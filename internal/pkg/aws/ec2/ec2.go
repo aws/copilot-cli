@@ -91,15 +91,15 @@ type VPC struct {
 }
 
 // String formats the elements of a VPC into a display-ready string.
-func (v *VPC) String() string {
+func (v *VPC) String() (string, error) {
 	if v.Name != "" {
-		return fmt.Sprintf("%s (%s)", v.ID, v.Name)
+		return fmt.Sprintf("%s (%s)", v.ID, v.Name), nil
 	}
-	return v.ID
+	return v.ID, nil
 }
 
 // ExtractVPC extracts the VPC ID from the VPC display string.
-func ExtractVPC(label string) VPC {
+func ExtractVPC(label string) (VPC, error) {
 	splitVPC := strings.SplitN(label, " ", 2)
 	extractedVPC := VPC{
 		ID: splitVPC[0],
@@ -107,7 +107,7 @@ func ExtractVPC(label string) VPC {
 	if strings.Contains(label, "(") {
 		extractedVPC.Name = strings.Trim(splitVPC[1], "()")
 	}
-	return extractedVPC
+	return extractedVPC, nil
 }
 
 // ListVPCs returns names and IDs (or just IDs, if Name tag does not exist) of all VPCs.

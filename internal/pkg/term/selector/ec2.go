@@ -49,7 +49,11 @@ func (s *EC2Select) VPC(prompt, help string) (string, error) {
 	}
 	var options []string
 	for _, vpc := range vpcs {
-		options = append(options, vpc.String())
+		stringifiedVPC, err := vpc.String()
+		if err != nil {
+			return "", fmt.Errorf("convert VPC info to string: %w", err)
+		}
+		options = append(options, stringifiedVPC)
 	}
 	vpc, err := s.prompt.SelectOne(
 		prompt, help,
@@ -57,8 +61,11 @@ func (s *EC2Select) VPC(prompt, help string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("select VPC: %w", err)
 	}
-	id := ec2.ExtractVPC(vpc).ID
-	return id, nil
+	extractedVPC, err := ec2.ExtractVPC(vpc)
+	if err != nil {
+		return "", fmt.Errorf("extract VPC ID: %w", err)
+	}
+	return extractedVPC.ID, nil
 }
 
 // PublicSubnets has the user multiselect public subnets given the VPC ID.
