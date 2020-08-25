@@ -97,8 +97,8 @@ func (c *CloudWatchLogs) logStreams(logGroupName string) ([]*string, error) {
 	return logStreamNames, nil
 }
 
-// TaskLogEvents returns an array of Cloudwatch Logs events.
-func (c *CloudWatchLogs) TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...GetLogEventsOpts) (*LogEventsOutput, error) {
+// LogEvents returns an array of Cloudwatch Logs events.
+func (c *CloudWatchLogs) LogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...GetLogEventsOpts) (*LogEventsOutput, error) {
 	var events []*Event
 	var in *cloudwatchlogs.GetLogEventsInput
 	logStreamNames, err := c.logStreams(logGroupName)

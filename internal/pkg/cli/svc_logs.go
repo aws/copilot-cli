@@ -9,10 +9,10 @@ import (
 	"io"
 	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/ecslogging"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
@@ -24,7 +24,6 @@ const (
 	svcLogNamePrompt        = "Which service's logs would you like to show?"
 	svcLogNameHelpPrompt    = "The logs of a deployed service will be shown."
 
-	logGroupNamePattern    = "/copilot/%s-%s-%s"
 	cwGetLogEventsLimitMin = 1
 	cwGetLogEventsLimitMax = 10000
 )
@@ -48,12 +47,12 @@ type svcLogsOpts struct {
 	startTime int64
 	endTime   int64
 
-	w             io.Writer
-	configStore   store
-	deployStore   deployedEnvironmentLister
-	sel           deploySelector
-	initCwLogsSvc func(*svcLogsOpts, string) error // Overriden in tests.
-	cwlogsSvc     map[string]cwlogService
+	w           io.Writer
+	configStore store
+	deployStore deployedEnvironmentLister
+	sel         deploySelector
+	logsSvc     logEventsWriter
+	initLogsSvc func() error // Overriden in tests.
 }
 
 func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
@@ -65,26 +64,30 @@ func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
-	return &svcLogsOpts{
+	opts := &svcLogsOpts{
 		svcLogsVars: vars,
 		w:           log.OutputWriter,
 		configStore: configStore,
 		deployStore: deployStore,
 		sel:         selector.NewDeploySelect(vars.prompt, configStore, deployStore),
-		initCwLogsSvc: func(o *svcLogsOpts, envName string) error {
-			env, err := o.configStore.GetEnvironment(o.AppName(), envName)
-			if err != nil {
-				return fmt.Errorf("get environment: %w", err)
-			}
-			sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
-			if err != nil {
-				return err
-			}
-			o.cwlogsSvc[env.Name] = cloudwatchlogs.New(sess)
-			return nil
-		},
-		cwlogsSvc: make(map[string]cwlogService),
-	}, nil
+	}
+	opts.initLogsSvc = func() error {
+		configStore, err := config.NewStore()
+		if err != nil {
+			return fmt.Errorf("connect to environment config store: %w", err)
+		}
+		env, err := configStore.GetEnvironment(opts.AppName(), opts.envName)
+		if err != nil {
+			return fmt.Errorf("get environment: %w", err)
+		}
+		sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return err
+		}
+		opts.logsSvc = ecslogging.NewServiceClient(sess, opts.AppName(), opts.envName, opts.svcName)
+		return nil
+	}
+	return opts, nil
 }
 
 // Validate returns an error if the values provided by flags are invalid.
@@ -145,31 +148,24 @@ func (o *svcLogsOpts) Ask() error {
 
 // Execute outputs logs of the service.
 func (o *svcLogsOpts) Execute() error {
-	logGroupName := fmt.Sprintf(logGroupNamePattern, o.AppName(), o.envName, o.svcName)
-	logEventsOutput := &cloudwatchlogs.LogEventsOutput{
-		LastEventTime: make(map[string]int64),
-	}
-	if err := o.initCwLogsSvc(o, o.envName); err != nil {
+	if err := o.initLogsSvc(); err != nil {
 		return err
 	}
-	var err error
-	for {
-		logEventsOutput, err = o.cwlogsSvc[o.envName].TaskLogEvents(logGroupName, logEventsOutput.LastEventTime, o.generateGetLogEventOpts()...)
-		if err != nil {
-			return err
-		}
-		if err := o.outputLogs(logEventsOutput.Events); err != nil {
-			return err
-		}
-		if !o.follow {
-			return nil
-		}
-		// for unit test.
-		if logEventsOutput.LastEventTime == nil {
-			return nil
-		}
-		time.Sleep(cloudwatchlogs.SleepDuration)
+	eventsWriter := ecslogging.WriteHumanLogs
+	if o.shouldOutputJSON {
+		eventsWriter = ecslogging.WriteJSONLogs
 	}
+	err := o.logsSvc.WriteLogEvents(ecslogging.WriteLogEventsOpts{
+		Follow:    o.follow,
+		Limit:     o.limit,
+		EndTime:   o.endTime,
+		StartTime: o.startTime,
+		OnEvents:  eventsWriter,
+	})
+	if err != nil {
+		return fmt.Errorf("write log events for service %s: %w", o.svcName, err)
+	}
+	return nil
 }
 
 func (o *svcLogsOpts) askApp() error {
@@ -184,19 +180,6 @@ func (o *svcLogsOpts) askApp() error {
 	return nil
 }
 
-func (o *svcLogsOpts) generateGetLogEventOpts() []cloudwatchlogs.GetLogEventsOpts {
-	opts := []cloudwatchlogs.GetLogEventsOpts{
-		cloudwatchlogs.WithLimit(o.limit),
-	}
-	if o.startTime != 0 {
-		opts = append(opts, cloudwatchlogs.WithStartTime(o.startTime))
-	}
-	if o.endTime != 0 {
-		opts = append(opts, cloudwatchlogs.WithEndTime(o.endTime))
-	}
-	return opts
-}
-
 func (o *svcLogsOpts) askSvcEnvName() error {
 	deployedService, err := o.sel.DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, o.AppName(), selector.WithEnv(o.envName), selector.WithSvc(o.svcName))
 	if err != nil {
@@ -204,23 +187,6 @@ func (o *svcLogsOpts) askSvcEnvName() error {
 	}
 	o.svcName = deployedService.Svc
 	o.envName = deployedService.Env
-	return nil
-}
-
-func (o *svcLogsOpts) outputLogs(logs []*cloudwatchlogs.Event) error {
-	if !o.shouldOutputJSON {
-		for _, log := range logs {
-			fmt.Fprint(o.w, log.HumanString())
-		}
-		return nil
-	}
-	for _, log := range logs {
-		data, err := log.JSONString()
-		if err != nil {
-			return err
-		}
-		fmt.Fprint(o.w, data)
-	}
 	return nil
 }
 
