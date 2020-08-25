@@ -91,23 +91,34 @@ type VPC struct {
 }
 
 // String formats the elements of a VPC into a display-ready string.
-func (v *VPC) String() (string, error) {
+func (v *VPC) String() string {
 	if v.Name != "" {
-		return fmt.Sprintf("%s (%s)", v.ID, v.Name), nil
+		return fmt.Sprintf("%s (%s)", v.ID, v.Name)
 	}
-	return v.ID, nil
+	return v.ID
 }
 
 // ExtractVPC extracts the VPC ID from the VPC display string.
-func ExtractVPC(label string) (VPC, error) {
+func ExtractVPC(label string) (*VPC, error) {
 	splitVPC := strings.SplitN(label, " ", 2)
-	extractedVPC := VPC{
-		ID: splitVPC[0],
+	// TODO: switch to regex
+	switch len(splitVPC) {
+	case 2:
+		if strings.Contains(label, "(") {
+			return &VPC{
+				ID:   splitVPC[0],
+				Name: strings.Trim(splitVPC[1], "()"),
+			}, nil
+		} else {
+			return nil, fmt.Errorf("extract Name from string: %s", label)
+		}
+	case 1:
+		return &VPC{
+			ID: splitVPC[0],
+		}, nil
+	default:
+		return nil, fmt.Errorf("extract VPC ID from string: %s", label)
 	}
-	if strings.Contains(label, "(") {
-		extractedVPC.Name = strings.Trim(splitVPC[1], "()")
-	}
-	return extractedVPC, nil
 }
 
 // ListVPCs returns names and IDs (or just IDs, if Name tag does not exist) of all VPCs.
@@ -130,15 +141,16 @@ func (c *EC2) ListVPCs() ([]VPC, error) {
 	}
 	var vpcs []VPC
 	for _, vpc := range ec2vpcs {
-		VPC := VPC{
-			ID: aws.StringValue(vpc.VpcId),
-		}
+		var name string
 		for _, tag := range vpc.Tags {
 			if aws.StringValue(tag.Key) == "Name" {
-				VPC.Name = aws.StringValue(tag.Value)
+				name = aws.StringValue(tag.Value)
 			}
 		}
-		vpcs = append(vpcs, VPC)
+		vpcs = append(vpcs, VPC{
+			ID:   aws.StringValue(vpc.VpcId),
+			Name: name,
+		})
 	}
 	return vpcs, nil
 }

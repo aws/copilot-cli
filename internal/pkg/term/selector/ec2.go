@@ -49,7 +49,7 @@ func (s *EC2Select) VPC(prompt, help string) (string, error) {
 	}
 	var options []string
 	for _, vpc := range vpcs {
-		stringifiedVPC, err := vpc.String()
+		stringifiedVPC := vpc.String()
 		if err != nil {
 			return "", fmt.Errorf("convert VPC info to string: %w", err)
 		}
