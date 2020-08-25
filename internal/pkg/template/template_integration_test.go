@@ -1,6 +1,6 @@
 // +build integration
 
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package template_test
@@ -23,14 +23,14 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 			opts: template.ServiceOpts{},
 		},
 		"renders a valid template with addons with no outputs": {
-			opts:  template.ServiceOpts{
+			opts: template.ServiceOpts{
 				NestedStack: &template.ServiceNestedStackOpts{
 					StackName: "AddonsStack",
 				},
 			},
 		},
 		"renders a valid template with addons with outputs": {
-			opts:  template.ServiceOpts{
+			opts: template.ServiceOpts{
 				NestedStack: &template.ServiceNestedStackOpts{
 					StackName:       "AddonsStack",
 					VariableOutputs: []string{"TableName"},

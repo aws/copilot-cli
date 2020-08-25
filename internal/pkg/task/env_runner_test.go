@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package task
@@ -6,6 +6,8 @@ package task
 import (
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -14,7 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/task/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestEnvRunner_Run(t *testing.T) {
@@ -26,11 +27,11 @@ func TestEnvRunner_Run(t *testing.T) {
 		deploy.EnvTagKey: inEnv,
 	}
 	filtersForVPCFromAppEnv := []ec2.Filter{
-		ec2.Filter{
+		{
 			Name:   tagFilterNameForEnv,
 			Values: []string{inEnv},
 		},
-		ec2.Filter{
+		{
 			Name:   tagFilterNameForApp,
 			Values: []string{inApp},
 		},
@@ -38,14 +39,14 @@ func TestEnvRunner_Run(t *testing.T) {
 
 	mockResourceGetterWithCluster := func(m *mocks.MockResourceGetter) {
 		m.EXPECT().GetResourcesByTags(clusterResourceType, resourceTagFiltersForCluster).Return([]*resourcegroups.Resource{
-			&resourcegroups.Resource{ARN: "cluster-1"},
+			{ARN: "cluster-1"},
 		}, nil)
 	}
 	mockVPCGetterAny := func(m *mocks.MockVPCGetter) {
 		m.EXPECT().SubnetIDs(gomock.Any()).AnyTimes()
 		m.EXPECT().SecurityGroups(gomock.Any()).AnyTimes()
 	}
-	mockStarterNotRun := func(m *mocks.MockTaskRunner) {
+	mockStarterNotRun := func(m *mocks.MockRunner) {
 		m.EXPECT().RunTask(gomock.Any()).Times(0)
 	}
 
@@ -55,7 +56,7 @@ func TestEnvRunner_Run(t *testing.T) {
 
 		mockVPCGetter      func(m *mocks.MockVPCGetter)
 		mockResourceGetter func(m *mocks.MockResourceGetter)
-		mockStarter        func(m *mocks.MockTaskRunner)
+		mockStarter        func(m *mocks.MockRunner)
 
 		wantedError error
 		wantedTasks []*Task
@@ -82,10 +83,10 @@ func TestEnvRunner_Run(t *testing.T) {
 			mockResourceGetter: func(m *mocks.MockResourceGetter) {
 				m.EXPECT().GetResourcesByTags(clusterResourceType, resourceTagFiltersForCluster).
 					Return([]*resourcegroups.Resource{
-						&resourcegroups.Resource{
+						{
 							ARN: "cluster-1",
 						},
-						&resourcegroups.Resource{
+						{
 							ARN: "cluster-2",
 						},
 					}, nil)
@@ -133,7 +134,7 @@ func TestEnvRunner_Run(t *testing.T) {
 				m.EXPECT().PublicSubnetIDs(filtersForVPCFromAppEnv).Return([]string{"subnet-1", "subnet-2"}, nil)
 				m.EXPECT().SecurityGroups(filtersForVPCFromAppEnv).Return([]string{"sg-1", "sg-2"}, nil)
 			},
-			mockStarter: func(m *mocks.MockTaskRunner) {
+			mockStarter: func(m *mocks.MockRunner) {
 				m.EXPECT().RunTask(ecs.RunTaskInput{
 					Cluster:        "cluster-1",
 					Count:          1,
@@ -158,7 +159,7 @@ func TestEnvRunner_Run(t *testing.T) {
 				m.EXPECT().PublicSubnetIDs(filtersForVPCFromAppEnv).Return([]string{"subnet-1", "subnet-2"}, nil)
 				m.EXPECT().SecurityGroups(filtersForVPCFromAppEnv).Return([]string{"sg-1", "sg-2"}, nil)
 			},
-			mockStarter: func(m *mocks.MockTaskRunner) {
+			mockStarter: func(m *mocks.MockRunner) {
 				m.EXPECT().RunTask(ecs.RunTaskInput{
 					Cluster:        "cluster-1",
 					Count:          1,
@@ -186,7 +187,7 @@ func TestEnvRunner_Run(t *testing.T) {
 
 			mockVPCGetter := mocks.NewMockVPCGetter(ctrl)
 			mockResourceGetter := mocks.NewMockResourceGetter(ctrl)
-			mockStarter := mocks.NewMockTaskRunner(ctrl)
+			mockStarter := mocks.NewMockRunner(ctrl)
 
 			tc.mockVPCGetter(mockVPCGetter)
 			tc.mockResourceGetter(mockResourceGetter)

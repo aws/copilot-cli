@@ -282,7 +282,7 @@ func TestLogEvents(t *testing.T) {
 				client: mockcloudwatchlogsClient,
 			}
 
-			gotLogEventsOutput, gotErr := service.TaskLogEvents(tc.logGroupName, tc.lastEventTime, WithLimit(tc.limit), WithStartTime(tc.startTime), WithEndTime(tc.endTime))
+			gotLogEventsOutput, gotErr := service.LogEvents(tc.logGroupName, tc.lastEventTime, WithLimit(tc.limit), WithStartTime(tc.startTime), WithEndTime(tc.endTime))
 
 			if gotErr != nil {
 				require.Equal(t, tc.wantErr, gotErr)

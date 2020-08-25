@@ -32,7 +32,7 @@ import (
 const (
 	envInitNamePrompt              = "What is your environment's name?"
 	envInitNameHelpPrompt          = "A unique identifier for an environment (e.g. dev, test, prod)."
-	envInitDefaultEnvConfirmPrompt = `Would you like to use the default configuration for a new production environment?
+	envInitDefaultEnvConfirmPrompt = `Would you like to use the default configuration for a new environment?
     - A new VPC with 2 AZs, 2 public subnets and 2 private subnets
     - A new ECS Cluster
     - New IAM Roles to manage services in your environment
