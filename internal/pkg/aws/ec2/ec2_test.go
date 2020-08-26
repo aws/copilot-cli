@@ -42,6 +42,45 @@ var (
 	}
 )
 
+func TestEC2_ExtractVPC(t *testing.T) {
+	testCases := map[string]struct {
+		displayString string
+		wantedError   error
+		wantedVPC     *VPC
+	}{
+		"returns error if string is empty": {
+			displayString: "",
+			wantedError:   fmt.Errorf("extract VPC ID from string: "),
+		},
+		"returns just the VPC ID if no name present": {
+			displayString: "vpc-imagr8vpcstring",
+			wantedError:   nil,
+			wantedVPC: &VPC{
+				ID: "vpc-imagr8vpcstring",
+			},
+		},
+		"returns both the VPC ID and name if both present": {
+			displayString: "vpc-imagr8vpcstring (copilot-app-name-env)",
+			wantedError:   nil,
+			wantedVPC: &VPC{
+				ID:   "vpc-imagr8vpcstring",
+				Name: "copilot-app-name-env",
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			vpc, err := ExtractVPC(tc.displayString)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedVPC, vpc)
+			}
+		})
+	}
+}
+
 func TestEC2_ListVPC(t *testing.T) {
 	testCases := map[string]struct {
 		mockEC2Client func(m *mocks.Mockapi)

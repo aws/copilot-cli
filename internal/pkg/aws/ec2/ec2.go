@@ -104,25 +104,19 @@ func (v *VPC) String() string {
 // For example: vpc-0576efeea396efee2 (copilot-video-store-test)
 // will return VPC{ID: "vpc-0576efeea396efee2", Name: "copilot-video-store-test"}.
 func ExtractVPC(label string) (*VPC, error) {
-	splitVPC := strings.SplitN(label, " ", 2)
-	// TODO: switch to regex
-	switch len(splitVPC) {
-	case 2:
-		if strings.Contains(label, "(") {
-			return &VPC{
-				ID:   splitVPC[0],
-				Name: strings.Trim(splitVPC[1], "()"),
-			}, nil
-		} else {
-			return nil, fmt.Errorf("extract Name from string: %s", label)
-		}
-	case 1:
-		return &VPC{
-			ID: splitVPC[0],
-		}, nil
-	default:
+	if label == "" {
 		return nil, fmt.Errorf("extract VPC ID from string: %s", label)
 	}
+	splitVPC := strings.SplitN(label, " ", 2)
+	// TODO: switch to regex to make more robust
+	var name string
+	if len(splitVPC) == 2 {
+		name = strings.Trim(splitVPC[1], "()")
+	}
+	return &VPC{
+		ID:   splitVPC[0],
+		Name: name,
+	}, nil
 }
 
 // ListVPCs returns names and IDs (or just IDs, if Name tag does not exist) of all VPCs.
