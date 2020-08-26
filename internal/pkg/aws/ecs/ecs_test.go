@@ -730,7 +730,7 @@ func TestTask_TaskStatus(t *testing.T) {
 	}{
 		"errors if failed to parse task ID": {
 			taskArn: aws.String("badTaskArn"),
-			wantErr: fmt.Errorf("arn: invalid prefix"),
+			wantErr: fmt.Errorf("parse ECS task ARN: arn: invalid prefix"),
 		},
 		"success with a provisioning task": {
 			taskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d"),
@@ -893,6 +893,35 @@ func TestTaskStatus_HumanString(t *testing.T) {
 			gotTaskStatus := task.HumanString()
 
 			require.Equal(t, tc.wantTaskStatus, gotTaskStatus)
+		})
+
+	}
+}
+func Test_TaskID(t *testing.T) {
+	testCases := map[string]struct {
+		taskARN string
+
+		wantErr error
+		wantID  string
+	}{
+		"bad unparsable task ARN": {
+			taskARN: "mockBadTaskARN",
+			wantErr: fmt.Errorf("parse ECS task ARN: arn: invalid prefix"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			gotID, gotErr := TaskID(tc.taskARN)
+
+			// THEN
+			if gotErr != nil {
+				require.EqualError(t, gotErr, tc.wantErr.Error())
+			} else {
+				require.NoError(t, gotErr)
+				require.Equal(t, tc.wantID, gotID)
+			}
 		})
 
 	}

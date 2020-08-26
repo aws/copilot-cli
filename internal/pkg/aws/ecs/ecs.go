@@ -386,14 +386,15 @@ func (s *ServiceArn) ServiceName() (string, error) {
 }
 
 // TaskID parses the task ARN and returns the task ID.
-// For example: arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d
-// becomes 4082490ee6c245e09d2145010aa1ba8d.
-func TaskID(taskArn string) (string, error) {
-	parsedArn, err := arn.Parse(taskArn)
+// For example: arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d,
+// arn:aws:ecs:us-west-2:123456789:task/4082490ee6c245e09d2145010aa1ba8d
+// return 4082490ee6c245e09d2145010aa1ba8d.
+func TaskID(taskARN string) (string, error) {
+	parsedARN, err := arn.Parse(taskARN)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("parse ECS task ARN: %w", err)
 	}
-	resources := strings.Split(parsedArn.Resource, "/")
+	resources := strings.Split(parsedARN.Resource, "/")
 	taskID := resources[len(resources)-1]
 	return taskID, nil
 }

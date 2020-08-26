@@ -7,7 +7,6 @@ package cloudwatchlogs
 import (
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -18,8 +17,6 @@ import (
 const (
 	// SleepDuration is the sleep time for making the next request for log events.
 	SleepDuration = 1 * time.Second
-
-	logStreamNamePrefix = "copilot/"
 )
 
 var (
@@ -63,7 +60,7 @@ func New(s *session.Session) *CloudWatchLogs {
 }
 
 // logStreams returns all name of the log streams in a log group.
-func (c *CloudWatchLogs) logStreams(logGroup string, logStream ...string) ([]string, error) {
+func (c *CloudWatchLogs) logStreams(logGroup string, logStreams ...string) ([]string, error) {
 	resp, err := c.client.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 		LogGroupName: aws.String(logGroup),
 		Descending:   aws.Bool(true),
@@ -83,8 +80,8 @@ func (c *CloudWatchLogs) logStreams(logGroup string, logStream ...string) ([]str
 		}
 		logStreamNames = append(logStreamNames, name)
 	}
-	if len(logStream) != 0 {
-		logStreamNames = filterStringSlice(logStreamNames, logStream)
+	if len(logStreams) != 0 {
+		logStreamNames = filterStringSlice(logStreamNames, logStreams)
 	}
 	return logStreamNames, nil
 }
@@ -97,6 +94,9 @@ func (c *CloudWatchLogs) LogEvents(opts *LogEventsOpts) (*LogEventsOutput, error
 	logStreams, err := c.logStreams(opts.LogGroup, opts.LogStream...)
 	if err != nil {
 		return nil, err
+	}
+	if opts.StreamLastEventTime == nil {
+		opts.StreamLastEventTime = make(map[string]int64)
 	}
 	for _, logStream := range logStreams {
 		// Set override value
@@ -114,7 +114,7 @@ func (c *CloudWatchLogs) LogEvents(opts *LogEventsOpts) (*LogEventsOutput, error
 
 		for _, event := range resp.Events {
 			log := &Event{
-				LogStreamName: trimLogStreamName(logStream),
+				LogStreamName: logStream,
 				IngestionTime: aws.Int64Value(event.IngestionTime),
 				Message:       aws.StringValue(event.Message),
 				Timestamp:     aws.Int64Value(event.Timestamp),
@@ -139,13 +139,11 @@ func (c *CloudWatchLogs) LogEvents(opts *LogEventsOpts) (*LogEventsOutput, error
 	}, nil
 }
 
-func truncateEvents(limit int, events []*Event) (truncatedEvents []*Event) {
-	if len(events) >= limit {
-		truncatedEvents = events[len(events)-limit:]
-	} else {
-		truncatedEvents = events
+func truncateEvents(limit int, events []*Event) []*Event {
+	if len(events) <= limit {
+		return events
 	}
-	return
+	return events[len(events)-limit:] // Only grab the last N elements where N = limit
 }
 
 func defaultGetLogEventsInput(opts *LogEventsOpts) *cloudwatchlogs.GetLogEventsInput {
@@ -155,11 +153,6 @@ func defaultGetLogEventsInput(opts *LogEventsOpts) *cloudwatchlogs.GetLogEventsI
 		EndTime:      opts.EndTime,
 		Limit:        opts.Limit,
 	}
-}
-
-func trimLogStreamName(logStreamName string) string {
-	// logStreamName example: copilot/{name}/1cc0685ad01d4d0f8e4e2c00d1775c56
-	return strings.TrimPrefix(logStreamName, logStreamNamePrefix)
 }
 
 func filterStringSlice(all, filter []string) (res []string) {

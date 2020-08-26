@@ -116,7 +116,8 @@ func (t *TaskClient) allTasksStopped() (bool, error) {
 	return stopped, nil
 }
 
-func (t *TaskClient) logStreamNamesFromTasks(tasks []*task.Task) (logStreamNames []string, err error) {
+func (t *TaskClient) logStreamNamesFromTasks(tasks []*task.Task) ([]string, error) {
+	var logStreamNames []string
 	for _, task := range tasks {
 		id, err := ecs.TaskID(task.TaskARN)
 		if err != nil {
@@ -124,5 +125,5 @@ func (t *TaskClient) logStreamNamesFromTasks(tasks []*task.Task) (logStreamNames
 		}
 		logStreamNames = append(logStreamNames, fmt.Sprintf(fmtLogStreamName, t.GroupName, id))
 	}
-	return
+	return logStreamNames, nil
 }

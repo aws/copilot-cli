@@ -52,9 +52,6 @@ func NewServiceClient(sess *session.Session, app, env, svc string) *ServiceClien
 
 // WriteLogEvents writes service logs.
 func (s *ServiceClient) WriteLogEvents(opts WriteLogEventsOpts) error {
-	logEventsOutput := &cloudwatchlogs.LogEventsOutput{
-		LastEventTime: make(map[string]int64),
-	}
 	logEventsOpts := &cloudwatchlogs.LogEventsOpts{
 		LogGroup:  s.logGroupName,
 		Limit:     aws.Int64(int64(opts.Limit)),
@@ -62,10 +59,8 @@ func (s *ServiceClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 		StartTime: opts.StartTime,
 		// TODO: Add log filtering by task ID.
 	}
-	var err error
 	for {
-		logEventsOpts.StreamLastEventTime = logEventsOutput.LastEventTime
-		logEventsOutput, err = s.eventsGetter.LogEvents(logEventsOpts)
+		logEventsOutput, err := s.eventsGetter.LogEvents(logEventsOpts)
 		if err != nil {
 			return fmt.Errorf("get task log events for log group %s: %w", s.logGroupName, err)
 		}
@@ -79,6 +74,7 @@ func (s *ServiceClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 		if logEventsOutput.LastEventTime == nil {
 			return nil
 		}
+		logEventsOpts.StreamLastEventTime = logEventsOutput.LastEventTime
 		time.Sleep(cloudwatchlogs.SleepDuration)
 	}
 }
