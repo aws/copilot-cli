@@ -34,7 +34,7 @@ func (m *MocklogGetter) EXPECT() *MocklogGetterMockRecorder {
 }
 
 // LogEvents mocks base method
-func (m *MocklogGetter) LogEvents(opts *cloudwatchlogs.LogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error) {
+func (m *MocklogGetter) LogEvents(opts cloudwatchlogs.LogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LogEvents", opts)
 	ret0, _ := ret[0].(*cloudwatchlogs.LogEventsOutput)

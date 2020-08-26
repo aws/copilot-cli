@@ -251,7 +251,7 @@ func TestLogEvents(t *testing.T) {
 			service := CloudWatchLogs{
 				client: mockcloudwatchlogsClient,
 			}
-			gotLogEventsOutput, gotErr := service.LogEvents(&LogEventsOpts{
+			gotLogEventsOutput, gotErr := service.LogEvents(LogEventsOpts{
 				LogGroup:            tc.logGroupName,
 				EndTime:             tc.endTime,
 				Limit:               tc.limit,
@@ -264,7 +264,7 @@ func TestLogEvents(t *testing.T) {
 				require.Equal(t, tc.wantErr, gotErr)
 			} else {
 				require.ElementsMatch(t, tc.wantLogEvents, gotLogEventsOutput.Events)
-				require.Equal(t, tc.wantLastEventTime, gotLogEventsOutput.LastEventTime)
+				require.Equal(t, tc.wantLastEventTime, gotLogEventsOutput.StreamLastEventTime)
 			}
 		})
 	}

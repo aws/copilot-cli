@@ -36,9 +36,6 @@ type TaskClient struct {
 	Writer       io.Writer
 	EventsLogger logGetter
 	Describer    TasksDescriber
-
-	// Fields that are private that get modified each time
-	runningTasks []*task.Task
 }
 
 // NewTaskClient returns a TaskClient that can retrieve logs from the given tasks under the groupName.
@@ -55,26 +52,25 @@ func NewTaskClient(sess *session.Session, groupName string, tasks []*task.Task) 
 
 // WriteEventsUntilStopped writes tasks' events to a writer until all tasks have stopped.
 func (t *TaskClient) WriteEventsUntilStopped() error {
-	t.runningTasks = t.Tasks
-	lastEventTimestampByLogGroup := make(map[string]int64)
+	in := cloudwatchlogs.LogEventsOpts{
+		LogGroup: fmt.Sprintf(fmtTaskLogGroupName, t.GroupName),
+	}
 	for {
-		logStreams, err := t.logStreamNamesFromTasks(t.runningTasks)
+		logStreams, err := t.logStreamNamesFromTasks(t.Tasks)
 		if err != nil {
 			return err
 		}
+		in.LogStream = logStreams
 		for i := 0; i < numCWLogsCallsPerRound; i++ {
-			logEventsOutput, err := t.EventsLogger.LogEvents(&cloudwatchlogs.LogEventsOpts{
-				LogGroup:            fmt.Sprintf(fmtTaskLogGroupName, t.GroupName),
-				LogStream:           logStreams,
-				StreamLastEventTime: lastEventTimestampByLogGroup,
-			})
+			logEventsOutput, err := t.EventsLogger.LogEvents(in)
 			if err != nil {
 				return fmt.Errorf("get task log events: %w", err)
 			}
 			if err := WriteHumanLogs(t.Writer, cwEventsToHumanJSONStringers(logEventsOutput.Events)); err != nil {
 				return fmt.Errorf("write log event: %w", err)
 			}
-			lastEventTimestampByLogGroup = logEventsOutput.LastEventTime
+			in.StreamLastEventTime = logEventsOutput.StreamLastEventTime
+
 			time.Sleep(cloudwatchlogs.SleepDuration)
 		}
 		stopped, err := t.allTasksStopped()
@@ -88,13 +84,13 @@ func (t *TaskClient) WriteEventsUntilStopped() error {
 }
 
 func (t *TaskClient) allTasksStopped() (bool, error) {
-	taskARNs := make([]string, len(t.runningTasks))
-	for idx, task := range t.runningTasks {
+	taskARNs := make([]string, len(t.Tasks))
+	for idx, task := range t.Tasks {
 		taskARNs[idx] = task.TaskARN
 	}
 
 	// NOTE: all tasks are deployed to the same cluster and there are at least one tasks being deployed
-	cluster := t.runningTasks[0].ClusterARN
+	cluster := t.Tasks[0].ClusterARN
 
 	tasksResp, err := t.Describer.DescribeTasks(cluster, taskARNs)
 	if err != nil {
@@ -112,7 +108,7 @@ func (t *TaskClient) allTasksStopped() (bool, error) {
 			})
 		}
 	}
-	t.runningTasks = runningTasks
+	t.Tasks = runningTasks
 	return stopped, nil
 }
 

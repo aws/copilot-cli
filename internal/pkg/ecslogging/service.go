@@ -20,7 +20,7 @@ const (
 )
 
 type logGetter interface {
-	LogEvents(opts *cloudwatchlogs.LogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
+	LogEvents(opts cloudwatchlogs.LogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
 }
 
 // ServiceClient retrieves the logs of an Amazon ECS service.
@@ -52,7 +52,7 @@ func NewServiceClient(sess *session.Session, app, env, svc string) *ServiceClien
 
 // WriteLogEvents writes service logs.
 func (s *ServiceClient) WriteLogEvents(opts WriteLogEventsOpts) error {
-	logEventsOpts := &cloudwatchlogs.LogEventsOpts{
+	logEventsOpts := cloudwatchlogs.LogEventsOpts{
 		LogGroup:  s.logGroupName,
 		Limit:     aws.Int64(int64(opts.Limit)),
 		EndTime:   opts.EndTime,
@@ -71,10 +71,10 @@ func (s *ServiceClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 			return nil
 		}
 		// for unit test.
-		if logEventsOutput.LastEventTime == nil {
+		if logEventsOutput.StreamLastEventTime == nil {
 			return nil
 		}
-		logEventsOpts.StreamLastEventTime = logEventsOutput.LastEventTime
+		logEventsOpts.StreamLastEventTime = logEventsOutput.StreamLastEventTime
 		time.Sleep(cloudwatchlogs.SleepDuration)
 	}
 }

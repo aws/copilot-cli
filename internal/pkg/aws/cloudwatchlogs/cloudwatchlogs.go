@@ -39,7 +39,7 @@ type LogEventsOutput struct {
 	// Retrieved log events.
 	Events []*Event
 	// Timestamp for the last event
-	LastEventTime map[string]int64
+	StreamLastEventTime map[string]int64
 }
 
 // LogEventsOpts wraps the parameters to call LogEvents.
@@ -87,7 +87,7 @@ func (c *CloudWatchLogs) logStreams(logGroup string, logStreams ...string) ([]st
 }
 
 // LogEvents returns an array of Cloudwatch Logs events.
-func (c *CloudWatchLogs) LogEvents(opts *LogEventsOpts) (*LogEventsOutput, error) {
+func (c *CloudWatchLogs) LogEvents(opts LogEventsOpts) (*LogEventsOutput, error) {
 	var events []*Event
 	// Set default value
 	in := defaultGetLogEventsInput(opts)
@@ -95,16 +95,17 @@ func (c *CloudWatchLogs) LogEvents(opts *LogEventsOpts) (*LogEventsOutput, error
 	if err != nil {
 		return nil, err
 	}
-	if opts.StreamLastEventTime == nil {
-		opts.StreamLastEventTime = make(map[string]int64)
+	streamLastEventTime := make(map[string]int64)
+	for k, v := range opts.StreamLastEventTime {
+		streamLastEventTime[k] = v
 	}
 	for _, logStream := range logStreams {
 		// Set override value
 		in.SetLogStreamName(logStream)
-		if opts.StreamLastEventTime[logStream] != 0 {
+		if streamLastEventTime[logStream] != 0 {
 			// If last event for this log stream exists, increment last log event timestamp
 			// by one to get logs after the last event.
-			in.SetStartTime(opts.StreamLastEventTime[logStream] + 1)
+			in.SetStartTime(streamLastEventTime[logStream] + 1)
 		}
 		// TODO: https://github.com/aws/copilot-cli/pull/628#discussion_r374291068 and https://github.com/aws/copilot-cli/pull/628#discussion_r374294362
 		resp, err := c.client.GetLogEvents(in)
@@ -122,20 +123,20 @@ func (c *CloudWatchLogs) LogEvents(opts *LogEventsOpts) (*LogEventsOutput, error
 			events = append(events, log)
 		}
 		if len(resp.Events) != 0 {
-			opts.StreamLastEventTime[logStream] = *resp.Events[len(resp.Events)-1].Timestamp
+			streamLastEventTime[logStream] = *resp.Events[len(resp.Events)-1].Timestamp
 		}
 	}
 	sort.SliceStable(events, func(i, j int) bool { return events[i].Timestamp < events[j].Timestamp })
 	limit := int(aws.Int64Value(in.Limit))
 	if limit != 0 {
 		return &LogEventsOutput{
-			Events:        truncateEvents(limit, events),
-			LastEventTime: opts.StreamLastEventTime,
+			Events:              truncateEvents(limit, events),
+			StreamLastEventTime: streamLastEventTime,
 		}, nil
 	}
 	return &LogEventsOutput{
-		Events:        events,
-		LastEventTime: opts.StreamLastEventTime,
+		Events:              events,
+		StreamLastEventTime: streamLastEventTime,
 	}, nil
 }
 
@@ -146,7 +147,7 @@ func truncateEvents(limit int, events []*Event) []*Event {
 	return events[len(events)-limit:] // Only grab the last N elements where N = limit
 }
 
-func defaultGetLogEventsInput(opts *LogEventsOpts) *cloudwatchlogs.GetLogEventsInput {
+func defaultGetLogEventsInput(opts LogEventsOpts) *cloudwatchlogs.GetLogEventsInput {
 	return &cloudwatchlogs.GetLogEventsInput{
 		LogGroupName: aws.String(opts.LogGroup),
 		StartTime:    opts.StartTime,

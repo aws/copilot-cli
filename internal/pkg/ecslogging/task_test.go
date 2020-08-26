@@ -95,7 +95,7 @@ func TestEventsWriter_WriteEventsUntilStopped(t *testing.T) {
 		"success": {
 			tasks: goodTasks,
 			setUpMocks: func(m writeEventMocks) {
-				m.logGetter.EXPECT().LogEvents(gomock.Any()).Do(func(param *cloudwatchlogs.LogEventsOpts) {
+				m.logGetter.EXPECT().LogEvents(gomock.Any()).Do(func(param cloudwatchlogs.LogEventsOpts) {
 					require.Equal(t, param.LogGroup, "/copilot/my-log-group")
 					require.Equal(t, param.LogStream, []string{"copilot-task/my-log-group/task1", "copilot-task/my-log-group/task2", "copilot-task/my-log-group/task3"})
 				}).

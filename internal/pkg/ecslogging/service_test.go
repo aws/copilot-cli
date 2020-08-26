@@ -100,13 +100,13 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Return(&cloudwatchlogs.LogEventsOutput{
-							Events:        logEvents,
-							LastEventTime: mockLastEventTime,
+							Events:              logEvents,
+							StreamLastEventTime: mockLastEventTime,
 						}, nil),
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Return(&cloudwatchlogs.LogEventsOutput{
-							Events:        moreLogEvents,
-							LastEventTime: nil,
+							Events:              moreLogEvents,
+							StreamLastEventTime: nil,
 						}, nil),
 				)
 			},
