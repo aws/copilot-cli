@@ -168,12 +168,12 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		appDeployer:  deploycfn.New(defaultSession),
 		identity:     identity.New(defaultSession),
 		prog:         termprogress.NewSpinner(),
+		selApp:       selector.NewSelect(vars.prompt, store),
 		selCreds: &selector.CredsSelect{
 			Session: sessProvider,
 			Profile: cfg,
 			Prompt:  vars.prompt,
 		},
-		selApp:       selector.NewSelect(vars.prompt, store),
 	}, nil
 }
 
@@ -200,6 +200,13 @@ func (o *initEnvOpts) Validate() error {
 
 // Ask asks for fields that are required but not passed in.
 func (o *initEnvOpts) Ask() error {
+	if o.AppName() == "" {
+		name, err := o.selApp.Application(appShowNamePrompt, appShowNameHelpPrompt)
+		if err != nil {
+			return fmt.Errorf("select application: %w", err)
+		}
+		o.appName = name
+	}
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
@@ -208,13 +215,6 @@ func (o *initEnvOpts) Ask() error {
 	}
 	if err := o.askEnvRegion(); err != nil {
 		return err
-	}
-	if o.appName == "" {
-		name, err := o.selApp.Application(appShowNamePrompt, appShowNameHelpPrompt)
-		if err != nil {
-			return fmt.Errorf("select application: %w", err)
-		}
-		o.appName = name
 	}
 	return o.askCustomizedResources()
 }
