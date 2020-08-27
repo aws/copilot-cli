@@ -9,6 +9,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -44,8 +45,8 @@ type svcLogsOpts struct {
 	svcLogsVars
 
 	// internal states
-	startTime int64
-	endTime   int64
+	startTime *int64
+	endTime   *int64
 
 	w           io.Writer
 	configStore store
@@ -120,7 +121,7 @@ func (o *svcLogsOpts) Validate() error {
 		if err != nil {
 			return fmt.Errorf(`invalid argument %s for "--start-time" flag: %w`, o.humanStartTime, err)
 		}
-		o.startTime = startTime
+		o.startTime = aws.Int64(startTime)
 	}
 
 	if o.humanEndTime != "" {
@@ -128,7 +129,7 @@ func (o *svcLogsOpts) Validate() error {
 		if err != nil {
 			return fmt.Errorf(`invalid argument %s for "--end-time" flag: %w`, o.humanEndTime, err)
 		}
-		o.endTime = endTime
+		o.endTime = aws.Int64(endTime)
 	}
 
 	if o.limit < cwGetLogEventsLimitMin || o.limit > cwGetLogEventsLimitMax {
@@ -190,10 +191,10 @@ func (o *svcLogsOpts) askSvcEnvName() error {
 	return nil
 }
 
-func (o *svcLogsOpts) parseSince() int64 {
+func (o *svcLogsOpts) parseSince() *int64 {
 	sinceSec := int64(o.since.Round(time.Second).Seconds())
 	timeNow := time.Now().Add(time.Duration(-sinceSec) * time.Second)
-	return timeNow.Unix() * 1000
+	return aws.Int64(timeNow.Unix() * 1000)
 }
 
 func (o *svcLogsOpts) parseRFC3339(timeStr string) (int64, error) {
