@@ -255,7 +255,7 @@ func TestLogEvents(t *testing.T) {
 				LogGroup:            tc.logGroupName,
 				EndTime:             tc.endTime,
 				Limit:               tc.limit,
-				LogStream:           tc.logStream,
+				LogStreams:          tc.logStream,
 				StartTime:           tc.startTime,
 				StreamLastEventTime: tc.lastEventTime,
 			})

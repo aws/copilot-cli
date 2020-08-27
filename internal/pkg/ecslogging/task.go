@@ -20,7 +20,7 @@ const (
 	numCWLogsCallsPerRound = 10
 	fmtTaskLogGroupName    = "/copilot/%s"
 	// e.g., copilot-task/python/4f8243e83f8a4bdaa7587fa1eaff2ea3
-	fmtLogStreamName = "copilot-task/%s/%s"
+	fmtTaskLogStreamName = "copilot-task/%s/%s"
 )
 
 // TasksDescriber describes ECS tasks.
@@ -60,7 +60,7 @@ func (t *TaskClient) WriteEventsUntilStopped() error {
 		if err != nil {
 			return err
 		}
-		in.LogStream = logStreams
+		in.LogStreams = logStreams
 		for i := 0; i < numCWLogsCallsPerRound; i++ {
 			logEventsOutput, err := t.EventsLogger.LogEvents(in)
 			if err != nil {
@@ -119,7 +119,7 @@ func (t *TaskClient) logStreamNamesFromTasks(tasks []*task.Task) ([]string, erro
 		if err != nil {
 			return nil, fmt.Errorf("parse task ID from ARN %s", task.TaskARN)
 		}
-		logStreamNames = append(logStreamNames, fmt.Sprintf(fmtLogStreamName, t.GroupName, id))
+		logStreamNames = append(logStreamNames, fmt.Sprintf(fmtTaskLogStreamName, t.GroupName, id))
 	}
 	return logStreamNames, nil
 }

@@ -37,6 +37,7 @@ type svcLogsVars struct {
 	envName          string
 	humanStartTime   string
 	humanEndTime     string
+	taskIDs          []string
 	since            time.Duration
 	*GlobalOpts
 }
@@ -161,6 +162,7 @@ func (o *svcLogsOpts) Execute() error {
 		Limit:     o.limit,
 		EndTime:   o.endTime,
 		StartTime: o.startTime,
+		TaskIDs:   o.taskIDs,
 		OnEvents:  eventsWriter,
 	})
 	if err != nil {
@@ -220,7 +222,11 @@ func BuildSvcLogsCmd() *cobra.Command {
   Displays logs in the last hour.
   /code $ copilot svc logs --since 1h
   Displays logs from 2006-01-02T15:04:05 to 2006-01-02T15:05:05.
-  /code $ copilot svc logs --start-time 2006-01-02T15:04:05+00:00 --end-time 2006-01-02T15:05:05+00:00`,
+  /code $ copilot svc logs --start-time 2006-01-02T15:04:05+00:00 --end-time 2006-01-02T15:05:05+00:00
+  Displays logs for specific tasks.
+  /code $ copilot svc logs --tasks 709c7eae05f947f6861b150372ddc443,1de57fd63c6a4920ac416d02add891b9
+  Displays logs in real time.
+  /code $ copilot svc logs --follow`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newSvcLogOpts(vars)
 			if err != nil {
@@ -244,5 +250,6 @@ func BuildSvcLogsCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
 	cmd.Flags().DurationVar(&vars.since, sinceFlag, 0, sinceFlagDescription)
 	cmd.Flags().IntVar(&vars.limit, limitFlag, 10, limitFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.taskIDs, tasksFlag, []string{}, tasksLogsFlagDescription)
 	return cmd
 }

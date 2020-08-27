@@ -45,7 +45,7 @@ type LogEventsOutput struct {
 // LogEventsOpts wraps the parameters to call LogEvents.
 type LogEventsOpts struct {
 	LogGroup            string
-	LogStream           []string
+	LogStreams          []string
 	Limit               *int64
 	StartTime           *int64
 	EndTime             *int64
@@ -91,7 +91,7 @@ func (c *CloudWatchLogs) LogEvents(opts LogEventsOpts) (*LogEventsOutput, error)
 	var events []*Event
 	// Set default value
 	in := defaultGetLogEventsInput(opts)
-	logStreams, err := c.logStreams(opts.LogGroup, opts.LogStream...)
+	logStreams, err := c.logStreams(opts.LogGroup, opts.LogStreams...)
 	if err != nil {
 		return nil, err
 	}
