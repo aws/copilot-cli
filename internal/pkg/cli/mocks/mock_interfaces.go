@@ -4103,3 +4103,41 @@ func (mr *MockcredsSelectorMockRecorder) Creds(prompt, help interface{}) *gomock
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Creds", reflect.TypeOf((*MockcredsSelector)(nil).Creds), prompt, help)
 }
+
+// Mockec2Client is a mock of ec2Client interface
+type Mockec2Client struct {
+	ctrl     *gomock.Controller
+	recorder *Mockec2ClientMockRecorder
+}
+
+// Mockec2ClientMockRecorder is the mock recorder for Mockec2Client
+type Mockec2ClientMockRecorder struct {
+	mock *Mockec2Client
+}
+
+// NewMockec2Client creates a new mock instance
+func NewMockec2Client(ctrl *gomock.Controller) *Mockec2Client {
+	mock := &Mockec2Client{ctrl: ctrl}
+	mock.recorder = &Mockec2ClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *Mockec2Client) EXPECT() *Mockec2ClientMockRecorder {
+	return m.recorder
+}
+
+// VPCWithDNSSupport mocks base method
+func (m *Mockec2Client) VPCWithDNSSupport(vpcID string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VPCWithDNSSupport", vpcID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// VPCWithDNSSupport indicates an expected call of VPCWithDNSSupport
+func (mr *Mockec2ClientMockRecorder) VPCWithDNSSupport(vpcID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VPCWithDNSSupport", reflect.TypeOf((*Mockec2Client)(nil).VPCWithDNSSupport), vpcID)
+}

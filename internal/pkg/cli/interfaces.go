@@ -394,3 +394,7 @@ type ec2Selector interface {
 type credsSelector interface {
 	Creds(prompt, help string) (*session.Session, error)
 }
+
+type ec2Client interface {
+	VPCWithDNSSupport(vpcID string) (bool, error)
+}

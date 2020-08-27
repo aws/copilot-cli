@@ -61,6 +61,7 @@ type api interface {
 	DescribeSubnets(*ec2.DescribeSubnetsInput) (*ec2.DescribeSubnetsOutput, error)
 	DescribeSecurityGroups(*ec2.DescribeSecurityGroupsInput) (*ec2.DescribeSecurityGroupsOutput, error)
 	DescribeVpcs(input *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error)
+	DescribeVpcAttribute(input *ec2.DescribeVpcAttributeInput) (*ec2.DescribeVpcAttributeOutput, error)
 }
 
 // Filter contains the name and values of a filter.
@@ -151,6 +152,18 @@ func (c *EC2) ListVPCs() ([]VPC, error) {
 		})
 	}
 	return vpcs, nil
+}
+
+// VPCWithDNSSupport returns if DNS resolution is enabled for the VPC.
+func (c *EC2) VPCWithDNSSupport(vpcID string) (bool, error) {
+	resp, err := c.client.DescribeVpcAttribute(&ec2.DescribeVpcAttributeInput{
+		VpcId:     aws.String(vpcID),
+		Attribute: aws.String(ec2.VpcAttributeNameEnableDnsSupport),
+	})
+	if err != nil {
+		return false, fmt.Errorf("describe attribute for VPC %s: %w", vpcID, err)
+	}
+	return aws.BoolValue(resp.EnableDnsSupport.Value), nil
 }
 
 // ListVPCSubnets lists all subnets given a VPC ID.

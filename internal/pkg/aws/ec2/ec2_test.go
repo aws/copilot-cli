@@ -429,3 +429,56 @@ func TestEC2_SecurityGroups(t *testing.T) {
 		})
 	}
 }
+
+func TestEC2_VPCWithDNSSupport(t *testing.T) {
+	testCases := map[string]struct {
+		vpcID string
+
+		mockEC2Client func(m *mocks.Mockapi)
+
+		wantedError   error
+		wantedSupport bool
+	}{
+		"fail to descibe VPC attribute": {
+			vpcID: "mockVPCID",
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeVpcAttribute(gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantedError: fmt.Errorf("describe attribute for VPC mockVPCID: some error"),
+		},
+		"success": {
+			vpcID: "mockVPCID",
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeVpcAttribute(&ec2.DescribeVpcAttributeInput{
+					VpcId:     aws.String("mockVPCID"),
+					Attribute: aws.String(ec2.VpcAttributeNameEnableDnsSupport),
+				}).Return(&ec2.DescribeVpcAttributeOutput{
+					EnableDnsSupport: &ec2.AttributeBooleanValue{
+						Value: aws.Bool(true),
+					},
+				}, nil)
+			},
+			wantedSupport: true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockAPI := mocks.NewMockapi(ctrl)
+			tc.mockEC2Client(mockAPI)
+
+			ec2Client := EC2{
+				client: mockAPI,
+			}
+
+			support, err := ec2Client.VPCWithDNSSupport(tc.vpcID)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedSupport, support)
+			}
+		})
+	}
+}
