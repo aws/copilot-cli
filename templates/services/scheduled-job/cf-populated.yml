@@ -1,0 +1,295 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cloudformation template that represents a scheduled job. 
+Parameters: 
+  Partition:
+    Type: String
+  Region:
+    Type: String
+  Account:
+    Type: String
+  AppName:
+    Type: String
+  EnvName:
+    Type: String
+  ServiceName:
+    Type: String
+  ContainerImage:
+    Type: String
+  TaskCPU:
+    Type: String
+  TaskMemory:
+    Type: String
+  TaskCount:
+    Type: Number
+  LogRetention:
+    Type: Number
+  AddonsTemplateURL:
+    Description: 'URL of the addons nested stack template within the S3 bucket.'
+    Type: String
+    Default: ""
+Conditions: 
+  HasAddons: # If a bucket URL is specified, that means the template exists.
+    !Not [!Equals [!Ref AddonsTemplateURL, ""]]
+Resources: 
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['', [/copilot/, !Ref AppName, '-', !Ref EnvName, '-', !Ref ServiceName]]
+      RetentionInDays: !Ref LogRetention
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    DependsOn: LogGroup
+    Properties:
+      Family: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref ServiceName]]
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: 256
+      Memory: 512
+      ExecutionRoleArn: !Ref ExecutionRole
+      TaskRoleArn: !Ref TaskRole
+      ContainerDefinitions:
+        - Name: !Ref ServiceName
+          Image: !Ref ContainerImage
+          PortMappings:
+            - ContainerPort: 80
+            # We pipe certain environment variables directly into the task definition.
+          # This lets customers have access to, for example, their LB endpoint - which they'd
+          # have no way of otherwise determining.
+          Environment:
+          - Name: COPILOT_APPLICATION_NAME
+            Value: !Sub '${AppName}'
+          - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
+            Value: !Sub '${AppName}.local'
+          - Name: COPILOT_ENVIRONMENT_NAME
+            Value: !Sub '${EnvName}'
+          - Name: COPILOT_SERVICE_NAME
+            Value: !Sub '${ServiceName}'
+          - Name: COPILOT_LB_DNS
+            Value:
+              Fn::ImportValue:
+                !Sub "${AppName}-${EnvName}-PublicLoadBalancerDNS"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-region: !Ref AWS::Region
+              awslogs-group: !Ref LogGroup
+              awslogs-stream-prefix: copilot
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref ServiceName, SecretsPolicy]]
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'ssm:GetParameters'
+                Resource:
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
+                Condition:
+                  StringEquals:
+                    'ssm:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'ssm:ResourceTag/copilot-environment': !Sub '${EnvName}'
+              - Effect: 'Allow'
+                Action:
+                  - 'secretsmanager:GetSecretValue'
+                Resource:
+                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+                Condition:
+                  StringEquals:
+                    'secretsmanager:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'secretsmanager:ResourceTag/copilot-environment': !Sub '${EnvName}'
+              - Effect: 'Allow'
+                Action:
+                  - 'kms:Decrypt'
+                Resource:
+                  - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'DenyIAMExceptTaggedRoles'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Deny'
+                Action: 'iam:*'
+                Resource: '*'
+              - Effect: 'Allow'
+                Action: 'sts:AssumeRole'
+                Resource:
+                  - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
+                Condition:
+                  StringEquals:
+                    'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
+  
+  Rule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      ScheduleExpression: 'rate(2 hours)'
+      State: ENABLED
+      Targets:
+      - Arn: !Ref StateMachine
+        Id: statemachine
+        RoleArn: !GetAtt 'RuleRole.Arn'
+  
+  RuleRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: 'events.amazonaws.com'
+          Action: 'sts:AssumeRole'
+      Policies:
+      - PolicyName: EventRulePolicy
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action: 'states:StartExecution'
+            Resource: !Ref StateMachine
+
+  StateMachine:
+    Type: 'AWS::StepFunctions::StateMachine'
+    Properties:
+      RoleArn: !GetAtt 'StateMachineRole.Arn'
+      LoggingConfiguration:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt LogGroup.Arn
+        IncludeExecutionData: true
+        Level: 'FATAL'
+      DefinitionSubstitutions:
+        Cluster: 
+          Fn::ImportValue:
+            !Sub '${AppName}-${EnvName}-ClusterId'
+        TaskDefinition: !Ref TaskDefinition
+        Subnets: !Join
+          - '","'
+          - Fn::Split:
+            - ","
+            - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+        AssignPublicIp: 'ENABLED' # Should be DISABLED if we use private subnets
+        SecurityGroups: 
+          Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+        Timeout: 300 # seconds
+      DefinitionString: |-
+        {
+          "Version": "1.0",
+          "Comment": "Run AWS Fargate task",
+          "TimeoutSeconds": ${Timeout},
+          "StartAt": "Run Fargate Task",
+          "States": {
+            "Run Fargate Task": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::ecs:runTask.sync",
+              "Parameters": {
+                "LaunchType": "FARGATE",
+                "PlatformVersion": "LATEST",
+                "Cluster": "${Cluster}",
+                "TaskDefinition": "${TaskDefinition}",
+                "Group.$": "$$.Execution.Name",
+                "NetworkConfiguration": {
+                  "AwsvpcConfiguration": {
+                    "Subnets": ["${Subnets}"],
+                    "AssignPublicIp": "${AssignPublicIp}",
+                    "SecurityGroups": ["${SecurityGroups}"]
+                  }
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "States.TaskFailed"
+                  ],
+                  "IntervalSeconds": 3,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 1.0
+                },
+                {
+                  "ErrorEquals": [
+                    "ECS.AmazonECSException"
+                  ],
+                  "IntervalSeconds": 10,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2.0
+                }
+              ],
+              "End": true
+            }
+          }
+        }
+      
+    
+  StateMachineRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: 'states.amazonaws.com'
+          Action: 'sts:AssumeRole'
+      Policies:
+      - PolicyName: StateMachine
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action: 'iam:PassRole'
+            Resource:
+            - !GetAtt ExecutionRole.Arn
+            - !GetAtt TaskRole.Arn
+          - Effect: Allow
+            Action: 'ecs:RunTask'
+            Resource: 
+            - !Ref TaskDefinition
+            Condition:
+              ArnEquals:
+                'ecs:cluster': !Sub arn:${Partition}:ecs:${Region}:${Account}:cluster/${AppName}-${EnvName}-Cluster-*
+          - Effect: Allow
+            Action:
+            - 'ecs:StopTask'
+            - 'ecs:DescribeTasks'
+            Resource: '*'
+            Condition:
+              ArnEquals:
+                'ecs:cluster': !Sub arn:${Partition}:ecs:${Region}:${Account}:cluster/${AppName}-${EnvName}-Cluster-*
+          - Effect: Allow
+            Action:
+              - 'logs:CreateLogDelivery'
+              - 'logs:GetLogDelivery'
+              - 'logs:UpdateLogDelivery'
+              - 'logs:DeleteLogDelivery'
+              - 'logs:ListLogDeliveries'
+              - 'logs:PutResourcePolicy'
+              - 'logs:DescribeResourcePolicies'
+              - 'logs:DescribeLogGroups'
+            Resource: '*' # CWL doesn't support resource-level permissions
+          - Effect: Allow
+            Action:
+            - 'events:PutTargets'
+            - 'events:PutRule'
+            - 'events:DescribeRule'
+            Resource: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForECSTaskRule'
