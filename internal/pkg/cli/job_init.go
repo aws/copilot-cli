@@ -29,11 +29,11 @@ Deployed resources (such as your job, logs) will contain this job's name and be 
 	jobInitDockerfileHelpPrompt = "Dockerfile to use for building your job's container image."
 )
 
-const (
-	fmtAddJobToAppStart    = "Creating ECR repositories for job %s."
-	fmtAddJobToAppFailed   = "Failed to create ECR repositories for job %s.\n"
-	fmtAddJobToAppComplete = "Created ECR repositories for job %s.\n"
-)
+// const (
+// 	fmtAddJobToAppStart    = "Creating ECR repositories for job %s."
+// 	fmtAddJobToAppFailed   = "Failed to create ECR repositories for job %s.\n"
+// 	fmtAddJobToAppComplete = "Created ECR repositories for job %s.\n"
+// )
 
 type initJobVars struct {
 	*GlobalOpts
@@ -50,7 +50,6 @@ type initJobOpts struct {
 	store       store
 	appDeployer appDeployer
 	prog        progress
-	df          dockerfileParser
 
 	// Outputs stored on successful actions.
 	manifestPath string
