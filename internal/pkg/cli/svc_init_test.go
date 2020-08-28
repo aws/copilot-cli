@@ -193,7 +193,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			wantedErr:      nil,
 		},
-		"returns an error if fail to find Dockerfiles": {
+		"prompts user for custom path if fail to find Dockerfiles": {
 			inSvcType:        wantedSvcType,
 			inSvcName:        wantedSvcName,
 			inSvcPort:        wantedSvcPort,
@@ -201,10 +201,25 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, "Dockerfile", wantedSvcName)), gomock.Eq(fmt.Sprintf(svcInitDockerfilePathHelpPrompt)), gomock.Any(), gomock.Any()).
+					Return("frontend/Dockerfile", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			wantedErr:      fmt.Errorf("no Dockerfiles found within . or a sub-directory level below"),
+			wantedErr:      nil,
+		},
+		"returns an error if fail to get custom Dockerfile path": {
+			inSvcType:        wantedSvcType,
+			inSvcName:        wantedSvcName,
+			inSvcPort:        wantedSvcPort,
+			inDockerfilePath: "",
+
+			mockFileSystem: func(mockFS afero.Fs) {},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, "Dockerfile", wantedSvcName)), gomock.Eq(fmt.Sprintf(svcInitDockerfilePathHelpPrompt)), gomock.Any(), gomock.Any()).
+					Return("", errors.New("some error"))
+			},
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
+			wantedErr:      fmt.Errorf("get custom path: some error"),
 		},
 		"returns an error if fail to select Dockerfile": {
 			inSvcType:        wantedSvcType,

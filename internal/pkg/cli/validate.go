@@ -122,6 +122,17 @@ func validateDomainName(val interface{}) error {
 	return nil
 }
 
+func validatePath(val interface{}) error {
+	path, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	if path == "" {
+		return errValueEmpty
+	}
+	return nil
+}
+
 func validateStorageType(val interface{}) error {
 	storageType, ok := val.(string)
 	if !ok {

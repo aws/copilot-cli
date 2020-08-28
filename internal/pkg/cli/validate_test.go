@@ -191,6 +191,32 @@ func TestValidateDDBName(t *testing.T) {
 	}
 }
 
+func TestValidatePath(t *testing.T) {
+	testCases := map[string]struct {
+		input interface{}
+		want  error
+	}{
+		"not a string": {
+			input: 123,
+			want:  errValueNotAString,
+		},
+		"empty string": {
+			input: "",
+			want:  errValueEmpty,
+		},
+	}
+	for path, tc := range testCases {
+		t.Run(path, func(t *testing.T) {
+			got := validatePath(tc.input)
+			if tc.want == nil {
+				require.Nil(t, got)
+			} else {
+				require.EqualError(t, tc.want, got.Error())
+			}
+		})
+	}
+}
+
 func TestValidateStorageType(t *testing.T) {
 	testCases := map[string]struct {
 		input string

@@ -36,8 +36,10 @@ To learn more see: https://git.io/JfIpT`
 	fmtSvcInitSvcNameHelpPrompt = `The name will uniquely identify this service within your app %s.
 Deployed resources (such as your service, logs) will contain this service's name and be tagged with it.`
 
-	fmtSvcInitDockerfilePrompt  = "Which %s would you like to use for %s?"
-	svcInitDockerfileHelpPrompt = "Dockerfile to use for building your service's container image."
+	fmtSvcInitDockerfilePrompt      = "Which %s would you like to use for %s?"
+	svcInitDockerfileHelpPrompt     = "Dockerfile to use for building your service's container image."
+	fmtSvcInitDockerfilePathPrompt  = "What is the path to the %s for %s?"
+	svcInitDockerfilePathHelpPrompt = "Path to Dockerfile to use for building your service's container image."
 
 	svcInitSvcPortPrompt     = "Which %s do you want customer traffic sent to?"
 	svcInitSvcPortHelpPrompt = `The port will be used by the load balancer to route incoming traffic to this service.
@@ -311,22 +313,31 @@ func (o *initSvcOpts) askDockerfile() error {
 		return nil
 	}
 
-	// TODO https://github.com/aws/copilot-cli/issues/206
 	dockerfiles, err := listDockerfiles(o.fs, ".")
-	if err != nil {
+	// If no Dockerfiles are found in current directory or subdirectory one level down, prompt user.
+	var sel string
+	if err != nil && strings.HasPrefix(err.Error(), "no Dockerfiles found") {
+		sel, err = o.prompt.Get(
+			fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
+			fmt.Sprintf(svcInitDockerfilePathHelpPrompt),
+			validatePath,
+			prompt.WithFinalMessage("Path to Dockerfile:"))
+		if err != nil {
+			return fmt.Errorf("get custom path: %w", err)
+		}
+	} else if err != nil {
 		return err
+	} else {
+		sel, err = o.prompt.SelectOne(
+			fmt.Sprintf(fmtSvcInitDockerfilePrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
+			svcInitDockerfileHelpPrompt,
+			dockerfiles,
+			prompt.WithFinalMessage("Dockerfile:"),
+		)
+		if err != nil {
+			return fmt.Errorf("select Dockerfile: %w", err)
+		}
 	}
-
-	sel, err := o.prompt.SelectOne(
-		fmt.Sprintf(fmtSvcInitDockerfilePrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
-		svcInitDockerfileHelpPrompt,
-		dockerfiles,
-		prompt.WithFinalMessage("Dockerfile:"),
-	)
-	if err != nil {
-		return fmt.Errorf("select Dockerfile: %w", err)
-	}
-
 	o.DockerfilePath = sel
 
 	return nil
