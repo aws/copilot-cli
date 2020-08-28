@@ -1,12 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Cloudformation template that represents a scheduled job. 
 Parameters: 
-  Partition:
-    Type: String
-  Region:
-    Type: String
-  Account:
-    Type: String
   AppName:
     Type: String
   EnvName:
@@ -267,7 +261,7 @@ Resources:
             - !Ref TaskDefinition
             Condition:
               ArnEquals:
-                'ecs:cluster': !Sub arn:${Partition}:ecs:${Region}:${Account}:cluster/${AppName}-${EnvName}-Cluster-*
+                'ecs:cluster': !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${AppName}-${EnvName}-Cluster-*
           - Effect: Allow
             Action:
             - 'ecs:StopTask'
@@ -275,7 +269,7 @@ Resources:
             Resource: '*'
             Condition:
               ArnEquals:
-                'ecs:cluster': !Sub arn:${Partition}:ecs:${Region}:${Account}:cluster/${AppName}-${EnvName}-Cluster-*
+                'ecs:cluster': !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${AppName}-${EnvName}-Cluster-*
           - Effect: Allow
             Action:
               - 'logs:CreateLogDelivery'
