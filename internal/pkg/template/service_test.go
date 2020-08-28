@@ -24,7 +24,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 			mockDependencies: func(t *Template) {
 				mockBox := packd.NewMemoryBox()
 				var baseContent string
-				for _, name := range commonServiceCFTemplateNames {
+				for _, name := range commonWorkloadCFTemplateNames {
 					baseContent += fmt.Sprintf(`{{include "%s" . | indent 2}}`+"\n", name)
 				}
 				mockBox.AddString("workloads/backend/cf.yml", baseContent)

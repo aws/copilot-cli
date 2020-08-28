@@ -76,7 +76,7 @@ func TestLoadBalancedWebService_StackName(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			conf := &LoadBalancedWebService{
-				svc: &svc{
+				wkld: &wkld{
 					name: tc.inSvcName,
 					env:  tc.inEnvName,
 					app:  tc.inAppName,
@@ -114,7 +114,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				addons := mockTemplater{err: errors.New("some error")}
 				c.parser = m
-				c.svc.addons = addons
+				c.wkld.addons = addons
 			},
 			wantedTemplate: "",
 			wantedError:    fmt.Errorf("generate addons template for service %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
@@ -130,7 +130,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
     Value: hello`,
 				}
 				c.parser = m
-				c.svc.addons = addons
+				c.wkld.addons = addons
 			},
 
 			wantedTemplate: "",
@@ -146,7 +146,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 
 				addons := mockTemplater{err: &addon.ErrDirNotExist{}}
 				c.parser = m
-				c.svc.addons = addons
+				c.wkld.addons = addons
 			},
 
 			wantedTemplate: "template",
@@ -204,7 +204,7 @@ Outputs:
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			conf := &LoadBalancedWebService{
-				svc: &svc{
+				wkld: &wkld{
 					name: aws.StringValue(testLBWebServiceManifest.Name),
 					env:  testEnvName,
 					app:  testAppName,
@@ -261,19 +261,19 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 	testLBWebServiceManifestWithBadSidecar.TargetContainer = aws.String("xray")
 	expectedParams := []*cloudformation.Parameter{
 		{
-			ParameterKey:   aws.String(ServiceAppNameParamKey),
+			ParameterKey:   aws.String(WorkloadAppNameParamKey),
 			ParameterValue: aws.String("phonetool"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceEnvNameParamKey),
+			ParameterKey:   aws.String(WorkloadEnvNameParamKey),
 			ParameterValue: aws.String("test"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceNameParamKey),
+			ParameterKey:   aws.String(WorkloadNameParamKey),
 			ParameterValue: aws.String("frontend"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceContainerImageParamKey),
+			ParameterKey:   aws.String(WorkloadContainerImageParamKey),
 			ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
 		},
 		{
@@ -289,23 +289,23 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			ParameterValue: aws.String("/"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceTaskCPUParamKey),
+			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),
 			ParameterValue: aws.String("256"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceTaskMemoryParamKey),
+			ParameterKey:   aws.String(WorkloadTaskMemoryParamKey),
 			ParameterValue: aws.String("512"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceTaskCountParamKey),
+			ParameterKey:   aws.String(WorkloadTaskCountParamKey),
 			ParameterValue: aws.String("1"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceLogRetentionParamKey),
+			ParameterKey:   aws.String(WorkloadLogRetentionParamKey),
 			ParameterValue: aws.String("30"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceAddonsTemplateURLParamKey),
+			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 			ParameterValue: aws.String(""),
 		},
 	}
@@ -385,7 +385,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 
 			// GIVEN
 			conf := &LoadBalancedWebService{
-				svc: &svc{
+				wkld: &wkld{
 					name: aws.StringValue(tc.manifest.Name),
 					env:  testEnvName,
 					app:  testAppName,
@@ -423,8 +423,8 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 		"unavailable template": {
 			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().Parse(svcParamsTemplatePath, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
-				c.svc.parser = m
+				m.EXPECT().Parse(wkldParamsTemplatePath, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+				c.wkld.parser = m
 			},
 			wantedParams: "",
 			wantedError:  errors.New("some error"),
@@ -432,8 +432,8 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 		"render params template": {
 			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().Parse(svcParamsTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("params")}, nil)
-				c.svc.parser = m
+				m.EXPECT().Parse(wkldParamsTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("params")}, nil)
+				c.wkld.parser = m
 			},
 			wantedParams: "params",
 		},
@@ -445,7 +445,7 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			c := &LoadBalancedWebService{
-				svc: &svc{
+				wkld: &wkld{
 					name: aws.StringValue(testLBWebServiceManifest.Name),
 					env:  testEnvName,
 					app:  testAppName,
@@ -475,7 +475,7 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 func TestLoadBalancedWebService_Tags(t *testing.T) {
 	// GIVEN
 	conf := &LoadBalancedWebService{
-		svc: &svc{
+		wkld: &wkld{
 			name: aws.StringValue(testLBWebServiceManifest.Name),
 			env:  testEnvName,
 			app:  testAppName,

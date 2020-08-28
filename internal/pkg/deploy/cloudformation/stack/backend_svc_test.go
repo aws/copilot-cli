@@ -130,7 +130,7 @@ func TestBackendService_Template(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			conf := &BackendService{
-				svc: &svc{
+				wkld: &wkld{
 					name: aws.StringValue(testBackendSvcManifest.Name),
 					env:  testEnvName,
 					app:  testAppName,
@@ -156,7 +156,7 @@ func TestBackendService_Template(t *testing.T) {
 func TestBackendService_Parameters(t *testing.T) {
 	// GIVEN
 	conf := &BackendService{
-		svc: &svc{
+		wkld: &wkld{
 			name: aws.StringValue(testBackendSvcManifest.Name),
 			env:  testEnvName,
 			app:  testAppName,
@@ -175,19 +175,19 @@ func TestBackendService_Parameters(t *testing.T) {
 	// THEN
 	require.ElementsMatch(t, []*cloudformation.Parameter{
 		{
-			ParameterKey:   aws.String(ServiceAppNameParamKey),
+			ParameterKey:   aws.String(WorkloadAppNameParamKey),
 			ParameterValue: aws.String("phonetool"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceEnvNameParamKey),
+			ParameterKey:   aws.String(WorkloadEnvNameParamKey),
 			ParameterValue: aws.String("test"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceNameParamKey),
+			ParameterKey:   aws.String(WorkloadNameParamKey),
 			ParameterValue: aws.String("frontend"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceContainerImageParamKey),
+			ParameterKey:   aws.String(WorkloadContainerImageParamKey),
 			ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
 		},
 		{
@@ -195,23 +195,23 @@ func TestBackendService_Parameters(t *testing.T) {
 			ParameterValue: aws.String("8080"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceTaskCPUParamKey),
+			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),
 			ParameterValue: aws.String("256"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceTaskMemoryParamKey),
+			ParameterKey:   aws.String(WorkloadTaskMemoryParamKey),
 			ParameterValue: aws.String("512"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceTaskCountParamKey),
+			ParameterKey:   aws.String(WorkloadTaskCountParamKey),
 			ParameterValue: aws.String("1"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceLogRetentionParamKey),
+			ParameterKey:   aws.String(WorkloadLogRetentionParamKey),
 			ParameterValue: aws.String("30"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceAddonsTemplateURLParamKey),
+			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 			ParameterValue: aws.String(""),
 		},
 	}, params)
