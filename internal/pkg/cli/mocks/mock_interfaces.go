@@ -4127,17 +4127,17 @@ func (m *Mockec2Client) EXPECT() *Mockec2ClientMockRecorder {
 	return m.recorder
 }
 
-// VPCWithDNSSupport mocks base method
-func (m *Mockec2Client) VPCWithDNSSupport(vpcID string) (bool, error) {
+// HasDNSSupport mocks base method
+func (m *Mockec2Client) HasDNSSupport(vpcID string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VPCWithDNSSupport", vpcID)
+	ret := m.ctrl.Call(m, "HasDNSSupport", vpcID)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// VPCWithDNSSupport indicates an expected call of VPCWithDNSSupport
-func (mr *Mockec2ClientMockRecorder) VPCWithDNSSupport(vpcID interface{}) *gomock.Call {
+// HasDNSSupport indicates an expected call of HasDNSSupport
+func (mr *Mockec2ClientMockRecorder) HasDNSSupport(vpcID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VPCWithDNSSupport", reflect.TypeOf((*Mockec2Client)(nil).VPCWithDNSSupport), vpcID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasDNSSupport", reflect.TypeOf((*Mockec2Client)(nil).HasDNSSupport), vpcID)
 }

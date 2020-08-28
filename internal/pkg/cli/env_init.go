@@ -369,14 +369,14 @@ func (o *initEnvOpts) askImportResources() error {
 	if o.ec2Client == nil {
 		o.ec2Client = ec2.New(o.sess)
 	}
-	dnsSupport, err := o.ec2Client.VPCWithDNSSupport(o.ImportVPC.ID)
+	dnsSupport, err := o.ec2Client.HasDNSSupport(o.ImportVPC.ID)
 	if err != nil {
 		return fmt.Errorf("check if VPC %s has DNS support enabled: %w", o.ImportVPC.ID, err)
 	}
 	if !dnsSupport {
-		log.Warningln(`Looks like you're creating an environment using a VPC with DNS support disabled.
-However, currently Copilot will not be able to deploy a service then.
-We recommend using VPC with enabled DNS. To learn more about the issue:
+		log.Errorln(`Looks like you're creating an environment using a VPC with DNS support *disabled*.
+Copilot cannot create services in VPCs without DNS support. We recommend enabling this property.
+To learn more about the issue:
 https://aws.amazon.com/premiumsupport/knowledge-center/ecs-pull-container-api-error-ecr/`)
 		return fmt.Errorf("VPC %s has no DNS support enabled", o.ImportVPC.ID)
 	}

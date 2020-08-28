@@ -396,5 +396,5 @@ type credsSelector interface {
 }
 
 type ec2Client interface {
-	VPCWithDNSSupport(vpcID string) (bool, error)
+	HasDNSSupport(vpcID string) (bool, error)
 }

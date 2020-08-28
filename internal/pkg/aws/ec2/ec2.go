@@ -154,14 +154,14 @@ func (c *EC2) ListVPCs() ([]VPC, error) {
 	return vpcs, nil
 }
 
-// VPCWithDNSSupport returns if DNS resolution is enabled for the VPC.
-func (c *EC2) VPCWithDNSSupport(vpcID string) (bool, error) {
+// HasDNSSupport returns if DNS resolution is enabled for the VPC.
+func (c *EC2) HasDNSSupport(vpcID string) (bool, error) {
 	resp, err := c.client.DescribeVpcAttribute(&ec2.DescribeVpcAttributeInput{
 		VpcId:     aws.String(vpcID),
 		Attribute: aws.String(ec2.VpcAttributeNameEnableDnsSupport),
 	})
 	if err != nil {
-		return false, fmt.Errorf("describe attribute for VPC %s: %w", vpcID, err)
+		return false, fmt.Errorf("describe %s attribute for VPC %s: %w", ec2.VpcAttributeNameEnableDnsSupport, vpcID, err)
 	}
 	return aws.BoolValue(resp.EnableDnsSupport.Value), nil
 }

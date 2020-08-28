@@ -430,7 +430,7 @@ func TestEC2_SecurityGroups(t *testing.T) {
 	}
 }
 
-func TestEC2_VPCWithDNSSupport(t *testing.T) {
+func TestEC2_HasDNSSupport(t *testing.T) {
 	testCases := map[string]struct {
 		vpcID string
 
@@ -444,7 +444,7 @@ func TestEC2_VPCWithDNSSupport(t *testing.T) {
 			mockEC2Client: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeVpcAttribute(gomock.Any()).Return(nil, errors.New("some error"))
 			},
-			wantedError: fmt.Errorf("describe attribute for VPC mockVPCID: some error"),
+			wantedError: fmt.Errorf("describe enableDnsSupport attribute for VPC mockVPCID: some error"),
 		},
 		"success": {
 			vpcID: "mockVPCID",
@@ -472,7 +472,7 @@ func TestEC2_VPCWithDNSSupport(t *testing.T) {
 				client: mockAPI,
 			}
 
-			support, err := ec2Client.VPCWithDNSSupport(tc.vpcID)
+			support, err := ec2Client.HasDNSSupport(tc.vpcID)
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
