@@ -42,11 +42,11 @@ type initJobVars struct {
 }
 
 type initJobOpts struct {
-	initJob
+	initJobVars
 
 	// Interfaces to interact with dependencies.
 	fs          afero.Fs
-	ws          manifestWriter
+	ws          svcManifestWriter
 	store       store
 	appDeployer appDeployer
 	prog        progress
@@ -56,7 +56,7 @@ type initJobOpts struct {
 	manifestPath string
 }
 
-func newInitJobOpts(vars initJobvars) (*initJobOpts, error) {
+func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't connect to config store: %w", err)
@@ -110,9 +110,6 @@ func (o *initJobOpts) Ask() error {
 	if err := o.askDockerfile(); err != nil {
 		return err
 	}
-	if err := o.askExtendedConfiguration(); err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -140,7 +137,7 @@ func (o *initJobOpts) Execute() error {
 	if err := o.store.CreateService(&config.Service{
 		App:  o.AppName(),
 		Name: o.Name,
-		Type: o.ServiceType,
+		Type: "Scheduled Job",
 	}); err != nil {
 		return fmt.Errorf("saving service %s: %w", o.Name, err)
 	}
@@ -179,20 +176,7 @@ func (o *initJobOpts) createManifest() (string, error) {
 }
 
 func (o *initJobOpts) newManifest() (encoding.BinaryMarshaler, error) {
-	return o.newScheduledJobManifest()
-
-}
-
-func (o *initJobOpts) newScheduledJobManifest() (*manifest.ScheduledJob, error) {
-	if err != nil {
-		return nil, err
-	}
-	return manifest.NewScheduledJob(manifest.ScheduledJobProps{
-		BaseProps: manifest.ServiceProps{
-			Name:       o.Name,
-			Dockerfile: o.DockerfilePath,
-		},
-	}), nil
+	return &manifest.BackendService{}, nil
 }
 
 func (o *initJobOpts) askJobName() error {
