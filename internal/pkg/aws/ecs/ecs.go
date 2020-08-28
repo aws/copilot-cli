@@ -289,7 +289,7 @@ func (e *ECS) DescribeTasks(cluster string, taskARNs []string) ([]*Task, error) 
 
 // TaskStatus returns the status of the running task.
 func (t *Task) TaskStatus() (*TaskStatus, error) {
-	taskID, err := t.taskID(aws.StringValue(t.TaskArn))
+	taskID, err := TaskID(aws.StringValue(t.TaskArn))
 	if err != nil {
 		return nil, err
 	}
@@ -321,19 +321,6 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 		StoppedAt:     stoppedAt,
 		StoppedReason: stoppedReason,
 	}, nil
-}
-
-// taskID parses the task ARN and returns the task ID.
-// For example: arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d
-// becomes 4082490ee6c245e09d2145010aa1ba8d.
-func (t *Task) taskID(taskArn string) (string, error) {
-	parsedArn, err := arn.Parse(taskArn)
-	if err != nil {
-		return "", err
-	}
-	resources := strings.Split(parsedArn.Resource, "/")
-	taskID := resources[len(resources)-1]
-	return taskID, nil
 }
 
 // imageDigest returns the short image digest.
@@ -396,4 +383,18 @@ func (s *ServiceArn) ServiceName() (string, error) {
 		return "", fmt.Errorf("cannot parse resource for ARN %s", serviceArn)
 	}
 	return resources[2], nil
+}
+
+// TaskID parses the task ARN and returns the task ID.
+// For example: arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d,
+// arn:aws:ecs:us-west-2:123456789:task/4082490ee6c245e09d2145010aa1ba8d
+// return 4082490ee6c245e09d2145010aa1ba8d.
+func TaskID(taskARN string) (string, error) {
+	parsedARN, err := arn.Parse(taskARN)
+	if err != nil {
+		return "", fmt.Errorf("parse ECS task ARN: %w", err)
+	}
+	resources := strings.Split(parsedARN.Resource, "/")
+	taskID := resources[len(resources)-1]
+	return taskID, nil
 }

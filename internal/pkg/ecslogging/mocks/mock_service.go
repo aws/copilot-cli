@@ -34,21 +34,16 @@ func (m *MocklogGetter) EXPECT() *MocklogGetterMockRecorder {
 }
 
 // LogEvents mocks base method
-func (m *MocklogGetter) LogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error) {
+func (m *MocklogGetter) LogEvents(opts cloudwatchlogs.LogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{logGroupName, streamLastEventTime}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "LogEvents", varargs...)
+	ret := m.ctrl.Call(m, "LogEvents", opts)
 	ret0, _ := ret[0].(*cloudwatchlogs.LogEventsOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // LogEvents indicates an expected call of LogEvents
-func (mr *MocklogGetterMockRecorder) LogEvents(logGroupName, streamLastEventTime interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MocklogGetterMockRecorder) LogEvents(opts interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{logGroupName, streamLastEventTime}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogEvents", reflect.TypeOf((*MocklogGetter)(nil).LogEvents), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogEvents", reflect.TypeOf((*MocklogGetter)(nil).LogEvents), opts)
 }

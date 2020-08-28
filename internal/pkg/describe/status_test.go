@@ -115,7 +115,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 				)
 			},
 
-			wantedError: fmt.Errorf("get status for task badMockTaskArn: arn: invalid prefix"),
+			wantedError: fmt.Errorf("get status for task badMockTaskArn: parse ECS task ARN: arn: invalid prefix"),
 		},
 		"errors if failed to get CloudWatch alarms": {
 			setupMocks: func(m serviceStatusMocks) {

@@ -9,6 +9,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -19,9 +20,7 @@ const (
 )
 
 type logGetter interface {
-	LogEvents(logGroupName string,
-		streamLastEventTime map[string]int64,
-		opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
+	LogEvents(opts cloudwatchlogs.LogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
 }
 
 // ServiceClient retrieves the logs of an Amazon ECS service.
@@ -35,8 +34,8 @@ type ServiceClient struct {
 type WriteLogEventsOpts struct {
 	Follow    bool
 	Limit     int
-	StartTime int64
-	EndTime   int64
+	StartTime *int64
+	EndTime   *int64
 	// OnEvents is a handler that's invoked when logs are retrieved from the service.
 	OnEvents func(w io.Writer, logs []HumanJSONStringer) error
 }
@@ -53,12 +52,15 @@ func NewServiceClient(sess *session.Session, app, env, svc string) *ServiceClien
 
 // WriteLogEvents writes service logs.
 func (s *ServiceClient) WriteLogEvents(opts WriteLogEventsOpts) error {
-	logEventsOutput := &cloudwatchlogs.LogEventsOutput{
-		LastEventTime: make(map[string]int64),
+	logEventsOpts := cloudwatchlogs.LogEventsOpts{
+		LogGroup:  s.logGroupName,
+		Limit:     aws.Int64(int64(opts.Limit)),
+		EndTime:   opts.EndTime,
+		StartTime: opts.StartTime,
+		// TODO: Add log filtering by task ID.
 	}
-	var err error
 	for {
-		logEventsOutput, err = s.eventsGetter.LogEvents(s.logGroupName, logEventsOutput.LastEventTime, opts.generateGetLogEventOpts()...)
+		logEventsOutput, err := s.eventsGetter.LogEvents(logEventsOpts)
 		if err != nil {
 			return fmt.Errorf("get task log events for log group %s: %w", s.logGroupName, err)
 		}
@@ -69,22 +71,10 @@ func (s *ServiceClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 			return nil
 		}
 		// for unit test.
-		if logEventsOutput.LastEventTime == nil {
+		if logEventsOutput.StreamLastEventTime == nil {
 			return nil
 		}
+		logEventsOpts.StreamLastEventTime = logEventsOutput.StreamLastEventTime
 		time.Sleep(cloudwatchlogs.SleepDuration)
 	}
-}
-
-func (w *WriteLogEventsOpts) generateGetLogEventOpts() []cloudwatchlogs.GetLogEventsOpts {
-	opts := []cloudwatchlogs.GetLogEventsOpts{
-		cloudwatchlogs.WithLimit(w.Limit),
-	}
-	if w.StartTime != 0 {
-		opts = append(opts, cloudwatchlogs.WithStartTime(w.StartTime))
-	}
-	if w.EndTime != 0 {
-		opts = append(opts, cloudwatchlogs.WithEndTime(w.EndTime))
-	}
-	return opts
 }
