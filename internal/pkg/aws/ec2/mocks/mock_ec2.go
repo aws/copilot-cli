@@ -77,3 +77,18 @@ func (mr *MockapiMockRecorder) DescribeVpcs(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeVpcs", reflect.TypeOf((*Mockapi)(nil).DescribeVpcs), input)
 }
+
+// DescribeVpcAttribute mocks base method
+func (m *Mockapi) DescribeVpcAttribute(input *ec2.DescribeVpcAttributeInput) (*ec2.DescribeVpcAttributeOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeVpcAttribute", input)
+	ret0, _ := ret[0].(*ec2.DescribeVpcAttributeOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeVpcAttribute indicates an expected call of DescribeVpcAttribute
+func (mr *MockapiMockRecorder) DescribeVpcAttribute(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeVpcAttribute", reflect.TypeOf((*Mockapi)(nil).DescribeVpcAttribute), input)
+}
