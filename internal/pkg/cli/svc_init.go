@@ -319,7 +319,7 @@ func (o *initSvcOpts) askDockerfile() error {
 	if err != nil && strings.HasPrefix(err.Error(), "no Dockerfiles found") {
 		sel, err = o.prompt.Get(
 			fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
-			fmt.Sprintf(svcInitDockerfilePathHelpPrompt),
+			svcInitDockerfilePathHelpPrompt,
 			validatePath,
 			prompt.WithFinalMessage("Path to Dockerfile:"))
 		if err != nil {

@@ -201,7 +201,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, "Dockerfile", wantedSvcName)), gomock.Eq(fmt.Sprintf(svcInitDockerfilePathHelpPrompt)), gomock.Any(), gomock.Any()).
+				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, "Dockerfile", wantedSvcName)), gomock.Eq(svcInitDockerfilePathHelpPrompt), gomock.Any(), gomock.Any()).
 					Return("frontend/Dockerfile", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
@@ -215,7 +215,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, "Dockerfile", wantedSvcName)), gomock.Eq(fmt.Sprintf(svcInitDockerfilePathHelpPrompt)), gomock.Any(), gomock.Any()).
+				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, "Dockerfile", wantedSvcName)), gomock.Eq(svcInitDockerfilePathHelpPrompt), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
