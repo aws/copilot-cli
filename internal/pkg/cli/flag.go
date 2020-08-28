@@ -142,7 +142,7 @@ Defaults to all logs. Only one of start-time / since may be used.`
 Defaults to all logs. Only one of start-time / since may be used.`
 	endTimeFlagDescription = `Optional. Only return logs before a specific date (RFC3339).
 Defaults to all logs. Only one of end-time / follow may be used.`
-	tasksLogsFlagDescription = "Optional. Only return logs for specific tasks."
+	tasksLogsFlagDescription = "Optional. Only return logs from specific task IDs."
 
 	deployTestFlagDescription        = `Deploy your service to a "test" environment.`
 	githubURLFlagDescription         = "GitHub repository URL for your service."
