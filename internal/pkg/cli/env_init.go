@@ -30,6 +30,9 @@ import (
 )
 
 const (
+	envInitAppNamePrompt     = "Which application is the environment in?"
+	envInitAppNameHelpPrompt = "An application is a collection of related services."
+	
 	envInitNamePrompt              = "What is your environment's name?"
 	envInitNameHelpPrompt          = "A unique identifier for an environment (e.g. dev, test, prod)."
 	envInitDefaultEnvConfirmPrompt = `Would you like to use the default configuration for a new production environment?
@@ -201,7 +204,7 @@ func (o *initEnvOpts) Validate() error {
 // Ask asks for fields that are required but not passed in.
 func (o *initEnvOpts) Ask() error {
 	if o.AppName() == "" {
-		name, err := o.selApp.Application(appShowNamePrompt, appShowNameHelpPrompt)
+		name, err := o.selApp.Application(envInitAppNamePrompt, envInitAppNameHelpPrompt)
 		if err != nil {
 			return fmt.Errorf("select application: %w", err)
 		}
