@@ -187,14 +187,11 @@ func (o *initEnvOpts) Validate() error {
 			return err
 		}
 	}
-
-	if o.AppName() == "" {
-		existingApps, _ := o.store.ListApplications()
-		if len(existingApps) == 0 {
-			return fmt.Errorf("no application found: run %s or %s into your workspace please", color.HighlightCode("app init"), color.HighlightCode("cd"))
+	if o.AppName() != "" {
+		if err := o.checkExist(o.AppName()); err != nil {
+			return err
 		}
 	}
-
 	if err := o.validateCustomizedResources(); err != nil {
 		return err
 	}
@@ -271,6 +268,15 @@ func (o *initEnvOpts) Execute() error {
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
 func (o *initEnvOpts) RecommendedActions() []string {
+	return nil
+}
+
+// checkExist fetches an application by name. If it can't be found, return a ErrNoSuchApplication
+func (o *initEnvOpts) checkExist(name string) error {
+	_, err := o.store.GetApplication(name)
+	if err != nil {
+		return fmt.Errorf("get application %s: %w", name, err)
+	}
 	return nil
 }
 
