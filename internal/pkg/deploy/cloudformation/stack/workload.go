@@ -144,7 +144,7 @@ func (w *wkld) addonsOutputs() (*template.ServiceNestedStackOpts, error) {
 	if err != nil {
 		var noAddonsErr *addon.ErrDirNotExist
 		if !errors.As(err, &noAddonsErr) {
-			return nil, fmt.Errorf("generate addons template for service %s: %w", w.name, err)
+			return nil, fmt.Errorf("generate addons template for %s: %w", w.name, err)
 		}
 		return nil, nil // Addons directory does not exist, so there are no outputs and error.
 	}
