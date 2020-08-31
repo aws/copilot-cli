@@ -27,7 +27,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				for _, name := range commonWorkloadCFTemplateNames {
 					baseContent += fmt.Sprintf(`{{include "%s" . | indent 2}}`+"\n", name)
 				}
-				mockBox.AddString("workloads/backend/cf.yml", baseContent)
+				mockBox.AddString("workloads/services/backend/cf.yml", baseContent)
 				mockBox.AddString("workloads/common/cf/loggroup.yml", "loggroup")
 				mockBox.AddString("workloads/common/cf/envvars.yml", "envvars")
 				mockBox.AddString("workloads/common/cf/executionrole.yml", "executionrole")

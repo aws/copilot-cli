@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	lbWebSvcManifestPath = "workloads/lb-web/manifest.yml"
+	lbWebSvcManifestPath = "workloads/services/lb-web/manifest.yml"
 
 	// LogRetentionInDays is the default log retention time in days.
 	LogRetentionInDays = 30

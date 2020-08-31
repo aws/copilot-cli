@@ -13,8 +13,12 @@ import (
 
 // Paths of workload cloudformation templates under templates/workloads/.
 const (
-	fmtWkldCFTemplatePath       = "workloads/%s/cf.yml"
+	fmtWkldCFTemplatePath       = "workloads/%s/%s/cf.yml"
 	fmtWkldCommonCFTemplatePath = "workloads/common/cf/%s.yml"
+)
+
+const (
+	servicesDirName = "services"
 )
 
 var (
@@ -94,7 +98,7 @@ func (t *Template) ParseBackendService(data ServiceOpts) (*Content, error) {
 
 // parseSvc parses a service's CloudFormation template with the specified data object and returns its content.
 func (t *Template) parseSvc(name string, data interface{}, options ...ParseOption) (*Content, error) {
-	tpl, err := t.parse("base", fmt.Sprintf(fmtWkldCFTemplatePath, name), options...)
+	tpl, err := t.parse("base", fmt.Sprintf(fmtWkldCFTemplatePath, servicesDirName, name), options...)
 	if err != nil {
 		return nil, err
 	}
