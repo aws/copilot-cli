@@ -68,7 +68,7 @@ func TestBackendService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				svc.addons = mockTemplater{err: errors.New("some error")}
 			},
-			wantedErr: fmt.Errorf("generate addons template for service %s: %w", aws.StringValue(testBackendSvcManifest.Name), errors.New("some error")),
+			wantedErr: fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testBackendSvcManifest.Name), errors.New("some error")),
 		},
 		"failed parsing sidecars template": {
 			manifest: badTestBackendSvcManifest,

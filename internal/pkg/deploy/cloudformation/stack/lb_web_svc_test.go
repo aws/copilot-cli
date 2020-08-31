@@ -117,7 +117,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				c.wkld.addons = addons
 			},
 			wantedTemplate: "",
-			wantedError:    fmt.Errorf("generate addons template for service %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
+			wantedError:    fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
 		},
 		"failed parsing svc template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
