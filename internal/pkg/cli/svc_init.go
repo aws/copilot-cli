@@ -5,6 +5,7 @@ package cli
 
 import (
 	"encoding"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -307,27 +308,15 @@ func (o *initSvcOpts) askSvcName() error {
 }
 
 // askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
-// If the user chooses to enter a custom path, then we prompt them for the path.
 func (o *initSvcOpts) askDockerfile() error {
 	if o.DockerfilePath != "" {
 		return nil
 	}
 
 	dockerfiles, err := listDockerfiles(o.fs, ".")
-	// If no Dockerfiles are found in current directory or subdirectory one level down, prompt user.
+	// If Dockerfiles are found in the current directory or subdirectory one level down, ask the user to select one.
 	var sel string
-	if err != nil && strings.HasPrefix(err.Error(), "no Dockerfiles found") {
-		sel, err = o.prompt.Get(
-			fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
-			svcInitDockerfilePathHelpPrompt,
-			validatePath,
-			prompt.WithFinalMessage("Path to Dockerfile:"))
-		if err != nil {
-			return fmt.Errorf("get custom path: %w", err)
-		}
-	} else if err != nil {
-		return err
-	} else {
+	if err == nil {
 		sel, err = o.prompt.SelectOne(
 			fmt.Sprintf(fmtSvcInitDockerfilePrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
 			svcInitDockerfileHelpPrompt,
@@ -337,6 +326,19 @@ func (o *initSvcOpts) askDockerfile() error {
 		if err != nil {
 			return fmt.Errorf("select Dockerfile: %w", err)
 		}
+	}
+	var notExistErr *dockerfile.ErrDockerfileNotFound
+	if !errors.As(err, &notExistErr) {
+		return err
+	}
+	// If no Dockerfiles were found, prompt user for custom path.
+	sel, err = o.prompt.Get(
+		fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
+		svcInitDockerfilePathHelpPrompt,
+		validatePath,
+		prompt.WithFinalMessage("Path to Dockerfile:"))
+	if err != nil {
+		return fmt.Errorf("get custom path: %w", err)
 	}
 	o.DockerfilePath = sel
 

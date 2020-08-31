@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+
 	"github.com/spf13/afero"
 )
 
@@ -51,7 +53,7 @@ func listDockerfiles(fs afero.Fs, dir string) ([]string, error) {
 		}
 	}
 	if len(directories) == 0 {
-		return nil, fmt.Errorf("no Dockerfiles found within %s or a sub-directory level below", dir)
+		return nil, &dockerfile.ErrDockerfileNotFound{}
 	}
 	sort.Strings(directories)
 	dockerfiles := make([]string, 0, len(directories))

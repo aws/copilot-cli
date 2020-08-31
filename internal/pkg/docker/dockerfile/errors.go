@@ -24,3 +24,12 @@ type ErrNoExpose struct {
 func (e ErrNoExpose) Error() string {
 	return fmt.Sprintf("no EXPOSE statements in Dockerfile %s", e.Dockerfile)
 }
+
+// ErrDockerfileNotFound occurs when a Dockerfile cannot be found in the current working directory or subdirectory
+// one level down.
+type ErrDockerfileNotFound struct {
+}
+
+func (e *ErrDockerfileNotFound) Error() string {
+	return fmt.Sprintf("no Dockerfiles found within current directory or sub-directory one level below")
+}
