@@ -47,6 +47,8 @@ type templater interface {
 	Template() (string, error)
 }
 
+// wkld represents a containerized workload running on Amazon ECS.
+// A workload can be a long-running service, an ephemeral task, or a periodic task.
 type wkld struct {
 	name string
 	env  string
