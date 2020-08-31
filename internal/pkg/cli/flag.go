@@ -80,6 +80,10 @@ const (
 	secretAccessKeyFlag = "aws-secret-access-key"
 	sessionTokenFlag    = "aws-session-token"
 	regionFlag          = "region"
+
+	retriesFlag  = "retries"
+	timeoutFlag  = "timeout"
+	scheduleFlag = "schedule"
 )
 
 // Short flag names.
@@ -193,4 +197,8 @@ Tasks with the same group name share the same set of resources.
 	secretAccessKeyFlagDescription = "Optional. An AWS secret access key."
 	sessionTokenFlagDescription    = "Optional. An AWS session token for temporary credentials."
 	envRegionTokenFlagDescription  = "Optional. An AWS region where the environment will be created."
+
+	retriesFlagDescription  = "Optional. The number of times to try restarting the job on a failure."
+	timoutFlagDescription   = "Optional. The total execution time for the task, including retries."
+	scheduleFlagDescription = "The schedule on which to run this job. Can be specified using rate or cron syntax. (e.g. `20 minutes`, `@DAILY`. `0 * * * * *`)"
 )
