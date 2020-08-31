@@ -92,7 +92,7 @@ func (o *initJobOpts) Ask() error {
 	return nil
 }
 
-// Execute writes the service's manifest file and stores the service in SSM.
+// Execute writes the job's manifest file and stores the name in SSM.
 func (o *initJobOpts) Execute() error {
 	return nil
 }
@@ -107,7 +107,7 @@ func (o *initJobOpts) RecommendedActions() []string {
 	}
 }
 
-// BuildJobInitCmd builds the command for creating a new service.
+// BuildJobInitCmd builds the command for creating a new job.
 func BuildJobInitCmd() *cobra.Command {
 	vars := initJobVars{
 		GlobalOpts: NewGlobalOpts(),
