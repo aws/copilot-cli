@@ -145,8 +145,8 @@ func BuildJobInitCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.Name, nameFlag, nameFlagShort, "", jobFlagDescription)
 	cmd.Flags().StringVarP(&vars.DockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVar(&vars.Timeout, timeoutFlag, "", timeoutFlagDescription)
-	cmd.Flags().Uint16Var(&vars.Retries, retriesFlag, "", retriesFlagDescription)
-	cmd.Flags().StringVar(&vars.Schedule, scheduleFlag, "", scheduleFlagDescription)
+	cmd.Flags().Uint16Var(&vars.Retries, retriesFlag, 0, retriesFlagDescription)
+	cmd.Flags().StringVarP(&vars.Schedule, scheduleFlag, scheduleFlagShort, "", scheduleFlagDescription)
 
 	requiredFlags := pflag.NewFlagSet("Required Flags", pflag.ContinueOnError)
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
