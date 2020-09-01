@@ -4,15 +4,11 @@
 package cli
 
 import (
-	"errors"
-
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
-var errNoAppInWorkspace = errors.New("could not find an application attached to this workspace, please run `app init` first")
 
 // BuildJobCmd is the top level command for jobs.
 func BuildJobCmd() *cobra.Command {
