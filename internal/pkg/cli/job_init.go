@@ -36,7 +36,7 @@ type initJobVars struct {
 	Name           string
 	DockerfilePath string
 	Timeout        string
-	Retries        uint16
+	Retries        int
 	Schedule       string
 }
 
@@ -144,9 +144,9 @@ func BuildJobInitCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&vars.Name, nameFlag, nameFlagShort, "", jobFlagDescription)
 	cmd.Flags().StringVarP(&vars.DockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
-	cmd.Flags().StringVar(&vars.Timeout, timeoutFlag, "", timeoutFlagDescription)
-	cmd.Flags().Uint16Var(&vars.Retries, retriesFlag, 0, retriesFlagDescription)
 	cmd.Flags().StringVarP(&vars.Schedule, scheduleFlag, scheduleFlagShort, "", scheduleFlagDescription)
+	cmd.Flags().StringVar(&vars.Timeout, timeoutFlag, "", timeoutFlagDescription)
+	cmd.Flags().IntVar(&vars.Retries, retriesFlag, 0, retriesFlagDescription)
 
 	cmd.Annotations = map[string]string{
 		"group": group.Develop,
