@@ -8,7 +8,6 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -28,24 +27,25 @@ type deployJobVars struct {
 type deployJobOpts struct {
 	deployJobVars
 
-	store              store
-	ws                 wsSvcDirReader
-	imageBuilderPusher imageBuilderPusher
-	unmarshal          func(in []byte) (interface{}, error)
-	s3                 artifactUploader
-	cmd                runner
-	addons             templater
-	appCFN             appResourcesGetter
-	jobCFN             cloudformation.CloudFormation
-	sessProvider       sessionProvider
+	store        store
+	ws           wsSvcDirReader
+	unmarshal    func(in []byte) (interface{}, error)
+	cmd          runner
+	sessProvider sessionProvider
 
 	spinner progress
 	sel     wsSelector
 
-	// cached variables
-	targetApp         *config.Application
-	targetEnvironment *config.Environment
-	targetWorkload    *config.Service
+	// imageBuilderPusher imageBuilderPusher
+	// s3           artifactUploader
+	// addons       templater
+	// appCFN       appResourcesGetter
+	// jobCFN       cloudformation.CloudFormation
+
+	// // cached variables
+	// targetApp         *config.Application
+	// targetEnvironment *config.Environment
+	// targetWorkload    *config.Service
 }
 
 func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
