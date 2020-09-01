@@ -85,7 +85,11 @@ func (s *BackendService) Template() (string, error) {
 
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
-	return append(s.wkld.Parameters(), []*cloudformation.Parameter{
+	svcParams, err := s.wkld.Parameters()
+	if err != nil {
+		return nil, err
+	}
+	return append(svcParams, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),
 			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.Image.Port)), 10)),

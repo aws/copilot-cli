@@ -66,7 +66,16 @@ func (w *wkld) StackName() string {
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
-func (w *wkld) Parameters() []*cloudformation.Parameter {
+func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
+	desiredCount := w.tc.Count.TaskCount
+	// If auto scaling is configured, override the desired count value.
+	if !w.tc.Count.Autoscaling.IsEmpty() {
+		min, _, err := w.tc.Count.Autoscaling.Range.Value()
+		if err != nil {
+			return nil, fmt.Errorf("parse task count value %s: %w", string(w.tc.Count.Autoscaling.Range), err)
+		}
+		desiredCount = aws.Int(min)
+	}
 	return []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(WorkloadAppNameParamKey),
@@ -94,7 +103,7 @@ func (w *wkld) Parameters() []*cloudformation.Parameter {
 		},
 		{
 			ParameterKey:   aws.String(WorkloadTaskCountParamKey),
-			ParameterValue: aws.String(strconv.Itoa(*w.tc.Count)),
+			ParameterValue: aws.String(strconv.Itoa(*desiredCount)),
 		},
 		{
 			ParameterKey:   aws.String(WorkloadLogRetentionParamKey),
@@ -104,7 +113,7 @@ func (w *wkld) Parameters() []*cloudformation.Parameter {
 			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 			ParameterValue: aws.String(w.rc.AddonsTemplateURL),
 		},
-	}
+	}, nil
 }
 
 // Tags returns the list of tags to apply to the CloudFormation stack.
