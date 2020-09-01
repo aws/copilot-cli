@@ -36,7 +36,7 @@ type loadBalancedWebSvcReadParser interface {
 
 // LoadBalancedWebService represents the configuration needed to create a CloudFormation stack from a load balanced web service manifest.
 type LoadBalancedWebService struct {
-	*svc
+	*wkld
 	manifest     *manifest.LoadBalancedWebService
 	httpsEnabled bool
 
@@ -55,7 +55,7 @@ func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app st
 		return nil, fmt.Errorf("apply environment %s override: %s", env, err)
 	}
 	return &LoadBalancedWebService{
-		svc: &svc{
+		wkld: &wkld{
 			name:   aws.StringValue(mft.Name),
 			env:    env,
 			app:    app,
@@ -136,7 +136,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 	if err != nil {
 		return nil, err
 	}
-	return append(s.svc.Parameters(), []*cloudformation.Parameter{
+	return append(s.wkld.Parameters(), []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
 			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.Image.Port)), 10)),
@@ -167,5 +167,5 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability to users.
 func (s *LoadBalancedWebService) SerializedParameters() (string, error) {
-	return s.svc.templateConfiguration(s)
+	return s.wkld.templateConfiguration(s)
 }
