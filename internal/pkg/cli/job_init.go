@@ -120,7 +120,7 @@ func BuildJobInitCmd() *cobra.Command {
   /code $ copilot job init --name reaper --dockerfile ./frontend/Dockerfile --rate "1 day"
 
   Create a "report-generator" scheduled task with retries.
-  /code $ copilot job init --name report-generator --rate "1 day" --retries 3 --timeout `,
+  /code $ copilot job init --name report-generator --rate "@monthly" --retries 3 --timeout 900s`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitJobOpts(vars)
 			if err != nil {
