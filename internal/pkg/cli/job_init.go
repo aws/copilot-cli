@@ -18,12 +18,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	fmtJobInitNameHelpPrompt = `The name will uniquely identify this job within your app %s.
-Deployed resources (such as your job, logs) will contain this job's name and be tagged with it.`
+// var (
+// 	fmtJobInitNameHelpPrompt = `The name will uniquely identify this job within your app %s.
+// Deployed resources (such as your job, logs) will contain this job's name and be tagged with it.`
 
-	jobInitDockerfileHelpPrompt = "Dockerfile to use for building your job's container image."
-)
+// 	jobInitDockerfileHelpPrompt = "Dockerfile to use for building your job's container image."
+// )
 
 // const (
 // 	fmtAddJobToAppStart    = "Creating ECR repositories for job %s."
