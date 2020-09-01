@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/ecslogging"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
 	"github.com/golang/mock/gomock"
@@ -258,20 +259,37 @@ func TestSvcLogs_Ask(t *testing.T) {
 }
 
 func TestSvcLogs_Execute(t *testing.T) {
+	mockStartTime := int64(123456789)
+	mockEndTime := int64(987654321)
 	testCases := map[string]struct {
-		inputSvc string
+		inputSvc  string
+		follow    bool
+		limit     int
+		endTime   int64
+		startTime int64
+		taskIDs   []string
 
 		mocklogsSvc func(ctrl *gomock.Controller) logEventsWriter
 
 		wantedError error
 	}{
 		"success": {
-			inputSvc: "mockSvc",
+			inputSvc:  "mockSvc",
+			endTime:   mockEndTime,
+			startTime: mockStartTime,
+			follow:    true,
+			limit:     100,
+			taskIDs:   []string{"mockTaskID"},
 
 			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
 				m := mocks.NewMocklogEventsWriter(ctrl)
-				m.EXPECT().WriteLogEvents(gomock.Any()).
-					Return(nil)
+				m.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param ecslogging.WriteLogEventsOpts) {
+					require.Equal(t, param.TaskIDs, []string{"mockTaskID"})
+					require.Equal(t, param.EndTime, &mockEndTime)
+					require.Equal(t, param.StartTime, &mockStartTime)
+					require.Equal(t, param.Follow, true)
+					require.Equal(t, param.Limit, 100)
+				}).Return(nil)
 
 				return m
 			},
@@ -301,7 +319,12 @@ func TestSvcLogs_Execute(t *testing.T) {
 			svcLogs := &svcLogsOpts{
 				svcLogsVars: svcLogsVars{
 					svcName: tc.inputSvc,
+					follow:  tc.follow,
+					limit:   tc.limit,
+					taskIDs: tc.taskIDs,
 				},
+				startTime:   &tc.startTime,
+				endTime:     &tc.endTime,
 				initLogsSvc: func() error { return nil },
 				logsSvc:     tc.mocklogsSvc(ctrl),
 			}

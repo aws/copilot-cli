@@ -9,6 +9,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -36,6 +37,7 @@ type svcLogsVars struct {
 	envName          string
 	humanStartTime   string
 	humanEndTime     string
+	taskIDs          []string
 	since            time.Duration
 	*GlobalOpts
 }
@@ -44,8 +46,8 @@ type svcLogsOpts struct {
 	svcLogsVars
 
 	// internal states
-	startTime int64
-	endTime   int64
+	startTime *int64
+	endTime   *int64
 
 	w           io.Writer
 	configStore store
@@ -120,7 +122,7 @@ func (o *svcLogsOpts) Validate() error {
 		if err != nil {
 			return fmt.Errorf(`invalid argument %s for "--start-time" flag: %w`, o.humanStartTime, err)
 		}
-		o.startTime = startTime
+		o.startTime = aws.Int64(startTime)
 	}
 
 	if o.humanEndTime != "" {
@@ -128,7 +130,7 @@ func (o *svcLogsOpts) Validate() error {
 		if err != nil {
 			return fmt.Errorf(`invalid argument %s for "--end-time" flag: %w`, o.humanEndTime, err)
 		}
-		o.endTime = endTime
+		o.endTime = aws.Int64(endTime)
 	}
 
 	if o.limit < cwGetLogEventsLimitMin || o.limit > cwGetLogEventsLimitMax {
@@ -160,6 +162,7 @@ func (o *svcLogsOpts) Execute() error {
 		Limit:     o.limit,
 		EndTime:   o.endTime,
 		StartTime: o.startTime,
+		TaskIDs:   o.taskIDs,
 		OnEvents:  eventsWriter,
 	})
 	if err != nil {
@@ -190,10 +193,10 @@ func (o *svcLogsOpts) askSvcEnvName() error {
 	return nil
 }
 
-func (o *svcLogsOpts) parseSince() int64 {
+func (o *svcLogsOpts) parseSince() *int64 {
 	sinceSec := int64(o.since.Round(time.Second).Seconds())
 	timeNow := time.Now().Add(time.Duration(-sinceSec) * time.Second)
-	return timeNow.Unix() * 1000
+	return aws.Int64(timeNow.Unix() * 1000)
 }
 
 func (o *svcLogsOpts) parseRFC3339(timeStr string) (int64, error) {
@@ -219,7 +222,11 @@ func BuildSvcLogsCmd() *cobra.Command {
   Displays logs in the last hour.
   /code $ copilot svc logs --since 1h
   Displays logs from 2006-01-02T15:04:05 to 2006-01-02T15:05:05.
-  /code $ copilot svc logs --start-time 2006-01-02T15:04:05+00:00 --end-time 2006-01-02T15:05:05+00:00`,
+  /code $ copilot svc logs --start-time 2006-01-02T15:04:05+00:00 --end-time 2006-01-02T15:05:05+00:00
+	Displays logs from specific task IDs.
+  /code $ copilot svc logs --tasks 709c7eae05f947f6861b150372ddc443,1de57fd63c6a4920ac416d02add891b9
+  Displays logs in real time.
+  /code $ copilot svc logs --follow`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newSvcLogOpts(vars)
 			if err != nil {
@@ -243,5 +250,6 @@ func BuildSvcLogsCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
 	cmd.Flags().DurationVar(&vars.since, sinceFlag, 0, sinceFlagDescription)
 	cmd.Flags().IntVar(&vars.limit, limitFlag, 10, limitFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.taskIDs, tasksFlag, nil, tasksLogsFlagDescription)
 	return cmd
 }
