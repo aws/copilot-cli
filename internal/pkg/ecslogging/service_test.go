@@ -22,6 +22,7 @@ type serviceLogsMocks struct {
 func TestServiceLogs_WriteServiceLogEvents(t *testing.T) {
 	const (
 		mockLogGroupName     = "mockLogGroup"
+		mockLogStreamPrefix  = "mockLogStreamPrefix"
 		logEventsHumanString = `firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -
 firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
 firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
@@ -54,6 +55,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 	testCases := map[string]struct {
 		follow     bool
 		jsonOutput bool
+		taskIDs    []string
 		setupMocks func(mocks serviceLogsMocks)
 
 		wantedError   error
@@ -95,10 +97,13 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 			wantedContent: logEventsJSONString,
 		},
 		"success with follow flag": {
-			follow: true,
+			follow:  true,
+			taskIDs: []string{"mockTaskID1", "mockTaskID2"},
 			setupMocks: func(m serviceLogsMocks) {
 				gomock.InOrder(
-					m.logGetter.EXPECT().LogEvents(gomock.Any()).
+					m.logGetter.EXPECT().LogEvents(gomock.Any()).Do(func(param cloudwatchlogs.LogEventsOpts) {
+						require.Equal(t, param.LogStreams, []string{"mockLogStreamPrefix/mockTaskID1", "mockLogStreamPrefix/mockTaskID2"})
+					}).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events:              logEvents,
 							StreamLastEventTime: mockLastEventTime,
@@ -134,9 +139,10 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 
 			b := &bytes.Buffer{}
 			svcLogs := &ServiceClient{
-				logGroupName: mockLogGroupName,
-				eventsGetter: mocklogGetter,
-				w:            b,
+				logGroupName:        mockLogGroupName,
+				logStreamNamePrefix: mockLogStreamPrefix,
+				eventsGetter:        mocklogGetter,
+				w:                   b,
 			}
 
 			// WHEN
@@ -146,6 +152,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 			}
 			err := svcLogs.WriteLogEvents(WriteLogEventsOpts{
 				Follow:   tc.follow,
+				TaskIDs:  tc.taskIDs,
 				OnEvents: logWriter,
 			})
 

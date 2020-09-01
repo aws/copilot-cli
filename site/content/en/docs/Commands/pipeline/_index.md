@@ -1,7 +1,7 @@
 ---
 title: "pipeline"
 linkTitle: "pipeline"
-weight: 5
+weight: 6
 expand: true
 ---
 Commands for pipelines.  
