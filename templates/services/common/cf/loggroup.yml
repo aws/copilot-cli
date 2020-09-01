@@ -1,5 +1,0 @@
-LogGroup:
-  Type: AWS::Logs::LogGroup
-  Properties:
-    LogGroupName: !Join ['', [/copilot/, !Ref AppName, '-', !Ref EnvName, '-', !Ref ServiceName]]
-    RetentionInDays: !Ref LogRetention

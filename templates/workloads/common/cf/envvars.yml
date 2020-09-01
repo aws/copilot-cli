@@ -9,7 +9,7 @@ Environment:
 - Name: COPILOT_ENVIRONMENT_NAME
   Value: !Sub '${EnvName}'
 - Name: COPILOT_SERVICE_NAME
-  Value: !Sub '${ServiceName}'
+  Value: !Sub '${WorkloadName}'
 - Name: COPILOT_LB_DNS
   Value:
     Fn::ImportValue:

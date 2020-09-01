@@ -26,7 +26,7 @@ type backendSvcReadParser interface {
 
 // BackendService represents the configuration needed to create a CloudFormation stack from a backend service manifest.
 type BackendService struct {
-	*svc
+	*wkld
 	manifest *manifest.BackendService
 
 	parser backendSvcReadParser
@@ -44,7 +44,7 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 		return nil, fmt.Errorf("apply environment %s override: %s", env, err)
 	}
 	return &BackendService{
-		svc: &svc{
+		wkld: &wkld{
 			name:   aws.StringValue(mft.Name),
 			env:    env,
 			app:    app,
@@ -85,7 +85,7 @@ func (s *BackendService) Template() (string, error) {
 
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
-	return append(s.svc.Parameters(), []*cloudformation.Parameter{
+	return append(s.wkld.Parameters(), []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),
 			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.Image.Port)), 10)),
@@ -96,5 +96,5 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability to users.
 func (s *BackendService) SerializedParameters() (string, error) {
-	return s.svc.templateConfiguration(s)
+	return s.wkld.templateConfiguration(s)
 }
