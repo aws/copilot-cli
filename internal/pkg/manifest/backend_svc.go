@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	backendSvcManifestPath = "services/backend/manifest.yml"
+	backendSvcManifestPath = "workloads/services/backend/manifest.yml"
 )
 
 // BackendServiceProps represents the configuration needed to create a backend service.
