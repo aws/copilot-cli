@@ -9,34 +9,36 @@ import (
 	"io"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
 const (
-	logGroupNamePattern = "/copilot/%s-%s-%s"
+	fmtSvclogGroupName    = "/copilot/%s-%s-%s"
+	fmtSvcLogStreamPrefix = "copilot/%s"
 )
 
 type logGetter interface {
-	LogEvents(logGroupName string,
-		streamLastEventTime map[string]int64,
-		opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
+	LogEvents(opts cloudwatchlogs.LogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
 }
 
 // ServiceClient retrieves the logs of an Amazon ECS service.
 type ServiceClient struct {
-	logGroupName string
-	eventsGetter logGetter
-	w            io.Writer
+	logGroupName        string
+	logStreamNamePrefix string
+	eventsGetter        logGetter
+	w                   io.Writer
 }
 
 // WriteLogEventsOpts wraps the parameters to call WriteLogEvents.
 type WriteLogEventsOpts struct {
 	Follow    bool
 	Limit     int
-	StartTime int64
-	EndTime   int64
+	StartTime *int64
+	EndTime   *int64
+	TaskIDs   []string
 	// OnEvents is a handler that's invoked when logs are retrieved from the service.
 	OnEvents func(w io.Writer, logs []HumanJSONStringer) error
 }
@@ -45,20 +47,24 @@ type WriteLogEventsOpts struct {
 // The logging client is initialized from the given sess session.
 func NewServiceClient(sess *session.Session, app, env, svc string) *ServiceClient {
 	return &ServiceClient{
-		logGroupName: fmt.Sprintf(logGroupNamePattern, app, env, svc),
-		eventsGetter: cloudwatchlogs.New(sess),
-		w:            log.OutputWriter,
+		logGroupName:        fmt.Sprintf(fmtSvclogGroupName, app, env, svc),
+		logStreamNamePrefix: fmt.Sprintf(fmtSvcLogStreamPrefix, svc),
+		eventsGetter:        cloudwatchlogs.New(sess),
+		w:                   log.OutputWriter,
 	}
 }
 
 // WriteLogEvents writes service logs.
 func (s *ServiceClient) WriteLogEvents(opts WriteLogEventsOpts) error {
-	logEventsOutput := &cloudwatchlogs.LogEventsOutput{
-		LastEventTime: make(map[string]int64),
+	logEventsOpts := cloudwatchlogs.LogEventsOpts{
+		LogGroup:   s.logGroupName,
+		Limit:      aws.Int64(int64(opts.Limit)),
+		EndTime:    opts.EndTime,
+		StartTime:  opts.StartTime,
+		LogStreams: s.logStreams(opts.TaskIDs),
 	}
-	var err error
 	for {
-		logEventsOutput, err = s.eventsGetter.LogEvents(s.logGroupName, logEventsOutput.LastEventTime, opts.generateGetLogEventOpts()...)
+		logEventsOutput, err := s.eventsGetter.LogEvents(logEventsOpts)
 		if err != nil {
 			return fmt.Errorf("get task log events for log group %s: %w", s.logGroupName, err)
 		}
@@ -69,22 +75,17 @@ func (s *ServiceClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 			return nil
 		}
 		// for unit test.
-		if logEventsOutput.LastEventTime == nil {
+		if logEventsOutput.StreamLastEventTime == nil {
 			return nil
 		}
+		logEventsOpts.StreamLastEventTime = logEventsOutput.StreamLastEventTime
 		time.Sleep(cloudwatchlogs.SleepDuration)
 	}
 }
 
-func (w *WriteLogEventsOpts) generateGetLogEventOpts() []cloudwatchlogs.GetLogEventsOpts {
-	opts := []cloudwatchlogs.GetLogEventsOpts{
-		cloudwatchlogs.WithLimit(w.Limit),
+func (s *ServiceClient) logStreams(taskIDs []string) (logStreamName []string) {
+	for _, taskID := range taskIDs {
+		logStreamName = append(logStreamName, fmt.Sprintf("%s/%s", s.logStreamNamePrefix, taskID))
 	}
-	if w.StartTime != 0 {
-		opts = append(opts, cloudwatchlogs.WithStartTime(w.StartTime))
-	}
-	if w.EndTime != 0 {
-		opts = append(opts, cloudwatchlogs.WithEndTime(w.EndTime))
-	}
-	return opts
+	return
 }

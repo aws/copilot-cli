@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/AlecAivazis/survey/v2 v2.1.1
 	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
-	github.com/aws/aws-sdk-go v1.34.9
+	github.com/aws/aws-sdk-go v1.34.13
 	github.com/awslabs/goformation/v4 v4.15.0
 	github.com/briandowns/spinner v1.11.1
 	github.com/dustin/go-humanize v1.0.0
@@ -14,7 +14,7 @@ require (
 	github.com/gobuffalo/packd v1.0.0
 	github.com/gobuffalo/packr/v2 v2.8.0
 	github.com/golang/mock v1.4.4
-	github.com/google/uuid v1.1.1
+	github.com/google/uuid v1.1.2
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c // indirect
 	github.com/imdario/mergo v0.3.9
 	github.com/karrick/godirwalk v1.15.6 // indirect
@@ -34,7 +34,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/xlab/treeprint v1.0.0
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37 // indirect
-	gopkg.in/ini.v1 v1.60.1
+	gopkg.in/ini.v1 v1.60.2
 	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c
 )
 
