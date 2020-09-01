@@ -326,6 +326,8 @@ func (o *initSvcOpts) askDockerfile() error {
 		if err != nil {
 			return fmt.Errorf("select Dockerfile: %w", err)
 		}
+		o.DockerfilePath = sel
+		return nil
 	}
 	var notExistErr *dockerfile.ErrDockerfileNotFound
 	if !errors.As(err, &notExistErr) {
@@ -341,7 +343,6 @@ func (o *initSvcOpts) askDockerfile() error {
 		return fmt.Errorf("get custom path: %w", err)
 	}
 	o.DockerfilePath = sel
-
 	return nil
 }
 

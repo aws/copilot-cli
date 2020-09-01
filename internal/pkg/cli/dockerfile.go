@@ -53,7 +53,9 @@ func listDockerfiles(fs afero.Fs, dir string) ([]string, error) {
 		}
 	}
 	if len(directories) == 0 {
-		return nil, &dockerfile.ErrDockerfileNotFound{}
+		return nil, &dockerfile.ErrDockerfileNotFound{
+			Dir: dir,
+		}
 	}
 	sort.Strings(directories)
 	dockerfiles := make([]string, 0, len(directories))
