@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -15,7 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 var (
@@ -117,10 +117,10 @@ func BuildJobInitCmd() *cobra.Command {
 		Short: "Creates a new scheduled job in an application.",
 		Example: `
   Create a "reaper" scheduled task to run once per day.
-  /code $ copilot job init --name reaper --dockerfile ./frontend/Dockerfile --rate "1 day"
+  /code $ copilot job init --name reaper --dockerfile ./frontend/Dockerfile --schedule "every 2 hours"
 
   Create a "report-generator" scheduled task with retries.
-  /code $ copilot job init --name report-generator --rate "@monthly" --retries 3 --timeout 900s`,
+  /code $ copilot job init --name report-generator --schedule "@monthly" --retries 3 --timeout 900s`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitJobOpts(vars)
 			if err != nil {
@@ -148,9 +148,9 @@ func BuildJobInitCmd() *cobra.Command {
 	cmd.Flags().Uint16Var(&vars.Retries, retriesFlag, 0, retriesFlagDescription)
 	cmd.Flags().StringVarP(&vars.Schedule, scheduleFlag, scheduleFlagShort, "", scheduleFlagDescription)
 
-	requiredFlags := pflag.NewFlagSet("Required Flags", pflag.ContinueOnError)
-	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
-	requiredFlags.AddFlag(cmd.Flags().Lookup(dockerFileFlag))
+	cmd.Annotations = map[string]string{
+		"group": group.Develop,
+	}
 
 	return cmd
 }
