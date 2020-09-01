@@ -81,7 +81,7 @@ func (o *deployJobOpts) Ask() error {
 	return nil
 }
 
-// Execute builds and pushes the container image for the job,
+// Execute builds and pushes the container image for the job.
 func (o *deployJobOpts) Execute() error {
 	return nil
 }
