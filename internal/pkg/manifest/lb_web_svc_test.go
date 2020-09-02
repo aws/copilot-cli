@@ -92,7 +92,9 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(1024),
 						Memory: aws.Int(1024),
-						Count:  aws.Int(1),
+						Count: Count{
+							Value: aws.Int(1),
+						},
 					},
 				},
 			},
@@ -121,7 +123,9 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(1024),
 						Memory: aws.Int(1024),
-						Count:  aws.Int(1),
+						Count: Count{
+							Value: aws.Int(1),
+						},
 					},
 				},
 			},
@@ -150,7 +154,9 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(1024),
 						Memory: aws.Int(1024),
-						Count:  aws.Int(1),
+						Count: Count{
+							Value: aws.Int(1),
+						},
 						Variables: map[string]string{
 							"LOG_LEVEL":      "DEBUG",
 							"DDB_TABLE_NAME": "awards",
@@ -189,8 +195,10 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 							TargetContainer: aws.String("xray"),
 						},
 						TaskConfig: TaskConfig{
-							CPU:   aws.Int(2046),
-							Count: aws.Int(0),
+							CPU: aws.Int(2046),
+							Count: Count{
+								Value: aws.Int(0),
+							},
 							Variables: map[string]string{
 								"DDB_TABLE_NAME": "awards-prod",
 							},
@@ -236,7 +244,9 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(2046),
 						Memory: aws.Int(1024),
-						Count:  aws.Int(0),
+						Count: Count{
+							Value: aws.Int(0),
+						},
 						Variables: map[string]string{
 							"LOG_LEVEL":      "DEBUG",
 							"DDB_TABLE_NAME": "awards-prod",
