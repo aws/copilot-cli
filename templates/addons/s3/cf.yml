@@ -5,7 +5,7 @@ Parameters:
   Env:
     Type: String
     Description: The environment name your service, job, or workflow is being deployed to.
-  Name:
+  Workload:
     Type: String
     Description: The name of the service, job, or workflow being deployed.
 Resources:
@@ -18,7 +18,7 @@ Resources:
         ServerSideEncryptionConfiguration:
         - ServerSideEncryptionByDefault:
             SSEAlgorithm: AES256
-      BucketName: !Sub '${App}-${Env}-${Name}-{{.Name}}'
+      BucketName: !Sub '${App}-${Env}-${Workload}-{{.Name}}'
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true

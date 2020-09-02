@@ -49,7 +49,9 @@ func TestNewBackendSvc(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(256),
 						Memory: aws.Int(512),
-						Count:  aws.Int(1),
+						Count: Count{
+							Value: aws.Int(1),
+						},
 					},
 				},
 			},
@@ -93,7 +95,9 @@ func TestNewBackendSvc(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(256),
 						Memory: aws.Int(512),
-						Count:  aws.Int(1),
+						Count: Count{
+							Value: aws.Int(1),
+						},
 					},
 				},
 			},
@@ -197,7 +201,9 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(256),
-				Count:  aws.Int(1),
+				Count: Count{
+					Value: aws.Int(1),
+				},
 			},
 		},
 	}
@@ -229,7 +235,9 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(256),
-				Count:  aws.Int(1),
+				Count: Count{
+					Value: aws.Int(1),
+				},
 			},
 			Sidecar: Sidecar{
 				Sidecars: map[string]*SidecarConfig{
@@ -249,8 +257,12 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		Environments: map[string]*BackendServiceConfig{
 			"test": {
 				TaskConfig: TaskConfig{
-					Count: aws.Int(0),
-					CPU:   aws.Int(512),
+					Count: Count{
+						Autoscaling: Autoscaling{
+							CPU: aws.String("70%"),
+						},
+					},
+					CPU: aws.Int(512),
 					Variables: map[string]string{
 						"LOG_LEVEL": "",
 					},
@@ -314,7 +326,12 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(512),
 						Memory: aws.Int(256),
-						Count:  aws.Int(0),
+						Count: Count{
+							Value: aws.Int(1),
+							Autoscaling: Autoscaling{
+								CPU: aws.String("70%"),
+							},
+						},
 						Variables: map[string]string{
 							"LOG_LEVEL": "",
 						},
