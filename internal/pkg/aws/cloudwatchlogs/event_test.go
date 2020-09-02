@@ -44,6 +44,12 @@ func TestColorCodeMessage(t *testing.T) {
 			givenColor:   color.Yellow,
 			wantMessage:  fmt.Sprintf("%s something has happened", color.Yellow.Sprint("Warning")),
 		},
+		"should apply color to a fatal code if code is next to special character": {
+			givenMessage: "error: something happened",
+			givenCode:    "error",
+			givenColor:   color.Red,
+			wantMessage:  fmt.Sprintf("%s: something happened", color.Red.Sprint("error")),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

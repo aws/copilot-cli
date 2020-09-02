@@ -7,7 +7,7 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
+	"regexp"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	c "github.com/fatih/color"
@@ -53,15 +53,11 @@ func (l *Event) shortLogStreamName() string {
 }
 
 // colorCodeMessage returns the given message with color applied to every occurence of code
-func colorCodeMessage(message string, code string, givenColor *c.Color) string {
+func colorCodeMessage(message string, code string, colorToApply *c.Color) string {
 	if c.NoColor {
 		return message
 	}
-	words := strings.Split(message, " ")
-	for i, word := range words {
-		if word == code {
-			words[i] = givenColor.Sprint(word)
-		}
-	}
-	return strings.Join(words, " ")
+	pattern := fmt.Sprintf("\\b%s\\b", code)
+	re := regexp.MustCompile(pattern)
+	return re.ReplaceAllString(message, colorToApply.Sprint(code))
 }
