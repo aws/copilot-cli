@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package task
@@ -6,13 +6,14 @@ package task
 import (
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/task/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestNetworkConfigRunner_Run(t *testing.T) {
@@ -24,7 +25,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 		securityGroups []string
 
 		mockClusterGetter func(m *mocks.MockDefaultClusterGetter)
-		mockStarter       func(m *mocks.MockTaskRunner)
+		mockStarter       func(m *mocks.MockRunner)
 		mockVPCGetter     func(m *mocks.MockVPCGetter)
 
 		wantedError error
@@ -40,7 +41,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 				m.EXPECT().SubnetIDs().AnyTimes()
 				m.EXPECT().SecurityGroups().AnyTimes()
 			},
-			mockStarter: func(m *mocks.MockTaskRunner) {
+			mockStarter: func(m *mocks.MockRunner) {
 				m.EXPECT().RunTask(gomock.Any()).Times(0)
 			},
 			wantedError: &errGetDefaultCluster{
@@ -60,7 +61,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			mockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().SubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).Times(0)
 			},
-			mockStarter: func(m *mocks.MockTaskRunner) {
+			mockStarter: func(m *mocks.MockRunner) {
 				m.EXPECT().RunTask(gomock.Any()).Return(nil, errors.New("error running task"))
 			},
 
@@ -82,7 +83,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			mockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().SubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).Times(0)
 			},
-			mockStarter: func(m *mocks.MockTaskRunner) {
+			mockStarter: func(m *mocks.MockRunner) {
 				m.EXPECT().RunTask(ecs.RunTaskInput{
 					Cluster:        "cluster-1",
 					Count:          1,
@@ -110,7 +111,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			mockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().SubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).Return(nil, errors.New("error getting subnets"))
 			},
-			mockStarter: func(m *mocks.MockTaskRunner) {
+			mockStarter: func(m *mocks.MockRunner) {
 				m.EXPECT().RunTask(gomock.Any()).Times(0)
 			},
 			wantedError: fmt.Errorf(fmtErrDefaultSubnets, errors.New("error getting subnets")),
@@ -128,7 +129,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 				m.EXPECT().SubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).
 					Return([]string{"default-subnet-1", "default-subnet-2"}, nil)
 			},
-			mockStarter: func(m *mocks.MockTaskRunner) {
+			mockStarter: func(m *mocks.MockRunner) {
 				m.EXPECT().RunTask(ecs.RunTaskInput{
 					Cluster:        "cluster-1",
 					Count:          1,
@@ -158,7 +159,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 
 			mockVpcGetter := mocks.NewMockVPCGetter(ctrl)
 			mockClusterGetter := mocks.NewMockDefaultClusterGetter(ctrl)
-			mockStarter := mocks.NewMockTaskRunner(ctrl)
+			mockStarter := mocks.NewMockRunner(ctrl)
 
 			tc.mockVPCGetter(mockVpcGetter)
 			tc.mockClusterGetter(mockClusterGetter)

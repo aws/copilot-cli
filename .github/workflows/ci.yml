@@ -69,3 +69,17 @@ jobs:
         with:
           version: v1.30
           args: --timeout 5m0s
+
+  license:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.14
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Run license check
+        run: ./scripts/license.sh .

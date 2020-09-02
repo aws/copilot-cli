@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package template
@@ -24,20 +24,20 @@ func TestTemplate_ParseSvc(t *testing.T) {
 			mockDependencies: func(t *Template) {
 				mockBox := packd.NewMemoryBox()
 				var baseContent string
-				for _, name := range commonServiceCFTemplateNames {
+				for _, name := range commonWorkloadCFTemplateNames {
 					baseContent += fmt.Sprintf(`{{include "%s" . | indent 2}}`+"\n", name)
 				}
-				mockBox.AddString("services/backend/cf.yml", baseContent)
-				mockBox.AddString("services/common/cf/loggroup.yml", "loggroup")
-				mockBox.AddString("services/common/cf/envvars.yml", "envvars")
-				mockBox.AddString("services/common/cf/executionrole.yml", "executionrole")
-				mockBox.AddString("services/common/cf/taskrole.yml", "taskrole")
-				mockBox.AddString("services/common/cf/fargate-taskdef-base-properties.yml", "fargate-taskdef-base-properties")
-				mockBox.AddString("services/common/cf/service-base-properties.yml", "service-base-properties")
-				mockBox.AddString("services/common/cf/servicediscovery.yml", "servicediscovery")
-				mockBox.AddString("services/common/cf/addons.yml", "addons")
-				mockBox.AddString("services/common/cf/sidecars.yml", "sidecars")
-				mockBox.AddString("services/common/cf/logconfig.yml", "logconfig")
+				mockBox.AddString("workloads/services/backend/cf.yml", baseContent)
+				mockBox.AddString("workloads/common/cf/loggroup.yml", "loggroup")
+				mockBox.AddString("workloads/common/cf/envvars.yml", "envvars")
+				mockBox.AddString("workloads/common/cf/executionrole.yml", "executionrole")
+				mockBox.AddString("workloads/common/cf/taskrole.yml", "taskrole")
+				mockBox.AddString("workloads/common/cf/fargate-taskdef-base-properties.yml", "fargate-taskdef-base-properties")
+				mockBox.AddString("workloads/common/cf/service-base-properties.yml", "service-base-properties")
+				mockBox.AddString("workloads/common/cf/servicediscovery.yml", "servicediscovery")
+				mockBox.AddString("workloads/common/cf/addons.yml", "addons")
+				mockBox.AddString("workloads/common/cf/sidecars.yml", "sidecars")
+				mockBox.AddString("workloads/common/cf/logconfig.yml", "logconfig")
 
 				t.box = mockBox
 			},

@@ -29,6 +29,7 @@ type initEnvMocks struct {
 	selVPC       *mocks.Mockec2Selector
 	selCreds     *mocks.MockcredsSelector
 	config       *mocks.MockprofileNames
+	ec2Client    *mocks.Mockec2Client
 }
 
 func TestInitEnvOpts_Validate(t *testing.T) {
@@ -279,6 +280,30 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("select VPC: some error"),
 		},
+		"fail to check if VPC has DNS support": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return(envInitImportEnvResourcesSelectOption, nil)
+				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(false, mockErr)
+			},
+			wantedError: fmt.Errorf("check if VPC mockVPC has DNS support enabled: some error"),
+		},
+		"fail to import VPC has no DNS support": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return(envInitImportEnvResourcesSelectOption, nil)
+				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(false, nil)
+			},
+			wantedError: fmt.Errorf("VPC mockVPC has no DNS support enabled"),
+		},
 		"fail to select public subnets": {
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
@@ -287,6 +312,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
 				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
 					Return(nil, mockErr)
 			},
@@ -300,6 +326,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
 				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
 					Return([]string{"mockPublicSubnet"}, nil)
 				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
@@ -315,6 +342,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
 				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
 					Return([]string{"mockPublicSubnet"}, nil)
 				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
@@ -332,6 +360,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any()).Times(0)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPCID").Return(true, nil)
 			},
 		},
 		"fail to get VPC CIDR": {
@@ -420,6 +449,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				config:       mocks.NewMockprofileNames(ctrl),
 				selVPC:       mocks.NewMockec2Selector(ctrl),
 				selCreds:     mocks.NewMockcredsSelector(ctrl),
+				ec2Client:    mocks.NewMockec2Client(ctrl),
 			}
 
 			tc.setupMocks(mocks)
@@ -440,6 +470,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				sessProvider: mocks.sessProvider,
 				selVPC:       mocks.selVPC,
 				selCreds:     mocks.selCreds,
+				ec2Client:    mocks.ec2Client,
 			}
 
 			// WHEN

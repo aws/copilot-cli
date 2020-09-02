@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package describe
@@ -115,7 +115,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 				)
 			},
 
-			wantedError: fmt.Errorf("get status for task badMockTaskArn: arn: invalid prefix"),
+			wantedError: fmt.Errorf("get status for task badMockTaskArn: parse ECS task ARN: arn: invalid prefix"),
 		},
 		"errors if failed to get CloudWatch alarms": {
 			setupMocks: func(m serviceStatusMocks) {

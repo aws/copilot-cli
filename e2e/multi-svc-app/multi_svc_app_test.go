@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package multi_svc_app_test
 
 import (
@@ -32,9 +35,7 @@ var _ = Describe("Multiple Service App", func() {
 		})
 
 		It("app ls includes new application", func() {
-			apps, err := cli.AppList()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(apps).To(ContainSubstring(appName))
+			Eventually(cli.AppList, "30s", "5s").Should(ContainSubstring(appName))
 		})
 
 		It("app show includes app name", func() {
@@ -178,7 +179,7 @@ var _ = Describe("Multiple Service App", func() {
 				Eventually(func() (int, error) {
 					resp, fetchErr = http.Get(route.URL)
 					return resp.StatusCode, fetchErr
-				}, "30s", "1s").Should(Equal(200))
+				}, "60s", "1s").Should(Equal(200))
 
 				// Read the response - our deployed apps should return a body with their
 				// name as the value.

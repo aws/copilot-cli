@@ -1,4 +1,4 @@
-Family: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref ServiceName]]
+Family: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName]]
 NetworkMode: awsvpc
 RequiresCompatibilities:
   - FARGATE

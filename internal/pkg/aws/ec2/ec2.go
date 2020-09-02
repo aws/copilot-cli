@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package ec2 provides a client to make API requests to Amazon Elastic Compute Cloud.
@@ -6,6 +6,7 @@ package ec2
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -60,6 +61,7 @@ type api interface {
 	DescribeSubnets(*ec2.DescribeSubnetsInput) (*ec2.DescribeSubnetsOutput, error)
 	DescribeSecurityGroups(*ec2.DescribeSecurityGroupsInput) (*ec2.DescribeSecurityGroupsOutput, error)
 	DescribeVpcs(input *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error)
+	DescribeVpcAttribute(input *ec2.DescribeVpcAttributeInput) (*ec2.DescribeVpcAttributeOutput, error)
 }
 
 // Filter contains the name and values of a filter.
@@ -83,14 +85,49 @@ func New(s *session.Session) *EC2 {
 	}
 }
 
-// ListVPC returns IDs of all VPCs.
-func (c *EC2) ListVPC() ([]string, error) {
-	var vpcs []*ec2.Vpc
+// VPC contains the ID and name of a VPC.
+type VPC struct {
+	ID   string
+	Name string
+}
+
+// String formats the elements of a VPC into a display-ready string.
+// For example: VPC{ID: "vpc-0576efeea396efee2", Name: "copilot-video-store-test"}
+// will return vpc-0576efeea396efee2 (copilot-video-store-test).
+func (v *VPC) String() string {
+	if v.Name != "" {
+		return fmt.Sprintf("%s (%s)", v.ID, v.Name)
+	}
+	return v.ID
+}
+
+// ExtractVPC extracts the VPC ID from the VPC display string.
+// For example: vpc-0576efeea396efee2 (copilot-video-store-test)
+// will return VPC{ID: "vpc-0576efeea396efee2", Name: "copilot-video-store-test"}.
+func ExtractVPC(label string) (*VPC, error) {
+	if label == "" {
+		return nil, fmt.Errorf("extract VPC ID from string: %s", label)
+	}
+	splitVPC := strings.SplitN(label, " ", 2)
+	// TODO: switch to regex to make more robust
+	var name string
+	if len(splitVPC) == 2 {
+		name = strings.Trim(splitVPC[1], "()")
+	}
+	return &VPC{
+		ID:   splitVPC[0],
+		Name: name,
+	}, nil
+}
+
+// ListVPCs returns names and IDs (or just IDs, if Name tag does not exist) of all VPCs.
+func (c *EC2) ListVPCs() ([]VPC, error) {
+	var ec2vpcs []*ec2.Vpc
 	response, err := c.client.DescribeVpcs(&ec2.DescribeVpcsInput{})
 	if err != nil {
 		return nil, fmt.Errorf("describe VPCs: %w", err)
 	}
-	vpcs = append(vpcs, response.Vpcs...)
+	ec2vpcs = append(ec2vpcs, response.Vpcs...)
 
 	for response.NextToken != nil {
 		response, err = c.client.DescribeVpcs(&ec2.DescribeVpcsInput{
@@ -99,14 +136,34 @@ func (c *EC2) ListVPC() ([]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("describe VPCs: %w", err)
 		}
-		vpcs = append(vpcs, response.Vpcs...)
+		ec2vpcs = append(ec2vpcs, response.Vpcs...)
 	}
-	var vpcNames []string
-	for _, vpc := range vpcs {
-		vpcNames = append(vpcNames, aws.StringValue(vpc.VpcId))
+	var vpcs []VPC
+	for _, vpc := range ec2vpcs {
+		var name string
+		for _, tag := range vpc.Tags {
+			if aws.StringValue(tag.Key) == "Name" {
+				name = aws.StringValue(tag.Value)
+			}
+		}
+		vpcs = append(vpcs, VPC{
+			ID:   aws.StringValue(vpc.VpcId),
+			Name: name,
+		})
 	}
+	return vpcs, nil
+}
 
-	return vpcNames, nil
+// HasDNSSupport returns if DNS resolution is enabled for the VPC.
+func (c *EC2) HasDNSSupport(vpcID string) (bool, error) {
+	resp, err := c.client.DescribeVpcAttribute(&ec2.DescribeVpcAttributeInput{
+		VpcId:     aws.String(vpcID),
+		Attribute: aws.String(ec2.VpcAttributeNameEnableDnsSupport),
+	})
+	if err != nil {
+		return false, fmt.Errorf("describe %s attribute for VPC %s: %w", ec2.VpcAttributeNameEnableDnsSupport, vpcID, err)
+	}
+	return aws.BoolValue(resp.EnableDnsSupport.Value), nil
 }
 
 // ListVPCSubnets lists all subnets given a VPC ID.

@@ -1,4 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 // Package dockerfile provides simple Dockerfile parsing functionality.
 package dockerfile
@@ -35,7 +36,7 @@ const (
 	startPeriodFlag    = "start-period"
 	startPeriodDefault = 0
 
-	retriesFlag    = "retries"
+	hcRetriesFlag  = "retries"
 	retriesDefault = 2
 
 	hcInstrStartIndex = len("HEALTHCHECK ")
@@ -239,7 +240,7 @@ func parseHealthCheck(content string) (*HealthCheck, error) {
 	fs.DurationVar(&interval, intervalFlag, intervalDefault, "")
 	fs.DurationVar(&timeout, timeoutFlag, timeoutDefault, "")
 	fs.DurationVar(&startPeriod, startPeriodFlag, startPeriodDefault, "")
-	fs.IntVar(&retries, retriesFlag, retriesDefault, "")
+	fs.IntVar(&retries, hcRetriesFlag, retriesDefault, "")
 
 	if err := fs.Parse(strings.Split(content[hcInstrStartIndex:], " ")); err != nil {
 		return nil, err

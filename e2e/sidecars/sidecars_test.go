@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package sidecars_test
@@ -77,9 +77,7 @@ var _ = Describe("sidecars flow", func() {
 		})
 
 		It("app ls includes new app", func() {
-			apps, err := cli.AppList()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(apps).To(ContainSubstring(appName))
+			Eventually(cli.AppList, "30s", "5s").Should(ContainSubstring(appName))
 		})
 
 		It("app show includes app name", func() {

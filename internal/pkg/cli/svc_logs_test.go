@@ -4,14 +4,13 @@
 package cli
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"testing"
 	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/ecslogging"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
 	"github.com/golang/mock/gomock"
@@ -137,8 +136,7 @@ func TestSvcLogs_Validate(t *testing.T) {
 						appName: tc.inputApp,
 					},
 				},
-				configStore:   mockstore,
-				initCwLogsSvc: func(*svcLogsOpts, string) error { return nil },
+				configStore: mockstore,
 			}
 
 			// WHEN
@@ -261,129 +259,55 @@ func TestSvcLogs_Ask(t *testing.T) {
 }
 
 func TestSvcLogs_Execute(t *testing.T) {
-	mockLastEventTime := map[string]int64{
-		"mockLogStreamName": 123456,
-	}
-	logEvents := []*cloudwatchlogs.Event{
-		{
-			LogStreamName: "firelens_log_router/fcfe4ab8043841c08162318e5ad805f1",
-			Message:       `10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -`,
-		},
-		{
-			LogStreamName: "firelens_log_router/fcfe4ab8043841c08162318e5ad805f1",
-			Message:       `10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -`,
-		},
-		{
-			LogStreamName: "firelens_log_router/fcfe4ab8043841c08162318e5ad805f1",
-			Message:       `10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -`,
-		},
-	}
-	moreLogEvents := []*cloudwatchlogs.Event{
-		{
-			LogStreamName: "firelens_log_router/fcfe4ab8043841c08162318e5ad805f1",
-			Message:       `10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 404 -`,
-		},
-	}
-	logEventsHumanString := `firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -
-firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
-firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
-`
-	logEventsJSONString := "{\"logStreamName\":\"firelens_log_router/fcfe4ab8043841c08162318e5ad805f1\",\"ingestionTime\":0,\"message\":\"10.0.0.00 - - [01/Jan/1970 01:01:01] \\\"GET / HTTP/1.1\\\" 200 -\",\"timestamp\":0}\n{\"logStreamName\":\"firelens_log_router/fcfe4ab8043841c08162318e5ad805f1\",\"ingestionTime\":0,\"message\":\"10.0.0.00 - - [01/Jan/1970 01:01:01] \\\"FATA some error\\\" - -\",\"timestamp\":0}\n{\"logStreamName\":\"firelens_log_router/fcfe4ab8043841c08162318e5ad805f1\",\"ingestionTime\":0,\"message\":\"10.0.0.00 - - [01/Jan/1970 01:01:01] \\\"WARN some warning\\\" - -\",\"timestamp\":0}\n"
+	mockStartTime := int64(123456789)
+	mockEndTime := int64(987654321)
 	testCases := map[string]struct {
-		inputApp     string
-		inputSvc     string
-		inputFollow  bool
-		inputEnvName string
-		inputJSON    bool
+		inputSvc  string
+		follow    bool
+		limit     int
+		endTime   int64
+		startTime int64
+		taskIDs   []string
 
-		mockcwlogService func(ctrl *gomock.Controller) map[string]cwlogService
+		mocklogsSvc func(ctrl *gomock.Controller) logEventsWriter
 
-		wantedError   error
-		wantedContent string
+		wantedError error
 	}{
-		"with no optional flags set": {
-			inputApp:     "mockApp",
-			inputSvc:     "mockSvc",
-			inputEnvName: "mockEnv",
+		"success": {
+			inputSvc:  "mockSvc",
+			endTime:   mockEndTime,
+			startTime: mockStartTime,
+			follow:    true,
+			limit:     100,
+			taskIDs:   []string{"mockTaskID"},
 
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				m := mocks.NewMockcwlogService(ctrl)
-				cwlogServices := make(map[string]cwlogService)
-				m.EXPECT().TaskLogEvents(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockEnv", "mockSvc"), make(map[string]int64), gomock.Any()).
-					Return(&cloudwatchlogs.LogEventsOutput{
-						Events: logEvents,
-					}, nil)
+			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
+				m := mocks.NewMocklogEventsWriter(ctrl)
+				m.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param ecslogging.WriteLogEventsOpts) {
+					require.Equal(t, param.TaskIDs, []string{"mockTaskID"})
+					require.Equal(t, param.EndTime, &mockEndTime)
+					require.Equal(t, param.StartTime, &mockStartTime)
+					require.Equal(t, param.Follow, true)
+					require.Equal(t, param.Limit, 100)
+				}).Return(nil)
 
-				cwlogServices["mockEnv"] = m
-				return cwlogServices
-			},
-
-			wantedError:   nil,
-			wantedContent: logEventsHumanString,
-		},
-		"with json flag set": {
-			inputApp:     "mockApp",
-			inputSvc:     "mockSvc",
-			inputEnvName: "mockEnv",
-			inputJSON:    true,
-
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				m := mocks.NewMockcwlogService(ctrl)
-				cwlogServices := make(map[string]cwlogService)
-				m.EXPECT().TaskLogEvents(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockEnv", "mockSvc"), make(map[string]int64), gomock.Any()).
-					Return(&cloudwatchlogs.LogEventsOutput{
-						Events: logEvents,
-					}, nil)
-
-				cwlogServices["mockEnv"] = m
-				return cwlogServices
-			},
-
-			wantedError:   nil,
-			wantedContent: logEventsJSONString,
-		},
-		"with follow flag set": {
-			inputApp:     "mockApp",
-			inputSvc:     "mockSvc",
-			inputEnvName: "mockEnv",
-			inputFollow:  true,
-
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				m := mocks.NewMockcwlogService(ctrl)
-				cwlogServices := make(map[string]cwlogService)
-				m.EXPECT().TaskLogEvents(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockEnv", "mockSvc"), make(map[string]int64), gomock.Any()).Return(&cloudwatchlogs.LogEventsOutput{
-					Events:        logEvents,
-					LastEventTime: mockLastEventTime,
-				}, nil)
-				m.EXPECT().TaskLogEvents(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockEnv", "mockSvc"), mockLastEventTime, gomock.Any()).Return(&cloudwatchlogs.LogEventsOutput{
-					Events:        moreLogEvents,
-					LastEventTime: nil,
-				}, nil)
-				cwlogServices["mockEnv"] = m
-				return cwlogServices
+				return m
 			},
 
 			wantedError: nil,
-			wantedContent: `firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -
-firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
-firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
-firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 404 -
-`,
 		},
 		"returns error if fail to get event logs": {
-			inputApp:     "mockApp",
-			inputSvc:     "mockSvc",
-			inputEnvName: "mockEnv",
+			inputSvc: "mockSvc",
 
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				m := mocks.NewMockcwlogService(ctrl)
-				cwlogServices := make(map[string]cwlogService)
-				m.EXPECT().TaskLogEvents(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockEnv", "mockSvc"), make(map[string]int64), gomock.Any()).Return(nil, errors.New("some error"))
-				cwlogServices["mockEnv"] = m
-				return cwlogServices
+			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
+				m := mocks.NewMocklogEventsWriter(ctrl)
+				m.EXPECT().WriteLogEvents(gomock.Any()).
+					Return(errors.New("some error"))
+
+				return m
 			},
 
-			wantedError: fmt.Errorf("some error"),
+			wantedError: fmt.Errorf("write log events for service mockSvc: some error"),
 		},
 	}
 
@@ -392,20 +316,17 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			b := &bytes.Buffer{}
 			svcLogs := &svcLogsOpts{
 				svcLogsVars: svcLogsVars{
-					follow:           tc.inputFollow,
-					envName:          tc.inputEnvName,
-					svcName:          tc.inputSvc,
-					shouldOutputJSON: tc.inputJSON,
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inputApp,
-					},
+					svcName: tc.inputSvc,
+					follow:  tc.follow,
+					limit:   tc.limit,
+					taskIDs: tc.taskIDs,
 				},
-				initCwLogsSvc: func(*svcLogsOpts, string) error { return nil },
-				cwlogsSvc:     tc.mockcwlogService(ctrl),
-				w:             b,
+				startTime:   &tc.startTime,
+				endTime:     &tc.endTime,
+				initLogsSvc: func() error { return nil },
+				logsSvc:     tc.mocklogsSvc(ctrl),
 			}
 
 			// WHEN
@@ -416,7 +337,6 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedContent, b.String(), "expected output content match")
 			}
 		})
 	}

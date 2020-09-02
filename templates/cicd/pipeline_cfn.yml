@@ -178,7 +178,9 @@ Resources:
             Resource:{{range $stage := .Stages}}
               - arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole{{end}}
       Roles:
-        - !Ref PipelineRole{{range $index, $stage := .Stages}}  {{if $stage.TestCommands}}
+        - !Ref PipelineRole
+{{- range $index, $stage := .Stages}}
+  {{- if $stage.TestCommands}}
   BuildTestCommands{{$stage.Name}}:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -193,7 +195,16 @@ Resources:
         ComputeType: BUILD_GENERAL1_SMALL
       Source:
         Type: NO_SOURCE
-        BuildSpec: "version: 0.2\nphases:\n  build:\n    commands: [{{range $index, $command := $stage.TestCommands}}{{if $index}},{{end}}\"{{$command}}\"{{end}}]"{{end}}{{end}}
+        BuildSpec: |
+          version: 0.2
+          phases:
+            build:
+              commands:
+              {{- range $index, $command := $stage.TestCommands}}
+                - {{$command}}
+              {{- end}}
+  {{- end}}
+{{- end}}
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     DependsOn:

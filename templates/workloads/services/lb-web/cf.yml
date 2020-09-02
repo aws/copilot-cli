@@ -7,7 +7,7 @@ Parameters:
     Type: String
   EnvName:
     Type: String
-  ServiceName:
+  WorkloadName:
     Type: String
   ContainerImage:
     Type: String
@@ -55,7 +55,7 @@ Resources:
     Properties:
 {{include "fargate-taskdef-base-properties" . | indent 6}}
       ContainerDefinitions:
-        - Name: !Ref ServiceName
+        - Name: !Ref WorkloadName
           Image: !Ref ContainerImage
           PortMappings:
             - ContainerPort: !Ref ContainerPort
@@ -111,12 +111,12 @@ Resources:
       HostedZoneId:
         Fn::ImportValue:
           !Sub "${AppName}-${EnvName}-HostedZone"
-      Comment: !Sub "LoadBalancer alias for service ${ServiceName}"
+      Comment: !Sub "LoadBalancer alias for service ${WorkloadName}"
       RecordSets:
       - Name:
           !Join
             - '.'
-            - - !Ref ServiceName
+            - - !Ref WorkloadName
               - Fn::ImportValue:
                   !Sub "${AppName}-${EnvName}-SubDomain"
               - ""
@@ -189,7 +189,7 @@ Resources:
             Values:
               - Fn::Join:
                 - '.'
-                - - !Ref ServiceName
+                - - !Ref WorkloadName
                   - Fn::ImportValue:
                       !Sub "${AppName}-${EnvName}-SubDomain"
       ListenerArn:

@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package template
@@ -11,15 +11,19 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
-// Paths of service cloudformation templates under templates/services/.
+// Paths of workload cloudformation templates under templates/workloads/.
 const (
-	fmtSvcCFTemplatePath       = "services/%s/cf.yml"
-	fmtSvcCommonCFTemplatePath = "services/common/cf/%s.yml"
+	fmtWkldCFTemplatePath       = "workloads/%s/%s/cf.yml"
+	fmtWkldCommonCFTemplatePath = "workloads/common/cf/%s.yml"
+)
+
+const (
+	servicesDirName = "services"
 )
 
 var (
-	// Template names under "services/common/cf/".
-	commonServiceCFTemplateNames = []string{
+	// Template names under "workloads/common/cf/".
+	commonWorkloadCFTemplateNames = []string{
 		"loggroup",
 		"envvars",
 		"executionrole",
@@ -94,12 +98,12 @@ func (t *Template) ParseBackendService(data ServiceOpts) (*Content, error) {
 
 // parseSvc parses a service's CloudFormation template with the specified data object and returns its content.
 func (t *Template) parseSvc(name string, data interface{}, options ...ParseOption) (*Content, error) {
-	tpl, err := t.parse("base", fmt.Sprintf(fmtSvcCFTemplatePath, name), options...)
+	tpl, err := t.parse("base", fmt.Sprintf(fmtWkldCFTemplatePath, servicesDirName, name), options...)
 	if err != nil {
 		return nil, err
 	}
-	for _, templateName := range commonServiceCFTemplateNames {
-		nestedTpl, err := t.parse(templateName, fmt.Sprintf(fmtSvcCommonCFTemplatePath, templateName), options...)
+	for _, templateName := range commonWorkloadCFTemplateNames {
+		nestedTpl, err := t.parse(templateName, fmt.Sprintf(fmtWkldCommonCFTemplatePath, templateName), options...)
 		if err != nil {
 			return nil, err
 		}

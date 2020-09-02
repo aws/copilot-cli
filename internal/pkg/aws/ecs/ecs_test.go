@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package ecs
@@ -341,11 +341,11 @@ func TestECS_DefaultCluster(t *testing.T) {
 					DescribeClusters(&ecs.DescribeClustersInput{}).
 					Return(&ecs.DescribeClustersOutput{
 						Clusters: []*ecs.Cluster{
-							&ecs.Cluster{
+							{
 								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster1"),
 								ClusterName: aws.String("cluster1"),
 							},
-							&ecs.Cluster{
+							{
 								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster2"),
 								ClusterName: aws.String("cluster2"),
 							},
@@ -387,7 +387,7 @@ func TestECS_DefaultCluster(t *testing.T) {
 }
 
 func TestECS_HasDefaultCluster(t *testing.T) {
-	testCases := map[string] struct{
+	testCases := map[string]struct {
 		mockECSClient func(m *mocks.Mockapi)
 
 		wantedHasDefaultCluster bool
@@ -414,7 +414,7 @@ func TestECS_HasDefaultCluster(t *testing.T) {
 				m.EXPECT().DescribeClusters(&ecs.DescribeClustersInput{}).
 					Return(&ecs.DescribeClustersOutput{
 						Clusters: []*ecs.Cluster{
-							{ ClusterArn: aws.String("cluster") },
+							{ClusterArn: aws.String("cluster")},
 						},
 					}, nil)
 			},
@@ -445,7 +445,6 @@ func TestECS_HasDefaultCluster(t *testing.T) {
 		})
 	}
 }
-
 
 func TestECS_RunTask(t *testing.T) {
 	type input struct {
@@ -493,13 +492,13 @@ func TestECS_RunTask(t *testing.T) {
 				}).
 					Return(&ecs.RunTaskOutput{
 						Tasks: []*ecs.Task{
-							&ecs.Task{
+							{
 								TaskArn: aws.String("task-1"),
 							},
-							&ecs.Task{
+							{
 								TaskArn: aws.String("task-2"),
 							},
-							&ecs.Task{
+							{
 								TaskArn: aws.String("task-3"),
 							},
 						},
@@ -617,26 +616,26 @@ func TestECS_DescribeTasks(t *testing.T) {
 					Tasks:   aws.StringSlice(inTaskARNs),
 				}).Return(&ecs.DescribeTasksOutput{
 					Tasks: []*ecs.Task{
-						&ecs.Task{
+						{
 							TaskArn: aws.String("task-1"),
 						},
-						&ecs.Task{
+						{
 							TaskArn: aws.String("task-2"),
 						},
-						&ecs.Task{
+						{
 							TaskArn: aws.String("task-3"),
 						},
 					},
 				}, nil)
 			},
 			wantedTasks: []*Task{
-				&Task{
+				{
 					TaskArn: aws.String("task-1"),
 				},
-				&Task{
+				{
 					TaskArn: aws.String("task-2"),
 				},
-				&Task{
+				{
 					TaskArn: aws.String("task-3"),
 				},
 			},
@@ -731,7 +730,7 @@ func TestTask_TaskStatus(t *testing.T) {
 	}{
 		"errors if failed to parse task ID": {
 			taskArn: aws.String("badTaskArn"),
-			wantErr: fmt.Errorf("arn: invalid prefix"),
+			wantErr: fmt.Errorf("parse ECS task ARN: arn: invalid prefix"),
 		},
 		"success with a provisioning task": {
 			taskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d"),
@@ -894,6 +893,35 @@ func TestTaskStatus_HumanString(t *testing.T) {
 			gotTaskStatus := task.HumanString()
 
 			require.Equal(t, tc.wantTaskStatus, gotTaskStatus)
+		})
+
+	}
+}
+func Test_TaskID(t *testing.T) {
+	testCases := map[string]struct {
+		taskARN string
+
+		wantErr error
+		wantID  string
+	}{
+		"bad unparsable task ARN": {
+			taskARN: "mockBadTaskARN",
+			wantErr: fmt.Errorf("parse ECS task ARN: arn: invalid prefix"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			gotID, gotErr := TaskID(tc.taskARN)
+
+			// THEN
+			if gotErr != nil {
+				require.EqualError(t, gotErr, tc.wantErr.Error())
+			} else {
+				require.NoError(t, gotErr)
+				require.Equal(t, tc.wantID, gotID)
+			}
 		})
 
 	}

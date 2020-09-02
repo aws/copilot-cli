@@ -1,0 +1,34 @@
+version: 0.2
+env:
+  variables:
+    AWS_STS_REGIONAL_ENDPOINTS: "regional"
+    STAGE_SESSION_NAME: "aws_copilot_cli"
+  parameter-store:
+    STAGE_ROLE_ARN: COPILOT_STAGE_ROLE_ARN
+    STAGE_BUCKET: COPILOT_STAGE_BUCKET_NAME
+phases:
+  pre_build:
+    commands:
+      - CREDS=`aws sts assume-role --role-arn $STAGE_ROLE_ARN --role-session-name $STAGE_SESSION_NAME`
+      - export AWS_ACCESS_KEY_ID=`echo $CREDS | jq -r .Credentials.AccessKeyId`
+      - export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r .Credentials.SecretAccessKey`
+      - export AWS_SESSION_TOKEN=`echo $CREDS | jq -r .Credentials.SessionToken`
+  build:
+    commands:
+      - export GIT_COMMIT_ID=`git rev-parse HEAD`
+      - ls -lah
+      - echo "Creating MD5 hash for the following files..."
+      - cat ./$GIT_COMMIT_ID.manifest
+      - |
+        for artifact in `cat ./$GIT_COMMIT_ID.manifest`
+        do
+            md5FileName="${artifact%.exe}"
+            md5sum $artifact | sed 's/ .*//' > "$md5FileName.md5"
+            echo "Generated m5d for $artifact: $(cat $md5FileName.md5)"
+            aws s3 cp $artifact "s3://$STAGE_BUCKET/$artifact" || exit 1
+            echo "Copied $artifact to s3://$STAGE_BUCKET/$artifact"
+        done
+      - ls -lah $(dirname `head -1 ./$GIT_COMMIT_ID.manifest`)
+artifacts:
+  files: 
+    - '**/*'

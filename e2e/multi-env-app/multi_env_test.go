@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package multi_env_app_test
 
 import (
@@ -34,9 +37,7 @@ var _ = Describe("Multiple Env App", func() {
 		})
 
 		It("app ls includes new app", func() {
-			apps, err := cli.AppList()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(apps).To(ContainSubstring(appName))
+			Eventually(cli.AppList, "30s", "5s").Should(ContainSubstring(appName))
 		})
 
 		It("app show includes app name", func() {

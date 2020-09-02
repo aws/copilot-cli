@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package describe
@@ -138,9 +138,9 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		configs = append(configs, &ServiceConfig{
 			Environment: env,
 			Port:        d.svcParams[stack.LBWebServiceContainerPortParamKey],
-			Tasks:       d.svcParams[stack.ServiceTaskCountParamKey],
-			CPU:         d.svcParams[stack.ServiceTaskCPUParamKey],
-			Memory:      d.svcParams[stack.ServiceTaskMemoryParamKey],
+			Tasks:       d.svcParams[stack.WorkloadTaskCountParamKey],
+			CPU:         d.svcParams[stack.WorkloadTaskCPUParamKey],
+			Memory:      d.svcParams[stack.WorkloadTaskMemoryParamKey],
 		})
 		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, serviceDiscovery{
 			Service: d.svc,

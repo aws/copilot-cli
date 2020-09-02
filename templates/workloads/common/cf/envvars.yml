@@ -9,13 +9,13 @@ Environment:
 - Name: COPILOT_ENVIRONMENT_NAME
   Value: !Sub '${EnvName}'
 - Name: COPILOT_SERVICE_NAME
-  Value: !Sub '${ServiceName}'
+  Value: !Sub '${WorkloadName}'
 - Name: COPILOT_LB_DNS
   Value:
     Fn::ImportValue:
       !Sub "${AppName}-${EnvName}-PublicLoadBalancerDNS" {{if .Variables}}{{range $name, $value := .Variables}}
 - Name: {{$name}}
-  Value: {{$value}}{{end}}{{end}}{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{range $var := .NestedStack.VariableOutputs}}
+  Value: {{$value | printf "%q"}}{{end}}{{end}}{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{range $var := .NestedStack.VariableOutputs}}
 - Name: {{toSnakeCase $var}}
   Value:
     Fn::GetAtt: [{{$stackName}}, Outputs.{{$var}}]{{end}}{{end}}{{if hasSecrets .}}

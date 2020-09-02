@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/ecslogging"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -42,14 +42,13 @@ const (
 )
 
 const (
-	fmtRepoName         = "copilot-%s"
-	fmtImageURI         = "%s:%s"
-	fmtTaskLogGroupName = "/copilot/%s"
+	fmtRepoName = "copilot-%s"
+	fmtImageURI = "%s:%s"
 )
 
 var (
 	errNumNotPositive = errors.New("number of tasks must be positive")
-	errCpuNotPositive = errors.New("CPU units must be positive")
+	errCPUNotPositive = errors.New("CPU units must be positive")
 	errMemNotPositive = errors.New("memory must be positive")
 )
 
@@ -151,15 +150,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	}
 
 	opts.configureEventsWriter = func(tasks []*task.Task) {
-		logGroupName := fmt.Sprintf(fmtTaskLogGroupName, opts.groupName)
-		opts.eventsWriter = &task.EventsWriter{
-			GroupName: logGroupName,
-			Tasks:     tasks,
-
-			Describer:    ecs.New(opts.sess),
-			EventsLogger: cloudwatchlogs.New(opts.sess),
-			Writer:       log.OutputWriter,
-		}
+		opts.eventsWriter = ecslogging.NewTaskClient(opts.sess, opts.groupName, tasks)
 	}
 	return &opts, nil
 }
@@ -232,7 +223,7 @@ func (o *runTaskOpts) Validate() error {
 	}
 
 	if o.cpu <= 0 {
-		return errCpuNotPositive
+		return errCPUNotPositive
 	}
 
 	if o.memory <= 0 {

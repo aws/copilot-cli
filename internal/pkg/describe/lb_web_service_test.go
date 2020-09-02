@@ -209,9 +209,9 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceContainerPortParamKey: "80",
-						stack.ServiceTaskCountParamKey:          "1",
-						stack.ServiceTaskCPUParamKey:            "256",
-						stack.ServiceTaskMemoryParamKey:         "512",
+						stack.WorkloadTaskCountParamKey:         "1",
+						stack.WorkloadTaskCPUParamKey:           "256",
+						stack.WorkloadTaskMemoryParamKey:        "512",
 						stack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
@@ -230,9 +230,9 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceRulePathParamKey:      testSvcPath,
 						stack.LBWebServiceContainerPortParamKey: "80",
-						stack.ServiceTaskCountParamKey:          "1",
-						stack.ServiceTaskCPUParamKey:            "256",
-						stack.ServiceTaskMemoryParamKey:         "512",
+						stack.WorkloadTaskCountParamKey:         "1",
+						stack.WorkloadTaskCPUParamKey:           "256",
+						stack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return(
 						map[string]string{
@@ -255,9 +255,9 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceRulePathParamKey:      testSvcPath,
 						stack.LBWebServiceContainerPortParamKey: "5000",
-						stack.ServiceTaskCountParamKey:          "1",
-						stack.ServiceTaskCPUParamKey:            "256",
-						stack.ServiceTaskMemoryParamKey:         "512",
+						stack.WorkloadTaskCountParamKey:         "1",
+						stack.WorkloadTaskCPUParamKey:           "256",
+						stack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return(
 						map[string]string{
@@ -270,9 +270,9 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceRulePathParamKey:      prodSvcPath,
 						stack.LBWebServiceContainerPortParamKey: "5000",
-						stack.ServiceTaskCountParamKey:          "2",
-						stack.ServiceTaskCPUParamKey:            "512",
-						stack.ServiceTaskMemoryParamKey:         "1024",
+						stack.WorkloadTaskCountParamKey:         "2",
+						stack.WorkloadTaskCPUParamKey:           "512",
+						stack.WorkloadTaskMemoryParamKey:        "1024",
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return(
 						map[string]string{

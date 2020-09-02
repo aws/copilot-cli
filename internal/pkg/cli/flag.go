@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -33,6 +33,7 @@ const (
 	sinceFlag             = "since"
 	startTimeFlag         = "start-time"
 	endTimeFlag           = "end-time"
+	tasksFlag             = "tasks"
 	envProfilesFlag       = "env-profiles"
 	prodEnvFlag           = "prod"
 	deployFlag            = "deploy"
@@ -80,6 +81,10 @@ const (
 	secretAccessKeyFlag = "aws-secret-access-key"
 	sessionTokenFlag    = "aws-session-token"
 	regionFlag          = "region"
+
+	retriesFlag  = "retries"
+	timeoutFlag  = "timeout"
+	scheduleFlag = "schedule"
 )
 
 // Short flag names.
@@ -96,6 +101,8 @@ const (
 	githubAccessTokenFlagShort = "t"
 	gitBranchFlagShort         = "b"
 	envsFlagShort              = "e"
+
+	scheduleFlagShort = "s"
 )
 
 // Descriptions for flags.
@@ -121,6 +128,7 @@ const (
 	appFlagDescription      = "Name of the application."
 	envFlagDescription      = "Name of the environment."
 	svcFlagDescription      = "Name of the service."
+	jobFlagDescription      = "Name of the scheduled job."
 	pipelineFlagDescription = "Name of the pipeline."
 	profileFlagDescription  = "Name of the profile."
 	yesFlagDescription      = "Skips confirmation prompt."
@@ -132,14 +140,17 @@ const (
 Allows you to categorize resources.`
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
 	prodEnvFlagDescription        = "If the environment contains production services."
-	limitFlagDescription          = "Optional. The maximum number of log events returned."
-	followFlagDescription         = "Optional. Specifies if the logs should be streamed."
-	sinceFlagDescription          = `Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
+
+	limitFlagDescription  = "Optional. The maximum number of log events returned."
+	followFlagDescription = "Optional. Specifies if the logs should be streamed."
+	sinceFlagDescription  = `Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
 Defaults to all logs. Only one of start-time / since may be used.`
 	startTimeFlagDescription = `Optional. Only return logs after a specific date (RFC3339).
 Defaults to all logs. Only one of start-time / since may be used.`
 	endTimeFlagDescription = `Optional. Only return logs before a specific date (RFC3339).
 Defaults to all logs. Only one of end-time / follow may be used.`
+	tasksLogsFlagDescription = "Optional. Only return logs from specific task IDs."
+
 	deployTestFlagDescription        = `Deploy your service to a "test" environment.`
 	githubURLFlagDescription         = "GitHub repository URL for your service."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
@@ -192,4 +203,11 @@ Tasks with the same group name share the same set of resources.
 	secretAccessKeyFlagDescription = "Optional. An AWS secret access key."
 	sessionTokenFlagDescription    = "Optional. An AWS session token for temporary credentials."
 	envRegionTokenFlagDescription  = "Optional. An AWS region where the environment will be created."
+
+	retriesFlagDescription = "Optional. The number of times to try restarting the job on a failure."
+	timeoutFlagDescription = `Optional. The total execution time for the task, including retries.
+For example: "2h", "30 minutes", "900s"`
+	scheduleFlagDescription = `The schedule on which to run this job. 
+Can be specified using rate or cron syntax. 
+For example: "20 minutes", "@DAILY", "0 * * * * *"`
 )

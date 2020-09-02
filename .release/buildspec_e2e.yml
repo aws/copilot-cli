@@ -1,5 +1,10 @@
 version: 0.2
 
+env:
+  secrets-manager:
+    DOCKERHUB_USERNAME: prod/ecs-cicd-bot/dockerhub-account-info:username
+    DOCKERHUB_TOKEN: prod/ecs-cicd-bot/dockerhub-token:dockerhub-token
+
 batch:
   fast-fail: false
   build-matrix:
@@ -32,6 +37,9 @@ phases:
     runtime-versions:
       golang: 1.14
       nodejs: 10
+  pre_build:
+    commands:
+       - docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_TOKEN}
   build:
     commands:
        - cd $CODEBUILD_SRC_DIR
