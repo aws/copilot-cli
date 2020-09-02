@@ -21,7 +21,7 @@ const (
 )
 
 var (
-	fatalCodes   = []string{"FATA", "FATAL", "fatal", "ERROR", "error"}
+	fatalCodes   = []string{"FATA", "FATAL", "fatal", "ERR", "ERROR", "error"}
 	warningCodes = []string{"WARN", "warn", "WARNING", "warning"}
 )
 
