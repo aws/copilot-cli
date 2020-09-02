@@ -78,8 +78,8 @@ environments:
 						TaskConfig: TaskConfig{
 							CPU:    aws.Int(512),
 							Memory: aws.Int(1024),
-							Count: AutoscalingOrTaskCount{
-								TaskCount: aws.Int(1),
+							Count: Count{
+								Value: aws.Int(1),
 							},
 							Variables: map[string]string{
 								"LOG_LEVEL": "WARN",
@@ -113,15 +113,15 @@ environments:
 					Environments: map[string]*LoadBalancedWebServiceConfig{
 						"test": {
 							TaskConfig: TaskConfig{
-								Count: AutoscalingOrTaskCount{
-									TaskCount: aws.Int(3),
+								Count: Count{
+									Value: aws.Int(3),
 								},
 							},
 						},
 						"prod": {
 							TaskConfig: TaskConfig{
-								Count: AutoscalingOrTaskCount{
-									Autoscaling: AutoscalingConfig{
+								Count: Count{
+									Autoscaling: Autoscaling{
 										Range: Range("1-10"),
 										CPU:   aws.String("70%"),
 									},
@@ -175,8 +175,8 @@ secrets:
 						TaskConfig: TaskConfig{
 							CPU:    aws.Int(1024),
 							Memory: aws.Int(1024),
-							Count: AutoscalingOrTaskCount{
-								TaskCount: aws.Int(1),
+							Count: Count{
+								Value: aws.Int(1),
 							},
 							Secrets: map[string]string{
 								"API_TOKEN": "SUBS_API_TOKEN",
@@ -362,18 +362,19 @@ func TestBuildConfig(t *testing.T) {
 	}
 }
 
-func TestAutoscalingOrTaskCount_UnmarshalYAML(t *testing.T) {
+func TestCount_UnmarshalYAML(t *testing.T) {
+	mockResponseTime := 500 * time.Millisecond
 	testCases := map[string]struct {
 		inContent []byte
 
-		wantedStruct AutoscalingOrTaskCount
+		wantedStruct Count
 		wantedError  error
 	}{
 		"legacy case: simple task count": {
 			inContent: []byte(`count: 1`),
 
-			wantedStruct: AutoscalingOrTaskCount{
-				TaskCount: aws.Int(1),
+			wantedStruct: Count{
+				Value: aws.Int(1),
 			},
 		},
 		"With auto scaling enabled": {
@@ -382,15 +383,15 @@ func TestAutoscalingOrTaskCount_UnmarshalYAML(t *testing.T) {
   cpu: 70%
   memory: 80%
   requests: 1000
-  response-time: 500
+  response_time: 500ms
 `),
-			wantedStruct: AutoscalingOrTaskCount{
-				Autoscaling: AutoscalingConfig{
+			wantedStruct: Count{
+				Autoscaling: Autoscaling{
 					Range:        Range("1-10"),
 					CPU:          aws.String("70%"),
 					Memory:       aws.String("80%"),
 					Requests:     aws.Int(1000),
-					ResponseTime: aws.Int(500),
+					ResponseTime: &mockResponseTime,
 				},
 			},
 		},
@@ -409,12 +410,12 @@ func TestAutoscalingOrTaskCount_UnmarshalYAML(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				// check memberwise dereferenced pointer equality
-				require.Equal(t, aws.IntValue(tc.wantedStruct.TaskCount), aws.IntValue(b.Count.TaskCount))
+				require.Equal(t, aws.IntValue(tc.wantedStruct.Value), aws.IntValue(b.Count.Value))
 				require.Equal(t, tc.wantedStruct.Autoscaling.Range, b.Count.Autoscaling.Range)
 				require.Equal(t, aws.StringValue(tc.wantedStruct.Autoscaling.CPU), aws.StringValue(b.Count.Autoscaling.CPU))
 				require.Equal(t, aws.StringValue(tc.wantedStruct.Autoscaling.Memory), aws.StringValue(b.Count.Autoscaling.Memory))
 				require.Equal(t, aws.IntValue(tc.wantedStruct.Autoscaling.Requests), aws.IntValue(b.Count.Autoscaling.Requests))
-				require.Equal(t, aws.IntValue(tc.wantedStruct.Autoscaling.ResponseTime), aws.IntValue(b.Count.Autoscaling.ResponseTime))
+				require.Equal(t, tc.wantedStruct.Autoscaling.ResponseTime, b.Count.Autoscaling.ResponseTime)
 			}
 		})
 	}
@@ -453,7 +454,7 @@ func TestRange_Value(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			r := Range(tc.inRange)
-			gotMin, gotMax, err := r.Value()
+			gotMin, gotMax, err := r.Parse()
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())

@@ -92,8 +92,8 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(1024),
 						Memory: aws.Int(1024),
-						Count: AutoscalingOrTaskCount{
-							TaskCount: aws.Int(1),
+						Count: Count{
+							Value: aws.Int(1),
 						},
 					},
 				},
@@ -123,8 +123,8 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(1024),
 						Memory: aws.Int(1024),
-						Count: AutoscalingOrTaskCount{
-							TaskCount: aws.Int(1),
+						Count: Count{
+							Value: aws.Int(1),
 						},
 					},
 				},
@@ -154,8 +154,8 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(1024),
 						Memory: aws.Int(1024),
-						Count: AutoscalingOrTaskCount{
-							TaskCount: aws.Int(1),
+						Count: Count{
+							Value: aws.Int(1),
 						},
 						Variables: map[string]string{
 							"LOG_LEVEL":      "DEBUG",
@@ -196,8 +196,8 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 						},
 						TaskConfig: TaskConfig{
 							CPU: aws.Int(2046),
-							Count: AutoscalingOrTaskCount{
-								TaskCount: aws.Int(0),
+							Count: Count{
+								Value: aws.Int(0),
 							},
 							Variables: map[string]string{
 								"DDB_TABLE_NAME": "awards-prod",
@@ -244,8 +244,8 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(2046),
 						Memory: aws.Int(1024),
-						Count: AutoscalingOrTaskCount{
-							TaskCount: aws.Int(0),
+						Count: Count{
+							Value: aws.Int(0),
 						},
 						Variables: map[string]string{
 							"LOG_LEVEL":      "DEBUG",

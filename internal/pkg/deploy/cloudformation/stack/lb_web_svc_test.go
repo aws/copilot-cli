@@ -237,22 +237,22 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		Port: 80,
 	}
 	testLBWebServiceManifest := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifest.Count = manifest.AutoscalingOrTaskCount{
-		TaskCount: aws.Int(1),
-		Autoscaling: manifest.AutoscalingConfig{
+	testLBWebServiceManifest.Count = manifest.Count{
+		Value: aws.Int(1),
+		Autoscaling: manifest.Autoscaling{
 			Range: manifest.Range("2-100"),
 		},
 	}
 	testLBWebServiceManifestWithBadCount := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestWithBadCount.Count = manifest.AutoscalingOrTaskCount{
-		Autoscaling: manifest.AutoscalingConfig{
+	testLBWebServiceManifestWithBadCount.Count = manifest.Count{
+		Autoscaling: manifest.Autoscaling{
 			Range: manifest.Range("badCount"),
 		},
 	}
 	testLBWebServiceManifestWithSidecar := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestWithSidecar.Count = manifest.AutoscalingOrTaskCount{
-		TaskCount: aws.Int(1),
-		Autoscaling: manifest.AutoscalingConfig{
+	testLBWebServiceManifestWithSidecar.Count = manifest.Count{
+		Value: aws.Int(1),
+		Autoscaling: manifest.Autoscaling{
 			Range: manifest.Range("2-100"),
 		},
 	}

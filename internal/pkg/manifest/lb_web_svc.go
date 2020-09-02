@@ -88,8 +88,8 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),
-				Count: AutoscalingOrTaskCount{
-					TaskCount: aws.Int(1),
+				Count: Count{
+					Value: aws.Int(1),
 				},
 			},
 		},
