@@ -35,17 +35,6 @@ type deployJobOpts struct {
 
 	spinner progress
 	sel     wsSelector
-
-	// imageBuilderPusher imageBuilderPusher
-	// s3           artifactUploader
-	// addons       templater
-	// appCFN       appResourcesGetter
-	// jobCFN       cloudformation.CloudFormation
-
-	// // cached variables
-	// targetApp         *config.Application
-	// targetEnvironment *config.Environment
-	// targetWorkload    *config.Service
 }
 
 func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
