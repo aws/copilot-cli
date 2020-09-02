@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -123,7 +124,7 @@ environments:
 								Count: Count{
 									Autoscaling: Autoscaling{
 										Range: Range("1-10"),
-										CPU:   aws.String("70%"),
+										CPU:   percentageP("70%"),
 									},
 								},
 							},
@@ -267,9 +268,9 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				// check memberwise dereferenced pointer equality
-				require.Equal(t, aws.StringValue(tc.wantedStruct.BuildString), aws.StringValue(b.Build.BuildString))
-				require.Equal(t, aws.StringValue(tc.wantedStruct.BuildArgs.Context), aws.StringValue(b.Build.BuildArgs.Context))
-				require.Equal(t, aws.StringValue(tc.wantedStruct.BuildArgs.Dockerfile), aws.StringValue(b.Build.BuildArgs.Dockerfile))
+				require.Equal(t, tc.wantedStruct.BuildString, b.Build.BuildString)
+				require.Equal(t, tc.wantedStruct.BuildArgs.Context, b.Build.BuildArgs.Context)
+				require.Equal(t, tc.wantedStruct.BuildArgs.Dockerfile, b.Build.BuildArgs.Dockerfile)
 				require.Equal(t, tc.wantedStruct.BuildArgs.Args, b.Build.BuildArgs.Args)
 			}
 		})
@@ -388,8 +389,8 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 			wantedStruct: Count{
 				Autoscaling: Autoscaling{
 					Range:        Range("1-10"),
-					CPU:          aws.String("70%"),
-					Memory:       aws.String("80%"),
+					CPU:          percentageP("70%"),
+					Memory:       percentageP("80%"),
 					Requests:     aws.Int(1000),
 					ResponseTime: &mockResponseTime,
 				},
@@ -410,18 +411,51 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				// check memberwise dereferenced pointer equality
-				require.Equal(t, aws.IntValue(tc.wantedStruct.Value), aws.IntValue(b.Count.Value))
+				require.Equal(t, tc.wantedStruct.Value, b.Count.Value)
 				require.Equal(t, tc.wantedStruct.Autoscaling.Range, b.Count.Autoscaling.Range)
-				require.Equal(t, aws.StringValue(tc.wantedStruct.Autoscaling.CPU), aws.StringValue(b.Count.Autoscaling.CPU))
-				require.Equal(t, aws.StringValue(tc.wantedStruct.Autoscaling.Memory), aws.StringValue(b.Count.Autoscaling.Memory))
-				require.Equal(t, aws.IntValue(tc.wantedStruct.Autoscaling.Requests), aws.IntValue(b.Count.Autoscaling.Requests))
+				require.Equal(t, tc.wantedStruct.Autoscaling.CPU, b.Count.Autoscaling.CPU)
+				require.Equal(t, tc.wantedStruct.Autoscaling.Memory, b.Count.Autoscaling.Memory)
+				require.Equal(t, tc.wantedStruct.Autoscaling.Requests, b.Count.Autoscaling.Requests)
 				require.Equal(t, tc.wantedStruct.Autoscaling.ResponseTime, b.Count.Autoscaling.ResponseTime)
 			}
 		})
 	}
 }
 
-func TestRange_Value(t *testing.T) {
+func TestPercentage_Parse(t *testing.T) {
+	testCases := map[string]struct {
+		inPerc string
+
+		wanted    int
+		wantedErr error
+	}{
+		"invalid format": {
+			inPerc: "badPerc",
+
+			wantedErr: fmt.Errorf("cannot convert percentage value badPerc to integer"),
+		},
+		"success": {
+			inPerc: "70%",
+
+			wanted: 70,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			p := Percentage(tc.inPerc)
+			got, err := p.Parse()
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, got, tc.wanted)
+			}
+		})
+	}
+}
+
+func TestRange_Parse(t *testing.T) {
 	testCases := map[string]struct {
 		inRange string
 
@@ -465,4 +499,134 @@ func TestRange_Value(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSidecar_Options(t *testing.T) {
+	testCases := map[string]struct {
+		inPort string
+
+		wanted    *template.SidecarOpts
+		wantedErr error
+	}{
+		"invalid port": {
+			inPort: "b/a/d/P/o/r/t",
+
+			wantedErr: fmt.Errorf("cannot parse port mapping from b/a/d/P/o/r/t"),
+		},
+		"good port without protocol": {
+			inPort: "2000",
+
+			wanted: &template.SidecarOpts{
+				Port: aws.String("2000"),
+			},
+		},
+		"good port with protocol": {
+			inPort: "2000/udp",
+
+			wanted: &template.SidecarOpts{
+				Port:     aws.String("2000"),
+				Protocol: aws.String("udp"),
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			sidecar := Sidecar{
+				Sidecars: map[string]*SidecarConfig{
+					"foo": {
+						CredsParam: aws.String("mockCredsParam"),
+						Image:      aws.String("mockImage"),
+						Port:       aws.String(tc.inPort),
+					},
+				},
+			}
+			got, err := sidecar.Options()
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, got[0].Port, tc.wanted.Port)
+				require.Equal(t, got[0].Protocol, tc.wanted.Protocol)
+			}
+		})
+	}
+}
+func TestAutoscaling_Options(t *testing.T) {
+	const (
+		mockRange    = "1-100"
+		mockCPU      = "70%"
+		mockMemory   = "80%"
+		mockRequests = 1000
+	)
+	mockResponseTime := 512 * time.Millisecond
+	testCases := map[string]struct {
+		inRange        string
+		inCPU          string
+		inMemory       string
+		inRequests     int
+		inResponseTime time.Duration
+
+		wanted    *template.AutoscalingOpts
+		wantedErr error
+	}{
+		"invalid range": {
+			inRange: "badRange",
+
+			wantedErr: fmt.Errorf("invalid range value badRange. Should be in format of ${min}-${max}"),
+		},
+		"invalid cpu": {
+			inRange: mockRange,
+			inCPU:   "badCPU",
+
+			wantedErr: fmt.Errorf("cannot convert percentage value badCPU to integer"),
+		},
+		"invalid memory": {
+			inRange:  mockRange,
+			inCPU:    mockCPU,
+			inMemory: "badMemory",
+
+			wantedErr: fmt.Errorf("cannot convert percentage value badMemory to integer"),
+		},
+		"success": {
+			inRange:        mockRange,
+			inCPU:          mockCPU,
+			inMemory:       mockMemory,
+			inRequests:     mockRequests,
+			inResponseTime: mockResponseTime,
+
+			wanted: &template.AutoscalingOpts{
+				MaxCapacity:  aws.Int(100),
+				MinCapacity:  aws.Int(1),
+				CPU:          aws.Float64(70),
+				Memory:       aws.Float64(80),
+				Requests:     aws.Float64(1000),
+				ResponseTime: aws.Float64(0.512),
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			a := Autoscaling{
+				Range:        Range(tc.inRange),
+				CPU:          percentageP(tc.inCPU),
+				Memory:       percentageP(tc.inMemory),
+				Requests:     aws.Int(tc.inRequests),
+				ResponseTime: &tc.inResponseTime,
+			}
+			got, err := a.Options()
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, got, tc.wanted)
+			}
+		})
+	}
+}
+
+func percentageP(s string) *Percentage {
+	p := Percentage(s)
+	return &p
 }

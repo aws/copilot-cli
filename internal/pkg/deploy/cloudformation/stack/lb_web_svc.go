@@ -93,9 +93,13 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := s.manifest.Sidecar.SidecarsOpts()
+	sidecars, err := s.manifest.Sidecar.Options()
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
+	}
+	autoscaling, err := s.manifest.Count.Autoscaling.Options()
+	if err != nil {
+		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
 	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.ServiceOpts{
 		Variables:          s.manifest.Variables,
@@ -103,6 +107,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		NestedStack:        outputs,
 		Sidecars:           sidecars,
 		LogConfig:          s.manifest.LogConfigOpts(),
+		Autoscaling:        autoscaling,
 		RulePriorityLambda: rulePriorityLambda.String(),
 	})
 	if err != nil {
