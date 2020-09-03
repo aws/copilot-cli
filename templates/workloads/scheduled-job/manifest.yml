@@ -20,7 +20,7 @@ memory: {{.Memory}}
 schedule: @daily
 
 # Optional. The number of times to retry the job before failing.
-retries: 1
+retries: 0
 # Optional. The timeout after which to stop the job if it's still running. You can use the units (h, m, s).
 timeout: 15m
 
@@ -35,4 +35,4 @@ timeout: 15m
 # You can override any of the values defined above by environment.
 #environments:
 #  test:
-#    count: 2               # Number of tasks to run for the "test" environment.
+#    schedule: 10 minutes               # Number of tasks to run for the "test" environment.
