@@ -1,0 +1,58 @@
+{
+  "Version": "1.0",
+  "Comment": "Run AWS Fargate task",
+  "TimeoutSeconds": ${Timeout},
+  "StartAt": "Run Fargate Task",
+  "States": {
+    "Run Fargate Task": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.sync",
+      "Parameters": {
+        "LaunchType": "FARGATE",
+        "PlatformVersion": "LATEST",
+        "Cluster": "${Cluster}",
+        "TaskDefinition": "${TaskDefinition}",
+        "Group.$": "$$.Execution.Name",
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "Subnets": ["${Subnets}"],
+            "AssignPublicIp": "${AssignPublicIp}",
+            "SecurityGroups": ["${SecurityGroups}"]
+          }
+        },
+        "Overrides": {
+          "ContainerOverrides": [
+            {
+              "Name": "fargate-app",
+              "Environment": [
+                {
+                  "Name": "IS_STANDALONE_EXECUTION",
+                  "Value": "1"
+                }
+              ]
+            }
+          ]
+        }
+      },{{if .Retries}}
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.TaskFailed"
+          ],
+          "IntervalSeconds": 3,
+          "MaxAttempts": {{.Retries}},
+          "BackoffRate": 1.0
+        },
+        {
+          "ErrorEquals": [
+            "ECS.AmazonECSException"
+          ],
+          "IntervalSeconds": 10,
+          "MaxAttempts": {{.Retries}},
+          "BackoffRate": 2.0
+        }
+      ],{{end}}
+      "End": "True"
+    }
+  }
+}

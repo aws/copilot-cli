@@ -1,0 +1,73 @@
+StateMachine:
+  Type: AWS::StepFunctions::StateMachine
+  Properties:
+    RoleArn: !GetAtt StateMachineRole.Arn
+    LoggingConfiguration:
+      Destinations:
+        - CloudWatchLogsLogGroup:
+            LogGroupArn: !GetAtt LogGroup.Arn
+      IncludeExecutionData: true
+      Level: ERROR
+    DefinitionSubstitutions:
+      Cluster: !Sub arn:${Partition}:ecs:${Region}:${Account}:cluster/${AppName}-${EnvName}-ClusterId
+      TaskDefinition: !Ref TaskDefinition.Arn
+      Subnets: !Join
+        - '","'
+        - Fn::ImportValue: !Sub "${AppName}-${EnvName}-PublicSubnets"
+      AssignPublicIp: ENABLED # Should be DISABLED if we use private subnets
+      SecurityGroups:
+        - Fn::ImportValue: !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"{{if .Timeout}}
+      Timeout: {{.Timeout}} # seconds{{end}}
+    DefinitionString: |-
+{{include state-machine-definition . | indent 6}}      
+      
+StateMachineRole:
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Version: 2012-10-17
+      Statement:
+      - Effect: Allow
+        Principal:
+          Service: states.amazonaws.com
+        Action: sts:AssumeRole
+    Policies:
+    - PolicyName: StateMachine
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action: iam:PassRole
+          Resource:
+          - !GetAtt ExecutionRole.Arn
+          - !GetAtt TaskRole.Arn
+        - Effect: Allow
+          Action: ecs:RunTask
+          Resource: !GetAtt TaskDefinition.Arn
+          Condition:
+            ArnEquals:
+              'ecs:cluster': !Sub arn:${Partition}:ecs:${Region}:${Account}:cluster/${AppName}-${EnvName}-ClusterId
+        - Effect: Allow
+          Action:
+          - ecs:StopTask
+          - ecs:DescribeTasks
+          Resource: "*"
+          Condition:
+            ArnEquals:
+              'ecs:cluster': !Sub arn:${Partition}:ecs:${Region}:${Account}:cluster/${AppName}-${EnvName}-ClusterId
+        - Effect: Allow
+          Action:
+            - logs:CreateLogDelivery
+            - logs:GetLogDelivery
+            - logs:UpdateLogDelivery
+            - logs:DeleteLogDelivery
+            - logs:ListLogDeliveries
+            - logs:PutResourcePolicy
+            - logs:DescribeResourcePolicies
+            - logs:DescribeLogGroups
+          Resource: "*" # CWL doesn't support resource-level permissions
+        - Effect: Allow
+          Action:
+          - events:PutTargets
+          - events:PutRule
+          - events:DescribeRule
+          Resource: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForECSTaskRule
