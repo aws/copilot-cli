@@ -40,20 +40,6 @@ var ServiceTypes = []string{
 	BackendServiceType,
 }
 
-// Percentage is percentage input in manifest.
-type Percentage string
-
-// Parse parses Percentage and return its value.
-// For example: 70% returns 70.
-func (p Percentage) Parse() (int, error) {
-	s := strings.TrimSuffix(string(p), "%")
-	value, err := strconv.Atoi(s)
-	if err != nil {
-		return 0, fmt.Errorf("cannot convert percentage value %s to integer", s)
-	}
-	return value, nil
-}
-
 // Range is a number range with maximum and minimum values.
 type Range string
 
@@ -314,8 +300,8 @@ func (a *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // Autoscaling represents the configurable options for Auto Scaling.
 type Autoscaling struct {
 	Range        Range          `yaml:"range"`
-	CPU          *Percentage    `yaml:"cpu"`
-	Memory       *Percentage    `yaml:"memory"`
+	CPU          *int           `yaml:"cpu_percentage"`
+	Memory       *int           `yaml:"memory_percentage"`
 	Requests     *int           `yaml:"requests"`
 	ResponseTime *time.Duration `yaml:"response_time"`
 }
@@ -333,21 +319,15 @@ func (a *Autoscaling) Options() (*template.AutoscalingOpts, error) {
 	autoscalingOpts := template.AutoscalingOpts{
 		MinCapacity: &min,
 		MaxCapacity: &max,
-		Requests:    aws.Float64(float64(aws.IntValue(a.Requests))),
 	}
 	if a.CPU != nil {
-		cpu, err := a.CPU.Parse()
-		if err != nil {
-			return nil, err
-		}
-		autoscalingOpts.CPU = aws.Float64(float64(cpu))
+		autoscalingOpts.CPU = aws.Float64(float64(*a.CPU))
 	}
 	if a.Memory != nil {
-		memory, err := a.Memory.Parse()
-		if err != nil {
-			return nil, err
-		}
-		autoscalingOpts.Memory = aws.Float64(float64(memory))
+		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory))
+	}
+	if a.Requests != nil {
+		autoscalingOpts.Requests = aws.Float64(float64(*a.Requests))
 	}
 	if a.ResponseTime != nil {
 		responseTime := float64(*a.ResponseTime) / float64(time.Second)

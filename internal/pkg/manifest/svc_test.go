@@ -60,7 +60,7 @@ environments:
   prod:
     count:
       range: 1-10
-      cpu: 70%
+      cpu_percentage: 70
 `,
 			requireCorrectValues: func(t *testing.T, i interface{}) {
 				actualManifest, ok := i.(*LoadBalancedWebService)
@@ -124,7 +124,7 @@ environments:
 								Count: Count{
 									Autoscaling: Autoscaling{
 										Range: Range("1-10"),
-										CPU:   percentageP("70%"),
+										CPU:   aws.Int(70),
 									},
 								},
 							},
@@ -381,16 +381,16 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 		"With auto scaling enabled": {
 			inContent: []byte(`count:
   range: 1-10
-  cpu: 70%
-  memory: 80%
+  cpu_percentage: 70
+  memory_percentage: 80
   requests: 1000
   response_time: 500ms
 `),
 			wantedStruct: Count{
 				Autoscaling: Autoscaling{
 					Range:        Range("1-10"),
-					CPU:          percentageP("70%"),
-					Memory:       percentageP("80%"),
+					CPU:          aws.Int(70),
+					Memory:       aws.Int(80),
 					Requests:     aws.Int(1000),
 					ResponseTime: &mockResponseTime,
 				},
@@ -417,39 +417,6 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.Autoscaling.Memory, b.Count.Autoscaling.Memory)
 				require.Equal(t, tc.wantedStruct.Autoscaling.Requests, b.Count.Autoscaling.Requests)
 				require.Equal(t, tc.wantedStruct.Autoscaling.ResponseTime, b.Count.Autoscaling.ResponseTime)
-			}
-		})
-	}
-}
-
-func TestPercentage_Parse(t *testing.T) {
-	testCases := map[string]struct {
-		inPerc string
-
-		wanted    int
-		wantedErr error
-	}{
-		"invalid format": {
-			inPerc: "badPerc",
-
-			wantedErr: fmt.Errorf("cannot convert percentage value badPerc to integer"),
-		},
-		"success": {
-			inPerc: "70%",
-
-			wanted: 70,
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			p := Percentage(tc.inPerc)
-			got, err := p.Parse()
-
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, got, tc.wanted)
 			}
 		})
 	}
@@ -555,15 +522,13 @@ func TestSidecar_Options(t *testing.T) {
 func TestAutoscaling_Options(t *testing.T) {
 	const (
 		mockRange    = "1-100"
-		mockCPU      = "70%"
-		mockMemory   = "80%"
 		mockRequests = 1000
 	)
 	mockResponseTime := 512 * time.Millisecond
 	testCases := map[string]struct {
 		inRange        string
-		inCPU          string
-		inMemory       string
+		inCPU          int
+		inMemory       int
 		inRequests     int
 		inResponseTime time.Duration
 
@@ -575,23 +540,10 @@ func TestAutoscaling_Options(t *testing.T) {
 
 			wantedErr: fmt.Errorf("invalid range value badRange. Should be in format of ${min}-${max}"),
 		},
-		"invalid cpu": {
-			inRange: mockRange,
-			inCPU:   "badCPU",
-
-			wantedErr: fmt.Errorf("cannot convert percentage value badCPU to integer"),
-		},
-		"invalid memory": {
-			inRange:  mockRange,
-			inCPU:    mockCPU,
-			inMemory: "badMemory",
-
-			wantedErr: fmt.Errorf("cannot convert percentage value badMemory to integer"),
-		},
 		"success": {
 			inRange:        mockRange,
-			inCPU:          mockCPU,
-			inMemory:       mockMemory,
+			inCPU:          70,
+			inMemory:       80,
 			inRequests:     mockRequests,
 			inResponseTime: mockResponseTime,
 
@@ -609,8 +561,8 @@ func TestAutoscaling_Options(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			a := Autoscaling{
 				Range:        Range(tc.inRange),
-				CPU:          percentageP(tc.inCPU),
-				Memory:       percentageP(tc.inMemory),
+				CPU:          aws.Int(tc.inCPU),
+				Memory:       aws.Int(tc.inMemory),
 				Requests:     aws.Int(tc.inRequests),
 				ResponseTime: &tc.inResponseTime,
 			}
@@ -624,9 +576,4 @@ func TestAutoscaling_Options(t *testing.T) {
 			}
 		})
 	}
-}
-
-func percentageP(s string) *Percentage {
-	p := Percentage(s)
-	return &p
 }
