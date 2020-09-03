@@ -1,7 +1,7 @@
 {
   "Version": "1.0",
-  "Comment": "Run AWS Fargate task",
-  "TimeoutSeconds": ${Timeout},
+  "Comment": "Run AWS Fargate task",{{if .Timeout}}
+  "TimeoutSeconds": ${Timeout},{{end}}
   "StartAt": "Run Fargate Task",
   "States": {
     "Run Fargate Task": {

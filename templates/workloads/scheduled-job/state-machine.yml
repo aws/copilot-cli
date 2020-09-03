@@ -17,7 +17,7 @@ StateMachine:
       AssignPublicIp: ENABLED # Should be DISABLED if we use private subnets
       SecurityGroups:
         - Fn::ImportValue: !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"{{if .Timeout}}
-      Timeout: {{.Timeout}} # seconds{{end}}
+      Timeout: {{.Timeout}}{{end}}
     DefinitionString: |-
 {{include state-machine-definition . | indent 6}}      
       
