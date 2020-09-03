@@ -34,5 +34,5 @@ timeout: 15m
 
 # You can override any of the values defined above by environment.
 #environments:
-#  test:
-#    schedule: 10 minutes               # Number of tasks to run for the "test" environment.
+#  prod:
+#    cpu: 2048               # Larger CPU value for prod environment 
