@@ -63,31 +63,23 @@ type LoadBalancedWebServiceProps struct {
 
 // NewLoadBalancedWebService creates a new public load balanced web service, receives all the requests from the load balancer,
 // has a single task with minimal CPU and memory thresholds, and sets the default health check path to "/".
-func NewLoadBalancedWebService(input *LoadBalancedWebServiceProps) *LoadBalancedWebService {
-	defaultLbManifest := newDefaultLoadBalancedWebService()
-	defaultLbManifest.Service = Service{
-		Name: aws.String(input.Name),
-		Type: aws.String(LoadBalancedWebServiceType),
-	}
-	defaultLbManifest.Image = ServiceImageWithPort{
-		ServiceImage: ServiceImage{
-			Build: BuildArgsOrString{
-				BuildArgs: DockerBuildArgs{
-					Dockerfile: aws.String(input.Dockerfile),
-				},
-			},
-		},
-		Port: aws.Uint16(input.Port),
-	}
-	defaultLbManifest.RoutingRule.Path = aws.String(input.Path)
-	defaultLbManifest.parser = template.New()
-	return defaultLbManifest
+func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalancedWebService {
+	svc := newDefaultLoadBalancedWebService()
+	// Apply overrides.
+	svc.Name = aws.String(props.Name)
+	svc.LoadBalancedWebServiceConfig.Image.Build.BuildArgs.Dockerfile = aws.String(props.Dockerfile)
+	svc.LoadBalancedWebServiceConfig.Image.Port = aws.Uint16(props.Port)
+	svc.RoutingRule.Path = aws.String(props.Path)
+	svc.parser = template.New()
+	return svc
 }
 
 // newDefaultLoadBalancedWebService returns an empty LoadBalancedWebService with only the default values set.
 func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 	return &LoadBalancedWebService{
-		Service: Service{},
+		Service: Service{
+			Type: aws.String(LoadBalancedWebServiceType),
+		},
 		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 			Image: ServiceImageWithPort{},
 			RoutingRule: RoutingRule{
@@ -96,7 +88,9 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),
-				Count:  aws.Int(1),
+				Count: Count{
+					Value: aws.Int(1),
+				},
 			},
 		},
 	}

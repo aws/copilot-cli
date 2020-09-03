@@ -228,22 +228,34 @@ Outputs:
 }
 
 func TestLoadBalancedWebService_Parameters(t *testing.T) {
-	testLBWebServiceManifest := manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
+	baseProps := &manifest.LoadBalancedWebServiceProps{
 		ServiceProps: &manifest.ServiceProps{
 			Name:       "frontend",
 			Dockerfile: "frontend/Dockerfile",
 		},
 		Path: "frontend",
 		Port: 80,
-	})
-	testLBWebServiceManifestWithSidecar := manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
-		ServiceProps: &manifest.ServiceProps{
-			Name:       "frontend",
-			Dockerfile: "frontend/Dockerfile",
+	}
+	testLBWebServiceManifest := manifest.NewLoadBalancedWebService(baseProps)
+	testLBWebServiceManifest.Count = manifest.Count{
+		Value: aws.Int(1),
+		Autoscaling: manifest.Autoscaling{
+			Range: manifest.Range("2-100"),
 		},
-		Path: "frontend",
-		Port: 80,
-	})
+	}
+	testLBWebServiceManifestWithBadCount := manifest.NewLoadBalancedWebService(baseProps)
+	testLBWebServiceManifestWithBadCount.Count = manifest.Count{
+		Autoscaling: manifest.Autoscaling{
+			Range: manifest.Range("badCount"),
+		},
+	}
+	testLBWebServiceManifestWithSidecar := manifest.NewLoadBalancedWebService(baseProps)
+	testLBWebServiceManifestWithSidecar.Count = manifest.Count{
+		Value: aws.Int(1),
+		Autoscaling: manifest.Autoscaling{
+			Range: manifest.Range("2-100"),
+		},
+	}
 	testLBWebServiceManifestWithSidecar.TargetContainer = aws.String("xray")
 	testLBWebServiceManifestWithSidecar.Sidecar = manifest.Sidecar{Sidecars: map[string]*manifest.SidecarConfig{
 		"xray": {
@@ -298,7 +310,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		},
 		{
 			ParameterKey:   aws.String(WorkloadTaskCountParamKey),
-			ParameterValue: aws.String("1"),
+			ParameterValue: aws.String("2"),
 		},
 		{
 			ParameterKey:   aws.String(WorkloadLogRetentionParamKey),
@@ -378,6 +390,12 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			manifest:     testLBWebServiceManifestWithBadSidecar,
 
 			expectedErr: fmt.Errorf("target container xray doesn't exist"),
+		},
+		"with bad count": {
+			httpsEnabled: true,
+			manifest:     testLBWebServiceManifestWithBadCount,
+
+			expectedErr: fmt.Errorf("parse task count value badCount: invalid range value badCount. Should be in format of ${min}-${max}"),
 		},
 	}
 	for name, tc := range testCases {

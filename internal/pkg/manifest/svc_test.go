@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -55,6 +56,10 @@ logging:
 environments:
   test:
     count: 3
+  prod:
+    count:
+      range: 1-10
+      cpu: 70%
 `,
 			requireCorrectValues: func(t *testing.T, i interface{}) {
 				actualManifest, ok := i.(*LoadBalancedWebService)
@@ -73,7 +78,9 @@ environments:
 						TaskConfig: TaskConfig{
 							CPU:    aws.Int(512),
 							Memory: aws.Int(1024),
-							Count:  aws.Int(1),
+							Count: Count{
+								Value: aws.Int(1),
+							},
 							Variables: map[string]string{
 								"LOG_LEVEL": "WARN",
 							},
@@ -106,7 +113,19 @@ environments:
 					Environments: map[string]*LoadBalancedWebServiceConfig{
 						"test": {
 							TaskConfig: TaskConfig{
-								Count: aws.Int(3),
+								Count: Count{
+									Value: aws.Int(3),
+								},
+							},
+						},
+						"prod": {
+							TaskConfig: TaskConfig{
+								Count: Count{
+									Autoscaling: Autoscaling{
+										Range: Range("1-10"),
+										CPU:   aws.String("70%"),
+									},
+								},
 							},
 						},
 					},
@@ -156,7 +175,9 @@ secrets:
 						TaskConfig: TaskConfig{
 							CPU:    aws.Int(1024),
 							Memory: aws.Int(1024),
-							Count:  aws.Int(1),
+							Count: Count{
+								Value: aws.Int(1),
+							},
 							Secrets: map[string]string{
 								"API_TOKEN": "SUBS_API_TOKEN",
 							},
@@ -188,7 +209,7 @@ type: 'OH NO'
 	}
 }
 
-func TestBuildArgsUnmarshalYAML(t *testing.T) {
+func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		inContent []byte
 
@@ -337,6 +358,111 @@ func TestBuildConfig(t *testing.T) {
 			got := s.BuildConfig(mockWsRoot)
 
 			require.Equal(t, tc.wantedBuild, *got)
+		})
+	}
+}
+
+func TestCount_UnmarshalYAML(t *testing.T) {
+	mockResponseTime := 500 * time.Millisecond
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct Count
+		wantedError  error
+	}{
+		"legacy case: simple task count": {
+			inContent: []byte(`count: 1`),
+
+			wantedStruct: Count{
+				Value: aws.Int(1),
+			},
+		},
+		"With auto scaling enabled": {
+			inContent: []byte(`count:
+  range: 1-10
+  cpu: 70%
+  memory: 80%
+  requests: 1000
+  response_time: 500ms
+`),
+			wantedStruct: Count{
+				Autoscaling: Autoscaling{
+					Range:        Range("1-10"),
+					CPU:          aws.String("70%"),
+					Memory:       aws.String("80%"),
+					Requests:     aws.Int(1000),
+					ResponseTime: &mockResponseTime,
+				},
+			},
+		},
+		"Error if unmarshalable": {
+			inContent: []byte(`count: badNumber
+`),
+			wantedError: errUnmarshalCountOpts,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var b TaskConfig
+			err := yaml.Unmarshal(tc.inContent, &b)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				// check memberwise dereferenced pointer equality
+				require.Equal(t, aws.IntValue(tc.wantedStruct.Value), aws.IntValue(b.Count.Value))
+				require.Equal(t, tc.wantedStruct.Autoscaling.Range, b.Count.Autoscaling.Range)
+				require.Equal(t, aws.StringValue(tc.wantedStruct.Autoscaling.CPU), aws.StringValue(b.Count.Autoscaling.CPU))
+				require.Equal(t, aws.StringValue(tc.wantedStruct.Autoscaling.Memory), aws.StringValue(b.Count.Autoscaling.Memory))
+				require.Equal(t, aws.IntValue(tc.wantedStruct.Autoscaling.Requests), aws.IntValue(b.Count.Autoscaling.Requests))
+				require.Equal(t, tc.wantedStruct.Autoscaling.ResponseTime, b.Count.Autoscaling.ResponseTime)
+			}
+		})
+	}
+}
+
+func TestRange_Value(t *testing.T) {
+	testCases := map[string]struct {
+		inRange string
+
+		wantedMin int
+		wantedMax int
+		wantedErr error
+	}{
+		"invalid format": {
+			inRange: "badRange",
+
+			wantedErr: fmt.Errorf("invalid range value badRange. Should be in format of ${min}-${max}"),
+		},
+		"invalid minimum": {
+			inRange: "a-100",
+
+			wantedErr: fmt.Errorf("cannot convert minimum value a to integer"),
+		},
+		"invalid maximum": {
+			inRange: "1-a",
+
+			wantedErr: fmt.Errorf("cannot convert maximum value a to integer"),
+		},
+		"success": {
+			inRange: "1-10",
+
+			wantedMin: 1,
+			wantedMax: 10,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			r := Range(tc.inRange)
+			gotMin, gotMax, err := r.Parse()
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, gotMin, tc.wantedMin)
+				require.Equal(t, gotMax, tc.wantedMax)
+			}
 		})
 	}
 }

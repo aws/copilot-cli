@@ -7,9 +7,10 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
+	"regexp"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	c "github.com/fatih/color"
 )
 
 const (
@@ -36,10 +37,10 @@ func (l *Event) JSONString() (string, error) {
 // HumanString returns the stringified LogEvent struct with human readable format.
 func (l *Event) HumanString() string {
 	for _, code := range fatalCodes {
-		l.Message = strings.ReplaceAll(l.Message, code, color.Red.Sprint(code))
+		l.Message = colorCodeMessage(l.Message, code, color.Red)
 	}
 	for _, code := range warningCodes {
-		l.Message = strings.ReplaceAll(l.Message, code, color.Yellow.Sprint(code))
+		l.Message = colorCodeMessage(l.Message, code, color.Yellow)
 	}
 	return fmt.Sprintf("%s %s\n", color.Grey.Sprint(l.shortLogStreamName()), l.Message)
 }
@@ -49,4 +50,14 @@ func (l *Event) shortLogStreamName() string {
 		return l.LogStreamName
 	}
 	return l.LogStreamName[0:shortLogStreamNameLength]
+}
+
+// colorCodeMessage returns the given message with color applied to every occurence of code
+func colorCodeMessage(message string, code string, colorToApply *c.Color) string {
+	if c.NoColor {
+		return message
+	}
+	pattern := fmt.Sprintf("\\b%s\\b", code)
+	re := regexp.MustCompile(pattern)
+	return re.ReplaceAllString(message, colorToApply.Sprint(code))
 }
