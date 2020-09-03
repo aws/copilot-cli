@@ -16,13 +16,13 @@ cpu: {{.CPU}}
 # Amount of memory in MiB used by the task.
 memory: {{.Memory}}
 
-# The number of times to retry the job before failing.
+# The trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2 hours, 90s, 15 minutes)
+schedule: @daily
+
+# Optional. The number of times to retry the job before failing.
 retries: 1
-# The timeout after which to stop the job if it's still running. 
-timeout: 900
-# The trigger for your job. You can set the `rate` or `cron` and `eventpattern` fields.  
-trigger:
-  rate: every 20 minutes
+# Optional. The timeout after which to stop the job if it's still running. You can use the units (h, m, s).
+timeout: 15m
 
 # Optional fields for more advanced use-cases.
 #
