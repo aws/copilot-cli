@@ -1,7 +1,7 @@
 ---
 title: "deploy"
 linkTitle: "deploy"
-weight: 6
+weight: 7
 ---
 
 ```

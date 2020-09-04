@@ -25,7 +25,7 @@ cpu: {{.CPU}}
 # Amount of memory in MiB used by the task.
 memory: {{.Memory}}
 # Number of tasks that should be running in your service.
-count: {{.Count}}
+count: {{.Count.Value}}
 
 # Optional fields for more advanced use-cases.
 #

@@ -11,15 +11,19 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
-// Paths of service cloudformation templates under templates/services/.
+// Paths of workload cloudformation templates under templates/workloads/.
 const (
-	fmtSvcCFTemplatePath       = "services/%s/cf.yml"
-	fmtSvcCommonCFTemplatePath = "services/common/cf/%s.yml"
+	fmtWkldCFTemplatePath       = "workloads/%s/%s/cf.yml"
+	fmtWkldCommonCFTemplatePath = "workloads/common/cf/%s.yml"
+)
+
+const (
+	servicesDirName = "services"
 )
 
 var (
-	// Template names under "services/common/cf/".
-	commonServiceCFTemplateNames = []string{
+	// Template names under "workloads/common/cf/".
+	commonWorkloadCFTemplateNames = []string{
 		"loggroup",
 		"envvars",
 		"executionrole",
@@ -30,6 +34,7 @@ var (
 		"addons",
 		"sidecars",
 		"logconfig",
+		"autoscaling",
 	}
 )
 
@@ -67,6 +72,16 @@ type LogConfigOpts struct {
 	ConfigFile     *string
 }
 
+// AutoscalingOpts holds configuration that's needed for Auto Scaling.
+type AutoscalingOpts struct {
+	MinCapacity  *int
+	MaxCapacity  *int
+	CPU          *float64
+	Memory       *float64
+	Requests     *float64
+	ResponseTime *float64
+}
+
 // ServiceOpts holds optional data that can be provided to enable features in a service stack template.
 type ServiceOpts struct {
 	// Additional options that're common between **all** service templates.
@@ -75,6 +90,7 @@ type ServiceOpts struct {
 	NestedStack *ServiceNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	Sidecars    []*SidecarOpts
 	LogConfig   *LogConfigOpts
+	Autoscaling *AutoscalingOpts
 
 	// Additional options that're not shared across all service templates.
 	HealthCheck        *ecs.HealthCheck
@@ -94,12 +110,12 @@ func (t *Template) ParseBackendService(data ServiceOpts) (*Content, error) {
 
 // parseSvc parses a service's CloudFormation template with the specified data object and returns its content.
 func (t *Template) parseSvc(name string, data interface{}, options ...ParseOption) (*Content, error) {
-	tpl, err := t.parse("base", fmt.Sprintf(fmtSvcCFTemplatePath, name), options...)
+	tpl, err := t.parse("base", fmt.Sprintf(fmtWkldCFTemplatePath, servicesDirName, name), options...)
 	if err != nil {
 		return nil, err
 	}
-	for _, templateName := range commonServiceCFTemplateNames {
-		nestedTpl, err := t.parse(templateName, fmt.Sprintf(fmtSvcCommonCFTemplatePath, templateName), options...)
+	for _, templateName := range commonWorkloadCFTemplateNames {
+		nestedTpl, err := t.parse(templateName, fmt.Sprintf(fmtWkldCommonCFTemplatePath, templateName), options...)
 		if err != nil {
 			return nil, err
 		}

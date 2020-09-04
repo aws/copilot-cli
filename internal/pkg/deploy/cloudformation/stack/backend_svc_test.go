@@ -45,18 +45,23 @@ var testBackendSvcManifest = manifest.NewBackendService(manifest.BackendServiceP
 })
 
 func TestBackendService_Template(t *testing.T) {
-	badTestBackendSvcManifest := manifest.NewBackendService(manifest.BackendServiceProps{
+	baseProps := manifest.BackendServiceProps{
 		ServiceProps: manifest.ServiceProps{
 			Name:       "frontend",
 			Dockerfile: "./frontend/Dockerfile",
 		},
 		Port: 8080,
-	})
-	badTestBackendSvcManifest.Sidecar = manifest.Sidecar{Sidecars: map[string]*manifest.SidecarConfig{
+	}
+	testBackendSvcManifestWithBadSidecar := manifest.NewBackendService(baseProps)
+	testBackendSvcManifestWithBadSidecar.Sidecar = manifest.Sidecar{Sidecars: map[string]*manifest.SidecarConfig{
 		"xray": {
 			Port: aws.String("80/80/80"),
 		},
 	}}
+	testBackendSvcManifestWithBadAutoScaling := manifest.NewBackendService(baseProps)
+	testBackendSvcManifestWithBadAutoScaling.Count.Autoscaling = manifest.Autoscaling{
+		Range: manifest.Range("badRange"),
+	}
 	testCases := map[string]struct {
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, svc *BackendService)
 		manifest         *manifest.BackendService
@@ -68,10 +73,10 @@ func TestBackendService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				svc.addons = mockTemplater{err: errors.New("some error")}
 			},
-			wantedErr: fmt.Errorf("generate addons template for service %s: %w", aws.StringValue(testBackendSvcManifest.Name), errors.New("some error")),
+			wantedErr: fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testBackendSvcManifest.Name), errors.New("some error")),
 		},
 		"failed parsing sidecars template": {
-			manifest: badTestBackendSvcManifest,
+			manifest: testBackendSvcManifestWithBadSidecar,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				svc.addons = mockTemplater{
 					tpl: `Outputs:
@@ -80,6 +85,17 @@ func TestBackendService_Template(t *testing.T) {
 				}
 			},
 			wantedErr: fmt.Errorf("convert the sidecar configuration for service frontend: %w", errors.New("cannot parse port mapping from 80/80/80")),
+		},
+		"failed parsing Auto Scaling template": {
+			manifest: testBackendSvcManifestWithBadAutoScaling,
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				svc.addons = mockTemplater{
+					tpl: `Outputs:
+  AdditionalResourcesPolicyArn:
+    Value: hello`,
+				}
+			},
+			wantedErr: fmt.Errorf("convert the Auto Scaling configuration for service frontend: %w", errors.New("invalid range value badRange. Should be in format of ${min}-${max}")),
 		},
 		"failed parsing svc template": {
 			manifest: testBackendSvcManifest,
@@ -130,7 +146,7 @@ func TestBackendService_Template(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			conf := &BackendService{
-				svc: &svc{
+				wkld: &wkld{
 					name: aws.StringValue(testBackendSvcManifest.Name),
 					env:  testEnvName,
 					app:  testAppName,
@@ -156,7 +172,7 @@ func TestBackendService_Template(t *testing.T) {
 func TestBackendService_Parameters(t *testing.T) {
 	// GIVEN
 	conf := &BackendService{
-		svc: &svc{
+		wkld: &wkld{
 			name: aws.StringValue(testBackendSvcManifest.Name),
 			env:  testEnvName,
 			app:  testAppName,
@@ -175,19 +191,19 @@ func TestBackendService_Parameters(t *testing.T) {
 	// THEN
 	require.ElementsMatch(t, []*cloudformation.Parameter{
 		{
-			ParameterKey:   aws.String(ServiceAppNameParamKey),
+			ParameterKey:   aws.String(WorkloadAppNameParamKey),
 			ParameterValue: aws.String("phonetool"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceEnvNameParamKey),
+			ParameterKey:   aws.String(WorkloadEnvNameParamKey),
 			ParameterValue: aws.String("test"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceNameParamKey),
+			ParameterKey:   aws.String(WorkloadNameParamKey),
 			ParameterValue: aws.String("frontend"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceContainerImageParamKey),
+			ParameterKey:   aws.String(WorkloadContainerImageParamKey),
 			ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
 		},
 		{
@@ -195,23 +211,23 @@ func TestBackendService_Parameters(t *testing.T) {
 			ParameterValue: aws.String("8080"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceTaskCPUParamKey),
+			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),
 			ParameterValue: aws.String("256"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceTaskMemoryParamKey),
+			ParameterKey:   aws.String(WorkloadTaskMemoryParamKey),
 			ParameterValue: aws.String("512"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceTaskCountParamKey),
+			ParameterKey:   aws.String(WorkloadTaskCountParamKey),
 			ParameterValue: aws.String("1"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceLogRetentionParamKey),
+			ParameterKey:   aws.String(WorkloadLogRetentionParamKey),
 			ParameterValue: aws.String("30"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceAddonsTemplateURLParamKey),
+			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 			ParameterValue: aws.String(""),
 		},
 	}, params)

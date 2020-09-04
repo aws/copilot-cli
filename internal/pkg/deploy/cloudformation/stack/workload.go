@@ -16,22 +16,22 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
-// Template rendering configuration common across services.
+// Template rendering configuration common across workloads.
 const (
-	svcParamsTemplatePath = "services/params.json.tmpl"
+	wkldParamsTemplatePath = "workloads/params.json.tmpl"
 )
 
-// Parameter logical IDs common across services.
+// Parameter logical IDs common across workloads.
 const (
-	ServiceAppNameParamKey           = "AppName"
-	ServiceEnvNameParamKey           = "EnvName"
-	ServiceNameParamKey              = "ServiceName"
-	ServiceContainerImageParamKey    = "ContainerImage"
-	ServiceTaskCPUParamKey           = "TaskCPU"
-	ServiceTaskMemoryParamKey        = "TaskMemory"
-	ServiceTaskCountParamKey         = "TaskCount"
-	ServiceLogRetentionParamKey      = "LogRetention"
-	ServiceAddonsTemplateURLParamKey = "AddonsTemplateURL"
+	WorkloadAppNameParamKey           = "AppName"
+	WorkloadEnvNameParamKey           = "EnvName"
+	WorkloadNameParamKey              = "WorkloadName"
+	WorkloadContainerImageParamKey    = "ContainerImage"
+	WorkloadTaskCPUParamKey           = "TaskCPU"
+	WorkloadTaskMemoryParamKey        = "TaskMemory"
+	WorkloadTaskCountParamKey         = "TaskCount"
+	WorkloadLogRetentionParamKey      = "LogRetention"
+	WorkloadAddonsTemplateURLParamKey = "AddonsTemplateURL"
 )
 
 // RuntimeConfig represents configuration that's defined outside of the manifest file
@@ -47,7 +47,9 @@ type templater interface {
 	Template() (string, error)
 }
 
-type svc struct {
+// wkld represents a containerized workload running on Amazon ECS.
+// A workload can be a long-running service, an ephemeral task, or a periodic task.
+type wkld struct {
 	name string
 	env  string
 	app  string
@@ -59,58 +61,67 @@ type svc struct {
 }
 
 // StackName returns the name of the stack.
-func (s *svc) StackName() string {
-	return NameForService(s.app, s.env, s.name)
+func (w *wkld) StackName() string {
+	return NameForService(w.app, w.env, w.name)
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
-func (s *svc) Parameters() []*cloudformation.Parameter {
+func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
+	desiredCount := w.tc.Count.Value
+	// If auto scaling is configured, override the desired count value.
+	if !w.tc.Count.Autoscaling.IsEmpty() {
+		min, _, err := w.tc.Count.Autoscaling.Range.Parse()
+		if err != nil {
+			return nil, fmt.Errorf("parse task count value %s: %w", string(w.tc.Count.Autoscaling.Range), err)
+		}
+		desiredCount = aws.Int(min)
+	}
 	return []*cloudformation.Parameter{
 		{
-			ParameterKey:   aws.String(ServiceAppNameParamKey),
-			ParameterValue: aws.String(s.app),
+			ParameterKey:   aws.String(WorkloadAppNameParamKey),
+			ParameterValue: aws.String(w.app),
 		},
 		{
-			ParameterKey:   aws.String(ServiceEnvNameParamKey),
-			ParameterValue: aws.String(s.env),
+			ParameterKey:   aws.String(WorkloadEnvNameParamKey),
+			ParameterValue: aws.String(w.env),
 		},
 		{
-			ParameterKey:   aws.String(ServiceNameParamKey),
-			ParameterValue: aws.String(s.name),
+			ParameterKey:   aws.String(WorkloadNameParamKey),
+			ParameterValue: aws.String(w.name),
 		},
 		{
-			ParameterKey:   aws.String(ServiceContainerImageParamKey),
-			ParameterValue: aws.String(fmt.Sprintf("%s:%s", s.rc.ImageRepoURL, s.rc.ImageTag)),
+			ParameterKey:   aws.String(WorkloadContainerImageParamKey),
+			ParameterValue: aws.String(fmt.Sprintf("%s:%s", w.rc.ImageRepoURL, w.rc.ImageTag)),
 		},
 		{
-			ParameterKey:   aws.String(ServiceTaskCPUParamKey),
-			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(s.tc.CPU))),
+			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),
+			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(w.tc.CPU))),
 		},
 		{
-			ParameterKey:   aws.String(ServiceTaskMemoryParamKey),
-			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(s.tc.Memory))),
+			ParameterKey:   aws.String(WorkloadTaskMemoryParamKey),
+			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(w.tc.Memory))),
 		},
 		{
-			ParameterKey:   aws.String(ServiceTaskCountParamKey),
-			ParameterValue: aws.String(strconv.Itoa(*s.tc.Count)),
+			ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+			ParameterValue: aws.String(strconv.Itoa(*desiredCount)),
 		},
 		{
-			ParameterKey:   aws.String(ServiceLogRetentionParamKey),
+			ParameterKey:   aws.String(WorkloadLogRetentionParamKey),
 			ParameterValue: aws.String("30"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceAddonsTemplateURLParamKey),
-			ParameterValue: aws.String(s.rc.AddonsTemplateURL),
+			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
+			ParameterValue: aws.String(w.rc.AddonsTemplateURL),
 		},
-	}
+	}, nil
 }
 
 // Tags returns the list of tags to apply to the CloudFormation stack.
-func (s *svc) Tags() []*cloudformation.Tag {
-	return mergeAndFlattenTags(s.rc.AdditionalTags, map[string]string{
-		deploy.AppTagKey:     s.app,
-		deploy.EnvTagKey:     s.env,
-		deploy.ServiceTagKey: s.name,
+func (w *wkld) Tags() []*cloudformation.Tag {
+	return mergeAndFlattenTags(w.rc.AdditionalTags, map[string]string{
+		deploy.AppTagKey:     w.app,
+		deploy.EnvTagKey:     w.env,
+		deploy.ServiceTagKey: w.name,
 	})
 }
 
@@ -119,12 +130,12 @@ type templateConfigurer interface {
 	Tags() []*cloudformation.Tag
 }
 
-func (s *svc) templateConfiguration(tc templateConfigurer) (string, error) {
+func (w *wkld) templateConfiguration(tc templateConfigurer) (string, error) {
 	params, err := tc.Parameters()
 	if err != nil {
 		return "", err
 	}
-	doc, err := s.parser.Parse(svcParamsTemplatePath, struct {
+	doc, err := w.parser.Parse(wkldParamsTemplatePath, struct {
 		Parameters []*cloudformation.Parameter
 		Tags       []*cloudformation.Tag
 	}{
@@ -139,19 +150,19 @@ func (s *svc) templateConfiguration(tc templateConfigurer) (string, error) {
 	return doc.String(), nil
 }
 
-func (s *svc) addonsOutputs() (*template.ServiceNestedStackOpts, error) {
-	stack, err := s.addons.Template()
+func (w *wkld) addonsOutputs() (*template.ServiceNestedStackOpts, error) {
+	stack, err := w.addons.Template()
 	if err != nil {
 		var noAddonsErr *addon.ErrDirNotExist
 		if !errors.As(err, &noAddonsErr) {
-			return nil, fmt.Errorf("generate addons template for service %s: %w", s.name, err)
+			return nil, fmt.Errorf("generate addons template for %s: %w", w.name, err)
 		}
 		return nil, nil // Addons directory does not exist, so there are no outputs and error.
 	}
 
 	out, err := addon.Outputs(stack)
 	if err != nil {
-		return nil, fmt.Errorf("get addons outputs for service %s: %w", s.name, err)
+		return nil, fmt.Errorf("get addons outputs for service %s: %w", w.name, err)
 	}
 	return &template.ServiceNestedStackOpts{
 		StackName:       addon.StackName,
