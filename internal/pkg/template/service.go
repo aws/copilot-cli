@@ -34,6 +34,7 @@ var (
 		"addons",
 		"sidecars",
 		"logconfig",
+		"autoscaling",
 	}
 )
 
