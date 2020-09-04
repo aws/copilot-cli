@@ -2,7 +2,6 @@
 AutoScalingRole:
   Type: AWS::IAM::Role
   Properties:
-    RoleName: !Join ['', [!Ref WorkloadName, AutoScalingRole]]
     AssumeRolePolicyDocument:
       Statement:
         - Effect: Allow
@@ -31,28 +30,28 @@ AutoScalingTarget:
 AutoScalingPolicyECSServiceAverageCPUUtilization:
   Type: AWS::ApplicationAutoScaling::ScalingPolicy
   Properties:
-    PolicyName: !Join ['-', [!Ref WorkloadName, ECSServiceAverageCPUUtilization]]
+    PolicyName: !Join ['-', [!Ref WorkloadName, ECSServiceAverageCPUUtilization, ScalingPolicy]]
     PolicyType: TargetTrackingScaling
     ScalingTargetId: !Ref AutoScalingTarget
     TargetTrackingScalingPolicyConfiguration:
       PredefinedMetricSpecification:
         PredefinedMetricType: ECSServiceAverageCPUUtilization
-      ScaleInCooldown: 10
-      ScaleOutCooldown: 10
+      ScaleInCooldown: 120
+      ScaleOutCooldown: 60
       TargetValue: {{.Autoscaling.CPU}}
 {{- end}}
 {{if .Autoscaling.Memory}}
 AutoScalingPolicyECSServiceAverageMemoryUtilization:
   Type: AWS::ApplicationAutoScaling::ScalingPolicy
   Properties:
-    PolicyName: !Join ['-', [!Ref WorkloadName, ECSServiceAverageMemoryUtilization]]
+    PolicyName: !Join ['-', [!Ref WorkloadName, ECSServiceAverageMemoryUtilization, ScalingPolicy]]
     PolicyType: TargetTrackingScaling
     ScalingTargetId: !Ref AutoScalingTarget
     TargetTrackingScalingPolicyConfiguration:
       PredefinedMetricSpecification:
         PredefinedMetricType: ECSServiceAverageMemoryUtilization
-      ScaleInCooldown: 10
-      ScaleOutCooldown: 10
+      ScaleInCooldown: 120
+      ScaleOutCooldown: 60
       TargetValue: {{.Autoscaling.Memory}}
 {{- end}}
 {{- end}}
