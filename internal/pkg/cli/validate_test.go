@@ -199,10 +199,16 @@ func TestValidatePath(t *testing.T) {
 		fs.MkdirAll("frontend", 0755)
 		fs.MkdirAll("backend", 0755)
 
-		afero.WriteFile(fs, "Dockerfile", []byte("FROM nginx"), 0644)
 		afero.WriteFile(fs, "frontend/Dockerfile", []byte("FROM nginx"), 0644)
 		afero.WriteFile(fs, "backend/Dockerfile", []byte("FROM nginx"), 0644)
 	}
+
+	deleteFS := func() {
+		fs := &afero.Afero{Fs: afero.NewOsFs()}
+		fs.RemoveAll("frontend")
+		fs.RemoveAll("backend")
+	}
+
 	testCases := map[string]struct {
 		input interface{}
 		want  error
@@ -232,6 +238,7 @@ func TestValidatePath(t *testing.T) {
 		t.Run(path, func(t *testing.T) {
 
 			// GIVEN
+			defer deleteFS()
 			mockFileSystem()
 
 			// WHEN
