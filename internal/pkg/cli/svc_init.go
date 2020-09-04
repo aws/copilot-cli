@@ -277,11 +277,11 @@ func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, err
 		return nil, fmt.Errorf("get copilot directory: %w", err)
 	}
 	wsRoot := filepath.Dir(copilotDirPath)
-	dfpath, err := filepath.Abs(o.DockerfilePath)
+	o.DockerfilePath, err = filepath.Abs(o.DockerfilePath)
 	if err != nil {
 		return nil, err
 	}
-	o.DockerfilePath, err = filepath.Rel(wsRoot, dfpath)
+	dfpath, err := filepath.Rel(wsRoot, o.DockerfilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, err
 	return manifest.NewBackendService(manifest.BackendServiceProps{
 		ServiceProps: manifest.ServiceProps{
 			Name:       o.Name,
-			Dockerfile: o.DockerfilePath,
+			Dockerfile: dfpath,
 		},
 		Port:        o.Port,
 		HealthCheck: hc,
