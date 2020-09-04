@@ -240,18 +240,18 @@ func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalance
 		return nil, fmt.Errorf("get copilot directory: %w", err)
 	}
 	wsRoot := filepath.Dir(copilotDirPath)
-	o.DockerfilePath, err = filepath.Abs(o.DockerfilePath)
+	dfpath, err := filepath.Abs(o.DockerfilePath)
 	if err != nil {
 		return nil, err
 	}
-	dfpath, err := filepath.Rel(wsRoot, o.DockerfilePath)
+	o.DockerfilePath, err = filepath.Rel(wsRoot, dfpath)
 	if err != nil {
 		return nil, err
 	}
 	props := &manifest.LoadBalancedWebServiceProps{
 		ServiceProps: &manifest.ServiceProps{
 			Name:       o.Name,
-			Dockerfile: dfpath,
+			Dockerfile: o.DockerfilePath,
 		},
 		Port: o.Port,
 		Path: "/",
@@ -277,11 +277,11 @@ func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, err
 		return nil, fmt.Errorf("get copilot directory: %w", err)
 	}
 	wsRoot := filepath.Dir(copilotDirPath)
-	o.DockerfilePath, err = filepath.Abs(o.DockerfilePath)
+	dfpath, err := filepath.Abs(o.DockerfilePath)
 	if err != nil {
 		return nil, err
 	}
-	dfpath, err := filepath.Rel(wsRoot, o.DockerfilePath)
+	o.DockerfilePath, err = filepath.Rel(wsRoot, dfpath)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, err
 	return manifest.NewBackendService(manifest.BackendServiceProps{
 		ServiceProps: manifest.ServiceProps{
 			Name:       o.Name,
-			Dockerfile: dfpath,
+			Dockerfile: o.DockerfilePath,
 		},
 		Port:        o.Port,
 		HealthCheck: hc,
@@ -356,11 +356,12 @@ func (o *initSvcOpts) askDockerfile() error {
 		o.DockerfilePath = sel
 		return nil
 	}
+
+	// If no Dockerfiles were found, prompt user for custom path.
 	var notExistErr *dockerfile.ErrDockerfileNotFound
 	if !errors.As(err, &notExistErr) {
 		return err
 	}
-	// If no Dockerfiles were found, prompt user for custom path.
 	sel, err = o.prompt.Get(
 		fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
 		svcInitDockerfilePathHelpPrompt,
@@ -369,7 +370,6 @@ func (o *initSvcOpts) askDockerfile() error {
 	if err != nil {
 		return fmt.Errorf("get custom path: %w", err)
 	}
-
 	o.DockerfilePath = sel
 	return nil
 }

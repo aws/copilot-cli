@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/opts"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -394,7 +392,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
-				m.EXPECT().WriteServiceManifest(gomock.Any(), opts.Name).Return("/frontend/manifest.yml", nil)
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("app").Return([]*config.Service{}, nil)
@@ -432,7 +430,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
-				m.EXPECT().WriteServiceManifest(gomock.Any(), opts.Name).Return("/frontend/manifest.yml", errors.New("some error"))
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", errors.New("some error"))
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("app").Return([]*config.Service{}, nil)
@@ -464,7 +462,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
-				m.EXPECT().WriteServiceManifest(gomock.Any(), opts.Name).Return("/frontend/manifest.yml", nil)
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("app").Return([]*config.Service{}, nil)
@@ -490,7 +488,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
-				m.EXPECT().WriteServiceManifest(gomock.Any(), opts.Name).Return("/frontend/manifest.yml", nil)
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("app").Return([]*config.Service{}, nil)
@@ -516,7 +514,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/backend", nil)
-				m.EXPECT().WriteServiceManifest(gomock.Any(), opts.Name).
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Service.Type, manifest.BackendServiceType)
 						require.Nil(t, m.Image.HealthCheck)
@@ -561,7 +559,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/backend", nil)
-				m.EXPECT().WriteServiceManifest(gomock.Any(), opts.Name).
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Service.Type, manifest.BackendServiceType)
 						require.Equal(t, *m.Image.HealthCheck, manifest.ContainerHealthCheck{
@@ -621,11 +619,21 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			mockappDeployer := mocks.NewMockappDeployer(ctrl)
 			mockProg := mocks.NewMockprogress(ctrl)
 			mockDf := mocks.NewMockdockerfileParser(ctrl)
-			tc.mockWriter(mockWriter)
-			tc.mockstore(mockstore)
-			tc.mockappDeployer(mockappDeployer)
-			tc.mockProg(mockProg)
-			tc.mockDf(mockDf)
+			if tc.mockWriter != nil {
+				tc.mockWriter(mockWriter)
+			}
+			if tc.mockstore != nil {
+				tc.mockstore(mockstore)
+			}
+			if tc.mockappDeployer != nil {
+				tc.mockappDeployer(mockappDeployer)
+			}
+			if tc.mockProg != nil {
+				tc.mockProg(mockProg)
+			}
+			if tc.mockDf != nil {
+				tc.mockDf(mockDf)
+			}
 			opts := initSvcOpts{
 				initSvcVars: initSvcVars{
 					ServiceType:    tc.inSvcType,
@@ -635,6 +643,10 @@ func TestAppInitOpts_Execute(t *testing.T) {
 					GlobalOpts:     &GlobalOpts{appName: tc.inAppName},
 				},
 				setupParser: func(o *initSvcOpts) {},
+				ws:          mockWriter,
+				store:       mockstore,
+				appDeployer: mockappDeployer,
+				prog:        mockProg,
 				df:          mockDf,
 			}
 
@@ -668,24 +680,25 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			inAppName:        "app",
 			inSvcName:        "frontend",
 			inSvcPort:        80,
-			inDockerfilePath: "frontend/Dockerfile",
+			inDockerfilePath: "/Dockerfile",
+
 			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
-				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
-				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
+				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("app").Return([]*config.Service{}, nil)
 			},
+
 			wantedPath: "/",
 		},
 		"creates manifest with / as the path when it's the only app": {
 			inAppName:        "app",
 			inSvcName:        "frontend",
 			inSvcPort:        80,
-			inDockerfilePath: "frontend/Dockerfile",
+			inDockerfilePath: "/Dockerfile",
+
 			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
-				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
-				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
+				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("app").Return([]*config.Service{
@@ -695,16 +708,17 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 					},
 				}, nil)
 			},
+
 			wantedPath: "/",
 		},
 		"creates manifest with / as the path when it's the only LBWebApp": {
 			inAppName:        "app",
 			inSvcName:        "frontend",
 			inSvcPort:        80,
-			inDockerfilePath: "frontend/Dockerfile",
+			inDockerfilePath: "/Dockerfile",
+
 			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
-				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
-				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
+				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("app").Return([]*config.Service{
@@ -714,16 +728,17 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 					},
 				}, nil)
 			},
+
 			wantedPath: "/",
 		},
 		"creates manifest with {app name} as the path if there's another LBWebApp": {
 			inAppName:        "app",
 			inSvcName:        "frontend",
 			inSvcPort:        80,
-			inDockerfilePath: "frontend/Dockerfile",
+			inDockerfilePath: "/Dockerfile",
+
 			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
-				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
-				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
+				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("app").Return([]*config.Service{
@@ -733,6 +748,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 					},
 				}, nil)
 			},
+
 			wantedPath: "frontend",
 		},
 	}
@@ -745,8 +761,12 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 
 			mockWriter := mocks.NewMocksvcDirManifestWriter(ctrl)
 			mockstore := mocks.NewMockstore(ctrl)
-			tc.mockWriter(mockWriter)
-			tc.mockstore(mockstore)
+			if tc.mockWriter != nil {
+				tc.mockWriter(mockWriter)
+			}
+			if tc.mockstore != nil {
+				tc.mockstore(mockstore)
+			}
 			opts := initSvcOpts{
 				initSvcVars: initSvcVars{
 					ServiceType:    manifest.LoadBalancedWebServiceType,
@@ -767,7 +787,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.inSvcName, aws.StringValue(manifest.Service.Name))
 				require.Equal(t, tc.inSvcPort, aws.Uint16Value(manifest.Image.Port))
-				require.Equal(t, tc.inDockerfilePath, aws.StringValue(manifest.Image.Build.BuildArgs.Dockerfile))
+				require.Contains(t, tc.inDockerfilePath, aws.StringValue(manifest.Image.Build.BuildArgs.Dockerfile))
 				require.Equal(t, tc.wantedPath, aws.StringValue(manifest.Path))
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
