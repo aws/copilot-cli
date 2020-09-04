@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spf13/afero"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -192,6 +194,15 @@ func TestValidateDDBName(t *testing.T) {
 }
 
 func TestValidatePath(t *testing.T) {
+	mockFileSystem := func() {
+		fs := &afero.Afero{Fs: afero.NewOsFs()}
+		fs.MkdirAll("frontend", 0755)
+		fs.MkdirAll("backend", 0755)
+
+		afero.WriteFile(fs, "Dockerfile", []byte("FROM nginx"), 0644)
+		afero.WriteFile(fs, "frontend/Dockerfile", []byte("FROM nginx"), 0644)
+		afero.WriteFile(fs, "backend/Dockerfile", []byte("FROM nginx"), 0644)
+	}
 	testCases := map[string]struct {
 		input interface{}
 		want  error
@@ -204,10 +215,29 @@ func TestValidatePath(t *testing.T) {
 			input: "",
 			want:  errValueEmpty,
 		},
+		"invalid path": {
+			input: "../Dockerfile",
+			want:  errValueNotAValidPath,
+		},
+		"returns nil if valid absolute path": {
+			input: "frontend/Dockerfile",
+			want:  nil,
+		},
+		"returns nil if valid relative path": {
+			input: "frontend/../backend/Dockerfile",
+			want:  nil,
+		},
 	}
 	for path, tc := range testCases {
 		t.Run(path, func(t *testing.T) {
+
+			// GIVEN
+			mockFileSystem()
+
+			// WHEN
 			got := validatePath(tc.input)
+
+			// THEN
 			if tc.want == nil {
 				require.Nil(t, got)
 			} else {

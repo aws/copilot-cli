@@ -7,6 +7,7 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -70,7 +71,7 @@ type initSvcOpts struct {
 
 	// Interfaces to interact with dependencies.
 	fs          afero.Fs
-	ws          svcManifestWriter
+	ws          svcDirManifestWriter
 	store       store
 	appDeployer appDeployer
 	prog        progress
@@ -234,10 +235,23 @@ func (o *initSvcOpts) newManifest() (encoding.BinaryMarshaler, error) {
 }
 
 func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalancedWebService, error) {
+	copilotDirPath, err := o.ws.CopilotDirPath()
+	if err != nil {
+		return nil, fmt.Errorf("get copilot directory: %w", err)
+	}
+	wsRoot := filepath.Dir(copilotDirPath)
+	o.DockerfilePath, err = filepath.Abs(o.DockerfilePath)
+	if err != nil {
+		return nil, err
+	}
+	dfpath, err := filepath.Rel(wsRoot, o.DockerfilePath)
+	if err != nil {
+		return nil, err
+	}
 	props := &manifest.LoadBalancedWebServiceProps{
 		ServiceProps: &manifest.ServiceProps{
 			Name:       o.Name,
-			Dockerfile: o.DockerfilePath,
+			Dockerfile: dfpath,
 		},
 		Port: o.Port,
 		Path: "/",
@@ -258,6 +272,19 @@ func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalance
 }
 
 func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, error) {
+	copilotDirPath, err := o.ws.CopilotDirPath()
+	if err != nil {
+		return nil, fmt.Errorf("get copilot directory: %w", err)
+	}
+	wsRoot := filepath.Dir(copilotDirPath)
+	o.DockerfilePath, err = filepath.Abs(o.DockerfilePath)
+	if err != nil {
+		return nil, err
+	}
+	dfpath, err := filepath.Rel(wsRoot, o.DockerfilePath)
+	if err != nil {
+		return nil, err
+	}
 	hc, err := o.parseHealthCheck()
 	if err != nil {
 		return nil, err
@@ -265,7 +292,7 @@ func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, err
 	return manifest.NewBackendService(manifest.BackendServiceProps{
 		ServiceProps: manifest.ServiceProps{
 			Name:       o.Name,
-			Dockerfile: o.DockerfilePath,
+			Dockerfile: dfpath,
 		},
 		Port:        o.Port,
 		HealthCheck: hc,
@@ -342,6 +369,7 @@ func (o *initSvcOpts) askDockerfile() error {
 	if err != nil {
 		return fmt.Errorf("get custom path: %w", err)
 	}
+
 	o.DockerfilePath = sel
 	return nil
 }
