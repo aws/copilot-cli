@@ -406,11 +406,11 @@ func (o *initSvcOpts) getRelativePath() (string, error) {
 	wsRoot := filepath.Dir(copilotDirPath)
 	o.DockerfilePath, err = filepath.Abs(o.DockerfilePath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("get absolute path: %s", err)
 	}
 	o.DockerfilePath, err = filepath.Rel(wsRoot, o.DockerfilePath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("find relative path from workspace root to Dockerfile: %s", err)
 	}
 	return o.DockerfilePath, nil
 }
