@@ -240,13 +240,13 @@ func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalance
 		return nil, fmt.Errorf("get copilot directory: %w", err)
 	}
 	wsRoot := filepath.Dir(copilotDirPath)
-	dfpath, err := filepath.Abs(o.DockerfilePath)
+	dfPath, err := filepath.Abs(o.DockerfilePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get absolute path: %s", err)
 	}
-	o.DockerfilePath, err = filepath.Rel(wsRoot, dfpath)
+	o.DockerfilePath, err = filepath.Rel(wsRoot, dfPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get relative path from workspace root to Dockerfile: %s", err)
 	}
 	props := &manifest.LoadBalancedWebServiceProps{
 		ServiceProps: &manifest.ServiceProps{
@@ -281,7 +281,7 @@ func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, err
 	if err != nil {
 		return nil, err
 	}
-	dfpath, err := filepath.Rel(wsRoot, o.DockerfilePath)
+	dfPath, err := filepath.Rel(wsRoot, o.DockerfilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, err
 	return manifest.NewBackendService(manifest.BackendServiceProps{
 		ServiceProps: manifest.ServiceProps{
 			Name:       o.Name,
-			Dockerfile: dfpath,
+			Dockerfile: dfPath,
 		},
 		Port:        o.Port,
 		HealthCheck: hc,
@@ -357,16 +357,16 @@ func (o *initSvcOpts) askDockerfile() error {
 		return nil
 	}
 
-	// If no Dockerfiles were found, prompt user for custom path.
 	var notExistErr *dockerfile.ErrDockerfileNotFound
 	if !errors.As(err, &notExistErr) {
 		return err
 	}
+	// If no Dockerfiles were found, prompt user for custom path.
 	sel, err = o.prompt.Get(
 		fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
 		svcInitDockerfilePathHelpPrompt,
 		validatePath,
-		prompt.WithFinalMessage("Path to Dockerfile:"))
+		prompt.WithFinalMessage("Dockerfile:"))
 	if err != nil {
 		return fmt.Errorf("get custom path: %w", err)
 	}
