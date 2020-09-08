@@ -235,23 +235,11 @@ func (o *initSvcOpts) newManifest() (encoding.BinaryMarshaler, error) {
 }
 
 func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalancedWebService, error) {
-	copilotDirPath, err := o.ws.CopilotDirPath()
-	if err != nil {
-		return nil, fmt.Errorf("get copilot directory: %w", err)
-	}
-	wsRoot := filepath.Dir(copilotDirPath)
-	dfPath, err := filepath.Abs(o.DockerfilePath)
-	if err != nil {
-		return nil, fmt.Errorf("get absolute path: %s", err)
-	}
-	o.DockerfilePath, err = filepath.Rel(wsRoot, dfPath)
-	if err != nil {
-		return nil, fmt.Errorf("get relative path from workspace root to Dockerfile: %s", err)
-	}
+	dfPath, err := o.getRelativePath()
 	props := &manifest.LoadBalancedWebServiceProps{
 		ServiceProps: &manifest.ServiceProps{
 			Name:       o.Name,
-			Dockerfile: o.DockerfilePath,
+			Dockerfile: dfPath,
 		},
 		Port: o.Port,
 		Path: "/",
@@ -272,16 +260,7 @@ func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalance
 }
 
 func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, error) {
-	copilotDirPath, err := o.ws.CopilotDirPath()
-	if err != nil {
-		return nil, fmt.Errorf("get copilot directory: %w", err)
-	}
-	wsRoot := filepath.Dir(copilotDirPath)
-	o.DockerfilePath, err = filepath.Abs(o.DockerfilePath)
-	if err != nil {
-		return nil, err
-	}
-	dfPath, err := filepath.Rel(wsRoot, o.DockerfilePath)
+	dfPath, err := o.getRelativePath()
 	if err != nil {
 		return nil, err
 	}
@@ -417,6 +396,23 @@ func (o *initSvcOpts) askSvcPort() error {
 	o.Port = uint16(portUint)
 
 	return nil
+}
+
+func (o *initSvcOpts) getRelativePath() (string, error) {
+	copilotDirPath, err := o.ws.CopilotDirPath()
+	if err != nil {
+		return "", fmt.Errorf("get copilot directory: %w", err)
+	}
+	wsRoot := filepath.Dir(copilotDirPath)
+	o.DockerfilePath, err = filepath.Abs(o.DockerfilePath)
+	if err != nil {
+		return "", err
+	}
+	o.DockerfilePath, err = filepath.Rel(wsRoot, o.DockerfilePath)
+	if err != nil {
+		return "", err
+	}
+	return o.DockerfilePath, nil
 }
 
 func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error) {
