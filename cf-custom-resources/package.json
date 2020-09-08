@@ -24,6 +24,7 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "aws-sdk": "^2.540.0",
+    "yargs-parser": ">=18.1.2",
     "aws-sdk-mock": "^4.5.0",
     "babel-minify": "^0.5.1",
     "eslint": "^6.5.1",
