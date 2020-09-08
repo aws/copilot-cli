@@ -17,12 +17,12 @@ cpu: {{.CPU}}
 memory: {{.Memory}}
 
 # The trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2 hours, 90s, 15 minutes)
-schedule: @daily
+schedule: {{.Schedule}}
 
 # Optional. The number of times to retry the job before failing.
-retries: 0
+retries: {{.Retries}}
 # Optional. The timeout after which to stop the job if it's still running. You can use the units (h, m, s).
-timeout: 15m
+timeout: {{.Timeout}}
 
 # Optional fields for more advanced use-cases.
 #
