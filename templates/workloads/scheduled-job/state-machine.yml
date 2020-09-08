@@ -13,7 +13,7 @@ StateMachine:
       Cluster: 
         Fn::ImportValue:
           !Sub '${AppName}-${EnvName}-ClusterId'
-      TaskDefinition: !GetAtt TaskDefinition.Arn
+      TaskDefinition: !Ref TaskDefinition
       Subnets: !Join
         - '","'
         - Fn::ImportValue: !Sub "${AppName}-${EnvName}-PublicSubnets"
@@ -46,7 +46,7 @@ StateMachineRole:
           - !GetAtt TaskRole.Arn
         - Effect: Allow
           Action: ecs:RunTask
-          Resource: !GetAtt TaskDefinition.Arn
+          Resource: !Ref TaskDefinition
           Condition:
             ArnEquals:
               'ecs:cluster': !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::Account}:cluster/${AppName}-${EnvName}-ClusterId
