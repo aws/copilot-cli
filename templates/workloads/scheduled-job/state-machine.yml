@@ -10,8 +10,10 @@ StateMachine:
       Level: ALL
     DefinitionSubstitutions:
       ContainerName: !Ref WorkloadName
-      Cluster: !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::Account}:cluster/${AppName}-${EnvName}-ClusterId
-      TaskDefinition: !Ref TaskDefinition.Arn
+      Cluster: 
+        Fn::ImportValue:
+          !Sub '${AppName}-${EnvName}-ClusterId'
+      TaskDefinition: !GetAtt TaskDefinition.Arn
       Subnets: !Join
         - '","'
         - Fn::ImportValue: !Sub "${AppName}-${EnvName}-PublicSubnets"
