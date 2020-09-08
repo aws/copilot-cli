@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
-
 	"github.com/spf13/afero"
 )
 
@@ -53,7 +51,7 @@ func listDockerfiles(fs afero.Fs, dir string) ([]string, error) {
 		}
 	}
 	if len(directories) == 0 {
-		return nil, &dockerfile.ErrDockerfileNotFound{
+		return nil, &ErrDockerfileNotFound{
 			Dir: dir,
 		}
 	}
@@ -64,4 +62,14 @@ func listDockerfiles(fs afero.Fs, dir string) ([]string, error) {
 		dockerfiles = append(dockerfiles, file)
 	}
 	return dockerfiles, nil
+}
+
+// ErrDockerfileNotFound occurs when a Dockerfile cannot be found in the current working directory or subdirectory
+// one level down.
+type ErrDockerfileNotFound struct {
+	Dir string
+}
+
+func (e *ErrDockerfileNotFound) Error() string {
+	return fmt.Sprintf("no Dockerfiles found within %s or a sub-directory level below", e.Dir)
 }

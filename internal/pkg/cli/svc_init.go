@@ -336,7 +336,7 @@ func (o *initSvcOpts) askDockerfile() error {
 		return nil
 	}
 
-	var notExistErr *dockerfile.ErrDockerfileNotFound
+	var notExistErr *ErrDockerfileNotFound
 	if !errors.As(err, &notExistErr) {
 		return err
 	}
@@ -344,7 +344,9 @@ func (o *initSvcOpts) askDockerfile() error {
 	sel, err = o.prompt.Get(
 		fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
 		svcInitDockerfilePathHelpPrompt,
-		validatePath,
+		func(v interface{}) error {
+			return validatePath(afero.NewOsFs(), v)
+		},
 		prompt.WithFinalMessage("Dockerfile:"))
 	if err != nil {
 		return fmt.Errorf("get custom path: %w", err)
@@ -408,11 +410,11 @@ func (o *initSvcOpts) getRelativePath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("get absolute path: %s", err)
 	}
-	o.DockerfilePath, err = filepath.Rel(wsRoot, o.DockerfilePath)
+	dfPath, err := filepath.Rel(wsRoot, o.DockerfilePath)
 	if err != nil {
 		return "", fmt.Errorf("find relative path from workspace root to Dockerfile: %s", err)
 	}
-	return o.DockerfilePath, nil
+	return dfPath, nil
 }
 
 func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error) {

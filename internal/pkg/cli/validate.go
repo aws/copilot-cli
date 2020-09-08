@@ -125,7 +125,7 @@ func validateDomainName(val interface{}) error {
 	return nil
 }
 
-func validatePath(val interface{}) error {
+func validatePath(fs afero.Fs, val interface{}) error {
 	path, ok := val.(string)
 	if !ok {
 		return errValueNotAString
@@ -133,8 +133,7 @@ func validatePath(val interface{}) error {
 	if path == "" {
 		return errValueEmpty
 	}
-	a := afero.Afero{Fs: afero.NewOsFs()}
-	_, err := a.Stat(path)
+	_, err := fs.Stat(path)
 	if err != nil {
 		return errValueNotAValidPath
 	}
