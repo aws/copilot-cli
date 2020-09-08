@@ -8,7 +8,7 @@ ExecutionRole:
             Service: ecs-tasks.amazonaws.com
           Action: 'sts:AssumeRole'
     Policies:
-      - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref ServiceName, SecretsPolicy]]
+      - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, SecretsPolicy]]
         PolicyDocument:
           Version: '2012-10-17'
           Statement:

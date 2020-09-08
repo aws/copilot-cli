@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	logGroupNamePattern = "/copilot/%s-%s-%s"
+	fmtSvclogGroupName    = "/copilot/%s-%s-%s"
+	fmtSvcLogStreamPrefix = "copilot/%s"
 )
 
 type logGetter interface {
@@ -25,9 +26,10 @@ type logGetter interface {
 
 // ServiceClient retrieves the logs of an Amazon ECS service.
 type ServiceClient struct {
-	logGroupName string
-	eventsGetter logGetter
-	w            io.Writer
+	logGroupName        string
+	logStreamNamePrefix string
+	eventsGetter        logGetter
+	w                   io.Writer
 }
 
 // WriteLogEventsOpts wraps the parameters to call WriteLogEvents.
@@ -36,6 +38,7 @@ type WriteLogEventsOpts struct {
 	Limit     int
 	StartTime *int64
 	EndTime   *int64
+	TaskIDs   []string
 	// OnEvents is a handler that's invoked when logs are retrieved from the service.
 	OnEvents func(w io.Writer, logs []HumanJSONStringer) error
 }
@@ -44,20 +47,21 @@ type WriteLogEventsOpts struct {
 // The logging client is initialized from the given sess session.
 func NewServiceClient(sess *session.Session, app, env, svc string) *ServiceClient {
 	return &ServiceClient{
-		logGroupName: fmt.Sprintf(logGroupNamePattern, app, env, svc),
-		eventsGetter: cloudwatchlogs.New(sess),
-		w:            log.OutputWriter,
+		logGroupName:        fmt.Sprintf(fmtSvclogGroupName, app, env, svc),
+		logStreamNamePrefix: fmt.Sprintf(fmtSvcLogStreamPrefix, svc),
+		eventsGetter:        cloudwatchlogs.New(sess),
+		w:                   log.OutputWriter,
 	}
 }
 
 // WriteLogEvents writes service logs.
 func (s *ServiceClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 	logEventsOpts := cloudwatchlogs.LogEventsOpts{
-		LogGroup:  s.logGroupName,
-		Limit:     aws.Int64(int64(opts.Limit)),
-		EndTime:   opts.EndTime,
-		StartTime: opts.StartTime,
-		// TODO: Add log filtering by task ID.
+		LogGroup:   s.logGroupName,
+		Limit:      aws.Int64(int64(opts.Limit)),
+		EndTime:    opts.EndTime,
+		StartTime:  opts.StartTime,
+		LogStreams: s.logStreams(opts.TaskIDs),
 	}
 	for {
 		logEventsOutput, err := s.eventsGetter.LogEvents(logEventsOpts)
@@ -77,4 +81,11 @@ func (s *ServiceClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 		logEventsOpts.StreamLastEventTime = logEventsOutput.StreamLastEventTime
 		time.Sleep(cloudwatchlogs.SleepDuration)
 	}
+}
+
+func (s *ServiceClient) logStreams(taskIDs []string) (logStreamName []string) {
+	for _, taskID := range taskIDs {
+		logStreamName = append(logStreamName, fmt.Sprintf("%s/%s", s.logStreamNamePrefix, taskID))
+	}
+	return
 }

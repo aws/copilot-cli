@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	backendSvcManifestPath = "services/backend/manifest.yml"
+	backendSvcManifestPath = "workloads/services/backend/manifest.yml"
 )
 
 // BackendServiceProps represents the configuration needed to create a backend service.
@@ -131,7 +131,9 @@ func newDefaultBackendService() *BackendService {
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),
-				Count:  aws.Int(1),
+				Count: Count{
+					Value: aws.Int(1),
+				},
 			},
 		},
 	}

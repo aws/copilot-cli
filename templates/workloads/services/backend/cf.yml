@@ -7,7 +7,7 @@ Parameters:
     Type: String
   EnvName:
     Type: String
-  ServiceName:
+  WorkloadName:
     Type: String
   ContainerImage:
     Type: String
@@ -38,7 +38,7 @@ Resources:
     Properties:
 {{include "fargate-taskdef-base-properties" . | indent 6}}
       ContainerDefinitions:
-        - Name: !Ref ServiceName
+        - Name: !Ref WorkloadName
           Image: !Ref ContainerImage
           PortMappings:
             - ContainerPort: !Ref ContainerPort
@@ -54,10 +54,9 @@ Resources:
 {{- end}}
 {{include "sidecars" . | indent 8}}
 {{include "executionrole" . | indent 2}}
-
 {{include "taskrole" . | indent 2}}
-
 {{include "servicediscovery" . | indent 2}}
+{{include "autoscaling" . | indent 2}}
 
   Service:
     Type: AWS::ECS::Service

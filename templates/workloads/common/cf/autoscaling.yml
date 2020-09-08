@@ -1,0 +1,57 @@
+{{- if .Autoscaling}}
+AutoScalingRole:
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Statement:
+        - Effect: Allow
+          Principal:
+            Service: ecs-tasks.amazonaws.com
+          Action: 'sts:AssumeRole'
+    ManagedPolicyArns:
+      - 'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceAutoscaleRole'
+
+AutoScalingTarget:
+  Type: AWS::ApplicationAutoScaling::ScalableTarget
+  Properties:
+    MinCapacity: {{.Autoscaling.MinCapacity}}
+    MaxCapacity: {{.Autoscaling.MaxCapacity}}
+    ResourceId:
+      Fn::Join:
+        - '/'
+        - - 'service'
+          - Fn::ImportValue:
+              !Sub '${AppName}-${EnvName}-ClusterId'
+          - !GetAtt Service.Name
+    ScalableDimension: ecs:service:DesiredCount
+    ServiceNamespace: ecs
+    RoleARN: !GetAtt AutoScalingRole.Arn
+{{if .Autoscaling.CPU}}
+AutoScalingPolicyECSServiceAverageCPUUtilization:
+  Type: AWS::ApplicationAutoScaling::ScalingPolicy
+  Properties:
+    PolicyName: !Join ['-', [!Ref WorkloadName, ECSServiceAverageCPUUtilization, ScalingPolicy]]
+    PolicyType: TargetTrackingScaling
+    ScalingTargetId: !Ref AutoScalingTarget
+    TargetTrackingScalingPolicyConfiguration:
+      PredefinedMetricSpecification:
+        PredefinedMetricType: ECSServiceAverageCPUUtilization
+      ScaleInCooldown: 120
+      ScaleOutCooldown: 60
+      TargetValue: {{.Autoscaling.CPU}}
+{{- end}}
+{{if .Autoscaling.Memory}}
+AutoScalingPolicyECSServiceAverageMemoryUtilization:
+  Type: AWS::ApplicationAutoScaling::ScalingPolicy
+  Properties:
+    PolicyName: !Join ['-', [!Ref WorkloadName, ECSServiceAverageMemoryUtilization, ScalingPolicy]]
+    PolicyType: TargetTrackingScaling
+    ScalingTargetId: !Ref AutoScalingTarget
+    TargetTrackingScalingPolicyConfiguration:
+      PredefinedMetricSpecification:
+        PredefinedMetricType: ECSServiceAverageMemoryUtilization
+      ScaleInCooldown: 120
+      ScaleOutCooldown: 60
+      TargetValue: {{.Autoscaling.Memory}}
+{{- end}}
+{{- end}}

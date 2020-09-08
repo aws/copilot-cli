@@ -7,6 +7,7 @@ package cloudwatchlogs
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -45,7 +46,7 @@ type LogEventsOutput struct {
 // LogEventsOpts wraps the parameters to call LogEvents.
 type LogEventsOpts struct {
 	LogGroup            string
-	LogStream           []string
+	LogStreams          []string // If nil, retrieve logs from all log streams.
 	Limit               *int64
 	StartTime           *int64
 	EndTime             *int64
@@ -81,7 +82,7 @@ func (c *CloudWatchLogs) logStreams(logGroup string, logStreams ...string) ([]st
 		logStreamNames = append(logStreamNames, name)
 	}
 	if len(logStreams) != 0 {
-		logStreamNames = filterStringSlice(logStreamNames, logStreams)
+		logStreamNames = filterStringSliceByPrefix(logStreamNames, logStreams)
 	}
 	return logStreamNames, nil
 }
@@ -91,7 +92,7 @@ func (c *CloudWatchLogs) LogEvents(opts LogEventsOpts) (*LogEventsOutput, error)
 	var events []*Event
 	// Set default value
 	in := defaultGetLogEventsInput(opts)
-	logStreams, err := c.logStreams(opts.LogGroup, opts.LogStream...)
+	logStreams, err := c.logStreams(opts.LogGroup, opts.LogStreams...)
 	if err != nil {
 		return nil, err
 	}
@@ -156,15 +157,19 @@ func defaultGetLogEventsInput(opts LogEventsOpts) *cloudwatchlogs.GetLogEventsIn
 	}
 }
 
-func filterStringSlice(all, filter []string) (res []string) {
-	mask := make(map[string]bool)
-	for _, s := range filter {
-		mask[s] = true
-	}
-	for _, s := range all {
-		if mask[s] {
-			res = append(res, s)
+// Example: if the prefixes is []string{"a"} and all is []string{"a", "b", "ab"}
+// then it returns []string{"a", "ab"}.
+func filterStringSliceByPrefix(all, prefixes []string) (res []string) {
+	m := make(map[string]bool)
+	for _, candidate := range all {
+		for _, prefix := range prefixes {
+			if strings.HasPrefix(candidate, prefix) {
+				m[candidate] = true
+			}
 		}
+	}
+	for k := range m {
+		res = append(res, k)
 	}
 	return
 }
