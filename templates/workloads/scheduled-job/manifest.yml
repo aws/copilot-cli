@@ -16,7 +16,7 @@ cpu: {{.CPU}}
 # Amount of memory in MiB used by the task.
 memory: {{.Memory}}
 
-# The trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2 hours, 90s, 15 minutes)
+# The trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2h, 90s, 15m)
 schedule: {{.Schedule}}
 
 # Optional. The number of times to retry the job before failing.
