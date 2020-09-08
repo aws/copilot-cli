@@ -1,7 +1,9 @@
 {
   "Version": "1.0",
-  "Comment": "Run AWS Fargate task",{{if .Timeout}}
-  "TimeoutSeconds": ${Timeout},{{end}}
+  "Comment": "Run AWS Fargate task",
+  {{- if .Timeout}}
+  "TimeoutSeconds": ${Timeout},
+  {{- end}}
   "StartAt": "Run Fargate Task",
   "States": {
     "Run Fargate Task": {
@@ -20,20 +22,8 @@
             "SecurityGroups": ["${SecurityGroups}"]
           }
         },
-        "Overrides": {
-          "ContainerOverrides": [
-            {
-              "Name": "fargate-app",
-              "Environment": [
-                {
-                  "Name": "IS_STANDALONE_EXECUTION",
-                  "Value": "1"
-                }
-              ]
-            }
-          ]
-        }
-      },{{if .Retries}}
+      },
+      {{- if .Retries}}
       "Retry": [
         {
           "ErrorEquals": [
@@ -51,7 +41,8 @@
           "MaxAttempts": {{.Retries}},
           "BackoffRate": 2.0
         }
-      ],{{end}}
+      ],
+      {{- end}}
       "End": "True"
     }
   }

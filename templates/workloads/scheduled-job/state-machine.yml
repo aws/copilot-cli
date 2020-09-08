@@ -7,16 +7,18 @@ StateMachine:
         - CloudWatchLogsLogGroup:
             LogGroupArn: !GetAtt LogGroup.Arn
       IncludeExecutionData: true
-      Level: ERROR
+      Level: ALL
     DefinitionSubstitutions:
-      Cluster: !Sub arn:${Partition}:ecs:${Region}:${Account}:cluster/${AppName}-${EnvName}-ClusterId
+      ContainerName: !Ref WorkloadName
+      Cluster: !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::Account}:cluster/${AppName}-${EnvName}-ClusterId
       TaskDefinition: !Ref TaskDefinition.Arn
       Subnets: !Join
         - '","'
         - Fn::ImportValue: !Sub "${AppName}-${EnvName}-PublicSubnets"
       AssignPublicIp: ENABLED # Should be DISABLED if we use private subnets
       SecurityGroups:
-        - Fn::ImportValue: !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"{{if .Timeout}}
+        - Fn::ImportValue: !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"
+        {{- if .Timeout}}
       Timeout: {{.Timeout}}{{end}}
     DefinitionString: |-
 {{include state-machine-definition . | indent 6}}      
@@ -45,7 +47,7 @@ StateMachineRole:
           Resource: !GetAtt TaskDefinition.Arn
           Condition:
             ArnEquals:
-              'ecs:cluster': !Sub arn:${Partition}:ecs:${Region}:${Account}:cluster/${AppName}-${EnvName}-ClusterId
+              'ecs:cluster': !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::Account}:cluster/${AppName}-${EnvName}-ClusterId
         - Effect: Allow
           Action:
           - ecs:StopTask
@@ -53,7 +55,7 @@ StateMachineRole:
           Resource: "*"
           Condition:
             ArnEquals:
-              'ecs:cluster': !Sub arn:${Partition}:ecs:${Region}:${Account}:cluster/${AppName}-${EnvName}-ClusterId
+              'ecs:cluster': !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::Account}:cluster/${AppName}-${EnvName}-ClusterId
         - Effect: Allow
           Action:
             - logs:CreateLogDelivery
