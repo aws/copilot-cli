@@ -352,7 +352,7 @@ func (o *initSvcOpts) askDockerfile() error {
 		},
 		prompt.WithFinalMessage("Dockerfile:"))
 	if err != nil {
-		return fmt.Errorf("get custom path: %w", err)
+		return fmt.Errorf("get custom Dockerfile path: %w", err)
 	}
 	o.DockerfilePath = sel
 	return nil
