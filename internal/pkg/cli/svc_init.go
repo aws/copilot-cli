@@ -236,6 +236,9 @@ func (o *initSvcOpts) newManifest() (encoding.BinaryMarshaler, error) {
 
 func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalancedWebService, error) {
 	dfPath, err := o.getRelativePath()
+	if err != nil {
+		return nil, err
+	}
 	props := &manifest.LoadBalancedWebServiceProps{
 		ServiceProps: &manifest.ServiceProps{
 			Name:       o.Name,
@@ -406,15 +409,18 @@ func (o *initSvcOpts) getRelativePath() (string, error) {
 		return "", fmt.Errorf("get copilot directory: %w", err)
 	}
 	wsRoot := filepath.Dir(copilotDirPath)
-	o.DockerfilePath, err = filepath.Abs(o.DockerfilePath)
+	absDfPath, err := filepath.Abs(o.DockerfilePath)
 	if err != nil {
 		return "", fmt.Errorf("get absolute path: %s", err)
 	}
-	dfPath, err := filepath.Rel(wsRoot, o.DockerfilePath)
+	if !strings.Contains(absDfPath, wsRoot) {
+		return "", fmt.Errorf("Dockerfile not within workspace")
+	}
+	relDfPath, err := filepath.Rel(wsRoot, absDfPath)
 	if err != nil {
 		return "", fmt.Errorf("find relative path from workspace root to Dockerfile: %s", err)
 	}
-	return dfPath, nil
+	return relDfPath, nil
 }
 
 func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error) {
