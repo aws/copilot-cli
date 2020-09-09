@@ -418,7 +418,7 @@ func (o *initSvcOpts) getRelativePath() (string, error) {
 	}
 	relDfPath, err := filepath.Rel(wsRoot, absDfPath)
 	if err != nil {
-		return "", fmt.Errorf("find relative path from workspace root to Dockerfile: %s", err)
+		return "", fmt.Errorf("find relative path from workspace root to Dockerfile: %v", err)
 	}
 	return relDfPath, nil
 }
