@@ -24,6 +24,7 @@ require (
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.2
 	github.com/pelletier/go-toml v1.8.0 // indirect
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/sirupsen/logrus v1.6.0 // indirect
 	github.com/spf13/afero v1.3.5
 	github.com/spf13/cast v1.3.1 // indirect
