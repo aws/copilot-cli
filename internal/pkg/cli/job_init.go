@@ -84,6 +84,27 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initJobOpts) Validate() error {
+	if o.Name != "" {
+		if err := validateJobName(o.Name); err != nil {
+			return err
+		}
+	}
+	if o.DockerfilePath != "" {
+		if _, err := o.fs.Stat(o.DockerfilePath); err != nil {
+			return err
+		}
+	}
+	if o.Schedule != "" {
+
+	}
+	if o.Timeout != "" {
+
+	}
+	if o.Retries != 0 {
+		if o.Retries < 0 {
+			return fmt.Errorf("number of times to retry %d must be positive", o.Retries)
+		}
+	}
 	return nil
 }
 

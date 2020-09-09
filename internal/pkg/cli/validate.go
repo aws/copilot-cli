@@ -81,6 +81,13 @@ func validateAppName(val interface{}) error {
 	return nil
 }
 
+func validateJobName(val interface{}) error {
+	if err := basicNameValidation(val); err != nil {
+		return fmt.Errorf("job name %v is invalid: %w", val, err)
+	}
+	return nil
+}
+
 func validateSvcName(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {
 		return fmt.Errorf("service name %v is invalid: %w", val, err)
