@@ -411,7 +411,7 @@ func (o *initSvcOpts) getRelativePath() (string, error) {
 	wsRoot := filepath.Dir(copilotDirPath)
 	absDfPath, err := filepath.Abs(o.DockerfilePath)
 	if err != nil {
-		return "", fmt.Errorf("get absolute path: %s", err)
+		return "", fmt.Errorf("get absolute path: %v", err)
 	}
 	if !strings.Contains(absDfPath, wsRoot) {
 		return "", fmt.Errorf("Dockerfile not within workspace")
