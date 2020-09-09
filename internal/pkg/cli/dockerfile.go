@@ -69,5 +69,5 @@ type errDockerfileNotFound struct {
 }
 
 func (e *errDockerfileNotFound) Error() string {
-	return fmt.Sprintf("no Dockerfiles found within %s or a sub-directory level below", e.Dir)
+	return fmt.Sprintf("no Dockerfiles found within %s or a sub-directory level below", e.dir)
 }

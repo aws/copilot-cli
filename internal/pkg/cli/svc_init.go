@@ -339,7 +339,7 @@ func (o *initSvcOpts) askDockerfile() error {
 		return nil
 	}
 
-	var notExistErr *ErrDockerfileNotFound
+	var notExistErr *errDockerfileNotFound
 	if !errors.As(err, &notExistErr) {
 		return err
 	}
