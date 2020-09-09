@@ -414,7 +414,7 @@ func (o *initSvcOpts) getRelativePath() (string, error) {
 		return "", fmt.Errorf("get absolute path: %v", err)
 	}
 	if !strings.Contains(absDfPath, wsRoot) {
-		return "", fmt.Errorf("Dockerfile not within workspace")
+		return "", fmt.Errorf("Dockerfile %s not within workspace %s", absDfPath, wsRoot)
 	}
 	relDfPath, err := filepath.Rel(wsRoot, absDfPath)
 	if err != nil {
