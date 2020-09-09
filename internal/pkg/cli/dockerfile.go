@@ -51,8 +51,8 @@ func listDockerfiles(fs afero.Fs, dir string) ([]string, error) {
 		}
 	}
 	if len(directories) == 0 {
-		return nil, &ErrDockerfileNotFound{
-			Dir: dir,
+		return nil, &errDockerfileNotFound{
+			dir: dir,
 		}
 	}
 	sort.Strings(directories)
@@ -64,12 +64,10 @@ func listDockerfiles(fs afero.Fs, dir string) ([]string, error) {
 	return dockerfiles, nil
 }
 
-// ErrDockerfileNotFound occurs when a Dockerfile cannot be found in the current working directory or subdirectory
-// one level down.
-type ErrDockerfileNotFound struct {
-	Dir string
+type errDockerfileNotFound struct {
+	dir string
 }
 
-func (e *ErrDockerfileNotFound) Error() string {
+func (e *errDockerfileNotFound) Error() string {
 	return fmt.Sprintf("no Dockerfiles found within %s or a sub-directory level below", e.Dir)
 }
