@@ -26,8 +26,8 @@ var JobTypes = []string{
 
 var (
 	errStringNotDuration            = errors.New("duration must be of the form 90m, 2h, 60s")
-	errStringNotCron                = errors.New("string is not a valid cron schedule")
-	errStringNeitherDurationNorCron = errors.New("schedule must be either cron expression or duration")
+	errStringNotCron                = errors.New("string is not a valid cron schedule (M H DoM Mo DoW")
+	errStringNeitherDurationNorCron = errors.New("schedule must be either 5-element cron expression or Go duration string")
 	errDurationTooShort             = errors.New("rate expressions must have duration longer than 1 second")
 )
 
@@ -37,6 +37,10 @@ var (
 )
 
 const (
+	// Cron expressions in AWS Cloudwatch are of the form "M H DoM Mo DoW Y"
+	// We use these predefined schedules when a customer specifies "@daily" or "@annually"
+	// to fulfill the predefined schedules spec defined at
+	// https://godoc.org/github.com/robfig/cron#hdr-Predefined_schedules
 	cronHourly  = "0 * * * * *" // at minute 0
 	cronDaily   = "0 0 * * * *" // at midnight
 	cronWeekly  = "0 0 * * 0 *" // at midnight on sunday
@@ -99,6 +103,9 @@ func (s *Schedule) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func (s *Schedule) parseCron() error {
+	// Use the standard cron parser from https://godoc.org/github.com/robfig/cron#hdr-Predefined_schedules
+	// This parser is 5 elements: M H DoM Mo DoW, and allows descriptors like
+	// @daily, @monthly, @every 30m, @every 2d (using Go duration strings. )
 	_, err := cron.ParseStandard(s.rawString)
 	if err != nil {
 		return errStringNotCron
@@ -106,6 +113,9 @@ func (s *Schedule) parseCron() error {
 	// check if the string is a directive or a schedule
 	if strings.HasPrefix(s.rawString, "@") {
 		every := "@every "
+
+		// Use a rate syntax for intervals, as that abstraction works better for our purposes
+		// than cron
 		if strings.HasPrefix(s.rawString, every) {
 			d := Duration(s.rawString[len(every):])
 			s.Rate, err = d.ToRate()
@@ -126,7 +136,8 @@ func (s *Schedule) parseCron() error {
 	}
 
 	// the string was parseable by cron but did not use a predefined schedule or @every directive
-	s.Cron = fmt.Sprintf(fmtCronExpression, s.rawString)
+	fullCronExpression := addYearToCron(s.rawString)
+	s.Cron = fmt.Sprintf(fmtCronExpression, fullCronExpression)
 	s.parsed = true
 	return nil
 }
@@ -140,6 +151,11 @@ func (s *Schedule) parseRate() error {
 	s.Rate = rate
 	s.parsed = true
 	return nil
+}
+
+func addYearToCron(expr string) string {
+	everyYear := " *"
+	return expr + everyYear
 }
 
 // Duration is a string of the form 90m, 30s, 24h.
