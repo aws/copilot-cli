@@ -5,6 +5,7 @@ package cli
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
@@ -14,6 +15,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/robfig/cron"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -95,10 +97,18 @@ func (o *initJobOpts) Validate() error {
 		}
 	}
 	if o.Schedule != "" {
-
+		if _, err := cron.ParseStandard(o.Schedule); err != nil {
+			return err
+		}
 	}
 	if o.Timeout != "" {
-
+		timeout, err := time.ParseDuration(o.Timeout)
+		if err != nil {
+			return err
+		}
+		if timeout.Seconds() != float64(int64(timeout)) {
+			return fmt.Errorf("timeout duration %s cannot be in units smaller than a second", o.Timeout)
+		}
 	}
 	if o.Retries != 0 {
 		if o.Retries < 0 {

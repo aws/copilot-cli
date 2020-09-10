@@ -206,8 +206,8 @@ Tasks with the same group name share the same set of resources.
 
 	retriesFlagDescription = "Optional. The number of times to try restarting the job on a failure."
 	timeoutFlagDescription = `Optional. The total execution time for the task, including retries.
-For example: "2h", "30 minutes", "900s"`
+For example: "2h", "30m", "900s"`
 	scheduleFlagDescription = `The schedule on which to run this job. 
 Can be specified using rate or cron syntax. 
-For example: "20 minutes", "@DAILY", "0 * * * * *"`
+For example: "@every 20m", "@DAILY", "0 * * * * "`
 )
