@@ -45,18 +45,23 @@ var testBackendSvcManifest = manifest.NewBackendService(manifest.BackendServiceP
 })
 
 func TestBackendService_Template(t *testing.T) {
-	badTestBackendSvcManifest := manifest.NewBackendService(manifest.BackendServiceProps{
+	baseProps := manifest.BackendServiceProps{
 		ServiceProps: manifest.ServiceProps{
 			Name:       "frontend",
 			Dockerfile: "./frontend/Dockerfile",
 		},
 		Port: 8080,
-	})
-	badTestBackendSvcManifest.Sidecar = manifest.Sidecar{Sidecars: map[string]*manifest.SidecarConfig{
+	}
+	testBackendSvcManifestWithBadSidecar := manifest.NewBackendService(baseProps)
+	testBackendSvcManifestWithBadSidecar.Sidecar = manifest.Sidecar{Sidecars: map[string]*manifest.SidecarConfig{
 		"xray": {
 			Port: aws.String("80/80/80"),
 		},
 	}}
+	testBackendSvcManifestWithBadAutoScaling := manifest.NewBackendService(baseProps)
+	testBackendSvcManifestWithBadAutoScaling.Count.Autoscaling = manifest.Autoscaling{
+		Range: manifest.Range("badRange"),
+	}
 	testCases := map[string]struct {
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, svc *BackendService)
 		manifest         *manifest.BackendService
@@ -71,7 +76,7 @@ func TestBackendService_Template(t *testing.T) {
 			wantedErr: fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testBackendSvcManifest.Name), errors.New("some error")),
 		},
 		"failed parsing sidecars template": {
-			manifest: badTestBackendSvcManifest,
+			manifest: testBackendSvcManifestWithBadSidecar,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				svc.addons = mockTemplater{
 					tpl: `Outputs:
@@ -80,6 +85,17 @@ func TestBackendService_Template(t *testing.T) {
 				}
 			},
 			wantedErr: fmt.Errorf("convert the sidecar configuration for service frontend: %w", errors.New("cannot parse port mapping from 80/80/80")),
+		},
+		"failed parsing Auto Scaling template": {
+			manifest: testBackendSvcManifestWithBadAutoScaling,
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				svc.addons = mockTemplater{
+					tpl: `Outputs:
+  AdditionalResourcesPolicyArn:
+    Value: hello`,
+				}
+			},
+			wantedErr: fmt.Errorf("convert the Auto Scaling configuration for service frontend: %w", errors.New("invalid range value badRange. Should be in format of ${min}-${max}")),
 		},
 		"failed parsing svc template": {
 			manifest: testBackendSvcManifest,

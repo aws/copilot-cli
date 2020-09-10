@@ -34,6 +34,7 @@ var (
 		"addons",
 		"sidecars",
 		"logconfig",
+		"autoscaling",
 	}
 )
 
@@ -71,6 +72,16 @@ type LogConfigOpts struct {
 	ConfigFile     *string
 }
 
+// AutoscalingOpts holds configuration that's needed for Auto Scaling.
+type AutoscalingOpts struct {
+	MinCapacity  *int
+	MaxCapacity  *int
+	CPU          *float64
+	Memory       *float64
+	Requests     *float64
+	ResponseTime *float64
+}
+
 // ServiceOpts holds optional data that can be provided to enable features in a service stack template.
 type ServiceOpts struct {
 	// Additional options that're common between **all** service templates.
@@ -79,6 +90,7 @@ type ServiceOpts struct {
 	NestedStack *ServiceNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	Sidecars    []*SidecarOpts
 	LogConfig   *LogConfigOpts
+	Autoscaling *AutoscalingOpts
 
 	// Additional options that're not shared across all service templates.
 	HealthCheck        *ecs.HealthCheck

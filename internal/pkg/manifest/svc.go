@@ -40,17 +40,6 @@ var ServiceTypes = []string{
 	BackendServiceType,
 }
 
-// Service holds the basic data that every service manifest file needs to have.
-type Service struct {
-	Name *string `yaml:"name"`
-	Type *string `yaml:"type"` // must be one of the supported manifest types.
-}
-
-// ServiceImage represents the service's container image.
-type ServiceImage struct {
-	Build BuildArgsOrString `yaml:"build"` // Path to the Dockerfile.
-}
-
 // Range is a number range with maximum and minimum values.
 type Range string
 
@@ -70,6 +59,17 @@ func (r Range) Parse() (min int, max int, err error) {
 		return 0, 0, fmt.Errorf("cannot convert maximum value %s to integer", minMax[1])
 	}
 	return min, max, nil
+}
+
+// Service holds the basic data that every service manifest file needs to have.
+type Service struct {
+	Name *string `yaml:"name"`
+	Type *string `yaml:"type"` // must be one of the supported manifest types.
+}
+
+// ServiceImage represents the service's container image.
+type ServiceImage struct {
+	Build BuildArgsOrString `yaml:"build"` // Path to the Dockerfile.
 }
 
 // BuildConfig populates a docker.BuildArguments struct from the fields available in the manifest.
@@ -229,8 +229,8 @@ type Sidecar struct {
 	Sidecars map[string]*SidecarConfig `yaml:"sidecars"`
 }
 
-// SidecarsOpts converts the service's sidecar configuration into a format parsable by the templates pkg.
-func (s *Sidecar) SidecarsOpts() ([]*template.SidecarOpts, error) {
+// Options converts the service's sidecar configuration into a format parsable by the templates pkg.
+func (s *Sidecar) Options() ([]*template.SidecarOpts, error) {
 	if s.Sidecars == nil {
 		return nil, nil
 	}
@@ -300,10 +300,40 @@ func (a *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // Autoscaling represents the configurable options for Auto Scaling.
 type Autoscaling struct {
 	Range        Range          `yaml:"range"`
-	CPU          *string        `yaml:"cpu"`
-	Memory       *string        `yaml:"memory"`
+	CPU          *int           `yaml:"cpu_percentage"`
+	Memory       *int           `yaml:"memory_percentage"`
 	Requests     *int           `yaml:"requests"`
 	ResponseTime *time.Duration `yaml:"response_time"`
+}
+
+// Options converts the service's Auto Scaling configuration into a format parsable
+// by the templates pkg.
+func (a *Autoscaling) Options() (*template.AutoscalingOpts, error) {
+	if a.IsEmpty() {
+		return nil, nil
+	}
+	min, max, err := a.Range.Parse()
+	if err != nil {
+		return nil, err
+	}
+	autoscalingOpts := template.AutoscalingOpts{
+		MinCapacity: &min,
+		MaxCapacity: &max,
+	}
+	if a.CPU != nil {
+		autoscalingOpts.CPU = aws.Float64(float64(*a.CPU))
+	}
+	if a.Memory != nil {
+		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory))
+	}
+	if a.Requests != nil {
+		autoscalingOpts.Requests = aws.Float64(float64(*a.Requests))
+	}
+	if a.ResponseTime != nil {
+		responseTime := float64(*a.ResponseTime) / float64(time.Second)
+		autoscalingOpts.ResponseTime = aws.Float64(responseTime)
+	}
+	return &autoscalingOpts, nil
 }
 
 // IsEmpty returns whether Autoscaling is empty.
