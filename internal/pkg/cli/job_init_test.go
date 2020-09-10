@@ -32,9 +32,25 @@ func TestJobInitOpts_Validate(t *testing.T) {
 			inDockerfilePath: "./hello/Dockerfile",
 			wantedErr:        errors.New("open hello/Dockerfile: file does not exist"),
 		},
-		"invalid schedule": {
+		"invalid schedule; cron and rate": {
 			inSchedule: "every 56 minutes",
-			wantedErr:  errors.New("Expected exactly 5 fields, found 3: every 56 minutes"),
+			wantedErr:  errors.New("schedule value every 56 minutes is invalid"),
+		},
+		"invalid schedule; rate too frequent": {
+			inSchedule: "7s",
+			wantedErr:  errors.New("schedule rate 7s must be greater than a minute"),
+		},
+		"invalid schedule; rate in subseconds": {
+			inSchedule: "75.9s",
+			wantedErr:  errors.New("schedule rate 75.9s cannot be in units smaller than a second"),
+		},
+		"valid schedule; cron": {
+			inSchedule: "* * * * *",
+			wantedErr:  nil,
+		},
+		"valid schedule; rate": {
+			inSchedule: "1h23m45s",
+			wantedErr:  nil,
 		},
 		"invalid timeout duration; subseconds": {
 			inTimeout: "30m45.5s",

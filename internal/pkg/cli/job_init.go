@@ -97,16 +97,26 @@ func (o *initJobOpts) Validate() error {
 		}
 	}
 	if o.Schedule != "" {
-		if _, err := cron.ParseStandard(o.Schedule); err != nil {
-			return err
+		_, cronErr := cron.ParseStandard(o.Schedule)
+		rate, timeErr := time.ParseDuration(o.Schedule)
+		if cronErr != nil && timeErr == nil {
+			if rate.Seconds() != float64(int64(rate.Seconds())) {
+				return fmt.Errorf("schedule rate %s cannot be in units smaller than a second", o.Schedule)
+			} else if rate.Seconds() < 60 {
+				return fmt.Errorf("schedule rate %s must be greater than a minute", o.Schedule)
+			}
+		}
+		if cronErr != nil && timeErr != nil {
+			return fmt.Errorf("schedule value %s is invalid", o.Schedule)
 		}
 	}
+
 	if o.Timeout != "" {
 		timeout, err := time.ParseDuration(o.Timeout)
 		if err != nil {
 			return err
 		}
-		if timeout.Seconds() != float64(int64(timeout)) {
+		if timeout.Seconds() != float64(int64(timeout.Seconds())) {
 			return fmt.Errorf("timeout duration %s cannot be in units smaller than a second", o.Timeout)
 		}
 	}
