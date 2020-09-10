@@ -110,7 +110,6 @@ func (o *initJobOpts) Validate() error {
 			return fmt.Errorf("schedule value %s is invalid", o.Schedule)
 		}
 	}
-
 	if o.Timeout != "" {
 		timeout, err := time.ParseDuration(o.Timeout)
 		if err != nil {
