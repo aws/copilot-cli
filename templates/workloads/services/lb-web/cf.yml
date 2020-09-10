@@ -168,6 +168,14 @@ Resources:
               Action:
                 - elasticloadbalancing:DescribeRules
               Resource: "*"
+        - PolicyName: "ECSAccess"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - ecs:ListTasks
+              Resource: "*"
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 

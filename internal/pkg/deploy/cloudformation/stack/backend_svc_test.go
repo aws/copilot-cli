@@ -45,6 +45,7 @@ var testBackendSvcManifest = manifest.NewBackendService(manifest.BackendServiceP
 })
 
 func TestBackendService_Template(t *testing.T) {
+	const mockUpdateID = "mockUpdateID"
 	baseProps := manifest.BackendServiceProps{
 		ServiceProps: manifest.ServiceProps{
 			Name:       "frontend",
@@ -68,9 +69,21 @@ func TestBackendService_Template(t *testing.T) {
 		wantedTemplate   string
 		wantedErr        error
 	}{
+		"unavailable desired count lambda template": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(nil, errors.New("some error"))
+				svc.parser = m
+			},
+			wantedTemplate: "",
+			wantedErr:      fmt.Errorf("read desired count lambda: some error"),
+		},
 		"unexpected addons parsing error": {
 			manifest: testBackendSvcManifest,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				svc.parser = m
 				svc.addons = mockTemplater{err: errors.New("some error")}
 			},
 			wantedErr: fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testBackendSvcManifest.Name), errors.New("some error")),
@@ -78,6 +91,9 @@ func TestBackendService_Template(t *testing.T) {
 		"failed parsing sidecars template": {
 			manifest: testBackendSvcManifestWithBadSidecar,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				svc.parser = m
 				svc.addons = mockTemplater{
 					tpl: `Outputs:
   AdditionalResourcesPolicyArn:
@@ -89,6 +105,9 @@ func TestBackendService_Template(t *testing.T) {
 		"failed parsing Auto Scaling template": {
 			manifest: testBackendSvcManifestWithBadAutoScaling,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				svc.parser = m
 				svc.addons = mockTemplater{
 					tpl: `Outputs:
   AdditionalResourcesPolicyArn:
@@ -100,8 +119,8 @@ func TestBackendService_Template(t *testing.T) {
 		"failed parsing svc template": {
 			manifest: testBackendSvcManifest,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
-
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(gomock.Any()).Return(nil, errors.New("some error"))
 				svc.parser = m
 				svc.addons = mockTemplater{
@@ -116,6 +135,7 @@ func TestBackendService_Template(t *testing.T) {
 			manifest: testBackendSvcManifest,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(template.ServiceOpts{
 					HealthCheck: &ecs.HealthCheck{
 						Command:     aws.StringSlice([]string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"}),
@@ -124,6 +144,8 @@ func TestBackendService_Template(t *testing.T) {
 						StartPeriod: aws.Int64(0),
 						Timeout:     aws.Int64(10),
 					},
+					DesiredCountLambda:         "something",
+					DesiredCountLambdaUpdateID: mockUpdateID,
 					NestedStack: &template.ServiceNestedStackOpts{
 						StackName:       addon.StackName,
 						VariableOutputs: []string{"Hello"},
@@ -156,6 +178,7 @@ func TestBackendService_Template(t *testing.T) {
 					},
 				},
 				manifest: tc.manifest,
+				updateID: mockUpdateID,
 			}
 			tc.mockDependencies(t, ctrl, conf)
 
@@ -163,8 +186,12 @@ func TestBackendService_Template(t *testing.T) {
 			template, err := conf.Template()
 
 			// THEN
-			require.Equal(t, tc.wantedErr, err)
-			require.Equal(t, tc.wantedTemplate, template)
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedTemplate, template)
+			}
 		})
 	}
 }

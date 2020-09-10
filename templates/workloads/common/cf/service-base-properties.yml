@@ -2,7 +2,7 @@ Cluster:
   Fn::ImportValue:
     !Sub '${AppName}-${EnvName}-ClusterId'
 TaskDefinition: !Ref TaskDefinition
-DesiredCount: !Ref TaskCount
+DesiredCount: !GetAtt DynamicDesiredCountAction.DesiredCount
 PropagateTags: SERVICE
 LaunchType: FARGATE
 NetworkConfiguration:

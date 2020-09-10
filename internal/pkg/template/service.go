@@ -93,8 +93,10 @@ type ServiceOpts struct {
 	Autoscaling *AutoscalingOpts
 
 	// Additional options that're not shared across all service templates.
-	HealthCheck        *ecs.HealthCheck
-	RulePriorityLambda string
+	HealthCheck                *ecs.HealthCheck
+	RulePriorityLambda         string
+	DesiredCountLambda         string
+	DesiredCountLambdaUpdateID string
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
