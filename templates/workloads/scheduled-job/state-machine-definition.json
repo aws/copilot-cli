@@ -27,19 +27,11 @@
       "Retry": [
         {
           "ErrorEquals": [
-            "States.TaskFailed"
-          ],
-          "IntervalSeconds": 3,
-          "MaxAttempts": {{.Retries}},
-          "BackoffRate": 1.0
-        },
-        {
-          "ErrorEquals": [
-            "ECS.AmazonECSException"
+            "States.ALL"
           ],
           "IntervalSeconds": 10,
           "MaxAttempts": {{.Retries}},
-          "BackoffRate": 2.0
+          "BackoffRate": 1.5
         }
       ],
       {{- end}}
