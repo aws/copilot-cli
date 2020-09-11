@@ -40,25 +40,57 @@ func TestJobInitOpts_Validate(t *testing.T) {
 			inSchedule: "7s",
 			wantedErr:  errors.New("schedule rate 7s must be greater than a minute"),
 		},
+		"invalid schedule; rate is zero": {
+			inSchedule: "0m",
+			wantedErr:  errors.New("schedule rate 0m must be greater than a minute"),
+		},
 		"invalid schedule; rate in subseconds": {
 			inSchedule: "75.9s",
-			wantedErr:  errors.New("schedule rate 75.9s cannot be in units smaller than a second"),
+			wantedErr:  errors.New("duration 75.9s cannot be in units smaller than a second"),
 		},
-		"valid schedule; cron": {
+		"invalid schedule; rate in milliseconds": {
+			inSchedule: "3ms",
+			wantedErr:  errors.New("duration 3ms cannot be in units smaller than a second"),
+		},
+		"invalid schedule; cron interval too frequent": {
+			inSchedule: "@every 30s",
+			wantedErr:  errors.New("schedule rate @every 30s must be greater than a minute"),
+		},
+		"invalid schedule; cron interval is zero": {
+			inSchedule: "@every 0s",
+			wantedErr:  errors.New("schedule rate @every 0s must be greater than a minute"),
+		},
+		"invalid schedule; cron interval duration improperly formed": {
+			inSchedule: "@every 5min",
+			wantedErr:  errors.New("@every 5min is not a valid duration string: time: unknown unit min in duration 5min"),
+		},
+		"valid schedule; crontab": {
 			inSchedule: "* * * * *",
 			wantedErr:  nil,
 		},
+		"valid schedule; predefined schedule": {
+			inSchedule: "@daily",
+			wantedErr:  nil,
+		},
+		"valid schedule; interval": {
+			inSchedule: "@every 5m",
+			wantedErr:  nil,
+		},
 		"valid schedule; rate": {
-			inSchedule: "1h23m45s",
+			inSchedule: "1h23m",
 			wantedErr:  nil,
 		},
 		"invalid timeout duration; incorrect format": {
 			inTimeout: "30 minutes",
-			wantedErr: errors.New("time: unknown unit  minutes in duration 30 minutes"),
+			wantedErr: errors.New("30 minutes is not a valid timeout duration string: time: unknown unit  minutes in duration 30 minutes"),
 		},
 		"invalid timeout duration; subseconds": {
 			inTimeout: "30m45.5s",
-			wantedErr: errors.New("timeout duration 30m45.5s cannot be in units smaller than a second"),
+			wantedErr: errors.New("duration 30m45.5s cannot be in units smaller than a second"),
+		},
+		"invalid timeout duration; milliseconds": {
+			inTimeout: "3ms",
+			wantedErr: errors.New("duration 3ms cannot be in units smaller than a second"),
 		},
 		"invalid timeout; too short": {
 			inTimeout: "0s",
