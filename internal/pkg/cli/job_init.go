@@ -121,7 +121,7 @@ func (o *initJobOpts) Validate() error {
 	}
 	if o.Retries != 0 {
 		if o.Retries < 0 {
-			return fmt.Errorf("number of times to retry %d must be positive", o.Retries)
+			return errors.New("number of retries must be non-negative")
 		}
 	}
 	return nil
