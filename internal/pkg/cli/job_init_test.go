@@ -62,7 +62,7 @@ func TestJobInitOpts_Validate(t *testing.T) {
 		},
 		"invalid number of times to retry": {
 			inRetries: -3,
-			wantedErr: errors.New("number of times to retry -3 must be positive"),
+			wantedErr: errors.New("number of retries must be non-negative"),
 		},
 	}
 

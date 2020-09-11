@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -97,17 +98,22 @@ func (o *initJobOpts) Validate() error {
 		}
 	}
 	if o.Schedule != "" {
-		_, cronErr := cron.ParseStandard(o.Schedule)
-		rate, timeErr := time.ParseDuration(o.Schedule)
-		if cronErr != nil && timeErr == nil {
-			if rate.Seconds() != float64(int64(rate.Seconds())) {
-				return fmt.Errorf("schedule rate %s cannot be in units smaller than a second", o.Schedule)
-			} else if rate.Seconds() < 60 {
-				return fmt.Errorf("schedule rate %s must be greater than a minute", o.Schedule)
-			}
+		_, err := cron.ParseStandard(o.Schedule)
+		if err == nil {
+			return nil
 		}
-		if cronErr != nil && timeErr != nil {
+		var rate time.Duration
+		if err != nil {
+			rate, err = time.ParseDuration(o.Schedule)
+		}
+		if err != nil {
 			return fmt.Errorf("schedule value %s is invalid", o.Schedule)
+		}
+		if rate.Seconds() != float64(int64(rate.Seconds())) {
+			return fmt.Errorf("schedule rate %s cannot be in units smaller than a second", o.Schedule)
+		}
+		if rate.Seconds() < 60 {
+			return fmt.Errorf("schedule rate %s must be greater than a minute", o.Schedule)
 		}
 	}
 	if o.Timeout != "" {
@@ -120,8 +126,7 @@ func (o *initJobOpts) Validate() error {
 		}
 	}
 	if o.Retries < 0 {
-			return errors.New("number of retries must be non-negative")
-		}
+		return errors.New("number of retries must be non-negative")
 	}
 	return nil
 }
