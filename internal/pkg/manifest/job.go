@@ -25,10 +25,10 @@ var JobTypes = []string{
 }
 
 var (
-	errStringNotDuration            = errors.New("duration must be of the form 90m, 2h, 60s")
-	errStringNotCron                = errors.New("string is not a valid cron schedule (M H DoM Mo DoW")
-	errStringNeitherDurationNorCron = errors.New("schedule must be either 5-element cron expression or Go duration string")
-	errDurationTooShort             = errors.New("rate expressions must have duration longer than 1 second")
+	errStringNotDuration = errors.New("duration must be of the form 90m, 2h, 60s")
+	errStringNotCron     = errors.New("string is not a valid cron schedule (M H DoM Mo DoW")
+	errScheduleInvalid   = errors.New("schedule must be either 5-element cron expression or Go duration string")
+	errDurationTooShort  = errors.New("rate expressions must have duration longer than 1 second")
 )
 
 var (
@@ -41,11 +41,14 @@ const (
 	// We use these predefined schedules when a customer specifies "@daily" or "@annually"
 	// to fulfill the predefined schedules spec defined at
 	// https://godoc.org/github.com/robfig/cron#hdr-Predefined_schedules
-	cronHourly  = "0 * * * * *" // at minute 0
-	cronDaily   = "0 0 * * * *" // at midnight
-	cronWeekly  = "0 0 * * 0 *" // at midnight on sunday
-	cronMonthly = "0 0 1 * * *" // at midnight on the first of the month
-	cronYearly  = "0 0 1 1 * *" // at midnight on January 1
+	// AWS requires that cron expressions use a ? wildcard for either DoM or DoW
+	// so we represent that here.
+	//            M H mD Mo wD Y
+	cronHourly  = "0 * * * ? *" // at minute 0
+	cronDaily   = "0 0 * * ? *" // at midnight
+	cronWeekly  = "0 0 ? * 1 *" // at midnight on sunday
+	cronMonthly = "0 0 1 * ? *" // at midnight on the first of the month
+	cronYearly  = "0 0 1 1 ? *" // at midnight on January 1
 )
 
 var predefinedSchedules = map[string]string{
@@ -58,7 +61,6 @@ var predefinedSchedules = map[string]string{
 }
 
 var regexpPredefined = regexp.MustCompile(`@(hourly|daily|weekly|monthly|yearly|annually)`)
-var regexpEvery = regexp.MustCompile(`@every (\d+.*)`)
 
 // Schedule is a string which can be parsed into either a cron entry or a duration.
 // AWS uses a 6-member cron of the format MIN HOUR DOM MON DOW YEAR, so we assume
@@ -82,7 +84,7 @@ func (s *Schedule) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		case errStringNotCron:
 			break
 		default:
-			return err
+			return fmt.Errorf("unmarshal schedule: %w", err)
 		}
 	}
 
@@ -93,13 +95,13 @@ func (s *Schedule) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	if err := s.parseRate(); err != nil {
-		return err
+		return errScheduleInvalid
 	}
 	if s.parsed {
 		return nil
 	}
 
-	return errStringNeitherDurationNorCron
+	return errScheduleInvalid
 }
 
 func (s *Schedule) parseCron() error {
@@ -196,4 +198,12 @@ func (d Duration) ToRate() (rate string, err error) {
 		return "", errDurationTooShort
 	}
 	return fmt.Sprintf(fmtRateExpression, minutes), nil
+}
+
+type Job struct {
+	Name
+}
+
+type ScheduledJob struct {
+	Job
 }
