@@ -119,8 +119,7 @@ func (o *initJobOpts) Validate() error {
 			return fmt.Errorf("timeout duration %s cannot be in units smaller than a second", o.Timeout)
 		}
 	}
-	if o.Retries != 0 {
-		if o.Retries < 0 {
+	if o.Retries < 0 {
 			return errors.New("number of retries must be non-negative")
 		}
 	}
