@@ -17,7 +17,7 @@ cpu: {{.CPU}}
 memory: {{.Memory}}
 
 # The trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2h, 1h30m, 15m)
-schedule: "{{.Schedule.String}}"
+schedule: "{{.Schedule}}"
 # Optional. The number of times to retry the job before failing.
 {{- if .Retries}}
 retries: {{.Retries}}
