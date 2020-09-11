@@ -11,11 +11,11 @@ import (
 const (
 	// EnvCFTemplatePath is the path where the cloudformation for the environment is written.
 	EnvCFTemplatePath       = "environment/cf.yml"
-	fmtEnvCFSubTemplatePath = "environment/cf/%s.yml"
+	fmtEnvCFSubTemplatePath = "environment/partials/%s.yml"
 )
 
 var (
-	// Template names under "environment/cf/".
+	// Template names under "environment/partials/".
 	envCFSubTemplateNames = []string{
 		"cfn-execution-role",
 		"custom-resources",

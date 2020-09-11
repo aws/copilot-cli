@@ -19,7 +19,7 @@ Generally, the steps involved in task run are:
 ### Notes
 1. Tasks with the same group name share the same set of resources, including CloudFormation stack, ECR repository, CloudWatch log group and task definition.
 2. If the tasks are deployed to a Copilot environment (i.e. by specifying `--env`), only public subnets that are created by that environment will be used. 
-3. 🚨 the `--env` flag only works with environments created with v0.3.0 of Copilot or later. Customers using environments created with v0.2.0 or earlier can update their environment manager role with [this](https://github.com/aws/copilot-cli/blob/mainline/templates/environment/cf/environment-manager-role.yml) policy. 
+3. 🚨 the `--env` flag only works with environments created with v0.3.0 of Copilot or later. Customers using environments created with v0.2.0 or earlier can update their environment manager role with [this](https://github.com/aws/copilot-cli/blob/mainline/templates/environment/partials/environment-manager-role.yml) policy. 
 4. If using `--default` and you get an error saying there's no default cluster, run `aws ecs create-cluster` and then re-run the copilot command. 
 
 ### What are the flags?
