@@ -1,28 +1,27 @@
-# The manifest for the "{{.Name}}" job.
-# Read the full specification for the "{{.Type}}" type at:
+# The manifest for the "cuteness-aggregator" job.
+# Read the full specification for the "Scheduled Job" type at:
 #  https://github.com/aws/copilot-cli/wiki/Manifests#scheduled-job
 
 # Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
-name: {{.Name}}
+name: cuteness-aggregator
 # The "architecture" of the job you're running.
-type: {{.Type}}
+type: Scheduled Job
 
 image:
   # Docker build arguments. You can specify additional overrides here. Supported: dockerfile, context, args
-  build: {{.Image.Build.BuildArgs.Dockerfile}}
+  build: ./cuteness-aggregator/Dockerfile
 
 # Number of CPU units for the task.
-cpu: {{.CPU}}
+cpu: 256
 # Amount of memory in MiB used by the task.
-memory: {{.Memory}}
+memory: 512
 
-# The trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2h, 90s, 15m)
-schedule: {{.Schedule}}
-
+# The trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2h, 1h30m, 15m)
+schedule: "@weekly"
 # Optional. The number of times to retry the job before failing.
-retries: {{.Retries}}
+#retries: 3
 # Optional. The timeout after which to stop the job if it's still running. You can use the units (h, m, s).
-timeout: {{.Timeout}}
+#timeout: 1h30m
 
 # Optional fields for more advanced use-cases.
 #

@@ -11,12 +11,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/robfig/cron/v3"
 )
 
 const (
 	// ScheduledJobType is a recurring ECS Fargate task which runs on a schedule.
 	ScheduledJobType = "Scheduled Job"
+)
+
+const (
+	scheduledJobManifestPath = "workloads/jobs/scheduled-job/manifest.yml"
 )
 
 // JobTypes holds the valid job "architectures"
@@ -68,15 +74,15 @@ var regexpPredefined = regexp.MustCompile(`@(hourly|daily|weekly|monthly|yearly|
 type Schedule struct {
 	rawString string
 	parsed    bool
-	Cron      string
-	Rate      string
+	String    string
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Schedule
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v2) interface.
 func (s *Schedule) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&s.rawString); err != nil {
+	var rawString string
+	if err := unmarshal(rawString); err != nil {
 		return err
 	}
 	if err := s.parseCron(); err != nil {
@@ -120,7 +126,7 @@ func (s *Schedule) parseCron() error {
 		// than cron
 		if strings.HasPrefix(s.rawString, every) {
 			d := Duration(s.rawString[len(every):])
-			s.Rate, err = d.ToRate()
+			s.String, err = d.ToRate()
 			if err != nil {
 				return err
 			}
@@ -132,14 +138,14 @@ func (s *Schedule) parseCron() error {
 		if len(predefinedMatch) == 0 {
 			return errStringNotCron
 		}
-		s.Cron = fmt.Sprintf(fmtCronExpression, predefinedSchedules[predefinedMatch[1]])
+		s.String = fmt.Sprintf(fmtCronExpression, predefinedSchedules[predefinedMatch[1]])
 		s.parsed = true
 		return nil
 	}
 
 	// the string was parseable by cron but did not use a predefined schedule or @every directive
 	fullCronExpression := addYearToCron(s.rawString)
-	s.Cron = fmt.Sprintf(fmtCronExpression, fullCronExpression)
+	s.String = fmt.Sprintf(fmtCronExpression, fullCronExpression)
 	s.parsed = true
 	return nil
 }
@@ -150,7 +156,7 @@ func (s *Schedule) parseRate() error {
 	if err != nil {
 		return err
 	}
-	s.Rate = rate
+	s.String = rate
 	s.parsed = true
 	return nil
 }
@@ -200,10 +206,83 @@ func (d Duration) ToRate() (rate string, err error) {
 	return fmt.Sprintf(fmtRateExpression, minutes), nil
 }
 
-type Job struct {
-	Name
+// ScheduledJob holds the configuration to build a container image that is run
+// periodically in a given environment with timeout and retry logic.
+type ScheduledJob struct {
+	Service            `yaml:",inline"`
+	ScheduledJobConfig `yaml:",inline"`
+	Environments       map[string]*ScheduledJobConfig `yaml:",flow"`
+
+	parser template.Parser
 }
 
-type ScheduledJob struct {
-	Job
+// ScheduledJobConfig holds the configuration for a scheduled job
+type ScheduledJobConfig struct {
+	Image          ServiceImage `yaml:",flow"`
+	TaskConfig     `yaml:",inline"`
+	*LogConfig     `yaml:"logging,flow"`
+	Sidecar        `yaml:",inline"`
+	ScheduleConfig `yaml:",inline"`
+}
+
+// ScheduleConfig holds the fields necessary to describe a scheduled job's execution frequency and error handling.
+type ScheduleConfig struct {
+	Schedule Schedule `yaml:"schedule"`
+	Timeout  string   `yaml:"timeout"`
+	Retries  int      `yaml:"retries"`
+}
+
+// ScheduledJobProps contains properties for creating a new scheduled job manifest.
+type ScheduledJobProps struct {
+	*ServiceProps
+	Schedule string
+	Timeout  string
+	Retries  int
+}
+
+// LogConfigOpts converts the job's Firelens configuration into a format parsable by the templates pkg.
+func (lc *ScheduledJobConfig) LogConfigOpts() *template.LogConfigOpts {
+	if lc.LogConfig == nil {
+		return nil
+	}
+	return lc.logConfigOpts()
+}
+
+// newDefaultScheduledJob returns an empty ScheduledJob with only the default values set.
+func newDefaultScheduledJob() *ScheduledJob {
+	return &ScheduledJob{
+		Service: Service{
+			Type: aws.String(ScheduledJobType),
+		},
+		ScheduledJobConfig: ScheduledJobConfig{
+			Image: ServiceImage{},
+			TaskConfig: TaskConfig{
+				CPU:    aws.Int(256),
+				Memory: aws.Int(512),
+			},
+		},
+	}
+}
+
+// NewScheduledJob creates a new
+func NewScheduledJob(props ScheduledJobProps) *ScheduledJob {
+	job := newDefaultScheduledJob()
+	// Apply overrides.
+	job.Name = aws.String(props.Name)
+	job.ScheduledJobConfig.Image.Build.BuildArgs.Dockerfile = aws.String(props.Dockerfile)
+	job.Schedule.String = props.Schedule
+	job.Retries = props.Retries
+	job.Timeout = props.Timeout
+	job.parser = template.New()
+	return job
+}
+
+// MarshalBinary serializes the manifest object into a binary YAML document.
+// Implements the encoding.BinaryMarshaler interface.
+func (j *ScheduledJob) MarshalBinary() ([]byte, error) {
+	content, err := j.parser.Parse(scheduledJobManifestPath, *j)
+	if err != nil {
+		return nil, err
+	}
+	return content.Bytes(), nil
 }
