@@ -34,7 +34,7 @@ func TestJobInitOpts_Validate(t *testing.T) {
 		},
 		"invalid schedule; cron and rate": {
 			inSchedule: "every 56 minutes",
-			wantedErr:  errors.New("schedule value every 56 minutes is invalid"),
+			wantedErr:  errors.New("schedule value every 56 minutes must be either a Go duration string or a valid cron expression"),
 		},
 		"invalid schedule; rate too frequent": {
 			inSchedule: "7s",
@@ -52,13 +52,17 @@ func TestJobInitOpts_Validate(t *testing.T) {
 			inSchedule: "1h23m45s",
 			wantedErr:  nil,
 		},
+		"invalid timeout duration; incorrect format": {
+			inTimeout: "30 minutes",
+			wantedErr: errors.New("time: unknown unit  minutes in duration 30 minutes"),
+		},
 		"invalid timeout duration; subseconds": {
 			inTimeout: "30m45.5s",
 			wantedErr: errors.New("timeout duration 30m45.5s cannot be in units smaller than a second"),
 		},
-		"invalid timeout duration; incorrect format": {
-			inTimeout: "30 minutes",
-			wantedErr: errors.New("time: unknown unit  minutes in duration 30 minutes"),
+		"invalid timeout; too short": {
+			inTimeout: "0s",
+			wantedErr: errors.New("timeout duration 0s must be longer than 1s"),
 		},
 		"invalid number of times to retry": {
 			inRetries: -3,

@@ -107,7 +107,7 @@ func (o *initJobOpts) Validate() error {
 			rate, err = time.ParseDuration(o.Schedule)
 		}
 		if err != nil {
-			return fmt.Errorf("schedule value %s is invalid", o.Schedule)
+			return fmt.Errorf("schedule value %s must be either a Go duration string or a valid cron expression", o.Schedule)
 		}
 		if rate.Seconds() != float64(int64(rate.Seconds())) {
 			return fmt.Errorf("schedule rate %s cannot be in units smaller than a second", o.Schedule)
@@ -123,6 +123,9 @@ func (o *initJobOpts) Validate() error {
 		}
 		if timeout.Seconds() != float64(int64(timeout.Seconds())) {
 			return fmt.Errorf("timeout duration %s cannot be in units smaller than a second", o.Timeout)
+		}
+		if timeout.Seconds() < 1 {
+			return fmt.Errorf("timeout duration %s must be longer than 1s", o.Timeout)
 		}
 	}
 	if o.Retries < 0 {
