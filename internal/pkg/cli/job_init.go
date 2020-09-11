@@ -102,10 +102,7 @@ func (o *initJobOpts) Validate() error {
 		if err == nil {
 			return nil
 		}
-		var rate time.Duration
-		if err != nil {
-			rate, err = time.ParseDuration(o.Schedule)
-		}
+		rate, err := time.ParseDuration(o.Schedule)
 		if err != nil {
 			return fmt.Errorf("schedule value %s must be either a Go duration string or a valid cron expression", o.Schedule)
 		}
