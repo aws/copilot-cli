@@ -93,7 +93,6 @@ func TestLoadBalancedWebService_StackName(t *testing.T) {
 }
 
 func TestLoadBalancedWebService_Template(t *testing.T) {
-	const mockUpdateID = "mockUpdateID"
 	testCases := map[string]struct {
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService)
 
@@ -155,9 +154,8 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.ServiceOpts{
-					RulePriorityLambda:         "lambda",
-					DesiredCountLambda:         "something",
-					DesiredCountLambdaUpdateID: mockUpdateID,
+					RulePriorityLambda: "lambda",
+					DesiredCountLambda: "something",
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 
 				addons := mockTemplater{err: &addon.ErrDirNotExist{}}
@@ -179,9 +177,8 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 						SecretOutputs:   []string{"MySecretArn"},
 						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 					},
-					RulePriorityLambda:         "lambda",
-					DesiredCountLambda:         "something",
-					DesiredCountLambdaUpdateID: mockUpdateID,
+					RulePriorityLambda: "lambda",
+					DesiredCountLambda: "something",
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{
 					tpl: `Resources:
@@ -233,7 +230,6 @@ Outputs:
 					},
 				},
 				manifest: testLBWebServiceManifest,
-				updateID: mockUpdateID,
 			}
 			tc.mockDependencies(t, ctrl, conf)
 

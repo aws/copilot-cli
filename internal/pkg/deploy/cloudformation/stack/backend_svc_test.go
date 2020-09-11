@@ -45,7 +45,6 @@ var testBackendSvcManifest = manifest.NewBackendService(manifest.BackendServiceP
 })
 
 func TestBackendService_Template(t *testing.T) {
-	const mockUpdateID = "mockUpdateID"
 	baseProps := manifest.BackendServiceProps{
 		ServiceProps: manifest.ServiceProps{
 			Name:       "frontend",
@@ -144,8 +143,7 @@ func TestBackendService_Template(t *testing.T) {
 						StartPeriod: aws.Int64(0),
 						Timeout:     aws.Int64(10),
 					},
-					DesiredCountLambda:         "something",
-					DesiredCountLambdaUpdateID: mockUpdateID,
+					DesiredCountLambda: "something",
 					NestedStack: &template.ServiceNestedStackOpts{
 						StackName:       addon.StackName,
 						VariableOutputs: []string{"Hello"},
@@ -178,7 +176,6 @@ func TestBackendService_Template(t *testing.T) {
 					},
 				},
 				manifest: tc.manifest,
-				updateID: mockUpdateID,
 			}
 			tc.mockDependencies(t, ctrl, conf)
 

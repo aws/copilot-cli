@@ -28,7 +28,6 @@ type backendSvcReadParser interface {
 type BackendService struct {
 	*wkld
 	manifest *manifest.BackendService
-	updateID string
 
 	parser backendSvcReadParser
 }
@@ -66,13 +65,6 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("read desired count lambda: %w", err)
 	}
-	if s.updateID == "" {
-		id, err := randomUpdateID()
-		if err != nil {
-			return "", err
-		}
-		s.updateID = id
-	}
 	outputs, err := s.addonsOutputs()
 	if err != nil {
 		return "", err
@@ -86,15 +78,14 @@ func (s *BackendService) Template() (string, error) {
 		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
 	}
 	content, err := s.parser.ParseBackendService(template.ServiceOpts{
-		Variables:                  s.manifest.BackendServiceConfig.Variables,
-		Secrets:                    s.manifest.BackendServiceConfig.Secrets,
-		NestedStack:                outputs,
-		Sidecars:                   sidecars,
-		Autoscaling:                autoscaling,
-		HealthCheck:                s.manifest.BackendServiceConfig.Image.HealthCheckOpts(),
-		LogConfig:                  s.manifest.LogConfigOpts(),
-		DesiredCountLambda:         desiredCountLambda.String(),
-		DesiredCountLambdaUpdateID: s.updateID,
+		Variables:          s.manifest.BackendServiceConfig.Variables,
+		Secrets:            s.manifest.BackendServiceConfig.Secrets,
+		NestedStack:        outputs,
+		Sidecars:           sidecars,
+		Autoscaling:        autoscaling,
+		HealthCheck:        s.manifest.BackendServiceConfig.Image.HealthCheckOpts(),
+		LogConfig:          s.manifest.LogConfigOpts(),
+		DesiredCountLambda: desiredCountLambda.String(),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)

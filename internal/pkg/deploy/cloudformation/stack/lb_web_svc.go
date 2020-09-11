@@ -12,7 +12,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
-	"github.com/google/uuid"
 )
 
 // Template rendering configuration.
@@ -42,7 +41,6 @@ type LoadBalancedWebService struct {
 	*wkld
 	manifest     *manifest.LoadBalancedWebService
 	httpsEnabled bool
-	updateID     string
 
 	parser loadBalancedWebSvcReadParser
 }
@@ -97,13 +95,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("read desired count lambda: %w", err)
 	}
-	if s.updateID == "" {
-		id, err := randomUpdateID()
-		if err != nil {
-			return "", err
-		}
-		s.updateID = id
-	}
 	outputs, err := s.addonsOutputs()
 	if err != nil {
 		return "", err
@@ -117,15 +108,14 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
 	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.ServiceOpts{
-		Variables:                  s.manifest.Variables,
-		Secrets:                    s.manifest.Secrets,
-		NestedStack:                outputs,
-		Sidecars:                   sidecars,
-		LogConfig:                  s.manifest.LogConfigOpts(),
-		Autoscaling:                autoscaling,
-		RulePriorityLambda:         rulePriorityLambda.String(),
-		DesiredCountLambda:         desiredCountLambda.String(),
-		DesiredCountLambdaUpdateID: s.updateID,
+		Variables:          s.manifest.Variables,
+		Secrets:            s.manifest.Secrets,
+		NestedStack:        outputs,
+		Sidecars:           sidecars,
+		LogConfig:          s.manifest.LogConfigOpts(),
+		Autoscaling:        autoscaling,
+		RulePriorityLambda: rulePriorityLambda.String(),
+		DesiredCountLambda: desiredCountLambda.String(),
 	})
 	if err != nil {
 		return "", err
@@ -198,12 +188,4 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 // to a YAML document annotated with comments for readability to users.
 func (s *LoadBalancedWebService) SerializedParameters() (string, error) {
 	return s.wkld.templateConfiguration(s)
-}
-
-func randomUpdateID() (string, error) {
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return "", fmt.Errorf("generate random id for Change Set: %w", err)
-	}
-	return id.String(), err
 }

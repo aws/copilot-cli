@@ -54,7 +54,6 @@ AutoScalingPolicyECSServiceAverageMemoryUtilization:
       ScaleOutCooldown: 60
       TargetValue: {{.Autoscaling.Memory}}
 {{- end}}
-{{- end}}
 
 DynamicDesiredCountAction:
   Type: Custom::DynamicDesiredCountFunction
@@ -63,9 +62,12 @@ DynamicDesiredCountAction:
     Cluster:
       Fn::ImportValue:
         !Sub '${AppName}-${EnvName}-ClusterId'
-    Family: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName]]
-    DesiredCount: !Ref TaskCount
-    UpdateID: {{.DesiredCountLambdaUpdateID}}
+    App: !Ref AppName
+    Env: !Ref EnvName
+    Svc: !Ref WorkloadName
+    DefaultDesiredCount: !Ref TaskCount
+    # We need to force trigger this lambda function on all deployments, so we give it a random ID as input on all event types.
+    UpdateID: {{ randomUUID }}
 
 DynamicDesiredCountFunction:
   Type: AWS::Lambda::Function
@@ -73,8 +75,9 @@ DynamicDesiredCountFunction:
     Code:
       ZipFile: |
         {{.DesiredCountLambda}}
-    Handler: "index.desiredCountHandler"
+    Handler: "index.handler"
     Timeout: 600
     MemorySize: 512
     Role: !GetAtt 'CustomResourceRole.Arn'
-    Runtime: nodejs10.x
+    Runtime: nodejs12.x
+{{- end}}
