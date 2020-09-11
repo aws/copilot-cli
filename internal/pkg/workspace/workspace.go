@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
@@ -117,6 +118,9 @@ func (ws *Workspace) Summary() (*Summary, error) {
 
 // ServiceNames returns the names of the services in the workspace.
 func (ws *Workspace) ServiceNames() ([]string, error) {
+	type isService interface {
+		IsService() bool
+	}
 	copilotPath, err := ws.CopilotDirPath()
 	if err != nil {
 		return nil, err
@@ -132,6 +136,57 @@ func (ws *Workspace) ServiceNames() ([]string, error) {
 		}
 		if exists, _ := ws.fsUtils.Exists(filepath.Join(copilotPath, f.Name(), manifestFileName)); !exists {
 			// Swallow the error because we don't want to include any services that we don't have permissions to read.
+			continue
+		}
+		manifestBytes, err := ws.ReadServiceManifest(f.Name())
+		if err != nil {
+			return nil, fmt.Errorf("read manifest for workload %s: %w", f.Name(), err)
+		}
+		wkld, err := manifest.UnmarshalService(manifestBytes)
+		mf, ok := wkld.(isService)
+		if !ok {
+			return nil, fmt.Errorf("workload %s does not have required method IsService()", f.Name())
+		}
+		if !mf.IsService() {
+			continue
+		}
+		names = append(names, f.Name())
+	}
+	return names, nil
+}
+
+// JobNames returns the names of all jobs in the workspace.
+func (ws *Workspace) JobNames() ([]string, error) {
+	type isJob interface {
+		IsJob() bool
+	}
+	copilotPath, err := ws.CopilotDirPath()
+	if err != nil {
+		return nil, err
+	}
+	files, err := ws.fsUtils.ReadDir(copilotPath)
+	if err != nil {
+		return nil, fmt.Errorf("read directory %s: %w", copilotPath, err)
+	}
+	var names []string
+	for _, f := range files {
+		if !f.IsDir() {
+			continue
+		}
+		if exists, _ := ws.fsUtils.Exists(filepath.Join(copilotPath, f.Name(), manifestFileName)); !exists {
+			// Swallow the error because we don't want to include any services that we don't have permissions to read.
+			continue
+		}
+		manifestBytes, err := ws.ReadServiceManifest(f.Name())
+		if err != nil {
+			return nil, fmt.Errorf("read manifest for workload %s: %w", f.Name(), err)
+		}
+		wkld, err := manifest.UnmarshalService(manifestBytes)
+		mf, ok := wkld.(isJob)
+		if !ok {
+			return nil, fmt.Errorf("workload %s does not have required method IsJob()", f.Name())
+		}
+		if !mf.IsJob() {
 			continue
 		}
 		names = append(names, f.Name())
