@@ -16,10 +16,17 @@ image:
 http:
   # Requests to this path will be forwarded to your service. 
   # To match all requests you can use the "/" path. 
+  # NOTE: If you plan to deploy multiple services, this value must be unique per-service
+  # NOTE: It is unnecessary to start the path with a "/", for example "/api" versus "api"
   path: '{{.Path}}'
   # You can specify a custom health check path. The default is "/"
+  # WARNING: Passing healthchecks are required and are how ECS measures task health. Failure to pass healthcheck may result cyclical restarts.
+  # NOTE: The healthcheck URL should be appended to the "path" value.
+  # For example, if "path" is set to "api", and your API serves it's healthcheck on "/healthz", this value should be "/api/healthz"
   # healthcheck: '{{.HealthCheckPath}}'
 
+# NOTE: Not all values for CPU + Memory are valid, refer to below link for valid value pairs:
+# https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html
 # Number of CPU units for the task.
 cpu: {{.CPU}}
 # Amount of memory in MiB used by the task.
