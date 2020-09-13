@@ -23,8 +23,6 @@ http:
   # For example, if "path" is set to "api", and your API serves it's healthcheck on "/healthz", this value should be "/api/healthz"
   # healthcheck: '{{.HealthCheckPath}}'
 
-# NOTE: Not all values for CPU + Memory are valid, refer to below link for valid value pairs:
-# https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html
 # Number of CPU units for the task.
 cpu: {{.CPU}}
 # Amount of memory in MiB used by the task.
