@@ -134,10 +134,8 @@ func validateJobSchedule(sched string) error {
 	}
 	if cronErr != timeErr {
 		return fmt.Errorf("cron: %w; duration: %v", cronErr, timeErr)
-	} else {
-		return fmt.Errorf("%s: %w", errScheduleInvalid, cronErr)
 	}
-	return nil
+	return fmt.Errorf("%s: %w", errScheduleInvalid, cronErr)
 }
 
 func validateTimeout(timeout string) error {
