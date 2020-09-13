@@ -36,6 +36,8 @@ Parameters:
     Type: String
   TargetPort:
     Type: Number
+  Stickiness:
+    Type: String
 Conditions:
   HTTPLoadBalancer:
     !Not
@@ -98,6 +100,8 @@ Resources:
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 60                  # Default is 300.
+        - Key: stickiness.enabled
+          Value: !Ref Stickiness
       TargetType: ip
       VpcId:
         Fn::ImportValue:
