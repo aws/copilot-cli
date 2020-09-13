@@ -558,7 +558,7 @@ func TestLoadBalancedWebService_Tags(t *testing.T) {
 	tags := conf.Tags()
 
 	// THEN
-	require.ElementsMatch(t, []*cloudformation.Tag{
+	require.Equal(t, []*cloudformation.Tag{
 		{
 			Key:   aws.String(deploy.AppTagKey),
 			Value: aws.String("phonetool"),
