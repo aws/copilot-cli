@@ -6,8 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
@@ -17,7 +15,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/robfig/cron/v3"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -99,30 +96,14 @@ func (o *initJobOpts) Validate() error {
 		}
 	}
 	if o.Schedule != "" {
-		every := "@every "
-		if strings.HasPrefix(o.Schedule, every) {
-			rate, err := time.ParseDuration(o.Schedule[len(every):])
-			if err != nil {
-				return fmt.Errorf("%s is not a valid duration string: %w", o.Schedule, err)
-			}
-			return o.checkDurationBounds(rate, o.Schedule)
+		if err := validateJobSchedule(o.Schedule); err != nil {
+			return err
 		}
-		_, err := cron.ParseStandard(o.Schedule)
-		if err == nil {
-			return nil
-		}
-		rate, err := time.ParseDuration(o.Schedule)
-		if err != nil {
-			return fmt.Errorf("schedule value %s must be either a Go duration string or a valid cron expression", o.Schedule)
-		}
-		return o.checkDurationBounds(rate, o.Schedule)
 	}
 	if o.Timeout != "" {
-		timeout, err := time.ParseDuration(o.Timeout)
-		if err != nil {
-			return fmt.Errorf("%s is not a valid timeout duration string: %w", o.Timeout, err)
+		if err := validateTimeout(o.Timeout); err != nil {
+			return err
 		}
-		return o.checkDurationBounds(timeout, o.Timeout)
 	}
 	if o.Retries < 0 {
 		return errors.New("number of retries must be non-negative")
@@ -137,19 +118,6 @@ func (o *initJobOpts) Ask() error {
 
 // Execute writes the job's manifest file and stores the name in SSM.
 func (o *initJobOpts) Execute() error {
-	return nil
-}
-
-func (o *initJobOpts) checkDurationBounds(duration time.Duration, input string) error {
-	if duration.Seconds() != float64(int64(duration.Seconds())) {
-		return fmt.Errorf("duration %s cannot be in units smaller than a second", input)
-	}
-	if input == o.Schedule && duration.Seconds() < 60 {
-		return fmt.Errorf("schedule rate %s must be greater than a minute", input)
-	}
-	if input == o.Timeout && duration.Seconds() < 1 {
-		return fmt.Errorf("timeout duration %s must be longer than 1s", input)
-	}
 	return nil
 }
 

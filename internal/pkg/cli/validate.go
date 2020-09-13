@@ -10,6 +10,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/robfig/cron/v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -34,6 +37,9 @@ var (
 	errDDBAttributeBadFormat              = errors.New("value must be of the form <name>:<T> where T is one of S, N, or B")
 	errTooManyLSIKeys                     = errors.New("number of specified LSI sort keys must be 5 or less")
 	errDomainInvalid                      = errors.New("value must contain at least one '.' character")
+	errDurationInvalid                    = errors.New("value must be a valid Go duration string (example: 30m)")
+	errDurationBadUnits                   = errors.New("duration cannot be in units smaller than a second")
+	errScheduleInvalid                    = errors.New("value must be either a Go duration string (example: 1h) or a valid cron expression (examples: @weekly; @every 30m; 0 0 * * 0)")
 )
 
 var (
@@ -81,13 +87,6 @@ func validateAppName(val interface{}) error {
 	return nil
 }
 
-func validateJobName(val interface{}) error {
-	if err := basicNameValidation(val); err != nil {
-		return fmt.Errorf("job name %v is invalid: %w", val, err)
-	}
-	return nil
-}
-
 func validateSvcName(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {
 		return fmt.Errorf("service name %v is invalid: %w", val, err)
@@ -115,6 +114,37 @@ func validateSvcType(val interface{}) error {
 	}
 
 	return fmt.Errorf("invalid service type %s: must be one of %s", svcType, prettify(manifest.ServiceTypes))
+}
+
+func validateJobName(val interface{}) error {
+	if err := basicNameValidation(val); err != nil {
+		return fmt.Errorf("job name %v is invalid: %w", val, err)
+	}
+	return nil
+}
+
+func validateJobSchedule(sched string) error {
+	cronErr := basicCronValidation(sched)
+	if cronErr == nil {
+		return nil
+	}
+	timeErr := basicDurationValidation(sched, 60)
+	if timeErr == nil {
+		return nil
+	}
+	if cronErr != timeErr {
+		return fmt.Errorf("cron: %w; duration: %v", cronErr, timeErr)
+	} else {
+		return fmt.Errorf("%s: %w", errScheduleInvalid, cronErr)
+	}
+	return nil
+}
+
+func validateTimeout(timeout string) error {
+	if err := basicDurationValidation(timeout, 1); err != nil {
+		return fmt.Errorf("timeout value %s is invalid: %w", timeout, err)
+	}
+	return nil
 }
 
 func validateDomainName(val interface{}) error {
@@ -164,6 +194,34 @@ func basicNameValidation(val interface{}) error {
 		return errValueBadFormat
 	}
 
+	return nil
+}
+
+func basicCronValidation(sched string) error {
+	every := "@every "
+	if strings.HasPrefix(sched, every) {
+		if err := basicDurationValidation(sched[len(every):], 60); err != nil {
+			return err
+		}
+	}
+	_, err := cron.ParseStandard(sched)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func basicDurationValidation(duration string, minDurationSecs int) error {
+	parsedDuration, err := time.ParseDuration(duration)
+	if err != nil {
+		return errDurationInvalid
+	}
+	if parsedDuration.Seconds() != float64(int64(parsedDuration.Seconds())) {
+		return errDurationBadUnits
+	}
+	if parsedDuration.Seconds() < float64(minDurationSecs) {
+		return fmt.Errorf("duration must be greater than %ds", minDurationSecs)
+	}
 	return nil
 }
 
