@@ -354,7 +354,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("80"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickiness),
+					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 			}...),
@@ -377,7 +377,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("80"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickiness),
+					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 			}...),
@@ -400,7 +400,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("5000"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickiness),
+					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 			}...),
@@ -423,7 +423,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("80"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickiness),
+					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 					ParameterValue: aws.String("true"),
 				},
 			}...),
