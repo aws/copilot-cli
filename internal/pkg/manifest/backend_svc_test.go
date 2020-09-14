@@ -22,21 +22,21 @@ func TestNewBackendSvc(t *testing.T) {
 	}{
 		"without healthcheck": {
 			inProps: BackendServiceProps{
-				ServiceProps: ServiceProps{
+				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
 				Port: 8080,
 			},
 			wantedManifest: &BackendService{
-				Service: Service{
+				Workload: Workload{
 					Name: aws.String("subscribers"),
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					Image: imageWithPortAndHealthcheck{
 						ServiceImageWithPort: ServiceImageWithPort{
-							ServiceImage: ServiceImage{
+							Image: Image{
 								Build: BuildArgsOrString{
 									BuildArgs: DockerBuildArgs{
 										Dockerfile: aws.String("./subscribers/Dockerfile"),
@@ -58,7 +58,7 @@ func TestNewBackendSvc(t *testing.T) {
 		},
 		"with custom healthcheck command": {
 			inProps: BackendServiceProps{
-				ServiceProps: ServiceProps{
+				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
@@ -68,14 +68,14 @@ func TestNewBackendSvc(t *testing.T) {
 				Port: 8080,
 			},
 			wantedManifest: &BackendService{
-				Service: Service{
+				Workload: Workload{
 					Name: aws.String("subscribers"),
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					Image: imageWithPortAndHealthcheck{
 						ServiceImageWithPort: ServiceImageWithPort{
-							ServiceImage: ServiceImage{
+							Image: Image{
 								Build: BuildArgsOrString{
 									BuildArgs: DockerBuildArgs{
 										Dockerfile: aws.String("./subscribers/Dockerfile"),
@@ -127,7 +127,7 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 	}{
 		"without healthcheck": {
 			inProps: BackendServiceProps{
-				ServiceProps: ServiceProps{
+				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
@@ -137,7 +137,7 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 		},
 		"with custom healthcheck command": {
 			inProps: BackendServiceProps{
-				ServiceProps: ServiceProps{
+				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
@@ -174,14 +174,14 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 
 func TestBackendSvc_ApplyEnv(t *testing.T) {
 	mockBackendServiceWithNoOverride := BackendService{
-		Service: Service{
+		Workload: Workload{
 			Name: aws.String("phonetool"),
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
 			Image: imageWithPortAndHealthcheck{
 				ServiceImageWithPort: ServiceImageWithPort{
-					ServiceImage: ServiceImage{
+					Image: Image{
 						Build: BuildArgsOrString{
 							BuildArgs: DockerBuildArgs{
 								Dockerfile: aws.String("./Dockerfile"),

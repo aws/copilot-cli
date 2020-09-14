@@ -18,14 +18,14 @@ const (
 
 // BackendServiceProps represents the configuration needed to create a backend service.
 type BackendServiceProps struct {
-	ServiceProps
+	WorkloadProps
 	Port        uint16
 	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
 }
 
 // BackendService holds the configuration to create a backend service manifest.
 type BackendService struct {
-	Service              `yaml:",inline"`
+	Workload             `yaml:",inline"`
 	BackendServiceConfig `yaml:",inline"`
 	// Use *BackendServiceConfig because of https://github.com/imdario/mergo/issues/146
 	Environments map[string]*BackendServiceConfig `yaml:",flow"`
@@ -123,7 +123,7 @@ func (s BackendService) ApplyEnv(envName string) (*BackendService, error) {
 // newDefaultBackendService returns a backend service with minimal task sizes and a single replica.
 func newDefaultBackendService() *BackendService {
 	return &BackendService{
-		Service: Service{
+		Workload: Workload{
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{

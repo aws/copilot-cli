@@ -21,7 +21,7 @@ const (
 // LoadBalancedWebService holds the configuration to build a container image with an exposed port that receives
 // requests through a load balancer with AWS Fargate as the compute engine.
 type LoadBalancedWebService struct {
-	Service                      `yaml:",inline"`
+	Workload                     `yaml:",inline"`
 	LoadBalancedWebServiceConfig `yaml:",inline"`
 	// Use *LoadBalancedWebServiceConfig because of https://github.com/imdario/mergo/issues/146
 	Environments map[string]*LoadBalancedWebServiceConfig `yaml:",flow"` // Fields to override per environment.
@@ -56,7 +56,7 @@ type RoutingRule struct {
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
 type LoadBalancedWebServiceProps struct {
-	*ServiceProps
+	*WorkloadProps
 	Path string
 	Port uint16
 }
@@ -77,7 +77,7 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 // newDefaultLoadBalancedWebService returns an empty LoadBalancedWebService with only the default values set.
 func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 	return &LoadBalancedWebService{
-		Service: Service{
+		Workload: Workload{
 			Type: aws.String(LoadBalancedWebServiceType),
 		},
 		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{

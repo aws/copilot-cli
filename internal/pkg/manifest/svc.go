@@ -61,14 +61,14 @@ func (r Range) Parse() (min int, max int, err error) {
 	return min, max, nil
 }
 
-// Service holds the basic data that every service manifest file needs to have.
-type Service struct {
+// Workload holds the basic data that every workload manifest file needs to have.
+type Workload struct {
 	Name *string `yaml:"name"`
 	Type *string `yaml:"type"` // must be one of the supported manifest types.
 }
 
-// ServiceImage represents the service's container image.
-type ServiceImage struct {
+// Image represents the workload's container image.
+type Image struct {
 	Build BuildArgsOrString `yaml:"build"` // Path to the Dockerfile.
 }
 
@@ -78,63 +78,63 @@ type ServiceImage struct {
 // 2. Specific dockerfile, context = dockerfile dir
 // 3. "Dockerfile" located in context dir
 // 4. "Dockerfile" located in ws root.
-func (s *ServiceImage) BuildConfig(rootDirectory string) *DockerBuildArgs {
-	df := s.dockerfile()
-	ctx := s.context()
+func (i *Image) BuildConfig(rootDirectory string) *DockerBuildArgs {
+	df := i.dockerfile()
+	ctx := i.context()
 	if df != "" && ctx != "" {
 		return &DockerBuildArgs{
 			Dockerfile: aws.String(filepath.Join(rootDirectory, df)),
 			Context:    aws.String(filepath.Join(rootDirectory, ctx)),
-			Args:       s.args(),
+			Args:       i.args(),
 		}
 	}
 	if df != "" && ctx == "" {
 		return &DockerBuildArgs{
 			Dockerfile: aws.String(filepath.Join(rootDirectory, df)),
 			Context:    aws.String(filepath.Join(rootDirectory, filepath.Dir(df))),
-			Args:       s.args(),
+			Args:       i.args(),
 		}
 	}
 	if df == "" && ctx != "" {
 		return &DockerBuildArgs{
 			Dockerfile: aws.String(filepath.Join(rootDirectory, ctx, dockerfileDefaultName)),
 			Context:    aws.String(filepath.Join(rootDirectory, ctx)),
-			Args:       s.args(),
+			Args:       i.args(),
 		}
 	}
 	return &DockerBuildArgs{
 		Dockerfile: aws.String(filepath.Join(rootDirectory, dockerfileDefaultName)),
 		Context:    aws.String(rootDirectory),
-		Args:       s.args(),
+		Args:       i.args(),
 	}
 }
 
-// dockerfile returns the path to the service's Dockerfile. If no dockerfile is specified,
+// dockerfile returns the path to the workload's Dockerfile. If no dockerfile is specified,
 // returns "".
-func (s *ServiceImage) dockerfile() string {
+func (i *Image) dockerfile() string {
 	// Prefer to use the "Dockerfile" string in BuildArgs. Otherwise,
 	// "BuildString". If no dockerfile specified, return "".
-	if s.Build.BuildArgs.Dockerfile != nil {
-		return aws.StringValue(s.Build.BuildArgs.Dockerfile)
+	if i.Build.BuildArgs.Dockerfile != nil {
+		return aws.StringValue(i.Build.BuildArgs.Dockerfile)
 	}
 
 	var dfPath string
-	if s.Build.BuildString != nil {
-		dfPath = aws.StringValue(s.Build.BuildString)
+	if i.Build.BuildString != nil {
+		dfPath = aws.StringValue(i.Build.BuildString)
 	}
 
 	return dfPath
 }
 
 // context returns the build context directory if it exists, otherwise an empty string.
-func (s *ServiceImage) context() string {
-	return aws.StringValue(s.Build.BuildArgs.Context)
+func (i *Image) context() string {
+	return aws.StringValue(i.Build.BuildArgs.Context)
 }
 
 // args returns the args section, if it exists, to override args in the dockerfile.
 // Otherwise it returns an empty map.
-func (s *ServiceImage) args() map[string]string {
-	return s.Build.BuildArgs.Args
+func (i *Image) args() map[string]string {
+	return i.Build.BuildArgs.Args
 }
 
 // BuildArgsOrString is a custom type which supports unmarshaling yaml which
@@ -186,8 +186,8 @@ func (b *DockerBuildArgs) isEmpty() bool {
 
 // ServiceImageWithPort represents a container image with an exposed port.
 type ServiceImageWithPort struct {
-	ServiceImage `yaml:",inline"`
-	Port         *uint16 `yaml:"port"`
+	Image `yaml:",inline"`
+	Port  *uint16 `yaml:"port"`
 }
 
 // LogConfig holds configuration for Firelens to route your logs.
@@ -342,17 +342,17 @@ func (a *Autoscaling) IsEmpty() bool {
 		a.Requests == nil && a.ResponseTime == nil
 }
 
-// ServiceProps contains properties for creating a new service manifest.
-type ServiceProps struct {
+// WorkloadProps contains properties for creating a new service manifest.
+type WorkloadProps struct {
 	Name       string
 	Dockerfile string
 }
 
-// UnmarshalService deserializes the YAML input stream into a service manifest object.
+// UnmarshalWorkload deserializes the YAML input stream into a service manifest object.
 // If an error occurs during deserialization, then returns the error.
 // If the service type in the manifest is invalid, then returns an ErrInvalidManifestType.
-func UnmarshalService(in []byte) (interface{}, error) {
-	am := Service{}
+func UnmarshalWorkload(in []byte) (interface{}, error) {
+	am := Workload{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
 		return nil, fmt.Errorf("unmarshal to service manifest: %w", err)
 	}
@@ -382,7 +382,7 @@ func UnmarshalService(in []byte) (interface{}, error) {
 		}
 		return m, nil
 	default:
-		return nil, &ErrInvalidSvcManifestType{Type: typeVal}
+		return nil, &ErrInvalidWkldManifestType{Type: typeVal}
 	}
 }
 

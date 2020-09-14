@@ -70,13 +70,13 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 	}{
 		"with no existing environments": {
 			in: &LoadBalancedWebService{
-				Service: Service{
+				Workload: Workload{
 					Name: aws.String("phonetool"),
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					Image: ServiceImageWithPort{
-						ServiceImage: ServiceImage{
+						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
 									Dockerfile: aws.String("./Dockerfile"),
@@ -101,13 +101,13 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 			envToApply: "prod-iad",
 
 			wanted: &LoadBalancedWebService{
-				Service: Service{
+				Workload: Workload{
 					Name: aws.String("phonetool"),
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					Image: ServiceImageWithPort{
-						ServiceImage: ServiceImage{
+						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
 									Dockerfile: aws.String("./Dockerfile"),
@@ -132,13 +132,13 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 		},
 		"with overrides": {
 			in: &LoadBalancedWebService{
-				Service: Service{
+				Workload: Workload{
 					Name: aws.String("phonetool"),
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					Image: ServiceImageWithPort{
-						ServiceImage: ServiceImage{
+						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
 									Dockerfile: aws.String("./Dockerfile"),
@@ -182,7 +182,7 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
 						Image: ServiceImageWithPort{
-							ServiceImage: ServiceImage{
+							Image: Image{
 								Build: BuildArgsOrString{
 									BuildArgs: DockerBuildArgs{
 										Dockerfile: aws.String("./RealDockerfile"),
@@ -221,13 +221,13 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 			envToApply: "prod-iad",
 
 			wanted: &LoadBalancedWebService{
-				Service: Service{
+				Workload: Workload{
 					Name: aws.String("phonetool"),
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					Image: ServiceImageWithPort{
-						ServiceImage: ServiceImage{
+						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
 									Dockerfile: aws.String("./RealDockerfile"),

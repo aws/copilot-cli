@@ -66,9 +66,9 @@ environments:
 				actualManifest, ok := i.(*LoadBalancedWebService)
 				require.True(t, ok)
 				wantedManifest := &LoadBalancedWebService{
-					Service: Service{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
+					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-						Image: ServiceImageWithPort{ServiceImage: ServiceImage{Build: BuildArgsOrString{
+						Image: ServiceImageWithPort{Image: Image{Build: BuildArgsOrString{
 							BuildString: aws.String("frontend/Dockerfile"),
 						}}, Port: aws.Uint16(80)},
 						RoutingRule: RoutingRule{
@@ -151,14 +151,14 @@ secrets:
 				actualManifest, ok := i.(*BackendService)
 				require.True(t, ok)
 				wantedManifest := &BackendService{
-					Service: Service{
+					Workload: Workload{
 						Name: aws.String("subscribers"),
 						Type: aws.String(BackendServiceType),
 					},
 					BackendServiceConfig: BackendServiceConfig{
 						Image: imageWithPortAndHealthcheck{
 							ServiceImageWithPort: ServiceImageWithPort{
-								ServiceImage: ServiceImage{
+								Image: Image{
 									Build: BuildArgsOrString{
 										BuildString: aws.String("./subscribers/Dockerfile"),
 									},
@@ -193,13 +193,13 @@ secrets:
 name: CowSvc
 type: 'OH NO'
 `,
-			wantedErr: &ErrInvalidSvcManifestType{Type: "OH NO"},
+			wantedErr: &ErrInvalidWkldManifestType{Type: "OH NO"},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			m, err := UnmarshalService([]byte(tc.inContent))
+			m, err := UnmarshalWorkload([]byte(tc.inContent))
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
@@ -261,7 +261,7 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			var b ServiceImage
+			var b Image
 			err := yaml.Unmarshal(tc.inContent, &b)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
@@ -353,7 +353,7 @@ func TestBuildConfig(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			s := ServiceImage{
+			s := Image{
 				Build: tc.inBuild,
 			}
 			got := s.BuildConfig(mockWsRoot)

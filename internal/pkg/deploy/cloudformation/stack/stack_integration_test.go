@@ -32,7 +32,7 @@ func Test_Autoscaling_Integration(t *testing.T) {
 	path := filepath.Join("testdata", "autoscaling", manifestPath)
 	wantedManifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
-	mft, err := manifest.UnmarshalService(wantedManifestBytes)
+	mft, err := manifest.UnmarshalWorkload(wantedManifestBytes)
 	require.NoError(t, err)
 	v, ok := mft.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
