@@ -299,6 +299,67 @@ func TestWorkspace_ServiceNames(t *testing.T) {
 	}
 }
 
+func TestWorkspace_JobNames(t *testing.T) {
+	testCases := map[string]struct {
+		copilotDir          string
+		fs                  func() afero.Fs
+		mockManifestContent []byte
+
+		wantedNames []string
+		wantedErr   error
+	}{
+		"read not-existing directory": {
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				return fs
+			},
+			wantedErr: errors.New("read directory /copilot: open /copilot: file does not exist"),
+		},
+		"retrieve only directories with manifest files": {
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.Mkdir("/copilot", 0755)
+				fs.Create("/copilot/buildspec.yml")
+
+				// Valid service directory structure.
+				fs.Mkdir("/copilot/users", 0755)
+				fs.Create("/copilot/users/manifest.yml")
+
+				// Valid service directory structure.
+				fs.MkdirAll("/copilot/payments/addons", 0755)
+				fs.Create("/copilot/payments/manifest.yml")
+
+				// Missing manifest.yml.
+				fs.Mkdir("/copilot/inventory", 0755)
+				return fs
+			},
+			mockManifestContent: []byte(""),
+			wantedNames:         []string{"users", "payments"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ws := &Workspace{
+				copilotDir: tc.copilotDir,
+				fsUtils: &afero.Afero{
+					Fs: tc.fs(),
+				},
+			}
+
+			ws.isJob(tc.mockManifestContent)
+			names, err := ws.JobNames()
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.ElementsMatch(t, tc.wantedNames, names)
+			}
+		})
+	}
+}
+
 func TestIsInGitRepository(t *testing.T) {
 	testCases := map[string]struct {
 		given  func() FileStat

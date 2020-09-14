@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/spf13/afero"
@@ -118,9 +119,6 @@ func (ws *Workspace) Summary() (*Summary, error) {
 
 // ServiceNames returns the names of the services in the workspace.
 func (ws *Workspace) ServiceNames() ([]string, error) {
-	type isService interface {
-		IsService() bool
-	}
 	copilotPath, err := ws.CopilotDirPath()
 	if err != nil {
 		return nil, err
@@ -142,24 +140,15 @@ func (ws *Workspace) ServiceNames() ([]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read manifest for workload %s: %w", f.Name(), err)
 		}
-		wkld, err := manifest.UnmarshalService(manifestBytes)
-		mf, ok := wkld.(isService)
-		if !ok {
-			return nil, fmt.Errorf("workload %s does not have required method IsService()", f.Name())
+		if ws.isService(manifestBytes) {
+			names = append(names, f.Name())
 		}
-		if !mf.IsService() {
-			continue
-		}
-		names = append(names, f.Name())
 	}
 	return names, nil
 }
 
 // JobNames returns the names of all jobs in the workspace.
 func (ws *Workspace) JobNames() ([]string, error) {
-	type isJob interface {
-		IsJob() bool
-	}
 	copilotPath, err := ws.CopilotDirPath()
 	if err != nil {
 		return nil, err
@@ -181,15 +170,9 @@ func (ws *Workspace) JobNames() ([]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read manifest for workload %s: %w", f.Name(), err)
 		}
-		wkld, err := manifest.UnmarshalService(manifestBytes)
-		mf, ok := wkld.(isJob)
-		if !ok {
-			return nil, fmt.Errorf("workload %s does not have required method IsJob()", f.Name())
+		if ws.isJob(manifestBytes) {
+			names = append(names, f.Name())
 		}
-		if !mf.IsJob() {
-			continue
-		}
-		names = append(names, f.Name())
 	}
 	return names, nil
 }
@@ -371,6 +354,26 @@ func (ws *Workspace) CopilotDirPath() (string, error) {
 		ManifestDirectoryName: CopilotDirName,
 		NumberOfLevelsChecked: maximumParentDirsToSearch,
 	}
+}
+
+// isService returns true if a manifest's type is one of the supported service types.
+func (ws *Workspace) isService(mftBytes []byte) bool {
+	for _, serviceType := range manifest.ServiceTypes {
+		if strings.Contains(string(mftBytes), serviceType) {
+			return true
+		}
+	}
+	return false
+}
+
+// isJob returns true if a manifest's type is one of the supported job types.
+func (ws *Workspace) isJob(mftBytes []byte) bool {
+	for _, jobType := range manifest.JobTypes {
+		if strings.Contains(string(mftBytes), jobType) {
+			return true
+		}
+	}
+	return false
 }
 
 // write flushes the data to a file under the copilot directory joined by path elements.

@@ -45,7 +45,7 @@ const (
 	ScheduledJobType = "Scheduled Job"
 )
 
-// JobTypes are the supported job manifest types. 
+// JobTypes are the supported job manifest types.
 var JobTypes = []string{
 	ScheduledJobType,
 }
@@ -75,26 +75,6 @@ func (r Range) Parse() (min int, max int, err error) {
 type Service struct {
 	Name *string `yaml:"name"`
 	Type *string `yaml:"type"` // must be one of the supported manifest types.
-}
-
-// IsService returns true if a manifest's type is one of the supported service types.
-func (s *Service) IsService() bool {
-	for _, mftType := range ServiceTypes {
-		if aws.StringValue(s.Type) == mftType {
-			return true
-		}
-	}
-	return false
-}
-
-// IsJob returns true if a manifest's type is one of the supported job types.
-func (s *Service) IsJob() bool {
-	for _, mftType := range JobTypes {
-		if aws.StringValue(s.Type) == mftType {
-			return true
-		}
-	}
-	return false
 }
 
 // ServiceImage represents the service's container image.
