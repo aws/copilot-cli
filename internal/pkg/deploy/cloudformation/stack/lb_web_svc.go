@@ -27,6 +27,7 @@ const (
 	LBWebServiceHealthCheckPathParamKey = "HealthCheckPath"
 	LBWebServiceTargetContainerParamKey = "TargetContainer"
 	LBWebServiceTargetPortParamKey      = "TargetPort"
+	LBWebServiceStickinessParamKey      = "Stickiness"
 )
 
 type loadBalancedWebSvcReadParser interface {
@@ -169,6 +170,10 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 		{
 			ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
 			ParameterValue: targetPort,
+		},
+		{
+			ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+			ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.Stickiness))),
 		},
 	}...), nil
 }

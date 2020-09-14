@@ -19,6 +19,8 @@ http:
   path: '{{.Path}}'
   # You can specify a custom health check path. The default is "/"
   # healthcheck: '{{.HealthCheckPath}}'
+  # You can enable sticky sessions.
+  # stickiness: true
 
 # Number of CPU units for the task.
 cpu: {{.CPU}}
