@@ -39,7 +39,7 @@ var (
 	errDomainInvalid                      = errors.New("value must contain at least one '.' character")
 	errDurationInvalid                    = errors.New("value must be a valid Go duration string (example: 1h30m)")
 	errDurationBadUnits                   = errors.New("duration cannot be in units smaller than a second")
-	errScheduleInvalid                    = errors.New("value must be either a Go duration string (example: 1h) or a valid cron expression (examples: @weekly; @every 30m; 0 0 * * 0)")
+	errScheduleInvalid                    = errors.New("value must be either a Go duration string (example: 1h30m) or a valid cron expression (examples: @weekly; @every 30m; 0 0 * * 0)")
 )
 
 var (
