@@ -219,6 +219,11 @@ type svcManifestWriter interface {
 	WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
 }
 
+type svcDirManifestWriter interface {
+	svcManifestWriter
+	CopilotDirPath() (string, error)
+}
+
 type wsPipelineManifestReader interface {
 	ReadPipelineManifest() ([]byte, error)
 }
