@@ -1,0 +1,38 @@
+# The manifest for the "cuteness-aggregator" job.
+# Read the full specification for the "Scheduled Job" type at:
+#  https://github.com/aws/copilot-cli/wiki/Manifests#scheduled-job
+
+# Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
+name: cuteness-aggregator
+
+# The "architecture" of the job you're running.
+type: Scheduled Job
+
+image:
+  # Docker build arguments. You can specify additional overrides here. Supported: dockerfile, context, args
+  build: ./cuteness-aggregator/Dockerfile
+
+# Number of CPU units for the task.
+cpu: 256
+# Amount of memory in MiB used by the task.
+memory: 512
+
+# The trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2h, 1h30m, 15m)
+schedule: "0 */2 * * *"
+# Optional. The number of times to retry the job before failing.
+retries: 3
+# Optional. The timeout after which to stop the job if it's still running. You can use the units (h, m, s).
+timeout: 1h30m
+
+# Optional fields for more advanced use-cases.
+#
+#variables:                    # Pass environment variables as key value pairs.
+#  LOG_LEVEL: info
+#
+#secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
+#  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
+
+# You can override any of the values defined above by environment.
+#environments:
+#  prod:
+#    cpu: 2048               # Larger CPU value for prod environment 
