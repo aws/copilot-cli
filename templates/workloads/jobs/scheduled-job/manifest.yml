@@ -4,6 +4,7 @@
 
 # Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
 name: {{.Name}}
+
 # The "architecture" of the job you're running.
 type: {{.Type}}
 
