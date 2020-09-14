@@ -52,6 +52,17 @@ func TestScheduledJob_MarshalBinary(t *testing.T) {
 			},
 			wantedTestData: "scheduled-job-no-retries.yml",
 		},
+		"with retries and no timeout": {
+			inProps: ScheduledJobProps{
+				ServiceProps: &ServiceProps{
+					Name:       "cuteness-aggregator",
+					Dockerfile: "./cuteness-aggregator/Dockerfile",
+				},
+				Schedule: "@every 5h",
+				Retries:  5,
+			},
+			wantedTestData: "scheduled-job-no-timeout.yml",
+		},
 	}
 
 	for name, tc := range testCases {
