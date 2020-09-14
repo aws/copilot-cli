@@ -5,7 +5,9 @@ package cli
 
 import (
 	"encoding"
+	"errors"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -36,8 +38,10 @@ To learn more see: https://git.io/JfIpT`
 	fmtSvcInitSvcNameHelpPrompt = `The name will uniquely identify this service within your app %s.
 Deployed resources (such as your service, logs) will contain this service's name and be tagged with it.`
 
-	fmtSvcInitDockerfilePrompt  = "Which %s would you like to use for %s?"
-	svcInitDockerfileHelpPrompt = "Dockerfile to use for building your service's container image."
+	fmtSvcInitDockerfilePrompt      = "Which %s would you like to use for %s?"
+	svcInitDockerfileHelpPrompt     = "Dockerfile to use for building your service's container image."
+	fmtSvcInitDockerfilePathPrompt  = "What is the path to the %s for %s?"
+	svcInitDockerfilePathHelpPrompt = "Path to Dockerfile to use for building your service's container image."
 
 	svcInitSvcPortPrompt     = "Which %s do you want customer traffic sent to?"
 	svcInitSvcPortHelpPrompt = `The port will be used by the load balancer to route incoming traffic to this service.
@@ -67,7 +71,7 @@ type initSvcOpts struct {
 
 	// Interfaces to interact with dependencies.
 	fs          afero.Fs
-	ws          svcManifestWriter
+	ws          svcDirManifestWriter
 	store       store
 	appDeployer appDeployer
 	prog        progress
@@ -231,10 +235,14 @@ func (o *initSvcOpts) newManifest() (encoding.BinaryMarshaler, error) {
 }
 
 func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalancedWebService, error) {
+	dfPath, err := o.getRelativePath()
+	if err != nil {
+		return nil, err
+	}
 	props := &manifest.LoadBalancedWebServiceProps{
 		ServiceProps: &manifest.ServiceProps{
 			Name:       o.Name,
-			Dockerfile: o.DockerfilePath,
+			Dockerfile: dfPath,
 		},
 		Port: o.Port,
 		Path: "/",
@@ -255,6 +263,10 @@ func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalance
 }
 
 func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, error) {
+	dfPath, err := o.getRelativePath()
+	if err != nil {
+		return nil, err
+	}
 	hc, err := o.parseHealthCheck()
 	if err != nil {
 		return nil, err
@@ -262,7 +274,7 @@ func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, err
 	return manifest.NewBackendService(manifest.BackendServiceProps{
 		ServiceProps: manifest.ServiceProps{
 			Name:       o.Name,
-			Dockerfile: o.DockerfilePath,
+			Dockerfile: dfPath,
 		},
 		Port:        o.Port,
 		HealthCheck: hc,
@@ -305,30 +317,44 @@ func (o *initSvcOpts) askSvcName() error {
 }
 
 // askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
-// If the user chooses to enter a custom path, then we prompt them for the path.
 func (o *initSvcOpts) askDockerfile() error {
 	if o.DockerfilePath != "" {
 		return nil
 	}
 
-	// TODO https://github.com/aws/copilot-cli/issues/206
 	dockerfiles, err := listDockerfiles(o.fs, ".")
-	if err != nil {
+	// If Dockerfiles are found in the current directory or subdirectory one level down, ask the user to select one.
+	var sel string
+	if err == nil {
+		sel, err = o.prompt.SelectOne(
+			fmt.Sprintf(fmtSvcInitDockerfilePrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
+			svcInitDockerfileHelpPrompt,
+			dockerfiles,
+			prompt.WithFinalMessage("Dockerfile:"),
+		)
+		if err != nil {
+			return fmt.Errorf("select Dockerfile: %w", err)
+		}
+		o.DockerfilePath = sel
+		return nil
+	}
+
+	var notExistErr *errDockerfileNotFound
+	if !errors.As(err, &notExistErr) {
 		return err
 	}
-
-	sel, err := o.prompt.SelectOne(
-		fmt.Sprintf(fmtSvcInitDockerfilePrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
-		svcInitDockerfileHelpPrompt,
-		dockerfiles,
-		prompt.WithFinalMessage("Dockerfile:"),
-	)
+	// If no Dockerfiles were found, prompt user for custom path.
+	sel, err = o.prompt.Get(
+		fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
+		svcInitDockerfilePathHelpPrompt,
+		func(v interface{}) error {
+			return validatePath(afero.NewOsFs(), v)
+		},
+		prompt.WithFinalMessage("Dockerfile:"))
 	if err != nil {
-		return fmt.Errorf("select Dockerfile: %w", err)
+		return fmt.Errorf("get custom Dockerfile path: %w", err)
 	}
-
 	o.DockerfilePath = sel
-
 	return nil
 }
 
@@ -375,6 +401,26 @@ func (o *initSvcOpts) askSvcPort() error {
 	o.Port = uint16(portUint)
 
 	return nil
+}
+
+func (o *initSvcOpts) getRelativePath() (string, error) {
+	copilotDirPath, err := o.ws.CopilotDirPath()
+	if err != nil {
+		return "", fmt.Errorf("get copilot directory: %w", err)
+	}
+	wsRoot := filepath.Dir(copilotDirPath)
+	absDfPath, err := filepath.Abs(o.DockerfilePath)
+	if err != nil {
+		return "", fmt.Errorf("get absolute path: %v", err)
+	}
+	if !strings.Contains(absDfPath, wsRoot) {
+		return "", fmt.Errorf("Dockerfile %s not within workspace %s", absDfPath, wsRoot)
+	}
+	relDfPath, err := filepath.Rel(wsRoot, absDfPath)
+	if err != nil {
+		return "", fmt.Errorf("find relative path from workspace root to Dockerfile: %v", err)
+	}
+	return relDfPath, nil
 }
 
 func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error) {
