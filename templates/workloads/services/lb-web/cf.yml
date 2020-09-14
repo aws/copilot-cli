@@ -38,6 +38,7 @@ Parameters:
     Type: Number
   Stickiness:
     Type: String
+    Default: false
 Conditions:
   HTTPLoadBalancer:
     !Not
