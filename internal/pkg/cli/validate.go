@@ -37,7 +37,7 @@ var (
 	errDDBAttributeBadFormat              = errors.New("value must be of the form <name>:<T> where T is one of S, N, or B")
 	errTooManyLSIKeys                     = errors.New("number of specified LSI sort keys must be 5 or less")
 	errDomainInvalid                      = errors.New("value must contain at least one '.' character")
-	errDurationInvalid                    = errors.New("value must be a valid Go duration string (example: 30m)")
+	errDurationInvalid                    = errors.New("value must be a valid Go duration string (example: 1h30m)")
 	errDurationBadUnits                   = errors.New("duration cannot be in units smaller than a second")
 	errScheduleInvalid                    = errors.New("value must be either a Go duration string (example: 1h) or a valid cron expression (examples: @weekly; @every 30m; 0 0 * * 0)")
 )
