@@ -11,20 +11,22 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
-// var (
-// 	fmtJobInitNameHelpPrompt = `The name will uniquely identify this job within your app %s.
-// Deployed resources (such as your job, logs) will contain this job's name and be tagged with it.`
+var (
+	fmtJobInitNameHelpPrompt = `The name will uniquely identify this job within your app %s.
+Deployed resources (such as your job, logs) will contain this job's name and be tagged with it.`
 
-// 	jobInitDockerfileHelpPrompt = "Dockerfile to use for building your job's container image."
-// )
+	jobInitDockerfileHelpPrompt = "Dockerfile to use for building your job's container image."
+)
 
 // const (
 // 	fmtAddJobToAppStart    = "Creating ECR repositories for job %s."
@@ -39,6 +41,7 @@ type initJobVars struct {
 	Timeout        string
 	Retries        int
 	Schedule       string
+	JobType        string
 }
 
 type initJobOpts struct {
@@ -113,11 +116,44 @@ func (o *initJobOpts) Validate() error {
 
 // Ask prompts for fields that are required but not passed in.
 func (o *initJobOpts) Ask() error {
+	if err := o.askJobName(); err != nil {
+		return err
+	}
+	if err := o.askDockerfile(); err != nil {
+		return err
+	}
+	if err := o.askSchedule(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // Execute writes the job's manifest file and stores the name in SSM.
 func (o *initJobOpts) Execute() error {
+	return nil
+}
+
+func (o *initJobOpts) askJobType() error {
+	o.JobType = manifest.ScheduledJobType
+	return nil
+}
+
+func (o *initJobOpts) askJobName() error {
+	if o.Name != "" {
+		return nil
+	}
+
+	name, err := o.prompt.Get(
+		fmt.Sprintf(fmtSvcInitSvcNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.JobType)),
+		fmt.Sprintf(fmtJobInitJobNameHelpPrompt, o.AppName()),
+		validateSvcName,
+		prompt.WithFinalMessage("Job name:"),
+	)
+	if err != nil {
+		return fmt.Errorf("get job name: %w", err)
+	}
+	o.Name = name
 	return nil
 }
 
