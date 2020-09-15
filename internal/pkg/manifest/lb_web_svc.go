@@ -50,6 +50,7 @@ func (lc *LoadBalancedWebServiceConfig) LogConfigOpts() *template.LogConfigOpts 
 type RoutingRule struct {
 	Path            *string `yaml:"path"`
 	HealthCheckPath *string `yaml:"healthcheck"`
+	Stickiness      *bool   `yaml:"stickiness"`
 	// TargetContainer is the container load balancer routes traffic to.
 	TargetContainer *string `yaml:"targetContainer"`
 }

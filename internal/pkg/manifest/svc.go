@@ -385,6 +385,12 @@ func UnmarshalService(in []byte) (interface{}, error) {
 			m.BackendServiceConfig.Image.HealthCheck.applyIfNotSet(newDefaultContainerHealthCheck())
 		}
 		return m, nil
+	case ScheduledJobType:
+		m := newDefaultScheduledJob()
+		if err := yaml.Unmarshal(in, m); err != nil {
+			return nil, fmt.Errorf("unmarshal to scheduled job: %w", err)
+		}
+		return m, nil
 	default:
 		return nil, &ErrInvalidSvcManifestType{Type: typeVal}
 	}
