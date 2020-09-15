@@ -22,7 +22,8 @@ const (
 )
 
 type alarmStatusGetter interface {
-	GetAlarmsWithTags(tags map[string]string) ([]cloudwatch.AlarmStatus, error)
+	AlarmsWithTags(tags map[string]string) ([]cloudwatch.AlarmStatus, error)
+	ECSServiceAutoscalingAlarms(cluster, service string) ([]cloudwatch.AlarmStatus, error)
 }
 
 type resourcesGetter interface {
@@ -126,14 +127,21 @@ func (s *ServiceStatus) Describe() (*ServiceStatusDesc, error) {
 		}
 		taskStatus = append(taskStatus, *status)
 	}
-	alarms, err := s.CwSvc.GetAlarmsWithTags(map[string]string{
+	var alarms []cloudwatch.AlarmStatus
+	taggedAlarms, err := s.CwSvc.AlarmsWithTags(map[string]string{
 		deploy.AppTagKey:     s.AppName,
 		deploy.EnvTagKey:     s.EnvName,
 		deploy.ServiceTagKey: s.SvcName,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("get CloudWatch alarms: %w", err)
+		return nil, fmt.Errorf("get tagged CloudWatch alarms: %w", err)
 	}
+	alarms = append(alarms, taggedAlarms...)
+	autoscalingAlarms, err := s.CwSvc.ECSServiceAutoscalingAlarms(clusterName, serviceName)
+	if err != nil {
+		return nil, fmt.Errorf("get auto scaling CloudWatch alarms: %w", err)
+	}
+	alarms = append(alarms, autoscalingAlarms...)
 	return &ServiceStatusDesc{
 		Service: service.ServiceStatus(),
 		Tasks:   taskStatus,

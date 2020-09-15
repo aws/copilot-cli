@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	aas "github.com/aws/copilot-cli/internal/pkg/aws/applicationautoscaling"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -31,10 +32,19 @@ type resourceGetter interface {
 	GetResourcesByTags(resourceType string, tags map[string]string) ([]*rg.Resource, error)
 }
 
+type autoscalingAlarmNamesGetter interface {
+	ECSServiceAlarmNames(cluster, service string) ([]string, error)
+}
+
 // CloudWatch wraps an Amazon CloudWatch client.
 type CloudWatch struct {
-	cwClient api
-	rgClient resourceGetter
+	client api
+	// Optional client.
+	rgClient  resourceGetter
+	assClient autoscalingAlarmNamesGetter
+	// Optional client init.
+	initRgClient  func()
+	initAssclient func()
 }
 
 // AlarmStatus contains CloudWatch alarm status.
@@ -49,38 +59,57 @@ type AlarmStatus struct {
 
 // New returns a CloudWatch struct configured against the input session.
 func New(s *session.Session) *CloudWatch {
-	return &CloudWatch{
-		cwClient: cloudwatch.New(s),
-		rgClient: rg.New(s),
+	cw := &CloudWatch{
+		client: cloudwatch.New(s),
 	}
+	cw.initRgClient = func() {
+		cw.rgClient = rg.New(s)
+	}
+	cw.initAssclient = func() {
+		cw.assClient = aas.New(s)
+	}
+	return cw
 }
 
-// GetAlarmsWithTags returns all the CloudWatch alarms that have the resource tags.
-func (cw *CloudWatch) GetAlarmsWithTags(tags map[string]string) ([]AlarmStatus, error) {
-	var alarmNames []*string
+// ECSServiceAutoscalingAlarms returns the CloudWatch alarms associated with the
+// auto scaling policies attached to the ECS service.
+func (cw *CloudWatch) ECSServiceAutoscalingAlarms(cluster, service string) ([]AlarmStatus, error) {
+	cw.initAssclient()
+	alarmNames, err := cw.assClient.ECSServiceAlarmNames(cluster, service)
+	if err != nil {
+		return nil, fmt.Errorf("retrieve auto scaling alarm names for ECS service %s/%s: %w", cluster, service, err)
+	}
+	return cw.alarmStatus(alarmNames)
+}
 
+// AlarmsWithTags returns all the CloudWatch alarms that have the resource tags.
+func (cw *CloudWatch) AlarmsWithTags(tags map[string]string) ([]AlarmStatus, error) {
+	cw.initRgClient()
+	var alarmNames []string
 	resources, err := cw.rgClient.GetResourcesByTags(cloudwatchResourceType, tags)
 	if err != nil {
 		return nil, err
 	}
-
 	for _, resource := range resources {
-		name, err := cw.getAlarmName(resource.ARN)
+		name, err := getAlarmName(resource.ARN)
 		if err != nil {
 			return nil, err
 		}
-		alarmNames = append(alarmNames, name)
+		alarmNames = append(alarmNames, aws.StringValue(name))
 	}
+	return cw.alarmStatus(alarmNames)
+}
 
-	// Return an empty array since DescribeAlarms will return all alarms if "AlarmNames" is an empty array.
-	if len(alarmNames) == 0 {
+func (cw *CloudWatch) alarmStatus(alarms []string) ([]AlarmStatus, error) {
+	if len(alarms) == 0 {
 		return []AlarmStatus{}, nil
 	}
 	var alarmStatus []AlarmStatus
+	var err error
 	alarmResp := &cloudwatch.DescribeAlarmsOutput{}
 	for {
-		alarmResp, err = cw.cwClient.DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
-			AlarmNames: alarmNames,
+		alarmResp, err = cw.client.DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
+			AlarmNames: aws.StringSlice(alarms),
 			NextToken:  alarmResp.NextToken,
 		})
 		if err != nil {
@@ -93,21 +122,6 @@ func (cw *CloudWatch) GetAlarmsWithTags(tags map[string]string) ([]AlarmStatus, 
 		}
 	}
 	return alarmStatus, nil
-}
-
-// getAlarmName gets the alarm name given a specific alarm ARN.
-// For example: arn:aws:cloudwatch:us-west-2:1234567890:alarm:SDc-ReadCapacityUnitsLimit-BasicAlarm
-// returns SDc-ReadCapacityUnitsLimit-BasicAlarm
-func (cw *CloudWatch) getAlarmName(alarmArn string) (*string, error) {
-	resp, err := arn.Parse(alarmArn)
-	if err != nil {
-		return nil, fmt.Errorf("parse alarm ARN %s: %w", alarmArn, err)
-	}
-	alarmNameList := strings.Split(resp.Resource, ":")
-	if len(alarmNameList) != 2 {
-		return nil, fmt.Errorf("cannot parse alarm ARN resource %s", resp.Resource)
-	}
-	return aws.String(alarmNameList[1]), nil
 }
 
 func (cw *CloudWatch) compositeAlarmsStatus(alarms []*cloudwatch.CompositeAlarm) []AlarmStatus {
@@ -138,4 +152,19 @@ func (cw *CloudWatch) metricAlarmsStatus(alarms []*cloudwatch.MetricAlarm) []Ala
 		})
 	}
 	return alarmStatusList
+}
+
+// getAlarmName gets the alarm name given a specific alarm ARN.
+// For example: arn:aws:cloudwatch:us-west-2:1234567890:alarm:SDc-ReadCapacityUnitsLimit-BasicAlarm
+// returns SDc-ReadCapacityUnitsLimit-BasicAlarm
+func getAlarmName(alarmArn string) (*string, error) {
+	resp, err := arn.Parse(alarmArn)
+	if err != nil {
+		return nil, fmt.Errorf("parse alarm ARN %s: %w", alarmArn, err)
+	}
+	alarmNameList := strings.Split(resp.Resource, ":")
+	if len(alarmNameList) != 2 {
+		return nil, fmt.Errorf("cannot parse alarm ARN resource %s", resp.Resource)
+	}
+	return aws.String(alarmNameList[1]), nil
 }

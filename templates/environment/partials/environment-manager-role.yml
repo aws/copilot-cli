@@ -37,10 +37,6 @@ EnvironmentManagerRole:
             "cloudwatch:DescribeAlarms"
           ]
           Resource: "*"
-          Condition: 
-            StringEquals:
-              'aws:ResourceTag/copilot-application': !Sub '${AppName}'
-              'aws:ResourceTag/copilot-environment': !Sub '${EnvironmentName}'
         - Sid: ECS
           Effect: Allow
           Action: [
@@ -201,6 +197,12 @@ EnvironmentManagerRole:
           Effect: Allow
           Action: [
             "tag:GetResources"
+          ]
+          Resource: "*"
+        - Sid: ApplicationAutoscaling
+          Effect: Allow
+          Action: [
+            "application-autoscaling:DescribeScalingPolicies"
           ]
           Resource: "*"
         - Sid: DeleteRoles

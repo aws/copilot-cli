@@ -35,19 +35,34 @@ func (m *MockalarmStatusGetter) EXPECT() *MockalarmStatusGetterMockRecorder {
 	return m.recorder
 }
 
-// GetAlarmsWithTags mocks base method
-func (m *MockalarmStatusGetter) GetAlarmsWithTags(tags map[string]string) ([]cloudwatch.AlarmStatus, error) {
+// AlarmsWithTags mocks base method
+func (m *MockalarmStatusGetter) AlarmsWithTags(tags map[string]string) ([]cloudwatch.AlarmStatus, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAlarmsWithTags", tags)
+	ret := m.ctrl.Call(m, "AlarmsWithTags", tags)
 	ret0, _ := ret[0].([]cloudwatch.AlarmStatus)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetAlarmsWithTags indicates an expected call of GetAlarmsWithTags
-func (mr *MockalarmStatusGetterMockRecorder) GetAlarmsWithTags(tags interface{}) *gomock.Call {
+// AlarmsWithTags indicates an expected call of AlarmsWithTags
+func (mr *MockalarmStatusGetterMockRecorder) AlarmsWithTags(tags interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAlarmsWithTags", reflect.TypeOf((*MockalarmStatusGetter)(nil).GetAlarmsWithTags), tags)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlarmsWithTags", reflect.TypeOf((*MockalarmStatusGetter)(nil).AlarmsWithTags), tags)
+}
+
+// ECSServiceAutoscalingAlarms mocks base method
+func (m *MockalarmStatusGetter) ECSServiceAutoscalingAlarms(cluster, service string) ([]cloudwatch.AlarmStatus, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ECSServiceAutoscalingAlarms", cluster, service)
+	ret0, _ := ret[0].([]cloudwatch.AlarmStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ECSServiceAutoscalingAlarms indicates an expected call of ECSServiceAutoscalingAlarms
+func (mr *MockalarmStatusGetterMockRecorder) ECSServiceAutoscalingAlarms(cluster, service interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ECSServiceAutoscalingAlarms", reflect.TypeOf((*MockalarmStatusGetter)(nil).ECSServiceAutoscalingAlarms), cluster, service)
 }
 
 // MockresourcesGetter is a mock of resourcesGetter interface

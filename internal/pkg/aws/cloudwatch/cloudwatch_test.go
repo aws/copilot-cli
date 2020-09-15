@@ -18,15 +18,16 @@ import (
 )
 
 type cloudWatchMocks struct {
-	cw *mocks.Mockapi
-	rg *mocks.MockresourceGetter
+	cw  *mocks.Mockapi
+	rg  *mocks.MockresourceGetter
+	aas *mocks.MockautoscalingAlarmNamesGetter
 }
 
-func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
+func TestCloudWatch_AlarmsWithTags(t *testing.T) {
 	const (
-		appName      = "mockSvc"
+		svcName      = "mockSvc"
 		envName      = "mockEnv"
-		projectName  = "mockApp"
+		appName      = "mockApp"
 		mockAlarmArn = "arn:aws:cloudwatch:us-west-2:1234567890:alarm:mockAlarmName"
 		mockArn1     = mockAlarmArn + "1"
 		mockArn2     = mockAlarmArn + "2"
@@ -34,7 +35,7 @@ func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
 	mockTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
 	mockError := errors.New("some error")
 	testTags := map[string]string{
-		"copilot-application": projectName,
+		"copilot-application": appName,
 	}
 
 	testCases := map[string]struct {
@@ -191,16 +192,109 @@ func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			cwSvc := CloudWatch{
-				mockcwClient,
-				mockrgClient,
+				client:   mockcwClient,
+				rgClient: mockrgClient,
+
+				initRgClient: func() {},
 			}
 
-			gotAlarmStatus, gotErr := cwSvc.GetAlarmsWithTags(testTags)
+			gotAlarmStatus, gotErr := cwSvc.AlarmsWithTags(testTags)
 
 			if gotErr != nil {
 				require.EqualError(t, tc.wantErr, gotErr.Error())
 			} else {
-				require.ElementsMatch(t, tc.wantAlarmStatus, gotAlarmStatus)
+				require.Equal(t, tc.wantAlarmStatus, gotAlarmStatus)
+			}
+		})
+
+	}
+}
+
+func TestCloudWatch_ECSServiceAutoscalingAlarms(t *testing.T) {
+	const (
+		mockCluster  = "mockCluster"
+		mockService  = "mockService"
+		mockAlarmArn = "arn:aws:cloudwatch:us-west-2:1234567890:alarm:mockAlarmName"
+	)
+	mockTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
+	mockError := errors.New("some error")
+
+	testCases := map[string]struct {
+		setupMocks func(m cloudWatchMocks)
+
+		wantErr         error
+		wantAlarmStatus []AlarmStatus
+	}{
+		"errors if failed to retrieve auto scaling alarm names": {
+			setupMocks: func(m cloudWatchMocks) {
+				m.aas.EXPECT().ECSServiceAlarmNames(mockCluster, mockService).Return(nil, mockError)
+			},
+
+			wantErr: fmt.Errorf("retrieve auto scaling alarm names for ECS service mockCluster/mockService: some error"),
+		},
+		"success": {
+			setupMocks: func(m cloudWatchMocks) {
+				gomock.InOrder(
+					m.aas.EXPECT().ECSServiceAlarmNames(mockCluster, mockService).Return([]string{"mockAlarmName"}, nil),
+					m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
+						NextToken:  nil,
+						AlarmNames: aws.StringSlice([]string{"mockAlarmName"}),
+					}).Return(&cloudwatch.DescribeAlarmsOutput{
+						NextToken: nil,
+						MetricAlarms: []*cloudwatch.MetricAlarm{
+							{
+								AlarmArn:              aws.String(mockAlarmArn),
+								AlarmName:             aws.String("mockAlarmName"),
+								StateReason:           aws.String("mockReason"),
+								StateValue:            aws.String("mockState"),
+								StateUpdatedTimestamp: &mockTime,
+							},
+						},
+					}, nil),
+				)
+			},
+
+			wantAlarmStatus: []AlarmStatus{
+				{
+					Arn:          mockAlarmArn,
+					Name:         "mockAlarmName",
+					Type:         "Metric",
+					Reason:       "mockReason",
+					Status:       "mockState",
+					UpdatedTimes: mockTime,
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockcwClient := mocks.NewMockapi(ctrl)
+			mockaasClient := mocks.NewMockautoscalingAlarmNamesGetter(ctrl)
+			mocks := cloudWatchMocks{
+				cw:  mockcwClient,
+				aas: mockaasClient,
+			}
+
+			tc.setupMocks(mocks)
+
+			cwSvc := CloudWatch{
+				client:    mockcwClient,
+				assClient: mockaasClient,
+
+				initAssclient: func() {},
+			}
+
+			gotAlarmStatus, gotErr := cwSvc.ECSServiceAutoscalingAlarms(mockCluster, mockService)
+
+			if gotErr != nil {
+				require.EqualError(t, tc.wantErr, gotErr.Error())
+			} else {
+				require.Equal(t, tc.wantAlarmStatus, gotAlarmStatus)
 			}
 		})
 
