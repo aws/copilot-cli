@@ -280,7 +280,7 @@ func TestWorkspace_ServiceNames(t *testing.T) {
 				fs.Mkdir("/copilot/inventory", 0755)
 				return fs
 			},
-			//serviceTypes: []string{"Load Balanced Web Service", "Backend Service"},
+
 			wantedNames: []string{"users", "payments"},
 		},
 		"retrieve only workload names of the correct type": {
@@ -306,7 +306,7 @@ func TestWorkspace_ServiceNames(t *testing.T) {
 				fs.Mkdir("/copilot/inventory", 0755)
 				return fs
 			},
-			//serviceTypes: []string{"Load Balanced Web Service", "Backend Service"},
+
 			wantedNames: []string{"payments"},
 		},
 	}
@@ -334,7 +334,6 @@ func TestWorkspace_JobNames(t *testing.T) {
 	testCases := map[string]struct {
 		copilotDir string
 		fs         func() afero.Fs
-		//jobTypes   []string
 
 		wantedNames []string
 		wantedErr   error
@@ -370,7 +369,7 @@ func TestWorkspace_JobNames(t *testing.T) {
 				fs.Mkdir("/copilot/inventory", 0755)
 				return fs
 			},
-			//serviceTypes: []string{"Load Balanced Web Service", "Backend Service"},
+
 			wantedNames: []string{"users", "payments"},
 		},
 		"retrieve only workload names of the correct type": {
@@ -396,7 +395,7 @@ func TestWorkspace_JobNames(t *testing.T) {
 				fs.Mkdir("/copilot/inventory", 0755)
 				return fs
 			},
-			//serviceTypes: []string{"Load Balanced Web Service", "Backend Service"},
+
 			wantedNames: []string{"users"},
 		},
 	}
@@ -409,7 +408,6 @@ func TestWorkspace_JobNames(t *testing.T) {
 					Fs: tc.fs(),
 				},
 			}
-			//mf := &manifest.ServiceTypes
 
 			names, err := ws.JobNames()
 			if tc.wantedErr != nil {
