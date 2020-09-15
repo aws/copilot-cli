@@ -40,16 +40,6 @@ var ServiceTypes = []string{
 	BackendServiceType,
 }
 
-const (
-	// ScheduledJobType is a job which is run periodically in a given environment.
-	ScheduledJobType = "Scheduled Job"
-)
-
-// JobTypes are the supported job manifest types.
-var JobTypes = []string{
-	ScheduledJobType,
-}
-
 // Range is a number range with maximum and minimum values.
 type Range string
 
