@@ -126,7 +126,7 @@ func (ws *Workspace) JobNames() ([]string, error) {
 	return ws.WorkloadNames("job")
 }
 
-// WorkloadNames returns the name of all workloads (either services or jobs) in the workspace
+// WorkloadNames returns the name of all workloads (either services or jobs) in the workspace.
 func (ws *Workspace) WorkloadNames(wlType string) ([]string, error) {
 	copilotPath, err := ws.CopilotDirPath()
 	if err != nil {
@@ -215,7 +215,7 @@ func (ws *Workspace) WritePipelineManifest(marshaler encoding.BinaryMarshaler) (
 }
 
 // DeleteWorkspaceFile removes the .workspace file under copilot/ directory.
-// This will be called during app delete, we do not want to delete any other generated files
+// This will be called during app delete, we do not want to delete any other generated files.
 func (ws *Workspace) DeleteWorkspaceFile() error {
 	return ws.fsUtils.Remove(filepath.Join(CopilotDirName, SummaryFileName))
 }
@@ -342,7 +342,7 @@ func (ws *Workspace) CopilotDirPath() (string, error) {
 	}
 }
 
-// Workload is a description of what's associated with a given workload
+// Workload is a description of what's associated with a given workload.
 type Workload struct {
 	WorkloadType string `yaml:"type"`
 }

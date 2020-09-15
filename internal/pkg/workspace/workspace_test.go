@@ -266,17 +266,48 @@ func TestWorkspace_ServiceNames(t *testing.T) {
 
 				// Valid service directory structure.
 				fs.Mkdir("/copilot/users", 0755)
-				fs.Create("/copilot/users/manifest.yml")
+				manifest, _ := fs.Create("/copilot/users/manifest.yml")
+				defer manifest.Close()
+				manifest.Write([]byte("type: Load Balanced Web Service"))
 
 				// Valid service directory structure.
 				fs.MkdirAll("/copilot/payments/addons", 0755)
-				fs.Create("/copilot/payments/manifest.yml")
+				manifest2, _ := fs.Create("/copilot/payments/manifest.yml")
+				defer manifest2.Close()
+				manifest2.Write([]byte("type: Load Balanced Web Service"))
 
 				// Missing manifest.yml.
 				fs.Mkdir("/copilot/inventory", 0755)
 				return fs
 			},
+			//serviceTypes: []string{"Load Balanced Web Service", "Backend Service"},
 			wantedNames: []string{"users", "payments"},
+		},
+		"retrieve only workload names of the correct type": {
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.Mkdir("/copilot", 0755)
+				fs.Create("/copilot/buildspec.yml")
+
+				// Valid service directory structure.
+				fs.Mkdir("/copilot/users", 0755)
+				manifest, _ := fs.Create("/copilot/users/manifest.yml")
+				defer manifest.Close()
+				manifest.Write([]byte("type: Scheduled Job"))
+
+				// Valid service directory structure.
+				fs.MkdirAll("/copilot/payments/addons", 0755)
+				manifest2, _ := fs.Create("/copilot/payments/manifest.yml")
+				defer manifest2.Close()
+				manifest2.Write([]byte("type: Load Balanced Web Service"))
+
+				// Missing manifest.yml.
+				fs.Mkdir("/copilot/inventory", 0755)
+				return fs
+			},
+			//serviceTypes: []string{"Load Balanced Web Service", "Backend Service"},
+			wantedNames: []string{"payments"},
 		},
 	}
 
@@ -290,6 +321,97 @@ func TestWorkspace_ServiceNames(t *testing.T) {
 			}
 
 			names, err := ws.ServiceNames()
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.ElementsMatch(t, tc.wantedNames, names)
+			}
+		})
+	}
+}
+
+func TestWorkspace_JobNames(t *testing.T) {
+	testCases := map[string]struct {
+		copilotDir string
+		fs         func() afero.Fs
+		//jobTypes   []string
+
+		wantedNames []string
+		wantedErr   error
+	}{
+		"read not-existing directory": {
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				return fs
+			},
+			wantedErr: errors.New("read directory /copilot: open /copilot: file does not exist"),
+		},
+		"retrieve only directories with manifest files": {
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.Mkdir("/copilot", 0755)
+				fs.Create("/copilot/buildspec.yml")
+
+				// Valid service directory structure.
+				fs.Mkdir("/copilot/users", 0755)
+				manifest, _ := fs.Create("/copilot/users/manifest.yml")
+				defer manifest.Close()
+				manifest.Write([]byte("type: Scheduled Job"))
+
+				// Valid service directory structure.
+				fs.MkdirAll("/copilot/payments/addons", 0755)
+				manifest2, _ := fs.Create("/copilot/payments/manifest.yml")
+				defer manifest2.Close()
+				manifest2.Write([]byte("type: Scheduled Job"))
+
+				// Missing manifest.yml.
+				fs.Mkdir("/copilot/inventory", 0755)
+				return fs
+			},
+			//serviceTypes: []string{"Load Balanced Web Service", "Backend Service"},
+			wantedNames: []string{"users", "payments"},
+		},
+		"retrieve only workload names of the correct type": {
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.Mkdir("/copilot", 0755)
+				fs.Create("/copilot/buildspec.yml")
+
+				// Valid service directory structure.
+				fs.Mkdir("/copilot/users", 0755)
+				manifest, _ := fs.Create("/copilot/users/manifest.yml")
+				defer manifest.Close()
+				manifest.Write([]byte("type: Scheduled Job"))
+
+				// Valid service directory structure.
+				fs.MkdirAll("/copilot/payments/addons", 0755)
+				manifest2, _ := fs.Create("/copilot/payments/manifest.yml")
+				defer manifest2.Close()
+				manifest2.Write([]byte("type: Load Balanced Web Service"))
+
+				// Missing manifest.yml.
+				fs.Mkdir("/copilot/inventory", 0755)
+				return fs
+			},
+			//serviceTypes: []string{"Load Balanced Web Service", "Backend Service"},
+			wantedNames: []string{"users"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ws := &Workspace{
+				copilotDir: tc.copilotDir,
+				fsUtils: &afero.Afero{
+					Fs: tc.fs(),
+				},
+			}
+			//mf := &manifest.ServiceTypes
+
+			names, err := ws.JobNames()
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
