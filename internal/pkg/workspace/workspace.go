@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/spf13/afero"
@@ -119,36 +118,16 @@ func (ws *Workspace) Summary() (*Summary, error) {
 
 // ServiceNames returns the names of the services in the workspace.
 func (ws *Workspace) ServiceNames() ([]string, error) {
-	copilotPath, err := ws.CopilotDirPath()
-	if err != nil {
-		return nil, err
-	}
-	files, err := ws.fsUtils.ReadDir(copilotPath)
-	if err != nil {
-		return nil, fmt.Errorf("read directory %s: %w", copilotPath, err)
-	}
-	var names []string
-	for _, f := range files {
-		if !f.IsDir() {
-			continue
-		}
-		if exists, _ := ws.fsUtils.Exists(filepath.Join(copilotPath, f.Name(), manifestFileName)); !exists {
-			// Swallow the error because we don't want to include any services that we don't have permissions to read.
-			continue
-		}
-		manifestBytes, err := ws.ReadServiceManifest(f.Name())
-		if err != nil {
-			return nil, fmt.Errorf("read manifest for workload %s: %w", f.Name(), err)
-		}
-		if ws.isService(manifestBytes) {
-			names = append(names, f.Name())
-		}
-	}
-	return names, nil
+	return ws.WorkloadNames("service")
 }
 
 // JobNames returns the names of all jobs in the workspace.
 func (ws *Workspace) JobNames() ([]string, error) {
+	return ws.WorkloadNames("job")
+}
+
+// WorkloadNames returns the name of all workloads (either services or jobs) in the workspace
+func (ws *Workspace) WorkloadNames(wlType string) ([]string, error) {
 	copilotPath, err := ws.CopilotDirPath()
 	if err != nil {
 		return nil, err
@@ -170,8 +149,15 @@ func (ws *Workspace) JobNames() ([]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read manifest for workload %s: %w", f.Name(), err)
 		}
-		if ws.isJob(manifestBytes) {
-			names = append(names, f.Name())
+		switch wlType {
+		case "service":
+			if ws.isWorkloadType(manifestBytes, manifest.ServiceTypes) {
+				names = append(names, f.Name())
+			}
+		case "job":
+			if ws.isWorkloadType(manifestBytes, manifest.JobTypes) {
+				names = append(names, f.Name())
+			}
 		}
 	}
 	return names, nil
@@ -356,20 +342,19 @@ func (ws *Workspace) CopilotDirPath() (string, error) {
 	}
 }
 
-// isService returns true if a manifest's type is one of the supported service types.
-func (ws *Workspace) isService(mftBytes []byte) bool {
-	for _, serviceType := range manifest.ServiceTypes {
-		if strings.Contains(string(mftBytes), serviceType) {
-			return true
-		}
-	}
-	return false
+// Workload is a description of what's associated with a given workload
+type Workload struct {
+	WorkloadType string `yaml:"type"`
 }
 
-// isJob returns true if a manifest's type is one of the supported job types.
-func (ws *Workspace) isJob(mftBytes []byte) bool {
-	for _, jobType := range manifest.JobTypes {
-		if strings.Contains(string(mftBytes), jobType) {
+// isWorkloadType returns true if a manifest's type is one of the supported service types.
+func (ws *Workspace) isWorkloadType(mftBytes []byte, types []string) bool {
+	var wl Workload
+	if err := yaml.Unmarshal(mftBytes, &wl); err != nil {
+		return false
+	}
+	for _, wantedType := range types {
+		if wl.WorkloadType == wantedType {
 			return true
 		}
 	}
