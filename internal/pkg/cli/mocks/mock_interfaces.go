@@ -1998,6 +1998,59 @@ func (mr *MocksvcManifestWriterMockRecorder) WriteServiceManifest(marshaler, svc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteServiceManifest", reflect.TypeOf((*MocksvcManifestWriter)(nil).WriteServiceManifest), marshaler, svcName)
 }
 
+// MocksvcDirManifestWriter is a mock of svcDirManifestWriter interface
+type MocksvcDirManifestWriter struct {
+	ctrl     *gomock.Controller
+	recorder *MocksvcDirManifestWriterMockRecorder
+}
+
+// MocksvcDirManifestWriterMockRecorder is the mock recorder for MocksvcDirManifestWriter
+type MocksvcDirManifestWriterMockRecorder struct {
+	mock *MocksvcDirManifestWriter
+}
+
+// NewMocksvcDirManifestWriter creates a new mock instance
+func NewMocksvcDirManifestWriter(ctrl *gomock.Controller) *MocksvcDirManifestWriter {
+	mock := &MocksvcDirManifestWriter{ctrl: ctrl}
+	mock.recorder = &MocksvcDirManifestWriterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocksvcDirManifestWriter) EXPECT() *MocksvcDirManifestWriterMockRecorder {
+	return m.recorder
+}
+
+// WriteServiceManifest mocks base method
+func (m *MocksvcDirManifestWriter) WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteServiceManifest", marshaler, svcName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WriteServiceManifest indicates an expected call of WriteServiceManifest
+func (mr *MocksvcDirManifestWriterMockRecorder) WriteServiceManifest(marshaler, svcName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteServiceManifest", reflect.TypeOf((*MocksvcDirManifestWriter)(nil).WriteServiceManifest), marshaler, svcName)
+}
+
+// CopilotDirPath mocks base method
+func (m *MocksvcDirManifestWriter) CopilotDirPath() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CopilotDirPath")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CopilotDirPath indicates an expected call of CopilotDirPath
+func (mr *MocksvcDirManifestWriterMockRecorder) CopilotDirPath() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MocksvcDirManifestWriter)(nil).CopilotDirPath))
+}
+
 // MockwsPipelineManifestReader is a mock of wsPipelineManifestReader interface
 type MockwsPipelineManifestReader struct {
 	ctrl     *gomock.Controller
