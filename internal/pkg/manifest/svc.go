@@ -130,23 +130,6 @@ func (a *Autoscaling) IsEmpty() bool {
 		a.Requests == nil && a.ResponseTime == nil
 }
 
-// Valid sidecar portMapping example: 2000/udp, or 2000 (default to be tcp).
-func parsePortMapping(s *string) (port *string, protocol *string, err error) {
-	if s == nil {
-		// default port for sidecar container to be 80.
-		return aws.String(defaultSidecarPort), nil, nil
-	}
-	portProtocol := strings.Split(*s, "/")
-	switch len(portProtocol) {
-	case 1:
-		return aws.String(portProtocol[0]), nil, nil
-	case 2:
-		return aws.String(portProtocol[0]), aws.String(portProtocol[1]), nil
-	default:
-		return nil, nil, fmt.Errorf("cannot parse port mapping from %s", *s)
-	}
-}
-
 func durationp(v time.Duration) *time.Duration {
 	return &v
 }

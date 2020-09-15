@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -185,12 +186,12 @@ func (lc *LogConfig) enableMetadata() *string {
 	return aws.String(strconv.FormatBool(*lc.EnableMetadata))
 }
 
-// Sidecar holds configuration for all sidecar containers in a service.
+// Sidecar holds configuration for all sidecar containers in a workload.
 type Sidecar struct {
 	Sidecars map[string]*SidecarConfig `yaml:"sidecars"`
 }
 
-// Options converts the service's sidecar configuration into a format parsable by the templates pkg.
+// Options converts the workload's sidecar configuration into a format parsable by the templates pkg.
 func (s *Sidecar) Options() ([]*template.SidecarOpts, error) {
 	if s.Sidecars == nil {
 		return nil, nil
@@ -219,6 +220,23 @@ type SidecarConfig struct {
 	CredsParam *string `yaml:"credentialsParameter"`
 }
 
+// Valid sidecar portMapping example: 2000/udp, or 2000 (default to be tcp).
+func parsePortMapping(s *string) (port *string, protocol *string, err error) {
+	if s == nil {
+		// default port for sidecar container to be 80.
+		return aws.String(defaultSidecarPort), nil, nil
+	}
+	portProtocol := strings.Split(*s, "/")
+	switch len(portProtocol) {
+	case 1:
+		return aws.String(portProtocol[0]), nil, nil
+	case 2:
+		return aws.String(portProtocol[0]), aws.String(portProtocol[1]), nil
+	default:
+		return nil, nil, fmt.Errorf("cannot parse port mapping from %s", *s)
+	}
+}
+
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
 type TaskConfig struct {
 	CPU       *int              `yaml:"cpu"`
@@ -228,19 +246,19 @@ type TaskConfig struct {
 	Secrets   map[string]string `yaml:"secrets"`
 }
 
-// WorkloadProps contains properties for creating a new service manifest.
+// WorkloadProps contains properties for creating a new workload manifest.
 type WorkloadProps struct {
 	Name       string
 	Dockerfile string
 }
 
-// UnmarshalWorkload deserializes the YAML input stream into a service manifest object.
+// UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.
 // If an error occurs during deserialization, then returns the error.
-// If the service type in the manifest is invalid, then returns an ErrInvalidManifestType.
+// If the workload type in the manifest is invalid, then returns an ErrInvalidManifestType.
 func UnmarshalWorkload(in []byte) (interface{}, error) {
 	am := Workload{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
-		return nil, fmt.Errorf("unmarshal to service manifest: %w", err)
+		return nil, fmt.Errorf("unmarshal to workload manifest: %w", err)
 	}
 	typeVal := aws.StringValue(am.Type)
 
