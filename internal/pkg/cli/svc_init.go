@@ -198,7 +198,7 @@ func (o *initSvcOpts) createManifest() (string, error) {
 		return "", err
 	}
 	var manifestExists bool
-	manifestPath, err := o.ws.WriteServiceManifest(manifest, o.Name)
+	manifestPath, err := o.ws.WriteWorkloadManifest(manifest, o.Name)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
@@ -240,7 +240,7 @@ func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalance
 		return nil, err
 	}
 	props := &manifest.LoadBalancedWebServiceProps{
-		ServiceProps: &manifest.ServiceProps{
+		WorkloadProps: &manifest.WorkloadProps{
 			Name:       o.Name,
 			Dockerfile: dfPath,
 		},
@@ -272,7 +272,7 @@ func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, err
 		return nil, err
 	}
 	return manifest.NewBackendService(manifest.BackendServiceProps{
-		ServiceProps: manifest.ServiceProps{
+		WorkloadProps: manifest.WorkloadProps{
 			Name:       o.Name,
 			Dockerfile: dfPath,
 		},

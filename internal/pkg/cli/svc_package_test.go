@@ -285,7 +285,7 @@ func TestPackageSvcOpts_Execute(t *testing.T) {
 
 				mockWs := mocks.NewMockwsSvcReader(ctrl)
 				mockWs.EXPECT().
-					ReadServiceManifest("api").
+					ReadWorkloadManifest("api").
 					Return([]byte(`name: api
 type: Load Balanced Web Service
 image:
