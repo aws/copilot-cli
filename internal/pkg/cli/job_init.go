@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
@@ -22,27 +23,23 @@ import (
 )
 
 var (
-	fmtJobInitJobNameHelpPrompt = `The name will uniquely identify this job within your app %s.
-Deployed resources (such as your task, logs, ECR repository) will contain this
-job's name and be tagged with it.`
-
-	jobInitDockerfileHelpPrompt = "Dockerfile to use for building your job's container image."
-
 	jobInitSchedulePrompt = "How would you like to " + color.Emphasize("schedule") + "this job?"
 	jobInitScheduleHelp   = `How to determine this job's schedule. "Rate" lets you define the time between 
 executions and is good for jobs which need to run frequently. "Fixed Schedule"
 lets you use a predefined or custom cron schedule and is good for less-frequent 
 jobs or those which require specific execution schedules.`
 
-	jobInitRatePrompt     = "How long would you like to wait between executions?"
-	jobInitRateHelpPrompt = `You can specify the time as a duration string. (For example, 2m, 1h30m, 24h)`
+	jobInitRatePrompt = "How long would you like to wait between executions?"
+	jobInitRateHelp   = `You can specify the time as a duration string. (For example, 2m, 1h30m, 24h)`
 
-	jobInitSchedulePrompt = "What schedule would you like to use?"
-	jobInitScheduleHelp   = `Predefined schedules run at midnight or the top of the hour.
-Custom schedules can be defined using the following cron:
+	jobInitCronSchedulePrompt = "What schedule would you like to use?"
+	jobInitCronScheduleHelp   = `Predefined schedules run at midnight or the top of the hour.
+For example, "Daily" runs at midnight. "Weekly" runs at midnight on Mondays.`
+	jobInitCronCustomSchedulePrompt = "What custom cron schedule would you like to use?"
+	jobInitCronCustomScheduleHelp   = `Custom schedules can be defined using the following cron:
 Minute | Hour | Day of Month | Month | Day of Week
 For example: 0 17 ? * MON-FRI (5 pm on weekdays)
-             0 0 1 */3 ? (on the first of the month, quarterly)`
+			 0 0 1 */3 * (on the first of the month, quarterly)`
 )
 
 const (
@@ -158,6 +155,9 @@ func (o *initJobOpts) Validate() error {
 
 // Ask prompts for fields that are required but not passed in.
 func (o *initJobOpts) Ask() error {
+	if err := o.askJobType(); err != nil {
+		return err
+	}
 	if err := o.askJobName(); err != nil {
 		return err
 	}
@@ -188,7 +188,7 @@ func (o *initJobOpts) askJobName() error {
 
 	name, err := o.prompt.Get(
 		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.JobType)),
-		fmt.Sprintf(fmtJobInitJobNameHelpPrompt, job, o.AppName()),
+		fmt.Sprintf(fmtWkldInitNameHelpPrompt, job, o.AppName()),
 		validateSvcName,
 		prompt.WithFinalMessage("Job name:"),
 	)
@@ -226,14 +226,61 @@ func (o *initJobOpts) askSchedule() error {
 	}
 	switch scheduleType {
 	case rate:
+		return o.askRate()
 	case fixedSchedule:
+		return o.askCron()
 	default:
+		return fmt.Errorf("unrecognized schedule type %s", scheduleType)
 	}
+}
 
-	// How would you like to schedule this job? > Run at a specific time > Run on an interval
-	// Okay, would you like to use a preset schedule or a custom cron expression?
-	// Okay, how long would like the interval between invocations to be?
-	//
+func (o *initJobOpts) askRate() error {
+	rateInput, err := o.prompt.Get(
+		jobInitRatePrompt,
+		jobInitRateHelp,
+		durationValidation,
+		prompt.WithFinalMessage("Rate:"),
+	)
+	if err != nil {
+		return fmt.Errorf("get schedule rate: %w", err)
+	}
+	o.Schedule = fmt.Sprintf("@every %s", rateInput)
+	return nil
+}
+
+func (o *initJobOpts) askCron() error {
+	cronInput, err := o.prompt.SelectOne(
+		jobInitCronSchedulePrompt,
+		jobInitCronScheduleHelp,
+		presetSchedules,
+		prompt.WithFinalMessage("Fixed Schedule:"),
+	)
+	if err != nil {
+		return fmt.Errorf("get preset schedule: %w", err)
+	}
+	if cronInput != custom {
+		o.Schedule = getPresetSchedule(cronInput)
+		return nil
+	}
+	customSchedule, err := o.prompt.Get(
+		jobInitCronCustomSchedulePrompt,
+		jobInitCronCustomScheduleHelp,
+		cronValidation,
+		prompt.WithDefaultInput("0 * * * *"),
+		prompt.WithFinalMessage("Custom Schedule:"),
+	)
+	o.Schedule = customSchedule
+	return nil
+}
+
+func getPresetSchedule(input string) string {
+	return fmt.Sprintf("@%s", strings.ToLower(input))
+}
+func durationValidation(in interface{}) error {
+	return nil
+}
+func cronValidation(in interface{}) error {
+	return nil
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.

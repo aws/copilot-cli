@@ -35,7 +35,7 @@ A %s is a private, non internet-facing service.
 To learn more see: https://git.io/JfIpT`
 
 	fmtWkldInitNamePrompt     = "What do you want to %s this %s?"
-	fmtWkldInitNameHelpPrompt = `The name will uniquely identify this %[1]s within your app %[2]s.
+	fmtWkldInitNameHelpPrompt = `The name will uniquely identify this %s within your app %s.
 Deployed resources (such as your ECR repository, logs) will contain this %[1]s's name and be tagged with it.`
 
 	fmtWkldInitDockerfilePrompt      = "Which %s would you like to use for %s?"
@@ -323,7 +323,7 @@ func askDockerfile(wkldName string, fs afero.Fs, p prompter) (string, error) {
 	var sel string
 	if err == nil {
 		sel, err = p.SelectOne(
-			fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
+			fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(wkldName)),
 			wkldInitDockerfileHelpPrompt,
 			dockerfiles,
 			prompt.WithFinalMessage("Dockerfile:"),
@@ -340,7 +340,7 @@ func askDockerfile(wkldName string, fs afero.Fs, p prompter) (string, error) {
 	}
 	// If no Dockerfiles were found, prompt user for custom path.
 	sel, err = p.Get(
-		fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
+		fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(wkldName)),
 		wkldInitDockerfilePathHelpPrompt,
 		func(v interface{}) error {
 			return validatePath(afero.NewOsFs(), v)
