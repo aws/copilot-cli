@@ -34,23 +34,23 @@ func TestJobInitOpts_Validate(t *testing.T) {
 		},
 		"invalid schedule; not cron": {
 			inSchedule: "every 56 minutes",
-			wantedErr:  errors.New("expected exactly 5 fields, found 3: [every 56 minutes]"),
+			wantedErr:  fmt.Errorf("schedule every 56 minutes is invalid: %s", errScheduleInvalid),
 		},
 		"invalid schedule; cron interval in subseconds": {
 			inSchedule: "@every 75.9s",
-			wantedErr:  errDurationBadUnits,
+			wantedErr:  fmt.Errorf("interval @every 75.9s is invalid: %s", errDurationBadUnits),
 		},
 		"invalid schedule; cron interval in milliseconds": {
 			inSchedule: "@every 3ms",
-			wantedErr:  errDurationBadUnits,
+			wantedErr:  fmt.Errorf("interval @every 3ms is invalid: %s", errDurationBadUnits),
 		},
 		"invalid schedule; cron interval too frequent": {
 			inSchedule: "@every 30s",
-			wantedErr:  errors.New("duration must be greater than 60s"),
+			wantedErr:  errors.New("interval @every 30s is invalid: duration must be greater than 60s"),
 		},
 		"invalid schedule; cron interval is zero": {
 			inSchedule: "@every 0s",
-			wantedErr:  errors.New("duration must be greater than 60s"),
+			wantedErr:  errors.New("interval @every 0s is invalid: duration must be greater than 60s"),
 		},
 		"invalid schedule; cron interval duration improperly formed": {
 			inSchedule: "@every 5min",

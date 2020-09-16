@@ -212,12 +212,12 @@ func basicCronValidation(sched string) error {
 			if err == errDurationInvalid {
 				return fmt.Errorf("interval %s must include a valid Go duration string (example: @every 1h30m)", sched)
 			}
-			return err
+			return fmt.Errorf("interval %s is invalid: %s", sched, err)
 		}
 	}
 	_, err := cron.ParseStandard(sched)
 	if err != nil {
-		return err
+		return fmt.Errorf("schedule %s is invalid: %s", sched, errScheduleInvalid)
 	}
 	return nil
 }
