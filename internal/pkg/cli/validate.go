@@ -126,15 +126,12 @@ func validateJobName(val interface{}) error {
 	return nil
 }
 
-func validateJobSchedule(sched string) error {
-	if err := basicCronValidation(sched); err != nil {
-		return err
-	}
-	return nil
+func validateSchedule(sched string) error {
+	return validateCron(sched)
 }
 
 func validateTimeout(timeout string) error {
-	if err := basicDurationValidation(timeout, 1); err != nil {
+	if err := validateDuration(timeout, 1); err != nil {
 		return fmt.Errorf("timeout value %s is invalid: %w", timeout, err)
 	}
 	return nil
@@ -205,10 +202,10 @@ func basicNameValidation(val interface{}) error {
 	return nil
 }
 
-func basicCronValidation(sched string) error {
+func validateCron(sched string) error {
 	every := "@every "
 	if strings.HasPrefix(sched, every) {
-		if err := basicDurationValidation(sched[len(every):], 60); err != nil {
+		if err := validateDuration(sched[len(every):], 60); err != nil {
 			if err == errDurationInvalid {
 				return fmt.Errorf("interval %s must include a valid Go duration string (example: @every 1h30m)", sched)
 			}
@@ -222,7 +219,7 @@ func basicCronValidation(sched string) error {
 	return nil
 }
 
-func basicDurationValidation(duration string, minDurationSecs int) error {
+func validateDuration(duration string, minDurationSecs int) error {
 	parsedDuration, err := time.ParseDuration(duration)
 	if err != nil {
 		return errDurationInvalid

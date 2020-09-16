@@ -96,7 +96,7 @@ func (o *initJobOpts) Validate() error {
 		}
 	}
 	if o.Schedule != "" {
-		if err := validateJobSchedule(o.Schedule); err != nil {
+		if err := validateSchedule(o.Schedule); err != nil {
 			return err
 		}
 	}
