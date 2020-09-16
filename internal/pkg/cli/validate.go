@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/spf13/afero"
+
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -22,6 +24,7 @@ var (
 	errValueBadFormat                     = errors.New("value must start with a letter and contain only lower-case letters, numbers, and hyphens")
 	errValueNotAString                    = errors.New("value must be a string")
 	errValueNotAStringSlice               = errors.New("value must be a string slice")
+	errValueNotAValidPath                 = errors.New("value must be a valid path")
 	errValueNotAnIPNet                    = errors.New("value must be a valid IP address range (example: 10.0.0.0/16)")
 	errValueNotIPNetSlice                 = errors.New("value must be a valid slice of IP address range (example: 10.0.0.0/16,10.0.1.0/16)")
 	errPortInvalid                        = errors.New("value must be in range 1-65535")
@@ -118,6 +121,21 @@ func validateDomainName(val interface{}) error {
 	dots := domainNameRegexp.FindAllString(domainName, regexpFindAllMatches)
 	if dots == nil {
 		return errDomainInvalid
+	}
+	return nil
+}
+
+func validatePath(fs afero.Fs, val interface{}) error {
+	path, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	if path == "" {
+		return errValueEmpty
+	}
+	_, err := fs.Stat(path)
+	if err != nil {
+		return errValueNotAValidPath
 	}
 	return nil
 }

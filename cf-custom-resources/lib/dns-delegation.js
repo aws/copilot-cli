@@ -1,17 +1,16 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-'use strict';
+"use strict";
 
-const aws = require('aws-sdk');
+const aws = require("aws-sdk");
 
 const defaultSleep = function (ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
 // These are used for test purposes only
 let defaultResponseURL;
 let waiter;
-
 
 /**
  * Upload a CloudFormation response object to S3.
@@ -24,47 +23,57 @@ let waiter;
  * @param {string} [reason] reason for failure, if any, to convey to the user
  * @returns {Promise} Promise that is resolved on success, or rejected on connection error or HTTP error response
  */
-let report = function (event, context, responseStatus, physicalResourceId, responseData, reason) {
-    return new Promise((resolve, reject) => {
-        const https = require('https');
-        const {
-            URL
-        } = require('url');
+let report = function (
+  event,
+  context,
+  responseStatus,
+  physicalResourceId,
+  responseData,
+  reason
+) {
+  return new Promise((resolve, reject) => {
+    const https = require("https");
+    const { URL } = require("url");
 
-        var responseBody = JSON.stringify({
-            Status: responseStatus,
-            Reason: reason,
-            PhysicalResourceId: physicalResourceId || context.logStreamName,
-            StackId: event.StackId,
-            RequestId: event.RequestId,
-            LogicalResourceId: event.LogicalResourceId,
-            Data: responseData
-        });
-
-        const parsedUrl = new URL(event.ResponseURL || defaultResponseURL);
-        const options = {
-            hostname: parsedUrl.hostname,
-            port: 443,
-            path: parsedUrl.pathname + parsedUrl.search,
-            method: 'PUT',
-            headers: {
-                'Content-Type': '',
-                'Content-Length': responseBody.length
-            }
-        };
-
-        https.request(options)
-            .on('error', reject)
-            .on('response', res => {
-                res.resume();
-                if (res.statusCode >= 400) {
-                    reject(new Error(`Server returned error ${res.statusCode}: ${res.statusMessage}`));
-                } else {
-                    resolve();
-                }
-            })
-            .end(responseBody, 'utf8');
+    var responseBody = JSON.stringify({
+      Status: responseStatus,
+      Reason: reason,
+      PhysicalResourceId: physicalResourceId || context.logStreamName,
+      StackId: event.StackId,
+      RequestId: event.RequestId,
+      LogicalResourceId: event.LogicalResourceId,
+      Data: responseData,
     });
+
+    const parsedUrl = new URL(event.ResponseURL || defaultResponseURL);
+    const options = {
+      hostname: parsedUrl.hostname,
+      port: 443,
+      path: parsedUrl.pathname + parsedUrl.search,
+      method: "PUT",
+      headers: {
+        "Content-Type": "",
+        "Content-Length": responseBody.length,
+      },
+    };
+
+    https
+      .request(options)
+      .on("error", reject)
+      .on("response", (res) => {
+        res.resume();
+        if (res.statusCode >= 400) {
+          reject(
+            new Error(
+              `Server returned error ${res.statusCode}: ${res.statusMessage}`
+            )
+          );
+        } else {
+          resolve();
+        }
+      })
+      .end(responseBody, "utf8");
+  });
 };
 
 /**
@@ -80,46 +89,65 @@ let report = function (event, context, responseStatus, physicalResourceId, respo
  * @param {string} rootDnsRole the IAM role ARN that can manage domainName
  * @returns {string} the created subdomain
  */
-const createSubdomainInRoot = async function (requestId, domainName, subDomain, nameServers, rootDnsRole) {
-    const route53 = new aws.Route53({
-        credentials: new aws.ChainableTemporaryCredentials(
-            {
-                params: {RoleArn: rootDnsRole},
-                masterCredentials: (new aws.EnvironmentCredentials('AWS'))
+const createSubdomainInRoot = async function (
+  requestId,
+  domainName,
+  subDomain,
+  nameServers,
+  rootDnsRole
+) {
+  const route53 = new aws.Route53({
+    credentials: new aws.ChainableTemporaryCredentials({
+      params: { RoleArn: rootDnsRole },
+      masterCredentials: new aws.EnvironmentCredentials("AWS"),
+    }),
+  });
+
+  const hostedZones = await route53
+    .listHostedZonesByName({
+      DNSName: domainName,
+    })
+    .promise();
+
+  if (!hostedZones.HostedZones || hostedZones.HostedZones.length == 0) {
+    throw new Error(
+      `Couldn't find any hostedzones with DNS name ${domainName}. Request ${requestId}`
+    );
+  }
+
+  const domainHostedZone = hostedZones.HostedZones[0];
+
+  // HostedZoneIDs are of the form /hostedzone/1234455, but the actual
+  // ID is after the last slash.
+  const hostedZoneId = domainHostedZone.Id.split("/").pop();
+
+  const changeBatch = await route53
+    .changeResourceRecordSets({
+      ChangeBatch: {
+        Changes: [
+          recordChangeAction(
+            "UPSERT",
+            subDomain,
+            "NS",
+            nameServers.map((ns) => {
+              return {
+                Value: ns,
+              };
             })
-        });
+          ),
+        ],
+      },
+      HostedZoneId: hostedZoneId,
+    })
+    .promise();
 
-    const hostedZones = await route53.listHostedZonesByName({
-        DNSName: domainName
-    }).promise();
+  console.log(
+    `Created recordset in hostedzone ${hostedZoneId} for ${subDomain}`
+  );
 
-    if (!hostedZones.HostedZones || hostedZones.HostedZones.length == 0) {
-        throw new Error(`Couldn't find any hostedzones with DNS name ${domainName}. Request ${requestId}`)
-    }
-
-    const domainHostedZone = hostedZones.HostedZones[0];
-
-    // HostedZoneIDs are of the form /hostedzone/1234455, but the actual
-    // ID is after the last slash.
-    const hostedZoneId = domainHostedZone.Id.split('/').pop();
-
-
-    const changeBatch = await route53.changeResourceRecordSets({
-        ChangeBatch: {
-            Changes: [recordChangeAction('UPSERT', subDomain, "NS", nameServers.map(ns => {
-                return {
-                    Value: ns
-                }
-            }))]
-        },
-        HostedZoneId: hostedZoneId
-    }).promise();
-
-    console.log(`Created recordset in hostedzone ${hostedZoneId} for ${subDomain}`);
-
-    await waitForRecordSetChange(route53, changeBatch.ChangeInfo.Id);
-    return subDomain
-}
+  await waitForRecordSetChange(route53, changeBatch.ChangeInfo.Id);
+  return subDomain;
+};
 
 /**
  * Deletes the NameServer record sets from a hostedzone using a cross
@@ -131,125 +159,161 @@ const createSubdomainInRoot = async function (requestId, domainName, subDomain, 
  * @param {string} rootDnsRole the IAM role ARN that can manage domainName
  * @returns {string} the deleted subdomain
  */
-const deleteSubdomainInRoot = async function (requestId, domainName, subDomain, rootDnsRole) {
-    const route53 = new aws.Route53({
-        credentials: new aws.ChainableTemporaryCredentials(
-            {
-                params: {RoleArn: rootDnsRole},
-                masterCredentials: (new aws.EnvironmentCredentials('AWS'))
-            })
-        });
+const deleteSubdomainInRoot = async function (
+  requestId,
+  domainName,
+  subDomain,
+  rootDnsRole
+) {
+  const route53 = new aws.Route53({
+    credentials: new aws.ChainableTemporaryCredentials({
+      params: { RoleArn: rootDnsRole },
+      masterCredentials: new aws.EnvironmentCredentials("AWS"),
+    }),
+  });
 
-    const hostedZones = await route53.listHostedZonesByName({
-        DNSName: domainName
-    }).promise();
+  const hostedZones = await route53
+    .listHostedZonesByName({
+      DNSName: domainName,
+    })
+    .promise();
 
-    if (!hostedZones.HostedZones || hostedZones.HostedZones.length == 0) {
-        throw new Error(`Couldn't find any hostedzones with DNS name ${domainName}. Request ${requestId}`)
-    }
+  if (!hostedZones.HostedZones || hostedZones.HostedZones.length == 0) {
+    throw new Error(
+      `Couldn't find any hostedzones with DNS name ${domainName}. Request ${requestId}`
+    );
+  }
 
-    const domainHostedZone = hostedZones.HostedZones[0];
+  const domainHostedZone = hostedZones.HostedZones[0];
 
-    // HostedZoneIDs are of the form /hostedzone/1234455, but the actual
-    // ID is after the last slash.
-    const hostedZoneId = domainHostedZone.Id.split('/').pop();
+  // HostedZoneIDs are of the form /hostedzone/1234455, but the actual
+  // ID is after the last slash.
+  const hostedZoneId = domainHostedZone.Id.split("/").pop();
 
-    // Find the recordsets for this subdomain, and then remove it
-    // from the hosted zone.
-    const recordSets = await route53.listResourceRecordSets({
-        HostedZoneId: hostedZoneId,
-        MaxItems: '1',
-        StartRecordName: subDomain,
-        StartRecordType: 'NS'
-      }).promise();
+  // Find the recordsets for this subdomain, and then remove it
+  // from the hosted zone.
+  const recordSets = await route53
+    .listResourceRecordSets({
+      HostedZoneId: hostedZoneId,
+      MaxItems: "1",
+      StartRecordName: subDomain,
+      StartRecordType: "NS",
+    })
+    .promise();
 
-    // If the records have already been deleted, return early.
-    if (!recordSets.ResourceRecordSets || recordSets.ResourceRecordSets == 0) {
-        return subDomain;
-    }
+  // If the records have already been deleted, return early.
+  if (!recordSets.ResourceRecordSets || recordSets.ResourceRecordSets == 0) {
+    return subDomain;
+  }
 
-    const subDomainRecordSet = recordSets.ResourceRecordSets[0];
-    // If the our subdomain doesn't exactly match the recordset,
-    // or the type isn't NS, we'll skip deleting it - since it isn't our record.
-    if (subDomainRecordSet.Name !== `${subDomain}.` || subDomainRecordSet.Type !== 'NS') {
-        return subDomain;
-    }
-    console.log(`Deleting recordset ${subDomainRecordSet.Name}`)
+  const subDomainRecordSet = recordSets.ResourceRecordSets[0];
+  // If the our subdomain doesn't exactly match the recordset,
+  // or the type isn't NS, we'll skip deleting it - since it isn't our record.
+  if (
+    subDomainRecordSet.Name !== `${subDomain}.` ||
+    subDomainRecordSet.Type !== "NS"
+  ) {
+    return subDomain;
+  }
+  console.log(`Deleting recordset ${subDomainRecordSet.Name}`);
 
-    const changeBatch = await route53.changeResourceRecordSets({
-        ChangeBatch: {
-            Changes: [recordChangeAction('DELETE', subDomain, 'NS', subDomainRecordSet.ResourceRecords)]
-        },
-        HostedZoneId: hostedZoneId
-    }).promise();
+  const changeBatch = await route53
+    .changeResourceRecordSets({
+      ChangeBatch: {
+        Changes: [
+          recordChangeAction(
+            "DELETE",
+            subDomain,
+            "NS",
+            subDomainRecordSet.ResourceRecords
+          ),
+        ],
+      },
+      HostedZoneId: hostedZoneId,
+    })
+    .promise();
 
-    await waitForRecordSetChange(route53, changeBatch.ChangeInfo.Id);
-    return subDomain
-}
+  await waitForRecordSetChange(route53, changeBatch.ChangeInfo.Id);
+  return subDomain;
+};
 
-const recordChangeAction = function(action, recordName, recordType, recordValues ) {
-    return {
-        Action: action,
-        ResourceRecordSet: {
-            Name: recordName,
-            Type: recordType,
-            TTL: 60,
-            ResourceRecords: recordValues
-        }
-    };
-}
+const recordChangeAction = function (
+  action,
+  recordName,
+  recordType,
+  recordValues
+) {
+  return {
+    Action: action,
+    ResourceRecordSet: {
+      Name: recordName,
+      Type: recordType,
+      TTL: 60,
+      ResourceRecords: recordValues,
+    },
+  };
+};
 
-const waitForRecordSetChange = function(route53, changeId) {
-    return  route53.waitFor('resourceRecordSetsChanged', {
-        // Wait up to 5 minutes
-        $waiter: {
-            delay: 30,
-            maxAttempts: 10
-        },
-        Id: changeId
-    }).promise();
-}
+const waitForRecordSetChange = function (route53, changeId) {
+  return route53
+    .waitFor("resourceRecordSetsChanged", {
+      // Wait up to 5 minutes
+      $waiter: {
+        delay: 30,
+        maxAttempts: 10,
+      },
+      Id: changeId,
+    })
+    .promise();
+};
 
 exports.domainDelegationHandler = async function (event, context) {
-    var responseData = {};
-    var physicalResourceId;
-    try {
-        switch (event.RequestType) {
-            case 'Create':
-            case 'Update':
-                const subdomain = await createSubdomainInRoot(
-                    event.RequestId,
-                    event.ResourceProperties.DomainName,
-                    event.ResourceProperties.SubdomainName,
-                    event.ResourceProperties.NameServers,
-                    event.ResourceProperties.RootDNSRole,
-                );
-                responseData.Arn = physicalResourceId = subdomain;
-                break;
-            case 'Delete':
-                 await deleteSubdomainInRoot(
-                    event.RequestId,
-                    event.ResourceProperties.DomainName,
-                    event.ResourceProperties.SubdomainName,
-                    event.ResourceProperties.RootDNSRole,
-                );
-                physicalResourceId = event.PhysicalResourceId;
-                break;
-            default:
-                throw new Error(`Unsupported request type ${event.RequestType}`);
-        }
-
-        await report(event, context, 'SUCCESS', physicalResourceId, responseData);
-    } catch (err) {
-        console.log(`Caught error ${err}.`);
-        console.log(err)
-        await report(event, context, 'FAILED', physicalResourceId, null, err.message);
+  var responseData = {};
+  var physicalResourceId;
+  try {
+    switch (event.RequestType) {
+      case "Create":
+      case "Update":
+        const subdomain = await createSubdomainInRoot(
+          event.RequestId,
+          event.ResourceProperties.DomainName,
+          event.ResourceProperties.SubdomainName,
+          event.ResourceProperties.NameServers,
+          event.ResourceProperties.RootDNSRole
+        );
+        responseData.Arn = physicalResourceId = subdomain;
+        break;
+      case "Delete":
+        await deleteSubdomainInRoot(
+          event.RequestId,
+          event.ResourceProperties.DomainName,
+          event.ResourceProperties.SubdomainName,
+          event.ResourceProperties.RootDNSRole
+        );
+        physicalResourceId = event.PhysicalResourceId;
+        break;
+      default:
+        throw new Error(`Unsupported request type ${event.RequestType}`);
     }
+
+    await report(event, context, "SUCCESS", physicalResourceId, responseData);
+  } catch (err) {
+    console.log(`Caught error ${err}.`);
+    console.log(err);
+    await report(
+      event,
+      context,
+      "FAILED",
+      physicalResourceId,
+      null,
+      err.message
+    );
+  }
 };
 
 /**
  * @private
  */
-exports.withDefaultResponseURL = function(url) {
+exports.withDefaultResponseURL = function (url) {
   defaultResponseURL = url;
 };
