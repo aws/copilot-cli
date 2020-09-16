@@ -262,6 +262,14 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			Port: aws.String("5000"),
 		},
 	}}
+	testLBWebServiceManifestWithStickiness := manifest.NewLoadBalancedWebService(baseProps)
+	testLBWebServiceManifestWithStickiness.Count = manifest.Count{
+		Value: aws.Int(1),
+		Autoscaling: manifest.Autoscaling{
+			Range: manifest.Range("2-100"),
+		},
+	}
+	testLBWebServiceManifestWithStickiness.Stickiness = aws.Bool(true)
 	testLBWebServiceManifestWithBadSidecar := manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:       "frontend",
@@ -345,6 +353,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
+				{
+					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
 			}...),
 		},
 		"HTTPS Not Enabled": {
@@ -364,6 +376,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
+				{
+					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
 			}...),
 		},
 		"with sidecar container": {
@@ -382,6 +398,33 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
 					ParameterValue: aws.String("5000"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
+			}...),
+		},
+		"Stickiness Enabled": {
+			httpsEnabled: false,
+			manifest:     testLBWebServiceManifestWithStickiness,
+
+			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterValue: aws.String("80"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("true"),
 				},
 			}...),
 		},
