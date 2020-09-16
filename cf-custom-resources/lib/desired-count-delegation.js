@@ -113,21 +113,16 @@ const getRunningTaskCount = async function (
   const serviceARN = resources[0].ResourceARN;
 
   var ecs = new aws.ECS();
-  var taskNum = 0;
-  var nextToken;
-  do {
-    const resp = await ecs
-      .listTasks({
-        cluster: cluster,
-        serviceName: serviceARN,
-        nextToken: nextToken,
-      })
-      .promise();
-    taskNum += resp.taskArns.length;
-    nextToken = resp.nextToken;
-  } while (nextToken);
-
-  return taskNum;
+  const resp = await ecs
+    .describeServices({
+      cluster: cluster,
+      services: [serviceARN],
+    })
+    .promise();
+  if (resp.services.length !== 1) {
+    return defaultDesiredCount;
+  }
+  return resp.services[0].desiredCount;
 };
 
 /**

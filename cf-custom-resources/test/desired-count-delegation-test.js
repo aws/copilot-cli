@@ -17,7 +17,6 @@ describe("Desired count delegation Handler", () => {
   const testEnv = "testEnv";
   const testSvc = "testSvc";
   const testECSService = "testECSService";
-  const testNextToken = "mockNextToken";
 
   beforeEach(() => {
     DesiredCountDelegation.withDefaultResponseURL(responseURL);
@@ -54,9 +53,9 @@ describe("Desired count delegation Handler", () => {
     const getResourcesFake = sinon.fake.resolves({
       ResourceTagMappingList: [],
     });
-    const listTasksFake = sinon.stub();
+    const describeServicesFake = sinon.stub();
     AWS.mock("ResourceGroupsTaggingAPI", "getResources", getResourcesFake);
-    AWS.mock("ECS", "listTasks", listTasksFake);
+    AWS.mock("ECS", "describeServices", describeServicesFake);
     const request = nock(responseURL)
       .put("/", (body) => {
         return body.Status === "SUCCESS" && body.Data.DesiredCount == 3;
@@ -97,7 +96,7 @@ describe("Desired count delegation Handler", () => {
             ],
           })
         );
-        sinon.assert.notCalled(listTasksFake);
+        sinon.assert.notCalled(describeServicesFake);
         expect(request.isDone()).toBe(true);
       });
   });
@@ -110,11 +109,15 @@ describe("Desired count delegation Handler", () => {
         },
       ],
     });
-    const listTasksFake = sinon.fake.resolves({
-      taskArns: ["mockTask1", "mockTask2"],
+    const describeServicesFake = sinon.fake.resolves({
+      services: [
+        {
+          desiredCount: 2,
+        },
+      ],
     });
     AWS.mock("ResourceGroupsTaggingAPI", "getResources", getResourcesFake);
-    AWS.mock("ECS", "listTasks", listTasksFake);
+    AWS.mock("ECS", "describeServices", describeServicesFake);
     const request = nock(responseURL)
       .put("/", (body) => {
         return body.Status === "SUCCESS" && body.Data.DesiredCount == 2;
@@ -156,87 +159,10 @@ describe("Desired count delegation Handler", () => {
           })
         );
         sinon.assert.calledWith(
-          listTasksFake,
+          describeServicesFake,
           sinon.match({
             cluster: testCluster,
-            serviceName: testECSService,
-          })
-        );
-        expect(request.isDone()).toBe(true);
-      });
-  });
-
-  test("update operation with pagination", () => {
-    const getResourcesFake = sinon.fake.resolves({
-      ResourceTagMappingList: [
-        {
-          ResourceARN: testECSService,
-        },
-      ],
-    });
-    const listTasksFake = sinon.stub();
-    listTasksFake.onCall(0).resolves({
-      taskArns: ["mockTask1", "mockTask2"],
-      nextToken: testNextToken,
-    });
-    listTasksFake.onCall(1).resolves({
-      taskArns: ["mockTask3", "mockTask4"],
-    });
-    AWS.mock("ResourceGroupsTaggingAPI", "getResources", getResourcesFake);
-    AWS.mock("ECS", "listTasks", listTasksFake);
-    const request = nock(responseURL)
-      .put("/", (body) => {
-        return body.Status === "SUCCESS" && body.Data.DesiredCount == 4;
-      })
-      .reply(200);
-
-    return LambdaTester(DesiredCountDelegation.handler)
-      .event({
-        RequestType: "Update",
-        RequestId: testRequestId,
-        ResponseURL: responseURL,
-        ResourceProperties: {
-          Cluster: testCluster,
-          App: testApp,
-          Env: testEnv,
-          Svc: testSvc,
-          DefaultDesiredCount: 3,
-        },
-      })
-      .expectResolve(() => {
-        sinon.assert.calledWith(
-          getResourcesFake,
-          sinon.match({
-            ResourceTypeFilters: ["ecs:service"],
-            TagFilters: [
-              {
-                Key: "copilot-application",
-                Values: [testApp],
-              },
-              {
-                Key: "copilot-environment",
-                Values: [testEnv],
-              },
-              {
-                Key: "copilot-service",
-                Values: [testSvc],
-              },
-            ],
-          })
-        );
-        sinon.assert.calledWith(
-          listTasksFake.firstCall,
-          sinon.match({
-            cluster: testCluster,
-            serviceName: testECSService,
-          })
-        );
-        sinon.assert.calledWith(
-          listTasksFake.secondCall,
-          sinon.match({
-            cluster: testCluster,
-            serviceName: testECSService,
-            nextToken: testNextToken,
+            services: [testECSService],
           })
         );
         expect(request.isDone()).toBe(true);

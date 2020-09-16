@@ -80,7 +80,7 @@ Resources:
             - Sid: ECS
               Effect: Allow
               Action:
-                - ecs:ListTasks
+                - ecs:DescribeServices
               Resource: "*"
               Condition: 
                 ArnEquals: 
