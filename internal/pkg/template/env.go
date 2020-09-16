@@ -31,8 +31,9 @@ type EnvOpts struct {
 	DNSDelegationLambda       string
 	ACMValidationLambda       string
 	EnableLongARNFormatLambda string
-	ImportVPC                 *ImportVPCOpts
-	VPCConfig                 *AdjustVPCOpts
+
+	ImportVPC *ImportVPCOpts
+	VPCConfig *AdjustVPCOpts
 }
 
 // ImportVPCOpts holds the fields to import VPC resources.
@@ -50,7 +51,7 @@ type AdjustVPCOpts struct {
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.
-func (t *Template) ParseEnv(data interface{}, options ...ParseOption) (*Content, error) {
+func (t *Template) ParseEnv(data *EnvOpts, options ...ParseOption) (*Content, error) {
 	tpl, err := t.parse("base", EnvCFTemplatePath, options...)
 	if err != nil {
 		return nil, err

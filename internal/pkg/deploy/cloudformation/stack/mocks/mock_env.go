@@ -69,7 +69,7 @@ func (mr *MockenvReadParserMockRecorder) Parse(path, data interface{}, options .
 }
 
 // ParseEnv mocks base method
-func (m *MockenvReadParser) ParseEnv(data interface{}, options ...template.ParseOption) (*template.Content, error) {
+func (m *MockenvReadParser) ParseEnv(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{data}
 	for _, a := range options {

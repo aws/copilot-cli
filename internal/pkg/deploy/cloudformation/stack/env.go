@@ -18,7 +18,7 @@ import (
 
 type envReadParser interface {
 	template.ReadParser
-	ParseEnv(data interface{}, options ...template.ParseOption) (*template.Content, error)
+	ParseEnv(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error)
 }
 
 // EnvStackConfig is for providing all the values to set up an
@@ -86,7 +86,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		vpcConf = e.AdjustVPCOpts()
 	}
 
-	content, err := e.parser.ParseEnv(template.EnvOpts{
+	content, err := e.parser.ParseEnv(&template.EnvOpts{
 		ACMValidationLambda:       acmLambda.String(),
 		DNSDelegationLambda:       dnsLambda.String(),
 		EnableLongARNFormatLambda: enableLongARNsLambda.String(),
