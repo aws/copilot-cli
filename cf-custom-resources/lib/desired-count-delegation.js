@@ -4,9 +4,6 @@
 
 const aws = require("aws-sdk");
 
-// priorityForRootRule is the max priority number that's always set for the listener rule that matches the root path "/"
-const priorityForRootRule = "50000";
-
 // These are used for test purposes only
 let defaultResponseURL;
 
@@ -71,88 +68,107 @@ let report = function (
 };
 
 /**
- * Lists all the existing rules for a ALB Listener, finds the max of their
- * priorities, and then returns max + 1.
+ * Get the current running task number for a specific task definition.
  *
- * @param {string} listenerArn the ARN of the ALB listener.
-
- * @returns {number} The next available ALB listener rule priority.
+ * @param {string} defaultDesiredCount Default desired count number.
+ * @param {string} cluster Name of the ECS cluster.
+ * @param {string} app Name of the copilot application.
+ * @param {string} env Name of the copilot environment.
+ * @param {string} svc Name of the copilot service.
+ *
+ * @returns {number} The running task number.
  */
-const calculateNextRulePriority = async function (listenerArn) {
-  var elb = new aws.ELBv2();
-  // Grab all the rules for this listener
-  var marker;
-  var rules = [];
-  do {
-    const rulesResponse = await elb
-      .describeRules({
-        ListenerArn: listenerArn,
-        Marker: marker,
-      })
-      .promise();
+const getRunningTaskCount = async function (
+  defaultDesiredCount,
+  cluster,
+  app,
+  env,
+  svc
+) {
+  var resourcegroupstaggingapi = new aws.ResourceGroupsTaggingAPI();
+  const rgResp = await resourcegroupstaggingapi
+    .getResources({
+      ResourceTypeFilters: ["ecs:service"],
+      TagFilters: [
+        {
+          Key: "copilot-application",
+          Values: [app],
+        },
+        {
+          Key: "copilot-environment",
+          Values: [env],
+        },
+        {
+          Key: "copilot-service",
+          Values: [svc],
+        },
+      ],
+    })
+    .promise();
 
-    rules = rules.concat(rulesResponse.Rules);
-    marker = rulesResponse.NextMarker;
-  } while (marker);
-
-  let nextRulePriority = 1;
-  if (rules.length > 0) {
-    // Take the max rule priority, and add 1 to it.
-    const rulePriorities = rules.map((rule) => {
-      if (
-        rule.Priority === "default" ||
-        rule.Priority === priorityForRootRule
-      ) {
-        // Ignore the root rule's priority since it has to be always the max value.
-        // Ignore the default rule's prority since it's the same as 0.
-        return 0;
-      }
-      return parseInt(rule.Priority);
-    });
-    const max = Math.max(...rulePriorities);
-    nextRulePriority = max + 1;
+  const resources = rgResp.ResourceTagMappingList;
+  if (resources.length !== 1) {
+    return defaultDesiredCount;
   }
+  const serviceARN = resources[0].ResourceARN;
 
-  return nextRulePriority;
+  var ecs = new aws.ECS();
+  const resp = await ecs
+    .describeServices({
+      cluster: cluster,
+      services: [serviceARN],
+    })
+    .promise();
+  if (resp.services.length !== 1) {
+    return defaultDesiredCount;
+  }
+  return resp.services[0].desiredCount;
 };
 
 /**
- * Next Available ALB Rule Priority handler, invoked by Lambda
+ * Correct desired count handler, invoked by Lambda.
  */
-exports.nextAvailableRulePriorityHandler = async function (event, context) {
+exports.handler = async function (event, context) {
   var responseData = {};
   var physicalResourceId;
-  var rulePriority;
+  const props = event.ResourceProperties;
 
   try {
     switch (event.RequestType) {
       case "Create":
-        rulePriority = await calculateNextRulePriority(
-          event.ResourceProperties.ListenerArn
+        responseData.DesiredCount = await getRunningTaskCount(
+          props.DefaultDesiredCount,
+          props.Cluster,
+          props.App,
+          props.Env,
+          props.Svc
         );
-        responseData.Priority = rulePriority;
-        physicalResourceId = `alb-rule-priority-${event.LogicalResourceId}`;
+        physicalResourceId = `copilot/apps/${props.App}/envs/${props.Env}/services/${props.Svc}/autoscaling`;
         break;
-      // Do nothing on update and delete, since this isn't a "real" resource.
       case "Update":
+        responseData.DesiredCount = await getRunningTaskCount(
+          props.DefaultDesiredCount,
+          props.Cluster,
+          props.App,
+          props.Env,
+          props.Svc
+        );
+        physicalResourceId = event.PhysicalResourceId;
+        break;
       case "Delete":
         physicalResourceId = event.PhysicalResourceId;
         break;
       default:
         throw new Error(`Unsupported request type ${event.RequestType}`);
     }
-
     await report(event, context, "SUCCESS", physicalResourceId, responseData);
   } catch (err) {
-    console.log(`Caught error ${err}.`);
-    await report(
-      event,
-      context,
-      "FAILED",
-      physicalResourceId,
-      null,
-      err.message
+    // If it fails, just set to be desired count and return.
+    responseData.DesiredCount = props.DefaultDesiredCount;
+    console.log(
+      `Caught error ${err}. Set back desired count to ${responseData.DesiredCount}`
     );
+    await report(event, context, "SUCCESS", physicalResourceId, responseData);
   }
 };
 

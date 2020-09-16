@@ -17,6 +17,7 @@ import (
 // Template rendering configuration.
 const (
 	lbWebSvcRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
+	desiredCountGeneratorPath         = "custom-resources/desired-count-delegation.js"
 )
 
 // Parameter logical IDs for a load balanced web service.
@@ -88,7 +89,11 @@ func NewHTTPSLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, a
 func (s *LoadBalancedWebService) Template() (string, error) {
 	rulePriorityLambda, err := s.parser.Read(lbWebSvcRulePriorityGeneratorPath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("read rule priority lambda: %w", err)
+	}
+	desiredCountLambda, err := s.parser.Read(desiredCountGeneratorPath)
+	if err != nil {
+		return "", fmt.Errorf("read desired count lambda: %w", err)
 	}
 	outputs, err := s.addonsOutputs()
 	if err != nil {
@@ -110,6 +115,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		LogConfig:          s.manifest.LogConfigOpts(),
 		Autoscaling:        autoscaling,
 		RulePriorityLambda: rulePriorityLambda.String(),
+		DesiredCountLambda: desiredCountLambda.String(),
 	})
 	if err != nil {
 		return "", err
