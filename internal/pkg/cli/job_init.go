@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	jobInitSchedulePrompt = "How would you like to " + color.Emphasize("schedule") + "this job?"
+	jobInitSchedulePrompt = "How would you like to " + color.Emphasize("schedule") + " this job?"
 	jobInitScheduleHelp   = `How to determine this job's schedule. "Rate" lets you define the time between 
 executions and is good for jobs which need to run frequently. "Fixed Schedule"
 lets you use a predefined or custom cron schedule and is good for less-frequent 
