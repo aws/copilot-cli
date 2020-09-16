@@ -32,37 +32,29 @@ func TestJobInitOpts_Validate(t *testing.T) {
 			inDockerfilePath: "./hello/Dockerfile",
 			wantedErr:        errors.New("open hello/Dockerfile: file does not exist"),
 		},
-		"invalid schedule; cron and duration": {
+		"invalid schedule; not cron": {
 			inSchedule: "every 56 minutes",
-			wantedErr:  fmt.Errorf("cron: expected exactly 5 fields, found 3: [every 56 minutes]; duration: %s", errDurationInvalid),
+			wantedErr:  errors.New("expected exactly 5 fields, found 3: [every 56 minutes]"),
 		},
-		"invalid schedule; duration too frequent": {
-			inSchedule: "7s",
-			wantedErr:  errors.New("cron: expected exactly 5 fields, found 1: [7s]; duration: duration must be greater than 60s"),
+		"invalid schedule; cron interval in subseconds": {
+			inSchedule: "@every 75.9s",
+			wantedErr:  errDurationBadUnits,
 		},
-		"invalid schedule; duration is zero": {
-			inSchedule: "0m",
-			wantedErr:  errors.New("cron: expected exactly 5 fields, found 1: [0m]; duration: duration must be greater than 60s"),
-		},
-		"invalid schedule; duration in subseconds": {
-			inSchedule: "75.9s",
-			wantedErr:  fmt.Errorf("cron: expected exactly 5 fields, found 1: [75.9s]; duration: %s", errDurationBadUnits),
-		},
-		"invalid schedule; duration in milliseconds": {
-			inSchedule: "3ms",
-			wantedErr:  fmt.Errorf("cron: expected exactly 5 fields, found 1: [3ms]; duration: %s", errDurationBadUnits),
+		"invalid schedule; cron interval in milliseconds": {
+			inSchedule: "@every 3ms",
+			wantedErr:  errDurationBadUnits,
 		},
 		"invalid schedule; cron interval too frequent": {
 			inSchedule: "@every 30s",
-			wantedErr:  fmt.Errorf("cron: duration must be greater than 60s; duration: %s", errDurationInvalid),
+			wantedErr:  errors.New("duration must be greater than 60s"),
 		},
 		"invalid schedule; cron interval is zero": {
 			inSchedule: "@every 0s",
-			wantedErr:  fmt.Errorf("cron: duration must be greater than 60s; duration: %s", errDurationInvalid),
+			wantedErr:  errors.New("duration must be greater than 60s"),
 		},
 		"invalid schedule; cron interval duration improperly formed": {
 			inSchedule: "@every 5min",
-			wantedErr:  fmt.Errorf("%s: %s", errScheduleInvalid, errDurationInvalid),
+			wantedErr:  errors.New("interval @every 5min must include a valid Go duration string (example: @every 1h30m)"),
 		},
 		"valid schedule; crontab": {
 			inSchedule: "* * * * *",
@@ -76,8 +68,12 @@ func TestJobInitOpts_Validate(t *testing.T) {
 			inSchedule: "@every 5m",
 			wantedErr:  nil,
 		},
-		"valid schedule; duration": {
-			inSchedule: "1h23m",
+		"valid schedule; interval with 0 for some units": {
+			inSchedule: "@every 1h0m0s",
+			wantedErr:  nil,
+		},
+		"valid schedule; interval with carryover value for some units": {
+			inSchedule: "@every 0h60m60s",
 			wantedErr:  nil,
 		},
 		"invalid timeout duration; incorrect format": {

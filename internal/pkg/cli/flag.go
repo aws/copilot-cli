@@ -206,8 +206,7 @@ Tasks with the same group name share the same set of resources.
 
 	retriesFlagDescription = "Optional. The number of times to try restarting the job on a failure."
 	timeoutFlagDescription = `Optional. The total execution time for the task, including retries.
-For example: "2h", "30m", "900s"`
+Use a valid Go duration string like "2h", "1h30m", "900s".`
 	scheduleFlagDescription = `The schedule on which to run this job. 
-Can be specified using a Go duration string or valid cron expression (M H DoM M DoW)
-For example: "1h30m", "@every 20m", "@daily", "0 * * * *"`
+Use a valid cron expression (M H DoM M DoW) like "0 * * * *", "@daily", "@weekly", "@every 1h30m".`
 )
