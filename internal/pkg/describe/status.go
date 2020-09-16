@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"text/tabwriter"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/aas"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
@@ -22,7 +23,8 @@ const (
 )
 
 type alarmStatusGetter interface {
-	GetAlarmsWithTags(tags map[string]string) ([]cloudwatch.AlarmStatus, error)
+	AlarmsWithTags(tags map[string]string) ([]cloudwatch.AlarmStatus, error)
+	AlarmStatus(alarms []string) ([]cloudwatch.AlarmStatus, error)
 }
 
 type resourcesGetter interface {
@@ -34,14 +36,19 @@ type ecsServiceGetter interface {
 	Service(clusterName, serviceName string) (*ecs.Service, error)
 }
 
+type autoscalingAlarmNamesGetter interface {
+	ECSServiceAlarmNames(cluster, service string) ([]string, error)
+}
+
 // ServiceStatus retrieves status of a service.
 type ServiceStatus struct {
-	AppName string
-	EnvName string
-	SvcName string
+	app string
+	env string
+	svc string
 
-	EcsSvc ecsServiceGetter
-	CwSvc  alarmStatusGetter
+	ecsSvc ecsServiceGetter
+	cwSvc  alarmStatusGetter
+	aasSvc autoscalingAlarmNamesGetter
 	rgSvc  resourcesGetter
 }
 
@@ -71,20 +78,21 @@ func NewServiceStatus(opt *NewServiceStatusConfig) (*ServiceStatus, error) {
 		return nil, fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 	}
 	return &ServiceStatus{
-		AppName: opt.App,
-		EnvName: opt.Env,
-		SvcName: opt.Svc,
-		rgSvc:   rg.New(sess),
-		CwSvc:   cloudwatch.New(sess),
-		EcsSvc:  ecs.New(sess),
+		app:    opt.App,
+		env:    opt.Env,
+		svc:    opt.Svc,
+		rgSvc:  rg.New(sess),
+		cwSvc:  cloudwatch.New(sess),
+		ecsSvc: ecs.New(sess),
+		aasSvc: aas.New(sess),
 	}, nil
 }
 
 func (s *ServiceStatus) getServiceArn() (*ecs.ServiceArn, error) {
 	svcResources, err := s.rgSvc.GetResourcesByTags(ecsServiceResourceType, map[string]string{
-		deploy.AppTagKey:     s.AppName,
-		deploy.EnvTagKey:     s.EnvName,
-		deploy.ServiceTagKey: s.SvcName,
+		deploy.AppTagKey:     s.app,
+		deploy.EnvTagKey:     s.env,
+		deploy.ServiceTagKey: s.svc,
 	})
 	if err != nil {
 		return nil, err
@@ -110,11 +118,11 @@ func (s *ServiceStatus) Describe() (*ServiceStatusDesc, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get service name: %w", err)
 	}
-	service, err := s.EcsSvc.Service(clusterName, serviceName)
+	service, err := s.ecsSvc.Service(clusterName, serviceName)
 	if err != nil {
 		return nil, fmt.Errorf("get service %s: %w", serviceName, err)
 	}
-	tasks, err := s.EcsSvc.ServiceTasks(clusterName, serviceName)
+	tasks, err := s.ecsSvc.ServiceTasks(clusterName, serviceName)
 	if err != nil {
 		return nil, fmt.Errorf("get tasks for service %s: %w", serviceName, err)
 	}
@@ -126,19 +134,38 @@ func (s *ServiceStatus) Describe() (*ServiceStatusDesc, error) {
 		}
 		taskStatus = append(taskStatus, *status)
 	}
-	alarms, err := s.CwSvc.GetAlarmsWithTags(map[string]string{
-		deploy.AppTagKey:     s.AppName,
-		deploy.EnvTagKey:     s.EnvName,
-		deploy.ServiceTagKey: s.SvcName,
+	var alarms []cloudwatch.AlarmStatus
+	taggedAlarms, err := s.cwSvc.AlarmsWithTags(map[string]string{
+		deploy.AppTagKey:     s.app,
+		deploy.EnvTagKey:     s.env,
+		deploy.ServiceTagKey: s.svc,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("get CloudWatch alarms: %w", err)
+		return nil, fmt.Errorf("get tagged CloudWatch alarms: %w", err)
 	}
+	alarms = append(alarms, taggedAlarms...)
+	autoscalingAlarms, err := s.ecsServiceAutoscalingAlarms(clusterName, serviceName)
+	if err != nil {
+		return nil, err
+	}
+	alarms = append(alarms, autoscalingAlarms...)
 	return &ServiceStatusDesc{
 		Service: service.ServiceStatus(),
 		Tasks:   taskStatus,
 		Alarms:  alarms,
 	}, nil
+}
+
+func (s *ServiceStatus) ecsServiceAutoscalingAlarms(cluster, service string) ([]cloudwatch.AlarmStatus, error) {
+	alarmNames, err := s.aasSvc.ECSServiceAlarmNames(cluster, service)
+	if err != nil {
+		return nil, fmt.Errorf("retrieve auto scaling alarm names for ECS service %s/%s: %w", cluster, service, err)
+	}
+	alarms, err := s.cwSvc.AlarmStatus(alarmNames)
+	if err != nil {
+		return nil, fmt.Errorf("get auto scaling CloudWatch alarms: %w", err)
+	}
+	return alarms, nil
 }
 
 // JSONString returns the stringified ServiceStatusDesc struct with json format.

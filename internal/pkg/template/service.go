@@ -9,6 +9,7 @@ import (
 	"text/template"
 
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/google/uuid"
 )
 
 // Paths of workload cloudformation templates under templates/workloads/.
@@ -95,6 +96,7 @@ type ServiceOpts struct {
 	// Additional options that're not shared across all service templates.
 	HealthCheck        *ecs.HealthCheck
 	RulePriorityLambda string
+	DesiredCountLambda string
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
@@ -138,6 +140,7 @@ func withSvcParsingFuncs() ParseOption {
 			"hasSecrets":  hasSecrets,
 			"fmtSlice":    FmtSliceFunc,
 			"quoteSlice":  QuotePSliceFunc,
+			"randomUUID":  randomUUIDFunc,
 		})
 	}
 }
@@ -150,4 +153,12 @@ func hasSecrets(opts ServiceOpts) bool {
 		return true
 	}
 	return false
+}
+
+func randomUUIDFunc() (string, error) {
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return "", fmt.Errorf("generate random uuid: %w", err)
+	}
+	return id.String(), err
 }

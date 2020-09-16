@@ -18,14 +18,14 @@ const (
 
 // BackendServiceProps represents the configuration needed to create a backend service.
 type BackendServiceProps struct {
-	ServiceProps
+	WorkloadProps
 	Port        uint16
 	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
 }
 
 // BackendService holds the configuration to create a backend service manifest.
 type BackendService struct {
-	Service              `yaml:",inline"`
+	Workload             `yaml:",inline"`
 	BackendServiceConfig `yaml:",inline"`
 	// Use *BackendServiceConfig because of https://github.com/imdario/mergo/issues/146
 	Environments map[string]*BackendServiceConfig `yaml:",flow"`
@@ -37,13 +37,13 @@ type BackendService struct {
 type BackendServiceConfig struct {
 	Image      imageWithPortAndHealthcheck `yaml:",flow"`
 	TaskConfig `yaml:",inline"`
-	*LogConfig `yaml:"logging,flow"`
+	*Logging   `yaml:"logging,flow"`
 	Sidecar    `yaml:",inline"`
 }
 
 // LogConfigOpts converts the service's Firelens configuration into a format parsable by the templates pkg.
 func (bc *BackendServiceConfig) LogConfigOpts() *template.LogConfigOpts {
-	if bc.LogConfig == nil {
+	if bc.Logging == nil {
 		return nil
 	}
 	return bc.logConfigOpts()
@@ -123,7 +123,7 @@ func (s BackendService) ApplyEnv(envName string) (*BackendService, error) {
 // newDefaultBackendService returns a backend service with minimal task sizes and a single replica.
 func newDefaultBackendService() *BackendService {
 	return &BackendService{
-		Service: Service{
+		Workload: Workload{
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
