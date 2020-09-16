@@ -22,17 +22,59 @@ import (
 )
 
 var (
-	fmtJobInitNameHelpPrompt = `The name will uniquely identify this job within your app %s.
-Deployed resources (such as your job, logs) will contain this job's name and be tagged with it.`
+	fmtJobInitJobNameHelpPrompt = `The name will uniquely identify this job within your app %s.
+Deployed resources (such as your task, logs, ECR repository) will contain this
+job's name and be tagged with it.`
 
 	jobInitDockerfileHelpPrompt = "Dockerfile to use for building your job's container image."
+
+	jobInitSchedulePrompt = "How would you like to " + color.Emphasize("schedule") + "this job?"
+	jobInitScheduleHelp   = `How to determine this job's schedule. "Rate" lets you define the time between 
+executions and is good for jobs which need to run frequently. "Fixed Schedule"
+lets you use a predefined or custom cron schedule and is good for less-frequent 
+jobs or those which require specific execution schedules.`
+
+	jobInitRatePrompt     = "How long would you like to wait between executions?"
+	jobInitRateHelpPrompt = `You can specify the time as a duration string. (For example, 2m, 1h30m, 24h)`
+
+	jobInitSchedulePrompt = "What schedule would you like to use?"
+	jobInitScheduleHelp   = `Predefined schedules run at midnight or the top of the hour.
+Custom schedules can be defined using the following cron:
+Minute | Hour | Day of Month | Month | Day of Week
+For example: 0 17 ? * MON-FRI (5 pm on weekdays)
+             0 0 1 */3 ? (on the first of the month, quarterly)`
 )
 
-// const (
+const (
+	job           = "job"
+	rate          = "Rate"
+	fixedSchedule = "Fixed Schedule"
+
+	custom  = "Custom"
+	hourly  = "Hourly"
+	daily   = "Daily"
+	weekly  = "Weekly"
+	monthly = "Monthly"
+	yearly  = "Yearly"
+
 // 	fmtAddJobToAppStart    = "Creating ECR repositories for job %s."
 // 	fmtAddJobToAppFailed   = "Failed to create ECR repositories for job %s.\n"
 // 	fmtAddJobToAppComplete = "Created ECR repositories for job %s.\n"
-// )
+)
+
+var scheduleTypes = []string{
+	rate,
+	fixedSchedule,
+}
+
+var presetSchedules = []string{
+	custom,
+	hourly,
+	daily,
+	weekly,
+	monthly,
+	yearly,
+}
 
 type initJobVars struct {
 	*GlobalOpts
@@ -145,8 +187,8 @@ func (o *initJobOpts) askJobName() error {
 	}
 
 	name, err := o.prompt.Get(
-		fmt.Sprintf(fmtSvcInitSvcNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.JobType)),
-		fmt.Sprintf(fmtJobInitJobNameHelpPrompt, o.AppName()),
+		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.JobType)),
+		fmt.Sprintf(fmtJobInitJobNameHelpPrompt, job, o.AppName()),
 		validateSvcName,
 		prompt.WithFinalMessage("Job name:"),
 	)
@@ -155,6 +197,43 @@ func (o *initJobOpts) askJobName() error {
 	}
 	o.Name = name
 	return nil
+}
+
+func (o *initJobOpts) askDockerfile() error {
+	if o.DockerfilePath != "" {
+		return nil
+	}
+	df, err := askDockerfile(o.Name, o.fs, o.prompt)
+	if err != nil {
+		return err
+	}
+	o.DockerfilePath = df
+	return nil
+}
+
+func (o *initJobOpts) askSchedule() error {
+	if o.Schedule != "" {
+		return nil
+	}
+	scheduleType, err := o.prompt.SelectOne(
+		jobInitSchedulePrompt,
+		jobInitScheduleHelp,
+		scheduleTypes,
+		prompt.WithFinalMessage("Schedule type:"),
+	)
+	if err != nil {
+		return fmt.Errorf("get schedule type: %w", err)
+	}
+	switch scheduleType {
+	case rate:
+	case fixedSchedule:
+	default:
+	}
+
+	// How would you like to schedule this job? > Run at a specific time > Run on an interval
+	// Okay, would you like to use a preset schedule or a custom cron expression?
+	// Okay, how long would like the interval between invocations to be?
+	//
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.

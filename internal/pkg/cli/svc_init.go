@@ -34,14 +34,14 @@ To learn more see: https://git.io/JfIpv
 A %s is a private, non internet-facing service.
 To learn more see: https://git.io/JfIpT`
 
-	fmtSvcInitSvcNamePrompt     = "What do you want to %s this %s?"
-	fmtSvcInitSvcNameHelpPrompt = `The name will uniquely identify this service within your app %s.
-Deployed resources (such as your service, logs) will contain this service's name and be tagged with it.`
+	fmtWkldInitNamePrompt     = "What do you want to %s this %s?"
+	fmtWkldInitNameHelpPrompt = `The name will uniquely identify this %[1]s within your app %[2]s.
+Deployed resources (such as your ECR repository, logs) will contain this %[1]s's name and be tagged with it.`
 
-	fmtSvcInitDockerfilePrompt      = "Which %s would you like to use for %s?"
-	svcInitDockerfileHelpPrompt     = "Dockerfile to use for building your service's container image."
-	fmtSvcInitDockerfilePathPrompt  = "What is the path to the %s for %s?"
-	svcInitDockerfilePathHelpPrompt = "Path to Dockerfile to use for building your service's container image."
+	fmtWkldInitDockerfilePrompt      = "Which %s would you like to use for %s?"
+	wkldInitDockerfileHelpPrompt     = "Dockerfile to use for building your container image."
+	fmtWkldInitDockerfilePathPrompt  = "What is the path to the %s for %s?"
+	wkldInitDockerfilePathHelpPrompt = "Path to Dockerfile to use for building your container image."
 
 	svcInitSvcPortPrompt     = "Which %s do you want customer traffic sent to?"
 	svcInitSvcPortHelpPrompt = `The port will be used by the load balancer to route incoming traffic to this service.
@@ -56,6 +56,7 @@ const (
 
 const (
 	defaultSvcPortString = "80"
+	service              = "service"
 )
 
 type initSvcVars struct {
@@ -305,8 +306,8 @@ func (o *initSvcOpts) askSvcName() error {
 	}
 
 	name, err := o.prompt.Get(
-		fmt.Sprintf(fmtSvcInitSvcNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.ServiceType)),
-		fmt.Sprintf(fmtSvcInitSvcNameHelpPrompt, o.AppName()),
+		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.ServiceType)),
+		fmt.Sprintf(fmtWkldInitNameHelpPrompt, service, o.AppName()),
 		validateSvcName,
 		prompt.WithFinalMessage("Service name:"))
 	if err != nil {
@@ -316,46 +317,53 @@ func (o *initSvcOpts) askSvcName() error {
 	return nil
 }
 
-// askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
-func (o *initSvcOpts) askDockerfile() error {
-	if o.DockerfilePath != "" {
-		return nil
-	}
-
-	dockerfiles, err := listDockerfiles(o.fs, ".")
+func askDockerfile(wkldName string, fs afero.Fs, p prompter) (string, error) {
+	dockerfiles, err := listDockerfiles(fs, ".")
 	// If Dockerfiles are found in the current directory or subdirectory one level down, ask the user to select one.
 	var sel string
 	if err == nil {
-		sel, err = o.prompt.SelectOne(
-			fmt.Sprintf(fmtSvcInitDockerfilePrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
-			svcInitDockerfileHelpPrompt,
+		sel, err = p.SelectOne(
+			fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
+			wkldInitDockerfileHelpPrompt,
 			dockerfiles,
 			prompt.WithFinalMessage("Dockerfile:"),
 		)
 		if err != nil {
-			return fmt.Errorf("select Dockerfile: %w", err)
+			return "", fmt.Errorf("select Dockerfile: %w", err)
 		}
-		o.DockerfilePath = sel
-		return nil
+		return sel, nil
 	}
 
 	var notExistErr *errDockerfileNotFound
 	if !errors.As(err, &notExistErr) {
-		return err
+		return "", err
 	}
 	// If no Dockerfiles were found, prompt user for custom path.
-	sel, err = o.prompt.Get(
-		fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
-		svcInitDockerfilePathHelpPrompt,
+	sel, err = p.Get(
+		fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
+		wkldInitDockerfilePathHelpPrompt,
 		func(v interface{}) error {
 			return validatePath(afero.NewOsFs(), v)
 		},
 		prompt.WithFinalMessage("Dockerfile:"))
 	if err != nil {
-		return fmt.Errorf("get custom Dockerfile path: %w", err)
+		return "", fmt.Errorf("get custom Dockerfile path: %w", err)
 	}
-	o.DockerfilePath = sel
+	return sel, nil
+}
+
+// askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
+func (o *initSvcOpts) askDockerfile() error {
+	if o.DockerfilePath != "" {
+		return nil
+	}
+	df, err := askDockerfile(o.Name, o.fs, o.prompt)
+	if err != nil {
+		return err
+	}
+	o.DockerfilePath = df
 	return nil
+
 }
 
 func (o *initSvcOpts) askSvcPort() error {
