@@ -30,7 +30,7 @@ var (
 )
 
 var testBackendSvcManifest = manifest.NewBackendService(manifest.BackendServiceProps{
-	ServiceProps: manifest.ServiceProps{
+	WorkloadProps: manifest.WorkloadProps{
 		Name:       "frontend",
 		Dockerfile: "./frontend/Dockerfile",
 	},
@@ -46,7 +46,7 @@ var testBackendSvcManifest = manifest.NewBackendService(manifest.BackendServiceP
 
 func TestBackendService_Template(t *testing.T) {
 	baseProps := manifest.BackendServiceProps{
-		ServiceProps: manifest.ServiceProps{
+		WorkloadProps: manifest.WorkloadProps{
 			Name:       "frontend",
 			Dockerfile: "./frontend/Dockerfile",
 		},

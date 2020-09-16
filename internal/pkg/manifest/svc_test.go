@@ -5,7 +5,6 @@ package manifest
 
 import (
 	"fmt"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -66,9 +65,9 @@ environments:
 				actualManifest, ok := i.(*LoadBalancedWebService)
 				require.True(t, ok)
 				wantedManifest := &LoadBalancedWebService{
-					Service: Service{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
+					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-						Image: ServiceImageWithPort{ServiceImage: ServiceImage{Build: BuildArgsOrString{
+						Image: ServiceImageWithPort{Image: Image{Build: BuildArgsOrString{
 							BuildString: aws.String("frontend/Dockerfile"),
 						}}, Port: aws.Uint16(80)},
 						RoutingRule: RoutingRule{
@@ -98,7 +97,7 @@ environments:
 								},
 							},
 						},
-						LogConfig: &LogConfig{
+						Logging: &Logging{
 							Destination: map[string]string{
 								"exclude-pattern": "^.*[aeiou]$",
 								"include-pattern": "^[a-z][aeiou].*$",
@@ -151,14 +150,14 @@ secrets:
 				actualManifest, ok := i.(*BackendService)
 				require.True(t, ok)
 				wantedManifest := &BackendService{
-					Service: Service{
+					Workload: Workload{
 						Name: aws.String("subscribers"),
 						Type: aws.String(BackendServiceType),
 					},
 					BackendServiceConfig: BackendServiceConfig{
 						Image: imageWithPortAndHealthcheck{
 							ServiceImageWithPort: ServiceImageWithPort{
-								ServiceImage: ServiceImage{
+								Image: Image{
 									Build: BuildArgsOrString{
 										BuildString: aws.String("./subscribers/Dockerfile"),
 									},
@@ -193,172 +192,19 @@ secrets:
 name: CowSvc
 type: 'OH NO'
 `,
-			wantedErr: &ErrInvalidSvcManifestType{Type: "OH NO"},
+			wantedErr: &ErrInvalidWorkloadType{Type: "OH NO"},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			m, err := UnmarshalService([]byte(tc.inContent))
+			m, err := UnmarshalWorkload([]byte(tc.inContent))
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				tc.requireCorrectValues(t, m)
 			}
-		})
-	}
-}
-
-func TestBuildArgs_UnmarshalYAML(t *testing.T) {
-	testCases := map[string]struct {
-		inContent []byte
-
-		wantedStruct BuildArgsOrString
-		wantedError  error
-	}{
-		"legacy case: simple build string": {
-			inContent: []byte(`build: ./Dockerfile`),
-
-			wantedStruct: BuildArgsOrString{
-				BuildString: aws.String("./Dockerfile"),
-			},
-		},
-		"Dockerfile specified in build opts": {
-			inContent: []byte(`build:
-  dockerfile: path/to/Dockerfile
-`),
-			wantedStruct: BuildArgsOrString{
-				BuildArgs: DockerBuildArgs{
-					Dockerfile: aws.String("path/to/Dockerfile"),
-				},
-			},
-		},
-		"Dockerfile context, and args specified in build opts": {
-			inContent: []byte(`build:
-  dockerfile: path/to/Dockerfile
-  args:
-    arg1: value1
-    bestdog: bowie
-  context: path/to/source`),
-			wantedStruct: BuildArgsOrString{
-				BuildArgs: DockerBuildArgs{
-					Dockerfile: aws.String("path/to/Dockerfile"),
-					Context:    aws.String("path/to/source"),
-					Args: map[string]string{
-						"arg1":    "value1",
-						"bestdog": "bowie",
-					},
-				},
-			},
-		},
-		"Error if unmarshalable": {
-			inContent: []byte(`build:
-  badfield: OH NOES
-  otherbadfield: DOUBLE BAD`),
-			wantedError: errUnmarshalBuildOpts,
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			var b ServiceImage
-			err := yaml.Unmarshal(tc.inContent, &b)
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.NoError(t, err)
-				// check memberwise dereferenced pointer equality
-				require.Equal(t, tc.wantedStruct.BuildString, b.Build.BuildString)
-				require.Equal(t, tc.wantedStruct.BuildArgs.Context, b.Build.BuildArgs.Context)
-				require.Equal(t, tc.wantedStruct.BuildArgs.Dockerfile, b.Build.BuildArgs.Dockerfile)
-				require.Equal(t, tc.wantedStruct.BuildArgs.Args, b.Build.BuildArgs.Args)
-			}
-		})
-	}
-}
-
-func TestBuildConfig(t *testing.T) {
-	mockWsRoot := "/root/dir"
-	testCases := map[string]struct {
-		inBuild     BuildArgsOrString
-		wantedBuild DockerBuildArgs
-	}{
-		"simple case: BuildString path to dockerfile": {
-			inBuild: BuildArgsOrString{
-				BuildString: aws.String("my/Dockerfile"),
-			},
-			wantedBuild: DockerBuildArgs{
-				Dockerfile: aws.String(filepath.Join(mockWsRoot, "my/Dockerfile")),
-				Context:    aws.String(filepath.Join(mockWsRoot, "my")),
-			},
-		},
-		"Different context than dockerfile": {
-			inBuild: BuildArgsOrString{
-				BuildArgs: DockerBuildArgs{
-					Dockerfile: aws.String("build/dockerfile"),
-					Context:    aws.String("cmd/main"),
-				},
-			},
-			wantedBuild: DockerBuildArgs{
-				Dockerfile: aws.String(filepath.Join(mockWsRoot, "build/dockerfile")),
-				Context:    aws.String(filepath.Join(mockWsRoot, "cmd/main")),
-			},
-		},
-		"no dockerfile specified": {
-			inBuild: BuildArgsOrString{
-				BuildArgs: DockerBuildArgs{
-					Context: aws.String("cmd/main"),
-				},
-			},
-			wantedBuild: DockerBuildArgs{
-				Dockerfile: aws.String(filepath.Join(mockWsRoot, "cmd", "main", "Dockerfile")),
-				Context:    aws.String(filepath.Join(mockWsRoot, "cmd", "main")),
-			},
-		},
-		"no dockerfile or context specified": {
-			inBuild: BuildArgsOrString{
-				BuildArgs: DockerBuildArgs{
-					Args: map[string]string{
-						"goodDog": "bowie",
-					},
-				},
-			},
-			wantedBuild: DockerBuildArgs{
-				Dockerfile: aws.String(filepath.Join(mockWsRoot, "Dockerfile")),
-				Context:    aws.String(mockWsRoot),
-				Args: map[string]string{
-					"goodDog": "bowie",
-				},
-			},
-		},
-		"including args": {
-			inBuild: BuildArgsOrString{
-				BuildArgs: DockerBuildArgs{
-					Dockerfile: aws.String("my/Dockerfile"),
-					Args: map[string]string{
-						"goodDog":  "bowie",
-						"badGoose": "HONK",
-					},
-				},
-			},
-			wantedBuild: DockerBuildArgs{
-				Dockerfile: aws.String(filepath.Join(mockWsRoot, "my/Dockerfile")),
-				Context:    aws.String(filepath.Join(mockWsRoot, "my")),
-				Args: map[string]string{
-					"goodDog":  "bowie",
-					"badGoose": "HONK",
-				},
-			},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			s := ServiceImage{
-				Build: tc.inBuild,
-			}
-			got := s.BuildConfig(mockWsRoot)
-
-			require.Equal(t, tc.wantedBuild, *got)
 		})
 	}
 }
@@ -468,57 +314,6 @@ func TestRange_Parse(t *testing.T) {
 	}
 }
 
-func TestSidecar_Options(t *testing.T) {
-	testCases := map[string]struct {
-		inPort string
-
-		wanted    *template.SidecarOpts
-		wantedErr error
-	}{
-		"invalid port": {
-			inPort: "b/a/d/P/o/r/t",
-
-			wantedErr: fmt.Errorf("cannot parse port mapping from b/a/d/P/o/r/t"),
-		},
-		"good port without protocol": {
-			inPort: "2000",
-
-			wanted: &template.SidecarOpts{
-				Port: aws.String("2000"),
-			},
-		},
-		"good port with protocol": {
-			inPort: "2000/udp",
-
-			wanted: &template.SidecarOpts{
-				Port:     aws.String("2000"),
-				Protocol: aws.String("udp"),
-			},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			sidecar := Sidecar{
-				Sidecars: map[string]*SidecarConfig{
-					"foo": {
-						CredsParam: aws.String("mockCredsParam"),
-						Image:      aws.String("mockImage"),
-						Port:       aws.String(tc.inPort),
-					},
-				},
-			}
-			got, err := sidecar.Options()
-
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, got[0].Port, tc.wanted.Port)
-				require.Equal(t, got[0].Protocol, tc.wanted.Protocol)
-			}
-		})
-	}
-}
 func TestAutoscaling_Options(t *testing.T) {
 	const (
 		mockRange    = "1-100"

@@ -28,7 +28,7 @@ const (
 )
 
 var testLBWebServiceManifest = manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
-	ServiceProps: &manifest.ServiceProps{
+	WorkloadProps: &manifest.WorkloadProps{
 		Name:       "frontend",
 		Dockerfile: "frontend/Dockerfile",
 	},
@@ -249,7 +249,7 @@ Outputs:
 
 func TestLoadBalancedWebService_Parameters(t *testing.T) {
 	baseProps := &manifest.LoadBalancedWebServiceProps{
-		ServiceProps: &manifest.ServiceProps{
+		WorkloadProps: &manifest.WorkloadProps{
 			Name:       "frontend",
 			Dockerfile: "frontend/Dockerfile",
 		},
@@ -291,7 +291,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 	}
 	testLBWebServiceManifestWithStickiness.Stickiness = aws.Bool(true)
 	testLBWebServiceManifestWithBadSidecar := manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
-		ServiceProps: &manifest.ServiceProps{
+		WorkloadProps: &manifest.WorkloadProps{
 			Name:       "frontend",
 			Dockerfile: "frontend/Dockerfile",
 		},

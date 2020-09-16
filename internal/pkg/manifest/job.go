@@ -26,7 +26,7 @@ var JobTypes = []string{
 // ScheduledJob holds the configuration to build a container image that is run
 // periodically in a given environment with timeout and retry logic.
 type ScheduledJob struct {
-	Service            `yaml:",inline"`
+	Workload           `yaml:",inline"`
 	ScheduledJobConfig `yaml:",inline"`
 	Environments       map[string]*ScheduledJobConfig `yaml:",flow"`
 
@@ -35,9 +35,9 @@ type ScheduledJob struct {
 
 // ScheduledJobConfig holds the configuration for a scheduled job
 type ScheduledJobConfig struct {
-	Image          ServiceImage `yaml:",flow"`
+	Image          Image `yaml:",flow"`
 	TaskConfig     `yaml:",inline"`
-	*LogConfig     `yaml:"logging,flow"`
+	*Logging       `yaml:"logging,flow"`
 	Sidecar        `yaml:",inline"`
 	ScheduleConfig `yaml:",inline"`
 }
@@ -51,7 +51,7 @@ type ScheduleConfig struct {
 
 // ScheduledJobProps contains properties for creating a new scheduled job manifest.
 type ScheduledJobProps struct {
-	*ServiceProps
+	*WorkloadProps
 	Schedule string
 	Timeout  string
 	Retries  int
@@ -59,7 +59,7 @@ type ScheduledJobProps struct {
 
 // LogConfigOpts converts the job's Firelens configuration into a format parsable by the templates pkg.
 func (lc *ScheduledJobConfig) LogConfigOpts() *template.LogConfigOpts {
-	if lc.LogConfig == nil {
+	if lc.Logging == nil {
 		return nil
 	}
 	return lc.logConfigOpts()
@@ -68,11 +68,11 @@ func (lc *ScheduledJobConfig) LogConfigOpts() *template.LogConfigOpts {
 // newDefaultScheduledJob returns an empty ScheduledJob with only the default values set.
 func newDefaultScheduledJob() *ScheduledJob {
 	return &ScheduledJob{
-		Service: Service{
+		Workload: Workload{
 			Type: aws.String(ScheduledJobType),
 		},
 		ScheduledJobConfig: ScheduledJobConfig{
-			Image: ServiceImage{},
+			Image: Image{},
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),

@@ -82,7 +82,7 @@ func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
 
 		store:        store,
 		ws:           ws,
-		unmarshal:    manifest.UnmarshalService,
+		unmarshal:    manifest.UnmarshalWorkload,
 		spinner:      termprogress.NewSpinner(),
 		sel:          selector.NewWorkspaceSelect(vars.prompt, store, ws),
 		cmd:          command.New(),
@@ -303,7 +303,7 @@ func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {
 		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
 	}
 
-	manifestBytes, err := o.ws.ReadServiceManifest(o.Name)
+	manifestBytes, err := o.ws.ReadWorkloadManifest(o.Name)
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file %s: %w", o.Name, err)
 	}
@@ -357,7 +357,7 @@ func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 }
 
 func (o *deploySvcOpts) manifest() (interface{}, error) {
-	raw, err := o.ws.ReadServiceManifest(o.Name)
+	raw, err := o.ws.ReadWorkloadManifest(o.Name)
 	if err != nil {
 		return nil, fmt.Errorf("read service %s manifest from workspace: %w", o.Name, err)
 	}
