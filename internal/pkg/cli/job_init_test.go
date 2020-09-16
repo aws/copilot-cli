@@ -46,11 +46,11 @@ func TestJobInitOpts_Validate(t *testing.T) {
 		},
 		"invalid schedule; cron interval too frequent": {
 			inSchedule: "@every 30s",
-			wantedErr:  errors.New("interval @every 30s is invalid: duration must be greater than 60s"),
+			wantedErr:  errors.New("interval @every 30s is invalid: duration must be 1m0s or greater"),
 		},
 		"invalid schedule; cron interval is zero": {
 			inSchedule: "@every 0s",
-			wantedErr:  errors.New("interval @every 0s is invalid: duration must be greater than 60s"),
+			wantedErr:  errors.New("interval @every 0s is invalid: duration must be 1m0s or greater"),
 		},
 		"invalid schedule; cron interval duration improperly formed": {
 			inSchedule: "@every 5min",
@@ -90,7 +90,7 @@ func TestJobInitOpts_Validate(t *testing.T) {
 		},
 		"invalid timeout; too short": {
 			inTimeout: "0s",
-			wantedErr: errors.New("timeout value 0s is invalid: duration must be greater than 1s"),
+			wantedErr: errors.New("timeout value 0s is invalid: duration must be 1s or greater"),
 		},
 		"invalid number of times to retry": {
 			inRetries: -3,
