@@ -34,13 +34,13 @@ type LoadBalancedWebServiceConfig struct {
 	Image       ServiceImageWithPort `yaml:",flow"`
 	RoutingRule `yaml:"http,flow"`
 	TaskConfig  `yaml:",inline"`
-	*LogConfig  `yaml:"logging,flow"`
+	*Logging    `yaml:"logging,flow"`
 	Sidecar     `yaml:",inline"`
 }
 
 // LogConfigOpts converts the service's Firelens configuration into a format parsable by the templates pkg.
 func (lc *LoadBalancedWebServiceConfig) LogConfigOpts() *template.LogConfigOpts {
-	if lc.LogConfig == nil {
+	if lc.Logging == nil {
 		return nil
 	}
 	return lc.logConfigOpts()

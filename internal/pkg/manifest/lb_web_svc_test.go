@@ -175,7 +175,7 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 							},
 						},
 					},
-					LogConfig: &LogConfig{
+					Logging: &Logging{
 						ConfigFile: aws.String("mockConfigFile"),
 					},
 				},
@@ -210,7 +210,7 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 								},
 							},
 						},
-						LogConfig: &LogConfig{
+						Logging: &Logging{
 							SecretOptions: map[string]string{
 								"FOO": "BAR",
 							},
@@ -265,7 +265,7 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 							},
 						},
 					},
-					LogConfig: &LogConfig{
+					Logging: &Logging{
 						ConfigFile: aws.String("mockConfigFile"),
 						SecretOptions: map[string]string{
 							"FOO": "BAR",

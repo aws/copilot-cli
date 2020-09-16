@@ -37,7 +37,7 @@ type ScheduledJob struct {
 type ScheduledJobConfig struct {
 	Image          Image `yaml:",flow"`
 	TaskConfig     `yaml:",inline"`
-	*LogConfig     `yaml:"logging,flow"`
+	*Logging       `yaml:"logging,flow"`
 	Sidecar        `yaml:",inline"`
 	ScheduleConfig `yaml:",inline"`
 }
@@ -59,7 +59,7 @@ type ScheduledJobProps struct {
 
 // LogConfigOpts converts the job's Firelens configuration into a format parsable by the templates pkg.
 func (lc *ScheduledJobConfig) LogConfigOpts() *template.LogConfigOpts {
-	if lc.LogConfig == nil {
+	if lc.Logging == nil {
 		return nil
 	}
 	return lc.logConfigOpts()

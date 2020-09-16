@@ -97,7 +97,7 @@ environments:
 								},
 							},
 						},
-						LogConfig: &LogConfig{
+						Logging: &Logging{
 							Destination: map[string]string{
 								"exclude-pattern": "^.*[aeiou]$",
 								"include-pattern": "^[a-z][aeiou].*$",

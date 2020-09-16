@@ -152,8 +152,8 @@ func (b *DockerBuildArgs) isEmpty() bool {
 	return false
 }
 
-// LogConfig holds configuration for Firelens to route your logs.
-type LogConfig struct {
+// Logging holds configuration for Firelens to route your logs.
+type Logging struct {
 	Image          *string           `yaml:"image"`
 	Destination    map[string]string `yaml:"destination,flow"`
 	EnableMetadata *bool             `yaml:"enableMetadata"`
@@ -161,7 +161,7 @@ type LogConfig struct {
 	ConfigFile     *string           `yaml:"configFilePath"`
 }
 
-func (lc *LogConfig) logConfigOpts() *template.LogConfigOpts {
+func (lc *Logging) logConfigOpts() *template.LogConfigOpts {
 	return &template.LogConfigOpts{
 		Image:          lc.image(),
 		ConfigFile:     lc.ConfigFile,
@@ -171,14 +171,14 @@ func (lc *LogConfig) logConfigOpts() *template.LogConfigOpts {
 	}
 }
 
-func (lc *LogConfig) image() *string {
+func (lc *Logging) image() *string {
 	if lc.Image == nil {
 		return aws.String(defaultFluentbitImage)
 	}
 	return lc.Image
 }
 
-func (lc *LogConfig) enableMetadata() *string {
+func (lc *Logging) enableMetadata() *string {
 	if lc.EnableMetadata == nil {
 		// Enable ecs log metadata by default.
 		return aws.String("true")

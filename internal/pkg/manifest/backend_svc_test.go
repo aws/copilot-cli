@@ -247,7 +247,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					},
 				},
 			},
-			LogConfig: &LogConfig{
+			Logging: &Logging{
 				Destination: map[string]string{
 					"Name":            "datadog",
 					"exclude-pattern": "*",
@@ -274,7 +274,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						},
 					},
 				},
-				LogConfig: &LogConfig{
+				Logging: &Logging{
 					Destination: map[string]string{
 						"include-pattern": "*",
 						"exclude-pattern": "fe/",
@@ -345,7 +345,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 							},
 						},
 					},
-					LogConfig: &LogConfig{
+					Logging: &Logging{
 						Destination: map[string]string{
 							"Name":            "datadog",
 							"include-pattern": "*",
