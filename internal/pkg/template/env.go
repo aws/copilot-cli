@@ -10,7 +10,7 @@ import (
 
 const (
 	// EnvCFTemplatePath is the path where the cloudformation for the environment is written.
-	EnvCFTemplatePath       = "environment/cf.yml"
+	EnvCFTemplatePath       = "environment/versions/cf-legacy.yml"
 	fmtEnvCFSubTemplatePath = "environment/partials/%s.yml"
 )
 
