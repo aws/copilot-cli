@@ -41,7 +41,7 @@ func TestEnvTemplate(t *testing.T) {
 				m.EXPECT().Read(dnsDelegationTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
 				m.EXPECT().Read(acmValidationTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
 				m.EXPECT().Read(enableLongARNsTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
-				m.EXPECT().ParseEnv(template.EnvOpts{
+				m.EXPECT().ParseEnv(&template.EnvOpts{
 					ACMValidationLambda:       "customresources",
 					DNSDelegationLambda:       "customresources",
 					EnableLongARNFormatLambda: "customresources",
