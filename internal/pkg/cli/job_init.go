@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -84,6 +85,29 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initJobOpts) Validate() error {
+	if o.Name != "" {
+		if err := validateJobName(o.Name); err != nil {
+			return err
+		}
+	}
+	if o.DockerfilePath != "" {
+		if _, err := o.fs.Stat(o.DockerfilePath); err != nil {
+			return err
+		}
+	}
+	if o.Schedule != "" {
+		if err := validateSchedule(o.Schedule); err != nil {
+			return err
+		}
+	}
+	if o.Timeout != "" {
+		if err := validateTimeout(o.Timeout); err != nil {
+			return err
+		}
+	}
+	if o.Retries < 0 {
+		return errors.New("number of retries must be non-negative")
+	}
 	return nil
 }
 

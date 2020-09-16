@@ -24,7 +24,7 @@ func TestTemplate_ParseEnv(t *testing.T) {
 				for _, name := range envCFSubTemplateNames {
 					baseContent += fmt.Sprintf(`{{include "%s" . | indent 2}}`+"\n", name)
 				}
-				mockBox.AddString("environment/cf.yml", baseContent)
+				mockBox.AddString("environment/versions/cf-legacy.yml", baseContent)
 				mockBox.AddString("environment/partials/cfn-execution-role.yml", "cfn-execution-role")
 				mockBox.AddString("environment/partials/custom-resources.yml", "custom-resources")
 				mockBox.AddString("environment/partials/custom-resources-role.yml", "custom-resources-role")

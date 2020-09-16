@@ -52,7 +52,7 @@ func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
 
 		store:        store,
 		ws:           ws,
-		unmarshal:    manifest.UnmarshalService,
+		unmarshal:    manifest.UnmarshalWorkload,
 		spinner:      termprogress.NewSpinner(),
 		sel:          selector.NewWorkspaceSelect(vars.prompt, store, ws),
 		cmd:          command.New(),

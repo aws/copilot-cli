@@ -163,8 +163,8 @@ func (ws *Workspace) WorkloadNames(wlType string) ([]string, error) {
 	return names, nil
 }
 
-// ReadServiceManifest returns the contents of the service manifest under copilot/{name}/manifest.yml.
-func (ws *Workspace) ReadServiceManifest(name string) ([]byte, error) {
+// ReadWorkloadManifest returns the contents of the workload's manifest under copilot/{name}/manifest.yml.
+func (ws *Workspace) ReadWorkloadManifest(name string) ([]byte, error) {
 	return ws.read(name, manifestFileName)
 }
 
@@ -185,11 +185,11 @@ func (ws *Workspace) ReadPipelineManifest() ([]byte, error) {
 	return ws.read(pipelineFileName)
 }
 
-// WriteServiceManifest writes the service's manifest under the copilot/{name}/ directory.
-func (ws *Workspace) WriteServiceManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
+// WriteWorkloadManifest writes the workload's manifest under the copilot/{name}/ directory.
+func (ws *Workspace) WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	data, err := marshaler.MarshalBinary()
 	if err != nil {
-		return "", fmt.Errorf("marshal service %s manifest to binary: %w", name, err)
+		return "", fmt.Errorf("marshal workload %s manifest to binary: %w", name, err)
 	}
 	return ws.write(data, name, manifestFileName)
 }

@@ -143,7 +143,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 		store:        ssm,
 		ws:           ws,
-		unmarshal:    manifest.UnmarshalService,
+		unmarshal:    manifest.UnmarshalWorkload,
 		sel:          selector.NewWorkspaceSelect(prompt, ssm, ws),
 		spinner:      spin,
 		cmd:          command.New(),
