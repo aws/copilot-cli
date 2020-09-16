@@ -192,7 +192,7 @@ secrets:
 name: CowSvc
 type: 'OH NO'
 `,
-			wantedErr: &ErrInvalidWkldManifestType{Type: "OH NO"},
+			wantedErr: &ErrInvalidWorkloadType{Type: "OH NO"},
 		},
 	}
 

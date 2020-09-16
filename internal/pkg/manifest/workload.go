@@ -286,6 +286,6 @@ func UnmarshalWorkload(in []byte) (interface{}, error) {
 		}
 		return m, nil
 	default:
-		return nil, &ErrInvalidWkldManifestType{Type: typeVal}
+		return nil, &ErrInvalidWorkloadType{Type: typeVal}
 	}
 }

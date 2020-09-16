@@ -7,12 +7,12 @@ import (
 	"fmt"
 )
 
-// ErrInvalidWkldManifestType occurs when a user requested a manifest template type that doesn't exist.
-type ErrInvalidWkldManifestType struct {
+// ErrInvalidWorkloadType occurs when a user requested a manifest template type that doesn't exist.
+type ErrInvalidWorkloadType struct {
 	Type string
 }
 
-func (e *ErrInvalidWkldManifestType) Error() string {
+func (e *ErrInvalidWorkloadType) Error() string {
 	return fmt.Sprintf("invalid manifest type: %s", e.Type)
 }
 
