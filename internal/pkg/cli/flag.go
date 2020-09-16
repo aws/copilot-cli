@@ -208,5 +208,6 @@ Tasks with the same group name share the same set of resources.
 	timeoutFlagDescription = `Optional. The total execution time for the task, including retries.
 Use a valid Go duration string like "2h", "1h30m", "900s".`
 	scheduleFlagDescription = `The schedule on which to run this job. 
-Use a valid cron expression (M H DoM M DoW) like "0 * * * *", "@daily", "@weekly", "@every 1h30m".`
+Accepts cron expressions of the format (M H DoM M DoW) and schedule definition strings. 
+For example: "0 * * * *", "@daily", "@weekly", "@every 1h30m".`
 )
