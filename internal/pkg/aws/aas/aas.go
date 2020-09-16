@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package applicationautoscaling provides a client to make API requests to Application Auto Scaling.
-package applicationautoscaling
+// Package aas provides a client to make API requests to Application Auto Scaling.
+package aas
 
 import (
 	"fmt"

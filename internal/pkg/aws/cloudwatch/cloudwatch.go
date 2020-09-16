@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	aas "github.com/aws/copilot-cli/internal/pkg/aws/applicationautoscaling"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -32,19 +31,10 @@ type resourceGetter interface {
 	GetResourcesByTags(resourceType string, tags map[string]string) ([]*rg.Resource, error)
 }
 
-type autoscalingAlarmNamesGetter interface {
-	ECSServiceAlarmNames(cluster, service string) ([]string, error)
-}
-
 // CloudWatch wraps an Amazon CloudWatch client.
 type CloudWatch struct {
-	client api
-	// Optional client.
-	rgClient  resourceGetter
-	assClient autoscalingAlarmNamesGetter
-	// Optional client init.
-	initRgClient  func()
-	initAssclient func()
+	client   api
+	rgClient resourceGetter
 }
 
 // AlarmStatus contains CloudWatch alarm status.
@@ -59,32 +49,14 @@ type AlarmStatus struct {
 
 // New returns a CloudWatch struct configured against the input session.
 func New(s *session.Session) *CloudWatch {
-	cw := &CloudWatch{
-		client: cloudwatch.New(s),
+	return &CloudWatch{
+		client:   cloudwatch.New(s),
+		rgClient: rg.New(s),
 	}
-	cw.initRgClient = func() {
-		cw.rgClient = rg.New(s)
-	}
-	cw.initAssclient = func() {
-		cw.assClient = aas.New(s)
-	}
-	return cw
-}
-
-// ECSServiceAutoscalingAlarms returns the CloudWatch alarms associated with the
-// auto scaling policies attached to the ECS service.
-func (cw *CloudWatch) ECSServiceAutoscalingAlarms(cluster, service string) ([]AlarmStatus, error) {
-	cw.initAssclient()
-	alarmNames, err := cw.assClient.ECSServiceAlarmNames(cluster, service)
-	if err != nil {
-		return nil, fmt.Errorf("retrieve auto scaling alarm names for ECS service %s/%s: %w", cluster, service, err)
-	}
-	return cw.alarmStatus(alarmNames)
 }
 
 // AlarmsWithTags returns all the CloudWatch alarms that have the resource tags.
 func (cw *CloudWatch) AlarmsWithTags(tags map[string]string) ([]AlarmStatus, error) {
-	cw.initRgClient()
 	var alarmNames []string
 	resources, err := cw.rgClient.GetResourcesByTags(cloudwatchResourceType, tags)
 	if err != nil {
@@ -95,14 +67,15 @@ func (cw *CloudWatch) AlarmsWithTags(tags map[string]string) ([]AlarmStatus, err
 		if err != nil {
 			return nil, err
 		}
-		alarmNames = append(alarmNames, aws.StringValue(name))
+		alarmNames = append(alarmNames, name)
 	}
-	return cw.alarmStatus(alarmNames)
+	return cw.AlarmStatus(alarmNames)
 }
 
-func (cw *CloudWatch) alarmStatus(alarms []string) ([]AlarmStatus, error) {
+// AlarmStatus returns the status of each given alarm name.
+func (cw *CloudWatch) AlarmStatus(alarms []string) ([]AlarmStatus, error) {
 	if len(alarms) == 0 {
-		return []AlarmStatus{}, nil
+		return nil, nil
 	}
 	var alarmStatus []AlarmStatus
 	var err error
@@ -157,14 +130,14 @@ func (cw *CloudWatch) metricAlarmsStatus(alarms []*cloudwatch.MetricAlarm) []Ala
 // getAlarmName gets the alarm name given a specific alarm ARN.
 // For example: arn:aws:cloudwatch:us-west-2:1234567890:alarm:SDc-ReadCapacityUnitsLimit-BasicAlarm
 // returns SDc-ReadCapacityUnitsLimit-BasicAlarm
-func getAlarmName(alarmArn string) (*string, error) {
-	resp, err := arn.Parse(alarmArn)
+func getAlarmName(alarmARN string) (string, error) {
+	resp, err := arn.Parse(alarmARN)
 	if err != nil {
-		return nil, fmt.Errorf("parse alarm ARN %s: %w", alarmArn, err)
+		return "", fmt.Errorf("parse alarm ARN %s: %w", alarmARN, err)
 	}
 	alarmNameList := strings.Split(resp.Resource, ":")
 	if len(alarmNameList) != 2 {
-		return nil, fmt.Errorf("cannot parse alarm ARN resource %s", resp.Resource)
+		return "", fmt.Errorf("unknown ARN resource format %s", resp.Resource)
 	}
-	return aws.String(alarmNameList[1]), nil
+	return alarmNameList[1], nil
 }

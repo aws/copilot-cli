@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package applicationautoscaling
+package aas
 
 import (
 	"errors"
@@ -10,7 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	aas "github.com/aws/aws-sdk-go/service/applicationautoscaling"
-	"github.com/aws/copilot-cli/internal/pkg/aws/applicationautoscaling/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/aws/aas/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )

@@ -50,19 +50,19 @@ func (mr *MockalarmStatusGetterMockRecorder) AlarmsWithTags(tags interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlarmsWithTags", reflect.TypeOf((*MockalarmStatusGetter)(nil).AlarmsWithTags), tags)
 }
 
-// ECSServiceAutoscalingAlarms mocks base method
-func (m *MockalarmStatusGetter) ECSServiceAutoscalingAlarms(cluster, service string) ([]cloudwatch.AlarmStatus, error) {
+// AlarmStatus mocks base method
+func (m *MockalarmStatusGetter) AlarmStatus(alarms []string) ([]cloudwatch.AlarmStatus, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ECSServiceAutoscalingAlarms", cluster, service)
+	ret := m.ctrl.Call(m, "AlarmStatus", alarms)
 	ret0, _ := ret[0].([]cloudwatch.AlarmStatus)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ECSServiceAutoscalingAlarms indicates an expected call of ECSServiceAutoscalingAlarms
-func (mr *MockalarmStatusGetterMockRecorder) ECSServiceAutoscalingAlarms(cluster, service interface{}) *gomock.Call {
+// AlarmStatus indicates an expected call of AlarmStatus
+func (mr *MockalarmStatusGetterMockRecorder) AlarmStatus(alarms interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ECSServiceAutoscalingAlarms", reflect.TypeOf((*MockalarmStatusGetter)(nil).ECSServiceAutoscalingAlarms), cluster, service)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlarmStatus", reflect.TypeOf((*MockalarmStatusGetter)(nil).AlarmStatus), alarms)
 }
 
 // MockresourcesGetter is a mock of resourcesGetter interface
@@ -154,4 +154,42 @@ func (m *MockecsServiceGetter) Service(clusterName, serviceName string) (*ecs.Se
 func (mr *MockecsServiceGetterMockRecorder) Service(clusterName, serviceName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockecsServiceGetter)(nil).Service), clusterName, serviceName)
+}
+
+// MockautoscalingAlarmNamesGetter is a mock of autoscalingAlarmNamesGetter interface
+type MockautoscalingAlarmNamesGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockautoscalingAlarmNamesGetterMockRecorder
+}
+
+// MockautoscalingAlarmNamesGetterMockRecorder is the mock recorder for MockautoscalingAlarmNamesGetter
+type MockautoscalingAlarmNamesGetterMockRecorder struct {
+	mock *MockautoscalingAlarmNamesGetter
+}
+
+// NewMockautoscalingAlarmNamesGetter creates a new mock instance
+func NewMockautoscalingAlarmNamesGetter(ctrl *gomock.Controller) *MockautoscalingAlarmNamesGetter {
+	mock := &MockautoscalingAlarmNamesGetter{ctrl: ctrl}
+	mock.recorder = &MockautoscalingAlarmNamesGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockautoscalingAlarmNamesGetter) EXPECT() *MockautoscalingAlarmNamesGetterMockRecorder {
+	return m.recorder
+}
+
+// ECSServiceAlarmNames mocks base method
+func (m *MockautoscalingAlarmNamesGetter) ECSServiceAlarmNames(cluster, service string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ECSServiceAlarmNames", cluster, service)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ECSServiceAlarmNames indicates an expected call of ECSServiceAlarmNames
+func (mr *MockautoscalingAlarmNamesGetterMockRecorder) ECSServiceAlarmNames(cluster, service interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ECSServiceAlarmNames", reflect.TypeOf((*MockautoscalingAlarmNamesGetter)(nil).ECSServiceAlarmNames), cluster, service)
 }

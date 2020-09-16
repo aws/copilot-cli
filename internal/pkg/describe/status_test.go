@@ -27,6 +27,7 @@ type serviceStatusMocks struct {
 	ecsServiceGetter  *mocks.MockecsServiceGetter
 	alarmStatusGetter *mocks.MockalarmStatusGetter
 	resourcesGetter   *mocks.MockresourcesGetter
+	aas               *mocks.MockautoscalingAlarmNamesGetter
 }
 
 func TestServiceStatus_Describe(t *testing.T) {
@@ -142,7 +143,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 
 			wantedError: fmt.Errorf("get tagged CloudWatch alarms: some error"),
 		},
-		"errors if failed to get auto scaling CloudWatch alarms": {
+		"errors if failed to get auto scaling CloudWatch alarm names": {
 			setupMocks: func(m serviceStatusMocks) {
 				gomock.InOrder(
 					m.resourcesGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, mockTags).Return([]*rg.Resource{
@@ -158,7 +159,30 @@ func TestServiceStatus_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.alarmStatusGetter.EXPECT().AlarmsWithTags(gomock.Any()).Return([]cloudwatch.AlarmStatus{}, nil),
-					m.alarmStatusGetter.EXPECT().ECSServiceAutoscalingAlarms(mockCluster, mockService).Return(nil, mockError),
+					m.aas.EXPECT().ECSServiceAlarmNames(mockCluster, mockService).Return(nil, mockError),
+				)
+			},
+
+			wantedError: fmt.Errorf("retrieve auto scaling alarm names for ECS service mockCluster/mockService: some error"),
+		},
+		"errors if failed to get auto scaling CloudWatch alarm status": {
+			setupMocks: func(m serviceStatusMocks) {
+				gomock.InOrder(
+					m.resourcesGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, mockTags).Return([]*rg.Resource{
+						{
+							ARN: mockServiceArn,
+						},
+					}, nil),
+					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&ecs.Service{}, nil),
+					m.ecsServiceGetter.EXPECT().ServiceTasks(mockCluster, mockService).Return([]*ecs.Task{
+						{
+							TaskArn:   aws.String("arn:aws:ecs:us-west-2:123456789012:task/mockCluster/1234567890123456789"),
+							StartedAt: &startTime,
+						},
+					}, nil),
+					m.alarmStatusGetter.EXPECT().AlarmsWithTags(gomock.Any()).Return([]cloudwatch.AlarmStatus{}, nil),
+					m.aas.EXPECT().ECSServiceAlarmNames(mockCluster, mockService).Return([]string{"mockAlarmName"}, nil),
+					m.alarmStatusGetter.EXPECT().AlarmStatus([]string{"mockAlarmName"}).Return(nil, mockError),
 				)
 			},
 
@@ -217,7 +241,8 @@ func TestServiceStatus_Describe(t *testing.T) {
 							UpdatedTimes: updateTime,
 						},
 					}, nil),
-					m.alarmStatusGetter.EXPECT().ECSServiceAutoscalingAlarms(mockCluster, mockService).Return([]cloudwatch.AlarmStatus{
+					m.aas.EXPECT().ECSServiceAlarmNames(mockCluster, mockService).Return([]string{"mockAlarm2"}, nil),
+					m.alarmStatusGetter.EXPECT().AlarmStatus([]string{"mockAlarm2"}).Return([]cloudwatch.AlarmStatus{
 						{
 							Arn:          "mockAlarmArn2",
 							Name:         "mockAlarm2",
@@ -288,21 +313,24 @@ func TestServiceStatus_Describe(t *testing.T) {
 			mockecsSvc := mocks.NewMockecsServiceGetter(ctrl)
 			mockcwSvc := mocks.NewMockalarmStatusGetter(ctrl)
 			mockrgSvc := mocks.NewMockresourcesGetter(ctrl)
+			mockaasClient := mocks.NewMockautoscalingAlarmNamesGetter(ctrl)
 			mocks := serviceStatusMocks{
 				ecsServiceGetter:  mockecsSvc,
 				alarmStatusGetter: mockcwSvc,
 				resourcesGetter:   mockrgSvc,
+				aas:               mockaasClient,
 			}
 
 			tc.setupMocks(mocks)
 
 			svcStatus := &ServiceStatus{
-				SvcName: "mockSvc",
-				EnvName: "mockEnv",
-				AppName: "mockApp",
-				CwSvc:   mockcwSvc,
-				EcsSvc:  mockecsSvc,
-				rgSvc:   mockrgSvc,
+				svc:    "mockSvc",
+				env:    "mockEnv",
+				app:    "mockApp",
+				cwSvc:  mockcwSvc,
+				ecsSvc: mockecsSvc,
+				rgSvc:  mockrgSvc,
+				aasSvc: mockaasClient,
 			}
 
 			// WHEN
