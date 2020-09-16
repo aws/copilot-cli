@@ -139,7 +139,7 @@ func (ws *Workspace) ServiceNames() ([]string, error) {
 	return names, nil
 }
 
-// ReadWorkloadManifest returns the contents of the service manifest under copilot/{name}/manifest.yml.
+// ReadWorkloadManifest returns the contents of the workload's manifest under copilot/{name}/manifest.yml.
 func (ws *Workspace) ReadWorkloadManifest(name string) ([]byte, error) {
 	return ws.read(name, manifestFileName)
 }
