@@ -4,13 +4,8 @@
 
 const aws = require("aws-sdk");
 
-const defaultSleep = function (ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-};
-
 // These are used for test purposes only
 let defaultResponseURL;
-let waiter;
 
 /**
  * Upload a CloudFormation response object to S3.
