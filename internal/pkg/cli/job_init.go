@@ -268,6 +268,9 @@ func (o *initJobOpts) askCron() error {
 		prompt.WithDefaultInput("0 * * * *"),
 		prompt.WithFinalMessage("Custom Schedule:"),
 	)
+	if err != nil {
+		return fmt.Errorf("get custom schedule: %w", err)
+	}
 	o.Schedule = customSchedule
 	return nil
 }
