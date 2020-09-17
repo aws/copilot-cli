@@ -64,7 +64,6 @@ func TestPipelineCreation(t *testing.T) {
 		environmentToDeploy := deploy.CreateEnvironmentInput{
 			Name:                     randStringBytes(10),
 			AppName:                  app.Name,
-			PublicLoadBalancer:       true,
 			ToolsAccountPrincipalARN: envCallerInfo.RootUserARN,
 		}
 		envStackName := fmt.Sprintf("%s-%s",

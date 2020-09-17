@@ -304,7 +304,6 @@ func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 		Name:                     "env",
 		AppName:                  "project",
 		Prod:                     true,
-		PublicLoadBalancer:       true,
 		ToolsAccountPrincipalARN: "arn:aws:iam::000000000:root",
 	}
 }
