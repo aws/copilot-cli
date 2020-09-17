@@ -63,7 +63,7 @@ func TestEnvTemplate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			envStack := &EnvStackConfig{
-				CreateEnvironmentInput: mockDeployEnvironmentInput(),
+				in: mockDeployEnvironmentInput(),
 			}
 			tc.mockDependencies(ctrl, envStack)
 
@@ -144,7 +144,7 @@ func TestEnvParameters(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			env := &EnvStackConfig{
-				CreateEnvironmentInput: tc.input,
+				in: tc.input,
 			}
 			params, _ := env.Parameters()
 			require.ElementsMatch(t, tc.want, params)
@@ -160,7 +160,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 		"without tools account ARN": {
 			want: "",
 			input: &EnvStackConfig{
-				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
+				in: &deploy.CreateEnvironmentInput{
 					ToolsAccountPrincipalARN: "",
 					AppDNSName:               "ecs.aws",
 				},
@@ -169,7 +169,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 		"without DNS": {
 			want: "",
 			input: &EnvStackConfig{
-				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
+				in: &deploy.CreateEnvironmentInput{
 					ToolsAccountPrincipalARN: "arn:aws:iam::0000000:root",
 					AppDNSName:               "",
 				},
@@ -178,7 +178,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 		"with invalid tools principal": {
 			want: "",
 			input: &EnvStackConfig{
-				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
+				in: &deploy.CreateEnvironmentInput{
 					ToolsAccountPrincipalARN: "0000000",
 					AppDNSName:               "ecs.aws",
 				},
@@ -187,7 +187,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 		"with dns and tools principal": {
 			want: "arn:aws:iam::0000000:role/-DNSDelegationRole",
 			input: &EnvStackConfig{
-				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
+				in: &deploy.CreateEnvironmentInput{
 					ToolsAccountPrincipalARN: "arn:aws:iam::0000000:root",
 					AppDNSName:               "ecs.aws",
 				},
@@ -204,7 +204,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 
 func TestEnvTags(t *testing.T) {
 	env := &EnvStackConfig{
-		CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
+		in: &deploy.CreateEnvironmentInput{
 			Name:    "env",
 			AppName: "project",
 			AdditionalTags: map[string]string{
@@ -233,7 +233,7 @@ func TestEnvTags(t *testing.T) {
 func TestStackName(t *testing.T) {
 	deploymentInput := mockDeployEnvironmentInput()
 	env := &EnvStackConfig{
-		CreateEnvironmentInput: deploymentInput,
+		in: deploymentInput,
 	}
 	require.Equal(t, fmt.Sprintf("%s-%s", deploymentInput.AppName, deploymentInput.Name), env.StackName())
 }
@@ -269,7 +269,7 @@ func TestToEnv(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			envStack := &EnvStackConfig{
-				CreateEnvironmentInput: mockDeployInput,
+				in: mockDeployInput,
 			}
 			got, err := envStack.ToEnv(tc.mockStack)
 

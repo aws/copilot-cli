@@ -21,7 +21,8 @@ type CreateEnvironmentInput struct {
 	ImportVPCConfig          *ImportVPCConfig  // Optional configuration if users have an existing VPC.
 	AdjustVPCConfig          *AdjustVPCConfig  // Optional configuration if users want to override default VPC configuration.
 
-	Version string // The version of the environment template to use while mutating the stack.
+	// The version of the environment template to creat the stack. If empty, creates the legacy stack.
+	Version string
 }
 
 // ImportVPCOpts converts the environment's vpc importing configuration into a format parsable by the templates pkg.

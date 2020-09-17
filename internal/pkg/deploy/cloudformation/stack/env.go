@@ -23,7 +23,7 @@ type envReadParser interface {
 // EnvStackConfig is for providing all the values to set up an
 // environment stack and to interpret the outputs from it.
 type EnvStackConfig struct {
-	*deploy.CreateEnvironmentInput
+	in     *deploy.CreateEnvironmentInput
 	parser envReadParser
 }
 
@@ -53,8 +53,8 @@ const (
 // spinning up an environment.
 func NewEnvStackConfig(input *deploy.CreateEnvironmentInput) *EnvStackConfig {
 	return &EnvStackConfig{
-		CreateEnvironmentInput: input,
-		parser:                 template.New(),
+		in:     input,
+		parser: template.New(),
 	}
 }
 
@@ -78,15 +78,15 @@ func (e *EnvStackConfig) Template() (string, error) {
 		PublicSubnetCIDRs:  strings.Split(DefaultPublicSubnetCIDRs, ","),
 	}
 
-	if e.AdjustVPCOpts() != nil {
-		vpcConf = e.AdjustVPCOpts()
+	if e.in.AdjustVPCOpts() != nil {
+		vpcConf = e.in.AdjustVPCOpts()
 	}
 
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
 		ACMValidationLambda:       acmLambda.String(),
 		DNSDelegationLambda:       dnsLambda.String(),
 		EnableLongARNFormatLambda: enableLongARNsLambda.String(),
-		ImportVPC:                 e.ImportVPCOpts(),
+		ImportVPC:                 e.in.ImportVPCOpts(),
 		VPCConfig:                 vpcConf,
 	}, template.WithFuncs(map[string]interface{}{
 		"inc": template.IncFunc,
@@ -103,19 +103,19 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	return []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(envParamAppNameKey),
-			ParameterValue: aws.String(e.AppName),
+			ParameterValue: aws.String(e.in.AppName),
 		},
 		{
 			ParameterKey:   aws.String(envParamEnvNameKey),
-			ParameterValue: aws.String(e.Name),
+			ParameterValue: aws.String(e.in.Name),
 		},
 		{
 			ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-			ParameterValue: aws.String(e.ToolsAccountPrincipalARN),
+			ParameterValue: aws.String(e.in.ToolsAccountPrincipalARN),
 		},
 		{
 			ParameterKey:   aws.String(envParamAppDNSKey),
-			ParameterValue: aws.String(e.AppDNSName),
+			ParameterValue: aws.String(e.in.AppDNSName),
 		},
 		{
 			ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
@@ -126,27 +126,27 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 
 // Tags returns the tags that should be applied to the environment CloudFormation stack.
 func (e *EnvStackConfig) Tags() []*cloudformation.Tag {
-	return mergeAndFlattenTags(e.AdditionalTags, map[string]string{
-		deploy.AppTagKey: e.AppName,
-		deploy.EnvTagKey: e.Name,
+	return mergeAndFlattenTags(e.in.AdditionalTags, map[string]string{
+		deploy.AppTagKey: e.in.AppName,
+		deploy.EnvTagKey: e.in.Name,
 	})
 }
 
 func (e *EnvStackConfig) dnsDelegationRole() string {
-	if e.ToolsAccountPrincipalARN == "" || e.AppDNSName == "" {
+	if e.in.ToolsAccountPrincipalARN == "" || e.in.AppDNSName == "" {
 		return ""
 	}
 
-	appRole, err := arn.Parse(e.ToolsAccountPrincipalARN)
+	appRole, err := arn.Parse(e.in.ToolsAccountPrincipalARN)
 	if err != nil {
 		return ""
 	}
-	return fmt.Sprintf("arn:aws:iam::%s:role/%s", appRole.AccountID, dnsDelegationRoleName(e.AppName))
+	return fmt.Sprintf("arn:aws:iam::%s:role/%s", appRole.AccountID, dnsDelegationRoleName(e.in.AppName))
 }
 
 // StackName returns the name of the CloudFormation stack (based on the app and env names).
 func (e *EnvStackConfig) StackName() string {
-	return NameForEnv(e.AppName, e.Name)
+	return NameForEnv(e.in.AppName, e.in.Name)
 }
 
 // ToEnv inspects an environment cloudformation stack and constructs an environment
@@ -163,9 +163,9 @@ func (e *EnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.Environment
 	}
 
 	return &config.Environment{
-		Name:             e.Name,
-		App:              e.AppName,
-		Prod:             e.Prod,
+		Name:             e.in.Name,
+		App:              e.in.AppName,
+		Prod:             e.in.Prod,
 		Region:           stackARN.Region,
 		AccountID:        stackARN.AccountID,
 		ManagerRoleARN:   stackOutputs[envOutputManagerRoleKey],
