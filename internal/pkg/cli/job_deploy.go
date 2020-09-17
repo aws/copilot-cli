@@ -109,18 +109,11 @@ func (o *deployJobOpts) validateJobName() error {
 }
 
 func (o *deployJobOpts) validateEnvName() error {
-	if _, err := o.targetEnv(); err != nil {
-		return err
+	_, err := o.store.GetEnvironment(o.AppName(), o.EnvName)
+	if err != nil {
+		return fmt.Errorf("get environment %s configuration: %w", o.EnvName, err)
 	}
 	return nil
-}
-
-func (o *deployJobOpts) targetEnv() (*config.Environment, error) {
-	env, err := o.store.GetEnvironment(o.AppName(), o.EnvName)
-	if err != nil {
-		return nil, fmt.Errorf("get environment %s configuration: %w", o.EnvName, err)
-	}
-	return env, nil
 }
 
 // BuildJobDeployCmd builds the `job deploy` subcommand.
