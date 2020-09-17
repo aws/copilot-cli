@@ -88,6 +88,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		EnableLongARNFormatLambda: enableLongARNsLambda.String(),
 		ImportVPC:                 e.in.ImportVPCOpts(),
 		VPCConfig:                 vpcConf,
+		Version:                   e.in.Version,
 	}, template.WithFuncs(map[string]interface{}{
 		"inc": template.IncFunc,
 	}))
