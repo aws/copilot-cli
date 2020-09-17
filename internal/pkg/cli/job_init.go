@@ -237,7 +237,7 @@ func (o *initJobOpts) askRate() error {
 	rateInput, err := o.prompt.Get(
 		jobInitRatePrompt,
 		jobInitRateHelp,
-		durationValidation,
+		validateRate,
 		prompt.WithFinalMessage("Rate:"),
 	)
 	if err != nil {
@@ -264,7 +264,7 @@ func (o *initJobOpts) askCron() error {
 	customSchedule, err := o.prompt.Get(
 		jobInitCronCustomSchedulePrompt,
 		jobInitCronCustomScheduleHelp,
-		cronValidation,
+		validateSchedule,
 		prompt.WithDefaultInput("0 * * * *"),
 		prompt.WithFinalMessage("Custom Schedule:"),
 	)
@@ -277,12 +277,6 @@ func (o *initJobOpts) askCron() error {
 
 func getPresetSchedule(input string) string {
 	return fmt.Sprintf("@%s", strings.ToLower(input))
-}
-func durationValidation(in interface{}) error {
-	return nil
-}
-func cronValidation(in interface{}) error {
-	return nil
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
