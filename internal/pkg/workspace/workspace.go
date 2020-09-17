@@ -118,16 +118,30 @@ func (ws *Workspace) Summary() (*Summary, error) {
 
 // ServiceNames returns the names of the services in the workspace.
 func (ws *Workspace) ServiceNames() ([]string, error) {
-	return ws.WorkloadNames("service")
+	return ws.WorkloadNames(func(wlType string) bool {
+		for _, t := range manifest.ServiceTypes {
+			if wlType == t {
+				return true
+			}
+		}
+		return false
+	})
 }
 
 // JobNames returns the names of all jobs in the workspace.
 func (ws *Workspace) JobNames() ([]string, error) {
-	return ws.WorkloadNames("job")
+	return ws.WorkloadNames(func(wlType string) bool {
+		for _, t := range manifest.JobTypes {
+			if wlType == t {
+				return true
+			}
+		}
+		return false
+	})
 }
 
 // WorkloadNames returns the name of all workloads (either services or jobs) in the workspace.
-func (ws *Workspace) WorkloadNames(wlType string) ([]string, error) {
+func (ws *Workspace) WorkloadNames(match func(string) bool) ([]string, error) {
 	copilotPath, err := ws.CopilotDirPath()
 	if err != nil {
 		return nil, err
@@ -145,19 +159,16 @@ func (ws *Workspace) WorkloadNames(wlType string) ([]string, error) {
 			// Swallow the error because we don't want to include any services that we don't have permissions to read.
 			continue
 		}
-		manifestBytes, err := ws.ReadServiceManifest(f.Name())
+		manifestBytes, err := ws.ReadWorkloadManifest(f.Name())
 		if err != nil {
 			return nil, fmt.Errorf("read manifest for workload %s: %w", f.Name(), err)
 		}
-		switch wlType {
-		case "service":
-			if ws.isWorkloadType(manifestBytes, manifest.ServiceTypes) {
-				names = append(names, f.Name())
-			}
-		case "job":
-			if ws.isWorkloadType(manifestBytes, manifest.JobTypes) {
-				names = append(names, f.Name())
-			}
+		wlType, err := ws.readWorkloadType(manifestBytes)
+		if err != nil {
+			return nil, err
+		}
+		if match(wlType) {
+			names = append(names, f.Name())
 		}
 	}
 	return names, nil
@@ -342,23 +353,14 @@ func (ws *Workspace) CopilotDirPath() (string, error) {
 	}
 }
 
-// Workload is a description of what's associated with a given workload.
-type Workload struct {
-	WorkloadType string `yaml:"type"`
-}
-
-// isWorkloadType returns true if a manifest's type is one of the supported service types.
-func (ws *Workspace) isWorkloadType(mftBytes []byte, types []string) bool {
-	var wl Workload
-	if err := yaml.Unmarshal(mftBytes, &wl); err != nil {
-		return false
+func (ws *Workspace) readWorkloadType(dat []byte) (string, error) {
+	wl := struct {
+		Type string `yaml:"type"`
+	}{}
+	if err := yaml.Unmarshal(dat, &wl); err != nil {
+		return "", err
 	}
-	for _, wantedType := range types {
-		if wl.WorkloadType == wantedType {
-			return true
-		}
-	}
-	return false
+	return wl.Type, nil
 }
 
 // write flushes the data to a file under the copilot directory joined by path elements.
