@@ -118,7 +118,7 @@ func (ws *Workspace) Summary() (*Summary, error) {
 
 // ServiceNames returns the names of the services in the workspace.
 func (ws *Workspace) ServiceNames() ([]string, error) {
-	return ws.WorkloadNames(func(wlType string) bool {
+	return ws.workloadNames(func(wlType string) bool {
 		for _, t := range manifest.ServiceTypes {
 			if wlType == t {
 				return true
@@ -130,7 +130,7 @@ func (ws *Workspace) ServiceNames() ([]string, error) {
 
 // JobNames returns the names of all jobs in the workspace.
 func (ws *Workspace) JobNames() ([]string, error) {
-	return ws.WorkloadNames(func(wlType string) bool {
+	return ws.workloadNames(func(wlType string) bool {
 		for _, t := range manifest.JobTypes {
 			if wlType == t {
 				return true
@@ -140,8 +140,8 @@ func (ws *Workspace) JobNames() ([]string, error) {
 	})
 }
 
-// WorkloadNames returns the name of all workloads (either services or jobs) in the workspace.
-func (ws *Workspace) WorkloadNames(match func(string) bool) ([]string, error) {
+// workloadNames returns the name of all workloads (either services or jobs) in the workspace.
+func (ws *Workspace) workloadNames(match func(string) bool) ([]string, error) {
 	copilotPath, err := ws.CopilotDirPath()
 	if err != nil {
 		return nil, err
