@@ -22,6 +22,7 @@ const (
 	profileFlag = "profile"
 	yesFlag     = "yes"
 	jsonFlag    = "json"
+	allFlag     = "all"
 
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
@@ -85,6 +86,8 @@ const (
 	retriesFlag  = "retries"
 	timeoutFlag  = "timeout"
 	scheduleFlag = "schedule"
+
+	versionFlag = "version"
 )
 
 // Short flag names.
@@ -210,4 +213,6 @@ Accepts valid Go duration strings. For example: "2h", "1h30m", "900s".`
 	scheduleFlagDescription = `The schedule on which to run this job. 
 Accepts cron expressions of the format (M H DoM M DoW) and schedule definition strings. 
 For example: "0 * * * *", "@daily", "@weekly", "@every 1h30m".`
+
+	upgradeAllEnvsDescription = "Optional. Upgrade all environments."
 )
