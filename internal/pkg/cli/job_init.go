@@ -167,7 +167,6 @@ func (o *initJobOpts) Ask() error {
 	if err := o.askSchedule(); err != nil {
 		return err
 	}
-
 	return nil
 }
 

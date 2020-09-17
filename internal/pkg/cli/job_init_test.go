@@ -219,8 +219,8 @@ func TestJobInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, "Dockerfile", wantedJobname)), gomock.Eq(wkldInitDockerfilePathHelpPrompt), gomock.Any(), gomock.Any()).
-					Return("cuteness-aggragator/Dockerfile", nil)
+				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, "Dockerfile", wantedJobName)), gomock.Eq(wkldInitDockerfilePathHelpPrompt), gomock.Any(), gomock.Any()).
+					Return("cuteness-aggregator/Dockerfile", nil)
 			},
 			wantedErr:      nil,
 			wantedSchedule: wantedCronSchedule,
@@ -243,15 +243,53 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			inJobType:        wantedJobType,
 			inJobName:        wantedJobName,
 			inDockerfilePath: wantedDockerfilePath,
-			inJobSchedule:    wantedCronSchedule,
+			inJobSchedule:    "",
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, "Dockerfile", wantedJobname)), gomock.Eq(wkldInitDockerfilePathHelpPrompt), gomock.Any(), gomock.Any()).
+				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(rate, nil)
+				m.EXPECT().Get(
+					gomock.Eq(jobInitRatePrompt),
+					gomock.Eq(jobInitRateHelp),
+					gomock.Any(),
+					gomock.Any(),
+				).Return("1h", nil)
+			},
+			wantedErr:      nil,
+			wantedSchedule: wantedRate,
+		},
+		"error selecting schedule type": {
+			inJobType:        wantedJobType,
+			inJobName:        wantedJobName,
+			inDockerfilePath: wantedDockerfilePath,
+			inJobSchedule:    "",
+
+			mockFileSystem: func(mockFS afero.Fs) {},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(gomock.Eq(jobInitSchedulePrompt), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
-			wantedErr:      fmt.Errorf("get custom Dockerfile path: some error"),
-			wantedSchedule: wantedCronSchedule,
+			wantedErr: fmt.Errorf("get schedule type: some error"),
+		},
+		"error getting rate": {
+			inJobType:        wantedJobType,
+			inJobName:        wantedJobName,
+			inDockerfilePath: wantedDockerfilePath,
+			inJobSchedule:    "",
+
+			mockFileSystem: func(mockFS afero.Fs) {},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(gomock.Eq(jobInitSchedulePrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(rate, nil)
+				m.EXPECT().Get(
+					gomock.Eq(jobInitRatePrompt),
+					gomock.Eq(jobInitRateHelp),
+					gomock.Any(),
+					gomock.Any(),
+				).Return("", errors.New("some error"))
+			},
+			wantedErr: fmt.Errorf("get schedule rate: some error"),
 		},
 	}
 	for name, tc := range testCases {
