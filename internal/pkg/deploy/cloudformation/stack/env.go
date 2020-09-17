@@ -5,7 +5,6 @@ package stack
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -33,8 +32,7 @@ const (
 	dnsDelegationTemplatePath  = "custom-resources/dns-delegation.js"
 	enableLongARNsTemplatePath = "custom-resources/enable-long-arns.js"
 
-	// Parameter keys.
-	envParamIncludeLBKey             = "IncludePublicLoadBalancer"
+	// Mandatory parameter keys.
 	envParamAppNameKey               = "AppName"
 	envParamEnvNameKey               = "EnvironmentName"
 	envParamToolsAccountPrincipalKey = "ToolsAccountPrincipalARN"
@@ -42,10 +40,8 @@ const (
 	envParamAppDNSDelegationRoleKey  = "AppDNSDelegationRole"
 
 	// Output keys.
-	EnvOutputCFNExecutionRoleARN       = "CFNExecutionRoleARN"
-	EnvOutputManagerRoleKey            = "EnvironmentManagerRoleARN"
-	EnvOutputPublicLoadBalancerDNSName = "PublicLoadBalancerDNSName"
-	EnvOutputSubdomain                 = "EnvironmentSubdomain"
+	envOutputCFNExecutionRoleARN = "CFNExecutionRoleARN"
+	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
 
 	// Default parameter values
 	DefaultVPCCIDR            = "10.0.0.0/16"
@@ -105,10 +101,6 @@ func (e *EnvStackConfig) Template() (string, error) {
 // Parameters returns the parameters to be passed into a environment CloudFormation template.
 func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	return []*cloudformation.Parameter{
-		{
-			ParameterKey:   aws.String(envParamIncludeLBKey),
-			ParameterValue: aws.String(strconv.FormatBool(e.PublicLoadBalancer)),
-		},
 		{
 			ParameterKey:   aws.String(envParamAppNameKey),
 			ParameterValue: aws.String(e.AppName),
@@ -176,7 +168,7 @@ func (e *EnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.Environment
 		Prod:             e.Prod,
 		Region:           stackARN.Region,
 		AccountID:        stackARN.AccountID,
-		ManagerRoleARN:   stackOutputs[EnvOutputManagerRoleKey],
-		ExecutionRoleARN: stackOutputs[EnvOutputCFNExecutionRoleARN],
+		ManagerRoleARN:   stackOutputs[envOutputManagerRoleKey],
+		ExecutionRoleARN: stackOutputs[envOutputCFNExecutionRoleARN],
 	}, nil
 }

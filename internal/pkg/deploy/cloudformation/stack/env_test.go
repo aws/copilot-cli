@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -94,10 +93,6 @@ func TestEnvParameters(t *testing.T) {
 			input: deploymentInput,
 			want: []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(envParamIncludeLBKey),
-					ParameterValue: aws.String(strconv.FormatBool(deploymentInput.PublicLoadBalancer)),
-				},
-				{
 					ParameterKey:   aws.String(envParamAppNameKey),
 					ParameterValue: aws.String(deploymentInput.AppName),
 				},
@@ -122,10 +117,6 @@ func TestEnvParameters(t *testing.T) {
 		"with DNS": {
 			input: deploymentInputWithDNS,
 			want: []*cloudformation.Parameter{
-				{
-					ParameterKey:   aws.String(envParamIncludeLBKey),
-					ParameterValue: aws.String(strconv.FormatBool(deploymentInputWithDNS.PublicLoadBalancer)),
-				},
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
 					ParameterValue: aws.String(deploymentInputWithDNS.AppName),
@@ -297,11 +288,11 @@ func mockEnvironmentStack(stackArn, managerRoleARN, executionRoleARN string) *cl
 		StackId: aws.String(stackArn),
 		Outputs: []*cloudformation.Output{
 			{
-				OutputKey:   aws.String(EnvOutputManagerRoleKey),
+				OutputKey:   aws.String(envOutputManagerRoleKey),
 				OutputValue: aws.String(managerRoleARN),
 			},
 			{
-				OutputKey:   aws.String(EnvOutputCFNExecutionRoleARN),
+				OutputKey:   aws.String(envOutputCFNExecutionRoleARN),
 				OutputValue: aws.String(executionRoleARN),
 			},
 		},
