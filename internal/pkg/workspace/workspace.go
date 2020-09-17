@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
@@ -117,6 +118,30 @@ func (ws *Workspace) Summary() (*Summary, error) {
 
 // ServiceNames returns the names of the services in the workspace.
 func (ws *Workspace) ServiceNames() ([]string, error) {
+	return ws.workloadNames(func(wlType string) bool {
+		for _, t := range manifest.ServiceTypes {
+			if wlType == t {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+// JobNames returns the names of all jobs in the workspace.
+func (ws *Workspace) JobNames() ([]string, error) {
+	return ws.workloadNames(func(wlType string) bool {
+		for _, t := range manifest.JobTypes {
+			if wlType == t {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+// workloadNames returns the name of all workloads (either services or jobs) in the workspace.
+func (ws *Workspace) workloadNames(match func(string) bool) ([]string, error) {
 	copilotPath, err := ws.CopilotDirPath()
 	if err != nil {
 		return nil, err
@@ -134,7 +159,17 @@ func (ws *Workspace) ServiceNames() ([]string, error) {
 			// Swallow the error because we don't want to include any services that we don't have permissions to read.
 			continue
 		}
-		names = append(names, f.Name())
+		manifestBytes, err := ws.ReadWorkloadManifest(f.Name())
+		if err != nil {
+			return nil, fmt.Errorf("read manifest for workload %s: %w", f.Name(), err)
+		}
+		wlType, err := ws.readWorkloadType(manifestBytes)
+		if err != nil {
+			return nil, err
+		}
+		if match(wlType) {
+			names = append(names, f.Name())
+		}
 	}
 	return names, nil
 }
@@ -191,7 +226,7 @@ func (ws *Workspace) WritePipelineManifest(marshaler encoding.BinaryMarshaler) (
 }
 
 // DeleteWorkspaceFile removes the .workspace file under copilot/ directory.
-// This will be called during app delete, we do not want to delete any other generated files
+// This will be called during app delete, we do not want to delete any other generated files.
 func (ws *Workspace) DeleteWorkspaceFile() error {
 	return ws.fsUtils.Remove(filepath.Join(CopilotDirName, SummaryFileName))
 }
@@ -316,6 +351,16 @@ func (ws *Workspace) CopilotDirPath() (string, error) {
 		ManifestDirectoryName: CopilotDirName,
 		NumberOfLevelsChecked: maximumParentDirsToSearch,
 	}
+}
+
+func (ws *Workspace) readWorkloadType(dat []byte) (string, error) {
+	wl := struct {
+		Type string `yaml:"type"`
+	}{}
+	if err := yaml.Unmarshal(dat, &wl); err != nil {
+		return "", err
+	}
+	return wl.Type, nil
 }
 
 // write flushes the data to a file under the copilot directory joined by path elements.
