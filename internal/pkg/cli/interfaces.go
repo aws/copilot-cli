@@ -212,11 +212,11 @@ type wsFileDeleter interface {
 }
 
 type svcManifestReader interface {
-	ReadServiceManifest(svcName string) ([]byte, error)
+	ReadWorkloadManifest(svcName string) ([]byte, error)
 }
 
 type svcManifestWriter interface {
-	WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
+	WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
 }
 
 type jobManifestReader interface {

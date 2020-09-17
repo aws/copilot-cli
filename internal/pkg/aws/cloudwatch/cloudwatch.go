@@ -33,7 +33,7 @@ type resourceGetter interface {
 
 // CloudWatch wraps an Amazon CloudWatch client.
 type CloudWatch struct {
-	cwClient api
+	client   api
 	rgClient resourceGetter
 }
 
@@ -50,37 +50,39 @@ type AlarmStatus struct {
 // New returns a CloudWatch struct configured against the input session.
 func New(s *session.Session) *CloudWatch {
 	return &CloudWatch{
-		cwClient: cloudwatch.New(s),
+		client:   cloudwatch.New(s),
 		rgClient: rg.New(s),
 	}
 }
 
-// GetAlarmsWithTags returns all the CloudWatch alarms that have the resource tags.
-func (cw *CloudWatch) GetAlarmsWithTags(tags map[string]string) ([]AlarmStatus, error) {
-	var alarmNames []*string
-
+// AlarmsWithTags returns all the CloudWatch alarms that have the resource tags.
+func (cw *CloudWatch) AlarmsWithTags(tags map[string]string) ([]AlarmStatus, error) {
+	var alarmNames []string
 	resources, err := cw.rgClient.GetResourcesByTags(cloudwatchResourceType, tags)
 	if err != nil {
 		return nil, err
 	}
-
 	for _, resource := range resources {
-		name, err := cw.getAlarmName(resource.ARN)
+		name, err := getAlarmName(resource.ARN)
 		if err != nil {
 			return nil, err
 		}
 		alarmNames = append(alarmNames, name)
 	}
+	return cw.AlarmStatus(alarmNames)
+}
 
-	// Return an empty array since DescribeAlarms will return all alarms if "AlarmNames" is an empty array.
-	if len(alarmNames) == 0 {
-		return []AlarmStatus{}, nil
+// AlarmStatus returns the status of each given alarm name.
+func (cw *CloudWatch) AlarmStatus(alarms []string) ([]AlarmStatus, error) {
+	if len(alarms) == 0 {
+		return nil, nil
 	}
 	var alarmStatus []AlarmStatus
+	var err error
 	alarmResp := &cloudwatch.DescribeAlarmsOutput{}
 	for {
-		alarmResp, err = cw.cwClient.DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
-			AlarmNames: alarmNames,
+		alarmResp, err = cw.client.DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
+			AlarmNames: aws.StringSlice(alarms),
 			NextToken:  alarmResp.NextToken,
 		})
 		if err != nil {
@@ -93,21 +95,6 @@ func (cw *CloudWatch) GetAlarmsWithTags(tags map[string]string) ([]AlarmStatus, 
 		}
 	}
 	return alarmStatus, nil
-}
-
-// getAlarmName gets the alarm name given a specific alarm ARN.
-// For example: arn:aws:cloudwatch:us-west-2:1234567890:alarm:SDc-ReadCapacityUnitsLimit-BasicAlarm
-// returns SDc-ReadCapacityUnitsLimit-BasicAlarm
-func (cw *CloudWatch) getAlarmName(alarmArn string) (*string, error) {
-	resp, err := arn.Parse(alarmArn)
-	if err != nil {
-		return nil, fmt.Errorf("parse alarm ARN %s: %w", alarmArn, err)
-	}
-	alarmNameList := strings.Split(resp.Resource, ":")
-	if len(alarmNameList) != 2 {
-		return nil, fmt.Errorf("cannot parse alarm ARN resource %s", resp.Resource)
-	}
-	return aws.String(alarmNameList[1]), nil
 }
 
 func (cw *CloudWatch) compositeAlarmsStatus(alarms []*cloudwatch.CompositeAlarm) []AlarmStatus {
@@ -138,4 +125,19 @@ func (cw *CloudWatch) metricAlarmsStatus(alarms []*cloudwatch.MetricAlarm) []Ala
 		})
 	}
 	return alarmStatusList
+}
+
+// getAlarmName gets the alarm name given a specific alarm ARN.
+// For example: arn:aws:cloudwatch:us-west-2:1234567890:alarm:SDc-ReadCapacityUnitsLimit-BasicAlarm
+// returns SDc-ReadCapacityUnitsLimit-BasicAlarm
+func getAlarmName(alarmARN string) (string, error) {
+	resp, err := arn.Parse(alarmARN)
+	if err != nil {
+		return "", fmt.Errorf("parse alarm ARN %s: %w", alarmARN, err)
+	}
+	alarmNameList := strings.Split(resp.Resource, ":")
+	if len(alarmNameList) != 2 {
+		return "", fmt.Errorf("unknown ARN resource format %s", resp.Resource)
+	}
+	return alarmNameList[1], nil
 }

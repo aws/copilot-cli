@@ -28,7 +28,7 @@ const (
 )
 
 var testLBWebServiceManifest = manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
-	ServiceProps: &manifest.ServiceProps{
+	WorkloadProps: &manifest.WorkloadProps{
 		Name:       "frontend",
 		Dockerfile: "frontend/Dockerfile",
 	},
@@ -106,12 +106,23 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				c.parser = m
 			},
 			wantedTemplate: "",
-			wantedError:    errors.New("some error"),
+			wantedError:    fmt.Errorf("read rule priority lambda: some error"),
+		},
+		"unavailable desired count lambda template": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
+				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
+				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(nil, errors.New("some error"))
+				c.parser = m
+			},
+			wantedTemplate: "",
+			wantedError:    fmt.Errorf("read desired count lambda: some error"),
 		},
 		"unexpected addons parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				addons := mockTemplater{err: errors.New("some error")}
 				c.parser = m
 				c.wkld.addons = addons
@@ -123,6 +134,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).Return(nil, errors.New("some error"))
 				addons := mockTemplater{
 					tpl: `Outputs:
@@ -134,14 +146,16 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			},
 
 			wantedTemplate: "",
-			wantedError:    errors.New("some error"),
+			wantedError:    fmt.Errorf("some error"),
 		},
 		"render template without addons": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.ServiceOpts{
 					RulePriorityLambda: "lambda",
+					DesiredCountLambda: "something",
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 
 				addons := mockTemplater{err: &addon.ErrDirNotExist{}}
@@ -155,6 +169,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.ServiceOpts{
 					NestedStack: &template.ServiceNestedStackOpts{
 						StackName:       addon.StackName,
@@ -163,6 +178,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 					},
 					RulePriorityLambda: "lambda",
+					DesiredCountLambda: "something",
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{
 					tpl: `Resources:
@@ -221,15 +237,19 @@ Outputs:
 			template, err := conf.Template()
 
 			// THEN
-			require.Equal(t, tc.wantedError, err)
-			require.Equal(t, tc.wantedTemplate, template)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedTemplate, template)
+			}
 		})
 	}
 }
 
 func TestLoadBalancedWebService_Parameters(t *testing.T) {
 	baseProps := &manifest.LoadBalancedWebServiceProps{
-		ServiceProps: &manifest.ServiceProps{
+		WorkloadProps: &manifest.WorkloadProps{
 			Name:       "frontend",
 			Dockerfile: "frontend/Dockerfile",
 		},
@@ -271,7 +291,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 	}
 	testLBWebServiceManifestWithStickiness.Stickiness = aws.Bool(true)
 	testLBWebServiceManifestWithBadSidecar := manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
-		ServiceProps: &manifest.ServiceProps{
+		WorkloadProps: &manifest.WorkloadProps{
 			Name:       "frontend",
 			Dockerfile: "frontend/Dockerfile",
 		},

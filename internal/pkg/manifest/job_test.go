@@ -20,7 +20,7 @@ func TestScheduledJob_MarshalBinary(t *testing.T) {
 	}{
 		"without timeout or retries": {
 			inProps: ScheduledJobProps{
-				ServiceProps: &ServiceProps{
+				WorkloadProps: &WorkloadProps{
 					Name:       "cuteness-aggregator",
 					Dockerfile: "./cuteness-aggregator/Dockerfile",
 				},
@@ -30,7 +30,7 @@ func TestScheduledJob_MarshalBinary(t *testing.T) {
 		},
 		"fully specified using cron schedule": {
 			inProps: ScheduledJobProps{
-				ServiceProps: &ServiceProps{
+				WorkloadProps: &WorkloadProps{
 					Name:       "cuteness-aggregator",
 					Dockerfile: "./cuteness-aggregator/Dockerfile",
 				},
@@ -42,7 +42,7 @@ func TestScheduledJob_MarshalBinary(t *testing.T) {
 		},
 		"with timeout and no retries": {
 			inProps: ScheduledJobProps{
-				ServiceProps: &ServiceProps{
+				WorkloadProps: &WorkloadProps{
 					Name:       "cuteness-aggregator",
 					Dockerfile: "./cuteness-aggregator/Dockerfile",
 				},
@@ -54,7 +54,7 @@ func TestScheduledJob_MarshalBinary(t *testing.T) {
 		},
 		"with retries and no timeout": {
 			inProps: ScheduledJobProps{
-				ServiceProps: &ServiceProps{
+				WorkloadProps: &WorkloadProps{
 					Name:       "cuteness-aggregator",
 					Dockerfile: "./cuteness-aggregator/Dockerfile",
 				},

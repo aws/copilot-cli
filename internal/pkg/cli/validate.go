@@ -10,6 +10,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/robfig/cron/v3"
 
 	"github.com/spf13/afero"
 
@@ -37,6 +40,9 @@ var (
 	errDDBAttributeBadFormat              = errors.New("value must be of the form <name>:<T> where T is one of S, N, or B")
 	errTooManyLSIKeys                     = errors.New("number of specified LSI sort keys must be 5 or less")
 	errDomainInvalid                      = errors.New("value must contain at least one '.' character")
+	errDurationInvalid                    = errors.New("value must be a valid Go duration string (example: 1h30m)")
+	errDurationBadUnits                   = errors.New("duration cannot be in units smaller than a second")
+	errScheduleInvalid                    = errors.New("value must be a valid cron expression (examples: @weekly; @every 30m; 0 0 * * 0)")
 )
 
 var (
@@ -113,6 +119,24 @@ func validateSvcType(val interface{}) error {
 	return fmt.Errorf("invalid service type %s: must be one of %s", svcType, prettify(manifest.ServiceTypes))
 }
 
+func validateJobName(val interface{}) error {
+	if err := basicNameValidation(val); err != nil {
+		return fmt.Errorf("job name %v is invalid: %w", val, err)
+	}
+	return nil
+}
+
+func validateSchedule(sched string) error {
+	return validateCron(sched)
+}
+
+func validateTimeout(timeout string) error {
+	if err := validateDuration(timeout, 1*time.Second); err != nil {
+		return fmt.Errorf("timeout value %s is invalid: %w", timeout, err)
+	}
+	return nil
+}
+
 func validateDomainName(val interface{}) error {
 	domainName, ok := val.(string)
 	if !ok {
@@ -175,6 +199,38 @@ func basicNameValidation(val interface{}) error {
 		return errValueBadFormat
 	}
 
+	return nil
+}
+
+func validateCron(sched string) error {
+	every := "@every "
+	if strings.HasPrefix(sched, every) {
+		if err := validateDuration(sched[len(every):], 60*time.Second); err != nil {
+			if err == errDurationInvalid {
+				return fmt.Errorf("interval %s must include a valid Go duration string (example: @every 1h30m)", sched)
+			}
+			return fmt.Errorf("interval %s is invalid: %s", sched, err)
+		}
+	}
+	_, err := cron.ParseStandard(sched)
+	if err != nil {
+		return fmt.Errorf("schedule %s is invalid: %s", sched, errScheduleInvalid)
+	}
+	return nil
+}
+
+func validateDuration(duration string, min time.Duration) error {
+	parsedDuration, err := time.ParseDuration(duration)
+	if err != nil {
+		return errDurationInvalid
+	}
+	// This checks if the duration has parts smaller than a whole second.
+	if parsedDuration > parsedDuration.Truncate(time.Second) {
+		return errDurationBadUnits
+	}
+	if parsedDuration < min {
+		return fmt.Errorf("duration must be %v or greater", min)
+	}
 	return nil
 }
 
