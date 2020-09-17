@@ -18,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/templates"
+	"github.com/gobuffalo/packd"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -509,7 +510,7 @@ func TestCloudFormation_GetRegionalAppResources(t *testing.T) {
 					return tc.createRegionalMockClient(ctrl)
 				},
 				appStackSet: tc.mockStackSet(t, ctrl),
-				box:         boxWithTemplateFile(),
+				box:         packd.NewMemoryBox(),
 			}
 
 			// WHEN
@@ -594,7 +595,7 @@ func TestCloudFormation_GetAppResourcesByRegion(t *testing.T) {
 					return tc.createRegionalMockClient(ctrl)
 				},
 				appStackSet: tc.mockStackSet(t, ctrl),
-				box:         boxWithTemplateFile(),
+				box:         packd.NewMemoryBox(),
 			}
 
 			// WHEN
