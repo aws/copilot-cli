@@ -32,23 +32,23 @@ func TestJobDeployOpts_Validate(t *testing.T) {
 		},
 		"with workspace error": {
 			inAppName: "phonetool",
-			inJobName: "frontend",
+			inJobName: "resizer",
 			mockWs: func(m *mocks.MockwsJobDirReader) {
 				m.EXPECT().JobNames().Return(nil, errors.New("some error"))
 			},
 			mockStore: func(m *mocks.Mockstore) {},
 
-			wantedError: errors.New("list services in the workspace: some error"),
+			wantedError: errors.New("list jobs in the workspace: some error"),
 		},
-		"with service not in workspace": {
+		"with job not in workspace": {
 			inAppName: "phonetool",
-			inJobName: "frontend",
+			inJobName: "resizer",
 			mockWs: func(m *mocks.MockwsJobDirReader) {
 				m.EXPECT().JobNames().Return([]string{}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {},
 
-			wantedError: errors.New("service frontend not found in the workspace"),
+			wantedError: errors.New("job resizer not found in the workspace"),
 		},
 		"with unknown environment": {
 			inAppName: "phonetool",
@@ -63,10 +63,10 @@ func TestJobDeployOpts_Validate(t *testing.T) {
 		},
 		"successful validation": {
 			inAppName: "phonetool",
-			inJobName: "frontend",
+			inJobName: "resizer",
 			inEnvName: "test",
 			mockWs: func(m *mocks.MockwsJobDirReader) {
-				m.EXPECT().JobNames().Return([]string{"frontend"}, nil)
+				m.EXPECT().JobNames().Return([]string{"resizer"}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").

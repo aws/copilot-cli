@@ -219,10 +219,6 @@ type svcManifestWriter interface {
 	WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
 }
 
-type jobManifestReader interface {
-	ReadJobManifest(jobName string) ([]byte, error)
-}
-
 type jobManifestWriter interface {
 	WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error)
 }
@@ -261,11 +257,15 @@ type wsJobLister interface {
 
 type wsJobReader interface {
 	wsJobLister
-	jobManifestReader
 }
 
 type wsJobDirReader interface {
 	wsJobReader
+}
+
+type JobDirManifestWriter interface {
+	jobManifestWriter
+	CopilotDirPath() (string, error)
 }
 
 type wsPipelineReader interface {
