@@ -7,13 +7,12 @@ package main
 import (
 	"os"
 
-	"github.com/spf13/cobra"
-
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/cli"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/version"
+	"github.com/spf13/cobra"
 )
 
 func init() {

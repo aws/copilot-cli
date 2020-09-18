@@ -4,11 +4,10 @@
 package cli
 
 import (
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // BuildEnvCmd is the top level command for environments.

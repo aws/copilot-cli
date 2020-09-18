@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
@@ -182,7 +183,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtSvcInitDockerfilePrompt, "Dockerfile", wantedSvcName)), svcInitDockerfileHelpPrompt, gomock.Eq(
+				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.Emphasize("Dockerfile"), wantedSvcName)), wkldInitDockerfileHelpPrompt, gomock.Eq(
 					[]string{
 						"./Dockerfile",
 						"backend/Dockerfile",
@@ -201,7 +202,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, "Dockerfile", wantedSvcName)), gomock.Eq(svcInitDockerfilePathHelpPrompt), gomock.Any(), gomock.Any()).
+				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, "Dockerfile", wantedSvcName)), gomock.Eq(wkldInitDockerfilePathHelpPrompt), gomock.Any(), gomock.Any()).
 					Return("frontend/Dockerfile", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
@@ -215,7 +216,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtSvcInitDockerfilePathPrompt, "Dockerfile", wantedSvcName)), gomock.Eq(svcInitDockerfilePathHelpPrompt), gomock.Any(), gomock.Any()).
+				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, "Dockerfile", wantedSvcName)), gomock.Eq(wkldInitDockerfilePathHelpPrompt), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
@@ -235,7 +236,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtSvcInitDockerfilePrompt, "Dockerfile", wantedSvcName)), gomock.Any(), gomock.Eq(
+				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, "Dockerfile", wantedSvcName)), gomock.Any(), gomock.Eq(
 					[]string{
 						"./Dockerfile",
 						"backend/Dockerfile",

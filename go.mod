@@ -18,12 +18,14 @@ require (
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c // indirect
 	github.com/imdario/mergo v0.3.9
 	github.com/karrick/godirwalk v1.15.6 // indirect
+	github.com/lnquy/cron v1.0.1
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mitchellh/mapstructure v1.3.0 // indirect
 	github.com/moby/buildkit v0.7.2
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.2
 	github.com/pelletier/go-toml v1.8.0 // indirect
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/sirupsen/logrus v1.6.0 // indirect
 	github.com/spf13/afero v1.3.5
 	github.com/spf13/cast v1.3.1 // indirect
