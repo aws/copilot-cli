@@ -225,7 +225,7 @@ func validateDuration(duration string, min time.Duration) error {
 		return errDurationInvalid
 	}
 	// This checks if the duration has parts smaller than a whole second.
-	if parsedDuration.Seconds() != float64(int64(parsedDuration.Seconds())) {
+	if parsedDuration > parsedDuration.Truncate(time.Second) {
 		return errDurationBadUnits
 	}
 	if parsedDuration < min {

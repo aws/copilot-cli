@@ -189,6 +189,24 @@ var _ = Describe("Multiple Service App", func() {
 			}
 		})
 
+		It("svc status should include the service, tasks, and alarm status", func() {
+			svcName := "front-end"
+			svc, svcStatusErr := cli.SvcStatus(&client.SvcStatusRequest{
+				AppName: appName,
+				Name:    svcName,
+				EnvName: "test",
+			})
+			Expect(svcStatusErr).NotTo(HaveOccurred())
+			// Service should be active.
+			Expect(svc.Service.Status).To(Equal("ACTIVE"))
+			// Desired count should be minimum auto scaling number.
+			Expect(svc.Service.DesiredCount).To(Equal(int64(2)))
+			// Should have correct number of running tasks.
+			Expect(len(svc.Tasks)).To(Equal(2))
+			// Should have correct number of auto scaling alarms.
+			Expect(len(svc.Alarms)).To(Equal(4))
+		})
+
 		It("env show should include the name and type for front-end, www, and back-end svcs", func() {
 			envShowOutput, envShowErr := cli.EnvShow(&client.EnvShowRequest{
 				AppName: appName,

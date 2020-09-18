@@ -14,19 +14,19 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-// CLI is a wrapper around os.execs
+// CLI is a wrapper around os.execs.
 type CLI struct {
 	path string
 }
 
-// AppInitRequest contains the parameters for calling copilot app init
+// AppInitRequest contains the parameters for calling copilot app init.
 type AppInitRequest struct {
 	AppName string
 	Domain  string
 	Tags    map[string]string
 }
 
-// InitRequest contains the parameters for calling copilot init
+// InitRequest contains the parameters for calling copilot init.
 type InitRequest struct {
 	AppName    string
 	SvcName    string
@@ -37,7 +37,7 @@ type InitRequest struct {
 	SvcPort    string
 }
 
-// EnvInitRequest contains the parameters for calling copilot env init
+// EnvInitRequest contains the parameters for calling copilot env init.
 type EnvInitRequest struct {
 	AppName       string
 	EnvName       string
@@ -49,7 +49,7 @@ type EnvInitRequest struct {
 }
 
 // EnvInitRequestVPCImport contains the parameters for configuring VPC import when
-// calling copilot env init
+// calling copilot env init.
 type EnvInitRequestVPCImport struct {
 	ID               string
 	PublicSubnetIDs  string
@@ -62,20 +62,20 @@ func (e EnvInitRequestVPCImport) IsSet() bool {
 }
 
 // EnvInitRequestVPCConfig contains the parameters for configuring VPC config when
-// calling copilot env init
+// calling copilot env init.
 type EnvInitRequestVPCConfig struct {
 	CIDR               string
 	PublicSubnetCIDRs  string
 	PrivateSubnetCIDRs string
 }
 
-// EnvShowRequest contains the parameters for calling copilot env show
+// EnvShowRequest contains the parameters for calling copilot env show.
 type EnvShowRequest struct {
 	AppName string
 	EnvName string
 }
 
-// SvcInitRequest contains the parameters for calling copilot svc init
+// SvcInitRequest contains the parameters for calling copilot svc init.
 type SvcInitRequest struct {
 	Name       string
 	SvcType    string
@@ -83,13 +83,20 @@ type SvcInitRequest struct {
 	SvcPort    string
 }
 
-// SvcShowRequest contains the parameters for calling copilot svc show
+// SvcShowRequest contains the parameters for calling copilot svc show.
 type SvcShowRequest struct {
 	Name    string
 	AppName string
 }
 
-// SvcLogsRequest contains the parameters for calling copilot svc logs
+// SvcStatusRequest contains the parameters for calling copilot svc status.
+type SvcStatusRequest struct {
+	Name    string
+	AppName string
+	EnvName string
+}
+
+// SvcLogsRequest contains the parameters for calling copilot svc logs.
 type SvcLogsRequest struct {
 	AppName string
 	EnvName string
@@ -97,7 +104,7 @@ type SvcLogsRequest struct {
 	Since   string
 }
 
-// SvcDeployInput contains the parameters for calling copilot svc deploy
+// SvcDeployInput contains the parameters for calling copilot svc deploy.
 type SvcDeployInput struct {
 	Name     string
 	EnvName  string
@@ -223,6 +230,28 @@ func (cli *CLI) SvcShow(opts *SvcShowRequest) (*SvcShowOutput, error) {
 	}
 
 	return toSvcShowOutput(svcJSON)
+}
+
+/*SvcStatus runs:
+copilot svc status
+	--app $p
+	--env $e
+	--name $n
+	--json
+*/
+func (cli *CLI) SvcStatus(opts *SvcStatusRequest) (*SvcStatusOutput, error) {
+	svcJSON, svcStatusErr := cli.exec(
+		exec.Command(cli.path, "svc", "status",
+			"--app", opts.AppName,
+			"--name", opts.Name,
+			"--env", opts.EnvName,
+			"--json"))
+
+	if svcStatusErr != nil {
+		return nil, svcStatusErr
+	}
+
+	return toSvcStatusOutput(svcJSON)
 }
 
 /*SvcDelete runs:
