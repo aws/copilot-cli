@@ -306,6 +306,59 @@ func (mr *MockWsWorkloadListerMockRecorder) JobNames() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JobNames", reflect.TypeOf((*MockWsWorkloadLister)(nil).JobNames))
 }
 
+// MockWsSvcConfigGetter is a mock of WsSvcConfigGetter interface
+type MockWsSvcConfigGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockWsSvcConfigGetterMockRecorder
+}
+
+// MockWsSvcConfigGetterMockRecorder is the mock recorder for MockWsSvcConfigGetter
+type MockWsSvcConfigGetterMockRecorder struct {
+	mock *MockWsSvcConfigGetter
+}
+
+// NewMockWsSvcConfigGetter creates a new mock instance
+func NewMockWsSvcConfigGetter(ctrl *gomock.Controller) *MockWsSvcConfigGetter {
+	mock := &MockWsSvcConfigGetter{ctrl: ctrl}
+	mock.recorder = &MockWsSvcConfigGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockWsSvcConfigGetter) EXPECT() *MockWsSvcConfigGetterMockRecorder {
+	return m.recorder
+}
+
+// ServiceNames mocks base method
+func (m *MockWsSvcConfigGetter) ServiceNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceNames indicates an expected call of ServiceNames
+func (mr *MockWsSvcConfigGetterMockRecorder) ServiceNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockWsSvcConfigGetter)(nil).ServiceNames))
+}
+
+// ListDockerfiles mocks base method
+func (m *MockWsSvcConfigGetter) ListDockerfiles() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDockerfiles")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDockerfiles indicates an expected call of ListDockerfiles
+func (mr *MockWsSvcConfigGetterMockRecorder) ListDockerfiles() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDockerfiles", reflect.TypeOf((*MockWsSvcConfigGetter)(nil).ListDockerfiles))
+}
+
 // MockDeployStoreClient is a mock of DeployStoreClient interface
 type MockDeployStoreClient struct {
 	ctrl     *gomock.Controller

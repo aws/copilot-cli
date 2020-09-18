@@ -19,6 +19,7 @@ import (
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
+	prompt "github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	selector "github.com/aws/copilot-cli/internal/pkg/term/selector"
 	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
 	gomock "github.com/golang/mock/gomock"
@@ -1911,6 +1912,44 @@ func (mr *MockwsFileDeleterMockRecorder) DeleteWorkspaceFile() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkspaceFile", reflect.TypeOf((*MockwsFileDeleter)(nil).DeleteWorkspaceFile))
 }
 
+// MockdockerfileLister is a mock of dockerfileLister interface
+type MockdockerfileLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockdockerfileListerMockRecorder
+}
+
+// MockdockerfileListerMockRecorder is the mock recorder for MockdockerfileLister
+type MockdockerfileListerMockRecorder struct {
+	mock *MockdockerfileLister
+}
+
+// NewMockdockerfileLister creates a new mock instance
+func NewMockdockerfileLister(ctrl *gomock.Controller) *MockdockerfileLister {
+	mock := &MockdockerfileLister{ctrl: ctrl}
+	mock.recorder = &MockdockerfileListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockdockerfileLister) EXPECT() *MockdockerfileListerMockRecorder {
+	return m.recorder
+}
+
+// ListDockerfiles mocks base method
+func (m *MockdockerfileLister) ListDockerfiles() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDockerfiles")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDockerfiles indicates an expected call of ListDockerfiles
+func (mr *MockdockerfileListerMockRecorder) ListDockerfiles() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDockerfiles", reflect.TypeOf((*MockdockerfileLister)(nil).ListDockerfiles))
+}
+
 // MocksvcManifestReader is a mock of svcManifestReader interface
 type MocksvcManifestReader struct {
 	ctrl     *gomock.Controller
@@ -1972,6 +2011,21 @@ func (m *MocksvcManifestWriter) EXPECT() *MocksvcManifestWriterMockRecorder {
 	return m.recorder
 }
 
+// ListDockerfiles mocks base method
+func (m *MocksvcManifestWriter) ListDockerfiles() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDockerfiles")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDockerfiles indicates an expected call of ListDockerfiles
+func (mr *MocksvcManifestWriterMockRecorder) ListDockerfiles() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDockerfiles", reflect.TypeOf((*MocksvcManifestWriter)(nil).ListDockerfiles))
+}
+
 // WriteWorkloadManifest mocks base method
 func (m *MocksvcManifestWriter) WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error) {
 	m.ctrl.T.Helper()
@@ -2008,6 +2062,21 @@ func NewMocksvcDirManifestWriter(ctrl *gomock.Controller) *MocksvcDirManifestWri
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MocksvcDirManifestWriter) EXPECT() *MocksvcDirManifestWriterMockRecorder {
 	return m.recorder
+}
+
+// ListDockerfiles mocks base method
+func (m *MocksvcDirManifestWriter) ListDockerfiles() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDockerfiles")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDockerfiles indicates an expected call of ListDockerfiles
+func (mr *MocksvcDirManifestWriterMockRecorder) ListDockerfiles() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDockerfiles", reflect.TypeOf((*MocksvcDirManifestWriter)(nil).ListDockerfiles))
 }
 
 // WriteWorkloadManifest mocks base method
@@ -4082,6 +4151,83 @@ func (mr *MockwsSelectorMockRecorder) Service(prompt, help interface{}) *gomock.
 func (m *MockwsSelector) Job(prompt, help string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Job", prompt, help)
+// MockinitJobSelector is a mock of initJobSelector interface
+type MockinitJobSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockinitJobSelectorMockRecorder
+}
+
+// MockinitJobSelectorMockRecorder is the mock recorder for MockinitJobSelector
+type MockinitJobSelectorMockRecorder struct {
+	mock *MockinitJobSelector
+}
+
+// NewMockinitJobSelector creates a new mock instance
+func NewMockinitJobSelector(ctrl *gomock.Controller) *MockinitJobSelector {
+	mock := &MockinitJobSelector{ctrl: ctrl}
+	mock.recorder = &MockinitJobSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockinitJobSelector) EXPECT() *MockinitJobSelectorMockRecorder {
+	return m.recorder
+}
+
+// Dockerfile mocks base method
+func (m *MockinitJobSelector) Dockerfile(selPrompt, getPrompt, selHelp, getHelp string, pv prompt.ValidatorFunc) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Dockerfile", selPrompt, getPrompt, selHelp, getHelp, pv)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Dockerfile indicates an expected call of Dockerfile
+func (mr *MockinitJobSelectorMockRecorder) Dockerfile(selPrompt, getPrompt, selHelp, getHelp, pv interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dockerfile", reflect.TypeOf((*MockinitJobSelector)(nil).Dockerfile), selPrompt, getPrompt, selHelp, getHelp, pv)
+}
+
+// Schedule mocks base method
+func (m *MockinitJobSelector) Schedule() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Schedule")
+}
+
+// Schedule indicates an expected call of Schedule
+func (mr *MockinitJobSelectorMockRecorder) Schedule() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Schedule", reflect.TypeOf((*MockinitJobSelector)(nil).Schedule))
+}
+
+// MockinitSvcSelector is a mock of initSvcSelector interface
+type MockinitSvcSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockinitSvcSelectorMockRecorder
+}
+
+// MockinitSvcSelectorMockRecorder is the mock recorder for MockinitSvcSelector
+type MockinitSvcSelectorMockRecorder struct {
+	mock *MockinitSvcSelector
+}
+
+// NewMockinitSvcSelector creates a new mock instance
+func NewMockinitSvcSelector(ctrl *gomock.Controller) *MockinitSvcSelector {
+	mock := &MockinitSvcSelector{ctrl: ctrl}
+	mock.recorder = &MockinitSvcSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockinitSvcSelector) EXPECT() *MockinitSvcSelectorMockRecorder {
+	return m.recorder
+}
+
+// Dockerfile mocks base method
+func (m *MockinitSvcSelector) Dockerfile(selPrompt, getPrompt, selHelp, getHelp string, pv prompt.ValidatorFunc) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Dockerfile", selPrompt, getPrompt, selHelp, getHelp, pv)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -4091,6 +4237,10 @@ func (m *MockwsSelector) Job(prompt, help string) (string, error) {
 func (mr *MockwsSelectorMockRecorder) Job(prompt, help interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Job", reflect.TypeOf((*MockwsSelector)(nil).Job), prompt, help)
+// Dockerfile indicates an expected call of Dockerfile
+func (mr *MockinitSvcSelectorMockRecorder) Dockerfile(selPrompt, getPrompt, selHelp, getHelp, pv interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dockerfile", reflect.TypeOf((*MockinitSvcSelector)(nil).Dockerfile), selPrompt, getPrompt, selHelp, getHelp, pv)
 }
 
 // Mockec2Selector is a mock of ec2Selector interface

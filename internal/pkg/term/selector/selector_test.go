@@ -861,3 +861,90 @@ func TestSelect_Application(t *testing.T) {
 		})
 	}
 }
+
+func TestWorkspaceSelect_Dockerfile(t *testing.T) {
+	testCases := map[string]struct{
+
+	}:
+	"choose an existing Dockerfile": {
+		inSvcType:        wantedSvcType,
+		inSvcName:        wantedSvcName,
+		inSvcPort:        wantedSvcPort,
+		inDockerfilePath: "",
+
+		mockFileSystem: func(mockFS afero.Fs) {
+			mockFS.MkdirAll("frontend", 0755)
+			mockFS.MkdirAll("backend", 0755)
+
+			afero.WriteFile(mockFS, "Dockerfile", []byte("FROM nginx"), 0644)
+			afero.WriteFile(mockFS, "frontend/Dockerfile", []byte("FROM nginx"), 0644)
+			afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
+		},
+		mockPrompt: func(m *mocks.Mockprompter) {
+			m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.Emphasize("Dockerfile"), wantedSvcName)), wkldInitDockerfileHelpPrompt, gomock.Eq(
+				[]string{
+					"./Dockerfile",
+					"backend/Dockerfile",
+					"frontend/Dockerfile",
+				}), gomock.Any()).
+				Return("frontend/Dockerfile", nil)
+		},
+		mockDockerfile: func(m *mocks.MockdockerfileParser) {},
+		wantedErr:      nil,
+	},
+	"prompts user for custom path if fail to find Dockerfiles": {
+		inSvcType:        wantedSvcType,
+		inSvcName:        wantedSvcName,
+		inSvcPort:        wantedSvcPort,
+		inDockerfilePath: "",
+
+		mockFileSystem: func(mockFS afero.Fs) {},
+		mockPrompt: func(m *mocks.Mockprompter) {
+			m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, "Dockerfile", wantedSvcName)), gomock.Eq(wkldInitDockerfilePathHelpPrompt), gomock.Any(), gomock.Any()).
+				Return("frontend/Dockerfile", nil)
+		},
+		mockDockerfile: func(m *mocks.MockdockerfileParser) {},
+		wantedErr:      nil,
+	},
+	"returns an error if fail to get custom Dockerfile path": {
+		inSvcType:        wantedSvcType,
+		inSvcName:        wantedSvcName,
+		inSvcPort:        wantedSvcPort,
+		inDockerfilePath: "",
+
+		mockFileSystem: func(mockFS afero.Fs) {},
+		mockPrompt: func(m *mocks.Mockprompter) {
+			m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, "Dockerfile", wantedSvcName)), gomock.Eq(wkldInitDockerfilePathHelpPrompt), gomock.Any(), gomock.Any()).
+				Return("", errors.New("some error"))
+		},
+		mockDockerfile: func(m *mocks.MockdockerfileParser) {},
+		wantedErr:      fmt.Errorf("get custom Dockerfile path: some error"),
+	},
+	"returns an error if fail to select Dockerfile": {
+		inSvcType:        wantedSvcType,
+		inSvcName:        wantedSvcName,
+		inDockerfilePath: "",
+
+		mockFileSystem: func(mockFS afero.Fs) {
+			mockFS.MkdirAll("frontend", 0755)
+			mockFS.MkdirAll("backend", 0755)
+
+			afero.WriteFile(mockFS, "Dockerfile", []byte("FROM nginx"), 0644)
+			afero.WriteFile(mockFS, "frontend/Dockerfile", []byte("FROM nginx"), 0644)
+			afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
+		},
+		mockPrompt: func(m *mocks.Mockprompter) {
+			m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, "Dockerfile", wantedSvcName)), gomock.Any(), gomock.Eq(
+				[]string{
+					"./Dockerfile",
+					"backend/Dockerfile",
+					"frontend/Dockerfile",
+				}), gomock.Any()).
+				Return("", errors.New("some error"))
+		},
+		mockDockerfile: func(m *mocks.MockdockerfileParser) {},
+		wantedErr:      fmt.Errorf("select Dockerfile: some error"),
+	},
+}
+
+func TestWorkspaceSelect_Schedule()
