@@ -27,7 +27,10 @@ cpu: 256
 # Amount of memory in MiB used by the task.
 memory: 512
 # Number of tasks that should be running in your service.
-count: 1
+count:
+  range: 2-5
+  cpu_percentage: 70
+  memory_percentage: 80
 
 variables:
   TEST_JSON_ENV_VAR: "{}" # https://github.com/aws/copilot-cli/issues/1292
