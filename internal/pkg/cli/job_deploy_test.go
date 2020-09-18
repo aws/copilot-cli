@@ -87,11 +87,9 @@ func TestJobDeployOpts_Validate(t *testing.T) {
 			tc.mockStore(mockStore)
 			opts := deployJobOpts{
 				deployJobVars: deployJobVars{
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inAppName,
-					},
-					Name:    tc.inJobName,
-					EnvName: tc.inEnvName,
+					appName: tc.inAppName,
+					name:    tc.inJobName,
+					envName: tc.inEnvName,
 				},
 				ws:    mockWs,
 				store: mockStore,

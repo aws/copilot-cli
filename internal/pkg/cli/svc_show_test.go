@@ -17,7 +17,6 @@ import (
 
 type showSvcMocks struct {
 	storeSvc  *mocks.Mockstore
-	prompt    *mocks.Mockprompter
 	describer *mocks.Mockdescriber
 	ws        *mocks.MockwsSvcReader
 	sel       *mocks.MockconfigSelector

@@ -23,6 +23,7 @@ Environments are deployment stages shared between services.`,
 	cmd.AddCommand(buildEnvListCmd())
 	cmd.AddCommand(buildEnvDeleteCmd())
 	cmd.AddCommand(buildEnvShowCmd())
+	cmd.AddCommand(buildEnvUpgradeCmd())
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": group.Develop,
