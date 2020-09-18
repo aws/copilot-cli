@@ -110,13 +110,25 @@ func validateSvcType(val interface{}) error {
 	if !ok {
 		return errValueNotAString
 	}
-	for _, validType := range manifest.ServiceTypes {
-		if svcType == validType {
+	return validateWorkloadType(svcType, manifest.ServiceTypes, service)
+}
+
+func validateWorkloadType(wkldType string, validTypes []string, errFlavor string) error {
+	for _, validType := range validTypes {
+		if wkldType == validType {
 			return nil
 		}
 	}
 
-	return fmt.Errorf("invalid service type %s: must be one of %s", svcType, prettify(manifest.ServiceTypes))
+	return fmt.Errorf("invalid %s type %s: must be one of %s", errFlavor, wkldType, prettify(validTypes))
+}
+
+func validateJobType(val interface{}) error {
+	jobType, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	return validateWorkloadType(jobType, manifest.JobTypes, job)
 }
 
 func validateJobName(val interface{}) error {
@@ -126,15 +138,31 @@ func validateJobName(val interface{}) error {
 	return nil
 }
 
-func validateSchedule(sched string) error {
-	return validateCron(sched)
+func validateSchedule(sched interface{}) error {
+	s, ok := sched.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	return validateCron(s)
 }
 
-func validateTimeout(timeout string) error {
-	if err := validateDuration(timeout, 1*time.Second); err != nil {
-		return fmt.Errorf("timeout value %s is invalid: %w", timeout, err)
+func validateTimeout(timeout interface{}) error {
+	t, ok := timeout.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	if err := validateDuration(t, 1*time.Second); err != nil {
+		return fmt.Errorf("timeout value %s is invalid: %w", t, err)
 	}
 	return nil
+}
+
+func validateRate(rate interface{}) error {
+	r, ok := rate.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	return validateDuration(r, 60*time.Second)
 }
 
 func validateDomainName(val interface{}) error {

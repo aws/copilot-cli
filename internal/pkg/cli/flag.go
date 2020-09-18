@@ -19,6 +19,7 @@ const (
 	envFlag     = "env"
 	svcFlag     = "svc"
 	svcTypeFlag = "svc-type"
+	jobTypeFlag = "job-type"
 	profileFlag = "profile"
 	yesFlag     = "yes"
 	jsonFlag    = "json"
@@ -96,6 +97,7 @@ const (
 	envFlagShort     = "e"
 	svcFlagShort     = "s"
 	svcTypeFlagShort = "t"
+	jobTypeFlagShort = "t"
 
 	dockerFileFlagShort        = "d"
 	githubURLFlagShort         = "u"
@@ -112,6 +114,8 @@ var (
 %s`, strings.Join(template.QuoteSliceFunc(manifest.ServiceTypes), ", "))
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s`, strings.Join(template.QuoteSliceFunc(storageTypes), ", "))
+	jobTypeFlagDescription = fmt.Sprintf(`Type of job to create. Must be one of:
+%s`, strings.Join(template.QuoteSliceFunc(manifest.JobTypes), ", "))
 
 	subnetsFlagDescription = fmt.Sprintf(`Optional. The subnet IDs for the task to use. Can be specified multiple times.
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
