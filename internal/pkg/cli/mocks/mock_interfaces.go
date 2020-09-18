@@ -4190,15 +4190,18 @@ func (mr *MockinitJobSelectorMockRecorder) Dockerfile(selPrompt, getPrompt, selH
 }
 
 // Schedule mocks base method
-func (m *MockinitJobSelector) Schedule() {
+func (m *MockinitJobSelector) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Schedule")
+	ret := m.ctrl.Call(m, "Schedule", scheduleTypePrompt, scheduleTypeHelp, scheduleValidator, rateValidator)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Schedule indicates an expected call of Schedule
-func (mr *MockinitJobSelectorMockRecorder) Schedule() *gomock.Call {
+func (mr *MockinitJobSelectorMockRecorder) Schedule(scheduleTypePrompt, scheduleTypeHelp, scheduleValidator, rateValidator interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Schedule", reflect.TypeOf((*MockinitJobSelector)(nil).Schedule))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Schedule", reflect.TypeOf((*MockinitJobSelector)(nil).Schedule), scheduleTypePrompt, scheduleTypeHelp, scheduleValidator, rateValidator)
 }
 
 // MockinitSvcSelector is a mock of initSvcSelector interface

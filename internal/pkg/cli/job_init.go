@@ -30,6 +30,10 @@ lets you use a predefined or custom cron schedule and is good for less-frequent
 jobs or those which require specific execution schedules.`
 )
 
+const (
+	job = "job"
+)
+
 // const (
 // 	fmtAddJobToAppStart    = "Creating ECR repositories for job %s."
 // 	fmtAddJobToAppFailed   = "Failed to create ECR repositories for job %s.\n"
@@ -189,7 +193,7 @@ func (o *initJobOpts) askDockerfile() error {
 		},
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("select Dockerfile: %w", err)
 	}
 	o.dockerfilePath = df
 	return nil
