@@ -28,7 +28,7 @@ type deployJobOpts struct {
 	deployJobVars
 
 	store        store
-	ws           wsSvcDirReader
+	ws           wsJobDirReader
 	unmarshal    func(in []byte) (interface{}, error)
 	cmd          runner
 	sessProvider sessionProvider
@@ -67,6 +67,15 @@ func (o *deployJobOpts) Validate() error {
 
 // Ask prompts the user for any required fields that are not provided.
 func (o *deployJobOpts) Ask() error {
+	if err := o.askJobName(); err != nil {
+		return err
+	}
+	if err := o.askEnvName(); err != nil {
+		return err
+	}
+	if err := o.askImageTag(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -77,6 +86,19 @@ func (o *deployJobOpts) Execute() error {
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
 func (o *deployJobOpts) RecommendedActions() []string {
+	return nil
+}
+
+func (o *deployJobOpts) askJobName() error {
+	if o.Name != "" {
+		return nil
+	}
+
+	name, err := o.sel.Job("Select a job in your workspace", "")
+	if err != nil {
+		return fmt.Errorf("select job: %w", err)
+	}
+	o.Name = name
 	return nil
 }
 
