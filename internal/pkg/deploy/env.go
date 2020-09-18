@@ -15,12 +15,14 @@ type CreateEnvironmentInput struct {
 	AppName                  string            // Name of the application this environment belongs to.
 	Name                     string            // Name of the environment, must be unique within an application.
 	Prod                     bool              // Whether or not this environment is a production environment.
-	PublicLoadBalancer       bool              // Whether or not this environment should contain a shared public load balancer between applications.
 	ToolsAccountPrincipalARN string            // The Principal ARN of the tools account.
 	AppDNSName               string            // The DNS name of this application, if it exists
 	AdditionalTags           map[string]string // AdditionalTags are labels applied to resources under the application.
-	ImportVPCConfig          *ImportVPCConfig
-	AdjustVPCConfig          *AdjustVPCConfig
+	ImportVPCConfig          *ImportVPCConfig  // Optional configuration if users have an existing VPC.
+	AdjustVPCConfig          *AdjustVPCConfig  // Optional configuration if users want to override default VPC configuration.
+
+	// The version of the environment template to creat the stack. If empty, creates the legacy stack.
+	Version string
 }
 
 // ImportVPCOpts converts the environment's vpc importing configuration into a format parsable by the templates pkg.

@@ -21,6 +21,11 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
+const (
+	envOutputPublicLoadBalancerDNSName = "PublicLoadBalancerDNSName"
+	envOutputSubdomain                 = "EnvironmentSubdomain"
+)
+
 // WebServiceURI represents the unique identifier to access a web service.
 type WebServiceURI struct {
 	DNSName string // The environment's subdomain if the service is served on HTTPS. Otherwise, the public load balancer's DNS.
@@ -201,12 +206,12 @@ func (d *WebServiceDescriber) URI(envName string) (string, error) {
 	d.svcParams = svcParams
 
 	uri := &WebServiceURI{
-		DNSName: envOutputs[stack.EnvOutputPublicLoadBalancerDNSName],
+		DNSName: envOutputs[envOutputPublicLoadBalancerDNSName],
 		Path:    svcParams[stack.LBWebServiceRulePathParamKey],
 	}
-	_, isHTTPS := envOutputs[stack.EnvOutputSubdomain]
+	_, isHTTPS := envOutputs[envOutputSubdomain]
 	if isHTTPS {
-		dnsName := fmt.Sprintf("%s.%s", d.svc, envOutputs[stack.EnvOutputSubdomain])
+		dnsName := fmt.Sprintf("%s.%s", d.svc, envOutputs[envOutputSubdomain])
 		uri = &WebServiceURI{
 			DNSName: dnsName,
 		}

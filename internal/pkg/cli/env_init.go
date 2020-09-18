@@ -470,7 +470,6 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 		Name:                     o.Name,
 		AppName:                  o.AppName(),
 		Prod:                     o.IsProduction,
-		PublicLoadBalancer:       true, // TODO: configure this based on user input or service Type needs?
 		ToolsAccountPrincipalARN: caller.RootUserARN,
 		AppDNSName:               app.Domain,
 		AdditionalTags:           app.Tags,
