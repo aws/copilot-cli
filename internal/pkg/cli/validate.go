@@ -110,13 +110,25 @@ func validateSvcType(val interface{}) error {
 	if !ok {
 		return errValueNotAString
 	}
-	for _, validType := range manifest.ServiceTypes {
-		if svcType == validType {
+	return validateWorkloadType(svcType, manifest.ServiceTypes, service)
+}
+
+func validateWorkloadType(wkldType string, validTypes []string, errFlavor string) error {
+	for _, validType := range validTypes {
+		if wkldType == validType {
 			return nil
 		}
 	}
 
-	return fmt.Errorf("invalid service type %s: must be one of %s", svcType, prettify(manifest.ServiceTypes))
+	return fmt.Errorf("invalid %s type %s: must be one of %s", errFlavor, wkldType, prettify(validTypes))
+}
+
+func validateJobType(val interface{}) error {
+	jobType, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	return validateWorkloadType(jobType, manifest.JobTypes, job)
 }
 
 func validateJobName(val interface{}) error {

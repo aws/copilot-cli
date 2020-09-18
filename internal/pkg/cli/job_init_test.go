@@ -352,9 +352,39 @@ func TestJobInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 					gomock.Any(),
 				).Return(wantedCronSchedule, nil)
+				m.EXPECT().Confirm(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(true, nil)
 			},
 			wantedErr:      nil,
 			wantedSchedule: wantedCronSchedule,
+		},
+		"custom schedule skips confirm if easy to read": {
+			inJobType:        wantedJobType,
+			inJobName:        wantedJobName,
+			inDockerfilePath: wantedDockerfilePath,
+			inJobSchedule:    "",
+
+			mockFileSystem: func(mockFS afero.Fs) {},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(fixedSchedule, nil)
+				m.EXPECT().SelectOne(
+					gomock.Eq(jobInitCronSchedulePrompt),
+					gomock.Eq(jobInitCronScheduleHelp),
+					gomock.Eq(presetSchedules),
+					gomock.Any(),
+				).Return("Custom", nil)
+				m.EXPECT().Get(
+					gomock.Eq(jobInitCronCustomSchedulePrompt),
+					gomock.Eq(jobInitCronCustomScheduleHelp),
+					gomock.Any(),
+					gomock.Any(),
+				).Return(wantedPresetSchedule, nil)
+			},
+			wantedErr:      nil,
+			wantedSchedule: wantedPresetSchedule,
 		},
 		"error getting custom schedule": {
 			inJobType:        wantedJobType,

@@ -18,6 +18,7 @@ require (
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c // indirect
 	github.com/imdario/mergo v0.3.9
 	github.com/karrick/godirwalk v1.15.6 // indirect
+	github.com/lnquy/cron v1.0.1
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mitchellh/mapstructure v1.3.0 // indirect
 	github.com/moby/buildkit v0.7.2

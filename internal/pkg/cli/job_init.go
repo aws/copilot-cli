@@ -18,6 +18,7 @@ import (
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/lnquy/cron"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -39,11 +40,15 @@ For example, "Daily" runs at midnight. "Weekly" runs at midnight on Mondays.`
 	jobInitCronCustomScheduleHelp   = `Custom schedules can be defined using the following cron:
 Minute | Hour | Day of Month | Month | Day of Week
 For example: 0 17 ? * MON-FRI (5 pm on weekdays)
-			 0 0 1 */3 * (on the first of the month, quarterly)`
+             0 0 1 */3 * (on the first of the month, quarterly)`
+	jobInitCronHumanReadableConfirmPrompt = "Would you like to use this schedule?"
+	jobInitCronHumanReadableConfirmHelp   = `Confirm whether the schedule looks right to you.
+(Y)es will continue execution. (N)o will allow you to input a different schedule.`
 )
 
 const (
-	job           = "job"
+	job = "job"
+
 	rate          = "Rate"
 	fixedSchedule = "Fixed Schedule"
 
@@ -127,6 +132,11 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initJobOpts) Validate() error {
+	if o.JobType != "" {
+		if err := validateJobType(o.JobType); err != nil {
+			return err
+		}
+	}
 	if o.Name != "" {
 		if err := validateJobName(o.Name); err != nil {
 			return err
@@ -176,6 +186,10 @@ func (o *initJobOpts) Execute() error {
 }
 
 func (o *initJobOpts) askJobType() error {
+	if o.JobType != "" {
+		return nil
+	}
+	// short circuit since there's only one valid job type.
 	o.JobType = manifest.ScheduledJobType
 	return nil
 }
@@ -261,16 +275,47 @@ func (o *initJobOpts) askCron() error {
 		o.Schedule = getPresetSchedule(cronInput)
 		return nil
 	}
-	customSchedule, err := o.prompt.Get(
-		jobInitCronCustomSchedulePrompt,
-		jobInitCronCustomScheduleHelp,
-		validateSchedule,
-		prompt.WithDefaultInput("0 * * * *"),
-		prompt.WithFinalMessage("Custom Schedule:"),
-	)
+	var customSchedule, humanCron string
+	cronDescriptor, err := cron.NewDescriptor()
 	if err != nil {
 		return fmt.Errorf("get custom schedule: %w", err)
 	}
+	for {
+		customSchedule, err = o.prompt.Get(
+			jobInitCronCustomSchedulePrompt,
+			jobInitCronCustomScheduleHelp,
+			validateSchedule,
+			prompt.WithDefaultInput("0 * * * *"),
+			prompt.WithFinalMessage("Custom Schedule:"),
+		)
+		if err != nil {
+			return fmt.Errorf("get custom schedule: %w", err)
+		}
+
+		// Break if the customer has specified an easy to read cron definition string
+		if strings.HasPrefix(customSchedule, "@") {
+			break
+		}
+
+		humanCron, err = cronDescriptor.ToDescription(customSchedule, cron.Locale_en)
+		if err != nil {
+			return fmt.Errorf("convert cron to human string: %w", err)
+		}
+
+		log.Infoln(fmt.Sprintf("Your job will run at the following times: %s", humanCron))
+
+		ok, err := o.prompt.Confirm(
+			jobInitCronHumanReadableConfirmPrompt,
+			jobInitCronHumanReadableConfirmHelp,
+		)
+		if err != nil {
+			return fmt.Errorf("confirm cron schedule: %w", err)
+		}
+		if ok {
+			break
+		}
+	}
+
 	o.Schedule = customSchedule
 	return nil
 }
@@ -325,6 +370,7 @@ func BuildJobInitCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.Name, nameFlag, nameFlagShort, "", jobFlagDescription)
+	cmd.Flags().StringVarP(&vars.JobType, jobTypeFlag, jobTypeFlagShort, "", jobTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.DockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.Schedule, scheduleFlag, scheduleFlagShort, "", scheduleFlagDescription)
 	cmd.Flags().StringVar(&vars.Timeout, timeoutFlag, "", timeoutFlagDescription)
