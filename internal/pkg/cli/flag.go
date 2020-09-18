@@ -86,8 +86,6 @@ const (
 	retriesFlag  = "retries"
 	timeoutFlag  = "timeout"
 	scheduleFlag = "schedule"
-
-	versionFlag = "version"
 )
 
 // Short flag names.
