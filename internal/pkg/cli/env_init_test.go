@@ -800,7 +800,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().DeployEnvironment(&deploy.CreateEnvironmentInput{
 					Name:                     "test",
 					AppName:                  "phonetool",
-					PublicLoadBalancer:       true,
 					ToolsAccountPrincipalARN: "some arn",
 				}).Return(&cloudformation.ErrStackAlreadyExists{})
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
