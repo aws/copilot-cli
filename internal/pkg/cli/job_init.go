@@ -40,7 +40,8 @@ For example, "Daily" runs at midnight. "Weekly" runs at midnight on Mondays.`
 	jobInitCronCustomScheduleHelp   = `Custom schedules can be defined using the following cron:
 Minute | Hour | Day of Month | Month | Day of Week
 For example: 0 17 ? * MON-FRI (5 pm on weekdays)
-             0 0 1 */3 * (on the first of the month, quarterly)`
+			 0 0 1 */3 * (on the first of the month, quarterly)
+For more information, see: https://en.wikipedia.org/wiki/Cron#Overview`
 	jobInitCronHumanReadableConfirmPrompt = "Would you like to use this schedule?"
 	jobInitCronHumanReadableConfirmHelp   = `Confirm whether the schedule looks right to you.
 (Y)es will continue execution. (N)o will allow you to input a different schedule.`
