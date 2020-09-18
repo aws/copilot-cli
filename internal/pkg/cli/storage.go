@@ -18,7 +18,7 @@ func BuildStorageCmd() *cobra.Command {
 Augment your services with S3 buckets, NoSQL and SQL databases.`,
 	}
 
-	cmd.AddCommand(BuildStorageInitCmd())
+	cmd.AddCommand(buildStorageInitCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 

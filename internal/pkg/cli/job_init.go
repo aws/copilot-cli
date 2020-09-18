@@ -80,13 +80,13 @@ var presetSchedules = []string{
 }
 
 type initJobVars struct {
-	*GlobalOpts
-	Name           string
-	DockerfilePath string
-	Timeout        string
-	Retries        int
-	Schedule       string
-	JobType        string
+	appName        string
+	name           string
+	dockerfilePath string
+	timeout        string
+	retries        int
+	schedule       string
+	jobType        string
 }
 
 type initJobOpts struct {
@@ -98,6 +98,7 @@ type initJobOpts struct {
 	store       store
 	appDeployer appDeployer
 	prog        progress
+	prompt      prompter
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -128,37 +129,38 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		ws:          ws,
 		appDeployer: cloudformation.New(sess),
 		prog:        termprogress.NewSpinner(),
+		prompt:      prompt.New(),
 	}, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initJobOpts) Validate() error {
-	if o.JobType != "" {
-		if err := validateJobType(o.JobType); err != nil {
+	if o.jobType != "" {
+		if err := validateJobType(o.jobType); err != nil {
 			return err
 		}
 	}
-	if o.Name != "" {
-		if err := validateJobName(o.Name); err != nil {
+	if o.name != "" {
+		if err := validateJobName(o.name); err != nil {
 			return err
 		}
 	}
-	if o.DockerfilePath != "" {
-		if _, err := o.fs.Stat(o.DockerfilePath); err != nil {
+	if o.dockerfilePath != "" {
+		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {
 			return err
 		}
 	}
-	if o.Schedule != "" {
-		if err := validateSchedule(o.Schedule); err != nil {
+	if o.schedule != "" {
+		if err := validateSchedule(o.schedule); err != nil {
 			return err
 		}
 	}
-	if o.Timeout != "" {
-		if err := validateTimeout(o.Timeout); err != nil {
+	if o.timeout != "" {
+		if err := validateTimeout(o.timeout); err != nil {
 			return err
 		}
 	}
-	if o.Retries < 0 {
+	if o.retries < 0 {
 		return errors.New("number of retries must be non-negative")
 	}
 	return nil
@@ -187,46 +189,46 @@ func (o *initJobOpts) Execute() error {
 }
 
 func (o *initJobOpts) askJobType() error {
-	if o.JobType != "" {
+	if o.jobType != "" {
 		return nil
 	}
 	// short circuit since there's only one valid job type.
-	o.JobType = manifest.ScheduledJobType
+	o.jobType = manifest.ScheduledJobType
 	return nil
 }
 
 func (o *initJobOpts) askJobName() error {
-	if o.Name != "" {
+	if o.name != "" {
 		return nil
 	}
 
 	name, err := o.prompt.Get(
-		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.JobType)),
-		fmt.Sprintf(fmtWkldInitNameHelpPrompt, job, o.AppName()),
+		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.jobType)),
+		fmt.Sprintf(fmtWkldInitNameHelpPrompt, job, o.appName),
 		validateSvcName,
 		prompt.WithFinalMessage("Job name:"),
 	)
 	if err != nil {
 		return fmt.Errorf("get job name: %w", err)
 	}
-	o.Name = name
+	o.name = name
 	return nil
 }
 
 func (o *initJobOpts) askDockerfile() error {
-	if o.DockerfilePath != "" {
+	if o.dockerfilePath != "" {
 		return nil
 	}
-	df, err := askDockerfile(o.Name, o.fs, o.prompt)
+	df, err := askDockerfile(o.name, o.fs, o.prompt)
 	if err != nil {
 		return err
 	}
-	o.DockerfilePath = df
+	o.dockerfilePath = df
 	return nil
 }
 
 func (o *initJobOpts) askSchedule() error {
-	if o.Schedule != "" {
+	if o.schedule != "" {
 		return nil
 	}
 	scheduleType, err := o.prompt.SelectOne(
@@ -258,7 +260,7 @@ func (o *initJobOpts) askRate() error {
 	if err != nil {
 		return fmt.Errorf("get schedule rate: %w", err)
 	}
-	o.Schedule = fmt.Sprintf("@every %s", rateInput)
+	o.schedule = fmt.Sprintf("@every %s", rateInput)
 	return nil
 }
 
@@ -273,7 +275,7 @@ func (o *initJobOpts) askCron() error {
 		return fmt.Errorf("get preset schedule: %w", err)
 	}
 	if cronInput != custom {
-		o.Schedule = getPresetSchedule(cronInput)
+		o.schedule = getPresetSchedule(cronInput)
 		return nil
 	}
 	var customSchedule, humanCron string
@@ -317,7 +319,7 @@ func (o *initJobOpts) askCron() error {
 		}
 	}
 
-	o.Schedule = customSchedule
+	o.schedule = customSchedule
 	return nil
 }
 
@@ -330,16 +332,14 @@ func (o *initJobOpts) RecommendedActions() []string {
 	return []string{
 		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath)),
 		fmt.Sprintf("Run %s to deploy your job to a %s environment.",
-			color.HighlightCode(fmt.Sprintf("copilot job deploy --name %s --env %s", o.Name, defaultEnvironmentName)),
+			color.HighlightCode(fmt.Sprintf("copilot job deploy --name %s --env %s", o.name, defaultEnvironmentName)),
 			defaultEnvironmentName),
 	}
 }
 
-// BuildJobInitCmd builds the command for creating a new job.
-func BuildJobInitCmd() *cobra.Command {
-	vars := initJobVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildJobInitCmd builds the command for creating a new job.
+func buildJobInitCmd() *cobra.Command {
+	vars := initJobVars{}
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a new scheduled job in an application.",
@@ -370,12 +370,13 @@ func BuildJobInitCmd() *cobra.Command {
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.Name, nameFlag, nameFlagShort, "", jobFlagDescription)
-	cmd.Flags().StringVarP(&vars.JobType, jobTypeFlag, jobTypeFlagShort, "", jobTypeFlagDescription)
-	cmd.Flags().StringVarP(&vars.DockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
-	cmd.Flags().StringVarP(&vars.Schedule, scheduleFlag, scheduleFlagShort, "", scheduleFlagDescription)
-	cmd.Flags().StringVar(&vars.Timeout, timeoutFlag, "", timeoutFlagDescription)
-	cmd.Flags().IntVar(&vars.Retries, retriesFlag, 0, retriesFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", jobFlagDescription)
+	cmd.Flags().StringVarP(&vars.jobType, jobTypeFlag, jobTypeFlagShort, "", jobTypeFlagDescription)
+	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
+	cmd.Flags().StringVarP(&vars.schedule, scheduleFlag, scheduleFlagShort, "", scheduleFlagDescription)
+	cmd.Flags().StringVar(&vars.timeout, timeoutFlag, "", timeoutFlagDescription)
+	cmd.Flags().IntVar(&vars.retries, retriesFlag, 0, retriesFlagDescription)
 
 	cmd.Annotations = map[string]string{
 		"group": group.Develop,

@@ -4,17 +4,14 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
 // envUpgradeVars holds flag values.
 type envUpgradeVars struct {
-	*GlobalOpts
-
-	name string // Required. Name of the environment.
-	all  bool   // True means all environments should be upgraded.
+	appName string // Required. Name of the application.
+	name    string // Required. Name of the environment.
+	all     bool   // True means all environments should be upgraded.
 }
 
 // envUpgradeOpts represents the env upgrade command and holds the necessary data
@@ -42,15 +39,12 @@ func (o *envUpgradeVars) Ask() error {
 // Execute updates the cloudformation stack an environment to the specified version.
 // If the environment stack is busy updating, it spins and waits until the stack can be updated.
 func (o *envUpgradeOpts) Execute() error {
-	fmt.Printf("app name is %s\n", o.AppName())
 	return nil
 }
 
-// BuildEnvUpgradeCmd builds the command to update the
-func BuildEnvUpgradeCmd() *cobra.Command {
-	vars := envUpgradeVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildEnvUpgradeCmd builds the command to update the
+func buildEnvUpgradeCmd() *cobra.Command {
+	vars := envUpgradeVars{}
 	cmd := &cobra.Command{
 		Use:    "upgrade",
 		Short:  "Upgrades the template of an environment to the latest version.",
@@ -67,6 +61,7 @@ func BuildEnvUpgradeCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().BoolVar(&vars.all, allFlag, false, upgradeAllEnvsDescription)
 	return cmd
 }

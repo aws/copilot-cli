@@ -117,19 +117,19 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			// GIVEN
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					Name:          tc.inEnvName,
-					DefaultConfig: tc.inDefault,
-					AdjustVPC: adjustVPCVars{
+					name:          tc.inEnvName,
+					defaultConfig: tc.inDefault,
+					adjustVPC: adjustVPCVars{
 						PublicSubnetCIDRs: tc.inPublicCIDRs,
 						CIDR:              tc.inVPCCIDR,
 					},
-					ImportVPC: importVPCVars{
+					importVPC: importVPCVars{
 						PublicSubnetIDs: tc.inPublicIDs,
 						ID:              tc.inVPCID,
 					},
-					GlobalOpts: &GlobalOpts{appName: tc.inAppName},
-					Profile:    tc.inProfileName,
-					TempCreds: tempCredsVars{
+					appName: tc.inAppName,
+					profile: tc.inProfileName,
+					tempCreds: tempCredsVars{
 						AccessKeyID:     tc.inAccessKeyID,
 						SecretAccessKey: tc.inSecretAccessKey,
 						SessionToken:    tc.inSessionToken,
@@ -456,21 +456,19 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			// GIVEN
 			addEnv := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					Name:          tc.inEnv,
-					Profile:       tc.inProfile,
-					TempCreds:     tc.inTempCreds,
-					Region:        tc.inRegion,
-					DefaultConfig: tc.inDefault,
-					AdjustVPC:     tc.inAdjustVPCVars,
-					ImportVPC:     tc.inImportVPCVars,
-					GlobalOpts: &GlobalOpts{
-						prompt: mocks.prompt,
-					},
+					name:          tc.inEnv,
+					profile:       tc.inProfile,
+					tempCreds:     tc.inTempCreds,
+					region:        tc.inRegion,
+					defaultConfig: tc.inDefault,
+					adjustVPC:     tc.inAdjustVPCVars,
+					importVPC:     tc.inImportVPCVars,
 				},
 				sessProvider: mocks.sessProvider,
 				selVPC:       mocks.selVPC,
 				selCreds:     mocks.selCreds,
 				ec2Client:    mocks.ec2Client,
+				prompt:       mocks.prompt,
 			}
 
 			// WHEN
@@ -479,7 +477,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			// THEN
 			if tc.wantedError == nil {
 				require.NoError(t, err)
-				require.Equal(t, mockEnv, addEnv.Name, "expected environment names to match")
+				require.Equal(t, mockEnv, addEnv.name, "expected environment names to match")
 			} else {
 				require.EqualError(t, err, tc.wantedError.Error())
 			}
@@ -908,9 +906,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					Name:         tc.inEnvName,
-					GlobalOpts:   &GlobalOpts{appName: tc.inAppName},
-					IsProduction: tc.inProd,
+					name:         tc.inEnvName,
+					appName:      tc.inAppName,
+					isProduction: tc.inProd,
 				},
 				store:       mockstore,
 				envDeployer: mockDeployer,
@@ -1032,7 +1030,7 @@ func TestInitEnvOpts_delegateDNSFromApp(t *testing.T) {
 			}
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					GlobalOpts: &GlobalOpts{appName: tc.app.Name},
+					appName: tc.app.Name,
 				},
 				envIdentity: mockIdentity,
 				appDeployer: mockDeployer,

@@ -20,19 +20,16 @@ require (
 	github.com/karrick/godirwalk v1.15.6 // indirect
 	github.com/lnquy/cron v1.0.1
 	github.com/mattn/go-colorable v0.1.6 // indirect
-	github.com/mitchellh/mapstructure v1.3.0 // indirect
 	github.com/moby/buildkit v0.7.2
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.2
-	github.com/pelletier/go-toml v1.8.0 // indirect
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sirupsen/logrus v1.6.0 // indirect
 	github.com/spf13/afero v1.4.0
 	github.com/spf13/cast v1.3.1 // indirect
+	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/spf13/cobra v1.0.0
-	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.6.1
 	github.com/xlab/treeprint v1.0.0
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37 // indirect

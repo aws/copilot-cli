@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/cobra"
@@ -29,7 +30,7 @@ const (
 )
 
 type showPipelineVars struct {
-	*GlobalOpts
+	appName               string
 	shouldOutputJSON      bool
 	shouldOutputResources bool
 	pipelineName          string
@@ -46,6 +47,7 @@ type showPipelineOpts struct {
 	describer     describer
 	initDescriber func(bool) error
 	sel           appSelector
+	prompt        prompter
 }
 
 func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
@@ -64,12 +66,14 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
 
+	prompter := prompt.New()
 	opts := &showPipelineOpts{
 		showPipelineVars: vars,
 		ws:               ws,
 		store:            store,
 		pipelineSvc:      codepipeline.New(defaultSession),
-		sel:              selector.NewSelect(vars.prompt, store),
+		sel:              selector.NewSelect(prompter, store),
+		prompt:           prompter,
 		w:                log.OutputWriter,
 	}
 	opts.initDescriber = func(enableResources bool) error {
@@ -87,8 +91,8 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *showPipelineOpts) Validate() error {
-	if o.AppName() != "" {
-		if _, err := o.store.GetApplication(o.AppName()); err != nil {
+	if o.appName != "" {
+		if _, err := o.store.GetApplication(o.appName); err != nil {
 			return err
 		}
 	}
@@ -110,7 +114,7 @@ func (o *showPipelineOpts) Ask() error {
 }
 
 func (o *showPipelineOpts) askAppName() error {
-	if o.AppName() != "" {
+	if o.appName != "" {
 		return nil
 	}
 	name, err := o.sel.Application(pipelineShowAppNamePrompt, pipelineShowAppNameHelpPrompt)
@@ -135,7 +139,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 	}
 
 	if errors.Is(err, workspace.ErrNoPipelineInWorkspace) {
-		log.Infof("No pipeline manifest in workspace for application %s, looking for deployed pipelines\n", color.HighlightUserInput(o.AppName()))
+		log.Infof("No pipeline manifest in workspace for application %s, looking for deployed pipelines\n", color.HighlightUserInput(o.appName))
 	}
 
 	// find deployed pipelines
@@ -145,7 +149,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 	}
 
 	if len(pipelineNames) == 0 {
-		log.Infof("No pipelines found for application %s.\n", color.HighlightUserInput(o.AppName()))
+		log.Infof("No pipelines found for application %s.\n", color.HighlightUserInput(o.appName))
 		return nil
 	}
 
@@ -159,10 +163,10 @@ func (o *showPipelineOpts) askPipelineName() error {
 
 	// select from list of deployed pipelines
 	pipelineName, err = o.prompt.SelectOne(
-		fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(o.AppName())), pipelineShowPipelineNameHelpPrompt, pipelineNames,
+		fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(o.appName)), pipelineShowPipelineNameHelpPrompt, pipelineNames,
 	)
 	if err != nil {
-		return fmt.Errorf("select pipeline for application %s: %w", o.AppName(), err)
+		return fmt.Errorf("select pipeline for application %s: %w", o.appName, err)
 	}
 	o.pipelineName = pipelineName
 	return nil
@@ -171,7 +175,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 
 func (o *showPipelineOpts) retrieveAllPipelines() ([]string, error) {
 	pipelines, err := o.pipelineSvc.ListPipelineNamesByTags(map[string]string{
-		deploy.AppTagKey: o.AppName(),
+		deploy.AppTagKey: o.appName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("list pipelines: %w", err)
@@ -221,11 +225,9 @@ func (o *showPipelineOpts) Execute() error {
 	return nil
 }
 
-// BuildPipelineShowCmd build the command for deploying a new pipeline or updating an existing pipeline.
-func BuildPipelineShowCmd() *cobra.Command {
-	vars := showPipelineVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildPipelineShowCmd build the command for deploying a new pipeline or updating an existing pipeline.
+func buildPipelineShowCmd() *cobra.Command {
+	vars := showPipelineVars{}
 	cmd := &cobra.Command{
 		Use:   "show",
 		Short: "Shows info about a deployed pipeline for an application.",

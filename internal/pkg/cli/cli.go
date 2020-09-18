@@ -12,62 +12,23 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-// GlobalOpts holds fields that are used across multiple commands.
-type GlobalOpts struct {
-	appName string
-	prompt  prompter
-}
-
-// NewGlobalOpts returns a GlobalOpts with the application name retrieved from viper.
-func NewGlobalOpts() *GlobalOpts {
-	bindAppName()
-
-	return &GlobalOpts{
-		// Leave the appName as empty in case it's overwritten by a global flag.
-		// See https://github.com/aws/copilot-cli/issues/570#issuecomment-569133741
-		prompt: prompt.New(),
-	}
-}
-
-// AppName returns the application name.
-// If the name is empty, it caches it after querying viper.
-func (o *GlobalOpts) AppName() string {
-	if o.appName != "" {
-		return o.appName
-	}
-	o.appName = viper.GetString(appFlag)
-	return o.appName
-}
-
-// bindAppName loads the application's name to viper.
-// If there is an error, we swallow the error and leave the default value as empty string.
-func bindAppName() {
-	name, err := loadAppName()
-	if err != nil {
-		return
-	}
-	viper.SetDefault(appFlag, name)
-}
-
-// loadAppName retrieves the application's name from the workspace if it exists and returns it.
-// If there is an error, it returns an empty string and the error.
-func loadAppName() (string, error) {
+// tryReadingAppName retrieves the application's name from the workspace if it exists and returns it.
+// If there is an error while retrieving the workspace summary, returns the empty string.
+func tryReadingAppName() string {
 	ws, err := workspace.New()
 	if err != nil {
-		return "", fmt.Errorf("fetching workspace: %w", err)
+		return ""
 	}
 
 	summary, err := ws.Summary()
 	if err != nil {
-		return "", fmt.Errorf("reading from workspace: %w", err)
+		return ""
 	}
-	return summary.Application, nil
+	return summary.Application
 }
 
 type errReservedArg struct {

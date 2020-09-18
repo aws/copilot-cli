@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
 )
@@ -22,14 +23,15 @@ const (
 )
 
 type listEnvVars struct {
-	*GlobalOpts
-	ShouldOutputJSON bool
+	appName          string
+	shouldOutputJSON bool
 }
 
 type listEnvOpts struct {
 	listEnvVars
-	store store
-	sel   configSelector
+	store  store
+	prompt prompter
+	sel    configSelector
 
 	w io.Writer
 }
@@ -40,17 +42,19 @@ func newListEnvOpts(vars listEnvVars) (*listEnvOpts, error) {
 		return nil, err
 	}
 
+	prompter := prompt.New()
 	return &listEnvOpts{
 		listEnvVars: vars,
 		store:       store,
-		sel:         selector.NewConfigSelect(vars.prompt, store),
+		sel:         selector.NewConfigSelect(prompter, store),
+		prompt:      prompter,
 		w:           os.Stdout,
 	}, nil
 }
 
 // Ask asks for fields that are required but not passed in.
 func (o *listEnvOpts) Ask() error {
-	if o.AppName() != "" {
+	if o.appName != "" {
 		return nil
 	}
 	app, err := o.sel.Application(envListAppNamePrompt, envListAppNameHelper)
@@ -64,17 +68,17 @@ func (o *listEnvOpts) Ask() error {
 // Execute lists the environments through the prompt.
 func (o *listEnvOpts) Execute() error {
 	// Ensure the application actually exists before we try to list its environments.
-	if _, err := o.store.GetApplication(o.AppName()); err != nil {
+	if _, err := o.store.GetApplication(o.appName); err != nil {
 		return err
 	}
 
-	envs, err := o.store.ListEnvironments(o.AppName())
+	envs, err := o.store.ListEnvironments(o.appName)
 	if err != nil {
 		return err
 	}
 
 	var out string
-	if o.ShouldOutputJSON {
+	if o.shouldOutputJSON {
 		data, err := o.jsonOutput(envs)
 		if err != nil {
 			return err
@@ -111,11 +115,9 @@ func (o *listEnvOpts) jsonOutput(envs []*config.Environment) (string, error) {
 	return fmt.Sprintf("%s\n", b), nil
 }
 
-// BuildEnvListCmd builds the command for listing environments in an application.
-func BuildEnvListCmd() *cobra.Command {
-	vars := listEnvVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildEnvListCmd builds the command for listing environments in an application.
+func buildEnvListCmd() *cobra.Command {
+	vars := listEnvVars{}
 	cmd := &cobra.Command{
 		Use:   "ls",
 		Short: "Lists all the environments in an application.",
@@ -133,6 +135,7 @@ func BuildEnvListCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	cmd.Flags().BoolVar(&vars.ShouldOutputJSON, jsonFlag, false, jsonFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	return cmd
 }

@@ -20,10 +20,10 @@ Applications are a collection of services and environments.`,
 Applications are a collection of services and environments.`,
 	}
 
-	cmd.AddCommand(BuildAppInitCommand())
-	cmd.AddCommand(BuildAppListCommand())
-	cmd.AddCommand(BuildAppShowCmd())
-	cmd.AddCommand(BuildAppDeleteCommand())
+	cmd.AddCommand(buildAppInitCommand())
+	cmd.AddCommand(buildAppListCommand())
+	cmd.AddCommand(buildAppShowCmd())
+	cmd.AddCommand(buildAppDeleteCommand())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

@@ -104,9 +104,7 @@ func TestSvcShow_Validate(t *testing.T) {
 			showSvcs := &showSvcOpts{
 				showSvcVars: showSvcVars{
 					svcName: tc.inputSvc,
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inputApp,
-					},
+					appName: tc.inputApp,
 				},
 				store: mockStoreReader,
 			}
@@ -190,13 +188,11 @@ func TestSvcShow_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStoreReader := mocks.NewMockstore(ctrl)
-			mockPrompter := mocks.NewMockprompter(ctrl)
 			mockWorkspace := mocks.NewMockwsSvcReader(ctrl)
 			mockSelector := mocks.NewMockconfigSelector(ctrl)
 
 			mocks := showSvcMocks{
 				storeSvc: mockStoreReader,
-				prompt:   mockPrompter,
 				ws:       mockWorkspace,
 				sel:      mockSelector,
 			}
@@ -206,10 +202,7 @@ func TestSvcShow_Ask(t *testing.T) {
 			showSvcs := &showSvcOpts{
 				showSvcVars: showSvcVars{
 					svcName: tc.inputSvc,
-					GlobalOpts: &GlobalOpts{
-						prompt:  mockPrompter,
-						appName: tc.inputApp,
-					},
+					appName: tc.inputApp,
 				},
 				store: mockStoreReader,
 				sel:   mockSelector,
@@ -223,7 +216,7 @@ func TestSvcShow_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedApp, showSvcs.AppName(), "expected app name to match")
+				require.Equal(t, tc.wantedApp, showSvcs.appName, "expected app name to match")
 				require.Equal(t, tc.wantedSvc, showSvcs.svcName, "expected service name to match")
 			}
 		})
@@ -304,9 +297,7 @@ func TestSvcShow_Execute(t *testing.T) {
 				showSvcVars: showSvcVars{
 					svcName:          tc.inputSvc,
 					shouldOutputJSON: tc.shouldOutputJSON,
-					GlobalOpts: &GlobalOpts{
-						appName: appName,
-					},
+					appName:          appName,
 				},
 				describer:     mockSvcDescriber,
 				initDescriber: func() error { return nil },

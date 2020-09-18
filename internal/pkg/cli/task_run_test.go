@@ -285,9 +285,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 
 			opts := runTaskOpts{
 				runTaskVars: runTaskVars{
-					GlobalOpts: &GlobalOpts{
-						appName: tc.appName,
-					},
+					appName:           tc.appName,
 					count:             tc.inCount,
 					cpu:               tc.inCPU,
 					memory:            tc.inMemory,
@@ -525,10 +523,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			opts := runTaskOpts{
 				runTaskVars: runTaskVars{
-					GlobalOpts: &GlobalOpts{
-						appName: tc.appName,
-						prompt:  mockPrompter,
-					},
+					appName:           tc.appName,
 					groupName:         tc.inName,
 					env:               tc.inEnv,
 					useDefaultSubnets: tc.inDefault,
@@ -543,7 +538,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			if tc.wantedError == nil {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedEnv, opts.env)
-				require.Equal(t, tc.wantedApp, opts.AppName())
+				require.Equal(t, tc.wantedApp, opts.appName)
 				if tc.wantedName != "" {
 					require.Equal(t, tc.wantedName, opts.groupName)
 				}
@@ -752,8 +747,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 
 			opts := &runTaskOpts{
 				runTaskVars: runTaskVars{
-					GlobalOpts: &GlobalOpts{},
-					groupName:  inGroupName,
+					groupName: inGroupName,
 
 					image:    tc.inImage,
 					imageTag: tc.inTag,

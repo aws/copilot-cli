@@ -54,9 +54,7 @@ func TestEnvList_Ask(t *testing.T) {
 
 			listEnvs := &listEnvOpts{
 				listEnvVars: listEnvVars{
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inputApp,
-					},
+					appName: tc.inputApp,
 				},
 				sel: mockSelector,
 			}
@@ -67,7 +65,7 @@ func TestEnvList_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedApp, listEnvs.AppName(), "expected app names to match")
+				require.Equal(t, tc.wantedApp, listEnvs.appName, "expected app names to match")
 			}
 		})
 	}
@@ -87,10 +85,8 @@ func TestEnvList_Execute(t *testing.T) {
 		"with json envs": {
 			listOpts: listEnvOpts{
 				listEnvVars: listEnvVars{
-					ShouldOutputJSON: true,
-					GlobalOpts: &GlobalOpts{
-						appName: "coolapp",
-					},
+					shouldOutputJSON: true,
+					appName:          "coolapp",
 				},
 				store: mockstore,
 			},
@@ -111,9 +107,7 @@ func TestEnvList_Execute(t *testing.T) {
 		"with envs": {
 			listOpts: listEnvOpts{
 				listEnvVars: listEnvVars{
-					GlobalOpts: &GlobalOpts{
-						appName: "coolapp",
-					},
+					appName: "coolapp",
 				},
 				store: mockstore,
 			},
@@ -135,9 +129,7 @@ func TestEnvList_Execute(t *testing.T) {
 			expectedErr: mockError,
 			listOpts: listEnvOpts{
 				listEnvVars: listEnvVars{
-					GlobalOpts: &GlobalOpts{
-						appName: "coolapp",
-					},
+					appName: "coolapp",
 				},
 				store: mockstore,
 			},
@@ -156,9 +148,7 @@ func TestEnvList_Execute(t *testing.T) {
 			expectedErr: mockError,
 			listOpts: listEnvOpts{
 				listEnvVars: listEnvVars{
-					GlobalOpts: &GlobalOpts{
-						appName: "coolapp",
-					},
+					appName: "coolapp",
 				},
 				store: mockstore,
 			},
@@ -176,9 +166,7 @@ func TestEnvList_Execute(t *testing.T) {
 		"with production envs": {
 			listOpts: listEnvOpts{
 				listEnvVars: listEnvVars{
-					GlobalOpts: &GlobalOpts{
-						appName: "coolapp",
-					},
+					appName: "coolapp",
 				},
 				store: mockstore,
 			},

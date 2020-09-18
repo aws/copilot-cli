@@ -13,6 +13,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/cobra"
@@ -31,9 +32,9 @@ const (
 )
 
 type listSvcVars struct {
-	*GlobalOpts
-	ShouldOutputJSON        bool
-	ShouldShowLocalServices bool
+	appName                 string
+	shouldOutputJSON        bool
+	shouldShowLocalServices bool
 }
 
 type listSvcOpts struct {
@@ -61,13 +62,13 @@ func newListSvcOpts(vars listSvcVars) (*listSvcOpts, error) {
 		store: store,
 		ws:    ws,
 		w:     os.Stdout,
-		sel:   selector.NewSelect(vars.prompt, store),
+		sel:   selector.NewSelect(prompt.New(), store),
 	}, nil
 }
 
 // Ask asks for fields that are required but not passed in.
 func (o *listSvcOpts) Ask() error {
-	if o.AppName() != "" {
+	if o.appName != "" {
 		return nil
 	}
 
@@ -82,16 +83,16 @@ func (o *listSvcOpts) Ask() error {
 // Execute lists the services through the prompt.
 func (o *listSvcOpts) Execute() error {
 	// Ensure the application actually exists before we try to list its services.
-	if _, err := o.store.GetApplication(o.AppName()); err != nil {
+	if _, err := o.store.GetApplication(o.appName); err != nil {
 		return fmt.Errorf("get application: %w", err)
 	}
 
-	svcs, err := o.store.ListServices(o.AppName())
+	svcs, err := o.store.ListServices(o.appName)
 	if err != nil {
 		return err
 	}
 
-	if o.ShouldShowLocalServices {
+	if o.shouldShowLocalServices {
 		localNames, err := o.ws.ServiceNames()
 		if err != nil {
 			return fmt.Errorf("get local services names: %w", err)
@@ -100,7 +101,7 @@ func (o *listSvcOpts) Execute() error {
 	}
 
 	var out string
-	if o.ShouldOutputJSON {
+	if o.shouldOutputJSON {
 		data, err := o.jsonOutput(svcs)
 		if err != nil {
 			return err
@@ -156,11 +157,9 @@ func filterSvcsByName(svcs []*config.Service, wantedNames []string) []*config.Se
 	return filtered
 }
 
-// BuildSvcListCmd builds the command for listing services in an appication.
-func BuildSvcListCmd() *cobra.Command {
-	vars := listSvcVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildSvcListCmd builds the command for listing services in an appication.
+func buildSvcListCmd() *cobra.Command {
+	vars := listSvcVars{}
 	cmd := &cobra.Command{
 		Use:   "ls",
 		Short: "Lists all the services in an application.",
@@ -178,8 +177,8 @@ func BuildSvcListCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
-	cmd.Flags().BoolVar(&vars.ShouldOutputJSON, jsonFlag, false, jsonFlagDescription)
-	cmd.Flags().BoolVar(&vars.ShouldShowLocalServices, localFlag, false, localSvcFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
+	cmd.Flags().BoolVar(&vars.shouldShowLocalServices, localFlag, false, localSvcFlagDescription)
 	return cmd
 }

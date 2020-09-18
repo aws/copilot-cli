@@ -15,6 +15,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -40,9 +41,9 @@ const (
 )
 
 type updatePipelineVars struct {
-	PipelineName     string
-	SkipConfirmation bool
-	*GlobalOpts
+	appName          string
+	pipelineName     string
+	skipConfirmation bool
 }
 
 type updatePipelineOpts struct {
@@ -51,6 +52,7 @@ type updatePipelineOpts struct {
 	pipelineDeployer pipelineDeployer
 	app              *config.Application
 	prog             progress
+	prompt           prompter
 	region           string
 	envStore         environmentStore
 	ws               wsPipelineReader
@@ -62,9 +64,9 @@ func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error)
 		return nil, fmt.Errorf("new config store client: %w", err)
 	}
 
-	app, err := store.GetApplication(vars.AppName())
+	app, err := store.GetApplication(vars.appName)
 	if err != nil {
-		return nil, fmt.Errorf("get application %s: %w", vars.AppName(), err)
+		return nil, fmt.Errorf("get application %s: %w", vars.appName, err)
 	}
 
 	defaultSession, err := sessions.NewProvider().Default()
@@ -85,6 +87,7 @@ func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error)
 		envStore:           store,
 		ws:                 ws,
 		prog:               termprogress.NewSpinner(),
+		prompt:             prompt.New(),
 	}, nil
 }
 
@@ -101,9 +104,9 @@ func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineSta
 	}
 
 	for _, stage := range manifestStages {
-		env, err := o.envStore.GetEnvironment(o.AppName(), stage.Name)
+		env, err := o.envStore.GetEnvironment(o.appName, stage.Name)
 		if err != nil {
-			return nil, fmt.Errorf("get environment %s in application %s: %w", stage.Name, o.AppName(), err)
+			return nil, fmt.Errorf("get environment %s in application %s: %w", stage.Name, o.appName, err)
 		}
 
 		pipelineStage := deploy.PipelineStage{
@@ -141,11 +144,11 @@ func (o *updatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, erro
 }
 
 func (o *updatePipelineOpts) shouldUpdate() (bool, error) {
-	if o.SkipConfirmation {
+	if o.skipConfirmation {
 		return true, nil
 	}
 
-	shouldUpdate, err := o.prompt.Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, o.PipelineName), "")
+	shouldUpdate, err := o.prompt.Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, o.pipelineName), "")
 	if err != nil {
 		return false, fmt.Errorf("prompt for pipeline update: %w", err)
 	}
@@ -158,15 +161,15 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 		return fmt.Errorf("check if pipeline exists: %w", err)
 	}
 	if !exist {
-		o.prog.Start(fmt.Sprintf(fmtPipelineUpdateStart, color.HighlightUserInput(o.PipelineName)))
+		o.prog.Start(fmt.Sprintf(fmtPipelineUpdateStart, color.HighlightUserInput(o.pipelineName)))
 		if err := o.pipelineDeployer.CreatePipeline(in); err != nil {
 			var alreadyExists *cloudformation.ErrStackAlreadyExists
 			if !errors.As(err, &alreadyExists) {
-				o.prog.Stop(log.Serrorf(fmtPipelineUpdateFailed, color.HighlightUserInput(o.PipelineName)))
+				o.prog.Stop(log.Serrorf(fmtPipelineUpdateFailed, color.HighlightUserInput(o.pipelineName)))
 				return fmt.Errorf("create pipeline: %w", err)
 			}
 		}
-		o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateComplete, color.HighlightUserInput(o.PipelineName)))
+		o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateComplete, color.HighlightUserInput(o.pipelineName)))
 		return nil
 	}
 
@@ -178,25 +181,25 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 	if !shouldUpdate {
 		return nil
 	}
-	o.prog.Start(fmt.Sprintf(fmtPipelineUpdateProposalStart, color.HighlightUserInput(o.PipelineName)))
+	o.prog.Start(fmt.Sprintf(fmtPipelineUpdateProposalStart, color.HighlightUserInput(o.pipelineName)))
 	if err := o.pipelineDeployer.UpdatePipeline(in); err != nil {
-		o.prog.Stop(log.Serrorf(fmtPipelineUpdateProposalFailed, color.HighlightUserInput(o.PipelineName)))
+		o.prog.Stop(log.Serrorf(fmtPipelineUpdateProposalFailed, color.HighlightUserInput(o.pipelineName)))
 		return fmt.Errorf("update pipeline: %w", err)
 	}
-	o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateProposalComplete, color.HighlightUserInput(o.PipelineName)))
+	o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateProposalComplete, color.HighlightUserInput(o.pipelineName)))
 	return nil
 }
 
 // Execute create a new pipeline or update the current pipeline if it already exists.
 func (o *updatePipelineOpts) Execute() error {
 	// bootstrap pipeline resources
-	o.prog.Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, color.HighlightUserInput(o.AppName())))
+	o.prog.Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, color.HighlightUserInput(o.appName)))
 	err := o.pipelineDeployer.AddPipelineResourcesToApp(o.app, o.region)
 	if err != nil {
-		o.prog.Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, color.HighlightUserInput(o.AppName())))
-		return fmt.Errorf("add pipeline resources to application %s in %s: %w", o.AppName(), o.region, err)
+		o.prog.Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, color.HighlightUserInput(o.appName)))
+		return fmt.Errorf("add pipeline resources to application %s in %s: %w", o.appName, o.region, err)
 	}
-	o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, color.HighlightUserInput(o.AppName())))
+	o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, color.HighlightUserInput(o.appName)))
 
 	// read pipeline manifest
 	data, err := o.ws.ReadPipelineManifest()
@@ -207,7 +210,7 @@ func (o *updatePipelineOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
 	}
-	o.PipelineName = pipeline.Name
+	o.pipelineName = pipeline.Name
 	source := &deploy.Source{
 		ProviderName: pipeline.Source.ProviderName,
 		Properties:   pipeline.Source.Properties,
@@ -226,7 +229,7 @@ func (o *updatePipelineOpts) Execute() error {
 	}
 
 	deployPipelineInput := &deploy.CreatePipelineInput{
-		AppName:         o.AppName(),
+		AppName:         o.appName,
 		Name:            pipeline.Name,
 		Source:          source,
 		Stages:          stages,
@@ -242,10 +245,8 @@ func (o *updatePipelineOpts) Execute() error {
 }
 
 // BuildPipelineUpdateCmd build the command for deploying a new pipeline or updating an existing pipeline.
-func BuildPipelineUpdateCmd() *cobra.Command {
-	vars := updatePipelineVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+func buildPipelineUpdateCmd() *cobra.Command {
+	vars := updatePipelineVars{}
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Deploys a pipeline for the services in your workspace.",
@@ -264,7 +265,7 @@ func BuildPipelineUpdateCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	cmd.Flags().BoolVar(&vars.SkipConfirmation, yesFlag, false, yesFlagDescription)
-
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
 	return cmd
 }

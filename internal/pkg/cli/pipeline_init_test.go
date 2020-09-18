@@ -224,17 +224,14 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
-					Environments:      tc.inEnvironments,
-					GitHubOwner:       tc.inGitHubOwner,
-					GitHubRepo:        tc.inGitHubRepo,
-					GitHubAccessToken: tc.inGitHubAccessToken,
-					GlobalOpts: &GlobalOpts{
-						prompt: mockPrompt,
-					},
+					environments:      tc.inEnvironments,
+					githubOwner:       tc.inGitHubOwner,
+					githubRepo:        tc.inGitHubRepo,
+					githubAccessToken: tc.inGitHubAccessToken,
 				},
-
 				envs:     tc.inAppEnvs,
 				repoURLs: tc.inURLs,
+				prompt:   mockPrompt,
 			}
 
 			tc.mockPrompt(mockPrompt)
@@ -247,10 +244,10 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.expectedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.expectedGitHubOwner, opts.GitHubOwner)
-				require.Equal(t, tc.expectedGitHubRepo, opts.GitHubRepo)
-				require.Equal(t, tc.expectedGitHubAccessToken, opts.GitHubAccessToken)
-				require.ElementsMatch(t, tc.expectedEnvironments, opts.Environments)
+				require.Equal(t, tc.expectedGitHubOwner, opts.githubOwner)
+				require.Equal(t, tc.expectedGitHubRepo, opts.githubRepo)
+				require.Equal(t, tc.expectedGitHubAccessToken, opts.githubAccessToken)
+				require.ElementsMatch(t, tc.expectedEnvironments, opts.environments)
 			}
 		})
 	}
@@ -276,7 +273,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
-					GlobalOpts: &GlobalOpts{appName: tc.inAppName},
+					appName: tc.inAppName,
 				},
 			}
 
@@ -644,11 +641,11 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
-					Environments:      tc.inEnvironments,
-					GitHubRepo:        tc.inGitHubRepo,
-					GitHubAccessToken: tc.inGitHubToken,
-					GitBranch:         tc.inGitBranch,
-					GlobalOpts:        &GlobalOpts{appName: tc.inAppName},
+					environments:      tc.inEnvironments,
+					githubRepo:        tc.inGitHubRepo,
+					githubAccessToken: tc.inGitHubToken,
+					gitBranch:         tc.inGitBranch,
+					appName:           tc.inAppName,
 				},
 
 				secretsmanager: mockSecretsManager,
@@ -695,9 +692,9 @@ func TestInitPipelineOpts_createPipelineName(t *testing.T) {
 			// GIVEN
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
-					GitHubRepo:  tc.inGitHubRepo,
-					GlobalOpts:  &GlobalOpts{appName: tc.inAppName},
-					GitHubOwner: tc.inAppOwner,
+					githubRepo:  tc.inGitHubRepo,
+					appName:     tc.inAppName,
+					githubOwner: tc.inAppOwner,
 				},
 			}
 
@@ -849,7 +846,7 @@ func TestInitPipelineOpts_getEnvConfig(t *testing.T) {
 			// GIVEN
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
-					GlobalOpts: &GlobalOpts{appName: tc.inAppName},
+					appName: tc.inAppName,
 				},
 				envs: tc.inEnvs,
 			}

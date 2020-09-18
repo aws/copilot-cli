@@ -31,7 +31,7 @@ const (
 )
 
 var initPackageAddonsSvc = func(o *packageSvcOpts) error {
-	addonsSvc, err := addon.New(o.Name)
+	addonsSvc, err := addon.New(o.name)
 	if err != nil {
 		return fmt.Errorf("initiate addons service: %w", err)
 	}
@@ -40,11 +40,11 @@ var initPackageAddonsSvc = func(o *packageSvcOpts) error {
 }
 
 type packageSvcVars struct {
-	*GlobalOpts
-	Name      string
-	EnvName   string
-	Tag       string
-	OutputDir string
+	name      string
+	envName   string
+	appName   string
+	tag       string
+	outputDir string
 }
 
 type packageSvcOpts struct {
@@ -62,6 +62,7 @@ type packageSvcOpts struct {
 	fs              afero.Fs
 	runner          runner
 	sel             wsSelector
+	prompt          prompter
 	stackSerializer func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
 }
 
@@ -80,6 +81,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		return nil, fmt.Errorf("retrieve default session: %w", err)
 	}
 
+	prompter := prompt.New()
 	opts := &packageSvcOpts{
 		packageSvcVars: vars,
 		initAddonsSvc:  initPackageAddonsSvc,
@@ -87,7 +89,8 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		store:          store,
 		appCFN:         cloudformation.New(sess),
 		runner:         command.New(),
-		sel:            selector.NewWorkspaceSelect(vars.prompt, store, ws),
+		sel:            selector.NewWorkspaceSelect(prompter, store, ws),
+		prompt:         prompter,
 		stackWriter:    os.Stdout,
 		paramsWriter:   ioutil.Discard,
 		addonsWriter:   ioutil.Discard,
@@ -124,20 +127,20 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *packageSvcOpts) Validate() error {
-	if o.AppName() == "" {
+	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
-	if o.Name != "" {
+	if o.name != "" {
 		names, err := o.ws.ServiceNames()
 		if err != nil {
 			return fmt.Errorf("list services in the workspace: %w", err)
 		}
-		if !contains(o.Name, names) {
-			return fmt.Errorf("service '%s' does not exist in the workspace", o.Name)
+		if !contains(o.name, names) {
+			return fmt.Errorf("service '%s' does not exist in the workspace", o.name)
 		}
 	}
-	if o.EnvName != "" {
-		if _, err := o.store.GetEnvironment(o.AppName(), o.EnvName); err != nil {
+	if o.envName != "" {
+		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
 			return err
 		}
 	}
@@ -157,12 +160,12 @@ func (o *packageSvcOpts) Ask() error {
 
 // Execute prints the CloudFormation template of the application for the environment.
 func (o *packageSvcOpts) Execute() error {
-	env, err := o.store.GetEnvironment(o.AppName(), o.EnvName)
+	env, err := o.store.GetEnvironment(o.appName, o.envName)
 	if err != nil {
 		return err
 	}
 
-	if o.OutputDir != "" {
+	if o.outputDir != "" {
 		if err := o.setOutputFileWriters(); err != nil {
 			return err
 		}
@@ -190,7 +193,7 @@ func (o *packageSvcOpts) Execute() error {
 	}
 
 	// Addons template won't show up without setting --output-dir flag.
-	if o.OutputDir != "" {
+	if o.outputDir != "" {
 		if err := o.setAddonsFileWriter(); err != nil {
 			return err
 		}
@@ -201,7 +204,7 @@ func (o *packageSvcOpts) Execute() error {
 }
 
 func (o *packageSvcOpts) askAppName() error {
-	if o.Name != "" {
+	if o.name != "" {
 		return nil
 	}
 
@@ -209,25 +212,25 @@ func (o *packageSvcOpts) askAppName() error {
 	if err != nil {
 		return fmt.Errorf("select service: %w", err)
 	}
-	o.Name = name
+	o.name = name
 	return nil
 }
 
 func (o *packageSvcOpts) askEnvName() error {
-	if o.EnvName != "" {
+	if o.envName != "" {
 		return nil
 	}
 
-	name, err := o.sel.Environment(svcPackageEnvNamePrompt, "", o.AppName())
+	name, err := o.sel.Environment(svcPackageEnvNamePrompt, "", o.appName)
 	if err != nil {
 		return fmt.Errorf("select environment: %w", err)
 	}
-	o.EnvName = name
+	o.envName = name
 	return nil
 }
 
 func (o *packageSvcOpts) askTag() error {
-	if o.Tag != "" {
+	if o.tag != "" {
 		return nil
 	}
 
@@ -239,7 +242,7 @@ func (o *packageSvcOpts) askTag() error {
 			return fmt.Errorf("prompt get image tag: %w", err)
 		}
 	}
-	o.Tag = tag
+	o.tag = tag
 	return nil
 }
 
@@ -257,7 +260,7 @@ type svcCfnTemplates struct {
 
 // getSvcTemplates returns the CloudFormation stack's template and its parameters for the service.
 func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTemplates, error) {
-	raw, err := o.ws.ReadWorkloadManifest(o.Name)
+	raw, err := o.ws.ReadWorkloadManifest(o.name)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +269,7 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 		return nil, err
 	}
 
-	app, err := o.store.GetApplication(o.AppName())
+	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
 		return nil, err
 	}
@@ -275,17 +278,17 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 		return nil, err
 	}
 
-	repoURL, ok := resources.RepositoryURLs[o.Name]
+	repoURL, ok := resources.RepositoryURLs[o.name]
 	if !ok {
 		return nil, &errRepoNotFound{
-			svcName:      o.Name,
+			svcName:      o.name,
 			envRegion:    env.Region,
 			appAccountID: app.AccountID,
 		}
 	}
 	serializer, err := o.stackSerializer(mft, env, app, stack.RuntimeConfig{
 		ImageRepoURL:   repoURL,
-		ImageTag:       o.Tag,
+		ImageTag:       o.tag,
 		AdditionalTags: app.Tags,
 	})
 	if err != nil {
@@ -304,20 +307,20 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 
 // setOutputFileWriters creates the output directory, and updates the template and param writers to file writers in the directory.
 func (o *packageSvcOpts) setOutputFileWriters() error {
-	if err := o.fs.MkdirAll(o.OutputDir, 0755); err != nil {
-		return fmt.Errorf("create directory %s: %w", o.OutputDir, err)
+	if err := o.fs.MkdirAll(o.outputDir, 0755); err != nil {
+		return fmt.Errorf("create directory %s: %w", o.outputDir, err)
 	}
 
-	templatePath := filepath.Join(o.OutputDir,
-		fmt.Sprintf(config.ServiceCfnTemplateNameFormat, o.Name))
+	templatePath := filepath.Join(o.outputDir,
+		fmt.Sprintf(config.ServiceCfnTemplateNameFormat, o.name))
 	templateFile, err := o.fs.Create(templatePath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", templatePath, err)
 	}
 	o.stackWriter = templateFile
 
-	paramsPath := filepath.Join(o.OutputDir,
-		fmt.Sprintf(config.ServiceCfnTemplateConfigurationNameFormat, o.Name, o.EnvName))
+	paramsPath := filepath.Join(o.outputDir,
+		fmt.Sprintf(config.ServiceCfnTemplateConfigurationNameFormat, o.name, o.envName))
 	paramsFile, err := o.fs.Create(paramsPath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", paramsPath, err)
@@ -328,8 +331,8 @@ func (o *packageSvcOpts) setOutputFileWriters() error {
 }
 
 func (o *packageSvcOpts) setAddonsFileWriter() error {
-	addonsPath := filepath.Join(o.OutputDir,
-		fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.Name))
+	addonsPath := filepath.Join(o.outputDir,
+		fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.name))
 	addonsFile, err := o.fs.Create(addonsPath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", addonsPath, err)
@@ -368,11 +371,9 @@ func (e *errRepoNotFound) Is(target error) bool {
 		e.appAccountID == t.appAccountID
 }
 
-// BuildSvcPackageCmd builds the command for printing a service's CloudFormation template.
-func BuildSvcPackageCmd() *cobra.Command {
-	vars := packageSvcVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildSvcPackageCmd builds the command for printing a service's CloudFormation template.
+func buildSvcPackageCmd() *cobra.Command {
+	vars := packageSvcVars{}
 	cmd := &cobra.Command{
 		Use:   "package",
 		Short: "Prints the AWS CloudFormation template of a service.",
@@ -400,10 +401,10 @@ func BuildSvcPackageCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	// Set the defaults to opts.{Field} otherwise cobra overrides the values set by the constructor.
-	cmd.Flags().StringVarP(&vars.Name, nameFlag, nameFlagShort, "", svcFlagDescription)
-	cmd.Flags().StringVarP(&vars.EnvName, envFlag, envFlagShort, "", envFlagDescription)
-	cmd.Flags().StringVar(&vars.Tag, imageTagFlag, "", imageTagFlagDescription)
-	cmd.Flags().StringVar(&vars.OutputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)
+	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVar(&vars.tag, imageTagFlag, "", imageTagFlagDescription)
+	cmd.Flags().StringVar(&vars.outputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
 	return cmd
 }

@@ -94,11 +94,9 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 			tc.mockStore(mockStore)
 			opts := deploySvcOpts{
 				deploySvcVars: deploySvcVars{
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inAppName,
-					},
-					Name:    tc.inSvcName,
-					EnvName: tc.inEnvName,
+					appName: tc.inAppName,
+					name:    tc.inSvcName,
+					envName: tc.inEnvName,
 				},
 				ws:    mockWs,
 				store: mockStore,
@@ -169,12 +167,10 @@ func TestSvcDeployOpts_Ask(t *testing.T) {
 			tc.wantedCalls(mockSel)
 			opts := deploySvcOpts{
 				deploySvcVars: deploySvcVars{
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inAppName,
-					},
-					Name:     tc.inSvcName,
-					EnvName:  tc.inEnvName,
-					ImageTag: tc.inImageTag,
+					appName:  tc.inAppName,
+					name:     tc.inSvcName,
+					envName:  tc.inEnvName,
+					imageTag: tc.inImageTag,
 				},
 				sel: mockSel,
 			}
@@ -185,9 +181,9 @@ func TestSvcDeployOpts_Ask(t *testing.T) {
 			// THEN
 			if tc.wantedError == nil {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedSvcName, opts.Name)
-				require.Equal(t, tc.wantedEnvName, opts.EnvName)
-				require.Equal(t, tc.wantedImageTag, opts.ImageTag)
+				require.Equal(t, tc.wantedSvcName, opts.name)
+				require.Equal(t, tc.wantedEnvName, opts.envName)
+				require.Equal(t, tc.wantedImageTag, opts.imageTag)
 			} else {
 				require.EqualError(t, err, tc.wantedError.Error())
 			}
@@ -303,7 +299,7 @@ image:
 			}
 			opts := deploySvcOpts{
 				deploySvcVars: deploySvcVars{
-					Name: test.inputSvc,
+					name: test.inputSvc,
 				},
 				ws:        mockWorkspace,
 				unmarshal: unmarshaler,
@@ -455,7 +451,7 @@ func TestSvcDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 
 			opts := deploySvcOpts{
 				deploySvcVars: deploySvcVars{
-					Name: tc.inputSvc,
+					name: tc.inputSvc,
 				},
 				store:             mockProjectSvc,
 				appCFN:            mockProjectResourcesGetter,
