@@ -94,6 +94,26 @@ func (mr *MockPrompterMockRecorder) MultiSelect(message, help, options interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MultiSelect", reflect.TypeOf((*MockPrompter)(nil).MultiSelect), varargs...)
 }
 
+// Confirm mocks base method
+func (m *MockPrompter) Confirm(message, help string, promptOpts ...prompt.Option) (bool, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{message, help}
+	for _, a := range promptOpts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Confirm", varargs...)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Confirm indicates an expected call of Confirm
+func (mr *MockPrompterMockRecorder) Confirm(message, help interface{}, promptOpts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{message, help}, promptOpts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Confirm", reflect.TypeOf((*MockPrompter)(nil).Confirm), varargs...)
+}
+
 // MockAppEnvLister is a mock of AppEnvLister interface
 type MockAppEnvLister struct {
 	ctrl     *gomock.Controller
