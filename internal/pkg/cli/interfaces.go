@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -9,15 +9,14 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	"github.com/aws/copilot-cli/internal/pkg/ecslogging"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -151,9 +150,8 @@ type repositoryService interface {
 	imageBuilderPusher
 }
 
-type cwlogService interface {
-	TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
-	LogGroupExists(logGroupName string) (bool, error)
+type logEventsWriter interface {
+	WriteLogEvents(opts ecslogging.WriteLogEventsOpts) error
 }
 
 type templater interface {
@@ -185,6 +183,14 @@ type sessionFromRoleProvider interface {
 	FromRole(roleARN string, region string) (*session.Session, error)
 }
 
+type sessionFromStaticProvider interface {
+	FromStaticCreds(accessKeyID, secretAccessKey, sessionToken string) (*session.Session, error)
+}
+
+type sessionFromProfileProvider interface {
+	FromProfile(name string) (*session.Session, error)
+}
+
 type profileNames interface {
 	Names() []string
 }
@@ -193,6 +199,8 @@ type sessionProvider interface {
 	defaultSessionProvider
 	regionalSessionProvider
 	sessionFromRoleProvider
+	sessionFromProfileProvider
+	sessionFromStaticProvider
 }
 
 type describer interface {
@@ -204,11 +212,16 @@ type wsFileDeleter interface {
 }
 
 type svcManifestReader interface {
-	ReadServiceManifest(svcName string) ([]byte, error)
+	ReadWorkloadManifest(svcName string) ([]byte, error)
 }
 
 type svcManifestWriter interface {
-	WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
+	WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
+}
+
+type svcDirManifestWriter interface {
+	svcManifestWriter
+	CopilotDirPath() (string, error)
 }
 
 type wsPipelineManifestReader interface {
@@ -327,20 +340,12 @@ type dockerfileParser interface {
 	GetHealthCheck() (*dockerfile.HealthCheck, error)
 }
 
-type serviceArnGetter interface {
-	GetServiceArn() (*ecs.ServiceArn, error)
-}
-
 type statusDescriber interface {
 	Describe() (*describe.ServiceStatusDesc, error)
 }
 
 type envDescriber interface {
 	Describe() (*describe.EnvDescription, error)
-}
-
-type resourceGroupsClient interface {
-	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
 }
 
 type pipelineGetter interface {
@@ -389,4 +394,12 @@ type ec2Selector interface {
 	VPC(prompt, help string) (string, error)
 	PublicSubnets(prompt, help, vpcID string) ([]string, error)
 	PrivateSubnets(prompt, help, vpcID string) ([]string, error)
+}
+
+type credsSelector interface {
+	Creds(prompt, help string) (*session.Session, error)
+}
+
+type ec2Client interface {
+	HasDNSSupport(vpcID string) (bool, error)
 }

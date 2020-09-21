@@ -88,8 +88,8 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 			setupMocks: func(m webSvcDescriberMocks) {
 				gomock.InOrder(
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
-						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
-						stack.EnvOutputSubdomain:                 testEnvSubdomain,
+						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+						envOutputSubdomain:                 testEnvSubdomain,
 					}, nil),
 					m.svcDescriber.EXPECT().Params().Return(nil, mockErr),
 				)
@@ -100,8 +100,8 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 			setupMocks: func(m webSvcDescriberMocks) {
 				gomock.InOrder(
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
-						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
-						stack.EnvOutputSubdomain:                 testEnvSubdomain,
+						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+						envOutputSubdomain:                 testEnvSubdomain,
 					}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceRulePathParamKey: testSvcPath,
@@ -115,7 +115,7 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 			setupMocks: func(m webSvcDescriberMocks) {
 				gomock.InOrder(
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
-						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceRulePathParamKey: testSvcPath,
@@ -205,13 +205,13 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
-						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceContainerPortParamKey: "80",
-						stack.ServiceTaskCountParamKey:          "1",
-						stack.ServiceTaskCPUParamKey:            "256",
-						stack.ServiceTaskMemoryParamKey:         "512",
+						stack.WorkloadTaskCountParamKey:         "1",
+						stack.WorkloadTaskCPUParamKey:           "256",
+						stack.WorkloadTaskMemoryParamKey:        "512",
 						stack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
@@ -225,14 +225,14 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
-						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceRulePathParamKey:      testSvcPath,
 						stack.LBWebServiceContainerPortParamKey: "80",
-						stack.ServiceTaskCountParamKey:          "1",
-						stack.ServiceTaskCPUParamKey:            "256",
-						stack.ServiceTaskMemoryParamKey:         "512",
+						stack.WorkloadTaskCountParamKey:         "1",
+						stack.WorkloadTaskCPUParamKey:           "256",
+						stack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return(
 						map[string]string{
@@ -250,14 +250,14 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv}, nil),
 
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
-						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceRulePathParamKey:      testSvcPath,
 						stack.LBWebServiceContainerPortParamKey: "5000",
-						stack.ServiceTaskCountParamKey:          "1",
-						stack.ServiceTaskCPUParamKey:            "256",
-						stack.ServiceTaskMemoryParamKey:         "512",
+						stack.WorkloadTaskCountParamKey:         "1",
+						stack.WorkloadTaskCPUParamKey:           "256",
+						stack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return(
 						map[string]string{
@@ -265,14 +265,14 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 						}, nil),
 
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
-						stack.EnvOutputPublicLoadBalancerDNSName: prodEnvLBDNSName,
+						envOutputPublicLoadBalancerDNSName: prodEnvLBDNSName,
 					}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceRulePathParamKey:      prodSvcPath,
 						stack.LBWebServiceContainerPortParamKey: "5000",
-						stack.ServiceTaskCountParamKey:          "2",
-						stack.ServiceTaskCPUParamKey:            "512",
-						stack.ServiceTaskMemoryParamKey:         "1024",
+						stack.WorkloadTaskCountParamKey:         "2",
+						stack.WorkloadTaskCPUParamKey:           "512",
+						stack.WorkloadTaskMemoryParamKey:        "1024",
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return(
 						map[string]string{

@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package resourcegroups provides a client to make API requests to AWS Resource Groups
@@ -20,11 +20,6 @@ type api interface {
 // ResourceGroups wraps an AWS ResourceGroups client.
 type ResourceGroups struct {
 	client api
-}
-
-type tagFilter struct {
-	Key    string
-	Values []string
 }
 
 // Resource contains the ARN and the tags of the resource.

@@ -1,0 +1,25 @@
+Rule:
+  Type: AWS::Events::Rule
+  Properties:
+    ScheduleExpression: {{.ScheduleExpression}}
+    State: ENABLED
+    Targets:
+    - Arn: !Ref StateMachine
+      Id: statemachine
+      RoleArn: !GetAtt RuleRole.Arn
+RuleRole:
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Statement:
+      - Effect: Allow
+        Principal:
+          Service: events.amazonaws.com
+        Action: sts:AssumeRole
+    Policies:
+    - PolicyName: EventRulePolicy
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action: states:StartExecution
+          Resource: !Ref StateMachine

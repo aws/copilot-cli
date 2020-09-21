@@ -4,11 +4,12 @@
 package manifest
 
 import (
-	"path/filepath"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -55,14 +56,18 @@ logging:
 environments:
   test:
     count: 3
+  prod:
+    count:
+      range: 1-10
+      cpu_percentage: 70
 `,
 			requireCorrectValues: func(t *testing.T, i interface{}) {
 				actualManifest, ok := i.(*LoadBalancedWebService)
 				require.True(t, ok)
 				wantedManifest := &LoadBalancedWebService{
-					Service: Service{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
+					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-						Image: ServiceImageWithPort{ServiceImage: ServiceImage{Build: BuildArgsOrString{
+						Image: ServiceImageWithPort{Image: Image{Build: BuildArgsOrString{
 							BuildString: aws.String("frontend/Dockerfile"),
 						}}, Port: aws.Uint16(80)},
 						RoutingRule: RoutingRule{
@@ -73,7 +78,9 @@ environments:
 						TaskConfig: TaskConfig{
 							CPU:    aws.Int(512),
 							Memory: aws.Int(1024),
-							Count:  aws.Int(1),
+							Count: Count{
+								Value: aws.Int(1),
+							},
 							Variables: map[string]string{
 								"LOG_LEVEL": "WARN",
 							},
@@ -90,7 +97,7 @@ environments:
 								},
 							},
 						},
-						LogConfig: &LogConfig{
+						Logging: &Logging{
 							Destination: map[string]string{
 								"exclude-pattern": "^.*[aeiou]$",
 								"include-pattern": "^[a-z][aeiou].*$",
@@ -106,7 +113,19 @@ environments:
 					Environments: map[string]*LoadBalancedWebServiceConfig{
 						"test": {
 							TaskConfig: TaskConfig{
-								Count: aws.Int(3),
+								Count: Count{
+									Value: aws.Int(3),
+								},
+							},
+						},
+						"prod": {
+							TaskConfig: TaskConfig{
+								Count: Count{
+									Autoscaling: Autoscaling{
+										Range: Range("1-10"),
+										CPU:   aws.Int(70),
+									},
+								},
 							},
 						},
 					},
@@ -131,14 +150,14 @@ secrets:
 				actualManifest, ok := i.(*BackendService)
 				require.True(t, ok)
 				wantedManifest := &BackendService{
-					Service: Service{
+					Workload: Workload{
 						Name: aws.String("subscribers"),
 						Type: aws.String(BackendServiceType),
 					},
 					BackendServiceConfig: BackendServiceConfig{
 						Image: imageWithPortAndHealthcheck{
 							ServiceImageWithPort: ServiceImageWithPort{
-								ServiceImage: ServiceImage{
+								Image: Image{
 									Build: BuildArgsOrString{
 										BuildString: aws.String("./subscribers/Dockerfile"),
 									},
@@ -156,7 +175,9 @@ secrets:
 						TaskConfig: TaskConfig{
 							CPU:    aws.Int(1024),
 							Memory: aws.Int(1024),
-							Count:  aws.Int(1),
+							Count: Count{
+								Value: aws.Int(1),
+							},
 							Secrets: map[string]string{
 								"API_TOKEN": "SUBS_API_TOKEN",
 							},
@@ -171,13 +192,13 @@ secrets:
 name: CowSvc
 type: 'OH NO'
 `,
-			wantedErr: &ErrInvalidSvcManifestType{Type: "OH NO"},
+			wantedErr: &ErrInvalidWorkloadType{Type: "OH NO"},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			m, err := UnmarshalService([]byte(tc.inContent))
+			m, err := UnmarshalWorkload([]byte(tc.inContent))
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
@@ -188,155 +209,166 @@ type: 'OH NO'
 	}
 }
 
-func TestBuildArgsUnmarshalYAML(t *testing.T) {
+func TestCount_UnmarshalYAML(t *testing.T) {
+	mockResponseTime := 500 * time.Millisecond
 	testCases := map[string]struct {
 		inContent []byte
 
-		wantedStruct BuildArgsOrString
+		wantedStruct Count
 		wantedError  error
 	}{
-		"legacy case: simple build string": {
-			inContent: []byte(`build: ./Dockerfile`),
+		"legacy case: simple task count": {
+			inContent: []byte(`count: 1`),
 
-			wantedStruct: BuildArgsOrString{
-				BuildString: aws.String("./Dockerfile"),
+			wantedStruct: Count{
+				Value: aws.Int(1),
 			},
 		},
-		"Dockerfile specified in build opts": {
-			inContent: []byte(`build:
-  dockerfile: path/to/Dockerfile
+		"With auto scaling enabled": {
+			inContent: []byte(`count:
+  range: 1-10
+  cpu_percentage: 70
+  memory_percentage: 80
+  requests: 1000
+  response_time: 500ms
 `),
-			wantedStruct: BuildArgsOrString{
-				BuildArgs: DockerBuildArgs{
-					Dockerfile: aws.String("path/to/Dockerfile"),
-				},
-			},
-		},
-		"Dockerfile context, and args specified in build opts": {
-			inContent: []byte(`build:
-  dockerfile: path/to/Dockerfile
-  args:
-    arg1: value1
-    bestdog: bowie
-  context: path/to/source`),
-			wantedStruct: BuildArgsOrString{
-				BuildArgs: DockerBuildArgs{
-					Dockerfile: aws.String("path/to/Dockerfile"),
-					Context:    aws.String("path/to/source"),
-					Args: map[string]string{
-						"arg1":    "value1",
-						"bestdog": "bowie",
-					},
+			wantedStruct: Count{
+				Autoscaling: Autoscaling{
+					Range:        Range("1-10"),
+					CPU:          aws.Int(70),
+					Memory:       aws.Int(80),
+					Requests:     aws.Int(1000),
+					ResponseTime: &mockResponseTime,
 				},
 			},
 		},
 		"Error if unmarshalable": {
-			inContent: []byte(`build:
-  badfield: OH NOES
-  otherbadfield: DOUBLE BAD`),
-			wantedError: errUnmarshalBuildOpts,
+			inContent: []byte(`count: badNumber
+`),
+			wantedError: errUnmarshalCountOpts,
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			var b ServiceImage
+			var b TaskConfig
 			err := yaml.Unmarshal(tc.inContent, &b)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
 				// check memberwise dereferenced pointer equality
-				require.Equal(t, aws.StringValue(tc.wantedStruct.BuildString), aws.StringValue(b.Build.BuildString))
-				require.Equal(t, aws.StringValue(tc.wantedStruct.BuildArgs.Context), aws.StringValue(b.Build.BuildArgs.Context))
-				require.Equal(t, aws.StringValue(tc.wantedStruct.BuildArgs.Dockerfile), aws.StringValue(b.Build.BuildArgs.Dockerfile))
-				require.Equal(t, tc.wantedStruct.BuildArgs.Args, b.Build.BuildArgs.Args)
+				require.Equal(t, tc.wantedStruct.Value, b.Count.Value)
+				require.Equal(t, tc.wantedStruct.Autoscaling.Range, b.Count.Autoscaling.Range)
+				require.Equal(t, tc.wantedStruct.Autoscaling.CPU, b.Count.Autoscaling.CPU)
+				require.Equal(t, tc.wantedStruct.Autoscaling.Memory, b.Count.Autoscaling.Memory)
+				require.Equal(t, tc.wantedStruct.Autoscaling.Requests, b.Count.Autoscaling.Requests)
+				require.Equal(t, tc.wantedStruct.Autoscaling.ResponseTime, b.Count.Autoscaling.ResponseTime)
 			}
 		})
 	}
 }
 
-func TestBuildConfig(t *testing.T) {
-	mockWsRoot := "/root/dir"
+func TestRange_Parse(t *testing.T) {
 	testCases := map[string]struct {
-		inBuild     BuildArgsOrString
-		wantedBuild DockerBuildArgs
+		inRange string
+
+		wantedMin int
+		wantedMax int
+		wantedErr error
 	}{
-		"simple case: BuildString path to dockerfile": {
-			inBuild: BuildArgsOrString{
-				BuildString: aws.String("my/Dockerfile"),
-			},
-			wantedBuild: DockerBuildArgs{
-				Dockerfile: aws.String(filepath.Join(mockWsRoot, "my/Dockerfile")),
-				Context:    aws.String(filepath.Join(mockWsRoot, "my")),
-			},
+		"invalid format": {
+			inRange: "badRange",
+
+			wantedErr: fmt.Errorf("invalid range value badRange. Should be in format of ${min}-${max}"),
 		},
-		"Different context than dockerfile": {
-			inBuild: BuildArgsOrString{
-				BuildArgs: DockerBuildArgs{
-					Dockerfile: aws.String("build/dockerfile"),
-					Context:    aws.String("cmd/main"),
-				},
-			},
-			wantedBuild: DockerBuildArgs{
-				Dockerfile: aws.String(filepath.Join(mockWsRoot, "build/dockerfile")),
-				Context:    aws.String(filepath.Join(mockWsRoot, "cmd/main")),
-			},
+		"invalid minimum": {
+			inRange: "a-100",
+
+			wantedErr: fmt.Errorf("cannot convert minimum value a to integer"),
 		},
-		"no dockerfile specified": {
-			inBuild: BuildArgsOrString{
-				BuildArgs: DockerBuildArgs{
-					Context: aws.String("cmd/main"),
-				},
-			},
-			wantedBuild: DockerBuildArgs{
-				Dockerfile: aws.String(filepath.Join(mockWsRoot, "cmd", "main", "Dockerfile")),
-				Context:    aws.String(filepath.Join(mockWsRoot, "cmd", "main")),
-			},
+		"invalid maximum": {
+			inRange: "1-a",
+
+			wantedErr: fmt.Errorf("cannot convert maximum value a to integer"),
 		},
-		"no dockerfile or context specified": {
-			inBuild: BuildArgsOrString{
-				BuildArgs: DockerBuildArgs{
-					Args: map[string]string{
-						"goodDog": "bowie",
-					},
-				},
-			},
-			wantedBuild: DockerBuildArgs{
-				Dockerfile: aws.String(filepath.Join(mockWsRoot, "Dockerfile")),
-				Context:    aws.String(mockWsRoot),
-				Args: map[string]string{
-					"goodDog": "bowie",
-				},
-			},
+		"success": {
+			inRange: "1-10",
+
+			wantedMin: 1,
+			wantedMax: 10,
 		},
-		"including args": {
-			inBuild: BuildArgsOrString{
-				BuildArgs: DockerBuildArgs{
-					Dockerfile: aws.String("my/Dockerfile"),
-					Args: map[string]string{
-						"goodDog":  "bowie",
-						"badGoose": "HONK",
-					},
-				},
-			},
-			wantedBuild: DockerBuildArgs{
-				Dockerfile: aws.String(filepath.Join(mockWsRoot, "my/Dockerfile")),
-				Context:    aws.String(filepath.Join(mockWsRoot, "my")),
-				Args: map[string]string{
-					"goodDog":  "bowie",
-					"badGoose": "HONK",
-				},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			r := Range(tc.inRange)
+			gotMin, gotMax, err := r.Parse()
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, gotMin, tc.wantedMin)
+				require.Equal(t, gotMax, tc.wantedMax)
+			}
+		})
+	}
+}
+
+func TestAutoscaling_Options(t *testing.T) {
+	const (
+		mockRange    = "1-100"
+		mockRequests = 1000
+	)
+	mockResponseTime := 512 * time.Millisecond
+	testCases := map[string]struct {
+		inRange        string
+		inCPU          int
+		inMemory       int
+		inRequests     int
+		inResponseTime time.Duration
+
+		wanted    *template.AutoscalingOpts
+		wantedErr error
+	}{
+		"invalid range": {
+			inRange: "badRange",
+
+			wantedErr: fmt.Errorf("invalid range value badRange. Should be in format of ${min}-${max}"),
+		},
+		"success": {
+			inRange:        mockRange,
+			inCPU:          70,
+			inMemory:       80,
+			inRequests:     mockRequests,
+			inResponseTime: mockResponseTime,
+
+			wanted: &template.AutoscalingOpts{
+				MaxCapacity:  aws.Int(100),
+				MinCapacity:  aws.Int(1),
+				CPU:          aws.Float64(70),
+				Memory:       aws.Float64(80),
+				Requests:     aws.Float64(1000),
+				ResponseTime: aws.Float64(0.512),
 			},
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			s := ServiceImage{
-				Build: tc.inBuild,
+			a := Autoscaling{
+				Range:        Range(tc.inRange),
+				CPU:          aws.Int(tc.inCPU),
+				Memory:       aws.Int(tc.inMemory),
+				Requests:     aws.Int(tc.inRequests),
+				ResponseTime: &tc.inResponseTime,
 			}
-			got := s.BuildConfig(mockWsRoot)
+			got, err := a.Options()
 
-			require.Equal(t, tc.wantedBuild, *got)
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, got, tc.wanted)
+			}
 		})
 	}
 }

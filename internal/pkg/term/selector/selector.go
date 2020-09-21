@@ -14,8 +14,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 )
 
-// Prompter wraps the method to select an option from a list of options.
+// Prompter wraps the methods to ask for inputs from the terminal.
 type Prompter interface {
+	Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.Option) (string, error)
 	SelectOne(message, help string, options []string, promptOpts ...prompt.Option) (string, error)
 	MultiSelect(message, help string, options []string, promptOpts ...prompt.Option) ([]string, error)
 }
@@ -250,10 +251,7 @@ func (s *Select) Environment(prompt, help, app string, additionalOpts ...string)
 		return "", fmt.Errorf("get environments for app %s from metadata store: %w", app, err)
 	}
 
-	for _, opt := range additionalOpts {
-		envs = append(envs, opt)
-	}
-
+	envs = append(envs, additionalOpts...)
 	if len(envs) == 0 {
 		log.Infof("Couldn't find any environments associated with app %s, try initializing one: %s\n",
 			color.HighlightUserInput(app),
@@ -279,10 +277,7 @@ func (s *Select) Application(prompt, help string, additionalOpts ...string) (str
 		return "", err
 	}
 
-	for _, opt := range additionalOpts {
-		appNames = append(appNames, opt)
-	}
-
+	appNames = append(appNames, additionalOpts...)
 	if len(appNames) == 0 {
 		log.Infof("Couldn't find any applications in this region and account. Try initializing one with %s\n",
 			color.HighlightCode("copilot app init"))

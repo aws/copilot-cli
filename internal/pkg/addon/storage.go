@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package addon contains the service to manage addons.
@@ -17,15 +17,11 @@ const (
 	s3AddonPath       = "addons/s3/cf.yml"
 )
 
-var regexpMatchAttribute = regexp.MustCompile("^(\\S+):([sbnSBN])")
+var regexpMatchAttribute = regexp.MustCompile(`^(\S+):([sbnSBN])`)
 
 var storageTemplateFunctions = map[string]interface{}{
 	"logicalIDSafe": template.StripNonAlphaNumFunc,
 	"envVarName":    template.EnvVarNameFunc,
-}
-
-type storage struct {
-	Name *string
 }
 
 // DynamoDB contains configuration options which fully descibe a DynamoDB table.

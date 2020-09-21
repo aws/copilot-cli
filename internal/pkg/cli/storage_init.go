@@ -1,4 +1,4 @@
-// Copyright Amazon.com, Inc or its affiliates. All rights reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -28,12 +28,10 @@ const (
 const (
 	s3BucketFriendlyText      = "S3 Bucket"
 	dynamoDBTableFriendlyText = "DynamoDB Table"
-	lsiFriendlyText           = "Local Secondary Index"
 )
 
 const (
-	ddbKeyString       = "key"
-	ddbAttributeString = "attribute"
+	ddbKeyString = "key"
 )
 
 var storageTypes = []string{
@@ -56,8 +54,6 @@ S3 is a web object store built to store and retrieve any amount of data from any
 We'll deploy the resources for the storage when you run 'svc deploy'.`
 )
 
-var fmtStorageInitCreateConfirm = "Okay, we'll create %s %s named %s linked to your %s service."
-
 // DDB-specific questions and help prompts.
 var (
 	fmtStorageInitDDBKeyPrompt     = "What would you like to name the %s of this %s?"
@@ -78,36 +74,18 @@ partition key but a different sort key. You may specify up to 5 alternate sort k
 
 	storageInitDDBLSINamePrompt = "What would you like to name this " + color.Emphasize("alternate sort key") + "?"
 	storageInitDDBLSINameHelp   = "You can use the characters [a-zA-Z0-9.-_]"
-
-	storageInitDDBLSISortKeyHelp = "The sort key of this Local Secondary Index. An LSI can be queried based on the partition key and LSI sort key."
 )
 
 const (
-	ddbStringType = "S"
-	ddbIntType    = "N"
-	ddbBinaryType = "B"
+	ddbStringType = "String"
+	ddbIntType    = "Number"
+	ddbBinaryType = "Binary"
 )
 
 var attributeTypes = []string{
 	ddbStringType,
 	ddbIntType,
 	ddbBinaryType,
-}
-
-var attributeTypesLong = []string{
-	"String",
-	"Number",
-	"Binary",
-}
-
-const (
-	ddbPartitionKeyType = "HASH"
-	ddbSortKeyType      = "RANGE"
-)
-
-type attribute struct {
-	name     string
-	dataType string
 }
 
 type initStorageVars struct {
@@ -131,7 +109,6 @@ type initStorageOpts struct {
 	ws    wsAddonManager
 	store store
 
-	app *config.Application
 	sel wsSelector
 }
 
@@ -326,7 +303,7 @@ func (o *initStorageOpts) askDynamoPartitionKey() error {
 
 	keyType, err := o.prompt.SelectOne(keyTypePrompt,
 		keyTypeHelp,
-		attributeTypesLong,
+		attributeTypes,
 		prompt.WithFinalMessage("Partition key datatype:"),
 	)
 	if err != nil {
@@ -350,7 +327,7 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 	if err != nil {
 		return fmt.Errorf("confirm DDB sort key: %w", err)
 	}
-	if response == false {
+	if !response {
 		o.noSort = true
 		return nil
 	}
@@ -372,7 +349,7 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 
 	keyType, err := o.prompt.SelectOne(keyTypePrompt,
 		keyTypeHelp,
-		attributeTypesLong,
+		attributeTypes,
 		prompt.WithFinalMessage("Sort key datatype:"),
 	)
 	if err != nil {
@@ -423,7 +400,7 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 		}
 		lsiType, err := o.prompt.SelectOne(lsiTypePrompt,
 			lsiTypeHelp,
-			attributeTypesLong,
+			attributeTypes,
 			prompt.WithFinalMessage("Attribute type:"),
 		)
 		if err != nil {

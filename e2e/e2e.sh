@@ -21,4 +21,4 @@ do
 done
 
 #Run all the e2e tests
-cd /github.com/aws/copilot-cli/e2e/ && /go/bin/ginkgo -v -r
+cd /github.com/aws/copilot-cli/e2e/$TEST_SUITE && /go/bin/ginkgo -v -r

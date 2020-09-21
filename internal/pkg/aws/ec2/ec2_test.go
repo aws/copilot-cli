@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package ec2
@@ -42,13 +42,51 @@ var (
 	}
 )
 
+func TestEC2_ExtractVPC(t *testing.T) {
+	testCases := map[string]struct {
+		displayString string
+		wantedError   error
+		wantedVPC     *VPC
+	}{
+		"returns error if string is empty": {
+			displayString: "",
+			wantedError:   fmt.Errorf("extract VPC ID from string: "),
+		},
+		"returns just the VPC ID if no name present": {
+			displayString: "vpc-imagr8vpcstring",
+			wantedError:   nil,
+			wantedVPC: &VPC{
+				ID: "vpc-imagr8vpcstring",
+			},
+		},
+		"returns both the VPC ID and name if both present": {
+			displayString: "vpc-imagr8vpcstring (copilot-app-name-env)",
+			wantedError:   nil,
+			wantedVPC: &VPC{
+				ID:   "vpc-imagr8vpcstring",
+				Name: "copilot-app-name-env",
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			vpc, err := ExtractVPC(tc.displayString)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedVPC, vpc)
+			}
+		})
+	}
+}
+
 func TestEC2_ListVPC(t *testing.T) {
-	const mockVPCID = "mockVPCID"
 	testCases := map[string]struct {
 		mockEC2Client func(m *mocks.Mockapi)
 
 		wantedError error
-		wantedVPC   []string
+		wantedVPC   []VPC
 	}{
 		"fail to describe vpcs": {
 			mockEC2Client: func(m *mocks.Mockapi) {
@@ -72,11 +110,25 @@ func TestEC2_ListVPC(t *testing.T) {
 					Vpcs: []*ec2.Vpc{
 						{
 							VpcId: aws.String("mockVPCID2"),
+							Tags: []*ec2.Tag{
+								{
+									Key:   aws.String("Name"),
+									Value: aws.String("mockVPC2Name"),
+								},
+							},
 						},
 					},
 				}, nil)
 			},
-			wantedVPC: []string{"mockVPCID1", "mockVPCID2"},
+			wantedVPC: []VPC{
+				{
+					ID: "mockVPCID1",
+				},
+				{
+					ID:   "mockVPCID2",
+					Name: "mockVPC2Name",
+				},
+			},
 		},
 	}
 
@@ -91,7 +143,7 @@ func TestEC2_ListVPC(t *testing.T) {
 				client: mockAPI,
 			}
 
-			vpcs, err := ec2Client.ListVPC()
+			vpcs, err := ec2Client.ListVPCs()
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
@@ -373,6 +425,59 @@ func TestEC2_SecurityGroups(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedARNs, arns)
+			}
+		})
+	}
+}
+
+func TestEC2_HasDNSSupport(t *testing.T) {
+	testCases := map[string]struct {
+		vpcID string
+
+		mockEC2Client func(m *mocks.Mockapi)
+
+		wantedError   error
+		wantedSupport bool
+	}{
+		"fail to descibe VPC attribute": {
+			vpcID: "mockVPCID",
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeVpcAttribute(gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantedError: fmt.Errorf("describe enableDnsSupport attribute for VPC mockVPCID: some error"),
+		},
+		"success": {
+			vpcID: "mockVPCID",
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeVpcAttribute(&ec2.DescribeVpcAttributeInput{
+					VpcId:     aws.String("mockVPCID"),
+					Attribute: aws.String(ec2.VpcAttributeNameEnableDnsSupport),
+				}).Return(&ec2.DescribeVpcAttributeOutput{
+					EnableDnsSupport: &ec2.AttributeBooleanValue{
+						Value: aws.Bool(true),
+					},
+				}, nil)
+			},
+			wantedSupport: true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockAPI := mocks.NewMockapi(ctrl)
+			tc.mockEC2Client(mockAPI)
+
+			ec2Client := EC2{
+				client: mockAPI,
+			}
+
+			support, err := ec2Client.HasDNSSupport(tc.vpcID)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedSupport, support)
 			}
 		})
 	}

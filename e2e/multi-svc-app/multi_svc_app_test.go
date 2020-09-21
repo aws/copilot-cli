@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package multi_svc_app_test
 
 import (
@@ -32,9 +35,7 @@ var _ = Describe("Multiple Service App", func() {
 		})
 
 		It("app ls includes new application", func() {
-			apps, err := cli.AppList()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(apps).To(ContainSubstring(appName))
+			Eventually(cli.AppList, "30s", "5s").Should(ContainSubstring(appName))
 		})
 
 		It("app show includes app name", func() {
@@ -70,6 +71,7 @@ var _ = Describe("Multiple Service App", func() {
 			backEndInitErr  error
 		)
 		BeforeAll(func() {
+
 			_, frontEndInitErr = cli.SvcInit(&client.SvcInitRequest{
 				Name:       "front-end",
 				SvcType:    "Load Balanced Web Service",
@@ -177,7 +179,7 @@ var _ = Describe("Multiple Service App", func() {
 				Eventually(func() (int, error) {
 					resp, fetchErr = http.Get(route.URL)
 					return resp.StatusCode, fetchErr
-				}, "30s", "1s").Should(Equal(200))
+				}, "60s", "1s").Should(Equal(200))
 
 				// Read the response - our deployed apps should return a body with their
 				// name as the value.
@@ -185,6 +187,24 @@ var _ = Describe("Multiple Service App", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(bodyBytes)).To(Equal(svcName))
 			}
+		})
+
+		It("svc status should include the service, tasks, and alarm status", func() {
+			svcName := "front-end"
+			svc, svcStatusErr := cli.SvcStatus(&client.SvcStatusRequest{
+				AppName: appName,
+				Name:    svcName,
+				EnvName: "test",
+			})
+			Expect(svcStatusErr).NotTo(HaveOccurred())
+			// Service should be active.
+			Expect(svc.Service.Status).To(Equal("ACTIVE"))
+			// Desired count should be minimum auto scaling number.
+			Expect(svc.Service.DesiredCount).To(Equal(int64(2)))
+			// Should have correct number of running tasks.
+			Expect(len(svc.Tasks)).To(Equal(2))
+			// Should have correct number of auto scaling alarms.
+			Expect(len(svc.Alarms)).To(Equal(4))
 		})
 
 		It("env show should include the name and type for front-end, www, and back-end svcs", func() {
@@ -236,6 +256,34 @@ var _ = Describe("Multiple Service App", func() {
 			bodyBytes, err := ioutil.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(bodyBytes)).To(Equal("back-end-service-discovery"))
+		})
+
+		It("environment variable should be overridden and accessible through GET /magicwords", func() {
+			// The front-end service has a route called "/magicwords/" which returns the value of
+			// an environment variable set by a docker argument. If the argument is not overridden
+			// at build time, the endpoint will return "open caraway" in the body. If the value
+			// is overridden by the extended build configuration in the manifest, it will return
+			// "open sesame" in the body.
+			svcName := "front-end"
+			svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
+				AppName: appName,
+				Name:    svcName,
+			})
+			Expect(svcShowErr).NotTo(HaveOccurred())
+			Expect(len(svc.Routes)).To(Equal(1))
+
+			// Calls the front end's magicwords endpoint
+			route := svc.Routes[0]
+			Expect(route.Environment).To(Equal("test"))
+			resp, fetchErr := http.Get(fmt.Sprintf("%s/magicwords/", route.URL))
+			Expect(fetchErr).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+
+			// Read the response - successfully overridden build arg will result
+			// in a response of "open sesame"
+			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(bodyBytes)).To(Equal("open sesame"))
 		})
 
 		It("svc logs should display logs", func() {

@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package sidecars_test
@@ -15,6 +15,8 @@ import (
 )
 
 var cli *client.CLI
+var aws *client.AWS
+var docker *client.Docker
 var appName string
 var svcName string
 var sidecarImageURI string
@@ -30,6 +32,8 @@ var _ = BeforeSuite(func() {
 	ecsCli, err := client.NewCLI()
 	cli = ecsCli
 	Expect(err).NotTo(HaveOccurred())
+	aws = client.NewAWS()
+	docker = client.NewDocker()
 	appName = fmt.Sprintf("e2e-sidecars-%d", time.Now().Unix())
 	svcName = "hello"
 	sidecarRepoName = fmt.Sprintf("e2e-sidecars-nginx-%d", time.Now().Unix())

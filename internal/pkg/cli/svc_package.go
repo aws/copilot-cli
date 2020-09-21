@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -18,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
@@ -233,7 +234,7 @@ func (o *packageSvcOpts) askTag() error {
 	tag, err := getVersionTag(o.runner)
 	if err != nil {
 		// We're not in a Git repository, prompt the user for an explicit tag.
-		tag, err = o.prompt.Get(inputImageTagPrompt, "", nil)
+		tag, err = o.prompt.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
 		if err != nil {
 			return fmt.Errorf("prompt get image tag: %w", err)
 		}
@@ -256,11 +257,11 @@ type svcCfnTemplates struct {
 
 // getSvcTemplates returns the CloudFormation stack's template and its parameters for the service.
 func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTemplates, error) {
-	raw, err := o.ws.ReadServiceManifest(o.Name)
+	raw, err := o.ws.ReadWorkloadManifest(o.Name)
 	if err != nil {
 		return nil, err
 	}
-	mft, err := manifest.UnmarshalService(raw)
+	mft, err := manifest.UnmarshalWorkload(raw)
 	if err != nil {
 		return nil, err
 	}

@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
@@ -225,7 +224,7 @@ func (o *initPipelineOpts) RecommendedActions() []string {
 	return []string{
 		"Commit and push the generated buildspec and manifest file.",
 		fmt.Sprintf("Update the %s phase of your buildspec to unit test your services before pushing the images.", color.HighlightResource("build")),
-		fmt.Sprint("Update your pipeline manifest to add additional stages."),
+		"Update your pipeline manifest to add additional stages.",
 		fmt.Sprintf("Run %s to deploy your pipeline for the repository.", color.HighlightCode("copilot pipeline update")),
 	}
 }
@@ -247,6 +246,15 @@ func (o *initPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
 	return manifest.NewProvider(config)
 }
 
+func (o *initPipelineOpts) getEnvConfig(environmentName string) (*config.Environment, error) {
+	for _, env := range o.envs {
+		if env.Name == environmentName {
+			return env, nil
+		}
+	}
+	return nil, fmt.Errorf("environment %s in application %s is not found", environmentName, o.AppName())
+}
+
 func (o *initPipelineOpts) createPipelineManifest() error {
 	pipelineName := o.createPipelineName()
 	provider, err := o.createPipelineProvider()
@@ -254,7 +262,20 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		return fmt.Errorf("create pipeline provider: %w", err)
 	}
 
-	manifest, err := manifest.CreatePipeline(pipelineName, provider, o.Environments)
+	var stages []manifest.PipelineStage
+	for _, environmentName := range o.Environments {
+		env, err := o.getEnvConfig(environmentName)
+		if err != nil {
+			return err
+		}
+		stage := manifest.PipelineStage{
+			Name:             env.Name,
+			RequiresApproval: env.Prod,
+		}
+		stages = append(stages, stage)
+	}
+
+	manifest, err := manifest.NewPipelineManifest(pipelineName, provider, stages)
 	if err != nil {
 		return fmt.Errorf("generate a pipeline manifest: %w", err)
 	}
@@ -442,7 +463,7 @@ func (o *initPipelineOpts) parseOwnerRepoName(url string) (string, string, error
 	regexPattern := regexp.MustCompile(`.*(github.com)(:|\/)`)
 	parsedURL := strings.TrimPrefix(url, regexPattern.FindString(url))
 	parsedURL = strings.TrimSuffix(parsedURL, ".git")
-	ownerRepo := strings.Split(parsedURL, string(os.PathSeparator))
+	ownerRepo := strings.Split(parsedURL, "/")
 	if len(ownerRepo) != 2 {
 		return "", "", fmt.Errorf("unable to parse the GitHub repository owner and name from %s: please pass the repository URL with the format `--github-url https://github.com/{owner}/{repositoryName}`", url)
 	}

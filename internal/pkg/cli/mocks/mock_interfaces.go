@@ -8,15 +8,14 @@ import (
 	encoding "encoding"
 	session "github.com/aws/aws-sdk-go/aws/session"
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	cloudwatchlogs "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
-	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	describe "github.com/aws/copilot-cli/internal/pkg/describe"
 	docker "github.com/aws/copilot-cli/internal/pkg/docker"
 	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	ecslogging "github.com/aws/copilot-cli/internal/pkg/ecslogging"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -1316,62 +1315,41 @@ func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(docker, args interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockrepositoryService)(nil).BuildAndPush), docker, args)
 }
 
-// MockcwlogService is a mock of cwlogService interface
-type MockcwlogService struct {
+// MocklogEventsWriter is a mock of logEventsWriter interface
+type MocklogEventsWriter struct {
 	ctrl     *gomock.Controller
-	recorder *MockcwlogServiceMockRecorder
+	recorder *MocklogEventsWriterMockRecorder
 }
 
-// MockcwlogServiceMockRecorder is the mock recorder for MockcwlogService
-type MockcwlogServiceMockRecorder struct {
-	mock *MockcwlogService
+// MocklogEventsWriterMockRecorder is the mock recorder for MocklogEventsWriter
+type MocklogEventsWriterMockRecorder struct {
+	mock *MocklogEventsWriter
 }
 
-// NewMockcwlogService creates a new mock instance
-func NewMockcwlogService(ctrl *gomock.Controller) *MockcwlogService {
-	mock := &MockcwlogService{ctrl: ctrl}
-	mock.recorder = &MockcwlogServiceMockRecorder{mock}
+// NewMocklogEventsWriter creates a new mock instance
+func NewMocklogEventsWriter(ctrl *gomock.Controller) *MocklogEventsWriter {
+	mock := &MocklogEventsWriter{ctrl: ctrl}
+	mock.recorder = &MocklogEventsWriterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockcwlogService) EXPECT() *MockcwlogServiceMockRecorder {
+func (m *MocklogEventsWriter) EXPECT() *MocklogEventsWriterMockRecorder {
 	return m.recorder
 }
 
-// TaskLogEvents mocks base method
-func (m *MockcwlogService) TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error) {
+// WriteLogEvents mocks base method
+func (m *MocklogEventsWriter) WriteLogEvents(opts ecslogging.WriteLogEventsOpts) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{logGroupName, streamLastEventTime}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "TaskLogEvents", varargs...)
-	ret0, _ := ret[0].(*cloudwatchlogs.LogEventsOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "WriteLogEvents", opts)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// TaskLogEvents indicates an expected call of TaskLogEvents
-func (mr *MockcwlogServiceMockRecorder) TaskLogEvents(logGroupName, streamLastEventTime interface{}, opts ...interface{}) *gomock.Call {
+// WriteLogEvents indicates an expected call of WriteLogEvents
+func (mr *MocklogEventsWriterMockRecorder) WriteLogEvents(opts interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{logGroupName, streamLastEventTime}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskLogEvents", reflect.TypeOf((*MockcwlogService)(nil).TaskLogEvents), varargs...)
-}
-
-// LogGroupExists mocks base method
-func (m *MockcwlogService) LogGroupExists(logGroupName string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LogGroupExists", logGroupName)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// LogGroupExists indicates an expected call of LogGroupExists
-func (mr *MockcwlogServiceMockRecorder) LogGroupExists(logGroupName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogGroupExists", reflect.TypeOf((*MockcwlogService)(nil).LogGroupExists), logGroupName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteLogEvents", reflect.TypeOf((*MocklogEventsWriter)(nil).WriteLogEvents), opts)
 }
 
 // Mocktemplater is a mock of templater interface
@@ -1658,6 +1636,82 @@ func (mr *MocksessionFromRoleProviderMockRecorder) FromRole(roleARN, region inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromRole", reflect.TypeOf((*MocksessionFromRoleProvider)(nil).FromRole), roleARN, region)
 }
 
+// MocksessionFromStaticProvider is a mock of sessionFromStaticProvider interface
+type MocksessionFromStaticProvider struct {
+	ctrl     *gomock.Controller
+	recorder *MocksessionFromStaticProviderMockRecorder
+}
+
+// MocksessionFromStaticProviderMockRecorder is the mock recorder for MocksessionFromStaticProvider
+type MocksessionFromStaticProviderMockRecorder struct {
+	mock *MocksessionFromStaticProvider
+}
+
+// NewMocksessionFromStaticProvider creates a new mock instance
+func NewMocksessionFromStaticProvider(ctrl *gomock.Controller) *MocksessionFromStaticProvider {
+	mock := &MocksessionFromStaticProvider{ctrl: ctrl}
+	mock.recorder = &MocksessionFromStaticProviderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocksessionFromStaticProvider) EXPECT() *MocksessionFromStaticProviderMockRecorder {
+	return m.recorder
+}
+
+// FromStaticCreds mocks base method
+func (m *MocksessionFromStaticProvider) FromStaticCreds(accessKeyID, secretAccessKey, sessionToken string) (*session.Session, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FromStaticCreds", accessKeyID, secretAccessKey, sessionToken)
+	ret0, _ := ret[0].(*session.Session)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FromStaticCreds indicates an expected call of FromStaticCreds
+func (mr *MocksessionFromStaticProviderMockRecorder) FromStaticCreds(accessKeyID, secretAccessKey, sessionToken interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromStaticCreds", reflect.TypeOf((*MocksessionFromStaticProvider)(nil).FromStaticCreds), accessKeyID, secretAccessKey, sessionToken)
+}
+
+// MocksessionFromProfileProvider is a mock of sessionFromProfileProvider interface
+type MocksessionFromProfileProvider struct {
+	ctrl     *gomock.Controller
+	recorder *MocksessionFromProfileProviderMockRecorder
+}
+
+// MocksessionFromProfileProviderMockRecorder is the mock recorder for MocksessionFromProfileProvider
+type MocksessionFromProfileProviderMockRecorder struct {
+	mock *MocksessionFromProfileProvider
+}
+
+// NewMocksessionFromProfileProvider creates a new mock instance
+func NewMocksessionFromProfileProvider(ctrl *gomock.Controller) *MocksessionFromProfileProvider {
+	mock := &MocksessionFromProfileProvider{ctrl: ctrl}
+	mock.recorder = &MocksessionFromProfileProviderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocksessionFromProfileProvider) EXPECT() *MocksessionFromProfileProviderMockRecorder {
+	return m.recorder
+}
+
+// FromProfile mocks base method
+func (m *MocksessionFromProfileProvider) FromProfile(name string) (*session.Session, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FromProfile", name)
+	ret0, _ := ret[0].(*session.Session)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FromProfile indicates an expected call of FromProfile
+func (mr *MocksessionFromProfileProviderMockRecorder) FromProfile(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromProfile", reflect.TypeOf((*MocksessionFromProfileProvider)(nil).FromProfile), name)
+}
+
 // MockprofileNames is a mock of profileNames interface
 type MockprofileNames struct {
 	ctrl     *gomock.Controller
@@ -1763,6 +1817,36 @@ func (mr *MocksessionProviderMockRecorder) FromRole(roleARN, region interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromRole", reflect.TypeOf((*MocksessionProvider)(nil).FromRole), roleARN, region)
 }
 
+// FromProfile mocks base method
+func (m *MocksessionProvider) FromProfile(name string) (*session.Session, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FromProfile", name)
+	ret0, _ := ret[0].(*session.Session)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FromProfile indicates an expected call of FromProfile
+func (mr *MocksessionProviderMockRecorder) FromProfile(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromProfile", reflect.TypeOf((*MocksessionProvider)(nil).FromProfile), name)
+}
+
+// FromStaticCreds mocks base method
+func (m *MocksessionProvider) FromStaticCreds(accessKeyID, secretAccessKey, sessionToken string) (*session.Session, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FromStaticCreds", accessKeyID, secretAccessKey, sessionToken)
+	ret0, _ := ret[0].(*session.Session)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FromStaticCreds indicates an expected call of FromStaticCreds
+func (mr *MocksessionProviderMockRecorder) FromStaticCreds(accessKeyID, secretAccessKey, sessionToken interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromStaticCreds", reflect.TypeOf((*MocksessionProvider)(nil).FromStaticCreds), accessKeyID, secretAccessKey, sessionToken)
+}
+
 // Mockdescriber is a mock of describer interface
 type Mockdescriber struct {
 	ctrl     *gomock.Controller
@@ -1861,19 +1945,19 @@ func (m *MocksvcManifestReader) EXPECT() *MocksvcManifestReaderMockRecorder {
 	return m.recorder
 }
 
-// ReadServiceManifest mocks base method
-func (m *MocksvcManifestReader) ReadServiceManifest(svcName string) ([]byte, error) {
+// ReadWorkloadManifest mocks base method
+func (m *MocksvcManifestReader) ReadWorkloadManifest(svcName string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadServiceManifest", svcName)
+	ret := m.ctrl.Call(m, "ReadWorkloadManifest", svcName)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ReadServiceManifest indicates an expected call of ReadServiceManifest
-func (mr *MocksvcManifestReaderMockRecorder) ReadServiceManifest(svcName interface{}) *gomock.Call {
+// ReadWorkloadManifest indicates an expected call of ReadWorkloadManifest
+func (mr *MocksvcManifestReaderMockRecorder) ReadWorkloadManifest(svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MocksvcManifestReader)(nil).ReadServiceManifest), svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MocksvcManifestReader)(nil).ReadWorkloadManifest), svcName)
 }
 
 // MocksvcManifestWriter is a mock of svcManifestWriter interface
@@ -1899,19 +1983,72 @@ func (m *MocksvcManifestWriter) EXPECT() *MocksvcManifestWriterMockRecorder {
 	return m.recorder
 }
 
-// WriteServiceManifest mocks base method
-func (m *MocksvcManifestWriter) WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error) {
+// WriteWorkloadManifest mocks base method
+func (m *MocksvcManifestWriter) WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteServiceManifest", marshaler, svcName)
+	ret := m.ctrl.Call(m, "WriteWorkloadManifest", marshaler, svcName)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// WriteServiceManifest indicates an expected call of WriteServiceManifest
-func (mr *MocksvcManifestWriterMockRecorder) WriteServiceManifest(marshaler, svcName interface{}) *gomock.Call {
+// WriteWorkloadManifest indicates an expected call of WriteWorkloadManifest
+func (mr *MocksvcManifestWriterMockRecorder) WriteWorkloadManifest(marshaler, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteServiceManifest", reflect.TypeOf((*MocksvcManifestWriter)(nil).WriteServiceManifest), marshaler, svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteWorkloadManifest", reflect.TypeOf((*MocksvcManifestWriter)(nil).WriteWorkloadManifest), marshaler, svcName)
+}
+
+// MocksvcDirManifestWriter is a mock of svcDirManifestWriter interface
+type MocksvcDirManifestWriter struct {
+	ctrl     *gomock.Controller
+	recorder *MocksvcDirManifestWriterMockRecorder
+}
+
+// MocksvcDirManifestWriterMockRecorder is the mock recorder for MocksvcDirManifestWriter
+type MocksvcDirManifestWriterMockRecorder struct {
+	mock *MocksvcDirManifestWriter
+}
+
+// NewMocksvcDirManifestWriter creates a new mock instance
+func NewMocksvcDirManifestWriter(ctrl *gomock.Controller) *MocksvcDirManifestWriter {
+	mock := &MocksvcDirManifestWriter{ctrl: ctrl}
+	mock.recorder = &MocksvcDirManifestWriterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocksvcDirManifestWriter) EXPECT() *MocksvcDirManifestWriterMockRecorder {
+	return m.recorder
+}
+
+// WriteWorkloadManifest mocks base method
+func (m *MocksvcDirManifestWriter) WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteWorkloadManifest", marshaler, svcName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WriteWorkloadManifest indicates an expected call of WriteWorkloadManifest
+func (mr *MocksvcDirManifestWriterMockRecorder) WriteWorkloadManifest(marshaler, svcName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteWorkloadManifest", reflect.TypeOf((*MocksvcDirManifestWriter)(nil).WriteWorkloadManifest), marshaler, svcName)
+}
+
+// CopilotDirPath mocks base method
+func (m *MocksvcDirManifestWriter) CopilotDirPath() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CopilotDirPath")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CopilotDirPath indicates an expected call of CopilotDirPath
+func (mr *MocksvcDirManifestWriterMockRecorder) CopilotDirPath() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MocksvcDirManifestWriter)(nil).CopilotDirPath))
 }
 
 // MockwsPipelineManifestReader is a mock of wsPipelineManifestReader interface
@@ -2081,19 +2218,19 @@ func (mr *MockwsSvcReaderMockRecorder) ServiceNames() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsSvcReader)(nil).ServiceNames))
 }
 
-// ReadServiceManifest mocks base method
-func (m *MockwsSvcReader) ReadServiceManifest(svcName string) ([]byte, error) {
+// ReadWorkloadManifest mocks base method
+func (m *MockwsSvcReader) ReadWorkloadManifest(svcName string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadServiceManifest", svcName)
+	ret := m.ctrl.Call(m, "ReadWorkloadManifest", svcName)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ReadServiceManifest indicates an expected call of ReadServiceManifest
-func (mr *MockwsSvcReaderMockRecorder) ReadServiceManifest(svcName interface{}) *gomock.Call {
+// ReadWorkloadManifest indicates an expected call of ReadWorkloadManifest
+func (mr *MockwsSvcReaderMockRecorder) ReadWorkloadManifest(svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsSvcReader)(nil).ReadServiceManifest), svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockwsSvcReader)(nil).ReadWorkloadManifest), svcName)
 }
 
 // MockwsSvcDirReader is a mock of wsSvcDirReader interface
@@ -2134,19 +2271,19 @@ func (mr *MockwsSvcDirReaderMockRecorder) ServiceNames() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsSvcDirReader)(nil).ServiceNames))
 }
 
-// ReadServiceManifest mocks base method
-func (m *MockwsSvcDirReader) ReadServiceManifest(svcName string) ([]byte, error) {
+// ReadWorkloadManifest mocks base method
+func (m *MockwsSvcDirReader) ReadWorkloadManifest(svcName string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadServiceManifest", svcName)
+	ret := m.ctrl.Call(m, "ReadWorkloadManifest", svcName)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ReadServiceManifest indicates an expected call of ReadServiceManifest
-func (mr *MockwsSvcDirReaderMockRecorder) ReadServiceManifest(svcName interface{}) *gomock.Call {
+// ReadWorkloadManifest indicates an expected call of ReadWorkloadManifest
+func (mr *MockwsSvcDirReaderMockRecorder) ReadWorkloadManifest(svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsSvcDirReader)(nil).ReadServiceManifest), svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockwsSvcDirReader)(nil).ReadWorkloadManifest), svcName)
 }
 
 // CopilotDirPath mocks base method
@@ -2322,19 +2459,19 @@ func (mr *MockwsAddonManagerMockRecorder) ServiceNames() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsAddonManager)(nil).ServiceNames))
 }
 
-// ReadServiceManifest mocks base method
-func (m *MockwsAddonManager) ReadServiceManifest(svcName string) ([]byte, error) {
+// ReadWorkloadManifest mocks base method
+func (m *MockwsAddonManager) ReadWorkloadManifest(svcName string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadServiceManifest", svcName)
+	ret := m.ctrl.Call(m, "ReadWorkloadManifest", svcName)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ReadServiceManifest indicates an expected call of ReadServiceManifest
-func (mr *MockwsAddonManagerMockRecorder) ReadServiceManifest(svcName interface{}) *gomock.Call {
+// ReadWorkloadManifest indicates an expected call of ReadWorkloadManifest
+func (mr *MockwsAddonManagerMockRecorder) ReadWorkloadManifest(svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsAddonManager)(nil).ReadServiceManifest), svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockwsAddonManager)(nil).ReadWorkloadManifest), svcName)
 }
 
 // MockartifactUploader is a mock of artifactUploader interface
@@ -3335,44 +3472,6 @@ func (mr *MockdockerfileParserMockRecorder) GetHealthCheck() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHealthCheck", reflect.TypeOf((*MockdockerfileParser)(nil).GetHealthCheck))
 }
 
-// MockserviceArnGetter is a mock of serviceArnGetter interface
-type MockserviceArnGetter struct {
-	ctrl     *gomock.Controller
-	recorder *MockserviceArnGetterMockRecorder
-}
-
-// MockserviceArnGetterMockRecorder is the mock recorder for MockserviceArnGetter
-type MockserviceArnGetterMockRecorder struct {
-	mock *MockserviceArnGetter
-}
-
-// NewMockserviceArnGetter creates a new mock instance
-func NewMockserviceArnGetter(ctrl *gomock.Controller) *MockserviceArnGetter {
-	mock := &MockserviceArnGetter{ctrl: ctrl}
-	mock.recorder = &MockserviceArnGetterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockserviceArnGetter) EXPECT() *MockserviceArnGetterMockRecorder {
-	return m.recorder
-}
-
-// GetServiceArn mocks base method
-func (m *MockserviceArnGetter) GetServiceArn() (*ecs.ServiceArn, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetServiceArn")
-	ret0, _ := ret[0].(*ecs.ServiceArn)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetServiceArn indicates an expected call of GetServiceArn
-func (mr *MockserviceArnGetterMockRecorder) GetServiceArn() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServiceArn", reflect.TypeOf((*MockserviceArnGetter)(nil).GetServiceArn))
-}
-
 // MockstatusDescriber is a mock of statusDescriber interface
 type MockstatusDescriber struct {
 	ctrl     *gomock.Controller
@@ -3447,44 +3546,6 @@ func (m *MockenvDescriber) Describe() (*describe.EnvDescription, error) {
 func (mr *MockenvDescriberMockRecorder) Describe() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockenvDescriber)(nil).Describe))
-}
-
-// MockresourceGroupsClient is a mock of resourceGroupsClient interface
-type MockresourceGroupsClient struct {
-	ctrl     *gomock.Controller
-	recorder *MockresourceGroupsClientMockRecorder
-}
-
-// MockresourceGroupsClientMockRecorder is the mock recorder for MockresourceGroupsClient
-type MockresourceGroupsClientMockRecorder struct {
-	mock *MockresourceGroupsClient
-}
-
-// NewMockresourceGroupsClient creates a new mock instance
-func NewMockresourceGroupsClient(ctrl *gomock.Controller) *MockresourceGroupsClient {
-	mock := &MockresourceGroupsClient{ctrl: ctrl}
-	mock.recorder = &MockresourceGroupsClientMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockresourceGroupsClient) EXPECT() *MockresourceGroupsClientMockRecorder {
-	return m.recorder
-}
-
-// GetResourcesByTags mocks base method
-func (m *MockresourceGroupsClient) GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetResourcesByTags", resourceType, tags)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetResourcesByTags indicates an expected call of GetResourcesByTags
-func (mr *MockresourceGroupsClientMockRecorder) GetResourcesByTags(resourceType, tags interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResourcesByTags", reflect.TypeOf((*MockresourceGroupsClient)(nil).GetResourcesByTags), resourceType, tags)
 }
 
 // MockpipelineGetter is a mock of pipelineGetter interface
@@ -4056,4 +4117,80 @@ func (m *Mockec2Selector) PrivateSubnets(prompt, help, vpcID string) ([]string, 
 func (mr *Mockec2SelectorMockRecorder) PrivateSubnets(prompt, help, vpcID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrivateSubnets", reflect.TypeOf((*Mockec2Selector)(nil).PrivateSubnets), prompt, help, vpcID)
+}
+
+// MockcredsSelector is a mock of credsSelector interface
+type MockcredsSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockcredsSelectorMockRecorder
+}
+
+// MockcredsSelectorMockRecorder is the mock recorder for MockcredsSelector
+type MockcredsSelectorMockRecorder struct {
+	mock *MockcredsSelector
+}
+
+// NewMockcredsSelector creates a new mock instance
+func NewMockcredsSelector(ctrl *gomock.Controller) *MockcredsSelector {
+	mock := &MockcredsSelector{ctrl: ctrl}
+	mock.recorder = &MockcredsSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockcredsSelector) EXPECT() *MockcredsSelectorMockRecorder {
+	return m.recorder
+}
+
+// Creds mocks base method
+func (m *MockcredsSelector) Creds(prompt, help string) (*session.Session, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Creds", prompt, help)
+	ret0, _ := ret[0].(*session.Session)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Creds indicates an expected call of Creds
+func (mr *MockcredsSelectorMockRecorder) Creds(prompt, help interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Creds", reflect.TypeOf((*MockcredsSelector)(nil).Creds), prompt, help)
+}
+
+// Mockec2Client is a mock of ec2Client interface
+type Mockec2Client struct {
+	ctrl     *gomock.Controller
+	recorder *Mockec2ClientMockRecorder
+}
+
+// Mockec2ClientMockRecorder is the mock recorder for Mockec2Client
+type Mockec2ClientMockRecorder struct {
+	mock *Mockec2Client
+}
+
+// NewMockec2Client creates a new mock instance
+func NewMockec2Client(ctrl *gomock.Controller) *Mockec2Client {
+	mock := &Mockec2Client{ctrl: ctrl}
+	mock.recorder = &Mockec2ClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *Mockec2Client) EXPECT() *Mockec2ClientMockRecorder {
+	return m.recorder
+}
+
+// HasDNSSupport mocks base method
+func (m *Mockec2Client) HasDNSSupport(vpcID string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasDNSSupport", vpcID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HasDNSSupport indicates an expected call of HasDNSSupport
+func (mr *Mockec2ClientMockRecorder) HasDNSSupport(vpcID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasDNSSupport", reflect.TypeOf((*Mockec2Client)(nil).HasDNSSupport), vpcID)
 }

@@ -15,7 +15,7 @@ import (
 const (
 	// The change set name must match the regex [a-zA-Z][-a-zA-Z0-9]*. The generated UUID can start with a number,
 	// by prefixing the uuid with a word we guarantee that we start with a letter.
-	fmtChangeSetName = "ecscli-%s"
+	fmtChangeSetName = "copilot-%s"
 
 	// Status reasons that can occur if the change set execution status is "FAILED".
 	noChangesReason = "NO_CHANGES_REASON"
@@ -184,10 +184,11 @@ func (cs *changeSet) createAndExecute(conf *stackConfig) error {
 			return fmt.Errorf("check if changeset is empty: %v: %w", err, descrErr)
 		}
 		// The change set was empty - so we clean it up.
-		// We have to clean up the change set because there's a limit on the number
+		// We try to clean up the change set because there's a limit on the number
 		// of failed change sets a customer can have on a particular stack.
+		// See https://cloudonaut.io/aws-cli-cloudformation-deploy-limit-exceeded/.
 		if len(descr.changes) == 0 {
-			cs.delete()
+			_ = cs.delete()
 			return &ErrChangeSetEmpty{
 				cs: cs,
 			}

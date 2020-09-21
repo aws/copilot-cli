@@ -168,31 +168,31 @@ func (mr *MockDefaultClusterGetterMockRecorder) DefaultCluster() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultCluster", reflect.TypeOf((*MockDefaultClusterGetter)(nil).DefaultCluster))
 }
 
-// MockTaskRunner is a mock of TaskRunner interface
-type MockTaskRunner struct {
+// MockRunner is a mock of Runner interface
+type MockRunner struct {
 	ctrl     *gomock.Controller
-	recorder *MockTaskRunnerMockRecorder
+	recorder *MockRunnerMockRecorder
 }
 
-// MockTaskRunnerMockRecorder is the mock recorder for MockTaskRunner
-type MockTaskRunnerMockRecorder struct {
-	mock *MockTaskRunner
+// MockRunnerMockRecorder is the mock recorder for MockRunner
+type MockRunnerMockRecorder struct {
+	mock *MockRunner
 }
 
-// NewMockTaskRunner creates a new mock instance
-func NewMockTaskRunner(ctrl *gomock.Controller) *MockTaskRunner {
-	mock := &MockTaskRunner{ctrl: ctrl}
-	mock.recorder = &MockTaskRunnerMockRecorder{mock}
+// NewMockRunner creates a new mock instance
+func NewMockRunner(ctrl *gomock.Controller) *MockRunner {
+	mock := &MockRunner{ctrl: ctrl}
+	mock.recorder = &MockRunnerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockTaskRunner) EXPECT() *MockTaskRunnerMockRecorder {
+func (m *MockRunner) EXPECT() *MockRunnerMockRecorder {
 	return m.recorder
 }
 
 // RunTask mocks base method
-func (m *MockTaskRunner) RunTask(input ecs.RunTaskInput) ([]*ecs.Task, error) {
+func (m *MockRunner) RunTask(input ecs.RunTaskInput) ([]*ecs.Task, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunTask", input)
 	ret0, _ := ret[0].([]*ecs.Task)
@@ -201,7 +201,7 @@ func (m *MockTaskRunner) RunTask(input ecs.RunTaskInput) ([]*ecs.Task, error) {
 }
 
 // RunTask indicates an expected call of RunTask
-func (mr *MockTaskRunnerMockRecorder) RunTask(input interface{}) *gomock.Call {
+func (mr *MockRunnerMockRecorder) RunTask(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunTask", reflect.TypeOf((*MockTaskRunner)(nil).RunTask), input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunTask", reflect.TypeOf((*MockRunner)(nil).RunTask), input)
 }

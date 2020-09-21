@@ -1,10 +1,13 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 package cli
 
 import (
 	"encoding"
+	"errors"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -31,12 +34,14 @@ To learn more see: https://git.io/JfIpv
 A %s is a private, non internet-facing service.
 To learn more see: https://git.io/JfIpT`
 
-	fmtSvcInitSvcNamePrompt     = "What do you want to %s this %s?"
-	fmtSvcInitSvcNameHelpPrompt = `The name will uniquely identify this service within your app %s.
-Deployed resources (such as your service, logs) will contain this service's name and be tagged with it.`
+	fmtWkldInitNamePrompt     = "What do you want to %s this %s?"
+	fmtWkldInitNameHelpPrompt = `The name will uniquely identify this %s within your app %s.
+Deployed resources (such as your ECR repository, logs) will contain this %[1]s's name and be tagged with it.`
 
-	fmtSvcInitDockerfilePrompt  = "Which %s would you like to use for %s?"
-	svcInitDockerfileHelpPrompt = "Dockerfile to use for building your service's container image."
+	fmtWkldInitDockerfilePrompt      = "Which %s would you like to use for %s?"
+	wkldInitDockerfileHelpPrompt     = "Dockerfile to use for building your container image."
+	fmtWkldInitDockerfilePathPrompt  = "What is the path to the %s for %s?"
+	wkldInitDockerfilePathHelpPrompt = "Path to Dockerfile to use for building your container image."
 
 	svcInitSvcPortPrompt     = "Which %s do you want customer traffic sent to?"
 	svcInitSvcPortHelpPrompt = `The port will be used by the load balancer to route incoming traffic to this service.
@@ -51,6 +56,7 @@ const (
 
 const (
 	defaultSvcPortString = "80"
+	service              = "service"
 )
 
 type initSvcVars struct {
@@ -66,7 +72,7 @@ type initSvcOpts struct {
 
 	// Interfaces to interact with dependencies.
 	fs          afero.Fs
-	ws          svcManifestWriter
+	ws          svcDirManifestWriter
 	store       store
 	appDeployer appDeployer
 	prog        progress
@@ -193,7 +199,7 @@ func (o *initSvcOpts) createManifest() (string, error) {
 		return "", err
 	}
 	var manifestExists bool
-	manifestPath, err := o.ws.WriteServiceManifest(manifest, o.Name)
+	manifestPath, err := o.ws.WriteWorkloadManifest(manifest, o.Name)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
@@ -230,10 +236,14 @@ func (o *initSvcOpts) newManifest() (encoding.BinaryMarshaler, error) {
 }
 
 func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalancedWebService, error) {
+	dfPath, err := o.getRelativePath()
+	if err != nil {
+		return nil, err
+	}
 	props := &manifest.LoadBalancedWebServiceProps{
-		ServiceProps: &manifest.ServiceProps{
+		WorkloadProps: &manifest.WorkloadProps{
 			Name:       o.Name,
-			Dockerfile: o.DockerfilePath,
+			Dockerfile: dfPath,
 		},
 		Port: o.Port,
 		Path: "/",
@@ -254,14 +264,18 @@ func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalance
 }
 
 func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, error) {
+	dfPath, err := o.getRelativePath()
+	if err != nil {
+		return nil, err
+	}
 	hc, err := o.parseHealthCheck()
 	if err != nil {
 		return nil, err
 	}
 	return manifest.NewBackendService(manifest.BackendServiceProps{
-		ServiceProps: manifest.ServiceProps{
+		WorkloadProps: manifest.WorkloadProps{
 			Name:       o.Name,
-			Dockerfile: o.DockerfilePath,
+			Dockerfile: dfPath,
 		},
 		Port:        o.Port,
 		HealthCheck: hc,
@@ -292,8 +306,8 @@ func (o *initSvcOpts) askSvcName() error {
 	}
 
 	name, err := o.prompt.Get(
-		fmt.Sprintf(fmtSvcInitSvcNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.ServiceType)),
-		fmt.Sprintf(fmtSvcInitSvcNameHelpPrompt, o.AppName()),
+		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.ServiceType)),
+		fmt.Sprintf(fmtWkldInitNameHelpPrompt, service, o.AppName()),
 		validateSvcName,
 		prompt.WithFinalMessage("Service name:"))
 	if err != nil {
@@ -303,32 +317,53 @@ func (o *initSvcOpts) askSvcName() error {
 	return nil
 }
 
+func askDockerfile(wkldName string, fs afero.Fs, p prompter) (string, error) {
+	dockerfiles, err := listDockerfiles(fs, ".")
+	// If Dockerfiles are found in the current directory or subdirectory one level down, ask the user to select one.
+	var sel string
+	if err == nil {
+		sel, err = p.SelectOne(
+			fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(wkldName)),
+			wkldInitDockerfileHelpPrompt,
+			dockerfiles,
+			prompt.WithFinalMessage("Dockerfile:"),
+		)
+		if err != nil {
+			return "", fmt.Errorf("select Dockerfile: %w", err)
+		}
+		return sel, nil
+	}
+
+	var notExistErr *errDockerfileNotFound
+	if !errors.As(err, &notExistErr) {
+		return "", err
+	}
+	// If no Dockerfiles were found, prompt user for custom path.
+	sel, err = p.Get(
+		fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(wkldName)),
+		wkldInitDockerfilePathHelpPrompt,
+		func(v interface{}) error {
+			return validatePath(afero.NewOsFs(), v)
+		},
+		prompt.WithFinalMessage("Dockerfile:"))
+	if err != nil {
+		return "", fmt.Errorf("get custom Dockerfile path: %w", err)
+	}
+	return sel, nil
+}
+
 // askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
-// If the user chooses to enter a custom path, then we prompt them for the path.
 func (o *initSvcOpts) askDockerfile() error {
 	if o.DockerfilePath != "" {
 		return nil
 	}
-
-	// TODO https://github.com/aws/copilot-cli/issues/206
-	dockerfiles, err := listDockerfiles(o.fs, ".")
+	df, err := askDockerfile(o.Name, o.fs, o.prompt)
 	if err != nil {
 		return err
 	}
-
-	sel, err := o.prompt.SelectOne(
-		fmt.Sprintf(fmtSvcInitDockerfilePrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
-		svcInitDockerfileHelpPrompt,
-		dockerfiles,
-		prompt.WithFinalMessage("Dockerfile:"),
-	)
-	if err != nil {
-		return fmt.Errorf("select Dockerfile: %w", err)
-	}
-
-	o.DockerfilePath = sel
-
+	o.DockerfilePath = df
 	return nil
+
 }
 
 func (o *initSvcOpts) askSvcPort() error {
@@ -343,7 +378,7 @@ func (o *initSvcOpts) askSvcPort() error {
 	if err != nil {
 		log.Debugln(err.Error())
 	}
-	var defaultPort = defaultSvcPortString
+	var defaultPort string
 	switch len(ports) {
 	case 0:
 		// There were no ports detected, keep the default port prompt.
@@ -357,7 +392,7 @@ func (o *initSvcOpts) askSvcPort() error {
 
 	port, err := o.prompt.Get(
 		fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port")),
-		fmt.Sprintf(svcInitSvcPortHelpPrompt),
+		svcInitSvcPortHelpPrompt,
 		validateSvcPort,
 		prompt.WithDefaultInput(defaultPort),
 		prompt.WithFinalMessage("Port:"),
@@ -374,6 +409,26 @@ func (o *initSvcOpts) askSvcPort() error {
 	o.Port = uint16(portUint)
 
 	return nil
+}
+
+func (o *initSvcOpts) getRelativePath() (string, error) {
+	copilotDirPath, err := o.ws.CopilotDirPath()
+	if err != nil {
+		return "", fmt.Errorf("get copilot directory: %w", err)
+	}
+	wsRoot := filepath.Dir(copilotDirPath)
+	absDfPath, err := filepath.Abs(o.DockerfilePath)
+	if err != nil {
+		return "", fmt.Errorf("get absolute path: %v", err)
+	}
+	if !strings.Contains(absDfPath, wsRoot) {
+		return "", fmt.Errorf("Dockerfile %s not within workspace %s", absDfPath, wsRoot)
+	}
+	relDfPath, err := filepath.Rel(wsRoot, absDfPath)
+	if err != nil {
+		return "", fmt.Errorf("find relative path from workspace root to Dockerfile: %v", err)
+	}
+	return relDfPath, nil
 }
 
 func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error) {

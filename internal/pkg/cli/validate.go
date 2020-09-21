@@ -10,6 +10,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/robfig/cron/v3"
+
+	"github.com/spf13/afero"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -22,9 +27,9 @@ var (
 	errValueBadFormat                     = errors.New("value must start with a letter and contain only lower-case letters, numbers, and hyphens")
 	errValueNotAString                    = errors.New("value must be a string")
 	errValueNotAStringSlice               = errors.New("value must be a string slice")
+	errValueNotAValidPath                 = errors.New("value must be a valid path")
 	errValueNotAnIPNet                    = errors.New("value must be a valid IP address range (example: 10.0.0.0/16)")
 	errValueNotIPNetSlice                 = errors.New("value must be a valid slice of IP address range (example: 10.0.0.0/16,10.0.1.0/16)")
-	errInvalidGitHubRepo                  = errors.New("value must be a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
 	errPortInvalid                        = errors.New("value must be in range 1-65535")
 	errS3ValueBadSize                     = errors.New("value must be between 3 and 63 characters in length")
 	errS3ValueBadFormat                   = errors.New("value must not contain consecutive periods or dashes, or be formatted as IP address")
@@ -33,9 +38,11 @@ var (
 	errDDBValueBadSize                    = errors.New("value must be between 3 and 255 characters in length")
 	errValueBadFormatWithPeriodUnderscore = errors.New("value must contain only alphanumeric characters and ._-")
 	errDDBAttributeBadFormat              = errors.New("value must be of the form <name>:<T> where T is one of S, N, or B")
-	errLSIAttributeNotPresent             = errors.New("lsi must be present in list of attributes")
 	errTooManyLSIKeys                     = errors.New("number of specified LSI sort keys must be 5 or less")
 	errDomainInvalid                      = errors.New("value must contain at least one '.' character")
+	errDurationInvalid                    = errors.New("value must be a valid Go duration string (example: 1h30m)")
+	errDurationBadUnits                   = errors.New("duration cannot be in units smaller than a second")
+	errScheduleInvalid                    = errors.New("value must be a valid cron expression (examples: @weekly; @every 30m; 0 0 * * 0)")
 )
 
 var (
@@ -44,8 +51,6 @@ var (
 )
 
 var fmtErrInvalidStorageType = "invalid storage type %s: must be one of %s"
-
-var githubRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
 
 // matches alphanumeric, ._-, from 3 to 255 characters long
 // https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html
@@ -105,13 +110,59 @@ func validateSvcType(val interface{}) error {
 	if !ok {
 		return errValueNotAString
 	}
-	for _, validType := range manifest.ServiceTypes {
-		if svcType == validType {
+	return validateWorkloadType(svcType, manifest.ServiceTypes, service)
+}
+
+func validateWorkloadType(wkldType string, validTypes []string, errFlavor string) error {
+	for _, validType := range validTypes {
+		if wkldType == validType {
 			return nil
 		}
 	}
 
-	return fmt.Errorf("invalid service type %s: must be one of %s", svcType, prettify(manifest.ServiceTypes))
+	return fmt.Errorf("invalid %s type %s: must be one of %s", errFlavor, wkldType, prettify(validTypes))
+}
+
+func validateJobType(val interface{}) error {
+	jobType, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	return validateWorkloadType(jobType, manifest.JobTypes, job)
+}
+
+func validateJobName(val interface{}) error {
+	if err := basicNameValidation(val); err != nil {
+		return fmt.Errorf("job name %v is invalid: %w", val, err)
+	}
+	return nil
+}
+
+func validateSchedule(sched interface{}) error {
+	s, ok := sched.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	return validateCron(s)
+}
+
+func validateTimeout(timeout interface{}) error {
+	t, ok := timeout.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	if err := validateDuration(t, 1*time.Second); err != nil {
+		return fmt.Errorf("timeout value %s is invalid: %w", t, err)
+	}
+	return nil
+}
+
+func validateRate(rate interface{}) error {
+	r, ok := rate.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	return validateDuration(r, 60*time.Second)
 }
 
 func validateDomainName(val interface{}) error {
@@ -122,6 +173,21 @@ func validateDomainName(val interface{}) error {
 	dots := domainNameRegexp.FindAllString(domainName, regexpFindAllMatches)
 	if dots == nil {
 		return errDomainInvalid
+	}
+	return nil
+}
+
+func validatePath(fs afero.Fs, val interface{}) error {
+	path, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	if path == "" {
+		return errValueEmpty
+	}
+	_, err := fs.Stat(path)
+	if err != nil {
+		return errValueNotAValidPath
 	}
 	return nil
 }
@@ -161,6 +227,38 @@ func basicNameValidation(val interface{}) error {
 		return errValueBadFormat
 	}
 
+	return nil
+}
+
+func validateCron(sched string) error {
+	every := "@every "
+	if strings.HasPrefix(sched, every) {
+		if err := validateDuration(sched[len(every):], 60*time.Second); err != nil {
+			if err == errDurationInvalid {
+				return fmt.Errorf("interval %s must include a valid Go duration string (example: @every 1h30m)", sched)
+			}
+			return fmt.Errorf("interval %s is invalid: %s", sched, err)
+		}
+	}
+	_, err := cron.ParseStandard(sched)
+	if err != nil {
+		return fmt.Errorf("schedule %s is invalid: %s", sched, errScheduleInvalid)
+	}
+	return nil
+}
+
+func validateDuration(duration string, min time.Duration) error {
+	parsedDuration, err := time.ParseDuration(duration)
+	if err != nil {
+		return errDurationInvalid
+	}
+	// This checks if the duration has parts smaller than a whole second.
+	if parsedDuration > parsedDuration.Truncate(time.Second) {
+		return errDurationBadUnits
+	}
+	if parsedDuration < min {
+		return fmt.Errorf("duration must be %v or greater", min)
+	}
 	return nil
 }
 

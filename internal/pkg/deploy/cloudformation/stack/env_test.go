@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -41,7 +40,7 @@ func TestEnvTemplate(t *testing.T) {
 				m.EXPECT().Read(dnsDelegationTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
 				m.EXPECT().Read(acmValidationTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
 				m.EXPECT().Read(enableLongARNsTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
-				m.EXPECT().ParseEnv(template.EnvOpts{
+				m.EXPECT().ParseEnv(&template.EnvOpts{
 					ACMValidationLambda:       "customresources",
 					DNSDelegationLambda:       "customresources",
 					EnableLongARNFormatLambda: "customresources",
@@ -64,7 +63,7 @@ func TestEnvTemplate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			envStack := &EnvStackConfig{
-				CreateEnvironmentInput: mockDeployEnvironmentInput(),
+				in: mockDeployEnvironmentInput(),
 			}
 			tc.mockDependencies(ctrl, envStack)
 
@@ -94,10 +93,6 @@ func TestEnvParameters(t *testing.T) {
 			input: deploymentInput,
 			want: []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(envParamIncludeLBKey),
-					ParameterValue: aws.String(strconv.FormatBool(deploymentInput.PublicLoadBalancer)),
-				},
-				{
 					ParameterKey:   aws.String(envParamAppNameKey),
 					ParameterValue: aws.String(deploymentInput.AppName),
 				},
@@ -122,10 +117,6 @@ func TestEnvParameters(t *testing.T) {
 		"with DNS": {
 			input: deploymentInputWithDNS,
 			want: []*cloudformation.Parameter{
-				{
-					ParameterKey:   aws.String(envParamIncludeLBKey),
-					ParameterValue: aws.String(strconv.FormatBool(deploymentInputWithDNS.PublicLoadBalancer)),
-				},
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
 					ParameterValue: aws.String(deploymentInputWithDNS.AppName),
@@ -153,7 +144,7 @@ func TestEnvParameters(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			env := &EnvStackConfig{
-				CreateEnvironmentInput: tc.input,
+				in: tc.input,
 			}
 			params, _ := env.Parameters()
 			require.ElementsMatch(t, tc.want, params)
@@ -169,7 +160,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 		"without tools account ARN": {
 			want: "",
 			input: &EnvStackConfig{
-				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
+				in: &deploy.CreateEnvironmentInput{
 					ToolsAccountPrincipalARN: "",
 					AppDNSName:               "ecs.aws",
 				},
@@ -178,7 +169,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 		"without DNS": {
 			want: "",
 			input: &EnvStackConfig{
-				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
+				in: &deploy.CreateEnvironmentInput{
 					ToolsAccountPrincipalARN: "arn:aws:iam::0000000:root",
 					AppDNSName:               "",
 				},
@@ -187,7 +178,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 		"with invalid tools principal": {
 			want: "",
 			input: &EnvStackConfig{
-				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
+				in: &deploy.CreateEnvironmentInput{
 					ToolsAccountPrincipalARN: "0000000",
 					AppDNSName:               "ecs.aws",
 				},
@@ -196,7 +187,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 		"with dns and tools principal": {
 			want: "arn:aws:iam::0000000:role/-DNSDelegationRole",
 			input: &EnvStackConfig{
-				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
+				in: &deploy.CreateEnvironmentInput{
 					ToolsAccountPrincipalARN: "arn:aws:iam::0000000:root",
 					AppDNSName:               "ecs.aws",
 				},
@@ -213,7 +204,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 
 func TestEnvTags(t *testing.T) {
 	env := &EnvStackConfig{
-		CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
+		in: &deploy.CreateEnvironmentInput{
 			Name:    "env",
 			AppName: "project",
 			AdditionalTags: map[string]string{
@@ -242,7 +233,7 @@ func TestEnvTags(t *testing.T) {
 func TestStackName(t *testing.T) {
 	deploymentInput := mockDeployEnvironmentInput()
 	env := &EnvStackConfig{
-		CreateEnvironmentInput: deploymentInput,
+		in: deploymentInput,
 	}
 	require.Equal(t, fmt.Sprintf("%s-%s", deploymentInput.AppName, deploymentInput.Name), env.StackName())
 }
@@ -278,7 +269,7 @@ func TestToEnv(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			envStack := &EnvStackConfig{
-				CreateEnvironmentInput: mockDeployInput,
+				in: mockDeployInput,
 			}
 			got, err := envStack.ToEnv(tc.mockStack)
 
@@ -297,11 +288,11 @@ func mockEnvironmentStack(stackArn, managerRoleARN, executionRoleARN string) *cl
 		StackId: aws.String(stackArn),
 		Outputs: []*cloudformation.Output{
 			{
-				OutputKey:   aws.String(EnvOutputManagerRoleKey),
+				OutputKey:   aws.String(envOutputManagerRoleKey),
 				OutputValue: aws.String(managerRoleARN),
 			},
 			{
-				OutputKey:   aws.String(EnvOutputCFNExecutionRoleARN),
+				OutputKey:   aws.String(envOutputCFNExecutionRoleARN),
 				OutputValue: aws.String(executionRoleARN),
 			},
 		},
@@ -313,7 +304,6 @@ func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 		Name:                     "env",
 		AppName:                  "project",
 		Prod:                     true,
-		PublicLoadBalancer:       true,
 		ToolsAccountPrincipalARN: "arn:aws:iam::000000000:root",
 	}
 }

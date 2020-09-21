@@ -1,0 +1,54 @@
+version: 0.2
+
+env:
+  secrets-manager:
+    DOCKERHUB_USERNAME: prod/ecs-cicd-bot/dockerhub-account-info:username
+    DOCKERHUB_TOKEN: prod/ecs-cicd-bot/dockerhub-token:dockerhub-token
+
+batch:
+  fast-fail: false
+  build-matrix:
+    static:
+      env:
+        privileged-mode: true
+        type: LINUX_CONTAINER
+    dynamic:
+      env:
+        compute-type:
+          - BUILD_GENERAL1_LARGE
+        image:
+          - aws/codebuild/standard:4.0
+        variables:
+          # We increase the number of VPCs/region limit to 15 from 5 in our e2e tests accounts
+          # to accommodate running them in parallel.
+          # If TEST_SUITE goes above 15 e2e tests the limits and this comment should be updated.
+          TEST_SUITE:
+            - addons
+            - customized-env
+            - init
+            - multi-env-app
+            - multi-svc-app
+            - root
+            - sidecars
+            - task
+
+phases:
+  install:
+    runtime-versions:
+      golang: 1.14
+      nodejs: 10
+  pre_build:
+    commands:
+       - docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_TOKEN}
+  build:
+    commands:
+       - cd $CODEBUILD_SRC_DIR
+       - export GOPATH=/go
+       - rm -rf cf-custom-resources/node_modules
+       - mkdir -p /tmp/.aws
+       - printf "[default]\nregion = us-west-2\n[profile e2etestenv]\nregion=us-west-1\n[profile e2eprodenv]\nregion=us-east-1\n" > /tmp/.aws/config
+       - printf "[default]\naws_access_key_id=$E2E_USER_1_ACCESS_KEY\naws_secret_access_key=$E2E_USER_1_SECRET_KEY\n\n[e2etestenv]\naws_access_key_id=$E2E_USER_2_ACCESS_KEY\naws_secret_access_key=$E2E_USER_2_SECRET_KEY\n\n[e2eprodenv]\naws_access_key_id=$E2E_USER_3_ACCESS_KEY\naws_secret_access_key=$E2E_USER_3_SECRET_KEY\n" > /tmp/.aws/credentials
+       - sed -i -e '$s/$/ --noColor/' e2e/e2e.sh
+       - make build-e2e
+       - docker build -t copilot-cli/e2e . -f e2e/Dockerfile
+       - docker run --privileged -v /tmp/.aws:/home/.aws -e "HOME=/home" -e "TEST_SUITE=$TEST_SUITE" copilot-cli/e2e:latest

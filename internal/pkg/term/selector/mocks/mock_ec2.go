@@ -33,19 +33,19 @@ func (m *MockVPCSubnetLister) EXPECT() *MockVPCSubnetListerMockRecorder {
 	return m.recorder
 }
 
-// ListVPC mocks base method
-func (m *MockVPCSubnetLister) ListVPC() ([]string, error) {
+// ListVPCs mocks base method
+func (m *MockVPCSubnetLister) ListVPCs() ([]ec2.VPC, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListVPC")
-	ret0, _ := ret[0].([]string)
+	ret := m.ctrl.Call(m, "ListVPCs")
+	ret0, _ := ret[0].([]ec2.VPC)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListVPC indicates an expected call of ListVPC
-func (mr *MockVPCSubnetListerMockRecorder) ListVPC() *gomock.Call {
+// ListVPCs indicates an expected call of ListVPCs
+func (mr *MockVPCSubnetListerMockRecorder) ListVPCs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPC", reflect.TypeOf((*MockVPCSubnetLister)(nil).ListVPC))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCs", reflect.TypeOf((*MockVPCSubnetLister)(nil).ListVPCs))
 }
 
 // ListVPCSubnets mocks base method

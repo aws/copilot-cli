@@ -1,0 +1,27 @@
+# We pipe certain environment variables directly into the task definition.
+# This lets customers have access to, for example, their LB endpoint - which they'd
+# have no way of otherwise determining.
+Environment:
+- Name: COPILOT_APPLICATION_NAME
+  Value: !Sub '${AppName}'
+- Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
+  Value: !Sub '${AppName}.local'
+- Name: COPILOT_ENVIRONMENT_NAME
+  Value: !Sub '${EnvName}'
+- Name: COPILOT_SERVICE_NAME
+  Value: !Sub '${WorkloadName}'
+- Name: COPILOT_LB_DNS
+  Value:
+    Fn::ImportValue:
+      !Sub "${AppName}-${EnvName}-PublicLoadBalancerDNS" {{if .Variables}}{{range $name, $value := .Variables}}
+- Name: {{$name}}
+  Value: {{$value | printf "%q"}}{{end}}{{end}}{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{range $var := .NestedStack.VariableOutputs}}
+- Name: {{toSnakeCase $var}}
+  Value:
+    Fn::GetAtt: [{{$stackName}}, Outputs.{{$var}}]{{end}}{{end}}{{if hasSecrets .}}
+Secrets:{{range $name, $valueFrom := .Secrets}}
+- Name: {{$name}}
+  ValueFrom: {{$valueFrom}}{{end}}{{end}}{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{range $secret := .NestedStack.SecretOutputs}}
+- Name: {{toSnakeCase $secret}}
+  ValueFrom:
+    Fn::GetAtt: [{{$stackName}}, Outputs.{{$secret}}]{{end}}{{end}}

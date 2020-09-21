@@ -4,11 +4,10 @@
 package cli
 
 import (
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // BuildEnvCmd is the top level command for environments.
@@ -22,7 +21,7 @@ Environments are deployment stages shared between services.`,
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
 	cmd.PersistentFlags().StringP(appFlag, appFlagShort, "" /* default */, appFlagDescription)
-	viper.BindPFlag(appFlag, cmd.PersistentFlags().Lookup(appFlag))
+	_ = viper.BindPFlag(appFlag, cmd.PersistentFlags().Lookup(appFlag)) // Ignore err because the flag name is not empty.
 
 	cmd.AddCommand(BuildEnvInitCmd())
 	cmd.AddCommand(BuildEnvListCmd())

@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -136,7 +136,7 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 				m.EXPECT().Environment(svcPackageEnvNamePrompt, "", testAppName).Return("test", nil)
 			},
 			expectPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(inputImageTagPrompt, "", nil).Return("v1.0.0", nil)
+				m.EXPECT().Get(inputImageTagPrompt, "", gomock.Any()).Return("v1.0.0", nil)
 			},
 
 			wantedSvcName: "frontend",
@@ -285,7 +285,7 @@ func TestPackageSvcOpts_Execute(t *testing.T) {
 
 				mockWs := mocks.NewMockwsSvcReader(ctrl)
 				mockWs.EXPECT().
-					ReadServiceManifest("api").
+					ReadWorkloadManifest("api").
 					Return([]byte(`name: api
 type: Load Balanced Web Service
 image:

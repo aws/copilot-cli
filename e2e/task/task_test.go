@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package task
 
 import (
@@ -47,7 +50,7 @@ var _ = Describe("Task", func() {
 				Dockerfile: "./backend/Dockerfile",
 
 				AppName: appName,
-				Env: envName,
+				Env:     envName,
 			})
 		})
 
@@ -66,7 +69,7 @@ var _ = Describe("Task", func() {
 				Dockerfile: "./backend/Dockerfile",
 
 				Default: true,
-				Follow: true,
+				Follow:  true,
 			})
 		})
 
@@ -101,11 +104,8 @@ var _ = Describe("Task", func() {
 				Command: "python main.py",
 				EnvVars: "STATUS=OVERRIDDEN",
 
-				AppName: appName,
-				Env: envName,
-
 				Default: true,
-				Follow: true,
+				Follow:  true,
 			})
 
 		})

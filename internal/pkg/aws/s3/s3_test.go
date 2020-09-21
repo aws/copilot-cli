@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package s3
@@ -214,6 +214,16 @@ func TestS3_EmptyBucket(t *testing.T) {
 
 			wantErr: fmt.Errorf("list objects for bucket mockBucket: some error"),
 		},
+		"should not invoke DeleteObjects if bucket is empty": {
+			inBucket: "mockBucket",
+			mockS3Client: func(m *mocks.Mocks3Api) {
+				m.EXPECT().ListObjectVersions(gomock.Any()).Return(&s3.ListObjectVersionsOutput{
+					IsTruncated: aws.Bool(false),
+				}, nil)
+				m.EXPECT().DeleteObjects(gomock.Any()).Times(0)
+			},
+			wantErr: nil,
+		},
 		"should wrap up error if fail to delete objects": {
 			inBucket: "mockBucket",
 			mockS3Client: func(m *mocks.Mocks3Api) {
@@ -231,7 +241,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 				}).Return(nil, errors.New("some error"))
 			},
 
-			wantErr: fmt.Errorf("delete objects for bucket mockBucket: some error"),
+			wantErr: fmt.Errorf("delete objects from bucket mockBucket: some error"),
 		},
 	}
 
@@ -250,7 +260,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 
 			gotErr := service.EmptyBucket(tc.inBucket)
 
-			if gotErr != nil {
+			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())
 			}
 		})

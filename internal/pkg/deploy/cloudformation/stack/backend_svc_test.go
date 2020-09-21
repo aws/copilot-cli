@@ -30,7 +30,7 @@ var (
 )
 
 var testBackendSvcManifest = manifest.NewBackendService(manifest.BackendServiceProps{
-	ServiceProps: manifest.ServiceProps{
+	WorkloadProps: manifest.WorkloadProps{
 		Name:       "frontend",
 		Dockerfile: "./frontend/Dockerfile",
 	},
@@ -45,34 +45,54 @@ var testBackendSvcManifest = manifest.NewBackendService(manifest.BackendServiceP
 })
 
 func TestBackendService_Template(t *testing.T) {
-	badTestBackendSvcManifest := manifest.NewBackendService(manifest.BackendServiceProps{
-		ServiceProps: manifest.ServiceProps{
+	baseProps := manifest.BackendServiceProps{
+		WorkloadProps: manifest.WorkloadProps{
 			Name:       "frontend",
 			Dockerfile: "./frontend/Dockerfile",
 		},
 		Port: 8080,
-	})
-	badTestBackendSvcManifest.Sidecar = manifest.Sidecar{Sidecars: map[string]*manifest.SidecarConfig{
+	}
+	testBackendSvcManifestWithBadSidecar := manifest.NewBackendService(baseProps)
+	testBackendSvcManifestWithBadSidecar.Sidecar = manifest.Sidecar{Sidecars: map[string]*manifest.SidecarConfig{
 		"xray": {
 			Port: aws.String("80/80/80"),
 		},
 	}}
+	testBackendSvcManifestWithBadAutoScaling := manifest.NewBackendService(baseProps)
+	testBackendSvcManifestWithBadAutoScaling.Count.Autoscaling = manifest.Autoscaling{
+		Range: manifest.Range("badRange"),
+	}
 	testCases := map[string]struct {
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, svc *BackendService)
 		manifest         *manifest.BackendService
 		wantedTemplate   string
 		wantedErr        error
 	}{
+		"unavailable desired count lambda template": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(nil, errors.New("some error"))
+				svc.parser = m
+			},
+			wantedTemplate: "",
+			wantedErr:      fmt.Errorf("read desired count lambda: some error"),
+		},
 		"unexpected addons parsing error": {
 			manifest: testBackendSvcManifest,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				svc.parser = m
 				svc.addons = mockTemplater{err: errors.New("some error")}
 			},
-			wantedErr: fmt.Errorf("generate addons template for service %s: %w", aws.StringValue(testBackendSvcManifest.Name), errors.New("some error")),
+			wantedErr: fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testBackendSvcManifest.Name), errors.New("some error")),
 		},
 		"failed parsing sidecars template": {
-			manifest: badTestBackendSvcManifest,
+			manifest: testBackendSvcManifestWithBadSidecar,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				svc.parser = m
 				svc.addons = mockTemplater{
 					tpl: `Outputs:
   AdditionalResourcesPolicyArn:
@@ -81,11 +101,25 @@ func TestBackendService_Template(t *testing.T) {
 			},
 			wantedErr: fmt.Errorf("convert the sidecar configuration for service frontend: %w", errors.New("cannot parse port mapping from 80/80/80")),
 		},
+		"failed parsing Auto Scaling template": {
+			manifest: testBackendSvcManifestWithBadAutoScaling,
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				svc.parser = m
+				svc.addons = mockTemplater{
+					tpl: `Outputs:
+  AdditionalResourcesPolicyArn:
+    Value: hello`,
+				}
+			},
+			wantedErr: fmt.Errorf("convert the Auto Scaling configuration for service frontend: %w", errors.New("invalid range value badRange. Should be in format of ${min}-${max}")),
+		},
 		"failed parsing svc template": {
 			manifest: testBackendSvcManifest,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
-
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(gomock.Any()).Return(nil, errors.New("some error"))
 				svc.parser = m
 				svc.addons = mockTemplater{
@@ -100,6 +134,7 @@ func TestBackendService_Template(t *testing.T) {
 			manifest: testBackendSvcManifest,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(template.ServiceOpts{
 					HealthCheck: &ecs.HealthCheck{
 						Command:     aws.StringSlice([]string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"}),
@@ -108,6 +143,7 @@ func TestBackendService_Template(t *testing.T) {
 						StartPeriod: aws.Int64(0),
 						Timeout:     aws.Int64(10),
 					},
+					DesiredCountLambda: "something",
 					NestedStack: &template.ServiceNestedStackOpts{
 						StackName:       addon.StackName,
 						VariableOutputs: []string{"Hello"},
@@ -130,7 +166,7 @@ func TestBackendService_Template(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			conf := &BackendService{
-				svc: &svc{
+				wkld: &wkld{
 					name: aws.StringValue(testBackendSvcManifest.Name),
 					env:  testEnvName,
 					app:  testAppName,
@@ -147,8 +183,12 @@ func TestBackendService_Template(t *testing.T) {
 			template, err := conf.Template()
 
 			// THEN
-			require.Equal(t, tc.wantedErr, err)
-			require.Equal(t, tc.wantedTemplate, template)
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedTemplate, template)
+			}
 		})
 	}
 }
@@ -156,7 +196,7 @@ func TestBackendService_Template(t *testing.T) {
 func TestBackendService_Parameters(t *testing.T) {
 	// GIVEN
 	conf := &BackendService{
-		svc: &svc{
+		wkld: &wkld{
 			name: aws.StringValue(testBackendSvcManifest.Name),
 			env:  testEnvName,
 			app:  testAppName,
@@ -175,19 +215,19 @@ func TestBackendService_Parameters(t *testing.T) {
 	// THEN
 	require.ElementsMatch(t, []*cloudformation.Parameter{
 		{
-			ParameterKey:   aws.String(ServiceAppNameParamKey),
+			ParameterKey:   aws.String(WorkloadAppNameParamKey),
 			ParameterValue: aws.String("phonetool"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceEnvNameParamKey),
+			ParameterKey:   aws.String(WorkloadEnvNameParamKey),
 			ParameterValue: aws.String("test"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceNameParamKey),
+			ParameterKey:   aws.String(WorkloadNameParamKey),
 			ParameterValue: aws.String("frontend"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceContainerImageParamKey),
+			ParameterKey:   aws.String(WorkloadContainerImageParamKey),
 			ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
 		},
 		{
@@ -195,23 +235,23 @@ func TestBackendService_Parameters(t *testing.T) {
 			ParameterValue: aws.String("8080"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceTaskCPUParamKey),
+			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),
 			ParameterValue: aws.String("256"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceTaskMemoryParamKey),
+			ParameterKey:   aws.String(WorkloadTaskMemoryParamKey),
 			ParameterValue: aws.String("512"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceTaskCountParamKey),
+			ParameterKey:   aws.String(WorkloadTaskCountParamKey),
 			ParameterValue: aws.String("1"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceLogRetentionParamKey),
+			ParameterKey:   aws.String(WorkloadLogRetentionParamKey),
 			ParameterValue: aws.String("30"),
 		},
 		{
-			ParameterKey:   aws.String(ServiceAddonsTemplateURLParamKey),
+			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 			ParameterValue: aws.String(""),
 		},
 	}, params)

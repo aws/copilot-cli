@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -26,6 +26,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/cobra"
@@ -33,10 +34,6 @@ import (
 
 const (
 	inputImageTagPrompt = "Input an image tag value:"
-)
-
-var (
-	errNoLocalManifestsFound = errors.New("no manifest files found")
 )
 
 type deploySvcVars struct {
@@ -85,7 +82,7 @@ func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
 
 		store:        store,
 		ws:           ws,
-		unmarshal:    manifest.UnmarshalService,
+		unmarshal:    manifest.UnmarshalWorkload,
 		spinner:      termprogress.NewSpinner(),
 		sel:          selector.NewWorkspaceSelect(vars.prompt, store, ws),
 		cmd:          command.New(),
@@ -240,7 +237,7 @@ func (o *deploySvcOpts) askImageTag() error {
 
 	log.Warningln("Failed to default tag, are you in a git repository?")
 
-	userInputTag, err := o.prompt.Get(inputImageTagPrompt, "", nil /*no validation*/)
+	userInputTag, err := o.prompt.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
 	if err != nil {
 		return fmt.Errorf("prompt for image tag: %w", err)
 	}
@@ -306,7 +303,7 @@ func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {
 		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
 	}
 
-	manifestBytes, err := o.ws.ReadServiceManifest(o.Name)
+	manifestBytes, err := o.ws.ReadWorkloadManifest(o.Name)
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file %s: %w", o.Name, err)
 	}
@@ -360,7 +357,7 @@ func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 }
 
 func (o *deploySvcOpts) manifest() (interface{}, error) {
-	raw, err := o.ws.ReadServiceManifest(o.Name)
+	raw, err := o.ws.ReadWorkloadManifest(o.Name)
 	if err != nil {
 		return nil, fmt.Errorf("read service %s manifest from workspace: %w", o.Name, err)
 	}

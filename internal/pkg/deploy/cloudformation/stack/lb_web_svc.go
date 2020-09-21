@@ -17,6 +17,7 @@ import (
 // Template rendering configuration.
 const (
 	lbWebSvcRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
+	desiredCountGeneratorPath         = "custom-resources/desired-count-delegation.js"
 )
 
 // Parameter logical IDs for a load balanced web service.
@@ -27,6 +28,7 @@ const (
 	LBWebServiceHealthCheckPathParamKey = "HealthCheckPath"
 	LBWebServiceTargetContainerParamKey = "TargetContainer"
 	LBWebServiceTargetPortParamKey      = "TargetPort"
+	LBWebServiceStickinessParamKey      = "Stickiness"
 )
 
 type loadBalancedWebSvcReadParser interface {
@@ -36,7 +38,7 @@ type loadBalancedWebSvcReadParser interface {
 
 // LoadBalancedWebService represents the configuration needed to create a CloudFormation stack from a load balanced web service manifest.
 type LoadBalancedWebService struct {
-	*svc
+	*wkld
 	manifest     *manifest.LoadBalancedWebService
 	httpsEnabled bool
 
@@ -55,7 +57,7 @@ func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app st
 		return nil, fmt.Errorf("apply environment %s override: %s", env, err)
 	}
 	return &LoadBalancedWebService{
-		svc: &svc{
+		wkld: &wkld{
 			name:   aws.StringValue(mft.Name),
 			env:    env,
 			app:    app,
@@ -87,15 +89,23 @@ func NewHTTPSLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, a
 func (s *LoadBalancedWebService) Template() (string, error) {
 	rulePriorityLambda, err := s.parser.Read(lbWebSvcRulePriorityGeneratorPath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("read rule priority lambda: %w", err)
+	}
+	desiredCountLambda, err := s.parser.Read(desiredCountGeneratorPath)
+	if err != nil {
+		return "", fmt.Errorf("read desired count lambda: %w", err)
 	}
 	outputs, err := s.addonsOutputs()
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := s.manifest.Sidecar.SidecarsOpts()
+	sidecars, err := s.manifest.Sidecar.Options()
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
+	}
+	autoscaling, err := s.manifest.Count.Autoscaling.Options()
+	if err != nil {
+		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
 	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.ServiceOpts{
 		Variables:          s.manifest.Variables,
@@ -103,7 +113,9 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		NestedStack:        outputs,
 		Sidecars:           sidecars,
 		LogConfig:          s.manifest.LogConfigOpts(),
+		Autoscaling:        autoscaling,
 		RulePriorityLambda: rulePriorityLambda.String(),
+		DesiredCountLambda: desiredCountLambda.String(),
 	})
 	if err != nil {
 		return "", err
@@ -132,11 +144,15 @@ func (s *LoadBalancedWebService) loadBalancerTarget() (targetContainer *string, 
 
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, error) {
+	svcParams, err := s.wkld.Parameters()
+	if err != nil {
+		return nil, err
+	}
 	targetContainer, targetPort, err := s.loadBalancerTarget()
 	if err != nil {
 		return nil, err
 	}
-	return append(s.svc.Parameters(), []*cloudformation.Parameter{
+	return append(svcParams, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
 			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.Image.Port)), 10)),
@@ -161,11 +177,15 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
 			ParameterValue: targetPort,
 		},
+		{
+			ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+			ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.Stickiness))),
+		},
 	}...), nil
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability to users.
 func (s *LoadBalancedWebService) SerializedParameters() (string, error) {
-	return s.svc.templateConfiguration(s)
+	return s.wkld.templateConfiguration(s)
 }

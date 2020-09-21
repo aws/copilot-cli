@@ -1,11 +1,16 @@
 pull_request_rules:
   - name: Merge on CI success and review approval
     conditions:
-      - base~=(master|rename-commands)
+      - base~=(mainline|rename-commands)
       - "#approved-reviews-by>=2"
       - approved-reviews-by=@aws/aws-ecs-devx
       - -approved-reviews-by~=author
-      - status-success=AWS CodeBuild us-west-2 (ecs-cli-v2-ci)
+      - status-success=build (compile-linux)
+      - status-success=build (compile-windows)
+      - status-success=build (compile-darwin)
+      - status-success=test
+      - status-success=staticcheck
+      - status-success=license
       - status-success=Semantic Pull Request
       - -label~=(WIP|do-not-merge)
       - -title~=(WIP|wip)
@@ -20,8 +25,13 @@ pull_request_rules:
         commit_message: title+body
   - name: Automatically approve and merge Dependabot PRs
     conditions:
-      - base=master
-      - status-success=AWS CodeBuild us-west-2 (ecs-cli-v2-ci)
+      - base=mainline
+      - status-success=build (compile-linux)
+      - status-success=build (compile-windows)
+      - status-success=build (compile-darwin)
+      - status-success=test
+      - status-success=staticcheck
+      - status-success=license
       - status-success=Semantic Pull Request
       - author=dependabot[bot]
       - -title~=(WIP|wip)

@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cloudwatch
@@ -22,11 +22,11 @@ type cloudWatchMocks struct {
 	rg *mocks.MockresourceGetter
 }
 
-func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
+func TestCloudWatch_AlarmsWithTags(t *testing.T) {
 	const (
-		appName      = "mockSvc"
+		svcName      = "mockSvc"
 		envName      = "mockEnv"
-		projectName  = "mockApp"
+		appName      = "mockApp"
 		mockAlarmArn = "arn:aws:cloudwatch:us-west-2:1234567890:alarm:mockAlarmName"
 		mockArn1     = mockAlarmArn + "1"
 		mockArn2     = mockAlarmArn + "2"
@@ -34,7 +34,7 @@ func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
 	mockTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
 	mockError := errors.New("some error")
 	testTags := map[string]string{
-		"copilot-application": projectName,
+		"copilot-application": appName,
 	}
 
 	testCases := map[string]struct {
@@ -62,7 +62,7 @@ func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
 				m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]*rg.Resource{{ARN: "arn:aws:cloudwatch:us-west-2:1234567890:alarm:badAlarm:Names"}}, nil)
 			},
 
-			wantErr: fmt.Errorf("cannot parse alarm ARN resource alarm:badAlarm:Names"),
+			wantErr: fmt.Errorf("unknown ARN resource format alarm:badAlarm:Names"),
 		},
 		"errors if failed to describe CloudWatch alarms": {
 			setupMocks: func(m cloudWatchMocks) {
@@ -77,12 +77,12 @@ func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
 
 			wantErr: fmt.Errorf("describe CloudWatch alarms: some error"),
 		},
-		"return an empty array if no alarms found": {
+		"return if no alarms found": {
 			setupMocks: func(m cloudWatchMocks) {
 				m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]*rg.Resource{}, nil)
 			},
 
-			wantAlarmStatus: []AlarmStatus{},
+			wantAlarmStatus: nil,
 		},
 		"success": {
 			setupMocks: func(m cloudWatchMocks) {
@@ -191,16 +191,16 @@ func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			cwSvc := CloudWatch{
-				mockcwClient,
-				mockrgClient,
+				client:   mockcwClient,
+				rgClient: mockrgClient,
 			}
 
-			gotAlarmStatus, gotErr := cwSvc.GetAlarmsWithTags(testTags)
+			gotAlarmStatus, gotErr := cwSvc.AlarmsWithTags(testTags)
 
 			if gotErr != nil {
 				require.EqualError(t, tc.wantErr, gotErr.Error())
 			} else {
-				require.ElementsMatch(t, tc.wantAlarmStatus, gotAlarmStatus)
+				require.Equal(t, tc.wantAlarmStatus, gotAlarmStatus)
 			}
 		})
 

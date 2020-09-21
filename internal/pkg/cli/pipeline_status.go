@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -120,9 +120,9 @@ func (o *pipelineStatusOpts) Execute() error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(o.w, data)
+		fmt.Fprint(o.w, data)
 	} else {
-		fmt.Fprintf(o.w, pipelineStatus.HumanString())
+		fmt.Fprint(o.w, pipelineStatus.HumanString())
 	}
 
 	return nil

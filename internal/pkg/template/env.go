@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package template
@@ -9,13 +9,12 @@ import (
 )
 
 const (
-	// EnvCFTemplatePath is the path where the cloudformation for the environment is written.
-	EnvCFTemplatePath       = "environment/cf.yml"
-	fmtEnvCFSubTemplatePath = "environment/cf/%s.yml"
+	fmtEnvCFTemplatePath    = "environment/versions/cf-%s.yml"
+	fmtEnvCFSubTemplatePath = "environment/partials/%s.yml"
 )
 
 var (
-	// Template names under "environment/cf/".
+	// Template names under "environment/partials/".
 	envCFSubTemplateNames = []string{
 		"cfn-execution-role",
 		"custom-resources",
@@ -28,11 +27,14 @@ var (
 
 // EnvOpts holds data that can be provided to enable features in an environment stack template.
 type EnvOpts struct {
+	Version string // The template version to use for the environment. If empty uses the "legacy" template.
+
 	DNSDelegationLambda       string
 	ACMValidationLambda       string
 	EnableLongARNFormatLambda string
-	ImportVPC                 *ImportVPCOpts
-	VPCConfig                 *AdjustVPCOpts
+
+	ImportVPC *ImportVPCOpts
+	VPCConfig *AdjustVPCOpts
 }
 
 // ImportVPCOpts holds the fields to import VPC resources.
@@ -50,8 +52,8 @@ type AdjustVPCOpts struct {
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.
-func (t *Template) ParseEnv(data interface{}, options ...ParseOption) (*Content, error) {
-	tpl, err := t.parse("base", EnvCFTemplatePath, options...)
+func (t *Template) ParseEnv(data *EnvOpts, options ...ParseOption) (*Content, error) {
+	tpl, err := t.parse("base", envTemplatePath(data.Version), options...)
 	if err != nil {
 		return nil, err
 	}
@@ -70,4 +72,11 @@ func (t *Template) ParseEnv(data interface{}, options ...ParseOption) (*Content,
 		return nil, fmt.Errorf("execute environment template with data %v: %w", data, err)
 	}
 	return &Content{buf}, nil
+}
+
+func envTemplatePath(version string) string {
+	if version == "" {
+		return fmt.Sprintf(fmtEnvCFTemplatePath, "legacy")
+	}
+	return fmt.Sprintf(fmtEnvCFTemplatePath, version)
 }

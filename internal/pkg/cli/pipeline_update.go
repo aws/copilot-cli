@@ -112,9 +112,9 @@ func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineSta
 				Name:      stage.Name,
 				Region:    env.Region,
 				AccountID: env.AccountID,
-				Prod:      env.Prod,
 			},
-			TestCommands: stage.TestCommands,
+			RequiresApproval: stage.RequiresApproval,
+			TestCommands:     stage.TestCommands,
 		}
 		stages = append(stages, pipelineStage)
 	}

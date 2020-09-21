@@ -168,7 +168,12 @@ func (p Prompt) Get(message, help string, validator ValidatorFunc, promptOpts ..
 	}
 
 	var result string
-	err := p(prompt, &result, stdio(), validators(validator), icons())
+	var err error
+	if validator == nil {
+		err = p(prompt, &result, stdio(), icons())
+	} else {
+		err = p(prompt, &result, stdio(), validators(validator), icons())
+	}
 	return result, err
 }
 
@@ -339,14 +344,11 @@ func icons() survey.AskOpt {
 	})
 }
 
+// RequireNonEmpty returns an error if v is a zero-value.
+func RequireNonEmpty(v interface{}) error {
+	return survey.Required(v)
+}
+
 func validators(validatorFunc ValidatorFunc) survey.AskOpt {
-	var v survey.Validator
-
-	if validatorFunc != nil {
-		v = survey.ComposeValidators(survey.Required, survey.Validator(validatorFunc))
-	} else {
-		v = survey.Required
-	}
-
-	return survey.WithValidator(v)
+	return survey.WithValidator(survey.ComposeValidators(survey.Required, survey.Validator(validatorFunc)))
 }

@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package describe
@@ -20,8 +20,6 @@ const (
 	rulePriorityFunction = "Custom::RulePriorityFunction"
 	waitCondition        = "AWS::CloudFormation::WaitCondition"
 	waitConditionHandle  = "AWS::CloudFormation::WaitConditionHandle"
-
-	serviceLogicalID = "Service"
 )
 
 type stackAndResourcesDescriber interface {

@@ -1,0 +1,41 @@
+{
+  "Version": "1.0",
+  "Comment": "Run AWS Fargate task",
+  {{- if .Timeout}}
+  "TimeoutSeconds": ${Timeout},
+  {{- end}}
+  "StartAt": "Run Fargate Task",
+  "States": {
+    "Run Fargate Task": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.sync",
+      "Parameters": {
+        "LaunchType": "FARGATE",
+        "PlatformVersion": "LATEST",
+        "Cluster": "${Cluster}",
+        "TaskDefinition": "${TaskDefinition}",
+        "Group.$": "$$.Execution.Name",
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "Subnets": ["${Subnets}"],
+            "AssignPublicIp": "${AssignPublicIp}",
+            "SecurityGroups": ["${SecurityGroups}"]
+          }
+        },
+      },
+      {{- if .Retries}}
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 10,
+          "MaxAttempts": {{.Retries}},
+          "BackoffRate": 1.5
+        }
+      ],
+      {{- end}}
+      "End": "True"
+    }
+  }
+}

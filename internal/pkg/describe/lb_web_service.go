@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package describe
@@ -19,6 +19,11 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+)
+
+const (
+	envOutputPublicLoadBalancerDNSName = "PublicLoadBalancerDNSName"
+	envOutputSubdomain                 = "EnvironmentSubdomain"
 )
 
 // WebServiceURI represents the unique identifier to access a web service.
@@ -138,9 +143,9 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		configs = append(configs, &ServiceConfig{
 			Environment: env,
 			Port:        d.svcParams[stack.LBWebServiceContainerPortParamKey],
-			Tasks:       d.svcParams[stack.ServiceTaskCountParamKey],
-			CPU:         d.svcParams[stack.ServiceTaskCPUParamKey],
-			Memory:      d.svcParams[stack.ServiceTaskMemoryParamKey],
+			Tasks:       d.svcParams[stack.WorkloadTaskCountParamKey],
+			CPU:         d.svcParams[stack.WorkloadTaskCPUParamKey],
+			Memory:      d.svcParams[stack.WorkloadTaskMemoryParamKey],
 		})
 		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, serviceDiscovery{
 			Service: d.svc,
@@ -201,12 +206,12 @@ func (d *WebServiceDescriber) URI(envName string) (string, error) {
 	d.svcParams = svcParams
 
 	uri := &WebServiceURI{
-		DNSName: envOutputs[stack.EnvOutputPublicLoadBalancerDNSName],
+		DNSName: envOutputs[envOutputPublicLoadBalancerDNSName],
 		Path:    svcParams[stack.LBWebServiceRulePathParamKey],
 	}
-	_, isHTTPS := envOutputs[stack.EnvOutputSubdomain]
+	_, isHTTPS := envOutputs[envOutputSubdomain]
 	if isHTTPS {
-		dnsName := fmt.Sprintf("%s.%s", d.svc, envOutputs[stack.EnvOutputSubdomain])
+		dnsName := fmt.Sprintf("%s.%s", d.svc, envOutputs[envOutputSubdomain])
 		uri = &WebServiceURI{
 			DNSName: dnsName,
 		}
@@ -293,28 +298,28 @@ func (w *webSvcDesc) JSONString() (string, error) {
 func (w *webSvcDesc) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, color.Bold.Sprint("About\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("About\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Application", w.App)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", w.Service)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Type", w.Type)
-	fmt.Fprintf(writer, color.Bold.Sprint("\nConfigurations\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.Configurations.humanString(writer)
-	fmt.Fprintf(writer, color.Bold.Sprint("\nRoutes\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Environment", "URL")
 	for _, route := range w.Routes {
 		fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
 	}
-	fmt.Fprintf(writer, color.Bold.Sprint("\nService Discovery\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nService Discovery\n\n"))
 	writer.Flush()
 	w.ServiceDiscovery.humanString(writer)
-	fmt.Fprintf(writer, color.Bold.Sprint("\nVariables\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()
 	w.Variables.humanString(writer)
 	if len(w.Resources) != 0 {
-		fmt.Fprintf(writer, color.Bold.Sprint("\nResources\n"))
+		fmt.Fprint(writer, color.Bold.Sprint("\nResources\n"))
 		writer.Flush()
 
 		// Go maps don't have a guaranteed order.
@@ -333,22 +338,20 @@ func cpuToString(s string) string {
 
 // IsStackNotExistsErr returns true if error type is stack not exist.
 func IsStackNotExistsErr(err error) bool {
-	for {
-		if err == nil {
-			return false
-		}
-		aerr, ok := err.(awserr.Error)
-		if !ok {
-			return IsStackNotExistsErr(errors.Unwrap(err))
-		}
-		if aerr.Code() != "ValidationError" {
-			return IsStackNotExistsErr(errors.Unwrap(err))
-		}
-		if !strings.Contains(aerr.Message(), "does not exist") {
-			return IsStackNotExistsErr(errors.Unwrap(err))
-		}
-		return true
+	if err == nil {
+		return false
 	}
+	aerr, ok := err.(awserr.Error)
+	if !ok {
+		return IsStackNotExistsErr(errors.Unwrap(err))
+	}
+	if aerr.Code() != "ValidationError" {
+		return IsStackNotExistsErr(errors.Unwrap(err))
+	}
+	if !strings.Contains(aerr.Message(), "does not exist") {
+		return IsStackNotExistsErr(errors.Unwrap(err))
+	}
+	return true
 }
 
 func appendServiceDiscovery(sds []*ServiceDiscovery, sd serviceDiscovery, env string) []*ServiceDiscovery {

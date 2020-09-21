@@ -361,7 +361,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	id, err := identity.Get()
 	require.NoError(t, err)
 
-	environmentToDeploy := deploy.CreateEnvironmentInput{Name: randStringBytes(10), AppName: randStringBytes(10), PublicLoadBalancer: true, ToolsAccountPrincipalARN: id.RootUserARN}
+	environmentToDeploy := deploy.CreateEnvironmentInput{Name: randStringBytes(10), AppName: randStringBytes(10), ToolsAccountPrincipalARN: id.RootUserARN}
 	envStackName := fmt.Sprintf("%s-%s", environmentToDeploy.AppName, environmentToDeploy.Name)
 
 	t.Run("Deploys an environment to CloudFormation", func(t *testing.T) {

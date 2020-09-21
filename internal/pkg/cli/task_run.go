@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/ecslogging"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -42,29 +42,24 @@ const (
 )
 
 const (
-	fmtRepoName         = "copilot-%s"
-	fmtImageURI         = "%s:%s"
-	fmtTaskLogGroupName = "/copilot/%s"
+	fmtRepoName = "copilot-%s"
+	fmtImageURI = "%s:%s"
 )
 
 var (
 	errNumNotPositive = errors.New("number of tasks must be positive")
-	errCpuNotPositive = errors.New("CPU units must be positive")
+	errCPUNotPositive = errors.New("CPU units must be positive")
 	errMemNotPositive = errors.New("memory must be positive")
 )
 
 var (
-	taskRunAppPrompt       = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("application"), color.Emphasize("task"))
-	taskRunEnvPrompt       = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("environment"), color.Emphasize("task"))
-	taskRunGroupNamePrompt = fmt.Sprintf("What would you like to %s your task group?", color.Emphasize("name"))
+	taskRunAppPrompt = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("application"), color.Emphasize("task"))
+	taskRunEnvPrompt = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("environment"), color.Emphasize("task"))
 
 	taskRunAppPromptHelp = fmt.Sprintf(`Task will be deployed to the selected application. 
 Select %s to run the task in your default VPC instead of any existing application.`, color.Emphasize(appEnvOptionNone))
 	taskRunEnvPromptHelp = fmt.Sprintf(`Task will be deployed to the selected environment.
 Select %s to run the task in your default VPC instead of any existing environment.`, color.Emphasize(appEnvOptionNone))
-	taskRunGroupNamePromptHelp = `The group name of the task. Tasks with the same group name share the same 
-set of resources, including CloudFormation stack, CloudWatch log group, 
-task definition and ECR repository.`
 )
 
 type runTaskVars struct {
@@ -155,15 +150,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	}
 
 	opts.configureEventsWriter = func(tasks []*task.Task) {
-		logGroupName := fmt.Sprintf(fmtTaskLogGroupName, opts.groupName)
-		opts.eventsWriter = &task.EventsWriter{
-			GroupName: logGroupName,
-			Tasks:     tasks,
-
-			Describer:    ecs.New(opts.sess),
-			EventsLogger: cloudwatchlogs.New(opts.sess),
-			Writer:       log.OutputWriter,
-		}
+		opts.eventsWriter = ecslogging.NewTaskClient(opts.sess, opts.groupName, tasks)
 	}
 	return &opts, nil
 }
@@ -236,7 +223,7 @@ func (o *runTaskOpts) Validate() error {
 	}
 
 	if o.cpu <= 0 {
-		return errCpuNotPositive
+		return errCPUNotPositive
 	}
 
 	if o.memory <= 0 {
@@ -371,7 +358,7 @@ func (o *runTaskOpts) Execute() error {
 		dir, err := os.Getwd()
 		if err != nil {
 			log.Errorf("Cannot retrieve working directory, please use --%s to specify a task group name.\n", taskGroupNameFlag)
-			return fmt.Errorf("get working directory: %v", err) 
+			return fmt.Errorf("get working directory: %v", err)
 		}
 		o.groupName = filepath.Base(dir)
 	}

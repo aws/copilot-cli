@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	lbWebSvcManifestPath = "services/lb-web/manifest.yml"
+	lbWebSvcManifestPath = "workloads/services/lb-web/manifest.yml"
 
 	// LogRetentionInDays is the default log retention time in days.
 	LogRetentionInDays = 30
@@ -21,7 +21,7 @@ const (
 // LoadBalancedWebService holds the configuration to build a container image with an exposed port that receives
 // requests through a load balancer with AWS Fargate as the compute engine.
 type LoadBalancedWebService struct {
-	Service                      `yaml:",inline"`
+	Workload                     `yaml:",inline"`
 	LoadBalancedWebServiceConfig `yaml:",inline"`
 	// Use *LoadBalancedWebServiceConfig because of https://github.com/imdario/mergo/issues/146
 	Environments map[string]*LoadBalancedWebServiceConfig `yaml:",flow"` // Fields to override per environment.
@@ -34,13 +34,13 @@ type LoadBalancedWebServiceConfig struct {
 	Image       ServiceImageWithPort `yaml:",flow"`
 	RoutingRule `yaml:"http,flow"`
 	TaskConfig  `yaml:",inline"`
-	*LogConfig  `yaml:"logging,flow"`
+	*Logging    `yaml:"logging,flow"`
 	Sidecar     `yaml:",inline"`
 }
 
 // LogConfigOpts converts the service's Firelens configuration into a format parsable by the templates pkg.
 func (lc *LoadBalancedWebServiceConfig) LogConfigOpts() *template.LogConfigOpts {
-	if lc.LogConfig == nil {
+	if lc.Logging == nil {
 		return nil
 	}
 	return lc.logConfigOpts()
@@ -50,44 +50,37 @@ func (lc *LoadBalancedWebServiceConfig) LogConfigOpts() *template.LogConfigOpts 
 type RoutingRule struct {
 	Path            *string `yaml:"path"`
 	HealthCheckPath *string `yaml:"healthcheck"`
+	Stickiness      *bool   `yaml:"stickiness"`
 	// TargetContainer is the container load balancer routes traffic to.
 	TargetContainer *string `yaml:"targetContainer"`
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
 type LoadBalancedWebServiceProps struct {
-	*ServiceProps
+	*WorkloadProps
 	Path string
 	Port uint16
 }
 
 // NewLoadBalancedWebService creates a new public load balanced web service, receives all the requests from the load balancer,
 // has a single task with minimal CPU and memory thresholds, and sets the default health check path to "/".
-func NewLoadBalancedWebService(input *LoadBalancedWebServiceProps) *LoadBalancedWebService {
-	defaultLbManifest := newDefaultLoadBalancedWebService()
-	defaultLbManifest.Service = Service{
-		Name: aws.String(input.Name),
-		Type: aws.String(LoadBalancedWebServiceType),
-	}
-	defaultLbManifest.Image = ServiceImageWithPort{
-		ServiceImage: ServiceImage{
-			Build: BuildArgsOrString{
-				BuildArgs: DockerBuildArgs{
-					Dockerfile: aws.String(input.Dockerfile),
-				},
-			},
-		},
-		Port: aws.Uint16(input.Port),
-	}
-	defaultLbManifest.RoutingRule.Path = aws.String(input.Path)
-	defaultLbManifest.parser = template.New()
-	return defaultLbManifest
+func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalancedWebService {
+	svc := newDefaultLoadBalancedWebService()
+	// Apply overrides.
+	svc.Name = aws.String(props.Name)
+	svc.LoadBalancedWebServiceConfig.Image.Build.BuildArgs.Dockerfile = aws.String(props.Dockerfile)
+	svc.LoadBalancedWebServiceConfig.Image.Port = aws.Uint16(props.Port)
+	svc.RoutingRule.Path = aws.String(props.Path)
+	svc.parser = template.New()
+	return svc
 }
 
 // newDefaultLoadBalancedWebService returns an empty LoadBalancedWebService with only the default values set.
 func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 	return &LoadBalancedWebService{
-		Service: Service{},
+		Workload: Workload{
+			Type: aws.String(LoadBalancedWebServiceType),
+		},
 		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 			Image: ServiceImageWithPort{},
 			RoutingRule: RoutingRule{
@@ -96,7 +89,9 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),
-				Count:  aws.Int(1),
+				Count: Count{
+					Value: aws.Int(1),
+				},
 			},
 		},
 	}

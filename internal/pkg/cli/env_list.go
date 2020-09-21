@@ -83,7 +83,7 @@ func (o *listEnvOpts) Execute() error {
 	} else {
 		out = o.humanOutput(envs)
 	}
-	fmt.Fprintf(o.w, out)
+	fmt.Fprint(o.w, out)
 
 	return nil
 }

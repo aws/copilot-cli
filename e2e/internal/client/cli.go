@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package client
 
 import (
@@ -11,19 +14,19 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-// CLI is a wrapper around os.execs
+// CLI is a wrapper around os.execs.
 type CLI struct {
 	path string
 }
 
-// AppInitRequest contains the parameters for calling copilot app init
+// AppInitRequest contains the parameters for calling copilot app init.
 type AppInitRequest struct {
 	AppName string
 	Domain  string
 	Tags    map[string]string
 }
 
-// InitRequest contains the parameters for calling copilot init
+// InitRequest contains the parameters for calling copilot init.
 type InitRequest struct {
 	AppName    string
 	SvcName    string
@@ -34,21 +37,45 @@ type InitRequest struct {
 	SvcPort    string
 }
 
-// EnvInitRequest contains the parameters for calling copilot env init
+// EnvInitRequest contains the parameters for calling copilot env init.
 type EnvInitRequest struct {
-	AppName string
-	EnvName string
-	Profile string
-	Prod    bool
+	AppName       string
+	EnvName       string
+	Profile       string
+	Prod          bool
+	CustomizedEnv bool
+	VPCImport     EnvInitRequestVPCImport
+	VPCConfig     EnvInitRequestVPCConfig
 }
 
-// EnvShowRequest contains the parameters for calling copilot env show
+// EnvInitRequestVPCImport contains the parameters for configuring VPC import when
+// calling copilot env init.
+type EnvInitRequestVPCImport struct {
+	ID               string
+	PublicSubnetIDs  string
+	PrivateSubnetIDs string
+}
+
+// IsSet returns true if all fields are set.
+func (e EnvInitRequestVPCImport) IsSet() bool {
+	return e.ID != "" && e.PublicSubnetIDs != "" && e.PrivateSubnetIDs != ""
+}
+
+// EnvInitRequestVPCConfig contains the parameters for configuring VPC config when
+// calling copilot env init.
+type EnvInitRequestVPCConfig struct {
+	CIDR               string
+	PublicSubnetCIDRs  string
+	PrivateSubnetCIDRs string
+}
+
+// EnvShowRequest contains the parameters for calling copilot env show.
 type EnvShowRequest struct {
 	AppName string
 	EnvName string
 }
 
-// SvcInitRequest contains the parameters for calling copilot svc init
+// SvcInitRequest contains the parameters for calling copilot svc init.
 type SvcInitRequest struct {
 	Name       string
 	SvcType    string
@@ -56,13 +83,20 @@ type SvcInitRequest struct {
 	SvcPort    string
 }
 
-// SvcShowRequest contains the parameters for calling copilot svc show
+// SvcShowRequest contains the parameters for calling copilot svc show.
 type SvcShowRequest struct {
 	Name    string
 	AppName string
 }
 
-// SvcLogsRequest contains the parameters for calling copilot svc logs
+// SvcStatusRequest contains the parameters for calling copilot svc status.
+type SvcStatusRequest struct {
+	Name    string
+	AppName string
+	EnvName string
+}
+
+// SvcLogsRequest contains the parameters for calling copilot svc logs.
 type SvcLogsRequest struct {
 	AppName string
 	EnvName string
@@ -70,7 +104,7 @@ type SvcLogsRequest struct {
 	Since   string
 }
 
-// SvcDeployInput contains the parameters for calling copilot svc deploy
+// SvcDeployInput contains the parameters for calling copilot svc deploy.
 type SvcDeployInput struct {
 	Name     string
 	EnvName  string
@@ -83,8 +117,8 @@ type TaskRunInput struct {
 
 	GroupName string
 
-	Image          string
-	Dockerfile     string
+	Image      string
+	Dockerfile string
 
 	Subnets        []string
 	SecurityGroups []string
@@ -198,6 +232,28 @@ func (cli *CLI) SvcShow(opts *SvcShowRequest) (*SvcShowOutput, error) {
 	return toSvcShowOutput(svcJSON)
 }
 
+/*SvcStatus runs:
+copilot svc status
+	--app $p
+	--env $e
+	--name $n
+	--json
+*/
+func (cli *CLI) SvcStatus(opts *SvcStatusRequest) (*SvcStatusOutput, error) {
+	svcJSON, svcStatusErr := cli.exec(
+		exec.Command(cli.path, "svc", "status",
+			"--app", opts.AppName,
+			"--name", opts.Name,
+			"--env", opts.EnvName,
+			"--json"))
+
+	if svcStatusErr != nil {
+		return nil, svcStatusErr
+	}
+
+	return toSvcStatusOutput(svcJSON)
+}
+
 /*SvcDelete runs:
 copilot svc delete
 	--name $n
@@ -281,7 +337,14 @@ copilot env init
 	--name $n
 	--app $a
 	--profile $pr
-	--prod (optionally)
+	--prod (optional)
+	--default-config (optional)
+	--import-private-subnets (optional)
+	--import-public-subnets (optional)
+	--import-vpc-id (optional)
+	--override-private-cidrs (optional)
+	--override-public-cidrs (optional)
+	--override-vpc-cidr (optional)
 */
 func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 	commands := []string{"env", "init",
@@ -291,6 +354,17 @@ func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 	}
 	if opts.Prod {
 		commands = append(commands, "--prod")
+	}
+	if !opts.CustomizedEnv {
+		commands = append(commands, "--default-config")
+	}
+	if (opts.VPCImport != EnvInitRequestVPCImport{}) {
+		commands = append(commands, "--import-vpc-id", opts.VPCImport.ID, "--import-public-subnets",
+			opts.VPCImport.PublicSubnetIDs, "--import-private-subnets", opts.VPCImport.PrivateSubnetIDs)
+	}
+	if (opts.VPCConfig != EnvInitRequestVPCConfig{}) {
+		commands = append(commands, "--override-vpc-cidr", opts.VPCConfig.CIDR, "--override-public-cidrs",
+			opts.VPCConfig.PublicSubnetCIDRs, "--override-private-cidrs", opts.VPCConfig.PrivateSubnetCIDRs)
 	}
 	return cli.exec(exec.Command(cli.path, commands...))
 }
@@ -430,11 +504,11 @@ func (cli *CLI) TaskRun(input *TaskRunInput) (string, error) {
 		commands = append(commands, "--env-vars", input.EnvVars)
 	}
 
-	if input.Default != false {
+	if input.Default {
 		commands = append(commands, "--default")
 	}
 
-	if input.Follow != false {
+	if input.Follow {
 		commands = append(commands, "--follow")
 	}
 

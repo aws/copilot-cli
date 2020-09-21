@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package s3 provides a client to make API requests to Amazon Simple Storage Service.
@@ -89,12 +89,18 @@ func (s *S3) EmptyBucket(bucket string) error {
 				VersionId: deleteMarker.VersionId,
 			})
 		}
+		if len(objectsToDelete) == 0 {
+			return nil
+		}
 		_, err = s.s3Client.DeleteObjects(&s3.DeleteObjectsInput{
 			Bucket: aws.String(bucket),
 			Delete: &s3.Delete{
 				Objects: objectsToDelete,
 			},
 		})
+		if err != nil {
+			return fmt.Errorf("delete objects from bucket %s: %w", bucket, err)
+		}
 		if !aws.BoolValue(listResp.IsTruncated) {
 			return nil
 		}

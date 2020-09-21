@@ -1,0 +1,27 @@
+Cluster:
+  Fn::ImportValue:
+    !Sub '${AppName}-${EnvName}-ClusterId'
+TaskDefinition: !Ref TaskDefinition
+{{- if .Autoscaling }}
+DesiredCount: !GetAtt DynamicDesiredCountAction.DesiredCount
+{{- else }}
+DesiredCount: !Ref TaskCount
+{{- end}}
+PropagateTags: SERVICE
+LaunchType: FARGATE
+NetworkConfiguration:
+  AwsvpcConfiguration:
+    AssignPublicIp: ENABLED
+    Subnets:
+      - Fn::Select:
+        - 0
+        - Fn::Split:
+          - ','
+          - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+      - Fn::Select:
+        - 1
+        - Fn::Split:
+          - ','
+          - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+    SecurityGroups:
+      - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'

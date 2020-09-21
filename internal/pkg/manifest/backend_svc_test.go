@@ -22,21 +22,21 @@ func TestNewBackendSvc(t *testing.T) {
 	}{
 		"without healthcheck": {
 			inProps: BackendServiceProps{
-				ServiceProps: ServiceProps{
+				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
 				Port: 8080,
 			},
 			wantedManifest: &BackendService{
-				Service: Service{
+				Workload: Workload{
 					Name: aws.String("subscribers"),
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					Image: imageWithPortAndHealthcheck{
 						ServiceImageWithPort: ServiceImageWithPort{
-							ServiceImage: ServiceImage{
+							Image: Image{
 								Build: BuildArgsOrString{
 									BuildArgs: DockerBuildArgs{
 										Dockerfile: aws.String("./subscribers/Dockerfile"),
@@ -49,14 +49,16 @@ func TestNewBackendSvc(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(256),
 						Memory: aws.Int(512),
-						Count:  aws.Int(1),
+						Count: Count{
+							Value: aws.Int(1),
+						},
 					},
 				},
 			},
 		},
 		"with custom healthcheck command": {
 			inProps: BackendServiceProps{
-				ServiceProps: ServiceProps{
+				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
@@ -66,14 +68,14 @@ func TestNewBackendSvc(t *testing.T) {
 				Port: 8080,
 			},
 			wantedManifest: &BackendService{
-				Service: Service{
+				Workload: Workload{
 					Name: aws.String("subscribers"),
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					Image: imageWithPortAndHealthcheck{
 						ServiceImageWithPort: ServiceImageWithPort{
-							ServiceImage: ServiceImage{
+							Image: Image{
 								Build: BuildArgsOrString{
 									BuildArgs: DockerBuildArgs{
 										Dockerfile: aws.String("./subscribers/Dockerfile"),
@@ -93,7 +95,9 @@ func TestNewBackendSvc(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(256),
 						Memory: aws.Int(512),
-						Count:  aws.Int(1),
+						Count: Count{
+							Value: aws.Int(1),
+						},
 					},
 				},
 			},
@@ -123,7 +127,7 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 	}{
 		"without healthcheck": {
 			inProps: BackendServiceProps{
-				ServiceProps: ServiceProps{
+				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
@@ -133,7 +137,7 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 		},
 		"with custom healthcheck command": {
 			inProps: BackendServiceProps{
-				ServiceProps: ServiceProps{
+				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
@@ -170,14 +174,14 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 
 func TestBackendSvc_ApplyEnv(t *testing.T) {
 	mockBackendServiceWithNoOverride := BackendService{
-		Service: Service{
+		Workload: Workload{
 			Name: aws.String("phonetool"),
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
 			Image: imageWithPortAndHealthcheck{
 				ServiceImageWithPort: ServiceImageWithPort{
-					ServiceImage: ServiceImage{
+					Image: Image{
 						Build: BuildArgsOrString{
 							BuildArgs: DockerBuildArgs{
 								Dockerfile: aws.String("./Dockerfile"),
@@ -197,7 +201,9 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(256),
-				Count:  aws.Int(1),
+				Count: Count{
+					Value: aws.Int(1),
+				},
 			},
 		},
 	}
@@ -229,7 +235,9 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(256),
-				Count:  aws.Int(1),
+				Count: Count{
+					Value: aws.Int(1),
+				},
 			},
 			Sidecar: Sidecar{
 				Sidecars: map[string]*SidecarConfig{
@@ -239,7 +247,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					},
 				},
 			},
-			LogConfig: &LogConfig{
+			Logging: &Logging{
 				Destination: map[string]string{
 					"Name":            "datadog",
 					"exclude-pattern": "*",
@@ -249,8 +257,12 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		Environments: map[string]*BackendServiceConfig{
 			"test": {
 				TaskConfig: TaskConfig{
-					Count: aws.Int(0),
-					CPU:   aws.Int(512),
+					Count: Count{
+						Autoscaling: Autoscaling{
+							CPU: aws.Int(70),
+						},
+					},
+					CPU: aws.Int(512),
 					Variables: map[string]string{
 						"LOG_LEVEL": "",
 					},
@@ -262,7 +274,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						},
 					},
 				},
-				LogConfig: &LogConfig{
+				Logging: &Logging{
 					Destination: map[string]string{
 						"include-pattern": "*",
 						"exclude-pattern": "fe/",
@@ -314,7 +326,12 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(512),
 						Memory: aws.Int(256),
-						Count:  aws.Int(0),
+						Count: Count{
+							Value: aws.Int(1),
+							Autoscaling: Autoscaling{
+								CPU: aws.Int(70),
+							},
+						},
 						Variables: map[string]string{
 							"LOG_LEVEL": "",
 						},
@@ -328,7 +345,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 							},
 						},
 					},
-					LogConfig: &LogConfig{
+					Logging: &Logging{
 						Destination: map[string]string{
 							"Name":            "datadog",
 							"include-pattern": "*",

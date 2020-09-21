@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package workspace contains functionality to manage a user's local workspace. This includes
@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
@@ -103,7 +104,7 @@ func (ws *Workspace) Summary() (*Summary, error) {
 	if err != nil {
 		return nil, err
 	}
-	summaryFileExists, err := ws.fsUtils.Exists(summaryPath)
+	summaryFileExists, _ := ws.fsUtils.Exists(summaryPath) // If an err occurs, return no applications.
 	if summaryFileExists {
 		value, err := ws.fsUtils.ReadFile(summaryPath)
 		if err != nil {
@@ -117,6 +118,30 @@ func (ws *Workspace) Summary() (*Summary, error) {
 
 // ServiceNames returns the names of the services in the workspace.
 func (ws *Workspace) ServiceNames() ([]string, error) {
+	return ws.workloadNames(func(wlType string) bool {
+		for _, t := range manifest.ServiceTypes {
+			if wlType == t {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+// JobNames returns the names of all jobs in the workspace.
+func (ws *Workspace) JobNames() ([]string, error) {
+	return ws.workloadNames(func(wlType string) bool {
+		for _, t := range manifest.JobTypes {
+			if wlType == t {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+// workloadNames returns the name of all workloads (either services or jobs) in the workspace.
+func (ws *Workspace) workloadNames(match func(string) bool) ([]string, error) {
 	copilotPath, err := ws.CopilotDirPath()
 	if err != nil {
 		return nil, err
@@ -134,13 +159,23 @@ func (ws *Workspace) ServiceNames() ([]string, error) {
 			// Swallow the error because we don't want to include any services that we don't have permissions to read.
 			continue
 		}
-		names = append(names, f.Name())
+		manifestBytes, err := ws.ReadWorkloadManifest(f.Name())
+		if err != nil {
+			return nil, fmt.Errorf("read manifest for workload %s: %w", f.Name(), err)
+		}
+		wlType, err := ws.readWorkloadType(manifestBytes)
+		if err != nil {
+			return nil, err
+		}
+		if match(wlType) {
+			names = append(names, f.Name())
+		}
 	}
 	return names, nil
 }
 
-// ReadServiceManifest returns the contents of the service manifest under copilot/{name}/manifest.yml.
-func (ws *Workspace) ReadServiceManifest(name string) ([]byte, error) {
+// ReadWorkloadManifest returns the contents of the workload's manifest under copilot/{name}/manifest.yml.
+func (ws *Workspace) ReadWorkloadManifest(name string) ([]byte, error) {
 	return ws.read(name, manifestFileName)
 }
 
@@ -161,11 +196,11 @@ func (ws *Workspace) ReadPipelineManifest() ([]byte, error) {
 	return ws.read(pipelineFileName)
 }
 
-// WriteServiceManifest writes the service's manifest under the copilot/{name}/ directory.
-func (ws *Workspace) WriteServiceManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
+// WriteWorkloadManifest writes the workload's manifest under the copilot/{name}/ directory.
+func (ws *Workspace) WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	data, err := marshaler.MarshalBinary()
 	if err != nil {
-		return "", fmt.Errorf("marshal service %s manifest to binary: %w", name, err)
+		return "", fmt.Errorf("marshal workload %s manifest to binary: %w", name, err)
 	}
 	return ws.write(data, name, manifestFileName)
 }
@@ -191,7 +226,7 @@ func (ws *Workspace) WritePipelineManifest(marshaler encoding.BinaryMarshaler) (
 }
 
 // DeleteWorkspaceFile removes the .workspace file under copilot/ directory.
-// This will be called during app delete, we do not want to delete any other generated files
+// This will be called during app delete, we do not want to delete any other generated files.
 func (ws *Workspace) DeleteWorkspaceFile() error {
 	return ws.fsUtils.Remove(filepath.Join(CopilotDirName, SummaryFileName))
 }
@@ -316,6 +351,16 @@ func (ws *Workspace) CopilotDirPath() (string, error) {
 		ManifestDirectoryName: CopilotDirName,
 		NumberOfLevelsChecked: maximumParentDirsToSearch,
 	}
+}
+
+func (ws *Workspace) readWorkloadType(dat []byte) (string, error) {
+	wl := struct {
+		Type string `yaml:"type"`
+	}{}
+	if err := yaml.Unmarshal(dat, &wl); err != nil {
+		return "", err
+	}
+	return wl.Type, nil
 }
 
 // write flushes the data to a file under the copilot directory joined by path elements.

@@ -70,13 +70,13 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 	}{
 		"with no existing environments": {
 			in: &LoadBalancedWebService{
-				Service: Service{
+				Workload: Workload{
 					Name: aws.String("phonetool"),
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					Image: ServiceImageWithPort{
-						ServiceImage: ServiceImage{
+						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
 									Dockerfile: aws.String("./Dockerfile"),
@@ -92,20 +92,22 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(1024),
 						Memory: aws.Int(1024),
-						Count:  aws.Int(1),
+						Count: Count{
+							Value: aws.Int(1),
+						},
 					},
 				},
 			},
 			envToApply: "prod-iad",
 
 			wanted: &LoadBalancedWebService{
-				Service: Service{
+				Workload: Workload{
 					Name: aws.String("phonetool"),
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					Image: ServiceImageWithPort{
-						ServiceImage: ServiceImage{
+						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
 									Dockerfile: aws.String("./Dockerfile"),
@@ -121,20 +123,22 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(1024),
 						Memory: aws.Int(1024),
-						Count:  aws.Int(1),
+						Count: Count{
+							Value: aws.Int(1),
+						},
 					},
 				},
 			},
 		},
 		"with overrides": {
 			in: &LoadBalancedWebService{
-				Service: Service{
+				Workload: Workload{
 					Name: aws.String("phonetool"),
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					Image: ServiceImageWithPort{
-						ServiceImage: ServiceImage{
+						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
 									Dockerfile: aws.String("./Dockerfile"),
@@ -150,7 +154,9 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(1024),
 						Memory: aws.Int(1024),
-						Count:  aws.Int(1),
+						Count: Count{
+							Value: aws.Int(1),
+						},
 						Variables: map[string]string{
 							"LOG_LEVEL":      "DEBUG",
 							"DDB_TABLE_NAME": "awards",
@@ -169,14 +175,14 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 							},
 						},
 					},
-					LogConfig: &LogConfig{
+					Logging: &Logging{
 						ConfigFile: aws.String("mockConfigFile"),
 					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
 						Image: ServiceImageWithPort{
-							ServiceImage: ServiceImage{
+							Image: Image{
 								Build: BuildArgsOrString{
 									BuildArgs: DockerBuildArgs{
 										Dockerfile: aws.String("./RealDockerfile"),
@@ -189,8 +195,10 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 							TargetContainer: aws.String("xray"),
 						},
 						TaskConfig: TaskConfig{
-							CPU:   aws.Int(2046),
-							Count: aws.Int(0),
+							CPU: aws.Int(2046),
+							Count: Count{
+								Value: aws.Int(0),
+							},
 							Variables: map[string]string{
 								"DDB_TABLE_NAME": "awards-prod",
 							},
@@ -202,7 +210,7 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 								},
 							},
 						},
-						LogConfig: &LogConfig{
+						Logging: &Logging{
 							SecretOptions: map[string]string{
 								"FOO": "BAR",
 							},
@@ -213,13 +221,13 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 			envToApply: "prod-iad",
 
 			wanted: &LoadBalancedWebService{
-				Service: Service{
+				Workload: Workload{
 					Name: aws.String("phonetool"),
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					Image: ServiceImageWithPort{
-						ServiceImage: ServiceImage{
+						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
 									Dockerfile: aws.String("./RealDockerfile"),
@@ -236,7 +244,9 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(2046),
 						Memory: aws.Int(1024),
-						Count:  aws.Int(0),
+						Count: Count{
+							Value: aws.Int(0),
+						},
 						Variables: map[string]string{
 							"LOG_LEVEL":      "DEBUG",
 							"DDB_TABLE_NAME": "awards-prod",
@@ -255,7 +265,7 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 							},
 						},
 					},
-					LogConfig: &LogConfig{
+					Logging: &Logging{
 						ConfigFile: aws.String("mockConfigFile"),
 						SecretOptions: map[string]string{
 							"FOO": "BAR",

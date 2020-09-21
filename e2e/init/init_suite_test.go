@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package init_test
 
 import (
@@ -15,7 +18,7 @@ var appName string
 
 /**
 The Init Suite runs through the copilot init workflow for a brand new
-project. It creates a single environment, deploys an app to it, and then
+application. It creates a single environment, deploys a service to it, and then
 tears it down.
 */
 func TestInit(t *testing.T) {

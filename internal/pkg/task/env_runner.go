@@ -1,10 +1,11 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package task
 
 import (
 	"fmt"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -40,7 +41,7 @@ type EnvRunner struct {
 	// Interfaces to interact with dependencies. Must not be nil.
 	VPCGetter     VPCGetter
 	ClusterGetter ResourceGetter
-	Starter       TaskRunner
+	Starter       Runner
 }
 
 // Run runs tasks in the environment of the application, and returns the tasks.
@@ -109,11 +110,11 @@ func (r *EnvRunner) cluster(app, env string) (string, error) {
 
 func (r *EnvRunner) filtersForVPCFromAppEnv() []ec2.Filter {
 	return []ec2.Filter{
-		ec2.Filter{
+		{
 			Name:   tagFilterNameForEnv,
 			Values: []string{r.Env},
 		},
-		ec2.Filter{
+		{
 			Name:   tagFilterNameForApp,
 			Values: []string{r.App},
 		},

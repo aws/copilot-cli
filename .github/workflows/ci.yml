@@ -6,9 +6,55 @@ on:
       - '*'
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        command: [compile-linux, compile-windows, compile-darwin]
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.14
+
+      - name: Set up Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Generate static files
+        run: make packr-build
+
+      - name: Build binaries
+        run: make ${{matrix.command}}
+
+      - name: Cleanup
+        run: make packr-clean
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.14
+
+      - name: Set up Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Run tests
+        run: make test
+
   staticcheck:
     runs-on: ubuntu-latest
-
     steps:
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -18,5 +64,22 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
 
-      - name: Run go vet
-        run: go vet ./...
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.30
+          args: --timeout 5m0s
+
+  license:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.14
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Run license check
+        run: ./scripts/license.sh .

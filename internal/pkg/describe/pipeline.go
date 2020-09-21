@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package describe
@@ -90,7 +90,7 @@ func (p *Pipeline) HumanString() string {
 	var b bytes.Buffer
 	// TODO tweak the spacing
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, color.Bold.Sprint("About\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("About\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", p.Name)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Region", p.Region)
@@ -98,20 +98,20 @@ func (p *Pipeline) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Created At", humanizeTime(p.CreatedAt))
 	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(p.UpdatedAt))
 	writer.Flush()
-	fmt.Fprintf(writer, color.Bold.Sprint("\nStages\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nStages\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", "Name", "Category", "Provider", "Details")
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%[1]s\t%[1]s\t%[1]s\n", "----")
 	for _, stage := range p.Stages {
-		fmt.Fprintf(writer, stage.HumanString())
+		fmt.Fprint(writer, stage.HumanString())
 	}
 	writer.Flush()
 	if len(p.Resources) != 0 {
-		fmt.Fprintf(writer, color.Bold.Sprint("\nResources\n"))
+		fmt.Fprint(writer, color.Bold.Sprint("\nResources\n"))
 		writer.Flush()
 		for _, r := range p.Resources {
-			fmt.Fprintf(writer, r.HumanString())
+			fmt.Fprint(writer, r.HumanString())
 		}
 
 	}

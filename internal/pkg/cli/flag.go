@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -19,9 +19,11 @@ const (
 	envFlag     = "env"
 	svcFlag     = "svc"
 	svcTypeFlag = "svc-type"
+	jobTypeFlag = "job-type"
 	profileFlag = "profile"
 	yesFlag     = "yes"
 	jsonFlag    = "json"
+	allFlag     = "all"
 
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
@@ -33,6 +35,7 @@ const (
 	sinceFlag             = "since"
 	startTimeFlag         = "start-time"
 	endTimeFlag           = "end-time"
+	tasksFlag             = "tasks"
 	envProfilesFlag       = "env-profiles"
 	prodEnvFlag           = "prod"
 	deployFlag            = "deploy"
@@ -74,12 +77,16 @@ const (
 	publicSubnetCIDRsFlag  = "override-public-cidrs"
 	privateSubnetCIDRsFlag = "override-private-cidrs"
 
-	noCustomResourcesFlag = "no-custom-resources"
+	defaultConfigFlag = "default-config"
 
 	accessKeyIDFlag     = "aws-access-key-id"
 	secretAccessKeyFlag = "aws-secret-access-key"
 	sessionTokenFlag    = "aws-session-token"
 	regionFlag          = "region"
+
+	retriesFlag  = "retries"
+	timeoutFlag  = "timeout"
+	scheduleFlag = "schedule"
 )
 
 // Short flag names.
@@ -90,12 +97,15 @@ const (
 	envFlagShort     = "e"
 	svcFlagShort     = "s"
 	svcTypeFlagShort = "t"
+	jobTypeFlagShort = "t"
 
 	dockerFileFlagShort        = "d"
 	githubURLFlagShort         = "u"
 	githubAccessTokenFlagShort = "t"
 	gitBranchFlagShort         = "b"
 	envsFlagShort              = "e"
+
+	scheduleFlagShort = "s"
 )
 
 // Descriptions for flags.
@@ -104,6 +114,8 @@ var (
 %s`, strings.Join(template.QuoteSliceFunc(manifest.ServiceTypes), ", "))
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s`, strings.Join(template.QuoteSliceFunc(storageTypes), ", "))
+	jobTypeFlagDescription = fmt.Sprintf(`Type of job to create. Must be one of:
+%s`, strings.Join(template.QuoteSliceFunc(manifest.JobTypes), ", "))
 
 	subnetsFlagDescription = fmt.Sprintf(`Optional. The subnet IDs for the task to use. Can be specified multiple times.
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
@@ -121,6 +133,7 @@ const (
 	appFlagDescription      = "Name of the application."
 	envFlagDescription      = "Name of the environment."
 	svcFlagDescription      = "Name of the service."
+	jobFlagDescription      = "Name of the scheduled job."
 	pipelineFlagDescription = "Name of the pipeline."
 	profileFlagDescription  = "Name of the profile."
 	yesFlagDescription      = "Skips confirmation prompt."
@@ -132,14 +145,17 @@ const (
 Allows you to categorize resources.`
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
 	prodEnvFlagDescription        = "If the environment contains production services."
-	limitFlagDescription          = "Optional. The maximum number of log events returned."
-	followFlagDescription         = "Optional. Specifies if the logs should be streamed."
-	sinceFlagDescription          = `Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
+
+	limitFlagDescription  = "Optional. The maximum number of log events returned."
+	followFlagDescription = "Optional. Specifies if the logs should be streamed."
+	sinceFlagDescription  = `Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
 Defaults to all logs. Only one of start-time / since may be used.`
 	startTimeFlagDescription = `Optional. Only return logs after a specific date (RFC3339).
 Defaults to all logs. Only one of start-time / since may be used.`
 	endTimeFlagDescription = `Optional. Only return logs before a specific date (RFC3339).
 Defaults to all logs. Only one of end-time / follow may be used.`
+	tasksLogsFlagDescription = "Optional. Only return logs from specific task IDs."
+
 	deployTestFlagDescription        = `Deploy your service to a "test" environment.`
 	githubURLFlagDescription         = "GitHub repository URL for your service."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
@@ -165,18 +181,18 @@ Must be of the format '<keyName>:<dataType>'.`
 	storageLSIConfigFlagDescription = `Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
 Must be of the format '<keyName>:<dataType>'.`
 
-	countFlagDescription          = "Optional. The number of tasks to set up."
-	cpuFlagDescription            = "Optional. The number of CPU units to reserve for each task."
-	memoryFlagDescription         = "Optional. The amount of memory to reserve in MiB for each task."
-	imageFlagDescription          = "Optional. The image to run instead of building a Dockerfile."
-	taskRoleFlagDescription       = "Optional. The ARN of the role for the task to use."
-	executionRoleFlagDescription  = "Optional. The ARN of the role that grants the container agent permission to make AWS API calls."
-	envVarsFlagDescription        = "Optional. Environment variables specified by key=value separated with commas."
-	commandFlagDescription        = `Optional. The command that is passed to "docker run" to override the default command.`
-	taskGroupFlagDescription      = `Optional. The group name of the task. 
+	countFlagDescription         = "Optional. The number of tasks to set up."
+	cpuFlagDescription           = "Optional. The number of CPU units to reserve for each task."
+	memoryFlagDescription        = "Optional. The amount of memory to reserve in MiB for each task."
+	imageFlagDescription         = "Optional. The image to run instead of building a Dockerfile."
+	taskRoleFlagDescription      = "Optional. The ARN of the role for the task to use."
+	executionRoleFlagDescription = "Optional. The ARN of the role that grants the container agent permission to make AWS API calls."
+	envVarsFlagDescription       = "Optional. Environment variables specified by key=value separated with commas."
+	commandFlagDescription       = `Optional. The command that is passed to "docker run" to override the default command.`
+	taskGroupFlagDescription     = `Optional. The group name of the task. 
 Tasks with the same group name share the same set of resources. 
 (default directory name)`
-	taskImageTagFlagDescription   = `Optional. The container image tag in addition to "latest".`
+	taskImageTagFlagDescription = `Optional. The container image tag in addition to "latest".`
 
 	vpcIDFlagDescription          = "Optional. Use an existing VPC ID."
 	publicSubnetsFlagDescription  = "Optional. Use existing public subnet IDs."
@@ -186,10 +202,19 @@ Tasks with the same group name share the same set of resources.
 	publicSubnetCIDRsFlagDescription  = "Optional. CIDR to use for public subnets (default 10.0.0.0/24,10.0.1.0/24)."
 	privateSubnetCIDRsFlagDescription = "Optional. CIDR to use for private subnets (default 10.0.2.0/24,10.0.3.0/24)."
 
-	noCustomResourcesFlagDescription = "Optional. Skip prompting and use default environment configuration."
+	defaultConfigFlagDescription = "Optional. Skip prompting and use default environment configuration."
 
 	accessKeyIDFlagDescription     = "Optional. An AWS access key."
 	secretAccessKeyFlagDescription = "Optional. An AWS secret access key."
 	sessionTokenFlagDescription    = "Optional. An AWS session token for temporary credentials."
-	envRegionTokenFlagDescription  = "Options. An AWS region where the environment will be created."
+	envRegionTokenFlagDescription  = "Optional. An AWS region where the environment will be created."
+
+	retriesFlagDescription = "Optional. The number of times to try restarting the job on a failure."
+	timeoutFlagDescription = `Optional. The total execution time for the task, including retries.
+Accepts valid Go duration strings. For example: "2h", "1h30m", "900s".`
+	scheduleFlagDescription = `The schedule on which to run this job. 
+Accepts cron expressions of the format (M H DoM M DoW) and schedule definition strings. 
+For example: "0 * * * *", "@daily", "@weekly", "@every 1h30m".`
+
+	upgradeAllEnvsDescription = "Optional. Upgrade all environments."
 )

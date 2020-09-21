@@ -1,0 +1,10 @@
+AddonsStack:
+  Type: AWS::CloudFormation::Stack
+  Condition: HasAddons
+  Properties:
+    Parameters:
+      App: !Ref AppName
+      Env: !Ref EnvName
+      Name: !Ref WorkloadName
+    TemplateURL:
+      !Ref AddonsTemplateURL

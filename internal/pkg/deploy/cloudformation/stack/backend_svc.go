@@ -26,7 +26,7 @@ type backendSvcReadParser interface {
 
 // BackendService represents the configuration needed to create a CloudFormation stack from a backend service manifest.
 type BackendService struct {
-	*svc
+	*wkld
 	manifest *manifest.BackendService
 
 	parser backendSvcReadParser
@@ -44,7 +44,7 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 		return nil, fmt.Errorf("apply environment %s override: %s", env, err)
 	}
 	return &BackendService{
-		svc: &svc{
+		wkld: &wkld{
 			name:   aws.StringValue(mft.Name),
 			env:    env,
 			app:    app,
@@ -61,21 +61,31 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 
 // Template returns the CloudFormation template for the backend service.
 func (s *BackendService) Template() (string, error) {
+	desiredCountLambda, err := s.parser.Read(desiredCountGeneratorPath)
+	if err != nil {
+		return "", fmt.Errorf("read desired count lambda: %w", err)
+	}
 	outputs, err := s.addonsOutputs()
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := s.manifest.Sidecar.SidecarsOpts()
+	sidecars, err := s.manifest.Sidecar.Options()
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
+	autoscaling, err := s.manifest.Count.Autoscaling.Options()
+	if err != nil {
+		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
+	}
 	content, err := s.parser.ParseBackendService(template.ServiceOpts{
-		Variables:   s.manifest.BackendServiceConfig.Variables,
-		Secrets:     s.manifest.BackendServiceConfig.Secrets,
-		NestedStack: outputs,
-		Sidecars:    sidecars,
-		HealthCheck: s.manifest.BackendServiceConfig.Image.HealthCheckOpts(),
-		LogConfig:   s.manifest.LogConfigOpts(),
+		Variables:          s.manifest.BackendServiceConfig.Variables,
+		Secrets:            s.manifest.BackendServiceConfig.Secrets,
+		NestedStack:        outputs,
+		Sidecars:           sidecars,
+		Autoscaling:        autoscaling,
+		HealthCheck:        s.manifest.BackendServiceConfig.Image.HealthCheckOpts(),
+		LogConfig:          s.manifest.LogConfigOpts(),
+		DesiredCountLambda: desiredCountLambda.String(),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
@@ -85,7 +95,11 @@ func (s *BackendService) Template() (string, error) {
 
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
-	return append(s.svc.Parameters(), []*cloudformation.Parameter{
+	svcParams, err := s.wkld.Parameters()
+	if err != nil {
+		return nil, err
+	}
+	return append(svcParams, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),
 			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.Image.Port)), 10)),
@@ -96,5 +110,5 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability to users.
 func (s *BackendService) SerializedParameters() (string, error) {
-	return s.svc.templateConfiguration(s)
+	return s.wkld.templateConfiguration(s)
 }
