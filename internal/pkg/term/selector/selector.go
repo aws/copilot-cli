@@ -38,7 +38,7 @@ type ConfigLister interface {
 	ConfigSvcLister
 }
 
-// WsSvcLister wraps the method to get workloads in current workspace.
+// WsWlLister wraps the method to get workloads in current workspace.
 type WsWlLister interface {
 	ServiceNames() ([]string, error)
 	JobNames() ([]string, error)
