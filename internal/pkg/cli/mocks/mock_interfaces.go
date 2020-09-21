@@ -6,6 +6,9 @@ package mocks
 
 import (
 	encoding "encoding"
+	io "io"
+	reflect "reflect"
+
 	session "github.com/aws/aws-sdk-go/aws/session"
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
@@ -22,8 +25,6 @@ import (
 	selector "github.com/aws/copilot-cli/internal/pkg/term/selector"
 	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
 	gomock "github.com/golang/mock/gomock"
-	io "io"
-	reflect "reflect"
 )
 
 // MockactionCommand is a mock of actionCommand interface
@@ -2339,8 +2340,6 @@ func (mr *MockwsSvcDirReaderMockRecorder) CopilotDirPath() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockwsSvcDirReader)(nil).CopilotDirPath))
 }
 
-<<<<<<< HEAD
-=======
 // MockwsJobLister is a mock of wsJobLister interface
 type MockwsJobLister struct {
 	ctrl     *gomock.Controller
@@ -2417,7 +2416,6 @@ func (mr *MockwsJobReaderMockRecorder) JobNames() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JobNames", reflect.TypeOf((*MockwsJobReader)(nil).JobNames))
 }
 
->>>>>>> archer/mainline
 // MockwsJobDirReader is a mock of wsJobDirReader interface
 type MockwsJobDirReader struct {
 	ctrl     *gomock.Controller
@@ -2456,8 +2454,6 @@ func (mr *MockwsJobDirReaderMockRecorder) JobNames() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JobNames", reflect.TypeOf((*MockwsJobDirReader)(nil).JobNames))
 }
 
-<<<<<<< HEAD
-=======
 // MockJobDirManifestWriter is a mock of JobDirManifestWriter interface
 type MockJobDirManifestWriter struct {
 	ctrl     *gomock.Controller
@@ -2511,7 +2507,6 @@ func (mr *MockJobDirManifestWriterMockRecorder) CopilotDirPath() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockJobDirManifestWriter)(nil).CopilotDirPath))
 }
 
->>>>>>> archer/mainline
 // MockwsPipelineReader is a mock of wsPipelineReader interface
 type MockwsPipelineReader struct {
 	ctrl     *gomock.Controller

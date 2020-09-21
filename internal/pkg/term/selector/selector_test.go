@@ -202,7 +202,7 @@ func TestDeploySelect_Service(t *testing.T) {
 }
 
 type workspaceSelectMocks struct {
-	serviceLister *mocks.MockWsSvcLister
+	serviceLister *mocks.MockWsWlLister
 	prompt        *mocks.MockPrompter
 }
 
@@ -298,7 +298,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockwsSvcLister := mocks.NewMockWsSvcLister(ctrl)
+			mockwsSvcLister := mocks.NewMockWsWlLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := workspaceSelectMocks{
 				serviceLister: mockwsSvcLister,
@@ -310,7 +310,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 				Select: &Select{
 					prompt: mockprompt,
 				},
-				svcLister: mockwsSvcLister,
+				wlLister: mockwsSvcLister,
 			}
 			got, err := sel.Service("Select a local service", "Help text")
 			if tc.wantErr != nil {
