@@ -1998,6 +1998,44 @@ func (mr *MocksvcManifestWriterMockRecorder) WriteWorkloadManifest(marshaler, sv
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteWorkloadManifest", reflect.TypeOf((*MocksvcManifestWriter)(nil).WriteWorkloadManifest), marshaler, svcName)
 }
 
+// MockjobManifestWriter is a mock of jobManifestWriter interface
+type MockjobManifestWriter struct {
+	ctrl     *gomock.Controller
+	recorder *MockjobManifestWriterMockRecorder
+}
+
+// MockjobManifestWriterMockRecorder is the mock recorder for MockjobManifestWriter
+type MockjobManifestWriterMockRecorder struct {
+	mock *MockjobManifestWriter
+}
+
+// NewMockjobManifestWriter creates a new mock instance
+func NewMockjobManifestWriter(ctrl *gomock.Controller) *MockjobManifestWriter {
+	mock := &MockjobManifestWriter{ctrl: ctrl}
+	mock.recorder = &MockjobManifestWriterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockjobManifestWriter) EXPECT() *MockjobManifestWriterMockRecorder {
+	return m.recorder
+}
+
+// WriteJobManifest mocks base method
+func (m *MockjobManifestWriter) WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteJobManifest", marshaler, jobName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WriteJobManifest indicates an expected call of WriteJobManifest
+func (mr *MockjobManifestWriterMockRecorder) WriteJobManifest(marshaler, jobName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteJobManifest", reflect.TypeOf((*MockjobManifestWriter)(nil).WriteJobManifest), marshaler, jobName)
+}
+
 // MocksvcDirManifestWriter is a mock of svcDirManifestWriter interface
 type MocksvcDirManifestWriter struct {
 	ctrl     *gomock.Controller
@@ -2301,6 +2339,85 @@ func (mr *MockwsSvcDirReaderMockRecorder) CopilotDirPath() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockwsSvcDirReader)(nil).CopilotDirPath))
 }
 
+<<<<<<< HEAD
+=======
+// MockwsJobLister is a mock of wsJobLister interface
+type MockwsJobLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsJobListerMockRecorder
+}
+
+// MockwsJobListerMockRecorder is the mock recorder for MockwsJobLister
+type MockwsJobListerMockRecorder struct {
+	mock *MockwsJobLister
+}
+
+// NewMockwsJobLister creates a new mock instance
+func NewMockwsJobLister(ctrl *gomock.Controller) *MockwsJobLister {
+	mock := &MockwsJobLister{ctrl: ctrl}
+	mock.recorder = &MockwsJobListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockwsJobLister) EXPECT() *MockwsJobListerMockRecorder {
+	return m.recorder
+}
+
+// JobNames mocks base method
+func (m *MockwsJobLister) JobNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "JobNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// JobNames indicates an expected call of JobNames
+func (mr *MockwsJobListerMockRecorder) JobNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JobNames", reflect.TypeOf((*MockwsJobLister)(nil).JobNames))
+}
+
+// MockwsJobReader is a mock of wsJobReader interface
+type MockwsJobReader struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsJobReaderMockRecorder
+}
+
+// MockwsJobReaderMockRecorder is the mock recorder for MockwsJobReader
+type MockwsJobReaderMockRecorder struct {
+	mock *MockwsJobReader
+}
+
+// NewMockwsJobReader creates a new mock instance
+func NewMockwsJobReader(ctrl *gomock.Controller) *MockwsJobReader {
+	mock := &MockwsJobReader{ctrl: ctrl}
+	mock.recorder = &MockwsJobReaderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockwsJobReader) EXPECT() *MockwsJobReaderMockRecorder {
+	return m.recorder
+}
+
+// JobNames mocks base method
+func (m *MockwsJobReader) JobNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "JobNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// JobNames indicates an expected call of JobNames
+func (mr *MockwsJobReaderMockRecorder) JobNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JobNames", reflect.TypeOf((*MockwsJobReader)(nil).JobNames))
+}
+
+>>>>>>> archer/mainline
 // MockwsJobDirReader is a mock of wsJobDirReader interface
 type MockwsJobDirReader struct {
 	ctrl     *gomock.Controller
@@ -2339,6 +2456,62 @@ func (mr *MockwsJobDirReaderMockRecorder) JobNames() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JobNames", reflect.TypeOf((*MockwsJobDirReader)(nil).JobNames))
 }
 
+<<<<<<< HEAD
+=======
+// MockJobDirManifestWriter is a mock of JobDirManifestWriter interface
+type MockJobDirManifestWriter struct {
+	ctrl     *gomock.Controller
+	recorder *MockJobDirManifestWriterMockRecorder
+}
+
+// MockJobDirManifestWriterMockRecorder is the mock recorder for MockJobDirManifestWriter
+type MockJobDirManifestWriterMockRecorder struct {
+	mock *MockJobDirManifestWriter
+}
+
+// NewMockJobDirManifestWriter creates a new mock instance
+func NewMockJobDirManifestWriter(ctrl *gomock.Controller) *MockJobDirManifestWriter {
+	mock := &MockJobDirManifestWriter{ctrl: ctrl}
+	mock.recorder = &MockJobDirManifestWriterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockJobDirManifestWriter) EXPECT() *MockJobDirManifestWriterMockRecorder {
+	return m.recorder
+}
+
+// WriteJobManifest mocks base method
+func (m *MockJobDirManifestWriter) WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteJobManifest", marshaler, jobName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WriteJobManifest indicates an expected call of WriteJobManifest
+func (mr *MockJobDirManifestWriterMockRecorder) WriteJobManifest(marshaler, jobName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteJobManifest", reflect.TypeOf((*MockJobDirManifestWriter)(nil).WriteJobManifest), marshaler, jobName)
+}
+
+// CopilotDirPath mocks base method
+func (m *MockJobDirManifestWriter) CopilotDirPath() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CopilotDirPath")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CopilotDirPath indicates an expected call of CopilotDirPath
+func (mr *MockJobDirManifestWriterMockRecorder) CopilotDirPath() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockJobDirManifestWriter)(nil).CopilotDirPath))
+}
+
+>>>>>>> archer/mainline
 // MockwsPipelineReader is a mock of wsPipelineReader interface
 type MockwsPipelineReader struct {
 	ctrl     *gomock.Controller

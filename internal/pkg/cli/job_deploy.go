@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -65,6 +66,19 @@ func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
 
 // Validate returns an error if the user inputs are invalid.
 func (o *deployJobOpts) Validate() error {
+	if o.AppName() == "" {
+		return errNoAppInWorkspace
+	}
+	if o.Name != "" {
+		if err := o.validateJobName(); err != nil {
+			return err
+		}
+	}
+	if o.EnvName != "" {
+		if err := o.validateEnvName(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -89,6 +103,27 @@ func (o *deployJobOpts) Execute() error {
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
 func (o *deployJobOpts) RecommendedActions() []string {
+	return nil
+}
+
+func (o *deployJobOpts) validateJobName() error {
+	names, err := o.ws.JobNames()
+	if err != nil {
+		return fmt.Errorf("list jobs in the workspace: %w", err)
+	}
+	for _, name := range names {
+		if o.Name == name {
+			return nil
+		}
+	}
+	return fmt.Errorf("job %s not found in the workspace", color.HighlightUserInput(o.Name))
+}
+
+func (o *deployJobOpts) validateEnvName() error {
+	_, err := o.store.GetEnvironment(o.AppName(), o.EnvName)
+	if err != nil {
+		return fmt.Errorf("get environment %s configuration: %w", o.EnvName, err)
+	}
 	return nil
 }
 
