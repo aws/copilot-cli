@@ -2301,6 +2301,44 @@ func (mr *MockwsSvcDirReaderMockRecorder) CopilotDirPath() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockwsSvcDirReader)(nil).CopilotDirPath))
 }
 
+// MockwsJobDirReader is a mock of wsJobDirReader interface
+type MockwsJobDirReader struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsJobDirReaderMockRecorder
+}
+
+// MockwsJobDirReaderMockRecorder is the mock recorder for MockwsJobDirReader
+type MockwsJobDirReaderMockRecorder struct {
+	mock *MockwsJobDirReader
+}
+
+// NewMockwsJobDirReader creates a new mock instance
+func NewMockwsJobDirReader(ctrl *gomock.Controller) *MockwsJobDirReader {
+	mock := &MockwsJobDirReader{ctrl: ctrl}
+	mock.recorder = &MockwsJobDirReaderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockwsJobDirReader) EXPECT() *MockwsJobDirReaderMockRecorder {
+	return m.recorder
+}
+
+// JobNames mocks base method
+func (m *MockwsJobDirReader) JobNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "JobNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// JobNames indicates an expected call of JobNames
+func (mr *MockwsJobDirReaderMockRecorder) JobNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JobNames", reflect.TypeOf((*MockwsJobDirReader)(nil).JobNames))
+}
+
 // MockwsPipelineReader is a mock of wsPipelineReader interface
 type MockwsPipelineReader struct {
 	ctrl     *gomock.Controller
@@ -4049,6 +4087,21 @@ func (m *MockwsSelector) Service(prompt, help string) (string, error) {
 func (mr *MockwsSelectorMockRecorder) Service(prompt, help interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockwsSelector)(nil).Service), prompt, help)
+}
+
+// Job mocks base method
+func (m *MockwsSelector) Job(prompt, help string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Job", prompt, help)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Job indicates an expected call of Job
+func (mr *MockwsSelectorMockRecorder) Job(prompt, help interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Job", reflect.TypeOf((*MockwsSelector)(nil).Job), prompt, help)
 }
 
 // Mockec2Selector is a mock of ec2Selector interface

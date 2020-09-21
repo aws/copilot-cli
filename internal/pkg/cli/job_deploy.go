@@ -6,6 +6,9 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -99,6 +102,42 @@ func (o *deployJobOpts) askJobName() error {
 		return fmt.Errorf("select job: %w", err)
 	}
 	o.Name = name
+	return nil
+}
+
+func (o *deployJobOpts) askEnvName() error {
+	if o.EnvName != "" {
+		return nil
+	}
+
+	name, err := o.sel.Environment("Select an environment", "", o.AppName())
+	if err != nil {
+		return fmt.Errorf("select environment: %w", err)
+	}
+	o.EnvName = name
+	return nil
+}
+
+func (o *deployJobOpts) askImageTag() error {
+	if o.ImageTag != "" {
+		return nil
+	}
+
+	tag, err := getVersionTag(o.cmd)
+
+	if err == nil {
+		o.ImageTag = tag
+
+		return nil
+	}
+
+	log.Warningln("Failed to default tag, are you in a git repository?")
+
+	userInputTag, err := o.prompt.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
+	if err != nil {
+		return fmt.Errorf("prompt for image tag: %w", err)
+	}
+	o.ImageTag = userInputTag
 	return nil
 }
 
