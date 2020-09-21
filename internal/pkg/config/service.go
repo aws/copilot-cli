@@ -25,29 +25,29 @@ const (
 	AddonsCfnTemplateNameFormat = "%s.addons.stack.yml"
 )
 
-// Service represents a deployable long running service or task.
-type Service struct {
-	App  string `json:"app"`  // Name of the app this service belongs to.
-	Name string `json:"name"` // Name of the service, which must be unique within a app.
-	Type string `json:"type"` // Type of the service (ex: Load Balanced Web Server, etc)
+// Workload represents a deployable long running service or task.
+type Workload struct {
+	App  string `json:"app"`  // Name of the app this workload belongs to.
+	Name string `json:"name"` // Name of the workload, which must be unique within a app.
+	Type string `json:"type"` // Type of the workload (ex: Load Balanced Web Server, etc)
 }
 
-// CreateService instantiates a new service within an existing application. Skip if
-// the service already exists in the application.
-func (s *Store) CreateService(svc *Service) error {
-	if _, err := s.GetApplication(svc.App); err != nil {
+// CreateWorkload instantiates a new service or job within an existing application. Skip if
+// the workload already exists in the application.
+func (s *Store) CreateWorkload(wkld *Workload) error {
+	if _, err := s.GetApplication(wkld.App); err != nil {
 		return err
 	}
 
-	servicePath := fmt.Sprintf(fmtSvcParamPath, svc.App, svc.Name)
-	data, err := marshal(svc)
+	servicePath := fmt.Sprintf(fmtSvcParamPath, wkld.App, wkld.Name)
+	data, err := marshal(wkld)
 	if err != nil {
-		return fmt.Errorf("serializing service %s: %w", svc.Name, err)
+		return fmt.Errorf("serializing workload %s: %w", wkld.Name, err)
 	}
 
 	_, err = s.ssmClient.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(servicePath),
-		Description: aws.String(fmt.Sprintf("Copilot Service %s", svc.Name)),
+		Description: aws.String(fmt.Sprintf("Copilot Workload %s", wkld.Name)),
 		Type:        aws.String(ssm.ParameterTypeString),
 		Value:       aws.String(data),
 	})
@@ -58,15 +58,15 @@ func (s *Store) CreateService(svc *Service) error {
 				return nil
 			}
 		}
-		return fmt.Errorf("create service %s in application %s: %w", svc.Name, svc.App, err)
+		return fmt.Errorf("create workload %s in application %s: %w", wkld.Name, wkld.App, err)
 	}
 	return nil
 }
 
-// GetService gets a service belonging to a particular application by name. If no svc is found
-// it returns ErrNoSuchService.
-func (s *Store) GetService(appName, svcName string) (*Service, error) {
-	svcPath := fmt.Sprintf(fmtSvcParamPath, appName, svcName)
+// GetWorkload gets a workload belonging to a particular application by name. If no job or svc is found
+// it returns ErrNoSuchWorkload.
+func (s *Store) GetWorkload(appName, wkldName string) (*Workload, error) {
+	svcPath := fmt.Sprintf(fmtSvcParamPath, appName, wkldName)
 	svcParam, err := s.ssmClient.GetParameter(&ssm.GetParameterInput{
 		Name: aws.String(svcPath),
 	})
@@ -75,36 +75,36 @@ func (s *Store) GetService(appName, svcName string) (*Service, error) {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ssm.ErrCodeParameterNotFound:
-				return nil, &ErrNoSuchService{
+				return nil, &ErrNoSuchWorkload{
 					ApplicationName: appName,
-					ServiceName:     svcName,
+					ServiceName:     wkldName,
 				}
 			}
 		}
-		return nil, fmt.Errorf("get service %s in application %s: %w", svcName, appName, err)
+		return nil, fmt.Errorf("get workload %s in application %s: %w", wkldName, appName, err)
 	}
 
-	var svc Service
+	var svc Workload
 	err = json.Unmarshal([]byte(*svcParam.Parameter.Value), &svc)
 	if err != nil {
-		return nil, fmt.Errorf("read configuration for service %s in application %s: %w", svcName, appName, err)
+		return nil, fmt.Errorf("read configuration for workload %s in application %s: %w", wkldName, appName, err)
 	}
 	return &svc, nil
 }
 
-// ListServices returns all services belonging to a particular application.
-func (s *Store) ListServices(appName string) ([]*Service, error) {
-	var services []*Service
+// ListWorkloads returns all services belonging to a particular application.
+func (s *Store) ListWorkloads(appName string) ([]*Workload, error) {
+	var services []*Workload
 
 	servicesPath := fmt.Sprintf(rootSvcParamPath, appName)
 	serializedSvcs, err := s.listParams(servicesPath)
 	if err != nil {
-		return nil, fmt.Errorf("list services for application %s: %w", appName, err)
+		return nil, fmt.Errorf("list workloads for application %s: %w", appName, err)
 	}
 	for _, serializedSvc := range serializedSvcs {
-		var svc Service
+		var svc Workload
 		if err := json.Unmarshal([]byte(*serializedSvc), &svc); err != nil {
-			return nil, fmt.Errorf("read service configuration for application %s: %w", appName, err)
+			return nil, fmt.Errorf("read workload configuration for application %s: %w", appName, err)
 		}
 
 		services = append(services, &svc)
@@ -112,10 +112,10 @@ func (s *Store) ListServices(appName string) ([]*Service, error) {
 	return services, nil
 }
 
-// DeleteService removes a service from SSM.
+// DeleteWorkload removes a service from SSM.
 // If the service does not exist in the store or is successfully deleted then returns nil. Otherwise, returns an error.
-func (s *Store) DeleteService(appName, svcName string) error {
-	paramName := fmt.Sprintf(fmtSvcParamPath, appName, svcName)
+func (s *Store) DeleteWorkload(appName, wkldName string) error {
+	paramName := fmt.Sprintf(fmtSvcParamPath, appName, wkldName)
 	_, err := s.ssmClient.DeleteParameter(&ssm.DeleteParameterInput{
 		Name: aws.String(paramName),
 	})
@@ -127,7 +127,7 @@ func (s *Store) DeleteService(appName, svcName string) error {
 				return nil
 			}
 		}
-		return fmt.Errorf("delete service %s from application %s: %w", svcName, appName, err)
+		return fmt.Errorf("delete workload %s from application %s: %w", wkldName, appName, err)
 	}
 	return nil
 }

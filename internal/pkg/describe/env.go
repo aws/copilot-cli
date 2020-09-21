@@ -19,7 +19,7 @@ import (
 // EnvDescription contains the information about an environment.
 type EnvDescription struct {
 	Environment *config.Environment `json:"environment"`
-	Services    []*config.Service   `json:"services"`
+	Services    []*config.Workload  `json:"services"`
 	Tags        map[string]string   `json:"tags,omitempty"`
 	Resources   []*CfnResource      `json:"resources,omitempty"`
 }
@@ -106,12 +106,12 @@ func (e *EnvDescriber) stackTags() (map[string]string, error) {
 	return tags, nil
 }
 
-func (e *EnvDescriber) filterDeployedSvcs() ([]*config.Service, error) {
-	allSvcs, err := e.configStore.ListServices(e.app)
+func (e *EnvDescriber) filterDeployedSvcs() ([]*config.Workload, error) {
+	allSvcs, err := e.configStore.ListWorkloads(e.app)
 	if err != nil {
 		return nil, fmt.Errorf("list services for app %s: %w", e.app, err)
 	}
-	svcs := make(map[string]*config.Service)
+	svcs := make(map[string]*config.Workload)
 	for _, svc := range allSvcs {
 		svcs[svc.Name] = svc
 	}
@@ -119,7 +119,7 @@ func (e *EnvDescriber) filterDeployedSvcs() ([]*config.Service, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list deployed services in env %s: %w", e.env.Name, err)
 	}
-	var deployedSvcs []*config.Service
+	var deployedSvcs []*config.Workload
 	for _, deployedSvcName := range deployedSvcNames {
 		deployedSvcs = append(deployedSvcs, svcs[deployedSvcName])
 	}

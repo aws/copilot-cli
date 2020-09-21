@@ -99,7 +99,7 @@ func (o *showAppOpts) description() (*describe.App, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list environments in application %s: %w", o.name, err)
 	}
-	svcs, err := o.store.ListServices(o.name)
+	svcs, err := o.store.ListWorkloads(o.name)
 	if err != nil {
 		return nil, fmt.Errorf("list services in application %s: %w", o.name, err)
 	}
@@ -112,9 +112,9 @@ func (o *showAppOpts) description() (*describe.App, error) {
 			Prod:      env.Prod,
 		})
 	}
-	var trimmedSvcs []*config.Service
+	var trimmedSvcs []*config.Workload
 	for _, svc := range svcs {
-		trimmedSvcs = append(trimmedSvcs, &config.Service{
+		trimmedSvcs = append(trimmedSvcs, &config.Workload{
 			Name: svc.Name,
 			Type: svc.Type,
 		})

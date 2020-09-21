@@ -102,17 +102,17 @@ func (mr *MockConfigStoreClientMockRecorder) ListEnvironments(appName interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockConfigStoreClient)(nil).ListEnvironments), appName)
 }
 
-// GetService mocks base method
-func (m *MockConfigStoreClient) GetService(appName, svcName string) (*config.Service, error) {
+// GetWorkload mocks base method
+func (m *MockConfigStoreClient) GetWorkload(appName, svcName string) (*config.Workload, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetService", appName, svcName)
-	ret0, _ := ret[0].(*config.Service)
+	ret := m.ctrl.Call(m, "GetWorkload", appName, svcName)
+	ret0, _ := ret[0].(*config.Workload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetService indicates an expected call of GetService
-func (mr *MockConfigStoreClientMockRecorder) GetService(appName, svcName interface{}) *gomock.Call {
+// GetWorkload indicates an expected call of GetWorkload
+func (mr *MockConfigStoreClientMockRecorder) GetWorkload(appName, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetService", reflect.TypeOf((*MockConfigStoreClient)(nil).GetService), appName, svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkload", reflect.TypeOf((*MockConfigStoreClient)(nil).GetWorkload), appName, svcName)
 }

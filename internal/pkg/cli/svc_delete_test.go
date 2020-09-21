@@ -42,7 +42,7 @@ func TestDeleteSvcOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inName:    "api",
 			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetService("phonetool", "api").Times(1).Return(&config.Service{
+				m.EXPECT().GetWorkload("phonetool", "api").Times(1).Return(&config.Workload{
 					Name: "api",
 				}, nil)
 			},
@@ -69,7 +69,7 @@ func TestDeleteSvcOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inName:    "api",
 			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetService("phonetool", "api").Times(1).Return(nil, mockError)
+				m.EXPECT().GetWorkload("phonetool", "api").Times(1).Return(nil, mockError)
 			},
 			want: errors.New("some error"),
 		},
@@ -125,7 +125,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices(testAppName).Return([]*config.Service{
+				m.EXPECT().ListWorkloads(testAppName).Return([]*config.Workload{
 					{
 						Name: testSvcName,
 					},
@@ -144,7 +144,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices(testAppName).Return([]*config.Service{
+				m.EXPECT().ListWorkloads(testAppName).Return([]*config.Workload{
 					{
 						Name: testSvcName,
 					},
@@ -158,7 +158,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices(testAppName).Return([]*config.Service{}, nil)
+				m.EXPECT().ListWorkloads(testAppName).Return([]*config.Workload{}, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
@@ -168,7 +168,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices(testAppName).Return([]*config.Service{
+				m.EXPECT().ListWorkloads(testAppName).Return([]*config.Workload{
 					{
 						Name: testSvcName,
 					},
@@ -336,7 +336,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtSvcDeleteResourcesComplete, mockSvcName, mockAppName)),
 
 					// deleteSSMParam
-					mocks.store.EXPECT().DeleteService(mockAppName, mockSvcName).Return(nil),
+					mocks.store.EXPECT().DeleteWorkload(mockAppName, mockSvcName).Return(nil),
 				)
 			},
 			wantedError: nil,
@@ -364,7 +364,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					mocks.appCFN.EXPECT().RemoveServiceFromApp(gomock.Any(), gomock.Any()).Return(nil).Times(0),
 
 					// It should **not** deleteSSMParam
-					mocks.store.EXPECT().DeleteService(gomock.Any(), gomock.Any()).Return(nil).Times(0),
+					mocks.store.EXPECT().DeleteWorkload(gomock.Any(), gomock.Any()).Return(nil).Times(0),
 				)
 			},
 			wantedError: nil,

@@ -49,15 +49,15 @@ func (e *ErrNoSuchEnvironment) Error() string {
 		e.EnvironmentName, e.ApplicationName)
 }
 
-// ErrNoSuchService means a specific service couldn't be found in a specific application.
-type ErrNoSuchService struct {
+// ErrNoSuchWorkload means a specific service or job couldn't be found in a specific application.
+type ErrNoSuchWorkload struct {
 	ApplicationName string
 	ServiceName     string
 }
 
 // Is returns whether the provided error equals this error.
-func (e *ErrNoSuchService) Is(target error) bool {
-	t, ok := target.(*ErrNoSuchService)
+func (e *ErrNoSuchWorkload) Is(target error) bool {
+	t, ok := target.(*ErrNoSuchWorkload)
 	if !ok {
 		return false
 	}
@@ -65,7 +65,7 @@ func (e *ErrNoSuchService) Is(target error) bool {
 		e.ServiceName == t.ServiceName
 }
 
-func (e *ErrNoSuchService) Error() string {
-	return fmt.Sprintf("couldn't find service %s in the application %s",
+func (e *ErrNoSuchWorkload) Error() string {
+	return fmt.Sprintf("couldn't find workload %s in the application %s",
 		e.ServiceName, e.ApplicationName)
 }

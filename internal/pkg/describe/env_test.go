@@ -45,17 +45,17 @@ func TestEnvDescriber_Describe(t *testing.T) {
 		ExecutionRoleARN: "",
 		ManagerRoleARN:   "",
 	}
-	testSvc1 := &config.Service{
+	testSvc1 := &config.Workload{
 		App:  "testApp",
 		Name: "testSvc1",
 		Type: "load-balanced",
 	}
-	testSvc2 := &config.Service{
+	testSvc2 := &config.Workload{
 		App:  "testApp",
 		Name: "testSvc2",
 		Type: "load-balanced",
 	}
-	testSvc3 := &config.Service{
+	testSvc3 := &config.Workload{
 		App:  "testApp",
 		Name: "testSvc3",
 		Type: "load-balanced",
@@ -78,7 +78,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 		PhysicalResourceId: aws.String("AWS::ECS::Cluster-jI63pYBWU6BZ"),
 		ResourceType:       aws.String("testApp-testEnv-Cluster"),
 	}
-	envSvcs := []*config.Service{testSvc1, testSvc2}
+	envSvcs := []*config.Workload{testSvc1, testSvc2}
 	mockError := errors.New("some error")
 	testCases := map[string]struct {
 		shouldOutputResources bool
@@ -86,13 +86,13 @@ func TestEnvDescriber_Describe(t *testing.T) {
 		setupMocks func(mocks envDescriberMocks)
 
 		wantedEnv   *EnvDescription
-		wantedSvcs  []*config.Service
+		wantedSvcs  []*config.Workload
 		wantedError error
 	}{
 		"error if fail to list all services": {
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-					m.configStoreSvc.EXPECT().ListServices(testApp).Return(nil, mockError),
+					m.configStoreSvc.EXPECT().ListWorkloads(testApp).Return(nil, mockError),
 				)
 			},
 			wantedError: fmt.Errorf("list services for app testApp: some error"),
@@ -100,7 +100,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 		"error if fail to list deployed services": {
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-					m.configStoreSvc.EXPECT().ListServices(testApp).Return([]*config.Service{
+					m.configStoreSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{
 						testSvc1, testSvc2, testSvc3,
 					}, nil),
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
@@ -112,7 +112,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 		"error if fail to get env tags": {
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-					m.configStoreSvc.EXPECT().ListServices(testApp).Return([]*config.Service{
+					m.configStoreSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{
 						testSvc1, testSvc2, testSvc3,
 					}, nil),
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
@@ -126,7 +126,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			shouldOutputResources: true,
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-					m.configStoreSvc.EXPECT().ListServices(testApp).Return([]*config.Service{
+					m.configStoreSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{
 						testSvc1, testSvc2, testSvc3,
 					}, nil),
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
@@ -143,7 +143,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			shouldOutputResources: false,
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-					m.configStoreSvc.EXPECT().ListServices(testApp).Return([]*config.Service{
+					m.configStoreSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{
 						testSvc1, testSvc2, testSvc3,
 					}, nil),
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
@@ -163,7 +163,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			shouldOutputResources: true,
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-					m.configStoreSvc.EXPECT().ListServices(testApp).Return([]*config.Service{
+					m.configStoreSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{
 						testSvc1, testSvc2, testSvc3,
 					}, nil),
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
@@ -242,22 +242,22 @@ func TestEnvDescription_JSONString(t *testing.T) {
 		ExecutionRoleARN: "",
 		ManagerRoleARN:   "",
 	}
-	testSvc1 := &config.Service{
+	testSvc1 := &config.Workload{
 		App:  "testApp",
 		Name: "testSvc1",
 		Type: "load-balanced",
 	}
-	testSvc2 := &config.Service{
+	testSvc2 := &config.Workload{
 		App:  "testApp",
 		Name: "testSvc2",
 		Type: "load-balanced",
 	}
-	testSvc3 := &config.Service{
+	testSvc3 := &config.Workload{
 		App:  "testApp",
 		Name: "testSvc3",
 		Type: "load-balanced",
 	}
-	allSvcs := []*config.Service{testSvc1, testSvc2, testSvc3}
+	allSvcs := []*config.Workload{testSvc1, testSvc2, testSvc3}
 	wantedContent := "{\"environment\":{\"app\":\"testApp\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"services\":[{\"app\":\"testApp\",\"name\":\"testSvc1\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc2\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc3\",\"type\":\"load-balanced\"}],\"tags\":{\"key1\":\"value1\",\"key2\":\"value2\"},\"resources\":[{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"testApp-testEnv-CFNExecutionRole\"},{\"type\":\"testApp-testEnv-Cluster\",\"physicalID\":\"AWS::ECS::Cluster-jI63pYBWU6BZ\"}]}\n"
 
 	// GIVEN
@@ -293,22 +293,22 @@ func TestEnvDescription_HumanString(t *testing.T) {
 		ExecutionRoleARN: "",
 		ManagerRoleARN:   "",
 	}
-	testSvc1 := &config.Service{
+	testSvc1 := &config.Workload{
 		App:  "testApp",
 		Name: "testSvc1",
 		Type: "load-balanced",
 	}
-	testSvc2 := &config.Service{
+	testSvc2 := &config.Workload{
 		App:  "testApp",
 		Name: "testSvc2",
 		Type: "load-balanced",
 	}
-	testSvc3 := &config.Service{
+	testSvc3 := &config.Workload{
 		App:  "testApp",
 		Name: "testSvc3",
 		Type: "load-balanced",
 	}
-	allSvcs := []*config.Service{testSvc1, testSvc2, testSvc3}
+	allSvcs := []*config.Workload{testSvc1, testSvc2, testSvc3}
 
 	wantedContent := `About
 

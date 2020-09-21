@@ -71,24 +71,24 @@ func TestErrNoSuchEnvironment_Is(t *testing.T) {
 	}
 }
 
-func TestErrNoSuchService(t *testing.T) {
-	err := &ErrNoSuchService{ServiceName: "api", ApplicationName: "chicken"}
-	require.EqualError(t, err, "couldn't find service api in the application chicken")
+func TestErrNoSuchWorkload(t *testing.T) {
+	err := &ErrNoSuchWorkload{ServiceName: "api", ApplicationName: "chicken"}
+	require.EqualError(t, err, "couldn't find workload api in the application chicken")
 }
 
-func TestErrNoSuchService_Is(t *testing.T) {
-	err := &ErrNoSuchService{ServiceName: "api", ApplicationName: "chicken"}
+func TestErrNoSuchWorkload_Is(t *testing.T) {
+	err := &ErrNoSuchWorkload{ServiceName: "api", ApplicationName: "chicken"}
 	testCases := map[string]struct {
 		wantedSame bool
 		otherError error
 	}{
 		"errors are same": {
 			wantedSame: true,
-			otherError: &ErrNoSuchService{ServiceName: "api", ApplicationName: "chicken"},
+			otherError: &ErrNoSuchWorkload{ServiceName: "api", ApplicationName: "chicken"},
 		},
 		"errors have different values": {
 			wantedSame: false,
-			otherError: &ErrNoSuchService{ServiceName: "api", ApplicationName: "rooster"},
+			otherError: &ErrNoSuchWorkload{ServiceName: "api", ApplicationName: "rooster"},
 		},
 		"errors are different type": {
 			wantedSame: false,

@@ -87,7 +87,7 @@ func (o *listSvcOpts) Execute() error {
 		return fmt.Errorf("get application: %w", err)
 	}
 
-	svcs, err := o.store.ListServices(o.appName)
+	svcs, err := o.store.ListWorkloads(o.appName)
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func (o *listSvcOpts) Execute() error {
 	return nil
 }
 
-func (o *listSvcOpts) humanOutput(svcs []*config.Service) {
+func (o *listSvcOpts) humanOutput(svcs []*config.Workload) {
 	writer := tabwriter.NewWriter(o.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprintf(writer, "%s\t%s\n", "Name", "Type")
 	nameLengthMax := len("Name")
@@ -131,9 +131,9 @@ func (o *listSvcOpts) humanOutput(svcs []*config.Service) {
 	writer.Flush()
 }
 
-func (o *listSvcOpts) jsonOutput(svcs []*config.Service) (string, error) {
+func (o *listSvcOpts) jsonOutput(svcs []*config.Workload) (string, error) {
 	type out struct {
-		Services []*config.Service `json:"services"`
+		Services []*config.Workload `json:"services"`
 	}
 	b, err := json.Marshal(out{Services: svcs})
 	if err != nil {
@@ -142,12 +142,12 @@ func (o *listSvcOpts) jsonOutput(svcs []*config.Service) (string, error) {
 	return fmt.Sprintf("%s\n", b), nil
 }
 
-func filterSvcsByName(svcs []*config.Service, wantedNames []string) []*config.Service {
+func filterSvcsByName(svcs []*config.Workload, wantedNames []string) []*config.Workload {
 	isWanted := make(map[string]bool)
 	for _, name := range wantedNames {
 		isWanted[name] = true
 	}
-	var filtered []*config.Service
+	var filtered []*config.Workload
 	for _, svc := range svcs {
 		if _, ok := isWanted[svc.Name]; !ok {
 			continue

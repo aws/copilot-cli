@@ -139,7 +139,7 @@ type deleteAppMocks struct {
 
 func TestDeleteAppOpts_Execute(t *testing.T) {
 	const mockAppName = "phonetool"
-	mockServices := []*config.Service{
+	mockServices := []*config.Workload{
 		{
 			Name: "webapp",
 		},
@@ -169,7 +169,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			setupMocks: func(mocks deleteAppMocks) {
 				gomock.InOrder(
 					// deleteSvcs
-					mocks.store.EXPECT().ListServices(mockAppName).Return(mockServices, nil),
+					mocks.store.EXPECT().ListWorkloads(mockAppName).Return(mockServices, nil),
 					mocks.svcDeleter.EXPECT().Execute().Return(nil),
 
 					// deleteEnvs
@@ -210,7 +210,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			setupMocks: func(mocks deleteAppMocks) {
 				gomock.InOrder(
 					// deleteSvcs
-					mocks.store.EXPECT().ListServices(mockAppName).Return(mockServices, nil),
+					mocks.store.EXPECT().ListWorkloads(mockAppName).Return(mockServices, nil),
 					mocks.svcDeleter.EXPECT().Execute().Return(nil),
 
 					// deleteEnvs

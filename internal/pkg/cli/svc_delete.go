@@ -100,7 +100,7 @@ func (o *deleteSvcOpts) Validate() error {
 		return errNoAppInWorkspace
 	}
 	if o.name != "" {
-		if _, err := o.store.GetService(o.appName, o.name); err != nil {
+		if _, err := o.store.GetWorkload(o.appName, o.name); err != nil {
 			return err
 		}
 	}
@@ -229,7 +229,7 @@ func (o *deleteSvcOpts) askSvcName() error {
 }
 
 func (o *deleteSvcOpts) serviceNames() ([]string, error) {
-	services, err := o.store.ListServices(o.appName)
+	services, err := o.store.ListWorkloads(o.appName)
 	if err != nil {
 		return nil, fmt.Errorf("list services for application %s: %w", o.appName, err)
 	}
@@ -321,7 +321,7 @@ func (o *deleteSvcOpts) removeSvcFromApp() error {
 }
 
 func (o *deleteSvcOpts) deleteSSMParam() error {
-	if err := o.store.DeleteService(o.appName, o.name); err != nil {
+	if err := o.store.DeleteWorkload(o.appName, o.name); err != nil {
 		return fmt.Errorf("delete service %s in application %s from config store: %w", o.name, o.appName, err)
 	}
 

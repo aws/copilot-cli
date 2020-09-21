@@ -41,27 +41,27 @@ type actionCommand interface {
 
 // SSM store interface.
 
-type serviceStore interface {
-	serviceCreator
-	serviceGetter
-	serviceLister
-	serviceDeleter
+type workloadStore interface {
+	workloadCreator
+	workloadGetter
+	workloadLister
+	workloadDeleter
 }
 
-type serviceCreator interface {
-	CreateService(svc *config.Service) error
+type workloadCreator interface {
+	CreateWorkload(svc *config.Workload) error
 }
 
-type serviceGetter interface {
-	GetService(appName, svcName string) (*config.Service, error)
+type workloadGetter interface {
+	GetWorkload(appName, svcName string) (*config.Workload, error)
 }
 
-type serviceLister interface {
-	ListServices(appName string) ([]*config.Service, error)
+type workloadLister interface {
+	ListWorkloads(appName string) ([]*config.Workload, error)
 }
 
-type serviceDeleter interface {
-	DeleteService(appName, svcName string) error
+type workloadDeleter interface {
+	DeleteWorkload(appName, wkldName string) error
 }
 
 type applicationStore interface {
@@ -113,7 +113,7 @@ type environmentDeleter interface {
 type store interface {
 	applicationStore
 	environmentStore
-	serviceStore
+	workloadStore
 }
 
 type deployedEnvironmentLister interface {

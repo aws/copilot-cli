@@ -103,26 +103,26 @@ func Test_SSM_Service_Integration(t *testing.T) {
 		require.NoError(t, err)
 
 		// Make sure there are no svcs with our new application
-		svcs, err := s.ListServices(applicationToCreate.Name)
+		svcs, err := s.ListWorkloads(applicationToCreate.Name)
 		require.NoError(t, err)
 		require.Empty(t, svcs)
 
 		// Add our services
-		err = s.CreateService(&apiService)
+		err = s.CreateWorkload(&apiService)
 		require.NoError(t, err)
 
-		err = s.CreateService(&feService)
+		err = s.CreateWorkload(&feService)
 		require.NoError(t, err)
 
 		// Skip and do not return error if services already exists
-		err = s.CreateService(&feService)
+		err = s.CreateWorkload(&feService)
 		require.NoError(t, err)
 
 		// Wait for consistency to kick in (ssm path commands are eventually consistent)
 		time.Sleep(5 * time.Second)
 
 		// Make sure all the svcs are under our application
-		svcs, err = s.ListServices(applicationToCreate.Name)
+		svcs, err = s.ListWorkloads(applicationToCreate.Name)
 		require.NoError(t, err)
 		var services []config.Service
 		for _, s := range svcs {
@@ -131,11 +131,11 @@ func Test_SSM_Service_Integration(t *testing.T) {
 		require.ElementsMatch(t, services, []config.Service{apiService, feService})
 
 		// Fetch our saved svcs, one by one
-		svc, err := s.GetService(applicationToCreate.Name, apiService.Name)
+		svc, err := s.GetWorkload(applicationToCreate.Name, apiService.Name)
 		require.NoError(t, err)
 		require.Equal(t, apiService, *svc)
 
-		svc, err = s.GetService(applicationToCreate.Name, feService.Name)
+		svc, err = s.GetWorkload(applicationToCreate.Name, feService.Name)
 		require.NoError(t, err)
 		require.Equal(t, feService, *svc)
 	})
