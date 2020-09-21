@@ -14,7 +14,8 @@
     "HealthCheckPath": "/",
     "HTTPSEnabled": "true",
     "TargetContainer": "my-svc",
-    "TargetPort": "5000"
+    "TargetPort": "5000",
+    "Stickiness": "false"
   },
   "Tags": { 
     "copilot-application": "my-app",
