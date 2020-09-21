@@ -247,6 +247,10 @@ type wsSvcDirReader interface {
 	CopilotDirPath() (string, error)
 }
 
+type wsJobDirReader interface {
+	JobNames() ([]string, error)
+}
+
 type wsPipelineReader interface {
 	wsServiceLister
 	wsPipelineManifestReader
