@@ -105,12 +105,11 @@ func TestJobInitOpts_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			opts := initJobOpts{
 				initJobVars: initJobVars{
-					Name:           tc.inJobName,
-					DockerfilePath: tc.inDockerfilePath,
-					Timeout:        tc.inTimeout,
-					Retries:        tc.inRetries,
-					Schedule:       tc.inSchedule,
-					GlobalOpts:     &GlobalOpts{},
+					name:           tc.inJobName,
+					dockerfilePath: tc.inDockerfilePath,
+					timeout:        tc.inTimeout,
+					retries:        tc.inRetries,
+					schedule:       tc.inSchedule,
 				},
 				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
 			}
@@ -421,15 +420,13 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			opts := &initJobOpts{
 				initJobVars: initJobVars{
-					JobType:        tc.inJobType,
-					Name:           tc.inJobName,
-					DockerfilePath: tc.inDockerfilePath,
-					Schedule:       tc.inJobSchedule,
-					GlobalOpts: &GlobalOpts{
-						prompt: mockPrompt,
-					},
+					jobType:        tc.inJobType,
+					name:           tc.inJobName,
+					dockerfilePath: tc.inDockerfilePath,
+					schedule:       tc.inJobSchedule,
 				},
-				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
+				fs:     &afero.Afero{Fs: afero.NewMemMapFs()},
+				prompt: mockPrompt,
 			}
 			tc.mockFileSystem(opts.fs)
 			tc.mockPrompt(mockPrompt)
@@ -443,10 +440,10 @@ func TestJobInitOpts_Ask(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, wantedJobType, opts.JobType)
-			require.Equal(t, wantedJobName, opts.Name)
-			require.Equal(t, wantedDockerfilePath, opts.DockerfilePath)
-			require.Equal(t, tc.wantedSchedule, opts.Schedule)
+			require.Equal(t, wantedJobType, opts.jobType)
+			require.Equal(t, wantedJobName, opts.name)
+			require.Equal(t, wantedDockerfilePath, opts.dockerfilePath)
+			require.Equal(t, tc.wantedSchedule, opts.schedule)
 
 		})
 	}

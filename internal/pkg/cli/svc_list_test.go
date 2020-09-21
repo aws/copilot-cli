@@ -30,10 +30,8 @@ func TestListSvcOpts_Execute(t *testing.T) {
 		"with json outputs": {
 			opts: listSvcOpts{
 				listSvcVars: listSvcVars{
-					ShouldOutputJSON: true,
-					GlobalOpts: &GlobalOpts{
-						appName: "coolapp",
-					},
+					shouldOutputJSON: true,
+					appName:          "coolapp",
 				},
 				store: mockstore,
 			},
@@ -54,9 +52,7 @@ func TestListSvcOpts_Execute(t *testing.T) {
 		"with human outputs": {
 			opts: listSvcOpts{
 				listSvcVars: listSvcVars{
-					GlobalOpts: &GlobalOpts{
-						appName: "coolapp",
-					},
+					appName: "coolapp",
 				},
 				store: mockstore,
 			},
@@ -78,9 +74,7 @@ func TestListSvcOpts_Execute(t *testing.T) {
 			expectedErr: fmt.Errorf("get application: %w", mockError),
 			opts: listSvcOpts{
 				listSvcVars: listSvcVars{
-					GlobalOpts: &GlobalOpts{
-						appName: "coolapp",
-					},
+					appName: "coolapp",
 				},
 				store: mockstore,
 			},
@@ -99,9 +93,7 @@ func TestListSvcOpts_Execute(t *testing.T) {
 			expectedErr: mockError,
 			opts: listSvcOpts{
 				listSvcVars: listSvcVars{
-					GlobalOpts: &GlobalOpts{
-						appName: "coolapp",
-					},
+					appName: "coolapp",
 				},
 				store: mockstore,
 			},
@@ -120,10 +112,8 @@ func TestListSvcOpts_Execute(t *testing.T) {
 			expectedErr: nil,
 			opts: listSvcOpts{
 				listSvcVars: listSvcVars{
-					ShouldShowLocalServices: true,
-					GlobalOpts: &GlobalOpts{
-						appName: "coolapp",
-					},
+					shouldShowLocalServices: true,
+					appName:                 "coolapp",
 				},
 				store: mockstore,
 				ws:    mockWorkspace,
@@ -195,9 +185,7 @@ func TestListSvcOpts_Ask(t *testing.T) {
 
 			listApps := &listSvcOpts{
 				listSvcVars: listSvcVars{
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inApp,
-					},
+					appName: tc.inApp,
 				},
 				sel: mockSel,
 			}
@@ -205,7 +193,7 @@ func TestListSvcOpts_Ask(t *testing.T) {
 			err := listApps.Ask()
 
 			require.NoError(t, err)
-			require.Equal(t, tc.wantedApp, listApps.AppName(), "expected application names to match")
+			require.Equal(t, tc.wantedApp, listApps.appName, "expected application names to match")
 		})
 	}
 }

@@ -66,12 +66,10 @@ func TestShowAppOpts_Validate(t *testing.T) {
 
 			opts := &showAppOpts{
 				showAppVars: showAppVars{
-					GlobalOpts: &GlobalOpts{
-						prompt:  mockPrompter,
-						appName: tc.inAppName,
-					},
+					name: tc.inAppName,
 				},
-				store: mockStoreReader,
+				store:  mockStoreReader,
+				prompt: mockPrompter,
 			}
 
 			// WHEN
@@ -137,9 +135,7 @@ func TestShowAppOpts_Ask(t *testing.T) {
 
 			opts := &showAppOpts{
 				showAppVars: showAppVars{
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inApp,
-					},
+					name: tc.inApp,
 				},
 				sel: mocks.sel,
 			}
@@ -152,7 +148,7 @@ func TestShowAppOpts_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedApp, opts.AppName(), "expected app names to match")
+				require.Equal(t, tc.wantedApp, opts.name, "expected app names to match")
 
 			}
 		})
@@ -308,9 +304,7 @@ Services
 			opts := &showAppOpts{
 				showAppVars: showAppVars{
 					shouldOutputJSON: tc.shouldOutputJSON,
-					GlobalOpts: &GlobalOpts{
-						appName: testAppName,
-					},
+					name:             testAppName,
 				},
 				store: mockStoreReader,
 				w:     b,

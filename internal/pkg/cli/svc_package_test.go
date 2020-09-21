@@ -90,9 +90,9 @@ func TestPackageSvcOpts_Validate(t *testing.T) {
 
 			opts := &packageSvcOpts{
 				packageSvcVars: packageSvcVars{
-					Name:       tc.inSvcName,
-					EnvName:    tc.inEnvName,
-					GlobalOpts: &GlobalOpts{appName: tc.inAppName},
+					name:    tc.inSvcName,
+					envName: tc.inEnvName,
+					appName: tc.inAppName,
 				},
 				ws:    mockWorkspace,
 				store: mockStore,
@@ -213,15 +213,13 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 
 			opts := &packageSvcOpts{
 				packageSvcVars: packageSvcVars{
-					Name:    tc.inSvcName,
-					EnvName: tc.inEnvName,
-					Tag:     tc.inTag,
-					GlobalOpts: &GlobalOpts{
-						appName: testAppName,
-						prompt:  mockPrompt,
-					},
+					name:    tc.inSvcName,
+					envName: tc.inEnvName,
+					tag:     tc.inTag,
+					appName: testAppName,
 				},
 				sel:    mockSelector,
+				prompt: mockPrompt,
 				runner: mockRunner,
 			}
 
@@ -229,9 +227,9 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 			err := opts.Ask()
 
 			// THEN
-			require.Equal(t, tc.wantedSvcName, opts.Name)
-			require.Equal(t, tc.wantedEnvName, opts.EnvName)
-			require.Equal(t, tc.wantedTag, opts.Tag)
+			require.Equal(t, tc.wantedSvcName, opts.name)
+			require.Equal(t, tc.wantedEnvName, opts.envName)
+			require.Equal(t, tc.wantedTag, opts.tag)
 
 			if tc.wantedErrorS != "" {
 				require.EqualError(t, err, tc.wantedErrorS)
@@ -255,12 +253,10 @@ func TestPackageSvcOpts_Execute(t *testing.T) {
 	}{
 		"writes service template without addons": {
 			inVars: packageSvcVars{
-				GlobalOpts: &GlobalOpts{
-					appName: "ecs-kudos",
-				},
-				Name:    "api",
-				EnvName: "test",
-				Tag:     "1234",
+				appName: "ecs-kudos",
+				name:    "api",
+				envName: "test",
+				tag:     "1234",
 			},
 			mockDependencies: func(ctrl *gomock.Controller, opts *packageSvcOpts) {
 				mockStore := mocks.NewMockstore(ctrl)

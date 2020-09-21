@@ -33,9 +33,9 @@ const (
 )
 
 type initAppVars struct {
-	AppName      string
-	DomainName   string
-	ResourceTags map[string]string
+	name         string
+	domainName   string
+	resourceTags map[string]string
 }
 
 type initAppOpts struct {
@@ -78,16 +78,16 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 
 // Validate returns an error if the user's input is invalid.
 func (o *initAppOpts) Validate() error {
-	if o.AppName != "" {
-		if err := o.validateAppName(o.AppName); err != nil {
+	if o.name != "" {
+		if err := o.validateAppName(o.name); err != nil {
 			return err
 		}
 	}
-	if o.DomainName != "" {
-		if err := validateDomainName(o.DomainName); err != nil {
-			return fmt.Errorf("domain name %s is invalid: %w", o.DomainName, err)
+	if o.domainName != "" {
+		if err := validateDomainName(o.domainName); err != nil {
+			return fmt.Errorf("domain name %s is invalid: %w", o.domainName, err)
 		}
-		if err := o.validateDomain(o.DomainName); err != nil {
+		if err := o.validateDomain(o.domainName); err != nil {
 			return err
 		}
 	}
@@ -111,20 +111,20 @@ https://github.com/aws/copilot-cli/wiki/credentials`)
 	// When there's a local application.
 	summary, err := o.ws.Summary()
 	if err == nil {
-		if o.AppName == "" {
+		if o.name == "" {
 			log.Infoln(fmt.Sprintf(
 				"Your workspace is registered to application %s.",
 				color.HighlightUserInput(summary.Application)))
-			o.AppName = summary.Application
+			o.name = summary.Application
 			return nil
 		}
-		if o.AppName != summary.Application {
+		if o.name != summary.Application {
 			log.Errorf(`Workspace is already registered with application %s instead of %s.
 If you'd like to delete the application locally, you can remove the %s directory.
 If you'd like to delete the application and all of its resources, run %s.
 `,
 				summary.Application,
-				o.AppName,
+				o.name,
 				workspace.CopilotDirName,
 				color.HighlightCode("copilot app delete"))
 			return fmt.Errorf("workspace already registered with %s", summary.Application)
@@ -132,7 +132,7 @@ If you'd like to delete the application and all of its resources, run %s.
 	}
 
 	// Flag is set by user.
-	if o.AppName != "" {
+	if o.name != "" {
 		return nil
 	}
 
@@ -159,28 +159,28 @@ func (o *initAppOpts) Execute() error {
 		return fmt.Errorf("get identity: %w", err)
 	}
 
-	err = o.ws.Create(o.AppName)
+	err = o.ws.Create(o.name)
 	if err != nil {
-		return fmt.Errorf("create new workspace with application name %s: %w", o.AppName, err)
+		return fmt.Errorf("create new workspace with application name %s: %w", o.name, err)
 	}
-	o.prog.Start(fmt.Sprintf(fmtAppInitStart, color.HighlightUserInput(o.AppName)))
+	o.prog.Start(fmt.Sprintf(fmtAppInitStart, color.HighlightUserInput(o.name)))
 	err = o.cfn.DeployApp(&deploy.CreateAppInput{
-		Name:           o.AppName,
+		Name:           o.name,
 		AccountID:      caller.Account,
-		DomainName:     o.DomainName,
-		AdditionalTags: o.ResourceTags,
+		DomainName:     o.domainName,
+		AdditionalTags: o.resourceTags,
 	})
 	if err != nil {
-		o.prog.Stop(log.Serrorf(fmtAppInitFailed, color.HighlightUserInput(o.AppName)))
+		o.prog.Stop(log.Serrorf(fmtAppInitFailed, color.HighlightUserInput(o.name)))
 		return err
 	}
-	o.prog.Stop(log.Ssuccessf(fmtAppInitComplete, color.HighlightUserInput(o.AppName)))
+	o.prog.Stop(log.Ssuccessf(fmtAppInitComplete, color.HighlightUserInput(o.name)))
 
 	return o.store.CreateApplication(&config.Application{
 		AccountID: caller.Account,
-		Name:      o.AppName,
-		Domain:    o.DomainName,
-		Tags:      o.ResourceTags,
+		Name:      o.name,
+		Domain:    o.domainName,
+		Tags:      o.resourceTags,
 	})
 }
 
@@ -196,7 +196,7 @@ func (o *initAppOpts) validateAppName(name string) error {
 		}
 		return fmt.Errorf("get application %s: %w", name, err)
 	}
-	if o.DomainName != "" && app.Domain != o.DomainName {
+	if o.domainName != "" && app.Domain != o.domainName {
 		return fmt.Errorf("application named %s already exists with a different domain name %s", name, app.Domain)
 	}
 	return nil
@@ -229,7 +229,7 @@ func (o *initAppOpts) askAppName(formatMsg string) error {
 	if err != nil {
 		return fmt.Errorf("prompt get application name: %w", err)
 	}
-	o.AppName = appName
+	o.name = appName
 	return nil
 }
 
@@ -246,12 +246,12 @@ func (o *initAppOpts) askSelectExistingAppName(existingApps []*config.Applicatio
 	if err != nil {
 		return fmt.Errorf("prompt select application name: %w", err)
 	}
-	o.AppName = name
+	o.name = name
 	return nil
 }
 
-// BuildAppInitCommand builds the command for creating a new application.
-func BuildAppInitCommand() *cobra.Command {
+// buildAppInitCommand builds the command for creating a new application.
+func buildAppInitCommand() *cobra.Command {
 	vars := initAppVars{}
 	cmd := &cobra.Command{
 		Use:   "init [name]",
@@ -272,7 +272,7 @@ An application is a collection of containerized services that operate together.`
 				return err
 			}
 			if len(args) == 1 {
-				opts.AppName = args[0]
+				opts.name = args[0]
 			}
 			if err := opts.Validate(); err != nil {
 				return err
@@ -283,7 +283,7 @@ An application is a collection of containerized services that operate together.`
 			if err := opts.Execute(); err != nil {
 				return err
 			}
-			log.Successf("The directory %s will hold service manifests for application %s.\n", color.HighlightResource(workspace.CopilotDirName), color.HighlightUserInput(opts.AppName))
+			log.Successf("The directory %s will hold service manifests for application %s.\n", color.HighlightResource(workspace.CopilotDirName), color.HighlightUserInput(opts.name))
 			log.Infoln()
 			log.Infoln("Recommended follow-up actions:")
 			for _, followUp := range opts.RecommendedActions() {
@@ -292,7 +292,7 @@ An application is a collection of containerized services that operate together.`
 			return nil
 		}),
 	}
-	cmd.Flags().StringVar(&vars.DomainName, domainNameFlag, "", domainNameFlagDescription)
-	cmd.Flags().StringToStringVar(&vars.ResourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
+	cmd.Flags().StringVar(&vars.domainName, domainNameFlag, "", domainNameFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	return cmd
 }

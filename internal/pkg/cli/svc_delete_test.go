@@ -85,11 +85,9 @@ func TestDeleteSvcOpts_Validate(t *testing.T) {
 
 			opts := deleteSvcOpts{
 				deleteSvcVars: deleteSvcVars{
-					GlobalOpts: &GlobalOpts{
-						appName: test.inAppName,
-					},
-					Name:    test.inName,
-					EnvName: test.inEnvName,
+					appName: test.inAppName,
+					name:    test.inName,
+					envName: test.inEnvName,
 				},
 				store: mockstore,
 			}
@@ -260,15 +258,13 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 
 			opts := deleteSvcOpts{
 				deleteSvcVars: deleteSvcVars{
-					SkipConfirmation: test.skipConfirmation,
-					GlobalOpts: &GlobalOpts{
-						appName: testAppName,
-						prompt:  mockPrompter,
-					},
-					Name:    test.inName,
-					EnvName: test.envName,
+					skipConfirmation: test.skipConfirmation,
+					appName:          testAppName,
+					name:             test.inName,
+					envName:          test.envName,
 				},
-				store: mockStore,
+				store:  mockStore,
+				prompt: mockPrompter,
 			}
 
 			got := opts.Ask()
@@ -276,7 +272,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			if got != nil {
 				require.Equal(t, test.wantedError, got)
 			} else {
-				require.Equal(t, test.wantedName, opts.Name)
+				require.Equal(t, test.wantedName, opts.name)
 			}
 		})
 	}
@@ -425,11 +421,9 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 
 			opts := deleteSvcOpts{
 				deleteSvcVars: deleteSvcVars{
-					GlobalOpts: &GlobalOpts{
-						appName: test.inAppName,
-					},
-					Name:    test.inSvcName,
-					EnvName: test.inEnvName,
+					appName: test.inAppName,
+					name:    test.inSvcName,
+					envName: test.inEnvName,
 				},
 				store:     mockstore,
 				sess:      mockSession,

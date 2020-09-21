@@ -95,9 +95,7 @@ stages:
 
 			opts := &deletePipelineOpts{
 				deletePipelineVars: deletePipelineVars{
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inAppName,
-					},
+					appName: tc.inAppName,
 				},
 				ws: mockWorkspace,
 			}
@@ -163,13 +161,11 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 
 			opts := &deletePipelineOpts{
 				deletePipelineVars: deletePipelineVars{
-					SkipConfirmation: tc.skipConfirmation,
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inAppName,
-						prompt:  mockPrompt,
-					},
+					skipConfirmation: tc.skipConfirmation,
+					appName:          tc.inAppName,
 				},
 				PipelineName: tc.inPipelineName,
+				prompt:       mockPrompt,
 			}
 
 			// WHEN
@@ -299,11 +295,8 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 
 			opts := &deletePipelineOpts{
 				deletePipelineVars: deletePipelineVars{
-					DeleteSecret: tc.deleteSecret,
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inAppName,
-						prompt:  mockPrompter,
-					},
+					shouldDeleteSecret: tc.deleteSecret,
+					appName:            tc.inAppName,
 				},
 				PipelineName:     tc.inPipelineName,
 				PipelineSecret:   tc.inPipelineSecret,
@@ -311,6 +304,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 				pipelineDeployer: mockDeployer,
 				ws:               mockWorkspace,
 				prog:             mockProg,
+				prompt:           mockPrompter,
 			}
 
 			// WHEN

@@ -15,6 +15,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecslogging"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
 )
@@ -35,11 +36,11 @@ type svcLogsVars struct {
 	limit            int
 	svcName          string
 	envName          string
+	appName          string
 	humanStartTime   string
 	humanEndTime     string
 	taskIDs          []string
 	since            time.Duration
-	*GlobalOpts
 }
 
 type svcLogsOpts struct {
@@ -71,14 +72,14 @@ func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
 		w:           log.OutputWriter,
 		configStore: configStore,
 		deployStore: deployStore,
-		sel:         selector.NewDeploySelect(vars.prompt, configStore, deployStore),
+		sel:         selector.NewDeploySelect(prompt.New(), configStore, deployStore),
 	}
 	opts.initLogsSvc = func() error {
 		configStore, err := config.NewStore()
 		if err != nil {
 			return fmt.Errorf("connect to environment config store: %w", err)
 		}
-		env, err := configStore.GetEnvironment(opts.AppName(), opts.envName)
+		env, err := configStore.GetEnvironment(opts.appName, opts.envName)
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
 		}
@@ -86,7 +87,7 @@ func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
 		if err != nil {
 			return err
 		}
-		opts.logsSvc = ecslogging.NewServiceClient(sess, opts.AppName(), opts.envName, opts.svcName)
+		opts.logsSvc = ecslogging.NewServiceClient(sess, opts.appName, opts.envName, opts.svcName)
 		return nil
 	}
 	return opts, nil
@@ -94,8 +95,8 @@ func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
 
 // Validate returns an error if the values provided by flags are invalid.
 func (o *svcLogsOpts) Validate() error {
-	if o.AppName() != "" {
-		_, err := o.configStore.GetApplication(o.AppName())
+	if o.appName != "" {
+		_, err := o.configStore.GetApplication(o.appName)
 		if err != nil {
 			return err
 		}
@@ -172,7 +173,7 @@ func (o *svcLogsOpts) Execute() error {
 }
 
 func (o *svcLogsOpts) askApp() error {
-	if o.AppName() != "" {
+	if o.appName != "" {
 		return nil
 	}
 	app, err := o.sel.Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt)
@@ -184,9 +185,9 @@ func (o *svcLogsOpts) askApp() error {
 }
 
 func (o *svcLogsOpts) askSvcEnvName() error {
-	deployedService, err := o.sel.DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, o.AppName(), selector.WithEnv(o.envName), selector.WithSvc(o.svcName))
+	deployedService, err := o.sel.DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithSvc(o.svcName))
 	if err != nil {
-		return fmt.Errorf("select deployed services for application %s: %w", o.AppName(), err)
+		return fmt.Errorf("select deployed services for application %s: %w", o.appName, err)
 	}
 	o.svcName = deployedService.Svc
 	o.envName = deployedService.Env
@@ -207,11 +208,9 @@ func (o *svcLogsOpts) parseRFC3339(timeStr string) (int64, error) {
 	return startTimeTmp.Unix() * 1000, nil
 }
 
-// BuildSvcLogsCmd builds the command for displaying service logs in an application.
-func BuildSvcLogsCmd() *cobra.Command {
-	vars := svcLogsVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildSvcLogsCmd builds the command for displaying service logs in an application.
+func buildSvcLogsCmd() *cobra.Command {
+	vars := svcLogsVars{}
 	cmd := &cobra.Command{
 		Use:   "logs",
 		Short: "Displays logs of a deployed service.",
@@ -241,9 +240,9 @@ func BuildSvcLogsCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
 	cmd.Flags().StringVarP(&vars.svcName, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVar(&vars.humanStartTime, startTimeFlag, "", startTimeFlagDescription)
 	cmd.Flags().StringVar(&vars.humanEndTime, endTimeFlag, "", endTimeFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)

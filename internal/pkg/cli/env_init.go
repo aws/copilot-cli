@@ -115,17 +115,17 @@ func (v tempCredsVars) isSet() bool {
 }
 
 type initEnvVars struct {
-	*GlobalOpts
-	Name          string // Name for the environment.
-	Profile       string // The named profile to use for credential retrieval. Mutually exclusive with TempCreds.
-	IsProduction  bool   // True means retain resources even after deletion.
-	DefaultConfig bool   // True means using default environment configuration.
+	appName       string
+	name          string // Name for the environment.
+	profile       string // The named profile to use for credential retrieval. Mutually exclusive with tempCreds.
+	isProduction  bool   // True means retain resources even after deletion.
+	defaultConfig bool   // True means using default environment configuration.
 
-	ImportVPC importVPCVars // Existing VPC resources to use instead of creating new ones.
-	AdjustVPC adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
+	importVPC importVPCVars // Existing VPC resources to use instead of creating new ones.
+	adjustVPC adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
 
-	TempCreds tempCredsVars // Temporary credentials to initialize the environment. Mutually exclusive with the Profile.
-	Region    string        // The region to create the environment in.
+	tempCreds tempCredsVars // Temporary credentials to initialize the environment. Mutually exclusive with the profile.
+	region    string        // The region to create the environment in.
 }
 
 type initEnvOpts struct {
@@ -140,6 +140,7 @@ type initEnvOpts struct {
 	envIdentity  identityService
 	ec2Client    ec2Client
 	prog         progress
+	prompt       prompter
 	selVPC       ec2Selector
 	selCreds     credsSelector
 
@@ -161,6 +162,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		return nil, fmt.Errorf("read named profiles: %w", err)
 	}
 
+	prompter := prompt.New()
 	return &initEnvOpts{
 		initEnvVars:  vars,
 		sessProvider: sessProvider,
@@ -168,22 +170,23 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		appDeployer:  deploycfn.New(defaultSession),
 		identity:     identity.New(defaultSession),
 		prog:         termprogress.NewSpinner(),
+		prompt:       prompter,
 		selCreds: &selector.CredsSelect{
 			Session: sessProvider,
 			Profile: cfg,
-			Prompt:  vars.prompt,
+			Prompt:  prompter,
 		},
 	}, nil
 }
 
 // Validate returns an error if the values passed by flags are invalid.
 func (o *initEnvOpts) Validate() error {
-	if o.Name != "" {
-		if err := validateEnvironmentName(o.Name); err != nil {
+	if o.name != "" {
+		if err := validateEnvironmentName(o.name); err != nil {
 			return err
 		}
 	}
-	if o.AppName() == "" {
+	if o.appName == "" {
 		return fmt.Errorf("no application found: run %s or %s into your workspace please", color.HighlightCode("app init"), color.HighlightCode("cd"))
 	}
 	if err := o.validateCustomizedResources(); err != nil {
@@ -216,7 +219,7 @@ func (o *initEnvOpts) Execute() error {
 		o.envDeployer = deploycfn.New(o.sess)
 	}
 
-	app, err := o.store.GetApplication(o.AppName())
+	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
 		// Ensure the app actually exists before we do a deployment.
 		return err
@@ -233,11 +236,11 @@ func (o *initEnvOpts) Execute() error {
 	}
 
 	// 2. Get the environment
-	env, err := o.envDeployer.GetEnvironment(o.AppName(), o.Name)
+	env, err := o.envDeployer.GetEnvironment(o.appName, o.name)
 	if err != nil {
-		return fmt.Errorf("get environment struct for %s: %w", o.Name, err)
+		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
 	}
-	env.Prod = o.IsProduction
+	env.Prod = o.isProduction
 
 	// 3. Add the stack set instance to the app stackset.
 	if err := o.addToStackset(app, env); err != nil {
@@ -259,17 +262,17 @@ func (o *initEnvOpts) RecommendedActions() []string {
 }
 
 func (o *initEnvOpts) validateCustomizedResources() error {
-	if o.ImportVPC.isSet() && o.AdjustVPC.isSet() {
+	if o.importVPC.isSet() && o.adjustVPC.isSet() {
 		return errors.New("cannot specify both import vpc flags and configure vpc flags")
 	}
-	if (o.ImportVPC.isSet() || o.AdjustVPC.isSet()) && o.DefaultConfig {
+	if (o.importVPC.isSet() || o.adjustVPC.isSet()) && o.defaultConfig {
 		return fmt.Errorf("cannot import or configure vpc if --%s is set", defaultConfigFlag)
 	}
 	return nil
 }
 
 func (o *initEnvOpts) askEnvName() error {
-	if o.Name != "" {
+	if o.name != "" {
 		return nil
 	}
 
@@ -277,28 +280,28 @@ func (o *initEnvOpts) askEnvName() error {
 	if err != nil {
 		return fmt.Errorf("get environment name: %w", err)
 	}
-	o.Name = envName
+	o.name = envName
 	return nil
 }
 
 func (o *initEnvOpts) askEnvSession() error {
-	if o.Profile != "" {
-		sess, err := o.sessProvider.FromProfile(o.Profile)
+	if o.profile != "" {
+		sess, err := o.sessProvider.FromProfile(o.profile)
 		if err != nil {
-			return fmt.Errorf("create session from profile %s: %w", o.Profile, err)
+			return fmt.Errorf("create session from profile %s: %w", o.profile, err)
 		}
 		o.sess = sess
 		return nil
 	}
-	if o.TempCreds.isSet() {
-		sess, err := o.sessProvider.FromStaticCreds(o.TempCreds.AccessKeyID, o.TempCreds.SecretAccessKey, o.TempCreds.SessionToken)
+	if o.tempCreds.isSet() {
+		sess, err := o.sessProvider.FromStaticCreds(o.tempCreds.AccessKeyID, o.tempCreds.SecretAccessKey, o.tempCreds.SessionToken)
 		if err != nil {
 			return err
 		}
 		o.sess = sess
 		return nil
 	}
-	sess, err := o.selCreds.Creds(fmt.Sprintf(fmtEnvInitCredsPrompt, color.HighlightUserInput(o.Name)), envInitCredsHelpPrompt)
+	sess, err := o.selCreds.Creds(fmt.Sprintf(fmtEnvInitCredsPrompt, color.HighlightUserInput(o.name)), envInitCredsHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select creds: %w", err)
 	}
@@ -308,8 +311,8 @@ func (o *initEnvOpts) askEnvSession() error {
 
 func (o *initEnvOpts) askEnvRegion() error {
 	region := aws.StringValue(o.sess.Config.Region)
-	if o.Region != "" {
-		region = o.Region
+	if o.region != "" {
+		region = o.region
 	}
 	if region == "" {
 		v, err := o.prompt.Get(envInitRegionPrompt, "", nil, prompt.WithDefaultInput(envInitDefaultRegionOption))
@@ -323,13 +326,13 @@ func (o *initEnvOpts) askEnvRegion() error {
 }
 
 func (o *initEnvOpts) askCustomizedResources() error {
-	if o.DefaultConfig {
+	if o.defaultConfig {
 		return nil
 	}
-	if o.ImportVPC.isSet() {
+	if o.importVPC.isSet() {
 		return o.askImportResources()
 	}
-	if o.AdjustVPC.isSet() {
+	if o.adjustVPC.isSet() {
 		return o.askAdjustResources()
 	}
 	adjustOrImport, err := o.prompt.SelectOne(
@@ -353,7 +356,7 @@ func (o *initEnvOpts) askImportResources() error {
 	if o.selVPC == nil {
 		o.selVPC = selector.NewEC2Select(o.prompt, ec2.New(o.sess))
 	}
-	if o.ImportVPC.ID == "" {
+	if o.importVPC.ID == "" {
 		vpcID, err := o.selVPC.VPC(envInitVPCSelectPrompt, "")
 		if err != nil {
 			if err == selector.ErrVPCNotFound {
@@ -364,51 +367,51 @@ func (o *initEnvOpts) askImportResources() error {
 			}
 			return fmt.Errorf("select VPC: %w", err)
 		}
-		o.ImportVPC.ID = vpcID
+		o.importVPC.ID = vpcID
 	}
 	if o.ec2Client == nil {
 		o.ec2Client = ec2.New(o.sess)
 	}
-	dnsSupport, err := o.ec2Client.HasDNSSupport(o.ImportVPC.ID)
+	dnsSupport, err := o.ec2Client.HasDNSSupport(o.importVPC.ID)
 	if err != nil {
-		return fmt.Errorf("check if VPC %s has DNS support enabled: %w", o.ImportVPC.ID, err)
+		return fmt.Errorf("check if VPC %s has DNS support enabled: %w", o.importVPC.ID, err)
 	}
 	if !dnsSupport {
 		log.Errorln(`Looks like you're creating an environment using a VPC with DNS support *disabled*.
 Copilot cannot create services in VPCs without DNS support. We recommend enabling this property.
 To learn more about the issue:
 https://aws.amazon.com/premiumsupport/knowledge-center/ecs-pull-container-api-error-ecr/`)
-		return fmt.Errorf("VPC %s has no DNS support enabled", o.ImportVPC.ID)
+		return fmt.Errorf("VPC %s has no DNS support enabled", o.importVPC.ID)
 	}
-	if o.ImportVPC.PublicSubnetIDs == nil {
-		publicSubnets, err := o.selVPC.PublicSubnets(envInitPublicSubnetsSelectPrompt, "", o.ImportVPC.ID)
+	if o.importVPC.PublicSubnetIDs == nil {
+		publicSubnets, err := o.selVPC.PublicSubnets(envInitPublicSubnetsSelectPrompt, "", o.importVPC.ID)
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
 				log.Errorf(`No existing public subnets were found in VPC %s. You can either:
 - Create new public subnets and then import them.
-- Use the default Copilot environment configuration.`, o.ImportVPC.ID)
+- Use the default Copilot environment configuration.`, o.importVPC.ID)
 			}
 			return fmt.Errorf("select public subnets: %w", err)
 		}
-		o.ImportVPC.PublicSubnetIDs = publicSubnets
+		o.importVPC.PublicSubnetIDs = publicSubnets
 	}
-	if o.ImportVPC.PrivateSubnetIDs == nil {
-		privateSubnets, err := o.selVPC.PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", o.ImportVPC.ID)
+	if o.importVPC.PrivateSubnetIDs == nil {
+		privateSubnets, err := o.selVPC.PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", o.importVPC.ID)
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
 				log.Errorf(`No existing private subnets were found in VPC %s. You can either:
 - Create new private subnets and then import them.
-- Use the default Copilot environment configuration.`, o.ImportVPC.ID)
+- Use the default Copilot environment configuration.`, o.importVPC.ID)
 			}
 			return fmt.Errorf("select private subnets: %w", err)
 		}
-		o.ImportVPC.PrivateSubnetIDs = privateSubnets
+		o.importVPC.PrivateSubnetIDs = privateSubnets
 	}
 	return nil
 }
 
 func (o *initEnvOpts) askAdjustResources() error {
-	if o.AdjustVPC.CIDR.String() == emptyIPNet.String() {
+	if o.adjustVPC.CIDR.String() == emptyIPNet.String() {
 		vpcCIDRString, err := o.prompt.Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, validateCIDR,
 			prompt.WithDefaultInput(stack.DefaultVPCCIDR))
 		if err != nil {
@@ -418,46 +421,46 @@ func (o *initEnvOpts) askAdjustResources() error {
 		if err != nil {
 			return fmt.Errorf("parse VPC CIDR: %w", err)
 		}
-		o.AdjustVPC.CIDR = *vpcCIDR
+		o.adjustVPC.CIDR = *vpcCIDR
 	}
-	if o.AdjustVPC.PublicSubnetCIDRs == nil {
+	if o.adjustVPC.PublicSubnetCIDRs == nil {
 		publicCIDR, err := o.prompt.Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, validateCIDRSlice,
 			prompt.WithDefaultInput(stack.DefaultPublicSubnetCIDRs))
 		if err != nil {
 			return fmt.Errorf("get public subnet CIDRs: %w", err)
 		}
-		o.AdjustVPC.PublicSubnetCIDRs = strings.Split(publicCIDR, ",")
+		o.adjustVPC.PublicSubnetCIDRs = strings.Split(publicCIDR, ",")
 	}
-	if o.AdjustVPC.PrivateSubnetCIDRs == nil {
+	if o.adjustVPC.PrivateSubnetCIDRs == nil {
 		privateCIDR, err := o.prompt.Get(envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp, validateCIDRSlice,
 			prompt.WithDefaultInput(stack.DefaultPrivateSubnetCIDRs))
 		if err != nil {
 			return fmt.Errorf("get private subnet CIDRs: %w", err)
 		}
-		o.AdjustVPC.PrivateSubnetCIDRs = strings.Split(privateCIDR, ",")
+		o.adjustVPC.PrivateSubnetCIDRs = strings.Split(privateCIDR, ",")
 	}
 	return nil
 }
 
 func (o *initEnvOpts) importVPCConfig() *deploy.ImportVPCConfig {
-	if o.DefaultConfig || !o.ImportVPC.isSet() {
+	if o.defaultConfig || !o.importVPC.isSet() {
 		return nil
 	}
 	return &deploy.ImportVPCConfig{
-		ID:               o.ImportVPC.ID,
-		PrivateSubnetIDs: o.ImportVPC.PrivateSubnetIDs,
-		PublicSubnetIDs:  o.ImportVPC.PublicSubnetIDs,
+		ID:               o.importVPC.ID,
+		PrivateSubnetIDs: o.importVPC.PrivateSubnetIDs,
+		PublicSubnetIDs:  o.importVPC.PublicSubnetIDs,
 	}
 }
 
 func (o *initEnvOpts) adjustVPCConfig() *deploy.AdjustVPCConfig {
-	if o.DefaultConfig || !o.AdjustVPC.isSet() {
+	if o.defaultConfig || !o.adjustVPC.isSet() {
 		return nil
 	}
 	return &deploy.AdjustVPCConfig{
-		CIDR:               o.AdjustVPC.CIDR.String(),
-		PrivateSubnetCIDRs: o.AdjustVPC.PrivateSubnetCIDRs,
-		PublicSubnetCIDRs:  o.AdjustVPC.PublicSubnetCIDRs,
+		CIDR:               o.adjustVPC.CIDR.String(),
+		PrivateSubnetCIDRs: o.adjustVPC.PrivateSubnetCIDRs,
+		PublicSubnetCIDRs:  o.adjustVPC.PublicSubnetCIDRs,
 	}
 }
 
@@ -467,9 +470,9 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 		return fmt.Errorf("get identity: %w", err)
 	}
 	deployEnvInput := &deploy.CreateEnvironmentInput{
-		Name:                     o.Name,
-		AppName:                  o.AppName(),
-		Prod:                     o.IsProduction,
+		Name:                     o.name,
+		AppName:                  o.appName,
+		Prod:                     o.isProduction,
 		ToolsAccountPrincipalARN: caller.RootUserARN,
 		AppDNSName:               app.Domain,
 		AdditionalTags:           app.Tags,
@@ -477,42 +480,42 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 		ImportVPCConfig:          o.importVPCConfig(),
 	}
 
-	o.prog.Start(fmt.Sprintf(fmtDeployEnvStart, color.HighlightUserInput(o.Name)))
+	o.prog.Start(fmt.Sprintf(fmtDeployEnvStart, color.HighlightUserInput(o.name)))
 	if err := o.envDeployer.DeployEnvironment(deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
 			o.prog.Stop(log.Ssuccessf(fmtDeployEnvComplete,
-				color.HighlightUserInput(o.Name), color.HighlightUserInput(o.AppName())))
+				color.HighlightUserInput(o.name), color.HighlightUserInput(o.appName)))
 			return nil
 		}
-		o.prog.Stop(log.Serrorf(fmtDeployEnvFailed, color.HighlightUserInput(o.Name)))
+		o.prog.Stop(log.Serrorf(fmtDeployEnvFailed, color.HighlightUserInput(o.name)))
 		return err
 	}
 
 	// Display updates while the deployment is happening.
-	o.prog.Start(fmt.Sprintf(fmtStreamEnvStart, color.HighlightUserInput(o.Name)))
+	o.prog.Start(fmt.Sprintf(fmtStreamEnvStart, color.HighlightUserInput(o.name)))
 	stackEvents, responses := o.envDeployer.StreamEnvironmentCreation(deployEnvInput)
 	for stackEvent := range stackEvents {
 		o.prog.Events(o.humanizeEnvironmentEvents(stackEvent))
 	}
 	resp := <-responses
 	if resp.Err != nil {
-		o.prog.Stop(log.Serrorf(fmtStreamEnvFailed, color.HighlightUserInput(o.Name)))
+		o.prog.Stop(log.Serrorf(fmtStreamEnvFailed, color.HighlightUserInput(o.name)))
 		return resp.Err
 	}
-	o.prog.Stop(log.Ssuccessf(fmtStreamEnvComplete, color.HighlightUserInput(o.Name)))
+	o.prog.Stop(log.Ssuccessf(fmtStreamEnvComplete, color.HighlightUserInput(o.name)))
 
 	return nil
 }
 
 func (o *initEnvOpts) addToStackset(app *config.Application, env *config.Environment) error {
-	o.prog.Start(fmt.Sprintf(fmtAddEnvToAppStart, color.Emphasize(env.AccountID), color.Emphasize(env.Region), color.HighlightUserInput(o.AppName())))
+	o.prog.Start(fmt.Sprintf(fmtAddEnvToAppStart, color.Emphasize(env.AccountID), color.Emphasize(env.Region), color.HighlightUserInput(o.appName)))
 	if err := o.appDeployer.AddEnvToApp(app, env); err != nil {
-		o.prog.Stop(log.Serrorf(fmtAddEnvToAppFailed, color.Emphasize(env.AccountID), color.Emphasize(env.Region), color.HighlightUserInput(o.AppName())))
+		o.prog.Stop(log.Serrorf(fmtAddEnvToAppFailed, color.Emphasize(env.AccountID), color.Emphasize(env.Region), color.HighlightUserInput(o.appName)))
 		return fmt.Errorf("deploy env %s to application %s: %w", env.Name, app.Name, err)
 	}
-	o.prog.Stop(log.Ssuccessf(fmtAddEnvToAppComplete, color.Emphasize(env.AccountID), color.Emphasize(env.Region), color.HighlightUserInput(o.AppName())))
+	o.prog.Stop(log.Ssuccessf(fmtAddEnvToAppComplete, color.Emphasize(env.AccountID), color.Emphasize(env.Region), color.HighlightUserInput(o.appName)))
 
 	return nil
 }
@@ -569,7 +572,7 @@ func (o *initEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.Resource
 }
 
 func (o *initEnvOpts) envProgressOrder() (order []termprogress.Text) {
-	if !o.ImportVPC.isSet() {
+	if !o.importVPC.isSet() {
 		order = append(order, []termprogress.Text{textVPC, textInternetGateway, textPublicSubnets, textPrivateSubnets, textRouteTables}...)
 	}
 	order = append(order, []termprogress.Text{textECSCluster, textALB}...)
@@ -577,23 +580,21 @@ func (o *initEnvOpts) envProgressOrder() (order []termprogress.Text) {
 }
 
 func (o *initEnvOpts) validateCredentials() error {
-	if o.Profile != "" && o.TempCreds.AccessKeyID != "" {
+	if o.profile != "" && o.tempCreds.AccessKeyID != "" {
 		return fmt.Errorf("cannot specify both --%s and --%s", profileFlag, accessKeyIDFlag)
 	}
-	if o.Profile != "" && o.TempCreds.SecretAccessKey != "" {
+	if o.profile != "" && o.tempCreds.SecretAccessKey != "" {
 		return fmt.Errorf("cannot specify both --%s and --%s", profileFlag, secretAccessKeyFlag)
 	}
-	if o.Profile != "" && o.TempCreds.SessionToken != "" {
+	if o.profile != "" && o.tempCreds.SessionToken != "" {
 		return fmt.Errorf("cannot specify both --%s and --%s", profileFlag, sessionTokenFlag)
 	}
 	return nil
 }
 
-// BuildEnvInitCmd builds the command for adding an environment.
-func BuildEnvInitCmd() *cobra.Command {
-	vars := initEnvVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildEnvInitCmd builds the command for adding an environment.
+func buildEnvInitCmd() *cobra.Command {
+	vars := initEnvVars{}
 
 	cmd := &cobra.Command{
 		Use:   "init",
@@ -628,27 +629,28 @@ func BuildEnvInitCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.Name, nameFlag, nameFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVar(&vars.profile, profileFlag, "", profileFlagDescription)
+	cmd.Flags().StringVar(&vars.tempCreds.AccessKeyID, accessKeyIDFlag, "", accessKeyIDFlagDescription)
+	cmd.Flags().StringVar(&vars.tempCreds.SecretAccessKey, secretAccessKeyFlag, "", secretAccessKeyFlagDescription)
+	cmd.Flags().StringVar(&vars.tempCreds.SessionToken, sessionTokenFlag, "", sessionTokenFlagDescription)
+	cmd.Flags().StringVar(&vars.region, regionFlag, "", envRegionTokenFlagDescription)
 
-	cmd.Flags().StringVar(&vars.Profile, profileFlag, "", profileFlagDescription)
-	cmd.Flags().StringVar(&vars.TempCreds.AccessKeyID, accessKeyIDFlag, "", accessKeyIDFlagDescription)
-	cmd.Flags().StringVar(&vars.TempCreds.SecretAccessKey, secretAccessKeyFlag, "", secretAccessKeyFlagDescription)
-	cmd.Flags().StringVar(&vars.TempCreds.SessionToken, sessionTokenFlag, "", sessionTokenFlagDescription)
-	cmd.Flags().StringVar(&vars.Region, regionFlag, "", envRegionTokenFlagDescription)
+	cmd.Flags().BoolVar(&vars.isProduction, prodEnvFlag, false, prodEnvFlagDescription)
 
-	cmd.Flags().BoolVar(&vars.IsProduction, prodEnvFlag, false, prodEnvFlagDescription)
+	cmd.Flags().StringVar(&vars.importVPC.ID, vpcIDFlag, "", vpcIDFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.importVPC.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.importVPC.PrivateSubnetIDs, privateSubnetsFlag, nil, privateSubnetsFlagDescription)
 
-	cmd.Flags().StringVar(&vars.ImportVPC.ID, vpcIDFlag, "", vpcIDFlagDescription)
-	cmd.Flags().StringSliceVar(&vars.ImportVPC.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
-	cmd.Flags().StringSliceVar(&vars.ImportVPC.PrivateSubnetIDs, privateSubnetsFlag, nil, privateSubnetsFlagDescription)
-
-	cmd.Flags().IPNetVar(&vars.AdjustVPC.CIDR, vpcCIDRFlag, net.IPNet{}, vpcCIDRFlagDescription)
+	cmd.Flags().IPNetVar(&vars.adjustVPC.CIDR, vpcCIDRFlag, net.IPNet{}, vpcCIDRFlagDescription)
 	// TODO: use IPNetSliceVar when it is available (https://github.com/spf13/pflag/issues/273).
-	cmd.Flags().StringSliceVar(&vars.AdjustVPC.PublicSubnetCIDRs, publicSubnetCIDRsFlag, nil, publicSubnetCIDRsFlagDescription)
-	cmd.Flags().StringSliceVar(&vars.AdjustVPC.PrivateSubnetCIDRs, privateSubnetCIDRsFlag, nil, privateSubnetCIDRsFlagDescription)
-	cmd.Flags().BoolVar(&vars.DefaultConfig, defaultConfigFlag, false, defaultConfigFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.adjustVPC.PublicSubnetCIDRs, publicSubnetCIDRsFlag, nil, publicSubnetCIDRsFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.adjustVPC.PrivateSubnetCIDRs, privateSubnetCIDRsFlag, nil, privateSubnetCIDRsFlagDescription)
+	cmd.Flags().BoolVar(&vars.defaultConfig, defaultConfigFlag, false, defaultConfigFlagDescription)
 
 	flags := pflag.NewFlagSet("Common", pflag.ContinueOnError)
+	flags.AddFlag(cmd.Flags().Lookup(appFlag))
 	flags.AddFlag(cmd.Flags().Lookup(nameFlag))
 	flags.AddFlag(cmd.Flags().Lookup(profileFlag))
 	flags.AddFlag(cmd.Flags().Lookup(accessKeyIDFlag))

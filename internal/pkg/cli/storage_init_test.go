@@ -173,9 +173,6 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			tc.mockStore(mockStore)
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inAppName,
-					},
 					storageType:  tc.inStorageType,
 					storageName:  tc.inStorageName,
 					storageSvc:   tc.inSvcName,
@@ -185,8 +182,9 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 					noLSI:        tc.inNoLSI,
 					noSort:       tc.inNoSort,
 				},
-				ws:    mockWs,
-				store: mockStore,
+				appName: tc.inAppName,
+				ws:      mockWs,
+				store:   mockStore,
 			}
 
 			// WHEN
@@ -559,9 +557,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedVars: &initStorageVars{
-				GlobalOpts: &GlobalOpts{
-					appName: wantedAppName,
-				},
 				storageName: wantedTableName,
 				storageSvc:  wantedSvcName,
 				storageType: dynamoDBStorageType,
@@ -590,9 +585,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedVars: &initStorageVars{
-				GlobalOpts: &GlobalOpts{
-					appName: wantedAppName,
-				},
 				storageName: wantedTableName,
 				storageSvc:  wantedSvcName,
 				storageType: dynamoDBStorageType,
@@ -619,9 +611,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedVars: &initStorageVars{
-				GlobalOpts: &GlobalOpts{
-					appName: wantedAppName,
-				},
 				storageName: wantedTableName,
 				storageSvc:  wantedSvcName,
 				storageType: dynamoDBStorageType,
@@ -729,10 +718,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockConfig := mocks.NewMockwsSelector(ctrl)
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inAppName,
-						prompt:  mockPrompt,
-					},
 					storageType:  tc.inStorageType,
 					storageName:  tc.inStorageName,
 					storageSvc:   tc.inSvcName,
@@ -742,7 +727,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					noLSI:        tc.inNoLSI,
 					noSort:       tc.inNoSort,
 				},
-				sel: mockConfig,
+				appName: tc.inAppName,
+				sel:     mockConfig,
+				prompt:  mockPrompt,
 			}
 			tc.mockPrompt(mockPrompt)
 			tc.mockCfg(mockConfig)
@@ -756,7 +743,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				require.NoError(t, err)
 			}
 			if tc.wantedVars != nil {
-				tc.wantedVars.prompt = opts.prompt
 				require.Equal(t, *tc.wantedVars, opts.initStorageVars)
 			}
 		})
@@ -864,9 +850,6 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			mockAddon := mocks.NewMockwsAddonManager(ctrl)
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inAppName,
-					},
 					storageType:  tc.inStorageType,
 					storageName:  tc.inStorageName,
 					storageSvc:   tc.inSvcName,
@@ -876,7 +859,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 					noLSI:        tc.inNoLSI,
 					noSort:       tc.inNoSort,
 				},
-				ws: mockAddon,
+				appName: tc.inAppName,
+				ws:      mockAddon,
 			}
 			tc.mockWs(mockAddon)
 			// WHEN

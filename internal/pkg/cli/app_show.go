@@ -8,6 +8,7 @@ import (
 	"io"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
 	"github.com/aws/copilot-cli/internal/pkg/describe"
@@ -21,16 +22,17 @@ const (
 )
 
 type showAppVars struct {
-	*GlobalOpts
+	name             string
 	shouldOutputJSON bool
 }
 
 type showAppOpts struct {
 	showAppVars
 
-	store store
-	w     io.Writer
-	sel   appSelector
+	prompt prompter
+	store  store
+	w      io.Writer
+	sel    appSelector
 }
 
 func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
@@ -39,20 +41,22 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
 
+	prompter := prompt.New()
 	return &showAppOpts{
 		showAppVars: vars,
 		store:       store,
 		w:           log.OutputWriter,
-		sel:         selector.NewSelect(vars.prompt, store),
+		prompt:      prompter,
+		sel:         selector.NewSelect(prompter, store),
 	}, nil
 }
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showAppOpts) Validate() error {
-	if o.AppName() != "" {
-		_, err := o.store.GetApplication(o.AppName())
+	if o.name != "" {
+		_, err := o.store.GetApplication(o.name)
 		if err != nil {
-			return fmt.Errorf("get application %s: %w", o.AppName(), err)
+			return fmt.Errorf("get application %s: %w", o.name, err)
 		}
 	}
 
@@ -87,17 +91,17 @@ func (o *showAppOpts) Execute() error {
 }
 
 func (o *showAppOpts) description() (*describe.App, error) {
-	app, err := o.store.GetApplication(o.AppName())
+	app, err := o.store.GetApplication(o.name)
 	if err != nil {
-		return nil, fmt.Errorf("get application %s: %w", o.AppName(), err)
+		return nil, fmt.Errorf("get application %s: %w", o.name, err)
 	}
-	envs, err := o.store.ListEnvironments(o.AppName())
+	envs, err := o.store.ListEnvironments(o.name)
 	if err != nil {
-		return nil, fmt.Errorf("list environments in application %s: %w", o.AppName(), err)
+		return nil, fmt.Errorf("list environments in application %s: %w", o.name, err)
 	}
-	svcs, err := o.store.ListServices(o.AppName())
+	svcs, err := o.store.ListServices(o.name)
 	if err != nil {
-		return nil, fmt.Errorf("list services in application %s: %w", o.AppName(), err)
+		return nil, fmt.Errorf("list services in application %s: %w", o.name, err)
 	}
 	var trimmedEnvs []*config.Environment
 	for _, env := range envs {
@@ -124,22 +128,20 @@ func (o *showAppOpts) description() (*describe.App, error) {
 }
 
 func (o *showAppOpts) askName() error {
-	if o.AppName() != "" {
+	if o.name != "" {
 		return nil
 	}
 	name, err := o.sel.Application(appShowNamePrompt, appShowNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application: %w", err)
 	}
-	o.appName = name
+	o.name = name
 	return nil
 }
 
-// BuildAppShowCmd builds the command for showing details of an application.
-func BuildAppShowCmd() *cobra.Command {
-	vars := showAppVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildAppShowCmd builds the command for showing details of an application.
+func buildAppShowCmd() *cobra.Command {
+	vars := showAppVars{}
 	cmd := &cobra.Command{
 		Use:   "show",
 		Short: "Shows info about an application.",
@@ -167,6 +169,6 @@ func BuildAppShowCmd() *cobra.Command {
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
-	cmd.Flags().StringVarP(&vars.appName, nameFlag, nameFlagShort, "" /* default */, appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, tryReadingAppName(), appFlagDescription)
 	return cmd
 }

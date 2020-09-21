@@ -24,7 +24,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -94,7 +93,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 	initAppCmd := &initAppOpts{
 		initAppVars: initAppVars{
-			AppName: vars.appName,
+			name: vars.appName,
 		},
 		store:    ssm,
 		ws:       ws,
@@ -105,30 +104,32 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	initSvcCmd := &initSvcOpts{
 		initSvcVars: initSvcVars{
-			ServiceType:    vars.svcType,
-			Name:           vars.svcName,
-			DockerfilePath: vars.dockerfilePath,
-			Port:           vars.port,
-			GlobalOpts:     NewGlobalOpts(),
+			serviceType:    vars.svcType,
+			name:           vars.svcName,
+			dockerfilePath: vars.dockerfilePath,
+			port:           vars.port,
+			appName:        vars.appName,
 		},
 		fs:          &afero.Afero{Fs: afero.NewOsFs()},
 		ws:          ws,
 		store:       ssm,
 		appDeployer: deployer,
 		prog:        spin,
+		prompt:      prompt,
 		setupParser: func(o *initSvcOpts) {
-			o.df = dockerfile.New(o.fs, o.DockerfilePath)
+			o.df = dockerfile.New(o.fs, o.dockerfilePath)
 		},
 	}
 	initEnvCmd := &initEnvOpts{
 		initEnvVars: initEnvVars{
-			GlobalOpts:   NewGlobalOpts(),
-			Name:         defaultEnvironmentName,
-			IsProduction: false,
+			appName:      vars.appName,
+			name:         defaultEnvironmentName,
+			isProduction: false,
 		},
 		store:       ssm,
 		appDeployer: deployer,
 		prog:        spin,
+		prompt:      prompt,
 		identity:    id,
 
 		sess: defaultSess,
@@ -136,12 +137,13 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 	deploySvcCmd := &deploySvcOpts{
 		deploySvcVars: deploySvcVars{
-			EnvName:    defaultEnvironmentName,
-			ImageTag:   vars.imageTag,
-			GlobalOpts: NewGlobalOpts(),
+			envName:  defaultEnvironmentName,
+			imageTag: vars.imageTag,
+			appName:  vars.appName,
 		},
 
 		store:        ssm,
+		prompt:       prompt,
 		ws:           ws,
 		unmarshal:    manifest.UnmarshalWorkload,
 		sel:          selector.NewWorkspaceSelect(prompt, ssm, ws),
@@ -158,11 +160,11 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		initEnvCmd:   initEnvCmd,
 		deploySvcCmd: deploySvcCmd,
 
-		appName:        &initAppCmd.AppName,
-		svcType:        &initSvcCmd.ServiceType,
-		svcName:        &initSvcCmd.Name,
-		svcPort:        &initSvcCmd.Port,
-		dockerfilePath: &initSvcCmd.DockerfilePath,
+		appName:        &initAppCmd.name,
+		svcType:        &initSvcCmd.serviceType,
+		svcName:        &initSvcCmd.name,
+		svcPort:        &initSvcCmd.port,
+		dockerfilePath: &initSvcCmd.dockerfilePath,
 
 		prompt: prompt,
 	}, nil
@@ -209,12 +211,15 @@ func (o *initOpts) loadApp() error {
 	if err := o.initAppCmd.Validate(); err != nil {
 		return err
 	}
-	// Write the application name to viper so that sub-commands can retrieve its value.
-	viper.Set(appFlag, o.appName)
 	return nil
 }
 
 func (o *initOpts) loadSvc() error {
+	if initSvcOpts, ok := o.initSvcCmd.(*initSvcOpts); ok {
+		// Set the application name from app init to the service init command.
+		initSvcOpts.appName = *o.appName
+	}
+
 	if err := o.initSvcCmd.Ask(); err != nil {
 		return fmt.Errorf("ask svc init: %w", err)
 	}
@@ -233,6 +238,10 @@ func (o *initOpts) deployEnv() error {
 		// User chose not to deploy the service, exit.
 		return nil
 	}
+	if initEnvCmd, ok := o.initEnvCmd.(*initEnvOpts); ok {
+		// Set the application name from app init to the env init command.
+		initEnvCmd.appName = *o.appName
+	}
 
 	log.Infoln()
 	return o.initEnvCmd.Execute()
@@ -243,8 +252,9 @@ func (o *initOpts) deploySvc() error {
 		return nil
 	}
 	if deployOpts, ok := o.deploySvcCmd.(*deploySvcOpts); ok {
-		// Set the service's name to the deploy sub-command.
-		deployOpts.Name = *o.svcName
+		// Set the service's name and app name to the deploy sub-command.
+		deployOpts.name = *o.svcName
+		deployOpts.appName = *o.appName
 	}
 
 	if err := o.deploySvcCmd.Ask(); err != nil {
@@ -289,7 +299,7 @@ func BuildInitCmd() *cobra.Command {
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.svcName, svcFlag, svcFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.svcType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)

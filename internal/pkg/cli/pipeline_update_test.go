@@ -161,7 +161,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 
 			opts := &updatePipelineOpts{
 				updatePipelineVars: updatePipelineVars{
-					GlobalOpts: &GlobalOpts{appName: tc.inAppName},
+					appName: tc.inAppName,
 				},
 				envStore: mockEnvStore,
 				ws:       mockWorkspace,
@@ -601,11 +601,8 @@ stages:
 
 			opts := &updatePipelineOpts{
 				updatePipelineVars: updatePipelineVars{
-					PipelineName: tc.inPipelineName,
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inAppName,
-						prompt:  mockPrompt,
-					},
+					pipelineName: tc.inPipelineName,
+					appName:      tc.inAppName,
 				},
 				pipelineDeployer: mockPipelineDeployer,
 				ws:               mockWorkspace,
@@ -613,6 +610,7 @@ stages:
 				region:           tc.inRegion,
 				envStore:         mockEnvStore,
 				prog:             mockProgress,
+				prompt:           mockPrompt,
 			}
 
 			// WHEN

@@ -18,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
 )
@@ -46,10 +47,10 @@ type resourceGetter interface {
 }
 
 type deleteEnvVars struct {
-	*GlobalOpts
-	EnvName          string
-	EnvProfile       string
-	SkipConfirmation bool
+	appName          string
+	name             string
+	profile          string
+	skipConfirmation bool
 }
 
 type deleteEnvOpts struct {
@@ -60,6 +61,7 @@ type deleteEnvOpts struct {
 	deployClient  environmentDeployer
 	profileConfig profileNames
 	prog          progress
+	prompt        prompter
 	sel           configSelector
 
 	// initProfileClients is overriden in tests.
@@ -76,16 +78,18 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 		return nil, err
 	}
 
+	prompter := prompt.New()
 	return &deleteEnvOpts{
 		deleteEnvVars: vars,
 		store:         store,
 		profileConfig: cfg,
 		prog:          termprogress.NewSpinner(),
-		sel:           selector.NewConfigSelect(vars.prompt, store),
+		sel:           selector.NewConfigSelect(prompter, store),
+		prompt:        prompter,
 		initProfileClients: func(o *deleteEnvOpts) error {
-			profileSess, err := sessions.NewProvider().FromProfile(o.EnvProfile)
+			profileSess, err := sessions.NewProvider().FromProfile(o.profile)
 			if err != nil {
-				return fmt.Errorf("cannot create session from profile %s: %w", o.EnvProfile, err)
+				return fmt.Errorf("cannot create session from profile %s: %w", o.profile, err)
 			}
 			o.rgClient = resourcegroupstaggingapi.New(profileSess)
 			o.deployClient = cloudformation.New(profileSess)
@@ -96,7 +100,7 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 
 // Validate returns an error if the individual user inputs are invalid.
 func (o *deleteEnvOpts) Validate() error {
-	if o.EnvName != "" {
+	if o.name != "" {
 		if err := o.validateEnvName(); err != nil {
 			return err
 		}
@@ -113,12 +117,12 @@ func (o *deleteEnvOpts) Ask() error {
 		return err
 	}
 
-	if o.SkipConfirmation {
+	if o.skipConfirmation {
 		return nil
 	}
-	deleteConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, o.EnvName, o.AppName()), "")
+	deleteConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, o.name, o.appName), "")
 	if err != nil {
-		return fmt.Errorf("confirm to delete environment %s: %w", o.EnvName, err)
+		return fmt.Errorf("confirm to delete environment %s: %w", o.name, err)
 	}
 	if !deleteConfirmed {
 		return errEnvDeleteCancelled
@@ -153,7 +157,7 @@ func (o *deleteEnvOpts) RecommendedActions() []string {
 }
 
 func (o *deleteEnvOpts) validateEnvName() error {
-	if _, err := o.store.GetEnvironment(o.AppName(), o.EnvName); err != nil {
+	if _, err := o.store.GetEnvironment(o.appName, o.name); err != nil {
 		return err
 	}
 	return nil
@@ -169,11 +173,11 @@ func (o *deleteEnvOpts) validateNoRunningServices() error {
 			},
 			{
 				Key:    aws.String(deploy.EnvTagKey),
-				Values: []*string{aws.String(o.EnvName)},
+				Values: []*string{aws.String(o.name)},
 			},
 			{
 				Key:    aws.String(deploy.AppTagKey),
-				Values: []*string{aws.String(o.AppName())},
+				Values: []*string{aws.String(o.appName)},
 			},
 		},
 	})
@@ -190,25 +194,25 @@ func (o *deleteEnvOpts) validateNoRunningServices() error {
 				svcNames = append(svcNames, *t.Value)
 			}
 		}
-		return fmt.Errorf("service '%s' still exist within the environment %s", strings.Join(svcNames, ", "), o.EnvName)
+		return fmt.Errorf("service '%s' still exist within the environment %s", strings.Join(svcNames, ", "), o.name)
 	}
 	return nil
 }
 
 func (o *deleteEnvOpts) askEnvName() error {
-	if o.EnvName != "" {
+	if o.name != "" {
 		return nil
 	}
-	env, err := o.sel.Environment(envDeleteNamePrompt, "", o.AppName())
+	env, err := o.sel.Environment(envDeleteNamePrompt, "", o.appName)
 	if err != nil {
 		return fmt.Errorf("select environment to delete: %w", err)
 	}
-	o.EnvName = env
+	o.name = env
 	return nil
 }
 
 func (o *deleteEnvOpts) askProfile() error {
-	if o.EnvProfile != "" {
+	if o.profile != "" {
 		return nil
 	}
 
@@ -217,44 +221,42 @@ func (o *deleteEnvOpts) askProfile() error {
 		return errNamedProfilesNotFound
 	}
 	if len(names) == 1 {
-		o.EnvProfile = names[0]
-		log.Infof("Only found one profile, defaulting to: %s\n", color.HighlightUserInput(o.EnvProfile))
+		o.profile = names[0]
+		log.Infof("Only found one profile, defaulting to: %s\n", color.HighlightUserInput(o.profile))
 		return nil
 	}
 
 	profile, err := o.prompt.SelectOne(
-		fmt.Sprintf(fmtEnvDeleteProfilePrompt, color.HighlightUserInput(o.EnvName)),
+		fmt.Sprintf(fmtEnvDeleteProfilePrompt, color.HighlightUserInput(o.name)),
 		envDeleteProfileHelpPrompt,
 		names)
 	if err != nil {
 		return fmt.Errorf("get the profile name: %w", err)
 	}
-	o.EnvProfile = profile
+	o.profile = profile
 	return nil
 }
 
 // deleteStack returns true if the stack was deleted successfully. Otherwise, returns false.
 func (o *deleteEnvOpts) deleteStack() bool {
-	o.prog.Start(fmt.Sprintf(fmtDeleteEnvStart, o.EnvName, o.AppName()))
-	if err := o.deployClient.DeleteEnvironment(o.AppName(), o.EnvName); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.EnvName, o.AppName(), err))
+	o.prog.Start(fmt.Sprintf(fmtDeleteEnvStart, o.name, o.appName))
+	if err := o.deployClient.DeleteEnvironment(o.appName, o.name); err != nil {
+		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.name, o.appName, err))
 		return false
 	}
-	o.prog.Stop(log.Ssuccessf(fmtDeleteEnvComplete, o.EnvName, o.AppName()))
+	o.prog.Stop(log.Ssuccessf(fmtDeleteEnvComplete, o.name, o.appName))
 	return true
 }
 
 func (o *deleteEnvOpts) deleteFromStore() {
-	if err := o.store.DeleteEnvironment(o.AppName(), o.EnvName); err != nil {
-		log.Infof("Failed to remove environment %s from application %s store: %v\n", o.EnvName, o.AppName(), err)
+	if err := o.store.DeleteEnvironment(o.appName, o.name); err != nil {
+		log.Infof("Failed to remove environment %s from application %s store: %v\n", o.name, o.appName, err)
 	}
 }
 
-// BuildEnvDeleteCmd builds the command to delete environment(s).
-func BuildEnvDeleteCmd() *cobra.Command {
-	vars := deleteEnvVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildEnvDeleteCmd builds the command to delete environment(s).
+func buildEnvDeleteCmd() *cobra.Command {
+	vars := deleteEnvVars{}
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Deletes an environment from your application.",
@@ -278,8 +280,9 @@ func BuildEnvDeleteCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.EnvName, nameFlag, nameFlagShort, "", envFlagDescription)
-	cmd.Flags().StringVar(&vars.EnvProfile, profileFlag, "", profileFlagDescription)
-	cmd.Flags().BoolVar(&vars.SkipConfirmation, yesFlag, false, yesFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVar(&vars.profile, profileFlag, "", profileFlagDescription)
+	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
 	return cmd
 }

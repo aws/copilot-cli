@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
 )
@@ -24,10 +25,10 @@ const (
 )
 
 type showEnvVars struct {
-	*GlobalOpts
+	appName               string
+	name                  string
 	shouldOutputJSON      bool
 	shouldOutputResources bool
-	envName               string
 }
 
 type showEnvOpts struct {
@@ -54,18 +55,18 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 		showEnvVars: vars,
 		store:       configStore,
 		w:           log.OutputWriter,
-		sel:         selector.NewConfigSelect(vars.prompt, configStore),
+		sel:         selector.NewConfigSelect(prompt.New(), configStore),
 	}
 	opts.initEnvDescriber = func() error {
 		d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-			App:             opts.AppName(),
-			Env:             opts.envName,
+			App:             opts.appName,
+			Env:             opts.name,
 			ConfigStore:     configStore,
 			DeployStore:     deployStore,
 			EnableResources: opts.shouldOutputResources,
 		})
 		if err != nil {
-			return fmt.Errorf("creating describer for environment %s in application %s: %w", opts.envName, opts.AppName(), err)
+			return fmt.Errorf("creating describer for environment %s in application %s: %w", opts.name, opts.appName, err)
 		}
 		opts.describer = d
 		return nil
@@ -75,13 +76,13 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showEnvOpts) Validate() error {
-	if o.AppName() != "" {
-		if _, err := o.store.GetApplication(o.AppName()); err != nil {
+	if o.appName != "" {
+		if _, err := o.store.GetApplication(o.appName); err != nil {
 			return err
 		}
 	}
-	if o.envName != "" {
-		if _, err := o.store.GetEnvironment(o.AppName(), o.envName); err != nil {
+	if o.name != "" {
+		if _, err := o.store.GetEnvironment(o.appName, o.name); err != nil {
 			return err
 		}
 	}
@@ -104,7 +105,7 @@ func (o *showEnvOpts) Execute() error {
 	}
 	env, err := o.describer.Describe()
 	if err != nil {
-		return fmt.Errorf("describe environment %s: %w", o.envName, err)
+		return fmt.Errorf("describe environment %s: %w", o.name, err)
 	}
 	if o.shouldOutputJSON {
 		data, err := env.JSONString()
@@ -120,7 +121,7 @@ func (o *showEnvOpts) Execute() error {
 }
 
 func (o *showEnvOpts) askApp() error {
-	if o.AppName() != "" {
+	if o.appName != "" {
 		return nil
 	}
 	app, err := o.sel.Application(envShowAppNamePrompt, envShowAppNameHelpPrompt)
@@ -133,23 +134,21 @@ func (o *showEnvOpts) askApp() error {
 
 func (o *showEnvOpts) askEnvName() error {
 	//return if env name is set by flag
-	if o.envName != "" {
+	if o.name != "" {
 		return nil
 	}
-	env, err := o.sel.Environment(fmt.Sprintf(envShowNamePrompt, color.HighlightUserInput(o.AppName())), envShowHelpPrompt, o.AppName())
+	env, err := o.sel.Environment(fmt.Sprintf(envShowNamePrompt, color.HighlightUserInput(o.appName)), envShowHelpPrompt, o.appName)
 	if err != nil {
-		return fmt.Errorf("select environment for application %s: %w", o.AppName(), err)
+		return fmt.Errorf("select environment for application %s: %w", o.appName, err)
 	}
-	o.envName = env
+	o.name = env
 
 	return nil
 }
 
-// BuildEnvShowCmd builds the command for showing environments in an application.
-func BuildEnvShowCmd() *cobra.Command {
-	vars := showEnvVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildEnvShowCmd builds the command for showing environments in an application.
+func buildEnvShowCmd() *cobra.Command {
+	vars := showEnvVars{}
 	cmd := &cobra.Command{
 		Use:   "show",
 		Short: "Shows info about a deployed environment.",
@@ -172,8 +171,8 @@ func BuildEnvShowCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
-	cmd.Flags().StringVarP(&vars.envName, nameFlag, nameFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputResources, resourcesFlag, false, envResourcesFlagDescription)
 	return cmd

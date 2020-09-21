@@ -60,11 +60,11 @@ const (
 )
 
 type initSvcVars struct {
-	*GlobalOpts
-	ServiceType    string
-	Name           string
-	DockerfilePath string
-	Port           uint16
+	appName        string
+	serviceType    string
+	name           string
+	dockerfilePath string
+	port           uint16
 }
 
 type initSvcOpts struct {
@@ -76,6 +76,7 @@ type initSvcOpts struct {
 	store       store
 	appDeployer appDeployer
 	prog        progress
+	prompt      prompter
 	df          dockerfileParser
 
 	// Outputs stored on successful actions.
@@ -110,35 +111,36 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		ws:          ws,
 		appDeployer: cloudformation.New(sess),
 		prog:        termprogress.NewSpinner(),
+		prompt:      prompt.New(),
 
 		setupParser: func(o *initSvcOpts) {
-			o.df = dockerfile.New(o.fs, o.DockerfilePath)
+			o.df = dockerfile.New(o.fs, o.dockerfilePath)
 		},
 	}, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initSvcOpts) Validate() error {
-	if o.AppName() == "" {
+	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
-	if o.ServiceType != "" {
-		if err := validateSvcType(o.ServiceType); err != nil {
+	if o.serviceType != "" {
+		if err := validateSvcType(o.serviceType); err != nil {
 			return err
 		}
 	}
-	if o.Name != "" {
-		if err := validateSvcName(o.Name); err != nil {
+	if o.name != "" {
+		if err := validateSvcName(o.name); err != nil {
 			return err
 		}
 	}
-	if o.DockerfilePath != "" {
-		if _, err := o.fs.Stat(o.DockerfilePath); err != nil {
+	if o.dockerfilePath != "" {
+		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {
 			return err
 		}
 	}
-	if o.Port != 0 {
-		if err := validateSvcPort(o.Port); err != nil {
+	if o.port != 0 {
+		if err := validateSvcPort(o.port); err != nil {
 			return err
 		}
 	}
@@ -165,9 +167,9 @@ func (o *initSvcOpts) Ask() error {
 
 // Execute writes the service's manifest file and stores the service in SSM.
 func (o *initSvcOpts) Execute() error {
-	app, err := o.store.GetApplication(o.AppName())
+	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
-		return fmt.Errorf("get application %s: %w", o.AppName(), err)
+		return fmt.Errorf("get application %s: %w", o.appName, err)
 	}
 
 	manifestPath, err := o.createManifest()
@@ -176,19 +178,19 @@ func (o *initSvcOpts) Execute() error {
 	}
 	o.manifestPath = manifestPath
 
-	o.prog.Start(fmt.Sprintf(fmtAddSvcToAppStart, o.Name))
-	if err := o.appDeployer.AddServiceToApp(app, o.Name); err != nil {
-		o.prog.Stop(log.Serrorf(fmtAddSvcToAppFailed, o.Name))
-		return fmt.Errorf("add service %s to application %s: %w", o.Name, o.AppName(), err)
+	o.prog.Start(fmt.Sprintf(fmtAddSvcToAppStart, o.name))
+	if err := o.appDeployer.AddServiceToApp(app, o.name); err != nil {
+		o.prog.Stop(log.Serrorf(fmtAddSvcToAppFailed, o.name))
+		return fmt.Errorf("add service %s to application %s: %w", o.name, o.appName, err)
 	}
-	o.prog.Stop(log.Ssuccessf(fmtAddSvcToAppComplete, o.Name))
+	o.prog.Stop(log.Ssuccessf(fmtAddSvcToAppComplete, o.name))
 
 	if err := o.store.CreateService(&config.Service{
-		App:  o.AppName(),
-		Name: o.Name,
-		Type: o.ServiceType,
+		App:  o.appName,
+		Name: o.name,
+		Type: o.serviceType,
 	}); err != nil {
-		return fmt.Errorf("saving service %s: %w", o.Name, err)
+		return fmt.Errorf("saving service %s: %w", o.name, err)
 	}
 	return nil
 }
@@ -199,7 +201,7 @@ func (o *initSvcOpts) createManifest() (string, error) {
 		return "", err
 	}
 	var manifestExists bool
-	manifestPath, err := o.ws.WriteWorkloadManifest(manifest, o.Name)
+	manifestPath, err := o.ws.WriteWorkloadManifest(manifest, o.name)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
@@ -217,21 +219,21 @@ func (o *initSvcOpts) createManifest() (string, error) {
 	if manifestExists {
 		manifestMsgFmt = "Manifest file for service %s already exists at %s, skipping writing it.\n"
 	}
-	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.Name), color.HighlightResource(manifestPath))
-	log.Infoln(color.Help(fmt.Sprintf("Your manifest contains configurations like your container size and port (:%d).", o.Port)))
+	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.name), color.HighlightResource(manifestPath))
+	log.Infoln(color.Help(fmt.Sprintf("Your manifest contains configurations like your container size and port (:%d).", o.port)))
 	log.Infoln()
 
 	return manifestPath, nil
 }
 
 func (o *initSvcOpts) newManifest() (encoding.BinaryMarshaler, error) {
-	switch o.ServiceType {
+	switch o.serviceType {
 	case manifest.LoadBalancedWebServiceType:
 		return o.newLoadBalancedWebServiceManifest()
 	case manifest.BackendServiceType:
 		return o.newBackendServiceManifest()
 	default:
-		return nil, fmt.Errorf("service type %s doesn't have a manifest", o.ServiceType)
+		return nil, fmt.Errorf("service type %s doesn't have a manifest", o.serviceType)
 	}
 }
 
@@ -242,21 +244,21 @@ func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalance
 	}
 	props := &manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
-			Name:       o.Name,
+			Name:       o.name,
 			Dockerfile: dfPath,
 		},
-		Port: o.Port,
+		Port: o.port,
 		Path: "/",
 	}
-	existingSvcs, err := o.store.ListServices(o.AppName())
+	existingSvcs, err := o.store.ListServices(o.appName)
 	if err != nil {
 		return nil, err
 	}
 	// We default to "/" for the first service, but if there's another
 	// Load Balanced Web Service, we use the svc name as the default, instead.
 	for _, existingSvc := range existingSvcs {
-		if existingSvc.Type == manifest.LoadBalancedWebServiceType && existingSvc.Name != o.Name {
-			props.Path = o.Name
+		if existingSvc.Type == manifest.LoadBalancedWebServiceType && existingSvc.Name != o.name {
+			props.Path = o.name
 			break
 		}
 	}
@@ -274,16 +276,16 @@ func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, err
 	}
 	return manifest.NewBackendService(manifest.BackendServiceProps{
 		WorkloadProps: manifest.WorkloadProps{
-			Name:       o.Name,
+			Name:       o.name,
 			Dockerfile: dfPath,
 		},
-		Port:        o.Port,
+		Port:        o.port,
 		HealthCheck: hc,
 	}), nil
 }
 
 func (o *initSvcOpts) askSvcType() error {
-	if o.ServiceType != "" {
+	if o.serviceType != "" {
 		return nil
 	}
 
@@ -296,24 +298,24 @@ func (o *initSvcOpts) askSvcType() error {
 	if err != nil {
 		return fmt.Errorf("select service type: %w", err)
 	}
-	o.ServiceType = t
+	o.serviceType = t
 	return nil
 }
 
 func (o *initSvcOpts) askSvcName() error {
-	if o.Name != "" {
+	if o.name != "" {
 		return nil
 	}
 
 	name, err := o.prompt.Get(
-		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.ServiceType)),
-		fmt.Sprintf(fmtWkldInitNameHelpPrompt, service, o.AppName()),
+		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.serviceType)),
+		fmt.Sprintf(fmtWkldInitNameHelpPrompt, service, o.appName),
 		validateSvcName,
 		prompt.WithFinalMessage("Service name:"))
 	if err != nil {
 		return fmt.Errorf("get service name: %w", err)
 	}
-	o.Name = name
+	o.name = name
 	return nil
 }
 
@@ -354,21 +356,21 @@ func askDockerfile(wkldName string, fs afero.Fs, p prompter) (string, error) {
 
 // askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
 func (o *initSvcOpts) askDockerfile() error {
-	if o.DockerfilePath != "" {
+	if o.dockerfilePath != "" {
 		return nil
 	}
-	df, err := askDockerfile(o.Name, o.fs, o.prompt)
+	df, err := askDockerfile(o.name, o.fs, o.prompt)
 	if err != nil {
 		return err
 	}
-	o.DockerfilePath = df
+	o.dockerfilePath = df
 	return nil
 
 }
 
 func (o *initSvcOpts) askSvcPort() error {
 	// Use flag before anything else
-	if o.Port != 0 {
+	if o.port != 0 {
 		return nil
 	}
 
@@ -384,7 +386,7 @@ func (o *initSvcOpts) askSvcPort() error {
 		// There were no ports detected, keep the default port prompt.
 		defaultPort = defaultSvcPortString
 	case 1:
-		o.Port = ports[0]
+		o.port = ports[0]
 		return nil
 	default:
 		defaultPort = strconv.Itoa(int(ports[0]))
@@ -406,7 +408,7 @@ func (o *initSvcOpts) askSvcPort() error {
 		return fmt.Errorf("parse port string: %w", err)
 	}
 
-	o.Port = uint16(portUint)
+	o.port = uint16(portUint)
 
 	return nil
 }
@@ -417,7 +419,7 @@ func (o *initSvcOpts) getRelativePath() (string, error) {
 		return "", fmt.Errorf("get copilot directory: %w", err)
 	}
 	wsRoot := filepath.Dir(copilotDirPath)
-	absDfPath, err := filepath.Abs(o.DockerfilePath)
+	absDfPath, err := filepath.Abs(o.dockerfilePath)
 	if err != nil {
 		return "", fmt.Errorf("get absolute path: %v", err)
 	}
@@ -435,7 +437,7 @@ func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error)
 	o.setupParser(o)
 	hc, err := o.df.GetHealthCheck()
 	if err != nil {
-		return nil, fmt.Errorf("get healthcheck from Dockerfile: %s, %w", o.DockerfilePath, err)
+		return nil, fmt.Errorf("get healthcheck from Dockerfile: %s, %w", o.dockerfilePath, err)
 	}
 	if hc == nil {
 		return nil, nil
@@ -454,16 +456,14 @@ func (o *initSvcOpts) RecommendedActions() []string {
 	return []string{
 		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath)),
 		fmt.Sprintf("Run %s to deploy your service to a %s environment.",
-			color.HighlightCode(fmt.Sprintf("copilot svc deploy --name %s --env %s", o.Name, defaultEnvironmentName)),
+			color.HighlightCode(fmt.Sprintf("copilot svc deploy --name %s --env %s", o.name, defaultEnvironmentName)),
 			defaultEnvironmentName),
 	}
 }
 
-// BuildSvcInitCmd build the command for creating a new service.
-func BuildSvcInitCmd() *cobra.Command {
-	vars := initSvcVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildSvcInitCmd build the command for creating a new service.
+func buildSvcInitCmd() *cobra.Command {
+	vars := initSvcVars{}
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a new service in an application.",
@@ -497,10 +497,11 @@ This command is also run as part of "copilot init".`,
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.Name, nameFlag, nameFlagShort, "", svcFlagDescription)
-	cmd.Flags().StringVarP(&vars.ServiceType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)
-	cmd.Flags().StringVarP(&vars.DockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
-	cmd.Flags().Uint16Var(&vars.Port, svcPortFlag, 0, svcPortFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)
+	cmd.Flags().StringVarP(&vars.serviceType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)
+	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
+	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
 
 	// Bucket flags by service type.
 	requiredFlags := pflag.NewFlagSet("Required Flags", pflag.ContinueOnError)

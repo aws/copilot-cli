@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
 )
@@ -25,9 +26,9 @@ const (
 )
 
 type showSvcVars struct {
-	*GlobalOpts
 	shouldOutputJSON      bool
 	shouldOutputResources bool
+	appName               string
 	svcName               string
 }
 
@@ -55,11 +56,11 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 		showSvcVars: vars,
 		store:       ssmStore,
 		w:           log.OutputWriter,
-		sel:         selector.NewConfigSelect(vars.prompt, ssmStore),
+		sel:         selector.NewConfigSelect(prompt.New(), ssmStore),
 	}
 	opts.initDescriber = func() error {
 		var d describer
-		svc, err := opts.store.GetService(opts.AppName(), opts.svcName)
+		svc, err := opts.store.GetService(opts.appName, opts.svcName)
 		if err != nil {
 			return err
 		}
@@ -67,7 +68,7 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 		case manifest.LoadBalancedWebServiceType:
 			d, err = describe.NewWebServiceDescriber(describe.NewWebServiceConfig{
 				NewServiceConfig: describe.NewServiceConfig{
-					App:         opts.AppName(),
+					App:         opts.appName,
 					Svc:         opts.svcName,
 					ConfigStore: ssmStore,
 				},
@@ -77,7 +78,7 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 		case manifest.BackendServiceType:
 			d, err = describe.NewBackendServiceDescriber(describe.NewBackendServiceConfig{
 				NewServiceConfig: describe.NewServiceConfig{
-					App:         opts.AppName(),
+					App:         opts.appName,
 					Svc:         opts.svcName,
 					ConfigStore: ssmStore,
 				},
@@ -89,7 +90,7 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 		}
 
 		if err != nil {
-			return fmt.Errorf("creating describer for service %s in application %s: %w", opts.svcName, opts.AppName(), err)
+			return fmt.Errorf("creating describer for service %s in application %s: %w", opts.svcName, opts.appName, err)
 		}
 		opts.describer = d
 		return nil
@@ -99,13 +100,13 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showSvcOpts) Validate() error {
-	if o.AppName() != "" {
-		if _, err := o.store.GetApplication(o.AppName()); err != nil {
+	if o.appName != "" {
+		if _, err := o.store.GetApplication(o.appName); err != nil {
 			return err
 		}
 	}
 	if o.svcName != "" {
-		if _, err := o.store.GetService(o.AppName(), o.svcName); err != nil {
+		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
 			return err
 		}
 	}
@@ -148,7 +149,7 @@ func (o *showSvcOpts) Execute() error {
 }
 
 func (o *showSvcOpts) askApp() error {
-	if o.AppName() != "" {
+	if o.appName != "" {
 		return nil
 	}
 	appName, err := o.sel.Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt)
@@ -164,21 +165,19 @@ func (o *showSvcOpts) askSvcName() error {
 	if o.svcName != "" {
 		return nil
 	}
-	svcName, err := o.sel.Service(fmt.Sprintf(svcShowSvcNamePrompt, color.HighlightUserInput(o.AppName())),
-		svcShowSvcNameHelpPrompt, o.AppName())
+	svcName, err := o.sel.Service(fmt.Sprintf(svcShowSvcNamePrompt, color.HighlightUserInput(o.appName)),
+		svcShowSvcNameHelpPrompt, o.appName)
 	if err != nil {
-		return fmt.Errorf("select service for application %s: %w", o.AppName(), err)
+		return fmt.Errorf("select service for application %s: %w", o.appName, err)
 	}
 	o.svcName = svcName
 
 	return nil
 }
 
-// BuildSvcShowCmd builds the command for showing services in an application.
-func BuildSvcShowCmd() *cobra.Command {
-	vars := showSvcVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildSvcShowCmd builds the command for showing services in an application.
+func buildSvcShowCmd() *cobra.Command {
+	vars := showSvcVars{}
 	cmd := &cobra.Command{
 		Use:   "show",
 		Short: "Shows info about a deployed service per environment.",
@@ -201,7 +200,7 @@ func BuildSvcShowCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.svcName, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputResources, resourcesFlag, false, svcResourcesFlagDescription)

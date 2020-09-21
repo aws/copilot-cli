@@ -69,11 +69,11 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			opts := initSvcOpts{
 				initSvcVars: initSvcVars{
-					ServiceType:    tc.inSvcType,
-					Name:           tc.inSvcName,
-					DockerfilePath: tc.inDockerfilePath,
-					Port:           tc.inSvcPort,
-					GlobalOpts:     &GlobalOpts{appName: tc.inAppName},
+					serviceType:    tc.inSvcType,
+					name:           tc.inSvcName,
+					dockerfilePath: tc.inDockerfilePath,
+					port:           tc.inSvcPort,
+					appName:        tc.inAppName,
 				},
 				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
 			}
@@ -331,17 +331,15 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
 			opts := &initSvcOpts{
 				initSvcVars: initSvcVars{
-					ServiceType:    tc.inSvcType,
-					Name:           tc.inSvcName,
-					Port:           tc.inSvcPort,
-					DockerfilePath: tc.inDockerfilePath,
-					GlobalOpts: &GlobalOpts{
-						prompt: mockPrompt,
-					},
+					serviceType:    tc.inSvcType,
+					name:           tc.inSvcName,
+					port:           tc.inSvcPort,
+					dockerfilePath: tc.inDockerfilePath,
 				},
 				fs:          &afero.Afero{Fs: afero.NewMemMapFs()},
 				setupParser: func(o *initSvcOpts) {},
 				df:          mockDockerfile,
+				prompt:      mockPrompt,
 			}
 			tc.mockFileSystem(opts.fs)
 			tc.mockPrompt(mockPrompt)
@@ -355,9 +353,9 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, wantedSvcType, opts.ServiceType)
-				require.Equal(t, wantedSvcName, opts.Name)
-				require.Equal(t, wantedDockerfilePath, opts.DockerfilePath)
+				require.Equal(t, wantedSvcType, opts.serviceType)
+				require.Equal(t, wantedSvcName, opts.name)
+				require.Equal(t, wantedDockerfilePath, opts.dockerfilePath)
 			}
 		})
 	}
@@ -637,11 +635,11 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			}
 			opts := initSvcOpts{
 				initSvcVars: initSvcVars{
-					ServiceType:    tc.inSvcType,
-					Name:           tc.inSvcName,
-					Port:           tc.inSvcPort,
-					DockerfilePath: tc.inDockerfilePath,
-					GlobalOpts:     &GlobalOpts{appName: tc.inAppName},
+					serviceType:    tc.inSvcType,
+					name:           tc.inSvcName,
+					port:           tc.inSvcPort,
+					dockerfilePath: tc.inDockerfilePath,
+					appName:        tc.inAppName,
 				},
 				setupParser: func(o *initSvcOpts) {},
 				ws:          mockWriter,
@@ -770,11 +768,11 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			}
 			opts := initSvcOpts{
 				initSvcVars: initSvcVars{
-					ServiceType:    manifest.LoadBalancedWebServiceType,
-					Name:           tc.inSvcName,
-					Port:           tc.inSvcPort,
-					DockerfilePath: tc.inDockerfilePath,
-					GlobalOpts:     &GlobalOpts{appName: tc.inAppName},
+					serviceType:    manifest.LoadBalancedWebServiceType,
+					name:           tc.inSvcName,
+					port:           tc.inSvcPort,
+					dockerfilePath: tc.inDockerfilePath,
+					appName:        tc.inAppName,
 				},
 				ws:    mockWriter,
 				store: mockstore,
