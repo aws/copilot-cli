@@ -4,6 +4,10 @@
 package cli
 
 import (
+	"errors"
+	"fmt"
+
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -18,16 +22,35 @@ type envUpgradeVars struct {
 // and clients to execute the command.
 type envUpgradeOpts struct {
 	envUpgradeVars
+
+	store environmentStore
 }
 
-func newEnvUpgradeOpts(vars envUpgradeVars) *envUpgradeOpts {
+func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
+	store, err := config.NewStore()
+	if err != nil {
+		return nil, fmt.Errorf("connect to config store: %v", err)
+	}
 	return &envUpgradeOpts{
 		envUpgradeVars: vars,
-	}
+		store:          store,
+	}, nil
 }
 
 // Validate returns an error if the values passed by flags are invalid.
 func (o *envUpgradeOpts) Validate() error {
+	if o.all && o.name != "" {
+		return fmt.Errorf("cannot specify both --%s and --%s flags", allFlag, nameFlag)
+	}
+	if o.name != "" {
+		if _, err := o.store.GetEnvironment(o.appName, o.name); err != nil {
+			var errEnvDoesNotExist *config.ErrNoSuchEnvironment
+			if errors.As(err, &errEnvDoesNotExist) {
+				return err
+			}
+			return fmt.Errorf("get environment %s configuration from application %s: %v", o.name, o.appName, err)
+		}
+	}
 	return nil
 }
 
@@ -50,7 +73,10 @@ func buildEnvUpgradeCmd() *cobra.Command {
 		Short:  "Upgrades the template of an environment to the latest version.",
 		Hidden: true,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts := newEnvUpgradeOpts(vars)
+			opts, err := newEnvUpgradeOpts(vars)
+			if err != nil {
+				return err
+			}
 			if err := opts.Validate(); err != nil {
 				return err
 			}
