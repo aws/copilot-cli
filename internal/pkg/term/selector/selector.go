@@ -38,8 +38,8 @@ type ConfigLister interface {
 	ConfigSvcLister
 }
 
-// WsWlLister wraps the method to get workloads in current workspace.
-type WsWlLister interface {
+// WsWorkloadLister wraps the method to get workloads in current workspace.
+type WsWorkloadLister interface {
 	ServiceNames() ([]string, error)
 	JobNames() ([]string, error)
 }
@@ -65,7 +65,7 @@ type ConfigSelect struct {
 // WorkspaceSelect  is an application and environment selector, but can also choose a service/job from the workspace.
 type WorkspaceSelect struct {
 	*Select
-	wlLister WsWlLister
+	wlLister WsWorkloadLister
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -94,7 +94,7 @@ func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
 
 // NewWorkspaceSelect returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
-func NewWorkspaceSelect(prompt Prompter, store AppEnvLister, ws WsWlLister) *WorkspaceSelect {
+func NewWorkspaceSelect(prompt Prompter, store AppEnvLister, ws WsWorkloadLister) *WorkspaceSelect {
 	return &WorkspaceSelect{
 		Select:   NewSelect(prompt, store),
 		wlLister: ws,
