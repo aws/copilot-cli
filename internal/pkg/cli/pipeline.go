@@ -19,11 +19,11 @@ Continuous delivery pipelines to release services.`,
 Continuous delivery pipelines to release services.`,
 	}
 
-	cmd.AddCommand(BuildPipelineInitCmd())
-	cmd.AddCommand(BuildPipelineUpdateCmd())
-	cmd.AddCommand(BuildPipelineDeleteCmd())
-	cmd.AddCommand(BuildPipelineShowCmd())
-	cmd.AddCommand(BuildPipelineStatusCmd())
+	cmd.AddCommand(buildPipelineInitCmd())
+	cmd.AddCommand(buildPipelineUpdateCmd())
+	cmd.AddCommand(buildPipelineDeleteCmd())
+	cmd.AddCommand(buildPipelineShowCmd())
+	cmd.AddCommand(buildPipelineStatusCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

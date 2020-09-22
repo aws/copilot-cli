@@ -121,7 +121,7 @@ func TestInitAppOpts_Ask(t *testing.T) {
 
 			opts := &initAppOpts{
 				initAppVars: initAppVars{
-					AppName: tc.inAppName,
+					name: tc.inAppName,
 				},
 				store:  mocks.NewMockstore(ctrl),
 				ws:     mocks.NewMockwsAppManager(ctrl),
@@ -137,7 +137,7 @@ func TestInitAppOpts_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedAppName, opts.AppName)
+				require.Equal(t, tc.wantedAppName, opts.name)
 			}
 		})
 	}
@@ -264,8 +264,8 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				route53: mockRoute53Svc,
 				store:   mockStore,
 				initAppVars: initAppVars{
-					AppName:    tc.inAppName,
-					DomainName: tc.inDomainName,
+					name:       tc.inAppName,
+					domainName: tc.inDomainName,
 				},
 			}
 
@@ -407,9 +407,9 @@ func TestInitAppOpts_Execute(t *testing.T) {
 
 			opts := &initAppOpts{
 				initAppVars: initAppVars{
-					AppName:    "myapp",
-					DomainName: tc.inDomainName,
-					ResourceTags: map[string]string{
+					name:       "myapp",
+					domainName: tc.inDomainName,
+					resourceTags: map[string]string{
 						"owner": "boss",
 					},
 				},

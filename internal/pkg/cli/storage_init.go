@@ -89,7 +89,6 @@ var attributeTypes = []string{
 }
 
 type initStorageVars struct {
-	*GlobalOpts
 	storageType string
 	storageName string
 	storageSvc  string
@@ -104,12 +103,14 @@ type initStorageVars struct {
 
 type initStorageOpts struct {
 	initStorageVars
+	appName string
 
 	fs    afero.Fs
 	ws    wsAddonManager
 	store store
 
-	sel wsSelector
+	sel    wsSelector
+	prompt prompter
 }
 
 func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
@@ -123,18 +124,21 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
+	prompter := prompt.New()
 	return &initStorageOpts{
 		initStorageVars: vars,
+		appName:         tryReadingAppName(),
 
-		fs:    &afero.Afero{Fs: afero.NewOsFs()},
-		store: store,
-		ws:    ws,
-		sel:   selector.NewWorkspaceSelect(vars.prompt, store, ws),
+		fs:     &afero.Afero{Fs: afero.NewOsFs()},
+		store:  store,
+		ws:     ws,
+		sel:    selector.NewWorkspaceSelect(prompter, store, ws),
+		prompt: prompter,
 	}, nil
 }
 
 func (o *initStorageOpts) Validate() error {
-	if o.AppName() == "" {
+	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
 	if o.storageSvc != "" {
@@ -538,11 +542,9 @@ func (o *initStorageOpts) RecommendedActions() []string {
 	}
 }
 
-// BuildStorageInitCmd builds the command and adds it to the CLI.
-func BuildStorageInitCmd() *cobra.Command {
-	vars := initStorageVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildStorageInitCmd builds the command and adds it to the CLI.
+func buildStorageInitCmd() *cobra.Command {
+	vars := initStorageVars{}
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a new storage config file in a service's addons directory.",

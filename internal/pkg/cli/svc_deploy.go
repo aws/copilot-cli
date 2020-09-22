@@ -37,11 +37,11 @@ const (
 )
 
 type deploySvcVars struct {
-	*GlobalOpts
-	Name         string
-	EnvName      string
-	ImageTag     string
-	ResourceTags map[string]string
+	appName      string
+	name         string
+	envName      string
+	imageTag     string
+	resourceTags map[string]string
 }
 
 type deploySvcOpts struct {
@@ -60,6 +60,7 @@ type deploySvcOpts struct {
 
 	spinner progress
 	sel     wsSelector
+	prompt  prompter
 
 	// cached variables
 	targetApp         *config.Application
@@ -77,6 +78,7 @@ func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
+	prompter := prompt.New()
 	return &deploySvcOpts{
 		deploySvcVars: vars,
 
@@ -84,7 +86,8 @@ func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
 		ws:           ws,
 		unmarshal:    manifest.UnmarshalWorkload,
 		spinner:      termprogress.NewSpinner(),
-		sel:          selector.NewWorkspaceSelect(vars.prompt, store, ws),
+		sel:          selector.NewWorkspaceSelect(prompter, store, ws),
+		prompt:       prompter,
 		cmd:          command.New(),
 		sessProvider: sessions.NewProvider(),
 	}, nil
@@ -92,15 +95,15 @@ func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
 
 // Validate returns an error if the user inputs are invalid.
 func (o *deploySvcOpts) Validate() error {
-	if o.AppName() == "" {
+	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
-	if o.Name != "" {
+	if o.name != "" {
 		if err := o.validateSvcName(); err != nil {
 			return err
 		}
 	}
-	if o.EnvName != "" {
+	if o.envName != "" {
 		if err := o.validateEnvName(); err != nil {
 			return err
 		}
@@ -130,13 +133,13 @@ func (o *deploySvcOpts) Execute() error {
 	}
 	o.targetEnvironment = env
 
-	app, err := o.store.GetApplication(o.AppName())
+	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
 		return err
 	}
 	o.targetApp = app
 
-	svc, err := o.store.GetService(o.AppName(), o.Name)
+	svc, err := o.store.GetService(o.appName, o.name)
 	if err != nil {
 		return fmt.Errorf("get service configuration: %w", err)
 	}
@@ -174,11 +177,11 @@ func (o *deploySvcOpts) validateSvcName() error {
 		return fmt.Errorf("list services in the workspace: %w", err)
 	}
 	for _, name := range names {
-		if o.Name == name {
+		if o.name == name {
 			return nil
 		}
 	}
-	return fmt.Errorf("service %s not found in the workspace", color.HighlightUserInput(o.Name))
+	return fmt.Errorf("service %s not found in the workspace", color.HighlightUserInput(o.name))
 }
 
 func (o *deploySvcOpts) validateEnvName() error {
@@ -189,15 +192,15 @@ func (o *deploySvcOpts) validateEnvName() error {
 }
 
 func (o *deploySvcOpts) targetEnv() (*config.Environment, error) {
-	env, err := o.store.GetEnvironment(o.AppName(), o.EnvName)
+	env, err := o.store.GetEnvironment(o.appName, o.envName)
 	if err != nil {
-		return nil, fmt.Errorf("get environment %s configuration: %w", o.EnvName, err)
+		return nil, fmt.Errorf("get environment %s configuration: %w", o.envName, err)
 	}
 	return env, nil
 }
 
 func (o *deploySvcOpts) askSvcName() error {
-	if o.Name != "" {
+	if o.name != "" {
 		return nil
 	}
 
@@ -205,32 +208,32 @@ func (o *deploySvcOpts) askSvcName() error {
 	if err != nil {
 		return fmt.Errorf("select service: %w", err)
 	}
-	o.Name = name
+	o.name = name
 	return nil
 }
 
 func (o *deploySvcOpts) askEnvName() error {
-	if o.EnvName != "" {
+	if o.envName != "" {
 		return nil
 	}
 
-	name, err := o.sel.Environment("Select an environment", "", o.AppName())
+	name, err := o.sel.Environment("Select an environment", "", o.appName)
 	if err != nil {
 		return fmt.Errorf("select environment: %w", err)
 	}
-	o.EnvName = name
+	o.envName = name
 	return nil
 }
 
 func (o *deploySvcOpts) askImageTag() error {
-	if o.ImageTag != "" {
+	if o.imageTag != "" {
 		return nil
 	}
 
 	tag, err := getVersionTag(o.cmd)
 
 	if err == nil {
-		o.ImageTag = tag
+		o.imageTag = tag
 
 		return nil
 	}
@@ -241,7 +244,7 @@ func (o *deploySvcOpts) askImageTag() error {
 	if err != nil {
 		return fmt.Errorf("prompt for image tag: %w", err)
 	}
-	o.ImageTag = userInputTag
+	o.imageTag = userInputTag
 	return nil
 }
 
@@ -257,7 +260,7 @@ func (o *deploySvcOpts) configureClients() error {
 	}
 
 	// ECR client against tools account profile AND target environment region
-	repoName := fmt.Sprintf("%s/%s", o.appName, o.Name)
+	repoName := fmt.Sprintf("%s/%s", o.appName, o.name)
 	registry := ecr.New(defaultSessEnvRegion)
 	o.imageBuilderPusher, err = repository.New(repoName, registry)
 	if err != nil {
@@ -269,7 +272,7 @@ func (o *deploySvcOpts) configureClients() error {
 	// CF client against env account profile AND target environment region
 	o.svcCFN = cloudformation.New(envSession)
 
-	addonsSvc, err := addon.New(o.Name)
+	addonsSvc, err := addon.New(o.name)
 	if err != nil {
 		return fmt.Errorf("initiate addons service: %w", err)
 	}
@@ -303,17 +306,17 @@ func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {
 		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
 	}
 
-	manifestBytes, err := o.ws.ReadWorkloadManifest(o.Name)
+	manifestBytes, err := o.ws.ReadWorkloadManifest(o.name)
 	if err != nil {
-		return nil, fmt.Errorf("read manifest file %s: %w", o.Name, err)
+		return nil, fmt.Errorf("read manifest file %s: %w", o.name, err)
 	}
 	svc, err := o.unmarshal(manifestBytes)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal service %s manifest: %w", o.Name, err)
+		return nil, fmt.Errorf("unmarshal service %s manifest: %w", o.name, err)
 	}
 	mf, ok := svc.(dfArgs)
 	if !ok {
-		return nil, fmt.Errorf("service %s does not have required method Build()", o.Name)
+		return nil, fmt.Errorf("service %s does not have required method Build()", o.name)
 	}
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
@@ -326,7 +329,7 @@ func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {
 		Dockerfile: *args.Dockerfile,
 		Context:    *args.Context,
 		Args:       args.Args,
-		ImageTag:   o.ImageTag,
+		ImageTag:   o.imageTag,
 	}, nil
 }
 
@@ -349,7 +352,7 @@ func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 	}
 
 	reader := strings.NewReader(template)
-	url, err := o.s3.PutArtifact(resources.S3Bucket, fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.Name), reader)
+	url, err := o.s3.PutArtifact(resources.S3Bucket, fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.name), reader)
 	if err != nil {
 		return "", fmt.Errorf("put addons artifact to bucket %s: %w", resources.S3Bucket, err)
 	}
@@ -357,13 +360,13 @@ func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 }
 
 func (o *deploySvcOpts) manifest() (interface{}, error) {
-	raw, err := o.ws.ReadWorkloadManifest(o.Name)
+	raw, err := o.ws.ReadWorkloadManifest(o.name)
 	if err != nil {
-		return nil, fmt.Errorf("read service %s manifest from workspace: %w", o.Name, err)
+		return nil, fmt.Errorf("read service %s manifest from workspace: %w", o.name, err)
 	}
 	mft, err := o.unmarshal(raw)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal service %s manifest: %w", o.Name, err)
+		return nil, fmt.Errorf("unmarshal service %s manifest: %w", o.name, err)
 	}
 	return mft, nil
 }
@@ -373,19 +376,19 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	if err != nil {
 		return nil, fmt.Errorf("get application %s resources from region %s: %w", o.targetApp.Name, o.targetEnvironment.Region, err)
 	}
-	repoURL, ok := resources.RepositoryURLs[o.Name]
+	repoURL, ok := resources.RepositoryURLs[o.name]
 	if !ok {
 		return nil, &errRepoNotFound{
-			svcName:      o.Name,
+			svcName:      o.name,
 			envRegion:    o.targetEnvironment.Region,
 			appAccountID: o.targetApp.AccountID,
 		}
 	}
 	return &stack.RuntimeConfig{
 		ImageRepoURL:      repoURL,
-		ImageTag:          o.ImageTag,
+		ImageTag:          o.imageTag,
 		AddonsTemplateURL: addonsURL,
-		AdditionalTags:    tags.Merge(o.targetApp.Tags, o.ResourceTags),
+		AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
 	}, nil
 }
 
@@ -424,7 +427,7 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 	}
 	o.spinner.Start(
 		fmt.Sprintf("Deploying %s to %s.",
-			fmt.Sprintf("%s:%s", color.HighlightUserInput(o.Name), color.HighlightUserInput(o.ImageTag)),
+			fmt.Sprintf("%s:%s", color.HighlightUserInput(o.name), color.HighlightUserInput(o.imageTag)),
 			color.HighlightUserInput(o.targetEnvironment.Name)))
 
 	if err := o.svcCFN.DeployService(conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
@@ -446,16 +449,16 @@ func (o *deploySvcOpts) showAppURI() error {
 	case manifest.LoadBalancedWebServiceType:
 		svcDescriber, err = describe.NewWebServiceDescriber(describe.NewWebServiceConfig{
 			NewServiceConfig: describe.NewServiceConfig{
-				App:         o.AppName(),
-				Svc:         o.Name,
+				App:         o.appName,
+				Svc:         o.name,
 				ConfigStore: o.store,
 			},
 		})
 	case manifest.BackendServiceType:
 		svcDescriber, err = describe.NewBackendServiceDescriber(describe.NewBackendServiceConfig{
 			NewServiceConfig: describe.NewServiceConfig{
-				App:         o.AppName(),
-				Svc:         o.Name,
+				App:         o.appName,
+				Svc:         o.name,
 				ConfigStore: o.store,
 			},
 		})
@@ -472,18 +475,16 @@ func (o *deploySvcOpts) showAppURI() error {
 	}
 	switch o.targetSvc.Type {
 	case manifest.BackendServiceType:
-		log.Successf("Deployed %s, its service discovery endpoint is %s.\n", color.HighlightUserInput(o.Name), color.HighlightResource(uri))
+		log.Successf("Deployed %s, its service discovery endpoint is %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
 	default:
-		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.Name), color.HighlightResource(uri))
+		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
 	}
 	return nil
 }
 
-// BuildSvcDeployCmd builds the `svc deploy` subcommand.
-func BuildSvcDeployCmd() *cobra.Command {
-	vars := deploySvcVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildSvcDeployCmd builds the `svc deploy` subcommand.
+func buildSvcDeployCmd() *cobra.Command {
+	vars := deploySvcVars{}
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploys a service to an environment.",
@@ -510,10 +511,11 @@ func BuildSvcDeployCmd() *cobra.Command {
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.Name, nameFlag, nameFlagShort, "", svcFlagDescription)
-	cmd.Flags().StringVarP(&vars.EnvName, envFlag, envFlagShort, "", envFlagDescription)
-	cmd.Flags().StringVar(&vars.ImageTag, imageTagFlag, "", imageTagFlagDescription)
-	cmd.Flags().StringToStringVar(&vars.ResourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)
+	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 
 	return cmd
 }

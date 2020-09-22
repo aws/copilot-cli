@@ -11,6 +11,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
 )
@@ -23,10 +24,10 @@ const (
 )
 
 type svcStatusVars struct {
-	*GlobalOpts
 	shouldOutputJSON bool
 	svcName          string
 	envName          string
+	appName          string
 }
 
 type svcStatusOpts struct {
@@ -52,16 +53,16 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 		svcStatusVars: vars,
 		store:         configStore,
 		w:             log.OutputWriter,
-		sel:           selector.NewDeploySelect(vars.prompt, configStore, deployStore),
+		sel:           selector.NewDeploySelect(prompt.New(), configStore, deployStore),
 		initStatusDescriber: func(o *svcStatusOpts) error {
 			d, err := describe.NewServiceStatus(&describe.NewServiceStatusConfig{
-				App:         o.AppName(),
+				App:         o.appName,
 				Env:         o.envName,
 				Svc:         o.svcName,
 				ConfigStore: configStore,
 			})
 			if err != nil {
-				return fmt.Errorf("creating status describer for service %s in application %s: %w", o.svcName, o.AppName(), err)
+				return fmt.Errorf("creating status describer for service %s in application %s: %w", o.svcName, o.appName, err)
 			}
 			o.statusDescriber = d
 			return nil
@@ -71,18 +72,18 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *svcStatusOpts) Validate() error {
-	if o.AppName() != "" {
-		if _, err := o.store.GetApplication(o.AppName()); err != nil {
+	if o.appName != "" {
+		if _, err := o.store.GetApplication(o.appName); err != nil {
 			return err
 		}
 	}
 	if o.svcName != "" {
-		if _, err := o.store.GetService(o.AppName(), o.svcName); err != nil {
+		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
 			return err
 		}
 	}
 	if o.envName != "" {
-		if _, err := o.store.GetEnvironment(o.AppName(), o.envName); err != nil {
+		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
 			return err
 		}
 	}
@@ -121,7 +122,7 @@ func (o *svcStatusOpts) Execute() error {
 }
 
 func (o *svcStatusOpts) askApp() error {
-	if o.AppName() != "" {
+	if o.appName != "" {
 		return nil
 	}
 	app, err := o.sel.Application(svcStatusAppNamePrompt, svcStatusAppNameHelpPrompt)
@@ -133,20 +134,18 @@ func (o *svcStatusOpts) askApp() error {
 }
 
 func (o *svcStatusOpts) askSvcEnvName() error {
-	deployedService, err := o.sel.DeployedService(svcStatusNamePrompt, svcStatusNameHelpPrompt, o.AppName(), selector.WithEnv(o.envName), selector.WithSvc(o.svcName))
+	deployedService, err := o.sel.DeployedService(svcStatusNamePrompt, svcStatusNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithSvc(o.svcName))
 	if err != nil {
-		return fmt.Errorf("select deployed services for application %s: %w", o.AppName(), err)
+		return fmt.Errorf("select deployed services for application %s: %w", o.appName, err)
 	}
 	o.svcName = deployedService.Svc
 	o.envName = deployedService.Env
 	return nil
 }
 
-// BuildSvcStatusCmd builds the command for showing the status of a deployed service.
-func BuildSvcStatusCmd() *cobra.Command {
-	vars := svcStatusVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildSvcStatusCmd builds the command for showing the status of a deployed service.
+func buildSvcStatusCmd() *cobra.Command {
+	vars := svcStatusVars{}
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Shows status of a deployed service.",
@@ -169,9 +168,9 @@ func BuildSvcStatusCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
 	cmd.Flags().StringVarP(&vars.svcName, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	return cmd
 }

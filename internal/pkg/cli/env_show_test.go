@@ -92,10 +92,8 @@ func TestEnvShow_Validate(t *testing.T) {
 
 			showEnvs := &showEnvOpts{
 				showEnvVars: showEnvVars{
-					envName: tc.inputEnvironment,
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inputApp,
-					},
+					name:    tc.inputEnvironment,
+					appName: tc.inputApp,
 				},
 				store: mockStoreReader,
 			}
@@ -185,10 +183,8 @@ func TestEnvShow_Ask(t *testing.T) {
 
 			showEnvs := &showEnvOpts{
 				showEnvVars: showEnvVars{
-					envName: tc.inputEnv,
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inputApp,
-					},
+					name:    tc.inputEnv,
+					appName: tc.inputApp,
 				},
 				sel: mockSelector,
 			}
@@ -199,8 +195,8 @@ func TestEnvShow_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedApp, showEnvs.AppName(), "expected app name to match")
-				require.Equal(t, tc.wantedEnv, showEnvs.envName, "expected environment name to match")
+				require.Equal(t, tc.wantedApp, showEnvs.appName, "expected app name to match")
+				require.Equal(t, tc.wantedEnv, showEnvs.name, "expected environment name to match")
 			}
 		})
 	}
@@ -321,7 +317,7 @@ func TestEnvShow_Execute(t *testing.T) {
 
 			showEnvs := &showEnvOpts{
 				showEnvVars: showEnvVars{
-					envName:          tc.inputEnv,
+					name:             tc.inputEnv,
 					shouldOutputJSON: tc.shouldOutputJSON,
 				},
 				store:            mockStoreReader,

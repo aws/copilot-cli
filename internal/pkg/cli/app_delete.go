@@ -42,9 +42,9 @@ var (
 )
 
 type deleteAppVars struct {
+	name             string
 	skipConfirmation bool
 	envProfiles      map[string]string
-	*GlobalOpts
 }
 
 type deleteAppOpts struct {
@@ -55,6 +55,7 @@ type deleteAppOpts struct {
 	ws                   wsFileDeleter
 	sessProvider         sessionProvider
 	cfn                  deployer
+	prompt               prompter
 	s3                   func(session *session.Session) bucketEmptier
 	executor             func(svcName string) (executor, error)
 	askExecutor          func(envName, envProfile string) (askExecutor, error)
@@ -85,14 +86,15 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		ws:            ws,
 		sessProvider:  provider,
 		cfn:           cloudformation.New(defaultSession),
+		prompt:        prompt.New(),
 		s3: func(session *session.Session) bucketEmptier {
 			return s3.New(session)
 		},
 		executor: func(svcName string) (executor, error) {
 			opts, err := newDeleteSvcOpts(deleteSvcVars{
-				SkipConfirmation: true, // always skip sub-confirmations
-				GlobalOpts:       NewGlobalOpts(),
-				Name:             svcName,
+				skipConfirmation: true, // always skip sub-confirmations
+				name:             svcName,
+				appName:          vars.name,
 			})
 			if err != nil {
 				return nil, err
@@ -101,10 +103,10 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		},
 		askExecutor: func(envName, envProfile string) (askExecutor, error) {
 			opts, err := newDeleteEnvOpts(deleteEnvVars{
-				SkipConfirmation: true,
-				GlobalOpts:       NewGlobalOpts(),
-				EnvName:          envName,
-				EnvProfile:       envProfile,
+				skipConfirmation: true,
+				appName:          vars.name,
+				name:             envName,
+				profile:          envProfile,
 			})
 			if err != nil {
 				return nil, err
@@ -113,9 +115,9 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		},
 		deletePipelineRunner: func() (deletePipelineRunner, error) {
 			opts, err := newDeletePipelineOpts(deletePipelineVars{
-				GlobalOpts:       NewGlobalOpts(),
-				SkipConfirmation: true,
-				DeleteSecret:     true,
+				appName:            vars.name,
+				skipConfirmation:   true,
+				shouldDeleteSecret: true,
 			})
 			if err != nil {
 				return nil, err
@@ -127,7 +129,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 
 // Validate returns an error if the user's input is invalid.
 func (o *deleteAppOpts) Validate() error {
-	if o.AppName() == "" {
+	if o.name == "" {
 		return errNoAppInWorkspace
 	}
 	return nil
@@ -140,7 +142,7 @@ func (o *deleteAppOpts) Ask() error {
 	}
 
 	manualConfirm, err := o.prompt.Confirm(
-		fmt.Sprintf(fmtDeleteAppConfirmPrompt, o.AppName()),
+		fmt.Sprintf(fmtDeleteAppConfirmPrompt, o.name),
 		deleteAppConfirmHelp,
 		prompt.WithTrueDefault())
 	if err != nil {
@@ -192,9 +194,9 @@ func (o *deleteAppOpts) Execute() error {
 }
 
 func (o *deleteAppOpts) deleteSvcs() error {
-	svcs, err := o.store.ListServices(o.AppName())
+	svcs, err := o.store.ListServices(o.name)
 	if err != nil {
-		return fmt.Errorf("list services for application %s: %w", o.AppName(), err)
+		return fmt.Errorf("list services for application %s: %w", o.name, err)
 	}
 
 	for _, svc := range svcs {
@@ -210,9 +212,9 @@ func (o *deleteAppOpts) deleteSvcs() error {
 }
 
 func (o *deleteAppOpts) deleteEnvs() error {
-	envs, err := o.store.ListEnvironments(o.AppName())
+	envs, err := o.store.ListEnvironments(o.name)
 	if err != nil {
-		return fmt.Errorf("list environments for application %s: %w", o.AppName(), err)
+		return fmt.Errorf("list environments for application %s: %w", o.name, err)
 	}
 
 	for _, env := range envs {
@@ -236,9 +238,9 @@ func (o *deleteAppOpts) deleteEnvs() error {
 }
 
 func (o *deleteAppOpts) emptyS3Bucket() error {
-	app, err := o.store.GetApplication(o.AppName())
+	app, err := o.store.GetApplication(o.name)
 	if err != nil {
-		return fmt.Errorf("get application %s: %w", o.AppName(), err)
+		return fmt.Errorf("get application %s: %w", o.name, err)
 	}
 	appResources, err := o.cfn.GetRegionalAppResources(app)
 	if err != nil {
@@ -272,7 +274,7 @@ func (o *deleteAppOpts) deletePipeline() error {
 
 func (o *deleteAppOpts) deleteAppResources() error {
 	o.spinner.Start(deleteAppResourcesStartMsg)
-	if err := o.cfn.DeleteApp(o.AppName()); err != nil {
+	if err := o.cfn.DeleteApp(o.name); err != nil {
 		o.spinner.Stop(log.Serror("Error deleting application resources."))
 		return fmt.Errorf("delete app resources: %w", err)
 	}
@@ -282,9 +284,9 @@ func (o *deleteAppOpts) deleteAppResources() error {
 
 func (o *deleteAppOpts) deleteAppConfigs() error {
 	o.spinner.Start(deleteAppConfigStartMsg)
-	if err := o.store.DeleteApplication(o.AppName()); err != nil {
+	if err := o.store.DeleteApplication(o.name); err != nil {
 		o.spinner.Stop(log.Serror("Error deleting application configuration."))
-		return fmt.Errorf("delete application %s configuration: %w", o.AppName(), err)
+		return fmt.Errorf("delete application %s configuration: %w", o.name, err)
 	}
 	o.spinner.Stop(log.Ssuccess(deleteAppConfigStopMsg))
 	return nil
@@ -300,11 +302,9 @@ func (o *deleteAppOpts) deleteWs() error {
 	return nil
 }
 
-// BuildAppDeleteCommand builds the `app delete` subcommand.
-func BuildAppDeleteCommand() *cobra.Command {
-	vars := deleteAppVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildAppDeleteCommand builds the `app delete` subcommand.
+func buildAppDeleteCommand() *cobra.Command {
+	vars := deleteAppVars{}
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete all resources associated with the application.",
@@ -327,6 +327,7 @@ func BuildAppDeleteCommand() *cobra.Command {
 		}),
 	}
 
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envProfiles, envProfilesFlag, nil, envProfilesFlagDescription)
 	return cmd

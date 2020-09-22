@@ -41,9 +41,7 @@ func TestDeleteAppOpts_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			opts := deleteAppOpts{
 				deleteAppVars: deleteAppVars{
-					GlobalOpts: &GlobalOpts{
-						appName: test.name,
-					},
+					name: test.name,
 				},
 			}
 
@@ -114,12 +112,10 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 			test.setupMocks(ctrl)
 			opts := deleteAppOpts{
 				deleteAppVars: deleteAppVars{
-					GlobalOpts: &GlobalOpts{
-						appName: mockAppName,
-						prompt:  mockPrompter,
-					},
+					name:             mockAppName,
 					skipConfirmation: test.skipConfirmation,
 				},
+				prompt: mockPrompter,
 			}
 
 			got := opts.Ask()
@@ -303,9 +299,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 
 			opts := deleteAppOpts{
 				deleteAppVars: deleteAppVars{
-					GlobalOpts: &GlobalOpts{
-						appName: mockAppName,
-					},
+					name: mockAppName,
 				},
 				spinner:              mockSpinner,
 				store:                mockStore,

@@ -31,8 +31,8 @@ func (o *listAppOpts) Execute() error {
 	return nil
 }
 
-// BuildAppListCommand builds the command to list existing applications.
-func BuildAppListCommand() *cobra.Command {
+// buildAppListCommand builds the command to list existing applications.
+func buildAppListCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ls",
 		Short: "Lists all the applications in your account.",

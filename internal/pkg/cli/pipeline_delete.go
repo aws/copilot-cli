@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/spf13/cobra"
@@ -34,9 +35,9 @@ var (
 )
 
 type deletePipelineVars struct {
-	*GlobalOpts
-	SkipConfirmation bool
-	DeleteSecret     bool
+	appName            string
+	skipConfirmation   bool
+	shouldDeleteSecret bool
 }
 
 type deletePipelineOpts struct {
@@ -48,6 +49,7 @@ type deletePipelineOpts struct {
 	// Interfaces to dependencies
 	pipelineDeployer pipelineDeployer
 	prog             progress
+	prompt           prompter
 	secretsmanager   secretsManager
 	ws               wsPipelineReader
 }
@@ -71,6 +73,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 	opts := &deletePipelineOpts{
 		deletePipelineVars: vars,
 		prog:               termprogress.NewSpinner(),
+		prompt:             prompt.New(),
 		secretsmanager:     secretsmanager,
 		pipelineDeployer:   cloudformation.New(defaultSess),
 		ws:                 ws,
@@ -81,7 +84,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *deletePipelineOpts) Validate() error {
-	if o.AppName() == "" {
+	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
 
@@ -94,12 +97,12 @@ func (o *deletePipelineOpts) Validate() error {
 
 // Ask prompts for fields that are required but not passed in.
 func (o *deletePipelineOpts) Ask() error {
-	if o.SkipConfirmation {
+	if o.skipConfirmation {
 		return nil
 	}
 
 	deleteConfirmed, err := o.prompt.Confirm(
-		fmt.Sprintf(pipelineDeleteConfirmPrompt, o.PipelineName, o.AppName()),
+		fmt.Sprintf(pipelineDeleteConfirmPrompt, o.PipelineName, o.appName),
 		pipelineDeleteConfirmHelp)
 
 	if err != nil {
@@ -150,7 +153,7 @@ func (o *deletePipelineOpts) readPipelineManifest() error {
 }
 
 func (o *deletePipelineOpts) deleteSecret() error {
-	if !o.DeleteSecret {
+	if !o.shouldDeleteSecret {
 		confirmDeletion, err := o.prompt.Confirm(
 			fmt.Sprintf(pipelineSecretDeleteConfirmPrompt, o.PipelineSecret, o.PipelineName),
 			pipelineDeleteSecretConfirmHelp,
@@ -175,12 +178,12 @@ func (o *deletePipelineOpts) deleteSecret() error {
 }
 
 func (o *deletePipelineOpts) deleteStack() error {
-	o.prog.Start(fmt.Sprintf(fmtDeletePipelineStart, o.PipelineName, o.AppName()))
+	o.prog.Start(fmt.Sprintf(fmtDeletePipelineStart, o.PipelineName, o.appName))
 	if err := o.pipelineDeployer.DeletePipeline(o.PipelineName); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDeletePipelineFailed, o.PipelineName, o.AppName(), err))
+		o.prog.Stop(log.Serrorf(fmtDeletePipelineFailed, o.PipelineName, o.appName, err))
 		return err
 	}
-	o.prog.Stop(log.Ssuccessf(fmtDeletePipelineComplete, o.PipelineName, o.AppName()))
+	o.prog.Stop(log.Ssuccessf(fmtDeletePipelineComplete, o.PipelineName, o.appName))
 	return nil
 }
 
@@ -203,11 +206,9 @@ func (o *deletePipelineOpts) Run() error {
 	return nil
 }
 
-// BuildPipelineDeleteCmd build the command for deleting an existing pipeline.
-func BuildPipelineDeleteCmd() *cobra.Command {
-	vars := deletePipelineVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildPipelineDeleteCmd build the command for deleting an existing pipeline.
+func buildPipelineDeleteCmd() *cobra.Command {
+	vars := deletePipelineVars{}
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Deletes the pipeline associated with your workspace.",
@@ -223,7 +224,8 @@ func BuildPipelineDeleteCmd() *cobra.Command {
 			return opts.Run()
 		}),
 	}
-	cmd.Flags().BoolVar(&vars.SkipConfirmation, yesFlag, false, yesFlagDescription)
-	cmd.Flags().BoolVar(&vars.DeleteSecret, deleteSecretFlag, false, deleteSecretFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
+	cmd.Flags().BoolVar(&vars.shouldDeleteSecret, deleteSecretFlag, false, deleteSecretFlagDescription)
 	return cmd
 }

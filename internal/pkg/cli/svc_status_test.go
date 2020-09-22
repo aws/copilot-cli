@@ -92,9 +92,7 @@ func TestSvcStatus_Validate(t *testing.T) {
 				svcStatusVars: svcStatusVars{
 					svcName: tc.inputSvc,
 					envName: tc.inputEnvironment,
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inputApp,
-					},
+					appName: tc.inputApp,
 				},
 				store: mockStoreReader,
 			}
@@ -166,9 +164,7 @@ func TestSvcStatus_Ask(t *testing.T) {
 				svcStatusVars: svcStatusVars{
 					svcName: tc.inputSvc,
 					envName: tc.inputEnvironment,
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inputApp,
-					},
+					appName: tc.inputApp,
 				},
 				sel: mockSelector,
 			}
@@ -228,9 +224,7 @@ func TestSvcStatus_Execute(t *testing.T) {
 					svcName:          "mockSvc",
 					envName:          "mockEnv",
 					shouldOutputJSON: tc.shouldOutputJSON,
-					GlobalOpts: &GlobalOpts{
-						appName: "mockApp",
-					},
+					appName:          "mockApp",
 				},
 				statusDescriber:     mockStatusDescriber,
 				initStatusDescriber: func(*svcStatusOpts) error { return nil },

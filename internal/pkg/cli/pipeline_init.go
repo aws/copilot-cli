@@ -19,6 +19,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
@@ -54,13 +55,13 @@ var (
 var errNoEnvsInApp = errors.New("there were no more environments found that can be added to your pipeline. Please run `copilot env init` to create a new environment")
 
 type initPipelineVars struct {
-	Environments      []string
-	GitHubOwner       string
-	GitHubRepo        string
-	GitHubURL         string
-	GitHubAccessToken string
-	GitBranch         string
-	*GlobalOpts
+	appName           string
+	environments      []string
+	githubOwner       string
+	githubRepo        string
+	githubURL         string
+	githubAccessToken string
+	gitBranch         string
 }
 
 type initPipelineOpts struct {
@@ -72,6 +73,7 @@ type initPipelineOpts struct {
 	runner         runner
 	cfnClient      appResourcesGetter
 	store          store
+	prompt         prompter
 
 	// Outputs stored on successful actions.
 	secretName string
@@ -142,13 +144,14 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 	}
 	opts.cfnClient = cloudformation.New(defaultSession)
 
+	opts.prompt = prompt.New()
 	return opts, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initPipelineOpts) Validate() error {
 	// TODO add validation for flags
-	if o.AppName() == "" {
+	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
 
@@ -158,29 +161,29 @@ func (o *initPipelineOpts) Validate() error {
 // Ask prompts for fields that are required but not passed in.
 func (o *initPipelineOpts) Ask() error {
 	var err error
-	if len(o.Environments) == 0 {
+	if len(o.environments) == 0 {
 		if err = o.selectEnvironments(); err != nil {
 			return err
 		}
 	}
 
-	if o.GitHubURL == "" {
+	if o.githubURL == "" {
 		if err = o.selectGitHubURL(); err != nil {
 			return err
 		}
 	}
-	if o.GitHubOwner, o.GitHubRepo, err = o.parseOwnerRepoName(o.GitHubURL); err != nil {
+	if o.githubOwner, o.githubRepo, err = o.parseOwnerRepoName(o.githubURL); err != nil {
 		return err
 	}
 
-	if o.GitHubAccessToken == "" {
+	if o.githubAccessToken == "" {
 		if err = o.getGitHubAccessToken(); err != nil {
 			return err
 		}
 	}
 
-	if o.GitBranch == "" {
-		o.GitBranch = masterBranch
+	if o.gitBranch == "" {
+		o.gitBranch = masterBranch
 	}
 	return nil
 }
@@ -188,14 +191,14 @@ func (o *initPipelineOpts) Ask() error {
 // Execute writes the pipeline manifest file.
 func (o *initPipelineOpts) Execute() error {
 	secretName := o.createSecretName()
-	_, err := o.secretsmanager.CreateSecret(secretName, o.GitHubAccessToken)
+	_, err := o.secretsmanager.CreateSecret(secretName, o.githubAccessToken)
 
 	if err != nil {
 		var existsErr *secretsmanager.ErrSecretAlreadyExists
 		if !errors.As(err, &existsErr) {
 			return err
 		}
-		log.Successf("Secret already exists for %s! Do nothing.\n", color.HighlightUserInput(o.GitHubRepo))
+		log.Successf("Secret already exists for %s! Do nothing.\n", color.HighlightUserInput(o.githubRepo))
 	} else {
 		log.Successf("Created the secret %s for pipeline source stage!\n", color.HighlightUserInput(secretName))
 	}
@@ -230,17 +233,17 @@ func (o *initPipelineOpts) RecommendedActions() []string {
 }
 
 func (o *initPipelineOpts) createSecretName() string {
-	return fmt.Sprintf("github-token-%s-%s", o.appName, o.GitHubRepo)
+	return fmt.Sprintf("github-token-%s-%s", o.appName, o.githubRepo)
 }
 
 func (o *initPipelineOpts) createPipelineName() string {
-	return fmt.Sprintf("pipeline-%s-%s-%s", o.appName, o.GitHubOwner, o.GitHubRepo)
+	return fmt.Sprintf("pipeline-%s-%s-%s", o.appName, o.githubOwner, o.githubRepo)
 }
 
 func (o *initPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
 	config := &manifest.GitHubProperties{
-		OwnerAndRepository:    "https://" + githubURL + "/" + o.GitHubOwner + "/" + o.GitHubRepo,
-		Branch:                o.GitBranch,
+		OwnerAndRepository:    "https://" + githubURL + "/" + o.githubOwner + "/" + o.githubRepo,
+		Branch:                o.gitBranch,
 		GithubSecretIdKeyName: o.secretName,
 	}
 	return manifest.NewProvider(config)
@@ -252,7 +255,7 @@ func (o *initPipelineOpts) getEnvConfig(environmentName string) (*config.Environ
 			return env, nil
 		}
 	}
-	return nil, fmt.Errorf("environment %s in application %s is not found", environmentName, o.AppName())
+	return nil, fmt.Errorf("environment %s in application %s is not found", environmentName, o.appName)
 }
 
 func (o *initPipelineOpts) createPipelineManifest() error {
@@ -263,7 +266,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 	}
 
 	var stages []manifest.PipelineStage
-	for _, environmentName := range o.Environments {
+	for _, environmentName := range o.environments {
 		env, err := o.getEnvConfig(environmentName)
 		if err != nil {
 			return err
@@ -300,7 +303,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 	if manifestExists {
 		manifestMsgFmt = "Pipeline manifest file for %s already exists at %s, skipping writing it.\n"
 	}
-	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.GitHubRepo), color.HighlightResource(manifestPath))
+	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.githubRepo), color.HighlightResource(manifestPath))
 	log.Infoln("The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.")
 	return nil
 }
@@ -347,9 +350,9 @@ func (o *initPipelineOpts) createBuildspec() error {
 }
 
 func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {
-	app, err := o.store.GetApplication(o.AppName())
+	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
-		return nil, fmt.Errorf("get application %s: %w", o.AppName(), err)
+		return nil, fmt.Errorf("get application %s: %w", o.appName, err)
 	}
 	regionalResources, err := o.cfnClient.GetRegionalAppResources(app)
 	if err != nil {
@@ -378,7 +381,7 @@ func (o *initPipelineOpts) selectEnvironments() error {
 	for {
 		promptMsg := pipelineInitAddEnvPrompt
 		promptHelpMsg := pipelineInitAddEnvHelpPrompt
-		if len(o.Environments) > 0 {
+		if len(o.environments) > 0 {
 			promptMsg = pipelineInitAddMoreEnvPrompt
 			promptHelpMsg = pipelineInitAddMoreEnvHelpPrompt
 		}
@@ -413,7 +416,7 @@ func (o *initPipelineOpts) listAvailableEnvironments() []string {
 }
 
 func (o *initPipelineOpts) envCanBeAdded(selectedEnv string) bool {
-	for _, env := range o.Environments {
+	for _, env := range o.environments {
 		if selectedEnv == env {
 			return false
 		}
@@ -425,7 +428,7 @@ func (o *initPipelineOpts) envCanBeAdded(selectedEnv string) bool {
 func (o *initPipelineOpts) selectEnvironment() error {
 	envs := o.listAvailableEnvironments()
 
-	if len(envs) == 0 && len(o.Environments) != 0 {
+	if len(envs) == 0 && len(o.environments) != 0 {
 		log.Infoln("There are no more environments to add.")
 		return nil
 	}
@@ -440,7 +443,7 @@ func (o *initPipelineOpts) selectEnvironment() error {
 		return err
 	}
 
-	o.Environments = append(o.Environments, env)
+	o.environments = append(o.environments, env)
 
 	return nil
 }
@@ -454,7 +457,7 @@ func (o *initPipelineOpts) selectGitHubURL() error {
 	if err != nil {
 		return fmt.Errorf("select GitHub URL: %w", err)
 	}
-	o.GitHubURL = url
+	o.githubURL = url
 
 	return nil
 }
@@ -495,7 +498,7 @@ func (o *initPipelineOpts) parseGitRemoteResult(s string) ([]string, error) {
 
 func (o *initPipelineOpts) getGitHubAccessToken() error {
 	token, err := o.prompt.GetSecret(
-		fmt.Sprintf("Please enter your GitHub Personal Access Token for your repository %s:", color.HighlightUserInput(o.GitHubRepo)),
+		fmt.Sprintf("Please enter your GitHub Personal Access Token for your repository %s:", color.HighlightUserInput(o.githubRepo)),
 		`The personal access token for the GitHub repository linked to your workspace. 
 For more information, please refer to: https://git.io/JfDFD.`,
 	)
@@ -503,14 +506,14 @@ For more information, please refer to: https://git.io/JfDFD.`,
 	if err != nil {
 		return fmt.Errorf("get GitHub access token: %w", err)
 	}
-	o.GitHubAccessToken = token
+	o.githubAccessToken = token
 	return nil
 }
 
 func (o *initPipelineOpts) getEnvs() ([]*config.Environment, error) {
-	envs, err := o.store.ListEnvironments(o.AppName())
+	envs, err := o.store.ListEnvironments(o.appName)
 	if err != nil {
-		return nil, fmt.Errorf("list environments for application %s: %w", o.AppName(), err)
+		return nil, fmt.Errorf("list environments for application %s: %w", o.appName, err)
 	}
 	if len(envs) == 0 {
 		return nil, errNoEnvsInApp
@@ -518,11 +521,9 @@ func (o *initPipelineOpts) getEnvs() ([]*config.Environment, error) {
 	return envs, nil
 }
 
-// BuildPipelineInitCmd build the command for creating a new pipeline.
-func BuildPipelineInitCmd() *cobra.Command {
-	vars := initPipelineVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildPipelineInitCmd build the command for creating a new pipeline.
+func buildPipelineInitCmd() *cobra.Command {
+	vars := initPipelineVars{}
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a pipeline for the services in your workspace.",
@@ -555,10 +556,11 @@ func BuildPipelineInitCmd() *cobra.Command {
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.GitHubURL, githubURLFlag, githubURLFlagShort, "", githubURLFlagDescription)
-	cmd.Flags().StringVarP(&vars.GitHubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
-	cmd.Flags().StringVarP(&vars.GitBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
-	cmd.Flags().StringSliceVarP(&vars.Environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.githubURL, githubURLFlag, githubURLFlagShort, "", githubURLFlagDescription)
+	cmd.Flags().StringVarP(&vars.githubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
+	cmd.Flags().StringVarP(&vars.gitBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
+	cmd.Flags().StringSliceVarP(&vars.environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
 
 	return cmd
 }

@@ -15,17 +15,18 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 )
 
 type deployJobVars struct {
-	*GlobalOpts
-	Name         string
-	EnvName      string
-	ImageTag     string
-	ResourceTags map[string]string
+	appName      string
+	name         string
+	envName      string
+	imageTag     string
+	resourceTags map[string]string
 }
 
 type deployJobOpts struct {
@@ -39,6 +40,7 @@ type deployJobOpts struct {
 
 	spinner progress
 	sel     wsSelector
+  prompt  prompter
 }
 
 func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
@@ -51,6 +53,7 @@ func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
+  prompter := prompt.New()
 	return &deployJobOpts{
 		deployJobVars: vars,
 
@@ -58,7 +61,8 @@ func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
 		ws:           ws,
 		unmarshal:    manifest.UnmarshalWorkload,
 		spinner:      termprogress.NewSpinner(),
-		sel:          selector.NewWorkspaceSelect(vars.prompt, store, ws),
+		sel:          selector.NewWorkspaceSelect(prompter, store, ws),
+    prompt:       prompter,
 		cmd:          command.New(),
 		sessProvider: sessions.NewProvider(),
 	}, nil
@@ -66,15 +70,15 @@ func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
 
 // Validate returns an error if the user inputs are invalid.
 func (o *deployJobOpts) Validate() error {
-	if o.AppName() == "" {
+	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
-	if o.Name != "" {
+	if o.name != "" {
 		if err := o.validateJobName(); err != nil {
 			return err
 		}
 	}
-	if o.EnvName != "" {
+	if o.envName != "" {
 		if err := o.validateEnvName(); err != nil {
 			return err
 		}
@@ -112,23 +116,23 @@ func (o *deployJobOpts) validateJobName() error {
 		return fmt.Errorf("list jobs in the workspace: %w", err)
 	}
 	for _, name := range names {
-		if o.Name == name {
+		if o.name == name {
 			return nil
 		}
 	}
-	return fmt.Errorf("job %s not found in the workspace", color.HighlightUserInput(o.Name))
+	return fmt.Errorf("job %s not found in the workspace", color.HighlightUserInput(o.name))
 }
 
 func (o *deployJobOpts) validateEnvName() error {
-	_, err := o.store.GetEnvironment(o.AppName(), o.EnvName)
+	_, err := o.store.GetEnvironment(o.appName, o.envName)
 	if err != nil {
-		return fmt.Errorf("get environment %s configuration: %w", o.EnvName, err)
+		return fmt.Errorf("get environment %s configuration: %w", o.envName, err)
 	}
 	return nil
 }
 
 func (o *deployJobOpts) askJobName() error {
-	if o.Name != "" {
+	if o.name != "" {
 		return nil
 	}
 
@@ -136,32 +140,32 @@ func (o *deployJobOpts) askJobName() error {
 	if err != nil {
 		return fmt.Errorf("select job: %w", err)
 	}
-	o.Name = name
+	o.name = name
 	return nil
 }
 
 func (o *deployJobOpts) askEnvName() error {
-	if o.EnvName != "" {
+	if o.envName != "" {
 		return nil
 	}
 
-	name, err := o.sel.Environment("Select an environment", "", o.AppName())
+	name, err := o.sel.Environment("Select an environment", "", o.appName())
 	if err != nil {
 		return fmt.Errorf("select environment: %w", err)
 	}
-	o.EnvName = name
+	o.envName = name
 	return nil
 }
 
 func (o *deployJobOpts) askImageTag() error {
-	if o.ImageTag != "" {
+	if o.imageTag != "" {
 		return nil
 	}
 
 	tag, err := getVersionTag(o.cmd)
 
 	if err == nil {
-		o.ImageTag = tag
+		o.imageTag = tag
 
 		return nil
 	}
@@ -172,15 +176,13 @@ func (o *deployJobOpts) askImageTag() error {
 	if err != nil {
 		return fmt.Errorf("prompt for image tag: %w", err)
 	}
-	o.ImageTag = userInputTag
+	o.imageTag = userInputTag
 	return nil
 }
 
-// BuildJobDeployCmd builds the `job deploy` subcommand.
-func BuildJobDeployCmd() *cobra.Command {
-	vars := deployJobVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+// buildJobDeployCmd builds the `job deploy` subcommand.
+func buildJobDeployCmd() *cobra.Command {
+	vars := deployJobVars{}
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploys a job to an environment.",
@@ -207,10 +209,11 @@ func BuildJobDeployCmd() *cobra.Command {
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.Name, nameFlag, nameFlagShort, "", jobFlagDescription)
-	cmd.Flags().StringVarP(&vars.EnvName, envFlag, envFlagShort, "", envFlagDescription)
-	cmd.Flags().StringVar(&vars.ImageTag, imageTagFlag, "", imageTagFlagDescription)
-	cmd.Flags().StringToStringVar(&vars.ResourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", jobFlagDescription)
+	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 
 	return cmd
 }

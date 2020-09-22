@@ -65,8 +65,8 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 			defer ctrl.Finish()
 			opts := &deleteEnvOpts{
 				deleteEnvVars: deleteEnvVars{
-					EnvName:    tc.inEnv,
-					GlobalOpts: &GlobalOpts{appName: tc.inAppName},
+					name:    tc.inEnv,
+					appName: tc.inAppName,
 				},
 				store: tc.mockStore(ctrl),
 			}
@@ -116,7 +116,7 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 
 				o.sel = mockSelector
 				o.profileConfig = mockCfg
-				o.GlobalOpts.prompt = mockPrompter
+				o.prompt = mockPrompter
 			},
 			wantedEnvName:    testEnv,
 			wantedEnvProfile: testProfile1,
@@ -134,7 +134,7 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 
 				o.sel = mockSelector
 				o.profileConfig = mockCfg
-				o.GlobalOpts.prompt = mockPrompter
+				o.prompt = mockPrompter
 			},
 			wantedEnvName:    testEnv,
 			wantedEnvProfile: testProfile1,
@@ -148,7 +148,7 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 				mockPrompter := mocks.NewMockprompter(ctrl)
 				mockPrompter.EXPECT().Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, testEnv, testApp), gomock.Any()).Return(false, errors.New("some error"))
 
-				o.GlobalOpts.prompt = mockPrompter
+				o.prompt = mockPrompter
 			},
 
 			wantedError: errors.New("confirm to delete environment test: some error"),
@@ -164,7 +164,7 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 				mockPrompter.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 
 				o.profileConfig = mockCfg
-				o.GlobalOpts.prompt = mockPrompter
+				o.prompt = mockPrompter
 			},
 
 			wantedError: errors.New("get the profile name: some error"),
@@ -190,12 +190,10 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 			opts := &deleteEnvOpts{
 				deleteEnvVars: deleteEnvVars{
-					EnvName:    tc.inEnvName,
-					EnvProfile: tc.inEnvProfile,
-					GlobalOpts: &GlobalOpts{
-						appName: testApp,
-					},
-					SkipConfirmation: tc.inSkipConfirmation,
+					name:             tc.inEnvName,
+					profile:          tc.inEnvProfile,
+					appName:          testApp,
+					skipConfirmation: tc.inSkipConfirmation,
 				},
 			}
 			tc.mockDependencies(ctrl, opts)
@@ -205,8 +203,8 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 
 			// THEN
 			if tc.wantedError == nil {
-				require.Equal(t, tc.wantedEnvName, opts.EnvName)
-				require.Equal(t, tc.wantedEnvProfile, opts.EnvProfile)
+				require.Equal(t, tc.wantedEnvName, opts.name)
+				require.Equal(t, tc.wantedEnvProfile, opts.profile)
 				require.NoError(t, err)
 			} else {
 				require.EqualError(t, err, tc.wantedError.Error())
@@ -334,10 +332,8 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 			opts := deleteEnvOpts{
 				deleteEnvVars: deleteEnvVars{
-					EnvName: testEnv,
-					GlobalOpts: &GlobalOpts{
-						appName: testApp,
-					},
+					name:    testEnv,
+					appName: testApp,
 				},
 				store:        tc.mockStore(ctrl),
 				deployClient: tc.mockDeploy(ctrl),

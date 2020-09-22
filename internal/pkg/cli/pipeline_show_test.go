@@ -96,9 +96,7 @@ func TestPipelineShow_Validate(t *testing.T) {
 
 			opts := &showPipelineOpts{
 				showPipelineVars: showPipelineVars{
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inAppName,
-					},
+					appName:      tc.inAppName,
 					pipelineName: tc.inPipelineName,
 				},
 				store:       mockStoreReader,
@@ -274,16 +272,14 @@ stages:
 
 			opts := &showPipelineOpts{
 				showPipelineVars: showPipelineVars{
-					GlobalOpts: &GlobalOpts{
-						prompt:  mockPrompt,
-						appName: tc.inAppName,
-					},
+					appName:      tc.inAppName,
 					pipelineName: tc.inPipelineName,
 				},
 				store:       mockStoreReader,
 				ws:          mockWorkspace,
 				pipelineSvc: mockPipelineSvc,
 				sel:         mockSel,
+				prompt:      mockPrompt,
 			}
 
 			// WHEN
@@ -294,7 +290,7 @@ stages:
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.expectedApp, opts.AppName(), "expected application names to match")
+				require.Equal(t, tc.expectedApp, opts.appName, "expected application names to match")
 				require.Equal(t, tc.expectedPipeline, opts.pipelineName, "expected pipeline name to match")
 			}
 		})

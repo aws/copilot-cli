@@ -11,6 +11,7 @@ import (
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/ecslogging"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
@@ -63,7 +64,6 @@ Select %s to run the task in your default VPC instead of any existing environmen
 )
 
 type runTaskVars struct {
-	*GlobalOpts
 	count  int
 	cpu    int
 	memory int
@@ -80,6 +80,7 @@ type runTaskVars struct {
 	subnets           []string
 	securityGroups    []string
 	env               string
+	appName           string
 	useDefaultSubnets bool
 
 	envVars      map[string]string
@@ -127,7 +128,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 		fs:      &afero.Afero{Fs: afero.NewOsFs()},
 		store:   store,
-		sel:     selector.NewSelect(vars.prompt, store),
+		sel:     selector.NewSelect(prompt.New(), store),
 		spinner: termprogress.NewSpinner(),
 	}
 
@@ -164,7 +165,7 @@ func (o *runTaskOpts) configureRunner() taskRunner {
 			Count:     o.count,
 			GroupName: o.groupName,
 
-			App: o.AppName(),
+			App: o.appName,
 			Env: o.env,
 
 			VPCGetter:     vpcGetter,
@@ -494,7 +495,7 @@ func (o *runTaskOpts) deploy() error {
 		ExecutionRole:  o.executionRole,
 		Command:        o.command,
 		EnvVars:        o.envVars,
-		App:            o.AppName(),
+		App:            o.appName,
 		Env:            o.env,
 		AdditionalTags: o.resourceTags,
 	}
@@ -509,7 +510,7 @@ func (o *runTaskOpts) validateAppName() error {
 }
 
 func (o *runTaskOpts) validateEnvName() error {
-	if o.AppName() != "" {
+	if o.appName != "" {
 		if _, err := o.targetEnv(); err != nil {
 			return err
 		}
@@ -521,7 +522,7 @@ func (o *runTaskOpts) validateEnvName() error {
 }
 
 func (o *runTaskOpts) askAppName() error {
-	if o.AppName() != "" {
+	if o.appName != "" {
 		return nil
 	}
 
@@ -545,11 +546,11 @@ func (o *runTaskOpts) askEnvName() error {
 	}
 
 	// If the application is empty then the user wants to run in the default VPC. Do not prompt for an environment name.
-	if o.AppName() == "" || o.subnets != nil {
+	if o.appName == "" || o.subnets != nil {
 		return nil
 	}
 
-	env, err := o.sel.Environment(taskRunEnvPrompt, taskRunEnvPromptHelp, o.AppName(), appEnvOptionNone)
+	env, err := o.sel.Environment(taskRunEnvPrompt, taskRunEnvPromptHelp, o.appName, appEnvOptionNone)
 	if err != nil {
 		return fmt.Errorf("ask for environment: %w", err)
 	}
@@ -563,7 +564,7 @@ func (o *runTaskOpts) askEnvName() error {
 }
 
 func (o *runTaskOpts) targetEnv() (*config.Environment, error) {
-	env, err := o.store.GetEnvironment(o.AppName(), o.env)
+	env, err := o.store.GetEnvironment(o.appName, o.env)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s config: %w", o.env, err)
 	}
@@ -572,9 +573,7 @@ func (o *runTaskOpts) targetEnv() (*config.Environment, error) {
 
 // BuildTaskRunCmd build the command for running a new task
 func BuildTaskRunCmd() *cobra.Command {
-	vars := runTaskVars{
-		GlobalOpts: NewGlobalOpts(),
-	}
+	vars := runTaskVars{}
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "Run a one-off task on Amazon ECS.",

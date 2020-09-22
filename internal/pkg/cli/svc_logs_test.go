@@ -24,7 +24,6 @@ type svcLogsMock struct {
 
 func TestSvcLogs_Validate(t *testing.T) {
 	const (
-		mockLimit        = 3
 		mockSince        = 1 * time.Minute
 		mockStartTime    = "1970-01-01T01:01:01+00:00"
 		mockBadStartTime = "badStartTime"
@@ -132,9 +131,7 @@ func TestSvcLogs_Validate(t *testing.T) {
 					humanEndTime:   tc.inputEndTime,
 					since:          tc.inputSince,
 					svcName:        tc.inputSvc,
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inputApp,
-					},
+					appName:        tc.inputApp,
 				},
 				configStore: mockstore,
 			}
@@ -237,9 +234,7 @@ func TestSvcLogs_Ask(t *testing.T) {
 				svcLogsVars: svcLogsVars{
 					envName: tc.inputEnvName,
 					svcName: tc.inputSvc,
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inputApp,
-					},
+					appName: tc.inputApp,
 				},
 				configStore: mockstore,
 				sel:         mockSel,
