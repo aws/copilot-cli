@@ -60,7 +60,7 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 	}
 	opts.initDescriber = func() error {
 		var d describer
-		svc, err := opts.store.GetWorkload(opts.appName, opts.svcName)
+		svc, err := opts.store.GetService(opts.appName, opts.svcName)
 		if err != nil {
 			return err
 		}
@@ -106,7 +106,7 @@ func (o *showSvcOpts) Validate() error {
 		}
 	}
 	if o.svcName != "" {
-		if _, err := o.store.GetWorkload(o.appName, o.svcName); err != nil {
+		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
 			return err
 		}
 	}

@@ -78,7 +78,7 @@ func (o *svcStatusOpts) Validate() error {
 		}
 	}
 	if o.svcName != "" {
-		if _, err := o.store.GetWorkload(o.appName, o.svcName); err != nil {
+		if _, err := o.store.GetService(o.appName, o.svcName); err != nil {
 			return err
 		}
 	}

@@ -15,17 +15,17 @@ import (
 )
 
 func TestStore_ListServices(t *testing.T) {
-	frontendService := Workload{Name: "fe", App: "chicken", Type: "LBFargate"}
+	frontendService := Workload{Name: "fe", App: "chicken", Type: "Load Balanced Fargate Service"}
 	frontendServiceString, err := marshal(frontendService)
-	frontendServicePath := fmt.Sprintf(fmtSvcParamPath, frontendService.App, frontendService.Name)
+	frontendServicePath := fmt.Sprintf(fmtWkldParamPath, frontendService.App, frontendService.Name)
 	require.NoError(t, err, "Marshal svc should not fail")
 
-	apiService := Workload{Name: "api", App: "chicken", Type: "LBFargate"}
+	apiService := Workload{Name: "api", App: "chicken", Type: "Load Balanced Fargate Service"}
 	apiServiceString, err := marshal(apiService)
-	apiServicePath := fmt.Sprintf(fmtSvcParamPath, apiService.App, apiService.Name)
+	apiServicePath := fmt.Sprintf(fmtWkldParamPath, apiService.App, apiService.Name)
 	require.NoError(t, err, "Marshal svc should not fail")
 
-	servicePath := fmt.Sprintf(rootSvcParamPath, frontendService.App)
+	servicePath := fmt.Sprintf(rootWkldParamPath, frontendService.App)
 
 	lastPageInPaginatedResp := false
 
@@ -74,7 +74,7 @@ func TestStore_ListServices(t *testing.T) {
 				require.Equal(t, servicePath, *param.Path)
 				return nil, fmt.Errorf("broken")
 			},
-			wantedErr: fmt.Errorf("list services for application chicken: broken"),
+			wantedErr: fmt.Errorf("read service configuration for application chicken: broken"),
 		},
 		"with paginated response": {
 			mockGetParametersByPath: func(t *testing.T, param *ssm.GetParametersByPathInput) (output *ssm.GetParametersByPathOutput, e error) {
@@ -137,9 +137,9 @@ func TestStore_ListServices(t *testing.T) {
 }
 
 func TestStore_GetService(t *testing.T) {
-	testService := Workload{Name: "api", App: "chicken", Type: "LBFargate"}
+	testService := Workload{Name: "api", App: "chicken", Type: "Load Balanced Fargate Service"}
 	testServiceString, err := marshal(testService)
-	testServicePath := fmt.Sprintf(fmtSvcParamPath, testService.App, testService.Name)
+	testServicePath := fmt.Sprintf(fmtWkldParamPath, testService.App, testService.Name)
 	require.NoError(t, err, "Marshal svc should not fail")
 
 	testCases := map[string]struct {
@@ -219,9 +219,9 @@ func TestStore_CreateService(t *testing.T) {
 	testApplicationPath := fmt.Sprintf(fmtApplicationPath, testApplication.Name)
 	require.NoError(t, err, "Marshal app should not fail")
 
-	testService := Workload{Name: "api", App: testApplication.Name, Type: "LBFargate"}
+	testService := Workload{Name: "api", App: testApplication.Name, Type: "Load Balanced Fargate Service"}
 	testServiceString, err := marshal(testService)
-	testServicePath := fmt.Sprintf(fmtSvcParamPath, testService.App, testService.Name)
+	testServicePath := fmt.Sprintf(fmtWkldParamPath, testService.App, testService.Name)
 	require.NoError(t, err, "Marshal svc should not fail")
 
 	testCases := map[string]struct {
@@ -330,7 +330,7 @@ func TestDeleteService(t *testing.T) {
 		},
 		"successfully deleted param": {
 			mockDeleteParam: func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
-				wantedPath := fmt.Sprintf(fmtSvcParamPath, mockApplicationName, mockSvcName)
+				wantedPath := fmt.Sprintf(fmtWkldParamPath, mockApplicationName, mockSvcName)
 
 				require.Equal(t, wantedPath, *in.Name)
 

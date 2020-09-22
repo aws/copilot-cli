@@ -170,19 +170,19 @@ func (m *MockConfigSvcLister) EXPECT() *MockConfigSvcListerMockRecorder {
 	return m.recorder
 }
 
-// ListWorkloads mocks base method
-func (m *MockConfigSvcLister) ListWorkloads(appName string) ([]*config.Workload, error) {
+// ListServices mocks base method
+func (m *MockConfigSvcLister) ListServices(appName string) ([]*config.Workload, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListWorkloads", appName)
+	ret := m.ctrl.Call(m, "ListServices", appName)
 	ret0, _ := ret[0].([]*config.Workload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListWorkloads indicates an expected call of ListWorkloads
-func (mr *MockConfigSvcListerMockRecorder) ListWorkloads(appName interface{}) *gomock.Call {
+// ListServices indicates an expected call of ListServices
+func (mr *MockConfigSvcListerMockRecorder) ListServices(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockConfigSvcLister)(nil).ListWorkloads), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockConfigSvcLister)(nil).ListServices), appName)
 }
 
 // MockConfigLister is a mock of ConfigLister interface
@@ -238,19 +238,19 @@ func (mr *MockConfigListerMockRecorder) ListApplications() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListApplications", reflect.TypeOf((*MockConfigLister)(nil).ListApplications))
 }
 
-// ListWorkloads mocks base method
-func (m *MockConfigLister) ListWorkloads(appName string) ([]*config.Workload, error) {
+// ListServices mocks base method
+func (m *MockConfigLister) ListServices(appName string) ([]*config.Workload, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListWorkloads", appName)
+	ret := m.ctrl.Call(m, "ListServices", appName)
 	ret0, _ := ret[0].([]*config.Workload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListWorkloads indicates an expected call of ListWorkloads
-func (mr *MockConfigListerMockRecorder) ListWorkloads(appName interface{}) *gomock.Call {
+// ListServices indicates an expected call of ListServices
+func (mr *MockConfigListerMockRecorder) ListServices(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockConfigLister)(nil).ListWorkloads), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockConfigLister)(nil).ListServices), appName)
 }
 
 // MockWsSvcLister is a mock of WsSvcLister interface

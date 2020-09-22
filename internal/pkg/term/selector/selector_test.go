@@ -338,7 +338,7 @@ func TestConfigSelect_Service(t *testing.T) {
 			setupMocks: func(m configSelectMocks) {
 				m.serviceLister.
 					EXPECT().
-					ListWorkloads(gomock.Eq(appName)).
+					ListServices(gomock.Eq(appName)).
 					Return([]*config.Workload{}, nil).
 					Times(1)
 				m.prompt.
@@ -353,7 +353,7 @@ func TestConfigSelect_Service(t *testing.T) {
 			setupMocks: func(m configSelectMocks) {
 				m.serviceLister.
 					EXPECT().
-					ListWorkloads(gomock.Eq(appName)).
+					ListServices(gomock.Eq(appName)).
 					Return([]*config.Workload{
 						{
 							App:  appName,
@@ -374,7 +374,7 @@ func TestConfigSelect_Service(t *testing.T) {
 			setupMocks: func(m configSelectMocks) {
 				m.serviceLister.
 					EXPECT().
-					ListWorkloads(gomock.Eq(appName)).
+					ListServices(gomock.Eq(appName)).
 					Return([]*config.Workload{
 						{
 							App:  appName,
@@ -403,7 +403,7 @@ func TestConfigSelect_Service(t *testing.T) {
 			setupMocks: func(m configSelectMocks) {
 				m.serviceLister.
 					EXPECT().
-					ListWorkloads(gomock.Eq(appName)).
+					ListServices(gomock.Eq(appName)).
 					Return([]*config.Workload{
 						{
 							App:  appName,

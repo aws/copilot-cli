@@ -41,7 +41,7 @@ func TestListSvcOpts_Execute(t *testing.T) {
 					Return(&config.Application{}, nil)
 				mockstore.
 					EXPECT().
-					ListWorkloads(gomock.Eq("coolapp")).
+					ListServices(gomock.Eq("coolapp")).
 					Return([]*config.Workload{
 						{Name: "my-svc"},
 						{Name: "lb-svc"},
@@ -62,7 +62,7 @@ func TestListSvcOpts_Execute(t *testing.T) {
 					Return(&config.Application{}, nil)
 				mockstore.
 					EXPECT().
-					ListWorkloads(gomock.Eq("coolapp")).
+					ListServices(gomock.Eq("coolapp")).
 					Return([]*config.Workload{
 						{Name: "my-svc", Type: "Load Balanced Web Service"},
 						{Name: "lb-svc", Type: "Load Balanced Web Service"},
@@ -85,7 +85,7 @@ func TestListSvcOpts_Execute(t *testing.T) {
 
 				mockstore.
 					EXPECT().
-					ListWorkloads(gomock.Eq("coolapp")).
+					ListServices(gomock.Eq("coolapp")).
 					Times(0)
 			},
 		},
@@ -104,7 +104,7 @@ func TestListSvcOpts_Execute(t *testing.T) {
 
 				mockstore.
 					EXPECT().
-					ListWorkloads(gomock.Eq("coolapp")).
+					ListServices(gomock.Eq("coolapp")).
 					Return(nil, mockError)
 			},
 		},
@@ -124,7 +124,7 @@ func TestListSvcOpts_Execute(t *testing.T) {
 					Return(&config.Application{}, nil)
 				mockstore.
 					EXPECT().
-					ListWorkloads(gomock.Eq("coolapp")).
+					ListServices(gomock.Eq("coolapp")).
 					Return([]*config.Workload{
 						{Name: "my-svc", Type: "Load Balanced Web Service"},
 						{Name: "lb-svc", Type: "Load Balanced Web Service"},

@@ -87,7 +87,7 @@ func (o *listSvcOpts) Execute() error {
 		return fmt.Errorf("get application: %w", err)
 	}
 
-	svcs, err := o.store.ListWorkloads(o.appName)
+	svcs, err := o.store.ListServices(o.appName)
 	if err != nil {
 		return err
 	}

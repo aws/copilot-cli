@@ -107,7 +107,7 @@ func (e *EnvDescriber) stackTags() (map[string]string, error) {
 }
 
 func (e *EnvDescriber) filterDeployedSvcs() ([]*config.Workload, error) {
-	allSvcs, err := e.configStore.ListWorkloads(e.app)
+	allSvcs, err := e.configStore.ListServices(e.app)
 	if err != nil {
 		return nil, fmt.Errorf("list services for app %s: %w", e.app, err)
 	}

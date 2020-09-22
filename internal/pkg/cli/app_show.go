@@ -99,7 +99,7 @@ func (o *showAppOpts) description() (*describe.App, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list environments in application %s: %w", o.name, err)
 	}
-	svcs, err := o.store.ListWorkloads(o.name)
+	svcs, err := o.store.ListServices(o.name)
 	if err != nil {
 		return nil, fmt.Errorf("list services in application %s: %w", o.name, err)
 	}

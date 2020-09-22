@@ -52,7 +52,7 @@ func TestSvcShow_Validate(t *testing.T) {
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
 						Name: "my-app",
 					}, nil),
-					m.storeSvc.EXPECT().GetWorkload("my-app", "my-svc").Return(&config.Workload{
+					m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{
 						Name: "my-svc",
 					}, nil),
 				)
@@ -79,7 +79,7 @@ func TestSvcShow_Validate(t *testing.T) {
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
 						Name: "my-app",
 					}, nil),
-					m.storeSvc.EXPECT().GetWorkload("my-app", "my-svc").Return(nil, errors.New("some error")),
+					m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(nil, errors.New("some error")),
 				)
 			},
 

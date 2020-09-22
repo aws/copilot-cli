@@ -35,8 +35,8 @@ const (
 	fmtApplicationPath  = "/copilot/applications/%s"
 	rootEnvParamPath    = "/copilot/applications/%s/environments/"
 	fmtEnvParamPath     = "/copilot/applications/%s/environments/%s" // path for an environment in an application
-	rootSvcParamPath    = "/copilot/applications/%s/components/"
-	fmtSvcParamPath     = "/copilot/applications/%s/components/%s" // path for a service in an application
+	rootWkldParamPath   = "/copilot/applications/%s/components/"
+	fmtWkldParamPath    = "/copilot/applications/%s/components/%s" // path for a service in an application
 )
 
 type identityGetter interface {

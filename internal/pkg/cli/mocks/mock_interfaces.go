@@ -105,235 +105,166 @@ func (mr *MockactionCommandMockRecorder) RecommendedActions() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecommendedActions", reflect.TypeOf((*MockactionCommand)(nil).RecommendedActions))
 }
 
-// MockworkloadStore is a mock of workloadStore interface
-type MockworkloadStore struct {
+// MockserviceStore is a mock of serviceStore interface
+type MockserviceStore struct {
 	ctrl     *gomock.Controller
-	recorder *MockworkloadStoreMockRecorder
+	recorder *MockserviceStoreMockRecorder
 }
 
-// MockworkloadStoreMockRecorder is the mock recorder for MockworkloadStore
-type MockworkloadStoreMockRecorder struct {
-	mock *MockworkloadStore
+// MockserviceStoreMockRecorder is the mock recorder for MockserviceStore
+type MockserviceStoreMockRecorder struct {
+	mock *MockserviceStore
 }
 
-// NewMockworkloadStore creates a new mock instance
-func NewMockworkloadStore(ctrl *gomock.Controller) *MockworkloadStore {
-	mock := &MockworkloadStore{ctrl: ctrl}
-	mock.recorder = &MockworkloadStoreMockRecorder{mock}
+// NewMockserviceStore creates a new mock instance
+func NewMockserviceStore(ctrl *gomock.Controller) *MockserviceStore {
+	mock := &MockserviceStore{ctrl: ctrl}
+	mock.recorder = &MockserviceStoreMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockworkloadStore) EXPECT() *MockworkloadStoreMockRecorder {
+func (m *MockserviceStore) EXPECT() *MockserviceStoreMockRecorder {
 	return m.recorder
 }
 
-// CreateWorkload mocks base method
-func (m *MockworkloadStore) CreateWorkload(svc *config.Workload) error {
+// CreateService mocks base method
+func (m *MockserviceStore) CreateService(svc *config.Workload) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateWorkload", svc)
+	ret := m.ctrl.Call(m, "CreateService", svc)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// CreateWorkload indicates an expected call of CreateWorkload
-func (mr *MockworkloadStoreMockRecorder) CreateWorkload(svc interface{}) *gomock.Call {
+// CreateService indicates an expected call of CreateService
+func (mr *MockserviceStoreMockRecorder) CreateService(svc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorkload", reflect.TypeOf((*MockworkloadStore)(nil).CreateWorkload), svc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateService", reflect.TypeOf((*MockserviceStore)(nil).CreateService), svc)
 }
 
-// GetWorkload mocks base method
-func (m *MockworkloadStore) GetWorkload(appName, svcName string) (*config.Workload, error) {
+// GetService mocks base method
+func (m *MockserviceStore) GetService(appName, svcName string) (*config.Workload, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetWorkload", appName, svcName)
+	ret := m.ctrl.Call(m, "GetService", appName, svcName)
 	ret0, _ := ret[0].(*config.Workload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetWorkload indicates an expected call of GetWorkload
-func (mr *MockworkloadStoreMockRecorder) GetWorkload(appName, svcName interface{}) *gomock.Call {
+// GetService indicates an expected call of GetService
+func (mr *MockserviceStoreMockRecorder) GetService(appName, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkload", reflect.TypeOf((*MockworkloadStore)(nil).GetWorkload), appName, svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetService", reflect.TypeOf((*MockserviceStore)(nil).GetService), appName, svcName)
 }
 
-// ListWorkloads mocks base method
-func (m *MockworkloadStore) ListWorkloads(appName string) ([]*config.Workload, error) {
+// ListServices mocks base method
+func (m *MockserviceStore) ListServices(appName string) ([]*config.Workload, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListWorkloads", appName)
+	ret := m.ctrl.Call(m, "ListServices", appName)
 	ret0, _ := ret[0].([]*config.Workload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListWorkloads indicates an expected call of ListWorkloads
-func (mr *MockworkloadStoreMockRecorder) ListWorkloads(appName interface{}) *gomock.Call {
+// ListServices indicates an expected call of ListServices
+func (mr *MockserviceStoreMockRecorder) ListServices(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockworkloadStore)(nil).ListWorkloads), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockserviceStore)(nil).ListServices), appName)
 }
 
-// DeleteWorkload mocks base method
-func (m *MockworkloadStore) DeleteWorkload(appName, wkldName string) error {
+// DeleteService mocks base method
+func (m *MockserviceStore) DeleteService(appName, svcName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteWorkload", appName, wkldName)
+	ret := m.ctrl.Call(m, "DeleteService", appName, svcName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeleteWorkload indicates an expected call of DeleteWorkload
-func (mr *MockworkloadStoreMockRecorder) DeleteWorkload(appName, wkldName interface{}) *gomock.Call {
+// DeleteService indicates an expected call of DeleteService
+func (mr *MockserviceStoreMockRecorder) DeleteService(appName, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkload", reflect.TypeOf((*MockworkloadStore)(nil).DeleteWorkload), appName, wkldName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteService", reflect.TypeOf((*MockserviceStore)(nil).DeleteService), appName, svcName)
 }
 
-// MockworkloadCreator is a mock of workloadCreator interface
-type MockworkloadCreator struct {
+// MockjobStore is a mock of jobStore interface
+type MockjobStore struct {
 	ctrl     *gomock.Controller
-	recorder *MockworkloadCreatorMockRecorder
+	recorder *MockjobStoreMockRecorder
 }
 
-// MockworkloadCreatorMockRecorder is the mock recorder for MockworkloadCreator
-type MockworkloadCreatorMockRecorder struct {
-	mock *MockworkloadCreator
+// MockjobStoreMockRecorder is the mock recorder for MockjobStore
+type MockjobStoreMockRecorder struct {
+	mock *MockjobStore
 }
 
-// NewMockworkloadCreator creates a new mock instance
-func NewMockworkloadCreator(ctrl *gomock.Controller) *MockworkloadCreator {
-	mock := &MockworkloadCreator{ctrl: ctrl}
-	mock.recorder = &MockworkloadCreatorMockRecorder{mock}
+// NewMockjobStore creates a new mock instance
+func NewMockjobStore(ctrl *gomock.Controller) *MockjobStore {
+	mock := &MockjobStore{ctrl: ctrl}
+	mock.recorder = &MockjobStoreMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockworkloadCreator) EXPECT() *MockworkloadCreatorMockRecorder {
+func (m *MockjobStore) EXPECT() *MockjobStoreMockRecorder {
 	return m.recorder
 }
 
-// CreateWorkload mocks base method
-func (m *MockworkloadCreator) CreateWorkload(svc *config.Workload) error {
+// CreateJob mocks base method
+func (m *MockjobStore) CreateJob(job *config.Workload) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateWorkload", svc)
+	ret := m.ctrl.Call(m, "CreateJob", job)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// CreateWorkload indicates an expected call of CreateWorkload
-func (mr *MockworkloadCreatorMockRecorder) CreateWorkload(svc interface{}) *gomock.Call {
+// CreateJob indicates an expected call of CreateJob
+func (mr *MockjobStoreMockRecorder) CreateJob(job interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorkload", reflect.TypeOf((*MockworkloadCreator)(nil).CreateWorkload), svc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateJob", reflect.TypeOf((*MockjobStore)(nil).CreateJob), job)
 }
 
-// MockworkloadGetter is a mock of workloadGetter interface
-type MockworkloadGetter struct {
-	ctrl     *gomock.Controller
-	recorder *MockworkloadGetterMockRecorder
-}
-
-// MockworkloadGetterMockRecorder is the mock recorder for MockworkloadGetter
-type MockworkloadGetterMockRecorder struct {
-	mock *MockworkloadGetter
-}
-
-// NewMockworkloadGetter creates a new mock instance
-func NewMockworkloadGetter(ctrl *gomock.Controller) *MockworkloadGetter {
-	mock := &MockworkloadGetter{ctrl: ctrl}
-	mock.recorder = &MockworkloadGetterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockworkloadGetter) EXPECT() *MockworkloadGetterMockRecorder {
-	return m.recorder
-}
-
-// GetWorkload mocks base method
-func (m *MockworkloadGetter) GetWorkload(appName, svcName string) (*config.Workload, error) {
+// GetJob mocks base method
+func (m *MockjobStore) GetJob(appName, jobName string) (*config.Workload, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetWorkload", appName, svcName)
+	ret := m.ctrl.Call(m, "GetJob", appName, jobName)
 	ret0, _ := ret[0].(*config.Workload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetWorkload indicates an expected call of GetWorkload
-func (mr *MockworkloadGetterMockRecorder) GetWorkload(appName, svcName interface{}) *gomock.Call {
+// GetJob indicates an expected call of GetJob
+func (mr *MockjobStoreMockRecorder) GetJob(appName, jobName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkload", reflect.TypeOf((*MockworkloadGetter)(nil).GetWorkload), appName, svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJob", reflect.TypeOf((*MockjobStore)(nil).GetJob), appName, jobName)
 }
 
-// MockworkloadLister is a mock of workloadLister interface
-type MockworkloadLister struct {
-	ctrl     *gomock.Controller
-	recorder *MockworkloadListerMockRecorder
-}
-
-// MockworkloadListerMockRecorder is the mock recorder for MockworkloadLister
-type MockworkloadListerMockRecorder struct {
-	mock *MockworkloadLister
-}
-
-// NewMockworkloadLister creates a new mock instance
-func NewMockworkloadLister(ctrl *gomock.Controller) *MockworkloadLister {
-	mock := &MockworkloadLister{ctrl: ctrl}
-	mock.recorder = &MockworkloadListerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockworkloadLister) EXPECT() *MockworkloadListerMockRecorder {
-	return m.recorder
-}
-
-// ListWorkloads mocks base method
-func (m *MockworkloadLister) ListWorkloads(appName string) ([]*config.Workload, error) {
+// ListJobs mocks base method
+func (m *MockjobStore) ListJobs(appName string) ([]*config.Workload, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListWorkloads", appName)
+	ret := m.ctrl.Call(m, "ListJobs", appName)
 	ret0, _ := ret[0].([]*config.Workload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListWorkloads indicates an expected call of ListWorkloads
-func (mr *MockworkloadListerMockRecorder) ListWorkloads(appName interface{}) *gomock.Call {
+// ListJobs indicates an expected call of ListJobs
+func (mr *MockjobStoreMockRecorder) ListJobs(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockworkloadLister)(nil).ListWorkloads), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockjobStore)(nil).ListJobs), appName)
 }
 
-// MockworkloadDeleter is a mock of workloadDeleter interface
-type MockworkloadDeleter struct {
-	ctrl     *gomock.Controller
-	recorder *MockworkloadDeleterMockRecorder
-}
-
-// MockworkloadDeleterMockRecorder is the mock recorder for MockworkloadDeleter
-type MockworkloadDeleterMockRecorder struct {
-	mock *MockworkloadDeleter
-}
-
-// NewMockworkloadDeleter creates a new mock instance
-func NewMockworkloadDeleter(ctrl *gomock.Controller) *MockworkloadDeleter {
-	mock := &MockworkloadDeleter{ctrl: ctrl}
-	mock.recorder = &MockworkloadDeleterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockworkloadDeleter) EXPECT() *MockworkloadDeleterMockRecorder {
-	return m.recorder
-}
-
-// DeleteWorkload mocks base method
-func (m *MockworkloadDeleter) DeleteWorkload(appName, wkldName string) error {
+// DeleteJob mocks base method
+func (m *MockjobStore) DeleteJob(appName, jobName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteWorkload", appName, wkldName)
+	ret := m.ctrl.Call(m, "DeleteJob", appName, jobName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeleteWorkload indicates an expected call of DeleteWorkload
-func (mr *MockworkloadDeleterMockRecorder) DeleteWorkload(appName, wkldName interface{}) *gomock.Call {
+// DeleteJob indicates an expected call of DeleteJob
+func (mr *MockjobStoreMockRecorder) DeleteJob(appName, jobName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkload", reflect.TypeOf((*MockworkloadDeleter)(nil).DeleteWorkload), appName, wkldName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteJob", reflect.TypeOf((*MockjobStore)(nil).DeleteJob), appName, jobName)
 }
 
 // MockapplicationStore is a mock of applicationStore interface
@@ -937,62 +868,120 @@ func (mr *MockstoreMockRecorder) DeleteEnvironment(appName, environmentName inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*Mockstore)(nil).DeleteEnvironment), appName, environmentName)
 }
 
-// CreateWorkload mocks base method
-func (m *Mockstore) CreateWorkload(svc *config.Workload) error {
+// CreateService mocks base method
+func (m *Mockstore) CreateService(svc *config.Workload) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateWorkload", svc)
+	ret := m.ctrl.Call(m, "CreateService", svc)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// CreateWorkload indicates an expected call of CreateWorkload
-func (mr *MockstoreMockRecorder) CreateWorkload(svc interface{}) *gomock.Call {
+// CreateService indicates an expected call of CreateService
+func (mr *MockstoreMockRecorder) CreateService(svc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorkload", reflect.TypeOf((*Mockstore)(nil).CreateWorkload), svc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateService", reflect.TypeOf((*Mockstore)(nil).CreateService), svc)
 }
 
-// GetWorkload mocks base method
-func (m *Mockstore) GetWorkload(appName, svcName string) (*config.Workload, error) {
+// GetService mocks base method
+func (m *Mockstore) GetService(appName, svcName string) (*config.Workload, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetWorkload", appName, svcName)
+	ret := m.ctrl.Call(m, "GetService", appName, svcName)
 	ret0, _ := ret[0].(*config.Workload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetWorkload indicates an expected call of GetWorkload
-func (mr *MockstoreMockRecorder) GetWorkload(appName, svcName interface{}) *gomock.Call {
+// GetService indicates an expected call of GetService
+func (mr *MockstoreMockRecorder) GetService(appName, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkload", reflect.TypeOf((*Mockstore)(nil).GetWorkload), appName, svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetService", reflect.TypeOf((*Mockstore)(nil).GetService), appName, svcName)
 }
 
-// ListWorkloads mocks base method
-func (m *Mockstore) ListWorkloads(appName string) ([]*config.Workload, error) {
+// ListServices mocks base method
+func (m *Mockstore) ListServices(appName string) ([]*config.Workload, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListWorkloads", appName)
+	ret := m.ctrl.Call(m, "ListServices", appName)
 	ret0, _ := ret[0].([]*config.Workload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListWorkloads indicates an expected call of ListWorkloads
-func (mr *MockstoreMockRecorder) ListWorkloads(appName interface{}) *gomock.Call {
+// ListServices indicates an expected call of ListServices
+func (mr *MockstoreMockRecorder) ListServices(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*Mockstore)(nil).ListWorkloads), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*Mockstore)(nil).ListServices), appName)
 }
 
-// DeleteWorkload mocks base method
-func (m *Mockstore) DeleteWorkload(appName, wkldName string) error {
+// DeleteService mocks base method
+func (m *Mockstore) DeleteService(appName, svcName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteWorkload", appName, wkldName)
+	ret := m.ctrl.Call(m, "DeleteService", appName, svcName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeleteWorkload indicates an expected call of DeleteWorkload
-func (mr *MockstoreMockRecorder) DeleteWorkload(appName, wkldName interface{}) *gomock.Call {
+// DeleteService indicates an expected call of DeleteService
+func (mr *MockstoreMockRecorder) DeleteService(appName, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkload", reflect.TypeOf((*Mockstore)(nil).DeleteWorkload), appName, wkldName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteService", reflect.TypeOf((*Mockstore)(nil).DeleteService), appName, svcName)
+}
+
+// CreateJob mocks base method
+func (m *Mockstore) CreateJob(job *config.Workload) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateJob", job)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateJob indicates an expected call of CreateJob
+func (mr *MockstoreMockRecorder) CreateJob(job interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateJob", reflect.TypeOf((*Mockstore)(nil).CreateJob), job)
+}
+
+// GetJob mocks base method
+func (m *Mockstore) GetJob(appName, jobName string) (*config.Workload, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetJob", appName, jobName)
+	ret0, _ := ret[0].(*config.Workload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetJob indicates an expected call of GetJob
+func (mr *MockstoreMockRecorder) GetJob(appName, jobName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJob", reflect.TypeOf((*Mockstore)(nil).GetJob), appName, jobName)
+}
+
+// ListJobs mocks base method
+func (m *Mockstore) ListJobs(appName string) ([]*config.Workload, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListJobs", appName)
+	ret0, _ := ret[0].([]*config.Workload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListJobs indicates an expected call of ListJobs
+func (mr *MockstoreMockRecorder) ListJobs(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*Mockstore)(nil).ListJobs), appName)
+}
+
+// DeleteJob mocks base method
+func (m *Mockstore) DeleteJob(appName, jobName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteJob", appName, jobName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteJob indicates an expected call of DeleteJob
+func (mr *MockstoreMockRecorder) DeleteJob(appName, jobName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteJob", reflect.TypeOf((*Mockstore)(nil).DeleteJob), appName, jobName)
 }
 
 // MockdeployedEnvironmentLister is a mock of deployedEnvironmentLister interface
@@ -1998,44 +1987,6 @@ func (mr *MocksvcManifestWriterMockRecorder) WriteWorkloadManifest(marshaler, sv
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteWorkloadManifest", reflect.TypeOf((*MocksvcManifestWriter)(nil).WriteWorkloadManifest), marshaler, svcName)
 }
 
-// MockjobManifestWriter is a mock of jobManifestWriter interface
-type MockjobManifestWriter struct {
-	ctrl     *gomock.Controller
-	recorder *MockjobManifestWriterMockRecorder
-}
-
-// MockjobManifestWriterMockRecorder is the mock recorder for MockjobManifestWriter
-type MockjobManifestWriterMockRecorder struct {
-	mock *MockjobManifestWriter
-}
-
-// NewMockjobManifestWriter creates a new mock instance
-func NewMockjobManifestWriter(ctrl *gomock.Controller) *MockjobManifestWriter {
-	mock := &MockjobManifestWriter{ctrl: ctrl}
-	mock.recorder = &MockjobManifestWriterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockjobManifestWriter) EXPECT() *MockjobManifestWriterMockRecorder {
-	return m.recorder
-}
-
-// WriteJobManifest mocks base method
-func (m *MockjobManifestWriter) WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteJobManifest", marshaler, jobName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// WriteJobManifest indicates an expected call of WriteJobManifest
-func (mr *MockjobManifestWriterMockRecorder) WriteJobManifest(marshaler, jobName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteJobManifest", reflect.TypeOf((*MockjobManifestWriter)(nil).WriteJobManifest), marshaler, jobName)
-}
-
 // MocksvcDirManifestWriter is a mock of svcDirManifestWriter interface
 type MocksvcDirManifestWriter struct {
 	ctrl     *gomock.Controller
@@ -2339,82 +2290,6 @@ func (mr *MockwsSvcDirReaderMockRecorder) CopilotDirPath() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockwsSvcDirReader)(nil).CopilotDirPath))
 }
 
-// MockwsJobLister is a mock of wsJobLister interface
-type MockwsJobLister struct {
-	ctrl     *gomock.Controller
-	recorder *MockwsJobListerMockRecorder
-}
-
-// MockwsJobListerMockRecorder is the mock recorder for MockwsJobLister
-type MockwsJobListerMockRecorder struct {
-	mock *MockwsJobLister
-}
-
-// NewMockwsJobLister creates a new mock instance
-func NewMockwsJobLister(ctrl *gomock.Controller) *MockwsJobLister {
-	mock := &MockwsJobLister{ctrl: ctrl}
-	mock.recorder = &MockwsJobListerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockwsJobLister) EXPECT() *MockwsJobListerMockRecorder {
-	return m.recorder
-}
-
-// JobNames mocks base method
-func (m *MockwsJobLister) JobNames() ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "JobNames")
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// JobNames indicates an expected call of JobNames
-func (mr *MockwsJobListerMockRecorder) JobNames() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JobNames", reflect.TypeOf((*MockwsJobLister)(nil).JobNames))
-}
-
-// MockwsJobReader is a mock of wsJobReader interface
-type MockwsJobReader struct {
-	ctrl     *gomock.Controller
-	recorder *MockwsJobReaderMockRecorder
-}
-
-// MockwsJobReaderMockRecorder is the mock recorder for MockwsJobReader
-type MockwsJobReaderMockRecorder struct {
-	mock *MockwsJobReader
-}
-
-// NewMockwsJobReader creates a new mock instance
-func NewMockwsJobReader(ctrl *gomock.Controller) *MockwsJobReader {
-	mock := &MockwsJobReader{ctrl: ctrl}
-	mock.recorder = &MockwsJobReaderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockwsJobReader) EXPECT() *MockwsJobReaderMockRecorder {
-	return m.recorder
-}
-
-// JobNames mocks base method
-func (m *MockwsJobReader) JobNames() ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "JobNames")
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// JobNames indicates an expected call of JobNames
-func (mr *MockwsJobReaderMockRecorder) JobNames() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JobNames", reflect.TypeOf((*MockwsJobReader)(nil).JobNames))
-}
-
 // MockwsJobDirReader is a mock of wsJobDirReader interface
 type MockwsJobDirReader struct {
 	ctrl     *gomock.Controller
@@ -2451,59 +2326,6 @@ func (m *MockwsJobDirReader) JobNames() ([]string, error) {
 func (mr *MockwsJobDirReaderMockRecorder) JobNames() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JobNames", reflect.TypeOf((*MockwsJobDirReader)(nil).JobNames))
-}
-
-// MockJobDirManifestWriter is a mock of JobDirManifestWriter interface
-type MockJobDirManifestWriter struct {
-	ctrl     *gomock.Controller
-	recorder *MockJobDirManifestWriterMockRecorder
-}
-
-// MockJobDirManifestWriterMockRecorder is the mock recorder for MockJobDirManifestWriter
-type MockJobDirManifestWriterMockRecorder struct {
-	mock *MockJobDirManifestWriter
-}
-
-// NewMockJobDirManifestWriter creates a new mock instance
-func NewMockJobDirManifestWriter(ctrl *gomock.Controller) *MockJobDirManifestWriter {
-	mock := &MockJobDirManifestWriter{ctrl: ctrl}
-	mock.recorder = &MockJobDirManifestWriterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockJobDirManifestWriter) EXPECT() *MockJobDirManifestWriterMockRecorder {
-	return m.recorder
-}
-
-// WriteJobManifest mocks base method
-func (m *MockJobDirManifestWriter) WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteJobManifest", marshaler, jobName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// WriteJobManifest indicates an expected call of WriteJobManifest
-func (mr *MockJobDirManifestWriterMockRecorder) WriteJobManifest(marshaler, jobName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteJobManifest", reflect.TypeOf((*MockJobDirManifestWriter)(nil).WriteJobManifest), marshaler, jobName)
-}
-
-// CopilotDirPath mocks base method
-func (m *MockJobDirManifestWriter) CopilotDirPath() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CopilotDirPath")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CopilotDirPath indicates an expected call of CopilotDirPath
-func (mr *MockJobDirManifestWriterMockRecorder) CopilotDirPath() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockJobDirManifestWriter)(nil).CopilotDirPath))
 }
 
 // MockwsPipelineReader is a mock of wsPipelineReader interface

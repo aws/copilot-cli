@@ -43,7 +43,7 @@ func TestSvcStatus_Validate(t *testing.T) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{
 					Name: "my-app",
 				}, nil)
-				m.EXPECT().GetWorkload("my-app", "my-svc").Return(nil, errors.New("some error"))
+				m.EXPECT().GetService("my-app", "my-svc").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("some error"),
@@ -73,7 +73,7 @@ func TestSvcStatus_Validate(t *testing.T) {
 				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
 					Name: "test",
 				}, nil)
-				m.EXPECT().GetWorkload("my-app", "my-svc").Return(&config.Workload{
+				m.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{
 					Name: "my-svc",
 				}, nil)
 			},

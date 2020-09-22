@@ -69,7 +69,7 @@ func TestStore_ListDeployedServices(t *testing.T) {
 						AppTagKey: "mockApp",
 						EnvTagKey: "mockEnv",
 					}).Return([]*rg.Resource{{ARN: "mockARN", Tags: map[string]string{ServiceTagKey: "mockSvc"}}}, nil),
-					m.configStore.EXPECT().GetWorkload("mockApp", "mockSvc").Return(nil, errors.New("some error")),
+					m.configStore.EXPECT().GetService("mockApp", "mockSvc").Return(nil, errors.New("some error")),
 				)
 			},
 
@@ -86,11 +86,11 @@ func TestStore_ListDeployedServices(t *testing.T) {
 						EnvTagKey: "mockEnv",
 					}).Return([]*rg.Resource{{ARN: "mockARN1", Tags: map[string]string{ServiceTagKey: "mockSvc1"}},
 						{ARN: "mockARN2", Tags: map[string]string{ServiceTagKey: "mockSvc2"}}}, nil),
-					m.configStore.EXPECT().GetWorkload("mockApp", "mockSvc1").Return(&config.Workload{
+					m.configStore.EXPECT().GetService("mockApp", "mockSvc1").Return(&config.Workload{
 						App:  "mockApp",
 						Name: "mockSvc1",
 					}, nil),
-					m.configStore.EXPECT().GetWorkload("mockApp", "mockSvc2").Return(&config.Workload{
+					m.configStore.EXPECT().GetService("mockApp", "mockSvc2").Return(&config.Workload{
 						App:  "mockApp",
 						Name: "mockSvc2",
 					}, nil),

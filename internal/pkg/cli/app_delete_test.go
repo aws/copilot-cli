@@ -169,7 +169,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			setupMocks: func(mocks deleteAppMocks) {
 				gomock.InOrder(
 					// deleteSvcs
-					mocks.store.EXPECT().ListWorkloads(mockAppName).Return(mockServices, nil),
+					mocks.store.EXPECT().ListServices(mockAppName).Return(mockServices, nil),
 					mocks.svcDeleter.EXPECT().Execute().Return(nil),
 
 					// deleteEnvs
@@ -210,7 +210,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			setupMocks: func(mocks deleteAppMocks) {
 				gomock.InOrder(
 					// deleteSvcs
-					mocks.store.EXPECT().ListWorkloads(mockAppName).Return(mockServices, nil),
+					mocks.store.EXPECT().ListServices(mockAppName).Return(mockServices, nil),
 					mocks.svcDeleter.EXPECT().Execute().Return(nil),
 
 					// deleteEnvs

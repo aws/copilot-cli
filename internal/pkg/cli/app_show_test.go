@@ -174,7 +174,7 @@ func TestShowAppOpts_Execute(t *testing.T) {
 					Name:   "my-app",
 					Domain: "example.com",
 				}, nil)
-				m.storeSvc.EXPECT().ListWorkloads("my-app").Return([]*config.Workload{
+				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Workload{
 					{
 						Name: "my-svc",
 						Type: "lb-web-svc",
@@ -204,7 +204,7 @@ func TestShowAppOpts_Execute(t *testing.T) {
 					Name:   "my-app",
 					Domain: "example.com",
 				}, nil)
-				m.storeSvc.EXPECT().ListWorkloads("my-app").Return([]*config.Workload{
+				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Workload{
 					{
 						Name: "my-svc",
 						Type: "lb-web-svc",
@@ -281,7 +281,7 @@ Services
 						Region:    "us-west-1",
 					},
 				}, nil)
-				m.storeSvc.EXPECT().ListWorkloads("my-app").Return(nil, testError)
+				m.storeSvc.EXPECT().ListServices("my-app").Return(nil, testError)
 			},
 
 			wantedError: fmt.Errorf("list services in application %s: %w", "my-app", testError),

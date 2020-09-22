@@ -194,7 +194,7 @@ func (o *deleteAppOpts) Execute() error {
 }
 
 func (o *deleteAppOpts) deleteSvcs() error {
-	svcs, err := o.store.ListWorkloads(o.name)
+	svcs, err := o.store.ListServices(o.name)
 	if err != nil {
 		return fmt.Errorf("list services for application %s: %w", o.name, err)
 	}

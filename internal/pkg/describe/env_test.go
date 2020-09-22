@@ -92,7 +92,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 		"error if fail to list all services": {
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-					m.configStoreSvc.EXPECT().ListWorkloads(testApp).Return(nil, mockError),
+					m.configStoreSvc.EXPECT().ListServices(testApp).Return(nil, mockError),
 				)
 			},
 			wantedError: fmt.Errorf("list services for app testApp: some error"),
@@ -100,7 +100,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 		"error if fail to list deployed services": {
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-					m.configStoreSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{
+					m.configStoreSvc.EXPECT().ListServices(testApp).Return([]*config.Workload{
 						testSvc1, testSvc2, testSvc3,
 					}, nil),
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
@@ -112,7 +112,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 		"error if fail to get env tags": {
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-					m.configStoreSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{
+					m.configStoreSvc.EXPECT().ListServices(testApp).Return([]*config.Workload{
 						testSvc1, testSvc2, testSvc3,
 					}, nil),
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
@@ -126,7 +126,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			shouldOutputResources: true,
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-					m.configStoreSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{
+					m.configStoreSvc.EXPECT().ListServices(testApp).Return([]*config.Workload{
 						testSvc1, testSvc2, testSvc3,
 					}, nil),
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
@@ -143,7 +143,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			shouldOutputResources: false,
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-					m.configStoreSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{
+					m.configStoreSvc.EXPECT().ListServices(testApp).Return([]*config.Workload{
 						testSvc1, testSvc2, testSvc3,
 					}, nil),
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
@@ -163,7 +163,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			shouldOutputResources: true,
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-					m.configStoreSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{
+					m.configStoreSvc.EXPECT().ListServices(testApp).Return([]*config.Workload{
 						testSvc1, testSvc2, testSvc3,
 					}, nil),
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).

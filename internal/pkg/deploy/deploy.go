@@ -48,7 +48,7 @@ type resourceGetter interface {
 type ConfigStoreClient interface {
 	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
 	ListEnvironments(appName string) ([]*config.Environment, error)
-	GetWorkload(appName, svcName string) (*config.Workload, error)
+	GetService(appName, svcName string) (*config.Workload, error)
 }
 
 // Store fetches information on deployed services.
@@ -103,7 +103,7 @@ func (s *Store) ListDeployedServices(appName string, envName string) ([]string, 
 		if svcName == "" {
 			return nil, fmt.Errorf("service with ARN %s is not tagged with %s", resource.ARN, ServiceTagKey)
 		}
-		svc, err := s.configStore.GetWorkload(appName, svcName)
+		svc, err := s.configStore.GetService(appName, svcName)
 		if err != nil {
 			return nil, fmt.Errorf("get service %s: %w", svcName, err)
 		}

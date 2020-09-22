@@ -185,7 +185,7 @@ func (o *initSvcOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtAddSvcToAppComplete, o.name))
 
-	if err := o.store.CreateWorkload(&config.Workload{
+	if err := o.store.CreateService(&config.Workload{
 		App:  o.appName,
 		Name: o.name,
 		Type: o.serviceType,
@@ -250,7 +250,7 @@ func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalance
 		Port: o.port,
 		Path: "/",
 	}
-	existingSvcs, err := o.store.ListWorkloads(o.appName)
+	existingSvcs, err := o.store.ListServices(o.appName)
 	if err != nil {
 		return nil, err
 	}

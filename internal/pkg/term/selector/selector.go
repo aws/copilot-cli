@@ -29,7 +29,7 @@ type AppEnvLister interface {
 
 // ConfigSvcLister wraps the method to list svcs in config store.
 type ConfigSvcLister interface {
-	ListWorkloads(appName string) ([]*config.Workload, error)
+	ListServices(appName string) ([]*config.Workload, error)
 }
 
 // ConfigLister wraps config store listing methods.
@@ -322,7 +322,7 @@ func (s *Select) retrieveEnvironments(app string) ([]string, error) {
 }
 
 func (s *ConfigSelect) retrieveServices(app string) ([]string, error) {
-	services, err := s.svcLister.ListWorkloads(app)
+	services, err := s.svcLister.ListServices(app)
 	if err != nil {
 		return nil, fmt.Errorf("list services: %w", err)
 	}

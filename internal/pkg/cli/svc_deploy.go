@@ -139,7 +139,7 @@ func (o *deploySvcOpts) Execute() error {
 	}
 	o.targetApp = app
 
-	svc, err := o.store.GetWorkload(o.appName, o.name)
+	svc, err := o.store.GetService(o.appName, o.name)
 	if err != nil {
 		return fmt.Errorf("get service configuration: %w", err)
 	}

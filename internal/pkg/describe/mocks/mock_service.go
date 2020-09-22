@@ -156,19 +156,19 @@ func (mr *MockConfigStoreSvcMockRecorder) ListEnvironments(appName interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockConfigStoreSvc)(nil).ListEnvironments), appName)
 }
 
-// ListWorkloads mocks base method
-func (m *MockConfigStoreSvc) ListWorkloads(appName string) ([]*config.Workload, error) {
+// ListServices mocks base method
+func (m *MockConfigStoreSvc) ListServices(appName string) ([]*config.Workload, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListWorkloads", appName)
+	ret := m.ctrl.Call(m, "ListServices", appName)
 	ret0, _ := ret[0].([]*config.Workload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListWorkloads indicates an expected call of ListWorkloads
-func (mr *MockConfigStoreSvcMockRecorder) ListWorkloads(appName interface{}) *gomock.Call {
+// ListServices indicates an expected call of ListServices
+func (mr *MockConfigStoreSvcMockRecorder) ListServices(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockConfigStoreSvc)(nil).ListWorkloads), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockConfigStoreSvc)(nil).ListServices), appName)
 }
 
 // MockDeployedEnvServicesLister is a mock of DeployedEnvServicesLister interface
