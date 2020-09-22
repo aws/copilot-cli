@@ -216,7 +216,7 @@ func (o *deleteAppOpts) deleteSvcs() error {
 }
 
 func (o *deleteAppOpts) deleteJobs() error {
-	jobs, err := o.store.ListJobs(o.name)
+	_, err := o.store.ListJobs(o.name)
 	if err != nil {
 		return fmt.Errorf("list jobs for application %s: %w", o.name, err)
 	}

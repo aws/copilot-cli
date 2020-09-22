@@ -179,7 +179,6 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 
 					// deleteJobs
 					mocks.store.EXPECT().ListJobs(mockAppName).Return(mockJobs, nil),
-					mocks.svcDeleter.EXPECT().Execute().Return(nil),
 
 					// deleteEnvs
 					mocks.store.EXPECT().ListEnvironments(mockAppName).Return(mockEnvs, nil),
@@ -224,7 +223,6 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 
 					// deleteJobs
 					mocks.store.EXPECT().ListJobs(mockAppName).Return(mockJobs, nil),
-					mocks.svcDeleter.EXPECT().Execute().Return(nil),
 
 					// deleteEnvs
 					mocks.store.EXPECT().ListEnvironments(mockAppName).Return(mockEnvs, nil),
