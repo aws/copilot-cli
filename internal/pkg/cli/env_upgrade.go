@@ -8,7 +8,17 @@ import (
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
+)
+
+const (
+	envUpgradeAppPrompt = "In which application is your environment?"
+
+	envUpgradeEnvPrompt = "Which environment do you want to upgrade?"
+	envUpgradeEnvHelp   = `Upgrades the AWS CloudFormation template for your environment
+to support latest Copilot features.`
 )
 
 // envUpgradeVars holds flag values.
@@ -24,6 +34,7 @@ type envUpgradeOpts struct {
 	envUpgradeVars
 
 	store environmentStore
+	sel   appEnvSelector
 }
 
 func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
@@ -34,6 +45,7 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 	return &envUpgradeOpts{
 		envUpgradeVars: vars,
 		store:          store,
+		sel:            selector.NewSelect(prompt.New(), store),
 	}, nil
 }
 
@@ -55,7 +67,21 @@ func (o *envUpgradeOpts) Validate() error {
 }
 
 // Ask prompts for any required flags that are not set by the user.
-func (o *envUpgradeVars) Ask() error {
+func (o *envUpgradeOpts) Ask() error {
+	if o.appName == "" {
+		app, err := o.sel.Application(envUpgradeAppPrompt, "")
+		if err != nil {
+			return fmt.Errorf("select application: %v", err)
+		}
+		o.appName = app
+	}
+	if !o.all && o.name == "" {
+		env, err := o.sel.Environment(envUpgradeEnvPrompt, envUpgradeEnvHelp, o.appName)
+		if err != nil {
+			return fmt.Errorf("select environment: %v", err)
+		}
+		o.name = env
+	}
 	return nil
 }
 

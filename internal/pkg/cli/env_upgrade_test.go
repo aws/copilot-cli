@@ -99,3 +99,86 @@ func TestEnvUpgradeOpts_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestEnvUpgradeOpts_Ask(t *testing.T) {
+	testCases := map[string]struct {
+		given func(ctrl *gomock.Controller) *envUpgradeOpts
+
+		wantedAppName string
+		wantedEnvName string
+		wantedErr     error
+	}{
+		"should prompt for application if not set": {
+			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
+				m := mocks.NewMockappEnvSelector(ctrl)
+				m.EXPECT().Application("In which application is your environment?", "").Return("phonetool", nil)
+
+				return &envUpgradeOpts{
+					envUpgradeVars: envUpgradeVars{
+						name: "test",
+					},
+					sel: m,
+				}
+			},
+			wantedAppName: "phonetool",
+			wantedEnvName: "test",
+		},
+		"should not prompt for environment if --all is set": {
+			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
+				m := mocks.NewMockappEnvSelector(ctrl)
+				m.EXPECT().Application(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+				return &envUpgradeOpts{
+					envUpgradeVars: envUpgradeVars{
+						appName: "phonetool",
+						name:    "test",
+						all:     true,
+					},
+					sel: m,
+				}
+			},
+			wantedAppName: "phonetool",
+			wantedEnvName: "test",
+		},
+		"should prompt for environment if --all and --name is not provided": {
+			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
+				m := mocks.NewMockappEnvSelector(ctrl)
+				m.EXPECT().Environment(
+					"Which environment do you want to upgrade?",
+					`Upgrades the AWS CloudFormation template for your environment
+to support latest Copilot features.`,
+					"phonetool").
+					Return("test", nil)
+
+				return &envUpgradeOpts{
+					envUpgradeVars: envUpgradeVars{
+						appName: "phonetool",
+					},
+					sel: m,
+				}
+			},
+			wantedAppName: "phonetool",
+			wantedEnvName: "test",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			opts := tc.given(ctrl)
+
+			err := opts.Ask()
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedAppName, opts.appName)
+				require.Equal(t, tc.wantedEnvName, opts.name)
+			}
+		})
+	}
+}
