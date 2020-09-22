@@ -144,6 +144,11 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			Name: "webapp",
 		},
 	}
+	mockJobs := []*config.Workload{
+		{
+			Name: "mailer",
+		},
+	}
 	mockEnvs := []*config.Environment{
 		{
 			Name: "staging",
@@ -170,6 +175,10 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// deleteSvcs
 					mocks.store.EXPECT().ListServices(mockAppName).Return(mockServices, nil),
+					mocks.svcDeleter.EXPECT().Execute().Return(nil),
+
+					// deleteJobs
+					mocks.store.EXPECT().ListJobs(mockAppName).Return(mockJobs, nil),
 					mocks.svcDeleter.EXPECT().Execute().Return(nil),
 
 					// deleteEnvs
@@ -211,6 +220,10 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// deleteSvcs
 					mocks.store.EXPECT().ListServices(mockAppName).Return(mockServices, nil),
+					mocks.svcDeleter.EXPECT().Execute().Return(nil),
+
+					// deleteJobs
+					mocks.store.EXPECT().ListJobs(mockAppName).Return(mockJobs, nil),
 					mocks.svcDeleter.EXPECT().Execute().Return(nil),
 
 					// deleteEnvs

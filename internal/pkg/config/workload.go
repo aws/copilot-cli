@@ -153,8 +153,6 @@ func (s *Store) GetJob(appName, jobName string) (*Workload, error) {
 	return &job, nil
 }
 
-func (s *Store) getWorkload(appName, workloadName string) (*Workload, error) { return nil, nil }
-
 // ListServices returns all services belonging to a particular application.
 func (s *Store) ListServices(appName string) ([]*Workload, error) {
 	wklds, err := s.listWorkloads(appName)
