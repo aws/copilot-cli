@@ -160,12 +160,10 @@ func TestJobDeployOpts_Ask(t *testing.T) {
 			tc.wantedCalls(mockSel)
 			opts := deployJobOpts{
 				deployJobVars: deployJobVars{
-					GlobalOpts: &GlobalOpts{
-						appName: tc.inAppName,
-					},
-					Name:     tc.inJobName,
-					EnvName:  tc.inEnvName,
-					ImageTag: tc.inImageTag,
+					appName:  tc.inAppName,
+					name:     tc.inJobName,
+					envName:  tc.inEnvName,
+					imageTag: tc.inImageTag,
 				},
 				sel: mockSel,
 			}
@@ -176,9 +174,9 @@ func TestJobDeployOpts_Ask(t *testing.T) {
 			// THEN
 			if tc.wantedError == nil {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedJobName, opts.Name)
-				require.Equal(t, tc.wantedEnvName, opts.EnvName)
-				require.Equal(t, tc.wantedImageTag, opts.ImageTag)
+				require.Equal(t, tc.wantedJobName, opts.name)
+				require.Equal(t, tc.wantedEnvName, opts.envName)
+				require.Equal(t, tc.wantedImageTag, opts.imageTag)
 			} else {
 				require.EqualError(t, err, tc.wantedError.Error())
 			}

@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
-	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -40,7 +39,7 @@ type deployJobOpts struct {
 
 	spinner progress
 	sel     wsSelector
-  prompt  prompter
+	prompt  prompter
 }
 
 func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
@@ -53,7 +52,7 @@ func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
-  prompter := prompt.New()
+	prompter := prompt.New()
 	return &deployJobOpts{
 		deployJobVars: vars,
 
@@ -62,7 +61,7 @@ func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
 		unmarshal:    manifest.UnmarshalWorkload,
 		spinner:      termprogress.NewSpinner(),
 		sel:          selector.NewWorkspaceSelect(prompter, store, ws),
-    prompt:       prompter,
+		prompt:       prompter,
 		cmd:          command.New(),
 		sessProvider: sessions.NewProvider(),
 	}, nil
@@ -149,7 +148,7 @@ func (o *deployJobOpts) askEnvName() error {
 		return nil
 	}
 
-	name, err := o.sel.Environment("Select an environment", "", o.appName())
+	name, err := o.sel.Environment("Select an environment", "", o.appName)
 	if err != nil {
 		return fmt.Errorf("select environment: %w", err)
 	}
