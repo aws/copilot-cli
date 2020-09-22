@@ -220,17 +220,6 @@ func (o *deleteAppOpts) deleteJobs() error {
 	if err != nil {
 		return fmt.Errorf("list jobs for application %s: %w", o.name, err)
 	}
-	for _, job := range jobs {
-		// TODO: replace this with a "job delete" executor.
-		// We use the `svc delete` executor since it
-		cmd, err := o.executor(job.Name)
-		if err != nil {
-			return err
-		}
-		if err := cmd.Execute(); err != nil {
-			return fmt.Errorf("execute job delete: %w", err)
-		}
-	}
 	return nil
 }
 
