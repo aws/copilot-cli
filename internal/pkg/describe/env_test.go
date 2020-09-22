@@ -227,6 +227,73 @@ func TestEnvDescriber_Describe(t *testing.T) {
 	}
 }
 
+func TestEnvDescriber_Version(t *testing.T) {
+	testCases := map[string]struct {
+		given func(ctrl *gomock.Controller) *EnvDescriber
+
+		wantedVersion string
+		wantedErr     error
+	}{
+		"should return empty version if legacy template": {
+			given: func(ctrl *gomock.Controller) *EnvDescriber {
+				m := mocks.NewMockstackAndResourcesDescriber(ctrl)
+				m.EXPECT().Template(gomock.Any()).Return(`
+Resources:
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: LoadBalancerRule
+    Properties:
+      ServiceName: !Ref 'ServiceName'
+      Cluster:
+        Fn::ImportValue:
+          !Join [':', [!Ref 'StackName', 'ClusterName']]
+`, nil)
+				return &EnvDescriber{
+					app:            "phonetool",
+					env:            &config.Environment{Name: "test"},
+					stackDescriber: m,
+				}
+			},
+		},
+		"should read the version from the Metadata field": {
+			given: func(ctrl *gomock.Controller) *EnvDescriber {
+				m := mocks.NewMockstackAndResourcesDescriber(ctrl)
+				m.EXPECT().Template("phonetool-test").Return(`
+Metadata:
+  Version: 1.0.0
+`, nil)
+				return &EnvDescriber{
+					app:            "phonetool",
+					env:            &config.Environment{Name: "test"},
+					stackDescriber: m,
+				}
+			},
+
+			wantedVersion: "1.0.0",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			d := tc.given(ctrl)
+
+			// WHEN
+			actual, err := d.Version()
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedVersion, actual)
+			}
+		})
+	}
+}
+
 func TestEnvDescription_JSONString(t *testing.T) {
 	testApp := &config.Application{
 		Name: "testApp",

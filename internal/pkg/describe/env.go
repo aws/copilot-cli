@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"gopkg.in/yaml.v3"
 )
 
 // EnvDescription contains the information about an environment.
@@ -62,41 +63,63 @@ func NewEnvDescriber(opt NewEnvDescriberConfig) (*EnvDescriber, error) {
 
 		configStore:    opt.ConfigStore,
 		deployStore:    opt.DeployStore,
-		stackDescriber: stackAndResourcesDescriber(d),
+		stackDescriber: d,
 	}, nil
 }
 
 // Describe returns info about an application's environment.
-func (e *EnvDescriber) Describe() (*EnvDescription, error) {
-	svcs, err := e.filterDeployedSvcs()
+func (d *EnvDescriber) Describe() (*EnvDescription, error) {
+	svcs, err := d.filterDeployedSvcs()
 	if err != nil {
 		return nil, err
 	}
 
-	tags, err := e.stackTags()
+	tags, err := d.stackTags()
 	if err != nil {
 		return nil, fmt.Errorf("retrieve environment tags: %w", err)
 	}
 
 	var stackResources []*CfnResource
-	if e.enableResources {
-		stackResources, err = e.envOutputs()
+	if d.enableResources {
+		stackResources, err = d.envOutputs()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment resources: %w", err)
 		}
 	}
 
 	return &EnvDescription{
-		Environment: e.env,
+		Environment: d.env,
 		Services:    svcs,
 		Tags:        tags,
 		Resources:   stackResources,
 	}, nil
 }
 
-func (e *EnvDescriber) stackTags() (map[string]string, error) {
+// Version returns the CloudFormation template version associated with
+// the environment by reading the Metadata.Version field from the template.
+//
+// If the Version field does not exist, then it's a legacy template and it returns an empty string and nil error.
+func (d *EnvDescriber) Version() (string, error) {
+	body, err := d.stackDescriber.Template(stack.NameForEnv(d.app, d.env.Name))
+	if err != nil {
+		return "", err
+	}
+
+	type metadata struct {
+		Version string `yaml:"Version"`
+	}
+	tpl := struct {
+		Metadata metadata `yaml:"Metadata"`
+	}{}
+	if err := yaml.Unmarshal([]byte(body), &tpl); err != nil {
+		return "", fmt.Errorf("unmarshal CloudFormation template to read Version: %w", err)
+	}
+	return tpl.Metadata.Version, nil
+}
+
+func (d *EnvDescriber) stackTags() (map[string]string, error) {
 	tags := make(map[string]string)
-	envStack, err := e.stackDescriber.Stack(stack.NameForEnv(e.app, e.env.Name))
+	envStack, err := d.stackDescriber.Stack(stack.NameForEnv(d.app, d.env.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -106,18 +129,18 @@ func (e *EnvDescriber) stackTags() (map[string]string, error) {
 	return tags, nil
 }
 
-func (e *EnvDescriber) filterDeployedSvcs() ([]*config.Workload, error) {
-	allSvcs, err := e.configStore.ListServices(e.app)
+func (d *EnvDescriber) filterDeployedSvcs() ([]*config.Workload, error) {
+	allSvcs, err := d.configStore.ListServices(d.app)
 	if err != nil {
-		return nil, fmt.Errorf("list services for app %s: %w", e.app, err)
+		return nil, fmt.Errorf("list services for app %s: %w", d.app, err)
 	}
 	svcs := make(map[string]*config.Workload)
 	for _, svc := range allSvcs {
 		svcs[svc.Name] = svc
 	}
-	deployedSvcNames, err := e.deployStore.ListDeployedServices(e.app, e.env.Name)
+	deployedSvcNames, err := d.deployStore.ListDeployedServices(d.app, d.env.Name)
 	if err != nil {
-		return nil, fmt.Errorf("list deployed services in env %s: %w", e.env.Name, err)
+		return nil, fmt.Errorf("list deployed services in env %s: %w", d.env.Name, err)
 	}
 	var deployedSvcs []*config.Workload
 	for _, deployedSvcName := range deployedSvcNames {
@@ -126,8 +149,8 @@ func (e *EnvDescriber) filterDeployedSvcs() ([]*config.Workload, error) {
 	return deployedSvcs, nil
 }
 
-func (e *EnvDescriber) envOutputs() ([]*CfnResource, error) {
-	envStack, err := e.stackDescriber.StackResources(stack.NameForEnv(e.app, e.env.Name))
+func (d *EnvDescriber) envOutputs() ([]*CfnResource, error) {
+	envStack, err := d.stackDescriber.StackResources(stack.NameForEnv(d.app, d.env.Name))
 	if err != nil {
 		return nil, err
 	}
