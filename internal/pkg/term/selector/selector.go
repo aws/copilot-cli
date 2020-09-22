@@ -93,7 +93,7 @@ func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
 }
 
 // NewWorkspaceSelect returns a new selector that chooses applications and environments from the config store, but
-// services from the local workspace.
+// services/jobs from the local workspace.
 func NewWorkspaceSelect(prompt Prompter, store AppEnvLister, ws WsWorkloadLister) *WorkspaceSelect {
 	return &WorkspaceSelect{
 		Select:   NewSelect(prompt, store),
@@ -205,7 +205,7 @@ func (s *DeploySelect) DeployedService(prompt, help string, app string, opts ...
 }
 
 // Service fetches all services in the workspace and then prompts the user to select one.
-func (s *WorkspaceSelect) Service(prompt, help string) (string, error) {
+func (s *WorkspaceSelect) Service(promptString, help string) (string, error) {
 	serviceNames, err := s.retrieveWorkspaceServices()
 	if err != nil {
 		return "", fmt.Errorf("list services: %w", err)
@@ -215,7 +215,7 @@ func (s *WorkspaceSelect) Service(prompt, help string) (string, error) {
 		return serviceNames[0], nil
 	}
 
-	selectedServiceName, err := s.prompt.SelectOne(prompt, help, serviceNames)
+	selectedServiceName, err := s.prompt.SelectOne(promptString, help, serviceNames, prompt.WithFinalMessage("Service name:"))
 	if err != nil {
 		return "", fmt.Errorf("select local service: %w", err)
 	}
@@ -223,7 +223,7 @@ func (s *WorkspaceSelect) Service(prompt, help string) (string, error) {
 }
 
 // Job fetches all jobs in the workspace and then prompts the user to select one.
-func (s *WorkspaceSelect) Job(prompt, help string) (string, error) {
+func (s *WorkspaceSelect) Job(promptString, help string) (string, error) {
 	jobNames, err := s.retrieveWorkspaceJobs()
 	if err != nil {
 		return "", fmt.Errorf("list jobs: %w", err)
@@ -233,7 +233,7 @@ func (s *WorkspaceSelect) Job(prompt, help string) (string, error) {
 		return jobNames[0], nil
 	}
 
-	selectedJobName, err := s.prompt.SelectOne(prompt, help, jobNames)
+	selectedJobName, err := s.prompt.SelectOne(promptString, help, jobNames, prompt.WithFinalMessage("Job name:"))
 	if err != nil {
 		return "", fmt.Errorf("select local job: %w", err)
 	}

@@ -223,7 +223,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -242,7 +242,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -265,7 +265,8 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 					SelectOne(
 						gomock.Eq("Select a local service"),
 						gomock.Eq("Help text"),
-						gomock.Eq([]string{"service1", "service2"})).
+						gomock.Eq([]string{"service1", "service2"}),
+						gomock.Any()).
 					Return("service2", nil).
 					Times(1)
 			},
@@ -285,7 +286,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"service1", "service2"})).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"service1", "service2"}), gomock.Any()).
 					Return("", fmt.Errorf("error selecting")).
 					Times(1)
 			},
@@ -339,7 +340,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -358,7 +359,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -381,7 +382,8 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 					SelectOne(
 						gomock.Eq("Select a local job"),
 						gomock.Eq("Help text"),
-						gomock.Eq([]string{"resizer1", "resizer2"})).
+						gomock.Eq([]string{"resizer1", "resizer2"}),
+						gomock.Any()).
 					Return("resizer2", nil).
 					Times(1)
 			},
@@ -401,7 +403,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"resizer1", "resizer2"})).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"resizer1", "resizer2"}), gomock.Any()).
 					Return("", fmt.Errorf("error selecting")).
 					Times(1)
 			},
