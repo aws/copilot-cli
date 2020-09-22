@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestStore_ListWorkloads(t *testing.T) {
+func TestStore_ListServices(t *testing.T) {
 	frontendService := Workload{Name: "fe", App: "chicken", Type: "LBFargate"}
 	frontendServiceString, err := marshal(frontendService)
 	frontendServicePath := fmt.Sprintf(fmtSvcParamPath, frontendService.App, frontendService.Name)
@@ -67,14 +67,14 @@ func TestStore_ListWorkloads(t *testing.T) {
 					},
 				}, nil
 			},
-			wantedErr: fmt.Errorf("read workload configuration for application chicken: invalid character 'o' looking for beginning of value"),
+			wantedErr: fmt.Errorf("read service configuration for application chicken: invalid character 'o' looking for beginning of value"),
 		},
 		"with SSM error": {
 			mockGetParametersByPath: func(t *testing.T, param *ssm.GetParametersByPathInput) (output *ssm.GetParametersByPathOutput, e error) {
 				require.Equal(t, servicePath, *param.Path)
 				return nil, fmt.Errorf("broken")
 			},
-			wantedErr: fmt.Errorf("list workloads for application chicken: broken"),
+			wantedErr: fmt.Errorf("list services for application chicken: broken"),
 		},
 		"with paginated response": {
 			mockGetParametersByPath: func(t *testing.T, param *ssm.GetParametersByPathInput) (output *ssm.GetParametersByPathOutput, e error) {
@@ -120,7 +120,7 @@ func TestStore_ListWorkloads(t *testing.T) {
 			}
 
 			// WHEN
-			svcPointers, err := store.ListWorkloads("chicken")
+			svcPointers, err := store.ListServices("chicken")
 			// THEN
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
@@ -136,7 +136,7 @@ func TestStore_ListWorkloads(t *testing.T) {
 	}
 }
 
-func TestStore_GetWorkload(t *testing.T) {
+func TestStore_GetService(t *testing.T) {
 	testService := Workload{Name: "api", App: "chicken", Type: "LBFargate"}
 	testServiceString, err := marshal(testService)
 	testServicePath := fmt.Sprintf(fmtSvcParamPath, testService.App, testService.Name)
@@ -165,7 +165,7 @@ func TestStore_GetWorkload(t *testing.T) {
 				require.Equal(t, testServicePath, *param.Name)
 				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "bloop", nil)
 			},
-			wantedErr: &ErrNoSuchWorkload{
+			wantedErr: &ErrNoSuchService{
 				ApplicationName: testService.App,
 				ServiceName:     testService.Name,
 			},
@@ -180,13 +180,13 @@ func TestStore_GetWorkload(t *testing.T) {
 					},
 				}, nil
 			},
-			wantedErr: fmt.Errorf("read configuration for workload api in application chicken: invalid character 'o' looking for beginning of value"),
+			wantedErr: fmt.Errorf("read configuration for service api in application chicken: invalid character 'o' looking for beginning of value"),
 		},
 		"with SSM error": {
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
 				return nil, fmt.Errorf("broken")
 			},
-			wantedErr: fmt.Errorf("get workload api in application chicken: broken"),
+			wantedErr: fmt.Errorf("get service api in application chicken: broken"),
 		},
 	}
 
@@ -201,7 +201,7 @@ func TestStore_GetWorkload(t *testing.T) {
 			}
 
 			// WHEN
-			svc, err := store.GetWorkload("chicken", "api")
+			svc, err := store.GetService("chicken", "api")
 
 			// THEN
 			if tc.wantedErr != nil {
@@ -213,7 +213,7 @@ func TestStore_GetWorkload(t *testing.T) {
 	}
 }
 
-func TestStore_CreateWorkload(t *testing.T) {
+func TestStore_CreateService(t *testing.T) {
 	testApplication := Application{Name: "chicken", Version: "1.0"}
 	testApplicationString, err := marshal(testApplication)
 	testApplicationPath := fmt.Sprintf(fmtApplicationPath, testApplication.Name)
@@ -278,7 +278,7 @@ func TestStore_CreateWorkload(t *testing.T) {
 					},
 				}, nil
 			},
-			wantedErr: fmt.Errorf("create workload api in application chicken: broken"),
+			wantedErr: fmt.Errorf("create service api in application chicken: broken"),
 		},
 	}
 
@@ -294,7 +294,7 @@ func TestStore_CreateWorkload(t *testing.T) {
 			}
 
 			// WHEN
-			err := store.CreateWorkload(&Workload{
+			err := store.CreateService(&Workload{
 				Name: testService.Name,
 				App:  testService.App,
 				Type: testService.Type})
@@ -307,7 +307,7 @@ func TestStore_CreateWorkload(t *testing.T) {
 	}
 }
 
-func TestDeleteWorkload(t *testing.T) {
+func TestDeleteService(t *testing.T) {
 	mockApplicationName := "mockApplicationName"
 	mockSvcName := "mockSvcName"
 	mockError := errors.New("mockError")
@@ -326,7 +326,7 @@ func TestDeleteWorkload(t *testing.T) {
 			mockDeleteParam: func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
 				return nil, mockError
 			},
-			want: fmt.Errorf("delete workload %s from application %s: %w", mockSvcName, mockApplicationName, mockError),
+			want: fmt.Errorf("delete service %s from application %s: %w", mockSvcName, mockApplicationName, mockError),
 		},
 		"successfully deleted param": {
 			mockDeleteParam: func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
@@ -349,7 +349,7 @@ func TestDeleteWorkload(t *testing.T) {
 				},
 			}
 
-			got := s.DeleteWorkload(mockApplicationName, mockSvcName)
+			got := s.DeleteService(mockApplicationName, mockSvcName)
 
 			require.Equal(t, test.want, got)
 		})
