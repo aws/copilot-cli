@@ -392,6 +392,7 @@ type deploySelector interface {
 type wsSelector interface {
 	appEnvSelector
 	Service(prompt, help string) (string, error)
+	Job(prompt, help string) (string, error)
 }
 
 type ec2Selector interface {
