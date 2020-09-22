@@ -72,23 +72,23 @@ func TestErrNoSuchEnvironment_Is(t *testing.T) {
 }
 
 func TestErrNoSuchService(t *testing.T) {
-	err := &ErrNoSuchService{ServiceName: "api", ApplicationName: "chicken"}
+	err := &ErrNoSuchService{Name: "api", App: "chicken"}
 	require.EqualError(t, err, "couldn't find service api in the application chicken")
 }
 
 func TestErrNoSuchService_Is(t *testing.T) {
-	err := &ErrNoSuchService{ServiceName: "api", ApplicationName: "chicken"}
+	err := &ErrNoSuchService{Name: "api", App: "chicken"}
 	testCases := map[string]struct {
 		wantedSame bool
 		otherError error
 	}{
 		"errors are same": {
 			wantedSame: true,
-			otherError: &ErrNoSuchService{ServiceName: "api", ApplicationName: "chicken"},
+			otherError: &ErrNoSuchService{Name: "api", App: "chicken"},
 		},
 		"errors have different values": {
 			wantedSame: false,
-			otherError: &ErrNoSuchService{ServiceName: "api", ApplicationName: "rooster"},
+			otherError: &ErrNoSuchService{Name: "api", App: "rooster"},
 		},
 		"errors are different type": {
 			wantedSame: false,
@@ -103,23 +103,23 @@ func TestErrNoSuchService_Is(t *testing.T) {
 }
 
 func TestErrNoSuchJob(t *testing.T) {
-	err := &ErrNoSuchJob{JobName: "mailer", ApplicationName: "cool"}
+	err := &ErrNoSuchJob{Name: "mailer", App: "cool"}
 	require.EqualError(t, err, "couldn't find job mailer in the application cool")
 }
 
 func TestErrNoSuchJob_Is(t *testing.T) {
-	err := &ErrNoSuchJob{JobName: "mailer", ApplicationName: "cool"}
+	err := &ErrNoSuchJob{Name: "mailer", App: "cool"}
 	testCases := map[string]struct {
 		wantedSame bool
 		otherError error
 	}{
 		"errors are same": {
 			wantedSame: true,
-			otherError: &ErrNoSuchJob{JobName: "mailer", ApplicationName: "cool"},
+			otherError: &ErrNoSuchJob{Name: "mailer", App: "cool"},
 		},
 		"errors have different values": {
 			wantedSame: false,
-			otherError: &ErrNoSuchJob{JobName: "ranker", ApplicationName: "cool"},
+			otherError: &ErrNoSuchJob{Name: "ranker", App: "cool"},
 		},
 		"errors are different types": {
 			wantedSame: false,

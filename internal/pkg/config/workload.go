@@ -96,8 +96,8 @@ func (s *Store) GetService(appName, svcName string) (*Workload, error) {
 			switch aerr.Code() {
 			case ssm.ErrCodeParameterNotFound:
 				return nil, &ErrNoSuchService{
-					ApplicationName: appName,
-					ServiceName:     svcName,
+					App:  appName,
+					Name: svcName,
 				}
 			}
 		}
@@ -111,8 +111,8 @@ func (s *Store) GetService(appName, svcName string) (*Workload, error) {
 	}
 	if !strings.Contains(strings.ToLower(svc.Type), serviceString) {
 		return nil, &ErrNoSuchService{
-			ApplicationName: appName,
-			ServiceName:     svcName,
+			App:  appName,
+			Name: svcName,
 		}
 	}
 	return &svc, nil
@@ -131,8 +131,8 @@ func (s *Store) GetJob(appName, jobName string) (*Workload, error) {
 			switch aerr.Code() {
 			case ssm.ErrCodeParameterNotFound:
 				return nil, &ErrNoSuchJob{
-					ApplicationName: appName,
-					JobName:         jobName,
+					App:  appName,
+					Name: jobName,
 				}
 			}
 		}
@@ -146,8 +146,8 @@ func (s *Store) GetJob(appName, jobName string) (*Workload, error) {
 	}
 	if !strings.Contains(strings.ToLower(job.Type), jobString) {
 		return nil, &ErrNoSuchJob{
-			ApplicationName: appName,
-			JobName:         jobName,
+			App:  appName,
+			Name: jobName,
 		}
 	}
 	return &job, nil

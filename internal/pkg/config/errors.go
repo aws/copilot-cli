@@ -51,8 +51,8 @@ func (e *ErrNoSuchEnvironment) Error() string {
 
 // ErrNoSuchService means a specific service couldn't be found in a specific application.
 type ErrNoSuchService struct {
-	ApplicationName string
-	ServiceName     string
+	App  string
+	Name string
 }
 
 // Is returns whether the provided error equals this error.
@@ -61,19 +61,19 @@ func (e *ErrNoSuchService) Is(target error) bool {
 	if !ok {
 		return false
 	}
-	return e.ApplicationName == t.ApplicationName &&
-		e.ServiceName == t.ServiceName
+	return e.App == t.App &&
+		e.Name == t.Name
 }
 
 func (e *ErrNoSuchService) Error() string {
 	return fmt.Sprintf("couldn't find service %s in the application %s",
-		e.ServiceName, e.ApplicationName)
+		e.Name, e.App)
 }
 
 // ErrNoSuchJob means a specific job couldn't be found in a specific application.
 type ErrNoSuchJob struct {
-	ApplicationName string
-	JobName         string
+	App  string
+	Name string
 }
 
 // Is returns whether the provided error equals this error.
@@ -82,11 +82,11 @@ func (e *ErrNoSuchJob) Is(target error) bool {
 	if !ok {
 		return false
 	}
-	return e.ApplicationName == t.ApplicationName &&
-		e.JobName == t.JobName
+	return e.App == t.App &&
+		e.Name == t.Name
 }
 
 func (e *ErrNoSuchJob) Error() string {
 	return fmt.Sprintf("couldn't find job %s in the application %s",
-		e.JobName, e.ApplicationName)
+		e.Name, e.App)
 }

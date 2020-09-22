@@ -255,8 +255,8 @@ func TestStore_GetService(t *testing.T) {
 				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "bloop", nil)
 			},
 			wantedErr: &ErrNoSuchService{
-				ApplicationName: testService.App,
-				ServiceName:     testService.Name,
+				App:  testService.App,
+				Name: testService.Name,
 			},
 		},
 		"with malformed json": {
@@ -337,8 +337,8 @@ func TestStore_GetJob(t *testing.T) {
 				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "bloop", nil)
 			},
 			wantedErr: &ErrNoSuchJob{
-				ApplicationName: mailerJob.App,
-				JobName:         mailerJob.Name,
+				App:  mailerJob.App,
+				Name: mailerJob.Name,
 			},
 		},
 		"with existing service": {
@@ -352,8 +352,8 @@ func TestStore_GetJob(t *testing.T) {
 				}, nil
 			},
 			wantedErr: &ErrNoSuchJob{
-				ApplicationName: mailerJob.App,
-				JobName:         mailerJob.Name,
+				App:  mailerJob.App,
+				Name: mailerJob.Name,
 			},
 		},
 	}
