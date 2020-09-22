@@ -222,20 +222,20 @@ func (s *WorkspaceSelect) Service(prompt, help string) (string, error) {
 	return selectedServiceName, nil
 }
 
-// Job fetches all services in the workspace and then prompts the user to select one.
+// Job fetches all jobs in the workspace and then prompts the user to select one.
 func (s *WorkspaceSelect) Job(prompt, help string) (string, error) {
 	jobNames, err := s.retrieveWorkspaceJobs()
 	if err != nil {
 		return "", fmt.Errorf("list jobs: %w", err)
 	}
 	if len(jobNames) == 1 {
-		log.Infof("Only found one service in workspace, defaulting to: %s\n", color.HighlightUserInput(jobNames[0]))
+		log.Infof("Only found one job in workspace, defaulting to: %s\n", color.HighlightUserInput(jobNames[0]))
 		return jobNames[0], nil
 	}
 
 	selectedJobName, err := s.prompt.SelectOne(prompt, help, jobNames)
 	if err != nil {
-		return "", fmt.Errorf("select local jobs: %w", err)
+		return "", fmt.Errorf("select local job: %w", err)
 	}
 	return selectedJobName, nil
 }
@@ -364,12 +364,12 @@ func (s *WorkspaceSelect) retrieveWorkspaceServices() ([]string, error) {
 }
 
 func (s *WorkspaceSelect) retrieveWorkspaceJobs() ([]string, error) {
-	localServiceNames, err := s.wlLister.JobNames()
+	localJobNames, err := s.wlLister.JobNames()
 	if err != nil {
 		return nil, err
 	}
-	if len(localServiceNames) == 0 {
-		return nil, errors.New("no services found in workspace")
+	if len(localJobNames) == 0 {
+		return nil, errors.New("no jobs found in workspace")
 	}
-	return localServiceNames, nil
+	return localJobNames, nil
 }

@@ -128,7 +128,7 @@ func TestJobDeployOpts_Ask(t *testing.T) {
 			inAppName:  "phonetool",
 			inImageTag: "latest",
 			wantedCalls: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Job("Select a job in your workspace", "").Return("resizer", nil)
+				m.EXPECT().Job("Select a job from your workspace", "").Return("resizer", nil)
 				m.EXPECT().Environment("Select an environment", "", "phonetool").Return("prod-iad", nil)
 			},
 
