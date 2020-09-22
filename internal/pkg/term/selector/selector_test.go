@@ -227,7 +227,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 					Times(0)
 
 			},
-			wantErr: fmt.Errorf("list services: no services found in workspace"),
+			wantErr: fmt.Errorf("no services found in workspace"),
 		},
 		"with only one workspace service (skips prompting)": {
 			setupMocks: func(m workspaceSelectMocks) {
@@ -344,7 +344,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 					Times(0)
 
 			},
-			wantErr: fmt.Errorf("list jobs: no jobs found in workspace"),
+			wantErr: fmt.Errorf("no jobs found in workspace"),
 		},
 		"with only one workspace job (skips prompting)": {
 			setupMocks: func(m workspaceSelectMocks) {
