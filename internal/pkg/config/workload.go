@@ -25,8 +25,8 @@ const (
 	// is called.
 	AddonsCfnTemplateNameFormat = "%s.addons.stack.yml"
 
-	serviceString = "service"
-	jobString     = "job"
+	svcWorkloadType = "service"
+	jobWorkloadType = "job"
 )
 
 // Workload represents a deployable long running service or task.
@@ -39,7 +39,7 @@ type Workload struct {
 // CreateService instantiates a new service within an existing application. Skip if
 // the service already exists in the application.
 func (s *Store) CreateService(svc *Workload) error {
-	if err := s.createWorkload(svc, serviceString); err != nil {
+	if err := s.createWorkload(svc); err != nil {
 		return fmt.Errorf("create service %s in application %s: %w", svc.Name, svc.App, err)
 	}
 	return nil
@@ -48,13 +48,13 @@ func (s *Store) CreateService(svc *Workload) error {
 // CreateJob instantiates a new job within an existing application. Skip if the job already
 // exists in the application.
 func (s *Store) CreateJob(job *Workload) error {
-	if err := s.createWorkload(job, jobString); err != nil {
+	if err := s.createWorkload(job); err != nil {
 		return fmt.Errorf("create job %s in application %s: %w", job.Name, job.App, err)
 	}
 	return nil
 }
 
-func (s *Store) createWorkload(wkld *Workload, wkldType string) error {
+func (s *Store) createWorkload(wkld *Workload) error {
 	if _, err := s.GetApplication(wkld.App); err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (s *Store) createWorkload(wkld *Workload, wkldType string) error {
 
 	_, err = s.ssmClient.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(wkldPath),
-		Description: aws.String(fmt.Sprintf("Copilot %s %s", strings.Title(wkldType), wkld.Name)),
+		Description: aws.String(fmt.Sprintf("Copilot %s %s", wkld.Type, wkld.Name)),
 		Type:        aws.String(ssm.ParameterTypeString),
 		Value:       aws.String(data),
 	})
@@ -109,7 +109,7 @@ func (s *Store) GetService(appName, svcName string) (*Workload, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read configuration for service %s in application %s: %w", svcName, appName, err)
 	}
-	if !strings.Contains(strings.ToLower(svc.Type), serviceString) {
+	if !strings.Contains(strings.ToLower(svc.Type), svcWorkloadType) {
 		return nil, &ErrNoSuchService{
 			App:  appName,
 			Name: svcName,
@@ -144,7 +144,7 @@ func (s *Store) GetJob(appName, jobName string) (*Workload, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read configuration for job %s in application %s: %w", jobName, appName, err)
 	}
-	if !strings.Contains(strings.ToLower(job.Type), jobString) {
+	if !strings.Contains(strings.ToLower(job.Type), jobWorkloadType) {
 		return nil, &ErrNoSuchJob{
 			App:  appName,
 			Name: jobName,
@@ -162,7 +162,7 @@ func (s *Store) ListServices(appName string) ([]*Workload, error) {
 
 	var services []*Workload
 	for _, wkld := range wklds {
-		if strings.Contains(strings.ToLower(wkld.Type), serviceString) {
+		if strings.Contains(strings.ToLower(wkld.Type), svcWorkloadType) {
 			services = append(services, wkld)
 		}
 	}
@@ -179,7 +179,7 @@ func (s *Store) ListJobs(appName string) ([]*Workload, error) {
 
 	var jobs []*Workload
 	for _, wkld := range wklds {
-		if strings.Contains(strings.ToLower(wkld.Type), jobString) {
+		if strings.Contains(strings.ToLower(wkld.Type), jobWorkloadType) {
 			jobs = append(jobs, wkld)
 		}
 	}

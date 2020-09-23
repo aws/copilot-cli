@@ -36,21 +36,21 @@ const (
 	rootEnvParamPath    = "/copilot/applications/%s/environments/"
 	fmtEnvParamPath     = "/copilot/applications/%s/environments/%s" // path for an environment in an application
 	rootWkldParamPath   = "/copilot/applications/%s/components/"
-	fmtWkldParamPath    = "/copilot/applications/%s/components/%s" // path for a service in an application
+	fmtWkldParamPath    = "/copilot/applications/%s/components/%s" // path for a workload in an application
 )
 
 type identityGetter interface {
 	Get() (identity.Caller, error)
 }
 
-// Store is in charge of fetching and creating applications, environment, services and pipeline configuration in SSM.
+// Store is in charge of fetching and creating applications, environment, services and other workloads, and pipeline configuration in SSM.
 type Store struct {
 	idClient      identityGetter
 	ssmClient     ssmiface.SSMAPI
 	sessionRegion string
 }
 
-// NewStore returns a new store, allowing you to query or create Applications, Environments, and Services.
+// NewStore returns a new store, allowing you to query or create Applications, Environments, Services, and other workloads.
 func NewStore() (*Store, error) {
 	p := sessions.NewProvider()
 	sess, err := p.Default()
