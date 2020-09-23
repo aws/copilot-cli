@@ -167,13 +167,13 @@ func TestCloudWatch_AlarmsWithTags(t *testing.T) {
 					Arn:          mockArn1,
 					Name:         "mockAlarmName",
 					Type:         "Metric",
-					Condition:    "mockMetricName outside the band (width: 2.00) for 1 datapoints within 2 minutes",
+					Condition:    "-",
 					Status:       "mockState",
 					UpdatedTimes: mockTime,
 				},
 			},
 		},
-		"success with dynamic metrics": {
+		"success with predictive or dynamic metrics": {
 			setupMocks: func(m cloudWatchMocks) {
 				gomock.InOrder(
 					m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]*rg.Resource{{ARN: mockAlarmArn}}, nil),
@@ -243,7 +243,7 @@ func TestCloudWatch_AlarmsWithTags(t *testing.T) {
 					Arn:          mockArn1,
 					Name:         "mockAlarmName1",
 					Type:         "Metric",
-					Condition:    "mockMetricName1 > the band for 1 datapoints within 2 minutes",
+					Condition:    "-",
 					Status:       "mockState",
 					UpdatedTimes: mockTime,
 				},
@@ -251,7 +251,7 @@ func TestCloudWatch_AlarmsWithTags(t *testing.T) {
 					Arn:          mockArn2,
 					Name:         "mockAlarmName2",
 					Type:         "Metric",
-					Condition:    "mockMetricName2 > the dynamic threshold for 1 datapoints within 2 minutes",
+					Condition:    "-",
 					Status:       "mockState",
 					UpdatedTimes: mockTime,
 				},
