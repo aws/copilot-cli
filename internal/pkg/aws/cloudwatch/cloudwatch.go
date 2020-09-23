@@ -15,13 +15,18 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
+	"github.com/dustin/go-humanize"
 )
 
 const (
 	cloudwatchResourceType = "cloudwatch:alarm"
 	compositeAlarmType     = "Composite"
 	metricAlarmType        = "Metric"
+	fmtAlarmCondition      = "%s %s %.2f for %d datapoints within %s"
 )
+
+// humanizeDuration is overriden in tests so that its output is constant as time passes.
+var humanizeDuration = humanize.RelTime
 
 type api interface {
 	DescribeAlarms(input *cloudwatch.DescribeAlarmsInput) (*cloudwatch.DescribeAlarmsOutput, error)
@@ -37,11 +42,54 @@ type CloudWatch struct {
 	rgClient resourceGetter
 }
 
+type comparisonOperator string
+
+func (c comparisonOperator) humanString() string {
+	switch c {
+	case cloudwatch.ComparisonOperatorGreaterThanOrEqualToThreshold:
+		return "≥"
+	case cloudwatch.ComparisonOperatorGreaterThanThreshold:
+		return ">"
+	case cloudwatch.ComparisonOperatorLessThanThreshold:
+		return "<"
+	case cloudwatch.ComparisonOperatorLessThanOrEqualToThreshold:
+		return "≤"
+	case cloudwatch.ComparisonOperatorLessThanLowerOrGreaterThanUpperThreshold:
+		return "outside"
+	case cloudwatch.ComparisonOperatorLessThanLowerThreshold:
+		return "<"
+	case cloudwatch.ComparisonOperatorGreaterThanUpperThreshold:
+		return ">"
+	default:
+		return ""
+	}
+}
+
+type metricAlarm cloudwatch.MetricAlarm
+
+func (a metricAlarm) condition() string {
+	metricName := aws.StringValue(a.MetricName)
+	// If metric name doesn't exist, then it means they are using MetricDataQuery
+	// which could be very difficult to parse into a human readable condition.
+	// https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricAlarm.html
+	if metricName == "" {
+		return "-"
+	}
+	operator := comparisonOperator(aws.StringValue(a.ComparisonOperator)).humanString()
+	datapointsToAlarm := aws.Int64Value(a.DatapointsToAlarm)
+	if datapointsToAlarm == 0 {
+		datapointsToAlarm = aws.Int64Value(a.EvaluationPeriods)
+	}
+	period := time.Duration(aws.Int64Value(a.EvaluationPeriods)*aws.Int64Value(a.Period)) * time.Second
+	return fmt.Sprintf(fmtAlarmCondition, metricName, operator, aws.Float64Value(a.Threshold), datapointsToAlarm,
+		strings.TrimSpace(humanizeDuration(time.Now(), time.Now().Add(period), "", "")))
+}
+
 // AlarmStatus contains CloudWatch alarm status.
 type AlarmStatus struct {
 	Arn          string    `json:"arn"`
 	Name         string    `json:"name"`
-	Reason       string    `json:"reason"`
+	Condition    string    `json:"condition"`
 	Status       string    `json:"status"`
 	Type         string    `json:"type"`
 	UpdatedTimes time.Time `json:"updatedTimes"`
@@ -100,10 +148,13 @@ func (cw *CloudWatch) AlarmStatus(alarms []string) ([]AlarmStatus, error) {
 func (cw *CloudWatch) compositeAlarmsStatus(alarms []*cloudwatch.CompositeAlarm) []AlarmStatus {
 	var alarmStatusList []AlarmStatus
 	for _, alarm := range alarms {
+		if alarm == nil {
+			continue
+		}
 		alarmStatusList = append(alarmStatusList, AlarmStatus{
 			Arn:          aws.StringValue(alarm.AlarmArn),
 			Name:         aws.StringValue(alarm.AlarmName),
-			Reason:       aws.StringValue(alarm.StateReason),
+			Condition:    aws.StringValue(alarm.AlarmRule),
 			Status:       aws.StringValue(alarm.StateValue),
 			Type:         compositeAlarmType,
 			UpdatedTimes: *alarm.StateUpdatedTimestamp,
@@ -115,13 +166,17 @@ func (cw *CloudWatch) compositeAlarmsStatus(alarms []*cloudwatch.CompositeAlarm)
 func (cw *CloudWatch) metricAlarmsStatus(alarms []*cloudwatch.MetricAlarm) []AlarmStatus {
 	var alarmStatusList []AlarmStatus
 	for _, alarm := range alarms {
+		if alarm == nil {
+			continue
+		}
+		metricAlarm := metricAlarm(*alarm)
 		alarmStatusList = append(alarmStatusList, AlarmStatus{
-			Arn:          aws.StringValue(alarm.AlarmArn),
-			Name:         aws.StringValue(alarm.AlarmName),
-			Reason:       aws.StringValue(alarm.StateReason),
-			Status:       aws.StringValue(alarm.StateValue),
+			Arn:          aws.StringValue(metricAlarm.AlarmArn),
+			Name:         aws.StringValue(metricAlarm.AlarmName),
+			Condition:    metricAlarm.condition(),
+			Status:       aws.StringValue(metricAlarm.StateValue),
 			Type:         metricAlarmType,
-			UpdatedTimes: *alarm.StateUpdatedTimestamp,
+			UpdatedTimes: *metricAlarm.StateUpdatedTimestamp,
 		})
 	}
 	return alarmStatusList

@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/dustin/go-humanize"
 )
 
@@ -100,7 +101,20 @@ func (t TaskStatus) HumanString() string {
 	if len(t.ID) >= shortTaskIDLength {
 		shortTaskID = t.ID[:shortTaskIDLength]
 	}
-	return fmt.Sprintf("  %s\t%s\t%s\t%s\t%s\t%s\n", shortTaskID, imageDigest, t.LastStatus, t.Health, startedSince, stoppedSince)
+	return fmt.Sprintf("  %s\t%s\t%s\t%s\t%s\t%s\n", shortTaskID, imageDigest, t.LastStatus, startedSince, stoppedSince, taskHealthColor(t.Health))
+}
+
+func taskHealthColor(status string) string {
+	switch status {
+	case "HEALTHY":
+		return color.Green.Sprint(status)
+	case "UNHEALTHY":
+		return color.Red.Sprint(status)
+	case "UNKNOWN":
+		return color.Yellow.Sprint(status)
+	default:
+		return status
+	}
 }
 
 // Image contains very basic info of a container image.
