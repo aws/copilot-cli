@@ -100,21 +100,18 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 //
 // If the Version field does not exist, then it's a legacy template and it returns an empty string and nil error.
 func (d *EnvDescriber) Version() (string, error) {
-	body, err := d.stackDescriber.Template(stack.NameForEnv(d.app, d.env.Name))
+	raw, err := d.stackDescriber.Metadata(stack.NameForEnv(d.app, d.env.Name))
 	if err != nil {
 		return "", err
 	}
 
-	type metadata struct {
+	metadata := struct {
 		Version string `yaml:"Version"`
-	}
-	tpl := struct {
-		Metadata metadata `yaml:"Metadata"`
 	}{}
-	if err := yaml.Unmarshal([]byte(body), &tpl); err != nil {
-		return "", fmt.Errorf("unmarshal CloudFormation template to read Version: %w", err)
+	if err := yaml.Unmarshal([]byte(raw), &metadata); err != nil {
+		return "", fmt.Errorf("unmarshal Metadata property to read Version: %w", err)
 	}
-	return tpl.Metadata.Version, nil
+	return metadata.Version, nil
 }
 
 func (d *EnvDescriber) stackTags() (map[string]string, error) {

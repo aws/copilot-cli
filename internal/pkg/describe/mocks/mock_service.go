@@ -65,19 +65,19 @@ func (mr *MockstackAndResourcesDescriberMockRecorder) StackResources(stackName i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackResources", reflect.TypeOf((*MockstackAndResourcesDescriber)(nil).StackResources), stackName)
 }
 
-// Template mocks base method
-func (m *MockstackAndResourcesDescriber) Template(stackName string) (string, error) {
+// Metadata mocks base method
+func (m *MockstackAndResourcesDescriber) Metadata(stackName string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Template", stackName)
+	ret := m.ctrl.Call(m, "Metadata", stackName)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Template indicates an expected call of Template
-func (mr *MockstackAndResourcesDescriberMockRecorder) Template(stackName interface{}) *gomock.Call {
+// Metadata indicates an expected call of Metadata
+func (mr *MockstackAndResourcesDescriberMockRecorder) Metadata(stackName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockstackAndResourcesDescriber)(nil).Template), stackName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Metadata", reflect.TypeOf((*MockstackAndResourcesDescriber)(nil).Metadata), stackName)
 }
 
 // MockecsClient is a mock of ecsClient interface

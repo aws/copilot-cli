@@ -14,7 +14,7 @@ import (
 type cfnStackDescriber interface {
 	DescribeStacks(input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
 	DescribeStackResources(input *cloudformation.DescribeStackResourcesInput) (*cloudformation.DescribeStackResourcesOutput, error)
-	GetTemplate(in *cloudformation.GetTemplateInput) (*cloudformation.GetTemplateOutput, error)
+	GetTemplateSummary(in *cloudformation.GetTemplateSummaryInput) (*cloudformation.GetTemplateSummaryOutput, error)
 }
 
 // stackDescriber retrieves information of a CloudFormation Stack.
@@ -54,13 +54,13 @@ func (d *stackDescriber) StackResources(stackName string) ([]*cloudformation.Sta
 	return out.StackResources, nil
 }
 
-// Template returns the CloudFormation template of the stack.
-func (d *stackDescriber) Template(stackName string) (string, error) {
-	out, err := d.stackDescribers.GetTemplate(&cloudformation.GetTemplateInput{
+// Metadata returns the Metadata property of the CloudFormation stack's template.
+func (d *stackDescriber) Metadata(stackName string) (string, error) {
+	out, err := d.stackDescribers.GetTemplateSummary(&cloudformation.GetTemplateSummaryInput{
 		StackName: aws.String(stackName),
 	})
 	if err != nil {
-		return "", fmt.Errorf("get template for stack %s: %w", stackName, err)
+		return "", fmt.Errorf("get template summary for stack %s: %w", stackName, err)
 	}
-	return aws.StringValue(out.TemplateBody), nil
+	return aws.StringValue(out.Metadata), nil
 }

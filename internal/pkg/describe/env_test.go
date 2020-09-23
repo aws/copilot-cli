@@ -237,17 +237,7 @@ func TestEnvDescriber_Version(t *testing.T) {
 		"should return empty version if legacy template": {
 			given: func(ctrl *gomock.Controller) *EnvDescriber {
 				m := mocks.NewMockstackAndResourcesDescriber(ctrl)
-				m.EXPECT().Template(gomock.Any()).Return(`
-Resources:
-  Service:
-    Type: AWS::ECS::Service
-    DependsOn: LoadBalancerRule
-    Properties:
-      ServiceName: !Ref 'ServiceName'
-      Cluster:
-        Fn::ImportValue:
-          !Join [':', [!Ref 'StackName', 'ClusterName']]
-`, nil)
+				m.EXPECT().Metadata(gomock.Any()).Return("", nil)
 				return &EnvDescriber{
 					app:            "phonetool",
 					env:            &config.Environment{Name: "test"},
@@ -258,10 +248,7 @@ Resources:
 		"should read the version from the Metadata field": {
 			given: func(ctrl *gomock.Controller) *EnvDescriber {
 				m := mocks.NewMockstackAndResourcesDescriber(ctrl)
-				m.EXPECT().Template("phonetool-test").Return(`
-Metadata:
-  Version: 1.0.0
-`, nil)
+				m.EXPECT().Metadata("phonetool-test").Return(`{"Version":"1.0.0"}`, nil)
 				return &EnvDescriber{
 					app:            "phonetool",
 					env:            &config.Environment{Name: "test"},

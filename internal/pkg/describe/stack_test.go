@@ -173,37 +173,37 @@ func TestStackDescriber_StackResources(t *testing.T) {
 	}
 }
 
-func TestStackDescriber_Template(t *testing.T) {
+func TestStackDescriber_Metadata(t *testing.T) {
 	testCases := map[string]struct {
 		stackName string
 		mockCFN   func(ctrl *gomock.Controller) cfnStackDescriber
 
-		wantedTemplate string
+		wantedMetadata string
 		wantedErr      error
 	}{
 		"should wrap cfn error": {
 			stackName: "phonetool-test",
 			mockCFN: func(ctrl *gomock.Controller) cfnStackDescriber {
 				m := mocks.NewMockcfnStackDescriber(ctrl)
-				m.EXPECT().GetTemplate(gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().GetTemplateSummary(gomock.Any()).Return(nil, errors.New("some error"))
 				return m
 			},
 
 			wantedErr: errors.New("get template for stack phonetool-test: some error"),
 		},
-		"should retrieve template body on successful call": {
+		"should retrieve metadata on successful call": {
 			stackName: "phonetool-test",
 			mockCFN: func(ctrl *gomock.Controller) cfnStackDescriber {
 				m := mocks.NewMockcfnStackDescriber(ctrl)
-				m.EXPECT().GetTemplate(&cloudformation.GetTemplateInput{
+				m.EXPECT().GetTemplateSummary(&cloudformation.GetTemplateSummaryInput{
 					StackName: aws.String("phonetool-test"),
-				}).Return(&cloudformation.GetTemplateOutput{
-					TemplateBody: aws.String("hello"),
+				}).Return(&cloudformation.GetTemplateSummaryOutput{
+					Metadata: aws.String("hello"),
 				}, nil)
 				return m
 			},
 
-			wantedTemplate: "hello",
+			wantedMetadata: "hello",
 		},
 	}
 
@@ -217,14 +217,14 @@ func TestStackDescriber_Template(t *testing.T) {
 			}
 
 			// WHEN
-			actual, err := d.Template(tc.stackName)
+			actual, err := d.Metadata(tc.stackName)
 
 			// THEN
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedTemplate, actual)
+				require.Equal(t, tc.wantedMetadata, actual)
 			}
 		})
 	}
