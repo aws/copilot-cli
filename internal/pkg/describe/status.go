@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/aas"
@@ -20,8 +21,8 @@ import (
 )
 
 const (
-	ecsServiceResourceType = "ecs:service"
-	maxColumnWidth         = 30
+	ecsServiceResourceType    = "ecs:service"
+	maxAlarmStatusColumnWidth = 30
 )
 
 type alarmStatusGetter interface {
@@ -202,7 +203,7 @@ func (s *ServiceStatusDesc) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", "Name", "Condition", "Last Updated", "Health")
 	for _, alarm := range s.Alarms {
 		updatedTimeSince := humanizeTime(alarm.UpdatedTimes)
-		printWithMaxWidth(writer, "  %s\t%s\t%s\t%s\n", maxColumnWidth, alarm.Name, alarm.Condition, updatedTimeSince, alarmHealthColor(alarm.Status))
+		printWithMaxWidth(writer, "  %s\t%s\t%s\t%s\n", maxAlarmStatusColumnWidth, alarm.Name, alarm.Condition, updatedTimeSince, alarmHealthColor(alarm.Status))
 		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", "", "", "", "")
 	}
 	writer.Flush()
@@ -210,28 +211,28 @@ func (s *ServiceStatusDesc) HumanString() string {
 }
 
 func printWithMaxWidth(w *tabwriter.Writer, format string, width int, members ...string) {
-	memberSlices := make([][]string, len(members))
-	m := 0
+	columns := make([][]string, len(members))
+	maxNumOfLinesPerCol := 0
 	for ind, member := range members {
-		var memberSlice []string
-		var res string
+		var column []string
+		builder := new(strings.Builder)
 		// https://stackoverflow.com/questions/25686109/split-string-by-length-in-golang
 		for i, r := range []rune(member) {
-			res += string(r)
+			builder.WriteRune(r)
 			if i > 0 && (i+1)%width == 0 {
-				memberSlice = append(memberSlice, res)
-				res = ""
+				column = append(column, builder.String())
+				builder.Reset()
 			}
 		}
-		if res != "" {
-			memberSlice = append(memberSlice, res)
+		if builder.String() != "" {
+			column = append(column, builder.String())
 		}
-		m = int(math.Max(float64(len(memberSlice)), float64(m)))
-		memberSlices[ind] = memberSlice
+		maxNumOfLinesPerCol = int(math.Max(float64(len(column)), float64(maxNumOfLinesPerCol)))
+		columns[ind] = column
 	}
-	for i := 0; i < m; i++ {
-		args := make([]interface{}, len(memberSlices))
-		for ind, memberSlice := range memberSlices {
+	for i := 0; i < maxNumOfLinesPerCol; i++ {
+		args := make([]interface{}, len(columns))
+		for ind, memberSlice := range columns {
 			if i >= len(memberSlice) {
 				args[ind] = ""
 				continue

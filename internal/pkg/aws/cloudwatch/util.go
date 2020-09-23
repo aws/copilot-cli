@@ -93,24 +93,24 @@ func (a metricAlarm) condition() string {
 	}
 	datapointsToAlarm := aws.Int64Value(a.DatapointsToAlarm)
 	if datapointsToAlarm == 0 {
+		// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-cw-alarm.html#cfn-cloudwatch-alarm-datapointstoalarm
 		datapointsToAlarm = aws.Int64Value(evaluationPeriod)
 	}
 	operator := comparisonOperator(aws.StringValue(a.ComparisonOperator))
-	durationPeriod := time.Duration(aws.Int64Value(evaluationPeriod)*aws.Int64Value(period)) * time.Second
 	switch thresholdType {
 	case static:
-		return fmt.Sprintf(fmtStaticMetricCondition, metricName, operator.humanString(), aws.Float64Value(a.Threshold), datapointsToAlarm,
-			strings.TrimSpace(humanizeDuration(time.Now(), time.Now().Add(durationPeriod), "", "")))
+		return fmt.Sprintf(fmtStaticMetricCondition, metricName, operator.humanString(),
+			aws.Float64Value(a.Threshold), datapointsToAlarm, humanizePeriod(evaluationPeriod, period))
 	case dynamic:
 		if operator.isDynamicBand() {
-			return fmt.Sprintf(fmtDynamicMetricConditionWithBand, metricName, operator.humanString(), datapointsToAlarm,
-				strings.TrimSpace(humanizeDuration(time.Now(), time.Now().Add(durationPeriod), "", "")))
+			return fmt.Sprintf(fmtDynamicMetricConditionWithBand, metricName, operator.humanString(),
+				datapointsToAlarm, humanizePeriod(evaluationPeriod, period))
 		}
-		return fmt.Sprintf(fmtDynamicMetricCondition, metricName, operator.humanString(), datapointsToAlarm,
-			strings.TrimSpace(humanizeDuration(time.Now(), time.Now().Add(durationPeriod), "", "")))
+		return fmt.Sprintf(fmtDynamicMetricCondition, metricName, operator.humanString(),
+			datapointsToAlarm, humanizePeriod(evaluationPeriod, period))
 	case predictive:
-		return fmt.Sprintf(fmtPredictiveMetricCondition, metricName, operator.humanString(), aws.Float64Value(bandWidth), datapointsToAlarm,
-			strings.TrimSpace(humanizeDuration(time.Now(), time.Now().Add(durationPeriod), "", "")))
+		return fmt.Sprintf(fmtPredictiveMetricCondition, metricName, operator.humanString(), aws.Float64Value(bandWidth),
+			datapointsToAlarm, humanizePeriod(evaluationPeriod, period))
 	default:
 		return ""
 	}
@@ -185,4 +185,9 @@ func (a metricAlarm) thresholdMetric() *cloudwatch.MetricDataQuery {
 		}
 	}
 	return nil
+}
+
+func humanizePeriod(evaluationPeriod, period *int64) string {
+	durationPeriod := time.Duration(aws.Int64Value(evaluationPeriod)*aws.Int64Value(period)) * time.Second
+	return strings.TrimSpace(humanizeDuration(time.Now(), time.Now().Add(durationPeriod), "", ""))
 }
