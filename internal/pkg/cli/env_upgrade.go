@@ -8,9 +8,13 @@ import (
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
+	"golang.org/x/mod/semver"
 )
 
 const (
@@ -35,6 +39,10 @@ type envUpgradeOpts struct {
 
 	store environmentStore
 	sel   appEnvSelector
+
+	// Constructors for clients that can be initialized only at runtime.
+	// These functions are overriden in tests to provide mocks.
+	newEnvVersionGetter func(app, env string) (versionGetter, error)
 }
 
 func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
@@ -44,8 +52,21 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 	}
 	return &envUpgradeOpts{
 		envUpgradeVars: vars,
-		store:          store,
-		sel:            selector.NewSelect(prompt.New(), store),
+
+		store: store,
+		sel:   selector.NewSelect(prompt.New(), store),
+
+		newEnvVersionGetter: func(app, env string) (versionGetter, error) {
+			d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+				App:         app,
+				Env:         env,
+				ConfigStore: store,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("new env describer for environment %s in app %s: %v", env, app, err)
+			}
+			return d, nil
+		},
 	}, nil
 }
 
@@ -88,7 +109,76 @@ func (o *envUpgradeOpts) Ask() error {
 // Execute updates the cloudformation stack an environment to the specified version.
 // If the environment stack is busy updating, it spins and waits until the stack can be updated.
 func (o *envUpgradeOpts) Execute() error {
+	envs, err := o.listEnvsToUpgrade()
+	if err != nil {
+		return err
+	}
+	for _, env := range envs {
+		if err := o.upgrade(env); err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+func (o *envUpgradeOpts) listEnvsToUpgrade() ([]string, error) {
+	if !o.all {
+		return []string{o.name}, nil
+	}
+
+	envs, err := o.store.ListEnvironments(o.appName)
+	if err != nil {
+		return nil, fmt.Errorf("list environments in app %s: %v", o.appName, err)
+	}
+	var names []string
+	for _, env := range envs {
+		names = append(names, env.Name)
+	}
+	return names, nil
+}
+
+func (o *envUpgradeOpts) upgrade(env string) error {
+	yes, err := o.shouldUpgrade(env)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return nil
+	}
+	return nil
+}
+
+func (o *envUpgradeOpts) shouldUpgrade(env string) (bool, error) {
+	envTpl, err := o.newEnvVersionGetter(o.appName, env)
+	if err != nil {
+		return false, err
+	}
+	version, err := envTpl.Version()
+	if err != nil {
+		return false, fmt.Errorf("get template version of environment %s in app %s: %v", env, o.appName, err)
+	}
+
+	// The Compare function requires versions to be prefix by "v" and for them to be valid semvers.
+	diff := semver.Compare(prefixSemVer(version), prefixSemVer(deploy.LatestEnvTemplateVersion))
+	if diff < 0 {
+		// Newer version available.
+		return true, nil
+	}
+
+	msg := fmt.Sprintf("Environment %s is already on version %s, skip upgrade.", env, deploy.LatestEnvTemplateVersion)
+	if diff > 0 {
+		msg = fmt.Sprintf(`Skip upgrading environment %s to version %s since it's on version %s. 
+Are you using the latest version of AWS Copilot?`, env, deploy.LatestEnvTemplateVersion, version)
+	}
+	log.Debugln(msg)
+	return false, nil
+}
+
+func prefixSemVer(v string) string {
+	if v == deploy.LegacyEnvTemplateVersion {
+		return "v0.0.0"
+	}
+	return "v" + v
 }
 
 // buildEnvUpgradeCmd builds the command to update the
