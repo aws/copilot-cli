@@ -203,8 +203,8 @@ func TestDeploySelect_Service(t *testing.T) {
 }
 
 type workspaceSelectMocks struct {
-	serviceLister *mocks.MockWsSvcConfigGetter
-	prompt        *mocks.MockPrompter
+	workloadLister *mocks.MockWsConfigGetter
+	prompt         *mocks.MockPrompter
 }
 
 func TestWorkspaceSelect_Service(t *testing.T) {
@@ -300,7 +300,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockwsSvcLister := mocks.NewMockWsSvcConfigGetter(ctrl)
+			mockwsWorkloadLister := mocks.NewMockWsConfigGetter(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := workspaceSelectMocks{
 				workloadLister: mockwsWorkloadLister,
@@ -308,7 +308,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			sel := WorkspaceSvcSelect{
+			sel := WorkspaceSelect{
 				Select: &Select{
 					prompt: mockprompt,
 				},
@@ -417,10 +417,10 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockwsWorkloadLister := mocks.NewMockWsWorkloadLister(ctrl)
+			mockwsConfigGetter := mocks.NewMockWsConfigGetter(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := workspaceSelectMocks{
-				workloadLister: mockwsWorkloadLister,
+				workloadLister: mockwsConfigGetter,
 				prompt:         mockprompt,
 			}
 			tc.setupMocks(mocks)
@@ -429,7 +429,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 				Select: &Select{
 					prompt: mockprompt,
 				},
-				wlLister: mockwsWorkloadLister,
+				wlLister: mockwsConfigGetter,
 			}
 			got, err := sel.Job("Select a local job", "Help text")
 			if tc.wantErr != nil {
@@ -870,14 +870,14 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 		"frontend/Dockerfile",
 	}
 	testCases := map[string]struct {
-		mockWs     func(*mocks.MockWsSvcConfigGetter)
+		mockWs     func(*mocks.MockWsConfigGetter)
 		mockPrompt func(*mocks.MockPrompter)
 
 		wantedErr        error
 		wantedDockerfile string
 	}{
 		"choose an existing Dockerfile": {
-			mockWs: func(m *mocks.MockWsSvcConfigGetter) {
+			mockWs: func(m *mocks.MockWsConfigGetter) {
 				m.EXPECT().ListDockerfiles().Return(dockerfiles, nil)
 			},
 			mockPrompt: func(m *mocks.MockPrompter) {
@@ -891,7 +891,7 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 			wantedDockerfile: "frontend/Dockerfile",
 		},
 		"prompts user for custom path if fail to find Dockerfiles": {
-			mockWs: func(m *mocks.MockWsSvcConfigGetter) {
+			mockWs: func(m *mocks.MockWsConfigGetter) {
 				m.EXPECT().ListDockerfiles().Return(nil, &workspace.ErrDockerfileNotFound{})
 			},
 			mockPrompt: func(m *mocks.MockPrompter) {
@@ -906,7 +906,7 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 			wantedDockerfile: "crazy/path/Dockerfile",
 		},
 		"returns an error if fail to get custom Dockerfile path": {
-			mockWs: func(m *mocks.MockWsSvcConfigGetter) {
+			mockWs: func(m *mocks.MockWsConfigGetter) {
 				m.EXPECT().ListDockerfiles().Return(nil, &workspace.ErrDockerfileNotFound{})
 			},
 			mockPrompt: func(m *mocks.MockPrompter) {
@@ -920,7 +920,7 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 			wantedErr: fmt.Errorf("get custom Dockerfile path: some error"),
 		},
 		"returns an error if fail to select Dockerfile": {
-			mockWs: func(m *mocks.MockWsSvcConfigGetter) {
+			mockWs: func(m *mocks.MockWsConfigGetter) {
 				m.EXPECT().ListDockerfiles().Return(dockerfiles, nil)
 			},
 			mockPrompt: func(m *mocks.MockPrompter) {
@@ -941,7 +941,7 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 			defer ctrl.Finish()
 			p := mocks.NewMockPrompter(ctrl)
 			s := mocks.NewMockAppEnvLister(ctrl)
-			cfg := mocks.NewMockWsSvcConfigGetter(ctrl)
+			cfg := mocks.NewMockWsConfigGetter(ctrl)
 			tc.mockPrompt(p)
 			tc.mockWs(cfg)
 			sel := NewWorkspaceSelect(p, s, cfg)

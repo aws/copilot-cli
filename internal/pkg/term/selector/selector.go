@@ -93,9 +93,9 @@ type WsWorkloadLister interface {
 	JobNames() ([]string, error)
 }
 
-// WsWkldConfigGetter wraps methods to get svc names and Dockerfiles from the workspace.
-type WsSvcConfigGetter interface {
-	WsSvcLister
+// WsConfigGetter wraps methods to get workload names and Dockerfiles from the workspace.
+type WsConfigGetter interface {
+	WsWorkloadLister
 	ListDockerfiles() ([]string, error)
 }
 
@@ -118,9 +118,9 @@ type ConfigSelect struct {
 }
 
 // WorkspaceSelect  is an application and environment selector, but can also choose a service from the workspace.
-type WorkspaceSvcSelect struct {
+type WorkspaceSelect struct {
 	*Select
-	svcLister WsSvcConfigGetter
+	wlLister WsConfigGetter
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -147,12 +147,12 @@ func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
 	}
 }
 
-// NewWorkspaceSvcSelect returns a new selector that chooses applications and environments from the config store, but
+// NewWorkspaceSelect returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
-func NewWorkspaceSvcSelect(prompt Prompter, store AppEnvLister, ws WsSvcConfigGetter) *WorkspaceSvcSelect {
-	return &WorkspaceSvcSelect{
-		Select:    NewSelect(prompt, store),
-		svcLister: ws,
+func NewWorkspaceSelect(prompt Prompter, store AppEnvLister, ws WsConfigGetter) *WorkspaceSelect {
+	return &WorkspaceSelect{
+		Select:   NewSelect(prompt, store),
+		wlLister: ws,
 	}
 }
 
@@ -260,7 +260,7 @@ func (s *DeploySelect) DeployedService(prompt, help string, app string, opts ...
 }
 
 // Service fetches all services in the workspace and then prompts the user to select one.
-func (s *WorkspaceSvcSelect) Service(prompt, help string) (string, error) {
+func (s *WorkspaceSelect) Service(msg, help string) (string, error) {
 	serviceNames, err := s.retrieveWorkspaceServices()
 	if err != nil {
 		return "", fmt.Errorf("list services: %w", err)
@@ -413,8 +413,8 @@ func (s *ConfigSelect) retrieveServices(app string) ([]string, error) {
 	return serviceNames, nil
 }
 
-func (s *WorkspaceSvcSelect) retrieveWorkspaceServices() ([]string, error) {
-	localServiceNames, err := s.svcLister.ServiceNames()
+func (s *WorkspaceSelect) retrieveWorkspaceServices() ([]string, error) {
+	localServiceNames, err := s.wlLister.ServiceNames()
 	if err != nil {
 		return nil, err
 	}
@@ -431,8 +431,8 @@ func (s *WorkspaceSelect) retrieveWorkspaceJobs() ([]string, error) {
 
 // Dockerfile asks the user to select from a list of Dockerfiles in the current
 // directory or one level down. If no dockerfiles are found, it asks for a custom path.
-func (s *WorkspaceSvcSelect) Dockerfile(selPrompt, getPrompt, selHelp, getHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
-	dockerfiles, err := s.svcLister.ListDockerfiles()
+func (s *WorkspaceSelect) Dockerfile(selPrompt, getPrompt, selHelp, getHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
+	dockerfiles, err := s.wlLister.ListDockerfiles()
 	// If Dockerfiles are found in the current directory or subdirectory one level down, ask the user to select one.
 	var sel string
 	if err == nil {
@@ -465,7 +465,7 @@ func (s *WorkspaceSvcSelect) Dockerfile(selPrompt, getPrompt, selHelp, getHelp s
 }
 
 // Schedule asks the user to select either a rate, preset cron, or custom cron.
-func (s *WorkspaceSvcSelect) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
+func (s *WorkspaceSelect) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
 	scheduleType, err := s.prompt.SelectOne(
 		scheduleTypePrompt,
 		scheduleTypeHelp,
@@ -486,7 +486,7 @@ func (s *WorkspaceSvcSelect) Schedule(scheduleTypePrompt, scheduleTypeHelp strin
 	return "", nil
 }
 
-func (s *WorkspaceSvcSelect) askRate(rateValidator prompt.ValidatorFunc) (string, error) {
+func (s *WorkspaceSelect) askRate(rateValidator prompt.ValidatorFunc) (string, error) {
 	rateInput, err := s.prompt.Get(
 		ratePrompt,
 		rateHelp,
@@ -499,7 +499,7 @@ func (s *WorkspaceSvcSelect) askRate(rateValidator prompt.ValidatorFunc) (string
 	return fmt.Sprintf(every, rateInput), nil
 }
 
-func (s *WorkspaceSvcSelect) askCron(scheduleValidator prompt.ValidatorFunc) (string, error) {
+func (s *WorkspaceSelect) askCron(scheduleValidator prompt.ValidatorFunc) (string, error) {
 	cronInput, err := s.prompt.SelectOne(
 		schedulePrompt,
 		scheduleHelp,
