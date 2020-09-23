@@ -22,7 +22,6 @@ const (
 	cloudwatchResourceType = "cloudwatch:alarm"
 	compositeAlarmType     = "Composite"
 	metricAlarmType        = "Metric"
-	fmtAlarmCondition      = "%s %s %.2f for %d datapoints within %s"
 )
 
 // humanizeDuration is overriden in tests so that its output is constant as time passes.
@@ -40,49 +39,6 @@ type resourceGetter interface {
 type CloudWatch struct {
 	client   api
 	rgClient resourceGetter
-}
-
-type comparisonOperator string
-
-func (c comparisonOperator) humanString() string {
-	switch c {
-	case cloudwatch.ComparisonOperatorGreaterThanOrEqualToThreshold:
-		return "≥"
-	case cloudwatch.ComparisonOperatorGreaterThanThreshold:
-		return ">"
-	case cloudwatch.ComparisonOperatorLessThanThreshold:
-		return "<"
-	case cloudwatch.ComparisonOperatorLessThanOrEqualToThreshold:
-		return "≤"
-	case cloudwatch.ComparisonOperatorLessThanLowerOrGreaterThanUpperThreshold:
-		return "outside"
-	case cloudwatch.ComparisonOperatorLessThanLowerThreshold:
-		return "<"
-	case cloudwatch.ComparisonOperatorGreaterThanUpperThreshold:
-		return ">"
-	default:
-		return ""
-	}
-}
-
-type metricAlarm cloudwatch.MetricAlarm
-
-func (a metricAlarm) condition() string {
-	metricName := aws.StringValue(a.MetricName)
-	// If metric name doesn't exist, then it means they are using MetricDataQuery
-	// which could be very difficult to parse into a human readable condition.
-	// https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricAlarm.html
-	if metricName == "" {
-		return "-"
-	}
-	operator := comparisonOperator(aws.StringValue(a.ComparisonOperator)).humanString()
-	datapointsToAlarm := aws.Int64Value(a.DatapointsToAlarm)
-	if datapointsToAlarm == 0 {
-		datapointsToAlarm = aws.Int64Value(a.EvaluationPeriods)
-	}
-	period := time.Duration(aws.Int64Value(a.EvaluationPeriods)*aws.Int64Value(a.Period)) * time.Second
-	return fmt.Sprintf(fmtAlarmCondition, metricName, operator, aws.Float64Value(a.Threshold), datapointsToAlarm,
-		strings.TrimSpace(humanizeDuration(time.Now(), time.Now().Add(period), "", "")))
 }
 
 // AlarmStatus contains CloudWatch alarm status.
