@@ -483,7 +483,6 @@ func (s *WorkspaceSelect) Schedule(scheduleTypePrompt, scheduleTypeHelp string, 
 	default:
 		return "", fmt.Errorf("unrecognized schedule type %s", scheduleType)
 	}
-	return "", nil
 }
 
 func (s *WorkspaceSelect) askRate(rateValidator prompt.ValidatorFunc) (string, error) {
