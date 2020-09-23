@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -222,6 +223,61 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedEnv, actual)
+			}
+		})
+	}
+}
+
+func TestEnvDescriber_Version(t *testing.T) {
+	testCases := map[string]struct {
+		given func(ctrl *gomock.Controller) *EnvDescriber
+
+		wantedVersion string
+		wantedErr     error
+	}{
+		"should return deploy.LegacyEnvTemplateVersion version if legacy template": {
+			given: func(ctrl *gomock.Controller) *EnvDescriber {
+				m := mocks.NewMockstackAndResourcesDescriber(ctrl)
+				m.EXPECT().Metadata(gomock.Any()).Return("", nil)
+				return &EnvDescriber{
+					app:            "phonetool",
+					env:            &config.Environment{Name: "test"},
+					stackDescriber: m,
+				}
+			},
+			wantedVersion: deploy.LegacyEnvTemplateVersion,
+		},
+		"should read the version from the Metadata field": {
+			given: func(ctrl *gomock.Controller) *EnvDescriber {
+				m := mocks.NewMockstackAndResourcesDescriber(ctrl)
+				m.EXPECT().Metadata("phonetool-test").Return(`{"Version":"1.0.0"}`, nil)
+				return &EnvDescriber{
+					app:            "phonetool",
+					env:            &config.Environment{Name: "test"},
+					stackDescriber: m,
+				}
+			},
+
+			wantedVersion: "1.0.0",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			d := tc.given(ctrl)
+
+			// WHEN
+			actual, err := d.Version()
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedVersion, actual)
 			}
 		})
 	}

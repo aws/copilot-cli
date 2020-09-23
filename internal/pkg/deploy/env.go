@@ -10,6 +10,13 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
+const (
+	// LegacyEnvTemplateVersion is the version associated with the environment template before we started versioning.
+	LegacyEnvTemplateVersion = ""
+	// LatestEnvTemplateVersion is the latest version number available for environment templates.
+	LatestEnvTemplateVersion = "1.0.0"
+)
+
 // CreateEnvironmentInput holds the fields required to deploy an environment.
 type CreateEnvironmentInput struct {
 	AppName                  string            // Name of the application this environment belongs to.
