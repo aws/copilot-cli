@@ -107,3 +107,79 @@ func TestJobDeployOpts_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestJobDeployOpts_Ask(t *testing.T) {
+	testCases := map[string]struct {
+		inAppName  string
+		inEnvName  string
+		inJobName  string
+		inImageTag string
+
+		wantedCalls func(m *mocks.MockwsSelector)
+
+		wantedJobName  string
+		wantedEnvName  string
+		wantedImageTag string
+		wantedError    error
+	}{
+		"prompts for environment name and job names": {
+			inAppName:  "phonetool",
+			inImageTag: "latest",
+			wantedCalls: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Job("Select a job from your workspace", "").Return("resizer", nil)
+				m.EXPECT().Environment("Select an environment", "", "phonetool").Return("prod-iad", nil)
+			},
+
+			wantedJobName:  "resizer",
+			wantedEnvName:  "prod-iad",
+			wantedImageTag: "latest",
+		},
+		"don't call selector if flags are provided": {
+			inAppName:  "phonetool",
+			inEnvName:  "prod-iad",
+			inJobName:  "resizer",
+			inImageTag: "latest",
+			wantedCalls: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Job(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+
+			wantedJobName:  "resizer",
+			wantedEnvName:  "prod-iad",
+			wantedImageTag: "latest",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mockSel := mocks.NewMockwsSelector(ctrl)
+
+			tc.wantedCalls(mockSel)
+			opts := deployJobOpts{
+				deployJobVars: deployJobVars{
+					appName:  tc.inAppName,
+					name:     tc.inJobName,
+					envName:  tc.inEnvName,
+					imageTag: tc.inImageTag,
+				},
+				sel: mockSel,
+			}
+
+			// WHEN
+			err := opts.Ask()
+
+			// THEN
+			if tc.wantedError == nil {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedJobName, opts.name)
+				require.Equal(t, tc.wantedEnvName, opts.envName)
+				require.Equal(t, tc.wantedImageTag, opts.imageTag)
+			} else {
+				require.EqualError(t, err, tc.wantedError.Error())
+			}
+		})
+	}
+}

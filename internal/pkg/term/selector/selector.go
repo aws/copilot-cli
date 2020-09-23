@@ -38,9 +38,10 @@ type ConfigLister interface {
 	ConfigSvcLister
 }
 
-// WsSvcLister wraps the method to get svcs in current workspace.
-type WsSvcLister interface {
+// WsWorkloadLister wraps the method to get workloads in current workspace.
+type WsWorkloadLister interface {
 	ServiceNames() ([]string, error)
+	JobNames() ([]string, error)
 }
 
 // DeployStoreClient wraps methods of deploy store.
@@ -61,10 +62,10 @@ type ConfigSelect struct {
 	svcLister ConfigSvcLister
 }
 
-// WorkspaceSelect  is an application and environment selector, but can also choose a service from the workspace.
+// WorkspaceSelect  is an application and environment selector, but can also choose a service/job from the workspace.
 type WorkspaceSelect struct {
 	*Select
-	svcLister WsSvcLister
+	wlLister WsWorkloadLister
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -92,11 +93,11 @@ func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
 }
 
 // NewWorkspaceSelect returns a new selector that chooses applications and environments from the config store, but
-// services from the local workspace.
-func NewWorkspaceSelect(prompt Prompter, store AppEnvLister, ws WsSvcLister) *WorkspaceSelect {
+// services/jobs from the local workspace.
+func NewWorkspaceSelect(prompt Prompter, store AppEnvLister, ws WsWorkloadLister) *WorkspaceSelect {
 	return &WorkspaceSelect{
-		Select:    NewSelect(prompt, store),
-		svcLister: ws,
+		Select:   NewSelect(prompt, store),
+		wlLister: ws,
 	}
 }
 
@@ -204,21 +205,45 @@ func (s *DeploySelect) DeployedService(prompt, help string, app string, opts ...
 }
 
 // Service fetches all services in the workspace and then prompts the user to select one.
-func (s *WorkspaceSelect) Service(prompt, help string) (string, error) {
+func (s *WorkspaceSelect) Service(msg, help string) (string, error) {
 	serviceNames, err := s.retrieveWorkspaceServices()
 	if err != nil {
 		return "", fmt.Errorf("list services: %w", err)
+	}
+	if len(serviceNames) == 0 {
+		return "", errors.New("no services found in workspace")
 	}
 	if len(serviceNames) == 1 {
 		log.Infof("Only found one service in workspace, defaulting to: %s\n", color.HighlightUserInput(serviceNames[0]))
 		return serviceNames[0], nil
 	}
 
-	selectedServiceName, err := s.prompt.SelectOne(prompt, help, serviceNames)
+	selectedServiceName, err := s.prompt.SelectOne(msg, help, serviceNames, prompt.WithFinalMessage("Service name:"))
 	if err != nil {
 		return "", fmt.Errorf("select local service: %w", err)
 	}
 	return selectedServiceName, nil
+}
+
+// Job fetches all jobs in the workspace and then prompts the user to select one.
+func (s *WorkspaceSelect) Job(msg, help string) (string, error) {
+	jobNames, err := s.retrieveWorkspaceJobs()
+	if err != nil {
+		return "", fmt.Errorf("list jobs: %w", err)
+	}
+	if len(jobNames) == 0 {
+		return "", errors.New("no jobs found in workspace")
+	}
+	if len(jobNames) == 1 {
+		log.Infof("Only found one job in workspace, defaulting to: %s\n", color.HighlightUserInput(jobNames[0]))
+		return jobNames[0], nil
+	}
+
+	selectedJobName, err := s.prompt.SelectOne(msg, help, jobNames, prompt.WithFinalMessage("Job name:"))
+	if err != nil {
+		return "", fmt.Errorf("select local job: %w", err)
+	}
+	return selectedJobName, nil
 }
 
 // Service fetches all services in an app and prompts the user to select one.
@@ -334,12 +359,17 @@ func (s *ConfigSelect) retrieveServices(app string) ([]string, error) {
 }
 
 func (s *WorkspaceSelect) retrieveWorkspaceServices() ([]string, error) {
-	localServiceNames, err := s.svcLister.ServiceNames()
+	localServiceNames, err := s.wlLister.ServiceNames()
 	if err != nil {
 		return nil, err
 	}
-	if len(localServiceNames) == 0 {
-		return nil, errors.New("no services found in workspace")
-	}
 	return localServiceNames, nil
+}
+
+func (s *WorkspaceSelect) retrieveWorkspaceJobs() ([]string, error) {
+	localJobNames, err := s.wlLister.JobNames()
+	if err != nil {
+		return nil, err
+	}
+	return localJobNames, nil
 }
