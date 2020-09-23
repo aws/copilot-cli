@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -234,7 +235,7 @@ func TestEnvDescriber_Version(t *testing.T) {
 		wantedVersion string
 		wantedErr     error
 	}{
-		"should return empty version if legacy template": {
+		"should return deploy.LegacyEnvTemplateVersion version if legacy template": {
 			given: func(ctrl *gomock.Controller) *EnvDescriber {
 				m := mocks.NewMockstackAndResourcesDescriber(ctrl)
 				m.EXPECT().Metadata(gomock.Any()).Return("", nil)
@@ -244,6 +245,7 @@ func TestEnvDescriber_Version(t *testing.T) {
 					stackDescriber: m,
 				}
 			},
+			wantedVersion: deploy.LegacyEnvTemplateVersion,
 		},
 		"should read the version from the Metadata field": {
 			given: func(ctrl *gomock.Controller) *EnvDescriber {

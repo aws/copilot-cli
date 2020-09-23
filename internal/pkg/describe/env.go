@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"gopkg.in/yaml.v3"
@@ -98,7 +99,7 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 // Version returns the CloudFormation template version associated with
 // the environment by reading the Metadata.Version field from the template.
 //
-// If the Version field does not exist, then it's a legacy template and it returns an empty string and nil error.
+// If the Version field does not exist, then it's a legacy template and it returns an deploy.LegacyEnvTemplateVersion and nil error.
 func (d *EnvDescriber) Version() (string, error) {
 	raw, err := d.stackDescriber.Metadata(stack.NameForEnv(d.app, d.env.Name))
 	if err != nil {
@@ -110,6 +111,9 @@ func (d *EnvDescriber) Version() (string, error) {
 	}{}
 	if err := yaml.Unmarshal([]byte(raw), &metadata); err != nil {
 		return "", fmt.Errorf("unmarshal Metadata property to read Version: %w", err)
+	}
+	if metadata.Version == "" {
+		return deploy.LegacyEnvTemplateVersion, nil
 	}
 	return metadata.Version, nil
 }

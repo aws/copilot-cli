@@ -189,7 +189,7 @@ func TestStackDescriber_Metadata(t *testing.T) {
 				return m
 			},
 
-			wantedErr: errors.New("get template for stack phonetool-test: some error"),
+			wantedErr: errors.New("get template summary for stack phonetool-test: some error"),
 		},
 		"should retrieve metadata on successful call": {
 			stackName: "phonetool-test",
