@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -45,6 +46,12 @@ For more information, see: https://en.wikipedia.org/wiki/Cron#Overview`
 	jobInitCronHumanReadableConfirmPrompt = "Would you like to use this schedule?"
 	jobInitCronHumanReadableConfirmHelp   = `Confirm whether the schedule looks right to you.
 (Y)es will continue execution. (N)o will allow you to input a different schedule.`
+)
+
+const (
+	fmtAddJobToAppStart    = "Creating ECR repositories for job %s."
+	fmtAddJobToAppFailed   = "Failed to create ECR repositories for job %s.\n"
+	fmtAddJobToAppComplete = "Created ECR repositories for job %s.\n"
 )
 
 const (
@@ -94,9 +101,9 @@ type initJobOpts struct {
 
 	// Interfaces to interact with dependencies.
 	fs          afero.Fs
-	ws          svcManifestWriter
+	ws          svcDirManifestWriter
 	store       store
-	appDeployer appDeployer
+	appDeployer jobDeployer
 	prog        progress
 	prompt      prompter
 
@@ -185,7 +192,99 @@ func (o *initJobOpts) Ask() error {
 
 // Execute writes the job's manifest file and stores the name in SSM.
 func (o *initJobOpts) Execute() error {
+	app, err := o.store.GetApplication(o.appName)
+	if err != nil {
+		return fmt.Errorf("get application %s: %w", o.appName, err)
+	}
+
+	manifestPath, err := o.createManifest()
+	if err != nil {
+		return err
+	}
+	o.manifestPath = manifestPath
+
+	o.prog.Start(fmt.Sprintf(fmtAddJobToAppStart, o.name))
+	if err := o.appDeployer.AddJobToApp(app, o.name); err != nil {
+		o.prog.Stop(log.Serrorf(fmtAddJobToAppFailed, o.name))
+		return fmt.Errorf("add job %s to application %s: %w", o.name, o.appName, err)
+	}
+	o.prog.Stop(log.Ssuccessf(fmtAddJobToAppComplete, o.name))
+
+	if err := o.store.CreateJob(&config.Workload{
+		App:  o.appName,
+		Name: o.name,
+		Type: o.jobType,
+	}); err != nil {
+		return fmt.Errorf("saving job %s: %w", o.name, err)
+	}
 	return nil
+}
+
+func (o *initJobOpts) createManifest() (string, error) {
+	manifest, err := o.newJobManifest()
+	if err != nil {
+		return "", err
+	}
+	var manifestExists bool
+	manifestPath, err := o.ws.WriteWorkloadManifest(manifest, o.name)
+	if err != nil {
+		e, ok := err.(*workspace.ErrFileExists)
+		if !ok {
+			return "", err
+		}
+		manifestExists = true
+		manifestPath = e.FileName
+	}
+	manifestPath, err = relPath(manifestPath)
+	if err != nil {
+		return "", err
+	}
+
+	manifestMsgFmt := "Wrote the manifest for job %s at %s\n"
+	if manifestExists {
+		manifestMsgFmt = "Manifest file for job %s already exists at %s, skipping writing it.\n"
+	}
+	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.name), color.HighlightResource(manifestPath))
+	log.Infoln(color.Help(fmt.Sprintf("Your manifest contains configurations like your container size and job schedule (%s).", o.schedule)))
+	log.Infoln()
+
+	return manifestPath, nil
+}
+
+func (o *initJobOpts) newJobManifest() (*manifest.ScheduledJob, error) {
+	dfPath, err := o.getRelativePath()
+	if err != nil {
+		return nil, err
+	}
+	return manifest.NewScheduledJob(manifest.ScheduledJobProps{
+		WorkloadProps: &manifest.WorkloadProps{
+			Name:       o.name,
+			Dockerfile: dfPath,
+		},
+		Schedule: o.schedule,
+		Timeout:  o.timeout,
+		Retries:  o.retries,
+	}), nil
+}
+
+func (o *initJobOpts) getRelativePath() (string, error) {
+	copilotDirPath, err := o.ws.CopilotDirPath()
+	if err != nil {
+		return "", fmt.Errorf("get copilot directory: %w", err)
+	}
+	wsRoot := filepath.Dir(copilotDirPath)
+	absDfPath, err := filepath.Abs(o.dockerfilePath)
+	if err != nil {
+		return "", fmt.Errorf("get absolute path: %v", err)
+	}
+	if !strings.Contains(absDfPath, wsRoot) {
+		return "", fmt.Errorf("Dockerfile %s not within workspace %s", absDfPath, wsRoot)
+	}
+	relDfPath, err := filepath.Rel(wsRoot, absDfPath)
+	if err != nil {
+		return "", fmt.Errorf("find relative path from workspace root to Dockerfile: %v", err)
+	}
+	return relDfPath, nil
 }
 
 func (o *initJobOpts) askJobType() error {

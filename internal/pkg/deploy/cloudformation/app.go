@@ -144,6 +144,23 @@ func (cf CloudFormation) getResourcesForStackInstances(app *config.Application, 
 // Currently, this means that we'll set up an ECR repo with a policy for all envs to be able
 // to pull from it.
 func (cf CloudFormation) AddServiceToApp(app *config.Application, svcName string) error {
+	if err := cf.addWorkloadToApp(app, svcName); err != nil {
+		return fmt.Errorf("adding service %s resources to application %s: %w", svcName, app.Name, err)
+	}
+	return nil
+}
+
+// AddJobToApp attempts to add new job-specific resources to the application resource stack.
+// Currently, this means that we'll set up an ECR repo with a policy for all envs to be able
+// to pull from it.
+func (cf CloudFormation) AddJobToApp(app *config.Application, jobName string) error {
+	if err := cf.addWorkloadToApp(app, jobName); err != nil {
+		return fmt.Errorf("adding job %s resources to application %s: %w", jobName, app.Name, err)
+	}
+	return nil
+}
+
+func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string) error {
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:           app.Name,
 		AccountID:      app.AccountID,
@@ -151,35 +168,35 @@ func (cf CloudFormation) AddServiceToApp(app *config.Application, svcName string
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
 	if err != nil {
-		return fmt.Errorf("adding %s service resources to application %s: %w", svcName, app.Name, err)
+		return err
 	}
 
 	// We'll generate a new list of Accounts to add to our application
 	// infrastructure by appending the environment's account if it
 	// doesn't already exist.
-	var svcList []string
-	shouldAddNewSvc := true
+	var wlList []string
+	shouldAddNewWl := true
 	for _, svc := range previouslyDeployedConfig.Services {
-		svcList = append(svcList, svc)
-		if svc == svcName {
-			shouldAddNewSvc = false
+		wlList = append(wlList, svc)
+		if svc == wlName {
+			shouldAddNewWl = false
 		}
 	}
 
-	if !shouldAddNewSvc {
+	if !shouldAddNewWl {
 		return nil
 	}
 
-	svcList = append(svcList, svcName)
+	wlList = append(wlList, wlName)
 
 	newDeploymentConfig := stack.AppResourcesConfig{
 		Version:  previouslyDeployedConfig.Version + 1,
-		Services: svcList,
+		Services: wlList,
 		Accounts: previouslyDeployedConfig.Accounts,
 		App:      appConfig.Name,
 	}
 	if err := cf.deployAppConfig(appConfig, &newDeploymentConfig); err != nil {
-		return fmt.Errorf("adding %s service resources to application: %w", svcName, err)
+		return err
 	}
 
 	return nil

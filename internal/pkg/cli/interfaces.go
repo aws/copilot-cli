@@ -304,6 +304,14 @@ type appDeployer interface {
 	DeleteApp(name string) error
 }
 
+type jobDeployer interface {
+	DeployApp(in *deploy.CreateAppInput) error
+	AddJobToApp(app *config.Application, jobName string) error
+	AddEnvToApp(app *config.Application, env *config.Environment) error
+	DelegateDNSPermissions(app *config.Application, accountID string) error
+	DeleteApp(name string) error
+}
+
 type appResourcesGetter interface {
 	GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error)
 	GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error)
