@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
@@ -968,4 +969,124 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 	}
 }
 
-func TestWorkspaceSelect_Schedule(t *testing.T) {}
+func TestWorkspaceSelect_Schedule(t *testing.T) {
+	scheduleTypePrompt := "HAY WHAT SCHEDULE"
+	scheduleTypeHelp := "NO"
+
+	testCases := map[string]struct {
+		mockPrompt     func(*mocks.MockPrompter)
+		wantedSchedule string
+		wantedErr      error
+	}{
+		"error asking schedule type": {
+			mockPrompt: func(m *mocks.MockPrompter) {
+				gomock.InOrder(
+					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return("", errors.New("some error")),
+				)
+			},
+			wantedErr: errors.New("get schedule type: some error"),
+		},
+		"ask for rate": {
+			mockPrompt: func(m *mocks.MockPrompter) {
+				gomock.InOrder(
+					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(rate, nil),
+					m.EXPECT().Get(ratePrompt, rateHelp, gomock.Any(), gomock.Any()).Return("1h30m", nil),
+				)
+			},
+			wantedSchedule: "@every 1h30m",
+		},
+		"error getting rate": {
+			mockPrompt: func(m *mocks.MockPrompter) {
+				gomock.InOrder(
+					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(rate, nil),
+					m.EXPECT().Get(ratePrompt, rateHelp, gomock.Any(), gomock.Any()).Return("", fmt.Errorf("some error")),
+				)
+			},
+			wantedErr: errors.New("get schedule rate: some error"),
+		},
+		"ask for cron": {
+			mockPrompt: func(m *mocks.MockPrompter) {
+				gomock.InOrder(
+					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
+					m.EXPECT().SelectOne(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Daily", nil),
+				)
+			},
+			wantedSchedule: "@daily",
+		},
+		"error getting cron": {
+			mockPrompt: func(m *mocks.MockPrompter) {
+				gomock.InOrder(
+					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
+					m.EXPECT().SelectOne(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("", errors.New("some error")),
+				)
+			},
+			wantedErr: errors.New("get preset schedule: some error"),
+		},
+		"ask for custom schedule": {
+			mockPrompt: func(m *mocks.MockPrompter) {
+				gomock.InOrder(
+					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
+					m.EXPECT().SelectOne(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Custom", nil),
+					m.EXPECT().Get(customSchedulePrompt, customScheduleHelp, gomock.Any(), gomock.Any()).Return("0 * * * *", nil),
+					m.EXPECT().Confirm(humanReadableCronConfirmPrompt, humanReadableCronConfirmHelp).Return(true, nil),
+				)
+			},
+			wantedSchedule: "0 * * * *",
+		},
+		"error getting custom schedule": {
+			mockPrompt: func(m *mocks.MockPrompter) {
+				gomock.InOrder(
+					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
+					m.EXPECT().SelectOne(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Custom", nil),
+					m.EXPECT().Get(customSchedulePrompt, customScheduleHelp, gomock.Any(), gomock.Any()).Return("", errors.New("some error")),
+				)
+			},
+			wantedErr: errors.New("get custom schedule: some error"),
+		},
+		"error confirming custom schedule": {
+			mockPrompt: func(m *mocks.MockPrompter) {
+				gomock.InOrder(
+					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
+					m.EXPECT().SelectOne(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Custom", nil),
+					m.EXPECT().Get(customSchedulePrompt, customScheduleHelp, gomock.Any(), gomock.Any()).Return("0 * * * *", nil),
+					m.EXPECT().Confirm(humanReadableCronConfirmPrompt, humanReadableCronConfirmHelp).Return(false, errors.New("some error")),
+				)
+			},
+			wantedErr: errors.New("confirm cron schedule: some error"),
+		},
+		"custom schedule using valid definition string results in no confirm": {
+			mockPrompt: func(m *mocks.MockPrompter) {
+				gomock.InOrder(
+					m.EXPECT().SelectOne(scheduleTypePrompt, scheduleTypeHelp, scheduleTypes, gomock.Any()).Return(fixedSchedule, nil),
+					m.EXPECT().SelectOne(schedulePrompt, scheduleHelp, presetSchedules, gomock.Any()).Return("Custom", nil),
+					m.EXPECT().Get(customSchedulePrompt, customScheduleHelp, gomock.Any(), gomock.Any()).Return("@hourly", nil),
+				)
+			},
+			wantedSchedule: "@hourly",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			p := mocks.NewMockPrompter(ctrl)
+			s := mocks.NewMockAppEnvLister(ctrl)
+			cfg := mocks.NewMockWsConfigGetter(ctrl)
+			tc.mockPrompt(p)
+			sel := NewWorkspaceSelect(p, s, cfg)
+
+			var mockValidator prompt.ValidatorFunc = func(interface{}) error { return nil }
+
+			// WHEN
+			schedule, err := sel.Schedule(scheduleTypePrompt, scheduleTypeHelp, mockValidator, mockValidator)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.Equal(t, tc.wantedSchedule, schedule)
+			}
+		})
+	}
+}
