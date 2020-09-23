@@ -171,10 +171,10 @@ func (m *MockConfigSvcLister) EXPECT() *MockConfigSvcListerMockRecorder {
 }
 
 // ListServices mocks base method
-func (m *MockConfigSvcLister) ListServices(appName string) ([]*config.Service, error) {
+func (m *MockConfigSvcLister) ListServices(appName string) ([]*config.Workload, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListServices", appName)
-	ret0, _ := ret[0].([]*config.Service)
+	ret0, _ := ret[0].([]*config.Workload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -239,10 +239,10 @@ func (mr *MockConfigListerMockRecorder) ListApplications() *gomock.Call {
 }
 
 // ListServices mocks base method
-func (m *MockConfigLister) ListServices(appName string) ([]*config.Service, error) {
+func (m *MockConfigLister) ListServices(appName string) ([]*config.Workload, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListServices", appName)
-	ret0, _ := ret[0].([]*config.Service)
+	ret0, _ := ret[0].([]*config.Workload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -52,7 +52,7 @@ func TestSvcShow_Validate(t *testing.T) {
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
 						Name: "my-app",
 					}, nil),
-					m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(&config.Service{
+					m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{
 						Name: "my-svc",
 					}, nil),
 				)

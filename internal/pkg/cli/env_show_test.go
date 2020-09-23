@@ -214,17 +214,17 @@ func TestEnvShow_Execute(t *testing.T) {
 		ExecutionRoleARN: "",
 		ManagerRoleARN:   "",
 	}
-	testSvc1 := &config.Service{
+	testSvc1 := &config.Workload{
 		App:  "testApp",
 		Name: "testSvc1",
 		Type: "load-balanced",
 	}
-	testSvc2 := &config.Service{
+	testSvc2 := &config.Workload{
 		App:  "testApp",
 		Name: "testSvc2",
 		Type: "load-balanced",
 	}
-	testSvc3 := &config.Service{
+	testSvc3 := &config.Workload{
 		App:  "testApp",
 		Name: "testSvc3",
 		Type: "load-balanced",
@@ -242,7 +242,7 @@ func TestEnvShow_Execute(t *testing.T) {
 	mockTags := map[string]string{"copilot-application": "testApp", "copilot-environment": "testEnv", "key1": "value1", "key2": "value2"}
 	mockEnvDescription := describe.EnvDescription{
 		Environment: testEnv,
-		Services:    []*config.Service{testSvc1, testSvc2, testSvc3},
+		Services:    []*config.Workload{testSvc1, testSvc2, testSvc3},
 		Tags:        mockTags,
 		Resources:   wantedResources,
 	}

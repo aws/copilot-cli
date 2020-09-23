@@ -29,7 +29,7 @@ type AppEnvLister interface {
 
 // ConfigSvcLister wraps the method to list svcs in config store.
 type ConfigSvcLister interface {
-	ListServices(appName string) ([]*config.Service, error)
+	ListServices(appName string) ([]*config.Workload, error)
 }
 
 // ConfigLister wraps config store listing methods.

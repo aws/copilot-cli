@@ -185,7 +185,7 @@ func (o *initSvcOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtAddSvcToAppComplete, o.name))
 
-	if err := o.store.CreateService(&config.Service{
+	if err := o.store.CreateService(&config.Workload{
 		App:  o.appName,
 		Name: o.name,
 		Type: o.serviceType,

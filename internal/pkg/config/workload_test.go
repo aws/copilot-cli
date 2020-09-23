@@ -15,24 +15,24 @@ import (
 )
 
 func TestStore_ListServices(t *testing.T) {
-	frontendService := Service{Name: "fe", App: "chicken", Type: "LBFargate"}
+	frontendService := Workload{Name: "fe", App: "chicken", Type: "Load Balanced Fargate Service"}
 	frontendServiceString, err := marshal(frontendService)
-	frontendServicePath := fmt.Sprintf(fmtSvcParamPath, frontendService.App, frontendService.Name)
+	frontendServicePath := fmt.Sprintf(fmtWkldParamPath, frontendService.App, frontendService.Name)
 	require.NoError(t, err, "Marshal svc should not fail")
 
-	apiService := Service{Name: "api", App: "chicken", Type: "LBFargate"}
+	apiService := Workload{Name: "api", App: "chicken", Type: "Load Balanced Fargate Service"}
 	apiServiceString, err := marshal(apiService)
-	apiServicePath := fmt.Sprintf(fmtSvcParamPath, apiService.App, apiService.Name)
+	apiServicePath := fmt.Sprintf(fmtWkldParamPath, apiService.App, apiService.Name)
 	require.NoError(t, err, "Marshal svc should not fail")
 
-	servicePath := fmt.Sprintf(rootSvcParamPath, frontendService.App)
+	servicePath := fmt.Sprintf(rootWkldParamPath, frontendService.App)
 
 	lastPageInPaginatedResp := false
 
 	testCases := map[string]struct {
 		mockGetParametersByPath func(t *testing.T, param *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error)
 
-		wantedSvcs []Service
+		wantedSvcs []Workload
 		wantedErr  error
 	}{
 		"with multiple existing svcs": {
@@ -52,7 +52,7 @@ func TestStore_ListServices(t *testing.T) {
 				}, nil
 			},
 
-			wantedSvcs: []Service{apiService, frontendService},
+			wantedSvcs: []Workload{apiService, frontendService},
 			wantedErr:  nil,
 		},
 		"with malformed json": {
@@ -74,7 +74,7 @@ func TestStore_ListServices(t *testing.T) {
 				require.Equal(t, servicePath, *param.Path)
 				return nil, fmt.Errorf("broken")
 			},
-			wantedErr: fmt.Errorf("list services for application chicken: broken"),
+			wantedErr: fmt.Errorf("read service configuration for application chicken: broken"),
 		},
 		"with paginated response": {
 			mockGetParametersByPath: func(t *testing.T, param *ssm.GetParametersByPathInput) (output *ssm.GetParametersByPathOutput, e error) {
@@ -103,7 +103,7 @@ func TestStore_ListServices(t *testing.T) {
 				}, nil
 			},
 
-			wantedSvcs: []Service{apiService, frontendService},
+			wantedSvcs: []Workload{apiService, frontendService},
 			wantedErr:  nil,
 		},
 	}
@@ -125,7 +125,7 @@ func TestStore_ListServices(t *testing.T) {
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
-				var services []Service
+				var services []Workload
 				for _, s := range svcPointers {
 					services = append(services, *s)
 				}
@@ -136,15 +136,104 @@ func TestStore_ListServices(t *testing.T) {
 	}
 }
 
+func TestStore_ListJobs(t *testing.T) {
+	frontendService := Workload{Name: "fe", App: "chicken", Type: "Load Balanced Fargate Service"}
+	frontendServiceString, err := marshal(frontendService)
+	frontendServicePath := fmt.Sprintf(fmtWkldParamPath, frontendService.App, frontendService.Name)
+	require.NoError(t, err, "Marshal svc should not fail")
+
+	mailerJob := Workload{Name: "mailer", App: "chicken", Type: "Scheduled Job"}
+	mailerJobString, err := marshal(mailerJob)
+	mailerJobPath := fmt.Sprintf(fmtWkldParamPath, mailerJob.App, mailerJob.Name)
+	require.NoError(t, err, "Marshal job should not fail")
+
+	analyticsJob := Workload{Name: "analyzer", App: "chicken", Type: "Scheduled Job"}
+	analyticsJobString, err := marshal(analyticsJob)
+	analyticsJobPath := fmt.Sprintf(fmtWkldParamPath, analyticsJob.App, analyticsJob.Name)
+	require.NoError(t, err, "Marshal job should not fail")
+
+	workloadPath := fmt.Sprintf(rootWkldParamPath, mailerJob.App)
+
+	testCases := map[string]struct {
+		mockGetParametersByPath func(t *testing.T, param *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error)
+
+		wantedJobs []Workload
+		wantedErr  error
+	}{
+		"with existing jobs": {
+			mockGetParametersByPath: func(t *testing.T, param *ssm.GetParametersByPathInput) (output *ssm.GetParametersByPathOutput, e error) {
+				require.Equal(t, workloadPath, *param.Path)
+				return &ssm.GetParametersByPathOutput{
+					Parameters: []*ssm.Parameter{
+						{
+							Name:  aws.String(mailerJobPath),
+							Value: aws.String(mailerJobString),
+						},
+						{
+							Name:  aws.String(analyticsJobPath),
+							Value: aws.String(analyticsJobString),
+						},
+					},
+				}, nil
+			},
+			wantedJobs: []Workload{mailerJob, analyticsJob},
+			wantedErr:  nil,
+		},
+		"with service and job": {
+			mockGetParametersByPath: func(t *testing.T, param *ssm.GetParametersByPathInput) (output *ssm.GetParametersByPathOutput, e error) {
+				require.Equal(t, workloadPath, *param.Path)
+				return &ssm.GetParametersByPathOutput{
+					Parameters: []*ssm.Parameter{
+						{
+							Name:  aws.String(mailerJobPath),
+							Value: aws.String(mailerJobString),
+						},
+						{
+							Name:  aws.String(frontendServicePath),
+							Value: aws.String(frontendServiceString),
+						},
+					},
+				}, nil
+			},
+			wantedJobs: []Workload{mailerJob},
+			wantedErr:  nil,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			//GIVEN
+			store := &Store{
+				ssmClient: &mockSSM{
+					t:                       t,
+					mockGetParametersByPath: tc.mockGetParametersByPath,
+				},
+			}
+
+			// WHEN
+			jobPointers, err := store.ListJobs("chicken")
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				var jobs []Workload
+				for _, j := range jobPointers {
+					jobs = append(jobs, *j)
+				}
+				require.ElementsMatch(t, tc.wantedJobs, jobs)
+			}
+		})
+	}
+}
+
 func TestStore_GetService(t *testing.T) {
-	testService := Service{Name: "api", App: "chicken", Type: "LBFargate"}
+	testService := Workload{Name: "api", App: "chicken", Type: "Load Balanced Fargate Service"}
 	testServiceString, err := marshal(testService)
-	testServicePath := fmt.Sprintf(fmtSvcParamPath, testService.App, testService.Name)
+	testServicePath := fmt.Sprintf(fmtWkldParamPath, testService.App, testService.Name)
 	require.NoError(t, err, "Marshal svc should not fail")
 
 	testCases := map[string]struct {
 		mockGetParameter func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
-		wantedSvc        Service
+		wantedSvc        Workload
 		wantedErr        error
 	}{
 		"with existing service": {
@@ -166,8 +255,8 @@ func TestStore_GetService(t *testing.T) {
 				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "bloop", nil)
 			},
 			wantedErr: &ErrNoSuchService{
-				ApplicationName: testService.App,
-				ServiceName:     testService.Name,
+				App:  testService.App,
+				Name: testService.Name,
 			},
 		},
 		"with malformed json": {
@@ -213,15 +302,93 @@ func TestStore_GetService(t *testing.T) {
 	}
 }
 
+func TestStore_GetJob(t *testing.T) {
+	mailerJob := Workload{Name: "mailer", App: "chicken", Type: "Scheduled Job"}
+	mailerJobString, err := marshal(mailerJob)
+	mailerJobPath := fmt.Sprintf(fmtWkldParamPath, mailerJob.App, mailerJob.Name)
+	require.NoError(t, err, "Marshal job should not fail")
+
+	testService := Workload{Name: "mailer", App: "chicken", Type: "Load Balanced Fargate Service"}
+	testServiceString, err := marshal(testService)
+	testServicePath := fmt.Sprintf(fmtWkldParamPath, testService.App, testService.Name)
+	require.NoError(t, err, "Marshal svc should not fail")
+
+	testCases := map[string]struct {
+		mockGetParameter func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
+		wantedJob        Workload
+		wantedErr        error
+	}{
+		"with existing job": {
+			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
+				require.Equal(t, mailerJobPath, *param.Name)
+				return &ssm.GetParameterOutput{
+					Parameter: &ssm.Parameter{
+						Name:  aws.String(mailerJobPath),
+						Value: aws.String(mailerJobString),
+					},
+				}, nil
+			},
+			wantedJob: mailerJob,
+			wantedErr: nil,
+		},
+		"with no existing job": {
+			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
+				require.Equal(t, mailerJobPath, *param.Name)
+				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "bloop", nil)
+			},
+			wantedErr: &ErrNoSuchJob{
+				App:  mailerJob.App,
+				Name: mailerJob.Name,
+			},
+		},
+		"with existing service": {
+			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
+				require.Equal(t, mailerJobPath, *param.Name)
+				return &ssm.GetParameterOutput{
+					Parameter: &ssm.Parameter{
+						Name:  aws.String(testServicePath),
+						Value: aws.String(testServiceString),
+					},
+				}, nil
+			},
+			wantedErr: &ErrNoSuchJob{
+				App:  mailerJob.App,
+				Name: mailerJob.Name,
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			store := &Store{
+				ssmClient: &mockSSM{
+					t:                t,
+					mockGetParameter: tc.mockGetParameter,
+				},
+			}
+
+			// WHEN
+			job, err := store.GetJob("chicken", "mailer")
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.Equal(t, tc.wantedJob, *job)
+			}
+		})
+	}
+}
+
 func TestStore_CreateService(t *testing.T) {
 	testApplication := Application{Name: "chicken", Version: "1.0"}
 	testApplicationString, err := marshal(testApplication)
 	testApplicationPath := fmt.Sprintf(fmtApplicationPath, testApplication.Name)
 	require.NoError(t, err, "Marshal app should not fail")
 
-	testService := Service{Name: "api", App: testApplication.Name, Type: "LBFargate"}
+	testService := Workload{Name: "api", App: testApplication.Name, Type: "Load Balanced Fargate Service"}
 	testServiceString, err := marshal(testService)
-	testServicePath := fmt.Sprintf(fmtSvcParamPath, testService.App, testService.Name)
+	testServicePath := fmt.Sprintf(fmtWkldParamPath, testService.App, testService.Name)
 	require.NoError(t, err, "Marshal svc should not fail")
 
 	testCases := map[string]struct {
@@ -294,7 +461,7 @@ func TestStore_CreateService(t *testing.T) {
 			}
 
 			// WHEN
-			err := store.CreateService(&Service{
+			err := store.CreateService(&Workload{
 				Name: testService.Name,
 				App:  testService.App,
 				Type: testService.Type})
@@ -330,7 +497,7 @@ func TestDeleteService(t *testing.T) {
 		},
 		"successfully deleted param": {
 			mockDeleteParam: func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
-				wantedPath := fmt.Sprintf(fmtSvcParamPath, mockApplicationName, mockSvcName)
+				wantedPath := fmt.Sprintf(fmtWkldParamPath, mockApplicationName, mockSvcName)
 
 				require.Equal(t, wantedPath, *in.Name)
 

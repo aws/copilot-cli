@@ -394,10 +394,10 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("app").Return([]*config.Service{}, nil)
+				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
 				m.EXPECT().CreateService(gomock.Any()).
-					Do(func(app *config.Service) {
-						require.Equal(t, &config.Service{
+					Do(func(app *config.Workload) {
+						require.Equal(t, &config.Workload{
 							Name: "frontend",
 							App:  "app",
 							Type: manifest.LoadBalancedWebServiceType,
@@ -432,7 +432,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", errors.New("some error"))
 			},
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("app").Return([]*config.Service{}, nil)
+				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
 				m.EXPECT().GetApplication("app").Return(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
@@ -464,7 +464,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("app").Return([]*config.Service{}, nil)
+				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
 				m.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
@@ -490,7 +490,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("app").Return([]*config.Service{}, nil)
+				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
 				m.EXPECT().CreateService(gomock.Any()).
 					Return(fmt.Errorf("oops"))
 				m.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{}, nil)
@@ -521,8 +521,8 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().CreateService(gomock.Any()).
-					Do(func(app *config.Service) {
-						require.Equal(t, &config.Service{
+					Do(func(app *config.Workload) {
+						require.Equal(t, &config.Workload{
 							Name: "backend",
 							App:  "app",
 							Type: manifest.BackendServiceType,
@@ -571,8 +571,8 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().CreateService(gomock.Any()).
-					Do(func(app *config.Service) {
-						require.Equal(t, &config.Service{
+					Do(func(app *config.Workload) {
+						require.Equal(t, &config.Workload{
 							Name: "backend",
 							App:  "app",
 							Type: manifest.BackendServiceType,
@@ -685,7 +685,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("app").Return([]*config.Service{}, nil)
+				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
 			},
 
 			wantedPath: "/",
@@ -700,7 +700,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("app").Return([]*config.Service{
+				m.EXPECT().ListServices("app").Return([]*config.Workload{
 					{
 						Name: "frontend",
 						Type: manifest.LoadBalancedWebServiceType,
@@ -720,7 +720,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("app").Return([]*config.Service{
+				m.EXPECT().ListServices("app").Return([]*config.Workload{
 					{
 						Name: "another-app",
 						Type: "backend",
@@ -740,7 +740,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("app").Return([]*config.Service{
+				m.EXPECT().ListServices("app").Return([]*config.Workload{
 					{
 						Name: "another-app",
 						Type: manifest.LoadBalancedWebServiceType,

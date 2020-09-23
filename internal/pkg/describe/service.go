@@ -35,7 +35,7 @@ type ecsClient interface {
 type ConfigStoreSvc interface {
 	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
 	ListEnvironments(appName string) ([]*config.Environment, error)
-	ListServices(appName string) ([]*config.Service, error)
+	ListServices(appName string) ([]*config.Workload, error)
 }
 
 // DeployedEnvServicesLister wraps methods of deploy store.

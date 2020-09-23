@@ -39,29 +39,20 @@ type actionCommand interface {
 	RecommendedActions() []string
 }
 
-// SSM store interface.
+// SSM store interfaces.
 
 type serviceStore interface {
-	serviceCreator
-	serviceGetter
-	serviceLister
-	serviceDeleter
-}
-
-type serviceCreator interface {
-	CreateService(svc *config.Service) error
-}
-
-type serviceGetter interface {
-	GetService(appName, svcName string) (*config.Service, error)
-}
-
-type serviceLister interface {
-	ListServices(appName string) ([]*config.Service, error)
-}
-
-type serviceDeleter interface {
+	CreateService(svc *config.Workload) error
+	GetService(appName, svcName string) (*config.Workload, error)
+	ListServices(appName string) ([]*config.Workload, error)
 	DeleteService(appName, svcName string) error
+}
+
+type jobStore interface {
+	CreateJob(job *config.Workload) error
+	GetJob(appName, jobName string) (*config.Workload, error)
+	ListJobs(appName string) ([]*config.Workload, error)
+	DeleteJob(appName, jobName string) error
 }
 
 type applicationStore interface {
@@ -114,6 +105,7 @@ type store interface {
 	applicationStore
 	environmentStore
 	serviceStore
+	jobStore
 }
 
 type deployedEnvironmentLister interface {
