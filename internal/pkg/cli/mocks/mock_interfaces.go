@@ -4078,6 +4078,21 @@ func (mr *MockwsSelectorMockRecorder) Service(prompt, help interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockwsSelector)(nil).Service), prompt, help)
 }
 
+// Job mocks base method
+func (m *MockwsSelector) Job(prompt, help string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Job", prompt, help)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Job indicates an expected call of Job
+func (mr *MockwsSelectorMockRecorder) Job(prompt, help interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Job", reflect.TypeOf((*MockwsSelector)(nil).Job), prompt, help)
+}
+
 // Mockec2Selector is a mock of ec2Selector interface
 type Mockec2Selector struct {
 	ctrl     *gomock.Controller

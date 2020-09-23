@@ -202,8 +202,8 @@ func TestDeploySelect_Service(t *testing.T) {
 }
 
 type workspaceSelectMocks struct {
-	serviceLister *mocks.MockWsSvcLister
-	prompt        *mocks.MockPrompter
+	workloadLister *mocks.MockWsWorkloadLister
+	prompt         *mocks.MockPrompter
 }
 
 func TestWorkspaceSelect_Service(t *testing.T) {
@@ -215,7 +215,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		"with no workspace services": {
 			setupMocks: func(m workspaceSelectMocks) {
 
-				m.serviceLister.
+				m.workloadLister.
 					EXPECT().
 					ServiceNames().
 					Return([]string{}, nil).
@@ -223,16 +223,16 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
-			wantErr: fmt.Errorf("list services: no services found in workspace"),
+			wantErr: fmt.Errorf("no services found in workspace"),
 		},
 		"with only one workspace service (skips prompting)": {
 			setupMocks: func(m workspaceSelectMocks) {
 
-				m.serviceLister.
+				m.workloadLister.
 					EXPECT().
 					ServiceNames().
 					Return([]string{
@@ -242,7 +242,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 
 			},
@@ -251,7 +251,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		"with multiple workspace services": {
 			setupMocks: func(m workspaceSelectMocks) {
 
-				m.serviceLister.
+				m.workloadLister.
 					EXPECT().
 					ServiceNames().
 					Return([]string{
@@ -265,7 +265,8 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 					SelectOne(
 						gomock.Eq("Select a local service"),
 						gomock.Eq("Help text"),
-						gomock.Eq([]string{"service1", "service2"})).
+						gomock.Eq([]string{"service1", "service2"}),
+						gomock.Any()).
 					Return("service2", nil).
 					Times(1)
 			},
@@ -274,7 +275,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		"with error selecting services": {
 			setupMocks: func(m workspaceSelectMocks) {
 
-				m.serviceLister.
+				m.workloadLister.
 					EXPECT().
 					ServiceNames().
 					Return([]string{
@@ -285,7 +286,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"service1", "service2"})).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"service1", "service2"}), gomock.Any()).
 					Return("", fmt.Errorf("error selecting")).
 					Times(1)
 			},
@@ -298,11 +299,11 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockwsSvcLister := mocks.NewMockWsSvcLister(ctrl)
+			mockwsWorkloadLister := mocks.NewMockWsWorkloadLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := workspaceSelectMocks{
-				serviceLister: mockwsSvcLister,
-				prompt:        mockprompt,
+				workloadLister: mockwsWorkloadLister,
+				prompt:         mockprompt,
 			}
 			tc.setupMocks(mocks)
 
@@ -310,9 +311,126 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 				Select: &Select{
 					prompt: mockprompt,
 				},
-				svcLister: mockwsSvcLister,
+				wlLister: mockwsWorkloadLister,
 			}
 			got, err := sel.Service("Select a local service", "Help text")
+			if tc.wantErr != nil {
+				require.EqualError(t, tc.wantErr, err.Error())
+			} else {
+				require.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestWorkspaceSelect_Job(t *testing.T) {
+	testCases := map[string]struct {
+		setupMocks func(mocks workspaceSelectMocks)
+		wantErr    error
+		want       string
+	}{
+		"with no workspace jobs": {
+			setupMocks: func(m workspaceSelectMocks) {
+
+				m.workloadLister.
+					EXPECT().
+					JobNames().
+					Return([]string{}, nil).
+					Times(1)
+
+				m.prompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+
+			},
+			wantErr: fmt.Errorf("no jobs found in workspace"),
+		},
+		"with only one workspace job (skips prompting)": {
+			setupMocks: func(m workspaceSelectMocks) {
+
+				m.workloadLister.
+					EXPECT().
+					JobNames().
+					Return([]string{
+						"resizer",
+					}, nil).
+					Times(1)
+
+				m.prompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+
+			},
+			want: "resizer",
+		},
+		"with multiple workspace services": {
+			setupMocks: func(m workspaceSelectMocks) {
+
+				m.workloadLister.
+					EXPECT().
+					JobNames().
+					Return([]string{
+						"resizer1",
+						"resizer2",
+					}, nil).
+					Times(1)
+
+				m.prompt.
+					EXPECT().
+					SelectOne(
+						gomock.Eq("Select a local job"),
+						gomock.Eq("Help text"),
+						gomock.Eq([]string{"resizer1", "resizer2"}),
+						gomock.Any()).
+					Return("resizer2", nil).
+					Times(1)
+			},
+			want: "resizer2",
+		},
+		"with error selecting services": {
+			setupMocks: func(m workspaceSelectMocks) {
+
+				m.workloadLister.
+					EXPECT().
+					JobNames().
+					Return([]string{
+						"resizer1",
+						"resizer2",
+					}, nil).
+					Times(1)
+
+				m.prompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"resizer1", "resizer2"}), gomock.Any()).
+					Return("", fmt.Errorf("error selecting")).
+					Times(1)
+			},
+			wantErr: fmt.Errorf("select local job: error selecting"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockwsWorkloadLister := mocks.NewMockWsWorkloadLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := workspaceSelectMocks{
+				workloadLister: mockwsWorkloadLister,
+				prompt:         mockprompt,
+			}
+			tc.setupMocks(mocks)
+
+			sel := WorkspaceSelect{
+				Select: &Select{
+					prompt: mockprompt,
+				},
+				wlLister: mockwsWorkloadLister,
+			}
+			got, err := sel.Job("Select a local job", "Help text")
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {
