@@ -18,7 +18,7 @@ const (
 
 	envUpgradeEnvPrompt = "Which environment do you want to upgrade?"
 	envUpgradeEnvHelp   = `Upgrades the AWS CloudFormation template for your environment
-to support latest Copilot features.`
+to support the latest Copilot features.`
 )
 
 // envUpgradeVars holds flag values.

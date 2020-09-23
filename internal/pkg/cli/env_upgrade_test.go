@@ -147,7 +147,7 @@ func TestEnvUpgradeOpts_Ask(t *testing.T) {
 				m.EXPECT().Environment(
 					"Which environment do you want to upgrade?",
 					`Upgrades the AWS CloudFormation template for your environment
-to support latest Copilot features.`,
+to support the latest Copilot features.`,
 					"phonetool").
 					Return("test", nil)
 
