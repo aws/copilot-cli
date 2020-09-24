@@ -37,6 +37,9 @@ var (
 		"sidecars",
 		"logconfig",
 		"autoscaling",
+		"eventrule",
+		"state-machine",
+		"state-machine-definition.json",
 	}
 )
 

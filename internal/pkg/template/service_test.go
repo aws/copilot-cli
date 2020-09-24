@@ -39,7 +39,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				mockBox.AddString("workloads/common/cf/sidecars.yml", "sidecars")
 				mockBox.AddString("workloads/common/cf/logconfig.yml", "logconfig")
 				mockBox.AddString("workloads/common/cf/autoscaling.yml", "autoscaling")
-				mockBox.AddString("workloads/common/state-machine-definition.json", "state-machine-definition")
+				mockBox.AddString("workloads/common/cf/state-machine-definition.json.yml", "state-machine-definition")
 				mockBox.AddString("workloads/common/cf/eventrule.yml", "eventrule")
 				mockBox.AddString("workloads/common/cf/state-machine.yml", "state-machine")
 
@@ -56,9 +56,9 @@ func TestTemplate_ParseSvc(t *testing.T) {
   sidecars
   logconfig
   autoscaling
-  state-machine-definition
   eventrule
   state-machine
+  state-machine-definition
 `,
 		},
 	}
@@ -75,6 +75,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 			if tc.wantedErr != nil {
 				require.Contains(t, err.Error(), tc.wantedErr.Error())
 			} else {
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedContent, c.String())
 			}
 		})
