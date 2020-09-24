@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -167,7 +168,6 @@ to support the latest Copilot features.`,
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-
 			opts := tc.given(ctrl)
 
 			err := opts.Ask()
@@ -178,6 +178,56 @@ to support the latest Copilot features.`,
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedAppName, opts.appName)
 				require.Equal(t, tc.wantedEnvName, opts.name)
+			}
+		})
+	}
+}
+
+func TestEnvUpgradeOpts_Execute(t *testing.T) {
+	testCases := map[string]struct {
+		given     func(ctrl *gomock.Controller) *envUpgradeOpts
+		wantedErr error
+	}{
+		"should skip upgrading if the environment version is already at least latest": {
+			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
+				mockStore := mocks.NewMockenvironmentStore(ctrl)
+				mockStore.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
+					{
+						Name: "test",
+					},
+					{
+						Name: "prod",
+					},
+				}, nil)
+				mockEnvTpl := mocks.NewMockversionGetter(ctrl)
+				mockEnvTpl.EXPECT().Version().Return(deploy.LatestEnvTemplateVersion, nil).Times(2)
+
+				return &envUpgradeOpts{
+					envUpgradeVars: envUpgradeVars{
+						appName: "phonetool",
+						all:     true,
+					},
+					store: mockStore,
+					newEnvVersionGetter: func(_, _ string) (versionGetter, error) {
+						return mockEnvTpl, nil
+					},
+				}
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			opts := tc.given(ctrl)
+
+			err := opts.Execute()
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

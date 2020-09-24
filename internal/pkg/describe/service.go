@@ -25,6 +25,7 @@ const (
 type stackAndResourcesDescriber interface {
 	Stack(stackName string) (*cloudformation.Stack, error)
 	StackResources(stackName string) ([]*cloudformation.StackResource, error)
+	Metadata(stackName string) (string, error)
 }
 
 type ecsClient interface {

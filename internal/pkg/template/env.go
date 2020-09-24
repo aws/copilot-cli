@@ -76,7 +76,7 @@ func (t *Template) ParseEnv(data *EnvOpts, options ...ParseOption) (*Content, er
 
 func envTemplatePath(version string) string {
 	if version == "" {
-		return fmt.Sprintf(fmtEnvCFTemplatePath, "legacy")
+		return fmt.Sprintf(fmtEnvCFTemplatePath, "v0.0.0")
 	}
 	return fmt.Sprintf(fmtEnvCFTemplatePath, version)
 }

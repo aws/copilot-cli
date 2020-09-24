@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/spf13/afero"
@@ -39,6 +40,8 @@ const (
 	buildspecFileName         = "buildspec.yml"
 
 	ymlFileExtension = ".yml"
+
+	dockerfileName = "Dockerfile"
 )
 
 // Summary is a description of what's associated with this workspace.
@@ -396,4 +399,62 @@ func (ws *Workspace) read(elem ...string) ([]byte, error) {
 	}
 	pathElems := append([]string{copilotPath}, elem...)
 	return ws.fsUtils.ReadFile(filepath.Join(pathElems...))
+}
+
+// ListDockerfiles returns the list of Dockerfiles within the current
+// working directory and a sub-directory level below. If an error occurs while
+// reading directories, or no Dockerfiles found returns the error.
+func (ws *Workspace) ListDockerfiles() ([]string, error) {
+	wdFiles, err := ws.fsUtils.ReadDir(ws.workingDir)
+	if err != nil {
+		return nil, fmt.Errorf("read directory: %w", err)
+	}
+	var directories []string
+	for _, wdFile := range wdFiles {
+		// Add current directory if a Dockerfile exists, otherwise continue.
+		if !wdFile.IsDir() {
+			if wdFile.Name() == dockerfileName {
+				directories = append(directories, filepath.Dir(wdFile.Name()))
+			}
+			continue
+		}
+
+		// Add sub-directories containing a Dockerfile one level below current directory.
+		subFiles, err := ws.fsUtils.ReadDir(wdFile.Name())
+		if err != nil {
+			return nil, fmt.Errorf("read directory: %w", err)
+		}
+		for _, f := range subFiles {
+			// NOTE: ignore directories in sub-directories.
+			if f.IsDir() {
+				continue
+			}
+
+			if f.Name() == dockerfileName {
+				directories = append(directories, wdFile.Name())
+			}
+		}
+	}
+	if len(directories) == 0 {
+		return nil, &ErrDockerfileNotFound{
+			dir: ws.workingDir,
+		}
+	}
+	sort.Strings(directories)
+	dockerfiles := make([]string, 0, len(directories))
+	for _, dir := range directories {
+		file := dir + "/" + dockerfileName
+		dockerfiles = append(dockerfiles, file)
+	}
+	return dockerfiles, nil
+}
+
+// ErrDockerfileNotFound is returned when no Dockerfiles could be found in the current
+// working directory or in any directories one level down from it.
+type ErrDockerfileNotFound struct {
+	dir string
+}
+
+func (e *ErrDockerfileNotFound) Error() string {
+	return fmt.Sprintf("no Dockerfiles found within %s or a sub-directory level below", e.dir)
 }

@@ -62,3 +62,18 @@ func (mr *MockcfnStackDescriberMockRecorder) DescribeStackResources(input interf
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStackResources", reflect.TypeOf((*MockcfnStackDescriber)(nil).DescribeStackResources), input)
 }
+
+// GetTemplateSummary mocks base method
+func (m *MockcfnStackDescriber) GetTemplateSummary(in *cloudformation.GetTemplateSummaryInput) (*cloudformation.GetTemplateSummaryOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTemplateSummary", in)
+	ret0, _ := ret[0].(*cloudformation.GetTemplateSummaryOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTemplateSummary indicates an expected call of GetTemplateSummary
+func (mr *MockcfnStackDescriberMockRecorder) GetTemplateSummary(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplateSummary", reflect.TypeOf((*MockcfnStackDescriber)(nil).GetTemplateSummary), in)
+}
