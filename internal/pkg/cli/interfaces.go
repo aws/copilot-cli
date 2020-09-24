@@ -20,6 +20,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 )
@@ -203,11 +204,16 @@ type wsFileDeleter interface {
 	DeleteWorkspaceFile() error
 }
 
+type dockerfileLister interface {
+	ListDockerfiles() ([]string, error)
+}
+
 type svcManifestReader interface {
 	ReadWorkloadManifest(svcName string) ([]byte, error)
 }
 
 type svcManifestWriter interface {
+	dockerfileLister
 	WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
 }
 
@@ -389,6 +395,15 @@ type wsSelector interface {
 	appEnvSelector
 	Service(prompt, help string) (string, error)
 	Job(prompt, help string) (string, error)
+}
+
+type initJobSelector interface {
+	dockerfileSelector
+	Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error)
+}
+
+type dockerfileSelector interface {
+	Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pv prompt.ValidatorFunc) (string, error)
 }
 
 type ec2Selector interface {
