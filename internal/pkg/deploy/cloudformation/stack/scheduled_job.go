@@ -17,7 +17,8 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-type scheduledJobParser interface {
+type scheduledJobReadParser interface {
+	template.ReadParser
 	ParseScheduledJob(template.WorkloadOpts) (*template.Content, error)
 }
 
@@ -27,7 +28,7 @@ type ScheduledJob struct {
 	*wkld
 	manifest *manifest.ScheduledJob
 
-	parser scheduledJobParser
+	parser scheduledJobReadParser
 }
 
 var (
