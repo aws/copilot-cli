@@ -350,6 +350,10 @@ type envDescriber interface {
 	Describe() (*describe.EnvDescription, error)
 }
 
+type versionGetter interface {
+	Version() (string, error)
+}
+
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 	ListPipelineNamesByTags(tags map[string]string) ([]string, error)

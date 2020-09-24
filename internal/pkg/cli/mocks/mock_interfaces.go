@@ -3644,6 +3644,44 @@ func (mr *MockenvDescriberMockRecorder) Describe() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockenvDescriber)(nil).Describe))
 }
 
+// MockversionGetter is a mock of versionGetter interface
+type MockversionGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockversionGetterMockRecorder
+}
+
+// MockversionGetterMockRecorder is the mock recorder for MockversionGetter
+type MockversionGetterMockRecorder struct {
+	mock *MockversionGetter
+}
+
+// NewMockversionGetter creates a new mock instance
+func NewMockversionGetter(ctrl *gomock.Controller) *MockversionGetter {
+	mock := &MockversionGetter{ctrl: ctrl}
+	mock.recorder = &MockversionGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockversionGetter) EXPECT() *MockversionGetterMockRecorder {
+	return m.recorder
+}
+
+// Version mocks base method
+func (m *MockversionGetter) Version() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Version")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Version indicates an expected call of Version
+func (mr *MockversionGetterMockRecorder) Version() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockversionGetter)(nil).Version))
+}
+
 // MockpipelineGetter is a mock of pipelineGetter interface
 type MockpipelineGetter struct {
 	ctrl     *gomock.Controller
