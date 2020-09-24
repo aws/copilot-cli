@@ -394,12 +394,12 @@ type wsSelector interface {
 }
 
 type initJobSelector interface {
-	Dockerfile(selPrompt, getPrompt, selHelp, getHelp string, pv prompt.ValidatorFunc) (string, error)
+	dockerfileSelector
 	Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error)
 }
 
-type initSvcSelector interface {
-	Dockerfile(selPrompt, getPrompt, selHelp, getHelp string, pv prompt.ValidatorFunc) (string, error)
+type dockerfileSelector interface {
+	Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pv prompt.ValidatorFunc) (string, error)
 }
 
 type ec2Selector interface {

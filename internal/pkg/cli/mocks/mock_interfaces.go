@@ -4215,31 +4215,31 @@ func (mr *MockinitJobSelectorMockRecorder) Schedule(scheduleTypePrompt, schedule
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Schedule", reflect.TypeOf((*MockinitJobSelector)(nil).Schedule), scheduleTypePrompt, scheduleTypeHelp, scheduleValidator, rateValidator)
 }
 
-// MockinitSvcSelector is a mock of initSvcSelector interface
-type MockinitSvcSelector struct {
+// MockdockerfileSelector is a mock of dockerfileSelector interface
+type MockdockerfileSelector struct {
 	ctrl     *gomock.Controller
-	recorder *MockinitSvcSelectorMockRecorder
+	recorder *MockdockerfileSelectorMockRecorder
 }
 
-// MockinitSvcSelectorMockRecorder is the mock recorder for MockinitSvcSelector
-type MockinitSvcSelectorMockRecorder struct {
-	mock *MockinitSvcSelector
+// MockdockerfileSelectorMockRecorder is the mock recorder for MockdockerfileSelector
+type MockdockerfileSelectorMockRecorder struct {
+	mock *MockdockerfileSelector
 }
 
-// NewMockinitSvcSelector creates a new mock instance
-func NewMockinitSvcSelector(ctrl *gomock.Controller) *MockinitSvcSelector {
-	mock := &MockinitSvcSelector{ctrl: ctrl}
-	mock.recorder = &MockinitSvcSelectorMockRecorder{mock}
+// NewMockdockerfileSelector creates a new mock instance
+func NewMockdockerfileSelector(ctrl *gomock.Controller) *MockdockerfileSelector {
+	mock := &MockdockerfileSelector{ctrl: ctrl}
+	mock.recorder = &MockdockerfileSelectorMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockinitSvcSelector) EXPECT() *MockinitSvcSelectorMockRecorder {
+func (m *MockdockerfileSelector) EXPECT() *MockdockerfileSelectorMockRecorder {
 	return m.recorder
 }
 
 // Dockerfile mocks base method
-func (m *MockinitSvcSelector) Dockerfile(selPrompt, getPrompt, selHelp, getHelp string, pv prompt.ValidatorFunc) (string, error) {
+func (m *MockdockerfileSelector) Dockerfile(selPrompt, getPrompt, selHelp, getHelp string, pv prompt.ValidatorFunc) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Dockerfile", selPrompt, getPrompt, selHelp, getHelp, pv)
 	ret0, _ := ret[0].(string)
@@ -4248,9 +4248,9 @@ func (m *MockinitSvcSelector) Dockerfile(selPrompt, getPrompt, selHelp, getHelp 
 }
 
 // Dockerfile indicates an expected call of Dockerfile
-func (mr *MockinitSvcSelectorMockRecorder) Dockerfile(selPrompt, getPrompt, selHelp, getHelp, pv interface{}) *gomock.Call {
+func (mr *MockdockerfileSelectorMockRecorder) Dockerfile(selPrompt, getPrompt, selHelp, getHelp, pv interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dockerfile", reflect.TypeOf((*MockinitSvcSelector)(nil).Dockerfile), selPrompt, getPrompt, selHelp, getHelp, pv)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dockerfile", reflect.TypeOf((*MockdockerfileSelector)(nil).Dockerfile), selPrompt, getPrompt, selHelp, getHelp, pv)
 }
 
 // Mockec2Selector is a mock of ec2Selector interface

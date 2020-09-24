@@ -79,7 +79,7 @@ type initSvcOpts struct {
 	prompt      prompter
 	df          dockerfileParser
 
-	sel initSvcSelector
+	sel dockerfileSelector
 
 	// Outputs stored on successful actions.
 	manifestPath string

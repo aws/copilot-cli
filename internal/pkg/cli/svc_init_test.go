@@ -106,7 +106,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 		inSvcPort        uint16
 
 		mockPrompt     func(m *mocks.Mockprompter)
-		mockSel        func(m *mocks.MockinitSvcSelector)
+		mockSel        func(m *mocks.MockdockerfileSelector)
 		mockDockerfile func(m *mocks.MockdockerfileParser)
 
 		wantedErr error
@@ -122,7 +122,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					Return(wantedSvcType, nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockSel:        func(m *mocks.MockinitSvcSelector) {},
+			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			wantedErr:      nil,
 		},
 		"return an error if fail to get service type": {
@@ -136,7 +136,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					Return("", errors.New("some error"))
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockSel:        func(m *mocks.MockinitSvcSelector) {},
+			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			wantedErr:      fmt.Errorf("select service type: some error"),
 		},
 		"prompt for service name": {
@@ -150,7 +150,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					Return(wantedSvcName, nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockSel:        func(m *mocks.MockinitSvcSelector) {},
+			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			wantedErr:      nil,
 		},
 		"returns an error if fail to get service name": {
@@ -164,7 +164,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					Return("", errors.New("some error"))
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockSel:        func(m *mocks.MockinitSvcSelector) {},
+			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			wantedErr:      fmt.Errorf("get service name: some error"),
 		},
 		"select Dockerfile": {
@@ -174,7 +174,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: "",
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
-			mockSel: func(m *mocks.MockinitSvcSelector) {
+			mockSel: func(m *mocks.MockdockerfileSelector) {
 				m.EXPECT().Dockerfile(
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, wantedSvcName)),
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, wantedSvcName)),
@@ -192,7 +192,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: "",
 
-			mockSel: func(m *mocks.MockinitSvcSelector) {
+			mockSel: func(m *mocks.MockdockerfileSelector) {
 				m.EXPECT().Dockerfile(
 					gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
 				).Return("", errors.New("some error"))
@@ -214,7 +214,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
 			},
-			mockSel:   func(m *mocks.MockinitSvcSelector) {},
+			mockSel:   func(m *mocks.MockdockerfileSelector) {},
 			wantedErr: nil,
 		},
 		"errors if port not specified": {
@@ -230,7 +230,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("expose error"))
 			},
-			mockSel:   func(m *mocks.MockinitSvcSelector) {},
+			mockSel:   func(m *mocks.MockdockerfileSelector) {},
 			wantedErr: fmt.Errorf("get port: some error"),
 		},
 		"errors if port out of range": {
@@ -246,7 +246,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
 			},
-			mockSel:   func(m *mocks.MockinitSvcSelector) {},
+			mockSel:   func(m *mocks.MockdockerfileSelector) {},
 			wantedErr: fmt.Errorf("get port: some error"),
 		},
 		"don't ask if dockerfile has port": {
@@ -260,7 +260,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{80}, nil)
 			},
-			mockSel: func(m *mocks.MockinitSvcSelector) {},
+			mockSel: func(m *mocks.MockdockerfileSelector) {},
 		},
 		"don't use dockerfile port if flag specified": {
 			inSvcType:        wantedSvcType,
@@ -271,7 +271,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockSel:        func(m *mocks.MockinitSvcSelector) {},
+			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 		},
 	}
 
@@ -283,7 +283,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
-			mockSel := mocks.NewMockinitSvcSelector(ctrl)
+			mockSel := mocks.NewMockdockerfileSelector(ctrl)
 			opts := &initSvcOpts{
 				initSvcVars: initSvcVars{
 					serviceType:    tc.inSvcType,

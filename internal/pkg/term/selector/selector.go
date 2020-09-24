@@ -93,8 +93,8 @@ type WsWorkloadLister interface {
 	JobNames() ([]string, error)
 }
 
-// WsConfigGetter wraps methods to get workload names and Dockerfiles from the workspace.
-type WsConfigGetter interface {
+// WsWorkloadDockerfileLister wraps methods to get workload names and Dockerfiles from the workspace.
+type WsWorkloadDockerfileLister interface {
 	WsWorkloadLister
 	ListDockerfiles() ([]string, error)
 }
@@ -120,7 +120,7 @@ type ConfigSelect struct {
 // WorkspaceSelect  is an application and environment selector, but can also choose a service from the workspace.
 type WorkspaceSelect struct {
 	*Select
-	wlLister WsConfigGetter
+	wlLister WsWorkloadDockerfileLister
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -149,7 +149,7 @@ func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
 
 // NewWorkspaceSelect returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
-func NewWorkspaceSelect(prompt Prompter, store AppEnvLister, ws WsConfigGetter) *WorkspaceSelect {
+func NewWorkspaceSelect(prompt Prompter, store AppEnvLister, ws WsWorkloadDockerfileLister) *WorkspaceSelect {
 	return &WorkspaceSelect{
 		Select:   NewSelect(prompt, store),
 		wlLister: ws,
@@ -431,7 +431,7 @@ func (s *WorkspaceSelect) retrieveWorkspaceJobs() ([]string, error) {
 
 // Dockerfile asks the user to select from a list of Dockerfiles in the current
 // directory or one level down. If no dockerfiles are found, it asks for a custom path.
-func (s *WorkspaceSelect) Dockerfile(selPrompt, getPrompt, selHelp, getHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
+func (s *WorkspaceSelect) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
 	dockerfiles, err := s.wlLister.ListDockerfiles()
 	// If Dockerfiles are found in the current directory or subdirectory one level down, ask the user to select one.
 	var sel string
@@ -454,8 +454,8 @@ func (s *WorkspaceSelect) Dockerfile(selPrompt, getPrompt, selHelp, getHelp stri
 	}
 	// If no Dockerfiles were found, prompt user for custom path.
 	sel, err = s.prompt.Get(
-		getPrompt,
-		getHelp,
+		notFoundPrompt,
+		notFoundHelp,
 		pathValidator,
 		prompt.WithFinalMessage("Dockerfile:"))
 	if err != nil {

@@ -34,12 +34,6 @@ const (
 	job = "job"
 )
 
-// const (
-// 	fmtAddJobToAppStart    = "Creating ECR repositories for job %s."
-// 	fmtAddJobToAppFailed   = "Failed to create ECR repositories for job %s.\n"
-// 	fmtAddJobToAppComplete = "Created ECR repositories for job %s.\n"
-//)
-
 type initJobVars struct {
 	appName        string
 	name           string
