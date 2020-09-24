@@ -5,11 +5,17 @@ package cli
 
 import (
 	"fmt"
+	"path/filepath"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
+	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -35,11 +41,18 @@ type deployJobOpts struct {
 	ws           wsJobDirReader
 	unmarshal    func(in []byte) (interface{}, error)
 	cmd          runner
+	addons       templater
+	appCFN       appResourcesGetter
+	jobCFN       cloudformation.CloudFormation
 	sessProvider sessionProvider
 
 	spinner progress
 	sel     wsSelector
 	prompt  prompter
+
+	targetApp         *config.Application
+	targetEnvironment *config.Environment
+	targetJob         *config.Workload
 }
 
 func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
@@ -101,7 +114,140 @@ func (o *deployJobOpts) Ask() error {
 
 // Execute builds and pushes the container image for the job.
 func (o *deployJobOpts) Execute() error {
+	env, err := targetEnv(o.store, o.appName, o.envName)
+	if err != nil {
+		return err
+	}
+	o.targetEnvironment = env
+
+	app, err := o.store.GetApplication(o.appName)
+	if err != nil {
+		return err
+	}
+	o.targetApp = app
+
+	job, err := o.store.GetJob(o.appName, o.name)
+	if err != nil {
+		return fmt.Errorf("get job configuration: %w", err)
+	}
+	o.targetJob = job
+
+	if err := o.configureClients(); err != nil {
+		return err
+	}
+
+	if err := o.pushtoECRRepo(); err != nil {
+		return err
+	}
+
+	addonsURL, err := o.pushAddonsTemplateToS3Bucket()
+	if err != nil {
+		return err
+	}
+
+	return o.deployJob(addonsURL)
+}
+
+func getBuildArgs(name, imageTag string, ws wsSvcDirReader, unmarshal func([]byte) (interface{}, error)) (*docker.BuildArguments, error) {
+	type dfArgs interface {
+		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
+	}
+
+	manifestBytes, err := ws.ReadWorkloadManifest(name)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest file %s: %w", name, err)
+	}
+	wkld, err := unmarshal(manifestBytes)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal manifest for %s: %w", name, err)
+	}
+	mf, ok := wkld.(dfArgs)
+	if !ok {
+		return nil, fmt.Errorf("%s does not have required method Build()", o.name)
+	}
+	copilotDir, err := ws.CopilotDirPath()
+	if err != nil {
+		return nil, fmt.Errorf("get copilot directory: %w", err)
+	}
+	wsRoot := filepath.Dir(copilotDir)
+
+	args := mf.BuildArgs(wsRoot)
+	return &docker.BuildArguments{
+		Dockerfile: *args.Dockerfile,
+		Context:    *args.Context,
+		Args:       args.Args,
+		ImageTag:   imageTag,
+	}, nil
+}
+
+func (o *deployJobOpts) deployJob(addonsURL string) error {
+	conf, err := o.stackConfiguration(addonsURL)
+	if err != nil {
+		return err
+	}
+	o.spinner.Start(
+		fmt.Sprintf("Deploying %s to %s",
+			fmt.Sprintf("%s:%s", color.HighlightUserInput(o.name), color.HighlightUserInput(o.imageTag)),
+			color.HighlightUserInput(o.targetEnvironment.Name),
+		),
+	)
+	if err := o.jobCFN.DeployService(conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
+		o.spinner.Stop(log.Serrorf("Failed to deploy job.\n"))
+		return fmt.Errorf("deploy job: %w", err)
+	}
+	o.spinner.Stop("\n")
 	return nil
+}
+
+func (o *deployJobOpts) stackConfiguration(addonsURL string) (cloudformation.StackConfiguration, error) {
+	mft, err := o.manifest()
+	if err != nil {
+		return nil, err
+	}
+	rc, err := o.runtimeConfig(addonsURL)
+	if err != nil {
+		return nil, err
+	}
+	var conf cloudformation.StackConfiguration
+	switch t := mft.(type) {
+	case *manifest.ScheduledJob:
+		conf, err = stack.NewScheduledJob(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
+	default:
+		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("create stack configuration: %w", err)
+	}
+	return conf, nil
+}
+
+func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
+	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
+	if err != nil {
+		return nil, fmt.Errorf("get application %s resources from region %s: %w", o.targetApp.Name, o.targetEnvironment.Region, err)
+	}
+	repoURL, ok := resources.RepositoryURLs[o.name]
+	if !ok {
+		return nil, &errRepoNotFound{
+			svcName:      o.name,
+			envRegion:    o.targetEnvironment.Region,
+			appAccountID: o.targetApp.AccountID,
+		}
+	}
+	return &stack.RuntimeConfig{
+		ImageRepoURL:      repoURL,
+		ImageTag:          o.imageTag,
+		AddonsTemplateURL: addonsURL,
+		AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
+	}, nil
+}
+
+func (o *deployJobOpts) manifest() (interface{}, error) {
+	mft, err := unmarshalManifest(o.name, o.ws, o.unmarshal)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal manifest for job %s: %w", o.name, err)
+	}
+	return mft, nil
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
@@ -123,9 +269,8 @@ func (o *deployJobOpts) validateJobName() error {
 }
 
 func (o *deployJobOpts) validateEnvName() error {
-	_, err := o.store.GetEnvironment(o.appName, o.envName)
-	if err != nil {
-		return fmt.Errorf("get environment %s configuration: %w", o.envName, err)
+	if _, err := targetEnv(o.store, o.appName, o.envName); err != nil {
+		return err
 	}
 	return nil
 }

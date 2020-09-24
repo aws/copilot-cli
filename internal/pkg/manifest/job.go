@@ -5,6 +5,8 @@
 package manifest
 
 import (
+	"errors"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -23,6 +25,18 @@ const (
 var JobTypes = []string{
 	ScheduledJobType,
 }
+
+var (
+	errStringNotDuration            = errors.New("duration must be of the form 90m, 2h, 60s")
+	errStringNotCron                = errors.New("string is not a valid cron schedule")
+	errStringNeitherDurationNorCron = errors.New("schedule must be either cron expression or duration")
+	errDurationTooShort             = errors.New("rate expressions must have duration longer than 1 second")
+)
+
+var (
+	fmtRateExpression = "rate(%d minutes)"
+	fmtCronExpression = "cron(%s)"
+)
 
 // ScheduledJob holds the configuration to build a container image that is run
 // periodically in a given environment with timeout and retry logic.
@@ -81,6 +95,9 @@ func newDefaultScheduledJob() *ScheduledJob {
 		},
 	}
 }
+
+// Duration is a string of the form 90m, 30s, 24h.
+type Duration string
 
 // NewScheduledJob creates a new
 func NewScheduledJob(props ScheduledJobProps) *ScheduledJob {
