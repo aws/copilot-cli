@@ -39,6 +39,9 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				mockBox.AddString("workloads/common/cf/sidecars.yml", "sidecars")
 				mockBox.AddString("workloads/common/cf/logconfig.yml", "logconfig")
 				mockBox.AddString("workloads/common/cf/autoscaling.yml", "autoscaling")
+				mockBox.AddString("workloads/common/state-machine-definition.json", "state-machine-definition")
+				mockBox.AddString("workloads/common/cf/eventrule.yml", "eventrule")
+				mockBox.AddString("workloads/common/cf/state-machine.yml", "state-machine")
 
 				t.box = mockBox
 			},
@@ -53,6 +56,9 @@ func TestTemplate_ParseSvc(t *testing.T) {
   sidecars
   logconfig
   autoscaling
+  state-machine-definition
+  eventrule
+  state-machine
 `,
 		},
 	}
@@ -77,21 +83,21 @@ func TestTemplate_ParseSvc(t *testing.T) {
 
 func TestHasSecrets(t *testing.T) {
 	testCases := map[string]struct {
-		in     ServiceOpts
+		in     WorkloadOpts
 		wanted bool
 	}{
 		"nil secrets": {
-			in:     ServiceOpts{},
+			in:     WorkloadOpts{},
 			wanted: false,
 		},
 		"no secrets": {
-			in: ServiceOpts{
+			in: WorkloadOpts{
 				Secrets: map[string]string{},
 			},
 			wanted: false,
 		},
 		"service has secrets": {
-			in: ServiceOpts{
+			in: WorkloadOpts{
 				Secrets: map[string]string{
 					"hello": "world",
 				},
@@ -99,8 +105,8 @@ func TestHasSecrets(t *testing.T) {
 			wanted: true,
 		},
 		"nested has secrets": {
-			in: ServiceOpts{
-				NestedStack: &ServiceNestedStackOpts{
+			in: WorkloadOpts{
+				NestedStack: &WorkloadNestedStackOpts{
 					SecretOutputs: []string{"MySecretArn"},
 				},
 			},

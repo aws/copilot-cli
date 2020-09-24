@@ -150,7 +150,7 @@ func (w *wkld) templateConfiguration(tc templateConfigurer) (string, error) {
 	return doc.String(), nil
 }
 
-func (w *wkld) addonsOutputs() (*template.ServiceNestedStackOpts, error) {
+func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
 	stack, err := w.addons.Template()
 	if err != nil {
 		var noAddonsErr *addon.ErrDirNotExist
@@ -164,7 +164,7 @@ func (w *wkld) addonsOutputs() (*template.ServiceNestedStackOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get addons outputs for service %s: %w", w.name, err)
 	}
-	return &template.ServiceNestedStackOpts{
+	return &template.WorkloadNestedStackOpts{
 		StackName:       addon.StackName,
 		VariableOutputs: envVarOutputNames(out),
 		SecretOutputs:   secretOutputNames(out),

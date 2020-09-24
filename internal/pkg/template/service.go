@@ -20,6 +20,7 @@ const (
 
 const (
 	servicesDirName = "services"
+	jobDirName      = "jobs"
 )
 
 var (
@@ -41,12 +42,13 @@ var (
 
 // Names of service templates.
 const (
-	lbWebSvcTplName   = "lb-web"
-	backendSvcTplName = "backend"
+	lbWebSvcTplName     = "lb-web"
+	backendSvcTplName   = "backend"
+	scheduledJobTplName = "scheduled-job"
 )
 
-// ServiceNestedStackOpts holds configuration that's needed if the service stack has a nested stack.
-type ServiceNestedStackOpts struct {
+// WorkloadNestedStackOpts holds configuration that's needed if the service stack has a nested stack.
+type WorkloadNestedStackOpts struct {
 	StackName string
 
 	VariableOutputs []string
@@ -83,12 +85,18 @@ type AutoscalingOpts struct {
 	ResponseTime *float64
 }
 
-// ServiceOpts holds optional data that can be provided to enable features in a service stack template.
-type ServiceOpts struct {
+// StateMachineOpts holds configuration neeed for State Machine retries and timout.
+type StateMachineOpts struct {
+	Timeout *int
+	Retries *int
+}
+
+// WorkloadOpts holds optional data that can be provided to enable features in a service stack template.
+type WorkloadOpts struct {
 	// Additional options that're common between **all** service templates.
 	Variables   map[string]string
 	Secrets     map[string]string
-	NestedStack *ServiceNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	NestedStack *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	Sidecars    []*SidecarOpts
 	LogConfig   *LogConfigOpts
 	Autoscaling *AutoscalingOpts
@@ -97,22 +105,40 @@ type ServiceOpts struct {
 	HealthCheck        *ecs.HealthCheck
 	RulePriorityLambda string
 	DesiredCountLambda string
+
+	// Additional options for jobs.
+	ScheduleExpression string
+	StateMachine       *StateMachineOpts
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
 // with the specified data object and returns its content.
-func (t *Template) ParseLoadBalancedWebService(data ServiceOpts) (*Content, error) {
+func (t *Template) ParseLoadBalancedWebService(data WorkloadOpts) (*Content, error) {
 	return t.parseSvc(lbWebSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseBackendService parses a backend service's CloudFormation template with the specified data object and returns its content.
-func (t *Template) ParseBackendService(data ServiceOpts) (*Content, error) {
+func (t *Template) ParseBackendService(data WorkloadOpts) (*Content, error) {
 	return t.parseSvc(backendSvcTplName, data, withSvcParsingFuncs())
+}
+
+// ParseScheduledJob parses a scheduled job's Cloudformation Template
+func (t *Template) ParseScheduledJob(data WorkloadOpts) (*Content, error) {
+	return t.parseJob(scheduledJobTplName, data, withSvcParsingFuncs())
 }
 
 // parseSvc parses a service's CloudFormation template with the specified data object and returns its content.
 func (t *Template) parseSvc(name string, data interface{}, options ...ParseOption) (*Content, error) {
-	tpl, err := t.parse("base", fmt.Sprintf(fmtWkldCFTemplatePath, servicesDirName, name), options...)
+	return t.parseWkld(name, servicesDirName, data, options...)
+}
+
+// parseJob parses a job's Cloudformation template with the specified data object and returns its content.
+func (t *Template) parseJob(name string, data interface{}, options ...ParseOption) (*Content, error) {
+	return t.parseWkld(name, jobDirName, data, options...)
+}
+
+func (t *Template) parseWkld(name, wkldDirName string, data interface{}, options ...ParseOption) (*Content, error) {
+	tpl, err := t.parse("base", fmt.Sprintf(fmtWkldCFTemplatePath, wkldDirName, name), options...)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +154,7 @@ func (t *Template) parseSvc(name string, data interface{}, options ...ParseOptio
 	}
 	buf := &bytes.Buffer{}
 	if err := tpl.Execute(buf, data); err != nil {
-		return nil, fmt.Errorf("execute service template %s with data %v: %w", name, data, err)
+		return nil, fmt.Errorf("execute template %s with data %v: %w", name, data, err)
 	}
 	return &Content{buf}, nil
 }
@@ -145,7 +171,7 @@ func withSvcParsingFuncs() ParseOption {
 	}
 }
 
-func hasSecrets(opts ServiceOpts) bool {
+func hasSecrets(opts WorkloadOpts) bool {
 	if len(opts.Secrets) > 0 {
 		return true
 	}

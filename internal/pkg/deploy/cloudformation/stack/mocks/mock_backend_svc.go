@@ -69,7 +69,7 @@ func (mr *MockbackendSvcReadParserMockRecorder) Parse(path, data interface{}, op
 }
 
 // ParseBackendService mocks base method
-func (m *MockbackendSvcReadParser) ParseBackendService(arg0 template.ServiceOpts) (*template.Content, error) {
+func (m *MockbackendSvcReadParser) ParseBackendService(arg0 template.WorkloadOpts) (*template.Content, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ParseBackendService", arg0)
 	ret0, _ := ret[0].(*template.Content)

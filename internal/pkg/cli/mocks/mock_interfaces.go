@@ -4224,18 +4224,18 @@ func (m *MockinitJobSelector) EXPECT() *MockinitJobSelectorMockRecorder {
 }
 
 // Dockerfile mocks base method
-func (m *MockinitJobSelector) Dockerfile(selPrompt, getPrompt, selHelp, getHelp string, pv prompt.ValidatorFunc) (string, error) {
+func (m *MockinitJobSelector) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pv prompt.ValidatorFunc) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Dockerfile", selPrompt, getPrompt, selHelp, getHelp, pv)
+	ret := m.ctrl.Call(m, "Dockerfile", selPrompt, notFoundPrompt, selHelp, notFoundHelp, pv)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Dockerfile indicates an expected call of Dockerfile
-func (mr *MockinitJobSelectorMockRecorder) Dockerfile(selPrompt, getPrompt, selHelp, getHelp, pv interface{}) *gomock.Call {
+func (mr *MockinitJobSelectorMockRecorder) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp, pv interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dockerfile", reflect.TypeOf((*MockinitJobSelector)(nil).Dockerfile), selPrompt, getPrompt, selHelp, getHelp, pv)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dockerfile", reflect.TypeOf((*MockinitJobSelector)(nil).Dockerfile), selPrompt, notFoundPrompt, selHelp, notFoundHelp, pv)
 }
 
 // Schedule mocks base method
@@ -4277,18 +4277,18 @@ func (m *MockdockerfileSelector) EXPECT() *MockdockerfileSelectorMockRecorder {
 }
 
 // Dockerfile mocks base method
-func (m *MockdockerfileSelector) Dockerfile(selPrompt, getPrompt, selHelp, getHelp string, pv prompt.ValidatorFunc) (string, error) {
+func (m *MockdockerfileSelector) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pv prompt.ValidatorFunc) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Dockerfile", selPrompt, getPrompt, selHelp, getHelp, pv)
+	ret := m.ctrl.Call(m, "Dockerfile", selPrompt, notFoundPrompt, selHelp, notFoundHelp, pv)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Dockerfile indicates an expected call of Dockerfile
-func (mr *MockdockerfileSelectorMockRecorder) Dockerfile(selPrompt, getPrompt, selHelp, getHelp, pv interface{}) *gomock.Call {
+func (mr *MockdockerfileSelectorMockRecorder) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp, pv interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dockerfile", reflect.TypeOf((*MockdockerfileSelector)(nil).Dockerfile), selPrompt, getPrompt, selHelp, getHelp, pv)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dockerfile", reflect.TypeOf((*MockdockerfileSelector)(nil).Dockerfile), selPrompt, notFoundPrompt, selHelp, notFoundHelp, pv)
 }
 
 // Mockec2Selector is a mock of ec2Selector interface
