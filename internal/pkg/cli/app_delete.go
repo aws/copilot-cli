@@ -162,6 +162,10 @@ func (o *deleteAppOpts) Execute() error {
 		return err
 	}
 
+	if err := o.deleteJobs(); err != nil {
+		return err
+	}
+
 	if err := o.deleteEnvs(); err != nil {
 		return err
 	}
@@ -207,6 +211,14 @@ func (o *deleteAppOpts) deleteSvcs() error {
 		if err := cmd.Execute(); err != nil {
 			return fmt.Errorf("execute svc delete: %w", err)
 		}
+	}
+	return nil
+}
+
+func (o *deleteAppOpts) deleteJobs() error {
+	_, err := o.store.ListJobs(o.name)
+	if err != nil {
+		return fmt.Errorf("list jobs for application %s: %w", o.name, err)
 	}
 	return nil
 }

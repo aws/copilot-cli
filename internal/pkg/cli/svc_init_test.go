@@ -14,7 +14,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
@@ -106,8 +105,8 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 		inDockerfilePath string
 		inSvcPort        uint16
 
-		mockFileSystem func(mockFS afero.Fs)
 		mockPrompt     func(m *mocks.Mockprompter)
+		mockSel        func(m *mocks.MockdockerfileSelector)
 		mockDockerfile func(m *mocks.MockdockerfileParser)
 
 		wantedErr error
@@ -118,12 +117,12 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: wantedDockerfilePath,
 
-			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtSvcInitSvcTypePrompt, "service type")), gomock.Any(), gomock.Eq(manifest.ServiceTypes), gomock.Any()).
 					Return(wantedSvcType, nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
+			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			wantedErr:      nil,
 		},
 		"return an error if fail to get service type": {
@@ -132,12 +131,12 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: wantedDockerfilePath,
 
-			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Eq(manifest.ServiceTypes), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
+			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			wantedErr:      fmt.Errorf("select service type: some error"),
 		},
 		"prompt for service name": {
@@ -146,12 +145,12 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: wantedDockerfilePath,
 
-			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Eq(fmt.Sprintf("What do you want to name this %s?", wantedSvcType)), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedSvcName, nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
+			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			wantedErr:      nil,
 		},
 		"returns an error if fail to get service name": {
@@ -160,92 +159,47 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: wantedDockerfilePath,
 
-			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
+			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			wantedErr:      fmt.Errorf("get service name: some error"),
 		},
-		"choose an existing Dockerfile": {
+		"select Dockerfile": {
 			inSvcType:        wantedSvcType,
 			inSvcName:        wantedSvcName,
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: "",
 
-			mockFileSystem: func(mockFS afero.Fs) {
-				mockFS.MkdirAll("frontend", 0755)
-				mockFS.MkdirAll("backend", 0755)
-
-				afero.WriteFile(mockFS, "Dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "frontend/Dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.Emphasize("Dockerfile"), wantedSvcName)), wkldInitDockerfileHelpPrompt, gomock.Eq(
-					[]string{
-						"./Dockerfile",
-						"backend/Dockerfile",
-						"frontend/Dockerfile",
-					}), gomock.Any()).
-					Return("frontend/Dockerfile", nil)
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockSel: func(m *mocks.MockdockerfileSelector) {
+				m.EXPECT().Dockerfile(
+					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, wantedSvcName)),
+					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, wantedSvcName)),
+					gomock.Eq(wkldInitDockerfileHelpPrompt),
+					gomock.Eq(wkldInitDockerfilePathHelpPrompt),
+					gomock.Any(),
+				).Return("frontend/Dockerfile", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			wantedErr:      nil,
 		},
-		"prompts user for custom path if fail to find Dockerfiles": {
+		"returns an error if fail to get Dockerfile": {
 			inSvcType:        wantedSvcType,
 			inSvcName:        wantedSvcName,
 			inSvcPort:        wantedSvcPort,
 			inDockerfilePath: "",
 
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, "Dockerfile", wantedSvcName)), gomock.Eq(wkldInitDockerfilePathHelpPrompt), gomock.Any(), gomock.Any()).
-					Return("frontend/Dockerfile", nil)
+			mockSel: func(m *mocks.MockdockerfileSelector) {
+				m.EXPECT().Dockerfile(
+					gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
+				).Return("", errors.New("some error"))
 			},
+			mockPrompt:     func(m *mocks.Mockprompter) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			wantedErr:      nil,
-		},
-		"returns an error if fail to get custom Dockerfile path": {
-			inSvcType:        wantedSvcType,
-			inSvcName:        wantedSvcName,
-			inSvcPort:        wantedSvcPort,
-			inDockerfilePath: "",
-
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, "Dockerfile", wantedSvcName)), gomock.Eq(wkldInitDockerfilePathHelpPrompt), gomock.Any(), gomock.Any()).
-					Return("", errors.New("some error"))
-			},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			wantedErr:      fmt.Errorf("get custom Dockerfile path: some error"),
-		},
-		"returns an error if fail to select Dockerfile": {
-			inSvcType:        wantedSvcType,
-			inSvcName:        wantedSvcName,
-			inDockerfilePath: "",
-
-			mockFileSystem: func(mockFS afero.Fs) {
-				mockFS.MkdirAll("frontend", 0755)
-				mockFS.MkdirAll("backend", 0755)
-
-				afero.WriteFile(mockFS, "Dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "frontend/Dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, "Dockerfile", wantedSvcName)), gomock.Any(), gomock.Eq(
-					[]string{
-						"./Dockerfile",
-						"backend/Dockerfile",
-						"frontend/Dockerfile",
-					}), gomock.Any()).
-					Return("", errors.New("some error"))
-			},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			wantedErr:      fmt.Errorf("select Dockerfile: some error"),
+			wantedErr:      fmt.Errorf("some error"),
 		},
 		"asks for port if not specified": {
 			inSvcType:        wantedSvcType,
@@ -253,7 +207,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: wantedDockerfilePath,
 			inSvcPort:        0, //invalid port, default case
 
-			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(defaultSvcPortString, nil)
@@ -261,6 +214,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
 			},
+			mockSel:   func(m *mocks.MockdockerfileSelector) {},
 			wantedErr: nil,
 		},
 		"errors if port not specified": {
@@ -269,7 +223,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: wantedDockerfilePath,
 			inSvcPort:        0, //invalid port, default case
 
-			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
@@ -277,6 +230,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("expose error"))
 			},
+			mockSel:   func(m *mocks.MockdockerfileSelector) {},
 			wantedErr: fmt.Errorf("get port: some error"),
 		},
 		"errors if port out of range": {
@@ -285,7 +239,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: wantedDockerfilePath,
 			inSvcPort:        0, //invalid port, default case
 
-			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("100000", errors.New("some error"))
@@ -293,6 +246,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
 			},
+			mockSel:   func(m *mocks.MockdockerfileSelector) {},
 			wantedErr: fmt.Errorf("get port: some error"),
 		},
 		"don't ask if dockerfile has port": {
@@ -301,12 +255,12 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: wantedDockerfilePath,
 			inSvcPort:        0,
 
-			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{80}, nil)
 			},
+			mockSel: func(m *mocks.MockdockerfileSelector) {},
 		},
 		"don't use dockerfile port if flag specified": {
 			inSvcType:        wantedSvcType,
@@ -314,10 +268,10 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: wantedDockerfilePath,
 			inSvcPort:        wantedSvcPort,
 
-			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
+			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 		},
 	}
 
@@ -329,6 +283,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
+			mockSel := mocks.NewMockdockerfileSelector(ctrl)
 			opts := &initSvcOpts{
 				initSvcVars: initSvcVars{
 					serviceType:    tc.inSvcType,
@@ -340,8 +295,9 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				setupParser: func(o *initSvcOpts) {},
 				df:          mockDockerfile,
 				prompt:      mockPrompt,
+				sel:         mockSel,
 			}
-			tc.mockFileSystem(opts.fs)
+			tc.mockSel(mockSel)
 			tc.mockPrompt(mockPrompt)
 			tc.mockDockerfile(mockDockerfile)
 
@@ -394,10 +350,10 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("app").Return([]*config.Service{}, nil)
+				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
 				m.EXPECT().CreateService(gomock.Any()).
-					Do(func(app *config.Service) {
-						require.Equal(t, &config.Service{
+					Do(func(app *config.Workload) {
+						require.Equal(t, &config.Workload{
 							Name: "frontend",
 							App:  "app",
 							Type: manifest.LoadBalancedWebServiceType,
@@ -432,7 +388,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", errors.New("some error"))
 			},
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("app").Return([]*config.Service{}, nil)
+				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
 				m.EXPECT().GetApplication("app").Return(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
@@ -464,7 +420,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("app").Return([]*config.Service{}, nil)
+				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
 				m.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{
 					Name:      "app",
 					AccountID: "1234",
@@ -490,7 +446,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("app").Return([]*config.Service{}, nil)
+				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
 				m.EXPECT().CreateService(gomock.Any()).
 					Return(fmt.Errorf("oops"))
 				m.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{}, nil)
@@ -521,8 +477,8 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().CreateService(gomock.Any()).
-					Do(func(app *config.Service) {
-						require.Equal(t, &config.Service{
+					Do(func(app *config.Workload) {
+						require.Equal(t, &config.Workload{
 							Name: "backend",
 							App:  "app",
 							Type: manifest.BackendServiceType,
@@ -571,8 +527,8 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().CreateService(gomock.Any()).
-					Do(func(app *config.Service) {
-						require.Equal(t, &config.Service{
+					Do(func(app *config.Workload) {
+						require.Equal(t, &config.Workload{
 							Name: "backend",
 							App:  "app",
 							Type: manifest.BackendServiceType,
@@ -685,7 +641,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("app").Return([]*config.Service{}, nil)
+				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
 			},
 
 			wantedPath: "/",
@@ -700,7 +656,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("app").Return([]*config.Service{
+				m.EXPECT().ListServices("app").Return([]*config.Workload{
 					{
 						Name: "frontend",
 						Type: manifest.LoadBalancedWebServiceType,
@@ -720,7 +676,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("app").Return([]*config.Service{
+				m.EXPECT().ListServices("app").Return([]*config.Workload{
 					{
 						Name: "another-app",
 						Type: "backend",
@@ -740,7 +696,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("app").Return([]*config.Service{
+				m.EXPECT().ListServices("app").Return([]*config.Workload{
 					{
 						Name: "another-app",
 						Type: manifest.LoadBalancedWebServiceType,

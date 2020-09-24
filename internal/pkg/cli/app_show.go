@@ -112,9 +112,9 @@ func (o *showAppOpts) description() (*describe.App, error) {
 			Prod:      env.Prod,
 		})
 	}
-	var trimmedSvcs []*config.Service
+	var trimmedSvcs []*config.Workload
 	for _, svc := range svcs {
-		trimmedSvcs = append(trimmedSvcs, &config.Service{
+		trimmedSvcs = append(trimmedSvcs, &config.Workload{
 			Name: svc.Name,
 			Type: svc.Type,
 		})

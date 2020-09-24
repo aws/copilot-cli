@@ -6,11 +6,12 @@ package cli
 import (
 	"fmt"
 
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -38,6 +39,7 @@ type deployJobOpts struct {
 
 	spinner progress
 	sel     wsSelector
+	prompt  prompter
 }
 
 func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
@@ -50,6 +52,7 @@ func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
+	prompter := prompt.New()
 	return &deployJobOpts{
 		deployJobVars: vars,
 
@@ -57,7 +60,8 @@ func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
 		ws:           ws,
 		unmarshal:    manifest.UnmarshalWorkload,
 		spinner:      termprogress.NewSpinner(),
-		sel:          selector.NewWorkspaceSelect(prompt.New(), store, ws),
+		sel:          selector.NewWorkspaceSelect(prompter, store, ws),
+		prompt:       prompter,
 		cmd:          command.New(),
 		sessProvider: sessions.NewProvider(),
 	}, nil
@@ -83,6 +87,15 @@ func (o *deployJobOpts) Validate() error {
 
 // Ask prompts the user for any required fields that are not provided.
 func (o *deployJobOpts) Ask() error {
+	if err := o.askJobName(); err != nil {
+		return err
+	}
+	if err := o.askEnvName(); err != nil {
+		return err
+	}
+	if err := o.askImageTag(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -114,6 +127,55 @@ func (o *deployJobOpts) validateEnvName() error {
 	if err != nil {
 		return fmt.Errorf("get environment %s configuration: %w", o.envName, err)
 	}
+	return nil
+}
+
+func (o *deployJobOpts) askJobName() error {
+	if o.name != "" {
+		return nil
+	}
+
+	name, err := o.sel.Job("Select a job from your workspace", "")
+	if err != nil {
+		return fmt.Errorf("select job: %w", err)
+	}
+	o.name = name
+	return nil
+}
+
+func (o *deployJobOpts) askEnvName() error {
+	if o.envName != "" {
+		return nil
+	}
+
+	name, err := o.sel.Environment("Select an environment", "", o.appName)
+	if err != nil {
+		return fmt.Errorf("select environment: %w", err)
+	}
+	o.envName = name
+	return nil
+}
+
+func (o *deployJobOpts) askImageTag() error {
+	if o.imageTag != "" {
+		return nil
+	}
+
+	tag, err := getVersionTag(o.cmd)
+
+	if err == nil {
+		o.imageTag = tag
+
+		return nil
+	}
+
+	log.Warningln("Failed to default tag, are you in a git repository?")
+
+	userInputTag, err := o.prompt.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
+	if err != nil {
+		return fmt.Errorf("prompt for image tag: %w", err)
+	}
+	o.imageTag = userInputTag
 	return nil
 }
 

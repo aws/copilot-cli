@@ -18,7 +18,7 @@ type App struct {
 	Name     string                `json:"name"`
 	URI      string                `json:"uri"`
 	Envs     []*config.Environment `json:"environments"`
-	Services []*config.Service     `json:"services"`
+	Services []*config.Workload    `json:"services"`
 }
 
 // JSONString returns the stringified App struct with json format.

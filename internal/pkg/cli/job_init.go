@@ -6,7 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
@@ -17,8 +16,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/lnquy/cron"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -29,55 +28,11 @@ var (
 executions and is good for jobs which need to run frequently. "Fixed Schedule"
 lets you use a predefined or custom cron schedule and is good for less-frequent 
 jobs or those which require specific execution schedules.`
-
-	jobInitRatePrompt = "How long would you like to wait between executions?"
-	jobInitRateHelp   = `You can specify the time as a duration string. (For example, 2m, 1h30m, 24h)`
-
-	jobInitCronSchedulePrompt = "What schedule would you like to use?"
-	jobInitCronScheduleHelp   = `Predefined schedules run at midnight or the top of the hour.
-For example, "Daily" runs at midnight. "Weekly" runs at midnight on Mondays.`
-	jobInitCronCustomSchedulePrompt = "What custom cron schedule would you like to use?"
-	jobInitCronCustomScheduleHelp   = `Custom schedules can be defined using the following cron:
-Minute | Hour | Day of Month | Month | Day of Week
-For example: 0 17 ? * MON-FRI (5 pm on weekdays)
-			 0 0 1 */3 * (on the first of the month, quarterly)
-For more information, see: https://en.wikipedia.org/wiki/Cron#Overview`
-	jobInitCronHumanReadableConfirmPrompt = "Would you like to use this schedule?"
-	jobInitCronHumanReadableConfirmHelp   = `Confirm whether the schedule looks right to you.
-(Y)es will continue execution. (N)o will allow you to input a different schedule.`
 )
 
 const (
 	job = "job"
-
-	rate          = "Rate"
-	fixedSchedule = "Fixed Schedule"
-
-	custom  = "Custom"
-	hourly  = "Hourly"
-	daily   = "Daily"
-	weekly  = "Weekly"
-	monthly = "Monthly"
-	yearly  = "Yearly"
-
-// 	fmtAddJobToAppStart    = "Creating ECR repositories for job %s."
-// 	fmtAddJobToAppFailed   = "Failed to create ECR repositories for job %s.\n"
-// 	fmtAddJobToAppComplete = "Created ECR repositories for job %s.\n"
 )
-
-var scheduleTypes = []string{
-	rate,
-	fixedSchedule,
-}
-
-var presetSchedules = []string{
-	custom,
-	hourly,
-	daily,
-	weekly,
-	monthly,
-	yearly,
-}
 
 type initJobVars struct {
 	appName        string
@@ -99,6 +54,7 @@ type initJobOpts struct {
 	appDeployer appDeployer
 	prog        progress
 	prompt      prompter
+	sel         initJobSelector
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -121,6 +77,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		return nil, err
 	}
 
+	prompter := prompt.New()
 	return &initJobOpts{
 		initJobVars: vars,
 
@@ -129,7 +86,8 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		ws:          ws,
 		appDeployer: cloudformation.New(sess),
 		prog:        termprogress.NewSpinner(),
-		prompt:      prompt.New(),
+		prompt:      prompter,
+		sel:         selector.NewWorkspaceSelect(prompter, store, ws),
 	}, nil
 }
 
@@ -219,9 +177,17 @@ func (o *initJobOpts) askDockerfile() error {
 	if o.dockerfilePath != "" {
 		return nil
 	}
-	df, err := askDockerfile(o.name, o.fs, o.prompt)
+	df, err := o.sel.Dockerfile(
+		fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(o.name)),
+		fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, color.HighlightUserInput(o.name)),
+		wkldInitDockerfileHelpPrompt,
+		wkldInitDockerfilePathHelpPrompt,
+		func(v interface{}) error {
+			return validatePath(afero.NewOsFs(), v)
+		},
+	)
 	if err != nil {
-		return err
+		return fmt.Errorf("select Dockerfile: %w", err)
 	}
 	o.dockerfilePath = df
 	return nil
@@ -231,100 +197,18 @@ func (o *initJobOpts) askSchedule() error {
 	if o.schedule != "" {
 		return nil
 	}
-	scheduleType, err := o.prompt.SelectOne(
+	schedule, err := o.sel.Schedule(
 		jobInitSchedulePrompt,
 		jobInitScheduleHelp,
-		scheduleTypes,
-		prompt.WithFinalMessage("Schedule type:"),
-	)
-	if err != nil {
-		return fmt.Errorf("get schedule type: %w", err)
-	}
-	switch scheduleType {
-	case rate:
-		return o.askRate()
-	case fixedSchedule:
-		return o.askCron()
-	default:
-		return fmt.Errorf("unrecognized schedule type %s", scheduleType)
-	}
-}
-
-func (o *initJobOpts) askRate() error {
-	rateInput, err := o.prompt.Get(
-		jobInitRatePrompt,
-		jobInitRateHelp,
+		validateSchedule,
 		validateRate,
-		prompt.WithFinalMessage("Rate:"),
 	)
 	if err != nil {
-		return fmt.Errorf("get schedule rate: %w", err)
+		return fmt.Errorf("get schedule: %w", err)
 	}
-	o.schedule = fmt.Sprintf("@every %s", rateInput)
+
+	o.schedule = schedule
 	return nil
-}
-
-func (o *initJobOpts) askCron() error {
-	cronInput, err := o.prompt.SelectOne(
-		jobInitCronSchedulePrompt,
-		jobInitCronScheduleHelp,
-		presetSchedules,
-		prompt.WithFinalMessage("Fixed Schedule:"),
-	)
-	if err != nil {
-		return fmt.Errorf("get preset schedule: %w", err)
-	}
-	if cronInput != custom {
-		o.schedule = getPresetSchedule(cronInput)
-		return nil
-	}
-	var customSchedule, humanCron string
-	cronDescriptor, err := cron.NewDescriptor()
-	if err != nil {
-		return fmt.Errorf("get custom schedule: %w", err)
-	}
-	for {
-		customSchedule, err = o.prompt.Get(
-			jobInitCronCustomSchedulePrompt,
-			jobInitCronCustomScheduleHelp,
-			validateSchedule,
-			prompt.WithDefaultInput("0 * * * *"),
-			prompt.WithFinalMessage("Custom Schedule:"),
-		)
-		if err != nil {
-			return fmt.Errorf("get custom schedule: %w", err)
-		}
-
-		// Break if the customer has specified an easy to read cron definition string
-		if strings.HasPrefix(customSchedule, "@") {
-			break
-		}
-
-		humanCron, err = cronDescriptor.ToDescription(customSchedule, cron.Locale_en)
-		if err != nil {
-			return fmt.Errorf("convert cron to human string: %w", err)
-		}
-
-		log.Infoln(fmt.Sprintf("Your job will run at the following times: %s", humanCron))
-
-		ok, err := o.prompt.Confirm(
-			jobInitCronHumanReadableConfirmPrompt,
-			jobInitCronHumanReadableConfirmHelp,
-		)
-		if err != nil {
-			return fmt.Errorf("confirm cron schedule: %w", err)
-		}
-		if ok {
-			break
-		}
-	}
-
-	o.schedule = customSchedule
-	return nil
-}
-
-func getPresetSchedule(input string) string {
-	return fmt.Sprintf("@%s", strings.ToLower(input))
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.

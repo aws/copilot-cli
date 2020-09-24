@@ -48,7 +48,7 @@ type resourceGetter interface {
 type ConfigStoreClient interface {
 	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
 	ListEnvironments(appName string) ([]*config.Environment, error)
-	GetService(appName, svcName string) (*config.Service, error)
+	GetService(appName, svcName string) (*config.Workload, error)
 }
 
 // Store fetches information on deployed services.

@@ -65,7 +65,7 @@ type deploySvcOpts struct {
 	// cached variables
 	targetApp         *config.Application
 	targetEnvironment *config.Environment
-	targetSvc         *config.Service
+	targetSvc         *config.Workload
 }
 
 func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {

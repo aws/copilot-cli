@@ -25,6 +25,7 @@ const (
 type stackAndResourcesDescriber interface {
 	Stack(stackName string) (*cloudformation.Stack, error)
 	StackResources(stackName string) ([]*cloudformation.StackResource, error)
+	Metadata(stackName string) (string, error)
 }
 
 type ecsClient interface {
@@ -35,7 +36,7 @@ type ecsClient interface {
 type ConfigStoreSvc interface {
 	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
 	ListEnvironments(appName string) ([]*config.Environment, error)
-	ListServices(appName string) ([]*config.Service, error)
+	ListServices(appName string) ([]*config.Workload, error)
 }
 
 // DeployedEnvServicesLister wraps methods of deploy store.

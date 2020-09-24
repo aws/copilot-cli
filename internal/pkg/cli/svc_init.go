@@ -5,7 +5,6 @@ package cli
 
 import (
 	"encoding"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -20,6 +19,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -38,9 +38,9 @@ To learn more see: https://git.io/JfIpT`
 	fmtWkldInitNameHelpPrompt = `The name will uniquely identify this %s within your app %s.
 Deployed resources (such as your ECR repository, logs) will contain this %[1]s's name and be tagged with it.`
 
-	fmtWkldInitDockerfilePrompt      = "Which %s would you like to use for %s?"
+	fmtWkldInitDockerfilePrompt      = "Which " + color.Emphasize("Dockerfile") + " would you like to use for %s?"
 	wkldInitDockerfileHelpPrompt     = "Dockerfile to use for building your container image."
-	fmtWkldInitDockerfilePathPrompt  = "What is the path to the %s for %s?"
+	fmtWkldInitDockerfilePathPrompt  = "What is the path to the " + color.Emphasize("Dockerfile") + " for %s?"
 	wkldInitDockerfilePathHelpPrompt = "Path to Dockerfile to use for building your container image."
 
 	svcInitSvcPortPrompt     = "Which %s do you want customer traffic sent to?"
@@ -79,6 +79,8 @@ type initSvcOpts struct {
 	prompt      prompter
 	df          dockerfileParser
 
+	sel dockerfileSelector
+
 	// Outputs stored on successful actions.
 	manifestPath string
 
@@ -102,7 +104,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	prompter := prompt.New()
 	return &initSvcOpts{
 		initSvcVars: vars,
 
@@ -111,7 +113,8 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		ws:          ws,
 		appDeployer: cloudformation.New(sess),
 		prog:        termprogress.NewSpinner(),
-		prompt:      prompt.New(),
+		prompt:      prompter,
+		sel:         selector.NewWorkspaceSelect(prompter, store, ws),
 
 		setupParser: func(o *initSvcOpts) {
 			o.df = dockerfile.New(o.fs, o.dockerfilePath)
@@ -185,7 +188,7 @@ func (o *initSvcOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtAddSvcToAppComplete, o.name))
 
-	if err := o.store.CreateService(&config.Service{
+	if err := o.store.CreateService(&config.Workload{
 		App:  o.appName,
 		Name: o.name,
 		Type: o.serviceType,
@@ -319,53 +322,25 @@ func (o *initSvcOpts) askSvcName() error {
 	return nil
 }
 
-func askDockerfile(wkldName string, fs afero.Fs, p prompter) (string, error) {
-	dockerfiles, err := listDockerfiles(fs, ".")
-	// If Dockerfiles are found in the current directory or subdirectory one level down, ask the user to select one.
-	var sel string
-	if err == nil {
-		sel, err = p.SelectOne(
-			fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(wkldName)),
-			wkldInitDockerfileHelpPrompt,
-			dockerfiles,
-			prompt.WithFinalMessage("Dockerfile:"),
-		)
-		if err != nil {
-			return "", fmt.Errorf("select Dockerfile: %w", err)
-		}
-		return sel, nil
-	}
-
-	var notExistErr *errDockerfileNotFound
-	if !errors.As(err, &notExistErr) {
-		return "", err
-	}
-	// If no Dockerfiles were found, prompt user for custom path.
-	sel, err = p.Get(
-		fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(wkldName)),
-		wkldInitDockerfilePathHelpPrompt,
-		func(v interface{}) error {
-			return validatePath(afero.NewOsFs(), v)
-		},
-		prompt.WithFinalMessage("Dockerfile:"))
-	if err != nil {
-		return "", fmt.Errorf("get custom Dockerfile path: %w", err)
-	}
-	return sel, nil
-}
-
 // askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
 func (o *initSvcOpts) askDockerfile() error {
 	if o.dockerfilePath != "" {
 		return nil
 	}
-	df, err := askDockerfile(o.name, o.fs, o.prompt)
+	df, err := o.sel.Dockerfile(
+		fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(o.name)),
+		fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, color.HighlightUserInput(o.name)),
+		wkldInitDockerfileHelpPrompt,
+		wkldInitDockerfilePathHelpPrompt,
+		func(v interface{}) error {
+			return validatePath(afero.NewOsFs(), v)
+		},
+	)
 	if err != nil {
 		return err
 	}
 	o.dockerfilePath = df
 	return nil
-
 }
 
 func (o *initSvcOpts) askSvcPort() error {

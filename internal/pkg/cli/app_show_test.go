@@ -174,7 +174,7 @@ func TestShowAppOpts_Execute(t *testing.T) {
 					Name:   "my-app",
 					Domain: "example.com",
 				}, nil)
-				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Service{
+				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Workload{
 					{
 						Name: "my-svc",
 						Type: "lb-web-svc",
@@ -204,7 +204,7 @@ func TestShowAppOpts_Execute(t *testing.T) {
 					Name:   "my-app",
 					Domain: "example.com",
 				}, nil)
-				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Service{
+				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Workload{
 					{
 						Name: "my-svc",
 						Type: "lb-web-svc",

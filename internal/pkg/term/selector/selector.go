@@ -7,11 +7,59 @@ package selector
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
+
+	"github.com/lnquy/cron"
+)
+
+const (
+	every         = "@every %s"
+	rate          = "Rate"
+	fixedSchedule = "Fixed Schedule"
+
+	custom  = "Custom"
+	hourly  = "Hourly"
+	daily   = "Daily"
+	weekly  = "Weekly"
+	monthly = "Monthly"
+	yearly  = "Yearly"
+)
+
+var scheduleTypes = []string{
+	rate,
+	fixedSchedule,
+}
+
+var presetSchedules = []string{
+	custom,
+	hourly,
+	daily,
+	weekly,
+	monthly,
+	yearly,
+}
+
+var (
+	ratePrompt = "How long would you like to wait between executions?"
+	rateHelp   = `You can specify the time as a duration string. (For example, 2m, 1h30m, 24h)`
+
+	schedulePrompt = "What schedule would you like to use?"
+	scheduleHelp   = `Predefined schedules run at midnight or the top of the hour.
+For example, "Daily" runs at midnight. "Weekly" runs at midnight on Mondays.`
+	customSchedulePrompt = "What custom cron schedule would you like to use?"
+	customScheduleHelp   = `Custom schedules can be defined using the following cron:
+Minute | Hour | Day of Month | Month | Day of Week
+For example: 0 17 ? * MON-FRI (5 pm on weekdays)
+             0 0 1 */3 * (on the first of the month, quarterly)`
+	humanReadableCronConfirmPrompt = "Would you like to use this schedule?"
+	humanReadableCronConfirmHelp   = `Confirm whether the schedule looks right to you.
+(Y)es will continue execution. (N)o will allow you to input a different schedule.`
 )
 
 // Prompter wraps the methods to ask for inputs from the terminal.
@@ -19,6 +67,7 @@ type Prompter interface {
 	Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.Option) (string, error)
 	SelectOne(message, help string, options []string, promptOpts ...prompt.Option) (string, error)
 	MultiSelect(message, help string, options []string, promptOpts ...prompt.Option) ([]string, error)
+	Confirm(message, help string, promptOpts ...prompt.Option) (bool, error)
 }
 
 // AppEnvLister wraps methods to list apps and envs in config store.
@@ -29,7 +78,7 @@ type AppEnvLister interface {
 
 // ConfigSvcLister wraps the method to list svcs in config store.
 type ConfigSvcLister interface {
-	ListServices(appName string) ([]*config.Service, error)
+	ListServices(appName string) ([]*config.Workload, error)
 }
 
 // ConfigLister wraps config store listing methods.
@@ -38,9 +87,16 @@ type ConfigLister interface {
 	ConfigSvcLister
 }
 
-// WsSvcLister wraps the method to get svcs in current workspace.
-type WsSvcLister interface {
+// WsWorkloadLister wraps the method to get workloads in current workspace.
+type WsWorkloadLister interface {
 	ServiceNames() ([]string, error)
+	JobNames() ([]string, error)
+}
+
+// WsWorkloadDockerfileLister wraps methods to get workload names and Dockerfiles from the workspace.
+type WsWorkloadDockerfileLister interface {
+	WsWorkloadLister
+	ListDockerfiles() ([]string, error)
 }
 
 // DeployStoreClient wraps methods of deploy store.
@@ -64,7 +120,7 @@ type ConfigSelect struct {
 // WorkspaceSelect  is an application and environment selector, but can also choose a service from the workspace.
 type WorkspaceSelect struct {
 	*Select
-	svcLister WsSvcLister
+	wlLister WsWorkloadDockerfileLister
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -93,10 +149,10 @@ func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
 
 // NewWorkspaceSelect returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
-func NewWorkspaceSelect(prompt Prompter, store AppEnvLister, ws WsSvcLister) *WorkspaceSelect {
+func NewWorkspaceSelect(prompt Prompter, store AppEnvLister, ws WsWorkloadDockerfileLister) *WorkspaceSelect {
 	return &WorkspaceSelect{
-		Select:    NewSelect(prompt, store),
-		svcLister: ws,
+		Select:   NewSelect(prompt, store),
+		wlLister: ws,
 	}
 }
 
@@ -204,21 +260,45 @@ func (s *DeploySelect) DeployedService(prompt, help string, app string, opts ...
 }
 
 // Service fetches all services in the workspace and then prompts the user to select one.
-func (s *WorkspaceSelect) Service(prompt, help string) (string, error) {
+func (s *WorkspaceSelect) Service(msg, help string) (string, error) {
 	serviceNames, err := s.retrieveWorkspaceServices()
 	if err != nil {
 		return "", fmt.Errorf("list services: %w", err)
+	}
+	if len(serviceNames) == 0 {
+		return "", errors.New("no services found in workspace")
 	}
 	if len(serviceNames) == 1 {
 		log.Infof("Only found one service in workspace, defaulting to: %s\n", color.HighlightUserInput(serviceNames[0]))
 		return serviceNames[0], nil
 	}
 
-	selectedServiceName, err := s.prompt.SelectOne(prompt, help, serviceNames)
+	selectedServiceName, err := s.prompt.SelectOne(msg, help, serviceNames, prompt.WithFinalMessage("Service name:"))
 	if err != nil {
 		return "", fmt.Errorf("select local service: %w", err)
 	}
 	return selectedServiceName, nil
+}
+
+// Job fetches all jobs in the workspace and then prompts the user to select one.
+func (s *WorkspaceSelect) Job(msg, help string) (string, error) {
+	jobNames, err := s.retrieveWorkspaceJobs()
+	if err != nil {
+		return "", fmt.Errorf("list jobs: %w", err)
+	}
+	if len(jobNames) == 0 {
+		return "", errors.New("no jobs found in workspace")
+	}
+	if len(jobNames) == 1 {
+		log.Infof("Only found one job in workspace, defaulting to: %s\n", color.HighlightUserInput(jobNames[0]))
+		return jobNames[0], nil
+	}
+
+	selectedJobName, err := s.prompt.SelectOne(msg, help, jobNames, prompt.WithFinalMessage("Job name:"))
+	if err != nil {
+		return "", fmt.Errorf("select local job: %w", err)
+	}
+	return selectedJobName, nil
 }
 
 // Service fetches all services in an app and prompts the user to select one.
@@ -334,12 +414,147 @@ func (s *ConfigSelect) retrieveServices(app string) ([]string, error) {
 }
 
 func (s *WorkspaceSelect) retrieveWorkspaceServices() ([]string, error) {
-	localServiceNames, err := s.svcLister.ServiceNames()
+	localServiceNames, err := s.wlLister.ServiceNames()
 	if err != nil {
 		return nil, err
 	}
-	if len(localServiceNames) == 0 {
-		return nil, errors.New("no services found in workspace")
-	}
 	return localServiceNames, nil
+}
+
+func (s *WorkspaceSelect) retrieveWorkspaceJobs() ([]string, error) {
+	localJobNames, err := s.wlLister.JobNames()
+	if err != nil {
+		return nil, err
+	}
+	return localJobNames, nil
+}
+
+// Dockerfile asks the user to select from a list of Dockerfiles in the current
+// directory or one level down. If no dockerfiles are found, it asks for a custom path.
+func (s *WorkspaceSelect) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
+	dockerfiles, err := s.wlLister.ListDockerfiles()
+	// If Dockerfiles are found in the current directory or subdirectory one level down, ask the user to select one.
+	var sel string
+	if err == nil {
+		sel, err = s.prompt.SelectOne(
+			selPrompt,
+			selHelp,
+			dockerfiles,
+			prompt.WithFinalMessage("Dockerfile:"),
+		)
+		if err != nil {
+			return "", fmt.Errorf("select Dockerfile: %w", err)
+		}
+		return sel, nil
+	}
+
+	var notExistErr *workspace.ErrDockerfileNotFound
+	if !errors.As(err, &notExistErr) {
+		return "", err
+	}
+	// If no Dockerfiles were found, prompt user for custom path.
+	sel, err = s.prompt.Get(
+		notFoundPrompt,
+		notFoundHelp,
+		pathValidator,
+		prompt.WithFinalMessage("Dockerfile:"))
+	if err != nil {
+		return "", fmt.Errorf("get custom Dockerfile path: %w", err)
+	}
+	return sel, nil
+}
+
+// Schedule asks the user to select either a rate, preset cron, or custom cron.
+func (s *WorkspaceSelect) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
+	scheduleType, err := s.prompt.SelectOne(
+		scheduleTypePrompt,
+		scheduleTypeHelp,
+		scheduleTypes,
+		prompt.WithFinalMessage("Schedule type:"),
+	)
+	if err != nil {
+		return "", fmt.Errorf("get schedule type: %w", err)
+	}
+	switch scheduleType {
+	case rate:
+		return s.askRate(rateValidator)
+	case fixedSchedule:
+		return s.askCron(scheduleValidator)
+	default:
+		return "", fmt.Errorf("unrecognized schedule type %s", scheduleType)
+	}
+}
+
+func (s *WorkspaceSelect) askRate(rateValidator prompt.ValidatorFunc) (string, error) {
+	rateInput, err := s.prompt.Get(
+		ratePrompt,
+		rateHelp,
+		rateValidator,
+		prompt.WithFinalMessage("Rate:"),
+	)
+	if err != nil {
+		return "", fmt.Errorf("get schedule rate: %w", err)
+	}
+	return fmt.Sprintf(every, rateInput), nil
+}
+
+func (s *WorkspaceSelect) askCron(scheduleValidator prompt.ValidatorFunc) (string, error) {
+	cronInput, err := s.prompt.SelectOne(
+		schedulePrompt,
+		scheduleHelp,
+		presetSchedules,
+		prompt.WithFinalMessage("Fixed Schedule:"),
+	)
+	if err != nil {
+		return "", fmt.Errorf("get preset schedule: %w", err)
+	}
+	if cronInput != custom {
+		return presetScheduleToDefinitionString(cronInput), nil
+	}
+	var customSchedule, humanCron string
+	cronDescriptor, err := cron.NewDescriptor()
+	if err != nil {
+		return "", fmt.Errorf("get custom schedule: %w", err)
+	}
+	for {
+		customSchedule, err = s.prompt.Get(
+			customSchedulePrompt,
+			customScheduleHelp,
+			scheduleValidator,
+			prompt.WithDefaultInput("0 * * * *"),
+			prompt.WithFinalMessage("Custom Schedule:"),
+		)
+		if err != nil {
+			return "", fmt.Errorf("get custom schedule: %w", err)
+		}
+
+		// Break if the customer has specified an easy to read cron definition string
+		if strings.HasPrefix(customSchedule, "@") {
+			break
+		}
+
+		humanCron, err = cronDescriptor.ToDescription(customSchedule, cron.Locale_en)
+		if err != nil {
+			return "", fmt.Errorf("convert cron to human string: %w", err)
+		}
+
+		log.Infoln(fmt.Sprintf("Your job will run at the following times: %s", humanCron))
+
+		ok, err := s.prompt.Confirm(
+			humanReadableCronConfirmPrompt,
+			humanReadableCronConfirmHelp,
+		)
+		if err != nil {
+			return "", fmt.Errorf("confirm cron schedule: %w", err)
+		}
+		if ok {
+			break
+		}
+	}
+
+	return customSchedule, nil
+}
+
+func presetScheduleToDefinitionString(input string) string {
+	return fmt.Sprintf("@%s", strings.ToLower(input))
 }

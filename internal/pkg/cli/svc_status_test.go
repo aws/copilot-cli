@@ -73,7 +73,7 @@ func TestSvcStatus_Validate(t *testing.T) {
 				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
 					Name: "test",
 				}, nil)
-				m.EXPECT().GetService("my-app", "my-svc").Return(&config.Service{
+				m.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{
 					Name: "my-svc",
 				}, nil)
 			},

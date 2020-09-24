@@ -20,6 +20,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 )
@@ -39,29 +40,20 @@ type actionCommand interface {
 	RecommendedActions() []string
 }
 
-// SSM store interface.
+// SSM store interfaces.
 
 type serviceStore interface {
-	serviceCreator
-	serviceGetter
-	serviceLister
-	serviceDeleter
-}
-
-type serviceCreator interface {
-	CreateService(svc *config.Service) error
-}
-
-type serviceGetter interface {
-	GetService(appName, svcName string) (*config.Service, error)
-}
-
-type serviceLister interface {
-	ListServices(appName string) ([]*config.Service, error)
-}
-
-type serviceDeleter interface {
+	CreateService(svc *config.Workload) error
+	GetService(appName, svcName string) (*config.Workload, error)
+	ListServices(appName string) ([]*config.Workload, error)
 	DeleteService(appName, svcName string) error
+}
+
+type jobStore interface {
+	CreateJob(job *config.Workload) error
+	GetJob(appName, jobName string) (*config.Workload, error)
+	ListJobs(appName string) ([]*config.Workload, error)
+	DeleteJob(appName, jobName string) error
 }
 
 type applicationStore interface {
@@ -114,6 +106,7 @@ type store interface {
 	applicationStore
 	environmentStore
 	serviceStore
+	jobStore
 }
 
 type deployedEnvironmentLister interface {
@@ -211,11 +204,16 @@ type wsFileDeleter interface {
 	DeleteWorkspaceFile() error
 }
 
+type dockerfileLister interface {
+	ListDockerfiles() ([]string, error)
+}
+
 type svcManifestReader interface {
 	ReadWorkloadManifest(svcName string) ([]byte, error)
 }
 
 type svcManifestWriter interface {
+	dockerfileLister
 	WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
 }
 
@@ -352,6 +350,10 @@ type envDescriber interface {
 	Describe() (*describe.EnvDescription, error)
 }
 
+type versionGetter interface {
+	Version() (string, error)
+}
+
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 	ListPipelineNamesByTags(tags map[string]string) ([]string, error)
@@ -392,6 +394,16 @@ type deploySelector interface {
 type wsSelector interface {
 	appEnvSelector
 	Service(prompt, help string) (string, error)
+	Job(prompt, help string) (string, error)
+}
+
+type initJobSelector interface {
+	dockerfileSelector
+	Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error)
+}
+
+type dockerfileSelector interface {
+	Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pv prompt.ValidatorFunc) (string, error)
 }
 
 type ec2Selector interface {

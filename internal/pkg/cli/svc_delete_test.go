@@ -42,7 +42,7 @@ func TestDeleteSvcOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inName:    "api",
 			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetService("phonetool", "api").Times(1).Return(&config.Service{
+				m.EXPECT().GetService("phonetool", "api").Times(1).Return(&config.Workload{
 					Name: "api",
 				}, nil)
 			},
@@ -125,7 +125,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices(testAppName).Return([]*config.Service{
+				m.EXPECT().ListServices(testAppName).Return([]*config.Workload{
 					{
 						Name: testSvcName,
 					},
@@ -144,7 +144,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices(testAppName).Return([]*config.Service{
+				m.EXPECT().ListServices(testAppName).Return([]*config.Workload{
 					{
 						Name: testSvcName,
 					},
@@ -158,7 +158,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices(testAppName).Return([]*config.Service{}, nil)
+				m.EXPECT().ListServices(testAppName).Return([]*config.Workload{}, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
@@ -168,7 +168,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices(testAppName).Return([]*config.Service{
+				m.EXPECT().ListServices(testAppName).Return([]*config.Workload{
 					{
 						Name: testSvcName,
 					},
