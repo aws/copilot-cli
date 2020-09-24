@@ -216,6 +216,15 @@ type svcDirManifestWriter interface {
 	CopilotDirPath() (string, error)
 }
 
+type jobManifestWriter interface {
+	WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error)
+}
+
+type jobDirManifestWriter interface {
+	jobManifestWriter
+	CopilotDirPath() (string, error)
+}
+
 type wsPipelineManifestReader interface {
 	ReadPipelineManifest() ([]byte, error)
 }
@@ -299,13 +308,6 @@ type pipelineDeployer interface {
 type appDeployer interface {
 	DeployApp(in *deploy.CreateAppInput) error
 	AddServiceToApp(app *config.Application, svcName string) error
-	AddEnvToApp(app *config.Application, env *config.Environment) error
-	DelegateDNSPermissions(app *config.Application, accountID string) error
-	DeleteApp(name string) error
-}
-
-type jobDeployer interface {
-	DeployApp(in *deploy.CreateAppInput) error
 	AddJobToApp(app *config.Application, jobName string) error
 	AddEnvToApp(app *config.Application, env *config.Environment) error
 	DelegateDNSPermissions(app *config.Application, accountID string) error

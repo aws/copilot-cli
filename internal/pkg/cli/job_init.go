@@ -101,9 +101,9 @@ type initJobOpts struct {
 
 	// Interfaces to interact with dependencies.
 	fs          afero.Fs
-	ws          svcDirManifestWriter
+	ws          jobDirManifestWriter
 	store       store
-	appDeployer jobDeployer
+	appDeployer appDeployer
 	prog        progress
 	prompt      prompter
 
