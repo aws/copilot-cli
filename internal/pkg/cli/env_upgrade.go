@@ -158,27 +158,19 @@ func (o *envUpgradeOpts) shouldUpgrade(env string) (bool, error) {
 		return false, fmt.Errorf("get template version of environment %s in app %s: %v", env, o.appName, err)
 	}
 
-	// The Compare function requires versions to be prefix by "v" and for them to be valid semvers.
-	diff := semver.Compare(prefixSemVer(version), prefixSemVer(deploy.LatestEnvTemplateVersion))
+	diff := semver.Compare(version, deploy.LatestEnvTemplateVersion)
 	if diff < 0 {
 		// Newer version available.
 		return true, nil
 	}
 
-	msg := fmt.Sprintf("Environment %s is already on version %s, skip upgrade.", env, deploy.LatestEnvTemplateVersion)
+	msg := fmt.Sprintf("Environment %s is already on the latest version %s, skip upgrade.", env, deploy.LatestEnvTemplateVersion)
 	if diff > 0 {
 		msg = fmt.Sprintf(`Skip upgrading environment %s to version %s since it's on version %s. 
 Are you using the latest version of AWS Copilot?`, env, deploy.LatestEnvTemplateVersion, version)
 	}
 	log.Debugln(msg)
 	return false, nil
-}
-
-func prefixSemVer(v string) string {
-	if v == deploy.LegacyEnvTemplateVersion {
-		return "v0.0.0"
-	}
-	return "v" + v
 }
 
 // buildEnvUpgradeCmd builds the command to update the
