@@ -6,6 +6,7 @@ package stack
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 	"unicode"
@@ -169,10 +170,17 @@ func toRate(durationString string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("invalid duration %s", durationString)
 	}
-	var minutes int = int(d.Minutes())
-	if minutes < 1 {
+	// Check that rates are not specified in units smaller than minutes
+	floatMinutes := d.Minutes()
+	if floatMinutes != math.Round(floatMinutes) {
+		return "", fmt.Errorf("duration must be a whole number of minutes or hours")
+	}
+
+	if d < time.Minute*1 {
 		return "", errors.New("duration must be >= 1 minute")
 	}
+
+	minutes := int(floatMinutes)
 	if minutes == 1 {
 		return fmt.Sprintf(fmtRateScheduleExpression, minutes, "minute"), nil
 	}

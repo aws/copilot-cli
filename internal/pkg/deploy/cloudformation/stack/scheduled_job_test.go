@@ -178,8 +178,8 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 			inputSchedule:  "@every 1m",
 			wantedSchedule: "rate(1 minute)",
 		},
-		"truncate to minute if using small units": {
-			inputSchedule:  "@every 61000ms",
+		"round to minute if using small units": {
+			inputSchedule:  "@every 60000ms",
 			wantedSchedule: "rate(1 minute)",
 		},
 		"malformed rate": {
@@ -214,17 +214,25 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 			inputSchedule:  "* * ? * 2-6",
 			wantedSchedule: "cron(* * ? * 3-7 *)",
 		},
+		"zero-indexed DOW with un?ed DOM": {
+			inputSchedule:  "* * * * 2-6",
+			wantedSchedule: "cron(* * ? * 3-7 *)",
+		},
 		"returns error if both DOM and DOW specified": {
 			inputSchedule: "* * 1 * SUN",
 			wantedError:   errors.New("parse cron schedule: cannot specify both DOW and DOM in cron expression"),
 		},
 		"returns error if fixed interval less than one minute": {
-			inputSchedule: "@every 50s",
+			inputSchedule: "@every -5m",
 			wantedError:   errors.New("parse fixed interval: duration must be >= 1 minute"),
 		},
-		"truncates to minute (round down)": {
-			inputSchedule:  "@every 90s",
-			wantedSchedule: "rate(1 minute)",
+		"returns error if fixed interval is 0": {
+			inputSchedule: "@every 0m",
+			wantedError:   errors.New("parse fixed interval: duration must be >= 1 minute"),
+		},
+		"error on non-whole-number of minutes": {
+			inputSchedule: "@every 89s",
+			wantedError:   errors.New("parse fixed interval: duration must be a whole number of minutes or hours"),
 		},
 	}
 	for name, tc := range testCases {
