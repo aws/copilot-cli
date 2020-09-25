@@ -31,7 +31,7 @@ type ScheduledJob struct {
 }
 
 var (
-	fmtRateScheduleExpression = "rate(%s %s)" // rate({duration} {units})
+	fmtRateScheduleExpression = "rate(%d %s)" // rate({duration} {units})
 	fmtCronScheduleExpression = "cron(%s)"
 )
 
@@ -134,6 +134,10 @@ func (j *ScheduledJob) Template() (string, error) {
 // @every cron definition strings are converted to rates.
 // All others become cron expressions.
 func (j *ScheduledJob) awsSchedule() (string, error) {
+	if j.manifest.Schedule == "" {
+		return "", fmt.Errorf("missing required field schedule in manifest for job %s", j.name)
+	}
+
 	// Try parsing the string as a cron expression to validate it.
 	if _, err := cron.ParseStandard(j.manifest.Schedule); err != nil {
 		return "", fmt.Errorf("schedule %s for job %s is not a valid cron expression or definition string", j.manifest.Schedule, j.name)
@@ -194,6 +198,10 @@ func toFixedSchedule(schedule string) (string, error) {
 	}
 }
 
+func specified(input string) bool {
+	return !strings.ContainsAny(input, "*?")
+}
+
 // toAWSCron converts "standard" 5-element crons into the AWS preferred syntax
 // cron(* * * * ? *)
 // MIN HOU DOM MON DOW YEA
@@ -222,11 +230,11 @@ func toAWSCron(schedule string) (string, error) {
 	// If both are asterisks, convert DOW to a ?
 	case sched[DOM] == "*" && sched[DOW] == "*":
 		sched[DOW] = "?"
-	// If DOM is * and DOW is specified, convert DOM to ?
-	case sched[DOM] == "*" && !strings.ContainsAny(sched[DOW], "?*"):
+	// If DOM is * or ? and DOW is specified, convert DOM to ?
+	case !specified(sched[DOM]) && specified(sched[DOW]):
 		sched[DOM] = "?"
-	// If DOW is * and DOM is specified, convert DOW to ?
-	case sched[DOW] == "*" && !strings.ContainsAny(sched[DOM], "?*"):
+	// If DOW is * or ? and DOM is specified, convert DOW to ?
+	case !specified(sched[DOW]) && specified(sched[DOM]):
 		sched[DOW] = "?"
 	// Error if both DOM and DOW are specified
 	default:
@@ -257,23 +265,27 @@ func toAWSCron(schedule string) (string, error) {
 // It also performs basic validations to provide a fast feedback loop to the customer.
 func (j *ScheduledJob) stateMachine() (*template.StateMachineOpts, error) {
 
-	parsedTimeout, err := time.ParseDuration(j.manifest.Timeout)
-	if err != nil {
-		return nil, err
+	var timeoutSeconds *int
+	if j.manifest.Timeout != "" {
+		parsedTimeout, err := time.ParseDuration(j.manifest.Timeout)
+		if err != nil {
+			return nil, err
+		}
+		if parsedTimeout < 1*time.Second {
+			return nil, errors.New("timeout must be ≥ 1 second")
+		}
+		timeoutSeconds = aws.Int(int(parsedTimeout.Seconds()))
 	}
 
-	if parsedTimeout < 1*time.Second {
-		return nil, errors.New("timeout must be greater than 1 second")
-	}
-
-	timeoutSeconds := int(parsedTimeout.Seconds())
-
-	retries := j.manifest.Retries
-	if retries < 0 {
-		return nil, errors.New("number of retries cannot be negative")
+	var retries *int
+	if j.manifest.Retries != 0 {
+		if j.manifest.Retries < 0 {
+			return nil, errors.New("number of retries cannot be negative")
+		}
+		retries = aws.Int(j.manifest.Retries)
 	}
 	return &template.StateMachineOpts{
-		Timeout: aws.Int(timeoutSeconds),
-		Retries: aws.Int(retries),
+		Timeout: timeoutSeconds,
+		Retries: retries,
 	}, nil
 }

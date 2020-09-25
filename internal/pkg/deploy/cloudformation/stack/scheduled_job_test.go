@@ -159,3 +159,172 @@ Outputs:
 		})
 	}
 }
+
+func TestScheduledJob_awsSchedule(t *testing.T) {
+	testCases := map[string]struct {
+		inputSchedule  string
+		wantedSchedule string
+		wantedError    error
+	}{
+		"simple rate": {
+			inputSchedule:  "@every 1h30m",
+			wantedSchedule: "rate(90 minutes)",
+		},
+		"missing schedule": {
+			inputSchedule: "",
+			wantedError:   errors.New("missing required field schedule in manifest for job mailer"),
+		},
+		"one minute rate": {
+			inputSchedule:  "@every 1m",
+			wantedSchedule: "rate(1 minute)",
+		},
+		"truncate to minute if using small units": {
+			inputSchedule:  "@every 61000ms",
+			wantedSchedule: "rate(1 minute)",
+		},
+		"malformed rate": {
+			inputSchedule: "@every 402 seconds",
+			wantedError:   errors.New("schedule @every 402 seconds for job mailer is not a valid cron expression or definition string"),
+		},
+		"malformed cron": {
+			inputSchedule: "every 4m",
+			wantedError:   errors.New("schedule every 4m for job mailer is not a valid cron expression or definition string"),
+		},
+		"correctly converts predefined schedule": {
+			inputSchedule:  "@daily",
+			wantedSchedule: "cron(0 0 * * ? *)",
+		},
+		"unrecognized predefined schedule": {
+			inputSchedule: "@minutely",
+			wantedError:   errors.New("schedule @minutely for job mailer is not a valid cron expression or definition string"),
+		},
+		"correctly converts cron with all asterisks": {
+			inputSchedule:  "* * * * *",
+			wantedSchedule: "cron(* * * * ? *)",
+		},
+		"correctly converts cron with specified DOW": {
+			inputSchedule:  "* * * * MON-FRI",
+			wantedSchedule: "cron(* * ? * MON-FRI *)",
+		},
+		"correctly converts crom with specified DOM": {
+			inputSchedule:  "* * 1 * *",
+			wantedSchedule: "cron(* * 1 * ? *)",
+		},
+		"correctly increments 0-indexed DOW": {
+			inputSchedule:  "* * ? * 2-6",
+			wantedSchedule: "cron(* * ? * 3-7 *)",
+		},
+		"returns error if both DOM and DOW specified": {
+			inputSchedule: "* * 1 * SUN",
+			wantedError:   errors.New("parse cron schedule: cannot specify both DOW and DOM in cron expression"),
+		},
+		"returns error if fixed interval less than one minute": {
+			inputSchedule: "@every 50s",
+			wantedError:   errors.New("parse fixed interval: duration must be >= 1 minute"),
+		},
+		"truncates to minute (round down)": {
+			inputSchedule:  "@every 90s",
+			wantedSchedule: "rate(1 minute)",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			job := &ScheduledJob{
+				wkld: &wkld{
+					name: "mailer",
+				},
+				manifest: &manifest.ScheduledJob{
+					ScheduledJobConfig: manifest.ScheduledJobConfig{
+						ScheduleConfig: manifest.ScheduleConfig{
+							Schedule: tc.inputSchedule,
+						},
+					},
+				},
+			}
+			// WHEN
+			parsedSchedule, err := job.awsSchedule()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedSchedule, parsedSchedule)
+			}
+		})
+	}
+}
+
+func TestScheduledJob_stateMachine(t *testing.T) {
+	testCases := map[string]struct {
+		inputTimeout string
+		inputRetries int
+		wantedConfig template.StateMachineOpts
+		wantedError  error
+	}{
+		"timeout and retries": {
+			inputTimeout: "3h",
+			inputRetries: 5,
+			wantedConfig: template.StateMachineOpts{
+				Timeout: aws.Int(10800),
+				Retries: aws.Int(5),
+			},
+		},
+		"just timeout": {
+			inputTimeout: "1h",
+			wantedConfig: template.StateMachineOpts{
+				Timeout: aws.Int(3600),
+				Retries: nil,
+			},
+		},
+		"just retries": {
+			inputRetries: 2,
+			wantedConfig: template.StateMachineOpts{
+				Timeout: nil,
+				Retries: aws.Int(2),
+			},
+		},
+		"negative retries": {
+			inputRetries: -4,
+			wantedError:  errors.New("number of retries cannot be negative"),
+		},
+		"timeout too small": {
+			inputTimeout: "500ms",
+			wantedError:  errors.New("timeout must be ≥ 1 second"),
+		},
+		"invalid timeout": {
+			inputTimeout: "5 hours",
+			wantedError:  errors.New("time: unknown unit  hours in duration 5 hours"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			job := &ScheduledJob{
+				wkld: &wkld{
+					name: "mailer",
+				},
+				manifest: &manifest.ScheduledJob{
+					ScheduledJobConfig: manifest.ScheduledJobConfig{
+						ScheduleConfig: manifest.ScheduleConfig{
+							Retries: tc.inputRetries,
+							Timeout: tc.inputTimeout,
+						},
+					},
+				},
+			}
+			// WHEN
+			parsedStateMachine, err := job.stateMachine()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, aws.IntValue(tc.wantedConfig.Retries), aws.IntValue(parsedStateMachine.Retries))
+				require.Equal(t, aws.IntValue(tc.wantedConfig.Timeout), aws.IntValue(parsedStateMachine.Timeout))
+			}
+		})
+	}
+}
