@@ -202,11 +202,31 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 			inputSchedule:  "* * * * *",
 			wantedSchedule: "cron(* * * * ? *)",
 		},
+		"correctly converts cron with one ? in DOW": {
+			inputSchedule:  "* * * * ?",
+			wantedSchedule: "cron(* * * * ? *)",
+		},
+		"correctly converts cron with one ? in DOM": {
+			inputSchedule:  "* * ? * *",
+			wantedSchedule: "cron(* * * * ? *)",
+		},
+		"correctly convert two ? in DOW and DOM": {
+			inputSchedule:  "* * ? * ?",
+			wantedSchedule: "cron(* * * * ? *)",
+		},
 		"correctly converts cron with specified DOW": {
 			inputSchedule:  "* * * * MON-FRI",
 			wantedSchedule: "cron(* * ? * MON-FRI *)",
 		},
-		"correctly converts crom with specified DOM": {
+		"correctly parse provided ? with DOW": {
+			inputSchedule:  "* * ? * MON",
+			wantedSchedule: "cron(* * ? * MON *)",
+		},
+		"correctly parse provided ? with DOM": {
+			inputSchedule:  "* * 1 * ?",
+			wantedSchedule: "cron(* * 1 * ? *)",
+		},
+		"correctly converts cron with specified DOM": {
 			inputSchedule:  "* * 1 * *",
 			wantedSchedule: "cron(* * 1 * ? *)",
 		},
@@ -233,6 +253,10 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 		"error on non-whole-number of minutes": {
 			inputSchedule: "@every 89s",
 			wantedError:   errors.New("parse fixed interval: duration must be a whole number of minutes or hours"),
+		},
+		"error on too many inputs": {
+			inputSchedule: "* * * * * *",
+			wantedError:   errors.New("schedule * * * * * * for job mailer is not a valid cron expression or definition string"),
 		},
 	}
 	for name, tc := range testCases {

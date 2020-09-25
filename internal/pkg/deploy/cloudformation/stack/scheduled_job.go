@@ -235,9 +235,10 @@ func toAWSCron(schedule string) (string, error) {
 	// 0 9 * * 1 ==> 0 9 ? * 1
 	// 0 9 1 * * ==> 0 9 1 * ?
 	switch {
-	// If both are asterisks, convert DOW to a ?
-	case sched[DOM] == "*" && sched[DOW] == "*":
+	// If both are unspecified, convert DOW to a ? and DOM to *
+	case !specified(sched[DOM]) && !specified(sched[DOW]):
 		sched[DOW] = "?"
+		sched[DOM] = "*"
 	// If DOM is * or ? and DOW is specified, convert DOM to ?
 	case !specified(sched[DOM]) && specified(sched[DOW]):
 		sched[DOM] = "?"
