@@ -5,6 +5,8 @@ package stack
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -44,12 +46,85 @@ func TestScheduledJob_Template(t *testing.T) {
 		"render template without addons successfully": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
 				m := mocks.NewMockscheduledJobParser(ctrl)
-				m.EXPECT().ParseScheduledJob(template.WorkloadOpts{}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				m.EXPECT().ParseScheduledJob(gomock.Eq(template.WorkloadOpts{
+					ScheduleExpression: "cron(0 0 * * ? *)",
+					StateMachine: &template.StateMachineOpts{
+						Timeout: aws.Int(5400),
+						Retries: aws.Int(3),
+					},
+				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{err: &addon.ErrDirNotExist{}}
 				j.parser = m
 				j.wkld.addons = addons
 			},
 			wantedTemplate: "template",
+		},
+		"render template with addons": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
+				m := mocks.NewMockscheduledJobParser(ctrl)
+				m.EXPECT().ParseScheduledJob(gomock.Eq(template.WorkloadOpts{
+					NestedStack: &template.WorkloadNestedStackOpts{
+						StackName:       addon.StackName,
+						VariableOutputs: []string{"Hello"},
+						SecretOutputs:   []string{"MySecretArn"},
+						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
+					},
+					ScheduleExpression: "cron(0 0 * * ? *)",
+					StateMachine: &template.StateMachineOpts{
+						Timeout: aws.Int(5400),
+						Retries: aws.Int(3),
+					},
+				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				addons := mockTemplater{
+					tpl: `Resources:
+  AdditionalResourcesPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action: '*'
+          Resource: '*'
+  MySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: 'This is my rds instance secret'
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "admin"}'
+        GenerateStringKey: 'password'
+        PasswordLength: 16
+        ExcludeCharacters: '"@/\'
+Outputs:
+  AdditionalResourcesPolicyArn:
+    Value: !Ref AdditionalResourcesPolicy
+  MySecretArn:
+    Value: !Ref MySecret
+  Hello:
+    Value: hello`,
+				}
+				j.parser = m
+				j.wkld.addons = addons
+			},
+			wantedTemplate: "template",
+		},
+		"error parsing addons": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
+				m := mocks.NewMockscheduledJobParser(ctrl)
+				addons := mockTemplater{err: errors.New("some error")}
+				j.parser = m
+				j.wkld.addons = addons
+			},
+			wantedError: fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testScheduledJobManifest.Name), errors.New("some error")),
+		},
+		"template parsing error": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
+				m := mocks.NewMockscheduledJobParser(ctrl)
+				m.EXPECT().ParseScheduledJob(gomock.Any()).Return(nil, errors.New("some error"))
+				addons := mockTemplater{err: &addon.ErrDirNotExist{}}
+				j.parser = m
+				j.wkld.addons = addons
+			},
+			wantedError: fmt.Errorf("parse scheduled job template: some error"),
 		},
 	}
 	for name, tc := range testCases {
