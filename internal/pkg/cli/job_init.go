@@ -185,7 +185,7 @@ func (o *initJobOpts) createManifest() (string, error) {
 		return "", err
 	}
 	var manifestExists bool
-	manifestPath, err := o.ws.WriteWorkloadManifest(manifest, o.name)
+	manifestPath, err := o.ws.WriteJobManifest(manifest, o.name)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {

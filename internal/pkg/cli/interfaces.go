@@ -209,12 +209,12 @@ type dockerfileLister interface {
 }
 
 type svcManifestReader interface {
-	ReadWorkloadManifest(svcName string) ([]byte, error)
+	ReadServiceManifest(svcName string) ([]byte, error)
 }
 
 type svcManifestWriter interface {
 	dockerfileLister
-	WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
+	WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
 }
 
 type svcDirManifestWriter interface {
@@ -223,7 +223,7 @@ type svcDirManifestWriter interface {
 }
 
 type jobManifestWriter interface {
-	WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error)
+	WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error)
 }
 
 type jobDirManifestWriter interface {

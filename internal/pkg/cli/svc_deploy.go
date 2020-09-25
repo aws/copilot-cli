@@ -306,7 +306,7 @@ func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {
 		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
 	}
 
-	manifestBytes, err := o.ws.ReadWorkloadManifest(o.name)
+	manifestBytes, err := o.ws.ReadServiceManifest(o.name)
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file %s: %w", o.name, err)
 	}
@@ -360,7 +360,7 @@ func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 }
 
 func (o *deploySvcOpts) manifest() (interface{}, error) {
-	raw, err := o.ws.ReadWorkloadManifest(o.name)
+	raw, err := o.ws.ReadServiceManifest(o.name)
 	if err != nil {
 		return nil, fmt.Errorf("read service %s manifest from workspace: %w", o.name, err)
 	}

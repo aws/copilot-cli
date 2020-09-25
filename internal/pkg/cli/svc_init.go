@@ -204,7 +204,7 @@ func (o *initSvcOpts) createManifest() (string, error) {
 		return "", err
 	}
 	var manifestExists bool
-	manifestPath, err := o.ws.WriteWorkloadManifest(manifest, o.name)
+	manifestPath, err := o.ws.WriteServiceManifest(manifest, o.name)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {

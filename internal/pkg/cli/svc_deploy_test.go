@@ -225,7 +225,7 @@ image:
 			wantData: nil,
 			wantErr:  fmt.Errorf("read manifest file %s: %w", "serviceA", mockError),
 			mockWs: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadWorkloadManifest("serviceA").Times(1).Return(nil, mockError)
+				m.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(nil, mockError)
 			},
 		},
 		// This is kind of a hacky test implementation since there isn't a mock manifest service, instead
@@ -236,7 +236,7 @@ image:
 			wantErr:       fmt.Errorf("unmarshal service %s manifest: %w", "serviceA", mockError),
 			mockUnmarshal: func(in []byte) (interface{}, error) { return nil, mockError },
 			mockWs: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadWorkloadManifest(gomock.Any()).Return([]byte("bad manifest file bytes"), nil)
+				m.EXPECT().ReadServiceManifest(gomock.Any()).Return([]byte("bad manifest file bytes"), nil)
 			},
 		},
 		"should return error if workspace methods fail": {
@@ -244,7 +244,7 @@ image:
 			wantData: nil,
 			wantErr:  fmt.Errorf("get copilot directory: %w", mockError),
 			mockWs: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadWorkloadManifest(gomock.Any()).Return(mockManifest, nil)
+				m.EXPECT().ReadServiceManifest(gomock.Any()).Return(mockManifest, nil)
 				m.EXPECT().CopilotDirPath().Return("", mockError)
 			},
 		},
@@ -257,7 +257,7 @@ image:
 			wantErr: nil,
 			mockWs: func(m *mocks.MockwsSvcDirReader) {
 				m.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil)
-				m.EXPECT().ReadWorkloadManifest("serviceA").Times(1).Return(mockManifest, nil)
+				m.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(mockManifest, nil)
 			},
 		},
 		"using simple buildstring (backwards compatible)": {
@@ -268,7 +268,7 @@ image:
 			},
 			wantErr: nil,
 			mockWs: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadWorkloadManifest("serviceA").Times(1).Return(mockMftBuildString, nil)
+				m.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(mockMftBuildString, nil)
 				m.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil)
 			},
 		},
@@ -280,7 +280,7 @@ image:
 			},
 			wantErr: nil,
 			mockWs: func(m *mocks.MockwsSvcDirReader) {
-				m.EXPECT().ReadWorkloadManifest("serviceA").Times(1).Return(mockMftNoContext, nil)
+				m.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(mockMftNoContext, nil)
 				m.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil)
 			},
 		},

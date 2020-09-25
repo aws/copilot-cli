@@ -326,7 +326,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 
 			mockWriter: func(m *mocks.MockjobDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/resizer", nil)
-				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", nil)
+				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().CreateJob(gomock.Any()).
@@ -362,7 +362,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 
 			mockWriter: func(m *mocks.MockjobDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/resizer", nil)
-				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", errors.New("some error"))
+				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", errors.New("some error"))
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("app").Return(&config.Application{
@@ -391,7 +391,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 
 			mockWriter: func(m *mocks.MockjobDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/resizer", nil)
-				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", nil)
+				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{
@@ -416,7 +416,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 
 			mockWriter: func(m *mocks.MockjobDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/resizer", nil)
-				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", nil)
+				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().CreateJob(gomock.Any()).

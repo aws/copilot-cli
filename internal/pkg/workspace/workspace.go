@@ -162,7 +162,7 @@ func (ws *Workspace) workloadNames(match func(string) bool) ([]string, error) {
 			// Swallow the error because we don't want to include any services that we don't have permissions to read.
 			continue
 		}
-		manifestBytes, err := ws.ReadWorkloadManifest(f.Name())
+		manifestBytes, err := ws.readWorkloadManifest(f.Name())
 		if err != nil {
 			return nil, fmt.Errorf("read manifest for workload %s: %w", f.Name(), err)
 		}
@@ -177,8 +177,17 @@ func (ws *Workspace) workloadNames(match func(string) bool) ([]string, error) {
 	return names, nil
 }
 
-// ReadWorkloadManifest returns the contents of the workload's manifest under copilot/{name}/manifest.yml.
-func (ws *Workspace) ReadWorkloadManifest(name string) ([]byte, error) {
+// ReadServiceManifest returns the contents of the service's manifest under copilot/{name}/manifest.yml.
+func (ws *Workspace) ReadServiceManifest(name string) ([]byte, error) {
+	return ws.readWorkloadManifest(name)
+}
+
+// ReadJobManifest returns the contents of the job's manifest under copilot/{name}/manifest.yml.
+func (ws *Workspace) ReadJobManifest(name string) ([]byte, error) {
+	return ws.readWorkloadManifest(name)
+}
+
+func (ws *Workspace) readWorkloadManifest(name string) ([]byte, error) {
 	return ws.read(name, manifestFileName)
 }
 
@@ -199,8 +208,17 @@ func (ws *Workspace) ReadPipelineManifest() ([]byte, error) {
 	return ws.read(pipelineFileName)
 }
 
-// WriteWorkloadManifest writes the workload's manifest under the copilot/{name}/ directory.
-func (ws *Workspace) WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
+// WriteServiceManifest writes the service's manifest under the copilot/{name}/ directory.
+func (ws *Workspace) WriteServiceManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
+	return ws.writeWorkloadManifest(marshaler, name)
+}
+
+// WriteJobManifest writes the job's manifest under the copilot/{name}/ directory.
+func (ws *Workspace) WriteJobManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
+	return ws.writeWorkloadManifest(marshaler, name)
+}
+
+func (ws *Workspace) writeWorkloadManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	data, err := marshaler.MarshalBinary()
 	if err != nil {
 		return "", fmt.Errorf("marshal workload %s manifest to binary: %w", name, err)
