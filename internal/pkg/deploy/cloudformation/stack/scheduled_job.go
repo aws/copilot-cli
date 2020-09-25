@@ -12,8 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
-type scheduledJobReadParser interface {
-	template.ReadParser
+type scheduledJobParser interface {
 	ParseScheduledJob(template.WorkloadOpts) (*template.Content, error)
 }
 
@@ -23,7 +22,7 @@ type ScheduledJob struct {
 	*wkld
 	manifest *manifest.ScheduledJob
 
-	parser scheduledJobReadParser
+	parser scheduledJobParser
 }
 
 // NewScheduledJob creates a new ScheduledJob stack from a manifest file.
@@ -51,4 +50,32 @@ func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConf
 
 		parser: parser,
 	}, nil
+}
+
+// Template returns the CloudFormation template for the scheduled job.
+func (j *ScheduledJob) Template() (string, error) {
+
+	outputs, err := j.addonsOutputs()
+	if err != nil {
+		return "", err
+	}
+
+	sidecars, err := j.manifest.Sidecar.Options()
+	if err != nil {
+		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
+	}
+
+	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
+		Variables:          j.manifest.Variables,
+		Secrets:            j.manifest.Secrets,
+		NestedStack:        outputs,
+		Sidecars:           sidecars,
+		ScheduleExpression: "",  // TODO: write the manifest.AWSSchedule() method
+		StateMachine:       nil, // TODO: write the manifest.StateMachine() method
+		LogConfig:          j.manifest.LogConfigOpts(),
+	})
+	if err != nil {
+		return "", fmt.Errorf("parse scheduled job template: %w", err)
+	}
+	return content.String(), nil
 }
