@@ -181,7 +181,7 @@ func (ws *Workspace) workloadNames(match func(string) bool) ([]string, error) {
 func (ws *Workspace) ReadServiceManifest(name string) ([]byte, error) {
 	mf, err := ws.readWorkloadManifest(name)
 	if err != nil {
-		return nil, fmt.Errorf("read manifest file %s: %w", name, err)
+		return nil, fmt.Errorf("read service %s manifest file: %w", name, err)
 	}
 	return mf, nil
 }
@@ -190,7 +190,7 @@ func (ws *Workspace) ReadServiceManifest(name string) ([]byte, error) {
 func (ws *Workspace) ReadJobManifest(name string) ([]byte, error) {
 	mf, err := ws.readWorkloadManifest(name)
 	if err != nil {
-		return nil, fmt.Errorf("read manifest file %s: %w", name, err)
+		return nil, fmt.Errorf("read job %s manifest file: %w", name, err)
 	}
 	return mf, nil
 }
