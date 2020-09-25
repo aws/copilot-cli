@@ -179,12 +179,20 @@ func (ws *Workspace) workloadNames(match func(string) bool) ([]string, error) {
 
 // ReadServiceManifest returns the contents of the service's manifest under copilot/{name}/manifest.yml.
 func (ws *Workspace) ReadServiceManifest(name string) ([]byte, error) {
-	return ws.readWorkloadManifest(name)
+	mf, err := ws.readWorkloadManifest(name)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest file %s: %w", name, err)
+	}
+	return mf, nil
 }
 
 // ReadJobManifest returns the contents of the job's manifest under copilot/{name}/manifest.yml.
 func (ws *Workspace) ReadJobManifest(name string) ([]byte, error) {
-	return ws.readWorkloadManifest(name)
+	mf, err := ws.readWorkloadManifest(name)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest file %s: %w", name, err)
+	}
+	return mf, nil
 }
 
 func (ws *Workspace) readWorkloadManifest(name string) ([]byte, error) {
@@ -210,18 +218,26 @@ func (ws *Workspace) ReadPipelineManifest() ([]byte, error) {
 
 // WriteServiceManifest writes the service's manifest under the copilot/{name}/ directory.
 func (ws *Workspace) WriteServiceManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
-	return ws.writeWorkloadManifest(marshaler, name)
+	mfPath, err := ws.writeWorkloadManifest(marshaler, name)
+	if err != nil {
+		return "", fmt.Errorf("marshal service %s manifest to binary: %w", name, err)
+	}
+	return mfPath, nil
 }
 
 // WriteJobManifest writes the job's manifest under the copilot/{name}/ directory.
 func (ws *Workspace) WriteJobManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
-	return ws.writeWorkloadManifest(marshaler, name)
+	mfPath, err := ws.writeWorkloadManifest(marshaler, name)
+	if err != nil {
+		return "", fmt.Errorf("marshal job %s manifest to binary: %w", name, err)
+	}
+	return mfPath, nil
 }
 
 func (ws *Workspace) writeWorkloadManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	data, err := marshaler.MarshalBinary()
 	if err != nil {
-		return "", fmt.Errorf("marshal workload %s manifest to binary: %w", name, err)
+		return "", err
 	}
 	return ws.write(data, name, manifestFileName)
 }
