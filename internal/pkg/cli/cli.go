@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -88,4 +89,25 @@ func relPath(fullPath string) (string, error) {
 		return "", fmt.Errorf("get relative path of file: %w", err)
 	}
 	return path, nil
+}
+
+// relativeDockerfilePath returns the path from the workspace root to the Dockerfile.
+func relativeDockerfilePath(ws copilotDirGetter, dockerfilePath string) (string, error) {
+	copilotDirPath, err := ws.CopilotDirPath()
+	if err != nil {
+		return "", fmt.Errorf("get copilot directory: %w", err)
+	}
+	wsRoot := filepath.Dir(copilotDirPath)
+	absDfPath, err := filepath.Abs(dockerfilePath)
+	if err != nil {
+		return "", fmt.Errorf("get absolute path: %v", err)
+	}
+	if !strings.Contains(absDfPath, wsRoot) {
+		return "", fmt.Errorf("Dockerfile %s not within workspace %s", absDfPath, wsRoot)
+	}
+	relDfPath, err := filepath.Rel(wsRoot, absDfPath)
+	if err != nil {
+		return "", fmt.Errorf("find relative path from workspace root to Dockerfile: %v", err)
+	}
+	return relDfPath, nil
 }

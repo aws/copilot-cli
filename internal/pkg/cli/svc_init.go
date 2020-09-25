@@ -6,7 +6,6 @@ package cli
 import (
 	"encoding"
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -241,7 +240,7 @@ func (o *initSvcOpts) newManifest() (encoding.BinaryMarshaler, error) {
 }
 
 func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalancedWebService, error) {
-	dfPath, err := relativePath(o.ws, o.dockerfilePath)
+	dfPath, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +268,7 @@ func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalance
 }
 
 func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, error) {
-	dfPath, err := relativePath(o.ws, o.dockerfilePath)
+	dfPath, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -386,26 +385,6 @@ func (o *initSvcOpts) askSvcPort() error {
 	o.port = uint16(portUint)
 
 	return nil
-}
-
-func relativePath(ws copilotDirGetter, dockerfilePath string) (string, error) {
-	copilotDirPath, err := ws.CopilotDirPath()
-	if err != nil {
-		return "", fmt.Errorf("get copilot directory: %w", err)
-	}
-	wsRoot := filepath.Dir(copilotDirPath)
-	absDfPath, err := filepath.Abs(dockerfilePath)
-	if err != nil {
-		return "", fmt.Errorf("get absolute path: %v", err)
-	}
-	if !strings.Contains(absDfPath, wsRoot) {
-		return "", fmt.Errorf("Dockerfile %s not within workspace %s", absDfPath, wsRoot)
-	}
-	relDfPath, err := filepath.Rel(wsRoot, absDfPath)
-	if err != nil {
-		return "", fmt.Errorf("find relative path from workspace root to Dockerfile: %v", err)
-	}
-	return relDfPath, nil
 }
 
 func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error) {
