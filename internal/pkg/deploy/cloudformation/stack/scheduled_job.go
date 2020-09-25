@@ -4,12 +4,17 @@
 package stack
 
 import (
+	"errors"
 	"fmt"
+	"strings"
+	"time"
+	"unicode"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/robfig/cron/v3"
 )
 
 type scheduledJobParser interface {
@@ -24,6 +29,37 @@ type ScheduledJob struct {
 
 	parser scheduledJobParser
 }
+
+var (
+	fmtRateScheduleExpression = "rate(%s %s)" // rate({duration} {units})
+	fmtCronScheduleExpression = "cron(%s)"
+)
+
+const (
+	// Cron expressions in AWS Cloudwatch are of the form "M H DoM Mo DoW Y"
+	// We use these predefined schedules when a customer specifies "@daily" or "@annually"
+	// to fulfill the predefined schedules spec defined at
+	// https://godoc.org/github.com/robfig/cron#hdr-Predefined_schedules
+	// AWS requires that cron expressions use a ? wildcard for either DoM or DoW
+	// so we represent that here.
+	//            M H mD Mo wD Y
+	cronHourly  = "0 * * * ? *" // at minute 0
+	cronDaily   = "0 0 * * ? *" // at midnight
+	cronWeekly  = "0 0 ? * 1 *" // at midnight on sunday
+	cronMonthly = "0 0 1 * ? *" // at midnight on the first of the month
+	cronYearly  = "0 0 1 1 ? *" // at midnight on January 1
+)
+
+const (
+	hourly   = "@hourly"
+	daily    = "@daily"
+	weekly   = "@weekly"
+	monthly  = "@monthly"
+	yearly   = "@yearly"
+	annually = "@annually"
+
+	every = "@every "
+)
 
 // NewScheduledJob creates a new ScheduledJob stack from a manifest file.
 func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConfig) (*ScheduledJob, error) {
@@ -65,17 +101,179 @@ func (j *ScheduledJob) Template() (string, error) {
 		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
 	}
 
+	schedule, err := j.awsSchedule()
+	if err != nil {
+		return "", fmt.Errorf("convert schedule for job %s: %w", j.name, err)
+	}
+
+	stateMachine, err := j.stateMachine()
+	if err != nil {
+		return "", fmt.Errorf("convert retry/timeout config for job %s: %w", j.name, err)
+	}
+
 	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
 		Variables:          j.manifest.Variables,
 		Secrets:            j.manifest.Secrets,
 		NestedStack:        outputs,
 		Sidecars:           sidecars,
-		ScheduleExpression: "",  // TODO: write the manifest.AWSSchedule() method
-		StateMachine:       nil, // TODO: write the manifest.StateMachine() method
+		ScheduleExpression: schedule,
+		StateMachine:       stateMachine,
 		LogConfig:          j.manifest.LogConfigOpts(),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)
 	}
 	return content.String(), nil
+}
+
+// awsSchedule converts the Schedule string to the format required by Cloudwatch Events
+// https://docs.aws.amazon.com/lambda/latest/dg/services-cloudwatchevents-expressions.html
+// Cron expressions must have an sixth "year" field, and must contain at least one ? (either-or)
+// in either day-of-month or day-of-week.
+// Day-of-week expressions are zero-indexed in Golang but one-indexed in AWS.
+// @every cron definition strings are converted to rates.
+// All others become cron expressions.
+func (j *ScheduledJob) awsSchedule() (string, error) {
+	// Try parsing the string as a cron expression to validate it.
+	if _, err := cron.ParseStandard(j.manifest.Schedule); err != nil {
+		return "", fmt.Errorf("schedule %s for job %s is not a valid cron expression or definition string", j.manifest.Schedule, j.name)
+	}
+	var scheduleExpression string
+	var err error
+	switch {
+	case strings.HasPrefix(j.manifest.Schedule, every):
+		scheduleExpression, err = toRate(j.manifest.Schedule[len(every):])
+		if err != nil {
+			return "", fmt.Errorf("parse fixed interval: %w", err)
+		}
+	case strings.HasPrefix(j.manifest.Schedule, "@"):
+		scheduleExpression, err = toFixedSchedule(j.manifest.Schedule)
+		if err != nil {
+			return "", fmt.Errorf("parse preset schedule: %w", err)
+		}
+	default:
+		scheduleExpression, err = toAWSCron(j.manifest.Schedule)
+		if err != nil {
+			return "", fmt.Errorf("parse cron schedule: %w", err)
+		}
+	}
+	return scheduleExpression, nil
+}
+
+func toRate(durationString string) (string, error) {
+	d, err := time.ParseDuration(durationString)
+	if err != nil {
+		return "", fmt.Errorf("invalid duration %s", durationString)
+	}
+	var minutes int = int(d.Minutes())
+	if minutes < 1 {
+		return "", errors.New("duration must be >= 1 minute")
+	}
+	if minutes == 1 {
+		return fmt.Sprintf(fmtRateScheduleExpression, minutes, "minute"), nil
+	}
+	return fmt.Sprintf(fmtRateScheduleExpression, minutes, "minutes"), nil
+}
+
+func toFixedSchedule(schedule string) (string, error) {
+	switch {
+	case strings.HasPrefix(schedule, hourly):
+		return fmt.Sprintf(fmtCronScheduleExpression, cronHourly), nil
+	case strings.HasPrefix(schedule, daily):
+		return fmt.Sprintf(fmtCronScheduleExpression, cronDaily), nil
+	case strings.HasPrefix(schedule, weekly):
+		return fmt.Sprintf(fmtCronScheduleExpression, cronWeekly), nil
+	case strings.HasPrefix(schedule, monthly):
+		return fmt.Sprintf(fmtCronScheduleExpression, cronMonthly), nil
+	case strings.HasPrefix(schedule, annually):
+		fallthrough
+	case strings.HasPrefix(schedule, yearly):
+		return fmt.Sprintf(fmtCronScheduleExpression, cronYearly), nil
+	default:
+		return "", fmt.Errorf("unrecognized cron definition string")
+	}
+}
+
+// toAWSCron converts "standard" 5-element crons into the AWS preferred syntax
+// cron(* * * * ? *)
+// MIN HOU DOM MON DOW YEA
+// EITHER DOM or DOW must be specified as ? (either-or operator)
+// BOTH DOM and DOW cannot be specified
+// DOW numbers run 1-7, not 0-6
+func toAWSCron(schedule string) (string, error) {
+	const (
+		MIN = iota
+		HOU
+		DOM
+		MON
+		DOW
+	)
+
+	// Split the cron into its components. We can do this because it'll already have been validated.
+	// Use https://golang.org/pkg/strings/#Fields since it handles consecutive whitespace.
+	sched := strings.Fields(schedule)
+
+	// Check whether the Day of Week and Day of Month fields have a ?
+	// Possible conversion:
+	// * * * * * ==> * * * * ?
+	// 0 9 * * 1 ==> 0 9 ? * 1
+	// 0 9 1 * * ==> 0 9 1 * ?
+	switch {
+	// If both are asterisks, convert DOW to a ?
+	case sched[DOM] == "*" && sched[DOW] == "*":
+		sched[DOW] = "?"
+	// If DOM is * and DOW is specified, convert DOM to ?
+	case sched[DOM] == "*" && !strings.ContainsAny(sched[DOW], "?*"):
+		sched[DOM] = "?"
+	// If DOW is * and DOM is specified, convert DOW to ?
+	case sched[DOW] == "*" && !strings.ContainsAny(sched[DOM], "?*"):
+		sched[DOW] = "?"
+	// Error if both DOM and DOW are specified
+	default:
+		return "", errors.New("cannot specify both DOW and DOM in cron expression")
+	}
+
+	// Increment the DOW by one if specified as a number
+	// https://play.golang.org/p/_1uxt0zJneb
+	var newDOW []rune
+	for _, c := range sched[DOW] {
+		if unicode.IsDigit(c) {
+			newDOW = append(newDOW, c+1)
+		} else {
+			newDOW = append(newDOW, c)
+		}
+	}
+	// We don't need to use a string builder here because this will only ever have a max of
+	// about 50 characters (SUN-MON,MON-TUE,TUE-WED,... is the longest possible string here)
+	sched[DOW] = string(newDOW)
+
+	// Add "every year" to 5-element crons to comply with AWS
+	sched = append(sched, "*")
+
+	return fmt.Sprintf(fmtCronScheduleExpression, strings.Join(sched, " ")), nil
+}
+
+// StateMachine converts the Timeout and Retries fields to an instance of template.StateMachineOpts
+// It also performs basic validations to provide a fast feedback loop to the customer.
+func (j *ScheduledJob) stateMachine() (*template.StateMachineOpts, error) {
+
+	parsedTimeout, err := time.ParseDuration(j.manifest.Timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	if parsedTimeout < 1*time.Second {
+		return nil, errors.New("timeout must be greater than 1 second")
+	}
+
+	timeoutSeconds := int(parsedTimeout.Seconds())
+
+	retries := j.manifest.Retries
+	if retries < 0 {
+		return nil, errors.New("number of retries cannot be negative")
+	}
+	return &template.StateMachineOpts{
+		Timeout: aws.Int(timeoutSeconds),
+		Retries: aws.Int(retries),
+	}, nil
 }
