@@ -861,13 +861,13 @@ func TestTaskStatus_HumanString(t *testing.T) {
 			stoppedAt:   stopTime,
 			imageDigest: mockImageDigest,
 
-			wantTaskStatus: "  aslhfnqo\t18f7eb6c\tRUNNING\tHEALTHY\t14 years ago\t14 years ago\n",
+			wantTaskStatus: "  aslhfnqo\t18f7eb6c\tRUNNING\t14 years ago\t14 years ago\tHEALTHY\n",
 		},
 		"missing params": {
 			health:     "HEALTHY",
 			lastStatus: "RUNNING",
 
-			wantTaskStatus: "  -\t-\tRUNNING\tHEALTHY\t-\t-\n",
+			wantTaskStatus: "  -\t-\tRUNNING\t-\t-\tHEALTHY\n",
 		},
 	}
 
