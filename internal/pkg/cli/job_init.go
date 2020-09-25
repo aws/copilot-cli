@@ -209,7 +209,7 @@ func (o *initJobOpts) createManifest() (string, error) {
 }
 
 func (o *initJobOpts) newJobManifest() (*manifest.ScheduledJob, error) {
-	dfPath, err := getRelativePath(o.ws, o.dockerfilePath)
+	dfPath, err := relativePath(o.ws, o.dockerfilePath)
 	if err != nil {
 		return nil, err
 	}
