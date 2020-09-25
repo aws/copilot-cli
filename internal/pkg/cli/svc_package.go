@@ -260,7 +260,7 @@ type svcCfnTemplates struct {
 
 // getSvcTemplates returns the CloudFormation stack's template and its parameters for the service.
 func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTemplates, error) {
-	raw, err := o.ws.ReadWorkloadManifest(o.name)
+	raw, err := o.ws.ReadServiceManifest(o.name)
 	if err != nil {
 		return nil, err
 	}
