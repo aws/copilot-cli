@@ -20,6 +20,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -241,6 +242,10 @@ func (o *initEnvOpts) Execute() error {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
 	}
 	env.Prod = o.isProduction
+	env.CustomConfig = config.CustomConfig{
+		ImportVPC: o.importVPCConfig(),
+		VPCConfig: o.adjustVPCConfig(),
+	}
 
 	// 3. Add the stack set instance to the app stackset.
 	if err := o.addToStackset(app, env); err != nil {
@@ -442,22 +447,22 @@ func (o *initEnvOpts) askAdjustResources() error {
 	return nil
 }
 
-func (o *initEnvOpts) importVPCConfig() *deploy.ImportVPCConfig {
+func (o *initEnvOpts) importVPCConfig() *template.ImportVPCOpts {
 	if o.defaultConfig || !o.importVPC.isSet() {
 		return nil
 	}
-	return &deploy.ImportVPCConfig{
+	return &template.ImportVPCOpts{
 		ID:               o.importVPC.ID,
 		PrivateSubnetIDs: o.importVPC.PrivateSubnetIDs,
 		PublicSubnetIDs:  o.importVPC.PublicSubnetIDs,
 	}
 }
 
-func (o *initEnvOpts) adjustVPCConfig() *deploy.AdjustVPCConfig {
+func (o *initEnvOpts) adjustVPCConfig() *template.AdjustVPCOpts {
 	if o.defaultConfig || !o.adjustVPC.isSet() {
 		return nil
 	}
-	return &deploy.AdjustVPCConfig{
+	return &template.AdjustVPCOpts{
 		CIDR:               o.adjustVPC.CIDR.String(),
 		PrivateSubnetCIDRs: o.adjustVPC.PrivateSubnetCIDRs,
 		PublicSubnetCIDRs:  o.adjustVPC.PublicSubnetCIDRs,

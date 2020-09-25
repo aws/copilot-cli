@@ -102,7 +102,7 @@ func TestEnvList_Execute(t *testing.T) {
 						{Name: "test2"},
 					}, nil)
 			},
-			expectedContent: "{\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"\",\"accountID\":\"\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"app\":\"\",\"name\":\"test2\",\"region\":\"\",\"accountID\":\"\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}]}\n",
+			expectedContent: "{\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"\",\"accountID\":\"\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\",\"customConfig\":{\"importVPC\":null,\"vpcConfig\":null}},{\"app\":\"\",\"name\":\"test2\",\"region\":\"\",\"accountID\":\"\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\",\"customConfig\":{\"importVPC\":null,\"vpcConfig\":null}}]}\n",
 		},
 		"with envs": {
 			listOpts: listEnvOpts{

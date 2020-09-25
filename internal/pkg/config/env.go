@@ -11,18 +11,26 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 // Environment represents a deployment environment in an application.
 type Environment struct {
-	App              string `json:"app"`              // Name of the app this environment belongs to.
-	Name             string `json:"name"`             // Name of the environment, must be unique within a App.
-	Region           string `json:"region"`           // Name of the region this environment is stored in.
-	AccountID        string `json:"accountID"`        // Account ID of the account this environment is stored in.
-	Prod             bool   `json:"prod"`             // Whether or not this environment is a production environment.
-	RegistryURL      string `json:"registryURL"`      // URL For ECR Registry for this environment.
-	ExecutionRoleARN string `json:"executionRoleARN"` // ARN used by CloudFormation to make modification to the environment stack.
-	ManagerRoleARN   string `json:"managerRoleARN"`   // ARN for the manager role assumed to manipulate the environment and its services.
+	App              string       `json:"app"`              // Name of the app this environment belongs to.
+	Name             string       `json:"name"`             // Name of the environment, must be unique within a App.
+	Region           string       `json:"region"`           // Name of the region this environment is stored in.
+	AccountID        string       `json:"accountID"`        // Account ID of the account this environment is stored in.
+	Prod             bool         `json:"prod"`             // Whether or not this environment is a production environment.
+	RegistryURL      string       `json:"registryURL"`      // URL For ECR Registry for this environment.
+	ExecutionRoleARN string       `json:"executionRoleARN"` // ARN used by CloudFormation to make modification to the environment stack.
+	ManagerRoleARN   string       `json:"managerRoleARN"`   // ARN for the manager role assumed to manipulate the environment and its services.
+	CustomConfig     CustomConfig `json:"customConfig"`     // Custom environment configuration by users.
+}
+
+// CustomConfig represents the custom environment config.
+type CustomConfig struct {
+	ImportVPC *template.ImportVPCOpts `json:"importVPC"`
+	VPCConfig *template.AdjustVPCOpts `json:"vpcConfig"`
 }
 
 // CreateEnvironment instantiates a new environment within an existing App. Skip if

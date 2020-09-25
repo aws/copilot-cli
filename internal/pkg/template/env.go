@@ -39,16 +39,16 @@ type EnvOpts struct {
 
 // ImportVPCOpts holds the fields to import VPC resources.
 type ImportVPCOpts struct {
-	ID               string // ID for the VPC.
-	PublicSubnetIDs  []string
-	PrivateSubnetIDs []string
+	ID               string   `json:"id"` // ID for the VPC.
+	PublicSubnetIDs  []string `json:"publicSubnetIDs"`
+	PrivateSubnetIDs []string `json:"privateSubnetIDs"`
 }
 
 // AdjustVPCOpts holds the fields to adjust default VPC resources.
 type AdjustVPCOpts struct {
-	CIDR               string // CIDR range for the VPC.
-	PublicSubnetCIDRs  []string
-	PrivateSubnetCIDRs []string
+	CIDR               string   `json:"cidr"` // CIDR range for the VPC.
+	PublicSubnetCIDRs  []string `json:"publicSubnetCIDRs"`
+	PrivateSubnetCIDRs []string `json:"privateSubnetCIDRs"`
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.
