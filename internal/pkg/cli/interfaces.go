@@ -219,7 +219,7 @@ type svcManifestWriter interface {
 
 type svcDirManifestWriter interface {
 	svcManifestWriter
-	CopilotDirPath() (string, error)
+	copilotDirGetter
 }
 
 type jobManifestWriter interface {
@@ -228,6 +228,10 @@ type jobManifestWriter interface {
 
 type jobDirManifestWriter interface {
 	jobManifestWriter
+	copilotDirGetter
+}
+
+type copilotDirGetter interface {
 	CopilotDirPath() (string, error)
 }
 
@@ -251,7 +255,7 @@ type wsSvcReader interface {
 
 type wsSvcDirReader interface {
 	wsSvcReader
-	CopilotDirPath() (string, error)
+	copilotDirGetter
 }
 
 type wsJobDirReader interface {

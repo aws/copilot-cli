@@ -241,7 +241,7 @@ func (o *initSvcOpts) newManifest() (encoding.BinaryMarshaler, error) {
 }
 
 func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalancedWebService, error) {
-	dfPath, err := o.getRelativePath()
+	dfPath, err := getRelativePath(o.ws, o.dockerfilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +269,7 @@ func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalance
 }
 
 func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, error) {
-	dfPath, err := o.getRelativePath()
+	dfPath, err := getRelativePath(o.ws, o.dockerfilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -388,13 +388,13 @@ func (o *initSvcOpts) askSvcPort() error {
 	return nil
 }
 
-func (o *initSvcOpts) getRelativePath() (string, error) {
-	copilotDirPath, err := o.ws.CopilotDirPath()
+func getRelativePath(ws copilotDirGetter, dockerfilePath string) (string, error) {
+	copilotDirPath, err := ws.CopilotDirPath()
 	if err != nil {
 		return "", fmt.Errorf("get copilot directory: %w", err)
 	}
 	wsRoot := filepath.Dir(copilotDirPath)
-	absDfPath, err := filepath.Abs(o.dockerfilePath)
+	absDfPath, err := filepath.Abs(dockerfilePath)
 	if err != nil {
 		return "", fmt.Errorf("get absolute path: %v", err)
 	}

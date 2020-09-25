@@ -6,8 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
-	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
@@ -211,7 +209,7 @@ func (o *initJobOpts) createManifest() (string, error) {
 }
 
 func (o *initJobOpts) newJobManifest() (*manifest.ScheduledJob, error) {
-	dfPath, err := o.getRelativePath()
+	dfPath, err := getRelativePath(o.ws, o.dockerfilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -224,26 +222,6 @@ func (o *initJobOpts) newJobManifest() (*manifest.ScheduledJob, error) {
 		Timeout:  o.timeout,
 		Retries:  o.retries,
 	}), nil
-}
-
-func (o *initJobOpts) getRelativePath() (string, error) {
-	copilotDirPath, err := o.ws.CopilotDirPath()
-	if err != nil {
-		return "", fmt.Errorf("get copilot directory: %w", err)
-	}
-	wsRoot := filepath.Dir(copilotDirPath)
-	absDfPath, err := filepath.Abs(o.dockerfilePath)
-	if err != nil {
-		return "", fmt.Errorf("get absolute path: %v", err)
-	}
-	if !strings.Contains(absDfPath, wsRoot) {
-		return "", fmt.Errorf("Dockerfile %s not within workspace %s", absDfPath, wsRoot)
-	}
-	relDfPath, err := filepath.Rel(wsRoot, absDfPath)
-	if err != nil {
-		return "", fmt.Errorf("find relative path from workspace root to Dockerfile: %v", err)
-	}
-	return relDfPath, nil
 }
 
 func (o *initJobOpts) askJobType() error {
