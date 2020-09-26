@@ -1973,19 +1973,19 @@ func (m *MocksvcManifestReader) EXPECT() *MocksvcManifestReaderMockRecorder {
 	return m.recorder
 }
 
-// ReadWorkloadManifest mocks base method
-func (m *MocksvcManifestReader) ReadWorkloadManifest(svcName string) ([]byte, error) {
+// ReadServiceManifest mocks base method
+func (m *MocksvcManifestReader) ReadServiceManifest(svcName string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadWorkloadManifest", svcName)
+	ret := m.ctrl.Call(m, "ReadServiceManifest", svcName)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ReadWorkloadManifest indicates an expected call of ReadWorkloadManifest
-func (mr *MocksvcManifestReaderMockRecorder) ReadWorkloadManifest(svcName interface{}) *gomock.Call {
+// ReadServiceManifest indicates an expected call of ReadServiceManifest
+func (mr *MocksvcManifestReaderMockRecorder) ReadServiceManifest(svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MocksvcManifestReader)(nil).ReadWorkloadManifest), svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MocksvcManifestReader)(nil).ReadServiceManifest), svcName)
 }
 
 // MocksvcManifestWriter is a mock of svcManifestWriter interface
@@ -2026,19 +2026,19 @@ func (mr *MocksvcManifestWriterMockRecorder) ListDockerfiles() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDockerfiles", reflect.TypeOf((*MocksvcManifestWriter)(nil).ListDockerfiles))
 }
 
-// WriteWorkloadManifest mocks base method
-func (m *MocksvcManifestWriter) WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error) {
+// WriteServiceManifest mocks base method
+func (m *MocksvcManifestWriter) WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteWorkloadManifest", marshaler, svcName)
+	ret := m.ctrl.Call(m, "WriteServiceManifest", marshaler, svcName)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// WriteWorkloadManifest indicates an expected call of WriteWorkloadManifest
-func (mr *MocksvcManifestWriterMockRecorder) WriteWorkloadManifest(marshaler, svcName interface{}) *gomock.Call {
+// WriteServiceManifest indicates an expected call of WriteServiceManifest
+func (mr *MocksvcManifestWriterMockRecorder) WriteServiceManifest(marshaler, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteWorkloadManifest", reflect.TypeOf((*MocksvcManifestWriter)(nil).WriteWorkloadManifest), marshaler, svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteServiceManifest", reflect.TypeOf((*MocksvcManifestWriter)(nil).WriteServiceManifest), marshaler, svcName)
 }
 
 // MocksvcDirManifestWriter is a mock of svcDirManifestWriter interface
@@ -2079,19 +2079,19 @@ func (mr *MocksvcDirManifestWriterMockRecorder) ListDockerfiles() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDockerfiles", reflect.TypeOf((*MocksvcDirManifestWriter)(nil).ListDockerfiles))
 }
 
-// WriteWorkloadManifest mocks base method
-func (m *MocksvcDirManifestWriter) WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error) {
+// WriteServiceManifest mocks base method
+func (m *MocksvcDirManifestWriter) WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteWorkloadManifest", marshaler, svcName)
+	ret := m.ctrl.Call(m, "WriteServiceManifest", marshaler, svcName)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// WriteWorkloadManifest indicates an expected call of WriteWorkloadManifest
-func (mr *MocksvcDirManifestWriterMockRecorder) WriteWorkloadManifest(marshaler, svcName interface{}) *gomock.Call {
+// WriteServiceManifest indicates an expected call of WriteServiceManifest
+func (mr *MocksvcDirManifestWriterMockRecorder) WriteServiceManifest(marshaler, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteWorkloadManifest", reflect.TypeOf((*MocksvcDirManifestWriter)(nil).WriteWorkloadManifest), marshaler, svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteServiceManifest", reflect.TypeOf((*MocksvcDirManifestWriter)(nil).WriteServiceManifest), marshaler, svcName)
 }
 
 // CopilotDirPath mocks base method
@@ -2107,6 +2107,97 @@ func (m *MocksvcDirManifestWriter) CopilotDirPath() (string, error) {
 func (mr *MocksvcDirManifestWriterMockRecorder) CopilotDirPath() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MocksvcDirManifestWriter)(nil).CopilotDirPath))
+}
+
+// MockjobManifestWriter is a mock of jobManifestWriter interface
+type MockjobManifestWriter struct {
+	ctrl     *gomock.Controller
+	recorder *MockjobManifestWriterMockRecorder
+}
+
+// MockjobManifestWriterMockRecorder is the mock recorder for MockjobManifestWriter
+type MockjobManifestWriterMockRecorder struct {
+	mock *MockjobManifestWriter
+}
+
+// NewMockjobManifestWriter creates a new mock instance
+func NewMockjobManifestWriter(ctrl *gomock.Controller) *MockjobManifestWriter {
+	mock := &MockjobManifestWriter{ctrl: ctrl}
+	mock.recorder = &MockjobManifestWriterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockjobManifestWriter) EXPECT() *MockjobManifestWriterMockRecorder {
+	return m.recorder
+}
+
+// WriteJobManifest mocks base method
+func (m *MockjobManifestWriter) WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteJobManifest", marshaler, jobName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WriteJobManifest indicates an expected call of WriteJobManifest
+func (mr *MockjobManifestWriterMockRecorder) WriteJobManifest(marshaler, jobName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteJobManifest", reflect.TypeOf((*MockjobManifestWriter)(nil).WriteJobManifest), marshaler, jobName)
+}
+
+// MockjobDirManifestWriter is a mock of jobDirManifestWriter interface
+type MockjobDirManifestWriter struct {
+	ctrl     *gomock.Controller
+	recorder *MockjobDirManifestWriterMockRecorder
+}
+
+// MockjobDirManifestWriterMockRecorder is the mock recorder for MockjobDirManifestWriter
+type MockjobDirManifestWriterMockRecorder struct {
+	mock *MockjobDirManifestWriter
+}
+
+// NewMockjobDirManifestWriter creates a new mock instance
+func NewMockjobDirManifestWriter(ctrl *gomock.Controller) *MockjobDirManifestWriter {
+	mock := &MockjobDirManifestWriter{ctrl: ctrl}
+	mock.recorder = &MockjobDirManifestWriterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockjobDirManifestWriter) EXPECT() *MockjobDirManifestWriterMockRecorder {
+	return m.recorder
+}
+
+// WriteJobManifest mocks base method
+func (m *MockjobDirManifestWriter) WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteJobManifest", marshaler, jobName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WriteJobManifest indicates an expected call of WriteJobManifest
+func (mr *MockjobDirManifestWriterMockRecorder) WriteJobManifest(marshaler, jobName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteJobManifest", reflect.TypeOf((*MockjobDirManifestWriter)(nil).WriteJobManifest), marshaler, jobName)
+}
+
+// CopilotDirPath mocks base method
+func (m *MockjobDirManifestWriter) CopilotDirPath() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CopilotDirPath")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CopilotDirPath indicates an expected call of CopilotDirPath
+func (mr *MockjobDirManifestWriterMockRecorder) CopilotDirPath() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockjobDirManifestWriter)(nil).CopilotDirPath))
 }
 
 // MockwsPipelineManifestReader is a mock of wsPipelineManifestReader interface
@@ -2276,19 +2367,19 @@ func (mr *MockwsSvcReaderMockRecorder) ServiceNames() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsSvcReader)(nil).ServiceNames))
 }
 
-// ReadWorkloadManifest mocks base method
-func (m *MockwsSvcReader) ReadWorkloadManifest(svcName string) ([]byte, error) {
+// ReadServiceManifest mocks base method
+func (m *MockwsSvcReader) ReadServiceManifest(svcName string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadWorkloadManifest", svcName)
+	ret := m.ctrl.Call(m, "ReadServiceManifest", svcName)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ReadWorkloadManifest indicates an expected call of ReadWorkloadManifest
-func (mr *MockwsSvcReaderMockRecorder) ReadWorkloadManifest(svcName interface{}) *gomock.Call {
+// ReadServiceManifest indicates an expected call of ReadServiceManifest
+func (mr *MockwsSvcReaderMockRecorder) ReadServiceManifest(svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockwsSvcReader)(nil).ReadWorkloadManifest), svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsSvcReader)(nil).ReadServiceManifest), svcName)
 }
 
 // MockwsSvcDirReader is a mock of wsSvcDirReader interface
@@ -2329,19 +2420,19 @@ func (mr *MockwsSvcDirReaderMockRecorder) ServiceNames() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsSvcDirReader)(nil).ServiceNames))
 }
 
-// ReadWorkloadManifest mocks base method
-func (m *MockwsSvcDirReader) ReadWorkloadManifest(svcName string) ([]byte, error) {
+// ReadServiceManifest mocks base method
+func (m *MockwsSvcDirReader) ReadServiceManifest(svcName string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadWorkloadManifest", svcName)
+	ret := m.ctrl.Call(m, "ReadServiceManifest", svcName)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ReadWorkloadManifest indicates an expected call of ReadWorkloadManifest
-func (mr *MockwsSvcDirReaderMockRecorder) ReadWorkloadManifest(svcName interface{}) *gomock.Call {
+// ReadServiceManifest indicates an expected call of ReadServiceManifest
+func (mr *MockwsSvcDirReaderMockRecorder) ReadServiceManifest(svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockwsSvcDirReader)(nil).ReadWorkloadManifest), svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsSvcDirReader)(nil).ReadServiceManifest), svcName)
 }
 
 // CopilotDirPath mocks base method
@@ -2555,19 +2646,19 @@ func (mr *MockwsAddonManagerMockRecorder) ServiceNames() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsAddonManager)(nil).ServiceNames))
 }
 
-// ReadWorkloadManifest mocks base method
-func (m *MockwsAddonManager) ReadWorkloadManifest(svcName string) ([]byte, error) {
+// ReadServiceManifest mocks base method
+func (m *MockwsAddonManager) ReadServiceManifest(svcName string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadWorkloadManifest", svcName)
+	ret := m.ctrl.Call(m, "ReadServiceManifest", svcName)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ReadWorkloadManifest indicates an expected call of ReadWorkloadManifest
-func (mr *MockwsAddonManagerMockRecorder) ReadWorkloadManifest(svcName interface{}) *gomock.Call {
+// ReadServiceManifest indicates an expected call of ReadServiceManifest
+func (mr *MockwsAddonManagerMockRecorder) ReadServiceManifest(svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockwsAddonManager)(nil).ReadWorkloadManifest), svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsAddonManager)(nil).ReadServiceManifest), svcName)
 }
 
 // MockartifactUploader is a mock of artifactUploader interface
@@ -3012,6 +3103,20 @@ func (mr *MockappDeployerMockRecorder) AddServiceToApp(app, svcName interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddServiceToApp", reflect.TypeOf((*MockappDeployer)(nil).AddServiceToApp), app, svcName)
 }
 
+// AddJobToApp mocks base method
+func (m *MockappDeployer) AddJobToApp(app *config.Application, jobName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddJobToApp", app, jobName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddJobToApp indicates an expected call of AddJobToApp
+func (mr *MockappDeployerMockRecorder) AddJobToApp(app, jobName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddJobToApp", reflect.TypeOf((*MockappDeployer)(nil).AddJobToApp), app, jobName)
+}
+
 // AddEnvToApp mocks base method
 func (m *MockappDeployer) AddEnvToApp(app *config.Application, env *config.Environment) error {
 	m.ctrl.T.Helper()
@@ -3332,6 +3437,20 @@ func (m *Mockdeployer) AddServiceToApp(app *config.Application, svcName string) 
 func (mr *MockdeployerMockRecorder) AddServiceToApp(app, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddServiceToApp", reflect.TypeOf((*Mockdeployer)(nil).AddServiceToApp), app, svcName)
+}
+
+// AddJobToApp mocks base method
+func (m *Mockdeployer) AddJobToApp(app *config.Application, jobName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddJobToApp", app, jobName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddJobToApp indicates an expected call of AddJobToApp
+func (mr *MockdeployerMockRecorder) AddJobToApp(app, jobName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddJobToApp", reflect.TypeOf((*Mockdeployer)(nil).AddJobToApp), app, jobName)
 }
 
 // AddEnvToApp mocks base method

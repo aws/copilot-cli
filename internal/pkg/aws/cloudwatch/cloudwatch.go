@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
+	"github.com/dustin/go-humanize"
 )
 
 const (
@@ -22,6 +23,9 @@ const (
 	compositeAlarmType     = "Composite"
 	metricAlarmType        = "Metric"
 )
+
+// humanizeDuration is overriden in tests so that its output is constant as time passes.
+var humanizeDuration = humanize.RelTime
 
 type api interface {
 	DescribeAlarms(input *cloudwatch.DescribeAlarmsInput) (*cloudwatch.DescribeAlarmsOutput, error)
@@ -41,7 +45,7 @@ type CloudWatch struct {
 type AlarmStatus struct {
 	Arn          string    `json:"arn"`
 	Name         string    `json:"name"`
-	Reason       string    `json:"reason"`
+	Condition    string    `json:"condition"`
 	Status       string    `json:"status"`
 	Type         string    `json:"type"`
 	UpdatedTimes time.Time `json:"updatedTimes"`
@@ -100,10 +104,13 @@ func (cw *CloudWatch) AlarmStatus(alarms []string) ([]AlarmStatus, error) {
 func (cw *CloudWatch) compositeAlarmsStatus(alarms []*cloudwatch.CompositeAlarm) []AlarmStatus {
 	var alarmStatusList []AlarmStatus
 	for _, alarm := range alarms {
+		if alarm == nil {
+			continue
+		}
 		alarmStatusList = append(alarmStatusList, AlarmStatus{
 			Arn:          aws.StringValue(alarm.AlarmArn),
 			Name:         aws.StringValue(alarm.AlarmName),
-			Reason:       aws.StringValue(alarm.StateReason),
+			Condition:    aws.StringValue(alarm.AlarmRule),
 			Status:       aws.StringValue(alarm.StateValue),
 			Type:         compositeAlarmType,
 			UpdatedTimes: *alarm.StateUpdatedTimestamp,
@@ -115,13 +122,17 @@ func (cw *CloudWatch) compositeAlarmsStatus(alarms []*cloudwatch.CompositeAlarm)
 func (cw *CloudWatch) metricAlarmsStatus(alarms []*cloudwatch.MetricAlarm) []AlarmStatus {
 	var alarmStatusList []AlarmStatus
 	for _, alarm := range alarms {
+		if alarm == nil {
+			continue
+		}
+		metricAlarm := metricAlarm(*alarm)
 		alarmStatusList = append(alarmStatusList, AlarmStatus{
-			Arn:          aws.StringValue(alarm.AlarmArn),
-			Name:         aws.StringValue(alarm.AlarmName),
-			Reason:       aws.StringValue(alarm.StateReason),
-			Status:       aws.StringValue(alarm.StateValue),
+			Arn:          aws.StringValue(metricAlarm.AlarmArn),
+			Name:         aws.StringValue(metricAlarm.AlarmName),
+			Condition:    metricAlarm.condition(),
+			Status:       aws.StringValue(metricAlarm.StateValue),
 			Type:         metricAlarmType,
-			UpdatedTimes: *alarm.StateUpdatedTimestamp,
+			UpdatedTimes: *metricAlarm.StateUpdatedTimestamp,
 		})
 	}
 	return alarmStatusList

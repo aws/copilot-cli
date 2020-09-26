@@ -347,7 +347,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
-				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
@@ -385,7 +385,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
-				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", errors.New("some error"))
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", errors.New("some error"))
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
@@ -417,7 +417,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
-				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
@@ -443,7 +443,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
-				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
@@ -469,7 +469,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/backend", nil)
-				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "backend").
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
 						require.Nil(t, m.Image.HealthCheck)
@@ -514,7 +514,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/backend", nil)
-				m.EXPECT().WriteWorkloadManifest(gomock.Any(), "backend").
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
 						require.Equal(t, *m.Image.HealthCheck, manifest.ContainerHealthCheck{
