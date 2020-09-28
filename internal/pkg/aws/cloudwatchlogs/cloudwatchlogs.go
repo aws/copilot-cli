@@ -90,8 +90,7 @@ func (c *CloudWatchLogs) logStreams(logGroup string, logStreams ...string) ([]st
 // LogEvents returns an array of Cloudwatch Logs events.
 func (c *CloudWatchLogs) LogEvents(opts LogEventsOpts) (*LogEventsOutput, error) {
 	var events []*Event
-	// Set default value
-	in := defaultGetLogEventsInput(opts)
+	in := initGetLogEventsInput(opts)
 	logStreams, err := c.logStreams(opts.LogGroup, opts.LogStreams...)
 	if err != nil {
 		return nil, err
@@ -148,7 +147,7 @@ func truncateEvents(limit int, events []*Event) []*Event {
 	return events[len(events)-limit:] // Only grab the last N elements where N = limit
 }
 
-func defaultGetLogEventsInput(opts LogEventsOpts) *cloudwatchlogs.GetLogEventsInput {
+func initGetLogEventsInput(opts LogEventsOpts) *cloudwatchlogs.GetLogEventsInput {
 	return &cloudwatchlogs.GetLogEventsInput{
 		LogGroupName: aws.String(opts.LogGroup),
 		StartTime:    opts.StartTime,

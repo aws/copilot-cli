@@ -45,9 +45,6 @@ func TestSvcLogs_Validate(t *testing.T) {
 		wantedError error
 	}{
 		"with no flag set": {
-			// default value for limit and since flags
-			inputLimit: 10,
-
 			mockstore: func(m *mocks.Mockstore) {},
 
 			wantedError: nil,
@@ -256,6 +253,8 @@ func TestSvcLogs_Ask(t *testing.T) {
 func TestSvcLogs_Execute(t *testing.T) {
 	mockStartTime := int64(123456789)
 	mockEndTime := int64(987654321)
+	mockLimit := int64(10)
+	var mockNilLimit *int64
 	testCases := map[string]struct {
 		inputSvc  string
 		follow    bool
@@ -273,7 +272,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 			endTime:   mockEndTime,
 			startTime: mockStartTime,
 			follow:    true,
-			limit:     100,
+			limit:     10,
 			taskIDs:   []string{"mockTaskID"},
 
 			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
@@ -283,7 +282,29 @@ func TestSvcLogs_Execute(t *testing.T) {
 					require.Equal(t, param.EndTime, &mockEndTime)
 					require.Equal(t, param.StartTime, &mockStartTime)
 					require.Equal(t, param.Follow, true)
-					require.Equal(t, param.Limit, 100)
+					require.Equal(t, param.Limit, &mockLimit)
+				}).Return(nil)
+
+				return m
+			},
+
+			wantedError: nil,
+		},
+		"success with no limit set": {
+			inputSvc:  "mockSvc",
+			endTime:   mockEndTime,
+			startTime: mockStartTime,
+			follow:    true,
+			taskIDs:   []string{"mockTaskID"},
+
+			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
+				m := mocks.NewMocklogEventsWriter(ctrl)
+				m.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param ecslogging.WriteLogEventsOpts) {
+					require.Equal(t, param.TaskIDs, []string{"mockTaskID"})
+					require.Equal(t, param.EndTime, &mockEndTime)
+					require.Equal(t, param.StartTime, &mockStartTime)
+					require.Equal(t, param.Follow, true)
+					require.Equal(t, param.Limit, mockNilLimit)
 				}).Return(nil)
 
 				return m
