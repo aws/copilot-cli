@@ -48,12 +48,12 @@ func (e *errChangeSetNotExecutable) Error() string {
 	return fmt.Sprintf("execute change set %s for stack %s because status is %s with reason %s", e.cs.name, e.cs.stackName, e.descr.executionStatus, e.descr.statusReason)
 }
 
-// errStackUpdateInProgress occurs when we try to update a stack that's already being updated.
-type errStackUpdateInProgress struct {
+// ErrStackUpdateInProgress occurs when we try to update a stack that's already being updated.
+type ErrStackUpdateInProgress struct {
 	name string
 }
 
-func (e *errStackUpdateInProgress) Error() string {
+func (e *ErrStackUpdateInProgress) Error() string {
 	return fmt.Sprintf("stack %s is currently being updated and cannot be deployed to", e.name)
 }
 

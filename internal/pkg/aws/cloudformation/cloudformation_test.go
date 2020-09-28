@@ -53,7 +53,7 @@ func TestCloudFormation_Create(t *testing.T) {
 				}, nil)
 				return m
 			},
-			wantedErr: &errStackUpdateInProgress{
+			wantedErr: &ErrStackUpdateInProgress{
 				name: mockStack.Name,
 			},
 		},
@@ -217,7 +217,7 @@ func TestCloudFormation_Update(t *testing.T) {
 				}, nil)
 				return m
 			},
-			wantedErr: &errStackUpdateInProgress{
+			wantedErr: &ErrStackUpdateInProgress{
 				name: mockStack.Name,
 			},
 		},

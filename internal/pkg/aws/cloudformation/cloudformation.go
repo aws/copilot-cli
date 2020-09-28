@@ -54,7 +54,7 @@ func (c *CloudFormation) Create(stack *Stack) error {
 		return c.create(stack)
 	}
 	if status.inProgress() {
-		return &errStackUpdateInProgress{
+		return &ErrStackUpdateInProgress{
 			name: stack.Name,
 		}
 	}
@@ -92,7 +92,7 @@ func (c *CloudFormation) Update(stack *Stack) error {
 	}
 	status := stackStatus(aws.StringValue(descr.StackStatus))
 	if status.inProgress() {
-		return &errStackUpdateInProgress{
+		return &ErrStackUpdateInProgress{
 			name: stack.Name,
 		}
 	}
