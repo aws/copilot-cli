@@ -9,14 +9,11 @@ import (
 	"errors"
 	"fmt"
 
-	awssession "github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/spf13/cobra"
+
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
-	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 )
 
@@ -43,15 +40,8 @@ type deleteJobOpts struct {
 	deleteJobVars
 
 	// Interfaces to dependencies.
-	store   store
-	sess    sessionProvider
-	spinner progress
-	prompt  prompter
-	appCFN  jobRemoverFromApp
-	getECR  func(session *awssession.Session) imageRemover
-
-	// Internal state.
-	environments []*config.Environment
+	store  store
+	prompt prompter
 }
 
 func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
@@ -60,8 +50,6 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
 
-	provider := sessions.NewProvider()
-	defaultSession, err := provider.Default()
 	if err != nil {
 		return nil, err
 	}
@@ -69,14 +57,8 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 	return &deleteJobOpts{
 		deleteJobVars: vars,
 
-		store:   store,
-		spinner: termprogress.NewSpinner(),
-		prompt:  prompt.New(),
-		sess:    provider,
-		appCFN:  cloudformation.New(defaultSession),
-		getECR: func(session *awssession.Session) imageRemover {
-			return ecr.New(session)
-		},
+		store:  store,
+		prompt: prompt.New(),
 	}, nil
 }
 
@@ -183,4 +165,42 @@ func (o *deleteJobOpts) jobNames() ([]string, error) {
 		names = append(names, job.Name)
 	}
 	return names, nil
+}
+
+// buildJobDeleteCmd builds the command to delete job(s).
+func buildJobDeleteCmd() *cobra.Command {
+	vars := deleteJobVars{}
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Deletes a job from an application.",
+		Example: `
+  Delete the "report-generator" job from the application.
+  /code $ copilot job delete --name report-generator
+
+  Delete the "report-generator" job from just the prod environment.
+  /code $ copilot job delete --name report-generator --env prod
+
+  Delete the "report-generator" job without confirmation prompt.
+  /code $ copilot job delete --name report-generator --yes`,
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts, err := newDeleteJobOpts(vars)
+			if err != nil {
+				return err
+			}
+			if err := opts.Validate(); err != nil {
+				return err
+			}
+			if err := opts.Ask(); err != nil {
+				return err
+			}
+
+			return nil
+		}),
+	}
+
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", jobFlagDescription)
+	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
+	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
+	return cmd
 }
