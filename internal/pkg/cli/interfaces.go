@@ -301,6 +301,10 @@ type svcRemoverFromApp interface {
 	RemoveServiceFromApp(app *config.Application, svcName string) error
 }
 
+type jobRemoverFromApp interface {
+	RemoveJobFromApp(app *config.Application, jobName string) error
+}
+
 type imageRemover interface {
 	ClearRepository(repoName string) error // implemented by ECR Service
 }
