@@ -204,7 +204,7 @@ func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string
 
 // RemoveServiceFromApp attempts to remove service-specific resources (ECR repositories) from the application resource stack.
 func (cf CloudFormation) RemoveServiceFromApp(app *config.Application, svcName string) error {
-	if err := cf.removeworkloadFromApp(app, svcName); err != nil {
+	if err := cf.removeWorkloadFromApp(app, svcName); err != nil {
 		return fmt.Errorf("removing %s service resources from application: %w", svcName, err)
 	}
 	return nil
@@ -212,13 +212,13 @@ func (cf CloudFormation) RemoveServiceFromApp(app *config.Application, svcName s
 
 // RemoveJobFromApp attempts to remove job-specific resources (ECR repositories) from the application resource stack.
 func (cf CloudFormation) RemoveJobFromApp(app *config.Application, jobName string) error {
-	if err := cf.removeworkloadFromApp(app, jobName); err != nil {
+	if err := cf.removeWorkloadFromApp(app, jobName); err != nil {
 		return fmt.Errorf("removing %s job resources from application: %w", jobName, err)
 	}
 	return nil
 }
 
-func (cf CloudFormation) removeworkloadFromApp(app *config.Application, wlName string) error {
+func (cf CloudFormation) removeWorkloadFromApp(app *config.Application, wlName string) error {
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:      app.Name,
 		AccountID: app.AccountID,
@@ -251,7 +251,7 @@ func (cf CloudFormation) removeworkloadFromApp(app *config.Application, wlName s
 		App:      appConfig.Name,
 	}
 	if err := cf.deployAppConfig(appConfig, &newDeploymentConfig); err != nil {
-		return fmt.Errorf("removing %s service resources from application: %w", wlName, err)
+		return err
 	}
 
 	return nil

@@ -71,9 +71,7 @@ func (o *deleteJobOpts) Validate() error {
 		}
 	}
 	if o.envName != "" {
-		if err := o.validateEnvName(); err != nil {
-			return err
-		}
+		return o.validateEnvName()
 	}
 	return nil
 }
