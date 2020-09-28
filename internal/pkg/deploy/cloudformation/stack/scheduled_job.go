@@ -92,7 +92,6 @@ func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConf
 
 // Template returns the CloudFormation template for the scheduled job.
 func (j *ScheduledJob) Template() (string, error) {
-
 	outputs, err := j.addonsOutputs()
 	if err != nil {
 		return "", err
@@ -287,7 +286,6 @@ func toAWSCron(schedule string) (string, error) {
 // StateMachine converts the Timeout and Retries fields to an instance of template.StateMachineOpts
 // It also performs basic validations to provide a fast feedback loop to the customer.
 func (j *ScheduledJob) stateMachineOpts() (*template.StateMachineOpts, error) {
-
 	var timeoutSeconds *int
 	if j.manifest.Timeout != "" {
 		parsedTimeout, err := time.ParseDuration(j.manifest.Timeout)
