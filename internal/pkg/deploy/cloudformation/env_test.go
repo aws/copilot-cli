@@ -4,6 +4,7 @@
 package cloudformation
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -73,6 +74,24 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 					cfnClient: m,
 				}
 			},
+		},
+		"wrap error on unexpected update err": {
+			in: &deploy.CreateEnvironmentInput{
+				AppName: "phonetool",
+				Name:    "test",
+				Version: "v1.0.0",
+			},
+			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{}, nil)
+				m.EXPECT().UpdateAndWait(gomock.Any()).Return(errors.New("some error"))
+
+				return &CloudFormation{
+					cfnClient: m,
+				}
+			},
+
+			wantedErr: errors.New("update and wait for stack phonetool-test: some error"),
 		},
 	}
 

@@ -17,6 +17,12 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 )
 
+// Environment stack's parameters that need to updated while moving the legacy template to a newer version.
+const (
+	includeLoadBalancerParamKey = "IncludePublicLoadBalancer"
+	albWorkloadsParamKey        = "ALBWorkloads"
+)
+
 // DeployEnvironment creates the CloudFormation stack for an environment by creating and executing a change set.
 //
 // If the deployment succeeds, returns nil.
@@ -87,21 +93,10 @@ func (cf CloudFormation) GetEnvironment(appName, envName string) (*config.Enviro
 	return conf.ToEnv(descr.SDK())
 }
 
-// UpgradeLegacyEnvironment updates a legacy environment stack to a newer version.
-//
-// UpgradeEnvironment and UpgradeLegacyEnvironment are separated methods because the legacy cloudformation stack has the
-// "IncludePublicLoadBalancer" parameter which has been deprecated in favor of the "ALBWorkloads".
-// UpgradeLegacyEnvironment does the necessary transformation to use the "ALBWorkloads" parameter instead.
-func (cf CloudFormation) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentInput, lbWebServices ...string) error {
+// UpgradeEnvironment updates an environment stack's template to a newer version.
+func (cf CloudFormation) UpgradeEnvironment(in *deploy.CreateEnvironmentInput) error {
 	return cf.upgradeEnvironment(in, func(param *awscfn.Parameter) *awscfn.Parameter {
-		if aws.StringValue(param.ParameterKey) == "IncludePublicLoadBalancer" {
-			// "IncludePublicLoadBalancer" has been deprecated in favor of "ALBWorkloads".
-			// We need to populate this parameter so that the env ALB is not deleted.
-			return &awscfn.Parameter{
-				ParameterKey:   aws.String("ALBWorkloads"),
-				ParameterValue: aws.String(strings.Join(lbWebServices, ",")),
-			}
-		}
+		// Use existing parameter values.
 		return &awscfn.Parameter{
 			ParameterKey:     param.ParameterKey,
 			UsePreviousValue: aws.Bool(true),
@@ -109,10 +104,21 @@ func (cf CloudFormation) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentIn
 	})
 }
 
-// UpgradeEnvironment updates an environment stack's template to a newer version.
-func (cf CloudFormation) UpgradeEnvironment(in *deploy.CreateEnvironmentInput) error {
+// UpgradeLegacyEnvironment updates a legacy environment stack to a newer version.
+//
+// UpgradeEnvironment and UpgradeLegacyEnvironment are separate methods because the legacy cloudformation stack has the
+// "IncludePublicLoadBalancer" parameter which has been deprecated in favor of the "ALBWorkloads".
+// UpgradeLegacyEnvironment does the necessary transformation to use the "ALBWorkloads" parameter instead.
+func (cf CloudFormation) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentInput, lbWebServices ...string) error {
 	return cf.upgradeEnvironment(in, func(param *awscfn.Parameter) *awscfn.Parameter {
-		// Use existing parameter values.
+		if aws.StringValue(param.ParameterKey) == includeLoadBalancerParamKey {
+			// "IncludePublicLoadBalancer" has been deprecated in favor of "ALBWorkloads".
+			// We need to populate this parameter so that the env ALB is not deleted.
+			return &awscfn.Parameter{
+				ParameterKey:   aws.String(albWorkloadsParamKey),
+				ParameterValue: aws.String(strings.Join(lbWebServices, ",")),
+			}
+		}
 		return &awscfn.Parameter{
 			ParameterKey:     param.ParameterKey,
 			UsePreviousValue: aws.Bool(true),
@@ -127,7 +133,7 @@ func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, t
 	}
 
 	for {
-		// Use the existing parameter values.
+		// Set the parameters of the stack.
 		descr, err := cf.cfnClient.Describe(s.Name)
 		if err != nil {
 			return fmt.Errorf("describe stack %s: %w", s.Name, err)
