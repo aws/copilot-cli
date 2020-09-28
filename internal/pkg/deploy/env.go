@@ -7,7 +7,6 @@ package deploy
 
 import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 const (
@@ -19,14 +18,14 @@ const (
 
 // CreateEnvironmentInput holds the fields required to deploy an environment.
 type CreateEnvironmentInput struct {
-	AppName                  string                  // Name of the application this environment belongs to.
-	Name                     string                  // Name of the environment, must be unique within an application.
-	Prod                     bool                    // Whether or not this environment is a production environment.
-	ToolsAccountPrincipalARN string                  // The Principal ARN of the tools account.
-	AppDNSName               string                  // The DNS name of this application, if it exists
-	AdditionalTags           map[string]string       // AdditionalTags are labels applied to resources under the application.
-	ImportVPCConfig          *template.ImportVPCOpts // Optional configuration if users have an existing VPC.
-	AdjustVPCConfig          *template.AdjustVPCOpts // Optional configuration if users want to override default VPC configuration.
+	AppName                  string            // Name of the application this environment belongs to.
+	Name                     string            // Name of the environment, must be unique within an application.
+	Prod                     bool              // Whether or not this environment is a production environment.
+	ToolsAccountPrincipalARN string            // The Principal ARN of the tools account.
+	AppDNSName               string            // The DNS name of this application, if it exists
+	AdditionalTags           map[string]string // AdditionalTags are labels applied to resources under the application.
+	ImportVPCConfig          *config.ImportVPC // Optional configuration if users have an existing VPC.
+	AdjustVPCConfig          *config.AdjustVPC // Optional configuration if users want to override default VPC configuration.
 
 	// The version of the environment template to creat the stack. If empty, creates the legacy stack.
 	Version string

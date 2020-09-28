@@ -196,7 +196,7 @@ func TestShowAppOpts_Execute(t *testing.T) {
 				}, nil)
 			},
 
-			wantedContent: "{\"name\":\"my-app\",\"uri\":\"example.com\",\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\",\"customConfig\":{\"importVPC\":null,\"vpcConfig\":null}},{\"app\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\",\"customConfig\":{\"importVPC\":null,\"vpcConfig\":null}}],\"services\":[{\"app\":\"\",\"name\":\"my-svc\",\"type\":\"lb-web-svc\"}]}\n",
+			wantedContent: "{\"name\":\"my-app\",\"uri\":\"example.com\",\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"app\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"services\":[{\"app\":\"\",\"name\":\"my-svc\",\"type\":\"lb-web-svc\"}]}\n",
 		},
 		"correctly shows human output": {
 			setupMocks: func(m showAppMocks) {

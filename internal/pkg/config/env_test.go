@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 )
 
@@ -228,13 +227,13 @@ func TestStore_CreateEnvironment(t *testing.T) {
 	testApplicationPath := fmt.Sprintf(fmtApplicationPath, testApplication.Name)
 	require.NoError(t, err, "Marshal application should not fail")
 
-	testCustomConfig := CustomConfig{
-		ImportVPC: &template.ImportVPCOpts{
+	testCustomConfig := &CustomizeEnv{
+		ImportVPC: &ImportVPC{
 			ID:               "mockID",
 			PrivateSubnetIDs: []string{"mockPrivateSubnet"},
 			PublicSubnetIDs:  []string{"mockPublicSubnet"},
 		},
-		VPCConfig: &template.AdjustVPCOpts{
+		VPCConfig: &AdjustVPC{
 			CIDR:               "mockCIDR",
 			PrivateSubnetCIDRs: []string{"mockSubnetCIDR"},
 			PublicSubnetCIDRs:  []string{"mockSubnetCIDR"},

@@ -72,7 +72,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	vpcConf := &template.AdjustVPCOpts{
+	vpcConf := &config.AdjustVPC{
 		CIDR:               DefaultVPCCIDR,
 		PrivateSubnetCIDRs: strings.Split(DefaultPrivateSubnetCIDRs, ","),
 		PublicSubnetCIDRs:  strings.Split(DefaultPublicSubnetCIDRs, ","),

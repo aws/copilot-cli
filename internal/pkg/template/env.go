@@ -6,6 +6,8 @@ package template
 import (
 	"bytes"
 	"fmt"
+
+	"github.com/aws/copilot-cli/internal/pkg/config"
 )
 
 const (
@@ -33,22 +35,8 @@ type EnvOpts struct {
 	ACMValidationLambda       string
 	EnableLongARNFormatLambda string
 
-	ImportVPC *ImportVPCOpts
-	VPCConfig *AdjustVPCOpts
-}
-
-// ImportVPCOpts holds the fields to import VPC resources.
-type ImportVPCOpts struct {
-	ID               string   `json:"id"` // ID for the VPC.
-	PublicSubnetIDs  []string `json:"publicSubnetIDs"`
-	PrivateSubnetIDs []string `json:"privateSubnetIDs"`
-}
-
-// AdjustVPCOpts holds the fields to adjust default VPC resources.
-type AdjustVPCOpts struct {
-	CIDR               string   `json:"cidr"` // CIDR range for the VPC.
-	PublicSubnetCIDRs  []string `json:"publicSubnetCIDRs"`
-	PrivateSubnetCIDRs []string `json:"privateSubnetCIDRs"`
+	ImportVPC *config.ImportVPC
+	VPCConfig *config.AdjustVPC
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.
