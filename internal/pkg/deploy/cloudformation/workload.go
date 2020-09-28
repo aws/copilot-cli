@@ -39,3 +39,8 @@ func (cf CloudFormation) DeployService(conf StackConfiguration, opts ...cloudfor
 func (cf CloudFormation) DeleteService(in deploy.DeleteServiceInput) error {
 	return cf.cfnClient.DeleteAndWait(fmt.Sprintf("%s-%s-%s", in.AppName, in.EnvName, in.Name))
 }
+
+// DeleteJob removes the CloudFormation stack of a deployed job.
+func (cf CloudFormation) DeleteJob(in deploy.DeleteJobInput) error {
+	return cf.cfnClient.DeleteAndWait(fmt.Sprintf("%s-%s-%s", in.AppName, in.EnvName, in.Name))
+}
