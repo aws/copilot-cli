@@ -106,7 +106,7 @@ func (o *envUpgradeOpts) Ask() error {
 	return nil
 }
 
-// Execute updates the cloudformation stack an environment to the specified version.
+// Execute updates the cloudformation stack of an environment to the latest version.
 // If the environment stack is busy updating, it spins and waits until the stack can be updated.
 func (o *envUpgradeOpts) Execute() error {
 	envs, err := o.listEnvsToUpgrade()
@@ -173,7 +173,8 @@ Are you using the latest version of AWS Copilot?`, env, deploy.LatestEnvTemplate
 	return false, nil
 }
 
-// buildEnvUpgradeCmd builds the command to update the
+// buildEnvUpgradeCmd builds the command to update environment(s) to the latest version of
+// the environment template.
 func buildEnvUpgradeCmd() *cobra.Command {
 	vars := envUpgradeVars{}
 	cmd := &cobra.Command{
