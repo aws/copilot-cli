@@ -209,16 +209,29 @@ type dockerfileLister interface {
 }
 
 type svcManifestReader interface {
-	ReadWorkloadManifest(svcName string) ([]byte, error)
+	ReadServiceManifest(svcName string) ([]byte, error)
 }
 
 type svcManifestWriter interface {
 	dockerfileLister
-	WriteWorkloadManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
+	WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
 }
 
 type svcDirManifestWriter interface {
 	svcManifestWriter
+	copilotDirGetter
+}
+
+type jobManifestWriter interface {
+	WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error)
+}
+
+type jobDirManifestWriter interface {
+	jobManifestWriter
+	copilotDirGetter
+}
+
+type copilotDirGetter interface {
 	CopilotDirPath() (string, error)
 }
 
@@ -242,7 +255,7 @@ type wsSvcReader interface {
 
 type wsSvcDirReader interface {
 	wsSvcReader
-	CopilotDirPath() (string, error)
+	copilotDirGetter
 }
 
 type wsJobDirReader interface {
@@ -305,6 +318,7 @@ type pipelineDeployer interface {
 type appDeployer interface {
 	DeployApp(in *deploy.CreateAppInput) error
 	AddServiceToApp(app *config.Application, svcName string) error
+	AddJobToApp(app *config.Application, jobName string) error
 	AddEnvToApp(app *config.Application, env *config.Environment) error
 	DelegateDNSPermissions(app *config.Application, accountID string) error
 	DeleteApp(name string) error

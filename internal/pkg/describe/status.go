@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/aas"
@@ -19,7 +21,8 @@ import (
 )
 
 const (
-	ecsServiceResourceType = "ecs:service"
+	ecsServiceResourceType    = "ecs:service"
+	maxAlarmStatusColumnWidth = 30
 )
 
 type alarmStatusGetter interface {
@@ -180,7 +183,7 @@ func (s *ServiceStatusDesc) JSONString() (string, error) {
 // HumanString returns the stringified ServiceStatusDesc struct with human readable format.
 func (s *ServiceStatusDesc) HumanString() string {
 	var b bytes.Buffer
-	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
+	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, statusCellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprint(writer, color.Bold.Sprint("Service Status\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s %v / %v running tasks (%v pending)\n", statusColor(s.Service.Status),
@@ -191,19 +194,66 @@ func (s *ServiceStatusDesc) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Task Definition", s.Service.TaskDefinition)
 	fmt.Fprint(writer, color.Bold.Sprint("\nTask Status\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\t%s\n", "ID", "Image Digest", "Last Status", "Health Status", "Started At", "Stopped At")
+	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\t%s\n", "ID", "Image Digest", "Last Status", "Started At", "Stopped At", "Health Status")
 	for _, task := range s.Tasks {
 		fmt.Fprint(writer, task.HumanString())
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nAlarms\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", "Name", "Health", "Last Updated", "Reason")
+	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", "Name", "Condition", "Last Updated", "Health")
 	for _, alarm := range s.Alarms {
 		updatedTimeSince := humanizeTime(alarm.UpdatedTimes)
-		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", alarm.Name, alarm.Status, updatedTimeSince, alarm.Reason)
+		printWithMaxWidth(writer, "  %s\t%s\t%s\t%s\n", maxAlarmStatusColumnWidth, alarm.Name, alarm.Condition, updatedTimeSince, alarmHealthColor(alarm.Status))
+		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", "", "", "", "")
 	}
 	writer.Flush()
 	return b.String()
+}
+
+func printWithMaxWidth(w *tabwriter.Writer, format string, width int, members ...string) {
+	columns := make([][]string, len(members))
+	maxNumOfLinesPerCol := 0
+	for ind, member := range members {
+		var column []string
+		builder := new(strings.Builder)
+		// https://stackoverflow.com/questions/25686109/split-string-by-length-in-golang
+		for i, r := range []rune(member) {
+			builder.WriteRune(r)
+			if i > 0 && (i+1)%width == 0 {
+				column = append(column, builder.String())
+				builder.Reset()
+			}
+		}
+		if builder.String() != "" {
+			column = append(column, builder.String())
+		}
+		maxNumOfLinesPerCol = int(math.Max(float64(len(column)), float64(maxNumOfLinesPerCol)))
+		columns[ind] = column
+	}
+	for i := 0; i < maxNumOfLinesPerCol; i++ {
+		args := make([]interface{}, len(columns))
+		for ind, memberSlice := range columns {
+			if i >= len(memberSlice) {
+				args[ind] = ""
+				continue
+			}
+			args[ind] = memberSlice[i]
+		}
+		fmt.Fprintf(w, format, args...)
+	}
+}
+
+func alarmHealthColor(status string) string {
+	switch status {
+	case "OK":
+		return color.Green.Sprint(status)
+	case "ALARM":
+		return color.Red.Sprint(status)
+	case "INSUFFICIENT_DATA":
+		return color.Yellow.Sprint(status)
+	default:
+		return status
+	}
 }
 
 func statusColor(status string) string {

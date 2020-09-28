@@ -31,6 +31,12 @@ jobs or those which require specific execution schedules.`
 )
 
 const (
+	fmtAddJobToAppStart    = "Creating ECR repositories for job %s."
+	fmtAddJobToAppFailed   = "Failed to create ECR repositories for job %s.\n"
+	fmtAddJobToAppComplete = "Created ECR repositories for job %s.\n"
+)
+
+const (
 	job = "job"
 )
 
@@ -49,7 +55,7 @@ type initJobOpts struct {
 
 	// Interfaces to interact with dependencies.
 	fs          afero.Fs
-	ws          svcManifestWriter
+	ws          jobDirManifestWriter
 	store       store
 	appDeployer appDeployer
 	prog        progress
@@ -143,7 +149,79 @@ func (o *initJobOpts) Ask() error {
 
 // Execute writes the job's manifest file and stores the name in SSM.
 func (o *initJobOpts) Execute() error {
+	app, err := o.store.GetApplication(o.appName)
+	if err != nil {
+		return fmt.Errorf("get application %s: %w", o.appName, err)
+	}
+
+	manifestPath, err := o.createManifest()
+	if err != nil {
+		return err
+	}
+	o.manifestPath = manifestPath
+
+	o.prog.Start(fmt.Sprintf(fmtAddJobToAppStart, o.name))
+	if err := o.appDeployer.AddJobToApp(app, o.name); err != nil {
+		o.prog.Stop(log.Serrorf(fmtAddJobToAppFailed, o.name))
+		return fmt.Errorf("add job %s to application %s: %w", o.name, o.appName, err)
+	}
+	o.prog.Stop(log.Ssuccessf(fmtAddJobToAppComplete, o.name))
+
+	if err := o.store.CreateJob(&config.Workload{
+		App:  o.appName,
+		Name: o.name,
+		Type: o.jobType,
+	}); err != nil {
+		return fmt.Errorf("saving job %s: %w", o.name, err)
+	}
 	return nil
+}
+
+func (o *initJobOpts) createManifest() (string, error) {
+	manifest, err := o.newJobManifest()
+	if err != nil {
+		return "", err
+	}
+	var manifestExists bool
+	manifestPath, err := o.ws.WriteJobManifest(manifest, o.name)
+	if err != nil {
+		e, ok := err.(*workspace.ErrFileExists)
+		if !ok {
+			return "", err
+		}
+		manifestExists = true
+		manifestPath = e.FileName
+	}
+	manifestPath, err = relPath(manifestPath)
+	if err != nil {
+		return "", err
+	}
+
+	manifestMsgFmt := "Wrote the manifest for job %s at %s\n"
+	if manifestExists {
+		manifestMsgFmt = "Manifest file for job %s already exists at %s, skipping writing it.\n"
+	}
+	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.name), color.HighlightResource(manifestPath))
+	log.Infoln(color.Help(fmt.Sprintf("Your manifest contains configurations like your container size and job schedule (%s).", o.schedule)))
+	log.Infoln()
+
+	return manifestPath, nil
+}
+
+func (o *initJobOpts) newJobManifest() (*manifest.ScheduledJob, error) {
+	dfPath, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
+	if err != nil {
+		return nil, err
+	}
+	return manifest.NewScheduledJob(manifest.ScheduledJobProps{
+		WorkloadProps: &manifest.WorkloadProps{
+			Name:       o.name,
+			Dockerfile: dfPath,
+		},
+		Schedule: o.schedule,
+		Timeout:  o.timeout,
+		Retries:  o.retries,
+	}), nil
 }
 
 func (o *initJobOpts) askJobType() error {

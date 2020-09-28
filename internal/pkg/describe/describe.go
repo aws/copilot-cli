@@ -14,9 +14,10 @@ import (
 
 const (
 	// Display settings.
-	minCellWidth           = 20  // minimum number of characters in a table's cell.
-	tabWidth               = 4   // number of characters in between columns.
-	cellPaddingWidth       = 2   // number of padding characters added by default to a cell.
+	minCellWidth           = 20 // minimum number of characters in a table's cell.
+	tabWidth               = 4  // number of characters in between columns.
+	cellPaddingWidth       = 2  // number of padding characters added by default to a cell.
+	statusCellPaddingWidth = 4
 	paddingChar            = ' ' // character in between columns.
 	noAdditionalFormatting = 0
 )

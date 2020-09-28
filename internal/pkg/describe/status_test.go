@@ -235,7 +235,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 						{
 							Arn:          "mockAlarmArn1",
 							Name:         "mockAlarm1",
-							Reason:       "Threshold Crossed",
+							Condition:    "mockCondition",
 							Status:       "OK",
 							Type:         "Metric",
 							UpdatedTimes: updateTime,
@@ -246,7 +246,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 						{
 							Arn:          "mockAlarmArn2",
 							Name:         "mockAlarm2",
-							Reason:       "Threshold Crossed",
+							Condition:    "mockCondition",
 							Status:       "OK",
 							Type:         "Metric",
 							UpdatedTimes: updateTime,
@@ -267,15 +267,15 @@ func TestServiceStatus_Describe(t *testing.T) {
 					{
 						Arn:          "mockAlarmArn1",
 						Name:         "mockAlarm1",
-						Reason:       "Threshold Crossed",
+						Condition:    "mockCondition",
 						Status:       "OK",
 						Type:         "Metric",
 						UpdatedTimes: updateTime,
 					},
 					{
 						Arn:          "mockAlarmArn2",
+						Condition:    "mockCondition",
 						Name:         "mockAlarm2",
-						Reason:       "Threshold Crossed",
 						Status:       "OK",
 						Type:         "Metric",
 						UpdatedTimes: updateTime,
@@ -378,9 +378,17 @@ func TestServiceStatusDesc_String(t *testing.T) {
 				},
 				Alarms: []cloudwatch.AlarmStatus{
 					{
-						Arn:          "mockAlarmArn",
-						Name:         "mockAlarm",
-						Reason:       "Threshold Crossed",
+						Arn:          "mockAlarmArn1",
+						Name:         "mySupercalifragilisticexpialidociousAlarm",
+						Condition:    "RequestCount > 100.00 for 3 datapoints within 25 minutes",
+						Status:       "OK",
+						Type:         "Metric",
+						UpdatedTimes: updateTime,
+					},
+					{
+						Arn:          "mockAlarmArn2",
+						Name:         "Um-dittle-ittl-um-dittle-I-Alarm",
+						Condition:    "CPUUtilization > 70.00 for 3 datapoints within 3 minutes",
 						Status:       "OK",
 						Type:         "Metric",
 						UpdatedTimes: updateTime,
@@ -400,20 +408,25 @@ func TestServiceStatusDesc_String(t *testing.T) {
 
 Last Deployment
 
-  Updated At        14 years ago
-  Task Definition   mockTaskDefinition
+  Updated At         14 years ago
+  Task Definition    mockTaskDefinition
 
 Task Status
 
-  ID                Image Digest        Last Status         Health Status       Started At          Stopped At
-  12345678          -                   PROVISIONING        HEALTHY             -                   -
+  ID                Image Digest        Last Status         Started At          Stopped At          Health Status
+  12345678          -                   PROVISIONING        -                   -                   HEALTHY
 
 Alarms
 
-  Name              Health              Last Updated        Reason
-  mockAlarm         OK                  2 months from now   Threshold Crossed
+  Name                              Condition                         Last Updated         Health
+  mySupercalifragilisticexpialid    RequestCount > 100.00 for 3 da    2 months from now    OK
+  ociousAlarm                       tapoints within 25 minutes                             
+                                                                                           
+  Um-dittle-ittl-um-dittle-I-Ala    CPUUtilization > 70.00 for 3 d    2 months from now    OK
+  rm                                atapoints within 3 minutes                             
+                                                                                           
 `,
-			json: "{\"Service\":{\"desiredCount\":1,\"runningCount\":0,\"status\":\"ACTIVE\",\"lastDeploymentAt\":\"2006-01-02T15:04:05Z\",\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":null,\"lastStatus\":\"PROVISIONING\",\"startedAt\":\"0001-01-01T00:00:00Z\",\"stoppedAt\":\"0001-01-01T00:00:00Z\",\"stoppedReason\":\"\"}],\"alarms\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"reason\":\"Threshold Crossed\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"}]}\n",
+			json: "{\"Service\":{\"desiredCount\":1,\"runningCount\":0,\"status\":\"ACTIVE\",\"lastDeploymentAt\":\"2006-01-02T15:04:05Z\",\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":null,\"lastStatus\":\"PROVISIONING\",\"startedAt\":\"0001-01-01T00:00:00Z\",\"stoppedAt\":\"0001-01-01T00:00:00Z\",\"stoppedReason\":\"\"}],\"alarms\":[{\"arn\":\"mockAlarmArn1\",\"name\":\"mySupercalifragilisticexpialidociousAlarm\",\"condition\":\"RequestCount \\u003e 100.00 for 3 datapoints within 25 minutes\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"},{\"arn\":\"mockAlarmArn2\",\"name\":\"Um-dittle-ittl-um-dittle-I-Alarm\",\"condition\":\"CPUUtilization \\u003e 70.00 for 3 datapoints within 3 minutes\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"}]}\n",
 		},
 		"running": {
 			desc: &ServiceStatusDesc{
@@ -427,8 +440,8 @@ Alarms
 				Alarms: []cloudwatch.AlarmStatus{
 					{
 						Arn:          "mockAlarmArn",
+						Condition:    "mockCondition",
 						Name:         "mockAlarm",
-						Reason:       "Threshold Crossed",
 						Status:       "OK",
 						Type:         "Metric",
 						UpdatedTimes: updateTime,
@@ -461,20 +474,21 @@ Alarms
 
 Last Deployment
 
-  Updated At        14 years ago
-  Task Definition   mockTaskDefinition
+  Updated At         14 years ago
+  Task Definition    mockTaskDefinition
 
 Task Status
 
-  ID                Image Digest        Last Status         Health Status       Started At          Stopped At
-  12345678          69671a96,ca27a44e   RUNNING             HEALTHY             14 years ago        14 years ago
+  ID                Image Digest         Last Status         Started At          Stopped At          Health Status
+  12345678          69671a96,ca27a44e    RUNNING             14 years ago        14 years ago        HEALTHY
 
 Alarms
 
-  Name              Health              Last Updated        Reason
-  mockAlarm         OK                  2 months from now   Threshold Crossed
+  Name              Condition           Last Updated         Health
+  mockAlarm         mockCondition       2 months from now    OK
+                                                             
 `,
-			json: "{\"Service\":{\"desiredCount\":1,\"runningCount\":1,\"status\":\"ACTIVE\",\"lastDeploymentAt\":\"2006-01-02T15:04:05Z\",\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"69671a968e8ec3648e2697417750e\"},{\"ID\":\"mockImageID2\",\"Digest\":\"ca27a44e25ce17fea7b07940ad793\"}],\"lastStatus\":\"RUNNING\",\"startedAt\":\"2006-01-02T15:04:05Z\",\"stoppedAt\":\"2006-01-02T16:04:05Z\",\"stoppedReason\":\"some reason\"}],\"alarms\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"reason\":\"Threshold Crossed\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"}]}\n",
+			json: "{\"Service\":{\"desiredCount\":1,\"runningCount\":1,\"status\":\"ACTIVE\",\"lastDeploymentAt\":\"2006-01-02T15:04:05Z\",\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"69671a968e8ec3648e2697417750e\"},{\"ID\":\"mockImageID2\",\"Digest\":\"ca27a44e25ce17fea7b07940ad793\"}],\"lastStatus\":\"RUNNING\",\"startedAt\":\"2006-01-02T15:04:05Z\",\"stoppedAt\":\"2006-01-02T16:04:05Z\",\"stoppedReason\":\"some reason\"}],\"alarms\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"condition\":\"mockCondition\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"}]}\n",
 		},
 	}
 
