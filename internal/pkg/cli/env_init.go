@@ -287,7 +287,7 @@ func BuildEnvInitCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&opts.EnvName, nameFlag, nameFlagShort, "", envFlagDescription)
-	cmd.Flags().StringVar(&opts.EnvProfile, profileFlag, "run-admin", profileFlagDescription)
+	cmd.Flags().StringVar(&opts.EnvProfile, profileFlag, "services-admin", profileFlagDescription)
 	cmd.Flags().BoolVar(&opts.IsProduction, prodEnvFlag, opts.IsProduction, prodEnvFlagDescription)
 	return cmd
 }

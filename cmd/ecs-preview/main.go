@@ -28,7 +28,7 @@ func init() {
 }
 
 func main() {
-	if err := os.Setenv("AWS_PROFILE", "run-admin"); err != nil {
+	if err := os.Setenv("AWS_PROFILE", "services-admin"); err != nil {
 		os.Exit(2)
 	}
 	cmd := buildRootCmd()
