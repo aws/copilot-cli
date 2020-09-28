@@ -172,7 +172,7 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 		},
 		"missing schedule": {
 			inputSchedule: "",
-			wantedError:   errors.New("missing required field schedule in manifest for job mailer"),
+			wantedError:   errors.New("missing required field \"schedule\" in manifest for job mailer"),
 		},
 		"one minute rate": {
 			inputSchedule:  "@every 1m",
@@ -244,11 +244,11 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 		},
 		"returns error if fixed interval less than one minute": {
 			inputSchedule: "@every -5m",
-			wantedError:   errors.New("parse fixed interval: duration must be >= 1 minute"),
+			wantedError:   errors.New("parse fixed interval: duration must be greater than or equal to 1 minute"),
 		},
 		"returns error if fixed interval is 0": {
 			inputSchedule: "@every 0m",
-			wantedError:   errors.New("parse fixed interval: duration must be >= 1 minute"),
+			wantedError:   errors.New("parse fixed interval: duration must be greater than or equal to 1 minute"),
 		},
 		"error on non-whole-number of minutes": {
 			inputSchedule: "@every 89s",
@@ -327,11 +327,15 @@ func TestScheduledJob_stateMachine(t *testing.T) {
 		},
 		"timeout too small": {
 			inputTimeout: "500ms",
-			wantedError:  errors.New("timeout must be ≥ 1 second"),
+			wantedError:  errors.New("timeout must be greater than or equal to 1 second"),
 		},
 		"invalid timeout": {
 			inputTimeout: "5 hours",
 			wantedError:  errors.New("time: unknown unit  hours in duration 5 hours"),
+		},
+		"timeout non-integer number of seconds": {
+			inputTimeout: "1s40ms",
+			wantedError:  errors.New("timeout must be a whole number of seconds, minutes, or hours"),
 		},
 	}
 	for name, tc := range testCases {
@@ -351,7 +355,7 @@ func TestScheduledJob_stateMachine(t *testing.T) {
 				},
 			}
 			// WHEN
-			parsedStateMachine, err := job.stateMachine()
+			parsedStateMachine, err := job.stateMachineOpts()
 
 			// THEN
 			if tc.wantedError != nil {

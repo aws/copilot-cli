@@ -54,6 +54,7 @@ const (
 const (
 	hourly   = "@hourly"
 	daily    = "@daily"
+	midnight = "@midnight"
 	weekly   = "@weekly"
 	monthly  = "@monthly"
 	yearly   = "@yearly"
@@ -107,7 +108,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		return "", fmt.Errorf("convert schedule for job %s: %w", j.name, err)
 	}
 
-	stateMachine, err := j.stateMachine()
+	stateMachine, err := j.stateMachineOpts()
 	if err != nil {
 		return "", fmt.Errorf("convert retry/timeout config for job %s: %w", j.name, err)
 	}
@@ -136,7 +137,7 @@ func (j *ScheduledJob) Template() (string, error) {
 // All others become cron expressions.
 func (j *ScheduledJob) awsSchedule() (string, error) {
 	if j.manifest.Schedule == "" {
-		return "", fmt.Errorf("missing required field schedule in manifest for job %s", j.name)
+		return "", fmt.Errorf("missing required field \"schedule\" in manifest for job %s", j.name)
 	}
 
 	// Try parsing the string as a cron expression to validate it.
@@ -165,6 +166,9 @@ func (j *ScheduledJob) awsSchedule() (string, error) {
 	return scheduleExpression, nil
 }
 
+// toRate converts a cron "@every" directive to a rate expression defined in minutes.
+// example input: @every 1h30m
+//        output: rate(90 minutes)
 func toRate(durationString string) (string, error) {
 	d, err := time.ParseDuration(durationString)
 	if err != nil {
@@ -177,7 +181,7 @@ func toRate(durationString string) (string, error) {
 	}
 
 	if d < time.Minute*1 {
-		return "", errors.New("duration must be >= 1 minute")
+		return "", errors.New("duration must be greater than or equal to 1 minute")
 	}
 
 	minutes := int(floatMinutes)
@@ -187,10 +191,18 @@ func toRate(durationString string) (string, error) {
 	return fmt.Sprintf(fmtRateScheduleExpression, minutes, "minutes"), nil
 }
 
+// toFixedSchedule converts cron predefined schedules into AWS-flavored cron expressions.
+// (https://godoc.org/github.com/robfig/cron#hdr-Predefined_schedules)
+// Example input: @daily
+//        output: cron(0 0 * * ? *)
+//         input: @annually
+//        output: cron(0 0 1 1 ? *)
 func toFixedSchedule(schedule string) (string, error) {
 	switch {
 	case strings.HasPrefix(schedule, hourly):
 		return fmt.Sprintf(fmtCronScheduleExpression, cronHourly), nil
+	case strings.HasPrefix(schedule, midnight):
+		fallthrough
 	case strings.HasPrefix(schedule, daily):
 		return fmt.Sprintf(fmtCronScheduleExpression, cronDaily), nil
 	case strings.HasPrefix(schedule, weekly):
@@ -206,7 +218,7 @@ func toFixedSchedule(schedule string) (string, error) {
 	}
 }
 
-func specified(input string) bool {
+func awsCronFieldSpecified(input string) bool {
 	return !strings.ContainsAny(input, "*?")
 }
 
@@ -216,6 +228,8 @@ func specified(input string) bool {
 // EITHER DOM or DOW must be specified as ? (either-or operator)
 // BOTH DOM and DOW cannot be specified
 // DOW numbers run 1-7, not 0-6
+// Example input: 0 9 * * 1-5 (at 9 am, Monday-Friday)
+//              : cron(0 9 ? * 2-6 *) (adds required ? operator, increments DOW to 1-index, adds year)
 func toAWSCron(schedule string) (string, error) {
 	const (
 		MIN = iota
@@ -236,14 +250,14 @@ func toAWSCron(schedule string) (string, error) {
 	// 0 9 1 * * ==> 0 9 1 * ?
 	switch {
 	// If both are unspecified, convert DOW to a ? and DOM to *
-	case !specified(sched[DOM]) && !specified(sched[DOW]):
+	case !awsCronFieldSpecified(sched[DOM]) && !awsCronFieldSpecified(sched[DOW]):
 		sched[DOW] = "?"
 		sched[DOM] = "*"
 	// If DOM is * or ? and DOW is specified, convert DOM to ?
-	case !specified(sched[DOM]) && specified(sched[DOW]):
+	case !awsCronFieldSpecified(sched[DOM]) && awsCronFieldSpecified(sched[DOW]):
 		sched[DOM] = "?"
 	// If DOW is * or ? and DOM is specified, convert DOW to ?
-	case !specified(sched[DOW]) && specified(sched[DOM]):
+	case !awsCronFieldSpecified(sched[DOW]) && awsCronFieldSpecified(sched[DOM]):
 		sched[DOW] = "?"
 	// Error if both DOM and DOW are specified
 	default:
@@ -272,7 +286,7 @@ func toAWSCron(schedule string) (string, error) {
 
 // StateMachine converts the Timeout and Retries fields to an instance of template.StateMachineOpts
 // It also performs basic validations to provide a fast feedback loop to the customer.
-func (j *ScheduledJob) stateMachine() (*template.StateMachineOpts, error) {
+func (j *ScheduledJob) stateMachineOpts() (*template.StateMachineOpts, error) {
 
 	var timeoutSeconds *int
 	if j.manifest.Timeout != "" {
@@ -281,7 +295,10 @@ func (j *ScheduledJob) stateMachine() (*template.StateMachineOpts, error) {
 			return nil, err
 		}
 		if parsedTimeout < 1*time.Second {
-			return nil, errors.New("timeout must be ≥ 1 second")
+			return nil, errors.New("timeout must be greater than or equal to 1 second")
+		}
+		if parsedTimeout.Seconds() != math.Round(parsedTimeout.Seconds()) {
+			return nil, errors.New("timeout must be a whole number of seconds, minutes, or hours")
 		}
 		timeoutSeconds = aws.Int(int(parsedTimeout.Seconds()))
 	}

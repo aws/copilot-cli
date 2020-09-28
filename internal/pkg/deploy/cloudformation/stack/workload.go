@@ -40,7 +40,7 @@ type RuntimeConfig struct {
 	ImageRepoURL      string            // ImageRepoURL is the ECR repository URL the container image should be pushed to.
 	ImageTag          string            // ImageTag is the container image's unique tag.
 	AddonsTemplateURL string            // Optional. S3 object URL for the addons template.
-	AdditionalTags    map[string]string // AdditionalTags are labels applied to resources in the service stack.
+	AdditionalTags    map[string]string // AdditionalTags are labels applied to resources in the workload stack.
 }
 
 type templater interface {
@@ -162,7 +162,7 @@ func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
 
 	out, err := addon.Outputs(stack)
 	if err != nil {
-		return nil, fmt.Errorf("get addons outputs for service %s: %w", w.name, err)
+		return nil, fmt.Errorf("get addons outputs for %s: %w", w.name, err)
 	}
 	return &template.WorkloadNestedStackOpts{
 		StackName:       addon.StackName,

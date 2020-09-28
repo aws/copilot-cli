@@ -43,14 +43,14 @@ var (
 	}
 )
 
-// Names of service templates.
+// Names of workload templates.
 const (
 	lbWebSvcTplName     = "lb-web"
 	backendSvcTplName   = "backend"
 	scheduledJobTplName = "scheduled-job"
 )
 
-// WorkloadNestedStackOpts holds configuration that's needed if the service stack has a nested stack.
+// WorkloadNestedStackOpts holds configuration that's needed if the workload stack has a nested stack.
 type WorkloadNestedStackOpts struct {
 	StackName string
 
@@ -88,15 +88,15 @@ type AutoscalingOpts struct {
 	ResponseTime *float64
 }
 
-// StateMachineOpts holds configuration neeed for State Machine retries and timout.
+// StateMachineOpts holds configuration neeed for State Machine retries and timeout.
 type StateMachineOpts struct {
 	Timeout *int
 	Retries *int
 }
 
-// WorkloadOpts holds optional data that can be provided to enable features in a service stack template.
+// WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
-	// Additional options that're common between **all** service templates.
+	// Additional options that are common between **all** workload templates.
 	Variables   map[string]string
 	Secrets     map[string]string
 	NestedStack *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
@@ -104,12 +104,12 @@ type WorkloadOpts struct {
 	LogConfig   *LogConfigOpts
 	Autoscaling *AutoscalingOpts
 
-	// Additional options that're not shared across all service templates.
+	// Additional options for service templates.
 	HealthCheck        *ecs.HealthCheck
 	RulePriorityLambda string
 	DesiredCountLambda string
 
-	// Additional options for jobs.
+	// Additional options for job templates.
 	ScheduleExpression string
 	StateMachine       *StateMachineOpts
 }
