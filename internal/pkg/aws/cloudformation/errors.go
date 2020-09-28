@@ -50,11 +50,11 @@ func (e *errChangeSetNotExecutable) Error() string {
 
 // ErrStackUpdateInProgress occurs when we try to update a stack that's already being updated.
 type ErrStackUpdateInProgress struct {
-	name string
+	Name string
 }
 
 func (e *ErrStackUpdateInProgress) Error() string {
-	return fmt.Sprintf("stack %s is currently being updated and cannot be deployed to", e.name)
+	return fmt.Sprintf("stack %s is currently being updated and cannot be deployed to", e.Name)
 }
 
 // stackDoesNotExist returns true if the underlying error is a stack doesn't exist.

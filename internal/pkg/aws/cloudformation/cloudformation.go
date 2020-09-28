@@ -55,7 +55,7 @@ func (c *CloudFormation) Create(stack *Stack) error {
 	}
 	if status.inProgress() {
 		return &ErrStackUpdateInProgress{
-			name: stack.Name,
+			Name: stack.Name,
 		}
 	}
 	return &ErrStackAlreadyExists{
@@ -93,7 +93,7 @@ func (c *CloudFormation) Update(stack *Stack) error {
 	status := stackStatus(aws.StringValue(descr.StackStatus))
 	if status.inProgress() {
 		return &ErrStackUpdateInProgress{
-			name: stack.Name,
+			Name: stack.Name,
 		}
 	}
 	return c.update(stack)
@@ -104,12 +104,16 @@ func (c *CloudFormation) UpdateAndWait(stack *Stack) error {
 	if err := c.Update(stack); err != nil {
 		return err
 	}
+	return c.WaitForUpdate(stack.Name)
+}
 
+// WaitForUpdate blocks until the stack is updated or until the max attempt window expires.
+func (c *CloudFormation) WaitForUpdate(stackName string) error {
 	err := c.client.WaitUntilStackUpdateCompleteWithContext(context.Background(), &cloudformation.DescribeStacksInput{
-		StackName: aws.String(stack.Name),
+		StackName: aws.String(stackName),
 	}, waiters...)
 	if err != nil {
-		return fmt.Errorf("wait until stack %s update is complete: %w", stack.Name, err)
+		return fmt.Errorf("wait until stack %s update is complete: %w", stackName, err)
 	}
 	return nil
 }
