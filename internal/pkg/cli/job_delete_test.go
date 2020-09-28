@@ -139,7 +139,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 
 			wantedName: testJobName,
 		},
-		"should skip asking for job name if only one service found": {
+		"should skip asking for job name if only one job found": {
 			inName:           "",
 			skipConfirmation: true,
 			mockstore: func(m *mocks.Mockstore) {
@@ -153,7 +153,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 
 			wantedName: testJobName,
 		},
-		"returns error if no services found": {
+		"returns error if no jobs found": {
 			inName:           "",
 			skipConfirmation: true,
 			mockstore: func(m *mocks.Mockstore) {
