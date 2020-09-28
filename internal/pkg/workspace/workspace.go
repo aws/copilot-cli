@@ -218,26 +218,18 @@ func (ws *Workspace) ReadPipelineManifest() ([]byte, error) {
 
 // WriteServiceManifest writes the service's manifest under the copilot/{name}/ directory.
 func (ws *Workspace) WriteServiceManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
-	mfPath, err := ws.writeWorkloadManifest(marshaler, name)
+	data, err := marshaler.MarshalBinary()
 	if err != nil {
 		return "", fmt.Errorf("marshal service %s manifest to binary: %w", name, err)
 	}
-	return mfPath, nil
+	return ws.write(data, name, manifestFileName)
 }
 
 // WriteJobManifest writes the job's manifest under the copilot/{name}/ directory.
 func (ws *Workspace) WriteJobManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
-	mfPath, err := ws.writeWorkloadManifest(marshaler, name)
-	if err != nil {
-		return "", fmt.Errorf("marshal job %s manifest to binary: %w", name, err)
-	}
-	return mfPath, nil
-}
-
-func (ws *Workspace) writeWorkloadManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
 	data, err := marshaler.MarshalBinary()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("marshal job %s manifest to binary: %w", name, err)
 	}
 	return ws.write(data, name, manifestFileName)
 }
