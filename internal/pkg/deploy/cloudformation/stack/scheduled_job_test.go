@@ -184,11 +184,11 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 		},
 		"malformed rate": {
 			inputSchedule: "@every 402 seconds",
-			wantedError:   errors.New("schedule @every 402 seconds for job mailer is not a valid cron expression or definition string"),
+			wantedError:   errors.New("schedule @every 402 seconds for job mailer is not a valid cron expression, rate, or preset schedule"),
 		},
 		"malformed cron": {
 			inputSchedule: "every 4m",
-			wantedError:   errors.New("schedule every 4m for job mailer is not a valid cron expression or definition string"),
+			wantedError:   errors.New("schedule every 4m for job mailer is not a valid cron expression, rate, or preset schedule"),
 		},
 		"correctly converts predefined schedule": {
 			inputSchedule:  "@daily",
@@ -196,7 +196,7 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 		},
 		"unrecognized predefined schedule": {
 			inputSchedule: "@minutely",
-			wantedError:   errors.New("schedule @minutely for job mailer is not a valid cron expression or definition string"),
+			wantedError:   errors.New("schedule @minutely for job mailer is not a valid cron expression, rate, or preset schedule"),
 		},
 		"correctly converts cron with all asterisks": {
 			inputSchedule:  "* * * * *",
@@ -256,11 +256,11 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 		},
 		"error on too many inputs": {
 			inputSchedule: "* * * * * *",
-			wantedError:   errors.New("schedule * * * * * * for job mailer is not a valid cron expression or definition string"),
+			wantedError:   errors.New("schedule * * * * * * for job mailer is not a valid cron expression, rate, or preset schedule"),
 		},
 		"cron syntax error": {
 			inputSchedule: "* * * malformed *",
-			wantedError:   errors.New("schedule * * * malformed * for job mailer is not a valid cron expression or definition string"),
+			wantedError:   errors.New("schedule * * * malformed * for job mailer is not a valid cron expression, rate, or preset schedule"),
 		},
 	}
 	for name, tc := range testCases {

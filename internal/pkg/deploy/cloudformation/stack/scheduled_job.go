@@ -142,7 +142,7 @@ func (j *ScheduledJob) awsSchedule() (string, error) {
 
 	// Try parsing the string as a cron expression to validate it.
 	if _, err := cron.ParseStandard(j.manifest.Schedule); err != nil {
-		return "", fmt.Errorf("schedule %s for job %s is not a valid cron expression or definition string", j.manifest.Schedule, j.name)
+		return "", fmt.Errorf("schedule %s for job %s is not a valid cron expression, rate, or preset schedule", j.manifest.Schedule, j.name)
 	}
 	var scheduleExpression string
 	var err error
@@ -214,7 +214,7 @@ func toFixedSchedule(schedule string) (string, error) {
 	case strings.HasPrefix(schedule, yearly):
 		return fmt.Sprintf(fmtCronScheduleExpression, cronYearly), nil
 	default:
-		return "", fmt.Errorf("unrecognized cron definition string")
+		return "", fmt.Errorf("unrecognized preset schedule %s", schedule)
 	}
 }
 
