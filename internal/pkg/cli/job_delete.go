@@ -91,12 +91,12 @@ func (o *deleteJobOpts) Ask() error {
 	}
 
 	// When there's no env name passed in, we'll completely
-	// remove the service from the application.
+	// remove the job from the application.
 	deletePrompt := fmt.Sprintf(fmtJobDeleteConfirmPrompt, o.name, o.appName)
 	deleteConfirmHelp := jobDeleteConfirmHelp
 	if o.envName != "" {
 		// When a customer provides a particular environment,
-		// we'll just delete the service from that environment -
+		// we'll just delete the job from that environment -
 		// but keep it in the app.
 		deletePrompt = fmt.Sprintf(fmtJobDeleteFromEnvConfirmPrompt, o.name, o.envName)
 		deleteConfirmHelp = fmt.Sprintf(jobDeleteFromEnvConfirmHelp, o.envName)
