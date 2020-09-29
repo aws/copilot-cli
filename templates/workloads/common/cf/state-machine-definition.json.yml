@@ -1,8 +1,10 @@
 {
   "Version": "1.0",
   "Comment": "Run AWS Fargate task",
-  {{- if .Timeout}}
-  "TimeoutSeconds": ${Timeout},
+  {{- if .StateMachine}}
+  {{- if .StateMachine.Timeout}}
+  "TimeoutSeconds": ${.StateMachine.Timeout},
+  {{- end}}
   {{- end}}
   "StartAt": "Run Fargate Task",
   "States": {
@@ -23,17 +25,19 @@
           }
         },
       },
-      {{- if .Retries}}
+      {{- if .StateMachine}}
+      {{- if .StateMachine.Retries}}
       "Retry": [
         {
           "ErrorEquals": [
             "States.ALL"
           ],
           "IntervalSeconds": 10,
-          "MaxAttempts": {{.Retries}},
+          "MaxAttempts": {{.StateMachine.Retries}},
           "BackoffRate": 1.5
         }
       ],
+      {{- end}}
       {{- end}}
       "End": "True"
     }

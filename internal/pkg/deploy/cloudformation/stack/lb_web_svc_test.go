@@ -153,7 +153,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().ParseLoadBalancedWebService(template.ServiceOpts{
+				m.EXPECT().ParseLoadBalancedWebService(template.WorkloadOpts{
 					RulePriorityLambda: "lambda",
 					DesiredCountLambda: "something",
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
@@ -170,8 +170,8 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().ParseLoadBalancedWebService(template.ServiceOpts{
-					NestedStack: &template.ServiceNestedStackOpts{
+				m.EXPECT().ParseLoadBalancedWebService(template.WorkloadOpts{
+					NestedStack: &template.WorkloadNestedStackOpts{
 						StackName:       addon.StackName,
 						VariableOutputs: []string{"Hello"},
 						SecretOutputs:   []string{"MySecretArn"},
