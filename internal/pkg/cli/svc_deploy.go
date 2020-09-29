@@ -300,6 +300,9 @@ func pushToECR(ecr imageBuilderPusher, args *docker.BuildArguments) error {
 
 func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {
 	svc, err := o.manifest()
+	if err != nil {
+		return nil, err
+	}
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
 		return nil, fmt.Errorf("get copilot directory: %w", err)
@@ -356,11 +359,11 @@ func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 func (o *deploySvcOpts) manifest() (interface{}, error) {
 	raw, err := o.ws.ReadServiceManifest(o.name)
 	if err != nil {
-		return nil, fmt.Errorf("read manifest for service %s: %w", o.name, err)
+		return nil, fmt.Errorf("read service %s manifest file: %w", o.name, err)
 	}
 	mft, err := o.unmarshal(raw)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal manifest for service %s: %w", o.name, err)
+		return nil, fmt.Errorf("unmarshal service %s manifest: %w", o.name, err)
 	}
 	return mft, nil
 }

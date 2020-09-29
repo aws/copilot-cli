@@ -225,6 +225,9 @@ func (o *deployJobOpts) configureClients() error {
 
 func (o *deployJobOpts) getBuildArgs() (*docker.BuildArguments, error) {
 	job, err := o.manifest()
+	if err != nil {
+		return nil, err
+	}
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
 		return nil, fmt.Errorf("get copilot directory: %w", err)
@@ -297,11 +300,11 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 func (o *deployJobOpts) manifest() (interface{}, error) {
 	raw, err := o.ws.ReadJobManifest(o.name)
 	if err != nil {
-		return nil, fmt.Errorf("read manifest for job %s: %w", o.name, err)
+		return nil, fmt.Errorf("read job %s manifest: %w", o.name, err)
 	}
 	mft, err := o.unmarshal(raw)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal manifest for job %s: %w", o.name, err)
+		return nil, fmt.Errorf("unmarshal job %s manifest: %w", o.name, err)
 	}
 	return mft, nil
 }

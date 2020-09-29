@@ -223,7 +223,7 @@ image:
 		"should return error if ws ReadFile returns error": {
 			inputSvc: "serviceA",
 			wantData: nil,
-			wantErr:  fmt.Errorf("read manifest file %s: %w", "serviceA", mockError),
+			wantErr:  fmt.Errorf("read service %s manifest file: %w", "serviceA", mockError),
 			mockWs: func(m *mocks.MockwsSvcDirReader) {
 				m.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(nil, mockError)
 			},
