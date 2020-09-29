@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/ecslogging/mocks"
 	"github.com/golang/mock/gomock"
@@ -19,7 +20,7 @@ type serviceLogsMocks struct {
 	logGetter *mocks.MocklogGetter
 }
 
-func TestServiceLogs_WriteServiceLogEvents(t *testing.T) {
+func TestServiceClient_WriteLogEvents(t *testing.T) {
 	const (
 		mockLogGroupName     = "mockLogGroup"
 		mockLogStreamPrefix  = "mockLogStreamPrefix"
@@ -52,8 +53,14 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 			Message:       `10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 404 -`,
 		},
 	}
+	mockLimit := aws.Int64(100)
+	mockDefaultLimit := aws.Int64(10)
+	var mockNilLimit *int64
+	mockStartTime := aws.Int64(123456789)
 	testCases := map[string]struct {
 		follow     bool
+		limit      *int64
+		startTime  *int64
 		jsonOutput bool
 		taskIDs    []string
 		setupMocks func(mocks serviceLogsMocks)
@@ -72,12 +79,15 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 			wantedError: fmt.Errorf("get task log events for log group mockLogGroup: some error"),
 		},
 		"success with human output": {
+			limit: mockLimit,
 			setupMocks: func(m serviceLogsMocks) {
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
-						Return(&cloudwatchlogs.LogEventsOutput{
-							Events: logEvents,
-						}, nil),
+						Do(func(param cloudwatchlogs.LogEventsOpts) {
+							require.Equal(t, param.Limit, mockLimit)
+						}).Return(&cloudwatchlogs.LogEventsOutput{
+						Events: logEvents,
+					}, nil),
 				)
 			},
 
@@ -85,9 +95,13 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 		},
 		"success with json output": {
 			jsonOutput: true,
+			startTime:  mockStartTime,
 			setupMocks: func(m serviceLogsMocks) {
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
+						Do(func(param cloudwatchlogs.LogEventsOpts) {
+							require.Equal(t, param.Limit, mockNilLimit)
+						}).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events: logEvents,
 						}, nil),
@@ -101,9 +115,11 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 			taskIDs: []string{"mockTaskID1", "mockTaskID2"},
 			setupMocks: func(m serviceLogsMocks) {
 				gomock.InOrder(
-					m.logGetter.EXPECT().LogEvents(gomock.Any()).Do(func(param cloudwatchlogs.LogEventsOpts) {
-						require.Equal(t, param.LogStreams, []string{"mockLogStreamPrefix/mockTaskID1", "mockLogStreamPrefix/mockTaskID2"})
-					}).
+					m.logGetter.EXPECT().LogEvents(gomock.Any()).
+						Do(func(param cloudwatchlogs.LogEventsOpts) {
+							require.Equal(t, param.LogStreams, []string{"mockLogStreamPrefix/mockTaskID1", "mockLogStreamPrefix/mockTaskID2"})
+							require.Equal(t, param.Limit, mockDefaultLimit)
+						}).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events:              logEvents,
 							StreamLastEventTime: mockLastEventTime,
@@ -151,9 +167,11 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 				logWriter = WriteJSONLogs
 			}
 			err := svcLogs.WriteLogEvents(WriteLogEventsOpts{
-				Follow:   tc.follow,
-				TaskIDs:  tc.taskIDs,
-				OnEvents: logWriter,
+				Follow:    tc.follow,
+				TaskIDs:   tc.taskIDs,
+				Limit:     tc.limit,
+				StartTime: tc.startTime,
+				OnEvents:  logWriter,
 			})
 
 			// THEN

@@ -16,6 +16,8 @@ import (
 )
 
 const (
+	defaultServiceLogsLimit = 10
+
 	fmtSvclogGroupName    = "/copilot/%s-%s-%s"
 	fmtSvcLogStreamPrefix = "copilot/%s"
 )
@@ -35,12 +37,24 @@ type ServiceClient struct {
 // WriteLogEventsOpts wraps the parameters to call WriteLogEvents.
 type WriteLogEventsOpts struct {
 	Follow    bool
-	Limit     int
+	Limit     *int64
 	StartTime *int64
 	EndTime   *int64
 	TaskIDs   []string
 	// OnEvents is a handler that's invoked when logs are retrieved from the service.
 	OnEvents func(w io.Writer, logs []HumanJSONStringer) error
+}
+
+func (o WriteLogEventsOpts) limit() *int64 {
+	if o.Limit != nil {
+		return o.Limit
+	}
+	if o.StartTime != nil || o.EndTime != nil {
+		// If time filtering is set, then set limit to be maximum number.
+		// https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetLogEvents.html#CWL-GetLogEvents-request-limit
+		return nil
+	}
+	return aws.Int64(defaultServiceLogsLimit)
 }
 
 // NewServiceClient returns a ServiceClient for the svc service under env and app.
@@ -58,7 +72,7 @@ func NewServiceClient(sess *session.Session, app, env, svc string) *ServiceClien
 func (s *ServiceClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 	logEventsOpts := cloudwatchlogs.LogEventsOpts{
 		LogGroup:   s.logGroupName,
-		Limit:      aws.Int64(int64(opts.Limit)),
+		Limit:      opts.limit(),
 		EndTime:    opts.EndTime,
 		StartTime:  opts.StartTime,
 		LogStreams: s.logStreams(opts.TaskIDs),
