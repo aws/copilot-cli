@@ -146,7 +146,8 @@ Allows you to categorize resources.`
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
 	prodEnvFlagDescription        = "If the environment contains production services."
 
-	limitFlagDescription  = "Optional. The maximum number of log events returned."
+	limitFlagDescription = `Optional. The maximum number of log events returned. Default is 10
+unless any time filtering flags are set.`
 	followFlagDescription = "Optional. Specifies if the logs should be streamed."
 	sinceFlagDescription  = `Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
 Defaults to all logs. Only one of start-time / since may be used.`
