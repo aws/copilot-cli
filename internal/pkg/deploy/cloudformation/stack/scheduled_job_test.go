@@ -172,7 +172,7 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 		},
 		"missing schedule": {
 			inputSchedule: "",
-			wantedError:   errors.New("missing required field \"schedule\" in manifest for job mailer"),
+			wantedError:   errors.New(`missing required field "schedule" in manifest for job mailer`),
 		},
 		"one minute rate": {
 			inputSchedule:  "@every 1m",
@@ -184,11 +184,11 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 		},
 		"malformed rate": {
 			inputSchedule: "@every 402 seconds",
-			wantedError:   errors.New("schedule @every 402 seconds for job mailer is not a valid cron expression, rate, or preset schedule"),
+			wantedError:   errors.New("schedule is not valid cron, rate, or preset: failed to parse duration @every 402 seconds: time: unknown unit  seconds in duration 402 seconds"),
 		},
 		"malformed cron": {
 			inputSchedule: "every 4m",
-			wantedError:   errors.New("schedule every 4m for job mailer is not a valid cron expression, rate, or preset schedule"),
+			wantedError:   errors.New("schedule is not valid cron, rate, or preset: expected exactly 5 fields, found 2: [every 4m]"),
 		},
 		"correctly converts predefined schedule": {
 			inputSchedule:  "@daily",
@@ -196,7 +196,7 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 		},
 		"unrecognized predefined schedule": {
 			inputSchedule: "@minutely",
-			wantedError:   errors.New("schedule @minutely for job mailer is not a valid cron expression, rate, or preset schedule"),
+			wantedError:   errors.New("schedule is not valid cron, rate, or preset: unrecognized descriptor: @minutely"),
 		},
 		"correctly converts cron with all asterisks": {
 			inputSchedule:  "* * * * *",
@@ -256,11 +256,11 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 		},
 		"error on too many inputs": {
 			inputSchedule: "* * * * * *",
-			wantedError:   errors.New("schedule * * * * * * for job mailer is not a valid cron expression, rate, or preset schedule"),
+			wantedError:   errors.New("schedule is not valid cron, rate, or preset: expected exactly 5 fields, found 6: [* * * * * *]"),
 		},
 		"cron syntax error": {
 			inputSchedule: "* * * malformed *",
-			wantedError:   errors.New("schedule * * * malformed * for job mailer is not a valid cron expression, rate, or preset schedule"),
+			wantedError:   errors.New("schedule is not valid cron, rate, or preset: failed to parse int from malformed: strconv.Atoi: parsing \"malformed\": invalid syntax"),
 		},
 	}
 	for name, tc := range testCases {

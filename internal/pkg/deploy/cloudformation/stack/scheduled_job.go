@@ -6,7 +6,6 @@ package stack
 import (
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 	"time"
 	"unicode"
@@ -136,12 +135,12 @@ func (j *ScheduledJob) Template() (string, error) {
 // All others become cron expressions.
 func (j *ScheduledJob) awsSchedule() (string, error) {
 	if j.manifest.Schedule == "" {
-		return "", fmt.Errorf("missing required field \"schedule\" in manifest for job %s", j.name)
+		return "", fmt.Errorf(`missing required field "schedule" in manifest for job %s`, j.name)
 	}
 
 	// Try parsing the string as a cron expression to validate it.
 	if _, err := cron.ParseStandard(j.manifest.Schedule); err != nil {
-		return "", fmt.Errorf("schedule %s for job %s is not a valid cron expression, rate, or preset schedule", j.manifest.Schedule, j.name)
+		return "", fmt.Errorf("schedule is not valid cron, rate, or preset: %w", err)
 	}
 	var scheduleExpression string
 	var err error
@@ -168,14 +167,13 @@ func (j *ScheduledJob) awsSchedule() (string, error) {
 // toRate converts a cron "@every" directive to a rate expression defined in minutes.
 // example input: @every 1h30m
 //        output: rate(90 minutes)
-func toRate(durationString string) (string, error) {
-	d, err := time.ParseDuration(durationString)
+func toRate(duration string) (string, error) {
+	d, err := time.ParseDuration(duration)
 	if err != nil {
-		return "", fmt.Errorf("invalid duration %s", durationString)
+		return "", fmt.Errorf("invalid duration %s", duration)
 	}
 	// Check that rates are not specified in units smaller than minutes
-	floatMinutes := d.Minutes()
-	if floatMinutes != math.Round(floatMinutes) {
+	if d != d.Truncate(time.Minute) {
 		return "", fmt.Errorf("duration must be a whole number of minutes or hours")
 	}
 
@@ -183,7 +181,7 @@ func toRate(durationString string) (string, error) {
 		return "", errors.New("duration must be greater than or equal to 1 minute")
 	}
 
-	minutes := int(floatMinutes)
+	minutes := int(d.Minutes())
 	if minutes == 1 {
 		return fmt.Sprintf(fmtRateScheduleExpression, minutes, "minute"), nil
 	}
@@ -295,7 +293,7 @@ func (j *ScheduledJob) stateMachineOpts() (*template.StateMachineOpts, error) {
 		if parsedTimeout < 1*time.Second {
 			return nil, errors.New("timeout must be greater than or equal to 1 second")
 		}
-		if parsedTimeout.Seconds() != math.Round(parsedTimeout.Seconds()) {
+		if parsedTimeout != parsedTimeout.Truncate(time.Second) {
 			return nil, errors.New("timeout must be a whole number of seconds, minutes, or hours")
 		}
 		timeoutSeconds = aws.Int(int(parsedTimeout.Seconds()))
