@@ -96,9 +96,6 @@ func newDefaultScheduledJob() *ScheduledJob {
 	}
 }
 
-// Duration is a string of the form 90m, 30s, 24h.
-type Duration string
-
 // NewScheduledJob creates a new
 func NewScheduledJob(props ScheduledJobProps) *ScheduledJob {
 	job := newDefaultScheduledJob()

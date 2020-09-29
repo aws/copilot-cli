@@ -4,13 +4,18 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
-	"path/filepath"
+	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/docker"
+	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -37,14 +42,16 @@ type deployJobVars struct {
 type deployJobOpts struct {
 	deployJobVars
 
-	store        store
-	ws           wsJobDirReader
-	unmarshal    func(in []byte) (interface{}, error)
-	cmd          runner
-	addons       templater
-	appCFN       appResourcesGetter
-	jobCFN       cloudformation.CloudFormation
-	sessProvider sessionProvider
+	store              store
+	ws                 wsJobDirReader
+	unmarshal          func(in []byte) (interface{}, error)
+	cmd                runner
+	addons             templater
+	appCFN             appResourcesGetter
+	jobCFN             cloudformation.CloudFormation
+	imageBuilderPusher imageBuilderPusher
+	sessProvider       sessionProvider
+	s3                 artifactUploader
 
 	spinner progress
 	sel     wsSelector
@@ -135,8 +142,11 @@ func (o *deployJobOpts) Execute() error {
 	if err := o.configureClients(); err != nil {
 		return err
 	}
-
-	if err := o.pushtoECRRepo(); err != nil {
+	buildArgs, err := o.getBuildArgs()
+	if err != nil {
+		return fmt.Errorf("get build arguments: %w", err)
+	}
+	if err = pushToECR(o.imageBuilderPusher, buildArgs); err != nil {
 		return err
 	}
 
@@ -148,36 +158,78 @@ func (o *deployJobOpts) Execute() error {
 	return o.deployJob(addonsURL)
 }
 
-func getBuildArgs(name, imageTag string, ws wsSvcDirReader, unmarshal func([]byte) (interface{}, error)) (*docker.BuildArguments, error) {
-	type dfArgs interface {
-		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
+// pushAddonsTemplateToS3Bucket generates the addons template for the job and pushes it to S3.
+// If the job doesn't have any addons, it returns the empty string and no errors.
+// If the job has addons, it returns the URL of the S3 object storing the addons template.
+func (o *deployJobOpts) pushAddonsTemplateToS3Bucket() (string, error) {
+	template, err := o.addons.Template()
+	if err != nil {
+		var notExistErr *addon.ErrDirNotExist
+		if errors.As(err, &notExistErr) {
+			// addons doesn't exist for job, the url is empty.
+			return "", nil
+		}
+		return "", fmt.Errorf("retrieve addons template: %w", err)
+	}
+	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
+	if err != nil {
+		return "", fmt.Errorf("get app resources: %w", err)
 	}
 
-	manifestBytes, err := ws.ReadWorkloadManifest(name)
+	reader := strings.NewReader(template)
+	url, err := o.s3.PutArtifact(resources.S3Bucket, fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.name), reader)
 	if err != nil {
-		return nil, fmt.Errorf("read manifest file %s: %w", name, err)
+		return "", fmt.Errorf("put addons artifact to bucket %s: %w", resources.S3Bucket, err)
 	}
-	wkld, err := unmarshal(manifestBytes)
+	return url, nil
+}
+
+func (o *deployJobOpts) configureClients() error {
+	defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnvironment.Region)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal manifest for %s: %w", name, err)
+		return fmt.Errorf("create ECR session with region %s: %w", o.targetEnvironment.Region, err)
 	}
-	mf, ok := wkld.(dfArgs)
-	if !ok {
-		return nil, fmt.Errorf("%s does not have required method Build()", o.name)
+
+	envSession, err := o.sessProvider.FromRole(o.targetEnvironment.ManagerRoleARN, o.targetEnvironment.Region)
+	if err != nil {
+		return fmt.Errorf("assuming environment manager role: %w", err)
 	}
-	copilotDir, err := ws.CopilotDirPath()
+
+	// ECR client against tools account profile AND target environment region
+	repoName := fmt.Sprintf("%s/%s", o.appName, o.name)
+	registry := ecr.New(defaultSessEnvRegion)
+	o.imageBuilderPusher, err = repository.New(repoName, registry)
+	if err != nil {
+		return fmt.Errorf("initiate image builder pusher: %w", err)
+	}
+
+	o.s3 = s3.New(defaultSessEnvRegion)
+
+	// CF client against env account profile AND target environment region
+	o.jobCFN = cloudformation.New(envSession)
+
+	addonsSvc, err := addon.New(o.name)
+	if err != nil {
+		return fmt.Errorf("initiate addons service: %w", err)
+	}
+	o.addons = addonsSvc
+
+	// client to retrieve an application's resources created with CloudFormation
+	defaultSess, err := o.sessProvider.Default()
+	if err != nil {
+		return fmt.Errorf("create default session: %w", err)
+	}
+	o.appCFN = cloudformation.New(defaultSess)
+	return nil
+}
+
+func (o *deployJobOpts) getBuildArgs() (*docker.BuildArguments, error) {
+	job, err := o.manifest()
+	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
 		return nil, fmt.Errorf("get copilot directory: %w", err)
 	}
-	wsRoot := filepath.Dir(copilotDir)
-
-	args := mf.BuildArgs(wsRoot)
-	return &docker.BuildArguments{
-		Dockerfile: *args.Dockerfile,
-		Context:    *args.Context,
-		Args:       args.Args,
-		ImageTag:   imageTag,
-	}, nil
+	return buildArgs(o.name, o.imageTag, copilotDir, job)
 }
 
 func (o *deployJobOpts) deployJob(addonsURL string) error {
@@ -243,7 +295,11 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 }
 
 func (o *deployJobOpts) manifest() (interface{}, error) {
-	mft, err := unmarshalManifest(o.name, o.ws, o.unmarshal)
+	raw, err := o.ws.ReadJobManifest(o.name)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest for job %s: %w", o.name, err)
+	}
+	mft, err := o.unmarshal(raw)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal manifest for job %s: %w", o.name, err)
 	}

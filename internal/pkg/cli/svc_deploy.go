@@ -149,7 +149,11 @@ func (o *deploySvcOpts) Execute() error {
 		return err
 	}
 
-	if err := o.pushToECRRepo(); err != nil {
+	buildArgs, err := o.getBuildArgs()
+	if err != nil {
+		return fmt.Errorf("get build arguments: %w", err)
+	}
+	if err = pushToECR(o.imageBuilderPusher, buildArgs); err != nil {
 		return err
 	}
 
@@ -287,41 +291,31 @@ func (o *deploySvcOpts) configureClients() error {
 	return nil
 }
 
-func (o *deploySvcOpts) pushToECRRepo() error {
-
-	dockerBuildInput, err := getBuildArgs(o.name, o.imageTag, o.ws, o.unmarshal)
-	if err != nil {
-		return err
-	}
-
-	if err := o.imageBuilderPusher.BuildAndPush(docker.New(), dockerBuildInput); err != nil {
+func pushToECR(ecr imageBuilderPusher, args *docker.BuildArguments) error {
+	if err := ecr.BuildAndPush(docker.New(), args); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
-
 	return nil
 }
 
-func getBuildArgs(name, imageTag string, ws wsSvcDirReader, unmarshal func([]byte) (interface{}, error)) (*docker.BuildArguments, error) {
-	type dfArgs interface {
-		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
-	}
-
-	manifestBytes, err := ws.ReadServiceManifest(name)
-	if err != nil {
-		return nil, fmt.Errorf("read manifest file %s: %w", name, err)
-	}
-	wkld, err := unmarshal(manifestBytes)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal manifest for %s: %w", name, err)
-	}
-	mf, ok := wkld.(dfArgs)
-	if !ok {
-		return nil, fmt.Errorf("%s does not have required method Build()", name)
-	}
-	copilotDir, err := ws.CopilotDirPath()
+func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {
+	svc, err := o.manifest()
+	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
 		return nil, fmt.Errorf("get copilot directory: %w", err)
 	}
+	return buildArgs(o.name, o.imageTag, copilotDir, svc)
+}
+
+func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*docker.BuildArguments, error) {
+	type dfArgs interface {
+		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
+	}
+	mf, ok := unmarshaledManifest.(dfArgs)
+	if !ok {
+		return nil, fmt.Errorf("%s does not have required method Build()", name)
+	}
+
 	wsRoot := filepath.Dir(copilotDir)
 
 	args := mf.BuildArgs(wsRoot)
@@ -360,21 +354,13 @@ func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 }
 
 func (o *deploySvcOpts) manifest() (interface{}, error) {
-	mft, err := unmarshalManifest(o.name, o.ws, o.unmarshal)
+	raw, err := o.ws.ReadServiceManifest(o.name)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest for service %s: %w", o.name, err)
+	}
+	mft, err := o.unmarshal(raw)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal manifest for service %s: %w", o.name, err)
-	}
-	return mft, nil
-}
-
-func unmarshalManifest(name string, ws svcManifestReader, unmarshal func([]byte) (interface{}, error)) (interface{}, error) {
-	raw, err := ws.ReadWorkloadManifest(name)
-	if err != nil {
-		return nil, err
-	}
-	mft, err := unmarshal(raw)
-	if err != nil {
-		return nil, err
 	}
 	return mft, nil
 }

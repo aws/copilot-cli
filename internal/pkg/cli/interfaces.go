@@ -212,6 +212,10 @@ type svcManifestReader interface {
 	ReadServiceManifest(svcName string) ([]byte, error)
 }
 
+type jobManifestReader interface {
+	ReadJobManifest(jobName string) ([]byte, error)
+}
+
 type svcManifestWriter interface {
 	dockerfileLister
 	WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
@@ -263,7 +267,7 @@ type wsJobLister interface {
 }
 
 type wsJobReader interface {
-	svcManifestReader
+	jobManifestReader
 	wsJobLister
 }
 
