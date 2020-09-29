@@ -135,3 +135,8 @@ func (j ScheduledJob) ApplyEnv(envName string) (*ScheduledJob, error) {
 	j.Environments = nil
 	return &j, nil
 }
+
+// BuildArgs returns a docker.BuildArguments object for the job given a workspace root.
+func (j *ScheduledJob) BuildArgs(wsRoot string) *DockerBuildArgs {
+	return j.Image.BuildConfig(wsRoot)
+}
