@@ -32,6 +32,7 @@ type cfnClient interface {
 	WaitForCreate(stackName string) error
 	Update(*cloudformation.Stack) error
 	UpdateAndWait(*cloudformation.Stack) error
+	WaitForUpdate(stackName string) error
 	Delete(stackName string) error
 	DeleteAndWait(stackName string) error
 	Describe(stackName string) (*cloudformation.StackDescription, error)
