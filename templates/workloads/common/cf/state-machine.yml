@@ -14,16 +14,15 @@ StateMachine:
         Fn::ImportValue:
           !Sub '${AppName}-${EnvName}-ClusterId'
       TaskDefinition: !Ref TaskDefinition
-      Subnets: !Join
-        - '","'
-        - Fn::ImportValue: !Sub "${AppName}-${EnvName}-PublicSubnets"
+      Subnets: 
+       - Fn::ImportValue: !Sub "${AppName}-${EnvName}-PublicSubnets"
       AssignPublicIp: ENABLED # Should be DISABLED if we use private subnets
       SecurityGroups:
         - Fn::ImportValue: !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"
         {{- if .StateMachine}}{{if .StateMachine.Timeout}}
       Timeout: {{.StateMachine.Timeout}}{{end}}{{end}}
     DefinitionString: |-
-{{include state-machine-definition . | indent 6}}      
+{{include "state-machine-definition.json" . | indent 6}}      
       
 StateMachineRole:
   Type: AWS::IAM::Role
@@ -49,7 +48,12 @@ StateMachineRole:
           Resource: !Ref TaskDefinition
           Condition:
             ArnEquals:
-              'ecs:cluster': !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::Account}:cluster/${AppName}-${EnvName}-ClusterId
+              'ecs:cluster':
+                Fn::Sub:
+                  - arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ClusterID}
+                  - ClusterID:
+                      Fn::ImportValue:
+                        !Sub '${AppName}-${EnvName}-ClusterId'
         - Effect: Allow
           Action:
           - ecs:StopTask
@@ -57,7 +61,12 @@ StateMachineRole:
           Resource: "*"
           Condition:
             ArnEquals:
-              'ecs:cluster': !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::Account}:cluster/${AppName}-${EnvName}-ClusterId
+              'ecs:cluster':
+                Fn::Sub:
+                  - arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ClusterID}
+                  - ClusterID:
+                      Fn::ImportValue:
+                        !Sub '${AppName}-${EnvName}-ClusterId'
         - Effect: Allow
           Action:
             - logs:CreateLogDelivery
