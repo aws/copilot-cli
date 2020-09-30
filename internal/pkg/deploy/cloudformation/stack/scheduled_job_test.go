@@ -262,10 +262,6 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 			inputSchedule: "* * * malformed *",
 			wantedError:   errors.New("schedule is not valid cron, rate, or preset: failed to parse int from malformed: strconv.Atoi: parsing \"malformed\": invalid syntax"),
 		},
-		"cron syntax error": {
-			inputSchedule: "* * * malformed *",
-			wantedError:   errors.New("schedule * * * malformed * for job mailer is not a valid cron expression or definition string"),
-		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

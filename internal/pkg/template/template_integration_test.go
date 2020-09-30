@@ -22,11 +22,31 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 		"renders a valid template by default": {
 			opts: template.WorkloadOpts{},
 		},
+		"renders with timeout and no retries": {
+			opts: template.WorkloadOpts{
+				StateMachine: &template.StateMachineOpts{
+					Timeout: aws.Int(3600),
+				},
+			},
+		},
 		"renders with options": {
 			opts: template.WorkloadOpts{
 				StateMachine: &template.StateMachineOpts{
 					Retries: aws.Int(5),
 					Timeout: aws.Int(3600),
+				},
+			},
+		},
+		"renders with options and addons": {
+			opts: template.WorkloadOpts{
+				StateMachine: &template.StateMachineOpts{
+					Retries: aws.Int(3),
+				},
+				NestedStack: &template.WorkloadNestedStackOpts{
+					StackName:       "AddonsStack",
+					VariableOutputs: []string{"TableName"},
+					SecretOutputs:   []string{"TablePassword"},
+					PolicyOutputs:   []string{"TablePolicy"},
 				},
 			},
 		},
