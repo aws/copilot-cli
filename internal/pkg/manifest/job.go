@@ -91,13 +91,16 @@ func newDefaultScheduledJob() *ScheduledJob {
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),
+				Count: Count{
+					Value: aws.Int(1),
+				},
 			},
 		},
 	}
 }
 
 // NewScheduledJob creates a new
-func NewScheduledJob(props ScheduledJobProps) *ScheduledJob {
+func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	job := newDefaultScheduledJob()
 	// Apply overrides.
 	job.Name = aws.String(props.Name)
@@ -105,6 +108,7 @@ func NewScheduledJob(props ScheduledJobProps) *ScheduledJob {
 	job.Schedule = props.Schedule
 	job.Retries = props.Retries
 	job.Timeout = props.Timeout
+
 	job.parser = template.New()
 	return job
 }

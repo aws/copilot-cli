@@ -20,7 +20,7 @@ import (
 
 // Parameter logical IDs for a scheduled job
 const (
-	ScheduledJobSchedule = "Schedule"
+	ScheduledJobScheduleParamKey = "Schedule"
 )
 
 type scheduledJobParser interface {
@@ -138,10 +138,14 @@ func (j *ScheduledJob) Parameters() ([]*cloudformation.Parameter, error) {
 	if err != nil {
 		return nil, err
 	}
+	schedule, err := j.awsSchedule()
+	if err != nil {
+		return nil, err
+	}
 	return append(wkldParams, []*cloudformation.Parameter{
 		{
-			ParameterKey:   aws.String(ScheduledJobSchedule),
-			ParameterValue: aws.String(j.manifest.Schedule),
+			ParameterKey:   aws.String(ScheduledJobScheduleParamKey),
+			ParameterValue: aws.String(schedule),
 		},
 	}...), nil
 }
