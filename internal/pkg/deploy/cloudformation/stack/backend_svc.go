@@ -21,7 +21,7 @@ const (
 
 type backendSvcReadParser interface {
 	template.ReadParser
-	ParseBackendService(template.ServiceOpts) (*template.Content, error)
+	ParseBackendService(template.WorkloadOpts) (*template.Content, error)
 }
 
 // BackendService represents the configuration needed to create a CloudFormation stack from a backend service manifest.
@@ -41,7 +41,7 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 	}
 	envManifest, err := mft.ApplyEnv(env) // Apply environment overrides to the manifest values.
 	if err != nil {
-		return nil, fmt.Errorf("apply environment %s override: %s", env, err)
+		return nil, fmt.Errorf("apply environment %s override: %w", env, err)
 	}
 	return &BackendService{
 		wkld: &wkld{
@@ -77,7 +77,7 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
 	}
-	content, err := s.parser.ParseBackendService(template.ServiceOpts{
+	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		Variables:          s.manifest.BackendServiceConfig.Variables,
 		Secrets:            s.manifest.BackendServiceConfig.Secrets,
 		NestedStack:        outputs,

@@ -2200,6 +2200,44 @@ func (mr *MockjobDirManifestWriterMockRecorder) CopilotDirPath() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockjobDirManifestWriter)(nil).CopilotDirPath))
 }
 
+// MockcopilotDirGetter is a mock of copilotDirGetter interface
+type MockcopilotDirGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockcopilotDirGetterMockRecorder
+}
+
+// MockcopilotDirGetterMockRecorder is the mock recorder for MockcopilotDirGetter
+type MockcopilotDirGetterMockRecorder struct {
+	mock *MockcopilotDirGetter
+}
+
+// NewMockcopilotDirGetter creates a new mock instance
+func NewMockcopilotDirGetter(ctrl *gomock.Controller) *MockcopilotDirGetter {
+	mock := &MockcopilotDirGetter{ctrl: ctrl}
+	mock.recorder = &MockcopilotDirGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockcopilotDirGetter) EXPECT() *MockcopilotDirGetterMockRecorder {
+	return m.recorder
+}
+
+// CopilotDirPath mocks base method
+func (m *MockcopilotDirGetter) CopilotDirPath() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CopilotDirPath")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CopilotDirPath indicates an expected call of CopilotDirPath
+func (mr *MockcopilotDirGetterMockRecorder) CopilotDirPath() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockcopilotDirGetter)(nil).CopilotDirPath))
+}
+
 // MockwsPipelineManifestReader is a mock of wsPipelineManifestReader interface
 type MockwsPipelineManifestReader struct {
 	ctrl     *gomock.Controller

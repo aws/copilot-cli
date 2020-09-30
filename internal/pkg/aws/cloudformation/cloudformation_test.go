@@ -53,8 +53,8 @@ func TestCloudFormation_Create(t *testing.T) {
 				}, nil)
 				return m
 			},
-			wantedErr: &errStackUpdateInProgress{
-				name: mockStack.Name,
+			wantedErr: &ErrStackUpdateInProgress{
+				Name: mockStack.Name,
 			},
 		},
 		"fail if a successfully created stack already exists": {
@@ -217,8 +217,8 @@ func TestCloudFormation_Update(t *testing.T) {
 				}, nil)
 				return m
 			},
-			wantedErr: &errStackUpdateInProgress{
-				name: mockStack.Name,
+			wantedErr: &ErrStackUpdateInProgress{
+				Name: mockStack.Name,
 			},
 		},
 		"update a previously existing stack": {
