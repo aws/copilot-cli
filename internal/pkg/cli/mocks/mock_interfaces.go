@@ -2929,6 +2929,80 @@ func (mr *MocksvcRemoverFromAppMockRecorder) RemoveServiceFromApp(app, svcName i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveServiceFromApp", reflect.TypeOf((*MocksvcRemoverFromApp)(nil).RemoveServiceFromApp), app, svcName)
 }
 
+// MockjobDeleter is a mock of jobDeleter interface
+type MockjobDeleter struct {
+	ctrl     *gomock.Controller
+	recorder *MockjobDeleterMockRecorder
+}
+
+// MockjobDeleterMockRecorder is the mock recorder for MockjobDeleter
+type MockjobDeleterMockRecorder struct {
+	mock *MockjobDeleter
+}
+
+// NewMockjobDeleter creates a new mock instance
+func NewMockjobDeleter(ctrl *gomock.Controller) *MockjobDeleter {
+	mock := &MockjobDeleter{ctrl: ctrl}
+	mock.recorder = &MockjobDeleterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockjobDeleter) EXPECT() *MockjobDeleterMockRecorder {
+	return m.recorder
+}
+
+// DeleteJob mocks base method
+func (m *MockjobDeleter) DeleteJob(in deploy.DeleteJobInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteJob", in)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteJob indicates an expected call of DeleteJob
+func (mr *MockjobDeleterMockRecorder) DeleteJob(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteJob", reflect.TypeOf((*MockjobDeleter)(nil).DeleteJob), in)
+}
+
+// MockjobRemoverFromApp is a mock of jobRemoverFromApp interface
+type MockjobRemoverFromApp struct {
+	ctrl     *gomock.Controller
+	recorder *MockjobRemoverFromAppMockRecorder
+}
+
+// MockjobRemoverFromAppMockRecorder is the mock recorder for MockjobRemoverFromApp
+type MockjobRemoverFromAppMockRecorder struct {
+	mock *MockjobRemoverFromApp
+}
+
+// NewMockjobRemoverFromApp creates a new mock instance
+func NewMockjobRemoverFromApp(ctrl *gomock.Controller) *MockjobRemoverFromApp {
+	mock := &MockjobRemoverFromApp{ctrl: ctrl}
+	mock.recorder = &MockjobRemoverFromAppMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockjobRemoverFromApp) EXPECT() *MockjobRemoverFromAppMockRecorder {
+	return m.recorder
+}
+
+// RemoveJobFromApp mocks base method
+func (m *MockjobRemoverFromApp) RemoveJobFromApp(app *config.Application, jobName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveJobFromApp", app, jobName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveJobFromApp indicates an expected call of RemoveJobFromApp
+func (mr *MockjobRemoverFromAppMockRecorder) RemoveJobFromApp(app, jobName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveJobFromApp", reflect.TypeOf((*MockjobRemoverFromApp)(nil).RemoveJobFromApp), app, jobName)
+}
+
 // MockimageRemover is a mock of imageRemover interface
 type MockimageRemover struct {
 	ctrl     *gomock.Controller
