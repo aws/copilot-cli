@@ -27,10 +27,10 @@ func TestDeleteJobOpts_Validate(t *testing.T) {
 
 		want error
 	}{
-		"should return errNoAppInWorkspace": {
+		"should return error if job/env flag but not app flag set": {
 			setupMocks: func(m *mocks.Mockstore) {},
 			inName:     "api",
-			want:       errNoAppInWorkspace,
+			want:       errors.New("--app must be provided"),
 		},
 		"with no flag set": {
 			inAppName:  "phonetool",
@@ -124,7 +124,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Job("Select a job to delete", "").Return(testJobName, nil)
+				m.EXPECT().Job("Which job would you like to delete?", "").Return(testJobName, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
@@ -134,7 +134,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Job("Select a job to delete", "").Return("", mockError)
+				m.EXPECT().Job("Which job would you like to delete?", "").Return("", mockError)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
@@ -144,7 +144,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Job("Select a job to delete", "").Return("", mockError)
+				m.EXPECT().Job("Which job would you like to delete?", "").Return("", mockError)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 

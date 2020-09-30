@@ -20,6 +20,8 @@ import (
 const (
 	fmtJobDeleteConfirmPrompt        = "Are you sure you want to delete %s from application %s?"
 	fmtJobDeleteFromEnvConfirmPrompt = "Are you sure you want to delete %s from environment %s?"
+	jobDeleteAppNamePrompt           = "Which application's job would you like to delete?"
+	jobDeleteJobNamePrompt           = "Which job would you like to delete?"
 	jobDeleteConfirmHelp             = "This will remove the job from all environments and delete it from your app."
 	jobDeleteFromEnvConfirmHelp      = "This will remove the job from just the %s environment."
 )
@@ -67,8 +69,10 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 
 // Validate returns an error if the user inputs are invalid.
 func (o *deleteJobOpts) Validate() error {
-	if o.appName == "" {
-		return errNoAppInWorkspace
+	if o.name != "" || o.envName != "" {
+		if o.appName == "" {
+			return fmt.Errorf("--%s must be provided", appFlag)
+		}
 	}
 	if o.name != "" {
 		if _, err := o.store.GetJob(o.appName, o.name); err != nil {
@@ -83,6 +87,9 @@ func (o *deleteJobOpts) Validate() error {
 
 // Ask prompts the user for any required flags.
 func (o *deleteJobOpts) Ask() error {
+	if err := o.askAppName(); err != nil {
+		return err
+	}
 	if err := o.askJobName(); err != nil {
 		return err
 	}
@@ -131,12 +138,25 @@ func (o *deleteJobOpts) targetEnv() (*config.Environment, error) {
 	return env, nil
 }
 
+func (o *deleteJobOpts) askAppName() error {
+	if o.appName != "" {
+		return nil
+	}
+
+	name, err := o.sel.Application(jobDeleteAppNamePrompt, "")
+	if err != nil {
+		return fmt.Errorf("select application name: %w", err)
+	}
+	o.appName = name
+	return nil
+}
+
 func (o *deleteJobOpts) askJobName() error {
 	if o.name != "" {
 		return nil
 	}
 
-	name, err := o.sel.Job("Select a job to delete", "")
+	name, err := o.sel.Job(jobDeleteJobNamePrompt, "")
 	if err != nil {
 		return fmt.Errorf("select job: %w", err)
 	}
