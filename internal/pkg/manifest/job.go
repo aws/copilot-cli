@@ -7,6 +7,7 @@ package manifest
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/imdario/mergo"
 )
 
 const (
@@ -102,4 +103,21 @@ func (j *ScheduledJob) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 	return content.Bytes(), nil
+}
+
+// ApplyEnv returns the manifest with environment overrides.
+func (j ScheduledJob) ApplyEnv(envName string) (*ScheduledJob, error) {
+	overrideConfig, ok := j.Environments[envName]
+	if !ok {
+		return &j, nil
+	}
+	// Apply overrides to the original job
+	err := mergo.Merge(&j, ScheduledJob{
+		ScheduledJobConfig: *overrideConfig,
+	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+	if err != nil {
+		return nil, err
+	}
+	j.Environments = nil
+	return &j, nil
 }

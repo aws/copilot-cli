@@ -134,7 +134,7 @@ func (o *svcLogsOpts) Validate() error {
 		o.endTime = aws.Int64(endTime)
 	}
 
-	if o.limit < cwGetLogEventsLimitMin || o.limit > cwGetLogEventsLimitMax {
+	if o.limit != 0 && (o.limit < cwGetLogEventsLimitMin || o.limit > cwGetLogEventsLimitMax) {
 		return fmt.Errorf("--limit %d is out-of-bounds, value must be between %d and %d", o.limit, cwGetLogEventsLimitMin, cwGetLogEventsLimitMax)
 	}
 
@@ -158,9 +158,13 @@ func (o *svcLogsOpts) Execute() error {
 	if o.shouldOutputJSON {
 		eventsWriter = ecslogging.WriteJSONLogs
 	}
+	var limit *int64
+	if o.limit != 0 {
+		limit = aws.Int64(int64(o.limit))
+	}
 	err := o.logsSvc.WriteLogEvents(ecslogging.WriteLogEventsOpts{
 		Follow:    o.follow,
-		Limit:     o.limit,
+		Limit:     limit,
 		EndTime:   o.endTime,
 		StartTime: o.startTime,
 		TaskIDs:   o.taskIDs,
@@ -248,7 +252,7 @@ func buildSvcLogsCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
 	cmd.Flags().DurationVar(&vars.since, sinceFlag, 0, sinceFlagDescription)
-	cmd.Flags().IntVar(&vars.limit, limitFlag, 10, limitFlagDescription)
+	cmd.Flags().IntVar(&vars.limit, limitFlag, 0, limitFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.taskIDs, tasksFlag, nil, tasksLogsFlagDescription)
 	return cmd
 }
