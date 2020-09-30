@@ -24,6 +24,7 @@ import (
 
 const (
 	svcDeleteNamePrompt              = "Which service would you like to delete?"
+	svcDeleteAppNamePrompt           = "Which application's service would you like to delete?"
 	fmtSvcDeleteConfirmPrompt        = "Are you sure you want to delete %s from application %s?"
 	fmtSvcDeleteFromEnvConfirmPrompt = "Are you sure you want to delete %s from environment %s?"
 	svcDeleteConfirmHelp             = "This will remove the service from all environments and delete it from your app."
@@ -96,8 +97,10 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 
 // Validate returns an error if the user inputs are invalid.
 func (o *deleteSvcOpts) Validate() error {
-	if o.appName == "" {
-		return errNoAppInWorkspace
+	if o.name != "" || o.envName != "" {
+		if o.appName == "" {
+			return errNoAppInWorkspace
+		}
 	}
 	if o.name != "" {
 		if _, err := o.store.GetService(o.appName, o.name); err != nil {
@@ -114,6 +117,9 @@ func (o *deleteSvcOpts) Validate() error {
 
 // Ask prompts the user for any required flags.
 func (o *deleteSvcOpts) Ask() error {
+	if err := o.askAppName(); err != nil {
+		return err
+	}
 	if err := o.askSvcName(); err != nil {
 		return err
 	}
@@ -201,6 +207,17 @@ func (o *deleteSvcOpts) targetEnv() (*config.Environment, error) {
 		return nil, fmt.Errorf("get environment %s from config store: %w", o.envName, err)
 	}
 	return env, nil
+}
+
+func (o *deleteSvcOpts) askAppName() error {
+	if o.appName != "" {
+		return nil
+	}
+
+	name, err := o.sel.Application(svcDeleteAppNamePrompt, "")
+	if err != nil {
+		return fmt.Errorf("select application name: %w", err)
+	}
 }
 
 func (o *deleteSvcOpts) askSvcName() error {
