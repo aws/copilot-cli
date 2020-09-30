@@ -40,7 +40,6 @@ type deleteJobOpts struct {
 
 	// Interfaces to dependencies.
 	store  store
-	ws     selector.WsWorkloadLister
 	prompt prompter
 	sel    wsSelector
 }

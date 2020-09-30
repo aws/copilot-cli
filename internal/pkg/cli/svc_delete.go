@@ -223,18 +223,6 @@ func (o *deleteSvcOpts) askSvcName() error {
 	return nil
 }
 
-func (o *deleteSvcOpts) serviceNames() ([]string, error) {
-	services, err := o.store.ListServices(o.appName)
-	if err != nil {
-		return nil, fmt.Errorf("list services for application %s: %w", o.appName, err)
-	}
-	var names []string
-	for _, svc := range services {
-		names = append(names, svc.Name)
-	}
-	return names, nil
-}
-
 func (o *deleteSvcOpts) appEnvironments() error {
 	if o.envName != "" {
 		env, err := o.targetEnv()
