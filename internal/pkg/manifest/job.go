@@ -24,11 +24,6 @@ var JobTypes = []string{
 	ScheduledJobType,
 }
 
-var (
-	fmtRateExpression = "rate(%d minutes)"
-	fmtCronExpression = "cron(%s)"
-)
-
 // ScheduledJob holds the configuration to build a container image that is run
 // periodically in a given environment with timeout and retry logic.
 type ScheduledJob struct {
