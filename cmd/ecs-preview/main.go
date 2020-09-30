@@ -92,6 +92,7 @@ func buildRootCmd() *cobra.Command {
 
 	// "Storage" command group.
 	cmd.AddCommand(cli.BuildDatabaseCmd())
+	cmd.AddCommand(cli.BuildS3Cmd())
 
 	// "Release" command group.
 	cmd.AddCommand(cli.BuildPipelineCmd())

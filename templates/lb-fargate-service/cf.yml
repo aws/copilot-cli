@@ -180,13 +180,11 @@ Resources:
               - Effect: 'Allow'
                 Action: '*'
                 Resource:
-                  - !Sub 'arn:aws:s3:::${ProjectName}-${EnvName}-*'
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
                   - !Sub 'arn:aws:elasticache:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
                   - !Sub 'arn:aws:redshift:${AWS::Region}:${AWS::AccountId}:*:${ProjectName}-${EnvName}-*'
                   - !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:*:${ProjectName}-${EnvName}-*'
                   - !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
-
                   - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${EnvName}-*'
                   - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${EnvName}-*'
                   - !Sub 'arn:aws:kinesis:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
@@ -225,6 +223,24 @@ Resources:
                   - 'cloudwatch:PutDashboard'
                   - 'cloudwatch:ListMetrics'
                 Resource: '*'
+        - PolicyName: 'AllowS3Access'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 's3:ListBucket'
+                Resource: !Sub 'arn:aws:s3:::${ProjectName}-${EnvName}-storage'
+                Condition:
+                  StringLike:
+                    's3:prefix': !Sub 'apps/${AppName}/*'
+              - Effect: 'Allow'
+                Action:
+                  - 's3:DeleteObject'
+                  - 's3:GetObject'
+                  - 's3:ListObjects'
+                  - 's3:PutObject'
+                Resource: !Sub 'arn:aws:s3:::${ProjectName}-${EnvName}-storage/apps/${AppName}/*'
 
   ContainerSecurityGroup:
     Type: AWS::EC2::SecurityGroup

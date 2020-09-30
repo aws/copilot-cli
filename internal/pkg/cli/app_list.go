@@ -172,7 +172,7 @@ func BuildAppListCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "ls",
-		Short: "Lists all the applications in a project",
+		Short: "Lists all the applications in a project.",
 		Example: `
   Lists all the applications
   /code $ dw_run.sh app ls`,

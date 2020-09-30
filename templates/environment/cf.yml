@@ -552,6 +552,23 @@ Resources:
       SubjectAlternativeNames:
       - !Sub "*.${EnvironmentName}.${ProjectName}.${ProjectDNSName}"
       - !Sub "*.${ProjectDNSName}" # needed for {app-name}.dw.run domain names
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectName}-${EnvironmentName}-storage"
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+    DeletionPolicy: Retain
+
 Outputs:
   VpcId:
     Value: !Ref VPC
@@ -645,3 +662,8 @@ Outputs:
     Description: The domain name of this environment.
     Export:
       Name: !Sub ${AWS::StackName}-SubDomain
+
+  S3Bucket:
+    Value: !Ref S3Bucket
+    Export:
+      Name: !Sub ${AWS::StackName}-S3Bucket

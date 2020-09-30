@@ -10,9 +10,10 @@ require (
 	github.com/datadotworld/dev-tools v0.0.0-20200123221603-f137cd5b107a
 	github.com/fatih/color v1.8.0
 	github.com/fatih/structs v1.1.0
-	github.com/gobuffalo/packd v0.3.0
-	github.com/gobuffalo/packr/v2 v2.7.1
-	github.com/golang/mock v1.4.0
+	github.com/gobuffalo/envy v1.7.1 // indirect
+	github.com/gobuffalo/packd v1.0.0
+	github.com/gobuffalo/packr/v2 v2.8.0
+	github.com/golang/mock v1.4.4
 	github.com/google/uuid v1.1.1
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
@@ -20,8 +21,9 @@ require (
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.8.1
 	github.com/spf13/afero v1.2.2
-	github.com/spf13/cobra v0.0.5
+	github.com/spf13/cobra v0.0.6
 	github.com/spf13/viper v1.6.1
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.5.1
 	gopkg.in/yaml.v3 v3.0.0-20190905181640-827449938966
+	rsc.io/quote/v3 v3.1.0 // indirect
 )

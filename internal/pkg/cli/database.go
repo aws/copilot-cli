@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// BuildDatabaseCmd is the top level command for the storage options.
+// BuildDatabaseCmd is the top level command for the database options.
 func BuildDatabaseCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "database",
