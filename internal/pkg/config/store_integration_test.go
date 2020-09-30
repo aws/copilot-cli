@@ -94,8 +94,8 @@ func Test_SSM_Environment_Integration(t *testing.T) {
 func Test_SSM_Service_Integration(t *testing.T) {
 	s, _ := config.NewStore()
 	applicationToCreate := config.Application{Name: randStringBytes(10), Version: "1.0"}
-	apiService := config.Service{Name: "api", App: applicationToCreate.Name, Type: "LBFargateService"}
-	feService := config.Service{Name: "front-end", App: applicationToCreate.Name, Type: "LBFargateService"}
+	apiService := config.Workload{Name: "api", App: applicationToCreate.Name, Type: "LBFargateService"}
+	feService := config.Workload{Name: "front-end", App: applicationToCreate.Name, Type: "LBFargateService"}
 
 	t.Run("Create, Get and List Applications", func(t *testing.T) {
 		// Create our first application
@@ -124,11 +124,11 @@ func Test_SSM_Service_Integration(t *testing.T) {
 		// Make sure all the svcs are under our application
 		svcs, err = s.ListServices(applicationToCreate.Name)
 		require.NoError(t, err)
-		var services []config.Service
+		var services []config.Workload
 		for _, s := range svcs {
 			services = append(services, *s)
 		}
-		require.ElementsMatch(t, services, []config.Service{apiService, feService})
+		require.ElementsMatch(t, services, []config.Workload{apiService, feService})
 
 		// Fetch our saved svcs, one by one
 		svc, err := s.GetService(applicationToCreate.Name, apiService.Name)

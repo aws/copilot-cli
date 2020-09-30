@@ -72,21 +72,21 @@ func (e *EnvStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	vpcConf := &template.AdjustVPCOpts{
+	vpcConf := &config.AdjustVPC{
 		CIDR:               DefaultVPCCIDR,
 		PrivateSubnetCIDRs: strings.Split(DefaultPrivateSubnetCIDRs, ","),
 		PublicSubnetCIDRs:  strings.Split(DefaultPublicSubnetCIDRs, ","),
 	}
 
-	if e.in.AdjustVPCOpts() != nil {
-		vpcConf = e.in.AdjustVPCOpts()
+	if e.in.AdjustVPCConfig != nil {
+		vpcConf = e.in.AdjustVPCConfig
 	}
 
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
 		ACMValidationLambda:       acmLambda.String(),
 		DNSDelegationLambda:       dnsLambda.String(),
 		EnableLongARNFormatLambda: enableLongARNsLambda.String(),
-		ImportVPC:                 e.in.ImportVPCOpts(),
+		ImportVPC:                 e.in.ImportVPCConfig,
 		VPCConfig:                 vpcConf,
 		Version:                   e.in.Version,
 	}, template.WithFuncs(map[string]interface{}{

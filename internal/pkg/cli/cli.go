@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -101,9 +100,6 @@ func relativeDockerfilePath(ws copilotDirGetter, dockerfilePath string) (string,
 	absDfPath, err := filepath.Abs(dockerfilePath)
 	if err != nil {
 		return "", fmt.Errorf("get absolute path: %v", err)
-	}
-	if !strings.Contains(absDfPath, wsRoot) {
-		return "", fmt.Errorf("Dockerfile %s not within workspace %s", absDfPath, wsRoot)
 	}
 	relDfPath, err := filepath.Rel(wsRoot, absDfPath)
 	if err != nil {
