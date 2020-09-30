@@ -7,11 +7,13 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
+
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+
 	"github.com/spf13/cobra"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 )
 
@@ -39,7 +41,9 @@ type deleteJobOpts struct {
 
 	// Interfaces to dependencies.
 	store  store
+	ws     selector.WsWorkloadLister
 	prompt prompter
+	sel    wsSelector
 }
 
 func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
@@ -52,11 +56,18 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 		return nil, err
 	}
 
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("new workspace: %w", err)
+	}
+
+	prompter := prompt.New()
 	return &deleteJobOpts{
 		deleteJobVars: vars,
 
 		store:  store,
-		prompt: prompt.New(),
+		prompt: prompter,
+		sel:    selector.NewWorkspaceSelect(prompter, store, ws),
 	}, nil
 }
 
@@ -131,36 +142,12 @@ func (o *deleteJobOpts) askJobName() error {
 		return nil
 	}
 
-	names, err := o.jobNames()
+	name, err := o.sel.Job("Select a job to delete", "")
 	if err != nil {
-		return err
-	}
-	if len(names) == 0 {
-		return fmt.Errorf("couldn't find any jobs in the application %s", o.appName)
-	}
-	if len(names) == 1 {
-		o.name = names[0]
-		log.Infof("Only found one job, defaulting to: %s\n", color.HighlightUserInput(o.name))
-		return nil
-	}
-	name, err := o.prompt.SelectOne(jobDeleteNamePrompt, "", names)
-	if err != nil {
-		return fmt.Errorf("select job to delete: %w", err)
+		return fmt.Errorf("select job: %w", err)
 	}
 	o.name = name
 	return nil
-}
-
-func (o *deleteJobOpts) jobNames() ([]string, error) {
-	jobs, err := o.store.ListJobs(o.appName)
-	if err != nil {
-		return nil, fmt.Errorf("list jobs for application %s: %w", o.appName, err)
-	}
-	var names []string
-	for _, job := range jobs {
-		names = append(names, job.Name)
-	}
-	return names, nil
 }
 
 // buildJobDeleteCmd builds the command to delete job(s).

@@ -176,7 +176,7 @@ func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string
 	// doesn't already exist.
 	var wlList []string
 	shouldAddNewWl := true
-	// For now, AppResourcesConfig.Services refers to workloads, including both services and jobs
+	// For now, AppResourcesConfig.Services refers to workloads, including both services and jobs.
 	for _, wl := range previouslyDeployedConfig.Services {
 		wlList = append(wlList, wl)
 		if wl == wlName {
@@ -232,6 +232,7 @@ func (cf CloudFormation) removeWorkloadFromApp(app *config.Application, wlName s
 	// with the input workload to be removed.
 	var wlList []string
 	shouldRemoveWl := false
+	// For now, AppResourcesConfig.Services refers to workloads, including both services and jobs.
 	for _, wl := range previouslyDeployedConfig.Services {
 		if wl == wlName {
 			shouldRemoveWl = true

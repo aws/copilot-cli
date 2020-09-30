@@ -9,6 +9,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
+
 	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -57,6 +60,7 @@ type deleteSvcOpts struct {
 	sess      sessionProvider
 	spinner   progress
 	prompt    prompter
+	sel       wsSelector
 	appCFN    svcRemoverFromApp
 	getSvcCFN func(session *awssession.Session) svcDeleter
 	getECR    func(session *awssession.Session) imageRemover
@@ -76,14 +80,20 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 	if err != nil {
 		return nil, err
 	}
+	prompter := prompt.New()
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("new workspace: %w", err)
+	}
 
 	return &deleteSvcOpts{
 		deleteSvcVars: vars,
 
 		store:   store,
 		spinner: termprogress.NewSpinner(),
-		prompt:  prompt.New(),
+		prompt:  prompter,
 		sess:    provider,
+		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
 		appCFN:  cloudformation.New(defaultSession),
 		getSvcCFN: func(session *awssession.Session) svcDeleter {
 			return cloudformation.New(session)
@@ -206,21 +216,9 @@ func (o *deleteSvcOpts) askSvcName() error {
 		return nil
 	}
 
-	names, err := o.serviceNames()
+	name, err := o.sel.Service("Select a service to delete", "")
 	if err != nil {
-		return err
-	}
-	if len(names) == 0 {
-		return fmt.Errorf("couldn't find any services in the application %s", o.appName)
-	}
-	if len(names) == 1 {
-		o.name = names[0]
-		log.Infof("Only found one service, defaulting to: %s\n", color.HighlightUserInput(o.name))
-		return nil
-	}
-	name, err := o.prompt.SelectOne(svcDeleteNamePrompt, "", names)
-	if err != nil {
-		return fmt.Errorf("select service to delete: %w", err)
+		return fmt.Errorf("select service: %w", err)
 	}
 	o.name = name
 	return nil

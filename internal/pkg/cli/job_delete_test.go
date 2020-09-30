@@ -114,8 +114,8 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 		inName           string
 		envName          string
 
-		mockstore  func(m *mocks.Mockstore)
 		mockPrompt func(m *mocks.Mockprompter)
+		mockSel    func(m *mocks.MockwsSelector)
 
 		wantedName  string
 		wantedError error
@@ -123,31 +123,8 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 		"should ask for job name": {
 			inName:           "",
 			skipConfirmation: true,
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListJobs(testAppName).Return([]*config.Workload{
-					{
-						Name: testJobName,
-					},
-					{
-						Name: "otherjob",
-					},
-				}, nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(jobDeleteNamePrompt, "", []string{testJobName, "otherjob"}).Times(1).Return(testJobName, nil)
-			},
-
-			wantedName: testJobName,
-		},
-		"should skip asking for job name if only one job found": {
-			inName:           "",
-			skipConfirmation: true,
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListJobs(testAppName).Return([]*config.Workload{
-					{
-						Name: testJobName,
-					},
-				}, nil)
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Job("Select a job to delete", "").Return(testJobName, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
@@ -156,44 +133,39 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 		"returns error if no jobs found": {
 			inName:           "",
 			skipConfirmation: true,
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListJobs(testAppName).Return([]*config.Workload{}, nil)
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Job("Select a job to delete", "").Return("", mockError)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("couldn't find any jobs in the application phonetool"),
+			wantedError: fmt.Errorf("select job: %w", mockError),
 		},
 		"returns error if fail to select job": {
 			inName:           "",
 			skipConfirmation: true,
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListJobs(testAppName).Return([]*config.Workload{
-					{
-						Name: testJobName,
-					},
-					{
-						Name: "otherjob",
-					},
-				}, nil)
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Job("Select a job to delete", "").Return("", mockError)
 			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(jobDeleteNamePrompt, "", []string{testJobName, "otherjob"}).Times(1).Return("", mockError)
-			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("select job to delete: %w", mockError),
+			wantedError: fmt.Errorf("select job: %w", mockError),
 		},
 		"should skip confirmation": {
 			inName:           testJobName,
 			skipConfirmation: true,
-			mockstore:        func(m *mocks.Mockstore) {},
-			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Job(gomock.Any(), gomock.Any()).Times(0)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
 
 			wantedName: testJobName,
 		},
 		"should wrap error returned from prompter confirmation": {
 			inName:           testJobName,
 			skipConfirmation: false,
-			mockstore:        func(m *mocks.Mockstore) {},
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Job(gomock.Any(), gomock.Any()).Times(0)
+			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(fmtJobDeleteConfirmPrompt, testJobName, testAppName),
@@ -206,7 +178,9 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 		"should return error if user does not confirm job delete": {
 			inName:           testJobName,
 			skipConfirmation: false,
-			mockstore:        func(m *mocks.Mockstore) {},
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Job(gomock.Any(), gomock.Any()).Times(0)
+			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(fmtJobDeleteConfirmPrompt, testJobName, testAppName),
@@ -219,7 +193,9 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 		"should return error nil if user confirms job delete": {
 			inName:           testJobName,
 			skipConfirmation: false,
-			mockstore:        func(m *mocks.Mockstore) {},
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Job(gomock.Any(), gomock.Any()).Times(0)
+			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(fmtJobDeleteConfirmPrompt, testJobName, testAppName),
@@ -233,7 +209,9 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			inName:           testJobName,
 			envName:          "test",
 			skipConfirmation: false,
-			mockstore:        func(m *mocks.Mockstore) {},
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Job(gomock.Any(), gomock.Any()).Times(0)
+			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(fmtJobDeleteFromEnvConfirmPrompt, testJobName, "test"),
@@ -251,9 +229,9 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockPrompter := mocks.NewMockprompter(ctrl)
-			mockStore := mocks.NewMockstore(ctrl)
+			mockSel := mocks.NewMockwsSelector(ctrl)
 			test.mockPrompt(mockPrompter)
-			test.mockstore(mockStore)
+			test.mockSel(mockSel)
 
 			opts := deleteJobOpts{
 				deleteJobVars: deleteJobVars{
@@ -262,8 +240,8 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 					name:             test.inName,
 					envName:          test.envName,
 				},
-				store:  mockStore,
 				prompt: mockPrompter,
+				sel:    mockSel,
 			}
 
 			got := opts.Ask()
