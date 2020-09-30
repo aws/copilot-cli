@@ -249,7 +249,7 @@ func (o *deleteSvcOpts) deleteStacks() error {
 
 		cfClient := o.getSvcCFN(sess)
 		o.spinner.Start(fmt.Sprintf(fmtSvcDeleteStart, o.name, env.Name))
-		if err := cfClient.DeleteService(deploy.DeleteServiceInput{
+		if err := cfClient.DeleteService(deploy.DeleteWorkloadInput{
 			Name:    o.name,
 			EnvName: env.Name,
 			AppName: o.appName,

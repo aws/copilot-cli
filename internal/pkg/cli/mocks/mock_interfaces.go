@@ -2879,7 +2879,7 @@ func (m *MocksvcDeleter) EXPECT() *MocksvcDeleterMockRecorder {
 }
 
 // DeleteService mocks base method
-func (m *MocksvcDeleter) DeleteService(in deploy.DeleteServiceInput) error {
+func (m *MocksvcDeleter) DeleteService(in deploy.DeleteWorkloadInput) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteService", in)
 	ret0, _ := ret[0].(error)
@@ -4408,44 +4408,6 @@ func (m *MockinitJobSelector) Schedule(scheduleTypePrompt, scheduleTypeHelp stri
 func (mr *MockinitJobSelectorMockRecorder) Schedule(scheduleTypePrompt, scheduleTypeHelp, scheduleValidator, rateValidator interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Schedule", reflect.TypeOf((*MockinitJobSelector)(nil).Schedule), scheduleTypePrompt, scheduleTypeHelp, scheduleValidator, rateValidator)
-}
-
-// MockjobSelector is a mock of jobSelector interface
-type MockjobSelector struct {
-	ctrl     *gomock.Controller
-	recorder *MockjobSelectorMockRecorder
-}
-
-// MockjobSelectorMockRecorder is the mock recorder for MockjobSelector
-type MockjobSelectorMockRecorder struct {
-	mock *MockjobSelector
-}
-
-// NewMockjobSelector creates a new mock instance
-func NewMockjobSelector(ctrl *gomock.Controller) *MockjobSelector {
-	mock := &MockjobSelector{ctrl: ctrl}
-	mock.recorder = &MockjobSelectorMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockjobSelector) EXPECT() *MockjobSelectorMockRecorder {
-	return m.recorder
-}
-
-// Job mocks base method
-func (m *MockjobSelector) Job(prompt, help string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Job", prompt, help)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Job indicates an expected call of Job
-func (mr *MockjobSelectorMockRecorder) Job(prompt, help interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Job", reflect.TypeOf((*MockjobSelector)(nil).Job), prompt, help)
 }
 
 // MockdockerfileSelector is a mock of dockerfileSelector interface
