@@ -186,6 +186,20 @@ func (mr *MockcfnClientMockRecorder) UpdateAndWait(arg0 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAndWait", reflect.TypeOf((*MockcfnClient)(nil).UpdateAndWait), arg0)
 }
 
+// WaitForUpdate mocks base method
+func (m *MockcfnClient) WaitForUpdate(stackName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitForUpdate", stackName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitForUpdate indicates an expected call of WaitForUpdate
+func (mr *MockcfnClientMockRecorder) WaitForUpdate(stackName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForUpdate", reflect.TypeOf((*MockcfnClient)(nil).WaitForUpdate), stackName)
+}
+
 // Delete mocks base method
 func (m *MockcfnClient) Delete(stackName string) error {
 	m.ctrl.T.Helper()

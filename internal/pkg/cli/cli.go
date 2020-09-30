@@ -89,3 +89,21 @@ func relPath(fullPath string) (string, error) {
 	}
 	return path, nil
 }
+
+// relativeDockerfilePath returns the path from the workspace root to the Dockerfile.
+func relativeDockerfilePath(ws copilotDirGetter, dockerfilePath string) (string, error) {
+	copilotDirPath, err := ws.CopilotDirPath()
+	if err != nil {
+		return "", fmt.Errorf("get copilot directory: %w", err)
+	}
+	wsRoot := filepath.Dir(copilotDirPath)
+	absDfPath, err := filepath.Abs(dockerfilePath)
+	if err != nil {
+		return "", fmt.Errorf("get absolute path: %v", err)
+	}
+	relDfPath, err := filepath.Rel(wsRoot, absDfPath)
+	if err != nil {
+		return "", fmt.Errorf("find relative path from workspace root to Dockerfile: %v", err)
+	}
+	return relDfPath, nil
+}
