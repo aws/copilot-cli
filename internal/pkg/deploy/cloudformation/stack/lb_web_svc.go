@@ -33,7 +33,7 @@ const (
 
 type loadBalancedWebSvcReadParser interface {
 	template.ReadParser
-	ParseLoadBalancedWebService(template.ServiceOpts) (*template.Content, error)
+	ParseLoadBalancedWebService(template.WorkloadOpts) (*template.Content, error)
 }
 
 // LoadBalancedWebService represents the configuration needed to create a CloudFormation stack from a load balanced web service manifest.
@@ -107,7 +107,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
 	}
-	content, err := s.parser.ParseLoadBalancedWebService(template.ServiceOpts{
+	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		Variables:          s.manifest.Variables,
 		Secrets:            s.manifest.Secrets,
 		NestedStack:        outputs,

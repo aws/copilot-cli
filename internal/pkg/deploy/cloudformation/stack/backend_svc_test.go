@@ -135,7 +135,7 @@ func TestBackendService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().ParseBackendService(template.ServiceOpts{
+				m.EXPECT().ParseBackendService(template.WorkloadOpts{
 					HealthCheck: &ecs.HealthCheck{
 						Command:     aws.StringSlice([]string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"}),
 						Interval:    aws.Int64(5),
@@ -144,7 +144,7 @@ func TestBackendService_Template(t *testing.T) {
 						Timeout:     aws.Int64(10),
 					},
 					DesiredCountLambda: "something",
-					NestedStack: &template.ServiceNestedStackOpts{
+					NestedStack: &template.WorkloadNestedStackOpts{
 						StackName:       addon.StackName,
 						VariableOutputs: []string{"Hello"},
 					},

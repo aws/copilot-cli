@@ -78,7 +78,7 @@ $ copilot task run      \
   --default             \
   --follow              \
   --image alpine:latest \
-  --command "echo 'Hello, Copilot v0.3.0'"
+  --command "echo 'Howdy, Copilot'"
 ```
 
 ## Learning more 📖
