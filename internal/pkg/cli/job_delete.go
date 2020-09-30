@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	jobDeleteNamePrompt              = "Which job would you like to delete?"
 	fmtJobDeleteConfirmPrompt        = "Are you sure you want to delete %s from application %s?"
 	fmtJobDeleteFromEnvConfirmPrompt = "Are you sure you want to delete %s from environment %s?"
 	jobDeleteConfirmHelp             = "This will remove the job from all environments and delete it from your app."
@@ -50,10 +49,6 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
-	}
-
-	if err != nil {
-		return nil, err
 	}
 
 	ws, err := workspace.New()

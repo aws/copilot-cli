@@ -26,7 +26,6 @@ import (
 )
 
 const (
-	svcDeleteNamePrompt              = "Which service would you like to delete?"
 	fmtSvcDeleteConfirmPrompt        = "Are you sure you want to delete %s from application %s?"
 	fmtSvcDeleteFromEnvConfirmPrompt = "Are you sure you want to delete %s from environment %s?"
 	svcDeleteConfirmHelp             = "This will remove the service from all environments and delete it from your app."
