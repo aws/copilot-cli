@@ -27,9 +27,14 @@ func TestDeleteJobOpts_Validate(t *testing.T) {
 
 		want error
 	}{
-		"should return error if job/env flag but not app flag set": {
+		"should return error if job flag but not app flag set": {
+			inName:     "resizer",
 			setupMocks: func(m *mocks.Mockstore) {},
-			inName:     "api",
+			want:       errors.New("--app must be provided"),
+		},
+		"should return error if env flag but not app flag set": {
+			inEnvName:  "test",
+			setupMocks: func(m *mocks.Mockstore) {},
 			want:       errors.New("--app must be provided"),
 		},
 		"with no flag set": {
@@ -37,12 +42,15 @@ func TestDeleteJobOpts_Validate(t *testing.T) {
 			setupMocks: func(m *mocks.Mockstore) {},
 			want:       nil,
 		},
-		"with all flag set": {
+		"with all flags set": {
 			inAppName: "phonetool",
-			inName:    "api",
+			inEnvName: "test",
+			inName:    "resizer",
 			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetJob("phonetool", "api").Times(1).Return(&config.Workload{
-					Name: "api",
+				m.EXPECT().GetEnvironment("phonetool", "test").
+					Return(&config.Environment{Name: "test"}, nil)
+				m.EXPECT().GetJob("phonetool", "resizer").Times(1).Return(&config.Workload{
+					Name: "resizer",
 				}, nil)
 			},
 			want: nil,
@@ -53,6 +61,16 @@ func TestDeleteJobOpts_Validate(t *testing.T) {
 			setupMocks: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
 					Return(&config.Environment{Name: "test"}, nil)
+			},
+			want: nil,
+		},
+		"with job flag set": {
+			inAppName: "phonetool",
+			inName:    "resizer",
+			setupMocks: func(m *mocks.Mockstore) {
+				m.EXPECT().GetJob("phonetool", "resizer").Times(1).Return(&config.Workload{
+					Name: "resizer",
+				}, nil)
 			},
 			want: nil,
 		},
@@ -113,6 +131,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 		skipConfirmation bool
 		inName           string
 		envName          string
+		appName          string
 
 		mockPrompt func(m *mocks.Mockprompter)
 		mockSel    func(m *mocks.MockwsSelector)
@@ -120,7 +139,19 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 		wantedName  string
 		wantedError error
 	}{
+		"should ask for app name": {
+			appName:          "",
+			inName:           testJobName,
+			skipConfirmation: true,
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Application("Which application's job would you like to delete?", "").Return(testAppName, nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+
+			wantedName: testJobName,
+		},
 		"should ask for job name": {
+			appName:          testAppName,
 			inName:           "",
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
@@ -131,6 +162,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			wantedName: testJobName,
 		},
 		"returns error if no jobs found": {
+			appName:          testAppName,
 			inName:           "",
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
@@ -141,9 +173,11 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("select job: %w", mockError),
 		},
 		"returns error if fail to select job": {
+			appName:          testAppName,
 			inName:           "",
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Job(gomock.Any(), gomock.Any()).Times(0)
 				m.EXPECT().Job("Which job would you like to delete?", "").Return("", mockError)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
@@ -151,6 +185,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("select job: %w", mockError),
 		},
 		"should skip confirmation": {
+			appName:          testAppName,
 			inName:           testJobName,
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
@@ -161,6 +196,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			wantedName: testJobName,
 		},
 		"should wrap error returned from prompter confirmation": {
+			appName:          testAppName,
 			inName:           testJobName,
 			skipConfirmation: false,
 			mockSel: func(m *mocks.MockwsSelector) {
@@ -176,6 +212,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("job delete confirmation prompt: %w", mockError),
 		},
 		"should return error if user does not confirm job delete": {
+			appName:          testAppName,
 			inName:           testJobName,
 			skipConfirmation: false,
 			mockSel: func(m *mocks.MockwsSelector) {
@@ -191,6 +228,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			wantedError: errJobDeleteCancelled,
 		},
 		"should return error nil if user confirms job delete": {
+			appName:          testAppName,
 			inName:           testJobName,
 			skipConfirmation: false,
 			mockSel: func(m *mocks.MockwsSelector) {
@@ -206,6 +244,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			wantedName: testJobName,
 		},
 		"should return error nil if user confirms job delete --env": {
+			appName:          testAppName,
 			inName:           testJobName,
 			envName:          "test",
 			skipConfirmation: false,
@@ -236,7 +275,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			opts := deleteJobOpts{
 				deleteJobVars: deleteJobVars{
 					skipConfirmation: test.skipConfirmation,
-					appName:          testAppName,
+					appName:          test.appName,
 					name:             test.inName,
 					envName:          test.envName,
 				},
