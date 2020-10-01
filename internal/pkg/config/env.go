@@ -15,14 +15,46 @@ import (
 
 // Environment represents a deployment environment in an application.
 type Environment struct {
-	App              string `json:"app"`              // Name of the app this environment belongs to.
-	Name             string `json:"name"`             // Name of the environment, must be unique within a App.
-	Region           string `json:"region"`           // Name of the region this environment is stored in.
-	AccountID        string `json:"accountID"`        // Account ID of the account this environment is stored in.
-	Prod             bool   `json:"prod"`             // Whether or not this environment is a production environment.
-	RegistryURL      string `json:"registryURL"`      // URL For ECR Registry for this environment.
-	ExecutionRoleARN string `json:"executionRoleARN"` // ARN used by CloudFormation to make modification to the environment stack.
-	ManagerRoleARN   string `json:"managerRoleARN"`   // ARN for the manager role assumed to manipulate the environment and its services.
+	App              string        `json:"app"`                    // Name of the app this environment belongs to.
+	Name             string        `json:"name"`                   // Name of the environment, must be unique within a App.
+	Region           string        `json:"region"`                 // Name of the region this environment is stored in.
+	AccountID        string        `json:"accountID"`              // Account ID of the account this environment is stored in.
+	Prod             bool          `json:"prod"`                   // Whether or not this environment is a production environment.
+	RegistryURL      string        `json:"registryURL"`            // URL For ECR Registry for this environment.
+	ExecutionRoleARN string        `json:"executionRoleARN"`       // ARN used by CloudFormation to make modification to the environment stack.
+	ManagerRoleARN   string        `json:"managerRoleARN"`         // ARN for the manager role assumed to manipulate the environment and its services.
+	CustomConfig     *CustomizeEnv `json:"customConfig,omitempty"` // Custom environment configuration by users.
+}
+
+// CustomizeEnv represents the custom environment config.
+type CustomizeEnv struct {
+	ImportVPC *ImportVPC `json:"importVPC,omitempty"`
+	VPCConfig *AdjustVPC `json:"adjustVPC,omitempty"`
+}
+
+// NewCustomizeEnv returns a new CustomizeEnv struct.
+func NewCustomizeEnv(importVPC *ImportVPC, adjustVPC *AdjustVPC) *CustomizeEnv {
+	if importVPC == nil && adjustVPC == nil {
+		return nil
+	}
+	return &CustomizeEnv{
+		ImportVPC: importVPC,
+		VPCConfig: adjustVPC,
+	}
+}
+
+// ImportVPC holds the fields to import VPC resources.
+type ImportVPC struct {
+	ID               string   `json:"id"` // ID for the VPC.
+	PublicSubnetIDs  []string `json:"publicSubnetIDs"`
+	PrivateSubnetIDs []string `json:"privateSubnetIDs"`
+}
+
+// AdjustVPC holds the fields to adjust default VPC resources.
+type AdjustVPC struct {
+	CIDR               string   `json:"cidr"` // CIDR range for the VPC.
+	PublicSubnetCIDRs  []string `json:"publicSubnetCIDRs"`
+	PrivateSubnetCIDRs []string `json:"privateSubnetCIDRs"`
 }
 
 // CreateEnvironment instantiates a new environment within an existing App. Skip if
