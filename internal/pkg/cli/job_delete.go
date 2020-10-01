@@ -34,7 +34,7 @@ const (
 
 const (
 	fmtJobDeleteStart             = "Deleting job %s from environment %s."
-	fmtJobDeleteFailed            = "Failed to job service %s from environment %s: %v."
+	fmtJobDeleteFailed            = "Failed to job %s from environment %s: %v."
 	fmtJobDeleteComplete          = "Deleted job %s from environment %s."
 	fmtJobDeleteResourcesStart    = "Deleting job %s resources from application %s."
 	fmtJobDeleteResourcesComplete = "Deleted job %s resources from application %s."

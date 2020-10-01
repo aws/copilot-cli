@@ -131,7 +131,7 @@ type deleteAppMocks struct {
 	ws              *mocks.MockwsFileDeleter
 	sessProvider    *sessions.Provider
 	deployer        *mocks.Mockdeployer
-	svcDeleter      *mocks.Mockexecutor
+	wlDeleter       *mocks.Mockexecutor
 	envDeleter      *mocks.MockaskExecutor
 	bucketEmptier   *mocks.MockbucketEmptier
 	pipelineDeleter *mocks.MockdeletePipelineRunner
@@ -175,10 +175,11 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// deleteSvcs
 					mocks.store.EXPECT().ListServices(mockAppName).Return(mockServices, nil),
-					mocks.svcDeleter.EXPECT().Execute().Return(nil),
+					mocks.wlDeleter.EXPECT().Execute().Return(nil),
 
 					// deleteJobs
 					mocks.store.EXPECT().ListJobs(mockAppName).Return(mockJobs, nil),
+					mocks.wlDeleter.EXPECT().Execute().Return(nil),
 
 					// deleteEnvs
 					mocks.store.EXPECT().ListEnvironments(mockAppName).Return(mockEnvs, nil),
@@ -219,10 +220,11 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// deleteSvcs
 					mocks.store.EXPECT().ListServices(mockAppName).Return(mockServices, nil),
-					mocks.svcDeleter.EXPECT().Execute().Return(nil),
+					mocks.wlDeleter.EXPECT().Execute().Return(nil),
 
 					// deleteJobs
 					mocks.store.EXPECT().ListJobs(mockAppName).Return(mockJobs, nil),
+					mocks.wlDeleter.EXPECT().Execute().Return(nil),
 
 					// deleteEnvs
 					mocks.store.EXPECT().ListEnvironments(mockAppName).Return(mockEnvs, nil),
@@ -301,7 +303,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				ws:              mockWorkspace,
 				sessProvider:    mockSession,
 				deployer:        mockDeployer,
-				svcDeleter:      mockExecutor,
+				wlDeleter:       mockExecutor,
 				envDeleter:      mockAskExecutor,
 				bucketEmptier:   mockBucketEmptier,
 				pipelineDeleter: mockRunner,

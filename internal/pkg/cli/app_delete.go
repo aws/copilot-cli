@@ -216,9 +216,19 @@ func (o *deleteAppOpts) deleteSvcs() error {
 }
 
 func (o *deleteAppOpts) deleteJobs() error {
-	_, err := o.store.ListJobs(o.name)
+	jobs, err := o.store.ListJobs(o.name)
 	if err != nil {
 		return fmt.Errorf("list jobs for application %s: %w", o.name, err)
+	}
+
+	for _, job := range jobs {
+		cmd, err := o.executor(job.Name)
+		if err != nil {
+			return err
+		}
+		if err := cmd.Execute(); err != nil {
+			return fmt.Errorf("execute job delete: %w", err)
+		}
 	}
 	return nil
 }
