@@ -107,3 +107,19 @@ func relativeDockerfilePath(ws copilotDirGetter, dockerfilePath string) (string,
 	}
 	return relDfPath, nil
 }
+
+// dfBuildRequired returns if the container image should be built from local Dockerfile.
+func dfBuildRequired(svc interface{}) (bool, error) {
+	type manifest interface {
+		BuildRequired() (bool, error)
+	}
+	mf, ok := svc.(manifest)
+	if !ok {
+		return false, fmt.Errorf("service does not have required methods BuildRequired()")
+	}
+	required, err := mf.BuildRequired()
+	if err != nil {
+		return false, fmt.Errorf("check if service requires building from local Dockerfile: %w", err)
+	}
+	return required, nil
+}

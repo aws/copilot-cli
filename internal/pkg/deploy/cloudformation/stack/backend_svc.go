@@ -45,13 +45,14 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 	}
 	return &BackendService{
 		wkld: &wkld{
-			name:   aws.StringValue(mft.Name),
-			env:    env,
-			app:    app,
-			tc:     envManifest.BackendServiceConfig.TaskConfig,
-			rc:     rc,
-			parser: parser,
-			addons: addons,
+			name:     aws.StringValue(mft.Name),
+			env:      env,
+			app:      app,
+			tc:       envManifest.BackendServiceConfig.TaskConfig,
+			rc:       rc,
+			location: envManifest.Image.Location,
+			parser:   parser,
+			addons:   addons,
 		},
 		manifest: envManifest,
 

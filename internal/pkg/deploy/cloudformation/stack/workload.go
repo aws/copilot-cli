@@ -37,10 +37,16 @@ const (
 // RuntimeConfig represents configuration that's defined outside of the manifest file
 // that is needed to create a CloudFormation stack.
 type RuntimeConfig struct {
-	ImageRepoURL      string            // ImageRepoURL is the ECR repository URL the container image should be pushed to.
-	ImageTag          string            // ImageTag is the container image's unique tag.
+	Dockerfile        *DockerfileImage  // Optional. Configuration for Dockerfile image.
 	AddonsTemplateURL string            // Optional. S3 object URL for the addons template.
 	AdditionalTags    map[string]string // AdditionalTags are labels applied to resources in the workload stack.
+}
+
+// DockerfileImage represents configuration about Dockerfile image that is needed to
+// create a CloudFormation stack.
+type DockerfileImage struct {
+	RepoURL  string // RepoURL is the ECR repository URL the container image should be pushed to.
+	ImageTag string // Tag is the container image's unique tag.
 }
 
 type templater interface {
@@ -50,11 +56,12 @@ type templater interface {
 // wkld represents a containerized workload running on Amazon ECS.
 // A workload can be a long-running service, an ephemeral task, or a periodic task.
 type wkld struct {
-	name string
-	env  string
-	app  string
-	tc   manifest.TaskConfig
-	rc   RuntimeConfig
+	name     string
+	env      string
+	app      string
+	tc       manifest.TaskConfig
+	rc       RuntimeConfig
+	location *string
 
 	parser template.Parser
 	addons templater
@@ -76,6 +83,10 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 		}
 		desiredCount = aws.Int(min)
 	}
+	image := w.location
+	if w.rc.Dockerfile != nil {
+		image = aws.String(fmt.Sprintf("%s:%s", w.rc.Dockerfile.RepoURL, w.rc.Dockerfile.ImageTag))
+	}
 	return []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(WorkloadAppNameParamKey),
@@ -91,7 +102,7 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 		{
 			ParameterKey:   aws.String(WorkloadContainerImageParamKey),
-			ParameterValue: aws.String(fmt.Sprintf("%s:%s", w.rc.ImageRepoURL, w.rc.ImageTag)),
+			ParameterValue: image,
 		},
 		{
 			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),

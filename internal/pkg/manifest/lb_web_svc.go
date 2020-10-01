@@ -113,7 +113,12 @@ func tplDirName(s string) string {
 	return filepath.Dir(s)
 }
 
-//BuildArgs returns a docker.BuildArguments object given a ws root directory.
+// BuildRequired returns if the service requires building from the local Dockerfile.
+func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
+	return buildRequired(s.Image.Image)
+}
+
+// BuildArgs returns a docker.BuildArguments object given a ws root directory.
 func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.Image.BuildConfig(wsRoot)
 }

@@ -27,7 +27,7 @@ version: 1.0
 name: frontend
 type: "Load Balanced Web Service"
 image:
-  build: frontend/Dockerfile
+  location: foo/bar
   port: 80
 cpu: 512
 memory: 1024
@@ -67,9 +67,9 @@ environments:
 				wantedManifest := &LoadBalancedWebService{
 					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-						Image: ServiceImageWithPort{Image: Image{Build: BuildArgsOrString{
-							BuildString: aws.String("frontend/Dockerfile"),
-						}}, Port: aws.Uint16(80)},
+						Image: ServiceImageWithPort{Image: Image{Build: BuildArgsOrString{},
+							Location: aws.String("foo/bar"),
+						}, Port: aws.Uint16(80)},
 						RoutingRule: RoutingRule{
 							Path:            aws.String("svc"),
 							HealthCheckPath: aws.String("/"),

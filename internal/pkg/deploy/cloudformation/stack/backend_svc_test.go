@@ -171,8 +171,10 @@ func TestBackendService_Template(t *testing.T) {
 					env:  testEnvName,
 					app:  testAppName,
 					rc: RuntimeConfig{
-						ImageRepoURL: testImageRepoURL,
-						ImageTag:     testImageTag,
+						Dockerfile: &DockerfileImage{
+							RepoURL:  testImageRepoURL,
+							ImageTag: testImageTag,
+						},
 					},
 				},
 				manifest: tc.manifest,
@@ -197,14 +199,11 @@ func TestBackendService_Parameters(t *testing.T) {
 	// GIVEN
 	conf := &BackendService{
 		wkld: &wkld{
-			name: aws.StringValue(testBackendSvcManifest.Name),
-			env:  testEnvName,
-			app:  testAppName,
-			tc:   testBackendSvcManifest.BackendServiceConfig.TaskConfig,
-			rc: RuntimeConfig{
-				ImageRepoURL: testImageRepoURL,
-				ImageTag:     testImageTag,
-			},
+			name:     aws.StringValue(testBackendSvcManifest.Name),
+			env:      testEnvName,
+			app:      testAppName,
+			location: aws.String("mockLocation"),
+			tc:       testBackendSvcManifest.BackendServiceConfig.TaskConfig,
 		},
 		manifest: testBackendSvcManifest,
 	}
@@ -228,7 +227,7 @@ func TestBackendService_Parameters(t *testing.T) {
 		},
 		{
 			ParameterKey:   aws.String(WorkloadContainerImageParamKey),
-			ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
+			ParameterValue: aws.String("mockLocation"),
 		},
 		{
 			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),

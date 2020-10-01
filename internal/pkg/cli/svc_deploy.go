@@ -66,6 +66,7 @@ type deploySvcOpts struct {
 	targetApp         *config.Application
 	targetEnvironment *config.Environment
 	targetSvc         *config.Workload
+	buildRequired     bool
 }
 
 func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
@@ -149,11 +150,10 @@ func (o *deploySvcOpts) Execute() error {
 		return err
 	}
 
-	if err := o.pushToECRRepo(); err != nil {
+	if err := o.configureContainerImage(); err != nil {
 		return err
 	}
 
-	// TODO: delete addons template from S3 bucket when deleting the environment.
 	addonsURL, err := o.pushAddonsTemplateToS3Bucket()
 	if err != nil {
 		return err
@@ -287,43 +287,47 @@ func (o *deploySvcOpts) configureClients() error {
 	return nil
 }
 
-func (o *deploySvcOpts) pushToECRRepo() error {
-
-	dockerBuildInput, err := o.getBuildArgs()
-	if err != nil {
-		return err
-	}
-
-	if err := o.imageBuilderPusher.BuildAndPush(docker.New(), dockerBuildInput); err != nil {
-		return fmt.Errorf("build and push image: %w", err)
-	}
-
-	return nil
-}
-
-func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {
-	type dfArgs interface {
-		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
-	}
-
+func (o *deploySvcOpts) configureContainerImage() error {
 	manifestBytes, err := o.ws.ReadServiceManifest(o.name)
 	if err != nil {
-		return nil, fmt.Errorf("read manifest file %s: %w", o.name, err)
+		return fmt.Errorf("read manifest file %s: %w", o.name, err)
 	}
 	svc, err := o.unmarshal(manifestBytes)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal service %s manifest: %w", o.name, err)
+		return fmt.Errorf("unmarshal service %s manifest: %w", o.name, err)
 	}
-	mf, ok := svc.(dfArgs)
+	required, err := dfBuildRequired(svc)
+	if err != nil {
+		return err
+	}
+	if !required {
+		return nil
+	}
+	// If it is built from local Dockerfile, build and push to the ECR repo.
+	buildArg, err := o.dfBuildArgs(svc)
+	if err != nil {
+		return err
+	}
+	if err := o.imageBuilderPusher.BuildAndPush(docker.New(), buildArg); err != nil {
+		return fmt.Errorf("build and push image: %w", err)
+	}
+	o.buildRequired = true
+	return nil
+}
+
+func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*docker.BuildArguments, error) {
+	type dfBuild interface {
+		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
+	}
+	mf, ok := svc.(dfBuild)
 	if !ok {
-		return nil, fmt.Errorf("service %s does not have required method Build()", o.name)
+		return nil, fmt.Errorf("service %s does not have required methods BuildArgs()", o.name)
 	}
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
 		return nil, fmt.Errorf("get copilot directory: %w", err)
 	}
 	wsRoot := filepath.Dir(copilotDir)
-
 	args := mf.BuildArgs(wsRoot)
 	return &docker.BuildArguments{
 		Dockerfile: *args.Dockerfile,
@@ -372,6 +376,13 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 }
 
 func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
+	rc := stack.RuntimeConfig{
+		AddonsTemplateURL: addonsURL,
+		AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
+	}
+	if !o.buildRequired {
+		return &rc, nil
+	}
 	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
 	if err != nil {
 		return nil, fmt.Errorf("get application %s resources from region %s: %w", o.targetApp.Name, o.targetEnvironment.Region, err)
@@ -384,12 +395,11 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			appAccountID: o.targetApp.AccountID,
 		}
 	}
-	return &stack.RuntimeConfig{
-		ImageRepoURL:      repoURL,
-		ImageTag:          o.imageTag,
-		AddonsTemplateURL: addonsURL,
-		AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
-	}, nil
+	rc.Dockerfile = &stack.DockerfileImage{
+		RepoURL:  repoURL,
+		ImageTag: o.imageTag,
+	}
+	return &rc, nil
 }
 
 func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.StackConfiguration, error) {

@@ -138,8 +138,10 @@ Outputs:
 					env:  testJobEnvName,
 					app:  testJobAppName,
 					rc: RuntimeConfig{
-						ImageRepoURL: testJobImageRepoURL,
-						ImageTag:     testJobImageTag,
+						Dockerfile: &DockerfileImage{
+							ImageTag: testJobImageTag,
+							RepoURL:  testJobImageRepoURL,
+						},
 					},
 				},
 				manifest: testScheduledJobManifest,

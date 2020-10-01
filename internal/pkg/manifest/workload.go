@@ -37,7 +37,8 @@ type Workload struct {
 
 // Image represents the workload's container image.
 type Image struct {
-	Build BuildArgsOrString `yaml:"build"` // Path to the Dockerfile.
+	Build    BuildArgsOrString `yaml:"build"` // Path to the Dockerfile.
+	Location *string           `yaml:"location"`
 }
 
 // BuildConfig populates a docker.BuildArguments struct from the fields available in the manifest.
@@ -110,6 +111,13 @@ func (i *Image) args() map[string]string {
 type BuildArgsOrString struct {
 	BuildString *string
 	BuildArgs   DockerBuildArgs
+}
+
+func (b *BuildArgsOrString) isEmpty() bool {
+	if aws.StringValue(b.BuildString) == "" && b.BuildArgs.isEmpty() {
+		return true
+	}
+	return false
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the BuildArgsOrString
@@ -288,4 +296,15 @@ func UnmarshalWorkload(in []byte) (interface{}, error) {
 	default:
 		return nil, &ErrInvalidWorkloadType{Type: typeVal}
 	}
+}
+
+func buildRequired(image Image) (bool, error) {
+	hasBuild, hasURL := image.Build.isEmpty(), image.Location == nil
+	if hasBuild == hasURL {
+		return false, fmt.Errorf("either build or url in the manifest needs to be specified")
+	}
+	if image.Location == nil {
+		return true, nil
+	}
+	return false, nil
 }

@@ -97,6 +97,11 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
+// BuildRequired returns if the service requires building from the local Dockerfile.
+func (s *BackendService) BuildRequired() (bool, error) {
+	return buildRequired(s.Image.Image)
+}
+
 // BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory
 func (s *BackendService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.Image.BuildConfig(wsRoot)
