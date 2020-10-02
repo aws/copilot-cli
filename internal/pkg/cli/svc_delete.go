@@ -235,7 +235,7 @@ func (o *deleteSvcOpts) askSvcName() error {
 		return nil
 	}
 
-	name, err := o.sel.Service("Select a service to delete", "")
+	name, err := o.sel.Service(svcDeleteNamePrompt, "")
 	if err != nil {
 		return fmt.Errorf("select service: %w", err)
 	}
