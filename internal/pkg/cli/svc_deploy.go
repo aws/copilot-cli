@@ -296,7 +296,7 @@ func (o *deploySvcOpts) configureContainerImage() error {
 	if err != nil {
 		return fmt.Errorf("unmarshal service %s manifest: %w", o.name, err)
 	}
-	required, err := dfBuildRequired(svc)
+	required, err := manifest.DockerfileBuildRequired(svc)
 	if err != nil {
 		return err
 	}
@@ -376,12 +376,11 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 }
 
 func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
-	rc := stack.RuntimeConfig{
-		AddonsTemplateURL: addonsURL,
-		AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
-	}
 	if !o.buildRequired {
-		return &rc, nil
+		return &stack.RuntimeConfig{
+			AddonsTemplateURL: addonsURL,
+			AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
+		}, nil
 	}
 	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
 	if err != nil {
@@ -395,11 +394,14 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			appAccountID: o.targetApp.AccountID,
 		}
 	}
-	rc.Dockerfile = &stack.DockerfileImage{
-		RepoURL:  repoURL,
-		ImageTag: o.imageTag,
-	}
-	return &rc, nil
+	return &stack.RuntimeConfig{
+		AddonsTemplateURL: addonsURL,
+		AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
+		Image: &stack.ECRImage{
+			RepoURL:  repoURL,
+			ImageTag: o.imageTag,
+		},
+	}, nil
 }
 
 func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.StackConfiguration, error) {

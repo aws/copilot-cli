@@ -76,7 +76,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					Image: ServiceImageWithPort{
+					ImageConfig: ServiceImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
@@ -107,7 +107,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					Image: ServiceImageWithPort{
+					ImageConfig: ServiceImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
@@ -138,7 +138,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					Image: ServiceImageWithPort{
+					ImageConfig: ServiceImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
@@ -182,7 +182,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
-						Image: ServiceImageWithPort{
+						ImageConfig: ServiceImageWithPort{
 							Image: Image{
 								Build: BuildArgsOrString{
 									BuildArgs: DockerBuildArgs{
@@ -227,7 +227,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					Image: ServiceImageWithPort{
+					ImageConfig: ServiceImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
@@ -303,7 +303,7 @@ func TestLoadBalancedWebService_BuildRequired(t *testing.T) {
 				},
 				Location: aws.String("mockLocation"),
 			},
-			wantErr: fmt.Errorf("either build or url in the manifest needs to be specified"),
+			wantErr: fmt.Errorf(`either "image.build" or "image.location" needs to be specified in the manifest`),
 		},
 		"return true if location is not set": {
 			image: Image{
@@ -327,7 +327,7 @@ func TestLoadBalancedWebService_BuildRequired(t *testing.T) {
 			// GIVEN
 			manifest := &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					Image: ServiceImageWithPort{
+					ImageConfig: ServiceImageWithPort{
 						Image: tc.image,
 					},
 				},

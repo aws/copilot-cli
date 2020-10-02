@@ -67,7 +67,7 @@ environments:
 				wantedManifest := &LoadBalancedWebService{
 					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-						Image: ServiceImageWithPort{Image: Image{Build: BuildArgsOrString{},
+						ImageConfig: ServiceImageWithPort{Image: Image{Build: BuildArgsOrString{},
 							Location: aws.String("foo/bar"),
 						}, Port: aws.Uint16(80)},
 						RoutingRule: RoutingRule{
@@ -155,7 +155,7 @@ secrets:
 						Type: aws.String(BackendServiceType),
 					},
 					BackendServiceConfig: BackendServiceConfig{
-						Image: imageWithPortAndHealthcheck{
+						ImageConfig: imageWithPortAndHealthcheck{
 							ServiceImageWithPort: ServiceImageWithPort{
 								Image: Image{
 									Build: BuildArgsOrString{

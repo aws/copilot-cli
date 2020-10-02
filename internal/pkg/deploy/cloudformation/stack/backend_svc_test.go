@@ -171,7 +171,7 @@ func TestBackendService_Template(t *testing.T) {
 					env:  testEnvName,
 					app:  testAppName,
 					rc: RuntimeConfig{
-						Dockerfile: &DockerfileImage{
+						Image: &ECRImage{
 							RepoURL:  testImageRepoURL,
 							ImageTag: testImageTag,
 						},
@@ -199,11 +199,13 @@ func TestBackendService_Parameters(t *testing.T) {
 	// GIVEN
 	conf := &BackendService{
 		wkld: &wkld{
-			name:     aws.StringValue(testBackendSvcManifest.Name),
-			env:      testEnvName,
-			app:      testAppName,
-			location: aws.String("mockLocation"),
-			tc:       testBackendSvcManifest.BackendServiceConfig.TaskConfig,
+			name: aws.StringValue(testBackendSvcManifest.Name),
+			env:  testEnvName,
+			app:  testAppName,
+			image: manifest.Image{
+				Location: aws.String("mockLocation"),
+			},
+			tc: testBackendSvcManifest.BackendServiceConfig.TaskConfig,
 		},
 		manifest: testBackendSvcManifest,
 	}

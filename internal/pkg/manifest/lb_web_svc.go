@@ -31,7 +31,7 @@ type LoadBalancedWebService struct {
 
 // LoadBalancedWebServiceConfig holds the configuration for a load balanced web service.
 type LoadBalancedWebServiceConfig struct {
-	Image       ServiceImageWithPort `yaml:",flow"`
+	ImageConfig ServiceImageWithPort `yaml:"image,flow"`
 	RoutingRule `yaml:"http,flow"`
 	TaskConfig  `yaml:",inline"`
 	*Logging    `yaml:"logging,flow"`
@@ -68,8 +68,8 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	svc := newDefaultLoadBalancedWebService()
 	// Apply overrides.
 	svc.Name = aws.String(props.Name)
-	svc.LoadBalancedWebServiceConfig.Image.Build.BuildArgs.Dockerfile = aws.String(props.Dockerfile)
-	svc.LoadBalancedWebServiceConfig.Image.Port = aws.Uint16(props.Port)
+	svc.LoadBalancedWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = aws.String(props.Dockerfile)
+	svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
 	svc.RoutingRule.Path = aws.String(props.Path)
 	svc.parser = template.New()
 	return svc
@@ -82,7 +82,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 			Type: aws.String(LoadBalancedWebServiceType),
 		},
 		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-			Image: ServiceImageWithPort{},
+			ImageConfig: ServiceImageWithPort{},
 			RoutingRule: RoutingRule{
 				HealthCheckPath: aws.String("/"),
 			},
@@ -115,12 +115,12 @@ func tplDirName(s string) string {
 
 // BuildRequired returns if the service requires building from the local Dockerfile.
 func (s *LoadBalancedWebService) BuildRequired() (bool, error) {
-	return buildRequired(s.Image.Image)
+	return requiresBuild(s.ImageConfig.Image)
 }
 
 // BuildArgs returns a docker.BuildArguments object given a ws root directory.
 func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.Image.BuildConfig(wsRoot)
+	return s.ImageConfig.BuildConfig(wsRoot)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.

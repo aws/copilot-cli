@@ -268,7 +268,7 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 	if err != nil {
 		return nil, err
 	}
-	required, err := dfBuildRequired(mft)
+	imgNeedsBuild, err := manifest.DockerfileBuildRequired(mft)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +279,7 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 	rc := stack.RuntimeConfig{
 		AdditionalTags: app.Tags,
 	}
-	if required {
+	if imgNeedsBuild {
 		resources, err := o.appCFN.GetAppResourcesByRegion(app, env.Region)
 		if err != nil {
 			return nil, err
@@ -292,7 +292,7 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 				appAccountID: app.AccountID,
 			}
 		}
-		rc.Dockerfile = &stack.DockerfileImage{
+		rc.Image = &stack.ECRImage{
 			RepoURL:  repoURL,
 			ImageTag: o.tag,
 		}

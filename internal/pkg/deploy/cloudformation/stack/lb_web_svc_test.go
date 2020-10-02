@@ -225,7 +225,7 @@ Outputs:
 					env:  testEnvName,
 					app:  testAppName,
 					rc: RuntimeConfig{
-						Dockerfile: &DockerfileImage{
+						Image: &ECRImage{
 							RepoURL:  testImageRepoURL,
 							ImageTag: testImageTag,
 						},
@@ -474,7 +474,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					app:  testAppName,
 					tc:   tc.manifest.TaskConfig,
 					rc: RuntimeConfig{
-						Dockerfile: &DockerfileImage{
+						Image: &ECRImage{
 							RepoURL:  testImageRepoURL,
 							ImageTag: testImageTag,
 						},
@@ -536,7 +536,7 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 					app:  testAppName,
 					tc:   testLBWebServiceManifest.TaskConfig,
 					rc: RuntimeConfig{
-						Dockerfile: &DockerfileImage{
+						Image: &ECRImage{
 							RepoURL:  testImageRepoURL,
 							ImageTag: testImageTag,
 						},
@@ -567,7 +567,7 @@ func TestLoadBalancedWebService_Tags(t *testing.T) {
 			env:  testEnvName,
 			app:  testAppName,
 			rc: RuntimeConfig{
-				Dockerfile: &DockerfileImage{
+				Image: &ECRImage{
 					RepoURL:  testImageRepoURL,
 					ImageTag: testImageTag,
 				},

@@ -138,7 +138,7 @@ Outputs:
 					env:  testJobEnvName,
 					app:  testJobAppName,
 					rc: RuntimeConfig{
-						Dockerfile: &DockerfileImage{
+						Image: &ECRImage{
 							ImageTag: testJobImageTag,
 							RepoURL:  testJobImageRepoURL,
 						},
