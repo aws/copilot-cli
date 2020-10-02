@@ -14,21 +14,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestListSvcOpts_Execute(t *testing.T) {
+func TestListJobOpts_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockError := fmt.Errorf("error")
 	mockstore := mocks.NewMockstore(ctrl)
-	mockWorkspace := mocks.NewMockwsSvcReader(ctrl)
+	mockWorkspace := mocks.NewMockwsJobDirReader(ctrl)
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
-		opts            listSvcOpts
+		opts            listJobOpts
 		mocking         func()
 		expectedErr     error
 		expectedContent string
 	}{
 		"with json outputs": {
-			opts: listSvcOpts{
+			opts: listJobOpts{
 				listWkldVars: listWkldVars{
 					shouldOutputJSON: true,
 					appName:          "coolapp",
@@ -41,16 +41,16 @@ func TestListSvcOpts_Execute(t *testing.T) {
 					Return(&config.Application{}, nil)
 				mockstore.
 					EXPECT().
-					ListServices(gomock.Eq("coolapp")).
+					ListJobs(gomock.Eq("coolapp")).
 					Return([]*config.Workload{
-						{Name: "my-svc"},
-						{Name: "lb-svc"},
+						{Name: "mailer"},
+						{Name: "reaper"},
 					}, nil)
 			},
-			expectedContent: "{\"services\":[{\"app\":\"\",\"name\":\"my-svc\",\"type\":\"\"},{\"app\":\"\",\"name\":\"lb-svc\",\"type\":\"\"}]}\n",
+			expectedContent: "{\"jobs\":[{\"app\":\"\",\"name\":\"mailer\",\"type\":\"\"},{\"app\":\"\",\"name\":\"reaper\",\"type\":\"\"}]}\n",
 		},
 		"with human outputs": {
-			opts: listSvcOpts{
+			opts: listJobOpts{
 				listWkldVars: listWkldVars{
 					appName: "coolapp",
 				},
@@ -62,17 +62,17 @@ func TestListSvcOpts_Execute(t *testing.T) {
 					Return(&config.Application{}, nil)
 				mockstore.
 					EXPECT().
-					ListServices(gomock.Eq("coolapp")).
+					ListJobs(gomock.Eq("coolapp")).
 					Return([]*config.Workload{
-						{Name: "my-svc", Type: "Load Balanced Web Service"},
-						{Name: "lb-svc", Type: "Load Balanced Web Service"},
+						{Name: "mailer", Type: "Scheduled Job"},
+						{Name: "reaper", Type: "Scheduled Job"},
 					}, nil)
 			},
-			expectedContent: "Name                Type\n------              -------------------------\nmy-svc              Load Balanced Web Service\nlb-svc              Load Balanced Web Service\n",
+			expectedContent: "Name                Type\n------              -------------\nmailer              Scheduled Job\nreaper              Scheduled Job\n",
 		},
 		"with invalid app name": {
 			expectedErr: fmt.Errorf("get application: %w", mockError),
-			opts: listSvcOpts{
+			opts: listJobOpts{
 				listWkldVars: listWkldVars{
 					appName: "coolapp",
 				},
@@ -85,13 +85,13 @@ func TestListSvcOpts_Execute(t *testing.T) {
 
 				mockstore.
 					EXPECT().
-					ListServices(gomock.Eq("coolapp")).
+					ListJobs(gomock.Eq("coolapp")).
 					Times(0)
 			},
 		},
 		"with failed call to list": {
 			expectedErr: mockError,
-			opts: listSvcOpts{
+			opts: listJobOpts{
 				listWkldVars: listWkldVars{
 					appName: "coolapp",
 				},
@@ -104,13 +104,13 @@ func TestListSvcOpts_Execute(t *testing.T) {
 
 				mockstore.
 					EXPECT().
-					ListServices(gomock.Eq("coolapp")).
+					ListJobs(gomock.Eq("coolapp")).
 					Return(nil, mockError)
 			},
 		},
 		"with local flag enabled": {
 			expectedErr: nil,
-			opts: listSvcOpts{
+			opts: listJobOpts{
 				listWkldVars: listWkldVars{
 					shouldShowLocalWorkloads: true,
 					appName:                  "coolapp",
@@ -124,15 +124,15 @@ func TestListSvcOpts_Execute(t *testing.T) {
 					Return(&config.Application{}, nil)
 				mockstore.
 					EXPECT().
-					ListServices(gomock.Eq("coolapp")).
+					ListJobs(gomock.Eq("coolapp")).
 					Return([]*config.Workload{
-						{Name: "my-svc", Type: "Load Balanced Web Service"},
-						{Name: "lb-svc", Type: "Load Balanced Web Service"},
+						{Name: "mailer", Type: "Scheduled Job"},
+						{Name: "reaper", Type: "Scheduled Job"},
 					}, nil)
-				mockWorkspace.EXPECT().ServiceNames().
-					Return([]string{"my-svc"}, nil).Times(1)
+				mockWorkspace.EXPECT().JobNames().
+					Return([]string{"mailer"}, nil).Times(1)
 			},
-			expectedContent: "Name                Type\n------              -------------------------\nmy-svc              Load Balanced Web Service\n",
+			expectedContent: "Name                Type\n------              -------------\nmailer              Scheduled Job\n",
 		},
 	}
 
@@ -152,7 +152,7 @@ func TestListSvcOpts_Execute(t *testing.T) {
 	}
 }
 
-func TestListSvcOpts_Ask(t *testing.T) {
+func TestListJobOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inApp string
 
@@ -162,7 +162,7 @@ func TestListSvcOpts_Ask(t *testing.T) {
 	}{
 		"with no flags set": {
 			mockSel: func(m *mocks.MockappSelector) {
-				m.EXPECT().Application(svcListAppNamePrompt, wkldListAppNameHelp).Return("myapp", nil)
+				m.EXPECT().Application(jobListAppNamePrompt, wkldListAppNameHelp).Return("myapp", nil)
 			},
 			wantedApp: "myapp",
 		},
@@ -183,7 +183,7 @@ func TestListSvcOpts_Ask(t *testing.T) {
 			mockSel := mocks.NewMockappSelector(ctrl)
 			tc.mockSel(mockSel)
 
-			listApps := &listSvcOpts{
+			listApps := &listJobOpts{
 				listWkldVars: listWkldVars{
 					appName: tc.inApp,
 				},
