@@ -109,7 +109,7 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 func (o *deleteSvcOpts) Validate() error {
 	if o.name != "" || o.envName != "" {
 		if o.appName == "" {
-			return errNoAppInWorkspace
+			return fmt.Errorf("--%s must be provided", appFlag)
 		}
 	}
 	if o.name != "" {

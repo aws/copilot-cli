@@ -28,20 +28,28 @@ func TestDeleteSvcOpts_Validate(t *testing.T) {
 
 		want error
 	}{
-		"should return errNoAppInWorkspace": {
-			setupMocks: func(m *mocks.Mockstore) {},
+		"should return error if svc flag set but app flag not set": {
 			inName:     "api",
-			want:       errNoAppInWorkspace,
+			setupMocks: func(m *mocks.Mockstore) {},
+			want:       errors.New("--app must be provided"),
+		},
+		"should return error if env flag set but app flag not set": {
+			inEnvName:  "test",
+			setupMocks: func(m *mocks.Mockstore) {},
+			want:       errors.New("--app must be provided"),
 		},
 		"with no flag set": {
 			inAppName:  "phonetool",
 			setupMocks: func(m *mocks.Mockstore) {},
 			want:       nil,
 		},
-		"with all flag set": {
+		"with all flags set": {
 			inAppName: "phonetool",
+			inEnvName: "test",
 			inName:    "api",
 			setupMocks: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("phonetool", "test").
+					Return(&config.Environment{Name: "test"}, nil)
 				m.EXPECT().GetService("phonetool", "api").Times(1).Return(&config.Workload{
 					Name: "api",
 				}, nil)
@@ -54,6 +62,16 @@ func TestDeleteSvcOpts_Validate(t *testing.T) {
 			setupMocks: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
 					Return(&config.Environment{Name: "test"}, nil)
+			},
+			want: nil,
+		},
+		"with svc flag set": {
+			inAppName: "phonetool",
+			inName:    "api",
+			setupMocks: func(m *mocks.Mockstore) {
+				m.EXPECT().GetService("phonetool", "api").Times(1).Return(&config.Workload{
+					Name: "api",
+				}, nil)
 			},
 			want: nil,
 		},
@@ -114,6 +132,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 		skipConfirmation bool
 		inName           string
 		envName          string
+		appName          string
 
 		mockSel    func(m *mocks.MockwsSelector)
 		mockPrompt func(m *mocks.Mockprompter)
@@ -121,7 +140,19 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 		wantedName  string
 		wantedError error
 	}{
+		"should ask for app name": {
+			appName:          "",
+			inName:           testSvcName,
+			skipConfirmation: true,
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Application("Which application's service would you like to delete?", "").Return(testAppName, nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+
+			wantedName: testSvcName,
+		},
 		"should ask for service name": {
+			appName:          testAppName,
 			inName:           "",
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
@@ -132,6 +163,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			wantedName: testSvcName,
 		},
 		"returns error if no services found": {
+			appName:          testAppName,
 			inName:           "",
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
@@ -142,6 +174,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("select service: %w", mockError),
 		},
 		"returns error if fail to select service": {
+			appName:          testAppName,
 			inName:           "",
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
@@ -153,6 +186,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("select service: %w", mockError),
 		},
 		"should skip confirmation": {
+			appName:          testAppName,
 			inName:           testSvcName,
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
@@ -163,6 +197,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			wantedName: testSvcName,
 		},
 		"should wrap error returned from prompter confirmation": {
+			appName:          testAppName,
 			inName:           testSvcName,
 			skipConfirmation: false,
 			mockSel: func(m *mocks.MockwsSelector) {
@@ -178,6 +213,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("svc delete confirmation prompt: %w", mockError),
 		},
 		"should return error if user does not confirm svc delete": {
+			appName:          testAppName,
 			inName:           testSvcName,
 			skipConfirmation: false,
 			mockSel: func(m *mocks.MockwsSelector) {
@@ -193,6 +229,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			wantedError: errSvcDeleteCancelled,
 		},
 		"should return error nil if user confirms svc delete": {
+			appName:          testAppName,
 			inName:           testSvcName,
 			skipConfirmation: false,
 			mockSel: func(m *mocks.MockwsSelector) {
@@ -208,6 +245,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			wantedName: testSvcName,
 		},
 		"should return error nil if user confirms svc delete --env": {
+			appName:          testAppName,
 			inName:           testSvcName,
 			envName:          "test",
 			skipConfirmation: false,
@@ -238,7 +276,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			opts := deleteSvcOpts{
 				deleteSvcVars: deleteSvcVars{
 					skipConfirmation: test.skipConfirmation,
-					appName:          testAppName,
+					appName:          test.appName,
 					name:             test.inName,
 					envName:          test.envName,
 				},
