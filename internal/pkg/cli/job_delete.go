@@ -171,8 +171,8 @@ func buildJobDeleteCmd() *cobra.Command {
 		Use:   "delete",
 		Short: "Deletes a job from an application.",
 		Example: `
-  Delete the "report-generator" job from the application.
-  /code $ copilot job delete --name report-generator
+  Delete the "report-generator" job from the my-app application.
+  /code $ copilot job delete --name report-generator --app my-app
 
   Delete the "report-generator" job from just the prod environment.
   /code $ copilot job delete --name report-generator --env prod
