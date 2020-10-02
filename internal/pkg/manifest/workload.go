@@ -314,18 +314,17 @@ func requiresBuild(image Image) (bool, error) {
 	return false, nil
 }
 
-// DockerfileBuildRequired returns if the container image should be built from local Dockerfile.
-func DockerfileBuildRequired(svc interface{}) (bool, error) {
+func dockerfileBuildRequired(workloadType string, svc interface{}) (bool, error) {
 	type manifest interface {
 		BuildRequired() (bool, error)
 	}
 	mf, ok := svc.(manifest)
 	if !ok {
-		return false, fmt.Errorf("workload does not have required methods BuildRequired()")
+		return false, fmt.Errorf("%s does not have required methods BuildRequired()", workloadType)
 	}
 	required, err := mf.BuildRequired()
 	if err != nil {
-		return false, fmt.Errorf("check if workload requires building from local Dockerfile: %w", err)
+		return false, fmt.Errorf("check if %s requires building from local Dockerfile: %w", workloadType, err)
 	}
 	return required, nil
 }

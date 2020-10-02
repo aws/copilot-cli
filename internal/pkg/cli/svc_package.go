@@ -268,7 +268,7 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 	if err != nil {
 		return nil, err
 	}
-	imgNeedsBuild, err := manifest.DockerfileBuildRequired(mft)
+	imgNeedsBuild, err := manifest.ServiceDockerfileBuildRequired(mft)
 	if err != nil {
 		return nil, err
 	}

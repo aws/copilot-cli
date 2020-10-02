@@ -234,7 +234,7 @@ image:
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(nil, mockError),
 				)
 			},
-			wantErr: fmt.Errorf("read manifest file %s: %w", "serviceA", mockError),
+			wantErr: fmt.Errorf("read service %s manifest from workspace: %w", "serviceA", mockError),
 		},
 		"should return error if workspace methods fail": {
 			inputSvc: "serviceA",

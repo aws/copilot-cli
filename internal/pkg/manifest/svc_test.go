@@ -372,3 +372,61 @@ func TestAutoscaling_Options(t *testing.T) {
 		})
 	}
 }
+
+func Test_ServiceDockerfileBuildRequired(t *testing.T) {
+	testCases := map[string]struct {
+		svc interface{}
+
+		wanted    bool
+		wantedErr error
+	}{
+		"invalid type": {
+			svc: struct{}{},
+
+			wantedErr: fmt.Errorf("service does not have required methods BuildRequired()"),
+		},
+		"fail to check": {
+			svc: &LoadBalancedWebService{},
+
+			wantedErr: fmt.Errorf("check if service requires building from local Dockerfile: either \"image.build\" or \"image.location\" needs to be specified in the manifest"),
+		},
+		"success with false": {
+			svc: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ServiceImageWithPort{
+						Image: Image{
+							Location: aws.String("mockLocation"),
+						},
+					},
+				},
+			},
+		},
+		"success with true": {
+			svc: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ServiceImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildString: aws.String("mockDockerfile"),
+							},
+						},
+					},
+				},
+			},
+			wanted: true,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+
+			got, err := ServiceDockerfileBuildRequired(tc.svc)
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, got, tc.wanted)
+			}
+		})
+	}
+}

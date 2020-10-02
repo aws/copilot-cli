@@ -288,15 +288,11 @@ func (o *deploySvcOpts) configureClients() error {
 }
 
 func (o *deploySvcOpts) configureContainerImage() error {
-	manifestBytes, err := o.ws.ReadServiceManifest(o.name)
+	svc, err := o.manifest()
 	if err != nil {
-		return fmt.Errorf("read manifest file %s: %w", o.name, err)
+		return err
 	}
-	svc, err := o.unmarshal(manifestBytes)
-	if err != nil {
-		return fmt.Errorf("unmarshal service %s manifest: %w", o.name, err)
-	}
-	required, err := manifest.DockerfileBuildRequired(svc)
+	required, err := manifest.ServiceDockerfileBuildRequired(svc)
 	if err != nil {
 		return err
 	}
