@@ -2879,7 +2879,7 @@ func (m *MocksvcDeleter) EXPECT() *MocksvcDeleterMockRecorder {
 }
 
 // DeleteService mocks base method
-func (m *MocksvcDeleter) DeleteService(in deploy.DeleteServiceInput) error {
+func (m *MocksvcDeleter) DeleteService(in deploy.DeleteWorkloadInput) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteService", in)
 	ret0, _ := ret[0].(error)

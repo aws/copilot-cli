@@ -115,7 +115,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 		inName           string
 		envName          string
 
-		mockstore  func(m *mocks.Mockstore)
+		mockSel    func(m *mocks.MockwsSelector)
 		mockPrompt func(m *mocks.Mockprompter)
 
 		wantedName  string
@@ -124,31 +124,8 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 		"should ask for service name": {
 			inName:           "",
 			skipConfirmation: true,
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices(testAppName).Return([]*config.Workload{
-					{
-						Name: testSvcName,
-					},
-					{
-						Name: "otherservice",
-					},
-				}, nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(svcDeleteNamePrompt, "", []string{testSvcName, "otherservice"}).Times(1).Return(testSvcName, nil)
-			},
-
-			wantedName: testSvcName,
-		},
-		"should skip asking for service name if only one service found": {
-			inName:           "",
-			skipConfirmation: true,
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices(testAppName).Return([]*config.Workload{
-					{
-						Name: testSvcName,
-					},
-				}, nil)
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Service("Select a service to delete", "").Return(testSvcName, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
@@ -157,44 +134,40 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 		"returns error if no services found": {
 			inName:           "",
 			skipConfirmation: true,
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices(testAppName).Return([]*config.Workload{}, nil)
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Service("Select a service to delete", "").Return("", mockError)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("couldn't find any services in the application phonetool"),
+			wantedError: fmt.Errorf("select service: %w", mockError),
 		},
 		"returns error if fail to select service": {
 			inName:           "",
 			skipConfirmation: true,
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices(testAppName).Return([]*config.Workload{
-					{
-						Name: testSvcName,
-					},
-					{
-						Name: "otherservice",
-					},
-				}, nil)
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Service("Select a service to delete", "").Return("", mockError)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(svcDeleteNamePrompt, "", []string{testSvcName, "otherservice"}).Times(1).Return("", mockError)
 			},
 
-			wantedError: fmt.Errorf("select service to delete: %w", mockError),
+			wantedError: fmt.Errorf("select service: %w", mockError),
 		},
 		"should skip confirmation": {
 			inName:           testSvcName,
 			skipConfirmation: true,
-			mockstore:        func(m *mocks.Mockstore) {},
-			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
 
 			wantedName: testSvcName,
 		},
 		"should wrap error returned from prompter confirmation": {
 			inName:           testSvcName,
 			skipConfirmation: false,
-			mockstore:        func(m *mocks.Mockstore) {},
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
+			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(fmtSvcDeleteConfirmPrompt, testSvcName, testAppName),
@@ -207,7 +180,9 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 		"should return error if user does not confirm svc delete": {
 			inName:           testSvcName,
 			skipConfirmation: false,
-			mockstore:        func(m *mocks.Mockstore) {},
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
+			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(fmtSvcDeleteConfirmPrompt, testSvcName, testAppName),
@@ -220,7 +195,9 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 		"should return error nil if user confirms svc delete": {
 			inName:           testSvcName,
 			skipConfirmation: false,
-			mockstore:        func(m *mocks.Mockstore) {},
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
+			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(fmtSvcDeleteConfirmPrompt, testSvcName, testAppName),
@@ -234,7 +211,9 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           testSvcName,
 			envName:          "test",
 			skipConfirmation: false,
-			mockstore:        func(m *mocks.Mockstore) {},
+			mockSel: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
+			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(fmtSvcDeleteFromEnvConfirmPrompt, testSvcName, "test"),
@@ -252,9 +231,9 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockPrompter := mocks.NewMockprompter(ctrl)
-			mockStore := mocks.NewMockstore(ctrl)
+			mockSel := mocks.NewMockwsSelector(ctrl)
 			test.mockPrompt(mockPrompter)
-			test.mockstore(mockStore)
+			test.mockSel(mockSel)
 
 			opts := deleteSvcOpts{
 				deleteSvcVars: deleteSvcVars{
@@ -263,8 +242,8 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 					name:             test.inName,
 					envName:          test.envName,
 				},
-				store:  mockStore,
 				prompt: mockPrompter,
+				sel:    mockSel,
 			}
 
 			got := opts.Ask()

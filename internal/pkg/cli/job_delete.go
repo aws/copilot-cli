@@ -1,13 +1,13 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// SPDX-License-Identifier: Apache-2.0
-
 package cli
 
 import (
 	"errors"
 	"fmt"
+
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
@@ -22,14 +22,16 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 )
 
 const (
-	jobDeleteNamePrompt              = "Which job would you like to delete?"
 	fmtJobDeleteConfirmPrompt        = "Are you sure you want to delete %s from application %s?"
 	fmtJobDeleteFromEnvConfirmPrompt = "Are you sure you want to delete %s from environment %s?"
+	jobDeleteAppNamePrompt           = "Which application's job would you like to delete?"
+	jobDeleteJobNamePrompt           = "Which job would you like to delete?"
 	jobDeleteConfirmHelp             = "This will remove the job from all environments and delete it from your app."
-	jobDeleteFromEnvConfirmHelp      = "This will remove the job from just the %s environment."
+	fmtJobDeleteFromEnvConfirmHelp   = "This will remove the job from just the %s environment."
 )
 
 const (
@@ -56,9 +58,10 @@ type deleteJobOpts struct {
 
 	// Interfaces to dependencies.
 	store     store
+	prompt    prompter
+	sel       wsSelector
 	sess      sessionProvider
 	spinner   progress
-	prompt    prompter
 	appCFN    jobRemoverFromApp
 	getJobCFN func(session *awssession.Session) jobDeleter
 	getECR    func(session *awssession.Session) imageRemover
@@ -78,13 +81,18 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("new workspace: %w", err)
+	}
+	prompter := prompt.New()
 	return &deleteJobOpts{
 		deleteJobVars: vars,
 
 		store:   store,
 		spinner: termprogress.NewSpinner(),
 		prompt:  prompt.New(),
+		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
 		sess:    provider,
 		appCFN:  cloudformation.New(defaultSession),
 		getJobCFN: func(session *awssession.Session) jobDeleter {
@@ -98,8 +106,10 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 
 // Validate returns an error if the user inputs are invalid.
 func (o *deleteJobOpts) Validate() error {
-	if o.appName == "" {
-		return errNoAppInWorkspace
+	if o.name != "" || o.envName != "" {
+		if o.appName == "" {
+			return fmt.Errorf("--%s must be provided", appFlag)
+		}
 	}
 	if o.name != "" {
 		if _, err := o.store.GetJob(o.appName, o.name); err != nil {
@@ -107,15 +117,16 @@ func (o *deleteJobOpts) Validate() error {
 		}
 	}
 	if o.envName != "" {
-		if err := o.validateEnvName(); err != nil {
-			return err
-		}
+		return o.validateEnvName()
 	}
 	return nil
 }
 
 // Ask prompts the user for any required flags.
 func (o *deleteJobOpts) Ask() error {
+	if err := o.askAppName(); err != nil {
+		return err
+	}
 	if err := o.askJobName(); err != nil {
 		return err
 	}
@@ -133,7 +144,7 @@ func (o *deleteJobOpts) Ask() error {
 		// we'll just delete the job from that environment -
 		// but keep it in the app.
 		deletePrompt = fmt.Sprintf(fmtJobDeleteFromEnvConfirmPrompt, o.name, o.envName)
-		deleteConfirmHelp = fmt.Sprintf(jobDeleteFromEnvConfirmHelp, o.envName)
+		deleteConfirmHelp = fmt.Sprintf(fmtJobDeleteFromEnvConfirmHelp, o.envName)
 	}
 
 	deleteConfirmed, err := o.prompt.Confirm(
@@ -197,41 +208,30 @@ func (o *deleteJobOpts) targetEnv() (*config.Environment, error) {
 	return env, nil
 }
 
+func (o *deleteJobOpts) askAppName() error {
+	if o.appName != "" {
+		return nil
+	}
+
+	name, err := o.sel.Application(jobDeleteAppNamePrompt, "")
+	if err != nil {
+		return fmt.Errorf("select application name: %w", err)
+	}
+	o.appName = name
+	return nil
+}
+
 func (o *deleteJobOpts) askJobName() error {
 	if o.name != "" {
 		return nil
 	}
 
-	names, err := o.jobNames()
+	name, err := o.sel.Job(jobDeleteJobNamePrompt, "")
 	if err != nil {
-		return err
-	}
-	if len(names) == 0 {
-		return fmt.Errorf("couldn't find any jobs in the application %s", o.appName)
-	}
-	if len(names) == 1 {
-		o.name = names[0]
-		log.Infof("Only found one job, defaulting to: %s\n", color.HighlightUserInput(o.name))
-		return nil
-	}
-	name, err := o.prompt.SelectOne(jobDeleteNamePrompt, "", names)
-	if err != nil {
-		return fmt.Errorf("select job to delete: %w", err)
+		return fmt.Errorf("select job: %w", err)
 	}
 	o.name = name
 	return nil
-}
-
-func (o *deleteJobOpts) jobNames() ([]string, error) {
-	jobs, err := o.store.ListJobs(o.appName)
-	if err != nil {
-		return nil, fmt.Errorf("list jobs for application %s: %w", o.appName, err)
-	}
-	var names []string
-	for _, job := range jobs {
-		names = append(names, job.Name)
-	}
-	return names, nil
 }
 
 func (o *deleteJobOpts) appEnvironments() error {
@@ -345,8 +345,8 @@ func buildJobDeleteCmd() *cobra.Command {
 		Use:   "delete",
 		Short: "Deletes a job from an application.",
 		Example: `
-  Delete the "report-generator" job from the application.
-  /code $ copilot job delete --name report-generator
+  Delete the "report-generator" job from the my-app application.
+  /code $ copilot job delete --name report-generator --app my-app
 
   Delete the "report-generator" job from just the prod environment.
   /code $ copilot job delete --name report-generator --env prod

@@ -115,6 +115,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		store:       ssm,
 		appDeployer: deployer,
 		prog:        spin,
+		sel:         selector.NewWorkspaceSelect(prompt, ssm, ws),
 		prompt:      prompt,
 		setupParser: func(o *initSvcOpts) {
 			o.df = dockerfile.New(o.fs, o.dockerfilePath)
