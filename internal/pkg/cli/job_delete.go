@@ -26,8 +26,8 @@ import (
 )
 
 const (
-	fmtJobDeleteConfirmPrompt        = "Are you sure you want to delete %s from application %s?"
-	fmtJobDeleteFromEnvConfirmPrompt = "Are you sure you want to delete %s from environment %s?"
+	fmtJobDeleteConfirmPrompt        = "Are you sure you want to delete job %s from application %s?"
+	fmtJobDeleteFromEnvConfirmPrompt = "Are you sure you want to delete job %s from environment %s?"
 	jobDeleteAppNamePrompt           = "Which application's job would you like to delete?"
 	jobDeleteJobNamePrompt           = "Which job would you like to delete?"
 	jobDeleteConfirmHelp             = "This will remove the job from all environments and delete it from your app."
@@ -38,8 +38,8 @@ const (
 	fmtJobDeleteStart             = "Deleting job %s from environment %s."
 	fmtJobDeleteFailed            = "Failed to job %s from environment %s: %v."
 	fmtJobDeleteComplete          = "Deleted job %s from environment %s."
-	fmtJobDeleteResourcesStart    = "Deleting job %s resources from application %s."
-	fmtJobDeleteResourcesComplete = "Deleted job %s resources from application %s."
+	fmtJobDeleteResourcesStart    = "Deleting resources of job %s  from application %s."
+	fmtJobDeleteResourcesComplete = "Deleted resources of job %s from application %s."
 )
 
 var (

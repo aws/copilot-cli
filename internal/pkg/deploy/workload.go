@@ -15,6 +15,6 @@ type DeleteWorkloadInput struct {
 // DeleteJobInput holds the fields required to delete a job.
 type DeleteJobInput struct {
 	Name    string // Name of the job that needs to be deleted.
-	EnvName string // Name of the environment the service is deployed in.
-	AppName string // Name of the application the service belongs to.
+	EnvName string // Name of the environment the job is deployed in.
+	AppName string // Name of the application the job belongs to.
 }

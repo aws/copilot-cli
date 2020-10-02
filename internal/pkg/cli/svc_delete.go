@@ -26,8 +26,8 @@ import (
 )
 
 const (
-	fmtSvcDeleteConfirmPrompt        = "Are you sure you want to delete %s from application %s?"
-	fmtSvcDeleteFromEnvConfirmPrompt = "Are you sure you want to delete %s from environment %s?"
+	fmtSvcDeleteConfirmPrompt        = "Are you sure you want to delete service %s from application %s?"
+	fmtSvcDeleteFromEnvConfirmPrompt = "Are you sure you want to delete service %s from environment %s?"
 	svcDeleteConfirmHelp             = "This will remove the service from all environments and delete it from your app."
 	svcDeleteFromEnvConfirmHelp      = "This will remove the service from just the %s environment."
 )
@@ -36,8 +36,8 @@ const (
 	fmtSvcDeleteStart             = "Deleting service %s from environment %s."
 	fmtSvcDeleteFailed            = "Failed to delete service %s from environment %s: %v."
 	fmtSvcDeleteComplete          = "Deleted service %s from environment %s."
-	fmtSvcDeleteResourcesStart    = "Deleting service %s resources from application %s."
-	fmtSvcDeleteResourcesComplete = "Deleted service %s resources from application %s."
+	fmtSvcDeleteResourcesStart    = "Deleting resources of service %s from application %s."
+	fmtSvcDeleteResourcesComplete = "Deleted resources of service %s from application %s."
 )
 
 var (
