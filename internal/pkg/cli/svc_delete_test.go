@@ -156,7 +156,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service("Select a service to delete", "").Return(testSvcName, nil)
+				m.EXPECT().Service("Which service would you like to delete?", "").Return(testSvcName, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
@@ -167,7 +167,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service("Select a service to delete", "").Return("", mockError)
+				m.EXPECT().Service("Which service would you like to delete?", "").Return("", mockError)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
@@ -178,7 +178,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service("Select a service to delete", "").Return("", mockError)
+				m.EXPECT().Service("Which service would you like to delete?", "").Return("", mockError)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 			},
