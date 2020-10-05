@@ -568,20 +568,21 @@ func mockRepositoryAnytime(m runTaskMocks) {
 }
 
 func TestTaskRunOpts_Execute(t *testing.T) {
-	const inGroupName = "my-task"
-	mockRepoURI := "uri/repo"
-
-	tag := "tag"
-
+	const (
+		inGroupName = "my-task"
+		mockRepoURI = "uri/repo"
+		tag         = "tag"
+	)
 	defaultBuildArguments := docker.BuildArguments{
 		Context:  filepath.Dir(defaultDockerfilePath),
 		ImageTag: imageTagLatest,
 	}
 
 	testCases := map[string]struct {
-		inImage  string
-		inTag    string
-		inFollow bool
+		inImage   string
+		inTag     string
+		inFollow  bool
+		inCommand string
 
 		inEnv string
 
@@ -616,8 +617,9 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
-					Name:  inGroupName,
-					Image: "",
+					Name:    inGroupName,
+					Image:   "",
+					Command: []string{},
 				}).Return(errors.New("error deploying"))
 				mockHasDefaultCluster(m)
 			},
@@ -627,14 +629,16 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
-					Name:  inGroupName,
-					Image: "",
+					Name:    inGroupName,
+					Image:   "",
+					Command: []string{},
 				}).Return(nil)
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI)
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
-					Name:  inGroupName,
-					Image: "uri/repo:latest",
+					Name:    inGroupName,
+					Image:   "uri/repo:latest",
+					Command: []string{},
 				}).Times(1).Return(errors.New("error updating"))
 				mockHasDefaultCluster(m)
 			},
@@ -690,17 +694,20 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			},
 		},
 		"update image to task resource if image is not provided": {
+			inCommand: `/bin/sh -c "curl $ECS_CONTAINER_METADATA_URI_V4"`,
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
-					Name:  inGroupName,
-					Image: "",
+					Name:    inGroupName,
+					Image:   "",
+					Command: []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
 				}).Times(1).Return(nil)
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI)
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
-					Name:  inGroupName,
-					Image: "uri/repo:latest",
+					Name:    inGroupName,
+					Image:   "uri/repo:latest",
+					Command: []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
 				}).Times(1).Return(nil)
 				m.runner.EXPECT().Run().AnyTimes()
 				mockHasDefaultCluster(m)
@@ -753,6 +760,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					imageTag: tc.inTag,
 					env:      tc.inEnv,
 					follow:   tc.inFollow,
+					command:  tc.inCommand,
 				},
 				spinner: &mockSpinner{},
 				store:   mocks.store,
