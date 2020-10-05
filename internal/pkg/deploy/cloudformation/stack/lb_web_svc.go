@@ -63,6 +63,7 @@ func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app st
 			app:    app,
 			tc:     envManifest.TaskConfig,
 			rc:     rc,
+			image:  envManifest.ImageConfig,
 			parser: parser,
 			addons: addons,
 		},
@@ -125,7 +126,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 
 func (s *LoadBalancedWebService) loadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
 	containerName := s.name
-	containerPort := strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.Image.Port)), 10)
+	containerPort := strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.ImageConfig.Port)), 10)
 	// Route load balancer traffic to main container by default.
 	targetContainer = aws.String(containerName)
 	targetPort = aws.String(containerPort)
@@ -155,7 +156,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 	return append(svcParams, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
-			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.Image.Port)), 10)),
+			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.ImageConfig.Port)), 10)),
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),

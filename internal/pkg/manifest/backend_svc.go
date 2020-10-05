@@ -35,10 +35,10 @@ type BackendService struct {
 
 // BackendServiceConfig holds the configuration that can be overriden per environments.
 type BackendServiceConfig struct {
-	Image      imageWithPortAndHealthcheck `yaml:",flow"`
-	TaskConfig `yaml:",inline"`
-	*Logging   `yaml:"logging,flow"`
-	Sidecar    `yaml:",inline"`
+	ImageConfig imageWithPortAndHealthcheck `yaml:"image,flow"`
+	TaskConfig  `yaml:",inline"`
+	*Logging    `yaml:"logging,flow"`
+	Sidecar     `yaml:",inline"`
 }
 
 // LogConfigOpts converts the service's Firelens configuration into a format parsable by the templates pkg.
@@ -76,9 +76,9 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 	}
 	// Apply overrides.
 	svc.Name = aws.String(props.Name)
-	svc.BackendServiceConfig.Image.Build.BuildArgs.Dockerfile = aws.String(props.Dockerfile)
-	svc.BackendServiceConfig.Image.Port = aws.Uint16(props.Port)
-	svc.BackendServiceConfig.Image.HealthCheck = healthCheck
+	svc.BackendServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = aws.String(props.Dockerfile)
+	svc.BackendServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
+	svc.BackendServiceConfig.ImageConfig.HealthCheck = healthCheck
 	svc.parser = template.New()
 	return svc
 }
@@ -97,9 +97,14 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
+// BuildRequired returns if the service requires building from the local Dockerfile.
+func (s *BackendService) BuildRequired() (bool, error) {
+	return requiresBuild(s.ImageConfig.Image)
+}
+
 // BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory
 func (s *BackendService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.Image.BuildConfig(wsRoot)
+	return s.ImageConfig.BuildConfig(wsRoot)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.
@@ -127,7 +132,7 @@ func newDefaultBackendService() *BackendService {
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
-			Image: imageWithPortAndHealthcheck{},
+			ImageConfig: imageWithPortAndHealthcheck{},
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),

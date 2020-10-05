@@ -225,8 +225,10 @@ Outputs:
 					env:  testEnvName,
 					app:  testAppName,
 					rc: RuntimeConfig{
-						ImageRepoURL: testImageRepoURL,
-						ImageTag:     testImageTag,
+						Image: &ECRImage{
+							RepoURL:  testImageRepoURL,
+							ImageTag: testImageTag,
+						},
 					},
 				},
 				manifest: testLBWebServiceManifest,
@@ -472,8 +474,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					app:  testAppName,
 					tc:   tc.manifest.TaskConfig,
 					rc: RuntimeConfig{
-						ImageRepoURL: testImageRepoURL,
-						ImageTag:     testImageTag,
+						Image: &ECRImage{
+							RepoURL:  testImageRepoURL,
+							ImageTag: testImageTag,
+						},
 					},
 				},
 				manifest: tc.manifest,
@@ -532,8 +536,10 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 					app:  testAppName,
 					tc:   testLBWebServiceManifest.TaskConfig,
 					rc: RuntimeConfig{
-						ImageRepoURL: testImageRepoURL,
-						ImageTag:     testImageTag,
+						Image: &ECRImage{
+							RepoURL:  testImageRepoURL,
+							ImageTag: testImageTag,
+						},
 						AdditionalTags: map[string]string{
 							"owner": "boss",
 						},
@@ -561,8 +567,10 @@ func TestLoadBalancedWebService_Tags(t *testing.T) {
 			env:  testEnvName,
 			app:  testAppName,
 			rc: RuntimeConfig{
-				ImageRepoURL: testImageRepoURL,
-				ImageTag:     testImageTag,
+				Image: &ECRImage{
+					RepoURL:  testImageRepoURL,
+					ImageTag: testImageTag,
+				},
 				AdditionalTags: map[string]string{
 					"owner":              "boss",
 					deploy.AppTagKey:     "overrideapp",
