@@ -107,11 +107,6 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 
 // Validate returns an error if the user inputs are invalid.
 func (o *deleteSvcOpts) Validate() error {
-	if o.name != "" || o.envName != "" {
-		if o.appName == "" {
-			return fmt.Errorf("--%s must be provided", appFlag)
-		}
-	}
 	if o.name != "" {
 		if _, err := o.store.GetService(o.appName, o.name); err != nil {
 			return err
@@ -351,6 +346,9 @@ func buildSvcDeleteCmd() *cobra.Command {
 
   Delete the "test" service from just the prod environment.
   /code $ copilot svc delete --name test --env prod
+
+  Delete the "test" service from the "my-app" application from outside of the workspace.
+  /code $ copilot svc delete --name test --app my-app
 
   Delete the "test" service without confirmation prompt.
   /code $ copilot svc delete --name test --yes`,
