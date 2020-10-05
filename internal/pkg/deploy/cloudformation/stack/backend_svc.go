@@ -50,6 +50,7 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 			app:    app,
 			tc:     envManifest.BackendServiceConfig.TaskConfig,
 			rc:     rc,
+			image:  envManifest.ImageConfig,
 			parser: parser,
 			addons: addons,
 		},
@@ -83,7 +84,7 @@ func (s *BackendService) Template() (string, error) {
 		NestedStack:        outputs,
 		Sidecars:           sidecars,
 		Autoscaling:        autoscaling,
-		HealthCheck:        s.manifest.BackendServiceConfig.Image.HealthCheckOpts(),
+		HealthCheck:        s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),
 		LogConfig:          s.manifest.LogConfigOpts(),
 		DesiredCountLambda: desiredCountLambda.String(),
 	})
@@ -102,7 +103,7 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 	return append(svcParams, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),
-			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.Image.Port)), 10)),
+			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.ImageConfig.Port)), 10)),
 		},
 	}...), nil
 }

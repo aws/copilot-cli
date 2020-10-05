@@ -37,7 +37,13 @@ type Workload struct {
 
 // Image represents the workload's container image.
 type Image struct {
-	Build BuildArgsOrString `yaml:"build"` // Path to the Dockerfile.
+	Build    BuildArgsOrString `yaml:"build"`    // Build an image from a Dockerfile.
+	Location *string           `yaml:"location"` // Use an existing image instead.
+}
+
+// GetLocation returns the location of the image.
+func (i Image) GetLocation() string {
+	return aws.StringValue(i.Location)
 }
 
 // BuildConfig populates a docker.BuildArguments struct from the fields available in the manifest.
@@ -110,6 +116,13 @@ func (i *Image) args() map[string]string {
 type BuildArgsOrString struct {
 	BuildString *string
 	BuildArgs   DockerBuildArgs
+}
+
+func (b *BuildArgsOrString) isEmpty() bool {
+	if aws.StringValue(b.BuildString) == "" && b.BuildArgs.isEmpty() {
+		return true
+	}
+	return false
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the BuildArgsOrString
@@ -274,9 +287,9 @@ func UnmarshalWorkload(in []byte) (interface{}, error) {
 		if err := yaml.Unmarshal(in, m); err != nil {
 			return nil, fmt.Errorf("unmarshal to backend service: %w", err)
 		}
-		if m.BackendServiceConfig.Image.HealthCheck != nil {
+		if m.BackendServiceConfig.ImageConfig.HealthCheck != nil {
 			// Make sure that unset fields in the healthcheck gets a default value.
-			m.BackendServiceConfig.Image.HealthCheck.applyIfNotSet(newDefaultContainerHealthCheck())
+			m.BackendServiceConfig.ImageConfig.HealthCheck.applyIfNotSet(newDefaultContainerHealthCheck())
 		}
 		return m, nil
 	case ScheduledJobType:
@@ -288,4 +301,30 @@ func UnmarshalWorkload(in []byte) (interface{}, error) {
 	default:
 		return nil, &ErrInvalidWorkloadType{Type: typeVal}
 	}
+}
+
+func requiresBuild(image Image) (bool, error) {
+	hasBuild, hasURL := image.Build.isEmpty(), image.Location == nil
+	if hasBuild == hasURL {
+		return false, fmt.Errorf(`either "image.build" or "image.location" needs to be specified in the manifest`)
+	}
+	if image.Location == nil {
+		return true, nil
+	}
+	return false, nil
+}
+
+func dockerfileBuildRequired(workloadType string, svc interface{}) (bool, error) {
+	type manifest interface {
+		BuildRequired() (bool, error)
+	}
+	mf, ok := svc.(manifest)
+	if !ok {
+		return false, fmt.Errorf("%s does not have required methods BuildRequired()", workloadType)
+	}
+	required, err := mf.BuildRequired()
+	if err != nil {
+		return false, fmt.Errorf("check if %s requires building from local Dockerfile: %w", workloadType, err)
+	}
+	return required, nil
 }

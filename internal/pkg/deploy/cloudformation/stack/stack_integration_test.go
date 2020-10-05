@@ -37,8 +37,10 @@ func Test_Autoscaling_Integration(t *testing.T) {
 	v, ok := mft.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
 	serializer, err := stack.NewHTTPSLoadBalancedWebService(v, envName, appName, stack.RuntimeConfig{
-		ImageRepoURL: imageURL,
-		ImageTag:     imageTag,
+		Image: &stack.ECRImage{
+			RepoURL:  imageURL,
+			ImageTag: imageTag,
+		},
 	})
 	require.NoError(t, err)
 	tpl, err := serializer.Template()
