@@ -9,6 +9,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
+
 	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -23,7 +26,6 @@ import (
 )
 
 const (
-	svcDeleteNamePrompt              = "Which service would you like to delete?"
 	fmtSvcDeleteConfirmPrompt        = "Are you sure you want to delete %s from application %s?"
 	fmtSvcDeleteFromEnvConfirmPrompt = "Are you sure you want to delete %s from environment %s?"
 	svcDeleteConfirmHelp             = "This will remove the service from all environments and delete it from your app."
@@ -57,6 +59,7 @@ type deleteSvcOpts struct {
 	sess      sessionProvider
 	spinner   progress
 	prompt    prompter
+	sel       wsSelector
 	appCFN    svcRemoverFromApp
 	getSvcCFN func(session *awssession.Session) svcDeleter
 	getECR    func(session *awssession.Session) imageRemover
@@ -76,14 +79,20 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 	if err != nil {
 		return nil, err
 	}
+	prompter := prompt.New()
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("new workspace: %w", err)
+	}
 
 	return &deleteSvcOpts{
 		deleteSvcVars: vars,
 
 		store:   store,
 		spinner: termprogress.NewSpinner(),
-		prompt:  prompt.New(),
+		prompt:  prompter,
 		sess:    provider,
+		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
 		appCFN:  cloudformation.New(defaultSession),
 		getSvcCFN: func(session *awssession.Session) svcDeleter {
 			return cloudformation.New(session)
@@ -105,9 +114,7 @@ func (o *deleteSvcOpts) Validate() error {
 		}
 	}
 	if o.envName != "" {
-		if err := o.validateEnvName(); err != nil {
-			return err
-		}
+		return o.validateEnvName()
 	}
 	return nil
 }
@@ -208,36 +215,12 @@ func (o *deleteSvcOpts) askSvcName() error {
 		return nil
 	}
 
-	names, err := o.serviceNames()
+	name, err := o.sel.Service("Select a service to delete", "")
 	if err != nil {
-		return err
-	}
-	if len(names) == 0 {
-		return fmt.Errorf("couldn't find any services in the application %s", o.appName)
-	}
-	if len(names) == 1 {
-		o.name = names[0]
-		log.Infof("Only found one service, defaulting to: %s\n", color.HighlightUserInput(o.name))
-		return nil
-	}
-	name, err := o.prompt.SelectOne(svcDeleteNamePrompt, "", names)
-	if err != nil {
-		return fmt.Errorf("select service to delete: %w", err)
+		return fmt.Errorf("select service: %w", err)
 	}
 	o.name = name
 	return nil
-}
-
-func (o *deleteSvcOpts) serviceNames() ([]string, error) {
-	services, err := o.store.ListServices(o.appName)
-	if err != nil {
-		return nil, fmt.Errorf("list services for application %s: %w", o.appName, err)
-	}
-	var names []string
-	for _, svc := range services {
-		names = append(names, svc.Name)
-	}
-	return names, nil
 }
 
 func (o *deleteSvcOpts) appEnvironments() error {
@@ -266,7 +249,7 @@ func (o *deleteSvcOpts) deleteStacks() error {
 
 		cfClient := o.getSvcCFN(sess)
 		o.spinner.Start(fmt.Sprintf(fmtSvcDeleteStart, o.name, env.Name))
-		if err := cfClient.DeleteService(deploy.DeleteServiceInput{
+		if err := cfClient.DeleteService(deploy.DeleteWorkloadInput{
 			Name:    o.name,
 			EnvName: env.Name,
 			AppName: o.appName,
