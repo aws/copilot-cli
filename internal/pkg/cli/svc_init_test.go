@@ -472,7 +472,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
-						require.Nil(t, m.Image.HealthCheck)
+						require.Nil(t, m.ImageConfig.HealthCheck)
 					}).Return("/backend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
@@ -517,7 +517,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
-						require.Equal(t, *m.Image.HealthCheck, manifest.ContainerHealthCheck{
+						require.Equal(t, *m.ImageConfig.HealthCheck, manifest.ContainerHealthCheck{
 							Interval:    &testInterval,
 							Retries:     &testRetries,
 							Timeout:     &testTimeout,
@@ -741,8 +741,8 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			if tc.wantedErr == nil {
 				require.NoError(t, err)
 				require.Equal(t, tc.inSvcName, aws.StringValue(manifest.Workload.Name))
-				require.Equal(t, tc.inSvcPort, aws.Uint16Value(manifest.Image.Port))
-				require.Contains(t, tc.inDockerfilePath, aws.StringValue(manifest.Image.Build.BuildArgs.Dockerfile))
+				require.Equal(t, tc.inSvcPort, aws.Uint16Value(manifest.ImageConfig.Port))
+				require.Contains(t, tc.inDockerfilePath, aws.StringValue(manifest.ImageConfig.Build.BuildArgs.Dockerfile))
 				require.Equal(t, tc.wantedPath, aws.StringValue(manifest.Path))
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())

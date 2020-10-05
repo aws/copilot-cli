@@ -133,3 +133,8 @@ func (a *Autoscaling) IsEmpty() bool {
 func durationp(v time.Duration) *time.Duration {
 	return &v
 }
+
+// ServiceDockerfileBuildRequired returns if the service container image should be built from local Dockerfile.
+func ServiceDockerfileBuildRequired(svc interface{}) (bool, error) {
+	return dockerfileBuildRequired("service", svc)
+}
