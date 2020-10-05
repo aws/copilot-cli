@@ -27,16 +27,6 @@ func TestDeleteJobOpts_Validate(t *testing.T) {
 
 		want error
 	}{
-		"should return error if job flag set but app flag not set": {
-			inName:     "resizer",
-			setupMocks: func(m *mocks.Mockstore) {},
-			want:       errors.New("--app must be provided"),
-		},
-		"should return error if env flag set but app flag not set": {
-			inEnvName:  "test",
-			setupMocks: func(m *mocks.Mockstore) {},
-			want:       errors.New("--app must be provided"),
-		},
 		"with no flag set": {
 			inAppName:  "phonetool",
 			setupMocks: func(m *mocks.Mockstore) {},
