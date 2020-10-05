@@ -69,11 +69,6 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 
 // Validate returns an error if the user inputs are invalid.
 func (o *deleteJobOpts) Validate() error {
-	if o.name != "" || o.envName != "" {
-		if o.appName == "" {
-			return fmt.Errorf("--%s must be provided", appFlag)
-		}
-	}
 	if o.name != "" {
 		if _, err := o.store.GetJob(o.appName, o.name); err != nil {
 			return err
@@ -176,6 +171,9 @@ func buildJobDeleteCmd() *cobra.Command {
 
   Delete the "report-generator" job from just the prod environment.
   /code $ copilot job delete --name report-generator --env prod
+
+  Delete the "report-generator" job from the my-app application from outside of the workspace.
+  /code $ copilot job delete --name report-generator --app my-app
 
   Delete the "report-generator" job without confirmation prompt.
   /code $ copilot job delete --name report-generator --yes`,
