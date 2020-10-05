@@ -241,6 +241,7 @@ func (o *initEnvOpts) Execute() error {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
 	}
 	env.Prod = o.isProduction
+	env.CustomConfig = config.NewCustomizeEnv(o.importVPCConfig(), o.adjustVPCConfig())
 
 	// 3. Add the stack set instance to the app stackset.
 	if err := o.addToStackset(app, env); err != nil {
@@ -442,22 +443,22 @@ func (o *initEnvOpts) askAdjustResources() error {
 	return nil
 }
 
-func (o *initEnvOpts) importVPCConfig() *deploy.ImportVPCConfig {
+func (o *initEnvOpts) importVPCConfig() *config.ImportVPC {
 	if o.defaultConfig || !o.importVPC.isSet() {
 		return nil
 	}
-	return &deploy.ImportVPCConfig{
+	return &config.ImportVPC{
 		ID:               o.importVPC.ID,
 		PrivateSubnetIDs: o.importVPC.PrivateSubnetIDs,
 		PublicSubnetIDs:  o.importVPC.PublicSubnetIDs,
 	}
 }
 
-func (o *initEnvOpts) adjustVPCConfig() *deploy.AdjustVPCConfig {
+func (o *initEnvOpts) adjustVPCConfig() *config.AdjustVPC {
 	if o.defaultConfig || !o.adjustVPC.isSet() {
 		return nil
 	}
-	return &deploy.AdjustVPCConfig{
+	return &config.AdjustVPC{
 		CIDR:               o.adjustVPC.CIDR.String(),
 		PrivateSubnetCIDRs: o.adjustVPC.PrivateSubnetCIDRs,
 		PublicSubnetCIDRs:  o.adjustVPC.PublicSubnetCIDRs,

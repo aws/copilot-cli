@@ -268,29 +268,36 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 	if err != nil {
 		return nil, err
 	}
-
+	imgNeedsBuild, err := manifest.ServiceDockerfileBuildRequired(mft)
+	if err != nil {
+		return nil, err
+	}
 	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
 		return nil, err
 	}
-	resources, err := o.appCFN.GetAppResourcesByRegion(app, env.Region)
-	if err != nil {
-		return nil, err
+	rc := stack.RuntimeConfig{
+		AdditionalTags: app.Tags,
 	}
-
-	repoURL, ok := resources.RepositoryURLs[o.name]
-	if !ok {
-		return nil, &errRepoNotFound{
-			svcName:      o.name,
-			envRegion:    env.Region,
-			appAccountID: app.AccountID,
+	if imgNeedsBuild {
+		resources, err := o.appCFN.GetAppResourcesByRegion(app, env.Region)
+		if err != nil {
+			return nil, err
+		}
+		repoURL, ok := resources.RepositoryURLs[o.name]
+		if !ok {
+			return nil, &errRepoNotFound{
+				svcName:      o.name,
+				envRegion:    env.Region,
+				appAccountID: app.AccountID,
+			}
+		}
+		rc.Image = &stack.ECRImage{
+			RepoURL:  repoURL,
+			ImageTag: o.tag,
 		}
 	}
-	serializer, err := o.stackSerializer(mft, env, app, stack.RuntimeConfig{
-		ImageRepoURL:   repoURL,
-		ImageTag:       o.tag,
-		AdditionalTags: app.Tags,
-	})
+	serializer, err := o.stackSerializer(mft, env, app, rc)
 	if err != nil {
 		return nil, err
 	}

@@ -227,7 +227,19 @@ func TestStore_CreateEnvironment(t *testing.T) {
 	testApplicationPath := fmt.Sprintf(fmtApplicationPath, testApplication.Name)
 	require.NoError(t, err, "Marshal application should not fail")
 
-	testEnvironment := Environment{Name: "test", App: testApplication.Name, AccountID: "1234", Region: "us-west-2"}
+	testCustomConfig := &CustomizeEnv{
+		ImportVPC: &ImportVPC{
+			ID:               "mockID",
+			PrivateSubnetIDs: []string{"mockPrivateSubnet"},
+			PublicSubnetIDs:  []string{"mockPublicSubnet"},
+		},
+		VPCConfig: &AdjustVPC{
+			CIDR:               "mockCIDR",
+			PrivateSubnetCIDRs: []string{"mockSubnetCIDR"},
+			PublicSubnetCIDRs:  []string{"mockSubnetCIDR"},
+		},
+	}
+	testEnvironment := Environment{Name: "test", App: testApplication.Name, AccountID: "1234", Region: "us-west-2", CustomConfig: testCustomConfig}
 	testEnvironmentString, err := marshal(testEnvironment)
 	testEnvironmentPath := fmt.Sprintf(fmtEnvParamPath, testEnvironment.App, testEnvironment.Name)
 	require.NoError(t, err, "Marshal environment should not fail")
@@ -303,10 +315,12 @@ func TestStore_CreateEnvironment(t *testing.T) {
 
 			// WHEN
 			err := store.CreateEnvironment(&Environment{
-				Name:      testEnvironment.Name,
-				App:       testEnvironment.App,
-				AccountID: testEnvironment.AccountID,
-				Region:    testEnvironment.Region})
+				Name:         testEnvironment.Name,
+				App:          testEnvironment.App,
+				AccountID:    testEnvironment.AccountID,
+				Region:       testEnvironment.Region,
+				CustomConfig: testEnvironment.CustomConfig,
+			})
 
 			// THEN
 			if tc.wantedErr != nil {

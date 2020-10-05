@@ -37,24 +37,40 @@ const (
 // RuntimeConfig represents configuration that's defined outside of the manifest file
 // that is needed to create a CloudFormation stack.
 type RuntimeConfig struct {
-	ImageRepoURL      string            // ImageRepoURL is the ECR repository URL the container image should be pushed to.
-	ImageTag          string            // ImageTag is the container image's unique tag.
+	Image             *ECRImage         // Optional. Image location in an ECR repository.
 	AddonsTemplateURL string            // Optional. S3 object URL for the addons template.
 	AdditionalTags    map[string]string // AdditionalTags are labels applied to resources in the workload stack.
+}
+
+// ECRImage represents configuration about the pushed ECR image that is needed to
+// create a CloudFormation stack.
+type ECRImage struct {
+	RepoURL  string // RepoURL is the ECR repository URL the container image should be pushed to.
+	ImageTag string // Tag is the container image's unique tag.
+}
+
+// GetLocation returns the location of the ECR image.
+func (i ECRImage) GetLocation() string {
+	return fmt.Sprintf("%s:%s", i.RepoURL, i.ImageTag)
 }
 
 type templater interface {
 	Template() (string, error)
 }
 
+type location interface {
+	GetLocation() string
+}
+
 // wkld represents a containerized workload running on Amazon ECS.
 // A workload can be a long-running service, an ephemeral task, or a periodic task.
 type wkld struct {
-	name string
-	env  string
-	app  string
-	tc   manifest.TaskConfig
-	rc   RuntimeConfig
+	name  string
+	env   string
+	app   string
+	tc    manifest.TaskConfig
+	rc    RuntimeConfig
+	image location
 
 	parser template.Parser
 	addons templater
@@ -76,6 +92,13 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 		}
 		desiredCount = aws.Int(min)
 	}
+	var img string
+	if w.image != nil {
+		img = w.image.GetLocation()
+	}
+	if w.rc.Image != nil {
+		img = w.rc.Image.GetLocation()
+	}
 	return []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(WorkloadAppNameParamKey),
@@ -91,7 +114,7 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 		{
 			ParameterKey:   aws.String(WorkloadContainerImageParamKey),
-			ParameterValue: aws.String(fmt.Sprintf("%s:%s", w.rc.ImageRepoURL, w.rc.ImageTag)),
+			ParameterValue: aws.String(img),
 		},
 		{
 			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),

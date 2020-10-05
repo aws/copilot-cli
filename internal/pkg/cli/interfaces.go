@@ -308,7 +308,7 @@ type environmentDeployer interface {
 }
 
 type svcDeleter interface {
-	DeleteService(in deploy.DeleteServiceInput) error
+	DeleteService(in deploy.DeleteWorkloadInput) error
 }
 
 type svcRemoverFromApp interface {

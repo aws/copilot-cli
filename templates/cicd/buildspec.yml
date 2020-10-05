@@ -55,6 +55,10 @@ phases:
       - >
         for svc in $svcs; do
           manifest=$(cat $CODEBUILD_SRC_DIR/copilot/$svc/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))')
+          image_location=$(echo $manifest | jq '.image.location')
+          if [ -n "$image_location" ]; then
+            continue
+          fi
           base_dockerfile=$(echo $manifest | jq '.image.build')
           build_dockerfile=$(echo $manifest| jq 'if .image.build?.dockerfile? then .image.build.dockerfile else "" end' | sed 's/"//g')
           build_context=$(echo $manifest| jq 'if .image.build?.context? then .image.build.context else "" end' | sed 's/"//g')

@@ -176,7 +176,7 @@ func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string
 	// doesn't already exist.
 	var wlList []string
 	shouldAddNewWl := true
-	// For now, AppResourcesConfig.Services refers to workloads, including both services and jobs
+	// For now, AppResourcesConfig.Services refers to workloads, including both services and jobs.
 	for _, wl := range previouslyDeployedConfig.Services {
 		wlList = append(wlList, wl)
 		if wl == wlName {
@@ -202,8 +202,23 @@ func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string
 	return nil
 }
 
-// RemoveServiceFromApp attempts to remove service specific resources (ECR repositories) from the application resource stack.
+// RemoveServiceFromApp attempts to remove service-specific resources (ECR repositories) from the application resource stack.
 func (cf CloudFormation) RemoveServiceFromApp(app *config.Application, svcName string) error {
+	if err := cf.removeWorkloadFromApp(app, svcName); err != nil {
+		return fmt.Errorf("removing %s service resources from application: %w", svcName, err)
+	}
+	return nil
+}
+
+// RemoveJobFromApp attempts to remove job-specific resources (ECR repositories) from the application resource stack.
+func (cf CloudFormation) RemoveJobFromApp(app *config.Application, jobName string) error {
+	if err := cf.removeWorkloadFromApp(app, jobName); err != nil {
+		return fmt.Errorf("removing %s job resources from application: %w", jobName, err)
+	}
+	return nil
+}
+
+func (cf CloudFormation) removeWorkloadFromApp(app *config.Application, wlName string) error {
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:      app.Name,
 		AccountID: app.AccountID,
@@ -214,29 +229,30 @@ func (cf CloudFormation) RemoveServiceFromApp(app *config.Application, svcName s
 	}
 
 	// We'll generate a new list of Accounts to remove the account associated
-	// with the input service to be removed.
-	var svcList []string
-	shouldRemoveSvc := false
-	for _, svc := range previouslyDeployedConfig.Services {
-		if svc == svcName {
-			shouldRemoveSvc = true
+	// with the input workload to be removed.
+	var wlList []string
+	shouldRemoveWl := false
+	// For now, AppResourcesConfig.Services refers to workloads, including both services and jobs.
+	for _, wl := range previouslyDeployedConfig.Services {
+		if wl == wlName {
+			shouldRemoveWl = true
 			continue
 		}
-		svcList = append(svcList, svc)
+		wlList = append(wlList, wl)
 	}
 
-	if !shouldRemoveSvc {
+	if !shouldRemoveWl {
 		return nil
 	}
 
 	newDeploymentConfig := stack.AppResourcesConfig{
 		Version:  previouslyDeployedConfig.Version + 1,
-		Services: svcList,
+		Services: wlList,
 		Accounts: previouslyDeployedConfig.Accounts,
 		App:      appConfig.Name,
 	}
 	if err := cf.deployAppConfig(appConfig, &newDeploymentConfig); err != nil {
-		return fmt.Errorf("removing %s service resources from application: %w", svcName, err)
+		return err
 	}
 
 	return nil

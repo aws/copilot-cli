@@ -66,6 +66,7 @@ type deploySvcOpts struct {
 	targetApp         *config.Application
 	targetEnvironment *config.Environment
 	targetSvc         *config.Workload
+	buildRequired     bool
 }
 
 func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
@@ -149,15 +150,10 @@ func (o *deploySvcOpts) Execute() error {
 		return err
 	}
 
-	buildArgs, err := o.getBuildArgs()
-	if err != nil {
-		return fmt.Errorf("get build arguments: %w", err)
-	}
-	if err = pushToECR(o.imageBuilderPusher, buildArgs); err != nil {
+	if err := o.configureContainerImage(); err != nil {
 		return err
 	}
 
-	// TODO: delete addons template from S3 bucket when deleting the environment.
 	addonsURL, err := o.pushAddonsTemplateToS3Bucket()
 	if err != nil {
 		return err
@@ -291,18 +287,31 @@ func (o *deploySvcOpts) configureClients() error {
 	return nil
 }
 
-func pushToECR(ecr imageBuilderPusher, args *docker.BuildArguments) error {
-	if err := ecr.BuildAndPush(docker.New(), args); err != nil {
+func (o *deploySvcOpts) configureContainerImage() error {
+	svc, err := o.manifest()
+	if err != nil {
+		return err
+	}
+	required, err := manifest.ServiceDockerfileBuildRequired(svc)
+	if err != nil {
+		return err
+	}
+	if !required {
+		return nil
+	}
+	// If it is built from local Dockerfile, build and push to the ECR repo.
+	buildArg, err := o.dfBuildArgs(svc)
+	if err != nil {
+		return err
+	}
+	if err := o.imageBuilderPusher.BuildAndPush(docker.New(), buildArg); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
+	o.buildRequired = true
 	return nil
 }
 
-func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {
-	svc, err := o.manifest()
-	if err != nil {
-		return nil, err
-	}
+func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*docker.BuildArguments, error) {
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
 		return nil, fmt.Errorf("get copilot directory: %w", err)
@@ -316,11 +325,10 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 	}
 	mf, ok := unmarshaledManifest.(dfArgs)
 	if !ok {
-		return nil, fmt.Errorf("%s does not have required method Build()", name)
+		return nil, fmt.Errorf("%s does not have required method BuildArgs()", name)
 	}
 
 	wsRoot := filepath.Dir(copilotDir)
-
 	args := mf.BuildArgs(wsRoot)
 	return &docker.BuildArguments{
 		Dockerfile: *args.Dockerfile,
@@ -369,6 +377,12 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 }
 
 func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
+	if !o.buildRequired {
+		return &stack.RuntimeConfig{
+			AddonsTemplateURL: addonsURL,
+			AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
+		}, nil
+	}
 	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
 	if err != nil {
 		return nil, fmt.Errorf("get application %s resources from region %s: %w", o.targetApp.Name, o.targetEnvironment.Region, err)
@@ -382,10 +396,12 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 		}
 	}
 	return &stack.RuntimeConfig{
-		ImageRepoURL:      repoURL,
-		ImageTag:          o.imageTag,
 		AddonsTemplateURL: addonsURL,
 		AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
+		Image: &stack.ECRImage{
+			RepoURL:  repoURL,
+			ImageTag: o.imageTag,
+		},
 	}, nil
 }
 
