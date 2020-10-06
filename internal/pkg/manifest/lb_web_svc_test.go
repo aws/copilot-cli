@@ -63,6 +63,7 @@ func TestLoadBalancedWebService_MarshalBinary(t *testing.T) {
 }
 
 func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
+	mockRange := Range("1-10")
 	testCases := map[string]struct {
 		in         *LoadBalancedWebService
 		envToApply string
@@ -270,6 +271,38 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						ConfigFile: aws.String("mockConfigFile"),
 						SecretOptions: map[string]string{
 							"FOO": "BAR",
+						},
+					},
+				},
+			},
+		},
+		"with range override": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							Autoscaling: Autoscaling{
+								Range: &mockRange,
+								CPU:   aws.Int(80),
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							Value: nil,
+							Autoscaling: Autoscaling{
+								Range: &mockRange,
+								CPU:   aws.Int(80),
+							},
 						},
 					},
 				},

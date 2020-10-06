@@ -62,6 +62,7 @@ environments:
       cpu_percentage: 70
 `,
 			requireCorrectValues: func(t *testing.T, i interface{}) {
+				mockRange := Range("1-10")
 				actualManifest, ok := i.(*LoadBalancedWebService)
 				require.True(t, ok)
 				wantedManifest := &LoadBalancedWebService{
@@ -122,7 +123,7 @@ environments:
 							TaskConfig: TaskConfig{
 								Count: Count{
 									Autoscaling: Autoscaling{
-										Range: Range("1-10"),
+										Range: &mockRange,
 										CPU:   aws.Int(70),
 									},
 								},
@@ -211,6 +212,7 @@ type: 'OH NO'
 
 func TestCount_UnmarshalYAML(t *testing.T) {
 	mockResponseTime := 500 * time.Millisecond
+	mockRange := Range("1-10")
 	testCases := map[string]struct {
 		inContent []byte
 
@@ -234,7 +236,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 `),
 			wantedStruct: Count{
 				Autoscaling: Autoscaling{
-					Range:        Range("1-10"),
+					Range:        &mockRange,
 					CPU:          aws.Int(70),
 					Memory:       aws.Int(80),
 					Requests:     aws.Int(1000),
@@ -321,7 +323,7 @@ func TestAutoscaling_Options(t *testing.T) {
 	)
 	mockResponseTime := 512 * time.Millisecond
 	testCases := map[string]struct {
-		inRange        string
+		inRange        Range
 		inCPU          int
 		inMemory       int
 		inRequests     int
@@ -355,7 +357,7 @@ func TestAutoscaling_Options(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			a := Autoscaling{
-				Range:        Range(tc.inRange),
+				Range:        &tc.inRange,
 				CPU:          aws.Int(tc.inCPU),
 				Memory:       aws.Int(tc.inMemory),
 				Requests:     aws.Int(tc.inRequests),
