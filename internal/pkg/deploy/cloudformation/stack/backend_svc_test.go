@@ -58,9 +58,10 @@ func TestBackendService_Template(t *testing.T) {
 			Port: aws.String("80/80/80"),
 		},
 	}}
+	badRange := manifest.Range("badRange")
 	testBackendSvcManifestWithBadAutoScaling := manifest.NewBackendService(baseProps)
 	testBackendSvcManifestWithBadAutoScaling.Count.Autoscaling = manifest.Autoscaling{
-		Range: manifest.Range("badRange"),
+		Range: &badRange,
 	}
 	testCases := map[string]struct {
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, svc *BackendService)
