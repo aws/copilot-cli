@@ -118,7 +118,7 @@ func TestTaskStackConfig_Parameters(t *testing.T) {
 		Image:         "7456.dkr.ecr.us-east-2.amazonaws.com/my-task:0.1",
 		TaskRole:      "task-role",
 		ExecutionRole: "execution-role",
-		Command:       "echo hooray",
+		Command:       []string{"echo hooray"},
 	}
 
 	task := &taskStackConfig{
