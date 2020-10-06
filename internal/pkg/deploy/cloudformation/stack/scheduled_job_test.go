@@ -450,8 +450,10 @@ func TestScheduledJob_Parameters(t *testing.T) {
 					app:  testAppName,
 					tc:   tc.manifest.TaskConfig,
 					rc: RuntimeConfig{
-						ImageRepoURL: testImageRepoURL,
-						ImageTag:     testImageTag,
+						Image: &ECRImage{
+							RepoURL:  testImageRepoURL,
+							ImageTag: testImageTag,
+						},
 					},
 				},
 				manifest: tc.manifest,
@@ -508,8 +510,10 @@ func TestScheduledJob_SerializedParameters(t *testing.T) {
 					app:  testAppName,
 					tc:   testScheduledJobManifest.TaskConfig,
 					rc: RuntimeConfig{
-						ImageRepoURL: testImageRepoURL,
-						ImageTag:     testImageTag,
+						Image: &ECRImage{
+							RepoURL:  testImageRepoURL,
+							ImageTag: testImageTag,
+						},
 						AdditionalTags: map[string]string{
 							"owner": "boss",
 						},

@@ -36,7 +36,7 @@ type ScheduledJob struct {
 
 // ScheduledJobConfig holds the configuration for a scheduled job
 type ScheduledJobConfig struct {
-	Image          Image `yaml:",flow"`
+	ImageConfig    Image `yaml:",flow"`
 	TaskConfig     `yaml:",inline"`
 	*Logging       `yaml:"logging,flow"`
 	Sidecar        `yaml:",inline"`
@@ -73,7 +73,7 @@ func newDefaultScheduledJob() *ScheduledJob {
 			Type: aws.String(ScheduledJobType),
 		},
 		ScheduledJobConfig: ScheduledJobConfig{
-			Image: Image{},
+			ImageConfig: Image{},
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),
@@ -90,7 +90,7 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	job := newDefaultScheduledJob()
 	// Apply overrides.
 	job.Name = aws.String(props.Name)
-	job.ScheduledJobConfig.Image.Build.BuildArgs.Dockerfile = aws.String(props.Dockerfile)
+	job.ScheduledJobConfig.ImageConfig.Build.BuildArgs.Dockerfile = aws.String(props.Dockerfile)
 	job.Schedule = props.Schedule
 	job.Retries = props.Retries
 	job.Timeout = props.Timeout
@@ -128,5 +128,15 @@ func (j ScheduledJob) ApplyEnv(envName string) (*ScheduledJob, error) {
 
 // BuildArgs returns a docker.BuildArguments object for the job given a workspace root.
 func (j *ScheduledJob) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return j.Image.BuildConfig(wsRoot)
+	return j.ImageConfig.BuildConfig(wsRoot)
+}
+
+// BuildRequired returns if the service requires building from the local Dockerfile.
+func (j *ScheduledJob) BuildRequired() (bool, error) {
+	return requiresBuild(j.ImageConfig)
+}
+
+// JobDockerfileBuildRequired returns if the job container image should be built from local Dockerfile.
+func JobDockerfileBuildRequired(job interface{}) (bool, error) {
+	return dockerfileBuildRequired("job", job)
 }

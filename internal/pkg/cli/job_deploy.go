@@ -60,6 +60,7 @@ type deployJobOpts struct {
 	targetApp         *config.Application
 	targetEnvironment *config.Environment
 	targetJob         *config.Workload
+	buildRequired     bool
 }
 
 func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
@@ -142,11 +143,8 @@ func (o *deployJobOpts) Execute() error {
 	if err := o.configureClients(); err != nil {
 		return err
 	}
-	buildArgs, err := o.getBuildArgs()
-	if err != nil {
-		return fmt.Errorf("get build arguments: %w", err)
-	}
-	if err = pushToECR(o.imageBuilderPusher, buildArgs); err != nil {
+
+	if err := o.configureContainerImage(); err != nil {
 		return err
 	}
 
@@ -223,11 +221,31 @@ func (o *deployJobOpts) configureClients() error {
 	return nil
 }
 
-func (o *deployJobOpts) getBuildArgs() (*docker.BuildArguments, error) {
+func (o *deployJobOpts) configureContainerImage() error {
 	job, err := o.manifest()
 	if err != nil {
-		return nil, err
+		return err
 	}
+	required, err := manifest.ServiceDockerfileBuildRequired(job)
+	if err != nil {
+		return err
+	}
+	if !required {
+		return nil
+	}
+	// If it is built from local Dockerfile, build and push to the ECR repo.
+	buildArg, err := o.dfBuildArgs(job)
+	if err != nil {
+		return err
+	}
+	if err := o.imageBuilderPusher.BuildAndPush(docker.New(), buildArg); err != nil {
+		return fmt.Errorf("build and push image: %w", err)
+	}
+	o.buildRequired = true
+	return nil
+}
+
+func (o *deployJobOpts) dfBuildArgs(job interface{}) (*docker.BuildArguments, error) {
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
 		return nil, fmt.Errorf("get copilot directory: %w", err)
@@ -290,8 +308,10 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 		}
 	}
 	return &stack.RuntimeConfig{
-		ImageRepoURL:      repoURL,
-		ImageTag:          o.imageTag,
+		Image: &stack.ECRImage{
+			RepoURL:  repoURL,
+			ImageTag: o.imageTag,
+		},
 		AddonsTemplateURL: addonsURL,
 		AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
 	}, nil
