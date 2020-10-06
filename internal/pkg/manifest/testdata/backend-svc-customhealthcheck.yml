@@ -9,8 +9,8 @@ name: subscribers
 type: Backend Service
 
 image:
-  # Docker build arguments. You can specify additional overrides here. Supported: dockerfile, context, args
-  build: ./subscribers/Dockerfile
+  # The Docker image used for your service.
+  location: flask-sample
   # Port exposed through your container to route traffic to it.
   port: 8080
   healthcheck:

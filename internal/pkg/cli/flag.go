@@ -90,7 +90,7 @@ const (
 )
 
 // Short flag names.
-// A short flag only exists if the flag is mandatory by the command.
+// A short flag only exists if the flag or flag set is mandatory by the command.
 const (
 	nameFlagShort    = "n"
 	appFlagShort     = "a"
@@ -100,6 +100,7 @@ const (
 	jobTypeFlagShort = "t"
 
 	dockerFileFlagShort        = "d"
+	imageFlagShort             = "i"
 	githubURLFlagShort         = "u"
 	githubAccessTokenFlagShort = "t"
 	gitBranchFlagShort         = "b"
@@ -185,7 +186,7 @@ Must be of the format '<keyName>:<dataType>'.`
 	countFlagDescription         = "Optional. The number of tasks to set up."
 	cpuFlagDescription           = "Optional. The number of CPU units to reserve for each task."
 	memoryFlagDescription        = "Optional. The amount of memory to reserve in MiB for each task."
-	imageFlagDescription         = "Optional. The image to run instead of building a Dockerfile."
+	imageFlagDescription         = "Optional. The docker image to use instead of building from a Dockerfile."
 	taskRoleFlagDescription      = "Optional. The ARN of the role for the task to use."
 	executionRoleFlagDescription = "Optional. The ARN of the role that grants the container agent permission to make AWS API calls."
 	envVarsFlagDescription       = "Optional. Environment variables specified by key=value separated with commas."

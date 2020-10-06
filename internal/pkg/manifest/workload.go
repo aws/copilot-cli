@@ -263,6 +263,7 @@ type TaskConfig struct {
 type WorkloadProps struct {
 	Name       string
 	Dockerfile string
+	Image      string
 }
 
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.

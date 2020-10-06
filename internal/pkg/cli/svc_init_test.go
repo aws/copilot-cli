@@ -25,6 +25,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 		inSvcType        string
 		inSvcName        string
 		inDockerfilePath string
+		inImage          string
 		inAppName        string
 		inSvcPort        uint16
 
@@ -40,6 +41,12 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inSvcName: "1234",
 			wantedErr: fmt.Errorf("service name 1234 is invalid: %s", errValueBadFormat),
+		},
+		"fail if both image and dockerfile are set": {
+			inAppName:        "phonetool",
+			inDockerfilePath: "mockDockerfile",
+			inImage:          "mockImage",
+			wantedErr:        fmt.Errorf("--dockerfile and --image cannot be specified at the same time"),
 		},
 		"invalid dockerfile directory path": {
 			inAppName:        "phonetool",
@@ -72,6 +79,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 					name:           tc.inSvcName,
 					dockerfilePath: tc.inDockerfilePath,
 					port:           tc.inSvcPort,
+					image:          tc.inImage,
 					appName:        tc.inAppName,
 				},
 				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
@@ -103,6 +111,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 		inSvcType        string
 		inSvcName        string
 		inDockerfilePath string
+		inImage          string
 		inSvcPort        uint16
 
 		mockPrompt     func(m *mocks.Mockprompter)
@@ -166,6 +175,18 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			wantedErr:      fmt.Errorf("get service name: some error"),
+		},
+		"skip selecting Dockerfile if image flag is set": {
+			inSvcType:        wantedSvcType,
+			inSvcName:        wantedSvcName,
+			inSvcPort:        wantedSvcPort,
+			inImage:          "mockImage",
+			inDockerfilePath: "",
+
+			mockPrompt:     func(m *mocks.Mockprompter) {},
+			mockSel:        func(m *mocks.MockdockerfileSelector) {},
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
+			wantedErr:      nil,
 		},
 		"select Dockerfile": {
 			inSvcType:        wantedSvcType,
@@ -289,6 +310,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					serviceType:    tc.inSvcType,
 					name:           tc.inSvcName,
 					port:           tc.inSvcPort,
+					image:          tc.inImage,
 					dockerfilePath: tc.inDockerfilePath,
 				},
 				fs:          &afero.Afero{Fs: afero.NewMemMapFs()},
@@ -311,7 +333,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, wantedSvcType, opts.serviceType)
 				require.Equal(t, wantedSvcName, opts.name)
-				require.Equal(t, wantedDockerfilePath, opts.dockerfilePath)
 			}
 		})
 	}
@@ -330,6 +351,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 		inSvcName        string
 		inDockerfilePath string
 		inAppName        string
+		inImage          string
 		mockWriter       func(m *mocks.MocksvcDirManifestWriter)
 		mockstore        func(m *mocks.Mockstore)
 		mockappDeployer  func(m *mocks.MockappDeployer)
@@ -459,6 +481,49 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				m.EXPECT().Stop(gomock.Any())
 			},
 			wantedErr: fmt.Errorf("saving service frontend: oops"),
+		},
+		"using existing image": {
+			inSvcType: manifest.BackendServiceType,
+			inAppName: "app",
+			inSvcName: "backend",
+			inImage:   "mockImage",
+			inSvcPort: 80,
+
+			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
+					Do(func(m *manifest.BackendService, _ string) {
+						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
+						require.Equal(t, *m.ImageConfig.Location, "mockImage")
+						require.Nil(t, m.ImageConfig.HealthCheck)
+					}).Return("/backend/manifest.yml", nil)
+			},
+			mockstore: func(m *mocks.Mockstore) {
+				m.EXPECT().CreateService(gomock.Any()).
+					Do(func(app *config.Workload) {
+						require.Equal(t, &config.Workload{
+							Name: "backend",
+							App:  "app",
+							Type: manifest.BackendServiceType,
+						}, app)
+					}).
+					Return(nil)
+
+				m.EXPECT().GetApplication("app").Return(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, nil)
+			},
+			mockappDeployer: func(m *mocks.MockappDeployer) {
+				m.EXPECT().AddServiceToApp(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, "backend")
+			},
+			mockProg: func(m *mocks.Mockprogress) {
+				m.EXPECT().Start(fmt.Sprintf(fmtAddSvcToAppStart, "backend"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddSvcToAppComplete, "backend"))
+			},
+			mockDf: func(m *mocks.MockdockerfileParser) {},
 		},
 		"no healthcheck options": {
 			inSvcType:        manifest.BackendServiceType,
@@ -595,6 +660,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 					name:           tc.inSvcName,
 					port:           tc.inSvcPort,
 					dockerfilePath: tc.inDockerfilePath,
+					image:          tc.inImage,
 					appName:        tc.inAppName,
 				},
 				setupParser: func(o *initSvcOpts) {},
@@ -624,8 +690,6 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 		inSvcName        string
 		inDockerfilePath string
 		inAppName        string
-		setupMocks       func(controller *gomock.Controller)
-		mockWriter       func(m *mocks.MocksvcDirManifestWriter)
 		mockstore        func(m *mocks.Mockstore)
 
 		wantedErr  error
@@ -637,9 +701,6 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			inSvcPort:        80,
 			inDockerfilePath: "/Dockerfile",
 
-			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
-				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
-			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
 			},
@@ -652,9 +713,6 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			inSvcPort:        80,
 			inDockerfilePath: "/Dockerfile",
 
-			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
-				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
-			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("app").Return([]*config.Workload{
 					{
@@ -672,9 +730,6 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			inSvcPort:        80,
 			inDockerfilePath: "/Dockerfile",
 
-			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
-				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
-			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("app").Return([]*config.Workload{
 					{
@@ -692,9 +747,6 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			inSvcPort:        80,
 			inDockerfilePath: "/Dockerfile",
 
-			mockWriter: func(m *mocks.MocksvcDirManifestWriter) {
-				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
-			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("app").Return([]*config.Workload{
 					{
@@ -714,28 +766,22 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWriter := mocks.NewMocksvcDirManifestWriter(ctrl)
 			mockstore := mocks.NewMockstore(ctrl)
-			if tc.mockWriter != nil {
-				tc.mockWriter(mockWriter)
-			}
 			if tc.mockstore != nil {
 				tc.mockstore(mockstore)
 			}
 			opts := initSvcOpts{
 				initSvcVars: initSvcVars{
-					serviceType:    manifest.LoadBalancedWebServiceType,
-					name:           tc.inSvcName,
-					port:           tc.inSvcPort,
-					dockerfilePath: tc.inDockerfilePath,
-					appName:        tc.inAppName,
+					serviceType: manifest.LoadBalancedWebServiceType,
+					name:        tc.inSvcName,
+					port:        tc.inSvcPort,
+					appName:     tc.inAppName,
 				},
-				ws:    mockWriter,
 				store: mockstore,
 			}
 
 			// WHEN
-			manifest, err := opts.newLoadBalancedWebServiceManifest()
+			manifest, err := opts.newLoadBalancedWebServiceManifest(tc.inDockerfilePath)
 
 			// THEN
 			if tc.wantedErr == nil {

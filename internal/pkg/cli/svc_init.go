@@ -63,6 +63,7 @@ type initSvcVars struct {
 	serviceType    string
 	name           string
 	dockerfilePath string
+	image          string
 	port           uint16
 }
 
@@ -135,6 +136,9 @@ func (o *initSvcOpts) Validate() error {
 		if err := validateSvcName(o.name); err != nil {
 			return err
 		}
+	}
+	if o.dockerfilePath != "" && o.image != "" {
+		return fmt.Errorf("--%s and --%s cannot be specified at the same time", dockerFileFlag, imageFlag)
 	}
 	if o.dockerfilePath != "" {
 		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {
@@ -229,25 +233,30 @@ func (o *initSvcOpts) createManifest() (string, error) {
 }
 
 func (o *initSvcOpts) newManifest() (encoding.BinaryMarshaler, error) {
+	var dfPath string
+	if o.dockerfilePath != "" {
+		path, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
+		if err != nil {
+			return nil, err
+		}
+		dfPath = path
+	}
 	switch o.serviceType {
 	case manifest.LoadBalancedWebServiceType:
-		return o.newLoadBalancedWebServiceManifest()
+		return o.newLoadBalancedWebServiceManifest(dfPath)
 	case manifest.BackendServiceType:
-		return o.newBackendServiceManifest()
+		return o.newBackendServiceManifest(dfPath)
 	default:
 		return nil, fmt.Errorf("service type %s doesn't have a manifest", o.serviceType)
 	}
 }
 
-func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalancedWebService, error) {
-	dfPath, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
-	if err != nil {
-		return nil, err
-	}
+func (o *initSvcOpts) newLoadBalancedWebServiceManifest(dockerfilePath string) (*manifest.LoadBalancedWebService, error) {
 	props := &manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:       o.name,
-			Dockerfile: dfPath,
+			Dockerfile: dockerfilePath,
+			Image:      o.image,
 		},
 		Port: o.port,
 		Path: "/",
@@ -267,11 +276,7 @@ func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalance
 	return manifest.NewLoadBalancedWebService(props), nil
 }
 
-func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, error) {
-	dfPath, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
-	if err != nil {
-		return nil, err
-	}
+func (o *initSvcOpts) newBackendServiceManifest(dockerfilePath string) (*manifest.BackendService, error) {
 	hc, err := o.parseHealthCheck()
 	if err != nil {
 		return nil, err
@@ -279,7 +284,8 @@ func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, err
 	return manifest.NewBackendService(manifest.BackendServiceProps{
 		WorkloadProps: manifest.WorkloadProps{
 			Name:       o.name,
-			Dockerfile: dfPath,
+			Dockerfile: dockerfilePath,
+			Image:      o.image,
 		},
 		Port:        o.port,
 		HealthCheck: hc,
@@ -323,7 +329,7 @@ func (o *initSvcOpts) askSvcName() error {
 
 // askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
 func (o *initSvcOpts) askDockerfile() error {
-	if o.dockerfilePath != "" {
+	if o.dockerfilePath != "" || o.image != "" {
 		return nil
 	}
 	df, err := o.sel.Dockerfile(
@@ -388,6 +394,9 @@ func (o *initSvcOpts) askSvcPort() error {
 }
 
 func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error) {
+	if o.dockerfilePath == "" {
+		return nil, nil
+	}
 	o.setupParser(o)
 	hc, err := o.df.GetHealthCheck()
 	if err != nil {
@@ -455,6 +464,8 @@ This command is also run as part of "copilot init".`,
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.serviceType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
+	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
+
 	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
 
 	// Bucket flags by service type.
@@ -462,6 +473,7 @@ This command is also run as part of "copilot init".`,
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(svcTypeFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(dockerFileFlag))
+	requiredFlags.AddFlag(cmd.Flags().Lookup(imageFlag))
 
 	lbWebSvcFlags := pflag.NewFlagSet(manifest.LoadBalancedWebServiceType, pflag.ContinueOnError)
 	lbWebSvcFlags.AddFlag(cmd.Flags().Lookup(svcPortFlag))
