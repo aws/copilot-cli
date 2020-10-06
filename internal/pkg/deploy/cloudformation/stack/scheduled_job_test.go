@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -18,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var testScheduledJobManifest = manifest.NewScheduledJob(manifest.ScheduledJobProps{
+var testScheduledJobManifest = manifest.NewScheduledJob(&manifest.ScheduledJobProps{
 	WorkloadProps: &manifest.WorkloadProps{
 		Name:       "mailer",
 		Dockerfile: "mailer/Dockerfile",
@@ -367,6 +368,167 @@ func TestScheduledJob_stateMachine(t *testing.T) {
 				require.Equal(t, aws.IntValue(tc.wantedConfig.Retries), aws.IntValue(parsedStateMachine.Retries))
 				require.Equal(t, aws.IntValue(tc.wantedConfig.Timeout), aws.IntValue(parsedStateMachine.Timeout))
 			}
+		})
+	}
+}
+
+func TestScheduledJob_Parameters(t *testing.T) {
+	baseProps := &manifest.ScheduledJobProps{
+		WorkloadProps: &manifest.WorkloadProps{
+			Name:       "frontend",
+			Dockerfile: "frontend/Dockerfile",
+		},
+		Schedule: "@daily",
+	}
+	testScheduledJobManifest := manifest.NewScheduledJob(baseProps)
+	testScheduledJobManifest.Count = manifest.Count{
+		Value: aws.Int(1),
+	}
+	expectedParams := []*cloudformation.Parameter{
+		{
+			ParameterKey:   aws.String(WorkloadAppNameParamKey),
+			ParameterValue: aws.String("phonetool"),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadEnvNameParamKey),
+			ParameterValue: aws.String("test"),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadNameParamKey),
+			ParameterValue: aws.String("frontend"),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadContainerImageParamKey),
+			ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),
+			ParameterValue: aws.String("256"),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadTaskMemoryParamKey),
+			ParameterValue: aws.String("512"),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+			ParameterValue: aws.String("1"),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadLogRetentionParamKey),
+			ParameterValue: aws.String("30"),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
+			ParameterValue: aws.String(""),
+		},
+		{
+			ParameterKey:   aws.String(ScheduledJobScheduleParamKey),
+			ParameterValue: aws.String("cron(0 0 * * ? *)"),
+		},
+	}
+	testCases := map[string]struct {
+		httpsEnabled bool
+		manifest     *manifest.ScheduledJob
+
+		expectedParams []*cloudformation.Parameter
+		expectedErr    error
+	}{
+		"renders all parameters": {
+			manifest: testScheduledJobManifest,
+
+			expectedParams: expectedParams,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+
+			// GIVEN
+			conf := &ScheduledJob{
+				wkld: &wkld{
+					name: aws.StringValue(tc.manifest.Name),
+					env:  testEnvName,
+					app:  testAppName,
+					tc:   tc.manifest.TaskConfig,
+					rc: RuntimeConfig{
+						Image: &ECRImage{
+							RepoURL:  testImageRepoURL,
+							ImageTag: testImageTag,
+						},
+					},
+				},
+				manifest: tc.manifest,
+			}
+
+			// WHEN
+			params, err := conf.Parameters()
+
+			// THEN
+			if err == nil {
+				require.ElementsMatch(t, tc.expectedParams, params)
+			} else {
+				require.EqualError(t, tc.expectedErr, err.Error())
+			}
+		})
+	}
+}
+
+func TestScheduledJob_SerializedParameters(t *testing.T) {
+	testCases := map[string]struct {
+		mockDependencies func(ctrl *gomock.Controller, c *ScheduledJob)
+
+		wantedParams string
+		wantedError  error
+	}{
+		"unavailable template": {
+			mockDependencies: func(ctrl *gomock.Controller, c *ScheduledJob) {
+				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
+				m.EXPECT().Parse(wkldParamsTemplatePath, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+				c.wkld.parser = m
+			},
+			wantedParams: "",
+			wantedError:  errors.New("some error"),
+		},
+		"render params template": {
+			mockDependencies: func(ctrl *gomock.Controller, c *ScheduledJob) {
+				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
+				m.EXPECT().Parse(wkldParamsTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("params")}, nil)
+				c.wkld.parser = m
+			},
+			wantedParams: "params",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			c := &ScheduledJob{
+				wkld: &wkld{
+					name: aws.StringValue(testScheduledJobManifest.Name),
+					env:  testEnvName,
+					app:  testAppName,
+					tc:   testScheduledJobManifest.TaskConfig,
+					rc: RuntimeConfig{
+						Image: &ECRImage{
+							RepoURL:  testImageRepoURL,
+							ImageTag: testImageTag,
+						},
+						AdditionalTags: map[string]string{
+							"owner": "boss",
+						},
+					},
+				},
+				manifest: testScheduledJobManifest,
+			}
+			tc.mockDependencies(ctrl, c)
+
+			// WHEN
+			params, err := c.SerializedParameters()
+
+			// THEN
+			require.Equal(t, tc.wantedError, err)
+			require.Equal(t, tc.wantedParams, params)
 		})
 	}
 }

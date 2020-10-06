@@ -17,6 +17,8 @@ Parameters:
     Type: String
   TaskMemory:
     Type: String
+  TaskCount:
+    Type: Number
   LogRetention:
     Type: Number
   AddonsTemplateURL:

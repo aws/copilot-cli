@@ -50,7 +50,7 @@ type deploySvcOpts struct {
 	store              store
 	ws                 wsSvcDirReader
 	imageBuilderPusher imageBuilderPusher
-	unmarshal          func(in []byte) (interface{}, error)
+	unmarshal          func([]byte) (interface{}, error)
 	s3                 artifactUploader
 	cmd                runner
 	addons             templater
@@ -128,7 +128,7 @@ func (o *deploySvcOpts) Ask() error {
 
 // Execute builds and pushes the container image for the service,
 func (o *deploySvcOpts) Execute() error {
-	env, err := o.targetEnv()
+	env, err := targetEnv(o.store, o.appName, o.envName)
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func (o *deploySvcOpts) Execute() error {
 		return err
 	}
 
-	return o.showAppURI()
+	return o.showSvcURI()
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
@@ -185,16 +185,16 @@ func (o *deploySvcOpts) validateSvcName() error {
 }
 
 func (o *deploySvcOpts) validateEnvName() error {
-	if _, err := o.targetEnv(); err != nil {
+	if _, err := targetEnv(o.store, o.appName, o.envName); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (o *deploySvcOpts) targetEnv() (*config.Environment, error) {
-	env, err := o.store.GetEnvironment(o.appName, o.envName)
+func targetEnv(s store, appName, envName string) (*config.Environment, error) {
+	env, err := s.GetEnvironment(appName, envName)
 	if err != nil {
-		return nil, fmt.Errorf("get environment %s configuration: %w", o.envName, err)
+		return nil, fmt.Errorf("get environment %s configuration: %w", envName, err)
 	}
 	return env, nil
 }
@@ -312,24 +312,29 @@ func (o *deploySvcOpts) configureContainerImage() error {
 }
 
 func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*docker.BuildArguments, error) {
-	type dfBuild interface {
-		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
-	}
-	mf, ok := svc.(dfBuild)
-	if !ok {
-		return nil, fmt.Errorf("service %s does not have required methods BuildArgs()", o.name)
-	}
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
 		return nil, fmt.Errorf("get copilot directory: %w", err)
 	}
+	return buildArgs(o.name, o.imageTag, copilotDir, svc)
+}
+
+func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*docker.BuildArguments, error) {
+	type dfArgs interface {
+		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
+	}
+	mf, ok := unmarshaledManifest.(dfArgs)
+	if !ok {
+		return nil, fmt.Errorf("%s does not have required method BuildArgs()", name)
+	}
+
 	wsRoot := filepath.Dir(copilotDir)
 	args := mf.BuildArgs(wsRoot)
 	return &docker.BuildArguments{
 		Dockerfile: *args.Dockerfile,
 		Context:    *args.Context,
 		Args:       args.Args,
-		ImageTag:   o.imageTag,
+		ImageTag:   imageTag,
 	}, nil
 }
 
@@ -362,7 +367,7 @@ func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 func (o *deploySvcOpts) manifest() (interface{}, error) {
 	raw, err := o.ws.ReadServiceManifest(o.name)
 	if err != nil {
-		return nil, fmt.Errorf("read service %s manifest from workspace: %w", o.name, err)
+		return nil, fmt.Errorf("read service %s manifest file: %w", o.name, err)
 	}
 	mft, err := o.unmarshal(raw)
 	if err != nil {
@@ -446,7 +451,7 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 	return nil
 }
 
-func (o *deploySvcOpts) showAppURI() error {
+func (o *deploySvcOpts) showSvcURI() error {
 	type identifier interface {
 		URI(string) (string, error)
 	}

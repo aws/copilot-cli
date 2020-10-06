@@ -212,6 +212,10 @@ type svcManifestReader interface {
 	ReadServiceManifest(svcName string) ([]byte, error)
 }
 
+type jobManifestReader interface {
+	ReadJobManifest(jobName string) ([]byte, error)
+}
+
 type svcManifestWriter interface {
 	dockerfileLister
 	WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
@@ -258,8 +262,18 @@ type wsSvcDirReader interface {
 	copilotDirGetter
 }
 
-type wsJobDirReader interface {
+type wsJobLister interface {
 	JobNames() ([]string, error)
+}
+
+type wsJobReader interface {
+	jobManifestReader
+	wsJobLister
+}
+
+type wsJobDirReader interface {
+	wsJobReader
+	CopilotDirPath() (string, error)
 }
 
 type wsPipelineReader interface {
