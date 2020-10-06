@@ -6,6 +6,7 @@ package stack
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -40,7 +41,7 @@ type taskStackConfig struct {
 func NewTaskStackConfig(taskOpts *deploy.CreateTaskResourcesInput) *taskStackConfig {
 	return &taskStackConfig{
 		CreateTaskResourcesInput: taskOpts,
-		parser: template.New(),
+		parser:                   template.New(),
 	}
 }
 
@@ -51,7 +52,7 @@ func (t *taskStackConfig) StackName() string {
 
 // Template returns the task CloudFormation template.
 func (t *taskStackConfig) Template() (string, error) {
-	content, err := t.parser.Parse(taskTemplatePath, struct{
+	content, err := t.parser.Parse(taskTemplatePath, struct {
 		EnvVars map[string]string
 	}{
 		EnvVars: t.EnvVars,
@@ -90,12 +91,12 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterValue: aws.String(t.TaskRole),
 		},
 		{
-			ParameterKey: aws.String(taskExecutionRoleParamKey),
+			ParameterKey:   aws.String(taskExecutionRoleParamKey),
 			ParameterValue: aws.String(t.ExecutionRole),
 		},
 		{
 			ParameterKey:   aws.String(taskCommandParamKey),
-			ParameterValue: aws.String(t.Command),
+			ParameterValue: aws.String(strings.Join(t.Command, ",")),
 		},
 	}, nil
 }
