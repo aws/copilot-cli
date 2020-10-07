@@ -106,6 +106,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 		wantedSvcName        = "frontend"
 		wantedDockerfilePath = "frontend/Dockerfile"
 		wantedSvcPort        = 80
+		wantedImage          = "mockImage"
 	)
 	testCases := map[string]struct {
 		inSvcType        string
@@ -333,6 +334,12 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, wantedSvcType, opts.serviceType)
 				require.Equal(t, wantedSvcName, opts.name)
+				if opts.dockerfilePath != "" {
+					require.Equal(t, wantedDockerfilePath, opts.dockerfilePath)
+				}
+				if opts.image != "" {
+					require.Equal(t, wantedImage, opts.image)
+				}
 			}
 		})
 	}

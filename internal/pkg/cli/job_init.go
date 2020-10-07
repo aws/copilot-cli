@@ -44,6 +44,7 @@ type initJobVars struct {
 	appName        string
 	name           string
 	dockerfilePath string
+	image          string
 	timeout        string
 	retries        int
 	schedule       string
@@ -108,6 +109,9 @@ func (o *initJobOpts) Validate() error {
 		if err := validateJobName(o.name); err != nil {
 			return err
 		}
+	}
+	if o.dockerfilePath != "" && o.image != "" {
+		return fmt.Errorf("--%s and --%s cannot be specified at the same time", dockerFileFlag, imageFlag)
 	}
 	if o.dockerfilePath != "" {
 		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {
@@ -209,14 +213,19 @@ func (o *initJobOpts) createManifest() (string, error) {
 }
 
 func (o *initJobOpts) newJobManifest() (*manifest.ScheduledJob, error) {
-	dfPath, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
-	if err != nil {
-		return nil, err
+	var dfPath string
+	if o.dockerfilePath != "" {
+		path, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
+		if err != nil {
+			return nil, err
+		}
+		dfPath = path
 	}
 	return manifest.NewScheduledJob(&manifest.ScheduledJobProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:       o.name,
 			Dockerfile: dfPath,
+			Image:      o.image,
 		},
 		Schedule: o.schedule,
 		Timeout:  o.timeout,
@@ -252,7 +261,7 @@ func (o *initJobOpts) askJobName() error {
 }
 
 func (o *initJobOpts) askDockerfile() error {
-	if o.dockerfilePath != "" {
+	if o.dockerfilePath != "" || o.image != "" {
 		return nil
 	}
 	df, err := o.sel.Dockerfile(
@@ -339,6 +348,7 @@ func buildJobInitCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.schedule, scheduleFlag, scheduleFlagShort, "", scheduleFlagDescription)
 	cmd.Flags().StringVar(&vars.timeout, timeoutFlag, "", timeoutFlagDescription)
 	cmd.Flags().IntVar(&vars.retries, retriesFlag, 0, retriesFlagDescription)
+	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 
 	cmd.Annotations = map[string]string{
 		"group": group.Develop,

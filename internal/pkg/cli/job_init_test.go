@@ -23,6 +23,7 @@ func TestJobInitOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		inJobName        string
 		inDockerfilePath string
+		inImage          string
 		inTimeout        string
 		inRetries        int
 		inSchedule       string
@@ -102,6 +103,11 @@ func TestJobInitOpts_Validate(t *testing.T) {
 			inRetries: -3,
 			wantedErr: errors.New("number of retries must be non-negative"),
 		},
+		"fail if both image and dockerfile are set": {
+			inDockerfilePath: "mockDockerfile",
+			inImage:          "mockImage",
+			wantedErr:        fmt.Errorf("--dockerfile and --image cannot be specified at the same time"),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -109,6 +115,7 @@ func TestJobInitOpts_Validate(t *testing.T) {
 			opts := initJobOpts{
 				initJobVars: initJobVars{
 					name:           tc.inJobName,
+					image:          tc.inImage,
 					dockerfilePath: tc.inDockerfilePath,
 					timeout:        tc.inTimeout,
 					retries:        tc.inRetries,
@@ -137,11 +144,13 @@ func TestJobInitOpts_Ask(t *testing.T) {
 		wantedJobType        = manifest.ScheduledJobType
 		wantedJobName        = "cuteness-aggregator"
 		wantedDockerfilePath = "cuteness-aggregator/Dockerfile"
+		wantedImage          = "mockImage"
 		wantedCronSchedule   = "0 9-17 * * MON-FRI"
 	)
 	testCases := map[string]struct {
 		inJobType        string
 		inJobName        string
+		inImage          string
 		inDockerfilePath string
 		inJobSchedule    string
 
@@ -184,6 +193,19 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			},
 			mockSel:   func(m *mocks.MockinitJobSelector) {},
 			wantedErr: fmt.Errorf("get job name: some error"),
+		},
+		"skip selecting Dockerfile if image flag is set": {
+			inJobType:        wantedJobType,
+			inJobName:        wantedJobName,
+			inImage:          "mockImage",
+			inDockerfilePath: "",
+			inJobSchedule:    wantedCronSchedule,
+
+			mockPrompt:     func(m *mocks.Mockprompter) {},
+			mockSel:        func(m *mocks.MockinitJobSelector) {},
+			mockFileSystem: func(mockFS afero.Fs) {},
+			wantedErr:      nil,
+			wantedSchedule: wantedCronSchedule,
 		},
 		"prompt for existing dockerfile": {
 			inJobType:        wantedJobType,
@@ -274,6 +296,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 				initJobVars: initJobVars{
 					jobType:        tc.inJobType,
 					name:           tc.inJobName,
+					image:          tc.inImage,
 					dockerfilePath: tc.inDockerfilePath,
 					schedule:       tc.inJobSchedule,
 				},
@@ -297,9 +320,13 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, wantedJobType, opts.jobType)
 			require.Equal(t, wantedJobName, opts.name)
-			require.Equal(t, wantedDockerfilePath, opts.dockerfilePath)
+			if opts.dockerfilePath != "" {
+				require.Equal(t, wantedDockerfilePath, opts.dockerfilePath)
+			}
+			if opts.image != "" {
+				require.Equal(t, wantedImage, opts.image)
+			}
 			require.Equal(t, tc.wantedSchedule, opts.schedule)
-
 		})
 	}
 }
@@ -309,6 +336,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 		inJobType        string
 		inJobName        string
 		inDockerfilePath string
+		inImage          string
 		inAppName        string
 		mockWriter       func(m *mocks.MockjobDirManifestWriter)
 		mockstore        func(m *mocks.Mockstore)
@@ -327,6 +355,44 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			mockWriter: func(m *mocks.MockjobDirManifestWriter) {
 				m.EXPECT().CopilotDirPath().Return("/resizer", nil)
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", nil)
+			},
+			mockstore: func(m *mocks.Mockstore) {
+				m.EXPECT().CreateJob(gomock.Any()).
+					Do(func(app *config.Workload) {
+						require.Equal(t, &config.Workload{
+							Name: "resizer",
+							App:  "app",
+							Type: manifest.ScheduledJobType,
+						}, app)
+					}).
+					Return(nil)
+				m.EXPECT().GetApplication("app").Return(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, nil)
+			},
+			mockappDeployer: func(m *mocks.MockappDeployer) {
+				m.EXPECT().AddJobToApp(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, "resizer")
+			},
+			mockProg: func(m *mocks.Mockprogress) {
+				m.EXPECT().Start(fmt.Sprintf(fmtAddJobToAppStart, "resizer"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddJobToAppComplete, "resizer"))
+			},
+		},
+		"using existing image": {
+			inJobType: manifest.ScheduledJobType,
+			inAppName: "app",
+			inJobName: "resizer",
+			inImage:   "mockImage",
+
+			mockWriter: func(m *mocks.MockjobDirManifestWriter) {
+				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Do(func(m *manifest.ScheduledJob, _ string) {
+					require.Equal(t, *m.Workload.Type, manifest.ScheduledJobType)
+					require.Equal(t, *m.ImageConfig.Location, "mockImage")
+				}).Return("/resizer/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().CreateJob(gomock.Any()).
@@ -461,6 +527,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 					appName:        tc.inAppName,
 					name:           tc.inJobName,
 					dockerfilePath: tc.inDockerfilePath,
+					image:          tc.inImage,
 					jobType:        tc.inJobType,
 				},
 				ws:          mockWriter,
