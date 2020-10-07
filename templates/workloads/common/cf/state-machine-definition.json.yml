@@ -3,7 +3,7 @@
   "Comment": "Run AWS Fargate task",
   {{- if .StateMachine}}
   {{- if .StateMachine.Timeout}}
-  "TimeoutSeconds": ${.StateMachine.Timeout},
+  "TimeoutSeconds": {{.StateMachine.Timeout}},
   {{- end}}
   {{- end}}
   "StartAt": "Run Fargate Task",
@@ -23,7 +23,7 @@
             "AssignPublicIp": "${AssignPublicIp}",
             "SecurityGroups": ["${SecurityGroups}"]
           }
-        },
+        }
       },
       {{- if .StateMachine}}
       {{- if .StateMachine.Retries}}
@@ -39,7 +39,7 @@
       ],
       {{- end}}
       {{- end}}
-      "End": "True"
+      "End": true
     }
   }
 }

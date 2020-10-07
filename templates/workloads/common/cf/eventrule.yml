@@ -1,7 +1,7 @@
 Rule:
   Type: AWS::Events::Rule
   Properties:
-    ScheduleExpression: ${Schedule}
+    ScheduleExpression: !Ref Schedule
     State: ENABLED
     Targets:
     - Arn: !Ref StateMachine

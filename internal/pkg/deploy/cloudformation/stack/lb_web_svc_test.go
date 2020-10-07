@@ -259,23 +259,26 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		Port: 80,
 	}
 	testLBWebServiceManifest := manifest.NewLoadBalancedWebService(baseProps)
+	testLBWebServiceManifestRange := manifest.Range("2-100")
 	testLBWebServiceManifest.Count = manifest.Count{
 		Value: aws.Int(1),
 		Autoscaling: manifest.Autoscaling{
-			Range: manifest.Range("2-100"),
+			Range: &testLBWebServiceManifestRange,
 		},
 	}
 	testLBWebServiceManifestWithBadCount := manifest.NewLoadBalancedWebService(baseProps)
+	testLBWebServiceManifestWithBadCountRange := manifest.Range("badCount")
 	testLBWebServiceManifestWithBadCount.Count = manifest.Count{
 		Autoscaling: manifest.Autoscaling{
-			Range: manifest.Range("badCount"),
+			Range: &testLBWebServiceManifestWithBadCountRange,
 		},
 	}
 	testLBWebServiceManifestWithSidecar := manifest.NewLoadBalancedWebService(baseProps)
+	testLBWebServiceManifestWithSidecarRange := manifest.Range("2-100")
 	testLBWebServiceManifestWithSidecar.Count = manifest.Count{
 		Value: aws.Int(1),
 		Autoscaling: manifest.Autoscaling{
-			Range: manifest.Range("2-100"),
+			Range: &testLBWebServiceManifestWithSidecarRange,
 		},
 	}
 	testLBWebServiceManifestWithSidecar.TargetContainer = aws.String("xray")
@@ -285,10 +288,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		},
 	}}
 	testLBWebServiceManifestWithStickiness := manifest.NewLoadBalancedWebService(baseProps)
+	testLBWebServiceManifestWithStickinessRange := manifest.Range("2-100")
 	testLBWebServiceManifestWithStickiness.Count = manifest.Count{
 		Value: aws.Int(1),
 		Autoscaling: manifest.Autoscaling{
-			Range: manifest.Range("2-100"),
+			Range: &testLBWebServiceManifestWithStickinessRange,
 		},
 	}
 	testLBWebServiceManifestWithStickiness.Stickiness = aws.Bool(true)

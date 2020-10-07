@@ -26,8 +26,10 @@ import (
 )
 
 const (
-	fmtSvcDeleteConfirmPrompt        = "Are you sure you want to delete service %s from application %s?"
-	fmtSvcDeleteFromEnvConfirmPrompt = "Are you sure you want to delete service %s from environment %s?"
+	svcDeleteNamePrompt              = "Which service would you like to delete?"
+	svcDeleteAppNamePrompt           = "Which application's service would you like to delete?"
+	fmtSvcDeleteConfirmPrompt        = "Are you sure you want to delete %s from application %s?"
+	fmtSvcDeleteFromEnvConfirmPrompt = "Are you sure you want to delete %s from environment %s?"
 	svcDeleteConfirmHelp             = "This will remove the service from all environments and delete it from your app."
 	svcDeleteFromEnvConfirmHelp      = "This will remove the service from just the %s environment."
 )
@@ -105,9 +107,6 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 
 // Validate returns an error if the user inputs are invalid.
 func (o *deleteSvcOpts) Validate() error {
-	if o.appName == "" {
-		return errNoAppInWorkspace
-	}
 	if o.name != "" {
 		if _, err := o.store.GetService(o.appName, o.name); err != nil {
 			return err
@@ -121,6 +120,9 @@ func (o *deleteSvcOpts) Validate() error {
 
 // Ask prompts the user for any required flags.
 func (o *deleteSvcOpts) Ask() error {
+	if err := o.askAppName(); err != nil {
+		return err
+	}
 	if err := o.askSvcName(); err != nil {
 		return err
 	}
@@ -210,12 +212,25 @@ func (o *deleteSvcOpts) targetEnv() (*config.Environment, error) {
 	return env, nil
 }
 
+func (o *deleteSvcOpts) askAppName() error {
+	if o.appName != "" {
+		return nil
+	}
+
+	name, err := o.sel.Application(svcDeleteAppNamePrompt, "")
+	if err != nil {
+		return fmt.Errorf("select application name: %w", err)
+	}
+	o.appName = name
+	return nil
+}
+
 func (o *deleteSvcOpts) askSvcName() error {
 	if o.name != "" {
 		return nil
 	}
 
-	name, err := o.sel.Service("Select a service to delete", "")
+	name, err := o.sel.Service(svcDeleteNamePrompt, "")
 	if err != nil {
 		return fmt.Errorf("select service: %w", err)
 	}
@@ -331,6 +346,9 @@ func buildSvcDeleteCmd() *cobra.Command {
 
   Delete the "test" service from just the prod environment.
   /code $ copilot svc delete --name test --env prod
+
+  Delete the "test" service from the "my-app" application from outside of the workspace.
+  /code $ copilot svc delete --name test --app my-app
 
   Delete the "test" service without confirmation prompt.
   /code $ copilot svc delete --name test --yes`,
