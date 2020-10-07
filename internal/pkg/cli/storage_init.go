@@ -276,8 +276,7 @@ func (o *initStorageOpts) askStorageSvc() error {
 		return nil
 	}
 	svc, err := o.sel.Service(storageInitSvcPrompt,
-		storageInitSvcHelp,
-	)
+		storageInitSvcHelp, o.appName)
 	if err != nil {
 		return fmt.Errorf("retrieve local service names: %w", err)
 	}

@@ -208,7 +208,7 @@ func (o *packageSvcOpts) askAppName() error {
 		return nil
 	}
 
-	name, err := o.sel.Service(svcPackageSvcNamePrompt, "")
+	name, err := o.sel.Service(svcPackageSvcNamePrompt, "", o.appName)
 	if err != nil {
 		return fmt.Errorf("select service: %w", err)
 	}

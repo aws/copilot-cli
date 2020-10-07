@@ -132,7 +132,7 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("not a git repo"))
 			},
 			expectSelector: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service(svcPackageSvcNamePrompt, "").Return("frontend", nil)
+				m.EXPECT().Service(svcPackageSvcNamePrompt, "", testAppName).Return("frontend", nil)
 				m.EXPECT().Environment(svcPackageEnvNamePrompt, "", testAppName).Return("test", nil)
 			},
 			expectPrompt: func(m *mocks.Mockprompter) {
@@ -148,7 +148,7 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 			inTag:     "v1.0.0",
 
 			expectSelector: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service(svcPackageSvcNamePrompt, "").Return("frontend", nil)
+				m.EXPECT().Service(svcPackageSvcNamePrompt, "", testAppName).Return("frontend", nil)
 				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			expectPrompt: func(m *mocks.Mockprompter) {
@@ -165,7 +165,7 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 			inTag:     "v1.0.0",
 
 			expectSelector: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Service(gomock.Any(), gomock.Any(), testAppName).Times(0)
 				m.EXPECT().Environment(svcPackageEnvNamePrompt, "", testAppName).Return("test", nil)
 			},
 			expectPrompt: func(m *mocks.Mockprompter) {
@@ -183,7 +183,7 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 			inTag:     "v1.0.0",
 
 			expectSelector: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Service(gomock.Any(), gomock.Any(), testAppName).Times(0)
 				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			expectPrompt: func(m *mocks.Mockprompter) {

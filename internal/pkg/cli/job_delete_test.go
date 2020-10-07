@@ -145,7 +145,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Job("Which job would you like to delete?", "").Return(testJobName, nil)
+				m.EXPECT().Job("Which job would you like to delete?", "", testAppName).Return(testJobName, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
@@ -156,7 +156,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Job("Which job would you like to delete?", "").Return("", mockError)
+				m.EXPECT().Job("Which job would you like to delete?", "", testAppName).Return("", mockError)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
@@ -167,8 +167,8 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			inName:           "",
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Job(gomock.Any(), gomock.Any()).Times(0)
-				m.EXPECT().Job("Which job would you like to delete?", "").Return("", mockError)
+				m.EXPECT().Job(gomock.Any(), gomock.Any(), testAppName).Times(0)
+				m.EXPECT().Job("Which job would you like to delete?", "", testAppName).Return("", mockError)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
@@ -179,7 +179,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			inName:           testJobName,
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Job(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Job(gomock.Any(), gomock.Any(), testAppName).Times(0)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
@@ -190,7 +190,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			inName:           testJobName,
 			skipConfirmation: false,
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Job(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Job(gomock.Any(), gomock.Any(), testAppName).Times(0)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
@@ -206,7 +206,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			inName:           testJobName,
 			skipConfirmation: false,
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Job(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Job(gomock.Any(), gomock.Any(), testAppName).Times(0)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
@@ -222,7 +222,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			inName:           testJobName,
 			skipConfirmation: false,
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Job(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Job(gomock.Any(), gomock.Any(), testAppName).Times(0)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
@@ -239,7 +239,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 			envName:          "test",
 			skipConfirmation: false,
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Job(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Job(gomock.Any(), gomock.Any(), testAppName).Times(0)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(

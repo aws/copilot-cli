@@ -151,7 +151,7 @@ func (o *deleteJobOpts) askJobName() error {
 		return nil
 	}
 
-	name, err := o.sel.Job(jobDeleteJobNamePrompt, "")
+	name, err := o.sel.Job(jobDeleteJobNamePrompt, "", o.appName)
 	if err != nil {
 		return fmt.Errorf("select job: %w", err)
 	}

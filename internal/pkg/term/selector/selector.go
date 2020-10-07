@@ -108,7 +108,7 @@ type DeployStoreClient interface {
 // Select prompts users to select the name of an application or environment.
 type Select struct {
 	prompt Prompter
-	lister AppEnvLister
+	lister ConfigLister
 }
 
 // ConfigSelect is an application and environment selector, but can also choose a service from the config store.
@@ -121,6 +121,8 @@ type ConfigSelect struct {
 type WorkspaceSelect struct {
 	*Select
 	wlLister WsWorkloadDockerfileLister
+	//svcLister ConfigSvcLister
+	//app string
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -132,7 +134,7 @@ type DeploySelect struct {
 }
 
 // NewSelect returns a selector that chooses applications or environments.
-func NewSelect(prompt Prompter, store AppEnvLister) *Select {
+func NewSelect(prompt Prompter, store ConfigLister) *Select {
 	return &Select{
 		prompt: prompt,
 		lister: store,
@@ -149,15 +151,16 @@ func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
 
 // NewWorkspaceSelect returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
-func NewWorkspaceSelect(prompt Prompter, store AppEnvLister, ws WsWorkloadDockerfileLister) *WorkspaceSelect {
+func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WsWorkloadDockerfileLister) *WorkspaceSelect {
 	return &WorkspaceSelect{
 		Select:   NewSelect(prompt, store),
 		wlLister: ws,
+		//svcLister: store,
 	}
 }
 
 // NewDeploySelect returns a new selector that chooses services and environments from the deploy store.
-func NewDeploySelect(prompt Prompter, configStore AppEnvLister, deployStore DeployStoreClient) *DeploySelect {
+func NewDeploySelect(prompt Prompter, configStore ConfigLister, deployStore DeployStoreClient) *DeploySelect {
 	return &DeploySelect{
 		Select:         NewSelect(prompt, configStore),
 		deployStoreSvc: deployStore,
@@ -259,12 +262,24 @@ func (s *DeploySelect) DeployedService(prompt, help string, app string, opts ...
 	return &deployedSvc, nil
 }
 
+//// GetDeployedWorkloadOpts sets up optional parameters for GetDeployedServiceOpts function.
+//type GetWorkloadOpts func(*WorkspaceSelect)
+//
+//// WithApp sets up the app name for WorkspaceSelect.
+//func WithApp(app string) GetWorkloadOpts {
+//	return func(in *WorkspaceSelect) {
+//		in.app = app
+//	}
+//}
+
 // Service fetches all services in the workspace and then prompts the user to select one.
-func (s *WorkspaceSelect) Service(msg, help string) (string, error) {
-	serviceNames, err := s.retrieveWorkspaceServices()
+func (s *WorkspaceSelect) Service(msg, help string, app string) (string, error) {
+	wsServiceNames, err := s.retrieveWorkspaceServices()
 	if err != nil {
 		return "", fmt.Errorf("list services: %w", err)
 	}
+	storeServiceNames, err := s.Select.lister.ListServices(app)
+	serviceNames := filterWlsByName(storeServiceNames, wsServiceNames)
 	if len(serviceNames) == 0 {
 		return "", errors.New("no services found in workspace")
 	}
@@ -281,11 +296,13 @@ func (s *WorkspaceSelect) Service(msg, help string) (string, error) {
 }
 
 // Job fetches all jobs in the workspace and then prompts the user to select one.
-func (s *WorkspaceSelect) Job(msg, help string) (string, error) {
-	jobNames, err := s.retrieveWorkspaceJobs()
+func (s *WorkspaceSelect) Job(msg, help string, app string) (string, error) {
+	wsJobNames, err := s.retrieveWorkspaceJobs()
 	if err != nil {
 		return "", fmt.Errorf("list jobs: %w", err)
 	}
+	storeJobNames, err := s.Select.lister.ListServices(app)
+	jobNames := filterWlsByName(storeJobNames, wsJobNames)
 	if len(jobNames) == 0 {
 		return "", errors.New("no jobs found in workspace")
 	}
@@ -299,6 +316,21 @@ func (s *WorkspaceSelect) Job(msg, help string) (string, error) {
 		return "", fmt.Errorf("select local job: %w", err)
 	}
 	return selectedJobName, nil
+}
+
+func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
+	isWanted := make(map[string]bool)
+	for _, name := range wantedNames {
+		isWanted[name] = true
+	}
+	var filtered []string
+	for _, wl := range wls {
+		if _, ok := isWanted[wl.Name]; !ok {
+			continue
+		}
+		filtered = append(filtered, wl.Name)
+	}
+	return filtered
 }
 
 // Service fetches all services in an app and prompts the user to select one.

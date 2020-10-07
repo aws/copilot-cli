@@ -18,7 +18,7 @@ import (
 
 type deploySelectMocks struct {
 	deploySvc *mocks.MockDeployStoreClient
-	configSvc *mocks.MockAppEnvLister
+	configSvc *mocks.MockConfigLister
 	prompt    *mocks.MockPrompter
 }
 
@@ -176,7 +176,7 @@ func TestDeploySelect_Service(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockdeploySvc := mocks.NewMockDeployStoreClient(ctrl)
-			mockconfigSvc := mocks.NewMockAppEnvLister(ctrl)
+			mockconfigSvc := mocks.NewMockConfigLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := deploySelectMocks{
 				deploySvc: mockdeploySvc,
@@ -315,7 +315,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 				},
 				wlLister: mockwsWorkloadLister,
 			}
-			got, err := sel.Service("Select a local service", "Help text")
+			got, err := sel.Service("Select a local service", "Help text", "app-name")
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {
@@ -432,7 +432,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 				},
 				wlLister: mockwsConfigGetter,
 			}
-			got, err := sel.Job("Select a local job", "Help text")
+			got, err := sel.Job("Select a local job", "Help text", "app-name")
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {
@@ -578,7 +578,7 @@ func TestConfigSelect_Service(t *testing.T) {
 }
 
 type environmentMocks struct {
-	envLister *mocks.MockAppEnvLister
+	envLister *mocks.MockConfigLister
 	prompt    *mocks.MockPrompter
 }
 
@@ -719,7 +719,7 @@ func TestSelect_Environment(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockenvLister := mocks.NewMockAppEnvLister(ctrl)
+			mockenvLister := mocks.NewMockConfigLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := environmentMocks{
 				envLister: mockenvLister,
@@ -743,7 +743,7 @@ func TestSelect_Environment(t *testing.T) {
 }
 
 type applicationMocks struct {
-	appLister *mocks.MockAppEnvLister
+	appLister *mocks.MockConfigLister
 	prompt    *mocks.MockPrompter
 }
 
@@ -841,7 +841,7 @@ func TestSelect_Application(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockappLister := mocks.NewMockAppEnvLister(ctrl)
+			mockappLister := mocks.NewMockConfigLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := applicationMocks{
 				appLister: mockappLister,
@@ -941,7 +941,7 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			p := mocks.NewMockPrompter(ctrl)
-			s := mocks.NewMockAppEnvLister(ctrl)
+			s := mocks.NewMockConfigLister(ctrl)
 			cfg := mocks.NewMockWsWorkloadDockerfileLister(ctrl)
 			tc.mockPrompt(p)
 			tc.mockWs(cfg)
@@ -1071,7 +1071,7 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			p := mocks.NewMockPrompter(ctrl)
-			s := mocks.NewMockAppEnvLister(ctrl)
+			s := mocks.NewMockConfigLister(ctrl)
 			cfg := mocks.NewMockWsWorkloadDockerfileLister(ctrl)
 			tc.mockPrompt(p)
 			sel := NewWorkspaceSelect(p, s, cfg)
