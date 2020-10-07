@@ -58,6 +58,7 @@ type deleteAppOpts struct {
 	prompt               prompter
 	s3                   func(session *session.Session) bucketEmptier
 	executor             func(svcName string) (executor, error)
+	jobExecutor          func(jobName string) (jobExecutor, error)
 	askExecutor          func(envName, envProfile string) (askExecutor, error)
 	deletePipelineRunner func() (deletePipelineRunner, error)
 }
@@ -94,6 +95,17 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 			opts, err := newDeleteSvcOpts(deleteSvcVars{
 				skipConfirmation: true, // always skip sub-confirmations
 				name:             svcName,
+				appName:          vars.name,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return opts, nil
+		},
+		jobExecutor: func(jobName string) (jobExecutor, error) {
+			opts, err := newDeleteJobOpts(deleteJobVars{
+				skipConfirmation: true,
+				name:             jobName,
 				appName:          vars.name,
 			})
 			if err != nil {
@@ -222,7 +234,7 @@ func (o *deleteAppOpts) deleteJobs() error {
 	}
 
 	for _, job := range jobs {
-		cmd, err := o.executor(job.Name)
+		cmd, err := o.jobExecutor(job.Name)
 		if err != nil {
 			return err
 		}
