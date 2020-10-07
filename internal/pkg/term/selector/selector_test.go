@@ -367,6 +367,27 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			},
 			want: "service2",
 		},
+		"with error retrieving services from workspace": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.workloadLister.
+					EXPECT().ServiceNames().Return(
+					[]string{""}, errors.New("some error"))
+			},
+			wantErr: errors.New("retrieve services from workspace: some error"),
+		},
+		"with error retrieving services from store": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.workloadLister.EXPECT().ServiceNames().Return(
+					[]string{
+						"service1",
+						"service2",
+					}, nil).
+					Times(1)
+				m.configLister.EXPECT().ListServices("app-name").Return(
+					nil, errors.New("some error"))
+			},
+			wantErr: errors.New("retrieve services from store: some error"),
+		},
 		"with error selecting services": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.
@@ -602,6 +623,27 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 					Times(1)
 			},
 			want: "job2",
+		},
+		"with error retrieving jobs from workspace": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.workloadLister.
+					EXPECT().JobNames().Return(
+					[]string{""}, errors.New("some error"))
+			},
+			wantErr: errors.New("retrieve jobs from workspace: some error"),
+		},
+		"with error retrieving jobs from store": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.workloadLister.EXPECT().JobNames().Return(
+					[]string{
+						"service1",
+						"service2",
+					}, nil).
+					Times(1)
+				m.configLister.EXPECT().ListServices("app-name").Return(
+					nil, errors.New("some error"))
+			},
+			wantErr: errors.New("retrieve jobs from store: some error"),
 		},
 		"with error selecting jobs": {
 			setupMocks: func(m workspaceSelectMocks) {

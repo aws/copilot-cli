@@ -263,9 +263,12 @@ func (s *DeploySelect) DeployedService(prompt, help string, app string, opts ...
 func (s *WorkspaceSelect) Service(msg, help string, app string) (string, error) {
 	wsServiceNames, err := s.retrieveWorkspaceServices()
 	if err != nil {
-		return "", fmt.Errorf("list services: %w", err)
+		return "", fmt.Errorf("retrieve services from workspace: %w", err)
 	}
 	storeServiceNames, err := s.Select.lister.ListServices(app)
+	if err != nil {
+		return "", fmt.Errorf("retrieve services from store: %w", err)
+	}
 	serviceNames := filterWlsByName(storeServiceNames, wsServiceNames)
 	if len(serviceNames) == 0 {
 		return "", errors.New("no services found")
@@ -286,9 +289,12 @@ func (s *WorkspaceSelect) Service(msg, help string, app string) (string, error) 
 func (s *WorkspaceSelect) Job(msg, help string, app string) (string, error) {
 	wsJobNames, err := s.retrieveWorkspaceJobs()
 	if err != nil {
-		return "", fmt.Errorf("list jobs: %w", err)
+		return "", fmt.Errorf("retrieve jobs from workspace: %w", err)
 	}
 	storeJobNames, err := s.Select.lister.ListServices(app)
+	if err != nil {
+		return "", fmt.Errorf("retrieve jobs from store: %w", err)
+	}
 	jobNames := filterWlsByName(storeJobNames, wsJobNames)
 	if len(jobNames) == 0 {
 		return "", errors.New("no jobs found")
