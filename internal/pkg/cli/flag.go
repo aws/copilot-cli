@@ -113,6 +113,10 @@ const (
 var (
 	svcTypeFlagDescription = fmt.Sprintf(`Type of service to create. Must be one of:
 %s`, strings.Join(template.QuoteSliceFunc(manifest.ServiceTypes), ", "))
+	imageFlagDescription = fmt.Sprintf(`The location of an existing Docker image.
+Mutually exclusive with -%s, --%s`, dockerFileFlagShort, dockerFileFlag)
+	dockerFileFlagDescription = fmt.Sprintf(`Path to the Dockerfile.
+Mutually exclusive with -%s, --%s`, imageFlagShort, imageFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s`, strings.Join(template.QuoteSliceFunc(storageTypes), ", "))
 	jobTypeFlagDescription = fmt.Sprintf(`Type of job to create. Must be one of:
@@ -140,7 +144,6 @@ const (
 	yesFlagDescription      = "Skips confirmation prompt."
 	jsonFlagDescription     = "Optional. Outputs in JSON format."
 
-	dockerFileFlagDescription   = "Path to the Dockerfile."
 	imageTagFlagDescription     = `Optional. The container image tag.`
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated with commas.
 Allows you to categorize resources.`
@@ -186,7 +189,6 @@ Must be of the format '<keyName>:<dataType>'.`
 	countFlagDescription         = "Optional. The number of tasks to set up."
 	cpuFlagDescription           = "Optional. The number of CPU units to reserve for each task."
 	memoryFlagDescription        = "Optional. The amount of memory to reserve in MiB for each task."
-	imageFlagDescription         = "Optional. The docker image to use instead of building from a Dockerfile."
 	taskRoleFlagDescription      = "Optional. The ARN of the role for the task to use."
 	executionRoleFlagDescription = "Optional. The ARN of the role that grants the container agent permission to make AWS API calls."
 	envVarsFlagDescription       = "Optional. Environment variables specified by key=value separated with commas."

@@ -138,7 +138,7 @@ func (o *initSvcOpts) Validate() error {
 		}
 	}
 	if o.dockerfilePath != "" && o.image != "" {
-		return fmt.Errorf("--%s and --%s cannot be specified at the same time", dockerFileFlag, imageFlag)
+		return fmt.Errorf("--%s and --%s cannot be specified together", dockerFileFlag, imageFlag)
 	}
 	if o.dockerfilePath != "" {
 		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {

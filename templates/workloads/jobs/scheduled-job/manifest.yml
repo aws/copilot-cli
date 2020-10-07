@@ -14,7 +14,7 @@ image:
   build: {{.ImageConfig.Build.BuildArgs.Dockerfile}}
 {{- end}}
 {{- if .ImageConfig.Location}}
-  # The Docker image used for your service.
+  # The name of the Docker image.
   location: {{.ImageConfig.Location}}
 {{- end}}
 

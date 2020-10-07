@@ -46,7 +46,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inAppName:        "phonetool",
 			inDockerfilePath: "mockDockerfile",
 			inImage:          "mockImage",
-			wantedErr:        fmt.Errorf("--dockerfile and --image cannot be specified at the same time"),
+			wantedErr:        fmt.Errorf("--dockerfile and --image cannot be specified together"),
 		},
 		"invalid dockerfile directory path": {
 			inAppName:        "phonetool",

@@ -9,7 +9,7 @@ name: cuteness-aggregator
 type: Scheduled Job
 
 image:
-  # The Docker image used for your service.
+  # The name of the Docker image.
   location: copilot/cuteness-aggregator
 
 # Number of CPU units for the task.
