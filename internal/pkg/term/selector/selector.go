@@ -121,8 +121,6 @@ type ConfigSelect struct {
 type WorkspaceSelect struct {
 	*Select
 	wlLister WsWorkloadDockerfileLister
-	//svcLister ConfigSvcLister
-	//app string
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -155,7 +153,6 @@ func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WsWorkloadDocker
 	return &WorkspaceSelect{
 		Select:   NewSelect(prompt, store),
 		wlLister: ws,
-		//svcLister: store,
 	}
 }
 
