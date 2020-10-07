@@ -106,7 +106,7 @@ func TestJobInitOpts_Validate(t *testing.T) {
 		"fail if both image and dockerfile are set": {
 			inDockerfilePath: "mockDockerfile",
 			inImage:          "mockImage",
-			wantedErr:        fmt.Errorf("--dockerfile and --image cannot be specified at the same time"),
+			wantedErr:        fmt.Errorf("--dockerfile and --image cannot be specified together"),
 		},
 	}
 
@@ -205,6 +205,49 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			mockSel:        func(m *mocks.MockinitJobSelector) {},
 			mockFileSystem: func(mockFS afero.Fs) {},
 			wantedErr:      nil,
+			wantedSchedule: wantedCronSchedule,
+		},
+		"returns an error if fail to get image location": {
+			inJobType:        wantedJobType,
+			inJobName:        wantedJobName,
+			inDockerfilePath: "",
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
+					Return("", mockError)
+			},
+			mockSel: func(m *mocks.MockinitJobSelector) {
+				m.EXPECT().Dockerfile(
+					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, wantedJobName)),
+					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, wantedJobName)),
+					gomock.Eq(wkldInitDockerfileHelpPrompt),
+					gomock.Eq(wkldInitDockerfilePathHelpPrompt),
+					gomock.Any(),
+				).Return("Use an existing image instead", nil)
+			},
+			mockFileSystem: func(mockFS afero.Fs) {},
+			wantedErr:      fmt.Errorf("get image location: mock error"),
+		},
+		"using existing image": {
+			inJobType:        wantedJobType,
+			inJobName:        wantedJobName,
+			inJobSchedule:    wantedCronSchedule,
+			inDockerfilePath: "",
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
+					Return("mockImage", nil)
+			},
+			mockSel: func(m *mocks.MockinitJobSelector) {
+				m.EXPECT().Dockerfile(
+					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, wantedJobName)),
+					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, wantedJobName)),
+					gomock.Eq(wkldInitDockerfileHelpPrompt),
+					gomock.Eq(wkldInitDockerfilePathHelpPrompt),
+					gomock.Any(),
+				).Return("Use an existing image instead", nil)
+			},
+			mockFileSystem: func(mockFS afero.Fs) {},
 			wantedSchedule: wantedCronSchedule,
 		},
 		"prompt for existing dockerfile": {

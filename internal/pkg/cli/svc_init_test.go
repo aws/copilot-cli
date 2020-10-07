@@ -189,6 +189,50 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			wantedErr:      nil,
 		},
+		"returns an error if fail to get image location": {
+			inSvcType:        wantedSvcType,
+			inSvcName:        wantedSvcName,
+			inSvcPort:        wantedSvcPort,
+			inDockerfilePath: "",
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
+					Return("", mockError)
+			},
+			mockSel: func(m *mocks.MockdockerfileSelector) {
+				m.EXPECT().Dockerfile(
+					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, wantedSvcName)),
+					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, wantedSvcName)),
+					gomock.Eq(wkldInitDockerfileHelpPrompt),
+					gomock.Eq(wkldInitDockerfilePathHelpPrompt),
+					gomock.Any(),
+				).Return("Use an existing image instead", nil)
+			},
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
+			wantedErr:      fmt.Errorf("get image location: mock error"),
+		},
+		"using existing image": {
+			inSvcType:        wantedSvcType,
+			inSvcName:        wantedSvcName,
+			inDockerfilePath: "",
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
+					Return("mockImage", nil)
+				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(defaultSvcPortString, nil)
+			},
+			mockSel: func(m *mocks.MockdockerfileSelector) {
+				m.EXPECT().Dockerfile(
+					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, wantedSvcName)),
+					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, wantedSvcName)),
+					gomock.Eq(wkldInitDockerfileHelpPrompt),
+					gomock.Eq(wkldInitDockerfilePathHelpPrompt),
+					gomock.Any(),
+				).Return("Use an existing image instead", nil)
+			},
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
+		},
 		"select Dockerfile": {
 			inSvcType:        wantedSvcType,
 			inSvcName:        wantedSvcName,
@@ -221,7 +265,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			},
 			mockPrompt:     func(m *mocks.Mockprompter) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			wantedErr:      fmt.Errorf("some error"),
+			wantedErr:      fmt.Errorf("select Dockerfile: some error"),
 		},
 		"asks for port if not specified": {
 			inSvcType:        wantedSvcType,

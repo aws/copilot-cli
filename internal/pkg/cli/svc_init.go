@@ -51,6 +51,10 @@ const (
 	fmtAddSvcToAppStart    = "Creating ECR repositories for service %s."
 	fmtAddSvcToAppFailed   = "Failed to create ECR repositories for service %s.\n"
 	fmtAddSvcToAppComplete = "Created ECR repositories for service %s.\n"
+
+	wkldInitImagePrompt     = `What's the location of the image to use?`
+	wkldInitImagePromptHelp = `The location of an existing Docker image. Docker Hub registry are available by default.
+Other repositories are specified with either repository-url/image:tag or repository-url/image@digest`
 )
 
 const (
@@ -161,8 +165,14 @@ func (o *initSvcOpts) Ask() error {
 	if err := o.askSvcName(); err != nil {
 		return err
 	}
-	if err := o.askDockerfile(); err != nil {
+	useImage, err := o.askDockerfile()
+	if err != nil {
 		return err
+	}
+	if useImage {
+		if err := o.askImage(); err != nil {
+			return err
+		}
 	}
 	if err := o.askSvcPort(); err != nil {
 		return err
@@ -327,10 +337,23 @@ func (o *initSvcOpts) askSvcName() error {
 	return nil
 }
 
-// askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
-func (o *initSvcOpts) askDockerfile() error {
-	if o.dockerfilePath != "" || o.image != "" {
+func (o *initSvcOpts) askImage() error {
+	if o.image != "" {
 		return nil
+	}
+	image, err := o.prompt.Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil,
+		prompt.WithFinalMessage("Image:"))
+	if err != nil {
+		return fmt.Errorf("get image location: %w", err)
+	}
+	o.image = image
+	return nil
+}
+
+// askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
+func (o *initSvcOpts) askDockerfile() (useImage bool, err error) {
+	if o.dockerfilePath != "" || o.image != "" {
+		return false, nil
 	}
 	df, err := o.sel.Dockerfile(
 		fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(o.name)),
@@ -342,10 +365,13 @@ func (o *initSvcOpts) askDockerfile() error {
 		},
 	)
 	if err != nil {
-		return err
+		return false, fmt.Errorf("select Dockerfile: %w", err)
+	}
+	if df == selector.DockerfilePromptUseImage {
+		return true, nil
 	}
 	o.dockerfilePath = df
-	return nil
+	return false, nil
 }
 
 func (o *initSvcOpts) askSvcPort() error {
@@ -354,22 +380,23 @@ func (o *initSvcOpts) askSvcPort() error {
 		return nil
 	}
 
-	o.setupParser(o)
-	ports, err := o.df.GetExposedPorts()
-	// Ignore any errors in dockerfile parsing--we'll use the default instead.
-	if err != nil {
-		log.Debugln(err.Error())
-	}
-	var defaultPort string
-	switch len(ports) {
-	case 0:
-		// There were no ports detected, keep the default port prompt.
-		defaultPort = defaultSvcPortString
-	case 1:
-		o.port = ports[0]
-		return nil
-	default:
-		defaultPort = strconv.Itoa(int(ports[0]))
+	defaultPort := defaultSvcPortString
+	if o.dockerfilePath != "" {
+		o.setupParser(o)
+		ports, err := o.df.GetExposedPorts()
+		// Ignore any errors in dockerfile parsing--we'll use the default instead.
+		if err != nil {
+			log.Debugln(err.Error())
+		}
+		switch len(ports) {
+		case 0:
+			// There were no ports detected, keep the default port prompt.
+		case 1:
+			o.port = ports[0]
+			return nil
+		default:
+			defaultPort = strconv.Itoa(int(ports[0]))
+		}
 	}
 
 	port, err := o.prompt.Get(
