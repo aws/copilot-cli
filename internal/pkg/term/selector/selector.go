@@ -262,16 +262,6 @@ func (s *DeploySelect) DeployedService(prompt, help string, app string, opts ...
 	return &deployedSvc, nil
 }
 
-//// GetDeployedWorkloadOpts sets up optional parameters for GetDeployedServiceOpts function.
-//type GetWorkloadOpts func(*WorkspaceSelect)
-//
-//// WithApp sets up the app name for WorkspaceSelect.
-//func WithApp(app string) GetWorkloadOpts {
-//	return func(in *WorkspaceSelect) {
-//		in.app = app
-//	}
-//}
-
 // Service fetches all services in the workspace and then prompts the user to select one.
 func (s *WorkspaceSelect) Service(msg, help string, app string) (string, error) {
 	wsServiceNames, err := s.retrieveWorkspaceServices()
@@ -281,16 +271,16 @@ func (s *WorkspaceSelect) Service(msg, help string, app string) (string, error) 
 	storeServiceNames, err := s.Select.lister.ListServices(app)
 	serviceNames := filterWlsByName(storeServiceNames, wsServiceNames)
 	if len(serviceNames) == 0 {
-		return "", errors.New("no services found in workspace")
+		return "", errors.New("no services found")
 	}
 	if len(serviceNames) == 1 {
-		log.Infof("Only found one service in workspace, defaulting to: %s\n", color.HighlightUserInput(serviceNames[0]))
+		log.Infof("Only found one service, defaulting to: %s\n", color.HighlightUserInput(serviceNames[0]))
 		return serviceNames[0], nil
 	}
 
 	selectedServiceName, err := s.prompt.SelectOne(msg, help, serviceNames, prompt.WithFinalMessage("Service name:"))
 	if err != nil {
-		return "", fmt.Errorf("select local service: %w", err)
+		return "", fmt.Errorf("select service: %w", err)
 	}
 	return selectedServiceName, nil
 }
@@ -304,16 +294,16 @@ func (s *WorkspaceSelect) Job(msg, help string, app string) (string, error) {
 	storeJobNames, err := s.Select.lister.ListServices(app)
 	jobNames := filterWlsByName(storeJobNames, wsJobNames)
 	if len(jobNames) == 0 {
-		return "", errors.New("no jobs found in workspace")
+		return "", errors.New("no jobs found")
 	}
 	if len(jobNames) == 1 {
-		log.Infof("Only found one job in workspace, defaulting to: %s\n", color.HighlightUserInput(jobNames[0]))
+		log.Infof("Only found one job, defaulting to: %s\n", color.HighlightUserInput(jobNames[0]))
 		return jobNames[0], nil
 	}
 
 	selectedJobName, err := s.prompt.SelectOne(msg, help, jobNames, prompt.WithFinalMessage("Job name:"))
 	if err != nil {
-		return "", fmt.Errorf("select local job: %w", err)
+		return "", fmt.Errorf("select job: %w", err)
 	}
 	return selectedJobName, nil
 }
@@ -394,7 +384,6 @@ func (s *Select) Application(prompt, help string, additionalOpts ...string) (str
 		log.Infof("Couldn't find any applications in this region and account. Try initializing one with %s\n",
 			color.HighlightCode("copilot app init"))
 		return "", fmt.Errorf("no apps found")
-
 	}
 
 	if len(appNames) == 1 {
