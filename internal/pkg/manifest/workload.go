@@ -329,3 +329,10 @@ func dockerfileBuildRequired(workloadType string, svc interface{}) (bool, error)
 	}
 	return required, nil
 }
+
+func stringP(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}

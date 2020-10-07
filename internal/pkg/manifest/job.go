@@ -90,12 +90,8 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	job := newDefaultScheduledJob()
 	// Apply overrides.
 	job.Name = aws.String(props.Name)
-	if props.Dockerfile != "" {
-		job.ScheduledJobConfig.ImageConfig.Build.BuildArgs.Dockerfile = aws.String(props.Dockerfile)
-	}
-	if props.Image != "" {
-		job.ScheduledJobConfig.ImageConfig.Location = aws.String(props.Image)
-	}
+	job.ScheduledJobConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
+	job.ScheduledJobConfig.ImageConfig.Location = stringP(props.Image)
 	job.Schedule = props.Schedule
 	job.Retries = props.Retries
 	job.Timeout = props.Timeout
