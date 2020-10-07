@@ -11,10 +11,16 @@ import (
 	"unicode"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/robfig/cron/v3"
+)
+
+// Parameter logical IDs for a scheduled job
+const (
+	ScheduledJobScheduleParamKey = "Schedule"
 )
 
 type scheduledJobParser interface {
@@ -124,6 +130,30 @@ func (j *ScheduledJob) Template() (string, error) {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)
 	}
 	return content.String(), nil
+}
+
+// Parameters returns the list of CloudFormation parameters used by the template.
+func (j *ScheduledJob) Parameters() ([]*cloudformation.Parameter, error) {
+	wkldParams, err := j.wkld.Parameters()
+	if err != nil {
+		return nil, err
+	}
+	schedule, err := j.awsSchedule()
+	if err != nil {
+		return nil, err
+	}
+	return append(wkldParams, []*cloudformation.Parameter{
+		{
+			ParameterKey:   aws.String(ScheduledJobScheduleParamKey),
+			ParameterValue: aws.String(schedule),
+		},
+	}...), nil
+}
+
+// SerializedParameters returns the CloudFormation stack's parameters serialized
+// to a YAML document annotated with comments for readability.
+func (j *ScheduledJob) SerializedParameters() (string, error) {
+	return j.wkld.templateConfiguration(j)
 }
 
 // awsSchedule converts the Schedule string to the format required by Cloudwatch Events
