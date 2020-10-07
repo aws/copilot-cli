@@ -226,7 +226,7 @@ func (o *deployJobOpts) configureContainerImage() error {
 	if err != nil {
 		return err
 	}
-	required, err := manifest.ServiceDockerfileBuildRequired(job)
+	required, err := manifest.JobDockerfileBuildRequired(job)
 	if err != nil {
 		return err
 	}
@@ -295,6 +295,12 @@ func (o *deployJobOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 }
 
 func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
+	if !o.buildRequired {
+		return &stack.RuntimeConfig{
+			AddonsTemplateURL: addonsURL,
+			AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
+		}, nil
+	}
 	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
 	if err != nil {
 		return nil, fmt.Errorf("get application %s resources from region %s: %w", o.targetApp.Name, o.targetEnvironment.Region, err)

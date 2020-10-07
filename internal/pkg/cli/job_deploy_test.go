@@ -5,13 +5,22 @@ package cli
 
 import (
 	"errors"
+	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/docker"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+type deployJobMocks struct {
+	mockWs                 *mocks.MockwsJobDirReader
+	mockimageBuilderPusher *mocks.MockimageBuilderPusher
+}
 
 func TestJobDeployOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
@@ -179,6 +188,150 @@ func TestJobDeployOpts_Ask(t *testing.T) {
 				require.Equal(t, tc.wantedImageTag, opts.imageTag)
 			} else {
 				require.EqualError(t, err, tc.wantedError.Error())
+			}
+		})
+	}
+}
+
+func TestJobDeployOpts_configureContainerImage(t *testing.T) {
+	mockError := errors.New("mockError")
+	mockManifest := []byte(`name: mailer
+type: 'Scheduled Job'
+image:
+  build:
+    dockerfile: path/to/Dockerfile
+    context: path
+`)
+	mockMftNoBuild := []byte(`name: mailer
+type: 'Scheduled Job'
+image:
+  location: foo/bar
+`)
+	mockMftBuildString := []byte(`name: mailer
+type: 'Scheduled Job'
+image:
+  build: path/to/Dockerfile
+`)
+	mockMftNoContext := []byte(`name: mailer
+type: 'Scheduled Job'
+image:
+  build:
+    dockerfile: path/to/Dockerfile`)
+
+	tests := map[string]struct {
+		inputSvc   string
+		setupMocks func(mocks deployJobMocks)
+
+		wantErr error
+	}{
+		"should return error if ws ReadFile returns error": {
+			inputSvc: "mailer",
+			setupMocks: func(m deployJobMocks) {
+				gomock.InOrder(
+					m.mockWs.EXPECT().ReadJobManifest("mailer").Return(nil, mockError),
+				)
+			},
+			wantErr: fmt.Errorf("read job %s manifest: %w", "mailer", mockError),
+		},
+		"should return error if workspace methods fail": {
+			inputSvc: "mailer",
+			setupMocks: func(m deployJobMocks) {
+				gomock.InOrder(
+					m.mockWs.EXPECT().ReadJobManifest(gomock.Any()).Return(mockManifest, nil),
+					m.mockWs.EXPECT().CopilotDirPath().Return("", mockError),
+				)
+			},
+			wantErr: fmt.Errorf("get copilot directory: %w", mockError),
+		},
+		"success without building and pushing": {
+			inputSvc: "mailer",
+			setupMocks: func(m deployJobMocks) {
+				gomock.InOrder(
+					m.mockWs.EXPECT().ReadJobManifest("mailer").Return(mockMftNoBuild, nil),
+					m.mockWs.EXPECT().CopilotDirPath().Times(0),
+					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).Times(0),
+				)
+			},
+		},
+		"should return error if fail to build and push": {
+			inputSvc: "mailer",
+			setupMocks: func(m deployJobMocks) {
+				gomock.InOrder(
+					m.mockWs.EXPECT().ReadJobManifest("mailer").Return(mockManifest, nil),
+					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
+					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).Return(mockError),
+				)
+			},
+			wantErr: fmt.Errorf("build and push image: mockError"),
+		},
+		"success": {
+			inputSvc: "mailer",
+			setupMocks: func(m deployJobMocks) {
+				gomock.InOrder(
+					m.mockWs.EXPECT().ReadJobManifest("mailer").Return(mockManifest, nil),
+					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
+					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &docker.BuildArguments{
+						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
+						Context:    filepath.Join("/ws", "root", "path"),
+					}).Return(nil),
+				)
+			},
+		},
+		"using simple buildstring (backwards compatible)": {
+			inputSvc: "mailer",
+			setupMocks: func(m deployJobMocks) {
+				gomock.InOrder(
+					m.mockWs.EXPECT().ReadJobManifest("mailer").Return(mockMftBuildString, nil),
+					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
+					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &docker.BuildArguments{
+						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
+						Context:    filepath.Join("/ws", "root", "path", "to"),
+					}).Return(nil),
+				)
+			},
+		},
+		"without context field in overrides": {
+			inputSvc: "mailer",
+			setupMocks: func(m deployJobMocks) {
+				gomock.InOrder(
+					m.mockWs.EXPECT().ReadJobManifest("mailer").Return(mockMftNoContext, nil),
+					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
+					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &docker.BuildArguments{
+						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
+						Context:    filepath.Join("/ws", "root", "path", "to"),
+					}).Return(nil),
+				)
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockWorkspace := mocks.NewMockwsJobDirReader(ctrl)
+			mockimageBuilderPusher := mocks.NewMockimageBuilderPusher(ctrl)
+			mocks := deployJobMocks{
+				mockWs:                 mockWorkspace,
+				mockimageBuilderPusher: mockimageBuilderPusher,
+			}
+			test.setupMocks(mocks)
+			opts := deployJobOpts{
+				deployJobVars: deployJobVars{
+					name: test.inputSvc,
+				},
+				unmarshal:          manifest.UnmarshalWorkload,
+				imageBuilderPusher: mockimageBuilderPusher,
+				ws:                 mockWorkspace,
+			}
+
+			gotErr := opts.configureContainerImage()
+
+			if test.wantErr != nil {
+				require.EqualError(t, gotErr, test.wantErr.Error())
+			} else {
+				require.Nil(t, gotErr)
 			}
 		})
 	}

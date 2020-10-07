@@ -36,7 +36,7 @@ type ScheduledJob struct {
 
 // ScheduledJobConfig holds the configuration for a scheduled job
 type ScheduledJobConfig struct {
-	ImageConfig    Image `yaml:",flow"`
+	ImageConfig    Image `yaml:"image,flow"`
 	TaskConfig     `yaml:",inline"`
 	*Logging       `yaml:"logging,flow"`
 	Sidecar        `yaml:",inline"`
