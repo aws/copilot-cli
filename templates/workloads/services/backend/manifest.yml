@@ -4,8 +4,11 @@
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: {{.Name}}
-
+{{- if .ImageConfig.Port}}
 # Your service is reachable at "http://{{.Name}}.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:{{.ImageConfig.Port}}" but is not public.
+{{- else}}
+# Your service does not allow any traffic.
+{{- end}}
 type: {{.Type}}
 
 image:
@@ -17,8 +20,10 @@ image:
   # The name of the Docker image.
   location: {{.ImageConfig.Image.Location}}
 {{- end}}
+{{- if .ImageConfig.Port}}
   # Port exposed through your container to route traffic to it.
   port: {{.ImageConfig.Port}}
+{{- end}}
 {{- if .ImageConfig.HealthCheck}}
   healthcheck:
     # The command the container runs to determine if it's healthy.

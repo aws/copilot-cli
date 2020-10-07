@@ -15,6 +15,12 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
+const (
+	// BlankServiceDiscoveryURI is the blank service discovery URI.
+	BlankServiceDiscoveryURI = "-"
+	blankContainerPort       = "-"
+)
+
 // BackendServiceDescriber retrieves information about a backend service.
 type BackendServiceDescriber struct {
 	app             string
@@ -71,9 +77,13 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("retrieve service deployment configuration: %w", err)
 	}
+	port := svcParams[stack.LBWebServiceContainerPortParamKey]
+	if port == stack.BlankBackendSvcContainerPort {
+		return BlankServiceDiscoveryURI, nil
+	}
 	s := serviceDiscovery{
 		Service: d.svc,
-		Port:    svcParams[stack.LBWebServiceContainerPortParamKey],
+		Port:    port,
 		App:     d.app,
 	}
 	return s.String(), nil
@@ -98,14 +108,19 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("retrieve service deployment configuration: %w", err)
 		}
-		services = appendServiceDiscovery(services, serviceDiscovery{
-			Service: d.svc,
-			Port:    svcParams[stack.LBWebServiceContainerPortParamKey],
-			App:     d.app,
-		}, env)
+		port := svcParams[stack.LBWebServiceContainerPortParamKey]
+		if port != stack.BlankBackendSvcContainerPort {
+			services = appendServiceDiscovery(services, serviceDiscovery{
+				Service: d.svc,
+				Port:    port,
+				App:     d.app,
+			}, env)
+		} else {
+			port = blankContainerPort
+		}
 		configs = append(configs, &ServiceConfig{
 			Environment: env,
-			Port:        svcParams[stack.LBWebServiceContainerPortParamKey],
+			Port:        port,
 			Tasks:       svcParams[stack.WorkloadTaskCountParamKey],
 			CPU:         svcParams[stack.WorkloadTaskCPUParamKey],
 			Memory:      svcParams[stack.WorkloadTaskMemoryParamKey],

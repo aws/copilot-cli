@@ -19,6 +19,11 @@ const (
 	BackendServiceContainerPortParamKey = "ContainerPort"
 )
 
+const (
+	// BlankBackendSvcContainerPort indicates no port is exposed for service container.
+	BlankBackendSvcContainerPort = "-1"
+)
+
 type backendSvcReadParser interface {
 	template.ReadParser
 	ParseBackendService(template.WorkloadOpts) (*template.Content, error)
@@ -100,10 +105,14 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 	if err != nil {
 		return nil, err
 	}
+	containerPort := BlankBackendSvcContainerPort
+	if s.manifest.BackendServiceConfig.ImageConfig.Port != nil {
+		containerPort = strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.ImageConfig.Port)), 10)
+	}
 	return append(svcParams, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),
-			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.ImageConfig.Port)), 10)),
+			ParameterValue: aws.String(containerPort),
 		},
 	}...), nil
 }

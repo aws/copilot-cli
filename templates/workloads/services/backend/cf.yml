@@ -29,6 +29,8 @@ Parameters:
 Conditions:
   HasAddons:
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
+  ExposePort:
+    !Not [!Equals [!Ref ContainerPort, -1]]
 Resources:
 {{include "loggroup" . | indent 2}}
 
@@ -40,8 +42,7 @@ Resources:
       ContainerDefinitions:
         - Name: !Ref WorkloadName
           Image: !Ref ContainerImage
-          PortMappings:
-            - ContainerPort: !Ref ContainerPort
+          PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort}], !Ref "AWS::NoValue"]
 {{include "envvars" . | indent 10}}
 {{include "logconfig" . | indent 10}}
 {{- if .HealthCheck}}
@@ -110,8 +111,6 @@ Resources:
       DeploymentConfiguration:
         MinimumHealthyPercent: 100
         MaximumPercent: 200
-      ServiceRegistries:
-        - RegistryArn: !GetAtt DiscoveryService.Arn
-          Port: !Ref ContainerPort
+      ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref ContainerPort}], !Ref "AWS::NoValue"]
 
 {{include "addons" . | indent 2}}

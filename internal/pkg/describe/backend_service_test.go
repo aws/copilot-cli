@@ -23,12 +23,11 @@ type backendSvcDescriberMocks struct {
 
 func TestBackendServiceDescriber_Describe(t *testing.T) {
 	const (
-		testApp     = "phonetool"
-		testEnv     = "test"
-		testSvc     = "jobs"
-		testSvcPath = "*"
-		prodEnv     = "prod"
-		prodSvcPath = "*"
+		testApp = "phonetool"
+		testEnv = "test"
+		testSvc = "jobs"
+		prodEnv = "prod"
+		mockEnv = "mockEnv"
 	)
 	mockErr := errors.New("some error")
 	testCases := map[string]struct {
@@ -75,7 +74,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			shouldOutputResources: true,
 			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv}, nil),
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv, mockEnv}, nil),
 
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceContainerPortParamKey: "5000",
@@ -99,6 +98,17 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 							"COPILOT_ENVIRONMENT_NAME": prodEnv,
 						}, nil),
 
+					m.svcDescriber.EXPECT().Params().Return(map[string]string{
+						stack.LBWebServiceContainerPortParamKey: "-1",
+						stack.WorkloadTaskCountParamKey:         "2",
+						stack.WorkloadTaskCPUParamKey:           "512",
+						stack.WorkloadTaskMemoryParamKey:        "1024",
+					}, nil),
+					m.svcDescriber.EXPECT().EnvVars().Return(
+						map[string]string{
+							"COPILOT_ENVIRONMENT_NAME": mockEnv,
+						}, nil),
+
 					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
 						{
 							ResourceType:       aws.String("AWS::EC2::SecurityGroupIngress"),
@@ -109,6 +119,12 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						{
 							ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
 							PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
+						},
+					}, nil),
+					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
+						{
+							ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
+							PhysicalResourceId: aws.String("sg-2337435300758ed6b"),
 						},
 					}, nil),
 				)
@@ -132,6 +148,13 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						Port:        "5000",
 						Tasks:       "2",
 					},
+					{
+						CPU:         "512",
+						Environment: "mockEnv",
+						Memory:      "1024",
+						Port:        "-",
+						Tasks:       "2",
+					},
 				},
 				ServiceDiscovery: []*ServiceDiscovery{
 					{
@@ -140,6 +163,11 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					},
 				},
 				Variables: []*EnvVars{
+					{
+						Environment: "mockEnv",
+						Name:        "COPILOT_ENVIRONMENT_NAME",
+						Value:       "mockEnv",
+					},
 					{
 						Environment: "prod",
 						Name:        "COPILOT_ENVIRONMENT_NAME",
@@ -162,6 +190,12 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						{
 							Type:       "AWS::EC2::SecurityGroup",
 							PhysicalID: "sg-0758ed6b233743530",
+						},
+					},
+					"mockEnv": {
+						{
+							Type:       "AWS::EC2::SecurityGroup",
+							PhysicalID: "sg-2337435300758ed6b",
 						},
 					},
 				},
@@ -189,8 +223,9 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				enableResources: tc.shouldOutputResources,
 				store:           mockStore,
 				svcDescriber: map[string]svcDescriber{
-					"test": mockSvcDescriber,
-					"prod": mockSvcDescriber,
+					"test":    mockSvcDescriber,
+					"prod":    mockSvcDescriber,
+					"mockEnv": mockSvcDescriber,
 				},
 				initServiceDescriber: func(string) error { return nil },
 			}
