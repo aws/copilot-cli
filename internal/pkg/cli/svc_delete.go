@@ -160,11 +160,12 @@ func (o *deleteSvcOpts) Ask() error {
 // If the service is being removed from the application, Execute will
 // also delete the ECR repository and the SSM parameter.
 func (o *deleteSvcOpts) Execute() error {
-	if err := o.appEnvironments(); err != nil {
+	envs, err := o.appEnvironments()
+	if err != nil {
 		return err
 	}
 
-	if err := o.deleteStacks(); err != nil {
+	if err := o.deleteStacks(envs); err != nil {
 		return err
 	}
 
@@ -174,7 +175,7 @@ func (o *deleteSvcOpts) Execute() error {
 		return nil
 	}
 
-	if err := o.emptyECRRepos(); err != nil {
+	if err := o.emptyECRRepos(envs); err != nil {
 		return err
 	}
 	if err := o.removeSvcFromApp(); err != nil {
@@ -238,25 +239,26 @@ func (o *deleteSvcOpts) askSvcName() error {
 	return nil
 }
 
-func (o *deleteSvcOpts) appEnvironments() error {
+func (o *deleteSvcOpts) appEnvironments() ([]*config.Environment, error) {
+	envs := o.environments
+	var err error
 	if o.envName != "" {
 		env, err := o.targetEnv()
 		if err != nil {
-			return err
+			return nil, err
 		}
-		o.environments = append(o.environments, env)
+		envs = append(envs, env)
 	} else {
-		envs, err := o.store.ListEnvironments(o.appName)
+		envs, err = o.store.ListEnvironments(o.appName)
 		if err != nil {
-			return fmt.Errorf("list environments: %w", err)
+			return nil, fmt.Errorf("list environments: %w", err)
 		}
-		o.environments = envs
 	}
-	return nil
+	return envs, nil
 }
 
-func (o *deleteSvcOpts) deleteStacks() error {
-	for _, env := range o.environments {
+func (o *deleteSvcOpts) deleteStacks(envs []*config.Environment) error {
+	for _, env := range envs {
 		sess, err := o.sess.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return err
@@ -278,9 +280,9 @@ func (o *deleteSvcOpts) deleteStacks() error {
 }
 
 // This is to make mocking easier in unit tests
-func (o *deleteSvcOpts) emptyECRRepos() error {
+func (o *deleteSvcOpts) emptyECRRepos(envs []*config.Environment) error {
 	var uniqueRegions []string
-	for _, env := range o.environments {
+	for _, env := range envs {
 		if !contains(env.Region, uniqueRegions) {
 			uniqueRegions = append(uniqueRegions, env.Region)
 		}

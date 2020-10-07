@@ -159,11 +159,12 @@ func (o *deleteJobOpts) Ask() error {
 // If the job is being removed from the application, Execute will
 // also delete the ECR repository and the SSM parameter.
 func (o *deleteJobOpts) Execute() error {
-	if err := o.appEnvironments(); err != nil {
+	envs, err := o.appEnvironments()
+	if err != nil {
 		return err
 	}
 
-	if err := o.deleteStacks(); err != nil {
+	if err := o.deleteStacks(envs); err != nil {
 		return err
 	}
 
@@ -173,7 +174,7 @@ func (o *deleteJobOpts) Execute() error {
 		return nil
 	}
 
-	if err := o.emptyECRRepos(); err != nil {
+	if err := o.emptyECRRepos(envs); err != nil {
 		return err
 	}
 	if err := o.removeJobFromApp(); err != nil {
@@ -229,25 +230,26 @@ func (o *deleteJobOpts) askJobName() error {
 	return nil
 }
 
-func (o *deleteJobOpts) appEnvironments() error {
+func (o *deleteJobOpts) appEnvironments() ([]*config.Environment, error) {
+	envs := o.environments
+	var err error
 	if o.envName != "" {
 		env, err := o.targetEnv()
 		if err != nil {
-			return err
+			return nil, err
 		}
-		o.environments = append(o.environments, env)
+		envs = append(envs, env)
 	} else {
-		envs, err := o.store.ListEnvironments(o.appName)
+		envs, err = o.store.ListEnvironments(o.appName)
 		if err != nil {
-			return fmt.Errorf("list environments: %w", err)
+			return nil, fmt.Errorf("list environments: %w", err)
 		}
-		o.environments = envs
 	}
-	return nil
+	return envs, nil
 }
 
-func (o *deleteJobOpts) deleteStacks() error {
-	for _, env := range o.environments {
+func (o *deleteJobOpts) deleteStacks(envs []*config.Environment) error {
+	for _, env := range envs {
 		sess, err := o.sess.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return err
@@ -277,9 +279,9 @@ func (o *deleteJobOpts) needsAppCleanup() bool {
 }
 
 // This is to make mocking easier in unit tests
-func (o *deleteJobOpts) emptyECRRepos() error {
+func (o *deleteJobOpts) emptyECRRepos(envs []*config.Environment) error {
 	var uniqueRegions []string
-	for _, env := range o.environments {
+	for _, env := range envs {
 		if !contains(env.Region, uniqueRegions) {
 			uniqueRegions = append(uniqueRegions, env.Region)
 		}
