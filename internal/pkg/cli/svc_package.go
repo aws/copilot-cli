@@ -52,7 +52,7 @@ type packageSvcOpts struct {
 
 	// Interfaces to interact with dependencies.
 	addonsSvc       templater
-	initAddonsSvc   func(*packageSvcOpts) error // Overriden in tests.
+	initAddonsSvc   func(*packageSvcOpts) error // Overridden in tests.
 	ws              wsSvcReader
 	store           store
 	appCFN          appResourcesGetter
