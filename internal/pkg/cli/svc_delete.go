@@ -65,9 +65,6 @@ type deleteSvcOpts struct {
 	appCFN    svcRemoverFromApp
 	getSvcCFN func(session *awssession.Session) svcDeleter
 	getECR    func(session *awssession.Session) imageRemover
-
-	// Internal state.
-	environments []*config.Environment
 }
 
 func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
@@ -240,7 +237,7 @@ func (o *deleteSvcOpts) askSvcName() error {
 }
 
 func (o *deleteSvcOpts) appEnvironments() ([]*config.Environment, error) {
-	envs := o.environments
+	var envs []*config.Environment
 	var err error
 	if o.envName != "" {
 		env, err := o.targetEnv()

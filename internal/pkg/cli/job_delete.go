@@ -65,9 +65,6 @@ type deleteJobOpts struct {
 	appCFN    jobRemoverFromApp
 	getJobCFN func(session *awssession.Session) jobDeleter
 	getECR    func(session *awssession.Session) imageRemover
-
-	// Internal state.
-	environments []*config.Environment
 }
 
 func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
@@ -231,7 +228,7 @@ func (o *deleteJobOpts) askJobName() error {
 }
 
 func (o *deleteJobOpts) appEnvironments() ([]*config.Environment, error) {
-	envs := o.environments
+	var envs []*config.Environment
 	var err error
 	if o.envName != "" {
 		env, err := o.targetEnv()
