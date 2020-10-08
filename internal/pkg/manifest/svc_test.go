@@ -27,7 +27,7 @@ version: 1.0
 name: frontend
 type: "Load Balanced Web Service"
 image:
-  build: frontend/Dockerfile
+  location: foo/bar
   port: 80
 cpu: 512
 memory: 1024
@@ -62,14 +62,15 @@ environments:
       cpu_percentage: 70
 `,
 			requireCorrectValues: func(t *testing.T, i interface{}) {
+				mockRange := Range("1-10")
 				actualManifest, ok := i.(*LoadBalancedWebService)
 				require.True(t, ok)
 				wantedManifest := &LoadBalancedWebService{
 					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-						Image: ServiceImageWithPort{Image: Image{Build: BuildArgsOrString{
-							BuildString: aws.String("frontend/Dockerfile"),
-						}}, Port: aws.Uint16(80)},
+						ImageConfig: ServiceImageWithPort{Image: Image{Build: BuildArgsOrString{},
+							Location: aws.String("foo/bar"),
+						}, Port: aws.Uint16(80)},
 						RoutingRule: RoutingRule{
 							Path:            aws.String("svc"),
 							HealthCheckPath: aws.String("/"),
@@ -122,7 +123,7 @@ environments:
 							TaskConfig: TaskConfig{
 								Count: Count{
 									Autoscaling: Autoscaling{
-										Range: Range("1-10"),
+										Range: &mockRange,
 										CPU:   aws.Int(70),
 									},
 								},
@@ -155,7 +156,7 @@ secrets:
 						Type: aws.String(BackendServiceType),
 					},
 					BackendServiceConfig: BackendServiceConfig{
-						Image: imageWithPortAndHealthcheck{
+						ImageConfig: imageWithPortAndHealthcheck{
 							ServiceImageWithPort: ServiceImageWithPort{
 								Image: Image{
 									Build: BuildArgsOrString{
@@ -211,6 +212,7 @@ type: 'OH NO'
 
 func TestCount_UnmarshalYAML(t *testing.T) {
 	mockResponseTime := 500 * time.Millisecond
+	mockRange := Range("1-10")
 	testCases := map[string]struct {
 		inContent []byte
 
@@ -234,7 +236,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 `),
 			wantedStruct: Count{
 				Autoscaling: Autoscaling{
-					Range:        Range("1-10"),
+					Range:        &mockRange,
 					CPU:          aws.Int(70),
 					Memory:       aws.Int(80),
 					Requests:     aws.Int(1000),
@@ -321,7 +323,7 @@ func TestAutoscaling_Options(t *testing.T) {
 	)
 	mockResponseTime := 512 * time.Millisecond
 	testCases := map[string]struct {
-		inRange        string
+		inRange        Range
 		inCPU          int
 		inMemory       int
 		inRequests     int
@@ -355,13 +357,71 @@ func TestAutoscaling_Options(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			a := Autoscaling{
-				Range:        Range(tc.inRange),
+				Range:        &tc.inRange,
 				CPU:          aws.Int(tc.inCPU),
 				Memory:       aws.Int(tc.inMemory),
 				Requests:     aws.Int(tc.inRequests),
 				ResponseTime: &tc.inResponseTime,
 			}
 			got, err := a.Options()
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, got, tc.wanted)
+			}
+		})
+	}
+}
+
+func Test_ServiceDockerfileBuildRequired(t *testing.T) {
+	testCases := map[string]struct {
+		svc interface{}
+
+		wanted    bool
+		wantedErr error
+	}{
+		"invalid type": {
+			svc: struct{}{},
+
+			wantedErr: fmt.Errorf("service does not have required methods BuildRequired()"),
+		},
+		"fail to check": {
+			svc: &LoadBalancedWebService{},
+
+			wantedErr: fmt.Errorf("check if service requires building from local Dockerfile: either \"image.build\" or \"image.location\" needs to be specified in the manifest"),
+		},
+		"success with false": {
+			svc: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ServiceImageWithPort{
+						Image: Image{
+							Location: aws.String("mockLocation"),
+						},
+					},
+				},
+			},
+		},
+		"success with true": {
+			svc: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ServiceImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildString: aws.String("mockDockerfile"),
+							},
+						},
+					},
+				},
+			},
+			wanted: true,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+
+			got, err := ServiceDockerfileBuildRequired(tc.svc)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())

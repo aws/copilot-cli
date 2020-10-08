@@ -6,6 +6,7 @@ package manifest
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -15,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLoadBalancedWebSvc_MarshalBinary(t *testing.T) {
+func TestLoadBalancedWebService_MarshalBinary(t *testing.T) {
 	testCases := map[string]struct {
 		mockDependencies func(ctrl *gomock.Controller, manifest *LoadBalancedWebService)
 
@@ -61,7 +62,8 @@ func TestLoadBalancedWebSvc_MarshalBinary(t *testing.T) {
 	}
 }
 
-func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
+func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
+	mockRange := Range("1-10")
 	testCases := map[string]struct {
 		in         *LoadBalancedWebService
 		envToApply string
@@ -75,7 +77,7 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					Image: ServiceImageWithPort{
+					ImageConfig: ServiceImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
@@ -106,7 +108,7 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					Image: ServiceImageWithPort{
+					ImageConfig: ServiceImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
@@ -137,7 +139,7 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					Image: ServiceImageWithPort{
+					ImageConfig: ServiceImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
@@ -181,7 +183,7 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
-						Image: ServiceImageWithPort{
+						ImageConfig: ServiceImageWithPort{
 							Image: Image{
 								Build: BuildArgsOrString{
 									BuildArgs: DockerBuildArgs{
@@ -226,7 +228,7 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					Image: ServiceImageWithPort{
+					ImageConfig: ServiceImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
@@ -274,6 +276,38 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 				},
 			},
 		},
+		"with range override": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							Autoscaling: Autoscaling{
+								Range: &mockRange,
+								CPU:   aws.Int(80),
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							Value: nil,
+							Autoscaling: Autoscaling{
+								Range: &mockRange,
+								CPU:   aws.Int(80),
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -285,6 +319,62 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 
 			// THEN
 			require.Equal(t, tc.wanted, conf, "returned configuration should have overrides from the environment")
+		})
+	}
+}
+
+func TestLoadBalancedWebService_BuildRequired(t *testing.T) {
+	testCases := map[string]struct {
+		image   Image
+		want    bool
+		wantErr error
+	}{
+		"error if both build and location are set or not set": {
+			image: Image{
+				Build: BuildArgsOrString{
+					BuildString: aws.String("mockBuildString"),
+				},
+				Location: aws.String("mockLocation"),
+			},
+			wantErr: fmt.Errorf(`either "image.build" or "image.location" needs to be specified in the manifest`),
+		},
+		"return true if location is not set": {
+			image: Image{
+				Build: BuildArgsOrString{
+					BuildString: aws.String("mockBuildString"),
+				},
+			},
+			want: true,
+		},
+		"return false if location is set": {
+			image: Image{
+				Build:    BuildArgsOrString{},
+				Location: aws.String("mockLocation"),
+			},
+			want: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			manifest := &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ServiceImageWithPort{
+						Image: tc.image,
+					},
+				},
+			}
+
+			// WHEN
+			got, gotErr := manifest.BuildRequired()
+
+			// THEN
+			if gotErr != nil {
+				require.EqualError(t, gotErr, tc.wantErr.Error())
+			} else {
+				require.Equal(t, tc.want, got)
+			}
 		})
 	}
 }

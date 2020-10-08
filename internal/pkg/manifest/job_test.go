@@ -71,7 +71,7 @@ func TestScheduledJob_MarshalBinary(t *testing.T) {
 			path := filepath.Join("testdata", tc.wantedTestData)
 			wantedBytes, err := ioutil.ReadFile(path)
 			require.NoError(t, err)
-			manifest := NewScheduledJob(tc.inProps)
+			manifest := NewScheduledJob(&tc.inProps)
 
 			// WHEN
 			tpl, err := manifest.MarshalBinary()

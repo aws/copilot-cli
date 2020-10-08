@@ -87,7 +87,7 @@ func (a *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // Autoscaling represents the configurable options for Auto Scaling.
 type Autoscaling struct {
-	Range        Range          `yaml:"range"`
+	Range        *Range         `yaml:"range"`
 	CPU          *int           `yaml:"cpu_percentage"`
 	Memory       *int           `yaml:"memory_percentage"`
 	Requests     *int           `yaml:"requests"`
@@ -126,10 +126,15 @@ func (a *Autoscaling) Options() (*template.AutoscalingOpts, error) {
 
 // IsEmpty returns whether Autoscaling is empty.
 func (a *Autoscaling) IsEmpty() bool {
-	return a.Range == "" && a.CPU == nil && a.Memory == nil &&
+	return a.Range == nil && a.CPU == nil && a.Memory == nil &&
 		a.Requests == nil && a.ResponseTime == nil
 }
 
 func durationp(v time.Duration) *time.Duration {
 	return &v
+}
+
+// ServiceDockerfileBuildRequired returns if the service container image should be built from local Dockerfile.
+func ServiceDockerfileBuildRequired(svc interface{}) (bool, error) {
+	return dockerfileBuildRequired("service", svc)
 }

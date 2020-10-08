@@ -28,6 +28,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"github.com/google/shlex"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 
@@ -486,6 +487,10 @@ func (o *runTaskOpts) deploy() error {
 	if o.env != "" {
 		deployOpts = []awscloudformation.StackOption{awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)}
 	}
+	command, err := shlex.Split(o.command)
+	if err != nil {
+		return fmt.Errorf("split command %s into tokens using shell-style rules: %w", o.command, err)
+	}
 	input := &deploy.CreateTaskResourcesInput{
 		Name:           o.groupName,
 		CPU:            o.cpu,
@@ -493,7 +498,7 @@ func (o *runTaskOpts) deploy() error {
 		Image:          o.image,
 		TaskRole:       o.taskRole,
 		ExecutionRole:  o.executionRole,
-		Command:        o.command,
+		Command:        command,
 		EnvVars:        o.envVars,
 		App:            o.appName,
 		Env:            o.env,

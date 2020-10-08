@@ -5,21 +5,21 @@
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: {{.Name}}
 
-# Your service is reachable at "http://{{.Name}}.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:{{.Image.Port}}" but is not public.
+# Your service is reachable at "http://{{.Name}}.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:{{.ImageConfig.Port}}" but is not public.
 type: {{.Type}}
 
 image:
   # Docker build arguments. You can specify additional overrides here. Supported: dockerfile, context, args
-  build: {{.Image.Build.BuildArgs.Dockerfile}}
+  build: {{.ImageConfig.Build.BuildArgs.Dockerfile}}
   # Port exposed through your container to route traffic to it.
-  port: {{.Image.Port}}{{if .Image.HealthCheck}}
+  port: {{.ImageConfig.Port}}{{if .ImageConfig.HealthCheck}}
   healthcheck:
     # The command the container runs to determine if it's healthy.
-    command: {{fmtSlice (quoteSlice .Image.HealthCheck.Command)}}
-    interval: {{.Image.HealthCheck.Interval}}  # Time period between healthchecks. Default is 10s.
-    retries: {{.Image.HealthCheck.Retries}}      # Number of times to retry before container is deemed unhealthy. Default is 2.
-    timeout: {{.Image.HealthCheck.Timeout}}     # How long to wait before considering the healthcheck failed. Default is 5s.
-    start_period: {{.Image.HealthCheck.StartPeriod}} # Grace period within which to provide containers time to bootstrap before failed health checks count towards the maximum number of retries. Default is 0s.{{end}}
+    command: {{fmtSlice (quoteSlice .ImageConfig.HealthCheck.Command)}}
+    interval: {{.ImageConfig.HealthCheck.Interval}}  # Time period between healthchecks. Default is 10s.
+    retries: {{.ImageConfig.HealthCheck.Retries}}      # Number of times to retry before container is deemed unhealthy. Default is 2.
+    timeout: {{.ImageConfig.HealthCheck.Timeout}}     # How long to wait before considering the healthcheck failed. Default is 5s.
+    start_period: {{.ImageConfig.HealthCheck.StartPeriod}} # Grace period within which to provide containers time to bootstrap before failed health checks count towards the maximum number of retries. Default is 0s.{{end}}
 
 # Number of CPU units for the task.
 cpu: {{.CPU}}

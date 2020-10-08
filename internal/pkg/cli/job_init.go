@@ -213,7 +213,7 @@ func (o *initJobOpts) newJobManifest() (*manifest.ScheduledJob, error) {
 	if err != nil {
 		return nil, err
 	}
-	return manifest.NewScheduledJob(manifest.ScheduledJobProps{
+	return manifest.NewScheduledJob(&manifest.ScheduledJobProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:       o.name,
 			Dockerfile: dfPath,

@@ -34,7 +34,7 @@ func TestNewBackendSvc(t *testing.T) {
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
-					Image: imageWithPortAndHealthcheck{
+					ImageConfig: imageWithPortAndHealthcheck{
 						ServiceImageWithPort: ServiceImageWithPort{
 							Image: Image{
 								Build: BuildArgsOrString{
@@ -73,7 +73,7 @@ func TestNewBackendSvc(t *testing.T) {
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
-					Image: imageWithPortAndHealthcheck{
+					ImageConfig: imageWithPortAndHealthcheck{
 						ServiceImageWithPort: ServiceImageWithPort{
 							Image: Image{
 								Build: BuildArgsOrString{
@@ -179,7 +179,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
-			Image: imageWithPortAndHealthcheck{
+			ImageConfig: imageWithPortAndHealthcheck{
 				ServiceImageWithPort: ServiceImageWithPort{
 					Image: Image{
 						Build: BuildArgsOrString{
@@ -209,7 +209,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 	}
 	mockBackendServiceWithMinimalOverride := BackendService{
 		BackendServiceConfig: BackendServiceConfig{
-			Image: imageWithPortAndHealthcheck{
+			ImageConfig: imageWithPortAndHealthcheck{
 				ServiceImageWithPort: ServiceImageWithPort{
 					Port: aws.Uint16(80),
 				},
@@ -217,7 +217,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		},
 		Environments: map[string]*BackendServiceConfig{
 			"test": {
-				Image: imageWithPortAndHealthcheck{
+				ImageConfig: imageWithPortAndHealthcheck{
 					ServiceImageWithPort: ServiceImageWithPort{
 						Port: aws.Uint16(5000),
 					},
@@ -227,7 +227,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 	}
 	mockBackendServiceWithAllOverride := BackendService{
 		BackendServiceConfig: BackendServiceConfig{
-			Image: imageWithPortAndHealthcheck{
+			ImageConfig: imageWithPortAndHealthcheck{
 				ServiceImageWithPort: ServiceImageWithPort{
 					Port: aws.Uint16(80),
 				},
@@ -303,7 +303,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 
 			wanted: &BackendService{
 				BackendServiceConfig: BackendServiceConfig{
-					Image: imageWithPortAndHealthcheck{
+					ImageConfig: imageWithPortAndHealthcheck{
 						ServiceImageWithPort: ServiceImageWithPort{
 							Port: aws.Uint16(5000),
 						},
@@ -318,7 +318,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 
 			wanted: &BackendService{
 				BackendServiceConfig: BackendServiceConfig{
-					Image: imageWithPortAndHealthcheck{
+					ImageConfig: imageWithPortAndHealthcheck{
 						ServiceImageWithPort: ServiceImageWithPort{
 							Port: aws.Uint16(80),
 						},
