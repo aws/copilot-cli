@@ -4,12 +4,10 @@
 package cli
 
 import (
-	"bytes"
 	"fmt"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -17,136 +15,52 @@ import (
 func TestListJobOpts_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockError := fmt.Errorf("error")
-	mockstore := mocks.NewMockstore(ctrl)
-	mockWorkspace := mocks.NewMockwsJobDirReader(ctrl)
+	mockLister := mocks.NewMockwsStoreJobLister(ctrl)
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
-		opts            listJobOpts
-		mocking         func()
-		expectedErr     error
-		expectedContent string
+		opts        listJobOpts
+		mocking     func()
+		expectedErr error
 	}{
-		"with json outputs": {
+		"with successful call to list.Jobs": {
 			opts: listJobOpts{
 				listWkldVars: listWkldVars{
 					shouldOutputJSON: true,
 					appName:          "coolapp",
 				},
-				store: mockstore,
+				list: mockLister,
 			},
 			mocking: func() {
-				mockstore.EXPECT().
-					GetApplication(gomock.Eq("coolapp")).
-					Return(&config.Application{}, nil)
-				mockstore.
-					EXPECT().
-					ListJobs(gomock.Eq("coolapp")).
-					Return([]*config.Workload{
-						{Name: "mailer"},
-						{Name: "reaper"},
-					}, nil)
+				mockLister.EXPECT().
+					Jobs("coolapp", false, true).
+					Return(nil)
 			},
-			expectedContent: "{\"jobs\":[{\"app\":\"\",\"name\":\"mailer\",\"type\":\"\"},{\"app\":\"\",\"name\":\"reaper\",\"type\":\"\"}]}\n",
 		},
-		"with human outputs": {
+		"with failed call to list.Jobs": {
 			opts: listJobOpts{
 				listWkldVars: listWkldVars{
 					appName: "coolapp",
 				},
-				store: mockstore,
+				list: mockLister,
 			},
 			mocking: func() {
-				mockstore.EXPECT().
-					GetApplication(gomock.Eq("coolapp")).
-					Return(&config.Application{}, nil)
-				mockstore.
-					EXPECT().
-					ListJobs(gomock.Eq("coolapp")).
-					Return([]*config.Workload{
-						{Name: "mailer", Type: "Scheduled Job"},
-						{Name: "reaper", Type: "Scheduled Job"},
-					}, nil)
+				mockLister.EXPECT().
+					Jobs(gomock.Eq("coolapp"), gomock.Any(), gomock.Any()).
+					Return(mockError)
 			},
-			expectedContent: "Name                Type\n------              -------------\nmailer              Scheduled Job\nreaper              Scheduled Job\n",
-		},
-		"with invalid app name": {
-			expectedErr: fmt.Errorf("get application: %w", mockError),
-			opts: listJobOpts{
-				listWkldVars: listWkldVars{
-					appName: "coolapp",
-				},
-				store: mockstore,
-			},
-			mocking: func() {
-				mockstore.EXPECT().
-					GetApplication(gomock.Eq("coolapp")).
-					Return(nil, mockError)
-
-				mockstore.
-					EXPECT().
-					ListJobs(gomock.Eq("coolapp")).
-					Times(0)
-			},
-		},
-		"with failed call to list": {
-			expectedErr: mockError,
-			opts: listJobOpts{
-				listWkldVars: listWkldVars{
-					appName: "coolapp",
-				},
-				store: mockstore,
-			},
-			mocking: func() {
-				mockstore.EXPECT().
-					GetApplication(gomock.Eq("coolapp")).
-					Return(&config.Application{}, nil)
-
-				mockstore.
-					EXPECT().
-					ListJobs(gomock.Eq("coolapp")).
-					Return(nil, mockError)
-			},
-		},
-		"with local flag enabled": {
-			expectedErr: nil,
-			opts: listJobOpts{
-				listWkldVars: listWkldVars{
-					shouldShowLocalWorkloads: true,
-					appName:                  "coolapp",
-				},
-				store: mockstore,
-				ws:    mockWorkspace,
-			},
-			mocking: func() {
-				mockstore.EXPECT().
-					GetApplication(gomock.Eq("coolapp")).
-					Return(&config.Application{}, nil)
-				mockstore.
-					EXPECT().
-					ListJobs(gomock.Eq("coolapp")).
-					Return([]*config.Workload{
-						{Name: "mailer", Type: "Scheduled Job"},
-						{Name: "reaper", Type: "Scheduled Job"},
-					}, nil)
-				mockWorkspace.EXPECT().JobNames().
-					Return([]string{"mailer"}, nil).Times(1)
-			},
-			expectedContent: "Name                Type\n------              -------------\nmailer              Scheduled Job\n",
+			expectedErr: fmt.Errorf("error"),
 		},
 	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			b := &bytes.Buffer{}
 			tc.mocking()
-			tc.opts.w = b
 			err := tc.opts.Execute()
 
 			if tc.expectedErr != nil {
 				require.EqualError(t, tc.expectedErr, err.Error())
 			} else {
-				require.Equal(t, tc.expectedContent, b.String())
+				require.NoError(t, err)
 			}
 		})
 	}

@@ -56,6 +56,14 @@ type jobStore interface {
 	DeleteJob(appName, jobName string) error
 }
 
+type wsStoreSvcLister interface {
+	Services(appName string, showLocal bool, writeJSON bool) error
+}
+
+type wsStoreJobLister interface {
+	Jobs(appName string, showLocal, writeJSON bool) error
+}
+
 type applicationStore interface {
 	applicationCreator
 	applicationGetter

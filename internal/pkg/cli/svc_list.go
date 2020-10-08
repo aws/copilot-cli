@@ -4,15 +4,11 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"math"
 	"os"
-	"strings"
-	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/list"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -22,13 +18,6 @@ import (
 const (
 	svcListAppNamePrompt = "Which application's services would you like to list?"
 	wkldListAppNameHelp  = "An application groups all of your services and jobs together."
-
-	// Display settings.
-	minCellWidth           = 20  // minimum number of characters in a table's cell.
-	tabWidth               = 4   // number of characters in between columns.
-	cellPaddingWidth       = 2   // number of padding characters added by default to a cell.
-	paddingChar            = ' ' // character in between columns.
-	noAdditionalFormatting = 0
 )
 
 type listWkldVars struct {
@@ -41,10 +30,8 @@ type listSvcOpts struct {
 	listWkldVars
 
 	// Interfaces to dependencies.
-	store store
-	ws    wsSvcReader
-	w     io.Writer
-	sel   appSelector
+	sel  appSelector
+	list wsStoreSvcLister
 }
 
 func newListSvcOpts(vars listWkldVars) (*listSvcOpts, error) {
@@ -56,13 +43,13 @@ func newListSvcOpts(vars listWkldVars) (*listSvcOpts, error) {
 	if err != nil {
 		return nil, err
 	}
+	svcLister := list.NewLister(ws, store, os.Stdout)
+
 	return &listSvcOpts{
 		listWkldVars: vars,
 
-		store: store,
-		ws:    ws,
-		w:     os.Stdout,
-		sel:   selector.NewSelect(prompt.New(), store),
+		list: svcLister,
+		sel:  selector.NewSelect(prompt.New(), store),
 	}, nil
 }
 
@@ -82,79 +69,12 @@ func (o *listSvcOpts) Ask() error {
 
 // Execute lists the services through the prompt.
 func (o *listSvcOpts) Execute() error {
-	// Ensure the application actually exists before we try to list its services.
-	if _, err := o.store.GetApplication(o.appName); err != nil {
-		return fmt.Errorf("get application: %w", err)
-	}
 
-	svcs, err := o.store.ListServices(o.appName)
-	if err != nil {
+	if err := o.list.Services(o.appName, o.shouldShowLocalWorkloads, o.shouldOutputJSON); err != nil {
 		return err
 	}
 
-	if o.shouldShowLocalWorkloads {
-		localNames, err := o.ws.ServiceNames()
-		if err != nil {
-			return fmt.Errorf("get local service names: %w", err)
-		}
-		svcs = filterSvcsByName(svcs, localNames)
-	}
-
-	var out string
-	if o.shouldOutputJSON {
-		data, err := o.jsonOutput(svcs)
-		if err != nil {
-			return err
-		}
-		out = data
-		fmt.Fprint(o.w, out)
-	} else {
-		humanOutput(o.w, svcs)
-	}
-
 	return nil
-}
-
-func humanOutput(w io.Writer, wklds []*config.Workload) {
-	writer := tabwriter.NewWriter(w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, "%s\t%s\n", "Name", "Type")
-	nameLengthMax := len("Name")
-	typeLengthMax := len("Type")
-	for _, svc := range wklds {
-		nameLengthMax = int(math.Max(float64(nameLengthMax), float64(len(svc.Name))))
-		typeLengthMax = int(math.Max(float64(typeLengthMax), float64(len(svc.Type))))
-	}
-	fmt.Fprintf(writer, "%s\t%s\n", strings.Repeat("-", nameLengthMax), strings.Repeat("-", typeLengthMax))
-	for _, wkld := range wklds {
-		fmt.Fprintf(writer, "%s\t%s\n", wkld.Name, wkld.Type)
-	}
-	writer.Flush()
-}
-
-func (o *listSvcOpts) jsonOutput(svcs []*config.Workload) (string, error) {
-	type out struct {
-		Services []*config.Workload `json:"services"`
-	}
-	b, err := json.Marshal(out{Services: svcs})
-	if err != nil {
-		return "", fmt.Errorf("marshal services: %w", err)
-	}
-	return fmt.Sprintf("%s\n", b), nil
-}
-
-func filterSvcsByName(svcs []*config.Workload, wantedNames []string) []*config.Workload {
-	isWanted := make(map[string]bool)
-	for _, name := range wantedNames {
-		isWanted[name] = true
-	}
-	var filtered []*config.Workload
-	for _, svc := range svcs {
-		if _, ok := isWanted[svc.Name]; !ok {
-			continue
-		}
-		filtered = append(filtered, svc)
-	}
-	return filtered
 }
 
 // buildSvcListCmd builds the command for listing services in an appication.

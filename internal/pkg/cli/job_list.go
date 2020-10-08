@@ -4,12 +4,11 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/list"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -23,11 +22,9 @@ const (
 type listJobOpts struct {
 	listWkldVars
 
-	// Dependencies
-	store store
-	ws    wsJobDirReader
-	w     io.Writer
-	sel   appSelector
+	// Depenencies
+	sel  appSelector
+	list wsStoreJobLister
 }
 
 func newListJobOpts(vars listWkldVars) (*listJobOpts, error) {
@@ -39,13 +36,13 @@ func newListJobOpts(vars listWkldVars) (*listJobOpts, error) {
 	if err != nil {
 		return nil, err
 	}
+	jobLister := list.NewLister(ws, store, os.Stdout)
+
 	return &listJobOpts{
 		listWkldVars: vars,
 
-		store: store,
-		ws:    ws,
-		w:     os.Stdout,
-		sel:   selector.NewSelect(prompt.New(), store),
+		list: jobLister,
+		sel:  selector.NewSelect(prompt.New(), store),
 	}, nil
 }
 
@@ -64,48 +61,10 @@ func (o *listJobOpts) Ask() error {
 
 // Execute lists the jobs in the workspace or application.
 func (o *listJobOpts) Execute() error {
-	// Ensure the application actually exists before we try to list its services.
-	if _, err := o.store.GetApplication(o.appName); err != nil {
-		return fmt.Errorf("get application: %w", err)
-	}
-
-	jobs, err := o.store.ListJobs(o.appName)
-	if err != nil {
+	if err := o.list.Jobs(o.appName, o.shouldShowLocalWorkloads, o.shouldOutputJSON); err != nil {
 		return err
 	}
-
-	if o.shouldShowLocalWorkloads {
-		localNames, err := o.ws.JobNames()
-		if err != nil {
-			return fmt.Errorf("get local job names: %w", err)
-		}
-		jobs = filterSvcsByName(jobs, localNames)
-	}
-
-	var out string
-	if o.shouldOutputJSON {
-		data, err := o.jsonOutput(jobs)
-		if err != nil {
-			return err
-		}
-		out = data
-		fmt.Fprint(o.w, out)
-	} else {
-		humanOutput(o.w, jobs)
-	}
-
 	return nil
-}
-
-func (o *listJobOpts) jsonOutput(jobs []*config.Workload) (string, error) {
-	type out struct {
-		Jobs []*config.Workload `json:"jobs"`
-	}
-	b, err := json.Marshal(out{Jobs: jobs})
-	if err != nil {
-		return "", fmt.Errorf("marshal jobs: %w", err)
-	}
-	return fmt.Sprintf("%s\n", b), nil
 }
 
 func buildJobListCmd() *cobra.Command {
