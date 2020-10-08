@@ -51,6 +51,21 @@ func TestListSvcOpts_Execute(t *testing.T) {
 			},
 			expectedErr: fmt.Errorf("error"),
 		},
+		"json and local arguments rendered correctly": {
+			opts: listSvcOpts{
+				listWkldVars: listWkldVars{
+					shouldShowLocalWorkloads: true,
+					shouldOutputJSON:         true,
+					appName:                  "coolapp",
+				},
+				list: mockLister,
+			},
+			mocking: func() {
+				mockLister.EXPECT().
+					Services("coolapp", true, true).
+					Return(nil)
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

@@ -51,6 +51,35 @@ func TestListJobOpts_Execute(t *testing.T) {
 			},
 			expectedErr: fmt.Errorf("error"),
 		},
+		"shouldListLocal argument rendered correctly": {
+			opts: listJobOpts{
+				listWkldVars: listWkldVars{
+					shouldShowLocalWorkloads: true,
+					appName:                  "coolapp",
+				},
+				list: mockLister,
+			},
+			mocking: func() {
+				mockLister.EXPECT().
+					Jobs("coolapp", true, false).
+					Return(nil)
+			},
+		},
+		"json and local arguments rendered correctly": {
+			opts: listJobOpts{
+				listWkldVars: listWkldVars{
+					shouldShowLocalWorkloads: true,
+					shouldOutputJSON:         true,
+					appName:                  "coolapp",
+				},
+				list: mockLister,
+			},
+			mocking: func() {
+				mockLister.EXPECT().
+					Jobs("coolapp", true, true).
+					Return(nil)
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
