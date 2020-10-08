@@ -36,7 +36,7 @@ const (
 
 const (
 	fmtJobDeleteStart             = "Deleting job %s from environment %s."
-	fmtJobDeleteFailed            = "Failed to job %s from environment %s: %v."
+	fmtJobDeleteFailed            = "Failed to delete job %s from environment %s: %v."
 	fmtJobDeleteComplete          = "Deleted job %s from environment %s."
 	fmtJobDeleteResourcesStart    = "Deleting resources of job %s from application %s."
 	fmtJobDeleteResourcesComplete = "Deleted resources of job %s from application %s."
@@ -63,7 +63,7 @@ type deleteJobOpts struct {
 	sess      sessionProvider
 	spinner   progress
 	appCFN    jobRemoverFromApp
-	getJobCFN func(session *awssession.Session) jobDeleter
+	getJobCFN func(session *awssession.Session) wlDeleter
 	getECR    func(session *awssession.Session) imageRemover
 }
 
@@ -92,7 +92,7 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
 		sess:    provider,
 		appCFN:  cloudformation.New(defaultSession),
-		getJobCFN: func(session *awssession.Session) jobDeleter {
+		getJobCFN: func(session *awssession.Session) wlDeleter {
 			return cloudformation.New(session)
 		},
 		getECR: func(session *awssession.Session) imageRemover {
@@ -254,7 +254,7 @@ func (o *deleteJobOpts) deleteStacks(envs []*config.Environment) error {
 
 		cfClient := o.getJobCFN(sess)
 		o.spinner.Start(fmt.Sprintf(fmtJobDeleteStart, o.name, env.Name))
-		if err := cfClient.DeleteJob(deploy.DeleteJobInput{
+		if err := cfClient.DeleteWorkload(deploy.DeleteWorkloadInput{
 			Name:    o.name,
 			EnvName: env.Name,
 			AppName: o.appName,

@@ -291,7 +291,7 @@ type deleteSvcMocks struct {
 	sessProvider   *sessions.Provider
 	appCFN         *mocks.MocksvcRemoverFromApp
 	spinner        *mocks.Mockprogress
-	svcCFN         *mocks.MocksvcDeleter
+	svcCFN         *mocks.MockwlDeleter
 	ecr            *mocks.MockimageRemover
 }
 
@@ -331,7 +331,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					mocks.store.EXPECT().ListEnvironments(gomock.Eq(mockAppName)).Times(1).Return(mockEnvs, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtSvcDeleteStart, mockSvcName, mockEnvName)),
-					mocks.svcCFN.EXPECT().DeleteService(gomock.Any()).Return(nil),
+					mocks.svcCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtSvcDeleteComplete, mockSvcName, mockEnvName)),
 					// emptyECRRepos
 					mocks.ecr.EXPECT().ClearRepository(mockRepo).Return(nil),
@@ -361,7 +361,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtSvcDeleteStart, mockSvcName, mockEnvName)),
-					mocks.svcCFN.EXPECT().DeleteService(gomock.Any()).Return(nil),
+					mocks.svcCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtSvcDeleteComplete, mockSvcName, mockEnvName)),
 
 					// It should **not** emptyECRRepos
@@ -386,7 +386,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtSvcDeleteStart, mockSvcName, mockEnvName)),
-					mocks.svcCFN.EXPECT().DeleteService(gomock.Any()).Return(testError),
+					mocks.svcCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(testError),
 					mocks.spinner.EXPECT().Stop(log.Serrorf(fmtSvcDeleteFailed, mockSvcName, mockEnvName, testError)),
 				)
 			},
@@ -404,10 +404,10 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
 			mockSession := sessions.NewProvider()
 			mockAppCFN := mocks.NewMocksvcRemoverFromApp(ctrl)
-			mockSvcCFN := mocks.NewMocksvcDeleter(ctrl)
+			mockSvcCFN := mocks.NewMockwlDeleter(ctrl)
 			mockSpinner := mocks.NewMockprogress(ctrl)
 			mockImageRemover := mocks.NewMockimageRemover(ctrl)
-			mockGetSvcCFN := func(_ *session.Session) svcDeleter {
+			mockGetSvcCFN := func(_ *session.Session) wlDeleter {
 				return mockSvcCFN
 			}
 

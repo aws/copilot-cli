@@ -63,7 +63,7 @@ type deleteSvcOpts struct {
 	prompt    prompter
 	sel       wsSelector
 	appCFN    svcRemoverFromApp
-	getSvcCFN func(session *awssession.Session) svcDeleter
+	getSvcCFN func(session *awssession.Session) wlDeleter
 	getECR    func(session *awssession.Session) imageRemover
 }
 
@@ -93,7 +93,7 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 		sess:    provider,
 		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
 		appCFN:  cloudformation.New(defaultSession),
-		getSvcCFN: func(session *awssession.Session) svcDeleter {
+		getSvcCFN: func(session *awssession.Session) wlDeleter {
 			return cloudformation.New(session)
 		},
 		getECR: func(session *awssession.Session) imageRemover {
@@ -263,7 +263,7 @@ func (o *deleteSvcOpts) deleteStacks(envs []*config.Environment) error {
 
 		cfClient := o.getSvcCFN(sess)
 		o.spinner.Start(fmt.Sprintf(fmtSvcDeleteStart, o.name, env.Name))
-		if err := cfClient.DeleteService(deploy.DeleteWorkloadInput{
+		if err := cfClient.DeleteWorkload(deploy.DeleteWorkloadInput{
 			Name:    o.name,
 			EnvName: env.Name,
 			AppName: o.appName,

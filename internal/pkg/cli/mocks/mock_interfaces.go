@@ -3014,41 +3014,41 @@ func (mr *MockenvironmentDeployerMockRecorder) GetEnvironment(appName, envName i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).GetEnvironment), appName, envName)
 }
 
-// MocksvcDeleter is a mock of svcDeleter interface
-type MocksvcDeleter struct {
+// MockwlDeleter is a mock of wlDeleter interface
+type MockwlDeleter struct {
 	ctrl     *gomock.Controller
-	recorder *MocksvcDeleterMockRecorder
+	recorder *MockwlDeleterMockRecorder
 }
 
-// MocksvcDeleterMockRecorder is the mock recorder for MocksvcDeleter
-type MocksvcDeleterMockRecorder struct {
-	mock *MocksvcDeleter
+// MockwlDeleterMockRecorder is the mock recorder for MockwlDeleter
+type MockwlDeleterMockRecorder struct {
+	mock *MockwlDeleter
 }
 
-// NewMocksvcDeleter creates a new mock instance
-func NewMocksvcDeleter(ctrl *gomock.Controller) *MocksvcDeleter {
-	mock := &MocksvcDeleter{ctrl: ctrl}
-	mock.recorder = &MocksvcDeleterMockRecorder{mock}
+// NewMockwlDeleter creates a new mock instance
+func NewMockwlDeleter(ctrl *gomock.Controller) *MockwlDeleter {
+	mock := &MockwlDeleter{ctrl: ctrl}
+	mock.recorder = &MockwlDeleterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MocksvcDeleter) EXPECT() *MocksvcDeleterMockRecorder {
+func (m *MockwlDeleter) EXPECT() *MockwlDeleterMockRecorder {
 	return m.recorder
 }
 
-// DeleteService mocks base method
-func (m *MocksvcDeleter) DeleteService(in deploy.DeleteWorkloadInput) error {
+// DeleteWorkload mocks base method
+func (m *MockwlDeleter) DeleteWorkload(in deploy.DeleteWorkloadInput) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteService", in)
+	ret := m.ctrl.Call(m, "DeleteWorkload", in)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeleteService indicates an expected call of DeleteService
-func (mr *MocksvcDeleterMockRecorder) DeleteService(in interface{}) *gomock.Call {
+// DeleteWorkload indicates an expected call of DeleteWorkload
+func (mr *MockwlDeleterMockRecorder) DeleteWorkload(in interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteService", reflect.TypeOf((*MocksvcDeleter)(nil).DeleteService), in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkload", reflect.TypeOf((*MockwlDeleter)(nil).DeleteWorkload), in)
 }
 
 // MocksvcRemoverFromApp is a mock of svcRemoverFromApp interface
@@ -3086,43 +3086,6 @@ func (m *MocksvcRemoverFromApp) RemoveServiceFromApp(app *config.Application, sv
 func (mr *MocksvcRemoverFromAppMockRecorder) RemoveServiceFromApp(app, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveServiceFromApp", reflect.TypeOf((*MocksvcRemoverFromApp)(nil).RemoveServiceFromApp), app, svcName)
-}
-
-// MockjobDeleter is a mock of jobDeleter interface
-type MockjobDeleter struct {
-	ctrl     *gomock.Controller
-	recorder *MockjobDeleterMockRecorder
-}
-
-// MockjobDeleterMockRecorder is the mock recorder for MockjobDeleter
-type MockjobDeleterMockRecorder struct {
-	mock *MockjobDeleter
-}
-
-// NewMockjobDeleter creates a new mock instance
-func NewMockjobDeleter(ctrl *gomock.Controller) *MockjobDeleter {
-	mock := &MockjobDeleter{ctrl: ctrl}
-	mock.recorder = &MockjobDeleterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockjobDeleter) EXPECT() *MockjobDeleterMockRecorder {
-	return m.recorder
-}
-
-// DeleteJob mocks base method
-func (m *MockjobDeleter) DeleteJob(in deploy.DeleteJobInput) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteJob", in)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteJob indicates an expected call of DeleteJob
-func (mr *MockjobDeleterMockRecorder) DeleteJob(in interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteJob", reflect.TypeOf((*MockjobDeleter)(nil).DeleteJob), in)
 }
 
 // MockjobRemoverFromApp is a mock of jobRemoverFromApp interface

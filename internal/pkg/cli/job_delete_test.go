@@ -292,7 +292,7 @@ type deleteJobMocks struct {
 	sessProvider   *sessions.Provider
 	appCFN         *mocks.MockjobRemoverFromApp
 	spinner        *mocks.Mockprogress
-	jobCFN         *mocks.MockjobDeleter
+	jobCFN         *mocks.MockwlDeleter
 	ecr            *mocks.MockimageRemover
 }
 
@@ -332,7 +332,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.store.EXPECT().ListEnvironments(gomock.Eq(mockAppName)).Times(1).Return(mockEnvs, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobDeleteStart, mockJobName, mockEnvName)),
-					mocks.jobCFN.EXPECT().DeleteJob(gomock.Any()).Return(nil),
+					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobDeleteComplete, mockJobName, mockEnvName)),
 					// emptyECRRepos
 					mocks.ecr.EXPECT().ClearRepository(mockRepo).Return(nil),
@@ -362,7 +362,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobDeleteStart, mockJobName, mockEnvName)),
-					mocks.jobCFN.EXPECT().DeleteJob(gomock.Any()).Return(nil),
+					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobDeleteComplete, mockJobName, mockEnvName)),
 
 					// It should **not** emptyECRRepos
@@ -387,7 +387,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobDeleteStart, mockJobName, mockEnvName)),
-					mocks.jobCFN.EXPECT().DeleteJob(gomock.Any()).Return(testError),
+					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(testError),
 					mocks.spinner.EXPECT().Stop(log.Serrorf(fmtJobDeleteFailed, mockJobName, mockEnvName, testError)),
 				)
 			},
@@ -405,10 +405,10 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
 			mockSession := sessions.NewProvider()
 			mockAppCFN := mocks.NewMockjobRemoverFromApp(ctrl)
-			mockJobCFN := mocks.NewMockjobDeleter(ctrl)
+			mockJobCFN := mocks.NewMockwlDeleter(ctrl)
 			mockSpinner := mocks.NewMockprogress(ctrl)
 			mockImageRemover := mocks.NewMockimageRemover(ctrl)
-			mockGetJobCFN := func(_ *session.Session) jobDeleter {
+			mockGetJobCFN := func(_ *session.Session) wlDeleter {
 				return mockJobCFN
 			}
 

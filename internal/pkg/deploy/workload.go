@@ -5,16 +5,9 @@
 // This file defines workload deployment resources.
 package deploy
 
-// DeleteWorkloadInput holds the fields required to delete a service.
+// DeleteWorkloadInput holds the fields required to delete a workload.
 type DeleteWorkloadInput struct {
 	Name    string // Name of the workload that needs to be deleted.
 	EnvName string // Name of the environment the service is deployed in.
 	AppName string // Name of the application the service belongs to.
-}
-
-// DeleteJobInput holds the fields required to delete a job.
-type DeleteJobInput struct {
-	Name    string // Name of the job that needs to be deleted.
-	EnvName string // Name of the environment the job is deployed in.
-	AppName string // Name of the application the job belongs to.
 }
