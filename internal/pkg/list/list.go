@@ -15,8 +15,6 @@ import (
 )
 
 const (
-	jobListAppNamePrompt = "Which application's jobs would you like to list?"
-
 	// Display settings.
 	minCellWidth           = 20  // minimum number of characters in a table's cell.
 	tabWidth               = 4   // number of characters in between columns.
@@ -30,11 +28,6 @@ const (
 )
 
 var workloadTypes = []string{jobWorkloadType, svcWorkloadType}
-
-var (
-	wrapErrListWklds  = "list %s: %w"
-	fmtErrWkldInvalid = "%s must be one of: " + strings.Join(workloadTypes, ", ")
-)
 
 // Store wraps the methods required for interacting with config stores.
 type Store interface {
