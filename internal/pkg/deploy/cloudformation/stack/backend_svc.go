@@ -20,8 +20,8 @@ const (
 )
 
 const (
-	// BlankBackendSvcContainerPort indicates no port is exposed for service container.
-	BlankBackendSvcContainerPort = "-1"
+	// NoExposedContainerPort indicates no port should be exposed for the service container.
+	NoExposedContainerPort = "-1"
 )
 
 type backendSvcReadParser interface {
@@ -105,7 +105,7 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 	if err != nil {
 		return nil, err
 	}
-	containerPort := BlankBackendSvcContainerPort
+	containerPort := NoExposedContainerPort
 	if s.manifest.BackendServiceConfig.ImageConfig.Port != nil {
 		containerPort = strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.ImageConfig.Port)), 10)
 	}

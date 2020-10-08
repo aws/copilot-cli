@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	// BlankServiceDiscoveryURI is the blank service discovery URI.
+	// BlankServiceDiscoveryURI is an empty URI to denote services
+	// that cannot be reached with Service Discovery.
 	BlankServiceDiscoveryURI = "-"
 	blankContainerPort       = "-"
 )
@@ -78,7 +79,7 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 		return "", fmt.Errorf("retrieve service deployment configuration: %w", err)
 	}
 	port := svcParams[stack.LBWebServiceContainerPortParamKey]
-	if port == stack.BlankBackendSvcContainerPort {
+	if port == stack.NoExposedContainerPort {
 		return BlankServiceDiscoveryURI, nil
 	}
 	s := serviceDiscovery{
@@ -108,15 +109,14 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("retrieve service deployment configuration: %w", err)
 		}
-		port := svcParams[stack.LBWebServiceContainerPortParamKey]
-		if port != stack.BlankBackendSvcContainerPort {
+		port := blankContainerPort
+		if svcParams[stack.LBWebServiceContainerPortParamKey] != stack.NoExposedContainerPort {
+			port = svcParams[stack.LBWebServiceContainerPortParamKey]
 			services = appendServiceDiscovery(services, serviceDiscovery{
 				Service: d.svc,
 				Port:    port,
 				App:     d.app,
 			}, env)
-		} else {
-			port = blankContainerPort
 		}
 		configs = append(configs, &ServiceConfig{
 			Environment: env,

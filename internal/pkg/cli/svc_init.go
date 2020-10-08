@@ -236,7 +236,11 @@ func (o *initSvcOpts) createManifest() (string, error) {
 		manifestMsgFmt = "Manifest file for service %s already exists at %s, skipping writing it.\n"
 	}
 	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.name), color.HighlightResource(manifestPath))
-	log.Infoln(color.Help("Your manifest contains configurations like your container size and port."))
+	msg := "Your manifest contains configurations like your container size and port."
+	if o.port != 0 {
+		msg = fmt.Sprintf("Your manifest contains configurations like your container size and port (:%d).", o.port)
+	}
+	log.Infoln(color.Help(msg))
 	log.Infoln()
 
 	return manifestPath, nil
