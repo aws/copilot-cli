@@ -53,7 +53,7 @@ const (
 	fmtAddSvcToAppComplete = "Created ECR repositories for service %s.\n"
 
 	wkldInitImagePrompt     = `What's the location of the image to use?`
-	wkldInitImagePromptHelp = `The location of an existing Docker image. Docker Hub registry are available by default.
+	wkldInitImagePromptHelp = `The name of an existing Docker image. Images in the Docker Hub registry are available by default.
 Other repositories are specified with either repository-url/image:tag or repository-url/image@digest`
 )
 
@@ -165,11 +165,11 @@ func (o *initSvcOpts) Ask() error {
 	if err := o.askSvcName(); err != nil {
 		return err
 	}
-	useImage, err := o.askDockerfile()
+	dfSelected, err := o.askDockerfile()
 	if err != nil {
 		return err
 	}
-	if useImage {
+	if !dfSelected {
 		if err := o.askImage(); err != nil {
 			return err
 		}
@@ -350,10 +350,10 @@ func (o *initSvcOpts) askImage() error {
 	return nil
 }
 
-// askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
-func (o *initSvcOpts) askDockerfile() (useImage bool, err error) {
+// isDfSelected indicates if any Dockerfile is in use.
+func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 	if o.dockerfilePath != "" || o.image != "" {
-		return false, nil
+		return true, nil
 	}
 	df, err := o.sel.Dockerfile(
 		fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(o.name)),
@@ -368,10 +368,10 @@ func (o *initSvcOpts) askDockerfile() (useImage bool, err error) {
 		return false, fmt.Errorf("select Dockerfile: %w", err)
 	}
 	if df == selector.DockerfilePromptUseImage {
-		return true, nil
+		return false, nil
 	}
 	o.dockerfilePath = df
-	return false, nil
+	return true, nil
 }
 
 func (o *initSvcOpts) askSvcPort() error {

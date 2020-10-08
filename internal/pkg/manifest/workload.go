@@ -306,6 +306,7 @@ func UnmarshalWorkload(in []byte) (interface{}, error) {
 
 func requiresBuild(image Image) (bool, error) {
 	noBuild, noURL := image.Build.isEmpty(), image.Location == nil
+	// Error if both of them are specified or neither is specified.
 	if noBuild == noURL {
 		return false, fmt.Errorf(`either "image.build" or "image.location" needs to be specified in the manifest`)
 	}

@@ -142,11 +142,11 @@ func (o *initJobOpts) Ask() error {
 	if err := o.askJobName(); err != nil {
 		return err
 	}
-	useImage, err := o.askDockerfile()
+	dfSelected, err := o.askDockerfile()
 	if err != nil {
 		return err
 	}
-	if useImage {
+	if !dfSelected {
 		if err := o.askImage(); err != nil {
 			return err
 		}
@@ -279,9 +279,10 @@ func (o *initJobOpts) askImage() error {
 	return nil
 }
 
-func (o *initJobOpts) askDockerfile() (useImage bool, err error) {
+// isDfSelected indicates if any Dockerfile is in use.
+func (o *initJobOpts) askDockerfile() (isDfSelected bool, err error) {
 	if o.dockerfilePath != "" || o.image != "" {
-		return false, nil
+		return true, nil
 	}
 	df, err := o.sel.Dockerfile(
 		fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(o.name)),
@@ -296,10 +297,10 @@ func (o *initJobOpts) askDockerfile() (useImage bool, err error) {
 		return false, fmt.Errorf("select Dockerfile: %w", err)
 	}
 	if df == selector.DockerfilePromptUseImage {
-		return true, nil
+		return false, nil
 	}
 	o.dockerfilePath = df
-	return false, nil
+	return true, nil
 }
 
 func (o *initJobOpts) askSchedule() error {
