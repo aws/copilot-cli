@@ -184,7 +184,7 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 		},
 		"malformed rate": {
 			inputSchedule: "@every 402 seconds",
-			wantedError:   errors.New("schedule is not valid cron, rate, or preset: failed to parse duration @every 402 seconds: time: unknown unit  seconds in duration 402 seconds"),
+			wantedError:   errors.New(`schedule is not valid cron, rate, or preset: failed to parse duration @every 402 seconds: time: unknown unit " seconds" in duration "402 seconds"`),
 		},
 		"malformed cron": {
 			inputSchedule: "every 4m",
@@ -331,7 +331,7 @@ func TestScheduledJob_stateMachine(t *testing.T) {
 		},
 		"invalid timeout": {
 			inputTimeout: "5 hours",
-			wantedError:  errors.New("time: unknown unit  hours in duration 5 hours"),
+			wantedError:  errors.New(`time: unknown unit " hours" in duration "5 hours"`),
 		},
 		"timeout non-integer number of seconds": {
 			inputTimeout: "1s40ms",
