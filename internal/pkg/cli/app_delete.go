@@ -57,9 +57,9 @@ type deleteAppOpts struct {
 	cfn                  deployer
 	prompt               prompter
 	s3                   func(session *session.Session) bucketEmptier
-	executor             func(svcName string) (executor, error)
-	jobExecutor          func(jobName string) (jobExecutor, error)
-	askExecutor          func(envName, envProfile string) (askExecutor, error)
+	svcDeleteExecutor    func(svcName string) (svcDeleteExecutor, error)
+	jobDeleteExecutor    func(jobName string) (jobDeleteExecutor, error)
+	envDeleteExecutor    func(envName, envProfile string) (envDeleteExecutor, error)
 	deletePipelineRunner func() (deletePipelineRunner, error)
 }
 
@@ -91,7 +91,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		s3: func(session *session.Session) bucketEmptier {
 			return s3.New(session)
 		},
-		executor: func(svcName string) (executor, error) {
+		svcDeleteExecutor: func(svcName string) (svcDeleteExecutor, error) {
 			opts, err := newDeleteSvcOpts(deleteSvcVars{
 				skipConfirmation: true, // always skip sub-confirmations
 				name:             svcName,
@@ -102,7 +102,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 			}
 			return opts, nil
 		},
-		jobExecutor: func(jobName string) (jobExecutor, error) {
+		jobDeleteExecutor: func(jobName string) (jobDeleteExecutor, error) {
 			opts, err := newDeleteJobOpts(deleteJobVars{
 				skipConfirmation: true,
 				name:             jobName,
@@ -113,7 +113,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 			}
 			return opts, nil
 		},
-		askExecutor: func(envName, envProfile string) (askExecutor, error) {
+		envDeleteExecutor: func(envName, envProfile string) (envDeleteExecutor, error) {
 			opts, err := newDeleteEnvOpts(deleteEnvVars{
 				skipConfirmation: true,
 				appName:          vars.name,
@@ -216,7 +216,7 @@ func (o *deleteAppOpts) deleteSvcs() error {
 	}
 
 	for _, svc := range svcs {
-		cmd, err := o.executor(svc.Name)
+		cmd, err := o.svcDeleteExecutor(svc.Name)
 		if err != nil {
 			return err
 		}
@@ -234,7 +234,7 @@ func (o *deleteAppOpts) deleteJobs() error {
 	}
 
 	for _, job := range jobs {
-		cmd, err := o.jobExecutor(job.Name)
+		cmd, err := o.jobDeleteExecutor(job.Name)
 		if err != nil {
 			return err
 		}
@@ -257,7 +257,7 @@ func (o *deleteAppOpts) deleteEnvs() error {
 		// string, which triggers env delete's ask.
 		profile := o.envProfiles[env.Name]
 
-		cmd, err := o.askExecutor(env.Name, profile)
+		cmd, err := o.envDeleteExecutor(env.Name, profile)
 		if err != nil {
 			return err
 		}
