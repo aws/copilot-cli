@@ -4199,105 +4199,31 @@ func (mr *MockdeletePipelineRunnerMockRecorder) Run() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockdeletePipelineRunner)(nil).Run))
 }
 
-// MocksvcDeleteExecutor is a mock of svcDeleteExecutor interface
-type MocksvcDeleteExecutor struct {
+// MockexecuteAsker is a mock of executeAsker interface
+type MockexecuteAsker struct {
 	ctrl     *gomock.Controller
-	recorder *MocksvcDeleteExecutorMockRecorder
+	recorder *MockexecuteAskerMockRecorder
 }
 
-// MocksvcDeleteExecutorMockRecorder is the mock recorder for MocksvcDeleteExecutor
-type MocksvcDeleteExecutorMockRecorder struct {
-	mock *MocksvcDeleteExecutor
+// MockexecuteAskerMockRecorder is the mock recorder for MockexecuteAsker
+type MockexecuteAskerMockRecorder struct {
+	mock *MockexecuteAsker
 }
 
-// NewMocksvcDeleteExecutor creates a new mock instance
-func NewMocksvcDeleteExecutor(ctrl *gomock.Controller) *MocksvcDeleteExecutor {
-	mock := &MocksvcDeleteExecutor{ctrl: ctrl}
-	mock.recorder = &MocksvcDeleteExecutorMockRecorder{mock}
+// NewMockexecuteAsker creates a new mock instance
+func NewMockexecuteAsker(ctrl *gomock.Controller) *MockexecuteAsker {
+	mock := &MockexecuteAsker{ctrl: ctrl}
+	mock.recorder = &MockexecuteAskerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MocksvcDeleteExecutor) EXPECT() *MocksvcDeleteExecutorMockRecorder {
-	return m.recorder
-}
-
-// Execute mocks base method
-func (m *MocksvcDeleteExecutor) Execute() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Execute")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Execute indicates an expected call of Execute
-func (mr *MocksvcDeleteExecutorMockRecorder) Execute() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MocksvcDeleteExecutor)(nil).Execute))
-}
-
-// MockjobDeleteExecutor is a mock of jobDeleteExecutor interface
-type MockjobDeleteExecutor struct {
-	ctrl     *gomock.Controller
-	recorder *MockjobDeleteExecutorMockRecorder
-}
-
-// MockjobDeleteExecutorMockRecorder is the mock recorder for MockjobDeleteExecutor
-type MockjobDeleteExecutorMockRecorder struct {
-	mock *MockjobDeleteExecutor
-}
-
-// NewMockjobDeleteExecutor creates a new mock instance
-func NewMockjobDeleteExecutor(ctrl *gomock.Controller) *MockjobDeleteExecutor {
-	mock := &MockjobDeleteExecutor{ctrl: ctrl}
-	mock.recorder = &MockjobDeleteExecutorMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockjobDeleteExecutor) EXPECT() *MockjobDeleteExecutorMockRecorder {
-	return m.recorder
-}
-
-// Execute mocks base method
-func (m *MockjobDeleteExecutor) Execute() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Execute")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Execute indicates an expected call of Execute
-func (mr *MockjobDeleteExecutorMockRecorder) Execute() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockjobDeleteExecutor)(nil).Execute))
-}
-
-// MockenvDeleteExecutor is a mock of envDeleteExecutor interface
-type MockenvDeleteExecutor struct {
-	ctrl     *gomock.Controller
-	recorder *MockenvDeleteExecutorMockRecorder
-}
-
-// MockenvDeleteExecutorMockRecorder is the mock recorder for MockenvDeleteExecutor
-type MockenvDeleteExecutorMockRecorder struct {
-	mock *MockenvDeleteExecutor
-}
-
-// NewMockenvDeleteExecutor creates a new mock instance
-func NewMockenvDeleteExecutor(ctrl *gomock.Controller) *MockenvDeleteExecutor {
-	mock := &MockenvDeleteExecutor{ctrl: ctrl}
-	mock.recorder = &MockenvDeleteExecutorMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockenvDeleteExecutor) EXPECT() *MockenvDeleteExecutorMockRecorder {
+func (m *MockexecuteAsker) EXPECT() *MockexecuteAskerMockRecorder {
 	return m.recorder
 }
 
 // Ask mocks base method
-func (m *MockenvDeleteExecutor) Ask() error {
+func (m *MockexecuteAsker) Ask() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Ask")
 	ret0, _ := ret[0].(error)
@@ -4305,13 +4231,13 @@ func (m *MockenvDeleteExecutor) Ask() error {
 }
 
 // Ask indicates an expected call of Ask
-func (mr *MockenvDeleteExecutorMockRecorder) Ask() *gomock.Call {
+func (mr *MockexecuteAskerMockRecorder) Ask() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ask", reflect.TypeOf((*MockenvDeleteExecutor)(nil).Ask))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ask", reflect.TypeOf((*MockexecuteAsker)(nil).Ask))
 }
 
 // Execute mocks base method
-func (m *MockenvDeleteExecutor) Execute() error {
+func (m *MockexecuteAsker) Execute() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Execute")
 	ret0, _ := ret[0].(error)
@@ -4319,9 +4245,9 @@ func (m *MockenvDeleteExecutor) Execute() error {
 }
 
 // Execute indicates an expected call of Execute
-func (mr *MockenvDeleteExecutorMockRecorder) Execute() *gomock.Call {
+func (mr *MockexecuteAskerMockRecorder) Execute() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockenvDeleteExecutor)(nil).Execute))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockexecuteAsker)(nil).Execute))
 }
 
 // MockappSelector is a mock of appSelector interface

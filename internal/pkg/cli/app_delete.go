@@ -57,9 +57,9 @@ type deleteAppOpts struct {
 	cfn                  deployer
 	prompt               prompter
 	s3                   func(session *session.Session) bucketEmptier
-	svcDeleteExecutor    func(svcName string) (svcDeleteExecutor, error)
-	jobDeleteExecutor    func(jobName string) (jobDeleteExecutor, error)
-	envDeleteExecutor    func(envName, envProfile string) (envDeleteExecutor, error)
+	svcDeleteExecutor    func(svcName string) (executor, error)
+	jobDeleteExecutor    func(jobName string) (executor, error)
+	envDeleteExecutor    func(envName, envProfile string) (executeAsker, error)
 	deletePipelineRunner func() (deletePipelineRunner, error)
 }
 
@@ -91,7 +91,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		s3: func(session *session.Session) bucketEmptier {
 			return s3.New(session)
 		},
-		svcDeleteExecutor: func(svcName string) (svcDeleteExecutor, error) {
+		svcDeleteExecutor: func(svcName string) (executor, error) {
 			opts, err := newDeleteSvcOpts(deleteSvcVars{
 				skipConfirmation: true, // always skip sub-confirmations
 				name:             svcName,
@@ -102,7 +102,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 			}
 			return opts, nil
 		},
-		jobDeleteExecutor: func(jobName string) (jobDeleteExecutor, error) {
+		jobDeleteExecutor: func(jobName string) (executor, error) {
 			opts, err := newDeleteJobOpts(deleteJobVars{
 				skipConfirmation: true,
 				name:             jobName,
@@ -113,7 +113,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 			}
 			return opts, nil
 		},
-		envDeleteExecutor: func(envName, envProfile string) (envDeleteExecutor, error) {
+		envDeleteExecutor: func(envName, envProfile string) (executeAsker, error) {
 			opts, err := newDeleteEnvOpts(deleteEnvVars{
 				skipConfirmation: true,
 				appName:          vars.name,

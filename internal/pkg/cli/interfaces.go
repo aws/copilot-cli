@@ -403,15 +403,7 @@ type deletePipelineRunner interface {
 	Run() error
 }
 
-type svcDeleteExecutor interface {
-	Execute() error
-}
-
-type jobDeleteExecutor interface {
-	Execute() error
-}
-
-type envDeleteExecutor interface {
+type executeAsker interface {
 	Ask() error
 	executor
 }

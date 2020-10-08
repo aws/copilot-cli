@@ -131,9 +131,9 @@ type deleteAppMocks struct {
 	ws              *mocks.MockwsFileDeleter
 	sessProvider    *sessions.Provider
 	deployer        *mocks.Mockdeployer
-	svcDeleter      *mocks.MocksvcDeleteExecutor
-	jobDeleter      *mocks.MockjobDeleteExecutor
-	envDeleter      *mocks.MockenvDeleteExecutor
+	svcDeleter      *mocks.Mockexecutor
+	jobDeleter      *mocks.Mockexecutor
+	envDeleter      *mocks.MockexecuteAsker
 	bucketEmptier   *mocks.MockbucketEmptier
 	pipelineDeleter *mocks.MockdeletePipelineRunner
 }
@@ -283,16 +283,16 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			// mocking all the intermediary steps in calling Execute on DeleteAppOpts,
 			// DeleteEnvOpts, and DeletePipelineOpts. It allows us to instead simply
 			// test if the deletion of those resources succeeded or failed.
-			mockSvcDeleteExecutor := mocks.NewMocksvcDeleteExecutor(ctrl)
-			mockSvcExecutorProvider := func(appName string) (svcDeleteExecutor, error) {
+			mockSvcDeleteExecutor := mocks.NewMockexecutor(ctrl)
+			mockSvcExecutorProvider := func(appName string) (executor, error) {
 				return mockSvcDeleteExecutor, nil
 			}
-			mockJobDeleteExecutor := mocks.NewMockjobDeleteExecutor(ctrl)
-			mockJobExecutorProvider := func(appName string) (jobDeleteExecutor, error) {
+			mockJobDeleteExecutor := mocks.NewMockexecutor(ctrl)
+			mockJobExecutorProvider := func(appName string) (executor, error) {
 				return mockJobDeleteExecutor, nil
 			}
-			mockEnvDeleteExecutor := mocks.NewMockenvDeleteExecutor(ctrl)
-			mockAskExecutorProvider := func(envName, envProfile string) (envDeleteExecutor, error) {
+			mockEnvDeleteExecutor := mocks.NewMockexecuteAsker(ctrl)
+			mockAskExecutorProvider := func(envName, envProfile string) (executeAsker, error) {
 				return mockEnvDeleteExecutor, nil
 			}
 
