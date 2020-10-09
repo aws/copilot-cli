@@ -44,7 +44,7 @@ Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
 	githubURL             = "github.com"
-	masterBranch          = "master"
+	defaultBranch         = "main"
 )
 
 var (
@@ -183,7 +183,7 @@ func (o *initPipelineOpts) Ask() error {
 	}
 
 	if o.gitBranch == "" {
-		o.gitBranch = masterBranch
+		o.gitBranch = defaultBranch
 	}
 	return nil
 }
