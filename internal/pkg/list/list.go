@@ -27,8 +27,6 @@ const (
 	svcWorkloadType = "service"
 )
 
-var workloadTypes = []string{jobWorkloadType, svcWorkloadType}
-
 // Store wraps the methods required for interacting with config stores.
 type Store interface {
 	GetApplication(appName string) (*config.Application, error)
