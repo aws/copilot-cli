@@ -40,75 +40,78 @@ type Workspace interface {
 	ServiceNames() ([]string, error)
 }
 
-// Lister handles
-type Lister struct {
-	store Store
-	ws    Workspace
-	w     io.Writer
+// JobListWriter holds all the metadata needed to
+type JobListWriter struct {
+	ShowLocalJobs bool
+	OutputJSON    bool
+
+	Store Store
+	Ws    Workspace
+	W     io.Writer
 }
 
-// NewLister returns a new Lister structure, which can be used to list Jobs or Services
-// from both the config store and workspace.
-func NewLister(ws Workspace, store Store, writer io.Writer) *Lister {
-	return &Lister{
-		store: store,
-		ws:    ws,
-		w:     writer,
-	}
+// SvcListWriter holds all the metadata needed to write local or remote services to a writer
+type SvcListWriter struct {
+	ShowLocalSvcs bool
+	OutputJSON    bool
+
+	Store Store
+	Ws    Workspace
+	W     io.Writer
 }
 
 // Jobs lists all jobs, either locally or in the workspace, and writes the output to a writer.
-func (l *Lister) Jobs(appName string, showLocal bool, writeJSON bool) error {
-	if _, err := l.store.GetApplication(appName); err != nil {
+func (l *JobListWriter) Write(appName string) error {
+	if _, err := l.Store.GetApplication(appName); err != nil {
 		return fmt.Errorf("get application: %w", err)
 	}
-	wklds, err := l.store.ListJobs(appName)
+	wklds, err := l.Store.ListJobs(appName)
 	if err != nil {
 		return fmt.Errorf("get %s names: %w", jobWorkloadType, err)
 	}
-	if showLocal {
-		localWklds, err := l.ws.JobNames()
+	if l.ShowLocalJobs {
+		localWklds, err := l.Ws.JobNames()
 		if err != nil {
 			return fmt.Errorf("get local %s names: %w", jobWorkloadType, err)
 		}
 		wklds = filterByName(wklds, localWklds)
 	}
-	if writeJSON {
+	if l.OutputJSON {
 		data, err := l.jsonOutputJobs(wklds)
 		if err != nil {
 			return err
 		}
-		fmt.Fprint(l.w, data)
+		fmt.Fprint(l.W, data)
 	} else {
-		l.humanOutput(wklds)
+		humanOutput(wklds, l.W)
 	}
 	return nil
 }
 
-// Services lists all services, either locally or in the workspace, and writes the output to a writer.
-func (l *Lister) Services(appName string, showLocal bool, writeJSON bool) error {
-	if _, err := l.store.GetApplication(appName); err != nil {
+// Write lists all services, either locally or in the workspace, and writes the output to a writer.
+func (l *SvcListWriter) Write(appName string) error {
+	if _, err := l.Store.GetApplication(appName); err != nil {
 		return fmt.Errorf("get application: %w", err)
 	}
-	wklds, err := l.store.ListServices(appName)
+	wklds, err := l.Store.ListServices(appName)
 	if err != nil {
 		return fmt.Errorf("get %s names: %w", svcWorkloadType, err)
 	}
-	if showLocal {
-		localWklds, err := l.ws.ServiceNames()
+	if l.ShowLocalSvcs {
+		localWklds, err := l.Ws.ServiceNames()
 		if err != nil {
 			return fmt.Errorf("get local %s names: %w", svcWorkloadType, err)
 		}
 		wklds = filterByName(wklds, localWklds)
 	}
-	if writeJSON {
+	if l.OutputJSON {
 		data, err := l.jsonOutputSvcs(wklds)
 		if err != nil {
 			return err
 		}
-		fmt.Fprint(l.w, data)
+		fmt.Fprint(l.W, data)
 	} else {
-		l.humanOutput(wklds)
+		humanOutput(wklds, l.W)
 	}
 	return nil
 }
@@ -128,8 +131,8 @@ func filterByName(wklds []*config.Workload, wantedNames []string) []*config.Work
 	return filtered
 }
 
-func (l *Lister) humanOutput(wklds []*config.Workload) {
-	writer := tabwriter.NewWriter(l.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
+func humanOutput(wklds []*config.Workload, w io.Writer) {
+	writer := tabwriter.NewWriter(w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprintf(writer, "%s\t%s\n", "Name", "Type")
 	nameLengthMax := len("Name")
 	typeLengthMax := len("Type")
@@ -144,7 +147,7 @@ func (l *Lister) humanOutput(wklds []*config.Workload) {
 	writer.Flush()
 }
 
-func (l *Lister) jsonOutputSvcs(svcs []*config.Workload) (string, error) {
+func (l *SvcListWriter) jsonOutputSvcs(svcs []*config.Workload) (string, error) {
 	type out struct {
 		Services []*config.Workload `json:"services"`
 	}
@@ -155,7 +158,7 @@ func (l *Lister) jsonOutputSvcs(svcs []*config.Workload) (string, error) {
 	return fmt.Sprintf("%s\n", b), nil
 }
 
-func (l *Lister) jsonOutputJobs(jobs []*config.Workload) (string, error) {
+func (l *JobListWriter) jsonOutputJobs(jobs []*config.Workload) (string, error) {
 	type out struct {
 		Jobs []*config.Workload `json:"jobs"`
 	}

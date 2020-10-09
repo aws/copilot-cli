@@ -15,7 +15,7 @@ import (
 func TestListJobOpts_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockError := fmt.Errorf("error")
-	mockLister := mocks.NewMockwsStoreJobLister(ctrl)
+	mockLister := mocks.NewMockworkloadListWriter(ctrl)
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
@@ -33,7 +33,7 @@ func TestListJobOpts_Execute(t *testing.T) {
 			},
 			mocking: func() {
 				mockLister.EXPECT().
-					Jobs("coolapp", false, true).
+					Write("coolapp").
 					Return(nil)
 			},
 		},
@@ -46,39 +46,10 @@ func TestListJobOpts_Execute(t *testing.T) {
 			},
 			mocking: func() {
 				mockLister.EXPECT().
-					Jobs(gomock.Eq("coolapp"), gomock.Any(), gomock.Any()).
+					Write(gomock.Eq("coolapp")).
 					Return(mockError)
 			},
 			expectedErr: fmt.Errorf("error"),
-		},
-		"shouldListLocal argument rendered correctly": {
-			opts: listJobOpts{
-				listWkldVars: listWkldVars{
-					shouldShowLocalWorkloads: true,
-					appName:                  "coolapp",
-				},
-				list: mockLister,
-			},
-			mocking: func() {
-				mockLister.EXPECT().
-					Jobs("coolapp", true, false).
-					Return(nil)
-			},
-		},
-		"json and local arguments rendered correctly": {
-			opts: listJobOpts{
-				listWkldVars: listWkldVars{
-					shouldShowLocalWorkloads: true,
-					shouldOutputJSON:         true,
-					appName:                  "coolapp",
-				},
-				list: mockLister,
-			},
-			mocking: func() {
-				mockLister.EXPECT().
-					Jobs("coolapp", true, true).
-					Return(nil)
-			},
 		},
 	}
 	for name, tc := range testCases {

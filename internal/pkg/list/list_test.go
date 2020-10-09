@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestList_Jobs(t *testing.T) {
+func TestList_JobListWriter(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockError := fmt.Errorf("error")
 	mockStore := mocks.NewMockStore(ctrl)
@@ -154,10 +154,17 @@ func TestList_Jobs(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			b := &bytes.Buffer{}
 			tc.mocking()
-			list := NewLister(mockWs, mockStore, b)
+			list := &JobListWriter{
+				Ws:    mockWs,
+				Store: mockStore,
+				W:     b,
+
+				ShowLocalJobs: tc.inputListLocal,
+				OutputJSON:    tc.inputWriteJSON,
+			}
 
 			// WHEN
-			err := list.Jobs(tc.inputAppName, tc.inputListLocal, tc.inputWriteJSON)
+			err := list.Write(tc.inputAppName)
 
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
@@ -168,7 +175,7 @@ func TestList_Jobs(t *testing.T) {
 	}
 }
 
-func TestList_Services(t *testing.T) {
+func TestList_SvcListWriter(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockError := fmt.Errorf("error")
 	mockStore := mocks.NewMockStore(ctrl)
@@ -308,10 +315,17 @@ func TestList_Services(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			b := &bytes.Buffer{}
 			tc.mocking()
-			list := NewLister(mockWs, mockStore, b)
+			list := &SvcListWriter{
+				Ws:    mockWs,
+				Store: mockStore,
+				W:     b,
+
+				ShowLocalSvcs: tc.inputListLocal,
+				OutputJSON:    tc.inputWriteJSON,
+			}
 
 			// WHEN
-			err := list.Services(tc.inputAppName, tc.inputListLocal, tc.inputWriteJSON)
+			err := list.Write(tc.inputAppName)
 
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())

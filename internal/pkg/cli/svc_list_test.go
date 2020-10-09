@@ -15,7 +15,7 @@ import (
 func TestListSvcOpts_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockError := fmt.Errorf("error")
-	mockLister := mocks.NewMockwsStoreSvcLister(ctrl)
+	mockLister := mocks.NewMockworkloadListWriter(ctrl)
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
@@ -33,7 +33,7 @@ func TestListSvcOpts_Execute(t *testing.T) {
 			},
 			mocking: func() {
 				mockLister.EXPECT().
-					Services("coolapp", false, true).
+					Write("coolapp").
 					Return(nil)
 			},
 		},
@@ -46,25 +46,10 @@ func TestListSvcOpts_Execute(t *testing.T) {
 			},
 			mocking: func() {
 				mockLister.EXPECT().
-					Services(gomock.Eq("coolapp"), gomock.Any(), gomock.Any()).
+					Write(gomock.Eq("coolapp")).
 					Return(mockError)
 			},
 			expectedErr: fmt.Errorf("error"),
-		},
-		"json and local arguments rendered correctly": {
-			opts: listSvcOpts{
-				listWkldVars: listWkldVars{
-					shouldShowLocalWorkloads: true,
-					shouldOutputJSON:         true,
-					appName:                  "coolapp",
-				},
-				list: mockLister,
-			},
-			mocking: func() {
-				mockLister.EXPECT().
-					Services("coolapp", true, true).
-					Return(nil)
-			},
 		},
 	}
 	for name, tc := range testCases {

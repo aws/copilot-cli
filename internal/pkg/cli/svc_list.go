@@ -31,7 +31,7 @@ type listSvcOpts struct {
 
 	// Interfaces to dependencies.
 	sel  appSelector
-	list wsStoreSvcLister
+	list workloadListWriter
 }
 
 func newListSvcOpts(vars listWkldVars) (*listSvcOpts, error) {
@@ -43,7 +43,14 @@ func newListSvcOpts(vars listWkldVars) (*listSvcOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	svcLister := list.NewLister(ws, store, os.Stdout)
+	svcLister := &list.SvcListWriter{
+		Ws:    ws,
+		Store: store,
+		W:     os.Stdout,
+
+		ShowLocalSvcs: vars.shouldShowLocalWorkloads,
+		OutputJSON:    vars.shouldOutputJSON,
+	}
 
 	return &listSvcOpts{
 		listWkldVars: vars,
@@ -70,7 +77,7 @@ func (o *listSvcOpts) Ask() error {
 // Execute lists the services through the prompt.
 func (o *listSvcOpts) Execute() error {
 
-	if err := o.list.Services(o.appName, o.shouldShowLocalWorkloads, o.shouldOutputJSON); err != nil {
+	if err := o.list.Write(o.appName); err != nil {
 		return err
 	}
 

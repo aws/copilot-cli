@@ -268,78 +268,41 @@ func (mr *MockjobStoreMockRecorder) DeleteJob(appName, jobName interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteJob", reflect.TypeOf((*MockjobStore)(nil).DeleteJob), appName, jobName)
 }
 
-// MockwsStoreSvcLister is a mock of wsStoreSvcLister interface
-type MockwsStoreSvcLister struct {
+// MockworkloadListWriter is a mock of workloadListWriter interface
+type MockworkloadListWriter struct {
 	ctrl     *gomock.Controller
-	recorder *MockwsStoreSvcListerMockRecorder
+	recorder *MockworkloadListWriterMockRecorder
 }
 
-// MockwsStoreSvcListerMockRecorder is the mock recorder for MockwsStoreSvcLister
-type MockwsStoreSvcListerMockRecorder struct {
-	mock *MockwsStoreSvcLister
+// MockworkloadListWriterMockRecorder is the mock recorder for MockworkloadListWriter
+type MockworkloadListWriterMockRecorder struct {
+	mock *MockworkloadListWriter
 }
 
-// NewMockwsStoreSvcLister creates a new mock instance
-func NewMockwsStoreSvcLister(ctrl *gomock.Controller) *MockwsStoreSvcLister {
-	mock := &MockwsStoreSvcLister{ctrl: ctrl}
-	mock.recorder = &MockwsStoreSvcListerMockRecorder{mock}
+// NewMockworkloadListWriter creates a new mock instance
+func NewMockworkloadListWriter(ctrl *gomock.Controller) *MockworkloadListWriter {
+	mock := &MockworkloadListWriter{ctrl: ctrl}
+	mock.recorder = &MockworkloadListWriterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockwsStoreSvcLister) EXPECT() *MockwsStoreSvcListerMockRecorder {
+func (m *MockworkloadListWriter) EXPECT() *MockworkloadListWriterMockRecorder {
 	return m.recorder
 }
 
-// Services mocks base method
-func (m *MockwsStoreSvcLister) Services(appName string, showLocal, writeJSON bool) error {
+// Write mocks base method
+func (m *MockworkloadListWriter) Write(appName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Services", appName, showLocal, writeJSON)
+	ret := m.ctrl.Call(m, "Write", appName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Services indicates an expected call of Services
-func (mr *MockwsStoreSvcListerMockRecorder) Services(appName, showLocal, writeJSON interface{}) *gomock.Call {
+// Write indicates an expected call of Write
+func (mr *MockworkloadListWriterMockRecorder) Write(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Services", reflect.TypeOf((*MockwsStoreSvcLister)(nil).Services), appName, showLocal, writeJSON)
-}
-
-// MockwsStoreJobLister is a mock of wsStoreJobLister interface
-type MockwsStoreJobLister struct {
-	ctrl     *gomock.Controller
-	recorder *MockwsStoreJobListerMockRecorder
-}
-
-// MockwsStoreJobListerMockRecorder is the mock recorder for MockwsStoreJobLister
-type MockwsStoreJobListerMockRecorder struct {
-	mock *MockwsStoreJobLister
-}
-
-// NewMockwsStoreJobLister creates a new mock instance
-func NewMockwsStoreJobLister(ctrl *gomock.Controller) *MockwsStoreJobLister {
-	mock := &MockwsStoreJobLister{ctrl: ctrl}
-	mock.recorder = &MockwsStoreJobListerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockwsStoreJobLister) EXPECT() *MockwsStoreJobListerMockRecorder {
-	return m.recorder
-}
-
-// Jobs mocks base method
-func (m *MockwsStoreJobLister) Jobs(appName string, showLocal, writeJSON bool) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Jobs", appName, showLocal, writeJSON)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Jobs indicates an expected call of Jobs
-func (mr *MockwsStoreJobListerMockRecorder) Jobs(appName, showLocal, writeJSON interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Jobs", reflect.TypeOf((*MockwsStoreJobLister)(nil).Jobs), appName, showLocal, writeJSON)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*MockworkloadListWriter)(nil).Write), appName)
 }
 
 // MockapplicationStore is a mock of applicationStore interface

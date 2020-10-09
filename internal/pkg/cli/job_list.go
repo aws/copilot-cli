@@ -22,9 +22,9 @@ const (
 type listJobOpts struct {
 	listWkldVars
 
-	// Depenencies
+	// Dependencies
 	sel  appSelector
-	list wsStoreJobLister
+	list workloadListWriter
 }
 
 func newListJobOpts(vars listWkldVars) (*listJobOpts, error) {
@@ -36,7 +36,14 @@ func newListJobOpts(vars listWkldVars) (*listJobOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	jobLister := list.NewLister(ws, store, os.Stdout)
+	jobLister := &list.JobListWriter{
+		Ws:    ws,
+		Store: store,
+		W:     os.Stdout,
+
+		ShowLocalJobs: vars.shouldOutputJSON,
+		OutputJSON:    vars.shouldOutputJSON,
+	}
 
 	return &listJobOpts{
 		listWkldVars: vars,
@@ -61,7 +68,7 @@ func (o *listJobOpts) Ask() error {
 
 // Execute lists the jobs in the workspace or application.
 func (o *listJobOpts) Execute() error {
-	if err := o.list.Jobs(o.appName, o.shouldShowLocalWorkloads, o.shouldOutputJSON); err != nil {
+	if err := o.list.Write(o.appName); err != nil {
 		return err
 	}
 	return nil
