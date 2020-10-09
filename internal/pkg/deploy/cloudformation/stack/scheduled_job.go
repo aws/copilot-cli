@@ -73,7 +73,7 @@ type errScheduleInvalid struct {
 }
 
 func (e errScheduleInvalid) Error() string {
-	return fmt.Sprintf("schedule is not valid cron, rate, or preset: %s", e.reason.Error())
+	return fmt.Sprintf("schedule is not valid cron, rate, or preset: %v", e.reason)
 }
 
 type errDurationInvalid struct {
@@ -81,7 +81,7 @@ type errDurationInvalid struct {
 }
 
 func (e errDurationInvalid) Error() string {
-	return fmt.Sprintf("parse duration: %s", e.reason.Error())
+	return fmt.Sprintf("parse duration: %v", e.reason)
 }
 
 // NewScheduledJob creates a new ScheduledJob stack from a manifest file.
