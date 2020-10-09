@@ -68,6 +68,30 @@ const (
 	every = "@every "
 )
 
+type errScheduleInvalid struct {
+	reason string
+}
+
+func (e errScheduleInvalid) Error() string {
+	return fmt.Sprintf("schedule is not valid cron, rate, or preset: %s", e.reason)
+}
+
+func newErrScheduleInvalid(reason error) errScheduleInvalid {
+	return errScheduleInvalid{reason: reason.Error()}
+}
+
+type errDurationInvalid struct {
+	reason string
+}
+
+func (e errDurationInvalid) Error() string {
+	return fmt.Sprintf("parse duration: %s", e.reason)
+}
+
+func newErrDurationInvalid(reason error) errDurationInvalid {
+	return errDurationInvalid{reason: reason.Error()}
+}
+
 // NewScheduledJob creates a new ScheduledJob stack from a manifest file.
 func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConfig) (*ScheduledJob, error) {
 	parser := template.New()
@@ -170,7 +194,7 @@ func (j *ScheduledJob) awsSchedule() (string, error) {
 
 	// Try parsing the string as a cron expression to validate it.
 	if _, err := cron.ParseStandard(j.manifest.Schedule); err != nil {
-		return "", fmt.Errorf("schedule is not valid cron, rate, or preset: %w", err)
+		return "", newErrScheduleInvalid(err)
 	}
 	var scheduleExpression string
 	var err error
@@ -200,7 +224,7 @@ func (j *ScheduledJob) awsSchedule() (string, error) {
 func toRate(duration string) (string, error) {
 	d, err := time.ParseDuration(duration)
 	if err != nil {
-		return "", fmt.Errorf("invalid duration %s", duration)
+		return "", newErrDurationInvalid(err)
 	}
 	// Check that rates are not specified in units smaller than minutes
 	if d != d.Truncate(time.Minute) {
@@ -318,7 +342,7 @@ func (j *ScheduledJob) stateMachineOpts() (*template.StateMachineOpts, error) {
 	if j.manifest.Timeout != "" {
 		parsedTimeout, err := time.ParseDuration(j.manifest.Timeout)
 		if err != nil {
-			return nil, err
+			return nil, newErrDurationInvalid(err)
 		}
 		if parsedTimeout < 1*time.Second {
 			return nil, errors.New("timeout must be greater than or equal to 1 second")
