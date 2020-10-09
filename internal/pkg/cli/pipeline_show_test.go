@@ -127,7 +127,7 @@ source:
   properties:
     repository: badgoose/repo
     access_token_secret: "github-token-badgoose-repo"
-    branch: master
+    branch: main
 
 stages:
     -

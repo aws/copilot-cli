@@ -35,7 +35,7 @@ func (cf CloudFormation) DeployService(conf StackConfiguration, opts ...cloudfor
 	return cf.cfnClient.UpdateAndWait(stack)
 }
 
-// DeleteService removes the CloudFormation stack of a deployed service.
-func (cf CloudFormation) DeleteService(in deploy.DeleteWorkloadInput) error {
+// DeleteWorkload removes the CloudFormation stack of a deployed workload.
+func (cf CloudFormation) DeleteWorkload(in deploy.DeleteWorkloadInput) error {
 	return cf.cfnClient.DeleteAndWait(fmt.Sprintf("%s-%s-%s", in.AppName, in.EnvName, in.Name))
 }

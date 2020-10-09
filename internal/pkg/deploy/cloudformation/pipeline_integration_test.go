@@ -176,7 +176,7 @@ func TestPipelineCreation(t *testing.T) {
 				ProviderName: manifest.GithubProviderName,
 				Properties: map[string]interface{}{
 					"repository":                   "chicken/wings",
-					"branch":                       "master",
+					"branch":                       "main",
 					manifest.GithubSecretIdKeyName: secretId,
 				},
 			},

@@ -8,8 +8,14 @@ name: {{.Name}}
 type: {{.Type}}
 
 image:
-  # Docker build arguments. You can specify additional overrides here. Supported: dockerfile, context, args
+{{- if .ImageConfig.Build.BuildArgs.Dockerfile}}
+  # Docker build arguments. You can specify additional overrides here. Supported: dockerfile, context, args.
   build: {{.ImageConfig.Build.BuildArgs.Dockerfile}}
+{{- end}}
+{{- if .ImageConfig.Image.Location}}
+  # The name of the Docker image.
+  location: {{.ImageConfig.Image.Location}}
+{{- end}}
   # Port exposed through your container to route traffic to it.
   port: {{.ImageConfig.Port}}
 
