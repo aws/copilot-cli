@@ -260,7 +260,7 @@ func (o *deleteJobOpts) deleteStacks(envs []*config.Environment) error {
 			AppName: o.appName,
 		}); err != nil {
 			o.spinner.Stop(log.Serrorf(fmtJobDeleteFailed, o.name, env.Name, err))
-			return err
+			return fmt.Errorf("delete job: %w", err)
 		}
 		o.spinner.Stop(log.Ssuccessf(fmtJobDeleteComplete, o.name, env.Name))
 	}

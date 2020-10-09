@@ -390,7 +390,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Serrorf(fmtSvcDeleteFailed, mockSvcName, mockEnvName, testError)),
 				)
 			},
-			wantedError: testError,
+			wantedError: fmt.Errorf("delete service: %w", testError),
 		},
 	}
 

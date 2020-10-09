@@ -269,7 +269,7 @@ func (o *deleteSvcOpts) deleteStacks(envs []*config.Environment) error {
 			AppName: o.appName,
 		}); err != nil {
 			o.spinner.Stop(log.Serrorf(fmtSvcDeleteFailed, o.name, env.Name, err))
-			return err
+			return fmt.Errorf("delete service: %w", err)
 		}
 		o.spinner.Stop(log.Ssuccessf(fmtSvcDeleteComplete, o.name, env.Name))
 	}

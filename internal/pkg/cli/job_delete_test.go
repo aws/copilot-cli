@@ -391,7 +391,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Serrorf(fmtJobDeleteFailed, mockJobName, mockEnvName, testError)),
 				)
 			},
-			wantedError: testError,
+			wantedError: fmt.Errorf("delete job: %w", testError),
 		},
 	}
 
