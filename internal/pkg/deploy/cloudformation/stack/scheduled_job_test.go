@@ -165,9 +165,10 @@ Outputs:
 
 func TestScheduledJob_awsSchedule(t *testing.T) {
 	testCases := map[string]struct {
-		inputSchedule  string
-		wantedSchedule string
-		wantedError    error
+		inputSchedule   string
+		wantedSchedule  string
+		wantedError     error
+		wantedErrorType interface{}
 	}{
 		"simple rate": {
 			inputSchedule:  "@every 1h30m",
@@ -186,20 +187,20 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 			wantedSchedule: "rate(1 minute)",
 		},
 		"malformed rate": {
-			inputSchedule: "@every 402 seconds",
-			wantedError:   errors.New(`schedule is not valid cron, rate, or preset: failed to parse duration @every 402 seconds: time: unknown unit  seconds in duration 402 seconds`),
+			inputSchedule:   "@every 402 seconds",
+			wantedErrorType: &errScheduleInvalid{},
 		},
 		"malformed cron": {
-			inputSchedule: "every 4m",
-			wantedError:   errors.New("schedule is not valid cron, rate, or preset: expected exactly 5 fields, found 2: [every 4m]"),
+			inputSchedule:   "every 4m",
+			wantedErrorType: &errScheduleInvalid{},
 		},
 		"correctly converts predefined schedule": {
 			inputSchedule:  "@daily",
 			wantedSchedule: "cron(0 0 * * ? *)",
 		},
 		"unrecognized predefined schedule": {
-			inputSchedule: "@minutely",
-			wantedError:   errors.New("schedule is not valid cron, rate, or preset: unrecognized descriptor: @minutely"),
+			inputSchedule:   "@minutely",
+			wantedErrorType: &errScheduleInvalid{},
 		},
 		"correctly converts cron with all asterisks": {
 			inputSchedule:  "* * * * *",
@@ -258,12 +259,12 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 			wantedError:   errors.New("parse fixed interval: duration must be a whole number of minutes or hours"),
 		},
 		"error on too many inputs": {
-			inputSchedule: "* * * * * *",
-			wantedError:   errors.New("schedule is not valid cron, rate, or preset: expected exactly 5 fields, found 6: [* * * * * *]"),
+			inputSchedule:   "* * * * * *",
+			wantedErrorType: &errScheduleInvalid{},
 		},
 		"cron syntax error": {
-			inputSchedule: "* * * malformed *",
-			wantedError:   errors.New("schedule is not valid cron, rate, or preset: failed to parse int from malformed: strconv.Atoi: parsing \"malformed\": invalid syntax"),
+			inputSchedule:   "* * * malformed *",
+			wantedErrorType: &errScheduleInvalid{},
 		},
 	}
 	for name, tc := range testCases {
@@ -285,7 +286,11 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 			parsedSchedule, err := job.awsSchedule()
 
 			// THEN
-			if tc.wantedError != nil {
+			if tc.wantedErrorType != nil {
+				ok := errors.As(err, tc.wantedErrorType)
+				require.True(t, ok)
+				require.NotEmpty(t, tc.wantedErrorType)
+			} else if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
@@ -297,10 +302,11 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 
 func TestScheduledJob_stateMachine(t *testing.T) {
 	testCases := map[string]struct {
-		inputTimeout string
-		inputRetries int
-		wantedConfig template.StateMachineOpts
-		wantedError  error
+		inputTimeout    string
+		inputRetries    int
+		wantedConfig    template.StateMachineOpts
+		wantedError     error
+		wantedErrorType interface{}
 	}{
 		"timeout and retries": {
 			inputTimeout: "3h",
@@ -333,8 +339,8 @@ func TestScheduledJob_stateMachine(t *testing.T) {
 			wantedError:  errors.New("timeout must be greater than or equal to 1 second"),
 		},
 		"invalid timeout": {
-			inputTimeout: "5 hours",
-			wantedError:  errors.New(`time: unknown unit  hours in duration 5 hours`),
+			inputTimeout:    "5 hours",
+			wantedErrorType: &errDurationInvalid{},
 		},
 		"timeout non-integer number of seconds": {
 			inputTimeout: "1s40ms",
@@ -363,6 +369,8 @@ func TestScheduledJob_stateMachine(t *testing.T) {
 			// THEN
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
+			} else if tc.wantedErrorType != nil {
+				require.True(t, errors.As(err, tc.wantedErrorType))
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, aws.IntValue(tc.wantedConfig.Retries), aws.IntValue(parsedStateMachine.Retries))

@@ -79,7 +79,7 @@ func TestCloudFormation_UpdatePipeline(t *testing.T) {
 			Properties: map[string]interface{}{
 				"repository":          "aws/somethingCool",
 				"access_token_secret": "github-token-badgoose-backend",
-				"branch":              "master",
+				"branch":              "main",
 			},
 		},
 		Stages:          nil,
