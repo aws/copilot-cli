@@ -31,21 +31,10 @@ const (
 	yearly  = "Yearly"
 )
 
-var scheduleTypes = []string{
-	rate,
-	fixedSchedule,
-}
+const (
+	// DockerfilePromptUseImage is the option for using existing image instead of Dockerfile.
+	DockerfilePromptUseImage = "Use an existing image instead"
 
-var presetSchedules = []string{
-	custom,
-	hourly,
-	daily,
-	weekly,
-	monthly,
-	yearly,
-}
-
-var (
 	ratePrompt = "How long would you like to wait between executions?"
 	rateHelp   = `You can specify the time as a duration string. (For example, 2m, 1h30m, 24h)`
 
@@ -61,6 +50,20 @@ For example: 0 17 ? * MON-FRI (5 pm on weekdays)
 	humanReadableCronConfirmHelp   = `Confirm whether the schedule looks right to you.
 (Y)es will continue execution. (N)o will allow you to input a different schedule.`
 )
+
+var scheduleTypes = []string{
+	rate,
+	fixedSchedule,
+}
+
+var presetSchedules = []string{
+	custom,
+	hourly,
+	daily,
+	weekly,
+	monthly,
+	yearly,
+}
 
 // Prompter wraps the methods to ask for inputs from the terminal.
 type Prompter interface {
@@ -436,6 +439,7 @@ func (s *WorkspaceSelect) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoun
 	// If Dockerfiles are found in the current directory or subdirectory one level down, ask the user to select one.
 	var sel string
 	if err == nil {
+		dockerfiles = append(dockerfiles, DockerfilePromptUseImage)
 		sel, err = s.prompt.SelectOne(
 			selPrompt,
 			selHelp,

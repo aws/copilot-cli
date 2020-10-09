@@ -41,7 +41,7 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 				Configuration: map[string]*string{
 					"Owner":      aws.String("badgoose"),
 					"Repo":       aws.String("repo"),
-					"Branch":     aws.String("master"),
+					"Branch":     aws.String("main"),
 					"OAuthToken": aws.String("****"),
 				},
 				Name: aws.String("SourceCodeFor-dinder"),
