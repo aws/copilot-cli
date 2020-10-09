@@ -359,7 +359,7 @@ func (o *deployJobOpts) askJobName() error {
 		return nil
 	}
 
-	name, err := o.sel.Job("Select a job from your workspace", "", o.appName)
+	name, err := o.sel.Job("Select a job from your workspace", "")
 	if err != nil {
 		return fmt.Errorf("select job: %w", err)
 	}

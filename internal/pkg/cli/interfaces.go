@@ -421,8 +421,8 @@ type deploySelector interface {
 
 type wsSelector interface {
 	appEnvSelector
-	Service(prompt, help string, app string) (string, error)
-	Job(prompt, help string, app string) (string, error)
+	Service(prompt, help string) (string, error)
+	Job(prompt, help string) (string, error)
 }
 
 type initJobSelector interface {

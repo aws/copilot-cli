@@ -94,8 +94,9 @@ type WsWorkloadLister interface {
 }
 
 // WsWorkloadDockerfileLister wraps methods to get workload names and Dockerfiles from the workspace.
-type WsWorkloadDockerfileLister interface {
+type WorkspaceRetriever interface {
 	WsWorkloadLister
+	Summary() (*workspace.Summary, error)
 	ListDockerfiles() ([]string, error)
 }
 
@@ -120,7 +121,7 @@ type ConfigSelect struct {
 // WorkspaceSelect  is an application and environment selector, but can also choose a service from the workspace.
 type WorkspaceSelect struct {
 	*Select
-	wlLister WsWorkloadDockerfileLister
+	wlLister WorkspaceRetriever
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -149,7 +150,7 @@ func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
 
 // NewWorkspaceSelect returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
-func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WsWorkloadDockerfileLister) *WorkspaceSelect {
+func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriever) *WorkspaceSelect {
 	return &WorkspaceSelect{
 		Select:   NewSelect(prompt, store),
 		wlLister: ws,
@@ -260,12 +261,16 @@ func (s *DeploySelect) DeployedService(prompt, help string, app string, opts ...
 }
 
 // Service fetches all services in the workspace and then prompts the user to select one.
-func (s *WorkspaceSelect) Service(msg, help string, app string) (string, error) {
+func (s *WorkspaceSelect) Service(msg, help string) (string, error) {
 	wsServiceNames, err := s.retrieveWorkspaceServices()
 	if err != nil {
 		return "", fmt.Errorf("retrieve services from workspace: %w", err)
 	}
-	storeServiceNames, err := s.Select.lister.ListServices(app)
+	summary, err := s.wlLister.Summary()
+	if err != nil {
+		return "", fmt.Errorf("retrieve app name from workspace: %w", err)
+	}
+	storeServiceNames, err := s.Select.lister.ListServices(summary.Application)
 	if err != nil {
 		return "", fmt.Errorf("retrieve services from store: %w", err)
 	}
@@ -286,12 +291,16 @@ func (s *WorkspaceSelect) Service(msg, help string, app string) (string, error) 
 }
 
 // Job fetches all jobs in the workspace and then prompts the user to select one.
-func (s *WorkspaceSelect) Job(msg, help string, app string) (string, error) {
+func (s *WorkspaceSelect) Job(msg, help string) (string, error) {
 	wsJobNames, err := s.retrieveWorkspaceJobs()
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs from workspace: %w", err)
 	}
-	storeJobNames, err := s.Select.lister.ListServices(app)
+	summary, err := s.wlLister.Summary()
+	if err != nil {
+		return "", fmt.Errorf("retrieve app name from workspace: %w", err)
+	}
+	storeJobNames, err := s.Select.lister.ListServices(summary.Application)
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs from store: %w", err)
 	}

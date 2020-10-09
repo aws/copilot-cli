@@ -204,7 +204,7 @@ func (o *deploySvcOpts) askSvcName() error {
 		return nil
 	}
 
-	name, err := o.sel.Service("Select a service in your workspace", "", o.appName)
+	name, err := o.sel.Service("Select a service in your workspace", "")
 	if err != nil {
 		return fmt.Errorf("select service: %w", err)
 	}

@@ -4487,33 +4487,33 @@ func (mr *MockwsSelectorMockRecorder) Environment(prompt, help, app interface{},
 }
 
 // Service mocks base method
-func (m *MockwsSelector) Service(prompt, help, app string) (string, error) {
+func (m *MockwsSelector) Service(prompt, help string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Service", prompt, help, app)
+	ret := m.ctrl.Call(m, "Service", prompt, help)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Service indicates an expected call of Service
-func (mr *MockwsSelectorMockRecorder) Service(prompt, help, app interface{}) *gomock.Call {
+func (mr *MockwsSelectorMockRecorder) Service(prompt, help interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockwsSelector)(nil).Service), prompt, help, app)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockwsSelector)(nil).Service), prompt, help)
 }
 
 // Job mocks base method
-func (m *MockwsSelector) Job(prompt, help, app string) (string, error) {
+func (m *MockwsSelector) Job(prompt, help string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Job", prompt, help, app)
+	ret := m.ctrl.Call(m, "Job", prompt, help)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Job indicates an expected call of Job
-func (mr *MockwsSelectorMockRecorder) Job(prompt, help, app interface{}) *gomock.Call {
+func (mr *MockwsSelectorMockRecorder) Job(prompt, help interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Job", reflect.TypeOf((*MockwsSelector)(nil).Job), prompt, help, app)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Job", reflect.TypeOf((*MockwsSelector)(nil).Job), prompt, help)
 }
 
 // MockinitJobSelector is a mock of initJobSelector interface

@@ -138,7 +138,7 @@ func TestSvcDeployOpts_Ask(t *testing.T) {
 			inAppName:  "phonetool",
 			inImageTag: "latest",
 			wantedCalls: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service("Select a service in your workspace", "", "phonetool").Return("frontend", nil)
+				m.EXPECT().Service("Select a service in your workspace", "").Return("frontend", nil)
 				m.EXPECT().Environment("Select an environment", "", "phonetool").Return("prod-iad", nil)
 			},
 
@@ -152,7 +152,7 @@ func TestSvcDeployOpts_Ask(t *testing.T) {
 			inSvcName:  "frontend",
 			inImageTag: "latest",
 			wantedCalls: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any(), "phonetool").Times(0)
+				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
 				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 

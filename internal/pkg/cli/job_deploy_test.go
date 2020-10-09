@@ -126,7 +126,7 @@ func TestJobDeployOpts_Ask(t *testing.T) {
 			inAppName:  "phonetool",
 			inImageTag: "latest",
 			wantedCalls: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Job("Select a job from your workspace", "", "phonetool").Return("resizer", nil)
+				m.EXPECT().Job("Select a job from your workspace", "").Return("resizer", nil)
 				m.EXPECT().Environment("Select an environment", "", "phonetool").Return("prod-iad", nil)
 			},
 
@@ -140,7 +140,7 @@ func TestJobDeployOpts_Ask(t *testing.T) {
 			inJobName:  "resizer",
 			inImageTag: "latest",
 			wantedCalls: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Job(gomock.Any(), gomock.Any(), "phonetool").Times(0)
+				m.EXPECT().Job(gomock.Any(), gomock.Any()).Times(0)
 				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 

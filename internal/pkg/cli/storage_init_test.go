@@ -258,7 +258,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockCfg: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service(gomock.Eq(storageInitSvcPrompt), gomock.Any(), wantedAppName).Return(wantedSvcName, nil)
+				m.EXPECT().Service(gomock.Eq(storageInitSvcPrompt), gomock.Any()).Return(wantedSvcName, nil)
 			},
 
 			wantedErr: nil,
@@ -270,7 +270,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockCfg: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any(), wantedAppName).Return("", errors.New("some error"))
+				m.EXPECT().Service(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
 
 			wantedErr: fmt.Errorf("retrieve local service names: some error"),
