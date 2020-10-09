@@ -249,7 +249,7 @@ source:
   properties:
     repository: aws/somethingCool
     access_token_secret: "github-token-badgoose-backend"
-    branch: master
+    branch: main
 
 stages:
     -
