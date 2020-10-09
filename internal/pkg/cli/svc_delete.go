@@ -38,8 +38,8 @@ const (
 	fmtSvcDeleteStart             = "Deleting service %s from environment %s."
 	fmtSvcDeleteFailed            = "Failed to delete service %s from environment %s: %v."
 	fmtSvcDeleteComplete          = "Deleted service %s from environment %s."
-	fmtSvcDeleteResourcesStart    = "Deleting service %s resources from application %s."
-	fmtSvcDeleteResourcesComplete = "Deleted service %s resources from application %s."
+	fmtSvcDeleteResourcesStart    = "Deleting resources of service %s from application %s."
+	fmtSvcDeleteResourcesComplete = "Deleted resources of service %s from application %s."
 )
 
 var (
@@ -63,11 +63,8 @@ type deleteSvcOpts struct {
 	prompt    prompter
 	sel       wsSelector
 	appCFN    svcRemoverFromApp
-	getSvcCFN func(session *awssession.Session) svcDeleter
+	getSvcCFN func(session *awssession.Session) wlDeleter
 	getECR    func(session *awssession.Session) imageRemover
-
-	// Internal state.
-	environments []*config.Environment
 }
 
 func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
@@ -96,7 +93,7 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 		sess:    provider,
 		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
 		appCFN:  cloudformation.New(defaultSession),
-		getSvcCFN: func(session *awssession.Session) svcDeleter {
+		getSvcCFN: func(session *awssession.Session) wlDeleter {
 			return cloudformation.New(session)
 		},
 		getECR: func(session *awssession.Session) imageRemover {
@@ -160,11 +157,12 @@ func (o *deleteSvcOpts) Ask() error {
 // If the service is being removed from the application, Execute will
 // also delete the ECR repository and the SSM parameter.
 func (o *deleteSvcOpts) Execute() error {
-	if err := o.appEnvironments(); err != nil {
+	envs, err := o.appEnvironments()
+	if err != nil {
 		return err
 	}
 
-	if err := o.deleteStacks(); err != nil {
+	if err := o.deleteStacks(envs); err != nil {
 		return err
 	}
 
@@ -174,7 +172,7 @@ func (o *deleteSvcOpts) Execute() error {
 		return nil
 	}
 
-	if err := o.emptyECRRepos(); err != nil {
+	if err := o.emptyECRRepos(envs); err != nil {
 		return err
 	}
 	if err := o.removeSvcFromApp(); err != nil {
@@ -238,25 +236,26 @@ func (o *deleteSvcOpts) askSvcName() error {
 	return nil
 }
 
-func (o *deleteSvcOpts) appEnvironments() error {
+func (o *deleteSvcOpts) appEnvironments() ([]*config.Environment, error) {
+	var envs []*config.Environment
+	var err error
 	if o.envName != "" {
 		env, err := o.targetEnv()
 		if err != nil {
-			return err
+			return nil, err
 		}
-		o.environments = append(o.environments, env)
+		envs = append(envs, env)
 	} else {
-		envs, err := o.store.ListEnvironments(o.appName)
+		envs, err = o.store.ListEnvironments(o.appName)
 		if err != nil {
-			return fmt.Errorf("list environments: %w", err)
+			return nil, fmt.Errorf("list environments: %w", err)
 		}
-		o.environments = envs
 	}
-	return nil
+	return envs, nil
 }
 
-func (o *deleteSvcOpts) deleteStacks() error {
-	for _, env := range o.environments {
+func (o *deleteSvcOpts) deleteStacks(envs []*config.Environment) error {
+	for _, env := range envs {
 		sess, err := o.sess.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return err
@@ -264,13 +263,13 @@ func (o *deleteSvcOpts) deleteStacks() error {
 
 		cfClient := o.getSvcCFN(sess)
 		o.spinner.Start(fmt.Sprintf(fmtSvcDeleteStart, o.name, env.Name))
-		if err := cfClient.DeleteService(deploy.DeleteWorkloadInput{
+		if err := cfClient.DeleteWorkload(deploy.DeleteWorkloadInput{
 			Name:    o.name,
 			EnvName: env.Name,
 			AppName: o.appName,
 		}); err != nil {
 			o.spinner.Stop(log.Serrorf(fmtSvcDeleteFailed, o.name, env.Name, err))
-			return err
+			return fmt.Errorf("delete service: %w", err)
 		}
 		o.spinner.Stop(log.Ssuccessf(fmtSvcDeleteComplete, o.name, env.Name))
 	}
@@ -278,9 +277,9 @@ func (o *deleteSvcOpts) deleteStacks() error {
 }
 
 // This is to make mocking easier in unit tests
-func (o *deleteSvcOpts) emptyECRRepos() error {
+func (o *deleteSvcOpts) emptyECRRepos(envs []*config.Environment) error {
 	var uniqueRegions []string
-	for _, env := range o.environments {
+	for _, env := range envs {
 		if !contains(env.Region, uniqueRegions) {
 			uniqueRegions = append(uniqueRegions, env.Region)
 		}
