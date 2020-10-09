@@ -1248,7 +1248,12 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 			mockPrompt: func(m *mocks.MockPrompter) {
 				m.EXPECT().SelectOne(
 					gomock.Any(), gomock.Any(),
-					gomock.Eq(dockerfiles),
+					gomock.Eq([]string{
+						"./Dockerfile",
+						"backend/Dockerfile",
+						"frontend/Dockerfile",
+						"Use an existing image instead",
+					}),
 					gomock.Any(),
 				).Return("frontend/Dockerfile", nil)
 			},

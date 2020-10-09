@@ -112,7 +112,7 @@ func TestCloudFormation_DeployService(t *testing.T) {
 	}
 }
 
-func TestCloudFormation_DeleteService(t *testing.T) {
+func TestCloudFormation_DeleteWorkload(t *testing.T) {
 	testCases := map[string]struct {
 		in         deploy.DeleteWorkloadInput
 		createMock func(ctrl *gomock.Controller) cfnClient
@@ -141,7 +141,7 @@ func TestCloudFormation_DeleteService(t *testing.T) {
 			}
 
 			// WHEN
-			err := c.DeleteService(tc.in)
+			err := c.DeleteWorkload(tc.in)
 
 			// THEN
 			require.NoError(t, err)

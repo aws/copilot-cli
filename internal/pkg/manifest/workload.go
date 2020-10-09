@@ -263,6 +263,7 @@ type TaskConfig struct {
 type WorkloadProps struct {
 	Name       string
 	Dockerfile string
+	Image      string
 }
 
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.
@@ -304,8 +305,9 @@ func UnmarshalWorkload(in []byte) (interface{}, error) {
 }
 
 func requiresBuild(image Image) (bool, error) {
-	hasBuild, hasURL := image.Build.isEmpty(), image.Location == nil
-	if hasBuild == hasURL {
+	noBuild, noURL := image.Build.isEmpty(), image.Location == nil
+	// Error if both of them are specified or neither is specified.
+	if noBuild == noURL {
 		return false, fmt.Errorf(`either "image.build" or "image.location" needs to be specified in the manifest`)
 	}
 	if image.Location == nil {
@@ -327,4 +329,11 @@ func dockerfileBuildRequired(workloadType string, svc interface{}) (bool, error)
 		return false, fmt.Errorf("check if %s requires building from local Dockerfile: %w", workloadType, err)
 	}
 	return required, nil
+}
+
+func stringP(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

@@ -25,6 +25,7 @@ const (
 
 	toolsAccountID = "012345678910"
 	envAccountID   = "109876543210"
+	defaultBranch  = "main"
 )
 
 func TestPipelineParameters(t *testing.T) {
@@ -128,7 +129,7 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 			ProviderName: "GitHub",
 			Properties: map[string]interface{}{
 				"repository":          "hencrice/amazon-ecs-cli-v2",
-				"branch":              "master",
+				"branch":              defaultBranch,
 				"access_token_secret": "testGitHubSecret",
 			},
 		},

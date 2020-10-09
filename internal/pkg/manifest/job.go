@@ -36,7 +36,7 @@ type ScheduledJob struct {
 
 // ScheduledJobConfig holds the configuration for a scheduled job
 type ScheduledJobConfig struct {
-	ImageConfig    Image `yaml:",flow"`
+	ImageConfig    Image `yaml:"image,flow"`
 	TaskConfig     `yaml:",inline"`
 	*Logging       `yaml:"logging,flow"`
 	Sidecar        `yaml:",inline"`
@@ -90,7 +90,8 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	job := newDefaultScheduledJob()
 	// Apply overrides.
 	job.Name = aws.String(props.Name)
-	job.ScheduledJobConfig.ImageConfig.Build.BuildArgs.Dockerfile = aws.String(props.Dockerfile)
+	job.ScheduledJobConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
+	job.ScheduledJobConfig.ImageConfig.Location = stringP(props.Image)
 	job.Schedule = props.Schedule
 	job.Retries = props.Retries
 	job.Timeout = props.Timeout

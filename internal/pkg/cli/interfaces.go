@@ -307,12 +307,16 @@ type environmentDeployer interface {
 	GetEnvironment(appName, envName string) (*config.Environment, error)
 }
 
-type svcDeleter interface {
-	DeleteService(in deploy.DeleteWorkloadInput) error
+type wlDeleter interface {
+	DeleteWorkload(in deploy.DeleteWorkloadInput) error
 }
 
 type svcRemoverFromApp interface {
 	RemoveServiceFromApp(app *config.Application, svcName string) error
+}
+
+type jobRemoverFromApp interface {
+	RemoveJobFromApp(app *config.Application, jobName string) error
 }
 
 type imageRemover interface {
@@ -395,7 +399,7 @@ type deletePipelineRunner interface {
 	Run() error
 }
 
-type askExecutor interface {
+type executeAsker interface {
 	Ask() error
 	executor
 }
