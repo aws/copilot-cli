@@ -21,8 +21,8 @@ func TestScheduledJob_MarshalBinary(t *testing.T) {
 		"without timeout or retries": {
 			inProps: ScheduledJobProps{
 				WorkloadProps: &WorkloadProps{
-					Name:       "cuteness-aggregator",
-					Dockerfile: "./cuteness-aggregator/Dockerfile",
+					Name:  "cuteness-aggregator",
+					Image: "copilot/cuteness-aggregator",
 				},
 				Schedule: "@weekly",
 			},
