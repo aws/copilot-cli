@@ -4,7 +4,6 @@
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: subscribers
-
 # Your service is reachable at "http://subscribers.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:8080" but is not public.
 type: Backend Service
 

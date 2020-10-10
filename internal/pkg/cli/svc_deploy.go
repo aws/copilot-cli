@@ -488,7 +488,11 @@ func (o *deploySvcOpts) showSvcURI() error {
 	}
 	switch o.targetSvc.Type {
 	case manifest.BackendServiceType:
-		log.Successf("Deployed %s, its service discovery endpoint is %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
+		msg := fmt.Sprintf("Deployed %s.\n", color.HighlightUserInput(o.name))
+		if uri != describe.BlankServiceDiscoveryURI {
+			msg = fmt.Sprintf("Deployed %s, its service discovery endpoint is %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
+		}
+		log.Success(msg)
 	default:
 		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.name), color.HighlightResource(uri))
 	}
