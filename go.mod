@@ -34,7 +34,7 @@ require (
 	github.com/xlab/treeprint v1.0.0
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37 // indirect
 	golang.org/x/mod v0.3.0
-	gopkg.in/ini.v1 v1.61.0
+	gopkg.in/ini.v1 v1.62.0
 	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c
 )
 
