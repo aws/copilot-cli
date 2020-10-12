@@ -16,25 +16,18 @@ import (
 )
 
 const (
-	svcListAppNamePrompt = "Which application's services would you like to list?"
-	wkldListAppNameHelp  = "An application groups all of your services and jobs together."
+	jobListAppNamePrompt = "Which application's jobs would you like to list?"
 )
 
-type listWkldVars struct {
-	appName                  string
-	shouldOutputJSON         bool
-	shouldShowLocalWorkloads bool
-}
-
-type listSvcOpts struct {
+type listJobOpts struct {
 	listWkldVars
 
-	// Interfaces to dependencies.
+	// Dependencies
 	sel  appSelector
 	list workloadListWriter
 }
 
-func newListSvcOpts(vars listWkldVars) (*listSvcOpts, error) {
+func newListJobOpts(vars listWkldVars) (*listJobOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, err
@@ -43,30 +36,29 @@ func newListSvcOpts(vars listWkldVars) (*listSvcOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	svcLister := &list.SvcListWriter{
+	jobLister := &list.JobListWriter{
 		Ws:    ws,
 		Store: store,
 		W:     os.Stdout,
 
-		ShowLocalSvcs: vars.shouldShowLocalWorkloads,
+		ShowLocalJobs: vars.shouldOutputJSON,
 		OutputJSON:    vars.shouldOutputJSON,
 	}
 
-	return &listSvcOpts{
+	return &listJobOpts{
 		listWkldVars: vars,
 
-		list: svcLister,
+		list: jobLister,
 		sel:  selector.NewSelect(prompt.New(), store),
 	}, nil
 }
 
-// Ask asks for fields that are required but not passed in.
-func (o *listSvcOpts) Ask() error {
+func (o *listJobOpts) Ask() error {
 	if o.appName != "" {
 		return nil
 	}
 
-	name, err := o.sel.Application(svcListAppNamePrompt, wkldListAppNameHelp)
+	name, err := o.sel.Application(jobListAppNamePrompt, wkldListAppNameHelp)
 	if err != nil {
 		return fmt.Errorf("select application name: %w", err)
 	}
@@ -74,27 +66,24 @@ func (o *listSvcOpts) Ask() error {
 	return nil
 }
 
-// Execute lists the services through the prompt.
-func (o *listSvcOpts) Execute() error {
-
+// Execute lists the jobs in the workspace or application.
+func (o *listJobOpts) Execute() error {
 	if err := o.list.Write(o.appName); err != nil {
 		return err
 	}
-
 	return nil
 }
 
-// buildSvcListCmd builds the command for listing services in an appication.
-func buildSvcListCmd() *cobra.Command {
+func buildJobListCmd() *cobra.Command {
 	vars := listWkldVars{}
 	cmd := &cobra.Command{
 		Use:   "ls",
-		Short: "Lists all the services in an application.",
+		Short: "Lists all the jobs in an application.",
 		Example: `
-  Lists all the services for the "myapp" application.
-  /code $ copilot svc ls --app myapp`,
+  Lists all the jobs for the "myapp" application.
+  /code $ copilot job ls --app myapp`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts, err := newListSvcOpts(vars)
+			opts, err := newListJobOpts(vars)
 			if err != nil {
 				return err
 			}
@@ -106,6 +95,6 @@ func buildSvcListCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
-	cmd.Flags().BoolVar(&vars.shouldShowLocalWorkloads, localFlag, false, localSvcFlagDescription)
+	cmd.Flags().BoolVar(&vars.shouldShowLocalWorkloads, localFlag, false, localJobFlagDescription)
 	return cmd
 }
