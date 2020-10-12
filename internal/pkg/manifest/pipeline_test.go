@@ -17,6 +17,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	defaultBranch = "main"
+)
+
 func TestNewProvider(t *testing.T) {
 	testCases := map[string]struct {
 		providerConfig interface{}
@@ -25,7 +29,7 @@ func TestNewProvider(t *testing.T) {
 		"successfully create GitHub provider": {
 			providerConfig: &GitHubProperties{
 				OwnerAndRepository: "aws/amazon-ecs-cli-v2",
-				Branch:             "master",
+				Branch:             defaultBranch,
 			},
 		},
 	}
@@ -58,7 +62,7 @@ func TestNewPipelineManifest(t *testing.T) {
 			provider: func() Provider {
 				p, err := NewProvider(&GitHubProperties{
 					OwnerAndRepository: "aws/amazon-ecs-cli-v2",
-					Branch:             "master",
+					Branch:             defaultBranch,
 				})
 				require.NoError(t, err, "failed to create provider")
 				return p
@@ -70,7 +74,7 @@ func TestNewPipelineManifest(t *testing.T) {
 			provider: func() Provider {
 				p, err := NewProvider(&GitHubProperties{
 					OwnerAndRepository: "aws/amazon-ecs-cli-v2",
-					Branch:             "master",
+					Branch:             defaultBranch,
 				})
 				require.NoError(t, err, "failed to create provider")
 				return p
@@ -92,7 +96,7 @@ func TestNewPipelineManifest(t *testing.T) {
 					ProviderName: "GitHub",
 					Properties: structs.Map(GitHubProperties{
 						OwnerAndRepository: "aws/amazon-ecs-cli-v2",
-						Branch:             "master",
+						Branch:             defaultBranch,
 					}),
 				},
 				Stages: []PipelineStage{
@@ -191,7 +195,7 @@ source:
   provider: GitHub
   properties:
     repository: aws/somethingCool
-    branch: master
+    branch: main
 
 stages:
     -
@@ -217,7 +221,7 @@ source:
   properties:
     repository: aws/somethingCool
     access_token_secret: "github-token-badgoose-backend"
-    branch: master
+    branch: main
 
 stages:
     -
@@ -235,7 +239,7 @@ stages:
 					Properties: map[string]interface{}{
 						"access_token_secret": "github-token-badgoose-backend",
 						"repository":          "aws/somethingCool",
-						"branch":              "master",
+						"branch":              defaultBranch,
 					},
 				},
 				Stages: []PipelineStage{

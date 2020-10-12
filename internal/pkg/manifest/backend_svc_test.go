@@ -20,13 +20,12 @@ func TestNewBackendSvc(t *testing.T) {
 
 		wantedManifest *BackendService
 	}{
-		"without healthcheck": {
+		"without healthcheck and port": {
 			inProps: BackendServiceProps{
 				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
-				Port: 8080,
 			},
 			wantedManifest: &BackendService{
 				Workload: Workload{
@@ -43,7 +42,6 @@ func TestNewBackendSvc(t *testing.T) {
 									},
 								},
 							},
-							Port: aws.Uint16(8080),
 						},
 					},
 					TaskConfig: TaskConfig{
@@ -59,8 +57,8 @@ func TestNewBackendSvc(t *testing.T) {
 		"with custom healthcheck command": {
 			inProps: BackendServiceProps{
 				WorkloadProps: WorkloadProps{
-					Name:       "subscribers",
-					Dockerfile: "./subscribers/Dockerfile",
+					Name:  "subscribers",
+					Image: "mockImage",
 				},
 				HealthCheck: &ContainerHealthCheck{
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
@@ -76,11 +74,7 @@ func TestNewBackendSvc(t *testing.T) {
 					ImageConfig: imageWithPortAndHealthcheck{
 						ServiceImageWithPort: ServiceImageWithPort{
 							Image: Image{
-								Build: BuildArgsOrString{
-									BuildArgs: DockerBuildArgs{
-										Dockerfile: aws.String("./subscribers/Dockerfile"),
-									},
-								},
+								Location: aws.String("mockImage"),
 							},
 							Port: aws.Uint16(8080),
 						},
@@ -125,21 +119,20 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 
 		wantedTestdata string
 	}{
-		"without healthcheck": {
+		"without healthcheck and port": {
 			inProps: BackendServiceProps{
 				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
-				Port: 8080,
 			},
 			wantedTestdata: "backend-svc-nohealthcheck.yml",
 		},
 		"with custom healthcheck command": {
 			inProps: BackendServiceProps{
 				WorkloadProps: WorkloadProps{
-					Name:       "subscribers",
-					Dockerfile: "./subscribers/Dockerfile",
+					Name:  "subscribers",
+					Image: "flask-sample",
 				},
 				HealthCheck: &ContainerHealthCheck{
 					Command:     []string{"CMD-SHELL", "curl -f http://localhost:8080 || exit 1"},
