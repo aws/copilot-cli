@@ -78,7 +78,7 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 	svc.Name = aws.String(props.Name)
 	svc.BackendServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.BackendServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
-	svc.BackendServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
+	svc.BackendServiceConfig.ImageConfig.Port = uint16P(props.Port)
 	svc.BackendServiceConfig.ImageConfig.HealthCheck = healthCheck
 	svc.parser = template.New()
 	return svc
