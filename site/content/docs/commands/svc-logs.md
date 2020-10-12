@@ -1,0 +1,41 @@
+# svc logs
+```bash
+$ copilot svc logs
+```
+
+## What does it do?
+
+`copilot svc logs` displays the logs of a deployed service.
+
+## What are the flags?
+
+```bash
+  -a, --app string          Name of the application.
+      --end-time string     Optional. Only return logs before a specific date (RFC3339).
+                            Defaults to all logs. Only one of end-time / follow may be used.
+  -e, --env string          Name of the environment.
+      --follow              Optional. Specifies if the logs should be streamed.
+  -h, --help                help for logs
+      --json                Optional. Outputs in JSON format.
+      --limit int           Optional. The maximum number of log events returned. (default 10)
+  -n, --name string         Name of the service.
+      --since duration      Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
+                            Defaults to all logs. Only one of start-time / since may be used.
+      --start-time string   Optional. Only return logs after a specific date (RFC3339).
+                            Defaults to all logs. Only one of start-time / since may be used.
+      --tasks strings       Optional. Only return logs from specific task IDs.
+```
+
+## Examples 
+
+Displays logs of the service "my-svc" in environment "test".
+
+`$ copilot svc logs -n my-svc -e test`
+
+Displays logs in the last hour.
+
+`$ copilot svc logs --since 1h`
+
+Displays logs from 2006-01-02T15:04:05 to 2006-01-02T15:05:05.
+
+`$ copilot svc logs --start-time 2006-01-02T15:04:05+00:00 --end-time 2006-01-02T15:05:05+00:00`
