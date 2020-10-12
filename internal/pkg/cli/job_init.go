@@ -44,6 +44,7 @@ type initJobVars struct {
 	appName        string
 	name           string
 	dockerfilePath string
+	image          string
 	timeout        string
 	retries        int
 	schedule       string
@@ -109,6 +110,9 @@ func (o *initJobOpts) Validate() error {
 			return err
 		}
 	}
+	if o.dockerfilePath != "" && o.image != "" {
+		return fmt.Errorf("--%s and --%s cannot be specified together", dockerFileFlag, imageFlag)
+	}
 	if o.dockerfilePath != "" {
 		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {
 			return err
@@ -138,8 +142,14 @@ func (o *initJobOpts) Ask() error {
 	if err := o.askJobName(); err != nil {
 		return err
 	}
-	if err := o.askDockerfile(); err != nil {
+	dfSelected, err := o.askDockerfile()
+	if err != nil {
 		return err
+	}
+	if !dfSelected {
+		if err := o.askImage(); err != nil {
+			return err
+		}
 	}
 	if err := o.askSchedule(); err != nil {
 		return err
@@ -209,14 +219,19 @@ func (o *initJobOpts) createManifest() (string, error) {
 }
 
 func (o *initJobOpts) newJobManifest() (*manifest.ScheduledJob, error) {
-	dfPath, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
-	if err != nil {
-		return nil, err
+	var dfPath string
+	if o.dockerfilePath != "" {
+		path, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
+		if err != nil {
+			return nil, err
+		}
+		dfPath = path
 	}
 	return manifest.NewScheduledJob(&manifest.ScheduledJobProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:       o.name,
 			Dockerfile: dfPath,
+			Image:      o.image,
 		},
 		Schedule: o.schedule,
 		Timeout:  o.timeout,
@@ -251,9 +266,23 @@ func (o *initJobOpts) askJobName() error {
 	return nil
 }
 
-func (o *initJobOpts) askDockerfile() error {
-	if o.dockerfilePath != "" {
+func (o *initJobOpts) askImage() error {
+	if o.image != "" {
 		return nil
+	}
+	image, err := o.prompt.Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil,
+		prompt.WithFinalMessage("Image:"))
+	if err != nil {
+		return fmt.Errorf("get image location: %w", err)
+	}
+	o.image = image
+	return nil
+}
+
+// isDfSelected indicates if any Dockerfile is in use.
+func (o *initJobOpts) askDockerfile() (isDfSelected bool, err error) {
+	if o.dockerfilePath != "" || o.image != "" {
+		return true, nil
 	}
 	df, err := o.sel.Dockerfile(
 		fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(o.name)),
@@ -265,10 +294,13 @@ func (o *initJobOpts) askDockerfile() error {
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("select Dockerfile: %w", err)
+		return false, fmt.Errorf("select Dockerfile: %w", err)
+	}
+	if df == selector.DockerfilePromptUseImage {
+		return false, nil
 	}
 	o.dockerfilePath = df
-	return nil
+	return true, nil
 }
 
 func (o *initJobOpts) askSchedule() error {
@@ -339,6 +371,7 @@ func buildJobInitCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.schedule, scheduleFlag, scheduleFlagShort, "", scheduleFlagDescription)
 	cmd.Flags().StringVar(&vars.timeout, timeoutFlag, "", timeoutFlagDescription)
 	cmd.Flags().IntVar(&vars.retries, retriesFlag, 0, retriesFlagDescription)
+	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 
 	cmd.Annotations = map[string]string{
 		"group": group.Develop,

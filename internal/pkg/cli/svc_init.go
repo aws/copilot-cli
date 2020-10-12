@@ -51,6 +51,10 @@ const (
 	fmtAddSvcToAppStart    = "Creating ECR repositories for service %s."
 	fmtAddSvcToAppFailed   = "Failed to create ECR repositories for service %s.\n"
 	fmtAddSvcToAppComplete = "Created ECR repositories for service %s.\n"
+
+	wkldInitImagePrompt     = `What's the location of the image to use?`
+	wkldInitImagePromptHelp = `The name of an existing Docker image. Images in the Docker Hub registry are available by default.
+Other repositories are specified with either repository-url/image:tag or repository-url/image@digest`
 )
 
 const (
@@ -63,6 +67,7 @@ type initSvcVars struct {
 	serviceType    string
 	name           string
 	dockerfilePath string
+	image          string
 	port           uint16
 }
 
@@ -136,6 +141,9 @@ func (o *initSvcOpts) Validate() error {
 			return err
 		}
 	}
+	if o.dockerfilePath != "" && o.image != "" {
+		return fmt.Errorf("--%s and --%s cannot be specified together", dockerFileFlag, imageFlag)
+	}
 	if o.dockerfilePath != "" {
 		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {
 			return err
@@ -157,8 +165,14 @@ func (o *initSvcOpts) Ask() error {
 	if err := o.askSvcName(); err != nil {
 		return err
 	}
-	if err := o.askDockerfile(); err != nil {
+	dfSelected, err := o.askDockerfile()
+	if err != nil {
 		return err
+	}
+	if !dfSelected {
+		if err := o.askImage(); err != nil {
+			return err
+		}
 	}
 	if err := o.askSvcPort(); err != nil {
 		return err
@@ -222,32 +236,41 @@ func (o *initSvcOpts) createManifest() (string, error) {
 		manifestMsgFmt = "Manifest file for service %s already exists at %s, skipping writing it.\n"
 	}
 	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.name), color.HighlightResource(manifestPath))
-	log.Infoln(color.Help(fmt.Sprintf("Your manifest contains configurations like your container size and port (:%d).", o.port)))
+	msg := "Your manifest contains configurations like your container size and port."
+	if o.port != 0 {
+		msg = fmt.Sprintf("Your manifest contains configurations like your container size and port (:%d).", o.port)
+	}
+	log.Infoln(color.Help(msg))
 	log.Infoln()
 
 	return manifestPath, nil
 }
 
 func (o *initSvcOpts) newManifest() (encoding.BinaryMarshaler, error) {
+	var dfPath string
+	if o.dockerfilePath != "" {
+		path, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
+		if err != nil {
+			return nil, err
+		}
+		dfPath = path
+	}
 	switch o.serviceType {
 	case manifest.LoadBalancedWebServiceType:
-		return o.newLoadBalancedWebServiceManifest()
+		return o.newLoadBalancedWebServiceManifest(dfPath)
 	case manifest.BackendServiceType:
-		return o.newBackendServiceManifest()
+		return o.newBackendServiceManifest(dfPath)
 	default:
 		return nil, fmt.Errorf("service type %s doesn't have a manifest", o.serviceType)
 	}
 }
 
-func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalancedWebService, error) {
-	dfPath, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
-	if err != nil {
-		return nil, err
-	}
+func (o *initSvcOpts) newLoadBalancedWebServiceManifest(dockerfilePath string) (*manifest.LoadBalancedWebService, error) {
 	props := &manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:       o.name,
-			Dockerfile: dfPath,
+			Dockerfile: dockerfilePath,
+			Image:      o.image,
 		},
 		Port: o.port,
 		Path: "/",
@@ -267,11 +290,7 @@ func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalance
 	return manifest.NewLoadBalancedWebService(props), nil
 }
 
-func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, error) {
-	dfPath, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
-	if err != nil {
-		return nil, err
-	}
+func (o *initSvcOpts) newBackendServiceManifest(dockerfilePath string) (*manifest.BackendService, error) {
 	hc, err := o.parseHealthCheck()
 	if err != nil {
 		return nil, err
@@ -279,7 +298,8 @@ func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, err
 	return manifest.NewBackendService(manifest.BackendServiceProps{
 		WorkloadProps: manifest.WorkloadProps{
 			Name:       o.name,
-			Dockerfile: dfPath,
+			Dockerfile: dockerfilePath,
+			Image:      o.image,
 		},
 		Port:        o.port,
 		HealthCheck: hc,
@@ -321,10 +341,23 @@ func (o *initSvcOpts) askSvcName() error {
 	return nil
 }
 
-// askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
-func (o *initSvcOpts) askDockerfile() error {
-	if o.dockerfilePath != "" {
+func (o *initSvcOpts) askImage() error {
+	if o.image != "" {
 		return nil
+	}
+	image, err := o.prompt.Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil,
+		prompt.WithFinalMessage("Image:"))
+	if err != nil {
+		return fmt.Errorf("get image location: %w", err)
+	}
+	o.image = image
+	return nil
+}
+
+// isDfSelected indicates if any Dockerfile is in use.
+func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
+	if o.dockerfilePath != "" || o.image != "" {
+		return true, nil
 	}
 	df, err := o.sel.Dockerfile(
 		fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(o.name)),
@@ -336,34 +369,41 @@ func (o *initSvcOpts) askDockerfile() error {
 		},
 	)
 	if err != nil {
-		return err
+		return false, fmt.Errorf("select Dockerfile: %w", err)
+	}
+	if df == selector.DockerfilePromptUseImage {
+		return false, nil
 	}
 	o.dockerfilePath = df
-	return nil
+	return true, nil
 }
 
 func (o *initSvcOpts) askSvcPort() error {
-	// Use flag before anything else
 	if o.port != 0 {
 		return nil
 	}
 
-	o.setupParser(o)
-	ports, err := o.df.GetExposedPorts()
-	// Ignore any errors in dockerfile parsing--we'll use the default instead.
-	if err != nil {
-		log.Debugln(err.Error())
+	defaultPort := defaultSvcPortString
+	if o.dockerfilePath != "" {
+		o.setupParser(o)
+		ports, err := o.df.GetExposedPorts()
+		// Ignore any errors in dockerfile parsing--we'll use the default instead.
+		if err != nil {
+			log.Debugln(err.Error())
+		}
+		switch len(ports) {
+		case 0:
+			// There were no ports detected, keep the default port prompt.
+		case 1:
+			o.port = ports[0]
+			return nil
+		default:
+			defaultPort = strconv.Itoa(int(ports[0]))
+		}
 	}
-	var defaultPort string
-	switch len(ports) {
-	case 0:
-		// There were no ports detected, keep the default port prompt.
-		defaultPort = defaultSvcPortString
-	case 1:
-		o.port = ports[0]
+	// Skip asking if it is a backend service.
+	if o.serviceType == manifest.BackendServiceType {
 		return nil
-	default:
-		defaultPort = strconv.Itoa(int(ports[0]))
 	}
 
 	port, err := o.prompt.Get(
@@ -388,6 +428,9 @@ func (o *initSvcOpts) askSvcPort() error {
 }
 
 func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error) {
+	if o.dockerfilePath == "" {
+		return nil, nil
+	}
 	o.setupParser(o)
 	hc, err := o.df.GetHealthCheck()
 	if err != nil {
@@ -455,6 +498,8 @@ This command is also run as part of "copilot init".`,
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.serviceType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
+	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
+
 	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
 
 	// Bucket flags by service type.
@@ -462,6 +507,7 @@ This command is also run as part of "copilot init".`,
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(svcTypeFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(dockerFileFlag))
+	requiredFlags.AddFlag(cmd.Flags().Lookup(imageFlag))
 
 	lbWebSvcFlags := pflag.NewFlagSet(manifest.LoadBalancedWebServiceType, pflag.ContinueOnError)
 	lbWebSvcFlags.AddFlag(cmd.Flags().Lookup(svcPortFlag))

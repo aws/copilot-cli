@@ -1,0 +1,22 @@
+{% import "partials/language.html" as lang with context %}
+
+<!-- Application footer -->
+<footer class="md-footer">
+  <!-- Further information -->
+  <div class="md-footer-meta md-typeset" style="background-color: #fff;">
+    <div class="md-footer-meta__inner md-grid" style="background-color: #fff;">
+
+      <!-- Copyright and theme information -->
+      <div class="md-footer-copyright">
+        {% if config.copyright %}
+          <div class="md-footer-copyright__highlight" style="color: rgb(38, 38, 38);">
+            {{ config.copyright }}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Social links -->
+      {% include "partials/social.html" %}
+    </div>
+  </div>
+</footer>

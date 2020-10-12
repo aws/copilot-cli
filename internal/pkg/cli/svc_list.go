@@ -4,15 +4,11 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"math"
 	"os"
-	"strings"
-	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/list"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -20,34 +16,25 @@ import (
 )
 
 const (
-	svcListAppNamePrompt     = "Which application's services would you like to list?"
-	svcListAppNameHelpPrompt = "An application groups all of your services together."
-
-	// Display settings.
-	minCellWidth           = 20  // minimum number of characters in a table's cell.
-	tabWidth               = 4   // number of characters in between columns.
-	cellPaddingWidth       = 2   // number of padding characters added by default to a cell.
-	paddingChar            = ' ' // character in between columns.
-	noAdditionalFormatting = 0
+	svcListAppNamePrompt = "Which application's services would you like to list?"
+	wkldListAppNameHelp  = "An application groups all of your services and jobs together."
 )
 
-type listSvcVars struct {
-	appName                 string
-	shouldOutputJSON        bool
-	shouldShowLocalServices bool
+type listWkldVars struct {
+	appName                  string
+	shouldOutputJSON         bool
+	shouldShowLocalWorkloads bool
 }
 
 type listSvcOpts struct {
-	listSvcVars
+	listWkldVars
 
 	// Interfaces to dependencies.
-	store store
-	ws    wsSvcReader
-	w     io.Writer
-	sel   appSelector
+	sel  appSelector
+	list workloadListWriter
 }
 
-func newListSvcOpts(vars listSvcVars) (*listSvcOpts, error) {
+func newListSvcOpts(vars listWkldVars) (*listSvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, err
@@ -56,13 +43,20 @@ func newListSvcOpts(vars listSvcVars) (*listSvcOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &listSvcOpts{
-		listSvcVars: vars,
+	svcLister := &list.SvcListWriter{
+		Ws:    ws,
+		Store: store,
+		Out:   os.Stdout,
 
-		store: store,
-		ws:    ws,
-		w:     os.Stdout,
-		sel:   selector.NewSelect(prompt.New(), store),
+		ShowLocalSvcs: vars.shouldShowLocalWorkloads,
+		OutputJSON:    vars.shouldOutputJSON,
+	}
+
+	return &listSvcOpts{
+		listWkldVars: vars,
+
+		list: svcLister,
+		sel:  selector.NewSelect(prompt.New(), store),
 	}, nil
 }
 
@@ -72,7 +66,7 @@ func (o *listSvcOpts) Ask() error {
 		return nil
 	}
 
-	name, err := o.sel.Application(svcListAppNamePrompt, svcListAppNameHelpPrompt)
+	name, err := o.sel.Application(svcListAppNamePrompt, wkldListAppNameHelp)
 	if err != nil {
 		return fmt.Errorf("select application name: %w", err)
 	}
@@ -82,84 +76,17 @@ func (o *listSvcOpts) Ask() error {
 
 // Execute lists the services through the prompt.
 func (o *listSvcOpts) Execute() error {
-	// Ensure the application actually exists before we try to list its services.
-	if _, err := o.store.GetApplication(o.appName); err != nil {
-		return fmt.Errorf("get application: %w", err)
-	}
 
-	svcs, err := o.store.ListServices(o.appName)
-	if err != nil {
+	if err := o.list.Write(o.appName); err != nil {
 		return err
-	}
-
-	if o.shouldShowLocalServices {
-		localNames, err := o.ws.ServiceNames()
-		if err != nil {
-			return fmt.Errorf("get local services names: %w", err)
-		}
-		svcs = filterSvcsByName(svcs, localNames)
-	}
-
-	var out string
-	if o.shouldOutputJSON {
-		data, err := o.jsonOutput(svcs)
-		if err != nil {
-			return err
-		}
-		out = data
-		fmt.Fprint(o.w, out)
-	} else {
-		o.humanOutput(svcs)
 	}
 
 	return nil
 }
 
-func (o *listSvcOpts) humanOutput(svcs []*config.Workload) {
-	writer := tabwriter.NewWriter(o.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, "%s\t%s\n", "Name", "Type")
-	nameLengthMax := len("Name")
-	typeLengthMax := len("Type")
-	for _, svc := range svcs {
-		nameLengthMax = int(math.Max(float64(nameLengthMax), float64(len(svc.Name))))
-		typeLengthMax = int(math.Max(float64(typeLengthMax), float64(len(svc.Type))))
-	}
-	fmt.Fprintf(writer, "%s\t%s\n", strings.Repeat("-", nameLengthMax), strings.Repeat("-", typeLengthMax))
-	for _, svc := range svcs {
-		fmt.Fprintf(writer, "%s\t%s\n", svc.Name, svc.Type)
-	}
-	writer.Flush()
-}
-
-func (o *listSvcOpts) jsonOutput(svcs []*config.Workload) (string, error) {
-	type out struct {
-		Services []*config.Workload `json:"services"`
-	}
-	b, err := json.Marshal(out{Services: svcs})
-	if err != nil {
-		return "", fmt.Errorf("marshal services: %w", err)
-	}
-	return fmt.Sprintf("%s\n", b), nil
-}
-
-func filterSvcsByName(svcs []*config.Workload, wantedNames []string) []*config.Workload {
-	isWanted := make(map[string]bool)
-	for _, name := range wantedNames {
-		isWanted[name] = true
-	}
-	var filtered []*config.Workload
-	for _, svc := range svcs {
-		if _, ok := isWanted[svc.Name]; !ok {
-			continue
-		}
-		filtered = append(filtered, svc)
-	}
-	return filtered
-}
-
 // buildSvcListCmd builds the command for listing services in an appication.
 func buildSvcListCmd() *cobra.Command {
-	vars := listSvcVars{}
+	vars := listWkldVars{}
 	cmd := &cobra.Command{
 		Use:   "ls",
 		Short: "Lists all the services in an application.",
@@ -179,6 +106,6 @@ func buildSvcListCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
-	cmd.Flags().BoolVar(&vars.shouldShowLocalServices, localFlag, false, localSvcFlagDescription)
+	cmd.Flags().BoolVar(&vars.shouldShowLocalWorkloads, localFlag, false, localSvcFlagDescription)
 	return cmd
 }
