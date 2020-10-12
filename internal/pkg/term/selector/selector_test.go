@@ -219,10 +219,6 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.EXPECT().ServiceNames().Return(
 					[]string{}, nil).Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{}, nil).Times(1)
 				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -237,10 +233,6 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 						"service1",
 					}, nil).
 					Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{}, nil).Times(1)
 			},
@@ -251,10 +243,6 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 				m.workloadLister.EXPECT().ServiceNames().Return(
 					[]string{}, nil).
 					Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -272,10 +260,6 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 					[]string{
 						"service1",
 					}, nil).Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -298,10 +282,6 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 						"service2",
 						"service3",
 					}, nil).Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -322,10 +302,6 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 					[]string{
 						"service3",
 					}, nil).Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -359,10 +335,6 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 						"service2",
 						"service3",
 					}, nil).Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -400,21 +372,6 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			},
 			wantErr: errors.New("retrieve services from workspace: some error"),
 		},
-		"with error retrieving app name from workspace": {
-			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.
-					EXPECT().ServiceNames().Return(
-					[]string{
-						"service3",
-					}, nil).Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "",
-					},
-					errors.New("some error"))
-			},
-			wantErr: errors.New("retrieve app name from workspace: some error"),
-		},
 		"with error retrieving services from store": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.EXPECT().ServiceNames().Return(
@@ -423,10 +380,6 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 						"service2",
 					}, nil).
 					Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					nil, errors.New("some error"))
 			},
@@ -441,10 +394,6 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 						"service2",
 					}, nil).
 					Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -473,11 +422,11 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockwsWorkloadLister := mocks.NewMockWorkspaceRetriever(ctrl)
+			mockwsRetriever := mocks.NewMockWorkspaceRetriever(ctrl)
 			mockconfigLister := mocks.NewMockConfigLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := workspaceSelectMocks{
-				workloadLister: mockwsWorkloadLister,
+				workloadLister: mockwsRetriever,
 				configLister:   mockconfigLister,
 				prompt:         mockprompt,
 			}
@@ -488,7 +437,8 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 					prompt: mockprompt,
 					config: mockconfigLister,
 				},
-				ws: mockwsWorkloadLister,
+				ws:      mockwsRetriever,
+				appName: "app-name",
 			}
 			got, err := sel.Service("Select a service", "Help text")
 			if tc.wantErr != nil {
@@ -511,10 +461,6 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 				m.workloadLister.
 					EXPECT().JobNames().Return(
 					[]string{}, nil).Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{}, nil).Times(1)
 				m.prompt.
@@ -531,10 +477,6 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 					[]string{
 						"job1",
 					}, nil).Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{}, nil).Times(1)
 				m.prompt.
@@ -549,10 +491,6 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 				m.workloadLister.
 					EXPECT().JobNames().Return(
 					[]string{}, nil).Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -576,10 +514,6 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 					[]string{
 						"resizer",
 					}, nil).Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -603,10 +537,6 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 						"job2",
 						"job3",
 					}, nil).Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -627,10 +557,6 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 					[]string{
 						"job3",
 					}, nil).Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -663,10 +589,6 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 						"job2",
 						"job3",
 					}, nil).Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.
 					EXPECT().
 					ListServices("app-name").
@@ -708,21 +630,6 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			},
 			wantErr: errors.New("retrieve jobs from workspace: some error"),
 		},
-		"with error retrieving app name from workspace": {
-			setupMocks: func(m workspaceSelectMocks) {
-				m.workloadLister.
-					EXPECT().JobNames().Return(
-					[]string{
-						"service3",
-					}, nil).Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "",
-					},
-					errors.New("some error"))
-			},
-			wantErr: errors.New("retrieve app name from workspace: some error"),
-		},
 		"with error retrieving jobs from store": {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.EXPECT().JobNames().Return(
@@ -731,10 +638,6 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 						"service2",
 					}, nil).
 					Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					nil, errors.New("some error"))
 			},
@@ -747,10 +650,6 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 						"resizer1",
 						"resizer2",
 					}, nil).Times(1)
-				m.workloadLister.EXPECT().Summary().Return(
-					&workspace.Summary{
-						Application: "app-name",
-					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -779,11 +678,11 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockwsWorkloadLister := mocks.NewMockWorkspaceRetriever(ctrl)
+			mockwsRetriever := mocks.NewMockWorkspaceRetriever(ctrl)
 			mockconfigLister := mocks.NewMockConfigLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := workspaceSelectMocks{
-				workloadLister: mockwsWorkloadLister,
+				workloadLister: mockwsRetriever,
 				configLister:   mockconfigLister,
 				prompt:         mockprompt,
 			}
@@ -794,7 +693,8 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 					prompt: mockprompt,
 					config: mockconfigLister,
 				},
-				ws: mockwsWorkloadLister,
+				ws:      mockwsRetriever,
+				appName: "app-name",
 			}
 			got, err := sel.Job("Select a job", "Help text")
 			if tc.wantErr != nil {
@@ -1314,7 +1214,15 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 			cfg := mocks.NewMockWorkspaceRetriever(ctrl)
 			tc.mockPrompt(p)
 			tc.mockWs(cfg)
-			sel := NewWorkspaceSelect(p, s, cfg)
+
+			sel := WorkspaceSelect{
+				Select: &Select{
+					prompt: p,
+					config: s,
+				},
+				ws:      cfg,
+				appName: "app-name",
+			}
 
 			mockPromptText := "prompt"
 			mockHelpText := "help"
@@ -1343,6 +1251,7 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 	scheduleTypeHelp := "NO"
 
 	testCases := map[string]struct {
+		mockWs         func(retriever *mocks.MockWorkspaceRetriever)
 		mockPrompt     func(*mocks.MockPrompter)
 		wantedSchedule string
 		wantedErr      error
@@ -1443,7 +1352,14 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 			s := mocks.NewMockConfigLister(ctrl)
 			cfg := mocks.NewMockWorkspaceRetriever(ctrl)
 			tc.mockPrompt(p)
-			sel := NewWorkspaceSelect(p, s, cfg)
+			sel := WorkspaceSelect{
+				Select: &Select{
+					prompt: p,
+					config: s,
+				},
+				ws:      cfg,
+				appName: "app-name",
+			}
 
 			var mockValidator prompt.ValidatorFunc = func(interface{}) error { return nil }
 

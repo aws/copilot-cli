@@ -96,7 +96,7 @@ type WsWorkloadLister interface {
 	JobNames() ([]string, error)
 }
 
-// WsWorkloadDockerfileLister wraps methods to get workload names and Dockerfiles from the workspace.
+// WorkspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
 type WorkspaceRetriever interface {
 	WsWorkloadLister
 	Summary() (*workspace.Summary, error)
@@ -124,7 +124,8 @@ type ConfigSelect struct {
 // WorkspaceSelect  is an application and environment selector, but can also choose a service from the workspace.
 type WorkspaceSelect struct {
 	*Select
-	ws WorkspaceRetriever
+	ws      WorkspaceRetriever
+	appName string
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -154,9 +155,14 @@ func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
 // NewWorkspaceSelect returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
 func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriever) *WorkspaceSelect {
+	summary, err := ws.Summary()
+	if err != nil {
+		return nil
+	}
 	return &WorkspaceSelect{
-		Select: NewSelect(prompt, store),
-		ws:     ws,
+		Select:  NewSelect(prompt, store),
+		ws:      ws,
+		appName: summary.Application,
 	}
 }
 
@@ -269,11 +275,7 @@ func (s *WorkspaceSelect) Service(msg, help string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("retrieve services from workspace: %w", err)
 	}
-	summary, err := s.ws.Summary()
-	if err != nil {
-		return "", fmt.Errorf("retrieve app name from workspace: %w", err)
-	}
-	storeServiceNames, err := s.Select.config.ListServices(summary.Application)
+	storeServiceNames, err := s.Select.config.ListServices(s.appName)
 	if err != nil {
 		return "", fmt.Errorf("retrieve services from store: %w", err)
 	}
@@ -299,11 +301,7 @@ func (s *WorkspaceSelect) Job(msg, help string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs from workspace: %w", err)
 	}
-	summary, err := s.ws.Summary()
-	if err != nil {
-		return "", fmt.Errorf("retrieve app name from workspace: %w", err)
-	}
-	storeJobNames, err := s.Select.config.ListServices(summary.Application)
+	storeJobNames, err := s.Select.config.ListServices(s.appName)
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs from store: %w", err)
 	}
