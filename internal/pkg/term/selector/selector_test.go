@@ -187,7 +187,7 @@ func TestDeploySelect_Service(t *testing.T) {
 
 			sel := DeploySelect{
 				Select: &Select{
-					lister: mockconfigSvc,
+					config: mockconfigSvc,
 					prompt: mockprompt,
 				},
 				deployStoreSvc: mockdeploySvc,
@@ -486,9 +486,9 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			sel := WorkspaceSelect{
 				Select: &Select{
 					prompt: mockprompt,
-					lister: mockconfigLister,
+					config: mockconfigLister,
 				},
-				wlLister: mockwsWorkloadLister,
+				ws: mockwsWorkloadLister,
 			}
 			got, err := sel.Service("Select a service", "Help text")
 			if tc.wantErr != nil {
@@ -792,9 +792,9 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			sel := WorkspaceSelect{
 				Select: &Select{
 					prompt: mockprompt,
-					lister: mockconfigLister,
+					config: mockconfigLister,
 				},
-				wlLister: mockwsWorkloadLister,
+				ws: mockwsWorkloadLister,
 			}
 			got, err := sel.Job("Select a job", "Help text")
 			if tc.wantErr != nil {
@@ -1093,7 +1093,7 @@ func TestSelect_Environment(t *testing.T) {
 
 			sel := Select{
 				prompt: mockprompt,
-				lister: mockenvLister,
+				config: mockenvLister,
 			}
 
 			got, err := sel.Environment("Select an environment", "Help text", appName, tc.inAdditionalOpts...)
@@ -1215,7 +1215,7 @@ func TestSelect_Application(t *testing.T) {
 
 			sel := Select{
 				prompt: mockprompt,
-				lister: mockappLister,
+				config: mockappLister,
 			}
 
 			got, err := sel.Application("Select an app", "Help text")

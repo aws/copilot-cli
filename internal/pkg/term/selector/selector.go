@@ -112,7 +112,7 @@ type DeployStoreClient interface {
 // Select prompts users to select the name of an application or environment.
 type Select struct {
 	prompt Prompter
-	lister ConfigLister
+	config ConfigLister
 }
 
 // ConfigSelect is an application and environment selector, but can also choose a service from the config store.
@@ -124,7 +124,7 @@ type ConfigSelect struct {
 // WorkspaceSelect  is an application and environment selector, but can also choose a service from the workspace.
 type WorkspaceSelect struct {
 	*Select
-	wlLister WorkspaceRetriever
+	ws WorkspaceRetriever
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
@@ -139,7 +139,7 @@ type DeploySelect struct {
 func NewSelect(prompt Prompter, store ConfigLister) *Select {
 	return &Select{
 		prompt: prompt,
-		lister: store,
+		config: store,
 	}
 }
 
@@ -155,8 +155,8 @@ func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
 // services from the local workspace.
 func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriever) *WorkspaceSelect {
 	return &WorkspaceSelect{
-		Select:   NewSelect(prompt, store),
-		wlLister: ws,
+		Select: NewSelect(prompt, store),
+		ws:     ws,
 	}
 }
 
@@ -269,11 +269,11 @@ func (s *WorkspaceSelect) Service(msg, help string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("retrieve services from workspace: %w", err)
 	}
-	summary, err := s.wlLister.Summary()
+	summary, err := s.ws.Summary()
 	if err != nil {
 		return "", fmt.Errorf("retrieve app name from workspace: %w", err)
 	}
-	storeServiceNames, err := s.Select.lister.ListServices(summary.Application)
+	storeServiceNames, err := s.Select.config.ListServices(summary.Application)
 	if err != nil {
 		return "", fmt.Errorf("retrieve services from store: %w", err)
 	}
@@ -299,11 +299,11 @@ func (s *WorkspaceSelect) Job(msg, help string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs from workspace: %w", err)
 	}
-	summary, err := s.wlLister.Summary()
+	summary, err := s.ws.Summary()
 	if err != nil {
 		return "", fmt.Errorf("retrieve app name from workspace: %w", err)
 	}
-	storeJobNames, err := s.Select.lister.ListServices(summary.Application)
+	storeJobNames, err := s.Select.config.ListServices(summary.Application)
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs from store: %w", err)
 	}
@@ -414,7 +414,7 @@ func (s *Select) Application(prompt, help string, additionalOpts ...string) (str
 }
 
 func (s *Select) retrieveApps() ([]string, error) {
-	apps, err := s.lister.ListApplications()
+	apps, err := s.config.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list applications: %w", err)
 	}
@@ -426,7 +426,7 @@ func (s *Select) retrieveApps() ([]string, error) {
 }
 
 func (s *Select) retrieveEnvironments(app string) ([]string, error) {
-	envs, err := s.lister.ListEnvironments(app)
+	envs, err := s.config.ListEnvironments(app)
 	if err != nil {
 		return nil, fmt.Errorf("list environments: %w", err)
 	}
@@ -450,7 +450,7 @@ func (s *ConfigSelect) retrieveServices(app string) ([]string, error) {
 }
 
 func (s *WorkspaceSelect) retrieveWorkspaceServices() ([]string, error) {
-	localServiceNames, err := s.wlLister.ServiceNames()
+	localServiceNames, err := s.ws.ServiceNames()
 	if err != nil {
 		return nil, err
 	}
@@ -458,7 +458,7 @@ func (s *WorkspaceSelect) retrieveWorkspaceServices() ([]string, error) {
 }
 
 func (s *WorkspaceSelect) retrieveWorkspaceJobs() ([]string, error) {
-	localJobNames, err := s.wlLister.JobNames()
+	localJobNames, err := s.ws.JobNames()
 	if err != nil {
 		return nil, err
 	}
@@ -468,7 +468,7 @@ func (s *WorkspaceSelect) retrieveWorkspaceJobs() ([]string, error) {
 // Dockerfile asks the user to select from a list of Dockerfiles in the current
 // directory or one level down. If no dockerfiles are found, it asks for a custom path.
 func (s *WorkspaceSelect) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
-	dockerfiles, err := s.wlLister.ListDockerfiles()
+	dockerfiles, err := s.ws.ListDockerfiles()
 	// If Dockerfiles are found in the current directory or subdirectory one level down, ask the user to select one.
 	var sel string
 	if err == nil {
