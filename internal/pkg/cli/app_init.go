@@ -104,7 +104,7 @@ func (o *initAppOpts) Ask() error {
 		log.Warningln(`Looks like you're creating an application using credentials set by environment variables.
 Copilot will store your application metadata in this account.
 We recommend using credentials from named profiles. To learn more:
-https://github.com/aws/copilot-cli/wiki/credentials`)
+https://aws.github.io/copilot-cli/docs/credentials/`)
 		log.Infoln()
 	}
 
