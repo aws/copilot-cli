@@ -40,24 +40,27 @@ type Workspace interface {
 	ServiceNames() ([]string, error)
 }
 
-// JobListWriter holds all the metadata needed to
+// JobListWriter holds all the metadata and clients needed to list all jobs in a given
+// workspace or app in a human- or machine-readable format.
 type JobListWriter struct {
+	// Output configuration options.
 	ShowLocalJobs bool
 	OutputJSON    bool
 
-	Store Store
-	Ws    Workspace
-	W     io.Writer
+	Store Store     // Client to retrieve application configuration and job metadata.
+	Ws    Workspace // Client to retrieve local jobs.
+	Out   io.Writer // The writer where output will be written.
 }
 
-// SvcListWriter holds all the metadata needed to write local or remote services to a writer
+// SvcListWriter holds all the metadata and clients needed to list all services in a given
+// workspace or app in a human- or machine-readable format.
 type SvcListWriter struct {
 	ShowLocalSvcs bool
 	OutputJSON    bool
 
-	Store Store
-	Ws    Workspace
-	W     io.Writer
+	Store Store     // Client to retrieve application configuration and service metadata.
+	Ws    Workspace // Client to retrieve local jobs.
+	Out   io.Writer // The writer where output will be written.
 }
 
 // Jobs lists all jobs, either locally or in the workspace, and writes the output to a writer.
@@ -81,9 +84,9 @@ func (l *JobListWriter) Write(appName string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprint(l.W, data)
+		fmt.Fprint(l.Out, data)
 	} else {
-		humanOutput(wklds, l.W)
+		humanOutput(wklds, l.Out)
 	}
 	return nil
 }
@@ -109,9 +112,9 @@ func (l *SvcListWriter) Write(appName string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprint(l.W, data)
+		fmt.Fprint(l.Out, data)
 	} else {
-		humanOutput(wklds, l.W)
+		humanOutput(wklds, l.Out)
 	}
 	return nil
 }

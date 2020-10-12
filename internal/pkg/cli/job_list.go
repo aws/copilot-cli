@@ -39,7 +39,7 @@ func newListJobOpts(vars listWkldVars) (*listJobOpts, error) {
 	jobLister := &list.JobListWriter{
 		Ws:    ws,
 		Store: store,
-		W:     os.Stdout,
+		Out:   os.Stdout,
 
 		ShowLocalJobs: vars.shouldOutputJSON,
 		OutputJSON:    vars.shouldOutputJSON,
