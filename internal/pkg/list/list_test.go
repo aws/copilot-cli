@@ -157,7 +157,7 @@ func TestList_JobListWriter(t *testing.T) {
 			list := &JobListWriter{
 				Ws:    mockWs,
 				Store: mockStore,
-				W:     b,
+				Out:   b,
 
 				ShowLocalJobs: tc.inputListLocal,
 				OutputJSON:    tc.inputWriteJSON,
@@ -318,7 +318,7 @@ func TestList_SvcListWriter(t *testing.T) {
 			list := &SvcListWriter{
 				Ws:    mockWs,
 				Store: mockStore,
-				W:     b,
+				Out:   b,
 
 				ShowLocalSvcs: tc.inputListLocal,
 				OutputJSON:    tc.inputWriteJSON,

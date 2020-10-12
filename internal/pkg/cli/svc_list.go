@@ -46,7 +46,7 @@ func newListSvcOpts(vars listWkldVars) (*listSvcOpts, error) {
 	svcLister := &list.SvcListWriter{
 		Ws:    ws,
 		Store: store,
-		W:     os.Stdout,
+		Out:   os.Stdout,
 
 		ShowLocalSvcs: vars.shouldShowLocalWorkloads,
 		OutputJSON:    vars.shouldOutputJSON,
