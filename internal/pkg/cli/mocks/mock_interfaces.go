@@ -268,6 +268,43 @@ func (mr *MockjobStoreMockRecorder) DeleteJob(appName, jobName interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteJob", reflect.TypeOf((*MockjobStore)(nil).DeleteJob), appName, jobName)
 }
 
+// MockworkloadListWriter is a mock of workloadListWriter interface
+type MockworkloadListWriter struct {
+	ctrl     *gomock.Controller
+	recorder *MockworkloadListWriterMockRecorder
+}
+
+// MockworkloadListWriterMockRecorder is the mock recorder for MockworkloadListWriter
+type MockworkloadListWriterMockRecorder struct {
+	mock *MockworkloadListWriter
+}
+
+// NewMockworkloadListWriter creates a new mock instance
+func NewMockworkloadListWriter(ctrl *gomock.Controller) *MockworkloadListWriter {
+	mock := &MockworkloadListWriter{ctrl: ctrl}
+	mock.recorder = &MockworkloadListWriterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockworkloadListWriter) EXPECT() *MockworkloadListWriterMockRecorder {
+	return m.recorder
+}
+
+// Write mocks base method
+func (m *MockworkloadListWriter) Write(appName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Write", appName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Write indicates an expected call of Write
+func (mr *MockworkloadListWriterMockRecorder) Write(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*MockworkloadListWriter)(nil).Write), appName)
+}
+
 // MockapplicationStore is a mock of applicationStore interface
 type MockapplicationStore struct {
 	ctrl     *gomock.Controller

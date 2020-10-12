@@ -12,19 +12,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestListSvcOpts_Execute(t *testing.T) {
+func TestListJobOpts_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockError := fmt.Errorf("error")
 	mockLister := mocks.NewMockworkloadListWriter(ctrl)
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
-		opts        listSvcOpts
+		opts        listJobOpts
 		mocking     func()
 		expectedErr error
 	}{
-		"with successful call to list.Services": {
-			opts: listSvcOpts{
+		"with successful call to list.Jobs": {
+			opts: listJobOpts{
 				listWkldVars: listWkldVars{
 					shouldOutputJSON: true,
 					appName:          "coolapp",
@@ -37,8 +37,8 @@ func TestListSvcOpts_Execute(t *testing.T) {
 					Return(nil)
 			},
 		},
-		"with failed call to list.Services": {
-			opts: listSvcOpts{
+		"with failed call to list.Jobs": {
+			opts: listJobOpts{
 				listWkldVars: listWkldVars{
 					appName: "coolapp",
 				},
@@ -66,7 +66,7 @@ func TestListSvcOpts_Execute(t *testing.T) {
 	}
 }
 
-func TestListSvcOpts_Ask(t *testing.T) {
+func TestListJobOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inApp string
 
@@ -76,7 +76,7 @@ func TestListSvcOpts_Ask(t *testing.T) {
 	}{
 		"with no flags set": {
 			mockSel: func(m *mocks.MockappSelector) {
-				m.EXPECT().Application(svcListAppNamePrompt, wkldListAppNameHelp).Return("myapp", nil)
+				m.EXPECT().Application(jobListAppNamePrompt, wkldListAppNameHelp).Return("myapp", nil)
 			},
 			wantedApp: "myapp",
 		},
@@ -97,7 +97,7 @@ func TestListSvcOpts_Ask(t *testing.T) {
 			mockSel := mocks.NewMockappSelector(ctrl)
 			tc.mockSel(mockSel)
 
-			listApps := &listSvcOpts{
+			listApps := &listJobOpts{
 				listWkldVars: listWkldVars{
 					appName: tc.inApp,
 				},
