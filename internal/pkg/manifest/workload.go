@@ -337,3 +337,10 @@ func stringP(s string) *string {
 	}
 	return &s
 }
+
+func uint16P(n uint16) *uint16 {
+	if n == 0 {
+		return nil
+	}
+	return &n
+}

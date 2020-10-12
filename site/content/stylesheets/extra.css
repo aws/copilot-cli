@@ -1,0 +1,29 @@
+span.title {
+  font-weight: bold;
+}
+
+span.em {
+  font-weight: bold;
+}
+
+.separator {
+  border-bottom: 1px solid #e3e8ee;
+}
+
+a.field {
+  font-weight: 600;
+  /* color: #3c4257; */
+  font-size: .8rem;
+}
+
+span.parent-field {
+  font-weight: 600;
+  color:#a3acb9;
+  font-size: .85em;
+}
+
+span.type {
+  color: #8792a2;
+  font-size: .7rem;
+  margin-right: 4px;
+}

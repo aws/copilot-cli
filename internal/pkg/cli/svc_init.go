@@ -236,7 +236,11 @@ func (o *initSvcOpts) createManifest() (string, error) {
 		manifestMsgFmt = "Manifest file for service %s already exists at %s, skipping writing it.\n"
 	}
 	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.name), color.HighlightResource(manifestPath))
-	log.Infoln(color.Help(fmt.Sprintf("Your manifest contains configurations like your container size and port (:%d).", o.port)))
+	msg := "Your manifest contains configurations like your container size and port."
+	if o.port != 0 {
+		msg = fmt.Sprintf("Your manifest contains configurations like your container size and port (:%d).", o.port)
+	}
+	log.Infoln(color.Help(msg))
 	log.Infoln()
 
 	return manifestPath, nil
@@ -375,7 +379,6 @@ func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 }
 
 func (o *initSvcOpts) askSvcPort() error {
-	// Use flag before anything else
 	if o.port != 0 {
 		return nil
 	}
@@ -397,6 +400,10 @@ func (o *initSvcOpts) askSvcPort() error {
 		default:
 			defaultPort = strconv.Itoa(int(ports[0]))
 		}
+	}
+	// Skip asking if it is a backend service.
+	if o.serviceType == manifest.BackendServiceType {
+		return nil
 	}
 
 	port, err := o.prompt.Get(

@@ -1,0 +1,95 @@
+site_name: AWS Copilot CLI
+site_description: 'Develop, Release and Operate Container Apps on AWS.'
+repo_name: 'aws/copilot-cli'
+repo_url: 'https://github.com/aws/copilot-cli'
+edit_uri: 'edit/mainline/site/content'
+copyright: 'Copyright &copy; 2020 Amazon'
+docs_dir: 'site/content'
+extra_css:
+  - stylesheets/extra.css
+
+nav:
+  - Home: index.md
+  - Documentation:
+    - Overview: docs/overview.md
+    - Installing: docs/installing.md
+    - Getting Started: docs/getting-started.md
+    - Concepts:
+      - Overview: docs/concepts/overview.md
+      - Services: docs/concepts/services.md
+      - Environments: docs/concepts/environments.md
+      - Applications: docs/concepts/applications.md
+      - Pipelines: docs/concepts/pipelines.md
+    - Credentials: docs/credentials.md
+    - Manifest:
+      - Overview: docs/manifest/overview.md
+      - Load Balanced Web Service: docs/manifest/lb-web-service.md
+      - Backend Service: docs/manifest/backend-service.md
+      - Pipeline: docs/manifest/pipeline.md
+    - Developing:
+      - Environment Variables: docs/developing/environment-variables.md
+      - Secrets: docs/developing/secrets.md
+      - Service Discovery: docs/developing/service-discovery.md
+      - Additional AWS Resources: docs/developing/additional-aws-resources.md
+      - Sidecars: docs/developing/sidecars.md
+    - Commands:
+      - Getting Started:
+        - init: docs/commands/init.md
+        - docs: docs/commands/docs.md
+      - Develop:
+        - app init: docs/commands/app-init.md
+        - app ls: docs/commands/app-ls.md
+        - app show: docs/commands/app-show.md
+        - app delete: docs/commands/app-delete.md
+        - env init: docs/commands/env-init.md
+        - env ls: docs/commands/env-ls.md
+        - env show: docs/commands/env-show.md
+        - env delete: docs/commands/env-delete.md
+        - svc init: docs/commands/svc-init.md
+        - svc ls: docs/commands/svc-ls.md
+        - svc show: docs/commands/svc-show.md
+        - svc logs: docs/commands/svc-logs.md
+        - svc status: docs/commands/svc-status.md
+        - svc package: docs/commands/svc-package.md
+        - svc deploy: docs/commands/svc-deploy.md
+        - svc delete: docs/commands/svc-delete.md
+        - task run: docs/commands/task-run.md
+      - Release:
+        - pipeline init: docs/commands/pipeline-init.md
+        - pipeline update: docs/commands/pipeline-update.md
+        - pipeline show: docs/commands/pipeline-show.md
+        - pipeline status: docs/commands/pipeline-status.md
+        - pipeline delete: docs/commands/pipeline-delete.md
+        - deploy: docs/commands/deploy.md
+      - Addons:
+        - storage init: docs/commands/storage-init.md
+      - Settings:
+        - version: docs/commands/version.md
+        - completion: docs/commands/completion.md
+  - Community:
+      - Get Involved: community/get-involved.md
+      - Guides and resources: community/guides.md
+theme:
+  name: material
+  custom_dir: site/overrides
+  palette:
+    primary: white
+  font: false
+  icon:
+    logo: octicons/terminal-16
+  favicon: assets/images/cli.png
+  features:
+    - tabs
+    - instant
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+      options:
+        custom_icons:
+          - site/overrides/.icons

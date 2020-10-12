@@ -267,6 +267,18 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			wantedErr:      fmt.Errorf("select Dockerfile: some error"),
 		},
+		"skip asking for port for backend service": {
+			inSvcType:        "Backend Service",
+			inSvcName:        wantedSvcName,
+			inDockerfilePath: wantedDockerfilePath,
+
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {
+				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
+			},
+			mockSel:   func(m *mocks.MockdockerfileSelector) {},
+			wantedErr: nil,
+		},
 		"asks for port if not specified": {
 			inSvcType:        wantedSvcType,
 			inSvcName:        wantedSvcName,
@@ -376,7 +388,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, wantedSvcType, opts.serviceType)
 				require.Equal(t, wantedSvcName, opts.name)
 				if opts.dockerfilePath != "" {
 					require.Equal(t, wantedDockerfilePath, opts.dockerfilePath)

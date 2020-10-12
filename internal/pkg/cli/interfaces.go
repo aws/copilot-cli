@@ -56,6 +56,10 @@ type jobStore interface {
 	DeleteJob(appName, jobName string) error
 }
 
+type workloadListWriter interface {
+	Write(appName string) error
+}
+
 type applicationStore interface {
 	applicationCreator
 	applicationGetter

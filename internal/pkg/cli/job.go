@@ -23,6 +23,7 @@ Jobs are Amazon ECS tasks which run on a fixed schedule.`,
 	cmd.AddCommand(buildJobPackageCmd())
 	cmd.AddCommand(buildJobDeployCmd())
 	cmd.AddCommand(buildJobDeleteCmd())
+	cmd.AddCommand(buildJobListCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 

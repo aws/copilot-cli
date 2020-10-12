@@ -1,0 +1,106 @@
+# Sidecars
+Sidecars are additional containers that run along side the main container. They are usually used to perform peripheral tasks such as logging, configuration, or proxying requests.
+
+AWS also provides some plugin options that can be seamlessly incorporated with your ECS service, including but not limited to [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html), [AWS X-Ray](https://aws.amazon.com/xray/), and [AWS App Mesh](https://aws.amazon.com/app-mesh/).
+
+## How to add sidecars with Copilot?
+There are two ways of adding sidecars using Copilot manifest: specify [general sidecars](#general-sidecars) or with [sidecar patterns](#sidecar-patterns).
+
+### General sidecars
+You'll need to provide the URL for the sidecar image. Optionally, you can specify the port you'd like to expose and the credential parameter for [private registry](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html).
+
+``` yaml
+sidecars:
+  {{ sidecar name }}:
+    # Port of the container to expose. (Optional)
+    port: {{ port number }}
+    # Image URL for sidecar container. (Required)
+    image: {{ image url }}
+    # ARN of the secret containing the private repository credentials. (Optional)
+    credentialParameter: {{ credential }}
+```
+
+Below is an example of specifying the [nginx](https://www.nginx.com/) sidecar container in a load balanced web service manifest.
+
+``` yaml
+name: api
+type: Load Balanced Web Service
+
+image:
+  build: api/Dockerfile
+  port: 3000
+
+http:
+  path: 'api'
+  healthcheck: '/api/health-check'
+  # Target container for Load Balancer is our sidecar 'nginx', instead of the service container.
+  targetContainer: 'nginx'
+
+cpu: 256
+memory: 512
+count: 1
+
+sidecars:
+  nginx:
+    port: 80
+    image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/reverse-proxy:revision_1
+```
+
+### Sidecar patterns
+Sidecar patterns are pre-defined Copilot sidecar configurations. The only supported pattern is FireLens for now but we'll add more in the future!
+
+``` yaml
+# In the manifest.
+logging:
+  # The fluent bit image. (Optional, we'll use "amazon/aws-for-fluent-bit:latest" by default)
+  image: {{ image URL }}
+  # The configuration options to send to the Firelens log driver. (Optional)
+  destination:
+    {{ config key }}: {{ config value}}
+  # Whether to include ECS metadata in logs. (Optional, default to true)
+  enableMetadata: {{ true|false }}
+  # Secret to pass to the log configuration. (Optional)
+  secretOptions:
+    {{ key }}: {{ value}
+  # The full config file path in your custom fluent bit image.
+  configFile: {{ config file path }}
+```
+For example:
+
+``` yaml
+logging:
+  destination:
+    Name: cloudwatch
+    region: us-west-2
+    log_group_name: /copilot/sidecar-test-hello
+    log_stream_prefix: copilot/
+```
+
+You might need to add necessary permissions to the task role so that FireLens can forward your data. You can add permissions by specifying them in your [addons](/docs/developing/additional-aws-resources). For example:
+
+``` yaml
+Resources:
+  FireLensPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Action:
+          - logs:CreateLogStream
+          - logs:CreateLogGroup
+          - logs:DescribeLogStreams
+          - logs:PutLogEvents
+          Resource: "{{ resource ARN }}"
+Outputs:
+  FireLensPolicyArn:
+    Description: An addon ManagedPolicy gets used by the ECS task role
+    Value: !Ref FireLensPolicy
+```
+
+!!!info
+    Since Firelens log driver can route your main container's logs to various destinations, the [`svc logs`](/docs/commands/svc-logs) command can only track them when they are sent to the log group we create for Copilot service in CloudWatch. 
+
+!!!info
+    ** We're going to make this easier and more powerful!** Currently we only support using remote images for sidecars which means users need to build and push their local sidecar image. But, we are planning to support using local image or Dockerfile. Additionally, Firelens will be able to route logs for the other sidecars (not just the main container).
