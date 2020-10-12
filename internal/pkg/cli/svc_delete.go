@@ -80,6 +80,10 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 	}
 	prompter := prompt.New()
 	ws, err := workspace.New()
+	sel, err := selector.NewWorkspaceSelect(prompter, store, ws)
+	if err != nil {
+		return nil, err
+	}
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
@@ -91,7 +95,7 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 		spinner: termprogress.NewSpinner(),
 		prompt:  prompter,
 		sess:    provider,
-		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
+		sel:     sel,
 		appCFN:  cloudformation.New(defaultSession),
 		getSvcCFN: func(session *awssession.Session) wlDeleter {
 			return cloudformation.New(session)

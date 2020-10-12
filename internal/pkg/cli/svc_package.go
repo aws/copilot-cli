@@ -80,8 +80,11 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("retrieve default session: %w", err)
 	}
-
 	prompter := prompt.New()
+	sel, err := selector.NewWorkspaceSelect(prompter, store, ws)
+	if err != nil {
+		return nil, err
+	}
 	opts := &packageSvcOpts{
 		packageSvcVars: vars,
 		initAddonsSvc:  initPackageAddonsSvc,
@@ -89,7 +92,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		store:          store,
 		appCFN:         cloudformation.New(sess),
 		runner:         command.New(),
-		sel:            selector.NewWorkspaceSelect(prompter, store, ws),
+		sel:            sel,
 		prompt:         prompter,
 		stackWriter:    os.Stdout,
 		paramsWriter:   ioutil.Discard,
