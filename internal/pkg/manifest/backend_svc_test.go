@@ -20,13 +20,12 @@ func TestNewBackendSvc(t *testing.T) {
 
 		wantedManifest *BackendService
 	}{
-		"without healthcheck": {
+		"without healthcheck and port": {
 			inProps: BackendServiceProps{
 				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
-				Port: 8080,
 			},
 			wantedManifest: &BackendService{
 				Workload: Workload{
@@ -43,7 +42,6 @@ func TestNewBackendSvc(t *testing.T) {
 									},
 								},
 							},
-							Port: aws.Uint16(8080),
 						},
 					},
 					TaskConfig: TaskConfig{
@@ -121,13 +119,12 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 
 		wantedTestdata string
 	}{
-		"without healthcheck": {
+		"without healthcheck and port": {
 			inProps: BackendServiceProps{
 				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
-				Port: 8080,
 			},
 			wantedTestdata: "backend-svc-nohealthcheck.yml",
 		},
