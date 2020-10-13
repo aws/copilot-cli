@@ -62,17 +62,22 @@ const (
 	service              = "service"
 )
 
-type initSvcVars struct {
+type initWkldVars struct {
 	appName        string
-	serviceType    string
+	wkldType       string
 	name           string
 	dockerfilePath string
 	image          string
-	port           uint16
+
+	port uint16
+
+	timeout  string
+	retries  int
+	schedule string
 }
 
 type initSvcOpts struct {
-	initSvcVars
+	initWkldVars
 
 	// Interfaces to interact with dependencies.
 	fs          afero.Fs
@@ -92,7 +97,7 @@ type initSvcOpts struct {
 	setupParser func(*initSvcOpts)
 }
 
-func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
+func newInitSvcOpts(vars initWkldVars) (*initSvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't connect to config store: %w", err)
@@ -114,7 +119,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		return nil, err
 	}
 	return &initSvcOpts{
-		initSvcVars: vars,
+		initWkldVars: vars,
 
 		fs:          &afero.Afero{Fs: afero.NewOsFs()},
 		store:       store,
@@ -135,8 +140,8 @@ func (o *initSvcOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
-	if o.serviceType != "" {
-		if err := validateSvcType(o.serviceType); err != nil {
+	if o.wkldType != "" {
+		if err := validateSvcType(o.wkldType); err != nil {
 			return err
 		}
 	}
@@ -208,7 +213,7 @@ func (o *initSvcOpts) Execute() error {
 	if err := o.store.CreateService(&config.Workload{
 		App:  o.appName,
 		Name: o.name,
-		Type: o.serviceType,
+		Type: o.wkldType,
 	}); err != nil {
 		return fmt.Errorf("saving service %s: %w", o.name, err)
 	}
@@ -259,13 +264,13 @@ func (o *initSvcOpts) newManifest() (encoding.BinaryMarshaler, error) {
 		}
 		dfPath = path
 	}
-	switch o.serviceType {
+	switch o.wkldType {
 	case manifest.LoadBalancedWebServiceType:
 		return o.newLoadBalancedWebServiceManifest(dfPath)
 	case manifest.BackendServiceType:
 		return o.newBackendServiceManifest(dfPath)
 	default:
-		return nil, fmt.Errorf("service type %s doesn't have a manifest", o.serviceType)
+		return nil, fmt.Errorf("service type %s doesn't have a manifest", o.wkldType)
 	}
 }
 
@@ -311,7 +316,7 @@ func (o *initSvcOpts) newBackendServiceManifest(dockerfilePath string) (*manifes
 }
 
 func (o *initSvcOpts) askSvcType() error {
-	if o.serviceType != "" {
+	if o.wkldType != "" {
 		return nil
 	}
 
@@ -324,7 +329,7 @@ func (o *initSvcOpts) askSvcType() error {
 	if err != nil {
 		return fmt.Errorf("select service type: %w", err)
 	}
-	o.serviceType = t
+	o.wkldType = t
 	return nil
 }
 
@@ -334,7 +339,7 @@ func (o *initSvcOpts) askSvcName() error {
 	}
 
 	name, err := o.prompt.Get(
-		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.serviceType)),
+		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.wkldType)),
 		fmt.Sprintf(fmtWkldInitNameHelpPrompt, service, o.appName),
 		validateSvcName,
 		prompt.WithFinalMessage("Service name:"))
@@ -406,7 +411,7 @@ func (o *initSvcOpts) askSvcPort() error {
 		}
 	}
 	// Skip asking if it is a backend service.
-	if o.serviceType == manifest.BackendServiceType {
+	if o.wkldType == manifest.BackendServiceType {
 		return nil
 	}
 
@@ -464,7 +469,7 @@ func (o *initSvcOpts) RecommendedActions() []string {
 
 // buildSvcInitCmd build the command for creating a new service.
 func buildSvcInitCmd() *cobra.Command {
-	vars := initSvcVars{}
+	vars := initWkldVars{}
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a new service in an application.",
@@ -500,7 +505,7 @@ This command is also run as part of "copilot init".`,
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)
-	cmd.Flags().StringVarP(&vars.serviceType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)
+	cmd.Flags().StringVarP(&vars.wkldType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 

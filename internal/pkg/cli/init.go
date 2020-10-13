@@ -107,8 +107,8 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		prog:     spin,
 	}
 	initSvcCmd := &initSvcOpts{
-		initSvcVars: initSvcVars{
-			serviceType:    vars.svcType,
+		initWkldVars: initWkldVars{
+			wkldType:       vars.svcType,
 			name:           vars.svcName,
 			dockerfilePath: vars.dockerfilePath,
 			port:           vars.port,
@@ -166,7 +166,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		deploySvcCmd: deploySvcCmd,
 
 		appName:        &initAppCmd.name,
-		svcType:        &initSvcCmd.serviceType,
+		svcType:        &initSvcCmd.wkldType,
 		svcName:        &initSvcCmd.name,
 		svcPort:        &initSvcCmd.port,
 		dockerfilePath: &initSvcCmd.dockerfilePath,

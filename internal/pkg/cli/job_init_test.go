@@ -113,7 +113,7 @@ func TestJobInitOpts_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			opts := initJobOpts{
-				initJobVars: initJobVars{
+				initWkldVars: initWkldVars{
 					name:           tc.inJobName,
 					image:          tc.inImage,
 					dockerfilePath: tc.inDockerfilePath,
@@ -336,8 +336,8 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockSel := mocks.NewMockinitJobSelector(ctrl)
 			opts := &initJobOpts{
-				initJobVars: initJobVars{
-					jobType:        tc.inJobType,
+				initWkldVars: initWkldVars{
+					wkldType:       tc.inJobType,
 					name:           tc.inJobName,
 					image:          tc.inImage,
 					dockerfilePath: tc.inDockerfilePath,
@@ -361,7 +361,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, wantedJobType, opts.jobType)
+			require.Equal(t, wantedJobType, opts.wkldType)
 			require.Equal(t, wantedJobName, opts.name)
 			if opts.dockerfilePath != "" {
 				require.Equal(t, wantedDockerfilePath, opts.dockerfilePath)
@@ -566,12 +566,12 @@ func TestJobInitOpts_Execute(t *testing.T) {
 				tc.mockProg(mockProg)
 			}
 			opts := initJobOpts{
-				initJobVars: initJobVars{
+				initWkldVars: initWkldVars{
 					appName:        tc.inAppName,
 					name:           tc.inJobName,
 					dockerfilePath: tc.inDockerfilePath,
 					image:          tc.inImage,
-					jobType:        tc.inJobType,
+					wkldType:       tc.inJobType,
 				},
 				ws:          mockWriter,
 				store:       mockstore,

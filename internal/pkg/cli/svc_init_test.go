@@ -74,8 +74,8 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			opts := initSvcOpts{
-				initSvcVars: initSvcVars{
-					serviceType:    tc.inSvcType,
+				initWkldVars: initWkldVars{
+					wkldType:       tc.inSvcType,
 					name:           tc.inSvcName,
 					dockerfilePath: tc.inDockerfilePath,
 					port:           tc.inSvcPort,
@@ -363,8 +363,8 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
 			mockSel := mocks.NewMockdockerfileSelector(ctrl)
 			opts := &initSvcOpts{
-				initSvcVars: initSvcVars{
-					serviceType:    tc.inSvcType,
+				initWkldVars: initWkldVars{
+					wkldType:       tc.inSvcType,
 					name:           tc.inSvcName,
 					port:           tc.inSvcPort,
 					image:          tc.inImage,
@@ -717,8 +717,8 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				tc.mockDf(mockDf)
 			}
 			opts := initSvcOpts{
-				initSvcVars: initSvcVars{
-					serviceType:    tc.inSvcType,
+				initWkldVars: initWkldVars{
+					wkldType:       tc.inSvcType,
 					name:           tc.inSvcName,
 					port:           tc.inSvcPort,
 					dockerfilePath: tc.inDockerfilePath,
@@ -833,11 +833,11 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				tc.mockstore(mockstore)
 			}
 			opts := initSvcOpts{
-				initSvcVars: initSvcVars{
-					serviceType: manifest.LoadBalancedWebServiceType,
-					name:        tc.inSvcName,
-					port:        tc.inSvcPort,
-					appName:     tc.inAppName,
+				initWkldVars: initWkldVars{
+					wkldType: manifest.LoadBalancedWebServiceType,
+					name:     tc.inSvcName,
+					port:     tc.inSvcPort,
+					appName:  tc.inAppName,
 				},
 				store: mockstore,
 			}
