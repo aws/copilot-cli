@@ -388,29 +388,6 @@ func (o *deployJobOpts) askEnvName() error {
 	return nil
 }
 
-func (o *deployJobOpts) askImageTag() error {
-	if o.imageTag != "" {
-		return nil
-	}
-
-	tag, err := getVersionTag(o.cmd)
-
-	if err == nil {
-		o.imageTag = tag
-
-		return nil
-	}
-
-	log.Warningln("Failed to default tag, are you in a git repository?")
-
-	userInputTag, err := o.prompt.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
-	if err != nil {
-		return fmt.Errorf("prompt for image tag: %w", err)
-	}
-	o.imageTag = userInputTag
-	return nil
-}
-
 // buildJobDeployCmd builds the `job deploy` subcommand.
 func buildJobDeployCmd() *cobra.Command {
 	vars := deployJobVars{}
