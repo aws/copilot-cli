@@ -84,13 +84,18 @@ func (o *packageJobOpts) Validate() error {
 
 // Ask prompts the user for any missing required fields.
 func (o *packageJobOpts) Ask() error {
-	if err := o.askAppName(); err != nil {
+	if err := o.askJobName(); err != nil {
 		return err
 	}
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	return o.askTag()
+	tag, err := askImageTag(o.tag, o.prompt, o.runner)
+	if err != nil {
+		return err
+	}
+	o.tag = tag
+	return nil
 }
 
 // Execute prints the CloudFormation template of the application for the environment.
@@ -98,7 +103,7 @@ func (o *packageJobOpts) Execute() error {
 	return nil
 }
 
-func (o *packageJobOpts) askAppName() error {
+func (o *packageJobOpts) askJobName() error {
 	if o.name != "" {
 		return nil
 	}
@@ -121,23 +126,6 @@ func (o *packageJobOpts) askEnvName() error {
 		return fmt.Errorf("select environment: %w", err)
 	}
 	o.envName = name
-	return nil
-}
-
-func (o *packageJobOpts) askTag() error {
-	if o.tag != "" {
-		return nil
-	}
-
-	tag, err := getVersionTag(o.runner)
-	if err != nil {
-		// We're not in a Git repository, prompt the user for an explicit tag.
-		tag, err = o.prompt.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
-		if err != nil {
-			return fmt.Errorf("prompt get image tag: %w", err)
-		}
-	}
-	o.tag = tag
 	return nil
 }
 

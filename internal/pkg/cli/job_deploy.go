@@ -114,9 +114,11 @@ func (o *deployJobOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	if err := o.askImageTag(); err != nil {
+	tag, err := askImageTag(o.imageTag, o.prompt, o.cmd)
+	if err != nil {
 		return err
 	}
+	o.imageTag = tag
 	return nil
 }
 
