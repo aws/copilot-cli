@@ -34,6 +34,13 @@ func Stdout(writer io.Writer) Option {
 	}
 }
 
+// Stderr sets the internal *exec.Cmd's Stderr field.
+func Stderr(writer io.Writer) Option {
+	return func(c *exec.Cmd) {
+		c.Stderr = writer
+	}
+}
+
 // Run runs the input command with input args with Stdout and Stderr defaulted to os.Stderr.
 // Input options will override these defaults.
 func (s Service) Run(name string, args []string, options ...Option) error {

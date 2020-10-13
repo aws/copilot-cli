@@ -20,13 +20,14 @@ const (
 )
 
 func getVersionTag(runner runner) (string, error) {
-	var b bytes.Buffer
-	if err := runner.Run("git", []string{"describe", "--always"}, command.Stdout(&b)); err != nil {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if err := runner.Run("git", []string{"describe", "--always"}, command.Stdout(&stdout), command.Stderr(&stderr)); err != nil {
 		return "", err
 	}
 
 	// NOTE: `git describe` output bytes includes a `\n` character, so we trim it out.
-	return strings.TrimSpace(b.String()), nil
+	return strings.TrimSpace(stdout.String()), nil
 }
 
 func askImageTag(tag string, prompter prompter, cmd runner) (string, error) {
