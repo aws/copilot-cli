@@ -125,6 +125,10 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 	}
 
 	prompter := prompt.New()
+	sel, err := selector.NewWorkspaceSelect(prompter, store, ws)
+	if err != nil {
+		return nil, err
+	}
 	return &initStorageOpts{
 		initStorageVars: vars,
 		appName:         tryReadingAppName(),
@@ -132,7 +136,7 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 		fs:     &afero.Afero{Fs: afero.NewOsFs()},
 		store:  store,
 		ws:     ws,
-		sel:    selector.NewWorkspaceSelect(prompter, store, ws),
+		sel:    sel,
 		prompt: prompter,
 	}, nil
 }
@@ -275,9 +279,7 @@ func (o *initStorageOpts) askStorageSvc() error {
 	if o.storageSvc != "" {
 		return nil
 	}
-	svc, err := o.sel.Service(storageInitSvcPrompt,
-		storageInitSvcHelp,
-	)
+	svc, err := o.sel.Service(storageInitSvcPrompt, storageInitSvcHelp)
 	if err != nil {
 		return fmt.Errorf("retrieve local service names: %w", err)
 	}

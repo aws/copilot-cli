@@ -84,6 +84,10 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		return nil, err
 	}
 	prompt := prompt.New()
+	sel, err := selector.NewWorkspaceSelect(prompt, ssm, ws)
+	if err != nil {
+		return nil, err
+	}
 	spin := termprogress.NewSpinner()
 	id := identity.New(defaultSess)
 	deployer := cloudformation.New(defaultSess)
@@ -115,7 +119,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		store:       ssm,
 		appDeployer: deployer,
 		prog:        spin,
-		sel:         selector.NewWorkspaceSelect(prompt, ssm, ws),
+		sel:         sel,
 		prompt:      prompt,
 		setupParser: func(o *initSvcOpts) {
 			o.df = dockerfile.New(o.fs, o.dockerfilePath)
@@ -147,7 +151,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		prompt:       prompt,
 		ws:           ws,
 		unmarshal:    manifest.UnmarshalWorkload,
-		sel:          selector.NewWorkspaceSelect(prompt, ssm, ws),
+		sel:          sel,
 		spinner:      spin,
 		cmd:          command.New(),
 		sessProvider: sessProvider,
