@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	docsURL = "https://github.com/aws/copilot-cli/wiki"
+	docsURL = "https://aws.github.io/copilot-cli/"
 )
 
 // BuildDocsCmd builds the command for opening the documentation.

@@ -1,6 +1,6 @@
 # The manifest for the "cuteness-aggregator" job.
 # Read the full specification for the "Scheduled Job" type at:
-#  https://github.com/aws/copilot-cli/wiki/Manifests#scheduled-job
+#  https://aws.github.io/copilot-cli/docs/manifest/scheduled-job/
 
 # Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
 name: cuteness-aggregator

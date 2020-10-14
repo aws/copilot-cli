@@ -51,7 +51,7 @@ const (
 	fmtEnvInitCredsPrompt  = "Which credentials would you like to use to create %s?"
 	envInitCredsHelpPrompt = `The credentials are used to create your environment in an AWS account and region.
 To learn more:
-https://github.com/aws/copilot-cli/wiki/credentials#environment-credentials`
+https://aws.github.io/copilot-cli/docs/credentials/#environment-credentials`
 	envInitRegionPrompt        = "Which region?"
 	envInitDefaultRegionOption = "us-west-2"
 

@@ -17,7 +17,7 @@ import (
 
 const manifest = `# The manifest for the "hello" service.
 # Read the full specification for the "Load Balanced Web Service" type at:
-#  https://github.com/aws/copilot-cli/wiki/Manifests#load-balanced-web-svc
+#  https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: hello
