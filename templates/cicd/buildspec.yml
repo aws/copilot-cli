@@ -40,8 +40,8 @@ phases:
         done;
       - ls -lah ./infrastructure
       # Concatenate jobs and services into one var for addons
-      # If addons exists, upload addons templates to each S3 bucket and write template URL to template config files.
       - JOBS_SVCS=$(echo $jobs $svcs)
+      # If addons exists, upload addons templates to each S3 bucket and write template URL to template config files.
       - |
         for js in $JOBS_SVCS; do
           ADDONSFILE=./infrastructure/$js.addons.stack.yml
