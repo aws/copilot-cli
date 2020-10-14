@@ -114,9 +114,11 @@ func (o *deployJobOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	if err := o.askImageTag(); err != nil {
+	tag, err := askImageTag(o.imageTag, o.prompt, o.cmd)
+	if err != nil {
 		return err
 	}
+	o.imageTag = tag
 	return nil
 }
 
@@ -383,29 +385,6 @@ func (o *deployJobOpts) askEnvName() error {
 		return fmt.Errorf("select environment: %w", err)
 	}
 	o.envName = name
-	return nil
-}
-
-func (o *deployJobOpts) askImageTag() error {
-	if o.imageTag != "" {
-		return nil
-	}
-
-	tag, err := getVersionTag(o.cmd)
-
-	if err == nil {
-		o.imageTag = tag
-
-		return nil
-	}
-
-	log.Warningln("Failed to default tag, are you in a git repository?")
-
-	userInputTag, err := o.prompt.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
-	if err != nil {
-		return fmt.Errorf("prompt for image tag: %w", err)
-	}
-	o.imageTag = userInputTag
 	return nil
 }
 
