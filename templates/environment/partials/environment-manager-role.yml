@@ -1,4 +1,5 @@
 EnvironmentManagerRole:
+  DeletionPolicy: Retain
   Type: AWS::IAM::Role
   DependsOn: CloudformationExecutionRole
   Properties:

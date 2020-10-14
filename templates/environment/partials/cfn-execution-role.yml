@@ -1,4 +1,5 @@
 CloudformationExecutionRole:
+  DeletionPolicy: Retain
   Type: AWS::IAM::Role
 {{- if not .ImportVPC}}
   DependsOn: VPC
