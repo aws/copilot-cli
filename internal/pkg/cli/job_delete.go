@@ -83,13 +83,17 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 	prompter := prompt.New()
+	sel, err := selector.NewWorkspaceSelect(prompter, store, ws)
+	if err != nil {
+		return nil, err
+	}
 	return &deleteJobOpts{
 		deleteJobVars: vars,
 
 		store:   store,
 		spinner: termprogress.NewSpinner(),
 		prompt:  prompt.New(),
-		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
+		sel:     sel,
 		sess:    provider,
 		appCFN:  cloudformation.New(defaultSession),
 		getJobCFN: func(session *awssession.Session) wlDeleter {

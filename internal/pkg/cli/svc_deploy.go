@@ -32,10 +32,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	inputImageTagPrompt = "Input an image tag value:"
-)
-
 type deploySvcVars struct {
 	appName      string
 	name         string
@@ -80,6 +76,10 @@ func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 	prompter := prompt.New()
+	sel, err := selector.NewWorkspaceSelect(prompter, store, ws)
+	if err != nil {
+		return nil, err
+	}
 	return &deploySvcOpts{
 		deploySvcVars: vars,
 
@@ -87,7 +87,7 @@ func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
 		ws:           ws,
 		unmarshal:    manifest.UnmarshalWorkload,
 		spinner:      termprogress.NewSpinner(),
-		sel:          selector.NewWorkspaceSelect(prompter, store, ws),
+		sel:          sel,
 		prompt:       prompter,
 		cmd:          command.New(),
 		sessProvider: sessions.NewProvider(),
@@ -120,9 +120,11 @@ func (o *deploySvcOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	if err := o.askImageTag(); err != nil {
+	tag, err := askImageTag(o.imageTag, o.prompt, o.cmd)
+	if err != nil {
 		return err
 	}
+	o.imageTag = tag
 	return nil
 }
 
@@ -222,29 +224,6 @@ func (o *deploySvcOpts) askEnvName() error {
 		return fmt.Errorf("select environment: %w", err)
 	}
 	o.envName = name
-	return nil
-}
-
-func (o *deploySvcOpts) askImageTag() error {
-	if o.imageTag != "" {
-		return nil
-	}
-
-	tag, err := getVersionTag(o.cmd)
-
-	if err == nil {
-		o.imageTag = tag
-
-		return nil
-	}
-
-	log.Warningln("Failed to default tag, are you in a git repository?")
-
-	userInputTag, err := o.prompt.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
-	if err != nil {
-		return fmt.Errorf("prompt for image tag: %w", err)
-	}
-	o.imageTag = userInputTag
 	return nil
 }
 

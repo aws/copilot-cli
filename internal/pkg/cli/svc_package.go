@@ -52,7 +52,7 @@ type packageSvcOpts struct {
 
 	// Interfaces to interact with dependencies.
 	addonsSvc       templater
-	initAddonsSvc   func(*packageSvcOpts) error // Overriden in tests.
+	initAddonsSvc   func(*packageSvcOpts) error // Overridden in tests.
 	ws              wsSvcReader
 	store           store
 	appCFN          appResourcesGetter
@@ -80,8 +80,11 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("retrieve default session: %w", err)
 	}
-
 	prompter := prompt.New()
+	sel, err := selector.NewWorkspaceSelect(prompter, store, ws)
+	if err != nil {
+		return nil, err
+	}
 	opts := &packageSvcOpts{
 		packageSvcVars: vars,
 		initAddonsSvc:  initPackageAddonsSvc,
@@ -89,7 +92,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		store:          store,
 		appCFN:         cloudformation.New(sess),
 		runner:         command.New(),
-		sel:            selector.NewWorkspaceSelect(prompter, store, ws),
+		sel:            sel,
 		prompt:         prompter,
 		stackWriter:    os.Stdout,
 		paramsWriter:   ioutil.Discard,
@@ -149,13 +152,18 @@ func (o *packageSvcOpts) Validate() error {
 
 // Ask prompts the user for any missing required fields.
 func (o *packageSvcOpts) Ask() error {
-	if err := o.askAppName(); err != nil {
+	if err := o.askSvcName(); err != nil {
 		return err
 	}
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	return o.askTag()
+	tag, err := askImageTag(o.tag, o.prompt, o.runner)
+	if err != nil {
+		return err
+	}
+	o.tag = tag
+	return nil
 }
 
 // Execute prints the CloudFormation template of the application for the environment.
@@ -203,7 +211,7 @@ func (o *packageSvcOpts) Execute() error {
 	return err
 }
 
-func (o *packageSvcOpts) askAppName() error {
+func (o *packageSvcOpts) askSvcName() error {
 	if o.name != "" {
 		return nil
 	}
@@ -226,23 +234,6 @@ func (o *packageSvcOpts) askEnvName() error {
 		return fmt.Errorf("select environment: %w", err)
 	}
 	o.envName = name
-	return nil
-}
-
-func (o *packageSvcOpts) askTag() error {
-	if o.tag != "" {
-		return nil
-	}
-
-	tag, err := getVersionTag(o.runner)
-	if err != nil {
-		// We're not in a Git repository, prompt the user for an explicit tag.
-		tag, err = o.prompt.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
-		if err != nil {
-			return fmt.Errorf("prompt get image tag: %w", err)
-		}
-	}
-	o.tag = tag
 	return nil
 }
 
