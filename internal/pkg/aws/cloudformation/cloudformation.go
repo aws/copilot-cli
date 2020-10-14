@@ -135,23 +135,17 @@ func (c *CloudFormation) Delete(stackName string) error {
 
 // DeleteAndWait calls Delete then blocks until the stack is deleted or until the max attempt window expires.
 func (c *CloudFormation) DeleteAndWait(stackName string) error {
-	_, err := c.client.DeleteStack(&cloudformation.DeleteStackInput{
+	return c.deleteAndWait(&cloudformation.DeleteStackInput{
 		StackName: aws.String(stackName),
 	})
-	if err != nil {
-		if !stackDoesNotExist(err) {
-			return fmt.Errorf("delete stack %s: %w", stackName, err)
-		}
-		return nil // If the stack is already deleted, don't wait for it.
-	}
+}
 
-	err = c.client.WaitUntilStackDeleteCompleteWithContext(context.Background(), &cloudformation.DescribeStacksInput{
+// DeleteAndWaitWithRoleARN is DeleteAndWait but with a role ARN that AWS CloudFormation assumes to delete the stack.
+func (c *CloudFormation) DeleteAndWaitWithRoleARN(stackName, roleARN string) error {
+	return c.deleteAndWait(&cloudformation.DeleteStackInput{
 		StackName: aws.String(stackName),
-	}, waiters...)
-	if err != nil {
-		return fmt.Errorf("wait until stack %s delete is complete: %w", stackName, err)
-	}
-	return nil
+		RoleARN:   aws.String(roleARN),
+	})
 }
 
 // Describe returns a description of an existing stack.
@@ -171,6 +165,21 @@ func (c *CloudFormation) Describe(name string) (*StackDescription, error) {
 	}
 	descr := StackDescription(*out.Stacks[0])
 	return &descr, nil
+}
+
+// TemplateBody returns the template body of an existing stack.
+// If the stack does not exist, returns ErrStackNotFound.
+func (c *CloudFormation) TemplateBody(name string) (string, error) {
+	out, err := c.client.GetTemplate(&cloudformation.GetTemplateInput{
+		StackName: aws.String(name),
+	})
+	if err != nil {
+		if stackDoesNotExist(err) {
+			return "", &ErrStackNotFound{name: name}
+		}
+		return "", fmt.Errorf("get template %s: %w", name, err)
+	}
+	return aws.StringValue(out.TemplateBody), nil
 }
 
 // Events returns the list of stack events in **chronological** order.
@@ -216,4 +225,22 @@ func (c *CloudFormation) update(stack *Stack) error {
 		return err
 	}
 	return cs.createAndExecute(stack.stackConfig)
+}
+
+func (c *CloudFormation) deleteAndWait(in *cloudformation.DeleteStackInput) error {
+	_, err := c.client.DeleteStack(in)
+	if err != nil {
+		if !stackDoesNotExist(err) {
+			return fmt.Errorf("delete stack %s: %w", aws.StringValue(in.StackName), err)
+		}
+		return nil // If the stack is already deleted, don't wait for it.
+	}
+
+	err = c.client.WaitUntilStackDeleteCompleteWithContext(context.Background(), &cloudformation.DescribeStacksInput{
+		StackName: in.StackName,
+	}, waiters...)
+	if err != nil {
+		return fmt.Errorf("wait until stack %s delete is complete: %w", aws.StringValue(in.StackName), err)
+	}
+	return nil
 }
