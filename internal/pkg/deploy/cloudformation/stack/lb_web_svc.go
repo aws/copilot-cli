@@ -18,6 +18,7 @@ import (
 const (
 	lbWebSvcRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
 	desiredCountGeneratorPath         = "custom-resources/desired-count-delegation.js"
+	envControllerPath                 = "custom-resources/env-controller.js"
 )
 
 // Parameter logical IDs for a load balanced web service.
@@ -95,6 +96,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("read desired count lambda: %w", err)
 	}
+	envControllerLambda, err := s.parser.Read(envControllerPath)
+	if err != nil {
+		return "", fmt.Errorf("read env controller lambda: %w", err)
+	}
 	outputs, err := s.addonsOutputs()
 	if err != nil {
 		return "", err
@@ -108,15 +113,16 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
 	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
-		Variables:          s.manifest.Variables,
-		Secrets:            s.manifest.Secrets,
-		NestedStack:        outputs,
-		Sidecars:           sidecars,
-		LogConfig:          s.manifest.LogConfigOpts(),
-		Autoscaling:        autoscaling,
-		HTTPHealthCheck:    s.manifest.HTTPHealthCheckOpts(),
-		RulePriorityLambda: rulePriorityLambda.String(),
-		DesiredCountLambda: desiredCountLambda.String(),
+		Variables:           s.manifest.Variables,
+		Secrets:             s.manifest.Secrets,
+		NestedStack:         outputs,
+		Sidecars:            sidecars,
+		LogConfig:           s.manifest.LogConfigOpts(),
+		Autoscaling:         autoscaling,
+		HTTPHealthCheck:     s.manifest.HTTPHealthCheckOpts(),
+		RulePriorityLambda:  rulePriorityLambda.String(),
+		DesiredCountLambda:  desiredCountLambda.String(),
+		EnvControllerLambda: envControllerLambda.String(),
 	})
 	if err != nil {
 		return "", err

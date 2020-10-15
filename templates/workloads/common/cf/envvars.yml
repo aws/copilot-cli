@@ -11,9 +11,7 @@ Environment:
 - Name: COPILOT_SERVICE_NAME
   Value: !Sub '${WorkloadName}'
 - Name: COPILOT_LB_DNS
-  Value:
-    Fn::ImportValue:
-      !Sub "${AppName}-${EnvName}-PublicLoadBalancerDNS" {{if .Variables}}{{range $name, $value := .Variables}}
+  Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName{{if .Variables}}{{range $name, $value := .Variables}}
 - Name: {{$name}}
   Value: {{$value | printf "%q"}}{{end}}{{end}}{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{range $var := .NestedStack.VariableOutputs}}
 - Name: {{toSnakeCase $var}}

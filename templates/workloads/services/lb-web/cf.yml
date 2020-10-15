@@ -67,6 +67,7 @@ Resources:
 {{include "taskrole" . | indent 2}}
 {{include "servicediscovery" . | indent 2}}
 {{include "autoscaling" . | indent 2}}
+{{include "env-controller" . | indent 2}}
 
   Service:
     Type: AWS::ECS::Service
@@ -128,9 +129,7 @@ Resources:
           HostedZoneId:
             Fn::ImportValue:
               !Sub "${AppName}-${EnvName}-CanonicalHostedZoneID"
-          DNSName:
-            Fn::ImportValue:
-              !Sub "${AppName}-${EnvName}-PublicLoadBalancerDNS"
+          DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
 
   RulePriorityFunction:
     Type: AWS::Lambda::Function
@@ -167,6 +166,31 @@ Resources:
               Action:
                 - elasticloadbalancing:DescribeRules
               Resource: "*"
+        - PolicyName: "EnvControllerStackUpdate"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - cloudformation:DescribeStacks
+                - cloudformation:UpdateStack
+              Resource: "*"
+              Condition:
+                StringEquals:
+                  'cloudformation:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'cloudformation:ResourceTag/copilot-environment': !Sub '${EnvName}'
+        - PolicyName: "EnvControllerRolePass"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - iam:PassRole
+              Resource: "*"
+              Condition:
+                StringEquals:
+                  'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
 {{- if .Autoscaling }}
         - PolicyName: "DelegateDesiredCountAccess"
           PolicyDocument:
@@ -234,9 +258,7 @@ Resources:
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      ListenerArn:
-        Fn::ImportValue:
-          !Sub "${AppName}-${EnvName}-HTTPListenerArn"
+      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
 
   HTTPListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -256,9 +278,7 @@ Resources:
                 -
                   - !Sub "/${RulePath}"
                   - !Sub "/${RulePath}/*"
-      ListenerArn:
-        Fn::ImportValue:
-          !Sub "${AppName}-${EnvName}-HTTPListenerArn"
+      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
       Priority: 
         !If
           - HTTPRootPath
