@@ -16,6 +16,7 @@ import (
 	docker "github.com/aws/copilot-cli/internal/pkg/docker"
 	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	ecslogging "github.com/aws/copilot-cli/internal/pkg/ecslogging"
+	initworkload "github.com/aws/copilot-cli/internal/pkg/initworkload"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -4823,4 +4824,133 @@ func (m *Mockec2Client) HasDNSSupport(vpcID string) (bool, error) {
 func (mr *Mockec2ClientMockRecorder) HasDNSSupport(vpcID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasDNSSupport", reflect.TypeOf((*Mockec2Client)(nil).HasDNSSupport), vpcID)
+}
+
+// MockjobInitializer is a mock of jobInitializer interface
+type MockjobInitializer struct {
+	ctrl     *gomock.Controller
+	recorder *MockjobInitializerMockRecorder
+}
+
+// MockjobInitializerMockRecorder is the mock recorder for MockjobInitializer
+type MockjobInitializerMockRecorder struct {
+	mock *MockjobInitializer
+}
+
+// NewMockjobInitializer creates a new mock instance
+func NewMockjobInitializer(ctrl *gomock.Controller) *MockjobInitializer {
+	mock := &MockjobInitializer{ctrl: ctrl}
+	mock.recorder = &MockjobInitializerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockjobInitializer) EXPECT() *MockjobInitializerMockRecorder {
+	return m.recorder
+}
+
+// Job mocks base method
+func (m *MockjobInitializer) Job(props *initworkload.WorkloadProps) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Job", props)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Job indicates an expected call of Job
+func (mr *MockjobInitializerMockRecorder) Job(props interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Job", reflect.TypeOf((*MockjobInitializer)(nil).Job), props)
+}
+
+// MocksvcInitializer is a mock of svcInitializer interface
+type MocksvcInitializer struct {
+	ctrl     *gomock.Controller
+	recorder *MocksvcInitializerMockRecorder
+}
+
+// MocksvcInitializerMockRecorder is the mock recorder for MocksvcInitializer
+type MocksvcInitializerMockRecorder struct {
+	mock *MocksvcInitializer
+}
+
+// NewMocksvcInitializer creates a new mock instance
+func NewMocksvcInitializer(ctrl *gomock.Controller) *MocksvcInitializer {
+	mock := &MocksvcInitializer{ctrl: ctrl}
+	mock.recorder = &MocksvcInitializerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocksvcInitializer) EXPECT() *MocksvcInitializerMockRecorder {
+	return m.recorder
+}
+
+// Service mocks base method
+func (m *MocksvcInitializer) Service(props *initworkload.WorkloadProps) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Service", props)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Service indicates an expected call of Service
+func (mr *MocksvcInitializerMockRecorder) Service(props interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MocksvcInitializer)(nil).Service), props)
+}
+
+// MockjobSvcInitializer is a mock of jobSvcInitializer interface
+type MockjobSvcInitializer struct {
+	ctrl     *gomock.Controller
+	recorder *MockjobSvcInitializerMockRecorder
+}
+
+// MockjobSvcInitializerMockRecorder is the mock recorder for MockjobSvcInitializer
+type MockjobSvcInitializerMockRecorder struct {
+	mock *MockjobSvcInitializer
+}
+
+// NewMockjobSvcInitializer creates a new mock instance
+func NewMockjobSvcInitializer(ctrl *gomock.Controller) *MockjobSvcInitializer {
+	mock := &MockjobSvcInitializer{ctrl: ctrl}
+	mock.recorder = &MockjobSvcInitializerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockjobSvcInitializer) EXPECT() *MockjobSvcInitializerMockRecorder {
+	return m.recorder
+}
+
+// Job mocks base method
+func (m *MockjobSvcInitializer) Job(props *initworkload.WorkloadProps) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Job", props)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Job indicates an expected call of Job
+func (mr *MockjobSvcInitializerMockRecorder) Job(props interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Job", reflect.TypeOf((*MockjobSvcInitializer)(nil).Job), props)
+}
+
+// Service mocks base method
+func (m *MockjobSvcInitializer) Service(props *initworkload.WorkloadProps) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Service", props)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Service indicates an expected call of Service
+func (mr *MockjobSvcInitializerMockRecorder) Service(props interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockjobSvcInitializer)(nil).Service), props)
 }

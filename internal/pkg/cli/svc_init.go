@@ -235,7 +235,7 @@ func (o *initSvcOpts) createManifest() (string, error) {
 		manifestExists = true
 		manifestPath = e.FileName
 	}
-	manifestPath, err = relPath(manifestPath)
+	manifestPath, err = workspace.RelPath(manifestPath)
 	if err != nil {
 		return "", err
 	}

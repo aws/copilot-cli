@@ -17,6 +17,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/ecslogging"
+	"github.com/aws/copilot-cli/internal/pkg/initworkload"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -454,4 +455,17 @@ type credsSelector interface {
 
 type ec2Client interface {
 	HasDNSSupport(vpcID string) (bool, error)
+}
+
+type jobInitializer interface {
+	Job(props *initworkload.WorkloadProps) (string, error)
+}
+
+type svcInitializer interface {
+	Service(props *initworkload.WorkloadProps) (string, error)
+}
+
+type jobSvcInitializer interface {
+	jobInitializer
+	svcInitializer
 }

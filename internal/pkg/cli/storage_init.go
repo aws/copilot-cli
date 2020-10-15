@@ -458,7 +458,7 @@ func (o *initStorageOpts) createAddon() error {
 		}
 		return fmt.Errorf("addon already exists: %w", e)
 	}
-	addonPath, err = relPath(addonPath)
+	addonPath, err = workspace.RelPath(addonPath)
 	if err != nil {
 		return err
 	}

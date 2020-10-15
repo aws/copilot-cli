@@ -11,6 +11,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/initworkload"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -44,13 +45,9 @@ type initJobOpts struct {
 	initWkldVars
 
 	// Interfaces to interact with dependencies.
-	fs          afero.Fs
-	ws          jobDirManifestWriter
-	store       store
-	appDeployer appDeployer
-	prog        progress
-	prompt      prompter
-	sel         initJobSelector
+	fs     afero.Fs
+	prompt prompter
+	sel    initJobSelector
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -78,16 +75,20 @@ func newInitJobOpts(vars initWkldVars) (*initJobOpts, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	initJob := initworkload.NewJobInitializer(
+		store,
+		ws,
+		termprogress.NewSpinner(),
+		cloudformation.New(sess),
+	)
 	return &initJobOpts{
 		initWkldVars: vars,
 
-		fs:          &afero.Afero{Fs: afero.NewOsFs()},
-		store:       store,
-		ws:          ws,
-		appDeployer: cloudformation.New(sess),
-		prog:        termprogress.NewSpinner(),
-		prompt:      prompter,
-		sel:         sel,
+		fs:     &afero.Afero{Fs: afero.NewOsFs()},
+		init:   initJob,
+		prompt: prompter,
+		sel:    sel,
 	}, nil
 }
 
@@ -150,86 +151,25 @@ func (o *initJobOpts) Ask() error {
 	return nil
 }
 
-// Execute writes the job's manifest file and stores the name in SSM.
+// Execute writes the job's manifest file, creates an ECR repo, and stores the name in SSM.
 func (o *initJobOpts) Execute() error {
-	app, err := o.store.GetApplication(o.appName)
-	if err != nil {
-		return fmt.Errorf("get application %s: %w", o.appName, err)
-	}
-
-	manifestPath, err := o.createManifest()
+	manifestPath, err := o.init.Job(&initworkload.WorkloadProps{
+		App:            o.appName,
+		Name:           o.name,
+		DockerfilePath: o.dockerfilePath,
+		Image:          o.image,
+		Type: o.type,
+		
+		Schedule: o.schedule,
+		Retries: o.retries,
+		Timeout: o.timeout,
+	})
 	if err != nil {
 		return err
 	}
 	o.manifestPath = manifestPath
 
-	o.prog.Start(fmt.Sprintf(fmtAddJobToAppStart, o.name))
-	if err := o.appDeployer.AddJobToApp(app, o.name); err != nil {
-		o.prog.Stop(log.Serrorf(fmtAddJobToAppFailed, o.name))
-		return fmt.Errorf("add job %s to application %s: %w", o.name, o.appName, err)
-	}
-	o.prog.Stop(log.Ssuccessf(fmtAddJobToAppComplete, o.name))
-
-	if err := o.store.CreateJob(&config.Workload{
-		App:  o.appName,
-		Name: o.name,
-		Type: o.wkldType,
-	}); err != nil {
-		return fmt.Errorf("saving job %s: %w", o.name, err)
-	}
 	return nil
-}
-
-func (o *initJobOpts) createManifest() (string, error) {
-	manifest, err := o.newJobManifest()
-	if err != nil {
-		return "", err
-	}
-	var manifestExists bool
-	manifestPath, err := o.ws.WriteJobManifest(manifest, o.name)
-	if err != nil {
-		e, ok := err.(*workspace.ErrFileExists)
-		if !ok {
-			return "", err
-		}
-		manifestExists = true
-		manifestPath = e.FileName
-	}
-	manifestPath, err = relPath(manifestPath)
-	if err != nil {
-		return "", err
-	}
-
-	manifestMsgFmt := "Wrote the manifest for job %s at %s\n"
-	if manifestExists {
-		manifestMsgFmt = "Manifest file for job %s already exists at %s, skipping writing it.\n"
-	}
-	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.name), color.HighlightResource(manifestPath))
-	log.Infoln(color.Help(fmt.Sprintf("Your manifest contains configurations like your container size and job schedule (%s).", o.schedule)))
-	log.Infoln()
-
-	return manifestPath, nil
-}
-
-func (o *initJobOpts) newJobManifest() (*manifest.ScheduledJob, error) {
-	var dfPath string
-	if o.dockerfilePath != "" {
-		path, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
-		if err != nil {
-			return nil, err
-		}
-		dfPath = path
-	}
-	return manifest.NewScheduledJob(&manifest.ScheduledJobProps{
-		WorkloadProps: &manifest.WorkloadProps{
-			Name:       o.name,
-			Dockerfile: dfPath,
-			Image:      o.image,
-		},
-		Schedule: o.schedule,
-		Timeout:  o.timeout,
-		Retries:  o.retries,
-	}), nil
 }
 
 func (o *initJobOpts) askJobType() error {
