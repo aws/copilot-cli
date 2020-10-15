@@ -359,7 +359,6 @@ func TestServiceStatusDesc_String(t *testing.T) {
 	}()
 
 	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
-	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
 	updateTime, _ := time.Parse(time.RFC3339, "2020-03-13T19:50:30+00:00")
 
 	testCases := map[string]struct {
@@ -462,8 +461,6 @@ Alarms
 								Digest: "ca27a44e25ce17fea7b07940ad793",
 							},
 						},
-						StartedAt:     startTime,
-						StoppedAt:     stopTime,
 						StoppedReason: "some reason",
 					},
 				},
@@ -480,7 +477,7 @@ Last Deployment
 Task Status
 
   ID                Image Digest         Last Status         Started At          Stopped At          Health Status
-  12345678          69671a96,ca27a44e    RUNNING             14 years ago        14 years ago        HEALTHY
+  12345678          69671a96,ca27a44e    RUNNING             -                   -                   HEALTHY
 
 Alarms
 
@@ -488,7 +485,7 @@ Alarms
   mockAlarm         mockCondition       2 months from now    OK
                                                              
 `,
-			json: "{\"Service\":{\"desiredCount\":1,\"runningCount\":1,\"status\":\"ACTIVE\",\"lastDeploymentAt\":\"2006-01-02T15:04:05Z\",\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"69671a968e8ec3648e2697417750e\"},{\"ID\":\"mockImageID2\",\"Digest\":\"ca27a44e25ce17fea7b07940ad793\"}],\"lastStatus\":\"RUNNING\",\"startedAt\":\"2006-01-02T15:04:05Z\",\"stoppedAt\":\"2006-01-02T16:04:05Z\",\"stoppedReason\":\"some reason\"}],\"alarms\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"condition\":\"mockCondition\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"}]}\n",
+			json: "{\"Service\":{\"desiredCount\":1,\"runningCount\":1,\"status\":\"ACTIVE\",\"lastDeploymentAt\":\"2006-01-02T15:04:05Z\",\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"69671a968e8ec3648e2697417750e\"},{\"ID\":\"mockImageID2\",\"Digest\":\"ca27a44e25ce17fea7b07940ad793\"}],\"lastStatus\":\"RUNNING\",\"startedAt\":\"0001-01-01T00:00:00Z\",\"stoppedAt\":\"0001-01-01T00:00:00Z\",\"stoppedReason\":\"some reason\"}],\"alarms\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"condition\":\"mockCondition\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"}]}\n",
 		},
 	}
 

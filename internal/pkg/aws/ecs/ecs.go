@@ -30,6 +30,9 @@ const (
 	DesiredStatusStopped = ecs.DesiredStatusStopped
 )
 
+// humanizeTime is overriden in tests so that its output is constant as time passes.
+var humanizeTime = humanize.Time
+
 type api interface {
 	DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.DescribeTasksOutput, error)
 	DescribeTaskDefinition(input *ecs.DescribeTaskDefinitionInput) (*ecs.DescribeTaskDefinitionOutput, error)
@@ -91,11 +94,11 @@ func (t TaskStatus) HumanString() string {
 	}
 	startedSince := "-"
 	if !t.StartedAt.IsZero() {
-		startedSince = humanize.Time(t.StartedAt)
+		startedSince = humanizeTime(t.StartedAt)
 	}
 	stoppedSince := "-"
 	if !t.StoppedAt.IsZero() {
-		stoppedSince = humanize.Time(t.StoppedAt)
+		stoppedSince = humanizeTime(t.StoppedAt)
 	}
 	shortTaskID := "-"
 	if len(t.ID) >= shortTaskIDLength {

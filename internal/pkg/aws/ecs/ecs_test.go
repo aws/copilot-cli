@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs/mocks"
+	"github.com/dustin/go-humanize"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -840,6 +841,15 @@ func TestTask_TaskStatus(t *testing.T) {
 }
 
 func TestTaskStatus_HumanString(t *testing.T) {
+	// from the function changes (ex: from "1 month ago" to "2 months ago"). To make our tests stable,
+	oldHumanize := humanizeTime
+	humanizeTime = func(then time.Time) string {
+		now, _ := time.Parse(time.RFC3339, "2020-01-01T00:00:00+00:00")
+		return humanize.RelTime(then, now, "ago", "from now")
+	}
+	defer func() {
+		humanizeTime = oldHumanize
+	}()
 	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
 	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
 	mockImageDigest := "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"
