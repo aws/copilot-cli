@@ -36,7 +36,6 @@ const (
 	startTimeFlag         = "start-time"
 	endTimeFlag           = "end-time"
 	tasksFlag             = "tasks"
-	envProfilesFlag       = "env-profiles"
 	prodEnvFlag           = "prod"
 	deployFlag            = "deploy"
 	resourcesFlag         = "resources"
@@ -172,7 +171,6 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	pipelineResourcesFlagDescription = "Optional. Show the resources in your pipeline."
 	localSvcFlagDescription          = "Only show services in the workspace."
 	localJobFlagDescription          = "Only show jobs in the workspace."
-	envProfilesFlagDescription       = "Optional. Environments and the profile to use to delete the environment."
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
 	svcPortFlagDescription           = "Optional. The port on which your service listens."
 

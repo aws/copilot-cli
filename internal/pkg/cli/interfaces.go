@@ -188,10 +188,6 @@ type sessionFromProfileProvider interface {
 	FromProfile(name string) (*session.Session, error)
 }
 
-type profileNames interface {
-	Names() []string
-}
-
 type sessionProvider interface {
 	defaultSessionProvider
 	regionalSessionProvider

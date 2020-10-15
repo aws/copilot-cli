@@ -1739,43 +1739,6 @@ func (mr *MocksessionFromProfileProviderMockRecorder) FromProfile(name interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromProfile", reflect.TypeOf((*MocksessionFromProfileProvider)(nil).FromProfile), name)
 }
 
-// MockprofileNames is a mock of profileNames interface
-type MockprofileNames struct {
-	ctrl     *gomock.Controller
-	recorder *MockprofileNamesMockRecorder
-}
-
-// MockprofileNamesMockRecorder is the mock recorder for MockprofileNames
-type MockprofileNamesMockRecorder struct {
-	mock *MockprofileNames
-}
-
-// NewMockprofileNames creates a new mock instance
-func NewMockprofileNames(ctrl *gomock.Controller) *MockprofileNames {
-	mock := &MockprofileNames{ctrl: ctrl}
-	mock.recorder = &MockprofileNamesMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockprofileNames) EXPECT() *MockprofileNamesMockRecorder {
-	return m.recorder
-}
-
-// Names mocks base method
-func (m *MockprofileNames) Names() []string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Names")
-	ret0, _ := ret[0].([]string)
-	return ret0
-}
-
-// Names indicates an expected call of Names
-func (mr *MockprofileNamesMockRecorder) Names() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Names", reflect.TypeOf((*MockprofileNames)(nil).Names))
-}
-
 // MocksessionProvider is a mock of sessionProvider interface
 type MocksessionProvider struct {
 	ctrl     *gomock.Controller
