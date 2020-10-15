@@ -307,8 +307,10 @@ type bucketEmptier interface {
 type environmentDeployer interface {
 	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
 	StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse)
-	DeleteEnvironment(appName, envName string) error
+	DeleteEnvironment(appName, envName, cfnExecRoleARN string) error
 	GetEnvironment(appName, envName string) (*config.Environment, error)
+	EnvironmentTemplate(appName, envName string) (string, error)
+	UpdateEnvironmentTemplate(appName, envName, templateBody, cfnExecRoleARN string) error
 }
 
 type wlDeleter interface {
@@ -454,4 +456,8 @@ type credsSelector interface {
 
 type ec2Client interface {
 	HasDNSSupport(vpcID string) (bool, error)
+}
+
+type roleDeleter interface {
+	DeleteRole(string) error
 }

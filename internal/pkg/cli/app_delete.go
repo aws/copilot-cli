@@ -44,7 +44,6 @@ var (
 type deleteAppVars struct {
 	name             string
 	skipConfirmation bool
-	envProfiles      map[string]string
 }
 
 type deleteAppOpts struct {
@@ -59,7 +58,7 @@ type deleteAppOpts struct {
 	s3                   func(session *session.Session) bucketEmptier
 	svcDeleteExecutor    func(svcName string) (executor, error)
 	jobDeleteExecutor    func(jobName string) (executor, error)
-	envDeleteExecutor    func(envName, envProfile string) (executeAsker, error)
+	envDeleteExecutor    func(envName string) (executeAsker, error)
 	deletePipelineRunner func() (deletePipelineRunner, error)
 }
 
@@ -113,12 +112,11 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 			}
 			return opts, nil
 		},
-		envDeleteExecutor: func(envName, envProfile string) (executeAsker, error) {
+		envDeleteExecutor: func(envName string) (executeAsker, error) {
 			opts, err := newDeleteEnvOpts(deleteEnvVars{
 				skipConfirmation: true,
 				appName:          vars.name,
 				name:             envName,
-				profile:          envProfile,
 			})
 			if err != nil {
 				return nil, err
@@ -252,12 +250,7 @@ func (o *deleteAppOpts) deleteEnvs() error {
 	}
 
 	for _, env := range envs {
-		// Check to see if a profile was passed in for this environment
-		// for deletion - otherwise it will be passed as an empty
-		// string, which triggers env delete's ask.
-		profile := o.envProfiles[env.Name]
-
-		cmd, err := o.envDeleteExecutor(env.Name, profile)
+		cmd, err := o.envDeleteExecutor(env.Name)
 		if err != nil {
 			return err
 		}
@@ -344,7 +337,7 @@ func buildAppDeleteCommand() *cobra.Command {
 		Short: "Delete all resources associated with the application.",
 		Example: `
   Force delete the application with environments "test" and "prod".
-  /code $ copilot app delete --yes --env-profiles test=default,prod=prod-profile`,
+  /code $ copilot app delete --yes`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newDeleteAppOpts(vars)
 			if err != nil {
@@ -363,6 +356,5 @@ func buildAppDeleteCommand() *cobra.Command {
 
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
-	cmd.Flags().StringToStringVar(&vars.envProfiles, envProfilesFlag, nil, envProfilesFlagDescription)
 	return cmd
 }
