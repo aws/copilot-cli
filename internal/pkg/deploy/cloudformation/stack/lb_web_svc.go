@@ -48,7 +48,7 @@ type LoadBalancedWebService struct {
 // NewLoadBalancedWebService creates a new LoadBalancedWebService stack from a manifest file.
 func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
 	parser := template.New()
-	addons, err := addon.New(aws.StringValue(mft.Name))
+	addons, err := addon.New(aws.StringValue(mft.Name), "service")
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}

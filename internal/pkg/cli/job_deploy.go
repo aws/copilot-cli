@@ -168,7 +168,7 @@ func (o *deployJobOpts) Execute() error {
 func (o *deployJobOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 	template, err := o.addons.Template()
 	if err != nil {
-		var notExistErr *addon.ErrDirNotExist
+		var notExistErr *addon.ErrAddonsDirNotExist
 		if errors.As(err, &notExistErr) {
 			// addons doesn't exist for job, the url is empty.
 			return "", nil
@@ -212,7 +212,7 @@ func (o *deployJobOpts) configureClients() error {
 	// CF client against env account profile AND target environment region
 	o.jobCFN = cloudformation.New(envSession)
 
-	addonsSvc, err := addon.New(o.name)
+	addonsSvc, err := addon.New(o.name, "job")
 	if err != nil {
 		return fmt.Errorf("initiate addons service: %w", err)
 	}
@@ -314,7 +314,7 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	repoURL, ok := resources.RepositoryURLs[o.name]
 	if !ok {
 		return nil, &errRepoNotFound{
-			svcName:      o.name,
+			wlName:       o.name,
 			envRegion:    o.targetEnvironment.Region,
 			appAccountID: o.targetApp.AccountID,
 		}

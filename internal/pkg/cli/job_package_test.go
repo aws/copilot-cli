@@ -4,8 +4,12 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -233,6 +237,122 @@ func TestPackageJobOpts_Ask(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+func TestPackageJobOpts_Execute(t *testing.T) {
+	testCases := map[string]struct {
+		inVars packageJobVars
+
+		mockDependencies func(*gomock.Controller, *packageJobOpts)
+
+		wantedStack  string
+		wantedParams string
+		wantedAddons string
+		wantedErr    error
+	}{
+		"writes job template without addons": {
+			inVars: packageJobVars{
+				appName: "ecs-kudos",
+				name:    "resizer",
+				envName: "test",
+				tag:     "1234",
+			},
+			mockDependencies: func(ctrl *gomock.Controller, opts *packageJobOpts) {
+				mockStore := mocks.NewMockstore(ctrl)
+				mockStore.EXPECT().
+					GetEnvironment("ecs-kudos", "test").
+					Return(&config.Environment{
+						App:       "ecs-kudos",
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "1111",
+					}, nil)
+				mockApp := &config.Application{
+					Name:      "ecs-kudos",
+					AccountID: "1112",
+					Tags: map[string]string{
+						"owner": "boss",
+					},
+				}
+				mockStore.EXPECT().
+					GetApplication("ecs-kudos").
+					Return(mockApp, nil)
+
+				mockWs := mocks.NewMockwsJobDirReader(ctrl)
+				mockWs.EXPECT().
+					ReadJobManifest("resizer").
+					Return([]byte(`name: resizer
+type: Scheduled Job
+image:
+  build: ./Dockerfile
+  port: 80
+http:
+  path: 'resizer'
+cpu: 256
+memory: 512
+count: 1`), nil)
+
+				mockCfn := mocks.NewMockappResourcesGetter(ctrl)
+				mockCfn.EXPECT().
+					GetAppResourcesByRegion(mockApp, "us-west-2").
+					Return(&stack.AppRegionalResources{
+						RepositoryURLs: map[string]string{
+							"resizer": "some url",
+						},
+					}, nil)
+
+				mockAddons := mocks.NewMocktemplater(ctrl)
+				mockAddons.EXPECT().Template().
+					Return("", &addon.ErrAddonsDirNotExist{})
+
+				opts.store = mockStore
+				opts.ws = mockWs
+				opts.appCFN = mockCfn
+				opts.initAddonsSvc = func(opts *packageJobOpts) error {
+					opts.addonsSvc = mockAddons
+					return nil
+				}
+				opts.stackSerializer = func(_ interface{}, _ *config.Environment, _ *config.Application, _ stack.RuntimeConfig) (stackSerializer, error) {
+					mockStackSerializer := mocks.NewMockstackSerializer(ctrl)
+					mockStackSerializer.EXPECT().Template().Return("mystack", nil)
+					mockStackSerializer.EXPECT().SerializedParameters().Return("myparams", nil)
+					return mockStackSerializer, nil
+				}
+			},
+
+			wantedStack:  "mystack",
+			wantedParams: "myparams",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			stackBuf := new(bytes.Buffer)
+			paramsBuf := new(bytes.Buffer)
+			addonsBuf := new(bytes.Buffer)
+			opts := &packageJobOpts{
+				packageJobVars: tc.inVars,
+
+				stackWriter:  stackBuf,
+				paramsWriter: paramsBuf,
+				addonsWriter: addonsBuf,
+			}
+			tc.mockDependencies(ctrl, opts)
+
+			// WHEN
+			err := opts.Execute()
+
+			// THEN
+			require.Equal(t, tc.wantedErr, err)
+			require.Equal(t, tc.wantedStack, stackBuf.String())
+			require.Equal(t, tc.wantedParams, paramsBuf.String())
+			require.Equal(t, tc.wantedAddons, addonsBuf.String())
 		})
 	}
 }

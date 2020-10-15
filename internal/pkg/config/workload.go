@@ -14,13 +14,13 @@ import (
 )
 
 const (
-	// ServiceCfnTemplateNameFormat is the base output file name when `service package`
-	// is called. This is also used to render the pipeline CFN template.
-	ServiceCfnTemplateNameFormat = "%s.stack.yml"
-	// ServiceCfnTemplateConfigurationNameFormat is the base output configuration
-	// file name when `service package` is called. It's also used to render the
-	// pipeline CFN template.
-	ServiceCfnTemplateConfigurationNameFormat = "%s-%s.params.json"
+	// WorkloadCfnTemplateNameFormat is the base output file name when `service package`
+	// or `job package` is called. This is also used to render the pipeline CFN template.
+	WorkloadCfnTemplateNameFormat = "%s.stack.yml"
+	// WorkloadCfnTemplateConfigurationNameFormat is the base output configuration
+	// file name when `service package` or `job package is called. It's also used to
+	// render the pipeline CFN template.
+	WorkloadCfnTemplateConfigurationNameFormat = "%s-%s.params.json"
 	// AddonsCfnTemplateNameFormat is the addons output file name when `service package`
 	// is called.
 	AddonsCfnTemplateNameFormat = "%s.addons.stack.yml"

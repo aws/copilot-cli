@@ -15,7 +15,10 @@ import (
 )
 
 func TestAddons_Template(t *testing.T) {
-	const testSvcName = "mysvc"
+	const (
+		testSvcName = "mysvc"
+		testJobName = "resizer"
+	)
 	testErr := errors.New("some error")
 	testCases := map[string]struct {
 		mockAddons func(ctrl *gomock.Controller) *Addons
@@ -23,20 +26,52 @@ func TestAddons_Template(t *testing.T) {
 		wantedTemplate string
 		wantedErr      error
 	}{
-		"return ErrDirNotExist if addons doesn't exist in a service": {
+		"return ErrAddonsDirNotExist if addons doesn't exist in a service": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
 				ws := mocks.NewMockworkspaceReader(ctrl)
 				ws.EXPECT().ReadAddonsDir(testSvcName).
 					Return(nil, testErr)
 				return &Addons{
-					svcName: testSvcName,
-					ws:      ws,
+					wlName: testSvcName,
+					wlType: "service",
+					ws:     ws,
 				}
 			},
-			wantedErr: &ErrDirNotExist{
-				SvcName:   testSvcName,
+			wantedErr: &ErrAddonsDirNotExist{
+				WlName:    testSvcName,
+				WlType:    "service",
 				ParentErr: testErr,
 			},
+		},
+		"return ErrAddonsDirNotExist if addons doesn't exist in a job": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir(testJobName).
+					Return(nil, testErr)
+				return &Addons{
+					wlName: testJobName,
+					wlType: "job",
+					ws:     ws,
+				}
+			},
+			wantedErr: &ErrAddonsDirNotExist{
+				WlName:    testJobName,
+				WlType:    "job",
+				ParentErr: testErr,
+			},
+		},
+		"print correct error message for ErrAddonsDirNotExist": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir(testJobName).
+					Return(nil, testErr)
+				return &Addons{
+					wlName: testJobName,
+					wlType: "job",
+					ws:     ws,
+				}
+			},
+			wantedErr: errors.New("read addons directory for job resizer: some error"),
 		},
 		"return err on invalid Metadata fields": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
@@ -49,8 +84,8 @@ func TestAddons_Template(t *testing.T) {
 				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-metadata.yaml"))
 				ws.EXPECT().ReadAddon(testSvcName, "invalid-metadata.yaml").Return(second, nil)
 				return &Addons{
-					svcName: testSvcName,
-					ws:      ws,
+					wlName: testSvcName,
+					ws:     ws,
 				}
 			},
 			wantedErr: errors.New(`metadata key "Services" defined in "first.yaml" at Ln 4, Col 7 is different than in "invalid-metadata.yaml" at Ln 3, Col 5`),
@@ -66,8 +101,8 @@ func TestAddons_Template(t *testing.T) {
 				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-parameters.yaml"))
 				ws.EXPECT().ReadAddon(testSvcName, "invalid-parameters.yaml").Return(second, nil)
 				return &Addons{
-					svcName: testSvcName,
-					ws:      ws,
+					wlName: testSvcName,
+					ws:     ws,
 				}
 			},
 			wantedErr: errors.New(`parameter logical ID "Name" defined in "first.yaml" at Ln 15, Col 9 is different than in "invalid-parameters.yaml" at Ln 3, Col 7`),
@@ -83,8 +118,8 @@ func TestAddons_Template(t *testing.T) {
 				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-mappings.yaml"))
 				ws.EXPECT().ReadAddon(testSvcName, "invalid-mappings.yaml").Return(second, nil)
 				return &Addons{
-					svcName: testSvcName,
-					ws:      ws,
+					wlName: testSvcName,
+					ws:     ws,
 				}
 			},
 			wantedErr: errors.New(`mapping "MyTableDynamoDBSettings.test" defined in "first.yaml" at Ln 21, Col 13 is different than in "invalid-mappings.yaml" at Ln 4, Col 7`),
@@ -100,8 +135,8 @@ func TestAddons_Template(t *testing.T) {
 				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-conditions.yaml"))
 				ws.EXPECT().ReadAddon(testSvcName, "invalid-conditions.yaml").Return(second, nil)
 				return &Addons{
-					svcName: testSvcName,
-					ws:      ws,
+					wlName: testSvcName,
+					ws:     ws,
 				}
 			},
 			wantedErr: errors.New(`condition "IsProd" defined in "first.yaml" at Ln 28, Col 13 is different than in "invalid-conditions.yaml" at Ln 2, Col 13`),
@@ -117,8 +152,8 @@ func TestAddons_Template(t *testing.T) {
 				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-resources.yaml"))
 				ws.EXPECT().ReadAddon(testSvcName, "invalid-resources.yaml").Return(second, nil)
 				return &Addons{
-					svcName: testSvcName,
-					ws:      ws,
+					wlName: testSvcName,
+					ws:     ws,
 				}
 			},
 			wantedErr: errors.New(`resource "MyTable" defined in "first.yaml" at Ln 34, Col 9 is different than in "invalid-resources.yaml" at Ln 3, Col 5`),
@@ -134,8 +169,8 @@ func TestAddons_Template(t *testing.T) {
 				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-outputs.yaml"))
 				ws.EXPECT().ReadAddon(testSvcName, "invalid-outputs.yaml").Return(second, nil)
 				return &Addons{
-					svcName: testSvcName,
-					ws:      ws,
+					wlName: testSvcName,
+					ws:     ws,
 				}
 			},
 			wantedErr: errors.New(`output "MyTableAccessPolicy" defined in "first.yaml" at Ln 85, Col 9 is different than in "invalid-outputs.yaml" at Ln 3, Col 5`),
@@ -151,8 +186,8 @@ func TestAddons_Template(t *testing.T) {
 				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "second.yaml"))
 				ws.EXPECT().ReadAddon(testSvcName, "second.yaml").Return(second, nil)
 				return &Addons{
-					svcName: testSvcName,
-					ws:      ws,
+					wlName: testSvcName,
+					ws:     ws,
 				}
 			},
 			wantedTemplate: func() string {

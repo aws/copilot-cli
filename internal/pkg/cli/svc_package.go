@@ -31,7 +31,7 @@ const (
 )
 
 var initPackageAddonsSvc = func(o *packageSvcOpts) error {
-	addonsSvc, err := addon.New(o.name)
+	addonsSvc, err := addon.New(o.name, "service")
 	if err != nil {
 		return fmt.Errorf("initiate addons service: %w", err)
 	}
@@ -192,7 +192,7 @@ func (o *packageSvcOpts) Execute() error {
 
 	addonsTemplate, err := o.getAddonsTemplate()
 	// return nil if addons dir doesn't exist.
-	var notExistErr *addon.ErrDirNotExist
+	var notExistErr *addon.ErrAddonsDirNotExist
 	if errors.As(err, &notExistErr) {
 		return nil
 	}
@@ -278,7 +278,7 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 		repoURL, ok := resources.RepositoryURLs[o.name]
 		if !ok {
 			return nil, &errRepoNotFound{
-				svcName:      o.name,
+				wlName:       o.name,
 				envRegion:    env.Region,
 				appAccountID: app.AccountID,
 			}
@@ -310,7 +310,7 @@ func (o *packageSvcOpts) setOutputFileWriters() error {
 	}
 
 	templatePath := filepath.Join(o.outputDir,
-		fmt.Sprintf(config.ServiceCfnTemplateNameFormat, o.name))
+		fmt.Sprintf(config.WorkloadCfnTemplateNameFormat, o.name))
 	templateFile, err := o.fs.Create(templatePath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", templatePath, err)
@@ -318,7 +318,7 @@ func (o *packageSvcOpts) setOutputFileWriters() error {
 	o.stackWriter = templateFile
 
 	paramsPath := filepath.Join(o.outputDir,
-		fmt.Sprintf(config.ServiceCfnTemplateConfigurationNameFormat, o.name, o.envName))
+		fmt.Sprintf(config.WorkloadCfnTemplateConfigurationNameFormat, o.name, o.envName))
 	paramsFile, err := o.fs.Create(paramsPath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", paramsPath, err)
@@ -350,13 +350,13 @@ func contains(s string, items []string) bool {
 }
 
 type errRepoNotFound struct {
-	svcName      string
+	wlName       string
 	envRegion    string
 	appAccountID string
 }
 
 func (e *errRepoNotFound) Error() string {
-	return fmt.Sprintf("ECR repository not found for service %s in region %s and account %s", e.svcName, e.envRegion, e.appAccountID)
+	return fmt.Sprintf("ECR repository not found for service %s in region %s and account %s", e.wlName, e.envRegion, e.appAccountID)
 }
 
 func (e *errRepoNotFound) Is(target error) bool {
@@ -364,7 +364,7 @@ func (e *errRepoNotFound) Is(target error) bool {
 	if !ok {
 		return false
 	}
-	return e.svcName == t.svcName &&
+	return e.wlName == t.wlName &&
 		e.envRegion == t.envRegion &&
 		e.appAccountID == t.appAccountID
 }

@@ -4,21 +4,40 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 
-	"github.com/spf13/cobra"
-
+	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
+	"github.com/spf13/cobra"
 )
 
 const (
 	jobPackageJobNamePrompt = "Which job would you like to generate a CloudFormation template for?"
 	jobPackageEnvNamePrompt = "Which environment would you like to package this stack for?"
 )
+
+var initPackageAddons = func(o *packageJobOpts) error {
+	addonsSvc, err := addon.New(o.name, "job")
+	if err != nil {
+		return fmt.Errorf("initiate addons service: %w", err)
+	}
+	o.addonsSvc = addonsSvc
+	return nil
+}
 
 type packageJobVars struct {
 	name      string
@@ -32,11 +51,19 @@ type packageJobOpts struct {
 	packageJobVars
 
 	// Interfaces to interact with dependencies.
-	ws     wsJobDirReader
-	store  store
-	runner runner
-	sel    wsSelector
-	prompt prompter
+	addonsSvc       templater
+	initAddonsSvc   func(*packageJobOpts) error // Overridden in tests.
+	ws              wsJobDirReader
+	store           store
+	appCFN          appResourcesGetter
+	stackWriter     io.Writer
+	paramsWriter    io.Writer
+	addonsWriter    io.Writer
+	fs              afero.Fs
+	runner          runner
+	sel             wsSelector
+	prompt          prompter
+	stackSerializer func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
 }
 
 func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
@@ -48,6 +75,12 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
+	p := sessions.NewProvider()
+	sess, err := p.Default()
+	if err != nil {
+		return nil, fmt.Errorf("retrieve default session: %w", err)
+	}
+
 	prompter := prompt.New()
 	sel, err := selector.NewWorkspaceSelect(prompter, store, ws)
 	if err != nil {
@@ -55,11 +88,26 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 	}
 	opts := &packageJobOpts{
 		packageJobVars: vars,
+		initAddonsSvc:  initPackageAddons,
 		ws:             ws,
 		store:          store,
+		appCFN:         cloudformation.New(sess),
 		runner:         command.New(),
 		sel:            sel,
 		prompt:         prompter,
+		stackWriter:    os.Stdout,
+		paramsWriter:   ioutil.Discard,
+		fs:             &afero.Afero{Fs: afero.NewOsFs()},
+	}
+
+	opts.stackSerializer = func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
+		var serializer stackSerializer
+		jobMft := mft.(*manifest.ScheduledJob)
+		serializer, err := stack.NewScheduledJob(jobMft, env.Name, app.Name, rc)
+		if err != nil {
+			return nil, fmt.Errorf("init scheduled job stack serializer: %w", err)
+		}
+		return serializer, nil
 	}
 	return opts, nil
 }
@@ -104,7 +152,46 @@ func (o *packageJobOpts) Ask() error {
 
 // Execute prints the CloudFormation template of the application for the environment.
 func (o *packageJobOpts) Execute() error {
-	return nil
+	env, err := o.store.GetEnvironment(o.appName, o.envName)
+	if err != nil {
+		return err
+	}
+
+	if o.outputDir != "" {
+		if err := o.setOutputFileWriters(); err != nil {
+			return err
+		}
+	}
+	jobTemplates, err := o.getJobTemplates(env)
+	if err != nil {
+		return err
+	}
+	if _, err = o.stackWriter.Write([]byte(jobTemplates.stack)); err != nil {
+		return err
+	}
+	if _, err = o.paramsWriter.Write([]byte(jobTemplates.configuration)); err != nil {
+		return err
+	}
+
+	addonsTemplate, err := o.getAddonsTemplate()
+	// Return nil if addons dir doesn't exist.
+	var notExistErr *addon.ErrAddonsDirNotExist
+	if errors.As(err, &notExistErr) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("retrieve addons template: %w", err)
+	}
+
+	// Addons template won't show up without setting --output-dir flag.
+	if o.outputDir != "" {
+		if err := o.setAddonsFileWriter(); err != nil {
+			return err
+		}
+	}
+
+	_, err = o.addonsWriter.Write([]byte(addonsTemplate))
+	return err
 }
 
 func (o *packageJobOpts) askJobName() error {
@@ -130,6 +217,109 @@ func (o *packageJobOpts) askEnvName() error {
 		return fmt.Errorf("select environment: %w", err)
 	}
 	o.envName = name
+	return nil
+}
+
+// setOutputFileWriters creates the output directory, and updates the template and param writers to file writers in the directory.
+func (o *packageJobOpts) setOutputFileWriters() error {
+	if err := o.fs.MkdirAll(o.outputDir, 0755); err != nil {
+		return fmt.Errorf("create directory %s: %w", o.outputDir, err)
+	}
+
+	templatePath := filepath.Join(o.outputDir,
+		fmt.Sprintf(config.WorkloadCfnTemplateNameFormat, o.name))
+	templateFile, err := o.fs.Create(templatePath)
+	if err != nil {
+		return fmt.Errorf("create file %s: %w", templatePath, err)
+	}
+	o.stackWriter = templateFile
+
+	paramsPath := filepath.Join(o.outputDir,
+		fmt.Sprintf(config.WorkloadCfnTemplateConfigurationNameFormat, o.name, o.envName))
+	paramsFile, err := o.fs.Create(paramsPath)
+	if err != nil {
+		return fmt.Errorf("create file %s: %w", paramsPath, err)
+	}
+	o.paramsWriter = paramsFile
+
+	return nil
+}
+
+type jobCfnTemplates struct {
+	stack         string
+	configuration string
+}
+
+// getJobTemplates returns the CloudFormation stack's template and its parameters for the job.
+func (o *packageJobOpts) getJobTemplates(env *config.Environment) (*jobCfnTemplates, error) {
+	raw, err := o.ws.ReadJobManifest(o.name)
+	if err != nil {
+		return nil, err
+	}
+	mft, err := manifest.UnmarshalWorkload(raw)
+	if err != nil {
+		return nil, err
+	}
+	imgNeedsBuild, err := manifest.JobDockerfileBuildRequired(mft)
+	if err != nil {
+		return nil, err
+	}
+	app, err := o.store.GetApplication(o.appName)
+	if err != nil {
+		return nil, err
+	}
+	rc := stack.RuntimeConfig{
+		AdditionalTags: app.Tags,
+	}
+	if imgNeedsBuild {
+		resources, err := o.appCFN.GetAppResourcesByRegion(app, env.Region)
+		if err != nil {
+			return nil, err
+		}
+		repoURL, ok := resources.RepositoryURLs[o.name]
+		if !ok {
+			return nil, &errRepoNotFound{
+				wlName:       o.name,
+				envRegion:    env.Region,
+				appAccountID: app.AccountID,
+			}
+		}
+		rc.Image = &stack.ECRImage{
+			RepoURL:  repoURL,
+			ImageTag: o.tag,
+		}
+	}
+	serializer, err := o.stackSerializer(mft, env, app, rc)
+	if err != nil {
+		return nil, err
+	}
+	tpl, err := serializer.Template()
+	if err != nil {
+		return nil, fmt.Errorf("generate stack template: %w", err)
+	}
+	params, err := serializer.SerializedParameters()
+	if err != nil {
+		return nil, fmt.Errorf("generate stack template configuration: %w", err)
+	}
+	return &jobCfnTemplates{stack: tpl, configuration: params}, nil
+}
+
+func (o *packageJobOpts) getAddonsTemplate() (string, error) {
+	if err := o.initAddonsSvc(o); err != nil {
+		return "", err
+	}
+	return o.addonsSvc.Template()
+}
+
+func (o *packageJobOpts) setAddonsFileWriter() error {
+	addonsPath := filepath.Join(o.outputDir,
+		fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.name))
+	addonsFile, err := o.fs.Create(addonsPath)
+	if err != nil {
+		return fmt.Errorf("create file %s: %w", addonsPath, err)
+	}
+	o.addonsWriter = addonsFile
+
 	return nil
 }
 

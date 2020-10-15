@@ -304,7 +304,7 @@ count: 1`), nil)
 
 				mockAddons := mocks.NewMocktemplater(ctrl)
 				mockAddons.EXPECT().Template().
-					Return("", &addon.ErrDirNotExist{})
+					Return("", &addon.ErrAddonsDirNotExist{})
 
 				opts.store = mockStore
 				opts.ws = mockWs
