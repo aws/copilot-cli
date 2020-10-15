@@ -180,16 +180,19 @@ func (o *initSvcOpts) Ask() error {
 	if err != nil {
 		return err
 	}
+
+	var ports []uint16
 	if !dfSelected {
 		if err := o.askImage(); err != nil {
 			return err
 		}
-	} else {
+	}
+	if dfSelected && o.image == "" {
 		// Extract what we can from the dockerfile.
 		o.setupParser(o)
 
 		// Check for exposed ports.
-		ports, err := o.df.GetExposedPorts()
+		ports, err = o.df.GetExposedPorts()
 		// Ignore any errors in dockerfile parsing--we'll use the default port instead.
 		if err != nil {
 			log.Debugln(err.Error())
@@ -198,7 +201,7 @@ func (o *initSvcOpts) Ask() error {
 		// Check for a valid healthcheck and add it to the opts.
 		hc, err := o.parseHealthCheck()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		o.hc = hc
 	}
@@ -218,8 +221,8 @@ func (o *initSvcOpts) Execute() error {
 		DockerfilePath: o.dockerfilePath,
 		Image:          o.image,
 
-		Port: o.port,
-		Healthcheck: o.hc
+		Port:        o.port,
+		HealthCheck: o.hc,
 	})
 	if err != nil {
 		return err
