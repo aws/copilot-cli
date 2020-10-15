@@ -32,12 +32,6 @@ jobs or those which require specific execution schedules.`
 )
 
 const (
-	fmtAddJobToAppStart    = "Creating ECR repositories for job %s."
-	fmtAddJobToAppFailed   = "Failed to create ECR repositories for job %s.\n"
-	fmtAddJobToAppComplete = "Created ECR repositories for job %s.\n"
-)
-
-const (
 	job = "job"
 )
 
@@ -46,6 +40,8 @@ type initJobOpts struct {
 
 	// Interfaces to interact with dependencies.
 	fs     afero.Fs
+	store  store
+	init   jobInitializer
 	prompt prompter
 	sel    initJobSelector
 
@@ -70,23 +66,25 @@ func newInitJobOpts(vars initWkldVars) (*initJobOpts, error) {
 		return nil, err
 	}
 
+	jobInitter := initworkload.NewJobInitializer(
+		store,
+		ws,
+		termprogress.NewSpinner(),
+		cloudformation.New(sess),
+	)
+
 	prompter := prompt.New()
 	sel, err := selector.NewWorkspaceSelect(prompter, store, ws)
 	if err != nil {
 		return nil, err
 	}
 
-	initJob := initworkload.NewJobInitializer(
-		store,
-		ws,
-		termprogress.NewSpinner(),
-		cloudformation.New(sess),
-	)
 	return &initJobOpts{
 		initWkldVars: vars,
 
 		fs:     &afero.Afero{Fs: afero.NewOsFs()},
-		init:   initJob,
+		store:  store,
+		init:   jobInitter,
 		prompt: prompter,
 		sel:    sel,
 	}, nil
@@ -156,19 +154,18 @@ func (o *initJobOpts) Execute() error {
 	manifestPath, err := o.init.Job(&initworkload.WorkloadProps{
 		App:            o.appName,
 		Name:           o.name,
+		Type:           o.wkldType,
 		DockerfilePath: o.dockerfilePath,
 		Image:          o.image,
-		Type: o.type,
-		
+
 		Schedule: o.schedule,
-		Retries: o.retries,
-		Timeout: o.timeout,
+		Timeout:  o.timeout,
+		Retries:  o.retries,
 	})
 	if err != nil {
 		return err
 	}
 	o.manifestPath = manifestPath
-
 	return nil
 }
 

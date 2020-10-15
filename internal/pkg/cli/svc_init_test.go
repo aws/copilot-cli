@@ -400,7 +400,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 	}
 }
 
-func TestAppInitOpts_Execute(t *testing.T) {
+func TestSvcInitOpts_Execute(t *testing.T) {
 	var (
 		testInterval    = 10 * time.Second
 		testRetries     = 2

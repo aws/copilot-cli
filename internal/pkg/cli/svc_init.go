@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"encoding"
 	"fmt"
 	"strconv"
 	"strings"
@@ -197,11 +196,9 @@ func (o *initSvcOpts) Execute() error {
 		return fmt.Errorf("get application %s: %w", o.appName, err)
 	}
 
-	manifestPath, err := o.createManifest()
 	if err != nil {
 		return err
 	}
-	o.manifestPath = manifestPath
 
 	o.prog.Start(fmt.Sprintf(fmtAddSvcToAppStart, o.name))
 	if err := o.appDeployer.AddServiceToApp(app, o.name); err != nil {
@@ -218,60 +215,6 @@ func (o *initSvcOpts) Execute() error {
 		return fmt.Errorf("saving service %s: %w", o.name, err)
 	}
 	return nil
-}
-
-func (o *initSvcOpts) createManifest() (string, error) {
-	manifest, err := o.newManifest()
-	if err != nil {
-		return "", err
-	}
-	var manifestExists bool
-	manifestPath, err := o.ws.WriteServiceManifest(manifest, o.name)
-	if err != nil {
-		e, ok := err.(*workspace.ErrFileExists)
-		if !ok {
-			return "", err
-		}
-		manifestExists = true
-		manifestPath = e.FileName
-	}
-	manifestPath, err = workspace.RelPath(manifestPath)
-	if err != nil {
-		return "", err
-	}
-
-	manifestMsgFmt := "Wrote the manifest for service %s at %s\n"
-	if manifestExists {
-		manifestMsgFmt = "Manifest file for service %s already exists at %s, skipping writing it.\n"
-	}
-	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.name), color.HighlightResource(manifestPath))
-	msg := "Your manifest contains configurations like your container size and port."
-	if o.port != 0 {
-		msg = fmt.Sprintf("Your manifest contains configurations like your container size and port (:%d).", o.port)
-	}
-	log.Infoln(color.Help(msg))
-	log.Infoln()
-
-	return manifestPath, nil
-}
-
-func (o *initSvcOpts) newManifest() (encoding.BinaryMarshaler, error) {
-	var dfPath string
-	if o.dockerfilePath != "" {
-		path, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
-		if err != nil {
-			return nil, err
-		}
-		dfPath = path
-	}
-	switch o.wkldType {
-	case manifest.LoadBalancedWebServiceType:
-		return o.newLoadBalancedWebServiceManifest(dfPath)
-	case manifest.BackendServiceType:
-		return o.newBackendServiceManifest(dfPath)
-	default:
-		return nil, fmt.Errorf("service type %s doesn't have a manifest", o.wkldType)
-	}
 }
 
 func (o *initSvcOpts) newLoadBalancedWebServiceManifest(dockerfilePath string) (*manifest.LoadBalancedWebService, error) {

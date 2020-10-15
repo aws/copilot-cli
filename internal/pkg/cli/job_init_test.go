@@ -8,10 +8,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
-
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/initworkload"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/golang/mock/gomock"
@@ -376,207 +374,64 @@ func TestJobInitOpts_Ask(t *testing.T) {
 
 func TestJobInitOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
-		inJobType        string
-		inJobName        string
-		inDockerfilePath string
-		inImage          string
-		inAppName        string
-		mockWriter       func(m *mocks.MockjobDirManifestWriter)
-		mockstore        func(m *mocks.Mockstore)
-		mockappDeployer  func(m *mocks.MockappDeployer)
-		mockProg         func(m *mocks.Mockprogress)
-		mockDf           func(m *mocks.MockdockerfileParser)
+		mockJobInit func(m *mocks.MockjobInitializer)
 
-		wantedErr error
+		inApp  string
+		inName string
+		inType string
+		inDf   string
+
+		inSchedule string
+
+		wantedErr          error
+		wantedManifestPath string
 	}{
-		"writes Scheduled Job manifest, and creates repositories successfully": {
-			inJobType:        manifest.ScheduledJobType,
-			inAppName:        "app",
-			inJobName:        "resizer",
-			inDockerfilePath: "resizer/Dockerfile",
+		"success on typical job props": {
+			inApp:              "sample",
+			inName:             "mailer",
+			inType:             manifest.ScheduledJobType,
+			inDf:               "./Dockerfile",
+			inSchedule:         "@hourly",
+			wantedManifestPath: "manifest/path",
 
-			mockWriter: func(m *mocks.MockjobDirManifestWriter) {
-				m.EXPECT().CopilotDirPath().Return("/resizer", nil)
-				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", nil)
-			},
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().CreateJob(gomock.Any()).
-					Do(func(app *config.Workload) {
-						require.Equal(t, &config.Workload{
-							Name: "resizer",
-							App:  "app",
-							Type: manifest.ScheduledJobType,
-						}, app)
-					}).
-					Return(nil)
-				m.EXPECT().GetApplication("app").Return(&config.Application{
-					Name:      "app",
-					AccountID: "1234",
-				}, nil)
-			},
-			mockappDeployer: func(m *mocks.MockappDeployer) {
-				m.EXPECT().AddJobToApp(&config.Application{
-					Name:      "app",
-					AccountID: "1234",
-				}, "resizer")
-			},
-			mockProg: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddJobToAppStart, "resizer"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddJobToAppComplete, "resizer"))
+			mockJobInit: func(m *mocks.MockjobInitializer) {
+				m.EXPECT().Job(&initworkload.WorkloadProps{
+					App:            "sample",
+					Name:           "mailer",
+					Type:           "Scheduled Job",
+					DockerfilePath: "./Dockerfile",
+					Schedule:       "@hourly",
+				}).Return("manifest/path", nil)
 			},
 		},
-		"using existing image": {
-			inJobType: manifest.ScheduledJobType,
-			inAppName: "app",
-			inJobName: "resizer",
-			inImage:   "mockImage",
-
-			mockWriter: func(m *mocks.MockjobDirManifestWriter) {
-				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Do(func(m *manifest.ScheduledJob, _ string) {
-					require.Equal(t, *m.Workload.Type, manifest.ScheduledJobType)
-					require.Equal(t, *m.ImageConfig.Location, "mockImage")
-				}).Return("/resizer/manifest.yml", nil)
-			},
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().CreateJob(gomock.Any()).
-					Do(func(app *config.Workload) {
-						require.Equal(t, &config.Workload{
-							Name: "resizer",
-							App:  "app",
-							Type: manifest.ScheduledJobType,
-						}, app)
-					}).
-					Return(nil)
-				m.EXPECT().GetApplication("app").Return(&config.Application{
-					Name:      "app",
-					AccountID: "1234",
-				}, nil)
-			},
-			mockappDeployer: func(m *mocks.MockappDeployer) {
-				m.EXPECT().AddJobToApp(&config.Application{
-					Name:      "app",
-					AccountID: "1234",
-				}, "resizer")
-			},
-			mockProg: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddJobToAppStart, "resizer"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddJobToAppComplete, "resizer"))
-			},
-		},
-		"write manifest error": {
-			inJobType:        manifest.ScheduledJobType,
-			inAppName:        "app",
-			inJobName:        "resizer",
-			inDockerfilePath: "resizer/Dockerfile",
-
-			mockWriter: func(m *mocks.MockjobDirManifestWriter) {
-				m.EXPECT().CopilotDirPath().Return("/resizer", nil)
-				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", errors.New("some error"))
-			},
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("app").Return(&config.Application{
-					Name:      "app",
-					AccountID: "1234",
-				}, nil)
+		"failure": {
+			mockJobInit: func(m *mocks.MockjobInitializer) {
+				m.EXPECT().Job(gomock.Any()).Return("", errors.New("some error"))
 			},
 			wantedErr: errors.New("some error"),
 		},
-		"app error": {
-			inJobType:        manifest.ScheduledJobType,
-			inAppName:        "app",
-			inJobName:        "resizer",
-			inDockerfilePath: "resizer/Dockerfile",
-
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication(gomock.Any()).Return(nil, errors.New("some error"))
-			},
-			wantedErr: errors.New("get application app: some error"),
-		},
-		"add job to app fails": {
-			inJobType:        manifest.ScheduledJobType,
-			inAppName:        "app",
-			inJobName:        "resizer",
-			inDockerfilePath: "frontend/Dockerfile",
-
-			mockWriter: func(m *mocks.MockjobDirManifestWriter) {
-				m.EXPECT().CopilotDirPath().Return("/resizer", nil)
-				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", nil)
-			},
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{
-					Name:      "app",
-					AccountID: "1234",
-				}, nil)
-			},
-			mockProg: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddJobToAppStart, "resizer"))
-				m.EXPECT().Stop(log.Serrorf(fmtAddJobToAppFailed, "resizer"))
-			},
-			mockappDeployer: func(m *mocks.MockappDeployer) {
-				m.EXPECT().AddJobToApp(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
-			},
-			wantedErr: errors.New("add job resizer to application app: some error"),
-		},
-		"error saving app": {
-			inJobType:        manifest.LoadBalancedWebServiceType,
-			inAppName:        "app",
-			inJobName:        "resizer",
-			inDockerfilePath: "resizer/Dockerfile",
-
-			mockWriter: func(m *mocks.MockjobDirManifestWriter) {
-				m.EXPECT().CopilotDirPath().Return("/resizer", nil)
-				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", nil)
-			},
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().CreateJob(gomock.Any()).
-					Return(fmt.Errorf("oops"))
-				m.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{}, nil)
-			},
-			mockappDeployer: func(m *mocks.MockappDeployer) {
-				m.EXPECT().AddJobToApp(gomock.Any(), gomock.Any()).Return(nil)
-			},
-			mockProg: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(gomock.Any())
-				m.EXPECT().Stop(gomock.Any())
-			},
-			wantedErr: fmt.Errorf("saving job resizer: oops"),
-		},
 	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWriter := mocks.NewMockjobDirManifestWriter(ctrl)
-			mockstore := mocks.NewMockstore(ctrl)
-			mockappDeployer := mocks.NewMockappDeployer(ctrl)
-			mockProg := mocks.NewMockprogress(ctrl)
-			if tc.mockWriter != nil {
-				tc.mockWriter(mockWriter)
+			mockJobInitializer := mocks.NewMockjobInitializer(ctrl)
+
+			if tc.mockJobInit != nil {
+				tc.mockJobInit(mockJobInitializer)
 			}
-			if tc.mockstore != nil {
-				tc.mockstore(mockstore)
-			}
-			if tc.mockappDeployer != nil {
-				tc.mockappDeployer(mockappDeployer)
-			}
-			if tc.mockProg != nil {
-				tc.mockProg(mockProg)
-			}
+
 			opts := initJobOpts{
 				initWkldVars: initWkldVars{
-					appName:        tc.inAppName,
-					name:           tc.inJobName,
-					dockerfilePath: tc.inDockerfilePath,
-					image:          tc.inImage,
-					wkldType:       tc.inJobType,
+					appName:        tc.inApp,
+					name:           tc.inName,
+					wkldType:       tc.inType,
+					dockerfilePath: tc.inDf,
+					schedule:       tc.inSchedule,
 				},
-				ws:          mockWriter,
-				store:       mockstore,
-				appDeployer: mockappDeployer,
-				prog:        mockProg,
+				init: mockJobInitializer,
 			}
 
 			// WHEN
@@ -585,6 +440,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			// THEN
 			if tc.wantedErr == nil {
 				require.NoError(t, err)
+				require.Equal(t, tc.wantedManifestPath, opts.manifestPath)
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			}
