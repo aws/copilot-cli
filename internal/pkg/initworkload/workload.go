@@ -67,7 +67,8 @@ type WorkloadProps struct {
 	Timeout  string
 	Retries  int
 
-	Port uint16
+	Port        uint16
+	HealthCheck *manifest.ContainerHealthCheck
 }
 
 func (p *WorkloadProps) isValidWorkload() bool {
@@ -92,7 +93,7 @@ func (p *WorkloadProps) isValidJob() bool {
 
 type manifestWriter func(encoding.BinaryMarshaler, string) (string, error)
 
-type manifestCreator func(string, *WorkloadProps) (encoding.BinaryMarshaler, error)
+type manifestCreator func(*WorkloadProps) (encoding.BinaryMarshaler, error)
 
 type workloadAdder func(*config.Application, string) error
 
@@ -156,16 +157,15 @@ func (w *WorkloadInitializer) initWorkload(props *WorkloadProps) (manifestPath s
 		return "", fmt.Errorf("get application %s: %w", props.App, err)
 	}
 
-	var dfPath string
 	if props.DockerfilePath != "" {
 		path, err := relativeDockerfilePath(w.Ws, props.DockerfilePath)
 		if err != nil {
 			return "", err
 		}
-		dfPath = path
+		props.DockerfilePath = path
 	}
 
-	mf, err := w.createManifest(dfPath, props)
+	mf, err := w.createManifest(props)
 	if err != nil {
 		return "", err
 	}
@@ -230,13 +230,13 @@ func (w *WorkloadInitializer) Job(i *WorkloadProps) (string, error) {
 	return w.initWorkload(i)
 }
 
-func newJobManifest(dfPath string, i *WorkloadProps) (encoding.BinaryMarshaler, error) {
+func newJobManifest(i *WorkloadProps) (encoding.BinaryMarshaler, error) {
 	switch i.Type {
 	case manifest.ScheduledJobType:
 		return manifest.NewScheduledJob(&manifest.ScheduledJobProps{
 			WorkloadProps: &manifest.WorkloadProps{
 				Name:       i.Name,
-				Dockerfile: dfPath,
+				Dockerfile: i.DockerfilePath,
 				Image:      i.Image,
 			},
 			Schedule: i.Schedule,
@@ -257,16 +257,53 @@ func (w *WorkloadInitializer) Service(i *WorkloadProps) (string, error) {
 	return w.initWorkload(i)
 }
 
-// func newServiceManifest(dfPath string, i *WorkloadProps) (encoding.BinaryMarshaler, error) {
-// 	switch i.Type {
-// 	case manifest.LoadBalancedWebServiceType:
-// 		return o.newLoadBalancedWebServiceManifest(dfPath)
-// 	case manifest.BackendServiceType:
-// 		return o.newBackendServiceManifest(dfPath)
-// 	default:
-// 		return nil, fmt.Errorf("service type %s doesn't have a manifest", o.wkldType)
-// 	}
-// }
+func (w *WorkloadInitializer) newServiceManifest(i *WorkloadProps) (encoding.BinaryMarshaler, error) {
+	switch i.Type {
+	case manifest.LoadBalancedWebServiceType:
+		return w.newLoadBalancedWebServiceManifest(i)
+	case manifest.BackendServiceType:
+		return newBackendServiceManifest(i)
+	default:
+		return nil, fmt.Errorf("service type %s doesn't have a manifest", i.Type)
+	}
+}
+
+func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *WorkloadProps) (*manifest.LoadBalancedWebService, error) {
+	props := &manifest.LoadBalancedWebServiceProps{
+		WorkloadProps: &manifest.WorkloadProps{
+			Name:       i.Name,
+			Dockerfile: i.DockerfilePath,
+			Image:      i.Image,
+		},
+		Port: i.Port,
+		Path: "/",
+	}
+	existingSvcs, err := w.Store.ListServices(i.App)
+	if err != nil {
+		return nil, err
+	}
+	// We default to "/" for the first service, but if there's another
+	// Load Balanced Web Service, we use the svc name as the default, instead.
+	for _, existingSvc := range existingSvcs {
+		if existingSvc.Type == manifest.LoadBalancedWebServiceType && existingSvc.Name != i.Name {
+			props.Path = i.Name
+			break
+		}
+	}
+	return manifest.NewLoadBalancedWebService(props), nil
+}
+
+func newBackendServiceManifest(i *WorkloadProps) (*manifest.BackendService, error) {
+	return manifest.NewBackendService(manifest.BackendServiceProps{
+		WorkloadProps: manifest.WorkloadProps{
+			Name:       i.Name,
+			Dockerfile: i.DockerfilePath,
+			Image:      i.Image,
+		},
+		Port:        i.Port,
+		HealthCheck: i.HealthCheck,
+	}), nil
+}
 
 // relativeDockerfilePath returns the path from the workspace root to the Dockerfile.
 func relativeDockerfilePath(ws Workspace, path string) (string, error) {
