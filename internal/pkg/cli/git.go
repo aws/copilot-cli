@@ -9,9 +9,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
-
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
-
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 )
 
@@ -35,8 +33,8 @@ func askImageTag(tag string, prompter prompter, cmd runner) (string, error) {
 		return tag, nil
 	}
 	tag, err := getVersionTag(cmd)
-	log.Warningln("Failed to default tag, are you in a git repository?")
 	if err != nil {
+		log.Warningln("Failed to default tag, are you in a git repository?")
 		// User is not in a Git repository, so prompt for a tag.
 		tag, err = prompter.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
 		if err != nil {
