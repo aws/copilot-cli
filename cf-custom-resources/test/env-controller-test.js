@@ -57,6 +57,7 @@ describe("Env Controller Handler", () => {
         ResourceProperties: {
           EnvStack: testEnvStack,
           Workload: testWorkload,
+          Parameters: ["ALBWorkloads"],
         },
       })
       .expectResolve(() => {
@@ -86,6 +87,7 @@ describe("Env Controller Handler", () => {
         ResourceProperties: {
           EnvStack: testEnvStack,
           Workload: testWorkload,
+          Parameters: ["ALBWorkloads"],
         },
       })
       .expectResolve(() => {
@@ -105,7 +107,7 @@ describe("Env Controller Handler", () => {
         {
           StackName: "mockEnvStack",
           Parameters: testParams,
-          Outputs: []
+          Outputs: [],
         },
       ],
     });
@@ -126,6 +128,7 @@ describe("Env Controller Handler", () => {
         ResourceProperties: {
           EnvStack: testEnvStack,
           Workload: testWorkload,
+          Parameters: ["ALBWorkloads"],
         },
       })
       .expectResolve(() => {
@@ -138,11 +141,6 @@ describe("Env Controller Handler", () => {
         sinon.assert.calledWith(
           updateStackFake,
           sinon.match({
-            Capabilities: [
-              "CAPABILITY_IAM",
-              "CAPABILITY_NAMED_IAM",
-              "CAPABILITY_AUTO_EXPAND",
-            ],
             Parameters: [
               {
                 ParameterKey: "ALBWorkloads",
@@ -189,6 +187,7 @@ describe("Env Controller Handler", () => {
         ResourceProperties: {
           EnvStack: testEnvStack,
           Workload: "my-app",
+          Parameters: ["ALBWorkloads"],
         },
       })
       .expectResolve(() => {
@@ -224,7 +223,9 @@ describe("Env Controller Handler", () => {
       );
     updateStackFake.onSecondCall().resolves(null);
     AWS.mock("CloudFormation", "updateStack", updateStackFake);
-    const waitForFake = sinon.fake.resolves({});
+    const waitForFake = sinon.stub();
+    waitForFake.onFirstCall().resolves(null);
+    waitForFake.onSecondCall().resolves(null);
     AWS.mock("CloudFormation", "waitFor", waitForFake);
 
     const request = nock(ResponseURL)
@@ -241,6 +242,7 @@ describe("Env Controller Handler", () => {
         ResourceProperties: {
           EnvStack: testEnvStack,
           Workload: testWorkload,
+          Parameters: ["ALBWorkloads"],
         },
       })
       .expectResolve(() => {
@@ -253,11 +255,6 @@ describe("Env Controller Handler", () => {
         sinon.assert.calledWith(
           updateStackFake,
           sinon.match({
-            Capabilities: [
-              "CAPABILITY_IAM",
-              "CAPABILITY_NAMED_IAM",
-              "CAPABILITY_AUTO_EXPAND",
-            ],
             Parameters: [
               {
                 ParameterKey: "ALBWorkloads",
@@ -269,7 +266,14 @@ describe("Env Controller Handler", () => {
           })
         );
         sinon.assert.calledWith(
-          waitForFake,
+          waitForFake.firstCall,
+          sinon.match("stackUpdateComplete"),
+          sinon.match({
+            StackName: "mockEnvStack",
+          })
+        );
+        sinon.assert.calledWith(
+          waitForFake.secondCall,
           sinon.match("stackUpdateComplete"),
           sinon.match({
             StackName: "mockEnvStack",
@@ -309,6 +313,7 @@ describe("Env Controller Handler", () => {
         ResourceProperties: {
           EnvStack: testEnvStack,
           Workload: "my-app",
+          Parameters: ["ALBWorkloads"],
         },
       })
       .expectResolve(() => {
@@ -321,11 +326,6 @@ describe("Env Controller Handler", () => {
         sinon.assert.calledWith(
           updateStackFake,
           sinon.match({
-            Capabilities: [
-              "CAPABILITY_IAM",
-              "CAPABILITY_NAMED_IAM",
-              "CAPABILITY_AUTO_EXPAND",
-            ],
             Parameters: [
               {
                 ParameterKey: "ALBWorkloads",

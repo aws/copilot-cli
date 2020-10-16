@@ -68,15 +68,21 @@ let report = function (
 };
 
 /**
- * Control the optional resources of the environment stack by updating the parameters.
+ * Update the environment stack's parameters by adding or removing {workload} from the provided {parameters}.
  *
  * @param {string} requestType Type of the request.
  * @param {string} stackName Name of the stack.
  * @param {string} workload Name of the copilot workload.
+ * @param {string[]} envParameters List of parameters from the environment stack to update.
  *
- * @returns {number} The running task number.
+ * @returns {parameters} The updated parameters.
  */
-const controlEnv = async function (requestType, stackName, workload) {
+const controlEnv = async function (
+  requestType,
+  stackName,
+  workload,
+  envParameters
+) {
   var cfn = new aws.CloudFormation();
   while (true) {
     var describeStackResp = await cfn
@@ -89,18 +95,23 @@ const controlEnv = async function (requestType, stackName, workload) {
     }
     var updatedEnvStack = describeStackResp.Stacks[0];
     var params = JSON.parse(JSON.stringify(updatedEnvStack.Parameters));
+    var updated = false;
     for (const param of params) {
-      if (param.ParameterKey === "ALBWorkloads") {
-        param.ParameterValue = updateALBWorkloads(
-          requestType,
-          workload,
-          param.ParameterValue
-        );
+      for (const envParam of envParameters) {
+        if (param.ParameterKey === envParam) {
+          const [updatedParamValue, paramUpdated] = updateParameter(
+            requestType,
+            workload,
+            param.ParameterValue
+          );
+          param.ParameterValue = updatedParamValue;
+          updated = updated || paramUpdated;
+        }
       }
     }
-    const exportedValues = getExportedValues(updatedEnvStack)
+    const exportedValues = getExportedValues(updatedEnvStack);
     // Return if there's no parameter changes.
-    if (JSON.stringify(updatedEnvStack.Parameters) === JSON.stringify(params)) {
+    if (!updated) {
       return exportedValues;
     }
     try {
@@ -110,11 +121,7 @@ const controlEnv = async function (requestType, stackName, workload) {
           Parameters: params,
           UsePreviousTemplate: true,
           RoleARN: exportedValues["CFNExecutionRoleARN"],
-          Capabilities: [
-            "CAPABILITY_IAM",
-            "CAPABILITY_NAMED_IAM",
-            "CAPABILITY_AUTO_EXPAND",
-          ],
+          Capabilities: updatedEnvStack.Capabilities,
         })
         .promise();
     } catch (err) {
@@ -165,7 +172,8 @@ exports.handler = async function (event, context) {
         responseData = await controlEnv(
           "Create",
           props.EnvStack,
-          props.Workload
+          props.Workload,
+          props.Parameters
         );
         physicalResourceId = `envcontoller/${props.EnvStack}/${props.Workload}`;
         break;
@@ -173,12 +181,18 @@ exports.handler = async function (event, context) {
         responseData = await controlEnv(
           "Update",
           props.EnvStack,
-          props.Workload
+          props.Workload,
+          props.Parameters
         );
         physicalResourceId = event.PhysicalResourceId;
         break;
       case "Delete":
-        await controlEnv("Delete", props.EnvStack, props.Workload);
+        await controlEnv(
+          "Delete",
+          props.EnvStack,
+          props.Workload,
+          props.Parameters
+        );
         physicalResourceId = event.PhysicalResourceId;
         break;
       default:
@@ -203,12 +217,22 @@ const getExportedValues = function (stack) {
   stack.Outputs.forEach((output) => {
     exportedValues[output.OutputKey] = output.OutputValue;
   });
-  return exportedValues
-}
+  return exportedValues;
+};
 
-const updateALBWorkloads = function (requestType, workload, value) {
+/**
+ * Update parameter by adding workload to the parameter values.
+ *
+ * @param {string} requestType type of the request.
+ * @param {string} workload name of the workload.
+ * @param {string} paramValue value of the parameter.
+ *
+ * @returns {string} The updated parameter.
+ * @returns {bool} whether the parameter is modified.
+ */
+const updateParameter = function (requestType, workload, paramValue) {
   var set = new Set(
-    value.split(",").filter(function (el) {
+    paramValue.split(",").filter(function (el) {
       return el != "";
     })
   );
@@ -225,7 +249,8 @@ const updateALBWorkloads = function (requestType, workload, value) {
     default:
       throw new Error(`Unsupported request type ${requestType}`);
   }
-  return Array.from(set).join(",");
+  var updatedParamValue = Array.from(set).join(",");
+  return [updatedParamValue, updatedParamValue !== paramValue];
 };
 
 /**
