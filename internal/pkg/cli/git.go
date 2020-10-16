@@ -34,7 +34,7 @@ func askImageTag(tag string, prompter prompter, cmd runner) (string, error) {
 	}
 	tag, err := getVersionTag(cmd)
 	if err != nil {
-		log.Warningln("Failed to default tag, are you in a git repository?")
+		log.Warningln("Couldn't find a git commit sha to use as an image tag. Are you in a git repository?")
 		// User is not in a Git repository, so prompt for a tag.
 		tag, err = prompter.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
 		if err != nil {
