@@ -204,9 +204,8 @@ func TestDeploySelect_Service(t *testing.T) {
 }
 
 type workspaceSelectMocks struct {
-	workloadLister *mocks.MockWorkspaceRetriever
+	workloadLister *mocks.MockWsWorkloadDockerfileLister
 	prompt         *mocks.MockPrompter
-	configLister   *mocks.MockConfigLister
 }
 
 func TestWorkspaceSelect_Service(t *testing.T) {
@@ -215,8 +214,221 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		wantErr    error
 		want       string
 	}{
-		"with no workspace services and no store services": {
+		"with no workspace services": {
 			setupMocks: func(m workspaceSelectMocks) {
+				m.workloadLister.
+					EXPECT().
+					ServiceNames().
+					Return([]string{}, nil).
+					Times(1)
+				m.prompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			wantErr: fmt.Errorf("no services found in workspace"),
+		},
+		"with only one workspace service (skips prompting)": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.workloadLister.
+					EXPECT().
+					ServiceNames().
+					Return([]string{
+						"service1",
+					}, nil).
+					Times(1)
+				m.prompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			want: "service1",
+		},
+		"with multiple workspace services": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.workloadLister.
+					EXPECT().
+					ServiceNames().
+					Return([]string{
+						"service1",
+						"service2",
+					}, nil).
+					Times(1)
+				m.prompt.
+					EXPECT().
+					SelectOne(
+						gomock.Eq("Select a local service"),
+						gomock.Eq("Help text"),
+						gomock.Eq([]string{"service1", "service2"}),
+						gomock.Any()).
+					Return("service2", nil).
+					Times(1)
+			},
+			want: "service2",
+		},
+		"with error selecting services": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.workloadLister.
+					EXPECT().
+					ServiceNames().
+					Return([]string{
+						"service1",
+						"service2",
+					}, nil).
+					Times(1)
+				m.prompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"service1", "service2"}), gomock.Any()).
+					Return("", fmt.Errorf("error selecting")).
+					Times(1)
+			},
+			wantErr: fmt.Errorf("select local service: error selecting"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mockwsWorkloadLister := mocks.NewMockWsWorkloadDockerfileLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := workspaceSelectMocks{
+				workloadLister: mockwsWorkloadLister,
+				prompt:         mockprompt,
+			}
+			tc.setupMocks(mocks)
+			sel := WorkspaceSelect{
+				Select: &Select{
+					prompt: mockprompt,
+				},
+				wlLister: mockwsWorkloadLister,
+			}
+			got, err := sel.Service("Select a local service", "Help text")
+			if tc.wantErr != nil {
+				require.EqualError(t, tc.wantErr, err.Error())
+			} else {
+				require.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+func TestWorkspaceSelect_Job(t *testing.T) {
+	testCases := map[string]struct {
+		setupMocks func(mocks workspaceSelectMocks)
+		wantErr    error
+		want       string
+	}{
+		"with no workspace jobs": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.workloadLister.
+					EXPECT().
+					JobNames().
+					Return([]string{}, nil).
+					Times(1)
+				m.prompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			wantErr: fmt.Errorf("no jobs found in workspace"),
+		},
+		"with only one workspace job (skips prompting)": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.workloadLister.
+					EXPECT().
+					JobNames().
+					Return([]string{
+						"resizer",
+					}, nil).
+					Times(1)
+				m.prompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			want: "resizer",
+		},
+		"with multiple workspace services": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.workloadLister.
+					EXPECT().
+					JobNames().
+					Return([]string{
+						"resizer1",
+						"resizer2",
+					}, nil).
+					Times(1)
+				m.prompt.
+					EXPECT().
+					SelectOne(
+						gomock.Eq("Select a local job"),
+						gomock.Eq("Help text"),
+						gomock.Eq([]string{"resizer1", "resizer2"}),
+						gomock.Any()).
+					Return("resizer2", nil).
+					Times(1)
+			},
+			want: "resizer2",
+		},
+		"with error selecting services": {
+			setupMocks: func(m workspaceSelectMocks) {
+				m.workloadLister.
+					EXPECT().
+					JobNames().
+					Return([]string{
+						"resizer1",
+						"resizer2",
+					}, nil).
+					Times(1)
+				m.prompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"resizer1", "resizer2"}), gomock.Any()).
+					Return("", fmt.Errorf("error selecting")).
+					Times(1)
+			},
+			wantErr: fmt.Errorf("select local job: error selecting"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mockwsConfigGetter := mocks.NewMockWsWorkloadDockerfileLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := workspaceSelectMocks{
+				workloadLister: mockwsConfigGetter,
+				prompt:         mockprompt,
+			}
+			tc.setupMocks(mocks)
+			sel := WorkspaceSelect{
+				Select: &Select{
+					prompt: mockprompt,
+				},
+				wlLister: mockwsConfigGetter,
+			}
+			got, err := sel.Job("Select a local job", "Help text")
+			if tc.wantErr != nil {
+				require.EqualError(t, tc.wantErr, err.Error())
+			} else {
+				require.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
+type workspaceConfigSelectMocks struct {
+	workloadLister *mocks.MockWorkspaceRetriever
+	prompt         *mocks.MockPrompter
+	configLister   *mocks.MockConfigLister
+}
+
+func TestWorkspaceConfigSelect_Service(t *testing.T) {
+	testCases := map[string]struct {
+		setupMocks func(mocks workspaceConfigSelectMocks)
+		wantErr    error
+		want       string
+	}{
+		"with no workspace services and no store services": {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.EXPECT().ServiceNames().Return(
 					[]string{}, nil).Times(1)
 				m.configLister.EXPECT().ListServices("app-name").Return(
@@ -227,7 +439,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			wantErr: fmt.Errorf("no services found"),
 		},
 		"with one workspace service but no store services": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.EXPECT().ServiceNames().Return(
 					[]string{
 						"service1",
@@ -239,7 +451,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			wantErr: fmt.Errorf("no services found"),
 		},
 		"with one store service but no workspace services": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.EXPECT().ServiceNames().Return(
 					[]string{}, nil).
 					Times(1)
@@ -255,7 +467,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			wantErr: fmt.Errorf("no services found"),
 		},
 		"with only one service in both workspace and store (skips prompting)": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.EXPECT().ServiceNames().Return(
 					[]string{
 						"service1",
@@ -275,7 +487,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			want: "service1",
 		},
 		"with multiple workspace services but only one store service (skips prompting)": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.EXPECT().ServiceNames().Return(
 					[]string{
 						"service1",
@@ -297,7 +509,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			want: "service1",
 		},
 		"with multiple store services but only one workspace service (skips prompting)": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.EXPECT().ServiceNames().Return(
 					[]string{
 						"service3",
@@ -327,7 +539,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			want: "service3",
 		},
 		"with multiple workspace services and multiple store services, of which multiple overlap": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.
 					EXPECT().ServiceNames().Return(
 					[]string{
@@ -365,7 +577,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			want: "service2",
 		},
 		"with error retrieving services from workspace": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.
 					EXPECT().ServiceNames().Return(
 					[]string{""}, errors.New("some error"))
@@ -373,7 +585,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			wantErr: errors.New("retrieve services from workspace: some error"),
 		},
 		"with error retrieving services from store": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.EXPECT().ServiceNames().Return(
 					[]string{
 						"service1",
@@ -386,7 +598,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			wantErr: errors.New("retrieve services from store: some error"),
 		},
 		"with error selecting services": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.
 					EXPECT().ServiceNames().Return(
 					[]string{
@@ -425,14 +637,14 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			mockwsRetriever := mocks.NewMockWorkspaceRetriever(ctrl)
 			mockconfigLister := mocks.NewMockConfigLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
-			mocks := workspaceSelectMocks{
+			mocks := workspaceConfigSelectMocks{
 				workloadLister: mockwsRetriever,
 				configLister:   mockconfigLister,
 				prompt:         mockprompt,
 			}
 			tc.setupMocks(mocks)
 
-			sel := WorkspaceSelect{
+			sel := WorkspaceConfigSelect{
 				Select: &Select{
 					prompt: mockprompt,
 					config: mockconfigLister,
@@ -450,14 +662,14 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 	}
 }
 
-func TestWorkspaceSelect_Job(t *testing.T) {
+func TestWorkspaceConfigSelect_Job(t *testing.T) {
 	testCases := map[string]struct {
-		setupMocks func(mocks workspaceSelectMocks)
+		setupMocks func(mocks workspaceConfigSelectMocks)
 		wantErr    error
 		want       string
 	}{
 		"with no workspace jobs and no store jobs": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.
 					EXPECT().JobNames().Return(
 					[]string{}, nil).Times(1)
@@ -471,7 +683,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			wantErr: fmt.Errorf("no jobs found"),
 		},
 		"with one workspace job but no store jobs": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.
 					EXPECT().JobNames().Return(
 					[]string{
@@ -487,7 +699,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			wantErr: fmt.Errorf("no jobs found"),
 		},
 		"with one store job but no workspace jobs": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.
 					EXPECT().JobNames().Return(
 					[]string{}, nil).Times(1)
@@ -507,7 +719,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			wantErr: fmt.Errorf("no jobs found"),
 		},
 		"with only one in both workspace and store (skips prompting)": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 
 				m.workloadLister.
 					EXPECT().JobNames().Return(
@@ -530,7 +742,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			want: "resizer",
 		},
 		"with multiple workspace jobs but only one store job (skips prompting)": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.EXPECT().JobNames().Return(
 					[]string{
 						"job1",
@@ -552,7 +764,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			want: "job2",
 		},
 		"with multiple store jobs but only one workspace job (skips prompting)": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.EXPECT().JobNames().Return(
 					[]string{
 						"job3",
@@ -582,7 +794,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			want: "job3",
 		},
 		"with multiple workspace jobs and multiple store jobs, of which multiple overlap": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.EXPECT().JobNames().Return(
 					[]string{
 						"job1",
@@ -623,7 +835,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			want: "job2",
 		},
 		"with error retrieving jobs from workspace": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.
 					EXPECT().JobNames().Return(
 					[]string{""}, errors.New("some error"))
@@ -631,7 +843,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			wantErr: errors.New("retrieve jobs from workspace: some error"),
 		},
 		"with error retrieving jobs from store": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.EXPECT().JobNames().Return(
 					[]string{
 						"service1",
@@ -644,7 +856,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			wantErr: errors.New("retrieve jobs from store: some error"),
 		},
 		"with error selecting jobs": {
-			setupMocks: func(m workspaceSelectMocks) {
+			setupMocks: func(m workspaceConfigSelectMocks) {
 				m.workloadLister.EXPECT().JobNames().Return(
 					[]string{
 						"resizer1",
@@ -681,14 +893,14 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			mockwsRetriever := mocks.NewMockWorkspaceRetriever(ctrl)
 			mockconfigLister := mocks.NewMockConfigLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
-			mocks := workspaceSelectMocks{
+			mocks := workspaceConfigSelectMocks{
 				workloadLister: mockwsRetriever,
 				configLister:   mockconfigLister,
 				prompt:         mockprompt,
 			}
 			tc.setupMocks(mocks)
 
-			sel := WorkspaceSelect{
+			sel := WorkspaceConfigSelect{
 				Select: &Select{
 					prompt: mockprompt,
 					config: mockconfigLister,
@@ -1135,14 +1347,14 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 		"frontend/Dockerfile",
 	}
 	testCases := map[string]struct {
-		mockWs     func(retriever *mocks.MockWorkspaceRetriever)
+		mockWs     func(lister *mocks.MockWsWorkloadDockerfileLister)
 		mockPrompt func(*mocks.MockPrompter)
 
 		wantedErr        error
 		wantedDockerfile string
 	}{
 		"choose an existing Dockerfile": {
-			mockWs: func(m *mocks.MockWorkspaceRetriever) {
+			mockWs: func(m *mocks.MockWsWorkloadDockerfileLister) {
 				m.EXPECT().ListDockerfiles().Return(dockerfiles, nil)
 			},
 			mockPrompt: func(m *mocks.MockPrompter) {
@@ -1161,7 +1373,7 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 			wantedDockerfile: "frontend/Dockerfile",
 		},
 		"prompts user for custom path if fail to find Dockerfiles": {
-			mockWs: func(m *mocks.MockWorkspaceRetriever) {
+			mockWs: func(m *mocks.MockWsWorkloadDockerfileLister) {
 				m.EXPECT().ListDockerfiles().Return(nil, &workspace.ErrDockerfileNotFound{})
 			},
 			mockPrompt: func(m *mocks.MockPrompter) {
@@ -1176,7 +1388,7 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 			wantedDockerfile: "crazy/path/Dockerfile",
 		},
 		"returns an error if fail to get custom Dockerfile path": {
-			mockWs: func(m *mocks.MockWorkspaceRetriever) {
+			mockWs: func(m *mocks.MockWsWorkloadDockerfileLister) {
 				m.EXPECT().ListDockerfiles().Return(nil, &workspace.ErrDockerfileNotFound{})
 			},
 			mockPrompt: func(m *mocks.MockPrompter) {
@@ -1190,7 +1402,7 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 			wantedErr: fmt.Errorf("get custom Dockerfile path: some error"),
 		},
 		"returns an error if fail to select Dockerfile": {
-			mockWs: func(m *mocks.MockWorkspaceRetriever) {
+			mockWs: func(m *mocks.MockWsWorkloadDockerfileLister) {
 				m.EXPECT().ListDockerfiles().Return(dockerfiles, nil)
 			},
 			mockPrompt: func(m *mocks.MockPrompter) {
@@ -1211,18 +1423,11 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 			defer ctrl.Finish()
 			p := mocks.NewMockPrompter(ctrl)
 			s := mocks.NewMockConfigLister(ctrl)
-			cfg := mocks.NewMockWorkspaceRetriever(ctrl)
+			cfg := mocks.NewMockWsWorkloadDockerfileLister(ctrl)
 			tc.mockPrompt(p)
 			tc.mockWs(cfg)
 
-			sel := WorkspaceSelect{
-				Select: &Select{
-					prompt: p,
-					config: s,
-				},
-				ws:      cfg,
-				appName: "app-name",
-			}
+			sel := NewWorkspaceSelect(p, s, cfg)
 
 			mockPromptText := "prompt"
 			mockHelpText := "help"
@@ -1350,16 +1555,9 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 			defer ctrl.Finish()
 			p := mocks.NewMockPrompter(ctrl)
 			s := mocks.NewMockConfigLister(ctrl)
-			cfg := mocks.NewMockWorkspaceRetriever(ctrl)
+			cfg := mocks.NewMockWsWorkloadDockerfileLister(ctrl)
 			tc.mockPrompt(p)
-			sel := WorkspaceSelect{
-				Select: &Select{
-					prompt: p,
-					config: s,
-				},
-				ws:      cfg,
-				appName: "app-name",
-			}
+			sel := NewWorkspaceSelect(p, s, cfg)
 
 			var mockValidator prompt.ValidatorFunc = func(interface{}) error { return nil }
 

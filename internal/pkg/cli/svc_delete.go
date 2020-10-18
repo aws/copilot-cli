@@ -83,7 +83,7 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
-	sel, err := selector.NewWorkspaceSelect(prompter, store, ws)
+	sel, err := selector.NewWorkspaceConfigSelect(prompter, store, ws)
 	if err != nil {
 		return nil, err
 	}

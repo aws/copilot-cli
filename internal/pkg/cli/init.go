@@ -7,6 +7,8 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -20,7 +22,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
-	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -84,10 +85,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		return nil, err
 	}
 	prompt := prompt.New()
-	sel, err := selector.NewWorkspaceSelect(prompt, ssm, ws)
-	if err != nil {
-		return nil, err
-	}
 	spin := termprogress.NewSpinner()
 	id := identity.New(defaultSess)
 	deployer := cloudformation.New(defaultSess)
@@ -119,7 +116,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		store:       ssm,
 		appDeployer: deployer,
 		prog:        spin,
-		sel:         sel,
+		sel:         selector.NewWorkspaceSelect(prompt, ssm, ws),
 		prompt:      prompt,
 		setupParser: func(o *initSvcOpts) {
 			o.df = dockerfile.New(o.fs, o.dockerfilePath)
@@ -151,7 +148,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		prompt:       prompt,
 		ws:           ws,
 		unmarshal:    manifest.UnmarshalWorkload,
-		sel:          sel,
+		sel:          selector.NewWorkspaceSelect(prompt, ssm, ws),
 		spinner:      spin,
 		cmd:          command.New(),
 		sessProvider: sessProvider,
