@@ -66,7 +66,6 @@ type initWkldVars struct {
 	image          string
 
 	port uint16
-	hc   *manifest.ContainerHealthCheck
 
 	timeout  string
 	retries  int
@@ -86,6 +85,7 @@ type initSvcOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
+	hc           *manifest.ContainerHealthCheck
 
 	// sets up Dockerfile parser using fs and input path
 	setupParser func(*initSvcOpts)
