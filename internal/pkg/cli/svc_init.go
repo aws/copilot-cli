@@ -48,10 +48,6 @@ You should set this to the port which your Dockerfile uses to communicate with t
 )
 
 const (
-	fmtAddSvcToAppStart    = "Creating ECR repositories for service %s."
-	fmtAddSvcToAppFailed   = "Failed to create ECR repositories for service %s.\n"
-	fmtAddSvcToAppComplete = "Created ECR repositories for service %s.\n"
-
 	wkldInitImagePrompt     = `What's the location of the image to use?`
 	wkldInitImagePromptHelp = `The name of an existing Docker image. Images in the Docker Hub registry are available by default.
 Other repositories are specified with either repository-url/image:tag or repository-url/image@digest`

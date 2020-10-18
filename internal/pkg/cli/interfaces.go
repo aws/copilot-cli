@@ -209,35 +209,12 @@ type wsFileDeleter interface {
 	DeleteWorkspaceFile() error
 }
 
-type dockerfileLister interface {
-	ListDockerfiles() ([]string, error)
-}
-
 type svcManifestReader interface {
 	ReadServiceManifest(svcName string) ([]byte, error)
 }
 
 type jobManifestReader interface {
 	ReadJobManifest(jobName string) ([]byte, error)
-}
-
-type svcManifestWriter interface {
-	dockerfileLister
-	WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
-}
-
-type svcDirManifestWriter interface {
-	svcManifestWriter
-	copilotDirGetter
-}
-
-type jobManifestWriter interface {
-	WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error)
-}
-
-type jobDirManifestWriter interface {
-	jobManifestWriter
-	copilotDirGetter
 }
 
 type copilotDirGetter interface {
@@ -463,9 +440,4 @@ type jobInitializer interface {
 
 type svcInitializer interface {
 	Service(props *initworkload.WorkloadProps) (string, error)
-}
-
-type jobSvcInitializer interface {
-	jobInitializer
-	svcInitializer
 }
