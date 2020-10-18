@@ -93,7 +93,7 @@ func (p *WorkloadProps) isValidJob() bool {
 
 type manifestWriter func(encoding.BinaryMarshaler, string) (string, error)
 
-type manifestCreator func(*WorkloadProps) (encoding.BinaryMarshaler, error)
+type manifestCreator func(*WorkloadProps, Store) (encoding.BinaryMarshaler, error)
 
 type workloadAdder func(*config.Application, string) error
 
@@ -141,8 +141,8 @@ func NewSvcInitializer(s Store, ws Workspace, p Prog, d WorkloadAdder) *Workload
 		Ws:    ws,
 		Prog:  p,
 
-		// createManifest: newServiceManifest,
-		writeManifest: ws.WriteServiceManifest,
+		createManifest: newServiceManifest,
+		writeManifest:  ws.WriteServiceManifest,
 
 		addWlToApp:   d.AddServiceToApp,
 		addWlToStore: s.CreateService,
@@ -165,7 +165,7 @@ func (w *WorkloadInitializer) initWorkload(props *WorkloadProps) (manifestPath s
 		props.DockerfilePath = path
 	}
 
-	mf, err := w.createManifest(props)
+	mf, err := w.createManifest(props, w.Store)
 	if err != nil {
 		return "", err
 	}
@@ -230,7 +230,8 @@ func (w *WorkloadInitializer) Job(i *WorkloadProps) (string, error) {
 	return w.initWorkload(i)
 }
 
-func newJobManifest(i *WorkloadProps) (encoding.BinaryMarshaler, error) {
+// newJobManifest doesn't need the store but services do, so we have to add it to the function signature
+func newJobManifest(i *WorkloadProps, s Store) (encoding.BinaryMarshaler, error) {
 	switch i.Type {
 	case manifest.ScheduledJobType:
 		return manifest.NewScheduledJob(&manifest.ScheduledJobProps{
@@ -257,10 +258,10 @@ func (w *WorkloadInitializer) Service(i *WorkloadProps) (string, error) {
 	return w.initWorkload(i)
 }
 
-func (w *WorkloadInitializer) newServiceManifest(i *WorkloadProps) (encoding.BinaryMarshaler, error) {
+func newServiceManifest(i *WorkloadProps, s Store) (encoding.BinaryMarshaler, error) {
 	switch i.Type {
 	case manifest.LoadBalancedWebServiceType:
-		return w.newLoadBalancedWebServiceManifest(i)
+		return newLoadBalancedWebServiceManifest(i, s)
 	case manifest.BackendServiceType:
 		return newBackendServiceManifest(i)
 	default:
@@ -268,7 +269,7 @@ func (w *WorkloadInitializer) newServiceManifest(i *WorkloadProps) (encoding.Bin
 	}
 }
 
-func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *WorkloadProps) (*manifest.LoadBalancedWebService, error) {
+func newLoadBalancedWebServiceManifest(i *WorkloadProps, s Store) (*manifest.LoadBalancedWebService, error) {
 	props := &manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:       i.Name,
@@ -278,7 +279,7 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *WorkloadProps
 		Port: i.Port,
 		Path: "/",
 	}
-	existingSvcs, err := w.Store.ListServices(i.App)
+	existingSvcs, err := s.ListServices(i.App)
 	if err != nil {
 		return nil, err
 	}

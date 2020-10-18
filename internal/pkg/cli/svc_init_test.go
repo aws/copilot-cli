@@ -96,6 +96,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 		})
 	}
 }
+
 func TestSvcInitOpts_Ask(t *testing.T) {
 	const (
 		wantedSvcType        = manifest.LoadBalancedWebServiceType
