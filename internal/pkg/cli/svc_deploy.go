@@ -70,16 +70,11 @@ func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
-
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 	prompter := prompt.New()
-	sel, err := selector.NewWorkspaceSelect(prompter, store, ws)
-	if err != nil {
-		return nil, err
-	}
 	return &deploySvcOpts{
 		deploySvcVars: vars,
 
@@ -87,7 +82,7 @@ func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
 		ws:           ws,
 		unmarshal:    manifest.UnmarshalWorkload,
 		spinner:      termprogress.NewSpinner(),
-		sel:          sel,
+		sel:          selector.NewWorkspaceSelect(prompter, store, ws),
 		prompt:       prompter,
 		cmd:          command.New(),
 		sessProvider: sessions.NewProvider(),

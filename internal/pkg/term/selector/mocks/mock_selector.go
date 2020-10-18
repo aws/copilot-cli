@@ -327,6 +327,74 @@ func (mr *MockWsWorkloadListerMockRecorder) JobNames() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JobNames", reflect.TypeOf((*MockWsWorkloadLister)(nil).JobNames))
 }
 
+// MockWsWorkloadDockerfileLister is a mock of WsWorkloadDockerfileLister interface
+type MockWsWorkloadDockerfileLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockWsWorkloadDockerfileListerMockRecorder
+}
+
+// MockWsWorkloadDockerfileListerMockRecorder is the mock recorder for MockWsWorkloadDockerfileLister
+type MockWsWorkloadDockerfileListerMockRecorder struct {
+	mock *MockWsWorkloadDockerfileLister
+}
+
+// NewMockWsWorkloadDockerfileLister creates a new mock instance
+func NewMockWsWorkloadDockerfileLister(ctrl *gomock.Controller) *MockWsWorkloadDockerfileLister {
+	mock := &MockWsWorkloadDockerfileLister{ctrl: ctrl}
+	mock.recorder = &MockWsWorkloadDockerfileListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockWsWorkloadDockerfileLister) EXPECT() *MockWsWorkloadDockerfileListerMockRecorder {
+	return m.recorder
+}
+
+// ServiceNames mocks base method
+func (m *MockWsWorkloadDockerfileLister) ServiceNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceNames indicates an expected call of ServiceNames
+func (mr *MockWsWorkloadDockerfileListerMockRecorder) ServiceNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockWsWorkloadDockerfileLister)(nil).ServiceNames))
+}
+
+// JobNames mocks base method
+func (m *MockWsWorkloadDockerfileLister) JobNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "JobNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// JobNames indicates an expected call of JobNames
+func (mr *MockWsWorkloadDockerfileListerMockRecorder) JobNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JobNames", reflect.TypeOf((*MockWsWorkloadDockerfileLister)(nil).JobNames))
+}
+
+// ListDockerfiles mocks base method
+func (m *MockWsWorkloadDockerfileLister) ListDockerfiles() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDockerfiles")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDockerfiles indicates an expected call of ListDockerfiles
+func (mr *MockWsWorkloadDockerfileListerMockRecorder) ListDockerfiles() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDockerfiles", reflect.TypeOf((*MockWsWorkloadDockerfileLister)(nil).ListDockerfiles))
+}
+
 // MockWorkspaceRetriever is a mock of WorkspaceRetriever interface
 type MockWorkspaceRetriever struct {
 	ctrl     *gomock.Controller
