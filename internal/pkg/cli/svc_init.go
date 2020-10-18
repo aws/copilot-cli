@@ -195,12 +195,15 @@ func (o *initSvcOpts) Ask() error {
 		}
 
 		// Check for a valid healthcheck and add it to the opts.
-		hc, err := o.parseHealthCheck()
+		var hc *manifest.ContainerHealthCheck
+		hc, err = o.parseHealthCheck()
 		if err != nil {
 			return err
 		}
+
 		o.hc = hc
 	}
+
 	if err := o.askSvcPort(ports); err != nil {
 		return err
 	}
