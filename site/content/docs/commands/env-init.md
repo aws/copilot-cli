@@ -4,7 +4,7 @@ $ copilot env init [flags]
 ```
 
 ## What does it do?
-`copilot env init` creates a new [environment](/docs/concepts/environments) where your services will live.
+`copilot env init` creates a new [environment](/docs/docs/concepts/environments) where your services will live.
 
 After you answer the questions, the CLI creates the common infrastructure that's shared between your services such as a VPC, an Application Load Balancer, and an ECS Cluster. Additionally, you can [customize Copilot environment](http://127.0.0.1:8000/docs/concepts/environments/#customize-your-environment) by either configuring the default environment resources or importing existing resources for your environment.
 
