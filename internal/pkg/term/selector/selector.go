@@ -155,14 +155,9 @@ func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
 // NewWorkspaceSelect returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
 func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriever) (*WorkspaceSelect, error) {
-	summary, err := ws.Summary()
-	if err != nil {
-		return nil, fmt.Errorf("read workspace summary: %w", err)
-	}
 	return &WorkspaceSelect{
-		Select:  NewSelect(prompt, store),
-		ws:      ws,
-		appName: summary.Application,
+		Select: NewSelect(prompt, store),
+		ws:     ws,
 	}, nil
 }
 
@@ -271,11 +266,15 @@ func (s *DeploySelect) DeployedService(prompt, help string, app string, opts ...
 
 // Service fetches all services in the workspace and then prompts the user to select one.
 func (s *WorkspaceSelect) Service(msg, help string) (string, error) {
+	summary, err := s.ws.Summary()
+	if err != nil {
+		return "", fmt.Errorf("read workspace summary: %w", err)
+	}
 	wsServiceNames, err := s.retrieveWorkspaceServices()
 	if err != nil {
 		return "", fmt.Errorf("retrieve services from workspace: %w", err)
 	}
-	storeServiceNames, err := s.Select.config.ListServices(s.appName)
+	storeServiceNames, err := s.Select.config.ListServices(summary.Application)
 	if err != nil {
 		return "", fmt.Errorf("retrieve services from store: %w", err)
 	}
@@ -297,11 +296,15 @@ func (s *WorkspaceSelect) Service(msg, help string) (string, error) {
 
 // Job fetches all jobs in the workspace and then prompts the user to select one.
 func (s *WorkspaceSelect) Job(msg, help string) (string, error) {
+	summary, err := s.ws.Summary()
+	if err != nil {
+		return "", fmt.Errorf("read workspace summary: %w", err)
+	}
 	wsJobNames, err := s.retrieveWorkspaceJobs()
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs from workspace: %w", err)
 	}
-	storeJobNames, err := s.Select.config.ListServices(s.appName)
+	storeJobNames, err := s.Select.config.ListServices(summary.Application)
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs from store: %w", err)
 	}

@@ -219,6 +219,10 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			setupMocks: func(m workspaceSelectMocks) {
 				m.workloadLister.EXPECT().ServiceNames().Return(
 					[]string{}, nil).Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{}, nil).Times(1)
 				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -233,6 +237,10 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 						"service1",
 					}, nil).
 					Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{}, nil).Times(1)
 			},
@@ -243,6 +251,10 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 				m.workloadLister.EXPECT().ServiceNames().Return(
 					[]string{}, nil).
 					Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -260,6 +272,10 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 					[]string{
 						"service1",
 					}, nil).Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -282,6 +298,10 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 						"service2",
 						"service3",
 					}, nil).Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -302,6 +322,10 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 					[]string{
 						"service3",
 					}, nil).Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -335,6 +359,10 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 						"service2",
 						"service3",
 					}, nil).Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -369,6 +397,10 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 				m.workloadLister.
 					EXPECT().ServiceNames().Return(
 					[]string{""}, errors.New("some error"))
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 			},
 			wantErr: errors.New("retrieve services from workspace: some error"),
 		},
@@ -380,6 +412,10 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 						"service2",
 					}, nil).
 					Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					nil, errors.New("some error"))
 			},
@@ -394,6 +430,10 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 						"service2",
 					}, nil).
 					Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -437,8 +477,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 					prompt: mockprompt,
 					config: mockconfigLister,
 				},
-				ws:      mockwsRetriever,
-				appName: "app-name",
+				ws: mockwsRetriever,
 			}
 			got, err := sel.Service("Select a service", "Help text")
 			if tc.wantErr != nil {
@@ -461,6 +500,10 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 				m.workloadLister.
 					EXPECT().JobNames().Return(
 					[]string{}, nil).Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{}, nil).Times(1)
 				m.prompt.
@@ -477,6 +520,10 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 					[]string{
 						"job1",
 					}, nil).Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{}, nil).Times(1)
 				m.prompt.
@@ -491,6 +538,10 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 				m.workloadLister.
 					EXPECT().JobNames().Return(
 					[]string{}, nil).Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -514,6 +565,10 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 					[]string{
 						"resizer",
 					}, nil).Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -537,6 +592,10 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 						"job2",
 						"job3",
 					}, nil).Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -557,6 +616,10 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 					[]string{
 						"job3",
 					}, nil).Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -589,6 +652,10 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 						"job2",
 						"job3",
 					}, nil).Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.
 					EXPECT().
 					ListServices("app-name").
@@ -627,6 +694,10 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 				m.workloadLister.
 					EXPECT().JobNames().Return(
 					[]string{""}, errors.New("some error"))
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 			},
 			wantErr: errors.New("retrieve jobs from workspace: some error"),
 		},
@@ -638,6 +709,10 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 						"service2",
 					}, nil).
 					Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					nil, errors.New("some error"))
 			},
@@ -650,6 +725,10 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 						"resizer1",
 						"resizer2",
 					}, nil).Times(1)
+				m.workloadLister.EXPECT().Summary().Return(
+					&workspace.Summary{
+						Application: "app-name",
+					}, nil)
 				m.configLister.EXPECT().ListServices("app-name").Return(
 					[]*config.Workload{
 						{
@@ -693,8 +772,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 					prompt: mockprompt,
 					config: mockconfigLister,
 				},
-				ws:      mockwsRetriever,
-				appName: "app-name",
+				ws: mockwsRetriever,
 			}
 			got, err := sel.Job("Select a job", "Help text")
 			if tc.wantErr != nil {
