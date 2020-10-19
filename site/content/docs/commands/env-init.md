@@ -6,9 +6,9 @@ $ copilot env init [flags]
 ## What does it do?
 `copilot env init` creates a new [environment](/docs/docs/concepts/environments) where your services will live.
 
-After you answer the questions, the CLI creates the common infrastructure that's shared between your services such as a VPC, an Application Load Balancer, and an ECS Cluster. Additionally, you can [customize Copilot environment](http://127.0.0.1:8000/docs/concepts/environments/#customize-your-environment) by either configuring the default environment resources or importing existing resources for your environment.
+After you answer the questions, the CLI creates the common infrastructure that's shared between your services such as a VPC, an Application Load Balancer, and an ECS Cluster. Additionally, you can [customize Copilot environment](/docs/docs/concepts/environments/#customize-your-environment) by either configuring the default environment resources or importing existing resources for your environment.
 
-You create environments using a [named profile](/docs/credentials/#environment-credentials) to specify which AWS Account and Region you'd like the environment to be in.
+You create environments using a [named profile](/docs/docs/credentials/#environment-credentials) to specify which AWS Account and Region you'd like the environment to be in.
 
 ## What are the flags?
 Like all commands in the AWS Copilot CLI, if you don't provide required flags, we'll prompt you for all the information we need to get you going. You can skip the prompts by providing information via flags:
