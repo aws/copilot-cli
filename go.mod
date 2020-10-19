@@ -22,7 +22,7 @@ require (
 	github.com/lnquy/cron v1.0.1
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/moby/buildkit v0.7.2
-	github.com/onsi/ginkgo v1.14.1
+	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.3
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sirupsen/logrus v1.6.0 // indirect
