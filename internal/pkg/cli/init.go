@@ -7,7 +7,6 @@ package cli
 import (
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -68,15 +67,21 @@ type initOpts struct {
 	// Pointers to flag values part of sub-commands.
 	// Since the sub-commands implement the actionCommand interface, without pointers to their internal fields
 	// we have to resort to type-casting the interface. These pointers simplify data access.
-	appName        *string
-	wkldType       *string
-	svcName        *string
-	svcPort        *uint16
-	dockerfilePath *string
-	image          *string
-	schedule       *string
-	retries        *int
-	timeout        *string
+	svcAppName        *string
+	wkldType          *string
+	svcName           *string
+	svcDockerfilePath *string
+	svcImage          *string
+	svcPort           *uint16
+
+	jobAppName        *string
+	jobWkldType       *string
+	jobName           *string
+	jobDockerfilePath *string
+	jobImage          *string
+	schedule          *string
+	retries           *int
+	timeout           *string
 
 	prompt prompter
 }
@@ -127,11 +132,12 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		retries:        vars.retries,
 		timeout:        vars.timeout,
 	}
+	wlInitializer := initialize.NewWorkloadInitializer(ssm, ws, spin, deployer)
 	initSvcCmd := &initSvcOpts{
 		initWkldVars: wkldVars,
 
 		fs:     &afero.Afero{Fs: afero.NewOsFs()},
-		init:   initworkload.NewServiceInitializer(ssm, ws, spin, deployer),
+		init:   wlInitializer,
 		sel:    sel,
 		prompt: prompt,
 		setupParser: func(o *initSvcOpts) {
@@ -141,8 +147,8 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	initJobCmd := &initJobOpts{
 		initWkldVars: wkldVars,
 
-		fs:     &afer.Afero{Fs: afero.NewOsFs()},
-		init:   initworkload.NewJobInitializer(ssm, ws, spin, deployer),
+		fs:     &afero.Afero{Fs: afero.NewOsFs()},
+		init:   wlInitializer,
 		sel:    sel,
 		prompt: prompt,
 	}
@@ -187,15 +193,18 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		initEnvCmd:   initEnvCmd,
 		deploySvcCmd: deploySvcCmd,
 
-		appName:        &initAppCmd.name,
-		wkldType:       &initSvcCmd.wkldType,
-		svcName:        &initSvcCmd.name,
-		svcPort:        &initSvcCmd.port,
-		dockerfilePath: &initSvcCmd.dockerfilePath,
-		image:          &initSvcCmd.image,
-		schedule:       &initJobCmd.schedule,
-		retries:        &initJobCmd.retries,
-		timeout:        &initJobCmd.timeout,
+		svcAppName:        &initAppCmd.name,
+		wkldType:          &initSvcCmd.wkldType,
+		jobWkldType:       &initJobCmd.wkldType,
+		svcName:           &initSvcCmd.name,
+		svcPort:           &initSvcCmd.port,
+		svcDockerfilePath: &initSvcCmd.dockerfilePath,
+		jobDockerfilePath: &initJobCmd.dockerfilePath,
+		svcImage:          &initSvcCmd.image,
+		jobImage:          &initJobCmd.image,
+		schedule:          &initJobCmd.schedule,
+		retries:           &initJobCmd.retries,
+		timeout:           &initJobCmd.timeout,
 
 		prompt: prompt,
 	}, nil
@@ -246,7 +255,8 @@ func (o *initOpts) loadApp() error {
 	return nil
 }
 
-func (o *initOpts) loadSvc() error {
+func (o *initOpts) loadWkld() error {
+	wkldType, err := o.askWorkload()
 	if initSvcOpts, ok := o.initSvcCmd.(*initSvcOpts); ok {
 		// Set the application name from app init to the service init command.
 		initSvcOpts.appName = *o.appName
@@ -258,26 +268,29 @@ func (o *initOpts) loadSvc() error {
 	return o.initSvcCmd.Validate()
 }
 
-var wkldInitTypePrompt = "Which " + color.Emphasize("workload type") + " best represents your architecture?"
-
-func (o *initOpts) askWorkload() error {
+func (o *initOpts) askWorkload() (string, error) {
 	if o.wkldType != nil {
-		return nil
+		return "", nil
 	}
-
-	svcHelp := fmt.Sprintf(fmtSvcInitSvcTypeHelpPrompt,
+	wkldInitTypePrompt := "Which " + color.Emphasize("workload type") + " best represents your architecture?"
+	// Build the workload help prompt from existing helps text.
+	wkldHelp := fmt.Sprintf(fmtSvcInitSvcTypeHelpPrompt,
 		manifest.LoadBalancedWebServiceType,
 		manifest.BackendServiceType,
-	)
-	workloadTypes := []string{manifest.ScheduledJobType, ...manifest.ServiceTypes}
-	worklo
-	msg := fmt.Sprintf(fmtSvcInitSvcTypePrompt, color.Emphasize("service type"))
-	t, err := o.prompt.SelectOne(msg, help, manifest.ServiceTypes, prompt.WithFinalMessage("Service type:"))
-	if err != nil {
-		return fmt.Errorf("select service type: %w", err)
+	) + `
+
+` + fmt.Sprintf(fmtJobInitTypeHelp, manifest.ScheduledJobType)
+
+	workloadTypes := []string{manifest.ScheduledJobType}
+	for _, t := range manifest.ServiceTypes {
+		workloadTypes = append(workloadTypes, t)
 	}
-	o.wkldType = aws.String(t)
-	return nil
+	t, err := o.prompt.SelectOne(wkldInitTypePrompt, wkldHelp, workloadTypes, prompt.WithFinalMessage("Workload type:"))
+	if err != nil {
+		return "", fmt.Errorf("select service type: %w", err)
+	}
+
+	return t, nil
 }
 
 // deployEnv prompts the user to deploy a test environment if the application doesn't already have one.

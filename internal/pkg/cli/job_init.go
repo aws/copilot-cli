@@ -29,6 +29,9 @@ var (
 executions and is good for jobs which need to run frequently. "Fixed Schedule"
 lets you use a predefined or custom cron schedule and is good for less-frequent 
 jobs or those which require specific execution schedules.`
+
+	fmtJobInitTypeHelp = `A %s is a task which can be programmatically run, either on a schedule or via
+service code in response to events.`
 )
 
 const (

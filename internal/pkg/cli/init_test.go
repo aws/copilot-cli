@@ -146,10 +146,10 @@ func TestInitOpts_Run(t *testing.T) {
 				prompt: climocks.NewMockprompter(ctrl),
 
 				// These fields are used for logging, the values are not important for tests.
-				appName: &mockAppName,
-				svcName: &mockSvcName,
-				svcType: &mockSvcType,
-				svcPort: &mockAppPort,
+				appName:  &mockAppName,
+				svcName:  &mockSvcName,
+				wkldType: &mockSvcType,
+				svcPort:  &mockAppPort,
 			}
 			tc.expect(opts)
 
