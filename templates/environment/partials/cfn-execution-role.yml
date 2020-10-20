@@ -1,10 +1,5 @@
-# The CloudformationExecutionRole definition must be immediately followed with DeletionPolicy: Retain
-# because the "env delete" command checks if this role is retained by checking if the template contains the string:
-# """
-# CloudformationExecutionRole:
-#   DeletionPolicy: Retain
-# """
-# See #1510#discussion_r505885042
+# The CloudformationExecutionRole definition must be immediately followed with DeletionPolicy: Retain.
+# See #1533.
 CloudformationExecutionRole:
   DeletionPolicy: Retain
   Type: AWS::IAM::Role
