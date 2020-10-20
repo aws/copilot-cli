@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/golang/mock/gomock"
@@ -16,9 +17,10 @@ import (
 )
 
 type showAppMocks struct {
-	storeSvc *mocks.Mockstore
-	prompt   *mocks.Mockprompter
-	sel      *mocks.MockappSelector
+	storeSvc    *mocks.Mockstore
+	prompt      *mocks.Mockprompter
+	sel         *mocks.MockappSelector
+	pipelineSvc *mocks.MockpipelineGetter
 }
 
 func TestShowAppOpts_Validate(t *testing.T) {
@@ -194,9 +196,15 @@ func TestShowAppOpts_Execute(t *testing.T) {
 						Prod:      true,
 					},
 				}, nil)
+				m.pipelineSvc.EXPECT().
+					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
+					Return([]*codepipeline.Pipeline{
+						{Name: "pipeline1"},
+						{Name: "pipeline2"},
+					}, nil)
 			},
 
-			wantedContent: "{\"name\":\"my-app\",\"uri\":\"example.com\",\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"app\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"services\":[{\"app\":\"\",\"name\":\"my-svc\",\"type\":\"lb-web-svc\"}]}\n",
+			wantedContent: "{\"name\":\"my-app\",\"uri\":\"example.com\",\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"app\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"services\":[{\"app\":\"\",\"name\":\"my-svc\",\"type\":\"lb-web-svc\"}],\"pipelines\":[{\"name\":\"pipeline1\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"},{\"name\":\"pipeline2\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"}]}\n",
 		},
 		"correctly shows human output": {
 			setupMocks: func(m showAppMocks) {
@@ -222,6 +230,12 @@ func TestShowAppOpts_Execute(t *testing.T) {
 						Region:    "us-west-1",
 					},
 				}, nil)
+				m.pipelineSvc.EXPECT().
+					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
+					Return([]*codepipeline.Pipeline{
+						{Name: "pipeline1"},
+						{Name: "pipeline2"},
+					}, nil)
 			},
 
 			wantedContent: `About
@@ -239,6 +253,12 @@ Services
 
   Name              Type
   my-svc            lb-web-svc
+
+Pipelines
+
+  Name
+  pipeline1
+  pipeline2
 `,
 		},
 		"returns error if fail to get application": {
@@ -286,6 +306,38 @@ Services
 
 			wantedError: fmt.Errorf("list services in application %s: %w", "my-app", testError),
 		},
+		"returns error if fail to list pipelines": {
+			shouldOutputJSON: false,
+
+			setupMocks: func(m showAppMocks) {
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
+					Name:   "my-app",
+					Domain: "example.com",
+				}, nil)
+				m.storeSvc.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
+					{
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "123456789",
+					},
+					{
+						Name:      "prod",
+						AccountID: "123456789",
+						Region:    "us-west-1",
+					},
+				}, nil)
+				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Workload{
+					{
+						Name: "my-svc",
+						Type: "lb-web-svc",
+					},
+				}, nil)
+				m.pipelineSvc.EXPECT().
+					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
+					Return(nil, testError)
+			},
+			wantedError: fmt.Errorf("list pipelines in application %s: %w", "my-app", testError),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -295,9 +347,11 @@ Services
 
 			b := &bytes.Buffer{}
 			mockStoreReader := mocks.NewMockstore(ctrl)
+			mockPLSvc := mocks.NewMockpipelineGetter(ctrl)
 
 			mocks := showAppMocks{
-				storeSvc: mockStoreReader,
+				storeSvc:    mockStoreReader,
+				pipelineSvc: mockPLSvc,
 			}
 			tc.setupMocks(mocks)
 
@@ -306,8 +360,9 @@ Services
 					shouldOutputJSON: tc.shouldOutputJSON,
 					name:             testAppName,
 				},
-				store: mockStoreReader,
-				w:     b,
+				store:       mockStoreReader,
+				w:           b,
+				pipelineSvc: mockPLSvc,
 			}
 
 			// WHEN
