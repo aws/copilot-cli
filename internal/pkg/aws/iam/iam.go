@@ -41,7 +41,7 @@ func (c *IAM) DeleteRole(roleARN string) error {
 		return fmt.Errorf("parse role ARN %s: %w", roleARN, err)
 	}
 
-	roleName := strings.TrimPrefix(parsed.Resource, "role/")
+	roleName := strings.TrimPrefix(parsed.Resource, "role/") // Sample ARN format: arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole
 	if err := c.deleteRolePolicies(roleName); err != nil {
 		return err
 	}
