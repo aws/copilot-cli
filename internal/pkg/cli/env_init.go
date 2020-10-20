@@ -70,8 +70,6 @@ https://aws.github.io/copilot-cli/docs/credentials/#environment-credentials`
 )
 
 var (
-	errNamedProfilesNotFound = fmt.Errorf("no named AWS profiles found, run %s first please", color.HighlightCode("aws configure"))
-
 	envInitDefaultConfigSelectOption      = "Yes, use default."
 	envInitAdjustEnvResourcesSelectOption = "Yes, but I'd like configure the default resources (CIDR ranges)."
 	envInitImportEnvResourcesSelectOption = "No, I'd like to import existing resources (VPC, subnets)."
