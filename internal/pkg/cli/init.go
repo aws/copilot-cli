@@ -7,6 +7,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -41,11 +42,16 @@ type initVars struct {
 	// Flags unique to "init" that's not provided by other sub-commands.
 	shouldDeploy   bool
 	appName        string
-	svcType        string
+	wkldType       string
 	svcName        string
 	dockerfilePath string
+	image          string
 	imageTag       string
 	port           uint16
+
+	schedule string
+	retries  int
+	timeout  string
 }
 
 type initOpts struct {
@@ -55,6 +61,7 @@ type initOpts struct {
 	// Sub-commands to execute.
 	initAppCmd   actionCommand
 	initSvcCmd   actionCommand
+	initJobCmd   actionCommand
 	initEnvCmd   actionCommand
 	deploySvcCmd actionCommand
 
@@ -62,10 +69,14 @@ type initOpts struct {
 	// Since the sub-commands implement the actionCommand interface, without pointers to their internal fields
 	// we have to resort to type-casting the interface. These pointers simplify data access.
 	appName        *string
-	svcType        *string
+	wkldType       *string
 	svcName        *string
 	svcPort        *uint16
 	dockerfilePath *string
+	image          *string
+	schedule       *string
+	retries        *int
+	timeout        *string
 
 	prompt prompter
 }
@@ -105,22 +116,35 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		prog:     spin,
 	}
 	wkldInitter := &initialize.WorkloadInitializer{Store: ssm, Ws: ws, Prog: spin, Deployer: deployer}
+	wlkdVars := initWkldVars{
+		appName:        vars.appName,
+		wkldType:       vars.wkldType,
+		name:           vars.svcName,
+		dockerfilePath: vars.dockerfilePath,
+		image:          vars.image,
+		port:           vars.port,
+		schedule:       vars.schedule,
+		retries:        vars.retries,
+		timeout:        vars.timeout,
+	}
 	initSvcCmd := &initSvcOpts{
-		initWkldVars: initWkldVars{
-			wkldType:       vars.svcType,
-			name:           vars.svcName,
-			dockerfilePath: vars.dockerfilePath,
-			port:           vars.port,
-			appName:        vars.appName,
-		},
-		fs: &afero.Afero{Fs: afero.NewOsFs()},
+		initWkldVars: wkldVars,
 
-		init:   wkldInitter,
+		fs:     &afero.Afero{Fs: afero.NewOsFs()},
+		init:   initworkload.NewServiceInitializer(ssm, ws, spin, deployer),
 		sel:    sel,
 		prompt: prompt,
 		setupParser: func(o *initSvcOpts) {
 			o.df = dockerfile.New(o.fs, o.dockerfilePath)
 		},
+	}
+	initJobCmd := &initJobOpts{
+		initWkldVars: wkldVars,
+
+		fs:     &afer.Afero{Fs: afero.NewOsFs()},
+		init:   initworkload.NewJobInitializer(ssm, ws, spin, deployer),
+		sel:    sel,
+		prompt: prompt,
 	}
 	initEnvCmd := &initEnvOpts{
 		initEnvVars: initEnvVars{
@@ -159,14 +183,19 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 		initAppCmd:   initAppCmd,
 		initSvcCmd:   initSvcCmd,
+		initJobCmd:   initJobCmd,
 		initEnvCmd:   initEnvCmd,
 		deploySvcCmd: deploySvcCmd,
 
 		appName:        &initAppCmd.name,
-		svcType:        &initSvcCmd.wkldType,
+		wkldType:       &initSvcCmd.wkldType,
 		svcName:        &initSvcCmd.name,
 		svcPort:        &initSvcCmd.port,
 		dockerfilePath: &initSvcCmd.dockerfilePath,
+		image:          &initSvcCmd.image,
+		schedule:       &initJobCmd.schedule,
+		retries:        &initJobCmd.retries,
+		timeout:        &initJobCmd.timeout,
 
 		prompt: prompt,
 	}, nil
@@ -185,12 +214,13 @@ containerized services that operate together.`))
 	if err := o.loadApp(); err != nil {
 		return err
 	}
+
 	if err := o.loadSvc(); err != nil {
 		return err
 	}
 
 	log.Infof("Ok great, we'll set up a %s named %s in application %s listening on port %s.\n",
-		color.HighlightUserInput(*o.svcType), color.HighlightUserInput(*o.svcName), color.HighlightUserInput(*o.appName), color.HighlightUserInput(fmt.Sprintf("%d", *o.svcPort)))
+		color.HighlightUserInput(*o.wkldType), color.HighlightUserInput(*o.svcName), color.HighlightUserInput(*o.appName), color.HighlightUserInput(fmt.Sprintf("%d", *o.svcPort)))
 	log.Infoln()
 	if err := o.initAppCmd.Execute(); err != nil {
 		return fmt.Errorf("execute app init: %w", err)
@@ -226,6 +256,28 @@ func (o *initOpts) loadSvc() error {
 		return fmt.Errorf("ask svc init: %w", err)
 	}
 	return o.initSvcCmd.Validate()
+}
+
+var wkldInitTypePrompt = "Which " + color.Emphasize("workload type") + " best represents your architecture?"
+
+func (o *initOpts) askWorkload() error {
+	if o.wkldType != nil {
+		return nil
+	}
+
+	svcHelp := fmt.Sprintf(fmtSvcInitSvcTypeHelpPrompt,
+		manifest.LoadBalancedWebServiceType,
+		manifest.BackendServiceType,
+	)
+	workloadTypes := []string{manifest.ScheduledJobType, ...manifest.ServiceTypes}
+	worklo
+	msg := fmt.Sprintf(fmtSvcInitSvcTypePrompt, color.Emphasize("service type"))
+	t, err := o.prompt.SelectOne(msg, help, manifest.ServiceTypes, prompt.WithFinalMessage("Service type:"))
+	if err != nil {
+		return fmt.Errorf("select service type: %w", err)
+	}
+	o.wkldType = aws.String(t)
+	return nil
 }
 
 // deployEnv prompts the user to deploy a test environment if the application doesn't already have one.
@@ -303,8 +355,9 @@ func BuildInitCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.svcName, svcFlag, svcFlagShort, "", svcFlagDescription)
-	cmd.Flags().StringVarP(&vars.svcType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)
+	cmd.Flags().StringVarP(&vars.wkldType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
+	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldDeploy, deployFlag, false, deployTestFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
