@@ -191,7 +191,7 @@ func (s *Stage) HumanString() string {
 	return fmt.Sprintf("  %s\t%s\t%s\t%s\n", s.Name, s.Category, s.Provider, s.Details)
 }
 
-// ListPipelineNamesByTags retrieves the names of all pipelines for a project.
+// ListPipelineNamesByTags retrieves the names of all pipelines for an application.
 func (c *CodePipeline) ListPipelineNamesByTags(tags map[string]string) ([]string, error) {
 	var pipelineNames []string
 	resources, err := c.rgClient.GetResourcesByTags(pipelineResourceType, tags)
@@ -208,6 +208,27 @@ func (c *CodePipeline) ListPipelineNamesByTags(tags map[string]string) ([]string
 	}
 
 	return pipelineNames, nil
+}
+
+// GetPipelineByTags retrieves all of pipelines for an application.
+func (c *CodePipeline) GetPipelinesByTags(tags map[string]string) ([]*Pipeline, error) {
+	var pipelines []*Pipeline
+	resources, err := c.rgClient.GetResourcesByTags(pipelineResourceType, tags)
+	if err != nil {
+		return nil, err
+	}
+	for _, resource := range resources {
+		name, err := c.getPipelineName(resource.ARN)
+		if err != nil {
+			return nil, err
+		}
+		pipeline, err := c.GetPipeline(name)
+		if err != nil {
+			return nil, err
+		}
+		pipelines = append(pipelines, pipeline)
+	}
+	return pipelines, nil
 }
 
 func (c *CodePipeline) getPipelineName(resourceArn string) (string, error) {
