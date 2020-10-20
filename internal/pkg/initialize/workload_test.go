@@ -202,21 +202,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			},
 			wantedErr: fmt.Errorf("saving job resizer: oops"),
 		},
-		"developer error passing wrong params": {
-			mockWriter:      func(m *mocks.MockWorkspace) {},
-			mockstore:       func(m *mocks.MockStore) {},
-			mockappDeployer: func(m *mocks.MockWorkloadAdder) {},
-			mockProg:        func(m *mocks.MockProg) {},
-
-			inJobType:        manifest.ScheduledJobType,
-			inAppName:        "app",
-			inJobName:        "resizer",
-			inDockerfilePath: "resizer/Dockerfile",
-
-			inPort: 80,
-
-			wantedErr: fmt.Errorf("input properties do not specify a valid job"),
-		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -241,7 +226,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				tc.mockProg(mockProg)
 			}
 
-			initializer := NewJobInitializer(
+			initializer := NewWorkloadInitializer(
 				mockstore,
 				mockWriter,
 				mockProg,
@@ -367,8 +352,12 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				Port:           tc.inSvcPort,
 			}
 
+			initter := &WorkloadInitializer{
+				Store: mockstore,
+			}
+
 			// WHEN
-			manifest, err := newLoadBalancedWebServiceManifest(&props, mockstore)
+			manifest, err := initter.newLoadBalancedWebServiceManifest(&props)
 
 			// THEN
 			if tc.wantedErr == nil {
@@ -694,7 +683,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				tc.mockProg(mockProg)
 			}
 
-			initializer := NewSvcInitializer(
+			initializer := NewWorkloadInitializer(
 				mockstore,
 				mockWriter,
 				mockProg,

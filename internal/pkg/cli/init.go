@@ -107,7 +107,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		cfn:      deployer,
 		prog:     spin,
 	}
-	svcInitter := initialize.NewSvcInitializer(
+	wkldInitter := initialize.NewWorkloadInitializer(
 		ssm,
 		ws,
 		spin,
@@ -123,7 +123,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		},
 		fs: &afero.Afero{Fs: afero.NewOsFs()},
 
-		init:   svcInitter,
+		init:   wkldInitter,
 		sel:    sel,
 		prompt: prompt,
 		setupParser: func(o *initSvcOpts) {

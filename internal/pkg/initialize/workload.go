@@ -5,7 +5,6 @@ package initialize
 
 import (
 	"encoding"
-	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -26,6 +25,8 @@ const (
 	jobWlType = "job"
 	svcWlType = "service"
 )
+
+var fmtErrUnrecognizedWlType = "unrecognized workload type %s"
 
 // Store represents the methods needed to add workloads to the SSM parameter store.
 type Store interface {
@@ -71,34 +72,6 @@ type WorkloadProps struct {
 	HealthCheck *manifest.ContainerHealthCheck
 }
 
-func (p *WorkloadProps) isValidWorkload() bool {
-	return p.App != "" &&
-		p.Type != "" &&
-		p.Name != "" &&
-		(p.DockerfilePath != "" || p.Image != "")
-}
-
-func (p *WorkloadProps) isValidService() bool {
-	return p.isValidWorkload() &&
-		p.Schedule == "" &&
-		p.Timeout == "" &&
-		p.Retries == 0
-}
-
-func (p *WorkloadProps) isValidJob() bool {
-	return p.isValidWorkload() &&
-		p.Schedule != "" &&
-		p.Port == 0
-}
-
-type manifestWriter func(encoding.BinaryMarshaler, string) (string, error)
-
-type manifestCreator func(*WorkloadProps, Store) (encoding.BinaryMarshaler, error)
-
-type workloadAdder func(*config.Application, string) error
-
-type storeWorkloadAdder func(*config.Workload) error
-
 // WorkloadInitializer holds the clients necessary to initialize either a
 // service or job in an existing application.
 type WorkloadInitializer struct {
@@ -106,52 +79,64 @@ type WorkloadInitializer struct {
 	Deployer WorkloadAdder
 	Ws       Workspace
 	Prog     Prog
-
-	createManifest manifestCreator
-	writeManifest  manifestWriter
-	addWlToApp     workloadAdder
-	addWlToStore   storeWorkloadAdder
-
-	wlType string
 }
 
-// NewJobInitializer returns a struct which holds the clients and configuration needed to
-// initialize a new job in an existing application
-func NewJobInitializer(s Store, ws Workspace, p Prog, d WorkloadAdder) *WorkloadInitializer {
+// NewWorkloadInitializer returns a struct which holds the clients and configuration needed to
+// initialize a new workload in an existing application
+func NewWorkloadInitializer(s Store, ws Workspace, p Prog, d WorkloadAdder) *WorkloadInitializer {
 	return &WorkloadInitializer{
-		Store: s,
-		Ws:    ws,
-		Prog:  p,
-
-		createManifest: newJobManifest,
-		writeManifest:  ws.WriteJobManifest,
-
-		addWlToApp:   d.AddJobToApp,
-		addWlToStore: s.CreateJob,
-
-		wlType: jobWlType,
+		Store:    s,
+		Ws:       ws,
+		Prog:     p,
+		Deployer: d,
 	}
 }
 
-// NewSvcInitializer returns a struct which holds the clients and configuration needed to
-// initialize a new service in an existing application
-func NewSvcInitializer(s Store, ws Workspace, p Prog, d WorkloadAdder) *WorkloadInitializer {
-	return &WorkloadInitializer{
-		Store: s,
-		Ws:    ws,
-		Prog:  p,
-
-		createManifest: newServiceManifest,
-		writeManifest:  ws.WriteServiceManifest,
-
-		addWlToApp:   d.AddServiceToApp,
-		addWlToStore: s.CreateService,
-
-		wlType: svcWlType,
+func (w *WorkloadInitializer) createManifest(props *WorkloadProps, wlType string) (encoding.BinaryMarshaler, error) {
+	switch wlType {
+	case svcWlType:
+		return w.newServiceManifest(props)
+	case jobWlType:
+		return newJobManifest(props)
+	default:
+		return nil, fmt.Errorf(fmtErrUnrecognizedWlType, wlType)
 	}
 }
 
-func (w *WorkloadInitializer) initWorkload(props *WorkloadProps) (manifestPath string, err error) {
+func (w *WorkloadInitializer) writeManifest(mf encoding.BinaryMarshaler, wlName string, wlType string) (string, error) {
+	switch wlType {
+	case svcWlType:
+		return w.Ws.WriteServiceManifest(mf, wlName)
+	case jobWlType:
+		return w.Ws.WriteJobManifest(mf, wlName)
+	default:
+		return "", fmt.Errorf(fmtErrUnrecognizedWlType, wlType)
+	}
+}
+
+func (w *WorkloadInitializer) addWlToApp(app *config.Application, wlName string, wlType string) error {
+	switch wlType {
+	case svcWlType:
+		return w.Deployer.AddServiceToApp(app, wlName)
+	case jobWlType:
+		return w.Deployer.AddJobToApp(app, wlName)
+	default:
+		return fmt.Errorf(fmtErrUnrecognizedWlType, wlType)
+	}
+}
+
+func (w *WorkloadInitializer) addWlToStore(wl *config.Workload, wlType string) error {
+	switch wlType {
+	case svcWlType:
+		return w.Store.CreateService(wl)
+	case jobWlType:
+		return w.Store.CreateJob(wl)
+	default:
+		return fmt.Errorf(fmtErrUnrecognizedWlType, wlType)
+	}
+}
+
+func (w *WorkloadInitializer) initWorkload(props *WorkloadProps, wlType string) (manifestPath string, err error) {
 	app, err := w.Store.GetApplication(props.App)
 	if err != nil {
 		return "", fmt.Errorf("get application %s: %w", props.App, err)
@@ -165,17 +150,17 @@ func (w *WorkloadInitializer) initWorkload(props *WorkloadProps) (manifestPath s
 		props.DockerfilePath = path
 	}
 
-	mf, err := w.createManifest(props, w.Store)
+	mf, err := w.createManifest(props, wlType)
 	if err != nil {
 		return "", err
 	}
 
 	var manifestExists bool
-	manifestPath, err = w.writeManifest(mf, props.Name)
+	manifestPath, err = w.writeManifest(mf, props.Name, wlType)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
-			return "", fmt.Errorf("write %s manifest: %w", w.wlType, err)
+			return "", fmt.Errorf("write %s manifest: %w", wlType, err)
 		}
 		manifestExists = true
 		manifestPath = e.FileName
@@ -190,9 +175,9 @@ func (w *WorkloadInitializer) initWorkload(props *WorkloadProps) (manifestPath s
 	if manifestExists {
 		manifestMsgFmt = "Manifest file for %s %s already exists at %s, skipping writing it.\n"
 	}
-	log.Successf(manifestMsgFmt, w.wlType, color.HighlightUserInput(props.Name), color.HighlightResource(manifestPath))
+	log.Successf(manifestMsgFmt, wlType, color.HighlightUserInput(props.Name), color.HighlightResource(manifestPath))
 	var helpText string
-	if w.wlType == jobWlType {
+	if wlType == jobWlType {
 		helpText = fmt.Sprintf("Your manifest contains configurations like your container size and job schedule (%s).", props.Schedule)
 	} else {
 		helpText = "Your manifest contains configurations like your container size and port."
@@ -204,34 +189,30 @@ func (w *WorkloadInitializer) initWorkload(props *WorkloadProps) (manifestPath s
 	log.Infoln()
 
 	// add workload to application
-	w.Prog.Start(fmt.Sprintf(fmtAddWlToAppStart, w.wlType, props.Name))
-	if err := w.addWlToApp(app, props.Name); err != nil {
-		w.Prog.Stop(log.Serrorf(fmtAddWlToAppFailed, w.wlType, props.Name))
-		return "", fmt.Errorf("add %s %s to application %s: %w", w.wlType, props.Name, props.App, err)
+	w.Prog.Start(fmt.Sprintf(fmtAddWlToAppStart, wlType, props.Name))
+	if err := w.addWlToApp(app, props.Name, wlType); err != nil {
+		w.Prog.Stop(log.Serrorf(fmtAddWlToAppFailed, wlType, props.Name))
+		return "", fmt.Errorf("add %s %s to application %s: %w", wlType, props.Name, props.App, err)
 	}
-	w.Prog.Stop(log.Ssuccessf(fmtAddWlToAppComplete, w.wlType, props.Name))
+	w.Prog.Stop(log.Ssuccessf(fmtAddWlToAppComplete, wlType, props.Name))
 
 	// add job to ssm
 	if err := w.addWlToStore(&config.Workload{
 		App:  props.App,
 		Name: props.Name,
 		Type: props.Type,
-	}); err != nil {
-		return "", fmt.Errorf("saving %s %s: %w", w.wlType, props.Name, err)
+	}, wlType); err != nil {
+		return "", fmt.Errorf("saving %s %s: %w", wlType, props.Name, err)
 	}
 	return manifestPath, nil
 }
 
 // Job writes the job manifest, creates an ECR repository, and adds the job to SSM.
 func (w *WorkloadInitializer) Job(i *WorkloadProps) (string, error) {
-	if !i.isValidJob() {
-		return "", errors.New("input properties do not specify a valid job")
-	}
-	return w.initWorkload(i)
+	return w.initWorkload(i, jobWlType)
 }
 
-// newJobManifest doesn't need the store but services do, so we have to add it to the function signature
-func newJobManifest(i *WorkloadProps, s Store) (encoding.BinaryMarshaler, error) {
+func newJobManifest(i *WorkloadProps) (encoding.BinaryMarshaler, error) {
 	switch i.Type {
 	case manifest.ScheduledJobType:
 		return manifest.NewScheduledJob(&manifest.ScheduledJobProps{
@@ -252,16 +233,13 @@ func newJobManifest(i *WorkloadProps, s Store) (encoding.BinaryMarshaler, error)
 
 // Service writes the service manifest, creates an ECR repository, and adds the service to SSM.
 func (w *WorkloadInitializer) Service(i *WorkloadProps) (string, error) {
-	if !i.isValidService() {
-		return "", errors.New("input properties do not specify a valid service")
-	}
-	return w.initWorkload(i)
+	return w.initWorkload(i, svcWlType)
 }
 
-func newServiceManifest(i *WorkloadProps, s Store) (encoding.BinaryMarshaler, error) {
+func (w *WorkloadInitializer) newServiceManifest(i *WorkloadProps) (encoding.BinaryMarshaler, error) {
 	switch i.Type {
 	case manifest.LoadBalancedWebServiceType:
-		return newLoadBalancedWebServiceManifest(i, s)
+		return w.newLoadBalancedWebServiceManifest(i)
 	case manifest.BackendServiceType:
 		return newBackendServiceManifest(i)
 	default:
@@ -269,7 +247,7 @@ func newServiceManifest(i *WorkloadProps, s Store) (encoding.BinaryMarshaler, er
 	}
 }
 
-func newLoadBalancedWebServiceManifest(i *WorkloadProps, s Store) (*manifest.LoadBalancedWebService, error) {
+func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *WorkloadProps) (*manifest.LoadBalancedWebService, error) {
 	props := &manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:       i.Name,
@@ -279,7 +257,7 @@ func newLoadBalancedWebServiceManifest(i *WorkloadProps, s Store) (*manifest.Loa
 		Port: i.Port,
 		Path: "/",
 	}
-	existingSvcs, err := s.ListServices(i.App)
+	existingSvcs, err := w.Store.ListServices(i.App)
 	if err != nil {
 		return nil, err
 	}

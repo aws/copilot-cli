@@ -66,7 +66,7 @@ func newInitJobOpts(vars initWkldVars) (*initJobOpts, error) {
 		return nil, err
 	}
 
-	jobInitter := initialize.NewJobInitializer(
+	jobInitter := initialize.NewWorkloadInitializer(
 		store,
 		ws,
 		termprogress.NewSpinner(),

@@ -115,7 +115,7 @@ func newInitSvcOpts(vars initWkldVars) (*initSvcOpts, error) {
 		return nil, err
 	}
 
-	initSvc := initialize.NewSvcInitializer(
+	initSvc := initialize.NewWorkloadInitializer(
 		store,
 		ws,
 		termprogress.NewSpinner(),
