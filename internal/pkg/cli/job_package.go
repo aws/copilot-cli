@@ -82,10 +82,6 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 	}
 
 	prompter := prompt.New()
-	sel, err := selector.NewWorkspaceSelect(prompter, store, ws)
-	if err != nil {
-		return nil, err
-	}
 	opts := &packageJobOpts{
 		packageJobVars: vars,
 		initAddonsSvc:  initPackageAddons,
@@ -93,7 +89,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 		store:          store,
 		appCFN:         cloudformation.New(sess),
 		runner:         command.New(),
-		sel:            sel,
+		sel:            selector.NewWorkspaceSelect(prompter, store, ws),
 		prompt:         prompter,
 		stackWriter:    os.Stdout,
 		paramsWriter:   ioutil.Discard,

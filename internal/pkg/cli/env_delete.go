@@ -10,12 +10,12 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
-	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
+	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -25,16 +25,12 @@ import (
 
 const (
 	envDeleteNamePrompt = "Which environment would you like to delete?"
-
-	fmtEnvDeleteProfilePrompt  = "Which named profile should we use to delete %s?"
-	envDeleteProfileHelpPrompt = "This is usually the same AWS CLI named profile used to create the environment."
-
-	fmtDeleteEnvPrompt = "Are you sure you want to delete environment %s from application %s?"
+	fmtDeleteEnvPrompt  = "Are you sure you want to delete environment %s from application %s?"
 )
 
 const (
 	fmtDeleteEnvStart    = "Deleting environment %s from application %s."
-	fmtDeleteEnvFailed   = "Failed to delete environment %s from application %s: %v."
+	fmtDeleteEnvFailed   = "Failed to delete environment %s from application %s."
 	fmtDeleteEnvComplete = "Deleted environment %s from application %s."
 )
 
@@ -49,23 +45,26 @@ type resourceGetter interface {
 type deleteEnvVars struct {
 	appName          string
 	name             string
-	profile          string
 	skipConfirmation bool
 }
 
 type deleteEnvOpts struct {
 	deleteEnvVars
-	// Interfaces for dependencies.
-	store         environmentStore
-	rgClient      resourceGetter
-	deployClient  environmentDeployer
-	profileConfig profileNames
-	prog          progress
-	prompt        prompter
-	sel           configSelector
 
-	// initProfileClients is overriden in tests.
-	initProfileClients func(*deleteEnvOpts) error
+	// Interfaces for dependencies.
+	store    environmentStore
+	rg       resourceGetter
+	deployer environmentDeployer
+	iam      roleDeleter
+	prog     progress
+	prompt   prompter
+	sel      configSelector
+
+	// cached data to avoid fetching the same information multiple times.
+	envConfig *config.Environment
+
+	// initRuntimeClients is overriden in tests.
+	initRuntimeClients func(*deleteEnvOpts) error
 }
 
 func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
@@ -73,26 +72,28 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to copilot config store: %w", err)
 	}
-	cfg, err := profile.NewConfig()
-	if err != nil {
-		return nil, err
-	}
 
 	prompter := prompt.New()
 	return &deleteEnvOpts{
 		deleteEnvVars: vars,
-		store:         store,
-		profileConfig: cfg,
-		prog:          termprogress.NewSpinner(),
-		sel:           selector.NewConfigSelect(prompter, store),
-		prompt:        prompter,
-		initProfileClients: func(o *deleteEnvOpts) error {
-			profileSess, err := sessions.NewProvider().FromProfile(o.profile)
+
+		store:  store,
+		prog:   termprogress.NewSpinner(),
+		sel:    selector.NewConfigSelect(prompter, store),
+		prompt: prompter,
+
+		initRuntimeClients: func(o *deleteEnvOpts) error {
+			env, err := o.getEnvConfig()
 			if err != nil {
-				return fmt.Errorf("cannot create session from profile %s: %w", o.profile, err)
+				return err
 			}
-			o.rgClient = resourcegroupstaggingapi.New(profileSess)
-			o.deployClient = cloudformation.New(profileSess)
+			sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+			if err != nil {
+				return fmt.Errorf("create session from environment manager role %s in region %s: %w", env.ManagerRoleARN, env.Region, err)
+			}
+			o.rg = resourcegroupstaggingapi.New(sess)
+			o.iam = iam.New(sess)
+			o.deployer = cloudformation.New(sess)
 			return nil
 		},
 	}, nil
@@ -113,9 +114,6 @@ func (o *deleteEnvOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	if err := o.askProfile(); err != nil {
-		return err
-	}
 
 	if o.skipConfirmation {
 		return nil
@@ -127,27 +125,42 @@ func (o *deleteEnvOpts) Ask() error {
 	if !deleteConfirmed {
 		return errEnvDeleteCancelled
 	}
-
 	return nil
 }
 
-// Execute deletes the environment from the application by first deleting the stack and then removing the entry from the store.
-// If an operation fails, it moves on to the next one instead of halting the execution.
+// Execute deletes the environment from the application by:
+// 1. Deleting the cloudformation stack.
+// 2. Deleting the EnvManagerRole and CFNExecutionRole.
+// 3. Deleting the parameter from the SSM store.
 // The environment is removed from the store only if other delete operations succeed.
 // Execute assumes that Validate is invoked first.
 func (o *deleteEnvOpts) Execute() error {
-	if err := o.initProfileClients(o); err != nil {
+	if err := o.initRuntimeClients(o); err != nil {
 		return err
 	}
 	if err := o.validateNoRunningServices(); err != nil {
 		return err
 	}
 
-	isStackDeleted := o.deleteStack()
-	if isStackDeleted { // TODO Add a --force flag that attempts to remove from SSM regardless.
-		// Only remove from SSM if the stack and roles were deleted. Otherwise, the command will error when re-run.
-		o.deleteFromStore()
+	o.prog.Start(fmt.Sprintf(fmtDeleteEnvStart, o.name, o.appName))
+	if err := o.ensureRolesAreRetained(); err != nil {
+		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.name, o.appName))
+		return err
 	}
+	if err := o.deleteStack(); err != nil {
+		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.name, o.appName))
+		return err
+	}
+	if err := o.deleteRoles(); err != nil {
+		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.name, o.appName))
+		return err
+	}
+	// Only remove from SSM if the stack and roles were deleted. Otherwise, the command will error when re-run.
+	if err := o.deleteFromStore(); err != nil {
+		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.name, o.appName))
+		return err
+	}
+	o.prog.Stop(log.Ssuccessf(fmtDeleteEnvComplete, o.name, o.appName))
 	return nil
 }
 
@@ -157,14 +170,26 @@ func (o *deleteEnvOpts) RecommendedActions() []string {
 }
 
 func (o *deleteEnvOpts) validateEnvName() error {
-	if _, err := o.store.GetEnvironment(o.appName, o.name); err != nil {
+	if _, err := o.getEnvConfig(); err != nil {
 		return err
 	}
 	return nil
 }
 
+func (o *deleteEnvOpts) askEnvName() error {
+	if o.name != "" {
+		return nil
+	}
+	env, err := o.sel.Environment(envDeleteNamePrompt, "", o.appName)
+	if err != nil {
+		return fmt.Errorf("select environment to delete: %w", err)
+	}
+	o.name = env
+	return nil
+}
+
 func (o *deleteEnvOpts) validateNoRunningServices() error {
-	stacks, err := o.rgClient.GetResources(&resourcegroupstaggingapi.GetResourcesInput{
+	stacks, err := o.rg.GetResources(&resourcegroupstaggingapi.GetResourcesInput{
 		ResourceTypeFilters: []*string{aws.String("cloudformation")},
 		TagFilters: []*resourcegroupstaggingapi.TagFilter{
 			{
@@ -199,59 +224,101 @@ func (o *deleteEnvOpts) validateNoRunningServices() error {
 	return nil
 }
 
-func (o *deleteEnvOpts) askEnvName() error {
-	if o.name != "" {
+// ensureRolesAreRetained guarantees that the CloudformationExecutionRole and the EnvironmentManagerRole
+// are retained when the environment cloudformation stack is deleted.
+//
+// This method is needed because the environment stack is deleted using the CloudformationExecutionRole which means
+// that the role has to be retained in order for us to delete the stack. Similarly, only the EnvironmentManagerRole
+// has permissions to delete the CloudformationExecutionRole so it must be retained.
+// In earlier versions of the CLI, pre-commit 7e5428a, environment stacks were created without these roles retained.
+// In case we encounter a legacy stack, we need to first update the stack to make sure these roles are retained and then
+// proceed with the regular flow.
+func (o *deleteEnvOpts) ensureRolesAreRetained() error {
+	body, err := o.deployer.EnvironmentTemplate(o.appName, o.name)
+	if err != nil {
+		var stackDoesNotExist *awscfn.ErrStackNotFound
+		if errors.As(err, &stackDoesNotExist) {
+			return nil
+		}
+		return fmt.Errorf("get template body for environment %s in application %s: %v", o.name, o.appName, err)
+	}
+	// Check if the roles are already being retained.
+	retainsExecRole := strings.Contains(body, `
+  CloudformationExecutionRole:
+    DeletionPolicy: Retain`)
+	retainsManagerRole := strings.Contains(body, `
+  EnvironmentManagerRole:
+    DeletionPolicy: Retain`)
+	if retainsExecRole && retainsManagerRole {
+		// Nothing to do, this is **not** a legacy environment stack. Exit successfully.
 		return nil
 	}
-	env, err := o.sel.Environment(envDeleteNamePrompt, "", o.appName)
-	if err != nil {
-		return fmt.Errorf("select environment to delete: %w", err)
+
+	// Otherwise, update the body with the new deletion policies.
+	newBody := body
+	if !retainsExecRole {
+		parts := strings.Split(newBody, "  CloudformationExecutionRole:\n")
+		newBody = parts[0] + "  CloudformationExecutionRole:\n    DeletionPolicy: Retain\n" + parts[1]
 	}
-	o.name = env
+	if !retainsManagerRole {
+		parts := strings.Split(newBody, "  EnvironmentManagerRole:\n")
+		newBody = parts[0] + "  EnvironmentManagerRole:\n    DeletionPolicy: Retain\n" + parts[1]
+	}
+
+	env, err := o.getEnvConfig()
+	if err != nil {
+		return err
+	}
+	if err := o.deployer.UpdateEnvironmentTemplate(o.appName, o.name, newBody, env.ExecutionRoleARN); err != nil {
+		return fmt.Errorf("update environment stack to retain environment roles: %w", err)
+	}
 	return nil
 }
 
-func (o *deleteEnvOpts) askProfile() error {
-	if o.profile != "" {
-		return nil
-	}
-
-	names := o.profileConfig.Names()
-	if len(names) == 0 {
-		return errNamedProfilesNotFound
-	}
-	if len(names) == 1 {
-		o.profile = names[0]
-		log.Infof("Only found one profile, defaulting to: %s\n", color.HighlightUserInput(o.profile))
-		return nil
-	}
-
-	profile, err := o.prompt.SelectOne(
-		fmt.Sprintf(fmtEnvDeleteProfilePrompt, color.HighlightUserInput(o.name)),
-		envDeleteProfileHelpPrompt,
-		names)
+// deleteStack returns nil if the stack was deleted successfully. Otherwise, returns the error.
+func (o *deleteEnvOpts) deleteStack() error {
+	env, err := o.getEnvConfig()
 	if err != nil {
-		return fmt.Errorf("get the profile name: %w", err)
+		return err
 	}
-	o.profile = profile
+	if err := o.deployer.DeleteEnvironment(o.appName, o.name, env.ExecutionRoleARN); err != nil {
+		return fmt.Errorf("delete environment %s stack: %w", o.name, err)
+	}
 	return nil
 }
 
-// deleteStack returns true if the stack was deleted successfully. Otherwise, returns false.
-func (o *deleteEnvOpts) deleteStack() bool {
-	o.prog.Start(fmt.Sprintf(fmtDeleteEnvStart, o.name, o.appName))
-	if err := o.deployClient.DeleteEnvironment(o.appName, o.name); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.name, o.appName, err))
-		return false
+func (o *deleteEnvOpts) deleteRoles() error {
+	env, err := o.getEnvConfig()
+	if err != nil {
+		return err
 	}
-	o.prog.Stop(log.Ssuccessf(fmtDeleteEnvComplete, o.name, o.appName))
-	return true
+	if err := o.iam.DeleteRole(env.ExecutionRoleARN); err != nil {
+		return fmt.Errorf("delete role %s: %w", env.ExecutionRoleARN, err)
+	}
+	if err := o.iam.DeleteRole(env.ManagerRoleARN); err != nil {
+		return fmt.Errorf("delete role %s: %w", env.ManagerRoleARN, err)
+	}
+	return nil
 }
 
-func (o *deleteEnvOpts) deleteFromStore() {
+func (o *deleteEnvOpts) deleteFromStore() error {
 	if err := o.store.DeleteEnvironment(o.appName, o.name); err != nil {
-		log.Infof("Failed to remove environment %s from application %s store: %v\n", o.name, o.appName, err)
+		return fmt.Errorf("delete environment %s configuration from application %s", o.name, o.appName)
 	}
+	return nil
+}
+
+func (o *deleteEnvOpts) getEnvConfig() (*config.Environment, error) {
+	if o.envConfig != nil {
+		// Already fetched once, return.
+		return o.envConfig, nil
+	}
+	env, err := o.store.GetEnvironment(o.appName, o.name)
+	if err != nil {
+		return nil, fmt.Errorf("get environment %s configuration from app %s: %v", o.name, o.appName, err)
+	}
+	o.envConfig = env
+	return env, nil
 }
 
 // buildEnvDeleteCmd builds the command to delete environment(s).
@@ -262,10 +329,10 @@ func buildEnvDeleteCmd() *cobra.Command {
 		Short: "Deletes an environment from your application.",
 		Example: `
   Delete the "test" environment.
-  /code $ copilot env delete --name test --profile default
+  /code $ copilot env delete --name test
 
   Delete the "test" environment without prompting.
-  /code $ copilot env delete --name test --profile default --yes`,
+  /code $ copilot env delete --name test --yes`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newDeleteEnvOpts(vars)
 			if err != nil {
@@ -282,7 +349,6 @@ func buildEnvDeleteCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)
-	cmd.Flags().StringVar(&vars.profile, profileFlag, "", profileFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
 	return cmd
 }
