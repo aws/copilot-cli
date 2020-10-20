@@ -109,10 +109,6 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		return nil, err
 	}
 	prompter := prompt.New()
-	sel, err := selector.NewWorkspaceSelect(prompter, store, ws)
-	if err != nil {
-		return nil, err
-	}
 	return &initSvcOpts{
 		initSvcVars: vars,
 
@@ -122,7 +118,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		appDeployer: cloudformation.New(sess),
 		prog:        termprogress.NewSpinner(),
 		prompt:      prompter,
-		sel:         sel,
+		sel:         selector.NewWorkspaceSelect(prompter, store, ws),
 
 		setupParser: func(o *initSvcOpts) {
 			o.df = dockerfile.New(o.fs, o.dockerfilePath)

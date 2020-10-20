@@ -154,11 +154,11 @@ func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
 
 // NewWorkspaceSelect returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
-func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriever) (*WorkspaceSelect, error) {
+func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriever) *WorkspaceSelect {
 	return &WorkspaceSelect{
 		Select: NewSelect(prompt, store),
 		ws:     ws,
-	}, nil
+	}
 }
 
 // NewDeploySelect returns a new selector that chooses services and environments from the deploy store.
