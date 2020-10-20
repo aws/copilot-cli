@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/initworkload"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/golang/mock/gomock"
@@ -395,7 +394,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			wantedManifestPath: "manifest/path",
 
 			mockJobInit: func(m *mocks.MockjobInitializer) {
-				m.EXPECT().Job(&initworkload.WorkloadProps{
+				m.EXPECT().Job(&initialize.WorkloadProps{
 					App:            "sample",
 					Name:           "mailer",
 					Type:           "Scheduled Job",

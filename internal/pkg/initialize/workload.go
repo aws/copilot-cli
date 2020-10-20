@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package initworkload
+package initialize
 
 import (
 	"encoding"
@@ -55,7 +55,7 @@ type Prog interface {
 	Stop(label string)
 }
 
-// WorkloadProps contains the information needed to represent a Workload (job or service)
+// WorkloadProps contains the information needed to represent a Workload (job or service).
 type WorkloadProps struct {
 	App            string
 	Type           string

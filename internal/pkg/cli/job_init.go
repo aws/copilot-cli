@@ -11,7 +11,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/initworkload"
+	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -66,7 +66,7 @@ func newInitJobOpts(vars initWkldVars) (*initJobOpts, error) {
 		return nil, err
 	}
 
-	jobInitter := initworkload.NewJobInitializer(
+	jobInitter := initialize.NewJobInitializer(
 		store,
 		ws,
 		termprogress.NewSpinner(),
@@ -151,7 +151,7 @@ func (o *initJobOpts) Ask() error {
 
 // Execute writes the job's manifest file, creates an ECR repo, and stores the name in SSM.
 func (o *initJobOpts) Execute() error {
-	manifestPath, err := o.init.Job(&initworkload.WorkloadProps{
+	manifestPath, err := o.init.Job(&initialize.WorkloadProps{
 		App:            o.appName,
 		Name:           o.name,
 		Type:           o.wkldType,

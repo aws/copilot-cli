@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/initworkload"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
@@ -435,7 +434,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			inSvcPort: 80,
 
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
-				m.EXPECT().Service(&initworkload.WorkloadProps{
+				m.EXPECT().Service(&initialize.WorkloadProps{
 					App:            "sample",
 					Name:           "frontend",
 					Type:           "Load Balanced Web Service",

@@ -14,7 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
-	"github.com/aws/copilot-cli/internal/pkg/initworkload"
+	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -107,7 +107,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		cfn:      deployer,
 		prog:     spin,
 	}
-	svcInitter := initworkload.NewSvcInitializer(
+	svcInitter := initialize.NewSvcInitializer(
 		ssm,
 		ws,
 		spin,

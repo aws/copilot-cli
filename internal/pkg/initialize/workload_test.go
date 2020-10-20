@@ -1,4 +1,6 @@
-package initworkload
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+package initialize
 
 import (
 	"errors"
@@ -8,7 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/initworkload/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/initialize/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"

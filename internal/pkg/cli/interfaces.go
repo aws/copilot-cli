@@ -17,7 +17,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/ecslogging"
-	"github.com/aws/copilot-cli/internal/pkg/initworkload"
+	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -435,9 +435,9 @@ type ec2Client interface {
 }
 
 type jobInitializer interface {
-	Job(props *initworkload.WorkloadProps) (string, error)
+	Job(props *initialize.WorkloadProps) (string, error)
 }
 
 type svcInitializer interface {
-	Service(props *initworkload.WorkloadProps) (string, error)
+	Service(props *initialize.WorkloadProps) (string, error)
 }

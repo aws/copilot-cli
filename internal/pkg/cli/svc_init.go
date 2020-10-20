@@ -12,7 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
-	"github.com/aws/copilot-cli/internal/pkg/initworkload"
+	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -85,10 +85,12 @@ type initSvcOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
-	hc           *manifest.ContainerHealthCheck
 
-	// sets up Dockerfile parser using fs and input path
+	// Sets up Dockerfile parser using fs and input path
 	setupParser func(*initSvcOpts)
+
+	// Parsed healthcheck from Dockerfile. Placed here, not in initWkldVars, so staticcheck realizes it's used.
+	hc *manifest.ContainerHealthCheck
 }
 
 func newInitSvcOpts(vars initWkldVars) (*initSvcOpts, error) {
@@ -113,7 +115,7 @@ func newInitSvcOpts(vars initWkldVars) (*initSvcOpts, error) {
 		return nil, err
 	}
 
-	initSvc := initworkload.NewSvcInitializer(
+	initSvc := initialize.NewSvcInitializer(
 		store,
 		ws,
 		termprogress.NewSpinner(),
@@ -177,13 +179,14 @@ func (o *initSvcOpts) Ask() error {
 		return err
 	}
 
-	var ports []uint16
 	if !dfSelected {
 		if err := o.askImage(); err != nil {
 			return err
 		}
 	}
-	if dfSelected && o.image == "" {
+
+	var ports []uint16
+	if o.dockerfilePath != "" && o.image == "" {
 		// Extract what we can from the dockerfile.
 		o.setupParser(o)
 
@@ -213,7 +216,7 @@ func (o *initSvcOpts) Ask() error {
 
 // Execute writes the service's manifest file and stores the service in SSM.
 func (o *initSvcOpts) Execute() error {
-	manifestPath, err := o.init.Service(&initworkload.WorkloadProps{
+	manifestPath, err := o.init.Service(&initialize.WorkloadProps{
 		App:            o.appName,
 		Name:           o.name,
 		Type:           o.wkldType,
@@ -309,7 +312,6 @@ func (o *initSvcOpts) askSvcPort(parsedPorts []uint16) error {
 
 	defaultPort := defaultSvcPortString
 	if o.dockerfilePath != "" {
-
 		switch len(parsedPorts) {
 		case 0:
 			// There were no ports detected, keep the default port prompt.

@@ -16,7 +16,7 @@ import (
 	docker "github.com/aws/copilot-cli/internal/pkg/docker"
 	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	ecslogging "github.com/aws/copilot-cli/internal/pkg/ecslogging"
-	initworkload "github.com/aws/copilot-cli/internal/pkg/initworkload"
+	initialize "github.com/aws/copilot-cli/internal/pkg/initialize"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -4600,7 +4600,7 @@ func (m *MockjobInitializer) EXPECT() *MockjobInitializerMockRecorder {
 }
 
 // Job mocks base method
-func (m *MockjobInitializer) Job(props *initworkload.WorkloadProps) (string, error) {
+func (m *MockjobInitializer) Job(props *initialize.WorkloadProps) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Job", props)
 	ret0, _ := ret[0].(string)
@@ -4638,7 +4638,7 @@ func (m *MocksvcInitializer) EXPECT() *MocksvcInitializerMockRecorder {
 }
 
 // Service mocks base method
-func (m *MocksvcInitializer) Service(props *initworkload.WorkloadProps) (string, error) {
+func (m *MocksvcInitializer) Service(props *initialize.WorkloadProps) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Service", props)
 	ret0, _ := ret[0].(string)
