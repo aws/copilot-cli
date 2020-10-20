@@ -1,3 +1,10 @@
+# The EnvironmentManagerRole definition must be immediately followed with DeletionPolicy: Retain
+# because the "env delete" command checks if this role is retained by checking if the template contains the string:
+# """
+# EnvironmentManagerRole:
+#   DeletionPolicy: Retain
+# """
+# See #1510#discussion_r505885042
 EnvironmentManagerRole:
   DeletionPolicy: Retain
   Type: AWS::IAM::Role
