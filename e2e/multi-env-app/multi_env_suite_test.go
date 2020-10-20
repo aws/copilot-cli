@@ -33,7 +33,7 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.AppDelete(map[string]string{"test": testEnvironmentProfile, "prod": prodEnvironmentProfile})
+	_, err := cli.AppDelete()
 	Expect(err).NotTo(HaveOccurred())
 })
 

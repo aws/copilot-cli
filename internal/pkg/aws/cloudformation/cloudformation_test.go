@@ -462,6 +462,53 @@ func TestCloudFormation_Describe(t *testing.T) {
 	}
 }
 
+func TestCloudFormation_TemplateBody(t *testing.T) {
+	testCases := map[string]struct {
+		createMock func(ctrl *gomock.Controller) api
+		wantedBody string
+		wantedErr  error
+	}{
+		"return ErrStackNotFound if stack does not exist": {
+			createMock: func(ctrl *gomock.Controller) api {
+				m := mocks.NewMockapi(ctrl)
+				m.EXPECT().GetTemplate(gomock.Any()).Return(nil, errDoesNotExist)
+				return m
+			},
+			wantedErr: &ErrStackNotFound{name: mockStack.Name},
+		},
+		"returns the template body if the stack exists": {
+			createMock: func(ctrl *gomock.Controller) api {
+				m := mocks.NewMockapi(ctrl)
+				m.EXPECT().GetTemplate(&cloudformation.GetTemplateInput{
+					StackName: aws.String(mockStack.Name),
+				}).Return(&cloudformation.GetTemplateOutput{
+					TemplateBody: aws.String("hello"),
+				}, nil)
+				return m
+			},
+			wantedBody: "hello",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			c := CloudFormation{
+				client: tc.createMock(ctrl),
+			}
+
+			// WHEN
+			body, err := c.TemplateBody(mockStack.Name)
+
+			// THEN
+			require.Equal(t, tc.wantedBody, body)
+			require.Equal(t, tc.wantedErr, err)
+		})
+	}
+}
+
 func TestCloudFormation_Events(t *testing.T) {
 	testCases := map[string]struct {
 		createMock   func(ctrl *gomock.Controller) api

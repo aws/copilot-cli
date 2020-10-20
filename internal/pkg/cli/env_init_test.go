@@ -28,7 +28,6 @@ type initEnvMocks struct {
 	prompt       *mocks.Mockprompter
 	selVPC       *mocks.Mockec2Selector
 	selCreds     *mocks.MockcredsSelector
-	config       *mocks.MockprofileNames
 	ec2Client    *mocks.Mockec2Client
 }
 
@@ -446,7 +445,6 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			mocks := initEnvMocks{
 				sessProvider: mocks.NewMocksessionProvider(ctrl),
 				prompt:       mocks.NewMockprompter(ctrl),
-				config:       mocks.NewMockprofileNames(ctrl),
 				selVPC:       mocks.NewMockec2Selector(ctrl),
 				selCreds:     mocks.NewMockcredsSelector(ctrl),
 				ec2Client:    mocks.NewMockec2Client(ctrl),
