@@ -240,7 +240,7 @@ func (o *deleteEnvOpts) ensureRolesAreRetained() error {
 		if errors.As(err, &stackDoesNotExist) {
 			return nil
 		}
-		return fmt.Errorf("get template body for enviroment %s in application %s: %v", o.name, o.appName, err)
+		return fmt.Errorf("get template body for environment %s in application %s: %v", o.name, o.appName, err)
 	}
 	// Check if the roles are already being retained.
 	retainsExecRole := strings.Contains(body, `
