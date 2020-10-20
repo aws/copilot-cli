@@ -84,10 +84,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		return nil, err
 	}
 	prompt := prompt.New()
-	sel, err := selector.NewWorkspaceSelect(prompt, ssm, ws)
-	if err != nil {
-		return nil, err
-	}
+	sel := selector.NewWorkspaceSelect(prompt, ssm, ws)
 	spin := termprogress.NewSpinner()
 	id := identity.New(defaultSess)
 	deployer := cloudformation.New(defaultSess)
