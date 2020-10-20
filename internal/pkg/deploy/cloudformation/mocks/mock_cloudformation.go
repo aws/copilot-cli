@@ -228,6 +228,20 @@ func (mr *MockcfnClientMockRecorder) DeleteAndWait(stackName interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockcfnClient)(nil).DeleteAndWait), stackName)
 }
 
+// DeleteAndWaitWithRoleARN mocks base method
+func (m *MockcfnClient) DeleteAndWaitWithRoleARN(stackName, roleARN string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAndWaitWithRoleARN", stackName, roleARN)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAndWaitWithRoleARN indicates an expected call of DeleteAndWaitWithRoleARN
+func (mr *MockcfnClientMockRecorder) DeleteAndWaitWithRoleARN(stackName, roleARN interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWaitWithRoleARN", reflect.TypeOf((*MockcfnClient)(nil).DeleteAndWaitWithRoleARN), stackName, roleARN)
+}
+
 // Describe mocks base method
 func (m *MockcfnClient) Describe(stackName string) (*cloudformation0.StackDescription, error) {
 	m.ctrl.T.Helper()
@@ -241,6 +255,21 @@ func (m *MockcfnClient) Describe(stackName string) (*cloudformation0.StackDescri
 func (mr *MockcfnClientMockRecorder) Describe(stackName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockcfnClient)(nil).Describe), stackName)
+}
+
+// TemplateBody mocks base method
+func (m *MockcfnClient) TemplateBody(stackName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TemplateBody", stackName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TemplateBody indicates an expected call of TemplateBody
+func (mr *MockcfnClientMockRecorder) TemplateBody(stackName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TemplateBody", reflect.TypeOf((*MockcfnClient)(nil).TemplateBody), stackName)
 }
 
 // Events mocks base method

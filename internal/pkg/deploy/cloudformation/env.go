@@ -52,12 +52,12 @@ func (cf CloudFormation) StreamEnvironmentCreation(env *deploy.CreateEnvironment
 }
 
 // DeleteEnvironment deletes the CloudFormation stack of an environment.
-func (cf CloudFormation) DeleteEnvironment(appName, envName string) error {
+func (cf CloudFormation) DeleteEnvironment(appName, envName, cfnExecRoleARN string) error {
 	conf := stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
 		AppName: appName,
 		Name:    envName,
 	})
-	return cf.cfnClient.DeleteAndWait(conf.StackName())
+	return cf.cfnClient.DeleteAndWaitWithRoleARN(conf.StackName(), cfnExecRoleARN)
 }
 
 // streamEnvironmentResponse sends a CreateEnvironmentResponse to the response channel once the stack creation halts.
@@ -91,6 +91,26 @@ func (cf CloudFormation) GetEnvironment(appName, envName string) (*config.Enviro
 		return nil, err
 	}
 	return conf.ToEnv(descr.SDK())
+}
+
+// EnvironmentTemplate returns the environment's stack's template.
+func (cf CloudFormation) EnvironmentTemplate(appName, envName string) (string, error) {
+	stackName := stack.NameForEnv(appName, envName)
+	return cf.cfnClient.TemplateBody(stackName)
+}
+
+// UpdateEnvironmentTemplate updates the cloudformation stack's template body while maintaining the parameters and tags.
+func (cf CloudFormation) UpdateEnvironmentTemplate(appName, envName, templateBody, cfnExecRoleARN string) error {
+	stackName := stack.NameForEnv(appName, envName)
+	descr, err := cf.cfnClient.Describe(stackName)
+	if err != nil {
+		return fmt.Errorf("describe stack %s: %w", stackName, err)
+	}
+	s := cloudformation.NewStack(stackName, templateBody)
+	s.Parameters = descr.Parameters
+	s.Tags = descr.Tags
+	s.RoleARN = aws.String(cfnExecRoleARN)
+	return cf.cfnClient.UpdateAndWait(s)
 }
 
 // UpgradeEnvironment updates an environment stack's template to a newer version.

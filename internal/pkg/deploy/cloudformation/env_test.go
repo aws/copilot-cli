@@ -183,3 +183,114 @@ func TestCloudFormation_UpgradeLegacyEnvironment(t *testing.T) {
 		})
 	}
 }
+
+func TestCloudFormation_EnvironmentTemplate(t *testing.T) {
+	testCases := map[string]struct {
+		inAppName string
+		inEnvName string
+		inClient  func(ctrl *gomock.Controller) *mocks.MockcfnClient
+	}{
+		"calls TemplateBody": {
+			inAppName: "phonetool",
+			inEnvName: "test",
+			inClient: func(ctrl *gomock.Controller) *mocks.MockcfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().TemplateBody("phonetool-test").Return("", nil)
+				return m
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			cf := &CloudFormation{
+				cfnClient: tc.inClient(ctrl),
+			}
+
+			// WHEN
+			cf.EnvironmentTemplate(tc.inAppName, tc.inEnvName)
+		})
+	}
+}
+
+func TestCloudFormation_UpdateEnvironmentTemplate(t *testing.T) {
+	testCases := map[string]struct {
+		inAppName      string
+		inEnvName      string
+		inTemplateBody string
+		inExecRoleARN  string
+		inClient       func(t *testing.T, ctrl *gomock.Controller) *mocks.MockcfnClient
+
+		wantedError error
+	}{
+		"wraps error if describe fails": {
+			inAppName: "phonetool",
+			inEnvName: "test",
+			inClient: func(t *testing.T, ctrl *gomock.Controller) *mocks.MockcfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Describe(gomock.Any()).Return(nil, errors.New("some error"))
+				return m
+			},
+
+			wantedError: errors.New("describe stack phonetool-test: some error"),
+		},
+		"uses existing parameters, tags, and passed in new template and role arn on success": {
+			inAppName:      "phonetool",
+			inEnvName:      "test",
+			inTemplateBody: "hello",
+			inExecRoleARN:  "arn",
+			inClient: func(t *testing.T, ctrl *gomock.Controller) *mocks.MockcfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				params := []*awscfn.Parameter{
+					{
+						ParameterKey:   aws.String("ALBWorkloads"),
+						ParameterValue: aws.String("frontend"),
+					},
+				}
+				tags := []*awscfn.Tag{
+					{
+						Key:   aws.String("copilot-application"),
+						Value: aws.String("phonetool"),
+					},
+				}
+				m.EXPECT().Describe("phonetool-test").Return(&cloudformation.StackDescription{
+					Parameters: params,
+					Tags:       tags,
+				}, nil)
+				m.EXPECT().UpdateAndWait(gomock.Any()).Return(nil).
+					Do(func(s *cloudformation.Stack) {
+						require.Equal(t, "phonetool-test", s.Name)
+						require.Equal(t, params, s.Parameters)
+						require.Equal(t, tags, s.Tags)
+						require.Equal(t, "hello", s.Template)
+						require.Equal(t, aws.String("arn"), s.RoleARN)
+					})
+				return m
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			cf := &CloudFormation{
+				cfnClient: tc.inClient(t, ctrl),
+			}
+
+			// WHEN
+			err := cf.UpdateEnvironmentTemplate(tc.inAppName, tc.inEnvName, tc.inTemplateBody, tc.inExecRoleARN)
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

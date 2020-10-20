@@ -40,7 +40,7 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.AppDelete(map[string]string{"test": "default"})
+	_, err := cli.AppDelete()
 	Expect(err).NotTo(HaveOccurred())
 	err = command.Run("aws", []string{"ecr", "delete-repository", "--repository-name", sidecarRepoName, "--force"})
 	Expect(err).NotTo(HaveOccurred())

@@ -53,7 +53,7 @@ var _ = AfterSuite(func() {
 	err = aws.WaitStackDeleteComplete(taskStackName)
 	Expect(err).NotTo(HaveOccurred(), "task stack delete complete")
 	// Delete Copilot application.
-	_, err = cli.AppDelete(map[string]string{"test": "default"})
+	_, err = cli.AppDelete()
 	Expect(err).NotTo(HaveOccurred(), "delete Copilot application")
 })
 
