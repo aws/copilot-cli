@@ -294,7 +294,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		manifestPath = e.FileName
 	}
 
-	manifestPath, err = workspace.RelPath(manifestPath)
+	manifestPath, err = relPath(manifestPath)
 	if err != nil {
 		return err
 	}
@@ -339,7 +339,7 @@ func (o *initPipelineOpts) createBuildspec() error {
 	if buildspecExists {
 		buildspecMsgFmt = "Buildspec file for pipeline already exists at %s, skipping writing it.\n"
 	}
-	buildspecPath, err = workspace.RelPath(buildspecPath)
+	buildspecPath, err = relPath(buildspecPath)
 	if err != nil {
 		return err
 	}

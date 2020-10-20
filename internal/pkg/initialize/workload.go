@@ -6,6 +6,7 @@ package initialize
 import (
 	"encoding"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -166,7 +167,7 @@ func (w *WorkloadInitializer) initWorkload(props *WorkloadProps, wlType string) 
 		manifestPath = e.FileName
 	}
 
-	manifestPath, err = workspace.RelPath(manifestPath)
+	manifestPath, err = relPath(manifestPath)
 	if err != nil {
 		return "", err
 	}
@@ -300,4 +301,17 @@ func relativeDockerfilePath(ws Workspace, path string) (string, error) {
 		return "", fmt.Errorf("find relative path from workspace root to Dockerfile: %v", err)
 	}
 	return relDfPath, nil
+}
+
+// relPath returns the path relative to the current working directory.
+func relPath(fullPath string) (string, error) {
+	wkdir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("get working directory: %w", err)
+	}
+	path, err := filepath.Rel(wkdir, fullPath)
+	if err != nil {
+		return "", fmt.Errorf("get relative path of file: %w", err)
+	}
+	return path, nil
 }

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -74,4 +75,17 @@ func isStackSetNotExistsErr(err error) bool {
 		return isStackSetNotExistsErr(errors.Unwrap(err))
 	}
 	return true
+}
+
+// relPath returns the path relative to the current working directory.
+func relPath(fullPath string) (string, error) {
+	wkdir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("get working directory: %w", err)
+	}
+	path, err := filepath.Rel(wkdir, fullPath)
+	if err != nil {
+		return "", fmt.Errorf("get relative path of file: %w", err)
+	}
+	return path, nil
 }
