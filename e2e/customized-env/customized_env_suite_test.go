@@ -47,7 +47,7 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.AppDelete(map[string]string{"test": "default", "prod": "default"})
+	_, err := cli.AppDelete()
 	Expect(err).NotTo(HaveOccurred())
 	// Delete VPC stack.
 	err = aws.DeleteStack(vpcStackName)

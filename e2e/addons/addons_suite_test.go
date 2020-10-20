@@ -32,7 +32,7 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.AppDelete(map[string]string{"test": "default"})
+	_, err := cli.AppDelete()
 	Expect(err).NotTo(HaveOccurred())
 })
 
