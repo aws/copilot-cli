@@ -33,13 +33,11 @@ func TestAddons_Template(t *testing.T) {
 					Return(nil, testErr)
 				return &Addons{
 					wlName: testSvcName,
-					wlType: "service",
 					ws:     ws,
 				}
 			},
 			wantedErr: &ErrAddonsDirNotExist{
 				WlName:    testSvcName,
-				WlType:    "service",
 				ParentErr: testErr,
 			},
 		},
@@ -50,13 +48,11 @@ func TestAddons_Template(t *testing.T) {
 					Return(nil, testErr)
 				return &Addons{
 					wlName: testJobName,
-					wlType: "job",
 					ws:     ws,
 				}
 			},
 			wantedErr: &ErrAddonsDirNotExist{
 				WlName:    testJobName,
-				WlType:    "job",
 				ParentErr: testErr,
 			},
 		},
@@ -67,11 +63,10 @@ func TestAddons_Template(t *testing.T) {
 					Return(nil, testErr)
 				return &Addons{
 					wlName: testJobName,
-					wlType: "job",
 					ws:     ws,
 				}
 			},
-			wantedErr: errors.New("read addons directory for job resizer: some error"),
+			wantedErr: errors.New("read addons directory for resizer: some error"),
 		},
 		"return err on invalid Metadata fields": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {

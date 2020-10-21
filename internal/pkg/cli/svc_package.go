@@ -33,7 +33,7 @@ const (
 )
 
 var initPackageAddonsClient = func(o *packageSvcOpts) error {
-	addonsClient, err := addon.New(o.name, "service")
+	addonsClient, err := addon.New(o.name)
 	if err != nil {
 		return fmt.Errorf("new addons client: %w", err)
 	}

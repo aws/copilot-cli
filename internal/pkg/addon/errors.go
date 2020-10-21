@@ -13,12 +13,11 @@ import (
 // ErrAddonsDirNotExist occurs when an addons directory for a workload does not exist.
 type ErrAddonsDirNotExist struct {
 	WlName    string
-	WlType    string
 	ParentErr error
 }
 
 func (e *ErrAddonsDirNotExist) Error() string {
-	return fmt.Sprintf("read addons directory for %s %s: %v", e.WlType, e.WlName, e.ParentErr)
+	return fmt.Sprintf("read addons directory for %s: %v", e.WlName, e.ParentErr)
 }
 
 type errKeyAlreadyExists struct {

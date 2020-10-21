@@ -247,7 +247,7 @@ func (o *deploySvcOpts) configureClients() error {
 	// CF client against env account profile AND target environment region
 	o.svcCFN = cloudformation.New(envSession)
 
-	addonsSvc, err := addon.New(o.name, "service")
+	addonsSvc, err := addon.New(o.name)
 	if err != nil {
 		return fmt.Errorf("initiate addons service: %w", err)
 	}

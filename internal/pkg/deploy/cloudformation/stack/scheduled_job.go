@@ -87,7 +87,7 @@ func (e errDurationInvalid) Error() string {
 // NewScheduledJob creates a new ScheduledJob stack from a manifest file.
 func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConfig) (*ScheduledJob, error) {
 	parser := template.New()
-	addons, err := addon.New(aws.StringValue(mft.Name), "job")
+	addons, err := addon.New(aws.StringValue(mft.Name))
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}

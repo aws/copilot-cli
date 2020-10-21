@@ -26,21 +26,19 @@ type workspaceReader interface {
 // Addons represents additional resources for a workload.
 type Addons struct {
 	wlName string
-	wlType string
 
 	parser template.Parser
 	ws     workspaceReader
 }
 
 // New creates an Addons object given a workload name and type.
-func New(wlName, wlType string) (*Addons, error) {
+func New(wlName string) (*Addons, error) {
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
 	return &Addons{
 		wlName: wlName,
-		wlType: wlType,
 		parser: template.New(),
 		ws:     ws,
 	}, nil
@@ -56,7 +54,6 @@ func (a *Addons) Template() (string, error) {
 	if err != nil {
 		return "", &ErrAddonsDirNotExist{
 			WlName:    a.wlName,
-			WlType:    a.wlType,
 			ParentErr: err,
 		}
 	}
@@ -65,11 +62,11 @@ func (a *Addons) Template() (string, error) {
 	for _, fname := range filterYAMLfiles(fnames) {
 		out, err := a.ws.ReadAddon(a.wlName, fname)
 		if err != nil {
-			return "", fmt.Errorf("read addon %s under %s %s: %w", a.wlType, fname, a.wlName, err)
+			return "", fmt.Errorf("read addon %s under %s: %w", fname, a.wlName, err)
 		}
 		tpl := newCFNTemplate(fname)
 		if err := yaml.Unmarshal(out, tpl); err != nil {
-			return "", fmt.Errorf("unmarshal addon %s under %s %s: %w", a.wlType, fname, a.wlName, err)
+			return "", fmt.Errorf("unmarshal addon %s under %s: %w", fname, a.wlName, err)
 		}
 		if err := mergedTemplate.merge(tpl); err != nil {
 			return "", err

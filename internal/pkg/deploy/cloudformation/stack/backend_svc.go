@@ -40,7 +40,7 @@ type BackendService struct {
 // NewBackendService creates a new BackendService stack from a manifest file.
 func NewBackendService(mft *manifest.BackendService, env, app string, rc RuntimeConfig) (*BackendService, error) {
 	parser := template.New()
-	addons, err := addon.New(aws.StringValue(mft.Name), "service")
+	addons, err := addon.New(aws.StringValue(mft.Name))
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}

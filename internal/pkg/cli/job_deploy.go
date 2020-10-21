@@ -211,7 +211,7 @@ func (o *deployJobOpts) configureClients() error {
 	// CF client against env account profile AND target environment region
 	o.jobCFN = cloudformation.New(envSession)
 
-	addonsSvc, err := addon.New(o.name, "job")
+	addonsSvc, err := addon.New(o.name)
 	if err != nil {
 		return fmt.Errorf("initiate addons service: %w", err)
 	}
