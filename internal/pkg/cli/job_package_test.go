@@ -243,9 +243,9 @@ func TestPackageJobOpts_Ask(t *testing.T) {
 
 func TestPackageJobOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
-		inVars packageJobVars
+		inVars packageSvcVars
 
-		mockDependencies func(*gomock.Controller, *packageJobOpts)
+		mockDependencies func(*gomock.Controller, *packageSvcOpts)
 
 		wantedStack  string
 		wantedParams string
@@ -253,13 +253,13 @@ func TestPackageJobOpts_Execute(t *testing.T) {
 		wantedErr    error
 	}{
 		"writes job template without addons": {
-			inVars: packageJobVars{
+			inVars: packageSvcVars{
 				appName: "ecs-kudos",
 				name:    "resizer",
 				envName: "test",
 				tag:     "1234",
 			},
-			mockDependencies: func(ctrl *gomock.Controller, opts *packageJobOpts) {
+			mockDependencies: func(ctrl *gomock.Controller, opts *packageSvcOpts) {
 				mockStore := mocks.NewMockstore(ctrl)
 				mockStore.EXPECT().
 					GetEnvironment("ecs-kudos", "test").
@@ -280,9 +280,9 @@ func TestPackageJobOpts_Execute(t *testing.T) {
 					GetApplication("ecs-kudos").
 					Return(mockApp, nil)
 
-				mockWs := mocks.NewMockwsJobDirReader(ctrl)
+				mockWs := mocks.NewMockwsSvcReader(ctrl)
 				mockWs.EXPECT().
-					ReadJobManifest("resizer").
+					ReadServiceManifest("resizer").
 					Return([]byte(`name: resizer
 type: Scheduled Job
 image:
@@ -310,7 +310,7 @@ count: 1`), nil)
 				opts.store = mockStore
 				opts.ws = mockWs
 				opts.appCFN = mockCfn
-				opts.initAddonsClient = func(opts *packageJobOpts) error {
+				opts.initAddonsClient = func(opts *packageSvcOpts) error {
 					opts.addonsClient = mockAddons
 					return nil
 				}
@@ -336,8 +336,8 @@ count: 1`), nil)
 			stackBuf := new(bytes.Buffer)
 			paramsBuf := new(bytes.Buffer)
 			addonsBuf := new(bytes.Buffer)
-			opts := &packageJobOpts{
-				packageJobVars: tc.inVars,
+			opts := &packageSvcOpts{
+				packageSvcVars: tc.inVars,
 
 				stackWriter:  stackBuf,
 				paramsWriter: paramsBuf,
