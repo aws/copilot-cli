@@ -168,31 +168,31 @@ func (mr *MockAppEnvListerMockRecorder) ListApplications() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListApplications", reflect.TypeOf((*MockAppEnvLister)(nil).ListApplications))
 }
 
-// MockConfigSvcLister is a mock of ConfigSvcLister interface
-type MockConfigSvcLister struct {
+// MockConfigWlLister is a mock of ConfigWlLister interface
+type MockConfigWlLister struct {
 	ctrl     *gomock.Controller
-	recorder *MockConfigSvcListerMockRecorder
+	recorder *MockConfigWlListerMockRecorder
 }
 
-// MockConfigSvcListerMockRecorder is the mock recorder for MockConfigSvcLister
-type MockConfigSvcListerMockRecorder struct {
-	mock *MockConfigSvcLister
+// MockConfigWlListerMockRecorder is the mock recorder for MockConfigWlLister
+type MockConfigWlListerMockRecorder struct {
+	mock *MockConfigWlLister
 }
 
-// NewMockConfigSvcLister creates a new mock instance
-func NewMockConfigSvcLister(ctrl *gomock.Controller) *MockConfigSvcLister {
-	mock := &MockConfigSvcLister{ctrl: ctrl}
-	mock.recorder = &MockConfigSvcListerMockRecorder{mock}
+// NewMockConfigWlLister creates a new mock instance
+func NewMockConfigWlLister(ctrl *gomock.Controller) *MockConfigWlLister {
+	mock := &MockConfigWlLister{ctrl: ctrl}
+	mock.recorder = &MockConfigWlListerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockConfigSvcLister) EXPECT() *MockConfigSvcListerMockRecorder {
+func (m *MockConfigWlLister) EXPECT() *MockConfigWlListerMockRecorder {
 	return m.recorder
 }
 
 // ListServices mocks base method
-func (m *MockConfigSvcLister) ListServices(appName string) ([]*config.Workload, error) {
+func (m *MockConfigWlLister) ListServices(appName string) ([]*config.Workload, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListServices", appName)
 	ret0, _ := ret[0].([]*config.Workload)
@@ -201,9 +201,24 @@ func (m *MockConfigSvcLister) ListServices(appName string) ([]*config.Workload, 
 }
 
 // ListServices indicates an expected call of ListServices
-func (mr *MockConfigSvcListerMockRecorder) ListServices(appName interface{}) *gomock.Call {
+func (mr *MockConfigWlListerMockRecorder) ListServices(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockConfigSvcLister)(nil).ListServices), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockConfigWlLister)(nil).ListServices), appName)
+}
+
+// ListJobs mocks base method
+func (m *MockConfigWlLister) ListJobs(appName string) ([]*config.Workload, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListJobs", appName)
+	ret0, _ := ret[0].([]*config.Workload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListJobs indicates an expected call of ListJobs
+func (mr *MockConfigWlListerMockRecorder) ListJobs(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockConfigWlLister)(nil).ListJobs), appName)
 }
 
 // MockConfigLister is a mock of ConfigLister interface
@@ -272,6 +287,21 @@ func (m *MockConfigLister) ListServices(appName string) ([]*config.Workload, err
 func (mr *MockConfigListerMockRecorder) ListServices(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockConfigLister)(nil).ListServices), appName)
+}
+
+// ListJobs mocks base method
+func (m *MockConfigLister) ListJobs(appName string) ([]*config.Workload, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListJobs", appName)
+	ret0, _ := ret[0].([]*config.Workload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListJobs indicates an expected call of ListJobs
+func (mr *MockConfigListerMockRecorder) ListJobs(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockConfigLister)(nil).ListJobs), appName)
 }
 
 // MockWsWorkloadLister is a mock of WsWorkloadLister interface

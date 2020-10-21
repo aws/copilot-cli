@@ -79,15 +79,16 @@ type AppEnvLister interface {
 	ListApplications() ([]*config.Application, error)
 }
 
-// ConfigSvcLister wraps the method to list svcs in config store.
-type ConfigSvcLister interface {
+// ConfigWlLister wraps the method to list workloads in config store.
+type ConfigWlLister interface {
 	ListServices(appName string) ([]*config.Workload, error)
+	ListJobs(appName string) ([]*config.Workload, error)
 }
 
 // ConfigLister wraps config store listing methods.
 type ConfigLister interface {
 	AppEnvLister
-	ConfigSvcLister
+	ConfigWlLister
 }
 
 // WsWorkloadLister wraps the method to get workloads in current workspace.
@@ -118,7 +119,7 @@ type Select struct {
 // ConfigSelect is an application and environment selector, but can also choose a service from the config store.
 type ConfigSelect struct {
 	*Select
-	svcLister ConfigSvcLister
+	svcLister ConfigWlLister
 }
 
 // WorkspaceSelect  is an application and environment selector, but can also choose a service from the workspace.
@@ -304,7 +305,7 @@ func (s *WorkspaceSelect) Job(msg, help string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs from workspace: %w", err)
 	}
-	storeJobNames, err := s.Select.config.ListServices(summary.Application)
+	storeJobNames, err := s.Select.config.ListJobs(summary.Application)
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs from store: %w", err)
 	}
