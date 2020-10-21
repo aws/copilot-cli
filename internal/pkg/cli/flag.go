@@ -137,7 +137,7 @@ const (
 	appFlagDescription      = "Name of the application."
 	envFlagDescription      = "Name of the environment."
 	svcFlagDescription      = "Name of the service."
-	jobFlagDescription      = "Name of the scheduled job."
+	jobFlagDescription      = "Name of the job."
 	pipelineFlagDescription = "Name of the pipeline."
 	profileFlagDescription  = "Name of the profile."
 	yesFlagDescription      = "Skips confirmation prompt."
