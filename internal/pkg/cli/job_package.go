@@ -33,11 +33,11 @@ const (
 )
 
 var initPackageAddons = func(o *packageJobOpts) error {
-	addonsSvc, err := addon.New(o.name, "job")
+	addonsClient, err := addon.New(o.name, "job")
 	if err != nil {
-		return fmt.Errorf("initiate addons service: %w", err)
+		return fmt.Errorf("new addons client: %w", err)
 	}
-	o.addonsSvc = addonsSvc
+	o.addonsClient = addonsClient
 	return nil
 }
 
@@ -53,19 +53,19 @@ type packageJobOpts struct {
 	packageJobVars
 
 	// Interfaces to interact with dependencies.
-	addonsSvc       templater
-	initAddonsSvc   func(*packageJobOpts) error // Overridden in tests.
-	ws              wsJobDirReader
-	store           store
-	appCFN          appResourcesGetter
-	stackWriter     io.Writer
-	paramsWriter    io.Writer
-	addonsWriter    io.Writer
-	fs              afero.Fs
-	runner          runner
-	sel             wsSelector
-	prompt          prompter
-	stackSerializer func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
+	addonsClient     templater
+	initAddonsClient func(*packageJobOpts) error // Overridden in tests.
+	ws               wsJobDirReader
+	store            store
+	appCFN           appResourcesGetter
+	stackWriter      io.Writer
+	paramsWriter     io.Writer
+	addonsWriter     io.Writer
+	fs               afero.Fs
+	runner           runner
+	sel              wsSelector
+	prompt           prompter
+	stackSerializer  func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
 }
 
 func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
@@ -85,17 +85,17 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 
 	prompter := prompt.New()
 	opts := &packageJobOpts{
-		packageJobVars: vars,
-		initAddonsSvc:  initPackageAddons,
-		ws:             ws,
-		store:          store,
-		appCFN:         cloudformation.New(sess),
-		runner:         command.New(),
-		sel:            selector.NewWorkspaceSelect(prompter, store, ws),
-		prompt:         prompter,
-		stackWriter:    os.Stdout,
-		paramsWriter:   ioutil.Discard,
-		fs:             &afero.Afero{Fs: afero.NewOsFs()},
+		packageJobVars:   vars,
+		initAddonsClient: initPackageAddons,
+		ws:               ws,
+		store:            store,
+		appCFN:           cloudformation.New(sess),
+		runner:           command.New(),
+		sel:              selector.NewWorkspaceSelect(prompter, store, ws),
+		prompt:           prompter,
+		stackWriter:      os.Stdout,
+		paramsWriter:     ioutil.Discard,
+		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 	}
 
 	opts.stackSerializer = func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
@@ -303,10 +303,10 @@ func (o *packageJobOpts) getJobTemplates(env *config.Environment) (*jobCfnTempla
 }
 
 func (o *packageJobOpts) getAddonsTemplate() (string, error) {
-	if err := o.initAddonsSvc(o); err != nil {
+	if err := o.initAddonsClient(o); err != nil {
 		return "", err
 	}
-	return o.addonsSvc.Template()
+	return o.addonsClient.Template()
 }
 
 func (o *packageJobOpts) setAddonsFileWriter() error {

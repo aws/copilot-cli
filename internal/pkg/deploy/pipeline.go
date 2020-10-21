@@ -12,7 +12,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 
-	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
@@ -171,13 +170,13 @@ type PipelineStage struct {
 // WorkloadTemplatePath returns the full path to the workload CFN template
 // built during the build stage.
 func (s *PipelineStage) WorkloadTemplatePath(wlName string) string {
-	return fmt.Sprintf(config.WorkloadCfnTemplateNameFormat, wlName)
+	return fmt.Sprintf(WorkloadCfnTemplateNameFormat, wlName)
 }
 
 // WorkloadTemplateConfigurationPath returns the full path to the workload CFN
 // template configuration file built during the build stage.
 func (s *PipelineStage) WorkloadTemplateConfigurationPath(wlName string) string {
-	return fmt.Sprintf(config.WorkloadCfnTemplateConfigurationNameFormat,
+	return fmt.Sprintf(WorkloadCfnTemplateConfigurationNameFormat,
 		wlName, s.Name,
 	)
 }

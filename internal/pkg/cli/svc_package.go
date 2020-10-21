@@ -32,12 +32,12 @@ const (
 	svcPackageEnvNamePrompt = "Which environment would you like to package this stack for?"
 )
 
-var initPackageAddonsSvc = func(o *packageSvcOpts) error {
-	addonsSvc, err := addon.New(o.name, "service")
+var initPackageAddonsClient = func(o *packageSvcOpts) error {
+	addonsClient, err := addon.New(o.name, "service")
 	if err != nil {
-		return fmt.Errorf("initiate addons service: %w", err)
+		return fmt.Errorf("new addons client: %w", err)
 	}
-	o.addonsSvc = addonsSvc
+	o.addonsClient = addonsClient
 	return nil
 }
 
@@ -53,19 +53,19 @@ type packageSvcOpts struct {
 	packageSvcVars
 
 	// Interfaces to interact with dependencies.
-	addonsSvc       templater
-	initAddonsSvc   func(*packageSvcOpts) error // Overridden in tests.
-	ws              wsSvcReader
-	store           store
-	appCFN          appResourcesGetter
-	stackWriter     io.Writer
-	paramsWriter    io.Writer
-	addonsWriter    io.Writer
-	fs              afero.Fs
-	runner          runner
-	sel             wsSelector
-	prompt          prompter
-	stackSerializer func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
+	addonsClient     templater
+	initAddonsClient func(*packageSvcOpts) error // Overridden in tests.
+	ws               wsSvcReader
+	store            store
+	appCFN           appResourcesGetter
+	stackWriter      io.Writer
+	paramsWriter     io.Writer
+	addonsWriter     io.Writer
+	fs               afero.Fs
+	runner           runner
+	sel              wsSelector
+	prompt           prompter
+	stackSerializer  func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
 }
 
 func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
@@ -84,18 +84,18 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 	}
 	prompter := prompt.New()
 	opts := &packageSvcOpts{
-		packageSvcVars: vars,
-		initAddonsSvc:  initPackageAddonsSvc,
-		ws:             ws,
-		store:          store,
-		appCFN:         cloudformation.New(sess),
-		runner:         command.New(),
-		sel:            selector.NewWorkspaceSelect(prompter, store, ws),
-		prompt:         prompter,
-		stackWriter:    os.Stdout,
-		paramsWriter:   ioutil.Discard,
-		addonsWriter:   ioutil.Discard,
-		fs:             &afero.Afero{Fs: afero.NewOsFs()},
+		packageSvcVars:   vars,
+		initAddonsClient: initPackageAddonsClient,
+		ws:               ws,
+		store:            store,
+		appCFN:           cloudformation.New(sess),
+		runner:           command.New(),
+		sel:              selector.NewWorkspaceSelect(prompter, store, ws),
+		prompt:           prompter,
+		stackWriter:      os.Stdout,
+		paramsWriter:     ioutil.Discard,
+		addonsWriter:     ioutil.Discard,
+		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 	}
 
 	opts.stackSerializer = func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
@@ -236,10 +236,10 @@ func (o *packageSvcOpts) askEnvName() error {
 }
 
 func (o *packageSvcOpts) getAddonsTemplate() (string, error) {
-	if err := o.initAddonsSvc(o); err != nil {
+	if err := o.initAddonsClient(o); err != nil {
 		return "", err
 	}
-	return o.addonsSvc.Template()
+	return o.addonsClient.Template()
 }
 
 type svcCfnTemplates struct {
