@@ -224,12 +224,12 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				tc.mockProg(mockProg)
 			}
 
-			initializer := NewWorkloadInitializer(
-				mockstore,
-				mockWriter,
-				mockProg,
-				mockappDeployer,
-			)
+			initializer := &WorkloadInitializer{
+				Store:    mockstore,
+				Ws:       mockWriter,
+				Prog:     mockProg,
+				Deployer: mockappDeployer,
+			}
 
 			initJobProps := &JobProps{
 				WorkloadProps: &WorkloadProps{
@@ -685,12 +685,12 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				tc.mockProg(mockProg)
 			}
 
-			initializer := NewWorkloadInitializer(
-				mockstore,
-				mockWriter,
-				mockProg,
-				mockappDeployer,
-			)
+			initializer := &WorkloadInitializer{
+				Store:    mockstore,
+				Ws:       mockWriter,
+				Prog:     mockProg,
+				Deployer: mockappDeployer,
+			}
 
 			// WHEN
 			_, err := initializer.Service(&ServiceProps{

@@ -104,12 +104,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		cfn:      deployer,
 		prog:     spin,
 	}
-	wkldInitter := initialize.NewWorkloadInitializer(
-		ssm,
-		ws,
-		spin,
-		deployer,
-	)
+	wkldInitter := &initialize.WorkloadInitializer{Store: ssm, Ws: ws, Prog: spin, Deployer: deployer}
 	initSvcCmd := &initSvcOpts{
 		initWkldVars: initWkldVars{
 			wkldType:       vars.svcType,

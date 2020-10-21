@@ -112,12 +112,12 @@ func newInitSvcOpts(vars initWkldVars) (*initSvcOpts, error) {
 	prompter := prompt.New()
 	sel := selector.NewWorkspaceSelect(prompter, store, ws)
 
-	initSvc := initialize.NewWorkloadInitializer(
-		store,
-		ws,
-		termprogress.NewSpinner(),
-		cloudformation.New(sess),
-	)
+	initSvc := &initialize.WorkloadInitializer{
+		Store:    store,
+		Ws:       ws,
+		Prog:     termprogress.NewSpinner(),
+		Deployer: cloudformation.New(sess),
+	}
 	return &initSvcOpts{
 		initWkldVars: vars,
 

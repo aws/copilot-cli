@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package initialize contains methods and structs needed to initialize jobs and services.
 package initialize
 
 import (
@@ -88,17 +89,6 @@ type WorkloadInitializer struct {
 	Deployer WorkloadAdder
 	Ws       Workspace
 	Prog     Prog
-}
-
-// NewWorkloadInitializer returns a struct which holds the clients and configuration needed to
-// initialize a new workload in an existing application
-func NewWorkloadInitializer(s Store, ws Workspace, p Prog, d WorkloadAdder) *WorkloadInitializer {
-	return &WorkloadInitializer{
-		Store:    s,
-		Ws:       ws,
-		Prog:     p,
-		Deployer: d,
-	}
 }
 
 func (w *WorkloadInitializer) writeManifest(mf encoding.BinaryMarshaler, wlName string, wlType string) (string, error) {

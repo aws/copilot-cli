@@ -66,12 +66,12 @@ func newInitJobOpts(vars initWkldVars) (*initJobOpts, error) {
 		return nil, err
 	}
 
-	jobInitter := initialize.NewWorkloadInitializer(
-		store,
-		ws,
-		termprogress.NewSpinner(),
-		cloudformation.New(sess),
-	)
+	jobInitter := &initialize.WorkloadInitializer{
+		Store:    store,
+		Ws:       ws,
+		Prog:     termprogress.NewSpinner(),
+		Deployer: cloudformation.New(sess),
+	}
 
 	prompter := prompt.New()
 	sel := selector.NewWorkspaceSelect(prompter, store, ws)
