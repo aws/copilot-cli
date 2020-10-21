@@ -13,11 +13,14 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+var noopInitRuntimeClients = func(opts *deleteEnvOpts) error {
+	return nil
+}
 
 func TestDeleteEnvOpts_Validate(t *testing.T) {
 	const (
@@ -36,16 +39,10 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 			inEnv:     testEnvName,
 			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvironmentStore {
 				envStore := mocks.NewMockenvironmentStore(ctrl)
-				envStore.EXPECT().GetEnvironment(testAppName, testEnvName).Return(nil, &config.ErrNoSuchEnvironment{
-					ApplicationName: testAppName,
-					EnvironmentName: testEnvName,
-				})
+				envStore.EXPECT().GetEnvironment(testAppName, testEnvName).Return(nil, errors.New("some error"))
 				return envStore
 			},
-			wantedError: &config.ErrNoSuchEnvironment{
-				ApplicationName: testAppName,
-				EnvironmentName: testEnvName,
-			},
+			wantedError: errors.New("get environment test configuration from app phonetool: some error"),
 		},
 		"environment exists": {
 			inAppName: testAppName,
@@ -84,21 +81,17 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 
 func TestDeleteEnvOpts_Ask(t *testing.T) {
 	const (
-		testApp      = "phonetool"
-		testEnv      = "test"
-		testProfile1 = "default1"
-		testProfile2 = "default2"
+		testApp = "phonetool"
+		testEnv = "test"
 	)
 	testCases := map[string]struct {
 		inEnvName          string
-		inEnvProfile       string
 		inSkipConfirmation bool
 
 		mockDependencies func(ctrl *gomock.Controller, o *deleteEnvOpts)
 
-		wantedEnvName    string
-		wantedEnvProfile string
-		wantedError      error
+		wantedEnvName string
+		wantedError   error
 	}{
 		"prompts for all required flags": {
 			inSkipConfirmation: false,
@@ -106,43 +99,17 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 				mockSelector := mocks.NewMockconfigSelector(ctrl)
 				mockSelector.EXPECT().Environment(envDeleteNamePrompt, "", testApp).Return(testEnv, nil)
 
-				mockCfg := mocks.NewMockprofileNames(ctrl)
-				mockCfg.EXPECT().Names().Return([]string{testProfile1, testProfile2})
-
 				mockPrompter := mocks.NewMockprompter(ctrl)
-				mockPrompter.EXPECT().SelectOne(fmt.Sprintf(fmtEnvDeleteProfilePrompt, color.HighlightUserInput(testEnv)),
-					envDeleteProfileHelpPrompt, []string{testProfile1, testProfile2}).Return(testProfile1, nil)
 				mockPrompter.EXPECT().Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, testEnv, testApp), gomock.Any()).Return(true, nil)
 
 				o.sel = mockSelector
-				o.profileConfig = mockCfg
 				o.prompt = mockPrompter
 			},
-			wantedEnvName:    testEnv,
-			wantedEnvProfile: testProfile1,
-		},
-		"skip prompting if only one profile available": {
-			inSkipConfirmation: true,
-			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {
-				mockSelector := mocks.NewMockconfigSelector(ctrl)
-				mockSelector.EXPECT().Environment(envDeleteNamePrompt, "", testApp).Return(testEnv, nil)
-
-				mockCfg := mocks.NewMockprofileNames(ctrl)
-				mockCfg.EXPECT().Names().Return([]string{testProfile1})
-
-				mockPrompter := mocks.NewMockprompter(ctrl)
-
-				o.sel = mockSelector
-				o.profileConfig = mockCfg
-				o.prompt = mockPrompter
-			},
-			wantedEnvName:    testEnv,
-			wantedEnvProfile: testProfile1,
+			wantedEnvName: testEnv,
 		},
 		"wraps error from prompting for confirmation": {
 			inSkipConfirmation: false,
 			inEnvName:          testEnv,
-			inEnvProfile:       testProfile1,
 			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {
 
 				mockPrompter := mocks.NewMockprompter(ctrl)
@@ -152,34 +119,6 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 			},
 
 			wantedError: errors.New("confirm to delete environment test: some error"),
-		},
-		"wraps error from prompting from profile": {
-			inSkipConfirmation: true,
-			inEnvName:          testEnv,
-			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {
-				mockCfg := mocks.NewMockprofileNames(ctrl)
-				mockCfg.EXPECT().Names().Return([]string{testProfile1, testProfile2})
-
-				mockPrompter := mocks.NewMockprompter(ctrl)
-				mockPrompter.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
-
-				o.profileConfig = mockCfg
-				o.prompt = mockPrompter
-			},
-
-			wantedError: errors.New("get the profile name: some error"),
-		},
-		"errors when no named profile exists": {
-			inSkipConfirmation: true,
-			inEnvName:          testEnv,
-			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {
-				mockCfg := mocks.NewMockprofileNames(ctrl)
-				mockCfg.EXPECT().Names().Return([]string{})
-
-				o.profileConfig = mockCfg
-			},
-
-			wantedError: errNamedProfilesNotFound,
 		},
 	}
 
@@ -191,7 +130,6 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 			opts := &deleteEnvOpts{
 				deleteEnvVars: deleteEnvVars{
 					name:             tc.inEnvName,
-					profile:          tc.inEnvProfile,
 					appName:          testApp,
 					skipConfirmation: tc.inSkipConfirmation,
 				},
@@ -204,7 +142,6 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 			// THEN
 			if tc.wantedError == nil {
 				require.Equal(t, tc.wantedEnvName, opts.name)
-				require.Equal(t, tc.wantedEnvProfile, opts.profile)
 				require.NoError(t, err)
 			} else {
 				require.EqualError(t, err, tc.wantedError.Error())
@@ -214,13 +151,9 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 }
 
 func TestDeleteEnvOpts_Execute(t *testing.T) {
-	const (
-		testApp = "phonetool"
-		testEnv = "test"
-	)
-	testError := errors.New("some error")
-
 	testCases := map[string]struct {
+		given func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts
+
 		mockRG     func(ctrl *gomock.Controller) *mocks.MockresourceGetter
 		mockProg   func(ctrl *gomock.Controller) *mocks.Mockprogress
 		mockDeploy func(ctrl *gomock.Controller) *mocks.MockenvironmentDeployer
@@ -228,27 +161,22 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 
 		wantedError error
 	}{
-		"failed to get resources with tags": {
-			mockRG: func(ctrl *gomock.Controller) *mocks.MockresourceGetter {
-				rg := mocks.NewMockresourceGetter(ctrl)
-				rg.EXPECT().GetResources(gomock.Any()).Return(nil, errors.New("some error"))
-				return rg
-			},
-			mockProg: func(ctrl *gomock.Controller) *mocks.Mockprogress {
-				return nil
-			},
-			mockDeploy: func(ctrl *gomock.Controller) *mocks.MockenvironmentDeployer {
-				return nil
-			},
-			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvironmentStore {
-				return nil
+		"returns wrapped errors when failed to retrieve running services in the environment": {
+			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {
+				m := mocks.NewMockresourceGetter(ctrl)
+				m.EXPECT().GetResources(gomock.Any()).Return(nil, errors.New("some error"))
+
+				return &deleteEnvOpts{
+					rg:                 m,
+					initRuntimeClients: noopInitRuntimeClients,
+				}
 			},
 			wantedError: errors.New("find service cloudformation stacks: some error"),
 		},
-		"environment has running applications": {
-			mockRG: func(ctrl *gomock.Controller) *mocks.MockresourceGetter {
-				rg := mocks.NewMockresourceGetter(ctrl)
-				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
+		"returns error when there are running services": {
+			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {
+				m := mocks.NewMockresourceGetter(ctrl)
+				m.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{
 						{
 							Tags: []*resourcegroupstaggingapi.Tag{
@@ -264,63 +192,180 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 						},
 					},
 				}, nil)
-				return rg
+
+				return &deleteEnvOpts{
+					deleteEnvVars: deleteEnvVars{
+						appName: "phonetool",
+						name:    "test",
+					},
+					rg:                 m,
+					initRuntimeClients: noopInitRuntimeClients,
+				}
 			},
-			mockProg: func(ctrl *gomock.Controller) *mocks.Mockprogress {
-				return nil
-			},
-			mockDeploy: func(ctrl *gomock.Controller) *mocks.MockenvironmentDeployer {
-				return nil
-			},
-			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvironmentStore {
-				return nil
-			},
+
 			wantedError: errors.New("service 'frontend, backend' still exist within the environment test"),
 		},
-		"error from delete stack": {
-			mockRG: func(ctrl *gomock.Controller) *mocks.MockresourceGetter {
+		"returns wrapped error when environment stack cannot be updated to retain roles": {
+			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {
 				rg := mocks.NewMockresourceGetter(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
-				return rg
-			},
-			mockProg: func(ctrl *gomock.Controller) *mocks.Mockprogress {
+
 				prog := mocks.NewMockprogress(ctrl)
-				prog.EXPECT().Start(fmt.Sprintf(fmtDeleteEnvStart, testEnv, testApp))
-				prog.EXPECT().Stop(log.Serrorf(fmtDeleteEnvFailed, testEnv, testApp, testError))
-				return prog
+				prog.EXPECT().Start(gomock.Any())
+
+				deployer := mocks.NewMockenvironmentDeployer(ctrl)
+				deployer.EXPECT().EnvironmentTemplate(gomock.Any(), gomock.Any()).Return(`
+  CloudformationExecutionRole:
+  EnvironmentManagerRole:
+`, nil)
+				deployer.EXPECT().UpdateEnvironmentTemplate(
+					"phonetool",
+					"test",
+					`
+  CloudformationExecutionRole:
+    DeletionPolicy: Retain
+  EnvironmentManagerRole:
+    DeletionPolicy: Retain
+`, "arn").Return(errors.New("some error"))
+
+				prog.EXPECT().Stop(log.Serror("Failed to delete environment test from application phonetool."))
+
+				return &deleteEnvOpts{
+					deleteEnvVars: deleteEnvVars{
+						appName: "phonetool",
+						name:    "test",
+					},
+					rg:       rg,
+					deployer: deployer,
+					prog:     prog,
+					envConfig: &config.Environment{
+						ExecutionRoleARN: "arn",
+					},
+					initRuntimeClients: noopInitRuntimeClients,
+				}
 			},
-			mockDeploy: func(ctrl *gomock.Controller) *mocks.MockenvironmentDeployer {
-				deploy := mocks.NewMockenvironmentDeployer(ctrl)
-				deploy.EXPECT().DeleteEnvironment(testApp, testEnv).Return(testError)
-				return deploy
-			},
-			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvironmentStore {
-				return mocks.NewMockenvironmentStore(ctrl)
-			},
+			wantedError: errors.New("update environment stack to retain environment roles: some error"),
 		},
-		"deletes from store if stack deletion succeeds": {
-			mockRG: func(ctrl *gomock.Controller) *mocks.MockresourceGetter {
+		"returns wrapped error when stack cannot be deleted": {
+			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {
 				rg := mocks.NewMockresourceGetter(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
-				return rg
-			},
-			mockProg: func(ctrl *gomock.Controller) *mocks.Mockprogress {
+
 				prog := mocks.NewMockprogress(ctrl)
-				prog.EXPECT().Start(fmt.Sprintf(fmtDeleteEnvStart, testEnv, testApp))
-				prog.EXPECT().Stop(log.Ssuccessf(fmtDeleteEnvComplete, testEnv, testApp))
-				return prog
+				prog.EXPECT().Start(gomock.Any())
+
+				deployer := mocks.NewMockenvironmentDeployer(ctrl)
+				deployer.EXPECT().EnvironmentTemplate(gomock.Any(), gomock.Any()).Return(`
+  CloudformationExecutionRole:
+    DeletionPolicy: Retain
+  EnvironmentManagerRole:
+    DeletionPolicy: Retain`, nil)
+				deployer.EXPECT().DeleteEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+
+				prog.EXPECT().Stop(log.Serror("Failed to delete environment test from application phonetool."))
+
+				return &deleteEnvOpts{
+					deleteEnvVars: deleteEnvVars{
+						appName: "phonetool",
+						name:    "test",
+					},
+					rg:                 rg,
+					deployer:           deployer,
+					prog:               prog,
+					envConfig:          &config.Environment{},
+					initRuntimeClients: noopInitRuntimeClients,
+				}
 			},
-			mockDeploy: func(ctrl *gomock.Controller) *mocks.MockenvironmentDeployer {
-				deploy := mocks.NewMockenvironmentDeployer(ctrl)
-				deploy.EXPECT().DeleteEnvironment(testApp, testEnv).Return(nil)
-				return deploy
+
+			wantedError: errors.New("delete environment test stack: some error"),
+		},
+		"returns wrapped error when role cannot be deleted": {
+			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {
+				rg := mocks.NewMockresourceGetter(ctrl)
+				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
+					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
+
+				prog := mocks.NewMockprogress(ctrl)
+				prog.EXPECT().Start(gomock.Any())
+
+				deployer := mocks.NewMockenvironmentDeployer(ctrl)
+				deployer.EXPECT().EnvironmentTemplate(gomock.Any(), gomock.Any()).Return(`
+  CloudformationExecutionRole:
+    DeletionPolicy: Retain
+  EnvironmentManagerRole:
+    DeletionPolicy: Retain`, nil)
+				deployer.EXPECT().DeleteEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+				iam := mocks.NewMockroleDeleter(ctrl)
+				gomock.InOrder(
+					iam.EXPECT().DeleteRole("execARN").Return(nil),
+					iam.EXPECT().DeleteRole("managerRoleARN").Return(errors.New("some error")),
+				)
+
+				prog.EXPECT().Stop(log.Serror("Failed to delete environment test from application phonetool."))
+
+				return &deleteEnvOpts{
+					deleteEnvVars: deleteEnvVars{
+						appName: "phonetool",
+						name:    "test",
+					},
+					rg:       rg,
+					deployer: deployer,
+					prog:     prog,
+					iam:      iam,
+					envConfig: &config.Environment{
+						ExecutionRoleARN: "execARN",
+						ManagerRoleARN:   "managerRoleARN",
+					},
+					initRuntimeClients: noopInitRuntimeClients,
+				}
 			},
-			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvironmentStore {
+			wantedError: errors.New("delete role managerRoleARN: some error"),
+		},
+		"deletes the stack, then the roles, then SSM by default": {
+			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {
+				rg := mocks.NewMockresourceGetter(ctrl)
+				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
+					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
+
+				prog := mocks.NewMockprogress(ctrl)
+				prog.EXPECT().Start("Deleting environment test from application phonetool.")
+
+				deployer := mocks.NewMockenvironmentDeployer(ctrl)
+				deployer.EXPECT().EnvironmentTemplate("phonetool", "test").Return(`
+  CloudformationExecutionRole:
+    DeletionPolicy: Retain
+  EnvironmentManagerRole:
+    DeletionPolicy: Retain`, nil)
+				deployer.EXPECT().DeleteEnvironment("phonetool", "test", "execARN").Return(nil)
+
+				iam := mocks.NewMockroleDeleter(ctrl)
+				iam.EXPECT().DeleteRole("execARN").Return(nil)
+				iam.EXPECT().DeleteRole("managerRoleARN").Return(nil)
+
 				store := mocks.NewMockenvironmentStore(ctrl)
-				store.EXPECT().DeleteEnvironment(testApp, testEnv).Return(nil)
-				return store
+				store.EXPECT().DeleteEnvironment("phonetool", "test").Return(nil)
+
+				prog.EXPECT().Stop(log.Ssuccess("Deleted environment test from application phonetool."))
+
+				return &deleteEnvOpts{
+					deleteEnvVars: deleteEnvVars{
+						appName: "phonetool",
+						name:    "test",
+					},
+					rg:       rg,
+					deployer: deployer,
+					prog:     prog,
+					iam:      iam,
+					store:    store,
+					envConfig: &config.Environment{
+						ExecutionRoleARN: "execARN",
+						ManagerRoleARN:   "managerRoleARN",
+					},
+					initRuntimeClients: noopInitRuntimeClients,
+				}
 			},
 		},
 	}
@@ -330,19 +375,7 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			opts := deleteEnvOpts{
-				deleteEnvVars: deleteEnvVars{
-					name:    testEnv,
-					appName: testApp,
-				},
-				store:        tc.mockStore(ctrl),
-				deployClient: tc.mockDeploy(ctrl),
-				rgClient:     tc.mockRG(ctrl),
-				prog:         tc.mockProg(ctrl),
-				initProfileClients: func(o *deleteEnvOpts) error {
-					return nil
-				},
-			}
+			opts := tc.given(t, ctrl)
 
 			// WHEN
 			err := opts.Execute()

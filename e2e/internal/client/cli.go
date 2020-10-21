@@ -321,14 +321,12 @@ func (cli *CLI) SvcLogs(opts *SvcLogsRequest) ([]SvcLogsOutput, error) {
 /*EnvDelete runs:
 copilot env delete
 	--name $n
-	--profile $p
 	--yes
 */
-func (cli *CLI) EnvDelete(envName, profile string) (string, error) {
+func (cli *CLI) EnvDelete(envName string) (string, error) {
 	return cli.exec(
 		exec.Command(cli.path, "env", "delete",
 			"--name", envName,
-			"--profile", profile,
 			"--yes"))
 }
 
@@ -451,21 +449,11 @@ func (cli *CLI) AppList() (string, error) {
 }
 
 /*AppDelete runs:
-copilot app delete
-	--env-profiles $e1=$p1,$e2=$p2
-	--yes
+copilot app delete --yes
 */
-func (cli *CLI) AppDelete(profiles map[string]string) (string, error) {
+func (cli *CLI) AppDelete() (string, error) {
 	commands := []string{"app", "delete", "--yes"}
 
-	if len(profiles) > 0 {
-		commands = append(commands, "--env-profiles")
-		envProfiles := []string{}
-		for env, profile := range profiles {
-			envProfiles = append(envProfiles, fmt.Sprintf("%s=%s", env, profile))
-		}
-		commands = append(commands, strings.Join(envProfiles, ","))
-	}
 	return cli.exec(
 		exec.Command(cli.path, commands...))
 }

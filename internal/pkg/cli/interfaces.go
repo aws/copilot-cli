@@ -189,10 +189,6 @@ type sessionFromProfileProvider interface {
 	FromProfile(name string) (*session.Session, error)
 }
 
-type profileNames interface {
-	Names() []string
-}
-
 type sessionProvider interface {
 	defaultSessionProvider
 	regionalSessionProvider
@@ -285,8 +281,10 @@ type bucketEmptier interface {
 type environmentDeployer interface {
 	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
 	StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse)
-	DeleteEnvironment(appName, envName string) error
+	DeleteEnvironment(appName, envName, cfnExecRoleARN string) error
 	GetEnvironment(appName, envName string) (*config.Environment, error)
+	EnvironmentTemplate(appName, envName string) (string, error)
+	UpdateEnvironmentTemplate(appName, envName, templateBody, cfnExecRoleARN string) error
 }
 
 type wlDeleter interface {
@@ -440,4 +438,8 @@ type jobInitializer interface {
 
 type svcInitializer interface {
 	Service(props *initialize.ServiceProps) (string, error)
+}
+
+type roleDeleter interface {
+	DeleteRole(string) error
 }
