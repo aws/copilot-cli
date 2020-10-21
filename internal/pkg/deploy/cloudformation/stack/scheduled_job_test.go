@@ -284,7 +284,7 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 				},
 				manifest: &manifest.ScheduledJob{
 					ScheduledJobConfig: manifest.ScheduledJobConfig{
-						ScheduleConfig: manifest.ScheduleConfig{
+						On: manifest.JobTriggerConfig{
 							Schedule: tc.inputSchedule,
 						},
 					},
@@ -295,7 +295,7 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 
 			// THEN
 			if tc.wantedErrorType != nil {
-				ok := errors.As(err, tc.wantedErrorType)
+				ok := errors.As(err, &tc.wantedErrorType)
 				require.True(t, ok)
 				require.NotEmpty(t, tc.wantedErrorType)
 			} else if tc.wantedError != nil {
@@ -364,7 +364,7 @@ func TestScheduledJob_stateMachine(t *testing.T) {
 				},
 				manifest: &manifest.ScheduledJob{
 					ScheduledJobConfig: manifest.ScheduledJobConfig{
-						ScheduleConfig: manifest.ScheduleConfig{
+						JobFailureHandlerConfig: manifest.JobFailureHandlerConfig{
 							Retries: tc.inputRetries,
 							Timeout: tc.inputTimeout,
 						},
