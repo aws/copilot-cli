@@ -49,16 +49,12 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
 	prompter := prompt.New()
-	sel, err := selector.NewWorkspaceSelect(prompter, store, ws)
-	if err != nil {
-		return nil, err
-	}
 	opts := &packageJobOpts{
 		packageJobVars: vars,
 		ws:             ws,
 		store:          store,
 		runner:         command.New(),
-		sel:            sel,
+		sel:            selector.NewWorkspaceSelect(prompter, store, ws),
 		prompt:         prompter,
 	}
 	return opts, nil

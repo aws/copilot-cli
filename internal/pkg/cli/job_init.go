@@ -85,10 +85,6 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 	}
 
 	prompter := prompt.New()
-	sel, err := selector.NewWorkspaceSelect(prompter, store, ws)
-	if err != nil {
-		return nil, err
-	}
 	return &initJobOpts{
 		initJobVars: vars,
 
@@ -98,7 +94,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		appDeployer: cloudformation.New(sess),
 		prog:        termprogress.NewSpinner(),
 		prompt:      prompter,
-		sel:         sel,
+		sel:         selector.NewWorkspaceSelect(prompter, store, ws),
 	}, nil
 }
 
