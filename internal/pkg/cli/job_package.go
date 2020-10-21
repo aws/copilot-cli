@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -26,15 +25,6 @@ const (
 	jobPackageJobNamePrompt = "Which job would you like to generate a CloudFormation template for?"
 	jobPackageEnvNamePrompt = "Which environment would you like to package this stack for?"
 )
-
-var initPackageAddons = func(o *packageJobOpts) error {
-	addonsClient, err := addon.New(o.name)
-	if err != nil {
-		return fmt.Errorf("new addons client: %w", err)
-	}
-	o.addonsClient = addonsClient
-	return nil
-}
 
 type packageJobVars struct {
 	name      string
