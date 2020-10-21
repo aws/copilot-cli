@@ -31,7 +31,7 @@ type Addons struct {
 	ws     workspaceReader
 }
 
-// New creates an Addons object given a workload name and type.
+// New creates an Addons object given a workload name.
 func New(wlName string) (*Addons, error) {
 	ws, err := workspace.New()
 	if err != nil {
