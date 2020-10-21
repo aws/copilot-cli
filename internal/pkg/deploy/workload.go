@@ -13,6 +13,9 @@ const (
 	// file name when `service package` or `job package is called. It's also used to
 	// render the pipeline CFN template.
 	WorkloadCfnTemplateConfigurationNameFormat = "%s-%s.params.json"
+	// AddonsCfnTemplateNameFormat is the addons output file name when `service package`
+	// is called.
+	AddonsCfnTemplateNameFormat = "%s.addons.stack.yml"
 )
 
 // DeleteWorkloadInput holds the fields required to delete a workload.

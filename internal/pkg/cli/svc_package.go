@@ -328,7 +328,7 @@ func (o *packageSvcOpts) setOutputFileWriters() error {
 
 func (o *packageSvcOpts) setAddonsFileWriter() error {
 	addonsPath := filepath.Join(o.outputDir,
-		fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.name))
+		fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name))
 	addonsFile, err := o.fs.Create(addonsPath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", addonsPath, err)

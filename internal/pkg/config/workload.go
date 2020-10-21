@@ -14,10 +14,6 @@ import (
 )
 
 const (
-	// AddonsCfnTemplateNameFormat is the addons output file name when `service package`
-	// is called.
-	AddonsCfnTemplateNameFormat = "%s.addons.stack.yml"
-
 	svcWorkloadType = "service"
 	jobWorkloadType = "job"
 )
