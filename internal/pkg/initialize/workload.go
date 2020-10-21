@@ -67,7 +67,7 @@ type WorkloadProps struct {
 	Image          string
 }
 
-// JobProps contains the information needed to represent a Job
+// JobProps contains the information needed to represent a Job.
 type JobProps struct {
 	WorkloadProps
 	Schedule string
@@ -75,7 +75,7 @@ type JobProps struct {
 	Retries  int
 }
 
-// ServiceProps contains the information needed to represent a Service (port, HealthCheck, and workload common props)
+// ServiceProps contains the information needed to represent a Service (port, HealthCheck, and workload common props).
 type ServiceProps struct {
 	WorkloadProps
 	Port        uint16
