@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -306,7 +308,7 @@ func (o *packageSvcOpts) setOutputFileWriters() error {
 	}
 
 	templatePath := filepath.Join(o.outputDir,
-		fmt.Sprintf(config.WorkloadCfnTemplateNameFormat, o.name))
+		fmt.Sprintf(deploy.WorkloadCfnTemplateNameFormat, o.name))
 	templateFile, err := o.fs.Create(templatePath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", templatePath, err)
@@ -314,7 +316,7 @@ func (o *packageSvcOpts) setOutputFileWriters() error {
 	o.stackWriter = templateFile
 
 	paramsPath := filepath.Join(o.outputDir,
-		fmt.Sprintf(config.WorkloadCfnTemplateConfigurationNameFormat, o.name, o.envName))
+		fmt.Sprintf(deploy.WorkloadCfnTemplateConfigurationNameFormat, o.name, o.envName))
 	paramsFile, err := o.fs.Create(paramsPath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", paramsPath, err)
