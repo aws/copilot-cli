@@ -79,8 +79,8 @@ type AppEnvLister interface {
 	ListApplications() ([]*config.Application, error)
 }
 
-// ConfigWlLister wraps the method to list workloads in config store.
-type ConfigWlLister interface {
+// ConfigWorkloadLister wraps the method to list workloads in config store.
+type ConfigWorkloadLister interface {
 	ListServices(appName string) ([]*config.Workload, error)
 	ListJobs(appName string) ([]*config.Workload, error)
 }
@@ -88,7 +88,7 @@ type ConfigWlLister interface {
 // ConfigLister wraps config store listing methods.
 type ConfigLister interface {
 	AppEnvLister
-	ConfigWlLister
+	ConfigWorkloadLister
 }
 
 // WsWorkloadLister wraps the method to get workloads in current workspace.
@@ -119,7 +119,7 @@ type Select struct {
 // ConfigSelect is an application and environment selector, but can also choose a service from the config store.
 type ConfigSelect struct {
 	*Select
-	svcLister ConfigWlLister
+	svcLister ConfigWorkloadLister
 }
 
 // WorkspaceSelect  is an application and environment selector, but can also choose a service from the workspace.

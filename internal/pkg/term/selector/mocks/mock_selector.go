@@ -168,31 +168,31 @@ func (mr *MockAppEnvListerMockRecorder) ListApplications() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListApplications", reflect.TypeOf((*MockAppEnvLister)(nil).ListApplications))
 }
 
-// MockConfigWlLister is a mock of ConfigWlLister interface
-type MockConfigWlLister struct {
+// MockConfigWorkloadLister is a mock of ConfigWorkloadLister interface
+type MockConfigWorkloadLister struct {
 	ctrl     *gomock.Controller
-	recorder *MockConfigWlListerMockRecorder
+	recorder *MockConfigWorkloadListerMockRecorder
 }
 
-// MockConfigWlListerMockRecorder is the mock recorder for MockConfigWlLister
-type MockConfigWlListerMockRecorder struct {
-	mock *MockConfigWlLister
+// MockConfigWorkloadListerMockRecorder is the mock recorder for MockConfigWorkloadLister
+type MockConfigWorkloadListerMockRecorder struct {
+	mock *MockConfigWorkloadLister
 }
 
-// NewMockConfigWlLister creates a new mock instance
-func NewMockConfigWlLister(ctrl *gomock.Controller) *MockConfigWlLister {
-	mock := &MockConfigWlLister{ctrl: ctrl}
-	mock.recorder = &MockConfigWlListerMockRecorder{mock}
+// NewMockConfigWorkloadLister creates a new mock instance
+func NewMockConfigWorkloadLister(ctrl *gomock.Controller) *MockConfigWorkloadLister {
+	mock := &MockConfigWorkloadLister{ctrl: ctrl}
+	mock.recorder = &MockConfigWorkloadListerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockConfigWlLister) EXPECT() *MockConfigWlListerMockRecorder {
+func (m *MockConfigWorkloadLister) EXPECT() *MockConfigWorkloadListerMockRecorder {
 	return m.recorder
 }
 
 // ListServices mocks base method
-func (m *MockConfigWlLister) ListServices(appName string) ([]*config.Workload, error) {
+func (m *MockConfigWorkloadLister) ListServices(appName string) ([]*config.Workload, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListServices", appName)
 	ret0, _ := ret[0].([]*config.Workload)
@@ -201,13 +201,13 @@ func (m *MockConfigWlLister) ListServices(appName string) ([]*config.Workload, e
 }
 
 // ListServices indicates an expected call of ListServices
-func (mr *MockConfigWlListerMockRecorder) ListServices(appName interface{}) *gomock.Call {
+func (mr *MockConfigWorkloadListerMockRecorder) ListServices(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockConfigWlLister)(nil).ListServices), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockConfigWorkloadLister)(nil).ListServices), appName)
 }
 
 // ListJobs mocks base method
-func (m *MockConfigWlLister) ListJobs(appName string) ([]*config.Workload, error) {
+func (m *MockConfigWorkloadLister) ListJobs(appName string) ([]*config.Workload, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListJobs", appName)
 	ret0, _ := ret[0].([]*config.Workload)
@@ -216,9 +216,9 @@ func (m *MockConfigWlLister) ListJobs(appName string) ([]*config.Workload, error
 }
 
 // ListJobs indicates an expected call of ListJobs
-func (mr *MockConfigWlListerMockRecorder) ListJobs(appName interface{}) *gomock.Call {
+func (mr *MockConfigWorkloadListerMockRecorder) ListJobs(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockConfigWlLister)(nil).ListJobs), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockConfigWorkloadLister)(nil).ListJobs), appName)
 }
 
 // MockConfigLister is a mock of ConfigLister interface
