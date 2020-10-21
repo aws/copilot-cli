@@ -93,20 +93,12 @@ type WorkloadInitializer struct {
 
 // Service writes the service manifest, creates an ECR repository, and adds the service to SSM.
 func (w *WorkloadInitializer) Service(i *ServiceProps) (string, error) {
-	mf, err := w.newServiceManifest(i)
-	if err != nil {
-		return "", err
-	}
-	return w.initWorkload(i.WorkloadProps, svcWlType, mf, i.Port, "")
+	return w.initService(i)
 }
 
 // Job writes the job manifest, creates an ECR repository, and adds the job to SSM.
 func (w *WorkloadInitializer) Job(i *JobProps) (string, error) {
-	mf, err := newJobManifest(i)
-	if err != nil {
-		return "", err
-	}
-	return w.initWorkload(i.WorkloadProps, jobWlType, mf, 0, i.Schedule)
+	return w.initJob(i)
 }
 
 func (w *WorkloadInitializer) writeManifest(mf encoding.BinaryMarshaler, wlName string, wlType string) (string, error) {
@@ -142,10 +134,10 @@ func (w *WorkloadInitializer) addWlToStore(wl *config.Workload, wlType string) e
 	}
 }
 
-func (w *WorkloadInitializer) initWorkload(props WorkloadProps, wlType string, mf encoding.BinaryMarshaler, port uint16, sched string) (manifestPath string, err error) {
-	app, err := w.Store.GetApplication(props.App)
+func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
+	mf, err := newJobManifest(props)
 	if err != nil {
-		return "", fmt.Errorf("get application %s: %w", props.App, err)
+		return "", err
 	}
 
 	if props.DockerfilePath != "" {
@@ -157,43 +149,97 @@ func (w *WorkloadInitializer) initWorkload(props WorkloadProps, wlType string, m
 	}
 
 	var manifestExists bool
-	manifestPath, err = w.writeManifest(mf, props.Name, wlType)
+	manifestPath, err := w.writeManifest(mf, props.Name, jobWlType)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
-			return "", fmt.Errorf("write %s manifest: %w", wlType, err)
+			return "", fmt.Errorf("write %s manifest: %w", jobWlType, err)
 		}
 		manifestExists = true
 		manifestPath = e.FileName
 	}
-
 	manifestPath, err = relPath(manifestPath)
 	if err != nil {
 		return "", err
 	}
-
 	manifestMsgFmt := "Wrote the manifest for %s %s at %s\n"
 	if manifestExists {
 		manifestMsgFmt = "Manifest file for %s %s already exists at %s, skipping writing it.\n"
 	}
-	log.Successf(manifestMsgFmt, wlType, color.HighlightUserInput(props.Name), color.HighlightResource(manifestPath))
-	var helpText string
-	if wlType == jobWlType {
-		helpText = fmt.Sprintf("Your manifest contains configurations like your container size and job schedule (%s).", sched)
-	} else {
-		helpText = "Your manifest contains configurations like your container size and port."
-		if port != 0 {
-			helpText = fmt.Sprintf("Your manifest contains configurations like your container size and port (:%d).", port)
+	log.Successf(manifestMsgFmt, jobWlType, color.HighlightUserInput(props.Name), color.HighlightResource(manifestPath))
+	var sched = props.Schedule
+	if props.Schedule == "" {
+		sched = "None"
+	}
+	helpText := fmt.Sprintf("Your manifest contains configurations like your container size and job schedule (%s).", sched)
+	log.Infoln(color.Help(helpText))
+	log.Infoln()
+
+	err = w.addWlToAppAndSSM(props.WorkloadProps, jobWlType)
+	if err != nil {
+		return "", err
+	}
+	return manifestPath, nil
+}
+
+func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
+	mf, err := w.newServiceManifest(props)
+	if err != nil {
+		return "", err
+	}
+
+	if props.DockerfilePath != "" {
+		path, err := relativeDockerfilePath(w.Ws, props.DockerfilePath)
+		if err != nil {
+			return "", err
 		}
+		props.DockerfilePath = path
+	}
+
+	var manifestExists bool
+	manifestPath, err := w.writeManifest(mf, props.Name, svcWlType)
+	if err != nil {
+		e, ok := err.(*workspace.ErrFileExists)
+		if !ok {
+			return "", fmt.Errorf("write %s manifest: %w", svcWlType, err)
+		}
+		manifestExists = true
+		manifestPath = e.FileName
+	}
+	manifestPath, err = relPath(manifestPath)
+	if err != nil {
+		return "", err
+	}
+	manifestMsgFmt := "Wrote the manifest for %s %s at %s\n"
+	if manifestExists {
+		manifestMsgFmt = "Manifest file for %s %s already exists at %s, skipping writing it.\n"
+	}
+	log.Successf(manifestMsgFmt, svcWlType, color.HighlightUserInput(props.Name), color.HighlightResource(manifestPath))
+
+	helpText := "Your manifest contains configurations like your container size and port."
+	if props.Port != 0 {
+		helpText = fmt.Sprintf("Your manifest contains configurations like your container size and port (:%d).", props.Port)
 	}
 	log.Infoln(color.Help(helpText))
 	log.Infoln()
 
+	err = w.addWlToAppAndSSM(props.WorkloadProps, svcWlType)
+	if err != nil {
+		return "", err
+	}
+	return manifestPath, nil
+}
+
+func (w *WorkloadInitializer) addWlToAppAndSSM(props WorkloadProps, wlType string) error {
 	// add workload to application
+	app, err := w.Store.GetApplication(props.App)
+	if err != nil {
+		return fmt.Errorf("get application %s: %w", props.App, err)
+	}
 	w.Prog.Start(fmt.Sprintf(fmtAddWlToAppStart, wlType, props.Name))
 	if err := w.addWlToApp(app, props.Name, wlType); err != nil {
 		w.Prog.Stop(log.Serrorf(fmtAddWlToAppFailed, wlType, props.Name))
-		return "", fmt.Errorf("add %s %s to application %s: %w", wlType, props.Name, props.App, err)
+		return fmt.Errorf("add %s %s to application %s: %w", wlType, props.Name, props.App, err)
 	}
 	w.Prog.Stop(log.Ssuccessf(fmtAddWlToAppComplete, wlType, props.Name))
 
@@ -203,9 +249,10 @@ func (w *WorkloadInitializer) initWorkload(props WorkloadProps, wlType string, m
 		Name: props.Name,
 		Type: props.Type,
 	}, wlType); err != nil {
-		return "", fmt.Errorf("saving %s %s: %w", wlType, props.Name, err)
+		return fmt.Errorf("saving %s %s: %w", wlType, props.Name, err)
 	}
-	return manifestPath, nil
+
+	return nil
 }
 
 func newJobManifest(i *JobProps) (encoding.BinaryMarshaler, error) {

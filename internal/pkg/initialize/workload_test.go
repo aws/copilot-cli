@@ -126,12 +126,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				m.EXPECT().CopilotDirPath().Return("/resizer", nil)
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", errors.New("some error"))
 			},
-			mockstore: func(m *mocks.MockStore) {
-				m.EXPECT().GetApplication("app").Return(&config.Application{
-					Name:      "app",
-					AccountID: "1234",
-				}, nil)
-			},
+			mockstore: func(m *mocks.MockStore) {},
 			wantedErr: errors.New("write job manifest: some error"),
 		},
 		"app error": {
@@ -141,7 +136,10 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			inDockerfilePath: "resizer/Dockerfile",
 
 			inSchedule: "@hourly",
-
+			mockWriter: func(m *mocks.MockWorkspace) {
+				m.EXPECT().CopilotDirPath().Return("/copilot", nil)
+				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/copilot/resizer/manifest.yml", nil)
+			},
 			mockstore: func(m *mocks.MockStore) {
 				m.EXPECT().GetApplication(gomock.Any()).Return(nil, errors.New("some error"))
 			},
@@ -449,11 +447,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", errors.New("some error"))
 			},
 			mockstore: func(m *mocks.MockStore) {
-				m.EXPECT().ListServices("app").Return([]*config.Workload{}, nil)
-				m.EXPECT().GetApplication("app").Return(&config.Application{
-					Name:      "app",
-					AccountID: "1234",
-				}, nil)
+				m.EXPECT().ListServices("app")
 			},
 			wantedErr: errors.New("write service manifest: some error"),
 		},
@@ -464,6 +458,10 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inSvcPort:        80,
 			inDockerfilePath: "frontend/Dockerfile",
 
+			mockWriter: func(m *mocks.MockWorkspace) {
+				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/copilotfrontend/manifest.yml", nil)
+			},
 			mockstore: func(m *mocks.MockStore) {
 				m.EXPECT().ListServices("app")
 				m.EXPECT().GetApplication("app").Return(nil, errors.New("some error"))
