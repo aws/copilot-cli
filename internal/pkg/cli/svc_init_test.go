@@ -436,7 +436,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(&initialize.ServiceProps{
-					WorkloadProps: &initialize.WorkloadProps{
+					WorkloadProps: initialize.WorkloadProps{
 						App:            "sample",
 						Name:           "frontend",
 						Type:           "Load Balanced Web Service",

@@ -69,7 +69,7 @@ type WorkloadProps struct {
 
 // JobProps contains the information needed to represent a Job
 type JobProps struct {
-	*WorkloadProps
+	WorkloadProps
 	Schedule string
 	Timeout  string
 	Retries  int
@@ -77,7 +77,7 @@ type JobProps struct {
 
 // ServiceProps contains the information needed to represent a Service (port, HealthCheck, and workload common props)
 type ServiceProps struct {
-	*WorkloadProps
+	WorkloadProps
 	Port        uint16
 	HealthCheck *manifest.ContainerHealthCheck
 }
@@ -89,6 +89,24 @@ type WorkloadInitializer struct {
 	Deployer WorkloadAdder
 	Ws       Workspace
 	Prog     Prog
+}
+
+// Service writes the service manifest, creates an ECR repository, and adds the service to SSM.
+func (w *WorkloadInitializer) Service(i *ServiceProps) (string, error) {
+	mf, err := w.newServiceManifest(i)
+	if err != nil {
+		return "", err
+	}
+	return w.initWorkload(i.WorkloadProps, svcWlType, mf, i.Port, "")
+}
+
+// Job writes the job manifest, creates an ECR repository, and adds the job to SSM.
+func (w *WorkloadInitializer) Job(i *JobProps) (string, error) {
+	mf, err := newJobManifest(i)
+	if err != nil {
+		return "", err
+	}
+	return w.initWorkload(i.WorkloadProps, jobWlType, mf, 0, i.Schedule)
 }
 
 func (w *WorkloadInitializer) writeManifest(mf encoding.BinaryMarshaler, wlName string, wlType string) (string, error) {
@@ -124,7 +142,7 @@ func (w *WorkloadInitializer) addWlToStore(wl *config.Workload, wlType string) e
 	}
 }
 
-func (w *WorkloadInitializer) initWorkload(props *WorkloadProps, wlType string, mf encoding.BinaryMarshaler, port uint16, sched string) (manifestPath string, err error) {
+func (w *WorkloadInitializer) initWorkload(props WorkloadProps, wlType string, mf encoding.BinaryMarshaler, port uint16, sched string) (manifestPath string, err error) {
 	app, err := w.Store.GetApplication(props.App)
 	if err != nil {
 		return "", fmt.Errorf("get application %s: %w", props.App, err)
@@ -190,15 +208,6 @@ func (w *WorkloadInitializer) initWorkload(props *WorkloadProps, wlType string, 
 	return manifestPath, nil
 }
 
-// Job writes the job manifest, creates an ECR repository, and adds the job to SSM.
-func (w *WorkloadInitializer) Job(i *JobProps) (string, error) {
-	mf, err := newJobManifest(i)
-	if err != nil {
-		return "", err
-	}
-	return w.initWorkload(i.WorkloadProps, jobWlType, mf, 0, i.Schedule)
-}
-
 func newJobManifest(i *JobProps) (encoding.BinaryMarshaler, error) {
 	switch i.Type {
 	case manifest.ScheduledJobType:
@@ -216,15 +225,6 @@ func newJobManifest(i *JobProps) (encoding.BinaryMarshaler, error) {
 		return nil, fmt.Errorf("job type %s doesn't have a manifest", i.Type)
 
 	}
-}
-
-// Service writes the service manifest, creates an ECR repository, and adds the service to SSM.
-func (w *WorkloadInitializer) Service(i *ServiceProps) (string, error) {
-	mf, err := w.newServiceManifest(i)
-	if err != nil {
-		return "", err
-	}
-	return w.initWorkload(i.WorkloadProps, svcWlType, mf, i.Port, "")
 }
 
 func (w *WorkloadInitializer) newServiceManifest(i *ServiceProps) (encoding.BinaryMarshaler, error) {

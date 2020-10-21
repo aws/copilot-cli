@@ -396,7 +396,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 
 			mockJobInit: func(m *mocks.MockjobInitializer) {
 				m.EXPECT().Job(&initialize.JobProps{
-					WorkloadProps: &initialize.WorkloadProps{
+					WorkloadProps: initialize.WorkloadProps{
 						App:            "sample",
 						Name:           "mailer",
 						Type:           "Scheduled Job",

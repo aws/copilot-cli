@@ -232,7 +232,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			}
 
 			initJobProps := &JobProps{
-				WorkloadProps: &WorkloadProps{
+				WorkloadProps: WorkloadProps{
 					App:            tc.inAppName,
 					Name:           tc.inJobName,
 					DockerfilePath: tc.inDockerfilePath,
@@ -345,7 +345,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			}
 
 			props := ServiceProps{
-				WorkloadProps: &WorkloadProps{
+				WorkloadProps: WorkloadProps{
 					Name:           tc.inSvcName,
 					App:            tc.inAppName,
 					DockerfilePath: tc.inDockerfilePath,
@@ -694,7 +694,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 
 			// WHEN
 			_, err := initializer.Service(&ServiceProps{
-				WorkloadProps: &WorkloadProps{
+				WorkloadProps: WorkloadProps{
 					App:            tc.inAppName,
 					Name:           tc.inSvcName,
 					Type:           tc.inSvcType,
