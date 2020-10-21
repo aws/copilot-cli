@@ -430,3 +430,45 @@ func TestIsCorrectFormat(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateCron(t *testing.T) {
+	testCases := map[string]struct {
+		input      string
+		shouldPass bool
+	}{
+		"valid cron expression": {
+			input:      "* * * * *",
+			shouldPass: true,
+		},
+		"invalid cron": {
+			input:      "* * * * ? *",
+			shouldPass: false,
+		},
+		"valid schedule descriptor": {
+			input:      "@every 5m",
+			shouldPass: true,
+		},
+		"invalid schedule": {
+			input:      "@every 5 minutes",
+			shouldPass: false,
+		},
+		"bypass with rate()": {
+			input:      "rate(la la la)",
+			shouldPass: true,
+		},
+		"bypass with cron()": {
+			input:      "cron(0 9 3W * ? *)",
+			shouldPass: true,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := validateCron(tc.input)
+			if tc.shouldPass {
+				require.NoError(t, got)
+			} else {
+				require.NotNil(t, got)
+			}
+		})
+	}
+}
