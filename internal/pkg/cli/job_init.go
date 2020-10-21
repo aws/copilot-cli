@@ -74,10 +74,7 @@ func newInitJobOpts(vars initWkldVars) (*initJobOpts, error) {
 	)
 
 	prompter := prompt.New()
-	sel, err := selector.NewWorkspaceSelect(prompter, store, ws)
-	if err != nil {
-		return nil, err
-	}
+	sel := selector.NewWorkspaceSelect(prompter, store, ws)
 
 	return &initJobOpts{
 		initWkldVars: vars,

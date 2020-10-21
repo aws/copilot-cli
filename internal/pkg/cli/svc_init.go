@@ -110,10 +110,7 @@ func newInitSvcOpts(vars initWkldVars) (*initSvcOpts, error) {
 		return nil, err
 	}
 	prompter := prompt.New()
-	sel, err := selector.NewWorkspaceSelect(prompter, store, ws)
-	if err != nil {
-		return nil, err
-	}
+	sel := selector.NewWorkspaceSelect(prompter, store, ws)
 
 	initSvc := initialize.NewWorkloadInitializer(
 		store,
