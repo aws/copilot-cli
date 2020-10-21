@@ -169,26 +169,26 @@ func (o *packageJobOpts) newPackageCmd() (*packageSvcOpts, error) {
 	}
 	prompter := prompt.New()
 	packageCmd := &packageSvcOpts{
-		packageSvcVars{
-			o.name,
-			o.envName,
-			o.appName,
-			o.tag,
-			o.outputDir,
+		packageSvcVars: packageSvcVars{
+			name:      o.name,
+			envName:   o.envName,
+			appName:   o.appName,
+			tag:       o.tag,
+			outputDir: o.outputDir,
 		},
-		o.addonsClient,
-		initPackageAddonsClient,
-		ws,
-		store,
-		cloudformation.New(sess),
-		os.Stdout,
-		ioutil.Discard,
-		ioutil.Discard,
-		&afero.Afero{Fs: afero.NewOsFs()},
-		command.New(),
-		selector.NewWorkspaceSelect(prompter, store, ws),
-		prompter,
-		o.stackSerializer,
+		addonsClient:     o.addonsClient,
+		initAddonsClient: initPackageAddonsClient,
+		ws:               ws,
+		store:            store,
+		appCFN:           cloudformation.New(sess),
+		stackWriter:      os.Stdout,
+		paramsWriter:     ioutil.Discard,
+		addonsWriter:     ioutil.Discard,
+		fs:               &afero.Afero{Fs: afero.NewOsFs()},
+		runner:           command.New(),
+		sel:              selector.NewWorkspaceSelect(prompter, store, ws),
+		prompt:           prompter,
+		stackSerializer:  o.stackSerializer,
 	}
 	return packageCmd, nil
 }
