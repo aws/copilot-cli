@@ -76,7 +76,7 @@ logging:
     log_stream_prefix: copilot/
 ```
 
-You might need to add necessary permissions to the task role so that FireLens can forward your data. You can add permissions by specifying them in your [addons](/docs/developing/additional-aws-resources). For example:
+You might need to add necessary permissions to the task role so that FireLens can forward your data. You can add permissions by specifying them in your [addons](../developing/additional-aws-resources.md). For example:
 
 ``` yaml
 Resources:
@@ -100,7 +100,7 @@ Outputs:
 ```
 
 !!!info
-    Since Firelens log driver can route your main container's logs to various destinations, the [`svc logs`](/docs/commands/svc-logs) command can only track them when they are sent to the log group we create for Copilot service in CloudWatch. 
+    Since Firelens log driver can route your main container's logs to various destinations, the [`svc logs`](../commands/svc-logs.md) command can only track them when they are sent to the log group we create for Copilot service in CloudWatch. 
 
 !!!info
     ** We're going to make this easier and more powerful!** Currently we only support using remote images for sidecars which means users need to build and push their local sidecar image. But, we are planning to support using local image or Dockerfile. Additionally, Firelens will be able to route logs for the other sidecars (not just the main container).
