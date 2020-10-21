@@ -212,7 +212,11 @@ func (o *initJobOpts) createManifest() (string, error) {
 		manifestMsgFmt = "Manifest file for job %s already exists at %s, skipping writing it.\n"
 	}
 	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.name), color.HighlightResource(manifestPath))
-	log.Infoln(color.Help(fmt.Sprintf("Your manifest contains configurations like your container size and job schedule (%s).", o.schedule)))
+	scheduleText := o.schedule
+	if o.schedule == "" {
+		scheduleText = "None"
+	}
+	log.Infoln(color.Help(fmt.Sprintf("Your manifest contains configurations like your container size and job schedule (%s).", scheduleText)))
 	log.Infoln()
 
 	return manifestPath, nil
@@ -227,13 +231,17 @@ func (o *initJobOpts) newJobManifest() (*manifest.ScheduledJob, error) {
 		}
 		dfPath = path
 	}
+	schedule := o.schedule
+	if schedule == selector.NoSchedule {
+		schedule = ""
+	}
 	return manifest.NewScheduledJob(&manifest.ScheduledJobProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:       o.name,
 			Dockerfile: dfPath,
 			Image:      o.image,
 		},
-		Schedule: o.schedule,
+		Schedule: schedule,
 		Timeout:  o.timeout,
 		Retries:  o.retries,
 	}), nil
@@ -316,7 +324,6 @@ func (o *initJobOpts) askSchedule() error {
 	if err != nil {
 		return fmt.Errorf("get schedule: %w", err)
 	}
-
 	o.schedule = schedule
 	return nil
 }

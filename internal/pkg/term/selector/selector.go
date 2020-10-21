@@ -19,9 +19,12 @@ import (
 )
 
 const (
-	every         = "@every %s"
+	every = "@every %s"
+
 	rate          = "Rate"
 	fixedSchedule = "Fixed Schedule"
+	// NoSchedule represents a job which only contains the state machine, retries, task definition, and other infrastructure.
+	NoSchedule = "No Schedule"
 
 	custom  = "Custom"
 	hourly  = "Hourly"
@@ -54,6 +57,7 @@ For example: 0 17 ? * MON-FRI (5 pm on weekdays)
 var scheduleTypes = []string{
 	rate,
 	fixedSchedule,
+	NoSchedule,
 }
 
 var presetSchedules = []string{
@@ -518,6 +522,8 @@ func (s *WorkspaceSelect) Schedule(scheduleTypePrompt, scheduleTypeHelp string, 
 		return s.askRate(rateValidator)
 	case fixedSchedule:
 		return s.askCron(scheduleValidator)
+	case NoSchedule:
+		return "", nil
 	default:
 		return "", fmt.Errorf("unrecognized schedule type %s", scheduleType)
 	}

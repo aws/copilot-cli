@@ -9,8 +9,10 @@ Parameters:
     Type: String
   WorkloadName:
     Type: String
+  {{- if .ScheduleExpression}}
   Schedule:
     Type: String
+  {{- end}}
   ContainerImage:
     Type: String
   TaskCPU:
@@ -46,7 +48,9 @@ Resources:
 
 {{include "taskrole" . | indent 2}}
 
+{{- if .ScheduleExpression}}
 {{include "eventrule" . | indent 2}}
+{{- end}}
 
 {{include "state-machine" . | indent 2}}
 

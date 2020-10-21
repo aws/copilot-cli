@@ -23,8 +23,13 @@ cpu: {{.CPU}}
 # Amount of memory in MiB used by the task.
 memory: {{.Memory}}
 
-# The trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2h, 1h30m, 15m)
+# The trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2h, 1h30m, 15m).
+# If schedule is not set, you must programmatically invoke the job or define a Cloudwatch Event Rule via Copilot addons.
+{{- if .Schedule}}
 schedule: "{{.Schedule}}"
+{{- else}}
+#schedule: "0 12 * * MON-FRI"
+{{- end}}
 # Optional. The number of times to retry the job before failing.
 {{- if .Retries}}
 retries: {{.Retries}}

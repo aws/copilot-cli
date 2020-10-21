@@ -174,10 +174,6 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 			inputSchedule:  "@every 1h30m",
 			wantedSchedule: "rate(90 minutes)",
 		},
-		"missing schedule": {
-			inputSchedule: "",
-			wantedError:   errors.New(`missing required field "schedule" in manifest for job mailer`),
-		},
 		"one minute rate": {
 			inputSchedule:  "@every 1m",
 			wantedSchedule: "rate(1 minute)",

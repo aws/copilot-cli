@@ -158,6 +158,9 @@ func (j *ScheduledJob) Parameters() ([]*cloudformation.Parameter, error) {
 	if err != nil {
 		return nil, err
 	}
+	if schedule == "" {
+		return wkldParams, nil
+	}
 	return append(wkldParams, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(ScheduledJobScheduleParamKey),
@@ -181,7 +184,7 @@ func (j *ScheduledJob) SerializedParameters() (string, error) {
 // All others become cron expressions.
 func (j *ScheduledJob) awsSchedule() (string, error) {
 	if j.manifest.Schedule == "" {
-		return "", fmt.Errorf(`missing required field "schedule" in manifest for job %s`, j.name)
+		return "", nil
 	}
 
 	// Try parsing the string as a cron expression to validate it.
