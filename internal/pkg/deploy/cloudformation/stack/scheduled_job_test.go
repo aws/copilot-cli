@@ -266,6 +266,14 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 			inputSchedule:   "* * * malformed *",
 			wantedErrorType: &errScheduleInvalid{},
 		},
+		"passthrogh AWS flavored cron": {
+			inputSchedule:  "cron(0 * * * ? *)",
+			wantedSchedule: "cron(0 * * * ? *)",
+		},
+		"passthrough AWS flavored rate": {
+			inputSchedule:  "rate(5 minutes)",
+			wantedSchedule: "rate(5 minutes)",
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
