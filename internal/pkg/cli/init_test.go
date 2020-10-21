@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	climocks "github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -36,6 +37,7 @@ func TestInitOpts_Run(t *testing.T) {
 		},
 		"returns prompt error for service": {
 			expect: func(opts *initOpts) {
+				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any())
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initSvcCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(errors.New("my error"))
@@ -54,6 +56,7 @@ func TestInitOpts_Run(t *testing.T) {
 		},
 		"returns execute error for application": {
 			expect: func(opts *initOpts) {
+				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any())
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initSvcCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -77,6 +80,7 @@ func TestInitOpts_Run(t *testing.T) {
 		"deploys environment": {
 			inPromptForShouldDeploy: true,
 			expect: func(opts *initOpts) {
+				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(manifest.LoadBalancedWebServiceType, nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initSvcCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -113,6 +117,7 @@ func TestInitOpts_Run(t *testing.T) {
 			inPromptForShouldDeploy: true,
 			inShouldDeploy:          false,
 			expect: func(opts *initOpts) {
+				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(manifest.LoadBalancedWebServiceType, nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initSvcCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -146,10 +151,10 @@ func TestInitOpts_Run(t *testing.T) {
 				prompt: climocks.NewMockprompter(ctrl),
 
 				// These fields are used for logging, the values are not important for tests.
-				appName:  &mockAppName,
-				svcName:  &mockSvcName,
-				wkldType: &mockSvcType,
-				svcPort:  &mockAppPort,
+				appName: &mockAppName,
+				svcName: &mockSvcName,
+				svcType: &mockSvcType,
+				svcPort: &mockAppPort,
 			}
 			tc.expect(opts)
 

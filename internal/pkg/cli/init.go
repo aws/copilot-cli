@@ -63,25 +63,21 @@ type initOpts struct {
 	initJobCmd   actionCommand
 	initEnvCmd   actionCommand
 	deploySvcCmd actionCommand
+	deployJobCmd actionCommand
 
 	// Pointers to flag values part of sub-commands.
 	// Since the sub-commands implement the actionCommand interface, without pointers to their internal fields
 	// we have to resort to type-casting the interface. These pointers simplify data access.
-	svcAppName        *string
-	wkldType          *string
+	appName           *string
+	svcType           *string
+	jobType           *string
 	svcName           *string
+	jobName           *string
 	svcDockerfilePath *string
 	svcImage          *string
 	svcPort           *uint16
 
-	jobAppName        *string
-	jobWkldType       *string
-	jobName           *string
-	jobDockerfilePath *string
-	jobImage          *string
-	schedule          *string
-	retries           *int
-	timeout           *string
+	wkldVars initWkldVars
 
 	prompt prompter
 }
@@ -108,7 +104,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	initAppCmd := &initAppOpts{
 		initAppVars: initAppVars{
 			name: vars.appName,
@@ -120,8 +115,8 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		cfn:      deployer,
 		prog:     spin,
 	}
-	wkldInitter := &initialize.WorkloadInitializer{Store: ssm, Ws: ws, Prog: spin, Deployer: deployer}
-	wlkdVars := initWkldVars{
+	wlInitializer := &initialize.WorkloadInitializer{Store: ssm, Ws: ws, Prog: spin, Deployer: deployer}
+	wkldVars := initWkldVars{
 		appName:        vars.appName,
 		wkldType:       vars.wkldType,
 		name:           vars.svcName,
@@ -132,7 +127,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		retries:        vars.retries,
 		timeout:        vars.timeout,
 	}
-	wlInitializer := initialize.NewWorkloadInitializer(ssm, ws, spin, deployer)
 	initSvcCmd := &initSvcOpts{
 		initWkldVars: wkldVars,
 
@@ -183,6 +177,21 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		cmd:          command.New(),
 		sessProvider: sessProvider,
 	}
+	deployJobCmd := &deployJobOpts{
+		deployJobVars: deployJobVars{
+			envName:  defaultEnvironmentName,
+			imageTag: vars.imageTag,
+			appName:  vars.appName,
+		},
+		store:        ssm,
+		prompt:       prompt,
+		ws:           ws,
+		unmarshal:    manifest.UnmarshalWorkload,
+		sel:          sel,
+		spinner:      spin,
+		cmd:          command.New(),
+		sessProvider: sessProvider,
+	}
 
 	return &initOpts{
 		ShouldDeploy: vars.shouldDeploy,
@@ -192,19 +201,18 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		initJobCmd:   initJobCmd,
 		initEnvCmd:   initEnvCmd,
 		deploySvcCmd: deploySvcCmd,
+		deployJobCmd: deployJobCmd,
 
-		svcAppName:        &initAppCmd.name,
-		wkldType:          &initSvcCmd.wkldType,
-		jobWkldType:       &initJobCmd.wkldType,
+		appName:           &initAppCmd.name,
+		svcType:           &initSvcCmd.wkldType,
+		jobType:           &initJobCmd.wkldType,
 		svcName:           &initSvcCmd.name,
+		jobName:           &initJobCmd.name,
 		svcPort:           &initSvcCmd.port,
 		svcDockerfilePath: &initSvcCmd.dockerfilePath,
-		jobDockerfilePath: &initJobCmd.dockerfilePath,
 		svcImage:          &initSvcCmd.image,
-		jobImage:          &initJobCmd.image,
-		schedule:          &initJobCmd.schedule,
-		retries:           &initJobCmd.retries,
-		timeout:           &initJobCmd.timeout,
+
+		wkldVars: wkldVars,
 
 		prompt: prompt,
 	}, nil
@@ -224,24 +232,34 @@ containerized services that operate together.`))
 		return err
 	}
 
-	if err := o.loadSvc(); err != nil {
+	wlInitializeCmd, err := o.loadWkld()
+	if err != nil {
 		return err
 	}
-
+	var name string
+	if o.svcName == nil && o.jobName != nil {
+		name = *o.jobName
+	} else if o.svcName != nil && o.jobName == nil {
+		name = *o.svcName
+	} else {
+		return fmt.Errorf("can")
+	}
 	log.Infof("Ok great, we'll set up a %s named %s in application %s listening on port %s.\n",
-		color.HighlightUserInput(*o.wkldType), color.HighlightUserInput(*o.svcName), color.HighlightUserInput(*o.appName), color.HighlightUserInput(fmt.Sprintf("%d", *o.svcPort)))
+		color.HighlightUserInput(o.wkldVars.wkldType), color.HighlightUserInput(name), color.HighlightUserInput(*o.appName), color.HighlightUserInput(fmt.Sprintf("%d", *o.svcPort)))
 	log.Infoln()
 	if err := o.initAppCmd.Execute(); err != nil {
 		return fmt.Errorf("execute app init: %w", err)
 	}
-	if err := o.initSvcCmd.Execute(); err != nil {
-		return fmt.Errorf("execute svc init: %w", err)
+	if err := wlInitializeCmd.Execute(); err != nil {
+		return fmt.Errorf("execute job or svc init: %w", err)
 	}
 
 	if err := o.deployEnv(); err != nil {
 		return err
 	}
-
+	if o.wkldVars.wkldType == manifest.ScheduledJobType {
+		return o.deployJob()
+	}
 	return o.deploySvc()
 }
 
@@ -255,22 +273,57 @@ func (o *initOpts) loadApp() error {
 	return nil
 }
 
-func (o *initOpts) loadWkld() error {
-	wkldType, err := o.askWorkload()
-	if initSvcOpts, ok := o.initSvcCmd.(*initSvcOpts); ok {
-		// Set the application name from app init to the service init command.
-		initSvcOpts.appName = *o.appName
+func (o *initOpts) loadWkld() (actionCommand, error) {
+	cmd, err := o.loadWkldCmd()
+	if err != nil {
+		return nil, err
+	}
+	if err := cmd.Ask(); err != nil {
+		return nil, fmt.Errorf("ask job or svc init: %w", err)
+	}
+	if err := cmd.Validate(); err != nil {
+		return nil, fmt.Errorf("validate job or svc init: %w", err)
 	}
 
-	if err := o.initSvcCmd.Ask(); err != nil {
-		return fmt.Errorf("ask svc init: %w", err)
+	return cmd, nil
+}
+
+func (o *initOpts) loadWkldCmd() (actionCommand, error) {
+	wkldType, err := o.askWorkload()
+	if err != nil {
+		return nil, err
 	}
-	return o.initSvcCmd.Validate()
+	o.wkldVars.wkldType = wkldType
+
+	switch wkldType {
+	case manifest.ScheduledJobType:
+		cmd, ok := o.initJobCmd.(*initJobOpts)
+		if !ok {
+			return nil, fmt.Errorf("build job init command")
+		}
+		cmd.wkldType = wkldType
+		cmd.appName = *o.appName
+		o.jobName = &cmd.name
+		return cmd, nil
+	case manifest.LoadBalancedWebServiceType:
+		fallthrough
+	case manifest.BackendServiceType:
+		cmd, ok := o.initSvcCmd.(*initSvcOpts)
+		if !ok {
+			return nil, fmt.Errorf("build svc init command")
+		}
+		cmd.wkldType = wkldType
+		cmd.appName = *o.appName
+		o.svcName = &cmd.name
+		return cmd, nil
+	default:
+		return nil, fmt.Errorf("invalid job or service type %s", wkldType)
+	}
 }
 
 func (o *initOpts) askWorkload() (string, error) {
-	if o.wkldType != nil {
-		return "", nil
+	if o.wkldVars.wkldType != "" {
+		return o.wkldVars.wkldType, nil
 	}
 	wkldInitTypePrompt := "Which " + color.Emphasize("workload type") + " best represents your architecture?"
 	// Build the workload help prompt from existing helps text.
@@ -289,7 +342,7 @@ func (o *initOpts) askWorkload() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("select service type: %w", err)
 	}
-
+	o.wkldVars.wkldType = t
 	return t, nil
 }
 
@@ -330,6 +383,22 @@ func (o *initOpts) deploySvc() error {
 	return o.deploySvcCmd.Execute()
 }
 
+func (o *initOpts) deployJob() error {
+	if !o.ShouldDeploy {
+		return nil
+	}
+	if deployOpts, ok := o.deployJobCmd.(*deployJobOpts); ok {
+		// Set the service's name and app name to the deploy sub-command.
+		deployOpts.name = *o.jobName
+		deployOpts.appName = *o.appName
+	}
+
+	if err := o.deployJobCmd.Ask(); err != nil {
+		return err
+	}
+	return o.deployJobCmd.Execute()
+}
+
 func (o *initOpts) askShouldDeploy() error {
 	v, err := o.prompt.Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt, prompt.WithFinalMessage("Deploy:"))
 	if err != nil {
@@ -367,7 +436,7 @@ func BuildInitCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
-	cmd.Flags().StringVarP(&vars.svcName, svcFlag, svcFlagShort, "", svcFlagDescription)
+	cmd.Flags().StringVarP(&vars.svcName, nameFlag, svcFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.wkldType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
