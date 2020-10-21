@@ -395,12 +395,14 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			wantedManifestPath: "manifest/path",
 
 			mockJobInit: func(m *mocks.MockjobInitializer) {
-				m.EXPECT().Job(&initialize.WorkloadProps{
-					App:            "sample",
-					Name:           "mailer",
-					Type:           "Scheduled Job",
-					DockerfilePath: "./Dockerfile",
-					Schedule:       "@hourly",
+				m.EXPECT().Job(&initialize.JobProps{
+					WorkloadProps: &initialize.WorkloadProps{
+						App:            "sample",
+						Name:           "mailer",
+						Type:           "Scheduled Job",
+						DockerfilePath: "./Dockerfile",
+					},
+					Schedule: "@hourly",
 				}).Return("manifest/path", nil)
 			},
 		},

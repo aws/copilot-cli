@@ -435,12 +435,14 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			inSvcPort: 80,
 
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
-				m.EXPECT().Service(&initialize.WorkloadProps{
-					App:            "sample",
-					Name:           "frontend",
-					Type:           "Load Balanced Web Service",
-					DockerfilePath: "./Dockerfile",
-					Port:           80,
+				m.EXPECT().Service(&initialize.ServiceProps{
+					WorkloadProps: &initialize.WorkloadProps{
+						App:            "sample",
+						Name:           "frontend",
+						Type:           "Load Balanced Web Service",
+						DockerfilePath: "./Dockerfile",
+					},
+					Port: 80,
 				}).Return("manifest/path", nil)
 			},
 

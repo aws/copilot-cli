@@ -4600,7 +4600,7 @@ func (m *MockjobInitializer) EXPECT() *MockjobInitializerMockRecorder {
 }
 
 // Job mocks base method
-func (m *MockjobInitializer) Job(props *initialize.WorkloadProps) (string, error) {
+func (m *MockjobInitializer) Job(props *initialize.JobProps) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Job", props)
 	ret0, _ := ret[0].(string)
@@ -4638,7 +4638,7 @@ func (m *MocksvcInitializer) EXPECT() *MocksvcInitializerMockRecorder {
 }
 
 // Service mocks base method
-func (m *MocksvcInitializer) Service(props *initialize.WorkloadProps) (string, error) {
+func (m *MocksvcInitializer) Service(props *initialize.ServiceProps) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Service", props)
 	ret0, _ := ret[0].(string)

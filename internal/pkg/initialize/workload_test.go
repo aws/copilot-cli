@@ -29,8 +29,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 		inRetries  int
 		inTimeout  string
 
-		inPort uint16
-
 		mockWriter      func(m *mocks.MockWorkspace)
 		mockstore       func(m *mocks.MockStore)
 		mockappDeployer func(m *mocks.MockWorkloadAdder)
@@ -233,16 +231,17 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				mockappDeployer,
 			)
 
-			initJobProps := &WorkloadProps{
-				App:            tc.inAppName,
-				Name:           tc.inJobName,
-				DockerfilePath: tc.inDockerfilePath,
-				Image:          tc.inImage,
-				Type:           tc.inJobType,
-				Schedule:       tc.inSchedule,
-				Retries:        tc.inRetries,
-				Timeout:        tc.inTimeout,
-				Port:           tc.inPort,
+			initJobProps := &JobProps{
+				WorkloadProps: &WorkloadProps{
+					App:            tc.inAppName,
+					Name:           tc.inJobName,
+					DockerfilePath: tc.inDockerfilePath,
+					Image:          tc.inImage,
+					Type:           tc.inJobType,
+				},
+				Schedule: tc.inSchedule,
+				Retries:  tc.inRetries,
+				Timeout:  tc.inTimeout,
 			}
 
 			// WHEN
@@ -345,11 +344,13 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				tc.mockstore(mockstore)
 			}
 
-			props := WorkloadProps{
-				Name:           tc.inSvcName,
-				App:            tc.inAppName,
-				DockerfilePath: tc.inDockerfilePath,
-				Port:           tc.inSvcPort,
+			props := ServiceProps{
+				WorkloadProps: &WorkloadProps{
+					Name:           tc.inSvcName,
+					App:            tc.inAppName,
+					DockerfilePath: tc.inDockerfilePath,
+				},
+				Port: tc.inSvcPort,
 			}
 
 			initter := &WorkloadInitializer{
@@ -464,7 +465,8 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockstore: func(m *mocks.MockStore) {
-				m.EXPECT().GetApplication(gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().ListServices("app")
+				m.EXPECT().GetApplication("app").Return(nil, errors.New("some error"))
 			},
 			wantedErr: errors.New("get application app: some error"),
 		},
@@ -691,14 +693,16 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			)
 
 			// WHEN
-			_, err := initializer.Service(&WorkloadProps{
-				App:            tc.inAppName,
-				Name:           tc.inSvcName,
-				Type:           tc.inSvcType,
-				DockerfilePath: tc.inDockerfilePath,
-				Image:          tc.inImage,
-				Port:           tc.inSvcPort,
-				HealthCheck:    tc.inHealthCheck,
+			_, err := initializer.Service(&ServiceProps{
+				WorkloadProps: &WorkloadProps{
+					App:            tc.inAppName,
+					Name:           tc.inSvcName,
+					Type:           tc.inSvcType,
+					DockerfilePath: tc.inDockerfilePath,
+					Image:          tc.inImage,
+				},
+				Port:        tc.inSvcPort,
+				HealthCheck: tc.inHealthCheck,
 			})
 
 			// THEN

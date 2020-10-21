@@ -435,9 +435,9 @@ type ec2Client interface {
 }
 
 type jobInitializer interface {
-	Job(props *initialize.WorkloadProps) (string, error)
+	Job(props *initialize.JobProps) (string, error)
 }
 
 type svcInitializer interface {
-	Service(props *initialize.WorkloadProps) (string, error)
+	Service(props *initialize.ServiceProps) (string, error)
 }

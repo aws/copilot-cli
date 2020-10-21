@@ -216,13 +216,14 @@ func (o *initSvcOpts) Ask() error {
 
 // Execute writes the service's manifest file and stores the service in SSM.
 func (o *initSvcOpts) Execute() error {
-	manifestPath, err := o.init.Service(&initialize.WorkloadProps{
-		App:            o.appName,
-		Name:           o.name,
-		Type:           o.wkldType,
-		DockerfilePath: o.dockerfilePath,
-		Image:          o.image,
-
+	manifestPath, err := o.init.Service(&initialize.ServiceProps{
+		WorkloadProps: &initialize.WorkloadProps{
+			App:            o.appName,
+			Name:           o.name,
+			Type:           o.wkldType,
+			DockerfilePath: o.dockerfilePath,
+			Image:          o.image,
+		},
 		Port:        o.port,
 		HealthCheck: o.hc,
 	})

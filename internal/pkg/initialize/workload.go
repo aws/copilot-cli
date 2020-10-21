@@ -64,11 +64,19 @@ type WorkloadProps struct {
 	Name           string
 	DockerfilePath string
 	Image          string
+}
 
+// JobProps contains the information needed to represent a Job
+type JobProps struct {
+	*WorkloadProps
 	Schedule string
 	Timeout  string
 	Retries  int
+}
 
+// ServiceProps contains the information needed to represent a Service (port, HealthCheck, and workload common props)
+type ServiceProps struct {
+	*WorkloadProps
 	Port        uint16
 	HealthCheck *manifest.ContainerHealthCheck
 }
@@ -90,17 +98,6 @@ func NewWorkloadInitializer(s Store, ws Workspace, p Prog, d WorkloadAdder) *Wor
 		Ws:       ws,
 		Prog:     p,
 		Deployer: d,
-	}
-}
-
-func (w *WorkloadInitializer) createManifest(props *WorkloadProps, wlType string) (encoding.BinaryMarshaler, error) {
-	switch wlType {
-	case svcWlType:
-		return w.newServiceManifest(props)
-	case jobWlType:
-		return newJobManifest(props)
-	default:
-		return nil, fmt.Errorf(fmtErrUnrecognizedWlType, wlType)
 	}
 }
 
@@ -137,7 +134,7 @@ func (w *WorkloadInitializer) addWlToStore(wl *config.Workload, wlType string) e
 	}
 }
 
-func (w *WorkloadInitializer) initWorkload(props *WorkloadProps, wlType string) (manifestPath string, err error) {
+func (w *WorkloadInitializer) initWorkload(props *WorkloadProps, wlType string, mf encoding.BinaryMarshaler, port uint16, sched string) (manifestPath string, err error) {
 	app, err := w.Store.GetApplication(props.App)
 	if err != nil {
 		return "", fmt.Errorf("get application %s: %w", props.App, err)
@@ -149,11 +146,6 @@ func (w *WorkloadInitializer) initWorkload(props *WorkloadProps, wlType string) 
 			return "", err
 		}
 		props.DockerfilePath = path
-	}
-
-	mf, err := w.createManifest(props, wlType)
-	if err != nil {
-		return "", err
 	}
 
 	var manifestExists bool
@@ -179,11 +171,11 @@ func (w *WorkloadInitializer) initWorkload(props *WorkloadProps, wlType string) 
 	log.Successf(manifestMsgFmt, wlType, color.HighlightUserInput(props.Name), color.HighlightResource(manifestPath))
 	var helpText string
 	if wlType == jobWlType {
-		helpText = fmt.Sprintf("Your manifest contains configurations like your container size and job schedule (%s).", props.Schedule)
+		helpText = fmt.Sprintf("Your manifest contains configurations like your container size and job schedule (%s).", sched)
 	} else {
 		helpText = "Your manifest contains configurations like your container size and port."
-		if props.Port != 0 {
-			helpText = fmt.Sprintf("Your manifest contains configurations like your container size and port (:%d).", props.Port)
+		if port != 0 {
+			helpText = fmt.Sprintf("Your manifest contains configurations like your container size and port (:%d).", port)
 		}
 	}
 	log.Infoln(color.Help(helpText))
@@ -209,11 +201,15 @@ func (w *WorkloadInitializer) initWorkload(props *WorkloadProps, wlType string) 
 }
 
 // Job writes the job manifest, creates an ECR repository, and adds the job to SSM.
-func (w *WorkloadInitializer) Job(i *WorkloadProps) (string, error) {
-	return w.initWorkload(i, jobWlType)
+func (w *WorkloadInitializer) Job(i *JobProps) (string, error) {
+	mf, err := newJobManifest(i)
+	if err != nil {
+		return "", err
+	}
+	return w.initWorkload(i.WorkloadProps, jobWlType, mf, 0, i.Schedule)
 }
 
-func newJobManifest(i *WorkloadProps) (encoding.BinaryMarshaler, error) {
+func newJobManifest(i *JobProps) (encoding.BinaryMarshaler, error) {
 	switch i.Type {
 	case manifest.ScheduledJobType:
 		return manifest.NewScheduledJob(&manifest.ScheduledJobProps{
@@ -233,11 +229,15 @@ func newJobManifest(i *WorkloadProps) (encoding.BinaryMarshaler, error) {
 }
 
 // Service writes the service manifest, creates an ECR repository, and adds the service to SSM.
-func (w *WorkloadInitializer) Service(i *WorkloadProps) (string, error) {
-	return w.initWorkload(i, svcWlType)
+func (w *WorkloadInitializer) Service(i *ServiceProps) (string, error) {
+	mf, err := w.newServiceManifest(i)
+	if err != nil {
+		return "", err
+	}
+	return w.initWorkload(i.WorkloadProps, svcWlType, mf, i.Port, "")
 }
 
-func (w *WorkloadInitializer) newServiceManifest(i *WorkloadProps) (encoding.BinaryMarshaler, error) {
+func (w *WorkloadInitializer) newServiceManifest(i *ServiceProps) (encoding.BinaryMarshaler, error) {
 	switch i.Type {
 	case manifest.LoadBalancedWebServiceType:
 		return w.newLoadBalancedWebServiceManifest(i)
@@ -248,7 +248,7 @@ func (w *WorkloadInitializer) newServiceManifest(i *WorkloadProps) (encoding.Bin
 	}
 }
 
-func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *WorkloadProps) (*manifest.LoadBalancedWebService, error) {
+func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *ServiceProps) (*manifest.LoadBalancedWebService, error) {
 	props := &manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:       i.Name,
@@ -273,7 +273,7 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *WorkloadProps
 	return manifest.NewLoadBalancedWebService(props), nil
 }
 
-func newBackendServiceManifest(i *WorkloadProps) (*manifest.BackendService, error) {
+func newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error) {
 	return manifest.NewBackendService(manifest.BackendServiceProps{
 		WorkloadProps: manifest.WorkloadProps{
 			Name:       i.Name,

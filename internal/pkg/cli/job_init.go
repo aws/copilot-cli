@@ -151,12 +151,14 @@ func (o *initJobOpts) Ask() error {
 
 // Execute writes the job's manifest file, creates an ECR repo, and stores the name in SSM.
 func (o *initJobOpts) Execute() error {
-	manifestPath, err := o.init.Job(&initialize.WorkloadProps{
-		App:            o.appName,
-		Name:           o.name,
-		Type:           o.wkldType,
-		DockerfilePath: o.dockerfilePath,
-		Image:          o.image,
+	manifestPath, err := o.init.Job(&initialize.JobProps{
+		WorkloadProps: &initialize.WorkloadProps{
+			App:            o.appName,
+			Name:           o.name,
+			Type:           o.wkldType,
+			DockerfilePath: o.dockerfilePath,
+			Image:          o.image,
+		},
 
 		Schedule: o.schedule,
 		Timeout:  o.timeout,
