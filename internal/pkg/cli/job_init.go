@@ -11,6 +11,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -31,43 +32,24 @@ jobs or those which require specific execution schedules.`
 )
 
 const (
-	fmtAddJobToAppStart    = "Creating ECR repositories for job %s."
-	fmtAddJobToAppFailed   = "Failed to create ECR repositories for job %s.\n"
-	fmtAddJobToAppComplete = "Created ECR repositories for job %s.\n"
-)
-
-const (
 	job = "job"
 )
 
-type initJobVars struct {
-	appName        string
-	name           string
-	dockerfilePath string
-	image          string
-	timeout        string
-	retries        int
-	schedule       string
-	jobType        string
-}
-
 type initJobOpts struct {
-	initJobVars
+	initWkldVars
 
 	// Interfaces to interact with dependencies.
-	fs          afero.Fs
-	ws          jobDirManifestWriter
-	store       store
-	appDeployer appDeployer
-	prog        progress
-	prompt      prompter
-	sel         initJobSelector
+	fs     afero.Fs
+	store  store
+	init   jobInitializer
+	prompt prompter
+	sel    initJobSelector
 
 	// Outputs stored on successful actions.
 	manifestPath string
 }
 
-func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
+func newInitJobOpts(vars initWkldVars) (*initJobOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't connect to config store: %w", err)
@@ -84,24 +66,31 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		return nil, err
 	}
 
-	prompter := prompt.New()
-	return &initJobOpts{
-		initJobVars: vars,
+	jobInitter := &initialize.WorkloadInitializer{
+		Store:    store,
+		Ws:       ws,
+		Prog:     termprogress.NewSpinner(),
+		Deployer: cloudformation.New(sess),
+	}
 
-		fs:          &afero.Afero{Fs: afero.NewOsFs()},
-		store:       store,
-		ws:          ws,
-		appDeployer: cloudformation.New(sess),
-		prog:        termprogress.NewSpinner(),
-		prompt:      prompter,
-		sel:         selector.NewWorkspaceSelect(prompter, store, ws),
+	prompter := prompt.New()
+	sel := selector.NewWorkspaceSelect(prompter, store, ws)
+
+	return &initJobOpts{
+		initWkldVars: vars,
+
+		fs:     &afero.Afero{Fs: afero.NewOsFs()},
+		store:  store,
+		init:   jobInitter,
+		prompt: prompter,
+		sel:    sel,
 	}, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initJobOpts) Validate() error {
-	if o.jobType != "" {
-		if err := validateJobType(o.jobType); err != nil {
+	if o.wkldType != "" {
+		if err := validateJobType(o.wkldType); err != nil {
 			return err
 		}
 	}
@@ -157,94 +146,34 @@ func (o *initJobOpts) Ask() error {
 	return nil
 }
 
-// Execute writes the job's manifest file and stores the name in SSM.
+// Execute writes the job's manifest file, creates an ECR repo, and stores the name in SSM.
 func (o *initJobOpts) Execute() error {
-	app, err := o.store.GetApplication(o.appName)
-	if err != nil {
-		return fmt.Errorf("get application %s: %w", o.appName, err)
-	}
+	manifestPath, err := o.init.Job(&initialize.JobProps{
+		WorkloadProps: initialize.WorkloadProps{
+			App:            o.appName,
+			Name:           o.name,
+			Type:           o.wkldType,
+			DockerfilePath: o.dockerfilePath,
+			Image:          o.image,
+		},
 
-	manifestPath, err := o.createManifest()
+		Schedule: o.schedule,
+		Timeout:  o.timeout,
+		Retries:  o.retries,
+	})
 	if err != nil {
 		return err
 	}
 	o.manifestPath = manifestPath
-
-	o.prog.Start(fmt.Sprintf(fmtAddJobToAppStart, o.name))
-	if err := o.appDeployer.AddJobToApp(app, o.name); err != nil {
-		o.prog.Stop(log.Serrorf(fmtAddJobToAppFailed, o.name))
-		return fmt.Errorf("add job %s to application %s: %w", o.name, o.appName, err)
-	}
-	o.prog.Stop(log.Ssuccessf(fmtAddJobToAppComplete, o.name))
-
-	if err := o.store.CreateJob(&config.Workload{
-		App:  o.appName,
-		Name: o.name,
-		Type: o.jobType,
-	}); err != nil {
-		return fmt.Errorf("saving job %s: %w", o.name, err)
-	}
 	return nil
 }
 
-func (o *initJobOpts) createManifest() (string, error) {
-	manifest, err := o.newJobManifest()
-	if err != nil {
-		return "", err
-	}
-	var manifestExists bool
-	manifestPath, err := o.ws.WriteJobManifest(manifest, o.name)
-	if err != nil {
-		e, ok := err.(*workspace.ErrFileExists)
-		if !ok {
-			return "", err
-		}
-		manifestExists = true
-		manifestPath = e.FileName
-	}
-	manifestPath, err = relPath(manifestPath)
-	if err != nil {
-		return "", err
-	}
-
-	manifestMsgFmt := "Wrote the manifest for job %s at %s\n"
-	if manifestExists {
-		manifestMsgFmt = "Manifest file for job %s already exists at %s, skipping writing it.\n"
-	}
-	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.name), color.HighlightResource(manifestPath))
-	log.Infoln(color.Help(fmt.Sprintf("Your manifest contains configurations like your container size and job schedule (%s).", o.schedule)))
-	log.Infoln()
-
-	return manifestPath, nil
-}
-
-func (o *initJobOpts) newJobManifest() (*manifest.ScheduledJob, error) {
-	var dfPath string
-	if o.dockerfilePath != "" {
-		path, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
-		if err != nil {
-			return nil, err
-		}
-		dfPath = path
-	}
-	return manifest.NewScheduledJob(&manifest.ScheduledJobProps{
-		WorkloadProps: &manifest.WorkloadProps{
-			Name:       o.name,
-			Dockerfile: dfPath,
-			Image:      o.image,
-		},
-		Schedule: o.schedule,
-		Timeout:  o.timeout,
-		Retries:  o.retries,
-	}), nil
-}
-
 func (o *initJobOpts) askJobType() error {
-	if o.jobType != "" {
+	if o.wkldType != "" {
 		return nil
 	}
 	// short circuit since there's only one valid job type.
-	o.jobType = manifest.ScheduledJobType
+	o.wkldType = manifest.ScheduledJobType
 	return nil
 }
 
@@ -254,7 +183,7 @@ func (o *initJobOpts) askJobName() error {
 	}
 
 	name, err := o.prompt.Get(
-		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.jobType)),
+		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.wkldType)),
 		fmt.Sprintf(fmtWkldInitNameHelpPrompt, job, o.appName),
 		validateSvcName,
 		prompt.WithFinalMessage("Job name:"),
@@ -333,7 +262,7 @@ func (o *initJobOpts) RecommendedActions() []string {
 
 // buildJobInitCmd builds the command for creating a new job.
 func buildJobInitCmd() *cobra.Command {
-	vars := initJobVars{}
+	vars := initWkldVars{}
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a new scheduled job in an application.",
@@ -366,7 +295,7 @@ func buildJobInitCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", jobFlagDescription)
-	cmd.Flags().StringVarP(&vars.jobType, jobTypeFlag, jobTypeFlagShort, "", jobTypeFlagDescription)
+	cmd.Flags().StringVarP(&vars.wkldType, jobTypeFlag, jobTypeFlagShort, "", jobTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.schedule, scheduleFlag, scheduleFlagShort, "", scheduleFlagDescription)
 	cmd.Flags().StringVar(&vars.timeout, timeoutFlag, "", timeoutFlagDescription)

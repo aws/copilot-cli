@@ -17,6 +17,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/ecslogging"
+	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -204,35 +205,12 @@ type wsFileDeleter interface {
 	DeleteWorkspaceFile() error
 }
 
-type dockerfileLister interface {
-	ListDockerfiles() ([]string, error)
-}
-
 type svcManifestReader interface {
 	ReadServiceManifest(svcName string) ([]byte, error)
 }
 
 type jobManifestReader interface {
 	ReadJobManifest(jobName string) ([]byte, error)
-}
-
-type svcManifestWriter interface {
-	dockerfileLister
-	WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
-}
-
-type svcDirManifestWriter interface {
-	svcManifestWriter
-	copilotDirGetter
-}
-
-type jobManifestWriter interface {
-	WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error)
-}
-
-type jobDirManifestWriter interface {
-	jobManifestWriter
-	copilotDirGetter
 }
 
 type copilotDirGetter interface {
@@ -452,6 +430,14 @@ type credsSelector interface {
 
 type ec2Client interface {
 	HasDNSSupport(vpcID string) (bool, error)
+}
+
+type jobInitializer interface {
+	Job(props *initialize.JobProps) (string, error)
+}
+
+type svcInitializer interface {
+	Service(props *initialize.ServiceProps) (string, error)
 }
 
 type roleDeleter interface {

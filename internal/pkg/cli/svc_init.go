@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"encoding"
 	"fmt"
 	"strconv"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -48,10 +48,6 @@ You should set this to the port which your Dockerfile uses to communicate with t
 )
 
 const (
-	fmtAddSvcToAppStart    = "Creating ECR repositories for service %s."
-	fmtAddSvcToAppFailed   = "Failed to create ECR repositories for service %s.\n"
-	fmtAddSvcToAppComplete = "Created ECR repositories for service %s.\n"
-
 	wkldInitImagePrompt     = `What's the location of the image to use?`
 	wkldInitImagePromptHelp = `The name of an existing Docker image. Images in the Docker Hub registry are available by default.
 Other repositories are specified with either repository-url/image:tag or repository-url/image@digest`
@@ -62,37 +58,42 @@ const (
 	service              = "service"
 )
 
-type initSvcVars struct {
+type initWkldVars struct {
 	appName        string
-	serviceType    string
+	wkldType       string
 	name           string
 	dockerfilePath string
 	image          string
-	port           uint16
+
+	port uint16
+
+	timeout  string
+	retries  int
+	schedule string
 }
 
 type initSvcOpts struct {
-	initSvcVars
+	initWkldVars
 
 	// Interfaces to interact with dependencies.
-	fs          afero.Fs
-	ws          svcDirManifestWriter
-	store       store
-	appDeployer appDeployer
-	prog        progress
-	prompt      prompter
-	df          dockerfileParser
+	fs     afero.Fs
+	init   svcInitializer
+	prompt prompter
+	df     dockerfileParser
 
 	sel dockerfileSelector
 
 	// Outputs stored on successful actions.
 	manifestPath string
 
-	// sets up Dockerfile parser using fs and input path
+	// Sets up Dockerfile parser using fs and input path
 	setupParser func(*initSvcOpts)
+
+	// Parsed healthcheck from Dockerfile. Placed here, not in initWkldVars, so staticcheck realizes it's used.
+	hc *manifest.ContainerHealthCheck
 }
 
-func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
+func newInitSvcOpts(vars initWkldVars) (*initSvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't connect to config store: %w", err)
@@ -109,16 +110,21 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		return nil, err
 	}
 	prompter := prompt.New()
-	return &initSvcOpts{
-		initSvcVars: vars,
+	sel := selector.NewWorkspaceSelect(prompter, store, ws)
 
-		fs:          &afero.Afero{Fs: afero.NewOsFs()},
-		store:       store,
-		ws:          ws,
-		appDeployer: cloudformation.New(sess),
-		prog:        termprogress.NewSpinner(),
-		prompt:      prompter,
-		sel:         selector.NewWorkspaceSelect(prompter, store, ws),
+	initSvc := &initialize.WorkloadInitializer{
+		Store:    store,
+		Ws:       ws,
+		Prog:     termprogress.NewSpinner(),
+		Deployer: cloudformation.New(sess),
+	}
+	return &initSvcOpts{
+		initWkldVars: vars,
+
+		fs:     &afero.Afero{Fs: afero.NewOsFs()},
+		init:   initSvc,
+		prompt: prompter,
+		sel:    sel,
 
 		setupParser: func(o *initSvcOpts) {
 			o.df = dockerfile.New(o.fs, o.dockerfilePath)
@@ -131,8 +137,8 @@ func (o *initSvcOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
-	if o.serviceType != "" {
-		if err := validateSvcType(o.serviceType); err != nil {
+	if o.wkldType != "" {
+		if err := validateSvcType(o.wkldType); err != nil {
 			return err
 		}
 	}
@@ -169,11 +175,13 @@ func (o *initSvcOpts) Ask() error {
 	if err != nil {
 		return err
 	}
+
 	if !dfSelected {
 		if err := o.askImage(); err != nil {
 			return err
 		}
 	}
+
 	if err := o.askSvcPort(); err != nil {
 		return err
 	}
@@ -183,131 +191,35 @@ func (o *initSvcOpts) Ask() error {
 
 // Execute writes the service's manifest file and stores the service in SSM.
 func (o *initSvcOpts) Execute() error {
-	app, err := o.store.GetApplication(o.appName)
+	// Check for a valid healthcheck and add it to the opts.
+	var hc *manifest.ContainerHealthCheck
+	hc, err := o.parseHealthCheck()
 	if err != nil {
-		return fmt.Errorf("get application %s: %w", o.appName, err)
+		return err
 	}
 
-	manifestPath, err := o.createManifest()
+	o.hc = hc
+
+	manifestPath, err := o.init.Service(&initialize.ServiceProps{
+		WorkloadProps: initialize.WorkloadProps{
+			App:            o.appName,
+			Name:           o.name,
+			Type:           o.wkldType,
+			DockerfilePath: o.dockerfilePath,
+			Image:          o.image,
+		},
+		Port:        o.port,
+		HealthCheck: o.hc,
+	})
 	if err != nil {
 		return err
 	}
 	o.manifestPath = manifestPath
-
-	o.prog.Start(fmt.Sprintf(fmtAddSvcToAppStart, o.name))
-	if err := o.appDeployer.AddServiceToApp(app, o.name); err != nil {
-		o.prog.Stop(log.Serrorf(fmtAddSvcToAppFailed, o.name))
-		return fmt.Errorf("add service %s to application %s: %w", o.name, o.appName, err)
-	}
-	o.prog.Stop(log.Ssuccessf(fmtAddSvcToAppComplete, o.name))
-
-	if err := o.store.CreateService(&config.Workload{
-		App:  o.appName,
-		Name: o.name,
-		Type: o.serviceType,
-	}); err != nil {
-		return fmt.Errorf("saving service %s: %w", o.name, err)
-	}
 	return nil
 }
 
-func (o *initSvcOpts) createManifest() (string, error) {
-	manifest, err := o.newManifest()
-	if err != nil {
-		return "", err
-	}
-	var manifestExists bool
-	manifestPath, err := o.ws.WriteServiceManifest(manifest, o.name)
-	if err != nil {
-		e, ok := err.(*workspace.ErrFileExists)
-		if !ok {
-			return "", err
-		}
-		manifestExists = true
-		manifestPath = e.FileName
-	}
-	manifestPath, err = relPath(manifestPath)
-	if err != nil {
-		return "", err
-	}
-
-	manifestMsgFmt := "Wrote the manifest for service %s at %s\n"
-	if manifestExists {
-		manifestMsgFmt = "Manifest file for service %s already exists at %s, skipping writing it.\n"
-	}
-	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.name), color.HighlightResource(manifestPath))
-	msg := "Your manifest contains configurations like your container size and port."
-	if o.port != 0 {
-		msg = fmt.Sprintf("Your manifest contains configurations like your container size and port (:%d).", o.port)
-	}
-	log.Infoln(color.Help(msg))
-	log.Infoln()
-
-	return manifestPath, nil
-}
-
-func (o *initSvcOpts) newManifest() (encoding.BinaryMarshaler, error) {
-	var dfPath string
-	if o.dockerfilePath != "" {
-		path, err := relativeDockerfilePath(o.ws, o.dockerfilePath)
-		if err != nil {
-			return nil, err
-		}
-		dfPath = path
-	}
-	switch o.serviceType {
-	case manifest.LoadBalancedWebServiceType:
-		return o.newLoadBalancedWebServiceManifest(dfPath)
-	case manifest.BackendServiceType:
-		return o.newBackendServiceManifest(dfPath)
-	default:
-		return nil, fmt.Errorf("service type %s doesn't have a manifest", o.serviceType)
-	}
-}
-
-func (o *initSvcOpts) newLoadBalancedWebServiceManifest(dockerfilePath string) (*manifest.LoadBalancedWebService, error) {
-	props := &manifest.LoadBalancedWebServiceProps{
-		WorkloadProps: &manifest.WorkloadProps{
-			Name:       o.name,
-			Dockerfile: dockerfilePath,
-			Image:      o.image,
-		},
-		Port: o.port,
-		Path: "/",
-	}
-	existingSvcs, err := o.store.ListServices(o.appName)
-	if err != nil {
-		return nil, err
-	}
-	// We default to "/" for the first service, but if there's another
-	// Load Balanced Web Service, we use the svc name as the default, instead.
-	for _, existingSvc := range existingSvcs {
-		if existingSvc.Type == manifest.LoadBalancedWebServiceType && existingSvc.Name != o.name {
-			props.Path = o.name
-			break
-		}
-	}
-	return manifest.NewLoadBalancedWebService(props), nil
-}
-
-func (o *initSvcOpts) newBackendServiceManifest(dockerfilePath string) (*manifest.BackendService, error) {
-	hc, err := o.parseHealthCheck()
-	if err != nil {
-		return nil, err
-	}
-	return manifest.NewBackendService(manifest.BackendServiceProps{
-		WorkloadProps: manifest.WorkloadProps{
-			Name:       o.name,
-			Dockerfile: dockerfilePath,
-			Image:      o.image,
-		},
-		Port:        o.port,
-		HealthCheck: hc,
-	}), nil
-}
-
 func (o *initSvcOpts) askSvcType() error {
-	if o.serviceType != "" {
+	if o.wkldType != "" {
 		return nil
 	}
 
@@ -320,7 +232,7 @@ func (o *initSvcOpts) askSvcType() error {
 	if err != nil {
 		return fmt.Errorf("select service type: %w", err)
 	}
-	o.serviceType = t
+	o.wkldType = t
 	return nil
 }
 
@@ -330,7 +242,7 @@ func (o *initSvcOpts) askSvcName() error {
 	}
 
 	name, err := o.prompt.Get(
-		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.serviceType)),
+		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.wkldType)),
 		fmt.Sprintf(fmtWkldInitNameHelpPrompt, service, o.appName),
 		validateSvcName,
 		prompt.WithFinalMessage("Service name:"))
@@ -378,19 +290,27 @@ func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 	return true, nil
 }
 
-func (o *initSvcOpts) askSvcPort() error {
+func (o *initSvcOpts) askSvcPort() (err error) {
+	// See if we can get a healthcheck from the dockerfile.
+	o.setupParser(o)
+
+	// If the port flag was set, use that and don't ask.
 	if o.port != 0 {
 		return nil
 	}
 
-	defaultPort := defaultSvcPortString
-	if o.dockerfilePath != "" {
-		o.setupParser(o)
-		ports, err := o.df.GetExposedPorts()
-		// Ignore any errors in dockerfile parsing--we'll use the default instead.
+	var ports []uint16
+	if o.dockerfilePath != "" && o.image == "" {
+		// Check for exposed ports.
+		ports, err = o.df.GetExposedPorts()
+		// Ignore any errors in dockerfile parsing--we'll use the default port instead.
 		if err != nil {
 			log.Debugln(err.Error())
 		}
+	}
+
+	defaultPort := defaultSvcPortString
+	if o.dockerfilePath != "" {
 		switch len(ports) {
 		case 0:
 			// There were no ports detected, keep the default port prompt.
@@ -402,7 +322,7 @@ func (o *initSvcOpts) askSvcPort() error {
 		}
 	}
 	// Skip asking if it is a backend service.
-	if o.serviceType == manifest.BackendServiceType {
+	if o.wkldType == manifest.BackendServiceType {
 		return nil
 	}
 
@@ -428,7 +348,7 @@ func (o *initSvcOpts) askSvcPort() error {
 }
 
 func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error) {
-	if o.dockerfilePath == "" {
+	if o.dockerfilePath == "" || o.wkldType != manifest.BackendServiceType {
 		return nil, nil
 	}
 	o.setupParser(o)
@@ -460,7 +380,7 @@ func (o *initSvcOpts) RecommendedActions() []string {
 
 // buildSvcInitCmd build the command for creating a new service.
 func buildSvcInitCmd() *cobra.Command {
-	vars := initSvcVars{}
+	vars := initWkldVars{}
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a new service in an application.",
@@ -496,7 +416,7 @@ This command is also run as part of "copilot init".`,
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)
-	cmd.Flags().StringVarP(&vars.serviceType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)
+	cmd.Flags().StringVarP(&vars.wkldType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 
