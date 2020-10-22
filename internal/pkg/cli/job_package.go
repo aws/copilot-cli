@@ -143,7 +143,7 @@ func buildJobPackageCmd() *cobra.Command {
   Write the CloudFormation stack and configuration to a "infrastructure/" sub-directory instead of printing.
   /code $ copilot job package -n report-generator -e test --output-dir ./infrastructure
   /code $ ls ./infrastructure
-  /code report-generator.stack.yml      report-generator-test.config.yml`,
+  /code report-generator-test.stack.yml      report-generator-test.params.yml`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newPackageJobOpts(vars)
 			if err != nil {

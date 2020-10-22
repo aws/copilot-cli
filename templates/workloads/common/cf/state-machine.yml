@@ -1,6 +1,7 @@
 StateMachine:
   Type: AWS::StepFunctions::StateMachine
   Properties:
+    StateMachineName: !Sub '${AppName}-${EnvName}-${WorkloadName}'
     RoleArn: !GetAtt StateMachineRole.Arn
     LoggingConfiguration:
       Destinations:
