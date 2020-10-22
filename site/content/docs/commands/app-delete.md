@@ -10,13 +10,12 @@ $ copilot app delete [flags]
 ## What are the flags?
 
 ```bash
-    --env-profiles stringToString   Optional. Environments and the profile to use to delete the environment. (default [])
 -h, --help                          help for delete
     --yes                           Skips confirmation prompt.
 ```
 
 ## Examples
-Force delete the application with environments "test" and "prod".
+Force delete the application.
 ```bash
-$ copilot app delete --yes --env-profiles test=default,prod=prod-profile
+$ copilot app delete --yes 
 ```

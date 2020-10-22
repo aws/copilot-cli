@@ -137,7 +137,7 @@ const (
 	appFlagDescription      = "Name of the application."
 	envFlagDescription      = "Name of the environment."
 	svcFlagDescription      = "Name of the service."
-	jobFlagDescription      = "Name of the scheduled job."
+	jobFlagDescription      = "Name of the job."
 	pipelineFlagDescription = "Name of the pipeline."
 	profileFlagDescription  = "Name of the profile."
 	yesFlagDescription      = "Skips confirmation prompt."
@@ -217,7 +217,9 @@ Tasks with the same group name share the same set of resources.
 Accepts valid Go duration strings. For example: "2h", "1h30m", "900s".`
 	scheduleFlagDescription = `The schedule on which to run this job. 
 Accepts cron expressions of the format (M H DoM M DoW) and schedule definition strings. 
-For example: "0 * * * *", "@daily", "@weekly", "@every 1h30m".`
+For example: "0 * * * *", "@daily", "@weekly", "@every 1h30m".
+AWS Schedule Expressions of the form "rate(10 minutes)" or "cron(0 12 L * ? 2021)"
+are also accepted.`
 
 	upgradeAllEnvsDescription = "Optional. Upgrade all environments."
 )

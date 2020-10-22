@@ -23,8 +23,11 @@ cpu: {{.CPU}}
 # Amount of memory in MiB used by the task.
 memory: {{.Memory}}
 
-# The trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2h, 1h30m, 15m)
-schedule: "{{.Schedule}}"
+on:
+  # The scheduled trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2h, 1h30m, 15m)
+  # AWS Schedule Expressions are also accepted: https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html
+  schedule: "{{.On.Schedule}}"
+
 # Optional. The number of times to retry the job before failing.
 {{- if .Retries}}
 retries: {{.Retries}}

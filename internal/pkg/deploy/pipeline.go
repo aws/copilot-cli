@@ -170,7 +170,7 @@ type PipelineStage struct {
 // WorkloadTemplatePath returns the full path to the workload CFN template
 // built during the build stage.
 func (s *PipelineStage) WorkloadTemplatePath(wlName string) string {
-	return fmt.Sprintf(WorkloadCfnTemplateNameFormat, wlName)
+	return fmt.Sprintf(WorkloadCfnTemplateNameFormat, wlName, s.Name)
 }
 
 // WorkloadTemplateConfigurationPath returns the full path to the workload CFN
