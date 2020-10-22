@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -103,21 +104,20 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		cfn:      deployer,
 		prog:     spin,
 	}
+	wkldInitter := &initialize.WorkloadInitializer{Store: ssm, Ws: ws, Prog: spin, Deployer: deployer}
 	initSvcCmd := &initSvcOpts{
-		initSvcVars: initSvcVars{
-			serviceType:    vars.svcType,
+		initWkldVars: initWkldVars{
+			wkldType:       vars.svcType,
 			name:           vars.svcName,
 			dockerfilePath: vars.dockerfilePath,
 			port:           vars.port,
 			appName:        vars.appName,
 		},
-		fs:          &afero.Afero{Fs: afero.NewOsFs()},
-		ws:          ws,
-		store:       ssm,
-		appDeployer: deployer,
-		prog:        spin,
-		sel:         sel,
-		prompt:      prompt,
+		fs: &afero.Afero{Fs: afero.NewOsFs()},
+
+		init:   wkldInitter,
+		sel:    sel,
+		prompt: prompt,
 		setupParser: func(o *initSvcOpts) {
 			o.df = dockerfile.New(o.fs, o.dockerfilePath)
 		},
@@ -163,7 +163,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		deploySvcCmd: deploySvcCmd,
 
 		appName:        &initAppCmd.name,
-		svcType:        &initSvcCmd.serviceType,
+		svcType:        &initSvcCmd.wkldType,
 		svcName:        &initSvcCmd.name,
 		svcPort:        &initSvcCmd.port,
 		dockerfilePath: &initSvcCmd.dockerfilePath,

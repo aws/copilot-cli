@@ -484,3 +484,16 @@ type ErrDockerfileNotFound struct {
 func (e *ErrDockerfileNotFound) Error() string {
 	return fmt.Sprintf("no Dockerfiles found within %s or a sub-directory level below", e.dir)
 }
+
+// RelPath returns the path relative to the current working directory.
+func RelPath(fullPath string) (string, error) {
+	wkdir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("get working directory: %w", err)
+	}
+	path, err := filepath.Rel(wkdir, fullPath)
+	if err != nil {
+		return "", fmt.Errorf("get relative path of file: %w", err)
+	}
+	return path, nil
+}
