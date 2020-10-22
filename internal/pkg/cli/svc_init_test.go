@@ -406,6 +406,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 		inSvcType        string
 		inSvcName        string
 		inDockerfilePath string
+		inImage          string
 		inAppName        string
 
 		wantedErr          error
@@ -455,6 +456,48 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 
 			wantedManifestPath: "manifest/path",
 		},
+		"doesn't parse dockerfile if image specified (backend)": {
+			inAppName:        "sample",
+			inSvcName:        "backend",
+			inDockerfilePath: "",
+			inImage:          "nginx:latest",
+			inSvcType:        manifest.BackendServiceType,
+
+			mockSvcInit: func(m *mocks.MocksvcInitializer) {
+				m.EXPECT().Service(&initialize.ServiceProps{
+					WorkloadProps: initialize.WorkloadProps{
+						App:   "sample",
+						Name:  "backend",
+						Type:  "Backend Service",
+						Image: "nginx:latest",
+					},
+				}).Return("manifest/path", nil)
+			},
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
+
+			wantedManifestPath: "manifest/path",
+		},
+		"doesn't parse dockerfile if image specified (lb-web)": {
+			inAppName:        "sample",
+			inSvcName:        "frontend",
+			inDockerfilePath: "",
+			inImage:          "nginx:latest",
+			inSvcType:        manifest.LoadBalancedWebServiceType,
+
+			mockSvcInit: func(m *mocks.MocksvcInitializer) {
+				m.EXPECT().Service(&initialize.ServiceProps{
+					WorkloadProps: initialize.WorkloadProps{
+						App:   "sample",
+						Name:  "frontend",
+						Type:  "Load Balanced Web Service",
+						Image: "nginx:latest",
+					},
+				}).Return("manifest/path", nil)
+			},
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
+
+			wantedManifestPath: "manifest/path",
+		},
 		"failure": {
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(gomock.Any()).Return("", errors.New("some error"))
@@ -485,6 +528,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 					name:           tc.inSvcName,
 					wkldType:       tc.inSvcType,
 					dockerfilePath: tc.inDockerfilePath,
+					image:          tc.inImage,
 					port:           tc.inSvcPort,
 				},
 				init:        mockSvcInitializer,
