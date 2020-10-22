@@ -54,13 +54,14 @@ type initVars struct {
 }
 
 type initOpts struct {
+	initVars
+
 	ShouldDeploy          bool // true means we should create a test environment and deploy the service to it. Defaults to false.
 	promptForShouldDeploy bool // true means that the user set the ShouldDeploy flag explicitly.
 
 	// Sub-commands to execute.
 	initAppCmd   actionCommand
-	initSvcCmd   actionCommand
-	initJobCmd   actionCommand
+	initWlCmd    actionCommand
 	initEnvCmd   actionCommand
 	deploySvcCmd actionCommand
 	deployJobCmd actionCommand
@@ -68,18 +69,13 @@ type initOpts struct {
 	// Pointers to flag values part of sub-commands.
 	// Since the sub-commands implement the actionCommand interface, without pointers to their internal fields
 	// we have to resort to type-casting the interface. These pointers simplify data access.
-	appName           *string
-	svcType           *string
-	jobType           *string
-	svcName           *string
-	jobName           *string
-	svcDockerfilePath *string
-	svcImage          *string
-	svcPort           *uint16
+	appName *string
 
-	wkldVars initWkldVars
+	initWkldVars *initWkldVars
 
 	prompt prompter
+
+	setupWorkoadInit func(*initOpts, string) error
 }
 
 func newInitOpts(vars initVars) (*initOpts, error) {
@@ -114,37 +110,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		identity: id,
 		cfn:      deployer,
 		prog:     spin,
-	}
-	wlInitializer := &initialize.WorkloadInitializer{Store: ssm, Ws: ws, Prog: spin, Deployer: deployer}
-	wkldVars := initWkldVars{
-		appName:        vars.appName,
-		wkldType:       vars.wkldType,
-		name:           vars.svcName,
-		dockerfilePath: vars.dockerfilePath,
-		image:          vars.image,
-		port:           vars.port,
-		schedule:       vars.schedule,
-		retries:        vars.retries,
-		timeout:        vars.timeout,
-	}
-	initSvcCmd := &initSvcOpts{
-		initWkldVars: wkldVars,
-
-		fs:     &afero.Afero{Fs: afero.NewOsFs()},
-		init:   wlInitializer,
-		sel:    sel,
-		prompt: prompt,
-		setupParser: func(o *initSvcOpts) {
-			o.df = dockerfile.New(o.fs, o.dockerfilePath)
-		},
-	}
-	initJobCmd := &initJobOpts{
-		initWkldVars: wkldVars,
-
-		fs:     &afero.Afero{Fs: afero.NewOsFs()},
-		init:   wlInitializer,
-		sel:    sel,
-		prompt: prompt,
 	}
 	initEnvCmd := &initEnvOpts{
 		initEnvVars: initEnvVars{
@@ -194,27 +159,64 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 
 	return &initOpts{
+		initVars:     vars,
 		ShouldDeploy: vars.shouldDeploy,
 
 		initAppCmd:   initAppCmd,
-		initSvcCmd:   initSvcCmd,
-		initJobCmd:   initJobCmd,
 		initEnvCmd:   initEnvCmd,
 		deploySvcCmd: deploySvcCmd,
 		deployJobCmd: deployJobCmd,
 
-		appName:           &initAppCmd.name,
-		svcType:           &initSvcCmd.wkldType,
-		jobType:           &initJobCmd.wkldType,
-		svcName:           &initSvcCmd.name,
-		jobName:           &initJobCmd.name,
-		svcPort:           &initSvcCmd.port,
-		svcDockerfilePath: &initSvcCmd.dockerfilePath,
-		svcImage:          &initSvcCmd.image,
-
-		wkldVars: wkldVars,
+		appName: &initAppCmd.name,
 
 		prompt: prompt,
+
+		setupWorkoadInit: func(o *initOpts, wkldType string) error {
+			wlInitializer := &initialize.WorkloadInitializer{Store: ssm, Ws: ws, Prog: spin, Deployer: deployer}
+			wkldVars := initWkldVars{
+				appName:        *o.appName,
+				wkldType:       wkldType,
+				name:           vars.svcName,
+				dockerfilePath: vars.dockerfilePath,
+				image:          vars.image,
+				port:           vars.port,
+				schedule:       vars.schedule,
+				retries:        vars.retries,
+				timeout:        vars.timeout,
+			}
+			switch wkldType {
+			case manifest.ScheduledJobType:
+				opts := initJobOpts{
+					initWkldVars: wkldVars,
+
+					fs:     &afero.Afero{Fs: afero.NewOsFs()},
+					init:   wlInitializer,
+					sel:    sel,
+					prompt: prompt,
+				}
+				o.initWlCmd = &opts
+				o.initWkldVars = &opts.initWkldVars
+			case manifest.LoadBalancedWebServiceType:
+				fallthrough
+			case manifest.BackendServiceType:
+				opts := initSvcOpts{
+					initWkldVars: wkldVars,
+
+					fs:     &afero.Afero{Fs: afero.NewOsFs()},
+					init:   wlInitializer,
+					sel:    sel,
+					prompt: prompt,
+					setupParser: func(o *initSvcOpts) {
+						o.df = dockerfile.New(o.fs, o.dockerfilePath)
+					},
+				}
+				o.initWlCmd = &opts
+				o.initWkldVars = &opts.initWkldVars
+			default:
+				return fmt.Errorf("unrecognized workload type")
+			}
+			return nil
+		},
 	}, nil
 }
 
@@ -232,32 +234,29 @@ containerized services that operate together.`))
 		return err
 	}
 
-	wlInitializeCmd, err := o.loadWkld()
-	if err != nil {
+	if err := o.loadWkld(); err != nil {
 		return err
 	}
-	var name string
-	if o.svcName == nil && o.jobName != nil {
-		name = *o.jobName
-	} else if o.svcName != nil && o.jobName == nil {
-		name = *o.svcName
+	if o.initWkldVars.wkldType == manifest.ScheduledJobType {
+		log.Infof("Ok great, we'll set up a %s named %s in application %s running on the schedule %s.\n",
+			color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(o.initWkldVars.schedule))
 	} else {
-		return fmt.Errorf("can")
+		log.Infof("Ok great, we'll set up a %s named %s in application %s listening on port %s.\n",
+			color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(fmt.Sprintf("%d", o.initWkldVars.port)))
 	}
-	log.Infof("Ok great, we'll set up a %s named %s in application %s listening on port %s.\n",
-		color.HighlightUserInput(o.wkldVars.wkldType), color.HighlightUserInput(name), color.HighlightUserInput(*o.appName), color.HighlightUserInput(fmt.Sprintf("%d", *o.svcPort)))
+
 	log.Infoln()
 	if err := o.initAppCmd.Execute(); err != nil {
 		return fmt.Errorf("execute app init: %w", err)
 	}
-	if err := wlInitializeCmd.Execute(); err != nil {
+	if err := o.initWlCmd.Execute(); err != nil {
 		return fmt.Errorf("execute job or svc init: %w", err)
 	}
 
 	if err := o.deployEnv(); err != nil {
 		return err
 	}
-	if o.wkldVars.wkldType == manifest.ScheduledJobType {
+	if o.initWkldVars.wkldType == manifest.ScheduledJobType {
 		return o.deployJob()
 	}
 	return o.deploySvc()
@@ -273,57 +272,36 @@ func (o *initOpts) loadApp() error {
 	return nil
 }
 
-func (o *initOpts) loadWkld() (actionCommand, error) {
-	cmd, err := o.loadWkldCmd()
+func (o *initOpts) loadWkld() error {
+	err := o.loadWkldCmd()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if err := cmd.Ask(); err != nil {
-		return nil, fmt.Errorf("ask job or svc init: %w", err)
+	if err := o.initWlCmd.Ask(); err != nil {
+		return fmt.Errorf("ask job or svc init: %w", err)
 	}
-	if err := cmd.Validate(); err != nil {
-		return nil, fmt.Errorf("validate job or svc init: %w", err)
+	if err := o.initWlCmd.Validate(); err != nil {
+		return fmt.Errorf("validate job or svc init: %w", err)
 	}
 
-	return cmd, nil
+	return nil
 }
 
-func (o *initOpts) loadWkldCmd() (actionCommand, error) {
+func (o *initOpts) loadWkldCmd() error {
 	wkldType, err := o.askWorkload()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	o.wkldVars.wkldType = wkldType
+	if err := o.setupWorkoadInit(o, wkldType); err != nil {
+		return err
+	}
 
-	switch wkldType {
-	case manifest.ScheduledJobType:
-		cmd, ok := o.initJobCmd.(*initJobOpts)
-		if !ok {
-			return nil, fmt.Errorf("build job init command")
-		}
-		cmd.wkldType = wkldType
-		cmd.appName = *o.appName
-		o.jobName = &cmd.name
-		return cmd, nil
-	case manifest.LoadBalancedWebServiceType:
-		fallthrough
-	case manifest.BackendServiceType:
-		cmd, ok := o.initSvcCmd.(*initSvcOpts)
-		if !ok {
-			return nil, fmt.Errorf("build svc init command")
-		}
-		cmd.wkldType = wkldType
-		cmd.appName = *o.appName
-		o.svcName = &cmd.name
-		return cmd, nil
-	default:
-		return nil, fmt.Errorf("invalid job or service type %s", wkldType)
-	}
+	return nil
 }
 
 func (o *initOpts) askWorkload() (string, error) {
-	if o.wkldVars.wkldType != "" {
-		return o.wkldVars.wkldType, nil
+	if o.wkldType != "" {
+		return o.wkldType, nil
 	}
 	wkldInitTypePrompt := "Which " + color.Emphasize("workload type") + " best represents your architecture?"
 	// Build the workload help prompt from existing helps text.
@@ -342,7 +320,7 @@ func (o *initOpts) askWorkload() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("select service type: %w", err)
 	}
-	o.wkldVars.wkldType = t
+	o.wkldType = t
 	return t, nil
 }
 
@@ -373,7 +351,7 @@ func (o *initOpts) deploySvc() error {
 	}
 	if deployOpts, ok := o.deploySvcCmd.(*deploySvcOpts); ok {
 		// Set the service's name and app name to the deploy sub-command.
-		deployOpts.name = *o.svcName
+		deployOpts.name = o.initWkldVars.name
 		deployOpts.appName = *o.appName
 	}
 
@@ -389,7 +367,7 @@ func (o *initOpts) deployJob() error {
 	}
 	if deployOpts, ok := o.deployJobCmd.(*deployJobOpts); ok {
 		// Set the service's name and app name to the deploy sub-command.
-		deployOpts.name = *o.jobName
+		deployOpts.name = o.initWkldVars.name
 		deployOpts.appName = *o.appName
 	}
 
@@ -428,7 +406,7 @@ func BuildInitCmd() *cobra.Command {
 				log.Info("\nNo problem, you can deploy your service later:\n")
 				log.Infof("- Run %s to create your staging environment.\n",
 					color.HighlightCode(fmt.Sprintf("copilot env init --name %s --profile %s --app %s", defaultEnvironmentName, defaultEnvironmentProfile, *opts.appName)))
-				for _, followup := range opts.initSvcCmd.RecommendedActions() {
+				for _, followup := range opts.initWlCmd.RecommendedActions() {
 					log.Infof("- %s\n", followup)
 				}
 			}

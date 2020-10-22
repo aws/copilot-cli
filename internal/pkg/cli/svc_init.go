@@ -88,9 +88,6 @@ type initSvcOpts struct {
 
 	// Sets up Dockerfile parser using fs and input path
 	setupParser func(*initSvcOpts)
-
-	// Parsed healthcheck from Dockerfile. Placed here, not in initWkldVars, so staticcheck realizes it's used.
-	hc *manifest.ContainerHealthCheck
 }
 
 func newInitSvcOpts(vars initWkldVars) (*initSvcOpts, error) {
@@ -198,8 +195,6 @@ func (o *initSvcOpts) Execute() error {
 		return err
 	}
 
-	o.hc = hc
-
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -209,7 +204,7 @@ func (o *initSvcOpts) Execute() error {
 			Image:          o.image,
 		},
 		Port:        o.port,
-		HealthCheck: o.hc,
+		HealthCheck: hc,
 	})
 	if err != nil {
 		return err
