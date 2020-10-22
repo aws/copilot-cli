@@ -81,17 +81,18 @@ The configuration for the event that triggers your job.
 <span class="parent-field">on.</span><a id="on-schedule" href="#on-schedule" class="field">`schedule`</a> <span class="type">String</span>  
 You can specify a rate to periodically trigger your job, supported rates:
 
-* @yearly
-* @monthly
-* @weekly
-* @daily
-* @hourly
-* @every {duration} (For example, "1m", "5m") 
-* rate({duration}) based on CloudWatch's [rate expressions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#RateExpressions) 
+* `"@yearly"`
+* `"@monthly"`
+* `"@weekly"`
+* `"@daily"`
+* `"@hourly"`
+* `"@every {duration}"` (For example, "1m", "5m") 
+* `"rate({duration})"` based on CloudWatch's [rate expressions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#RateExpressions) 
 
 Alternatively, you can specify a cron schedule if you'd like to trigger the job at a specific time:  
 
-* cron({fields}) based on CloudWatch's [cron expressions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions)
+* `"* * * * *"` based on the standard [cron format](https://en.wikipedia.org/wiki/Cron#Overview).
+* `"cron({fields})"` based on CloudWatch's [cron expressions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions) with six fields.
 
 <div class="separator"></div>
 
