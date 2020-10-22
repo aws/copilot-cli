@@ -158,7 +158,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 					DesiredCountLambda: "something",
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 
-				addons := mockTemplater{err: &addon.ErrDirNotExist{}}
+				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
 				c.parser = m
 				c.wkld.addons = addons
 			},
