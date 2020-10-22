@@ -40,13 +40,14 @@ const (
 
 type initVars struct {
 	// Flags unique to "init" that's not provided by other sub-commands.
-	shouldDeploy   bool
-	appName        string
-	wkldType       string
-	svcName        string
-	dockerfilePath string
-	image          string
-	imageTag       string
+	shouldDeploy    bool
+	shouldNotDeploy bool
+	appName         string
+	wkldType        string
+	svcName         string
+	dockerfilePath  string
+	image           string
+	imageTag        string
 
 	// Service specific flags
 	port uint16
@@ -61,7 +62,7 @@ type initOpts struct {
 	initVars
 
 	ShouldDeploy          bool // true means we should create a test environment and deploy the service to it. Defaults to false.
-	promptForShouldDeploy bool // true means that the user set the ShouldDeploy flag explicitly.
+	promptForShouldDeploy bool // true means that the user set the ShouldDeploy or the ShouldNotDeploy flag explicitly.
 
 	// Sub-commands to execute.
 	initAppCmd   actionCommand
@@ -165,7 +166,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 	return &initOpts{
 		initVars:     vars,
-		ShouldDeploy: vars.shouldDeploy,
+		ShouldDeploy: vars.shouldDeploy && !vars.shouldNotDeploy,
 
 		initAppCmd:   initAppCmd,
 		initEnvCmd:   initEnvCmd,
@@ -417,7 +418,7 @@ func BuildInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			opts.promptForShouldDeploy = !cmd.Flags().Changed(deployFlag)
+			opts.promptForShouldDeploy = !cmd.Flags().Changed(deployFlag) && !cmd.Flags().Changed(noDeployFlag)
 			if err := opts.Run(); err != nil {
 				return err
 			}
@@ -438,6 +439,7 @@ func BuildInitCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldDeploy, deployFlag, false, deployTestFlagDescription)
+	cmd.Flags().BoolVar(&vars.shouldNotDeploy, noDeployFlag, false, noDeployTestFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
 	cmd.Flags().StringVar(&vars.schedule, scheduleFlag, "", scheduleFlagDescription)

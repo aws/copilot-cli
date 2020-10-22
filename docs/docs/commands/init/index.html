@@ -1255,7 +1255,8 @@
 <h2 id="what-are-the-flags">What are the flags?</h2>
 <p>Like all commands in the copilot CLI, if you don't provide required flags, we'll prompt you for all the information we need to get you going. You can skip the prompts by providing information via flags:</p>
 <div class="highlight"><pre><span></span><code>  -a, --app string          Name of the application.
-      --deploy              Deploy your service to a <span class="s2">&quot;test&quot;</span> environment.
+      --deploy              Optional. Deploy your service to a <span class="s2">&quot;test&quot;</span> environment.
+      --no-deploy           Optional. Do not prompt if the application must be deployed.
   -d, --dockerfile string   Path to the Dockerfile.
   -h, --help                <span class="nb">help</span> <span class="k">for</span> init
       --port uint16         Optional. The port on which your service listens.

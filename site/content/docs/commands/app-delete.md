@@ -11,6 +11,7 @@ $ copilot app delete [flags]
 
 ```bash
 -h, --help                          help for delete
+-n, --name string                   Name of the application. 
     --yes                           Skips confirmation prompt.
 ```
 

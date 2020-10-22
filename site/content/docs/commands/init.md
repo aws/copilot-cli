@@ -16,7 +16,8 @@ Like all commands in the copilot CLI, if you don't provide required flags, we'll
 
 ```sh
   -a, --app string          Name of the application.
-      --deploy              Deploy your service to a "test" environment.
+      --deploy              Optional. Deploy your service to a "test" environment.
+      --no-deploy           Optional. Do not prompt if the application must be deployed.
   -d, --dockerfile string   Path to the Dockerfile.
   -h, --help                help for init
       --port uint16         Optional. The port on which your service listens.

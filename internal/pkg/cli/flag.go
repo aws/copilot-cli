@@ -39,6 +39,7 @@ const (
 	tasksFlag             = "tasks"
 	prodEnvFlag           = "prod"
 	deployFlag            = "deploy"
+	noDeployFlag          = "no-deploy"
 	resourcesFlag         = "resources"
 	githubURLFlag         = "github-url"
 	githubAccessTokenFlag = "github-access-token"
@@ -163,7 +164,8 @@ Defaults to all logs. Only one of start-time / since may be used.`
 Defaults to all logs. Only one of end-time / follow may be used.`
 	tasksLogsFlagDescription = "Optional. Only return logs from specific task IDs."
 
-	deployTestFlagDescription        = `Deploy your service to a "test" environment.`
+	deployTestFlagDescription        = `Optional. Deploy your service to a "test" environment.`
+	noDeployTestFlagDescription      = `Optional. Do not prompt if the application must be deployed.`
 	githubURLFlagDescription         = "GitHub repository URL for your service."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
 	gitBranchFlagDescription         = "Branch used to trigger your pipeline."
