@@ -16,9 +16,10 @@ nav:
     - Getting Started: docs/getting-started.md
     - Concepts:
       - Overview: docs/concepts/overview.md
-      - Services: docs/concepts/services.md
-      - Environments: docs/concepts/environments.md
       - Applications: docs/concepts/applications.md
+      - Environments: docs/concepts/environments.md
+      - Services: docs/concepts/services.md
+      - Jobs: docs/concepts/jobs.md
       - Pipelines: docs/concepts/pipelines.md
     - Credentials: docs/credentials.md
     - Manifest:
