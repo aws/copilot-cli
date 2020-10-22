@@ -27,11 +27,11 @@ var defaultResourceCounts = map[termprogress.Text]int{
 
 // Row descriptions displayed while deploying an environment.
 const (
-	textVPC             termprogress.Text = "- Virtual private cloud on 2 availability zones to hold your services"
+	textVPC             termprogress.Text = "- Virtual private cloud on 2 availability zones to hold your services and jobs"
 	textInternetGateway termprogress.Text = "  - Internet gateway to connect the network to the internet"
-	textPublicSubnets   termprogress.Text = "  - Public subnets for internet facing services "
-	textPrivateSubnets  termprogress.Text = "  - Private subnets for services that can't be reached from the internet"
-	textRouteTables     termprogress.Text = "  - Routing tables for services to talk with each other"
-	textECSCluster      termprogress.Text = "- ECS Cluster to hold your services "
+	textPublicSubnets   termprogress.Text = "  - Public subnets for internet facing services and jobs"
+	textPrivateSubnets  termprogress.Text = "  - Private subnets for services and jobs that can't be reached from the internet"
+	textRouteTables     termprogress.Text = "  - Routing tables for services and jobs to talk with each other"
+	textECSCluster      termprogress.Text = "- ECS Cluster to hold your services and jobs"
 	textALB             termprogress.Text = "- Application load balancer to distribute traffic "
 )

@@ -22,14 +22,14 @@ import (
 )
 
 const (
-	fmtAppInitStart    = "Creating the infrastructure to manage services under application %s."
-	fmtAppInitComplete = "Created the infrastructure to manage services under application %s.\n"
-	fmtAppInitFailed   = "Failed to create the infrastructure to manage services under application %s.\n"
+	fmtAppInitStart    = "Creating the infrastructure to manage services and jobs under application %s."
+	fmtAppInitComplete = "Created the infrastructure to manage services and jobs under application %s.\n"
+	fmtAppInitFailed   = "Failed to create the infrastructure to manage services and jobs under application %s.\n"
 
 	fmtAppInitNamePrompt    = "What would you like to %s your application?"
 	fmtAppInitNewNamePrompt = `Ok, let's create a new application then.
   What would you like to %s your application?`
-	appInitNameHelpPrompt = "Services in the same application share the same VPC and ECS Cluster and are discoverable via service discovery."
+	appInitNameHelpPrompt = "Services and jobs in the same application share the same VPC and ECS Cluster and services are discoverable via service discovery."
 )
 
 type initAppVars struct {
@@ -216,7 +216,7 @@ func (o *initAppOpts) validateDomain(domainName string) error {
 // RecommendedActions returns a list of suggested additional commands users can run after successfully executing this command.
 func (o *initAppOpts) RecommendedActions() []string {
 	return []string{
-		fmt.Sprintf("Run %s to add a new service to your application.", color.HighlightCode("copilot init")),
+		fmt.Sprintf("Run %s to add a new service or job to your application.", color.HighlightCode("copilot init")),
 	}
 }
 
@@ -239,7 +239,7 @@ func (o *initAppOpts) askSelectExistingAppName(existingApps []*config.Applicatio
 		names = append(names, p.Name)
 	}
 	name, err := o.prompt.SelectOne(
-		fmt.Sprintf("Which %s do you want to add a new service to?", color.Emphasize("existing application")),
+		fmt.Sprintf("Which %s do you want to add a new service or job to?", color.Emphasize("existing application")),
 		appInitNameHelpPrompt,
 		names,
 		prompt.WithFinalMessage("Application name:"))
