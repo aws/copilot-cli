@@ -46,7 +46,7 @@ The name of your service.
 <div class="separator"></div>
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
-The architecture type for your service. [Backend services](/docs/concepts/services/#backend-service) is not reachable from the internet, but can be reached with [service discovery](/docs/developing/service-discovery/) from your other services.
+The architecture type for your service. [Backend services](../concepts/services.md#backend-service) is not reachable from the internet, but can be reached with [service discovery](../developing/service-discovery.md) from your other services.
 
 <div class="separator"></div>
 

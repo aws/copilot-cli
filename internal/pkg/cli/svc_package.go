@@ -306,7 +306,7 @@ func (o *packageSvcOpts) setOutputFileWriters() error {
 	}
 
 	templatePath := filepath.Join(o.outputDir,
-		fmt.Sprintf(config.ServiceCfnTemplateNameFormat, o.name))
+		fmt.Sprintf(config.ServiceCfnTemplateNameFormat, o.name, o.envName))
 	templateFile, err := o.fs.Create(templatePath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", templatePath, err)
@@ -379,7 +379,7 @@ func buildSvcPackageCmd() *cobra.Command {
   Write the CloudFormation stack and configuration to a "infrastructure/" sub-directory instead of printing.
   /code $ copilot svc package -n frontend -e test --output-dir ./infrastructure
   /code $ ls ./infrastructure
-  /code frontend.stack.yml      frontend-test.config.yml`,
+  /code frontend-test.stack.yml      frontend-test.params.yml`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newPackageSvcOpts(vars)
 			if err != nil {

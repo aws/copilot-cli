@@ -79,6 +79,8 @@ var (
 	)
 
 	domainNameRegexp = regexp.MustCompile(`\.`) //check for at least one dot in domain name
+
+	awsScheduleRegexp = regexp.MustCompile(`(?:rate|cron)\(.*\)`)
 )
 
 const regexpFindAllMatches = -1
@@ -231,6 +233,13 @@ func basicNameValidation(val interface{}) error {
 }
 
 func validateCron(sched string) error {
+	// If the schedule is wrapped in aws terms `rate()` or `cron()`, don't validate it--
+	// instead, pass it in as-is for serverside validation. AWS cron is weird (year field, nonstandard wildcards)
+	// so for edge cases we need to support it
+	awsSchedMatch := awsScheduleRegexp.FindStringSubmatch(sched)
+	if awsSchedMatch != nil {
+		return nil
+	}
 	every := "@every "
 	if strings.HasPrefix(sched, every) {
 		if err := validateDuration(sched[len(every):], 60*time.Second); err != nil {

@@ -171,7 +171,7 @@ type PipelineStage struct {
 // ServiceTemplatePath returns the full path to the service CFN template
 // built during the build stage.
 func (s *PipelineStage) ServiceTemplatePath(svcName string) string {
-	return fmt.Sprintf(config.ServiceCfnTemplateNameFormat, svcName)
+	return fmt.Sprintf(config.ServiceCfnTemplateNameFormat, svcName, s.Name)
 }
 
 // ServiceTemplateConfigurationPath returns the full path to the service CFN

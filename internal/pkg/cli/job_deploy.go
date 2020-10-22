@@ -274,6 +274,7 @@ func (o *deployJobOpts) deployJob(addonsURL string) error {
 		return fmt.Errorf("deploy job: %w", err)
 	}
 	o.spinner.Stop("\n")
+	log.Successf("Deployed %s.\n", color.HighlightUserInput(o.name))
 	return nil
 }
 
