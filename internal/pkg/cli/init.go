@@ -252,7 +252,7 @@ containerized services that operate together.`))
 		log.Infof("Ok great, we'll set up a %s named %s in application %s running on the schedule %s.\n",
 			color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(*o.schedule))
 	} else {
-		if o.port != nil {
+		if o.port != nil && *o.port != 0 {
 			log.Infof("Ok great, we'll set up a %s named %s in application %s listening on port %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(fmt.Sprintf("%d", *o.port)))
 		} else {
 			log.Infof("Ok great, we'll set up a %s named %s in application %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName))
