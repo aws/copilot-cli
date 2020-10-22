@@ -16,7 +16,7 @@ import (
 const (
 	// ServiceCfnTemplateNameFormat is the base output file name when `service package`
 	// is called. This is also used to render the pipeline CFN template.
-	ServiceCfnTemplateNameFormat = "%s.stack.yml"
+	ServiceCfnTemplateNameFormat = "%s-%s.stack.yml"
 	// ServiceCfnTemplateConfigurationNameFormat is the base output configuration
 	// file name when `service package` is called. It's also used to render the
 	// pipeline CFN template.
