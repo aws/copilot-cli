@@ -179,15 +179,18 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				name:           vars.svcName,
 				dockerfilePath: vars.dockerfilePath,
 				image:          vars.image,
-				port:           vars.port,
-				schedule:       vars.schedule,
-				retries:        vars.retries,
-				timeout:        vars.timeout,
 			}
-			switch wkldType {
-			case manifest.ScheduledJobType:
-				opts := initJobOpts{
+			switch t := wkldType; {
+			case t == manifest.ScheduledJobType:
+				jobVars := initJobVars{
 					initWkldVars: wkldVars,
+					schedule:     vars.schedule,
+					retries:      vars.retries,
+					timeout:      vars.timeout,
+				}
+
+				opts := initJobOpts{
+					initJobVars: jobVars,
 
 					fs:     &afero.Afero{Fs: afero.NewOsFs()},
 					init:   wlInitializer,
@@ -195,12 +198,15 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					prompt: prompt,
 				}
 				o.initWlCmd = &opts
+				o.schedule = &opts.schedule
 				o.initWkldVars = &opts.initWkldVars
-			case manifest.LoadBalancedWebServiceType:
-				fallthrough
-			case manifest.BackendServiceType:
-				opts := initSvcOpts{
+			case t == manifest.LoadBalancedWebServiceType || t == manifest.BackendServiceType:
+				svcVars := initSvcVars{
 					initWkldVars: wkldVars,
+					port:         vars.port,
+				}
+				opts := initSvcOpts{
+					initSvcVars: svcVars,
 
 					fs:     &afero.Afero{Fs: afero.NewOsFs()},
 					init:   wlInitializer,
@@ -211,6 +217,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					},
 				}
 				o.initWlCmd = &opts
+				o.port = &opts.port
 				o.initWkldVars = &opts.initWkldVars
 			default:
 				return fmt.Errorf("unrecognized workload type")

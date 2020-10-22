@@ -64,16 +64,16 @@ type initWkldVars struct {
 	name           string
 	dockerfilePath string
 	image          string
+}
+
+type initSvcVars struct {
+	initWkldVars
 
 	port uint16
-
-	timeout  string
-	retries  int
-	schedule string
 }
 
 type initSvcOpts struct {
-	initWkldVars
+	initSvcVars
 
 	// Interfaces to interact with dependencies.
 	fs     afero.Fs
@@ -90,7 +90,7 @@ type initSvcOpts struct {
 	setupParser func(*initSvcOpts)
 }
 
-func newInitSvcOpts(vars initWkldVars) (*initSvcOpts, error) {
+func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't connect to config store: %w", err)
@@ -116,7 +116,7 @@ func newInitSvcOpts(vars initWkldVars) (*initSvcOpts, error) {
 		Deployer: cloudformation.New(sess),
 	}
 	return &initSvcOpts{
-		initWkldVars: vars,
+		initSvcVars: vars,
 
 		fs:     &afero.Afero{Fs: afero.NewOsFs()},
 		init:   initSvc,
@@ -375,7 +375,7 @@ func (o *initSvcOpts) RecommendedActions() []string {
 
 // buildSvcInitCmd build the command for creating a new service.
 func buildSvcInitCmd() *cobra.Command {
-	vars := initWkldVars{}
+	vars := initSvcVars{}
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a new service in an application.",
