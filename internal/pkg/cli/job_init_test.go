@@ -111,13 +111,15 @@ func TestJobInitOpts_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			opts := initJobOpts{
-				initWkldVars: initWkldVars{
-					name:           tc.inJobName,
-					image:          tc.inImage,
-					dockerfilePath: tc.inDockerfilePath,
-					timeout:        tc.inTimeout,
-					retries:        tc.inRetries,
-					schedule:       tc.inSchedule,
+				initJobVars: initJobVars{
+					initWkldVars: initWkldVars{
+						name:           tc.inJobName,
+						image:          tc.inImage,
+						dockerfilePath: tc.inDockerfilePath,
+					},
+					timeout:  tc.inTimeout,
+					retries:  tc.inRetries,
+					schedule: tc.inSchedule,
 				},
 				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
 			}
@@ -334,12 +336,14 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockSel := mocks.NewMockinitJobSelector(ctrl)
 			opts := &initJobOpts{
-				initWkldVars: initWkldVars{
-					wkldType:       tc.inJobType,
-					name:           tc.inJobName,
-					image:          tc.inImage,
-					dockerfilePath: tc.inDockerfilePath,
-					schedule:       tc.inJobSchedule,
+				initJobVars: initJobVars{
+					initWkldVars: initWkldVars{
+						wkldType:       tc.inJobType,
+						name:           tc.inJobName,
+						image:          tc.inImage,
+						dockerfilePath: tc.inDockerfilePath,
+					},
+					schedule: tc.inJobSchedule,
 				},
 				fs:     &afero.Afero{Fs: afero.NewMemMapFs()},
 				sel:    mockSel,
@@ -426,12 +430,14 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			}
 
 			opts := initJobOpts{
-				initWkldVars: initWkldVars{
-					appName:        tc.inApp,
-					name:           tc.inName,
-					wkldType:       tc.inType,
-					dockerfilePath: tc.inDf,
-					schedule:       tc.inSchedule,
+				initJobVars: initJobVars{
+					initWkldVars: initWkldVars{
+						appName:        tc.inApp,
+						name:           tc.inName,
+						wkldType:       tc.inType,
+						dockerfilePath: tc.inDf,
+					},
+					schedule: tc.inSchedule,
 				},
 				init: mockJobInitializer,
 			}
