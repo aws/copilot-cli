@@ -103,11 +103,11 @@ func toSvcShowOutput(jsonInput string) (*SvcShowOutput, error) {
 
 // SvcListOutput is the JSON output for svc list.
 type SvcListOutput struct {
-	Services []SvcDescription `json:"services"`
+	Services []WkldDescription `json:"services"`
 }
 
-// SvcDescription contains the brief description of the service.
-type SvcDescription struct {
+// WkldDescription contains the brief description of the service.
+type WkldDescription struct {
 	Name    string `json:"name"`
 	Type    string `json:"type"`
 	AppName string `json:"app"`
@@ -115,6 +115,16 @@ type SvcDescription struct {
 
 func toSvcListOutput(jsonInput string) (*SvcListOutput, error) {
 	var output SvcListOutput
+	return &output, json.Unmarshal([]byte(jsonInput), &output)
+}
+
+//JobListOutput is the JSON output for job list.
+type JobListOutput struct {
+	Jobs []WkldDescription `json:"jobs"`
+}
+
+func toJobListOutput(jsonInput string) (*JobListOutput, error) {
+	var output JobListOutput
 	return &output, json.Unmarshal([]byte(jsonInput), &output)
 }
 

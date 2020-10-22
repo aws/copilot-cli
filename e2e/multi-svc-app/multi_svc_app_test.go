@@ -110,7 +110,7 @@ var _ = Describe("Multiple Service App", func() {
 			Expect(svcListError).NotTo(HaveOccurred())
 			Expect(len(svcList.Services)).To(Equal(3))
 
-			svcsByName := map[string]client.SvcDescription{}
+			svcsByName := map[string]client.WkldDescription{}
 			for _, svc := range svcList.Services {
 				svcsByName[svc.Name] = svc
 			}
@@ -308,5 +308,9 @@ var _ = Describe("Multiple Service App", func() {
 				}
 			}
 		})
+	})
+
+	Context("when adding a job", func() {
+
 	})
 })

@@ -131,6 +131,22 @@ type TaskRunInput struct {
 	Follow  bool
 }
 
+// JobInitInput contains the parameters for calling copilot job init.
+type JobInitInput struct {
+	Name       string
+	Dockerfile string
+	Schedule   string
+	Retries    string
+	Timeout    string
+}
+
+// JobDeployInput contains the parameters for calling copilot job deploy.
+type JobDeployInput struct {
+	Name     string
+	EnvName  string
+	ImageTag string
+}
+
 // NewCLI returns a wrapper around CLI
 func NewCLI() (*CLI, error) {
 	// These tests should be run in a dockerfile so that
@@ -501,6 +517,75 @@ func (cli *CLI) TaskRun(input *TaskRunInput) (string, error) {
 	}
 
 	return cli.exec(exec.Command(cli.path, commands...))
+}
+
+/*JobInit runs:
+copilot job init
+	--name $n
+	--dockerfile $d
+	--schedule $sched
+	--retries $r
+	--timeout $o
+*/
+func (cli *CLI) JobInit(opts *JobInitInput) (string, error) {
+	args := []string{
+		"job",
+		"init",
+		"--name", opts.Name,
+		"--dockerfile", opts.Dockerfile,
+		"--schedule", opts.Schedule,
+	}
+	// Apply optional flags only if a value is provided.
+	if opts.Retries != "" {
+		args = append(args, "--retries", opts.Retries)
+	}
+	if opts.Timeout != "" {
+		args = append(args, "--timeout", opts.Timeout)
+	}
+	return cli.exec(
+		exec.Command(cli.path, args...))
+}
+
+/*JobDeploy runs:
+copilot job deploy
+	--name $n
+	--env $e
+	--tag $t
+*/
+func (cli *CLI) JobDeploy(opts *JobDeployInput) (string, error) {
+	return cli.exec(
+		exec.Command(cli.path, "job", "deploy",
+			"--name", opts.Name,
+			"--env", opts.EnvName,
+			"--tag", opts.ImageTag))
+}
+
+/*JobDelete runs:
+copilot job delete
+	--name $n
+	--yes
+*/
+func (cli *CLI) JobDelete(jobName string) (string, error) {
+	return cli.exec(
+		exec.Command(cli.path, "job", "delete",
+			"--name", jobName,
+			"--yes"))
+}
+
+/*JobList runs:
+copilot job ls
+	--json?
+	--local?
+*/
+func (cli *CLI) JobList(appName string) (*JobListOutput, error) {
+	output, err := cli.exec(
+		exec.Command(cli.path, "job", "ls",
+			"--app", appName,
+			"--json"))
+	if err != nil {
+		return nil, err
+	}
+	return toJobListOutput(output)
 }
 
 func (cli *CLI) exec(command *exec.Cmd) (string, error) {
