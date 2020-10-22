@@ -301,10 +301,10 @@ func (o *initOpts) loadWkld() error {
 		return err
 	}
 	if err := o.initWlCmd.Ask(); err != nil {
-		return fmt.Errorf("execute %s ask: %w", o.wkldType, err)
+		return fmt.Errorf("ask %s: %w", o.wkldType, err)
 	}
 	if err := o.initWlCmd.Validate(); err != nil {
-		return fmt.Errorf("execute %s validate: %w", o.wkldType, err)
+		return fmt.Errorf("validate %s: %w", o.wkldType, err)
 	}
 
 	return nil

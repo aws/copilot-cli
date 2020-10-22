@@ -42,14 +42,14 @@ func TestInitOpts_Run(t *testing.T) {
 			wantedError: "my error",
 		},
 		"returns prompt error for service": {
+			inWlType: "Backend Service",
 			expect: func(opts *initOpts) {
-				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(errors.New("my error"))
 				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Validate().Times(0)
 			},
-			wantedError: "ask job or svc init: my error",
+			wantedError: "ask Backend Service: my error",
 		},
 		"returns validation error for service": {
 			inWlType: "Load Balanced Web Service",
@@ -59,7 +59,7 @@ func TestInitOpts_Run(t *testing.T) {
 				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Validate().Return(errors.New("my error"))
 			},
-			wantedError: "validate job or svc init: my error",
+			wantedError: "validate Load Balanced Web Service: my error",
 		},
 		"returns execute error for application": {
 			expect: func(opts *initOpts) {
@@ -74,8 +74,8 @@ func TestInitOpts_Run(t *testing.T) {
 			wantedError: "execute app init: my error",
 		},
 		"returns execute error for service": {
+			inWlType: "Load Balanced Web Service",
 			expect: func(opts *initOpts) {
-				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -83,7 +83,7 @@ func TestInitOpts_Run(t *testing.T) {
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Execute().Return(errors.New("my error"))
 			},
-			wantedError: "execute job or svc init: my error",
+			wantedError: "execute Load Balanced Web Service init: my error",
 		},
 		"deploys environment": {
 			inPromptForShouldDeploy: true,
