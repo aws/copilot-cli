@@ -129,7 +129,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					Return(wantedSvcType, nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts()
 				m.EXPECT().GetHealthCheck()
 			},
 			mockSel:   func(m *mocks.MockdockerfileSelector) {},
@@ -160,7 +159,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					Return(wantedSvcName, nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts()
 				m.EXPECT().GetHealthCheck()
 			},
 			mockSel:   func(m *mocks.MockdockerfileSelector) {},
@@ -253,7 +251,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				).Return("frontend/Dockerfile", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts()
 				m.EXPECT().GetHealthCheck()
 			},
 			wantedErr: nil,
@@ -360,7 +357,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts()
 				m.EXPECT().GetHealthCheck()
 			},
 			mockSel: func(m *mocks.MockdockerfileSelector) {},

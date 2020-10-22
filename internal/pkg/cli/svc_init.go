@@ -182,29 +182,7 @@ func (o *initSvcOpts) Ask() error {
 		}
 	}
 
-	var ports []uint16
-	if o.dockerfilePath != "" && o.image == "" {
-		// Extract what we can from the dockerfile.
-		o.setupParser(o)
-
-		// Check for exposed ports.
-		ports, err = o.df.GetExposedPorts()
-		// Ignore any errors in dockerfile parsing--we'll use the default port instead.
-		if err != nil {
-			log.Debugln(err.Error())
-		}
-
-		// Check for a valid healthcheck and add it to the opts.
-		var hc *manifest.ContainerHealthCheck
-		hc, err = o.parseHealthCheck()
-		if err != nil {
-			return err
-		}
-
-		o.hc = hc
-	}
-
-	if err := o.askSvcPort(ports); err != nil {
+	if err := o.askSvcPort(); err != nil {
 		return err
 	}
 
@@ -303,21 +281,42 @@ func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 	return true, nil
 }
 
-func (o *initSvcOpts) askSvcPort(parsedPorts []uint16) error {
+func (o *initSvcOpts) askSvcPort() (err error) {
+	// See if we can get a healthcheck from the dockerfile.
+	o.setupParser(o)
+	// Check for a valid healthcheck and add it to the opts.
+	var hc *manifest.ContainerHealthCheck
+	hc, err = o.parseHealthCheck()
+	if err != nil {
+		return err
+	}
+
+	o.hc = hc
+
+	// If the port flag was set, use that and don't ask.
 	if o.port != 0 {
 		return nil
+	}
+	var ports []uint16
+	if o.dockerfilePath != "" && o.image == "" {
+		// Check for exposed ports.
+		ports, err = o.df.GetExposedPorts()
+		// Ignore any errors in dockerfile parsing--we'll use the default port instead.
+		if err != nil {
+			log.Debugln(err.Error())
+		}
 	}
 
 	defaultPort := defaultSvcPortString
 	if o.dockerfilePath != "" {
-		switch len(parsedPorts) {
+		switch len(ports) {
 		case 0:
 			// There were no ports detected, keep the default port prompt.
 		case 1:
-			o.port = parsedPorts[0]
+			o.port = ports[0]
 			return nil
 		default:
-			defaultPort = strconv.Itoa(int(parsedPorts[0]))
+			defaultPort = strconv.Itoa(int(ports[0]))
 		}
 	}
 	// Skip asking if it is a backend service.
