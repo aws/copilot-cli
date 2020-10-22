@@ -29,6 +29,9 @@ var (
 
 var dockerfileDefaultName = "Dockerfile"
 
+// WorkloadTypes holds all workload manifest types.
+var WorkloadTypes = append(ServiceTypes, JobTypes...)
+
 // Workload holds the basic data that every workload manifest file needs to have.
 type Workload struct {
 	Name *string `yaml:"name"`

@@ -202,7 +202,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					prompt: prompt,
 				}
 				o.initWlCmd = &opts
-				o.schedule = &opts.schedule
+				o.schedule = &opts.schedule // Surfaced via pointer for logging
 				o.initWkldVars = &opts.initWkldVars
 			case t == manifest.LoadBalancedWebServiceType || t == manifest.BackendServiceType:
 				svcVars := initSvcVars{
@@ -221,7 +221,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					},
 				}
 				o.initWlCmd = &opts
-				o.port = &opts.port
+				o.port = &opts.port // Surfaced via pointer for logging.
 				o.initWkldVars = &opts.initWkldVars
 			default:
 				return fmt.Errorf("unrecognized workload type")
@@ -329,8 +329,7 @@ func (o *initOpts) askWorkload() (string, error) {
 
 ` + fmt.Sprintf(fmtJobInitTypeHelp, manifest.ScheduledJobType)
 
-	workloadTypes := append(manifest.ServiceTypes, manifest.ScheduledJobType)
-	t, err := o.prompt.SelectOne(wkldInitTypePrompt, wkldHelp, workloadTypes, prompt.WithFinalMessage("Workload type:"))
+	t, err := o.prompt.SelectOne(wkldInitTypePrompt, wkldHelp, manifest.WorkloadTypes, prompt.WithFinalMessage("Workload type:"))
 	if err != nil {
 		return "", fmt.Errorf("select service type: %w", err)
 	}
@@ -429,7 +428,7 @@ func BuildInitCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.svcName, nameFlag, svcFlagShort, "", svcFlagDescription)
-	cmd.Flags().StringVarP(&vars.wkldType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)
+	cmd.Flags().StringVarP(&vars.wkldType, typeFlag, svcTypeFlagShort, "", wkldTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldDeploy, deployFlag, false, deployTestFlagDescription)
