@@ -270,12 +270,15 @@ containerized services that operate together.`))
 	if err := o.deployEnv(); err != nil {
 		return err
 	}
+	return o.deploy()
+}
+
+func (o *initOpts) deploy() error {
 	if o.initWkldVars.wkldType == manifest.ScheduledJobType {
 		return o.deployJob()
 	}
 	return o.deploySvc()
 }
-
 func (o *initOpts) loadApp() error {
 	if err := o.initAppCmd.Ask(); err != nil {
 		return fmt.Errorf("ask app init: %w", err)
