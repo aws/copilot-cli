@@ -35,7 +35,7 @@ const (
 	envInitDefaultEnvConfirmPrompt = `Would you like to use the default configuration for a new environment?
     - A new VPC with 2 AZs, 2 public subnets and 2 private subnets
     - A new ECS Cluster
-    - New IAM Roles to manage services in your environment
+    - New IAM Roles to manage services and jobs in your environment
 `
 	envInitVPCSelectPrompt            = "Which VPC would you like to use?"
 	envInitPublicSubnetsSelectPrompt  = "Which public subnets would you like to use?"
@@ -377,7 +377,7 @@ func (o *initEnvOpts) askImportResources() error {
 	}
 	if !dnsSupport {
 		log.Errorln(`Looks like you're creating an environment using a VPC with DNS support *disabled*.
-Copilot cannot create services in VPCs without DNS support. We recommend enabling this property.
+Copilot cannot create services or jobs in VPCs without DNS support. We recommend enabling this property.
 To learn more about the issue:
 https://aws.amazon.com/premiumsupport/knowledge-center/ecs-pull-container-api-error-ecr/`)
 		return fmt.Errorf("VPC %s has no DNS support enabled", o.importVPC.ID)
