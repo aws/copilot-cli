@@ -70,7 +70,9 @@ phases:
           base_dockerfile=$(echo $manifest | jq '.image.build')
           build_dockerfile=$(echo $manifest| jq 'if .image.build?.dockerfile? then .image.build.dockerfile else "" end' | sed 's/"//g')
           build_context=$(echo $manifest| jq 'if .image.build?.context? then .image.build.context else "" end' | sed 's/"//g')
+          build_target=$(echo $manifest| jq 'if .image.build?.target? then .image.build.target else "" end' | sed 's/"//g')
           dockerfile_args=$(echo $manifest | jq 'if .image.build?.args? then .image.build.args else "" end | to_entries?')
+          build_cache_from=$(echo $manifest | jq 'if .image.build?.cache_from? then .image.build.cache_from else "" end')
           df_rel_path=$( echo $base_dockerfile | sed 's/"//g')
           if [ -n "$build_dockerfile" ]; then 
             df_rel_path=$build_dockerfile
@@ -84,6 +86,14 @@ phases:
           if [ -n "$dockerfile_args" ]; then
             for arg in $(echo $dockerfile_args | jq -r '.[] | "\(.key)=\(.value)"'); do 
               build_args="$build_args--build-arg $arg "
+            done
+          fi
+          if [ -n "$build_target" ]; then
+            build_args="$build_args--target $build_target "
+          fi
+          if [ -n "$build_cache_from" ]; then
+            for arg in $(echo $build_cache_from | jq -r '.[]'); do
+              build_args="$build_args--cache-from $arg "
             done
           fi
           echo "Name: $workload"
