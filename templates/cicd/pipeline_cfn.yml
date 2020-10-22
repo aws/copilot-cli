@@ -283,8 +283,8 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 StackName: {{$.AppName}}-{{$stage.Name}}-{{$svc}}
                 Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: BuildOutput::infrastructure/{{$stage.ServiceTemplatePath $svc}}
-                TemplateConfiguration: BuildOutput::infrastructure/{{$stage.ServiceTemplateConfigurationPath $svc}}
+                TemplatePath: BuildOutput::infrastructure/{{$stage.WorkloadTemplatePath $svc}}
+                TemplateConfiguration: BuildOutput::infrastructure/{{$stage.WorkloadTemplateConfigurationPath $svc}}
                 # The ARN of the IAM role (in the env account) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
