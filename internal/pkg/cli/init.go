@@ -419,6 +419,9 @@ func BuildInitCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.shouldDeploy, deployFlag, false, deployTestFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
+	cmd.Flags().StringVar(&vars.schedule, scheduleFlag, "", scheduleFlagDescription)
+	cmd.Flags().StringVar(&vars.timeout, timeoutFlag, "", timeoutFlagDescription)
+	cmd.Flags().IntVar(&vars.retries, retriesFlag, 0, retriesFlagDescription)
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": group.GettingStarted,
