@@ -9,6 +9,8 @@ type: Backend App
 image:
   # Path to your service's Dockerfile.
   build: ./api/Dockerfile
+  # Or instead of building, you can specify an existing image name.
+  location: aws_account_id.dkr.ecr.region.amazonaws.com/my-svc:tag
   # Port exposed through your container to route traffic to it.
   port: 8080
 
@@ -76,6 +78,9 @@ You can omit fields and Copilot will do its best to understand what you mean. Fo
  
 All paths are relative to your workspace root. 
 
+<span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>  
+Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).    
+The `location` field follows the same definition as the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image) in the Amazon ECS task definition.
 
 <span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  
 The port exposed in your Dockerfile. Copilot should parse this value for you from your `EXPOSE` instruction.
