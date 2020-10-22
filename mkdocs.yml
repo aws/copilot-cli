@@ -26,6 +26,7 @@ nav:
       - Overview: docs/manifest/overview.md
       - Load Balanced Web Service: docs/manifest/lb-web-service.md
       - Backend Service: docs/manifest/backend-service.md
+      - Scheduled Job: docs/manifest/scheduled-job.md
       - Pipeline: docs/manifest/pipeline.md
     - Developing:
       - Environment Variables: docs/developing/environment-variables.md

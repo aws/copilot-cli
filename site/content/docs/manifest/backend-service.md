@@ -11,7 +11,7 @@ image:
   build: ./api/Dockerfile
   # Or instead of building, you can specify an existing image name.
   location: aws_account_id.dkr.ecr.region.amazonaws.com/my-svc:tag
-  # Port exposed through your container to route traffic to it.
+  # Optional. Port exposed through your container to route traffic to it.
   port: 8080
 
   #Optional. Configuration for your container healthcheck.
@@ -83,7 +83,8 @@ Instead of building a container from a Dockerfile, you can specify an existing i
 The `location` field follows the same definition as the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image) in the Amazon ECS task definition.
 
 <span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  
-The port exposed in your Dockerfile. Copilot should parse this value for you from your `EXPOSE` instruction.
+The port exposed in your Dockerfile. Copilot should parse this value for you from your `EXPOSE` instruction.  
+If you don't need your backend service to accept requests from other services you can omit this field.
 
 <span class="parent-field">image.</span><a id="image-healthcheck" href="#image-healthcheck" class="field">`healthcheck`</a> <span class="type">Map</span>  
 Optional configuration for container health checks.
