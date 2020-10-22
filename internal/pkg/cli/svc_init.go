@@ -191,6 +191,15 @@ func (o *initSvcOpts) Ask() error {
 
 // Execute writes the service's manifest file and stores the service in SSM.
 func (o *initSvcOpts) Execute() error {
+	// Check for a valid healthcheck and add it to the opts.
+	var hc *manifest.ContainerHealthCheck
+	hc, err := o.parseHealthCheck()
+	if err != nil {
+		return err
+	}
+
+	o.hc = hc
+
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -284,19 +293,12 @@ func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 func (o *initSvcOpts) askSvcPort() (err error) {
 	// See if we can get a healthcheck from the dockerfile.
 	o.setupParser(o)
-	// Check for a valid healthcheck and add it to the opts.
-	var hc *manifest.ContainerHealthCheck
-	hc, err = o.parseHealthCheck()
-	if err != nil {
-		return err
-	}
-
-	o.hc = hc
 
 	// If the port flag was set, use that and don't ask.
 	if o.port != 0 {
 		return nil
 	}
+
 	var ports []uint16
 	if o.dockerfilePath != "" && o.image == "" {
 		// Check for exposed ports.
@@ -346,7 +348,7 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 }
 
 func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error) {
-	if o.dockerfilePath == "" {
+	if o.dockerfilePath == "" || o.wkldType != manifest.BackendServiceType {
 		return nil, nil
 	}
 	o.setupParser(o)

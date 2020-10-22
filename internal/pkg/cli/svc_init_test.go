@@ -128,11 +128,9 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtSvcInitSvcTypePrompt, "service type")), gomock.Any(), gomock.Eq(manifest.ServiceTypes), gomock.Any()).
 					Return(wantedSvcType, nil)
 			},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetHealthCheck()
-			},
-			mockSel:   func(m *mocks.MockdockerfileSelector) {},
-			wantedErr: nil,
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
+			mockSel:        func(m *mocks.MockdockerfileSelector) {},
+			wantedErr:      nil,
 		},
 		"return an error if fail to get service type": {
 			inSvcType:        "",
@@ -159,7 +157,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					Return(wantedSvcName, nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetHealthCheck()
 			},
 			mockSel:   func(m *mocks.MockdockerfileSelector) {},
 			wantedErr: nil,
@@ -250,10 +247,8 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return("frontend/Dockerfile", nil)
 			},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetHealthCheck()
-			},
-			wantedErr: nil,
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
+			wantedErr:      nil,
 		},
 		"returns an error if fail to get Dockerfile": {
 			inSvcType:        wantedSvcType,
@@ -278,7 +273,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
-				m.EXPECT().GetHealthCheck()
 			},
 			mockSel:   func(m *mocks.MockdockerfileSelector) {},
 			wantedErr: nil,
@@ -295,7 +289,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
-				m.EXPECT().GetHealthCheck()
 			},
 			mockSel:   func(m *mocks.MockdockerfileSelector) {},
 			wantedErr: nil,
@@ -312,7 +305,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("expose error"))
-				m.EXPECT().GetHealthCheck()
 			},
 			mockSel:   func(m *mocks.MockdockerfileSelector) {},
 			wantedErr: fmt.Errorf("get port: some error"),
@@ -329,7 +321,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
-				m.EXPECT().GetHealthCheck()
 			},
 			mockSel:   func(m *mocks.MockdockerfileSelector) {},
 			wantedErr: fmt.Errorf("get port: some error"),
@@ -344,7 +335,6 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{80}, nil)
-				m.EXPECT().GetHealthCheck()
 			},
 			mockSel: func(m *mocks.MockdockerfileSelector) {},
 		},
@@ -356,10 +346,8 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockPrompt: func(m *mocks.Mockprompter) {
 			},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetHealthCheck()
-			},
-			mockSel: func(m *mocks.MockdockerfileSelector) {},
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
+			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 		},
 	}
 
@@ -413,6 +401,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 func TestSvcInitOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		mockSvcInit      func(m *mocks.MocksvcInitializer)
+		mockDockerfile   func(m *mocks.MockdockerfileParser)
 		inSvcPort        uint16
 		inSvcType        string
 		inSvcName        string
@@ -444,6 +433,28 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 
 			wantedManifestPath: "manifest/path",
 		},
+		"backend service": {
+			inAppName:        "sample",
+			inSvcName:        "frontend",
+			inDockerfilePath: "./Dockerfile",
+			inSvcType:        manifest.BackendServiceType,
+
+			mockSvcInit: func(m *mocks.MocksvcInitializer) {
+				m.EXPECT().Service(&initialize.ServiceProps{
+					WorkloadProps: initialize.WorkloadProps{
+						App:            "sample",
+						Name:           "frontend",
+						Type:           "Backend Service",
+						DockerfilePath: "./Dockerfile",
+					},
+				}).Return("manifest/path", nil)
+			},
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {
+				m.EXPECT().GetHealthCheck().Return(nil, nil)
+			},
+
+			wantedManifestPath: "manifest/path",
+		},
 		"failure": {
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(gomock.Any()).Return("", errors.New("some error"))
@@ -459,9 +470,13 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockSvcInitializer := mocks.NewMocksvcInitializer(ctrl)
+			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
 
 			if tc.mockSvcInit != nil {
 				tc.mockSvcInit(mockSvcInitializer)
+			}
+			if tc.mockDockerfile != nil {
+				tc.mockDockerfile(mockDockerfile)
 			}
 
 			opts := initSvcOpts{
@@ -472,7 +487,9 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 					dockerfilePath: tc.inDockerfilePath,
 					port:           tc.inSvcPort,
 				},
-				init: mockSvcInitializer,
+				init:        mockSvcInitializer,
+				setupParser: func(*initSvcOpts) {},
+				df:          mockDockerfile,
 			}
 
 			// WHEN
