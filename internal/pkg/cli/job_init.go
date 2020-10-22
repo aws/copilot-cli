@@ -29,14 +29,24 @@ var (
 executions and is good for jobs which need to run frequently. "Fixed Schedule"
 lets you use a predefined or custom cron schedule and is good for less-frequent 
 jobs or those which require specific execution schedules.`
+
+	fmtJobInitTypeHelp = "A %s is a task which is invoked on a set schedule, with optional retry logic."
 )
 
 const (
 	job = "job"
 )
 
-type initJobOpts struct {
+type initJobVars struct {
 	initWkldVars
+
+	timeout  string
+	retries  int
+	schedule string
+}
+
+type initJobOpts struct {
+	initJobVars
 
 	// Interfaces to interact with dependencies.
 	fs     afero.Fs
@@ -49,7 +59,7 @@ type initJobOpts struct {
 	manifestPath string
 }
 
-func newInitJobOpts(vars initWkldVars) (*initJobOpts, error) {
+func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't connect to config store: %w", err)
@@ -77,7 +87,7 @@ func newInitJobOpts(vars initWkldVars) (*initJobOpts, error) {
 	sel := selector.NewWorkspaceSelect(prompter, store, ws)
 
 	return &initJobOpts{
-		initWkldVars: vars,
+		initJobVars: vars,
 
 		fs:     &afero.Afero{Fs: afero.NewOsFs()},
 		store:  store,
@@ -262,7 +272,7 @@ func (o *initJobOpts) RecommendedActions() []string {
 
 // buildJobInitCmd builds the command for creating a new job.
 func buildJobInitCmd() *cobra.Command {
-	vars := initWkldVars{}
+	vars := initJobVars{}
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a new scheduled job in an application.",

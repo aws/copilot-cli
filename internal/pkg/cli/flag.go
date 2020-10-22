@@ -20,6 +20,7 @@ const (
 	svcFlag     = "svc"
 	svcTypeFlag = "svc-type"
 	jobTypeFlag = "job-type"
+	typeFlag    = "type"
 	profileFlag = "profile"
 	yesFlag     = "yes"
 	jsonFlag    = "json"
@@ -120,6 +121,8 @@ Mutually exclusive with -%s, --%s`, imageFlagShort, imageFlag)
 %s`, strings.Join(template.QuoteSliceFunc(storageTypes), ", "))
 	jobTypeFlagDescription = fmt.Sprintf(`Type of job to create. Must be one of:
 %s`, strings.Join(template.QuoteSliceFunc(manifest.JobTypes), ", "))
+	wkldTypeFlagDescription = fmt.Sprintf(`Type of job or svc to create. Must be one of:
+%s`, strings.Join(template.QuoteSliceFunc(manifest.WorkloadTypes), ", "))
 
 	subnetsFlagDescription = fmt.Sprintf(`Optional. The subnet IDs for the task to use. Can be specified multiple times.
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)

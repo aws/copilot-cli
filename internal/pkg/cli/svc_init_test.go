@@ -70,13 +70,15 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			opts := initSvcOpts{
-				initWkldVars: initWkldVars{
-					wkldType:       tc.inSvcType,
-					name:           tc.inSvcName,
-					dockerfilePath: tc.inDockerfilePath,
-					port:           tc.inSvcPort,
-					image:          tc.inImage,
-					appName:        tc.inAppName,
+				initSvcVars: initSvcVars{
+					initWkldVars: initWkldVars{
+						wkldType:       tc.inSvcType,
+						name:           tc.inSvcName,
+						dockerfilePath: tc.inDockerfilePath,
+						image:          tc.inImage,
+						appName:        tc.inAppName,
+					},
+					port: tc.inSvcPort,
 				},
 				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
 			}
@@ -361,12 +363,14 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
 			mockSel := mocks.NewMockdockerfileSelector(ctrl)
 			opts := &initSvcOpts{
-				initWkldVars: initWkldVars{
-					wkldType:       tc.inSvcType,
-					name:           tc.inSvcName,
-					port:           tc.inSvcPort,
-					image:          tc.inImage,
-					dockerfilePath: tc.inDockerfilePath,
+				initSvcVars: initSvcVars{
+					initWkldVars: initWkldVars{
+						wkldType:       tc.inSvcType,
+						name:           tc.inSvcName,
+						image:          tc.inImage,
+						dockerfilePath: tc.inDockerfilePath,
+					},
+					port: tc.inSvcPort,
 				},
 				fs:          &afero.Afero{Fs: afero.NewMemMapFs()},
 				setupParser: func(o *initSvcOpts) {},
@@ -523,13 +527,15 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			}
 
 			opts := initSvcOpts{
-				initWkldVars: initWkldVars{
-					appName:        tc.inAppName,
-					name:           tc.inSvcName,
-					wkldType:       tc.inSvcType,
-					dockerfilePath: tc.inDockerfilePath,
-					image:          tc.inImage,
-					port:           tc.inSvcPort,
+				initSvcVars: initSvcVars{
+					initWkldVars: initWkldVars{
+						appName:        tc.inAppName,
+						name:           tc.inSvcName,
+						wkldType:       tc.inSvcType,
+						dockerfilePath: tc.inDockerfilePath,
+						image:          tc.inImage,
+					},
+					port: tc.inSvcPort,
 				},
 				init:        mockSvcInitializer,
 				setupParser: func(*initSvcOpts) {},
