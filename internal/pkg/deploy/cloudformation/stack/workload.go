@@ -176,7 +176,7 @@ func (w *wkld) templateConfiguration(tc templateConfigurer) (string, error) {
 func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
 	stack, err := w.addons.Template()
 	if err != nil {
-		var noAddonsErr *addon.ErrDirNotExist
+		var noAddonsErr *addon.ErrAddonsDirNotExist
 		if !errors.As(err, &noAddonsErr) {
 			return nil, fmt.Errorf("generate addons template for %s: %w", w.name, err)
 		}

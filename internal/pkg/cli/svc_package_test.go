@@ -304,13 +304,13 @@ count: 1`), nil)
 
 				mockAddons := mocks.NewMocktemplater(ctrl)
 				mockAddons.EXPECT().Template().
-					Return("", &addon.ErrDirNotExist{})
+					Return("", &addon.ErrAddonsDirNotExist{})
 
 				opts.store = mockStore
 				opts.ws = mockWs
 				opts.appCFN = mockCfn
-				opts.initAddonsSvc = func(opts *packageSvcOpts) error {
-					opts.addonsSvc = mockAddons
+				opts.initAddonsClient = func(opts *packageSvcOpts) error {
+					opts.addonsClient = mockAddons
 					return nil
 				}
 				opts.stackSerializer = func(_ interface{}, _ *config.Environment, _ *config.Application, _ stack.RuntimeConfig) (stackSerializer, error) {

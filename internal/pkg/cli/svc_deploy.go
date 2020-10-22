@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
@@ -319,7 +321,7 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 	template, err := o.addons.Template()
 	if err != nil {
-		var notExistErr *addon.ErrDirNotExist
+		var notExistErr *addon.ErrAddonsDirNotExist
 		if errors.As(err, &notExistErr) {
 			// addons doesn't exist for service, the url is empty.
 			return "", nil
@@ -332,7 +334,7 @@ func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 	}
 
 	reader := strings.NewReader(template)
-	url, err := o.s3.PutArtifact(resources.S3Bucket, fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.name), reader)
+	url, err := o.s3.PutArtifact(resources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
 	if err != nil {
 		return "", fmt.Errorf("put addons artifact to bucket %s: %w", resources.S3Bucket, err)
 	}
@@ -365,7 +367,7 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	repoURL, ok := resources.RepositoryURLs[o.name]
 	if !ok {
 		return nil, &errRepoNotFound{
-			svcName:      o.name,
+			wlName:       o.name,
 			envRegion:    o.targetEnvironment.Region,
 			appAccountID: o.targetApp.AccountID,
 		}
