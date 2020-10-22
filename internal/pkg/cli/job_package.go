@@ -38,7 +38,6 @@ type packageJobOpts struct {
 	packageJobVars
 
 	// Interfaces to interact with dependencies.
-	addonsClient    templater
 	ws              wsJobDirReader
 	store           store
 	runner          runner
