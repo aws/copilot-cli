@@ -47,7 +47,7 @@ type packageJobOpts struct {
 
 	// Subcommand implementing svc_package's Execute()
 	packageCmd    actionCommand
-	newPackageCmd func(*packageJobOpts) error
+	newPackageCmd func(*packageJobOpts)
 }
 
 func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
@@ -84,26 +84,25 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 		return serializer, nil
 	}
 
-	opts.newPackageCmd = func(jobOpts *packageJobOpts) error {
+	opts.newPackageCmd = func(o *packageJobOpts) {
 		opts.packageCmd = &packageSvcOpts{
 			packageSvcVars: packageSvcVars{
-				name:      jobOpts.name,
-				envName:   jobOpts.envName,
-				appName:   jobOpts.appName,
-				tag:       jobOpts.tag,
-				outputDir: jobOpts.outputDir,
+				name:      o.name,
+				envName:   o.envName,
+				appName:   o.appName,
+				tag:       o.tag,
+				outputDir: o.outputDir,
 			},
 			initAddonsClient: initPackageAddonsClient,
 			ws:               ws,
-			store:            jobOpts.store,
+			store:            o.store,
 			appCFN:           cloudformation.New(sess),
 			stackWriter:      os.Stdout,
 			paramsWriter:     ioutil.Discard,
 			addonsWriter:     ioutil.Discard,
 			fs:               &afero.Afero{Fs: afero.NewOsFs()},
-			stackSerializer:  jobOpts.stackSerializer,
+			stackSerializer:  o.stackSerializer,
 		}
-		return nil
 	}
 	return opts, nil
 }
@@ -148,9 +147,7 @@ func (o *packageJobOpts) Ask() error {
 
 // Execute prints the CloudFormation template of the application for the environment.
 func (o *packageJobOpts) Execute() error {
-	if err := o.newPackageCmd(o); err != nil {
-		return err
-	}
+	o.newPackageCmd(o)
 	return o.packageCmd.Execute()
 }
 

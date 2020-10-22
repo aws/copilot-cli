@@ -253,11 +253,10 @@ func TestPackageJobOpts_Execute(t *testing.T) {
 				tag:     "1234",
 			},
 			mockDependencies: func(ctrl *gomock.Controller, opts *packageJobOpts) {
-				opts.newPackageCmd = func(opts *packageJobOpts) error {
+				opts.newPackageCmd = func(opts *packageJobOpts) {
 					mockCmd := mocks.NewMockactionCommand(ctrl)
 					mockCmd.EXPECT().Execute().Return(nil)
 					opts.packageCmd = mockCmd
-					return nil
 				}
 			},
 			wantedErr: nil,
