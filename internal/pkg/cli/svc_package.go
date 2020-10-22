@@ -338,6 +338,11 @@ func (o *packageSvcOpts) setAddonsFileWriter() error {
 	return nil
 }
 
+// RecommendedActions is a no-op for this command.
+func (o *packageSvcOpts) RecommendedActions() []string {
+	return nil
+}
+
 func contains(s string, items []string) bool {
 	for _, item := range items {
 		if s == item {

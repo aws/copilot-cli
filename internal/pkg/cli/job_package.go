@@ -45,6 +45,10 @@ type packageJobOpts struct {
 	sel             wsSelector
 	prompt          prompter
 	stackSerializer func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
+
+	// Subcommand implementing svc_package's Execute()
+	packageCmd    actionCommand
+	newPackageCmd func(*packageJobOpts) error
 }
 
 func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
@@ -56,7 +60,11 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
-
+	p := sessions.NewProvider()
+	sess, err := p.Default()
+	if err != nil {
+		return nil, fmt.Errorf("retrieve default session: %w", err)
+	}
 	prompter := prompt.New()
 	opts := &packageJobOpts{
 		packageJobVars: vars,
@@ -75,6 +83,28 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			return nil, fmt.Errorf("init scheduled job stack serializer: %w", err)
 		}
 		return serializer, nil
+	}
+
+	opts.newPackageCmd = func(jobOpts *packageJobOpts) error {
+		opts.packageCmd = &packageSvcOpts{
+			packageSvcVars: packageSvcVars{
+				name:      jobOpts.name,
+				envName:   jobOpts.envName,
+				appName:   jobOpts.appName,
+				tag:       jobOpts.tag,
+				outputDir: jobOpts.outputDir,
+			},
+			initAddonsClient: initPackageAddonsClient,
+			ws:               ws,
+			store:            jobOpts.store,
+			appCFN:           cloudformation.New(sess),
+			stackWriter:      os.Stdout,
+			paramsWriter:     ioutil.Discard,
+			addonsWriter:     ioutil.Discard,
+			fs:               &afero.Afero{Fs: afero.NewOsFs()},
+			stackSerializer:  jobOpts.stackSerializer,
+		}
+		return nil
 	}
 	return opts, nil
 }
@@ -119,12 +149,10 @@ func (o *packageJobOpts) Ask() error {
 
 // Execute prints the CloudFormation template of the application for the environment.
 func (o *packageJobOpts) Execute() error {
-
-	packageCmd, err := o.newPackageCmd()
-	if err != nil {
+	if err := o.newPackageCmd(o); err != nil {
 		return err
 	}
-	return packageCmd.Execute()
+	return o.packageCmd.Execute()
 }
 
 func (o *packageJobOpts) askJobName() error {
@@ -151,46 +179,6 @@ func (o *packageJobOpts) askEnvName() error {
 	}
 	o.envName = name
 	return nil
-}
-
-func (o *packageJobOpts) newPackageCmd() (*packageSvcOpts, error) {
-	ws, err := workspace.New()
-	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
-	}
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("connect to config store: %w", err)
-	}
-	p := sessions.NewProvider()
-	sess, err := p.Default()
-	if err != nil {
-		return nil, fmt.Errorf("retrieve default session: %w", err)
-	}
-	prompter := prompt.New()
-	packageCmd := &packageSvcOpts{
-		packageSvcVars: packageSvcVars{
-			name:      o.name,
-			envName:   o.envName,
-			appName:   o.appName,
-			tag:       o.tag,
-			outputDir: o.outputDir,
-		},
-		addonsClient:     o.addonsClient,
-		initAddonsClient: initPackageAddonsClient,
-		ws:               ws,
-		store:            store,
-		appCFN:           cloudformation.New(sess),
-		stackWriter:      os.Stdout,
-		paramsWriter:     ioutil.Discard,
-		addonsWriter:     ioutil.Discard,
-		fs:               &afero.Afero{Fs: afero.NewOsFs()},
-		runner:           command.New(),
-		sel:              selector.NewWorkspaceSelect(prompter, store, ws),
-		prompt:           prompter,
-		stackSerializer:  o.stackSerializer,
-	}
-	return packageCmd, nil
 }
 
 // buildJobPackageCmd builds the command for printing a job's CloudFormation template.
