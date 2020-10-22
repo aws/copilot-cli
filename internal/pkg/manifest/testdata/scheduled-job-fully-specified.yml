@@ -17,9 +17,11 @@ cpu: 256
 # Amount of memory in MiB used by the task.
 memory: 512
 
-# The trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2h, 1h30m, 15m)
-# AWS Schedule Expressions also accepted: https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html
-schedule: "0 */2 * * *"
+on:
+  # The scheduled trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2h, 1h30m, 15m)
+  # AWS Schedule Expressions are also accepted: https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html
+  schedule: "0 */2 * * *"
+
 # Optional. The number of times to retry the job before failing.
 retries: 3
 # Optional. The timeout after which to stop the job if it's still running. You can use the units (h, m, s).

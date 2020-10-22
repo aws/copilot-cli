@@ -36,18 +36,23 @@ type ScheduledJob struct {
 
 // ScheduledJobConfig holds the configuration for a scheduled job
 type ScheduledJobConfig struct {
-	ImageConfig    Image `yaml:"image,flow"`
-	TaskConfig     `yaml:",inline"`
-	*Logging       `yaml:"logging,flow"`
-	Sidecar        `yaml:",inline"`
-	ScheduleConfig `yaml:",inline"`
+	ImageConfig             Image `yaml:"image,flow"`
+	TaskConfig              `yaml:",inline"`
+	*Logging                `yaml:"logging,flow"`
+	Sidecar                 `yaml:",inline"`
+	On                      JobTriggerConfig `yaml:"on,flow"`
+	JobFailureHandlerConfig `yaml:",inline"`
 }
 
-// ScheduleConfig holds the fields necessary to describe a scheduled job's execution frequency and error handling.
-type ScheduleConfig struct {
+// JobTriggerConfig represents the configuration for the event that triggers the job.
+type JobTriggerConfig struct {
 	Schedule string `yaml:"schedule"`
-	Timeout  string `yaml:"timeout"`
-	Retries  int    `yaml:"retries"`
+}
+
+// JobFailureHandlerConfig represents the error handling configuration for the job.
+type JobFailureHandlerConfig struct {
+	Timeout string `yaml:"timeout"`
+	Retries int    `yaml:"retries"`
 }
 
 // ScheduledJobProps contains properties for creating a new scheduled job manifest.
@@ -92,7 +97,7 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	job.Name = aws.String(props.Name)
 	job.ScheduledJobConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	job.ScheduledJobConfig.ImageConfig.Location = stringP(props.Image)
-	job.Schedule = props.Schedule
+	job.On.Schedule = props.Schedule
 	job.Retries = props.Retries
 	job.Timeout = props.Timeout
 
