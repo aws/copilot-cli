@@ -46,8 +46,11 @@ type initVars struct {
 	dockerfilePath string
 	image          string
 	imageTag       string
-	port           uint16
 
+	// Service specific flags
+	port uint16
+
+	// Scheduled Job specific flags
 	schedule string
 	retries  int
 	timeout  string
@@ -69,8 +72,9 @@ type initOpts struct {
 	// Pointers to flag values part of sub-commands.
 	// Since the sub-commands implement the actionCommand interface, without pointers to their internal fields
 	// we have to resort to type-casting the interface. These pointers simplify data access.
-	appName *string
-
+	appName      *string
+	port         *uint16
+	schedule     *string
 	initWkldVars *initWkldVars
 
 	prompt prompter
@@ -246,10 +250,13 @@ containerized services that operate together.`))
 	}
 	if o.initWkldVars.wkldType == manifest.ScheduledJobType {
 		log.Infof("Ok great, we'll set up a %s named %s in application %s running on the schedule %s.\n",
-			color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(o.initWkldVars.schedule))
+			color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(*o.schedule))
 	} else {
-		log.Infof("Ok great, we'll set up a %s named %s in application %s listening on port %s.\n",
-			color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(fmt.Sprintf("%d", o.initWkldVars.port)))
+		if o.port != nil {
+			log.Infof("Ok great, we'll set up a %s named %s in application %s listening on port %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(fmt.Sprintf("%d", *o.port)))
+		} else {
+			log.Infof("Ok great, we'll set up a %s named %s in application %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName))
+		}
 	}
 
 	log.Infoln()
