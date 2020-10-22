@@ -12,7 +12,8 @@ image:
   location: aws_account_id.dkr.ecr.region.amazonaws.com/my-svc:tag
 
 on:
-  # The scheduled trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2h, 1h30m, 15m)
+  # The scheduled trigger for your job. You can specify a Unix cron schedule or keyword (@weekly) or a rate (@every 1h30m)
+
   # AWS Schedule Expressions are also accepted: https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html
   schedule: @daily
 
