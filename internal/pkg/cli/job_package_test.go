@@ -4,12 +4,8 @@
 package cli
 
 import (
-	"bytes"
 	"errors"
 	"testing"
-
-	"github.com/aws/copilot-cli/internal/pkg/addon"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -243,87 +239,28 @@ func TestPackageJobOpts_Ask(t *testing.T) {
 
 func TestPackageJobOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
-		inVars packageSvcVars
+		inVars packageJobVars
 
-		mockDependencies func(*gomock.Controller, *packageSvcOpts)
+		mockDependencies func(*gomock.Controller, *packageJobOpts)
 
-		wantedStack  string
-		wantedParams string
-		wantedAddons string
-		wantedErr    error
+		wantedErr error
 	}{
 		"writes job template without addons": {
-			inVars: packageSvcVars{
+			inVars: packageJobVars{
 				appName: "ecs-kudos",
 				name:    "resizer",
 				envName: "test",
 				tag:     "1234",
 			},
-			mockDependencies: func(ctrl *gomock.Controller, opts *packageSvcOpts) {
-				mockStore := mocks.NewMockstore(ctrl)
-				mockStore.EXPECT().
-					GetEnvironment("ecs-kudos", "test").
-					Return(&config.Environment{
-						App:       "ecs-kudos",
-						Name:      "test",
-						Region:    "us-west-2",
-						AccountID: "1111",
-					}, nil)
-				mockApp := &config.Application{
-					Name:      "ecs-kudos",
-					AccountID: "1112",
-					Tags: map[string]string{
-						"owner": "boss",
-					},
-				}
-				mockStore.EXPECT().
-					GetApplication("ecs-kudos").
-					Return(mockApp, nil)
-
-				mockWs := mocks.NewMockwsSvcReader(ctrl)
-				mockWs.EXPECT().
-					ReadServiceManifest("resizer").
-					Return([]byte(`name: resizer
-type: Scheduled Job
-image:
-  build: ./Dockerfile
-  port: 80
-http:
-  path: 'resizer'
-cpu: 256
-memory: 512
-count: 1`), nil)
-
-				mockCfn := mocks.NewMockappResourcesGetter(ctrl)
-				mockCfn.EXPECT().
-					GetAppResourcesByRegion(mockApp, "us-west-2").
-					Return(&stack.AppRegionalResources{
-						RepositoryURLs: map[string]string{
-							"resizer": "some url",
-						},
-					}, nil)
-
-				mockAddons := mocks.NewMocktemplater(ctrl)
-				mockAddons.EXPECT().Template().
-					Return("", &addon.ErrAddonsDirNotExist{})
-
-				opts.store = mockStore
-				opts.ws = mockWs
-				opts.appCFN = mockCfn
-				opts.initAddonsClient = func(opts *packageSvcOpts) error {
-					opts.addonsClient = mockAddons
+			mockDependencies: func(ctrl *gomock.Controller, opts *packageJobOpts) {
+				opts.newPackageCmd = func(opts *packageJobOpts) error {
+					mockCmd := mocks.NewMockactionCommand(ctrl)
+					mockCmd.EXPECT().Execute().Return(nil)
+					opts.packageCmd = mockCmd
 					return nil
 				}
-				opts.stackSerializer = func(_ interface{}, _ *config.Environment, _ *config.Application, _ stack.RuntimeConfig) (stackSerializer, error) {
-					mockStackSerializer := mocks.NewMockstackSerializer(ctrl)
-					mockStackSerializer.EXPECT().Template().Return("mystack", nil)
-					mockStackSerializer.EXPECT().SerializedParameters().Return("myparams", nil)
-					return mockStackSerializer, nil
-				}
 			},
-
-			wantedStack:  "mystack",
-			wantedParams: "myparams",
+			wantedErr: nil,
 		},
 	}
 
@@ -333,15 +270,9 @@ count: 1`), nil)
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			stackBuf := new(bytes.Buffer)
-			paramsBuf := new(bytes.Buffer)
-			addonsBuf := new(bytes.Buffer)
-			opts := &packageSvcOpts{
-				packageSvcVars: tc.inVars,
-
-				stackWriter:  stackBuf,
-				paramsWriter: paramsBuf,
-				addonsWriter: addonsBuf,
+			opts := &packageJobOpts{
+				packageJobVars: tc.inVars,
+				packageCmd:     mocks.NewMockactionCommand(ctrl),
 			}
 			tc.mockDependencies(ctrl, opts)
 
@@ -350,9 +281,6 @@ count: 1`), nil)
 
 			// THEN
 			require.Equal(t, tc.wantedErr, err)
-			require.Equal(t, tc.wantedStack, stackBuf.String())
-			require.Equal(t, tc.wantedParams, paramsBuf.String())
-			require.Equal(t, tc.wantedAddons, addonsBuf.String())
 		})
 	}
 }
