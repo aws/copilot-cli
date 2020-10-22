@@ -54,7 +54,7 @@ func TestScheduledJob_Template(t *testing.T) {
 						Retries: aws.Int(3),
 					},
 				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
-				addons := mockTemplater{err: &addon.ErrDirNotExist{}}
+				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
 				j.parser = m
 				j.wkld.addons = addons
 			},
@@ -121,7 +121,7 @@ Outputs:
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
 				m := mocks.NewMockscheduledJobParser(ctrl)
 				m.EXPECT().ParseScheduledJob(gomock.Any()).Return(nil, errors.New("some error"))
-				addons := mockTemplater{err: &addon.ErrDirNotExist{}}
+				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
 				j.parser = m
 				j.wkld.addons = addons
 			},

@@ -236,3 +236,50 @@ func TestPackageJobOpts_Ask(t *testing.T) {
 		})
 	}
 }
+
+func TestPackageJobOpts_Execute(t *testing.T) {
+	testCases := map[string]struct {
+		inVars packageJobVars
+
+		mockDependencies func(*gomock.Controller, *packageJobOpts)
+
+		wantedErr error
+	}{
+		"writes job template without addons": {
+			inVars: packageJobVars{
+				appName: "ecs-kudos",
+				name:    "resizer",
+				envName: "test",
+				tag:     "1234",
+			},
+			mockDependencies: func(ctrl *gomock.Controller, opts *packageJobOpts) {
+				opts.newPackageCmd = func(opts *packageJobOpts) {
+					mockCmd := mocks.NewMockactionCommand(ctrl)
+					mockCmd.EXPECT().Execute().Return(nil)
+					opts.packageCmd = mockCmd
+				}
+			},
+			wantedErr: nil,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			opts := &packageJobOpts{
+				packageJobVars: tc.inVars,
+				packageCmd:     mocks.NewMockactionCommand(ctrl),
+			}
+			tc.mockDependencies(ctrl, opts)
+
+			// WHEN
+			err := opts.Execute()
+
+			// THEN
+			require.Equal(t, tc.wantedErr, err)
+		})
+	}
+}

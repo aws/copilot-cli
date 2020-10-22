@@ -10,14 +10,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ErrDirNotExist occurs when an addons directory for a service does not exist.
-type ErrDirNotExist struct {
-	SvcName   string
+// ErrAddonsDirNotExist occurs when an addons directory for a workload does not exist.
+type ErrAddonsDirNotExist struct {
+	WlName    string
 	ParentErr error
 }
 
-func (e *ErrDirNotExist) Error() string {
-	return fmt.Sprintf("read addons directory for service %s: %v", e.SvcName, e.ParentErr)
+func (e *ErrAddonsDirNotExist) Error() string {
+	return fmt.Sprintf("read addons directory for %s: %v", e.WlName, e.ParentErr)
 }
 
 type errKeyAlreadyExists struct {
