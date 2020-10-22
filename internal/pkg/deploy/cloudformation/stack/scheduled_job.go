@@ -6,6 +6,7 @@ package stack
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 	"unicode"
@@ -39,6 +40,8 @@ type ScheduledJob struct {
 var (
 	fmtRateScheduleExpression = "rate(%d %s)" // rate({duration} {units})
 	fmtCronScheduleExpression = "cron(%s)"
+
+	awsScheduleRegexp = regexp.MustCompile(`(?:rate|cron)\(.*\)`) // Validates that an expression is of the form rate(xyz) or cron(abc)
 )
 
 const (
@@ -179,30 +182,35 @@ func (j *ScheduledJob) SerializedParameters() (string, error) {
 // Day-of-week expressions are zero-indexed in Golang but one-indexed in AWS.
 // @every cron definition strings are converted to rates.
 // All others become cron expressions.
+// Exception is made for strings of the form "rate( )" or "cron( )". These are accepted as-is and
+// validated server-side by CloudFormation.
 func (j *ScheduledJob) awsSchedule() (string, error) {
-	if j.manifest.Schedule == "" {
+	if j.manifest.On.Schedule == "" {
 		return "", fmt.Errorf(`missing required field "schedule" in manifest for job %s`, j.name)
 	}
-
+	// If the schedule uses default CloudWatch Events syntax, pass it through for server-side validation.
+	if match := awsScheduleRegexp.FindStringSubmatch(j.manifest.On.Schedule); match != nil {
+		return j.manifest.On.Schedule, nil
+	}
 	// Try parsing the string as a cron expression to validate it.
-	if _, err := cron.ParseStandard(j.manifest.Schedule); err != nil {
+	if _, err := cron.ParseStandard(j.manifest.On.Schedule); err != nil {
 		return "", errScheduleInvalid{reason: err}
 	}
 	var scheduleExpression string
 	var err error
 	switch {
-	case strings.HasPrefix(j.manifest.Schedule, every):
-		scheduleExpression, err = toRate(j.manifest.Schedule[len(every):])
+	case strings.HasPrefix(j.manifest.On.Schedule, every):
+		scheduleExpression, err = toRate(j.manifest.On.Schedule[len(every):])
 		if err != nil {
 			return "", fmt.Errorf("parse fixed interval: %w", err)
 		}
-	case strings.HasPrefix(j.manifest.Schedule, "@"):
-		scheduleExpression, err = toFixedSchedule(j.manifest.Schedule)
+	case strings.HasPrefix(j.manifest.On.Schedule, "@"):
+		scheduleExpression, err = toFixedSchedule(j.manifest.On.Schedule)
 		if err != nil {
 			return "", fmt.Errorf("parse preset schedule: %w", err)
 		}
 	default:
-		scheduleExpression, err = toAWSCron(j.manifest.Schedule)
+		scheduleExpression, err = toAWSCron(j.manifest.On.Schedule)
 		if err != nil {
 			return "", fmt.Errorf("parse cron schedule: %w", err)
 		}

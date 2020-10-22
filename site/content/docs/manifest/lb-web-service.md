@@ -8,6 +8,8 @@ type: Load Balanced Web Service
 image:
   # Path to your service's Dockerfile.
   build: ./Dockerfile
+  # Or instead of building, you can specify an existing image name.
+  location: aws_account_id.dkr.ecr.region.amazonaws.com/my-svc:tag
   # Port exposed through your container to route traffic to it.
   port: 80
 
@@ -48,7 +50,7 @@ The name of your service.
 <div class="separator"></div>
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
-The architecture type for your service. A [Load balanced web service](/docs/concepts/services/#load-balanced-web-service) is an internet-facing service that's behind a load balancer, orchestrated by Amazon ECS on AWS Fargate.  
+The architecture type for your service. A [Load balanced web service](../concepts/services.md#load-balanced-web-service) is an internet-facing service that's behind a load balancer, orchestrated by Amazon ECS on AWS Fargate.  
 
 <div class="separator"></div>
 
@@ -78,6 +80,9 @@ You can omit fields and Copilot will do its best to understand what you mean. Fo
  
 All paths are relative to your workspace root. 
 
+<span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>  
+Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).    
+The `location` field follows the same definition as the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image) in the Amazon ECS task definition.
 
 <span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  
 The port exposed in your Dockerfile. Copilot should parse this value for you from your `EXPOSE` instruction.

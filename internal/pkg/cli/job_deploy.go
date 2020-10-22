@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
@@ -74,6 +76,9 @@ func newJobDeployOpts(vars deployJobVars) (*deployJobOpts, error) {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 	prompter := prompt.New()
+	if err != nil {
+		return nil, err
+	}
 	return &deployJobOpts{
 		deployJobVars: vars,
 
@@ -114,9 +119,11 @@ func (o *deployJobOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	if err := o.askImageTag(); err != nil {
+	tag, err := askImageTag(o.imageTag, o.prompt, o.cmd)
+	if err != nil {
 		return err
 	}
+	o.imageTag = tag
 	return nil
 }
 
@@ -162,7 +169,7 @@ func (o *deployJobOpts) Execute() error {
 func (o *deployJobOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 	template, err := o.addons.Template()
 	if err != nil {
-		var notExistErr *addon.ErrDirNotExist
+		var notExistErr *addon.ErrAddonsDirNotExist
 		if errors.As(err, &notExistErr) {
 			// addons doesn't exist for job, the url is empty.
 			return "", nil
@@ -175,7 +182,7 @@ func (o *deployJobOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 	}
 
 	reader := strings.NewReader(template)
-	url, err := o.s3.PutArtifact(resources.S3Bucket, fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.name), reader)
+	url, err := o.s3.PutArtifact(resources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
 	if err != nil {
 		return "", fmt.Errorf("put addons artifact to bucket %s: %w", resources.S3Bucket, err)
 	}
@@ -269,6 +276,7 @@ func (o *deployJobOpts) deployJob(addonsURL string) error {
 		return fmt.Errorf("deploy job: %w", err)
 	}
 	o.spinner.Stop("\n")
+	log.Successf("Deployed %s.\n", color.HighlightUserInput(o.name))
 	return nil
 }
 
@@ -308,7 +316,7 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	repoURL, ok := resources.RepositoryURLs[o.name]
 	if !ok {
 		return nil, &errRepoNotFound{
-			svcName:      o.name,
+			wlName:       o.name,
 			envRegion:    o.targetEnvironment.Region,
 			appAccountID: o.targetApp.AccountID,
 		}
@@ -383,29 +391,6 @@ func (o *deployJobOpts) askEnvName() error {
 		return fmt.Errorf("select environment: %w", err)
 	}
 	o.envName = name
-	return nil
-}
-
-func (o *deployJobOpts) askImageTag() error {
-	if o.imageTag != "" {
-		return nil
-	}
-
-	tag, err := getVersionTag(o.cmd)
-
-	if err == nil {
-		o.imageTag = tag
-
-		return nil
-	}
-
-	log.Warningln("Failed to default tag, are you in a git repository?")
-
-	userInputTag, err := o.prompt.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
-	if err != nil {
-		return fmt.Errorf("prompt for image tag: %w", err)
-	}
-	o.imageTag = userInputTag
 	return nil
 }
 

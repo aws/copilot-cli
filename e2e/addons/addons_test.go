@@ -233,7 +233,7 @@ var _ = Describe("addons flow", func() {
 		})
 
 		It("app delete does remove .workspace but keep local files", func() {
-			_, err := cli.AppDelete(map[string]string{"test": "default"})
+			_, err := cli.AppDelete()
 			Expect(err).NotTo(HaveOccurred())
 			Expect("./copilot").Should(BeADirectory())
 			Expect("./copilot/hello/addons").Should(BeADirectory())

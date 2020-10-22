@@ -51,7 +51,7 @@ const (
 	fmtEnvInitCredsPrompt  = "Which credentials would you like to use to create %s?"
 	envInitCredsHelpPrompt = `The credentials are used to create your environment in an AWS account and region.
 To learn more:
-https://github.com/aws/copilot-cli/wiki/credentials#environment-credentials`
+https://aws.github.io/copilot-cli/docs/credentials/#environment-credentials`
 	envInitRegionPrompt        = "Which region?"
 	envInitDefaultRegionOption = "us-west-2"
 
@@ -70,8 +70,6 @@ https://github.com/aws/copilot-cli/wiki/credentials#environment-credentials`
 )
 
 var (
-	errNamedProfilesNotFound = fmt.Errorf("no named AWS profiles found, run %s first please", color.HighlightCode("aws configure"))
-
 	envInitDefaultConfigSelectOption      = "Yes, use default."
 	envInitAdjustEnvResourcesSelectOption = "Yes, but I'd like configure the default resources (CIDR ranges)."
 	envInitImportEnvResourcesSelectOption = "No, I'd like to import existing resources (VPC, subnets)."

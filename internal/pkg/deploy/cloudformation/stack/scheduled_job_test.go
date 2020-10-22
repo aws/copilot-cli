@@ -54,7 +54,7 @@ func TestScheduledJob_Template(t *testing.T) {
 						Retries: aws.Int(3),
 					},
 				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
-				addons := mockTemplater{err: &addon.ErrDirNotExist{}}
+				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
 				j.parser = m
 				j.wkld.addons = addons
 			},
@@ -121,7 +121,7 @@ Outputs:
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
 				m := mocks.NewMockscheduledJobParser(ctrl)
 				m.EXPECT().ParseScheduledJob(gomock.Any()).Return(nil, errors.New("some error"))
-				addons := mockTemplater{err: &addon.ErrDirNotExist{}}
+				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
 				j.parser = m
 				j.wkld.addons = addons
 			},
@@ -266,6 +266,14 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 			inputSchedule:   "* * * malformed *",
 			wantedErrorType: &errScheduleInvalid{},
 		},
+		"passthrogh AWS flavored cron": {
+			inputSchedule:  "cron(0 * * * ? *)",
+			wantedSchedule: "cron(0 * * * ? *)",
+		},
+		"passthrough AWS flavored rate": {
+			inputSchedule:  "rate(5 minutes)",
+			wantedSchedule: "rate(5 minutes)",
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -276,7 +284,7 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 				},
 				manifest: &manifest.ScheduledJob{
 					ScheduledJobConfig: manifest.ScheduledJobConfig{
-						ScheduleConfig: manifest.ScheduleConfig{
+						On: manifest.JobTriggerConfig{
 							Schedule: tc.inputSchedule,
 						},
 					},
@@ -287,7 +295,7 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 
 			// THEN
 			if tc.wantedErrorType != nil {
-				ok := errors.As(err, tc.wantedErrorType)
+				ok := errors.As(err, &tc.wantedErrorType)
 				require.True(t, ok)
 				require.NotEmpty(t, tc.wantedErrorType)
 			} else if tc.wantedError != nil {
@@ -356,7 +364,7 @@ func TestScheduledJob_stateMachine(t *testing.T) {
 				},
 				manifest: &manifest.ScheduledJob{
 					ScheduledJobConfig: manifest.ScheduledJobConfig{
-						ScheduleConfig: manifest.ScheduleConfig{
+						JobFailureHandlerConfig: manifest.JobFailureHandlerConfig{
 							Retries: tc.inputRetries,
 							Timeout: tc.inputTimeout,
 						},

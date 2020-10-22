@@ -246,6 +246,21 @@ func (mr *MockapiMockRecorder) DescribeStackEvents(arg0 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStackEvents", reflect.TypeOf((*Mockapi)(nil).DescribeStackEvents), arg0)
 }
 
+// GetTemplate mocks base method
+func (m *Mockapi) GetTemplate(input *cloudformation.GetTemplateInput) (*cloudformation.GetTemplateOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTemplate", input)
+	ret0, _ := ret[0].(*cloudformation.GetTemplateOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTemplate indicates an expected call of GetTemplate
+func (mr *MockapiMockRecorder) GetTemplate(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplate", reflect.TypeOf((*Mockapi)(nil).GetTemplate), input)
+}
+
 // DeleteStack mocks base method
 func (m *Mockapi) DeleteStack(arg0 *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
 	m.ctrl.T.Helper()

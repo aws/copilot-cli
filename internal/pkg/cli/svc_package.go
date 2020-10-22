@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -30,12 +32,12 @@ const (
 	svcPackageEnvNamePrompt = "Which environment would you like to package this stack for?"
 )
 
-var initPackageAddonsSvc = func(o *packageSvcOpts) error {
-	addonsSvc, err := addon.New(o.name)
+var initPackageAddonsClient = func(o *packageSvcOpts) error {
+	addonsClient, err := addon.New(o.name)
 	if err != nil {
-		return fmt.Errorf("initiate addons service: %w", err)
+		return fmt.Errorf("new addons client: %w", err)
 	}
-	o.addonsSvc = addonsSvc
+	o.addonsClient = addonsClient
 	return nil
 }
 
@@ -51,19 +53,19 @@ type packageSvcOpts struct {
 	packageSvcVars
 
 	// Interfaces to interact with dependencies.
-	addonsSvc       templater
-	initAddonsSvc   func(*packageSvcOpts) error // Overriden in tests.
-	ws              wsSvcReader
-	store           store
-	appCFN          appResourcesGetter
-	stackWriter     io.Writer
-	paramsWriter    io.Writer
-	addonsWriter    io.Writer
-	fs              afero.Fs
-	runner          runner
-	sel             wsSelector
-	prompt          prompter
-	stackSerializer func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
+	addonsClient     templater
+	initAddonsClient func(*packageSvcOpts) error // Overridden in tests.
+	ws               wsSvcReader
+	store            store
+	appCFN           appResourcesGetter
+	stackWriter      io.Writer
+	paramsWriter     io.Writer
+	addonsWriter     io.Writer
+	fs               afero.Fs
+	runner           runner
+	sel              wsSelector
+	prompt           prompter
+	stackSerializer  func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
 }
 
 func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
@@ -80,21 +82,20 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("retrieve default session: %w", err)
 	}
-
 	prompter := prompt.New()
 	opts := &packageSvcOpts{
-		packageSvcVars: vars,
-		initAddonsSvc:  initPackageAddonsSvc,
-		ws:             ws,
-		store:          store,
-		appCFN:         cloudformation.New(sess),
-		runner:         command.New(),
-		sel:            selector.NewWorkspaceSelect(prompter, store, ws),
-		prompt:         prompter,
-		stackWriter:    os.Stdout,
-		paramsWriter:   ioutil.Discard,
-		addonsWriter:   ioutil.Discard,
-		fs:             &afero.Afero{Fs: afero.NewOsFs()},
+		packageSvcVars:   vars,
+		initAddonsClient: initPackageAddonsClient,
+		ws:               ws,
+		store:            store,
+		appCFN:           cloudformation.New(sess),
+		runner:           command.New(),
+		sel:              selector.NewWorkspaceSelect(prompter, store, ws),
+		prompt:           prompter,
+		stackWriter:      os.Stdout,
+		paramsWriter:     ioutil.Discard,
+		addonsWriter:     ioutil.Discard,
+		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 	}
 
 	opts.stackSerializer = func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
@@ -149,13 +150,18 @@ func (o *packageSvcOpts) Validate() error {
 
 // Ask prompts the user for any missing required fields.
 func (o *packageSvcOpts) Ask() error {
-	if err := o.askAppName(); err != nil {
+	if err := o.askSvcName(); err != nil {
 		return err
 	}
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	return o.askTag()
+	tag, err := askImageTag(o.tag, o.prompt, o.runner)
+	if err != nil {
+		return err
+	}
+	o.tag = tag
+	return nil
 }
 
 // Execute prints the CloudFormation template of the application for the environment.
@@ -184,7 +190,7 @@ func (o *packageSvcOpts) Execute() error {
 
 	addonsTemplate, err := o.getAddonsTemplate()
 	// return nil if addons dir doesn't exist.
-	var notExistErr *addon.ErrDirNotExist
+	var notExistErr *addon.ErrAddonsDirNotExist
 	if errors.As(err, &notExistErr) {
 		return nil
 	}
@@ -203,7 +209,7 @@ func (o *packageSvcOpts) Execute() error {
 	return err
 }
 
-func (o *packageSvcOpts) askAppName() error {
+func (o *packageSvcOpts) askSvcName() error {
 	if o.name != "" {
 		return nil
 	}
@@ -229,28 +235,11 @@ func (o *packageSvcOpts) askEnvName() error {
 	return nil
 }
 
-func (o *packageSvcOpts) askTag() error {
-	if o.tag != "" {
-		return nil
-	}
-
-	tag, err := getVersionTag(o.runner)
-	if err != nil {
-		// We're not in a Git repository, prompt the user for an explicit tag.
-		tag, err = o.prompt.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
-		if err != nil {
-			return fmt.Errorf("prompt get image tag: %w", err)
-		}
-	}
-	o.tag = tag
-	return nil
-}
-
 func (o *packageSvcOpts) getAddonsTemplate() (string, error) {
-	if err := o.initAddonsSvc(o); err != nil {
+	if err := o.initAddonsClient(o); err != nil {
 		return "", err
 	}
-	return o.addonsSvc.Template()
+	return o.addonsClient.Template()
 }
 
 type svcCfnTemplates struct {
@@ -287,7 +276,7 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 		repoURL, ok := resources.RepositoryURLs[o.name]
 		if !ok {
 			return nil, &errRepoNotFound{
-				svcName:      o.name,
+				wlName:       o.name,
 				envRegion:    env.Region,
 				appAccountID: app.AccountID,
 			}
@@ -319,7 +308,7 @@ func (o *packageSvcOpts) setOutputFileWriters() error {
 	}
 
 	templatePath := filepath.Join(o.outputDir,
-		fmt.Sprintf(config.ServiceCfnTemplateNameFormat, o.name))
+		fmt.Sprintf(deploy.WorkloadCfnTemplateNameFormat, o.name, o.envName))
 	templateFile, err := o.fs.Create(templatePath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", templatePath, err)
@@ -327,7 +316,7 @@ func (o *packageSvcOpts) setOutputFileWriters() error {
 	o.stackWriter = templateFile
 
 	paramsPath := filepath.Join(o.outputDir,
-		fmt.Sprintf(config.ServiceCfnTemplateConfigurationNameFormat, o.name, o.envName))
+		fmt.Sprintf(deploy.WorkloadCfnTemplateConfigurationNameFormat, o.name, o.envName))
 	paramsFile, err := o.fs.Create(paramsPath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", paramsPath, err)
@@ -339,13 +328,18 @@ func (o *packageSvcOpts) setOutputFileWriters() error {
 
 func (o *packageSvcOpts) setAddonsFileWriter() error {
 	addonsPath := filepath.Join(o.outputDir,
-		fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.name))
+		fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name))
 	addonsFile, err := o.fs.Create(addonsPath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", addonsPath, err)
 	}
 	o.addonsWriter = addonsFile
 
+	return nil
+}
+
+// RecommendedActions is a no-op for this command.
+func (o *packageSvcOpts) RecommendedActions() []string {
 	return nil
 }
 
@@ -359,13 +353,13 @@ func contains(s string, items []string) bool {
 }
 
 type errRepoNotFound struct {
-	svcName      string
+	wlName       string
 	envRegion    string
 	appAccountID string
 }
 
 func (e *errRepoNotFound) Error() string {
-	return fmt.Sprintf("ECR repository not found for service %s in region %s and account %s", e.svcName, e.envRegion, e.appAccountID)
+	return fmt.Sprintf("ECR repository not found for service %s in region %s and account %s", e.wlName, e.envRegion, e.appAccountID)
 }
 
 func (e *errRepoNotFound) Is(target error) bool {
@@ -373,7 +367,7 @@ func (e *errRepoNotFound) Is(target error) bool {
 	if !ok {
 		return false
 	}
-	return e.svcName == t.svcName &&
+	return e.wlName == t.wlName &&
 		e.envRegion == t.envRegion &&
 		e.appAccountID == t.appAccountID
 }
@@ -392,7 +386,7 @@ func buildSvcPackageCmd() *cobra.Command {
   Write the CloudFormation stack and configuration to a "infrastructure/" sub-directory instead of printing.
   /code $ copilot svc package -n frontend -e test --output-dir ./infrastructure
   /code $ ls ./infrastructure
-  /code frontend.stack.yml      frontend-test.config.yml`,
+  /code frontend-test.stack.yml      frontend-test.params.yml`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newPackageSvcOpts(vars)
 			if err != nil {

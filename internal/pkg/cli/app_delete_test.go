@@ -292,7 +292,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				return mockJobDeleteExecutor, nil
 			}
 			mockEnvDeleteExecutor := mocks.NewMockexecuteAsker(ctrl)
-			mockAskExecutorProvider := func(envName, envProfile string) (executeAsker, error) {
+			mockAskExecutorProvider := func(envName string) (executeAsker, error) {
 				return mockEnvDeleteExecutor, nil
 			}
 

@@ -13,17 +13,17 @@ import (
 func BuildJobCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "job",
-		Short: `Commands for scheduled jobs.
-Jobs are Amazon ECS tasks which run on a fixed schedule.`,
-		Long: `Commands for scheduled jobs.
-Jobs are Amazon ECS tasks which run on a fixed schedule.`,
+		Short: `Commands for jobs.
+Jobs are tasks that are triggered by events.`,
+		Long: `Commands for jobs.
+Jobs are tasks that are triggered by events.`,
 	}
 
 	cmd.AddCommand(buildJobInitCmd())
-	// cmd.AddCommand(BuildJobPackageCmd())
+	cmd.AddCommand(buildJobListCmd())
+	cmd.AddCommand(buildJobPackageCmd())
 	cmd.AddCommand(buildJobDeployCmd())
 	cmd.AddCommand(buildJobDeleteCmd())
-	cmd.AddCommand(buildJobListCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 

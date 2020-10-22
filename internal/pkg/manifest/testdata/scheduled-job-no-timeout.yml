@@ -1,6 +1,6 @@
 # The manifest for the "cuteness-aggregator" job.
 # Read the full specification for the "Scheduled Job" type at:
-#  https://github.com/aws/copilot-cli/wiki/Manifests#scheduled-job
+#  https://aws.github.io/copilot-cli/docs/manifest/scheduled-job/
 
 # Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
 name: cuteness-aggregator
@@ -17,8 +17,11 @@ cpu: 256
 # Amount of memory in MiB used by the task.
 memory: 512
 
-# The trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2h, 1h30m, 15m)
-schedule: "@every 5h"
+on:
+  # The scheduled trigger for your job. You can specify a cron schedule or keyword (@weekly) or a rate (2h, 1h30m, 15m)
+  # AWS Schedule Expressions are also accepted: https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html
+  schedule: "@every 5h"
+
 # Optional. The number of times to retry the job before failing.
 retries: 5
 # Optional. The timeout after which to stop the job if it's still running. You can use the units (h, m, s).

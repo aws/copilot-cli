@@ -23,49 +23,50 @@ type workspaceReader interface {
 	ReadAddon(svcName, fileName string) ([]byte, error)
 }
 
-// Addons represents additional resources for a service.
+// Addons represents additional resources for a workload.
 type Addons struct {
-	svcName string
+	wlName string
 
 	parser template.Parser
 	ws     workspaceReader
 }
 
-// New creates an Addons object given an service name.
-func New(svcName string) (*Addons, error) {
+// New creates an Addons object given a workload name.
+func New(wlName string) (*Addons, error) {
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
 	return &Addons{
-		svcName: svcName,
-		parser:  template.New(),
-		ws:      ws,
+		wlName: wlName,
+		parser: template.New(),
+		ws:     ws,
 	}, nil
 }
 
-// Template merges CloudFormation templates under the "addons/" directory of a service
+// Template merges CloudFormation templates under the "addons/" directory of a workload
 // into a single CloudFormation template and returns it.
 //
-// If the addons directory doesn't exist, it returns the empty string and ErrDirNotExist.
+// If the addons directory doesn't exist, it returns the empty string and
+// ErrAddonsDirNotExist.
 func (a *Addons) Template() (string, error) {
-	fnames, err := a.ws.ReadAddonsDir(a.svcName)
+	fnames, err := a.ws.ReadAddonsDir(a.wlName)
 	if err != nil {
-		return "", &ErrDirNotExist{
-			SvcName:   a.svcName,
+		return "", &ErrAddonsDirNotExist{
+			WlName:    a.wlName,
 			ParentErr: err,
 		}
 	}
 
 	mergedTemplate := newCFNTemplate("merged")
 	for _, fname := range filterYAMLfiles(fnames) {
-		out, err := a.ws.ReadAddon(a.svcName, fname)
+		out, err := a.ws.ReadAddon(a.wlName, fname)
 		if err != nil {
-			return "", fmt.Errorf("read addon %s under service %s: %w", fname, a.svcName, err)
+			return "", fmt.Errorf("read addon %s under %s: %w", fname, a.wlName, err)
 		}
 		tpl := newCFNTemplate(fname)
 		if err := yaml.Unmarshal(out, tpl); err != nil {
-			return "", fmt.Errorf("unmarshal addon %s under service %s: %w", fname, a.svcName, err)
+			return "", fmt.Errorf("unmarshal addon %s under %s: %w", fname, a.wlName, err)
 		}
 		if err := mergedTemplate.merge(tpl); err != nil {
 			return "", err

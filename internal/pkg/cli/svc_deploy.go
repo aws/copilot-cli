@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
@@ -30,10 +32,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/cobra"
-)
-
-const (
-	inputImageTagPrompt = "Input an image tag value:"
 )
 
 type deploySvcVars struct {
@@ -120,9 +118,11 @@ func (o *deploySvcOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	if err := o.askImageTag(); err != nil {
+	tag, err := askImageTag(o.imageTag, o.prompt, o.cmd)
+	if err != nil {
 		return err
 	}
+	o.imageTag = tag
 	return nil
 }
 
@@ -225,29 +225,6 @@ func (o *deploySvcOpts) askEnvName() error {
 	return nil
 }
 
-func (o *deploySvcOpts) askImageTag() error {
-	if o.imageTag != "" {
-		return nil
-	}
-
-	tag, err := getVersionTag(o.cmd)
-
-	if err == nil {
-		o.imageTag = tag
-
-		return nil
-	}
-
-	log.Warningln("Failed to default tag, are you in a git repository?")
-
-	userInputTag, err := o.prompt.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
-	if err != nil {
-		return fmt.Errorf("prompt for image tag: %w", err)
-	}
-	o.imageTag = userInputTag
-	return nil
-}
-
 func (o *deploySvcOpts) configureClients() error {
 	defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnvironment.Region)
 	if err != nil {
@@ -344,7 +321,7 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 	template, err := o.addons.Template()
 	if err != nil {
-		var notExistErr *addon.ErrDirNotExist
+		var notExistErr *addon.ErrAddonsDirNotExist
 		if errors.As(err, &notExistErr) {
 			// addons doesn't exist for service, the url is empty.
 			return "", nil
@@ -357,7 +334,7 @@ func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 	}
 
 	reader := strings.NewReader(template)
-	url, err := o.s3.PutArtifact(resources.S3Bucket, fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.name), reader)
+	url, err := o.s3.PutArtifact(resources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, o.name), reader)
 	if err != nil {
 		return "", fmt.Errorf("put addons artifact to bucket %s: %w", resources.S3Bucket, err)
 	}
@@ -390,7 +367,7 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	repoURL, ok := resources.RepositoryURLs[o.name]
 	if !ok {
 		return nil, &errRepoNotFound{
-			svcName:      o.name,
+			wlName:       o.name,
 			envRegion:    o.targetEnvironment.Region,
 			appAccountID: o.targetApp.AccountID,
 		}

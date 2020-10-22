@@ -269,7 +269,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 StackName: phonetool-test-api
                 Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: BuildOutput::infrastructure/api.stack.yml
+                TemplatePath: BuildOutput::infrastructure/api-test.stack.yml
                 TemplateConfiguration: BuildOutput::infrastructure/api-test.params.json
                 # The ARN of the IAM role (in the env account) that
                 # AWS CloudFormation assumes when it operates on resources

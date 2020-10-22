@@ -16,6 +16,7 @@ import (
 	docker "github.com/aws/copilot-cli/internal/pkg/docker"
 	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	ecslogging "github.com/aws/copilot-cli/internal/pkg/ecslogging"
+	initialize "github.com/aws/copilot-cli/internal/pkg/initialize"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -1739,43 +1740,6 @@ func (mr *MocksessionFromProfileProviderMockRecorder) FromProfile(name interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromProfile", reflect.TypeOf((*MocksessionFromProfileProvider)(nil).FromProfile), name)
 }
 
-// MockprofileNames is a mock of profileNames interface
-type MockprofileNames struct {
-	ctrl     *gomock.Controller
-	recorder *MockprofileNamesMockRecorder
-}
-
-// MockprofileNamesMockRecorder is the mock recorder for MockprofileNames
-type MockprofileNamesMockRecorder struct {
-	mock *MockprofileNames
-}
-
-// NewMockprofileNames creates a new mock instance
-func NewMockprofileNames(ctrl *gomock.Controller) *MockprofileNames {
-	mock := &MockprofileNames{ctrl: ctrl}
-	mock.recorder = &MockprofileNamesMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockprofileNames) EXPECT() *MockprofileNamesMockRecorder {
-	return m.recorder
-}
-
-// Names mocks base method
-func (m *MockprofileNames) Names() []string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Names")
-	ret0, _ := ret[0].([]string)
-	return ret0
-}
-
-// Names indicates an expected call of Names
-func (mr *MockprofileNamesMockRecorder) Names() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Names", reflect.TypeOf((*MockprofileNames)(nil).Names))
-}
-
 // MocksessionProvider is a mock of sessionProvider interface
 type MocksessionProvider struct {
 	ctrl     *gomock.Controller
@@ -1949,44 +1913,6 @@ func (mr *MockwsFileDeleterMockRecorder) DeleteWorkspaceFile() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkspaceFile", reflect.TypeOf((*MockwsFileDeleter)(nil).DeleteWorkspaceFile))
 }
 
-// MockdockerfileLister is a mock of dockerfileLister interface
-type MockdockerfileLister struct {
-	ctrl     *gomock.Controller
-	recorder *MockdockerfileListerMockRecorder
-}
-
-// MockdockerfileListerMockRecorder is the mock recorder for MockdockerfileLister
-type MockdockerfileListerMockRecorder struct {
-	mock *MockdockerfileLister
-}
-
-// NewMockdockerfileLister creates a new mock instance
-func NewMockdockerfileLister(ctrl *gomock.Controller) *MockdockerfileLister {
-	mock := &MockdockerfileLister{ctrl: ctrl}
-	mock.recorder = &MockdockerfileListerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockdockerfileLister) EXPECT() *MockdockerfileListerMockRecorder {
-	return m.recorder
-}
-
-// ListDockerfiles mocks base method
-func (m *MockdockerfileLister) ListDockerfiles() ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDockerfiles")
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListDockerfiles indicates an expected call of ListDockerfiles
-func (mr *MockdockerfileListerMockRecorder) ListDockerfiles() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDockerfiles", reflect.TypeOf((*MockdockerfileLister)(nil).ListDockerfiles))
-}
-
 // MocksvcManifestReader is a mock of svcManifestReader interface
 type MocksvcManifestReader struct {
 	ctrl     *gomock.Controller
@@ -2061,218 +1987,6 @@ func (m *MockjobManifestReader) ReadJobManifest(jobName string) ([]byte, error) 
 func (mr *MockjobManifestReaderMockRecorder) ReadJobManifest(jobName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadJobManifest", reflect.TypeOf((*MockjobManifestReader)(nil).ReadJobManifest), jobName)
-}
-
-// MocksvcManifestWriter is a mock of svcManifestWriter interface
-type MocksvcManifestWriter struct {
-	ctrl     *gomock.Controller
-	recorder *MocksvcManifestWriterMockRecorder
-}
-
-// MocksvcManifestWriterMockRecorder is the mock recorder for MocksvcManifestWriter
-type MocksvcManifestWriterMockRecorder struct {
-	mock *MocksvcManifestWriter
-}
-
-// NewMocksvcManifestWriter creates a new mock instance
-func NewMocksvcManifestWriter(ctrl *gomock.Controller) *MocksvcManifestWriter {
-	mock := &MocksvcManifestWriter{ctrl: ctrl}
-	mock.recorder = &MocksvcManifestWriterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MocksvcManifestWriter) EXPECT() *MocksvcManifestWriterMockRecorder {
-	return m.recorder
-}
-
-// ListDockerfiles mocks base method
-func (m *MocksvcManifestWriter) ListDockerfiles() ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDockerfiles")
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListDockerfiles indicates an expected call of ListDockerfiles
-func (mr *MocksvcManifestWriterMockRecorder) ListDockerfiles() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDockerfiles", reflect.TypeOf((*MocksvcManifestWriter)(nil).ListDockerfiles))
-}
-
-// WriteServiceManifest mocks base method
-func (m *MocksvcManifestWriter) WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteServiceManifest", marshaler, svcName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// WriteServiceManifest indicates an expected call of WriteServiceManifest
-func (mr *MocksvcManifestWriterMockRecorder) WriteServiceManifest(marshaler, svcName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteServiceManifest", reflect.TypeOf((*MocksvcManifestWriter)(nil).WriteServiceManifest), marshaler, svcName)
-}
-
-// MocksvcDirManifestWriter is a mock of svcDirManifestWriter interface
-type MocksvcDirManifestWriter struct {
-	ctrl     *gomock.Controller
-	recorder *MocksvcDirManifestWriterMockRecorder
-}
-
-// MocksvcDirManifestWriterMockRecorder is the mock recorder for MocksvcDirManifestWriter
-type MocksvcDirManifestWriterMockRecorder struct {
-	mock *MocksvcDirManifestWriter
-}
-
-// NewMocksvcDirManifestWriter creates a new mock instance
-func NewMocksvcDirManifestWriter(ctrl *gomock.Controller) *MocksvcDirManifestWriter {
-	mock := &MocksvcDirManifestWriter{ctrl: ctrl}
-	mock.recorder = &MocksvcDirManifestWriterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MocksvcDirManifestWriter) EXPECT() *MocksvcDirManifestWriterMockRecorder {
-	return m.recorder
-}
-
-// ListDockerfiles mocks base method
-func (m *MocksvcDirManifestWriter) ListDockerfiles() ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDockerfiles")
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListDockerfiles indicates an expected call of ListDockerfiles
-func (mr *MocksvcDirManifestWriterMockRecorder) ListDockerfiles() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDockerfiles", reflect.TypeOf((*MocksvcDirManifestWriter)(nil).ListDockerfiles))
-}
-
-// WriteServiceManifest mocks base method
-func (m *MocksvcDirManifestWriter) WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteServiceManifest", marshaler, svcName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// WriteServiceManifest indicates an expected call of WriteServiceManifest
-func (mr *MocksvcDirManifestWriterMockRecorder) WriteServiceManifest(marshaler, svcName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteServiceManifest", reflect.TypeOf((*MocksvcDirManifestWriter)(nil).WriteServiceManifest), marshaler, svcName)
-}
-
-// CopilotDirPath mocks base method
-func (m *MocksvcDirManifestWriter) CopilotDirPath() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CopilotDirPath")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CopilotDirPath indicates an expected call of CopilotDirPath
-func (mr *MocksvcDirManifestWriterMockRecorder) CopilotDirPath() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MocksvcDirManifestWriter)(nil).CopilotDirPath))
-}
-
-// MockjobManifestWriter is a mock of jobManifestWriter interface
-type MockjobManifestWriter struct {
-	ctrl     *gomock.Controller
-	recorder *MockjobManifestWriterMockRecorder
-}
-
-// MockjobManifestWriterMockRecorder is the mock recorder for MockjobManifestWriter
-type MockjobManifestWriterMockRecorder struct {
-	mock *MockjobManifestWriter
-}
-
-// NewMockjobManifestWriter creates a new mock instance
-func NewMockjobManifestWriter(ctrl *gomock.Controller) *MockjobManifestWriter {
-	mock := &MockjobManifestWriter{ctrl: ctrl}
-	mock.recorder = &MockjobManifestWriterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockjobManifestWriter) EXPECT() *MockjobManifestWriterMockRecorder {
-	return m.recorder
-}
-
-// WriteJobManifest mocks base method
-func (m *MockjobManifestWriter) WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteJobManifest", marshaler, jobName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// WriteJobManifest indicates an expected call of WriteJobManifest
-func (mr *MockjobManifestWriterMockRecorder) WriteJobManifest(marshaler, jobName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteJobManifest", reflect.TypeOf((*MockjobManifestWriter)(nil).WriteJobManifest), marshaler, jobName)
-}
-
-// MockjobDirManifestWriter is a mock of jobDirManifestWriter interface
-type MockjobDirManifestWriter struct {
-	ctrl     *gomock.Controller
-	recorder *MockjobDirManifestWriterMockRecorder
-}
-
-// MockjobDirManifestWriterMockRecorder is the mock recorder for MockjobDirManifestWriter
-type MockjobDirManifestWriterMockRecorder struct {
-	mock *MockjobDirManifestWriter
-}
-
-// NewMockjobDirManifestWriter creates a new mock instance
-func NewMockjobDirManifestWriter(ctrl *gomock.Controller) *MockjobDirManifestWriter {
-	mock := &MockjobDirManifestWriter{ctrl: ctrl}
-	mock.recorder = &MockjobDirManifestWriterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockjobDirManifestWriter) EXPECT() *MockjobDirManifestWriterMockRecorder {
-	return m.recorder
-}
-
-// WriteJobManifest mocks base method
-func (m *MockjobDirManifestWriter) WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteJobManifest", marshaler, jobName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// WriteJobManifest indicates an expected call of WriteJobManifest
-func (mr *MockjobDirManifestWriterMockRecorder) WriteJobManifest(marshaler, jobName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteJobManifest", reflect.TypeOf((*MockjobDirManifestWriter)(nil).WriteJobManifest), marshaler, jobName)
-}
-
-// CopilotDirPath mocks base method
-func (m *MockjobDirManifestWriter) CopilotDirPath() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CopilotDirPath")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CopilotDirPath indicates an expected call of CopilotDirPath
-func (mr *MockjobDirManifestWriterMockRecorder) CopilotDirPath() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockjobDirManifestWriter)(nil).CopilotDirPath))
 }
 
 // MockcopilotDirGetter is a mock of copilotDirGetter interface
@@ -3023,17 +2737,17 @@ func (mr *MockenvironmentDeployerMockRecorder) StreamEnvironmentCreation(env int
 }
 
 // DeleteEnvironment mocks base method
-func (m *MockenvironmentDeployer) DeleteEnvironment(appName, envName string) error {
+func (m *MockenvironmentDeployer) DeleteEnvironment(appName, envName, cfnExecRoleARN string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteEnvironment", appName, envName)
+	ret := m.ctrl.Call(m, "DeleteEnvironment", appName, envName, cfnExecRoleARN)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteEnvironment indicates an expected call of DeleteEnvironment
-func (mr *MockenvironmentDeployerMockRecorder) DeleteEnvironment(appName, envName interface{}) *gomock.Call {
+func (mr *MockenvironmentDeployerMockRecorder) DeleteEnvironment(appName, envName, cfnExecRoleARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeleteEnvironment), appName, envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeleteEnvironment), appName, envName, cfnExecRoleARN)
 }
 
 // GetEnvironment mocks base method
@@ -3049,6 +2763,35 @@ func (m *MockenvironmentDeployer) GetEnvironment(appName, envName string) (*conf
 func (mr *MockenvironmentDeployerMockRecorder) GetEnvironment(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).GetEnvironment), appName, envName)
+}
+
+// EnvironmentTemplate mocks base method
+func (m *MockenvironmentDeployer) EnvironmentTemplate(appName, envName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvironmentTemplate", appName, envName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnvironmentTemplate indicates an expected call of EnvironmentTemplate
+func (mr *MockenvironmentDeployerMockRecorder) EnvironmentTemplate(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentTemplate", reflect.TypeOf((*MockenvironmentDeployer)(nil).EnvironmentTemplate), appName, envName)
+}
+
+// UpdateEnvironmentTemplate mocks base method
+func (m *MockenvironmentDeployer) UpdateEnvironmentTemplate(appName, envName, templateBody, cfnExecRoleARN string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateEnvironmentTemplate", appName, envName, templateBody, cfnExecRoleARN)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateEnvironmentTemplate indicates an expected call of UpdateEnvironmentTemplate
+func (mr *MockenvironmentDeployerMockRecorder) UpdateEnvironmentTemplate(appName, envName, templateBody, cfnExecRoleARN interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEnvironmentTemplate", reflect.TypeOf((*MockenvironmentDeployer)(nil).UpdateEnvironmentTemplate), appName, envName, templateBody, cfnExecRoleARN)
 }
 
 // MockwlDeleter is a mock of wlDeleter interface
@@ -3654,17 +3397,17 @@ func (mr *MockdeployerMockRecorder) StreamEnvironmentCreation(env interface{}) *
 }
 
 // DeleteEnvironment mocks base method
-func (m *Mockdeployer) DeleteEnvironment(appName, envName string) error {
+func (m *Mockdeployer) DeleteEnvironment(appName, envName, cfnExecRoleARN string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteEnvironment", appName, envName)
+	ret := m.ctrl.Call(m, "DeleteEnvironment", appName, envName, cfnExecRoleARN)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteEnvironment indicates an expected call of DeleteEnvironment
-func (mr *MockdeployerMockRecorder) DeleteEnvironment(appName, envName interface{}) *gomock.Call {
+func (mr *MockdeployerMockRecorder) DeleteEnvironment(appName, envName, cfnExecRoleARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*Mockdeployer)(nil).DeleteEnvironment), appName, envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*Mockdeployer)(nil).DeleteEnvironment), appName, envName, cfnExecRoleARN)
 }
 
 // GetEnvironment mocks base method
@@ -3680,6 +3423,35 @@ func (m *Mockdeployer) GetEnvironment(appName, envName string) (*config.Environm
 func (mr *MockdeployerMockRecorder) GetEnvironment(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*Mockdeployer)(nil).GetEnvironment), appName, envName)
+}
+
+// EnvironmentTemplate mocks base method
+func (m *Mockdeployer) EnvironmentTemplate(appName, envName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvironmentTemplate", appName, envName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnvironmentTemplate indicates an expected call of EnvironmentTemplate
+func (mr *MockdeployerMockRecorder) EnvironmentTemplate(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentTemplate", reflect.TypeOf((*Mockdeployer)(nil).EnvironmentTemplate), appName, envName)
+}
+
+// UpdateEnvironmentTemplate mocks base method
+func (m *Mockdeployer) UpdateEnvironmentTemplate(appName, envName, templateBody, cfnExecRoleARN string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateEnvironmentTemplate", appName, envName, templateBody, cfnExecRoleARN)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateEnvironmentTemplate indicates an expected call of UpdateEnvironmentTemplate
+func (mr *MockdeployerMockRecorder) UpdateEnvironmentTemplate(appName, envName, templateBody, cfnExecRoleARN interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEnvironmentTemplate", reflect.TypeOf((*Mockdeployer)(nil).UpdateEnvironmentTemplate), appName, envName, templateBody, cfnExecRoleARN)
 }
 
 // DeployApp mocks base method
@@ -4823,4 +4595,117 @@ func (m *Mockec2Client) HasDNSSupport(vpcID string) (bool, error) {
 func (mr *Mockec2ClientMockRecorder) HasDNSSupport(vpcID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasDNSSupport", reflect.TypeOf((*Mockec2Client)(nil).HasDNSSupport), vpcID)
+}
+
+// MockjobInitializer is a mock of jobInitializer interface
+type MockjobInitializer struct {
+	ctrl     *gomock.Controller
+	recorder *MockjobInitializerMockRecorder
+}
+
+// MockjobInitializerMockRecorder is the mock recorder for MockjobInitializer
+type MockjobInitializerMockRecorder struct {
+	mock *MockjobInitializer
+}
+
+// NewMockjobInitializer creates a new mock instance
+func NewMockjobInitializer(ctrl *gomock.Controller) *MockjobInitializer {
+	mock := &MockjobInitializer{ctrl: ctrl}
+	mock.recorder = &MockjobInitializerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockjobInitializer) EXPECT() *MockjobInitializerMockRecorder {
+	return m.recorder
+}
+
+// Job mocks base method
+func (m *MockjobInitializer) Job(props *initialize.JobProps) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Job", props)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Job indicates an expected call of Job
+func (mr *MockjobInitializerMockRecorder) Job(props interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Job", reflect.TypeOf((*MockjobInitializer)(nil).Job), props)
+}
+
+// MocksvcInitializer is a mock of svcInitializer interface
+type MocksvcInitializer struct {
+	ctrl     *gomock.Controller
+	recorder *MocksvcInitializerMockRecorder
+}
+
+// MocksvcInitializerMockRecorder is the mock recorder for MocksvcInitializer
+type MocksvcInitializerMockRecorder struct {
+	mock *MocksvcInitializer
+}
+
+// NewMocksvcInitializer creates a new mock instance
+func NewMocksvcInitializer(ctrl *gomock.Controller) *MocksvcInitializer {
+	mock := &MocksvcInitializer{ctrl: ctrl}
+	mock.recorder = &MocksvcInitializerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocksvcInitializer) EXPECT() *MocksvcInitializerMockRecorder {
+	return m.recorder
+}
+
+// Service mocks base method
+func (m *MocksvcInitializer) Service(props *initialize.ServiceProps) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Service", props)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Service indicates an expected call of Service
+func (mr *MocksvcInitializerMockRecorder) Service(props interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MocksvcInitializer)(nil).Service), props)
+}
+
+// MockroleDeleter is a mock of roleDeleter interface
+type MockroleDeleter struct {
+	ctrl     *gomock.Controller
+	recorder *MockroleDeleterMockRecorder
+}
+
+// MockroleDeleterMockRecorder is the mock recorder for MockroleDeleter
+type MockroleDeleterMockRecorder struct {
+	mock *MockroleDeleter
+}
+
+// NewMockroleDeleter creates a new mock instance
+func NewMockroleDeleter(ctrl *gomock.Controller) *MockroleDeleter {
+	mock := &MockroleDeleter{ctrl: ctrl}
+	mock.recorder = &MockroleDeleterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockroleDeleter) EXPECT() *MockroleDeleterMockRecorder {
+	return m.recorder
+}
+
+// DeleteRole mocks base method
+func (m *MockroleDeleter) DeleteRole(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteRole", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteRole indicates an expected call of DeleteRole
+func (mr *MockroleDeleterMockRecorder) DeleteRole(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRole", reflect.TypeOf((*MockroleDeleter)(nil).DeleteRole), arg0)
 }
