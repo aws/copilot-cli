@@ -7,6 +7,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -248,29 +249,34 @@ containerized services that operate together.`))
 	if err := o.loadWkld(); err != nil {
 		return err
 	}
-	if o.initWkldVars.wkldType == manifest.ScheduledJobType {
-		log.Infof("Ok great, we'll set up a %s named %s in application %s running on the schedule %s.\n",
-			color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(*o.schedule))
-	} else {
-		if o.port != nil && *o.port != 0 {
-			log.Infof("Ok great, we'll set up a %s named %s in application %s listening on port %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(fmt.Sprintf("%d", *o.port)))
-		} else {
-			log.Infof("Ok great, we'll set up a %s named %s in application %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName))
-		}
-	}
+
+	o.logWorkloadTypeAck()
 
 	log.Infoln()
 	if err := o.initAppCmd.Execute(); err != nil {
 		return fmt.Errorf("execute app init: %w", err)
 	}
 	if err := o.initWlCmd.Execute(); err != nil {
-		return fmt.Errorf("execute job or svc init: %w", err)
+		return fmt.Errorf("execute %s init: %w", o.wkldType, err)
 	}
 
 	if err := o.deployEnv(); err != nil {
 		return err
 	}
 	return o.deploy()
+}
+
+func (o *initOpts) logWorkloadTypeAck() {
+	if o.initWkldVars.wkldType == manifest.ScheduledJobType {
+		log.Infof("Ok great, we'll set up a %s named %s in application %s running on the schedule %s.\n",
+			color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(*o.schedule))
+		return
+	}
+	if aws.Uint16Value(o.port) != 0 {
+		log.Infof("Ok great, we'll set up a %s named %s in application %s listening on port %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName), color.HighlightUserInput(fmt.Sprintf("%d", *o.port)))
+	} else {
+		log.Infof("Ok great, we'll set up a %s named %s in application %s.\n", color.HighlightUserInput(o.initWkldVars.wkldType), color.HighlightUserInput(o.initWkldVars.name), color.HighlightUserInput(o.initWkldVars.appName))
+	}
 }
 
 func (o *initOpts) deploy() error {
@@ -295,10 +301,10 @@ func (o *initOpts) loadWkld() error {
 		return err
 	}
 	if err := o.initWlCmd.Ask(); err != nil {
-		return fmt.Errorf("ask job or svc init: %w", err)
+		return fmt.Errorf("execute %s ask: %w", o.wkldType, err)
 	}
 	if err := o.initWlCmd.Validate(); err != nil {
-		return fmt.Errorf("validate job or svc init: %w", err)
+		return fmt.Errorf("execute %s validate: %w", o.wkldType, err)
 	}
 
 	return nil
