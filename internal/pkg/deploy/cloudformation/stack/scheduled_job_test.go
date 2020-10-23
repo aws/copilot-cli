@@ -53,7 +53,6 @@ func TestScheduledJob_Template(t *testing.T) {
 						Timeout: aws.Int(5400),
 						Retries: aws.Int(3),
 					},
-					IsJob: true,
 				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
 				j.parser = m
@@ -76,7 +75,6 @@ func TestScheduledJob_Template(t *testing.T) {
 						Timeout: aws.Int(5400),
 						Retries: aws.Int(3),
 					},
-					IsJob: true,
 				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{
 					tpl: `Resources:

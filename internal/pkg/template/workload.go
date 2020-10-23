@@ -112,7 +112,6 @@ type WorkloadOpts struct {
 	// Additional options for job templates.
 	ScheduleExpression string
 	StateMachine       *StateMachineOpts
-	IsJob              bool
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
