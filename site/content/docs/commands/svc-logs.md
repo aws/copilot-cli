@@ -30,12 +30,18 @@ $ copilot svc logs
 
 Displays logs of the service "my-svc" in environment "test".
 
-`$ copilot svc logs -n my-svc -e test`
+```bash
+$ copilot svc logs -n my-svc -e test
+```
 
 Displays logs in the last hour.
 
-`$ copilot svc logs --since 1h`
+```bash
+$ copilot svc logs --since 1h
+```
 
 Displays logs from 2006-01-02T15:04:05 to 2006-01-02T15:05:05.
 
-`$ copilot svc logs --start-time 2006-01-02T15:04:05+00:00 --end-time 2006-01-02T15:05:05+00:00`
+```bash
+$ copilot svc logs --start-time 2006-01-02T15:04:05+00:00 --end-time 2006-01-02T15:05:05+00:00
+```
