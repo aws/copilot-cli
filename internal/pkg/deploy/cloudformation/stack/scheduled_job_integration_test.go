@@ -23,8 +23,6 @@ const (
 	jobManifestPath = "job-manifest.yml"
 	jobStackPath    = "job-test.stack.yml"
 	jobParamsPath   = "job-test.params.json"
-
-	jobImageUrl = "alpine"
 )
 
 func TestScheduledJob_Template(t *testing.T) {
