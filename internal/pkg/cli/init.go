@@ -433,8 +433,8 @@ func BuildInitCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
-	cmd.Flags().StringVarP(&vars.svcName, nameFlag, svcFlagShort, "", svcFlagDescription)
-	cmd.Flags().StringVarP(&vars.wkldType, typeFlag, svcTypeFlagShort, "", wkldTypeFlagDescription)
+	cmd.Flags().StringVarP(&vars.svcName, nameFlag, nameFlagShort, "", workloadFlagDescription)
+	cmd.Flags().StringVarP(&vars.wkldType, typeFlag, typeFlagShort, "", wkldTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldDeploy, deployFlag, false, deployTestFlagDescription)
