@@ -35,7 +35,7 @@ func TestPipeline_Template(t *testing.T) {
 					Region:    "us-west-2",
 					AccountID: "1111",
 				},
-				LocalServices:    []string{"api"},
+				LocalWorkloads:   []string{"api"},
 				RequiresApproval: false,
 				TestCommands:     []string{`echo "test"`},
 			},

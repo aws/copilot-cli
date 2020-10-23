@@ -260,7 +260,7 @@ Resources:
               - Name: SCCheckoutArtifact
             OutputArtifacts:
               - Name: BuildOutput
-        {{- $length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}{{$svcNum := len $stage.LocalServices}}{{if gt $svcNum 0}}
+        {{- $length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}{{$numWorkloads := len $stage.LocalWorkloads}}{{if gt $numWorkloads 0}}
         - Name: DeployTo-{{$stage.Name}}
           Actions:{{if $stage.RequiresApproval }}
             - Name: ApprovePromotionTo-{{$stage.Name}}
@@ -269,8 +269,8 @@ Resources:
                 Owner: AWS
                 Version: 1
                 Provider: Manual
-              RunOrder: 1{{end}}{{range $svc := $stage.LocalServices}}
-            - Name: CreateOrUpdate-{{$svc}}-{{$stage.Name}}
+              RunOrder: 1{{end}}{{range $workload := $stage.LocalWorkloads}}
+            - Name: CreateOrUpdate-{{$workload}}-{{$stage.Name}}
               Region: {{$stage.Region}}
               ActionTypeId:
                 Category: Deploy
@@ -279,12 +279,12 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
-                ChangeSetName: {{$.AppName}}-{{$stage.Name}}-{{$svc}}
+                ChangeSetName: {{$.AppName}}-{{$stage.Name}}-{{$workload}}
                 ActionMode: CREATE_UPDATE
-                StackName: {{$.AppName}}-{{$stage.Name}}-{{$svc}}
+                StackName: {{$.AppName}}-{{$stage.Name}}-{{$workload}}
                 Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: BuildOutput::infrastructure/{{$stage.WorkloadTemplatePath $svc}}
-                TemplateConfiguration: BuildOutput::infrastructure/{{$stage.WorkloadTemplateConfigurationPath $svc}}
+                TemplatePath: BuildOutput::infrastructure/{{$stage.WorkloadTemplatePath $workload}}
+                TemplateConfiguration: BuildOutput::infrastructure/{{$stage.WorkloadTemplateConfigurationPath $workload}}
                 # The ARN of the IAM role (in the env account) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.

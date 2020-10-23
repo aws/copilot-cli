@@ -136,12 +136,12 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 		Stages: []deploy.PipelineStage{
 			{
 				AssociatedEnvironment: mockAssociatedEnv("test-chicken", "us-west-2"),
-				LocalServices:         []string{"frontend", "backend"},
+				LocalWorkloads:        []string{"frontend", "backend"},
 				TestCommands:          []string{"echo 'bok bok bok'", "make test"},
 			},
 			{
 				AssociatedEnvironment: mockAssociatedEnv("prod-can-fly", "us-east-1"),
-				LocalServices:         []string{"frontend", "backend"},
+				LocalWorkloads:        []string{"frontend", "backend"},
 			},
 		},
 		ArtifactBuckets: []deploy.ArtifactBucket{

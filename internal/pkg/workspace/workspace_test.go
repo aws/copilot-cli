@@ -419,6 +419,65 @@ func TestWorkspace_JobNames(t *testing.T) {
 	}
 }
 
+func TestWorkspace_WorkspaceNames(t *testing.T) {
+	testCases := map[string]struct {
+		copilotDir string
+		fs         func() afero.Fs
+
+		wantedNames []string
+		wantedErr   error
+	}{
+		"retrieve only directories with manifest files": {
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.Mkdir("/copilot", 0755)
+				fs.Create("/copilot/buildspec.yml")
+				fs.Create("/copilot/pipeline.yml")
+
+				fs.Mkdir("/copilot/frontend", 0755)
+				frontendManifest, _ := fs.Create("/copilot/frontend/manifest.yml")
+				defer frontendManifest.Close()
+				frontendManifest.Write([]byte("type: Load Balanced Web Service"))
+
+				fs.Mkdir("/copilot/users", 0755)
+				userManifest, _ := fs.Create("/copilot/users/manifest.yml")
+				defer userManifest.Close()
+				userManifest.Write([]byte("type: Backend Service"))
+
+				fs.MkdirAll("/copilot/report/addons", 0755)
+				reportManifest, _ := fs.Create("/copilot/report/manifest.yml")
+				defer reportManifest.Close()
+				reportManifest.Write([]byte("type: Scheduled Job"))
+
+				// Missing manifest.yml.
+				fs.Mkdir("/copilot/inventory", 0755)
+				return fs
+			},
+
+			wantedNames: []string{"frontend", "users", "report"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ws := &Workspace{
+				copilotDir: tc.copilotDir,
+				fsUtils: &afero.Afero{
+					Fs: tc.fs(),
+				},
+			}
+
+			names, err := ws.WorkloadNames()
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.ElementsMatch(t, tc.wantedNames, names)
+			}
+		})
+	}
+}
+
 func TestIsInGitRepository(t *testing.T) {
 	testCases := map[string]struct {
 		given  func() FileStat

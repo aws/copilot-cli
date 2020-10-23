@@ -162,7 +162,7 @@ func (s *Source) Owner() (string, error) {
 // test commands, if the user has opted to add any.
 type PipelineStage struct {
 	*AssociatedEnvironment
-	LocalServices    []string
+	LocalWorkloads   []string
 	RequiresApproval bool
 	TestCommands     []string
 }
