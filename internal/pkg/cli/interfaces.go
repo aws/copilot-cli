@@ -255,8 +255,8 @@ type wsJobDirReader interface {
 }
 
 type wsPipelineReader interface {
-	wsServiceLister
 	wsPipelineManifestReader
+	WorkloadNames() ([]string, error)
 }
 
 type wsAppManager interface {

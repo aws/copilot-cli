@@ -187,7 +187,7 @@ func TestPipelineCreation(t *testing.T) {
 						Region:    *appSess.Config.Region,
 						AccountID: app.AccountID,
 					},
-					LocalServices: []string{"frontend", "backend"},
+					LocalWorkloads: []string{"frontend", "backend"},
 				},
 			},
 			ArtifactBuckets: artifactBuckets,
