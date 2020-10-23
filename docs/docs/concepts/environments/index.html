@@ -360,8 +360,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../services/" title="Services" class="md-nav__link">
-      Services
+    <a href="../applications/" title="Applications" class="md-nav__link">
+      Applications
     </a>
   </li>
 
@@ -492,8 +492,20 @@
 
 
   <li class="md-nav__item">
-    <a href="../applications/" title="Applications" class="md-nav__link">
-      Applications
+    <a href="../services/" title="Services" class="md-nav__link">
+      Services
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../jobs/" title="Jobs" class="md-nav__link">
+      Jobs
     </a>
   </li>
 
@@ -580,6 +592,18 @@
   <li class="md-nav__item">
     <a href="../../manifest/backend-service/" title="Backend Service" class="md-nav__link">
       Backend Service
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../manifest/scheduled-job/" title="Scheduled Job" class="md-nav__link">
+      Scheduled Job
     </a>
   </li>
 
@@ -871,6 +895,66 @@
   <li class="md-nav__item">
     <a href="../../commands/env-delete/" title="env delete" class="md-nav__link">
       env delete
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-init/" title="job init" class="md-nav__link">
+      job init
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-ls/" title="job ls" class="md-nav__link">
+      job ls
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-package/" title="job package" class="md-nav__link">
+      job package
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-deploy/" title="job deploy" class="md-nav__link">
+      job deploy
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-delete/" title="job delete" class="md-nav__link">
+      job delete
     </a>
   </li>
 
@@ -1360,7 +1444,7 @@
                 
                 <p>When you first run <code>copilot init</code> you're asked if you want to create a <em>test</em> environment. This test environment contains all the AWS resources to provision a secure network (VPC, subnets, security groups and more) as well as other resources that are meant to be shared between multiple services like an Application Load Balancer or an ECS Cluster. When you deploy your service into your <em>test</em> environment, your service will use the <em>test</em> environment's network and resources. Your application can have multiple environments, and each will have its own networking and shared resources infrastructure.</p>
 <p>While Copilot creates a test environment for you when you get started, it's common to create a new, seperate environment for production. This production environment will be completly independent from the test environment, with its own networking stack and its own copy of services. By having both a test environment and a production environment, you can deploy changes to your test environment, validate them, then promote them to the production environment.</p>
-<p>In the diagram below we have an application called <em>MyApp</em> with two services, <em>API</em> and <em>Backend</em>. Those two services are deployed to the two environments, <em>test</em> and <em>prod</em>. You can see that in the <em>test</em> environment, both services are running only one container while the <em>prod</em> services have more containers running. Services can use different configurations depending on the environment they're deployed in. For more check out the <a href="/docs/developing/environment-variables/">using environment variables</a> guide.</p>
+<p>In the diagram below we have an application called <em>MyApp</em> with two services, <em>API</em> and <em>Backend</em>. Those two services are deployed to the two environments, <em>test</em> and <em>prod</em>. You can see that in the <em>test</em> environment, both services are running only one container while the <em>prod</em> services have more containers running. Services can use different configurations depending on the environment they're deployed in. For more check out the <a href="../../developing/environment-variables/">using environment variables</a> guide.</p>
 <p><img alt="" src="https://user-images.githubusercontent.com/879348/85873795-7da9c480-b786-11ea-9990-9604a3cc5f01.png" /></p>
 <h2 id="creating-an-environment">Creating an Environment</h2>
 <p>To create a new environment in your app, you can run <code>copilot env init</code> from within your workspace. Copilot will ask you what you want to name this environment and what profile you'd like to use to bootstrap the environment. These profiles are AWS <a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html">named profiles</a> which are associated with a particular account and region. When you select one of these profiles, your environment will be created in whichever account and region that profile is associated with.</p>

@@ -358,8 +358,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../concepts/services/" title="Services" class="md-nav__link">
-      Services
+    <a href="../../concepts/applications/" title="Applications" class="md-nav__link">
+      Applications
     </a>
   </li>
 
@@ -382,8 +382,20 @@
 
 
   <li class="md-nav__item">
-    <a href="../../concepts/applications/" title="Applications" class="md-nav__link">
-      Applications
+    <a href="../../concepts/services/" title="Services" class="md-nav__link">
+      Services
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../concepts/jobs/" title="Jobs" class="md-nav__link">
+      Jobs
     </a>
   </li>
 
@@ -470,6 +482,18 @@
   <li class="md-nav__item">
     <a href="../../manifest/backend-service/" title="Backend Service" class="md-nav__link">
       Backend Service
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../manifest/scheduled-job/" title="Scheduled Job" class="md-nav__link">
+      Scheduled Job
     </a>
   </li>
 
@@ -821,6 +845,66 @@
   <li class="md-nav__item">
     <a href="../../commands/env-delete/" title="env delete" class="md-nav__link">
       env delete
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-init/" title="job init" class="md-nav__link">
+      job init
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-ls/" title="job ls" class="md-nav__link">
+      job ls
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-package/" title="job package" class="md-nav__link">
+      job package
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-deploy/" title="job deploy" class="md-nav__link">
+      job deploy
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-delete/" title="job delete" class="md-nav__link">
+      job delete
     </a>
   </li>
 
@@ -1321,7 +1405,7 @@ For example:</p>
     <span class="nt">log_stream_prefix</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">copilot/</span>
 </code></pre></div>
 
-<p>You might need to add necessary permissions to the task role so that FireLens can forward your data. You can add permissions by specifying them in your <a href="/docs/developing/additional-aws-resources">addons</a>. For example:</p>
+<p>You might need to add necessary permissions to the task role so that FireLens can forward your data. You can add permissions by specifying them in your <a href="../additional-aws-resources/">addons</a>. For example:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">Resources</span><span class="p">:</span>
   <span class="nt">FireLensPolicy</span><span class="p">:</span>
     <span class="nt">Type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">AWS::IAM::ManagedPolicy</span>
@@ -1344,7 +1428,7 @@ For example:</p>
 
 <div class="admonition info">
 <p class="admonition-title">Info</p>
-<p>Since Firelens log driver can route your main container's logs to various destinations, the <a href="/docs/commands/svc-logs"><code>svc logs</code></a> command can only track them when they are sent to the log group we create for Copilot service in CloudWatch. </p>
+<p>Since Firelens log driver can route your main container's logs to various destinations, the <a href="../../commands/svc-logs/"><code>svc logs</code></a> command can only track them when they are sent to the log group we create for Copilot service in CloudWatch. </p>
 </div>
 <div class="admonition info">
 <p class="admonition-title">Info</p>
