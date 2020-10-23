@@ -40,8 +40,8 @@ We're distributing binaries from our GitHub releases. Instructions for installin
 
 | Platform | Command to install |
 |---------|---------
-| macOS | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.4.0/copilot-darwin-v0.4.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
-| Linux | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.4.0/copilot-linux-v0.4.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
+| macOS | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.5.0/copilot-darwin-v0.5.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
+| Linux | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.5.0/copilot-linux-v0.5.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
 
 
 </details>
@@ -57,8 +57,8 @@ To get a sample app up and running in one command, run the following:
 $ git clone git@github.com:aws-samples/aws-copilot-sample-service.git demo-app
 $ cd demo-app
 $ copilot init --app demo                \
-  --svc api                              \
-  --svc-type 'Load Balanced Web Service' \
+  --name api                             \
+  --type 'Load Balanced Web Service'     \
   --dockerfile './Dockerfile'            \
   --deploy
 ```
@@ -89,7 +89,7 @@ Want to learn more about what's happening? Check out our documentation [https://
 
 The AWS Copilot CLI is in beta, meaning that you can expect our command names to be stable as well as the shape of our 
 infrastructure patterns. However, we want to know what works, what doesn't work, and what you want! 
-Have any feedback at all? Drop us an [issue](https://github.com/aws/copilot-cli/issues/new) or join us on [gitter](https://gitter.im/aws/amazon-ecs-cli-v2).
+Have any feedback at all? Drop us an [issue](https://github.com/aws/copilot-cli/issues/new) or join us on [gitter](https://gitter.im/aws/copilot-cli).
 
 We're happy to hear feedback or answer questions, so reach out, anytime!
 
