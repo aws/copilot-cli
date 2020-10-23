@@ -20,6 +20,7 @@ const (
 	svcFlag     = "svc"
 	svcTypeFlag = "svc-type"
 	jobTypeFlag = "job-type"
+	typeFlag    = "type"
 	profileFlag = "profile"
 	yesFlag     = "yes"
 	jsonFlag    = "json"
@@ -91,12 +92,11 @@ const (
 // Short flag names.
 // A short flag only exists if the flag or flag set is mandatory by the command.
 const (
-	nameFlagShort    = "n"
-	appFlagShort     = "a"
-	envFlagShort     = "e"
-	svcFlagShort     = "s"
-	svcTypeFlagShort = "t"
-	jobTypeFlagShort = "t"
+	nameFlagShort = "n"
+	appFlagShort  = "a"
+	envFlagShort  = "e"
+	svcFlagShort  = "s"
+	typeFlagShort = "t"
 
 	dockerFileFlagShort        = "d"
 	imageFlagShort             = "i"
@@ -120,6 +120,8 @@ Mutually exclusive with -%s, --%s`, imageFlagShort, imageFlag)
 %s`, strings.Join(template.QuoteSliceFunc(storageTypes), ", "))
 	jobTypeFlagDescription = fmt.Sprintf(`Type of job to create. Must be one of:
 %s`, strings.Join(template.QuoteSliceFunc(manifest.JobTypes), ", "))
+	wkldTypeFlagDescription = fmt.Sprintf(`Type of job or svc to create. Must be one of:
+%s`, strings.Join(template.QuoteSliceFunc(manifest.WorkloadTypes), ", "))
 
 	subnetsFlagDescription = fmt.Sprintf(`Optional. The subnet IDs for the task to use. Can be specified multiple times.
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
@@ -138,6 +140,7 @@ const (
 	envFlagDescription      = "Name of the environment."
 	svcFlagDescription      = "Name of the service."
 	jobFlagDescription      = "Name of the job."
+	workloadFlagDescription = "Name of the service or job."
 	pipelineFlagDescription = "Name of the pipeline."
 	profileFlagDescription  = "Name of the profile."
 	yesFlagDescription      = "Skips confirmation prompt."
@@ -160,7 +163,7 @@ Defaults to all logs. Only one of start-time / since may be used.`
 Defaults to all logs. Only one of end-time / follow may be used.`
 	tasksLogsFlagDescription = "Optional. Only return logs from specific task IDs."
 
-	deployTestFlagDescription        = `Deploy your service to a "test" environment.`
+	deployTestFlagDescription        = `Deploy your service or job to a "test" environment.`
 	githubURLFlagDescription         = "GitHub repository URL for your service."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
 	gitBranchFlagDescription         = "Branch used to trigger your pipeline."

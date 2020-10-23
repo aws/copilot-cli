@@ -98,9 +98,9 @@ func (o *updatePipelineOpts) Validate() error {
 
 func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
 	var stages []deploy.PipelineStage
-	svcNames, err := o.ws.ServiceNames()
+	workloads, err := o.ws.WorkloadNames()
 	if err != nil {
-		return nil, fmt.Errorf("service names from workspace: %w", err)
+		return nil, fmt.Errorf("get workload names from workspace: %w", err)
 	}
 
 	for _, stage := range manifestStages {
@@ -110,7 +110,7 @@ func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineSta
 		}
 
 		pipelineStage := deploy.PipelineStage{
-			LocalServices: svcNames,
+			LocalWorkloads: workloads,
 			AssociatedEnvironment: &deploy.AssociatedEnvironment{
 				Name:      stage.Name,
 				Region:    env.Region,

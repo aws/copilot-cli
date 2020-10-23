@@ -529,6 +529,7 @@ func (s *WorkspaceSelect) askRate(rateValidator prompt.ValidatorFunc) (string, e
 		ratePrompt,
 		rateHelp,
 		rateValidator,
+		prompt.WithDefaultInput("1h30m"),
 		prompt.WithFinalMessage("Rate:"),
 	)
 	if err != nil {

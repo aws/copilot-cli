@@ -143,6 +143,13 @@ func (ws *Workspace) JobNames() ([]string, error) {
 	})
 }
 
+// WorkloadNames returns the name of all the workloads in the workspace.
+func (ws *Workspace) WorkloadNames() ([]string, error) {
+	return ws.workloadNames(func(wlType string) bool {
+		return true
+	})
+}
+
 // workloadNames returns the name of all workloads (either services or jobs) in the workspace.
 func (ws *Workspace) workloadNames(match func(string) bool) ([]string, error) {
 	copilotPath, err := ws.CopilotDirPath()
