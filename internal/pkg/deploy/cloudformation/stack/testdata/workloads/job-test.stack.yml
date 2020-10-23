@@ -60,7 +60,7 @@ Resources:
             Value: !Sub '${AppName}.local'
           - Name: COPILOT_ENVIRONMENT_NAME
             Value: !Sub '${EnvName}'
-          - Name: COPILOT_SERVICE_NAME
+          - Name: COPILOT_JOB_NAME
             Value: !Sub '${WorkloadName}'
           - Name: COPILOT_LB_DNS
             Value:
