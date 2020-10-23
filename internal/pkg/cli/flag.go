@@ -92,12 +92,11 @@ const (
 // Short flag names.
 // A short flag only exists if the flag or flag set is mandatory by the command.
 const (
-	nameFlagShort    = "n"
-	appFlagShort     = "a"
-	envFlagShort     = "e"
-	svcFlagShort     = "s"
-	svcTypeFlagShort = "t"
-	jobTypeFlagShort = "t"
+	nameFlagShort = "n"
+	appFlagShort  = "a"
+	envFlagShort  = "e"
+	svcFlagShort  = "s"
+	typeFlagShort = "t"
 
 	dockerFileFlagShort        = "d"
 	imageFlagShort             = "i"
@@ -141,6 +140,7 @@ const (
 	envFlagDescription      = "Name of the environment."
 	svcFlagDescription      = "Name of the service."
 	jobFlagDescription      = "Name of the job."
+	workloadFlagDescription = "Name of the service or job."
 	pipelineFlagDescription = "Name of the pipeline."
 	profileFlagDescription  = "Name of the profile."
 	yesFlagDescription      = "Skips confirmation prompt."
@@ -163,7 +163,7 @@ Defaults to all logs. Only one of start-time / since may be used.`
 Defaults to all logs. Only one of end-time / follow may be used.`
 	tasksLogsFlagDescription = "Optional. Only return logs from specific task IDs."
 
-	deployTestFlagDescription        = `Deploy your service to a "test" environment.`
+	deployTestFlagDescription        = `Deploy your service or job to a "test" environment.`
 	githubURLFlagDescription         = "GitHub repository URL for your service."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
 	gitBranchFlagDescription         = "Branch used to trigger your pipeline."

@@ -28,13 +28,13 @@ type AppInitRequest struct {
 
 // InitRequest contains the parameters for calling copilot init.
 type InitRequest struct {
-	AppName    string
-	SvcName    string
-	Deploy     bool
-	ImageTag   string
-	Dockerfile string
-	SvcType    string
-	SvcPort    string
+	AppName      string
+	WorkloadName string
+	Deploy       bool
+	ImageTag     string
+	Dockerfile   string
+	WorkloadType string
+	SvcPort      string
 }
 
 // EnvInitRequest contains the parameters for calling copilot env init.
@@ -181,8 +181,8 @@ func (cli *CLI) Init(opts *InitRequest) (string, error) {
 	return cli.exec(
 		exec.Command(cli.path, "init",
 			"--app", opts.AppName,
-			"--svc", opts.SvcName,
-			"--svc-type", opts.SvcType,
+			"--name", opts.WorkloadName,
+			"--type", opts.WorkloadType,
 			"--tag", opts.ImageTag,
 			"--dockerfile", opts.Dockerfile,
 			"--port", opts.SvcPort,

@@ -305,7 +305,7 @@ func buildJobInitCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", jobFlagDescription)
-	cmd.Flags().StringVarP(&vars.wkldType, jobTypeFlag, jobTypeFlagShort, "", jobTypeFlagDescription)
+	cmd.Flags().StringVarP(&vars.wkldType, jobTypeFlag, typeFlagShort, "", jobTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.schedule, scheduleFlag, scheduleFlagShort, "", scheduleFlagDescription)
 	cmd.Flags().StringVar(&vars.timeout, timeoutFlag, "", timeoutFlagDescription)

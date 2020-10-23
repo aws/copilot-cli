@@ -23,13 +23,13 @@ var _ = Describe("init flow", func() {
 	BeforeAll(func() {
 		svcName = "front-end"
 		_, initErr = cli.Init(&client.InitRequest{
-			AppName:    appName,
-			SvcName:    svcName,
-			ImageTag:   "gallopinggurdey",
-			Dockerfile: "./front-end/Dockerfile",
-			SvcType:    "Load Balanced Web Service",
-			Deploy:     true,
-			SvcPort:    "80",
+			AppName:      appName,
+			WorkloadName: svcName,
+			ImageTag:     "gallopinggurdey",
+			Dockerfile:   "./front-end/Dockerfile",
+			WorkloadType: "Load Balanced Web Service",
+			Deploy:       true,
+			SvcPort:      "80",
 		})
 	})
 
