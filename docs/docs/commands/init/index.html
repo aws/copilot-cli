@@ -358,8 +358,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../concepts/services/" title="Services" class="md-nav__link">
-      Services
+    <a href="../../concepts/applications/" title="Applications" class="md-nav__link">
+      Applications
     </a>
   </li>
 
@@ -382,8 +382,20 @@
 
 
   <li class="md-nav__item">
-    <a href="../../concepts/applications/" title="Applications" class="md-nav__link">
-      Applications
+    <a href="../../concepts/services/" title="Services" class="md-nav__link">
+      Services
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../concepts/jobs/" title="Jobs" class="md-nav__link">
+      Jobs
     </a>
   </li>
 
@@ -470,6 +482,18 @@
   <li class="md-nav__item">
     <a href="../../manifest/backend-service/" title="Backend Service" class="md-nav__link">
       Backend Service
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../manifest/scheduled-job/" title="Scheduled Job" class="md-nav__link">
+      Scheduled Job
     </a>
   </li>
 
@@ -673,13 +697,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#what-does-it-look-like" class="md-nav__link">
-    What does it look like?
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -817,6 +834,66 @@
   <li class="md-nav__item">
     <a href="../env-delete/" title="env delete" class="md-nav__link">
       env delete
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../job-init/" title="job init" class="md-nav__link">
+      job init
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../job-ls/" title="job ls" class="md-nav__link">
+      job ls
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../job-package/" title="job package" class="md-nav__link">
+      job package
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../job-deploy/" title="job deploy" class="md-nav__link">
+      job deploy
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../job-delete/" title="job delete" class="md-nav__link">
+      job delete
     </a>
   </li>
 
@@ -1217,13 +1294,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#what-does-it-look-like" class="md-nav__link">
-    What does it look like?
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -1250,24 +1320,31 @@
 
 <h2 id="what-does-it-do">What does it do?</h2>
 <p><code>copilot init</code> is your starting point if you want to deploy your container app on Amazon ECS. Run it within a directory with your Dockerfile, and <code>init</code> will ask you questions about your application so we can get it up and running quickly. </p>
-<p>After you answer all the questions, <code>copilot init</code> will set up an ECR repository for you and ask you if you'd like to deploy. If you opt to deploy, it'll create a new <code>test</code> environment (complete with a networking stack and roles), build your Dockerfile, push it to Amazon ECR, and deploy your service. </p>
-<p>If you have an existing app, and want to add another service to that app, you can run <code>copilot init</code> - and you'll be prompted to select an existing app to add your app to. </p>
+<p>After you answer all the questions, <code>copilot init</code> will set up an ECR repository for you and ask you if you'd like to deploy. If you opt to deploy, it'll create a new <code>test</code> environment (complete with a networking stack and roles), build your Dockerfile, push it to Amazon ECR, and deploy your service or job. </p>
+<p>If you have an existing app, and want to add another service or job to that app, you can run <code>copilot init</code> - and you'll be prompted to select an existing app to add your service or job to. </p>
 <h2 id="what-are-the-flags">What are the flags?</h2>
 <p>Like all commands in the copilot CLI, if you don't provide required flags, we'll prompt you for all the information we need to get you going. You can skip the prompts by providing information via flags:</p>
 <div class="highlight"><pre><span></span><code>  -a, --app string          Name of the application.
-      --deploy              Deploy your service to a <span class="s2">&quot;test&quot;</span> environment.
+      --deploy              Deploy your service or job to a <span class="s2">&quot;test&quot;</span> environment.
   -d, --dockerfile string   Path to the Dockerfile.
+                            Mutually exclusive with -i, --image
   -h, --help                <span class="nb">help</span> <span class="k">for</span> init
+  -i, --image string        The location of an existing Docker image.
+                            Mutually exclusive with -d, --dockerfile
+  -n, --name string         Name of the service or job.
       --port uint16         Optional. The port on which your service listens.
-      --profile string      Name of the profile. <span class="o">(</span>default <span class="s2">&quot;default&quot;</span><span class="o">)</span>
-  -s, --svc string          Name of the service.
-  -t, --svc-type string     Type of service to create. Must be one of:
+      --retries int         Optional. The number of <span class="nb">times</span> to try restarting the job on a failure.
+      --schedule string     The schedule on which to run this job. 
+                            Accepts cron expressions of the format <span class="o">(</span>M H DoM M DoW<span class="o">)</span> and schedule definition strings. 
+                            For example: <span class="s2">&quot;0 * * * *&quot;</span>, <span class="s2">&quot;@daily&quot;</span>, <span class="s2">&quot;@weekly&quot;</span>, <span class="s2">&quot;@every 1h30m&quot;</span>.
+                            AWS Schedule Expressions of the form <span class="s2">&quot;rate(10 minutes)&quot;</span> or <span class="s2">&quot;cron(0 12 L * ? 2021)&quot;</span>
+                            are also accepted.
+      --tag string          Optional. The container image tag.
+      --timeout string      Optional. The total execution <span class="nb">time</span> <span class="k">for</span> the task, including retries.
+                            Accepts valid Go duration strings. For example: <span class="s2">&quot;2h&quot;</span>, <span class="s2">&quot;1h30m&quot;</span>, <span class="s2">&quot;900s&quot;</span>.
+  -t, --type string         Type of service to create. Must be one of:
                             <span class="s2">&quot;Load Balanced Web Service&quot;</span>, <span class="s2">&quot;Backend Service&quot;</span>
-      --tag string          Optional. The service<span class="err">&#39;</span>s image tag.
 </code></pre></div>
-
-<h2 id="what-does-it-look-like">What does it look like?</h2>
-<p><img alt="Running copilot init" src="https://raw.githubusercontent.com/kohidave/copilot-demos/master/init-no-deploy.svg?sanitize=true" /></p>
                 
               
               

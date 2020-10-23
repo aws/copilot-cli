@@ -17,7 +17,7 @@
     
     
       
-        <title>app delete - AWS Copilot CLI</title>
+        <title>job delete - AWS Copilot CLI</title>
       
     
     
@@ -58,7 +58,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#app-delete" class="md-skip">
+        <a href="#job-delete" class="md-skip">
           Skip to content
         </a>
       
@@ -100,7 +100,7 @@
           </span>
           <span class="md-header-nav__topic md-ellipsis">
             
-              app delete
+              job delete
             
           </span>
         </div>
@@ -737,63 +737,11 @@
           
           
 
-  
 
-
-  <li class="md-nav__item md-nav__item--active">
-    
-    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
-    
-      
-    
-    
-      <label class="md-nav__link md-nav__link--active" for="__toc">
-        app delete
-        <span class="md-nav__icon md-icon"></span>
-      </label>
-    
-    <a href="./" title="app delete" class="md-nav__link md-nav__link--active">
+  <li class="md-nav__item">
+    <a href="../app-delete/" title="app delete" class="md-nav__link">
       app delete
     </a>
-    
-      
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#what-does-it-do" class="md-nav__link">
-    What does it do?
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-are-the-flags" class="md-nav__link">
-    What are the flags?
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    Examples
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-    
   </li>
 
         
@@ -897,11 +845,63 @@
           
           
 
+  
 
-  <li class="md-nav__item">
-    <a href="../job-delete/" title="job delete" class="md-nav__link">
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        job delete
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+    
+    <a href="./" title="job delete" class="md-nav__link md-nav__link--active">
       job delete
     </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-does-it-do" class="md-nav__link">
+    What does it do?
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-are-the-flags" class="md-nav__link">
+    What are the flags?
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    Examples
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
   </li>
 
         
@@ -1320,7 +1320,7 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/aws/copilot-cli/edit/mainline/site/content/docs/commands/app-delete.md" title="Edit this page" class="md-content__button md-icon">
+                  <a href="https://github.com/aws/copilot-cli/edit/mainline/site/content/docs/commands/job-delete.md" title="Edit this page" class="md-content__button md-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
                   </a>
                 
@@ -1328,20 +1328,32 @@
                   
                 
                 
-                <h1 id="app-delete">app delete</h1>
-<div class="highlight"><pre><span></span><code>$ copilot app delete <span class="o">[</span>flags<span class="o">]</span>
+                <h1 id="job-delete">job delete</h1>
+<div class="highlight"><pre><span></span><code>$ copilot job delete <span class="o">[</span>flags<span class="o">]</span>
 </code></pre></div>
 
 <h2 id="what-does-it-do">What does it do?</h2>
-<p><code>copilot app delete</code> deletes all resources associated with an application.</p>
+<p><code>copilot job delete</code> deletes all resources associated with your job in a particular environment.</p>
 <h2 id="what-are-the-flags">What are the flags?</h2>
-<div class="highlight"><pre><span></span><code>-h, --help                          <span class="nb">help</span> <span class="k">for</span> delete
-    --yes                           Skips confirmation prompt.
+<div class="highlight"><pre><span></span><code>  -a, --app string    Name of the application.
+  -e, --env string    Name of the environment.
+  -h, --help          <span class="nb">help</span> <span class="k">for</span> delete
+  -n, --name string   Name of the job.
+      --yes           Skips confirmation prompt.
 </code></pre></div>
 
 <h2 id="examples">Examples</h2>
-<p>Force delete the application.
-<div class="highlight"><pre><span></span><code>$ copilot app delete --yes 
+<p>Delete the "report-generator" job from the my-app application.
+<div class="highlight"><pre><span></span><code>$ copilot job delete --name report-generator --app my-app
+</code></pre></div></p>
+<p>Delete the "report-generator" job from just the prod environment.
+<div class="highlight"><pre><span></span><code>$ copilot job delete --name report-generator --env prod
+</code></pre></div></p>
+<p>Delete the "report-generator" job from the my-app application from outside of the workspace.
+<div class="highlight"><pre><span></span><code>$ copilot job delete --name report-generator --app my-app
+</code></pre></div></p>
+<p>Delete the "report-generator" job without confirmation prompt.
+<div class="highlight"><pre><span></span><code>$ copilot job delete --name report-generator --yes
 </code></pre></div></p>
                 
               

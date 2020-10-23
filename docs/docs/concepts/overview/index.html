@@ -379,8 +379,8 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#services" class="md-nav__link">
-    Services
+  <a href="#applications" class="md-nav__link">
+    Applications
   </a>
   
 </li>
@@ -393,8 +393,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#applications" class="md-nav__link">
-    Applications
+  <a href="#services" class="md-nav__link">
+    Services
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#jobs" class="md-nav__link">
+    Jobs
   </a>
   
 </li>
@@ -419,8 +426,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../services/" title="Services" class="md-nav__link">
-      Services
+    <a href="../applications/" title="Applications" class="md-nav__link">
+      Applications
     </a>
   </li>
 
@@ -443,8 +450,20 @@
 
 
   <li class="md-nav__item">
-    <a href="../applications/" title="Applications" class="md-nav__link">
-      Applications
+    <a href="../services/" title="Services" class="md-nav__link">
+      Services
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../jobs/" title="Jobs" class="md-nav__link">
+      Jobs
     </a>
   </li>
 
@@ -531,6 +550,18 @@
   <li class="md-nav__item">
     <a href="../../manifest/backend-service/" title="Backend Service" class="md-nav__link">
       Backend Service
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../manifest/scheduled-job/" title="Scheduled Job" class="md-nav__link">
+      Scheduled Job
     </a>
   </li>
 
@@ -822,6 +853,66 @@
   <li class="md-nav__item">
     <a href="../../commands/env-delete/" title="env delete" class="md-nav__link">
       env delete
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-init/" title="job init" class="md-nav__link">
+      job init
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-ls/" title="job ls" class="md-nav__link">
+      job ls
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-package/" title="job package" class="md-nav__link">
+      job package
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-deploy/" title="job deploy" class="md-nav__link">
+      job deploy
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-delete/" title="job delete" class="md-nav__link">
+      job delete
     </a>
   </li>
 
@@ -1209,8 +1300,8 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#services" class="md-nav__link">
-    Services
+  <a href="#applications" class="md-nav__link">
+    Applications
   </a>
   
 </li>
@@ -1223,8 +1314,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#applications" class="md-nav__link">
-    Applications
+  <a href="#services" class="md-nav__link">
+    Services
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#jobs" class="md-nav__link">
+    Jobs
   </a>
   
 </li>
@@ -1258,15 +1356,18 @@
                 
                 <h1 id="concepts">Concepts</h1>
 <p>Copilot makes it super easy to set up and deploy your containers on AWS - but getting started is only the first step of the journey. What happens when you want to have one copy of your service running only for testing and another copy serving production traffic? What happens when you want to add another service? How do you manage deploying to all of these services? Copilot wants to help you with all of these things so let's jump into some of Copilot's core concepts to understand how they can help.</p>
-<h2 id="services"><a href="/docs/concepts/services/">Services</a></h2>
-<p>A service is your code and all of the supporting infrastructure needed to get it up and running on AWS. When you first get started setting up a service, Copilot will ask you what <em>type</em> of service you want to create. The <em>type</em> of service determines the infrastructure that'll be created to support your code. If you want your code to serve traffic from the internet, for example, Copilot can set up an Application Load Balancer and an Amazon ECS Service running on AWS Fargate.</p>
-<p>Once you've told Copilot what type of service you're building, Copilot will take care of building your code's Dockerfile and storing the images securely in an Amazon ECR repository. Copilot will also create a simple file called the <em>manifest</em> which contains all the knobs and toggles for your service. This includes things like how much memory and CPU should be allocated to each copy of your service, how many copies of your service you want running, and more.</p>
-<h2 id="environments"><a href="/docs/concepts/environments/">Environments</a></h2>
+<h2 id="applications"><a href="../applications/">Applications</a></h2>
+<p>An Application is a collection of services and environments. When you get started with Copilot, the first thing you'll be asked to do is choose an application name. This can be a high level description of the product you're trying to build. An example might be an application named <em>"chat"</em> which has two services <em>"frontend"</em> and <em>"api"</em>. These two services could then be deployed to a <em>"test"</em> and <em>"production"</em> environment.</p>
+<h2 id="environments"><a href="../environments/">Environments</a></h2>
 <p>Rumor has it, there are people out there that can write perfect code on the first go without any bugs. While we tip our hats to those folks, we believe it's important to be able to test new code on a non-customer facing version of your service before promoting to production. In Copilot we do this by using <em>environments</em>. Each environment can have its own version of a service running allowing you to create a "test" and "production" environment. You can deploy your service to the test environment, make sure everything looks good, then deploy to your production environment. Since each environment is independent, if you deploy a bug to your test environment, customers using a service deployed to your production environment will be fine.</p>
 <p>Until now we've been talking about just one service, but what happens when you want to add another service? Perhaps you want to add a backend service to complement your frontend service. Each environment contains a set of resources shared between all the deployed services - these resources include the network (VPC, Subnets, Security Groups, etc...), the ECS Cluster, and the load balancer. If you deploy both your frontend and backend service to your test environment, both services will share the same network and cluster.</p>
-<h2 id="applications"><a href="/docs/concepts/applications/">Applications</a></h2>
-<p>An Application is a collection of services and environments. When you get started with Copilot, the first thing you'll be asked to do is choose an application name. This can be a high level description of the product you're trying to build. An example might be an application named <em>"chat"</em> which has two services <em>"frontend"</em> and <em>"api"</em>. These two services could then be deployed to a <em>"test"</em> and <em>"production"</em> environment.</p>
-<h2 id="pipelines"><a href="/docs/concepts/pipelines/">Pipelines</a></h2>
+<h2 id="services"><a href="../services/">Services</a></h2>
+<p>A service is your code and all of the supporting infrastructure needed to get it up and running on AWS. When you first get started setting up a service, Copilot will ask you what <em>type</em> of service you want to create. The <em>type</em> of service determines the infrastructure that'll be created to support your code. If you want your code to serve traffic from the internet, for example, Copilot can set up an Application Load Balancer and an Amazon ECS Service running on AWS Fargate.</p>
+<p>Once you've told Copilot what type of service you're building, Copilot will take care of building your code's Dockerfile and storing the images securely in an Amazon ECR repository. Copilot will also create a simple file called the <em>manifest</em> which contains all the knobs and toggles for your service. This includes things like how much memory and CPU should be allocated to each copy of your service, how many copies of your service you want running, and more.</p>
+<h2 id="jobs"><a href="../jobs/">Jobs</a></h2>
+<p>Jobs are <em>ephemeral</em> Amazon ECS tasks that are triggered by an event. Once their work is done, the task terminates. Just like services, Copilot will ask you all the necessary information 
+to quickly get going with a scheduled task on AWS. The manifest file can be used to always adjust the configuration and provide more advanced settings. </p>
+<h2 id="pipelines"><a href="../pipelines/">Pipelines</a></h2>
 <p>Now that you've got an application with a few services deployed to a couple of environments, staying on top of those deployments can become tricky. Copilot can help by setting up a release pipeline that deploys your service whenever you push to your git repositry. When a push is detected, your pipeline will build your service, push the image to ECR, and deploy to your environments.</p>
 <p>A common pattern is to set up a pipeline for a particular service that deploys to a test environment, runs automated testing, then deploys to the production environment.</p>
                 

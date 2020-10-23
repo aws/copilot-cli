@@ -17,7 +17,7 @@
     
     
       
-        <title>app delete - AWS Copilot CLI</title>
+        <title>Jobs - AWS Copilot CLI</title>
       
     
     
@@ -58,7 +58,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#app-delete" class="md-skip">
+        <a href="#creating-a-job" class="md-skip">
           Skip to content
         </a>
       
@@ -100,7 +100,7 @@
           </span>
           <span class="md-header-nav__topic md-ellipsis">
             
-              app delete
+              Jobs
             
           </span>
         </div>
@@ -323,10 +323,12 @@
           
           
 
+  
 
-  <li class="md-nav__item md-nav__item--nested">
+
+  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
     
-      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-4" type="checkbox" id="nav-2-4">
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-4" type="checkbox" id="nav-2-4" checked>
     
     <label class="md-nav__link" for="nav-2-4">
       Concepts
@@ -346,7 +348,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../concepts/overview/" title="Overview" class="md-nav__link">
+    <a href="../overview/" title="Overview" class="md-nav__link">
       Overview
     </a>
   </li>
@@ -358,7 +360,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../concepts/applications/" title="Applications" class="md-nav__link">
+    <a href="../applications/" title="Applications" class="md-nav__link">
       Applications
     </a>
   </li>
@@ -370,7 +372,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../concepts/environments/" title="Environments" class="md-nav__link">
+    <a href="../environments/" title="Environments" class="md-nav__link">
       Environments
     </a>
   </li>
@@ -382,7 +384,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../concepts/services/" title="Services" class="md-nav__link">
+    <a href="../services/" title="Services" class="md-nav__link">
       Services
     </a>
   </li>
@@ -392,11 +394,72 @@
           
           
 
+  
 
-  <li class="md-nav__item">
-    <a href="../../concepts/jobs/" title="Jobs" class="md-nav__link">
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Jobs
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+    
+    <a href="./" title="Jobs" class="md-nav__link md-nav__link--active">
       Jobs
     </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#creating-a-job" class="md-nav__link">
+    Creating a Job
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#config-and-the-manifest" class="md-nav__link">
+    Config and the Manifest
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deploying-a-job" class="md-nav__link">
+    Deploying a Job
+  </a>
+  
+    <nav class="md-nav" aria-label="Deploying a Job">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#whats-in-a-job" class="md-nav__link">
+    What's in a Job?
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
   </li>
 
         
@@ -406,7 +469,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../../concepts/pipelines/" title="Pipelines" class="md-nav__link">
+    <a href="../pipelines/" title="Pipelines" class="md-nav__link">
       Pipelines
     </a>
   </li>
@@ -605,12 +668,10 @@
           
           
 
-  
 
-
-  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+  <li class="md-nav__item md-nav__item--nested">
     
-      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-8" type="checkbox" id="nav-2-8" checked>
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-8" type="checkbox" id="nav-2-8">
     
     <label class="md-nav__link" for="nav-2-8">
       Commands
@@ -651,7 +712,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../init/" title="init" class="md-nav__link">
+    <a href="../../commands/init/" title="init" class="md-nav__link">
       init
     </a>
   </li>
@@ -663,7 +724,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../docs/" title="docs" class="md-nav__link">
+    <a href="../../commands/docs/" title="docs" class="md-nav__link">
       docs
     </a>
   </li>
@@ -678,12 +739,10 @@
           
           
 
-  
 
-
-  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+  <li class="md-nav__item md-nav__item--nested">
     
-      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-8-2" type="checkbox" id="nav-2-8-2" checked>
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-8-2" type="checkbox" id="nav-2-8-2">
     
     <label class="md-nav__link" for="nav-2-8-2">
       Develop
@@ -703,7 +762,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../app-init/" title="app init" class="md-nav__link">
+    <a href="../../commands/app-init/" title="app init" class="md-nav__link">
       app init
     </a>
   </li>
@@ -715,7 +774,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../app-ls/" title="app ls" class="md-nav__link">
+    <a href="../../commands/app-ls/" title="app ls" class="md-nav__link">
       app ls
     </a>
   </li>
@@ -727,7 +786,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../app-show/" title="app show" class="md-nav__link">
+    <a href="../../commands/app-show/" title="app show" class="md-nav__link">
       app show
     </a>
   </li>
@@ -737,63 +796,11 @@
           
           
 
-  
 
-
-  <li class="md-nav__item md-nav__item--active">
-    
-    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
-    
-      
-    
-    
-      <label class="md-nav__link md-nav__link--active" for="__toc">
-        app delete
-        <span class="md-nav__icon md-icon"></span>
-      </label>
-    
-    <a href="./" title="app delete" class="md-nav__link md-nav__link--active">
+  <li class="md-nav__item">
+    <a href="../../commands/app-delete/" title="app delete" class="md-nav__link">
       app delete
     </a>
-    
-      
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#what-does-it-do" class="md-nav__link">
-    What does it do?
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-are-the-flags" class="md-nav__link">
-    What are the flags?
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    Examples
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-    
   </li>
 
         
@@ -803,7 +810,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../env-init/" title="env init" class="md-nav__link">
+    <a href="../../commands/env-init/" title="env init" class="md-nav__link">
       env init
     </a>
   </li>
@@ -815,7 +822,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../env-ls/" title="env ls" class="md-nav__link">
+    <a href="../../commands/env-ls/" title="env ls" class="md-nav__link">
       env ls
     </a>
   </li>
@@ -827,7 +834,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../env-show/" title="env show" class="md-nav__link">
+    <a href="../../commands/env-show/" title="env show" class="md-nav__link">
       env show
     </a>
   </li>
@@ -839,7 +846,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../env-delete/" title="env delete" class="md-nav__link">
+    <a href="../../commands/env-delete/" title="env delete" class="md-nav__link">
       env delete
     </a>
   </li>
@@ -851,7 +858,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../job-init/" title="job init" class="md-nav__link">
+    <a href="../../commands/job-init/" title="job init" class="md-nav__link">
       job init
     </a>
   </li>
@@ -863,7 +870,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../job-ls/" title="job ls" class="md-nav__link">
+    <a href="../../commands/job-ls/" title="job ls" class="md-nav__link">
       job ls
     </a>
   </li>
@@ -875,7 +882,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../job-package/" title="job package" class="md-nav__link">
+    <a href="../../commands/job-package/" title="job package" class="md-nav__link">
       job package
     </a>
   </li>
@@ -887,7 +894,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../job-deploy/" title="job deploy" class="md-nav__link">
+    <a href="../../commands/job-deploy/" title="job deploy" class="md-nav__link">
       job deploy
     </a>
   </li>
@@ -899,7 +906,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../job-delete/" title="job delete" class="md-nav__link">
+    <a href="../../commands/job-delete/" title="job delete" class="md-nav__link">
       job delete
     </a>
   </li>
@@ -911,7 +918,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../svc-init/" title="svc init" class="md-nav__link">
+    <a href="../../commands/svc-init/" title="svc init" class="md-nav__link">
       svc init
     </a>
   </li>
@@ -923,7 +930,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../svc-ls/" title="svc ls" class="md-nav__link">
+    <a href="../../commands/svc-ls/" title="svc ls" class="md-nav__link">
       svc ls
     </a>
   </li>
@@ -935,7 +942,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../svc-show/" title="svc show" class="md-nav__link">
+    <a href="../../commands/svc-show/" title="svc show" class="md-nav__link">
       svc show
     </a>
   </li>
@@ -947,7 +954,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../svc-logs/" title="svc logs" class="md-nav__link">
+    <a href="../../commands/svc-logs/" title="svc logs" class="md-nav__link">
       svc logs
     </a>
   </li>
@@ -959,7 +966,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../svc-status/" title="svc status" class="md-nav__link">
+    <a href="../../commands/svc-status/" title="svc status" class="md-nav__link">
       svc status
     </a>
   </li>
@@ -971,7 +978,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../svc-package/" title="svc package" class="md-nav__link">
+    <a href="../../commands/svc-package/" title="svc package" class="md-nav__link">
       svc package
     </a>
   </li>
@@ -983,7 +990,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../svc-deploy/" title="svc deploy" class="md-nav__link">
+    <a href="../../commands/svc-deploy/" title="svc deploy" class="md-nav__link">
       svc deploy
     </a>
   </li>
@@ -995,7 +1002,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../svc-delete/" title="svc delete" class="md-nav__link">
+    <a href="../../commands/svc-delete/" title="svc delete" class="md-nav__link">
       svc delete
     </a>
   </li>
@@ -1007,7 +1014,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../task-run/" title="task run" class="md-nav__link">
+    <a href="../../commands/task-run/" title="task run" class="md-nav__link">
       task run
     </a>
   </li>
@@ -1045,7 +1052,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../pipeline-init/" title="pipeline init" class="md-nav__link">
+    <a href="../../commands/pipeline-init/" title="pipeline init" class="md-nav__link">
       pipeline init
     </a>
   </li>
@@ -1057,7 +1064,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../pipeline-update/" title="pipeline update" class="md-nav__link">
+    <a href="../../commands/pipeline-update/" title="pipeline update" class="md-nav__link">
       pipeline update
     </a>
   </li>
@@ -1069,7 +1076,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../pipeline-show/" title="pipeline show" class="md-nav__link">
+    <a href="../../commands/pipeline-show/" title="pipeline show" class="md-nav__link">
       pipeline show
     </a>
   </li>
@@ -1081,7 +1088,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../pipeline-status/" title="pipeline status" class="md-nav__link">
+    <a href="../../commands/pipeline-status/" title="pipeline status" class="md-nav__link">
       pipeline status
     </a>
   </li>
@@ -1093,7 +1100,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../pipeline-delete/" title="pipeline delete" class="md-nav__link">
+    <a href="../../commands/pipeline-delete/" title="pipeline delete" class="md-nav__link">
       pipeline delete
     </a>
   </li>
@@ -1105,7 +1112,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../deploy/" title="deploy" class="md-nav__link">
+    <a href="../../commands/deploy/" title="deploy" class="md-nav__link">
       deploy
     </a>
   </li>
@@ -1143,7 +1150,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../storage-init/" title="storage init" class="md-nav__link">
+    <a href="../../commands/storage-init/" title="storage init" class="md-nav__link">
       storage init
     </a>
   </li>
@@ -1181,7 +1188,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../version/" title="version" class="md-nav__link">
+    <a href="../../commands/version/" title="version" class="md-nav__link">
       version
     </a>
   </li>
@@ -1193,7 +1200,7 @@
 
 
   <li class="md-nav__item">
-    <a href="../completion/" title="completion" class="md-nav__link">
+    <a href="../../commands/completion/" title="completion" class="md-nav__link">
       completion
     </a>
   </li>
@@ -1278,8 +1285,6 @@
 <nav class="md-nav md-nav--secondary" aria-label="Table of contents">
   
   
-    
-  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -1288,23 +1293,36 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-does-it-do" class="md-nav__link">
-    What does it do?
+  <a href="#creating-a-job" class="md-nav__link">
+    Creating a Job
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-are-the-flags" class="md-nav__link">
-    What are the flags?
+  <a href="#config-and-the-manifest" class="md-nav__link">
+    Config and the Manifest
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    Examples
+  <a href="#deploying-a-job" class="md-nav__link">
+    Deploying a Job
   </a>
+  
+    <nav class="md-nav" aria-label="Deploying a Job">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#whats-in-a-job" class="md-nav__link">
+    What's in a Job?
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1320,7 +1338,7 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/aws/copilot-cli/edit/mainline/site/content/docs/commands/app-delete.md" title="Edit this page" class="md-content__button md-icon">
+                  <a href="https://github.com/aws/copilot-cli/edit/mainline/site/content/docs/concepts/jobs.md" title="Edit this page" class="md-content__button md-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
                   </a>
                 
@@ -1328,21 +1346,39 @@
                   
                 
                 
-                <h1 id="app-delete">app delete</h1>
-<div class="highlight"><pre><span></span><code>$ copilot app delete <span class="o">[</span>flags<span class="o">]</span>
+                  <h1>Jobs</h1>
+                
+                <p>Jobs are Amazon ECS tasks that are triggered by an event. Currently, Copilot supports only "Scheduled Jobs".
+These are tasks that can be triggered either on a fixed schedule or periodically by providing a rate.</p>
+<h2 id="creating-a-job">Creating a Job</h2>
+<p>The easiest way to create a job is to run the <code>init</code> command from the same directory as your Dockerfile.</p>
+<div class="highlight"><pre><span></span><code>$ copilot init
 </code></pre></div>
 
-<h2 id="what-does-it-do">What does it do?</h2>
-<p><code>copilot app delete</code> deletes all resources associated with an application.</p>
-<h2 id="what-are-the-flags">What are the flags?</h2>
-<div class="highlight"><pre><span></span><code>-h, --help                          <span class="nb">help</span> <span class="k">for</span> delete
-    --yes                           Skips confirmation prompt.
-</code></pre></div>
-
-<h2 id="examples">Examples</h2>
-<p>Force delete the application.
-<div class="highlight"><pre><span></span><code>$ copilot app delete --yes 
+<p>Once you select which application the job should be part of, Copilot will ask you the <strong>type</strong> of
+job you'd like to create. Currently, Copilot only supports "Scheduled Job".</p>
+<h2 id="config-and-the-manifest">Config and the Manifest</h2>
+<p>After you've run <code>copilot init</code>, the CLI will create a file called <code>manifest.yml</code>.
+The <a href="../../manifest/scheduled-job/">scheduled job manifest</a> is a simple declarative file that 
+contains the most common configuration for a task that's triggered by a scheduled event. For example,
+you can configure when you'd like to trigger the job, the container size, the timeout for the task, as well as
+how many times to retry in case of failures.</p>
+<h2 id="deploying-a-job">Deploying a Job</h2>
+<p>Once you've configured your manifest file to satisfy your requirements, you can deploy the changes with the deploy command:
+<div class="highlight"><pre><span></span><code>$ copilot deploy
 </code></pre></div></p>
+<p>Running this command will:</p>
+<ol>
+<li>Build your image locally  </li>
+<li>Push to your job's ECR repository  </li>
+<li>Convert the manifest file to a CloudFormation template  </li>
+<li>Package any additional infrastructure into the CloudFormation template  </li>
+<li>Deploy your resources</li>
+</ol>
+<h3 id="whats-in-a-job">What's in a Job?</h3>
+<p>Since Copilot uses CloudFormation under the hood, all the resources created are visible and tagged by Copilot.
+Scheduled Jobs are composed of an AmazonECS Task Definition, Task Role, Task Execution Role, 
+a Step Function State Machine for retrying on failures, and finally an Event Rule to trigger the state machine.</p>
                 
               
               
