@@ -353,8 +353,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../concepts/services/" title="Services" class="md-nav__link">
-      Services
+    <a href="../../concepts/applications/" title="Applications" class="md-nav__link">
+      Applications
     </a>
   </li>
 
@@ -377,8 +377,20 @@
 
 
   <li class="md-nav__item">
-    <a href="../../concepts/applications/" title="Applications" class="md-nav__link">
-      Applications
+    <a href="../../concepts/services/" title="Services" class="md-nav__link">
+      Services
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../concepts/jobs/" title="Jobs" class="md-nav__link">
+      Jobs
     </a>
   </li>
 
@@ -475,6 +487,18 @@
       Backend Service
     </a>
     
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../scheduled-job/" title="Scheduled Job" class="md-nav__link">
+      Scheduled Job
+    </a>
   </li>
 
         
@@ -765,6 +789,66 @@
   <li class="md-nav__item">
     <a href="../../commands/env-delete/" title="env delete" class="md-nav__link">
       env delete
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-init/" title="job init" class="md-nav__link">
+      job init
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-ls/" title="job ls" class="md-nav__link">
+      job ls
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-package/" title="job package" class="md-nav__link">
+      job package
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-deploy/" title="job deploy" class="md-nav__link">
+      job deploy
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/job-delete/" title="job delete" class="md-nav__link">
+      job delete
     </a>
   </li>
 
@@ -1160,7 +1244,9 @@
 <span class="nt">image</span><span class="p">:</span>
   <span class="c1"># Path to your service&#39;s Dockerfile.</span>
   <span class="nt">build</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">./api/Dockerfile</span>
-  <span class="c1"># Port exposed through your container to route traffic to it.</span>
+  <span class="c1"># Or instead of building, you can specify an existing image name.</span>
+  <span class="nt">location</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">aws_account_id.dkr.ecr.region.amazonaws.com/my-svc:tag</span>
+  <span class="c1"># Optional. Port exposed through your container to route traffic to it.</span>
   <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8080</span>
 
   <span class="c1">#Optional. Configuration for your container healthcheck.</span>
@@ -1195,7 +1281,7 @@ The name of your service.   </p>
 <div class="separator"></div>
 
 <p><a id="type" href="#type" class="field"><code>type</code></a> <span class="type">String</span><br />
-The architecture type for your service. <a href="/docs/concepts/services/#backend-service">Backend services</a> is not reachable from the internet, but can be reached with <a href="/docs/developing/service-discovery/">service discovery</a> from your other services.</p>
+The architecture type for your service. <a href="../../concepts/services/#backend-service">Backend services</a> is not reachable from the internet, but can be reached with <a href="../../developing/service-discovery/">service discovery</a> from your other services.</p>
 <div class="separator"></div>
 
 <p><a id="image" href="#image" class="field"><code>image</code></a> <span class="type">Map</span><br />
@@ -1217,8 +1303,12 @@ will result in the following call to docker build: <code>$ docker build --file p
 In this case, copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be: <code>$ docker build --file path/to/dockerfile --build-arg key=value context/dir</code>.</p>
 <p>You can omit fields and Copilot will do its best to understand what you mean. For example, if you specify <code>context</code> but not <code>dockerfile</code>, Copilot will run Docker in the context directory and assume that your Dockerfile is named "Dockerfile." If you specify <code>dockerfile</code> but no <code>context</code>, Copilot assumes you want to run Docker in the directory that contains <code>dockerfile</code>.</p>
 <p>All paths are relative to your workspace root. </p>
+<p><span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field"><code>location</code></a> <span class="type">String</span><br />
+Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with <a href="#image-build"><code>image.build</code></a>.  <br />
+The <code>location</code> field follows the same definition as the <a href="https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image"><code>image</code> parameter</a> in the Amazon ECS task definition.</p>
 <p><span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field"><code>port</code></a> <span class="type">Integer</span><br />
-The port exposed in your Dockerfile. Copilot should parse this value for you from your <code>EXPOSE</code> instruction.</p>
+The port exposed in your Dockerfile. Copilot should parse this value for you from your <code>EXPOSE</code> instruction.<br />
+If you don't need your backend service to accept requests from other services you can omit this field.</p>
 <p><span class="parent-field">image.</span><a id="image-healthcheck" href="#image-healthcheck" class="field"><code>healthcheck</code></a> <span class="type">Map</span><br />
 Optional configuration for container health checks.</p>
 <p><span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-cmd" href="#image-healthcheck-cmd" class="field"><code>command</code></a> <span class="type">Array of Strings</span><br />

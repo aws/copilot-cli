@@ -17,7 +17,7 @@
     
     
       
-        <title>app delete - AWS Copilot CLI</title>
+        <title>job deploy - AWS Copilot CLI</title>
       
     
     
@@ -58,7 +58,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#app-delete" class="md-skip">
+        <a href="#job-deploy" class="md-skip">
           Skip to content
         </a>
       
@@ -100,7 +100,7 @@
           </span>
           <span class="md-header-nav__topic md-ellipsis">
             
-              app delete
+              job deploy
             
           </span>
         </div>
@@ -737,63 +737,11 @@
           
           
 
-  
 
-
-  <li class="md-nav__item md-nav__item--active">
-    
-    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
-    
-      
-    
-    
-      <label class="md-nav__link md-nav__link--active" for="__toc">
-        app delete
-        <span class="md-nav__icon md-icon"></span>
-      </label>
-    
-    <a href="./" title="app delete" class="md-nav__link md-nav__link--active">
+  <li class="md-nav__item">
+    <a href="../app-delete/" title="app delete" class="md-nav__link">
       app delete
     </a>
-    
-      
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#what-does-it-do" class="md-nav__link">
-    What does it do?
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-are-the-flags" class="md-nav__link">
-    What are the flags?
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    Examples
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-    
   </li>
 
         
@@ -885,11 +833,63 @@
           
           
 
+  
 
-  <li class="md-nav__item">
-    <a href="../job-deploy/" title="job deploy" class="md-nav__link">
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        job deploy
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+    
+    <a href="./" title="job deploy" class="md-nav__link md-nav__link--active">
       job deploy
     </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-does-it-do" class="md-nav__link">
+    What does it do?
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-are-the-flags" class="md-nav__link">
+    What are the flags?
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    Examples
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
   </li>
 
         
@@ -1320,7 +1320,7 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/aws/copilot-cli/edit/mainline/site/content/docs/commands/app-delete.md" title="Edit this page" class="md-content__button md-icon">
+                  <a href="https://github.com/aws/copilot-cli/edit/mainline/site/content/docs/commands/job-deploy.md" title="Edit this page" class="md-content__button md-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
                   </a>
                 
@@ -1328,20 +1328,36 @@
                   
                 
                 
-                <h1 id="app-delete">app delete</h1>
-<div class="highlight"><pre><span></span><code>$ copilot app delete <span class="o">[</span>flags<span class="o">]</span>
+                <h1 id="job-deploy">job deploy</h1>
+<div class="highlight"><pre><span></span><code>$ copilot job deploy
 </code></pre></div>
 
 <h2 id="what-does-it-do">What does it do?</h2>
-<p><code>copilot app delete</code> deletes all resources associated with an application.</p>
+<p><code>job deploy</code> takes your local code and configuration and deploys your job. </p>
+<p>The steps involved in <code>job deploy</code> are:</p>
+<ol>
+<li>Build your local Dockerfile into an image</li>
+<li>Tag it with the value from <code>--tag</code> or the latest git sha (if you're in a git directory)</li>
+<li>Push the image to ECR</li>
+<li>Package your manifest file and addons into CloudFormation</li>
+<li>Create / update your ECS task definition and job</li>
+</ol>
 <h2 id="what-are-the-flags">What are the flags?</h2>
-<div class="highlight"><pre><span></span><code>-h, --help                          <span class="nb">help</span> <span class="k">for</span> delete
-    --yes                           Skips confirmation prompt.
+<div class="highlight"><pre><span></span><code>  -a, --app string                     Name of the application.
+  -e, --env string                     Name of the environment.
+  -h, --help                           <span class="nb">help</span> <span class="k">for</span> deploy
+  -n, --name string                    Name of the job.
+      --resource-tags stringToString   Optional. Labels with a key and value separated with commas.
+                                       Allows you to categorize resources. <span class="o">(</span>default <span class="o">[])</span>
+      --tag string                     Optional. The container image tag.
 </code></pre></div>
 
 <h2 id="examples">Examples</h2>
-<p>Force delete the application.
-<div class="highlight"><pre><span></span><code>$ copilot app delete --yes 
+<p>Deploys a job named "report-gen" to a "test" environment.
+<div class="highlight"><pre><span></span><code>$ copilot job deploy --name report-gen --env <span class="nb">test</span>
+</code></pre></div></p>
+<p>Deploys a job with additional resource tags.
+<div class="highlight"><pre><span></span><code>$ copilot job deploy --resource-tags source/revision<span class="o">=</span>bb133e7,deployment/initiator<span class="o">=</span>manual<span class="sb">`</span>
 </code></pre></div></p>
                 
               
