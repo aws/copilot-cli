@@ -105,6 +105,7 @@ func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConf
 			app:    app,
 			tc:     envManifest.ScheduledJobConfig.TaskConfig,
 			rc:     rc,
+			image:  envManifest.ImageConfig,
 			parser: parser,
 			addons: addons,
 		},
