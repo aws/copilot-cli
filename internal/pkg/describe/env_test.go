@@ -377,7 +377,7 @@ func TestEnvDescription_HumanString(t *testing.T) {
 Services
 
   Name              Type
-  ----              ----
+  --------          -------------
   testSvc1          load-balanced
   testSvc2          load-balanced
   testSvc3          load-balanced
@@ -385,7 +385,7 @@ Services
 Tags
 
   Key               Value
-  ---               -----
+  ----              ------
   key1              value1
   key2              value2
 
