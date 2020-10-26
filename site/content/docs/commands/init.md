@@ -6,9 +6,9 @@ $ copilot init
 ## What does it do? 
 `copilot init` is your starting point if you want to deploy your container app on Amazon ECS. Run it within a directory with your Dockerfile, and `init` will ask you questions about your application so we can get it up and running quickly. 
 
-After you answer all the questions, `copilot init` will set up an ECR repository for you and ask you if you'd like to deploy. If you opt to deploy, it'll create a new `test` environment (complete with a networking stack and roles), build your Dockerfile, push it to Amazon ECR, and deploy your service. 
+After you answer all the questions, `copilot init` will set up an ECR repository for you and ask you if you'd like to deploy. If you opt to deploy, it'll create a new `test` environment (complete with a networking stack and roles), build your Dockerfile, push it to Amazon ECR, and deploy your service or job. 
 
-If you have an existing app, and want to add another service to that app, you can run `copilot init` - and you'll be prompted to select an existing app to add your app to. 
+If you have an existing app, and want to add another service or job to that app, you can run `copilot init` - and you'll be prompted to select an existing app to add your service or job to. 
 
 ## What are the flags?
 
@@ -16,16 +16,23 @@ Like all commands in the copilot CLI, if you don't provide required flags, we'll
 
 ```sh
   -a, --app string          Name of the application.
-      --deploy              Deploy your service to a "test" environment.
+      --deploy              Deploy your service or job to a "test" environment.
   -d, --dockerfile string   Path to the Dockerfile.
+                            Mutually exclusive with -i, --image
   -h, --help                help for init
+  -i, --image string        The location of an existing Docker image.
+                            Mutually exclusive with -d, --dockerfile
+  -n, --name string         Name of the service or job.
       --port uint16         Optional. The port on which your service listens.
-      --profile string      Name of the profile. (default "default")
-  -s, --svc string          Name of the service.
-  -t, --svc-type string     Type of service to create. Must be one of:
-                            "Load Balanced Web Service", "Backend Service"
-      --tag string          Optional. The service's image tag.
+      --retries int         Optional. The number of times to try restarting the job on a failure.
+      --schedule string     The schedule on which to run this job. 
+                            Accepts cron expressions of the format (M H DoM M DoW) and schedule definition strings. 
+                            For example: "0 * * * *", "@daily", "@weekly", "@every 1h30m".
+                            AWS Schedule Expressions of the form "rate(10 minutes)" or "cron(0 12 L * ? 2021)"
+                            are also accepted.
+      --tag string          Optional. The container image tag.
+      --timeout string      Optional. The total execution time for the task, including retries.
+                            Accepts valid Go duration strings. For example: "2h", "1h30m", "900s".
+  -t, --type string         Type of service to create. Must be one of:
+                            "Load Balanced Web Service", "Backend Service", "Scheduled Job"
 ```
-
-## What does it look like?
-![Running copilot init](https://raw.githubusercontent.com/kohidave/copilot-demos/master/init-no-deploy.svg?sanitize=true)

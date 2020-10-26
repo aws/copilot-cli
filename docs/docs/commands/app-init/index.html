@@ -358,8 +358,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../concepts/services/" title="Services" class="md-nav__link">
-      Services
+    <a href="../../concepts/applications/" title="Applications" class="md-nav__link">
+      Applications
     </a>
   </li>
 
@@ -382,8 +382,20 @@
 
 
   <li class="md-nav__item">
-    <a href="../../concepts/applications/" title="Applications" class="md-nav__link">
-      Applications
+    <a href="../../concepts/services/" title="Services" class="md-nav__link">
+      Services
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../concepts/jobs/" title="Jobs" class="md-nav__link">
+      Jobs
     </a>
   </li>
 
@@ -470,6 +482,18 @@
   <li class="md-nav__item">
     <a href="../../manifest/backend-service/" title="Backend Service" class="md-nav__link">
       Backend Service
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../manifest/scheduled-job/" title="Scheduled Job" class="md-nav__link">
+      Scheduled Job
     </a>
   </li>
 
@@ -824,6 +848,66 @@
   <li class="md-nav__item">
     <a href="../env-delete/" title="env delete" class="md-nav__link">
       env delete
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../job-init/" title="job init" class="md-nav__link">
+      job init
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../job-ls/" title="job ls" class="md-nav__link">
+      job ls
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../job-package/" title="job package" class="md-nav__link">
+      job package
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../job-deploy/" title="job deploy" class="md-nav__link">
+      job deploy
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../job-delete/" title="job delete" class="md-nav__link">
+      job delete
     </a>
   </li>
 
@@ -1263,7 +1347,7 @@
 </code></pre></div>
 
 <h2 id="what-does-it-do">What does it do?</h2>
-<p><code>copilot app init</code> creates a new <a href="/docs/concepts/applications/">application</a> within the directory that will contain your service(s).</p>
+<p><code>copilot app init</code> creates a new <a href="../../concepts/applications/">application</a> within the directory that will contain your service(s).</p>
 <p>After you answer the questions, the CLI creates AWS Identity and Access Management roles to manage the release infrastructure for your services. You'll also see a new sub-directory created under your working directory: <code>copilot/</code>. The <code>copilot</code> directory will hold the manifest files and additional infrastructure for your services.</p>
 <p>Typically, you don't need to run <code>app init</code> (<code>init</code> does all the same work) unless you want to use a custom domain name or AWS tags. </p>
 <h2 id="what-are-the-flags">What are the flags?</h2>

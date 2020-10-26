@@ -358,8 +358,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../../concepts/services/" title="Services" class="md-nav__link">
-      Services
+    <a href="../../concepts/applications/" title="Applications" class="md-nav__link">
+      Applications
     </a>
   </li>
 
@@ -382,8 +382,20 @@
 
 
   <li class="md-nav__item">
-    <a href="../../concepts/applications/" title="Applications" class="md-nav__link">
-      Applications
+    <a href="../../concepts/services/" title="Services" class="md-nav__link">
+      Services
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../concepts/jobs/" title="Jobs" class="md-nav__link">
+      Jobs
     </a>
   </li>
 
@@ -470,6 +482,18 @@
   <li class="md-nav__item">
     <a href="../../manifest/backend-service/" title="Backend Service" class="md-nav__link">
       Backend Service
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../manifest/scheduled-job/" title="Scheduled Job" class="md-nav__link">
+      Scheduled Job
     </a>
   </li>
 
@@ -818,6 +842,66 @@
   
 </nav>
     
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../job-init/" title="job init" class="md-nav__link">
+      job init
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../job-ls/" title="job ls" class="md-nav__link">
+      job ls
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../job-package/" title="job package" class="md-nav__link">
+      job package
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../job-deploy/" title="job deploy" class="md-nav__link">
+      job deploy
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../job-delete/" title="job delete" class="md-nav__link">
+      job delete
+    </a>
   </li>
 
         
@@ -1249,22 +1333,21 @@
 </code></pre></div>
 
 <h2 id="what-does-it-do">What does it do?</h2>
-<p><code>copilot env delete</code> deletes an environment from your application. If there are running applications in your environment, you first need to run <a href="/docs/commands/svc-delete"><code>copilot svc delete</code></a>.</p>
+<p><code>copilot env delete</code> deletes an environment from your application. If there are running applications in your environment, you first need to run <a href="../svc-delete/"><code>copilot svc delete</code></a>.</p>
 <p>After you answer the questions, you should see the AWS CloudFormation stack for your environment gone.</p>
 <h2 id="what-are-the-flags">What are the flags?</h2>
 <div class="highlight"><pre><span></span><code>-h, --help             help for delete
 -n, --name string      Name of the environment.
-    --profile string   Name of the profile.
     --yes              Skips confirmation prompt.
 -a, --app string       Name of the application.
 </code></pre></div>
 
 <h2 id="examples">Examples</h2>
 <p>Delete the "test" environment.
-<div class="highlight"><pre><span></span><code>$ copilot env delete --name <span class="nb">test</span> --profile default
+<div class="highlight"><pre><span></span><code>$ copilot env delete --name <span class="nb">test</span> 
 </code></pre></div>
 Delete the "test" environment without prompting.
-<div class="highlight"><pre><span></span><code>$ copilot env delete --name <span class="nb">test</span> --profile default --yes
+<div class="highlight"><pre><span></span><code>$ copilot env delete --name <span class="nb">test</span> --yes
 </code></pre></div></p>
                 
               

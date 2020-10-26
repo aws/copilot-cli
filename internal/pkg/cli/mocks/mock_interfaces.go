@@ -2459,21 +2459,6 @@ func (m *MockwsPipelineReader) EXPECT() *MockwsPipelineReaderMockRecorder {
 	return m.recorder
 }
 
-// ServiceNames mocks base method
-func (m *MockwsPipelineReader) ServiceNames() ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceNames")
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ServiceNames indicates an expected call of ServiceNames
-func (mr *MockwsPipelineReaderMockRecorder) ServiceNames() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsPipelineReader)(nil).ServiceNames))
-}
-
 // ReadPipelineManifest mocks base method
 func (m *MockwsPipelineReader) ReadPipelineManifest() ([]byte, error) {
 	m.ctrl.T.Helper()
@@ -2487,6 +2472,21 @@ func (m *MockwsPipelineReader) ReadPipelineManifest() ([]byte, error) {
 func (mr *MockwsPipelineReaderMockRecorder) ReadPipelineManifest() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadPipelineManifest", reflect.TypeOf((*MockwsPipelineReader)(nil).ReadPipelineManifest))
+}
+
+// WorkloadNames mocks base method
+func (m *MockwsPipelineReader) WorkloadNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WorkloadNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WorkloadNames indicates an expected call of WorkloadNames
+func (mr *MockwsPipelineReaderMockRecorder) WorkloadNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkloadNames", reflect.TypeOf((*MockwsPipelineReader)(nil).WorkloadNames))
 }
 
 // MockwsAppManager is a mock of wsAppManager interface

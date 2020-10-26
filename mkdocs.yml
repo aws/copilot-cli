@@ -47,6 +47,11 @@ nav:
         - env ls: docs/commands/env-ls.md
         - env show: docs/commands/env-show.md
         - env delete: docs/commands/env-delete.md
+        - job init: docs/commands/job-init.md
+        - job ls: docs/commands/job-ls.md
+        - job package: docs/commands/job-package.md
+        - job deploy: docs/commands/job-deploy.md
+        - job delete: docs/commands/job-delete.md
         - svc init: docs/commands/svc-init.md
         - svc ls: docs/commands/svc-ls.md
         - svc show: docs/commands/svc-show.md

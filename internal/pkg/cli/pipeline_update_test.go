@@ -52,7 +52,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 					Prod:      false,
 				}
 				gomock.InOrder(
-					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.ws.EXPECT().WorkloadNames().Return([]string{"frontend", "backend"}, nil).Times(1),
 					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
 				)
 			},
@@ -64,7 +64,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 						Region:    "us-west-2",
 						AccountID: "123456789012",
 					},
-					LocalServices:    []string{"frontend", "backend"},
+					LocalWorkloads:   []string{"frontend", "backend"},
 					RequiresApproval: false,
 					TestCommands:     []string{"make test", "echo \"made test\""},
 				},
@@ -87,7 +87,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 					Prod:      false,
 				}
 				gomock.InOrder(
-					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.ws.EXPECT().WorkloadNames().Return([]string{"frontend", "backend"}, nil).Times(1),
 					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
 				)
 			},
@@ -99,7 +99,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 						Region:    "us-west-2",
 						AccountID: "123456789012",
 					},
-					LocalServices:    []string{"frontend", "backend"},
+					LocalWorkloads:   []string{"frontend", "backend"},
 					RequiresApproval: false,
 					TestCommands:     []string(nil),
 				},
@@ -123,7 +123,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 					Prod:      true,
 				}
 				gomock.InOrder(
-					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.ws.EXPECT().WorkloadNames().Return([]string{"frontend", "backend"}, nil).Times(1),
 					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
 				)
 			},
@@ -135,7 +135,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 						Region:    "us-west-2",
 						AccountID: "123456789012",
 					},
-					LocalServices:    []string{"frontend", "backend"},
+					LocalWorkloads:   []string{"frontend", "backend"},
 					RequiresApproval: true,
 					TestCommands:     []string(nil),
 				},
@@ -305,7 +305,7 @@ stages:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.ws.EXPECT().WorkloadNames().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
@@ -334,7 +334,7 @@ stages:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.ws.EXPECT().WorkloadNames().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
@@ -364,7 +364,7 @@ stages:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.ws.EXPECT().WorkloadNames().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
@@ -391,7 +391,7 @@ stages:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.ws.EXPECT().WorkloadNames().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
@@ -462,10 +462,10 @@ stages:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ServiceNames().Return(nil, errors.New("some error")).Times(1),
+					m.ws.EXPECT().WorkloadNames().Return(nil, errors.New("some error")).Times(1),
 				)
 			},
-			expectedError: fmt.Errorf("convert environments to deployment stage: service names from workspace: some error"),
+			expectedError: fmt.Errorf("convert environments to deployment stage: get workload names from workspace: some error"),
 		},
 		"returns an error if fails to get cross-regional resources": {
 			inApp:     &app,
@@ -478,7 +478,7 @@ stages:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.ws.EXPECT().WorkloadNames().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
@@ -501,7 +501,7 @@ stages:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.ws.EXPECT().WorkloadNames().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
@@ -527,7 +527,7 @@ stages:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.ws.EXPECT().WorkloadNames().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
@@ -556,7 +556,7 @@ stages:
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
 
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
-					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.ws.EXPECT().WorkloadNames().Return([]string{"frontend", "backend"}, nil).Times(1),
 
 					// convertStages
 					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
