@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"path/filepath"
 	"strings"
 
@@ -312,6 +313,8 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 		Context:    *args.Context,
 		Args:       args.Args,
 		ImageTag:   imageTag,
+		CacheFrom:  args.CacheFrom,
+		Target:     aws.StringValue(args.Target),
 	}, nil
 }
 

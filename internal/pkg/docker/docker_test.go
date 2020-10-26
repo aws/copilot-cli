@@ -31,6 +31,8 @@ func TestBuild(t *testing.T) {
 		context        string
 		additionalTags []string
 		args           map[string]string
+		target         string
+		cacheFrom      []string
 		setupMocks     func(controller *gomock.Controller)
 
 		wantedError error
@@ -103,6 +105,20 @@ func TestBuild(t *testing.T) {
 					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
+		"runs with cache_from and target fields": {
+			path: mockPath,
+			target: "foobar",
+			cacheFrom: []string{"foo/bar:latest", "foo/bar/baz:1.2.3"},
+			setupMocks: func(c *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(c)
+				mockRunner.EXPECT().Run("docker", []string{"build",
+					"-t", mockURI + ":" + mockTag1,
+					"--cache-from", "foo/bar:latest",
+					"--cache-from", "foo/bar/baz:1.2.3",
+					"--target", "foobar",
+					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
+			},
+		},
 	}
 
 	for name, tc := range tests {
@@ -119,6 +135,8 @@ func TestBuild(t *testing.T) {
 				ImageTag:       mockTag1,
 				AdditionalTags: tc.additionalTags,
 				Args:           tc.args,
+				Target:         tc.target,
+				CacheFrom:      tc.cacheFrom,
 			}
 			got := s.Build(&buildInput)
 

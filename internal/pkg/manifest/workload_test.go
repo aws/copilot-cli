@@ -56,6 +56,22 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 				},
 			},
 		},
+		"Dockerfile with cache from and target build opts": {
+			inContent: []byte(`build:
+  cache_from:
+    - foo/bar:latest
+    - foo/bar/baz:1.2.3
+  target: foobar`),
+			wantedStruct: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Target: aws.String("foobar"),
+					CacheFrom: []string{
+						"foo/bar:latest",
+						"foo/bar/baz:1.2.3",
+					},
+				},
+			},
+		},
 		"Error if unmarshalable": {
 			inContent: []byte(`build:
   badfield: OH NOES
@@ -76,6 +92,8 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.BuildArgs.Context, b.Build.BuildArgs.Context)
 				require.Equal(t, tc.wantedStruct.BuildArgs.Dockerfile, b.Build.BuildArgs.Dockerfile)
 				require.Equal(t, tc.wantedStruct.BuildArgs.Args, b.Build.BuildArgs.Args)
+				require.Equal(t, tc.wantedStruct.BuildArgs.Target, b.Build.BuildArgs.Target)
+				require.Equal(t, tc.wantedStruct.BuildArgs.CacheFrom, b.Build.BuildArgs.CacheFrom)
 			}
 		})
 	}
@@ -151,6 +169,26 @@ func TestBuildConfig(t *testing.T) {
 				Args: map[string]string{
 					"goodDog":  "bowie",
 					"badGoose": "HONK",
+				},
+			},
+		},
+		"including build options": {
+			inBuild: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Target: aws.String("foobar"),
+					CacheFrom: []string{
+						"foo/bar:latest",
+						"foo/bar/baz:1.2.3",
+					},
+				},
+			},
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "Dockerfile")),
+				Context:    aws.String(mockWsRoot),
+				Target:     aws.String("foobar"),
+				CacheFrom: []string{
+					"foo/bar:latest",
+					"foo/bar/baz:1.2.3",
 				},
 			},
 		},
