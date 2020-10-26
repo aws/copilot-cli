@@ -35,6 +35,8 @@ type BuildArguments struct {
 	ImageTag       string            // Required. Tag to pass to `docker build` via -t flag. Usually Git commit short ID.
 	Dockerfile     string            // Required. Dockerfile to pass to `docker build` via --file flag.
 	Context        string            // Optional. Build context directory to pass to `docker build`
+	Target         string            // Optional. The target build stage to pass to `docker build`
+	CacheFrom      []string          // Optional. Images to consider as cache sources to pass to `docker build`
 	Args           map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
 	AdditionalTags []string          // Optional. Additional image tags to pass to docker.
 }
@@ -51,6 +53,16 @@ func (r Runner) Build(in *BuildArguments) error {
 	// Add additional image tags to the docker build call.
 	for _, tag := range append(in.AdditionalTags, in.ImageTag) {
 		args = append(args, "-t", imageName(in.URI, tag))
+	}
+
+	// Add cache from options
+	for _, imageFrom := range in.CacheFrom {
+		args = append(args, "--cache-from", imageFrom)
+	}
+
+	// Add target option
+	if in.Target != "" {
+		args = append(args, "--target", in.Target)
 	}
 
 	// Add the "args:" override section from manifest to the docker build call

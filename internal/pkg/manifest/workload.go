@@ -58,31 +58,27 @@ func (i Image) GetLocation() string {
 func (i *Image) BuildConfig(rootDirectory string) *DockerBuildArgs {
 	df := i.dockerfile()
 	ctx := i.context()
+	dockerfile := aws.String(filepath.Join(rootDirectory, dockerfileDefaultName))
+	context := aws.String(rootDirectory)
+
 	if df != "" && ctx != "" {
-		return &DockerBuildArgs{
-			Dockerfile: aws.String(filepath.Join(rootDirectory, df)),
-			Context:    aws.String(filepath.Join(rootDirectory, ctx)),
-			Args:       i.args(),
-		}
+		dockerfile = aws.String(filepath.Join(rootDirectory, df))
+		context = aws.String(filepath.Join(rootDirectory, ctx))
 	}
 	if df != "" && ctx == "" {
-		return &DockerBuildArgs{
-			Dockerfile: aws.String(filepath.Join(rootDirectory, df)),
-			Context:    aws.String(filepath.Join(rootDirectory, filepath.Dir(df))),
-			Args:       i.args(),
-		}
+		dockerfile = aws.String(filepath.Join(rootDirectory, df))
+		context = aws.String(filepath.Join(rootDirectory, filepath.Dir(df)))
 	}
 	if df == "" && ctx != "" {
-		return &DockerBuildArgs{
-			Dockerfile: aws.String(filepath.Join(rootDirectory, ctx, dockerfileDefaultName)),
-			Context:    aws.String(filepath.Join(rootDirectory, ctx)),
-			Args:       i.args(),
-		}
+		dockerfile = aws.String(filepath.Join(rootDirectory, ctx, dockerfileDefaultName))
+		context = aws.String(filepath.Join(rootDirectory, ctx))
 	}
 	return &DockerBuildArgs{
-		Dockerfile: aws.String(filepath.Join(rootDirectory, dockerfileDefaultName)),
-		Context:    aws.String(rootDirectory),
+		Dockerfile: dockerfile,
+		Context:    context,
 		Args:       i.args(),
+		Target:     i.target(),
+		CacheFrom:  i.cacheFrom(),
 	}
 }
 
@@ -112,6 +108,17 @@ func (i *Image) context() string {
 // Otherwise it returns an empty map.
 func (i *Image) args() map[string]string {
 	return i.Build.BuildArgs.Args
+}
+
+// target returns the build target stage if it exists, otherwise nil.
+func (i *Image) target() *string {
+	return i.Build.BuildArgs.Target
+}
+
+// cacheFrom returns the cache from build section, if it exists.
+// Otherwise it returns nil.
+func (i *Image) cacheFrom() []string {
+	return i.Build.BuildArgs.CacheFrom
 }
 
 // BuildArgsOrString is a custom type which supports unmarshaling yaml which
@@ -159,10 +166,12 @@ type DockerBuildArgs struct {
 	Context    *string           `yaml:"context,omitempty"`
 	Dockerfile *string           `yaml:"dockerfile,omitempty"`
 	Args       map[string]string `yaml:"args,omitempty"`
+	Target     *string           `yaml:"target,omitempty"`
+	CacheFrom  []string          `yaml:"cache_from,omitempty"`
 }
 
 func (b *DockerBuildArgs) isEmpty() bool {
-	if b.Context == nil && b.Dockerfile == nil && b.Args == nil {
+	if b.Context == nil && b.Dockerfile == nil && b.Args == nil && b.Target == nil && b.CacheFrom == nil {
 		return true
 	}
 	return false
