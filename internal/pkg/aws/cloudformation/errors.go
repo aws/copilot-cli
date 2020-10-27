@@ -38,13 +38,13 @@ func (e *ErrStackNotFound) Error() string {
 	return fmt.Sprintf("stack named %s cannot be found", e.name)
 }
 
-// errChangeSetNotExecutable occurs when the change set cannot be executed.
-type errChangeSetNotExecutable struct {
+// ErrChangeSetNotExecutable occurs when the change set cannot be executed.
+type ErrChangeSetNotExecutable struct {
 	cs    *changeSet
 	descr *changeSetDescription
 }
 
-func (e *errChangeSetNotExecutable) Error() string {
+func (e *ErrChangeSetNotExecutable) Error() string {
 	return fmt.Sprintf("execute change set %s for stack %s because status is %s with reason %s", e.cs.name, e.cs.stackName, e.descr.executionStatus, e.descr.statusReason)
 }
 
