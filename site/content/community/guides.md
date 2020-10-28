@@ -26,3 +26,9 @@ Share your applications, videos, and blog posts with fellow Copilots!
 | Repository      | Description                          | Key features |
 | ----------- | ------------------------------------ | ------------ |
 [**github.com/copilot-example-voting-app**](https://github.com/copilot-example-voting-app) | A voting application distributed over three ECS services created with AWS Copilot. | Amazon Aurora PostgreSQL database, service discovery, autoscaling |
+
+
+## Workshops
+| Title      | Description                          |
+| ----------- | ------------------------------------ |
+[**ECS Workshop Using copilot-cli**](https://ecsworkshop.com/microservices/) | In this workshop, we deploy a three tier microservices application using the copilot-cli |
