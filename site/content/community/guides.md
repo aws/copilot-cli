@@ -31,4 +31,4 @@ Share your applications, videos, and blog posts with fellow Copilots!
 ## Workshops
 | Title      | Description                          |
 | ----------- | ------------------------------------ |
-[**ECS Workshop Using copilot-cli**](https://ecsworkshop.com/microservices/) | In this workshop, we deploy a three tier microservices application using the copilot-cli |
+[**ECS Workshop**](https://ecsworkshop.com/microservices/) | In this workshop, we deploy a three tier microservices application using the copilot-cli |
