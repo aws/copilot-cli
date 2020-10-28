@@ -88,6 +88,13 @@ type AutoscalingOpts struct {
 	ResponseTime *float64
 }
 
+type HttpHealthCheckOpts struct {
+	HealthyThreshold   *int64
+	UnhealthyThreshold *int64
+	Interval           *int64
+	Timeout            *int64
+}
+
 // StateMachineOpts holds configuration neeed for State Machine retries and timeout.
 type StateMachineOpts struct {
 	Timeout *int
@@ -106,6 +113,7 @@ type WorkloadOpts struct {
 
 	// Additional options for service templates.
 	HealthCheck        *ecs.HealthCheck
+	HttpHealthCheck    *HttpHealthCheckOpts
 	RulePriorityLambda string
 	DesiredCountLambda string
 

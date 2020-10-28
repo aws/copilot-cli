@@ -92,9 +92,10 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       #  Check if your service is healthy within 20 = 10*2 seconds, compared to 2.5 mins = 30*5 seconds.
-      HealthCheckIntervalSeconds: 10 # Default is 30.
-      HealthyThresholdCount: 2       # Default is 5.
-      HealthCheckTimeoutSeconds: 5
+      HealthCheckIntervalSeconds: {{.HttpHealthCheck.Interval}} # Default is 30.
+      HealthyThresholdCount: {{.HttpHealthCheck.HealthyThreshold}} # Default is 5.
+      UnhealthyThresholdCount: {{.HttpHealthCheck.UnhealthyThreshold}} # Default is 2.
+      HealthCheckTimeoutSeconds: {{.HttpHealthCheck.Timeout}} # Default is 5.
       HealthCheckPath: !Ref HealthCheckPath
       Port: !Ref ContainerPort
       Protocol: HTTP

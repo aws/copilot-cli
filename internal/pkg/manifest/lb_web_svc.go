@@ -50,9 +50,19 @@ func (lc *LoadBalancedWebServiceConfig) LogConfigOpts() *template.LogConfigOpts 
 type RoutingRule struct {
 	Path            *string `yaml:"path"`
 	HealthCheckPath *string `yaml:"healthcheck"`
-	Stickiness      *bool   `yaml:"stickiness"`
+	HTTPHealthCheck `yaml:",inline"`
+	Stickiness      *bool `yaml:"stickiness"`
 	// TargetContainer is the container load balancer routes traffic to.
 	TargetContainer *string `yaml:"targetContainer"`
+}
+
+// HTTPHealthCheck holds the configuration to determine if the load balanced web service is healthy.
+// See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html#cfn-elasticloadbalancingv2-targetgroup-healthcheckintervalseconds.
+type HTTPHealthCheck struct {
+	HealthyThreshold   *int64 `yaml:"healthy_threshold"`
+	UnhealthyThreshold *int64 `yaml:"unhealthy_threshold"`
+	Timeout            *int64 `yaml:"timeout"`
+	Interval           *int64 `yaml:"interval"`
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
@@ -86,6 +96,12 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 			ImageConfig: ServiceImageWithPort{},
 			RoutingRule: RoutingRule{
 				HealthCheckPath: aws.String("/"),
+				//HTTPHealthCheck: HTTPHealthCheck{
+				//	HealthyThreshold:   aws.Int64(2),
+				//	UnhealthyThreshold: aws.Int64(2),
+				//	Interval:           aws.Int64(10),
+				//	Timeout:            aws.Int64(5),
+				//},
 			},
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
