@@ -89,7 +89,6 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 				cmd:          command.New(),
 				sessProvider: sessions.NewProvider(),
 			}
-			return
 		},
 	}, nil
 }

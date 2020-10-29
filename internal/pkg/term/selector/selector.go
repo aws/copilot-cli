@@ -29,9 +29,6 @@ const (
 	weekly  = "Weekly"
 	monthly = "Monthly"
 	yearly  = "Yearly"
-
-	jobWlType = "job"
-	svcWlType = "service"
 )
 
 const (
@@ -357,15 +354,6 @@ func (s *WorkspaceSelect) Workload(msg, help string) (wl string, err error) {
 		return "", fmt.Errorf("select job or service: %w", err)
 	}
 	return selectedWlName, nil
-}
-
-func isJob(name string, workloads []*config.Workload) bool {
-	for _, w := range workloads {
-		if w.Name == name && strings.Contains(strings.ToLower(w.Type), jobWlType) {
-			return true
-		}
-	}
-	return false
 }
 
 func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
