@@ -16,6 +16,122 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
+	testCases := map[string]struct {
+		inputHealthyThreshold   *int64
+		inputUnhealthyThreshold *int64
+		inputInterval           *int64
+		inputTimeout            *int64
+
+		wantedOpts *template.HTTPHealthCheckOpts
+	}{
+		"no fields indicated in manifest": {
+			inputHealthyThreshold:   nil,
+			inputUnhealthyThreshold: nil,
+			inputInterval:           nil,
+			inputTimeout:            nil,
+
+			wantedOpts: &template.HTTPHealthCheckOpts{
+				HealthyThreshold:   aws.Int64(2),
+				UnhealthyThreshold: aws.Int64(2),
+				Interval:           aws.Int64(10),
+				Timeout:            aws.Int64(5),
+			},
+		},
+		"just HealthyThreshold": {
+			inputHealthyThreshold:   aws.Int64(5),
+			inputUnhealthyThreshold: nil,
+			inputInterval:           nil,
+			inputTimeout:            nil,
+
+			wantedOpts: &template.HTTPHealthCheckOpts{
+				HealthyThreshold:   aws.Int64(5),
+				UnhealthyThreshold: aws.Int64(2),
+				Interval:           aws.Int64(10),
+				Timeout:            aws.Int64(5),
+			},
+		},
+		"just UnhealthyThreshold": {
+			inputHealthyThreshold:   nil,
+			inputUnhealthyThreshold: aws.Int64(5),
+			inputInterval:           nil,
+			inputTimeout:            nil,
+
+			wantedOpts: &template.HTTPHealthCheckOpts{
+				HealthyThreshold:   aws.Int64(2),
+				UnhealthyThreshold: aws.Int64(5),
+				Interval:           aws.Int64(10),
+				Timeout:            aws.Int64(5),
+			},
+		},
+		"just Interval": {
+			inputHealthyThreshold:   nil,
+			inputUnhealthyThreshold: nil,
+			inputInterval:           aws.Int64(15),
+			inputTimeout:            nil,
+
+			wantedOpts: &template.HTTPHealthCheckOpts{
+				HealthyThreshold:   aws.Int64(2),
+				UnhealthyThreshold: aws.Int64(2),
+				Interval:           aws.Int64(15),
+				Timeout:            aws.Int64(5),
+			},
+		},
+		"just Timeout": {
+			inputHealthyThreshold:   nil,
+			inputUnhealthyThreshold: nil,
+			inputInterval:           nil,
+			inputTimeout:            aws.Int64(15),
+
+			wantedOpts: &template.HTTPHealthCheckOpts{
+				HealthyThreshold:   aws.Int64(2),
+				UnhealthyThreshold: aws.Int64(2),
+				Interval:           aws.Int64(10),
+				Timeout:            aws.Int64(15),
+			},
+		},
+		"all values changed in manifest": {
+			inputHealthyThreshold:   aws.Int64(3),
+			inputUnhealthyThreshold: aws.Int64(3),
+			inputInterval:           aws.Int64(60),
+			inputTimeout:            aws.Int64(60),
+
+			wantedOpts: &template.HTTPHealthCheckOpts{
+				HealthyThreshold:   aws.Int64(3),
+				UnhealthyThreshold: aws.Int64(3),
+				Interval:           aws.Int64(60),
+				Timeout:            aws.Int64(60),
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			lbwc := LoadBalancedWebServiceConfig{
+				ImageConfig: ServiceImageWithPort{},
+				RoutingRule: RoutingRule{
+					Path:            aws.String("path"),
+					HealthCheckPath: aws.String("/"),
+					HTTPHealthCheck: HTTPHealthCheck{
+						HealthyThreshold:   tc.inputHealthyThreshold,
+						UnhealthyThreshold: tc.inputUnhealthyThreshold,
+						Timeout:            tc.inputTimeout,
+						Interval:           tc.inputInterval,
+					},
+				},
+				TaskConfig: TaskConfig{},
+				Logging:    nil,
+				Sidecar:    Sidecar{},
+			}
+			// WHEN
+			actualOpts := lbwc.HTTPHealthCheckOpts()
+
+			// THEN
+			require.Equal(t, tc.wantedOpts, actualOpts)
+		})
+	}
+}
+
 func TestLoadBalancedWebService_MarshalBinary(t *testing.T) {
 	testCases := map[string]struct {
 		mockDependencies func(ctrl *gomock.Controller, manifest *LoadBalancedWebService)

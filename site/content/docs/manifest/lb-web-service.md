@@ -74,7 +74,7 @@ image:
     args:
       key: value
 ```
-In this case, copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be: `$ docker build --file path/to/dockerfile --build-arg key=value context/dir`.
+In this case, Copilot will use the context directory you specified and convert the key-value pairs under args to `--build-arg` overrides. The equivalent docker build call will be: `$ docker build --file path/to/dockerfile --build-arg key=value context/dir`.
 
 You can omit fields and Copilot will do its best to understand what you mean. For example, if you specify `context` but not `dockerfile`, Copilot will run Docker in the context directory and assume that your Dockerfile is named "Dockerfile." If you specify `dockerfile` but no `context`, Copilot assumes you want to run Docker in the directory that contains `dockerfile`.
  
@@ -98,6 +98,21 @@ Requests to this path will be forwarded to your service. Each Load Balanced Web 
 <span class="parent-field">http.</span><a id="http-healthcheck" href="#http-healthcheck" class="field">`healthcheck`</a> <span class="type">String</span>  
 Path exposed in your container to handle target group health check requests.  
 
+<span class="parent-field">http.</span><a id="http-healthyThreshold" href="#http-healthyThreshold" class="field">`healthyThreshold`</a> <span class="type">Integer</span>  
+The number of consecutive health check successes required before considering an unhealthy target healthy. The Copilot default is 2. Range: 2-10. 
+
+<span class="parent-field">http.</span><a id="http-unhealthyThreshold" href="#http-unhealthyThreshold" class="field">`unhealthyThreshold`</a> <span class="type">Integer</span>  
+The number of consecutive health check failures required before considering a target unhealthy. The Copilot default is 2. Range: 2-10.
+
+<span class="parent-interval">http.</span><a id="http-interval" href="#http-interval" class="field">`interval`</a> <span class="type">Integer</span>  
+The approximate amount of time, in seconds, between health checks of an individual target. The Copilot default is 10. Range: 5–300 seconds.
+
+<span class="parent-field">http.</span><a id="http-timeout" href="#http-timeout" class="field">`timeout`</a> <span class="type">Integer</span>  
+The amount of time, in seconds, during which no response from a target means a failed health check. The Copilot default is 5. Range 5-300 seconds.
+ 
+<span class="parent-field">http.</span><a id="http-targetContainer" href="#http-targetContainer" class="field">`targetContainer`</a> <span class="type">String</span>  
+A sidecar container that takes the place of a service container.
+                                 
 <span class="parent-field">http.</span><a id="http-stickiness" href="#http-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
 Indicates whether sticky sessions are enabled.
 
