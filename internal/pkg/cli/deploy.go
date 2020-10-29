@@ -4,8 +4,8 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -132,23 +132,18 @@ func (o *deployOpts) loadWkld() error {
 }
 
 func (o *deployOpts) loadWkldCmd() error {
-	_, getJobErr := o.store.GetJob(o.appName, o.name)
-	_, getSvcErr := o.store.GetService(o.appName, o.name)
-	if errors.Is(getJobErr, &config.ErrNoSuchJob{App: o.appName, Name: o.name}) &&
-		errors.Is(getSvcErr, &config.ErrNoSuchService{App: o.appName, Name: o.name}) {
-		return fmt.Errorf("no service or job %s exists in application %s", o.name, o.appName)
+	wl, err := o.store.GetWorkload(o.appName, o.name)
+	if err != nil {
+		return fmt.Errorf("retrieve %s from application %s: %w", o.appName, o.name, err)
 	}
-	if errors.Is(getJobErr, &config.ErrNoSuchJob{App: o.appName, Name: o.name}) && getSvcErr == nil {
-		o.setupDeployCmd(o, false)
-		o.wlType = svcWkldType
-		return nil
-	}
-	if errors.Is(getSvcErr, &config.ErrNoSuchService{App: o.appName, Name: o.name}) && getJobErr == nil {
+	if strings.Contains(strings.ToLower(wl.Type), jobWkldType) {
 		o.setupDeployCmd(o, true)
 		o.wlType = jobWkldType
 		return nil
 	}
-	return fmt.Errorf("retrieve name %s from application %s: %w", o.name, o.appName, getJobErr)
+	o.setupDeployCmd(o, false)
+	o.wlType = svcWkldType
+	return nil
 }
 
 // BuildDeployCmd is the deploy command.
