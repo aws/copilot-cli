@@ -333,10 +333,7 @@ func TestStore_GetService(t *testing.T) {
 				require.Equal(t, testServicePath, *param.Name)
 				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "bloop", nil)
 			},
-			wantedErr: &ErrNoSuchService{
-				App:  testService.App,
-				Name: testService.Name,
-			},
+			wantedErr: errors.New("get service: couldn't find api in the application chicken"),
 		},
 		"with malformed json": {
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
@@ -354,7 +351,7 @@ func TestStore_GetService(t *testing.T) {
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
 				return nil, fmt.Errorf("broken")
 			},
-			wantedErr: fmt.Errorf("get service api in application chicken: broken"),
+			wantedErr: fmt.Errorf("get service: broken"),
 		},
 	}
 
@@ -415,10 +412,7 @@ func TestStore_GetJob(t *testing.T) {
 				require.Equal(t, mailerJobPath, *param.Name)
 				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "bloop", nil)
 			},
-			wantedErr: &ErrNoSuchJob{
-				App:  mailerJob.App,
-				Name: mailerJob.Name,
-			},
+			wantedErr: errors.New("get job: couldn't find mailer in the application chicken"),
 		},
 		"with existing service": {
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {

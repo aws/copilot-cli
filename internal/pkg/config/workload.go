@@ -75,26 +75,13 @@ func (s *Store) createWorkload(wkld *Workload) error {
 // GetService gets a service belonging to a particular application by name. If no job or svc is found
 // it returns ErrNoSuchService.
 func (s *Store) GetService(appName, svcName string) (*Workload, error) {
-	svcPath := fmt.Sprintf(fmtWkldParamPath, appName, svcName)
-	svcParam, err := s.ssmClient.GetParameter(&ssm.GetParameterInput{
-		Name: aws.String(svcPath),
-	})
-
+	param, err := s.getWorkloadParam(appName, svcName)
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case ssm.ErrCodeParameterNotFound:
-				return nil, &ErrNoSuchService{
-					App:  appName,
-					Name: svcName,
-				}
-			}
-		}
-		return nil, fmt.Errorf("get service %s in application %s: %w", svcName, appName, err)
+		return nil, fmt.Errorf("get service: %w", err)
 	}
 
 	var svc Workload
-	err = json.Unmarshal([]byte(*svcParam.Parameter.Value), &svc)
+	err = json.Unmarshal(param, &svc)
 	if err != nil {
 		return nil, fmt.Errorf("read configuration for service %s in application %s: %w", svcName, appName, err)
 	}
@@ -110,26 +97,13 @@ func (s *Store) GetService(appName, svcName string) (*Workload, error) {
 // GetJob gets a job belonging to a particular application by name. If no job by that name is found,
 // it returns ErrNoSuchJob.
 func (s *Store) GetJob(appName, jobName string) (*Workload, error) {
-	jobPath := fmt.Sprintf(fmtWkldParamPath, appName, jobName)
-	jobParam, err := s.ssmClient.GetParameter(&ssm.GetParameterInput{
-		Name: aws.String(jobPath),
-	})
-
+	param, err := s.getWorkloadParam(appName, jobName)
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case ssm.ErrCodeParameterNotFound:
-				return nil, &ErrNoSuchJob{
-					App:  appName,
-					Name: jobName,
-				}
-			}
-		}
-		return nil, fmt.Errorf("get job %s in application %s: %w", jobName, appName, err)
+		return nil, fmt.Errorf("get job: %w", err)
 	}
 
 	var job Workload
-	err = json.Unmarshal([]byte(*jobParam.Parameter.Value), &job)
+	err = json.Unmarshal(param, &job)
 	if err != nil {
 		return nil, fmt.Errorf("read configuration for job %s in application %s: %w", jobName, appName, err)
 	}
@@ -140,6 +114,40 @@ func (s *Store) GetJob(appName, jobName string) (*Workload, error) {
 		}
 	}
 	return &job, nil
+}
+
+// GetWorkload gets a job or service belonging to an application by name.
+func (s *Store) GetWorkload(appName, name string) (*Workload, error) {
+	param, err := s.getWorkloadParam(appName, name)
+	if err != nil {
+		return nil, fmt.Errorf("get job or service: %w", err)
+	}
+	var wl Workload
+	err = json.Unmarshal(param, &wl)
+	if err != nil {
+		return nil, fmt.Errorf("read configuration for %s in application %s: %w", name, appName, err)
+	}
+	return &wl, nil
+}
+
+func (s *Store) getWorkloadParam(appName, name string) ([]byte, error) {
+	wlPath := fmt.Sprintf(fmtWkldParamPath, appName, name)
+	wlParam, err := s.ssmClient.GetParameter(&ssm.GetParameterInput{
+		Name: aws.String(wlPath),
+	})
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case ssm.ErrCodeParameterNotFound:
+				return nil, &ErrNoSuchWorkload{
+					App:  appName,
+					Name: name,
+				}
+			}
+		}
+		return nil, err
+	}
+	return []byte(*wlParam.Parameter.Value), nil
 }
 
 // ListServices returns all services belonging to a particular application.

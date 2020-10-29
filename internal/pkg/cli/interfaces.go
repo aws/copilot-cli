@@ -57,8 +57,9 @@ type jobStore interface {
 	DeleteJob(appName, jobName string) error
 }
 
-type wlLister interface {
+type wlStore interface {
 	ListWorkloads(appName string) ([]*config.Workload, error)
+	GetWorkload(appName, name string) (*config.Workload, error)
 }
 
 type workloadListWriter interface {
@@ -116,7 +117,7 @@ type store interface {
 	environmentStore
 	serviceStore
 	jobStore
-	wlLister
+	wlStore
 }
 
 type deployedEnvironmentLister interface {
