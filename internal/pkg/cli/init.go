@@ -132,7 +132,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 
 	deploySvcCmd := &deploySvcOpts{
-		deploySvcVars: deploySvcVars{
+		deployWkldVars: deployWkldVars{
 			envName:  defaultEnvironmentName,
 			imageTag: vars.imageTag,
 			appName:  vars.appName,
@@ -148,7 +148,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		sessProvider: sessProvider,
 	}
 	deployJobCmd := &deployJobOpts{
-		deployJobVars: deployJobVars{
+		deployWkldVars: deployWkldVars{
 			envName:  defaultEnvironmentName,
 			imageTag: vars.imageTag,
 			appName:  vars.appName,

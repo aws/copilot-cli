@@ -4,26 +4,181 @@
 package cli
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/aws/copilot-cli/cmd/copilot/template"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/term/command"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 )
 
-// BuildDeployCmd is the deploy command - which is
-// an alias for app deploy.
+const (
+	svcWkldType = "svc"
+	jobWkldType = "job"
+)
+
+type deployOpts struct {
+	deployWkldVars
+
+	deployWkld     actionCommand
+	setupDeployCmd func(*deployOpts, bool)
+
+	sel    wsSelector
+	store  store
+	ws     wsWlDirReader
+	prompt prompter
+
+	// values for logging
+	wlType string
+}
+
+func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
+	store, err := config.NewStore()
+	if err != nil {
+		return nil, fmt.Errorf("new config store: %w", err)
+	}
+
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("new workspace: %w", err)
+	}
+	prompter := prompt.New()
+	if err != nil {
+		return nil, err
+	}
+	return &deployOpts{
+		deployWkldVars: vars,
+		store:          store,
+		sel:            selector.NewWorkspaceSelect(prompter, store, ws),
+		ws:             ws,
+		prompt:         prompter,
+
+		setupDeployCmd: func(o *deployOpts, isJob bool) {
+			if isJob {
+				o.deployWkld = &deployJobOpts{
+					deployWkldVars: o.deployWkldVars,
+
+					store:        o.store,
+					ws:           o.ws,
+					unmarshal:    manifest.UnmarshalWorkload,
+					spinner:      termprogress.NewSpinner(),
+					sel:          selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
+					prompt:       o.prompt,
+					cmd:          command.New(),
+					sessProvider: sessions.NewProvider(),
+				}
+				return
+			}
+			o.deployWkld = &deploySvcOpts{
+				deployWkldVars: o.deployWkldVars,
+
+				store:        o.store,
+				ws:           o.ws,
+				unmarshal:    manifest.UnmarshalWorkload,
+				spinner:      termprogress.NewSpinner(),
+				sel:          selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
+				prompt:       o.prompt,
+				cmd:          command.New(),
+				sessProvider: sessions.NewProvider(),
+			}
+			return
+		},
+	}, nil
+}
+
+func (o *deployOpts) Run() error {
+	if err := o.askName(); err != nil {
+		return err
+	}
+	if err := o.loadWkld(); err != nil {
+		return err
+	}
+	if err := o.deployWkld.Execute(); err != nil {
+		return fmt.Errorf("execute %s deploy: %w", o.wlType, err)
+	}
+	return nil
+}
+
+func (o *deployOpts) askName() error {
+	if o.name != "" {
+		return nil
+	}
+	name, err := o.sel.Workload("Select a service or job in your workspace", "")
+	if err != nil {
+		return fmt.Errorf("select service or job: %w", err)
+	}
+	o.name = name
+	return nil
+}
+
+func (o *deployOpts) loadWkld() error {
+	if err := o.loadWkldCmd(); err != nil {
+		return err
+	}
+	if err := o.deployWkld.Ask(); err != nil {
+		return fmt.Errorf("ask %s deploy: %w", o.wlType, err)
+	}
+	if err := o.deployWkld.Validate(); err != nil {
+		return fmt.Errorf("validate %s deploy: %w", o.wlType, err)
+	}
+	return nil
+}
+
+func (o *deployOpts) loadWkldCmd() error {
+	_, getJobErr := o.store.GetJob(o.appName, o.name)
+	_, getSvcErr := o.store.GetService(o.appName, o.name)
+	if errors.Is(getJobErr, &config.ErrNoSuchJob{App: o.appName, Name: o.name}) &&
+		errors.Is(getSvcErr, &config.ErrNoSuchService{App: o.appName, Name: o.name}) {
+		return fmt.Errorf("no service or job %s exists in application %s", o.name, o.appName)
+	}
+	if errors.Is(getJobErr, &config.ErrNoSuchJob{App: o.appName, Name: o.name}) && getSvcErr == nil {
+		o.setupDeployCmd(o, false)
+		o.wlType = svcWkldType
+		return nil
+	}
+	if errors.Is(getSvcErr, &config.ErrNoSuchService{App: o.appName, Name: o.name}) && getJobErr == nil {
+		o.setupDeployCmd(o, true)
+		o.wlType = jobWkldType
+		return nil
+	}
+	return fmt.Errorf("retrieve name %s from application %s: %w", o.name, o.appName, getJobErr)
+}
+
+// BuildDeployCmd is the deploy command.
 func BuildDeployCmd() *cobra.Command {
-	deployCmd := buildSvcDeployCmd()
-	deployCmd.Use = "deploy"
-	deployCmd.Short = "Deploy your service."
-	deployCmd.Long = `Command for deploying services to your environments.`
-	deployCmd.Example = `
-	Deploys a service named "frontend" to a "test" environment.
-	/code $ copilot deploy --name frontend --env test`
+	vars := deployWkldVars{}
+	cmd := &cobra.Command{
+		Use:   "deploy",
+		Short: "Deploy a Copilot job or service.",
+		Long:  "Deploy a Copilot job or service.",
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts, err := newDeployOpts(vars)
+			if err != nil {
+				return err
+			}
+			if err := opts.Run(); err != nil {
+				return err
+			}
+			return nil
+		}),
+	}
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)
+	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 
-	deployCmd.SetUsageTemplate(template.Usage)
-
-	deployCmd.Annotations = map[string]string{
+	cmd.SetUsageTemplate(template.Usage)
+	cmd.Annotations = map[string]string{
 		"group": group.Release,
 	}
-	return deployCmd
+	return cmd
 }

@@ -57,6 +57,10 @@ type jobStore interface {
 	DeleteJob(appName, jobName string) error
 }
 
+type wlLister interface {
+	ListWorkloads(appName string) ([]*config.Workload, error)
+}
+
 type workloadListWriter interface {
 	Write(appName string) error
 }
@@ -112,6 +116,7 @@ type store interface {
 	environmentStore
 	serviceStore
 	jobStore
+	wlLister
 }
 
 type deployedEnvironmentLister interface {
@@ -249,9 +254,22 @@ type wsJobReader interface {
 	wsJobLister
 }
 
+type wsWlReader interface {
+	WorkloadNames() ([]string, error)
+}
+
 type wsJobDirReader interface {
 	wsJobReader
-	CopilotDirPath() (string, error)
+	copilotDirGetter
+}
+
+type wsWlDirReader interface {
+	wsJobReader
+	wsSvcReader
+	copilotDirGetter
+	wsWlReader
+	ListDockerfiles() ([]string, error)
+	Summary() (*workspace.Summary, error)
 }
 
 type wsPipelineReader interface {
@@ -408,6 +426,7 @@ type wsSelector interface {
 	appEnvSelector
 	Service(prompt, help string) (string, error)
 	Job(prompt, help string) (string, error)
+	Workload(msg, help string) (string, error)
 }
 
 type initJobSelector interface {

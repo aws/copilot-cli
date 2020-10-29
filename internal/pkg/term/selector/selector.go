@@ -29,6 +29,9 @@ const (
 	weekly  = "Weekly"
 	monthly = "Monthly"
 	yearly  = "Yearly"
+
+	jobWlType = "job"
+	svcWlType = "service"
 )
 
 const (
@@ -83,6 +86,7 @@ type AppEnvLister interface {
 type ConfigWorkloadLister interface {
 	ListServices(appName string) ([]*config.Workload, error)
 	ListJobs(appName string) ([]*config.Workload, error)
+	ListWorkloads(appName string) ([]*config.Workload, error)
 }
 
 // ConfigLister wraps config store listing methods.
@@ -95,6 +99,7 @@ type ConfigLister interface {
 type WsWorkloadLister interface {
 	ServiceNames() ([]string, error)
 	JobNames() ([]string, error)
+	WorkloadNames() ([]string, error)
 }
 
 // WorkspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
@@ -325,6 +330,44 @@ func (s *WorkspaceSelect) Job(msg, help string) (string, error) {
 	return selectedJobName, nil
 }
 
+// Workload fetches all jobs and services in an app and prompts the user to select one.
+func (s *WorkspaceSelect) Workload(msg, help string) (wl string, err error) {
+	summary, err := s.ws.Summary()
+	if err != nil {
+		return "", fmt.Errorf("read workspace summary: %w", err)
+	}
+	wsWlNames, err := s.retrieveWorkspaceWorkloads()
+	if err != nil {
+		return "", fmt.Errorf("retrieve jobs and services from workspace: %w", err)
+	}
+	storeWls, err := s.Select.config.ListWorkloads(summary.Application)
+	if err != nil {
+		return "", fmt.Errorf("retrieve jobs and services from store: %w", err)
+	}
+	wlNames := filterWlsByName(storeWls, wsWlNames)
+	if len(wlNames) == 0 {
+		return "", errors.New("no jobs or services found")
+	}
+	if len(wlNames) == 1 {
+		log.Infof("Only found one job or service, defaulting to: %s\n", color.HighlightUserInput(wlNames[0]))
+		return wlNames[0], nil
+	}
+	selectedWlName, err := s.prompt.SelectOne(msg, help, wlNames, prompt.WithFinalMessage("Name: "))
+	if err != nil {
+		return "", fmt.Errorf("select job or service: %w", err)
+	}
+	return selectedWlName, nil
+}
+
+func isJob(name string, workloads []*config.Workload) bool {
+	for _, w := range workloads {
+		if w.Name == name && strings.Contains(strings.ToLower(w.Type), jobWlType) {
+			return true
+		}
+	}
+	return false
+}
+
 func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
 	isWanted := make(map[string]bool)
 	for _, name := range wantedNames {
@@ -465,6 +508,14 @@ func (s *WorkspaceSelect) retrieveWorkspaceJobs() ([]string, error) {
 		return nil, err
 	}
 	return localJobNames, nil
+}
+
+func (s *WorkspaceSelect) retrieveWorkspaceWorkloads() ([]string, error) {
+	localWlNames, err := s.ws.WorkloadNames()
+	if err != nil {
+		return nil, err
+	}
+	return localWlNames, nil
 }
 
 // Dockerfile asks the user to select from a list of Dockerfiles in the current

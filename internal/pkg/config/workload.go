@@ -142,6 +142,30 @@ func (s *Store) GetJob(appName, jobName string) (*Workload, error) {
 	return &job, nil
 }
 
+func (s *Store) getWorkload(appName, wlName, wlType string, match func(string) bool) (*Workload, error) {
+	wlPath := fmt.Sprintf(fmtWkldParamPath, appName, wlName)
+	wlParam, err := s.ssmClient.GetParameter(&ssm.GetParameterInput{
+		Name: aws.String(wlPath),
+	})
+
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case ssm.ErrCodeParameterNotFound:
+				return nil, fmt.Errorf("job or service %s not found in application %s", wlName, appName)
+			}
+		}
+		return nil, fmt.Errorf("get job or svc %s in application %s: %w", wlName, appName, err)
+	}
+
+	var wl Workload
+	err = json.Unmarshal([]byte(*wlParam.Parameter.Value), &wl)
+	if err != nil {
+		return nil, fmt.Errorf("read configuration for job or service %s in application %s: %w", wlName, appName, err)
+	}
+	return &wl, nil
+}
+
 // ListServices returns all services belonging to a particular application.
 func (s *Store) ListServices(appName string) ([]*Workload, error) {
 	wklds, err := s.listWorkloads(appName)
@@ -174,6 +198,16 @@ func (s *Store) ListJobs(appName string) ([]*Workload, error) {
 	}
 
 	return jobs, nil
+}
+
+// ListWorkloads returns all workloads belonging to a particular application.
+func (s *Store) ListWorkloads(appName string) ([]*Workload, error) {
+	wklds, err := s.listWorkloads(appName)
+	if err != nil {
+		return nil, fmt.Errorf("read job & service configuration for application %s: %w", appName, err)
+	}
+
+	return wklds, nil
 }
 
 func (s *Store) listWorkloads(appName string) ([]*Workload, error) {
