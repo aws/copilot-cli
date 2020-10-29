@@ -158,6 +158,11 @@ func BuildDeployCmd() *cobra.Command {
 		Use:   "deploy",
 		Short: "Deploy a Copilot job or service.",
 		Long:  "Deploy a Copilot job or service.",
+		Example: `
+  Deploys a service named "frontend" to a "test" environment.
+  /code $ copilot deploy --name frontend --env test
+  Deploys a job named "mailer" with additional resource tags to a "prod" environment.
+  /code $ copilot deploy -n mailer -e prod --resource-tags source/revision=bb133e7,deployment/initiator=manual`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newDeployOpts(vars)
 			if err != nil {
@@ -170,7 +175,7 @@ func BuildDeployCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
-	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", workloadFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
