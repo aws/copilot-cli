@@ -18,7 +18,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const mockChangeSetName = "copilot-31323334-3536-4738-b930-313233333435"
+const (
+	mockChangeSetName = "copilot-31323334-3536-4738-b930-313233333435"
+	mockChangeSetID   = "arn:aws:cloudformation:us-west-2:111:changeSet/copilot-31323334-3536-4738-b930-313233333435/9edc39b0-ee18-440d-823e-3dda74646b2"
+)
 
 var (
 	mockStack = NewStack("id", "template")
@@ -584,13 +587,15 @@ func addDeployCalls(m *mocks.Mockapi, changeSetType string) {
 			cloudformation.CapabilityCapabilityNamedIam,
 			cloudformation.CapabilityCapabilityAutoExpand,
 		}),
-	}).Return(nil, nil)
+	}).Return(&cloudformation.CreateChangeSetOutput{
+		Id:      aws.String(mockChangeSetID),
+		StackId: aws.String(mockStack.Name),
+	}, nil)
 	m.EXPECT().WaitUntilChangeSetCreateCompleteWithContext(gomock.Any(), &cloudformation.DescribeChangeSetInput{
-		ChangeSetName: aws.String(mockChangeSetName),
-		StackName:     aws.String(mockStack.Name),
+		ChangeSetName: aws.String(mockChangeSetID),
 	}, gomock.Any())
 	m.EXPECT().DescribeChangeSet(&cloudformation.DescribeChangeSetInput{
-		ChangeSetName: aws.String(mockChangeSetName),
+		ChangeSetName: aws.String(mockChangeSetID),
 		StackName:     aws.String(mockStack.Name),
 	}).Return(&cloudformation.DescribeChangeSetOutput{
 		Changes: []*cloudformation.Change{
@@ -605,7 +610,7 @@ func addDeployCalls(m *mocks.Mockapi, changeSetType string) {
 		StatusReason:    aws.String("some reason"),
 	}, nil)
 	m.EXPECT().ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
-		ChangeSetName: aws.String(mockChangeSetName),
+		ChangeSetName: aws.String(mockChangeSetID),
 		StackName:     aws.String(mockStack.Name),
 	})
 }
