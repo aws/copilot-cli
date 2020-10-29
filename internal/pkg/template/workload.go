@@ -78,6 +78,14 @@ type LogConfigOpts struct {
 	ConfigFile     *string
 }
 
+// HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
+type HTTPHealthCheckOpts struct {
+	HealthyThreshold   *int64
+	UnhealthyThreshold *int64
+	Interval           *int64
+	Timeout            *int64
+}
+
 // AutoscalingOpts holds configuration that's needed for Auto Scaling.
 type AutoscalingOpts struct {
 	MinCapacity  *int
@@ -86,13 +94,6 @@ type AutoscalingOpts struct {
 	Memory       *float64
 	Requests     *float64
 	ResponseTime *float64
-}
-
-type HttpHealthCheckOpts struct {
-	HealthyThreshold   *int64
-	UnhealthyThreshold *int64
-	Interval           *int64
-	Timeout            *int64
 }
 
 // StateMachineOpts holds configuration neeed for State Machine retries and timeout.
@@ -113,7 +114,7 @@ type WorkloadOpts struct {
 
 	// Additional options for service templates.
 	HealthCheck        *ecs.HealthCheck
-	HttpHealthCheck    *HttpHealthCheckOpts
+	HTTPHealthCheck    *HTTPHealthCheckOpts
 	RulePriorityLambda string
 	DesiredCountLambda string
 

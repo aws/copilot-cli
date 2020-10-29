@@ -31,14 +31,6 @@ const (
 	LBWebServiceStickinessParamKey      = "Stickiness"
 )
 
-// Default values for HttpHealthCheck for a load balanced web service.
-const (
-	defaultHealthyThreshold   = int64(2)
-	defaultUnhealthyThreshold = int64(2)
-	defaultInterval           = int64(10)
-	defaultTimeout            = int64(5)
-)
-
 type loadBalancedWebSvcReadParser interface {
 	template.ReadParser
 	ParseLoadBalancedWebService(template.WorkloadOpts) (*template.Content, error)
@@ -116,36 +108,14 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
 	}
-	healthyThreshold := defaultHealthyThreshold
-	if s.manifest.LoadBalancedWebServiceConfig.HTTPHealthCheck.HealthyThreshold != nil {
-		fmt.Print(*s.manifest.LoadBalancedWebServiceConfig.HTTPHealthCheck.HealthyThreshold)
-		healthyThreshold = *s.manifest.LoadBalancedWebServiceConfig.HTTPHealthCheck.HealthyThreshold
-	}
-	unhealthyThreshold := defaultUnhealthyThreshold
-	if s.manifest.LoadBalancedWebServiceConfig.HTTPHealthCheck.UnhealthyThreshold != nil {
-		unhealthyThreshold = *s.manifest.LoadBalancedWebServiceConfig.HTTPHealthCheck.UnhealthyThreshold
-	}
-	interval := defaultInterval
-	if s.manifest.LoadBalancedWebServiceConfig.HTTPHealthCheck.Interval != nil {
-		interval = *s.manifest.LoadBalancedWebServiceConfig.HTTPHealthCheck.Interval
-	}
-	timeout := defaultTimeout
-	if s.manifest.LoadBalancedWebServiceConfig.HTTPHealthCheck.Timeout != nil {
-		timeout = *s.manifest.LoadBalancedWebServiceConfig.HTTPHealthCheck.Timeout
-	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
-		Variables:   s.manifest.Variables,
-		Secrets:     s.manifest.Secrets,
-		NestedStack: outputs,
-		Sidecars:    sidecars,
-		LogConfig:   s.manifest.LogConfigOpts(),
-		Autoscaling: autoscaling,
-		HttpHealthCheck: &template.HttpHealthCheckOpts{
-			HealthyThreshold:   &healthyThreshold,
-			UnhealthyThreshold: &unhealthyThreshold,
-			Interval:           &interval,
-			Timeout:            &timeout,
-		},
+		Variables:          s.manifest.Variables,
+		Secrets:            s.manifest.Secrets,
+		NestedStack:        outputs,
+		Sidecars:           sidecars,
+		LogConfig:          s.manifest.LogConfigOpts(),
+		Autoscaling:        autoscaling,
+		HTTPHealthCheck:    s.manifest.HTTPHealthCheckOpts(),
 		RulePriorityLambda: rulePriorityLambda.String(),
 		DesiredCountLambda: desiredCountLambda.String(),
 	})
@@ -197,22 +167,6 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			ParameterKey:   aws.String(LBWebServiceHealthCheckPathParamKey),
 			ParameterValue: s.manifest.HealthCheckPath,
 		},
-		//{
-		//	ParameterKey:   aws.String(LBWebServiceHealthyThresholdParamKey),
-		//	ParameterValue: aws.String(strconv.FormatInt(*aws.Int64(*s.manifest.HTTPHealthCheck.HealthyThreshold), 10)),
-		//},
-		//{
-		//	ParameterKey:   aws.String(LBWebServiceUnhealthyThresholdParamKey),
-		//	ParameterValue: aws.String(strconv.FormatUint(aws.Uint64Value(s.manifest.UnhealthyThreshold), 10)),
-		//},
-		//{
-		//	ParameterKey:   aws.String(LBWebServiceTimeoutParamKey),
-		//	ParameterValue: aws.String(strconv.FormatUint(aws.Uint64Value(s.manifest.Timeout), 10)),
-		//},
-		//{
-		//	ParameterKey:   aws.String(LBWebServiceIntervalParamKey),
-		//	ParameterValue: aws.String(strconv.FormatUint(aws.Uint64Value(s.manifest.Interval), 10)),
-		//},
 		{
 			ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
 			ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
