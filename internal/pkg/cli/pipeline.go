@@ -24,6 +24,7 @@ Continuous delivery pipelines to release services.`,
 	cmd.AddCommand(buildPipelineDeleteCmd())
 	cmd.AddCommand(buildPipelineShowCmd())
 	cmd.AddCommand(buildPipelineStatusCmd())
+	cmd.AddCommand(buildPipelineListCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

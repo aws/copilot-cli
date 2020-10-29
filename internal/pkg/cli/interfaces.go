@@ -369,6 +369,7 @@ type versionGetter interface {
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 	ListPipelineNamesByTags(tags map[string]string) ([]string, error)
+	GetPipelinesByTags(tags map[string]string) ([]*codepipeline.Pipeline, error)
 }
 
 type executor interface {

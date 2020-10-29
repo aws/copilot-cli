@@ -7,7 +7,10 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
@@ -29,10 +32,11 @@ type showAppVars struct {
 type showAppOpts struct {
 	showAppVars
 
-	prompt prompter
-	store  store
-	w      io.Writer
-	sel    appSelector
+	prompt      prompter
+	store       store
+	w           io.Writer
+	sel         appSelector
+	pipelineSvc pipelineGetter
 }
 
 func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
@@ -41,6 +45,10 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
 
+	defaultSession, err := sessions.NewProvider().Default()
+	if err != nil {
+		return nil, fmt.Errorf("default session: %w", err)
+	}
 	prompter := prompt.New()
 	return &showAppOpts{
 		showAppVars: vars,
@@ -48,6 +56,7 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 		w:           log.OutputWriter,
 		prompt:      prompter,
 		sel:         selector.NewSelect(prompter, store),
+		pipelineSvc: codepipeline.New(defaultSession),
 	}, nil
 }
 
@@ -103,6 +112,15 @@ func (o *showAppOpts) description() (*describe.App, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list services in application %s: %w", o.name, err)
 	}
+
+	pipelines, err := o.pipelineSvc.GetPipelinesByTags(map[string]string{
+		deploy.AppTagKey: o.name,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("list pipelines in application %s: %w", o.name, err)
+	}
+
 	var trimmedEnvs []*config.Environment
 	for _, env := range envs {
 		trimmedEnvs = append(trimmedEnvs, &config.Environment{
@@ -120,10 +138,11 @@ func (o *showAppOpts) description() (*describe.App, error) {
 		})
 	}
 	return &describe.App{
-		Name:     app.Name,
-		URI:      app.Domain,
-		Envs:     trimmedEnvs,
-		Services: trimmedSvcs,
+		Name:      app.Name,
+		URI:       app.Domain,
+		Envs:      trimmedEnvs,
+		Services:  trimmedSvcs,
+		Pipelines: pipelines,
 	}, nil
 }
 

@@ -9,16 +9,18 @@ import (
 	"fmt"
 	"text/tabwriter"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
 // App contains serialized parameters for an application.
 type App struct {
-	Name     string                `json:"name"`
-	URI      string                `json:"uri"`
-	Envs     []*config.Environment `json:"environments"`
-	Services []*config.Workload    `json:"services"`
+	Name      string                   `json:"name"`
+	URI       string                   `json:"uri"`
+	Envs      []*config.Environment    `json:"environments"`
+	Services  []*config.Workload       `json:"services"`
+	Pipelines []*codepipeline.Pipeline `json:"pipelines"`
 }
 
 // JSONString returns the stringified App struct with json format.
@@ -49,6 +51,12 @@ func (a *App) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", "Type")
 	for _, svc := range a.Services {
 		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
+	}
+	fmt.Fprint(writer, color.Bold.Sprint("\nPipelines\n\n"))
+	writer.Flush()
+	fmt.Fprintf(writer, "  %s\n", "Name")
+	for _, pipeline := range a.Pipelines {
+		fmt.Fprintf(writer, "  %s\n", pipeline.Name)
 	}
 	writer.Flush()
 	return b.String()
