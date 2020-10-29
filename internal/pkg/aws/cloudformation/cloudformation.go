@@ -45,7 +45,7 @@ func (c *CloudFormation) Create(stack *Stack) error {
 		// If the stack does not exist, create it.
 		return c.create(stack)
 	}
-	status := stackStatus(aws.StringValue(descr.StackStatus))
+	status := StackStatus(aws.StringValue(descr.StackStatus))
 	if status.requiresCleanup() {
 		// If the stack exists, but failed to create, we'll clean it up and then re-create it.
 		if err := c.Delete(stack.Name); err != nil {
@@ -53,7 +53,7 @@ func (c *CloudFormation) Create(stack *Stack) error {
 		}
 		return c.create(stack)
 	}
-	if status.inProgress() {
+	if status.InProgress() {
 		return &ErrStackUpdateInProgress{
 			Name: stack.Name,
 		}
@@ -90,8 +90,8 @@ func (c *CloudFormation) Update(stack *Stack) error {
 	if err != nil {
 		return err
 	}
-	status := stackStatus(aws.StringValue(descr.StackStatus))
-	if status.inProgress() {
+	status := StackStatus(aws.StringValue(descr.StackStatus))
+	if status.InProgress() {
 		return &ErrStackUpdateInProgress{
 			Name: stack.Name,
 		}

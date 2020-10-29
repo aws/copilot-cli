@@ -5,6 +5,7 @@ package cloudformation
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -61,15 +62,50 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 			},
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
 				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{}, nil).Times(2)
+
 				gomock.InOrder(
+					m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{}, nil).AnyTimes(),
 					m.EXPECT().UpdateAndWait(gomock.Any()).Return(&cloudformation.ErrStackUpdateInProgress{
 						Name: "phonetool-test",
-					}),
+					}).AnyTimes(),
+					m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
+						StackStatus: aws.String("UPDATE_IN_PROGRESS"),
+					}, nil).AnyTimes(),
+					m.EXPECT().WaitForUpdate("phonetool-test").Return(nil).AnyTimes(),
+					m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{}, nil).AnyTimes(),
 					m.EXPECT().UpdateAndWait(gomock.Any()).Return(nil),
 				)
-				m.EXPECT().WaitForUpdate("phonetool-test").Return(nil)
-
+				return &CloudFormation{
+					cfnClient: m,
+				}
+			},
+		},
+		"should exit successfully if there are no updates needed": {
+			in: &deploy.CreateEnvironmentInput{
+				AppName: "phonetool",
+				Name:    "test",
+				Version: "v1.0.0",
+			},
+			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{}, nil)
+				m.EXPECT().UpdateAndWait(gomock.Any()).Return(fmt.Errorf("update and wait: %w", &cloudformation.ErrChangeSetEmpty{}))
+				return &CloudFormation{
+					cfnClient: m,
+				}
+			},
+		},
+		"should retry if the changeset request becomes obsolete": {
+			in: &deploy.CreateEnvironmentInput{
+				AppName: "phonetool",
+				Name:    "test",
+				Version: "v1.0.0",
+			},
+			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{}, nil).Times(2)
+				m.EXPECT().UpdateAndWait(gomock.Any()).Return(fmt.Errorf("update and wait: %w", &cloudformation.ErrChangeSetNotExecutable{}))
+				m.EXPECT().UpdateAndWait(gomock.Any()).Return(nil)
 				return &CloudFormation{
 					cfnClient: m,
 				}
