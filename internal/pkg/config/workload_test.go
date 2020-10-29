@@ -136,6 +136,85 @@ func TestStore_ListServices(t *testing.T) {
 	}
 }
 
+func TestStore_ListWorkloads(t *testing.T) {
+	frontendService := Workload{Name: "fe", App: "chicken", Type: "Load Balanced Fargate Service"}
+	frontendServiceString, err := marshal(frontendService)
+	frontendServicePath := fmt.Sprintf(fmtWkldParamPath, frontendService.App, frontendService.Name)
+	require.NoError(t, err, "Marshal svc should not fail")
+
+	mailerJob := Workload{Name: "mailer", App: "chicken", Type: "Scheduled Job"}
+	mailerJobString, err := marshal(mailerJob)
+	mailerJobPath := fmt.Sprintf(fmtWkldParamPath, mailerJob.App, mailerJob.Name)
+	require.NoError(t, err, "Marshal job should not fail")
+	workloadPath := fmt.Sprintf(rootWkldParamPath, mailerJob.App)
+
+	testCases := map[string]struct {
+		mockGetParametersByPath func(t *testing.T, param *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error)
+
+		wantedWls []Workload
+		wantedErr error
+	}{
+		"with existing workloads": {
+			mockGetParametersByPath: func(t *testing.T, param *ssm.GetParametersByPathInput) (output *ssm.GetParametersByPathOutput, e error) {
+				require.Equal(t, workloadPath, *param.Path)
+				return &ssm.GetParametersByPathOutput{
+					Parameters: []*ssm.Parameter{
+						{
+							Name:  aws.String(mailerJobPath),
+							Value: aws.String(mailerJobString),
+						},
+						{
+							Name:  aws.String(frontendServicePath),
+							Value: aws.String(frontendServiceString),
+						},
+					},
+				}, nil
+			},
+			wantedWls: []Workload{mailerJob, frontendService},
+			wantedErr: nil,
+		},
+		"with job": {
+			mockGetParametersByPath: func(t *testing.T, param *ssm.GetParametersByPathInput) (output *ssm.GetParametersByPathOutput, e error) {
+				require.Equal(t, workloadPath, *param.Path)
+				return &ssm.GetParametersByPathOutput{
+					Parameters: []*ssm.Parameter{
+						{
+							Name:  aws.String(mailerJobPath),
+							Value: aws.String(mailerJobString),
+						},
+					},
+				}, nil
+			},
+			wantedWls: []Workload{mailerJob},
+			wantedErr: nil,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			//GIVEN
+			store := &Store{
+				ssmClient: &mockSSM{
+					t:                       t,
+					mockGetParametersByPath: tc.mockGetParametersByPath,
+				},
+			}
+
+			// WHEN
+			wlPointers, err := store.ListWorkloads("chicken")
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				var wls []Workload
+				for _, w := range wlPointers {
+					wls = append(wls, *w)
+				}
+				require.ElementsMatch(t, tc.wantedWls, wls)
+			}
+		})
+	}
+}
+
 func TestStore_ListJobs(t *testing.T) {
 	frontendService := Workload{Name: "fe", App: "chicken", Type: "Load Balanced Fargate Service"}
 	frontendServiceString, err := marshal(frontendService)
