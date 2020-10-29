@@ -85,9 +85,9 @@ func (cs *changeSet) String() string {
 	return fmt.Sprintf("change set %s for stack %s", cs.name, cs.stackName)
 }
 
-// create creates a Change Set and waits until it's created.
+// create creates a ChangeSet, waits until it's created, and returns the ChangeSet ID on success.
 func (cs *changeSet) create(conf *stackConfig) error {
-	_, err := cs.client.CreateChangeSet(&cloudformation.CreateChangeSetInput{
+	out, err := cs.client.CreateChangeSet(&cloudformation.CreateChangeSetInput{
 		ChangeSetName: aws.String(cs.name),
 		StackName:     aws.String(cs.stackName),
 		ChangeSetType: aws.String(cs.csType.String()),
@@ -105,12 +105,17 @@ func (cs *changeSet) create(conf *stackConfig) error {
 		return fmt.Errorf("create %s: %w", cs, err)
 	}
 	err = cs.client.WaitUntilChangeSetCreateCompleteWithContext(context.Background(), &cloudformation.DescribeChangeSetInput{
-		ChangeSetName: aws.String(cs.name),
-		StackName:     aws.String(cs.stackName),
+		ChangeSetName: out.Id,
 	}, waiters...)
 	if err != nil {
 		return fmt.Errorf("wait for creation of %s: %w", cs, err)
 	}
+
+	// Since the ChangeSet creation succeeded, use the full ARN instead of the name.
+	// Using the full ID is essential in case the ChangeSet execution status is obsolete.
+	// If we call DescribeChangeSet using the ChangeSet name and Stack name on an obsolete changeset, the results is empty.
+	// On the other hand, if you DescribeChangeSet using the full ID then the ChangeSet summary is retrieved correctly.
+	cs.name = aws.StringValue(out.Id)
 	return nil
 }
 
@@ -158,7 +163,7 @@ func (cs *changeSet) execute() error {
 		if descr.statusReason == noUpdatesReason {
 			return nil
 		}
-		return &errChangeSetNotExecutable{
+		return &ErrChangeSetNotExecutable{
 			cs:    cs,
 			descr: descr,
 		}

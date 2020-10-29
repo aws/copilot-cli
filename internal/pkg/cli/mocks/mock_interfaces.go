@@ -3897,6 +3897,21 @@ func (mr *MockpipelineGetterMockRecorder) ListPipelineNamesByTags(tags interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelineNamesByTags", reflect.TypeOf((*MockpipelineGetter)(nil).ListPipelineNamesByTags), tags)
 }
 
+// GetPipelinesByTags mocks base method
+func (m *MockpipelineGetter) GetPipelinesByTags(tags map[string]string) ([]*codepipeline.Pipeline, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPipelinesByTags", tags)
+	ret0, _ := ret[0].([]*codepipeline.Pipeline)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPipelinesByTags indicates an expected call of GetPipelinesByTags
+func (mr *MockpipelineGetterMockRecorder) GetPipelinesByTags(tags interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipelinesByTags", reflect.TypeOf((*MockpipelineGetter)(nil).GetPipelinesByTags), tags)
+}
+
 // Mockexecutor is a mock of executor interface
 type Mockexecutor struct {
 	ctrl     *gomock.Controller

@@ -18,6 +18,9 @@ const (
 
 // CreateEnvironmentInput holds the fields required to deploy an environment.
 type CreateEnvironmentInput struct {
+	// The version of the environment template to create the stack. If empty, creates the legacy stack.
+	Version string
+
 	AppName                  string            // Name of the application this environment belongs to.
 	Name                     string            // Name of the environment, must be unique within an application.
 	Prod                     bool              // Whether or not this environment is a production environment.
@@ -27,8 +30,7 @@ type CreateEnvironmentInput struct {
 	ImportVPCConfig          *config.ImportVPC // Optional configuration if users have an existing VPC.
 	AdjustVPCConfig          *config.AdjustVPC // Optional configuration if users want to override default VPC configuration.
 
-	// The version of the environment template to creat the stack. If empty, creates the legacy stack.
-	Version string
+	CFNServiceRoleARN string // Optional. A service role ARN that CloudFormation should use to make calls to resources in the stack.
 }
 
 // CreateEnvironmentResponse holds the created environment on successful deployment.
