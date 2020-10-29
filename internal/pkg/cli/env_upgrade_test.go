@@ -225,6 +225,50 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 				}
 			},
 		},
+		"should upgrade non-legacy environments with UpgradeEnvironment call": {
+			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
+				mockEnvTpl := mocks.NewMockversionGetter(ctrl)
+				mockEnvTpl.EXPECT().Version().Return("v0.1.0", nil) // Legacy versions are v0.0.0
+
+				mockStore := mocks.NewMockenvironmentStore(ctrl)
+				mockStore.EXPECT().GetEnvironment("phonetool", "test").
+					Return(&config.Environment{
+						App:              "phonetool",
+						Name:             "test",
+						ExecutionRoleARN: "execARN",
+						CustomConfig: &config.CustomizeEnv{
+							ImportVPC: &config.ImportVPC{
+								ID: "abc",
+							},
+						},
+					}, nil)
+
+				mockUpgrader := mocks.NewMockenvTemplateUpgrader(ctrl)
+				mockUpgrader.EXPECT().UpgradeEnvironment(&deploy.CreateEnvironmentInput{
+					Version: deploy.LatestEnvTemplateVersion,
+					AppName: "phonetool",
+					Name:    "test",
+					ImportVPCConfig: &config.ImportVPC{
+						ID: "abc",
+					},
+					CFNServiceRoleARN: "execARN",
+				}).Return(nil)
+
+				return &envUpgradeOpts{
+					envUpgradeVars: envUpgradeVars{
+						appName: "phonetool",
+						name:    "test",
+					},
+					store: mockStore,
+					newEnvVersionGetter: func(_, _ string) (versionGetter, error) {
+						return mockEnvTpl, nil
+					},
+					newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
+						return mockUpgrader, nil
+					},
+				}
+			},
+		},
 	}
 
 	for name, tc := range testCases {

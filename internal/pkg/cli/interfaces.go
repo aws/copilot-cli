@@ -385,6 +385,15 @@ type versionGetter interface {
 	Version() (string, error)
 }
 
+type envUpgrader interface {
+	UpgradeEnvironment(in *deploy.CreateEnvironmentInput) error
+}
+
+type envTemplateUpgrader interface {
+	envUpgrader
+	UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentInput, lbWebServices ...string) error
+}
+
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 	ListPipelineNamesByTags(tags map[string]string) ([]string, error)

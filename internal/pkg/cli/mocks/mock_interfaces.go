@@ -4108,6 +4108,99 @@ func (mr *MockversionGetterMockRecorder) Version() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockversionGetter)(nil).Version))
 }
 
+// MockenvUpgrader is a mock of envUpgrader interface
+type MockenvUpgrader struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvUpgraderMockRecorder
+}
+
+// MockenvUpgraderMockRecorder is the mock recorder for MockenvUpgrader
+type MockenvUpgraderMockRecorder struct {
+	mock *MockenvUpgrader
+}
+
+// NewMockenvUpgrader creates a new mock instance
+func NewMockenvUpgrader(ctrl *gomock.Controller) *MockenvUpgrader {
+	mock := &MockenvUpgrader{ctrl: ctrl}
+	mock.recorder = &MockenvUpgraderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockenvUpgrader) EXPECT() *MockenvUpgraderMockRecorder {
+	return m.recorder
+}
+
+// UpgradeEnvironment mocks base method
+func (m *MockenvUpgrader) UpgradeEnvironment(in *deploy.CreateEnvironmentInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpgradeEnvironment", in)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpgradeEnvironment indicates an expected call of UpgradeEnvironment
+func (mr *MockenvUpgraderMockRecorder) UpgradeEnvironment(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeEnvironment", reflect.TypeOf((*MockenvUpgrader)(nil).UpgradeEnvironment), in)
+}
+
+// MockenvTemplateUpgrader is a mock of envTemplateUpgrader interface
+type MockenvTemplateUpgrader struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvTemplateUpgraderMockRecorder
+}
+
+// MockenvTemplateUpgraderMockRecorder is the mock recorder for MockenvTemplateUpgrader
+type MockenvTemplateUpgraderMockRecorder struct {
+	mock *MockenvTemplateUpgrader
+}
+
+// NewMockenvTemplateUpgrader creates a new mock instance
+func NewMockenvTemplateUpgrader(ctrl *gomock.Controller) *MockenvTemplateUpgrader {
+	mock := &MockenvTemplateUpgrader{ctrl: ctrl}
+	mock.recorder = &MockenvTemplateUpgraderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockenvTemplateUpgrader) EXPECT() *MockenvTemplateUpgraderMockRecorder {
+	return m.recorder
+}
+
+// UpgradeEnvironment mocks base method
+func (m *MockenvTemplateUpgrader) UpgradeEnvironment(in *deploy.CreateEnvironmentInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpgradeEnvironment", in)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpgradeEnvironment indicates an expected call of UpgradeEnvironment
+func (mr *MockenvTemplateUpgraderMockRecorder) UpgradeEnvironment(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeEnvironment", reflect.TypeOf((*MockenvTemplateUpgrader)(nil).UpgradeEnvironment), in)
+}
+
+// UpgradeLegacyEnvironment mocks base method
+func (m *MockenvTemplateUpgrader) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentInput, lbWebServices ...string) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{in}
+	for _, a := range lbWebServices {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpgradeLegacyEnvironment", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpgradeLegacyEnvironment indicates an expected call of UpgradeLegacyEnvironment
+func (mr *MockenvTemplateUpgraderMockRecorder) UpgradeLegacyEnvironment(in interface{}, lbWebServices ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{in}, lbWebServices...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeLegacyEnvironment", reflect.TypeOf((*MockenvTemplateUpgrader)(nil).UpgradeLegacyEnvironment), varargs...)
+}
+
 // MockpipelineGetter is a mock of pipelineGetter interface
 type MockpipelineGetter struct {
 	ctrl     *gomock.Controller
