@@ -277,7 +277,8 @@ func (o *deployJobOpts) deployJob(addonsURL string) error {
 		if describeErr != nil {
 			return fmt.Errorf("describe stack: %w", describeErr)
 		}
-		log.Warningf("Cloudformation status reason: %s", errors[0].StatusReason)
+		log.Infoln("Cloudformation status reason:")
+		log.Infof("%s\n", errors[0].StatusReason)
 		return fmt.Errorf("deploy job: %w", err)
 	}
 	o.spinner.Stop("\n")

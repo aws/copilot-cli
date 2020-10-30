@@ -206,7 +206,7 @@ func (c *CloudFormation) events(stackName string, match eventMatcher) ([]StackEv
 			StackName: aws.String(stackName),
 		})
 		if err != nil {
-			return nil, fmt.Errorf("desribe stack events for stack %s: %w", stackName, err)
+			return nil, fmt.Errorf("describe stack events for stack %s: %w", stackName, err)
 		}
 		for _, event := range out.StackEvents {
 			if match(event) {

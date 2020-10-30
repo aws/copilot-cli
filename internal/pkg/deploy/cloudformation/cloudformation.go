@@ -109,8 +109,8 @@ func transformEvent(input cloudformation.StackEvent) deploy.ResourceEvent {
 			Type:        aws.StringValue(input.ResourceType),
 		},
 		Status: aws.StringValue(input.ResourceStatus),
-		// CFN error messages end with a '.' and only the first sentence is useful, the rest is error codes.
-		StatusReason: strings.Split(aws.StringValue(input.ResourceStatusReason), ".")[0],
+		// CFN error messages end with a '. (Service' and only the first sentence is useful, the rest is error codes.
+		StatusReason: strings.Split(aws.StringValue(input.ResourceStatusReason), ". (Service")[0],
 	}
 }
 
