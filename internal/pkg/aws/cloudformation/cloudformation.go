@@ -16,6 +16,16 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
+type eventMatcher func(*cloudformation.StackEvent) bool
+
+var eventErrorStates = []string{
+	cloudformation.ResourceStatusCreateFailed,
+	cloudformation.ResourceStatusDeleteFailed,
+	cloudformation.ResourceStatusImportFailed,
+	cloudformation.ResourceStatusUpdateFailed,
+	cloudformation.ResourceStatusImportRollbackFailed,
+}
+
 var waiters = []request.WaiterOption{
 	request.WithWaiterDelay(request.ConstantWaiterDelay(3 * time.Second)), // Poll for cfn updates every 3 seconds.
 	request.WithWaiterMaxAttempts(1800),                                   // Wait for at most 90 mins for any cfn action.
@@ -184,6 +194,10 @@ func (c *CloudFormation) TemplateBody(name string) (string, error) {
 
 // Events returns the list of stack events in **chronological** order.
 func (c *CloudFormation) Events(stackName string) ([]StackEvent, error) {
+	return c.events(stackName, func(in *cloudformation.StackEvent) bool { return true })
+}
+
+func (c *CloudFormation) events(stackName string, match eventMatcher) ([]StackEvent, error) {
 	var nextToken *string
 	var events []StackEvent
 	for {
@@ -195,7 +209,9 @@ func (c *CloudFormation) Events(stackName string) ([]StackEvent, error) {
 			return nil, fmt.Errorf("desribe stack events for stack %s: %w", stackName, err)
 		}
 		for _, event := range out.StackEvents {
-			events = append(events, StackEvent(*event))
+			if match(event) {
+				events = append(events, StackEvent(*event))
+			}
 		}
 		nextToken = out.NextToken
 		if nextToken == nil {
@@ -209,6 +225,18 @@ func (c *CloudFormation) Events(stackName string) ([]StackEvent, error) {
 		events[i], events[opp] = events[opp], events[i]
 	}
 	return events, nil
+}
+
+// ErrorEvents returns the list of events with "failed" status in **chronological order**
+func (c *CloudFormation) ErrorEvents(stackName string) ([]StackEvent, error) {
+	return c.events(stackName, func(in *cloudformation.StackEvent) bool {
+		for _, status := range eventErrorStates {
+			if aws.StringValue(in.ResourceStatus) == status {
+				return true
+			}
+		}
+		return false
+	})
 }
 
 func (c *CloudFormation) create(stack *Stack) error {

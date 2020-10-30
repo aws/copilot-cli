@@ -39,6 +39,7 @@ type cfnClient interface {
 	Describe(stackName string) (*cloudformation.StackDescription, error)
 	TemplateBody(stackName string) (string, error)
 	Events(stackName string) ([]cloudformation.StackEvent, error)
+	ErrorEvents(stackName string) ([]cloudformation.StackEvent, error)
 }
 
 type stackSetClient interface {
@@ -84,15 +85,7 @@ func (cf CloudFormation) streamResourceEvents(done <-chan struct{}, events chan 
 		}
 		var transformedEvents []deploy.ResourceEvent
 		for _, cfEvent := range cfEvents {
-			transformedEvents = append(transformedEvents, deploy.ResourceEvent{
-				Resource: deploy.Resource{
-					LogicalName: aws.StringValue(cfEvent.LogicalResourceId),
-					Type:        aws.StringValue(cfEvent.ResourceType),
-				},
-				Status: aws.StringValue(cfEvent.ResourceStatus),
-				// CFN error messages end with a '.' and only the first sentence is useful, the rest is error codes.
-				StatusReason: strings.Split(aws.StringValue(cfEvent.ResourceStatusReason), ".")[0],
-			})
+			transformedEvents = append(transformedEvents, transformEvent(cfEvent))
 		}
 		events <- transformedEvents
 	}
@@ -106,6 +99,18 @@ func (cf CloudFormation) streamResourceEvents(done <-chan struct{}, events chan 
 			close(events)       // Close the channel to let receivers know that there won't be any more events.
 			return              // Exit for-loop.
 		}
+	}
+}
+
+func transformEvent(input cloudformation.StackEvent) deploy.ResourceEvent {
+	return deploy.ResourceEvent{
+		Resource: deploy.Resource{
+			LogicalName: aws.StringValue(input.LogicalResourceId),
+			Type:        aws.StringValue(input.ResourceType),
+		},
+		Status: aws.StringValue(input.ResourceStatus),
+		// CFN error messages end with a '.' and only the first sentence is useful, the rest is error codes.
+		StatusReason: strings.Split(aws.StringValue(input.ResourceStatusReason), ".")[0],
 	}
 }
 
@@ -129,4 +134,17 @@ func toMap(tags []*sdkcloudformation.Tag) map[string]string {
 		m[aws.StringValue(t.Key)] = aws.StringValue(t.Value)
 	}
 	return m
+}
+
+// GetStackErrors returns the list of Cloudformation Resource Events, filtered by failures and erros.
+func (cf CloudFormation) GetStackErrors(conf StackConfiguration) ([]deploy.ResourceEvent, error) {
+	events, err := cf.cfnClient.ErrorEvents(conf.StackName())
+	if err != nil {
+		return nil, err
+	}
+	var transformedEvents []deploy.ResourceEvent
+	for _, cfEvent := range events {
+		transformedEvents = append(transformedEvents, transformEvent(cfEvent))
+	}
+	return transformedEvents, nil
 }
