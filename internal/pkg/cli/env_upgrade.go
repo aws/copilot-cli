@@ -75,6 +75,9 @@ func (o *envUpgradeOpts) Validate() error {
 	if o.all && o.name != "" {
 		return fmt.Errorf("cannot specify both --%s and --%s flags", allFlag, nameFlag)
 	}
+	if o.all {
+		return nil
+	}
 	if o.name != "" {
 		if _, err := o.store.GetEnvironment(o.appName, o.name); err != nil {
 			var errEnvDoesNotExist *config.ErrNoSuchEnvironment
@@ -170,6 +173,9 @@ func (o *envUpgradeOpts) shouldUpgrade(env string) (bool, error) {
 
 	msg := fmt.Sprintf("Environment %s is already on the latest version %s, skip upgrade.", env, deploy.LatestEnvTemplateVersion)
 	if diff > 0 {
+		// It's possible that a teammate used a different version of the CLI to upgrade the environment
+		// to a newer version. And the current user is on an older version of the CLI.
+		// In this situation we notify them they should update the CLI.
 		msg = fmt.Sprintf(`Skip upgrading environment %s to version %s since it's on version %s. 
 Are you using the latest version of AWS Copilot?`, env, deploy.LatestEnvTemplateVersion, version)
 	}

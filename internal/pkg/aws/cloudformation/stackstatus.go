@@ -9,14 +9,15 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
-type stackStatus string
+// StackStatus represents the status of a stack.
+type StackStatus string
 
 // requiresCleanup returns true if the stack was created, but failed and should be deleted.
-func (s stackStatus) requiresCleanup() bool {
+func (s StackStatus) requiresCleanup() bool {
 	return cloudformation.StackStatusRollbackComplete == string(s) || cloudformation.StackStatusRollbackFailed == string(s)
 }
 
-// inProgress returns true if the stack is currently being updated.
-func (s stackStatus) inProgress() bool {
+// InProgress returns true if the stack is currently being updated.
+func (s StackStatus) InProgress() bool {
 	return strings.HasSuffix(string(s), "IN_PROGRESS")
 }

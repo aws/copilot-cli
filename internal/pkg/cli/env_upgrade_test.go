@@ -81,6 +81,17 @@ func TestEnvUpgradeOpts_Validate(t *testing.T) {
 			},
 			wantedErr: errors.New("cannot specify both --all and --name flags"),
 		},
+		"should shorcircuit if only --all is provided": {
+			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
+				return &envUpgradeOpts{
+					envUpgradeVars: envUpgradeVars{
+						appName: "phonetool",
+						all:     true,
+					},
+				}
+			},
+			wantedErr: nil,
+		},
 	}
 
 	for name, tc := range testCases {

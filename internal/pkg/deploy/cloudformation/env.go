@@ -153,30 +153,59 @@ func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, t
 	}
 
 	for {
-		// Set the parameters of the stack.
 		descr, err := cf.cfnClient.Describe(s.Name)
 		if err != nil {
 			return fmt.Errorf("describe stack %s: %w", s.Name, err)
 		}
+
+		if cloudformation.StackStatus(aws.StringValue(descr.StackStatus)).InProgress() {
+			// There is already an update happening to the environment stack.
+			// Best-effort try to wait for the existing update to be over before retrying.
+			_ = cf.cfnClient.WaitForUpdate(s.Name)
+			continue
+		}
+
+		// Keep the parameters and tags of the stack.
 		var params []*awscfn.Parameter
 		for _, param := range descr.Parameters {
 			params = append(params, transformParam(param))
 		}
 		s.Parameters = params
+		s.Tags = descr.Tags
+
+		// Apply a service role if provided.
+		if in.CFNServiceRoleARN != "" {
+			s.RoleARN = aws.String(in.CFNServiceRoleARN)
+		}
 
 		// Attempt to update the stack template.
 		err = cf.cfnClient.UpdateAndWait(s)
 		if err == nil { // Success.
 			break
 		}
+
+		var emptyChangeSet *cloudformation.ErrChangeSetEmpty
 		var alreadyInProgErr *cloudformation.ErrStackUpdateInProgress
-		if !errors.As(err, &alreadyInProgErr) {
+		var obsoleteChangeSetErr *cloudformation.ErrChangeSetNotExecutable
+		switch updateErr := err; {
+		case errors.As(updateErr, &emptyChangeSet):
+			// The changes are already applied, nothing to do. Exit successfully.
+			return nil
+		case errors.As(updateErr, &alreadyInProgErr):
+			// There is another update going on in the environment, retry the upgrade.
+			continue
+		case errors.As(updateErr, &obsoleteChangeSetErr):
+			// If there are two "upgradeEnvironments" calls happening in parallel, it's possible that
+			// both invocations created a changeset to upgrade the environment stack.
+			// CloudFormation will ensure that one of them goes through, while the other returns
+			// an ErrChangeSetNotExecutable error.
+			//
+			// In that scenario, we should loop again, wait until the stack is updated,
+			// and exit due to changeset is empty.
+			continue
+		default:
 			return fmt.Errorf("update and wait for stack %s: %w", s.Name, err)
 		}
-
-		// There is already an update happening to the environment stack.
-		// Best-effort try to wait for the existing update to be over before retrying.
-		_ = cf.cfnClient.WaitForUpdate(s.Name)
 	}
 	return nil
 }
