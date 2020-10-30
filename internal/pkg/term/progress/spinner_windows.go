@@ -1,5 +1,3 @@
-// +build !windows
-
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -60,7 +58,7 @@ type Spinner struct {
 
 // NewSpinner returns a spinner that outputs to stderr.
 func NewSpinner() *Spinner {
-	s := spinner.New(charset, 125*time.Millisecond, spinner.WithHiddenCursor(true))
+	s := spinner.New(charset, 500*time.Millisecond, spinner.WithHiddenCursor(true))
 	s.Writer = log.DiagnosticWriter
 	return &Spinner{
 		spin:         s,
@@ -79,12 +77,6 @@ func (s *Spinner) Start(label string) {
 func (s *Spinner) Stop(label string) {
 	s.finalMSG(fmt.Sprintln(label))
 	s.spin.Stop()
-
-	// Maintain old progress entries on the screen.
-	for _, event := range s.pastEvents {
-		fmt.Fprintf(s.eventsWriter, "%s\n", event)
-	}
-	s.eventsWriter.Flush()
 	// Reset event entries once the spinner stops.
 	s.pastEvents = nil
 }
@@ -103,13 +95,10 @@ func (s *Spinner) Events(events []TabRow) {
 			s.cur.Down(1)
 			s.cur.EraseLine()
 		}
-		if len(s.pastEvents) > 0 {
-			s.cur.Up(len(s.pastEvents))
-		}
 
 		// Add new status updates, and move cursor back to the spinner.
 		for _, event := range events {
-			fmt.Fprintf(s.eventsWriter, "\n%s", event)
+			fmt.Fprintf(s.eventsWriter, "\r%s\n", event)
 		}
 		s.eventsWriter.Flush()
 		if len(events) > 0 {
