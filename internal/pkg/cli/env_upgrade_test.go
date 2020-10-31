@@ -10,6 +10,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +22,7 @@ func TestEnvUpgradeOpts_Validate(t *testing.T) {
 	}{
 		"should not error if the environment exists and a name is provided": {
 			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
-				m := mocks.NewMockenvironmentStore(ctrl)
+				m := mocks.NewMockstore(ctrl)
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, nil)
 
 				return &envUpgradeOpts{
@@ -35,7 +36,7 @@ func TestEnvUpgradeOpts_Validate(t *testing.T) {
 		},
 		"should throw a config.ErrNoSuchEnvironment if the environment is not found": {
 			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
-				m := mocks.NewMockenvironmentStore(ctrl)
+				m := mocks.NewMockstore(ctrl)
 				m.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Return(nil, &config.ErrNoSuchEnvironment{
 					ApplicationName: "phonetool",
 					EnvironmentName: "test",
@@ -56,7 +57,7 @@ func TestEnvUpgradeOpts_Validate(t *testing.T) {
 		},
 		"should throw a wrapped error on unexpected config failure": {
 			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
-				m := mocks.NewMockenvironmentStore(ctrl)
+				m := mocks.NewMockstore(ctrl)
 				m.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 
 				return &envUpgradeOpts{
@@ -201,7 +202,7 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 	}{
 		"should skip upgrading if the environment version is already at least latest": {
 			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
-				mockStore := mocks.NewMockenvironmentStore(ctrl)
+				mockStore := mocks.NewMockstore(ctrl)
 				mockStore.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
 					{
 						Name: "test",
@@ -230,7 +231,11 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 				mockEnvTpl := mocks.NewMockversionGetter(ctrl)
 				mockEnvTpl.EXPECT().Version().Return("v0.1.0", nil) // Legacy versions are v0.0.0
 
-				mockStore := mocks.NewMockenvironmentStore(ctrl)
+				mockProg := mocks.NewMockprogress(ctrl)
+				mockProg.EXPECT().Start(gomock.Any())
+				mockProg.EXPECT().Stop(gomock.Any())
+
+				mockStore := mocks.NewMockstore(ctrl)
 				mockStore.EXPECT().GetEnvironment("phonetool", "test").
 					Return(&config.Environment{
 						App:              "phonetool",
@@ -260,6 +265,7 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 						name:    "test",
 					},
 					store: mockStore,
+					prog:  mockProg,
 					newEnvVersionGetter: func(_, _ string) (versionGetter, error) {
 						return mockEnvTpl, nil
 					},
@@ -268,6 +274,162 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 				}
 			},
+		},
+		"should upgrade default legacy environments without any VPC configuration": {
+			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
+				mockEnvTpl := mocks.NewMockversionGetter(ctrl)
+				mockEnvTpl.EXPECT().Version().Return(deploy.LegacyEnvTemplateVersion, nil)
+
+				mockProg := mocks.NewMockprogress(ctrl)
+				mockProg.EXPECT().Start(gomock.Any())
+				mockProg.EXPECT().Stop(gomock.Any())
+
+				mockStore := mocks.NewMockstore(ctrl)
+				mockStore.EXPECT().GetEnvironment("phonetool", "test").
+					Return(&config.Environment{
+						App:              "phonetool",
+						Name:             "test",
+						ExecutionRoleARN: "execARN",
+					}, nil)
+				mockStore.EXPECT().ListServices("phonetool").Return([]*config.Workload{
+					{
+						App:  "phonetool",
+						Name: "frontend",
+						Type: manifest.LoadBalancedWebServiceType,
+					},
+					{
+						App:  "phonetool",
+						Name: "backend",
+						Type: manifest.BackendServiceType,
+					},
+				}, nil)
+
+				mockTemplater := mocks.NewMocktemplater(ctrl)
+				mockTemplater.EXPECT().Template().Return("template", nil)
+
+				mockUpgrader := mocks.NewMockenvTemplateUpgrader(ctrl)
+				mockUpgrader.EXPECT().EnvironmentTemplate("phonetool", "test").Return("template", nil)
+				mockUpgrader.EXPECT().UpgradeLegacyEnvironment(&deploy.CreateEnvironmentInput{
+					Version:           deploy.LatestEnvTemplateVersion,
+					AppName:           "phonetool",
+					Name:              "test",
+					CFNServiceRoleARN: "execARN",
+				}, "frontend").Return(nil)
+
+				return &envUpgradeOpts{
+					envUpgradeVars: envUpgradeVars{
+						appName: "phonetool",
+						name:    "test",
+					},
+					store:       mockStore,
+					envTemplate: mockTemplater,
+					prog:        mockProg,
+					newEnvVersionGetter: func(_, _ string) (versionGetter, error) {
+						return mockEnvTpl, nil
+					},
+					newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
+						return mockUpgrader, nil
+					},
+				}
+			},
+		},
+		"should upgrade legacy environments with imported VPC": {
+			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
+				mockEnvTpl := mocks.NewMockversionGetter(ctrl)
+				mockEnvTpl.EXPECT().Version().Return(deploy.LegacyEnvTemplateVersion, nil)
+
+				mockProg := mocks.NewMockprogress(ctrl)
+				mockProg.EXPECT().Start(gomock.Any())
+				mockProg.EXPECT().Stop(gomock.Any())
+
+				mockStore := mocks.NewMockstore(ctrl)
+				mockStore.EXPECT().GetEnvironment("phonetool", "test").
+					Return(&config.Environment{
+						App:              "phonetool",
+						Name:             "test",
+						ExecutionRoleARN: "execARN",
+						CustomConfig: &config.CustomizeEnv{
+							ImportVPC: &config.ImportVPC{
+								ID: "abc",
+							},
+						},
+					}, nil)
+				mockStore.EXPECT().ListServices("phonetool").Return([]*config.Workload{}, nil)
+
+				mockTemplater := mocks.NewMocktemplater(ctrl)
+				mockTemplater.EXPECT().Template().Return("template", nil)
+
+				mockUpgrader := mocks.NewMockenvTemplateUpgrader(ctrl)
+				mockUpgrader.EXPECT().EnvironmentTemplate("phonetool", "test").Return("modified template", nil)
+				mockUpgrader.EXPECT().UpgradeLegacyEnvironment(&deploy.CreateEnvironmentInput{
+					Version:           deploy.LatestEnvTemplateVersion,
+					AppName:           "phonetool",
+					Name:              "test",
+					CFNServiceRoleARN: "execARN",
+					ImportVPCConfig: &config.ImportVPC{
+						ID: "abc",
+					},
+				}).Return(nil)
+
+				return &envUpgradeOpts{
+					envUpgradeVars: envUpgradeVars{
+						appName: "phonetool",
+						name:    "test",
+					},
+					store:       mockStore,
+					envTemplate: mockTemplater,
+					prog:        mockProg,
+					newEnvVersionGetter: func(_, _ string) (versionGetter, error) {
+						return mockEnvTpl, nil
+					},
+					newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
+						return mockUpgrader, nil
+					},
+				}
+			},
+		},
+		"should throw an error if trying to upgrade a legacy environment with modified VPC but no SSM information": {
+			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
+				mockEnvTpl := mocks.NewMockversionGetter(ctrl)
+				mockEnvTpl.EXPECT().Version().Return(deploy.LegacyEnvTemplateVersion, nil)
+
+				mockProg := mocks.NewMockprogress(ctrl)
+				mockProg.EXPECT().Start(gomock.Any())
+				mockProg.EXPECT().Stop(gomock.Any())
+
+				mockStore := mocks.NewMockstore(ctrl)
+				mockStore.EXPECT().GetEnvironment("phonetool", "test").
+					Return(&config.Environment{
+						App:              "phonetool",
+						Name:             "test",
+						ExecutionRoleARN: "execARN",
+					}, nil)
+				mockStore.EXPECT().ListServices("phonetool").Return([]*config.Workload{}, nil)
+
+				mockTemplater := mocks.NewMocktemplater(ctrl)
+				mockTemplater.EXPECT().Template().Return("template", nil)
+
+				mockUpgrader := mocks.NewMockenvTemplateUpgrader(ctrl)
+				mockUpgrader.EXPECT().EnvironmentTemplate(gomock.Any(), gomock.Any()).Return("modified template", nil)
+				mockUpgrader.EXPECT().UpgradeLegacyEnvironment(gomock.Any()).Times(0)
+
+				return &envUpgradeOpts{
+					envUpgradeVars: envUpgradeVars{
+						appName: "phonetool",
+						name:    "test",
+					},
+					store:       mockStore,
+					envTemplate: mockTemplater,
+					prog:        mockProg,
+					newEnvVersionGetter: func(_, _ string) (versionGetter, error) {
+						return mockEnvTpl, nil
+					},
+					newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
+						return mockUpgrader, nil
+					},
+				}
+			},
+			wantedErr: errors.New("cannot upgrade environment due to missing vpc configuration"),
 		},
 	}
 

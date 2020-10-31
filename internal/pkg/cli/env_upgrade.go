@@ -11,8 +11,12 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
@@ -25,6 +29,10 @@ const (
 	envUpgradeEnvPrompt = "Which environment do you want to upgrade?"
 	envUpgradeEnvHelp   = `Upgrades the AWS CloudFormation template for your environment
 to support the latest Copilot features.`
+
+	fmtEnvUpgradeStart    = "Upgrading environment %s from version %s to version %s."
+	fmtEnvUpgradeFailed   = "Failed to upgrade environment %s's template to version %s."
+	fmtEnvUpgradeComplete = "Upgraded environment %s's template to version %s."
 )
 
 // envUpgradeVars holds flag values.
@@ -39,13 +47,16 @@ type envUpgradeVars struct {
 type envUpgradeOpts struct {
 	envUpgradeVars
 
-	store environmentStore
-	sel   appEnvSelector
+	store       store
+	sel         appEnvSelector
+	envTemplate templater
+	prog        progress
 
 	// Constructors for clients that can be initialized only at runtime.
 	// These functions are overriden in tests to provide mocks.
-	newEnvVersionGetter func(app, env string) (versionGetter, error)
-	newTemplateUpgrader func(conf *config.Environment) (envTemplateUpgrader, error)
+	newEnvVersionGetter    func(app, env string) (versionGetter, error)
+	newTemplateUpgrader    func(conf *config.Environment) (envTemplateUpgrader, error)
+	newEnvOutputsDescriber func(app, env string) (envVPCDescriber, error)
 }
 
 func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
@@ -58,6 +69,10 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 
 		store: store,
 		sel:   selector.NewSelect(prompt.New(), store),
+		envTemplate: stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
+			Version: deploy.LegacyEnvTemplateVersion,
+		}),
+		prog: termprogress.NewSpinner(),
 
 		newEnvVersionGetter: func(app, env string) (versionGetter, error) {
 			d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
@@ -76,6 +91,16 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 				return nil, fmt.Errorf("create session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
 			}
 			return cloudformation.New(sess), nil
+		},
+		newEnvOutputsDescriber: func(app, env string) (envVPCDescriber, error) {
+			d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+				App: app,
+				Env: env,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("new environment %s stack output describer: %v", env, err)
+			}
+			return d, nil
 		},
 	}, nil
 }
@@ -150,7 +175,7 @@ func (o *envUpgradeOpts) listEnvsToUpgrade() ([]string, error) {
 	return names, nil
 }
 
-func (o *envUpgradeOpts) upgrade(env string) error {
+func (o *envUpgradeOpts) upgrade(env string) (err error) {
 	version, err := o.envVersion(env)
 	if err != nil {
 		return err
@@ -162,6 +187,15 @@ func (o *envUpgradeOpts) upgrade(env string) error {
 	if !yes {
 		return nil
 	}
+
+	o.prog.Start(fmt.Sprintf(fmtEnvUpgradeStart, color.HighlightUserInput(env), color.Emphasize(version), color.Emphasize(deploy.LatestEnvTemplateVersion)))
+	defer func() {
+		if err != nil {
+			o.prog.Stop(log.Serrorf(fmtEnvUpgradeFailed, color.HighlightUserInput(env), color.Emphasize(deploy.LatestEnvTemplateVersion)))
+			return
+		}
+		o.prog.Stop(log.Ssuccessf(fmtEnvUpgradeComplete, color.HighlightUserInput(env), color.Emphasize(deploy.LatestEnvTemplateVersion)))
+	}()
 	conf, err := o.store.GetEnvironment(o.appName, env)
 	if err != nil {
 		return err
@@ -171,9 +205,9 @@ func (o *envUpgradeOpts) upgrade(env string) error {
 		return err
 	}
 	if version == deploy.LegacyEnvTemplateVersion {
-		return upgradeLegacyEnvironment(upgrader, conf, version, deploy.LatestEnvTemplateVersion)
+		return o.upgradeLegacyEnvironment(upgrader, conf, version, deploy.LatestEnvTemplateVersion)
 	}
-	return upgradeEnvironment(upgrader, conf, version, deploy.LatestEnvTemplateVersion)
+	return o.upgradeEnvironment(upgrader, conf, version, deploy.LatestEnvTemplateVersion)
 }
 
 func (o *envUpgradeOpts) envVersion(name string) (string, error) {
@@ -207,7 +241,7 @@ Are you using the latest version of AWS Copilot?`, env, deploy.LatestEnvTemplate
 	return false, nil
 }
 
-func upgradeEnvironment(upgrader envUpgrader, conf *config.Environment, fromVersion, toVersion string) error {
+func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.Environment, fromVersion, toVersion string) error {
 	var importedVPC *config.ImportVPC
 	var adjustedVPC *config.AdjustVPC
 	if conf.CustomConfig != nil {
@@ -228,12 +262,80 @@ func upgradeEnvironment(upgrader envUpgrader, conf *config.Environment, fromVers
 	return nil
 }
 
-func upgradeLegacyEnvironment(upgrader envUpgrader, conf *config.Environment, fromVersion, toVersion string) error {
-	// TODO(efekarakus) If the environment's version is a legacy version,
-	// and the template was generated by customizing the VPC,
-	// and the customization configuration is not stored in SSM (see #1433),
-	// then we cannot upgrade the environment without re-asking for the VPC configuration.
-	return nil
+func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, conf *config.Environment, fromVersion, toVersion string) error {
+	isDefaultEnv, err := o.isDefaultLegacyTemplate(upgrader, conf.App, conf.Name)
+	if err != nil {
+		return err
+	}
+	albWorkloads, err := o.listLBWebServices()
+	if err != nil {
+		return err
+	}
+	if isDefaultEnv {
+		if err := upgrader.UpgradeLegacyEnvironment(&deploy.CreateEnvironmentInput{
+			Version:           toVersion,
+			AppName:           conf.App,
+			Name:              conf.Name,
+			CFNServiceRoleARN: conf.ExecutionRoleARN,
+		}, albWorkloads...); err != nil {
+			return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
+		}
+		return nil
+	}
+	return o.upgradeLegacyEnvironmentWithVPCOverrides(upgrader, conf, fromVersion, toVersion, albWorkloads)
+}
+
+func (o *envUpgradeOpts) isDefaultLegacyTemplate(cfn envTemplater, appName, envName string) (bool, error) {
+	defaultLegacyEnvTemplate, err := o.envTemplate.Template()
+	if err != nil {
+		return false, fmt.Errorf("generate environment template %s: %v", deploy.LegacyEnvTemplateVersion, err)
+	}
+	actualTemplate, err := cfn.EnvironmentTemplate(appName, envName)
+	if err != nil {
+		return false, fmt.Errorf("get environment %s template body: %v", envName, err)
+	}
+	return defaultLegacyEnvTemplate == actualTemplate, nil
+}
+
+func (o *envUpgradeOpts) listLBWebServices() ([]string, error) {
+	services, err := o.store.ListServices(o.appName)
+	if err != nil {
+		return nil, fmt.Errorf("list services in application %s: %v", o.appName, err)
+	}
+	var lbWebServiceNames []string
+	for _, svc := range services {
+		if svc.Type != manifest.LoadBalancedWebServiceType {
+			continue
+		}
+		lbWebServiceNames = append(lbWebServiceNames, svc.Name)
+	}
+	return lbWebServiceNames, nil
+}
+
+func (o *envUpgradeOpts) upgradeLegacyEnvironmentWithVPCOverrides(upgrader legacyEnvUpgrader, conf *config.Environment,
+	fromVersion, toVersion string, albWorkloads []string) error {
+	if conf.CustomConfig != nil {
+		err := upgrader.UpgradeLegacyEnvironment(&deploy.CreateEnvironmentInput{
+			Version:           toVersion,
+			AppName:           conf.App,
+			Name:              conf.Name,
+			ImportVPCConfig:   conf.CustomConfig.ImportVPC,
+			AdjustVPCConfig:   conf.CustomConfig.VPCConfig,
+			CFNServiceRoleARN: conf.ExecutionRoleARN,
+		}, albWorkloads...)
+		if err != nil {
+			return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
+		}
+		return nil
+	}
+	// Prior to #1433, we did not store the custom VPC config in SSM.
+	// In this situation we unfortunately have to ask the users to enter the VPC configuration into SSM or re-create the
+	// environment in case they run into this issue.
+	log.Warningln(`
+Looks like you've an environment with a customized VPC configuration.
+Copilot could not upgrade your environment's CloudFormation template.
+To learn more about how to fix it: https://github.com/aws/copilot-cli/issues/1601`)
+	return errors.New("cannot upgrade environment due to missing vpc configuration")
 }
 
 // buildEnvUpgradeCmd builds the command to update environment(s) to the latest version of
