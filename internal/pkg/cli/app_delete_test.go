@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -131,6 +132,7 @@ type deleteAppMocks struct {
 	ws              *mocks.MockwsFileDeleter
 	sessProvider    *sessions.Provider
 	deployer        *mocks.Mockdeployer
+	imageRemover    *mocks.MockimageRemover
 	svcDeleter      *mocks.Mockexecutor
 	jobDeleter      *mocks.Mockexecutor
 	envDeleter      *mocks.MockexecuteAsker
@@ -140,6 +142,7 @@ type deleteAppMocks struct {
 
 func TestDeleteAppOpts_Execute(t *testing.T) {
 	const mockAppName = "phonetool"
+	const mockEnvName = "staging"
 	mockServices := []*config.Workload{
 		{
 			Name: "webapp",
@@ -152,8 +155,16 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 	}
 	mockEnvs := []*config.Environment{
 		{
-			Name: "staging",
+			Name:             "staging",
+			ExecutionRoleARN: "arn:aws:iam::123456789012:role/phonetool-staging-CFNExecutionRole",
+			Region:           "us-west-2",
 		},
+	}
+	mockTask := deploy.TaskStackInfo{
+		StackName: "task-example",
+		App:       mockAppName,
+		Env:       mockEnvs[0].Name,
+		RoleARN:   mockEnvs[0].ExecutionRoleARN,
 	}
 	mockApp := &config.Application{
 		Name: "badgoose",
@@ -182,8 +193,11 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.store.EXPECT().ListJobs(mockAppName).Return(mockJobs, nil),
 					mocks.jobDeleter.EXPECT().Execute().Return(nil),
 
-					// deleteEnvs
+					// deleteTasks
 					mocks.store.EXPECT().ListEnvironments(mockAppName).Return(mockEnvs, nil),
+					mocks.deployer.EXPECT().GetTaskStackInfo(mockAppName, mockEnvName).Return(nil, nil),
+
+					// deleteEnvs
 					mocks.envDeleter.EXPECT().Ask().Return(nil),
 					mocks.envDeleter.EXPECT().Execute().Return(nil),
 
@@ -227,8 +241,11 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.store.EXPECT().ListJobs(mockAppName).Return(mockJobs, nil),
 					mocks.jobDeleter.EXPECT().Execute().Return(nil),
 
-					// deleteEnvs
+					// deleteTasks
 					mocks.store.EXPECT().ListEnvironments(mockAppName).Return(mockEnvs, nil),
+					mocks.deployer.EXPECT().GetTaskStackInfo(mockAppName, mockEnvName).Return(nil, nil),
+
+					// deleteEnvs
 					mocks.envDeleter.EXPECT().Ask().Return(nil),
 					mocks.envDeleter.EXPECT().Execute().Return(nil),
 
@@ -241,6 +258,61 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 
 					// delete pipeline
 					mocks.pipelineDeleter.EXPECT().Run().Return(workspace.ErrNoPipelineInWorkspace),
+
+					// deleteAppResources
+					mocks.spinner.EXPECT().Start(deleteAppResourcesStartMsg),
+					mocks.deployer.EXPECT().DeleteApp(mockAppName).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppResourcesStopMsg)),
+
+					// deleteAppConfigs
+					mocks.spinner.EXPECT().Start(deleteAppConfigStartMsg),
+					mocks.store.EXPECT().DeleteApplication(mockAppName).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppConfigStopMsg)),
+
+					// deleteWs
+					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppWsStartMsg, workspace.SummaryFileName)),
+					mocks.ws.EXPECT().DeleteWorkspaceFile().Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmt.Sprintf(fmtDeleteAppWsStopMsg, workspace.SummaryFileName))),
+				)
+			},
+			wantedError: nil,
+		},
+
+		"when there is a task that needs deletion": {
+			appName: mockAppName,
+			setupMocks: func(mocks deleteAppMocks) {
+				gomock.InOrder(
+					// deleteSvcs
+					mocks.store.EXPECT().ListServices(mockAppName).Return(mockServices, nil),
+					mocks.svcDeleter.EXPECT().Execute().Return(nil),
+
+					// deleteJobs
+					mocks.store.EXPECT().ListJobs(mockAppName).Return(mockJobs, nil),
+					mocks.jobDeleter.EXPECT().Execute().Return(nil),
+
+					// deleteTasks
+					mocks.store.EXPECT().ListEnvironments(mockAppName).Return(mockEnvs, nil),
+					mocks.deployer.EXPECT().GetTaskStackInfo(mockAppName, mockEnvName).Return([]deploy.TaskStackInfo{
+						mockTask,
+					}, nil),
+					mocks.spinner.EXPECT().Start("Deleting task example from environment staging."),
+					mocks.imageRemover.EXPECT().ClearRepository("copilot-example"),
+					mocks.deployer.EXPECT().DeleteTask(mockTask).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess("Deleted task example from environment staging.\n")),
+
+					// deleteEnvs
+					mocks.envDeleter.EXPECT().Ask().Return(nil),
+					mocks.envDeleter.EXPECT().Execute().Return(nil),
+
+					// emptyS3bucket
+					mocks.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil),
+					mocks.deployer.EXPECT().GetRegionalAppResources(mockApp).Return(mockResources, nil),
+					mocks.spinner.EXPECT().Start(deleteAppCleanResourcesStartMsg),
+					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppCleanResourcesStopMsg)),
+
+					// delete pipeline
+					mocks.pipelineDeleter.EXPECT().Run().Return(nil),
 
 					// deleteAppResources
 					mocks.spinner.EXPECT().Start(deleteAppResourcesStartMsg),
@@ -278,6 +350,11 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			mockGetBucketEmptier := func(session *session.Session) bucketEmptier {
 				return mockBucketEmptier
 			}
+			mockimageRemover := mocks.NewMockimageRemover(ctrl)
+			mockGetImageRemover := func(session *session.Session) imageRemover {
+				return mockimageRemover
+			}
+			mockGetCFN := func(session *session.Session) deployer { return mockDeployer }
 
 			// The following three sets of mocks are to avoid having to go through
 			// mocking all the intermediary steps in calling Execute on DeleteAppOpts,
@@ -307,6 +384,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				ws:              mockWorkspace,
 				sessProvider:    mockSession,
 				deployer:        mockDeployer,
+				imageRemover:    mockimageRemover,
 				svcDeleter:      mockSvcDeleteExecutor,
 				jobDeleter:      mockJobDeleteExecutor,
 				envDeleter:      mockEnvDeleteExecutor,
@@ -323,8 +401,9 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				store:                mockStore,
 				ws:                   mockWorkspace,
 				sessProvider:         mockSession,
-				cfn:                  mockDeployer,
+				cfn:                  mockGetCFN,
 				s3:                   mockGetBucketEmptier,
+				ecr:                  mockGetImageRemover,
 				svcDeleteExecutor:    mockSvcExecutorProvider,
 				jobDeleteExecutor:    mockJobExecutorProvider,
 				envDeleteExecutor:    mockAskExecutorProvider,

@@ -348,6 +348,9 @@ type appResourcesGetter interface {
 
 type taskDeployer interface {
 	DeployTask(input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error
+	GetDefaultTaskStackInfo() ([]deploy.TaskStackInfo, error)
+	GetTaskStackInfo(appName, envName string) ([]deploy.TaskStackInfo, error)
+	DeleteTask(deploy.TaskStackInfo) error
 }
 
 type taskRunner interface {
@@ -362,6 +365,7 @@ type deployer interface {
 	environmentDeployer
 	appDeployer
 	pipelineDeployer
+	taskDeployer
 }
 
 type domainValidator interface {

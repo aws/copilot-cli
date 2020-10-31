@@ -47,7 +47,7 @@ func NewTaskStackConfig(taskOpts *deploy.CreateTaskResourcesInput) *taskStackCon
 
 // StackName returns the name of the CloudFormation stack for the task.
 func (t *taskStackConfig) StackName() string {
-	return NameForTask(t.Name)
+	return string(NameForTask(t.Name))
 }
 
 // Template returns the task CloudFormation template.

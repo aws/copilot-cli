@@ -8,9 +8,11 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -53,13 +55,16 @@ type deleteAppOpts struct {
 	store                store
 	ws                   wsFileDeleter
 	sessProvider         sessionProvider
-	cfn                  deployer
 	prompt               prompter
+	cfn                  func(session *session.Session) deployer
 	s3                   func(session *session.Session) bucketEmptier
+	ecr                  func(sess *session.Session) imageRemover
 	svcDeleteExecutor    func(svcName string) (executor, error)
 	jobDeleteExecutor    func(jobName string) (executor, error)
 	envDeleteExecutor    func(envName string) (executeAsker, error)
 	deletePipelineRunner func() (deletePipelineRunner, error)
+
+	envs []*config.Environment // Used to minimize code duplication between task delete and env delete.
 }
 
 func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
@@ -74,7 +79,6 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 	}
 
 	provider := sessions.NewProvider()
-	defaultSession, err := provider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
@@ -85,10 +89,15 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		store:         store,
 		ws:            ws,
 		sessProvider:  provider,
-		cfn:           cloudformation.New(defaultSession),
 		prompt:        prompt.New(),
+		cfn: func(session *session.Session) deployer {
+			return cloudformation.New(session)
+		},
 		s3: func(session *session.Session) bucketEmptier {
 			return s3.New(session)
+		},
+		ecr: func(sess *session.Session) imageRemover {
+			return ecr.New(sess)
 		},
 		svcDeleteExecutor: func(svcName string) (executor, error) {
 			opts, err := newDeleteSvcOpts(deleteSvcVars{
@@ -176,6 +185,10 @@ func (o *deleteAppOpts) Execute() error {
 		return err
 	}
 
+	if err := o.deleteTasks(); err != nil {
+		return err
+	}
+
 	if err := o.deleteEnvs(); err != nil {
 		return err
 	}
@@ -225,6 +238,43 @@ func (o *deleteAppOpts) deleteSvcs() error {
 	return nil
 }
 
+func (o *deleteAppOpts) deleteTasks() error {
+
+	envs, err := o.store.ListEnvironments(o.name)
+	if err != nil {
+		return fmt.Errorf("list environments for application %s: %w", o.name, err)
+	}
+	o.envs = envs
+
+	// Delete tasks from each environment (that is, delete the tasks that were created with each environment's manager role)
+	var envTasks []deploy.TaskStackInfo
+	for _, env := range envs {
+		envSess, err := o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return err
+		}
+		envCF := o.cfn(envSess)
+		envECR := o.ecr(envSess)
+		envTasks, err = envCF.GetTaskStackInfo(o.name, env.Name)
+		if err != nil {
+			return fmt.Errorf("get tasks deployed in environment %s: %w", env.Name, err)
+		}
+		for _, t := range envTasks {
+			o.spinner.Start(fmt.Sprintf("Deleting task %s from environment %s.", t.TaskName(), env.Name))
+			if err := envECR.ClearRepository(t.ECRRepoName()); err != nil {
+				o.spinner.Stop(log.Serrorf("Error emptying ECR repository for task %s\n", t.TaskName()))
+				return fmt.Errorf("empty ECR repository for task %s: %w", t.TaskName(), err)
+			}
+			if err := envCF.DeleteTask(t); err != nil {
+				o.spinner.Stop(log.Serrorf("Error deleting task %s from environment %s.\n", t.TaskName(), t.Env))
+				return fmt.Errorf("delete task %s from env %s: %w", t.TaskName(), t.Env, err)
+			}
+			o.spinner.Stop(log.Ssuccessf("Deleted task %s from environment %s.\n", t.TaskName(), t.Env))
+		}
+	}
+	return nil
+}
+
 func (o *deleteAppOpts) deleteJobs() error {
 	jobs, err := o.store.ListJobs(o.name)
 	if err != nil {
@@ -243,13 +293,9 @@ func (o *deleteAppOpts) deleteJobs() error {
 	return nil
 }
 
+// Should be called after deleteTasks; that's where envs are populated
 func (o *deleteAppOpts) deleteEnvs() error {
-	envs, err := o.store.ListEnvironments(o.name)
-	if err != nil {
-		return fmt.Errorf("list environments for application %s: %w", o.name, err)
-	}
-
-	for _, env := range envs {
+	for _, env := range o.envs {
 		cmd, err := o.envDeleteExecutor(env.Name)
 		if err != nil {
 			return err
@@ -269,7 +315,12 @@ func (o *deleteAppOpts) emptyS3Bucket() error {
 	if err != nil {
 		return fmt.Errorf("get application %s: %w", o.name, err)
 	}
-	appResources, err := o.cfn.GetRegionalAppResources(app)
+	sess, err := o.sessProvider.Default()
+	if err != nil {
+		return err
+	}
+	cfn := o.cfn(sess)
+	appResources, err := cfn.GetRegionalAppResources(app)
 	if err != nil {
 		return fmt.Errorf("get regional application resources for %s: %w", app.Name, err)
 	}
@@ -300,8 +351,13 @@ func (o *deleteAppOpts) deletePipeline() error {
 }
 
 func (o *deleteAppOpts) deleteAppResources() error {
+	sess, err := o.sessProvider.Default()
+	if err != nil {
+		return err
+	}
+	cfn := o.cfn(sess)
 	o.spinner.Start(deleteAppResourcesStartMsg)
-	if err := o.cfn.DeleteApp(o.name); err != nil {
+	if err := cfn.DeleteApp(o.name); err != nil {
 		o.spinner.Stop(log.Serrorln("Error deleting application resources."))
 		return fmt.Errorf("delete app resources: %w", err)
 	}

@@ -39,6 +39,7 @@ type cfnClient interface {
 	Describe(stackName string) (*cloudformation.StackDescription, error)
 	TemplateBody(stackName string) (string, error)
 	Events(stackName string) ([]cloudformation.StackEvent, error)
+	ListStacksWithPrefix(prefix string) ([]cloudformation.StackDescription, error)
 	ErrorEvents(stackName string) ([]cloudformation.StackEvent, error)
 }
 

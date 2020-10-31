@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -227,6 +228,11 @@ func (c *CloudFormation) events(stackName string, match eventMatcher) ([]StackEv
 	return events, nil
 }
 
+// ListStacksWithPrefix returns all the stacks in the current AWS account.
+func (c *CloudFormation) ListStacksWithPrefix(prefix string) ([]StackDescription, error) {
+	return c.listStacks(prefix)
+}
+
 // ErrorEvents returns the list of events with "failed" status in **chronological order**
 func (c *CloudFormation) ErrorEvents(stackName string) ([]StackEvent, error) {
 	return c.events(stackName, func(in *cloudformation.StackEvent) bool {
@@ -237,6 +243,11 @@ func (c *CloudFormation) ErrorEvents(stackName string) ([]StackEvent, error) {
 		}
 		return false
 	})
+}
+
+// ListStacksWithPrefix returns all the stacks in the current AWS account.
+func (c *CloudFormation) ListStacksWithPrefix(prefix string) ([]StackSummary, error) {
+	return c.listStacks(prefix, []*string{})
 }
 
 func (c *CloudFormation) create(stack *Stack) error {
@@ -271,4 +282,28 @@ func (c *CloudFormation) deleteAndWait(in *cloudformation.DeleteStackInput) erro
 		return fmt.Errorf("wait until stack %s delete is complete: %w", aws.StringValue(in.StackName), err)
 	}
 	return nil
+}
+
+func (c *CloudFormation) listStacks(prefix string) ([]StackDescription, error) {
+	var nextToken *string
+	var summaries []StackDescription
+	for {
+		out, err := c.client.DescribeStacks(&cloudformation.DescribeStacksInput{
+			NextToken: nextToken,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("list stacks: %w", err)
+		}
+
+		for _, summary := range out.Stacks {
+			if strings.HasPrefix(*summary.StackName, prefix) {
+				summaries = append(summaries, StackDescription(*summary))
+			}
+		}
+		nextToken = out.NextToken
+		if nextToken == nil {
+			break
+		}
+	}
+	return summaries, nil
 }

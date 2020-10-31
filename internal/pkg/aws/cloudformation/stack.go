@@ -79,6 +79,9 @@ type StackEvent cloudformation.StackEvent
 // StackDescription represents an existing AWS CloudFormation stack.
 type StackDescription cloudformation.Stack
 
+// StackSummary represents a summary of an existing AWS CloudFormation stack.
+type StackSummary cloudformation.StackSummary
+
 // SDK returns the underlying struct from the AWS SDK.
 func (d *StackDescription) SDK() *cloudformation.Stack {
 	raw := cloudformation.Stack(*d)

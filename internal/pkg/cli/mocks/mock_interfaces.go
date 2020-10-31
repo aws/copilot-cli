@@ -3517,6 +3517,50 @@ func (mr *MocktaskDeployerMockRecorder) DeployTask(input interface{}, opts ...in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeployTask), varargs...)
 }
 
+// GetDefaultTaskStackInfo mocks base method
+func (m *MocktaskDeployer) GetDefaultTaskStackInfo() ([]deploy.TaskStackInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDefaultTaskStackInfo")
+	ret0, _ := ret[0].([]deploy.TaskStackInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDefaultTaskStackInfo indicates an expected call of GetDefaultTaskStackInfo
+func (mr *MocktaskDeployerMockRecorder) GetDefaultTaskStackInfo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDefaultTaskStackInfo", reflect.TypeOf((*MocktaskDeployer)(nil).GetDefaultTaskStackInfo))
+}
+
+// GetTaskStackInfo mocks base method
+func (m *MocktaskDeployer) GetTaskStackInfo(appName, envName string) ([]deploy.TaskStackInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTaskStackInfo", appName, envName)
+	ret0, _ := ret[0].([]deploy.TaskStackInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTaskStackInfo indicates an expected call of GetTaskStackInfo
+func (mr *MocktaskDeployerMockRecorder) GetTaskStackInfo(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskStackInfo", reflect.TypeOf((*MocktaskDeployer)(nil).GetTaskStackInfo), appName, envName)
+}
+
+// DeleteTask mocks base method
+func (m *MocktaskDeployer) DeleteTask(arg0 deploy.TaskStackInfo) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteTask", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteTask indicates an expected call of DeleteTask
+func (mr *MocktaskDeployerMockRecorder) DeleteTask(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeleteTask), arg0)
+}
+
 // MocktaskRunner is a mock of taskRunner interface
 type MocktaskRunner struct {
 	ctrl     *gomock.Controller
@@ -3886,6 +3930,69 @@ func (m *Mockdeployer) GetRegionalAppResources(app *config.Application) ([]*stac
 func (mr *MockdeployerMockRecorder) GetRegionalAppResources(app interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalAppResources", reflect.TypeOf((*Mockdeployer)(nil).GetRegionalAppResources), app)
+}
+
+// DeployTask mocks base method
+func (m *Mockdeployer) DeployTask(input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{input}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeployTask", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeployTask indicates an expected call of DeployTask
+func (mr *MockdeployerMockRecorder) DeployTask(input interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{input}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*Mockdeployer)(nil).DeployTask), varargs...)
+}
+
+// GetDefaultTaskStackInfo mocks base method
+func (m *Mockdeployer) GetDefaultTaskStackInfo() ([]deploy.TaskStackInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDefaultTaskStackInfo")
+	ret0, _ := ret[0].([]deploy.TaskStackInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDefaultTaskStackInfo indicates an expected call of GetDefaultTaskStackInfo
+func (mr *MockdeployerMockRecorder) GetDefaultTaskStackInfo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDefaultTaskStackInfo", reflect.TypeOf((*Mockdeployer)(nil).GetDefaultTaskStackInfo))
+}
+
+// GetTaskStackInfo mocks base method
+func (m *Mockdeployer) GetTaskStackInfo(appName, envName string) ([]deploy.TaskStackInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTaskStackInfo", appName, envName)
+	ret0, _ := ret[0].([]deploy.TaskStackInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTaskStackInfo indicates an expected call of GetTaskStackInfo
+func (mr *MockdeployerMockRecorder) GetTaskStackInfo(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskStackInfo", reflect.TypeOf((*Mockdeployer)(nil).GetTaskStackInfo), appName, envName)
+}
+
+// DeleteTask mocks base method
+func (m *Mockdeployer) DeleteTask(arg0 deploy.TaskStackInfo) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteTask", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteTask indicates an expected call of DeleteTask
+func (mr *MockdeployerMockRecorder) DeleteTask(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTask", reflect.TypeOf((*Mockdeployer)(nil).DeleteTask), arg0)
 }
 
 // MockdomainValidator is a mock of domainValidator interface
