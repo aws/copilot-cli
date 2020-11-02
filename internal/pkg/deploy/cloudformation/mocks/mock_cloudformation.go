@@ -287,6 +287,21 @@ func (mr *MockcfnClientMockRecorder) Events(stackName interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Events", reflect.TypeOf((*MockcfnClient)(nil).Events), stackName)
 }
 
+// ErrorEvents mocks base method
+func (m *MockcfnClient) ErrorEvents(stackName string) ([]cloudformation0.StackEvent, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ErrorEvents", stackName)
+	ret0, _ := ret[0].([]cloudformation0.StackEvent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ErrorEvents indicates an expected call of ErrorEvents
+func (mr *MockcfnClientMockRecorder) ErrorEvents(stackName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ErrorEvents", reflect.TypeOf((*MockcfnClient)(nil).ErrorEvents), stackName)
+}
+
 // MockstackSetClient is a mock of stackSetClient interface
 type MockstackSetClient struct {
 	ctrl     *gomock.Controller

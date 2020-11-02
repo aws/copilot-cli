@@ -512,6 +512,74 @@ func TestCloudFormation_TemplateBody(t *testing.T) {
 	}
 }
 
+func TestCloudFormation_ErrorEvents(t *testing.T) {
+	mockEvents := []*cloudformation.StackEvent{
+		{
+			LogicalResourceId:    aws.String("abc123"),
+			ResourceType:         aws.String("ECS::Service"),
+			ResourceStatus:       aws.String("CREATE_FAILED"),
+			ResourceStatusReason: aws.String("Space elevator disconnected. (Service moonshot)"),
+		},
+		{
+			LogicalResourceId:    aws.String("xyz"),
+			ResourceType:         aws.String("ECS::Service"),
+			ResourceStatus:       aws.String("CREATE_COMPLETE"),
+			ResourceStatusReason: aws.String("Moon landing achieved. (Service moonshot)"),
+		},
+	}
+	testCases := map[string]struct {
+		mockCf       func(*mocks.Mockapi)
+		wantedErr    string
+		wantedEvents []StackEvent
+	}{
+		"completes successfully": {
+			mockCf: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeStackEvents(&cloudformation.DescribeStackEventsInput{
+					StackName: aws.String(mockStack.Name),
+				}).Return(&cloudformation.DescribeStackEventsOutput{
+					StackEvents: mockEvents,
+				}, nil)
+			},
+			wantedEvents: []StackEvent{
+				{
+					LogicalResourceId:    aws.String("abc123"),
+					ResourceType:         aws.String("ECS::Service"),
+					ResourceStatus:       aws.String("CREATE_FAILED"),
+					ResourceStatusReason: aws.String("Space elevator disconnected. (Service moonshot)"),
+				},
+			},
+		},
+		"error retrieving events": {
+			mockCf: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeStackEvents(gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantedErr: "describe stack events for stack id: some error",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockCf := mocks.NewMockapi(ctrl)
+			tc.mockCf(mockCf)
+
+			c := CloudFormation{
+				client: mockCf,
+			}
+			// WHEN
+			events, err := c.ErrorEvents(mockStack.Name)
+
+			// THEN
+			if tc.wantedErr != "" {
+				require.EqualError(t, err, tc.wantedErr)
+			} else {
+				require.Equal(t, tc.wantedEvents, events)
+			}
+		})
+	}
+}
 func TestCloudFormation_Events(t *testing.T) {
 	testCases := map[string]struct {
 		createMock   func(ctrl *gomock.Controller) api

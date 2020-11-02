@@ -6,9 +6,10 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
 	"path/filepath"
 	"strings"
+
+	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
