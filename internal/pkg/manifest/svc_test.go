@@ -74,6 +74,9 @@ environments:
 						RoutingRule: RoutingRule{
 							Path:            aws.String("svc"),
 							TargetContainer: aws.String("frontend"),
+							HealthCheck: HealthCheckArgsOrString{
+								HealthCheckPath: aws.String("/"),
+							},
 						},
 						TaskConfig: TaskConfig{
 							CPU:    aws.Int(512),

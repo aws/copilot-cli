@@ -25,8 +25,8 @@ const (
 	defaultHealthCheckPath    = "/"
 	defaultHealthyThreshold   = int64(2)
 	defaultUnhealthyThreshold = int64(2)
-	defaultInterval           = int64(10)
-	defaultTimeout            = int64(5)
+	defaultIntervalinS        = int64(10)
+	defaultTimeoutinS         = int64(5)
 )
 
 var (
@@ -66,8 +66,8 @@ func (lc *LoadBalancedWebServiceConfig) HTTPHealthCheckOpts() *template.HTTPHeal
 		HealthCheckPath:    aws.String(defaultHealthCheckPath),
 		HealthyThreshold:   aws.Int64(defaultHealthyThreshold),
 		UnhealthyThreshold: aws.Int64(defaultUnhealthyThreshold),
-		Interval:           aws.Int64(defaultInterval),
-		Timeout:            aws.Int64(defaultTimeout),
+		Interval:           aws.Int64(defaultIntervalinS),
+		Timeout:            aws.Int64(defaultTimeoutinS),
 	}
 	if lc.RoutingRule.HealthCheck.HealthCheckArgs.Path != nil {
 		opts.HealthCheckPath = lc.RoutingRule.HealthCheck.HealthCheckArgs.Path
@@ -147,7 +147,9 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 			ImageConfig: ServiceImageWithPort{},
 			RoutingRule: RoutingRule{
-				HealthCheck: HealthCheckArgsOrString{},
+				HealthCheck: HealthCheckArgsOrString{
+					HealthCheckPath: aws.String("/"),
+				},
 			},
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
