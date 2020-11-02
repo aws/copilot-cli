@@ -116,11 +116,11 @@ func (s *Store) GetJob(appName, jobName string) (*Workload, error) {
 	return &job, nil
 }
 
-// GetWorkload gets a job or service belonging to an application by name.
+// GetWorkload gets a workload belonging to an application by name.
 func (s *Store) GetWorkload(appName, name string) (*Workload, error) {
 	param, err := s.getWorkloadParam(appName, name)
 	if err != nil {
-		return nil, fmt.Errorf("get job or service: %w", err)
+		return nil, fmt.Errorf("get workload: %w", err)
 	}
 	var wl Workload
 	err = json.Unmarshal(param, &wl)
@@ -188,7 +188,7 @@ func (s *Store) ListJobs(appName string) ([]*Workload, error) {
 func (s *Store) ListWorkloads(appName string) ([]*Workload, error) {
 	wklds, err := s.listWorkloads(appName)
 	if err != nil {
-		return nil, fmt.Errorf("read job & service configuration for application %s: %w", appName, err)
+		return nil, fmt.Errorf("read workload configuration for application %s: %w", appName, err)
 	}
 
 	return wklds, nil

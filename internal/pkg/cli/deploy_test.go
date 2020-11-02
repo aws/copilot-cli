@@ -149,7 +149,7 @@ func TestDeployOpts_Run(t *testing.T) {
 				sel:        mockSel,
 				store:      mockStore,
 
-				setupDeployCmd: func(o *deployOpts, isJob bool) {},
+				setupDeployCmd: func(o *deployOpts, wlType string) {},
 			}
 
 			// WHEN

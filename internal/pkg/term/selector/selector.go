@@ -346,12 +346,12 @@ func (s *WorkspaceSelect) Workload(msg, help string) (wl string, err error) {
 		return "", errors.New("no jobs or services found")
 	}
 	if len(wlNames) == 1 {
-		log.Infof("Only found one job or service, defaulting to: %s\n", color.HighlightUserInput(wlNames[0]))
+		log.Infof("Only found one workload, defaulting to: %s\n", color.HighlightUserInput(wlNames[0]))
 		return wlNames[0], nil
 	}
 	selectedWlName, err := s.prompt.SelectOne(msg, help, wlNames, prompt.WithFinalMessage("Name: "))
 	if err != nil {
-		return "", fmt.Errorf("select job or service: %w", err)
+		return "", fmt.Errorf("select workload: %w", err)
 	}
 	return selectedWlName, nil
 }

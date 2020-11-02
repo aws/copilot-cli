@@ -29,7 +29,7 @@ type deployOpts struct {
 	deployWkldVars
 
 	deployWkld     actionCommand
-	setupDeployCmd func(*deployOpts, bool)
+	setupDeployCmd func(*deployOpts, string)
 
 	sel    wsSelector
 	store  store
@@ -51,9 +51,6 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 	prompter := prompt.New()
-	if err != nil {
-		return nil, err
-	}
 	return &deployOpts{
 		deployWkldVars: vars,
 		store:          store,
@@ -61,8 +58,9 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 		ws:             ws,
 		prompt:         prompter,
 
-		setupDeployCmd: func(o *deployOpts, isJob bool) {
-			if isJob {
+		setupDeployCmd: func(o *deployOpts, workloadType string) {
+			switch {
+			case contains(workloadType, manifest.JobTypes):
 				o.deployWkld = &deployJobOpts{
 					deployWkldVars: o.deployWkldVars,
 
@@ -75,19 +73,19 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					cmd:          command.New(),
 					sessProvider: sessions.NewProvider(),
 				}
-				return
-			}
-			o.deployWkld = &deploySvcOpts{
-				deployWkldVars: o.deployWkldVars,
+			case contains(workloadType, manifest.ServiceTypes):
+				o.deployWkld = &deploySvcOpts{
+					deployWkldVars: o.deployWkldVars,
 
-				store:        o.store,
-				ws:           o.ws,
-				unmarshal:    manifest.UnmarshalWorkload,
-				spinner:      termprogress.NewSpinner(),
-				sel:          selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
-				prompt:       o.prompt,
-				cmd:          command.New(),
-				sessProvider: sessions.NewProvider(),
+					store:        o.store,
+					ws:           o.ws,
+					unmarshal:    manifest.UnmarshalWorkload,
+					spinner:      termprogress.NewSpinner(),
+					sel:          selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
+					prompt:       o.prompt,
+					cmd:          command.New(),
+					sessProvider: sessions.NewProvider(),
+				}
 			}
 		},
 	}, nil
@@ -136,12 +134,11 @@ func (o *deployOpts) loadWkldCmd() error {
 	if err != nil {
 		return fmt.Errorf("retrieve %s from application %s: %w", o.appName, o.name, err)
 	}
+	o.setupDeployCmd(o, wl.Type)
 	if strings.Contains(strings.ToLower(wl.Type), jobWkldType) {
-		o.setupDeployCmd(o, true)
 		o.wlType = jobWkldType
 		return nil
 	}
-	o.setupDeployCmd(o, false)
 	o.wlType = svcWkldType
 	return nil
 }
