@@ -93,8 +93,8 @@ Resources:
       HealthCheckPath: {{.HTTPHealthCheck.HealthCheckPath}} # Default is '/'.
       HealthyThresholdCount: {{.HTTPHealthCheck.HealthyThreshold}} # Default is 2.
       UnhealthyThresholdCount: {{.HTTPHealthCheck.UnhealthyThreshold}} # Default is 2.
-      HealthCheckIntervalSeconds: {{.HTTPHealthCheck.Interval}} # Default is 10s.
-      HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}} # Default is 5s.
+      HealthCheckIntervalSeconds: {{.HTTPHealthCheck.Interval}} # Default is 10.
+      HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}} # Default is 5.
       Port: !Ref ContainerPort
       Protocol: HTTP
       TargetGroupAttributes:
