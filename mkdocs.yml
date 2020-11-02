@@ -12,8 +12,10 @@ nav:
   - Home: index.md
   - Documentation:
     - Overview: docs/overview.md
-    - Installing: docs/installing.md
-    - Getting Started: docs/getting-started.md
+    - Getting Started:
+      - Install Copilot: docs/getting-started/install.md
+      - (Optional) Verify the installation: docs/getting-started/verify.md
+      - Deploy your first application: docs/getting-started/first-app-tutorial.md
     - Concepts:
       - Overview: docs/concepts/overview.md
       - Applications: docs/concepts/applications.md
