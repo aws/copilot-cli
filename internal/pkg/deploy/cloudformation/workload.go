@@ -30,9 +30,24 @@ func (cf CloudFormation) DeployService(conf StackConfiguration, opts ...cloudfor
 	// The stack already exists, we need to update it instead.
 	var errAlreadyExists *cloudformation.ErrStackAlreadyExists
 	if !errors.As(err, &errAlreadyExists) {
+		return cf.handleStackError(conf, err)
+	}
+	err = cf.cfnClient.UpdateAndWait(stack)
+	return cf.handleStackError(conf, err)
+}
+
+func (cf CloudFormation) handleStackError(conf StackConfiguration, err error) error {
+	if err == nil {
+		return nil
+	}
+	errors, describeErr := cf.ErrorEvents(conf)
+	if describeErr != nil {
+		return fmt.Errorf("%w: describe stack: %v", err, describeErr)
+	}
+	if len(errors) == 0 {
 		return err
 	}
-	return cf.cfnClient.UpdateAndWait(stack)
+	return fmt.Errorf("%w: %s", err, errors[0].StatusReason)
 }
 
 // DeleteWorkload removes the CloudFormation stack of a deployed workload.

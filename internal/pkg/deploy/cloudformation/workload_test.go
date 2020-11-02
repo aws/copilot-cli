@@ -55,6 +55,7 @@ func (m *mockStackConfig) Tags() []*sdkcloudformation.Tag {
 
 func TestCloudFormation_DeployService(t *testing.T) {
 	testCases := map[string]struct {
+		wantedErr  string
 		createMock func(ctrl *gomock.Controller) cfnClient
 	}{
 		"does not call update if the stack is new": {
@@ -83,6 +84,26 @@ func TestCloudFormation_DeployService(t *testing.T) {
 				return m
 			},
 		},
+		"calls describe if create fails": {
+			createMock: func(ctrl *gomock.Controller) cfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().CreateAndWait(gomock.Any()).Return(errors.New("some error"))
+				m.EXPECT().ErrorEvents(gomock.Any()).Return([]cloudformation.StackEvent{
+					{ResourceStatusReason: aws.String("Bad things happened. (Service abcd)")},
+				}, nil)
+				return m
+			},
+			wantedErr: "some error: Bad things happened",
+		},
+		"returns descriptive error if describe fails": {
+			createMock: func(ctrl *gomock.Controller) cfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().CreateAndWait(gomock.Any()).Return(errors.New("some error"))
+				m.EXPECT().ErrorEvents(gomock.Any()).Return(nil, errors.New("other error"))
+				return m
+			},
+			wantedErr: "some error: describe stack: other error",
+		},
 	}
 
 	for name, tc := range testCases {
@@ -108,7 +129,11 @@ func TestCloudFormation_DeployService(t *testing.T) {
 			err := c.DeployService(conf, cloudformation.WithRoleARN("myrole"))
 
 			// THEN
-			require.NoError(t, err)
+			if tc.wantedErr != "" {
+				require.EqualError(t, err, tc.wantedErr)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
@@ -204,7 +229,7 @@ func TestCloudFormation_GetStackErrors(t *testing.T) {
 				template: "template",
 			}
 			// WHEN
-			out, err := c.GetStackErrors(conf)
+			out, err := c.ErrorEvents(conf)
 
 			// THEN
 			if tc.wantedErr != "" {

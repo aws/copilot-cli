@@ -136,8 +136,8 @@ func toMap(tags []*sdkcloudformation.Tag) map[string]string {
 	return m
 }
 
-// GetStackErrors returns the list of Cloudformation Resource Events, filtered by failures and erros.
-func (cf CloudFormation) GetStackErrors(conf StackConfiguration) ([]deploy.ResourceEvent, error) {
+// ErrorEvents returns the list of Cloudformation Resource Events, filtered by failures and erros.
+func (cf CloudFormation) ErrorEvents(conf StackConfiguration) ([]deploy.ResourceEvent, error) {
 	events, err := cf.cfnClient.ErrorEvents(conf.StackName())
 	if err != nil {
 		return nil, err

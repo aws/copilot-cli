@@ -426,12 +426,6 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 
 	if err := o.svcCFN.DeployService(conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
 		o.spinner.Stop(log.Serrorf("Failed to deploy service.\n"))
-		errors, describeErr := o.svcCFN.GetStackErrors(conf)
-		if describeErr != nil {
-			return fmt.Errorf("describe stack: %w", describeErr)
-		}
-		log.Infoln("Cloudformation status reason:")
-		log.Infof("%s\n", errors[0].StatusReason)
 		return fmt.Errorf("deploy service: %w", err)
 	}
 	o.spinner.Stop("\n")
