@@ -164,10 +164,6 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			ParameterValue: s.manifest.Path,
 		},
 		{
-			ParameterKey:   aws.String(LBWebServiceHealthCheckPathParamKey),
-			ParameterValue: s.manifest.HealthCheckPath,
-		},
-		{
 			ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
 			ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
 		},

@@ -30,8 +30,6 @@ Parameters:
     Description: 'URL of the addons nested stack template within the S3 bucket.'
     Type: String
     Default: ""
-  HealthCheckPath:
-    Type: String
   TargetContainer:
     Type: String
   TargetPort:
@@ -92,11 +90,11 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       #  Check if your service is healthy within 20 = 10*2 seconds, compared to 2.5 mins = 30*5 seconds.
+      HealthCheckPath: {{.HTTPHealthCheck.HealthCheckPath}} # Default is '/'.
       HealthyThresholdCount: {{.HTTPHealthCheck.HealthyThreshold}} # Default is 2.
       UnhealthyThresholdCount: {{.HTTPHealthCheck.UnhealthyThreshold}} # Default is 2.
-      HealthCheckIntervalSeconds: {{.HTTPHealthCheck.Interval}} # Default is 10.
-      HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}} # Default is 5.
-      HealthCheckPath: !Ref HealthCheckPath
+      HealthCheckIntervalSeconds: {{.HTTPHealthCheck.Interval}} # Default is 10s.
+      HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}} # Default is 5s.
       Port: !Ref ContainerPort
       Protocol: HTTP
       TargetGroupAttributes:

@@ -154,6 +154,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.WorkloadOpts{
 					HTTPHealthCheck: &template.HTTPHealthCheckOpts{
+						HealthCheckPath:    aws.String("/"),
 						HealthyThreshold:   aws.Int64(2),
 						UnhealthyThreshold: aws.Int64(2),
 						Interval:           aws.Int64(10),
@@ -183,6 +184,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 					},
 					HTTPHealthCheck: &template.HTTPHealthCheckOpts{
+						HealthCheckPath:    aws.String("/"),
 						HealthyThreshold:   aws.Int64(2),
 						UnhealthyThreshold: aws.Int64(2),
 						Interval:           aws.Int64(10),
@@ -340,10 +342,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		{
 			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
 			ParameterValue: aws.String("frontend"),
-		},
-		{
-			ParameterKey:   aws.String(LBWebServiceHealthCheckPathParamKey),
-			ParameterValue: aws.String("/"),
 		},
 		{
 			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),

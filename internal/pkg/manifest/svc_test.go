@@ -34,7 +34,7 @@ memory: 1024
 count: 1
 http:
   path: "svc"
-  targetContainer: "frontend"
+  target_container: "frontend"
 variables:
   LOG_LEVEL: "WARN"
 secrets:
@@ -73,7 +73,6 @@ environments:
 						}, Port: aws.Uint16(80)},
 						RoutingRule: RoutingRule{
 							Path:            aws.String("svc"),
-							HealthCheckPath: aws.String("/"),
 							TargetContainer: aws.String("frontend"),
 						},
 						TaskConfig: TaskConfig{

@@ -8,30 +8,35 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 	testCases := map[string]struct {
+		inputPath               *string
 		inputHealthyThreshold   *int64
 		inputUnhealthyThreshold *int64
-		inputInterval           *int64
-		inputTimeout            *int64
+		inputInterval           *time.Duration
+		inputTimeout            *time.Duration
 
 		wantedOpts *template.HTTPHealthCheckOpts
 	}{
 		"no fields indicated in manifest": {
+			inputPath:               nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
 			inputTimeout:            nil,
 
 			wantedOpts: &template.HTTPHealthCheckOpts{
+				HealthCheckPath:    aws.String("/"),
 				HealthyThreshold:   aws.Int64(2),
 				UnhealthyThreshold: aws.Int64(2),
 				Interval:           aws.Int64(10),
@@ -39,12 +44,14 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			},
 		},
 		"just HealthyThreshold": {
+			inputPath:               nil,
 			inputHealthyThreshold:   aws.Int64(5),
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
 			inputTimeout:            nil,
 
 			wantedOpts: &template.HTTPHealthCheckOpts{
+				HealthCheckPath:    aws.String("/"),
 				HealthyThreshold:   aws.Int64(5),
 				UnhealthyThreshold: aws.Int64(2),
 				Interval:           aws.Int64(10),
@@ -52,12 +59,14 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			},
 		},
 		"just UnhealthyThreshold": {
+			inputPath:               nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: aws.Int64(5),
 			inputInterval:           nil,
 			inputTimeout:            nil,
 
 			wantedOpts: &template.HTTPHealthCheckOpts{
+				HealthCheckPath:    aws.String("/"),
 				HealthyThreshold:   aws.Int64(2),
 				UnhealthyThreshold: aws.Int64(5),
 				Interval:           aws.Int64(10),
@@ -65,12 +74,14 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			},
 		},
 		"just Interval": {
+			inputPath:               nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: nil,
-			inputInterval:           aws.Int64(15),
+			inputInterval:           durationp(15 * time.Second),
 			inputTimeout:            nil,
 
 			wantedOpts: &template.HTTPHealthCheckOpts{
+				HealthCheckPath:    aws.String("/"),
 				HealthyThreshold:   aws.Int64(2),
 				UnhealthyThreshold: aws.Int64(2),
 				Interval:           aws.Int64(15),
@@ -78,12 +89,14 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			},
 		},
 		"just Timeout": {
+			inputPath:               nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
-			inputTimeout:            aws.Int64(15),
+			inputTimeout:            durationp(15 * time.Second),
 
 			wantedOpts: &template.HTTPHealthCheckOpts{
+				HealthCheckPath:    aws.String("/"),
 				HealthyThreshold:   aws.Int64(2),
 				UnhealthyThreshold: aws.Int64(2),
 				Interval:           aws.Int64(10),
@@ -91,12 +104,14 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			},
 		},
 		"all values changed in manifest": {
+			inputPath:               aws.String("/road/to/nowhere"),
 			inputHealthyThreshold:   aws.Int64(3),
 			inputUnhealthyThreshold: aws.Int64(3),
-			inputInterval:           aws.Int64(60),
-			inputTimeout:            aws.Int64(60),
+			inputInterval:           durationp(60 * time.Second),
+			inputTimeout:            durationp(60 * time.Second),
 
 			wantedOpts: &template.HTTPHealthCheckOpts{
+				HealthCheckPath:    aws.String("/road/to/nowhere"),
 				HealthyThreshold:   aws.Int64(3),
 				UnhealthyThreshold: aws.Int64(3),
 				Interval:           aws.Int64(60),
@@ -110,13 +125,16 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			lbwc := LoadBalancedWebServiceConfig{
 				ImageConfig: ServiceImageWithPort{},
 				RoutingRule: RoutingRule{
-					Path:            aws.String("path"),
-					HealthCheckPath: aws.String("/"),
-					HTTPHealthCheck: HTTPHealthCheck{
-						HealthyThreshold:   tc.inputHealthyThreshold,
-						UnhealthyThreshold: tc.inputUnhealthyThreshold,
-						Timeout:            tc.inputTimeout,
-						Interval:           tc.inputInterval,
+					Path: aws.String("path"),
+					HealthCheck: HealthCheckArgsOrString{
+						HealthCheckPath: tc.inputPath,
+						HealthCheckArgs: HTTPHealthCheckArgs{
+							Path:               tc.inputPath,
+							HealthyThreshold:   tc.inputHealthyThreshold,
+							UnhealthyThreshold: tc.inputUnhealthyThreshold,
+							Timeout:            tc.inputTimeout,
+							Interval:           tc.inputInterval,
+						},
 					},
 				},
 				TaskConfig: TaskConfig{},
@@ -128,6 +146,63 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 
 			// THEN
 			require.Equal(t, tc.wantedOpts, actualOpts)
+		})
+	}
+}
+
+func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct HealthCheckArgsOrString
+		wantedError  error
+	}{
+		"non-args path string": {
+			inContent: []byte(`  healthcheck: /testing`),
+
+			wantedStruct: HealthCheckArgsOrString{
+				HealthCheckPath: aws.String("/testing"),
+			},
+		},
+		"args specified in health check opts": {
+			inContent: []byte(`  healthcheck:
+    path: /testing
+    healthy_threshold: 5
+    unhealthy_threshold: 6
+    interval: 78s
+    timeout: 9s`),
+			wantedStruct: HealthCheckArgsOrString{
+				HealthCheckArgs: HTTPHealthCheckArgs{
+					Path:               aws.String("/testing"),
+					HealthyThreshold:   aws.Int64(5),
+					UnhealthyThreshold: aws.Int64(6),
+					Interval:           durationp(78 * time.Second),
+					Timeout:            durationp(9 * time.Second),
+				},
+			},
+		},
+		"error if unmarshalable": {
+			inContent: []byte(`  healthcheck:
+    bath: to ruin
+    unwealthy_threshold: berry`),
+			wantedError: errUnmarshalHealthCheckArgs,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var rr RoutingRule
+			err := yaml.Unmarshal(tc.inContent, &rr)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedStruct.HealthCheckPath, rr.HealthCheck.HealthCheckPath)
+				require.Equal(t, tc.wantedStruct.HealthCheckArgs.Path, rr.HealthCheck.HealthCheckArgs.Path)
+				require.Equal(t, tc.wantedStruct.HealthCheckArgs.HealthyThreshold, rr.HealthCheck.HealthCheckArgs.HealthyThreshold)
+				require.Equal(t, tc.wantedStruct.HealthCheckArgs.UnhealthyThreshold, rr.HealthCheck.HealthCheckArgs.UnhealthyThreshold)
+				require.Equal(t, tc.wantedStruct.HealthCheckArgs.Interval, rr.HealthCheck.HealthCheckArgs.Interval)
+				require.Equal(t, tc.wantedStruct.HealthCheckArgs.Timeout, rr.HealthCheck.HealthCheckArgs.Timeout)
+			}
 		})
 	}
 }
@@ -204,8 +279,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Port: aws.Uint16(80),
 					},
 					RoutingRule: RoutingRule{
-						Path:            aws.String("/awards/*"),
-						HealthCheckPath: aws.String("/"),
+						Path: aws.String("/awards/*"),
+						HealthCheck: HealthCheckArgsOrString{
+							HealthCheckPath: aws.String("/"),
+						},
 					},
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(1024),
@@ -235,8 +312,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Port: aws.Uint16(80),
 					},
 					RoutingRule: RoutingRule{
-						Path:            aws.String("/awards/*"),
-						HealthCheckPath: aws.String("/"),
+						Path: aws.String("/awards/*"),
+						HealthCheck: HealthCheckArgsOrString{
+							HealthCheckPath: aws.String("/"),
+						},
 					},
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(1024),
@@ -266,8 +345,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Port: aws.Uint16(80),
 					},
 					RoutingRule: RoutingRule{
-						Path:            aws.String("/awards/*"),
-						HealthCheckPath: aws.String("/"),
+						Path: aws.String("/awards/*"),
+						HealthCheck: HealthCheckArgsOrString{
+							HealthCheckPath: aws.String("/"),
+						},
 					},
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(1024),
@@ -355,8 +436,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Port: aws.Uint16(5000),
 					},
 					RoutingRule: RoutingRule{
-						Path:            aws.String("/awards/*"),
-						HealthCheckPath: aws.String("/"),
+						Path: aws.String("/awards/*"),
+						HealthCheck: HealthCheckArgsOrString{
+							HealthCheckPath: aws.String("/"),
+						},
 						TargetContainer: aws.String("xray"),
 					},
 					TaskConfig: TaskConfig{
