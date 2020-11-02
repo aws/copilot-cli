@@ -160,13 +160,6 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 	}
 }
 
-func (h *HealthCheckArgsOrString) isEmpty() bool {
-	if aws.StringValue(h.HealthCheckPath) == "" && h.HealthCheckArgs.isEmpty() {
-		return true
-	}
-	return false
-}
-
 func (h *HTTPHealthCheckArgs) isEmpty() bool {
 	if h.Path == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil && h.Interval == nil && h.Timeout == nil {
 		return true
