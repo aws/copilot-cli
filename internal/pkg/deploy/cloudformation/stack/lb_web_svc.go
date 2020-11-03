@@ -25,7 +25,6 @@ const (
 	LBWebServiceHTTPSParamKey           = "HTTPSEnabled"
 	LBWebServiceContainerPortParamKey   = "ContainerPort"
 	LBWebServiceRulePathParamKey        = "RulePath"
-	LBWebServiceHealthCheckPathParamKey = "HealthCheckPath"
 	LBWebServiceTargetContainerParamKey = "TargetContainer"
 	LBWebServiceTargetPortParamKey      = "TargetPort"
 	LBWebServiceStickinessParamKey      = "Stickiness"
@@ -131,6 +130,9 @@ func (s *LoadBalancedWebService) loadBalancerTarget() (targetContainer *string, 
 	// Route load balancer traffic to main container by default.
 	targetContainer = aws.String(containerName)
 	targetPort = aws.String(containerPort)
+	if s.manifest.TargetContainer == nil && s.manifest.TargetContainerCamelCase != nil {
+		s.manifest.TargetContainer = s.manifest.TargetContainerCamelCase
+	}
 	mftTargetContainer := s.manifest.TargetContainer
 	if mftTargetContainer != nil {
 		sidecar, ok := s.manifest.Sidecars[*mftTargetContainer]

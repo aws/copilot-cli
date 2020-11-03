@@ -114,7 +114,8 @@ type RoutingRule struct {
 	HealthCheck HealthCheckArgsOrString `yaml:"healthcheck"`
 	Stickiness  *bool                   `yaml:"stickiness"`
 	// TargetContainer is the container load balancer routes traffic to.
-	TargetContainer *string `yaml:"target_container"`
+	TargetContainer          *string `yaml:"target_container"`
+	TargetContainerCamelCase *string `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
@@ -163,10 +164,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 }
 
 func (h *HTTPHealthCheckArgs) isEmpty() bool {
-	if h.Path == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil && h.Interval == nil && h.Timeout == nil {
-		return true
-	}
-	return false
+	return h.Path == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil && h.Interval == nil && h.Timeout == nil
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the HealthCheckArgsOrString
