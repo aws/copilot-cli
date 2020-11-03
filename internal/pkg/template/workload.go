@@ -28,6 +28,7 @@ var (
 	commonWorkloadCFTemplateNames = []string{
 		"loggroup",
 		"envvars",
+		"secrets",
 		"executionrole",
 		"taskrole",
 		"fargate-taskdef-base-properties",

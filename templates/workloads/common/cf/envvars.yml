@@ -9,19 +9,9 @@ Environment:
 - Name: COPILOT_ENVIRONMENT_NAME
   Value: !Sub '${EnvName}'
 - Name: COPILOT_SERVICE_NAME
-  Value: !Sub '${WorkloadName}'
-{{- if .EnvControllerLambda}}
-- Name: COPILOT_LB_DNS
-  Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
-{{- end}}{{if .Variables}}{{range $name, $value := .Variables}}
+  Value: !Sub '${WorkloadName}'{{if .Variables}}{{range $name, $value := .Variables}}
 - Name: {{$name}}
   Value: {{$value | printf "%q"}}{{end}}{{end}}{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{range $var := .NestedStack.VariableOutputs}}
 - Name: {{toSnakeCase $var}}
   Value:
-    Fn::GetAtt: [{{$stackName}}, Outputs.{{$var}}]{{end}}{{end}}{{if hasSecrets .}}
-Secrets:{{range $name, $valueFrom := .Secrets}}
-- Name: {{$name}}
-  ValueFrom: {{$valueFrom}}{{end}}{{end}}{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{range $secret := .NestedStack.SecretOutputs}}
-- Name: {{toSnakeCase $secret}}
-  ValueFrom:
-    Fn::GetAtt: [{{$stackName}}, Outputs.{{$secret}}]{{end}}{{end}}
+    Fn::GetAtt: [{{$stackName}}, Outputs.{{$var}}]{{end}}{{end}}

@@ -30,6 +30,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				mockBox.AddString("workloads/services/backend/cf.yml", baseContent)
 				mockBox.AddString("workloads/common/cf/loggroup.yml", "loggroup")
 				mockBox.AddString("workloads/common/cf/envvars.yml", "envvars")
+				mockBox.AddString("workloads/common/cf/secrets.yml", "secrets")
 				mockBox.AddString("workloads/common/cf/executionrole.yml", "executionrole")
 				mockBox.AddString("workloads/common/cf/taskrole.yml", "taskrole")
 				mockBox.AddString("workloads/common/cf/fargate-taskdef-base-properties.yml", "fargate-taskdef-base-properties")
@@ -48,6 +49,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 			},
 			wantedContent: `  loggroup
   envvars
+  secrets
   executionrole
   taskrole
   fargate-taskdef-base-properties

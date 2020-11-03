@@ -61,6 +61,9 @@ Resources:
           PortMappings:
             - ContainerPort: !Ref ContainerPort
 {{include "envvars" . | indent 10}}
+          - Name: COPILOT_LB_DNS
+            Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+{{include "secrets" . | indent 10}}
 {{include "logconfig" . | indent 10}}
 {{include "sidecars" . | indent 8}}
 {{include "executionrole" . | indent 2}}
