@@ -95,7 +95,7 @@ func TestJobDeployOpts_Validate(t *testing.T) {
 			tc.mockWs(mockWs)
 			tc.mockStore(mockStore)
 			opts := deployJobOpts{
-				deployJobVars: deployJobVars{
+				deployWkldVars: deployWkldVars{
 					appName: tc.inAppName,
 					name:    tc.inJobName,
 					envName: tc.inEnvName,
@@ -168,7 +168,7 @@ func TestJobDeployOpts_Ask(t *testing.T) {
 
 			tc.wantedCalls(mockSel)
 			opts := deployJobOpts{
-				deployJobVars: deployJobVars{
+				deployWkldVars: deployWkldVars{
 					appName:  tc.inAppName,
 					name:     tc.inJobName,
 					envName:  tc.inEnvName,
@@ -318,7 +318,7 @@ image:
 			}
 			test.setupMocks(mocks)
 			opts := deployJobOpts{
-				deployJobVars: deployJobVars{
+				deployWkldVars: deployWkldVars{
 					name: test.inputSvc,
 				},
 				unmarshal:          manifest.UnmarshalWorkload,
