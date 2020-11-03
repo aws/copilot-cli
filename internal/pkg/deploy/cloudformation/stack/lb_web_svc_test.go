@@ -95,9 +95,8 @@ func TestLoadBalancedWebService_StackName(t *testing.T) {
 func TestLoadBalancedWebService_Template(t *testing.T) {
 	testCases := map[string]struct {
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService)
-
-		wantedTemplate string
-		wantedError    error
+		wantedTemplate   string
+		wantedError      error
 	}{
 		"unavailable rule priority lambda template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
@@ -154,6 +153,13 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.WorkloadOpts{
+					HTTPHealthCheck: &template.HTTPHealthCheckOpts{
+						HealthCheckPath:    aws.String("/"),
+						HealthyThreshold:   aws.Int64(2),
+						UnhealthyThreshold: aws.Int64(2),
+						Interval:           aws.Int64(10),
+						Timeout:            aws.Int64(5),
+					},
 					RulePriorityLambda: "lambda",
 					DesiredCountLambda: "something",
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
@@ -176,6 +182,13 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 						VariableOutputs: []string{"Hello"},
 						SecretOutputs:   []string{"MySecretArn"},
 						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
+					},
+					HTTPHealthCheck: &template.HTTPHealthCheckOpts{
+						HealthCheckPath:    aws.String("/"),
+						HealthyThreshold:   aws.Int64(2),
+						UnhealthyThreshold: aws.Int64(2),
+						Interval:           aws.Int64(10),
+						Timeout:            aws.Int64(5),
 					},
 					RulePriorityLambda: "lambda",
 					DesiredCountLambda: "something",
@@ -329,10 +342,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		{
 			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
 			ParameterValue: aws.String("frontend"),
-		},
-		{
-			ParameterKey:   aws.String(LBWebServiceHealthCheckPathParamKey),
-			ParameterValue: aws.String("/"),
 		},
 		{
 			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),
