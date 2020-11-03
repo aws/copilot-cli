@@ -4,6 +4,7 @@
 package cloudformation
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -54,6 +55,7 @@ func (m *mockStackConfig) Tags() []*sdkcloudformation.Tag {
 
 func TestCloudFormation_DeployService(t *testing.T) {
 	testCases := map[string]struct {
+		wantedErr  string
 		createMock func(ctrl *gomock.Controller) cfnClient
 	}{
 		"does not call update if the stack is new": {
@@ -82,6 +84,26 @@ func TestCloudFormation_DeployService(t *testing.T) {
 				return m
 			},
 		},
+		"calls describe if create fails": {
+			createMock: func(ctrl *gomock.Controller) cfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().CreateAndWait(gomock.Any()).Return(errors.New("some error"))
+				m.EXPECT().ErrorEvents(gomock.Any()).Return([]cloudformation.StackEvent{
+					{ResourceStatusReason: aws.String("Bad things happened. (Service abcd)")},
+				}, nil)
+				return m
+			},
+			wantedErr: "some error: Bad things happened",
+		},
+		"returns descriptive error if describe fails": {
+			createMock: func(ctrl *gomock.Controller) cfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().CreateAndWait(gomock.Any()).Return(errors.New("some error"))
+				m.EXPECT().ErrorEvents(gomock.Any()).Return(nil, errors.New("other error"))
+				return m
+			},
+			wantedErr: "some error: describe stack: other error",
+		},
 	}
 
 	for name, tc := range testCases {
@@ -107,7 +129,11 @@ func TestCloudFormation_DeployService(t *testing.T) {
 			err := c.DeployService(conf, cloudformation.WithRoleARN("myrole"))
 
 			// THEN
-			require.NoError(t, err)
+			if tc.wantedErr != "" {
+				require.EqualError(t, err, tc.wantedErr)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
@@ -136,6 +162,7 @@ func TestCloudFormation_DeleteWorkload(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
+
 			c := CloudFormation{
 				cfnClient: tc.createMock(ctrl),
 			}
@@ -145,6 +172,71 @@ func TestCloudFormation_DeleteWorkload(t *testing.T) {
 
 			// THEN
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestCloudFormation_GetStackErrors(t *testing.T) {
+	mockEvents := []cloudformation.StackEvent{
+		{
+			LogicalResourceId:    aws.String("abc123"),
+			ResourceType:         aws.String("ECS::Service"),
+			ResourceStatus:       aws.String("CREATE_FAILED"),
+			ResourceStatusReason: aws.String("Space elevator disconnected. (Service moonshot)"),
+		},
+	}
+	testCases := map[string]struct {
+		mockCfn      func(*mocks.MockcfnClient)
+		wantedErr    string
+		wantedEvents []deploy.ResourceEvent
+	}{
+		"returns successfully": {
+			mockCfn: func(m *mocks.MockcfnClient) {
+				m.EXPECT().ErrorEvents("myStack").Return(mockEvents, nil)
+			},
+			wantedEvents: []deploy.ResourceEvent{
+				{
+					Resource: deploy.Resource{
+						LogicalName: "abc123",
+						Type:        "ECS::Service",
+					},
+					Status:       "CREATE_FAILED",
+					StatusReason: "Space elevator disconnected",
+				},
+			},
+		},
+		"error getting events": {
+			mockCfn: func(m *mocks.MockcfnClient) {
+				m.EXPECT().ErrorEvents("myStack").Return(nil, errors.New("some error"))
+			},
+			wantedErr: "some error",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEn
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			cfnClient := mocks.NewMockcfnClient(ctrl)
+			tc.mockCfn(cfnClient)
+			c := CloudFormation{
+				cfnClient: cfnClient,
+			}
+
+			conf := &mockStackConfig{
+				name:     "myStack",
+				template: "template",
+			}
+			// WHEN
+			out, err := c.ErrorEvents(conf)
+
+			// THEN
+			if tc.wantedErr != "" {
+				require.EqualError(t, err, tc.wantedErr)
+			} else {
+				require.Equal(t, out, tc.wantedEvents)
+			}
 		})
 	}
 }
