@@ -14,7 +14,50 @@ EnvControllerFunction:
       ZipFile: |
         {{.EnvControllerLambda}}
     Handler: "index.handler"
-    Timeout: 600
+    Timeout: 900
     MemorySize: 512
-    Role: !GetAtt 'CustomResourceRole.Arn'
+    Role: !GetAtt 'EnvControllerRole.Arn'
     Runtime: nodejs12.x
+
+EnvControllerRole:
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Version: 2012-10-17
+      Statement:
+        -
+          Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+    Path: /
+    Policies:
+      - PolicyName: "EnvControllerStackUpdate"
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+              - cloudformation:DescribeStacks
+              - cloudformation:UpdateStack
+            Resource: "*"
+            Condition:
+              StringEquals:
+                'cloudformation:ResourceTag/copilot-application': !Sub '${AppName}'
+                'cloudformation:ResourceTag/copilot-environment': !Sub '${EnvName}'
+      - PolicyName: "EnvControllerRolePass"
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+              - iam:PassRole
+            Resource: "*"
+            Condition:
+              StringEquals:
+                'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+                'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
+    ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole

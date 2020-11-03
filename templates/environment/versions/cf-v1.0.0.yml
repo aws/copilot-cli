@@ -290,4 +290,4 @@ Outputs:
 
   EnabledFeatures:
     Value: !Ref ALBWorkloads
-    Description: Required to force update the stack when only ALBWorkloads changes.
+    Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
