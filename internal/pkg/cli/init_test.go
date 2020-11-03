@@ -162,11 +162,11 @@ func TestInitOpts_Run(t *testing.T) {
 				prompt: climocks.NewMockprompter(ctrl),
 
 				// These fields are used for logging, the values are not important for tests.
-				appName:          &mockAppName,
-				initWkldVars:     &initWkldVars{},
-				schedule:         &mockSchedule,
-				port:             &mockPort,
-				setupWorkoadInit: func(*initOpts, string) error { return nil },
+				appName:           &mockAppName,
+				initWkldVars:      &initWkldVars{},
+				schedule:          &mockSchedule,
+				port:              &mockPort,
+				setupWorkloadInit: func(*initOpts, string) error { return nil },
 			}
 			tc.expect(opts)
 
