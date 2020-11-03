@@ -98,7 +98,7 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 			tc.mockWs(mockWs)
 			tc.mockStore(mockStore)
 			opts := deploySvcOpts{
-				deploySvcVars: deploySvcVars{
+				deployWkldVars: deployWkldVars{
 					appName: tc.inAppName,
 					name:    tc.inSvcName,
 					envName: tc.inEnvName,
@@ -171,7 +171,7 @@ func TestSvcDeployOpts_Ask(t *testing.T) {
 
 			tc.wantedCalls(mockSel)
 			opts := deploySvcOpts{
-				deploySvcVars: deploySvcVars{
+				deployWkldVars: deployWkldVars{
 					appName:  tc.inAppName,
 					name:     tc.inSvcName,
 					envName:  tc.inEnvName,
@@ -321,7 +321,7 @@ image:
 			}
 			test.setupMocks(mocks)
 			opts := deploySvcOpts{
-				deploySvcVars: deploySvcVars{
+				deployWkldVars: deployWkldVars{
 					name: test.inputSvc,
 				},
 				unmarshal:          manifest.UnmarshalWorkload,
@@ -471,7 +471,7 @@ func TestSvcDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			tc.mockAddons(mockAddons)
 
 			opts := deploySvcOpts{
-				deploySvcVars: deploySvcVars{
+				deployWkldVars: deployWkldVars{
 					name: tc.inputSvc,
 				},
 				store:             mockProjectSvc,

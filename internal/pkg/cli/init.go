@@ -80,7 +80,7 @@ type initOpts struct {
 
 	prompt prompter
 
-	setupWorkoadInit func(*initOpts, string) error
+	setupWorkloadInit func(*initOpts, string) error
 }
 
 func newInitOpts(vars initVars) (*initOpts, error) {
@@ -132,7 +132,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 
 	deploySvcCmd := &deploySvcOpts{
-		deploySvcVars: deploySvcVars{
+		deployWkldVars: deployWkldVars{
 			envName:  defaultEnvironmentName,
 			imageTag: vars.imageTag,
 			appName:  vars.appName,
@@ -148,7 +148,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		sessProvider: sessProvider,
 	}
 	deployJobCmd := &deployJobOpts{
-		deployJobVars: deployJobVars{
+		deployWkldVars: deployWkldVars{
 			envName:  defaultEnvironmentName,
 			imageTag: vars.imageTag,
 			appName:  vars.appName,
@@ -176,7 +176,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 		prompt: prompt,
 
-		setupWorkoadInit: func(o *initOpts, wkldType string) error {
+		setupWorkloadInit: func(o *initOpts, wkldType string) error {
 			wlInitializer := &initialize.WorkloadInitializer{Store: ssm, Ws: ws, Prog: spin, Deployer: deployer}
 			wkldVars := initWkldVars{
 				appName:        *o.appName,
@@ -315,7 +315,7 @@ func (o *initOpts) loadWkldCmd() error {
 	if err != nil {
 		return err
 	}
-	if err := o.setupWorkoadInit(o, wkldType); err != nil {
+	if err := o.setupWorkloadInit(o, wkldType); err != nil {
 		return err
 	}
 

@@ -36,7 +36,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type deploySvcVars struct {
+type deployWkldVars struct {
 	appName      string
 	name         string
 	envName      string
@@ -45,7 +45,7 @@ type deploySvcVars struct {
 }
 
 type deploySvcOpts struct {
-	deploySvcVars
+	deployWkldVars
 
 	store              store
 	ws                 wsSvcDirReader
@@ -69,7 +69,7 @@ type deploySvcOpts struct {
 	buildRequired     bool
 }
 
-func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
+func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
@@ -81,7 +81,7 @@ func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
 	}
 	prompter := prompt.New()
 	return &deploySvcOpts{
-		deploySvcVars: vars,
+		deployWkldVars: vars,
 
 		store:        store,
 		ws:           ws,
@@ -482,7 +482,7 @@ func (o *deploySvcOpts) showSvcURI() error {
 
 // buildSvcDeployCmd builds the `svc deploy` subcommand.
 func buildSvcDeployCmd() *cobra.Command {
-	vars := deploySvcVars{}
+	vars := deployWkldVars{}
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploys a service to an environment.",
