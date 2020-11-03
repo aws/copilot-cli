@@ -47,16 +47,15 @@ type envUpgradeVars struct {
 type envUpgradeOpts struct {
 	envUpgradeVars
 
-	store       store
-	sel         appEnvSelector
-	envTemplate templater
-	prog        progress
+	store              store
+	sel                appEnvSelector
+	legacyEnvTemplater templater
+	prog               progress
 
 	// Constructors for clients that can be initialized only at runtime.
 	// These functions are overriden in tests to provide mocks.
-	newEnvVersionGetter    func(app, env string) (versionGetter, error)
-	newTemplateUpgrader    func(conf *config.Environment) (envTemplateUpgrader, error)
-	newEnvOutputsDescriber func(app, env string) (envVPCDescriber, error)
+	newEnvVersionGetter func(app, env string) (versionGetter, error)
+	newTemplateUpgrader func(conf *config.Environment) (envTemplateUpgrader, error)
 }
 
 func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
@@ -69,7 +68,7 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 
 		store: store,
 		sel:   selector.NewSelect(prompt.New(), store),
-		envTemplate: stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
+		legacyEnvTemplater: stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
 			Version: deploy.LegacyEnvTemplateVersion,
 		}),
 		prog: termprogress.NewSpinner(),
@@ -91,16 +90,6 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 				return nil, fmt.Errorf("create session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
 			}
 			return cloudformation.New(sess), nil
-		},
-		newEnvOutputsDescriber: func(app, env string) (envVPCDescriber, error) {
-			d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-				App: app,
-				Env: env,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("new environment %s stack output describer: %v", env, err)
-			}
-			return d, nil
 		},
 	}, nil
 }
@@ -286,9 +275,9 @@ func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, co
 }
 
 func (o *envUpgradeOpts) isDefaultLegacyTemplate(cfn envTemplater, appName, envName string) (bool, error) {
-	defaultLegacyEnvTemplate, err := o.envTemplate.Template()
+	defaultLegacyEnvTemplate, err := o.legacyEnvTemplater.Template()
 	if err != nil {
-		return false, fmt.Errorf("generate environment template %s: %v", deploy.LegacyEnvTemplateVersion, err)
+		return false, fmt.Errorf("generate default legacy environment template: %v", err)
 	}
 	actualTemplate, err := cfn.EnvironmentTemplate(appName, envName)
 	if err != nil {
@@ -315,15 +304,14 @@ func (o *envUpgradeOpts) listLBWebServices() ([]string, error) {
 func (o *envUpgradeOpts) upgradeLegacyEnvironmentWithVPCOverrides(upgrader legacyEnvUpgrader, conf *config.Environment,
 	fromVersion, toVersion string, albWorkloads []string) error {
 	if conf.CustomConfig != nil {
-		err := upgrader.UpgradeLegacyEnvironment(&deploy.CreateEnvironmentInput{
+		if err := upgrader.UpgradeLegacyEnvironment(&deploy.CreateEnvironmentInput{
 			Version:           toVersion,
 			AppName:           conf.App,
 			Name:              conf.Name,
 			ImportVPCConfig:   conf.CustomConfig.ImportVPC,
 			AdjustVPCConfig:   conf.CustomConfig.VPCConfig,
 			CFNServiceRoleARN: conf.ExecutionRoleARN,
-		}, albWorkloads...)
-		if err != nil {
+		}, albWorkloads...); err != nil {
 			return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
 		}
 		return nil

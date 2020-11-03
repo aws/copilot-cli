@@ -403,10 +403,6 @@ type envTemplateUpgrader interface {
 	legacyEnvUpgrader
 }
 
-type envVPCDescriber interface {
-	EnvironmentVPC() (*describe.EnvironmentVPC, error)
-}
-
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 	ListPipelineNamesByTags(tags map[string]string) ([]string, error)

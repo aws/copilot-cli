@@ -4108,6 +4108,44 @@ func (mr *MockversionGetterMockRecorder) Version() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockversionGetter)(nil).Version))
 }
 
+// MockenvTemplater is a mock of envTemplater interface
+type MockenvTemplater struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvTemplaterMockRecorder
+}
+
+// MockenvTemplaterMockRecorder is the mock recorder for MockenvTemplater
+type MockenvTemplaterMockRecorder struct {
+	mock *MockenvTemplater
+}
+
+// NewMockenvTemplater creates a new mock instance
+func NewMockenvTemplater(ctrl *gomock.Controller) *MockenvTemplater {
+	mock := &MockenvTemplater{ctrl: ctrl}
+	mock.recorder = &MockenvTemplaterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockenvTemplater) EXPECT() *MockenvTemplaterMockRecorder {
+	return m.recorder
+}
+
+// EnvironmentTemplate mocks base method
+func (m *MockenvTemplater) EnvironmentTemplate(appName, envName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvironmentTemplate", appName, envName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnvironmentTemplate indicates an expected call of EnvironmentTemplate
+func (mr *MockenvTemplaterMockRecorder) EnvironmentTemplate(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentTemplate", reflect.TypeOf((*MockenvTemplater)(nil).EnvironmentTemplate), appName, envName)
+}
+
 // MockenvUpgrader is a mock of envUpgrader interface
 type MockenvUpgrader struct {
 	ctrl     *gomock.Controller

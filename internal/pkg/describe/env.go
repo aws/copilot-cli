@@ -12,7 +12,6 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -126,34 +125,6 @@ type EnvironmentVPC struct {
 	ID               string
 	PublicSubnetIDs  []string
 	PrivateSubnetIDs []string
-}
-
-// EnvironmentVPC returns the ID of the VPC and its subnets by reading the outputs of the environment cloudformation stack.
-func (d *EnvDescriber) EnvironmentVPC() (*EnvironmentVPC, error) {
-	envStack, err := d.stackDescriber.Stack(stack.NameForEnv(d.app, d.env.Name))
-	if err != nil {
-		return nil, err
-	}
-
-	var vpcID string
-	var publicSubnets, privateSubnets []string
-	for _, output := range envStack.Outputs {
-		key := aws.StringValue(output.OutputKey)
-		val := aws.StringValue(output.OutputValue)
-		switch key {
-		case stack.EnvOutputVPCID:
-			vpcID = val
-		case stack.EnvOutputPublicSubnets:
-			publicSubnets = strings.Split(val, ",")
-		case stack.EnvOutputPrivateSubnets:
-			privateSubnets = strings.Split(val, ",")
-		}
-	}
-	return &EnvironmentVPC{
-		ID:               vpcID,
-		PublicSubnetIDs:  publicSubnets,
-		PrivateSubnetIDs: privateSubnets,
-	}, nil
 }
 
 func (d *EnvDescriber) stackTags() (map[string]string, error) {

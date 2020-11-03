@@ -321,9 +321,9 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 						appName: "phonetool",
 						name:    "test",
 					},
-					store:       mockStore,
-					envTemplate: mockTemplater,
-					prog:        mockProg,
+					store:              mockStore,
+					legacyEnvTemplater: mockTemplater,
+					prog:               mockProg,
 					newEnvVersionGetter: func(_, _ string) (versionGetter, error) {
 						return mockEnvTpl, nil
 					},
@@ -376,9 +376,9 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 						appName: "phonetool",
 						name:    "test",
 					},
-					store:       mockStore,
-					envTemplate: mockTemplater,
-					prog:        mockProg,
+					store:              mockStore,
+					legacyEnvTemplater: mockTemplater,
+					prog:               mockProg,
 					newEnvVersionGetter: func(_, _ string) (versionGetter, error) {
 						return mockEnvTpl, nil
 					},
@@ -418,9 +418,9 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 						appName: "phonetool",
 						name:    "test",
 					},
-					store:       mockStore,
-					envTemplate: mockTemplater,
-					prog:        mockProg,
+					store:              mockStore,
+					legacyEnvTemplater: mockTemplater,
+					prog:               mockProg,
 					newEnvVersionGetter: func(_, _ string) (versionGetter, error) {
 						return mockEnvTpl, nil
 					},

@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -279,67 +278,6 @@ func TestEnvDescriber_Version(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedVersion, actual)
-			}
-		})
-	}
-}
-
-func TestEnvDescriber_EnvironmentVPC(t *testing.T) {
-	testCases := map[string]struct {
-		given func(ctrl *gomock.Controller) *EnvDescriber
-
-		wantedVPC *EnvironmentVPC
-		wantedErr error
-	}{
-		"parses VPC outputs from CloudFormation stack": {
-			given: func(ctrl *gomock.Controller) *EnvDescriber {
-				m := mocks.NewMockstackAndResourcesDescriber(ctrl)
-				m.EXPECT().Stack("phonetool-test").Return(&cloudformation.Stack{
-					Outputs: []*cloudformation.Output{
-						{
-							OutputKey:   aws.String(stack.EnvOutputVPCID),
-							OutputValue: aws.String("123"),
-						},
-						{
-							OutputKey:   aws.String(stack.EnvOutputPublicSubnets),
-							OutputValue: aws.String("abc,efg"),
-						},
-						{
-							OutputKey:   aws.String(stack.EnvOutputPrivateSubnets),
-							OutputValue: aws.String("hij,klm"),
-						},
-					},
-				}, nil)
-				return &EnvDescriber{
-					app:            "phonetool",
-					env:            &config.Environment{Name: "test"},
-					stackDescriber: m,
-				}
-			},
-			wantedVPC: &EnvironmentVPC{
-				ID:               "123",
-				PublicSubnetIDs:  []string{"abc", "efg"},
-				PrivateSubnetIDs: []string{"hij", "klm"},
-			},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			d := tc.given(ctrl)
-
-			// WHEN
-			vpc, err := d.EnvironmentVPC()
-
-			// THEN
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedVPC, vpc)
 			}
 		})
 	}
