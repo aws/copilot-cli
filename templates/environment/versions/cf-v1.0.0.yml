@@ -287,3 +287,7 @@ Outputs:
     Description: The domain name of this environment.
     Export:
       Name: !Sub ${AWS::StackName}-SubDomain
+
+  EnabledFeatures:
+    Value: !Ref ALBWorkloads
+    Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
