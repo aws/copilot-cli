@@ -257,6 +257,9 @@ Resources:
                 -
                   - !Sub "/${RulePath}"
                   - !Sub "/${RulePath}/*"
+        - Field: 'source-ip'
+          SourceIpConfig:
+            Values:
       ListenerArn:
         Fn::ImportValue:
           !Sub "${AppName}-${EnvName}-HTTPListenerArn"
