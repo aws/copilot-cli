@@ -27,7 +27,8 @@ var (
 	jobInitScheduleHelp   = `How to determine this job's schedule. "Rate" lets you define the time between 
 executions and is good for jobs which need to run frequently. "Fixed Schedule"
 lets you use a predefined or custom cron schedule and is good for less-frequent 
-jobs or those which require specific execution schedules.`
+jobs or those which require specific execution schedules. "No Schedule" does not
+create an event rule. You must instead invoke the job programmatically.`
 )
 
 const (
@@ -118,7 +119,7 @@ func (o *initJobOpts) Validate() error {
 			return err
 		}
 	}
-	if o.schedule != "" {
+	if o.schedule != "" && o.schedule != selector.None {
 		if err := validateSchedule(o.schedule); err != nil {
 			return err
 		}
@@ -232,7 +233,7 @@ func (o *initJobOpts) newJobManifest() (*manifest.ScheduledJob, error) {
 		dfPath = path
 	}
 	schedule := o.schedule
-	if schedule == selector.NoSchedule {
+	if schedule == selector.None {
 		schedule = ""
 	}
 	return manifest.NewScheduledJob(&manifest.ScheduledJobProps{
