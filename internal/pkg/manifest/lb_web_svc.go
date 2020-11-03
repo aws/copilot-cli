@@ -4,18 +4,33 @@
 package manifest
 
 import (
+	"errors"
 	"path/filepath"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
+	"gopkg.in/yaml.v3"
 )
 
 const (
 	lbWebSvcManifestPath = "workloads/services/lb-web/manifest.yml"
+)
 
+// Default values for HTTPHealthCheck for a load balanced web service.
+const (
 	// LogRetentionInDays is the default log retention time in days.
-	LogRetentionInDays = 30
+	LogRetentionInDays        = 30
+	defaultHealthCheckPath    = "/"
+	defaultHealthyThreshold   = int64(2)
+	defaultUnhealthyThreshold = int64(2)
+	defaultIntervalinS        = int64(10)
+	defaultTimeoutinS         = int64(5)
+)
+
+var (
+	errUnmarshalHealthCheckArgs = errors.New("can't unmarshal healthcheck field into string or compose-style map")
 )
 
 // LoadBalancedWebService holds the configuration to build a container image with an exposed port that receives
@@ -46,13 +61,61 @@ func (lc *LoadBalancedWebServiceConfig) LogConfigOpts() *template.LogConfigOpts 
 	return lc.logConfigOpts()
 }
 
+func (lc *LoadBalancedWebServiceConfig) HTTPHealthCheckOpts() *template.HTTPHealthCheckOpts {
+	opts := template.HTTPHealthCheckOpts{
+		HealthCheckPath:    aws.String(defaultHealthCheckPath),
+		HealthyThreshold:   aws.Int64(defaultHealthyThreshold),
+		UnhealthyThreshold: aws.Int64(defaultUnhealthyThreshold),
+		Interval:           aws.Int64(defaultIntervalinS),
+		Timeout:            aws.Int64(defaultTimeoutinS),
+	}
+	if lc.RoutingRule.HealthCheck.HealthCheckArgs.Path != nil {
+		opts.HealthCheckPath = lc.RoutingRule.HealthCheck.HealthCheckArgs.Path
+	}
+	if lc.RoutingRule.HealthCheck.HealthCheckPath != nil {
+		opts.HealthCheckPath = lc.HealthCheck.HealthCheckPath
+	}
+	if lc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold != nil {
+		opts.HealthyThreshold = lc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold
+	}
+	if lc.RoutingRule.HealthCheck.HealthCheckArgs.UnhealthyThreshold != nil {
+		opts.UnhealthyThreshold = lc.RoutingRule.HealthCheck.HealthCheckArgs.UnhealthyThreshold
+	}
+	if lc.RoutingRule.HealthCheck.HealthCheckArgs.Interval != nil {
+		opts.Interval = aws.Int64(int64(lc.RoutingRule.HealthCheck.HealthCheckArgs.Interval.Seconds()))
+	}
+	if lc.RoutingRule.HealthCheck.HealthCheckArgs.Timeout != nil {
+		opts.Timeout = aws.Int64(int64(lc.RoutingRule.HealthCheck.HealthCheckArgs.Timeout.Seconds()))
+	}
+	return &opts
+}
+
+// HTTPHealthCheckArgs holds the configuration to determine if the load balanced web service is healthy.
+// These options are specifiable under the "healthcheck" field.
+// See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html.
+type HTTPHealthCheckArgs struct {
+	Path               *string        `yaml:"path"`
+	HealthyThreshold   *int64         `yaml:"healthy_threshold"`
+	UnhealthyThreshold *int64         `yaml:"unhealthy_threshold"`
+	Timeout            *time.Duration `yaml:"timeout"`
+	Interval           *time.Duration `yaml:"interval"`
+}
+
+// HealthCheckArgsOrString is a custom type which supports unmarshaling yaml which
+// can either be of type string or type HealthCheckArgs. q
+type HealthCheckArgsOrString struct {
+	HealthCheckPath *string
+	HealthCheckArgs HTTPHealthCheckArgs
+}
+
 // RoutingRule holds the path to route requests to the service.
 type RoutingRule struct {
-	Path            *string `yaml:"path"`
-	HealthCheckPath *string `yaml:"healthcheck"`
-	Stickiness      *bool   `yaml:"stickiness"`
+	Path        *string                 `yaml:"path"`
+	HealthCheck HealthCheckArgsOrString `yaml:"healthcheck"`
+	Stickiness  *bool                   `yaml:"stickiness"`
 	// TargetContainer is the container load balancer routes traffic to.
-	TargetContainer *string `yaml:"targetContainer"`
+	TargetContainer          *string `yaml:"target_container"`
+	TargetContainerCamelCase *string `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
@@ -85,7 +148,9 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 			ImageConfig: ServiceImageWithPort{},
 			RoutingRule: RoutingRule{
-				HealthCheckPath: aws.String("/"),
+				HealthCheck: HealthCheckArgsOrString{
+					HealthCheckPath: aws.String("/"),
+				},
 			},
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
@@ -96,6 +161,34 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 			},
 		},
 	}
+}
+
+func (h *HTTPHealthCheckArgs) isEmpty() bool {
+	return h.Path == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil && h.Interval == nil && h.Timeout == nil
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the HealthCheckArgsOrString
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (h *HealthCheckArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshal(&h.HealthCheckArgs); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if !h.HealthCheckArgs.isEmpty() {
+		// Unmarshaled successfully to h.HealthCheckArgs, return.
+		return nil
+	}
+
+	if err := unmarshal(&h.HealthCheckPath); err != nil {
+		return errUnmarshalHealthCheckArgs
+	}
+	return nil
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.

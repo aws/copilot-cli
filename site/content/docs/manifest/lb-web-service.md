@@ -95,9 +95,38 @@ The http section contains parameters related to integrating your service with an
 <span class="parent-field">http.</span><a id="http-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
 Requests to this path will be forwarded to your service. Each Load Balanced Web Service should listen on a unique path.
 
-<span class="parent-field">http.</span><a id="http-healthcheck" href="#http-healthcheck" class="field">`healthcheck`</a> <span class="type">String</span>  
-Path exposed in your container to handle target group health check requests.  
+<span class="parent-field">http.</span><a id="http-healthcheck" href="#http-healthcheck" class="field">`healthcheck`</a> <span class="type">String or Map</span>  
+If you specify a string, Copilot interprets it as the path exposed in your container to handle target group health check requests. The default is "/".
+```yaml
+http:
+  healthcheck: '/'
+```
+You can also specify healthcheck as a map:
+```yaml
+http:
+  healthcheck:
+    path: '/'
+    healthy_threshold: 3
+    unhealthy_threshold: 2
+    interval: 15s
+    timeout: 10s
+```
 
+<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-healthy_threshold" href="#http-healthcheck-healthy_threshold" class="field">`healthyThreshold`</a> <span class="type">Integer</span>  
+The number of consecutive health check successes required before considering an unhealthy target healthy. The Copilot default is 2. Range: 2-10. 
+
+<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-unhealthy_threshold" href="#http-healthcheck-unhealthy_threshold" class="field">`unhealthyThreshold`</a> <span class="type">Integer</span>  
+The number of consecutive health check failures required before considering a target unhealthy. The Copilot default is 2. Range: 2-10.
+
+<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-interval" href="#http-healthcheck-interval" class="field">`interval`</a> <span class="type">Duration</span>  
+The approximate amount of time, in seconds, between health checks of an individual target. The Copilot default is 10s. Range: 5s–300s.
+
+<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-timeout" href="#http-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
+The amount of time, in seconds, during which no response from a target means a failed health check. The Copilot default is 5s. Range 5s-300s.
+ 
+<span class="parent-field">http.</span><a id="http-target_container" href="#http-target_container" class="field">`targetContainer`</a> <span class="type">String</span>  
+A sidecar container that takes the place of a service container.
+                                 
 <span class="parent-field">http.</span><a id="http-stickiness" href="#http-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
 Indicates whether sticky sessions are enabled.
 

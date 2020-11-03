@@ -25,7 +25,6 @@ const (
 	LBWebServiceHTTPSParamKey           = "HTTPSEnabled"
 	LBWebServiceContainerPortParamKey   = "ContainerPort"
 	LBWebServiceRulePathParamKey        = "RulePath"
-	LBWebServiceHealthCheckPathParamKey = "HealthCheckPath"
 	LBWebServiceTargetContainerParamKey = "TargetContainer"
 	LBWebServiceTargetPortParamKey      = "TargetPort"
 	LBWebServiceStickinessParamKey      = "Stickiness"
@@ -115,6 +114,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Sidecars:           sidecars,
 		LogConfig:          s.manifest.LogConfigOpts(),
 		Autoscaling:        autoscaling,
+		HTTPHealthCheck:    s.manifest.HTTPHealthCheckOpts(),
 		RulePriorityLambda: rulePriorityLambda.String(),
 		DesiredCountLambda: desiredCountLambda.String(),
 	})
@@ -130,6 +130,9 @@ func (s *LoadBalancedWebService) loadBalancerTarget() (targetContainer *string, 
 	// Route load balancer traffic to main container by default.
 	targetContainer = aws.String(containerName)
 	targetPort = aws.String(containerPort)
+	if s.manifest.TargetContainer == nil && s.manifest.TargetContainerCamelCase != nil {
+		s.manifest.TargetContainer = s.manifest.TargetContainerCamelCase
+	}
 	mftTargetContainer := s.manifest.TargetContainer
 	if mftTargetContainer != nil {
 		sidecar, ok := s.manifest.Sidecars[*mftTargetContainer]
@@ -161,10 +164,6 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 		{
 			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
 			ParameterValue: s.manifest.Path,
-		},
-		{
-			ParameterKey:   aws.String(LBWebServiceHealthCheckPathParamKey),
-			ParameterValue: s.manifest.HealthCheckPath,
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
