@@ -42,7 +42,7 @@ EnvControllerRole:
             Action:
               - cloudformation:DescribeStacks
               - cloudformation:UpdateStack
-            Resource: "*"
+            Resource:  !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}-${EnvName}/*'
             Condition:
               StringEquals:
                 'cloudformation:ResourceTag/copilot-application': !Sub '${AppName}'
@@ -54,7 +54,7 @@ EnvControllerRole:
           - Effect: Allow
             Action:
               - iam:PassRole
-            Resource: "*"
+            Resource:  !Sub 'arn:aws:iam::${AWS::AccountId}:role/${AppName}-${EnvName}-CFNExecutionRole'
             Condition:
               StringEquals:
                 'iam:ResourceTag/copilot-application': !Sub '${AppName}'
