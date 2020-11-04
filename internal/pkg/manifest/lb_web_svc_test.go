@@ -26,7 +26,7 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 		inputInterval           *time.Duration
 		inputTimeout            *time.Duration
 
-		wantedOpts *template.HTTPHealthCheckOpts
+		wantedOpts template.HTTPHealthCheckOpts
 	}{
 		"no fields indicated in manifest": {
 			inputPath:               nil,
@@ -35,7 +35,7 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			inputInterval:           nil,
 			inputTimeout:            nil,
 
-			wantedOpts: &template.HTTPHealthCheckOpts{
+			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    aws.String("/"),
 				HealthyThreshold:   aws.Int64(2),
 				UnhealthyThreshold: aws.Int64(2),
@@ -50,7 +50,7 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			inputInterval:           nil,
 			inputTimeout:            nil,
 
-			wantedOpts: &template.HTTPHealthCheckOpts{
+			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    aws.String("/"),
 				HealthyThreshold:   aws.Int64(5),
 				UnhealthyThreshold: aws.Int64(2),
@@ -65,7 +65,7 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			inputInterval:           nil,
 			inputTimeout:            nil,
 
-			wantedOpts: &template.HTTPHealthCheckOpts{
+			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    aws.String("/"),
 				HealthyThreshold:   aws.Int64(2),
 				UnhealthyThreshold: aws.Int64(5),
@@ -80,7 +80,7 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			inputInterval:           durationp(15 * time.Second),
 			inputTimeout:            nil,
 
-			wantedOpts: &template.HTTPHealthCheckOpts{
+			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    aws.String("/"),
 				HealthyThreshold:   aws.Int64(2),
 				UnhealthyThreshold: aws.Int64(2),
@@ -95,7 +95,7 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			inputInterval:           nil,
 			inputTimeout:            durationp(15 * time.Second),
 
-			wantedOpts: &template.HTTPHealthCheckOpts{
+			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    aws.String("/"),
 				HealthyThreshold:   aws.Int64(2),
 				UnhealthyThreshold: aws.Int64(2),
@@ -110,7 +110,7 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			inputInterval:           durationp(60 * time.Second),
 			inputTimeout:            durationp(60 * time.Second),
 
-			wantedOpts: &template.HTTPHealthCheckOpts{
+			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    aws.String("/road/to/nowhere"),
 				HealthyThreshold:   aws.Int64(3),
 				UnhealthyThreshold: aws.Int64(3),

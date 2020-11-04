@@ -61,7 +61,8 @@ func (lc *LoadBalancedWebServiceConfig) LogConfigOpts() *template.LogConfigOpts 
 	return lc.logConfigOpts()
 }
 
-func (lc *LoadBalancedWebServiceConfig) HTTPHealthCheckOpts() *template.HTTPHealthCheckOpts {
+// HTTPHealthCheckOpts converts the ALB health check configuration into a format parsable by the templates pkg.
+func (lc *LoadBalancedWebServiceConfig) HTTPHealthCheckOpts() template.HTTPHealthCheckOpts {
 	opts := template.HTTPHealthCheckOpts{
 		HealthCheckPath:    aws.String(defaultHealthCheckPath),
 		HealthyThreshold:   aws.Int64(defaultHealthyThreshold),
@@ -87,7 +88,7 @@ func (lc *LoadBalancedWebServiceConfig) HTTPHealthCheckOpts() *template.HTTPHeal
 	if lc.RoutingRule.HealthCheck.HealthCheckArgs.Timeout != nil {
 		opts.Timeout = aws.Int64(int64(lc.RoutingRule.HealthCheck.HealthCheckArgs.Timeout.Seconds()))
 	}
-	return &opts
+	return opts
 }
 
 // HTTPHealthCheckArgs holds the configuration to determine if the load balanced web service is healthy.

@@ -167,7 +167,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.WorkloadOpts{
-					HTTPHealthCheck: &template.HTTPHealthCheckOpts{
+					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath:    aws.String("/"),
 						HealthyThreshold:   aws.Int64(2),
 						UnhealthyThreshold: aws.Int64(2),
@@ -199,7 +199,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 						SecretOutputs:   []string{"MySecretArn"},
 						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 					},
-					HTTPHealthCheck: &template.HTTPHealthCheckOpts{
+					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath:    aws.String("/"),
 						HealthyThreshold:   aws.Int64(2),
 						UnhealthyThreshold: aws.Int64(2),
