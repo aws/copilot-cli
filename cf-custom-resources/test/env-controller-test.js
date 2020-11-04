@@ -30,6 +30,9 @@ describe("Env Controller Handler", () => {
 
   beforeEach(() => {
     EnvController.withDefaultResponseURL(ResponseURL);
+    EnvController.deadlineExpired = function () {
+      return new Promise(function (resolve, reject) {});
+    };
     // Prevent logging.
     console.log = function () {};
   });
@@ -208,7 +211,7 @@ describe("Env Controller Handler", () => {
         {
           StackName: "mockEnvStack",
           Parameters: testParams,
-          Outputs: []
+          Outputs: [],
         },
       ],
     });
