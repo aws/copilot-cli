@@ -51,4 +51,9 @@ phases:
        - sed -i -e '$s/$/ --noColor/' e2e/e2e.sh
        - make build-e2e
        - docker build -t copilot-cli/e2e . -f e2e/Dockerfile
-       - docker run --privileged -v /tmp/.aws:/home/.aws -e "HOME=/home" -e "TEST_SUITE=$TEST_SUITE" copilot-cli/e2e:latest
+       - >
+         docker run --privileged -v /tmp/.aws:/home/.aws -e "HOME=/home"
+         -e "TEST_SUITE=$TEST_SUITE"
+         -e "DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME"
+         -e "DOCKERHUB_TOKEN=$DOCKERHUB_TOKEN" 
+         copilot-cli/e2e:latest
