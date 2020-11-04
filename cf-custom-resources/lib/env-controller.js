@@ -136,6 +136,10 @@ const controlEnv = async function (
       await cfn
         .waitFor("stackUpdateComplete", {
           StackName: stackName,
+          $waiter: {
+            delay: 30,
+            maxAttempts: 29,
+          },
         })
         .promise();
       continue;
@@ -144,6 +148,10 @@ const controlEnv = async function (
     await cfn
       .waitFor("stackUpdateComplete", {
         StackName: stackName,
+        $waiter: {
+          delay: 30,
+          maxAttempts: 29,
+        },
       })
       .promise();
     describeStackResp = await cfn
@@ -169,30 +177,39 @@ exports.handler = async function (event, context) {
   try {
     switch (event.RequestType) {
       case "Create":
-        responseData = await controlEnv(
-          "Create",
-          props.EnvStack,
-          props.Workload,
-          props.Parameters
-        );
+        responseData = await Promise.race([
+          exports.deadlineExpired(),
+          controlEnv(
+            "Create",
+            props.EnvStack,
+            props.Workload,
+            props.Parameters
+          ),
+        ]);
         physicalResourceId = `envcontoller/${props.EnvStack}/${props.Workload}`;
         break;
       case "Update":
-        responseData = await controlEnv(
-          "Update",
-          props.EnvStack,
-          props.Workload,
-          props.Parameters
-        );
+        responseData = await Promise.race([
+          exports.deadlineExpired(),
+          controlEnv(
+            "Update",
+            props.EnvStack,
+            props.Workload,
+            props.Parameters
+          ),
+        ]);
         physicalResourceId = event.PhysicalResourceId;
         break;
       case "Delete":
-        await controlEnv(
-          "Delete",
-          props.EnvStack,
-          props.Workload,
-          props.Parameters
-        );
+        responseData = await Promise.race([
+          exports.deadlineExpired(),
+          controlEnv(
+            "Delete",
+            props.EnvStack,
+            props.Workload,
+            props.Parameters
+          ),
+        ]);
         physicalResourceId = event.PhysicalResourceId;
         break;
       default:
@@ -251,6 +268,16 @@ const updateParameter = function (requestType, workload, paramValue) {
   }
   var updatedParamValue = Array.from(set).join(",");
   return [updatedParamValue, updatedParamValue !== paramValue];
+};
+
+exports.deadlineExpired = function () {
+  return new Promise(function (resolve, reject) {
+    setTimeout(
+      reject,
+      14 * 60 * 1000 + 30 * 1000 /* 14.5 minutes*/,
+      new Error("Lambda took longer than 14.5 minutes to update environment")
+    );
+  });
 };
 
 /**
