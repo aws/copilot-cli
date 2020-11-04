@@ -84,7 +84,7 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 
 	var stackResources []*CfnResource
 	if d.enableResources {
-		stackResources, err = d.envOutputs()
+		stackResources, err = d.resources()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment resources: %w", err)
 		}
@@ -120,6 +120,13 @@ func (d *EnvDescriber) Version() (string, error) {
 	return metadata.Version, nil
 }
 
+// EnvironmentVPC holds the ID of the environment's VPC configuration.
+type EnvironmentVPC struct {
+	ID               string
+	PublicSubnetIDs  []string
+	PrivateSubnetIDs []string
+}
+
 func (d *EnvDescriber) stackTags() (map[string]string, error) {
 	tags := make(map[string]string)
 	envStack, err := d.stackDescriber.Stack(stack.NameForEnv(d.app, d.env.Name))
@@ -152,7 +159,7 @@ func (d *EnvDescriber) filterDeployedSvcs() ([]*config.Workload, error) {
 	return deployedSvcs, nil
 }
 
-func (d *EnvDescriber) envOutputs() ([]*CfnResource, error) {
+func (d *EnvDescriber) resources() ([]*CfnResource, error) {
 	envStack, err := d.stackDescriber.StackResources(stack.NameForEnv(d.app, d.env.Name))
 	if err != nil {
 		return nil, err
