@@ -7,6 +7,11 @@ const aws = require("aws-sdk");
 // These are used for test purposes only
 let defaultResponseURL;
 
+const updateStackWaiter = {
+  delay: 30,
+  maxAttempts: 29,
+};
+
 /**
  * Upload a CloudFormation response object to S3.
  *
@@ -136,10 +141,7 @@ const controlEnv = async function (
       await cfn
         .waitFor("stackUpdateComplete", {
           StackName: stackName,
-          $waiter: {
-            delay: 30,
-            maxAttempts: 29,
-          },
+          $waiter: updateStackWaiter,
         })
         .promise();
       continue;
@@ -148,10 +150,7 @@ const controlEnv = async function (
     await cfn
       .waitFor("stackUpdateComplete", {
         StackName: stackName,
-        $waiter: {
-          delay: 30,
-          maxAttempts: 29,
-        },
+        $waiter: updateStackWaiter,
       })
       .promise();
     describeStackResp = await cfn
