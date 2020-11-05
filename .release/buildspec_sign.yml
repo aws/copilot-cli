@@ -44,6 +44,21 @@ phases:
       - ls -lah $(dirname `head -1 ./$GIT_COMMIT_ID.manifest`)
   post_build:
     commands:
+      - echo "Copying artifacts to generate a latest binary"
+      - VERSION=`cat ./$GIT_COMMIT_ID.version`
+      - ARTIFACT_DIRECTORY=`cat ./$GIT_COMMIT_ID.artifactdir`
+      - |
+        for platform in windows darwin linux linux-arm64
+        do
+            extension=""
+            if [ "$PLATFORM" = "windows"]; then
+                extension=".exe"
+            fi
+            cp $ARTIFACT_DIRECTORY/copilot-$platform-$VERSION$extension $ARTIFACT_DIRECTORY/copilot-$platform$extension
+            cp $ARTIFACT_DIRECTORY/copilot-$platform-$VERSION$extension.asc $ARTIFACT_DIRECTORY/copilot-$platform$extension.asc
+            echo $ARTIFACT_DIRECTORY/copilot-$platform$extension >> ./$GIT_COMMIT_ID.manifest
+            echo $ARTIFACT_DIRECTORY/copilot-$platform$extension.asc >> ./$GIT_COMMIT_ID.manifest
+        done
       - echo "Installing ecs-cli gpg public key"
       - /usr/bin/gpg --version
       - gpg --import .release/amazon-ecs-public-key.gpg

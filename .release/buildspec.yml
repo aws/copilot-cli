@@ -41,6 +41,10 @@ phases:
       - echo $ARTIFACT_DIRECTORY/copilot-linux-$VERSION >> $MANIFESTFILE
       - echo $ARTIFACT_DIRECTORY/copilot-linux-amd64-$VERSION >> $MANIFESTFILE
       - echo $ARTIFACT_DIRECTORY/copilot-linux-arm64-$VERSION >> $MANIFESTFILE
+      - VERSIONFILE="$COMMIT_ID.version"
+      - echo $VERSION >> $VERSIONFILE
+      - ARTIFACT_DIRECTORY_FILE="$COMMIT_ID.artifactdir"
+      - echo $ARTIFACT_DIRECTORY >> $ARTIFACT_DIRECTORY_FILE
     finally:
       - echo "Built artifacts:"
       - ls -lah $ARTIFACT_DIRECTORY
