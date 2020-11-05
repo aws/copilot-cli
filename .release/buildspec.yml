@@ -35,7 +35,7 @@ phases:
       - mv ./bin/local/copilot-linux-amd64 $ARTIFACT_DIRECTORY/copilot-linux-amd64-$VERSION
       - mv ./bin/local/copilot-linux-arm64 $ARTIFACT_DIRECTORY/copilot-linux-arm64-$VERSION
       - |
-        if [-z "$GIT_TAG"]; then
+        if [ ! -z "$GIT_TAG" ];then
             echo "Generating latest binaries as well for $GIT_TAG"
             cp $ARTIFACT_DIRECTORY/copilot-windows-$VERSION.exe $ARTIFACT_DIRECTORY/copilot-windows.exe
             cp $ARTIFACT_DIRECTORY/copilot-darwin-$VERSION $ARTIFACT_DIRECTORY/copilot-darwin
@@ -51,7 +51,7 @@ phases:
       - echo $ARTIFACT_DIRECTORY/copilot-linux-amd64-$VERSION >> $MANIFESTFILE
       - echo $ARTIFACT_DIRECTORY/copilot-linux-arm64-$VERSION >> $MANIFESTFILE
       - |
-        if [-z "$GIT_TAG"]; then
+        if [ ! -z "$GIT_TAG" ];then
             echo "Copying the latest binaries to the manifest for $GIT_TAG"
             echo $ARTIFACT_DIRECTORY/copilot-windows.exe >> $MANIFESTFILE
             echo $ARTIFACT_DIRECTORY/copilot-darwin >> $MANIFESTFILE
