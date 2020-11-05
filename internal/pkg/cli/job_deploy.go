@@ -46,6 +46,7 @@ type deployJobOpts struct {
 	imageBuilderPusher imageBuilderPusher
 	sessProvider       sessionProvider
 	s3                 artifactUploader
+	envUpgradeCmd      actionCommand
 
 	spinner progress
 	sel     wsSelector
@@ -143,6 +144,10 @@ func (o *deployJobOpts) Execute() error {
 		return err
 	}
 
+	if err := o.envUpgradeCmd.Execute(); err != nil {
+		return fmt.Errorf(`execute "env upgrade --app %s --name %s": %v`, o.appName, o.targetEnvironment.Name, err)
+	}
+
 	if err := o.configureContainerImage(); err != nil {
 		return err
 	}
@@ -217,6 +222,15 @@ func (o *deployJobOpts) configureClients() error {
 		return fmt.Errorf("create default session: %w", err)
 	}
 	o.appCFN = cloudformation.New(defaultSess)
+
+	cmd, err := newEnvUpgradeOpts(envUpgradeVars{
+		appName: o.appName,
+		name:    o.targetEnvironment.Name,
+	})
+	if err != nil {
+		return fmt.Errorf("new env upgrade command: %v", err)
+	}
+	o.envUpgradeCmd = cmd
 	return nil
 }
 
