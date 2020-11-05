@@ -148,6 +148,11 @@ func (o *envUpgradeOpts) Execute() error {
 	return nil
 }
 
+// RecommendedActions is a no-op for this command.
+func (o *envUpgradeOpts) RecommendedActions() []string {
+	return nil
+}
+
 func (o *envUpgradeOpts) listEnvsToUpgrade() ([]string, error) {
 	if !o.all {
 		return []string{o.name}, nil
