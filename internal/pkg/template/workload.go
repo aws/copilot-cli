@@ -28,6 +28,7 @@ var (
 	commonWorkloadCFTemplateNames = []string{
 		"loggroup",
 		"envvars",
+		"secrets",
 		"executionrole",
 		"taskrole",
 		"fargate-taskdef-base-properties",
@@ -40,6 +41,7 @@ var (
 		"eventrule",
 		"state-machine",
 		"state-machine-definition.json",
+		"env-controller",
 	}
 )
 
@@ -114,11 +116,12 @@ type WorkloadOpts struct {
 	Autoscaling *AutoscalingOpts
 
 	// Additional options for service templates.
-	HealthCheck        *ecs.HealthCheck
-	HTTPHealthCheck    *HTTPHealthCheckOpts
-	AllowedSourceIps   []string
-	RulePriorityLambda string
-	DesiredCountLambda string
+	HealthCheck         *ecs.HealthCheck
+	HTTPHealthCheck     HTTPHealthCheckOpts
+	AllowedSourceIps    []string
+	RulePriorityLambda  string
+	DesiredCountLambda  string
+	EnvControllerLambda string
 
 	// Additional options for job templates.
 	ScheduleExpression string

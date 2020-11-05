@@ -40,6 +40,9 @@ const (
 	envParamAppDNSDelegationRoleKey  = "AppDNSDelegationRole"
 
 	// Output keys.
+	EnvOutputVPCID               = "VpcId"
+	EnvOutputPublicSubnets       = "PublicSubnets"
+	EnvOutputPrivateSubnets      = "PrivateSubnets"
 	envOutputCFNExecutionRoleARN = "CFNExecutionRoleARN"
 	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
 

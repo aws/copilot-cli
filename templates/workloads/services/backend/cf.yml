@@ -44,6 +44,7 @@ Resources:
           Image: !Ref ContainerImage
           PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort}], !Ref "AWS::NoValue"]
 {{include "envvars" . | indent 10}}
+{{include "secrets" . | indent 10}}
 {{include "logconfig" . | indent 10}}
 {{- if .HealthCheck}}
           HealthCheck:

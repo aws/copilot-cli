@@ -20,5 +20,7 @@ do
 	sleep 1
 done
 
+echo $DOCKERHUB_TOKEN | docker login --password-stdin -u $DOCKERHUB_USERNAME
+
 #Run all the e2e tests
 cd /github.com/aws/copilot-cli/e2e/$TEST_SUITE && /go/bin/ginkgo -v -r

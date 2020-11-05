@@ -47,7 +47,7 @@ Creates a prod-iad environment using your "prod-admin" AWS profile using existin
 ```bash
 $ copilot env init --name prod-iad --profile prod-admin --prod \
 --import-vpc-id vpc-099c32d2b98cdcf47 \
---import-public-subnets subnet-013e8b691862966cf,subnet -014661ebb7ab8681a \
+--import-public-subnets subnet-013e8b691862966cf,subnet-014661ebb7ab8681a \
 --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f
 ```
 

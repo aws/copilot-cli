@@ -20,6 +20,8 @@ phases:
     commands:
       - ls -l
       - export COLOR="false"
+      # First, upgrade the cloudformation stack of every environment.
+      - ./copilot-linux env upgrade --all
       # Find all the local services in the workspace.
       - svcs=$(./copilot-linux svc ls --local --json | jq '.services[].name' | sed 's/"//g')
       # Find all the local jobs in the workspace.

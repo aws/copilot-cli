@@ -558,7 +558,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textPrivateSubnets, termprogress.StatusInProgress)),
 					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textRouteTables, termprogress.StatusInProgress)),
 					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textECSCluster, termprogress.StatusInProgress)),
-					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textALB, termprogress.StatusInProgress)),
 				})
 				m.EXPECT().Stop(log.Serrorf(fmtStreamEnvFailed, "test"))
 			},
@@ -797,6 +796,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Name:                     "test",
 					AppName:                  "phonetool",
 					ToolsAccountPrincipalARN: "some arn",
+					Version:                  deploy.LatestEnvTemplateVersion,
 				}).Return(&cloudformation.ErrStackAlreadyExists{})
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "1234",

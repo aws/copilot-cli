@@ -40,6 +40,7 @@ Resources:
         - Name: !Ref WorkloadName
           Image: !Ref ContainerImage
 {{include "envvars" . | indent 10}}
+{{include "secrets" . | indent 10}}
 {{include "logconfig" . | indent 10}}
 {{include "sidecars" . | indent 8}}
 {{include "executionrole" . | indent 2}}

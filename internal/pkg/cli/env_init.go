@@ -477,6 +477,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 		AdditionalTags:           app.Tags,
 		AdjustVPCConfig:          o.adjustVPCConfig(),
 		ImportVPCConfig:          o.importVPCConfig(),
+		Version:                  deploy.LatestEnvTemplateVersion,
 	}
 
 	o.prog.Start(fmt.Sprintf(fmtDeployEnvStart, color.HighlightUserInput(o.name)))
@@ -562,10 +563,6 @@ func (o *initEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.Resource
 		textECSCluster: func(event deploy.Resource) bool {
 			return event.Type == "AWS::ECS::Cluster"
 		},
-		textALB: func(event deploy.Resource) bool {
-			return strings.Contains(event.LogicalName, "LoadBalancer") ||
-				strings.Contains(event.Type, "ElasticLoadBalancingV2")
-		},
 	}
 	return termprogress.HumanizeResourceEvents(o.envProgressOrder(), resourceEvents, matcher, defaultResourceCounts)
 }
@@ -574,7 +571,7 @@ func (o *initEnvOpts) envProgressOrder() (order []termprogress.Text) {
 	if !o.importVPC.isSet() {
 		order = append(order, []termprogress.Text{textVPC, textInternetGateway, textPublicSubnets, textPrivateSubnets, textRouteTables}...)
 	}
-	order = append(order, []termprogress.Text{textECSCluster, textALB}...)
+	order = append(order, textECSCluster)
 	return
 }
 
