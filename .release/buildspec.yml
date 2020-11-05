@@ -25,6 +25,7 @@ phases:
       - VERSION=`./bin/local/copilot-linux-amd64 --version`
       - VERSION=`echo $VERSION | grep -oE "[^ ]+$"`
       - COMMIT_VERSION=`git rev-parse --short HEAD`
+      - GIT_TAG=`git tag --contains $COMMIT_VERSION`
       - echo "Creating version-tagged artifacts..."
       - ARTIFACT_DIRECTORY=aws/copilot
       - mkdir -p $ARTIFACT_DIRECTORY
@@ -33,6 +34,14 @@ phases:
       - cp ./bin/local/copilot-linux-amd64 $ARTIFACT_DIRECTORY/copilot-linux-$VERSION
       - mv ./bin/local/copilot-linux-amd64 $ARTIFACT_DIRECTORY/copilot-linux-amd64-$VERSION
       - mv ./bin/local/copilot-linux-arm64 $ARTIFACT_DIRECTORY/copilot-linux-arm64-$VERSION
+      - |
+        if [ ! -z "$GIT_TAG" ];then
+            echo "Generating latest binaries as well for $GIT_TAG"
+            cp $ARTIFACT_DIRECTORY/copilot-windows-$VERSION.exe $ARTIFACT_DIRECTORY/copilot-windows.exe
+            cp $ARTIFACT_DIRECTORY/copilot-darwin-$VERSION $ARTIFACT_DIRECTORY/copilot-darwin
+            cp $ARTIFACT_DIRECTORY/copilot-linux-$VERSION $ARTIFACT_DIRECTORY/copilot-linux
+            cp $ARTIFACT_DIRECTORY/copilot-linux-arm64-$VERSION $ARTIFACT_DIRECTORY/copilot-linux-arm64
+        fi
       - echo "Creating manifest file..."
       - COMMIT_ID=`git rev-parse HEAD`
       - MANIFESTFILE="$COMMIT_ID.manifest"
@@ -41,6 +50,14 @@ phases:
       - echo $ARTIFACT_DIRECTORY/copilot-linux-$VERSION >> $MANIFESTFILE
       - echo $ARTIFACT_DIRECTORY/copilot-linux-amd64-$VERSION >> $MANIFESTFILE
       - echo $ARTIFACT_DIRECTORY/copilot-linux-arm64-$VERSION >> $MANIFESTFILE
+      - |
+        if [ ! -z "$GIT_TAG" ];then
+            echo "Copying the latest binaries to the manifest for $GIT_TAG"
+            echo $ARTIFACT_DIRECTORY/copilot-windows.exe >> $MANIFESTFILE
+            echo $ARTIFACT_DIRECTORY/copilot-darwin >> $MANIFESTFILE
+            echo $ARTIFACT_DIRECTORY/copilot-linux >> $MANIFESTFILE
+            echo $ARTIFACT_DIRECTORY/copilot-linux-arm64 >> $MANIFESTFILE
+        fi
     finally:
       - echo "Built artifacts:"
       - ls -lah $ARTIFACT_DIRECTORY
