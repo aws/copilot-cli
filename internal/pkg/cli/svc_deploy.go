@@ -57,6 +57,7 @@ type deploySvcOpts struct {
 	appCFN             appResourcesGetter
 	svcCFN             cloudformation.CloudFormation
 	sessProvider       sessionProvider
+	envUpgradeCmd      actionCommand
 
 	spinner progress
 	sel     wsSelector
@@ -150,6 +151,10 @@ func (o *deploySvcOpts) Execute() error {
 
 	if err := o.configureClients(); err != nil {
 		return err
+	}
+
+	if err := o.envUpgradeCmd.Execute(); err != nil {
+		return fmt.Errorf(`execute "env upgrade --app %s --name %s": %v`, o.appName, o.targetEnvironment.Name, err)
 	}
 
 	if err := o.configureContainerImage(); err != nil {
@@ -263,6 +268,15 @@ func (o *deploySvcOpts) configureClients() error {
 		return fmt.Errorf("create default session: %w", err)
 	}
 	o.appCFN = cloudformation.New(defaultSess)
+
+	cmd, err := newEnvUpgradeOpts(envUpgradeVars{
+		appName: o.appName,
+		name:    o.targetEnvironment.Name,
+	})
+	if err != nil {
+		return fmt.Errorf("new env upgrade command: %v", err)
+	}
+	o.envUpgradeCmd = cmd
 	return nil
 }
 
