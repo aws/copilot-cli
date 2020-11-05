@@ -8,9 +8,13 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 const (
+	// DesiredStatusStopped represents the desired status "STOPPED" for a task.
+	DesiredStatusStopped = ecs.DesiredStatusStopped
+
 	fmtErrContainerStopped = "task %s: %s"
 )
 
