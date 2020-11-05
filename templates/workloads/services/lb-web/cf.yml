@@ -37,9 +37,9 @@ Parameters:
   Stickiness:
     Type: String
     Default: false
-  HasAllowedSourceIps:
-    Type: String
-    AllowedValues: [true, false]
+#  HasAllowedSourceIps:
+#    Type: String
+#    AllowedValues: [true, false]
 Conditions:
   HTTPLoadBalancer:
     !Not
@@ -48,8 +48,8 @@ Conditions:
     !Equals [!Ref HTTPSEnabled, true]
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
-  HasSourceIps:
-    !Equals [!Ref HasAllowedSourceIps, true]
+#  HasSourceIps:
+#    !Equals [!Ref HasAllowedSourceIps, true]
   HTTPRootPath: # If we're using path based routing and use the root path, we have some special logic
     !Equals [!Ref RulePath, "/"]
 Resources:
@@ -244,33 +244,21 @@ Resources:
           !Sub "${AppName}-${EnvName}-HTTPListenerArn"
 
   HTTPListenerRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Condition: HTTPLoadBalancer
-    Properties:
-      Actions:
-        - TargetGroupArn: !Ref TargetGroup
-          Type: forward
-      Conditions:
-        !If
-          - HasSourceIps
-          -
-            - Field: 'source-ip'
-              SourceIpConfig:
-                Values: {{.AllowedSourceIps}}
-          -
-            - !Ref "AWS::NoValue"
-      ListenerArn:
-        Fn::ImportValue:
-          !Sub "${AppName}-${EnvName}-HTTPListenerArn"
-      Priority: 1
-
-  HTTPListenerRule2:
       Type: AWS::ElasticLoadBalancingV2::ListenerRule
       Condition: HTTPLoadBalancer
       Properties:
         Actions:
           - TargetGroupArn: !Ref TargetGroup
             Type: forward
+#          {{- if .AllowedSourceIps}}
+#            Conditions:
+#            - Field: 'source-ip'
+#              SourceIpConfig:
+#                Values:
+#                {{- range $sourceIP := .AllowedSourceIps}}
+#                - $sourceIP
+#                {{- end}}
+#          {{- end}}
         Conditions:
           - Field: 'path-pattern'
             PathPatternConfig:
