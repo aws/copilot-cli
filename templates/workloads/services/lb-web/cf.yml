@@ -37,6 +37,9 @@ Parameters:
   Stickiness:
     Type: String
     Default: false
+  HasAllowedSourceIps:
+    Type: String
+    AllowedValues: [true, false]
 Conditions:
   HTTPLoadBalancer:
     !Not
@@ -45,6 +48,8 @@ Conditions:
     !Equals [!Ref HTTPSEnabled, true]
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
+  HasSourceIps:
+    !Equals [!Ref HasAllowedSourceIps, true]
   HTTPRootPath: # If we're using path based routing and use the root path, we have some special logic
     !Equals [!Ref RulePath, "/"]
 Resources:
@@ -246,27 +251,45 @@ Resources:
         - TargetGroupArn: !Ref TargetGroup
           Type: forward
       Conditions:
-        - Field: 'path-pattern'
-          PathPatternConfig:
-            Values:
-              !If
-                - HTTPRootPath
-                -
-                  - "/*"
-                -
-                  - !Sub "/${RulePath}"
-                  - !Sub "/${RulePath}/*"
-        - Field: 'source-ip'
-          SourceIpConfig:
-            Values:
+        !If
+          - HasSourceIps
+          -
+            - Field: 'source-ip'
+              SourceIpConfig:
+                Values: {{.AllowedSourceIps}}
+          -
+            - !Ref "AWS::NoValue"
       ListenerArn:
         Fn::ImportValue:
           !Sub "${AppName}-${EnvName}-HTTPListenerArn"
-      Priority: 
-        !If
-          - HTTPRootPath
-          - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
-          - !GetAtt HTTPRulePriorityAction.Priority
+      Priority: 1
+
+  HTTPListenerRule2:
+      Type: AWS::ElasticLoadBalancingV2::ListenerRule
+      Condition: HTTPLoadBalancer
+      Properties:
+        Actions:
+          - TargetGroupArn: !Ref TargetGroup
+            Type: forward
+        Conditions:
+          - Field: 'path-pattern'
+            PathPatternConfig:
+              Values:
+                !If
+                  - HTTPRootPath
+                  -
+                    - "/*"
+                  -
+                    - !Sub "/${RulePath}"
+                    - !Sub "/${RulePath}/*"
+        ListenerArn:
+          Fn::ImportValue:
+            !Sub "${AppName}-${EnvName}-HTTPListenerArn"
+        Priority:
+          !If
+            - HTTPRootPath
+            - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
+            - !GetAtt HTTPRulePriorityAction.Priority
 
   # Force a conditional dependency from the ECS service on the listener rules.
   # Our service depends on our HTTP/S listener to be set up before it can
