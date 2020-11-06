@@ -37,9 +37,6 @@ Parameters:
   Stickiness:
     Type: String
     Default: false
-#  HasAllowedSourceIps:
-#    Type: String
-#    AllowedValues: [true, false]
 Conditions:
   HTTPLoadBalancer:
     !Not
@@ -48,8 +45,6 @@ Conditions:
     !Equals [!Ref HTTPSEnabled, true]
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
-#  HasSourceIps:
-#    !Equals [!Ref HasAllowedSourceIps, true]
   HTTPRootPath: # If we're using path based routing and use the root path, we have some special logic
     !Equals [!Ref RulePath, "/"]
 Resources:
@@ -250,16 +245,15 @@ Resources:
       Actions:
         - TargetGroupArn: !Ref TargetGroup
           Type: forward
-          #          {{- if .AllowedSourceIps}}
-          #            Conditions:
-          #            - Field: 'source-ip'
-          #              SourceIpConfig:
-          #                Values:
-          #                {{- range $sourceIP := .AllowedSourceIps}}
-          #                - $sourceIP
-          #                {{- end}}
-          #          {{- end}}
       Conditions:
+      {{- if .AllowedSourceIps}}
+        - Field: 'source-ip'
+          SourceIpConfig:
+            Values:
+            {{- range $sourceIP := .AllowedSourceIps}}
+            - {{$sourceIP}}
+            {{- end}}
+            {{- end}}
         - Field: 'path-pattern'
           PathPatternConfig:
             Values:

@@ -23,13 +23,12 @@ const (
 
 // Parameter logical IDs for a load balanced web service.
 const (
-	LBWebServiceHTTPSParamKey               = "HTTPSEnabled"
-	LBWebServiceContainerPortParamKey       = "ContainerPort"
-	LBWebServiceRulePathParamKey            = "RulePath"
-	LBWebServiceTargetContainerParamKey     = "TargetContainer"
-	LBWebServiceTargetPortParamKey          = "TargetPort"
-	LBWebServiceStickinessParamKey          = "Stickiness"
-	LBWebServiceHasAllowedSourceIpsParamKey = "HasAllowedSourceIps"
+	LBWebServiceHTTPSParamKey           = "HTTPSEnabled"
+	LBWebServiceContainerPortParamKey   = "ContainerPort"
+	LBWebServiceRulePathParamKey        = "RulePath"
+	LBWebServiceTargetContainerParamKey = "TargetContainer"
+	LBWebServiceTargetPortParamKey      = "TargetPort"
+	LBWebServiceStickinessParamKey      = "Stickiness"
 )
 
 type loadBalancedWebSvcReadParser interface {
@@ -188,10 +187,6 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 		{
 			ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
 			ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.Stickiness))),
-		},
-		{
-			ParameterKey:   aws.String(LBWebServiceHasAllowedSourceIpsParamKey),
-			ParameterValue: aws.String(strconv.FormatBool(s.manifest.AllowedSourceIps != nil)),
 		},
 	}...), nil
 }
