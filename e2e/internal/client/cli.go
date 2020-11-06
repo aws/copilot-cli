@@ -35,6 +35,7 @@ type InitRequest struct {
 	Dockerfile   string
 	WorkloadType string
 	SvcPort      string
+	Schedule     string
 }
 
 // EnvInitRequest contains the parameters for calling copilot env init.
@@ -184,14 +185,23 @@ copilot init
 	--svc-type $type
 	--tag $t
 	--dockerfile $d
-	--port $port
 	--deploy (optionally)
+	--schedule $schedule (optionally)
+	--port $port (optionally)
 */
 func (cli *CLI) Init(opts *InitRequest) (string, error) {
 	var deployOption string
+	var scheduleOption string
+	var portOption string
 
 	if opts.Deploy {
 		deployOption = "--deploy"
+	}
+	if opts.Schedule != "" {
+		scheduleOption = "--schedule"
+	}
+	if opts.SvcPort != "" {
+		portOption = "--port"
 	}
 
 	return cli.exec(
@@ -201,8 +211,9 @@ func (cli *CLI) Init(opts *InitRequest) (string, error) {
 			"--type", opts.WorkloadType,
 			"--tag", opts.ImageTag,
 			"--dockerfile", opts.Dockerfile,
-			"--port", opts.SvcPort,
-			deployOption))
+			deployOption,
+			scheduleOption, opts.Schedule,
+			portOption, opts.SvcPort))
 }
 
 /*SvcInit runs:

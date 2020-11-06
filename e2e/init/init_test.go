@@ -16,8 +16,10 @@ import (
 var _ = Describe("init flow", func() {
 
 	var (
-		svcName string
-		initErr error
+		svcName    string
+		jobName    string
+		initErr    error
+		jobInitErr error
 	)
 
 	BeforeAll(func() {
@@ -31,11 +33,25 @@ var _ = Describe("init flow", func() {
 			Deploy:       true,
 			SvcPort:      "80",
 		})
+		jobName = "mailer"
+		_, jobInitErr = cli.Init(&client.InitRequest{
+			AppName:      appName,
+			WorkloadName: jobName,
+			ImageTag:     "thepostalservice",
+			Dockerfile:   "./job/Dockerfile",
+			WorkloadType: "Scheduled Job",
+			Deploy:       true,
+			Schedule:     "@every 5m",
+		})
 	})
 
-	Context("creating a brand new app, svc and deploying to a test environment", func() {
+	Context("creating a brand new app, svc, job, and deploying to a test environment", func() {
 		It("init does not return an error", func() {
 			Expect(initErr).NotTo(HaveOccurred())
+		})
+
+		It("init with job does not return an error", func() {
+			Expect(jobInitErr).NotTo(HaveOccurred())
 		})
 	})
 
@@ -57,6 +73,28 @@ var _ = Describe("init flow", func() {
 			Expect(len(svcList.Services)).To(Equal(1))
 			Expect(svcList.Services[0].Name).To(Equal(svcName))
 			Expect(svcList.Services[0].AppName).To(Equal(appName))
+		})
+
+	})
+
+	Context("job ls", func() {
+		var (
+			jobList    *client.JobListOutput
+			jobListErr error
+		)
+
+		BeforeAll(func() {
+			jobList, jobListErr = cli.JobList(appName)
+		})
+
+		It("should not return a job list error", func() {
+			Expect(jobListErr).NotTo(HaveOccurred())
+		})
+
+		It("should return one job", func() {
+			Expect(len(jobList.Jobs)).To(Equal(1))
+			Expect(jobList.Jobs[0].Name).To(Equal(jobName))
+			Expect(jobList.Jobs[0].AppName).To(Equal(appName))
 		})
 	})
 
