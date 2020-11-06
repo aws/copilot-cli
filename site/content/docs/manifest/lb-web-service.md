@@ -71,10 +71,14 @@ image:
   build:
     dockerfile: path/to/dockerfile
     context: context/dir
+    target: build-stage
+    cache_from:
+      - image:tag
     args:
       key: value
 ```
-In this case, copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be: `$ docker build --file path/to/dockerfile --build-arg key=value context/dir`.
+In this case, copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be:  
+`$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir`.
 
 You can omit fields and Copilot will do its best to understand what you mean. For example, if you specify `context` but not `dockerfile`, Copilot will run Docker in the context directory and assume that your Dockerfile is named "Dockerfile." If you specify `dockerfile` but no `context`, Copilot assumes you want to run Docker in the directory that contains `dockerfile`.
  
