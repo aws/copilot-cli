@@ -10,18 +10,18 @@ import (
 	"path/filepath"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/ecslogging"
+	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/docker"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -136,7 +136,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	opts.configureRuntimeOpts = func() error {
 		opts.runner = opts.configureRunner()
 		opts.deployer = cloudformation.New(opts.sess)
-		opts.defaultClusterGetter = ecs.New(opts.sess)
+		opts.defaultClusterGetter = awsecs.New(opts.sess)
 		return nil
 	}
 
@@ -152,14 +152,14 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	}
 
 	opts.configureEventsWriter = func(tasks []*task.Task) {
-		opts.eventsWriter = ecslogging.NewTaskClient(opts.sess, opts.groupName, tasks)
+		opts.eventsWriter = logging.NewTaskClient(opts.sess, opts.groupName, tasks)
 	}
 	return &opts, nil
 }
 
 func (o *runTaskOpts) configureRunner() taskRunner {
 	vpcGetter := ec2.New(o.sess)
-	ecsService := ecs.New(o.sess)
+	ecsService := awsecs.New(o.sess)
 
 	if o.env != "" {
 		return &task.EnvRunner{
@@ -170,7 +170,7 @@ func (o *runTaskOpts) configureRunner() taskRunner {
 			Env: o.env,
 
 			VPCGetter:     vpcGetter,
-			ClusterGetter: resourcegroups.New(o.sess),
+			ClusterGetter: ecs.New(o.sess),
 			Starter:       ecsService,
 		}
 	}

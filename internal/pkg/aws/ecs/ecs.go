@@ -78,26 +78,49 @@ func (e *ECS) Service(clusterName, serviceName string) (*Service, error) {
 	return nil, fmt.Errorf("cannot find service %s", serviceName)
 }
 
-// ServiceTasks calls ECS API and returns ECS tasks running in the cluster.
-func (e *ECS) ServiceTasks(clusterName, serviceName string) ([]*Task, error) {
+// ServiceTasks calls ECS API and returns ECS tasks running by a service.
+func (e *ECS) ServiceTasks(cluster, service string) ([]*Task, error) {
+	return e.listTasks(cluster, withService(service))
+}
+
+// FamilyTasks calls ECS API and returns ECS tasks in the same task definition family.
+func (e *ECS) FamilyTasks(cluster, family string) ([]*Task, error) {
+	return e.listTasks(cluster, withFamily(family))
+}
+
+type listTasksOpts func(*ecs.ListTasksInput)
+
+func withService(svcName string) listTasksOpts {
+	return func(in *ecs.ListTasksInput) {
+		in.ServiceName = aws.String(svcName)
+	}
+}
+
+func withFamily(family string) listTasksOpts {
+	return func(in *ecs.ListTasksInput) {
+		in.Family = aws.String(family)
+	}
+}
+
+func (e *ECS) listTasks(cluster string, opts ...listTasksOpts) ([]*Task, error) {
 	var tasks []*Task
-	var err error
-	listTaskResp := &ecs.ListTasksOutput{}
+	in := &ecs.ListTasksInput{
+		Cluster: aws.String(cluster),
+	}
+	for _, opt := range opts {
+		opt(in)
+	}
 	for {
-		listTaskResp, err = e.client.ListTasks(&ecs.ListTasksInput{
-			Cluster:     aws.String(clusterName),
-			ServiceName: aws.String(serviceName),
-			NextToken:   listTaskResp.NextToken,
-		})
+		listTaskResp, err := e.client.ListTasks(in)
 		if err != nil {
-			return nil, fmt.Errorf("list running tasks of service %s: %w", serviceName, err)
+			return nil, fmt.Errorf("list running tasks: %w", err)
 		}
 		descTaskResp, err := e.client.DescribeTasks(&ecs.DescribeTasksInput{
-			Cluster: aws.String(clusterName),
+			Cluster: aws.String(cluster),
 			Tasks:   listTaskResp.TaskArns,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("describe running tasks in cluster %s: %w", clusterName, err)
+			return nil, fmt.Errorf("describe running tasks in cluster %s: %w", cluster, err)
 		}
 		for _, task := range descTaskResp.Tasks {
 			t := Task(*task)
@@ -106,6 +129,7 @@ func (e *ECS) ServiceTasks(clusterName, serviceName string) ([]*Task, error) {
 		if listTaskResp.NextToken == nil {
 			break
 		}
+		in.NextToken = listTaskResp.NextToken
 	}
 	return tasks, nil
 }

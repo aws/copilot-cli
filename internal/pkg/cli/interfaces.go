@@ -16,8 +16,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
-	"github.com/aws/copilot-cli/internal/pkg/ecslogging"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
+	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -155,7 +155,7 @@ type repositoryService interface {
 }
 
 type logEventsWriter interface {
-	WriteLogEvents(opts ecslogging.WriteLogEventsOpts) error
+	WriteLogEvents(opts logging.WriteLogEventsOpts) error
 }
 
 type templater interface {

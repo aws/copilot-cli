@@ -7,7 +7,6 @@ package mocks
 import (
 	ec2 "github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	resourcegroups "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -92,42 +91,42 @@ func (mr *MockVPCGetterMockRecorder) PublicSubnetIDs(filters ...interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicSubnetIDs", reflect.TypeOf((*MockVPCGetter)(nil).PublicSubnetIDs), filters...)
 }
 
-// MockResourceGetter is a mock of ResourceGetter interface
-type MockResourceGetter struct {
+// MockClusterGetter is a mock of ClusterGetter interface
+type MockClusterGetter struct {
 	ctrl     *gomock.Controller
-	recorder *MockResourceGetterMockRecorder
+	recorder *MockClusterGetterMockRecorder
 }
 
-// MockResourceGetterMockRecorder is the mock recorder for MockResourceGetter
-type MockResourceGetterMockRecorder struct {
-	mock *MockResourceGetter
+// MockClusterGetterMockRecorder is the mock recorder for MockClusterGetter
+type MockClusterGetterMockRecorder struct {
+	mock *MockClusterGetter
 }
 
-// NewMockResourceGetter creates a new mock instance
-func NewMockResourceGetter(ctrl *gomock.Controller) *MockResourceGetter {
-	mock := &MockResourceGetter{ctrl: ctrl}
-	mock.recorder = &MockResourceGetterMockRecorder{mock}
+// NewMockClusterGetter creates a new mock instance
+func NewMockClusterGetter(ctrl *gomock.Controller) *MockClusterGetter {
+	mock := &MockClusterGetter{ctrl: ctrl}
+	mock.recorder = &MockClusterGetterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockResourceGetter) EXPECT() *MockResourceGetterMockRecorder {
+func (m *MockClusterGetter) EXPECT() *MockClusterGetterMockRecorder {
 	return m.recorder
 }
 
-// GetResourcesByTags mocks base method
-func (m *MockResourceGetter) GetResourcesByTags(resourceType string, tags map[string]string) ([]*resourcegroups.Resource, error) {
+// Cluster mocks base method
+func (m *MockClusterGetter) Cluster(app, env string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetResourcesByTags", resourceType, tags)
-	ret0, _ := ret[0].([]*resourcegroups.Resource)
+	ret := m.ctrl.Call(m, "Cluster", app, env)
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetResourcesByTags indicates an expected call of GetResourcesByTags
-func (mr *MockResourceGetterMockRecorder) GetResourcesByTags(resourceType, tags interface{}) *gomock.Call {
+// Cluster indicates an expected call of Cluster
+func (mr *MockClusterGetterMockRecorder) Cluster(app, env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResourcesByTags", reflect.TypeOf((*MockResourceGetter)(nil).GetResourcesByTags), resourceType, tags)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cluster", reflect.TypeOf((*MockClusterGetter)(nil).Cluster), app, env)
 }
 
 // MockDefaultClusterGetter is a mock of DefaultClusterGetter interface

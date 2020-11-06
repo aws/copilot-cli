@@ -203,7 +203,7 @@ func TestECS_Tasks(t *testing.T) {
 					ServiceName: aws.String("mockService"),
 				}).Return(nil, errors.New("some error"))
 			},
-			wantErr: fmt.Errorf("list running tasks of service mockService: some error"),
+			wantErr: fmt.Errorf("list running tasks: some error"),
 		},
 		"errors if failed to describe running tasks": {
 			clusterName: "mockCluster",

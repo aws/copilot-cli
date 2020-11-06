@@ -56,7 +56,7 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 	for _, container := range t.Containers {
 		images = append(images, Image{
 			ID:     aws.StringValue(container.Image),
-			Digest: t.imageDigest(aws.StringValue(container.ImageDigest)),
+			Digest: imageDigestValue(aws.StringValue(container.ImageDigest)),
 		})
 	}
 	return &TaskStatus{
@@ -68,13 +68,6 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 		StoppedAt:     stoppedAt,
 		StoppedReason: stoppedReason,
 	}, nil
-}
-
-// imageDigest returns the short image digest.
-// For example: sha256:18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7
-// becomes 18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7.
-func (t *Task) imageDigest(imageDigest string) string {
-	return strings.TrimPrefix(imageDigest, imageDigestPrefix)
 }
 
 // TaskStatus contains the status info of a task.
@@ -155,4 +148,11 @@ func taskHealthColor(status string) string {
 	default:
 		return status
 	}
+}
+
+// imageDigestValue strips the hash function prefix, such as "sha256:", from the digest.
+// For example: sha256:18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7
+// becomes 18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7.
+func imageDigestValue(digest string) string {
+	return strings.TrimPrefix(digest, imageDigestPrefix)
 }

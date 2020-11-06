@@ -63,8 +63,8 @@ type deleteJobOpts struct {
 	sess      sessionProvider
 	spinner   progress
 	appCFN    jobRemoverFromApp
-	getJobCFN func(session *awssession.Session) wlDeleter
-	getECR    func(session *awssession.Session) imageRemover
+	getJobCFN func(sess *awssession.Session) wlDeleter
+	getECR    func(sess *awssession.Session) imageRemover
 }
 
 func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
@@ -161,7 +161,7 @@ func (o *deleteJobOpts) Execute() error {
 		return err
 	}
 
-	if err := o.deleteStacks(envs); err != nil {
+	if err := o.deleteJobs(envs); err != nil {
 		return err
 	}
 
@@ -245,24 +245,31 @@ func (o *deleteJobOpts) appEnvironments() ([]*config.Environment, error) {
 	return envs, nil
 }
 
-func (o *deleteJobOpts) deleteStacks(envs []*config.Environment) error {
+func (o *deleteJobOpts) deleteJobs(envs []*config.Environment) error {
 	for _, env := range envs {
 		sess, err := o.sess.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return err
 		}
-
-		cfClient := o.getJobCFN(sess)
+		// Delete job stack
 		o.spinner.Start(fmt.Sprintf(fmtJobDeleteStart, o.name, env.Name))
-		if err := cfClient.DeleteWorkload(deploy.DeleteWorkloadInput{
-			Name:    o.name,
-			EnvName: env.Name,
-			AppName: o.appName,
-		}); err != nil {
+		if err = o.deleteStack(sess, env.Name); err != nil {
 			o.spinner.Stop(log.Serrorf(fmtJobDeleteFailed, o.name, env.Name, err))
-			return fmt.Errorf("delete job: %w", err)
+			return err
 		}
 		o.spinner.Stop(log.Ssuccessf(fmtJobDeleteComplete, o.name, env.Name))
+	}
+	return nil
+}
+
+func (o *deleteJobOpts) deleteStack(sess *awssession.Session, env string) error {
+	cfClient := o.getJobCFN(sess)
+	if err := cfClient.DeleteWorkload(deploy.DeleteWorkloadInput{
+		Name:    o.name,
+		EnvName: env,
+		AppName: o.appName,
+	}); err != nil {
+		return fmt.Errorf("delete job stack: %w", err)
 	}
 	return nil
 }

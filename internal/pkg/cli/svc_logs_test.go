@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/ecslogging"
+	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
 	"github.com/golang/mock/gomock"
@@ -277,7 +277,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 
 			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
 				m := mocks.NewMocklogEventsWriter(ctrl)
-				m.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param ecslogging.WriteLogEventsOpts) {
+				m.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param logging.WriteLogEventsOpts) {
 					require.Equal(t, param.TaskIDs, []string{"mockTaskID"})
 					require.Equal(t, param.EndTime, &mockEndTime)
 					require.Equal(t, param.StartTime, &mockStartTime)
@@ -299,7 +299,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 
 			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
 				m := mocks.NewMocklogEventsWriter(ctrl)
-				m.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param ecslogging.WriteLogEventsOpts) {
+				m.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param logging.WriteLogEventsOpts) {
 					require.Equal(t, param.TaskIDs, []string{"mockTaskID"})
 					require.Equal(t, param.EndTime, &mockEndTime)
 					require.Equal(t, param.StartTime, &mockStartTime)
