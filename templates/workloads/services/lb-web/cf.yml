@@ -253,7 +253,7 @@ Resources:
             {{- range $sourceIP := .AllowedSourceIps}}
             - {{$sourceIP}}
             {{- end}}
-            {{- end}}
+      {{- end}}
         - Field: 'path-pattern'
           PathPatternConfig:
             Values:
