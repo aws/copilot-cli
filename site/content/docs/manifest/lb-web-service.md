@@ -136,6 +136,10 @@ Indicates whether sticky sessions are enabled.
 
 <span class="parent-field">http.</span><a id="http-allowed-source-ips" href="#http-allowed-source-ips" class="field">`allowed_source_ips`</a> <span class="type">Array of Strings</span>  
 CIDR IP addresses permitted to access your service.
+```yaml
+http:
+  allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
+```
 
 <div class="separator"></div>
 
