@@ -115,8 +115,9 @@ type RoutingRule struct {
 	HealthCheck HealthCheckArgsOrString `yaml:"healthcheck"`
 	Stickiness  *bool                   `yaml:"stickiness"`
 	// TargetContainer is the container load balancer routes traffic to.
-	TargetContainer          *string `yaml:"target_container"`
-	TargetContainerCamelCase *string `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
+	TargetContainer          *string  `yaml:"target_container"`
+	TargetContainerCamelCase *string  `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
+	AllowedSourceIps         []string `yaml:"allowed_source_ips"`
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.

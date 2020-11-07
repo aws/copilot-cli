@@ -116,10 +116,10 @@ http:
     timeout: 10s
 ```
 
-<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-healthy_threshold" href="#http-healthcheck-healthy_threshold" class="field">`healthyThreshold`</a> <span class="type">Integer</span>  
+<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-healthy-threshold" href="#http-healthcheck-healthy-threshold" class="field">`healthy_threshold`</a> <span class="type">Integer</span>  
 The number of consecutive health check successes required before considering an unhealthy target healthy. The Copilot default is 2. Range: 2-10. 
 
-<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-unhealthy_threshold" href="#http-healthcheck-unhealthy_threshold" class="field">`unhealthyThreshold`</a> <span class="type">Integer</span>  
+<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-unhealthy-threshold" href="#http-healthcheck-unhealthy-threshold" class="field">`unhealthy_threshold`</a> <span class="type">Integer</span>  
 The number of consecutive health check failures required before considering a target unhealthy. The Copilot default is 2. Range: 2-10.
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-interval" href="#http-healthcheck-interval" class="field">`interval`</a> <span class="type">Duration</span>  
@@ -128,11 +128,18 @@ The approximate amount of time, in seconds, between health checks of an individu
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-timeout" href="#http-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
 The amount of time, in seconds, during which no response from a target means a failed health check. The Copilot default is 5s. Range 5s-300s.
  
-<span class="parent-field">http.</span><a id="http-target_container" href="#http-target_container" class="field">`targetContainer`</a> <span class="type">String</span>  
+<span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>  
 A sidecar container that takes the place of a service container.
                                  
 <span class="parent-field">http.</span><a id="http-stickiness" href="#http-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
 Indicates whether sticky sessions are enabled.
+
+<span class="parent-field">http.</span><a id="http-allowed-source-ips" href="#http-allowed-source-ips" class="field">`allowed_source_ips`</a> <span class="type">Array of Strings</span>  
+CIDR IP addresses permitted to access your service.
+```yaml
+http:
+  allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
+```
 
 <div class="separator"></div>
 
