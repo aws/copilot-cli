@@ -30,6 +30,15 @@ Resources:
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for env ls
         - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for service package
+      Policies:
+        - PolicyName: assume-env-manager
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Resource: 'arn:aws:iam::1111:role/phonetool-test-EnvManagerRole'
+              Action:
+              - sts:AssumeRole
   BuildProjectPolicy:
     Type: AWS::IAM::Policy
     DependsOn: BuildProjectRole
