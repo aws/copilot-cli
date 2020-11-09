@@ -16,6 +16,7 @@
         "PlatformVersion": "LATEST",
         "Cluster": "${Cluster}",
         "TaskDefinition": "${TaskDefinition}",
+        "PropagateTags": "TASK_DEFINITION",
         "Group.$": "$$.Execution.Name",
         "NetworkConfiguration": {
           "AwsvpcConfiguration": {

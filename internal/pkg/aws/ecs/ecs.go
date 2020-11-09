@@ -7,31 +7,14 @@ package ecs
 import (
 	"errors"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"github.com/dustin/go-humanize"
 )
-
-const (
-	shortTaskIDLength      = 8
-	shortImageDigestLength = 8
-	imageDigestPrefix      = "sha256:"
-
-	// DesiredStatusStopped represents the desired status "STOPPED" for a task.
-	DesiredStatusStopped = ecs.DesiredStatusStopped
-)
-
-// humanizeTime is overriden in tests so that its output is constant as time passes.
-var humanizeTime = humanize.Time
 
 type api interface {
 	DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.DescribeTasksOutput, error)
@@ -46,84 +29,6 @@ type api interface {
 // ECS wraps an AWS ECS client.
 type ECS struct {
 	client api
-}
-
-// TaskDefinition wraps up ECS TaskDefinition struct.
-type TaskDefinition ecs.TaskDefinition
-
-// Service wraps up ECS Service struct.
-type Service ecs.Service
-
-// Task wraps up ECS Task struct.
-type Task ecs.Task
-
-// ServiceStatus contains the status info of a service.
-type ServiceStatus struct {
-	DesiredCount     int64     `json:"desiredCount"`
-	RunningCount     int64     `json:"runningCount"`
-	Status           string    `json:"status"`
-	LastDeploymentAt time.Time `json:"lastDeploymentAt"`
-	TaskDefinition   string    `json:"taskDefinition"`
-}
-
-// TaskStatus contains the status info of a task.
-type TaskStatus struct {
-	Health        string    `json:"health"`
-	ID            string    `json:"id"`
-	Images        []Image   `json:"images"`
-	LastStatus    string    `json:"lastStatus"`
-	StartedAt     time.Time `json:"startedAt"`
-	StoppedAt     time.Time `json:"stoppedAt"`
-	StoppedReason string    `json:"stoppedReason"`
-}
-
-// HumanString returns the stringified TaskStatus struct with human readable format.
-// Example output:
-//   6ca7a60d          f884127d            RUNNING             UNKNOWN             19 hours ago        -
-func (t TaskStatus) HumanString() string {
-	var digest []string
-	imageDigest := "-"
-	for _, image := range t.Images {
-		if len(image.Digest) < shortImageDigestLength {
-			continue
-		}
-		digest = append(digest, image.Digest[:shortImageDigestLength])
-	}
-	if len(digest) != 0 {
-		imageDigest = strings.Join(digest, ",")
-	}
-	startedSince := "-"
-	if !t.StartedAt.IsZero() {
-		startedSince = humanizeTime(t.StartedAt)
-	}
-	stoppedSince := "-"
-	if !t.StoppedAt.IsZero() {
-		stoppedSince = humanizeTime(t.StoppedAt)
-	}
-	shortTaskID := "-"
-	if len(t.ID) >= shortTaskIDLength {
-		shortTaskID = t.ID[:shortTaskIDLength]
-	}
-	return fmt.Sprintf("  %s\t%s\t%s\t%s\t%s\t%s\n", shortTaskID, imageDigest, t.LastStatus, startedSince, stoppedSince, taskHealthColor(t.Health))
-}
-
-func taskHealthColor(status string) string {
-	switch status {
-	case "HEALTHY":
-		return color.Green.Sprint(status)
-	case "UNHEALTHY":
-		return color.Red.Sprint(status)
-	case "UNKNOWN":
-		return color.Yellow.Sprint(status)
-	default:
-		return status
-	}
-}
-
-// Image contains very basic info of a container image.
-type Image struct {
-	ID     string
-	Digest string
 }
 
 // RunTaskInput holds the fields needed to run tasks.
@@ -279,13 +184,6 @@ func (e *ECS) RunTask(input RunTaskInput) ([]*Task, error) {
 	return tasks, nil
 }
 
-func isRequestTimeoutErr(err error) bool {
-	if aerr, ok := err.(awserr.Error); ok {
-		return aerr.Code() == request.WaiterResourceNotReadyErrorCode
-	}
-	return false
-}
-
 // DescribeTasks returns the tasks with the taskARNs in the cluster.
 func (e *ECS) DescribeTasks(cluster string, taskARNs []string) ([]*Task, error) {
 	resp, err := e.client.DescribeTasks(&ecs.DescribeTasksInput{
@@ -304,114 +202,9 @@ func (e *ECS) DescribeTasks(cluster string, taskARNs []string) ([]*Task, error) 
 	return tasks, nil
 }
 
-// TaskStatus returns the status of the running task.
-func (t *Task) TaskStatus() (*TaskStatus, error) {
-	taskID, err := TaskID(aws.StringValue(t.TaskArn))
-	if err != nil {
-		return nil, err
+func isRequestTimeoutErr(err error) bool {
+	if aerr, ok := err.(awserr.Error); ok {
+		return aerr.Code() == request.WaiterResourceNotReadyErrorCode
 	}
-	var startedAt, stoppedAt time.Time
-	var stoppedReason string
-
-	if t.StoppedAt != nil {
-		stoppedAt = *t.StoppedAt
-	}
-	if t.StartedAt != nil {
-		startedAt = *t.StartedAt
-	}
-	if t.StoppedReason != nil {
-		stoppedReason = aws.StringValue(t.StoppedReason)
-	}
-	var images []Image
-	for _, container := range t.Containers {
-		images = append(images, Image{
-			ID:     aws.StringValue(container.Image),
-			Digest: t.imageDigest(aws.StringValue(container.ImageDigest)),
-		})
-	}
-	return &TaskStatus{
-		Health:        aws.StringValue(t.HealthStatus),
-		ID:            taskID,
-		Images:        images,
-		LastStatus:    aws.StringValue(t.LastStatus),
-		StartedAt:     startedAt,
-		StoppedAt:     stoppedAt,
-		StoppedReason: stoppedReason,
-	}, nil
-}
-
-// imageDigest returns the short image digest.
-// For example: sha256:18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7
-// becomes 18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7.
-func (t *Task) imageDigest(imageDigest string) string {
-	return strings.TrimPrefix(imageDigest, imageDigestPrefix)
-}
-
-// ServiceStatus returns the status of the running service.
-func (s *Service) ServiceStatus() ServiceStatus {
-	return ServiceStatus{
-		Status:           aws.StringValue(s.Status),
-		DesiredCount:     aws.Int64Value(s.DesiredCount),
-		RunningCount:     aws.Int64Value(s.RunningCount),
-		LastDeploymentAt: *s.Deployments[0].UpdatedAt, // FIXME Service assumed to have at least one deployment
-		TaskDefinition:   aws.StringValue(s.Deployments[0].TaskDefinition),
-	}
-}
-
-// EnvironmentVariables returns environment variables of the task definition.
-func (t *TaskDefinition) EnvironmentVariables() map[string]string {
-	envs := make(map[string]string)
-	for _, env := range t.ContainerDefinitions[0].Environment {
-		envs[aws.StringValue(env.Name)] = aws.StringValue(env.Value)
-	}
-	return envs
-}
-
-// ServiceArn is the arn of an ECS service.
-type ServiceArn string
-
-// ClusterName returns the cluster name.
-// For example: arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-myService-JSOH5GYBFAIB
-// will return my-project-test-Cluster-9F7Y0RLP60R7
-func (s *ServiceArn) ClusterName() (string, error) {
-	serviceArn := string(*s)
-	parsedArn, err := arn.Parse(serviceArn)
-	if err != nil {
-		return "", err
-	}
-	resources := strings.Split(parsedArn.Resource, "/")
-	if len(resources) != 3 {
-		return "", fmt.Errorf("cannot parse resource for ARN %s", serviceArn)
-	}
-	return resources[1], nil
-}
-
-// ServiceName returns the service name.
-// For example: arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-myService-JSOH5GYBFAIB
-// will return my-project-test-myService-JSOH5GYBFAIB
-func (s *ServiceArn) ServiceName() (string, error) {
-	serviceArn := string(*s)
-	parsedArn, err := arn.Parse(serviceArn)
-	if err != nil {
-		return "", err
-	}
-	resources := strings.Split(parsedArn.Resource, "/")
-	if len(resources) != 3 {
-		return "", fmt.Errorf("cannot parse resource for ARN %s", serviceArn)
-	}
-	return resources[2], nil
-}
-
-// TaskID parses the task ARN and returns the task ID.
-// For example: arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d,
-// arn:aws:ecs:us-west-2:123456789:task/4082490ee6c245e09d2145010aa1ba8d
-// return 4082490ee6c245e09d2145010aa1ba8d.
-func TaskID(taskARN string) (string, error) {
-	parsedARN, err := arn.Parse(taskARN)
-	if err != nil {
-		return "", fmt.Errorf("parse ECS task ARN: %w", err)
-	}
-	resources := strings.Split(parsedARN.Resource, "/")
-	taskID := resources[len(resources)-1]
-	return taskID, nil
+	return false
 }
