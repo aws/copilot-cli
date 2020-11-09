@@ -38,7 +38,7 @@ var _ = Describe("init flow", func() {
 			AppName:      appName,
 			WorkloadName: jobName,
 			ImageTag:     "thepostalservice",
-			Dockerfile:   "./job/Dockerfile",
+			Dockerfile:   "./mailer/Dockerfile",
 			WorkloadType: "Scheduled Job",
 			Deploy:       true,
 			Schedule:     "@every 5m",
