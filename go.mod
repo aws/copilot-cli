@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/AlecAivazis/survey/v2 v2.2.2
 	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
-	github.com/aws/aws-sdk-go v1.35.19
+	github.com/aws/aws-sdk-go v1.35.23
 	github.com/awslabs/goformation/v4 v4.15.2
 	github.com/briandowns/spinner v1.11.1
 	github.com/dustin/go-humanize v1.0.0
