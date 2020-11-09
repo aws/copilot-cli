@@ -118,6 +118,7 @@ type WorkloadOpts struct {
 	// Additional options for service templates.
 	HealthCheck         *ecs.HealthCheck
 	HTTPHealthCheck     HTTPHealthCheckOpts
+	AllowedSourceIps    []string
 	RulePriorityLambda  string
 	DesiredCountLambda  string
 	EnvControllerLambda string
