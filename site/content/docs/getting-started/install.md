@@ -13,19 +13,33 @@ Copy and paste the command into your terminal.
 
     | Command to install    |
     | :---------- |
-    | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.5.0/copilot-darwin-v0.5.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
-
-=== "Linux"
+    | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-darwin && chmod +x /usr/local/bin/copilot && copilot --help` |
+    
+=== "Linux x86 (64-bit)"
 
     | Command to install    |
     | :---------- |
-    | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.5.0/copilot-linux-v0.5.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
+    | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux && chmod +x /usr/local/bin/copilot && copilot --help` |
+    
+=== "Linux (ARM)"
+    
+    | Command to install    |
+    | :---------- |
+    | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux-arm64 && chmod +x /usr/local/bin/copilot && copilot --help` |
+
 
 === "Windows"
 
     | Command to install    |
     | :---------- |
-    | `Invoke-WebRequest -OutFile 'C:\Program Files\copilot.exe' https://github.com/aws/copilot-cli/releases/download/v0.5.0/copilot-windows-v0.5.0.exe` |
+    | `Invoke-WebRequest -OutFile 'C:\Program Files\copilot.exe' https://github.com/aws/copilot-cli/releases/latest/download/copilot-windows.exe` |
 
-    !!! note
+    !!! tip
         Please use the [Windows Terminal](https://github.com/microsoft/terminal) to have the best user experience. If you encounter permissions issues, ensure that you are running your terminal as an administrator.
+
+
+!!! info
+    To download a specific version, replace "latest" with the specific version. For example, to download v0.6.0 on macOS, type:
+    ```
+    curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.6.0/copilot-darwin && chmod +x /usr/local/bin/copilot && copilot --help
+    ```
