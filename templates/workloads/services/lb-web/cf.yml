@@ -246,6 +246,14 @@ Resources:
         - TargetGroupArn: !Ref TargetGroup
           Type: forward
       Conditions:
+      {{- if .AllowedSourceIps}}
+        - Field: 'source-ip'
+          SourceIpConfig:
+            Values:
+            {{- range $sourceIP := .AllowedSourceIps}}
+            - {{$sourceIP}}
+            {{- end}}
+      {{- end}}
         - Field: 'path-pattern'
           PathPatternConfig:
             Values:
