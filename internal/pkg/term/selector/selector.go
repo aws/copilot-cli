@@ -32,6 +32,8 @@ const (
 )
 
 const (
+	// dockerfilePromptUseCustom is the option for using Dockerfile with custom path.
+	dockerfilePromptUseCustom = "Enter custom path for your Dockerfile"
 	// DockerfilePromptUseImage is the option for using existing image instead of Dockerfile.
 	DockerfilePromptUseImage = "Use an existing image instead"
 
@@ -510,27 +512,23 @@ func (s *WorkspaceSelect) retrieveWorkspaceWorkloads() ([]string, error) {
 // directory or one level down. If no dockerfiles are found, it asks for a custom path.
 func (s *WorkspaceSelect) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
 	dockerfiles, err := s.ws.ListDockerfiles()
-	// If Dockerfiles are found in the current directory or subdirectory one level down, ask the user to select one.
+	if err != nil {
+		return "", fmt.Errorf("list Dockerfiles: %w", err)
+	}
 	var sel string
-	if err == nil {
-		dockerfiles = append(dockerfiles, DockerfilePromptUseImage)
-		sel, err = s.prompt.SelectOne(
-			selPrompt,
-			selHelp,
-			dockerfiles,
-			prompt.WithFinalMessage("Dockerfile:"),
-		)
-		if err != nil {
-			return "", fmt.Errorf("select Dockerfile: %w", err)
-		}
+	dockerfiles = append(dockerfiles, []string{dockerfilePromptUseCustom, DockerfilePromptUseImage}...)
+	sel, err = s.prompt.SelectOne(
+		selPrompt,
+		selHelp,
+		dockerfiles,
+		prompt.WithFinalMessage("Dockerfile:"),
+	)
+	if err != nil {
+		return "", fmt.Errorf("select Dockerfile: %w", err)
+	}
+	if sel != dockerfilePromptUseCustom {
 		return sel, nil
 	}
-
-	var notExistErr *workspace.ErrDockerfileNotFound
-	if !errors.As(err, &notExistErr) {
-		return "", err
-	}
-	// If no Dockerfiles were found, prompt user for custom path.
 	sel, err = s.prompt.Get(
 		notFoundPrompt,
 		notFoundHelp,
