@@ -1242,12 +1242,15 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 		},
 		"prompts user for custom path": {
 			mockWs: func(m *mocks.MockWorkspaceRetriever) {
-				m.EXPECT().ListDockerfiles().Return(dockerfiles, nil)
+				m.EXPECT().ListDockerfiles().Return([]string{}, nil)
 			},
 			mockPrompt: func(m *mocks.MockPrompter) {
 				m.EXPECT().SelectOne(
 					gomock.Any(), gomock.Any(),
-					gomock.Eq(dockerfileOptions),
+					gomock.Eq([]string{
+						"Enter custom path for your Dockerfile",
+						"Use an existing image instead",
+					}),
 					gomock.Any(),
 				).Return("Enter custom path for your Dockerfile", nil)
 				m.EXPECT().Get(
