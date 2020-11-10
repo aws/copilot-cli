@@ -38,6 +38,7 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	_, err = cli.JobDelete("mailer")
+	Expect(err).NotTo(HaveOccurred())
 
 	_, err = cli.EnvDelete("test")
 	Expect(err).NotTo(HaveOccurred())
