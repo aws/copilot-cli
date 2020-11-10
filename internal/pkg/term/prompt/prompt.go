@@ -51,7 +51,7 @@ func init() {
   {{- end}}
 {{- end}}`
 
-	survey.InputQuestionTemplate = `{{if not .Answer}}
+	survey.InputQuestionTemplate = `{{if not .ShowAnswer}}
 {{end}}
 {{- if .ShowHelp }}{{- color .Config.Icons.Help.Format }}{{ .Config.Icons.Help.Text }}{{$lines := split .Help "\n"}}{{range $i, $line := $lines}}
 {{- if eq $i 0}}  {{ $line }}
@@ -64,6 +64,7 @@ func init() {
 {{- else }}
   {{- if and .Help (not .ShowHelp)}}{{color "white"}}[{{ print .Config.HelpInput }} for help]{{color "reset"}} {{end}}
   {{- if .Default}}{{color "default"}}({{.Default}}) {{color "reset"}}{{end}}
+  {{- .Answer -}}
 {{- end}}`
 
 	survey.PasswordQuestionTemplate = `
