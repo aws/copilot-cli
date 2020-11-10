@@ -13,26 +13,26 @@ Copy and paste the command into your terminal.
 
     | Command to install    |
     | :---------- |
-    | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/latest/copilot-darwin && chmod +x /usr/local/bin/copilot && copilot --help` |
+    | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-darwin && chmod +x /usr/local/bin/copilot && copilot --help` |
     
 === "Linux x86 (64-bit)"
 
     | Command to install    |
     | :---------- |
-    | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/latest/copilot-linux && chmod +x /usr/local/bin/copilot && copilot --help` |
+    | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux && chmod +x /usr/local/bin/copilot && copilot --help` |
     
 === "Linux (ARM)"
     
     | Command to install    |
     | :---------- |
-    | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/latest/copilot-linux-arm64 && chmod +x /usr/local/bin/copilot && copilot --help` |
+    | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux-arm64 && chmod +x /usr/local/bin/copilot && copilot --help` |
 
 
 === "Windows"
 
     | Command to install    |
     | :---------- |
-    | `Invoke-WebRequest -OutFile 'C:\Program Files\copilot.exe' https://github.com/aws/copilot-cli/releases/download/latest/copilot-windows.exe` |
+    | `Invoke-WebRequest -OutFile 'C:\Program Files\copilot.exe' https://github.com/aws/copilot-cli/releases/latest/download/copilot-windows.exe` |
 
     !!! tip
         Please use the [Windows Terminal](https://github.com/microsoft/terminal) to have the best user experience. If you encounter permissions issues, ensure that you are running your terminal as an administrator.
