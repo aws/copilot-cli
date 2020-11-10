@@ -165,17 +165,17 @@ The AWS Copilot CLI executables are cryptographically signed using PGP signature
     === "macOS"
         For macOS systems, run the following command.
 
-        `sudo curl -Lo copilot.asc https://github.com/aws/copilot-cli/releases/download/v0.5.0/copilot-darwin-v0.5.0.asc`
+        `sudo curl -Lo copilot.asc https://github.com/aws/copilot-cli/releases/download/latest/copilot-darwin.asc`
 
     === "Linux"
         For Linux systems, run the following command.
 
-        `sudo curl -Lo copilot.asc https://github.com/aws/copilot-cli/releases/download/v0.5.0/copilot-linux-v0.5.0.asc`
+        `sudo curl -Lo copilot.asc https://github.com/aws/copilot-cli/releases/download/latest/copilot-linux.asc`
 
     === "Windows"
         For Windows systems, run the following command.
 
-        `Invoke-WebRequest -OutFile ecs-cli.asc https://github.com/aws/copilot-cli/releases/download/v0.5.0/copilot-windows-v0.5.0.exe`
+        `Invoke-WebRequest -OutFile ecs-cli.asc https://github.com/aws/copilot-cli/releases/download/latest/copilot-windows.exe`
 
 4. Verify the signature with the following command.
     * For macOS and Linux systems:
