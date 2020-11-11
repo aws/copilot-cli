@@ -14,8 +14,8 @@ image:
   port: 80
 
 http:
-  # Requests to this path will be forwarded to your service. 
-  # To match all requests you can use the "/" path. 
+  # Requests to this path will be forwarded to your service.
+  # To match all requests you can use the "/" path.
   path: '/'
 
   # You can specify a custom health check path. The default is "/"
@@ -63,7 +63,7 @@ If you specify a string, Copilot interprets it as the path to your Dockerfile. I
 image:
   build: path/to/dockerfile
 ```
-will result in the following call to docker build: `$ docker build --file path/to/dockerfile path/to` 
+will result in the following call to docker build: `$ docker build --file path/to/dockerfile path/to`
 
 You can also specify build as a map:
 ```yaml
@@ -81,8 +81,8 @@ In this case, copilot will use the context directory you specified and convert t
 `$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir`.
 
 You can omit fields and Copilot will do its best to understand what you mean. For example, if you specify `context` but not `dockerfile`, Copilot will run Docker in the context directory and assume that your Dockerfile is named "Dockerfile." If you specify `dockerfile` but no `context`, Copilot assumes you want to run Docker in the directory that contains `dockerfile`.
- 
-All paths are relative to your workspace root. 
+
+All paths are relative to your workspace root.
 
 <span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>  
 Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).    
@@ -117,7 +117,7 @@ http:
 ```
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-healthy-threshold" href="#http-healthcheck-healthy-threshold" class="field">`healthy_threshold`</a> <span class="type">Integer</span>  
-The number of consecutive health check successes required before considering an unhealthy target healthy. The Copilot default is 2. Range: 2-10. 
+The number of consecutive health check successes required before considering an unhealthy target healthy. The Copilot default is 2. Range: 2-10.
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-unhealthy-threshold" href="#http-healthcheck-unhealthy-threshold" class="field">`unhealthy_threshold`</a> <span class="type">Integer</span>  
 The number of consecutive health check failures required before considering a target unhealthy. The Copilot default is 2. Range: 2-10.
@@ -127,10 +127,10 @@ The approximate amount of time, in seconds, between health checks of an individu
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-timeout" href="#http-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
 The amount of time, in seconds, during which no response from a target means a failed health check. The Copilot default is 5s. Range 5s-300s.
- 
+
 <span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>  
 A sidecar container that takes the place of a service container.
-                                 
+
 <span class="parent-field">http.</span><a id="http-stickiness" href="#http-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
 Indicates whether sticky sessions are enabled.
 
@@ -166,6 +166,8 @@ count:
   range: 1-10
   cpu_percentage: 70
   memory_percentage: 80
+  requests: 10000
+  response_time: 2s
 ```
 
 
@@ -178,6 +180,12 @@ Scale up or down based on the average CPU your service should maintain.
 <span class="parent-field">count.</span><a id="count-memory-percentage" href="#count-memory-percentage" class="field">`memory_percentage`</a> <span class="type">Integer</span>  
 Scale up or down based on the average memory your service should maintain.  
 
+<span class="parent-field">count.</span><a id="requests" href="#count-requests" class="field">`requests`</a> <span class="type">Integer</span>  
+Scale up or down based on the request count handled per tasks.
+
+<span class="parent-field">count.</span><a id="response_time" href="#count-response_time" class="field">`response_time`</a> <span class="type">Integer</span>  
+Scale up or down based on the service average response time.
+
 <div class="separator"></div>
 
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>   
@@ -186,7 +194,7 @@ Key-value pairs that represents environment variables that will be passed to you
 <div class="separator"></div>
 
 <a id="secrets" href="#secrets" class="field">`secrets`</a> <span class="type">Map</span>   
-Key-value pairs that represents secret values from [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) that will passed to your service as environment variables securely. 
+Key-value pairs that represents secret values from [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) that will passed to your service as environment variables securely.
 
 <div class="separator"></div>
 

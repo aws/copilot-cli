@@ -61,7 +61,7 @@ If you specify a string, Copilot interprets it as the path to your Dockerfile. I
 image:
   build: path/to/dockerfile
 ```
-will result in the following call to docker build: `$ docker build --file path/to/dockerfile path/to` 
+will result in the following call to docker build: `$ docker build --file path/to/dockerfile path/to`
 
 You can also specify build as a map:
 ```yaml
@@ -79,8 +79,8 @@ In this case, copilot will use the context directory you specified and convert t
 `$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir`.
 
 You can omit fields and Copilot will do its best to understand what you mean. For example, if you specify `context` but not `dockerfile`, Copilot will run Docker in the context directory and assume that your Dockerfile is named "Dockerfile." If you specify `dockerfile` but no `context`, Copilot assumes you want to run Docker in the directory that contains `dockerfile`.
- 
-All paths are relative to your workspace root. 
+
+All paths are relative to your workspace root.
 
 <span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>  
 Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).    
@@ -95,7 +95,7 @@ Optional configuration for container health checks.
 
 <span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-cmd" href="#image-healthcheck-cmd" class="field">`command`</a> <span class="type">Array of Strings</span>  
 The command to run to determine if the container is healthy.  
-The string array can start with `CMD` to execute the command arguments directly, or `CMD-SHELL` to run the command with the container's default shell. 
+The string array can start with `CMD` to execute the command arguments directly, or `CMD-SHELL` to run the command with the container's default shell.
 
 <span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-interval" href="#image-healthcheck-interval" class="field">`interval`</a> <span class="type">Duration</span>  
 Time period between healthchecks in seconds. Default is 10s.
@@ -134,6 +134,8 @@ count:
   range: 1-10
   cpu_percentage: 70
   memory_percentage: 80
+  requests: 10000
+  response_time: 2s
 ```
 
 
@@ -146,6 +148,12 @@ Scale up or down based on the average CPU your service should maintain.
 <span class="parent-field">count.</span><a id="count-memory-percentage" href="#count-memory-percentage" class="field">`memory_percentage`</a> <span class="type">Integer</span>  
 Scale up or down based on the average memory your service should maintain.  
 
+<span class="parent-field">count.</span><a id="requests" href="#count-requests" class="field">`requests`</a> <span class="type">Integer</span>  
+Scale up or down based on the request count handled per tasks.
+
+<span class="parent-field">count.</span><a id="response_time" href="#count-response_time" class="field">`response_time`</a> <span class="type">Integer</span>  
+Scale up or down based on the service average response time.
+
 <div class="separator"></div>
 
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>   
@@ -154,7 +162,7 @@ Key-value pairs that represents environment variables that will be passed to you
 <div class="separator"></div>
 
 <a id="secrets" href="#secrets" class="field">`secrets`</a> <span class="type">Map</span>   
-Key-value pairs that represents secret values from [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) that will passed to your service as environment variables securely. 
+Key-value pairs that represents secret values from [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) that will passed to your service as environment variables securely.
 
 <div class="separator"></div>
 

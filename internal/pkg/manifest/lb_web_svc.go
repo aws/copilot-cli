@@ -103,7 +103,7 @@ type HTTPHealthCheckArgs struct {
 }
 
 // HealthCheckArgsOrString is a custom type which supports unmarshaling yaml which
-// can either be of type string or type HealthCheckArgs. q
+// can either be of type string or type HealthCheckArgs.
 type HealthCheckArgsOrString struct {
 	HealthCheckPath *string
 	HealthCheckArgs HTTPHealthCheckArgs
