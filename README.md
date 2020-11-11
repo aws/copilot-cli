@@ -32,17 +32,18 @@ $ brew install aws/tap/copilot-cli
 ```
 
 ### Manually 
-We're distributing binaries from our GitHub releases. Instructions for installing Copilot for your platform:
+We're distributing binaries from our GitHub releases.
 
 <details>
-  <summary>macOS and Linux</summary>
+  <summary>Instructions for installing Copilot for your platform</summary>
 
 
 | Platform | Command to install |
 |---------|---------
-| macOS | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.5.0/copilot-darwin-v0.5.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
-| Linux | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.5.0/copilot-linux-v0.5.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
-
+| macOS | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-darwin && chmod +x /usr/local/bin/copilot && copilot --help` |
+| Linux x86 (64-bit) | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux && chmod +x /usr/local/bin/copilot && copilot --help` |
+| Linux ARM | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux-arm64 && chmod +x /usr/local/bin/copilot && copilot --help` |
+| Windows | `Invoke-WebRequest -OutFile 'C:\Program Files\copilot.exe' https://github.com/aws/copilot-cli/releases/latest/download/copilot-windows.exe` |
 
 </details>
 
