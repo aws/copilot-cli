@@ -106,7 +106,7 @@ type SvcListOutput struct {
 	Services []WkldDescription `json:"services"`
 }
 
-// WkldDescription contains the brief description of the service.
+// WkldDescription contains the brief description of the workload.
 type WkldDescription struct {
 	Name    string `json:"name"`
 	Type    string `json:"type"`
