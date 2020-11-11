@@ -253,7 +253,12 @@ func (s *DeploySelect) DeployedService(prompt, help string, app string, opts ...
 	var deployedSvc DeployedService
 	if len(svcEnvNames) == 1 {
 		deployedSvc = svcEnvs[svcEnvNames[0]]
-		log.Infof("Only found one deployed service %s in environment %s\n", color.HighlightUserInput(deployedSvc.Svc), color.HighlightUserInput(deployedSvc.Env))
+		if s.svc == "" && s.env == "" {
+			log.Infof("Found only one deployed service %s in environment %s\n", color.HighlightUserInput(deployedSvc.Svc), color.HighlightUserInput(deployedSvc.Env))
+		}
+		if (s.svc != "") != (s.env != "") {
+			log.Infof("Service %s found in environment %s\n", color.HighlightUserInput(deployedSvc.Svc), color.HighlightUserInput(deployedSvc.Env))
+		}
 		return &deployedSvc, nil
 	}
 	svcEnvName, err := s.prompt.SelectOne(

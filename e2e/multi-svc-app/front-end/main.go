@@ -51,11 +51,31 @@ func GetMagicWords(w http.ResponseWriter, req *http.Request, ps httprouter.Param
 	w.Write([]byte(magicWords))
 }
 
+// GetJobCheck returns the value of the environment variable TEST_JOB_CHECK_VAR.
+func GetJobCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	log.Println("Get /job-checker/ succeeded")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(os.Getenv("TEST_JOB_CHECK_VAR")))
+}
+
+// SetJobCheck updates the environment variable TEST_JOB_CHECK_VAR in the container to "yes"
+func SetJobCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	log.Println("Get /job-setter/ succeeded")
+	err := os.Setenv("TEST_JOB_CHECK_VAR", "yes")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 func main() {
 	router := httprouter.New()
 	router.GET("/", SimpleGet)
 	router.GET("/service-discovery-test", ServiceDiscoveryGet)
 	router.GET("/magicwords/", GetMagicWords)
+	router.GET("/job-checker/", GetJobCheck)
+	router.GET("/job-setter/", SetJobCheck)
 
 	log.Fatal(http.ListenAndServe(":80", router))
 }
