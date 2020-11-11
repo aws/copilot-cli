@@ -77,7 +77,7 @@ func (s *Spinner) Start(label string) {
 
 // Stop stops the spinner and replaces it with a label.
 func (s *Spinner) Stop(label string) {
-	s.finalMSG(fmt.Sprintln(label))
+	s.finalMSG(fmt.Sprint(label))
 	s.spin.Stop()
 
 	// Maintain old progress entries on the screen.
