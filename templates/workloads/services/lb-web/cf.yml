@@ -129,9 +129,7 @@ Resources:
               - ""
         Type: A
         AliasTarget:
-          HostedZoneId:
-            Fn::ImportValue:
-              !Sub "${AppName}-${EnvName}-CanonicalHostedZoneID"
+          HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
           DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
 
   RulePriorityFunction:
@@ -206,9 +204,7 @@ Resources:
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      ListenerArn:
-        Fn::ImportValue:
-          !Sub "${AppName}-${EnvName}-HTTPSListenerArn"
+      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
 
   HTTPSListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -226,9 +222,7 @@ Resources:
                 - - !Ref WorkloadName
                   - Fn::ImportValue:
                       !Sub "${AppName}-${EnvName}-SubDomain"
-      ListenerArn:
-        Fn::ImportValue:
-          !Sub "${AppName}-${EnvName}-HTTPSListenerArn"
+      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
       Priority: !GetAtt HTTPSRulePriorityAction.Priority
 
   HTTPRulePriorityAction:
