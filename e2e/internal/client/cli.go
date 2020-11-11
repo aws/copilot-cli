@@ -35,6 +35,7 @@ type InitRequest struct {
 	Dockerfile   string
 	WorkloadType string
 	SvcPort      string
+	Schedule     string
 }
 
 // EnvInitRequest contains the parameters for calling copilot env init.
@@ -131,6 +132,31 @@ type TaskRunInput struct {
 	Follow  bool
 }
 
+// JobInitInput contains the parameters for calling copilot job init.
+type JobInitInput struct {
+	Name       string
+	Dockerfile string
+	Schedule   string
+	Retries    string
+	Timeout    string
+}
+
+// JobDeployInput contains the parameters for calling copilot job deploy.
+type JobDeployInput struct {
+	Name     string
+	EnvName  string
+	ImageTag string
+}
+
+// PackageInput contains the parameters for calling copilot job package.
+type PackageInput struct {
+	AppName string
+	Name    string
+	Env     string
+	Dir     string
+	Tag     string
+}
+
 // NewCLI returns a wrapper around CLI
 func NewCLI() (*CLI, error) {
 	// These tests should be run in a dockerfile so that
@@ -168,14 +194,23 @@ copilot init
 	--svc-type $type
 	--tag $t
 	--dockerfile $d
-	--port $port
 	--deploy (optionally)
+	--schedule $schedule (optionally)
+	--port $port (optionally)
 */
 func (cli *CLI) Init(opts *InitRequest) (string, error) {
 	var deployOption string
+	var scheduleOption string
+	var portOption string
 
 	if opts.Deploy {
 		deployOption = "--deploy"
+	}
+	if opts.Schedule != "" {
+		scheduleOption = "--schedule"
+	}
+	if opts.SvcPort != "" {
+		portOption = "--port"
 	}
 
 	return cli.exec(
@@ -185,8 +220,9 @@ func (cli *CLI) Init(opts *InitRequest) (string, error) {
 			"--type", opts.WorkloadType,
 			"--tag", opts.ImageTag,
 			"--dockerfile", opts.Dockerfile,
-			"--port", opts.SvcPort,
-			deployOption))
+			deployOption,
+			scheduleOption, opts.Schedule,
+			portOption, opts.SvcPort))
 }
 
 /*SvcInit runs:
@@ -501,6 +537,119 @@ func (cli *CLI) TaskRun(input *TaskRunInput) (string, error) {
 	}
 
 	return cli.exec(exec.Command(cli.path, commands...))
+}
+
+/*JobInit runs:
+copilot job init
+	--name $n
+	--dockerfile $d
+	--schedule $sched
+	--retries $r
+	--timeout $o
+*/
+func (cli *CLI) JobInit(opts *JobInitInput) (string, error) {
+	args := []string{
+		"job",
+		"init",
+		"--name", opts.Name,
+		"--dockerfile", opts.Dockerfile,
+		"--schedule", opts.Schedule,
+	}
+	// Apply optional flags only if a value is provided.
+	if opts.Retries != "" {
+		args = append(args, "--retries", opts.Retries)
+	}
+	if opts.Timeout != "" {
+		args = append(args, "--timeout", opts.Timeout)
+	}
+	return cli.exec(
+		exec.Command(cli.path, args...))
+}
+
+/*JobDeploy runs:
+copilot job deploy
+	--name $n
+	--env $e
+	--tag $t
+*/
+func (cli *CLI) JobDeploy(opts *JobDeployInput) (string, error) {
+	return cli.exec(
+		exec.Command(cli.path, "job", "deploy",
+			"--name", opts.Name,
+			"--env", opts.EnvName,
+			"--tag", opts.ImageTag))
+}
+
+/*JobDelete runs:
+copilot job delete
+	--name $n
+	--yes
+*/
+func (cli *CLI) JobDelete(jobName string) (string, error) {
+	return cli.exec(
+		exec.Command(cli.path, "job", "delete",
+			"--name", jobName,
+			"--yes"))
+}
+
+/*JobList runs:
+copilot job ls
+	--json?
+	--local?
+*/
+func (cli *CLI) JobList(appName string) (*JobListOutput, error) {
+	output, err := cli.exec(
+		exec.Command(cli.path, "job", "ls",
+			"--app", appName,
+			"--json"))
+	if err != nil {
+		return nil, err
+	}
+	return toJobListOutput(output)
+}
+
+/*JobPackage runs:
+copilot job package
+	--output-dir $dir
+	--name $name
+	--env $env
+	--app $appname
+	--tag $tag
+*/
+func (cli *CLI) JobPackage(opts *PackageInput) error {
+	args := []string{
+		"job",
+		"package",
+		"--name", opts.Name,
+		"--env", opts.Env,
+		"--app", opts.AppName,
+		"--output-dir", opts.Dir,
+		"--tag", opts.Tag,
+	}
+
+	_, err := cli.exec(exec.Command(cli.path, args...))
+	return err
+}
+
+/*SvcPackage runs:
+copilot svc package
+	--output-dir $dir
+	--name $name
+	--env $env
+	--app $appname
+*/
+func (cli *CLI) SvcPackage(opts *PackageInput) error {
+	args := []string{
+		"svc",
+		"package",
+		"--name", opts.Name,
+		"--env", opts.Env,
+		"--app", opts.AppName,
+		"--output-dir", opts.Dir,
+		"--tag", opts.Tag,
+	}
+	_, err := cli.exec(exec.Command(cli.path, args...))
+	return err
 }
 
 func (cli *CLI) exec(command *exec.Cmd) (string, error) {

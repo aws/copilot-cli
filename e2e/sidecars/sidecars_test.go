@@ -132,7 +132,7 @@ var _ = Describe("sidecars flow", func() {
 			Expect(svcListError).NotTo(HaveOccurred())
 			Expect(len(svcList.Services)).To(Equal(1))
 
-			svcsByName := map[string]client.SvcDescription{}
+			svcsByName := map[string]client.WkldDescription{}
 			for _, svc := range svcList.Services {
 				svcsByName[svc.Name] = svc
 			}
