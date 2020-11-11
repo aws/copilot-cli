@@ -150,11 +150,29 @@ var _ = Describe("Multiple Service App", func() {
 		})
 
 		It("svc package should output a cloudformation template and params file", func() {
-			Skip("not implemented yet")
+			svcPackageError := cli.SvcPackage(&client.PackageInput{
+				Name:    "front-end",
+				AppName: appName,
+				Env:     "test",
+				Dir:     "infrastructure",
+				Tag:     "gallopinggurdey",
+			})
+			Expect(svcPackageError).NotTo(HaveOccurred())
+			Expect("infrastructure/front-end-test.stack.yml").To(BeAnExistingFile())
+			Expect("infrastructure/front-end-test.params.json").To(BeAnExistingFile())
 		})
 
 		It("job package should output a Cloudformation template and params file", func() {
-			Skip("not implemented yet")
+			jobPackageError := cli.JobPackage(&client.PackageInput{
+				Name:    "query",
+				AppName: appName,
+				Env:     "test",
+				Dir:     "infrastructure",
+				Tag:     "thepostalservice",
+			})
+			Expect(jobPackageError).NotTo(HaveOccurred())
+			Expect("infrastructure/query-test.params.json").To(BeAnExistingFile())
+			Expect("infrastructure/query-test.stack.yml").To(BeAnExistingFile())
 		})
 	})
 
@@ -164,6 +182,8 @@ var _ = Describe("Multiple Service App", func() {
 			wwwDeployErr      error
 			backEndDeployErr  error
 			jobDeployErr      error
+
+			routeURL string
 		)
 		BeforeAll(func() {
 			_, frontEndDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
@@ -288,7 +308,10 @@ var _ = Describe("Multiple Service App", func() {
 			// Calls the front end's service discovery endpoint - which should connect
 			// to the backend, and pipe the backend response to us.
 			route := svc.Routes[0]
+
 			Expect(route.Environment).To(Equal("test"))
+			routeURL = route.URL
+
 			resp, fetchErr := http.Get(fmt.Sprintf("%s/service-discovery-test/", route.URL))
 			Expect(fetchErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
@@ -299,9 +322,14 @@ var _ = Describe("Multiple Service App", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(bodyBytes)).To(Equal("back-end-service-discovery"))
 
-			// Job should have run.
+		})
+
+		It("job should have run", func() {
+			// Job should have run. We check this by hitting the "job-checker" path, which tells us the value
+			// of the "TEST_JOB_CHECK_VAR" in the frontend service, which will have been updated by a GET on
+			// /job-setter
 			Eventually(func() (string, error) {
-				resp, fetchErr = http.Get(fmt.Sprintf("%s/job-checker/", route.URL))
+				resp, fetchErr := http.Get(fmt.Sprintf("%s/job-checker/", routeURL))
 				if fetchErr != nil {
 					return "", fetchErr
 				}

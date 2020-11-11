@@ -148,6 +148,15 @@ type JobDeployInput struct {
 	ImageTag string
 }
 
+// PackageInput contains the parameters for calling copilot job package.
+type PackageInput struct {
+	AppName string
+	Name    string
+	Env     string
+	Dir     string
+	Tag     string
+}
+
 // NewCLI returns a wrapper around CLI
 func NewCLI() (*CLI, error) {
 	// These tests should be run in a dockerfile so that
@@ -597,6 +606,50 @@ func (cli *CLI) JobList(appName string) (*JobListOutput, error) {
 		return nil, err
 	}
 	return toJobListOutput(output)
+}
+
+/*JobPackage runs:
+copilot job package
+	--output-dir $dir
+	--name $name
+	--env $env
+	--app $appname
+	--tag $tag
+*/
+func (cli *CLI) JobPackage(opts *PackageInput) error {
+	args := []string{
+		"job",
+		"package",
+		"--name", opts.Name,
+		"--env", opts.Env,
+		"--app", opts.AppName,
+		"--output-dir", opts.Dir,
+		"--tag", opts.Tag,
+	}
+
+	_, err := cli.exec(exec.Command(cli.path, args...))
+	return err
+}
+
+/*SvcPackage runs:
+copilot svc package
+	--output-dir $dir
+	--name $name
+	--env $env
+	--app $appname
+*/
+func (cli *CLI) SvcPackage(opts *PackageInput) error {
+	args := []string{
+		"svc",
+		"package",
+		"--name", opts.Name,
+		"--env", opts.Env,
+		"--app", opts.AppName,
+		"--output-dir", opts.Dir,
+		"--tag", opts.Tag,
+	}
+	_, err := cli.exec(exec.Command(cli.path, args...))
+	return err
 }
 
 func (cli *CLI) exec(command *exec.Cmd) (string, error) {
