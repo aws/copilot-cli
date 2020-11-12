@@ -82,7 +82,7 @@ type LogConfigOpts struct {
 
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
 type HTTPHealthCheckOpts struct {
-	HealthCheckPath    *string
+	HealthCheckPath    string
 	HealthyThreshold   *int64
 	UnhealthyThreshold *int64
 	Interval           *int64
@@ -118,6 +118,7 @@ type WorkloadOpts struct {
 	// Additional options for service templates.
 	HealthCheck         *ecs.HealthCheck
 	HTTPHealthCheck     HTTPHealthCheckOpts
+	AllowedSourceIps    []string
 	RulePriorityLambda  string
 	DesiredCountLambda  string
 	EnvControllerLambda string

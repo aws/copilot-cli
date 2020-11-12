@@ -820,11 +820,12 @@ func TestWorkspace_DeleteWorkspaceFile(t *testing.T) {
 	}
 }
 
-func TestValidateDockerfiles(t *testing.T) {
+func TestWorkspace_ListDockerfiles(t *testing.T) {
 	wantedDockerfiles := []string{"./Dockerfile", "backend/Dockerfile", "frontend/Dockerfile"}
 	testCases := map[string]struct {
 		mockFileSystem func(mockFS afero.Fs)
 		err            error
+		dockerfiles    []string
 	}{
 		"find Dockerfiles": {
 			mockFileSystem: func(mockFS afero.Fs) {
@@ -835,11 +836,12 @@ func TestValidateDockerfiles(t *testing.T) {
 				afero.WriteFile(mockFS, "frontend/Dockerfile", []byte("FROM nginx"), 0644)
 				afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
 			},
-			err: nil,
+			err:         nil,
+			dockerfiles: wantedDockerfiles,
 		},
 		"no Dockerfiles": {
 			mockFileSystem: func(mockFS afero.Fs) {},
-			err:            fmt.Errorf("no Dockerfiles found within / or a sub-directory level below"),
+			dockerfiles:    []string{},
 		},
 	}
 
@@ -861,7 +863,7 @@ func TestValidateDockerfiles(t *testing.T) {
 				require.EqualError(t, err, tc.err.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, wantedDockerfiles, got)
+				require.Equal(t, tc.dockerfiles, got)
 			}
 		})
 	}

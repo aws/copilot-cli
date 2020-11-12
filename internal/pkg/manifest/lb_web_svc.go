@@ -21,12 +21,8 @@ const (
 // Default values for HTTPHealthCheck for a load balanced web service.
 const (
 	// LogRetentionInDays is the default log retention time in days.
-	LogRetentionInDays        = 30
-	defaultHealthCheckPath    = "/"
-	defaultHealthyThreshold   = int64(2)
-	defaultUnhealthyThreshold = int64(2)
-	defaultIntervalinS        = int64(10)
-	defaultTimeoutinS         = int64(5)
+	LogRetentionInDays     = 30
+	defaultHealthCheckPath = "/"
 )
 
 var (
@@ -61,36 +57,6 @@ func (lc *LoadBalancedWebServiceConfig) LogConfigOpts() *template.LogConfigOpts 
 	return lc.logConfigOpts()
 }
 
-// HTTPHealthCheckOpts converts the ALB health check configuration into a format parsable by the templates pkg.
-func (lc *LoadBalancedWebServiceConfig) HTTPHealthCheckOpts() template.HTTPHealthCheckOpts {
-	opts := template.HTTPHealthCheckOpts{
-		HealthCheckPath:    aws.String(defaultHealthCheckPath),
-		HealthyThreshold:   aws.Int64(defaultHealthyThreshold),
-		UnhealthyThreshold: aws.Int64(defaultUnhealthyThreshold),
-		Interval:           aws.Int64(defaultIntervalinS),
-		Timeout:            aws.Int64(defaultTimeoutinS),
-	}
-	if lc.RoutingRule.HealthCheck.HealthCheckArgs.Path != nil {
-		opts.HealthCheckPath = lc.RoutingRule.HealthCheck.HealthCheckArgs.Path
-	}
-	if lc.RoutingRule.HealthCheck.HealthCheckPath != nil {
-		opts.HealthCheckPath = lc.HealthCheck.HealthCheckPath
-	}
-	if lc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold != nil {
-		opts.HealthyThreshold = lc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold
-	}
-	if lc.RoutingRule.HealthCheck.HealthCheckArgs.UnhealthyThreshold != nil {
-		opts.UnhealthyThreshold = lc.RoutingRule.HealthCheck.HealthCheckArgs.UnhealthyThreshold
-	}
-	if lc.RoutingRule.HealthCheck.HealthCheckArgs.Interval != nil {
-		opts.Interval = aws.Int64(int64(lc.RoutingRule.HealthCheck.HealthCheckArgs.Interval.Seconds()))
-	}
-	if lc.RoutingRule.HealthCheck.HealthCheckArgs.Timeout != nil {
-		opts.Timeout = aws.Int64(int64(lc.RoutingRule.HealthCheck.HealthCheckArgs.Timeout.Seconds()))
-	}
-	return opts
-}
-
 // HTTPHealthCheckArgs holds the configuration to determine if the load balanced web service is healthy.
 // These options are specifiable under the "healthcheck" field.
 // See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html.
@@ -103,10 +69,56 @@ type HTTPHealthCheckArgs struct {
 }
 
 // HealthCheckArgsOrString is a custom type which supports unmarshaling yaml which
-// can either be of type string or type HealthCheckArgs. q
+// can either be of type string or type HealthCheckArgs.
 type HealthCheckArgsOrString struct {
 	HealthCheckPath *string
 	HealthCheckArgs HTTPHealthCheckArgs
+}
+
+// HTTPHealthCheckOpts converts the ALB health check configuration into a format parsable by the templates pkg.
+func (hc HealthCheckArgsOrString) HTTPHealthCheckOpts() template.HTTPHealthCheckOpts {
+	opts := template.HTTPHealthCheckOpts{
+		HealthCheckPath:    defaultHealthCheckPath,
+		HealthyThreshold:   hc.HealthCheckArgs.HealthyThreshold,
+		UnhealthyThreshold: hc.HealthCheckArgs.UnhealthyThreshold,
+	}
+	if hc.HealthCheckArgs.Path != nil {
+		opts.HealthCheckPath = *hc.HealthCheckArgs.Path
+	}
+	if hc.HealthCheckPath != nil {
+		opts.HealthCheckPath = *hc.HealthCheckPath
+	}
+	if hc.HealthCheckArgs.Interval != nil {
+		opts.Interval = aws.Int64(int64(hc.HealthCheckArgs.Interval.Seconds()))
+	}
+	if hc.HealthCheckArgs.Timeout != nil {
+		opts.Timeout = aws.Int64(int64(hc.HealthCheckArgs.Timeout.Seconds()))
+	}
+	return opts
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the HealthCheckArgsOrString
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (hc *HealthCheckArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshal(&hc.HealthCheckArgs); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if !hc.HealthCheckArgs.isEmpty() {
+		// Unmarshaled successfully to h.HealthCheckArgs, return.
+		return nil
+	}
+
+	if err := unmarshal(&hc.HealthCheckPath); err != nil {
+		return errUnmarshalHealthCheckArgs
+	}
+	return nil
 }
 
 // RoutingRule holds the path to route requests to the service.
@@ -115,8 +127,9 @@ type RoutingRule struct {
 	HealthCheck HealthCheckArgsOrString `yaml:"healthcheck"`
 	Stickiness  *bool                   `yaml:"stickiness"`
 	// TargetContainer is the container load balancer routes traffic to.
-	TargetContainer          *string `yaml:"target_container"`
-	TargetContainerCamelCase *string `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
+	TargetContainer          *string  `yaml:"target_container"`
+	TargetContainerCamelCase *string  `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
+	AllowedSourceIps         []string `yaml:"allowed_source_ips"`
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
@@ -166,30 +179,6 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 
 func (h *HTTPHealthCheckArgs) isEmpty() bool {
 	return h.Path == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil && h.Interval == nil && h.Timeout == nil
-}
-
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the HealthCheckArgsOrString
-// struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (h *HealthCheckArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&h.HealthCheckArgs); err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
-			return err
-		}
-	}
-
-	if !h.HealthCheckArgs.isEmpty() {
-		// Unmarshaled successfully to h.HealthCheckArgs, return.
-		return nil
-	}
-
-	if err := unmarshal(&h.HealthCheckPath); err != nil {
-		return errUnmarshalHealthCheckArgs
-	}
-	return nil
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.

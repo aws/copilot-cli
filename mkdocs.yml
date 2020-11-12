@@ -66,6 +66,7 @@ nav:
       - Release:
         - pipeline init: docs/commands/pipeline-init.md
         - pipeline update: docs/commands/pipeline-update.md
+        - pipeline ls: docs/commands/pipeline-ls.md
         - pipeline show: docs/commands/pipeline-show.md
         - pipeline status: docs/commands/pipeline-status.md
         - pipeline delete: docs/commands/pipeline-delete.md
