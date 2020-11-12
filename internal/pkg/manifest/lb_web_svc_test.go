@@ -18,7 +18,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
+func TestHealthCheckArgsOrString_HTTPHealthCheckOpts(t *testing.T) {
 	testCases := map[string]struct {
 		inputPath               *string
 		inputHealthyThreshold   *int64
@@ -36,11 +36,7 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			inputTimeout:            nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath:    aws.String("/"),
-				HealthyThreshold:   aws.Int64(2),
-				UnhealthyThreshold: aws.Int64(2),
-				Interval:           aws.Int64(10),
-				Timeout:            aws.Int64(5),
+				HealthCheckPath: "/",
 			},
 		},
 		"just HealthyThreshold": {
@@ -51,11 +47,8 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			inputTimeout:            nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath:    aws.String("/"),
-				HealthyThreshold:   aws.Int64(5),
-				UnhealthyThreshold: aws.Int64(2),
-				Interval:           aws.Int64(10),
-				Timeout:            aws.Int64(5),
+				HealthCheckPath:  "/",
+				HealthyThreshold: aws.Int64(5),
 			},
 		},
 		"just UnhealthyThreshold": {
@@ -66,11 +59,8 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			inputTimeout:            nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath:    aws.String("/"),
-				HealthyThreshold:   aws.Int64(2),
+				HealthCheckPath:    "/",
 				UnhealthyThreshold: aws.Int64(5),
-				Interval:           aws.Int64(10),
-				Timeout:            aws.Int64(5),
 			},
 		},
 		"just Interval": {
@@ -81,11 +71,8 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			inputTimeout:            nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath:    aws.String("/"),
-				HealthyThreshold:   aws.Int64(2),
-				UnhealthyThreshold: aws.Int64(2),
-				Interval:           aws.Int64(15),
-				Timeout:            aws.Int64(5),
+				HealthCheckPath: "/",
+				Interval:        aws.Int64(15),
 			},
 		},
 		"just Timeout": {
@@ -96,11 +83,8 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			inputTimeout:            durationp(15 * time.Second),
 
 			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath:    aws.String("/"),
-				HealthyThreshold:   aws.Int64(2),
-				UnhealthyThreshold: aws.Int64(2),
-				Interval:           aws.Int64(10),
-				Timeout:            aws.Int64(15),
+				HealthCheckPath: "/",
+				Timeout:         aws.Int64(15),
 			},
 		},
 		"all values changed in manifest": {
@@ -111,7 +95,7 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 			inputTimeout:            durationp(60 * time.Second),
 
 			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath:    aws.String("/road/to/nowhere"),
+				HealthCheckPath:    "/road/to/nowhere",
 				HealthyThreshold:   aws.Int64(3),
 				UnhealthyThreshold: aws.Int64(3),
 				Interval:           aws.Int64(60),
@@ -122,27 +106,18 @@ func TestNewLoadBalancedWebService_HTTPHealthCheckOpts(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			lbwc := LoadBalancedWebServiceConfig{
-				ImageConfig: ServiceImageWithPort{},
-				RoutingRule: RoutingRule{
-					Path: aws.String("path"),
-					HealthCheck: HealthCheckArgsOrString{
-						HealthCheckPath: tc.inputPath,
-						HealthCheckArgs: HTTPHealthCheckArgs{
-							Path:               tc.inputPath,
-							HealthyThreshold:   tc.inputHealthyThreshold,
-							UnhealthyThreshold: tc.inputUnhealthyThreshold,
-							Timeout:            tc.inputTimeout,
-							Interval:           tc.inputInterval,
-						},
-					},
+			hc := HealthCheckArgsOrString{
+				HealthCheckPath: tc.inputPath,
+				HealthCheckArgs: HTTPHealthCheckArgs{
+					Path:               tc.inputPath,
+					HealthyThreshold:   tc.inputHealthyThreshold,
+					UnhealthyThreshold: tc.inputUnhealthyThreshold,
+					Timeout:            tc.inputTimeout,
+					Interval:           tc.inputInterval,
 				},
-				TaskConfig: TaskConfig{},
-				Logging:    nil,
-				Sidecar:    Sidecar{},
 			}
 			// WHEN
-			actualOpts := lbwc.HTTPHealthCheckOpts()
+			actualOpts := hc.HTTPHealthCheckOpts()
 
 			// THEN
 			require.Equal(t, tc.wantedOpts, actualOpts)

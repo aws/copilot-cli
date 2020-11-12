@@ -69,7 +69,52 @@ Resources:
 {{include "executionrole" . | indent 2}}
 {{include "taskrole" . | indent 2}}
 {{include "servicediscovery" . | indent 2}}
+{{- if .Autoscaling}}
 {{include "autoscaling" . | indent 2}}
+  {{if .Autoscaling.Requests}}
+  AutoScalingPolicyALBSumRequestCountPerTarget:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Join ['-', [!Ref WorkloadName, ALBSumRequestCountPerTarget, ScalingPolicy]]
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref AutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        CustomizedMetricSpecification:
+          Dimensions:
+            - Name: LoadBalancer
+              Value: !GetAtt EnvControllerAction.PublicLoadBalancerFullName
+            - Name: TargetGroup
+              Value: !GetAtt TargetGroup.TargetGroupFullName
+          MetricName: RequestCountPerTarget
+          Namespace: AWS/ApplicationELB
+          Statistic: Sum
+        ScaleInCooldown: 120
+        ScaleOutCooldown: 60
+        TargetValue: {{.Autoscaling.Requests}}
+  {{- end}}
+  {{if .Autoscaling.ResponseTime}}
+  AutoScalingPolicyALBAverageResponseTime:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Join ['-', [!Ref WorkloadName, ALBAverageResponseTime, ScalingPolicy]]
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref AutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        CustomizedMetricSpecification:
+          Dimensions:
+            - Name: LoadBalancer
+              Value: !GetAtt EnvControllerAction.PublicLoadBalancerFullName
+            - Name: TargetGroup
+              Value: !GetAtt TargetGroup.TargetGroupFullName
+          MetricName: TargetResponseTime
+          Namespace: AWS/ApplicationELB
+          Statistic: Average
+        ScaleInCooldown: 120
+        ScaleOutCooldown: 60
+        TargetValue: {{.Autoscaling.ResponseTime}}
+  {{- end}}
+{{- end}}
+
 {{include "env-controller" . | indent 2}}
 
   Service:
@@ -93,12 +138,19 @@ Resources:
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      #  Check if your service is healthy within 20 = 10*2 seconds, compared to 2.5 mins = 30*5 seconds.
       HealthCheckPath: {{.HTTPHealthCheck.HealthCheckPath}} # Default is '/'.
-      HealthyThresholdCount: {{.HTTPHealthCheck.HealthyThreshold}} # Default is 2.
-      UnhealthyThresholdCount: {{.HTTPHealthCheck.UnhealthyThreshold}} # Default is 2.
-      HealthCheckIntervalSeconds: {{.HTTPHealthCheck.Interval}} # Default is 10.
-      HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}} # Default is 5.
+{{- if .HTTPHealthCheck.HealthyThreshold}}
+      HealthyThresholdCount: {{.HTTPHealthCheck.HealthyThreshold}}
+{{- end}}
+{{- if .HTTPHealthCheck.UnhealthyThreshold}}
+      UnhealthyThresholdCount: {{.HTTPHealthCheck.UnhealthyThreshold}}
+{{- end}}
+{{- if .HTTPHealthCheck.Interval}}
+      HealthCheckIntervalSeconds: {{.HTTPHealthCheck.Interval}}
+{{- end}}
+{{- if .HTTPHealthCheck.Timeout}}
+      HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}}
+{{- end}}
       Port: !Ref ContainerPort
       Protocol: HTTP
       TargetGroupAttributes:
