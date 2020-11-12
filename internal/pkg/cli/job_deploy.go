@@ -278,10 +278,10 @@ func (o *deployJobOpts) deployJob(addonsURL string) error {
 		),
 	)
 	if err := o.jobCFN.DeployService(conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
-		o.spinner.Stop(log.Serrorf("Failed to deploy job.\n"))
+		o.spinner.Stop(log.Serrorf("Failed to deploy job.\n\n"))
 		return fmt.Errorf("deploy job: %w", err)
 	}
-	o.spinner.Stop("\n")
+	o.spinner.Stop("\n\n")
 	log.Successf("Deployed %s.\n", color.HighlightUserInput(o.name))
 	return nil
 }

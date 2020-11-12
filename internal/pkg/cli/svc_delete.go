@@ -36,10 +36,10 @@ const (
 
 const (
 	fmtSvcDeleteStart             = "Deleting service %s from environment %s."
-	fmtSvcDeleteFailed            = "Failed to delete service %s from environment %s: %v."
-	fmtSvcDeleteComplete          = "Deleted service %s from environment %s."
-	fmtSvcDeleteResourcesStart    = "Deleting resources of service %s from application %s."
-	fmtSvcDeleteResourcesComplete = "Deleted resources of service %s from application %s."
+	fmtSvcDeleteFailed            = "Failed to delete service %s from environment %s: %v.\n"
+	fmtSvcDeleteComplete          = "Deleted service %s from environment %s.\n"
+	fmtSvcDeleteResourcesStart    = "Deleting resources of service %s from application %s.\n"
+	fmtSvcDeleteResourcesComplete = "Deleted resources of service %s from application %s.\n"
 )
 
 var (
