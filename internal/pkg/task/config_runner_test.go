@@ -26,7 +26,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 
 		mockClusterGetter func(m *mocks.MockDefaultClusterGetter)
 		mockStarter       func(m *mocks.MockRunner)
-		mockVPCGetter     func(m *mocks.MockVPCGetter)
+		MockVPCGetter     func(m *mocks.MockVPCGetter)
 
 		wantedError error
 		wantedTasks []*Task
@@ -37,7 +37,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
 				m.EXPECT().DefaultCluster().Return("", errors.New("error getting default cluster"))
 			},
-			mockVPCGetter: func(m *mocks.MockVPCGetter) {
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().SubnetIDs().AnyTimes()
 				m.EXPECT().SecurityGroups().AnyTimes()
 			},
@@ -58,7 +58,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
 				m.EXPECT().DefaultCluster().Return("cluster-1", nil)
 			},
-			mockVPCGetter: func(m *mocks.MockVPCGetter) {
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().SubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).Times(0)
 			},
 			mockStarter: func(m *mocks.MockRunner) {
@@ -80,7 +80,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
 				m.EXPECT().DefaultCluster().Return("cluster-1", nil)
 			},
-			mockVPCGetter: func(m *mocks.MockVPCGetter) {
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().SubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).Times(0)
 			},
 			mockStarter: func(m *mocks.MockRunner) {
@@ -108,7 +108,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
 				m.EXPECT().DefaultCluster().AnyTimes()
 			},
-			mockVPCGetter: func(m *mocks.MockVPCGetter) {
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().SubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).Return(nil, errors.New("error getting subnets"))
 			},
 			mockStarter: func(m *mocks.MockRunner) {
@@ -125,7 +125,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
 				m.EXPECT().DefaultCluster().Return("cluster-1", nil)
 			},
-			mockVPCGetter: func(m *mocks.MockVPCGetter) {
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().SubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).
 					Return([]string{"default-subnet-1", "default-subnet-2"}, nil)
 			},
@@ -157,11 +157,11 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockVpcGetter := mocks.NewMockVPCGetter(ctrl)
+			MockVPCGetter := mocks.NewMockVPCGetter(ctrl)
 			mockClusterGetter := mocks.NewMockDefaultClusterGetter(ctrl)
 			mockStarter := mocks.NewMockRunner(ctrl)
 
-			tc.mockVPCGetter(mockVpcGetter)
+			tc.MockVPCGetter(MockVPCGetter)
 			tc.mockClusterGetter(mockClusterGetter)
 			tc.mockStarter(mockStarter)
 
@@ -172,7 +172,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 				Subnets:        tc.subnets,
 				SecurityGroups: tc.securityGroups,
 
-				VPCGetter:     mockVpcGetter,
+				VPCGetter:     MockVPCGetter,
 				ClusterGetter: mockClusterGetter,
 				Starter:       mockStarter,
 			}

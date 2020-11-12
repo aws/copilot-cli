@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package ecslogging contains utility functions for ECS logging.
-package ecslogging
+// Package logging contains utility functions for ECS logging.
+package logging
 
 import (
 	"fmt"

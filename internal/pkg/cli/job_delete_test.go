@@ -388,10 +388,10 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobDeleteStart, mockJobName, mockEnvName)),
 					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(testError),
-					mocks.spinner.EXPECT().Stop(log.Serrorf(fmtJobDeleteFailed, mockJobName, mockEnvName, testError)),
+					mocks.spinner.EXPECT().Stop(log.Serrorf(fmtJobDeleteFailed, mockJobName, mockEnvName, fmt.Errorf("delete job stack: %w", testError))),
 				)
 			},
-			wantedError: fmt.Errorf("delete job: %w", testError),
+			wantedError: fmt.Errorf("delete job stack: %w", testError),
 		},
 	}
 

@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package ecslogging
+package logging
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
-	"github.com/aws/copilot-cli/internal/pkg/ecslogging/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/logging/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )

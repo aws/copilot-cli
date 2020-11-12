@@ -11,8 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/task/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -22,10 +20,6 @@ func TestEnvRunner_Run(t *testing.T) {
 	inApp := "my-app"
 	inEnv := "my-env"
 
-	resourceTagFiltersForCluster := map[string]string{
-		deploy.AppTagKey: inApp,
-		deploy.EnvTagKey: inEnv,
-	}
 	filtersForVPCFromAppEnv := []ec2.Filter{
 		{
 			Name:   tagFilterNameForEnv,
@@ -37,12 +31,10 @@ func TestEnvRunner_Run(t *testing.T) {
 		},
 	}
 
-	mockResourceGetterWithCluster := func(m *mocks.MockResourceGetter) {
-		m.EXPECT().GetResourcesByTags(clusterResourceType, resourceTagFiltersForCluster).Return([]*resourcegroups.Resource{
-			{ARN: "cluster-1"},
-		}, nil)
+	MockClusterGetter := func(m *mocks.MockClusterGetter) {
+		m.EXPECT().Cluster(inApp, inEnv).Return("cluster-1", nil)
 	}
-	mockVPCGetterAny := func(m *mocks.MockVPCGetter) {
+	MockVPCGetterAny := func(m *mocks.MockVPCGetter) {
 		m.EXPECT().SubnetIDs(gomock.Any()).AnyTimes()
 		m.EXPECT().SecurityGroups(gomock.Any()).AnyTimes()
 	}
@@ -54,50 +46,24 @@ func TestEnvRunner_Run(t *testing.T) {
 		count     int
 		groupName string
 
-		mockVPCGetter      func(m *mocks.MockVPCGetter)
-		mockResourceGetter func(m *mocks.MockResourceGetter)
-		mockStarter        func(m *mocks.MockRunner)
+		MockVPCGetter     func(m *mocks.MockVPCGetter)
+		MockClusterGetter func(m *mocks.MockClusterGetter)
+		mockStarter       func(m *mocks.MockRunner)
 
 		wantedError error
 		wantedTasks []*Task
 	}{
 		"failed to get cluster": {
-			mockResourceGetter: func(m *mocks.MockResourceGetter) {
-				m.EXPECT().GetResourcesByTags(clusterResourceType, resourceTagFiltersForCluster).
-					Return(nil, errors.New("error getting resources"))
+			MockClusterGetter: func(m *mocks.MockClusterGetter) {
+				m.EXPECT().Cluster(inApp, inEnv).Return("", errors.New("error getting resources"))
 			},
-			mockVPCGetter: mockVPCGetterAny,
+			MockVPCGetter: MockVPCGetterAny,
 			mockStarter:   mockStarterNotRun,
-			wantedError:   fmt.Errorf(fmtErrClusterFromEnv, inEnv, errors.New("error getting resources")),
-		},
-		"no cluster found": {
-			mockResourceGetter: func(m *mocks.MockResourceGetter) {
-				m.EXPECT().GetResourcesByTags(clusterResourceType, resourceTagFiltersForCluster).
-					Return([]*resourcegroups.Resource{}, nil)
-			},
-			mockVPCGetter: mockVPCGetterAny,
-			mockStarter:   mockStarterNotRun,
-			wantedError:   fmt.Errorf("no cluster found in env %s", inEnv),
-		},
-		"more than one cluster is found": {
-			mockResourceGetter: func(m *mocks.MockResourceGetter) {
-				m.EXPECT().GetResourcesByTags(clusterResourceType, resourceTagFiltersForCluster).
-					Return([]*resourcegroups.Resource{
-						{
-							ARN: "cluster-1",
-						},
-						{
-							ARN: "cluster-2",
-						},
-					}, nil)
-			},
-			mockVPCGetter: mockVPCGetterAny,
-			mockStarter:   mockStarterNotRun,
-			wantedError:   fmt.Errorf(fmtErrMoreThanOneClusterFromEnv, inEnv),
+			wantedError:   fmt.Errorf("get cluster for environment %s: %w", inEnv, errors.New("error getting resources")),
 		},
 		"failed to get subnets": {
-			mockResourceGetter: mockResourceGetterWithCluster,
-			mockVPCGetter: func(m *mocks.MockVPCGetter) {
+			MockClusterGetter: MockClusterGetter,
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().PublicSubnetIDs(filtersForVPCFromAppEnv).
 					Return(nil, errors.New("error getting subnets"))
 				m.EXPECT().SecurityGroups(gomock.Any()).AnyTimes()
@@ -106,8 +72,8 @@ func TestEnvRunner_Run(t *testing.T) {
 			wantedError: fmt.Errorf(fmtErrPublicSubnetsFromEnv, inEnv, errors.New("error getting subnets")),
 		},
 		"no subnet is found": {
-			mockResourceGetter: mockResourceGetterWithCluster,
-			mockVPCGetter: func(m *mocks.MockVPCGetter) {
+			MockClusterGetter: MockClusterGetter,
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().PublicSubnetIDs(filtersForVPCFromAppEnv).
 					Return([]string{}, nil)
 				m.EXPECT().SecurityGroups(gomock.Any()).AnyTimes()
@@ -116,8 +82,8 @@ func TestEnvRunner_Run(t *testing.T) {
 			wantedError: errNoSubnetFound,
 		},
 		"failed to get security groups": {
-			mockResourceGetter: mockResourceGetterWithCluster,
-			mockVPCGetter: func(m *mocks.MockVPCGetter) {
+			MockClusterGetter: MockClusterGetter,
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().PublicSubnetIDs(gomock.Any()).Return([]string{"subnet-1"}, nil)
 				m.EXPECT().SecurityGroups(filtersForVPCFromAppEnv).
 					Return(nil, errors.New("error getting security groups"))
@@ -129,8 +95,8 @@ func TestEnvRunner_Run(t *testing.T) {
 			count:     1,
 			groupName: "my-task",
 
-			mockResourceGetter: mockResourceGetterWithCluster,
-			mockVPCGetter: func(m *mocks.MockVPCGetter) {
+			MockClusterGetter: MockClusterGetter,
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().PublicSubnetIDs(filtersForVPCFromAppEnv).Return([]string{"subnet-1", "subnet-2"}, nil)
 				m.EXPECT().SecurityGroups(filtersForVPCFromAppEnv).Return([]string{"sg-1", "sg-2"}, nil)
 			},
@@ -154,8 +120,8 @@ func TestEnvRunner_Run(t *testing.T) {
 			count:     1,
 			groupName: "my-task",
 
-			mockResourceGetter: mockResourceGetterWithCluster,
-			mockVPCGetter: func(m *mocks.MockVPCGetter) {
+			MockClusterGetter: MockClusterGetter,
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().PublicSubnetIDs(filtersForVPCFromAppEnv).Return([]string{"subnet-1", "subnet-2"}, nil)
 				m.EXPECT().SecurityGroups(filtersForVPCFromAppEnv).Return([]string{"sg-1", "sg-2"}, nil)
 			},
@@ -185,12 +151,12 @@ func TestEnvRunner_Run(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockVPCGetter := mocks.NewMockVPCGetter(ctrl)
-			mockResourceGetter := mocks.NewMockResourceGetter(ctrl)
+			MockVPCGetter := mocks.NewMockVPCGetter(ctrl)
+			MockClusterGetter := mocks.NewMockClusterGetter(ctrl)
 			mockStarter := mocks.NewMockRunner(ctrl)
 
-			tc.mockVPCGetter(mockVPCGetter)
-			tc.mockResourceGetter(mockResourceGetter)
+			tc.MockVPCGetter(MockVPCGetter)
+			tc.MockClusterGetter(MockClusterGetter)
 			tc.mockStarter(mockStarter)
 
 			task := &EnvRunner{
@@ -200,8 +166,8 @@ func TestEnvRunner_Run(t *testing.T) {
 				App: inApp,
 				Env: inEnv,
 
-				VPCGetter:     mockVPCGetter,
-				ClusterGetter: mockResourceGetter,
+				VPCGetter:     MockVPCGetter,
+				ClusterGetter: MockClusterGetter,
 				Starter:       mockStarter,
 			}
 

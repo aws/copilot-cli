@@ -13,7 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/ecslogging"
+	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -87,7 +87,7 @@ func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
 		if err != nil {
 			return err
 		}
-		opts.logsSvc = ecslogging.NewServiceClient(sess, opts.appName, opts.envName, opts.svcName)
+		opts.logsSvc = logging.NewServiceClient(sess, opts.appName, opts.envName, opts.svcName)
 		return nil
 	}
 	return opts, nil
@@ -154,15 +154,15 @@ func (o *svcLogsOpts) Execute() error {
 	if err := o.initLogsSvc(); err != nil {
 		return err
 	}
-	eventsWriter := ecslogging.WriteHumanLogs
+	eventsWriter := logging.WriteHumanLogs
 	if o.shouldOutputJSON {
-		eventsWriter = ecslogging.WriteJSONLogs
+		eventsWriter = logging.WriteJSONLogs
 	}
 	var limit *int64
 	if o.limit != 0 {
 		limit = aws.Int64(int64(o.limit))
 	}
-	err := o.logsSvc.WriteLogEvents(ecslogging.WriteLogEventsOpts{
+	err := o.logsSvc.WriteLogEvents(logging.WriteLogEventsOpts{
 		Follow:    o.follow,
 		Limit:     limit,
 		EndTime:   o.endTime,
