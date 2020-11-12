@@ -11,27 +11,26 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 )
 
-// VPCGetter gets subnets and security groups.
+// VPCGetter wraps methods of getting VPC info.
 type VPCGetter interface {
 	SubnetIDs(filters ...ec2.Filter) ([]string, error)
 	SecurityGroups(filters ...ec2.Filter) ([]string, error)
 	PublicSubnetIDs(filters ...ec2.Filter) ([]string, error)
 }
 
-// ResourceGetter gets resources by tags.
-type ResourceGetter interface {
-	GetResourcesByTags(resourceType string, tags map[string]string) ([]*resourcegroups.Resource, error)
+// ClusterGetter wraps the method of getting a cluster ARN.
+type ClusterGetter interface {
+	Cluster(app, env string) (string, error)
 }
 
-// DefaultClusterGetter gets the default cluster.
+// DefaultClusterGetter wraps the method of getting a default cluster ARN.
 type DefaultClusterGetter interface {
 	DefaultCluster() (string, error)
 }
 
-// Runner runs the tasks and wait for it to start.
+// Runner wraps the method of running tasks.
 type Runner interface {
 	RunTask(input ecs.RunTaskInput) ([]*ecs.Task, error)
 }

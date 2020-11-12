@@ -12,13 +12,8 @@ import (
 )
 
 const (
-	clusterResourceType = "ecs:cluster"
-
-	fmtErrClusterFromEnv            = "get cluster by env %s: %w"
-	fmtErrNoClusterFoundFromEnv     = "no cluster found in env %s"
-	fmtErrMoreThanOneClusterFromEnv = "more than one cluster is found in environment %s"
-	fmtErrPublicSubnetsFromEnv      = "get public subnet IDs from environment %s: %w"
-	fmtErrSecurityGroupsFromEnv     = "get security groups from environment %s: %w"
+	fmtErrPublicSubnetsFromEnv  = "get public subnet IDs from environment %s: %w"
+	fmtErrSecurityGroupsFromEnv = "get security groups from environment %s: %w"
 )
 
 // Names for tag filters
@@ -40,7 +35,7 @@ type EnvRunner struct {
 
 	// Interfaces to interact with dependencies. Must not be nil.
 	VPCGetter     VPCGetter
-	ClusterGetter ResourceGetter
+	ClusterGetter ClusterGetter
 	Starter       Runner
 }
 
@@ -50,9 +45,9 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 		return nil, err
 	}
 
-	cluster, err := r.cluster(r.App, r.Env)
+	cluster, err := r.ClusterGetter.Cluster(r.App, r.Env)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get cluster for environment %s: %w", r.Env, err)
 	}
 
 	filters := r.filtersForVPCFromAppEnv()
@@ -85,27 +80,6 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 		}
 	}
 	return convertECSTasks(ecsTasks), nil
-}
-
-func (r *EnvRunner) cluster(app, env string) (string, error) {
-	clusters, err := r.ClusterGetter.GetResourcesByTags(clusterResourceType, map[string]string{
-		deploy.AppTagKey: app,
-		deploy.EnvTagKey: env,
-	})
-
-	if err != nil {
-		return "", fmt.Errorf(fmtErrClusterFromEnv, env, err)
-	}
-
-	if len(clusters) == 0 {
-		return "", fmt.Errorf(fmtErrNoClusterFoundFromEnv, env)
-	}
-
-	// NOTE: only one cluster is associated with an application and an environment
-	if len(clusters) > 1 {
-		return "", fmt.Errorf(fmtErrMoreThanOneClusterFromEnv, r.Env)
-	}
-	return clusters[0].ARN, nil
 }
 
 func (r *EnvRunner) filtersForVPCFromAppEnv() []ec2.Filter {

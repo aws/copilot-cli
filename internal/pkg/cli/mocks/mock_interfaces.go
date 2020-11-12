@@ -15,8 +15,8 @@ import (
 	describe "github.com/aws/copilot-cli/internal/pkg/describe"
 	docker "github.com/aws/copilot-cli/internal/pkg/docker"
 	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
-	ecslogging "github.com/aws/copilot-cli/internal/pkg/ecslogging"
 	initialize "github.com/aws/copilot-cli/internal/pkg/initialize"
+	logging "github.com/aws/copilot-cli/internal/pkg/logging"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -1450,7 +1450,7 @@ func (m *MocklogEventsWriter) EXPECT() *MocklogEventsWriterMockRecorder {
 }
 
 // WriteLogEvents mocks base method
-func (m *MocklogEventsWriter) WriteLogEvents(opts ecslogging.WriteLogEventsOpts) error {
+func (m *MocklogEventsWriter) WriteLogEvents(opts logging.WriteLogEventsOpts) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WriteLogEvents", opts)
 	ret0, _ := ret[0].(error)
