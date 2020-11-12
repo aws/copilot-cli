@@ -119,7 +119,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Sidecars:            sidecars,
 		LogConfig:           s.manifest.LogConfigOpts(),
 		Autoscaling:         autoscaling,
-		HTTPHealthCheck:     s.manifest.HTTPHealthCheckOpts(),
+		HTTPHealthCheck:     s.manifest.HealthCheck.HTTPHealthCheckOpts(),
 		AllowedSourceIps:    s.manifest.AllowedSourceIps,
 		RulePriorityLambda:  rulePriorityLambda.String(),
 		DesiredCountLambda:  desiredCountLambda.String(),
