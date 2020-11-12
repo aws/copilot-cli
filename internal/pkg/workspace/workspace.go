@@ -468,11 +468,6 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 			}
 		}
 	}
-	if len(directories) == 0 {
-		return nil, &ErrDockerfileNotFound{
-			dir: ws.workingDir,
-		}
-	}
 	sort.Strings(directories)
 	dockerfiles := make([]string, 0, len(directories))
 	for _, dir := range directories {
@@ -480,16 +475,6 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 		dockerfiles = append(dockerfiles, file)
 	}
 	return dockerfiles, nil
-}
-
-// ErrDockerfileNotFound is returned when no Dockerfiles could be found in the current
-// working directory or in any directories one level down from it.
-type ErrDockerfileNotFound struct {
-	dir string
-}
-
-func (e *ErrDockerfileNotFound) Error() string {
-	return fmt.Sprintf("no Dockerfiles found within %s or a sub-directory level below", e.dir)
 }
 
 // RelPath returns the path relative to the current working directory.

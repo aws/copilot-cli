@@ -69,6 +69,7 @@ var _ = Describe("Multiple Service App", func() {
 			frontEndInitErr error
 			wwwInitErr      error
 			backEndInitErr  error
+			jobInitErr      error
 		)
 		BeforeAll(func() {
 
@@ -90,6 +91,12 @@ var _ = Describe("Multiple Service App", func() {
 				Dockerfile: "./back-end/Dockerfile",
 				SvcPort:    "80",
 			})
+
+			_, jobInitErr = cli.JobInit(&client.JobInitInput{
+				Name:       "query",
+				Dockerfile: "./query/Dockerfile",
+				Schedule:   "@every 4m", // This should run once, immediately after creation, then every 4m thereafter.
+			})
 		})
 
 		It("svc init should succeed", func() {
@@ -98,11 +105,18 @@ var _ = Describe("Multiple Service App", func() {
 			Expect(backEndInitErr).NotTo(HaveOccurred())
 		})
 
+		It("job init should succeed", func() {
+			Expect(jobInitErr).NotTo(HaveOccurred())
+		})
+
 		It("svc init should create svc manifests", func() {
 			Expect("./copilot/front-end/manifest.yml").Should(BeAnExistingFile())
 			Expect("./copilot/www/manifest.yml").Should(BeAnExistingFile())
 			Expect("./copilot/back-end/manifest.yml").Should(BeAnExistingFile())
+		})
 
+		It("job init should create job manifest", func() {
+			Expect("./copilot/query/manifest.yml").Should(BeAnExistingFile())
 		})
 
 		It("svc ls should list the svc", func() {
@@ -110,7 +124,7 @@ var _ = Describe("Multiple Service App", func() {
 			Expect(svcListError).NotTo(HaveOccurred())
 			Expect(len(svcList.Services)).To(Equal(3))
 
-			svcsByName := map[string]client.SvcDescription{}
+			svcsByName := map[string]client.WkldDescription{}
 			for _, svc := range svcList.Services {
 				svcsByName[svc.Name] = svc
 			}
@@ -121,22 +135,66 @@ var _ = Describe("Multiple Service App", func() {
 			}
 		})
 
+		It("job ls should list the job", func() {
+			jobList, jobListError := cli.JobList(appName)
+			Expect(jobListError).NotTo(HaveOccurred())
+			Expect(len(jobList.Jobs)).To(Equal(1))
+
+			jobsByName := map[string]client.WkldDescription{}
+			for _, job := range jobList.Jobs {
+				jobsByName[job.Name] = job
+			}
+
+			Expect(jobsByName["query"].Name).To(Equal("query"))
+			Expect(jobsByName["query"].AppName).To(Equal(appName))
+		})
+
 		It("svc package should output a cloudformation template and params file", func() {
-			Skip("not implemented yet")
+			svcPackageError := cli.SvcPackage(&client.PackageInput{
+				Name:    "front-end",
+				AppName: appName,
+				Env:     "test",
+				Dir:     "infrastructure",
+				Tag:     "gallopinggurdey",
+			})
+			Expect(svcPackageError).NotTo(HaveOccurred())
+			Expect("infrastructure/front-end-test.stack.yml").To(BeAnExistingFile())
+			Expect("infrastructure/front-end-test.params.json").To(BeAnExistingFile())
+		})
+
+		It("job package should output a Cloudformation template and params file", func() {
+			jobPackageError := cli.JobPackage(&client.PackageInput{
+				Name:    "query",
+				AppName: appName,
+				Env:     "test",
+				Dir:     "infrastructure",
+				Tag:     "thepostalservice",
+			})
+			Expect(jobPackageError).NotTo(HaveOccurred())
+			Expect("infrastructure/query-test.params.json").To(BeAnExistingFile())
+			Expect("infrastructure/query-test.stack.yml").To(BeAnExistingFile())
 		})
 	})
 
-	Context("when deploying services", func() {
+	Context("when deploying services and jobs", func() {
 		var (
 			frontEndDeployErr error
 			wwwDeployErr      error
 			backEndDeployErr  error
+			jobDeployErr      error
+
+			routeURL string
 		)
 		BeforeAll(func() {
 			_, frontEndDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
 				Name:     "front-end",
 				EnvName:  "test",
 				ImageTag: "gallopinggurdey",
+			})
+			_, jobDeployErr = cli.JobDeploy(&client.JobDeployInput{
+				Name:     "query",
+				EnvName:  "test",
+				ImageTag: "thepostalservice",
 			})
 			_, wwwDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
 				Name:     "www",
@@ -150,10 +208,14 @@ var _ = Describe("Multiple Service App", func() {
 			})
 		})
 
-		It("svc deploy should succeed to both environment", func() {
+		It("svc deploy should succeed", func() {
 			Expect(frontEndDeployErr).NotTo(HaveOccurred())
 			Expect(wwwDeployErr).NotTo(HaveOccurred())
 			Expect(backEndDeployErr).NotTo(HaveOccurred())
+		})
+
+		It("job deploy should succeed", func() {
+			Expect(jobDeployErr).NotTo(HaveOccurred())
 		})
 
 		It("svc show should include a valid URL and description for test env", func() {
@@ -246,7 +308,10 @@ var _ = Describe("Multiple Service App", func() {
 			// Calls the front end's service discovery endpoint - which should connect
 			// to the backend, and pipe the backend response to us.
 			route := svc.Routes[0]
+
 			Expect(route.Environment).To(Equal("test"))
+			routeURL = route.URL
+
 			resp, fetchErr := http.Get(fmt.Sprintf("%s/service-discovery-test/", route.URL))
 			Expect(fetchErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
@@ -256,6 +321,24 @@ var _ = Describe("Multiple Service App", func() {
 			bodyBytes, err := ioutil.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(bodyBytes)).To(Equal("back-end-service-discovery"))
+
+		})
+
+		It("job should have run", func() {
+			// Job should have run. We check this by hitting the "job-checker" path, which tells us the value
+			// of the "TEST_JOB_CHECK_VAR" in the frontend service, which will have been updated by a GET on
+			// /job-setter
+			Eventually(func() (string, error) {
+				resp, fetchErr := http.Get(fmt.Sprintf("%s/job-checker/", routeURL))
+				if fetchErr != nil {
+					return "", fetchErr
+				}
+				bodyBytes, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					return "", err
+				}
+				return string(bodyBytes), nil
+			}, "4m", "15s").Should(Equal("yes")) // This is shorthand for "error is nil and resp is yes"
 		})
 
 		It("environment variable should be overridden and accessible through GET /magicwords", func() {

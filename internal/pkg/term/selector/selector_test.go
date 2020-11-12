@@ -1207,10 +1207,17 @@ func TestSelect_Application(t *testing.T) {
 }
 
 func TestWorkspaceSelect_Dockerfile(t *testing.T) {
-	var dockerfiles = []string{
+	dockerfiles := []string{
 		"./Dockerfile",
 		"backend/Dockerfile",
 		"frontend/Dockerfile",
+	}
+	dockerfileOptions := []string{
+		"./Dockerfile",
+		"backend/Dockerfile",
+		"frontend/Dockerfile",
+		"Enter custom path for your Dockerfile",
+		"Use an existing image instead",
 	}
 	testCases := map[string]struct {
 		mockWs     func(retriever *mocks.MockWorkspaceRetriever)
@@ -1226,23 +1233,26 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 			mockPrompt: func(m *mocks.MockPrompter) {
 				m.EXPECT().SelectOne(
 					gomock.Any(), gomock.Any(),
-					gomock.Eq([]string{
-						"./Dockerfile",
-						"backend/Dockerfile",
-						"frontend/Dockerfile",
-						"Use an existing image instead",
-					}),
+					gomock.Eq(dockerfileOptions),
 					gomock.Any(),
 				).Return("frontend/Dockerfile", nil)
 			},
 			wantedErr:        nil,
 			wantedDockerfile: "frontend/Dockerfile",
 		},
-		"prompts user for custom path if fail to find Dockerfiles": {
+		"prompts user for custom path": {
 			mockWs: func(m *mocks.MockWorkspaceRetriever) {
-				m.EXPECT().ListDockerfiles().Return(nil, &workspace.ErrDockerfileNotFound{})
+				m.EXPECT().ListDockerfiles().Return([]string{}, nil)
 			},
 			mockPrompt: func(m *mocks.MockPrompter) {
+				m.EXPECT().SelectOne(
+					gomock.Any(), gomock.Any(),
+					gomock.Eq([]string{
+						"Enter custom path for your Dockerfile",
+						"Use an existing image instead",
+					}),
+					gomock.Any(),
+				).Return("Enter custom path for your Dockerfile", nil)
 				m.EXPECT().Get(
 					gomock.Any(),
 					gomock.Any(),
@@ -1253,19 +1263,12 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 			wantedErr:        nil,
 			wantedDockerfile: "crazy/path/Dockerfile",
 		},
-		"returns an error if fail to get custom Dockerfile path": {
+		"returns an error if fail to list Dockerfile": {
 			mockWs: func(m *mocks.MockWorkspaceRetriever) {
-				m.EXPECT().ListDockerfiles().Return(nil, &workspace.ErrDockerfileNotFound{})
+				m.EXPECT().ListDockerfiles().Return(nil, errors.New("some error"))
 			},
-			mockPrompt: func(m *mocks.MockPrompter) {
-				m.EXPECT().Get(
-					gomock.Any(),
-					gomock.Any(),
-					gomock.Any(),
-					gomock.Any(),
-				).Return("", errors.New("some error"))
-			},
-			wantedErr: fmt.Errorf("get custom Dockerfile path: some error"),
+			mockPrompt: func(m *mocks.MockPrompter) {},
+			wantedErr:  fmt.Errorf("list Dockerfiles: some error"),
 		},
 		"returns an error if fail to select Dockerfile": {
 			mockWs: func(m *mocks.MockWorkspaceRetriever) {
@@ -1280,6 +1283,25 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 				).Return("", errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("select Dockerfile: some error"),
+		},
+		"returns an error if fail to get custom Dockerfile path": {
+			mockWs: func(m *mocks.MockWorkspaceRetriever) {
+				m.EXPECT().ListDockerfiles().Return(dockerfiles, nil)
+			},
+			mockPrompt: func(m *mocks.MockPrompter) {
+				m.EXPECT().SelectOne(
+					gomock.Any(), gomock.Any(),
+					gomock.Eq(dockerfileOptions),
+					gomock.Any(),
+				).Return("Enter custom path for your Dockerfile", nil)
+				m.EXPECT().Get(
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).Return("", errors.New("some error"))
+			},
+			wantedErr: fmt.Errorf("get custom Dockerfile path: some error"),
 		},
 	}
 	for name, tc := range testCases {
