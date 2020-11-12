@@ -31,6 +31,7 @@ batch:
             - root
             - sidecars
             - task
+            - app-with-domain
 
 phases:
   install:
