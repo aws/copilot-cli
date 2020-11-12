@@ -38,7 +38,8 @@ const (
 	fmtSvcDeleteStart             = "Deleting service %s from environment %s."
 	fmtSvcDeleteFailed            = "Failed to delete service %s from environment %s: %v.\n"
 	fmtSvcDeleteComplete          = "Deleted service %s from environment %s.\n"
-	fmtSvcDeleteResourcesStart    = "Deleting resources of service %s from application %s.\n"
+	fmtSvcDeleteResourcesStart    = "Deleting resources of service %s from application %s."
+	fmtSvcDeleteResourcesFailed   = "Failed to delete resources of service %s from application %s.\n"
 	fmtSvcDeleteResourcesComplete = "Deleted resources of service %s from application %s.\n"
 )
 
@@ -309,7 +310,7 @@ func (o *deleteSvcOpts) removeSvcFromApp() error {
 	o.spinner.Start(fmt.Sprintf(fmtSvcDeleteResourcesStart, o.name, o.appName))
 	if err := o.appCFN.RemoveServiceFromApp(proj, o.name); err != nil {
 		if !isStackSetNotExistsErr(err) {
-			o.spinner.Stop(log.Serrorf(fmtSvcDeleteResourcesStart, o.name, o.appName))
+			o.spinner.Stop(log.Serrorf(fmtSvcDeleteResourcesFailed, o.name, o.appName))
 			return err
 		}
 	}
