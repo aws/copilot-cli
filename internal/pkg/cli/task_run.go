@@ -438,10 +438,10 @@ func (o *runTaskOpts) runTask() ([]*task.Task, error) {
 	o.spinner.Start(fmt.Sprintf("Waiting for %s to be running for %s.", english.Plural(o.count, "task", ""), o.groupName))
 	tasks, err := o.runner.Run()
 	if err != nil {
-		o.spinner.Stop(log.Serrorf("Failed to run %s.\n", o.groupName))
+		o.spinner.Stop(log.Serrorf("Failed to run %s.\n\n", o.groupName))
 		return nil, fmt.Errorf("run task %s: %w", o.groupName, err)
 	}
-	o.spinner.Stop(log.Ssuccessf("%s %s %s running.\n", english.PluralWord(o.count, "Task", ""), o.groupName, english.PluralWord(o.count, "is", "are")))
+	o.spinner.Stop(log.Ssuccessf("%s %s %s running.\n\n", english.PluralWord(o.count, "Task", ""), o.groupName, english.PluralWord(o.count, "is", "are")))
 	return tasks, nil
 }
 
@@ -465,20 +465,20 @@ func (o *runTaskOpts) buildAndPushImage() error {
 func (o *runTaskOpts) deployTaskResources() error {
 	o.spinner.Start(fmt.Sprintf("Provisioning resources and permissions for task %s.", color.HighlightUserInput(o.groupName)))
 	if err := o.deploy(); err != nil {
-		o.spinner.Stop(log.Serrorln("Failed to provision task resources."))
+		o.spinner.Stop(log.Serror("Failed to provision task resources.\n\n"))
 		return fmt.Errorf("provision resources for task %s: %w", o.groupName, err)
 	}
-	o.spinner.Stop(log.Ssuccessln("Successfully provisioned task resources."))
+	o.spinner.Stop(log.Ssuccess("Successfully provisioned task resources.\n\n"))
 	return nil
 }
 
 func (o *runTaskOpts) updateTaskResources() error {
 	o.spinner.Start(fmt.Sprintf("Updating image to task %s.", color.HighlightUserInput(o.groupName)))
 	if err := o.deploy(); err != nil {
-		o.spinner.Stop(log.Serrorln("Failed to update task resources."))
+		o.spinner.Stop(log.Serror("Failed to update task resources.\n\n"))
 		return fmt.Errorf("update resources for task %s: %w", o.groupName, err)
 	}
-	o.spinner.Stop(log.Ssuccessln("Successfully updated image to task."))
+	o.spinner.Stop(log.Ssuccess("Successfully updated image to task.\n\n"))
 	return nil
 }
 

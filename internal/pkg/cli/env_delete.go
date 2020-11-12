@@ -30,8 +30,8 @@ const (
 
 const (
 	fmtDeleteEnvStart    = "Deleting environment %s from application %s."
-	fmtDeleteEnvFailed   = "Failed to delete environment %s from application %s."
-	fmtDeleteEnvComplete = "Deleted environment %s from application %s."
+	fmtDeleteEnvFailed   = "Failed to delete environment %s from application %s.\n"
+	fmtDeleteEnvComplete = "Deleted environment %s from application %s.\n"
 )
 
 var (

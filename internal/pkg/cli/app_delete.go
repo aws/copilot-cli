@@ -25,16 +25,16 @@ const (
 	deleteAppConfirmHelp      = "This will delete all resources in your application: including services, environments, and pipelines."
 
 	deleteAppCleanResourcesStartMsg = "Cleaning up deployment resources."
-	deleteAppCleanResourcesStopMsg  = "Cleaned up deployment resources."
+	deleteAppCleanResourcesStopMsg  = "Cleaned up deployment resources.\n"
 
 	deleteAppResourcesStartMsg = "Deleting application resources."
-	deleteAppResourcesStopMsg  = "Deleted application resources."
+	deleteAppResourcesStopMsg  = "Deleted application resources.\n"
 
 	deleteAppConfigStartMsg = "Deleting application configuration."
-	deleteAppConfigStopMsg  = "Deleted application configuration."
+	deleteAppConfigStopMsg  = "Deleted application configuration.\n"
 
 	fmtDeleteAppWsStartMsg = "Deleting local %s file."
-	fmtDeleteAppWsStopMsg  = "Deleted local %s file."
+	fmtDeleteAppWsStopMsg  = "Deleted local %s file.\n"
 )
 
 var (
@@ -283,7 +283,7 @@ func (o *deleteAppOpts) emptyS3Bucket() error {
 		// Empty pipeline buckets.
 		s3Client := o.s3(sess)
 		if err := s3Client.EmptyBucket(resource.S3Bucket); err != nil {
-			o.spinner.Stop(log.Serror("Error cleaning up deployment resources."))
+			o.spinner.Stop(log.Serrorln("Error cleaning up deployment resources."))
 			return fmt.Errorf("empty bucket %s: %w", resource.S3Bucket, err)
 		}
 	}
@@ -302,7 +302,7 @@ func (o *deleteAppOpts) deletePipeline() error {
 func (o *deleteAppOpts) deleteAppResources() error {
 	o.spinner.Start(deleteAppResourcesStartMsg)
 	if err := o.cfn.DeleteApp(o.name); err != nil {
-		o.spinner.Stop(log.Serror("Error deleting application resources."))
+		o.spinner.Stop(log.Serrorln("Error deleting application resources."))
 		return fmt.Errorf("delete app resources: %w", err)
 	}
 	o.spinner.Stop(log.Ssuccess(deleteAppResourcesStopMsg))
@@ -312,7 +312,7 @@ func (o *deleteAppOpts) deleteAppResources() error {
 func (o *deleteAppOpts) deleteAppConfigs() error {
 	o.spinner.Start(deleteAppConfigStartMsg)
 	if err := o.store.DeleteApplication(o.name); err != nil {
-		o.spinner.Stop(log.Serror("Error deleting application configuration."))
+		o.spinner.Stop(log.Serrorln("Error deleting application configuration."))
 		return fmt.Errorf("delete application %s configuration: %w", o.name, err)
 	}
 	o.spinner.Stop(log.Ssuccess(deleteAppConfigStopMsg))
@@ -322,10 +322,10 @@ func (o *deleteAppOpts) deleteAppConfigs() error {
 func (o *deleteAppOpts) deleteWs() error {
 	o.spinner.Start(fmt.Sprintf(fmtDeleteAppWsStartMsg, workspace.SummaryFileName))
 	if err := o.ws.DeleteWorkspaceFile(); err != nil {
-		o.spinner.Stop(log.Serrorf("Error deleting %s file.", workspace.SummaryFileName))
+		o.spinner.Stop(log.Serrorf("Error deleting %s file.\n", workspace.SummaryFileName))
 		return fmt.Errorf("delete %s file: %w", workspace.SummaryFileName, err)
 	}
-	o.spinner.Stop(log.Ssuccess(fmt.Sprintf(fmtDeleteAppWsStopMsg, workspace.SummaryFileName)))
+	o.spinner.Stop(log.Ssuccessf(fmt.Sprintf(fmtDeleteAppWsStopMsg, workspace.SummaryFileName)))
 	return nil
 }
 

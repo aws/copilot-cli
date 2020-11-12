@@ -26,8 +26,8 @@ const (
 	pipelineDeleteSecretConfirmHelp   = "This will delete the token associated with the source of your pipeline."
 
 	fmtDeletePipelineStart    = "Deleting pipeline %s from application %s."
-	fmtDeletePipelineFailed   = "Failed to delete pipeline %s from application %s: %v."
-	fmtDeletePipelineComplete = "Deleted pipeline %s from application %s."
+	fmtDeletePipelineFailed   = "Failed to delete pipeline %s from application %s: %v.\n"
+	fmtDeletePipelineComplete = "Deleted pipeline %s from application %s.\n"
 )
 
 var (

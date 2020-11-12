@@ -229,7 +229,7 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
     DeletionPolicy: Retain
 `, "arn").Return(errors.New("some error"))
 
-				prog.EXPECT().Stop(log.Serror("Failed to delete environment test from application phonetool."))
+				prog.EXPECT().Stop(log.Serror("Failed to delete environment test from application phonetool.\n"))
 
 				return &deleteEnvOpts{
 					deleteEnvVars: deleteEnvVars{
@@ -264,7 +264,7 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
     DeletionPolicy: Retain`, nil)
 				deployer.EXPECT().DeleteEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 
-				prog.EXPECT().Stop(log.Serror("Failed to delete environment test from application phonetool."))
+				prog.EXPECT().Stop(log.Serror("Failed to delete environment test from application phonetool.\n"))
 
 				return &deleteEnvOpts{
 					deleteEnvVars: deleteEnvVars{
@@ -304,7 +304,7 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 					iam.EXPECT().DeleteRole("managerRoleARN").Return(errors.New("some error")),
 				)
 
-				prog.EXPECT().Stop(log.Serror("Failed to delete environment test from application phonetool."))
+				prog.EXPECT().Stop(log.Serror("Failed to delete environment test from application phonetool.\n"))
 
 				return &deleteEnvOpts{
 					deleteEnvVars: deleteEnvVars{
@@ -348,7 +348,7 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 				store := mocks.NewMockenvironmentStore(ctrl)
 				store.EXPECT().DeleteEnvironment("phonetool", "test").Return(nil)
 
-				prog.EXPECT().Stop(log.Ssuccess("Deleted environment test from application phonetool."))
+				prog.EXPECT().Stop(log.Ssuccess("Deleted environment test from application phonetool.\n"))
 
 				return &deleteEnvOpts{
 					deleteEnvVars: deleteEnvVars{

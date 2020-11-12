@@ -23,8 +23,8 @@ import (
 
 const (
 	fmtAppInitStart    = "Creating the infrastructure to manage services and jobs under application %s."
-	fmtAppInitComplete = "Created the infrastructure to manage services and jobs under application %s.\n"
-	fmtAppInitFailed   = "Failed to create the infrastructure to manage services and jobs under application %s.\n"
+	fmtAppInitComplete = "Created the infrastructure to manage services and jobs under application %s.\n\n"
+	fmtAppInitFailed   = "Failed to create the infrastructure to manage services and jobs under application %s.\n\n"
 
 	fmtAppInitNamePrompt    = "What would you like to %s your application?"
 	fmtAppInitNewNamePrompt = `Ok, let's create a new application then.

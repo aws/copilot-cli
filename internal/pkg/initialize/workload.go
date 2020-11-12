@@ -19,8 +19,8 @@ import (
 
 const (
 	fmtAddWlToAppStart    = "Creating ECR repositories for %s %s."
-	fmtAddWlToAppFailed   = "Failed to create ECR repositories for %s %s.\n"
-	fmtAddWlToAppComplete = "Created ECR repositories for %s %s.\n"
+	fmtAddWlToAppFailed   = "Failed to create ECR repositories for %s %s.\n\n"
+	fmtAddWlToAppComplete = "Created ECR repositories for %s %s.\n\n"
 )
 
 const (

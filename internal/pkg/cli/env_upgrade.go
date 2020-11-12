@@ -31,8 +31,8 @@ const (
 to support the latest Copilot features.`
 
 	fmtEnvUpgradeStart    = "Upgrading environment %s from version %s to version %s."
-	fmtEnvUpgradeFailed   = "Failed to upgrade environment %s's template to version %s."
-	fmtEnvUpgradeComplete = "Upgraded environment %s's template to version %s."
+	fmtEnvUpgradeFailed   = "Failed to upgrade environment %s's template to version %s.\n"
+	fmtEnvUpgradeComplete = "Upgraded environment %s's template to version %s.\n"
 )
 
 // envUpgradeVars holds flag values.

@@ -36,10 +36,10 @@ const (
 
 const (
 	fmtJobDeleteStart             = "Deleting job %s from environment %s."
-	fmtJobDeleteFailed            = "Failed to delete job %s from environment %s: %v."
-	fmtJobDeleteComplete          = "Deleted job %s from environment %s."
-	fmtJobDeleteResourcesStart    = "Deleting resources of job %s from application %s."
-	fmtJobDeleteResourcesComplete = "Deleted resources of job %s from application %s."
+	fmtJobDeleteFailed            = "Failed to delete job %s from environment %s: %v.\n"
+	fmtJobDeleteComplete          = "Deleted job %s from environment %s.\n"
+	fmtJobDeleteResourcesStart    = "Deleting resources of job %s from application %s.\n"
+	fmtJobDeleteResourcesComplete = "Deleted resources of job %s from application %s.\n"
 )
 
 var (

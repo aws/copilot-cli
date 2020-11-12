@@ -26,16 +26,16 @@ import (
 
 const (
 	fmtPipelineUpdateResourcesStart    = "Adding pipeline resources to your application: %s"
-	fmtPipelineUpdateResourcesFailed   = "Failed to add pipeline resources to your application: %s"
-	fmtPipelineUpdateResourcesComplete = "Successfully added pipeline resources to your application: %s"
+	fmtPipelineUpdateResourcesFailed   = "Failed to add pipeline resources to your application: %s\n"
+	fmtPipelineUpdateResourcesComplete = "Successfully added pipeline resources to your application: %s\n"
 
 	fmtPipelineUpdateStart    = "Creating a new pipeline: %s"
-	fmtPipelineUpdateFailed   = "Failed to create a new pipeline: %s."
-	fmtPipelineUpdateComplete = "Successfully created a new pipeline: %s"
+	fmtPipelineUpdateFailed   = "Failed to create a new pipeline: %s.\n"
+	fmtPipelineUpdateComplete = "Successfully created a new pipeline: %s\n"
 
 	fmtPipelineUpdateProposalStart    = "Proposing infrastructure changes for the pipeline: %s"
-	fmtPipelineUpdateProposalFailed   = "Failed to accept changes for pipeline: %s."
-	fmtPipelineUpdateProposalComplete = "Successfully updated pipeline: %s"
+	fmtPipelineUpdateProposalFailed   = "Failed to accept changes for pipeline: %s.\n"
+	fmtPipelineUpdateProposalComplete = "Successfully updated pipeline: %s\n"
 
 	fmtPipelineUpdateExistPrompt = "Are you sure you want to update an existing pipeline: %s?"
 )
