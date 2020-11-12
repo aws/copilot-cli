@@ -93,12 +93,19 @@ Resources:
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      #  Check if your service is healthy within 20 = 10*2 seconds, compared to 2.5 mins = 30*5 seconds.
       HealthCheckPath: {{.HTTPHealthCheck.HealthCheckPath}} # Default is '/'.
-      HealthyThresholdCount: {{.HTTPHealthCheck.HealthyThreshold}} # Default is 2.
-      UnhealthyThresholdCount: {{.HTTPHealthCheck.UnhealthyThreshold}} # Default is 2.
-      HealthCheckIntervalSeconds: {{.HTTPHealthCheck.Interval}} # Default is 10.
-      HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}} # Default is 5.
+{{- if .HTTPHealthCheck.HealthyThreshold}}
+      HealthyThresholdCount: {{.HTTPHealthCheck.HealthyThreshold}}
+{{- end}}
+{{- if .HTTPHealthCheck.UnhealthyThreshold}}
+      UnhealthyThresholdCount: {{.HTTPHealthCheck.UnhealthyThreshold}}
+{{- end}}
+{{- if .HTTPHealthCheck.Interval}}
+      HealthCheckIntervalSeconds: {{.HTTPHealthCheck.Interval}}
+{{- end}}
+{{- if .HTTPHealthCheck.Timeout}}
+      HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}}
+{{- end}}
       Port: !Ref ContainerPort
       Protocol: HTTP
       TargetGroupAttributes:
