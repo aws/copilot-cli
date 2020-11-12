@@ -134,8 +134,6 @@ count:
   range: 1-10
   cpu_percentage: 70
   memory_percentage: 80
-  requests: 10000
-  response_time: 2s
 ```
 
 
@@ -147,12 +145,6 @@ Scale up or down based on the average CPU your service should maintain.
 
 <span class="parent-field">count.</span><a id="count-memory-percentage" href="#count-memory-percentage" class="field">`memory_percentage`</a> <span class="type">Integer</span>  
 Scale up or down based on the average memory your service should maintain.  
-
-<span class="parent-field">count.</span><a id="requests" href="#count-requests" class="field">`requests`</a> <span class="type">Integer</span>  
-Scale up or down based on the request count handled per tasks.
-
-<span class="parent-field">count.</span><a id="response_time" href="#count-response_time" class="field">`response_time`</a> <span class="type">Integer</span>  
-Scale up or down based on the service average response time.
 
 <div class="separator"></div>
 

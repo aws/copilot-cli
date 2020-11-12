@@ -161,7 +161,7 @@ Resources:
   HTTPSListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn: HTTPSCert
-    Condition: ExportHTTPSListener 
+    Condition: ExportHTTPSListener
     Properties:
       Certificates:
         - CertificateArn: !Ref HTTPSCert
