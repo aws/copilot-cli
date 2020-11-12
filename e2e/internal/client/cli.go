@@ -81,6 +81,7 @@ type SvcInitRequest struct {
 	Name       string
 	SvcType    string
 	Dockerfile string
+	Image      string
 	SvcPort    string
 }
 
@@ -229,7 +230,6 @@ func (cli *CLI) Init(opts *InitRequest) (string, error) {
 copilot svc init
 	--name $n
 	--svc-type $t
-	--dockerfile $d
 	--port $port
 */
 func (cli *CLI) SvcInit(opts *SvcInitRequest) (string, error) {
@@ -238,11 +238,16 @@ func (cli *CLI) SvcInit(opts *SvcInitRequest) (string, error) {
 		"init",
 		"--name", opts.Name,
 		"--svc-type", opts.SvcType,
-		"--dockerfile", opts.Dockerfile,
 	}
 	// Apply optional flags only if a value is provided.
 	if opts.SvcPort != "" {
 		args = append(args, "--port", opts.SvcPort)
+	}
+	if opts.Dockerfile != "" {
+		args = append(args, "--dockerfile", opts.Dockerfile)
+	}
+	if opts.Image != "" {
+		args = append(args, "--image", opts.Image)
 	}
 	return cli.exec(
 		exec.Command(cli.path, args...))
