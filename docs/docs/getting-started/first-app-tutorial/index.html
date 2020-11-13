@@ -2,73 +2,73 @@
 <!doctype html>
 <html lang="en" class="no-js">
   <head>
-    
+
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
-      
+
         <meta name="description" content="Develop, Release and Operate Container Apps on AWS.">
-      
-      
-      
-      
+
+
+
+
       <link rel="shortcut icon" href="../../../assets/images/cli.png">
       <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-6.1.4">
-    
-    
-      
+
+
+
         <title>Deploy your first application - AWS Copilot CLI</title>
-      
-    
-    
+
+
+
       <link rel="stylesheet" href="../../../assets/stylesheets/main.358818c7.min.css">
-      
-        
+
+
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.f0267088.min.css">
-        
-          
-          
+
+
+
           <meta name="theme-color" content="#ffffff">
-        
-      
-    
-    
-    
-      
-    
-    
-    
+
+
+
+
+
+
+
+
+
       <link rel="stylesheet" href="../../../stylesheets/extra.css">
-    
-    
-      
-    
-    
+
+
+
+
+
   </head>
-  
-  
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
     <body dir="ltr" data-md-color-scheme="" data-md-color-primary="white" data-md-color-accent="">
-      
-  
+
+
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
-      
-        
+
+
         <a href="#step-1-download-configure-aws-copilot" class="md-skip">
           Skip to content
         </a>
-      
+
     </div>
     <div data-md-component="announce">
-      
+
     </div>
-    
+
       <!-- Application header -->
 <header class="md-header" data-md-component="header">
 
@@ -82,8 +82,8 @@
       class="md-header-nav__button md-logo"
       aria-label="AWS Copilot CLI"
     >
-      
-  
+
+
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0114.25 15H1.75A1.75 1.75 0 010 13.25V2.75zm1.75-.25a.25.25 0 00-.25.25v10.5c0 .138.112.25.25.25h12.5a.25.25 0 00.25-.25V2.75a.25.25 0 00-.25-.25H1.75zM7.25 8a.75.75 0 01-.22.53l-2.25 2.25a.75.75 0 11-1.06-1.06L5.44 8 3.72 6.28a.75.75 0 111.06-1.06l2.25 2.25c.141.14.22.331.22.53zm1.5 1.5a.75.75 0 000 1.5h3a.75.75 0 000-1.5h-3z"/></svg>
 
     </a>
@@ -95,30 +95,30 @@
 
     <!-- Header title -->
     <div class="md-header-nav__title" data-md-component="header-title">
-      
+
         <div class="md-header-nav__ellipsis">
           <span class="md-header-nav__topic md-ellipsis title">
             AWS Copilot CLI
           </span>
           <span class="md-header-nav__topic md-ellipsis">
-            
+
               Deploy your first application
-            
+
           </span>
         </div>
-      
+
     </div>
 
     <!-- Button to open search dialogue -->
-    
+
 
     <!-- Repository containing source -->
-    
+
       <div class="md-header-nav__source">
-        
+
 <a href="https://github.com/aws/copilot-cli/" title="Go to repository" class="md-source">
   <div class="md-source__icon md-icon">
-    
+
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
   </div>
   <div class="md-source__repository">
@@ -126,40 +126,40 @@
   </div>
 </a>
       </div>
-    
+
   </nav>
 </header>
-    
+
     <div class="md-container" data-md-component="container">
-      
-      
-        
-      
+
+
+
+
       <main class="md-main" data-md-component="main">
         <div class="md-main__inner md-grid">
-          
-            
+
+
               <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
-                    
+
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
     <a href="../../.." title="AWS Copilot CLI" class="md-nav__button md-logo" aria-label="AWS Copilot CLI">
-      
-  
+
+
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0114.25 15H1.75A1.75 1.75 0 010 13.25V2.75zm1.75-.25a.25.25 0 00-.25.25v10.5c0 .138.112.25.25.25h12.5a.25.25 0 00.25-.25V2.75a.25.25 0 00-.25-.25H1.75zM7.25 8a.75.75 0 01-.22.53l-2.25 2.25a.75.75 0 11-1.06-1.06L5.44 8 3.72 6.28a.75.75 0 111.06-1.06l2.25 2.25c.141.14.22.331.22.53zm1.5 1.5a.75.75 0 000 1.5h3a.75.75 0 000-1.5h-3z"/></svg>
 
     </a>
     AWS Copilot CLI
   </label>
-  
+
     <div class="md-nav__source">
-      
+
 <a href="https://github.com/aws/copilot-cli/" title="Go to repository" class="md-source">
   <div class="md-source__icon md-icon">
-    
+
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
   </div>
   <div class="md-source__repository">
@@ -167,12 +167,12 @@
   </div>
 </a>
     </div>
-  
+
   <ul class="md-nav__list" data-md-scrollfix>
-    
-      
-      
-      
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -181,18 +181,18 @@
     </a>
   </li>
 
-    
-      
-      
-      
 
-  
+
+
+
+
+
 
 
   <li class="md-nav__item md-nav__item--active md-nav__item--nested">
-    
+
       <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2" type="checkbox" id="nav-2" checked>
-    
+
     <label class="md-nav__link" for="nav-2">
       Documentation
       <span class="md-nav__icon md-icon"></span>
@@ -203,11 +203,11 @@
         Documentation
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
+
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -216,18 +216,18 @@
     </a>
   </li>
 
-        
-          
-          
-          
 
-  
+
+
+
+
+
 
 
   <li class="md-nav__item md-nav__item--active md-nav__item--nested">
-    
+
       <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-2" type="checkbox" id="nav-2-2" checked>
-    
+
     <label class="md-nav__link" for="nav-2-2">
       Getting Started
       <span class="md-nav__icon md-icon"></span>
@@ -238,11 +238,11 @@
         Getting Started
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
+
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -251,10 +251,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -263,109 +263,109 @@
     </a>
   </li>
 
-        
-          
-          
-          
 
-  
+
+
+
+
+
 
 
   <li class="md-nav__item md-nav__item--active">
-    
+
     <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
-    
-    
+
+
       <label class="md-nav__link md-nav__link--active" for="__toc">
         Deploy your first application
         <span class="md-nav__icon md-icon"></span>
       </label>
-    
+
     <a href="./" class="md-nav__link md-nav__link--active">
       Deploy your first application
     </a>
-    
-      
+
+
 <nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
+
+
+
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-scrollfix>
-      
+
         <li class="md-nav__item">
   <a href="#step-1-download-configure-aws-copilot" class="md-nav__link">
     Step 1: Download &amp; Configure AWS Copilot
   </a>
-  
+
 </li>
-      
+
         <li class="md-nav__item">
   <a href="#step-2-download-some-code-to-deploy" class="md-nav__link">
     Step 2: Download some code to deploy
   </a>
-  
+
 </li>
-      
+
         <li class="md-nav__item">
   <a href="#step-3-setting-up-our-app" class="md-nav__link">
     Step 3: Setting up our app
   </a>
-  
+
 </li>
-      
+
         <li class="md-nav__item">
   <a href="#step-4-answer-a-few-questions" class="md-nav__link">
     Step 4: Answer a few questions
   </a>
-  
+
 </li>
-      
+
         <li class="md-nav__item">
   <a href="#step-5-deploy-your-service" class="md-nav__link">
     Step 5: Deploy your service
   </a>
-  
+
 </li>
-      
+
         <li class="md-nav__item">
   <a href="#cleaning-up" class="md-nav__link">
     Cleaning up
   </a>
-  
+
 </li>
-      
+
         <li class="md-nav__item">
   <a href="#congratulations" class="md-nav__link">
     Congratulations!
   </a>
-  
+
 </li>
-      
+
     </ul>
-  
+
 </nav>
-    
+
   </li>
 
-        
+
       </ul>
     </nav>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item md-nav__item--nested">
-    
+
       <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-3" type="checkbox" id="nav-2-3">
-    
+
     <label class="md-nav__link" for="nav-2-3">
       Concepts
       <span class="md-nav__icon md-icon"></span>
@@ -376,11 +376,11 @@
         Concepts
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
+
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -389,10 +389,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -401,10 +401,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -413,10 +413,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -425,10 +425,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -437,10 +437,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -449,15 +449,15 @@
     </a>
   </li>
 
-        
+
       </ul>
     </nav>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -466,16 +466,16 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item md-nav__item--nested">
-    
+
       <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-5" type="checkbox" id="nav-2-5">
-    
+
     <label class="md-nav__link" for="nav-2-5">
       Manifest
       <span class="md-nav__icon md-icon"></span>
@@ -486,11 +486,11 @@
         Manifest
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
+
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -499,10 +499,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -511,10 +511,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -523,10 +523,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -535,10 +535,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -547,21 +547,21 @@
     </a>
   </li>
 
-        
+
       </ul>
     </nav>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item md-nav__item--nested">
-    
+
       <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-6" type="checkbox" id="nav-2-6">
-    
+
     <label class="md-nav__link" for="nav-2-6">
       Developing
       <span class="md-nav__icon md-icon"></span>
@@ -572,11 +572,11 @@
         Developing
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
+
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -585,10 +585,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -597,10 +597,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -609,10 +609,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -621,10 +621,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -633,21 +633,21 @@
     </a>
   </li>
 
-        
+
       </ul>
     </nav>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item md-nav__item--nested">
-    
+
       <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-7" type="checkbox" id="nav-2-7">
-    
+
     <label class="md-nav__link" for="nav-2-7">
       Commands
       <span class="md-nav__icon md-icon"></span>
@@ -658,17 +658,17 @@
         Commands
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
+
+
+
+
+
 
 
   <li class="md-nav__item md-nav__item--nested">
-    
+
       <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-7-1" type="checkbox" id="nav-2-7-1">
-    
+
     <label class="md-nav__link" for="nav-2-7-1">
       Getting Started
       <span class="md-nav__icon md-icon"></span>
@@ -679,11 +679,11 @@
         Getting Started
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
+
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -692,10 +692,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -704,21 +704,21 @@
     </a>
   </li>
 
-        
+
       </ul>
     </nav>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item md-nav__item--nested">
-    
+
       <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-7-2" type="checkbox" id="nav-2-7-2">
-    
+
     <label class="md-nav__link" for="nav-2-7-2">
       Develop
       <span class="md-nav__icon md-icon"></span>
@@ -729,11 +729,11 @@
         Develop
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
+
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -742,10 +742,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -754,10 +754,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -766,10 +766,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -778,10 +778,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -790,10 +790,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -802,10 +802,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -814,10 +814,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -826,10 +826,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -838,10 +838,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -850,10 +850,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -862,10 +862,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -874,10 +874,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -886,10 +886,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -898,10 +898,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -910,10 +910,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -922,10 +922,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -934,10 +934,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -946,10 +946,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -958,10 +958,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -970,10 +970,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -982,10 +982,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -994,21 +994,21 @@
     </a>
   </li>
 
-        
+
       </ul>
     </nav>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item md-nav__item--nested">
-    
+
       <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-7-3" type="checkbox" id="nav-2-7-3">
-    
+
     <label class="md-nav__link" for="nav-2-7-3">
       Release
       <span class="md-nav__icon md-icon"></span>
@@ -1019,11 +1019,11 @@
         Release
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
+
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -1032,10 +1032,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -1044,10 +1044,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -1056,10 +1056,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -1068,10 +1068,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -1080,10 +1080,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -1092,10 +1092,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -1104,21 +1104,21 @@
     </a>
   </li>
 
-        
+
       </ul>
     </nav>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item md-nav__item--nested">
-    
+
       <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-7-4" type="checkbox" id="nav-2-7-4">
-    
+
     <label class="md-nav__link" for="nav-2-7-4">
       Addons
       <span class="md-nav__icon md-icon"></span>
@@ -1129,11 +1129,11 @@
         Addons
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
+
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -1142,21 +1142,21 @@
     </a>
   </li>
 
-        
+
       </ul>
     </nav>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item md-nav__item--nested">
-    
+
       <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-7-5" type="checkbox" id="nav-2-7-5">
-    
+
     <label class="md-nav__link" for="nav-2-7-5">
       Settings
       <span class="md-nav__icon md-icon"></span>
@@ -1167,11 +1167,11 @@
         Settings
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
+
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -1180,10 +1180,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -1192,31 +1192,31 @@
     </a>
   </li>
 
-        
+
       </ul>
     </nav>
   </li>
 
-        
+
       </ul>
     </nav>
   </li>
 
-        
+
       </ul>
     </nav>
   </li>
 
-    
-      
-      
-      
+
+
+
+
 
 
   <li class="md-nav__item md-nav__item--nested">
-    
+
       <input class="md-nav__toggle md-toggle" data-md-toggle="nav-3" type="checkbox" id="nav-3">
-    
+
     <label class="md-nav__link" for="nav-3">
       Community
       <span class="md-nav__icon md-icon"></span>
@@ -1227,11 +1227,11 @@
         Community
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
-        
-        
-          
-          
-          
+
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -1240,10 +1240,10 @@
     </a>
   </li>
 
-        
-          
-          
-          
+
+
+
+
 
 
   <li class="md-nav__item">
@@ -1252,101 +1252,101 @@
     </a>
   </li>
 
-        
+
       </ul>
     </nav>
   </li>
 
-    
+
   </ul>
 </nav>
                   </div>
                 </div>
               </div>
-            
-            
+
+
               <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
-                    
+
 <nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
+
+
+
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-scrollfix>
-      
+
         <li class="md-nav__item">
   <a href="#step-1-download-configure-aws-copilot" class="md-nav__link">
     Step 1: Download &amp; Configure AWS Copilot
   </a>
-  
+
 </li>
-      
+
         <li class="md-nav__item">
   <a href="#step-2-download-some-code-to-deploy" class="md-nav__link">
     Step 2: Download some code to deploy
   </a>
-  
+
 </li>
-      
+
         <li class="md-nav__item">
   <a href="#step-3-setting-up-our-app" class="md-nav__link">
     Step 3: Setting up our app
   </a>
-  
+
 </li>
-      
+
         <li class="md-nav__item">
   <a href="#step-4-answer-a-few-questions" class="md-nav__link">
     Step 4: Answer a few questions
   </a>
-  
+
 </li>
-      
+
         <li class="md-nav__item">
   <a href="#step-5-deploy-your-service" class="md-nav__link">
     Step 5: Deploy your service
   </a>
-  
+
 </li>
-      
+
         <li class="md-nav__item">
   <a href="#cleaning-up" class="md-nav__link">
     Cleaning up
   </a>
-  
+
 </li>
-      
+
         <li class="md-nav__item">
   <a href="#congratulations" class="md-nav__link">
     Congratulations!
   </a>
-  
+
 </li>
-      
+
     </ul>
-  
+
 </nav>
                   </div>
                 </div>
               </div>
-            
-          
+
+
           <div class="md-content">
             <article class="md-content__inner md-typeset">
-              
-                
+
+
                   <a href="https://github.com/aws/copilot-cli/edit/mainline/site/content/docs/getting-started/first-app-tutorial.md" title="Edit this page" class="md-content__button md-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
                   </a>
-                
-                
+
+
                   <h1>Deploy your first application</h1>
-                
+
                 <p>AWS Copilot makes it easy to deploy your containers to AWS in just a few steps. In this tutorial we’re going to do just that - we’re going to deploy a sample front end service that you can visit in your browser. While we’ll be using a sample static website in this example, you can use AWS Copilot to build and deploy any container app with a Dockerfile. After we get your service all set up, we’ll show you how to delete the resources Copilot created to avoid charges.</p>
 <p>Sound fun? Let’s do it!</p>
 <h2 id="step-1-download-configure-aws-copilot">Step 1: Download &amp; Configure AWS Copilot</h2>
@@ -1373,7 +1373,7 @@ $ <span class="nb">cd</span> example
 <li><em>“What do you want to name this Load Balanced Web Service?”</em> - now what should we call our service in our app? Be as creative as you want - but I recommend naming this service <strong>front-end</strong>.</li>
 <li><em>“Which Dockerfile would you like to use for front-end?”</em> - go ahead and choose the default Dockerfile here. This is the service that Copilot will build and deploy for you. </li>
 </ol>
-<p>Once you choose your Dockerfile, Copilot will start setting up the AWS infrastructure to manage your service. 
+<p>Once you choose your Dockerfile, Copilot will start setting up the AWS infrastructure to manage your service.
 <img width="826" alt="init" src="https://user-images.githubusercontent.com/879348/86040314-ab963f80-b9f8-11ea-8de6-c8caea8f6abf.png"></p>
 <h2 id="step-5-deploy-your-service">Step 5: Deploy your service</h2>
 <p>Once Copilot finishes setting up the infrastructure to manage your app, you’ll be asked if you want to deploy your service to a test environment type <strong>yes.</strong></p>
@@ -1382,25 +1382,25 @@ $ <span class="nb">cd</span> example
 <p><img width="834" alt="deploy" src="https://user-images.githubusercontent.com/879348/86040356-be107900-b9f8-11ea-82cd-3bf2a5eb5c9d.png"></p>
 <h2 id="cleaning-up">Cleaning up</h2>
 <p>Now that you've deployed your service, let's go ahead and run <code>copilot app delete</code> - this will delete all the resources Copilot set up for your application, including your ECS Service and the ECR Repository. To delete everything run:</p>
-<div class="highlight"><pre><span></span><code>$ copilot app delete --env-profiles <span class="nv">test</span><span class="o">=</span>default
+<div class="highlight"><pre><span></span><code>$ copilot app delete
 </code></pre></div>
 <p><img width="738" alt="delete" src="https://user-images.githubusercontent.com/879348/86040380-c9fc3b00-b9f8-11ea-87c2-6d42518d39dd.png"></p>
 <h2 id="congratulations">Congratulations!</h2>
 <p>Congratulations! You have learned how to setup, deploy, and delete your container application to Amazon ECS using AWS Copilot. AWS Copilot is a command line tool that helps you develop, release and operate your container apps on AWS. </p>
 <p>We hope you had fun deploying your app. Ready to dive deeper into AWS Copilot and learn how to build and manage production ready container apps on AWS? Check out the <em>Developing</em> section in the sidebar. </p>
-                
-              
-              
-                
 
 
-              
+
+
+
+
+
             </article>
           </div>
         </div>
       </main>
-      
-        
+
+
 
 <!-- Application footer -->
 <footer class="md-footer">
@@ -1410,11 +1410,11 @@ $ <span class="nb">cd</span> example
 
       <!-- Copyright and theme information -->
       <div class="md-footer-copyright">
-        
+
           <div class="md-footer-copyright__highlight" style="color: rgb(38, 38, 38);">
             Copyright &copy; 2020 Amazon
           </div>
-        
+
         <div style="color: rgb(38, 38, 38);">
           Made with
           <a
@@ -1428,16 +1428,16 @@ $ <span class="nb">cd</span> example
       </div>
 
       <!-- Social links -->
-      
+
     </div>
   </div>
 </footer>
-      
+
     </div>
-    
+
       <script src="../../../assets/javascripts/vendor.7e0ee788.min.js"></script>
       <script src="../../../assets/javascripts/bundle.b3a72adc.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}</script>
-      
+
       <script>
         app = initialize({
           base: "../../..",
@@ -1447,7 +1447,7 @@ $ <span class="nb">cd</span> example
           }, typeof search !== "undefined" && search)
         })
       </script>
-      
-    
+
+
   </body>
 </html>
