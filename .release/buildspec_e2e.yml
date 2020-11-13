@@ -19,7 +19,7 @@ batch:
         variables:
           TEST_SUITE: addons
           APP_REGION: us-west-2
-    - identifier: customized-env
+    - identifier: customized_env
       env:
         privileged-mode: true
         type: LINUX_CONTAINER
@@ -37,7 +37,7 @@ batch:
         variables:
           TEST_SUITE: init
           APP_REGION: us-east-1
-    - identifier: multi-env-app
+    - identifier: multi_env_app
       env:
         privileged-mode: true
         type: LINUX_CONTAINER
@@ -46,7 +46,7 @@ batch:
         variables:
           TEST_SUITE: multi-env-app
           APP_REGION: us-east-2
-    - identifier: multi-svc-app
+    - identifier: multi_svc_app
       env:
         privileged-mode: true
         type: LINUX_CONTAINER
@@ -82,7 +82,7 @@ batch:
         variables:
           TEST_SUITE: task
           APP_REGION: us-east-2
-    - identifier: app-with-domain
+    - identifier: app_with_domain
       env:
         privileged-mode: true
         type: LINUX_CONTAINER
