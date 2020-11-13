@@ -38,7 +38,8 @@ const (
 	fmtJobDeleteStart             = "Deleting job %s from environment %s."
 	fmtJobDeleteFailed            = "Failed to delete job %s from environment %s: %v.\n"
 	fmtJobDeleteComplete          = "Deleted job %s from environment %s.\n"
-	fmtJobDeleteResourcesStart    = "Deleting resources of job %s from application %s.\n"
+	fmtJobDeleteResourcesStart    = "Deleting resources of job %s from application %s."
+	fmtJobDeleteResourcesFailed   = "Failed to delete resources of job %s from application %s.\n"
 	fmtJobDeleteResourcesComplete = "Deleted resources of job %s from application %s.\n"
 )
 
@@ -315,7 +316,7 @@ func (o *deleteJobOpts) removeJobFromApp() error {
 	o.spinner.Start(fmt.Sprintf(fmtJobDeleteResourcesStart, o.name, o.appName))
 	if err := o.appCFN.RemoveJobFromApp(proj, o.name); err != nil {
 		if !isStackSetNotExistsErr(err) {
-			o.spinner.Stop(log.Serrorf(fmtJobDeleteResourcesStart, o.name, o.appName))
+			o.spinner.Stop(log.Serrorf(fmtJobDeleteResourcesFailed, o.name, o.appName))
 			return err
 		}
 	}
