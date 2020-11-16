@@ -1260,7 +1260,7 @@ If you specify a string, Copilot interprets it as the path to your Dockerfile. I
 <div class="highlight"><pre><span></span><code><span class="nt">image</span><span class="p">:</span>
   <span class="nt">build</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">path/to/dockerfile</span>
 </code></pre></div>
-will result in the following call to docker build: <code>$ docker build --file path/to/dockerfile path/to</code> </p>
+will result in the following call to docker build: <code>$ docker build --file path/to/dockerfile path/to</code></p>
 <p>You can also specify build as a map:
 <div class="highlight"><pre><span></span><code><span class="nt">image</span><span class="p">:</span>
   <span class="nt">build</span><span class="p">:</span>
@@ -1275,7 +1275,7 @@ will result in the following call to docker build: <code>$ docker build --file p
 In this case, copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be:<br />
 <code>$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir</code>.</p>
 <p>You can omit fields and Copilot will do its best to understand what you mean. For example, if you specify <code>context</code> but not <code>dockerfile</code>, Copilot will run Docker in the context directory and assume that your Dockerfile is named "Dockerfile." If you specify <code>dockerfile</code> but no <code>context</code>, Copilot assumes you want to run Docker in the directory that contains <code>dockerfile</code>.</p>
-<p>All paths are relative to your workspace root. </p>
+<p>All paths are relative to your workspace root.</p>
 <p><span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field"><code>location</code></a> <span class="type">String</span><br />
 Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with <a href="#image-build"><code>image.build</code></a>.  <br />
 The <code>location</code> field follows the same definition as the <a href="https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image"><code>image</code> parameter</a> in the Amazon ECS task definition.</p>
@@ -1286,7 +1286,7 @@ If you don't need your backend service to accept requests from other services yo
 Optional configuration for container health checks.</p>
 <p><span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-cmd" href="#image-healthcheck-cmd" class="field"><code>command</code></a> <span class="type">Array of Strings</span><br />
 The command to run to determine if the container is healthy.<br />
-The string array can start with <code>CMD</code> to execute the command arguments directly, or <code>CMD-SHELL</code> to run the command with the container's default shell. </p>
+The string array can start with <code>CMD</code> to execute the command arguments directly, or <code>CMD-SHELL</code> to run the command with the container's default shell.</p>
 <p><span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-interval" href="#image-healthcheck-interval" class="field"><code>interval</code></a> <span class="type">Duration</span><br />
 Time period between healthchecks in seconds. Default is 10s.</p>
 <p><span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-retries" href="#image-healthcheck-retries" class="field"><code>retries</code></a> <span class="type">Integer</span><br />
@@ -1329,7 +1329,7 @@ Key-value pairs that represents environment variables that will be passed to you
 <div class="separator"></div>
 
 <p><a id="secrets" href="#secrets" class="field"><code>secrets</code></a> <span class="type">Map</span> <br />
-Key-value pairs that represents secret values from <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html">AWS Systems Manager Parameter Store</a> that will passed to your service as environment variables securely. </p>
+Key-value pairs that represents secret values from <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html">AWS Systems Manager Parameter Store</a> that will passed to your service as environment variables securely.</p>
 <div class="separator"></div>
 
 <p><a id="environments" href="#environments" class="field"><code>environments</code></a> <span class="type">Map</span><br />
