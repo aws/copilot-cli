@@ -4,19 +4,20 @@ $ copilot task run
 ```
 
 ## What does it do?
-Task run deploys and runs one-off tasks.
+`copilot task run` deploys and runs one-off tasks.
 
 Generally, the steps involved in task run are:
+
 1. Create an ECR repository and a log group for your task
 2. Build and push the image to ECR
-3. Create or update your ECS task defitinion
+3. Create or update your ECS task definition
 4. Run and wait for the tasks to start
 
 !!!info
-    1. Tasks with the same group name share the same set of resources, including CloudFormation stack, ECR repository, CloudWatch log group and task definition.
+    1. Tasks with the same group name share the same set of resources, including the CloudFormation stack, ECR repository, CloudWatch log group and task definition.
     2. If the tasks are deployed to a Copilot environment (i.e. by specifying `--env`), only public subnets that are created by that environment will be used. 
     3. The `--env` flag only works with environments created with v0.3.0 of Copilot or later. Customers using environments created with v0.2.0 or earlier can update their environment manager role with [this](https://github.com/aws/copilot-cli/blob/mainline/templates/environment/cf/environment-manager-role.yml) policy. 
-    4. If using `--default` and you get an error saying there's no default cluster, run `aws ecs create-cluster` and then re-run the copilot command. 
+    4. If you are using the `--default` flag and get an error saying there's no default cluster, run `aws ecs create-cluster` and then re-run the Copilot command. 
 
 ## What are the flags?
 ```

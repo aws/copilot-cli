@@ -49,7 +49,7 @@ This won't create your pipeline, but it will create some local files that will b
 
 * __Release order__: You'll be prompted for environments you want to deploy to - select them based on the order you want them to be deployed in your pipeline (deployments happen one environment at a time). You may, for example, want to deploy to your `test` environment first, and then your `prod` environment.
 
-* __Tracking repository__: After you've selected the environments you want to deploy to, you'll be prompted to select which GitHub repository you want your CodePipeline to track. This is the repository that, when pushed to, will trigger a Pipeline execution (if the repository you're interested in doesn't show up, you can pass it in using the `--github-url` flag).
+* __Tracking repository__: After you've selected the environments you want to deploy to, you'll be prompted to select which GitHub repository you want your CodePipeline to track. This is the repository that, when pushed to, will trigger a pipeline execution. (If the repository you're interested in doesn't show up, you can pass it in using the `--github-url` flag.)
 
 * __Personal access token__: In order to allow CodePipeline to track your GitHub repository, you'll need to provide a GitHub Personal Access Token. You can read how to do that [here](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line). Your token needs to have _repo_ and _admin:repo_hook_ permissions (so CodePipeline can create a WebHook on your behalf). Your GitHub Personal Access Token is stored securely in [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/).
 
@@ -75,7 +75,7 @@ source:
   # has the following properties: repository, branch.
   properties:
     access_token_secret: github-token-ecs-kudos-demo-api-frontend
-    branch: master
+    branch: main
     repository: https://github.com/kohidave/demo-api-frontend
 
 # The deployment section defines the order the pipeline will deploy
@@ -108,17 +108,17 @@ Now that your `pipeline.yml` and `buildspec.yml` are created, check them in and 
 
 `copilot pipeline update`
 
-This parses your `pipeline.yml`, creates a CodePipeline in the same account and region as your project (though it can deploy cross account and cross region) and kicks off a pipeline execution. Log into the AWS Console to watch your Pipeline go.
+This parses your `pipeline.yml`, creates a CodePipeline in the same account and region as your project (though it can deploy cross-account and cross-region) and kicks off a pipeline execution. Log into the AWS Console to watch your Pipeline go.
 
 ![Your completed CodePipeline](https://user-images.githubusercontent.com/828419/71861318-c7083980-30aa-11ea-80bb-4bea25bf5d04.png)
 
 ## Adding Tests
 
-Of course, one of the most important parts of a Pipeline is the automated testing. To add your own test commands, include the commands you'd like to run after your deploy step in the `test_commands` section. If all the commands succeed, your change is promoted to the next stage. 
+Of course, one of the most important parts of a pipeline is the automated testing. To add your own test commands, include the commands you'd like to run after your deploy step in the `test_commands` section. If all the commands succeed, your change is promoted to the next stage. 
 
 Adding `test_commands` generates a CodeBuild project with the [aws/codebuild/amazonlinux2-x86_64-standard:3.0](https://docs.aws.amazon.com/codebuild/latest/userguide/build-env-ref-available.html) image - so most commands from Amazon Linux 2 (including `make`) are available for use. 
 
-In the example below, the Pipeline will run `make test` command (in your source code directory) and only promote the change to the prod stage if that command exists successfully. 
+In the example below, the pipeline will run `make test` command (in your source code directory) and only promote the change to the prod stage if that command exits successfully. 
 
 ```yaml
 name: pipeline-ecs-kudos-kohidave-demo-api-frontend
@@ -127,7 +127,7 @@ source:
   provider: GitHub
   properties:
     access_token_secret: github-token-ecs-kudos-demo-api-frontend
-    branch: master
+    branch: main
     repository: https://github.com/kohidave/demo-api-frontend
 
 stages:
