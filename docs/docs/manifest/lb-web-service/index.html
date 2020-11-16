@@ -1218,8 +1218,8 @@
   <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
 
 <span class="nt">http</span><span class="p">:</span>
-  <span class="c1"># Requests to this path will be forwarded to your service. </span>
-  <span class="c1"># To match all requests you can use the &quot;/&quot; path. </span>
+  <span class="c1"># Requests to this path will be forwarded to your service.</span>
+  <span class="c1"># To match all requests you can use the &quot;/&quot; path.</span>
   <span class="nt">path</span><span class="p">:</span> <span class="s">&#39;/&#39;</span>
 
   <span class="c1"># You can specify a custom health check path. The default is &quot;/&quot;</span>
@@ -1262,7 +1262,7 @@ If you specify a string, Copilot interprets it as the path to your Dockerfile. I
 <div class="highlight"><pre><span></span><code><span class="nt">image</span><span class="p">:</span>
   <span class="nt">build</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">path/to/dockerfile</span>
 </code></pre></div>
-will result in the following call to docker build: <code>$ docker build --file path/to/dockerfile path/to</code> </p>
+will result in the following call to docker build: <code>$ docker build --file path/to/dockerfile path/to</code></p>
 <p>You can also specify build as a map:
 <div class="highlight"><pre><span></span><code><span class="nt">image</span><span class="p">:</span>
   <span class="nt">build</span><span class="p">:</span>
@@ -1277,7 +1277,7 @@ will result in the following call to docker build: <code>$ docker build --file p
 In this case, copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be:<br />
 <code>$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir</code>.</p>
 <p>You can omit fields and Copilot will do its best to understand what you mean. For example, if you specify <code>context</code> but not <code>dockerfile</code>, Copilot will run Docker in the context directory and assume that your Dockerfile is named "Dockerfile." If you specify <code>dockerfile</code> but no <code>context</code>, Copilot assumes you want to run Docker in the directory that contains <code>dockerfile</code>.</p>
-<p>All paths are relative to your workspace root. </p>
+<p>All paths are relative to your workspace root.</p>
 <p><span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field"><code>location</code></a> <span class="type">String</span><br />
 Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with <a href="#image-build"><code>image.build</code></a>.  <br />
 The <code>location</code> field follows the same definition as the <a href="https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image"><code>image</code> parameter</a> in the Amazon ECS task definition.</p>
@@ -1304,7 +1304,7 @@ You can also specify healthcheck as a map:
     <span class="nt">timeout</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">10s</span>
 </code></pre></div></p>
 <p><span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-healthy-threshold" href="#http-healthcheck-healthy-threshold" class="field"><code>healthy_threshold</code></a> <span class="type">Integer</span><br />
-The number of consecutive health check successes required before considering an unhealthy target healthy. The Copilot default is 2. Range: 2-10. </p>
+The number of consecutive health check successes required before considering an unhealthy target healthy. The Copilot default is 2. Range: 2-10.</p>
 <p><span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-unhealthy-threshold" href="#http-healthcheck-unhealthy-threshold" class="field"><code>unhealthy_threshold</code></a> <span class="type">Integer</span><br />
 The number of consecutive health check failures required before considering a target unhealthy. The Copilot default is 2. Range: 2-10.</p>
 <p><span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-interval" href="#http-healthcheck-interval" class="field"><code>interval</code></a> <span class="type">Duration</span><br />
@@ -1340,6 +1340,8 @@ The service will set the desired count to 5 and maintain 5 tasks in your service
   <span class="nt">range</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1-10</span>
   <span class="nt">cpu_percentage</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">70</span>
   <span class="nt">memory_percentage</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
+  <span class="nt">requests</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">10000</span>
+  <span class="nt">response_time</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2s</span>
 </code></pre></div></p>
 <p><span class="parent-field">count.</span><a id="count-range" href="#count-range" class="field"><code>range</code></a> <span class="type">String</span><br />
 Specify a minimum and maximum bound for the number of tasks your service should maintain.  </p>
@@ -1347,6 +1349,10 @@ Specify a minimum and maximum bound for the number of tasks your service should 
 Scale up or down based on the average CPU your service should maintain.  </p>
 <p><span class="parent-field">count.</span><a id="count-memory-percentage" href="#count-memory-percentage" class="field"><code>memory_percentage</code></a> <span class="type">Integer</span><br />
 Scale up or down based on the average memory your service should maintain.  </p>
+<p><span class="parent-field">count.</span><a id="requests" href="#count-requests" class="field"><code>requests</code></a> <span class="type">Integer</span><br />
+Scale up or down based on the request count handled per tasks.</p>
+<p><span class="parent-field">count.</span><a id="response-time" href="#count-response-time" class="field"><code>response_time</code></a> <span class="type">Duration</span><br />
+Scale up or down based on the service average response time.</p>
 <div class="separator"></div>
 
 <p><a id="variables" href="#variables" class="field"><code>variables</code></a> <span class="type">Map</span> <br />
@@ -1354,7 +1360,7 @@ Key-value pairs that represents environment variables that will be passed to you
 <div class="separator"></div>
 
 <p><a id="secrets" href="#secrets" class="field"><code>secrets</code></a> <span class="type">Map</span> <br />
-Key-value pairs that represents secret values from <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html">AWS Systems Manager Parameter Store</a> that will passed to your service as environment variables securely. </p>
+Key-value pairs that represents secret values from <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html">AWS Systems Manager Parameter Store</a> that will passed to your service as environment variables securely.</p>
 <div class="separator"></div>
 
 <p><a id="environments" href="#environments" class="field"><code>environments</code></a> <span class="type">Map</span><br />
