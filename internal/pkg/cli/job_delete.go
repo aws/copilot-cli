@@ -13,11 +13,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	awssession "github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -35,12 +37,17 @@ const (
 )
 
 const (
-	fmtJobDeleteStart             = "Deleting job %s from environment %s."
-	fmtJobDeleteFailed            = "Failed to delete job %s from environment %s: %v.\n"
-	fmtJobDeleteComplete          = "Deleted job %s from environment %s.\n"
+	fmtJobStackDeleteStart        = "Deleting the stack of job %s from environment %s."
+	fmtJobStackDeleteFailed       = "Failed to delete the stack of job %s from environment %s: %v.\n"
+	fmtJobStackDeleteComplete     = "Deleted the stack of job %s from environment %s.\n"
 	fmtJobDeleteResourcesStart    = "Deleting resources of job %s from application %s."
 	fmtJobDeleteResourcesFailed   = "Failed to delete resources of job %s from application %s.\n"
 	fmtJobDeleteResourcesComplete = "Deleted resources of job %s from application %s.\n"
+	fmtJobTasksStopStart          = "Stopping running tasks of job %s from environment %s."
+	fmtJobTasksStopFailed         = "Failed to stop running tasks of job %s from environment %s: %v.\n"
+	fmtJobTasksStopComplete       = "Stopped running tasks of job %s from environment %s.\n"
+
+	fmtJobDeleteTaskDeleteReason = "Task stopped because job %s was deleted."
 )
 
 var (
@@ -58,14 +65,16 @@ type deleteJobOpts struct {
 	deleteJobVars
 
 	// Interfaces to dependencies.
-	store     store
-	prompt    prompter
-	sel       wsSelector
-	sess      sessionProvider
-	spinner   progress
-	appCFN    jobRemoverFromApp
-	getJobCFN func(sess *awssession.Session) wlDeleter
-	getECR    func(sess *awssession.Session) imageRemover
+	store                  store
+	prompt                 prompter
+	sel                    wsSelector
+	sess                   sessionProvider
+	spinner                progress
+	appCFN                 jobRemoverFromApp
+	newWlDeleter           func(sess *session.Session) wlDeleter
+	newImageRemover        func(sess *session.Session) imageRemover
+	newActiveWlTasksGetter func(sess *session.Session) activeWlTasksGetter
+	newTaskStopper         func(sess *session.Session) tasksStopper
 }
 
 func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
@@ -93,11 +102,17 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
 		sess:    provider,
 		appCFN:  cloudformation.New(defaultSession),
-		getJobCFN: func(session *awssession.Session) wlDeleter {
+		newWlDeleter: func(session *session.Session) wlDeleter {
 			return cloudformation.New(session)
 		},
-		getECR: func(session *awssession.Session) imageRemover {
+		newImageRemover: func(session *session.Session) imageRemover {
 			return ecr.New(session)
+		},
+		newActiveWlTasksGetter: func(session *session.Session) activeWlTasksGetter {
+			return ecs.New(session)
+		},
+		newTaskStopper: func(session *session.Session) tasksStopper {
+			return awsecs.New(session)
 		},
 	}, nil
 }
@@ -253,18 +268,22 @@ func (o *deleteJobOpts) deleteJobs(envs []*config.Environment) error {
 			return err
 		}
 		// Delete job stack
-		o.spinner.Start(fmt.Sprintf(fmtJobDeleteStart, o.name, env.Name))
+		o.spinner.Start(fmt.Sprintf(fmtJobStackDeleteStart, o.name, env.Name))
 		if err = o.deleteStack(sess, env.Name); err != nil {
-			o.spinner.Stop(log.Serrorf(fmtJobDeleteFailed, o.name, env.Name, err))
+			o.spinner.Stop(log.Serrorf(fmtJobStackDeleteFailed, o.name, env.Name, err))
 			return err
 		}
-		o.spinner.Stop(log.Ssuccessf(fmtJobDeleteComplete, o.name, env.Name))
+		o.spinner.Stop(log.Ssuccessf(fmtJobStackDeleteComplete, o.name, env.Name))
+		// Delete orphan tasks
+		if err = o.deleteTasks(sess, env.Name); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func (o *deleteJobOpts) deleteStack(sess *awssession.Session, env string) error {
-	cfClient := o.getJobCFN(sess)
+func (o *deleteJobOpts) deleteStack(sess *session.Session, env string) error {
+	cfClient := o.newWlDeleter(sess)
 	if err := cfClient.DeleteWorkload(deploy.DeleteWorkloadInput{
 		Name:    o.name,
 		EnvName: env,
@@ -272,6 +291,25 @@ func (o *deleteJobOpts) deleteStack(sess *awssession.Session, env string) error 
 	}); err != nil {
 		return fmt.Errorf("delete job stack: %w", err)
 	}
+	return nil
+}
+
+func (o *deleteJobOpts) deleteTasks(sess *session.Session, env string) error {
+	cluster, taskARNs, err := o.newActiveWlTasksGetter(sess).ListActiveWorkloadTasks(o.appName, env, o.name)
+	if err != nil {
+		return fmt.Errorf("list active tasks for job %s in env %s: %w", o.name, env, err)
+	}
+	if len(taskARNs) == 0 {
+		return nil
+	}
+	o.spinner.Start(fmt.Sprintf(fmtJobTasksStopStart, o.name, env))
+	if err := o.newTaskStopper(sess).StopTasks(taskARNs,
+		awsecs.WithStopTaskCluster(cluster),
+		awsecs.WithStopTaskReason(fmt.Sprintf(fmtJobDeleteTaskDeleteReason, o.name))); err != nil {
+		o.spinner.Stop(log.Serrorf(fmtJobTasksStopFailed, o.name, env, err))
+		return fmt.Errorf("stop tasks for cluster %s: %w", cluster, err)
+	}
+	o.spinner.Stop(log.Ssuccessf(fmtJobTasksStopComplete, o.name, env))
 	return nil
 }
 
@@ -299,7 +337,7 @@ func (o *deleteJobOpts) emptyECRRepos(envs []*config.Environment) error {
 		if err != nil {
 			return err
 		}
-		client := o.getECR(sess)
+		client := o.newImageRemover(sess)
 		if err := client.ClearRepository(repoName); err != nil {
 			return err
 		}

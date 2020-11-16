@@ -8,27 +8,37 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 )
 
 const (
-	clusterResourceType = "ecs:cluster"
+	fmtWorkloadTaskDefinitionFamily = "%s-%s-%s"
+	clusterResourceType             = "ecs:cluster"
 )
 
 type resourceGetter interface {
 	GetResourcesByTags(resourceType string, tags map[string]string) ([]*resourcegroups.Resource, error)
 }
 
+type familyRunningTasksGetter interface {
+	FamilyRunningTasks(cluster, family string) ([]*ecs.Task, error)
+}
+
 // Client retrieves Copilot information from ECS endpoint.
 type Client struct {
-	rgGetter resourceGetter
+	rgGetter          resourceGetter
+	newECSTasksGetter func() familyRunningTasksGetter
 }
 
 // New inits a new Client.
 func New(sess *session.Session) *Client {
 	return &Client{
 		rgGetter: resourcegroups.New(sess),
+		newECSTasksGetter: func() familyRunningTasksGetter {
+			return ecs.New(sess)
+		},
 	}
 }
 
@@ -52,4 +62,21 @@ func (c Client) Cluster(app, env string) (string, error) {
 		return "", fmt.Errorf("more than one cluster is found in environment %s", env)
 	}
 	return clusters[0].ARN, nil
+}
+
+// ListActiveWorkloadTasks lists all active workload tasks (with desired status to be RUNNING) in the environment.
+func (c Client) ListActiveWorkloadTasks(app, env, workload string) (clusterARN string, taskARNs []string, err error) {
+	clusterARN, err = c.Cluster(app, env)
+	if err != nil {
+		return "", nil, fmt.Errorf("get cluster for env %s: %w", env, err)
+	}
+	tdFamilyName := fmt.Sprintf(fmtWorkloadTaskDefinitionFamily, app, env, workload)
+	tasks, err := c.newECSTasksGetter().FamilyRunningTasks(clusterARN, tdFamilyName)
+	if err != nil {
+		return "", nil, fmt.Errorf("list tasks that belong to family %s: %w", tdFamilyName, err)
+	}
+	for _, task := range tasks {
+		taskARNs = append(taskARNs, *task.TaskArn)
+	}
+	return
 }

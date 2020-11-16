@@ -33,6 +33,36 @@ func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
+// DescribeClusters mocks base method
+func (m *Mockapi) DescribeClusters(input *ecs.DescribeClustersInput) (*ecs.DescribeClustersOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeClusters", input)
+	ret0, _ := ret[0].(*ecs.DescribeClustersOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeClusters indicates an expected call of DescribeClusters
+func (mr *MockapiMockRecorder) DescribeClusters(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeClusters", reflect.TypeOf((*Mockapi)(nil).DescribeClusters), input)
+}
+
+// DescribeServices mocks base method
+func (m *Mockapi) DescribeServices(input *ecs.DescribeServicesInput) (*ecs.DescribeServicesOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeServices", input)
+	ret0, _ := ret[0].(*ecs.DescribeServicesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeServices indicates an expected call of DescribeServices
+func (mr *MockapiMockRecorder) DescribeServices(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeServices", reflect.TypeOf((*Mockapi)(nil).DescribeServices), input)
+}
+
 // DescribeTasks mocks base method
 func (m *Mockapi) DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.DescribeTasksOutput, error) {
 	m.ctrl.T.Helper()
@@ -63,21 +93,6 @@ func (mr *MockapiMockRecorder) DescribeTaskDefinition(input interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTaskDefinition", reflect.TypeOf((*Mockapi)(nil).DescribeTaskDefinition), input)
 }
 
-// DescribeServices mocks base method
-func (m *Mockapi) DescribeServices(input *ecs.DescribeServicesInput) (*ecs.DescribeServicesOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeServices", input)
-	ret0, _ := ret[0].(*ecs.DescribeServicesOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DescribeServices indicates an expected call of DescribeServices
-func (mr *MockapiMockRecorder) DescribeServices(input interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeServices", reflect.TypeOf((*Mockapi)(nil).DescribeServices), input)
-}
-
 // ListTasks mocks base method
 func (m *Mockapi) ListTasks(input *ecs.ListTasksInput) (*ecs.ListTasksOutput, error) {
 	m.ctrl.T.Helper()
@@ -93,21 +108,6 @@ func (mr *MockapiMockRecorder) ListTasks(input interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTasks", reflect.TypeOf((*Mockapi)(nil).ListTasks), input)
 }
 
-// DescribeClusters mocks base method
-func (m *Mockapi) DescribeClusters(input *ecs.DescribeClustersInput) (*ecs.DescribeClustersOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeClusters", input)
-	ret0, _ := ret[0].(*ecs.DescribeClustersOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DescribeClusters indicates an expected call of DescribeClusters
-func (mr *MockapiMockRecorder) DescribeClusters(input interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeClusters", reflect.TypeOf((*Mockapi)(nil).DescribeClusters), input)
-}
-
 // RunTask mocks base method
 func (m *Mockapi) RunTask(input *ecs.RunTaskInput) (*ecs.RunTaskOutput, error) {
 	m.ctrl.T.Helper()
@@ -121,6 +121,21 @@ func (m *Mockapi) RunTask(input *ecs.RunTaskInput) (*ecs.RunTaskOutput, error) {
 func (mr *MockapiMockRecorder) RunTask(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunTask", reflect.TypeOf((*Mockapi)(nil).RunTask), input)
+}
+
+// StopTask mocks base method
+func (m *Mockapi) StopTask(input *ecs.StopTaskInput) (*ecs.StopTaskOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StopTask", input)
+	ret0, _ := ret[0].(*ecs.StopTaskOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StopTask indicates an expected call of StopTask
+func (mr *MockapiMockRecorder) StopTask(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopTask", reflect.TypeOf((*Mockapi)(nil).StopTask), input)
 }
 
 // WaitUntilTasksRunning mocks base method

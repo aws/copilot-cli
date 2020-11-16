@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	resourcegroups "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
@@ -46,4 +47,42 @@ func (m *MockresourceGetter) GetResourcesByTags(resourceType string, tags map[st
 func (mr *MockresourceGetterMockRecorder) GetResourcesByTags(resourceType, tags interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResourcesByTags", reflect.TypeOf((*MockresourceGetter)(nil).GetResourcesByTags), resourceType, tags)
+}
+
+// MockfamilyRunningTasksGetter is a mock of familyRunningTasksGetter interface
+type MockfamilyRunningTasksGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockfamilyRunningTasksGetterMockRecorder
+}
+
+// MockfamilyRunningTasksGetterMockRecorder is the mock recorder for MockfamilyRunningTasksGetter
+type MockfamilyRunningTasksGetterMockRecorder struct {
+	mock *MockfamilyRunningTasksGetter
+}
+
+// NewMockfamilyRunningTasksGetter creates a new mock instance
+func NewMockfamilyRunningTasksGetter(ctrl *gomock.Controller) *MockfamilyRunningTasksGetter {
+	mock := &MockfamilyRunningTasksGetter{ctrl: ctrl}
+	mock.recorder = &MockfamilyRunningTasksGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockfamilyRunningTasksGetter) EXPECT() *MockfamilyRunningTasksGetterMockRecorder {
+	return m.recorder
+}
+
+// FamilyRunningTasks mocks base method
+func (m *MockfamilyRunningTasksGetter) FamilyRunningTasks(cluster, family string) ([]*ecs.Task, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FamilyRunningTasks", cluster, family)
+	ret0, _ := ret[0].([]*ecs.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FamilyRunningTasks indicates an expected call of FamilyRunningTasks
+func (mr *MockfamilyRunningTasksGetterMockRecorder) FamilyRunningTasks(cluster, family interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FamilyRunningTasks", reflect.TypeOf((*MockfamilyRunningTasksGetter)(nil).FamilyRunningTasks), cluster, family)
 }
