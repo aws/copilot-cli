@@ -73,14 +73,20 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 }
 
 func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
+	defaultHttpHealthCheck := template.HTTPHealthCheckOpts{
+		HealthCheckPath: "/",
+	}
 	testCases := map[string]struct {
 		opts template.WorkloadOpts
 	}{
 		"renders a valid template by default": {
-			opts: template.WorkloadOpts{},
+			opts: template.WorkloadOpts{
+				HTTPHealthCheck: defaultHttpHealthCheck,
+			},
 		},
 		"renders a valid template with addons with no outputs": {
 			opts: template.WorkloadOpts{
+				HTTPHealthCheck: defaultHttpHealthCheck,
 				NestedStack: &template.WorkloadNestedStackOpts{
 					StackName: "AddonsStack",
 				},
@@ -88,6 +94,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		},
 		"renders a valid template with addons with outputs": {
 			opts: template.WorkloadOpts{
+				HTTPHealthCheck: defaultHttpHealthCheck,
 				NestedStack: &template.WorkloadNestedStackOpts{
 					StackName:       "AddonsStack",
 					VariableOutputs: []string{"TableName"},
