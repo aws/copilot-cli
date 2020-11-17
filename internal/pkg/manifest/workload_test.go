@@ -36,6 +36,7 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 				BuildArgs: DockerBuildArgs{
 					Dockerfile: aws.String("path/to/Dockerfile"),
 				},
+				BuildString: nil,
 			},
 		},
 		"Dockerfile context, and args specified in build opts": {
@@ -54,6 +55,7 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 						"bestdog": "bowie",
 					},
 				},
+				BuildString: nil,
 			},
 		},
 		"Dockerfile with cache from and target build opts": {
@@ -70,6 +72,7 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 						"foo/bar/baz:1.2.3",
 					},
 				},
+				BuildString: nil,
 			},
 		},
 		"Error if unmarshalable": {
@@ -81,7 +84,11 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			var b Image
+			b := Image{
+				Build: BuildArgsOrString{
+					BuildString: aws.String("./default"),
+				},
+			}
 			err := yaml.Unmarshal(tc.inContent, &b)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())

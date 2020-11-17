@@ -84,8 +84,7 @@ func (hc HealthCheckArgsOrString) HTTPHealthCheckOpts() template.HTTPHealthCheck
 	}
 	if hc.HealthCheckArgs.Path != nil {
 		opts.HealthCheckPath = *hc.HealthCheckArgs.Path
-	}
-	if hc.HealthCheckPath != nil {
+	} else if hc.HealthCheckPath != nil {
 		opts.HealthCheckPath = *hc.HealthCheckPath
 	}
 	if hc.HealthCheckArgs.Interval != nil {
@@ -111,7 +110,8 @@ func (hc *HealthCheckArgsOrString) UnmarshalYAML(unmarshal func(interface{}) err
 	}
 
 	if !hc.HealthCheckArgs.isEmpty() {
-		// Unmarshaled successfully to h.HealthCheckArgs, return.
+		// Unmarshaled successfully to hc.HealthCheckArgs, reset hc.HealthCheckPath, and return.
+		hc.HealthCheckPath = nil
 		return nil
 	}
 
@@ -163,7 +163,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 			ImageConfig: ServiceImageWithPort{},
 			RoutingRule: RoutingRule{
 				HealthCheck: HealthCheckArgsOrString{
-					HealthCheckPath: aws.String("/"),
+					HealthCheckPath: aws.String(defaultHealthCheckPath),
 				},
 			},
 			TaskConfig: TaskConfig{
