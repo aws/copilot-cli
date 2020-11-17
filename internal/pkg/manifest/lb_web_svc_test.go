@@ -139,7 +139,7 @@ func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
 				HealthCheckPath: aws.String("/testing"),
 			},
 		},
-		"args specified in health check opts": {
+		"should use custom healthcheck configuration when provided and set default path to nil": {
 			inContent: []byte(`  healthcheck:
     path: /testing
     healthy_threshold: 5
@@ -154,6 +154,7 @@ func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
 					Interval:           durationp(78 * time.Second),
 					Timeout:            durationp(9 * time.Second),
 				},
+				HealthCheckPath: nil,
 			},
 		},
 		"error if unmarshalable": {
@@ -165,7 +166,7 @@ func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			var rr RoutingRule
+			rr := newDefaultLoadBalancedWebService().RoutingRule
 			err := yaml.Unmarshal(tc.inContent, &rr)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
