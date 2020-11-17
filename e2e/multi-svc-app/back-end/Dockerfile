@@ -30,3 +30,6 @@ RUN chmod +x ./e2e-service
 ENTRYPOINT ["./e2e-service"]
 # The service runs on port 80
 EXPOSE 80
+# The service performs a health check every 1 minute
+HEALTHCHECK --interval=1m --timeout=3s \
+  CMD curl -f http://localhost/ || exit 1
