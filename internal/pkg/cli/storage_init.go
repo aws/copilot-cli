@@ -42,16 +42,16 @@ var storageTypes = []string{
 // General-purpose prompts, collected for all storage resources.
 var (
 	fmtStorageInitTypePrompt = "What " + color.Emphasize("type") + " of storage would you like to associate with %s?"
-	storageInitTypeHelp      = `The type of storage you'd like to add to your service. 
+	storageInitTypeHelp      = `The type of storage you'd like to add to your workload. 
 DynamoDB is a key-value and document database that delivers single-digit millisecond performance at any scale.
 S3 is a web object store built to store and retrieve any amount of data from anywhere on the Internet.`
 
 	fmtStorageInitNamePrompt = "What would you like to " + color.Emphasize("name") + " this %s?"
 	storageInitNameHelp      = "The name of this storage resource. You can use the following characters: a-zA-Z0-9-_"
 
-	storageInitSvcPrompt = "Which " + color.Emphasize("service") + " would you like to associate with this storage resource?"
-	storageInitSvcHelp   = `The service you'd like to have access to this storage resource. 
-We'll deploy the resources for the storage when you run 'svc deploy'.`
+	storageInitSvcPrompt = "Which " + color.Emphasize("workload") + " would you like to associate with this storage resource?"
+	storageInitSvcHelp   = `The job or service you'd like to have access to this storage resource. 
+We'll deploy the resources for the storage when you run ` + color.HighlightCode("job deploy") + ` or ` + color.HighlightCode("svc deploy") + `.`
 )
 
 // DDB-specific questions and help prompts.
@@ -142,7 +142,7 @@ func (o *initStorageOpts) Validate() error {
 		return errNoAppInWorkspace
 	}
 	if o.storageSvc != "" {
-		if err := o.validateServiceName(); err != nil {
+		if err := o.validateWorkloadName(); err != nil {
 			return err
 		}
 	}
@@ -275,7 +275,7 @@ func (o *initStorageOpts) askStorageSvc() error {
 	if o.storageSvc != "" {
 		return nil
 	}
-	svc, err := o.sel.Service(storageInitSvcPrompt, storageInitSvcHelp)
+	svc, err := o.sel.Workload(storageInitSvcPrompt, storageInitSvcHelp)
 	if err != nil {
 		return fmt.Errorf("retrieve local service names: %w", err)
 	}
@@ -422,8 +422,8 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 	}
 }
 
-func (o *initStorageOpts) validateServiceName() error {
-	names, err := o.ws.ServiceNames()
+func (o *initStorageOpts) validateWorkloadName() error {
+	names, err := o.ws.WorkloadNames()
 	if err != nil {
 		return fmt.Errorf("retrieve local service names: %w", err)
 	}
@@ -545,11 +545,11 @@ func buildStorageInitCmd() *cobra.Command {
 	vars := initStorageVars{}
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Creates a new storage config file in a service's addons directory.",
-		Long: `Creates a new storage config file in a service's addons directory.
-Storage resources are deployed to your service's environments when you run
-'copilot svc deploy'. Resource names are injected into your service containers as
-environment variables for easy access.`,
+		Short: "Creates a new storage config file in a workload's addons directory.",
+		Long: `Creates a new storage config file in a workload's addons directory.
+Storage resources are deployed to your environments when you run ` + color.HighlightCode("copilot svc deploy") + `.` +
+			`Resource names are injected into your service containers as environment 
+ variables for easy access.`,
 		Example: `
   Create an S3 bucket named "my-bucket" attached to the "frontend" service.
   /code $ copilot storage init -n my-bucket -t S3 -s frontend
