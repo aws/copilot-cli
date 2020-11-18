@@ -91,7 +91,7 @@ var attributeTypes = []string{
 type initStorageVars struct {
 	storageType string
 	storageName string
-	storageSvc  string
+	storageWl   string
 
 	// Dynamo DB specific values collected via flags or prompts
 	partitionKey string
@@ -141,7 +141,7 @@ func (o *initStorageOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
-	if o.storageSvc != "" {
+	if o.storageWl != "" {
 		if err := o.validateWorkloadName(); err != nil {
 			return err
 		}
@@ -201,7 +201,7 @@ func (o *initStorageOpts) validateDDB() error {
 }
 
 func (o *initStorageOpts) Ask() error {
-	if err := o.askStorageSvc(); err != nil {
+	if err := o.askStorageWl(); err != nil {
 		return err
 	}
 	if err := o.askStorageType(); err != nil {
@@ -231,7 +231,7 @@ func (o *initStorageOpts) askStorageType() error {
 	}
 
 	storageType, err := o.prompt.SelectOne(fmt.Sprintf(
-		fmtStorageInitTypePrompt, color.HighlightUserInput(o.storageSvc)),
+		fmtStorageInitTypePrompt, color.HighlightUserInput(o.storageWl)),
 		storageInitTypeHelp,
 		storageTypes,
 		prompt.WithFinalMessage("Storage type:"))
@@ -271,15 +271,15 @@ func (o *initStorageOpts) askStorageName() error {
 	return nil
 }
 
-func (o *initStorageOpts) askStorageSvc() error {
-	if o.storageSvc != "" {
+func (o *initStorageOpts) askStorageWl() error {
+	if o.storageWl != "" {
 		return nil
 	}
 	svc, err := o.sel.Workload(storageInitSvcPrompt, storageInitSvcHelp)
 	if err != nil {
-		return fmt.Errorf("retrieve local service names: %w", err)
+		return fmt.Errorf("retrieve local workload names: %w", err)
 	}
-	o.storageSvc = svc
+	o.storageWl = svc
 	return nil
 }
 
@@ -425,14 +425,14 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 func (o *initStorageOpts) validateWorkloadName() error {
 	names, err := o.ws.WorkloadNames()
 	if err != nil {
-		return fmt.Errorf("retrieve local service names: %w", err)
+		return fmt.Errorf("retrieve local workload names: %w", err)
 	}
 	for _, name := range names {
-		if o.storageSvc == name {
+		if o.storageWl == name {
 			return nil
 		}
 	}
-	return fmt.Errorf("service %s not found in the workspace", o.storageSvc)
+	return fmt.Errorf("workload %s not found in the workspace", o.storageWl)
 }
 
 func (o *initStorageOpts) Execute() error {
@@ -446,7 +446,7 @@ func (o *initStorageOpts) createAddon() error {
 		return err
 	}
 
-	addonPath, err := o.ws.WriteAddon(addonCf, o.storageSvc, o.storageName)
+	addonPath, err := o.ws.WriteAddon(addonCf, o.storageWl, o.storageName)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
@@ -476,7 +476,7 @@ func (o *initStorageOpts) createAddon() error {
 	)
 	log.Infoln(color.Help(`The Cloudformation template is a nested stack which fully describes your resource,
 the IAM policy necessary for an ECS task to access that resource, and outputs
-which are injected as environment variables into the Copilot service this addon
+which are injected as environment variables into the Copilot workload this addon
 is associated with.`))
 	log.Infoln()
 
@@ -532,10 +532,10 @@ func (o *initStorageOpts) RecommendedActions() []string {
 
 	newVar := template.ToSnakeCaseFunc(template.EnvVarNameFunc(o.storageName))
 
-	svcDeployCmd := fmt.Sprintf("copilot svc deploy --name %s", o.storageSvc)
+	svcDeployCmd := fmt.Sprintf("copilot svc deploy --name %s", o.storageWl)
 
 	return []string{
-		fmt.Sprintf("Update your service code to leverage the injected environment variable %s", color.HighlightCode(newVar)),
+		fmt.Sprintf("Update your service or job code to leverage the injected environment variable %s", color.HighlightCode(newVar)),
 		fmt.Sprintf("Run %s to deploy your storage resources to your environments.", color.HighlightCode(svcDeployCmd)),
 	}
 }
@@ -548,15 +548,15 @@ func buildStorageInitCmd() *cobra.Command {
 		Short: "Creates a new storage config file in a workload's addons directory.",
 		Long: `Creates a new storage config file in a workload's addons directory.
 Storage resources are deployed to your environments when you run ` + color.HighlightCode("copilot svc deploy") + `.` +
-			`Resource names are injected into your service containers as environment 
+			`Resource names are injected into your service or job containers as environment 
  variables for easy access.`,
 		Example: `
   Create an S3 bucket named "my-bucket" attached to the "frontend" service.
-  /code $ copilot storage init -n my-bucket -t S3 -s frontend
+  /code $ copilot storage init -n my-bucket -t S3 -w frontend
   Create a basic DynamoDB table named "my-table" attached to the "frontend" service with a sort key specified.
-  /code $ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --no-lsi
+  /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --no-lsi
   Create a DynamoDB table with multiple alternate sort keys.
-  /code $ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N`,
+  /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {
@@ -580,7 +580,7 @@ Storage resources are deployed to your environments when you run ` + color.Highl
 	}
 	cmd.Flags().StringVarP(&vars.storageName, nameFlag, nameFlagShort, "", storageFlagDescription)
 	cmd.Flags().StringVarP(&vars.storageType, storageTypeFlag, typeFlagShort, "", storageTypeFlagDescription)
-	cmd.Flags().StringVarP(&vars.storageSvc, svcFlag, svcFlagShort, "", storageServiceFlagDescription)
+	cmd.Flags().StringVarP(&vars.storageWl, wkldFlag, wkldFlagShort, "", storageWorkloadFlagDescription)
 
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
 	cmd.Flags().StringVar(&vars.sortKey, storageSortKeyFlag, "", storageSortKeyFlagDescription)

@@ -2843,34 +2843,19 @@ func (mr *MockwsAddonManagerMockRecorder) WriteAddon(f, svc, name interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteAddon", reflect.TypeOf((*MockwsAddonManager)(nil).WriteAddon), f, svc, name)
 }
 
-// ServiceNames mocks base method
-func (m *MockwsAddonManager) ServiceNames() ([]string, error) {
+// WorkloadNames mocks base method
+func (m *MockwsAddonManager) WorkloadNames() ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceNames")
+	ret := m.ctrl.Call(m, "WorkloadNames")
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ServiceNames indicates an expected call of ServiceNames
-func (mr *MockwsAddonManagerMockRecorder) ServiceNames() *gomock.Call {
+// WorkloadNames indicates an expected call of WorkloadNames
+func (mr *MockwsAddonManagerMockRecorder) WorkloadNames() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsAddonManager)(nil).ServiceNames))
-}
-
-// ReadServiceManifest mocks base method
-func (m *MockwsAddonManager) ReadServiceManifest(svcName string) ([]byte, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadServiceManifest", svcName)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ReadServiceManifest indicates an expected call of ReadServiceManifest
-func (mr *MockwsAddonManagerMockRecorder) ReadServiceManifest(svcName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsAddonManager)(nil).ReadServiceManifest), svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkloadNames", reflect.TypeOf((*MockwsAddonManager)(nil).WorkloadNames))
 }
 
 // MockartifactUploader is a mock of artifactUploader interface

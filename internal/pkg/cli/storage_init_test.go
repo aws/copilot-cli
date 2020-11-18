@@ -41,7 +41,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 		},
 		"svc not in workspace": {
 			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ServiceNames().Return([]string{"bad", "workspace"}, nil)
+				m.EXPECT().WorkloadNames().Return([]string{"bad", "workspace"}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {},
 
@@ -49,11 +49,11 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inStorageType: s3StorageType,
 			inSvcName:     "frontend",
 			inStorageName: "my-bucket",
-			wantedErr:     errors.New("service frontend not found in the workspace"),
+			wantedErr:     errors.New("workload frontend not found in the workspace"),
 		},
 		"workspace error": {
 			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ServiceNames().Return(nil, errors.New("wanted err"))
+				m.EXPECT().WorkloadNames().Return(nil, errors.New("wanted err"))
 			},
 			mockStore: func(m *mocks.Mockstore) {},
 
@@ -61,7 +61,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inStorageType: s3StorageType,
 			inSvcName:     "frontend",
 			inStorageName: "my-bucket",
-			wantedErr:     errors.New("retrieve local service names: wanted err"),
+			wantedErr:     errors.New("retrieve local workload names: wanted err"),
 		},
 		"successfully validates valid s3 bucket name": {
 			mockWs:        func(m *mocks.MockwsAddonManager) {},
@@ -175,7 +175,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 				initStorageVars: initStorageVars{
 					storageType:  tc.inStorageType,
 					storageName:  tc.inStorageName,
-					storageSvc:   tc.inSvcName,
+					storageWl:    tc.inSvcName,
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,
@@ -251,14 +251,14 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			wantedErr: fmt.Errorf("select storage type: some error"),
 		},
-		"asks for storage svc": {
+		"asks for storage workload": {
 			inAppName:     wantedAppName,
 			inStorageName: wantedBucketName,
 			inStorageType: s3StorageType,
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockCfg: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service(gomock.Eq(storageInitSvcPrompt), gomock.Any()).Return(wantedSvcName, nil)
+				m.EXPECT().Workload(gomock.Eq(storageInitSvcPrompt), gomock.Any()).Return(wantedSvcName, nil)
 			},
 
 			wantedErr: nil,
@@ -270,10 +270,10 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockCfg: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+				m.EXPECT().Workload(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
 
-			wantedErr: fmt.Errorf("retrieve local service names: some error"),
+			wantedErr: fmt.Errorf("retrieve local workload names: some error"),
 		},
 		"asks for storage name": {
 			inAppName:     wantedAppName,
@@ -558,7 +558,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			wantedVars: &initStorageVars{
 				storageName: wantedTableName,
-				storageSvc:  wantedSvcName,
+				storageWl:   wantedSvcName,
 				storageType: dynamoDBStorageType,
 
 				partitionKey: wantedPartitionKey,
@@ -586,7 +586,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			wantedVars: &initStorageVars{
 				storageName: wantedTableName,
-				storageSvc:  wantedSvcName,
+				storageWl:   wantedSvcName,
 				storageType: dynamoDBStorageType,
 
 				partitionKey: wantedPartitionKey,
@@ -612,7 +612,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			wantedVars: &initStorageVars{
 				storageName: wantedTableName,
-				storageSvc:  wantedSvcName,
+				storageWl:   wantedSvcName,
 				storageType: dynamoDBStorageType,
 
 				partitionKey: wantedPartitionKey,
@@ -720,7 +720,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				initStorageVars: initStorageVars{
 					storageType:  tc.inStorageType,
 					storageName:  tc.inStorageName,
-					storageSvc:   tc.inSvcName,
+					storageWl:    tc.inSvcName,
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,
@@ -852,7 +852,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 				initStorageVars: initStorageVars{
 					storageType:  tc.inStorageType,
 					storageName:  tc.inStorageName,
-					storageSvc:   tc.inSvcName,
+					storageWl:    tc.inSvcName,
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,

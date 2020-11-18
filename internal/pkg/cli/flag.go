@@ -18,6 +18,7 @@ const (
 	appFlag     = "app"
 	envFlag     = "env"
 	svcFlag     = "svc"
+	wkldFlag    = "wkld"
 	svcTypeFlag = "svc-type"
 	jobTypeFlag = "job-type"
 	typeFlag    = "type"
@@ -96,6 +97,7 @@ const (
 	appFlagShort  = "a"
 	envFlagShort  = "e"
 	svcFlagShort  = "s"
+	wkldFlagShort = "w"
 	typeFlagShort = "t"
 
 	dockerFileFlagShort        = "d"
@@ -178,7 +180,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	svcPortFlagDescription           = "Optional. The port on which your service listens."
 
 	storageFlagDescription             = "Name of the storage resource to create."
-	storageServiceFlagDescription      = "Name of the service to associate with storage."
+	storageWorkloadFlagDescription     = "Name of the service or job to associate with storage."
 	storagePartitionKeyFlagDescription = `Partition key for the DDB table.
 Must be of the format '<keyName>:<dataType>'.`
 	storageSortKeyFlagDescription = `Optional. Sort key for the DDB table.
