@@ -58,6 +58,7 @@ type configurations []*ServiceConfig
 
 func (c configurations) humanString(w io.Writer) {
 	fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", "Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Port")
+	fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", "-----------", "-----", "----------", "------------", "----")
 	for _, config := range c {
 		fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Port)
 	}
@@ -112,6 +113,18 @@ func (d *ServiceDescriber) EnvVars() (map[string]string, error) {
 	envVars := taskDefinition.EnvironmentVariables()
 
 	return envVars, nil
+}
+
+// Secrets returns the secrets of the task definition.
+func (d *ServiceDescriber) Secrets() (map[string]string, error) {
+	taskDefName := fmt.Sprintf("%s-%s-%s", d.app, d.env, d.service)
+	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)
+	if err != nil {
+		return nil, err
+	}
+	secrets := taskDefinition.Secrets()
+
+	return secrets, nil
 }
 
 // ServiceStackResources returns the filtered service stack resources created by CloudFormation.

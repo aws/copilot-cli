@@ -14,6 +14,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
+
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -64,6 +66,7 @@ type svcDescriber interface {
 	Params() (map[string]string, error)
 	EnvOutputs() (map[string]string, error)
 	EnvVars() (map[string]string, error)
+	Secrets() (map[string]string, error)
 	ServiceStackResources() ([]*cloudformation.StackResource, error)
 }
 
@@ -127,6 +130,7 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var configs []*ServiceConfig
 	var serviceDiscoveries []*ServiceDiscovery
 	var envVars []*EnvVars
+	var secrets []*Secrets
 	for _, env := range environments {
 		err := d.initServiceDescriber(env)
 		if err != nil {
@@ -157,9 +161,16 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
 		}
 		envVars = append(envVars, flattenEnvVars(env, webSvcEnvVars)...)
+		webSvcSecrets, err := d.svcDescriber[env].Secrets()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve secrets: %w", err)
+		}
+		secrets = append(secrets, flattenSecrets(env, webSvcSecrets)...)
 	}
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
+	sort.SliceStable(secrets, func(i, j int) bool { return secrets[i].Environment < envVars[j].Environment })
+	sort.SliceStable(secrets, func(i, j int) bool { return secrets[i].Name < secrets[j].Name })
 
 	resources := make(map[string][]*CfnResource)
 	if d.enableResources {
@@ -184,6 +195,7 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		Routes:           routes,
 		ServiceDiscovery: serviceDiscoveries,
 		Variables:        envVars,
+		Secrets:          secrets,
 		Resources:        resources,
 	}, nil
 }
@@ -230,6 +242,7 @@ type envVars []*EnvVars
 
 func (e envVars) humanString(w io.Writer) {
 	fmt.Fprintf(w, "  %s\t%s\t%s\n", "Name", "Environment", "Value")
+	fmt.Fprintf(w, "  %s\t%s\t%s\n", "----", "-----------", "-----")
 	var prevName string
 	var prevValue string
 	for _, variable := range e {
@@ -252,6 +265,47 @@ func (e envVars) humanString(w io.Writer) {
 	}
 }
 
+type Secrets struct {
+	Name        string `json:"name"`
+	Environment string `json:"environment"`
+	ValueFrom   string `json:"valueFrom"`
+}
+
+type secrets []*Secrets
+
+func (s secrets) humanString(w io.Writer) {
+	fmt.Fprintf(w, "  %s\t%s\t%s\n", "Name", "Environment", "Value From")
+	fmt.Fprintf(w, "  %s\t%s\t%s\n", "----", "-----------", "----------")
+	var prevName string
+	var prevValueFrom string
+	for _, secret := range s {
+		// If the valueFrom is not an ARN, preface it with "parameter/"
+		var outputValueFrom string
+		_, err := arn.Parse(secret.ValueFrom)
+		if err != nil {
+			outputValueFrom = fmt.Sprintf("parameter/%s", secret.ValueFrom)
+		} else {
+			outputValueFrom = secret.ValueFrom
+		}
+		// Instead of re-writing the same secret valueFrom, we replace it with "-" to reduce text.
+		if secret.Name != prevName {
+			if secret.ValueFrom != prevValueFrom {
+				fmt.Fprintf(w, "  %s\t%s\t%s\n", secret.Name, secret.Environment, outputValueFrom)
+			} else {
+				fmt.Fprintf(w, "  %s\t%s\t-\n", secret.Name, secret.Environment)
+			}
+		} else {
+			if secret.ValueFrom != prevValueFrom {
+				fmt.Fprintf(w, "  -\t%s\t%s\n", secret.Environment, outputValueFrom)
+			} else {
+				fmt.Fprintf(w, "  -\t%s\t-\n", secret.Environment)
+			}
+		}
+		prevName = secret.Name
+		prevValueFrom = secret.ValueFrom
+	}
+}
+
 // WebServiceRoute contains serialized route parameters for a web service.
 type WebServiceRoute struct {
 	Environment string `json:"environment"`
@@ -268,6 +322,7 @@ type serviceDiscoveries []*ServiceDiscovery
 
 func (s serviceDiscoveries) humanString(w io.Writer) {
 	fmt.Fprintf(w, "  %s\t%s\n", "Environment", "Namespace")
+	fmt.Fprintf(w, "  %s\t%s\n", "-----------", "---------")
 	for _, sd := range s {
 		fmt.Fprintf(w, "  %s\t%s\n", strings.Join(sd.Environment, ", "), sd.Namespace)
 	}
@@ -282,6 +337,7 @@ type webSvcDesc struct {
 	Routes           []*WebServiceRoute `json:"routes"`
 	ServiceDiscovery serviceDiscoveries `json:"serviceDiscovery"`
 	Variables        envVars            `json:"variables"`
+	Secrets          secrets            `json:"secrets,omitempty"`
 	Resources        cfnResources       `json:"resources,omitempty"`
 }
 
@@ -309,6 +365,7 @@ func (w *webSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Environment", "URL")
+	fmt.Fprintf(writer, "  %s\t%s\n", "-----------", "---")
 	for _, route := range w.Routes {
 		fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
 	}
@@ -318,6 +375,11 @@ func (w *webSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()
 	w.Variables.humanString(writer)
+	if len(w.Secrets) != 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nSecrets\n\n"))
+		writer.Flush()
+		w.Secrets.humanString(writer)
+	}
 	if len(w.Resources) != 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nResources\n"))
 		writer.Flush()

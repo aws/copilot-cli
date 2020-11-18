@@ -219,6 +219,48 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
 		},
+		"return error if fail to retrieve environment variables": {
+			setupMocks: func(m webSvcDescriberMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+					}, nil),
+					m.svcDescriber.EXPECT().Params().Return(map[string]string{
+						stack.LBWebServiceContainerPortParamKey: "80",
+						stack.WorkloadTaskCountParamKey:         "1",
+						stack.WorkloadTaskCPUParamKey:           "256",
+						stack.WorkloadTaskMemoryParamKey:        "512",
+						stack.LBWebServiceRulePathParamKey:      testSvcPath,
+					}, nil),
+					m.svcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
+				)
+			},
+			wantedError: fmt.Errorf("retrieve environment variables: some error"),
+		},
+		"return error if fail to retrieve secrets": {
+			setupMocks: func(m webSvcDescriberMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+					}, nil),
+					m.svcDescriber.EXPECT().Params().Return(map[string]string{
+						stack.LBWebServiceContainerPortParamKey: "80",
+						stack.WorkloadTaskCountParamKey:         "1",
+						stack.WorkloadTaskCPUParamKey:           "256",
+						stack.WorkloadTaskMemoryParamKey:        "512",
+						stack.LBWebServiceRulePathParamKey:      testSvcPath,
+					}, nil),
+					m.svcDescriber.EXPECT().EnvVars().Return(
+						map[string]string{
+							"COPILOT_ENVIRONMENT_NAME": prodEnv,
+						}, nil),
+					m.svcDescriber.EXPECT().Secrets().Return(nil, mockErr),
+				)
+			},
+			wantedError: fmt.Errorf("retrieve secrets: some error"),
+		},
 		"return error if fail to retrieve service resources": {
 			shouldOutputResources: true,
 			setupMocks: func(m webSvcDescriberMocks) {
@@ -237,6 +279,11 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 					m.svcDescriber.EXPECT().EnvVars().Return(
 						map[string]string{
 							"COPILOT_ENVIRONMENT_NAME": testEnv,
+						}, nil),
+					m.svcDescriber.EXPECT().Secrets().Return(
+						map[string]string{
+							"GITHUB_WEBHOOK_SECRET": "GH_WEBHOOK_SECRET",
+							"SOME_OTHER_SECRET":     "SHHHHH",
 						}, nil),
 					m.svcDescriber.EXPECT().ServiceStackResources().Return(nil, mockErr),
 				)
@@ -263,7 +310,10 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 						map[string]string{
 							"COPILOT_ENVIRONMENT_NAME": testEnv,
 						}, nil),
-
+					m.svcDescriber.EXPECT().Secrets().Return(
+						map[string]string{
+							"GITHUB_WEBHOOK_SECRET": "GH_WEBHOOK_SECRET",
+						}, nil),
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: prodEnvLBDNSName,
 					}, nil),
@@ -278,7 +328,10 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 						map[string]string{
 							"COPILOT_ENVIRONMENT_NAME": prodEnv,
 						}, nil),
-
+					m.svcDescriber.EXPECT().Secrets().Return(
+						map[string]string{
+							"SOME_OTHER_SECRET": "SHHHHH",
+						}, nil),
 					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
 						{
 							ResourceType:       aws.String("AWS::EC2::SecurityGroupIngress"),
@@ -339,6 +392,18 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 						Environment: "test",
 						Name:        "COPILOT_ENVIRONMENT_NAME",
 						Value:       "test",
+					},
+				},
+				Secrets: []*Secrets{
+					{
+						Name:        "GITHUB_WEBHOOK_SECRET",
+						Environment: "test",
+						ValueFrom:   "GH_WEBHOOK_SECRET",
+					},
+					{
+						Name:        "SOME_OTHER_SECRET",
+						Environment: "prod",
+						ValueFrom:   "SHHHHH",
 					},
 				},
 				Resources: map[string][]*CfnResource{
@@ -414,25 +479,36 @@ func TestWebServiceDesc_String(t *testing.T) {
 Configurations
 
   Environment       Tasks               CPU (vCPU)          Memory (MiB)        Port
+  -----------       -----               ----------          ------------        ----
   test              1                   0.25                512                 80
   prod              3                   0.5                 1024                5000
 
 Routes
 
   Environment       URL
+  -----------       ---
   test              http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend
   prod              http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend
 
 Service Discovery
 
   Environment       Namespace
+  -----------       ---------
   test, prod        http://my-svc.my-app.local:5000
 
 Variables
 
   Name                      Environment         Value
+  ----                      -----------         -----
   COPILOT_ENVIRONMENT_NAME  prod                prod
   -                         test                test
+
+Secrets
+
+  Name                   Environment         Value From
+  ----                   -----------         ----------
+  GITHUB_WEBHOOK_SECRET  test                parameter/GH_WEBHOOK_SECRET
+  SOME_OTHER_SECRET      prod                parameter/SHHHHH
 
 Resources
 
@@ -442,7 +518,7 @@ Resources
   prod
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
-			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Load Balanced Web Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"serviceDiscovery\":[{\"environment\":[\"test\",\"prod\"],\"namespace\":\"http://my-svc.my-app.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Load Balanced Web Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"serviceDiscovery\":[{\"environment\":[\"test\",\"prod\"],\"namespace\":\"http://my-svc.my-app.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 	}
 
@@ -474,6 +550,18 @@ Resources
 					Environment: "test",
 					Name:        "COPILOT_ENVIRONMENT_NAME",
 					Value:       "test",
+				},
+			}
+			secrets := []*Secrets{
+				{
+					Name:        "GITHUB_WEBHOOK_SECRET",
+					Environment: "test",
+					ValueFrom:   "GH_WEBHOOK_SECRET",
+				},
+				{
+					Name:        "SOME_OTHER_SECRET",
+					Environment: "prod",
+					ValueFrom:   "SHHHHH",
 				},
 			}
 			routes := []*WebServiceRoute{
@@ -512,6 +600,7 @@ Resources
 				Configurations:   config,
 				App:              "my-app",
 				Variables:        envVars,
+				Secrets:          secrets,
 				Routes:           routes,
 				ServiceDiscovery: sds,
 				Resources:        resources,

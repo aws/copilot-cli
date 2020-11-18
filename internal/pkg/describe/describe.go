@@ -62,6 +62,18 @@ func flattenEnvVars(envName string, m map[string]string) []*EnvVars {
 	return envVarList
 }
 
+func flattenSecrets(envName string, m map[string]string) []*Secrets {
+	var secretsList []*Secrets
+	for k, v := range m {
+		secretsList = append(secretsList, &Secrets{
+			Environment: envName,
+			Name:        k,
+			ValueFrom:   v,
+		})
+	}
+	return secretsList
+}
+
 // HumanString returns the stringified CfnResource struct with human readable format.
 func (c CfnResource) HumanString() string {
 	return fmt.Sprintf("    %s\t%s\n", c.Type, c.PhysicalID)

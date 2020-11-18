@@ -285,3 +285,50 @@ func TestTaskDefinition_EnvVars(t *testing.T) {
 
 	}
 }
+
+func TestTaskDefinition_Secrets(t *testing.T) {
+	testCases := map[string]struct {
+		inContainers []*ecs.ContainerDefinition
+
+		wantSecrets map[string]string
+	}{
+		"should return secrets of the task definition as a map": {
+			inContainers: []*ecs.ContainerDefinition{
+				{
+					Secrets: []*ecs.Secret{
+						{
+							Name:      aws.String("GITHUB_WEBHOOK_SECRET"),
+							ValueFrom: aws.String("GH_WEBHOOK_SECRET"),
+						},
+						{
+							Name:      aws.String("SOME_OTHER_SECRET"),
+							ValueFrom: aws.String("SHHHHHHHH"),
+						},
+					},
+				},
+			},
+
+			wantSecrets: map[string]string{
+				"GITHUB_WEBHOOK_SECRET": "GH_WEBHOOK_SECRET",
+				"SOME_OTHER_SECRET":     "SHHHHHHHH",
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			taskDefinition := TaskDefinition{
+				ContainerDefinitions: tc.inContainers,
+			}
+
+			gotSecrets := taskDefinition.Secrets()
+
+			require.Equal(t, tc.wantSecrets, gotSecrets)
+		})
+
+	}
+}

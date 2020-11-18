@@ -112,6 +112,93 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 	}
 }
 
+func TestServiceDescriber_Secrets(t *testing.T) {
+	const (
+		testApp = "phonetool"
+		testSvc = "jobs"
+		testEnv = "test"
+	)
+	testCases := map[string]struct {
+		setupMocks func(mocks svcDescriberMocks)
+
+		wantedSecrets map[string]string
+		wantedError   error
+	}{
+		"returns error if fails to get secrets": {
+			setupMocks: func(m svcDescriberMocks) {
+				gomock.InOrder(
+					m.mockecsClient.EXPECT().TaskDefinition("phonetool-test-jobs").Return(nil, errors.New("some error")),
+				)
+			},
+
+			wantedError: fmt.Errorf("some error"),
+		},
+		"successfully gets secrets": {
+			setupMocks: func(m svcDescriberMocks) {
+				gomock.InOrder(
+					m.mockecsClient.EXPECT().TaskDefinition("phonetool-test-jobs").Return(&ecs.TaskDefinition{
+						ContainerDefinitions: []*ecsapi.ContainerDefinition{
+							{
+								Secrets: []*ecsapi.Secret{
+									{
+										Name:      aws.String("GITHUB_WEBHOOK_SECRET"),
+										ValueFrom: aws.String("GH_WEBHOOK_SECRET"),
+									},
+									{
+										Name:      aws.String("SOME_OTHER_SECRET"),
+										ValueFrom: aws.String("SHHHHH"),
+									},
+								},
+							},
+						},
+					}, nil),
+				)
+			},
+			wantedSecrets: map[string]string{
+				"GITHUB_WEBHOOK_SECRET": "GH_WEBHOOK_SECRET",
+				"SOME_OTHER_SECRET":     "SHHHHH",
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockecsClient := mocks.NewMockecsClient(ctrl)
+			mockStackDescriber := mocks.NewMockstackAndResourcesDescriber(ctrl)
+			mocks := svcDescriberMocks{
+				mockecsClient:      mockecsClient,
+				mockStackDescriber: mockStackDescriber,
+			}
+
+			tc.setupMocks(mocks)
+
+			d := &ServiceDescriber{
+				app:     testApp,
+				service: testSvc,
+				env:     testEnv,
+
+				ecsClient:      mockecsClient,
+				stackDescriber: mockStackDescriber,
+			}
+
+			// WHEN
+			actual, err := d.Secrets()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedSecrets, actual)
+			}
+		})
+	}
+}
+
 func TestServiceDescriber_ServiceStackResources(t *testing.T) {
 	const (
 		testApp            = "phonetool"

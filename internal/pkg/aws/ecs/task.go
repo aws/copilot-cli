@@ -123,6 +123,15 @@ func (t *TaskDefinition) EnvironmentVariables() map[string]string {
 	return envs
 }
 
+// Secrets returns secrets of the task definition.
+func (t *TaskDefinition) Secrets() map[string]string {
+	secrets := make(map[string]string)
+	for _, secret := range t.ContainerDefinitions[0].Secrets {
+		secrets[aws.StringValue(secret.Name)] = aws.StringValue(secret.ValueFrom)
+	}
+	return secrets
+}
+
 // TaskID parses the task ARN and returns the task ID.
 // For example: arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d,
 // arn:aws:ecs:us-west-2:123456789:task/4082490ee6c245e09d2145010aa1ba8d

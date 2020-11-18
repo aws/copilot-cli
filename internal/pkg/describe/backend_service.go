@@ -100,6 +100,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var configs []*ServiceConfig
 	var services []*ServiceDiscovery
 	var envVars []*EnvVars
+	var secrets []*Secrets
 	for _, env := range environments {
 		err := d.initServiceDescriber(env)
 		if err != nil {
@@ -130,9 +131,16 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
 		}
 		envVars = append(envVars, flattenEnvVars(env, backendSvcEnvVars)...)
+		webSvcSecrets, err := d.svcDescriber[env].Secrets()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve secrets: %w", err)
+		}
+		secrets = append(secrets, flattenSecrets(env, webSvcSecrets)...)
 	}
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
+	sort.SliceStable(secrets, func(i, j int) bool { return secrets[i].Environment < envVars[j].Environment })
+	sort.SliceStable(secrets, func(i, j int) bool { return secrets[i].Name < secrets[j].Name })
 
 	resources := make(map[string][]*CfnResource)
 	if d.enableResources {
@@ -156,6 +164,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		Configurations:   configs,
 		ServiceDiscovery: services,
 		Variables:        envVars,
+		Secrets:          secrets,
 		Resources:        resources,
 	}, nil
 }
@@ -168,6 +177,7 @@ type backendSvcDesc struct {
 	Configurations   configurations     `json:"configurations"`
 	ServiceDiscovery serviceDiscoveries `json:"serviceDiscovery"`
 	Variables        envVars            `json:"variables"`
+	Secrets          secrets            `json:"secrets,omitempty"`
 	Resources        cfnResources       `json:"resources,omitempty"`
 }
 
@@ -198,6 +208,11 @@ func (w *backendSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()
 	w.Variables.humanString(writer)
+	if len(w.Secrets) != 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nSecrets\n\n"))
+		writer.Flush()
+		w.Secrets.humanString(writer)
+	}
 	if len(w.Resources) != 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nResources\n"))
 		writer.Flush()

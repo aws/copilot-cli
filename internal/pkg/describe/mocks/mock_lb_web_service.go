@@ -78,6 +78,21 @@ func (mr *MocksvcDescriberMockRecorder) EnvVars() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvVars", reflect.TypeOf((*MocksvcDescriber)(nil).EnvVars))
 }
 
+// Secrets mocks base method
+func (m *MocksvcDescriber) Secrets() (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Secrets")
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Secrets indicates an expected call of Secrets
+func (mr *MocksvcDescriberMockRecorder) Secrets() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Secrets", reflect.TypeOf((*MocksvcDescriber)(nil).Secrets))
+}
+
 // ServiceStackResources mocks base method
 func (m *MocksvcDescriber) ServiceStackResources() ([]*cloudformation.StackResource, error) {
 	m.ctrl.T.Helper()
