@@ -51,7 +51,7 @@ phases:
             tmp=$(mktemp)
             timestamp=$(date +%s){{range $bucket := .ArtifactBuckets}}
             aws s3 cp "$ADDONSFILE" "s3://{{$bucket.BucketName}}/manual/$timestamp/$workload.addons.stack.yml";{{range $envName := $bucket.Environments}}
-            jq --arg a "https://{{$bucket.BucketName}}.s3-{{$bucket.Region}}.amazonaws.com/manual/$timestamp/$workload.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$workload-{{$envName}}.params.json > "$tmp" && mv "$tmp" ./infrastructure/$workload-{{$envName}}.params.json{{end}}{{end}}
+            jq --arg a "https://{{$bucket.BucketName}}.s3.{{$bucket.Region}}.amazonaws.com/manual/$timestamp/$workload.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$workload-{{$envName}}.params.json > "$tmp" && mv "$tmp" ./infrastructure/$workload-{{$envName}}.params.json{{end}}{{end}}
           fi
         done;
       # Build images
