@@ -5,6 +5,8 @@
 package manifest
 
 import (
+	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -133,8 +135,12 @@ func (j ScheduledJob) ApplyEnv(envName string) (*ScheduledJob, error) {
 }
 
 // BuildArgs returns a docker.BuildArguments object for the job given a workspace root.
-func (j *ScheduledJob) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return j.ImageConfig.BuildConfig(wsRoot)
+func (j *ScheduledJob) BuildArgs(wsRoot, envName string) (*DockerBuildArgs, error) {
+	envJob, err := j.ApplyEnv(envName)
+	if err != nil {
+		return nil, fmt.Errorf("apply environment %s: %w", envName, err)
+	}
+	return envJob.ImageConfig.BuildConfig(wsRoot), nil
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.

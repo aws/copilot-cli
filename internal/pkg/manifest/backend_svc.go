@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -103,9 +104,13 @@ func (s *BackendService) BuildRequired() (bool, error) {
 	return requiresBuild(s.ImageConfig.Image)
 }
 
-// BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory
-func (s *BackendService) BuildArgs(wsRoot string) *DockerBuildArgs {
-	return s.ImageConfig.BuildConfig(wsRoot)
+// BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory and environment
+func (s *BackendService) BuildArgs(wsRoot, envName string) (*DockerBuildArgs, error) {
+	envService, err := s.ApplyEnv(envName)
+	if err != nil {
+		return nil, fmt.Errorf("apply environment %s: %w", envName, err)
+	}
+	return envService.ImageConfig.BuildConfig(wsRoot), nil
 }
 
 // ApplyEnv returns the service manifest with environment overrides.

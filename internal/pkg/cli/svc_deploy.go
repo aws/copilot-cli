@@ -309,20 +309,23 @@ func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*docker.BuildArguments, er
 	if err != nil {
 		return nil, fmt.Errorf("get copilot directory: %w", err)
 	}
-	return buildArgs(o.name, o.imageTag, copilotDir, svc)
+	return buildArgs(o.name, o.imageTag, o.envName, copilotDir, svc)
 }
 
-func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*docker.BuildArguments, error) {
-	type dfArgs interface {
-		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
+func buildArgs(name, imageTag, envName, copilotDir string, unmarshaledManifest interface{}) (*docker.BuildArguments, error) {
+	type buildArgs interface {
+		BuildArgs(rootDirectory, envName string) (*manifest.DockerBuildArgs, error)
 	}
-	mf, ok := unmarshaledManifest.(dfArgs)
+	mf, ok := unmarshaledManifest.(buildArgs)
 	if !ok {
 		return nil, fmt.Errorf("%s does not have required method BuildArgs()", name)
 	}
 
 	wsRoot := filepath.Dir(copilotDir)
-	args := mf.BuildArgs(wsRoot)
+	args, err := mf.BuildArgs(wsRoot, envName)
+	if err != nil {
+		return nil, fmt.Errorf("get build arguments for %s: %w", name, err)
+	}
 	return &docker.BuildArguments{
 		Dockerfile: *args.Dockerfile,
 		Context:    *args.Context,

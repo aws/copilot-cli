@@ -219,10 +219,26 @@ image:
 type: 'Load Balanced Web Service'
 image:
   build:
-    dockerfile: path/to/Dockerfile`)
+    dockerfile: path/to/Dockerfile
+`)
+	mockMftArgOverrides := []byte(`name: serviceA
+type: 'Load Balanced Web Service'
+image:
+  build:
+    dockerfile: path/to/Dockerfile
+    args:
+      OVERRIDE: bad
+environments:
+  prod:
+    image:
+      build:
+        args:
+          OVERRIDE: good
+          NEW_PROD_ARG: good`)
 
 	tests := map[string]struct {
 		inputSvc   string
+		inEnvName  string
 		setupMocks func(mocks deploySvcMocks)
 
 		wantErr error
@@ -306,6 +322,21 @@ image:
 				)
 			},
 		},
+		"for a specific environment with overridden args": {
+			inputSvc:  "serviceA",
+			inEnvName: "prod",
+			setupMocks: func(m deploySvcMocks) {
+				gomock.InOrder(
+					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockMftArgOverrides, nil),
+					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
+					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &docker.BuildArguments{
+						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
+						Context:    filepath.Join("/ws", "root", "path", "to"),
+						Args:       map[string]string{"OVERRIDE": "good", "NEW_PROD_ARG": "good"},
+					}).Return(nil),
+				)
+			},
+		},
 	}
 
 	for name, test := range tests {
@@ -322,7 +353,8 @@ image:
 			test.setupMocks(mocks)
 			opts := deploySvcOpts{
 				deployWkldVars: deployWkldVars{
-					name: test.inputSvc,
+					name:    test.inputSvc,
+					envName: test.inEnvName,
 				},
 				unmarshal:          manifest.UnmarshalWorkload,
 				imageBuilderPusher: mockimageBuilderPusher,
