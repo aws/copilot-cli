@@ -195,12 +195,14 @@ func (s *ServiceStatusDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nTask Status\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\t%s\n", "ID", "Image Digest", "Last Status", "Started At", "Stopped At", "Health Status")
+	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\t%s\n", "--", "------------", "-----------", "----------", "----------", "-------------")
 	for _, task := range s.Tasks {
 		fmt.Fprint(writer, task.HumanString())
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nAlarms\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", "Name", "Condition", "Last Updated", "Health")
+	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", "----", "---------", "------------", "------")
 	for _, alarm := range s.Alarms {
 		updatedTimeSince := humanizeTime(alarm.UpdatedTimes)
 		printWithMaxWidth(writer, "  %s\t%s\t%s\t%s\n", maxAlarmStatusColumnWidth, alarm.Name, alarm.Condition, updatedTimeSince, alarmHealthColor(alarm.Status))
