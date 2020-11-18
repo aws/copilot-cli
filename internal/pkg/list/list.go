@@ -7,8 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -137,13 +135,7 @@ func filterByName(wklds []*config.Workload, wantedNames []string) []*config.Work
 func humanOutput(wklds []*config.Workload, w io.Writer) {
 	writer := tabwriter.NewWriter(w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprintf(writer, "%s\t%s\n", "Name", "Type")
-	nameLengthMax := len("Name")
-	typeLengthMax := len("Type")
-	for _, svc := range wklds {
-		nameLengthMax = int(math.Max(float64(nameLengthMax), float64(len(svc.Name))))
-		typeLengthMax = int(math.Max(float64(typeLengthMax), float64(len(svc.Type))))
-	}
-	fmt.Fprintf(writer, "%s\t%s\n", strings.Repeat("-", nameLengthMax), strings.Repeat("-", typeLengthMax))
+	fmt.Fprintf(writer, "%s\t%s\n", "----", "----")
 	for _, wkld := range wklds {
 		fmt.Fprintf(writer, "%s\t%s\n", wkld.Name, wkld.Type)
 	}

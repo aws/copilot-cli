@@ -36,7 +36,7 @@ func TestList_JobListWriter(t *testing.T) {
 			inputAppName:   mockAppName,
 			inputWriteJSON: false,
 
-			wantedContent: "Name                Type\n--------            -------------\nbadgoose            Scheduled Job\nfarmer              Scheduled Job\n",
+			wantedContent: "Name                Type\n----                ----\nbadgoose            Scheduled Job\nfarmer              Scheduled Job\n",
 			mocking: func() {
 				mockStore.EXPECT().
 					GetApplication(gomock.Eq("barnyard")).
@@ -88,7 +88,7 @@ func TestList_JobListWriter(t *testing.T) {
 			inputAppName:   mockAppName,
 			inputListLocal: true,
 
-			wantedContent: "Name                Type\n--------            -------------\nbadgoose            Scheduled Job\n",
+			wantedContent: "Name                Type\n----                ----\nbadgoose            Scheduled Job\n",
 
 			mocking: func() {
 				mockStore.EXPECT().GetApplication("barnyard").
@@ -197,7 +197,7 @@ func TestList_SvcListWriter(t *testing.T) {
 			inputAppName:   mockAppName,
 			inputWriteJSON: false,
 
-			wantedContent: "Name                Type\n------              -------------------------\ntrough              Backend Service\ngaggle              Load Balanced Web Service\n",
+			wantedContent: "Name                Type\n----                ----\ntrough              Backend Service\ngaggle              Load Balanced Web Service\n",
 			mocking: func() {
 				mockStore.EXPECT().
 					GetApplication(gomock.Eq("barnyard")).
@@ -249,7 +249,7 @@ func TestList_SvcListWriter(t *testing.T) {
 			inputAppName:   mockAppName,
 			inputListLocal: true,
 
-			wantedContent: "Name                Type\n------              ---------------\ntrough              Backend Service\n",
+			wantedContent: "Name                Type\n----                ----\ntrough              Backend Service\n",
 
 			mocking: func() {
 				mockStore.EXPECT().GetApplication("barnyard").
