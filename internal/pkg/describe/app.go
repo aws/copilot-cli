@@ -43,18 +43,21 @@ func (a *App) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nEnvironments\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Name", "AccountID", "Region")
+	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "----", "---------", "------")
 	for _, env := range a.Envs {
 		fmt.Fprintf(writer, "  %s\t%s\t%s\n", env.Name, env.AccountID, env.Region)
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nServices\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", "Type")
+	fmt.Fprintf(writer, "  %s\t%s\n", "----", "----")
 	for _, svc := range a.Services {
 		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nPipelines\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\n", "Name")
+	fmt.Fprintf(writer, "  %s\n", "----")
 	for _, pipeline := range a.Pipelines {
 		fmt.Fprintf(writer, "  %s\n", pipeline.Name)
 	}
