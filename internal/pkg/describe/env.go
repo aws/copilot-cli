@@ -7,9 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"math"
 	"sort"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -190,14 +188,15 @@ func (e *EnvDescription) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nServices\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", "Type")
-	nameLengthMax := len("Name")
-	typeLengthMax := len("Type")
-	for _, svc := range e.Services {
-		nameLengthMax = int(math.Max(float64(nameLengthMax), float64(len(svc.Name))))
-		typeLengthMax = int(math.Max(float64(typeLengthMax), float64(len(svc.Type))))
-	}
-	fmt.Fprintf(writer, "  %s\t%s\n", strings.Repeat("-", nameLengthMax), strings.Repeat("-", typeLengthMax))
-	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\n", "----", "----")
+	//nameLengthMax := len("Name")
+	//typeLengthMax := len("Type")
+	//for _, svc := range e.Services {
+	//	nameLengthMax = int(math.Max(float64(nameLengthMax), float64(len(svc.Name))))
+	//	typeLengthMax = int(math.Max(float64(typeLengthMax), float64(len(svc.Type))))
+	//}
+	//fmt.Fprintf(writer, "  %s\t%s\n", strings.Repeat("-", nameLengthMax), strings.Repeat("-", typeLengthMax))
+	//writer.Flush()
 	for _, svc := range e.Services {
 		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
 	}
@@ -205,15 +204,16 @@ func (e *EnvDescription) HumanString() string {
 	if len(e.Tags) != 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nTags\n\n"))
 		writer.Flush()
-		KeyLengthMax := len("Key")
-		ValueLengthMax := len("Value")
-		for k, v := range e.Tags {
-			KeyLengthMax = int(math.Max(float64(KeyLengthMax), float64(len(k))))
-			ValueLengthMax = int(math.Max(float64(ValueLengthMax), float64(len(v))))
-		}
+		//KeyLengthMax := len("Key")
+		//ValueLengthMax := len("Value")
+		//for k, v := range e.Tags {
+		//	KeyLengthMax = int(math.Max(float64(KeyLengthMax), float64(len(k))))
+		//	ValueLengthMax = int(math.Max(float64(ValueLengthMax), float64(len(v))))
+		//}
 		fmt.Fprintf(writer, "  %s\t%s\n", "Key", "Value")
-		fmt.Fprintf(writer, "  %s\t%s\n", strings.Repeat("-", KeyLengthMax), strings.Repeat("-", ValueLengthMax))
-		writer.Flush()
+		fmt.Fprintf(writer, "  %s\t%s\n", "---", "-----")
+		//fmt.Fprintf(writer, "  %s\t%s\n", strings.Repeat("-", KeyLengthMax), strings.Repeat("-", ValueLengthMax))
+		//writer.Flush()
 		// sort Tags in alpha order by keys
 		keys := make([]string, 0, len(e.Tags))
 		for k := range e.Tags {
