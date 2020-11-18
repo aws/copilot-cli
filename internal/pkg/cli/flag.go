@@ -96,7 +96,6 @@ const (
 	nameFlagShort = "n"
 	appFlagShort  = "a"
 	envFlagShort  = "e"
-	svcFlagShort  = "s"
 	wkldFlagShort = "w"
 	typeFlagShort = "t"
 
