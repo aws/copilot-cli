@@ -1,10 +1,10 @@
-Having an automated release process is one of the most important parts of software delivery so Copilot wants to make setting up that automated release process as easy as possible 🚀.
+Having an automated release process is one of the most important parts of software delivery, so Copilot wants to make setting up that process as easy as possible 🚀.
 
-In this section, we'll talk about using Copilot to set up a CodePipeline which automatically builds your service code when you push to GitHub, deploys to your environments, and runs automated testing.
+In this section, we'll talk about using Copilot to set up a CodePipeline that automatically builds your service code when you push to GitHub, deploys to your environments, and runs automated testing.
 
 ## Why?
 
-I won't get too philosophical about releasing software, but what's the point of having a release pipeline? With `copilot deploy` you can deploy your service directly from your computer to ECS, why add a middleman? That's a great question. For some apps, manually using `deploy` is enough, but as your release process gets more complicated (as you add more environments or add automated testing for example) you want to offload the boring work of repeatably orchestrating that process to a service. Having two services, each having two environments (test and production, say) and wanting to run integration tests after you deploy to your test environment becomes surprisingly cumbersome to do by hand.
+We won't get too philosophical about releasing software, but what's the point of having a release pipeline? With `copilot deploy` you can deploy your service directly from your computer to ECS, so why add a middleman? That's a great question. For some apps, manually using `deploy` is enough, but as your release process gets more complicated (as you add more environments or add automated testing, for example) you want to offload the boring work of repeatedly orchestrating that process to a service. With two services, each having two environments (test and production, say), running integration tests after you deploy to your test environment becomes surprisingly cumbersome to do by hand.
 
 Using an automated release tool like CodePipeline helps make your release manageable. Even if your release isn't particularly complicated, knowing that you can just `git push` to deploy your change always feels a little magical 🌈.
 
@@ -12,16 +12,16 @@ Using an automated release tool like CodePipeline helps make your release manage
 
 Copilot can set up a CodePipeline for you with a few commands - but before we jump into that, let's talk a little bit about the structure of the pipeline we'll be generating. Our pipeline will have the following basic structure:
 
-1. __GitHub Source__ - when you push to a configured branch (master by default), a new pipeline execution is triggered.
+1. __GitHub Source__ - when you push to a configured branch (main by default), a new pipeline execution is triggered.
 2. __Build Stage__ - after your code is pulled from GitHub, your service's container image is built and published to every environment's ECR repository.
-3. __Deploy Stages__ - after your code is built, you can deploy to any and all of your environments, with optional post deployment tests or manual approvals.
+3. __Deploy Stages__ - after your code is built, you can deploy to any and all of your environments, with optional post-deployment tests or manual approvals.
 
 Once you've set up a CodePipeline using Copilot, all you'll have to do is push to your GitHub repository, and CodePipeline will orchestrate the deployments.
 
 Want to learn more about CodePipeline? Check out their [getting started docs](https://docs.aws.amazon.com/codepipeline/latest/userguide/welcome-introducing.html).
 
 ## Creating a Pipeline in 3 steps
-Creating a Pipeline only requires three steps:
+Creating a Pipeline requires only three steps:
 
 1. Preparing the pipeline structure.
 2. Committing the generated `buildspec.yml`.
@@ -41,15 +41,15 @@ $ copilot pipeline update
 
 ### Step 1: Configuring your Pipeline
 
-Pipeline configurations are created at a workspace level. If your workspace has a single service then your pipeline will be triggered only for that service. However, if you have multiple services in a workspace then it will build all the services in the workspace. To start setting up a pipeline, `cd` into your service(s)'s workspace and run:
+Pipeline configurations are created at a workspace level. If your workspace has a single service, then your pipeline will be triggered only for that service. However, if you have multiple services in a workspace, then the pipeline will build all the services in the workspace. To start setting up a pipeline, `cd` into your service(s)'s workspace and run:
 
- `$ copilot pipeline init`
+ `copilot pipeline init`
 
 This won't create your pipeline, but it will create some local files that will be used when creating your pipeline.
 
 * __Release order__: You'll be prompted for environments you want to deploy to - select them based on the order you want them to be deployed in your pipeline (deployments happen one environment at a time). You may, for example, want to deploy to your `test` environment first, and then your `prod` environment.
 
-* __Tracking repository__: After you've selected the environments you want to deploy to, you'll be prompted to select which GitHub repository you want your CodePipeline to track. This is the repository that, when pushed to, will trigger a Pipeline execution (if the repository you're interested in doesn't show up, you can pass it in using the `--github-url` flag).
+* __Tracking repository__: After you've selected the environments you want to deploy to, you'll be prompted to select which GitHub repository you want your CodePipeline to track. This is the repository that, when pushed to, will trigger a pipeline execution. (If the repository you're interested in doesn't show up, you can pass it in using the `--github-url` flag.)
 
 * __Personal access token__: In order to allow CodePipeline to track your GitHub repository, you'll need to provide a GitHub Personal Access Token. You can read how to do that [here](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line). Your token needs to have _repo_ and _admin:repo_hook_ permissions (so CodePipeline can create a WebHook on your behalf). Your GitHub Personal Access Token is stored securely in [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/).
 
@@ -75,7 +75,7 @@ source:
   # has the following properties: repository, branch.
   properties:
     access_token_secret: github-token-ecs-kudos-demo-api-frontend
-    branch: master
+    branch: main
     repository: https://github.com/kohidave/demo-api-frontend
 
 # The deployment section defines the order the pipeline will deploy
@@ -108,17 +108,17 @@ Now that your `pipeline.yml` and `buildspec.yml` are created, check them in and 
 
 `copilot pipeline update`
 
-This parses your `pipeline.yml`, creates a CodePipeline in the same account and region as your project (though it can deploy cross account and cross region) and kicks off a pipeline execution. Log into the AWS Console to watch your Pipeline go.
+This parses your `pipeline.yml`, creates a CodePipeline in the same account and region as your project (though it can deploy cross-account and cross-region) and kicks off a pipeline execution. Log into the AWS Console to watch your Pipeline go.
 
 ![Your completed CodePipeline](https://user-images.githubusercontent.com/828419/71861318-c7083980-30aa-11ea-80bb-4bea25bf5d04.png)
 
 ## Adding Tests
 
-Of course, one of the most important parts of a Pipeline is the automated testing. To add your own test commands, include the commands you'd like to run after your deploy step in the `test_commands` section. If all the commands succeed, your change is promoted to the next stage. 
+Of course, one of the most important parts of a pipeline is the automated testing. To add your own test commands, include the commands you'd like to run after your deploy step in the `test_commands` section. If all the commands succeed, your change is promoted to the next stage. 
 
 Adding `test_commands` generates a CodeBuild project with the [aws/codebuild/amazonlinux2-x86_64-standard:3.0](https://docs.aws.amazon.com/codebuild/latest/userguide/build-env-ref-available.html) image - so most commands from Amazon Linux 2 (including `make`) are available for use. 
 
-In the example below, the Pipeline will run `make test` command (in your source code directory) and only promote the change to the prod stage if that command exists successfully. 
+In the example below, the pipeline will run `make test` command (in your source code directory) and only promote the change to the prod stage if that command exits successfully. 
 
 ```yaml
 name: pipeline-ecs-kudos-kohidave-demo-api-frontend
@@ -127,7 +127,7 @@ source:
   provider: GitHub
   properties:
     access_token_secret: github-token-ecs-kudos-demo-api-frontend
-    branch: master
+    branch: main
     repository: https://github.com/kohidave/demo-api-frontend
 
 stages:

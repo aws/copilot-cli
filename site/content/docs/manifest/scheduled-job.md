@@ -84,7 +84,7 @@ The `location` field follows the same definition as the [`image` parameter](http
 The configuration for the event that triggers your job.
 
 <span class="parent-field">on.</span><a id="on-schedule" href="#on-schedule" class="field">`schedule`</a> <span class="type">String</span>  
-You can specify a rate to periodically trigger your job, supported rates:
+You can specify a rate to periodically trigger your job. Supported rates:
 
 * `"@yearly"`
 * `"@monthly"`
@@ -122,15 +122,15 @@ How long the job should run before it aborts and fails. You can use the units: `
 <div class="separator"></div>
 
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>   
-Key-value pairs that represents environment variables that will be passed to your job. Copilot will include a number of environment variables by default for you.
+Key-value pairs that represent environment variables that will be passed to your job. Copilot will include a number of environment variables by default for you.
 
 <div class="separator"></div>
 
 <a id="secrets" href="#secrets" class="field">`secrets`</a> <span class="type">Map</span>   
-Key-value pairs that represents secret values from [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) that will passed to your job as environment variables securely. 
+Key-value pairs that represent secret values from [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) that will be securely passed to your job as environment variables. 
 
 <div class="separator"></div>
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
-The environment section lets you overwrite any value in your manifest based on the environment you're in. 
-In the example manifest above, we're overriding the cpu parameter so that our production container is more performant.
+The environment section lets you override any value in your manifest based on the environment you're in. 
+In the example manifest above, we're overriding the CPU parameter so that our production container is more performant.

@@ -21,7 +21,7 @@ Like all commands in the Copilot CLI, if you don't provide required flags, we'll
 The `--domain` flag allows you to specify a domain name registered with Amazon Route 53 in your app's account. This will allow all the services in your app to share the same domain name. You'll be able to access your services at: [https://{svcName}.{envName}.{appName}.{domain}](https://{svcName}.{envName}.{appName}.{domain})
 
 The `--resource-tags` flags allows you to add your custom [tags](https://docs.aws.amazon.com/general/latest/gr/aws_tagging.html) to all the resources in your app.
-For example: `$ copilot app init --resource-tags department=MyDept,team=MyTeam`
+For example: `copilot app init --resource-tags department=MyDept,team=MyTeam`
 
 ## Examples
 Create a new application named "my-app".

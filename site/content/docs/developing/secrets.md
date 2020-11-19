@@ -1,6 +1,6 @@
 # Secrets
 
-Secrets are sensitive bits of information like OAuth tokens, secret keys or API keys - information that you need in your application code, but shouldn't commit to your source code. In the AWS Copilot CLI secrets are passed in as environment variables (read more about [developing with environment variables](../developing/environment-variables.md)) but they're treated differently, due to their sensitive nature. 
+Secrets are sensitive bits of information like OAuth tokens, secret keys or API keys - information that you need in your application code, but shouldn't commit to your source code. In the AWS Copilot CLI, secrets are passed in as environment variables (read more about [developing with environment variables](../developing/environment-variables.md)), but they're treated differently due to their sensitive nature. 
 
 ## How do I add Secrets?
 
@@ -35,4 +35,4 @@ This works because ECS Agent will resolve the SSM parameter when it starts up yo
 
 !!! info
     **We're going to make this easier!** There are a couple of caveats - you have to store the secret in the same environment as your application.  
-    Some of our next work is to add a `secrets` command that lets you add a secret without having to worry about which environment you're in or how SSM works.
+    Some of our next work is to add a `secrets` command that lets you add a secret without having to worry about which environment you're in, or how SSM works.

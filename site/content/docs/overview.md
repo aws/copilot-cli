@@ -1,7 +1,7 @@
 Welcome to the AWS Copilot CLI 🎉
 
-The Copilot CLI is a tool for developers to build, release, and operate production ready containerized applications on Amazon ECS and AWS Fargate.   
-From getting started, pushing to staging and releasing to production, Copilot can help manage the entire lifecycle of your application development.
+The Copilot CLI is a tool for developers to build, release, and operate production-ready containerized applications on Amazon ECS and AWS Fargate.   
+From getting started, pushing to staging, and releasing to production, Copilot can help manage the entire lifecycle of your application development.
 
 ## Installing
 
