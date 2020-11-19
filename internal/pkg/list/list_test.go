@@ -36,7 +36,11 @@ func TestList_JobListWriter(t *testing.T) {
 			inputAppName:   mockAppName,
 			inputWriteJSON: false,
 
-			wantedContent: "Name                Type\n----                ----\nbadgoose            Scheduled Job\nfarmer              Scheduled Job\n",
+			wantedContent: `Name                Type
+----                ----
+badgoose            Scheduled Job
+farmer              Scheduled Job
+`,
 			mocking: func() {
 				mockStore.EXPECT().
 					GetApplication(gomock.Eq("barnyard")).
