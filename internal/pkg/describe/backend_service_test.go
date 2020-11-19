@@ -206,7 +206,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						Value:       "test",
 					},
 				},
-				Secrets: []*Secrets{
+				Secrets: []*secret{
 					{
 						Name:        "GITHUB_WEBHOOK_SECRET",
 						Environment: "test",
@@ -364,7 +364,7 @@ Resources
 					Value:       "test",
 				},
 			}
-			secrets := []*Secrets{
+			secrets := []*secret{
 				{
 					Name:        "GITHUB_WEBHOOK_SECRET",
 					Environment: "test",

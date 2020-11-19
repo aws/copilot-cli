@@ -62,10 +62,10 @@ func flattenEnvVars(envName string, m map[string]string) []*EnvVars {
 	return envVarList
 }
 
-func flattenSecrets(envName string, m map[string]string) []*Secrets {
-	var secretsList []*Secrets
+func flattenSecrets(envName string, m map[string]string) []*secret {
+	var secretsList []*secret
 	for k, v := range m {
-		secretsList = append(secretsList, &Secrets{
+		secretsList = append(secretsList, &secret{
 			Environment: envName,
 			Name:        k,
 			ValueFrom:   v,

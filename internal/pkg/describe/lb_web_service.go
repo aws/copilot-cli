@@ -130,7 +130,7 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var configs []*ServiceConfig
 	var serviceDiscoveries []*ServiceDiscovery
 	var envVars []*EnvVars
-	var secrets []*Secrets
+	var secrets []*secret
 	for _, env := range environments {
 		err := d.initServiceDescriber(env)
 		if err != nil {
@@ -265,13 +265,13 @@ func (e envVars) humanString(w io.Writer) {
 	}
 }
 
-type Secrets struct {
+type secret struct {
 	Name        string `json:"name"`
 	Environment string `json:"environment"`
 	ValueFrom   string `json:"valueFrom"`
 }
 
-type secrets []*Secrets
+type secrets []*secret
 
 func (s secrets) humanString(w io.Writer) {
 	fmt.Fprintf(w, "  %s\t%s\t%s\n", "Name", "Environment", "Value From")

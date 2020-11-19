@@ -100,7 +100,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var configs []*ServiceConfig
 	var services []*ServiceDiscovery
 	var envVars []*EnvVars
-	var secrets []*Secrets
+	var secrets []*secret
 	for _, env := range environments {
 		err := d.initServiceDescriber(env)
 		if err != nil {
