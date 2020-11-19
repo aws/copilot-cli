@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -188,7 +189,7 @@ func (e *EnvDescription) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nServices\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", "Type")
-	fmt.Fprintf(writer, "  %s\t%s\n", "----", "----")
+	fmt.Fprintf(writer, "  %s\t%s\n", strings.Repeat("-", len("Name")), strings.Repeat("-", len("Type")))
 	for _, svc := range e.Services {
 		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
 	}
@@ -197,7 +198,7 @@ func (e *EnvDescription) HumanString() string {
 		fmt.Fprint(writer, color.Bold.Sprint("\nTags\n\n"))
 		writer.Flush()
 		fmt.Fprintf(writer, "  %s\t%s\n", "Key", "Value")
-		fmt.Fprintf(writer, "  %s\t%s\n", "---", "-----")
+		fmt.Fprintf(writer, "  %s\t%s\n", strings.Repeat("-", len("Key")), strings.Repeat("-", len("Value")))
 		// sort Tags in alpha order by keys
 		keys := make([]string, 0, len(e.Tags))
 		for k := range e.Tags {
