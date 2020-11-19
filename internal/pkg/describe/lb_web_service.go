@@ -167,11 +167,6 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		}
 		secrets = append(secrets, flattenSecrets(env, webSvcSecrets)...)
 	}
-	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
-	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
-	sort.SliceStable(secrets, func(i, j int) bool { return secrets[i].Environment < envVars[j].Environment })
-	sort.SliceStable(secrets, func(i, j int) bool { return secrets[i].Name < secrets[j].Name })
-
 	resources := make(map[string][]*CfnResource)
 	if d.enableResources {
 		for _, env := range environments {
@@ -245,6 +240,8 @@ func (e envVars) humanString(w io.Writer) {
 	fmt.Fprintf(w, "  %s\t%s\t%s\n", "----", "-----------", "-----")
 	var prevName string
 	var prevValue string
+	sort.SliceStable(e, func(i, j int) bool { return e[i].Environment < e[j].Environment })
+	sort.SliceStable(e, func(i, j int) bool { return e[i].Name < e[j].Name })
 	for _, variable := range e {
 		// Instead of re-writing the same variable value, we replace it with "-" to reduce text.
 		if variable.Name != prevName {
@@ -278,6 +275,8 @@ func (s secrets) humanString(w io.Writer) {
 	fmt.Fprintf(w, "  %s\t%s\t%s\n", "----", "-----------", "----------")
 	var prevName string
 	var prevValueFrom string
+	sort.SliceStable(s, func(i, j int) bool { return s[i].Environment < s[j].Environment })
+	sort.SliceStable(s, func(i, j int) bool { return s[i].Name < s[j].Name })
 	for _, secret := range s {
 		valueFrom := secret.ValueFrom
 		if _, err := arn.Parse(secret.ValueFrom); err != nil {

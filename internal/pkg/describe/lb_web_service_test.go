@@ -384,14 +384,14 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 				},
 				Variables: []*EnvVars{
 					{
-						Environment: "prod",
-						Name:        "COPILOT_ENVIRONMENT_NAME",
-						Value:       "prod",
-					},
-					{
 						Environment: "test",
 						Name:        "COPILOT_ENVIRONMENT_NAME",
 						Value:       "test",
+					},
+					{
+						Environment: "prod",
+						Name:        "COPILOT_ENVIRONMENT_NAME",
+						Value:       "prod",
 					},
 				},
 				Secrets: []*secret{
