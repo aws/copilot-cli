@@ -19,7 +19,7 @@ import (
 
 type clientMocks struct {
 	resourceGetter *mocks.MockresourceGetter
-	ecsTaskGetter  *mocks.MockfamilyRunningTasksGetter
+	ecsTaskGetter  *mocks.MockRunningTasksInFamilyGetter
 }
 
 func TestClient_Cluster(t *testing.T) {
@@ -147,7 +147,7 @@ func TestClient_ListActiveWorkloadTasks(t *testing.T) {
 						Return([]*resourcegroups.Resource{
 							{ARN: "mockCluster"},
 						}, nil),
-					m.ecsTaskGetter.EXPECT().FamilyRunningTasks("mockCluster", "mockApp-mockEnv-mockWl").Return(nil, testError),
+					m.ecsTaskGetter.EXPECT().RunningTasksInFamily("mockCluster", "mockApp-mockEnv-mockWl").Return(nil, testError),
 				)
 			},
 			wantedError: fmt.Errorf("list tasks that belong to family mockApp-mockEnv-mockWl: some error"),
@@ -159,7 +159,7 @@ func TestClient_ListActiveWorkloadTasks(t *testing.T) {
 						Return([]*resourcegroups.Resource{
 							{ARN: "mockCluster"},
 						}, nil),
-					m.ecsTaskGetter.EXPECT().FamilyRunningTasks("mockCluster", "mockApp-mockEnv-mockWl").Return([]*ecs.Task{
+					m.ecsTaskGetter.EXPECT().RunningTasksInFamily("mockCluster", "mockApp-mockEnv-mockWl").Return([]*ecs.Task{
 						{
 							TaskArn: aws.String("mockTask1"),
 						},
@@ -181,10 +181,7 @@ func TestClient_ListActiveWorkloadTasks(t *testing.T) {
 
 			// GIVEN
 			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
-			mockECSTasksGetter := mocks.NewMockfamilyRunningTasksGetter(ctrl)
-			mockNewECSTasksGetter := func() familyRunningTasksGetter {
-				return mockECSTasksGetter
-			}
+			mockECSTasksGetter := mocks.NewMockRunningTasksInFamilyGetter(ctrl)
 			mocks := clientMocks{
 				resourceGetter: mockRgGetter,
 				ecsTaskGetter:  mockECSTasksGetter,
@@ -193,8 +190,8 @@ func TestClient_ListActiveWorkloadTasks(t *testing.T) {
 			test.setupMocks(mocks)
 
 			client := Client{
-				rgGetter:          mockRgGetter,
-				newECSTasksGetter: mockNewECSTasksGetter,
+				rgGetter:   mockRgGetter,
+				taskGetter: mockECSTasksGetter,
 			}
 
 			// WHEN

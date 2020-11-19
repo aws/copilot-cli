@@ -65,16 +65,16 @@ type deleteJobOpts struct {
 	deleteJobVars
 
 	// Interfaces to dependencies.
-	store                  store
-	prompt                 prompter
-	sel                    wsSelector
-	sess                   sessionProvider
-	spinner                progress
-	appCFN                 jobRemoverFromApp
-	newWlDeleter           func(sess *session.Session) wlDeleter
-	newImageRemover        func(sess *session.Session) imageRemover
-	newActiveWlTasksGetter func(sess *session.Session) activeWlTasksGetter
-	newTaskStopper         func(sess *session.Session) tasksStopper
+	store                        store
+	prompt                       prompter
+	sel                          wsSelector
+	sess                         sessionProvider
+	spinner                      progress
+	appCFN                       jobRemoverFromApp
+	newWlDeleter                 func(sess *session.Session) wlDeleter
+	newImageRemover              func(sess *session.Session) imageRemover
+	newactiveWorkloadTasksLister func(sess *session.Session) activeWorkloadTasksLister
+	newTaskStopper               func(sess *session.Session) tasksStopper
 }
 
 func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
@@ -108,7 +108,7 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 		newImageRemover: func(session *session.Session) imageRemover {
 			return ecr.New(session)
 		},
-		newActiveWlTasksGetter: func(session *session.Session) activeWlTasksGetter {
+		newactiveWorkloadTasksLister: func(session *session.Session) activeWorkloadTasksLister {
 			return ecs.New(session)
 		},
 		newTaskStopper: func(session *session.Session) tasksStopper {
@@ -295,7 +295,7 @@ func (o *deleteJobOpts) deleteStack(sess *session.Session, env string) error {
 }
 
 func (o *deleteJobOpts) deleteTasks(sess *session.Session, env string) error {
-	cluster, taskARNs, err := o.newActiveWlTasksGetter(sess).ListActiveWorkloadTasks(o.appName, env, o.name)
+	cluster, taskARNs, err := o.newactiveWorkloadTasksLister(sess).ListActiveWorkloadTasks(o.appName, env, o.name)
 	if err != nil {
 		return fmt.Errorf("list active tasks for job %s in env %s: %w", o.name, env, err)
 	}

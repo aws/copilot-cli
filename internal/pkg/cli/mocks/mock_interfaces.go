@@ -5208,31 +5208,31 @@ func (mr *MockroleDeleterMockRecorder) DeleteRole(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRole", reflect.TypeOf((*MockroleDeleter)(nil).DeleteRole), arg0)
 }
 
-// MockactiveWlTasksGetter is a mock of activeWlTasksGetter interface
-type MockactiveWlTasksGetter struct {
+// MockactiveWorkloadTasksLister is a mock of activeWorkloadTasksLister interface
+type MockactiveWorkloadTasksLister struct {
 	ctrl     *gomock.Controller
-	recorder *MockactiveWlTasksGetterMockRecorder
+	recorder *MockactiveWorkloadTasksListerMockRecorder
 }
 
-// MockactiveWlTasksGetterMockRecorder is the mock recorder for MockactiveWlTasksGetter
-type MockactiveWlTasksGetterMockRecorder struct {
-	mock *MockactiveWlTasksGetter
+// MockactiveWorkloadTasksListerMockRecorder is the mock recorder for MockactiveWorkloadTasksLister
+type MockactiveWorkloadTasksListerMockRecorder struct {
+	mock *MockactiveWorkloadTasksLister
 }
 
-// NewMockactiveWlTasksGetter creates a new mock instance
-func NewMockactiveWlTasksGetter(ctrl *gomock.Controller) *MockactiveWlTasksGetter {
-	mock := &MockactiveWlTasksGetter{ctrl: ctrl}
-	mock.recorder = &MockactiveWlTasksGetterMockRecorder{mock}
+// NewMockactiveWorkloadTasksLister creates a new mock instance
+func NewMockactiveWorkloadTasksLister(ctrl *gomock.Controller) *MockactiveWorkloadTasksLister {
+	mock := &MockactiveWorkloadTasksLister{ctrl: ctrl}
+	mock.recorder = &MockactiveWorkloadTasksListerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockactiveWlTasksGetter) EXPECT() *MockactiveWlTasksGetterMockRecorder {
+func (m *MockactiveWorkloadTasksLister) EXPECT() *MockactiveWorkloadTasksListerMockRecorder {
 	return m.recorder
 }
 
 // ListActiveWorkloadTasks mocks base method
-func (m *MockactiveWlTasksGetter) ListActiveWorkloadTasks(app, env, workload string) (string, []string, error) {
+func (m *MockactiveWorkloadTasksLister) ListActiveWorkloadTasks(app, env, workload string) (string, []string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListActiveWorkloadTasks", app, env, workload)
 	ret0, _ := ret[0].(string)
@@ -5242,9 +5242,9 @@ func (m *MockactiveWlTasksGetter) ListActiveWorkloadTasks(app, env, workload str
 }
 
 // ListActiveWorkloadTasks indicates an expected call of ListActiveWorkloadTasks
-func (mr *MockactiveWlTasksGetterMockRecorder) ListActiveWorkloadTasks(app, env, workload interface{}) *gomock.Call {
+func (mr *MockactiveWorkloadTasksListerMockRecorder) ListActiveWorkloadTasks(app, env, workload interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActiveWorkloadTasks", reflect.TypeOf((*MockactiveWlTasksGetter)(nil).ListActiveWorkloadTasks), app, env, workload)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActiveWorkloadTasks", reflect.TypeOf((*MockactiveWorkloadTasksLister)(nil).ListActiveWorkloadTasks), app, env, workload)
 }
 
 // MocktasksStopper is a mock of tasksStopper interface

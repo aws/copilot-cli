@@ -484,7 +484,7 @@ type roleDeleter interface {
 	DeleteRole(string) error
 }
 
-type activeWlTasksGetter interface {
+type activeWorkloadTasksLister interface {
 	ListActiveWorkloadTasks(app, env, workload string) (clusterARN string, taskARNs []string, err error)
 }
 

@@ -22,23 +22,21 @@ type resourceGetter interface {
 	GetResourcesByTags(resourceType string, tags map[string]string) ([]*resourcegroups.Resource, error)
 }
 
-type familyRunningTasksGetter interface {
-	FamilyRunningTasks(cluster, family string) ([]*ecs.Task, error)
+type runningTasksInFamilyGetter interface {
+	RunningTasksInFamily(cluster, family string) ([]*ecs.Task, error)
 }
 
 // Client retrieves Copilot information from ECS endpoint.
 type Client struct {
-	rgGetter          resourceGetter
-	newECSTasksGetter func() familyRunningTasksGetter
+	rgGetter   resourceGetter
+	taskGetter runningTasksInFamilyGetter
 }
 
 // New inits a new Client.
 func New(sess *session.Session) *Client {
 	return &Client{
-		rgGetter: resourcegroups.New(sess),
-		newECSTasksGetter: func() familyRunningTasksGetter {
-			return ecs.New(sess)
-		},
+		rgGetter:   resourcegroups.New(sess),
+		taskGetter: ecs.New(sess),
 	}
 }
 
@@ -71,7 +69,7 @@ func (c Client) ListActiveWorkloadTasks(app, env, workload string) (clusterARN s
 		return "", nil, fmt.Errorf("get cluster for env %s: %w", env, err)
 	}
 	tdFamilyName := fmt.Sprintf(fmtWorkloadTaskDefinitionFamily, app, env, workload)
-	tasks, err := c.newECSTasksGetter().FamilyRunningTasks(clusterARN, tdFamilyName)
+	tasks, err := c.taskGetter.RunningTasksInFamily(clusterARN, tdFamilyName)
 	if err != nil {
 		return "", nil, fmt.Errorf("list tasks that belong to family %s: %w", tdFamilyName, err)
 	}

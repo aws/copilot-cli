@@ -84,9 +84,9 @@ func (e *ECS) ServiceTasks(cluster, service string) ([]*Task, error) {
 	return e.listTasks(cluster, withService(service))
 }
 
-// FamilyRunningTasks calls ECS API and returns ECS tasks with the desired status to be RUNNING
+// RunningTasksInFamily calls ECS API and returns ECS tasks with the desired status to be RUNNING
 // within the same task definition family.
-func (e *ECS) FamilyRunningTasks(cluster, family string) ([]*Task, error) {
+func (e *ECS) RunningTasksInFamily(cluster, family string) ([]*Task, error) {
 	return e.listTasks(cluster, withFamily(family), withRunningTasks())
 }
 
@@ -162,7 +162,7 @@ func WithStopTaskCluster(cluster string) StopTasksOpts {
 	}
 }
 
-// StopTasks stops multiple running tasks.
+// StopTasks stops multiple running tasks given their IDs or ARNs.
 func (e *ECS) StopTasks(tasks []string, opts ...StopTasksOpts) error {
 	in := &ecs.StopTaskInput{}
 	for _, opt := range opts {

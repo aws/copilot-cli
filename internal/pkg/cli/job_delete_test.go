@@ -294,7 +294,7 @@ type deleteJobMocks struct {
 	spinner        *mocks.Mockprogress
 	jobCFN         *mocks.MockwlDeleter
 	ecr            *mocks.MockimageRemover
-	tasksGetter    *mocks.MockactiveWlTasksGetter
+	tasksGetter    *mocks.MockactiveWorkloadTasksLister
 	ecs            *mocks.MocktasksStopper
 }
 
@@ -478,7 +478,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 			mockJobCFN := mocks.NewMockwlDeleter(ctrl)
 			mockSpinner := mocks.NewMockprogress(ctrl)
 			mockImageRemover := mocks.NewMockimageRemover(ctrl)
-			mockTasksGetter := mocks.NewMockactiveWlTasksGetter(ctrl)
+			mockTasksGetter := mocks.NewMockactiveWorkloadTasksLister(ctrl)
 			mockTasksStopper := mocks.NewMocktasksStopper(ctrl)
 			mockGetJobCFN := func(_ *session.Session) wlDeleter {
 				return mockJobCFN
@@ -486,7 +486,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 			mockGetImageRemover := func(_ *session.Session) imageRemover {
 				return mockImageRemover
 			}
-			mockNewTasksGetter := func(_ *session.Session) activeWlTasksGetter {
+			mockNewTasksGetter := func(_ *session.Session) activeWorkloadTasksLister {
 				return mockTasksGetter
 			}
 			mockNewTasksStopper := func(_ *session.Session) tasksStopper {
@@ -513,14 +513,14 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					name:    test.inJobName,
 					envName: test.inEnvName,
 				},
-				store:                  mockstore,
-				sess:                   mockSession,
-				spinner:                mockSpinner,
-				appCFN:                 mockAppCFN,
-				newWlDeleter:           mockGetJobCFN,
-				newImageRemover:        mockGetImageRemover,
-				newActiveWlTasksGetter: mockNewTasksGetter,
-				newTaskStopper:         mockNewTasksStopper,
+				store:                        mockstore,
+				sess:                         mockSession,
+				spinner:                      mockSpinner,
+				appCFN:                       mockAppCFN,
+				newWlDeleter:                 mockGetJobCFN,
+				newImageRemover:              mockGetImageRemover,
+				newactiveWorkloadTasksLister: mockNewTasksGetter,
+				newTaskStopper:               mockNewTasksStopper,
 			}
 
 			// WHEN
