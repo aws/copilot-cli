@@ -279,24 +279,21 @@ func (s secrets) humanString(w io.Writer) {
 	var prevName string
 	var prevValueFrom string
 	for _, secret := range s {
-		// If the valueFrom is not an ARN, preface it with "parameter/"
-		var outputValueFrom string
-		_, err := arn.Parse(secret.ValueFrom)
-		if err != nil {
-			outputValueFrom = fmt.Sprintf("parameter/%s", secret.ValueFrom)
-		} else {
-			outputValueFrom = secret.ValueFrom
+		valueFrom := secret.ValueFrom
+		if _, err := arn.Parse(secret.ValueFrom); err != nil {
+			// If the valueFrom is not an ARN, preface it with "parameter/"
+			valueFrom = fmt.Sprintf("parameter/%s", secret.ValueFrom)
 		}
 		// Instead of re-writing the same secret valueFrom, we replace it with "-" to reduce text.
 		if secret.Name != prevName {
 			if secret.ValueFrom != prevValueFrom {
-				fmt.Fprintf(w, "  %s\t%s\t%s\n", secret.Name, secret.Environment, outputValueFrom)
+				fmt.Fprintf(w, "  %s\t%s\t%s\n", secret.Name, secret.Environment, valueFrom)
 			} else {
 				fmt.Fprintf(w, "  %s\t%s\t-\n", secret.Name, secret.Environment)
 			}
 		} else {
 			if secret.ValueFrom != prevValueFrom {
-				fmt.Fprintf(w, "  -\t%s\t%s\n", secret.Environment, outputValueFrom)
+				fmt.Fprintf(w, "  -\t%s\t%s\n", secret.Environment, valueFrom)
 			} else {
 				fmt.Fprintf(w, "  -\t%s\t-\n", secret.Environment)
 			}

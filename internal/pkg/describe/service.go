@@ -110,9 +110,7 @@ func (d *ServiceDescriber) EnvVars() (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	envVars := taskDefinition.EnvironmentVariables()
-
-	return envVars, nil
+	return taskDefinition.EnvironmentVariables(), nil
 }
 
 // Secrets returns the secrets of the task definition.
@@ -122,9 +120,7 @@ func (d *ServiceDescriber) Secrets() (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	secrets := taskDefinition.Secrets()
-
-	return secrets, nil
+	return taskDefinition.Secrets(), nil
 }
 
 // ServiceStackResources returns the filtered service stack resources created by CloudFormation.

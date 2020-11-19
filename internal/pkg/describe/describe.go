@@ -63,15 +63,15 @@ func flattenEnvVars(envName string, m map[string]string) []*EnvVars {
 }
 
 func flattenSecrets(envName string, m map[string]string) []*secret {
-	var secretsList []*secret
+	var secrets []*secret
 	for k, v := range m {
-		secretsList = append(secretsList, &secret{
+		secrets = append(secrets, &secret{
 			Environment: envName,
 			Name:        k,
 			ValueFrom:   v,
 		})
 	}
-	return secretsList
+	return secrets
 }
 
 // HumanString returns the stringified CfnResource struct with human readable format.
