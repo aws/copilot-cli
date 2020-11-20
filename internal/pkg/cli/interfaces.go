@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -481,4 +482,12 @@ type svcInitializer interface {
 
 type roleDeleter interface {
 	DeleteRole(string) error
+}
+
+type activeWorkloadTasksLister interface {
+	ListActiveWorkloadTasks(app, env, workload string) (clusterARN string, taskARNs []string, err error)
+}
+
+type tasksStopper interface {
+	StopTasks(tasks []string, opts ...ecs.StopTasksOpts) error
 }
