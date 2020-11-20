@@ -252,10 +252,14 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 						stack.WorkloadTaskMemoryParamKey:        "512",
 						stack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return(
-						map[string]string{
-							"COPILOT_ENVIRONMENT_NAME": prodEnv,
-						}, nil),
+					m.svcDescriber.EXPECT().EnvVars().Return([][]string{
+						{
+							"COPILOT_ENVIRONMENT_NAME",
+							"container",
+							"prod",
+						},
+					}, nil),
+
 					m.svcDescriber.EXPECT().Secrets().Return(nil, mockErr),
 				)
 			},
@@ -276,15 +280,25 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 						stack.WorkloadTaskCPUParamKey:           "256",
 						stack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return(
-						map[string]string{
-							"COPILOT_ENVIRONMENT_NAME": testEnv,
-						}, nil),
-					m.svcDescriber.EXPECT().Secrets().Return(
-						map[string]string{
-							"GITHUB_WEBHOOK_SECRET": "GH_WEBHOOK_SECRET",
-							"SOME_OTHER_SECRET":     "SHHHHH",
-						}, nil),
+					m.svcDescriber.EXPECT().EnvVars().Return([][]string{
+						{
+							"COPILOT_ENVIRONMENT_NAME",
+							"container",
+							"test",
+						},
+					}, nil),
+					m.svcDescriber.EXPECT().Secrets().Return([][]string{
+						{
+							"GITHUB_WEBHOOK_SECRET",
+							"container",
+							"GH_WEBHOOK_SECRET",
+						},
+						{
+							"SOME_OTHER_SECRET",
+							"container",
+							"SHHHHHHHH",
+						},
+					}, nil),
 					m.svcDescriber.EXPECT().ServiceStackResources().Return(nil, mockErr),
 				)
 			},
@@ -306,14 +320,20 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 						stack.WorkloadTaskCPUParamKey:           "256",
 						stack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return(
-						map[string]string{
-							"COPILOT_ENVIRONMENT_NAME": testEnv,
-						}, nil),
-					m.svcDescriber.EXPECT().Secrets().Return(
-						map[string]string{
-							"GITHUB_WEBHOOK_SECRET": "GH_WEBHOOK_SECRET",
-						}, nil),
+					m.svcDescriber.EXPECT().EnvVars().Return([][]string{
+						{
+							"COPILOT_ENVIRONMENT_NAME",
+							"container1",
+							testEnv,
+						},
+					}, nil),
+					m.svcDescriber.EXPECT().Secrets().Return([][]string{
+						{
+							"GITHUB_WEBHOOK_SECRET",
+							"container",
+							"GH_WEBHOOK_SECRET",
+						},
+					}, nil),
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: prodEnvLBDNSName,
 					}, nil),
@@ -324,14 +344,20 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 						stack.WorkloadTaskCPUParamKey:           "512",
 						stack.WorkloadTaskMemoryParamKey:        "1024",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return(
-						map[string]string{
-							"COPILOT_ENVIRONMENT_NAME": prodEnv,
-						}, nil),
-					m.svcDescriber.EXPECT().Secrets().Return(
-						map[string]string{
-							"SOME_OTHER_SECRET": "SHHHHH",
-						}, nil),
+					m.svcDescriber.EXPECT().EnvVars().Return([][]string{
+						{
+							"COPILOT_ENVIRONMENT_NAME",
+							"container2",
+							prodEnv,
+						},
+					}, nil),
+					m.svcDescriber.EXPECT().Secrets().Return([][]string{
+						{
+							"SOME_OTHER_SECRET",
+							"container",
+							"SHHHHHHHH",
+						},
+					}, nil),
 					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
 						{
 							ResourceType:       aws.String("AWS::EC2::SecurityGroupIngress"),
@@ -382,14 +408,16 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 						Namespace:   "jobs.phonetool.local:5000",
 					},
 				},
-				Variables: []*EnvVars{
+				Variables: []*EnvVar{
 					{
 						Environment: "test",
+						Container:   "container1",
 						Name:        "COPILOT_ENVIRONMENT_NAME",
 						Value:       "test",
 					},
 					{
 						Environment: "prod",
+						Container:   "container2",
 						Name:        "COPILOT_ENVIRONMENT_NAME",
 						Value:       "prod",
 					},
@@ -397,13 +425,15 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 				Secrets: []*secret{
 					{
 						Name:        "GITHUB_WEBHOOK_SECRET",
+						Container:   "container",
 						Environment: "test",
 						ValueFrom:   "GH_WEBHOOK_SECRET",
 					},
 					{
 						Name:        "SOME_OTHER_SECRET",
+						Container:   "container",
 						Environment: "prod",
-						ValueFrom:   "SHHHHH",
+						ValueFrom:   "SHHHHHHHH",
 					},
 				},
 				Resources: map[string][]*CfnResource{
@@ -469,7 +499,7 @@ func TestWebServiceDesc_String(t *testing.T) {
 		wantedHumanString string
 		wantedJSONString  string
 	}{
-		"correct output": {
+		"correct output including env vars and secrets sorted (name, container, env) and double-quotes for ditto": {
 			wantedHumanString: `About
 
   Application       my-app
@@ -498,17 +528,18 @@ Service Discovery
 
 Variables
 
-  Name                      Environment         Value
-  ----                      -----------         -----
-  COPILOT_ENVIRONMENT_NAME  prod                prod
-  -                         test                test
+  Name                      Container           Environment         Value
+  ----                      ---------           -----------         -----
+  COPILOT_ENVIRONMENT_NAME  containerA          test                test
+    "                       containerB          prod                prod
+  DIFFERENT_ENV_VAR           "                   "                   "
 
 Secrets
 
-  Name                   Environment         Value From
-  ----                   -----------         ----------
-  GITHUB_WEBHOOK_SECRET  test                parameter/GH_WEBHOOK_SECRET
-  SOME_OTHER_SECRET      prod                parameter/SHHHHH
+  Name                   Container           Environment         Value From
+  ----                   ---------           -----------         ----------
+  GITHUB_WEBHOOK_SECRET  containerA          test                parameter/GH_WEBHOOK_SECRET
+  SOME_OTHER_SECRET      containerB          prod                parameter/SHHHHH
 
 Resources
 
@@ -518,7 +549,7 @@ Resources
   prod
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
-			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Load Balanced Web Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"serviceDiscovery\":[{\"environment\":[\"test\",\"prod\"],\"namespace\":\"http://my-svc.my-app.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Load Balanced Web Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"serviceDiscovery\":[{\"environment\":[\"test\",\"prod\"],\"namespace\":\"http://my-svc.my-app.local:5000\"}],\"variables\":[{\"environment\":\"test\",\"container\":\"containerA\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"},{\"environment\":\"prod\",\"container\":\"containerB\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"prod\",\"container\":\"containerB\",\"name\":\"DIFFERENT_ENV_VAR\",\"value\":\"prod\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"containerA\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"container\":\"containerB\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 	}
 
@@ -540,26 +571,36 @@ Resources
 					Tasks:       "3",
 				},
 			}
-			envVars := []*EnvVars{
+			envVars := []*EnvVar{
 				{
 					Environment: "prod",
+					Container:   "containerB",
 					Name:        "COPILOT_ENVIRONMENT_NAME",
 					Value:       "prod",
 				},
 				{
 					Environment: "test",
+					Container:   "containerA",
 					Name:        "COPILOT_ENVIRONMENT_NAME",
 					Value:       "test",
+				},
+				{
+					Environment: "prod",
+					Container:   "containerB",
+					Name:        "DIFFERENT_ENV_VAR",
+					Value:       "prod",
 				},
 			}
 			secrets := []*secret{
 				{
 					Name:        "GITHUB_WEBHOOK_SECRET",
+					Container:   "containerA",
 					Environment: "test",
 					ValueFrom:   "GH_WEBHOOK_SECRET",
 				},
 				{
 					Name:        "SOME_OTHER_SECRET",
+					Container:   "containerB",
 					Environment: "prod",
 					ValueFrom:   "SHHHHH",
 				},

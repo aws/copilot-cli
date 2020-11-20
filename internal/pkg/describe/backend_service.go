@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"sort"
 	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -99,7 +98,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 	var configs []*ServiceConfig
 	var services []*ServiceDiscovery
-	var envVars []*EnvVars
+	var envVars []*EnvVar
 	var secrets []*secret
 	for _, env := range environments {
 		err := d.initServiceDescriber(env)
@@ -137,10 +136,6 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		}
 		secrets = append(secrets, flattenSecrets(env, webSvcSecrets)...)
 	}
-	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
-	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
-	sort.SliceStable(secrets, func(i, j int) bool { return secrets[i].Environment < envVars[j].Environment })
-	sort.SliceStable(secrets, func(i, j int) bool { return secrets[i].Name < secrets[j].Name })
 
 	resources := make(map[string][]*CfnResource)
 	if d.enableResources {

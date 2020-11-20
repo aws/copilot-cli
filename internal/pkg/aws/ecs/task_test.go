@@ -243,7 +243,7 @@ func TestTaskDefinition_EnvVars(t *testing.T) {
 	testCases := map[string]struct {
 		inContainers []*ecs.ContainerDefinition
 
-		wantEnvVars map[string]string
+		wantEnvVars [][]string
 	}{
 		"should return wrapped error given error": {
 			inContainers: []*ecs.ContainerDefinition{
@@ -258,12 +258,21 @@ func TestTaskDefinition_EnvVars(t *testing.T) {
 							Value: aws.String("prod"),
 						},
 					},
+					Name: aws.String("container"),
 				},
 			},
 
-			wantEnvVars: map[string]string{
-				"COPILOT_SERVICE_NAME":     "my-svc",
-				"COPILOT_ENVIRONMENT_NAME": "prod",
+			wantEnvVars: [][]string{
+				{
+					"COPILOT_SERVICE_NAME",
+					"container",
+					"my-svc",
+				},
+				{
+					"COPILOT_ENVIRONMENT_NAME",
+					"container",
+					"prod",
+				},
 			},
 		},
 	}
@@ -290,11 +299,12 @@ func TestTaskDefinition_Secrets(t *testing.T) {
 	testCases := map[string]struct {
 		inContainers []*ecs.ContainerDefinition
 
-		wantSecrets map[string]string
+		wantedSecrets [][]string
 	}{
-		"should return secrets of the task definition as a map": {
+		"should return secrets of the task definition as a list of lists": {
 			inContainers: []*ecs.ContainerDefinition{
 				{
+					Name: aws.String("container"),
 					Secrets: []*ecs.Secret{
 						{
 							Name:      aws.String("GITHUB_WEBHOOK_SECRET"),
@@ -308,9 +318,17 @@ func TestTaskDefinition_Secrets(t *testing.T) {
 				},
 			},
 
-			wantSecrets: map[string]string{
-				"GITHUB_WEBHOOK_SECRET": "GH_WEBHOOK_SECRET",
-				"SOME_OTHER_SECRET":     "SHHHHHHHH",
+			wantedSecrets: [][]string{
+				{
+					"GITHUB_WEBHOOK_SECRET",
+					"container",
+					"GH_WEBHOOK_SECRET",
+				},
+				{
+					"SOME_OTHER_SECRET",
+					"container",
+					"SHHHHHHHH",
+				},
 			},
 		},
 	}
@@ -327,7 +345,7 @@ func TestTaskDefinition_Secrets(t *testing.T) {
 
 			gotSecrets := taskDefinition.Secrets()
 
-			require.Equal(t, tc.wantSecrets, gotSecrets)
+			require.Equal(t, tc.wantedSecrets, gotSecrets)
 		})
 
 	}

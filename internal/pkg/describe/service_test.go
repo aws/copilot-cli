@@ -34,7 +34,7 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 	testCases := map[string]struct {
 		setupMocks func(mocks svcDescriberMocks)
 
-		wantedEnvVars map[string]string
+		wantedEnvVars [][]string
 		wantedError   error
 	}{
 		"returns error if fails to get environment variables": {
@@ -62,14 +62,23 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 										Value: aws.String("prod"),
 									},
 								},
+								Name: aws.String("container"),
 							},
 						},
 					}, nil),
 				)
 			},
-			wantedEnvVars: map[string]string{
-				"COPILOT_SERVICE_NAME":     "my-svc",
-				"COPILOT_ENVIRONMENT_NAME": "prod",
+			wantedEnvVars: [][]string{
+				{
+					"COPILOT_SERVICE_NAME",
+					"container",
+					"my-svc",
+				},
+				{
+					"COPILOT_ENVIRONMENT_NAME",
+					"container",
+					"prod",
+				},
 			},
 		},
 	}
@@ -121,7 +130,7 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 	testCases := map[string]struct {
 		setupMocks func(mocks svcDescriberMocks)
 
-		wantedSecrets map[string]string
+		wantedSecrets [][]string
 		wantedError   error
 	}{
 		"returns error if fails to get secrets": {
@@ -139,6 +148,7 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 					m.mockecsClient.EXPECT().TaskDefinition("phonetool-test-jobs").Return(&ecs.TaskDefinition{
 						ContainerDefinitions: []*ecsapi.ContainerDefinition{
 							{
+								Name: aws.String("container"),
 								Secrets: []*ecsapi.Secret{
 									{
 										Name:      aws.String("GITHUB_WEBHOOK_SECRET"),
@@ -146,7 +156,7 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 									},
 									{
 										Name:      aws.String("SOME_OTHER_SECRET"),
-										ValueFrom: aws.String("SHHHHH"),
+										ValueFrom: aws.String("SHHHHHHHH"),
 									},
 								},
 							},
@@ -154,9 +164,17 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 					}, nil),
 				)
 			},
-			wantedSecrets: map[string]string{
-				"GITHUB_WEBHOOK_SECRET": "GH_WEBHOOK_SECRET",
-				"SOME_OTHER_SECRET":     "SHHHHH",
+			wantedSecrets: [][]string{
+				{
+					"GITHUB_WEBHOOK_SECRET",
+					"container",
+					"GH_WEBHOOK_SECRET",
+				},
+				{
+					"SOME_OTHER_SECRET",
+					"container",
+					"SHHHHHHHH",
+				},
 			},
 		},
 	}

@@ -115,19 +115,31 @@ func (t TaskStatus) HumanString() string {
 type TaskDefinition ecs.TaskDefinition
 
 // EnvironmentVariables returns environment variables of the task definition.
-func (t *TaskDefinition) EnvironmentVariables() map[string]string {
-	envs := make(map[string]string)
-	for _, env := range t.ContainerDefinitions[0].Environment {
-		envs[aws.StringValue(env.Name)] = aws.StringValue(env.Value)
+func (t *TaskDefinition) EnvironmentVariables() [][]string {
+	var envs [][]string
+	for _, container := range t.ContainerDefinitions {
+		for _, env := range container.Environment {
+			envs = append(envs, []string{
+				aws.StringValue(env.Name),
+				aws.StringValue(container.Name),
+				aws.StringValue(env.Value),
+			})
+		}
 	}
 	return envs
 }
 
 // Secrets returns secrets of the task definition.
-func (t *TaskDefinition) Secrets() map[string]string {
-	secrets := make(map[string]string)
-	for _, secret := range t.ContainerDefinitions[0].Secrets {
-		secrets[aws.StringValue(secret.Name)] = aws.StringValue(secret.ValueFrom)
+func (t *TaskDefinition) Secrets() [][]string {
+	var secrets [][]string
+	for _, container := range t.ContainerDefinitions {
+		for _, secret := range container.Secrets {
+			secrets = append(secrets, []string{
+				aws.StringValue(secret.Name),
+				aws.StringValue(container.Name),
+				aws.StringValue(secret.ValueFrom),
+			})
+		}
 	}
 	return secrets
 }

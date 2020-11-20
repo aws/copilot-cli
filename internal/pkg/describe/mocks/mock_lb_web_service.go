@@ -64,10 +64,10 @@ func (mr *MocksvcDescriberMockRecorder) EnvOutputs() *gomock.Call {
 }
 
 // EnvVars mocks base method
-func (m *MocksvcDescriber) EnvVars() (map[string]string, error) {
+func (m *MocksvcDescriber) EnvVars() ([][]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnvVars")
-	ret0, _ := ret[0].(map[string]string)
+	ret0, _ := ret[0].([][]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -79,10 +79,10 @@ func (mr *MocksvcDescriberMockRecorder) EnvVars() *gomock.Call {
 }
 
 // Secrets mocks base method
-func (m *MocksvcDescriber) Secrets() (map[string]string, error) {
+func (m *MocksvcDescriber) Secrets() ([][]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Secrets")
-	ret0, _ := ret[0].(map[string]string)
+	ret0, _ := ret[0].([][]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

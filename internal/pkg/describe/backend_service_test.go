@@ -81,10 +81,13 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						stack.WorkloadTaskCPUParamKey:           "256",
 						stack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return(
-						map[string]string{
-							"COPILOT_ENVIRONMENT_NAME": prodEnv,
-						}, nil),
+					m.svcDescriber.EXPECT().EnvVars().Return([][]string{
+						{
+							"COPILOT_ENVIRONMENT_NAME",
+							"container",
+							"prod",
+						},
+					}, nil),
 					m.svcDescriber.EXPECT().Secrets().Return(nil, mockErr),
 				)
 			},
@@ -102,38 +105,53 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						stack.WorkloadTaskCPUParamKey:           "256",
 						stack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return(
-						map[string]string{
-							"COPILOT_ENVIRONMENT_NAME": testEnv,
-						}, nil),
-					m.svcDescriber.EXPECT().Secrets().Return(
-						map[string]string{
-							"GITHUB_WEBHOOK_SECRET": "GH_WEBHOOK_SECRET",
-						}, nil),
+					m.svcDescriber.EXPECT().EnvVars().Return([][]string{
+						{
+							"COPILOT_ENVIRONMENT_NAME",
+							"container",
+							testEnv,
+						},
+					}, nil),
+					m.svcDescriber.EXPECT().Secrets().Return([][]string{
+						{
+							"GITHUB_WEBHOOK_SECRET",
+							"container",
+							"GH_WEBHOOK_SECRET",
+						},
+					}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceContainerPortParamKey: "5000",
 						stack.WorkloadTaskCountParamKey:         "2",
 						stack.WorkloadTaskCPUParamKey:           "512",
 						stack.WorkloadTaskMemoryParamKey:        "1024",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return(
-						map[string]string{
-							"COPILOT_ENVIRONMENT_NAME": prodEnv,
-						}, nil),
-					m.svcDescriber.EXPECT().Secrets().Return(
-						map[string]string{
-							"SOME_OTHER_SECRET": "SHHHHH",
-						}, nil),
+					m.svcDescriber.EXPECT().EnvVars().Return([][]string{
+						{
+							"COPILOT_ENVIRONMENT_NAME",
+							"container",
+							prodEnv,
+						},
+					}, nil),
+					m.svcDescriber.EXPECT().Secrets().Return([][]string{
+						{
+							"SOME_OTHER_SECRET",
+							"container",
+							"SHHHHHHHH",
+						},
+					}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceContainerPortParamKey: "-1",
 						stack.WorkloadTaskCountParamKey:         "2",
 						stack.WorkloadTaskCPUParamKey:           "512",
 						stack.WorkloadTaskMemoryParamKey:        "1024",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return(
-						map[string]string{
-							"COPILOT_ENVIRONMENT_NAME": mockEnv,
-						}, nil),
+					m.svcDescriber.EXPECT().EnvVars().Return([][]string{
+						{
+							"COPILOT_ENVIRONMENT_NAME",
+							"container",
+							mockEnv,
+						},
+					}, nil),
 					m.svcDescriber.EXPECT().Secrets().Return(
 						nil, nil),
 					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
@@ -189,33 +207,38 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						Namespace:   "jobs.phonetool.local:5000",
 					},
 				},
-				Variables: []*EnvVars{
+				Variables: []*EnvVar{
 					{
-						Environment: "mockEnv",
+						Container:   "container",
+						Environment: "test",
 						Name:        "COPILOT_ENVIRONMENT_NAME",
-						Value:       "mockEnv",
+						Value:       "test",
 					},
 					{
+						Container:   "container",
 						Environment: "prod",
 						Name:        "COPILOT_ENVIRONMENT_NAME",
 						Value:       "prod",
 					},
 					{
-						Environment: "test",
+						Container:   "container",
+						Environment: "mockEnv",
 						Name:        "COPILOT_ENVIRONMENT_NAME",
-						Value:       "test",
+						Value:       "mockEnv",
 					},
 				},
 				Secrets: []*secret{
 					{
 						Name:        "GITHUB_WEBHOOK_SECRET",
+						Container:   "container",
 						Environment: "test",
 						ValueFrom:   "GH_WEBHOOK_SECRET",
 					},
 					{
 						Name:        "SOME_OTHER_SECRET",
+						Container:   "container",
 						Environment: "prod",
-						ValueFrom:   "SHHHHH",
+						ValueFrom:   "SHHHHHHHH",
 					},
 				},
 				Resources: map[string][]*CfnResource{
@@ -310,17 +333,17 @@ Service Discovery
 
 Variables
 
-  Name                      Environment         Value
-  ----                      -----------         -----
-  COPILOT_ENVIRONMENT_NAME  prod                prod
-  -                         test                test
+  Name                      Container           Environment         Value
+  ----                      ---------           -----------         -----
+  COPILOT_ENVIRONMENT_NAME  container           prod                prod
+    "                         "                 test                test
 
 Secrets
 
-  Name                   Environment         Value From
-  ----                   -----------         ----------
-  GITHUB_WEBHOOK_SECRET  test                parameter/GH_WEBHOOK_SECRET
-  SOME_OTHER_SECRET      prod                parameter/SHHHHH
+  Name                   Container           Environment         Value From
+  ----                   ---------           -----------         ----------
+  GITHUB_WEBHOOK_SECRET  container           test                parameter/GH_WEBHOOK_SECRET
+  SOME_OTHER_SECRET        "                 prod                parameter/SHHHHH
 
 Resources
 
@@ -330,7 +353,7 @@ Resources
   prod
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
-			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Backend Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"serviceDiscovery\":[{\"environment\":[\"test\",\"prod\"],\"namespace\":\"http://my-svc.my-app.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Backend Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"serviceDiscovery\":[{\"environment\":[\"test\",\"prod\"],\"namespace\":\"http://my-svc.my-app.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"container\":\"container\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"container\":\"container\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 	}
 
@@ -352,13 +375,15 @@ Resources
 					Tasks:       "3",
 				},
 			}
-			envVars := []*EnvVars{
+			envVars := []*EnvVar{
 				{
+					Container:   "container",
 					Environment: "prod",
 					Name:        "COPILOT_ENVIRONMENT_NAME",
 					Value:       "prod",
 				},
 				{
+					Container:   "container",
 					Environment: "test",
 					Name:        "COPILOT_ENVIRONMENT_NAME",
 					Value:       "test",
@@ -367,11 +392,13 @@ Resources
 			secrets := []*secret{
 				{
 					Name:        "GITHUB_WEBHOOK_SECRET",
+					Container:   "container",
 					Environment: "test",
 					ValueFrom:   "GH_WEBHOOK_SECRET",
 				},
 				{
 					Name:        "SOME_OTHER_SECRET",
+					Container:   "container",
 					Environment: "prod",
 					ValueFrom:   "SHHHHH",
 				},
