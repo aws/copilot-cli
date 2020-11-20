@@ -175,7 +175,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 				initStorageVars: initStorageVars{
 					storageType:  tc.inStorageType,
 					storageName:  tc.inStorageName,
-					storageWl:    tc.inSvcName,
+					workloadName: tc.inSvcName,
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,
@@ -557,9 +557,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedVars: &initStorageVars{
-				storageName: wantedTableName,
-				storageWl:   wantedSvcName,
-				storageType: dynamoDBStorageType,
+				storageName:  wantedTableName,
+				workloadName: wantedSvcName,
+				storageType:  dynamoDBStorageType,
 
 				partitionKey: wantedPartitionKey,
 				sortKey:      wantedSortKey,
@@ -585,9 +585,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedVars: &initStorageVars{
-				storageName: wantedTableName,
-				storageWl:   wantedSvcName,
-				storageType: dynamoDBStorageType,
+				storageName:  wantedTableName,
+				workloadName: wantedSvcName,
+				storageType:  dynamoDBStorageType,
 
 				partitionKey: wantedPartitionKey,
 				sortKey:      wantedSortKey,
@@ -611,9 +611,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedVars: &initStorageVars{
-				storageName: wantedTableName,
-				storageWl:   wantedSvcName,
-				storageType: dynamoDBStorageType,
+				storageName:  wantedTableName,
+				workloadName: wantedSvcName,
+				storageType:  dynamoDBStorageType,
 
 				partitionKey: wantedPartitionKey,
 				noLSI:        true,
@@ -720,7 +720,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				initStorageVars: initStorageVars{
 					storageType:  tc.inStorageType,
 					storageName:  tc.inStorageName,
-					storageWl:    tc.inSvcName,
+					workloadName: tc.inSvcName,
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,
@@ -852,7 +852,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 				initStorageVars: initStorageVars{
 					storageType:  tc.inStorageType,
 					storageName:  tc.inStorageName,
-					storageWl:    tc.inSvcName,
+					workloadName: tc.inSvcName,
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,
