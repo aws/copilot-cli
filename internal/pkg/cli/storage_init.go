@@ -546,11 +546,11 @@ workload and deployed to your environments when you run ` + color.HighlightCode(
 are injected into your containers as environment variables for easy access.`,
 		Example: `
   Create an S3 bucket named "my-bucket" attached to the "frontend" service.
-  /code $ copilot storage init -n my-bucket -t S3 --for frontend
+  /code $ copilot storage init -n my-bucket -t S3 -w frontend
   Create a basic DynamoDB table named "my-table" attached to the "frontend" service with a sort key specified.
-  /code $ copilot storage init -n my-table -t DynamoDB --for frontend --partition-key Email:S --sort-key UserId:N --no-lsi
+  /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --no-lsi
   Create a DynamoDB table with multiple alternate sort keys.
-  /code $ copilot storage init -n my-table -t DynamoDB --for frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N`,
+  /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {
@@ -574,7 +574,7 @@ are injected into your containers as environment variables for easy access.`,
 	}
 	cmd.Flags().StringVarP(&vars.storageName, nameFlag, nameFlagShort, "", storageFlagDescription)
 	cmd.Flags().StringVarP(&vars.storageType, storageTypeFlag, typeFlagShort, "", storageTypeFlagDescription)
-	cmd.Flags().StringVar(&vars.workloadName, forFlag, "", storageForFlagDescription)
+	cmd.Flags().StringVarP(&vars.workloadName, workloadFlag, workloadFlagShort, "", storageWorkloadFlagDescription)
 
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
 	cmd.Flags().StringVar(&vars.sortKey, storageSortKeyFlag, "", storageSortKeyFlagDescription)
@@ -585,7 +585,7 @@ are injected into your containers as environment variables for easy access.`,
 	requiredFlags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(storageTypeFlag))
-	requiredFlags.AddFlag(cmd.Flags().Lookup(forFlag))
+	requiredFlags.AddFlag(cmd.Flags().Lookup(workloadFlag))
 
 	ddbFlags := pflag.NewFlagSet("DynamoDB", pflag.ContinueOnError)
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storagePartitionKeyFlag))
