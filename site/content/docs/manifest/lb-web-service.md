@@ -50,7 +50,7 @@ The name of your service.
 <div class="separator"></div>
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
-The architecture type for your service. A [Load balanced web service](../concepts/services.md#load-balanced-web-service) is an internet-facing service that's behind a load balancer, orchestrated by Amazon ECS on AWS Fargate.  
+The architecture type for your service. A [Load Balanced Web Service](../concepts/services.md#load-balanced-web-service) is an internet-facing service that's behind a load balancer, orchestrated by Amazon ECS on AWS Fargate.  
 
 <div class="separator"></div>
 
@@ -77,7 +77,7 @@ image:
     args:
       key: value
 ```
-In this case, copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be:  
+In this case, Copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be:  
 `$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir`.
 
 You can omit fields and Copilot will do its best to understand what you mean. For example, if you specify `context` but not `dockerfile`, Copilot will run Docker in the context directory and assume that your Dockerfile is named "Dockerfile." If you specify `dockerfile` but no `context`, Copilot assumes you want to run Docker in the directory that contains `dockerfile`.
@@ -189,14 +189,14 @@ Scale up or down based on the service average response time.
 <div class="separator"></div>
 
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>   
-Key-value pairs that represents environment variables that will be passed to your service. Copilot will include a number of environment variables by default for you.
+Key-value pairs that represent environment variables that will be passed to your service. Copilot will include a number of environment variables by default for you.
 
 <div class="separator"></div>
 
 <a id="secrets" href="#secrets" class="field">`secrets`</a> <span class="type">Map</span>   
-Key-value pairs that represents secret values from [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) that will passed to your service as environment variables securely.
+Key-value pairs that represent secret values from [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) that will be securely passed to your service as environment variables.
 
 <div class="separator"></div>
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
-The environment section lets you overwrite any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.
+The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.
