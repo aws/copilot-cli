@@ -42,16 +42,14 @@ var storageTypes = []string{
 // General-purpose prompts, collected for all storage resources.
 var (
 	fmtStorageInitTypePrompt = "What " + color.Emphasize("type") + " of storage would you like to associate with %s?"
-	storageInitTypeHelp      = `The type of storage you'd like to add to your service. 
+	storageInitTypeHelp      = `The type of storage you'd like to add to your workload. 
 DynamoDB is a key-value and document database that delivers single-digit millisecond performance at any scale.
 S3 is a web object store built to store and retrieve any amount of data from anywhere on the Internet.`
 
 	fmtStorageInitNamePrompt = "What would you like to " + color.Emphasize("name") + " this %s?"
 	storageInitNameHelp      = "The name of this storage resource. You can use the following characters: a-zA-Z0-9-_"
 
-	storageInitSvcPrompt = "Which " + color.Emphasize("service") + " would you like to associate with this storage resource?"
-	storageInitSvcHelp   = `The service you'd like to have access to this storage resource. 
-We'll deploy the resources for the storage when you run 'svc deploy'.`
+	storageInitSvcPrompt = "Which " + color.Emphasize("workload") + " would you like to associate with this storage resource?"
 )
 
 // DDB-specific questions and help prompts.
@@ -89,9 +87,9 @@ var attributeTypes = []string{
 }
 
 type initStorageVars struct {
-	storageType string
-	storageName string
-	storageSvc  string
+	storageType  string
+	storageName  string
+	workloadName string
 
 	// Dynamo DB specific values collected via flags or prompts
 	partitionKey string
@@ -141,8 +139,8 @@ func (o *initStorageOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
-	if o.storageSvc != "" {
-		if err := o.validateServiceName(); err != nil {
+	if o.workloadName != "" {
+		if err := o.validateWorkloadName(); err != nil {
 			return err
 		}
 	}
@@ -201,7 +199,7 @@ func (o *initStorageOpts) validateDDB() error {
 }
 
 func (o *initStorageOpts) Ask() error {
-	if err := o.askStorageSvc(); err != nil {
+	if err := o.askStorageWl(); err != nil {
 		return err
 	}
 	if err := o.askStorageType(); err != nil {
@@ -231,7 +229,7 @@ func (o *initStorageOpts) askStorageType() error {
 	}
 
 	storageType, err := o.prompt.SelectOne(fmt.Sprintf(
-		fmtStorageInitTypePrompt, color.HighlightUserInput(o.storageSvc)),
+		fmtStorageInitTypePrompt, color.HighlightUserInput(o.workloadName)),
 		storageInitTypeHelp,
 		storageTypes,
 		prompt.WithFinalMessage("Storage type:"))
@@ -271,15 +269,15 @@ func (o *initStorageOpts) askStorageName() error {
 	return nil
 }
 
-func (o *initStorageOpts) askStorageSvc() error {
-	if o.storageSvc != "" {
+func (o *initStorageOpts) askStorageWl() error {
+	if o.workloadName != "" {
 		return nil
 	}
-	svc, err := o.sel.Service(storageInitSvcPrompt, storageInitSvcHelp)
+	workload, err := o.sel.Workload(storageInitSvcPrompt, "")
 	if err != nil {
-		return fmt.Errorf("retrieve local service names: %w", err)
+		return fmt.Errorf("retrieve local workload names: %w", err)
 	}
-	o.storageSvc = svc
+	o.workloadName = workload
 	return nil
 }
 
@@ -422,17 +420,17 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 	}
 }
 
-func (o *initStorageOpts) validateServiceName() error {
-	names, err := o.ws.ServiceNames()
+func (o *initStorageOpts) validateWorkloadName() error {
+	names, err := o.ws.WorkloadNames()
 	if err != nil {
-		return fmt.Errorf("retrieve local service names: %w", err)
+		return fmt.Errorf("retrieve local workload names: %w", err)
 	}
 	for _, name := range names {
-		if o.storageSvc == name {
+		if o.workloadName == name {
 			return nil
 		}
 	}
-	return fmt.Errorf("service %s not found in the workspace", o.storageSvc)
+	return fmt.Errorf("workload %s not found in the workspace", o.workloadName)
 }
 
 func (o *initStorageOpts) Execute() error {
@@ -446,7 +444,7 @@ func (o *initStorageOpts) createAddon() error {
 		return err
 	}
 
-	addonPath, err := o.ws.WriteAddon(addonCf, o.storageSvc, o.storageName)
+	addonPath, err := o.ws.WriteAddon(addonCf, o.workloadName, o.storageName)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
@@ -474,10 +472,6 @@ func (o *initStorageOpts) createAddon() error {
 		color.HighlightUserInput(o.storageName),
 		color.HighlightResource(addonPath),
 	)
-	log.Infoln(color.Help(`The Cloudformation template is a nested stack which fully describes your resource,
-the IAM policy necessary for an ECS task to access that resource, and outputs
-which are injected as environment variables into the Copilot service this addon
-is associated with.`))
 	log.Infoln()
 
 	return nil
@@ -532,11 +526,11 @@ func (o *initStorageOpts) RecommendedActions() []string {
 
 	newVar := template.ToSnakeCaseFunc(template.EnvVarNameFunc(o.storageName))
 
-	svcDeployCmd := fmt.Sprintf("copilot svc deploy --name %s", o.storageSvc)
+	deployCmd := fmt.Sprintf("copilot deploy --name %s", o.workloadName)
 
 	return []string{
-		fmt.Sprintf("Update your service code to leverage the injected environment variable %s", color.HighlightCode(newVar)),
-		fmt.Sprintf("Run %s to deploy your storage resources to your environments.", color.HighlightCode(svcDeployCmd)),
+		fmt.Sprintf("Update %s's code to leverage the injected environment variable %s", color.HighlightUserInput(o.workloadName), color.HighlightCode(newVar)),
+		fmt.Sprintf("Run %s to deploy your storage resources.", color.HighlightCode(deployCmd)),
 	}
 }
 
@@ -545,18 +539,18 @@ func buildStorageInitCmd() *cobra.Command {
 	vars := initStorageVars{}
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Creates a new storage config file in a service's addons directory.",
-		Long: `Creates a new storage config file in a service's addons directory.
-Storage resources are deployed to your service's environments when you run
-'copilot svc deploy'. Resource names are injected into your service containers as
-environment variables for easy access.`,
+		Short: "Creates a new AWS CloudFormation template for a storage resource.",
+		Long: `Creates a new AWS CloudFormation template for a storage resource.
+Storage resources are stored in the Copilot addons directory (e.g. ./copilot/frontend/addons) for a given
+workload and deployed to your environments when you run ` + color.HighlightCode("copilot deploy") + `. Resource names
+are injected into your containers as environment variables for easy access.`,
 		Example: `
   Create an S3 bucket named "my-bucket" attached to the "frontend" service.
-  /code $ copilot storage init -n my-bucket -t S3 -s frontend
+  /code $ copilot storage init -n my-bucket -t S3 -w frontend
   Create a basic DynamoDB table named "my-table" attached to the "frontend" service with a sort key specified.
-  /code $ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --no-lsi
+  /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --no-lsi
   Create a DynamoDB table with multiple alternate sort keys.
-  /code $ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N`,
+  /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {
@@ -580,7 +574,7 @@ environment variables for easy access.`,
 	}
 	cmd.Flags().StringVarP(&vars.storageName, nameFlag, nameFlagShort, "", storageFlagDescription)
 	cmd.Flags().StringVarP(&vars.storageType, storageTypeFlag, typeFlagShort, "", storageTypeFlagDescription)
-	cmd.Flags().StringVarP(&vars.storageSvc, svcFlag, svcFlagShort, "", storageServiceFlagDescription)
+	cmd.Flags().StringVarP(&vars.workloadName, workloadFlag, workloadFlagShort, "", storageWorkloadFlagDescription)
 
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
 	cmd.Flags().StringVar(&vars.sortKey, storageSortKeyFlag, "", storageSortKeyFlagDescription)
@@ -591,7 +585,7 @@ environment variables for easy access.`,
 	requiredFlags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(storageTypeFlag))
-	requiredFlags.AddFlag(cmd.Flags().Lookup(svcFlag))
+	requiredFlags.AddFlag(cmd.Flags().Lookup(workloadFlag))
 
 	ddbFlags := pflag.NewFlagSet("DynamoDB", pflag.ContinueOnError)
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storagePartitionKeyFlag))
