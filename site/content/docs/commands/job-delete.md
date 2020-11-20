@@ -34,7 +34,7 @@ Delete the "report-generator" job from the my-app application from outside of th
 $ copilot job delete --name report-generator --app my-app
 ```
 
-Delete the "report-generator" job without confirmation prompt.
+Delete the "report-generator" job without the confirmation prompt.
 ```bash
 $ copilot job delete --name report-generator --yes
 ```

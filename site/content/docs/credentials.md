@@ -30,12 +30,12 @@ $ copilot deploy
 ```
 
 !!! caution
-    We **do not** recommend using the environment variables: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` directly to look up your application's metadata because if they're overridden or expired then Copilot will not be able to look up your services or environments. 
+    We **do not** recommend using the environment variables: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` directly to look up your application's metadata because if they're overridden or expired, Copilot will not be able to look up your services or environments. 
 
-To learn more on all the supported `config` file settings: [Configuration and credential file settings](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-settings).
+To learn more about all the supported `config` file settings: [Configuration and credential file settings](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-settings).
 
 ## Environment credentials
-Copilot [environments](/docs/concepts/environments/) can be created in separate AWS accounts and regions than your application. While initializing an environment, Copilot will prompt you if you'd like to enter temporary credentials or a [named profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html) to create your environment:
+Copilot [environments](/docs/concepts/environments/) can be created in AWS accounts and regions separate from your application's. While initializing an environment, Copilot will prompt you to enter temporary credentials or a [named profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html) to create your environment:
 ```bash
 $ copilot env init
 
@@ -48,4 +48,4 @@ Name: prod-iad
   > [profile prod-iad]
   > [profile prod-pdx]
 ```
-Unlike the [Application credentials](#application-credentials) section, the AWS credentials for an environment are only needed for creation or deletion. Therefore, it's safe to use the values from temporary environment variables. Copilot prompts or takes the credentials as flags because the default chain is reserved for your application credentials.
+Unlike the [Application credentials](#application-credentials), the AWS credentials for an environment are only needed for creation or deletion. Therefore, it's safe to use the values from temporary environment variables. Copilot prompts or takes the credentials as flags because the default chain is reserved for your application credentials.

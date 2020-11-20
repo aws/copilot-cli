@@ -22,7 +22,7 @@ $ git clone https://github.com/aws-samples/aws-copilot-sample-service example
 $ cd example
 ```
 
-## Step 3: Setting up our app
+## Step 3: Set up our app
 
 Now this is where the fun starts! We have our service code and our Dockerfile and we want to get it deployed to AWS. Let’s have AWS Copilot help us do just that!
 
@@ -56,7 +56,7 @@ After your deployment completes your service will be up and running on AWS Farga
 
 <img width="834" alt="deploy" src="https://user-images.githubusercontent.com/879348/86040356-be107900-b9f8-11ea-82cd-3bf2a5eb5c9d.png">
 
-## Cleaning up
+## Step 6: Clean up
 
 Now that you've deployed your service, let's go ahead and run `copilot app delete` - this will delete all the resources Copilot set up for your application, including your ECS Service and the ECR Repository. To delete everything run:
 
@@ -68,6 +68,6 @@ $ copilot app delete
 
 ## Congratulations!
 
-Congratulations! You have learned how to setup, deploy, and delete your container application to Amazon ECS using AWS Copilot. AWS Copilot is a command line tool that helps you develop, release and operate your container apps on AWS.
+Congratulations! You have learned how to set up, deploy, and delete your container application to Amazon ECS using AWS Copilot. AWS Copilot is a command line tool that helps you develop, release and operate your container apps on AWS.
 
 We hope you had fun deploying your app. Ready to dive deeper into AWS Copilot and learn how to build and manage production ready container apps on AWS? Check out the _Developing_ section in the sidebar.

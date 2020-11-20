@@ -1,5 +1,5 @@
 One of the awesome things about containers is that once you've written your code, running it locally is as easy as typing `docker run`. 
-Copilot makes running those same containers on AWS as easy as running `copilot init`. 
+Copilot makes running those same containers on AWS as easy as typing `copilot init`. 
 Copilot will build your image, push it to Amazon ECR and set up all the infrastructure to run your service in a scalable and secure way.
   
 ## Creating a Service
@@ -10,7 +10,7 @@ Creating a service to run your containers on AWS can be done in a few ways. The 
 $ copilot init
 ```
 
-You'll be asked which application do you want this service to be a part of (or to create an application if there isn't one). Copilot will then ask about the __type__ of service you're trying to build.
+You'll be asked which application you want this service to be a part of (or asked to create an application if there isn't one). Copilot will then ask about the __type__ of service you're trying to build.
 
 After selecting a service type, Copilot will detect any health checks or exposed ports from your Dockerfile and ask if you'd like to deploy.
 
@@ -76,7 +76,7 @@ environments:
   prod:
     count: 2               # Number of tasks to run for the "test" environment.
 ```
-To learn about the specification of manifest files, see the [manifests](../manifest/overview.md) page.
+To learn about the specification of manifest files, see the [manifest](../manifest/overview.md) page.
 
 ## Deploying a Service
 

@@ -40,7 +40,7 @@ The name of your pipeline.
 <div class="separator"></div>
 
 <a id="version" href="#version" class="field">`version`</a> <span class="type">String</span>  
-The schema version for the template. There is only one version `1` supported at the moment.
+The schema version for the template. There is only one version, `1`, supported at the moment.
 
 <div class="separator"></div>
 
@@ -57,10 +57,10 @@ Provider-specific configuration on how the pipeline is triggered.
 The name of AWS Secrets Manager secret that holds the GitHub access token to trigger the pipeline.
 
 <span class="parent-field">source.properties.</span><a id="source-properties-branch" href="#source-properties-branch" class="field">`branch`</a> <span class="type">String</span>  
-The name of the branch from your repository to trigger the pipeline from.
+The name of the branch in your repository that triggers the pipeline.
 
 <span class="parent-field">source.properties.</span><a id="source-properties-repository" href="#source-properties-repository" class="field">`repository`</a> <span class="type">String</span>  
-The URL to your repository.
+The URL of your repository.
 
 <div class="separator"></div>
 
