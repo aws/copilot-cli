@@ -21,8 +21,6 @@ Read more about the Copilot charter and tenets [here](CHARTER.md).
 
 ![copilot help menu](https://user-images.githubusercontent.com/879348/90834852-087aeb80-e300-11ea-8340-7f64326036fc.png)
 
-> Using the instructions and assets in this repository folder is governed as a preview program under the AWS Service Terms (https://aws.amazon.com/service-terms/).
-
 ## Installing
 
 ### Homebrew 🍻
