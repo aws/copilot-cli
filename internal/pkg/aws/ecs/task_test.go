@@ -243,9 +243,9 @@ func TestTaskDefinition_EnvVars(t *testing.T) {
 	testCases := map[string]struct {
 		inContainers []*ecs.ContainerDefinition
 
-		wantEnvVars [][]string
+		wantEnvVars []*ContainerEnvVar
 	}{
-		"should return wrapped error given error": {
+		"should return wrapped error given error; otherwise should return list of ContainerEnvVar objects": {
 			inContainers: []*ecs.ContainerDefinition{
 				{
 					Environment: []*ecs.KeyValuePair{
@@ -262,7 +262,7 @@ func TestTaskDefinition_EnvVars(t *testing.T) {
 				},
 			},
 
-			wantEnvVars: [][]string{
+			wantEnvVars: []*ContainerEnvVar{
 				{
 					"COPILOT_SERVICE_NAME",
 					"container",
@@ -299,9 +299,9 @@ func TestTaskDefinition_Secrets(t *testing.T) {
 	testCases := map[string]struct {
 		inContainers []*ecs.ContainerDefinition
 
-		wantedSecrets [][]string
+		wantedSecrets []*ContainerSecret
 	}{
-		"should return secrets of the task definition as a list of lists": {
+		"should return secrets of the task definition as a list of ContainerSecret objects": {
 			inContainers: []*ecs.ContainerDefinition{
 				{
 					Name: aws.String("container"),
@@ -318,7 +318,7 @@ func TestTaskDefinition_Secrets(t *testing.T) {
 				},
 			},
 
-			wantedSecrets: [][]string{
+			wantedSecrets: []*ContainerSecret{
 				{
 					"GITHUB_WEBHOOK_SECRET",
 					"container",

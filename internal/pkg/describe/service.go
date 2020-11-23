@@ -105,7 +105,7 @@ func NewServiceDescriber(opt NewServiceConfig) (*ServiceDescriber, error) {
 }
 
 // EnvVars returns the environment variables of the task definition.
-func (d *ServiceDescriber) EnvVars() ([][]string, error) {
+func (d *ServiceDescriber) EnvVars() ([]*ecs.ContainerEnvVar, error) {
 	taskDefName := fmt.Sprintf("%s-%s-%s", d.app, d.env, d.service)
 	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)
 	if err != nil {
@@ -115,7 +115,7 @@ func (d *ServiceDescriber) EnvVars() ([][]string, error) {
 }
 
 // Secrets returns the secrets of the task definition.
-func (d *ServiceDescriber) Secrets() ([][]string, error) {
+func (d *ServiceDescriber) Secrets() ([]*ecs.ContainerSecret, error) {
 	taskDefName := fmt.Sprintf("%s-%s-%s", d.app, d.env, d.service)
 	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)
 	if err != nil {

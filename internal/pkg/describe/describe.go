@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/dustin/go-humanize"
@@ -50,27 +52,27 @@ func flattenResources(stackResources []*cloudformation.StackResource) []*CfnReso
 	return resources
 }
 
-func flattenEnvVars(envName string, s [][]string) []*envVar {
+func flattenEnvVars(envName string, s []*ecs.ContainerEnvVar) []*envVar {
 	var envVars []*envVar
-	for _, enviroVar := range s {
+	for _, thisEnvVar := range s {
 		envVars = append(envVars, &envVar{
-			Name:        enviroVar[0],
-			Container:   enviroVar[1],
+			Name:        thisEnvVar.Name,
+			Container:   thisEnvVar.Container,
 			Environment: envName,
-			Value:       enviroVar[2],
+			Value:       thisEnvVar.Value,
 		})
 	}
 	return envVars
 }
 
-func flattenSecrets(envName string, s [][]string) []*secret {
+func flattenSecrets(envName string, s []*ecs.ContainerSecret) []*secret {
 	var secrets []*secret
-	for _, eachSecret := range s {
+	for _, thisSecret := range s {
 		secrets = append(secrets, &secret{
-			Name:        eachSecret[0],
-			Container:   eachSecret[1],
+			Name:        thisSecret.Name,
+			Container:   thisSecret.Container,
 			Environment: envName,
-			ValueFrom:   eachSecret[2],
+			ValueFrom:   thisSecret.ValueFrom,
 		})
 	}
 	return secrets

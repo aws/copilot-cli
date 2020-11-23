@@ -34,7 +34,7 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 	testCases := map[string]struct {
 		setupMocks func(mocks svcDescriberMocks)
 
-		wantedEnvVars [][]string
+		wantedEnvVars []*ecs.ContainerEnvVar
 		wantedError   error
 	}{
 		"returns error if fails to get environment variables": {
@@ -68,7 +68,7 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 					}, nil),
 				)
 			},
-			wantedEnvVars: [][]string{
+			wantedEnvVars: []*ecs.ContainerEnvVar{
 				{
 					"COPILOT_SERVICE_NAME",
 					"container",
@@ -130,7 +130,7 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 	testCases := map[string]struct {
 		setupMocks func(mocks svcDescriberMocks)
 
-		wantedSecrets [][]string
+		wantedSecrets []*ecs.ContainerSecret
 		wantedError   error
 	}{
 		"returns error if fails to get secrets": {
@@ -164,7 +164,7 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 					}, nil),
 				)
 			},
-			wantedSecrets: [][]string{
+			wantedSecrets: []*ecs.ContainerSecret{
 				{
 					"GITHUB_WEBHOOK_SECRET",
 					"container",

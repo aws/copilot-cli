@@ -6,6 +6,7 @@ package mocks
 
 import (
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
+	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -64,10 +65,10 @@ func (mr *MocksvcDescriberMockRecorder) EnvOutputs() *gomock.Call {
 }
 
 // EnvVars mocks base method
-func (m *MocksvcDescriber) EnvVars() ([][]string, error) {
+func (m *MocksvcDescriber) EnvVars() ([]*ecs.ContainerEnvVar, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnvVars")
-	ret0, _ := ret[0].([][]string)
+	ret0, _ := ret[0].([]*ecs.ContainerEnvVar)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -79,10 +80,10 @@ func (mr *MocksvcDescriberMockRecorder) EnvVars() *gomock.Call {
 }
 
 // Secrets mocks base method
-func (m *MocksvcDescriber) Secrets() ([][]string, error) {
+func (m *MocksvcDescriber) Secrets() ([]*ecs.ContainerSecret, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Secrets")
-	ret0, _ := ret[0].([][]string)
+	ret0, _ := ret[0].([]*ecs.ContainerSecret)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

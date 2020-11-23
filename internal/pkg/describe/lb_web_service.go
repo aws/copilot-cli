@@ -14,6 +14,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+
 	"github.com/aws/aws-sdk-go/aws/arn"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -68,8 +70,8 @@ func (s *serviceDiscovery) String() string {
 type svcDescriber interface {
 	Params() (map[string]string, error)
 	EnvOutputs() (map[string]string, error)
-	EnvVars() ([][]string, error)
-	Secrets() ([][]string, error)
+	EnvVars() ([]*ecs.ContainerEnvVar, error)
+	Secrets() ([]*ecs.ContainerSecret, error)
 	ServiceStackResources() ([]*cloudformation.StackResource, error)
 }
 

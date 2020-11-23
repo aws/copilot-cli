@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -81,7 +83,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						stack.WorkloadTaskCPUParamKey:           "256",
 						stack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return([][]string{
+					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							"COPILOT_ENVIRONMENT_NAME",
 							"container",
@@ -105,14 +107,14 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						stack.WorkloadTaskCPUParamKey:           "256",
 						stack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return([][]string{
+					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							"COPILOT_ENVIRONMENT_NAME",
 							"container",
 							testEnv,
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().Secrets().Return([][]string{
+					m.svcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
 							"GITHUB_WEBHOOK_SECRET",
 							"container",
@@ -125,14 +127,14 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						stack.WorkloadTaskCPUParamKey:           "512",
 						stack.WorkloadTaskMemoryParamKey:        "1024",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return([][]string{
+					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							"COPILOT_ENVIRONMENT_NAME",
 							"container",
 							prodEnv,
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().Secrets().Return([][]string{
+					m.svcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
 							"SOME_OTHER_SECRET",
 							"container",
@@ -145,7 +147,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						stack.WorkloadTaskCPUParamKey:           "512",
 						stack.WorkloadTaskMemoryParamKey:        "1024",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return([][]string{
+					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							"COPILOT_ENVIRONMENT_NAME",
 							"container",
