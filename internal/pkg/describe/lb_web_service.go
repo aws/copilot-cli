@@ -26,6 +26,9 @@ import (
 const (
 	envOutputPublicLoadBalancerDNSName = "PublicLoadBalancerDNSName"
 	envOutputSubdomain                 = "EnvironmentSubdomain"
+
+	// Symbol used while displaying values in human format.
+	dittoSymbol = `  "`
 )
 
 // WebServiceURI represents the unique identifier to access a web service.
@@ -243,42 +246,24 @@ func (e envVars) humanString(w io.Writer) {
 	sort.SliceStable(e, func(i, j int) bool { return e[i].Environment < e[j].Environment })
 	sort.SliceStable(e, func(i, j int) bool { return e[i].Container < e[j].Container })
 	sort.SliceStable(e, func(i, j int) bool { return e[i].Name < e[j].Name })
-	// Pre-populate the previous map with dashes; otherwise, if fields are somehow empty, they get ditto symbols.
-	previous := map[string]string{
-		"name":        "-",
-		"container":   "-",
-		"environment": "-",
-		"valueFrom":   "-",
+	if len(e) > 0 {
+		fmt.Fprintf(w, "  %s\n", strings.Join([]string{e[0].Name, e[0].Container, e[0].Environment, e[0].Value}, "\t"))
 	}
-	for _, variable := range e {
-		var toPrint []string
-		if variable.Name == previous["name"] {
-			toPrint = append(toPrint, "  \"")
-		} else {
-			toPrint = append(toPrint, variable.Name)
+	for prev, cur := 0, 1; cur < len(e); prev, cur = prev+1, cur+1 {
+		cols := []string{e[cur].Name, e[cur].Container, e[cur].Environment, e[cur].Value}
+		if e[prev].Name == e[cur].Name {
+			cols[0] = dittoSymbol
 		}
-		if variable.Container == previous["container"] {
-			toPrint = append(toPrint, "  \"")
-		} else {
-			toPrint = append(toPrint, variable.Container)
+		if e[prev].Container == e[cur].Container {
+			cols[1] = dittoSymbol
 		}
-		if variable.Environment == previous["environment"] {
-			toPrint = append(toPrint, "  \"")
-		} else {
-			toPrint = append(toPrint, variable.Environment)
+		if e[prev].Environment == e[cur].Environment {
+			cols[2] = dittoSymbol
 		}
-		if variable.Value == previous["value"] {
-			toPrint = append(toPrint, "  \"")
-		} else {
-			toPrint = append(toPrint, variable.Value)
+		if e[prev].Value == e[cur].Value {
+			cols[3] = dittoSymbol
 		}
-		fmt.Fprintf(w, "  %s\n", strings.Join(toPrint, "\t"))
-		previous = map[string]string{
-			"name":        variable.Name,
-			"container":   variable.Container,
-			"environment": variable.Environment,
-			"value":       variable.Value,
-		}
+		fmt.Fprintf(w, "  %s\n", strings.Join(cols, "\t"))
 	}
 }
 
@@ -298,47 +283,34 @@ func (s secrets) humanString(w io.Writer) {
 	sort.SliceStable(s, func(i, j int) bool { return s[i].Environment < s[j].Environment })
 	sort.SliceStable(s, func(i, j int) bool { return s[i].Container < s[j].Container })
 	sort.SliceStable(s, func(i, j int) bool { return s[i].Name < s[j].Name })
-	// Pre-populate the previous map with dashes; otherwise, if fields are somehow empty, they get ditto symbols.
-	previous := map[string]string{
-		"name":        "-",
-		"container":   "-",
-		"environment": "-",
-		"valueFrom":   "-",
-	}
-	for _, variable := range s {
-		valueFrom := variable.ValueFrom
-		if _, err := arn.Parse(variable.ValueFrom); err != nil {
+	if len(s) > 0 {
+		valueFrom := s[0].ValueFrom
+		if _, err := arn.Parse(s[0].ValueFrom); err != nil {
 			// If the valueFrom is not an ARN, preface it with "parameter/"
-			valueFrom = fmt.Sprintf("parameter/%s", variable.ValueFrom)
+			valueFrom = fmt.Sprintf("parameter/%s", s[0].ValueFrom)
 		}
-		var toPrint []string
-		if variable.Name == previous["name"] {
-			toPrint = append(toPrint, "  \"")
-		} else {
-			toPrint = append(toPrint, variable.Name)
+		fmt.Fprintf(w, "  %s\n", strings.Join([]string{s[0].Name, s[0].Container, s[0].Environment, valueFrom}, "\t"))
+	}
+	for prev, cur := 0, 1; cur < len(s); prev, cur = prev+1, cur+1 {
+		valueFrom := s[cur].ValueFrom
+		if _, err := arn.Parse(s[cur].ValueFrom); err != nil {
+			// If the valueFrom is not an ARN, preface it with "parameter/"
+			valueFrom = fmt.Sprintf("parameter/%s", s[cur].ValueFrom)
 		}
-		if variable.Container == previous["container"] {
-			toPrint = append(toPrint, "  \"")
-		} else {
-			toPrint = append(toPrint, variable.Container)
+		cols := []string{s[cur].Name, s[cur].Container, s[cur].Environment, valueFrom}
+		if s[prev].Name == s[cur].Name {
+			cols[0] = dittoSymbol
 		}
-		if variable.Environment == previous["environment"] {
-			toPrint = append(toPrint, "  \"")
-		} else {
-			toPrint = append(toPrint, variable.Environment)
+		if s[prev].Container == s[cur].Container {
+			cols[1] = dittoSymbol
 		}
-		if variable.ValueFrom == previous["valueFrom"] {
-			toPrint = append(toPrint, "  \"")
-		} else {
-			toPrint = append(toPrint, valueFrom)
+		if s[prev].Environment == s[cur].Environment {
+			cols[2] = dittoSymbol
 		}
-		fmt.Fprintf(w, "  %s\n", strings.Join(toPrint, "\t"))
-		previous = map[string]string{
-			"name":        variable.Name,
-			"container":   variable.Container,
-			"environment": variable.Environment,
-			"valueFrom":   variable.ValueFrom,
+		if s[prev].ValueFrom == s[cur].ValueFrom {
+			cols[3] = dittoSymbol
 		}
+		fmt.Fprintf(w, "  %s\n", strings.Join(cols, "\t"))
 	}
 }
 
