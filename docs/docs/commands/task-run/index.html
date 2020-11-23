@@ -1301,19 +1301,21 @@
 <div class="highlight"><pre><span></span><code>$ copilot task run
 </code></pre></div>
 <h2 id="what-does-it-do">What does it do?</h2>
-<p>Task run deploys and runs one-off tasks.</p>
-<p>Generally, the steps involved in task run are:
-1. Create an ECR repository and a log group for your task
-2. Build and push the image to ECR
-3. Create or update your ECS task defitinion
-4. Run and wait for the tasks to start</p>
+<p><code>copilot task run</code> deploys and runs one-off tasks.</p>
+<p>Generally, the steps involved in task run are:</p>
+<ol>
+<li>Create an ECR repository and a log group for your task</li>
+<li>Build and push the image to ECR</li>
+<li>Create or update your ECS task definition</li>
+<li>Run and wait for the tasks to start</li>
+</ol>
 <div class="admonition info">
 <p class="admonition-title">Info</p>
 <ol>
-<li>Tasks with the same group name share the same set of resources, including CloudFormation stack, ECR repository, CloudWatch log group and task definition.</li>
+<li>Tasks with the same group name share the same set of resources, including the CloudFormation stack, ECR repository, CloudWatch log group and task definition.</li>
 <li>If the tasks are deployed to a Copilot environment (i.e. by specifying <code>--env</code>), only public subnets that are created by that environment will be used. </li>
 <li>The <code>--env</code> flag only works with environments created with v0.3.0 of Copilot or later. Customers using environments created with v0.2.0 or earlier can update their environment manager role with <a href="https://github.com/aws/copilot-cli/blob/mainline/templates/environment/cf/environment-manager-role.yml">this</a> policy. </li>
-<li>If using <code>--default</code> and you get an error saying there's no default cluster, run <code>aws ecs create-cluster</code> and then re-run the copilot command. </li>
+<li>If you are using the <code>--default</code> flag and get an error saying there's no default cluster, run <code>aws ecs create-cluster</code> and then re-run the Copilot command. </li>
 </ol>
 </div>
 <h2 id="what-are-the-flags">What are the flags?</h2>

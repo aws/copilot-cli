@@ -1268,7 +1268,7 @@
                 
                 
                 <h1 id="service-discovery">Service Discovery</h1>
-<p>Service Discovery is a way of letting services discover and connect with each other. Typically, services can only talk to each other if they expose a public endpoint - and even then, requests will have to go over the internet. With <a href="https://docs.aws.amazon.com/whitepapers/latest/microservices-on-aws/service-discovery.html">ECS Service Discovery</a> each service you create is given a private address and DNS name - meaning each service can talk to each other without ever leaving the local network (VPC) and without exposing a public endpoint.  </p>
+<p>Service Discovery is a way of letting services discover and connect with each other. Typically, services can only talk to each other if they expose a public endpoint - and even then, requests will have to go over the internet. With <a href="https://docs.aws.amazon.com/whitepapers/latest/microservices-on-aws/service-discovery.html">ECS Service Discovery</a>, each service you create is given a private address and DNS name - meaning each service can talk to another without ever leaving the local network (VPC) and without exposing a public endpoint.  </p>
 <h2 id="how-do-i-use-service-discovery">How do I use Service Discovery?</h2>
 <p>Service Discovery is enabled for all services set up using the Copilot CLI. We'll show you how to use it by using an example. Imagine we have an app called <code>kudos</code> and two services: <code>api</code> and <code>front-end</code>. </p>
 <p>In this example we'll imagine our <code>front-end</code> service has a public endpoint and wants to call our <code>api</code> service using its service discovery endpoint. </p>
