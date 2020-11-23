@@ -1311,7 +1311,7 @@
 <p>Sidecars are additional containers that run along side the main container. They are usually used to perform peripheral tasks such as logging, configuration, or proxying requests.</p>
 <p>AWS also provides some plugin options that can be seamlessly incorporated with your ECS service, including but not limited to <a href="https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html">FireLens</a>, <a href="https://aws.amazon.com/xray/">AWS X-Ray</a>, and <a href="https://aws.amazon.com/app-mesh/">AWS App Mesh</a>.</p>
 <h2 id="how-to-add-sidecars-with-copilot">How to add sidecars with Copilot?</h2>
-<p>There are two ways of adding sidecars using Copilot manifest: specify <a href="#general-sidecars">general sidecars</a> or with <a href="#sidecar-patterns">sidecar patterns</a>.</p>
+<p>There are two ways of adding sidecars using the Copilot manifest: by specifying <a href="#general-sidecars">general sidecars</a> or by using <a href="#sidecar-patterns">sidecar patterns</a>.</p>
 <h3 id="general-sidecars">General sidecars</h3>
 <p>You'll need to provide the URL for the sidecar image. Optionally, you can specify the port you'd like to expose and the credential parameter for <a href="https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html">private registry</a>.</p>
 <div class="highlight"><pre><span></span><code><span class="nt">sidecars</span><span class="p">:</span>
@@ -1347,12 +1347,12 @@
     <span class="nt">image</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1234567890.dkr.ecr.us-west-2.amazonaws.com/reverse-proxy:revision_1</span>
 </code></pre></div>
 <h3 id="sidecar-patterns">Sidecar patterns</h3>
-<p>Sidecar patterns are pre-defined Copilot sidecar configurations. The only supported pattern is FireLens for now but we'll add more in the future!</p>
+<p>Sidecar patterns are predefined Copilot sidecar configurations. For now, the only supported pattern is FireLens, but we'll add more in the future!</p>
 <p><div class="highlight"><pre><span></span><code><span class="c1"># In the manifest.</span>
 <span class="nt">logging</span><span class="p">:</span>
-  <span class="c1"># The fluent bit image. (Optional, we&#39;ll use &quot;amazon/aws-for-fluent-bit:latest&quot; by default)</span>
+  <span class="c1"># The Fluent Bit image. (Optional, we&#39;ll use &quot;amazon/aws-for-fluent-bit:latest&quot; by default)</span>
   <span class="nt">image</span><span class="p">:</span> <span class="p p-Indicator">{{</span> <span class="nv">image URL</span> <span class="p p-Indicator">}}</span>
-  <span class="c1"># The configuration options to send to the Firelens log driver. (Optional)</span>
+  <span class="c1"># The configuration options to send to the FireLens log driver. (Optional)</span>
   <span class="nt">destination</span><span class="p">:</span>
     <span class="p p-Indicator">{{</span> <span class="nv">config key</span> <span class="p p-Indicator">}}:</span> <span class="p p-Indicator">{{</span> <span class="nv">config value</span><span class="p p-Indicator">}}</span>
   <span class="c1"># Whether to include ECS metadata in logs. (Optional, default to true)</span>
@@ -1360,7 +1360,7 @@
   <span class="c1"># Secret to pass to the log configuration. (Optional)</span>
   <span class="nt">secretOptions</span><span class="p">:</span>
     <span class="p p-Indicator">{{</span> <span class="nv">key</span> <span class="p p-Indicator">}}:</span> <span class="p p-Indicator">{{</span> <span class="nv">value</span><span class="p p-Indicator">}</span>
-  <span class="c1"># The full config file path in your custom fluent bit image.</span>
+  <span class="c1"># The full config file path in your custom Fluent Bit image.</span>
 <span class="nt">  configFile</span><span class="p">:</span> <span class="p p-Indicator">{{</span> <span class="nv">config file path</span> <span class="p p-Indicator">}}</span>
 </code></pre></div>
 For example:</p>
@@ -1393,11 +1393,11 @@ For example:</p>
 </code></pre></div>
 <div class="admonition info">
 <p class="admonition-title">Info</p>
-<p>Since Firelens log driver can route your main container's logs to various destinations, the <a href="../../commands/svc-logs/"><code>svc logs</code></a> command can only track them when they are sent to the log group we create for Copilot service in CloudWatch. </p>
+<p>Since the FireLens log driver can route your main container's logs to various destinations, the <a href="../../commands/svc-logs/"><code>svc logs</code></a> command can track them only when they are sent to the log group we create for your Copilot service in CloudWatch. </p>
 </div>
 <div class="admonition info">
 <p class="admonition-title">Info</p>
-<p><strong> We're going to make this easier and more powerful!</strong> Currently we only support using remote images for sidecars which means users need to build and push their local sidecar image. But, we are planning to support using local image or Dockerfile. Additionally, Firelens will be able to route logs for the other sidecars (not just the main container).</p>
+<p><strong> We're going to make this easier and more powerful!</strong> Currently, we only support using remote images for sidecars, which means users need to build and push their local sidecar images. But we are planning to support using local images or Dockerfiles. Additionally, FireLens will be able to route logs for the other sidecars (not just the main container).</p>
 </div>
                 
               
