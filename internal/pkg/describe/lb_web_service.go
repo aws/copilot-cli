@@ -366,8 +366,9 @@ type ServiceDiscovery struct {
 type serviceDiscoveries []*ServiceDiscovery
 
 func (s serviceDiscoveries) humanString(w io.Writer) {
-	fmt.Fprintf(w, "  %s\t%s\n", "Environment", "Namespace")
-	fmt.Fprintf(w, "  %s\t%s\n", "-----------", "---------")
+	headers := []string{"Environment", "Namespace"}
+	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, sd := range s {
 		fmt.Fprintf(w, "  %s\t%s\n", strings.Join(sd.Environment, ", "), sd.Namespace)
 	}
@@ -409,8 +410,9 @@ func (w *webSvcDesc) HumanString() string {
 	w.Configurations.humanString(writer)
 	fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\n", "Environment", "URL")
-	fmt.Fprintf(writer, "  %s\t%s\n", "-----------", "---")
+	headers := []string{"Environment", "URL"}
+	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, route := range w.Routes {
 		fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
 	}
