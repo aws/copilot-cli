@@ -13,7 +13,7 @@ Required Flags
   -n, --name string           Name of the storage resource to create.
   -t, --storage-type string   Type of storage to add. Must be one of:
                               "DynamoDB", "S3"
-  -s, --svc string            Name of the service to associate with storage.
+  -w, --workload string       Name of the service or job to associate with storage.
 
 DynamoDB Flags
       --lsi stringArray        Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.

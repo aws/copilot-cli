@@ -1335,9 +1335,9 @@
 <p>Once you've told Copilot what type of service you're building, Copilot will take care of building your code's Dockerfile and storing the images securely in an Amazon ECR repository. Copilot will also create a simple file called the <em>manifest</em> which contains all the knobs and toggles for your service. This includes things like how much memory and CPU should be allocated to each copy of your service, how many copies of your service you want running, and more.</p>
 <h2 id="jobs"><a href="../jobs/">Jobs</a></h2>
 <p>Jobs are <em>ephemeral</em> Amazon ECS tasks that are triggered by an event. Once their work is done, the task terminates. Just like services, Copilot will ask you all the necessary information 
-to quickly get going with a scheduled task on AWS. The manifest file can be used to always adjust the configuration and provide more advanced settings. </p>
+to quickly get going with a scheduled task on AWS. The manifest file can always be used to adjust the configuration and provide more advanced settings. </p>
 <h2 id="pipelines"><a href="../pipelines/">Pipelines</a></h2>
-<p>Now that you've got an application with a few services deployed to a couple of environments, staying on top of those deployments can become tricky. Copilot can help by setting up a release pipeline that deploys your service whenever you push to your git repositry. When a push is detected, your pipeline will build your service, push the image to ECR, and deploy to your environments.</p>
+<p>Now that you've got an application with a few services deployed to a couple of environments, staying on top of those deployments can become tricky. Copilot can help by setting up a release pipeline that deploys your service whenever you push to your git repository. When a push is detected, your pipeline will build your service, push the image to ECR, and deploy to your environments.</p>
 <p>A common pattern is to set up a pipeline for a particular service that deploys to a test environment, runs automated testing, then deploys to the production environment.</p>
                 
               

@@ -1296,7 +1296,7 @@
                 
                 
                 <h1 id="additional-aws-resources">Additional AWS Resources</h1>
-<p>Additional AWS resources, referred as "addons" in the CLI, are any additional AWS services that a <a href="../../manifest/overview/">service manifest</a> does not integrate by default. For example, an addon can be a DynamoDB table or S3 bucket that your service needs to read or write to.</p>
+<p>Additional AWS resources, referred to as "addons" in the CLI, are any additional AWS services that a <a href="../../manifest/overview/">service manifest</a> does not integrate by default. For example, an addon can be a DynamoDB table or S3 bucket that your service needs to read or write to.</p>
 <h2 id="how-do-i-add-an-s3-bucket-or-ddb-table">How do I add an S3 bucket or DDB Table?</h2>
 <p>Copilot provides the following commands to help you create certain kinds of addons:</p>
 <ul>
@@ -1323,7 +1323,7 @@ Typically each file under the <code>addons/</code> directory represents a separa
 <p>When your service gets deployed, Copilot merges all these files into a single AWS CloudFormation template and creates a nested stack under your service's stack.</p>
 <h2 id="what-does-an-addon-template-look-like">What does an addon template look like?</h2>
 <p>An addon template can be any valid CloudFormation template. <br />
-However, Copilot will pass by default the <code>App</code>, <code>Env</code> and <code>Name</code> <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html">Parameters</a> for you to customize your resource properties with <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/conditions-section-structure.html">Conditions</a> or <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html">Mappings</a> if you wish to.</p>
+However, by default, Copilot will pass the <code>App</code>, <code>Env</code>, and <code>Name</code> <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html">Parameters</a>; you can customize your resource properties with <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/conditions-section-structure.html">Conditions</a> or <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html">Mappings</a> if you wish to.</p>
 <p>If you need to access your <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html">Resources</a> from your ECS task, make sure to:</p>
 <ol>
 <li>Define an <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-managedpolicy.html">IAM ManagedPolicy</a> resource in your template that holds the permissions for your task and add an <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html">Output</a> so that the permission is injected to your ECS Task Role.</li>
@@ -1389,7 +1389,7 @@ However, Copilot will pass by default the <code>App</code>, <code>Env</code> and
     <span class="nt">Description</span><span class="p">:</span> <span class="s">&quot;The</span><span class="nv"> </span><span class="s">ARN</span><span class="nv"> </span><span class="s">of</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">ManagedPolicy</span><span class="nv"> </span><span class="s">to</span><span class="nv"> </span><span class="s">attach</span><span class="nv"> </span><span class="s">to</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">task</span><span class="nv"> </span><span class="s">role.&quot;</span>
     <span class="nt">Value</span><span class="p">:</span> <span class="kt">!Ref</span> <span class="l l-Scalar l-Scalar-Plain">MyTableAccessPolicy</span>
 </code></pre></div></p>
-<p>Copilot will include this template as a nested stack under your service on your next release!</p>
+<p>On your next release, Copilot will include this template as a nested stack under your service!</p>
 <div class="admonition info">
 <p class="admonition-title">Info</p>
 <p>We recommend following <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html">Amazon IAM best practices</a> while defining AWS Managed Policies for the additional resources, including:</p>
