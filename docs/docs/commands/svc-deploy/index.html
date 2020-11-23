@@ -1287,14 +1287,14 @@
 <div class="highlight"><pre><span></span><code>$ copilot svc deploy
 </code></pre></div>
 <h2 id="what-does-it-do">What does it do?</h2>
-<p>Service deploy takes your local code and configuration and deploys it. </p>
+<p><code>copilot svc deploy</code> takes your local code and configuration and deploys it. </p>
 <p>The steps involved in service deploy are:</p>
 <ol>
 <li>Build your local Dockerfile into an image</li>
 <li>Tag it with the value from <code>--tag</code> or the latest git sha (if you're in a git directory)</li>
 <li>Push the image to ECR</li>
-<li>Package your Manifest file and Addons into CloudFormation</li>
-<li>Create / Update your ECS task-definition and service</li>
+<li>Package your manifest file and addons into CloudFormation</li>
+<li>Create / update your ECS task definition and service</li>
 </ol>
 <h2 id="what-are-the-flags">What are the flags?</h2>
 <div class="highlight"><pre><span></span><code>  -e, --env string                     Name of the environment.
