@@ -408,7 +408,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 						Namespace:   "jobs.phonetool.local:5000",
 					},
 				},
-				Variables: []*EnvVar{
+				Variables: []*envVar{
 					{
 						Environment: "test",
 						Container:   "container1",
@@ -571,7 +571,7 @@ Resources
 					Tasks:       "3",
 				},
 			}
-			envVars := []*EnvVar{
+			envVars := []*envVar{
 				{
 					Environment: "prod",
 					Container:   "containerB",

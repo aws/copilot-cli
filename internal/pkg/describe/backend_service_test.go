@@ -207,7 +207,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						Namespace:   "jobs.phonetool.local:5000",
 					},
 				},
-				Variables: []*EnvVar{
+				Variables: []*envVar{
 					{
 						Container:   "container",
 						Environment: "test",
@@ -375,7 +375,7 @@ Resources
 					Tasks:       "3",
 				},
 			}
-			envVars := []*EnvVar{
+			envVars := []*envVar{
 				{
 					Container:   "container",
 					Environment: "prod",

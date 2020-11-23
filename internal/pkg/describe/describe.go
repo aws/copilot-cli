@@ -50,14 +50,14 @@ func flattenResources(stackResources []*cloudformation.StackResource) []*CfnReso
 	return resources
 }
 
-func flattenEnvVars(envName string, s [][]string) []*EnvVar {
-	var envVars []*EnvVar
-	for _, envVar := range s {
-		envVars = append(envVars, &EnvVar{
-			Name:        envVar[0],
-			Container:   envVar[1],
+func flattenEnvVars(envName string, s [][]string) []*envVar {
+	var envVars []*envVar
+	for _, enviroVar := range s {
+		envVars = append(envVars, &envVar{
+			Name:        enviroVar[0],
+			Container:   enviroVar[1],
 			Environment: envName,
-			Value:       envVar[2],
+			Value:       enviroVar[2],
 		})
 	}
 	return envVars

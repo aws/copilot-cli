@@ -129,7 +129,7 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var routes []*WebServiceRoute
 	var configs []*ServiceConfig
 	var serviceDiscoveries []*ServiceDiscovery
-	var envVars []*EnvVar
+	var envVars []*envVar
 	var secrets []*secret
 	for _, env := range environments {
 		err := d.initServiceDescriber(env)
@@ -226,15 +226,15 @@ func (d *WebServiceDescriber) URI(envName string) (string, error) {
 	return uri.String(), nil
 }
 
-// EnvVar contains serialized environment variables for a service.
-type EnvVar struct {
+// envVar contains serialized environment variables for a service.
+type envVar struct {
 	Environment string `json:"environment"`
 	Container   string `json:"container"`
 	Name        string `json:"name"`
 	Value       string `json:"value"`
 }
 
-type envVars []*EnvVar
+type envVars []*envVar
 
 func (e envVars) humanString(w io.Writer) {
 	headers := []string{"Name", "Container", "Environment", "Value"}
