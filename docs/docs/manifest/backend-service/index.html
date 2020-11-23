@@ -1250,7 +1250,7 @@ The name of your service.   </p>
 <div class="separator"></div>
 
 <p><a id="type" href="#type" class="field"><code>type</code></a> <span class="type">String</span><br />
-The architecture type for your service. <a href="../../concepts/services/#backend-service">Backend services</a> is not reachable from the internet, but can be reached with <a href="../../developing/service-discovery/">service discovery</a> from your other services.</p>
+The architecture type for your service. <a href="../../concepts/services/#backend-service">Backend Services</a> are not reachable from the internet, but can be reached with <a href="../../developing/service-discovery/">service discovery</a> from your other services.</p>
 <div class="separator"></div>
 
 <p><a id="image" href="#image" class="field"><code>image</code></a> <span class="type">Map</span><br />
@@ -1281,18 +1281,18 @@ Instead of building a container from a Dockerfile, you can specify an existing i
 The <code>location</code> field follows the same definition as the <a href="https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image"><code>image</code> parameter</a> in the Amazon ECS task definition.</p>
 <p><span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field"><code>port</code></a> <span class="type">Integer</span><br />
 The port exposed in your Dockerfile. Copilot should parse this value for you from your <code>EXPOSE</code> instruction.<br />
-If you don't need your backend service to accept requests from other services you can omit this field.</p>
+If you don't need your Backend Service to accept requests from other services, you can omit this field.</p>
 <p><span class="parent-field">image.</span><a id="image-healthcheck" href="#image-healthcheck" class="field"><code>healthcheck</code></a> <span class="type">Map</span><br />
 Optional configuration for container health checks.</p>
 <p><span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-cmd" href="#image-healthcheck-cmd" class="field"><code>command</code></a> <span class="type">Array of Strings</span><br />
 The command to run to determine if the container is healthy.<br />
 The string array can start with <code>CMD</code> to execute the command arguments directly, or <code>CMD-SHELL</code> to run the command with the container's default shell.</p>
 <p><span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-interval" href="#image-healthcheck-interval" class="field"><code>interval</code></a> <span class="type">Duration</span><br />
-Time period between healthchecks in seconds. Default is 10s.</p>
+Time period between health checks, in seconds. Default is 10s.</p>
 <p><span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-retries" href="#image-healthcheck-retries" class="field"><code>retries</code></a> <span class="type">Integer</span><br />
 Number of times to retry before container is deemed unhealthy. Default is 2.</p>
 <p><span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-timeout" href="#image-healthcheck-timeout" class="field"><code>timeout</code></a> <span class="type">Duration</span><br />
-How long to wait before considering the healthcheck failed in seconds. Default is 5s.</p>
+How long to wait before considering the health check failed, in seconds. Default is 5s.</p>
 <p><span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-start-period" href="#image-healthcheck-start-period" class="field"><code>start_period</code></a> <span class="type">Duration</span><br />
 Grace period within which to provide containers time to bootstrap before failed health checks count towards the maximum number of retries. Default is 0s.</p>
 <div class="separator"></div>
@@ -1325,15 +1325,15 @@ Scale up or down based on the average memory your service should maintain.  </p>
 <div class="separator"></div>
 
 <p><a id="variables" href="#variables" class="field"><code>variables</code></a> <span class="type">Map</span> <br />
-Key-value pairs that represents environment variables that will be passed to your service. Copilot will include a number of environment variables by default for you.</p>
+Key-value pairs that represent environment variables that will be passed to your service. Copilot will include a number of environment variables by default for you.</p>
 <div class="separator"></div>
 
 <p><a id="secrets" href="#secrets" class="field"><code>secrets</code></a> <span class="type">Map</span> <br />
-Key-value pairs that represents secret values from <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html">AWS Systems Manager Parameter Store</a> that will passed to your service as environment variables securely.</p>
+Key-value pairs that represent secret values from <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html">AWS Systems Manager Parameter Store</a> that will be securely passed to your service as environment variables.</p>
 <div class="separator"></div>
 
 <p><a id="environments" href="#environments" class="field"><code>environments</code></a> <span class="type">Map</span><br />
-The environment section lets you overwrite any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.</p>
+The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.</p>
                 
               
               

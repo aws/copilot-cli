@@ -1397,18 +1397,18 @@
                 
                   <h1>Applications</h1>
                 
-                <p>An application is a group of related services, environments, and pipelines. Whether you have one service that does everything or a constelation of micro-services, Copilot organizes them and the environments they're deployed to into an "application".</p>
+                <p>An application is a group of related services, environments, and pipelines. Whether you have one service that does everything or a constellation of micro-services, Copilot organizes them and the environments they're deployed to into an "application".</p>
 <p>Let's walk through an example. We want to build a voting app which needs to collect votes and aggregate the results.</p>
-<p>To set up our vote app with two services, we can run <code>copilot init</code> twice. The first time we run <code>init</code>, we'll be asked what we should call the application this service will belong to. Since we're trying to build a voting system, we can call our application "vote" and our first service "collector". The next time we run <code>init</code>, we'll be asked if we want to add our new service to the existing “vote” app, and we’ll name the new service "aggregator".</p>
+<p>To set up our vote app with two services, we can run <code>copilot init</code> twice. The first time we run <code>copilot init</code>, we'll be asked what we should call the application this service will belong to. Since we're trying to build a voting system, we can call our application "vote" and our first service "collector". The next time we run <code>init</code>, we'll be asked if we want to add our new service to the existing “vote” app, and we’ll name the new service "aggregator".</p>
 <p>Your application configuration (which services and environments belong to it) is stored in your AWS account, so any other users in your account will be able to develop on the “vote" app as well. This means that you can have a teammate work on one service while you develop the other.</p>
 <p><img alt="" src="https://user-images.githubusercontent.com/879348/85869625-cd858d00-b780-11ea-817c-638814049d2d.png" /></p>
 <h2 id="creating-an-app">Creating an App</h2>
 <p>To set up an application, you can just run <code>copilot init</code>. You'll be asked if you want to set up an app or choose an use app.</p>
 <div class="highlight"><pre><span></span><code>copilot init
 </code></pre></div>
-<p>Once you've created an application, Copilot stores that application in SSM Parameter store in your AWS account. The account used to set up your application is known as the "applicaiton account". This is where your app's configuration lives, and anyone who has access to this account can use this app.</p>
+<p>Once you've created an application, Copilot stores that application in SSM Parameter store in your AWS account. The account used to set up your application is known as the "application account". This is where your app's configuration lives, and anyone who has access to this account can use this app.</p>
 <p>All resources created within this application will be tagged with the <code>copilot-app</code> <a href="https://docs.aws.amazon.com/general/latest/gr/aws_tagging.html">aws resource tag</a>. This helps you know which app resources in your account belong to.</p>
-<p>The name of your applicaiton has to be unique within your account (even across region).</p>
+<p>The name of your application has to be unique within your account (even across region).</p>
 <h3 id="additional-app-configurations">Additional App Configurations</h3>
 <p>You can also provide more granular configuration for your application by running <code>copilot app init</code>. This includes options to:</p>
 <ul>
@@ -1420,15 +1420,15 @@
   --resource-tags <span class="nv">department</span><span class="o">=</span>MyDept,team<span class="o">=</span>MyTeam
 </code></pre></div>
 <h2 id="app-infrastructure">App Infrastructure</h2>
-<p>While the bulk of the infrastructure Copilot provisions is specific to an environment and service, there are some application-wide resources, as well.</p>
+<p>While the bulk of the infrastructure Copilot provisions is specific to an environment and service, there are some application-wide resources as well.</p>
 <p><img alt="" src="https://user-images.githubusercontent.com/879348/85869637-d0807d80-b780-11ea-8359-6d75933c562a.png" /></p>
 <h3 id="ecr-repositories">ECR Repositories</h3>
 <p>ECR Repositories are regional resources which store your service images. Each service has its own ECR Repository per region in your app.</p>
 <p>In the above diagram, the app has several environments spread across three regions. Each of those regions has its own ECR repository for every service in your app. In this case, there are three services.</p>
-<p>Every time you add a service, we create an ECR Repository in every region. We do this to maintain region isolation (if one region goes down, environments in other region won't be affected) and to reduce cross region data transfer costs.</p>
+<p>Every time you add a service, we create an ECR Repository in every region. We do this to maintain region isolation (if one region goes down, environments in other region won't be affected) and to reduce cross-region data transfer costs.</p>
 <p>These ECR Repositories all live within your app's account (not the environment accounts) - and have policies which allow your environment accounts to pull from them.</p>
 <h3 id="release-infrastructure">Release Infrastructure</h3>
-<p>For every region represented in your app, we create a KMS Key and an S3 bucket. These resources are used by CodePipeline to enable cross region and cross account deployments. All Pipelines in your app share these same resources.</p>
+<p>For every region represented in your app, we create a KMS Key and an S3 bucket. These resources are used by CodePipeline to enable cross-region and cross-account deployments. All pipelines in your app share these same resources.</p>
 <p>Similar to the ECR Repositories, the S3 bucket and KMS keys have policies which allow for all of your environments, even in other accounts, to read encrypted deployment artifacts. This makes your cross-account, cross-region CodePipelines possible.</p>
 <h2 id="digging-into-your-app">Digging into your App</h2>
 <p>Now that we've set up an app, we can check on it using Copilot. Below are a few common ways to check in on your app.</p>

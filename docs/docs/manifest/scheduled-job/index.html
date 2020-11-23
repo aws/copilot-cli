@@ -1276,7 +1276,7 @@ The <code>location</code> field follows the same definition as the <a href="http
 <p><a id="on" href="#on" class="field"><code>on</code></a> <span class="type">Map</span><br />
 The configuration for the event that triggers your job.</p>
 <p><span class="parent-field">on.</span><a id="on-schedule" href="#on-schedule" class="field"><code>schedule</code></a> <span class="type">String</span><br />
-You can specify a rate to periodically trigger your job, supported rates:</p>
+You can specify a rate to periodically trigger your job. Supported rates:</p>
 <ul>
 <li><code>"@yearly"</code></li>
 <li><code>"@monthly"</code></li>
@@ -1310,16 +1310,16 @@ How long the job should run before it aborts and fails. You can use the units: <
 <div class="separator"></div>
 
 <p><a id="variables" href="#variables" class="field"><code>variables</code></a> <span class="type">Map</span> <br />
-Key-value pairs that represents environment variables that will be passed to your job. Copilot will include a number of environment variables by default for you.</p>
+Key-value pairs that represent environment variables that will be passed to your job. Copilot will include a number of environment variables by default for you.</p>
 <div class="separator"></div>
 
 <p><a id="secrets" href="#secrets" class="field"><code>secrets</code></a> <span class="type">Map</span> <br />
-Key-value pairs that represents secret values from <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html">AWS Systems Manager Parameter Store</a> that will passed to your job as environment variables securely. </p>
+Key-value pairs that represent secret values from <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html">AWS Systems Manager Parameter Store</a> that will be securely passed to your job as environment variables. </p>
 <div class="separator"></div>
 
 <p><a id="environments" href="#environments" class="field"><code>environments</code></a> <span class="type">Map</span><br />
-The environment section lets you overwrite any value in your manifest based on the environment you're in. 
-In the example manifest above, we're overriding the cpu parameter so that our production container is more performant.</p>
+The environment section lets you override any value in your manifest based on the environment you're in. 
+In the example manifest above, we're overriding the CPU parameter so that our production container is more performant.</p>
                 
               
               
