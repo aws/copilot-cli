@@ -43,22 +43,25 @@ func (a *App) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "URI", a.URI)
 	fmt.Fprint(writer, color.Bold.Sprint("\nEnvironments\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Name", "AccountID", "Region")
-	fmt.Fprintf(writer, "  %s\t%s\t%s\n", strings.Repeat("-", len("Name")), strings.Repeat("-", len("AccountID")), strings.Repeat("-", len("Region")))
+	headers := []string{"Name", "AccountID", "Region"}
+	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, env := range a.Envs {
 		fmt.Fprintf(writer, "  %s\t%s\t%s\n", env.Name, env.AccountID, env.Region)
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nServices\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\n", "Name", "Type")
-	fmt.Fprintf(writer, "  %s\t%s\n", strings.Repeat("-", len("Name")), strings.Repeat("-", len("Type")))
+	headers = []string{"Name", "Type"}
+	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, svc := range a.Services {
 		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nPipelines\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\n", "Name")
-	fmt.Fprintf(writer, "  %s\n", strings.Repeat("-", len("Name")))
+	headers = []string{"Name"}
+	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, pipeline := range a.Pipelines {
 		fmt.Fprintf(writer, "  %s\n", pipeline.Name)
 	}

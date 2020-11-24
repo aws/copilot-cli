@@ -188,8 +188,9 @@ func (e *EnvDescription) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Account ID", e.Environment.AccountID)
 	fmt.Fprint(writer, color.Bold.Sprint("\nServices\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\n", "Name", "Type")
-	fmt.Fprintf(writer, "  %s\t%s\n", strings.Repeat("-", len("Name")), strings.Repeat("-", len("Type")))
+	headers := []string{"Name", "Type"}
+	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, svc := range e.Services {
 		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
 	}
@@ -197,8 +198,9 @@ func (e *EnvDescription) HumanString() string {
 	if len(e.Tags) != 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nTags\n\n"))
 		writer.Flush()
-		fmt.Fprintf(writer, "  %s\t%s\n", "Key", "Value")
-		fmt.Fprintf(writer, "  %s\t%s\n", strings.Repeat("-", len("Key")), strings.Repeat("-", len("Value")))
+		headers := []string{"Key", "Value"}
+		fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 		// sort Tags in alpha order by keys
 		keys := make([]string, 0, len(e.Tags))
 		for k := range e.Tags {

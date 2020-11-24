@@ -135,8 +135,9 @@ func filterByName(wklds []*config.Workload, wantedNames []string) []*config.Work
 
 func humanOutput(wklds []*config.Workload, w io.Writer) {
 	writer := tabwriter.NewWriter(w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, "%s\t%s\n", "Name", "Type")
-	fmt.Fprintf(writer, "%s\t%s\n", strings.Repeat("-", len("Name")), strings.Repeat("-", len("Type")))
+	headers := []string{"Name", "Type"}
+	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, wkld := range wklds {
 		fmt.Fprintf(writer, "%s\t%s\n", wkld.Name, wkld.Type)
 	}
