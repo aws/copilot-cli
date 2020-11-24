@@ -264,14 +264,14 @@ func TestTaskDefinition_EnvVars(t *testing.T) {
 
 			wantEnvVars: []*ContainerEnvVar{
 				{
-					"COPILOT_SERVICE_NAME",
-					"container",
-					"my-svc",
+					Name:      "COPILOT_SERVICE_NAME",
+					Container: "container",
+					Value:     "my-svc",
 				},
 				{
-					"COPILOT_ENVIRONMENT_NAME",
-					"container",
-					"prod",
+					Name:      "COPILOT_ENVIRONMENT_NAME",
+					Container: "container",
+					Value:     "prod",
 				},
 			},
 		},
@@ -320,14 +320,14 @@ func TestTaskDefinition_Secrets(t *testing.T) {
 
 			wantedSecrets: []*ContainerSecret{
 				{
-					"GITHUB_WEBHOOK_SECRET",
-					"container",
-					"GH_WEBHOOK_SECRET",
+					Name:      "GITHUB_WEBHOOK_SECRET",
+					Container: "container",
+					ValueFrom: "GH_WEBHOOK_SECRET",
 				},
 				{
-					"SOME_OTHER_SECRET",
-					"container",
-					"SHHHHHHHH",
+					Name:      "SOME_OTHER_SECRET",
+					Container: "container",
+					ValueFrom: "SHHHHHHHH",
 				},
 			},
 		},

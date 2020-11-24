@@ -256,9 +256,9 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
-							"COPILOT_ENVIRONMENT_NAME",
-							"container",
-							"prod",
+							Name:      "COPILOT_ENVIRONMENT_NAME",
+							Container: "container",
+							Value:     "prod",
 						},
 					}, nil),
 
@@ -284,21 +284,21 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
-							"COPILOT_ENVIRONMENT_NAME",
-							"container",
-							"test",
+							Name:      "COPILOT_ENVIRONMENT_NAME",
+							Container: "container",
+							Value:     "test",
 						},
 					}, nil),
 					m.svcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
-							"GITHUB_WEBHOOK_SECRET",
-							"container",
-							"GH_WEBHOOK_SECRET",
+							Name:      "GITHUB_WEBHOOK_SECRET",
+							Container: "container",
+							ValueFrom: "GH_WEBHOOK_SECRET",
 						},
 						{
-							"SOME_OTHER_SECRET",
-							"container",
-							"SHHHHHHHH",
+							Name:      "SOME_OTHER_SECRET",
+							Container: "container",
+							ValueFrom: "SHHHHHHHH",
 						},
 					}, nil),
 					m.svcDescriber.EXPECT().ServiceStackResources().Return(nil, mockErr),
@@ -324,9 +324,9 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
-							"COPILOT_ENVIRONMENT_NAME",
-							"container1",
-							testEnv,
+							Name:      "COPILOT_ENVIRONMENT_NAME",
+							Container: "container1",
+							Value:     testEnv,
 						},
 					}, nil),
 					m.svcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
@@ -348,16 +348,16 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
-							"COPILOT_ENVIRONMENT_NAME",
-							"container2",
-							prodEnv,
+							Name:      "COPILOT_ENVIRONMENT_NAME",
+							Container: "container2",
+							Value:     prodEnv,
 						},
 					}, nil),
 					m.svcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
-							"SOME_OTHER_SECRET",
-							"container",
-							"SHHHHHHHH",
+							Name:      "SOME_OTHER_SECRET",
+							Container: "container",
+							ValueFrom: "SHHHHHHHH",
 						},
 					}, nil),
 					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{

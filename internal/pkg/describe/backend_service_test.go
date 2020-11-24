@@ -85,9 +85,9 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
-							"COPILOT_ENVIRONMENT_NAME",
-							"container",
-							"prod",
+							Name:      "COPILOT_ENVIRONMENT_NAME",
+							Container: "container",
+							Value:     "prod",
 						},
 					}, nil),
 					m.svcDescriber.EXPECT().Secrets().Return(nil, mockErr),
@@ -109,16 +109,16 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
-							"COPILOT_ENVIRONMENT_NAME",
-							"container",
-							testEnv,
+							Name:      "COPILOT_ENVIRONMENT_NAME",
+							Container: "container",
+							Value:     testEnv,
 						},
 					}, nil),
 					m.svcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
-							"GITHUB_WEBHOOK_SECRET",
-							"container",
-							"GH_WEBHOOK_SECRET",
+							Name:      "GITHUB_WEBHOOK_SECRET",
+							Container: "container",
+							ValueFrom: "GH_WEBHOOK_SECRET",
 						},
 					}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
@@ -129,16 +129,16 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
-							"COPILOT_ENVIRONMENT_NAME",
-							"container",
-							prodEnv,
+							Name:      "COPILOT_ENVIRONMENT_NAME",
+							Container: "container",
+							Value:     prodEnv,
 						},
 					}, nil),
 					m.svcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
-							"SOME_OTHER_SECRET",
-							"container",
-							"SHHHHHHHH",
+							Name:      "SOME_OTHER_SECRET",
+							Container: "container",
+							ValueFrom: "SHHHHHHHH",
 						},
 					}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
@@ -149,9 +149,9 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
-							"COPILOT_ENVIRONMENT_NAME",
-							"container",
-							mockEnv,
+							Name:      "COPILOT_ENVIRONMENT_NAME",
+							Container: "container",
+							Value:     mockEnv,
 						},
 					}, nil),
 					m.svcDescriber.EXPECT().Secrets().Return(
