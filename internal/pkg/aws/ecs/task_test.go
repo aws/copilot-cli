@@ -243,9 +243,9 @@ func TestTaskDefinition_EnvVars(t *testing.T) {
 	testCases := map[string]struct {
 		inContainers []*ecs.ContainerDefinition
 
-		wantEnvVars map[string]string
+		wantEnvVars []*ContainerEnvVar
 	}{
-		"should return wrapped error given error": {
+		"should return wrapped error given error; otherwise should return list of ContainerEnvVar objects": {
 			inContainers: []*ecs.ContainerDefinition{
 				{
 					Environment: []*ecs.KeyValuePair{
@@ -258,12 +258,21 @@ func TestTaskDefinition_EnvVars(t *testing.T) {
 							Value: aws.String("prod"),
 						},
 					},
+					Name: aws.String("container"),
 				},
 			},
 
-			wantEnvVars: map[string]string{
-				"COPILOT_SERVICE_NAME":     "my-svc",
-				"COPILOT_ENVIRONMENT_NAME": "prod",
+			wantEnvVars: []*ContainerEnvVar{
+				{
+					Name:      "COPILOT_SERVICE_NAME",
+					Container: "container",
+					Value:     "my-svc",
+				},
+				{
+					Name:      "COPILOT_ENVIRONMENT_NAME",
+					Container: "container",
+					Value:     "prod",
+				},
 			},
 		},
 	}
@@ -281,6 +290,62 @@ func TestTaskDefinition_EnvVars(t *testing.T) {
 			gotEnvVars := taskDefinition.EnvironmentVariables()
 
 			require.Equal(t, tc.wantEnvVars, gotEnvVars)
+		})
+
+	}
+}
+
+func TestTaskDefinition_Secrets(t *testing.T) {
+	testCases := map[string]struct {
+		inContainers []*ecs.ContainerDefinition
+
+		wantedSecrets []*ContainerSecret
+	}{
+		"should return secrets of the task definition as a list of ContainerSecret objects": {
+			inContainers: []*ecs.ContainerDefinition{
+				{
+					Name: aws.String("container"),
+					Secrets: []*ecs.Secret{
+						{
+							Name:      aws.String("GITHUB_WEBHOOK_SECRET"),
+							ValueFrom: aws.String("GH_WEBHOOK_SECRET"),
+						},
+						{
+							Name:      aws.String("SOME_OTHER_SECRET"),
+							ValueFrom: aws.String("SHHHHHHHH"),
+						},
+					},
+				},
+			},
+
+			wantedSecrets: []*ContainerSecret{
+				{
+					Name:      "GITHUB_WEBHOOK_SECRET",
+					Container: "container",
+					ValueFrom: "GH_WEBHOOK_SECRET",
+				},
+				{
+					Name:      "SOME_OTHER_SECRET",
+					Container: "container",
+					ValueFrom: "SHHHHHHHH",
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			taskDefinition := TaskDefinition{
+				ContainerDefinitions: tc.inContainers,
+			}
+
+			gotSecrets := taskDefinition.Secrets()
+
+			require.Equal(t, tc.wantedSecrets, gotSecrets)
 		})
 
 	}
