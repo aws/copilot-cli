@@ -17,12 +17,13 @@ import (
 )
 
 type api interface {
+	DescribeClusters(input *ecs.DescribeClustersInput) (*ecs.DescribeClustersOutput, error)
+	DescribeServices(input *ecs.DescribeServicesInput) (*ecs.DescribeServicesOutput, error)
 	DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.DescribeTasksOutput, error)
 	DescribeTaskDefinition(input *ecs.DescribeTaskDefinitionInput) (*ecs.DescribeTaskDefinitionOutput, error)
-	DescribeServices(input *ecs.DescribeServicesInput) (*ecs.DescribeServicesOutput, error)
 	ListTasks(input *ecs.ListTasksInput) (*ecs.ListTasksOutput, error)
-	DescribeClusters(input *ecs.DescribeClustersInput) (*ecs.DescribeClustersOutput, error)
 	RunTask(input *ecs.RunTaskInput) (*ecs.RunTaskOutput, error)
+	StopTask(input *ecs.StopTaskInput) (*ecs.StopTaskOutput, error)
 	WaitUntilTasksRunning(input *ecs.DescribeTasksInput) error
 }
 
@@ -83,9 +84,10 @@ func (e *ECS) ServiceTasks(cluster, service string) ([]*Task, error) {
 	return e.listTasks(cluster, withService(service))
 }
 
-// FamilyTasks calls ECS API and returns ECS tasks in the same task definition family.
-func (e *ECS) FamilyTasks(cluster, family string) ([]*Task, error) {
-	return e.listTasks(cluster, withFamily(family))
+// RunningTasksInFamily calls ECS API and returns ECS tasks with the desired status to be RUNNING
+// within the same task definition family.
+func (e *ECS) RunningTasksInFamily(cluster, family string) ([]*Task, error) {
+	return e.listTasks(cluster, withFamily(family), withRunningTasks())
 }
 
 type listTasksOpts func(*ecs.ListTasksInput)
@@ -102,6 +104,12 @@ func withFamily(family string) listTasksOpts {
 	}
 }
 
+func withRunningTasks() listTasksOpts {
+	return func(in *ecs.ListTasksInput) {
+		in.DesiredStatus = aws.String(ecs.DesiredStatusRunning)
+	}
+}
+
 func (e *ECS) listTasks(cluster string, opts ...listTasksOpts) ([]*Task, error) {
 	var tasks []*Task
 	in := &ecs.ListTasksInput{
@@ -114,6 +122,9 @@ func (e *ECS) listTasks(cluster string, opts ...listTasksOpts) ([]*Task, error) 
 		listTaskResp, err := e.client.ListTasks(in)
 		if err != nil {
 			return nil, fmt.Errorf("list running tasks: %w", err)
+		}
+		if len(listTaskResp.TaskArns) == 0 {
+			return tasks, nil
 		}
 		descTaskResp, err := e.client.DescribeTasks(&ecs.DescribeTasksInput{
 			Cluster: aws.String(cluster),
@@ -132,6 +143,38 @@ func (e *ECS) listTasks(cluster string, opts ...listTasksOpts) ([]*Task, error) 
 		in.NextToken = listTaskResp.NextToken
 	}
 	return tasks, nil
+}
+
+// StopTasksOpts sets the optional parameter for StopTasks.
+type StopTasksOpts func(*ecs.StopTaskInput)
+
+// WithStopTaskReason sets an optional message specified when a task is stopped.
+func WithStopTaskReason(reason string) StopTasksOpts {
+	return func(in *ecs.StopTaskInput) {
+		in.Reason = aws.String(reason)
+	}
+}
+
+// WithStopTaskCluster sets the cluster that hosts the task to stop.
+func WithStopTaskCluster(cluster string) StopTasksOpts {
+	return func(in *ecs.StopTaskInput) {
+		in.Cluster = aws.String(cluster)
+	}
+}
+
+// StopTasks stops multiple running tasks given their IDs or ARNs.
+func (e *ECS) StopTasks(tasks []string, opts ...StopTasksOpts) error {
+	in := &ecs.StopTaskInput{}
+	for _, opt := range opts {
+		opt(in)
+	}
+	for _, task := range tasks {
+		in.Task = aws.String(task)
+		if _, err := e.client.StopTask(in); err != nil {
+			return fmt.Errorf("stop task %s: %w", task, err)
+		}
+	}
+	return nil
 }
 
 // DefaultCluster returns the default cluster ARN in the account and region.

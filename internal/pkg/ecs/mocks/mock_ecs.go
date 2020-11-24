@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	resourcegroups "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
@@ -46,4 +47,42 @@ func (m *MockresourceGetter) GetResourcesByTags(resourceType string, tags map[st
 func (mr *MockresourceGetterMockRecorder) GetResourcesByTags(resourceType, tags interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResourcesByTags", reflect.TypeOf((*MockresourceGetter)(nil).GetResourcesByTags), resourceType, tags)
+}
+
+// MockRunningTasksInFamilyGetter is a mock of RunningTasksInFamilyGetter interface
+type MockRunningTasksInFamilyGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockRunningTasksInFamilyGetterMockRecorder
+}
+
+// MockRunningTasksInFamilyGetterMockRecorder is the mock recorder for MockRunningTasksInFamilyGetter
+type MockRunningTasksInFamilyGetterMockRecorder struct {
+	mock *MockRunningTasksInFamilyGetter
+}
+
+// NewMockRunningTasksInFamilyGetter creates a new mock instance
+func NewMockRunningTasksInFamilyGetter(ctrl *gomock.Controller) *MockRunningTasksInFamilyGetter {
+	mock := &MockRunningTasksInFamilyGetter{ctrl: ctrl}
+	mock.recorder = &MockRunningTasksInFamilyGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockRunningTasksInFamilyGetter) EXPECT() *MockRunningTasksInFamilyGetterMockRecorder {
+	return m.recorder
+}
+
+// RunningTasksInFamily mocks base method
+func (m *MockRunningTasksInFamilyGetter) RunningTasksInFamily(cluster, family string) ([]*ecs.Task, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RunningTasksInFamily", cluster, family)
+	ret0, _ := ret[0].([]*ecs.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RunningTasksInFamily indicates an expected call of RunningTasksInFamily
+func (mr *MockRunningTasksInFamilyGetterMockRecorder) RunningTasksInFamily(cluster, family interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunningTasksInFamily", reflect.TypeOf((*MockRunningTasksInFamilyGetter)(nil).RunningTasksInFamily), cluster, family)
 }

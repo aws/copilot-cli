@@ -4,9 +4,9 @@ $ copilot env delete [flags]
 ```
 
 ## What does it do?
-`copilot env delete` deletes an environment from your application. If there are running applications in your environment, you first need to run [`copilot svc delete`](../commands/svc-delete.md).
+`copilot env delete` deletes an environment from your application. If there are running applications in your environment, you need to first run [`copilot svc delete`](../commands/svc-delete.md).
 
-After you answer the questions, you should see the AWS CloudFormation stack for your environment gone.
+After you answer the questions, you should see that the AWS CloudFormation stack for your environment has been deleted.
 
 ## What are the flags?
 ```

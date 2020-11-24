@@ -34,7 +34,7 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 	testCases := map[string]struct {
 		setupMocks func(mocks svcDescriberMocks)
 
-		wantedEnvVars map[string]string
+		wantedEnvVars []*ecs.ContainerEnvVar
 		wantedError   error
 	}{
 		"returns error if fails to get environment variables": {
@@ -62,14 +62,23 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 										Value: aws.String("prod"),
 									},
 								},
+								Name: aws.String("container"),
 							},
 						},
 					}, nil),
 				)
 			},
-			wantedEnvVars: map[string]string{
-				"COPILOT_SERVICE_NAME":     "my-svc",
-				"COPILOT_ENVIRONMENT_NAME": "prod",
+			wantedEnvVars: []*ecs.ContainerEnvVar{
+				{
+					Name:      "COPILOT_SERVICE_NAME",
+					Container: "container",
+					Value:     "my-svc",
+				},
+				{
+					Name:      "COPILOT_ENVIRONMENT_NAME",
+					Container: "container",
+					Value:     "prod",
+				},
 			},
 		},
 	}
@@ -107,6 +116,102 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedEnvVars, actual)
+			}
+		})
+	}
+}
+
+func TestServiceDescriber_Secrets(t *testing.T) {
+	const (
+		testApp = "phonetool"
+		testSvc = "jobs"
+		testEnv = "test"
+	)
+	testCases := map[string]struct {
+		setupMocks func(mocks svcDescriberMocks)
+
+		wantedSecrets []*ecs.ContainerSecret
+		wantedError   error
+	}{
+		"returns error if fails to get secrets": {
+			setupMocks: func(m svcDescriberMocks) {
+				gomock.InOrder(
+					m.mockecsClient.EXPECT().TaskDefinition("phonetool-test-jobs").Return(nil, errors.New("some error")),
+				)
+			},
+
+			wantedError: fmt.Errorf("some error"),
+		},
+		"successfully gets secrets": {
+			setupMocks: func(m svcDescriberMocks) {
+				gomock.InOrder(
+					m.mockecsClient.EXPECT().TaskDefinition("phonetool-test-jobs").Return(&ecs.TaskDefinition{
+						ContainerDefinitions: []*ecsapi.ContainerDefinition{
+							{
+								Name: aws.String("container"),
+								Secrets: []*ecsapi.Secret{
+									{
+										Name:      aws.String("GITHUB_WEBHOOK_SECRET"),
+										ValueFrom: aws.String("GH_WEBHOOK_SECRET"),
+									},
+									{
+										Name:      aws.String("SOME_OTHER_SECRET"),
+										ValueFrom: aws.String("SHHHHHHHH"),
+									},
+								},
+							},
+						},
+					}, nil),
+				)
+			},
+			wantedSecrets: []*ecs.ContainerSecret{
+				{
+					Name:      "GITHUB_WEBHOOK_SECRET",
+					Container: "container",
+					ValueFrom: "GH_WEBHOOK_SECRET",
+				},
+				{
+					Name:      "SOME_OTHER_SECRET",
+					Container: "container",
+					ValueFrom: "SHHHHHHHH",
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockecsClient := mocks.NewMockecsClient(ctrl)
+			mockStackDescriber := mocks.NewMockstackAndResourcesDescriber(ctrl)
+			mocks := svcDescriberMocks{
+				mockecsClient:      mockecsClient,
+				mockStackDescriber: mockStackDescriber,
+			}
+
+			tc.setupMocks(mocks)
+
+			d := &ServiceDescriber{
+				app:     testApp,
+				service: testSvc,
+				env:     testEnv,
+
+				ecsClient:      mockecsClient,
+				stackDescriber: mockStackDescriber,
+			}
+
+			// WHEN
+			actual, err := d.Secrets()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedSecrets, actual)
 			}
 		})
 	}

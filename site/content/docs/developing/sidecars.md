@@ -4,7 +4,7 @@ Sidecars are additional containers that run along side the main container. They 
 AWS also provides some plugin options that can be seamlessly incorporated with your ECS service, including but not limited to [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html), [AWS X-Ray](https://aws.amazon.com/xray/), and [AWS App Mesh](https://aws.amazon.com/app-mesh/).
 
 ## How to add sidecars with Copilot?
-There are two ways of adding sidecars using Copilot manifest: specify [general sidecars](#general-sidecars) or with [sidecar patterns](#sidecar-patterns).
+There are two ways of adding sidecars using the Copilot manifest: by specifying [general sidecars](#general-sidecars) or by using [sidecar patterns](#sidecar-patterns).
 
 ### General sidecars
 You'll need to provide the URL for the sidecar image. Optionally, you can specify the port you'd like to expose and the credential parameter for [private registry](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html).
@@ -47,14 +47,14 @@ sidecars:
 ```
 
 ### Sidecar patterns
-Sidecar patterns are pre-defined Copilot sidecar configurations. The only supported pattern is FireLens for now but we'll add more in the future!
+Sidecar patterns are predefined Copilot sidecar configurations. For now, the only supported pattern is FireLens, but we'll add more in the future!
 
 ``` yaml
 # In the manifest.
 logging:
-  # The fluent bit image. (Optional, we'll use "amazon/aws-for-fluent-bit:latest" by default)
+  # The Fluent Bit image. (Optional, we'll use "amazon/aws-for-fluent-bit:latest" by default)
   image: {{ image URL }}
-  # The configuration options to send to the Firelens log driver. (Optional)
+  # The configuration options to send to the FireLens log driver. (Optional)
   destination:
     {{ config key }}: {{ config value}}
   # Whether to include ECS metadata in logs. (Optional, default to true)
@@ -62,7 +62,7 @@ logging:
   # Secret to pass to the log configuration. (Optional)
   secretOptions:
     {{ key }}: {{ value}
-  # The full config file path in your custom fluent bit image.
+  # The full config file path in your custom Fluent Bit image.
   configFile: {{ config file path }}
 ```
 For example:
@@ -100,7 +100,7 @@ Outputs:
 ```
 
 !!!info
-    Since Firelens log driver can route your main container's logs to various destinations, the [`svc logs`](../commands/svc-logs.md) command can only track them when they are sent to the log group we create for Copilot service in CloudWatch. 
+    Since the FireLens log driver can route your main container's logs to various destinations, the [`svc logs`](../commands/svc-logs.md) command can track them only when they are sent to the log group we create for your Copilot service in CloudWatch. 
 
 !!!info
-    ** We're going to make this easier and more powerful!** Currently we only support using remote images for sidecars which means users need to build and push their local sidecar image. But, we are planning to support using local image or Dockerfile. Additionally, Firelens will be able to route logs for the other sidecars (not just the main container).
+    ** We're going to make this easier and more powerful!** Currently, we only support using remote images for sidecars, which means users need to build and push their local sidecar images. But we are planning to support using local images or Dockerfiles. Additionally, FireLens will be able to route logs for the other sidecars (not just the main container).

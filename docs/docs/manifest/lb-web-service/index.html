@@ -1252,7 +1252,7 @@ The name of your service.   </p>
 <div class="separator"></div>
 
 <p><a id="type" href="#type" class="field"><code>type</code></a> <span class="type">String</span><br />
-The architecture type for your service. A <a href="../../concepts/services/#load-balanced-web-service">Load balanced web service</a> is an internet-facing service that's behind a load balancer, orchestrated by Amazon ECS on AWS Fargate.  </p>
+The architecture type for your service. A <a href="../../concepts/services/#load-balanced-web-service">Load Balanced Web Service</a> is an internet-facing service that's behind a load balancer, orchestrated by Amazon ECS on AWS Fargate.  </p>
 <div class="separator"></div>
 
 <p><a id="image" href="#image" class="field"><code>image</code></a> <span class="type">Map</span><br />
@@ -1274,7 +1274,7 @@ will result in the following call to docker build: <code>$ docker build --file p
     <span class="nt">args</span><span class="p">:</span>
       <span class="nt">key</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">value</span>
 </code></pre></div>
-In this case, copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be:<br />
+In this case, Copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be:<br />
 <code>$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir</code>.</p>
 <p>You can omit fields and Copilot will do its best to understand what you mean. For example, if you specify <code>context</code> but not <code>dockerfile</code>, Copilot will run Docker in the context directory and assume that your Dockerfile is named "Dockerfile." If you specify <code>dockerfile</code> but no <code>context</code>, Copilot assumes you want to run Docker in the directory that contains <code>dockerfile</code>.</p>
 <p>All paths are relative to your workspace root.</p>
@@ -1356,15 +1356,15 @@ Scale up or down based on the service average response time.</p>
 <div class="separator"></div>
 
 <p><a id="variables" href="#variables" class="field"><code>variables</code></a> <span class="type">Map</span> <br />
-Key-value pairs that represents environment variables that will be passed to your service. Copilot will include a number of environment variables by default for you.</p>
+Key-value pairs that represent environment variables that will be passed to your service. Copilot will include a number of environment variables by default for you.</p>
 <div class="separator"></div>
 
 <p><a id="secrets" href="#secrets" class="field"><code>secrets</code></a> <span class="type">Map</span> <br />
-Key-value pairs that represents secret values from <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html">AWS Systems Manager Parameter Store</a> that will passed to your service as environment variables securely.</p>
+Key-value pairs that represent secret values from <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html">AWS Systems Manager Parameter Store</a> that will be securely passed to your service as environment variables.</p>
 <div class="separator"></div>
 
 <p><a id="environments" href="#environments" class="field"><code>environments</code></a> <span class="type">Map</span><br />
-The environment section lets you overwrite any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.</p>
+The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.</p>
                 
               
               

@@ -14,17 +14,17 @@ import (
 // Long flag names.
 const (
 	// Common flags.
-	nameFlag    = "name"
-	appFlag     = "app"
-	envFlag     = "env"
-	svcFlag     = "svc"
-	svcTypeFlag = "svc-type"
-	jobTypeFlag = "job-type"
-	typeFlag    = "type"
-	profileFlag = "profile"
-	yesFlag     = "yes"
-	jsonFlag    = "json"
-	allFlag     = "all"
+	nameFlag     = "name"
+	appFlag      = "app"
+	envFlag      = "env"
+	workloadFlag = "workload"
+	svcTypeFlag  = "svc-type"
+	jobTypeFlag  = "job-type"
+	typeFlag     = "type"
+	profileFlag  = "profile"
+	yesFlag      = "yes"
+	jsonFlag     = "json"
+	allFlag      = "all"
 
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
@@ -92,11 +92,11 @@ const (
 // Short flag names.
 // A short flag only exists if the flag or flag set is mandatory by the command.
 const (
-	nameFlagShort = "n"
-	appFlagShort  = "a"
-	envFlagShort  = "e"
-	svcFlagShort  = "s"
-	typeFlagShort = "t"
+	nameFlagShort     = "n"
+	appFlagShort      = "a"
+	envFlagShort      = "e"
+	typeFlagShort     = "t"
+	workloadFlagShort = "w"
 
 	dockerFileFlagShort        = "d"
 	imageFlagShort             = "i"
@@ -178,7 +178,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	svcPortFlagDescription           = "Optional. The port on which your service listens."
 
 	storageFlagDescription             = "Name of the storage resource to create."
-	storageServiceFlagDescription      = "Name of the service to associate with storage."
+	storageWorkloadFlagDescription     = "Name of the service or job to associate with storage."
 	storagePartitionKeyFlagDescription = `Partition key for the DDB table.
 Must be of the format '<keyName>:<dataType>'.`
 	storageSortKeyFlagDescription = `Optional. Sort key for the DDB table.

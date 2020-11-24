@@ -12,7 +12,7 @@ If you have an existing app, and want to add another service or job to that app,
 
 ## What are the flags?
 
-Like all commands in the copilot CLI, if you don't provide required flags, we'll prompt you for all the information we need to get you going. You can skip the prompts by providing information via flags:
+Like all commands in the Copilot CLI, if you don't provide required flags, we'll prompt you for all the information we need to get you going. You can skip the prompts by providing information via flags:
 
 ```sh
   -a, --app string          Name of the application.

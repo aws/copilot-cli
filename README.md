@@ -1,12 +1,12 @@
-## AWS Copilot CLI (preview) ![latest version](https://img.shields.io/github/v/release/aws/copilot-cli) [![Join the chat at https://gitter.im/aws/copilot-cli](https://badges.gitter.im/aws/copilot-cli.svg)](https://gitter.im/aws/copilot-cli?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-###### _Develop, Release and Operate Container Apps on AWS._ 
+## AWS Copilot CLI ![latest version](https://img.shields.io/github/v/release/aws/copilot-cli) [![Join the chat at https://gitter.im/aws/copilot-cli](https://badges.gitter.im/aws/copilot-cli.svg)](https://gitter.im/aws/copilot-cli?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+###### _Build, Release and Operate Container Apps on AWS._ 
 
 
 
 * **Documentation**: [https://aws.github.io/copilot-cli/](https://aws.github.io/copilot-cli/)
 
-The AWS Copilot CLI is a tool for developers to create, release and manage production ready containerized applications on Amazon ECS and AWS Fargate.
-From getting started, pushing to a test environment and releasing to production, Copilot helps you through the entire life of your app development.
+The AWS Copilot CLI is a tool for developers to build, release and operate production ready containerized applications on Amazon ECS and AWS Fargate.
+From getting started, pushing to a test environment, and releasing to production, Copilot helps you through the entire life of your app development.
 
 Got a Dockerfile and some code? Get it up and running on ECS in under 10 minutes, with just one command. Ready to take that app to production? Spin up new environments and a continuous delivery pipeline without having to leave your terminal. Find a bug? Tail your logs and deploy with one tool.
 
@@ -20,8 +20,6 @@ Use Copilot to:
 Read more about the Copilot charter and tenets [here](CHARTER.md).
 
 ![copilot help menu](https://user-images.githubusercontent.com/879348/90834852-087aeb80-e300-11ea-8340-7f64326036fc.png)
-
-> Using the instructions and assets in this repository folder is governed as a preview program under the AWS Service Terms (https://aws.amazon.com/service-terms/).
 
 ## Installing
 
@@ -68,7 +66,7 @@ This will create a VPC, Application Load Balancer, an Amazon ECS Service with th
 
 ## Cleaning up 🧹
 
-Once you're finished playing around with this project, you can delete it and all the AWS resources associated it by running `copilot app delete`.
+Once you're finished playing around with this app, you can delete it and all the AWS resources associated it by running `copilot app delete`.
 
 ## Running a one-off task 🏃‍♀️
 
@@ -88,8 +86,6 @@ Want to learn more about what's happening? Check out our documentation [https://
 
 ## We need your feedback 🙏
 
-The AWS Copilot CLI is in beta, meaning that you can expect our command names to be stable as well as the shape of our 
-infrastructure patterns. However, we want to know what works, what doesn't work, and what you want! 
 Have any feedback at all? Drop us an [issue](https://github.com/aws/copilot-cli/issues/new) or join us on [gitter](https://gitter.im/aws/copilot-cli).
 
 We're happy to hear feedback or answer questions, so reach out, anytime!

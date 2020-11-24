@@ -9,6 +9,7 @@ import (
 	session "github.com/aws/aws-sdk-go/aws/session"
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -2843,34 +2844,19 @@ func (mr *MockwsAddonManagerMockRecorder) WriteAddon(f, svc, name interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteAddon", reflect.TypeOf((*MockwsAddonManager)(nil).WriteAddon), f, svc, name)
 }
 
-// ServiceNames mocks base method
-func (m *MockwsAddonManager) ServiceNames() ([]string, error) {
+// WorkloadNames mocks base method
+func (m *MockwsAddonManager) WorkloadNames() ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceNames")
+	ret := m.ctrl.Call(m, "WorkloadNames")
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ServiceNames indicates an expected call of ServiceNames
-func (mr *MockwsAddonManagerMockRecorder) ServiceNames() *gomock.Call {
+// WorkloadNames indicates an expected call of WorkloadNames
+func (mr *MockwsAddonManagerMockRecorder) WorkloadNames() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsAddonManager)(nil).ServiceNames))
-}
-
-// ReadServiceManifest mocks base method
-func (m *MockwsAddonManager) ReadServiceManifest(svcName string) ([]byte, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadServiceManifest", svcName)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ReadServiceManifest indicates an expected call of ReadServiceManifest
-func (mr *MockwsAddonManagerMockRecorder) ReadServiceManifest(svcName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsAddonManager)(nil).ReadServiceManifest), svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkloadNames", reflect.TypeOf((*MockwsAddonManager)(nil).WorkloadNames))
 }
 
 // MockartifactUploader is a mock of artifactUploader interface
@@ -5205,4 +5191,85 @@ func (m *MockroleDeleter) DeleteRole(arg0 string) error {
 func (mr *MockroleDeleterMockRecorder) DeleteRole(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRole", reflect.TypeOf((*MockroleDeleter)(nil).DeleteRole), arg0)
+}
+
+// MockactiveWorkloadTasksLister is a mock of activeWorkloadTasksLister interface
+type MockactiveWorkloadTasksLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockactiveWorkloadTasksListerMockRecorder
+}
+
+// MockactiveWorkloadTasksListerMockRecorder is the mock recorder for MockactiveWorkloadTasksLister
+type MockactiveWorkloadTasksListerMockRecorder struct {
+	mock *MockactiveWorkloadTasksLister
+}
+
+// NewMockactiveWorkloadTasksLister creates a new mock instance
+func NewMockactiveWorkloadTasksLister(ctrl *gomock.Controller) *MockactiveWorkloadTasksLister {
+	mock := &MockactiveWorkloadTasksLister{ctrl: ctrl}
+	mock.recorder = &MockactiveWorkloadTasksListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockactiveWorkloadTasksLister) EXPECT() *MockactiveWorkloadTasksListerMockRecorder {
+	return m.recorder
+}
+
+// ListActiveWorkloadTasks mocks base method
+func (m *MockactiveWorkloadTasksLister) ListActiveWorkloadTasks(app, env, workload string) (string, []string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListActiveWorkloadTasks", app, env, workload)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].([]string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListActiveWorkloadTasks indicates an expected call of ListActiveWorkloadTasks
+func (mr *MockactiveWorkloadTasksListerMockRecorder) ListActiveWorkloadTasks(app, env, workload interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActiveWorkloadTasks", reflect.TypeOf((*MockactiveWorkloadTasksLister)(nil).ListActiveWorkloadTasks), app, env, workload)
+}
+
+// MocktasksStopper is a mock of tasksStopper interface
+type MocktasksStopper struct {
+	ctrl     *gomock.Controller
+	recorder *MocktasksStopperMockRecorder
+}
+
+// MocktasksStopperMockRecorder is the mock recorder for MocktasksStopper
+type MocktasksStopperMockRecorder struct {
+	mock *MocktasksStopper
+}
+
+// NewMocktasksStopper creates a new mock instance
+func NewMocktasksStopper(ctrl *gomock.Controller) *MocktasksStopper {
+	mock := &MocktasksStopper{ctrl: ctrl}
+	mock.recorder = &MocktasksStopperMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocktasksStopper) EXPECT() *MocktasksStopperMockRecorder {
+	return m.recorder
+}
+
+// StopTasks mocks base method
+func (m *MocktasksStopper) StopTasks(tasks []string, opts ...ecs.StopTasksOpts) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{tasks}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "StopTasks", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StopTasks indicates an expected call of StopTasks
+func (mr *MocktasksStopperMockRecorder) StopTasks(tasks interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{tasks}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopTasks", reflect.TypeOf((*MocktasksStopper)(nil).StopTasks), varargs...)
 }

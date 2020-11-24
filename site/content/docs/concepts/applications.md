@@ -1,8 +1,8 @@
-An application is a group of related services, environments, and pipelines. Whether you have one service that does everything or a constelation of micro-services, Copilot organizes them and the environments they're deployed to into an "application".
+An application is a group of related services, environments, and pipelines. Whether you have one service that does everything or a constellation of micro-services, Copilot organizes them and the environments they're deployed to into an "application".
 
 Let's walk through an example. We want to build a voting app which needs to collect votes and aggregate the results.
 
-To set up our vote app with two services, we can run `copilot init` twice. The first time we run `init`, we'll be asked what we should call the application this service will belong to. Since we're trying to build a voting system, we can call our application "vote" and our first service "collector". The next time we run `init`, we'll be asked if we want to add our new service to the existing “vote” app, and we’ll name the new service "aggregator".
+To set up our vote app with two services, we can run `copilot init` twice. The first time we run `copilot init`, we'll be asked what we should call the application this service will belong to. Since we're trying to build a voting system, we can call our application "vote" and our first service "collector". The next time we run `init`, we'll be asked if we want to add our new service to the existing “vote” app, and we’ll name the new service "aggregator".
 
 Your application configuration (which services and environments belong to it) is stored in your AWS account, so any other users in your account will be able to develop on the “vote" app as well. This means that you can have a teammate work on one service while you develop the other.
 
@@ -16,11 +16,11 @@ To set up an application, you can just run `copilot init`. You'll be asked if yo
 copilot init
 ```
 
-Once you've created an application, Copilot stores that application in SSM Parameter store in your AWS account. The account used to set up your application is known as the "applicaiton account". This is where your app's configuration lives, and anyone who has access to this account can use this app.
+Once you've created an application, Copilot stores that application in SSM Parameter store in your AWS account. The account used to set up your application is known as the "application account". This is where your app's configuration lives, and anyone who has access to this account can use this app.
 
 All resources created within this application will be tagged with the `copilot-app` [aws resource tag](https://docs.aws.amazon.com/general/latest/gr/aws_tagging.html). This helps you know which app resources in your account belong to.
 
-The name of your applicaiton has to be unique within your account (even across region).
+The name of your application has to be unique within your account (even across region).
 
 ### Additional App Configurations
 You can also provide more granular configuration for your application by running `copilot app init`. This includes options to:
@@ -36,7 +36,7 @@ $ copilot app init                             \
 
 ## App Infrastructure
 
-While the bulk of the infrastructure Copilot provisions is specific to an environment and service, there are some application-wide resources, as well.
+While the bulk of the infrastructure Copilot provisions is specific to an environment and service, there are some application-wide resources as well.
 
 ![](https://user-images.githubusercontent.com/879348/85869637-d0807d80-b780-11ea-8359-6d75933c562a.png)
 
@@ -45,12 +45,12 @@ ECR Repositories are regional resources which store your service images. Each se
 
 In the above diagram, the app has several environments spread across three regions. Each of those regions has its own ECR repository for every service in your app. In this case, there are three services.
 
-Every time you add a service, we create an ECR Repository in every region. We do this to maintain region isolation (if one region goes down, environments in other region won't be affected) and to reduce cross region data transfer costs.
+Every time you add a service, we create an ECR Repository in every region. We do this to maintain region isolation (if one region goes down, environments in other region won't be affected) and to reduce cross-region data transfer costs.
 
 These ECR Repositories all live within your app's account (not the environment accounts) - and have policies which allow your environment accounts to pull from them.
 
 ### Release Infrastructure
-For every region represented in your app, we create a KMS Key and an S3 bucket. These resources are used by CodePipeline to enable cross region and cross account deployments. All Pipelines in your app share these same resources.
+For every region represented in your app, we create a KMS Key and an S3 bucket. These resources are used by CodePipeline to enable cross-region and cross-account deployments. All pipelines in your app share these same resources.
 
 Similar to the ECR Repositories, the S3 bucket and KMS keys have policies which allow for all of your environments, even in other accounts, to read encrypted deployment artifacts. This makes your cross-account, cross-region CodePipelines possible.
 

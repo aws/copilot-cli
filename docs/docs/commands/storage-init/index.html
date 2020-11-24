@@ -1322,7 +1322,7 @@
   -n, --name string           Name of the storage resource to create.
   -t, --storage-type string   Type of storage to add. Must be one of:
                               <span class="s2">&quot;DynamoDB&quot;</span>, <span class="s2">&quot;S3&quot;</span>
-  -s, --svc string            Name of the service to associate with storage.
+  -w, --workload string       Name of the service or job to associate with storage.
 
 DynamoDB Flags
       --lsi stringArray        Optional. Attribute to use as an alternate sort key. May be specified up to <span class="m">5</span> times.
@@ -1350,7 +1350,7 @@ Create a basic DynamoDB table named "my-table" attached to the "frontend" servic
   --lsi Goodness:N
 </code></pre></div>
 <h2 id="what-happens-under-the-hood">What happens under the hood?</h2>
-<p>It then writes a Cloudformation template specifying the S3 bucket or DDB table to the <code>addons</code> dir. When you run <code>copilot svc deploy</code>, the CLI merges this template with all the other templates in the addons directory to create a nested stack associated with your service. This nested stack describes all the additional resources you've associated with that service and is deployed wherever your service is deployed. </p>
+<p>Copilot writes a Cloudformation template specifying the S3 bucket or DDB table to the <code>addons</code> dir. When you run <code>copilot svc deploy</code>, the CLI merges this template with all the other templates in the addons directory to create a nested stack associated with your service. This nested stack describes all the additional resources you've associated with that service and is deployed wherever your service is deployed. </p>
 <p>This means that after running
 <div class="highlight"><pre><span></span><code>$ copilot storage init -n bucket -t S3 -s fe
 $ copilot svc deploy -n fe -e test

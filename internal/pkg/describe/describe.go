@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/dustin/go-humanize"
@@ -50,16 +52,30 @@ func flattenResources(stackResources []*cloudformation.StackResource) []*CfnReso
 	return resources
 }
 
-func flattenEnvVars(envName string, m map[string]string) []*EnvVars {
-	var envVarList []*EnvVars
-	for k, v := range m {
-		envVarList = append(envVarList, &EnvVars{
+func flattenEnvVars(envName string, envVars []*ecs.ContainerEnvVar) []*envVar {
+	var out []*envVar
+	for _, v := range envVars {
+		out = append(out, &envVar{
+			Name:        v.Name,
+			Container:   v.Container,
 			Environment: envName,
-			Name:        k,
-			Value:       v,
+			Value:       v.Value,
 		})
 	}
-	return envVarList
+	return out
+}
+
+func flattenSecrets(envName string, secrets []*ecs.ContainerSecret) []*secret {
+	var out []*secret
+	for _, s := range secrets {
+		out = append(out, &secret{
+			Name:        s.Name,
+			Container:   s.Container,
+			Environment: envName,
+			ValueFrom:   s.ValueFrom,
+		})
+	}
+	return out
 }
 
 // HumanString returns the stringified CfnResource struct with human readable format.

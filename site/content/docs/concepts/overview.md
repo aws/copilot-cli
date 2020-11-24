@@ -20,11 +20,11 @@ Once you've told Copilot what type of service you're building, Copilot will take
 ## [Jobs](./jobs.md)
 
 Jobs are _ephemeral_ Amazon ECS tasks that are triggered by an event. Once their work is done, the task terminates. Just like services, Copilot will ask you all the necessary information 
-to quickly get going with a scheduled task on AWS. The manifest file can be used to always adjust the configuration and provide more advanced settings. 
+to quickly get going with a scheduled task on AWS. The manifest file can always be used to adjust the configuration and provide more advanced settings. 
 
 ## [Pipelines](./pipelines.md)
 
-Now that you've got an application with a few services deployed to a couple of environments, staying on top of those deployments can become tricky. Copilot can help by setting up a release pipeline that deploys your service whenever you push to your git repositry. When a push is detected, your pipeline will build your service, push the image to ECR, and deploy to your environments.
+Now that you've got an application with a few services deployed to a couple of environments, staying on top of those deployments can become tricky. Copilot can help by setting up a release pipeline that deploys your service whenever you push to your git repository. When a push is detected, your pipeline will build your service, push the image to ECR, and deploy to your environments.
 
 A common pattern is to set up a pipeline for a particular service that deploys to a test environment, runs automated testing, then deploys to the production environment.
 

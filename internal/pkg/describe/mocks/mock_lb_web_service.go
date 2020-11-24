@@ -6,6 +6,7 @@ package mocks
 
 import (
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
+	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -64,10 +65,10 @@ func (mr *MocksvcDescriberMockRecorder) EnvOutputs() *gomock.Call {
 }
 
 // EnvVars mocks base method
-func (m *MocksvcDescriber) EnvVars() (map[string]string, error) {
+func (m *MocksvcDescriber) EnvVars() ([]*ecs.ContainerEnvVar, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnvVars")
-	ret0, _ := ret[0].(map[string]string)
+	ret0, _ := ret[0].([]*ecs.ContainerEnvVar)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -76,6 +77,21 @@ func (m *MocksvcDescriber) EnvVars() (map[string]string, error) {
 func (mr *MocksvcDescriberMockRecorder) EnvVars() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvVars", reflect.TypeOf((*MocksvcDescriber)(nil).EnvVars))
+}
+
+// Secrets mocks base method
+func (m *MocksvcDescriber) Secrets() ([]*ecs.ContainerSecret, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Secrets")
+	ret0, _ := ret[0].([]*ecs.ContainerSecret)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Secrets indicates an expected call of Secrets
+func (mr *MocksvcDescriberMockRecorder) Secrets() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Secrets", reflect.TypeOf((*MocksvcDescriber)(nil).Secrets))
 }
 
 // ServiceStackResources mocks base method

@@ -13,7 +13,7 @@ Required Flags
   -n, --name string           Name of the storage resource to create.
   -t, --storage-type string   Type of storage to add. Must be one of:
                               "DynamoDB", "S3"
-  -s, --svc string            Name of the service to associate with storage.
+  -w, --workload string       Name of the service or job to associate with storage.
 
 DynamoDB Flags
       --lsi stringArray        Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
@@ -51,7 +51,7 @@ $ copilot storage init \
 
 
 ## What happens under the hood?
-It then writes a Cloudformation template specifying the S3 bucket or DDB table to the `addons` dir. When you run `copilot svc deploy`, the CLI merges this template with all the other templates in the addons directory to create a nested stack associated with your service. This nested stack describes all the additional resources you've associated with that service and is deployed wherever your service is deployed. 
+Copilot writes a Cloudformation template specifying the S3 bucket or DDB table to the `addons` dir. When you run `copilot svc deploy`, the CLI merges this template with all the other templates in the addons directory to create a nested stack associated with your service. This nested stack describes all the additional resources you've associated with that service and is deployed wherever your service is deployed. 
 
 This means that after running
 ```

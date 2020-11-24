@@ -327,6 +327,79 @@ func TestECS_Tasks(t *testing.T) {
 	}
 }
 
+func TestECS_StopTasks(t *testing.T) {
+	mockTasks := []string{"mockTask1", "mockTask2"}
+	mockError := errors.New("some error")
+	testCases := map[string]struct {
+		cluster         string
+		stopTasksReason string
+		tasks           []string
+		mockECSClient   func(m *mocks.Mockapi)
+
+		wantErr error
+	}{
+		"errors if failed to stop tasks in default cluster": {
+			tasks: mockTasks,
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().StopTask(&ecs.StopTaskInput{
+					Task: aws.String("mockTask1"),
+				}).Return(&ecs.StopTaskOutput{}, nil)
+				m.EXPECT().StopTask(&ecs.StopTaskInput{
+					Task: aws.String("mockTask2"),
+				}).Return(&ecs.StopTaskOutput{}, mockError)
+			},
+			wantErr: fmt.Errorf("stop task mockTask2: some error"),
+		},
+		"success": {
+			tasks:           mockTasks,
+			cluster:         "mockCluster",
+			stopTasksReason: "some reason",
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().StopTask(&ecs.StopTaskInput{
+					Cluster: aws.String("mockCluster"),
+					Reason:  aws.String("some reason"),
+					Task:    aws.String("mockTask1"),
+				}).Return(&ecs.StopTaskOutput{}, nil)
+				m.EXPECT().StopTask(&ecs.StopTaskInput{
+					Cluster: aws.String("mockCluster"),
+					Reason:  aws.String("some reason"),
+					Task:    aws.String("mockTask2"),
+				}).Return(&ecs.StopTaskOutput{}, nil)
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockECSClient := mocks.NewMockapi(ctrl)
+			tc.mockECSClient(mockECSClient)
+
+			service := ECS{
+				client: mockECSClient,
+			}
+			var opts []StopTasksOpts
+			if tc.cluster != "" {
+				opts = append(opts, WithStopTaskCluster(tc.cluster))
+			}
+			if tc.stopTasksReason != "" {
+				opts = append(opts, WithStopTaskReason(tc.stopTasksReason))
+			}
+			gotErr := service.StopTasks(tc.tasks, opts...)
+
+			if gotErr != nil {
+				require.EqualError(t, tc.wantErr, gotErr.Error())
+			} else {
+				require.NoError(t, tc.wantErr)
+			}
+		})
+
+	}
+}
+
 func TestECS_DefaultCluster(t *testing.T) {
 	testCases := map[string]struct {
 		mockECSClient func(m *mocks.Mockapi)

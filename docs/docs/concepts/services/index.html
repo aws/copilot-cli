@@ -1414,13 +1414,13 @@
                   <h1>Services</h1>
                 
                 <p>One of the awesome things about containers is that once you've written your code, running it locally is as easy as typing <code>docker run</code>. 
-Copilot makes running those same containers on AWS as easy as running <code>copilot init</code>. 
+Copilot makes running those same containers on AWS as easy as typing <code>copilot init</code>. 
 Copilot will build your image, push it to Amazon ECR and set up all the infrastructure to run your service in a scalable and secure way.</p>
 <h2 id="creating-a-service">Creating a Service</h2>
 <p>Creating a service to run your containers on AWS can be done in a few ways. The easiest way is by running the <code>init</code> command from the same directory as your Dockerfile.</p>
 <div class="highlight"><pre><span></span><code>$ copilot init
 </code></pre></div>
-<p>You'll be asked which application do you want this service to be a part of (or to create an application if there isn't one). Copilot will then ask about the <strong>type</strong> of service you're trying to build.</p>
+<p>You'll be asked which application you want this service to be a part of (or asked to create an application if there isn't one). Copilot will then ask about the <strong>type</strong> of service you're trying to build.</p>
 <p>After selecting a service type, Copilot will detect any health checks or exposed ports from your Dockerfile and ask if you'd like to deploy.</p>
 <h2 id="choosing-a-service-type">Choosing a Service Type</h2>
 <p>We mentioned before that Copilot will set up all the infrastructure your service needs to run. But how does it know what kind of infrastructure to use?</p>
@@ -1471,7 +1471,7 @@ Copilot will build your image, push it to Amazon ECR and set up all the infrastr
   <span class="nt">prod</span><span class="p">:</span>
     <span class="nt">count</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2</span>               <span class="c1"># Number of tasks to run for the &quot;test&quot; environment.</span>
 </code></pre></div>
-To learn about the specification of manifest files, see the <a href="../../manifest/overview/">manifests</a> page.</p>
+To learn about the specification of manifest files, see the <a href="../../manifest/overview/">manifest</a> page.</p>
 <h2 id="deploying-a-service">Deploying a Service</h2>
 <p>Once you've set up your service, you can deploy it (and any changes to your manifest) by running the deploy command:</p>
 <div class="highlight"><pre><span></span><code>$ copilot deploy

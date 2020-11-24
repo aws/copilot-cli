@@ -1,6 +1,6 @@
 # Additional AWS Resources
 
-Additional AWS resources, referred as "addons" in the CLI, are any additional AWS services that a [service manifest](../manifest/overview.md) does not integrate by default. For example, an addon can be a DynamoDB table or S3 bucket that your service needs to read or write to.
+Additional AWS resources, referred to as "addons" in the CLI, are any additional AWS services that a [service manifest](../manifest/overview.md) does not integrate by default. For example, an addon can be a DynamoDB table or S3 bucket that your service needs to read or write to.
 
 ## How do I add an S3 bucket or DDB Table?
 
@@ -36,7 +36,7 @@ When your service gets deployed, Copilot merges all these files into a single AW
 
 ## What does an addon template look like?
 An addon template can be any valid CloudFormation template.   
-However, Copilot will pass by default the `App`, `Env` and `Name` [Parameters](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html) for you to customize your resource properties with [Conditions](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/conditions-section-structure.html) or [Mappings](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html) if you wish to.
+However, by default, Copilot will pass the `App`, `Env`, and `Name` [Parameters](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html); you can customize your resource properties with [Conditions](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/conditions-section-structure.html) or [Mappings](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html) if you wish to.
 
 If you need to access your [Resources](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html) from your ECS task, make sure to:
 
@@ -105,7 +105,7 @@ Outputs:
     Value: !Ref MyTableAccessPolicy
 ```
 
-Copilot will include this template as a nested stack under your service on your next release!
+On your next release, Copilot will include this template as a nested stack under your service!
 
 !!! info
     We recommend following [Amazon IAM best practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html) while defining AWS Managed Policies for the additional resources, including:
