@@ -331,9 +331,9 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.svcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
-							"GITHUB_WEBHOOK_SECRET",
-							"container",
-							"GH_WEBHOOK_SECRET",
+							Name:      "GITHUB_WEBHOOK_SECRET",
+							Container: "container",
+							ValueFrom: "GH_WEBHOOK_SECRET",
 						},
 					}, nil),
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
