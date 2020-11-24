@@ -52,30 +52,30 @@ func flattenResources(stackResources []*cloudformation.StackResource) []*CfnReso
 	return resources
 }
 
-func flattenEnvVars(envName string, s []*ecs.ContainerEnvVar) []*envVar {
-	var envVars []*envVar
-	for _, thisEnvVar := range s {
-		envVars = append(envVars, &envVar{
-			Name:        thisEnvVar.Name,
-			Container:   thisEnvVar.Container,
+func flattenEnvVars(envName string, envVars []*ecs.ContainerEnvVar) []*envVar {
+	var out []*envVar
+	for _, v := range envVars {
+		out = append(out, &envVar{
+			Name:        v.Name,
+			Container:   v.Container,
 			Environment: envName,
-			Value:       thisEnvVar.Value,
+			Value:       v.Value,
 		})
 	}
-	return envVars
+	return out
 }
 
-func flattenSecrets(envName string, s []*ecs.ContainerSecret) []*secret {
-	var secrets []*secret
-	for _, thisSecret := range s {
-		secrets = append(secrets, &secret{
-			Name:        thisSecret.Name,
-			Container:   thisSecret.Container,
+func flattenSecrets(envName string, secrets []*ecs.ContainerSecret) []*secret {
+	var out []*secret
+	for _, s := range secrets {
+		out = append(out, &secret{
+			Name:        s.Name,
+			Container:   s.Container,
 			Environment: envName,
-			ValueFrom:   thisSecret.ValueFrom,
+			ValueFrom:   s.ValueFrom,
 		})
 	}
-	return secrets
+	return out
 }
 
 // HumanString returns the stringified CfnResource struct with human readable format.

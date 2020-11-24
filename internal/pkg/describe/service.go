@@ -58,8 +58,9 @@ type ServiceConfig struct {
 type configurations []*ServiceConfig
 
 func (c configurations) humanString(w io.Writer) {
-	fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", "Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Port")
-	fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", strings.Repeat("-", len("Environment")), strings.Repeat("-", len("Tasks")), strings.Repeat("-", len("CPU (vCPU)")), strings.Repeat("-", len("Memory (MiB)")), strings.Repeat("-", len("Port")))
+	headers := []string{"Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Port"}
+	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, config := range c {
 		fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Port)
 	}

@@ -114,6 +114,7 @@ func (t TaskStatus) HumanString() string {
 // TaskDefinition wraps up ECS TaskDefinition struct.
 type TaskDefinition ecs.TaskDefinition
 
+// ContainerEnvVar holds basic info of an environment variable.
 type ContainerEnvVar struct {
 	Name      string
 	Container string
@@ -135,6 +136,7 @@ func (t *TaskDefinition) EnvironmentVariables() []*ContainerEnvVar {
 	return envs
 }
 
+// ContainerSecret holds basic info of a secret.
 type ContainerSecret struct {
 	Name      string
 	Container string
