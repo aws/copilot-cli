@@ -1,6 +1,6 @@
 # Service Discovery
 
-Service Discovery is a way of letting services discover and connect with each other. Typically, services can only talk to each other if they expose a public endpoint - and even then, requests will have to go over the internet. With [ECS Service Discovery](https://docs.aws.amazon.com/whitepapers/latest/microservices-on-aws/service-discovery.html) each service you create is given a private address and DNS name - meaning each service can talk to each other without ever leaving the local network (VPC) and without exposing a public endpoint.  
+Service Discovery is a way of letting services discover and connect with each other. Typically, services can only talk to each other if they expose a public endpoint - and even then, requests will have to go over the internet. With [ECS Service Discovery](https://docs.aws.amazon.com/whitepapers/latest/microservices-on-aws/service-discovery.html), each service you create is given a private address and DNS name - meaning each service can talk to another without ever leaving the local network (VPC) and without exposing a public endpoint.  
 
 ## How do I use Service Discovery?
 
