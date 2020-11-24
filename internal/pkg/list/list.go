@@ -133,11 +133,20 @@ func filterByName(wklds []*config.Workload, wantedNames []string) []*config.Work
 	return filtered
 }
 
+func underline(headings []string) []string {
+	var lines []string
+	for _, heading := range headings {
+		line := strings.Repeat("-", len(heading))
+		lines = append(lines, line)
+	}
+	return lines
+}
+
 func humanOutput(wklds []*config.Workload, w io.Writer) {
 	writer := tabwriter.NewWriter(w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	headers := []string{"Name", "Type"}
-	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
-	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
+	fmt.Fprintf(writer, "%s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(writer, "%s\n", strings.Join(underline(headers), "\t"))
 	for _, wkld := range wklds {
 		fmt.Fprintf(writer, "%s\t%s\n", wkld.Name, wkld.Type)
 	}
