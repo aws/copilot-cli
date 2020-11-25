@@ -49,13 +49,17 @@ sidecars:
   nginx:
     port: 80
     image: %s    # Image URL for sidecar container.
+    variables:
+      NGINX_PORT: %s
 logging:
   destination:
     Name: cloudwatch
-    region: us-west-2
+    region: us-east-1
     log_group_name: /copilot/%s
     log_stream_prefix: copilot/
 `
+
+const nginxPort = "80"
 
 var _ = Describe("sidecars flow", func() {
 	Context("when creating a new app", func() {
@@ -170,7 +174,7 @@ var _ = Describe("sidecars flow", func() {
 		var newManifest string
 		It("overwrite existing manifest", func() {
 			logGroupName := fmt.Sprintf("%s-test-%s", appName, svcName)
-			newManifest = fmt.Sprintf(manifest, sidecarImageURI, logGroupName)
+			newManifest = fmt.Sprintf(manifest, sidecarImageURI, nginxPort, logGroupName)
 			err := ioutil.WriteFile("./copilot/hello/manifest.yml", []byte(newManifest), 0644)
 			Expect(err).NotTo(HaveOccurred(), "overwrite manifest")
 		})

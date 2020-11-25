@@ -68,6 +68,8 @@ type SidecarOpts struct {
 	Port       *string
 	Protocol   *string
 	CredsParam *string
+	Variables  map[string]string
+	Secrets    map[string]string
 }
 
 // LogConfigOpts holds configuration that's needed if the service is configured with Firelens to route

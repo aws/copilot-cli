@@ -17,6 +17,16 @@
   PortMappings:
     - ContainerPort: {{$sidecar.Port}}{{if $sidecar.Protocol}}
       Protocol: {{$sidecar.Protocol}}{{end}}{{end}}
+{{- if $sidecar.Variables}}
+  Environment:
+{{- range $name, $value := $sidecar.Variables}}
+  - Name: {{$name}}
+    Value: {{$value | printf "%q"}}{{end}}{{end}}
+{{- if $sidecar.Secrets}}
+  Secrets:
+{{- range $name, $valueFrom := $sidecar.Secrets}}
+  - Name: {{$name}}
+    ValueFrom: {{$valueFrom}}{{end}}{{end}}
   LogConfiguration:
     LogDriver: awslogs
     Options:
