@@ -234,6 +234,8 @@ func (s *Sidecar) Options() ([]*template.SidecarOpts, error) {
 			Port:       port,
 			Protocol:   protocol,
 			CredsParam: config.CredsParam,
+			Secrets:    config.Secrets,
+			Variables:  config.Variables,
 		})
 	}
 	return sidecars, nil
@@ -241,9 +243,11 @@ func (s *Sidecar) Options() ([]*template.SidecarOpts, error) {
 
 // SidecarConfig represents the configurable options for setting up a sidecar container.
 type SidecarConfig struct {
-	Port       *string `yaml:"port"`
-	Image      *string `yaml:"image"`
-	CredsParam *string `yaml:"credentialsParameter"`
+	Port       *string           `yaml:"port"`
+	Image      *string           `yaml:"image"`
+	CredsParam *string           `yaml:"credentialsParameter"`
+	Variables  map[string]string `yaml:"variables"`
+	Secrets    map[string]string `yaml:"secrets"`
 }
 
 // Valid sidecar portMapping example: 2000/udp, or 2000 (default to be tcp).

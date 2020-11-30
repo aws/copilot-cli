@@ -213,6 +213,9 @@ func TestBuildConfig(t *testing.T) {
 }
 
 func TestSidecar_Options(t *testing.T) {
+	mockImage := aws.String("mockImage")
+	mockMap := map[string]string{"foo": "bar"}
+	mockCredsParam := aws.String("mockCredsParam")
 	testCases := map[string]struct {
 		inPort string
 
@@ -228,15 +231,25 @@ func TestSidecar_Options(t *testing.T) {
 			inPort: "2000",
 
 			wanted: &template.SidecarOpts{
-				Port: aws.String("2000"),
+				Name:       aws.String("foo"),
+				Port:       aws.String("2000"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
 			},
 		},
 		"good port with protocol": {
 			inPort: "2000/udp",
 
 			wanted: &template.SidecarOpts{
-				Port:     aws.String("2000"),
-				Protocol: aws.String("udp"),
+				Name:       aws.String("foo"),
+				Port:       aws.String("2000"),
+				Protocol:   aws.String("udp"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
 			},
 		},
 	}
@@ -245,8 +258,10 @@ func TestSidecar_Options(t *testing.T) {
 			sidecar := Sidecar{
 				Sidecars: map[string]*SidecarConfig{
 					"foo": {
-						CredsParam: aws.String("mockCredsParam"),
-						Image:      aws.String("mockImage"),
+						CredsParam: mockCredsParam,
+						Image:      mockImage,
+						Secrets:    mockMap,
+						Variables:  mockMap,
 						Port:       aws.String(tc.inPort),
 					},
 				},
@@ -257,8 +272,7 @@ func TestSidecar_Options(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, got[0].Port, tc.wanted.Port)
-				require.Equal(t, got[0].Protocol, tc.wanted.Protocol)
+				require.Equal(t, got[0], tc.wanted)
 			}
 		})
 	}
