@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
 	. "github.com/onsi/ginkgo"
@@ -257,12 +258,17 @@ var _ = Describe("sidecars flow", func() {
 				return svcLogs, svcLogsErr
 			}, "60s", "10s").ShouldNot(BeEmpty())
 
+			var firelensCreated bool
 			for _, logLine := range svcLogs {
 				Expect(logLine.Message).NotTo(Equal(""))
 				Expect(logLine.LogStreamName).NotTo(Equal(""))
 				Expect(logLine.Timestamp).NotTo(Equal(0))
 				Expect(logLine.IngestionTime).NotTo(Equal(0))
+				if strings.Contains(logLine.LogStreamName, fmt.Sprintf("copilot/%s-firelens-", svcName)) {
+					firelensCreated = true
+				}
 			}
+			Expect(firelensCreated).To(Equal(true))
 		})
 	})
 })
