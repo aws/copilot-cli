@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
 	"strings"
 	"text/tabwriter"
 
@@ -134,16 +133,20 @@ func filterByName(wklds []*config.Workload, wantedNames []string) []*config.Work
 	return filtered
 }
 
+func underline(headings []string) []string {
+	var lines []string
+	for _, heading := range headings {
+		line := strings.Repeat("-", len(heading))
+		lines = append(lines, line)
+	}
+	return lines
+}
+
 func humanOutput(wklds []*config.Workload, w io.Writer) {
 	writer := tabwriter.NewWriter(w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, "%s\t%s\n", "Name", "Type")
-	nameLengthMax := len("Name")
-	typeLengthMax := len("Type")
-	for _, svc := range wklds {
-		nameLengthMax = int(math.Max(float64(nameLengthMax), float64(len(svc.Name))))
-		typeLengthMax = int(math.Max(float64(typeLengthMax), float64(len(svc.Type))))
-	}
-	fmt.Fprintf(writer, "%s\t%s\n", strings.Repeat("-", nameLengthMax), strings.Repeat("-", typeLengthMax))
+	headers := []string{"Name", "Type"}
+	fmt.Fprintf(writer, "%s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(writer, "%s\n", strings.Join(underline(headers), "\t"))
 	for _, wkld := range wklds {
 		fmt.Fprintf(writer, "%s\t%s\n", wkld.Name, wkld.Type)
 	}

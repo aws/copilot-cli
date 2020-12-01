@@ -114,13 +114,48 @@ func (t TaskStatus) HumanString() string {
 // TaskDefinition wraps up ECS TaskDefinition struct.
 type TaskDefinition ecs.TaskDefinition
 
+// ContainerEnvVar holds basic info of an environment variable.
+type ContainerEnvVar struct {
+	Name      string
+	Container string
+	Value     string
+}
+
 // EnvironmentVariables returns environment variables of the task definition.
-func (t *TaskDefinition) EnvironmentVariables() map[string]string {
-	envs := make(map[string]string)
-	for _, env := range t.ContainerDefinitions[0].Environment {
-		envs[aws.StringValue(env.Name)] = aws.StringValue(env.Value)
+func (t *TaskDefinition) EnvironmentVariables() []*ContainerEnvVar {
+	var envs []*ContainerEnvVar
+	for _, container := range t.ContainerDefinitions {
+		for _, env := range container.Environment {
+			envs = append(envs, &ContainerEnvVar{
+				aws.StringValue(env.Name),
+				aws.StringValue(container.Name),
+				aws.StringValue(env.Value),
+			})
+		}
 	}
 	return envs
+}
+
+// ContainerSecret holds basic info of a secret.
+type ContainerSecret struct {
+	Name      string
+	Container string
+	ValueFrom string
+}
+
+// Secrets returns secrets of the task definition.
+func (t *TaskDefinition) Secrets() []*ContainerSecret {
+	var secrets []*ContainerSecret
+	for _, container := range t.ContainerDefinitions {
+		for _, secret := range container.Secrets {
+			secrets = append(secrets, &ContainerSecret{
+				aws.StringValue(secret.Name),
+				aws.StringValue(container.Name),
+				aws.StringValue(secret.ValueFrom),
+			})
+		}
+	}
+	return secrets
 }
 
 // TaskID parses the task ARN and returns the task ID.

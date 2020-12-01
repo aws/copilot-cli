@@ -641,7 +641,7 @@ Run a task with a command.
 	cmd.Flags().BoolVar(&vars.useDefaultSubnets, taskDefaultFlag, false, taskDefaultFlagDescription)
 
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
-	cmd.Flags().StringVar(&vars.command, commandFlag, "", commandFlagDescription)
+	cmd.Flags().StringVar(&vars.command, commandFlag, "", runCommandFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)

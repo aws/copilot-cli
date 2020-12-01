@@ -6,6 +6,7 @@ package describe
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -57,7 +58,9 @@ type ServiceConfig struct {
 type configurations []*ServiceConfig
 
 func (c configurations) humanString(w io.Writer) {
-	fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", "Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Port")
+	headers := []string{"Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Port"}
+	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, config := range c {
 		fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Port)
 	}
@@ -103,15 +106,23 @@ func NewServiceDescriber(opt NewServiceConfig) (*ServiceDescriber, error) {
 }
 
 // EnvVars returns the environment variables of the task definition.
-func (d *ServiceDescriber) EnvVars() (map[string]string, error) {
+func (d *ServiceDescriber) EnvVars() ([]*ecs.ContainerEnvVar, error) {
 	taskDefName := fmt.Sprintf("%s-%s-%s", d.app, d.env, d.service)
 	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)
 	if err != nil {
 		return nil, err
 	}
-	envVars := taskDefinition.EnvironmentVariables()
+	return taskDefinition.EnvironmentVariables(), nil
+}
 
-	return envVars, nil
+// Secrets returns the secrets of the task definition.
+func (d *ServiceDescriber) Secrets() ([]*ecs.ContainerSecret, error) {
+	taskDefName := fmt.Sprintf("%s-%s-%s", d.app, d.env, d.service)
+	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)
+	if err != nil {
+		return nil, err
+	}
+	return taskDefinition.Secrets(), nil
 }
 
 // ServiceStackResources returns the filtered service stack resources created by CloudFormation.

@@ -246,17 +246,20 @@ func TestShowAppOpts_Execute(t *testing.T) {
 Environments
 
   Name              AccountID           Region
+  ----              ---------           ------
   test              123456789           us-west-2
   prod              123456789           us-west-1
 
 Services
 
   Name              Type
+  ----              ----
   my-svc            lb-web-svc
 
 Pipelines
 
   Name
+  ----
   pipeline1
   pipeline2
 `,

@@ -87,6 +87,10 @@ const (
 	retriesFlag  = "retries"
 	timeoutFlag  = "timeout"
 	scheduleFlag = "schedule"
+
+	taskIDFlag      = "task-id"
+	containerFlag   = "container"
+	interactiveFlag = "interactive"
 )
 
 // Short flag names.
@@ -99,6 +103,7 @@ const (
 	workloadFlagShort = "w"
 
 	dockerFileFlagShort        = "d"
+	commandFlagShort           = "c"
 	imageFlagShort             = "i"
 	githubURLFlagShort         = "u"
 	githubAccessTokenFlagShort = "t"
@@ -141,6 +146,7 @@ const (
 	svcFlagDescription      = "Name of the service."
 	jobFlagDescription      = "Name of the job."
 	workloadFlagDescription = "Name of the service or job."
+	nameFlagDescription     = "Name of the service, job, or task group."
 	pipelineFlagDescription = "Name of the pipeline."
 	profileFlagDescription  = "Name of the profile."
 	yesFlagDescription      = "Skips confirmation prompt."
@@ -194,7 +200,7 @@ Must be of the format '<keyName>:<dataType>'.`
 	taskRoleFlagDescription      = "Optional. The ARN of the role for the task to use."
 	executionRoleFlagDescription = "Optional. The ARN of the role that grants the container agent permission to make AWS API calls."
 	envVarsFlagDescription       = "Optional. Environment variables specified by key=value separated with commas."
-	commandFlagDescription       = `Optional. The command that is passed to "docker run" to override the default command.`
+	runCommandFlagDescription    = `Optional. The command that is passed to "docker run" to override the default command.`
 	taskGroupFlagDescription     = `Optional. The group name of the task. 
 Tasks with the same group name share the same set of resources. 
 (default directory name)`
@@ -225,4 +231,9 @@ AWS Schedule Expressions of the form "rate(10 minutes)" or "cron(0 12 L * ? 2021
 are also accepted.`
 
 	upgradeAllEnvsDescription = "Optional. Upgrade all environments."
+
+	taskIDFlagDescription      = "Optional. ID of the task you want to exec in. By default a random task will be used."
+	execCommandFlagDescription = `Optional. The command that is passed to a running container.`
+	containerFlagDescription   = "Optional. The specific container you want to exec in. By default the first eseential container will be used."
+	interactiveFlagDescription = "Optional. Specifies if run commands interactively or not."
 )

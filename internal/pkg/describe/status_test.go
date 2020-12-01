@@ -413,11 +413,13 @@ Last Deployment
 Task Status
 
   ID                Image Digest        Last Status         Started At          Stopped At          Health Status
+  --                ------------        -----------         ----------          ----------          -------------
   12345678          -                   PROVISIONING        -                   -                   HEALTHY
 
 Alarms
 
   Name                              Condition                         Last Updated         Health
+  ----                              ---------                         ------------         ------
   mySupercalifragilisticexpialid    RequestCount > 100.00 for 3 da    2 months from now    OK
   ociousAlarm                       tapoints within 25 minutes                             
                                                                                            
@@ -477,11 +479,13 @@ Last Deployment
 Task Status
 
   ID                Image Digest         Last Status         Started At          Stopped At          Health Status
+  --                ------------         -----------         ----------          ----------          -------------
   12345678          69671a96,ca27a44e    RUNNING             -                   -                   HEALTHY
 
 Alarms
 
   Name              Condition           Last Updated         Health
+  ----              ---------           ------------         ------
   mockAlarm         mockCondition       2 months from now    OK
                                                              
 `,
