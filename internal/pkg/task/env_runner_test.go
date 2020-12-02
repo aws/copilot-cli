@@ -32,7 +32,7 @@ func TestEnvRunner_Run(t *testing.T) {
 	}
 
 	MockClusterGetter := func(m *mocks.MockClusterGetter) {
-		m.EXPECT().Cluster(inApp, inEnv).Return("cluster-1", nil)
+		m.EXPECT().ClusterARN(inApp, inEnv).Return("cluster-1", nil)
 	}
 	MockVPCGetterAny := func(m *mocks.MockVPCGetter) {
 		m.EXPECT().SubnetIDs(gomock.Any()).AnyTimes()
@@ -55,7 +55,7 @@ func TestEnvRunner_Run(t *testing.T) {
 	}{
 		"failed to get cluster": {
 			MockClusterGetter: func(m *mocks.MockClusterGetter) {
-				m.EXPECT().Cluster(inApp, inEnv).Return("", errors.New("error getting resources"))
+				m.EXPECT().ClusterARN(inApp, inEnv).Return("", errors.New("error getting resources"))
 			},
 			MockVPCGetter: MockVPCGetterAny,
 			mockStarter:   mockStarterNotRun,

@@ -14,9 +14,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 
-	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/dustin/go-humanize"
 	"github.com/golang/mock/gomock"
@@ -26,22 +23,17 @@ import (
 type serviceStatusMocks struct {
 	ecsServiceGetter  *mocks.MockecsServiceGetter
 	alarmStatusGetter *mocks.MockalarmStatusGetter
-	resourcesGetter   *mocks.MockresourcesGetter
+	serviceARNGetter  *mocks.MockserviceARNGetter
 	aas               *mocks.MockautoscalingAlarmNamesGetter
 }
 
 func TestServiceStatus_Describe(t *testing.T) {
 	const (
-		mockCluster       = "mockCluster"
-		mockService       = "mockService"
-		badMockServiceArn = "badMockArn"
-		mockServiceArn    = "arn:aws:ecs:us-west-2:1234567890:service/mockCluster/mockService"
+		mockCluster = "mockCluster"
+		mockService = "mockService"
 	)
-	mockTags := map[string]string{
-		deploy.AppTagKey:     "mockApp",
-		deploy.EnvTagKey:     "mockEnv",
-		deploy.ServiceTagKey: "mockSvc",
-	}
+	badSvcARN := ecs.ServiceArn("badMockArn")
+	mockSvcARN := ecs.ServiceArn("arn:aws:ecs:us-west-2:1234567890:service/mockCluster/mockService")
 	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
 	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
 	updateTime, _ := time.Parse(time.RFC3339, "2020-03-13T19:50:30+00:00")
@@ -55,7 +47,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 		"errors if failed to get service ARN": {
 			setupMocks: func(m serviceStatusMocks) {
 				gomock.InOrder(
-					m.resourcesGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, mockTags).Return(nil, mockError),
+					m.serviceARNGetter.EXPECT().ServiceARN("mockApp", "mockEnv", "mockSvc").Return(nil, mockError),
 				)
 			},
 
@@ -64,11 +56,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 		"errors if failed to get cluster name": {
 			setupMocks: func(m serviceStatusMocks) {
 				gomock.InOrder(
-					m.resourcesGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, mockTags).Return([]*rg.Resource{
-						{
-							ARN: badMockServiceArn,
-						},
-					}, nil),
+					m.serviceARNGetter.EXPECT().ServiceARN("mockApp", "mockEnv", "mockSvc").Return(&badSvcARN, nil),
 				)
 			},
 
@@ -77,11 +65,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 		"errors if failed to get service info": {
 			setupMocks: func(m serviceStatusMocks) {
 				gomock.InOrder(
-					m.resourcesGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, mockTags).Return([]*rg.Resource{
-						{
-							ARN: mockServiceArn,
-						},
-					}, nil),
+					m.serviceARNGetter.EXPECT().ServiceARN("mockApp", "mockEnv", "mockSvc").Return(&mockSvcARN, nil),
 					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(nil, mockError),
 				)
 			},
@@ -91,11 +75,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 		"errors if failed to get running tasks info": {
 			setupMocks: func(m serviceStatusMocks) {
 				gomock.InOrder(
-					m.resourcesGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, mockTags).Return([]*rg.Resource{
-						{
-							ARN: mockServiceArn,
-						},
-					}, nil),
+					m.serviceARNGetter.EXPECT().ServiceARN("mockApp", "mockEnv", "mockSvc").Return(&mockSvcARN, nil),
 					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&ecs.Service{}, nil),
 					m.ecsServiceGetter.EXPECT().ServiceTasks(mockCluster, mockService).Return(nil, mockError),
 				)
@@ -106,11 +86,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 		"errors if failed to get running tasks status": {
 			setupMocks: func(m serviceStatusMocks) {
 				gomock.InOrder(
-					m.resourcesGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, mockTags).Return([]*rg.Resource{
-						{
-							ARN: mockServiceArn,
-						},
-					}, nil),
+					m.serviceARNGetter.EXPECT().ServiceARN("mockApp", "mockEnv", "mockSvc").Return(&mockSvcARN, nil),
 					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&ecs.Service{}, nil),
 					m.ecsServiceGetter.EXPECT().ServiceTasks(mockCluster, mockService).Return([]*ecs.Task{
 						{
@@ -125,11 +101,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 		"errors if failed to get tagged CloudWatch alarms": {
 			setupMocks: func(m serviceStatusMocks) {
 				gomock.InOrder(
-					m.resourcesGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, mockTags).Return([]*rg.Resource{
-						{
-							ARN: mockServiceArn,
-						},
-					}, nil),
+					m.serviceARNGetter.EXPECT().ServiceARN("mockApp", "mockEnv", "mockSvc").Return(&mockSvcARN, nil),
 					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&ecs.Service{}, nil),
 					m.ecsServiceGetter.EXPECT().ServiceTasks(mockCluster, mockService).Return([]*ecs.Task{
 						{
@@ -146,11 +118,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 		"errors if failed to get auto scaling CloudWatch alarm names": {
 			setupMocks: func(m serviceStatusMocks) {
 				gomock.InOrder(
-					m.resourcesGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, mockTags).Return([]*rg.Resource{
-						{
-							ARN: mockServiceArn,
-						},
-					}, nil),
+					m.serviceARNGetter.EXPECT().ServiceARN("mockApp", "mockEnv", "mockSvc").Return(&mockSvcARN, nil),
 					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&ecs.Service{}, nil),
 					m.ecsServiceGetter.EXPECT().ServiceTasks(mockCluster, mockService).Return([]*ecs.Task{
 						{
@@ -168,11 +136,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 		"errors if failed to get auto scaling CloudWatch alarm status": {
 			setupMocks: func(m serviceStatusMocks) {
 				gomock.InOrder(
-					m.resourcesGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, mockTags).Return([]*rg.Resource{
-						{
-							ARN: mockServiceArn,
-						},
-					}, nil),
+					m.serviceARNGetter.EXPECT().ServiceARN("mockApp", "mockEnv", "mockSvc").Return(&mockSvcARN, nil),
 					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&ecs.Service{}, nil),
 					m.ecsServiceGetter.EXPECT().ServiceTasks(mockCluster, mockService).Return([]*ecs.Task{
 						{
@@ -191,11 +155,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 		"success": {
 			setupMocks: func(m serviceStatusMocks) {
 				gomock.InOrder(
-					m.resourcesGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, mockTags).Return([]*rg.Resource{
-						{
-							ARN: mockServiceArn,
-						},
-					}, nil),
+					m.serviceARNGetter.EXPECT().ServiceARN("mockApp", "mockEnv", "mockSvc").Return(&mockSvcARN, nil),
 					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&ecs.Service{
 						Status:       aws.String("ACTIVE"),
 						DesiredCount: aws.Int64(1),
@@ -312,25 +272,25 @@ func TestServiceStatus_Describe(t *testing.T) {
 
 			mockecsSvc := mocks.NewMockecsServiceGetter(ctrl)
 			mockcwSvc := mocks.NewMockalarmStatusGetter(ctrl)
-			mockrgSvc := mocks.NewMockresourcesGetter(ctrl)
+			mockSvcARNGetter := mocks.NewMockserviceARNGetter(ctrl)
 			mockaasClient := mocks.NewMockautoscalingAlarmNamesGetter(ctrl)
 			mocks := serviceStatusMocks{
 				ecsServiceGetter:  mockecsSvc,
 				alarmStatusGetter: mockcwSvc,
-				resourcesGetter:   mockrgSvc,
+				serviceARNGetter:  mockSvcARNGetter,
 				aas:               mockaasClient,
 			}
 
 			tc.setupMocks(mocks)
 
 			svcStatus := &ServiceStatus{
-				svc:    "mockSvc",
-				env:    "mockEnv",
-				app:    "mockApp",
-				cwSvc:  mockcwSvc,
-				ecsSvc: mockecsSvc,
-				rgSvc:  mockrgSvc,
-				aasSvc: mockaasClient,
+				svc:          "mockSvc",
+				env:          "mockEnv",
+				app:          "mockApp",
+				cwSvc:        mockcwSvc,
+				ecsSvc:       mockecsSvc,
+				svcARNGetter: mockSvcARNGetter,
+				aasSvc:       mockaasClient,
 			}
 
 			// WHEN
