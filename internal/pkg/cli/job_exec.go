@@ -39,7 +39,7 @@ func buildJobExecCmd() *cobra.Command {
 	vars := execVars{}
 	cmd := &cobra.Command{
 		Use:   "exec",
-		Short: "Execute a command in a running container in a job.",
+		Short: "Execute a command in a running container part of a job.",
 		Example: `
   Start an interactive bash session with a task part of the "reaper" job.
   /code $ copilot job exec -a my-app -e test -n reaper

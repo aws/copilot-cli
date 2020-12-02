@@ -39,7 +39,7 @@ func buildSvcExecCmd() *cobra.Command {
 	vars := execVars{}
 	cmd := &cobra.Command{
 		Use:   "exec",
-		Short: "Execute a command in a running container in a service.",
+		Short: "Execute a command in a running container part of a service.",
 		Example: `
   Start an interactive bash session with a task part of the "frontend" service.
   /code $ copilot svc exec -a my-app -e test -n frontend

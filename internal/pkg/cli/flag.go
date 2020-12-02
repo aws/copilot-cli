@@ -91,6 +91,7 @@ const (
 	taskIDFlag      = "task-id"
 	containerFlag   = "container"
 	interactiveFlag = "interactive"
+	clusterFlag     = "cluster"
 )
 
 // Short flag names.
@@ -236,4 +237,5 @@ are also accepted.`
 	execCommandFlagDescription = `Optional. The command that is passed to a running container.`
 	containerFlagDescription   = "Optional. The specific container you want to exec in. By default the first eseential container will be used."
 	interactiveFlagDescription = "Optional. Specifies if run commands interactively or not."
+	clusterFlagDescription     = "Optional. Specifies which cluster to use. Mutually exclusive with --app or --env."
 )
