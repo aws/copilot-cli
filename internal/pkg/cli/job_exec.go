@@ -9,58 +9,44 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	defaultCommand = "/bin/bash"
-)
-
-type execVars struct {
-	appName       string
-	envName       string
-	name          string
-	command       string
-	taskID        string
-	containerName string
-	interactive   bool
-}
-
-type execOpts struct {
+type jobExecOpts struct {
 	execVars
 }
 
-func newExecOpts(vars execVars) (*execOpts, error) {
-	return &execOpts{
+func newJobExecOpts(vars execVars) (*jobExecOpts, error) {
+	return &jobExecOpts{
 		execVars: vars,
 	}, nil
 }
 
 // Validate returns an error if the values provided by the user are invalid.
-func (o *execOpts) Validate() error {
+func (o *jobExecOpts) Validate() error {
 	return nil
 }
 
 // Ask asks for fields that are required but not passed in.
-func (o *execOpts) Ask() error {
+func (o *jobExecOpts) Ask() error {
 	return nil
 }
 
 // Execute executes a command in a running container.
-func (o *execOpts) Execute() error {
+func (o *jobExecOpts) Execute() error {
 	return nil
 }
 
-// BuildExecCmd is the top level command for exec.
-func BuildExecCmd() *cobra.Command {
+// buildJobExecCmd builds the command for execute a running container in a job.
+func buildJobExecCmd() *cobra.Command {
 	vars := execVars{}
 	cmd := &cobra.Command{
 		Use:   "exec",
-		Short: "Execute a command in a running container.",
+		Short: "Execute a command in a running container in a job.",
 		Example: `
-  Start an interactive bash session with a task part of the "frontend" service.
-  /code $ copilot exec -a my-app -e test -n frontend
-  Runs the 'cat progress.csv' command in the task prefixed with ID "1848c38" part of the "db-migrate" task group.
-  /code $ copilot exec --name db-migrate --task-id 1848c38 --command "cat progress.csv" --interactive=false`,
+  Start an interactive bash session with a task part of the "reaper" job.
+  /code $ copilot job exec -a my-app -e test -n reaper
+  Runs the 'docker ps' command in the task prefixed with ID "8c38184" within the "report-generator" service.
+  /code $ copilot job exec -a my-app -e test --name report-generator --task-id 8c38184 --command "docker ps" --interactive=false`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts, err := newExecOpts(vars)
+			opts, err := newJobExecOpts(vars)
 			if err != nil {
 				return err
 			}

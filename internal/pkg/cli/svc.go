@@ -31,6 +31,7 @@ Services are long-running Amazon ECS services.`,
 	cmd.AddCommand(buildSvcShowCmd())
 	cmd.AddCommand(buildSvcStatusCmd())
 	cmd.AddCommand(buildSvcLogsCmd())
+	cmd.AddCommand(buildSvcExecCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 

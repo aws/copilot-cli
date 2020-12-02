@@ -9,58 +9,44 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	defaultCommand = "/bin/bash"
-)
-
-type execVars struct {
-	appName       string
-	envName       string
-	name          string
-	command       string
-	taskID        string
-	containerName string
-	interactive   bool
-}
-
-type execOpts struct {
+type taskExecOpts struct {
 	execVars
 }
 
-func newExecOpts(vars execVars) (*execOpts, error) {
-	return &execOpts{
+func newTaskExecOpts(vars execVars) (*taskExecOpts, error) {
+	return &taskExecOpts{
 		execVars: vars,
 	}, nil
 }
 
 // Validate returns an error if the values provided by the user are invalid.
-func (o *execOpts) Validate() error {
+func (o *taskExecOpts) Validate() error {
 	return nil
 }
 
 // Ask asks for fields that are required but not passed in.
-func (o *execOpts) Ask() error {
+func (o *taskExecOpts) Ask() error {
 	return nil
 }
 
 // Execute executes a command in a running container.
-func (o *execOpts) Execute() error {
+func (o *taskExecOpts) Execute() error {
 	return nil
 }
 
-// BuildExecCmd is the top level command for exec.
-func BuildExecCmd() *cobra.Command {
+// buildTaskExecCmd builds the command for execute a running container in a one-off task.
+func buildTaskExecCmd() *cobra.Command {
 	vars := execVars{}
 	cmd := &cobra.Command{
 		Use:   "exec",
-		Short: "Execute a command in a running container.",
+		Short: "Execute a command in a running container in a one-off task.",
 		Example: `
-  Start an interactive bash session with a task part of the "frontend" service.
-  /code $ copilot exec -a my-app -e test -n frontend
+  Start an interactive bash session with a task named "db-migrate" in the "test environment under the current workspace.
+  /code $ copilot task exec -e test -n db-migrate
   Runs the 'cat progress.csv' command in the task prefixed with ID "1848c38" part of the "db-migrate" task group.
-  /code $ copilot exec --name db-migrate --task-id 1848c38 --command "cat progress.csv" --interactive=false`,
+  /code $ copilot task exec --name db-migrate --task-id 1848c38 --command "cat progress.csv" --interactive=false`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts, err := newExecOpts(vars)
+			opts, err := newTaskExecOpts(vars)
 			if err != nil {
 				return err
 			}
