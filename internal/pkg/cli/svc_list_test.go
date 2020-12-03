@@ -76,7 +76,7 @@ func TestListSvcOpts_Ask(t *testing.T) {
 	}{
 		"with no flags set": {
 			mockSel: func(m *mocks.MockappSelector) {
-				m.EXPECT().Application(svcListAppNamePrompt, wkldListAppNameHelp).Return("myapp", nil)
+				m.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("myapp", nil)
 			},
 			wantedApp: "myapp",
 		},

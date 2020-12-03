@@ -19,8 +19,6 @@ import (
 )
 
 const (
-	svcShowAppNamePrompt     = "Which application's service would you like to show?"
-	svcShowAppNameHelpPrompt = "An application groups all of your services together."
 	svcShowSvcNamePrompt     = "Which service of %s would you like to show?"
 	svcShowSvcNameHelpPrompt = "The details of a service will be shown (e.g., endpoint URL, CPU, Memory)."
 )
@@ -152,7 +150,7 @@ func (o *showSvcOpts) askApp() error {
 	if o.appName != "" {
 		return nil
 	}
-	appName, err := o.sel.Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt)
+	appName, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application name: %w", err)
 	}

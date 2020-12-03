@@ -135,7 +135,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           testSvcName,
 			skipConfirmation: true,
 			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Application("Which application's service would you like to delete?", "").Return(testAppName, nil)
+				m.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return(testAppName, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 

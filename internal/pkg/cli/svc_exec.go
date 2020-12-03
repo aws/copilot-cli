@@ -4,33 +4,100 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
+)
+
+const (
+	svcExecNamePrompt     = "Into which service would you like to execute?"
+	svcExecNameHelpPrompt = `Copilot runs your command in one of your chosen service's tasks.
+The task is chosen at random, and the first essential container is used.`
 )
 
 type svcExecOpts struct {
 	execVars
+	store store
+	sel   deploySelector
 }
 
 func newSvcExecOpts(vars execVars) (*svcExecOpts, error) {
+	ssmStore, err := config.NewStore()
+	if err != nil {
+		return nil, fmt.Errorf("connect to config store: %w", err)
+	}
+	deployStore, err := deploy.NewStore(ssmStore)
+	if err != nil {
+		return nil, fmt.Errorf("connect to deploy store: %w", err)
+	}
 	return &svcExecOpts{
 		execVars: vars,
+		store:    ssmStore,
+		sel:      selector.NewDeploySelect(prompt.New(), ssmStore, deployStore),
 	}, nil
 }
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *svcExecOpts) Validate() error {
+	if o.appName != "" {
+		if _, err := o.store.GetApplication(o.appName); err != nil {
+			return err
+		}
+	}
+	if o.envName != "" {
+		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
+			return err
+		}
+	}
+	if o.name != "" {
+		if _, err := o.store.GetService(o.appName, o.name); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 // Ask asks for fields that are required but not passed in.
 func (o *svcExecOpts) Ask() error {
+	if err := o.askApp(); err != nil {
+		return err
+	}
+	if err := o.askSvcEnvName(); err != nil {
+		return err
+	}
 	return nil
 }
 
 // Execute executes a command in a running container.
 func (o *svcExecOpts) Execute() error {
+	return nil
+}
+
+func (o *svcExecOpts) askApp() error {
+	if o.appName != "" {
+		return nil
+	}
+	app, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
+	if err != nil {
+		return fmt.Errorf("select application: %w", err)
+	}
+	o.appName = app
+	return nil
+}
+
+func (o *svcExecOpts) askSvcEnvName() error {
+	deployedService, err := o.sel.DeployedService(svcExecNamePrompt, svcExecNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithSvc(o.name))
+	if err != nil {
+		return fmt.Errorf("select deployed service for application %s: %w", o.appName, err)
+	}
+	o.name = deployedService.Svc
+	o.envName = deployedService.Env
 	return nil
 }
 

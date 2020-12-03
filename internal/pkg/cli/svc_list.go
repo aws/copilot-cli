@@ -15,11 +15,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	svcListAppNamePrompt = "Which application's services would you like to list?"
-	wkldListAppNameHelp  = "An application groups all of your services and jobs together."
-)
-
 type listWkldVars struct {
 	appName                  string
 	shouldOutputJSON         bool
@@ -66,7 +61,7 @@ func (o *listSvcOpts) Ask() error {
 		return nil
 	}
 
-	name, err := o.sel.Application(svcListAppNamePrompt, wkldListAppNameHelp)
+	name, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application name: %w", err)
 	}

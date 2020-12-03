@@ -21,10 +21,8 @@ import (
 )
 
 const (
-	svcLogAppNamePrompt     = "Which application does your service belong to?"
-	svcLogAppNameHelpPrompt = "An application groups all of your services together."
-	svcLogNamePrompt        = "Which service's logs would you like to show?"
-	svcLogNameHelpPrompt    = "The logs of a deployed service will be shown."
+	svcLogNamePrompt     = "Which service's logs would you like to show?"
+	svcLogNameHelpPrompt = "The logs of a deployed service will be shown."
 
 	cwGetLogEventsLimitMin = 1
 	cwGetLogEventsLimitMax = 10000
@@ -180,7 +178,7 @@ func (o *svcLogsOpts) askApp() error {
 	if o.appName != "" {
 		return nil
 	}
-	app, err := o.sel.Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt)
+	app, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application: %w", err)
 	}
