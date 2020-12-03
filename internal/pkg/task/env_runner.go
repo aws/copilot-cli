@@ -45,7 +45,7 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 		return nil, err
 	}
 
-	cluster, err := r.ClusterGetter.Cluster(r.App, r.Env)
+	cluster, err := r.ClusterGetter.ClusterARN(r.App, r.Env)
 	if err != nil {
 		return nil, fmt.Errorf("get cluster for environment %s: %w", r.Env, err)
 	}

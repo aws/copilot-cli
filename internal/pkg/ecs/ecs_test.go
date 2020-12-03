@@ -19,10 +19,10 @@ import (
 
 type clientMocks struct {
 	resourceGetter *mocks.MockresourceGetter
-	ecsTaskGetter  *mocks.MockRunningTasksInFamilyGetter
+	ecsTaskGetter  *mocks.MockrunningTasksInFamilyGetter
 }
 
-func TestClient_Cluster(t *testing.T) {
+func TestClient_ClusterARN(t *testing.T) {
 	const (
 		mockApp = "mockApp"
 		mockEnv = "mockEnv"
@@ -99,7 +99,7 @@ func TestClient_Cluster(t *testing.T) {
 			}
 
 			// WHEN
-			get, err := client.Cluster(mockApp, mockEnv)
+			get, err := client.ClusterARN(mockApp, mockEnv)
 
 			// THEN
 			if test.wantedError != nil {
@@ -107,6 +107,98 @@ func TestClient_Cluster(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, get, test.wantedCluster)
+			}
+		})
+	}
+}
+
+func TestClient_ServiceARN(t *testing.T) {
+	const (
+		mockApp = "mockApp"
+		mockEnv = "mockEnv"
+		mockSvc = "mockSvc"
+	)
+	getRgInput := map[string]string{
+		deploy.AppTagKey:     mockApp,
+		deploy.EnvTagKey:     mockEnv,
+		deploy.ServiceTagKey: mockSvc,
+	}
+	testError := errors.New("some error")
+
+	tests := map[string]struct {
+		setupMocks func(mocks clientMocks)
+
+		wantedError   error
+		wantedService string
+	}{
+		"errors if fail to get resources by tags": {
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+						Return(nil, testError),
+				)
+			},
+			wantedError: fmt.Errorf("get ECS service with tags (mockApp, mockEnv, mockSvc): some error"),
+		},
+		"errors if no service found": {
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+						Return([]*resourcegroups.Resource{}, nil),
+				)
+			},
+			wantedError: fmt.Errorf("no ECS service found for mockSvc in environment mockEnv"),
+		},
+		"errors if more than one service found": {
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+						Return([]*resourcegroups.Resource{
+							{ARN: "mockARN1"}, {ARN: "mockARN2"},
+						}, nil),
+				)
+			},
+			wantedError: fmt.Errorf("more than one ECS service with the name mockSvc found in environment mockEnv"),
+		},
+		"success": {
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+						Return([]*resourcegroups.Resource{
+							{ARN: "mockARN"},
+						}, nil),
+				)
+			},
+			wantedService: "mockARN",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// GIVEN
+			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
+			mocks := clientMocks{
+				resourceGetter: mockRgGetter,
+			}
+
+			test.setupMocks(mocks)
+
+			client := Client{
+				rgGetter: mockRgGetter,
+			}
+
+			// WHEN
+			get, err := client.ServiceARN(mockApp, mockEnv, mockSvc)
+
+			// THEN
+			if test.wantedError != nil {
+				require.EqualError(t, err, test.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, string(*get), test.wantedService)
 			}
 		})
 	}
@@ -181,7 +273,7 @@ func TestClient_ListActiveWorkloadTasks(t *testing.T) {
 
 			// GIVEN
 			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
-			mockECSTasksGetter := mocks.NewMockRunningTasksInFamilyGetter(ctrl)
+			mockECSTasksGetter := mocks.NewMockrunningTasksInFamilyGetter(ctrl)
 			mocks := clientMocks{
 				resourceGetter: mockRgGetter,
 				ecsTaskGetter:  mockECSTasksGetter,

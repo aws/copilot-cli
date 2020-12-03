@@ -22,7 +22,7 @@ type VPCGetter interface {
 
 // ClusterGetter wraps the method of getting a cluster ARN.
 type ClusterGetter interface {
-	Cluster(app, env string) (string, error)
+	ClusterARN(app, env string) (string, error)
 }
 
 // DefaultClusterGetter wraps the method of getting a default cluster ARN.

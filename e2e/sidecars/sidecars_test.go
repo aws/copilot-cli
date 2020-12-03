@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
 	. "github.com/onsi/ginkgo"
@@ -49,13 +50,17 @@ sidecars:
   nginx:
     port: 80
     image: %s    # Image URL for sidecar container.
+    variables:
+      NGINX_PORT: %s
 logging:
   destination:
     Name: cloudwatch
-    region: us-west-2
+    region: us-east-1
     log_group_name: /copilot/%s
     log_stream_prefix: copilot/
 `
+
+const nginxPort = "80"
 
 var _ = Describe("sidecars flow", func() {
 	Context("when creating a new app", func() {
@@ -170,7 +175,7 @@ var _ = Describe("sidecars flow", func() {
 		var newManifest string
 		It("overwrite existing manifest", func() {
 			logGroupName := fmt.Sprintf("%s-test-%s", appName, svcName)
-			newManifest = fmt.Sprintf(manifest, sidecarImageURI, logGroupName)
+			newManifest = fmt.Sprintf(manifest, sidecarImageURI, nginxPort, logGroupName)
 			err := ioutil.WriteFile("./copilot/hello/manifest.yml", []byte(newManifest), 0644)
 			Expect(err).NotTo(HaveOccurred(), "overwrite manifest")
 		})
@@ -253,12 +258,17 @@ var _ = Describe("sidecars flow", func() {
 				return svcLogs, svcLogsErr
 			}, "60s", "10s").ShouldNot(BeEmpty())
 
+			var firelensCreated bool
 			for _, logLine := range svcLogs {
 				Expect(logLine.Message).NotTo(Equal(""))
 				Expect(logLine.LogStreamName).NotTo(Equal(""))
 				Expect(logLine.Timestamp).NotTo(Equal(0))
 				Expect(logLine.IngestionTime).NotTo(Equal(0))
+				if strings.Contains(logLine.LogStreamName, fmt.Sprintf("copilot/%s-firelens-", svcName)) {
+					firelensCreated = true
+				}
 			}
+			Expect(firelensCreated).To(Equal(true))
 		})
 	})
 })
