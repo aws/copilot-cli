@@ -13,10 +13,10 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/aas"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	awsECS "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	copiEcs "github.com/aws/copilot-cli/internal/pkg/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
@@ -30,12 +30,12 @@ type alarmStatusGetter interface {
 }
 
 type ecsServiceGetter interface {
-	ServiceTasks(clusterName, serviceName string) ([]*ecs.Task, error)
-	Service(clusterName, serviceName string) (*ecs.Service, error)
+	ServiceTasks(clusterName, serviceName string) ([]*awsECS.Task, error)
+	Service(clusterName, serviceName string) (*awsECS.Service, error)
 }
 
 type serviceARNGetter interface {
-	ServiceARN(app, env, svc string) (*ecs.ServiceArn, error)
+	ServiceARN(app, env, svc string) (*awsECS.ServiceArn, error)
 }
 
 type autoscalingAlarmNamesGetter interface {
@@ -56,8 +56,8 @@ type ServiceStatus struct {
 
 // ServiceStatusDesc contains the status for a service.
 type ServiceStatusDesc struct {
-	Service ecs.ServiceStatus
-	Tasks   []ecs.TaskStatus         `json:"tasks"`
+	Service awsECS.ServiceStatus
+	Tasks   []awsECS.TaskStatus      `json:"tasks"`
 	Alarms  []cloudwatch.AlarmStatus `json:"alarms"`
 }
 
@@ -83,9 +83,9 @@ func NewServiceStatus(opt *NewServiceStatusConfig) (*ServiceStatus, error) {
 		app:          opt.App,
 		env:          opt.Env,
 		svc:          opt.Svc,
-		svcARNGetter: copiEcs.New(sess),
+		svcARNGetter: ecs.New(sess),
 		cwSvc:        cloudwatch.New(sess),
-		ecsSvc:       ecs.New(sess),
+		ecsSvc:       awsECS.New(sess),
 		aasSvc:       aas.New(sess),
 	}, nil
 }
@@ -112,7 +112,7 @@ func (s *ServiceStatus) Describe() (*ServiceStatusDesc, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get tasks for service %s: %w", serviceName, err)
 	}
-	var taskStatus []ecs.TaskStatus
+	var taskStatus []awsECS.TaskStatus
 	for _, task := range tasks {
 		status, err := task.TaskStatus()
 		if err != nil {

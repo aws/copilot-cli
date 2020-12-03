@@ -138,7 +138,7 @@ func TestClient_ServiceARN(t *testing.T) {
 						Return(nil, testError),
 				)
 			},
-			wantedError: fmt.Errorf("get ECS service for mockSvc in environment mockEnv: some error"),
+			wantedError: fmt.Errorf("get ECS service with tags (mockApp, mockEnv, mockSvc): some error"),
 		},
 		"errors if no service found": {
 			setupMocks: func(m clientMocks) {
@@ -158,7 +158,7 @@ func TestClient_ServiceARN(t *testing.T) {
 						}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("more than one ECS service is found for mockSvc in environment mockEnv"),
+			wantedError: fmt.Errorf("more than one ECS service with the name mockSvc found in environment mockEnv"),
 		},
 		"success": {
 			setupMocks: func(m clientMocks) {

@@ -63,7 +63,7 @@ func (c Client) ClusterARN(app, env string) (string, error) {
 	return clusters[0].ARN, nil
 }
 
-// ServiceARN returns the ARN of the ECS service for a Copilot service.
+// ServiceARN returns the ARN of an ECS service created with Copilot.
 func (c Client) ServiceARN(app, env, svc string) (*ecs.ServiceArn, error) {
 	services, err := c.rgGetter.GetResourcesByTags(serviceResourceType, map[string]string{
 		deploy.AppTagKey:     app,
@@ -71,13 +71,13 @@ func (c Client) ServiceARN(app, env, svc string) (*ecs.ServiceArn, error) {
 		deploy.ServiceTagKey: svc,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("get ECS service for %s in environment %s: %w", svc, env, err)
+		return nil, fmt.Errorf("get ECS service with tags (%s, %s, %s): %w", app, env, svc, err)
 	}
 	if len(services) == 0 {
 		return nil, fmt.Errorf("no ECS service found for %s in environment %s", svc, env)
 	}
 	if len(services) > 1 {
-		return nil, fmt.Errorf("more than one ECS service is found for %s in environment %s", svc, env)
+		return nil, fmt.Errorf("more than one ECS service with the name %s found in environment %s", svc, env)
 	}
 	serviceArn := ecs.ServiceArn(services[0].ARN)
 	return &serviceArn, nil
