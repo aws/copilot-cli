@@ -16,6 +16,7 @@ import (
 const (
 	fmtWorkloadTaskDefinitionFamily = "%s-%s-%s"
 	clusterResourceType             = "ecs:cluster"
+	serviceResourceType             = "ecs:service"
 )
 
 type resourceGetter interface {
@@ -40,8 +41,8 @@ func New(sess *session.Session) *Client {
 	}
 }
 
-// Cluster returns the ARN of the cluster in an environment.
-func (c Client) Cluster(app, env string) (string, error) {
+// ClusterARN returns the ARN of the cluster in an environment.
+func (c Client) ClusterARN(app, env string) (string, error) {
 	clusters, err := c.rgGetter.GetResourcesByTags(clusterResourceType, map[string]string{
 		deploy.AppTagKey: app,
 		deploy.EnvTagKey: env,
@@ -62,9 +63,29 @@ func (c Client) Cluster(app, env string) (string, error) {
 	return clusters[0].ARN, nil
 }
 
+// ServiceARN returns the ARN of an ECS service created with Copilot.
+func (c Client) ServiceARN(app, env, svc string) (*ecs.ServiceArn, error) {
+	services, err := c.rgGetter.GetResourcesByTags(serviceResourceType, map[string]string{
+		deploy.AppTagKey:     app,
+		deploy.EnvTagKey:     env,
+		deploy.ServiceTagKey: svc,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get ECS service with tags (%s, %s, %s): %w", app, env, svc, err)
+	}
+	if len(services) == 0 {
+		return nil, fmt.Errorf("no ECS service found for %s in environment %s", svc, env)
+	}
+	if len(services) > 1 {
+		return nil, fmt.Errorf("more than one ECS service with the name %s found in environment %s", svc, env)
+	}
+	serviceArn := ecs.ServiceArn(services[0].ARN)
+	return &serviceArn, nil
+}
+
 // ListActiveWorkloadTasks lists all active workload tasks (with desired status to be RUNNING) in the environment.
 func (c Client) ListActiveWorkloadTasks(app, env, workload string) (clusterARN string, taskARNs []string, err error) {
-	clusterARN, err = c.Cluster(app, env)
+	clusterARN, err = c.ClusterARN(app, env)
 	if err != nil {
 		return "", nil, fmt.Errorf("get cluster for env %s: %w", env, err)
 	}

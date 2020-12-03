@@ -13,15 +13,14 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/aas"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	awsECS "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
 const (
-	ecsServiceResourceType    = "ecs:service"
 	maxAlarmStatusColumnWidth = 30
 )
 
@@ -30,13 +29,13 @@ type alarmStatusGetter interface {
 	AlarmStatus(alarms []string) ([]cloudwatch.AlarmStatus, error)
 }
 
-type resourcesGetter interface {
-	GetResourcesByTags(resourceType string, tags map[string]string) ([]*rg.Resource, error)
+type ecsServiceGetter interface {
+	ServiceTasks(clusterName, serviceName string) ([]*awsECS.Task, error)
+	Service(clusterName, serviceName string) (*awsECS.Service, error)
 }
 
-type ecsServiceGetter interface {
-	ServiceTasks(clusterName, serviceName string) ([]*ecs.Task, error)
-	Service(clusterName, serviceName string) (*ecs.Service, error)
+type serviceARNGetter interface {
+	ServiceARN(app, env, svc string) (*awsECS.ServiceArn, error)
 }
 
 type autoscalingAlarmNamesGetter interface {
@@ -49,16 +48,16 @@ type ServiceStatus struct {
 	env string
 	svc string
 
-	ecsSvc ecsServiceGetter
-	cwSvc  alarmStatusGetter
-	aasSvc autoscalingAlarmNamesGetter
-	rgSvc  resourcesGetter
+	svcARNGetter serviceARNGetter
+	ecsSvc       ecsServiceGetter
+	cwSvc        alarmStatusGetter
+	aasSvc       autoscalingAlarmNamesGetter
 }
 
 // ServiceStatusDesc contains the status for a service.
 type ServiceStatusDesc struct {
-	Service ecs.ServiceStatus
-	Tasks   []ecs.TaskStatus         `json:"tasks"`
+	Service awsECS.ServiceStatus
+	Tasks   []awsECS.TaskStatus      `json:"tasks"`
 	Alarms  []cloudwatch.AlarmStatus `json:"alarms"`
 }
 
@@ -81,35 +80,19 @@ func NewServiceStatus(opt *NewServiceStatusConfig) (*ServiceStatus, error) {
 		return nil, fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 	}
 	return &ServiceStatus{
-		app:    opt.App,
-		env:    opt.Env,
-		svc:    opt.Svc,
-		rgSvc:  rg.New(sess),
-		cwSvc:  cloudwatch.New(sess),
-		ecsSvc: ecs.New(sess),
-		aasSvc: aas.New(sess),
+		app:          opt.App,
+		env:          opt.Env,
+		svc:          opt.Svc,
+		svcARNGetter: ecs.New(sess),
+		cwSvc:        cloudwatch.New(sess),
+		ecsSvc:       awsECS.New(sess),
+		aasSvc:       aas.New(sess),
 	}, nil
-}
-
-func (s *ServiceStatus) getServiceArn() (*ecs.ServiceArn, error) {
-	svcResources, err := s.rgSvc.GetResourcesByTags(ecsServiceResourceType, map[string]string{
-		deploy.AppTagKey:     s.app,
-		deploy.EnvTagKey:     s.env,
-		deploy.ServiceTagKey: s.svc,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if len(svcResources) == 0 {
-		return nil, fmt.Errorf("cannot find service arn in service stack resource")
-	}
-	serviceArn := ecs.ServiceArn(svcResources[0].ARN)
-	return &serviceArn, nil
 }
 
 // Describe returns status of a service.
 func (s *ServiceStatus) Describe() (*ServiceStatusDesc, error) {
-	serviceArn, err := s.getServiceArn()
+	serviceArn, err := s.svcARNGetter.ServiceARN(s.app, s.env, s.svc)
 	if err != nil {
 		return nil, fmt.Errorf("get service ARN: %w", err)
 	}
@@ -129,7 +112,7 @@ func (s *ServiceStatus) Describe() (*ServiceStatusDesc, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get tasks for service %s: %w", serviceName, err)
 	}
-	var taskStatus []ecs.TaskStatus
+	var taskStatus []awsECS.TaskStatus
 	for _, task := range tasks {
 		status, err := task.TaskStatus()
 		if err != nil {

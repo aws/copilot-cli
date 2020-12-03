@@ -114,19 +114,19 @@ func (m *MockClusterGetter) EXPECT() *MockClusterGetterMockRecorder {
 	return m.recorder
 }
 
-// Cluster mocks base method
-func (m *MockClusterGetter) Cluster(app, env string) (string, error) {
+// ClusterARN mocks base method
+func (m *MockClusterGetter) ClusterARN(app, env string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Cluster", app, env)
+	ret := m.ctrl.Call(m, "ClusterARN", app, env)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Cluster indicates an expected call of Cluster
-func (mr *MockClusterGetterMockRecorder) Cluster(app, env interface{}) *gomock.Call {
+// ClusterARN indicates an expected call of ClusterARN
+func (mr *MockClusterGetterMockRecorder) ClusterARN(app, env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cluster", reflect.TypeOf((*MockClusterGetter)(nil).Cluster), app, env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterARN", reflect.TypeOf((*MockClusterGetter)(nil).ClusterARN), app, env)
 }
 
 // MockDefaultClusterGetter is a mock of DefaultClusterGetter interface

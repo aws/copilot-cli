@@ -49,31 +49,31 @@ func (mr *MockresourceGetterMockRecorder) GetResourcesByTags(resourceType, tags 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResourcesByTags", reflect.TypeOf((*MockresourceGetter)(nil).GetResourcesByTags), resourceType, tags)
 }
 
-// MockRunningTasksInFamilyGetter is a mock of RunningTasksInFamilyGetter interface
-type MockRunningTasksInFamilyGetter struct {
+// MockrunningTasksInFamilyGetter is a mock of runningTasksInFamilyGetter interface
+type MockrunningTasksInFamilyGetter struct {
 	ctrl     *gomock.Controller
-	recorder *MockRunningTasksInFamilyGetterMockRecorder
+	recorder *MockrunningTasksInFamilyGetterMockRecorder
 }
 
-// MockRunningTasksInFamilyGetterMockRecorder is the mock recorder for MockRunningTasksInFamilyGetter
-type MockRunningTasksInFamilyGetterMockRecorder struct {
-	mock *MockRunningTasksInFamilyGetter
+// MockrunningTasksInFamilyGetterMockRecorder is the mock recorder for MockrunningTasksInFamilyGetter
+type MockrunningTasksInFamilyGetterMockRecorder struct {
+	mock *MockrunningTasksInFamilyGetter
 }
 
-// NewMockRunningTasksInFamilyGetter creates a new mock instance
-func NewMockRunningTasksInFamilyGetter(ctrl *gomock.Controller) *MockRunningTasksInFamilyGetter {
-	mock := &MockRunningTasksInFamilyGetter{ctrl: ctrl}
-	mock.recorder = &MockRunningTasksInFamilyGetterMockRecorder{mock}
+// NewMockrunningTasksInFamilyGetter creates a new mock instance
+func NewMockrunningTasksInFamilyGetter(ctrl *gomock.Controller) *MockrunningTasksInFamilyGetter {
+	mock := &MockrunningTasksInFamilyGetter{ctrl: ctrl}
+	mock.recorder = &MockrunningTasksInFamilyGetterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockRunningTasksInFamilyGetter) EXPECT() *MockRunningTasksInFamilyGetterMockRecorder {
+func (m *MockrunningTasksInFamilyGetter) EXPECT() *MockrunningTasksInFamilyGetterMockRecorder {
 	return m.recorder
 }
 
 // RunningTasksInFamily mocks base method
-func (m *MockRunningTasksInFamilyGetter) RunningTasksInFamily(cluster, family string) ([]*ecs.Task, error) {
+func (m *MockrunningTasksInFamilyGetter) RunningTasksInFamily(cluster, family string) ([]*ecs.Task, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunningTasksInFamily", cluster, family)
 	ret0, _ := ret[0].([]*ecs.Task)
@@ -82,7 +82,7 @@ func (m *MockRunningTasksInFamilyGetter) RunningTasksInFamily(cluster, family st
 }
 
 // RunningTasksInFamily indicates an expected call of RunningTasksInFamily
-func (mr *MockRunningTasksInFamilyGetterMockRecorder) RunningTasksInFamily(cluster, family interface{}) *gomock.Call {
+func (mr *MockrunningTasksInFamilyGetterMockRecorder) RunningTasksInFamily(cluster, family interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunningTasksInFamily", reflect.TypeOf((*MockRunningTasksInFamilyGetter)(nil).RunningTasksInFamily), cluster, family)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunningTasksInFamily", reflect.TypeOf((*MockrunningTasksInFamilyGetter)(nil).RunningTasksInFamily), cluster, family)
 }
