@@ -7,6 +7,7 @@ package mocks
 import (
 	cloudwatch "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	ecs0 "github.com/aws/copilot-cli/internal/pkg/ecs"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -117,42 +118,42 @@ func (mr *MockecsServiceGetterMockRecorder) Service(clusterName, serviceName int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockecsServiceGetter)(nil).Service), clusterName, serviceName)
 }
 
-// MockserviceARNGetter is a mock of serviceARNGetter interface
-type MockserviceARNGetter struct {
+// MockserviceDescriber is a mock of serviceDescriber interface
+type MockserviceDescriber struct {
 	ctrl     *gomock.Controller
-	recorder *MockserviceARNGetterMockRecorder
+	recorder *MockserviceDescriberMockRecorder
 }
 
-// MockserviceARNGetterMockRecorder is the mock recorder for MockserviceARNGetter
-type MockserviceARNGetterMockRecorder struct {
-	mock *MockserviceARNGetter
+// MockserviceDescriberMockRecorder is the mock recorder for MockserviceDescriber
+type MockserviceDescriberMockRecorder struct {
+	mock *MockserviceDescriber
 }
 
-// NewMockserviceARNGetter creates a new mock instance
-func NewMockserviceARNGetter(ctrl *gomock.Controller) *MockserviceARNGetter {
-	mock := &MockserviceARNGetter{ctrl: ctrl}
-	mock.recorder = &MockserviceARNGetterMockRecorder{mock}
+// NewMockserviceDescriber creates a new mock instance
+func NewMockserviceDescriber(ctrl *gomock.Controller) *MockserviceDescriber {
+	mock := &MockserviceDescriber{ctrl: ctrl}
+	mock.recorder = &MockserviceDescriberMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockserviceARNGetter) EXPECT() *MockserviceARNGetterMockRecorder {
+func (m *MockserviceDescriber) EXPECT() *MockserviceDescriberMockRecorder {
 	return m.recorder
 }
 
-// ServiceARN mocks base method
-func (m *MockserviceARNGetter) ServiceARN(app, env, svc string) (*ecs.ServiceArn, error) {
+// DescribeService mocks base method
+func (m *MockserviceDescriber) DescribeService(app, env, svc string) (*ecs0.ServiceDesc, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceARN", app, env, svc)
-	ret0, _ := ret[0].(*ecs.ServiceArn)
+	ret := m.ctrl.Call(m, "DescribeService", app, env, svc)
+	ret0, _ := ret[0].(*ecs0.ServiceDesc)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ServiceARN indicates an expected call of ServiceARN
-func (mr *MockserviceARNGetterMockRecorder) ServiceARN(app, env, svc interface{}) *gomock.Call {
+// DescribeService indicates an expected call of DescribeService
+func (mr *MockserviceDescriberMockRecorder) DescribeService(app, env, svc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceARN", reflect.TypeOf((*MockserviceARNGetter)(nil).ServiceARN), app, env, svc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockserviceDescriber)(nil).DescribeService), app, env, svc)
 }
 
 // MockautoscalingAlarmNamesGetter is a mock of autoscalingAlarmNamesGetter interface

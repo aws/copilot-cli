@@ -19,7 +19,7 @@ import (
 
 type clientMocks struct {
 	resourceGetter *mocks.MockresourceGetter
-	ecsTaskGetter  *mocks.MockrunningTasksInFamilyGetter
+	ecsClient      *mocks.MockecsClient
 }
 
 func TestClient_ClusterARN(t *testing.T) {
@@ -204,6 +204,107 @@ func TestClient_ServiceARN(t *testing.T) {
 	}
 }
 
+func TestClient_DescribeService(t *testing.T) {
+	const (
+		mockApp     = "mockApp"
+		mockEnv     = "mockEnv"
+		mockSvc     = "mockSvc"
+		badSvcARN   = "badMockArn"
+		mockSvcARN  = "arn:aws:ecs:us-west-2:1234567890:service/mockCluster/mockService"
+		mockCluster = "mockCluster"
+		mockService = "mockService"
+	)
+	getRgInput := map[string]string{
+		deploy.AppTagKey:     mockApp,
+		deploy.EnvTagKey:     mockEnv,
+		deploy.ServiceTagKey: mockSvc,
+	}
+
+	tests := map[string]struct {
+		setupMocks func(mocks clientMocks)
+
+		wantedError error
+		wanted      *ServiceDesc
+	}{
+		"return error if failed to get cluster name": {
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+						Return([]*resourcegroups.Resource{
+							{ARN: badSvcARN},
+						}, nil),
+				)
+			},
+			wantedError: fmt.Errorf("get cluster name: arn: invalid prefix"),
+		},
+		"return error if failed to get service tasks": {
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+						Return([]*resourcegroups.Resource{
+							{ARN: mockSvcARN},
+						}, nil),
+					m.ecsClient.EXPECT().ServiceTasks(mockCluster, mockService).Return(nil, errors.New("some error")),
+				)
+			},
+			wantedError: fmt.Errorf("get tasks for service mockService: some error"),
+		},
+		"success": {
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+						Return([]*resourcegroups.Resource{
+							{ARN: mockSvcARN},
+						}, nil),
+					m.ecsClient.EXPECT().ServiceTasks(mockCluster, mockService).Return([]*ecs.Task{
+						{TaskArn: aws.String("mockTaskARN")},
+					}, nil),
+				)
+			},
+			wanted: &ServiceDesc{
+				ClusterName: mockCluster,
+				Name:        mockService,
+				Tasks: []*ecs.Task{
+					{TaskArn: aws.String("mockTaskARN")},
+				},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// GIVEN
+			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
+			mockECSClient := mocks.NewMockecsClient(ctrl)
+			mocks := clientMocks{
+				resourceGetter: mockRgGetter,
+				ecsClient:      mockECSClient,
+			}
+
+			test.setupMocks(mocks)
+
+			client := Client{
+				rgGetter:  mockRgGetter,
+				ecsClient: mockECSClient,
+			}
+
+			// WHEN
+			get, err := client.DescribeService(mockApp, mockEnv, mockSvc)
+
+			// THEN
+			if test.wantedError != nil {
+				require.EqualError(t, err, test.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, get, test.wanted)
+			}
+		})
+	}
+}
+
 func TestClient_ListActiveWorkloadTasks(t *testing.T) {
 	const (
 		mockApp = "mockApp"
@@ -239,7 +340,7 @@ func TestClient_ListActiveWorkloadTasks(t *testing.T) {
 						Return([]*resourcegroups.Resource{
 							{ARN: "mockCluster"},
 						}, nil),
-					m.ecsTaskGetter.EXPECT().RunningTasksInFamily("mockCluster", "mockApp-mockEnv-mockWl").Return(nil, testError),
+					m.ecsClient.EXPECT().RunningTasksInFamily("mockCluster", "mockApp-mockEnv-mockWl").Return(nil, testError),
 				)
 			},
 			wantedError: fmt.Errorf("list tasks that belong to family mockApp-mockEnv-mockWl: some error"),
@@ -251,7 +352,7 @@ func TestClient_ListActiveWorkloadTasks(t *testing.T) {
 						Return([]*resourcegroups.Resource{
 							{ARN: "mockCluster"},
 						}, nil),
-					m.ecsTaskGetter.EXPECT().RunningTasksInFamily("mockCluster", "mockApp-mockEnv-mockWl").Return([]*ecs.Task{
+					m.ecsClient.EXPECT().RunningTasksInFamily("mockCluster", "mockApp-mockEnv-mockWl").Return([]*ecs.Task{
 						{
 							TaskArn: aws.String("mockTask1"),
 						},
@@ -273,17 +374,17 @@ func TestClient_ListActiveWorkloadTasks(t *testing.T) {
 
 			// GIVEN
 			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
-			mockECSTasksGetter := mocks.NewMockrunningTasksInFamilyGetter(ctrl)
+			mockECSTasksGetter := mocks.NewMockecsClient(ctrl)
 			mocks := clientMocks{
 				resourceGetter: mockRgGetter,
-				ecsTaskGetter:  mockECSTasksGetter,
+				ecsClient:      mockECSTasksGetter,
 			}
 
 			test.setupMocks(mocks)
 
 			client := Client{
-				rgGetter:   mockRgGetter,
-				taskGetter: mockECSTasksGetter,
+				rgGetter:  mockRgGetter,
+				ecsClient: mockECSTasksGetter,
 			}
 
 			// WHEN
