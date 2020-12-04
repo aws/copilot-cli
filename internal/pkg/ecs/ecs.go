@@ -23,21 +23,29 @@ type resourceGetter interface {
 	GetResourcesByTags(resourceType string, tags map[string]string) ([]*resourcegroups.Resource, error)
 }
 
-type runningTasksInFamilyGetter interface {
+type ecsClient interface {
 	RunningTasksInFamily(cluster, family string) ([]*ecs.Task, error)
+	ServiceTasks(clusterName, serviceName string) ([]*ecs.Task, error)
+}
+
+// ServiceDesc contains the description of an ECS service.
+type ServiceDesc struct {
+	Name        string
+	ClusterName string
+	Tasks       []*ecs.Task
 }
 
 // Client retrieves Copilot information from ECS endpoint.
 type Client struct {
-	rgGetter   resourceGetter
-	taskGetter runningTasksInFamilyGetter
+	rgGetter  resourceGetter
+	ecsClient ecsClient
 }
 
 // New inits a new Client.
 func New(sess *session.Session) *Client {
 	return &Client{
-		rgGetter:   resourcegroups.New(sess),
-		taskGetter: ecs.New(sess),
+		rgGetter:  resourcegroups.New(sess),
+		ecsClient: ecs.New(sess),
 	}
 }
 
@@ -83,6 +91,31 @@ func (c Client) ServiceARN(app, env, svc string) (*ecs.ServiceArn, error) {
 	return &serviceArn, nil
 }
 
+// DescribeService returns the description of an ECS service given Copilot service info.
+func (c Client) DescribeService(app, env, svc string) (*ServiceDesc, error) {
+	svcARN, err := c.ServiceARN(app, env, svc)
+	if err != nil {
+		return nil, err
+	}
+	clusterName, err := svcARN.ClusterName()
+	if err != nil {
+		return nil, fmt.Errorf("get cluster name: %w", err)
+	}
+	serviceName, err := svcARN.ServiceName()
+	if err != nil {
+		return nil, fmt.Errorf("get service name: %w", err)
+	}
+	tasks, err := c.ecsClient.ServiceTasks(clusterName, serviceName)
+	if err != nil {
+		return nil, fmt.Errorf("get tasks for service %s: %w", serviceName, err)
+	}
+	return &ServiceDesc{
+		ClusterName: clusterName,
+		Name:        serviceName,
+		Tasks:       tasks,
+	}, nil
+}
+
 // ListActiveWorkloadTasks lists all active workload tasks (with desired status to be RUNNING) in the environment.
 func (c Client) ListActiveWorkloadTasks(app, env, workload string) (clusterARN string, taskARNs []string, err error) {
 	clusterARN, err = c.ClusterARN(app, env)
@@ -90,7 +123,7 @@ func (c Client) ListActiveWorkloadTasks(app, env, workload string) (clusterARN s
 		return "", nil, fmt.Errorf("get cluster for env %s: %w", env, err)
 	}
 	tdFamilyName := fmt.Sprintf(fmtWorkloadTaskDefinitionFamily, app, env, workload)
-	tasks, err := c.taskGetter.RunningTasksInFamily(clusterARN, tdFamilyName)
+	tasks, err := c.ecsClient.RunningTasksInFamily(clusterARN, tdFamilyName)
 	if err != nil {
 		return "", nil, fmt.Errorf("list tasks that belong to family %s: %w", tdFamilyName, err)
 	}

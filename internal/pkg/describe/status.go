@@ -34,8 +34,8 @@ type ecsServiceGetter interface {
 	Service(clusterName, serviceName string) (*awsECS.Service, error)
 }
 
-type serviceARNGetter interface {
-	ServiceARN(app, env, svc string) (*awsECS.ServiceArn, error)
+type serviceDescriber interface {
+	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
 }
 
 type autoscalingAlarmNamesGetter interface {
@@ -48,7 +48,7 @@ type ServiceStatus struct {
 	env string
 	svc string
 
-	svcARNGetter serviceARNGetter
+	svcDescriber serviceDescriber
 	ecsSvc       ecsServiceGetter
 	cwSvc        alarmStatusGetter
 	aasSvc       autoscalingAlarmNamesGetter
@@ -83,7 +83,7 @@ func NewServiceStatus(opt *NewServiceStatusConfig) (*ServiceStatus, error) {
 		app:          opt.App,
 		env:          opt.Env,
 		svc:          opt.Svc,
-		svcARNGetter: ecs.New(sess),
+		svcDescriber: ecs.New(sess),
 		cwSvc:        cloudwatch.New(sess),
 		ecsSvc:       awsECS.New(sess),
 		aasSvc:       aas.New(sess),
@@ -92,28 +92,16 @@ func NewServiceStatus(opt *NewServiceStatusConfig) (*ServiceStatus, error) {
 
 // Describe returns status of a service.
 func (s *ServiceStatus) Describe() (*ServiceStatusDesc, error) {
-	serviceArn, err := s.svcARNGetter.ServiceARN(s.app, s.env, s.svc)
+	svcDesc, err := s.svcDescriber.DescribeService(s.app, s.env, s.svc)
 	if err != nil {
-		return nil, fmt.Errorf("get service ARN: %w", err)
+		return nil, fmt.Errorf("get ECS service description for %s: %w", s.svc, err)
 	}
-	clusterName, err := serviceArn.ClusterName()
+	service, err := s.ecsSvc.Service(svcDesc.ClusterName, svcDesc.Name)
 	if err != nil {
-		return nil, fmt.Errorf("get cluster name: %w", err)
-	}
-	serviceName, err := serviceArn.ServiceName()
-	if err != nil {
-		return nil, fmt.Errorf("get service name: %w", err)
-	}
-	service, err := s.ecsSvc.Service(clusterName, serviceName)
-	if err != nil {
-		return nil, fmt.Errorf("get service %s: %w", serviceName, err)
-	}
-	tasks, err := s.ecsSvc.ServiceTasks(clusterName, serviceName)
-	if err != nil {
-		return nil, fmt.Errorf("get tasks for service %s: %w", serviceName, err)
+		return nil, fmt.Errorf("get service %s: %w", svcDesc.Name, err)
 	}
 	var taskStatus []awsECS.TaskStatus
-	for _, task := range tasks {
+	for _, task := range svcDesc.Tasks {
 		status, err := task.TaskStatus()
 		if err != nil {
 			return nil, fmt.Errorf("get status for task %s: %w", *task.TaskArn, err)
@@ -130,7 +118,7 @@ func (s *ServiceStatus) Describe() (*ServiceStatusDesc, error) {
 		return nil, fmt.Errorf("get tagged CloudWatch alarms: %w", err)
 	}
 	alarms = append(alarms, taggedAlarms...)
-	autoscalingAlarms, err := s.ecsServiceAutoscalingAlarms(clusterName, serviceName)
+	autoscalingAlarms, err := s.ecsServiceAutoscalingAlarms(svcDesc.ClusterName, svcDesc.Name)
 	if err != nil {
 		return nil, err
 	}
