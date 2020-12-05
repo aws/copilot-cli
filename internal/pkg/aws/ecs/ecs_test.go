@@ -736,3 +736,40 @@ func TestECS_DescribeTasks(t *testing.T) {
 		})
 	}
 }
+
+func TestECS_ExecuteCommand(t *testing.T) {
+	testCases := map[string]struct {
+		mockAPI     func(m *mocks.Mockapi)
+		wantedError error
+	}{
+		"success": {
+			mockAPI: func(m *mocks.Mockapi) {},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockAPI := mocks.NewMockapi(ctrl)
+			tc.mockAPI(mockAPI)
+
+			ecs := ECS{
+				client: mockAPI,
+			}
+
+			err := ecs.ExecuteCommand(&ExecuteCommandInput{
+				Cluster:   "mockCluster",
+				Command:   "mockCommand",
+				Container: "mockContainer",
+				Task:      "mockTask",
+			})
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

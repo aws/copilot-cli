@@ -10,13 +10,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
@@ -489,5 +490,13 @@ type activeWorkloadTasksLister interface {
 }
 
 type tasksStopper interface {
-	StopTasks(tasks []string, opts ...ecs.StopTasksOpts) error
+	StopTasks(tasks []string, opts ...awsecs.StopTasksOpts) error
+}
+
+type serviceDescriber interface {
+	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
+}
+
+type commandExecutor interface {
+	ExecuteCommand(in *awsecs.ExecuteCommandInput) error
 }

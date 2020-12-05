@@ -5,11 +5,19 @@ package cli
 
 import (
 	"fmt"
+	"math/rand"
+	"strings"
+	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/cmd/copilot/template"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
@@ -23,8 +31,10 @@ The task is chosen at random, and the first essential container is used.`
 
 type svcExecOpts struct {
 	execVars
-	store store
-	sel   deploySelector
+	store              store
+	sel                deploySelector
+	newSvcDescriber    func(*session.Session) serviceDescriber
+	newCommandExecutor func(*session.Session) commandExecutor
 }
 
 func newSvcExecOpts(vars execVars) (*svcExecOpts, error) {
@@ -40,6 +50,9 @@ func newSvcExecOpts(vars execVars) (*svcExecOpts, error) {
 		execVars: vars,
 		store:    ssmStore,
 		sel:      selector.NewDeploySelect(prompt.New(), ssmStore, deployStore),
+		newSvcDescriber: func(s *session.Session) serviceDescriber {
+			return ecs.New(s)
+		},
 	}, nil
 }
 
@@ -76,6 +89,28 @@ func (o *svcExecOpts) Ask() error {
 
 // Execute executes a command in a running container.
 func (o *svcExecOpts) Execute() error {
+	sess, err := o.envSession()
+	if err != nil {
+		return err
+	}
+	svcDesc, err := o.newSvcDescriber(sess).DescribeService(o.appName, o.envName, o.name)
+	if err != nil {
+		return fmt.Errorf("describe ECS service for %s in environment %s: %w", o.name, o.envName, err)
+	}
+	task, err := o.selectTask(awsecs.FilterRunningTasks(svcDesc.Tasks))
+	if err != nil {
+		return err
+	}
+	container := o.selectContainer(task)
+	if err := o.newCommandExecutor(sess).ExecuteCommand(&awsecs.ExecuteCommandInput{
+		Cluster:     svcDesc.ClusterName,
+		Command:     o.command,
+		Container:   container,
+		Task:        aws.StringValue(task.TaskArn),
+		Interactive: o.interactive,
+	}); err != nil {
+		return fmt.Errorf("execute command %s in container %s: %w", o.command, container, err)
+	}
 	return nil
 }
 
@@ -99,6 +134,42 @@ func (o *svcExecOpts) askSvcEnvName() error {
 	o.name = deployedService.Svc
 	o.envName = deployedService.Env
 	return nil
+}
+
+func (o *svcExecOpts) envSession() (*session.Session, error) {
+	env, err := o.store.GetEnvironment(o.appName, o.envName)
+	if err != nil {
+		return nil, fmt.Errorf("get environment %s: %w", o.envName, err)
+	}
+	return sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+}
+
+func (o *svcExecOpts) selectTask(tasks []*awsecs.Task) (*awsecs.Task, error) {
+	if o.taskID != "" {
+		for _, task := range tasks {
+			taskID, err := awsecs.TaskID(aws.StringValue(task.TaskArn))
+			if err != nil {
+				return nil, err
+			}
+			if strings.HasPrefix(taskID, o.taskID) {
+				return task, nil
+			}
+		}
+		return nil, fmt.Errorf("found no running task whose ID is prefixed with %s", o.taskID)
+	}
+	if len(tasks) == 0 {
+		return nil, fmt.Errorf("found no running task for service %s in environment %s", o.name, o.envName)
+	}
+	rand.Seed(time.Now().Unix())
+	return tasks[rand.Intn(len(tasks))], nil
+}
+
+func (o *svcExecOpts) selectContainer(task *awsecs.Task) string {
+	if o.containerName != "" {
+		return o.containerName
+	}
+	// The first essential container is named with the workload name.
+	return o.name
 }
 
 // buildSvcExecCmd builds the command for execute a running container in a service.

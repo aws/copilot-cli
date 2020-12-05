@@ -350,3 +350,42 @@ func TestTaskDefinition_Secrets(t *testing.T) {
 
 	}
 }
+
+func TestFilterRunningTasks(t *testing.T) {
+	testCases := map[string]struct {
+		inTasks     []*Task
+		wantedTasks []*Task
+	}{
+		"should return only running tasks": {
+			inTasks: []*Task{
+				{
+					TaskArn:    aws.String("mockTask1"),
+					LastStatus: aws.String("STOPPED"),
+				},
+				{
+					TaskArn:    aws.String("mockTask2"),
+					LastStatus: aws.String("RUNNING"),
+				},
+			},
+			wantedTasks: []*Task{
+				{
+					TaskArn:    aws.String("mockTask2"),
+					LastStatus: aws.String("RUNNING"),
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			got := FilterRunningTasks(tc.inTasks)
+
+			require.Equal(t, tc.wantedTasks, got)
+		})
+
+	}
+}

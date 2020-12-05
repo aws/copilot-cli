@@ -8,16 +8,22 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 type execSvcMocks struct {
-	storeSvc *mocks.Mockstore
-	sel      *mocks.MockdeploySelector
+	storeSvc        *mocks.Mockstore
+	sel             *mocks.MockdeploySelector
+	svcDescriber    *mocks.MockserviceDescriber
+	commandExecutor *mocks.MockcommandExecutor
 }
 
 func TestSvcExec_Validate(t *testing.T) {
@@ -225,6 +231,166 @@ func TestSvcExec_Ask(t *testing.T) {
 				require.Equal(t, tc.wantedApp, execSvcs.appName, "expected app name to match")
 				require.Equal(t, tc.wantedSvc, execSvcs.name, "expected service name to match")
 				require.Equal(t, tc.wantedEnv, execSvcs.envName, "expected service name to match")
+			}
+		})
+	}
+}
+
+func TestSvcExec_Execute(t *testing.T) {
+	mockError := errors.New("some error")
+	testCases := map[string]struct {
+		containerName string
+		taskID        string
+		setupMocks    func(mocks execSvcMocks)
+
+		wantedError error
+	}{
+		"return error if fail to get environment": {
+			setupMocks: func(m execSvcMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(nil, mockError),
+				)
+			},
+			wantedError: fmt.Errorf("get environment mockEnv: some error"),
+		},
+		"return error if fail to describe service": {
+			setupMocks: func(m execSvcMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
+						Name: "my-env",
+					}, nil),
+					m.svcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(nil, mockError),
+				)
+			},
+			wantedError: fmt.Errorf("describe ECS service for mockSvc in environment mockEnv: some error"),
+		},
+		"return error if fail to find prefixed task": {
+			taskID: "mockTaskID1",
+			setupMocks: func(m execSvcMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
+						Name: "my-env",
+					}, nil),
+					m.svcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
+						Tasks: []*awsecs.Task{},
+					}, nil),
+				)
+			},
+			wantedError: fmt.Errorf("found no running task whose ID is prefixed with mockTaskID1"),
+		},
+		"return error if no running task found": {
+			setupMocks: func(m execSvcMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
+						Name: "my-env",
+					}, nil),
+					m.svcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
+						Tasks: []*awsecs.Task{},
+					}, nil),
+				)
+			},
+			wantedError: fmt.Errorf("found no running task for service mockSvc in environment mockEnv"),
+		},
+		"return error if fail to execute command": {
+			containerName: "hello",
+			setupMocks: func(m execSvcMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
+						Name: "my-env",
+					}, nil),
+					m.svcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
+						ClusterName: "mockCluster",
+						Tasks: []*awsecs.Task{
+							{
+								TaskArn:    aws.String("mockTaskID"),
+								LastStatus: aws.String("RUNNING"),
+							},
+						},
+					}, nil),
+					m.commandExecutor.EXPECT().ExecuteCommand(&awsecs.ExecuteCommandInput{
+						Cluster:     "mockCluster",
+						Container:   "hello",
+						Task:        "mockTaskID",
+						Command:     "mockCommand",
+						Interactive: true,
+					}).Return(mockError),
+				)
+			},
+			wantedError: fmt.Errorf("execute command mockCommand in container hello: some error"),
+		},
+		"success": {
+			setupMocks: func(m execSvcMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
+						Name: "my-env",
+					}, nil),
+					m.svcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
+						ClusterName: "mockCluster",
+						Tasks: []*awsecs.Task{
+							{
+								TaskArn:    aws.String("mockTaskID"),
+								LastStatus: aws.String("RUNNING"),
+							},
+						},
+					}, nil),
+					m.commandExecutor.EXPECT().ExecuteCommand(&awsecs.ExecuteCommandInput{
+						Cluster:     "mockCluster",
+						Container:   "mockSvc",
+						Task:        "mockTaskID",
+						Command:     "mockCommand",
+						Interactive: true,
+					}).Return(nil),
+				)
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockStoreReader := mocks.NewMockstore(ctrl)
+			mockSvcDescriber := mocks.NewMockserviceDescriber(ctrl)
+			mockCommandExecutor := mocks.NewMockcommandExecutor(ctrl)
+			mockNewSvcDescriber := func(_ *session.Session) serviceDescriber {
+				return mockSvcDescriber
+			}
+			mockNewCommandExecutor := func(_ *session.Session) commandExecutor {
+				return mockCommandExecutor
+			}
+
+			mocks := execSvcMocks{
+				storeSvc:        mockStoreReader,
+				commandExecutor: mockCommandExecutor,
+				svcDescriber:    mockSvcDescriber,
+			}
+
+			tc.setupMocks(mocks)
+
+			execSvcs := &svcExecOpts{
+				execVars: execVars{
+					name:          "mockSvc",
+					envName:       "mockEnv",
+					appName:       "mockApp",
+					command:       "mockCommand",
+					containerName: tc.containerName,
+					interactive:   true,
+					taskID:        tc.taskID,
+				},
+				store:              mockStoreReader,
+				newSvcDescriber:    mockNewSvcDescriber,
+				newCommandExecutor: mockNewCommandExecutor,
+			}
+
+			// WHEN
+			err := execSvcs.Execute()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

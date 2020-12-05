@@ -42,6 +42,15 @@ type RunTaskInput struct {
 	StartedBy      string
 }
 
+// ExecuteCommandInput holds the fields needed to execute commands in a running container.
+type ExecuteCommandInput struct {
+	Cluster     string
+	Command     string
+	Task        string
+	Container   string
+	Interactive bool
+}
+
 // New returns a Service configured against the input session.
 func New(s *session.Session) *ECS {
 	return &ECS{
@@ -267,6 +276,11 @@ func (e *ECS) DescribeTasks(cluster string, taskARNs []string) ([]*Task, error) 
 		tasks[idx] = &t
 	}
 	return tasks, nil
+}
+
+// ExecuteCommand executes commands in a running container.
+func (e *ECS) ExecuteCommand(in *ExecuteCommandInput) error {
+	return nil
 }
 
 func isRequestTimeoutErr(err error) bool {

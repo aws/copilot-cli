@@ -20,6 +20,8 @@ const (
 	shortTaskIDLength      = 8
 	shortImageDigestLength = 8
 	imageDigestPrefix      = "sha256:"
+
+	lastStatusRunning = "RUNNING"
 )
 
 // humanizeTime is overriden in tests so that its output is constant as time passes.
@@ -170,6 +172,17 @@ func TaskID(taskARN string) (string, error) {
 	resources := strings.Split(parsedARN.Resource, "/")
 	taskID := resources[len(resources)-1]
 	return taskID, nil
+}
+
+// FilterRunningTasks returns only tasks with the last status to be RUNNING.
+func FilterRunningTasks(tasks []*Task) []*Task {
+	var filtered []*Task
+	for _, task := range tasks {
+		if aws.StringValue(task.LastStatus) == lastStatusRunning {
+			filtered = append(filtered, task)
+		}
+	}
+	return filtered
 }
 
 func taskHealthColor(status string) string {

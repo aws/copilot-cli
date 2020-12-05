@@ -16,6 +16,7 @@ import (
 	describe "github.com/aws/copilot-cli/internal/pkg/describe"
 	docker "github.com/aws/copilot-cli/internal/pkg/docker"
 	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	ecs0 "github.com/aws/copilot-cli/internal/pkg/ecs"
 	initialize "github.com/aws/copilot-cli/internal/pkg/initialize"
 	logging "github.com/aws/copilot-cli/internal/pkg/logging"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
@@ -5272,4 +5273,79 @@ func (mr *MocktasksStopperMockRecorder) StopTasks(tasks interface{}, opts ...int
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{tasks}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopTasks", reflect.TypeOf((*MocktasksStopper)(nil).StopTasks), varargs...)
+}
+
+// MockserviceDescriber is a mock of serviceDescriber interface
+type MockserviceDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockserviceDescriberMockRecorder
+}
+
+// MockserviceDescriberMockRecorder is the mock recorder for MockserviceDescriber
+type MockserviceDescriberMockRecorder struct {
+	mock *MockserviceDescriber
+}
+
+// NewMockserviceDescriber creates a new mock instance
+func NewMockserviceDescriber(ctrl *gomock.Controller) *MockserviceDescriber {
+	mock := &MockserviceDescriber{ctrl: ctrl}
+	mock.recorder = &MockserviceDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockserviceDescriber) EXPECT() *MockserviceDescriberMockRecorder {
+	return m.recorder
+}
+
+// DescribeService mocks base method
+func (m *MockserviceDescriber) DescribeService(app, env, svc string) (*ecs0.ServiceDesc, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeService", app, env, svc)
+	ret0, _ := ret[0].(*ecs0.ServiceDesc)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeService indicates an expected call of DescribeService
+func (mr *MockserviceDescriberMockRecorder) DescribeService(app, env, svc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockserviceDescriber)(nil).DescribeService), app, env, svc)
+}
+
+// MockcommandExecutor is a mock of commandExecutor interface
+type MockcommandExecutor struct {
+	ctrl     *gomock.Controller
+	recorder *MockcommandExecutorMockRecorder
+}
+
+// MockcommandExecutorMockRecorder is the mock recorder for MockcommandExecutor
+type MockcommandExecutorMockRecorder struct {
+	mock *MockcommandExecutor
+}
+
+// NewMockcommandExecutor creates a new mock instance
+func NewMockcommandExecutor(ctrl *gomock.Controller) *MockcommandExecutor {
+	mock := &MockcommandExecutor{ctrl: ctrl}
+	mock.recorder = &MockcommandExecutorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockcommandExecutor) EXPECT() *MockcommandExecutorMockRecorder {
+	return m.recorder
+}
+
+// ExecuteCommand mocks base method
+func (m *MockcommandExecutor) ExecuteCommand(in *ecs.ExecuteCommandInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecuteCommand", in)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ExecuteCommand indicates an expected call of ExecuteCommand
+func (mr *MockcommandExecutorMockRecorder) ExecuteCommand(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteCommand", reflect.TypeOf((*MockcommandExecutor)(nil).ExecuteCommand), in)
 }
