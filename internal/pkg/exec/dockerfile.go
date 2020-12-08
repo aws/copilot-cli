@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package dockerfile provides simple Dockerfile parsing functionality.
-package dockerfile
+// Package exec provides an interface to execute certain commands.
+package exec
 
 import (
 	"flag"
@@ -70,8 +70,8 @@ type Dockerfile struct {
 	fs afero.Fs
 }
 
-// New returns an empty Dockerfile.
-func New(fs afero.Fs, path string) *Dockerfile {
+// NewDockerfile returns an empty Dockerfile.
+func NewDockerfile(fs afero.Fs, path string) *Dockerfile {
 	return &Dockerfile{
 		ExposedPorts: []portConfig{},
 		HealthCheck:  nil,

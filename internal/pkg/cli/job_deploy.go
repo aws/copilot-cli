@@ -11,7 +11,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
-	"github.com/aws/copilot-cli/internal/pkg/docker"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
@@ -251,14 +251,14 @@ func (o *deployJobOpts) configureContainerImage() error {
 	if err != nil {
 		return err
 	}
-	if err := o.imageBuilderPusher.BuildAndPush(docker.New(), buildArg); err != nil {
+	if err := o.imageBuilderPusher.BuildAndPush(exec.NewDockerCommand(), buildArg); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
 	o.buildRequired = true
 	return nil
 }
 
-func (o *deployJobOpts) dfBuildArgs(job interface{}) (*docker.BuildArguments, error) {
+func (o *deployJobOpts) dfBuildArgs(job interface{}) (*exec.BuildArguments, error) {
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
 		return nil, fmt.Errorf("get copilot directory: %w", err)

@@ -1,19 +1,19 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package docker
+package exec
 
 import (
 	"errors"
 	"fmt"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/docker/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/exec/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
-func TestBuild(t *testing.T) {
+func TestDockerCommand_Build(t *testing.T) {
 	mockError := errors.New("mockError")
 
 	mockURI := "mockURI"
@@ -106,8 +106,8 @@ func TestBuild(t *testing.T) {
 			},
 		},
 		"runs with cache_from and target fields": {
-			path: mockPath,
-			target: "foobar",
+			path:      mockPath,
+			target:    "foobar",
 			cacheFrom: []string{"foo/bar:latest", "foo/bar/baz:1.2.3"},
 			setupMocks: func(c *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(c)
@@ -125,7 +125,7 @@ func TestBuild(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			tc.setupMocks(controller)
-			s := Runner{
+			s := DockerCommand{
 				runner: mockRunner,
 			}
 			buildInput := BuildArguments{
@@ -149,7 +149,7 @@ func TestBuild(t *testing.T) {
 	}
 }
 
-func TestLogin(t *testing.T) {
+func TestDockerCommand_Login(t *testing.T) {
 	mockError := errors.New("mockError")
 
 	mockURI := "mockURI"
@@ -185,7 +185,7 @@ func TestLogin(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			test.setupMocks(controller)
-			s := Runner{
+			s := DockerCommand{
 				runner: mockRunner,
 			}
 
@@ -196,7 +196,7 @@ func TestLogin(t *testing.T) {
 	}
 }
 
-func TestPush(t *testing.T) {
+func TestDockerCommand_Push(t *testing.T) {
 	mockError := errors.New("mockError")
 
 	mockURI := "mockURI"
@@ -235,7 +235,7 @@ func TestPush(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			test.setupMocks(controller)
-			s := Runner{
+			s := DockerCommand{
 				runner: mockRunner,
 			}
 

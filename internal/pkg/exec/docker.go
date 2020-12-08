@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package docker provides an interface to the system's Docker daemon.
-package docker
+// Package exec provides an interface to execute certain commands.
+package exec
 
 import (
 	"fmt"
@@ -13,18 +13,14 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 )
 
-// Runner represents a command that can be run.
-type Runner struct {
+// DockerCommand represents docker commands that can be run.
+type DockerCommand struct {
 	runner
 }
 
-type runner interface {
-	Run(name string, args []string, options ...command.Option) error
-}
-
-// New returns a Runner.
-func New() Runner {
-	return Runner{
+// NewDockerCommand returns a DockerCommand.
+func NewDockerCommand() DockerCommand {
+	return DockerCommand{
 		runner: command.New(),
 	}
 }
@@ -42,7 +38,7 @@ type BuildArguments struct {
 }
 
 // Build will run a `docker build` command with the input uri, tag, and Dockerfile path.
-func (r Runner) Build(in *BuildArguments) error {
+func (c DockerCommand) Build(in *BuildArguments) error {
 	dfDir := in.Context
 	if dfDir == "" { // Context wasn't specified use the Dockerfile's directory as context.
 		dfDir = filepath.Dir(in.Dockerfile)
@@ -79,7 +75,7 @@ func (r Runner) Build(in *BuildArguments) error {
 
 	args = append(args, dfDir, "-f", in.Dockerfile)
 
-	err := r.Run("docker", args)
+	err := c.Run("docker", args)
 	if err != nil {
 		return fmt.Errorf("building image: %w", err)
 	}
@@ -88,8 +84,8 @@ func (r Runner) Build(in *BuildArguments) error {
 }
 
 // Login will run a `docker login` command against the Service repository URI with the input uri and auth data.
-func (r Runner) Login(uri, username, password string) error {
-	err := r.Run("docker",
+func (c DockerCommand) Login(uri, username, password string) error {
+	err := c.Run("docker",
 		[]string{"login", "-u", username, "--password-stdin", uri},
 		command.Stdin(strings.NewReader(password)))
 
@@ -101,11 +97,11 @@ func (r Runner) Login(uri, username, password string) error {
 }
 
 // Push will run `docker push` command against the repository URI with the input uri and image tags.
-func (r Runner) Push(uri, imageTag string, additionalTags ...string) error {
+func (c DockerCommand) Push(uri, imageTag string, additionalTags ...string) error {
 	for _, imageTag := range append(additionalTags, imageTag) {
 		path := imageName(uri, imageTag)
 
-		err := r.Run("docker", []string{"push", path})
+		err := c.Run("docker", []string{"push", path})
 		if err != nil {
 			return fmt.Errorf("docker push %s: %w", path, err)
 		}

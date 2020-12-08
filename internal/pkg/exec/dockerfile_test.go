@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package dockerfile
+package exec
 
 import (
 	"fmt"
@@ -183,7 +183,7 @@ EXPOSE 8080/tcp 5000`),
 				t.FailNow()
 			}
 
-			df := New(fs, "./Dockerfile")
+			df := NewDockerfile(fs, "./Dockerfile")
 
 			ports, err := df.GetExposedPorts()
 			if tc.wantedErr != nil {
@@ -255,7 +255,7 @@ func TestDockerfile_GetHealthCheck(t *testing.T) {
 				t.FailNow()
 			}
 
-			df := New(fs, "./Dockerfile")
+			df := NewDockerfile(fs, "./Dockerfile")
 			hc, err := df.GetHealthCheck()
 
 			if tc.wantedErr != nil {
