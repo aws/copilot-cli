@@ -23,7 +23,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
-	"github.com/aws/copilot-cli/internal/pkg/docker"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -297,14 +297,14 @@ func (o *deploySvcOpts) configureContainerImage() error {
 	if err != nil {
 		return err
 	}
-	if err := o.imageBuilderPusher.BuildAndPush(docker.New(), buildArg); err != nil {
+	if err := o.imageBuilderPusher.BuildAndPush(exec.NewDockerCommand(), buildArg); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
 	o.buildRequired = true
 	return nil
 }
 
-func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*docker.BuildArguments, error) {
+func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*exec.BuildArguments, error) {
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
 		return nil, fmt.Errorf("get copilot directory: %w", err)
@@ -312,7 +312,7 @@ func (o *deploySvcOpts) dfBuildArgs(svc interface{}) (*docker.BuildArguments, er
 	return buildArgs(o.name, o.imageTag, copilotDir, svc)
 }
 
-func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*docker.BuildArguments, error) {
+func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{}) (*exec.BuildArguments, error) {
 	type dfArgs interface {
 		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
 	}
@@ -323,7 +323,7 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 
 	wsRoot := filepath.Dir(copilotDir)
 	args := mf.BuildArgs(wsRoot)
-	return &docker.BuildArguments{
+	return &exec.BuildArguments{
 		Dockerfile: *args.Dockerfile,
 		Context:    *args.Context,
 		Args:       args.Args,

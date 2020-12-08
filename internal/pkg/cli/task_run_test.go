@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/docker"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/task"
@@ -573,7 +573,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		mockRepoURI = "uri/repo"
 		tag         = "tag"
 	)
-	defaultBuildArguments := docker.BuildArguments{
+	defaultBuildArguments := exec.BuildArguments{
 		Context:  filepath.Dir(defaultDockerfilePath),
 		ImageTag: imageTagLatest,
 	}
@@ -682,7 +682,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(
-					&docker.BuildArguments{
+					&exec.BuildArguments{
 						Context:        filepath.Dir(defaultDockerfilePath),
 						ImageTag:       imageTagLatest,
 						AdditionalTags: []string{tag},

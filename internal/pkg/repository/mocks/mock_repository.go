@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	docker "github.com/aws/copilot-cli/internal/pkg/docker"
+	exec "github.com/aws/copilot-cli/internal/pkg/exec"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -34,7 +34,7 @@ func (m *MockContainerLoginBuildPusher) EXPECT() *MockContainerLoginBuildPusherM
 }
 
 // Build mocks base method
-func (m *MockContainerLoginBuildPusher) Build(args *docker.BuildArguments) error {
+func (m *MockContainerLoginBuildPusher) Build(args *exec.BuildArguments) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Build", args)
 	ret0, _ := ret[0].(error)

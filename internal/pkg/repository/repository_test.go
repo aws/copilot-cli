@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/docker"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/repository/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -22,7 +22,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 	mockTag1, mockTag2, mockTag3 := "tag1", "tag2", "tag3"
 	mockRepoURI := "mockURI"
 
-	defaultDockerArguments := docker.BuildArguments{
+	defaultDockerArguments := exec.BuildArguments{
 		URI:            mockRepoURI,
 		Dockerfile:     inDockerfilePath,
 		Context:        filepath.Dir(inDockerfilePath),
@@ -118,7 +118,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 				uri: mockRepoURI,
 			}
 
-			err := repo.BuildAndPush(mockDocker, &docker.BuildArguments{
+			err := repo.BuildAndPush(mockDocker, &exec.BuildArguments{
 				Dockerfile:     inDockerfilePath,
 				Context:        filepath.Dir(inDockerfilePath),
 				ImageTag:       mockTag1,
