@@ -5336,7 +5336,7 @@ func (m *MockecsCommandExecutor) EXPECT() *MockecsCommandExecutorMockRecorder {
 }
 
 // ExecuteCommand mocks base method
-func (m *MockecsCommandExecutor) ExecuteCommand(in *ecs.ExecuteCommandInput) error {
+func (m *MockecsCommandExecutor) ExecuteCommand(in ecs.ExecuteCommandInput) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ExecuteCommand", in)
 	ret0, _ := ret[0].(error)

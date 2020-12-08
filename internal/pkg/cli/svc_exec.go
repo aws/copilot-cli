@@ -56,6 +56,9 @@ func newSvcExecOpts(vars execVars) (*svcExecOpts, error) {
 		newSvcDescriber: func(s *session.Session) serviceDescriber {
 			return ecs.New(s)
 		},
+		newCommandExecutor: func(s *session.Session) ecsCommandExecutor {
+			return awsecs.New(s)
+		},
 		randInt: func(x int) int {
 			rand.Seed(time.Now().Unix())
 			return rand.Intn(x)
@@ -110,7 +113,7 @@ func (o *svcExecOpts) Execute() error {
 	}
 	container := o.selectContainer()
 	log.Infof("Execute into container %s in task %s.\n", container, taskID)
-	if err := o.newCommandExecutor(sess).ExecuteCommand(&awsecs.ExecuteCommandInput{
+	if err := o.newCommandExecutor(sess).ExecuteCommand(awsecs.ExecuteCommandInput{
 		Cluster:     svcDesc.ClusterName,
 		Command:     o.command,
 		Container:   container,

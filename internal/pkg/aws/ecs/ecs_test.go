@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
 	"github.com/golang/mock/gomock"
@@ -738,12 +739,84 @@ func TestECS_DescribeTasks(t *testing.T) {
 }
 
 func TestECS_ExecuteCommand(t *testing.T) {
+	mockExecCmdIn := &ecs.ExecuteCommandInput{
+		Cluster:   aws.String("mockCluster"),
+		Command:   aws.String("mockCommand"),
+		Mode:      aws.String(ecs.ExecuteCommandModeInteractive),
+		Container: aws.String("mockContainer"),
+		Task:      aws.String("mockTask"),
+	}
+	mockSess := &ecs.Session{
+		SessionId: aws.String("mockSessID"),
+	}
+	mockErr := errors.New("some error")
 	testCases := map[string]struct {
-		mockAPI     func(m *mocks.Mockapi)
-		wantedError error
+		interactive        bool
+		mockAPI            func(m *mocks.Mockapi)
+		mockSessStarter    func(m *mocks.MockssmSessionStarter)
+		mockSessTerminator func(m *mocks.MockssmSessionTerminator)
+		wantedError        error
 	}{
+		"return error if fail to call ExecuteCommand": {
+			interactive: true,
+			mockAPI: func(m *mocks.Mockapi) {
+				m.EXPECT().ExecuteCommand(mockExecCmdIn).Return(nil, mockErr)
+			},
+			mockSessTerminator: func(m *mocks.MockssmSessionTerminator) {},
+			mockSessStarter:    func(m *mocks.MockssmSessionStarter) {},
+			wantedError:        fmt.Errorf("execute command: some error"),
+		},
+		"return error if fail to start the session": {
+			interactive: false,
+			mockAPI: func(m *mocks.Mockapi) {
+				m.EXPECT().ExecuteCommand(&ecs.ExecuteCommandInput{
+					Cluster:   aws.String("mockCluster"),
+					Command:   aws.String("mockCommand"),
+					Mode:      aws.String(ecs.ExecuteCommandModeSingleCommand),
+					Container: aws.String("mockContainer"),
+					Task:      aws.String("mockTask"),
+				}).Return(&ecs.ExecuteCommandOutput{
+					Session: mockSess,
+				}, nil)
+			},
+			mockSessTerminator: func(m *mocks.MockssmSessionTerminator) {},
+			mockSessStarter: func(m *mocks.MockssmSessionStarter) {
+				m.EXPECT().StartSession(mockSess).Return(mockErr)
+			},
+			wantedError: fmt.Errorf("start session mockSessID using ssm plugin: some error"),
+		},
+		"return error if fail to terminate the session": {
+			interactive: true,
+			mockAPI: func(m *mocks.Mockapi) {
+				m.EXPECT().ExecuteCommand(mockExecCmdIn).Return(&ecs.ExecuteCommandOutput{
+					Session: mockSess,
+				}, nil)
+			},
+			mockSessTerminator: func(m *mocks.MockssmSessionTerminator) {
+				m.EXPECT().TerminateSession(&ssm.TerminateSessionInput{
+					SessionId: aws.String("mockSessID"),
+				}).Return(nil, mockErr)
+			},
+			mockSessStarter: func(m *mocks.MockssmSessionStarter) {
+				m.EXPECT().StartSession(mockSess).Return(nil)
+			},
+			wantedError: fmt.Errorf("terminate session mockSessID: some error"),
+		},
 		"success": {
-			mockAPI: func(m *mocks.Mockapi) {},
+			interactive: true,
+			mockAPI: func(m *mocks.Mockapi) {
+				m.EXPECT().ExecuteCommand(mockExecCmdIn).Return(&ecs.ExecuteCommandOutput{
+					Session: mockSess,
+				}, nil)
+			},
+			mockSessTerminator: func(m *mocks.MockssmSessionTerminator) {
+				m.EXPECT().TerminateSession(&ssm.TerminateSessionInput{
+					SessionId: aws.String("mockSessID"),
+				}).Return(nil, nil)
+			},
+			mockSessStarter: func(m *mocks.MockssmSessionStarter) {
+				m.EXPECT().StartSession(mockSess).Return(nil)
+			},
 		},
 	}
 
@@ -753,17 +826,28 @@ func TestECS_ExecuteCommand(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockAPI := mocks.NewMockapi(ctrl)
+			mockSessStarter := mocks.NewMockssmSessionStarter(ctrl)
+			mockSessTerminator := mocks.NewMockssmSessionTerminator(ctrl)
 			tc.mockAPI(mockAPI)
+			tc.mockSessStarter(mockSessStarter)
+			tc.mockSessTerminator(mockSessTerminator)
 
 			ecs := ECS{
 				client: mockAPI,
+				newSessStarter: func() ssmSessionStarter {
+					return mockSessStarter
+				},
+				newSessTerminator: func() ssmSessionTerminator {
+					return mockSessTerminator
+				},
 			}
 
-			err := ecs.ExecuteCommand(&ExecuteCommandInput{
-				Cluster:   "mockCluster",
-				Command:   "mockCommand",
-				Container: "mockContainer",
-				Task:      "mockTask",
+			err := ecs.ExecuteCommand(ExecuteCommandInput{
+				Cluster:     "mockCluster",
+				Command:     "mockCommand",
+				Interactive: tc.interactive,
+				Container:   "mockContainer",
+				Task:        "mockTask",
 			})
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())

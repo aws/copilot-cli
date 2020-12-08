@@ -316,7 +316,7 @@ func TestSvcExec_Execute(t *testing.T) {
 							},
 						},
 					}, nil),
-					m.ecsCommandExecutor.EXPECT().ExecuteCommand(&awsecs.ExecuteCommandInput{
+					m.ecsCommandExecutor.EXPECT().ExecuteCommand(awsecs.ExecuteCommandInput{
 						Cluster:     "mockCluster",
 						Container:   "hello",
 						Task:        "mockTaskID",
@@ -346,7 +346,7 @@ func TestSvcExec_Execute(t *testing.T) {
 							},
 						},
 					}, nil),
-					m.ecsCommandExecutor.EXPECT().ExecuteCommand(&awsecs.ExecuteCommandInput{
+					m.ecsCommandExecutor.EXPECT().ExecuteCommand(awsecs.ExecuteCommandInput{
 						Cluster:     "mockCluster",
 						Container:   "mockSvc",
 						Task:        "mockTaskID",

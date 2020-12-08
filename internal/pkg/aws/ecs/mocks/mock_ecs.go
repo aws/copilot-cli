@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	ssm "github.com/aws/aws-sdk-go/service/ssm"
 	ecs "github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
@@ -93,6 +94,21 @@ func (mr *MockapiMockRecorder) DescribeTaskDefinition(input interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTaskDefinition", reflect.TypeOf((*Mockapi)(nil).DescribeTaskDefinition), input)
 }
 
+// ExecuteCommand mocks base method
+func (m *Mockapi) ExecuteCommand(input *ecs.ExecuteCommandInput) (*ecs.ExecuteCommandOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecuteCommand", input)
+	ret0, _ := ret[0].(*ecs.ExecuteCommandOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExecuteCommand indicates an expected call of ExecuteCommand
+func (mr *MockapiMockRecorder) ExecuteCommand(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteCommand", reflect.TypeOf((*Mockapi)(nil).ExecuteCommand), input)
+}
+
 // ListTasks mocks base method
 func (m *Mockapi) ListTasks(input *ecs.ListTasksInput) (*ecs.ListTasksOutput, error) {
 	m.ctrl.T.Helper()
@@ -150,4 +166,79 @@ func (m *Mockapi) WaitUntilTasksRunning(input *ecs.DescribeTasksInput) error {
 func (mr *MockapiMockRecorder) WaitUntilTasksRunning(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilTasksRunning", reflect.TypeOf((*Mockapi)(nil).WaitUntilTasksRunning), input)
+}
+
+// MockssmSessionStarter is a mock of ssmSessionStarter interface
+type MockssmSessionStarter struct {
+	ctrl     *gomock.Controller
+	recorder *MockssmSessionStarterMockRecorder
+}
+
+// MockssmSessionStarterMockRecorder is the mock recorder for MockssmSessionStarter
+type MockssmSessionStarterMockRecorder struct {
+	mock *MockssmSessionStarter
+}
+
+// NewMockssmSessionStarter creates a new mock instance
+func NewMockssmSessionStarter(ctrl *gomock.Controller) *MockssmSessionStarter {
+	mock := &MockssmSessionStarter{ctrl: ctrl}
+	mock.recorder = &MockssmSessionStarterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockssmSessionStarter) EXPECT() *MockssmSessionStarterMockRecorder {
+	return m.recorder
+}
+
+// StartSession mocks base method
+func (m *MockssmSessionStarter) StartSession(ssmSession *ecs.Session) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartSession", ssmSession)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StartSession indicates an expected call of StartSession
+func (mr *MockssmSessionStarterMockRecorder) StartSession(ssmSession interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartSession", reflect.TypeOf((*MockssmSessionStarter)(nil).StartSession), ssmSession)
+}
+
+// MockssmSessionTerminator is a mock of ssmSessionTerminator interface
+type MockssmSessionTerminator struct {
+	ctrl     *gomock.Controller
+	recorder *MockssmSessionTerminatorMockRecorder
+}
+
+// MockssmSessionTerminatorMockRecorder is the mock recorder for MockssmSessionTerminator
+type MockssmSessionTerminatorMockRecorder struct {
+	mock *MockssmSessionTerminator
+}
+
+// NewMockssmSessionTerminator creates a new mock instance
+func NewMockssmSessionTerminator(ctrl *gomock.Controller) *MockssmSessionTerminator {
+	mock := &MockssmSessionTerminator{ctrl: ctrl}
+	mock.recorder = &MockssmSessionTerminatorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockssmSessionTerminator) EXPECT() *MockssmSessionTerminatorMockRecorder {
+	return m.recorder
+}
+
+// TerminateSession mocks base method
+func (m *MockssmSessionTerminator) TerminateSession(input *ssm.TerminateSessionInput) (*ssm.TerminateSessionOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TerminateSession", input)
+	ret0, _ := ret[0].(*ssm.TerminateSessionOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TerminateSession indicates an expected call of TerminateSession
+func (mr *MockssmSessionTerminatorMockRecorder) TerminateSession(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateSession", reflect.TypeOf((*MockssmSessionTerminator)(nil).TerminateSession), input)
 }

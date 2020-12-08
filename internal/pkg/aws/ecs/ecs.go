@@ -13,7 +13,10 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
 type api interface {
@@ -21,15 +24,26 @@ type api interface {
 	DescribeServices(input *ecs.DescribeServicesInput) (*ecs.DescribeServicesOutput, error)
 	DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.DescribeTasksOutput, error)
 	DescribeTaskDefinition(input *ecs.DescribeTaskDefinitionInput) (*ecs.DescribeTaskDefinitionOutput, error)
+	ExecuteCommand(input *ecs.ExecuteCommandInput) (*ecs.ExecuteCommandOutput, error)
 	ListTasks(input *ecs.ListTasksInput) (*ecs.ListTasksOutput, error)
 	RunTask(input *ecs.RunTaskInput) (*ecs.RunTaskOutput, error)
 	StopTask(input *ecs.StopTaskInput) (*ecs.StopTaskOutput, error)
 	WaitUntilTasksRunning(input *ecs.DescribeTasksInput) error
 }
 
+type ssmSessionStarter interface {
+	StartSession(ssmSession *ecs.Session) error
+}
+
+type ssmSessionTerminator interface {
+	TerminateSession(input *ssm.TerminateSessionInput) (*ssm.TerminateSessionOutput, error)
+}
+
 // ECS wraps an AWS ECS client.
 type ECS struct {
-	client api
+	client            api
+	newSessStarter    func() ssmSessionStarter
+	newSessTerminator func() ssmSessionTerminator
 }
 
 // RunTaskInput holds the fields needed to run tasks.
@@ -55,6 +69,12 @@ type ExecuteCommandInput struct {
 func New(s *session.Session) *ECS {
 	return &ECS{
 		client: ecs.New(s),
+		newSessStarter: func() ssmSessionStarter {
+			return exec.NewSSMPlugin(s)
+		},
+		newSessTerminator: func() ssmSessionTerminator {
+			return ssm.New(s)
+		},
 	}
 }
 
@@ -278,8 +298,35 @@ func (e *ECS) DescribeTasks(cluster string, taskARNs []string) ([]*Task, error) 
 	return tasks, nil
 }
 
-// ExecuteCommand executes commands in a running container.
-func (e *ECS) ExecuteCommand(in *ExecuteCommandInput) error {
+// ExecuteCommand executes commands in a running container, and then terminate the session.
+func (e *ECS) ExecuteCommand(in ExecuteCommandInput) error {
+	var mode string
+	if in.Interactive {
+		mode = ecs.ExecuteCommandModeInteractive
+	} else {
+		mode = ecs.ExecuteCommandModeSingleCommand
+	}
+	execCmdresp, err := e.client.ExecuteCommand(&ecs.ExecuteCommandInput{
+		Cluster:   aws.String(in.Cluster),
+		Command:   aws.String(in.Command),
+		Container: aws.String(in.Container),
+		Mode:      aws.String(mode),
+		Task:      aws.String(in.Task),
+	})
+	if err != nil {
+		return fmt.Errorf("execute command: %w", err)
+	}
+	sessID := aws.StringValue(execCmdresp.Session.SessionId)
+	// Output the session ID for the ease of cleaning orphan sessions manually.
+	log.Infof("Created session %s", sessID)
+	if err := e.newSessStarter().StartSession(execCmdresp.Session); err != nil {
+		return fmt.Errorf("start session %s using ssm plugin: %w", sessID, err)
+	}
+	if _, err := e.newSessTerminator().TerminateSession(&ssm.TerminateSessionInput{
+		SessionId: aws.String(sessID),
+	}); err != nil {
+		return fmt.Errorf("terminate session %s: %w", sessID, err)
+	}
 	return nil
 }
 
