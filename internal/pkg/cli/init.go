@@ -14,7 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/exec/dockerfile"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -218,7 +218,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					sel:    sel,
 					prompt: prompt,
 					setupParser: func(o *initSvcOpts) {
-						o.df = dockerfile.New(o.fs, o.dockerfilePath)
+						o.df = exec.NewDockerfile(o.fs, o.dockerfilePath)
 					},
 				}
 				o.initWlCmd = &opts

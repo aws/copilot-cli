@@ -16,7 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
-	"github.com/aws/copilot-cli/internal/pkg/exec/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
@@ -371,7 +370,7 @@ type domainValidator interface {
 
 type dockerfileParser interface {
 	GetExposedPorts() ([]uint16, error)
-	GetHealthCheck() (*dockerfile.HealthCheck, error)
+	GetHealthCheck() (*exec.HealthCheck, error)
 }
 
 type statusDescriber interface {
