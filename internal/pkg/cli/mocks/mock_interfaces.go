@@ -5313,31 +5313,31 @@ func (mr *MockserviceDescriberMockRecorder) DescribeService(app, env, svc interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockserviceDescriber)(nil).DescribeService), app, env, svc)
 }
 
-// MockcommandExecutor is a mock of commandExecutor interface
-type MockcommandExecutor struct {
+// MockecsCommandExecutor is a mock of ecsCommandExecutor interface
+type MockecsCommandExecutor struct {
 	ctrl     *gomock.Controller
-	recorder *MockcommandExecutorMockRecorder
+	recorder *MockecsCommandExecutorMockRecorder
 }
 
-// MockcommandExecutorMockRecorder is the mock recorder for MockcommandExecutor
-type MockcommandExecutorMockRecorder struct {
-	mock *MockcommandExecutor
+// MockecsCommandExecutorMockRecorder is the mock recorder for MockecsCommandExecutor
+type MockecsCommandExecutorMockRecorder struct {
+	mock *MockecsCommandExecutor
 }
 
-// NewMockcommandExecutor creates a new mock instance
-func NewMockcommandExecutor(ctrl *gomock.Controller) *MockcommandExecutor {
-	mock := &MockcommandExecutor{ctrl: ctrl}
-	mock.recorder = &MockcommandExecutorMockRecorder{mock}
+// NewMockecsCommandExecutor creates a new mock instance
+func NewMockecsCommandExecutor(ctrl *gomock.Controller) *MockecsCommandExecutor {
+	mock := &MockecsCommandExecutor{ctrl: ctrl}
+	mock.recorder = &MockecsCommandExecutorMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockcommandExecutor) EXPECT() *MockcommandExecutorMockRecorder {
+func (m *MockecsCommandExecutor) EXPECT() *MockecsCommandExecutorMockRecorder {
 	return m.recorder
 }
 
 // ExecuteCommand mocks base method
-func (m *MockcommandExecutor) ExecuteCommand(in *ecs.ExecuteCommandInput) error {
+func (m *MockecsCommandExecutor) ExecuteCommand(in *ecs.ExecuteCommandInput) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ExecuteCommand", in)
 	ret0, _ := ret[0].(error)
@@ -5345,7 +5345,7 @@ func (m *MockcommandExecutor) ExecuteCommand(in *ecs.ExecuteCommandInput) error 
 }
 
 // ExecuteCommand indicates an expected call of ExecuteCommand
-func (mr *MockcommandExecutorMockRecorder) ExecuteCommand(in interface{}) *gomock.Call {
+func (mr *MockecsCommandExecutorMockRecorder) ExecuteCommand(in interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteCommand", reflect.TypeOf((*MockcommandExecutor)(nil).ExecuteCommand), in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteCommand", reflect.TypeOf((*MockecsCommandExecutor)(nil).ExecuteCommand), in)
 }

@@ -20,10 +20,10 @@ import (
 )
 
 type execSvcMocks struct {
-	storeSvc        *mocks.Mockstore
-	sel             *mocks.MockdeploySelector
-	svcDescriber    *mocks.MockserviceDescriber
-	commandExecutor *mocks.MockcommandExecutor
+	storeSvc           *mocks.Mockstore
+	sel                *mocks.MockdeploySelector
+	svcDescriber       *mocks.MockserviceDescriber
+	ecsCommandExecutor *mocks.MockecsCommandExecutor
 }
 
 func TestSvcExec_Validate(t *testing.T) {
@@ -237,6 +237,10 @@ func TestSvcExec_Ask(t *testing.T) {
 }
 
 func TestSvcExec_Execute(t *testing.T) {
+	const (
+		mockTaskARN      = "arn:aws:ecs:us-west-2:123456789:task/mockCluster/mockTaskID"
+		mockOtherTaskARN = "arn:aws:ecs:us-west-2:123456789:task/mockCluster/mockTaskID1"
+	)
 	mockError := errors.New("some error")
 	testCases := map[string]struct {
 		containerName string
@@ -264,20 +268,6 @@ func TestSvcExec_Execute(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("describe ECS service for mockSvc in environment mockEnv: some error"),
 		},
-		"return error if fail to find prefixed task": {
-			taskID: "mockTaskID1",
-			setupMocks: func(m execSvcMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
-						Name: "my-env",
-					}, nil),
-					m.svcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
-						Tasks: []*awsecs.Task{},
-					}, nil),
-				)
-			},
-			wantedError: fmt.Errorf("found no running task whose ID is prefixed with mockTaskID1"),
-		},
 		"return error if no running task found": {
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
@@ -291,6 +281,25 @@ func TestSvcExec_Execute(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("found no running task for service mockSvc in environment mockEnv"),
 		},
+		"return error if fail to find prefixed task": {
+			taskID: "mockTaskID1",
+			setupMocks: func(m execSvcMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
+						Name: "my-env",
+					}, nil),
+					m.svcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
+						Tasks: []*awsecs.Task{
+							{
+								TaskArn:    aws.String(mockTaskARN),
+								LastStatus: aws.String("RUNNING"),
+							},
+						},
+					}, nil),
+				)
+			},
+			wantedError: fmt.Errorf("found no running task whose ID is prefixed with mockTaskID1"),
+		},
 		"return error if fail to execute command": {
 			containerName: "hello",
 			setupMocks: func(m execSvcMocks) {
@@ -302,12 +311,12 @@ func TestSvcExec_Execute(t *testing.T) {
 						ClusterName: "mockCluster",
 						Tasks: []*awsecs.Task{
 							{
-								TaskArn:    aws.String("mockTaskID"),
+								TaskArn:    aws.String(mockTaskARN),
 								LastStatus: aws.String("RUNNING"),
 							},
 						},
 					}, nil),
-					m.commandExecutor.EXPECT().ExecuteCommand(&awsecs.ExecuteCommandInput{
+					m.ecsCommandExecutor.EXPECT().ExecuteCommand(&awsecs.ExecuteCommandInput{
 						Cluster:     "mockCluster",
 						Container:   "hello",
 						Task:        "mockTaskID",
@@ -328,12 +337,16 @@ func TestSvcExec_Execute(t *testing.T) {
 						ClusterName: "mockCluster",
 						Tasks: []*awsecs.Task{
 							{
-								TaskArn:    aws.String("mockTaskID"),
+								TaskArn:    aws.String(mockTaskARN),
+								LastStatus: aws.String("RUNNING"),
+							},
+							{
+								TaskArn:    aws.String(mockOtherTaskARN),
 								LastStatus: aws.String("RUNNING"),
 							},
 						},
 					}, nil),
-					m.commandExecutor.EXPECT().ExecuteCommand(&awsecs.ExecuteCommandInput{
+					m.ecsCommandExecutor.EXPECT().ExecuteCommand(&awsecs.ExecuteCommandInput{
 						Cluster:     "mockCluster",
 						Container:   "mockSvc",
 						Task:        "mockTaskID",
@@ -352,18 +365,18 @@ func TestSvcExec_Execute(t *testing.T) {
 
 			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockSvcDescriber := mocks.NewMockserviceDescriber(ctrl)
-			mockCommandExecutor := mocks.NewMockcommandExecutor(ctrl)
+			mockCommandExecutor := mocks.NewMockecsCommandExecutor(ctrl)
 			mockNewSvcDescriber := func(_ *session.Session) serviceDescriber {
 				return mockSvcDescriber
 			}
-			mockNewCommandExecutor := func(_ *session.Session) commandExecutor {
+			mockNewCommandExecutor := func(_ *session.Session) ecsCommandExecutor {
 				return mockCommandExecutor
 			}
 
 			mocks := execSvcMocks{
-				storeSvc:        mockStoreReader,
-				commandExecutor: mockCommandExecutor,
-				svcDescriber:    mockSvcDescriber,
+				storeSvc:           mockStoreReader,
+				ecsCommandExecutor: mockCommandExecutor,
+				svcDescriber:       mockSvcDescriber,
 			}
 
 			tc.setupMocks(mocks)
@@ -381,6 +394,7 @@ func TestSvcExec_Execute(t *testing.T) {
 				store:              mockStoreReader,
 				newSvcDescriber:    mockNewSvcDescriber,
 				newCommandExecutor: mockNewCommandExecutor,
+				randInt:            func(i int) int { return 0 },
 			}
 
 			// WHEN

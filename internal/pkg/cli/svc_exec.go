@@ -18,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
@@ -34,7 +35,9 @@ type svcExecOpts struct {
 	store              store
 	sel                deploySelector
 	newSvcDescriber    func(*session.Session) serviceDescriber
-	newCommandExecutor func(*session.Session) commandExecutor
+	newCommandExecutor func(*session.Session) ecsCommandExecutor
+	// Override in unit test
+	randInt func(int) int
 }
 
 func newSvcExecOpts(vars execVars) (*svcExecOpts, error) {
@@ -52,6 +55,10 @@ func newSvcExecOpts(vars execVars) (*svcExecOpts, error) {
 		sel:      selector.NewDeploySelect(prompt.New(), ssmStore, deployStore),
 		newSvcDescriber: func(s *session.Session) serviceDescriber {
 			return ecs.New(s)
+		},
+		randInt: func(x int) int {
+			rand.Seed(time.Now().Unix())
+			return rand.Intn(x)
 		},
 	}, nil
 }
@@ -97,16 +104,17 @@ func (o *svcExecOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("describe ECS service for %s in environment %s: %w", o.name, o.envName, err)
 	}
-	task, err := o.selectTask(awsecs.FilterRunningTasks(svcDesc.Tasks))
+	taskID, err := o.selectTask(awsecs.FilterRunningTasks(svcDesc.Tasks))
 	if err != nil {
 		return err
 	}
-	container := o.selectContainer(task)
+	container := o.selectContainer()
+	log.Infof("Execute into container %s in task %s.\n", container, taskID)
 	if err := o.newCommandExecutor(sess).ExecuteCommand(&awsecs.ExecuteCommandInput{
 		Cluster:     svcDesc.ClusterName,
 		Command:     o.command,
 		Container:   container,
-		Task:        aws.StringValue(task.TaskArn),
+		Task:        taskID,
 		Interactive: o.interactive,
 	}); err != nil {
 		return fmt.Errorf("execute command %s in container %s: %w", o.command, container, err)
@@ -144,27 +152,30 @@ func (o *svcExecOpts) envSession() (*session.Session, error) {
 	return sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
 }
 
-func (o *svcExecOpts) selectTask(tasks []*awsecs.Task) (*awsecs.Task, error) {
+func (o *svcExecOpts) selectTask(tasks []*awsecs.Task) (string, error) {
+	if len(tasks) == 0 {
+		return "", fmt.Errorf("found no running task for service %s in environment %s", o.name, o.envName)
+	}
 	if o.taskID != "" {
 		for _, task := range tasks {
 			taskID, err := awsecs.TaskID(aws.StringValue(task.TaskArn))
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			if strings.HasPrefix(taskID, o.taskID) {
-				return task, nil
+				return taskID, nil
 			}
 		}
-		return nil, fmt.Errorf("found no running task whose ID is prefixed with %s", o.taskID)
+		return "", fmt.Errorf("found no running task whose ID is prefixed with %s", o.taskID)
 	}
-	if len(tasks) == 0 {
-		return nil, fmt.Errorf("found no running task for service %s in environment %s", o.name, o.envName)
+	taskID, err := awsecs.TaskID(aws.StringValue(tasks[o.randInt(len(tasks))].TaskArn))
+	if err != nil {
+		return "", err
 	}
-	rand.Seed(time.Now().Unix())
-	return tasks[rand.Intn(len(tasks))], nil
+	return taskID, nil
 }
 
-func (o *svcExecOpts) selectContainer(task *awsecs.Task) string {
+func (o *svcExecOpts) selectContainer() string {
 	if o.containerName != "" {
 		return o.containerName
 	}

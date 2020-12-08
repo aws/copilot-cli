@@ -497,6 +497,6 @@ type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
 }
 
-type commandExecutor interface {
+type ecsCommandExecutor interface {
 	ExecuteCommand(in *awsecs.ExecuteCommandInput) error
 }
