@@ -20,8 +20,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -451,7 +451,7 @@ func (o *runTaskOpts) buildAndPushImage() error {
 		additionalTags = append(additionalTags, o.imageTag)
 	}
 
-	if err := o.repository.BuildAndPush(docker.New(), &docker.BuildArguments{
+	if err := o.repository.BuildAndPush(exec.NewDockerCommand(), &exec.BuildArguments{
 		Dockerfile:     o.dockerfilePath,
 		Context:        filepath.Dir(o.dockerfilePath),
 		ImageTag:       imageTagLatest,

@@ -7,12 +7,12 @@ package repository
 import (
 	"fmt"
 
-	"github.com/aws/copilot-cli/internal/pkg/docker"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 )
 
 // ContainerLoginBuildPusher provides support for logging in to repositories, building images and pushing images to repositories.
 type ContainerLoginBuildPusher interface {
-	Build(args *docker.BuildArguments) error
+	Build(args *exec.BuildArguments) error
 	Login(uri, username, password string) error
 	Push(uri, imageTag string, additionalTags ...string) error
 }
@@ -46,7 +46,7 @@ func New(name string, registry Registry) (*Repository, error) {
 }
 
 // BuildAndPush builds the image from Dockerfile and pushes it to the repository with tags.
-func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, args *docker.BuildArguments) error {
+func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, args *exec.BuildArguments) error {
 	if args.URI == "" {
 		args.URI = r.uri
 	}

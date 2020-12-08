@@ -14,9 +14,8 @@ import (
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	describe "github.com/aws/copilot-cli/internal/pkg/describe"
-	docker "github.com/aws/copilot-cli/internal/pkg/docker"
-	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	ecs0 "github.com/aws/copilot-cli/internal/pkg/ecs"
+	exec "github.com/aws/copilot-cli/internal/pkg/exec"
 	initialize "github.com/aws/copilot-cli/internal/pkg/initialize"
 	logging "github.com/aws/copilot-cli/internal/pkg/logging"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
@@ -1327,7 +1326,7 @@ func (m *MockimageBuilderPusher) EXPECT() *MockimageBuilderPusherMockRecorder {
 }
 
 // BuildAndPush mocks base method
-func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *docker.BuildArguments) error {
+func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *exec.BuildArguments) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BuildAndPush", docker, args)
 	ret0, _ := ret[0].(error)
@@ -1415,7 +1414,7 @@ func (mr *MockrepositoryServiceMockRecorder) URI() *gomock.Call {
 }
 
 // BuildAndPush mocks base method
-func (m *MockrepositoryService) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *docker.BuildArguments) error {
+func (m *MockrepositoryService) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *exec.BuildArguments) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BuildAndPush", docker, args)
 	ret0, _ := ret[0].(error)
@@ -3967,10 +3966,10 @@ func (mr *MockdockerfileParserMockRecorder) GetExposedPorts() *gomock.Call {
 }
 
 // GetHealthCheck mocks base method
-func (m *MockdockerfileParser) GetHealthCheck() (*dockerfile.HealthCheck, error) {
+func (m *MockdockerfileParser) GetHealthCheck() (*exec.HealthCheck, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetHealthCheck")
-	ret0, _ := ret[0].(*dockerfile.HealthCheck)
+	ret0, _ := ret[0].(*exec.HealthCheck)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -12,7 +12,7 @@ import (
 	addon "github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/internal/pkg/docker"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -273,7 +273,7 @@ image:
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockManifest, nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
-					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &docker.BuildArguments{
+					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &exec.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
 						Context:    filepath.Join("/ws", "root", "path"),
 					}).Return(nil),
@@ -286,7 +286,7 @@ image:
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockMftBuildString, nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
-					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &docker.BuildArguments{
+					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &exec.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
 						Context:    filepath.Join("/ws", "root", "path", "to"),
 					}).Return(nil),
@@ -299,7 +299,7 @@ image:
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadServiceManifest("serviceA").Return(mockMftNoContext, nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
-					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &docker.BuildArguments{
+					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &exec.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
 						Context:    filepath.Join("/ws", "root", "path", "to"),
 					}).Return(nil),
