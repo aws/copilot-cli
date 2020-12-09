@@ -16,7 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
 type api interface {
@@ -300,11 +299,9 @@ func (e *ECS) DescribeTasks(cluster string, taskARNs []string) ([]*Task, error) 
 
 // ExecuteCommand executes commands in a running container, and then terminate the session.
 func (e *ECS) ExecuteCommand(in ExecuteCommandInput) error {
-	var mode string
+	mode := ecs.ExecuteCommandModeSingleCommand
 	if in.Interactive {
 		mode = ecs.ExecuteCommandModeInteractive
-	} else {
-		mode = ecs.ExecuteCommandModeSingleCommand
 	}
 	execCmdresp, err := e.client.ExecuteCommand(&ecs.ExecuteCommandInput{
 		Cluster:   aws.String(in.Cluster),
@@ -317,8 +314,6 @@ func (e *ECS) ExecuteCommand(in ExecuteCommandInput) error {
 		return fmt.Errorf("execute command: %w", err)
 	}
 	sessID := aws.StringValue(execCmdresp.Session.SessionId)
-	// Output the session ID for the ease of cleaning orphan sessions manually.
-	log.Infof("Created session %s", sessID)
 	if err := e.newSessStarter().StartSession(execCmdresp.Session); err != nil {
 		return fmt.Errorf("start session %s using ssm plugin: %w", sessID, err)
 	}
