@@ -38,7 +38,7 @@ func Stream(ctx context.Context, fn FetchNotifier) error {
 		select {
 		case <-ctx.Done():
 			// The parent context is canceled. Try Fetch and Notify one last time and exit successfully.
-			fn.Fetch()
+			_, _ = fn.Fetch()
 			fn.Notify()
 			return nil
 		case <-time.After(fetchDelay):
