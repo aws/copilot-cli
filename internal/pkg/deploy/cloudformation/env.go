@@ -40,6 +40,7 @@ func (cf CloudFormation) DeployEnvironment(env *deploy.CreateEnvironmentInput) e
 // StreamEnvironmentCreation streams resource update events while a deployment is taking place.
 // Once the CloudFormation stack operation halts, the update channel is closed and a
 // CreateEnvironmentResponse is sent to the second channel.
+// Deprecated: Use stream.Stream with a stream.StackStreamer instead.
 func (cf CloudFormation) StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse) {
 	done := make(chan struct{})
 	events := make(chan []deploy.ResourceEvent)
