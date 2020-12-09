@@ -46,6 +46,10 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 	var events []StackEvent
 	var nextToken *string
 	for {
+		// DescribeStackEvents returns events in reverse chronological order,
+		// so we retrieve new events until we go past the ChangeSetCreationTime or we see an already seen event ID.
+		// This logic is taken from the AWS CDK:
+		// https://github.com/aws/aws-cdk/blob/43f3f09cc561fd32d651b2c327e877ad81c2ddb2/packages/aws-cdk/lib/api/util/cloudformation/stack-activity-monitor.ts#L230-L234
 		out, err := s.Client.DescribeStackEvents(&cloudformation.DescribeStackEventsInput{
 			NextToken: nextToken,
 			StackName: aws.String(s.StackName),
@@ -54,9 +58,6 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 			return next, fmt.Errorf("describe stack events %s: %w", s.StackName, err)
 		}
 
-		// Retrieve new events until we go past the ChangeSetCreationTime or we see an already seen event ID.
-		// This logic is taken from the AWS CDK:
-		// https://github.com/aws/aws-cdk/blob/43f3f09cc561fd32d651b2c327e877ad81c2ddb2/packages/aws-cdk/lib/api/util/cloudformation/stack-activity-monitor.ts#L230-L234
 		var finished bool
 		for _, event := range out.StackEvents {
 			if event.Timestamp.Before(s.ChangeSetCreationTime) {
@@ -83,7 +84,7 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 	// Store events to flush in chronological order.
 	reverse(events)
 	s.eventsToFlush = append(s.eventsToFlush, events...)
-	return time.Now().Add(3 * time.Second), nil
+	return time.Now().Add(3 * time.Second) /* Next Fetch should be attempted in 3 seconds */, nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.
