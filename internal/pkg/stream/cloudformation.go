@@ -27,7 +27,7 @@ type StackStreamer struct {
 	ChangeSetCreationTime time.Time            // The creation timestamp of the changeset being executed.
 
 	subscribers   []chan StackEvent
-	pastEventIDs  map[string]struct{}
+	pastEventIDs  map[string]bool
 	eventsToFlush []StackEvent
 }
 
@@ -40,7 +40,7 @@ func (s *StackStreamer) Subscribe(channels ...chan StackEvent) {
 // If an error occurs from describe stack events, returns a wrapped error.
 func (s *StackStreamer) Fetch() (next time.Time, err error) {
 	if s.pastEventIDs == nil {
-		s.pastEventIDs = make(map[string]struct{})
+		s.pastEventIDs = make(map[string]bool)
 	}
 
 	var events []StackEvent
@@ -73,7 +73,7 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 				ResourceType:      aws.StringValue(event.ResourceType),
 				ResourceStatus:    aws.StringValue(event.ResourceStatus),
 			})
-			s.pastEventIDs[aws.StringValue(event.EventId)] = struct{}{}
+			s.pastEventIDs[aws.StringValue(event.EventId)] = true
 		}
 		if finished || out.NextToken == nil {
 			break

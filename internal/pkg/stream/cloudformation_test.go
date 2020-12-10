@@ -168,8 +168,8 @@ func testStackStreamer_Fetch_WithSeenEvents(t *testing.T) {
 		Client:                client,
 		StackName:             "phonetool-test",
 		ChangeSetCreationTime: time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC),
-		pastEventIDs: map[string]struct{}{
-			"def": {},
+		pastEventIDs: map[string]bool{
+			"def": true,
 		},
 	}
 
