@@ -21,24 +21,6 @@ const (
 // ErrNoDefaultCluster occurs when the default cluster is not found.
 var ErrNoDefaultCluster = errors.New("default cluster does not exist")
 
-type ErrTerminateSession struct {
-	SessionID string
-	Err       error
-}
-
-func (e *ErrTerminateSession) Error() string {
-	return e.Err.Error()
-}
-
-type ErrExecuteCommand struct {
-	TerminateErr *ErrTerminateSession
-	Err          error
-}
-
-func (e *ErrExecuteCommand) Error() string {
-	return e.Err.Error()
-}
-
 // ErrWaiterResourceNotReadyForTasks contains the STOPPED reason for the container of the first task that failed to start.
 type ErrWaiterResourceNotReadyForTasks struct {
 	tasks                  []*Task

@@ -764,9 +764,7 @@ func TestECS_ExecuteCommand(t *testing.T) {
 			},
 			mockSessTerminator: func(m *mocks.MockssmSessionTerminator) {},
 			mockSessStarter:    func(m *mocks.MockssmSessionStarter) {},
-			wantedError: &ErrExecuteCommand{
-				Err: fmt.Errorf("execute command: %w", mockErr),
-			},
+			wantedError:        fmt.Errorf("execute command: %w", mockErr),
 		},
 		"return error if fail to start the session": {
 			interactive: false,
@@ -789,13 +787,7 @@ func TestECS_ExecuteCommand(t *testing.T) {
 			mockSessStarter: func(m *mocks.MockssmSessionStarter) {
 				m.EXPECT().StartSession(mockSess).Return(mockErr)
 			},
-			wantedError: &ErrExecuteCommand{
-				TerminateErr: &ErrTerminateSession{
-					SessionID: "mockSessID",
-					Err:       mockErr,
-				},
-				Err: fmt.Errorf("start session mockSessID using ssm plugin: %w", mockErr),
-			},
+			wantedError: fmt.Errorf("terminate session mockSessID: some error: start session mockSessID using ssm plugin: some error"),
 		},
 		"return error if fail to terminate the session": {
 			interactive: true,
@@ -812,12 +804,7 @@ func TestECS_ExecuteCommand(t *testing.T) {
 			mockSessStarter: func(m *mocks.MockssmSessionStarter) {
 				m.EXPECT().StartSession(mockSess).Return(nil)
 			},
-			wantedError: &ErrExecuteCommand{
-				TerminateErr: &ErrTerminateSession{
-					SessionID: "mockSessID",
-					Err:       mockErr,
-				},
-			},
+			wantedError: fmt.Errorf("terminate session mockSessID: %w", mockErr),
 		},
 		"success": {
 			interactive: true,
@@ -834,7 +821,6 @@ func TestECS_ExecuteCommand(t *testing.T) {
 			mockSessStarter: func(m *mocks.MockssmSessionStarter) {
 				m.EXPECT().StartSession(mockSess).Return(nil)
 			},
-			wantedError: &ErrExecuteCommand{},
 		},
 	}
 

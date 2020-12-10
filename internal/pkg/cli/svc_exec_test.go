@@ -242,9 +242,6 @@ func TestSvcExec_Execute(t *testing.T) {
 		mockOtherTaskARN = "arn:aws:ecs:us-west-2:123456789:task/mockCluster/mockTaskID1"
 	)
 	mockError := errors.New("some error")
-	mockExecuteCommandErr := &awsecs.ErrExecuteCommand{
-		Err: mockError,
-	}
 	testCases := map[string]struct {
 		containerName string
 		taskID        string
@@ -325,7 +322,7 @@ func TestSvcExec_Execute(t *testing.T) {
 						Task:        "mockTaskID",
 						Command:     "mockCommand",
 						Interactive: true,
-					}).Return(mockExecuteCommandErr),
+					}).Return(mockError),
 				)
 			},
 			wantedError: fmt.Errorf("execute command mockCommand in container hello: some error"),
@@ -355,7 +352,7 @@ func TestSvcExec_Execute(t *testing.T) {
 						Task:        "mockTaskID",
 						Command:     "mockCommand",
 						Interactive: true,
-					}).Return(&awsecs.ErrExecuteCommand{}),
+					}).Return(nil),
 				)
 			},
 		},

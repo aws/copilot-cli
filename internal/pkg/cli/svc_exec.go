@@ -18,7 +18,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -114,22 +113,14 @@ func (o *svcExecOpts) Execute() error {
 	}
 	container := o.selectContainer()
 	log.Infof("Execute into container %s in task %s.\n", container, taskID)
-	execCommandErr := o.newCommandExecutor(sess).ExecuteCommand(awsecs.ExecuteCommandInput{
+	if err = o.newCommandExecutor(sess).ExecuteCommand(awsecs.ExecuteCommandInput{
 		Cluster:     svcDesc.ClusterName,
 		Command:     o.command,
 		Container:   container,
 		Task:        taskID,
 		Interactive: o.interactive,
-	})
-	if execCommandErr.TerminateErr != nil {
-		log.Errorf(`Failed to terminate session %s: %s.
-You can manually terminate the session by either running %s or deleting it from aws console.
-`, execCommandErr.TerminateErr.SessionID,
-			execCommandErr.TerminateErr.Error(),
-			color.HighlightCode(fmt.Sprintf("aws ssm terminate-session --session-id %s", execCommandErr.TerminateErr.SessionID)))
-	}
-	if execCommandErr.Err != nil {
-		return fmt.Errorf("execute command %s in container %s: %w", o.command, container, execCommandErr.Err)
+	}); err != nil {
+		return fmt.Errorf("execute command %s in container %s: %w", o.command, o.containerName, err)
 	}
 	return nil
 }
