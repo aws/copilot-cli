@@ -764,7 +764,9 @@ func TestECS_ExecuteCommand(t *testing.T) {
 			},
 			mockSessTerminator: func(m *mocks.MockssmSessionTerminator) {},
 			mockSessStarter:    func(m *mocks.MockssmSessionStarter) {},
-			wantedError:        fmt.Errorf("execute command: some error"),
+			wantedError: &ErrExecuteCommand{
+				Err: fmt.Errorf("execute command: %w", mockErr),
+			},
 		},
 		"return error if fail to start the session": {
 			interactive: false,
@@ -779,11 +781,21 @@ func TestECS_ExecuteCommand(t *testing.T) {
 					Session: mockSess,
 				}, nil)
 			},
-			mockSessTerminator: func(m *mocks.MockssmSessionTerminator) {},
+			mockSessTerminator: func(m *mocks.MockssmSessionTerminator) {
+				m.EXPECT().TerminateSession(&ssm.TerminateSessionInput{
+					SessionId: aws.String("mockSessID"),
+				}).Return(nil, mockErr)
+			},
 			mockSessStarter: func(m *mocks.MockssmSessionStarter) {
 				m.EXPECT().StartSession(mockSess).Return(mockErr)
 			},
-			wantedError: fmt.Errorf("start session mockSessID using ssm plugin: some error"),
+			wantedError: &ErrExecuteCommand{
+				TerminateErr: &ErrTerminateSession{
+					SessionID: "mockSessID",
+					Err:       mockErr,
+				},
+				Err: fmt.Errorf("start session mockSessID using ssm plugin: %w", mockErr),
+			},
 		},
 		"return error if fail to terminate the session": {
 			interactive: true,
@@ -800,7 +812,12 @@ func TestECS_ExecuteCommand(t *testing.T) {
 			mockSessStarter: func(m *mocks.MockssmSessionStarter) {
 				m.EXPECT().StartSession(mockSess).Return(nil)
 			},
-			wantedError: fmt.Errorf("terminate session mockSessID: some error"),
+			wantedError: &ErrExecuteCommand{
+				TerminateErr: &ErrTerminateSession{
+					SessionID: "mockSessID",
+					Err:       mockErr,
+				},
+			},
 		},
 		"success": {
 			interactive: true,
@@ -817,6 +834,7 @@ func TestECS_ExecuteCommand(t *testing.T) {
 			mockSessStarter: func(m *mocks.MockssmSessionStarter) {
 				m.EXPECT().StartSession(mockSess).Return(nil)
 			},
+			wantedError: &ErrExecuteCommand{},
 		},
 	}
 
@@ -849,11 +867,7 @@ func TestECS_ExecuteCommand(t *testing.T) {
 				Container:   "mockContainer",
 				Task:        "mockTask",
 			})
-			if tc.wantedError != nil {
-				require.EqualError(t, tc.wantedError, err.Error())
-			} else {
-				require.NoError(t, err)
-			}
+			require.Equal(t, tc.wantedError, err)
 		})
 	}
 }

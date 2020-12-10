@@ -497,5 +497,5 @@ type serviceDescriber interface {
 }
 
 type ecsCommandExecutor interface {
-	ExecuteCommand(in awsecs.ExecuteCommandInput) error
+	ExecuteCommand(in awsecs.ExecuteCommandInput) *awsecs.ErrExecuteCommand
 }

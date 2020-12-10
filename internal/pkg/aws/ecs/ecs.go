@@ -298,7 +298,7 @@ func (e *ECS) DescribeTasks(cluster string, taskARNs []string) ([]*Task, error) 
 }
 
 // ExecuteCommand executes commands in a running container, and then terminate the session.
-func (e *ECS) ExecuteCommand(in ExecuteCommandInput) error {
+func (e *ECS) ExecuteCommand(in ExecuteCommandInput) *ErrExecuteCommand {
 	mode := ecs.ExecuteCommandModeSingleCommand
 	if in.Interactive {
 		mode = ecs.ExecuteCommandModeInteractive
@@ -311,16 +311,30 @@ func (e *ECS) ExecuteCommand(in ExecuteCommandInput) error {
 		Task:      aws.String(in.Task),
 	})
 	if err != nil {
-		return fmt.Errorf("execute command: %w", err)
+		return &ErrExecuteCommand{
+			Err: fmt.Errorf("execute command: %w", err),
+		}
 	}
 	sessID := aws.StringValue(execCmdresp.Session.SessionId)
 	if err := e.newSessStarter().StartSession(execCmdresp.Session); err != nil {
-		return fmt.Errorf("start session %s using ssm plugin: %w", sessID, err)
+		return &ErrExecuteCommand{
+			Err:          fmt.Errorf("start session %s using ssm plugin: %w", sessID, err),
+			TerminateErr: e.terminateSession(sessID),
+		}
 	}
+	return &ErrExecuteCommand{
+		TerminateErr: e.terminateSession(sessID),
+	}
+}
+
+func (e *ECS) terminateSession(sessID string) *ErrTerminateSession {
 	if _, err := e.newSessTerminator().TerminateSession(&ssm.TerminateSessionInput{
 		SessionId: aws.String(sessID),
 	}); err != nil {
-		return fmt.Errorf("terminate session %s: %w", sessID, err)
+		return &ErrTerminateSession{
+			SessionID: sessID,
+			Err:       err,
+		}
 	}
 	return nil
 }
