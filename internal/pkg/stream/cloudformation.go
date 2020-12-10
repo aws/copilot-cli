@@ -8,6 +8,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
+const (
+	stackFetchIntervalDuration = 3 * time.Second // How long to wait until Fetch is called again for a StackStreamer.
+)
+
 // StackEventsDescriber is the CloudFormation interface needed to describe stack events.
 type StackEventsDescriber interface {
 	DescribeStackEvents(*cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error)
@@ -38,6 +42,7 @@ func (s *StackStreamer) Subscribe(channels ...chan StackEvent) {
 
 // Fetch retrieves and stores any new CloudFormation stack events since the ChangeSetCreationTime in chronological order.
 // If an error occurs from describe stack events, returns a wrapped error.
+// Otherwise, returns the time the next Fetch should be attempted.
 func (s *StackStreamer) Fetch() (next time.Time, err error) {
 	if s.pastEventIDs == nil {
 		s.pastEventIDs = make(map[string]bool)
@@ -84,7 +89,7 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 	// Store events to flush in chronological order.
 	reverse(events)
 	s.eventsToFlush = append(s.eventsToFlush, events...)
-	return time.Now().Add(3 * time.Second) /* Next Fetch should be attempted in 3 seconds */, nil
+	return time.Now().Add(stackFetchIntervalDuration), nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.
