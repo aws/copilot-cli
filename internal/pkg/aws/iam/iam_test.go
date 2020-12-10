@@ -121,3 +121,44 @@ func TestIAM_DeleteRole(t *testing.T) {
 		})
 	}
 }
+
+func TestIAM_CreateECSServiceLinkedRole(t *testing.T) {
+	testCases := map[string]struct {
+		inClient func(ctrl *gomock.Controller) *mocks.Mockapi
+
+		wantedErr error
+	}{
+		"wraps error on failure": {
+			inClient: func(ctrl *gomock.Controller) *mocks.Mockapi {
+				m := mocks.NewMockapi(ctrl)
+				m.EXPECT().
+					CreateServiceLinkedRole(gomock.Any()).
+					Return(nil, errors.New("some error"))
+				return m
+			},
+
+			wantedErr: errors.New("create service linked role for Amazon ECS: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			iam := &IAM{
+				client: tc.inClient(ctrl),
+			}
+
+			// WHEN
+			err := iam.CreateECSServiceLinkedRole()
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

@@ -77,3 +77,18 @@ func (mr *MockapiMockRecorder) DeleteRole(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRole", reflect.TypeOf((*Mockapi)(nil).DeleteRole), input)
 }
+
+// CreateServiceLinkedRole mocks base method
+func (m *Mockapi) CreateServiceLinkedRole(input *iam.CreateServiceLinkedRoleInput) (*iam.CreateServiceLinkedRoleOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateServiceLinkedRole", input)
+	ret0, _ := ret[0].(*iam.CreateServiceLinkedRoleOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateServiceLinkedRole indicates an expected call of CreateServiceLinkedRole
+func (mr *MockapiMockRecorder) CreateServiceLinkedRole(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateServiceLinkedRole", reflect.TypeOf((*Mockapi)(nil).CreateServiceLinkedRole), input)
+}
