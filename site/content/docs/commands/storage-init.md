@@ -30,19 +30,19 @@ DynamoDB Flags
 Create an S3 bucket named "my-bucket" attached to the "frontend" service.
 
 ```
-$ copilot storage init -n my-bucket -t S3 -s frontend
+$ copilot storage init -n my-bucket -t S3 -w frontend
 ```
 Create a basic DynamoDB table named "my-table" attached to the "frontend" service with a sort key specified.
 
 ```
-$ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --no-lsi
+$ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --no-lsi
 ```
 
 Create a DynamoDB table with multiple alternate sort keys.
 
 ```
 $ copilot storage init \
-  -n my-table -t DynamoDB -s frontend \
+  -n my-table -t DynamoDB -w frontend \
   --partition-key Email:S \
   --sort-key UserId:N \
   --lsi Points:N \
@@ -55,7 +55,7 @@ Copilot writes a Cloudformation template specifying the S3 bucket or DDB table t
 
 This means that after running
 ```
-$ copilot storage init -n bucket -t S3 -s fe
+$ copilot storage init -n bucket -t S3 -w fe
 $ copilot svc deploy -n fe -e test
 $ copilot svc deploy -n fe -e prod
 ```

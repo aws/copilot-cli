@@ -504,3 +504,7 @@ type ssmPluginManager interface {
 	ValidateBinary() error
 	InstallLatestBinary() error
 }
+
+type serviceLinkedRoleCreator interface {
+	CreateECSServiceLinkedRole() error
+}

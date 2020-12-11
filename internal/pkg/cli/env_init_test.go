@@ -23,6 +23,11 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 )
 
+// mockServiceLinkedRoleCreator satisfies the serviceLinkedRoleCreator and is a no-op.
+type mockServiceLinkedRoleCreator struct{}
+
+func (m *mockServiceLinkedRoleCreator) CreateECSServiceLinkedRole() error { return nil }
+
 type initEnvMocks struct {
 	sessProvider *mocks.MocksessionProvider
 	prompt       *mocks.Mockprompter
@@ -913,6 +918,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				appDeployer: mockDeployer,
 				identity:    mockIdentity,
 				envIdentity: mockIdentity,
+				iam:         &mockServiceLinkedRoleCreator{},
 				prog:        mockProgress,
 			}
 
