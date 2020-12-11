@@ -69,7 +69,7 @@ func (c *IAM) CreateECSServiceLinkedRole() error {
 	if _, err := c.client.CreateServiceLinkedRole(&iam.CreateServiceLinkedRoleInput{
 		AWSServiceName: aws.String(ecsServiceName),
 	}); err != nil {
-		return fmt.Errorf("create service linked role for Amazon ECS: %w", err)
+		return fmt.Errorf("create service linked role for %s: %w", ecsServiceName, err)
 	}
 	return nil
 }

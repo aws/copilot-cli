@@ -137,7 +137,7 @@ func TestIAM_CreateECSServiceLinkedRole(t *testing.T) {
 				return m
 			},
 
-			wantedErr: errors.New("create service linked role for Amazon ECS: some error"),
+			wantedErr: errors.New("create service linked role for ecs.amazonaws.com: some error"),
 		},
 	}
 
