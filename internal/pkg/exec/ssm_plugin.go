@@ -7,7 +7,6 @@ package exec
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -19,7 +18,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
-	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 )
 
 const (
@@ -28,24 +26,11 @@ const (
 	ssmPluginBinaryMacOSURL         = "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/sessionmanager-bundle.zip"
 	startSessionAction              = "StartSession"
 	executableNotExistErrMessage    = "executable file not found"
-
-	ssmPluginInstallPrompt = `Looks like your Session Manager plugin is not installed yet.
-  Would you like to install the plugin to execute into the container?`
-	ssmPluginInstallPromptHelp = `You must install the Session Manager plugin on your local machine to be able to execute into the container
-  See https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html`
-	ssmPluginUpdatePrompt = `Looks like your Session Manager plugin is using version %s.
-  Would you like to update it to the latest version %s?`
-)
-
-var (
-	errSSMPluginCommandInstallCancelled = errors.New("ssm plugin install cancelled")
-	errSSMPluginCommandUpdateCancelled  = errors.New("ssm plugin update cancelled")
 )
 
 // SSMPluginCommand represents commands that can be run to trigger the ssm plugin.
 type SSMPluginCommand struct {
-	sess     *session.Session
-	prompter prompter
+	sess *session.Session
 	runner
 
 	// facilitate unit test.
@@ -57,18 +42,13 @@ type SSMPluginCommand struct {
 // NewSSMPluginCommand returns a SSMPluginCommand.
 func NewSSMPluginCommand(s *session.Session) SSMPluginCommand {
 	return SSMPluginCommand{
-		runner:   command.New(),
-		sess:     s,
-		prompter: prompt.New(),
+		runner: command.New(),
+		sess:   s,
 	}
 }
 
-// StartSession starts a session using the ssm plugin. And prompt to install the plugin
-// if it doesn't exist.
+// StartSession starts a session using the ssm plugin.
 func (s SSMPluginCommand) StartSession(ssmSess *ecs.Session) error {
-	if err := s.validateBinary(); err != nil {
-		return err
-	}
 	response, err := json.Marshal(ssmSess)
 	if err != nil {
 		return fmt.Errorf("marshal session response: %w", err)
@@ -81,7 +61,8 @@ func (s SSMPluginCommand) StartSession(ssmSess *ecs.Session) error {
 	return nil
 }
 
-func (s SSMPluginCommand) validateBinary() error {
+// ValidateBinary validates if the ssm plugin exists and needs update.
+func (s SSMPluginCommand) ValidateBinary() error {
 	var latestVersion, currentVersion string
 	if err := s.runner.Run("curl", []string{"-s", ssmPluginBinaryLatestVersionURL}, command.Stdout(&s.latestVersionBuffer)); err != nil {
 		return fmt.Errorf("get ssm plugin latest version: %w", err)
@@ -91,42 +72,22 @@ func (s SSMPluginCommand) validateBinary() error {
 		if !strings.Contains(err.Error(), executableNotExistErrMessage) {
 			return fmt.Errorf("get local ssm plugin version: %w", err)
 		}
-		// If ssm plugin is not install, prompt users to install the plugin.
-		confirmInstall, err := s.prompter.Confirm(ssmPluginInstallPrompt, ssmPluginInstallPromptHelp)
-		if err != nil {
-			return fmt.Errorf("prompt to confirm installing the plugin: %w", err)
+		return &ErrSSMPluginNotExist{}
+	}
+	currentVersion = strings.TrimSpace(s.currentVersionBuffer.String())
+	if currentVersion != latestVersion {
+		return &ErrOutdatedSSMPlugin{
+			CurrentVersion: currentVersion,
+			LatestVersion:  latestVersion,
 		}
-		if !confirmInstall {
-			return errSSMPluginCommandInstallCancelled
-		}
-		if err := s.installBinary(latestVersion); err != nil {
-			return fmt.Errorf("install binary: %w", err)
-		}
-		currentVersion = latestVersion
-	} else {
-		currentVersion = strings.TrimSpace(s.currentVersionBuffer.String())
-	}
-	if currentVersion == latestVersion {
-		return nil
-	}
-	// If ssm plugin is not up to date, prompt users to update the plugin.
-	confirmUpdate, err := s.prompter.Confirm(
-		fmt.Sprintf(ssmPluginUpdatePrompt, currentVersion, latestVersion), "")
-	if err != nil {
-		return fmt.Errorf("prompt to confirm updating the plugin: %w", err)
-	}
-	if !confirmUpdate {
-		return errSSMPluginCommandUpdateCancelled
-	}
-	if err := s.installBinary(latestVersion); err != nil {
-		return fmt.Errorf("update binary: %w", err)
 	}
 	return nil
 }
 
-func (s SSMPluginCommand) installBinary(version string) error {
+// InstallLatestBinary installs the latest ssm plugin.
+func (s SSMPluginCommand) InstallLatestBinary() error {
 	if s.tempDir == "" {
-		dir, err := ioutil.TempDir("", "temp")
+		dir, err := ioutil.TempDir("", "ssmplugin")
 		if err != nil {
 			return fmt.Errorf("create a temporary directory: %w", err)
 		}

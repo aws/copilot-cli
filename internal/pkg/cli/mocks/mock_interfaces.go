@@ -5348,3 +5348,54 @@ func (mr *MockecsCommandExecutorMockRecorder) ExecuteCommand(in interface{}) *go
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteCommand", reflect.TypeOf((*MockecsCommandExecutor)(nil).ExecuteCommand), in)
 }
+
+// MockssmPluginManager is a mock of ssmPluginManager interface
+type MockssmPluginManager struct {
+	ctrl     *gomock.Controller
+	recorder *MockssmPluginManagerMockRecorder
+}
+
+// MockssmPluginManagerMockRecorder is the mock recorder for MockssmPluginManager
+type MockssmPluginManagerMockRecorder struct {
+	mock *MockssmPluginManager
+}
+
+// NewMockssmPluginManager creates a new mock instance
+func NewMockssmPluginManager(ctrl *gomock.Controller) *MockssmPluginManager {
+	mock := &MockssmPluginManager{ctrl: ctrl}
+	mock.recorder = &MockssmPluginManagerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockssmPluginManager) EXPECT() *MockssmPluginManagerMockRecorder {
+	return m.recorder
+}
+
+// ValidateBinary mocks base method
+func (m *MockssmPluginManager) ValidateBinary() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateBinary")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateBinary indicates an expected call of ValidateBinary
+func (mr *MockssmPluginManagerMockRecorder) ValidateBinary() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateBinary", reflect.TypeOf((*MockssmPluginManager)(nil).ValidateBinary))
+}
+
+// InstallLatestBinary mocks base method
+func (m *MockssmPluginManager) InstallLatestBinary() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstallLatestBinary")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InstallLatestBinary indicates an expected call of InstallLatestBinary
+func (mr *MockssmPluginManagerMockRecorder) InstallLatestBinary() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallLatestBinary", reflect.TypeOf((*MockssmPluginManager)(nil).InstallLatestBinary))
+}

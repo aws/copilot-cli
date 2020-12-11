@@ -69,7 +69,7 @@ func New(s *session.Session) *ECS {
 	return &ECS{
 		client: ecs.New(s),
 		newSessStarter: func() ssmSessionStarter {
-			return exec.NewSSMPlugin(s)
+			return exec.NewSSMPluginCommand(s)
 		},
 		newSessTerminator: func() ssmSessionTerminator {
 			return ssm.New(s)

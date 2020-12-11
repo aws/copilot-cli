@@ -6,13 +6,8 @@ package exec
 
 import (
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
-	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 )
 
 type runner interface {
 	Run(name string, args []string, options ...command.Option) error
-}
-
-type prompter interface {
-	Confirm(message, help string, promptOpts ...prompt.Option) (bool, error)
 }

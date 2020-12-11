@@ -499,3 +499,8 @@ type serviceDescriber interface {
 type ecsCommandExecutor interface {
 	ExecuteCommand(in awsecs.ExecuteCommandInput) error
 }
+
+type ssmPluginManager interface {
+	ValidateBinary() error
+	InstallLatestBinary() error
+}

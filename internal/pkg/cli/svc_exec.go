@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -18,6 +19,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -28,6 +30,18 @@ const (
 	svcExecNamePrompt     = "Into which service would you like to execute?"
 	svcExecNameHelpPrompt = `Copilot runs your command in one of your chosen service's tasks.
 The task is chosen at random, and the first essential container is used.`
+
+	ssmPluginInstallPrompt = `Looks like the Session Manager plugin is not installed yet.
+Would you like to install the plugin to execute into the container?`
+	ssmPluginInstallPromptHelp = `You must install the Session Manager plugin on your local machine to be able to execute into the container
+See https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html`
+	ssmPluginUpdatePrompt = `Looks like the Session Manager plugin is using version %s.
+Would you like to update it to the latest version %s?`
+)
+
+var (
+	errSSMPluginCommandInstallCancelled = errors.New("ssm plugin install cancelled")
+	errSSMPluginCommandUpdateCancelled  = errors.New("ssm plugin update cancelled")
 )
 
 type svcExecOpts struct {
@@ -36,6 +50,8 @@ type svcExecOpts struct {
 	sel                deploySelector
 	newSvcDescriber    func(*session.Session) serviceDescriber
 	newCommandExecutor func(*session.Session) ecsCommandExecutor
+	ssmPluginManager   ssmPluginManager
+	prompter           prompter
 	// Override in unit test
 	randInt func(int) int
 }
@@ -63,6 +79,8 @@ func newSvcExecOpts(vars execVars) (*svcExecOpts, error) {
 			rand.Seed(time.Now().Unix())
 			return rand.Intn(x)
 		},
+		ssmPluginManager: exec.NewSSMPluginCommand(nil),
+		prompter:         prompt.New(),
 	}, nil
 }
 
@@ -83,7 +101,45 @@ func (o *svcExecOpts) Validate() error {
 			return err
 		}
 	}
-	return nil
+	return o.validateSSMBinary()
+}
+
+func (o *svcExecOpts) validateSSMBinary() error {
+	err := o.ssmPluginManager.ValidateBinary()
+	if err == nil {
+		return nil
+	}
+	switch v := err.(type) {
+	case *exec.ErrSSMPluginNotExist:
+		// If ssm plugin is not install, prompt users to install the plugin.
+		confirmInstall, err := o.prompter.Confirm(ssmPluginInstallPrompt, ssmPluginInstallPromptHelp)
+		if err != nil {
+			return fmt.Errorf("prompt to confirm installing the plugin: %w", err)
+		}
+		if !confirmInstall {
+			return errSSMPluginCommandInstallCancelled
+		}
+		if err := o.ssmPluginManager.InstallLatestBinary(); err != nil {
+			return fmt.Errorf("install ssm plugin: %w", err)
+		}
+		return nil
+	case *exec.ErrOutdatedSSMPlugin:
+		// If ssm plugin is not up to date, prompt users to update the plugin.
+		confirmUpdate, err := o.prompter.Confirm(
+			fmt.Sprintf(ssmPluginUpdatePrompt, v.CurrentVersion, v.LatestVersion), "")
+		if err != nil {
+			return fmt.Errorf("prompt to confirm updating the plugin: %w", err)
+		}
+		if !confirmUpdate {
+			return errSSMPluginCommandUpdateCancelled
+		}
+		if err := o.ssmPluginManager.InstallLatestBinary(); err != nil {
+			return fmt.Errorf("update ssm plugin: %w", err)
+		}
+		return nil
+	default:
+		return fmt.Errorf("validate ssm plugin: %w", err)
+	}
 }
 
 // Ask asks for fields that are required but not passed in.
