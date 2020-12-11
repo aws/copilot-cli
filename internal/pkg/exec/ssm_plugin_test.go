@@ -7,6 +7,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -17,16 +20,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSSMPlugin_StartSession(t *testing.T) {
+func TestSSMPluginCommand_StartSession(t *testing.T) {
 	const (
-		mockLatestVersion  = "mockLatestVersion"
-		mockCurrentVersion = "mockCurrentVersion"
+		mockLatestVersion  = "1.2.30.0"
+		mockCurrentVersion = "1.2.7.0"
 	)
 	mockSession := &ecs.Session{
 		SessionId:  aws.String("mockSessionID"),
 		StreamUrl:  aws.String("mockStreamURL"),
 		TokenValue: aws.String("mockTokenValue"),
 	}
+	var mockDir string
 	var mockRunner *mocks.Mockrunner
 	var mockPrompter *mocks.Mockprompter
 	mockError := errors.New("some error")
@@ -82,7 +86,7 @@ func TestSSMPlugin_StartSession(t *testing.T) {
 				mockPrompter.EXPECT().Confirm(ssmPluginInstallPrompt, ssmPluginInstallPromptHelp).
 					Return(false, nil)
 			},
-			wantedError: errSSMPluginInstallCancelled,
+			wantedError: errSSMPluginCommandInstallCancelled,
 		},
 		"return error if fail to install binary": {
 			inLatestVersion: mockLatestVersion,
@@ -95,8 +99,8 @@ func TestSSMPlugin_StartSession(t *testing.T) {
 					Return(errors.New("executable file not found in $PATH"))
 				mockPrompter.EXPECT().Confirm(ssmPluginInstallPrompt, ssmPluginInstallPromptHelp).
 					Return(true, nil)
-				mockRunner.EXPECT().Run("curl", []string{"https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/sessionmanager-bundle.zip",
-					"-o", "sessionmanager-bundle.zip"}).
+				mockRunner.EXPECT().Run("unzip", []string{"-o", filepath.Join(mockDir, "sessionmanager-bundle.zip"),
+					"-d", mockDir}).
 					Return(mockError)
 			},
 			wantedError: fmt.Errorf("install binary: some error"),
@@ -111,8 +115,7 @@ func TestSSMPlugin_StartSession(t *testing.T) {
 					Return(nil)
 				mockRunner.EXPECT().Run(ssmPluginBinaryName, []string{"--version"}, gomock.Any()).
 					Return(nil)
-				mockPrompter.EXPECT().Confirm(fmt.Sprintf(ssmPluginUpdatePrompt, mockCurrentVersion, mockLatestVersion),
-					ssmPluginUpdatePromptHelp).
+				mockPrompter.EXPECT().Confirm(fmt.Sprintf(ssmPluginUpdatePrompt, mockCurrentVersion, mockLatestVersion), "").
 					Return(false, mockError)
 			},
 			wantedError: fmt.Errorf("prompt to confirm updating the plugin: some error"),
@@ -127,11 +130,10 @@ func TestSSMPlugin_StartSession(t *testing.T) {
 					Return(nil)
 				mockRunner.EXPECT().Run(ssmPluginBinaryName, []string{"--version"}, gomock.Any()).
 					Return(nil)
-				mockPrompter.EXPECT().Confirm(fmt.Sprintf(ssmPluginUpdatePrompt, mockCurrentVersion, mockLatestVersion),
-					ssmPluginUpdatePromptHelp).
+				mockPrompter.EXPECT().Confirm(fmt.Sprintf(ssmPluginUpdatePrompt, mockCurrentVersion, mockLatestVersion), "").
 					Return(false, nil)
 			},
-			wantedError: errSSMPluginUpdateCancelled,
+			wantedError: errSSMPluginCommandUpdateCancelled,
 		},
 		"return error if fail to update binary": {
 			inLatestVersion:  mockLatestVersion,
@@ -143,11 +145,10 @@ func TestSSMPlugin_StartSession(t *testing.T) {
 					Return(nil)
 				mockRunner.EXPECT().Run(ssmPluginBinaryName, []string{"--version"}, gomock.Any()).
 					Return(nil)
-				mockPrompter.EXPECT().Confirm(fmt.Sprintf(ssmPluginUpdatePrompt, mockCurrentVersion, mockLatestVersion),
-					ssmPluginUpdatePromptHelp).
+				mockPrompter.EXPECT().Confirm(fmt.Sprintf(ssmPluginUpdatePrompt, mockCurrentVersion, mockLatestVersion), "").
 					Return(true, nil)
-				mockRunner.EXPECT().Run("curl", []string{"https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/sessionmanager-bundle.zip",
-					"-o", "sessionmanager-bundle.zip"}).
+				mockRunner.EXPECT().Run("unzip", []string{"-o", filepath.Join(mockDir, "sessionmanager-bundle.zip"),
+					"-d", mockDir}).
 					Return(mockError)
 			},
 			wantedError: fmt.Errorf("update binary: some error"),
@@ -195,16 +196,12 @@ func TestSSMPlugin_StartSession(t *testing.T) {
 					Return(errors.New("executable file not found in $PATH"))
 				mockPrompter.EXPECT().Confirm(ssmPluginInstallPrompt, ssmPluginInstallPromptHelp).
 					Return(true, nil)
-				mockRunner.EXPECT().Run("curl", []string{"https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/sessionmanager-bundle.zip",
-					"-o", "sessionmanager-bundle.zip"}).
+				mockRunner.EXPECT().Run("unzip", []string{"-o", filepath.Join(mockDir, "sessionmanager-bundle.zip"),
+					"-d", mockDir}).
 					Return(nil)
-				mockRunner.EXPECT().Run("unzip", []string{"-o", "sessionmanager-bundle.zip"}).
-					Return(nil)
-				mockRunner.EXPECT().Run("sudo", []string{"./sessionmanager-bundle/install", "-i",
+				mockRunner.EXPECT().Run("sudo", []string{filepath.Join(mockDir, "sessionmanager-bundle", "install"), "-i",
 					"/usr/local/sessionmanagerplugin", "-b",
 					"/usr/local/bin/session-manager-plugin"}).
-					Return(nil)
-				mockRunner.EXPECT().Run("rm", []string{"-r", "./sessionmanager-bundle", "sessionmanager-bundle.zip"}).
 					Return(nil)
 				mockRunner.EXPECT().Run(ssmPluginBinaryName, []string{`{"SessionId":"mockSessionID","StreamUrl":"mockStreamURL","TokenValue":"mockTokenValue"}`, "us-west-2", "StartSession"},
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -221,19 +218,14 @@ func TestSSMPlugin_StartSession(t *testing.T) {
 					Return(nil)
 				mockRunner.EXPECT().Run(ssmPluginBinaryName, []string{"--version"}, gomock.Any()).
 					Return(nil)
-				mockPrompter.EXPECT().Confirm(fmt.Sprintf(ssmPluginUpdatePrompt, mockCurrentVersion, mockLatestVersion),
-					ssmPluginUpdatePromptHelp).
+				mockPrompter.EXPECT().Confirm(fmt.Sprintf(ssmPluginUpdatePrompt, mockCurrentVersion, mockLatestVersion), "").
 					Return(true, nil)
-				mockRunner.EXPECT().Run("curl", []string{"https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/sessionmanager-bundle.zip",
-					"-o", "sessionmanager-bundle.zip"}).
+				mockRunner.EXPECT().Run("unzip", []string{"-o", filepath.Join(mockDir, "sessionmanager-bundle.zip"),
+					"-d", mockDir}).
 					Return(nil)
-				mockRunner.EXPECT().Run("unzip", []string{"-o", "sessionmanager-bundle.zip"}).
-					Return(nil)
-				mockRunner.EXPECT().Run("sudo", []string{"./sessionmanager-bundle/install", "-i",
+				mockRunner.EXPECT().Run("sudo", []string{filepath.Join(mockDir, "sessionmanager-bundle", "install"), "-i",
 					"/usr/local/sessionmanagerplugin", "-b",
 					"/usr/local/bin/session-manager-plugin"}).
-					Return(nil)
-				mockRunner.EXPECT().Run("rm", []string{"-r", "./sessionmanager-bundle", "sessionmanager-bundle.zip"}).
 					Return(nil)
 				mockRunner.EXPECT().Run(ssmPluginBinaryName, []string{`{"SessionId":"mockSessionID","StreamUrl":"mockStreamURL","TokenValue":"mockTokenValue"}`, "us-west-2", "StartSession"},
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -241,10 +233,11 @@ func TestSSMPlugin_StartSession(t *testing.T) {
 		},
 	}
 	for name, tc := range tests {
+		mockDir, _ = ioutil.TempDir("", "temp")
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			tc.setupMocks(ctrl)
-			s := SSMPlugin{
+			s := SSMPluginCommand{
 				runner:   mockRunner,
 				prompter: mockPrompter,
 				sess: &session.Session{
@@ -254,6 +247,7 @@ func TestSSMPlugin_StartSession(t *testing.T) {
 				},
 				currentVersionBuffer: *bytes.NewBufferString(tc.inCurrentVersion),
 				latestVersionBuffer:  *bytes.NewBufferString(tc.inLatestVersion),
+				tempDir:              mockDir,
 			}
 			err := s.StartSession(tc.inSession)
 			if tc.wantedError != nil {
@@ -262,5 +256,6 @@ func TestSSMPlugin_StartSession(t *testing.T) {
 				require.NoError(t, err)
 			}
 		})
+		os.RemoveAll(mockDir)
 	}
 }

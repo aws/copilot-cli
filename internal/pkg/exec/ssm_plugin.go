@@ -9,7 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -21,24 +25,25 @@ import (
 const (
 	ssmPluginBinaryName             = "session-manager-plugin"
 	ssmPluginBinaryLatestVersionURL = "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/VERSION"
+	ssmPluginBinaryMacOSURL         = "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/sessionmanager-bundle.zip"
 	startSessionAction              = "StartSession"
 	executableNotExistErrMessage    = "executable file not found"
 
 	ssmPluginInstallPrompt = `Looks like your Session Manager plugin is not installed yet.
   Would you like to install the plugin to execute into the container?`
-	ssmPluginInstallPromptHelp = "You must install the Session Manager plugin on your local machine to be able to execute into the container"
-	ssmPluginUpdatePrompt      = `Looks like your Session Manager plugin is in version %s.
+	ssmPluginInstallPromptHelp = `You must install the Session Manager plugin on your local machine to be able to execute into the container
+  See https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html`
+	ssmPluginUpdatePrompt = `Looks like your Session Manager plugin is using version %s.
   Would you like to update it to the latest version %s?`
-	ssmPluginUpdatePromptHelp = "Outdated Session Manager plugin might not work."
 )
 
 var (
-	errSSMPluginInstallCancelled = errors.New("ssm plugin install cancelled")
-	errSSMPluginUpdateCancelled  = errors.New("ssm plugin update cancelled")
+	errSSMPluginCommandInstallCancelled = errors.New("ssm plugin install cancelled")
+	errSSMPluginCommandUpdateCancelled  = errors.New("ssm plugin update cancelled")
 )
 
-// SSMPlugin represents commands that can be run to trigger the ssm plugin.
-type SSMPlugin struct {
+// SSMPluginCommand represents commands that can be run to trigger the ssm plugin.
+type SSMPluginCommand struct {
 	sess     *session.Session
 	prompter prompter
 	runner
@@ -46,11 +51,12 @@ type SSMPlugin struct {
 	// facilitate unit test.
 	latestVersionBuffer  bytes.Buffer
 	currentVersionBuffer bytes.Buffer
+	tempDir              string
 }
 
-// NewSSMPlugin returns a SSMPlugin.
-func NewSSMPlugin(s *session.Session) SSMPlugin {
-	return SSMPlugin{
+// NewSSMPluginCommand returns a SSMPluginCommand.
+func NewSSMPluginCommand(s *session.Session) SSMPluginCommand {
+	return SSMPluginCommand{
 		runner:   command.New(),
 		sess:     s,
 		prompter: prompt.New(),
@@ -59,7 +65,7 @@ func NewSSMPlugin(s *session.Session) SSMPlugin {
 
 // StartSession starts a session using the ssm plugin. And prompt to install the plugin
 // if it doesn't exist.
-func (s SSMPlugin) StartSession(ssmSess *ecs.Session) error {
+func (s SSMPluginCommand) StartSession(ssmSess *ecs.Session) error {
 	if err := s.validateBinary(); err != nil {
 		return err
 	}
@@ -75,7 +81,7 @@ func (s SSMPlugin) StartSession(ssmSess *ecs.Session) error {
 	return nil
 }
 
-func (s SSMPlugin) validateBinary() error {
+func (s SSMPluginCommand) validateBinary() error {
 	var latestVersion, currentVersion string
 	if err := s.runner.Run("curl", []string{"-s", ssmPluginBinaryLatestVersionURL}, command.Stdout(&s.latestVersionBuffer)); err != nil {
 		return fmt.Errorf("get ssm plugin latest version: %w", err)
@@ -91,7 +97,7 @@ func (s SSMPlugin) validateBinary() error {
 			return fmt.Errorf("prompt to confirm installing the plugin: %w", err)
 		}
 		if !confirmInstall {
-			return errSSMPluginInstallCancelled
+			return errSSMPluginCommandInstallCancelled
 		}
 		if err := s.installBinary(latestVersion); err != nil {
 			return fmt.Errorf("install binary: %w", err)
@@ -100,18 +106,17 @@ func (s SSMPlugin) validateBinary() error {
 	} else {
 		currentVersion = strings.TrimSpace(s.currentVersionBuffer.String())
 	}
-	if latestVersion == currentVersion {
+	if currentVersion == latestVersion {
 		return nil
 	}
 	// If ssm plugin is not up to date, prompt users to update the plugin.
 	confirmUpdate, err := s.prompter.Confirm(
-		fmt.Sprintf(ssmPluginUpdatePrompt, currentVersion, latestVersion),
-		ssmPluginUpdatePromptHelp)
+		fmt.Sprintf(ssmPluginUpdatePrompt, currentVersion, latestVersion), "")
 	if err != nil {
 		return fmt.Errorf("prompt to confirm updating the plugin: %w", err)
 	}
 	if !confirmUpdate {
-		return errSSMPluginUpdateCancelled
+		return errSSMPluginCommandUpdateCancelled
 	}
 	if err := s.installBinary(latestVersion); err != nil {
 		return fmt.Errorf("update binary: %w", err)
@@ -119,21 +124,41 @@ func (s SSMPlugin) validateBinary() error {
 	return nil
 }
 
-func (s SSMPlugin) installBinary(version string) error {
-	if err := s.runner.Run("curl", []string{"https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/sessionmanager-bundle.zip",
-		"-o", "sessionmanager-bundle.zip"}); err != nil {
+func (s SSMPluginCommand) installBinary(version string) error {
+	if s.tempDir == "" {
+		dir, err := ioutil.TempDir("", "temp")
+		if err != nil {
+			return fmt.Errorf("create a temporary directory: %w", err)
+		}
+		defer os.RemoveAll(dir)
+		s.tempDir = dir
+	}
+	if err := download(filepath.Join(s.tempDir, "sessionmanager-bundle.zip"), ssmPluginBinaryMacOSURL); err != nil {
+		return fmt.Errorf("download ssm plugin: %w", err)
+	}
+	if err := s.runner.Run("unzip", []string{"-o", filepath.Join(s.tempDir, "sessionmanager-bundle.zip"),
+		"-d", s.tempDir}); err != nil {
 		return err
 	}
-	if err := s.runner.Run("unzip", []string{"-o", "sessionmanager-bundle.zip"}); err != nil {
-		return err
-	}
-	if err := s.runner.Run("sudo", []string{"./sessionmanager-bundle/install", "-i",
+	if err := s.runner.Run("sudo", []string{filepath.Join(s.tempDir, "sessionmanager-bundle", "install"), "-i",
 		"/usr/local/sessionmanagerplugin", "-b",
 		"/usr/local/bin/session-manager-plugin"}); err != nil {
 		return err
 	}
-	if err := s.runner.Run("rm", []string{"-r", "./sessionmanager-bundle", "sessionmanager-bundle.zip"}); err != nil {
+	return nil
+}
+
+func download(filepath string, url string) error {
+	resp, err := http.Get(url)
+	if err != nil {
 		return err
 	}
-	return nil
+	defer resp.Body.Close()
+	out, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, resp.Body)
+	return err
 }
