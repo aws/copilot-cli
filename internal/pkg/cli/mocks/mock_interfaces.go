@@ -5272,3 +5272,40 @@ func (mr *MocktasksStopperMockRecorder) StopTasks(tasks interface{}, opts ...int
 	varargs := append([]interface{}{tasks}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopTasks", reflect.TypeOf((*MocktasksStopper)(nil).StopTasks), varargs...)
 }
+
+// MockserviceLinkedRoleCreator is a mock of serviceLinkedRoleCreator interface
+type MockserviceLinkedRoleCreator struct {
+	ctrl     *gomock.Controller
+	recorder *MockserviceLinkedRoleCreatorMockRecorder
+}
+
+// MockserviceLinkedRoleCreatorMockRecorder is the mock recorder for MockserviceLinkedRoleCreator
+type MockserviceLinkedRoleCreatorMockRecorder struct {
+	mock *MockserviceLinkedRoleCreator
+}
+
+// NewMockserviceLinkedRoleCreator creates a new mock instance
+func NewMockserviceLinkedRoleCreator(ctrl *gomock.Controller) *MockserviceLinkedRoleCreator {
+	mock := &MockserviceLinkedRoleCreator{ctrl: ctrl}
+	mock.recorder = &MockserviceLinkedRoleCreatorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockserviceLinkedRoleCreator) EXPECT() *MockserviceLinkedRoleCreatorMockRecorder {
+	return m.recorder
+}
+
+// CreateECSServiceLinkedRole mocks base method
+func (m *MockserviceLinkedRoleCreator) CreateECSServiceLinkedRole() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateECSServiceLinkedRole")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateECSServiceLinkedRole indicates an expected call of CreateECSServiceLinkedRole
+func (mr *MockserviceLinkedRoleCreatorMockRecorder) CreateECSServiceLinkedRole() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateECSServiceLinkedRole", reflect.TypeOf((*MockserviceLinkedRoleCreator)(nil).CreateECSServiceLinkedRole))
+}

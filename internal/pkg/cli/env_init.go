@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
+	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -137,6 +138,7 @@ type initEnvOpts struct {
 	identity     identityService
 	envIdentity  identityService
 	ec2Client    ec2Client
+	iam          serviceLinkedRoleCreator
 	prog         progress
 	prompt       prompter
 	selVPC       ec2Selector
@@ -216,6 +218,9 @@ func (o *initEnvOpts) Execute() error {
 	if o.envDeployer == nil {
 		o.envDeployer = deploycfn.New(o.sess)
 	}
+	if o.iam == nil {
+		o.iam = iam.New(o.sess)
+	}
 
 	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
@@ -228,12 +233,17 @@ func (o *initEnvOpts) Execute() error {
 			return fmt.Errorf("granting DNS permissions: %w", err)
 		}
 	}
-	// 1. Start creating the CloudFormation stack for the environment.
+	// 1. Attempt to create the service linked role if it doesn't exist.
+	// If the call fails because the role already exists, nothing to do.
+	// If the call fails because the user doesn't have permissions, then the role must be created outside of Copilot.
+	_ = o.iam.CreateECSServiceLinkedRole()
+
+	// 2. Start creating the CloudFormation stack for the environment.
 	if err := o.deployEnv(app); err != nil {
 		return err
 	}
 
-	// 2. Get the environment
+	// 3. Get the environment
 	env, err := o.envDeployer.GetEnvironment(o.appName, o.name)
 	if err != nil {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
@@ -241,12 +251,12 @@ func (o *initEnvOpts) Execute() error {
 	env.Prod = o.isProduction
 	env.CustomConfig = config.NewCustomizeEnv(o.importVPCConfig(), o.adjustVPCConfig())
 
-	// 3. Add the stack set instance to the app stackset.
+	// 4. Add the stack set instance to the app stackset.
 	if err := o.addToStackset(app, env); err != nil {
 		return err
 	}
 
-	// 4. Store the environment in SSM.
+	// 5. Store the environment in SSM.
 	if err := o.store.CreateEnvironment(env); err != nil {
 		return fmt.Errorf("store environment: %w", err)
 	}

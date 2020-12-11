@@ -490,3 +490,7 @@ type activeWorkloadTasksLister interface {
 type tasksStopper interface {
 	StopTasks(tasks []string, opts ...ecs.StopTasksOpts) error
 }
+
+type serviceLinkedRoleCreator interface {
+	CreateECSServiceLinkedRole() error
+}

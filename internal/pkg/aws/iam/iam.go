@@ -15,10 +15,15 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 )
 
+const (
+	ecsServiceName = "ecs.amazonaws.com"
+)
+
 type api interface {
 	DeleteRolePolicy(input *iam.DeleteRolePolicyInput) (*iam.DeleteRolePolicyOutput, error)
 	ListRolePolicies(input *iam.ListRolePoliciesInput) (*iam.ListRolePoliciesOutput, error)
 	DeleteRole(input *iam.DeleteRoleInput) (*iam.DeleteRoleOutput, error)
+	CreateServiceLinkedRole(input *iam.CreateServiceLinkedRoleInput) (*iam.CreateServiceLinkedRoleOutput, error)
 }
 
 // IAM wraps the AWS SDK's IAM client.
@@ -53,6 +58,18 @@ func (c *IAM) DeleteRole(roleARN string) error {
 			return nil
 		}
 		return fmt.Errorf("delete role named %s: %w", roleName, err)
+	}
+	return nil
+}
+
+// CreateECSServiceLinkedRole creates a Service-Linked Role for Amazon ECS.
+// This role is necessary so that Amazon ECS can call AWS APIs.
+// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using-service-linked-roles.html
+func (c *IAM) CreateECSServiceLinkedRole() error {
+	if _, err := c.client.CreateServiceLinkedRole(&iam.CreateServiceLinkedRoleInput{
+		AWSServiceName: aws.String(ecsServiceName),
+	}); err != nil {
+		return fmt.Errorf("create service linked role for %s: %w", ecsServiceName, err)
 	}
 	return nil
 }
