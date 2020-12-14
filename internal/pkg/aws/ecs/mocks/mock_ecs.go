@@ -5,7 +5,6 @@
 package mocks
 
 import (
-	ssm "github.com/aws/aws-sdk-go/service/ssm"
 	ecs "github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
@@ -203,42 +202,4 @@ func (m *MockssmSessionStarter) StartSession(ssmSession *ecs.Session) error {
 func (mr *MockssmSessionStarterMockRecorder) StartSession(ssmSession interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartSession", reflect.TypeOf((*MockssmSessionStarter)(nil).StartSession), ssmSession)
-}
-
-// MockssmSessionTerminator is a mock of ssmSessionTerminator interface
-type MockssmSessionTerminator struct {
-	ctrl     *gomock.Controller
-	recorder *MockssmSessionTerminatorMockRecorder
-}
-
-// MockssmSessionTerminatorMockRecorder is the mock recorder for MockssmSessionTerminator
-type MockssmSessionTerminatorMockRecorder struct {
-	mock *MockssmSessionTerminator
-}
-
-// NewMockssmSessionTerminator creates a new mock instance
-func NewMockssmSessionTerminator(ctrl *gomock.Controller) *MockssmSessionTerminator {
-	mock := &MockssmSessionTerminator{ctrl: ctrl}
-	mock.recorder = &MockssmSessionTerminatorMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockssmSessionTerminator) EXPECT() *MockssmSessionTerminatorMockRecorder {
-	return m.recorder
-}
-
-// TerminateSession mocks base method
-func (m *MockssmSessionTerminator) TerminateSession(input *ssm.TerminateSessionInput) (*ssm.TerminateSessionOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TerminateSession", input)
-	ret0, _ := ret[0].(*ssm.TerminateSessionOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// TerminateSession indicates an expected call of TerminateSession
-func (mr *MockssmSessionTerminatorMockRecorder) TerminateSession(input interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateSession", reflect.TypeOf((*MockssmSessionTerminator)(nil).TerminateSession), input)
 }

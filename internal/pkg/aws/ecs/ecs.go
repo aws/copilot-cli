@@ -13,7 +13,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
 )
@@ -34,15 +33,10 @@ type ssmSessionStarter interface {
 	StartSession(ssmSession *ecs.Session) error
 }
 
-type ssmSessionTerminator interface {
-	TerminateSession(input *ssm.TerminateSessionInput) (*ssm.TerminateSessionOutput, error)
-}
-
 // ECS wraps an AWS ECS client.
 type ECS struct {
-	client            api
-	newSessStarter    func() ssmSessionStarter
-	newSessTerminator func() ssmSessionTerminator
+	client         api
+	newSessStarter func() ssmSessionStarter
 }
 
 // RunTaskInput holds the fields needed to run tasks.
@@ -70,9 +64,6 @@ func New(s *session.Session) *ECS {
 		client: ecs.New(s),
 		newSessStarter: func() ssmSessionStarter {
 			return exec.NewSSMPluginCommand(s)
-		},
-		newSessTerminator: func() ssmSessionTerminator {
-			return ssm.New(s)
 		},
 	}
 }
@@ -314,28 +305,10 @@ func (e *ECS) ExecuteCommand(in ExecuteCommandInput) (err error) {
 		return fmt.Errorf("execute command: %w", err)
 	}
 	sessID := aws.StringValue(execCmdresp.Session.SessionId)
-	defer func() {
-		if terr := e.terminateSession(sessID); terr != nil {
-			if err != nil {
-				err = fmt.Errorf("terminate session %s: %v: %v", sessID, terr, err) // capture both errors
-			} else {
-				err = fmt.Errorf("terminate session %s: %w", sessID, terr)
-			}
-		}
-	}()
 	if err = e.newSessStarter().StartSession(execCmdresp.Session); err != nil {
 		err = fmt.Errorf("start session %s using ssm plugin: %w", sessID, err)
 	}
 	return err
-}
-
-func (e *ECS) terminateSession(sessID string) error {
-	if _, err := e.newSessTerminator().TerminateSession(&ssm.TerminateSessionInput{
-		SessionId: aws.String(sessID),
-	}); err != nil {
-		return err
-	}
-	return nil
 }
 
 func isRequestTimeoutErr(err error) bool {

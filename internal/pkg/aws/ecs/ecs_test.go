@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
 	"github.com/golang/mock/gomock"
@@ -751,20 +750,18 @@ func TestECS_ExecuteCommand(t *testing.T) {
 	}
 	mockErr := errors.New("some error")
 	testCases := map[string]struct {
-		interactive        bool
-		mockAPI            func(m *mocks.Mockapi)
-		mockSessStarter    func(m *mocks.MockssmSessionStarter)
-		mockSessTerminator func(m *mocks.MockssmSessionTerminator)
-		wantedError        error
+		interactive     bool
+		mockAPI         func(m *mocks.Mockapi)
+		mockSessStarter func(m *mocks.MockssmSessionStarter)
+		wantedError     error
 	}{
 		"return error if fail to call ExecuteCommand": {
 			interactive: true,
 			mockAPI: func(m *mocks.Mockapi) {
 				m.EXPECT().ExecuteCommand(mockExecCmdIn).Return(nil, mockErr)
 			},
-			mockSessTerminator: func(m *mocks.MockssmSessionTerminator) {},
-			mockSessStarter:    func(m *mocks.MockssmSessionStarter) {},
-			wantedError:        fmt.Errorf("execute command: %w", mockErr),
+			mockSessStarter: func(m *mocks.MockssmSessionStarter) {},
+			wantedError:     fmt.Errorf("execute command: some error"),
 		},
 		"return error if fail to start the session": {
 			interactive: false,
@@ -779,32 +776,10 @@ func TestECS_ExecuteCommand(t *testing.T) {
 					Session: mockSess,
 				}, nil)
 			},
-			mockSessTerminator: func(m *mocks.MockssmSessionTerminator) {
-				m.EXPECT().TerminateSession(&ssm.TerminateSessionInput{
-					SessionId: aws.String("mockSessID"),
-				}).Return(nil, mockErr)
-			},
 			mockSessStarter: func(m *mocks.MockssmSessionStarter) {
 				m.EXPECT().StartSession(mockSess).Return(mockErr)
 			},
-			wantedError: fmt.Errorf("terminate session mockSessID: some error: start session mockSessID using ssm plugin: some error"),
-		},
-		"return error if fail to terminate the session": {
-			interactive: true,
-			mockAPI: func(m *mocks.Mockapi) {
-				m.EXPECT().ExecuteCommand(mockExecCmdIn).Return(&ecs.ExecuteCommandOutput{
-					Session: mockSess,
-				}, nil)
-			},
-			mockSessTerminator: func(m *mocks.MockssmSessionTerminator) {
-				m.EXPECT().TerminateSession(&ssm.TerminateSessionInput{
-					SessionId: aws.String("mockSessID"),
-				}).Return(nil, mockErr)
-			},
-			mockSessStarter: func(m *mocks.MockssmSessionStarter) {
-				m.EXPECT().StartSession(mockSess).Return(nil)
-			},
-			wantedError: fmt.Errorf("terminate session mockSessID: %w", mockErr),
+			wantedError: fmt.Errorf("start session mockSessID using ssm plugin: some error"),
 		},
 		"success": {
 			interactive: true,
@@ -812,11 +787,6 @@ func TestECS_ExecuteCommand(t *testing.T) {
 				m.EXPECT().ExecuteCommand(mockExecCmdIn).Return(&ecs.ExecuteCommandOutput{
 					Session: mockSess,
 				}, nil)
-			},
-			mockSessTerminator: func(m *mocks.MockssmSessionTerminator) {
-				m.EXPECT().TerminateSession(&ssm.TerminateSessionInput{
-					SessionId: aws.String("mockSessID"),
-				}).Return(nil, nil)
 			},
 			mockSessStarter: func(m *mocks.MockssmSessionStarter) {
 				m.EXPECT().StartSession(mockSess).Return(nil)
@@ -831,18 +801,13 @@ func TestECS_ExecuteCommand(t *testing.T) {
 
 			mockAPI := mocks.NewMockapi(ctrl)
 			mockSessStarter := mocks.NewMockssmSessionStarter(ctrl)
-			mockSessTerminator := mocks.NewMockssmSessionTerminator(ctrl)
 			tc.mockAPI(mockAPI)
 			tc.mockSessStarter(mockSessStarter)
-			tc.mockSessTerminator(mockSessTerminator)
 
 			ecs := ECS{
 				client: mockAPI,
 				newSessStarter: func() ssmSessionStarter {
 					return mockSessStarter
-				},
-				newSessTerminator: func() ssmSessionTerminator {
-					return mockSessTerminator
 				},
 			}
 
@@ -853,7 +818,11 @@ func TestECS_ExecuteCommand(t *testing.T) {
 				Container:   "mockContainer",
 				Task:        "mockTask",
 			})
-			require.Equal(t, tc.wantedError, err)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
