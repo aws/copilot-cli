@@ -45,7 +45,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			inURL:         "bitbucket.org/repositories/repoName",
 			inEnvs:        []string{"test"},
 			setupMocks:    func(m *mocks.Mockstore) {},
-			expectedError: errors.New("Copilot currently accepts only urls to GitHub and CodeCommit repository sources"),
+			expectedError: errors.New("Copilot currently accepts only URLs to GitHub and CodeCommit repository sources"),
 		},
 		"invalid environments": {
 			inAppName: "my-app",
