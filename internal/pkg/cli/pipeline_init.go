@@ -44,6 +44,7 @@ Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
 	githubURL             = "github.com"
+	ccSubstring           = "codecommit"
 	defaultBranch         = "main"
 )
 
@@ -59,7 +60,7 @@ type initPipelineVars struct {
 	environments      []string
 	githubOwner       string
 	githubRepo        string
-	URL               string
+	repoURL           string
 	githubAccessToken string
 	gitBranch         string
 }
@@ -150,13 +151,11 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initPipelineOpts) Validate() error {
-	// May consider validating githubAccessToken and gitBranch flag values in the future.
-
-	if o.URL != "" {
-		if err := validateDomainName(o.URL); err != nil {
+	if o.repoURL != "" {
+		if err := validateDomainName(o.repoURL); err != nil {
 			return err
 		}
-		if !strings.Contains(o.URL, githubURL) && !strings.Contains(o.URL, "codecommit") {
+		if !strings.Contains(o.repoURL, githubURL) && !strings.Contains(o.repoURL, ccSubstring) {
 			return errors.New("Copilot currently accepts only URLs to GitHub and CodeCommit repository sources")
 		}
 	}
@@ -181,12 +180,12 @@ func (o *initPipelineOpts) Ask() error {
 		}
 	}
 
-	if o.URL == "" {
+	if o.repoURL == "" {
 		if err = o.selectGitHubURL(); err != nil {
 			return err
 		}
 	}
-	if o.githubOwner, o.githubRepo, err = o.parseOwnerRepoName(o.URL); err != nil {
+	if o.githubOwner, o.githubRepo, err = o.parseOwnerRepoName(o.repoURL); err != nil {
 		return err
 	}
 
@@ -471,7 +470,7 @@ func (o *initPipelineOpts) selectGitHubURL() error {
 	if err != nil {
 		return fmt.Errorf("select GitHub URL: %w", err)
 	}
-	o.URL = url
+	o.repoURL = url
 
 	return nil
 }
@@ -580,7 +579,7 @@ func buildPipelineInitCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
-	cmd.Flags().StringVarP(&vars.URL, githubURLFlag, githubURLFlagShort, "", githubURLFlagDescription)
+	cmd.Flags().StringVarP(&vars.repoURL, githubURLFlag, githubURLFlagShort, "", githubURLFlagDescription)
 	cmd.Flags().StringVarP(&vars.githubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
 	cmd.Flags().StringVarP(&vars.gitBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
 	cmd.Flags().StringSliceVarP(&vars.environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)

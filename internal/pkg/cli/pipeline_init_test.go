@@ -85,7 +85,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
 					appName:      tc.inAppName,
-					URL:          tc.inURL,
+					repoURL:      tc.inURL,
 					environments: tc.inEnvs,
 				},
 				store: mockStore,
