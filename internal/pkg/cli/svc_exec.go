@@ -138,6 +138,9 @@ func (o *svcExecOpts) validateSSMBinary() error {
 		}
 		return nil
 	default:
+		log.Errorf(`Failed to validate the Session Manager plugin. Please install or make sure your SSM plugin is up-to-date:
+https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html
+`)
 		return fmt.Errorf("validate ssm plugin: %w", err)
 	}
 }

@@ -73,7 +73,7 @@ func TestSSMPluginCommand_StartSession(t *testing.T) {
 	}
 }
 
-func TestSSMPluginCommand_ValidateBinary(t *testing.T) {
+func TestSSMPluginCommand_ValidateBinary_darwin(t *testing.T) {
 	const (
 		mockLatestVersion  = "1.2.30.0"
 		mockCurrentVersion = "1.2.7.0"
@@ -160,7 +160,7 @@ func TestSSMPluginCommand_ValidateBinary(t *testing.T) {
 	}
 }
 
-func TestSSMPluginCommand_InstallLatestBinary(t *testing.T) {
+func TestSSMPluginCommand_InstallLatestBinary_darwin(t *testing.T) {
 	var mockDir string
 	var mockRunner *mocks.Mockrunner
 	mockError := errors.New("some error")
