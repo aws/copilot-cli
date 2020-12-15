@@ -53,6 +53,23 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 
 			expectedError: errors.New("some error"),
 		},
+		"success": {
+			inAppName: "my-app",
+			inEnvs:    []string{"test", "prod"},
+
+			setupMocks: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(
+					&config.Environment{
+						Name: "test",
+					}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(
+					&config.Environment{
+						Name: "prod",
+					}, nil)
+			},
+
+			expectedError: nil,
+		},
 	}
 
 	for name, tc := range testCases {
