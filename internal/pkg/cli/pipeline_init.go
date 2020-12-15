@@ -157,7 +157,7 @@ func (o *initPipelineOpts) Validate() error {
 			return err
 		}
 		if !strings.Contains(o.URL, githubURL) && !strings.Contains(o.URL, "codecommit") {
-			return errors.New("Copilot currently accepts only urls to GitHub and CodeCommit repository sources")
+			return errors.New("Copilot currently accepts only URLs to GitHub and CodeCommit repository sources")
 		}
 	}
 	if o.environments != nil {

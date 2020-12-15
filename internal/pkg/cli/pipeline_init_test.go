@@ -33,7 +33,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 		setupMocks    func(m *mocks.Mockstore)
 		expectedError error
 	}{
-		"invalid url": {
+		"invalid URL": {
 			inAppName:     "my-app",
 			inURL:         "somethingdotcom",
 			inEnvs:        []string{"test"},
