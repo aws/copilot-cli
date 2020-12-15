@@ -21,10 +21,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type initPipelineMocks struct {
-	storeSvc *mocks.Mockstore
-}
-
 func TestInitPipelineOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName     string
