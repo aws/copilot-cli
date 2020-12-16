@@ -44,6 +44,7 @@ Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
 	githubURL             = "github.com"
+	ccSubstring           = "codecommit"
 	defaultBranch         = "main"
 )
 
@@ -59,7 +60,7 @@ type initPipelineVars struct {
 	environments      []string
 	githubOwner       string
 	githubRepo        string
-	githubURL         string
+	repoURL           string
 	githubAccessToken string
 	gitBranch         string
 }
@@ -150,11 +151,23 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initPipelineOpts) Validate() error {
-	// TODO add validation for flags
-	if o.appName == "" {
-		return errNoAppInWorkspace
+	if o.repoURL != "" {
+		if err := validateDomainName(o.repoURL); err != nil {
+			return err
+		}
+		if !strings.Contains(o.repoURL, githubURL) && !strings.Contains(o.repoURL, ccSubstring) {
+			return errors.New("Copilot currently accepts only URLs to GitHub and CodeCommit repository sources")
+		}
 	}
-
+	if o.environments != nil {
+		for _, env := range o.environments {
+			_, err := o.store.GetEnvironment(o.appName, env)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 	return nil
 }
 
@@ -167,12 +180,12 @@ func (o *initPipelineOpts) Ask() error {
 		}
 	}
 
-	if o.githubURL == "" {
+	if o.repoURL == "" {
 		if err = o.selectGitHubURL(); err != nil {
 			return err
 		}
 	}
-	if o.githubOwner, o.githubRepo, err = o.parseOwnerRepoName(o.githubURL); err != nil {
+	if o.githubOwner, o.githubRepo, err = o.parseOwnerRepoName(o.repoURL); err != nil {
 		return err
 	}
 
@@ -457,7 +470,7 @@ func (o *initPipelineOpts) selectGitHubURL() error {
 	if err != nil {
 		return fmt.Errorf("select GitHub URL: %w", err)
 	}
-	o.githubURL = url
+	o.repoURL = url
 
 	return nil
 }
@@ -511,6 +524,15 @@ For more information, please refer to: https://git.io/JfDFD.`,
 }
 
 func (o *initPipelineOpts) getEnvs() ([]*config.Environment, error) {
+	// If app name is passed in via flag, validate here.
+	if o.appName == "" {
+		return nil, errValueEmpty
+	}
+	if o.appName != "" {
+		if _, err := o.store.GetApplication(o.appName); err != nil {
+			return nil, err
+		}
+	}
 	envs, err := o.store.ListEnvironments(o.appName)
 	if err != nil {
 		return nil, fmt.Errorf("list environments for application %s: %w", o.appName, err)
@@ -557,7 +579,7 @@ func buildPipelineInitCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
-	cmd.Flags().StringVarP(&vars.githubURL, githubURLFlag, githubURLFlagShort, "", githubURLFlagDescription)
+	cmd.Flags().StringVarP(&vars.repoURL, githubURLFlag, githubURLFlagShort, "", githubURLFlagDescription)
 	cmd.Flags().StringVarP(&vars.githubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
 	cmd.Flags().StringVarP(&vars.gitBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
 	cmd.Flags().StringSliceVarP(&vars.environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
