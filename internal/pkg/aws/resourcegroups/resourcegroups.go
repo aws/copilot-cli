@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
@@ -30,6 +31,12 @@ type Resource struct {
 
 // New returns a ResourceGroup struct configured against the input session.
 func New(s *session.Session) *ResourceGroups {
+	// This is only for testing in RGTA gamma endpoint.
+	// REMOVE THIS WHEN LAUNCHING.
+	s, err := sessions.NewProvider().ResourceGroupsGammaSess()
+	if err != nil {
+		panic("setting up resources group gamma endpoint")
+	}
 	return &ResourceGroups{
 		client: resourcegroupstaggingapi.New(s),
 	}

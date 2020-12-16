@@ -45,6 +45,44 @@ func NewProvider() *Provider {
 	return instance
 }
 
+// ResourceGroupsGammaSess returns default session with resources group gamma endpoint.
+// Note that only us-west-2 is allowed and this is only for testing in ECS gamma endpoint.
+// REMOVE THIS WHEN LAUNCHING.
+func (p *Provider) ResourceGroupsGammaSess() (*session.Session, error) {
+	config := newConfig()
+	config.Endpoint = aws.String("https://tagging-gamma.us-west-2.amazonaws.com")
+	config.Region = aws.String("us-west-2")
+	sess, err := session.NewSessionWithOptions(session.Options{
+		Config:            *config,
+		SharedConfigState: session.SharedConfigEnable,
+	})
+	if err != nil {
+		return nil, err
+	}
+	sess.Handlers.Build.PushBackNamed(userAgentHandler())
+	p.defaultSess = sess
+	return sess, nil
+}
+
+// ECSGammaSess returns default session with ECS gamma endpoint.
+// Note that only us-west-2 is allowed and this is only for testing in ECS gamma endpoint.
+// REMOVE THIS WHEN LAUNCHING.
+func (p *Provider) ECSGammaSess() (*session.Session, error) {
+	config := newConfig()
+	config.Endpoint = aws.String("https://madison.us-west-2.amazonaws.com")
+	config.Region = aws.String("us-west-2")
+	sess, err := session.NewSessionWithOptions(session.Options{
+		Config:            *config,
+		SharedConfigState: session.SharedConfigEnable,
+	})
+	if err != nil {
+		return nil, err
+	}
+	sess.Handlers.Build.PushBackNamed(userAgentHandler())
+	p.defaultSess = sess
+	return sess, nil
+}
+
 // Default returns a session configured against the "default" AWS profile.
 func (p *Provider) Default() (*session.Session, error) {
 	if p.defaultSess != nil {
