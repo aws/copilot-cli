@@ -7,6 +7,7 @@
 package exec
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -51,7 +52,9 @@ func (s SSMPluginCommand) StartSession(ssmSess *ecs.Session) error {
 
 // ValidateBinary validates if the ssm plugin exists.
 func (s SSMPluginCommand) ValidateBinary() error {
-	return s.runner.Run(ssmPluginBinaryName, []string{})
+	// Hinder output on the screen.
+	var b bytes.Buffer
+	return s.runner.Run(ssmPluginBinaryName, []string{}, command.Stdout(&b))
 }
 
 // InstallLatestBinary returns nil and ssm plugin needs to be installed manually.
