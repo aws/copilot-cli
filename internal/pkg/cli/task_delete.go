@@ -10,6 +10,11 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+
+
 	"github.com/spf13/cobra"
 )
 
@@ -39,6 +44,41 @@ type deleteTaskOpts struct {
 	// Dependencies to interact with other modules
 	store  store
 	prompt prompter
+	spinner progress
+	sess sessionProvider
+	sel taskSelector
+	deleter
+}
+
+func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
+	store, err := config.NewStore()
+	if err != nil {
+		return nil, fmt.Errorf("new config store: %w", err)
+	}
+
+	provider := sessions.NewProvider()
+	defaultSession, err := provider.Default()
+	if err != nil {
+		return nil, err
+	}
+	prompter := prompt.New()
+	
+	return &deleteTaskOpts{
+		deleteTaskVars: vars,
+
+		store:   store,
+		spinner: termprogress.NewSpinner(),
+		prompt:  prompter,
+		sess:    provider,
+		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
+		appCFN:  cloudformation.New(defaultSession),
+		getSvcCFN: func(session *awssession.Session) wlDeleter {
+			return cloudformation.New(session)
+		},
+		getECR: func(session *awssession.Session) imageRemover {
+			return ecr.New(session)
+		},
+	}, nil
 }
 
 // Validate checks that flag inputs are valid. 
@@ -158,6 +198,67 @@ func (o *deleteTaskOpts) Ask() error {
 }
 
 func (o *deleteTaskOpts) askTaskName() error {
+	return nil
+}
+
+func (o *deleteAppOpts) Execute() error {
+	
+	envs, err := o.store.ListEnvironments(o.name)
+	if err != nil {
+		return fmt.Errorf("list environments for application %s: %w", o.name, err)
+	}
+	o.envs = envs
+
+	// Delete tasks from each environment (that is, delete the tasks that were created with each environment's manager role)
+	var envTasks []deploy.TaskStackInfo
+	for _, env := range envs {
+		envSess, err := o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return err
+		}
+		envCF := o.cfn(envSess)
+		envECR := o.ecr(envSess)
+		envTasks, err = envCF.GetTaskStackInfo(o.name)
+		if err != nil {
+			return fmt.Errorf("get tasks deployed in environment %s: %w", env.Name, err)
+		}
+		for _, t := range envTasks {
+			o.spinner.Start(fmt.Sprintf("Deleting task %s from environment %s.", t.TaskName(), env.Name))
+			if err := envECR.ClearRepository(t.ECRRepoName()); err != nil {
+				o.spinner.Stop(log.Serrorf("Error emptying ECR repository for task %s\n", t.TaskName()))
+				return fmt.Errorf("empty ECR repository for task %s: %w", t.TaskName(), err)
+			}
+			if err := envCF.DeleteTask(t); err != nil {
+				o.spinner.Stop(log.Serrorf("Error deleting task %s from environment %s.\n", t.TaskName(), t.Env))
+				return fmt.Errorf("delete task %s from env %s: %w", t.TaskName(), t.Env, err)
+			}
+			o.spinner.Stop(log.Ssuccessf("Deleted task %s from environment %s.\n", t.TaskName(), t.Env))
+		}
+	}
+
+	// Delete tasks in default VPC created with an EnvManagerRole
+	defaultSess, err := o.sessProvider.Default()
+	if err != nil {
+		return err
+	}
+	defaultECR := o.ecr(defaultSess)
+	defaultCFN := o.cfn(defaultSess)
+	defaultTasks, err := defaultCFN.GetTaskStackInfo(o.name)
+	if err != nil {
+		return fmt.Errorf("get tasks deployed in default VPC: %w", err)
+	}
+	for _, t := range defaultTasks {
+		o.spinner.Start(fmt.Sprintf("Deleting environment-dependent task %s from default VPC.", t.TaskName()))
+		if err := defaultECR.ClearRepository(t.ECRRepoName()); err != nil {
+			o.spinner.Stop(log.Serrorf("Error emptying ECR repository for task %s\n", t.TaskName()))
+			return fmt.Errorf("empty ECR repository for task %s: %w", t.TaskName(), err)
+		}
+		if err := defaultCFN.DeleteTask(t); err != nil {
+			o.spinner.Stop(log.Serrorf("Error deleting task %s from default VPC.\n", t.TaskName()))
+			return fmt.Errorf("delete task %s: %w", t.TaskName(), err)
+		}
+		o.spinner.Stop(log.Ssuccessf("Deleted task %s from default VPC.\n", t.TaskName()))
+	}
 	return nil
 }
 
