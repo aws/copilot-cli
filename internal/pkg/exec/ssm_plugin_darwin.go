@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -54,7 +55,7 @@ func (s SSMPluginCommand) StartSession(ssmSess *ecs.Session) error {
 		return fmt.Errorf("marshal session response: %w", err)
 	}
 	if err := s.runner.Run(ssmPluginBinaryName,
-		[]string{string(response), *s.sess.Config.Region, startSessionAction},
+		[]string{string(response), aws.StringValue(s.sess.Config.Region), startSessionAction},
 		command.Stderr(os.Stderr), command.Stdin(os.Stdin), command.Stdout(os.Stdout)); err != nil {
 		return fmt.Errorf("start session: %w", err)
 	}

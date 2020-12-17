@@ -41,7 +41,6 @@ Would you like to update it to the latest version %s?`
 
 var (
 	errSSMPluginCommandInstallCancelled = errors.New("ssm plugin install cancelled")
-	errSSMPluginCommandUpdateCancelled  = errors.New("ssm plugin update cancelled")
 )
 
 type svcExecOpts struct {
@@ -131,7 +130,10 @@ func (o *svcExecOpts) validateSSMBinary() error {
 			return fmt.Errorf("prompt to confirm updating the plugin: %w", err)
 		}
 		if !confirmUpdate {
-			return errSSMPluginCommandUpdateCancelled
+			log.Infof(`Alright, we won't update the Session Manager plugin.
+It might fail to execute if it is not using the latest plugin.
+`)
+			return nil
 		}
 		if err := o.ssmPluginManager.InstallLatestBinary(); err != nil {
 			return fmt.Errorf("update ssm plugin: %w", err)

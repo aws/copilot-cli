@@ -167,7 +167,7 @@ func TestSvcExec_Validate(t *testing.T) {
 
 			wantedError: fmt.Errorf("prompt to confirm updating the plugin: some error"),
 		},
-		"should bubble error if cannot confirm update": {
+		"should proceed if cannot confirm update": {
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
@@ -187,8 +187,6 @@ func TestSvcExec_Validate(t *testing.T) {
 						Return(false, nil),
 				)
 			},
-
-			wantedError: errSSMPluginCommandUpdateCancelled,
 		},
 		"should bubble error if cannot update the binary": {
 			setupMocks: func(m execSvcMocks) {
