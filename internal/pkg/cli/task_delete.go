@@ -204,6 +204,6 @@ func buildTaskDeleteCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.env, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
-	cmd.Flags().BoolVar(&vars.)
+	cmd.Flags().BoolVar(&vars.defaultCluster, taskDefaultFlag, false, "")
 	return cmd
 }
