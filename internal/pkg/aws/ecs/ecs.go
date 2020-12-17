@@ -297,16 +297,12 @@ func (e *ECS) DescribeTasks(cluster string, taskARNs []string) ([]*Task, error) 
 
 // ExecuteCommand executes commands in a running container, and then terminate the session.
 func (e *ECS) ExecuteCommand(in ExecuteCommandInput) (err error) {
-	mode := ecs.ExecuteCommandModeSingleCommand
-	if in.Interactive {
-		mode = ecs.ExecuteCommandModeInteractive
-	}
 	execCmdresp, err := e.client.ExecuteCommand(&ecs.ExecuteCommandInput{
-		Cluster:   aws.String(in.Cluster),
-		Command:   aws.String(in.Command),
-		Container: aws.String(in.Container),
-		Mode:      aws.String(mode),
-		Task:      aws.String(in.Task),
+		Cluster:     aws.String(in.Cluster),
+		Command:     aws.String(in.Command),
+		Container:   aws.String(in.Container),
+		Interactive: aws.Bool(in.Interactive),
+		Task:        aws.String(in.Task),
 	})
 	if err != nil {
 		return fmt.Errorf("execute command: %w", err)

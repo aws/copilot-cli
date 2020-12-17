@@ -84,6 +84,10 @@ const (
 	// "ServiceNotFoundException".
 	ErrCodeServiceNotFoundException = "ServiceNotFoundException"
 
+	// ErrCodeTargetNotConnectedException for service response error code
+	// "TargetNotConnectedException".
+	ErrCodeTargetNotConnectedException = "TargetNotConnectedException"
+
 	// ErrCodeTargetNotFoundException for service response error code
 	// "TargetNotFoundException".
 	ErrCodeTargetNotFoundException = "TargetNotFoundException"
@@ -121,6 +125,7 @@ var exceptionFromCode = map[string]func(protocol.ResponseMetadata) error{
 	"ServerException":                                newErrorServerException,
 	"ServiceNotActiveException":                      newErrorServiceNotActiveException,
 	"ServiceNotFoundException":                       newErrorServiceNotFoundException,
+	"TargetNotConnectedException":                    newErrorTargetNotConnectedException,
 	"TargetNotFoundException":                        newErrorTargetNotFoundException,
 	"TaskSetNotFoundException":                       newErrorTaskSetNotFoundException,
 	"UnsupportedFeatureException":                    newErrorUnsupportedFeatureException,

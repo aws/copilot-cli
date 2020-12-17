@@ -55,13 +55,13 @@ func (c *ECS) CreateCapacityProviderRequest(input *CreateCapacityProviderInput) 
 	return
 }
 
-// CreateCapacityProvider API operation for Amazon Elastic Container Service.
+// CreateCapacityProvider API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation CreateCapacityProvider for usage and error information.
 //
 // Returned Error Types:
@@ -139,13 +139,13 @@ func (c *ECS) CreateClusterRequest(input *CreateClusterInput) (req *request.Requ
 	return
 }
 
-// CreateCluster API operation for Amazon Elastic Container Service.
+// CreateCluster API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation CreateCluster for usage and error information.
 //
 // Returned Error Types:
@@ -219,13 +219,13 @@ func (c *ECS) CreateServiceRequest(input *CreateServiceInput) (req *request.Requ
 	return
 }
 
-// CreateService API operation for Amazon Elastic Container Service.
+// CreateService API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation CreateService for usage and error information.
 //
 // Returned Error Types:
@@ -309,13 +309,13 @@ func (c *ECS) CreateTaskSetRequest(input *CreateTaskSetInput) (req *request.Requ
 	return
 }
 
-// CreateTaskSet API operation for Amazon Elastic Container Service.
+// CreateTaskSet API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation CreateTaskSet for usage and error information.
 //
 // Returned Error Types:
@@ -405,13 +405,13 @@ func (c *ECS) DeleteAccountSettingRequest(input *DeleteAccountSettingInput) (req
 	return
 }
 
-// DeleteAccountSetting API operation for Amazon Elastic Container Service.
+// DeleteAccountSetting API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DeleteAccountSetting for usage and error information.
 //
 // Returned Error Types:
@@ -485,13 +485,13 @@ func (c *ECS) DeleteAttributesRequest(input *DeleteAttributesInput) (req *reques
 	return
 }
 
-// DeleteAttributes API operation for Amazon Elastic Container Service.
+// DeleteAttributes API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DeleteAttributes for usage and error information.
 //
 // Returned Error Types:
@@ -565,13 +565,13 @@ func (c *ECS) DeleteCapacityProviderRequest(input *DeleteCapacityProviderInput) 
 	return
 }
 
-// DeleteCapacityProvider API operation for Amazon Elastic Container Service.
+// DeleteCapacityProvider API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DeleteCapacityProvider for usage and error information.
 //
 // Returned Error Types:
@@ -647,13 +647,13 @@ func (c *ECS) DeleteClusterRequest(input *DeleteClusterInput) (req *request.Requ
 	return
 }
 
-// DeleteCluster API operation for Amazon Elastic Container Service.
+// DeleteCluster API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DeleteCluster for usage and error information.
 //
 // Returned Error Types:
@@ -737,13 +737,13 @@ func (c *ECS) DeleteServiceRequest(input *DeleteServiceInput) (req *request.Requ
 	return
 }
 
-// DeleteService API operation for Amazon Elastic Container Service.
+// DeleteService API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DeleteService for usage and error information.
 //
 // Returned Error Types:
@@ -821,13 +821,13 @@ func (c *ECS) DeleteTaskSetRequest(input *DeleteTaskSetInput) (req *request.Requ
 	return
 }
 
-// DeleteTaskSet API operation for Amazon Elastic Container Service.
+// DeleteTaskSet API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DeleteTaskSet for usage and error information.
 //
 // Returned Error Types:
@@ -915,13 +915,13 @@ func (c *ECS) DeregisterContainerInstanceRequest(input *DeregisterContainerInsta
 	return
 }
 
-// DeregisterContainerInstance API operation for Amazon Elastic Container Service.
+// DeregisterContainerInstance API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DeregisterContainerInstance for usage and error information.
 //
 // Returned Error Types:
@@ -997,13 +997,13 @@ func (c *ECS) DeregisterTaskDefinitionRequest(input *DeregisterTaskDefinitionInp
 	return
 }
 
-// DeregisterTaskDefinition API operation for Amazon Elastic Container Service.
+// DeregisterTaskDefinition API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DeregisterTaskDefinition for usage and error information.
 //
 // Returned Error Types:
@@ -1077,13 +1077,13 @@ func (c *ECS) DescribeCapacityProvidersRequest(input *DescribeCapacityProvidersI
 	return
 }
 
-// DescribeCapacityProviders API operation for Amazon Elastic Container Service.
+// DescribeCapacityProviders API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DescribeCapacityProviders for usage and error information.
 //
 // Returned Error Types:
@@ -1157,13 +1157,13 @@ func (c *ECS) DescribeClustersRequest(input *DescribeClustersInput) (req *reques
 	return
 }
 
-// DescribeClusters API operation for Amazon Elastic Container Service.
+// DescribeClusters API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DescribeClusters for usage and error information.
 //
 // Returned Error Types:
@@ -1237,13 +1237,13 @@ func (c *ECS) DescribeContainerInstancesRequest(input *DescribeContainerInstance
 	return
 }
 
-// DescribeContainerInstances API operation for Amazon Elastic Container Service.
+// DescribeContainerInstances API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DescribeContainerInstances for usage and error information.
 //
 // Returned Error Types:
@@ -1319,13 +1319,13 @@ func (c *ECS) DescribeFargateSpotPriceHistoryRequest(input *DescribeFargateSpotP
 	return
 }
 
-// DescribeFargateSpotPriceHistory API operation for Amazon Elastic Container Service.
+// DescribeFargateSpotPriceHistory API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DescribeFargateSpotPriceHistory for usage and error information.
 //
 // Returned Error Types:
@@ -1399,13 +1399,13 @@ func (c *ECS) DescribeServicesRequest(input *DescribeServicesInput) (req *reques
 	return
 }
 
-// DescribeServices API operation for Amazon Elastic Container Service.
+// DescribeServices API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DescribeServices for usage and error information.
 //
 // Returned Error Types:
@@ -1481,13 +1481,13 @@ func (c *ECS) DescribeTaskDefinitionRequest(input *DescribeTaskDefinitionInput) 
 	return
 }
 
-// DescribeTaskDefinition API operation for Amazon Elastic Container Service.
+// DescribeTaskDefinition API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DescribeTaskDefinition for usage and error information.
 //
 // Returned Error Types:
@@ -1561,13 +1561,13 @@ func (c *ECS) DescribeTaskSetsRequest(input *DescribeTaskSetsInput) (req *reques
 	return
 }
 
-// DescribeTaskSets API operation for Amazon Elastic Container Service.
+// DescribeTaskSets API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DescribeTaskSets for usage and error information.
 //
 // Returned Error Types:
@@ -1645,13 +1645,13 @@ func (c *ECS) DescribeTasksRequest(input *DescribeTasksInput) (req *request.Requ
 	return
 }
 
-// DescribeTasks API operation for Amazon Elastic Container Service.
+// DescribeTasks API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DescribeTasks for usage and error information.
 //
 // Returned Error Types:
@@ -1727,13 +1727,13 @@ func (c *ECS) DiscoverPollEndpointRequest(input *DiscoverPollEndpointInput) (req
 	return
 }
 
-// DiscoverPollEndpoint API operation for Amazon Elastic Container Service.
+// DiscoverPollEndpoint API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation DiscoverPollEndpoint for usage and error information.
 //
 // Returned Error Types:
@@ -1805,13 +1805,13 @@ func (c *ECS) ExecuteCommandRequest(input *ExecuteCommandInput) (req *request.Re
 	return
 }
 
-// ExecuteCommand API operation for Amazon Elastic Container Service.
+// ExecuteCommand API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation ExecuteCommand for usage and error information.
 //
 // Returned Error Types:
@@ -1824,6 +1824,8 @@ func (c *ECS) ExecuteCommandRequest(input *ExecuteCommandInput) (req *request.Re
 //   * AccessDeniedException
 //
 //   * ClusterNotFoundException
+//
+//   * TargetNotConnectedException
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/ecs-2014-11-13/ExecuteCommand
 func (c *ECS) ExecuteCommand(input *ExecuteCommandInput) (*ExecuteCommandOutput, error) {
@@ -1878,6 +1880,12 @@ func (c *ECS) ListAccountSettingsRequest(input *ListAccountSettingsInput) (req *
 		Name:       opListAccountSettings,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"nextToken"},
+			OutputTokens:    []string{"nextToken"},
+			LimitToken:      "maxResults",
+			TruncationToken: "",
+		},
 	}
 
 	if input == nil {
@@ -1889,13 +1897,13 @@ func (c *ECS) ListAccountSettingsRequest(input *ListAccountSettingsInput) (req *
 	return
 }
 
-// ListAccountSettings API operation for Amazon Elastic Container Service.
+// ListAccountSettings API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation ListAccountSettings for usage and error information.
 //
 // Returned Error Types:
@@ -1925,6 +1933,58 @@ func (c *ECS) ListAccountSettingsWithContext(ctx aws.Context, input *ListAccount
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
+}
+
+// ListAccountSettingsPages iterates over the pages of a ListAccountSettings operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListAccountSettings method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListAccountSettings operation.
+//    pageNum := 0
+//    err := client.ListAccountSettingsPages(params,
+//        func(page *ecs.ListAccountSettingsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *ECS) ListAccountSettingsPages(input *ListAccountSettingsInput, fn func(*ListAccountSettingsOutput, bool) bool) error {
+	return c.ListAccountSettingsPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListAccountSettingsPagesWithContext same as ListAccountSettingsPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *ECS) ListAccountSettingsPagesWithContext(ctx aws.Context, input *ListAccountSettingsInput, fn func(*ListAccountSettingsOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListAccountSettingsInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListAccountSettingsRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	for p.Next() {
+		if !fn(p.Page().(*ListAccountSettingsOutput), !p.HasNextPage()) {
+			break
+		}
+	}
+
+	return p.Err()
 }
 
 const opListAttributes = "ListAttributes"
@@ -1958,6 +2018,12 @@ func (c *ECS) ListAttributesRequest(input *ListAttributesInput) (req *request.Re
 		Name:       opListAttributes,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"nextToken"},
+			OutputTokens:    []string{"nextToken"},
+			LimitToken:      "maxResults",
+			TruncationToken: "",
+		},
 	}
 
 	if input == nil {
@@ -1969,13 +2035,13 @@ func (c *ECS) ListAttributesRequest(input *ListAttributesInput) (req *request.Re
 	return
 }
 
-// ListAttributes API operation for Amazon Elastic Container Service.
+// ListAttributes API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation ListAttributes for usage and error information.
 //
 // Returned Error Types:
@@ -2003,6 +2069,58 @@ func (c *ECS) ListAttributesWithContext(ctx aws.Context, input *ListAttributesIn
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
+}
+
+// ListAttributesPages iterates over the pages of a ListAttributes operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListAttributes method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListAttributes operation.
+//    pageNum := 0
+//    err := client.ListAttributesPages(params,
+//        func(page *ecs.ListAttributesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *ECS) ListAttributesPages(input *ListAttributesInput, fn func(*ListAttributesOutput, bool) bool) error {
+	return c.ListAttributesPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListAttributesPagesWithContext same as ListAttributesPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *ECS) ListAttributesPagesWithContext(ctx aws.Context, input *ListAttributesInput, fn func(*ListAttributesOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListAttributesInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListAttributesRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	for p.Next() {
+		if !fn(p.Page().(*ListAttributesOutput), !p.HasNextPage()) {
+			break
+		}
+	}
+
+	return p.Err()
 }
 
 const opListClusters = "ListClusters"
@@ -2053,13 +2171,13 @@ func (c *ECS) ListClustersRequest(input *ListClustersInput) (req *request.Reques
 	return
 }
 
-// ListClusters API operation for Amazon Elastic Container Service.
+// ListClusters API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation ListClusters for usage and error information.
 //
 // Returned Error Types:
@@ -2191,13 +2309,13 @@ func (c *ECS) ListContainerInstancesRequest(input *ListContainerInstancesInput) 
 	return
 }
 
-// ListContainerInstances API operation for Amazon Elastic Container Service.
+// ListContainerInstances API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation ListContainerInstances for usage and error information.
 //
 // Returned Error Types:
@@ -2331,13 +2449,13 @@ func (c *ECS) ListServicesRequest(input *ListServicesInput) (req *request.Reques
 	return
 }
 
-// ListServices API operation for Amazon Elastic Container Service.
+// ListServices API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation ListServices for usage and error information.
 //
 // Returned Error Types:
@@ -2465,13 +2583,13 @@ func (c *ECS) ListTagsForResourceRequest(input *ListTagsForResourceInput) (req *
 	return
 }
 
-// ListTagsForResource API operation for Amazon Elastic Container Service.
+// ListTagsForResource API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation ListTagsForResource for usage and error information.
 //
 // Returned Error Types:
@@ -2553,13 +2671,13 @@ func (c *ECS) ListTaskDefinitionFamiliesRequest(input *ListTaskDefinitionFamilie
 	return
 }
 
-// ListTaskDefinitionFamilies API operation for Amazon Elastic Container Service.
+// ListTaskDefinitionFamilies API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation ListTaskDefinitionFamilies for usage and error information.
 //
 // Returned Error Types:
@@ -2691,13 +2809,13 @@ func (c *ECS) ListTaskDefinitionsRequest(input *ListTaskDefinitionsInput) (req *
 	return
 }
 
-// ListTaskDefinitions API operation for Amazon Elastic Container Service.
+// ListTaskDefinitions API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation ListTaskDefinitions for usage and error information.
 //
 // Returned Error Types:
@@ -2829,13 +2947,13 @@ func (c *ECS) ListTasksRequest(input *ListTasksInput) (req *request.Request, out
 	return
 }
 
-// ListTasks API operation for Amazon Elastic Container Service.
+// ListTasks API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation ListTasks for usage and error information.
 //
 // Returned Error Types:
@@ -2965,13 +3083,13 @@ func (c *ECS) PutAccountSettingRequest(input *PutAccountSettingInput) (req *requ
 	return
 }
 
-// PutAccountSetting API operation for Amazon Elastic Container Service.
+// PutAccountSetting API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation PutAccountSetting for usage and error information.
 //
 // Returned Error Types:
@@ -3045,13 +3163,13 @@ func (c *ECS) PutAccountSettingDefaultRequest(input *PutAccountSettingDefaultInp
 	return
 }
 
-// PutAccountSettingDefault API operation for Amazon Elastic Container Service.
+// PutAccountSettingDefault API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation PutAccountSettingDefault for usage and error information.
 //
 // Returned Error Types:
@@ -3125,13 +3243,13 @@ func (c *ECS) PutAttributesRequest(input *PutAttributesInput) (req *request.Requ
 	return
 }
 
-// PutAttributes API operation for Amazon Elastic Container Service.
+// PutAttributes API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation PutAttributes for usage and error information.
 //
 // Returned Error Types:
@@ -3207,13 +3325,13 @@ func (c *ECS) PutClusterCapacityProvidersRequest(input *PutClusterCapacityProvid
 	return
 }
 
-// PutClusterCapacityProviders API operation for Amazon Elastic Container Service.
+// PutClusterCapacityProviders API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation PutClusterCapacityProviders for usage and error information.
 //
 // Returned Error Types:
@@ -3291,13 +3409,13 @@ func (c *ECS) RegisterContainerInstanceRequest(input *RegisterContainerInstanceI
 	return
 }
 
-// RegisterContainerInstance API operation for Amazon Elastic Container Service.
+// RegisterContainerInstance API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation RegisterContainerInstance for usage and error information.
 //
 // Returned Error Types:
@@ -3371,13 +3489,13 @@ func (c *ECS) RegisterTaskDefinitionRequest(input *RegisterTaskDefinitionInput) 
 	return
 }
 
-// RegisterTaskDefinition API operation for Amazon Elastic Container Service.
+// RegisterTaskDefinition API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation RegisterTaskDefinition for usage and error information.
 //
 // Returned Error Types:
@@ -3451,13 +3569,13 @@ func (c *ECS) RunTaskRequest(input *RunTaskInput) (req *request.Request, output 
 	return
 }
 
-// RunTask API operation for Amazon Elastic Container Service.
+// RunTask API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation RunTask for usage and error information.
 //
 // Returned Error Types:
@@ -3545,13 +3663,13 @@ func (c *ECS) StartTaskRequest(input *StartTaskInput) (req *request.Request, out
 	return
 }
 
-// StartTask API operation for Amazon Elastic Container Service.
+// StartTask API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation StartTask for usage and error information.
 //
 // Returned Error Types:
@@ -3631,13 +3749,13 @@ func (c *ECS) StopTaskRequest(input *StopTaskInput) (req *request.Request, outpu
 	return
 }
 
-// StopTask API operation for Amazon Elastic Container Service.
+// StopTask API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation StopTask for usage and error information.
 //
 // Returned Error Types:
@@ -3713,13 +3831,13 @@ func (c *ECS) SubmitAttachmentStateChangesRequest(input *SubmitAttachmentStateCh
 	return
 }
 
-// SubmitAttachmentStateChanges API operation for Amazon Elastic Container Service.
+// SubmitAttachmentStateChanges API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation SubmitAttachmentStateChanges for usage and error information.
 //
 // Returned Error Types:
@@ -3795,13 +3913,13 @@ func (c *ECS) SubmitContainerStateChangeRequest(input *SubmitContainerStateChang
 	return
 }
 
-// SubmitContainerStateChange API operation for Amazon Elastic Container Service.
+// SubmitContainerStateChange API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation SubmitContainerStateChange for usage and error information.
 //
 // Returned Error Types:
@@ -3875,13 +3993,13 @@ func (c *ECS) SubmitTaskStateChangeRequest(input *SubmitTaskStateChangeInput) (r
 	return
 }
 
-// SubmitTaskStateChange API operation for Amazon Elastic Container Service.
+// SubmitTaskStateChange API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation SubmitTaskStateChange for usage and error information.
 //
 // Returned Error Types:
@@ -3958,13 +4076,13 @@ func (c *ECS) TagResourceRequest(input *TagResourceInput) (req *request.Request,
 	return
 }
 
-// TagResource API operation for Amazon Elastic Container Service.
+// TagResource API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation TagResource for usage and error information.
 //
 // Returned Error Types:
@@ -4045,13 +4163,13 @@ func (c *ECS) UntagResourceRequest(input *UntagResourceInput) (req *request.Requ
 	return
 }
 
-// UntagResource API operation for Amazon Elastic Container Service.
+// UntagResource API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation UntagResource for usage and error information.
 //
 // Returned Error Types:
@@ -4129,13 +4247,13 @@ func (c *ECS) UpdateCapacityProviderRequest(input *UpdateCapacityProviderInput) 
 	return
 }
 
-// UpdateCapacityProvider API operation for Amazon Elastic Container Service.
+// UpdateCapacityProvider API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation UpdateCapacityProvider for usage and error information.
 //
 // Returned Error Types:
@@ -4209,13 +4327,13 @@ func (c *ECS) UpdateClusterRequest(input *UpdateClusterInput) (req *request.Requ
 	return
 }
 
-// UpdateCluster API operation for Amazon Elastic Container Service.
+// UpdateCluster API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation UpdateCluster for usage and error information.
 //
 // Returned Error Types:
@@ -4291,13 +4409,13 @@ func (c *ECS) UpdateClusterSettingsRequest(input *UpdateClusterSettingsInput) (r
 	return
 }
 
-// UpdateClusterSettings API operation for Amazon Elastic Container Service.
+// UpdateClusterSettings API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation UpdateClusterSettings for usage and error information.
 //
 // Returned Error Types:
@@ -4373,13 +4491,13 @@ func (c *ECS) UpdateContainerAgentRequest(input *UpdateContainerAgentInput) (req
 	return
 }
 
-// UpdateContainerAgent API operation for Amazon Elastic Container Service.
+// UpdateContainerAgent API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation UpdateContainerAgent for usage and error information.
 //
 // Returned Error Types:
@@ -4461,13 +4579,13 @@ func (c *ECS) UpdateContainerInstancesStateRequest(input *UpdateContainerInstanc
 	return
 }
 
-// UpdateContainerInstancesState API operation for Amazon Elastic Container Service.
+// UpdateContainerInstancesState API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation UpdateContainerInstancesState for usage and error information.
 //
 // Returned Error Types:
@@ -4543,13 +4661,13 @@ func (c *ECS) UpdateServiceRequest(input *UpdateServiceInput) (req *request.Requ
 	return
 }
 
-// UpdateService API operation for Amazon Elastic Container Service.
+// UpdateService API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation UpdateService for usage and error information.
 //
 // Returned Error Types:
@@ -4635,13 +4753,13 @@ func (c *ECS) UpdateServicePrimaryTaskSetRequest(input *UpdateServicePrimaryTask
 	return
 }
 
-// UpdateServicePrimaryTaskSet API operation for Amazon Elastic Container Service.
+// UpdateServicePrimaryTaskSet API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation UpdateServicePrimaryTaskSet for usage and error information.
 //
 // Returned Error Types:
@@ -4725,13 +4843,13 @@ func (c *ECS) UpdateTaskSetRequest(input *UpdateTaskSetInput) (req *request.Requ
 	return
 }
 
-// UpdateTaskSet API operation for Amazon Elastic Container Service.
+// UpdateTaskSet API operation for Amazon EC2 Container Service.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
 //
-// See the AWS API reference guide for Amazon Elastic Container Service's
+// See the AWS API reference guide for Amazon EC2 Container Service's
 // API operation UpdateTaskSet for usage and error information.
 //
 // Returned Error Types:
@@ -6839,8 +6957,6 @@ type ContainerStateChange struct {
 
 	ImageDigest *string `locationName:"imageDigest" type:"string"`
 
-	ManagedAgents []*ManagedAgentStateChange `locationName:"managedAgents" type:"list"`
-
 	NetworkBindings []*NetworkBinding `locationName:"networkBindings" type:"list"`
 
 	Reason *string `locationName:"reason" type:"string"`
@@ -6860,26 +6976,6 @@ func (s ContainerStateChange) GoString() string {
 	return s.String()
 }
 
-// Validate inspects the fields of the type to determine if they are valid.
-func (s *ContainerStateChange) Validate() error {
-	invalidParams := request.ErrInvalidParams{Context: "ContainerStateChange"}
-	if s.ManagedAgents != nil {
-		for i, v := range s.ManagedAgents {
-			if v == nil {
-				continue
-			}
-			if err := v.Validate(); err != nil {
-				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "ManagedAgents", i), err.(request.ErrInvalidParams))
-			}
-		}
-	}
-
-	if invalidParams.Len() > 0 {
-		return invalidParams
-	}
-	return nil
-}
-
 // SetContainerName sets the ContainerName field's value.
 func (s *ContainerStateChange) SetContainerName(v string) *ContainerStateChange {
 	s.ContainerName = &v
@@ -6895,12 +6991,6 @@ func (s *ContainerStateChange) SetExitCode(v int64) *ContainerStateChange {
 // SetImageDigest sets the ImageDigest field's value.
 func (s *ContainerStateChange) SetImageDigest(v string) *ContainerStateChange {
 	s.ImageDigest = &v
-	return s
-}
-
-// SetManagedAgents sets the ManagedAgents field's value.
-func (s *ContainerStateChange) SetManagedAgents(v []*ManagedAgentStateChange) *ContainerStateChange {
-	s.ManagedAgents = v
 	return s
 }
 
@@ -9429,6 +9519,28 @@ func (s *EnvironmentFile) SetValue(v string) *EnvironmentFile {
 	return s
 }
 
+type EphemeralStorage struct {
+	_ struct{} `type:"structure"`
+
+	Size *int64 `locationName:"size" type:"integer"`
+}
+
+// String returns the string representation
+func (s EphemeralStorage) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s EphemeralStorage) GoString() string {
+	return s.String()
+}
+
+// SetSize sets the Size field's value.
+func (s *EphemeralStorage) SetSize(v int64) *EphemeralStorage {
+	s.Size = &v
+	return s
+}
+
 type ExecuteCommandConfiguration struct {
 	_ struct{} `type:"structure"`
 
@@ -9477,8 +9589,8 @@ type ExecuteCommandInput struct {
 
 	Container *string `locationName:"container" type:"string"`
 
-	// Mode is a required field
-	Mode *string `locationName:"mode" type:"string" required:"true" enum:"ExecuteCommandMode"`
+	// Interactive is a required field
+	Interactive *bool `locationName:"interactive" type:"boolean" required:"true"`
 
 	// Task is a required field
 	Task *string `locationName:"task" type:"string" required:"true"`
@@ -9500,8 +9612,8 @@ func (s *ExecuteCommandInput) Validate() error {
 	if s.Command == nil {
 		invalidParams.Add(request.NewErrParamRequired("Command"))
 	}
-	if s.Mode == nil {
-		invalidParams.Add(request.NewErrParamRequired("Mode"))
+	if s.Interactive == nil {
+		invalidParams.Add(request.NewErrParamRequired("Interactive"))
 	}
 	if s.Task == nil {
 		invalidParams.Add(request.NewErrParamRequired("Task"))
@@ -9531,9 +9643,9 @@ func (s *ExecuteCommandInput) SetContainer(v string) *ExecuteCommandInput {
 	return s
 }
 
-// SetMode sets the Mode field's value.
-func (s *ExecuteCommandInput) SetMode(v string) *ExecuteCommandInput {
-	s.Mode = &v
+// SetInteractive sets the Interactive field's value.
+func (s *ExecuteCommandInput) SetInteractive(v bool) *ExecuteCommandInput {
+	s.Interactive = &v
 	return s
 }
 
@@ -9606,7 +9718,7 @@ type ExecuteCommandOutput struct {
 
 	ContainerName *string `locationName:"containerName" type:"string"`
 
-	Mode *string `locationName:"mode" type:"string" enum:"ExecuteCommandMode"`
+	Interactive *bool `locationName:"interactive" type:"boolean"`
 
 	Session *Session `locationName:"session" type:"structure"`
 
@@ -9641,9 +9753,9 @@ func (s *ExecuteCommandOutput) SetContainerName(v string) *ExecuteCommandOutput 
 	return s
 }
 
-// SetMode sets the Mode field's value.
-func (s *ExecuteCommandOutput) SetMode(v string) *ExecuteCommandOutput {
-	s.Mode = &v
+// SetInteractive sets the Interactive field's value.
+func (s *ExecuteCommandOutput) SetInteractive(v bool) *ExecuteCommandOutput {
+	s.Interactive = &v
 	return s
 }
 
@@ -11405,8 +11517,11 @@ func (s *ManagedAgent) SetReason(v string) *ManagedAgent {
 type ManagedAgentStateChange struct {
 	_ struct{} `type:"structure"`
 
-	// Name is a required field
-	Name *string `locationName:"name" type:"string" required:"true" enum:"ManagedAgentName"`
+	// ContainerName is a required field
+	ContainerName *string `locationName:"containerName" type:"string" required:"true"`
+
+	// ManagedAgentName is a required field
+	ManagedAgentName *string `locationName:"managedAgentName" type:"string" required:"true" enum:"ManagedAgentName"`
 
 	Reason *string `locationName:"reason" type:"string"`
 
@@ -11427,8 +11542,11 @@ func (s ManagedAgentStateChange) GoString() string {
 // Validate inspects the fields of the type to determine if they are valid.
 func (s *ManagedAgentStateChange) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "ManagedAgentStateChange"}
-	if s.Name == nil {
-		invalidParams.Add(request.NewErrParamRequired("Name"))
+	if s.ContainerName == nil {
+		invalidParams.Add(request.NewErrParamRequired("ContainerName"))
+	}
+	if s.ManagedAgentName == nil {
+		invalidParams.Add(request.NewErrParamRequired("ManagedAgentName"))
 	}
 	if s.Status == nil {
 		invalidParams.Add(request.NewErrParamRequired("Status"))
@@ -11440,9 +11558,15 @@ func (s *ManagedAgentStateChange) Validate() error {
 	return nil
 }
 
-// SetName sets the Name field's value.
-func (s *ManagedAgentStateChange) SetName(v string) *ManagedAgentStateChange {
-	s.Name = &v
+// SetContainerName sets the ContainerName field's value.
+func (s *ManagedAgentStateChange) SetContainerName(v string) *ManagedAgentStateChange {
+	s.ContainerName = &v
+	return s
+}
+
+// SetManagedAgentName sets the ManagedAgentName field's value.
+func (s *ManagedAgentStateChange) SetManagedAgentName(v string) *ManagedAgentStateChange {
+	s.ManagedAgentName = &v
 	return s
 }
 
@@ -14381,8 +14505,6 @@ type SubmitContainerStateChangeInput struct {
 
 	ExitCode *int64 `locationName:"exitCode" type:"integer"`
 
-	ManagedAgents []*ManagedAgentStateChange `locationName:"managedAgents" type:"list"`
-
 	NetworkBindings []*NetworkBinding `locationName:"networkBindings" type:"list"`
 
 	Reason *string `locationName:"reason" type:"string"`
@@ -14404,26 +14526,6 @@ func (s SubmitContainerStateChangeInput) GoString() string {
 	return s.String()
 }
 
-// Validate inspects the fields of the type to determine if they are valid.
-func (s *SubmitContainerStateChangeInput) Validate() error {
-	invalidParams := request.ErrInvalidParams{Context: "SubmitContainerStateChangeInput"}
-	if s.ManagedAgents != nil {
-		for i, v := range s.ManagedAgents {
-			if v == nil {
-				continue
-			}
-			if err := v.Validate(); err != nil {
-				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "ManagedAgents", i), err.(request.ErrInvalidParams))
-			}
-		}
-	}
-
-	if invalidParams.Len() > 0 {
-		return invalidParams
-	}
-	return nil
-}
-
 // SetCluster sets the Cluster field's value.
 func (s *SubmitContainerStateChangeInput) SetCluster(v string) *SubmitContainerStateChangeInput {
 	s.Cluster = &v
@@ -14439,12 +14541,6 @@ func (s *SubmitContainerStateChangeInput) SetContainerName(v string) *SubmitCont
 // SetExitCode sets the ExitCode field's value.
 func (s *SubmitContainerStateChangeInput) SetExitCode(v int64) *SubmitContainerStateChangeInput {
 	s.ExitCode = &v
-	return s
-}
-
-// SetManagedAgents sets the ManagedAgents field's value.
-func (s *SubmitContainerStateChangeInput) SetManagedAgents(v []*ManagedAgentStateChange) *SubmitContainerStateChangeInput {
-	s.ManagedAgents = v
 	return s
 }
 
@@ -14511,6 +14607,8 @@ type SubmitTaskStateChangeInput struct {
 
 	ExecutionStoppedAt *time.Time `locationName:"executionStoppedAt" type:"timestamp"`
 
+	ManagedAgents []*ManagedAgentStateChange `locationName:"managedAgents" type:"list"`
+
 	PullStartedAt *time.Time `locationName:"pullStartedAt" type:"timestamp"`
 
 	PullStoppedAt *time.Time `locationName:"pullStoppedAt" type:"timestamp"`
@@ -14545,13 +14643,13 @@ func (s *SubmitTaskStateChangeInput) Validate() error {
 			}
 		}
 	}
-	if s.Containers != nil {
-		for i, v := range s.Containers {
+	if s.ManagedAgents != nil {
+		for i, v := range s.ManagedAgents {
 			if v == nil {
 				continue
 			}
 			if err := v.Validate(); err != nil {
-				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "Containers", i), err.(request.ErrInvalidParams))
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "ManagedAgents", i), err.(request.ErrInvalidParams))
 			}
 		}
 	}
@@ -14583,6 +14681,12 @@ func (s *SubmitTaskStateChangeInput) SetContainers(v []*ContainerStateChange) *S
 // SetExecutionStoppedAt sets the ExecutionStoppedAt field's value.
 func (s *SubmitTaskStateChangeInput) SetExecutionStoppedAt(v time.Time) *SubmitTaskStateChangeInput {
 	s.ExecutionStoppedAt = &v
+	return s
+}
+
+// SetManagedAgents sets the ManagedAgents field's value.
+func (s *SubmitTaskStateChangeInput) SetManagedAgents(v []*ManagedAgentStateChange) *SubmitTaskStateChangeInput {
+	s.ManagedAgents = v
 	return s
 }
 
@@ -14781,6 +14885,61 @@ func (s TagResourceOutput) String() string {
 // GoString returns the string representation
 func (s TagResourceOutput) GoString() string {
 	return s.String()
+}
+
+type TargetNotConnectedException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"message" type:"string"`
+}
+
+// String returns the string representation
+func (s TargetNotConnectedException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s TargetNotConnectedException) GoString() string {
+	return s.String()
+}
+
+func newErrorTargetNotConnectedException(v protocol.ResponseMetadata) error {
+	return &TargetNotConnectedException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *TargetNotConnectedException) Code() string {
+	return "TargetNotConnectedException"
+}
+
+// Message returns the exception's message.
+func (s *TargetNotConnectedException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *TargetNotConnectedException) OrigErr() error {
+	return nil
+}
+
+func (s *TargetNotConnectedException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *TargetNotConnectedException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *TargetNotConnectedException) RequestID() string {
+	return s.RespMetadata.RequestID
 }
 
 type TargetNotFoundException struct {
@@ -15135,6 +15294,8 @@ type TaskDefinition struct {
 
 	DeregisteredAt *time.Time `locationName:"deregisteredAt" type:"timestamp"`
 
+	EphemeralStorage *EphemeralStorage `locationName:"ephemeralStorage" type:"structure"`
+
 	ExecutionRoleArn *string `locationName:"executionRoleArn" type:"string"`
 
 	ExecutionRoleCredentialProvider *string `locationName:"executionRoleCredentialProvider" type:"string"`
@@ -15215,6 +15376,12 @@ func (s *TaskDefinition) SetCpu(v string) *TaskDefinition {
 // SetDeregisteredAt sets the DeregisteredAt field's value.
 func (s *TaskDefinition) SetDeregisteredAt(v time.Time) *TaskDefinition {
 	s.DeregisteredAt = &v
+	return s
+}
+
+// SetEphemeralStorage sets the EphemeralStorage field's value.
+func (s *TaskDefinition) SetEphemeralStorage(v *EphemeralStorage) *TaskDefinition {
+	s.EphemeralStorage = v
 	return s
 }
 
@@ -17368,22 +17535,6 @@ func ExecuteCommandLogging_Values() []string {
 		ExecuteCommandLoggingNone,
 		ExecuteCommandLoggingDefault,
 		ExecuteCommandLoggingOverride,
-	}
-}
-
-const (
-	// ExecuteCommandModeInteractive is a ExecuteCommandMode enum value
-	ExecuteCommandModeInteractive = "INTERACTIVE"
-
-	// ExecuteCommandModeSingleCommand is a ExecuteCommandMode enum value
-	ExecuteCommandModeSingleCommand = "SINGLE_COMMAND"
-)
-
-// ExecuteCommandMode_Values returns all elements of the ExecuteCommandMode enum
-func ExecuteCommandMode_Values() []string {
-	return []string{
-		ExecuteCommandModeInteractive,
-		ExecuteCommandModeSingleCommand,
 	}
 }
 

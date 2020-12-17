@@ -739,11 +739,11 @@ func TestECS_DescribeTasks(t *testing.T) {
 
 func TestECS_ExecuteCommand(t *testing.T) {
 	mockExecCmdIn := &ecs.ExecuteCommandInput{
-		Cluster:   aws.String("mockCluster"),
-		Command:   aws.String("mockCommand"),
-		Mode:      aws.String(ecs.ExecuteCommandModeInteractive),
-		Container: aws.String("mockContainer"),
-		Task:      aws.String("mockTask"),
+		Cluster:     aws.String("mockCluster"),
+		Command:     aws.String("mockCommand"),
+		Interactive: aws.Bool(true),
+		Container:   aws.String("mockContainer"),
+		Task:        aws.String("mockTask"),
 	}
 	mockSess := &ecs.Session{
 		SessionId: aws.String("mockSessID"),
@@ -767,11 +767,11 @@ func TestECS_ExecuteCommand(t *testing.T) {
 			interactive: false,
 			mockAPI: func(m *mocks.Mockapi) {
 				m.EXPECT().ExecuteCommand(&ecs.ExecuteCommandInput{
-					Cluster:   aws.String("mockCluster"),
-					Command:   aws.String("mockCommand"),
-					Mode:      aws.String(ecs.ExecuteCommandModeSingleCommand),
-					Container: aws.String("mockContainer"),
-					Task:      aws.String("mockTask"),
+					Cluster:     aws.String("mockCluster"),
+					Command:     aws.String("mockCommand"),
+					Interactive: aws.Bool(false),
+					Container:   aws.String("mockContainer"),
+					Task:        aws.String("mockTask"),
 				}).Return(&ecs.ExecuteCommandOutput{
 					Session: mockSess,
 				}, nil)
