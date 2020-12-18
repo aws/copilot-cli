@@ -46,7 +46,7 @@ func TestPrompt_Get(t *testing.T) {
 
 				*result = mockInput
 
-				require.Equal(t, 3, len(opts))
+				require.Equal(t, 4, len(opts))
 
 				return nil
 			},
@@ -100,7 +100,7 @@ func TestPrompt_GetSecret(t *testing.T) {
 
 				*result = mockSecret
 
-				require.Equal(t, 2, len(opts))
+				require.Equal(t, 3, len(opts))
 
 				return nil
 			},
@@ -154,7 +154,7 @@ func TestPrompt_SelectOne(t *testing.T) {
 
 				*result = sel.Options[0]
 
-				require.Equal(t, 2, len(opts))
+				require.Equal(t, 3, len(opts))
 
 				return nil
 			},
@@ -215,7 +215,7 @@ func TestPrompt_MultiSelect(t *testing.T) {
 
 				*result = sel.Options
 
-				require.Equal(t, 2, len(opts))
+				require.Equal(t, 3, len(opts))
 
 				return nil
 			},
@@ -275,7 +275,7 @@ func TestPrompt_Confirm(t *testing.T) {
 
 				*result = true
 
-				require.Equal(t, 2, len(opts))
+				require.Equal(t, 3, len(opts))
 
 				return nil
 			},
