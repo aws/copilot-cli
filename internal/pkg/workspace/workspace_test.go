@@ -839,6 +839,28 @@ func TestWorkspace_ListDockerfiles(t *testing.T) {
 			err:         nil,
 			dockerfiles: wantedDockerfiles,
 		},
+		"nonstandard Dockerfile names": {
+			mockFileSystem: func(mockFS afero.Fs) {
+				mockFS.MkdirAll("frontend", 0755)
+				mockFS.MkdirAll("dockerfiles", 0755)
+				afero.WriteFile(mockFS, "Dockerfile", []byte("FROM nginx"), 0644)
+				afero.WriteFile(mockFS, "frontend/dockerfile", []byte("FROM nginx"), 0644)
+				afero.WriteFile(mockFS, "Job.dockerfile", []byte("FROM nginx"), 0644)
+
+			},
+			err:         nil,
+			dockerfiles: []string{"./Dockerfile", "./Job.dockerfile", "frontend/dockerfile"},
+		},
+		/* https://github.com/spf13/afero/issues/150
+		"unreadable directory is skipped without error": {
+			mockFileSystem: func(mockFS afero.Fs) {
+				mockFS.MkdirAll("unreadable", 0000)
+				afero.WriteFile(mockFS, "unreadable/Dockerfile", []byte("FROM nginx"), 0000)
+				afero.WriteFile(mockFS, "dockerfile", []byte("FROM nginx"), 0644)
+			},
+			err:         nil,
+			dockerfiles: []string{"./dockerfile"},
+		}, */
 		"no Dockerfiles": {
 			mockFileSystem: func(mockFS afero.Fs) {},
 			dockerfiles:    []string{},
