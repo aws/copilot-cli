@@ -445,7 +445,7 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 	}
 	var dockerfiles = make([]string, 0)
 	for _, wdFile := range wdFiles {
-		// Add current file if it is a Dockerfile and not a directoryotherwise continue.
+		// Add current file if it is a Dockerfile and not a directory; otherwise continue.
 		if !wdFile.IsDir() {
 			fname := wdFile.Name()
 			if strings.Contains(strings.ToLower(fname), dockerfileName) {
