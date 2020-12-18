@@ -135,8 +135,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inEnvironments      []string
 		inRepoURL           string
-		inGitHubOwner       string
-		inGitHubRepo        string
 		inGitHubAccessToken string
 		inGitBranch         string
 
@@ -156,8 +154,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		"no flags, prompts for all input": {
 			inEnvironments:      []string{},
 			inRepoURL:           "",
-			inGitHubOwner:       "",
-			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
 			inGitBranch:         "",
 			buffer:              *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
@@ -261,7 +257,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		"returns error if fail to select GitHub URL": {
 			inRepoURL:      "",
 			inEnvironments: []string{},
-			inGitHubRepo:   "",
 			buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
 
 			mockStore: func(m *mocks.Mockstore) {
@@ -302,7 +297,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		"returns error if fail to parse GitHub URL": {
 			inEnvironments:      []string{},
 			inRepoURL:           "",
-			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
 			inGitBranch:         "",
 			buffer:              *bytes.NewBufferString("archer\treallybadGoosegithub.comNotEvenAURL (fetch)\n"),
@@ -345,7 +339,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		"returns error if fail to get GitHub access token": {
 			inEnvironments:      []string{},
 			inRepoURL:           "",
-			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
 			inGitBranch:         "",
 			buffer:              *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
@@ -403,8 +396,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 					appName:           "my-app",
 					environments:      tc.inEnvironments,
 					repoURL:           tc.inRepoURL,
-					githubOwner:       tc.inGitHubOwner,
-					githubRepo:        tc.inGitHubRepo,
 					githubAccessToken: tc.inGitHubAccessToken,
 				},
 				envs:   []*config.Environment{},
