@@ -48,6 +48,12 @@ const (
 	defaultBranch = "main"
 )
 
+const (
+	fmtSecretName       = "github-token-%s-%s"
+	fmtPipelineName     = "pipeline-%s-%s-%s"
+	fmtPipelineProvider = "https://%s/%s/%s"
+)
+
 var (
 	// Filled in via the -ldflags flag at compile time to support pipeline buildspec CLI pulling.
 	binaryS3BucketPath string
@@ -103,31 +109,25 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		return nil, fmt.Errorf("new secretsmanager client: %w", err)
 	}
 
-	parser := template.New()
-
 	p := sessions.NewProvider()
 	defaultSession, err := p.Default()
 	if err != nil {
 		return nil, err
 	}
 
-	cfnClient := cloudformation.New(defaultSession)
-
 	ssmStore, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store client: %w", err)
 	}
 
-	prompter := prompt.New()
-
 	return &initPipelineOpts{
 		initPipelineVars: vars,
 		workspace:        ws,
 		secretsmanager:   secretsmanager,
-		parser:           parser,
-		cfnClient:        cfnClient,
+		parser:           template.New(),
+		cfnClient:        cloudformation.New(defaultSession),
 		store:            ssmStore,
-		prompt:           prompter,
+		prompt:           prompt.New(),
 		runner:           command.New(),
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 	}, nil
@@ -511,16 +511,16 @@ func (o *initPipelineOpts) createBuildspec() error {
 }
 
 func (o *initPipelineOpts) createSecretName() string {
-	return fmt.Sprintf("github-token-%s-%s", o.appName, o.githubRepo)
+	return fmt.Sprintf(fmtSecretName, o.appName, o.githubRepo)
 }
 
 func (o *initPipelineOpts) createPipelineName() string {
-	return fmt.Sprintf("pipeline-%s-%s-%s", o.appName, o.githubOwner, o.githubRepo)
+	return fmt.Sprintf(fmtPipelineName, o.appName, o.githubOwner, o.githubRepo)
 }
 
 func (o *initPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
 	config := &manifest.GitHubProperties{
-		OwnerAndRepository:    "https://" + githubURL + "/" + o.githubOwner + "/" + o.githubRepo,
+		OwnerAndRepository:    fmt.Sprintf(fmtPipelineProvider, githubURL, o.githubOwner, o.githubRepo),
 		Branch:                o.gitBranch,
 		GithubSecretIdKeyName: o.secretName,
 	}
