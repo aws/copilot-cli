@@ -549,7 +549,11 @@ func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {
 	var buckets []artifactBucket
 	for _, resource := range regionalResources {
 		var envNames []string
-		for _, env := range o.envs {
+		for _, environment := range o.environments {
+			env, err := o.getEnvConfig(environment)
+			if err != nil {
+				return nil, err
+			}
 			if env.Region == resource.Region {
 				envNames = append(envNames, env.Name)
 			}
