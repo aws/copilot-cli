@@ -74,7 +74,7 @@ variables:                    # Pass environment variables as key value pairs.
 # You can override any of the values defined above by environment.
 environments:
   prod:
-    count: 2               # Number of tasks to run for the "test" environment.
+    count: 2               # Number of tasks to run for the "prod" environment.
 ```
 To learn about the specification of manifest files, see the [manifest](../manifest/overview.md) page.
 

@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/spf13/afero"
@@ -41,7 +42,7 @@ const (
 
 	ymlFileExtension = ".yml"
 
-	dockerfileName = "Dockerfile"
+	dockerfileName = "dockerfile"
 )
 
 // Summary is a description of what's associated with this workspace.
@@ -442,12 +443,14 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read directory: %w", err)
 	}
-	var directories []string
+	var dockerfiles = make([]string, 0)
 	for _, wdFile := range wdFiles {
-		// Add current directory if a Dockerfile exists, otherwise continue.
+		// Add current file if it is a Dockerfile and not a directory; otherwise continue.
 		if !wdFile.IsDir() {
-			if wdFile.Name() == dockerfileName {
-				directories = append(directories, filepath.Dir(wdFile.Name()))
+			fname := wdFile.Name()
+			if strings.Contains(strings.ToLower(fname), dockerfileName) {
+				path := filepath.Dir(fname) + "/" + fname
+				dockerfiles = append(dockerfiles, path)
 			}
 			continue
 		}
@@ -455,25 +458,22 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 		// Add sub-directories containing a Dockerfile one level below current directory.
 		subFiles, err := ws.fsUtils.ReadDir(wdFile.Name())
 		if err != nil {
-			return nil, fmt.Errorf("read directory: %w", err)
+			// swallow errors for unreadable directories
+			continue
 		}
 		for _, f := range subFiles {
 			// NOTE: ignore directories in sub-directories.
 			if f.IsDir() {
 				continue
 			}
-
-			if f.Name() == dockerfileName {
-				directories = append(directories, wdFile.Name())
+			fname := f.Name()
+			if strings.Contains(strings.ToLower(fname), dockerfileName) {
+				path := wdFile.Name() + "/" + f.Name()
+				dockerfiles = append(dockerfiles, path)
 			}
 		}
 	}
-	sort.Strings(directories)
-	dockerfiles := make([]string, 0, len(directories))
-	for _, dir := range directories {
-		file := dir + "/" + dockerfileName
-		dockerfiles = append(dockerfiles, file)
-	}
+	sort.Strings(dockerfiles)
 	return dockerfiles, nil
 }
 
