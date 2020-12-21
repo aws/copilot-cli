@@ -839,6 +839,17 @@ func TestWorkspace_ListDockerfiles(t *testing.T) {
 			err:         nil,
 			dockerfiles: wantedDockerfiles,
 		},
+		"nonstandard Dockerfile names": {
+			mockFileSystem: func(mockFS afero.Fs) {
+				mockFS.MkdirAll("frontend", 0755)
+				mockFS.MkdirAll("dockerfiles", 0755)
+				afero.WriteFile(mockFS, "Dockerfile", []byte("FROM nginx"), 0644)
+				afero.WriteFile(mockFS, "frontend/dockerfile", []byte("FROM nginx"), 0644)
+				afero.WriteFile(mockFS, "Job.dockerfile", []byte("FROM nginx"), 0644)
+			},
+			err:         nil,
+			dockerfiles: []string{"./Dockerfile", "./Job.dockerfile", "frontend/dockerfile"},
+		},
 		"no Dockerfiles": {
 			mockFileSystem: func(mockFS afero.Fs) {},
 			dockerfiles:    []string{},
