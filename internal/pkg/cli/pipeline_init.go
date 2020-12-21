@@ -223,14 +223,15 @@ func (o *initPipelineOpts) RecommendedActions() []string {
 }
 
 func (o *initPipelineOpts) askEnvs() error {
-	if len(o.environments) == 0 {
-		err := o.getEnvs()
-		if err != nil {
-			return err
-		}
-		if err = o.selectEnvironments(); err != nil {
-			return err
-		}
+	if len(o.environments) != 0 {
+		return nil
+	}
+	err := o.getEnvs()
+	if err != nil {
+		return err
+	}
+	if err = o.selectEnvironments(); err != nil {
+		return err
 	}
 	return nil
 }
