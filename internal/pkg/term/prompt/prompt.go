@@ -171,9 +171,9 @@ func (p Prompt) Get(message, help string, validator ValidatorFunc, promptOpts ..
 	var result string
 	var err error
 	if validator == nil {
-		err = p(prompt, &result, stdio(), icons(), noInterrupt())
+		err = p(prompt, &result, stdio(), icons())
 	} else {
-		err = p(prompt, &result, stdio(), validators(validator), icons(), noInterrupt())
+		err = p(prompt, &result, stdio(), validators(validator), icons())
 	}
 	return result, err
 }
@@ -220,7 +220,7 @@ func (p Prompt) GetSecret(message, help string, promptOpts ...Option) (string, e
 	}
 
 	var result string
-	err := p(prompt, &result, stdio(), icons(), noInterrupt())
+	err := p(prompt, &result, stdio(), icons())
 	return result, err
 }
 
@@ -248,7 +248,7 @@ func (p Prompt) SelectOne(message, help string, options []string, promptOpts ...
 	}
 
 	var result string
-	err := p(prompt, &result, stdio(), icons(), noInterrupt())
+	err := p(prompt, &result, stdio(), icons())
 	return result, err
 }
 
@@ -275,7 +275,7 @@ func (p Prompt) MultiSelect(message, help string, options []string, promptOpts .
 		option(prompt)
 	}
 
-	err := p(prompt, &result, stdio(), icons(), noInterrupt())
+	err := p(prompt, &result, stdio(), icons())
 	return result, err
 }
 
@@ -296,7 +296,7 @@ func (p Prompt) Confirm(message, help string, promptOpts ...Option) (bool, error
 	}
 
 	var result bool
-	err := p(prompt, &result, stdio(), icons(), noInterrupt())
+	err := p(prompt, &result, stdio(), icons())
 	return result, err
 }
 
@@ -330,10 +330,6 @@ func WithTrueDefault() Option {
 
 func stdio() survey.AskOpt {
 	return survey.WithStdio(os.Stdin, os.Stderr, os.Stderr)
-}
-
-func noInterrupt() survey.AskOpt {
-	return survey.WithInterruptFunc(func() {})
 }
 
 func icons() survey.AskOpt {
