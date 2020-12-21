@@ -458,7 +458,8 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 		// Add sub-directories containing a Dockerfile one level below current directory.
 		subFiles, err := ws.fsUtils.ReadDir(wdFile.Name())
 		if err != nil {
-			return nil, fmt.Errorf("read directory: %w", err)
+			// swallow errors for unreadable directories
+			continue
 		}
 		for _, f := range subFiles {
 			// NOTE: ignore directories in sub-directories.
