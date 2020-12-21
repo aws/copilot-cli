@@ -33,8 +33,8 @@ func TestSSMPluginCommand_StartSession(t *testing.T) {
 			inSession: mockSession,
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
-				mockRunner.EXPECT().Run(ssmPluginBinaryName, []string{`{"SessionId":"mockSessionID","StreamUrl":"mockStreamURL","TokenValue":"mockTokenValue"}`, "us-west-2", "StartSession"},
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(mockError)
+				mockRunner.EXPECT().InteractiveRun(ssmPluginBinaryName,
+					[]string{`{"SessionId":"mockSessionID","StreamUrl":"mockStreamURL","TokenValue":"mockTokenValue"}`, "us-west-2", "StartSession"}).Return(mockError)
 			},
 			wantedError: fmt.Errorf("start session: some error"),
 		},
@@ -42,8 +42,8 @@ func TestSSMPluginCommand_StartSession(t *testing.T) {
 			inSession: mockSession,
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
-				mockRunner.EXPECT().Run(ssmPluginBinaryName, []string{`{"SessionId":"mockSessionID","StreamUrl":"mockStreamURL","TokenValue":"mockTokenValue"}`, "us-west-2", "StartSession"},
-					gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockRunner.EXPECT().InteractiveRun(ssmPluginBinaryName,
+					[]string{`{"SessionId":"mockSessionID","StreamUrl":"mockStreamURL","TokenValue":"mockTokenValue"}`, "us-west-2", "StartSession"}).Return(nil)
 			},
 		},
 	}

@@ -10,4 +10,5 @@ import (
 
 type runner interface {
 	Run(name string, args []string, options ...command.Option) error
+	InteractiveRun(name string, args []string) error
 }

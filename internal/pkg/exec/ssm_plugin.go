@@ -50,9 +50,8 @@ func (s SSMPluginCommand) StartSession(ssmSess *ecs.Session) error {
 	if err != nil {
 		return fmt.Errorf("marshal session response: %w", err)
 	}
-	if err := s.runner.Run(ssmPluginBinaryName,
-		[]string{string(response), aws.StringValue(s.sess.Config.Region), startSessionAction},
-		command.Stderr(os.Stderr), command.Stdin(os.Stdin), command.Stdout(os.Stdout)); err != nil {
+	if err := s.runner.InteractiveRun(ssmPluginBinaryName,
+		[]string{string(response), aws.StringValue(s.sess.Config.Region), startSessionAction}); err != nil {
 		return fmt.Errorf("start session: %w", err)
 	}
 	return nil

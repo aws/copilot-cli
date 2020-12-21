@@ -51,3 +51,17 @@ func (mr *MockrunnerMockRecorder) Run(name, args interface{}, options ...interfa
 	varargs := append([]interface{}{name, args}, options...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*Mockrunner)(nil).Run), varargs...)
 }
+
+// InteractiveRun mocks base method
+func (m *Mockrunner) InteractiveRun(name string, args []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InteractiveRun", name, args)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InteractiveRun indicates an expected call of InteractiveRun
+func (mr *MockrunnerMockRecorder) InteractiveRun(name, args interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InteractiveRun", reflect.TypeOf((*Mockrunner)(nil).InteractiveRun), name, args)
+}
