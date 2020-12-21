@@ -181,7 +181,7 @@ func (o *svcExecOpts) Execute() error {
 		Task:        taskID,
 		Interactive: o.interactive,
 	}); err != nil {
-		return fmt.Errorf("execute command %s in container %s: %w", o.command, o.containerName, err)
+		return fmt.Errorf("execute command %s in container %s: %w", o.command, container, err)
 	}
 	return nil
 }

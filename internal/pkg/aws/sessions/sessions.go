@@ -60,7 +60,6 @@ func (p *Provider) ResourceGroupsGammaSess() (*session.Session, error) {
 		return nil, err
 	}
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
-	p.defaultSess = sess
 	return sess, nil
 }
 
@@ -79,7 +78,6 @@ func (p *Provider) ECSGammaSess() (*session.Session, error) {
 		return nil, err
 	}
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
-	p.defaultSess = sess
 	return sess, nil
 }
 
