@@ -21,6 +21,88 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestInitPipelineOpts_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		inAppName     string
+		inURL         string
+		inEnvs        []string
+		setupMocks    func(m *mocks.Mockstore)
+		expectedError error
+	}{
+		"invalid URL": {
+			inAppName:     "my-app",
+			inURL:         "somethingdotcom",
+			inEnvs:        []string{"test"},
+			setupMocks:    func(m *mocks.Mockstore) {},
+			expectedError: errDomainInvalid,
+		},
+		"non-GH or non-CC repo provider": {
+			inAppName:     "my-app",
+			inURL:         "bitbucket.org/repositories/repoName",
+			inEnvs:        []string{"test"},
+			setupMocks:    func(m *mocks.Mockstore) {},
+			expectedError: errors.New("Copilot currently accepts only URLs to GitHub and CodeCommit repository sources"),
+		},
+		"invalid environments": {
+			inAppName: "my-app",
+			inEnvs:    []string{"test", "prod"},
+
+			setupMocks: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(nil, errors.New("some error"))
+			},
+
+			expectedError: errors.New("some error"),
+		},
+		"success": {
+			inAppName: "my-app",
+			inEnvs:    []string{"test", "prod"},
+
+			setupMocks: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(
+					&config.Environment{
+						Name: "test",
+					}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(
+					&config.Environment{
+						Name: "prod",
+					}, nil)
+			},
+
+			expectedError: nil,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockStore := mocks.NewMockstore(ctrl)
+
+			tc.setupMocks(mockStore)
+
+			opts := &initPipelineOpts{
+				initPipelineVars: initPipelineVars{
+					appName:      tc.inAppName,
+					repoURL:      tc.inURL,
+					environments: tc.inEnvs,
+				},
+				store: mockStore,
+			}
+
+			// WHEN
+			err := opts.Validate()
+
+			// THEN
+			if tc.expectedError != nil {
+				require.Equal(t, tc.expectedError, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
 func TestInitPipelineOpts_Ask(t *testing.T) {
 	githubOwner := "badGoose"
 	githubRepoName := "chaOS"
@@ -248,43 +330,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				require.Equal(t, tc.expectedGitHubRepo, opts.githubRepo)
 				require.Equal(t, tc.expectedGitHubAccessToken, opts.githubAccessToken)
 				require.ElementsMatch(t, tc.expectedEnvironments, opts.environments)
-			}
-		})
-	}
-}
-
-func TestInitPipelineOpts_Validate(t *testing.T) {
-	testCases := map[string]struct {
-		inAppName string
-
-		expectedError error
-	}{
-		"invalid app name": {
-			inAppName:     "",
-			expectedError: errNoAppInWorkspace,
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			opts := &initPipelineOpts{
-				initPipelineVars: initPipelineVars{
-					appName: tc.inAppName,
-				},
-			}
-
-			// WHEN
-			err := opts.Validate()
-
-			// THEN
-			if tc.expectedError != nil {
-				require.Equal(t, tc.expectedError, err)
-			} else {
-				require.NoError(t, err)
 			}
 		})
 	}
