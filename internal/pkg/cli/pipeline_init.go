@@ -44,8 +44,7 @@ Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
 	githubURL             = "github.com"
-	//ccSubstring           = "codecommit"
-	defaultBranch = "main"
+	defaultBranch         = "main"
 )
 
 const (
@@ -83,7 +82,7 @@ type initPipelineOpts struct {
 	prompt         prompter
 
 	// Outputs stored on successful actions.
-	secretName string
+	secret string
 
 	// Caches variables
 	envs     []*config.Environment
@@ -180,7 +179,7 @@ func (o *initPipelineOpts) Ask() error {
 
 // Execute writes the pipeline manifest file.
 func (o *initPipelineOpts) Execute() error {
-	secretName := o.createSecretName()
+	secretName := o.secretName()
 	_, err := o.secretsmanager.CreateSecret(secretName, o.githubAccessToken)
 
 	if err != nil {
@@ -192,7 +191,7 @@ func (o *initPipelineOpts) Execute() error {
 	} else {
 		log.Successf("Created the secret %s for pipeline source stage!\n", color.HighlightUserInput(secretName))
 	}
-	o.secretName = secretName
+	o.secret = secretName
 
 	// write pipeline.yml file, populate with:
 	//   - github repo as source
@@ -346,7 +345,7 @@ func (o *initPipelineOpts) askRepoDetails() error {
 func (o *initPipelineOpts) fetchRepoURLs() error {
 	err := o.runner.Run("git", []string{"remote", "-v"}, command.Stdout(&o.buffer))
 	if err != nil {
-		return fmt.Errorf("get remote repository info: %w, run `git remote add` first please", err)
+		return fmt.Errorf("get remote repository info: %w; make sure you have installed Git and are in a Git repository", err)
 	}
 	urls, err := o.parseGitRemoteResult(strings.TrimSpace(o.buffer.String()))
 	if err != nil {
@@ -421,8 +420,8 @@ For more information, please refer to: https://git.io/JfDFD.`,
 }
 
 func (o *initPipelineOpts) createPipelineManifest() error {
-	pipelineName := o.createPipelineName()
-	provider, err := o.createPipelineProvider()
+	pipelineName := o.pipelineName()
+	provider, err := o.pipelineProvider()
 	if err != nil {
 		return fmt.Errorf("create pipeline provider: %w", err)
 	}
@@ -511,19 +510,19 @@ func (o *initPipelineOpts) createBuildspec() error {
 	return nil
 }
 
-func (o *initPipelineOpts) createSecretName() string {
+func (o *initPipelineOpts) secretName() string {
 	return fmt.Sprintf(fmtSecretName, o.appName, o.githubRepo)
 }
 
-func (o *initPipelineOpts) createPipelineName() string {
+func (o *initPipelineOpts) pipelineName() string {
 	return fmt.Sprintf(fmtPipelineName, o.appName, o.githubOwner, o.githubRepo)
 }
 
-func (o *initPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
+func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	config := &manifest.GitHubProperties{
 		OwnerAndRepository:    fmt.Sprintf(fmtPipelineProvider, githubURL, o.githubOwner, o.githubRepo),
 		Branch:                o.gitBranch,
-		GithubSecretIdKeyName: o.secretName,
+		GithubSecretIdKeyName: o.secret,
 	}
 	return manifest.NewProvider(config)
 }
