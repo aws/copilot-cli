@@ -99,6 +99,9 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initJobOpts) Validate() error {
+	if o.appName == "" {
+		return errNoAppInWorkspace
+	}
 	if o.wkldType != "" {
 		if err := validateJobType(o.wkldType); err != nil {
 			return err
