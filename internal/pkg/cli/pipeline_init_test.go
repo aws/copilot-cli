@@ -835,7 +835,7 @@ func TestInitPipelineOpts_createPipelineName(t *testing.T) {
 			}
 
 			// WHEN
-			actual := opts.createPipelineName()
+			actual := opts.pipelineName()
 
 			// THEN
 			require.Equal(t, tc.expected, actual)
