@@ -106,6 +106,72 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 	}
 }
 
+func TestExec_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct Exec
+		wantedError  error
+	}{
+		"use default with empty value": {
+			inContent: []byte(`exec:
+count: 1`),
+
+			wantedStruct: Exec{
+				Enable: aws.Bool(false),
+			},
+		},
+		"use default without any input": {
+			inContent: []byte(`count: 1`),
+
+			wantedStruct: Exec{
+				Enable: aws.Bool(false),
+			},
+		},
+		"simple enable": {
+			inContent: []byte(`exec: true`),
+
+			wantedStruct: Exec{
+				Enable: aws.Bool(true),
+			},
+		},
+		"with config": {
+			inContent: []byte(`exec:
+  enable: true`),
+			wantedStruct: Exec{
+				Enable: aws.Bool(false),
+				ExecConfig: ExecConfig{
+					Enable: aws.Bool(true),
+				},
+			},
+		},
+		"Error if unmarshalable": {
+			inContent: []byte(`exec:
+  badfield: OH NOES
+  otherbadfield: DOUBLE BAD`),
+			wantedError: errUnmarshalExec,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			b := TaskConfig{
+				Exec: Exec{
+					Enable: aws.Bool(false),
+				},
+			}
+			err := yaml.Unmarshal(tc.inContent, &b)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				// check memberwise dereferenced pointer equality
+				require.Equal(t, tc.wantedStruct.Enable, b.Exec.Enable)
+				require.Equal(t, tc.wantedStruct.ExecConfig, b.Exec.ExecConfig)
+			}
+		})
+	}
+}
+
 func TestBuildConfig(t *testing.T) {
 	mockWsRoot := "/root/dir"
 	testCases := map[string]struct {

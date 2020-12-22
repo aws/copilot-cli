@@ -140,6 +140,9 @@ func newDefaultBackendService() *BackendService {
 				Count: Count{
 					Value: aws.Int(1),
 				},
+				Exec: Exec{
+					Enable: aws.Bool(false),
+				},
 			},
 		},
 	}

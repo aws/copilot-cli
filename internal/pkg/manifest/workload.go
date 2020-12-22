@@ -24,7 +24,7 @@ const (
 
 var (
 	errUnmarshalBuildOpts = errors.New("can't unmarshal build field into string or compose-style map")
-	errUnmarshalCountOpts = errors.New(`unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalExec      = errors.New("can't unmarshal exec field into boolean or exec configuration")
 )
 
 var dockerfileDefaultName = "Dockerfile"
@@ -178,6 +178,46 @@ func (b *DockerBuildArgs) isEmpty() bool {
 	return false
 }
 
+// Exec is a custom type which supports unmarshaling yaml which
+// can either be of type bool or type ExecConfig.
+type Exec struct {
+	Enable     *bool
+	ExecConfig ExecConfig
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the BuildArgsOrString
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (e *Exec) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshal(&e.ExecConfig); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if !e.ExecConfig.isEmpty() {
+		return nil
+	}
+
+	if err := unmarshal(&e.Enable); err != nil {
+		return errUnmarshalExec
+	}
+	return nil
+}
+
+// ExecConfig represents the configuration for ECS exec.
+type ExecConfig struct {
+	Enable *bool `yaml:"enable"`
+	// Reserved for future use.
+}
+
+func (e ExecConfig) isEmpty() bool {
+	return e.Enable == nil
+}
+
 // Logging holds configuration for Firelens to route your logs.
 type Logging struct {
 	Image          *string           `yaml:"image"`
@@ -272,6 +312,7 @@ type TaskConfig struct {
 	CPU       *int              `yaml:"cpu"`
 	Memory    *int              `yaml:"memory"`
 	Count     Count             `yaml:"count"`
+	Exec      Exec              `yaml:"exec"`
 	Variables map[string]string `yaml:"variables"`
 	Secrets   map[string]string `yaml:"secrets"`
 }
