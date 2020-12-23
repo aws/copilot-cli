@@ -30,7 +30,7 @@ const (
 	monthly = "Monthly"
 	yearly  = "Yearly"
 
-	escapeOpt = "[No additional environments]"
+	pipelineEscapeOpt = "[No additional environments]"
 )
 
 const (
@@ -443,7 +443,7 @@ func (s *Select) Environments(prompt, help, app string, finalMsgFunc func(int) p
 		return nil, fmt.Errorf("no environments found in app %s", app)
 	}
 
-	envs = append(envs, escapeOpt)
+	envs = append(envs, pipelineEscapeOpt)
 	var selectedEnvs []string
 	usedEnvs := make(map[string]bool)
 
@@ -460,7 +460,7 @@ func (s *Select) Environments(prompt, help, app string, finalMsgFunc func(int) p
 		if err != nil {
 			return nil, fmt.Errorf("select environments: %w", err)
 		}
-		if selectedEnv == escapeOpt {
+		if selectedEnv == pipelineEscapeOpt {
 			break
 		}
 		selectedEnvs = append(selectedEnvs, selectedEnv)
