@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/dustin/go-humanize"
+
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
@@ -229,7 +231,9 @@ func (o *initPipelineOpts) RecommendedActions() []string {
 
 func (o *initPipelineOpts) askEnvs() error {
 	if len(o.environments) == 0 {
-		envs, err := o.sel.Environments(pipelineSelectEnvPrompt, pipelineSelectEnvHelpPrompt, o.appName, prompt.WithFinalMessage("Pipeline deployment stage (in order):"))
+		envs, err := o.sel.Environments(pipelineSelectEnvPrompt, pipelineSelectEnvHelpPrompt, o.appName, func(order int) prompt.Option {
+			return prompt.WithFinalMessage(fmt.Sprintf("%s stage:", humanize.Ordinal(order)))
+		})
 		if err != nil {
 			return fmt.Errorf("select environments: %w", err)
 		}

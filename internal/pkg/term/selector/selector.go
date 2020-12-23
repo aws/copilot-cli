@@ -431,7 +431,7 @@ func (s *Select) Environment(prompt, help, app string, additionalOpts ...string)
 
 // Environments fetches all the environments in an app and prompts the user to select one OR MORE.
 // The List of options decreases as envs are chosen. Chosen envs displayed above with the finalMsg.
-func (s *Select) Environments(prompt, help, app string, finalMsg prompt.Option) ([]string, error) {
+func (s *Select) Environments(prompt, help, app string, finalMsgFunc func(int) prompt.Option) ([]string, error) {
 	envs, err := s.retrieveEnvironments(app)
 	if err != nil {
 		return nil, fmt.Errorf("get environments for app %s from metadata store: %w", app, err)
@@ -447,7 +447,7 @@ func (s *Select) Environments(prompt, help, app string, finalMsg prompt.Option) 
 	var selectedEnvs []string
 	usedEnvs := make(map[string]bool)
 
-	for {
+	for i := 1; i < len(envs); i++ {
 		var availableEnvs []string
 		for _, env := range envs {
 			// Check if environment has already been added to pipeline
@@ -456,7 +456,7 @@ func (s *Select) Environments(prompt, help, app string, finalMsg prompt.Option) 
 			}
 		}
 
-		selectedEnv, err := s.prompt.SelectOne(prompt, help, availableEnvs, finalMsg)
+		selectedEnv, err := s.prompt.SelectOne(prompt, help, availableEnvs, finalMsgFunc(i))
 		if err != nil {
 			return nil, fmt.Errorf("select environments: %w", err)
 		}
@@ -465,10 +465,6 @@ func (s *Select) Environments(prompt, help, app string, finalMsg prompt.Option) 
 		}
 		selectedEnvs = append(selectedEnvs, selectedEnv)
 
-		// If only [No additional environments] is available
-		if len(selectedEnvs) == len(envs)-1 {
-			break
-		}
 		usedEnvs[selectedEnv] = true
 	}
 	return selectedEnvs, nil

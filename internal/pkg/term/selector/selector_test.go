@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/dustin/go-humanize"
+
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector/mocks"
@@ -1281,7 +1283,9 @@ func TestSelect_Environments(t *testing.T) {
 				config: mockenvLister,
 			}
 
-			got, err := sel.Environments("Select an environment", "Help text", appName, prompt.WithFinalMessage("Final message"))
+			got, err := sel.Environments("Select an environment", "Help text", appName, func(order int) prompt.Option {
+				return prompt.WithFinalMessage(fmt.Sprintf("%s stage:", humanize.Ordinal(order)))
+			})
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {
