@@ -18,7 +18,8 @@ type cursor interface {
 	Show()
 }
 
-// fakeFileWriter is a terminal.FileWriter that delegates all writes to w and returns a dummy value for the FileDescriptor.
+// fakeFileWriter is a terminal.FileWriter.
+// If the underlying writer w does not implement Fd() then a dummy value is returned.
 type fakeFileWriter struct {
 	w io.Writer
 }
@@ -29,10 +30,12 @@ func (w *fakeFileWriter) Write(p []byte) (int, error) {
 }
 
 // Fd is required to be implemented to satisfy the terminal.FileWriter interface.
-// Unfortunately, the terminal.Cursor struct requires an input that satisfies this method although it does not call it
-// internally, so we can return whatever value that we want.
-// They should have instead taken a dependency only on io.Writer.
+// If the underlying writer is a file, like os.Stdout, then invoke it. Otherwise, this method allows us to create
+// a Cursor that can write to any io.Writer like a bytes.Buffer by returning a dummy value.
 func (w *fakeFileWriter) Fd() uintptr {
+	if v, ok := w.w.(terminal.FileWriter); ok {
+		return v.Fd()
+	}
 	return 0
 }
 
