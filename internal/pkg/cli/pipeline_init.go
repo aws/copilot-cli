@@ -190,17 +190,26 @@ func (o *initPipelineOpts) Execute() error {
 	}
 	o.secret = secretName
 
+	var envConfigs []*config.Environment
+	for _, environment := range o.environments {
+		envConfig, err := o.store.GetEnvironment(o.appName, environment)
+		if err != nil {
+			return fmt.Errorf("get config of environment: %w", err)
+		}
+		envConfigs = append(envConfigs, envConfig)
+	}
+
 	// write pipeline.yml file, populate with:
 	//   - github repo as source
 	//   - stage names (environments)
 	//   - enable/disable transition to prod envs
 
-	err = o.createPipelineManifest()
+	err = o.createPipelineManifest(envConfigs)
 	if err != nil {
 		return err
 	}
 
-	err = o.createBuildspec()
+	err = o.createBuildspec(envConfigs)
 	if err != nil {
 		return err
 	}
@@ -324,7 +333,7 @@ For more information, please refer to: https://git.io/JfDFD.`,
 	return nil
 }
 
-func (o *initPipelineOpts) createPipelineManifest() error {
+func (o *initPipelineOpts) createPipelineManifest(envs []*config.Environment) error {
 	pipelineName := o.pipelineName()
 	provider, err := o.pipelineProvider()
 	if err != nil {
@@ -332,11 +341,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 	}
 
 	var stages []manifest.PipelineStage
-	for _, environmentName := range o.environments {
-		env, err := o.store.GetEnvironment(o.appName, environmentName)
-		if err != nil {
-			return err
-		}
+	for _, env := range envs {
 		stage := manifest.PipelineStage{
 			Name:             env.Name,
 			RequiresApproval: env.Prod,
@@ -374,8 +379,8 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 	return nil
 }
 
-func (o *initPipelineOpts) createBuildspec() error {
-	artifactBuckets, err := o.artifactBuckets()
+func (o *initPipelineOpts) createBuildspec(envs []*config.Environment) error {
+	artifactBuckets, err := o.artifactBuckets(envs)
 	if err != nil {
 		return err
 	}
@@ -432,7 +437,7 @@ func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	return manifest.NewProvider(config)
 }
 
-func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {
+func (o *initPipelineOpts) artifactBuckets(envs []*config.Environment) ([]artifactBucket, error) {
 	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
 		return nil, fmt.Errorf("get application %s: %w", o.appName, err)
@@ -445,11 +450,7 @@ func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {
 	var buckets []artifactBucket
 	for _, resource := range regionalResources {
 		var envNames []string
-		for _, environment := range o.environments {
-			env, err := o.store.GetEnvironment(o.appName, environment)
-			if err != nil {
-				return nil, err
-			}
+		for _, env := range envs {
 			if env.Region == resource.Region {
 				envNames = append(envNames, env.Name)
 			}

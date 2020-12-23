@@ -29,6 +29,8 @@ const (
 	weekly  = "Weekly"
 	monthly = "Monthly"
 	yearly  = "Yearly"
+
+	escapeOpt = "[No additional environments]"
 )
 
 const (
@@ -441,13 +443,11 @@ func (s *Select) Environments(prompt, help, app string, finalMsg prompt.Option) 
 		return nil, fmt.Errorf("no environments found in app %s", app)
 	}
 
-	envs = append(envs, "[No additional environments]")
+	envs = append(envs, escapeOpt)
 	var selectedEnvs []string
 	usedEnvs := make(map[string]bool)
-	// This for-loop ends with one item left to select because when Environments() is used for `pipeline init`,
-	// the "[No additional environments]" option will be the only choice remaining if the user selects all
-	// of their environments for their pipeline.
-	for i := 1; i < len(envs); i++ {
+
+	for {
 		var availableEnvs []string
 		for _, env := range envs {
 			// Check if environment has already been added to pipeline
@@ -460,10 +460,15 @@ func (s *Select) Environments(prompt, help, app string, finalMsg prompt.Option) 
 		if err != nil {
 			return nil, fmt.Errorf("select environments: %w", err)
 		}
-		if selectedEnv == "[No additional environments]" {
+		if selectedEnv == escapeOpt {
 			break
 		}
 		selectedEnvs = append(selectedEnvs, selectedEnv)
+
+		// If only [No additional environments] is available
+		if len(selectedEnvs) == len(envs)-1 {
+			break
+		}
 		usedEnvs[selectedEnv] = true
 	}
 	return selectedEnvs, nil
