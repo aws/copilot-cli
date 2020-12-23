@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
@@ -362,7 +363,7 @@ func (o *runTaskOpts) Execute() error {
 			log.Errorf("Cannot retrieve working directory, please use --%s to specify a task group name.\n", taskGroupNameFlag)
 			return fmt.Errorf("get working directory: %v", err)
 		}
-		o.groupName = filepath.Base(dir)
+		o.groupName = strings.ToLower(filepath.Base(dir))
 	}
 
 	// NOTE: all runtime options must be configured only after session is configured
