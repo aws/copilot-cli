@@ -9,6 +9,7 @@
     "TaskCount": "1",
     "LogRetention": "30",
     "AddonsTemplateURL": "",
+    "EnableExec": "false",
     "ContainerPort": "5000",
     "RulePath": "my-svc",
     "HTTPSEnabled": "true",

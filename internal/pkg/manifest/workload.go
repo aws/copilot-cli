@@ -198,7 +198,7 @@ func (e *Exec) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	if !e.ExecConfig.isEmpty() {
+	if !e.ExecConfig.IsEmpty() {
 		return nil
 	}
 
@@ -214,7 +214,8 @@ type ExecConfig struct {
 	// Reserved for future use.
 }
 
-func (e ExecConfig) isEmpty() bool {
+// IsEmpty returns whether ExecConfig is empty.
+func (e ExecConfig) IsEmpty() bool {
 	return e.Enable == nil
 }
 

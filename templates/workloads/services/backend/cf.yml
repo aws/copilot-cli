@@ -26,7 +26,12 @@ Parameters:
   LogRetention:
     Type: Number
     Default: 30
+  EnableExec:
+    Type: String
+    AllowedValues: [true, false]
 Conditions:
+  ExecEnabled:
+    !Equals [!Ref EnableExec, true]
   HasAddons:
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   ExposePort:

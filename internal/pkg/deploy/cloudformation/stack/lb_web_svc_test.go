@@ -296,13 +296,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		},
 	}
 	testLBWebServiceManifestWithSidecar := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestWithSidecarRange := manifest.Range("2-100")
-	testLBWebServiceManifestWithSidecar.Count = manifest.Count{
-		Value: aws.Int(1),
-		Autoscaling: manifest.Autoscaling{
-			Range: &testLBWebServiceManifestWithSidecarRange,
-		},
-	}
 	testLBWebServiceManifestWithSidecar.TargetContainer = aws.String("xray")
 	testLBWebServiceManifestWithSidecar.Sidecar = manifest.Sidecar{Sidecars: map[string]*manifest.SidecarConfig{
 		"xray": {
@@ -310,14 +303,14 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		},
 	}}
 	testLBWebServiceManifestWithStickiness := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestWithStickinessRange := manifest.Range("2-100")
-	testLBWebServiceManifestWithStickiness.Count = manifest.Count{
-		Value: aws.Int(1),
-		Autoscaling: manifest.Autoscaling{
-			Range: &testLBWebServiceManifestWithStickinessRange,
+	testLBWebServiceManifestWithStickiness.Stickiness = aws.Bool(true)
+	testLBWebServiceManifestWithExecEnabled := manifest.NewLoadBalancedWebService(baseProps)
+	testLBWebServiceManifestWithExecEnabled.Exec = manifest.Exec{
+		Enable: aws.Bool(false),
+		ExecConfig: manifest.ExecConfig{
+			Enable: aws.Bool(true),
 		},
 	}
-	testLBWebServiceManifestWithStickiness.Stickiness = aws.Bool(true)
 	testLBWebServiceManifestWithBadSidecar := manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:       "frontend",
@@ -361,10 +354,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			ParameterValue: aws.String("512"),
 		},
 		{
-			ParameterKey:   aws.String(WorkloadTaskCountParamKey),
-			ParameterValue: aws.String("2"),
-		},
-		{
 			ParameterKey:   aws.String(WorkloadLogRetentionParamKey),
 			ParameterValue: aws.String("30"),
 		},
@@ -398,7 +387,15 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("80"),
 				},
 				{
+					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+					ParameterValue: aws.String("2"),
+				},
+				{
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadEnableExecParamKey),
 					ParameterValue: aws.String("false"),
 				},
 			}...),
@@ -421,7 +418,15 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("80"),
 				},
 				{
+					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+					ParameterValue: aws.String("2"),
+				},
+				{
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadEnableExecParamKey),
 					ParameterValue: aws.String("false"),
 				},
 			}...),
@@ -444,12 +449,20 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("5000"),
 				},
 				{
+					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+					ParameterValue: aws.String("1"),
+				},
+				{
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadEnableExecParamKey),
 					ParameterValue: aws.String("false"),
 				},
 			}...),
 		},
-		"Stickiness Enabled": {
+		"Stickiness enabled": {
 			httpsEnabled: false,
 			manifest:     testLBWebServiceManifestWithStickiness,
 
@@ -467,7 +480,46 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("80"),
 				},
 				{
+					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+					ParameterValue: aws.String("1"),
+				},
+				{
 					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("true"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadEnableExecParamKey),
+					ParameterValue: aws.String("false"),
+				},
+			}...),
+		},
+		"exec enabled": {
+			httpsEnabled: false,
+			manifest:     testLBWebServiceManifestWithExecEnabled,
+
+			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterValue: aws.String("80"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+					ParameterValue: aws.String("1"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadEnableExecParamKey),
 					ParameterValue: aws.String("true"),
 				},
 			}...),
@@ -502,8 +554,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 						},
 					},
 				},
-				manifest: tc.manifest,
-
+				manifest:     tc.manifest,
 				httpsEnabled: tc.httpsEnabled,
 			}
 

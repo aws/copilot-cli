@@ -64,6 +64,16 @@ EnvironmentManagerRole:
             "ecs:RunTask"
           ]
           Resource: "*"
+        - Sid: ExecuteCommand
+          Effect: Allow
+          Action: [
+            "ecs:ExecuteCommand"
+          ]
+          Resource: "*"
+          Condition:
+            StringEquals:
+              'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+              'iam:ResourceTag/copilot-environment': !Sub '${EnvironmentName}' 
         - Sid: CloudFormation
           Effect: Allow
           Action: [

@@ -8,6 +8,7 @@ DesiredCount: !GetAtt DynamicDesiredCountAction.DesiredCount
 DesiredCount: !Ref TaskCount
 {{- end}}
 PropagateTags: SERVICE
+EnableExecuteCommand: !Ref EnableExec
 LaunchType: FARGATE
 NetworkConfiguration:
   AwsvpcConfiguration:
