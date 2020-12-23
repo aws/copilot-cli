@@ -427,6 +427,52 @@ func (s *Select) Environment(prompt, help, app string, additionalOpts ...string)
 	return selectedEnvName, nil
 }
 
+// Environments fetches all the environments in an app and prompts the user to select one OR MORE.
+// The List of options decreases as envs are chosen. Chosen envs displayed above with the finalMsg.
+func (s *Select) Environments(prompt, help, app string, finalMsg prompt.Option, additionalOpts ...string) ([]string, error) {
+	envs, err := s.retrieveEnvironments(app)
+	if err != nil {
+		return nil, fmt.Errorf("get environments for app %s from metadata store: %w", app, err)
+	}
+	if len(envs) == 0 {
+		log.Infof("Couldn't find any environments associated with app %s, try initializing one: %s\n",
+			color.HighlightUserInput(app),
+			color.HighlightCode("copilot env init"))
+		return nil, fmt.Errorf("no environments found in app %s", app)
+	}
+
+	// This, as below with the for-loop, is currently optimized for `pipeline init`-- additional opts
+	// are not added until after the method errors out because len(envs) == 0.
+	envs = append(envs, additionalOpts...)
+	var selectedEnvs []string
+	usedEnvs := make(map[string]bool)
+
+	// This for-loop ends with one item left to select because at the moment,
+	// Environments() is being used only for `pipeline init` and the the 'quit'
+	// option ("[No additional environments]") will be the only choice remaining
+	// if the user selects all of their environments for their pipeline.
+	for i := 1; i < len(envs); i++ {
+		var availableEnvs []string
+		for _, env := range envs {
+			// Check if environment has already been added to pipeline
+			if _, ok := usedEnvs[env]; !ok {
+				availableEnvs = append(availableEnvs, env)
+			}
+		}
+
+		selectedEnv, err := s.prompt.SelectOne(prompt, help, availableEnvs, finalMsg)
+		if err != nil {
+			return nil, fmt.Errorf("select environments: %w", err)
+		}
+		if selectedEnv == "[No additional environments]" {
+			break
+		}
+		selectedEnvs = append(selectedEnvs, selectedEnv)
+		usedEnvs[selectedEnv] = true
+	}
+	return selectedEnvs, nil
+}
+
 // Application fetches all the apps in an account/region and prompts the user to select one.
 func (s *Select) Application(prompt, help string, additionalOpts ...string) (string, error) {
 	appNames, err := s.retrieveApps()
