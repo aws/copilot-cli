@@ -13,13 +13,13 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 )
 
-// StackSubscriber is the interface to subscribe a channel to a CloudFormation stack stream event.
+// StackSubscriber is the interface to subscribe channels to a CloudFormation stack stream event.
 type StackSubscriber interface {
 	Subscribe(channels ...chan stream.StackEvent)
 }
 
 // ListeningStackRenderer returns a component that listens for CloudFormation
-// resource events from a stack until ctx is canceled.
+// resource events from a stack until the ctx is canceled.
 //
 // The component only listens for stack resource events for the provided changes in the stack.
 // The state of changes is updated as events are published from the streamer.
