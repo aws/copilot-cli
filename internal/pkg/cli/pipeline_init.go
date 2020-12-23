@@ -55,8 +55,6 @@ var (
 	binaryS3BucketPath string
 )
 
-var errNoEnvsInApp = errors.New("there were no more environments found that can be added to your pipeline. Please run `copilot env init` to create a new environment")
-
 type initPipelineVars struct {
 	appName           string
 	environments      []string
