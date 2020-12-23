@@ -4760,23 +4760,18 @@ func (m *MockpipelineSelector) EXPECT() *MockpipelineSelectorMockRecorder {
 }
 
 // Environments mocks base method
-func (m *MockpipelineSelector) Environments(prompt, help, app string, opt prompt.Option, additionalOpts ...string) ([]string, error) {
+func (m *MockpipelineSelector) Environments(prompt, help, app string, opt prompt.Option) ([]string, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{prompt, help, app, opt}
-	for _, a := range additionalOpts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Environments", varargs...)
+	ret := m.ctrl.Call(m, "Environments", prompt, help, app, opt)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Environments indicates an expected call of Environments
-func (mr *MockpipelineSelectorMockRecorder) Environments(prompt, help, app, opt interface{}, additionalOpts ...interface{}) *gomock.Call {
+func (mr *MockpipelineSelectorMockRecorder) Environments(prompt, help, app, opt interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{prompt, help, app, opt}, additionalOpts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environments", reflect.TypeOf((*MockpipelineSelector)(nil).Environments), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environments", reflect.TypeOf((*MockpipelineSelector)(nil).Environments), prompt, help, app, opt)
 }
 
 // MockwsSelector is a mock of wsSelector interface

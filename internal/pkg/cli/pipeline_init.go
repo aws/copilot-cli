@@ -220,7 +220,7 @@ func (o *initPipelineOpts) RecommendedActions() []string {
 
 func (o *initPipelineOpts) askEnvs() error {
 	if len(o.environments) == 0 {
-		envs, err := o.sel.Environments(pipelineSelectEnvPrompt, pipelineSelectEnvHelpPrompt, o.appName, prompt.WithFinalMessage("Environment pipeline will deploy to, in order:"), "[No additional environments]")
+		envs, err := o.sel.Environments(pipelineSelectEnvPrompt, pipelineSelectEnvHelpPrompt, o.appName, prompt.WithFinalMessage("Environment pipeline will deploy to, in order:"))
 		if err != nil {
 			return fmt.Errorf("select environments: %w", err)
 		}

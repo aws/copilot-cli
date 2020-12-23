@@ -138,7 +138,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		inGitHubAccessToken string
 		inGitBranch         string
 
-		//mockStore    func(m *mocks.Mockstore)
 		mockPrompt   func(m *mocks.Mockprompter)
 		mockRunner   func(m *mocks.Mockrunner)
 		mockSelector func(m *mocks.MockpipelineSelector)
@@ -160,7 +159,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			buffer:              *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
 
 			mockSelector: func(m *mocks.MockpipelineSelector) {
-				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any(), gomock.Any()).Return([]string{"test", "prod"}, nil)
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
 			},
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -182,7 +181,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inEnvironments: []string{},
 
 			mockSelector: func(m *mocks.MockpipelineSelector) {
-				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return(nil, errors.New("some error"))
 			},
 			mockRunner: func(m *mocks.Mockrunner) {},
 			mockPrompt: func(m *mocks.Mockprompter) {},
@@ -197,7 +196,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
 
 			mockSelector: func(m *mocks.MockpipelineSelector) {
-				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any(), gomock.Any()).Return([]string{"test", "prod"}, nil)
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
 			},
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -221,7 +220,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			buffer:              *bytes.NewBufferString("archer\treallybadGoosegithub.comNotEvenAURL (fetch)\n"),
 
 			mockSelector: func(m *mocks.MockpipelineSelector) {
-				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any(), gomock.Any()).Return([]string{"test", "prod"}, nil)
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
 			},
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -245,7 +244,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			buffer:              *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\n"),
 
 			mockSelector: func(m *mocks.MockpipelineSelector) {
-				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any(), gomock.Any()).Return([]string{"test", "prod"}, nil)
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
 			},
 			mockRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)

@@ -442,7 +442,7 @@ type deploySelector interface {
 }
 
 type pipelineSelector interface {
-	Environments(prompt, help, app string, opt prompt.Option, additionalOpts ...string) ([]string, error)
+	Environments(prompt, help, app string, opt prompt.Option) ([]string, error)
 }
 
 type wsSelector interface {
