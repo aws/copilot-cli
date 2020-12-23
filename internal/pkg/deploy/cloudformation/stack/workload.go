@@ -32,7 +32,7 @@ const (
 	WorkloadTaskCountParamKey         = "TaskCount"
 	WorkloadLogRetentionParamKey      = "LogRetention"
 	WorkloadAddonsTemplateURLParamKey = "AddonsTemplateURL"
-	WorkloadEnableExecParamKey        = "EnableExec"
+	WorkloadEnableExecParamKey        = "EnableExecuteCommand"
 )
 
 // RuntimeConfig represents configuration that's defined outside of the manifest file

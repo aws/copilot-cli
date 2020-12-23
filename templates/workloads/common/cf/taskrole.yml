@@ -35,7 +35,6 @@ TaskRole:
                 "ssmmessages:OpenControlChannel",
                 "ssmmessages:CreateDataChannel ",
                 "ssmmessages:OpenDataChannel",
-                "ssm:UpdateInstanceInformation",
                 "ssm:GetConnectionStatus"
               ]
               Resource: !If [ExecEnabled, "*", !Ref AWS::NoValue]
