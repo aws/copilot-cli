@@ -30,7 +30,8 @@ func (m *mockRenderer) Render(out io.Writer) (int, error) {
 
 func TestRender(t *testing.T) {
 	// GIVEN
-	ctx, _ := context.WithTimeout(context.Background(), 350*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 350*time.Millisecond)
+	defer cancel()
 	actual := new(strings.Builder)
 	r := &mockRenderer{content: "hi\n"}
 
