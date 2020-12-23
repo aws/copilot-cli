@@ -86,10 +86,10 @@ func TestStackComponent_Render(t *testing.T) {
 		status:      "CREATE_COMPLETE",
 		children: []Renderer{
 			&mockRenderer{
-				content: "  - A load balancer to distribute traffic from the internet",
+				content: "  - A load balancer to distribute traffic from the internet\n",
 			},
 			&mockRenderer{
-				content: "  - An ECS cluster to hold your services",
+				content: "  - An ECS cluster to hold your services\n",
 			},
 		},
 	}
