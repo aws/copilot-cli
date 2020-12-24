@@ -29,6 +29,8 @@ const (
 	weekly  = "Weekly"
 	monthly = "Monthly"
 	yearly  = "Yearly"
+
+	pipelineEscapeOpt = "[No additional environments]"
 )
 
 const (
@@ -425,6 +427,47 @@ func (s *Select) Environment(prompt, help, app string, additionalOpts ...string)
 		return "", fmt.Errorf("select environment: %w", err)
 	}
 	return selectedEnvName, nil
+}
+
+// Environments fetches all the environments in an app and prompts the user to select one OR MORE.
+// The List of options decreases as envs are chosen. Chosen envs displayed above with the finalMsg.
+func (s *Select) Environments(prompt, help, app string, finalMsgFunc func(int) prompt.Option) ([]string, error) {
+	envs, err := s.retrieveEnvironments(app)
+	if err != nil {
+		return nil, fmt.Errorf("get environments for app %s from metadata store: %w", app, err)
+	}
+	if len(envs) == 0 {
+		log.Infof("Couldn't find any environments associated with app %s, try initializing one: %s\n",
+			color.HighlightUserInput(app),
+			color.HighlightCode("copilot env init"))
+		return nil, fmt.Errorf("no environments found in app %s", app)
+	}
+
+	envs = append(envs, pipelineEscapeOpt)
+	var selectedEnvs []string
+	usedEnvs := make(map[string]bool)
+
+	for i := 1; i < len(envs); i++ {
+		var availableEnvs []string
+		for _, env := range envs {
+			// Check if environment has already been added to pipeline
+			if _, ok := usedEnvs[env]; !ok {
+				availableEnvs = append(availableEnvs, env)
+			}
+		}
+
+		selectedEnv, err := s.prompt.SelectOne(prompt, help, availableEnvs, finalMsgFunc(i))
+		if err != nil {
+			return nil, fmt.Errorf("select environments: %w", err)
+		}
+		if selectedEnv == pipelineEscapeOpt {
+			break
+		}
+		selectedEnvs = append(selectedEnvs, selectedEnv)
+
+		usedEnvs[selectedEnv] = true
+	}
+	return selectedEnvs, nil
 }
 
 // Application fetches all the apps in an account/region and prompts the user to select one.

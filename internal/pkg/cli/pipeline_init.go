@@ -10,6 +10,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/dustin/go-humanize"
+
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -27,13 +31,8 @@ import (
 )
 
 const (
-	pipelineInitAddEnvPrompt     = "Would you like to add an environment to your pipeline?"
-	pipelineInitAddEnvHelpPrompt = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
-
-	pipelineInitAddMoreEnvPrompt     = "Would you like to add another environment to your pipeline?"
-	pipelineInitAddMoreEnvHelpPrompt = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
-
-	pipelineSelectEnvPrompt = "Which environment would you like to add to your pipeline?"
+	pipelineSelectEnvPrompt     = "Which environment would you like to add to your pipeline?"
+	pipelineSelectEnvHelpPrompt = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
 
 	pipelineSelectGitHubURLPrompt     = "Which GitHub repository would you like to use for your service?"
 	pipelineSelectGitHubURLHelpPrompt = `The GitHub repository linked to your workspace.
@@ -58,8 +57,6 @@ var (
 	binaryS3BucketPath string
 )
 
-var errNoEnvsInApp = errors.New("there were no more environments found that can be added to your pipeline. Please run `copilot env init` to create a new environment")
-
 type initPipelineVars struct {
 	appName           string
 	environments      []string
@@ -80,15 +77,14 @@ type initPipelineOpts struct {
 	cfnClient      appResourcesGetter
 	store          store
 	prompt         prompter
+	sel            pipelineSelector
 
 	// Outputs stored on successful actions.
 	secret string
 
 	// Caches variables
-	envs     []*config.Environment
-	repoURLs []string
-	fs       *afero.Afero
-	buffer   bytes.Buffer
+	fs     *afero.Afero
+	buffer bytes.Buffer
 }
 
 type artifactBucket struct {
@@ -119,6 +115,8 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		return nil, fmt.Errorf("new config store client: %w", err)
 	}
 
+	prompter := prompt.New()
+
 	return &initPipelineOpts{
 		initPipelineVars: vars,
 		workspace:        ws,
@@ -126,7 +124,8 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		parser:           template.New(),
 		cfnClient:        cloudformation.New(defaultSession),
 		store:            ssmStore,
-		prompt:           prompt.New(),
+		prompt:           prompter,
+		sel:              selector.NewSelect(prompter, ssmStore),
 		runner:           command.New(),
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 	}, nil
@@ -171,7 +170,7 @@ func (o *initPipelineOpts) Ask() error {
 		return err
 	}
 	// TODO: Do a switch/case here after adding more repo providers.
-	if err := o.askRepoDetails(); err != nil {
+	if err := o.askRepository(); err != nil {
 		return err
 	}
 	return nil
@@ -193,17 +192,26 @@ func (o *initPipelineOpts) Execute() error {
 	}
 	o.secret = secretName
 
+	var envConfigs []*config.Environment
+	for _, environment := range o.environments {
+		envConfig, err := o.store.GetEnvironment(o.appName, environment)
+		if err != nil {
+			return fmt.Errorf("get config of environment: %w", err)
+		}
+		envConfigs = append(envConfigs, envConfig)
+	}
+
 	// write pipeline.yml file, populate with:
 	//   - github repo as source
 	//   - stage names (environments)
 	//   - enable/disable transition to prod envs
 
-	err = o.createPipelineManifest()
+	err = o.createPipelineManifest(envConfigs)
 	if err != nil {
 		return err
 	}
 
-	err = o.createBuildspec()
+	err = o.createBuildspec(envConfigs)
 	if err != nil {
 		return err
 	}
@@ -222,108 +230,21 @@ func (o *initPipelineOpts) RecommendedActions() []string {
 }
 
 func (o *initPipelineOpts) askEnvs() error {
-	if len(o.environments) != 0 {
-		return nil
-	}
-	err := o.getEnvs()
-	if err != nil {
-		return err
-	}
-	if err = o.selectEnvironments(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (o *initPipelineOpts) getEnvs() error {
-	envs, err := o.store.ListEnvironments(o.appName)
-	if err != nil {
-		return fmt.Errorf("list environments for application %s: %w", o.appName, err)
-	}
-	if len(envs) == 0 {
-		return errNoEnvsInApp
-	}
-	o.envs = envs
-	return nil
-}
-
-func (o *initPipelineOpts) selectEnvironments() error {
-	for {
-		promptMsg := pipelineInitAddEnvPrompt
-		promptHelpMsg := pipelineInitAddEnvHelpPrompt
-		if len(o.environments) > 0 {
-			promptMsg = pipelineInitAddMoreEnvPrompt
-			promptHelpMsg = pipelineInitAddMoreEnvHelpPrompt
-		}
-		addEnv, err := o.prompt.Confirm(promptMsg, promptHelpMsg)
+	if len(o.environments) == 0 {
+		envs, err := o.sel.Environments(pipelineSelectEnvPrompt, pipelineSelectEnvHelpPrompt, o.appName, func(order int) prompt.Option {
+			return prompt.WithFinalMessage(fmt.Sprintf("%s stage:", humanize.Ordinal(order)))
+		})
 		if err != nil {
-			return fmt.Errorf("confirm adding an environment: %w", err)
+			return fmt.Errorf("select environments: %w", err)
 		}
-		if !addEnv {
-			break
-		}
-		if err := o.selectEnvironment(); err != nil {
-			return fmt.Errorf("add environment: %w", err)
-		}
-		if len(o.listAvailableEnvironments()) == 0 {
-			break
-		}
+		o.environments = envs
 	}
-
 	return nil
 }
 
-func (o *initPipelineOpts) listAvailableEnvironments() []string {
-	var envs []string
-	for _, env := range o.envs {
-		// Check if environment has already been added to pipeline
-		if o.envCanBeAdded(env.Name) {
-			envs = append(envs, env.Name)
-		}
-	}
-
-	return envs
-}
-
-func (o *initPipelineOpts) envCanBeAdded(selectedEnv string) bool {
-	for _, env := range o.environments {
-		if selectedEnv == env {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (o *initPipelineOpts) selectEnvironment() error {
-	envs := o.listAvailableEnvironments()
-
-	if len(envs) == 0 && len(o.environments) != 0 {
-		log.Infoln("There are no more environments to add.")
-		return nil
-	}
-
-	env, err := o.prompt.SelectOne(
-		pipelineSelectEnvPrompt,
-		"Environment to be added as the next stage in your pipeline.",
-		envs,
-	)
-
-	if err != nil {
-		return err
-	}
-
-	o.environments = append(o.environments, env)
-
-	return nil
-}
-
-func (o *initPipelineOpts) askRepoDetails() error {
+func (o *initPipelineOpts) askRepository() error {
 	var err error
 	if o.repoURL == "" {
-		if err = o.fetchRepoURLs(); err != nil {
-			return err
-		}
 		if err = o.selectGitHubURL(); err != nil {
 			return err
 		}
@@ -342,7 +263,8 @@ func (o *initPipelineOpts) askRepoDetails() error {
 	return nil
 }
 
-func (o *initPipelineOpts) fetchRepoURLs() error {
+func (o *initPipelineOpts) selectGitHubURL() error {
+	// Fetches and parses all remote repositories.
 	err := o.runner.Run("git", []string{"remote", "-v"}, command.Stdout(&o.buffer))
 	if err != nil {
 		return fmt.Errorf("get remote repository info: %w; make sure you have installed Git and are in a Git repository", err)
@@ -351,17 +273,13 @@ func (o *initPipelineOpts) fetchRepoURLs() error {
 	if err != nil {
 		return err
 	}
-	o.repoURLs = urls
 	o.buffer.Reset()
 
-	return nil
-}
-
-func (o *initPipelineOpts) selectGitHubURL() error {
+	// Prompts user to select a repo URL.
 	url, err := o.prompt.SelectOne(
 		pipelineSelectGitHubURLPrompt,
 		pipelineSelectGitHubURLHelpPrompt,
-		o.repoURLs,
+		urls,
 	)
 	if err != nil {
 		return fmt.Errorf("select GitHub URL: %w", err)
@@ -419,7 +337,7 @@ For more information, please refer to: https://git.io/JfDFD.`,
 	return nil
 }
 
-func (o *initPipelineOpts) createPipelineManifest() error {
+func (o *initPipelineOpts) createPipelineManifest(envs []*config.Environment) error {
 	pipelineName := o.pipelineName()
 	provider, err := o.pipelineProvider()
 	if err != nil {
@@ -427,11 +345,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 	}
 
 	var stages []manifest.PipelineStage
-	for _, environmentName := range o.environments {
-		env, err := o.getEnvConfig(environmentName)
-		if err != nil {
-			return err
-		}
+	for _, env := range envs {
 		stage := manifest.PipelineStage{
 			Name:             env.Name,
 			RequiresApproval: env.Prod,
@@ -469,8 +383,8 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 	return nil
 }
 
-func (o *initPipelineOpts) createBuildspec() error {
-	artifactBuckets, err := o.artifactBuckets()
+func (o *initPipelineOpts) createBuildspec(envs []*config.Environment) error {
+	artifactBuckets, err := o.artifactBuckets(envs)
 	if err != nil {
 		return err
 	}
@@ -527,16 +441,7 @@ func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	return manifest.NewProvider(config)
 }
 
-func (o *initPipelineOpts) getEnvConfig(environmentName string) (*config.Environment, error) {
-	for _, env := range o.envs {
-		if env.Name == environmentName {
-			return env, nil
-		}
-	}
-	return nil, fmt.Errorf("environment %s in application %s is not found", environmentName, o.appName)
-}
-
-func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {
+func (o *initPipelineOpts) artifactBuckets(envs []*config.Environment) ([]artifactBucket, error) {
 	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
 		return nil, fmt.Errorf("get application %s: %w", o.appName, err)
@@ -549,11 +454,7 @@ func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {
 	var buckets []artifactBucket
 	for _, resource := range regionalResources {
 		var envNames []string
-		for _, environment := range o.environments {
-			env, err := o.getEnvConfig(environment)
-			if err != nil {
-				return nil, err
-			}
+		for _, env := range envs {
 			if env.Region == resource.Region {
 				envNames = append(envNames, env.Name)
 			}

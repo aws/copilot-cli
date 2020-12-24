@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/dustin/go-humanize"
+
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector/mocks"
@@ -1075,6 +1077,215 @@ func TestSelect_Environment(t *testing.T) {
 			}
 
 			got, err := sel.Environment("Select an environment", "Help text", appName, tc.inAdditionalOpts...)
+			if tc.wantErr != nil {
+				require.EqualError(t, tc.wantErr, err.Error())
+			} else {
+				require.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestSelect_Environments(t *testing.T) {
+	appName := "myapp"
+	hardcodedOpt := "[No additional environments]"
+
+	testCases := map[string]struct {
+		setupMocks func(m environmentMocks)
+		wantErr    error
+		want       []string
+	}{
+		"with no environments": {
+			setupMocks: func(m environmentMocks) {
+				gomock.InOrder(
+					m.envLister.
+						EXPECT().
+						ListEnvironments(gomock.Eq(appName)).
+						Return([]*config.Environment{}, nil).
+						Times(1),
+					m.prompt.
+						EXPECT().
+						SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+						Times(0),
+				)
+			},
+			wantErr: fmt.Errorf("no environments found in app myapp"),
+		},
+		"with one environment": {
+			setupMocks: func(m environmentMocks) {
+				gomock.InOrder(
+					m.envLister.
+						EXPECT().
+						ListEnvironments(gomock.Eq(appName)).
+						Return([]*config.Environment{
+							{
+								App:  appName,
+								Name: "env1",
+							},
+						}, nil).
+						Times(1),
+					m.prompt.
+						EXPECT().
+						SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"env1", hardcodedOpt}), gomock.Any()).
+						Return("env1", nil).
+						Times(1),
+				)
+			},
+			want: []string{"env1"},
+		},
+		"with multiple environments (selection list reduces with each iteration, returns envs in order selected)": {
+			setupMocks: func(m environmentMocks) {
+				gomock.InOrder(
+					m.envLister.
+						EXPECT().
+						ListEnvironments(gomock.Eq(appName)).
+						Return([]*config.Environment{
+							{
+								App:  appName,
+								Name: "env1",
+							},
+							{
+								App:  appName,
+								Name: "env2",
+							},
+							{
+								App:  appName,
+								Name: "env3",
+							},
+						}, nil).
+						Times(1),
+					m.prompt.
+						EXPECT().
+						SelectOne(
+							gomock.Eq("Select an environment"),
+							gomock.Eq("Help text"),
+							gomock.Eq([]string{"env1", "env2", "env3", hardcodedOpt}),
+							gomock.Any()).
+						Return("env2", nil).
+						Times(1),
+					m.prompt.
+						EXPECT().
+						SelectOne(
+							gomock.Eq("Select an environment"),
+							gomock.Eq("Help text"),
+							gomock.Eq([]string{"env1", "env3", hardcodedOpt}),
+							gomock.Any()).
+						Return("env1", nil).
+						Times(1),
+					m.prompt.
+						EXPECT().
+						SelectOne(
+							gomock.Eq("Select an environment"),
+							gomock.Eq("Help text"),
+							gomock.Eq([]string{"env3", hardcodedOpt}),
+							gomock.Any()).
+						Return("env3", nil).
+						Times(1),
+				)
+			},
+			want: []string{"env2", "env1", "env3"},
+		},
+		"stops prompting when user selects '[No additional environments]'; quit opt not in env list": {
+			setupMocks: func(m environmentMocks) {
+				gomock.InOrder(
+					m.envLister.
+						EXPECT().
+						ListEnvironments(gomock.Eq(appName)).
+						Return([]*config.Environment{
+							{
+								App:  appName,
+								Name: "env1",
+							},
+							{
+								App:  appName,
+								Name: "env2",
+							},
+							{
+								App:  appName,
+								Name: "env3",
+							},
+						}, nil).
+						Times(1),
+					m.prompt.
+						EXPECT().
+						SelectOne(
+							gomock.Eq("Select an environment"),
+							gomock.Eq("Help text"),
+							gomock.Eq([]string{"env1", "env2", "env3", hardcodedOpt}),
+							gomock.Any()).
+						Return("env2", nil).
+						Times(1),
+					m.prompt.
+						EXPECT().
+						SelectOne(
+							gomock.Eq("Select an environment"),
+							gomock.Eq("Help text"),
+							gomock.Eq([]string{"env1", "env3", hardcodedOpt}),
+							gomock.Any()).
+						Return("env1", nil).
+						Times(1),
+					m.prompt.
+						EXPECT().
+						SelectOne(
+							gomock.Eq("Select an environment"),
+							gomock.Eq("Help text"),
+							gomock.Eq([]string{"env3", hardcodedOpt}),
+							gomock.Any()).
+						Return(hardcodedOpt, nil).
+						Times(1),
+				)
+			},
+			want: []string{"env2", "env1"},
+		},
+		"with error selecting environments": {
+			setupMocks: func(m environmentMocks) {
+				gomock.InOrder(
+					m.envLister.
+						EXPECT().
+						ListEnvironments(gomock.Eq(appName)).
+						Return([]*config.Environment{
+							{
+								App:  appName,
+								Name: "env1",
+							},
+							{
+								App:  appName,
+								Name: "env2",
+							},
+						}, nil).
+						Times(1),
+					m.prompt.
+						EXPECT().
+						SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"env1", "env2", hardcodedOpt}), gomock.Any()).
+						Return("", fmt.Errorf("error selecting")).
+						Times(1),
+				)
+			},
+			wantErr: fmt.Errorf("select environments: error selecting"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockenvLister := mocks.NewMockConfigLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := environmentMocks{
+				envLister: mockenvLister,
+				prompt:    mockprompt,
+			}
+			tc.setupMocks(mocks)
+
+			sel := Select{
+				prompt: mockprompt,
+				config: mockenvLister,
+			}
+
+			got, err := sel.Environments("Select an environment", "Help text", appName, func(order int) prompt.Option {
+				return prompt.WithFinalMessage(fmt.Sprintf("%s stage:", humanize.Ordinal(order)))
+			})
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {
