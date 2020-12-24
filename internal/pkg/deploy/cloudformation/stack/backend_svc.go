@@ -89,6 +89,7 @@ func (s *BackendService) Template() (string, error) {
 		NestedStack:        outputs,
 		Sidecars:           sidecars,
 		Autoscaling:        autoscaling,
+		ExecuteCommand:     s.manifest.ExecuteCommand.Options(),
 		HealthCheck:        s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),
 		LogConfig:          s.manifest.LogConfigOpts(),
 		DesiredCountLambda: desiredCountLambda.String(),

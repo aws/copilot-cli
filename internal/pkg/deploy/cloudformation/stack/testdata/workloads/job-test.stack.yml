@@ -137,28 +137,6 @@ Resources:
                   StringEquals:
                     'iam:ResourceTag/copilot-application': !Sub '${AppName}'
                     'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
-        - PolicyName: 'ExecuteCommand'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action: [
-                  "ssmmessages:CreateControlChannel",
-                  "ssmmessages:OpenControlChannel",
-                  "ssmmessages:CreateDataChannel ",
-                  "ssmmessages:OpenDataChannel",
-                  "ssm:GetConnectionStatus"
-                ]
-                Resource: !If [ExecEnabled, "*", !Ref AWS::NoValue]
-              - Effect: 'Allow'
-                Action: [
-                  "logs:CreateLogStream",
-                  "logs:DescribeLogGroups",
-                  "logs:DescribeLogStream",
-                  "logs:PutLogEvents"
-                ]
-                Resource: !If [ExecEnabled, "*", !Ref AWS::NoValue]
-  
 
   Rule:
     Type: AWS::Events::Rule

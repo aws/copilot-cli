@@ -32,7 +32,7 @@ image:
 cpu: 512
 memory: 1024
 count: 1
-exec: true
+execute_command: true
 http:
   path: "svc"
   target_container: "frontend"
@@ -85,7 +85,7 @@ environments:
 							Count: Count{
 								Value: aws.Int(1),
 							},
-							Exec: Exec{
+							ExecuteCommand: ExecuteCommand{
 								Enable: aws.Bool(true),
 							},
 							Variables: map[string]string{
@@ -185,7 +185,7 @@ secrets:
 							Count: Count{
 								Value: aws.Int(1),
 							},
-							Exec: Exec{
+							ExecuteCommand: ExecuteCommand{
 								Enable: aws.Bool(false),
 							},
 							Secrets: map[string]string{

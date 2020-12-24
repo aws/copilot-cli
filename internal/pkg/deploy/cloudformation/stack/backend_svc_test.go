@@ -29,22 +29,22 @@ var (
 	testStartPeriod = 0 * time.Second
 )
 
-var testBackendSvcManifest = manifest.NewBackendService(manifest.BackendServiceProps{
-	WorkloadProps: manifest.WorkloadProps{
-		Name:       "frontend",
-		Dockerfile: "./frontend/Dockerfile",
-	},
-	Port: 8080,
-	HealthCheck: &manifest.ContainerHealthCheck{
-		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
-		Interval:    &testInterval,
-		Retries:     &testRetries,
-		Timeout:     &testTimeout,
-		StartPeriod: &testStartPeriod,
-	},
-})
-
 func TestBackendService_Template(t *testing.T) {
+	var testBackendSvcManifest = manifest.NewBackendService(manifest.BackendServiceProps{
+		WorkloadProps: manifest.WorkloadProps{
+			Name:       "frontend",
+			Dockerfile: "./frontend/Dockerfile",
+		},
+		Port: 8080,
+		HealthCheck: &manifest.ContainerHealthCheck{
+			Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
+			Interval:    &testInterval,
+			Retries:     &testRetries,
+			Timeout:     &testTimeout,
+			StartPeriod: &testStartPeriod,
+		},
+	})
+	testBackendSvcManifest.ExecuteCommand = manifest.ExecuteCommand{Enable: aws.Bool(true)}
 	baseProps := manifest.BackendServiceProps{
 		WorkloadProps: manifest.WorkloadProps{
 			Name:       "frontend",
@@ -145,6 +145,7 @@ func TestBackendService_Template(t *testing.T) {
 						Timeout:     aws.Int64(10),
 					},
 					DesiredCountLambda: "something",
+					ExecuteCommand:     &template.ExecuteCommandOpts{},
 					NestedStack: &template.WorkloadNestedStackOpts{
 						StackName:       addon.StackName,
 						VariableOutputs: []string{"Hello"},
@@ -198,6 +199,20 @@ func TestBackendService_Template(t *testing.T) {
 
 func TestBackendService_Parameters(t *testing.T) {
 	// GIVEN
+	var testBackendSvcManifest = manifest.NewBackendService(manifest.BackendServiceProps{
+		WorkloadProps: manifest.WorkloadProps{
+			Name:       "frontend",
+			Dockerfile: "./frontend/Dockerfile",
+		},
+		Port: 8080,
+		HealthCheck: &manifest.ContainerHealthCheck{
+			Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
+			Interval:    &testInterval,
+			Retries:     &testRetries,
+			Timeout:     &testTimeout,
+			StartPeriod: &testStartPeriod,
+		},
+	})
 	conf := &BackendService{
 		wkld: &wkld{
 			name: aws.StringValue(testBackendSvcManifest.Name),
@@ -255,10 +270,6 @@ func TestBackendService_Parameters(t *testing.T) {
 		{
 			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 			ParameterValue: aws.String(""),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadEnableExecParamKey),
-			ParameterValue: aws.String("false"),
 		},
 	}, params)
 }

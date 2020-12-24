@@ -110,43 +110,43 @@ func TestExec_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		inContent []byte
 
-		wantedStruct Exec
+		wantedStruct ExecuteCommand
 		wantedError  error
 	}{
 		"use default with empty value": {
-			inContent: []byte(`exec:
+			inContent: []byte(`execute_command:
 count: 1`),
 
-			wantedStruct: Exec{
+			wantedStruct: ExecuteCommand{
 				Enable: aws.Bool(false),
 			},
 		},
 		"use default without any input": {
 			inContent: []byte(`count: 1`),
 
-			wantedStruct: Exec{
+			wantedStruct: ExecuteCommand{
 				Enable: aws.Bool(false),
 			},
 		},
 		"simple enable": {
-			inContent: []byte(`exec: true`),
+			inContent: []byte(`execute_command: true`),
 
-			wantedStruct: Exec{
+			wantedStruct: ExecuteCommand{
 				Enable: aws.Bool(true),
 			},
 		},
 		"with config": {
-			inContent: []byte(`exec:
+			inContent: []byte(`execute_command:
   enable: true`),
-			wantedStruct: Exec{
+			wantedStruct: ExecuteCommand{
 				Enable: aws.Bool(false),
-				ExecConfig: ExecConfig{
+				Config: ExecuteCommandConfig{
 					Enable: aws.Bool(true),
 				},
 			},
 		},
 		"Error if unmarshalable": {
-			inContent: []byte(`exec:
+			inContent: []byte(`execute_command:
   badfield: OH NOES
   otherbadfield: DOUBLE BAD`),
 			wantedError: errUnmarshalExec,
@@ -155,7 +155,7 @@ count: 1`),
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			b := TaskConfig{
-				Exec: Exec{
+				ExecuteCommand: ExecuteCommand{
 					Enable: aws.Bool(false),
 				},
 			}
@@ -165,8 +165,8 @@ count: 1`),
 			} else {
 				require.NoError(t, err)
 				// check memberwise dereferenced pointer equality
-				require.Equal(t, tc.wantedStruct.Enable, b.Exec.Enable)
-				require.Equal(t, tc.wantedStruct.ExecConfig, b.Exec.ExecConfig)
+				require.Equal(t, tc.wantedStruct.Enable, b.ExecuteCommand.Enable)
+				require.Equal(t, tc.wantedStruct.Config, b.ExecuteCommand.Config)
 			}
 		})
 	}
@@ -340,6 +340,41 @@ func TestSidecar_Options(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, got[0], tc.wanted)
 			}
+		})
+	}
+}
+
+func TestExec_Options(t *testing.T) {
+	testCases := map[string]struct {
+		inConfig ExecuteCommand
+
+		wanted *template.ExecuteCommandOpts
+	}{
+		"without exec enabled": {
+			inConfig: ExecuteCommand{},
+			wanted:   nil,
+		},
+		"exec enabled": {
+			inConfig: ExecuteCommand{
+				Enable: aws.Bool(true),
+			},
+			wanted: &template.ExecuteCommandOpts{},
+		},
+		"exec enabled with config": {
+			inConfig: ExecuteCommand{
+				Config: ExecuteCommandConfig{
+					Enable: aws.Bool(true),
+				},
+			},
+			wanted: &template.ExecuteCommandOpts{},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			exec := tc.inConfig
+			got := exec.Options()
+
+			require.Equal(t, got, tc.wanted)
 		})
 	}
 }

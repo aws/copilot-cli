@@ -172,7 +172,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 				Count: Count{
 					Value: aws.Int(1),
 				},
-				Exec: Exec{
+				ExecuteCommand: ExecuteCommand{
 					Enable: aws.Bool(false),
 				},
 			},

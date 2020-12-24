@@ -50,7 +50,7 @@ func TestNewBackendSvc(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-						Exec: Exec{
+						ExecuteCommand: ExecuteCommand{
 							Enable: aws.Bool(false),
 						},
 					},
@@ -95,7 +95,7 @@ func TestNewBackendSvc(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-						Exec: Exec{
+						ExecuteCommand: ExecuteCommand{
 							Enable: aws.Bool(false),
 						},
 					},

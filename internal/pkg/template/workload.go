@@ -101,6 +101,9 @@ type AutoscalingOpts struct {
 	ResponseTime *float64
 }
 
+// ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.
+type ExecuteCommandOpts struct{}
+
 // StateMachineOpts holds configuration neeed for State Machine retries and timeout.
 type StateMachineOpts struct {
 	Timeout *int
@@ -110,12 +113,13 @@ type StateMachineOpts struct {
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
-	Variables   map[string]string
-	Secrets     map[string]string
-	NestedStack *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
-	Sidecars    []*SidecarOpts
-	LogConfig   *LogConfigOpts
-	Autoscaling *AutoscalingOpts
+	Variables      map[string]string
+	Secrets        map[string]string
+	NestedStack    *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	Sidecars       []*SidecarOpts
+	LogConfig      *LogConfigOpts
+	Autoscaling    *AutoscalingOpts
+	ExecuteCommand *ExecuteCommandOpts
 
 	// Additional options for service templates.
 	HealthCheck         *ecs.HealthCheck

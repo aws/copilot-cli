@@ -9,7 +9,6 @@
     "TaskCount": "1",
     "LogRetention": "30",
     "AddonsTemplateURL": "",
-    "EnableExecuteCommand": "false",
     "Schedule": "cron(0 12 ? * MON *)"
   },
   "Tags": { 

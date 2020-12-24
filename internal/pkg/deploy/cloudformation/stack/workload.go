@@ -32,7 +32,6 @@ const (
 	WorkloadTaskCountParamKey         = "TaskCount"
 	WorkloadLogRetentionParamKey      = "LogRetention"
 	WorkloadAddonsTemplateURLParamKey = "AddonsTemplateURL"
-	WorkloadEnableExecParamKey        = "EnableExecuteCommand"
 )
 
 // RuntimeConfig represents configuration that's defined outside of the manifest file
@@ -93,10 +92,6 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 		}
 		desiredCount = aws.Int(min)
 	}
-	enableExec := w.tc.Exec.Enable
-	if !w.tc.Exec.ExecConfig.IsEmpty() {
-		enableExec = w.tc.Exec.ExecConfig.Enable
-	}
 	var img string
 	if w.image != nil {
 		img = w.image.GetLocation()
@@ -140,10 +135,6 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
 			ParameterValue: aws.String(w.rc.AddonsTemplateURL),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadEnableExecParamKey),
-			ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(enableExec))),
 		},
 	}, nil
 }

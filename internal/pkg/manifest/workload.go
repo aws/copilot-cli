@@ -178,18 +178,27 @@ func (b *DockerBuildArgs) isEmpty() bool {
 	return false
 }
 
-// Exec is a custom type which supports unmarshaling yaml which
-// can either be of type bool or type ExecConfig.
-type Exec struct {
-	Enable     *bool
-	ExecConfig ExecConfig
+// ExecuteCommand is a custom type which supports unmarshaling yaml which
+// can either be of type bool or type ExecuteCommandConfig.
+type ExecuteCommand struct {
+	Enable *bool
+	Config ExecuteCommandConfig
+}
+
+// Options converts the service's ECS Execute Command configuration into a format parsable
+// by the templates pkg.
+func (e *ExecuteCommand) Options() *template.ExecuteCommandOpts {
+	if e.Config.IsEmpty() && aws.BoolValue(e.Enable) == false {
+		return nil
+	}
+	return &template.ExecuteCommandOpts{}
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the BuildArgsOrString
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v2) interface.
-func (e *Exec) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&e.ExecConfig); err != nil {
+func (e *ExecuteCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshal(&e.Config); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -198,7 +207,7 @@ func (e *Exec) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	if !e.ExecConfig.IsEmpty() {
+	if !e.Config.IsEmpty() {
 		return nil
 	}
 
@@ -208,14 +217,14 @@ func (e *Exec) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-// ExecConfig represents the configuration for ECS exec.
-type ExecConfig struct {
+// ExecuteCommandConfig represents the configuration for ECS Execute Command.
+type ExecuteCommandConfig struct {
 	Enable *bool `yaml:"enable"`
 	// Reserved for future use.
 }
 
-// IsEmpty returns whether ExecConfig is empty.
-func (e ExecConfig) IsEmpty() bool {
+// IsEmpty returns whether ExecuteCommandConfig is empty.
+func (e ExecuteCommandConfig) IsEmpty() bool {
 	return e.Enable == nil
 }
 
@@ -310,12 +319,12 @@ func parsePortMapping(s *string) (port *string, protocol *string, err error) {
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
 type TaskConfig struct {
-	CPU       *int              `yaml:"cpu"`
-	Memory    *int              `yaml:"memory"`
-	Count     Count             `yaml:"count"`
-	Exec      Exec              `yaml:"exec"`
-	Variables map[string]string `yaml:"variables"`
-	Secrets   map[string]string `yaml:"secrets"`
+	CPU            *int              `yaml:"cpu"`
+	Memory         *int              `yaml:"memory"`
+	Count          Count             `yaml:"count"`
+	ExecuteCommand ExecuteCommand    `yaml:"execute_command"`
+	Variables      map[string]string `yaml:"variables"`
+	Secrets        map[string]string `yaml:"secrets"`
 }
 
 // WorkloadProps contains properties for creating a new workload manifest.

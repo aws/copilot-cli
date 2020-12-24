@@ -37,12 +37,7 @@ Parameters:
   Stickiness:
     Type: String
     Default: false
-  EnableExecuteCommand:
-    Type: String
-    AllowedValues: [true, false]
 Conditions:
-  ExecEnabled:
-    !Equals [!Ref EnableExecuteCommand, true]
   HTTPLoadBalancer:
     !Not
       - !Condition HTTPSLoadBalancer
