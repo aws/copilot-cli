@@ -22,6 +22,13 @@ const (
 	noUpdatesReason = "NO_UPDATES_REASON"
 )
 
+// ChangeSetDescription is the output of the DescribeChangeSet action.
+type ChangeSetDescription struct {
+	ExecutionStatus string
+	StatusReason    string
+	Changes         []*cloudformation.Change
+}
+
 type changeSetType int
 
 func (t changeSetType) String() string {
@@ -43,12 +50,6 @@ type changeSet struct {
 	stackName string
 	csType    changeSetType
 	client    changeSetAPI
-}
-
-type changeSetDescription struct {
-	executionStatus string
-	statusReason    string
-	changes         []*cloudformation.Change
 }
 
 func newCreateChangeSet(cfnClient changeSetAPI, stackName string) (*changeSet, error) {
@@ -120,7 +121,7 @@ func (cs *changeSet) create(conf *stackConfig) error {
 }
 
 // describe collects all the changes and statuses that the change set will apply and returns them.
-func (cs *changeSet) describe() (*changeSetDescription, error) {
+func (cs *changeSet) describe() (*ChangeSetDescription, error) {
 	var executionStatus, statusReason string
 	var changes []*cloudformation.Change
 	var nextToken *string
@@ -142,10 +143,10 @@ func (cs *changeSet) describe() (*changeSetDescription, error) {
 			break
 		}
 	}
-	return &changeSetDescription{
-		executionStatus: executionStatus,
-		statusReason:    statusReason,
-		changes:         changes,
+	return &ChangeSetDescription{
+		ExecutionStatus: executionStatus,
+		StatusReason:    statusReason,
+		Changes:         changes,
 	}, nil
 }
 
@@ -155,12 +156,12 @@ func (cs *changeSet) execute() error {
 	if err != nil {
 		return err
 	}
-	if descr.executionStatus != cloudformation.ExecutionStatusAvailable {
+	if descr.ExecutionStatus != cloudformation.ExecutionStatusAvailable {
 		// Ignore execute request if the change set does not contain any modifications.
-		if descr.statusReason == noChangesReason {
+		if descr.StatusReason == noChangesReason {
 			return nil
 		}
-		if descr.statusReason == noUpdatesReason {
+		if descr.StatusReason == noUpdatesReason {
 			return nil
 		}
 		return &ErrChangeSetNotExecutable{
@@ -192,7 +193,7 @@ func (cs *changeSet) createAndExecute(conf *stackConfig) error {
 		// We try to clean up the change set because there's a limit on the number
 		// of failed change sets a customer can have on a particular stack.
 		// See https://cloudonaut.io/aws-cli-cloudformation-deploy-limit-exceeded/.
-		if len(descr.changes) == 0 {
+		if len(descr.Changes) == 0 {
 			_ = cs.delete()
 			return &ErrChangeSetEmpty{
 				cs: cs,

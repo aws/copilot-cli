@@ -45,12 +45,12 @@ func New(s *session.Session) *CloudFormation {
 
 // Create deploys a new CloudFormation stack using Change Sets.
 // If the stack already exists in a failed state, deletes the stack and re-creates it.
-func (c *CloudFormation) Create(stack *Stack) error {
+func (c *CloudFormation) Create(stack *Stack) (changeSetID string, err error) {
 	descr, err := c.Describe(stack.Name)
 	if err != nil {
 		var stackNotFound *ErrStackNotFound
 		if !errors.As(err, &stackNotFound) {
-			return err
+			return "", err
 		}
 		// If the stack does not exist, create it.
 		return c.create(stack)
@@ -59,16 +59,16 @@ func (c *CloudFormation) Create(stack *Stack) error {
 	if status.requiresCleanup() {
 		// If the stack exists, but failed to create, we'll clean it up and then re-create it.
 		if err := c.Delete(stack.Name); err != nil {
-			return fmt.Errorf("cleanup previously failed stack %s: %w", stack.Name, err)
+			return "", fmt.Errorf("cleanup previously failed stack %s: %w", stack.Name, err)
 		}
 		return c.create(stack)
 	}
 	if status.InProgress() {
-		return &ErrStackUpdateInProgress{
+		return "", &ErrStackUpdateInProgress{
 			Name: stack.Name,
 		}
 	}
-	return &ErrStackAlreadyExists{
+	return "", &ErrStackAlreadyExists{
 		Name:  stack.Name,
 		Stack: descr,
 	}
@@ -76,10 +76,20 @@ func (c *CloudFormation) Create(stack *Stack) error {
 
 // CreateAndWait calls Create and then WaitForCreate.
 func (c *CloudFormation) CreateAndWait(stack *Stack) error {
-	if err := c.Create(stack); err != nil {
+	if _, err := c.Create(stack); err != nil {
 		return err
 	}
 	return c.WaitForCreate(stack.Name)
+}
+
+// DescribeChangeSet gathers and returns all changes for a change set.
+func (c *CloudFormation) DescribeChangeSet(changeSetID string) (*ChangeSetDescription, error) {
+	cs := &changeSet{name: changeSetID, client: c.client}
+	out, err := cs.describe()
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // WaitForCreate blocks until the stack is created or until the max attempt window expires.
@@ -239,12 +249,15 @@ func (c *CloudFormation) ErrorEvents(stackName string) ([]StackEvent, error) {
 	})
 }
 
-func (c *CloudFormation) create(stack *Stack) error {
+func (c *CloudFormation) create(stack *Stack) (string, error) {
 	cs, err := newCreateChangeSet(c.client, stack.Name)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return cs.createAndExecute(stack.stackConfig)
+	if err := cs.createAndExecute(stack.stackConfig); err != nil {
+		return "", err
+	}
+	return cs.name, nil
 }
 
 func (c *CloudFormation) update(stack *Stack) error {
