@@ -88,10 +88,9 @@ const (
 	timeoutFlag  = "timeout"
 	scheduleFlag = "schedule"
 
-	taskIDFlag      = "task-id"
-	containerFlag   = "container"
-	interactiveFlag = "interactive"
-	clusterFlag     = "cluster"
+	taskIDFlag    = "task-id"
+	containerFlag = "container"
+	clusterFlag   = "cluster"
 )
 
 // Short flag names.
@@ -236,6 +235,5 @@ are also accepted.`
 	taskIDFlagDescription      = "Optional. ID of the task you want to exec in. By default a random task will be used."
 	execCommandFlagDescription = `Optional. The command that is passed to a running container.`
 	containerFlagDescription   = "Optional. The specific container you want to exec in. By default the first essential container will be used."
-	interactiveFlagDescription = "Optional. Specifies if run commands interactively or not."
 	clusterFlagDescription     = "Optional. Specifies which cluster to use. Mutually exclusive with --app or --env."
 )

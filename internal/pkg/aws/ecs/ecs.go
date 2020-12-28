@@ -52,11 +52,10 @@ type RunTaskInput struct {
 
 // ExecuteCommandInput holds the fields needed to execute commands in a running container.
 type ExecuteCommandInput struct {
-	Cluster     string
-	Command     string
-	Task        string
-	Container   string
-	Interactive bool
+	Cluster   string
+	Command   string
+	Task      string
+	Container string
 }
 
 // New returns a Service configured against the input session.
@@ -301,7 +300,7 @@ func (e *ECS) ExecuteCommand(in ExecuteCommandInput) (err error) {
 		Cluster:     aws.String(in.Cluster),
 		Command:     aws.String(in.Command),
 		Container:   aws.String(in.Container),
-		Interactive: aws.Bool(in.Interactive),
+		Interactive: aws.Bool(true),
 		Task:        aws.String(in.Task),
 	})
 	if err != nil {

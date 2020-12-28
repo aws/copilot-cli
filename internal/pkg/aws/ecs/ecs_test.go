@@ -750,13 +750,11 @@ func TestECS_ExecuteCommand(t *testing.T) {
 	}
 	mockErr := errors.New("some error")
 	testCases := map[string]struct {
-		interactive     bool
 		mockAPI         func(m *mocks.Mockapi)
 		mockSessStarter func(m *mocks.MockssmSessionStarter)
 		wantedError     error
 	}{
 		"return error if fail to call ExecuteCommand": {
-			interactive: true,
 			mockAPI: func(m *mocks.Mockapi) {
 				m.EXPECT().ExecuteCommand(mockExecCmdIn).Return(nil, mockErr)
 			},
@@ -764,12 +762,11 @@ func TestECS_ExecuteCommand(t *testing.T) {
 			wantedError:     fmt.Errorf("execute command: some error"),
 		},
 		"return error if fail to start the session": {
-			interactive: false,
 			mockAPI: func(m *mocks.Mockapi) {
 				m.EXPECT().ExecuteCommand(&ecs.ExecuteCommandInput{
 					Cluster:     aws.String("mockCluster"),
 					Command:     aws.String("mockCommand"),
-					Interactive: aws.Bool(false),
+					Interactive: aws.Bool(true),
 					Container:   aws.String("mockContainer"),
 					Task:        aws.String("mockTask"),
 				}).Return(&ecs.ExecuteCommandOutput{
@@ -782,7 +779,6 @@ func TestECS_ExecuteCommand(t *testing.T) {
 			wantedError: fmt.Errorf("start session mockSessID using ssm plugin: some error"),
 		},
 		"success": {
-			interactive: true,
 			mockAPI: func(m *mocks.Mockapi) {
 				m.EXPECT().ExecuteCommand(mockExecCmdIn).Return(&ecs.ExecuteCommandOutput{
 					Session: mockSess,
@@ -812,11 +808,10 @@ func TestECS_ExecuteCommand(t *testing.T) {
 			}
 
 			err := ecs.ExecuteCommand(ExecuteCommandInput{
-				Cluster:     "mockCluster",
-				Command:     "mockCommand",
-				Interactive: tc.interactive,
-				Container:   "mockContainer",
-				Task:        "mockTask",
+				Cluster:   "mockCluster",
+				Command:   "mockCommand",
+				Container: "mockContainer",
+				Task:      "mockTask",
 			})
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())

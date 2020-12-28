@@ -20,7 +20,6 @@ type execVars struct {
 	command       string
 	taskID        string
 	containerName string
-	interactive   bool
 }
 
 type execOpts struct {
@@ -58,7 +57,7 @@ func BuildExecCmd() *cobra.Command {
   Start an interactive bash session with a task part of the "frontend" service.
   /code $ copilot exec -a my-app -e test -n frontend
   Runs the 'cat progress.csv' command in the task prefixed with ID "1848c38" part of the "db-migrate" task group.
-  /code $ copilot exec --name db-migrate --task-id 1848c38 --command "cat progress.csv" --interactive=false`,
+  /code $ copilot exec --name db-migrate --task-id 1848c38 --command "cat progress.csv"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newExecOpts(vars)
 			if err != nil {
@@ -79,7 +78,6 @@ func BuildExecCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.command, commandFlag, commandFlagShort, defaultCommand, execCommandFlagDescription)
 	cmd.Flags().StringVar(&vars.taskID, taskIDFlag, "", taskIDFlagDescription)
 	cmd.Flags().StringVar(&vars.containerName, containerFlag, "", containerFlagDescription)
-	cmd.Flags().BoolVar(&vars.interactive, interactiveFlag, true, interactiveFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

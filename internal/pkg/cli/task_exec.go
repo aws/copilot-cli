@@ -49,7 +49,7 @@ func buildTaskExecCmd() *cobra.Command {
   Start an interactive bash session with a task in task group "db-migrate" in the "test environment under the current workspace.
   /code $ copilot task exec -e test -n db-migrate
   Runs the 'cat progress.csv' command in the task prefixed with ID "1848c38" part of the "db-migrate" task group.
-  /code $ copilot task exec --name db-migrate --task-id 1848c38 --command "cat progress.csv" --interactive=false
+  /code $ copilot task exec --name db-migrate --task-id 1848c38 --command "cat progress.csv"
   Start an interactive bash session with a task prefixed with ID "38c3818" in the default cluster.
   /code $ copilot task exec --cluster default --task-id 38c3818`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
@@ -73,7 +73,6 @@ func buildTaskExecCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.taskID, taskIDFlag, "", taskIDFlagDescription)
 	cmd.Flags().StringVar(&vars.containerName, containerFlag, "", containerFlagDescription)
 	cmd.Flags().StringVar(&vars.cluster, clusterFlag, "", clusterFlagDescription)
-	cmd.Flags().BoolVar(&vars.interactive, interactiveFlag, true, interactiveFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

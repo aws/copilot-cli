@@ -175,11 +175,10 @@ func (o *svcExecOpts) Execute() error {
 	container := o.selectContainer()
 	log.Infof("Execute into container %s in task %s.\n", container, taskID)
 	if err = o.newCommandExecutor(sess).ExecuteCommand(awsecs.ExecuteCommandInput{
-		Cluster:     svcDesc.ClusterName,
-		Command:     o.command,
-		Container:   container,
-		Task:        taskID,
-		Interactive: o.interactive,
+		Cluster:   svcDesc.ClusterName,
+		Command:   o.command,
+		Container: container,
+		Task:      taskID,
 	}); err != nil {
 		return fmt.Errorf("execute command %s in container %s: %w", o.command, container, err)
 	}
@@ -257,7 +256,7 @@ func buildSvcExecCmd() *cobra.Command {
   Start an interactive bash session with a task part of the "frontend" service.
   /code $ copilot svc exec -a my-app -e test -n frontend
   Runs the 'ls' command in the task prefixed with ID "8c38184" within the "backend" service.
-  /code $ copilot svc exec -a my-app -e test --name backend --task-id 8c38184 --command "ls" --interactive=false`,
+  /code $ copilot svc exec -a my-app -e test --name backend --task-id 8c38184 --command "ls"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newSvcExecOpts(vars)
 			if err != nil {
@@ -278,7 +277,6 @@ func buildSvcExecCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.command, commandFlag, commandFlagShort, defaultCommand, execCommandFlagDescription)
 	cmd.Flags().StringVar(&vars.taskID, taskIDFlag, "", taskIDFlagDescription)
 	cmd.Flags().StringVar(&vars.containerName, containerFlag, "", containerFlagDescription)
-	cmd.Flags().BoolVar(&vars.interactive, interactiveFlag, true, interactiveFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
