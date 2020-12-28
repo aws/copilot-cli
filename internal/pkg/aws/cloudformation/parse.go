@@ -28,21 +28,18 @@ func ParseTemplateDescriptions(body string) (descriptionFor map[string]string, e
 	if err := yaml.Unmarshal([]byte(body), &tpl); err != nil {
 		return nil, fmt.Errorf("unmarshal cloudformation template: %w", err)
 	}
-
 	descriptionFor = make(map[string]string)
 	for i := 0; i < len(tpl.Resources.Content); i += 2 {
-		// The content of a map, like the "Resources" field, always come in pairs.
-		// The first element represents a key, ex: {Value: "Cluster", Kind: ScalarNode, Tag: "!!str", Content: nil}
-		// The second element holds the properties, ex: {Value: "", Kind: MappingNode, Tag:"!!map", Content:[...]}
-		resource := tpl.Resources.Content[i]
-		properties := tpl.Resources.Content[i+1]
-		description := properties.Content[0].HeadComment // The description is the comment above the first property.
+		// The content of a !!map, like the "Resources" field, always come in pairs.
+		// The first element represents the key, ex: {Value: "Cluster", Kind: ScalarNode, Tag: "!!str", Content: nil}
+		// The second element holds the values such as "Type" and "Properties", ex: {Value: "", Kind: MappingNode, Tag:"!!map", Content:[...]}
+		logicalID := tpl.Resources.Content[i]
+		fields := tpl.Resources.Content[i+1]
+		description := fields.Content[0].HeadComment // The description is the comment above the first property.
 		if description == "" {
 			continue
 		}
-
-		logicalID := resource.Value
-		descriptionFor[logicalID] = strings.Trim(description, " #" /* remove both spaces and the # character */)
+		descriptionFor[logicalID.Value] = strings.Trim(description, " #" /* remove leading and trailing chars {" ", "#"} */)
 	}
 	return descriptionFor, nil
 }
