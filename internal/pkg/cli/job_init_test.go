@@ -19,6 +19,7 @@ import (
 
 func TestJobInitOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
+		inAppName        string
 		inJobName        string
 		inDockerfilePath string
 		inImage          string
@@ -29,79 +30,102 @@ func TestJobInitOpts_Validate(t *testing.T) {
 		mockFileSystem func(mockFS afero.Fs)
 		wantedErr      error
 	}{
+		"invalid app name": {
+			inAppName: "",
+			wantedErr: errNoAppInWorkspace,
+		},
 		"invalid job name": {
+			inAppName: "phonetool",
 			inJobName: "1234",
 			wantedErr: fmt.Errorf("job name 1234 is invalid: %s", errValueBadFormat),
 		},
 		"invalid dockerfile directory path": {
+			inAppName:        "phonetool",
 			inDockerfilePath: "./hello/Dockerfile",
 			wantedErr:        errors.New("open hello/Dockerfile: file does not exist"),
 		},
 		"invalid schedule; not cron": {
+			inAppName:  "phonetool",
 			inSchedule: "every 56 minutes",
 			wantedErr:  fmt.Errorf("schedule every 56 minutes is invalid: %s", errScheduleInvalid),
 		},
 		"invalid schedule; cron interval in subseconds": {
+			inAppName:  "phonetool",
 			inSchedule: "@every 75.9s",
 			wantedErr:  fmt.Errorf("interval @every 75.9s is invalid: %s", errDurationBadUnits),
 		},
 		"invalid schedule; cron interval in milliseconds": {
+			inAppName:  "phonetool",
 			inSchedule: "@every 3ms",
 			wantedErr:  fmt.Errorf("interval @every 3ms is invalid: %s", errDurationBadUnits),
 		},
 		"invalid schedule; cron interval too frequent": {
+			inAppName:  "phonetool",
 			inSchedule: "@every 30s",
 			wantedErr:  errors.New("interval @every 30s is invalid: duration must be 1m0s or greater"),
 		},
 		"invalid schedule; cron interval is zero": {
+			inAppName:  "phonetool",
 			inSchedule: "@every 0s",
 			wantedErr:  errors.New("interval @every 0s is invalid: duration must be 1m0s or greater"),
 		},
 		"invalid schedule; cron interval duration improperly formed": {
+			inAppName:  "phonetool",
 			inSchedule: "@every 5min",
 			wantedErr:  errors.New("interval @every 5min must include a valid Go duration string (example: @every 1h30m)"),
 		},
 		"valid schedule; crontab": {
+			inAppName:  "phonetool",
 			inSchedule: "* * * * *",
 			wantedErr:  nil,
 		},
 		"valid schedule; predefined schedule": {
+			inAppName:  "phonetool",
 			inSchedule: "@daily",
 			wantedErr:  nil,
 		},
 		"valid schedule; interval": {
+			inAppName:  "phonetool",
 			inSchedule: "@every 5m",
 			wantedErr:  nil,
 		},
 		"valid schedule; interval with 0 for some units": {
+			inAppName:  "phonetool",
 			inSchedule: "@every 1h0m0s",
 			wantedErr:  nil,
 		},
 		"valid schedule; interval with carryover value for some units": {
+			inAppName:  "phonetool",
 			inSchedule: "@every 0h60m60s",
 			wantedErr:  nil,
 		},
 		"invalid timeout duration; incorrect format": {
+			inAppName: "phonetool",
 			inTimeout: "30 minutes",
 			wantedErr: fmt.Errorf("timeout value 30 minutes is invalid: %s", errDurationInvalid),
 		},
 		"invalid timeout duration; subseconds": {
+			inAppName: "phonetool",
 			inTimeout: "30m45.5s",
 			wantedErr: fmt.Errorf("timeout value 30m45.5s is invalid: %s", errDurationBadUnits),
 		},
 		"invalid timeout duration; milliseconds": {
+			inAppName: "phonetool",
 			inTimeout: "3ms",
 			wantedErr: fmt.Errorf("timeout value 3ms is invalid: %s", errDurationBadUnits),
 		},
 		"invalid timeout; too short": {
+			inAppName: "phonetool",
 			inTimeout: "0s",
 			wantedErr: errors.New("timeout value 0s is invalid: duration must be 1s or greater"),
 		},
 		"invalid number of times to retry": {
+			inAppName: "phonetool",
 			inRetries: -3,
 			wantedErr: errors.New("number of retries must be non-negative"),
 		},
 		"fail if both image and dockerfile are set": {
+			inAppName:        "phonetool",
 			inDockerfilePath: "mockDockerfile",
 			inImage:          "mockImage",
 			wantedErr:        fmt.Errorf("--dockerfile and --image cannot be specified together"),
@@ -113,6 +137,7 @@ func TestJobInitOpts_Validate(t *testing.T) {
 			opts := initJobOpts{
 				initJobVars: initJobVars{
 					initWkldVars: initWkldVars{
+						appName:        tc.inAppName,
 						name:           tc.inJobName,
 						image:          tc.inImage,
 						dockerfilePath: tc.inDockerfilePath,

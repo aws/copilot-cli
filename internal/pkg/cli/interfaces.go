@@ -442,6 +442,10 @@ type deploySelector interface {
 	DeployedService(prompt, help string, app string, opts ...selector.GetDeployedServiceOpts) (*selector.DeployedService, error)
 }
 
+type pipelineSelector interface {
+	Environments(prompt, help, app string, finalMsgFunc func(int) prompt.Option) ([]string, error)
+}
+
 type wsSelector interface {
 	appEnvSelector
 	Service(prompt, help string) (string, error)

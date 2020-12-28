@@ -11,6 +11,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
+// StackResourceDescription identifies a CloudFormation stack resource with a human-friendly description.
+type StackResourceDescription struct {
+	LogicalResourceID string
+	ResourceType      string
+	Description       string
+}
+
 type cfnStackDescriber interface {
 	DescribeStacks(input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
 	DescribeStackResources(input *cloudformation.DescribeStackResourcesInput) (*cloudformation.DescribeStackResourcesOutput, error)

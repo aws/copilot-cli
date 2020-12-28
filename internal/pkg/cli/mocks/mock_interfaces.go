@@ -4737,6 +4737,44 @@ func (mr *MockdeploySelectorMockRecorder) DeployedService(prompt, help, app inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployedService", reflect.TypeOf((*MockdeploySelector)(nil).DeployedService), varargs...)
 }
 
+// MockpipelineSelector is a mock of pipelineSelector interface
+type MockpipelineSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockpipelineSelectorMockRecorder
+}
+
+// MockpipelineSelectorMockRecorder is the mock recorder for MockpipelineSelector
+type MockpipelineSelectorMockRecorder struct {
+	mock *MockpipelineSelector
+}
+
+// NewMockpipelineSelector creates a new mock instance
+func NewMockpipelineSelector(ctrl *gomock.Controller) *MockpipelineSelector {
+	mock := &MockpipelineSelector{ctrl: ctrl}
+	mock.recorder = &MockpipelineSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockpipelineSelector) EXPECT() *MockpipelineSelectorMockRecorder {
+	return m.recorder
+}
+
+// Environments mocks base method
+func (m *MockpipelineSelector) Environments(prompt, help, app string, finalMsgFunc func(int) prompt.Option) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Environments", prompt, help, app, finalMsgFunc)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Environments indicates an expected call of Environments
+func (mr *MockpipelineSelectorMockRecorder) Environments(prompt, help, app, finalMsgFunc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environments", reflect.TypeOf((*MockpipelineSelector)(nil).Environments), prompt, help, app, finalMsgFunc)
+}
+
 // MockwsSelector is a mock of wsSelector interface
 type MockwsSelector struct {
 	ctrl     *gomock.Controller
