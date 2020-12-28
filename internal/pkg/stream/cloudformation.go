@@ -26,13 +26,23 @@ type StackEvent struct {
 
 // StackStreamer is a FetchNotifier for StackEvent events started by a change set.
 type StackStreamer struct {
-	Client                StackEventsDescriber // The CloudFormation client.
-	StackName             string               // The name of the stack to retrieve events from.
-	ChangeSetCreationTime time.Time            // The creation timestamp of the changeset being executed.
+	client                StackEventsDescriber
+	stackName             string
+	changeSetCreationTime time.Time
 
 	subscribers   []chan StackEvent
 	pastEventIDs  map[string]bool
 	eventsToFlush []StackEvent
+}
+
+// NewStackStreamer creates a StackStreamer from a cloudformation client, stack name, and the change set creation timestamp.
+func NewStackStreamer(cfn StackEventsDescriber, stackName string, csCreationTime time.Time) *StackStreamer {
+	return &StackStreamer{
+		client:                cfn,
+		stackName:             stackName,
+		changeSetCreationTime: csCreationTime,
+		pastEventIDs:          make(map[string]bool),
+	}
 }
 
 // Subscribe registers the channels to receive notifications from the streamer.
@@ -44,10 +54,6 @@ func (s *StackStreamer) Subscribe(channels ...chan StackEvent) {
 // If an error occurs from describe stack events, returns a wrapped error.
 // Otherwise, returns the time the next Fetch should be attempted.
 func (s *StackStreamer) Fetch() (next time.Time, err error) {
-	if s.pastEventIDs == nil {
-		s.pastEventIDs = make(map[string]bool)
-	}
-
 	var events []StackEvent
 	var nextToken *string
 	for {
@@ -55,17 +61,17 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 		// so we retrieve new events until we go past the ChangeSetCreationTime or we see an already seen event ID.
 		// This logic is taken from the AWS CDK:
 		// https://github.com/aws/aws-cdk/blob/43f3f09cc561fd32d651b2c327e877ad81c2ddb2/packages/aws-cdk/lib/api/util/cloudformation/stack-activity-monitor.ts#L230-L234
-		out, err := s.Client.DescribeStackEvents(&cloudformation.DescribeStackEventsInput{
+		out, err := s.client.DescribeStackEvents(&cloudformation.DescribeStackEventsInput{
 			NextToken: nextToken,
-			StackName: aws.String(s.StackName),
+			StackName: aws.String(s.stackName),
 		})
 		if err != nil {
-			return next, fmt.Errorf("describe stack events %s: %w", s.StackName, err)
+			return next, fmt.Errorf("describe stack events %s: %w", s.stackName, err)
 		}
 
 		var finished bool
 		for _, event := range out.StackEvents {
-			if event.Timestamp.Before(s.ChangeSetCreationTime) {
+			if event.Timestamp.Before(s.changeSetCreationTime) {
 				finished = true
 				break
 			}
