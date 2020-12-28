@@ -1,0 +1,200 @@
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+Resources:
+  LogGroup:
+  # A CloudWatch log group to store your logs.
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['', [/copilot/, !Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName]]
+      RetentionInDays: !Ref LogRetention
+
+  TaskDefinition:
+  # An ECS TaskDefinition where your containers are defined.
+    Type: AWS::ECS::TaskDefinition
+    DependsOn: LogGroup
+    Properties:
+      Family: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName]]
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: !Ref TaskCPU
+      Memory: !Ref TaskMemory
+      ExecutionRoleArn: !Ref ExecutionRole
+      TaskRoleArn: !Ref TaskRole
+      ContainerDefinitions:
+        - Name: !Ref WorkloadName
+          Image: !Ref ContainerImage
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+          # We pipe certain environment variables directly into the task definition.
+          # This lets customers have access to, for example, their LB endpoint - which they'd
+          # have no way of otherwise determining.
+          Environment:
+            - Name: COPILOT_APPLICATION_NAME
+              Value: !Sub '${AppName}'
+            - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
+              Value: !Sub '${AppName}.local'
+            - Name: COPILOT_ENVIRONMENT_NAME
+              Value: !Sub '${EnvName}'
+            - Name: COPILOT_SERVICE_NAME
+              Value: !Sub '${WorkloadName}'
+            - Name: COPILOT_LB_DNS
+              Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-region: !Ref AWS::Region
+              awslogs-group: !Ref LogGroup
+              awslogs-stream-prefix: copilot
+
+  TaskRole:
+  # A task role to manage permissions for your containers.
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'DenyIAMExceptTaggedRoles'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Deny'
+                Action: 'iam:*'
+                Resource: '*'
+              - Effect: 'Allow'
+                Action: 'sts:AssumeRole'
+                Resource:
+                  - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
+                Condition:
+                  StringEquals:
+                    'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
+
+  DiscoveryService:
+  # Service discovery to communicate with other services in your VPC.
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Description: Discovery Service for the Copilot services
+      DnsConfig:
+        RoutingPolicy: MULTIVALUE
+        DnsRecords:
+          - TTL: 10
+            Type: A
+          - TTL: 10
+            Type: SRV
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+      Name:  !Ref WorkloadName
+      NamespaceId:
+        Fn::ImportValue:
+          !Sub '${AppName}-${EnvName}-ServiceDiscoveryNamespaceID'
+
+
+  EnvControllerAction:
+  # Updating your environment to enable load balancers.
+    Type: Custom::EnvControllerFunction
+    Properties:
+      ServiceToken: !GetAtt EnvControllerFunction.Arn
+      Workload: !Ref WorkloadName
+      EnvStack: !Sub '${AppName}-${EnvName}'
+      Parameters:
+        - 'ALBWorkloads'
+      # We need to force trigger this lambda function on all deployments, so we give it a random ID as input on all event types.
+      UpdateID: c31b2422-5c1f-48cb-9a58-f0f418984d27
+
+  Service:
+  # An ECS service to run and maintain your tasks.
+    Type: AWS::ECS::Service
+    DependsOn: WaitUntilListenerRuleIsCreated
+    Properties:
+      Cluster:
+        Fn::ImportValue:
+          !Sub '${AppName}-${EnvName}-ClusterId'
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: !Ref TaskCount
+      PropagateTags: SERVICE
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - Fn::Select:
+                - 0
+                - Fn::Split:
+                    - ','
+                    - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+            - Fn::Select:
+                - 1
+                - Fn::Split:
+                    - ','
+                    - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+          SecurityGroups:
+            - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+      # This may need to be adjusted if the container takes a while to start up
+      HealthCheckGracePeriodSeconds: 60
+      LoadBalancers:
+        - ContainerName: !Ref TargetContainer
+          ContainerPort: !Ref TargetPort
+          TargetGroupArn: !Ref TargetGroup
+      ServiceRegistries:
+        - RegistryArn: !GetAtt DiscoveryService.Arn
+          Port: !Ref ContainerPort
+
+  TargetGroup:
+        # A target group to connect your service to the load balancer.
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPath: /_healthcheck # Default is '/'.
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60                  # Default is 300.
+        - Key: stickiness.enabled
+          Value: !Ref Stickiness
+      TargetType: ip
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${AppName}-${EnvName}-VpcId"
+
+
+  # Force a conditional dependency from the ECS service on the listener rules.
+  # Our service depends on our HTTP/S listener to be set up before it can
+  # be created. But, since our environment is either HTTPS or not, we
+  # have a conditional dependency (we have to wait for the HTTPS listener
+  # to be created or the HTTP listener to be created). In order to have a
+  # conditional dependency, we use the WaitHandle resource as a way to force
+  # a single dependency. The Ref in the WaitCondition implicitly creates a conditional
+  # dependency - if the condition is satisfied (HTTPLoadBalancer) - the ref resolves
+  # the HTTPWaitHandle, which depends on the HTTPListenerRule.
+
+  # We don't actually need to wait for the condition to
+  # be completed, that's why we set a count of 0. The timeout
+  # is a required field, but useless, so we set it to one.
+  WaitUntilListenerRuleIsCreated:
+    Type: AWS::CloudFormation::WaitCondition
+    Properties:
+      Handle: !If [HTTPLoadBalancer, !Ref HTTPWaitHandle, !Ref HTTPSWaitHandle]
+      Timeout: "1"
+      Count: 0
+
+  AddonsStack:
+  # An addons stack for your additional AWS resources.
+    Type: AWS::CloudFormation::Stack
+    Condition: HasAddons
+    Properties:
+      Parameters:
+        App: !Ref AppName
+        Env: !Ref EnvName
+        Name: !Ref WorkloadName
+      TemplateURL:
+        !Ref AddonsTemplateURL
