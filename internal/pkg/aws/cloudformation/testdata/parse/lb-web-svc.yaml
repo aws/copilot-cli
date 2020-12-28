@@ -1,52 +1,6 @@
 # Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
-AWSTemplateFormatVersion: 2010-09-09
-Description: CloudFormation template that represents a load balanced web service on Amazon ECS.
-Parameters:
-  AppName:
-    Type: String
-  EnvName:
-    Type: String
-  WorkloadName:
-    Type: String
-  ContainerImage:
-    Type: String
-  ContainerPort:
-    Type: Number
-  RulePath:
-    Type: String
-  TaskCPU:
-    Type: String
-  TaskMemory:
-    Type: String
-  TaskCount:
-    Type: Number
-  HTTPSEnabled:
-    Type: String
-    AllowedValues: [true, false]
-  LogRetention:
-    Type: Number
-  AddonsTemplateURL:
-    Description: 'URL of the addons nested stack template within the S3 bucket.'
-    Type: String
-    Default: ""
-  TargetContainer:
-    Type: String
-  TargetPort:
-    Type: Number
-  Stickiness:
-    Type: String
-    Default: false
-Conditions:
-  HTTPLoadBalancer:
-    !Not
-    - !Condition HTTPSLoadBalancer
-  HTTPSLoadBalancer:
-    !Equals [!Ref HTTPSEnabled, true]
-  HasAddons: # If a bucket URL is specified, that means the template exists.
-    !Not [!Equals [!Ref AddonsTemplateURL, ""]]
-  HTTPRootPath: # If we're using path based routing and use the root path, we have some special logic
-    !Equals [!Ref RulePath, "/"]
+
 Resources:
   LogGroup:
   # A CloudWatch log group to store your logs.
@@ -94,47 +48,6 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: copilot
-
-
-  ExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ecs-tasks.amazonaws.com
-            Action: 'sts:AssumeRole'
-      Policies:
-        - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, SecretsPolicy]]
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action:
-                  - 'ssm:GetParameters'
-                Resource:
-                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
-                Condition:
-                  StringEquals:
-                    'ssm:ResourceTag/copilot-application': !Sub '${AppName}'
-                    'ssm:ResourceTag/copilot-environment': !Sub '${EnvName}'
-              - Effect: 'Allow'
-                Action:
-                  - 'secretsmanager:GetSecretValue'
-                Resource:
-                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
-                Condition:
-                  StringEquals:
-                    'secretsmanager:ResourceTag/copilot-application': !Sub '${AppName}'
-                    'secretsmanager:ResourceTag/copilot-environment': !Sub '${EnvName}'
-              - Effect: 'Allow'
-                Action:
-                  - 'kms:Decrypt'
-                Resource:
-                  - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
-      ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
 
   TaskRole:
   # A task role to manage permissions for your containers.
@@ -195,61 +108,6 @@ Resources:
       # We need to force trigger this lambda function on all deployments, so we give it a random ID as input on all event types.
       UpdateID: c31b2422-5c1f-48cb-9a58-f0f418984d27
 
-  EnvControllerFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      Code:
-        ZipFile: |
-          "use strict";const aws=require("aws-sdk");let defaultResponseURL;const updateStackWaiter={delay:30,maxAttempts:29};let report=function(a,b,c,d,e,f){return new Promise((g,h)=>{const i=require("https"),{URL:j}=require("url");var k=JSON.stringify({Status:c,Reason:f,PhysicalResourceId:d||b.logStreamName,StackId:a.StackId,RequestId:a.RequestId,LogicalResourceId:a.LogicalResourceId,Data:e});const l=new j(a.ResponseURL||defaultResponseURL),m={hostname:l.hostname,port:443,path:l.pathname+l.search,method:"PUT",headers:{"Content-Type":"","Content-Length":k.length}};i.request(m).on("error",h).on("response",a=>{a.resume(),400<=a.statusCode?h(new Error(`Error ${a.statusCode}: ${a.statusMessage}`)):g()}).end(k,"utf8")})};const controlEnv=async function(a,b,c,d){for(var e,f=new aws.CloudFormation;;){if(e=await f.describeStacks({StackName:b}).promise(),1!==e.Stacks.length)throw new Error(`Cannot find environment stack ${b}`);var g=e.Stacks[0],h=JSON.parse(JSON.stringify(g.Parameters)),i=!1;for(const b of h)for(const e of d)if(b.ParameterKey===e){const[d,e]=updateParameter(a,c,b.ParameterValue);b.ParameterValue=d,i=i||e}const j=getExportedValues(g);if(!i)return j;try{await f.updateStack({StackName:b,Parameters:h,UsePreviousTemplate:!0,RoleARN:j.CFNExecutionRoleARN,Capabilities:g.Capabilities}).promise()}catch(a){if(!a.message.match(/^Stack.*is in UPDATE_IN_PROGRESS state and can not be updated/))throw a;await f.waitFor("stackUpdateComplete",{StackName:b,$waiter:updateStackWaiter}).promise();continue}if(await f.waitFor("stackUpdateComplete",{StackName:b,$waiter:updateStackWaiter}).promise(),e=await f.describeStacks({StackName:b}).promise(),1!==e.Stacks.length)throw new Error(`Cannot find environment stack ${b}`);return getExportedValues(e.Stacks[0])}};exports.handler=async function(a,b){var c,d={};const e=a.ResourceProperties;try{switch(a.RequestType){case"Create":d=await Promise.race([exports.deadlineExpired(),controlEnv("Create",e.EnvStack,e.Workload,e.Parameters)]),c=`envcontoller/${e.EnvStack}/${e.Workload}`;break;case"Update":d=await Promise.race([exports.deadlineExpired(),controlEnv("Update",e.EnvStack,e.Workload,e.Parameters)]),c=a.PhysicalResourceId;break;case"Delete":d=await Promise.race([exports.deadlineExpired(),controlEnv("Delete",e.EnvStack,e.Workload,e.Parameters)]),c=a.PhysicalResourceId;break;default:throw new Error(`Unsupported request type ${a.RequestType}`);}await report(a,b,"SUCCESS",c,d)}catch(d){console.log(`Caught error ${d}.`),await report(a,b,"FAILED",c,null,d.message)}};const getExportedValues=function(a){const b={};return a.Outputs.forEach(a=>{b[a.OutputKey]=a.OutputValue}),b},updateParameter=function(a,b,c){var d=new Set(c.split(",").filter(function(a){return""!=a}));switch(a){case"Create":d.add(b);break;case"Update":d.add(b);break;case"Delete":d.delete(b);break;default:throw new Error(`Unsupported request type ${a}`);}var e=Array.from(d).join(",");return[e,e!==c]};exports.deadlineExpired=function(){return new Promise(function(a,b){setTimeout(b,870000,new Error("Lambda took longer than 14.5 minutes to update environment"))})},exports.withDefaultResponseURL=function(a){defaultResponseURL=a};
-      Handler: "index.handler"
-      Timeout: 900
-      MemorySize: 512
-      Role: !GetAtt 'EnvControllerRole.Arn'
-      Runtime: nodejs12.x
-
-  EnvControllerRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          -
-            Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: "EnvControllerStackUpdate"
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - cloudformation:DescribeStacks
-                  - cloudformation:UpdateStack
-                Resource:  !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}-${EnvName}/*'
-                Condition:
-                  StringEquals:
-                    'cloudformation:ResourceTag/copilot-application': !Sub '${AppName}'
-                    'cloudformation:ResourceTag/copilot-environment': !Sub '${EnvName}'
-        - PolicyName: "EnvControllerRolePass"
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - iam:PassRole
-                Resource:  !Sub 'arn:aws:iam::${AWS::AccountId}:role/${AppName}-${EnvName}-CFNExecutionRole'
-                Condition:
-                  StringEquals:
-                    'iam:ResourceTag/copilot-application': !Sub '${AppName}'
-                    'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
   Service:
   # An ECS service to run and maintain your tasks.
     Type: AWS::ECS::Service
@@ -292,7 +150,7 @@ Resources:
           Port: !Ref ContainerPort
 
   TargetGroup:
-  # A target group to connect your service to the load balancer.
+        # A target group to connect your service to the load balancer.
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPath: /_healthcheck # Default is '/'.
@@ -308,122 +166,6 @@ Resources:
         Fn::ImportValue:
           !Sub "${AppName}-${EnvName}-VpcId"
 
-  LoadBalancerDNSAlias:
-    Type: AWS::Route53::RecordSetGroup
-    Condition: HTTPSLoadBalancer
-    Properties:
-      HostedZoneId:
-        Fn::ImportValue:
-          !Sub "${AppName}-${EnvName}-HostedZone"
-      Comment: !Sub "LoadBalancer alias for service ${WorkloadName}"
-      RecordSets:
-        - Name:
-            !Join
-            - '.'
-            - - !Ref WorkloadName
-              - Fn::ImportValue:
-                  !Sub "${AppName}-${EnvName}-SubDomain"
-              - ""
-          Type: A
-          AliasTarget:
-            HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
-            DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
-
-  RulePriorityFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      Code:
-        ZipFile: |
-          "use strict";const aws=require("aws-sdk"),priorityForRootRule="50000";let defaultResponseURL,report=function(a,b,c,d,e,f){return new Promise((g,h)=>{const i=require("https"),{URL:j}=require("url");var k=JSON.stringify({Status:c,Reason:f,PhysicalResourceId:d||b.logStreamName,StackId:a.StackId,RequestId:a.RequestId,LogicalResourceId:a.LogicalResourceId,Data:e});const l=new j(a.ResponseURL||defaultResponseURL),m={hostname:l.hostname,port:443,path:l.pathname+l.search,method:"PUT",headers:{"Content-Type":"","Content-Length":k.length}};i.request(m).on("error",h).on("response",a=>{a.resume(),400<=a.statusCode?h(new Error(`Error ${a.statusCode}: ${a.statusMessage}`)):g()}).end(k,"utf8")})};const calculateNextRulePriority=async function(a){var b,c=new aws.ELBv2,d=[];do{const e=await c.describeRules({ListenerArn:a,Marker:b}).promise();d=d.concat(e.Rules),b=e.NextMarker}while(b);let e=1;if(0<d.length){const a=d.map(a=>"default"===a.Priority||a.Priority===priorityForRootRule?0:parseInt(a.Priority)),b=Math.max(...a);e=b+1}return e};exports.nextAvailableRulePriorityHandler=async function(a,b){var c,d,e={};try{switch(a.RequestType){case"Create":d=await calculateNextRulePriority(a.ResourceProperties.ListenerArn),e.Priority=d,c=`alb-rule-priority-${a.LogicalResourceId}`;break;case"Update":case"Delete":c=a.PhysicalResourceId;break;default:throw new Error(`Unsupported request type ${a.RequestType}`);}await report(a,b,"SUCCESS",c,e)}catch(d){console.log(`Caught error ${d}.`),await report(a,b,"FAILED",c,null,d.message)}},exports.withDefaultResponseURL=function(a){defaultResponseURL=a};
-      Handler: "index.nextAvailableRulePriorityHandler"
-      Timeout: 600
-      MemorySize: 512
-      Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs10.x
-
-  CustomResourceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          -
-            Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: "DNSandACMAccess"
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - elasticloadbalancing:DescribeRules
-                Resource: "*"
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
-  HTTPSRulePriorityAction:
-    Condition: HTTPSLoadBalancer
-    Type: Custom::RulePriorityFunction
-    Properties:
-      ServiceToken: !GetAtt RulePriorityFunction.Arn
-      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
-
-  HTTPSListenerRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Condition: HTTPSLoadBalancer
-    Properties:
-      Actions:
-        - TargetGroupArn: !Ref TargetGroup
-          Type: forward
-      Conditions:
-        - Field: 'host-header'
-          HostHeaderConfig:
-            Values:
-              - Fn::Join:
-                  - '.'
-                  - - !Ref WorkloadName
-                    - Fn::ImportValue:
-                        !Sub "${AppName}-${EnvName}-SubDomain"
-      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
-      Priority: !GetAtt HTTPSRulePriorityAction.Priority
-
-  HTTPRulePriorityAction:
-    Condition: HTTPLoadBalancer
-    Type: Custom::RulePriorityFunction
-    Properties:
-      ServiceToken: !GetAtt RulePriorityFunction.Arn
-      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-
-  HTTPListenerRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Condition: HTTPLoadBalancer
-    Properties:
-      Actions:
-        - TargetGroupArn: !Ref TargetGroup
-          Type: forward
-      Conditions:
-        - Field: 'path-pattern'
-          PathPatternConfig:
-            Values:
-              !If
-              - HTTPRootPath
-              -
-                - "/*"
-              -
-                - !Sub "/${RulePath}"
-                - !Sub "/${RulePath}/*"
-      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-      Priority:
-        !If
-        - HTTPRootPath
-        - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
-        - !GetAtt HTTPRulePriorityAction.Priority
 
   # Force a conditional dependency from the ECS service on the listener rules.
   # Our service depends on our HTTP/S listener to be set up before it can
@@ -434,16 +176,6 @@ Resources:
   # a single dependency. The Ref in the WaitCondition implicitly creates a conditional
   # dependency - if the condition is satisfied (HTTPLoadBalancer) - the ref resolves
   # the HTTPWaitHandle, which depends on the HTTPListenerRule.
-
-  HTTPSWaitHandle:
-    Condition: HTTPSLoadBalancer
-    DependsOn: HTTPSListenerRule
-    Type: AWS::CloudFormation::WaitConditionHandle
-
-  HTTPWaitHandle:
-    Condition: HTTPLoadBalancer
-    DependsOn: HTTPListenerRule
-    Type: AWS::CloudFormation::WaitConditionHandle
 
   # We don't actually need to wait for the condition to
   # be completed, that's why we set a count of 0. The timeout
