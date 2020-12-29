@@ -10,7 +10,10 @@ import (
 
 	"github.com/dustin/go-humanize"
 
+	"github.com/aws/aws-sdk-go/aws"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -1682,6 +1685,144 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.Equal(t, tc.wantedSchedule, schedule)
+			}
+		})
+	}
+}
+
+type taskSelectMocks struct {
+	taskLister *mocks.MockTaskLister
+	prompt     *mocks.MockPrompter
+}
+
+func TestTaskSelect_Task(t *testing.T) {
+	const (
+		mockApp        = "mockApp"
+		mockEnv        = "mockEnv"
+		mockPromptText = "Select a running task"
+		mockHelpText   = "Help text"
+	)
+	mockTask1 := &awsecs.Task{
+		TaskArn:           aws.String("arn:aws:ecs:us-west-2:123456789:task/4082490ee6c245e09d2145010aa1ba8d"),
+		TaskDefinitionArn: aws.String("arn:aws:ecs:us-west-2:123456789:task-definition/sample-fargate:2"),
+	}
+	mockTask2 := &awsecs.Task{
+		TaskArn:           aws.String("arn:aws:ecs:us-west-2:123456789:task/0aa1ba8d4082490ee6c245e09d214501"),
+		TaskDefinitionArn: aws.String("arn:aws:ecs:us-west-2:123456789:task-definition/sample-fargate:3"),
+	}
+	mockErr := errors.New("some error")
+	testCases := map[string]struct {
+		setupMocks func(mocks taskSelectMocks)
+		app        string
+		env        string
+		useDefault bool
+
+		wantErr  error
+		wantTask *awsecs.Task
+	}{
+		"return error if fail to list active cluster tasks": {
+			useDefault: true,
+			setupMocks: func(m taskSelectMocks) {
+				m.taskLister.EXPECT().ListActiveDefaultClusterTasks(ecs.ListTasksFilter{}).Return(nil, mockErr)
+			},
+			wantErr: fmt.Errorf("list active tasks for default cluster: some error"),
+		},
+		"return error if fail to list active app env tasks": {
+			app: mockApp,
+			env: mockEnv,
+			setupMocks: func(m taskSelectMocks) {
+				m.taskLister.EXPECT().ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
+					App: mockApp,
+					Env: mockEnv,
+				}).Return(nil, mockErr)
+			},
+			wantErr: fmt.Errorf("list active tasks in environment mockEnv: some error"),
+		},
+		"return error if no running tasks found": {
+			app: mockApp,
+			env: mockEnv,
+			setupMocks: func(m taskSelectMocks) {
+				m.taskLister.EXPECT().ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
+					App: mockApp,
+					Env: mockEnv,
+				}).Return([]*awsecs.Task{}, nil)
+			},
+			wantErr: fmt.Errorf("no running tasks found"),
+		},
+		"return error if fail to select a task": {
+			app: mockApp,
+			env: mockEnv,
+			setupMocks: func(m taskSelectMocks) {
+				m.taskLister.EXPECT().ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
+					App: mockApp,
+					Env: mockEnv,
+				}).Return([]*awsecs.Task{mockTask1, mockTask2}, nil)
+				m.prompt.EXPECT().SelectOne(mockPromptText, mockHelpText, []string{
+					"4082490e (sample-fargate:2)",
+					"0aa1ba8d (sample-fargate:3)",
+				}).Return("", mockErr)
+			},
+			wantErr: fmt.Errorf("select running task: some error"),
+		},
+		"success with one running task": {
+			app: mockApp,
+			env: mockEnv,
+			setupMocks: func(m taskSelectMocks) {
+				m.taskLister.EXPECT().ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
+					App: mockApp,
+					Env: mockEnv,
+				}).Return([]*awsecs.Task{mockTask1}, nil)
+			},
+			wantTask: mockTask1,
+		},
+		"success": {
+			app: mockApp,
+			env: mockEnv,
+			setupMocks: func(m taskSelectMocks) {
+				m.taskLister.EXPECT().ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
+					App: mockApp,
+					Env: mockEnv,
+				}).Return([]*awsecs.Task{mockTask1, mockTask2}, nil)
+				m.prompt.EXPECT().SelectOne(mockPromptText, mockHelpText, []string{
+					"4082490e (sample-fargate:2)",
+					"0aa1ba8d (sample-fargate:3)",
+				}).Return("0aa1ba8d (sample-fargate:3)", nil)
+			},
+			wantTask: mockTask2,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mocktaskLister := mocks.NewMockTaskLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := taskSelectMocks{
+				taskLister: mocktaskLister,
+				prompt:     mockprompt,
+			}
+			tc.setupMocks(mocks)
+
+			sel := TaskSelect{
+				lister: mocktaskLister,
+				prompt: mockprompt,
+			}
+			var gotTask *awsecs.Task
+			var err error
+			if tc.useDefault {
+				gotTask, err = sel.RunningTask(mockPromptText, mockHelpText,
+					WithAppEnv(tc.app, tc.env), WithDefault())
+			} else {
+				gotTask, err = sel.RunningTask(mockPromptText, mockHelpText,
+					WithAppEnv(tc.app, tc.env))
+			}
+			if tc.wantErr != nil {
+				require.EqualError(t, tc.wantErr, err.Error())
+			} else {
+				require.NoError(t, tc.wantErr)
+				require.Equal(t, tc.wantTask, gotTask)
 			}
 		})
 	}

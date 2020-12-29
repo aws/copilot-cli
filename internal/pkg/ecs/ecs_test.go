@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	awsecs "github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -397,6 +398,112 @@ func TestClient_ListActiveWorkloadTasks(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, getCluster, test.wantedCluster)
 				require.Equal(t, getTasks, test.wantedTasks)
+			}
+		})
+	}
+}
+
+func TestClient_listActiveCopilotTasks(t *testing.T) {
+	const (
+		mockCluster   = "mockCluster"
+		mockTaskGroup = "mockTaskGroup"
+	)
+	testError := errors.New("some error")
+
+	tests := map[string]struct {
+		inTaskGroup string
+		inTaskID    string
+		setupMocks  func(mocks clientMocks)
+
+		wantedError error
+		wanted      []*ecs.Task
+	}{
+		"errors if fail to list running tasks in a family": {
+			inTaskGroup: mockTaskGroup,
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.ecsClient.EXPECT().RunningTasksInFamily(mockCluster, "copilot-mockTaskGroup").
+						Return(nil, testError),
+				)
+			},
+			wantedError: fmt.Errorf("list running tasks that belong to family copilot-mockTaskGroup in cluster mockCluster: some error"),
+		},
+		"errors if fail to list running tasks": {
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.ecsClient.EXPECT().RunningTasks(mockCluster).
+						Return(nil, testError),
+				)
+			},
+			wantedError: fmt.Errorf("list running tasks in cluster mockCluster: some error"),
+		},
+		"success": {
+			inTaskID: "123456",
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.ecsClient.EXPECT().RunningTasks(mockCluster).
+						Return([]*ecs.Task{
+							{
+								TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/123456789"),
+								Tags: []*awsecs.Tag{
+									{Key: aws.String("copilot-task")},
+								},
+							},
+							{
+								TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/123456788"),
+							},
+							{
+								TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/987765654"),
+								Tags: []*awsecs.Tag{
+									{Key: aws.String("copilot-task")},
+								},
+							},
+						}, nil),
+				)
+			},
+			wanted: []*ecs.Task{
+				{
+					TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/123456789"),
+					Tags: []*awsecs.Tag{
+						{Key: aws.String("copilot-task")},
+					},
+				},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// GIVEN
+			mockECSTasksGetter := mocks.NewMockecsClient(ctrl)
+			mocks := clientMocks{
+				ecsClient: mockECSTasksGetter,
+			}
+
+			test.setupMocks(mocks)
+
+			client := Client{
+				ecsClient: mockECSTasksGetter,
+			}
+
+			// WHEN
+			got, err := client.listActiveCopilotTasks(listActiveCopilotTasksOpts{
+				Cluster: mockCluster,
+				ListTasksFilter: ListTasksFilter{
+					TaskGroup: test.inTaskGroup,
+					TaskID:    test.inTaskID,
+				},
+			})
+
+			// THEN
+			if test.wantedError != nil {
+				require.EqualError(t, err, test.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, got, test.wanted)
 			}
 		})
 	}
