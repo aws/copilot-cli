@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -143,6 +144,61 @@ type DeploySelect struct {
 	env            string
 }
 
+// TaskStackDescriber wraps cloudformation client methods to describe task stacks
+type TaskStackDescriber interface {
+	GetDefaultTaskStackInfo() ([]deploy.TaskStackInfo, error)
+	GetTaskStackInfo(appName, envName string) ([]deploy.TaskStackInfo, error)
+}
+
+// TaskSelect is a selector based on CF methods to get deployed one off tasks. 
+type CFTaskSelect struct {
+	*Select
+	cfStore TaskStackDescriber
+	app string
+	env string
+	defaultCluster bool
+}
+
+// NewTaskSelect returns a selector that chooses one off tasks. 
+func NewCFTaskSelect(prompt Prompter, store ConfigLister, cf TaskStackDescriber) *CFTaskSelect {
+	return &CFTaskSelect{
+		Select: NewSelect(prompt, store),
+		cfStore: cf,
+	}
+}
+
+// GetDeployedTaskOpts sets up optional parameters for GetDeployedTaskOpts function.
+type GetDeployedTaskOpts func(*CFTaskSelect)
+
+// WithEnv sets up the env name for TaskSelect.
+func WithEnv(env string) GetDeployedTaskOpts {
+	return func(in *CFTaskSelect) {
+		in.env = env
+	}
+}
+
+// WithApp sets up the app name for CFTaskSelect.
+func WithApp(app string) GetDeployedTaskOpts {
+	return func(in *CFTaskSelect) {
+		in.app = app
+	}
+}
+// WithDefaultCluster sets up whether CFTaskSelect should use only the default cluster.
+func WithDefaultCluster() GetDeployedTaskOpts {
+	return func(in *CFTaskSelect) {
+		in.defaultCluster = true
+	}
+}
+
+type DeployedTask struct {
+	Name string
+	Env string
+}
+
+func (t *DeployedTask) String() string {
+	return fmt.Sprintf("%s (%s)", t.Name, t.Env)
+}
+
 // NewSelect returns a selector that chooses applications or environments.
 func NewSelect(prompt Prompter, store ConfigLister) *Select {
 	return &Select{
@@ -201,6 +257,60 @@ type DeployedService struct {
 
 func (s *DeployedService) String() string {
 	return fmt.Sprintf("%s (%s)", s.Svc, s.Env)
+}
+
+// Task has the user select a task. Callers can provide an environment, an app, or a "use default cluster" option
+// to filter the returned tasks.
+func (s *CFTaskSelect) Task(prompt, help string, opts ...GetDeployedTaskOpts) (*DeployedTask, error) {
+	for _, opt := range opts {
+		opt(s)
+	}
+	if s.defaultCluster && (s.env != "" || s.app != "") {
+		// Error for callers
+		return nil, fmt.Errorf("cannot specify both default cluster and env")
+	}
+	var tasks []deploy.TaskStackInfo
+	var err error
+	if s.defaultCluster {
+		defaultTasks, err := s.cfStore.GetDefaultTaskStackInfo()
+		if err != nil {
+			return nil, fmt.Errorf("get tasks in default cluster")
+		}
+		tasks = defaultTasks
+	} else if s.env != "" || s.app != "" {
+		return nil, fmt.Errorf("must specify either app and env or default cluster")
+	} else {
+		envTasks, err := s.cfStore.GetTaskStackInfo(s.app, s.env)
+		if err != nil {
+			return nil, fmt.Errorf("get tasks in environment %s: %w". s.env, err)
+		}
+		tasks = envTasks
+	}
+	choices := make([]string, len(tasks))
+	deployedTasks := make(map[string]DeployedTask)
+	var dt DeployedTask
+	for n, task := range tasks {
+		dt = DeployedTask{
+			Name: task.TaskName(),
+			Env: task.Env,
+		}
+		deployedTasks[dt.String()] = dt
+		choices[n] = dt.String()
+	}
+
+	if len(choices) == 0 {
+		return nil, fmt.Errorf("no deployed tasks found in selected cluster")
+	}
+	// Return if there's only once option.
+	if len(choices) == 1 {
+		log.Infof("Found only one deployed task: %s\n", color.HighlightUserInput(choices[0]))
+		return &deployedTasks[choices[0]], nil
+	}
+	choice, err := s.prompt.SelectOne(prompt, help, choices)
+	if err != nil {
+		return nil, fmt.Errorf("select task for deletion: %w", err)
+	}
+	return &deployedTasks[choice], nil
 }
 
 // DeployedService has the user select a deployed service. Callers can provide either a particular environment,
@@ -530,6 +640,10 @@ func (s *ConfigSelect) retrieveServices(app string) ([]string, error) {
 		serviceNames[ind] = service.Name
 	}
 	return serviceNames, nil
+}
+
+func (s *ConfigSelect) retrieveOneOffTasks() ([]string, error) {
+	tasks, err := s.
 }
 
 func (s *WorkspaceSelect) retrieveWorkspaceServices() ([]string, error) {
