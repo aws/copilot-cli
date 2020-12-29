@@ -79,7 +79,7 @@ func (c *CloudFormation) CreateAndWait(stack *Stack) error {
 	if _, err := c.Create(stack); err != nil {
 		return err
 	}
-	return c.WaitForCreate(stack.Name)
+	return c.WaitForCreate(context.Background(), stack.Name)
 }
 
 // DescribeChangeSet gathers and returns all changes for a change set.
@@ -93,8 +93,8 @@ func (c *CloudFormation) DescribeChangeSet(changeSetID string) (*ChangeSetDescri
 }
 
 // WaitForCreate blocks until the stack is created or until the max attempt window expires.
-func (c *CloudFormation) WaitForCreate(stackName string) error {
-	err := c.client.WaitUntilStackCreateCompleteWithContext(context.Background(), &cloudformation.DescribeStacksInput{
+func (c *CloudFormation) WaitForCreate(ctx context.Context, stackName string) error {
+	err := c.client.WaitUntilStackCreateCompleteWithContext(ctx, &cloudformation.DescribeStacksInput{
 		StackName: aws.String(stackName),
 	}, waiters...)
 	if err != nil {
@@ -124,12 +124,12 @@ func (c *CloudFormation) UpdateAndWait(stack *Stack) error {
 	if err := c.Update(stack); err != nil {
 		return err
 	}
-	return c.WaitForUpdate(stack.Name)
+	return c.WaitForUpdate(context.Background(), stack.Name)
 }
 
 // WaitForUpdate blocks until the stack is updated or until the max attempt window expires.
-func (c *CloudFormation) WaitForUpdate(stackName string) error {
-	err := c.client.WaitUntilStackUpdateCompleteWithContext(context.Background(), &cloudformation.DescribeStacksInput{
+func (c *CloudFormation) WaitForUpdate(ctx context.Context, stackName string) error {
+	err := c.client.WaitUntilStackUpdateCompleteWithContext(ctx, &cloudformation.DescribeStacksInput{
 		StackName: aws.String(stackName),
 	}, waiters...)
 	if err != nil {

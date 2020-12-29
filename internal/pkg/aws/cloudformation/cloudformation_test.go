@@ -5,6 +5,7 @@ package cloudformation
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -233,7 +234,7 @@ func TestCloudFormation_WaitForCreate(t *testing.T) {
 			}
 
 			// WHEN
-			err := c.WaitForCreate(mockStack.Name)
+			err := c.WaitForCreate(context.Background(), mockStack.Name)
 
 			// THEN
 			require.Equal(t, tc.wantedErr, err)
