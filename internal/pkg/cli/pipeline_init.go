@@ -68,13 +68,9 @@ var (
 type initPipelineVars struct {
 	appName           string
 	environments      []string
-	provider          string
 	repoURL           string
-	repoName          string
 	repoBranch        string
-	githubOwner       string
 	githubAccessToken string
-	ccRegion          string
 }
 
 type initPipelineOpts struct {
@@ -90,7 +86,11 @@ type initPipelineOpts struct {
 	sel            pipelineSelector
 
 	// Outputs stored on successful actions.
-	secret string
+	secret      string
+	provider    string
+	repoName    string
+	githubOwner string
+	ccRegion    string
 
 	// Caches variables
 	fs         *afero.Afero
