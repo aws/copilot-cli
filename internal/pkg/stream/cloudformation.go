@@ -24,7 +24,7 @@ type StackEvent struct {
 	ResourceStatus    string
 }
 
-// StackStreamer is a FetchNotifier for StackEvent events started by a change set.
+// StackStreamer is a FetchNotifyStopper for StackEvent events started by a change set.
 type StackStreamer struct {
 	client                StackEventsDescriber
 	stackName             string
@@ -106,6 +106,13 @@ func (s *StackStreamer) Notify() {
 		}
 	}
 	s.eventsToFlush = nil // reset after flushing all events.
+}
+
+// Stop closes all subscribed channels notifying them that no more events will be sent.
+func (s *StackStreamer) Stop() {
+	for _, sub := range s.subscribers {
+		close(sub)
+	}
 }
 
 // Taken from https://github.com/golang/go/wiki/SliceTricks#reversing
