@@ -29,8 +29,8 @@ type Stopper interface {
 // FetchNotifyStopper is the interface that groups a Fetcher, Notifier, and Stopper.
 type FetchNotifyStopper interface {
 	Fetcher
-	Notify()
-	Stop()
+	Notifier
+	Stopper
 }
 
 // Stream streams event updates by calling Fetch followed with Notify until the context is canceled or Fetch errors.
