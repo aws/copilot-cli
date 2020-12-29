@@ -36,6 +36,8 @@ type FetchNotifyStopper interface {
 // Stream streams event updates by calling Fetch followed with Notify until the context is canceled or Fetch errors.
 // Once the context is canceled, a best effort Fetch and Notify is called followed with stopping the streamer.
 func Stream(ctx context.Context, streamer FetchNotifyStopper) error {
+	defer streamer.Stop()
+
 	var next time.Time
 	var err error
 	for {
@@ -46,11 +48,9 @@ func Stream(ctx context.Context, streamer FetchNotifyStopper) error {
 
 		select {
 		case <-ctx.Done():
-			// The parent context is canceled.
-			// Best-effort publish latest events and then notify subscribers no more events will be sent.
+			// The parent context is canceled. Best-effort publish latest events.
 			_, _ = streamer.Fetch()
 			streamer.Notify()
-			streamer.Stop()
 			return nil
 		case <-time.After(fetchDelay):
 			next, err = streamer.Fetch()
