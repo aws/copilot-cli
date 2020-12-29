@@ -53,10 +53,11 @@ const (
 )
 
 const (
-	fmtSecretName       = "github-token-%s-%s"
-	fmtGHPipelineName   = "pipeline-%s-%s-%s"
-	fmtCCPipelineName   = "pipeline-%s-%s"
-	fmtPipelineProvider = "https://%s/%s/%s"
+	fmtSecretName         = "github-token-%s-%s"
+	fmtGHPipelineName     = "pipeline-%s-%s-%s"
+	fmtCCPipelineName     = "pipeline-%s-%s"
+	fmtGHPipelineProvider = "https://%s/%s/%s"
+	fmtCCPipelineProvider = "https://%s.console.%s/codesuite/codecommit/repositories/%s"
 )
 
 var (
@@ -74,7 +75,6 @@ type initPipelineVars struct {
 	githubOwner       string
 	githubAccessToken string
 	ccRegion          string
-	ccSSHKey          string
 }
 
 type initPipelineOpts struct {
@@ -258,27 +258,6 @@ func (o *initPipelineOpts) askEnvs() error {
 	o.envConfigs = envConfigs
 
 	return nil
-}
-
-func (o *initPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
-	if o.provider == ghProviderName {
-		config := &manifest.GitHubProperties{
-			OwnerAndRepository:    "https://" + githubURL + "/" + o.githubOwner + "/" + o.repoName,
-			Branch:                o.repoBranch,
-			GithubSecretIdKeyName: o.secret,
-		}
-		return manifest.NewProvider(config)
-	}
-	// TODO: double-check this
-	if o.provider == ccProviderName {
-		config := &manifest.CodeCommitProperties{
-			Repository: "https://" + o.ccRegion + ".console." + awsURL + "/codesuite/codecommit/repositories/" + o.repoName,
-			Branch:     o.repoBranch,
-		}
-		return manifest.NewProvider(config)
-	}
-	// Placeholder error, as provider type is currently assigned
-	return nil, fmt.Errorf("unsupported provider: %s", o.provider)
 }
 
 func (o *initPipelineOpts) askRepository() error {
@@ -535,7 +514,7 @@ func (o *initPipelineOpts) pipelineName() (string, error) {
 func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	if o.provider == ghProviderName {
 		config := &manifest.GitHubProperties{
-			OwnerAndRepository:    fmt.Sprintf(fmtPipelineProvider, githubURL, o.githubOwner, o.repoName),
+			OwnerAndRepository:    fmt.Sprintf(fmtGHPipelineProvider, githubURL, o.githubOwner, o.repoName),
 			Branch:                o.repoBranch,
 			GithubSecretIdKeyName: o.secret,
 		}
@@ -543,7 +522,7 @@ func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	}
 	if o.provider == ccProviderName {
 		config := &manifest.CodeCommitProperties{
-			Repository: o.repoName,
+			Repository: fmt.Sprintf(fmtCCPipelineProvider, o.ccRegion, awsURL, o.repoName),
 			Branch:     o.repoBranch,
 		}
 		return manifest.NewProvider(config)
