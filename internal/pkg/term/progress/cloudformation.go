@@ -28,7 +28,7 @@ type StackResourceDescription struct {
 //
 // The component only listens for stack resource events for the provided changes in the stack.
 // The state of changes is updated as events are published from the streamer.
-func ListeningStackRenderer(stackName, description string, changes []StackResourceDescription, streamer StackSubscriber) Renderer {
+func ListeningStackRenderer(streamer StackSubscriber, stackName, description string, changes []StackResourceDescription) Renderer {
 	var children []Renderer
 	for _, change := range changes {
 		children = append(children, listeningResourceRenderer(change, streamer))
