@@ -897,8 +897,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
-					provider:          tc.inProvider,
-					repoName:          tc.inRepoName,
 					githubAccessToken: tc.inGitHubToken,
 					appName:           tc.inAppName,
 				},
@@ -910,6 +908,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				parser:         mockParser,
 				fs:             memFs,
 				envConfigs:     tc.inEnvConfigs,
+				provider:       tc.inProvider,
+				repoName:       tc.inRepoName,
 			}
 
 			// WHEN
@@ -963,11 +963,11 @@ func TestInitPipelineOpts_pipelineName(t *testing.T) {
 			// GIVEN
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
-					repoName:    tc.inRepoName,
-					appName:     tc.inAppName,
-					githubOwner: tc.inAppOwner,
-					provider:    tc.inProviderName,
+					appName: tc.inAppName,
 				},
+				githubOwner: tc.inAppOwner,
+				provider:    tc.inProviderName,
+				repoName:    tc.inRepoName,
 			}
 
 			// WHEN
