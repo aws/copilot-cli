@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	context "context"
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	stackset "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
@@ -117,11 +118,12 @@ func (m *MockcfnClient) EXPECT() *MockcfnClientMockRecorder {
 }
 
 // Create mocks base method
-func (m *MockcfnClient) Create(arg0 *cloudformation0.Stack) error {
+func (m *MockcfnClient) Create(arg0 *cloudformation0.Stack) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Create indicates an expected call of Create
@@ -145,17 +147,17 @@ func (mr *MockcfnClientMockRecorder) CreateAndWait(arg0 interface{}) *gomock.Cal
 }
 
 // WaitForCreate mocks base method
-func (m *MockcfnClient) WaitForCreate(stackName string) error {
+func (m *MockcfnClient) WaitForCreate(ctx context.Context, stackName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForCreate", stackName)
+	ret := m.ctrl.Call(m, "WaitForCreate", ctx, stackName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitForCreate indicates an expected call of WaitForCreate
-func (mr *MockcfnClientMockRecorder) WaitForCreate(stackName interface{}) *gomock.Call {
+func (mr *MockcfnClientMockRecorder) WaitForCreate(ctx, stackName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForCreate", reflect.TypeOf((*MockcfnClient)(nil).WaitForCreate), stackName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForCreate", reflect.TypeOf((*MockcfnClient)(nil).WaitForCreate), ctx, stackName)
 }
 
 // Update mocks base method
@@ -187,17 +189,17 @@ func (mr *MockcfnClientMockRecorder) UpdateAndWait(arg0 interface{}) *gomock.Cal
 }
 
 // WaitForUpdate mocks base method
-func (m *MockcfnClient) WaitForUpdate(stackName string) error {
+func (m *MockcfnClient) WaitForUpdate(ctx context.Context, stackName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForUpdate", stackName)
+	ret := m.ctrl.Call(m, "WaitForUpdate", ctx, stackName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitForUpdate indicates an expected call of WaitForUpdate
-func (mr *MockcfnClientMockRecorder) WaitForUpdate(stackName interface{}) *gomock.Call {
+func (mr *MockcfnClientMockRecorder) WaitForUpdate(ctx, stackName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForUpdate", reflect.TypeOf((*MockcfnClient)(nil).WaitForUpdate), stackName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForUpdate", reflect.TypeOf((*MockcfnClient)(nil).WaitForUpdate), ctx, stackName)
 }
 
 // Delete mocks base method
@@ -257,6 +259,21 @@ func (mr *MockcfnClientMockRecorder) Describe(stackName interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockcfnClient)(nil).Describe), stackName)
 }
 
+// DescribeChangeSet mocks base method
+func (m *MockcfnClient) DescribeChangeSet(changeSetID string) (*cloudformation0.ChangeSetDescription, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeChangeSet", changeSetID)
+	ret0, _ := ret[0].(*cloudformation0.ChangeSetDescription)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeChangeSet indicates an expected call of DescribeChangeSet
+func (mr *MockcfnClientMockRecorder) DescribeChangeSet(changeSetID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeChangeSet", reflect.TypeOf((*MockcfnClient)(nil).DescribeChangeSet), changeSetID)
+}
+
 // TemplateBody mocks base method
 func (m *MockcfnClient) TemplateBody(stackName string) (string, error) {
 	m.ctrl.T.Helper()
@@ -300,6 +317,21 @@ func (m *MockcfnClient) ErrorEvents(stackName string) ([]cloudformation0.StackEv
 func (mr *MockcfnClientMockRecorder) ErrorEvents(stackName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ErrorEvents", reflect.TypeOf((*MockcfnClient)(nil).ErrorEvents), stackName)
+}
+
+// DescribeStackEvents mocks base method
+func (m *MockcfnClient) DescribeStackEvents(arg0 *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeStackEvents", arg0)
+	ret0, _ := ret[0].(*cloudformation.DescribeStackEventsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeStackEvents indicates an expected call of DescribeStackEvents
+func (mr *MockcfnClientMockRecorder) DescribeStackEvents(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStackEvents", reflect.TypeOf((*MockcfnClient)(nil).DescribeStackEvents), arg0)
 }
 
 // MockstackSetClient is a mock of stackSetClient interface
