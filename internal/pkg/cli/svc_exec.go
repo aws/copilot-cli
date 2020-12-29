@@ -100,51 +100,7 @@ func (o *svcExecOpts) Validate() error {
 			return err
 		}
 	}
-	return o.validateSSMBinary()
-}
-
-func (o *svcExecOpts) validateSSMBinary() error {
-	err := o.ssmPluginManager.ValidateBinary()
-	if err == nil {
-		return nil
-	}
-	switch v := err.(type) {
-	case *exec.ErrSSMPluginNotExist:
-		// If ssm plugin is not install, prompt users to install the plugin.
-		confirmInstall, err := o.prompter.Confirm(ssmPluginInstallPrompt, ssmPluginInstallPromptHelp)
-		if err != nil {
-			return fmt.Errorf("prompt to confirm installing the plugin: %w", err)
-		}
-		if !confirmInstall {
-			return errSSMPluginCommandInstallCancelled
-		}
-		if err := o.ssmPluginManager.InstallLatestBinary(); err != nil {
-			return fmt.Errorf("install ssm plugin: %w", err)
-		}
-		return nil
-	case *exec.ErrOutdatedSSMPlugin:
-		// If ssm plugin is not up to date, prompt users to update the plugin.
-		confirmUpdate, err := o.prompter.Confirm(
-			fmt.Sprintf(ssmPluginUpdatePrompt, v.CurrentVersion, v.LatestVersion), "")
-		if err != nil {
-			return fmt.Errorf("prompt to confirm updating the plugin: %w", err)
-		}
-		if !confirmUpdate {
-			log.Infof(`Alright, we won't update the Session Manager plugin.
-It might fail to execute if it is not using the latest plugin.
-`)
-			return nil
-		}
-		if err := o.ssmPluginManager.InstallLatestBinary(); err != nil {
-			return fmt.Errorf("update ssm plugin: %w", err)
-		}
-		return nil
-	default:
-		log.Errorf(`Failed to validate the Session Manager plugin. Please install or make sure your SSM plugin is up-to-date:
-https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html
-`)
-		return fmt.Errorf("validate ssm plugin: %w", err)
-	}
+	return validateSSMBinary(o.prompter, o.ssmPluginManager)
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -244,6 +200,50 @@ func (o *svcExecOpts) selectContainer() string {
 	}
 	// The first essential container is named with the workload name.
 	return o.name
+}
+
+func validateSSMBinary(prompt prompter, manager ssmPluginManager) error {
+	err := manager.ValidateBinary()
+	if err == nil {
+		return nil
+	}
+	switch v := err.(type) {
+	case *exec.ErrSSMPluginNotExist:
+		// If ssm plugin is not install, prompt users to install the plugin.
+		confirmInstall, err := prompt.Confirm(ssmPluginInstallPrompt, ssmPluginInstallPromptHelp)
+		if err != nil {
+			return fmt.Errorf("prompt to confirm installing the plugin: %w", err)
+		}
+		if !confirmInstall {
+			return errSSMPluginCommandInstallCancelled
+		}
+		if err := manager.InstallLatestBinary(); err != nil {
+			return fmt.Errorf("install ssm plugin: %w", err)
+		}
+		return nil
+	case *exec.ErrOutdatedSSMPlugin:
+		// If ssm plugin is not up to date, prompt users to update the plugin.
+		confirmUpdate, err := prompt.Confirm(
+			fmt.Sprintf(ssmPluginUpdatePrompt, v.CurrentVersion, v.LatestVersion), "")
+		if err != nil {
+			return fmt.Errorf("prompt to confirm updating the plugin: %w", err)
+		}
+		if !confirmUpdate {
+			log.Infof(`Alright, we won't update the Session Manager plugin.
+It might fail to execute if it is not using the latest plugin.
+`)
+			return nil
+		}
+		if err := manager.InstallLatestBinary(); err != nil {
+			return fmt.Errorf("update ssm plugin: %w", err)
+		}
+		return nil
+	default:
+		log.Errorf(`Failed to validate the Session Manager plugin. Please install or make sure your SSM plugin is up-to-date:
+https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html
+`)
+		return fmt.Errorf("validate ssm plugin: %w", err)
+	}
 }
 
 // buildSvcExecCmd builds the command for execute a running container in a service.

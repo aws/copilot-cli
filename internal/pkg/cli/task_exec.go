@@ -9,6 +9,8 @@ import (
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +21,9 @@ type taskExecVars struct {
 
 type taskExecOpts struct {
 	taskExecVars
-	store store
+	store            store
+	ssmPluginManager ssmPluginManager
+	prompter         prompter
 }
 
 func newTaskExecOpts(vars taskExecVars) (*taskExecOpts, error) {
@@ -28,8 +32,10 @@ func newTaskExecOpts(vars taskExecVars) (*taskExecOpts, error) {
 		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
 	return &taskExecOpts{
-		taskExecVars: vars,
-		store:        ssmStore,
+		taskExecVars:     vars,
+		store:            ssmStore,
+		ssmPluginManager: exec.NewSSMPluginCommand(nil),
+		prompter:         prompt.New(),
 	}, nil
 }
 
@@ -48,7 +54,7 @@ func (o *taskExecOpts) Validate() error {
 			return err
 		}
 	}
-	return nil
+	return validateSSMBinary(o.prompter, o.ssmPluginManager)
 }
 
 // Ask asks for fields that are required but not passed in.
