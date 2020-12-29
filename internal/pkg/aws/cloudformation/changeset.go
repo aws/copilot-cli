@@ -6,6 +6,7 @@ package cloudformation
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -26,6 +27,7 @@ const (
 type ChangeSetDescription struct {
 	ExecutionStatus string
 	StatusReason    string
+	CreationTime    time.Time
 	Changes         []*cloudformation.Change
 }
 
@@ -123,6 +125,7 @@ func (cs *changeSet) create(conf *stackConfig) error {
 // describe collects all the changes and statuses that the change set will apply and returns them.
 func (cs *changeSet) describe() (*ChangeSetDescription, error) {
 	var executionStatus, statusReason string
+	var creationTime time.Time
 	var changes []*cloudformation.Change
 	var nextToken *string
 	for {
@@ -136,6 +139,7 @@ func (cs *changeSet) describe() (*ChangeSetDescription, error) {
 		}
 		executionStatus = aws.StringValue(out.ExecutionStatus)
 		statusReason = aws.StringValue(out.StatusReason)
+		creationTime = aws.TimeValue(out.CreationTime)
 		changes = append(changes, out.Changes...)
 		nextToken = out.NextToken
 
@@ -146,6 +150,7 @@ func (cs *changeSet) describe() (*ChangeSetDescription, error) {
 	return &ChangeSetDescription{
 		ExecutionStatus: executionStatus,
 		StatusReason:    statusReason,
+		CreationTime:    creationTime,
 		Changes:         changes,
 	}, nil
 }

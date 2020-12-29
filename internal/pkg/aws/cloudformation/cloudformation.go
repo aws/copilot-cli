@@ -33,13 +33,13 @@ var waiters = []request.WaiterOption{
 
 // CloudFormation represents a client to make requests to AWS CloudFormation.
 type CloudFormation struct {
-	client api
+	client
 }
 
 // New creates a new CloudFormation client.
 func New(s *session.Session) *CloudFormation {
 	return &CloudFormation{
-		client: cloudformation.New(s),
+		cloudformation.New(s),
 	}
 }
 

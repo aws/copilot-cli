@@ -31,11 +31,11 @@ var (
 
 func TestCloudFormation_Create(t *testing.T) {
 	testCases := map[string]struct {
-		createMock func(ctrl *gomock.Controller) api
+		createMock func(ctrl *gomock.Controller) client
 		wantedErr  error
 	}{
 		"fail if checking the stack description fails": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DescribeStacks(&cloudformation.DescribeStacksInput{
 					StackName: aws.String(mockStack.Name),
@@ -45,7 +45,7 @@ func TestCloudFormation_Create(t *testing.T) {
 			wantedErr: fmt.Errorf("describe stack %s: %w", mockStack.Name, errors.New("some unexpected error")),
 		},
 		"fail if a stack exists that's already in progress": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
 					Stacks: []*cloudformation.Stack{
@@ -61,7 +61,7 @@ func TestCloudFormation_Create(t *testing.T) {
 			},
 		},
 		"fail if a successfully created stack already exists": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
 					Stacks: []*cloudformation.Stack{
@@ -80,7 +80,7 @@ func TestCloudFormation_Create(t *testing.T) {
 			},
 		},
 		"creates the stack if it doesn't exist": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(nil, errDoesNotExist)
 				addCreateDeployCalls(m)
@@ -88,7 +88,7 @@ func TestCloudFormation_Create(t *testing.T) {
 			},
 		},
 		"creates the stack after cleaning the previously failed execution": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
 					Stacks: []*cloudformation.Stack{
@@ -208,11 +208,11 @@ func TestCloudFormation_DescribeChangeSet(t *testing.T) {
 
 func TestCloudFormation_WaitForCreate(t *testing.T) {
 	testCases := map[string]struct {
-		createMock func(ctrl *gomock.Controller) api
+		createMock func(ctrl *gomock.Controller) client
 		wantedErr  error
 	}{
 		"wraps error on failure": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().WaitUntilStackCreateCompleteWithContext(gomock.Any(), &cloudformation.DescribeStacksInput{
 					StackName: aws.String(mockStack.Name),
@@ -243,11 +243,11 @@ func TestCloudFormation_WaitForCreate(t *testing.T) {
 
 func TestCloudFormation_Update(t *testing.T) {
 	testCases := map[string]struct {
-		createMock func(ctrl *gomock.Controller) api
+		createMock func(ctrl *gomock.Controller) client
 		wantedErr  error
 	}{
 		"fail if the stack is already in progress": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
 					Stacks: []*cloudformation.Stack{
@@ -263,7 +263,7 @@ func TestCloudFormation_Update(t *testing.T) {
 			},
 		},
 		"update a previously existing stack": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
 					Stacks: []*cloudformation.Stack{
@@ -302,11 +302,11 @@ func TestCloudFormation_Update(t *testing.T) {
 
 func TestCloudFormation_UpdateAndWait(t *testing.T) {
 	testCases := map[string]struct {
-		createMock func(ctrl *gomock.Controller) api
+		createMock func(ctrl *gomock.Controller) client
 		wantedErr  error
 	}{
 		"waits until the stack is created": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
 					Stacks: []*cloudformation.Stack{
@@ -348,11 +348,11 @@ func TestCloudFormation_UpdateAndWait(t *testing.T) {
 
 func TestCloudFormation_Delete(t *testing.T) {
 	testCases := map[string]struct {
-		createMock func(ctrl *gomock.Controller) api
+		createMock func(ctrl *gomock.Controller) client
 		wantedErr  error
 	}{
 		"fails on unexpected error": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DeleteStack(gomock.Any()).Return(nil, errors.New("some error"))
 				return m
@@ -360,7 +360,7 @@ func TestCloudFormation_Delete(t *testing.T) {
 			wantedErr: fmt.Errorf("delete stack %s: %w", mockStack.Name, errors.New("some error")),
 		},
 		"exits successfully if stack does not exist": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DeleteStack(&cloudformation.DeleteStackInput{
 					StackName: aws.String(mockStack.Name),
@@ -369,7 +369,7 @@ func TestCloudFormation_Delete(t *testing.T) {
 			},
 		},
 		"exits successfully if stack can be deleted": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DeleteStack(&cloudformation.DeleteStackInput{
 					StackName: aws.String(mockStack.Name),
@@ -399,11 +399,11 @@ func TestCloudFormation_Delete(t *testing.T) {
 
 func TestCloudFormation_DeleteAndWait(t *testing.T) {
 	testCases := map[string]struct {
-		createMock func(ctrl *gomock.Controller) api
+		createMock func(ctrl *gomock.Controller) client
 		wantedErr  error
 	}{
 		"skip waiting if stack does not exist": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DeleteStack(gomock.Any()).Return(nil, errDoesNotExist)
 				m.EXPECT().WaitUntilStackDeleteCompleteWithContext(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
@@ -411,7 +411,7 @@ func TestCloudFormation_DeleteAndWait(t *testing.T) {
 			},
 		},
 		"wait for stack deletion if stack is being deleted": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DeleteStack(&cloudformation.DeleteStackInput{
 					StackName: aws.String(mockStack.Name),
@@ -444,12 +444,12 @@ func TestCloudFormation_DeleteAndWait(t *testing.T) {
 
 func TestCloudFormation_Describe(t *testing.T) {
 	testCases := map[string]struct {
-		createMock  func(ctrl *gomock.Controller) api
+		createMock  func(ctrl *gomock.Controller) client
 		wantedDescr *StackDescription
 		wantedErr   error
 	}{
 		"return ErrStackNotFound if stack does not exist": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(nil, errDoesNotExist)
 				return m
@@ -457,7 +457,7 @@ func TestCloudFormation_Describe(t *testing.T) {
 			wantedErr: &ErrStackNotFound{name: mockStack.Name},
 		},
 		"returns ErrStackNotFound if the list returned is empty": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
 					Stacks: []*cloudformation.Stack{},
@@ -467,7 +467,7 @@ func TestCloudFormation_Describe(t *testing.T) {
 			wantedErr: &ErrStackNotFound{name: mockStack.Name},
 		},
 		"returns a StackDescription if stack exists": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
 					Stacks: []*cloudformation.Stack{
@@ -505,12 +505,12 @@ func TestCloudFormation_Describe(t *testing.T) {
 
 func TestCloudFormation_TemplateBody(t *testing.T) {
 	testCases := map[string]struct {
-		createMock func(ctrl *gomock.Controller) api
+		createMock func(ctrl *gomock.Controller) client
 		wantedBody string
 		wantedErr  error
 	}{
 		"return ErrStackNotFound if stack does not exist": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().GetTemplate(gomock.Any()).Return(nil, errDoesNotExist)
 				return m
@@ -518,7 +518,7 @@ func TestCloudFormation_TemplateBody(t *testing.T) {
 			wantedErr: &ErrStackNotFound{name: mockStack.Name},
 		},
 		"returns the template body if the stack exists": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().GetTemplate(&cloudformation.GetTemplateInput{
 					StackName: aws.String(mockStack.Name),
@@ -620,12 +620,12 @@ func TestCloudFormation_ErrorEvents(t *testing.T) {
 }
 func TestCloudFormation_Events(t *testing.T) {
 	testCases := map[string]struct {
-		createMock   func(ctrl *gomock.Controller) api
+		createMock   func(ctrl *gomock.Controller) client
 		wantedEvents []StackEvent
 		wantedErr    error
 	}{
 		"return events in chronological order": {
-			createMock: func(ctrl *gomock.Controller) api {
+			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().DescribeStackEvents(&cloudformation.DescribeStackEventsInput{
 					StackName: aws.String(mockStack.Name),
