@@ -36,6 +36,19 @@ type Image struct {
 // Task wraps up ECS Task struct.
 type Task ecs.Task
 
+// String returns the human readable format of an ECS task.
+// For example, a task with ARN arn:aws:ecs:us-west-2:123456789:task/4082490ee6c245e09d2145010aa1ba8d
+// and task definition ARN arn:aws:ecs:us-west-2:123456789012:task-definition/sample-fargate:2
+// becomes "4082490e (sample-fargate:2)"
+func (t Task) String() string {
+	taskID, _ := TaskID(aws.StringValue(t.TaskArn))
+	if len(taskID) >= shortTaskIDLength {
+		taskID = taskID[:shortTaskIDLength]
+	}
+	taskDefName, _ := taskDefinitionName(aws.StringValue(t.TaskDefinitionArn))
+	return fmt.Sprintf("%s (%s)", taskID, taskDefName)
+}
+
 // TaskStatus returns the status of the running task.
 func (t *Task) TaskStatus() (*TaskStatus, error) {
 	taskID, err := TaskID(aws.StringValue(t.TaskArn))
@@ -203,4 +216,16 @@ func taskHealthColor(status string) string {
 // becomes 18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7.
 func imageDigestValue(digest string) string {
 	return strings.TrimPrefix(digest, imageDigestPrefix)
+}
+
+// taskDefinitionName parses the task definition ARN and returns the task definition name.
+// For example: arn:aws:ecs:us-west-2:123456789012:task-definition/sample-fargate:2
+// returns sample-fargate:2
+func taskDefinitionName(taskDefARN string) (string, error) {
+	parsedARN, err := arn.Parse(taskDefARN)
+	if err != nil {
+		return "", fmt.Errorf("parse ECS task definition ARN: %w", err)
+	}
+	resources := strings.Split(parsedARN.Resource, "/")
+	return resources[len(resources)-1], nil
 }

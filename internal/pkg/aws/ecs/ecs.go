@@ -115,6 +115,10 @@ func (e *ECS) RunningTasksInFamily(cluster, family string) ([]*Task, error) {
 	return e.listTasks(cluster, withFamily(family), withRunningTasks())
 }
 
+func (e *ECS) RunningTasks(cluster string) ([]*Task, error) {
+	return e.listTasks(cluster, withRunningTasks())
+}
+
 type listTasksOpts func(*ecs.ListTasksInput)
 
 func withService(svcName string) listTasksOpts {
