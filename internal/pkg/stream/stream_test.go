@@ -26,6 +26,8 @@ func (s *counterStreamer) Notify() {
 	s.notifyCount += 1
 }
 
+func (s *counterStreamer) Stop() {}
+
 // errStreamer returns an error when Fetch is invoked.
 type errStreamer struct {
 	err error
@@ -36,6 +38,8 @@ func (s *errStreamer) Fetch() (time.Time, error) {
 }
 
 func (s *errStreamer) Notify() {}
+
+func (s *errStreamer) Stop() {}
 
 func TestStream(t *testing.T) {
 	t.Run("calls Fetch and Notify if context is canceled", func(t *testing.T) {

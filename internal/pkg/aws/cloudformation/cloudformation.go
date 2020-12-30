@@ -34,24 +34,24 @@ var waiters = []request.WaiterOption{
 
 // CloudFormation represents a client to make requests to AWS CloudFormation.
 type CloudFormation struct {
-	client api
+	client
 }
 
 // New creates a new CloudFormation client.
 func New(s *session.Session) *CloudFormation {
 	return &CloudFormation{
-		client: cloudformation.New(s),
+		cloudformation.New(s),
 	}
 }
 
 // Create deploys a new CloudFormation stack using Change Sets.
 // If the stack already exists in a failed state, deletes the stack and re-creates it.
-func (c *CloudFormation) Create(stack *Stack) error {
+func (c *CloudFormation) Create(stack *Stack) (changeSetID string, err error) {
 	descr, err := c.Describe(stack.Name)
 	if err != nil {
 		var stackNotFound *ErrStackNotFound
 		if !errors.As(err, &stackNotFound) {
-			return err
+			return "", err
 		}
 		// If the stack does not exist, create it.
 		return c.create(stack)
@@ -60,16 +60,16 @@ func (c *CloudFormation) Create(stack *Stack) error {
 	if status.requiresCleanup() {
 		// If the stack exists, but failed to create, we'll clean it up and then re-create it.
 		if err := c.Delete(stack.Name); err != nil {
-			return fmt.Errorf("cleanup previously failed stack %s: %w", stack.Name, err)
+			return "", fmt.Errorf("clean up previously failed stack %s: %w", stack.Name, err)
 		}
 		return c.create(stack)
 	}
 	if status.InProgress() {
-		return &ErrStackUpdateInProgress{
+		return "", &ErrStackUpdateInProgress{
 			Name: stack.Name,
 		}
 	}
-	return &ErrStackAlreadyExists{
+	return "", &ErrStackAlreadyExists{
 		Name:  stack.Name,
 		Stack: descr,
 	}
@@ -77,15 +77,25 @@ func (c *CloudFormation) Create(stack *Stack) error {
 
 // CreateAndWait calls Create and then WaitForCreate.
 func (c *CloudFormation) CreateAndWait(stack *Stack) error {
-	if err := c.Create(stack); err != nil {
+	if _, err := c.Create(stack); err != nil {
 		return err
 	}
-	return c.WaitForCreate(stack.Name)
+	return c.WaitForCreate(context.Background(), stack.Name)
+}
+
+// DescribeChangeSet gathers and returns all changes for a change set.
+func (c *CloudFormation) DescribeChangeSet(changeSetID string) (*ChangeSetDescription, error) {
+	cs := &changeSet{name: changeSetID, client: c.client}
+	out, err := cs.describe()
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // WaitForCreate blocks until the stack is created or until the max attempt window expires.
-func (c *CloudFormation) WaitForCreate(stackName string) error {
-	err := c.client.WaitUntilStackCreateCompleteWithContext(context.Background(), &cloudformation.DescribeStacksInput{
+func (c *CloudFormation) WaitForCreate(ctx context.Context, stackName string) error {
+	err := c.client.WaitUntilStackCreateCompleteWithContext(ctx, &cloudformation.DescribeStacksInput{
 		StackName: aws.String(stackName),
 	}, waiters...)
 	if err != nil {
@@ -115,12 +125,12 @@ func (c *CloudFormation) UpdateAndWait(stack *Stack) error {
 	if err := c.Update(stack); err != nil {
 		return err
 	}
-	return c.WaitForUpdate(stack.Name)
+	return c.WaitForUpdate(context.Background(), stack.Name)
 }
 
 // WaitForUpdate blocks until the stack is updated or until the max attempt window expires.
-func (c *CloudFormation) WaitForUpdate(stackName string) error {
-	err := c.client.WaitUntilStackUpdateCompleteWithContext(context.Background(), &cloudformation.DescribeStacksInput{
+func (c *CloudFormation) WaitForUpdate(ctx context.Context, stackName string) error {
+	err := c.client.WaitUntilStackUpdateCompleteWithContext(ctx, &cloudformation.DescribeStacksInput{
 		StackName: aws.String(stackName),
 	}, waiters...)
 	if err != nil {
@@ -245,12 +255,15 @@ func (c *CloudFormation) ErrorEvents(stackName string) ([]StackEvent, error) {
 	})
 }
 
-func (c *CloudFormation) create(stack *Stack) error {
+func (c *CloudFormation) create(stack *Stack) (string, error) {
 	cs, err := newCreateChangeSet(c.client, stack.Name)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return cs.createAndExecute(stack.stackConfig)
+	if err := cs.createAndExecute(stack.stackConfig); err != nil {
+		return "", err
+	}
+	return cs.name, nil
 }
 
 func (c *CloudFormation) update(stack *Stack) error {

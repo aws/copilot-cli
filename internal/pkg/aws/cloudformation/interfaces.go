@@ -17,7 +17,7 @@ type changeSetAPI interface {
 	DeleteChangeSet(*cloudformation.DeleteChangeSetInput) (*cloudformation.DeleteChangeSetOutput, error)
 }
 
-type api interface {
+type client interface {
 	changeSetAPI
 
 	DescribeStacks(*cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)

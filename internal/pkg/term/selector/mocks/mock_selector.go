@@ -5,8 +5,10 @@
 package mocks
 
 import (
+	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
+	ecs0 "github.com/aws/copilot-cli/internal/pkg/ecs"
 	prompt "github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
 	gomock "github.com/golang/mock/gomock"
@@ -605,4 +607,57 @@ func (m *MockTaskStackDescriber) GetTaskStackInfo(appName, envName string) ([]de
 func (mr *MockTaskStackDescriberMockRecorder) GetTaskStackInfo(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskStackInfo", reflect.TypeOf((*MockTaskStackDescriber)(nil).GetTaskStackInfo), appName, envName)
+}
+
+// MockTaskLister is a mock of TaskLister interface
+type MockTaskLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockTaskListerMockRecorder
+}
+
+// MockTaskListerMockRecorder is the mock recorder for MockTaskLister
+type MockTaskListerMockRecorder struct {
+	mock *MockTaskLister
+}
+
+// NewMockTaskLister creates a new mock instance
+func NewMockTaskLister(ctrl *gomock.Controller) *MockTaskLister {
+	mock := &MockTaskLister{ctrl: ctrl}
+	mock.recorder = &MockTaskListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockTaskLister) EXPECT() *MockTaskListerMockRecorder {
+	return m.recorder
+}
+
+// ListActiveAppEnvTasks mocks base method
+func (m *MockTaskLister) ListActiveAppEnvTasks(opts ecs0.ListActiveAppEnvTasksOpts) ([]*ecs.Task, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListActiveAppEnvTasks", opts)
+	ret0, _ := ret[0].([]*ecs.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListActiveAppEnvTasks indicates an expected call of ListActiveAppEnvTasks
+func (mr *MockTaskListerMockRecorder) ListActiveAppEnvTasks(opts interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActiveAppEnvTasks", reflect.TypeOf((*MockTaskLister)(nil).ListActiveAppEnvTasks), opts)
+}
+
+// ListActiveDefaultClusterTasks mocks base method
+func (m *MockTaskLister) ListActiveDefaultClusterTasks(filter ecs0.ListTasksFilter) ([]*ecs.Task, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListActiveDefaultClusterTasks", filter)
+	ret0, _ := ret[0].([]*ecs.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListActiveDefaultClusterTasks indicates an expected call of ListActiveDefaultClusterTasks
+func (mr *MockTaskListerMockRecorder) ListActiveDefaultClusterTasks(filter interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActiveDefaultClusterTasks", reflect.TypeOf((*MockTaskLister)(nil).ListActiveDefaultClusterTasks), filter)
 }

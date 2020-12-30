@@ -87,6 +87,21 @@ func (mr *MockecsClientMockRecorder) RunningTasksInFamily(cluster, family interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunningTasksInFamily", reflect.TypeOf((*MockecsClient)(nil).RunningTasksInFamily), cluster, family)
 }
 
+// RunningTasks mocks base method
+func (m *MockecsClient) RunningTasks(cluster string) ([]*ecs.Task, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RunningTasks", cluster)
+	ret0, _ := ret[0].([]*ecs.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RunningTasks indicates an expected call of RunningTasks
+func (mr *MockecsClientMockRecorder) RunningTasks(cluster interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunningTasks", reflect.TypeOf((*MockecsClient)(nil).RunningTasks), cluster)
+}
+
 // ServiceTasks mocks base method
 func (m *MockecsClient) ServiceTasks(clusterName, serviceName string) ([]*ecs.Task, error) {
 	m.ctrl.T.Helper()
@@ -100,4 +115,19 @@ func (m *MockecsClient) ServiceTasks(clusterName, serviceName string) ([]*ecs.Ta
 func (mr *MockecsClientMockRecorder) ServiceTasks(clusterName, serviceName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceTasks", reflect.TypeOf((*MockecsClient)(nil).ServiceTasks), clusterName, serviceName)
+}
+
+// DefaultCluster mocks base method
+func (m *MockecsClient) DefaultCluster() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DefaultCluster")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DefaultCluster indicates an expected call of DefaultCluster
+func (mr *MockecsClientMockRecorder) DefaultCluster() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultCluster", reflect.TypeOf((*MockecsClient)(nil).DefaultCluster))
 }
