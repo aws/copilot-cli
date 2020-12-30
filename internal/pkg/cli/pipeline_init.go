@@ -35,8 +35,8 @@ const (
 	pipelineSelectEnvPrompt     = "Which environment would you like to add to your pipeline?"
 	pipelineSelectEnvHelpPrompt = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
 
-	pipelineSelectURLPrompt     = "Which repository would you like to use for your service?"
-	pipelineSelectURLHelpPrompt = `The repository linked to your workspace.
+	pipelineSelectURLPrompt     = "Which repository would you like to use for your pipeline?"
+	pipelineSelectURLHelpPrompt = `The repository linked to your pipeline.
 Pushing to this repository will trigger your pipeline build stage.
 Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or the owner/rep, e.g. "myCompany/myRepo"`
 )
@@ -44,7 +44,7 @@ Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
 	githubURL             = "github.com"
-	codeCommit            = "codecommit"
+	ccIdentifier          = "codecommit"
 	awsURL                = "aws.amazon.com"
 	ghProviderName        = "GitHub"
 	ccProviderName        = "CodeCommit"
@@ -185,19 +185,9 @@ func (o *initPipelineOpts) Ask() error {
 // Execute writes the pipeline manifest file.
 func (o *initPipelineOpts) Execute() error {
 	if o.provider == ghProviderName {
-		secretName := o.secretName()
-		_, err := o.secretsmanager.CreateSecret(secretName, o.githubAccessToken)
-
-		if err != nil {
-			var existsErr *secretsmanager.ErrSecretAlreadyExists
-			if !errors.As(err, &existsErr) {
-				return err
-			}
-			log.Successf("Secret already exists for %s! Do nothing.\n", color.HighlightUserInput(o.repoName))
-		} else {
-			log.Successf("Created the secret %s for pipeline source stage!\n", color.HighlightUserInput(secretName))
+		if err := o.storeGitHubAccessToken(); err != nil {
+			return err
 		}
-		o.secret = secretName
 	}
 
 	// write pipeline.yml file, populate with:
@@ -230,7 +220,7 @@ func (o *initPipelineOpts) RecommendedActions() []string {
 func (o *initPipelineOpts) validateURL(url string) error {
 	// Note: no longer calling `validateDomainName` because if users use git-remote-codecommit
 	// (the HTTPS (GRC) protocol) to connect to CodeCommit, the url does not have any periods.
-	if !strings.Contains(url, githubURL) && !strings.Contains(url, codeCommit) {
+	if !strings.Contains(url, githubURL) && !strings.Contains(url, ccIdentifier) {
 		return errors.New("Copilot currently accepts only URLs to GitHub and CodeCommit repository sources")
 	}
 	return nil
@@ -268,38 +258,50 @@ func (o *initPipelineOpts) askRepository() error {
 		}
 	}
 
-	if strings.Contains(o.repoURL, githubURL) {
-		o.provider = ghProviderName
-		if o.githubOwner, o.repoName, err = o.parseOwnerRepoName(o.repoURL); err != nil {
+	switch {
+	case strings.Contains(o.repoURL, githubURL):
+		return o.askGitHubRepoDetails()
+	case strings.Contains(o.repoURL, ccIdentifier):
+		return o.askCodeCommitRepoDetails()
+	}
+	return nil
+}
+
+func (o *initPipelineOpts) askGitHubRepoDetails() error {
+	o.provider = ghProviderName
+	var err error
+	if o.githubOwner, o.repoName, err = o.parseOwnerRepoName(o.repoURL); err != nil {
+		return err
+	}
+	if o.githubAccessToken == "" {
+		if err = o.getGitHubAccessToken(); err != nil {
 			return err
-		}
-		if o.githubAccessToken == "" {
-			if err = o.getGitHubAccessToken(); err != nil {
-				return err
-			}
-		}
-		if o.repoBranch == "" {
-			o.repoBranch = defaultGHBranch
 		}
 	}
-	if strings.Contains(o.repoURL, codeCommit) {
-		o.provider = ccProviderName
-		if o.repoName, err = o.parseRepoName(o.repoURL); err != nil {
-			return err
-		}
-		if o.ccRegion, err = o.parseRegion(o.repoURL); err != nil {
-			return err
-		}
+	if o.repoBranch == "" {
+		o.repoBranch = defaultGHBranch
+	}
+	return nil
+}
 
-		// If any one of the chosen environments is in a region besides that of the CodeCommit repo, pipeline init errors out.
-		for _, env := range o.envConfigs {
-			if env.Region != o.ccRegion {
-				return fmt.Errorf("repository %s is in %s, but environment %s is in %s; they must be in the same region", o.repoName, o.ccRegion, env.Name, env.Region)
-			}
+func (o *initPipelineOpts) askCodeCommitRepoDetails() error {
+	var err error
+	o.provider = ccProviderName
+	if o.repoName, err = o.parseRepoName(o.repoURL); err != nil {
+		return err
+	}
+	if o.ccRegion, err = o.parseRegion(o.repoURL); err != nil {
+		return err
+	}
+
+	// If any one of the chosen environments is in a region besides that of the CodeCommit repo, pipeline init errors out.
+	for _, env := range o.envConfigs {
+		if env.Region != o.ccRegion {
+			return fmt.Errorf("repository %s is in %s, but environment %s is in %s; they must be in the same region", o.repoName, o.ccRegion, env.Name, env.Region)
 		}
-		if o.repoBranch == "" {
-			o.repoBranch = defaultCCBranch
-		}
+	}
+	if o.repoBranch == "" {
+		o.repoBranch = defaultCCBranch
 	}
 	return nil
 }
@@ -345,6 +347,7 @@ func (o *initPipelineOpts) parseOwnerRepoName(url string) (string, string, error
 	return ownerRepo[0], ownerRepo[1], nil
 }
 
+// parseRepoName splits the url on slashes and returns the last substring.
 func (o *initPipelineOpts) parseRepoName(url string) (string, error) {
 	parsedForRepo := strings.Split(url, "/")
 	if len(parsedForRepo) < 2 {
@@ -353,11 +356,18 @@ func (o *initPipelineOpts) parseRepoName(url string) (string, error) {
 	return parsedForRepo[len(parsedForRepo)-1], nil
 }
 
+// parseRegion first disregards anything before and including "codecommit" + double-colons/periods.
+// Ex: 	https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample -> us-west-2.amazonaws.com/v1/repos/aws-sample
+//		codecommit::us-west-2://aws-sample -> us-west-2://aws-sample
+//		ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample -> us-west-2.amazonaws.com/v1/repos/aws-sample
+// Then we take just the substring that precedes a period (HTTPS or SSH) or colon (git-remote-codecommit/federated),
+// check that it's an AWS region, and return it.
 func (o *initPipelineOpts) parseRegion(url string) (string, error) {
 	regexPattern := regexp.MustCompile(`(codecommit)(::|.)`)
 	region := regexPattern.Split(url, 2)
 	region = strings.Split(region[1], ".")
 	region = strings.Split(region[0], ":")
+	// aws region regex from https://www.regextester.com/109163
 	match, _ := regexp.MatchString(`(us(-gov)?|ap|ca|cn|eu|sa)-(central|(north|south)?(east|west)?)-\d`, region[0])
 	if !match {
 		return "", fmt.Errorf("unable to parse the AWS region from %s", url)
@@ -374,12 +384,15 @@ func (o *initPipelineOpts) parseRegion(url string) (string, error) {
 // https	https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (fetch)
 // fed		codecommit::us-west-2://aws-sample (fetch)
 // ssh		ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (push)
+
+// parseGitRemoteResults returns just the trimmed middle column (url) of the `git remote -v` results,
+// and skips urls from unsupported sources.
 func (o *initPipelineOpts) parseGitRemoteResult(s string) ([]string, error) {
 	var urls []string
 	urlSet := make(map[string]bool)
 	items := strings.Split(s, "\n")
 	for _, item := range items {
-		if !strings.Contains(item, githubURL) && !strings.Contains(item, codeCommit) {
+		if !strings.Contains(item, githubURL) && !strings.Contains(item, ccIdentifier) {
 			continue
 		}
 		cols := strings.Split(item, "\t")
@@ -403,6 +416,23 @@ For more information, please refer to: https://git.io/JfDFD.`,
 		return fmt.Errorf("get GitHub access token: %w", err)
 	}
 	o.githubAccessToken = token
+	return nil
+}
+
+func (o *initPipelineOpts) storeGitHubAccessToken() error {
+	secretName := o.secretName()
+	_, err := o.secretsmanager.CreateSecret(secretName, o.githubAccessToken)
+
+	if err != nil {
+		var existsErr *secretsmanager.ErrSecretAlreadyExists
+		if !errors.As(err, &existsErr) {
+			return err
+		}
+		log.Successf("Secret already exists for %s! Do nothing.\n", color.HighlightUserInput(o.repoName))
+	} else {
+		log.Successf("Created the secret %s for pipeline source stage!\n", color.HighlightUserInput(secretName))
+	}
+	o.secret = secretName
 	return nil
 }
 
