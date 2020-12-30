@@ -88,3 +88,12 @@ func (c *Cursor) EraseLine() {
 		terminal.EraseLine(cur.Out, terminal.ERASE_LINE_ALL)
 	}
 }
+
+// EraseLine erases a line from the writer w.
+func EraseLine(w io.Writer) {
+	var out terminal.FileWriter = &fakeFileWriter{w: w}
+	if term, ok := w.(terminal.FileWriter); ok { // If w is a file, like Stdout, then use the fileWriter instead.
+		out = term
+	}
+	terminal.EraseLine(out, terminal.ERASE_LINE_ALL)
+}

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"text/tabwriter"
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/cursor"
@@ -29,17 +30,22 @@ func Render(ctx context.Context, out io.Writer, r Renderer) error {
 	cursor := cursor.NewWithWriter(out)
 	cursor.Hide()
 	defer cursor.Show()
+
+	tabWriter := tabwriter.NewWriter(out, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	for {
 		select {
 		case <-ctx.Done():
 			_, err := r.Render(out)
 			return err
 		case <-time.After(renderInterval):
-			nl, err := r.Render(out)
+			nl, err := r.Render(tabWriter)
 			if err != nil {
 				return err
 			}
-			cursor.Up(nl + 1) // move the cursor back up to the starting line so that the Renderer is rendered in-place.
+			if err := tabWriter.Flush(); err != nil {
+				return err
+			}
+			cursor.Up(nl) // move the cursor back up to the starting line so that the Renderer is rendered in-place.
 		}
 	}
 }

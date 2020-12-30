@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/cursor"
 	"github.com/stretchr/testify/require"
 )
 
@@ -40,7 +41,11 @@ func TestSingleLineComponent_Render(t *testing.T) {
 			// THEN
 			require.NoError(t, err)
 			require.Equal(t, 1, nl, "expected only a single line to be written by a single line component")
-			require.Equal(t, tc.wantedOut, buf.String())
+
+			wanted := new(strings.Builder)
+			cursor.EraseLine(wanted)
+			wanted.WriteString(tc.wantedOut)
+			require.Equal(t, wanted.String(), buf.String())
 		})
 	}
 }

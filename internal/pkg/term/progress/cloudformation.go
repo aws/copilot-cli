@@ -31,7 +31,7 @@ type StackResourceDescription struct {
 func ListeningStackRenderer(streamer StackSubscriber, stackName, description string, changes []StackResourceDescription) Renderer {
 	var children []Renderer
 	for _, change := range changes {
-		children = append(children, listeningResourceRenderer(change, streamer))
+		children = append(children, listeningResourceRenderer(streamer, change, nestedComponentPadding))
 	}
 	comp := &stackComponent{
 		logicalID:   stackName,
@@ -45,11 +45,12 @@ func ListeningStackRenderer(streamer StackSubscriber, stackName, description str
 }
 
 // listeningResourceRenderer returns a component that listens for CloudFormation stack events for a particular resource.
-func listeningResourceRenderer(resource StackResourceDescription, streamer StackSubscriber) Renderer {
+func listeningResourceRenderer(streamer StackSubscriber, resource StackResourceDescription, padding int) Renderer {
 	comp := &regularResourceComponent{
 		logicalID:   resource.LogicalResourceID,
 		description: resource.Description,
 		stream:      make(chan stream.StackEvent),
+		padding:     padding,
 	}
 	streamer.Subscribe(comp.stream)
 	go comp.Listen()
@@ -62,6 +63,7 @@ type stackComponent struct {
 	description string     // The human friendly explanation of the purpose of the stack.
 	status      string     // The CloudFormation status of the stack.
 	children    []Renderer // Resources part of the stack.
+	padding     int        // Leading spaces before rendering the stack.
 
 	stream chan stream.StackEvent
 	mu     sync.Mutex
@@ -80,7 +82,8 @@ func (c *stackComponent) Render(out io.Writer) (numLines int, err error) {
 	r := new(allOrNothingRenderer)
 	c.mu.Lock()
 	r.Partial(&singleLineComponent{
-		Text: fmt.Sprintf("- %s [%s]", c.description, c.status),
+		Text:    fmt.Sprintf("- %s\t[%s]", c.description, c.status),
+		Padding: c.padding,
 	})
 	c.mu.Unlock()
 	for _, child := range c.children {
@@ -94,6 +97,7 @@ type regularResourceComponent struct {
 	logicalID   string // The LogicalID defined in the template for the resource.
 	status      string // The CloudFormation status of the resource.
 	description string // The human friendly explanation of the resource.
+	padding     int    // Leading spaces before rendering the resource.
 
 	stream chan stream.StackEvent
 	mu     sync.Mutex
@@ -112,7 +116,8 @@ func (c *regularResourceComponent) Render(out io.Writer) (numLines int, err erro
 	defer c.mu.Unlock()
 
 	slc := &singleLineComponent{
-		Text: fmt.Sprintf("- %s [%s]", c.description, c.status),
+		Text:    fmt.Sprintf("- %s\t[%s]", c.description, c.status),
+		Padding: c.padding,
 	}
 	return slc.Render(out)
 }
