@@ -31,6 +31,7 @@ Conditions:
     !Not [!Equals [ !Join ["", !Ref Command], ""]]
 Resources:
   TaskDefinition:
+    # An ECS task definition to run your container on ECS.
     Condition: HasImage # NOTE: We only create TaskDefinition if an image is provided
     Type: AWS::ECS::TaskDefinition
     DependsOn: ECRRepo
@@ -59,6 +60,7 @@ Resources:
       TaskRoleArn:
         !If [HasTaskRole, !Ref TaskRole, !Ref "AWS::NoValue"]
   DefaultExecutionRole:
+    # An IAM role to grant the Fargate agent to make AWS API calls on your behalf.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -70,6 +72,7 @@ Resources:
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
   ECRRepo:
+    # An ECR repository to store your container images.
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: !Join ["-", ["copilot", !Ref TaskName]]
@@ -91,6 +94,7 @@ Resources:
       LifecyclePolicy: # TODO: inject the JSON string instead of hard-coding it here
         LifecyclePolicyText: "{\"rules\":[{\"rulePriority\":1,\"selection\":{\"tagStatus\":\"untagged\",\"countType\":\"sinceImagePushed\",\"countUnit\":\"days\",\"countNumber\":5},\"action\":{\"type\":\"expire\"}}]}"
   LogGroup:
+    # A CloudWatch log group to hold your task logs.
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Join ['', ["/copilot/", !Ref TaskName]]

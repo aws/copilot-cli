@@ -1,4 +1,5 @@
 TaskRole:
+  # An IAM role to control permission for the containers in your tasks.
   Type: AWS::IAM::Role
   Properties:{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{if gt (len .NestedStack.PolicyOutputs) 0}}
     ManagedPolicyArns:{{range $managedPolicy := .NestedStack.PolicyOutputs}}

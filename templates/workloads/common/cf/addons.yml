@@ -1,4 +1,5 @@
 AddonsStack:
+  # An Addons CloudFormation Stack for your additional AWS resources.
   Type: AWS::CloudFormation::Stack
   Condition: HasAddons
   Properties:

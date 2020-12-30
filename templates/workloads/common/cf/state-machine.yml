@@ -1,4 +1,5 @@
 StateMachine:
+  # A state machine to invoke and handle failures for your job.
   Type: AWS::StepFunctions::StateMachine
   Properties:
     StateMachineName: !Sub '${AppName}-${EnvName}-${WorkloadName}'
