@@ -7,26 +7,37 @@ import (
 	"time"
 )
 
+// Fetcher is the interface that wraps the Fetch method.
 // Fetcher fetches events, updates its internal state with new events and returns the next time
 // the Fetch call should be attempted. On failure, Fetch returns an error.
 type Fetcher interface {
 	Fetch() (next time.Time, err error)
 }
 
-// Notifier notifies all of its subscribers of any new event updates.
+// Notifier is the interface that wraps the Notify method.
+// Notify publishes all new event updates to subscribers..
 type Notifier interface {
 	Notify()
 }
 
-// FetchNotifier is the interface that groups the Fetch and a Notify methods.
-type FetchNotifier interface {
+// Stopper is the interface that wraps the Stop method.
+// Stop notifies all subscribers that no more events will be sent.
+type Stopper interface {
+	Stop()
+}
+
+// FetchNotifyStopper is the interface that groups a Fetcher, Notifier, and Stopper.
+type FetchNotifyStopper interface {
 	Fetcher
 	Notifier
+	Stopper
 }
 
 // Stream streams event updates by calling Fetch followed with Notify until the context is canceled or Fetch errors.
-// Once the context is canceled, a best effort Fetch and Notify is called one last time.
-func Stream(ctx context.Context, fn FetchNotifier) error {
+// Once the context is canceled, a best effort Fetch and Notify is called followed with stopping the streamer.
+func Stream(ctx context.Context, streamer FetchNotifyStopper) error {
+	defer streamer.Stop()
+
 	var next time.Time
 	var err error
 	for {
@@ -37,16 +48,16 @@ func Stream(ctx context.Context, fn FetchNotifier) error {
 
 		select {
 		case <-ctx.Done():
-			// The parent context is canceled. Try Fetch and Notify one last time and exit successfully.
-			_, _ = fn.Fetch()
-			fn.Notify()
+			// The parent context is canceled. Best-effort publish latest events.
+			_, _ = streamer.Fetch()
+			streamer.Notify()
 			return nil
 		case <-time.After(fetchDelay):
-			next, err = fn.Fetch()
+			next, err = streamer.Fetch()
 			if err != nil {
 				return err
 			}
-			fn.Notify()
+			streamer.Notify()
 		}
 	}
 }

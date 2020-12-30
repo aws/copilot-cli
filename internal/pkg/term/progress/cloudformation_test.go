@@ -4,7 +4,6 @@
 package progress
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -15,7 +14,6 @@ import (
 func TestStackComponent_Listen(t *testing.T) {
 	t.Run("should not update status if no events are received for the logical ID", func(t *testing.T) {
 		// GIVEN
-		ctx, cancel := context.WithCancel(context.Background())
 		ch := make(chan stream.StackEvent)
 		done := make(chan bool)
 		comp := &stackComponent{
@@ -26,7 +24,7 @@ func TestStackComponent_Listen(t *testing.T) {
 
 		// WHEN
 		go func() {
-			comp.Listen(ctx)
+			comp.Listen()
 			done <- true
 		}()
 		go func() {
@@ -38,16 +36,15 @@ func TestStackComponent_Listen(t *testing.T) {
 				LogicalResourceID: "ServiceDiscoveryNamespace",
 				ResourceStatus:    "CREATE_COMPLETE",
 			}
-			cancel()
+			close(ch) // Close to notify that no more events will be sent.
 		}()
 
 		// THEN
-		<-done // Block until we are done listening.
+		<-done // Wait for listen to exit.
 		require.Equal(t, "not started", comp.status)
 	})
 	t.Run("should update status when an event is received for stack", func(t *testing.T) {
 		// GIVEN
-		ctx, cancel := context.WithCancel(context.Background())
 		ch := make(chan stream.StackEvent)
 		done := make(chan bool)
 		comp := &stackComponent{
@@ -58,7 +55,7 @@ func TestStackComponent_Listen(t *testing.T) {
 
 		// WHEN
 		go func() {
-			comp.Listen(ctx)
+			comp.Listen()
 			done <- true
 		}()
 		go func() {
@@ -70,11 +67,11 @@ func TestStackComponent_Listen(t *testing.T) {
 				LogicalResourceID: "phonetool-test",
 				ResourceStatus:    "CREATE_COMPLETE",
 			}
-			cancel()
+			close(ch) // Close to notify that no more events will be sent.
 		}()
 
 		// THEN
-		<-done // Block until we are done listening.
+		<-done // Wait for listen to exit.
 		require.Equal(t, "CREATE_COMPLETE", comp.status)
 	})
 }
@@ -110,7 +107,6 @@ func TestStackComponent_Render(t *testing.T) {
 func TestRegularResourceComponent_Listen(t *testing.T) {
 	t.Run("should not update status if no events are received for the logical ID", func(t *testing.T) {
 		// GIVEN
-		ctx, cancel := context.WithCancel(context.Background())
 		ch := make(chan stream.StackEvent)
 		done := make(chan bool)
 		comp := &regularResourceComponent{
@@ -121,7 +117,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 
 		// WHEN
 		go func() {
-			comp.Listen(ctx)
+			comp.Listen()
 			done <- true
 		}()
 		go func() {
@@ -129,16 +125,15 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 				LogicalResourceID: "ServiceDiscoveryNamespace",
 				ResourceStatus:    "CREATE_COMPLETE",
 			}
-			cancel()
+			close(ch) // Close to notify that no more events will be sent.
 		}()
 
 		// THEN
-		<-done // Block until we are done listening.
+		<-done // Wait for listen to exit.
 		require.Equal(t, "not started", comp.status)
 	})
 	t.Run("should update status when an event is received for the resource", func(t *testing.T) {
 		// GIVEN
-		ctx, cancel := context.WithCancel(context.Background())
 		ch := make(chan stream.StackEvent)
 		done := make(chan bool)
 		comp := &regularResourceComponent{
@@ -149,7 +144,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 
 		// WHEN
 		go func() {
-			comp.Listen(ctx)
+			comp.Listen()
 			done <- true
 		}()
 		go func() {
@@ -161,11 +156,11 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 				LogicalResourceID: "phonetool-test",
 				ResourceStatus:    "ROLLBACK_COMPLETE",
 			}
-			cancel()
+			close(ch) // Close to notify that no more events will be sent.
 		}()
 
 		// THEN
-		<-done // Block until we are done listening.
+		<-done // Wait for listen to exit.
 		require.Equal(t, "CREATE_COMPLETE", comp.status)
 	})
 }
