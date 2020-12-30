@@ -53,11 +53,11 @@ const (
 )
 
 const (
-	fmtSecretName         = "github-token-%s-%s"
-	fmtGHPipelineName     = "pipeline-%s-%s-%s"
-	fmtCCPipelineName     = "pipeline-%s-%s"
-	fmtGHPipelineProvider = "https://%s/%s/%s"
-	fmtCCPipelineProvider = "https://%s.console.%s/codesuite/codecommit/repositories/%s"
+	fmtSecretName     = "github-token-%s-%s"
+	fmtGHPipelineName = "pipeline-%s-%s-%s"
+	fmtCCPipelineName = "pipeline-%s-%s"
+	fmtGHRepoURL      = "https://%s/%s/%s"
+	fmtCCRepoURL      = "https://%s.console.%s/codesuite/codecommit/repositories/%s"
 )
 
 var (
@@ -194,14 +194,10 @@ func (o *initPipelineOpts) Execute() error {
 	//   - git repo as source
 	//   - stage names (environments)
 	//   - enable/disable transition to prod envs
-	var err error
-	err = o.createPipelineManifest()
-	if err != nil {
+	if err := o.createPipelineManifest(); err != nil {
 		return err
 	}
-
-	err = o.createBuildspec()
-	if err != nil {
+	if err := o.createBuildspec(); err != nil {
 		return err
 	}
 	return nil
@@ -269,10 +265,13 @@ func (o *initPipelineOpts) askRepository() error {
 
 func (o *initPipelineOpts) askGitHubRepoDetails() error {
 	o.provider = ghProviderName
-	var err error
-	if o.githubOwner, o.repoName, err = o.parseOwnerRepoName(o.repoURL); err != nil {
+	repoDetails, err := ghRepoURL(o.repoURL).parse()
+	if err != nil {
 		return err
 	}
+	o.repoName = repoDetails.name
+	o.githubOwner = repoDetails.owner
+
 	if o.githubAccessToken == "" {
 		if err = o.getGitHubAccessToken(); err != nil {
 			return err
@@ -285,14 +284,13 @@ func (o *initPipelineOpts) askGitHubRepoDetails() error {
 }
 
 func (o *initPipelineOpts) askCodeCommitRepoDetails() error {
-	var err error
 	o.provider = ccProviderName
-	if o.repoName, err = o.parseRepoName(o.repoURL); err != nil {
+	repoDetails, err := ccRepoURL(o.repoURL).parse()
+	if err != nil {
 		return err
 	}
-	if o.ccRegion, err = o.parseRegion(o.repoURL); err != nil {
-		return err
-	}
+	o.repoName = repoDetails.name
+	o.ccRegion = repoDetails.region
 
 	// If any one of the chosen environments is in a region besides that of the CodeCommit repo, pipeline init errors out.
 	for _, env := range o.envConfigs {
@@ -333,46 +331,6 @@ func (o *initPipelineOpts) selectURL() error {
 	o.repoURL = url
 
 	return nil
-
-}
-
-func (o *initPipelineOpts) parseOwnerRepoName(url string) (string, string, error) {
-	regexPattern := regexp.MustCompile(`.*(github.com)(:|\/)`)
-	parsedURL := strings.TrimPrefix(url, regexPattern.FindString(url))
-	parsedURL = strings.TrimSuffix(parsedURL, ".git")
-	ownerRepo := strings.Split(parsedURL, "/")
-	if len(ownerRepo) != 2 {
-		return "", "", fmt.Errorf("unable to parse the GitHub repository owner and name from %s: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`", url)
-	}
-	return ownerRepo[0], ownerRepo[1], nil
-}
-
-// parseRepoName splits the url on slashes and returns the last substring.
-func (o *initPipelineOpts) parseRepoName(url string) (string, error) {
-	parsedForRepo := strings.Split(url, "/")
-	if len(parsedForRepo) < 2 {
-		return "", fmt.Errorf("unable to parse the CodeCommit repository name from %s", url)
-	}
-	return parsedForRepo[len(parsedForRepo)-1], nil
-}
-
-// parseRegion first disregards anything before and including "codecommit" + double-colons/periods.
-// Ex: 	https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample -> us-west-2.amazonaws.com/v1/repos/aws-sample
-//		codecommit::us-west-2://aws-sample -> us-west-2://aws-sample
-//		ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample -> us-west-2.amazonaws.com/v1/repos/aws-sample
-// Then we take just the substring that precedes a period (HTTPS or SSH) or colon (git-remote-codecommit/federated),
-// check that it's an AWS region, and return it.
-func (o *initPipelineOpts) parseRegion(url string) (string, error) {
-	regexPattern := regexp.MustCompile(`(codecommit)(::|.)`)
-	region := regexPattern.Split(url, 2)
-	region = strings.Split(region[1], ".")
-	region = strings.Split(region[0], ":")
-	// aws region regex from https://www.regextester.com/109163
-	match, _ := regexp.MatchString(`(us(-gov)?|ap|ca|cn|eu|sa)-(central|(north|south)?(east|west)?)-\d`, region[0])
-	if !match {
-		return "", fmt.Errorf("unable to parse the AWS region from %s", url)
-	}
-	return region[0], nil
 }
 
 // examples:
@@ -403,6 +361,65 @@ func (o *initPipelineOpts) parseGitRemoteResult(s string) ([]string, error) {
 		urls = append(urls, url)
 	}
 	return urls, nil
+}
+
+type ghRepoURL string
+type ghRepoDetails struct {
+	name  string
+	owner string
+}
+type ccRepoURL string
+type ccRepoDetails struct {
+	name   string
+	region string
+}
+
+func (url ghRepoURL) parse() (ghRepoDetails, error) {
+	urlString := string(url)
+	regexPattern := regexp.MustCompile(`.*(github.com)(:|\/)`)
+	parsedURL := strings.TrimPrefix(urlString, regexPattern.FindString(urlString))
+	parsedURL = strings.TrimSuffix(parsedURL, ".git")
+	ownerRepo := strings.Split(parsedURL, "/")
+	if len(ownerRepo) != 2 {
+		return ghRepoDetails{}, fmt.Errorf("unable to parse the GitHub repository owner and name from %s: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`", url)
+	}
+	return ghRepoDetails{
+		name:  ownerRepo[1],
+		owner: ownerRepo[0],
+	}, nil
+}
+
+func (url ccRepoURL) parse() (ccRepoDetails, error) {
+	urlString := string(url)
+	var region string
+	// Parse region.
+	switch {
+	case strings.HasPrefix(urlString, "https://") || strings.HasPrefix(urlString, "ssh://"):
+		parsedURL := strings.Split(urlString, ".")
+		region = parsedURL[1]
+	case strings.HasPrefix(urlString, "codecommit::"):
+		parsedURL := strings.Split(urlString, ":")
+		region = parsedURL[2]
+	default:
+		return ccRepoDetails{}, fmt.Errorf("unknown CodeCommit URL format: %s", url)
+	}
+	// Double-check that parsed results is a valid region. Source: https://www.regextester.com/109163
+	match, _ := regexp.MatchString(`(us(-gov)?|ap|ca|cn|eu|sa)-(central|(north|south)?(east|west)?)-\d`, region)
+	if !match {
+		return ccRepoDetails{}, fmt.Errorf("unable to parse the AWS region from %s", url)
+	}
+
+	// Parse repo name.
+	parsedForRepo := strings.Split(urlString, "/")
+	if len(parsedForRepo) < 2 {
+		return ccRepoDetails{}, fmt.Errorf("unable to parse the CodeCommit repository name from %s", url)
+	}
+	repoName := parsedForRepo[len(parsedForRepo)-1]
+
+	return ccRepoDetails{
+		name:   repoName,
+		region: region,
+	}, nil
 }
 
 func (o *initPipelineOpts) getGitHubAccessToken() error {
@@ -544,7 +561,7 @@ func (o *initPipelineOpts) pipelineName() (string, error) {
 func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	if o.provider == ghProviderName {
 		config := &manifest.GitHubProperties{
-			OwnerAndRepository:    fmt.Sprintf(fmtGHPipelineProvider, githubURL, o.githubOwner, o.repoName),
+			OwnerAndRepository:    fmt.Sprintf(fmtGHRepoURL, githubURL, o.githubOwner, o.repoName),
 			Branch:                o.repoBranch,
 			GithubSecretIdKeyName: o.secret,
 		}
@@ -552,7 +569,7 @@ func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	}
 	if o.provider == ccProviderName {
 		config := &manifest.CodeCommitProperties{
-			Repository: fmt.Sprintf(fmtCCPipelineProvider, o.ccRegion, awsURL, o.repoName),
+			Repository: fmt.Sprintf(fmtCCRepoURL, o.ccRegion, awsURL, o.repoName),
 			Branch:     o.repoBranch,
 		}
 		return manifest.NewProvider(config)

@@ -412,7 +412,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			expectedRepoName:     "",
 			expectedEnvironments: []string{"test", "prod"},
-			expectedError:        fmt.Errorf("unable to parse the CodeCommit repository name from git-codecommitus-west-2amazonaws.com"),
+			expectedError:        fmt.Errorf("unknown CodeCommit URL format: git-codecommitus-west-2amazonaws.com"),
 		},
 		"returns error if fail to parse region out of CodeCommit URL": {
 			buffer: *bytes.NewBufferString(""),
@@ -1027,141 +1027,99 @@ ssh	ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (push)`,
 	}
 }
 
-func TestInitPipelineOpts_parseOwnerRepoName(t *testing.T) {
+func TestInitPipelineGHRepoURL_parse(t *testing.T) {
 	testCases := map[string]struct {
-		inGitHubURL string
+		inRepoURL ghRepoURL
 
-		expectedOwner string
-		expectedRepo  string
-		expectedError error
+		expectedDetails ghRepoDetails
+		expectedError   error
 	}{
 		"matches repo name without .git suffix": {
-			inGitHubURL: "https://github.com/badgoose/cli",
+			inRepoURL: "https://github.com/badgoose/cli",
 
-			expectedOwner: "badgoose",
-			expectedRepo:  "cli",
+			expectedDetails: ghRepoDetails{
+				name:  "cli",
+				owner: "badgoose",
+			},
 			expectedError: nil,
 		},
 		"matches repo name with .git suffix": {
-			inGitHubURL: "https://github.com/koke/grit.git",
+			inRepoURL: "https://github.com/koke/grit.git",
 
-			expectedOwner: "koke",
-			expectedRepo:  "grit",
+			expectedDetails: ghRepoDetails{
+				name:  "grit",
+				owner: "koke",
+			},
 			expectedError: nil,
 		},
 		"returns an error if it is not a github URL": {
-			inGitHubURL: "https://git-codecommit.us-east-1.amazonaws.com/v1/repos/whatever",
+			inRepoURL: "https://git-codecommit.us-east-1.amazonaws.com/v1/repos/whatever",
 
-			expectedOwner: "",
-			expectedRepo:  "",
 			expectedError: fmt.Errorf("unable to parse the GitHub repository owner and name from https://git-codecommit.us-east-1.amazonaws.com/v1/repos/whatever: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`"),
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			opts := &initPipelineOpts{}
-
 			// WHEN
-			owner, repo, err := opts.parseOwnerRepoName(tc.inGitHubURL)
+			details, err := ghRepoURL.parse(tc.inRepoURL)
 
 			// THEN
 			if tc.expectedError != nil {
 				require.EqualError(t, err, tc.expectedError.Error())
 			} else {
-				require.Equal(t, tc.expectedOwner, owner)
-				require.Equal(t, tc.expectedRepo, repo)
+				require.Equal(t, tc.expectedDetails, details)
 			}
 		})
 	}
 }
 
-func TestInitPipelineOpts_parseRepoName(t *testing.T) {
+func TestInitPipelineCCRepoURL_parse(t *testing.T) {
 	testCases := map[string]struct {
-		inRepoURL string
+		inRepoURL ccRepoURL
 
-		expectedRepo  string
-		expectedError error
+		expectedDetails ccRepoDetails
+		expectedError   error
 	}{
-		"matches repo name with https url": {
-			inRepoURL: "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample",
-
-			expectedRepo:  "aws-sample",
-			expectedError: nil,
-		},
-		"matches repo name with ssh url": {
-			inRepoURL: "ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample",
-
-			expectedRepo:  "aws-sample",
-			expectedError: nil,
-		},
-		"matches repo name with federated (GRC) url": {
-			inRepoURL: "codecommit::us-west-2://aws-sample",
-
-			expectedRepo:  "aws-sample",
-			expectedError: nil,
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			opts := &initPipelineOpts{}
-
-			// WHEN
-			repo, err := opts.parseRepoName(tc.inRepoURL)
-
-			// THEN
-			if tc.expectedError != nil {
-				require.EqualError(t, err, tc.expectedError.Error())
-			} else {
-				require.Equal(t, tc.expectedRepo, repo)
-			}
-		})
-	}
-}
-
-func TestInitPipelineOpts_parseRegion(t *testing.T) {
-	testCases := map[string]struct {
-		inRepoURL string
-
-		expectedRegion string
-		expectedError  error
-	}{
-		"matches region with https url": {
+		"matches with https url": {
 			inRepoURL: "https://git-codecommit.sa-east-1.amazonaws.com/v1/repos/aws-sample",
 
-			expectedRegion: "sa-east-1",
-			expectedError:  nil,
+			expectedDetails: ccRepoDetails{
+				name:   "aws-sample",
+				region: "sa-east-1",
+			},
+			expectedError: nil,
 		},
-		"matches repo name with ssh url": {
+		"matches with ssh url": {
 			inRepoURL: "ssh://git-codecommit.us-east-2.amazonaws.com/v1/repos/aws-sample",
 
-			expectedRegion: "us-east-2",
-			expectedError:  nil,
+			expectedDetails: ccRepoDetails{
+				name:   "aws-sample",
+				region: "us-east-2",
+			},
+			expectedError: nil,
 		},
-		"matches repo name with federated (GRC) url": {
+		"matches with federated (GRC) url": {
 			inRepoURL: "codecommit::us-gov-west-1://aws-sample",
 
-			expectedRegion: "us-gov-west-1",
-			expectedError:  nil,
+			expectedDetails: ccRepoDetails{
+				name:   "aws-sample",
+				region: "us-gov-west-1",
+			},
+			expectedError: nil,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			opts := &initPipelineOpts{}
-
 			// WHEN
-			region, err := opts.parseRegion(tc.inRepoURL)
+			details, err := ccRepoURL.parse(tc.inRepoURL)
 
 			// THEN
 			if tc.expectedError != nil {
 				require.EqualError(t, err, tc.expectedError.Error())
 			} else {
-				require.Equal(t, tc.expectedRegion, region)
+				require.Equal(t, tc.expectedDetails, details)
 			}
 		})
 	}
