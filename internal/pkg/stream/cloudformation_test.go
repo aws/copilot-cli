@@ -93,11 +93,7 @@ func testStackStreamer_Fetch_Success(t *testing.T) {
 			},
 		},
 	}
-	streamer := &StackStreamer{
-		Client:                client,
-		StackName:             "phonetool-test",
-		ChangeSetCreationTime: time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC),
-	}
+	streamer := NewStackStreamer(client, "phonetool-test", time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC))
 
 	// WHEN
 	_, err := streamer.Fetch()
@@ -131,9 +127,9 @@ func testStackStreamer_Fetch_PostChangeSet(t *testing.T) {
 		},
 	}
 	streamer := &StackStreamer{
-		Client:                client,
-		StackName:             "phonetool-test",
-		ChangeSetCreationTime: time.Date(2020, time.November, 23, 19, 0, 0, 0, time.UTC), // An hour after the last event.
+		client:                client,
+		stackName:             "phonetool-test",
+		changeSetCreationTime: time.Date(2020, time.November, 23, 19, 0, 0, 0, time.UTC), // An hour after the last event.
 	}
 
 	// WHEN
@@ -165,9 +161,9 @@ func testStackStreamer_Fetch_WithSeenEvents(t *testing.T) {
 		},
 	}
 	streamer := &StackStreamer{
-		Client:                client,
-		StackName:             "phonetool-test",
-		ChangeSetCreationTime: time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC),
+		client:                client,
+		stackName:             "phonetool-test",
+		changeSetCreationTime: time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC),
 		pastEventIDs: map[string]bool{
 			"def": true,
 		},
@@ -192,9 +188,9 @@ func testStackStreamer_Fetch_WithError(t *testing.T) {
 		err: errors.New("some error"),
 	}
 	streamer := &StackStreamer{
-		Client:                client,
-		StackName:             "phonetool-test",
-		ChangeSetCreationTime: time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC),
+		client:                client,
+		stackName:             "phonetool-test",
+		changeSetCreationTime: time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC),
 	}
 
 	// WHEN
