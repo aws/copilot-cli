@@ -39,7 +39,7 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := mocks.NewMockcfnClient(ctrl)
-		m.EXPECT().DescribeChangeSet(gomock.Any()).Return(nil, errors.New("DescribeChangeSet error"))
+		m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(nil, errors.New("DescribeChangeSet error"))
 		client := CloudFormation{cfnClient: m}
 
 		// WHEN
@@ -58,7 +58,7 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := mocks.NewMockcfnClient(ctrl)
-		m.EXPECT().DescribeChangeSet(gomock.Any()).Return(&cloudformation.ChangeSetDescription{}, nil)
+		m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(&cloudformation.ChangeSetDescription{}, nil)
 		m.EXPECT().TemplateBody(gomock.Any()).Return("", errors.New("TemplateBody error"))
 		client := CloudFormation{cfnClient: m}
 
@@ -78,7 +78,7 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := mocks.NewMockcfnClient(ctrl)
-		m.EXPECT().DescribeChangeSet(gomock.Any()).Return(&cloudformation.ChangeSetDescription{}, nil)
+		m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(&cloudformation.ChangeSetDescription{}, nil)
 		m.EXPECT().TemplateBody(gomock.Any()).Return("", nil)
 		m.EXPECT().DescribeStackEvents(gomock.Any()).Return(&sdkcloudformation.DescribeStackEventsOutput{}, nil).AnyTimes()
 		client := CloudFormation{cfnClient: m}
@@ -105,7 +105,7 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 		defer ctrl.Finish()
 		wantedErr := errors.New("streamer error")
 		m := mocks.NewMockcfnClient(ctrl)
-		m.EXPECT().DescribeChangeSet(gomock.Any()).Return(&cloudformation.ChangeSetDescription{}, nil)
+		m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(&cloudformation.ChangeSetDescription{}, nil)
 		m.EXPECT().TemplateBody(gomock.Any()).Return("", nil)
 		m.EXPECT().DescribeStackEvents(gomock.Any()).Return(nil, wantedErr)
 		client := CloudFormation{cfnClient: m}
@@ -136,7 +136,7 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := mocks.NewMockcfnClient(ctrl)
-		m.EXPECT().DescribeChangeSet("1234").Return(&cloudformation.ChangeSetDescription{
+		m.EXPECT().DescribeChangeSet("1234", "phonetool-test").Return(&cloudformation.ChangeSetDescription{
 			Changes: []*sdkcloudformation.Change{
 				{
 					ResourceChange: &sdkcloudformation.ResourceChange{
@@ -163,7 +163,7 @@ Resources:
 					Timestamp:          aws.Time(time.Now()),
 				},
 			},
-		}, nil)
+		}, nil).AnyTimes()
 		client := CloudFormation{cfnClient: m}
 		buf := new(strings.Builder)
 

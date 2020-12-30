@@ -44,7 +44,7 @@ type cfnClient interface {
 	DeleteAndWait(stackName string) error
 	DeleteAndWaitWithRoleARN(stackName, roleARN string) error
 	Describe(stackName string) (*cloudformation.StackDescription, error)
-	DescribeChangeSet(changeSetID string) (*cloudformation.ChangeSetDescription, error)
+	DescribeChangeSet(changeSetID, stackName string) (*cloudformation.ChangeSetDescription, error)
 	TemplateBody(stackName string) (string, error)
 	Events(stackName string) ([]cloudformation.StackEvent, error)
 	ErrorEvents(stackName string) ([]cloudformation.StackEvent, error)
@@ -139,7 +139,7 @@ func (cf CloudFormation) renderStackChanges(in renderStackChangesInput) error {
 	if err != nil {
 		return err
 	}
-	changeSet, err := cf.cfnClient.DescribeChangeSet(changeSetID)
+	changeSet, err := cf.cfnClient.DescribeChangeSet(changeSetID, in.stackName)
 	if err != nil {
 		return err
 	}
