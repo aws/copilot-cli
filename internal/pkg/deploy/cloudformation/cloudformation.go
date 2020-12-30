@@ -84,7 +84,7 @@ func New(sess *session.Session) CloudFormation {
 	}
 }
 
-// ErrorEvents returns the list of Cloudformation Resource Events, filtered by failures and erros.
+// ErrorEvents returns the list of CloudFormation Resource Events, filtered by failures and errors.
 func (cf CloudFormation) ErrorEvents(conf StackConfiguration) ([]deploy.ResourceEvent, error) {
 	events, err := cf.cfnClient.ErrorEvents(conf.StackName())
 	if err != nil {

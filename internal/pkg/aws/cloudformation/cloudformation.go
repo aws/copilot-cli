@@ -59,7 +59,7 @@ func (c *CloudFormation) Create(stack *Stack) (changeSetID string, err error) {
 	if status.requiresCleanup() {
 		// If the stack exists, but failed to create, we'll clean it up and then re-create it.
 		if err := c.Delete(stack.Name); err != nil {
-			return "", fmt.Errorf("cleanup previously failed stack %s: %w", stack.Name, err)
+			return "", fmt.Errorf("clean up previously failed stack %s: %w", stack.Name, err)
 		}
 		return c.create(stack)
 	}
