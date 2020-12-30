@@ -1691,20 +1691,19 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 	}
 }
 
-
 func TestSelect_CFTask(t *testing.T) {
 	taskPrompt := "TASK PLX"
 	taskHelp := "NO"
 	testTasks := []DeployedTask{
 		{
 			Name: "abc",
-			App: "phonetool",
-			Env: "prod-iad",
+			App:  "phonetool",
+			Env:  "prod-iad",
 		},
 		{
 			Name: "db-migrate",
-			App: "phonetool",
-			Env: "prod-iad",
+			App:  "phonetool",
+			Env:  "prod-iad",
 		},
 	}
 	testDefaultTask := DeployedTask{
@@ -1712,11 +1711,11 @@ func TestSelect_CFTask(t *testing.T) {
 	}
 	testCases := map[string]struct {
 		inDefaultCluster string
-		inOpts []GetDeployedTaskOpts
+		inOpts           []GetDeployedTaskOpts
 
 		mockStore  func(*mocks.MockConfigLister)
 		mockPrompt func(*mocks.MockPrompter)
-		mockCF func(*mocks.MockTaskStackDescriber)
+		mockCF     func(*mocks.MockTaskStackDescriber)
 
 		wantedErr  error
 		wantedTask *DeployedTask
@@ -1727,16 +1726,16 @@ func TestSelect_CFTask(t *testing.T) {
 			},
 			mockStore: func(m *mocks.MockConfigLister) {},
 			mockCF: func(m *mocks.MockTaskStackDescriber) {
-				m.EXPECT().GetTaskStackInfo("phonetool", "prod-iad").Return([]deploy.TaskStackInfo{
+				m.EXPECT().ListTaskStacks("phonetool", "prod-iad").Return([]deploy.TaskStackInfo{
 					{
 						StackName: "copilot-abc",
-						App: "phonetool",
-						Env: "prod-iad",
+						App:       "phonetool",
+						Env:       "prod-iad",
 					},
 					{
 						StackName: "copilot-db-migrate",
-						App: "phonetool",
-						Env: "prod-iad",
+						App:       "phonetool",
+						Env:       "prod-iad",
 					},
 				}, nil)
 			},
@@ -1749,7 +1748,7 @@ func TestSelect_CFTask(t *testing.T) {
 					},
 				).Return("abc (prod-iad)", nil)
 			},
-			wantedErr:        nil,
+			wantedErr:  nil,
 			wantedTask: &testTasks[0],
 		},
 		"error when retrieving stacks": {
@@ -1758,7 +1757,7 @@ func TestSelect_CFTask(t *testing.T) {
 			},
 			mockStore: func(m *mocks.MockConfigLister) {},
 			mockCF: func(m *mocks.MockTaskStackDescriber) {
-				m.EXPECT().GetTaskStackInfo("phonetool", "prod-iad").Return(nil, errors.New("some error"))
+				m.EXPECT().ListTaskStacks("phonetool", "prod-iad").Return(nil, errors.New("some error"))
 			},
 			mockPrompt: func(m *mocks.MockPrompter) {},
 			wantedErr:  errors.New("get tasks in environment prod-iad: some error"),
@@ -1769,7 +1768,7 @@ func TestSelect_CFTask(t *testing.T) {
 			},
 			mockStore: func(m *mocks.MockConfigLister) {},
 			mockCF: func(m *mocks.MockTaskStackDescriber) {
-				m.EXPECT().GetDefaultTaskStackInfo().Return([]deploy.TaskStackInfo{
+				m.EXPECT().ListDefaultTaskStacks().Return([]deploy.TaskStackInfo{
 					{
 						StackName: "task-oneoff",
 					},
@@ -1787,7 +1786,7 @@ func TestSelect_CFTask(t *testing.T) {
 					},
 				).Return("db-migrate (default cluster)", nil)
 			},
-			wantedErr:        nil,
+			wantedErr:  nil,
 			wantedTask: &testDefaultTask,
 		},
 		"with error getting default cluster tasks": {
@@ -1796,7 +1795,7 @@ func TestSelect_CFTask(t *testing.T) {
 			},
 			mockStore: func(m *mocks.MockConfigLister) {},
 			mockCF: func(m *mocks.MockTaskStackDescriber) {
-				m.EXPECT().GetDefaultTaskStackInfo().Return(nil, errors.New("some error"))
+				m.EXPECT().ListDefaultTaskStacks().Return(nil, errors.New("some error"))
 			},
 			mockPrompt: func(m *mocks.MockPrompter) {},
 			wantedErr:  errors.New("get tasks in default cluster: some error"),
@@ -1834,6 +1833,7 @@ func TestSelect_CFTask(t *testing.T) {
 		})
 	}
 }
+
 type taskSelectMocks struct {
 	taskLister *mocks.MockTaskLister
 	prompt     *mocks.MockPrompter

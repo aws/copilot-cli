@@ -124,7 +124,7 @@ var mockDescription3 = &cloudformation.StackDescription{
 	RoleARN:   aws.String(""),
 }
 
-func TestCloudFormation_GetTaskStackInfo(t *testing.T) {
+func TestCloudFormation_ListTaskStacks(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName   string
 		mockClient  func(*mocks.MockcfnClient)
@@ -169,7 +169,7 @@ func TestCloudFormation_GetTaskStackInfo(t *testing.T) {
 			cf := CloudFormation{cfnClient: mockCf}
 
 			// WHEN
-			tasks, err := cf.GetTaskStackInfo("appname", "test")
+			tasks, err := cf.ListTaskStacks("appname", "test")
 
 			if tc.wantedErr != "" {
 				require.EqualError(t, err, tc.wantedErr)
@@ -223,7 +223,7 @@ func TestCloudFormation_GetTaskDefaultStackInfo(t *testing.T) {
 			cf := CloudFormation{cfnClient: mockCf}
 
 			// WHEN
-			tasks, err := cf.GetDefaultTaskStackInfo()
+			tasks, err := cf.ListDefaultTaskStacks()
 
 			if tc.wantedErr != "" {
 				require.EqualError(t, err, tc.wantedErr)

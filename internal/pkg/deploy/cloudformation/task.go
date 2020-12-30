@@ -53,8 +53,8 @@ func (cf CloudFormation) DeployTask(input *deploy.CreateTaskResourcesInput, opts
 	return nil
 }
 
-// GetTaskStackInfo returns all the CF stacks which represent one-off copilot tasks in a given application's environments
-func (cf CloudFormation) GetTaskStackInfo(appName, envName string) ([]deploy.TaskStackInfo, error) {
+// ListTaskStacks returns all the CF stacks which represent one-off copilot tasks in a given application's environments
+func (cf CloudFormation) ListTaskStacks(appName, envName string) ([]deploy.TaskStackInfo, error) {
 	tasks, err := cf.cfnClient.ListStacksWithPrefix(taskStackPrefix)
 	if err != nil {
 		return nil, err
@@ -91,8 +91,8 @@ func (cf CloudFormation) GetTaskStackInfo(appName, envName string) ([]deploy.Tas
 	return outputTaskStacks, nil
 }
 
-// GetDefaultTaskStackInfo returns all the CF stacks created by copilot but not associated with an application.
-func (cf CloudFormation) GetDefaultTaskStackInfo() ([]deploy.TaskStackInfo, error) {
+// ListDefaultTaskStacks returns all the CF stacks created by copilot but not associated with an application.
+func (cf CloudFormation) ListDefaultTaskStacks() ([]deploy.TaskStackInfo, error) {
 	tasks, err := cf.cfnClient.ListStacksWithPrefix(taskStackPrefix)
 	if err != nil {
 		return nil, err

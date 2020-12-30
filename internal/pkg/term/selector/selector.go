@@ -121,8 +121,8 @@ type DeployStoreClient interface {
 
 // TaskStackDescriber wraps cloudformation client methods to describe task stacks
 type TaskStackDescriber interface {
-	GetDefaultTaskStackInfo() ([]deploy.TaskStackInfo, error)
-	GetTaskStackInfo(appName, envName string) ([]deploy.TaskStackInfo, error)
+	ListDefaultTaskStacks() ([]deploy.TaskStackInfo, error)
+	ListTaskStacks(appName, envName string) ([]deploy.TaskStackInfo, error)
 }
 
 // TaskLister wraps methods of listing tasks.
@@ -388,14 +388,14 @@ func (s *CFTaskSelect) Task(prompt, help string, opts ...GetDeployedTaskOpts) (*
 	var tasks []deploy.TaskStackInfo
 	var err error
 	if s.defaultCluster {
-		defaultTasks, err := s.cfStore.GetDefaultTaskStackInfo()
+		defaultTasks, err := s.cfStore.ListDefaultTaskStacks()
 		if err != nil {
 			return nil, fmt.Errorf("get tasks in default cluster: %w", err)
 		}
 		tasks = append(tasks, defaultTasks...)
 	}
 	if s.env != "" && s.app != "" {
-		envTasks, err := s.cfStore.GetTaskStackInfo(s.app, s.env)
+		envTasks, err := s.cfStore.ListTaskStacks(s.app, s.env)
 		if err != nil {
 			return nil, fmt.Errorf("get tasks in environment %s: %w", s.env, err)
 		}

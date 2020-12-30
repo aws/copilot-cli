@@ -579,34 +579,34 @@ func (m *MockTaskStackDescriber) EXPECT() *MockTaskStackDescriberMockRecorder {
 	return m.recorder
 }
 
-// GetDefaultTaskStackInfo mocks base method
-func (m *MockTaskStackDescriber) GetDefaultTaskStackInfo() ([]deploy.TaskStackInfo, error) {
+// ListDefaultTaskStacks mocks base method
+func (m *MockTaskStackDescriber) ListDefaultTaskStacks() ([]deploy.TaskStackInfo, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDefaultTaskStackInfo")
+	ret := m.ctrl.Call(m, "ListDefaultTaskStacks")
 	ret0, _ := ret[0].([]deploy.TaskStackInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetDefaultTaskStackInfo indicates an expected call of GetDefaultTaskStackInfo
-func (mr *MockTaskStackDescriberMockRecorder) GetDefaultTaskStackInfo() *gomock.Call {
+// ListDefaultTaskStacks indicates an expected call of ListDefaultTaskStacks
+func (mr *MockTaskStackDescriberMockRecorder) ListDefaultTaskStacks() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDefaultTaskStackInfo", reflect.TypeOf((*MockTaskStackDescriber)(nil).GetDefaultTaskStackInfo))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDefaultTaskStacks", reflect.TypeOf((*MockTaskStackDescriber)(nil).ListDefaultTaskStacks))
 }
 
-// GetTaskStackInfo mocks base method
-func (m *MockTaskStackDescriber) GetTaskStackInfo(appName, envName string) ([]deploy.TaskStackInfo, error) {
+// ListTaskStacks mocks base method
+func (m *MockTaskStackDescriber) ListTaskStacks(appName, envName string) ([]deploy.TaskStackInfo, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTaskStackInfo", appName, envName)
+	ret := m.ctrl.Call(m, "ListTaskStacks", appName, envName)
 	ret0, _ := ret[0].([]deploy.TaskStackInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetTaskStackInfo indicates an expected call of GetTaskStackInfo
-func (mr *MockTaskStackDescriberMockRecorder) GetTaskStackInfo(appName, envName interface{}) *gomock.Call {
+// ListTaskStacks indicates an expected call of ListTaskStacks
+func (mr *MockTaskStackDescriberMockRecorder) ListTaskStacks(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskStackInfo", reflect.TypeOf((*MockTaskStackDescriber)(nil).GetTaskStackInfo), appName, envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTaskStacks", reflect.TypeOf((*MockTaskStackDescriber)(nil).ListTaskStacks), appName, envName)
 }
 
 // MockTaskLister is a mock of TaskLister interface
