@@ -6,17 +6,38 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/cmd/copilot/template"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
+)
+
+const (
+	useDefaultClusterOption = "None (run in default cluster)"
+)
+
+var (
+	taskExecTaskPrompt        = fmt.Sprintf("Which %s would you like to execute into?", color.Emphasize("task"))
+	taskExecTaskHelpPrompt    = fmt.Sprintf("By default we'll execute into the first essential container of the %s.", color.Emphasize("task"))
+	taskExecAppNamePrompt     = fmt.Sprintf("In which %s are you running your %s?", color.Emphasize("application"), color.Emphasize("task"))
+	taskExecAppNameHelpPrompt = fmt.Sprintf(`Select the application that your task is deployed to. 
+Select %s to run the task in your default cluster instead of any existing application.`, color.Emphasize(useDefaultClusterOption))
+	taskExecEnvNamePrompt     = fmt.Sprintf("In which %s are you running your %s?", color.Emphasize("environment"), color.Emphasize("task"))
+	taskExecEnvNameHelpPrompt = fmt.Sprintf(`Select the environment that your task is deployed to.
+Select %s to run the task in your default cluster instead of any existing environment.`, color.Emphasize(useDefaultClusterOption))
 )
 
 type taskExecVars struct {
 	execVars
-	cluster string
+	useDefault bool
 }
 
 type taskExecOpts struct {
@@ -24,6 +45,10 @@ type taskExecOpts struct {
 	store            store
 	ssmPluginManager ssmPluginManager
 	prompter         prompter
+	newTaskSel       func(*session.Session) runningTaskSelector
+	configSel        appEnvSelector
+
+	task *awsecs.Task
 }
 
 func newTaskExecOpts(vars taskExecVars) (*taskExecOpts, error) {
@@ -31,18 +56,23 @@ func newTaskExecOpts(vars taskExecVars) (*taskExecOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
+	prompter := prompt.New()
 	return &taskExecOpts{
 		taskExecVars:     vars,
 		store:            ssmStore,
 		ssmPluginManager: exec.NewSSMPluginCommand(nil),
-		prompter:         prompt.New(),
+		prompter:         prompter,
+		newTaskSel: func(sess *session.Session) runningTaskSelector {
+			return selector.NewTaskSelect(prompter, ecs.New(sess))
+		},
+		configSel: selector.NewConfigSelect(prompter, ssmStore),
 	}, nil
 }
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *taskExecOpts) Validate() error {
-	if o.cluster != "" && (o.appName != "" || o.envName != "") {
-		return fmt.Errorf("cannot specify both cluster flag and app or env flags")
+	if o.useDefault && (o.appName != "" || o.envName != "") {
+		return fmt.Errorf("cannot specify both default flag and app or env flags")
 	}
 	if o.appName != "" {
 		if _, err := o.store.GetApplication(o.appName); err != nil {
@@ -59,11 +89,66 @@ func (o *taskExecOpts) Validate() error {
 
 // Ask asks for fields that are required but not passed in.
 func (o *taskExecOpts) Ask() error {
-	return nil
+	if o.useDefault {
+		return o.selectTaskInDefaultCluster()
+	}
+	if o.appName == "" {
+		appName, err := o.configSel.Application(taskExecAppNamePrompt, taskExecAppNameHelpPrompt, useDefaultClusterOption)
+		if err != nil {
+			return fmt.Errorf("select application: %w", err)
+		}
+		if appName == useDefaultClusterOption {
+			return o.selectTaskInDefaultCluster()
+		}
+		o.appName = appName
+	}
+	if o.envName == "" {
+		envName, err := o.configSel.Environment(taskExecEnvNamePrompt, taskExecEnvNameHelpPrompt, o.appName, useDefaultClusterOption)
+		if err != nil {
+			return fmt.Errorf("select environment: %w", err)
+		}
+		if envName == useDefaultClusterOption {
+			return o.selectTaskInDefaultCluster()
+		}
+		o.envName = envName
+	}
+	return o.selectTaskInAppEnvCluster()
 }
 
 // Execute executes a command in a running container.
 func (o *taskExecOpts) Execute() error {
+	return nil
+}
+
+func (o *taskExecOpts) selectTaskInDefaultCluster() error {
+	sess, err := sessions.NewProvider().Default()
+	if err != nil {
+		return fmt.Errorf("create default session: %w", err)
+	}
+	task, err := o.newTaskSel(sess).RunningTask(taskExecTaskPrompt, taskExecTaskHelpPrompt,
+		selector.WithDefault(), selector.WithTaskGroup(o.name), selector.WithTaskID(o.taskID))
+	if err != nil {
+		return fmt.Errorf("select running task in default cluster: %w", err)
+	}
+	o.task = task
+	return nil
+}
+
+func (o *taskExecOpts) selectTaskInAppEnvCluster() error {
+	env, err := o.store.GetEnvironment(o.appName, o.envName)
+	if err != nil {
+		return fmt.Errorf("get environment %s: %w", o.envName, err)
+	}
+	sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+	if err != nil {
+		return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
+	}
+	task, err := o.newTaskSel(sess).RunningTask(taskExecTaskPrompt, taskExecTaskHelpPrompt,
+		selector.WithAppEnv(o.appName, o.envName), selector.WithTaskGroup(o.name), selector.WithTaskID(o.taskID))
+	if err != nil {
+		return fmt.Errorf("select running task in environment %s: %w", o.envName, err)
+	}
+	o.task = task
 	return nil
 }
 
@@ -79,7 +164,7 @@ func buildTaskExecCmd() *cobra.Command {
   Runs the 'cat progress.csv' command in the task prefixed with ID "1848c38" part of the "db-migrate" task group.
   /code $ copilot task exec --name db-migrate --task-id 1848c38 --command "cat progress.csv"
   Start an interactive bash session with a task prefixed with ID "38c3818" in the default cluster.
-  /code $ copilot task exec --cluster default --task-id 38c3818`,
+  /code $ copilot task exec --default --task-id 38c3818`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newTaskExecOpts(vars)
 			if err != nil {
@@ -100,7 +185,7 @@ func buildTaskExecCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.command, commandFlag, commandFlagShort, defaultCommand, execCommandFlagDescription)
 	cmd.Flags().StringVar(&vars.taskID, taskIDFlag, "", taskIDFlagDescription)
 	cmd.Flags().StringVar(&vars.containerName, containerFlag, "", containerFlagDescription)
-	cmd.Flags().StringVar(&vars.cluster, clusterFlag, "", clusterFlagDescription)
+	cmd.Flags().BoolVar(&vars.useDefault, taskDefaultFlag, false, taskExecDefaultFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

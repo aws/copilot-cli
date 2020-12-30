@@ -158,6 +158,7 @@ func (e *ECS) listTasks(cluster string, opts ...listTasksOpts) ([]*Task, error) 
 		descTaskResp, err := e.client.DescribeTasks(&ecs.DescribeTasksInput{
 			Cluster: aws.String(cluster),
 			Tasks:   listTaskResp.TaskArns,
+			Include: aws.StringSlice([]string{"TAGS"}),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("describe running tasks in cluster %s: %w", cluster, err)
@@ -262,6 +263,7 @@ func (e *ECS) RunTask(input RunTaskInput) ([]*Task, error) {
 	waitErr := e.client.WaitUntilTasksRunning(&ecs.DescribeTasksInput{
 		Cluster: aws.String(input.Cluster),
 		Tasks:   aws.StringSlice(taskARNs),
+		Include: aws.StringSlice([]string{"TAGS"}),
 	})
 
 	if waitErr != nil && !isRequestTimeoutErr(waitErr) {
@@ -285,6 +287,7 @@ func (e *ECS) DescribeTasks(cluster string, taskARNs []string) ([]*Task, error) 
 	resp, err := e.client.DescribeTasks(&ecs.DescribeTasksInput{
 		Cluster: aws.String(cluster),
 		Tasks:   aws.StringSlice(taskARNs),
+		Include: aws.StringSlice([]string{"TAGS"}),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("describe tasks: %w", err)

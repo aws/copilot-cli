@@ -5474,3 +5474,46 @@ func (mr *MockserviceLinkedRoleCreatorMockRecorder) CreateECSServiceLinkedRole()
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateECSServiceLinkedRole", reflect.TypeOf((*MockserviceLinkedRoleCreator)(nil).CreateECSServiceLinkedRole))
 }
+
+// MockrunningTaskSelector is a mock of runningTaskSelector interface
+type MockrunningTaskSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockrunningTaskSelectorMockRecorder
+}
+
+// MockrunningTaskSelectorMockRecorder is the mock recorder for MockrunningTaskSelector
+type MockrunningTaskSelectorMockRecorder struct {
+	mock *MockrunningTaskSelector
+}
+
+// NewMockrunningTaskSelector creates a new mock instance
+func NewMockrunningTaskSelector(ctrl *gomock.Controller) *MockrunningTaskSelector {
+	mock := &MockrunningTaskSelector{ctrl: ctrl}
+	mock.recorder = &MockrunningTaskSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockrunningTaskSelector) EXPECT() *MockrunningTaskSelectorMockRecorder {
+	return m.recorder
+}
+
+// RunningTask mocks base method
+func (m *MockrunningTaskSelector) RunningTask(prompt, help string, opts ...selector.TaskOpts) (*ecs.Task, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{prompt, help}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RunningTask", varargs...)
+	ret0, _ := ret[0].(*ecs.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RunningTask indicates an expected call of RunningTask
+func (mr *MockrunningTaskSelectorMockRecorder) RunningTask(prompt, help interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{prompt, help}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunningTask", reflect.TypeOf((*MockrunningTaskSelector)(nil).RunningTask), varargs...)
+}

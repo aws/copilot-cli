@@ -132,8 +132,10 @@ Mutually exclusive with -%s, --%s`, imageFlagShort, imageFlag)
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
 	securityGroupsFlagDescription = fmt.Sprintf(`Optional. The security group IDs for the task to use. Can be specified multiple times.
 Cannot be specified with '%s' or '%s'.`, appFlag, envFlag)
-	taskDefaultFlagDescription = fmt.Sprintf(`Optional. Run tasks in default cluster and default subnets. 
+	taskRunDefaultFlagDescription = fmt.Sprintf(`Optional. Run tasks in default cluster and default subnets. 
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, subnetsFlag)
+	taskExecDefaultFlagDescription = fmt.Sprintf(`Optional. Run tasks in default cluster and default subnets. 
+Cannot be specified with '%s' or '%s'.`, appFlag, envFlag)
 	taskEnvFlagDescription = fmt.Sprintf(`Optional. Name of the environment.
 Cannot be specified with '%s', '%s' or '%s'`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
 	taskAppFlagDescription = fmt.Sprintf(`Optional. Name of the application.

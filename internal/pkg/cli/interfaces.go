@@ -512,3 +512,7 @@ type ssmPluginManager interface {
 type serviceLinkedRoleCreator interface {
 	CreateECSServiceLinkedRole() error
 }
+
+type runningTaskSelector interface {
+	RunningTask(prompt, help string, opts ...selector.TaskOpts) (*awsecs.Task, error)
+}

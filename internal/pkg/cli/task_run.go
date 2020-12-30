@@ -639,7 +639,7 @@ Run a task with a command.
 	cmd.Flags().StringVar(&vars.env, envFlag, "", taskEnvFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.subnets, subnetsFlag, nil, subnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.securityGroups, securityGroupsFlag, nil, securityGroupsFlagDescription)
-	cmd.Flags().BoolVar(&vars.useDefaultSubnets, taskDefaultFlag, false, taskDefaultFlagDescription)
+	cmd.Flags().BoolVar(&vars.useDefaultSubnets, taskDefaultFlag, false, taskRunDefaultFlagDescription)
 
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
 	cmd.Flags().StringVar(&vars.command, commandFlag, "", runCommandFlagDescription)
