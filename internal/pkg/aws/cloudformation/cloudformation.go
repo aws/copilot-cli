@@ -83,8 +83,8 @@ func (c *CloudFormation) CreateAndWait(stack *Stack) error {
 }
 
 // DescribeChangeSet gathers and returns all changes for a change set.
-func (c *CloudFormation) DescribeChangeSet(changeSetID string) (*ChangeSetDescription, error) {
-	cs := &changeSet{name: changeSetID, client: c.client}
+func (c *CloudFormation) DescribeChangeSet(changeSetID, stackName string) (*ChangeSetDescription, error) {
+	cs := &changeSet{name: changeSetID, stackName: stackName, client: c.client}
 	out, err := cs.describe()
 	if err != nil {
 		return nil, err
