@@ -112,7 +112,7 @@ func (cf CloudFormation) GetDefaultTaskStackInfo() ([]deploy.TaskStackInfo, erro
 			continue
 		}
 
-		// Check the RoleArn of the task to see if it's created using a copilot EnvManagerRole.
+		// Check the RoleArn of the task to see if it's created using a particular role, which would disqualify it.
 		if aws.StringValue(task.RoleARN) != "" {
 			continue
 		}

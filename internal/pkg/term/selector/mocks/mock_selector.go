@@ -6,6 +6,7 @@ package mocks
 
 import (
 	config "github.com/aws/copilot-cli/internal/pkg/config"
+	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	prompt "github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
 	gomock "github.com/golang/mock/gomock"
@@ -551,4 +552,57 @@ func (m *MockDeployStoreClient) IsServiceDeployed(appName, envName, svcName stri
 func (mr *MockDeployStoreClientMockRecorder) IsServiceDeployed(appName, envName, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsServiceDeployed", reflect.TypeOf((*MockDeployStoreClient)(nil).IsServiceDeployed), appName, envName, svcName)
+}
+
+// MockTaskStackDescriber is a mock of TaskStackDescriber interface
+type MockTaskStackDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockTaskStackDescriberMockRecorder
+}
+
+// MockTaskStackDescriberMockRecorder is the mock recorder for MockTaskStackDescriber
+type MockTaskStackDescriberMockRecorder struct {
+	mock *MockTaskStackDescriber
+}
+
+// NewMockTaskStackDescriber creates a new mock instance
+func NewMockTaskStackDescriber(ctrl *gomock.Controller) *MockTaskStackDescriber {
+	mock := &MockTaskStackDescriber{ctrl: ctrl}
+	mock.recorder = &MockTaskStackDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockTaskStackDescriber) EXPECT() *MockTaskStackDescriberMockRecorder {
+	return m.recorder
+}
+
+// GetDefaultTaskStackInfo mocks base method
+func (m *MockTaskStackDescriber) GetDefaultTaskStackInfo() ([]deploy.TaskStackInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDefaultTaskStackInfo")
+	ret0, _ := ret[0].([]deploy.TaskStackInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDefaultTaskStackInfo indicates an expected call of GetDefaultTaskStackInfo
+func (mr *MockTaskStackDescriberMockRecorder) GetDefaultTaskStackInfo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDefaultTaskStackInfo", reflect.TypeOf((*MockTaskStackDescriber)(nil).GetDefaultTaskStackInfo))
+}
+
+// GetTaskStackInfo mocks base method
+func (m *MockTaskStackDescriber) GetTaskStackInfo(appName, envName string) ([]deploy.TaskStackInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTaskStackInfo", appName, envName)
+	ret0, _ := ret[0].([]deploy.TaskStackInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTaskStackInfo indicates an expected call of GetTaskStackInfo
+func (mr *MockTaskStackDescriberMockRecorder) GetTaskStackInfo(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskStackInfo", reflect.TypeOf((*MockTaskStackDescriber)(nil).GetTaskStackInfo), appName, envName)
 }

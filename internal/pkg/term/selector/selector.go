@@ -117,6 +117,12 @@ type DeployStoreClient interface {
 	IsServiceDeployed(appName string, envName string, svcName string) (bool, error)
 }
 
+// TaskStackDescriber wraps cloudformation client methods to describe task stacks
+type TaskStackDescriber interface {
+	GetDefaultTaskStackInfo() ([]deploy.TaskStackInfo, error)
+	GetTaskStackInfo(appName, envName string) ([]deploy.TaskStackInfo, error)
+}
+
 // Select prompts users to select the name of an application or environment.
 type Select struct {
 	prompt Prompter
@@ -142,12 +148,6 @@ type DeploySelect struct {
 	deployStoreSvc DeployStoreClient
 	svc            string
 	env            string
-}
-
-// TaskStackDescriber wraps cloudformation client methods to describe task stacks
-type TaskStackDescriber interface {
-	GetDefaultTaskStackInfo() ([]deploy.TaskStackInfo, error)
-	GetTaskStackInfo(appName, envName string) ([]deploy.TaskStackInfo, error)
 }
 
 // CFTaskSelect is a selector based on CF methods to get deployed one off tasks.
@@ -191,7 +191,11 @@ type DeployedTask struct {
 }
 
 func (t *DeployedTask) String() string {
-	return fmt.Sprintf("%s (%s)", t.Name, t.Env)
+	env := t.Env
+	if t.Env == "" {
+		env = "default cluster"
+	}
+	return fmt.Sprintf("%s (%s)", t.Name, env)
 }
 
 // NewSelect returns a selector that chooses applications or environments.
@@ -264,25 +268,28 @@ func (s *CFTaskSelect) Task(prompt, help string, opts ...GetDeployedTaskOpts) (*
 		// Error for callers
 		return nil, fmt.Errorf("cannot specify both default cluster and env")
 	}
+	if !s.defaultCluster && (s.env == "" && s.app == "") {
+		return nil, fmt.Errorf("must specify either app and env or default cluster")
+	}
+
 	var tasks []deploy.TaskStackInfo
 	var err error
 	if s.defaultCluster {
 		defaultTasks, err := s.cfStore.GetDefaultTaskStackInfo()
 		if err != nil {
-			return nil, fmt.Errorf("get tasks in default cluster")
+			return nil, fmt.Errorf("get tasks in default cluster: %w", err)
 		}
-		tasks = defaultTasks
-	} else if s.env != "" || s.app != "" {
-		return nil, fmt.Errorf("must specify either app and env or default cluster")
-	} else {
+		tasks = append(tasks, defaultTasks...)
+	}
+	if s.env != "" && s.app != "" {
 		envTasks, err := s.cfStore.GetTaskStackInfo(s.app, s.env)
 		if err != nil {
 			return nil, fmt.Errorf("get tasks in environment %s: %w", s.env, err)
 		}
-		tasks = envTasks
+		tasks = append(tasks, envTasks...)
 	}
 	choices := make([]string, len(tasks))
-	deployedTasks := make(map[string]*DeployedTask)
+	deployedTasks := make(map[string]DeployedTask)
 	var dt DeployedTask
 	for n, task := range tasks {
 		dt = DeployedTask{
@@ -290,7 +297,7 @@ func (s *CFTaskSelect) Task(prompt, help string, opts ...GetDeployedTaskOpts) (*
 			Env:  task.Env,
 			App:  task.App,
 		}
-		deployedTasks[dt.String()] = &dt
+		deployedTasks[dt.String()] = dt
 		choices[n] = dt.String()
 	}
 
@@ -300,13 +307,15 @@ func (s *CFTaskSelect) Task(prompt, help string, opts ...GetDeployedTaskOpts) (*
 	// Return if there's only once option.
 	if len(choices) == 1 {
 		log.Infof("Found only one deployed task: %s\n", color.HighlightUserInput(choices[0]))
-		return deployedTasks[choices[0]], nil
+		deployedTask := deployedTasks[choices[0]]
+		return &deployedTask, nil
 	}
 	choice, err := s.prompt.SelectOne(prompt, help, choices)
 	if err != nil {
 		return nil, fmt.Errorf("select task for deletion: %w", err)
 	}
-	return deployedTasks[choice], nil
+	deployedTask := deployedTasks[choice]
+	return &deployedTask, nil
 }
 
 // DeployedService has the user select a deployed service. Callers can provide either a particular environment,
