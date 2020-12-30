@@ -5,6 +5,14 @@
 // This file defines service deployment resources.
 package deploy
 
+import (
+	"fmt"
+	"strings"
+)
+
+// FmtTaskECRRepoName is the pattern used to generate the ECR repository's name
+const FmtTaskECRRepoName = "copilot-%s"
+
 // CreateTaskResourcesInput holds the fields required to create a task stack.
 type CreateTaskResourcesInput struct {
 	Name   string
@@ -21,4 +29,24 @@ type CreateTaskResourcesInput struct {
 	Env string
 
 	AdditionalTags map[string]string
+}
+
+// TaskStackInfo contains essential information about a Copilot task stack
+type TaskStackInfo struct {
+	StackName string
+	App       string
+	Env       string
+
+	RoleARN string
+}
+
+// TaskName returns the name of the one-off task. This is the same as the value of the
+// copilot-task tag. For example, a stack called "task-db-migrate" will have the TaskName "db-migrate"
+func (t TaskStackInfo) TaskName() string {
+	return strings.SplitN(t.StackName, "-", 2)[1]
+}
+
+// ECRRepoName returns the name of the ECR repo for the one-off task.
+func (t TaskStackInfo) ECRRepoName() string {
+	return fmt.Sprintf(FmtTaskECRRepoName, t.TaskName())
 }

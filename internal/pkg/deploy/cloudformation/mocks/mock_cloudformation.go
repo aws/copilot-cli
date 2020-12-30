@@ -287,6 +287,21 @@ func (mr *MockcfnClientMockRecorder) Events(stackName interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Events", reflect.TypeOf((*MockcfnClient)(nil).Events), stackName)
 }
 
+// ListStacksWithPrefix mocks base method
+func (m *MockcfnClient) ListStacksWithPrefix(prefix string) ([]cloudformation0.StackDescription, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListStacksWithPrefix", prefix)
+	ret0, _ := ret[0].([]cloudformation0.StackDescription)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListStacksWithPrefix indicates an expected call of ListStacksWithPrefix
+func (mr *MockcfnClientMockRecorder) ListStacksWithPrefix(prefix interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListStacksWithPrefix", reflect.TypeOf((*MockcfnClient)(nil).ListStacksWithPrefix), prefix)
+}
+
 // ErrorEvents mocks base method
 func (m *MockcfnClient) ErrorEvents(stackName string) ([]cloudformation0.StackEvent, error) {
 	m.ctrl.T.Helper()

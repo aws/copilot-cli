@@ -45,7 +45,6 @@ const (
 )
 
 const (
-	fmtRepoName = "copilot-%s"
 	fmtImageURI = "%s:%s"
 )
 
@@ -142,7 +141,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	}
 
 	opts.configureRepository = func() error {
-		repoName := fmt.Sprintf(fmtRepoName, opts.groupName)
+		repoName := fmt.Sprintf(deploy.FmtTaskECRRepoName, opts.groupName)
 		registry := ecr.New(opts.sess)
 		repository, err := repository.New(repoName, registry)
 		if err != nil {

@@ -633,6 +633,68 @@ func TestCloudFormation_Events(t *testing.T) {
 	}
 }
 
+func TestCloudFormation_ListStacksWithPrefix(t *testing.T) {
+	mockStacks := &cloudformation.DescribeStacksOutput{
+		Stacks: []*cloudformation.Stack{
+			{
+				StackName: aws.String("task-example"),
+			},
+			{
+				StackName: aws.String("abcde"),
+			},
+		},
+	}
+	testCases := map[string]struct {
+		inPrefix     string
+		mockCf       func(*mocks.Mockapi)
+		wantedStacks []StackDescription
+		wantedErr    string
+	}{
+		"successfully lists stacks with prefix": {
+			inPrefix: "task",
+			mockCf: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeStacks(&cloudformation.DescribeStacksInput{}).Return(mockStacks, nil)
+			},
+			wantedStacks: []StackDescription{
+				{
+					StackName: aws.String("task-example"),
+				},
+			},
+		},
+		"error listing stacks": {
+			inPrefix: "task",
+			mockCf: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeStacks(gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantedErr: "list stacks: some error",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockClient := mocks.NewMockapi(ctrl)
+			tc.mockCf(mockClient)
+
+			c := CloudFormation{
+				client: mockClient,
+			}
+
+			// WHEN
+			stacks, err := c.ListStacksWithPrefix(tc.inPrefix)
+
+			// THEN
+			if tc.wantedErr != "" {
+				require.EqualError(t, err, tc.wantedErr)
+			} else {
+				require.Equal(t, tc.wantedStacks, stacks)
+			}
+		})
+	}
+}
+
 func addCreateDeployCalls(m *mocks.Mockapi) {
 	addDeployCalls(m, cloudformation.ChangeSetTypeCreate)
 }
