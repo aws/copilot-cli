@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"strings"
 
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -116,6 +118,12 @@ type DeployStoreClient interface {
 	IsServiceDeployed(appName string, envName string, svcName string) (bool, error)
 }
 
+// TaskLister wraps methods of listing tasks.
+type TaskLister interface {
+	ListActiveAppEnvTasks(opts ecs.ListActiveAppEnvTasksOpts) ([]*awsecs.Task, error)
+	ListActiveDefaultClusterTasks(filter ecs.ListTasksFilter) ([]*awsecs.Task, error)
+}
+
 // Select prompts users to select the name of an application or environment.
 type Select struct {
 	prompt Prompter
@@ -141,6 +149,17 @@ type DeploySelect struct {
 	deployStoreSvc DeployStoreClient
 	svc            string
 	env            string
+}
+
+// TaskSelect is a Copilot running task selector.
+type TaskSelect struct {
+	prompt         Prompter
+	lister         TaskLister
+	app            string
+	env            string
+	defaultCluster bool
+	taskGroup      string
+	taskID         string
 }
 
 // NewSelect returns a selector that chooses applications or environments.
@@ -174,6 +193,100 @@ func NewDeploySelect(prompt Prompter, configStore ConfigLister, deployStore Depl
 		Select:         NewSelect(prompt, configStore),
 		deployStoreSvc: deployStore,
 	}
+}
+
+// NewTaskSelect returns a new selector that chooses a running task.
+func NewTaskSelect(prompt Prompter, lister TaskLister) *TaskSelect {
+	return &TaskSelect{
+		prompt: prompt,
+		lister: lister,
+	}
+}
+
+// TaskOpts sets up optional parameters for Task function.
+type TaskOpts func(*TaskSelect)
+
+// WithAppEnv sets up the app name and env name for TaskSelect.
+func WithAppEnv(app, env string) TaskOpts {
+	return func(in *TaskSelect) {
+		in.app = app
+		in.env = env
+	}
+}
+
+// WithDefault uses default cluster for TaskSelect.
+func WithDefault() TaskOpts {
+	return func(in *TaskSelect) {
+		in.defaultCluster = true
+	}
+}
+
+// WithTaskGroup sets up the task group name for TaskSelect.
+func WithTaskGroup(taskGroup string) TaskOpts {
+	return func(in *TaskSelect) {
+		in.taskGroup = taskGroup
+	}
+}
+
+// WithTaskID sets up the task ID for TaskSelect.
+func WithTaskID(id string) TaskOpts {
+	return func(in *TaskSelect) {
+		in.taskID = id
+	}
+}
+
+// RunningTask has the user select a running task. Callers can provide either app and env names,
+// or use default cluster.
+func (s *TaskSelect) RunningTask(prompt, help string, opts ...TaskOpts) (*awsecs.Task, error) {
+	var tasks []*awsecs.Task
+	var err error
+	for _, opt := range opts {
+		opt(s)
+	}
+	filter := ecs.ListTasksFilter{
+		TaskGroup: s.taskGroup,
+		TaskID:    s.taskID,
+	}
+	if s.defaultCluster {
+		tasks, err = s.lister.ListActiveDefaultClusterTasks(filter)
+		if err != nil {
+			return nil, fmt.Errorf("list active tasks for default cluster: %w", err)
+		}
+	}
+	if s.app != "" && s.env != "" {
+		tasks, err = s.lister.ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
+			App:             s.app,
+			Env:             s.env,
+			ListTasksFilter: filter,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("list active tasks in environment %s: %w", s.env, err)
+		}
+	}
+	var taskStrList []string
+	taskStrMap := make(map[string]*awsecs.Task)
+	for _, task := range tasks {
+		taskStr := task.String()
+		taskStrList = append(taskStrList, taskStr)
+		taskStrMap[taskStr] = task
+	}
+	if len(taskStrList) == 0 {
+		return nil, fmt.Errorf("no running tasks found")
+	}
+	// return if only one running task found
+	if len(taskStrList) == 1 {
+		log.Infof("Found only one running task %s\n", color.HighlightUserInput(taskStrList[0]))
+		return taskStrMap[taskStrList[0]], nil
+	}
+	task, err := s.prompt.SelectOne(
+		prompt,
+		help,
+		taskStrList,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("select running task: %w", err)
+	}
+	return taskStrMap[task], nil
 }
 
 // GetDeployedServiceOpts sets up optional parameters for GetDeployedServiceOpts function.
