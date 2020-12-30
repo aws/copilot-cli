@@ -101,7 +101,6 @@ const (
 
 	dockerFileFlagShort        = "d"
 	imageFlagShort             = "i"
-	githubURLFlagShort         = "g"
 	repoURLFlagShort           = "u"
 	githubAccessTokenFlagShort = "t"
 	gitBranchFlagShort         = "b"

@@ -594,8 +594,8 @@ func buildPipelineInitCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
-	cmd.Flags().StringVarP(&vars.repoURL, githubURLFlag, githubURLFlagShort, "", githubURLFlagDescription)
-	cmd.Flags().MarkHidden(githubURLFlag)
+	cmd.Flags().StringVar(&vars.repoURL, githubURLFlag, "", githubURLFlagDescription)
+	_ = cmd.Flags().MarkHidden(githubURLFlag)
 	cmd.Flags().StringVarP(&vars.repoURL, repoURLFlag, repoURLFlagShort, "", repoURLFlagDescription)
 	cmd.Flags().StringVarP(&vars.githubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
 	cmd.Flags().StringVarP(&vars.repoBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
