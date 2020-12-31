@@ -21,6 +21,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -242,13 +243,30 @@ func (o *deleteEnvOpts) ensureRolesAreRetained() error {
 		}
 		return fmt.Errorf("get template body for environment %s in application %s: %v", o.name, o.appName, err)
 	}
-	// Check if the roles are already being retained.
-	retainsExecRole := strings.Contains(body, `
-  CloudformationExecutionRole:
-    DeletionPolicy: Retain`)
-	retainsManagerRole := strings.Contains(body, `
-  EnvironmentManagerRole:
-    DeletionPolicy: Retain`)
+
+	// Check if the execution role and the manager role are retained by the stack.
+	const retainPolicy = "Retain"
+	roles := struct {
+		ExecRole    yaml.Node `yaml:"CloudformationExecutionRole"`
+		ManagerRole yaml.Node `yaml:"EnvironmentManagerRole"`
+	}{}
+	if err := yaml.Unmarshal([]byte(body), &roles); err != nil {
+		return fmt.Errorf("unmarshal environment template body %s-%s to environment roles: %w", o.appName, o.name, err)
+	}
+
+	type roleProperties struct {
+		DeletionPolicy string `yaml:"DeletionPolicy"`
+	}
+	var execRoleProps roleProperties
+	if err := roles.ExecRole.Decode(&execRoleProps); err != nil {
+		return fmt.Errorf("decode execution role's deletion policy: %w", err)
+	}
+	var managerRoleProps roleProperties
+	if err := roles.ManagerRole.Decode(&managerRoleProps); err != nil {
+		return fmt.Errorf("decode manager role's deletion policy: %w", err)
+	}
+	retainsExecRole := execRoleProps.DeletionPolicy == retainPolicy
+	retainsManagerRole := managerRoleProps.DeletionPolicy == retainPolicy
 	if retainsExecRole && retainsManagerRole {
 		// Nothing to do, this is **not** a legacy environment stack. Exit successfully.
 		return nil
