@@ -37,6 +37,7 @@ AutoScalingRole:
       - 'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceAutoscaleRole'
 
 AutoScalingTarget:
+  # An AutoScaling target to scale your service's desired count.
   Type: AWS::ApplicationAutoScaling::ScalableTarget
   Properties:
     MinCapacity: {{.Autoscaling.MinCapacity}}

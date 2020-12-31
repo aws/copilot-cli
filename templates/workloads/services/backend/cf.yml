@@ -35,6 +35,7 @@ Resources:
 {{include "loggroup" . | indent 2}}
 
   TaskDefinition:
+    # An ECS task definition to group your containers and run them on ECS
     Type: AWS::ECS::TaskDefinition
     DependsOn: LogGroup
     Properties:
@@ -106,6 +107,7 @@ Resources:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 {{- end }}
   Service:
+    # An ECS service to run and maintain your tasks in the environment cluster
     Type: AWS::ECS::Service
     Properties:
 {{include "service-base-properties" . | indent 6}}

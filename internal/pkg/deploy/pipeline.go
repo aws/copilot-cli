@@ -80,7 +80,7 @@ type Source struct {
 
 // GitHubPersonalAccessTokenSecretID returns the ID of the secret in the
 // Secrets manager, which stores the GitHub Personal Access token if the
-// provider is "GitHub". Otherwise, it returns an error.
+// provider is "GitHub". Otherwise, it returns the detected provider.
 func (s *Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 	// TODO type check if properties are GitHubProperties?
 	secretID, exists := s.Properties[manifest.GithubSecretIdKeyName]
@@ -94,7 +94,7 @@ func (s *Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 	}
 
 	if s.ProviderName != manifest.GithubProviderName {
-		return "", fmt.Errorf("failed attempt to retrieve GitHub token from a non-GitHub provider")
+		return fmt.Sprintf("Non-GitHub provider detected: %s", s.ProviderName), nil
 	}
 
 	return id, nil
