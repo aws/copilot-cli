@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/stream"
-	"github.com/aws/copilot-cli/internal/pkg/term/cursor"
 	"github.com/stretchr/testify/require"
 )
 
@@ -100,13 +99,9 @@ func TestStackComponent_Render(t *testing.T) {
 	// THEN
 	require.NoError(t, err)
 	require.Equal(t, 3, nl, "expected 3 entries to be printed to the terminal")
-
-	wanted := new(strings.Builder)
-	cursor.EraseLine(wanted)
-	wanted.WriteString("- The environment stack \"phonetool-test\" contains your shared resources between services\t[CREATE_COMPLETE]\n")
-	wanted.WriteString("  - A load balancer to distribute traffic from the internet\n")
-	wanted.WriteString("  - An ECS cluster to hold your services\n")
-	require.Equal(t, wanted.String(), buf.String())
+	require.Equal(t, "- The environment stack \"phonetool-test\" contains your shared resources between services\t[CREATE_COMPLETE]\n"+
+		"  - A load balancer to distribute traffic from the internet\n"+
+		"  - An ECS cluster to hold your services\n", buf.String())
 }
 
 func TestRegularResourceComponent_Listen(t *testing.T) {
@@ -185,9 +180,5 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 	// THEN
 	require.NoError(t, err)
 	require.Equal(t, 1, nl, "expected to be rendered as a single line component")
-
-	wanted := new(strings.Builder)
-	cursor.EraseLine(wanted)
-	wanted.WriteString("- An ECS cluster to hold your services\t[CREATE_COMPLETE]\n")
-	require.Equal(t, wanted.String(), buf.String())
+	require.Equal(t, "- An ECS cluster to hold your services\t[CREATE_COMPLETE]\n", buf.String())
 }
