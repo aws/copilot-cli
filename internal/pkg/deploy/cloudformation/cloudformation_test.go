@@ -6,6 +6,7 @@ package cloudformation
 import (
 	"context"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -17,6 +18,12 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+type mockFileWriter struct {
+	io.Writer
+}
+
+func (m mockFileWriter) Fd() uintptr { return 0 }
 
 func TestCloudFormation_renderStackChanges(t *testing.T) {
 	t.Run("bubbles up create change set error", func(t *testing.T) {
@@ -86,7 +93,7 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 
 		// WHEN
 		in := renderStackChangesInput{
-			w: buf,
+			w: mockFileWriter{Writer: buf},
 			createChangeSet: func() (string, error) {
 				return "", nil
 			},
@@ -113,7 +120,7 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 
 		// WHEN
 		in := renderStackChangesInput{
-			w: buf,
+			w: mockFileWriter{Writer: buf},
 			createChangeSet: func() (string, error) {
 				return "", nil
 			},
@@ -169,7 +176,7 @@ Resources:
 
 		// WHEN
 		in := renderStackChangesInput{
-			w:                buf,
+			w:                mockFileWriter{Writer: buf},
 			stackName:        "phonetool-test",
 			stackDescription: "Creating phonetool-test environment.",
 			createChangeSet: func() (string, error) {

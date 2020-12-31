@@ -7,7 +7,6 @@ package cloudformation
 import (
 	"context"
 	"fmt"
-	"io"
 	"strings"
 	"time"
 
@@ -127,7 +126,7 @@ func (cf CloudFormation) streamResourceEvents(done <-chan struct{}, events chan 
 }
 
 type renderStackChangesInput struct {
-	w                io.Writer
+	w                progress.FileWriter
 	stackName        string
 	stackDescription string
 	createChangeSet  func() (string, error)
@@ -169,7 +168,7 @@ func (cf CloudFormation) renderStackChanges(in renderStackChangesInput) error {
 		return stream.Stream(waitCtx, streamer)
 	})
 	g.Go(func() error {
-		return progress.Render(waitCtx, in.w, renderer)
+		return progress.Render(waitCtx, progress.NewTabbedFileWriter(in.w), renderer)
 	})
 	return g.Wait()
 }

@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -17,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 )
 
 // Environment stack's parameters that need to updated while moving the legacy template to a newer version.
@@ -43,7 +43,7 @@ func (cf CloudFormation) DeployEnvironment(env *deploy.CreateEnvironmentInput) e
 }
 
 // DeployAndRenderEnvironment creates the CloudFormation stack for an environment, and render the stack creation to out.
-func (cf CloudFormation) DeployAndRenderEnvironment(out io.Writer, env *deploy.CreateEnvironmentInput) error {
+func (cf CloudFormation) DeployAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
 	s, err := toStack(stack.NewEnvStackConfig(env))
 	if err != nil {
 		return err
