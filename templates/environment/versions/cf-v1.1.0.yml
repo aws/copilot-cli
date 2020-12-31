@@ -58,7 +58,7 @@ Resources:
       CapacityProviders: ['FARGATE', 'FARGATE_SPOT']
 
   PublicLoadBalancerSecurityGroup:
-    # A security group for your load balancer allowing HTTP and HTTPS traffic.
+    # A security group for your load balancer allowing HTTP and HTTPS traffic
     Condition: CreateALB
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -85,7 +85,7 @@ Resources:
 
   # Only accept requests coming from the public ALB or other containers in the same security group.
   EnvironmentSecurityGroup:
-    # A security group for your containers to talk to each other.
+    # A security group to allow your containers to talk to each other
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, EnvironmentSecurityGroup]]
@@ -116,7 +116,7 @@ Resources:
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
 
   PublicLoadBalancer:
-    # An Application Load Balancer to distribute public traffic to your services.
+    # An Application Load Balancer to distribute public traffic to your services
     Condition: CreateALB
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:

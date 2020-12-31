@@ -1,5 +1,5 @@
 ExecutionRole:
-  # An IAM Role for the Fargate agent to make AWS API calls on your behalf.
+  # An IAM Role for the Fargate agent to make AWS API calls on your behalf
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:

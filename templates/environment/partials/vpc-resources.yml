@@ -1,5 +1,5 @@
 VPC:
-  # A Virtual Private Cloud to control networking of your AWS resources.
+  # A Virtual Private Cloud to control networking of your AWS resources
   Type: AWS::EC2::VPC
   Properties:
     CidrBlock: {{.CIDR}}
@@ -27,7 +27,7 @@ DefaultPublicRoute:
     GatewayId: !Ref InternetGateway
 
 InternetGateway:
-  # An Internet Gateway to connect to the public internet.
+  # An Internet Gateway to connect to the public internet
   Type: AWS::EC2::InternetGateway
   Properties:
     Tags:
@@ -41,7 +41,7 @@ InternetGatewayAttachment:
     VpcId: !Ref VPC
 {{range $ind, $cidr := .PublicSubnetCIDRs}}
 PublicSubnet{{inc $ind}}:
-  # Public subnet {{inc $ind}} for resources that can access the internet.
+  # Public subnet {{inc $ind}} for resources that can access the internet
   Type: AWS::EC2::Subnet
   Properties:
     CidrBlock: {{$cidr}}
@@ -53,7 +53,7 @@ PublicSubnet{{inc $ind}}:
         Value: !Sub 'copilot-${AppName}-${EnvironmentName}-pub{{$ind}}'
 {{end}}{{range $ind, $cidr := .PrivateSubnetCIDRs}}
 PrivateSubnet{{inc $ind}}:
-  # Private subnet {{inc $ind}} for resources with no internet access.
+  # Private subnet {{inc $ind}} for resources with no internet access
   Type: AWS::EC2::Subnet
   Properties:
     CidrBlock: {{$cidr}}

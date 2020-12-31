@@ -32,7 +32,7 @@ Resources:
 {{include "loggroup" . | indent 2}}
 
   TaskDefinition:
-    # An ECS task definition to group your containers and run them on ECS.
+    # An ECS task definition to group your containers and run them on ECS
     Type: AWS::ECS::TaskDefinition
     DependsOn: LogGroup
     Properties:

@@ -1,5 +1,5 @@
 EnvControllerAction:
-  # Update your environment's shared resources.
+  # Update your environment's shared resources
   Type: Custom::EnvControllerFunction
   Properties:
     ServiceToken: !GetAtt EnvControllerFunction.Arn
