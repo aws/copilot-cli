@@ -90,6 +90,7 @@ func TestStackComponent_Render(t *testing.T) {
 				content: "  - An ECS cluster to hold your services\n",
 			},
 		},
+		separator: '\t',
 	}
 	buf := new(strings.Builder)
 
@@ -174,6 +175,7 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 	comp := &regularResourceComponent{
 		description: "An ECS cluster to hold your services",
 		status:      "CREATE_COMPLETE",
+		separator:   '\t',
 	}
 	buf := new(strings.Builder)
 

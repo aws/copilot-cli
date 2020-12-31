@@ -89,11 +89,9 @@ func (c *Cursor) EraseLine() {
 	}
 }
 
-// EraseLine erases a line from the writer w.
+// EraseLine erases a line if the writer w is a file, like Stdout, otherwise doesn't do anything.
 func EraseLine(w io.Writer) {
-	var out terminal.FileWriter = &fakeFileWriter{w: w}
-	if term, ok := w.(terminal.FileWriter); ok { // If w is a file, like Stdout, then use the fileWriter instead.
-		out = term
+	if fw, ok := w.(terminal.FileWriter); ok {
+		terminal.EraseLine(fw, terminal.ERASE_LINE_ALL)
 	}
-	terminal.EraseLine(out, terminal.ERASE_LINE_ALL)
 }

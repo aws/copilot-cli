@@ -23,7 +23,7 @@ type StackResourceDescription struct {
 	Description       string
 }
 
-// ListeningStackRenderer returns a component that listens for CloudFormation
+// ListeningStackRenderer returns a tab-separated component that listens for CloudFormation
 // resource events from a stack until the streamer stops.
 //
 // The component only listens for stack resource events for the provided changes in the stack.
@@ -38,19 +38,22 @@ func ListeningStackRenderer(streamer StackSubscriber, stackName, description str
 		description: description,
 		children:    children,
 		stream:      make(chan stream.StackEvent),
+		separator:   '\t',
 	}
 	streamer.Subscribe(comp.stream)
 	go comp.Listen()
 	return comp
 }
 
-// listeningResourceRenderer returns a component that listens for CloudFormation stack events for a particular resource.
+// listeningResourceRenderer returns a tab-separated component that listens for
+// CloudFormation stack events for a particular resource.
 func listeningResourceRenderer(streamer StackSubscriber, resource StackResourceDescription, padding int) Renderer {
 	comp := &regularResourceComponent{
 		logicalID:   resource.LogicalResourceID,
 		description: resource.Description,
 		stream:      make(chan stream.StackEvent),
 		padding:     padding,
+		separator:   '\t',
 	}
 	streamer.Subscribe(comp.stream)
 	go comp.Listen()
@@ -63,7 +66,9 @@ type stackComponent struct {
 	description string     // The human friendly explanation of the purpose of the stack.
 	status      string     // The CloudFormation status of the stack.
 	children    []Renderer // Resources part of the stack.
-	padding     int        // Leading spaces before rendering the stack.
+
+	padding   int  // Leading spaces before rendering the stack.
+	separator rune // Character used to separate columns of text.
 
 	stream chan stream.StackEvent
 	mu     sync.Mutex
@@ -79,17 +84,23 @@ func (c *stackComponent) Listen() {
 // Render prints the CloudFormation stack's resource components in order and returns the number of lines written.
 // If any sub-component's Render call fails, then writes nothing and returns an error.
 func (c *stackComponent) Render(out io.Writer) (numLines int, err error) {
-	r := new(allOrNothingRenderer)
 	c.mu.Lock()
-	r.Partial(&singleLineComponent{
-		Text:    fmt.Sprintf("- %s\t[%s]", c.description, c.status),
-		Padding: c.padding,
-	})
+	text := fmt.Sprintf("- %s%s[%s]", c.description, string(c.separator), c.status)
 	c.mu.Unlock()
-	for _, child := range c.children {
-		r.Partial(child)
+
+	components := append([]Renderer{
+		&singleLineComponent{
+			Text:    text,
+			Padding: c.padding,
+		}}, c.children...)
+	for _, comp := range components {
+		nl, err := comp.Render(out)
+		if err != nil {
+			return 0, err
+		}
+		numLines += nl
 	}
-	return r.Render(out)
+	return numLines, nil
 }
 
 // regularResourceComponent can display a simple CloudFormation stack resource event.
@@ -97,7 +108,9 @@ type regularResourceComponent struct {
 	logicalID   string // The LogicalID defined in the template for the resource.
 	status      string // The CloudFormation status of the resource.
 	description string // The human friendly explanation of the resource.
-	padding     int    // Leading spaces before rendering the resource.
+
+	padding   int  // Leading spaces before rendering the resource.
+	separator rune // Character used to separate columns of text.
 
 	stream chan stream.StackEvent
 	mu     sync.Mutex
@@ -116,7 +129,7 @@ func (c *regularResourceComponent) Render(out io.Writer) (numLines int, err erro
 	defer c.mu.Unlock()
 
 	slc := &singleLineComponent{
-		Text:    fmt.Sprintf("- %s\t[%s]", c.description, c.status),
+		Text:    fmt.Sprintf("- %s%s[%s]", c.description, string(c.separator), c.status),
 		Padding: c.padding,
 	}
 	return slc.Render(out)

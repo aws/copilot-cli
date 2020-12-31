@@ -6,6 +6,7 @@ package progress
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"testing"
 	"time"
@@ -17,11 +18,11 @@ import (
 )
 
 type mockWriteFlusher struct {
-	buf *bytes.Buffer
+	w io.Writer
 }
 
 func (m *mockWriteFlusher) Write(p []byte) (n int, err error) {
-	return m.buf.Write(p)
+	return m.w.Write(p)
 }
 
 func (m *mockWriteFlusher) Flush() error {
@@ -95,7 +96,7 @@ func TestSpinner_Stop(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			mockSpinner := mocks.NewMockstartStopper(ctrl)
-			mockWriter := &mockWriteFlusher{buf: tc.eventsBuf}
+			mockWriter := &mockWriteFlusher{w: tc.eventsBuf}
 			s := &Spinner{
 				spin:         mockSpinner,
 				pastEvents:   tc.pastEvents,
@@ -148,7 +149,7 @@ func TestSpinner_Events(t *testing.T) {
 				spin:         mockSpinner,
 				cur:          &mockCursor{buf: tc.eventsBuf},
 				pastEvents:   tc.pastEvents,
-				eventsWriter: &mockWriteFlusher{buf: tc.eventsBuf},
+				eventsWriter: &mockWriteFlusher{w: tc.eventsBuf},
 			}
 
 			// WHEN
