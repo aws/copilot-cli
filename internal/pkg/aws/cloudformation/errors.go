@@ -41,11 +41,11 @@ func (e *ErrStackNotFound) Error() string {
 // ErrChangeSetNotExecutable occurs when the change set cannot be executed.
 type ErrChangeSetNotExecutable struct {
 	cs    *changeSet
-	descr *changeSetDescription
+	descr *ChangeSetDescription
 }
 
 func (e *ErrChangeSetNotExecutable) Error() string {
-	return fmt.Sprintf("execute change set %s for stack %s because status is %s with reason %s", e.cs.name, e.cs.stackName, e.descr.executionStatus, e.descr.statusReason)
+	return fmt.Sprintf("execute change set %s for stack %s because status is %s with reason %s", e.cs.name, e.cs.stackName, e.descr.ExecutionStatus, e.descr.StatusReason)
 }
 
 // ErrStackUpdateInProgress occurs when we try to update a stack that's already being updated.
