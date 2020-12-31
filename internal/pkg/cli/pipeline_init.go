@@ -147,10 +147,8 @@ func (o *initPipelineOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
-	if o.appName != "" {
-		if _, err := o.store.GetApplication(o.appName); err != nil {
-			return err
-		}
+	if _, err := o.store.GetApplication(o.appName); err != nil {
+		return err
 	}
 
 	if o.repoURL != "" {

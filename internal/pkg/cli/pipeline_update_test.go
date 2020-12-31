@@ -601,8 +601,7 @@ stages:
 
 			opts := &updatePipelineOpts{
 				updatePipelineVars: updatePipelineVars{
-					pipelineName: tc.inPipelineName,
-					appName:      tc.inAppName,
+					appName: tc.inAppName,
 				},
 				pipelineDeployer: mockPipelineDeployer,
 				ws:               mockWorkspace,
@@ -611,6 +610,8 @@ stages:
 				envStore:         mockEnvStore,
 				prog:             mockProgress,
 				prompt:           mockPrompt,
+
+				pipelineName: tc.inPipelineName,
 			}
 
 			// WHEN

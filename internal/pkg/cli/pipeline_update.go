@@ -42,7 +42,6 @@ const (
 
 type updatePipelineVars struct {
 	appName          string
-	pipelineName     string
 	skipConfirmation bool
 }
 
@@ -56,6 +55,8 @@ type updatePipelineOpts struct {
 	region           string
 	envStore         environmentStore
 	ws               wsPipelineReader
+
+	pipelineName string
 }
 
 func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error) {
