@@ -31,8 +31,10 @@ func Render(ctx context.Context, out WriteFlusher, r Renderer) error {
 	for {
 		select {
 		case <-ctx.Done():
-			_, err := r.Render(out)
-			return err
+			if _, err := r.Render(out); err != nil {
+				return err
+			}
+			return out.Flush()
 		case <-time.After(renderInterval):
 			nl, err := r.Render(out)
 			if err != nil {
