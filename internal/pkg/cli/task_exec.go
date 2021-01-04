@@ -26,13 +26,13 @@ const (
 
 var (
 	taskExecTaskPrompt        = fmt.Sprintf("Which %s would you like to execute into?", color.Emphasize("task"))
-	taskExecTaskHelpPrompt    = fmt.Sprintf("By default we'll execute into the first essential container of the %s.", color.Emphasize("task"))
+	taskExecTaskHelpPrompt    = fmt.Sprintf("By default we'll execute into the first %s of the task.", color.Emphasize("essential container"))
 	taskExecAppNamePrompt     = fmt.Sprintf("In which %s are you running your %s?", color.Emphasize("application"), color.Emphasize("task"))
 	taskExecAppNameHelpPrompt = fmt.Sprintf(`Select the application that your task is deployed to. 
-Select %s to run the task in your default cluster instead of any existing application.`, color.Emphasize(useDefaultClusterOption))
+Select %s to execute the task in your default cluster instead of any existing application.`, color.Emphasize(useDefaultClusterOption))
 	taskExecEnvNamePrompt     = fmt.Sprintf("In which %s are you running your %s?", color.Emphasize("environment"), color.Emphasize("task"))
 	taskExecEnvNameHelpPrompt = fmt.Sprintf(`Select the environment that your task is deployed to.
-Select %s to run the task in your default cluster instead of any existing environment.`, color.Emphasize(useDefaultClusterOption))
+Select %s to execute the task in your default cluster instead of any existing environment.`, color.Emphasize(useDefaultClusterOption))
 )
 
 type taskExecVars struct {
