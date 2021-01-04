@@ -83,19 +83,18 @@ type Source struct {
 // Secrets manager, which stores the GitHub Personal Access token if the
 // provider is "GitHub". Otherwise, it returns the detected provider.
 func (s *Source) GitHubPersonalAccessTokenSecretID() (string, error) {
-	// TODO type check if properties are GitHubProperties?
-	secretID, exists := s.Properties[manifest.GithubSecretIdKeyName]
-	if !exists {
-		return "", errors.New("the GitHub token secretID is not configured")
-	}
+	id := ""
+	var ok bool
+	if s.ProviderName == manifest.GithubProviderName {
+		secretID, exists := s.Properties[manifest.GithubSecretIdKeyName]
+		if !exists {
+			return "", errors.New("the GitHub token secretID is not configured")
+		}
 
-	id, ok := secretID.(string)
-	if !ok {
-		return "", fmt.Errorf("unable to locate the GitHub token secretID from %v", secretID)
-	}
-
-	if s.ProviderName != manifest.GithubProviderName {
-		return fmt.Sprintf("Non-GitHub provider detected: %s", s.ProviderName), nil
+		id, ok = secretID.(string)
+		if !ok {
+			return "", fmt.Errorf("unable to locate the GitHub token secretID from %v", secretID)
+		}
 	}
 
 	return id, nil
@@ -104,10 +103,10 @@ func (s *Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 // parseOwnerOrRegionAndRepo parses the owner (if GitHub) / region (if CodeCommit) and repo name from the repo URL.
 func (s *Source) parseOwnerOrRegionAndRepo(provider string) (string, string, error) {
 	var repoExp *regexp.Regexp
-	if provider == "GitHub" {
+	if provider == manifest.GithubProviderName {
 		repoExp = ghRepoExp
 	}
-	if provider == "CodeCommit" {
+	if provider == manifest.CodeCommitProviderName {
 		repoExp = ccRepoExp
 	}
 	url, exists := s.Properties["repository"]
@@ -131,10 +130,10 @@ func (s *Source) parseOwnerOrRegionAndRepo(provider string) (string, string, err
 		}
 	}
 	var ownerOrRegion string
-	if provider == "GitHub" {
+	if provider == manifest.GithubProviderName {
 		ownerOrRegion = matches["owner"]
 	}
-	if provider == "CodeCommit" {
+	if provider == manifest.CodeCommitProviderName {
 		ownerOrRegion = matches["region"]
 	}
 	return ownerOrRegion, matches["repo"], nil

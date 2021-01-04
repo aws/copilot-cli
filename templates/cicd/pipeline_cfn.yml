@@ -222,7 +222,6 @@ Resources:
 {{- end}}
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
-#    Condition: !Condition IsGitHub
     DependsOn:
       - PipelineRole
       - PipelineRolePolicy
