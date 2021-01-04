@@ -245,26 +245,31 @@ func (o *deleteEnvOpts) ensureRolesAreRetained() error {
 	}
 
 	// Check if the execution role and the manager role are retained by the stack.
-	const retainPolicy = "Retain"
+	tpl := struct {
+		Resources yaml.Node `yaml:"Resources"`
+	}{}
+	if err := yaml.Unmarshal([]byte(body), &tpl); err != nil {
+		return fmt.Errorf("unmarshal environment template body %s-%s to retrieve Resources: %w", o.appName, o.name, err)
+	}
 	roles := struct {
 		ExecRole    yaml.Node `yaml:"CloudformationExecutionRole"`
 		ManagerRole yaml.Node `yaml:"EnvironmentManagerRole"`
 	}{}
-	if err := yaml.Unmarshal([]byte(body), &roles); err != nil {
-		return fmt.Errorf("unmarshal environment template body %s-%s to environment roles: %w", o.appName, o.name, err)
+	if err := tpl.Resources.Decode(&roles); err != nil {
+		return fmt.Errorf("decode EnvironmentManagerRole and CloudformationExecutionRole from Resources: %w", err)
 	}
-
 	type roleProperties struct {
 		DeletionPolicy string `yaml:"DeletionPolicy"`
 	}
 	var execRoleProps roleProperties
 	if err := roles.ExecRole.Decode(&execRoleProps); err != nil {
-		return fmt.Errorf("decode execution role's deletion policy: %w", err)
+		return fmt.Errorf("decode CloudformationExecutionRole's deletion policy: %w", err)
 	}
 	var managerRoleProps roleProperties
 	if err := roles.ManagerRole.Decode(&managerRoleProps); err != nil {
-		return fmt.Errorf("decode manager role's deletion policy: %w", err)
+		return fmt.Errorf("decode EnvironmentManagerRole's deletion policy: %w", err)
 	}
+	const retainPolicy = "Retain"
 	retainsExecRole := execRoleProps.DeletionPolicy == retainPolicy
 	retainsManagerRole := managerRoleProps.DeletionPolicy == retainPolicy
 	if retainsExecRole && retainsManagerRole {
