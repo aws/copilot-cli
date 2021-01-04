@@ -16,7 +16,7 @@ require (
 	github.com/golang/mock v1.4.4
 	github.com/google/go-cmp v0.5.1 // indirect
 	github.com/google/shlex v0.0.0-20150127133951-6f45313302b9
-	github.com/google/uuid v1.1.2
+	github.com/google/uuid v1.1.3
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c // indirect
 	github.com/imdario/mergo v0.3.9
 	github.com/lnquy/cron v1.1.1
@@ -32,7 +32,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/xlab/treeprint v1.0.0
 	golang.org/x/mod v0.4.0
-	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208 // indirect
+	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/ini.v1 v1.62.0
