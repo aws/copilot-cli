@@ -1,5 +1,3 @@
-# The EnvironmentManagerRole definition must be immediately followed with DeletionPolicy: Retain.
-# See #1533.
 EnvironmentManagerRole:
   # An IAM Role to manage resources in your environment
   DeletionPolicy: Retain

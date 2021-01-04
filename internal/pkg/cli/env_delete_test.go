@@ -276,6 +276,7 @@ Resources:
 
 				deployer := mocks.NewMockenvironmentDeployer(ctrl)
 				deployer.EXPECT().EnvironmentTemplate(gomock.Any(), gomock.Any()).Return(`
+Resources:
   CloudformationExecutionRole:
     DeletionPolicy: Retain
   EnvironmentManagerRole:
@@ -311,6 +312,7 @@ Resources:
 
 				deployer := mocks.NewMockenvironmentDeployer(ctrl)
 				deployer.EXPECT().EnvironmentTemplate(gomock.Any(), gomock.Any()).Return(`
+Resources:
   CloudformationExecutionRole:
     DeletionPolicy: Retain
   EnvironmentManagerRole:
@@ -355,11 +357,15 @@ Resources:
 
 				deployer := mocks.NewMockenvironmentDeployer(ctrl)
 				deployer.EXPECT().EnvironmentTemplate("phonetool", "test").Return(`
+Resources:
   CloudformationExecutionRole:
     DeletionPolicy: Retain
+    Type: AWS::IAM::Role
   EnvironmentManagerRole:
     # An IAM Role to manage resources in your environment
-    DeletionPolicy: Retain`, nil)
+    DeletionPolicy: Retain
+    Type: AWS::IAM::Role
+`, nil)
 				deployer.EXPECT().DeleteEnvironment("phonetool", "test", "execARN").Return(nil)
 
 				iam := mocks.NewMockroleDeleter(ctrl)
