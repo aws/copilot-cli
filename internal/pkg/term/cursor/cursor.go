@@ -89,9 +89,18 @@ func (c *Cursor) EraseLine() {
 	}
 }
 
-// EraseLine erases a line if the writer w is a file, like Stdout, otherwise doesn't do anything.
-func EraseLine(w io.Writer) {
-	if fw, ok := w.(terminal.FileWriter); ok {
-		terminal.EraseLine(fw, terminal.ERASE_LINE_ALL)
+// EraseLine erases a line from a FileWriter.
+func EraseLine(fw terminal.FileWriter) {
+	terminal.EraseLine(fw, terminal.ERASE_LINE_ALL)
+}
+
+// EraseLinesAbove erases a line and moves the cursor up from fw, repeated n times.
+func EraseLinesAbove(fw terminal.FileWriter, n int) {
+	c := &terminal.Cursor{
+		Out: fw,
+	}
+	for i := 0; i < n; i += 1 {
+		EraseLine(fw)
+		c.Up(1)
 	}
 }

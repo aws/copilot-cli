@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-
-	"github.com/aws/copilot-cli/internal/pkg/term/cursor"
 )
 
 const (
@@ -23,8 +21,6 @@ type singleLineComponent struct {
 
 // Render prints the component and returns the number of lines printed to the terminal and the error if any.
 func (c *singleLineComponent) Render(out io.Writer) (numLines int, err error) {
-	cursor.EraseLine(out) // Clean previous entry if any before writing.
-
 	_, err = fmt.Fprintf(out, "%s%s\n", strings.Repeat(" ", c.Padding), c.Text)
 	if err != nil {
 		return 0, err

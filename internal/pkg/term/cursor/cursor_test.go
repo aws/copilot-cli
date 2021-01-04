@@ -8,22 +8,17 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/stretchr/testify/require"
 )
 
 func TestEraseLine(t *testing.T) {
 	testCases := map[string]struct {
-		inWriter    func(writer io.Writer) io.Writer
+		inWriter    func(writer io.Writer) terminal.FileWriter
 		shouldErase bool
 	}{
-		"should not erase a line if the writer is not a file": {
-			inWriter: func(writer io.Writer) io.Writer {
-				return writer
-			},
-			shouldErase: false,
-		},
 		"should erase a line if the writer is a file": {
-			inWriter: func(writer io.Writer) io.Writer {
+			inWriter: func(writer io.Writer) terminal.FileWriter {
 				return &fakeFileWriter{w: writer}
 			},
 			shouldErase: true,

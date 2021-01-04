@@ -22,6 +22,12 @@ type WriteFlusher interface {
 	Flush() error
 }
 
+// FileWriteFlusher is the interface that groups a FileWriter and WriteFlusher.
+type FileWriteFlusher interface {
+	FileWriter
+	WriteFlusher
+}
+
 // TabbedFileWriter is a FileWriter that also implements the WriteFlusher interface.
 // A TabbedFileWriter can properly align text separated by the '\t' character.
 type TabbedFileWriter struct {
@@ -33,7 +39,8 @@ func (w *TabbedFileWriter) Write(p []byte) (n int, err error) {
 	return w.WriteFlusher.Write(p)
 }
 
-// NewTabbedFileWriter takes a file as input and returns a writer that can properly write tab-separated text to it.
+// NewTabbedFileWriter takes a file as input and returns a FileWriteFlusher that can
+// properly write tab-separated text to it.
 func NewTabbedFileWriter(fw FileWriter) *TabbedFileWriter {
 	return &TabbedFileWriter{
 		FileWriter:   fw,

@@ -23,27 +23,41 @@ type Renderer interface {
 
 // Render renders r periodically to out until the ctx is canceled or an error occurs.
 // While Render is executing, the terminal cursor is hidden and updates are written in-place.
-func Render(ctx context.Context, out WriteFlusher, r Renderer) error {
+func Render(ctx context.Context, out FileWriteFlusher, r Renderer) error {
 	cursor := cursor.NewWithWriter(out)
 	cursor.Hide()
 	defer cursor.Show()
 
+	var writtenLines int
 	for {
 		select {
 		case <-ctx.Done():
-			if _, err := r.Render(out); err != nil {
+			if _, err := eraseAndRender(out, r, writtenLines); err != nil {
 				return err
 			}
-			return out.Flush()
+			return nil
 		case <-time.After(renderInterval):
-			nl, err := r.Render(out)
+			nl, err := eraseAndRender(out, r, writtenLines)
 			if err != nil {
 				return err
 			}
-			if err := out.Flush(); err != nil {
-				return err
-			}
-			cursor.Up(nl) // move the cursor back up to the starting line so that the Renderer is rendered in-place.
+			writtenLines = nl
 		}
 	}
+}
+
+// eraseAndRender erases prevNumLines from out and then renders r.
+func eraseAndRender(out FileWriteFlusher, r Renderer, prevNumLines int) (int, error) {
+	cursor.EraseLinesAbove(out, prevNumLines)
+	if err := out.Flush(); err != nil {
+		return 0, err
+	}
+	nl, err := r.Render(out)
+	if err != nil {
+		return 0, err
+	}
+	if err := out.Flush(); err != nil {
+		return 0, err
+	}
+	return nl, err
 }
