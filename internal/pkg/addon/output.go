@@ -4,13 +4,17 @@
 package addon
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
-	"github.com/awslabs/goformation/v4"
-	"github.com/awslabs/goformation/v4/cloudformation"
-	"github.com/awslabs/goformation/v4/cloudformation/iam"
-	"github.com/awslabs/goformation/v4/cloudformation/secretsmanager"
-	"github.com/awslabs/goformation/v4/intrinsics"
+	"gopkg.in/yaml.v3"
+)
+
+// AWS CloudFormation resource types.
+const (
+	secretManagerSecretType = "AWS::SecretsManager::Secret"
+	iamManagedPolicyType    = "AWS::IAM::ManagedPolicy"
 )
 
 // Output represents an output from a CloudFormation template.
@@ -25,52 +29,127 @@ type Output struct {
 
 // Outputs parses the Outputs section of a CloudFormation template to extract logical IDs and returns them.
 func Outputs(template string) ([]Output, error) {
-	// goformation needs to evaluate CFN intrinsic functions to render the template.
-	// However, by default "Ref" evaluates to nil and results in the deletion of the field.
-	//
-	// Instead, we want to retain the input logical ID for "Ref" so that we can check if an output refers
-	// to a particular CFN resource type.
-	tpl, err := goformation.ParseYAMLWithOptions([]byte(template), &intrinsics.ProcessorOptions{
-		IntrinsicHandlerOverrides: map[string]intrinsics.IntrinsicHandler{
-			// Given an output with "Value: !Ref AdditionalResourcesPolicy",
-			// this override evaluates to "Value: AdditionalResourcesPolicy".
-			"Ref": func(_ string, input interface{}, _ interface{}) interface{} {
-				if logicalID, ok := input.(string); ok {
-					return logicalID
-				}
-				return nil
-			},
-		},
-	})
+	type cfnTemplate struct {
+		Resources yaml.Node `yaml:"Resources"`
+		Outputs   yaml.Node `yaml:"Outputs"`
+	}
+	var tpl cfnTemplate
+	if err := yaml.Unmarshal([]byte(template), &tpl); err != nil {
+		return nil, fmt.Errorf("unmarshal addon cloudformation template: %w", err)
+	}
+
+	typeFor, err := parseTypeByLogicalID(&tpl.Resources)
 	if err != nil {
-		return nil, fmt.Errorf("parse CloudFormation template %s: %w", template, err)
+		return nil, err
+	}
+
+	outputNodes, err := parseOutputNodes(&tpl.Outputs)
+	if err != nil {
+		return nil, err
 	}
 
 	var outputs []Output
-	for logicalID, output := range tpl.Outputs {
-		outputs = append(outputs, Output{
-			Name:            logicalID,
-			IsSecret:        isSecret(output, tpl.GetAllSecretsManagerSecretResources()),
-			IsManagedPolicy: isManagedPolicy(output, tpl.GetAllIAMManagedPolicyResources()),
-		})
+	for _, outputNode := range outputNodes {
+		output := Output{
+			Name:            outputNode.name(),
+			IsSecret:        false,
+			IsManagedPolicy: false,
+		}
+		ref, ok := outputNode.ref()
+		if ok {
+			output.IsSecret = typeFor[ref] == secretManagerSecretType
+			output.IsManagedPolicy = typeFor[ref] == iamManagedPolicyType
+		}
+		outputs = append(outputs, output)
 	}
 	return outputs, nil
 }
 
-func isSecret(output cloudformation.Output, secrets map[string]*secretsmanager.Secret) bool {
-	value, ok := output.Value.(string)
-	if !ok {
-		return false
+// parseTypeByLogicalID returns a map where the key is the resource's logical ID and the value is the CloudFormation Type
+// of the resource such as "AWS::IAM::Role".
+func parseTypeByLogicalID(resourcesNode *yaml.Node) (typeFor map[string]string, err error) {
+	if resourcesNode.Kind != yaml.MappingNode {
+		// "Resources" is a required field in CloudFormation, check if it's defined as a map.
+		return nil, errors.New(`"Resources" field in cloudformation template is not a map`)
 	}
-	_, hasKey := secrets[value]
-	return hasKey
+
+	// The content of a !!map, like the "Resources" field, always come in pairs.
+	// The first element represents the key, ex: {Value: "Cluster", Kind: ScalarNode, Tag: "!!str", Content: nil}
+	// The second element holds the values such as "Type" and "Properties", ex: {Value: "", Kind: MappingNode, Tag:"!!map", Content:[...]}
+	typeFor = make(map[string]string)
+	for i := 0; i < len(resourcesNode.Content); i += 2 {
+		logicalIDNode := resourcesNode.Content[i]
+		fieldsNode := resourcesNode.Content[i+1]
+		fields := struct {
+			Type string `yaml:"Type"`
+		}{}
+		if err := fieldsNode.Decode(&fields); err != nil {
+			return nil, fmt.Errorf(`decode the "Type" field of resource "%s": %w`, logicalIDNode.Value, err)
+		}
+		typeFor[logicalIDNode.Value] = fields.Type
+	}
+	return typeFor, nil
 }
 
-func isManagedPolicy(output cloudformation.Output, policies map[string]*iam.ManagedPolicy) bool {
-	value, ok := output.Value.(string)
-	if !ok {
-		return false
+func parseOutputNodes(outputsNode *yaml.Node) ([]*outputNode, error) {
+	if outputsNode.IsZero() {
+		// "Outputs" is an optional field so we can skip it.
+		return nil, nil
 	}
-	_, hasKey := policies[value]
-	return hasKey
+
+	if outputsNode.Kind != yaml.MappingNode {
+		return nil, errors.New(`"Outputs" field in cloudformation template is not a map`)
+	}
+
+	// The content of a !!map, like the "Outputs" field, always come in pairs.
+	// The first element represents the key, ex: {Value: "MyDynamoDBTableName", Kind: ScalarNode, Tag: "!!str", Content: nil}
+	// The second element holds the values such as "Value", ex: {Value: "", Kind: MappingNode, Tag:"!!map", Content:[...]}
+	var nodes []*outputNode
+	for i := 0; i < len(outputsNode.Content); i += 2 {
+		nameNode := outputsNode.Content[i]
+
+		fields := struct {
+			Value yaml.Node `yaml:"Value"`
+		}{}
+		if err := outputsNode.Content[i+1].Decode(&fields); err != nil {
+			return nil, fmt.Errorf(`decode the "Value" field of output "%s": %w`, nameNode.Value, err)
+		}
+		nodes = append(nodes, &outputNode{
+			nameNode:  nameNode,
+			valueNode: &fields.Value,
+		})
+	}
+	return nodes, nil
+}
+
+type outputNode struct {
+	nameNode  *yaml.Node
+	valueNode *yaml.Node
+}
+
+func (n *outputNode) name() string {
+	return n.nameNode.Value
+}
+
+func (n *outputNode) ref() (string, bool) {
+	switch n.valueNode.Kind {
+	case yaml.ScalarNode:
+		// It's a string like "!Ref MyDynamoDBTable"
+		if n.valueNode.Tag != "!Ref" {
+			return "", false
+		}
+		return strings.TrimSpace(n.valueNode.Value), true
+	case yaml.MappingNode:
+		// Check if it's a map like "Ref: MyDynamoDBTable"
+		fields := struct {
+			Ref string `yaml:"Ref"`
+		}{}
+		_ = n.valueNode.Decode(&fields)
+		if fields.Ref == "" {
+			return "", false
+		}
+		return fields.Ref, true
+	default:
+		return "", false
+	}
 }
