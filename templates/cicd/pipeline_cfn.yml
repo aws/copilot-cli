@@ -7,9 +7,16 @@
 # limitations under the License.
 AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for {{$.AppName}}
+Parameters:
+  ProviderType:
+    Description: For now, either GitHub or CodeCommit
+    Type: String
+    Default: {{.Source.ProviderName}}
 Conditions:
   IsGitHub:
-    !Equals [$.Source.ProviderName, "GitHub"]
+    !Equals [!Ref ProviderType, "GitHub"]
+  IsCodeCommit:
+    !Equals [!Ref ProviderType, "CodeCommit"]
 Resources:
   BuildProjectRole:
     Type: AWS::IAM::Role
@@ -215,6 +222,7 @@ Resources:
 {{- end}}
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
+#    Condition: !Condition IsGitHub
     DependsOn:
       - PipelineRole
       - PipelineRolePolicy
@@ -235,34 +243,22 @@ Resources:
             - Name: SourceCodeFor-{{$.AppName}}
               ActionTypeId:
                 Category: Source
-                # TODO: #273 For CodeCommit, this needs to be AWS. Let's do that later
-                Owner:
-                  !If
-                    - IsGitHub
-                    - ThirdParty
-                    - AWS
+                Owner: !If [IsGitHub, ThirdParty, AWS]
                 Version: 1
                 Provider: {{.Source.ProviderName}}
               Configuration:
-                # TODO: #273 For now this set of configurations is GitHub-specific,
-                # change it to be more generic
-                !If
-                - IsGitHub
-                -
-                  Owner: {{$.Source.Owner}}
-                  Repo: {{$.Source.Repository}}
-                  Branch: {{index $.Source.Properties "branch"}}
-                  # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager
-                  # Use the *entire* SecretString with version AWSCURRENT
-                  OAuthToken: !Sub
-                      - '{{"{{"}}resolve:secretsmanager:${SecretId}{{"}}"}}'
-                      - { SecretId: {{$.Source.GitHubPersonalAccessTokenSecretID}} }
-                -
-                  Repo: {{$.Source.Repository}}
-                  Branch: {{index $.Source.Properties "branch"}}
+                Owner: !If [IsGitHub, $.Source.Owner, ""]
+                Repo: {{$.Source.Repository}}
+                Branch: {{index $.Source.Properties "branch"}}
+                # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager
+                # Use the *entire* SecretString with version AWSCURRENT
+                OAuthToken: !Sub
+                    - '{{"{{"}}resolve:secretsmanager:${SecretId}{{"}}"}}'
+                    - { SecretId: {{$.Source.GitHubPersonalAccessTokenSecretID}} }
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1
+            - !Ref AWS::NoValue
         - Name: Build
           Actions:
           - Name: Build

@@ -57,7 +57,7 @@ const (
 	fmtGHPipelineName = "pipeline-%s-%s-%s"
 	fmtCCPipelineName = "pipeline-%s-%s"
 	fmtGHRepoURL      = "https://%s/%s/%s"
-	fmtCCRepoURL      = "https://%s.console.%s/codesuite/codecommit/repositories/%s"
+	fmtCCRepoURL      = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse"
 )
 
 var (
@@ -559,7 +559,9 @@ func (o *initPipelineOpts) pipelineName() (string, error) {
 func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	if o.provider == ghProviderName {
 		config := &manifest.GitHubProperties{
-			OwnerAndRepository:    fmt.Sprintf(fmtGHRepoURL, githubURL, o.githubOwner, o.repoName),
+			URL:                   fmt.Sprintf(fmtGHRepoURL, githubURL, o.githubOwner, o.repoName),
+			Owner:                 o.githubOwner,
+			Repository:            o.repoName,
 			Branch:                o.repoBranch,
 			GithubSecretIdKeyName: o.secret,
 		}
@@ -567,7 +569,8 @@ func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	}
 	if o.provider == ccProviderName {
 		config := &manifest.CodeCommitProperties{
-			Repository: fmt.Sprintf(fmtCCRepoURL, o.ccRegion, awsURL, o.repoName),
+			URL:        fmt.Sprintf(fmtCCRepoURL, o.ccRegion, awsURL, o.repoName),
+			Repository: o.repoName,
 			Branch:     o.repoBranch,
 		}
 		return manifest.NewProvider(config)

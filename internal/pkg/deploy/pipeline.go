@@ -16,10 +16,11 @@ import (
 )
 
 // NOTE: this is duplicated from validate.go
-var githubRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
+var ghRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
+var ccRepoExp = regexp.MustCompile(`(https:\/\/(?P<region>.+)(.console.aws.amazon.com\/codesuite\/codecommit\/repositories\/)(?P<repo>.+)(browse))`)
 
 const (
-	fmtInvalidGitHubRepo = "unable to locate the repository from the properties: %+v"
+	fmtInvalidRepo = "unable to locate the repository url from the properties: %+v"
 )
 
 // CreatePipelineInput represents the fields required to deploy a pipeline.
@@ -100,60 +101,76 @@ func (s *Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 	return id, nil
 }
 
-type ownerAndRepo struct {
-	owner string
-	repo  string
-}
-
-func (s *Source) parseOwnerAndRepo() (*ownerAndRepo, error) {
-	if s.ProviderName != manifest.GithubProviderName {
-		return nil, fmt.Errorf("invalid provider: %s", s.ProviderName)
+// parseOwnerOrRegionAndRepo parses the owner (if GitHub) / region (if CodeCommit) and repo name from the repo URL.
+func (s *Source) parseOwnerOrRegionAndRepo(provider string) (string, string, error) {
+	var repoExp *regexp.Regexp
+	if provider == "GitHub" {
+		repoExp = ghRepoExp
 	}
-	ownerAndRepoI, exists := s.Properties["repository"]
+	if provider == "CodeCommit" {
+		repoExp = ccRepoExp
+	}
+	url, exists := s.Properties["repository"]
 	if !exists {
-		return nil, fmt.Errorf("unable to locate the repository from the properties: %+v", s.Properties)
+		return "", "", fmt.Errorf("unable to locate the repository from the properties: %+v", s.Properties)
 	}
-	ownerAndRepoStr, ok := ownerAndRepoI.(string)
+	urlStr, ok := url.(string)
 	if !ok {
-		return nil, fmt.Errorf(fmtInvalidGitHubRepo, ownerAndRepoI)
+		return "", "", fmt.Errorf(fmtInvalidRepo, url)
 	}
 
-	match := githubRepoExp.FindStringSubmatch(ownerAndRepoStr)
+	match := repoExp.FindStringSubmatch(urlStr)
 	if len(match) == 0 {
-		return nil, fmt.Errorf(fmtInvalidGitHubRepo, ownerAndRepoStr)
+		return "", "", fmt.Errorf(fmtInvalidRepo, urlStr)
 	}
 
 	matches := make(map[string]string)
-	for i, name := range githubRepoExp.SubexpNames() {
+	for i, name := range repoExp.SubexpNames() {
 		if i != 0 && name != "" {
 			matches[name] = match[i]
 		}
 	}
-
-	return &ownerAndRepo{
-		owner: matches["owner"],
-		repo:  matches["repo"],
-	}, nil
+	var ownerOrRegion string
+	if provider == "GitHub" {
+		ownerOrRegion = matches["owner"]
+	}
+	if provider == "CodeCommit" {
+		ownerOrRegion = matches["region"]
+	}
+	return ownerOrRegion, matches["repo"], nil
 }
 
 // Repository returns the repository portion. For example,
 // given "aws/amazon-ecs-cli-v2", this function returns "amazon-ecs-cli-v2".
 func (s *Source) Repository() (string, error) {
-	oAndR, err := s.parseOwnerAndRepo()
+	if s.ProviderName != manifest.GithubProviderName && s.ProviderName != manifest.CodeCommitProviderName {
+		return "", fmt.Errorf("invalid provider: %s", s.ProviderName)
+	}
+	_, repo, err := s.parseOwnerOrRegionAndRepo(s.ProviderName)
 	if err != nil {
 		return "", err
 	}
-	return oAndR.repo, nil
+	return repo, nil
 }
 
 // Owner returns the repository owner portion. For example,
 // given "aws/amazon-ecs-cli-v2", this function returns "aws".
 func (s *Source) Owner() (string, error) {
-	oAndR, err := s.parseOwnerAndRepo()
+	owner, _, err := s.parseOwnerOrRegionAndRepo(s.ProviderName)
 	if err != nil {
 		return "", err
 	}
-	return oAndR.owner, nil
+	return owner, nil
+}
+
+// Note: can combine with above.
+// Region returns the repository region portion.
+func (s *Source) Region() (string, error) {
+	region, _, err := s.parseOwnerOrRegionAndRepo(s.ProviderName)
+	if err != nil {
+		return "", err
+	}
+	return region, nil
 }
 
 // PipelineStage represents configuration for each deployment stage
