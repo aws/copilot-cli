@@ -1,5 +1,5 @@
 EnvironmentManagerRole:
-  # An IAM Role to manage resources in your environment
+  # An IAM Role to describe resources in your environment
   DeletionPolicy: Retain
   Type: AWS::IAM::Role
   DependsOn: CloudformationExecutionRole
