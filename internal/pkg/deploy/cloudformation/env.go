@@ -5,6 +5,7 @@
 package cloudformation
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 )
 
 // Environment stack's parameters that need to updated while moving the legacy template to a newer version.
@@ -34,7 +36,31 @@ func (cf CloudFormation) DeployEnvironment(env *deploy.CreateEnvironmentInput) e
 	if err != nil {
 		return err
 	}
-	return cf.cfnClient.Create(s)
+	if _, err := cf.cfnClient.Create(s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// DeployAndRenderEnvironment creates the CloudFormation stack for an environment, and render the stack creation to out.
+func (cf CloudFormation) DeployAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
+	s, err := toStack(stack.NewEnvStackConfig(env))
+	if err != nil {
+		return err
+	}
+	return cf.renderStackChanges(renderStackChangesInput{
+		w:                out,
+		stackName:        s.Name,
+		stackDescription: fmt.Sprintf("Creating the infrastructure for the %s environment.", s.Name),
+		createChangeSet: func() (string, error) {
+			changeSetID, err := cf.cfnClient.Create(s)
+			if err != nil {
+				return "", err
+			}
+			return changeSetID, nil
+		},
+		waitForStack: cf.cfnClient.WaitForCreate,
+	})
 }
 
 // StreamEnvironmentCreation streams resource update events while a deployment is taking place.
@@ -65,7 +91,7 @@ func (cf CloudFormation) DeleteEnvironment(appName, envName, cfnExecRoleARN stri
 // The done channel is closed once this method exits to notify other streams that they should stop working.
 func (cf CloudFormation) streamEnvironmentResponse(done chan struct{}, resp chan deploy.CreateEnvironmentResponse, stack *stack.EnvStackConfig) {
 	defer close(done)
-	if err := cf.cfnClient.WaitForCreate(stack.StackName()); err != nil {
+	if err := cf.cfnClient.WaitForCreate(context.Background(), stack.StackName()); err != nil {
 		resp <- deploy.CreateEnvironmentResponse{Err: err}
 		return
 	}
@@ -162,7 +188,7 @@ func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, t
 		if cloudformation.StackStatus(aws.StringValue(descr.StackStatus)).InProgress() {
 			// There is already an update happening to the environment stack.
 			// Best-effort try to wait for the existing update to be over before retrying.
-			_ = cf.cfnClient.WaitForUpdate(s.Name)
+			_ = cf.cfnClient.WaitForUpdate(context.Background(), s.Name)
 			continue
 		}
 

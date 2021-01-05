@@ -41,6 +41,7 @@ const (
 	deployFlag            = "deploy"
 	resourcesFlag         = "resources"
 	githubURLFlag         = "github-url"
+	repoURLFlag           = "url"
 	githubAccessTokenFlag = "github-access-token"
 	gitBranchFlag         = "git-branch"
 	envsFlag              = "environments"
@@ -105,7 +106,7 @@ const (
 	dockerFileFlagShort        = "d"
 	commandFlagShort           = "c"
 	imageFlagShort             = "i"
-	githubURLFlagShort         = "u"
+	repoURLFlagShort           = "u"
 	githubAccessTokenFlagShort = "t"
 	gitBranchFlagShort         = "b"
 	envsFlagShort              = "e"
@@ -172,7 +173,8 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	tasksLogsFlagDescription = "Optional. Only return logs from specific task IDs."
 
 	deployTestFlagDescription        = `Deploy your service or job to a "test" environment.`
-	githubURLFlagDescription         = "GitHub repository URL for your service."
+	githubURLFlagDescription         = "(Deprecated.) Use --url instead. Repository URL to trigger your pipeline."
+	repoURLFlagDescription           = "The repository URL to trigger your pipeline."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
 	gitBranchFlagDescription         = "Branch used to trigger your pipeline."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."

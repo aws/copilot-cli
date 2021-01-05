@@ -71,7 +71,7 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 					m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
 						StackStatus: aws.String("UPDATE_IN_PROGRESS"),
 					}, nil).AnyTimes(),
-					m.EXPECT().WaitForUpdate("phonetool-test").Return(nil).AnyTimes(),
+					m.EXPECT().WaitForUpdate(gomock.Any(), "phonetool-test").Return(nil).AnyTimes(),
 					m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{}, nil).AnyTimes(),
 					m.EXPECT().UpdateAndWait(gomock.Any()).Return(nil),
 				)
