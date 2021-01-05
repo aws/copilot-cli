@@ -79,13 +79,20 @@ func testStackStreamer_Fetch_Success(t *testing.T) {
 		out: &cloudformation.DescribeStackEventsOutput{
 			StackEvents: []*cloudformation.StackEvent{
 				{
-					EventId:           aws.String("abc"),
+					EventId:              aws.String("1"),
+					LogicalResourceId:    aws.String("CloudformationExecutionRole"),
+					ResourceStatus:       aws.String("CREATE_FAILED"),
+					ResourceStatusReason: aws.String("phonetool-test-CFNExecutionRole already exists"),
+					Timestamp:            aws.Time(time.Date(2020, time.November, 23, 19, 0, 0, 0, time.UTC)),
+				},
+				{
+					EventId:           aws.String("2"),
 					LogicalResourceId: aws.String("Cluster"),
 					ResourceStatus:    aws.String("CREATE_COMPLETE"),
 					Timestamp:         aws.Time(time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)),
 				},
 				{
-					EventId:           aws.String("def"),
+					EventId:           aws.String("3"),
 					LogicalResourceId: aws.String("PublicLoadBalancer"),
 					ResourceStatus:    aws.String("CREATE_COMPLETE"),
 					Timestamp:         aws.Time(time.Date(2020, time.November, 23, 17, 0, 0, 0, time.UTC)),
@@ -101,6 +108,11 @@ func testStackStreamer_Fetch_Success(t *testing.T) {
 	// THEN
 	require.NoError(t, err)
 	require.ElementsMatch(t, []StackEvent{
+		{
+			LogicalResourceID:    "CloudformationExecutionRole",
+			ResourceStatus:       "CREATE_FAILED",
+			ResourceStatusReason: "phonetool-test-CFNExecutionRole already exists",
+		},
 		{
 			LogicalResourceID: "PublicLoadBalancer",
 			ResourceStatus:    "CREATE_COMPLETE",
