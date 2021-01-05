@@ -10,17 +10,19 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 type execTaskMocks struct {
-	storeSvc  *mocks.Mockstore
-	configSel *mocks.MockappEnvSelector
-	taskSel   *mocks.MockrunningTaskSelector
+	storeSvc    *mocks.Mockstore
+	configSel   *mocks.MockappEnvSelector
+	taskSel     *mocks.MockrunningTaskSelector
+	commandExec *mocks.MockecsCommandExecutor
 }
 
 func TestTaskExec_Validate(t *testing.T) {
@@ -117,7 +119,7 @@ func TestTaskExec_Ask(t *testing.T) {
 		mockTaskGroup = "my-task-group"
 		mockTaskID    = "my-task-id"
 	)
-	mockTask := &awsecs.Task{
+	mockTask := &ecs.Task{
 		TaskArn: aws.String("mockTaskARN"),
 	}
 	mockErr := errors.New("some error")
@@ -130,7 +132,7 @@ func TestTaskExec_Ask(t *testing.T) {
 		setupMocks  func(mocks execTaskMocks)
 
 		wantedError error
-		wantedTask  *awsecs.Task
+		wantedTask  *ecs.Task
 	}{
 		"should bubble error if fail to select task in default cluster": {
 			useDefault: true,
@@ -255,6 +257,128 @@ func TestTaskExec_Ask(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedTask, execTasks.task)
+			}
+		})
+	}
+}
+
+func TestTaskExec_Execute(t *testing.T) {
+	const (
+		mockApp           = "my-app"
+		mockEnv           = "my-env"
+		mockCommand       = "mockCommand"
+		mockBadTaskARN    = "mockBadTaskARN"
+		mockTaskARN       = "arn:aws:ecs:us-west-2:123456789:task/4082490ee6c245e09d2145010aa1ba8d"
+		mockTaskID        = "4082490ee6c245e09d2145010aa1ba8d"
+		mockClusterARN    = "mockClusterARN"
+		mockContainerName = "mockContainerName"
+	)
+	mockTask := &ecs.Task{
+		TaskArn:    aws.String(mockTaskARN),
+		ClusterArn: aws.String(mockClusterARN),
+		Containers: []*awsecs.Container{
+			{
+				Name: aws.String(mockContainerName),
+			},
+		},
+	}
+	mockErr := errors.New("some error")
+	testCases := map[string]struct {
+		inTask       *ecs.Task
+		inUseDefault bool
+		setupMocks   func(mocks execTaskMocks)
+
+		wantedError error
+	}{
+		"should bubble error if fail to get environment": {
+			setupMocks: func(m execTaskMocks) {
+				m.storeSvc.EXPECT().GetEnvironment(mockApp, mockEnv).Return(nil, mockErr)
+			},
+
+			wantedError: fmt.Errorf("get environment my-env: some error"),
+		},
+		"should bubble error if fail to parse task id": {
+			inUseDefault: true,
+			inTask: &ecs.Task{
+				TaskArn:    aws.String(mockBadTaskARN),
+				ClusterArn: aws.String(mockClusterARN),
+				Containers: []*awsecs.Container{
+					{
+						Name: aws.String(mockContainerName),
+					},
+				},
+			},
+			setupMocks: func(m execTaskMocks) {},
+
+			wantedError: fmt.Errorf("parse task ARN mockBadTaskARN: parse ECS task ARN: arn: invalid prefix"),
+		},
+		"should bubble error if fail to execute commands": {
+			inTask:       mockTask,
+			inUseDefault: true,
+			setupMocks: func(m execTaskMocks) {
+				m.commandExec.EXPECT().ExecuteCommand(ecs.ExecuteCommandInput{
+					Cluster:   mockClusterARN,
+					Command:   mockCommand,
+					Container: mockContainerName,
+					Task:      mockTaskID,
+				}).Return(mockErr)
+			},
+
+			wantedError: fmt.Errorf("execute command mockCommand in container mockContainerName: some error"),
+		},
+		"success": {
+			inTask: mockTask,
+			setupMocks: func(m execTaskMocks) {
+				m.storeSvc.EXPECT().GetEnvironment(mockApp, mockEnv).Return(&config.Environment{}, nil)
+				m.commandExec.EXPECT().ExecuteCommand(ecs.ExecuteCommandInput{
+					Cluster:   mockClusterARN,
+					Command:   mockCommand,
+					Container: mockContainerName,
+					Task:      mockTaskID,
+				}).Return(nil)
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockStoreReader := mocks.NewMockstore(ctrl)
+			mockCommandExec := mocks.NewMockecsCommandExecutor(ctrl)
+			mockNewCommandExec := func(_ *session.Session) ecsCommandExecutor {
+				return mockCommandExec
+			}
+			mocks := execTaskMocks{
+				storeSvc:    mockStoreReader,
+				commandExec: mockCommandExec,
+			}
+
+			tc.setupMocks(mocks)
+
+			execTasks := &taskExecOpts{
+				taskExecVars: taskExecVars{
+					execVars: execVars{
+						appName: mockApp,
+						envName: mockEnv,
+						command: mockCommand,
+					},
+					useDefault: tc.inUseDefault,
+				},
+				task:               tc.inTask,
+				store:              mockStoreReader,
+				newCommandExecutor: mockNewCommandExec,
+			}
+
+			// WHEN
+			err := execTasks.Execute()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

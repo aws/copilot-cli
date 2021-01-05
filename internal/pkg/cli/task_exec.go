@@ -6,6 +6,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -15,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
@@ -42,11 +44,12 @@ type taskExecVars struct {
 
 type taskExecOpts struct {
 	taskExecVars
-	store            store
-	ssmPluginManager ssmPluginManager
-	prompter         prompter
-	newTaskSel       func(*session.Session) runningTaskSelector
-	configSel        appEnvSelector
+	store              store
+	ssmPluginManager   ssmPluginManager
+	prompter           prompter
+	newTaskSel         func(*session.Session) runningTaskSelector
+	configSel          appEnvSelector
+	newCommandExecutor func(*session.Session) ecsCommandExecutor
 
 	task *awsecs.Task
 }
@@ -66,6 +69,9 @@ func newTaskExecOpts(vars taskExecVars) (*taskExecOpts, error) {
 			return selector.NewTaskSelect(prompter, ecs.New(sess))
 		},
 		configSel: selector.NewConfigSelect(prompter, ssmStore),
+		newCommandExecutor: func(s *session.Session) ecsCommandExecutor {
+			return awsecs.New(s)
+		},
 	}, nil
 }
 
@@ -117,6 +123,24 @@ func (o *taskExecOpts) Ask() error {
 
 // Execute executes a command in a running container.
 func (o *taskExecOpts) Execute() error {
+	sess, err := o.configSession()
+	if err != nil {
+		return err
+	}
+	cluster, container := aws.StringValue(o.task.ClusterArn), aws.StringValue(o.task.Containers[0].Name)
+	taskID, err := awsecs.TaskID(aws.StringValue(o.task.TaskArn))
+	if err != nil {
+		return fmt.Errorf("parse task ARN %s: %w", aws.StringValue(o.task.TaskArn), err)
+	}
+	log.Infof("Execute into container %s in task %s.\n", container, taskID)
+	if err = o.newCommandExecutor(sess).ExecuteCommand(awsecs.ExecuteCommandInput{
+		Cluster:   cluster,
+		Command:   o.command,
+		Container: container,
+		Task:      taskID,
+	}); err != nil {
+		return fmt.Errorf("execute command %s in container %s: %w", o.command, container, err)
+	}
 	return nil
 }
 
@@ -152,6 +176,18 @@ func (o *taskExecOpts) selectTaskInAppEnvCluster() error {
 	return nil
 }
 
+func (o *taskExecOpts) configSession() (*session.Session, error) {
+	sessProvider := sessions.NewProvider()
+	if o.useDefault {
+		return sessProvider.Default()
+	}
+	env, err := o.store.GetEnvironment(o.appName, o.envName)
+	if err != nil {
+		return nil, fmt.Errorf("get environment %s: %w", o.envName, err)
+	}
+	return sessProvider.FromRole(env.ManagerRoleARN, env.Region)
+}
+
 // buildTaskExecCmd builds the command for execute a running container in a one-off task.
 func buildTaskExecCmd() *cobra.Command {
 	vars := taskExecVars{}
@@ -184,7 +220,6 @@ func buildTaskExecCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", nameFlagDescription)
 	cmd.Flags().StringVarP(&vars.command, commandFlag, commandFlagShort, defaultCommand, execCommandFlagDescription)
 	cmd.Flags().StringVar(&vars.taskID, taskIDFlag, "", taskIDFlagDescription)
-	cmd.Flags().StringVar(&vars.containerName, containerFlag, "", containerFlagDescription)
 	cmd.Flags().BoolVar(&vars.useDefault, taskDefaultFlag, false, taskExecDefaultFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)

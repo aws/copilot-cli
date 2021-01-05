@@ -236,7 +236,7 @@ are also accepted.`
 
 	upgradeAllEnvsDescription = "Optional. Upgrade all environments."
 
-	taskIDFlagDescription      = "Optional. ID of the task you want to exec in. By default a random task will be used."
+	taskIDFlagDescription      = "Optional. ID of the task you want to exec in."
 	execCommandFlagDescription = `Optional. The command that is passed to a running container.`
 	containerFlagDescription   = "Optional. The specific container you want to exec in. By default the first essential container will be used."
 	clusterFlagDescription     = "Optional. Specifies which cluster to use. Mutually exclusive with --app or --env."
