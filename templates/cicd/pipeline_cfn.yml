@@ -15,8 +15,6 @@ Parameters:
 Conditions:
   IsGitHub:
     !Equals [!Ref ProviderType, "GitHub"]
-  IsCodeCommit:
-    !Equals [!Ref ProviderType, "CodeCommit"]
 Resources:
   BuildProjectRole:
     Type: AWS::IAM::Role
@@ -240,28 +238,40 @@ Resources:
       Stages:
         - Name: Source
           Actions:
-            - Name: SourceCodeFor-{{$.AppName}}
-              ActionTypeId:
-                Category: Source
-                Owner: !If [IsGitHub, ThirdParty, AWS]
-                Version: 1
-                Provider: {{.Source.ProviderName}}
-              Configuration:
-#                Owner: {{$.Source.Owner}}
-#                Repo:
-#                Branch:
-                RepositoryName: {{$.Source.Repository}}
-                BranchName: {{index $.Source.Properties "branch"}}
-                # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager
-                # Use the *entire* SecretString with version AWSCURRENT
-#                OAuthToken: !Sub
-#                  - '{{"{{"}}resolve:secretsmanager:${SecretId}{{"}}"}}'
-#                  - { SecretId: {{$.Source.GitHubPersonalAccessTokenSecretID}} }
-#                PollForSourceChanges: true
-              OutputArtifacts:
-                - Name: !If [IsGitHub, SCCheckoutArtifact, CODE_ZIP]
-              RunOrder: 1
-            - !Ref AWS::NoValue
+            !If
+              - IsGitHub
+              -
+                - Name: SourceCodeFor-{{$.AppName}}
+                  ActionTypeId:
+                    Category: Source
+                    Owner: ThirdParty
+                    Version: 1
+                    Provider: {{.Source.ProviderName}}
+                  Configuration:
+                    Owner: {{$.Source.Owner}}
+                    Repo: {{$.Source.Repository}}
+                    Branch: {{index $.Source.Properties "branch"}}
+                    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager
+                    # Use the *entire* SecretString with version AWSCURRENT
+                    OAuthToken: !Sub
+                      - '{{"{{"}}resolve:secretsmanager:${SecretId}{{"}}"}}'
+                      - { SecretId: {{$.Source.GitHubPersonalAccessTokenSecretID}} }
+                  OutputArtifacts:
+                    - Name: SCCheckoutArtifact
+                  RunOrder: 1
+              -
+                - Name: SourceCodeFor-{{$.AppName}}
+                  ActionTypeId:
+                    Category: Source
+                    Owner: AWS
+                    Version: 1
+                    Provider: {{.Source.ProviderName}}
+                  Configuration:
+                    RepositoryName: {{$.Source.Repository}}
+                    BranchName: {{index $.Source.Properties "branch"}}
+                  OutputArtifacts:
+                    - Name: CODE_ZIP
+                  RunOrder: 1
         - Name: Build
           Actions:
           - Name: Build
