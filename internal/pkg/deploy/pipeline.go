@@ -17,7 +17,7 @@ import (
 
 // NOTE: this is duplicated from validate.go
 var ghRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
-var ccRepoExp = regexp.MustCompile(`(https:\/\/(?P<region>.+)(.console.aws.amazon.com\/codesuite\/codecommit\/repositories\/)(?P<repo>.+)(browse))`)
+var ccRepoExp = regexp.MustCompile(`(https:\/\/(?P<region>.+)(.console.aws.amazon.com\/codesuite\/codecommit\/repositories\/)(?P<repo>.+)(\/browse))`)
 
 const (
 	fmtInvalidRepo = "unable to locate the repository url from the properties: %+v"
@@ -83,7 +83,7 @@ type Source struct {
 // Secrets manager, which stores the GitHub Personal Access token if the
 // provider is "GitHub". Otherwise, it returns the detected provider.
 func (s *Source) GitHubPersonalAccessTokenSecretID() (string, error) {
-	id := ""
+	id := "N/A"
 	var ok bool
 	if s.ProviderName == manifest.GithubProviderName {
 		secretID, exists := s.Properties[manifest.GithubSecretIdKeyName]
@@ -155,9 +155,13 @@ func (s *Source) Repository() (string, error) {
 // Owner returns the repository owner portion. For example,
 // given "aws/amazon-ecs-cli-v2", this function returns "aws".
 func (s *Source) Owner() (string, error) {
-	owner, _, err := s.parseOwnerOrRegionAndRepo(s.ProviderName)
-	if err != nil {
-		return "", err
+	owner := "N/A"
+	var err error
+	if s.ProviderName == manifest.GithubProviderName {
+		owner, _, err = s.parseOwnerOrRegionAndRepo(s.ProviderName)
+		if err != nil {
+			return "", err
+		}
 	}
 	return owner, nil
 }

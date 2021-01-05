@@ -559,9 +559,9 @@ func (o *initPipelineOpts) pipelineName() (string, error) {
 func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	if o.provider == ghProviderName {
 		config := &manifest.GitHubProperties{
-			URL:                   fmt.Sprintf(fmtGHRepoURL, githubURL, o.githubOwner, o.repoName),
-			Owner:                 o.githubOwner,
-			Repository:            o.repoName,
+			//URL:                   fmt.Sprintf(fmtGHRepoURL, githubURL, o.githubOwner, o.repoName),
+			//Owner:                 o.githubOwner,
+			RepositoryURL:         fmt.Sprintf(fmtGHRepoURL, githubURL, o.githubOwner, o.repoName),
 			Branch:                o.repoBranch,
 			GithubSecretIdKeyName: o.secret,
 		}
@@ -569,9 +569,9 @@ func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	}
 	if o.provider == ccProviderName {
 		config := &manifest.CodeCommitProperties{
-			URL:        fmt.Sprintf(fmtCCRepoURL, o.ccRegion, awsURL, o.repoName),
-			Repository: o.repoName,
-			Branch:     o.repoBranch,
+			//URL:        fmt.Sprintf(fmtCCRepoURL, o.ccRegion, awsURL, o.repoName),
+			RepositoryURL: fmt.Sprintf(fmtCCRepoURL, o.ccRegion, awsURL, o.repoName),
+			Branch:        o.repoBranch,
 		}
 		return manifest.NewProvider(config)
 	}

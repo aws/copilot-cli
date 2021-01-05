@@ -151,6 +151,7 @@ Resources:
           - Effect: Allow
             Action:
               - codepipeline:*
+              - codecommit:*
               - iam:ListRoles
               - cloudformation:Describe*
               - cloudFormation:List*
@@ -246,16 +247,19 @@ Resources:
                 Version: 1
                 Provider: {{.Source.ProviderName}}
               Configuration:
-                Owner: !If [IsGitHub, $.Source.Owner, ""]
-                Repo: {{$.Source.Repository}}
-                Branch: {{index $.Source.Properties "branch"}}
+#                Owner: {{$.Source.Owner}}
+#                Repo:
+#                Branch:
+                RepositoryName: {{$.Source.Repository}}
+                BranchName: {{index $.Source.Properties "branch"}}
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager
                 # Use the *entire* SecretString with version AWSCURRENT
-                OAuthToken: !Sub
-                    - '{{"{{"}}resolve:secretsmanager:${SecretId}{{"}}"}}'
-                    - { SecretId: {{$.Source.GitHubPersonalAccessTokenSecretID}} }
+#                OAuthToken: !Sub
+#                  - '{{"{{"}}resolve:secretsmanager:${SecretId}{{"}}"}}'
+#                  - { SecretId: {{$.Source.GitHubPersonalAccessTokenSecretID}} }
+#                PollForSourceChanges: true
               OutputArtifacts:
-                - Name: SCCheckoutArtifact
+                - Name: !If [IsGitHub, SCCheckoutArtifact, CODE_ZIP]
               RunOrder: 1
             - !Ref AWS::NoValue
         - Name: Build
@@ -270,7 +274,7 @@ Resources:
               ProjectName: !Ref BuildProject
             RunOrder: 1
             InputArtifacts:
-              - Name: SCCheckoutArtifact
+              - Name: !If [IsGitHub, SCCheckoutArtifact, CODE_ZIP]
             OutputArtifacts:
               - Name: BuildOutput
         {{- $length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}{{$numWorkloads := len $stage.LocalWorkloads}}{{if gt $numWorkloads 0}}
