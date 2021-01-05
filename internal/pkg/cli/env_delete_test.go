@@ -216,17 +216,35 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 
 				deployer := mocks.NewMockenvironmentDeployer(ctrl)
 				deployer.EXPECT().EnvironmentTemplate(gomock.Any(), gomock.Any()).Return(`
+Resources:
+  EnableLongARNFormatAction:
+    Type: Custom::EnableLongARNFormatFunction
+    DependsOn:
+    - EnableLongARNFormatFunction
+    Properties:
+    ServiceToken: !GetAtt EnableLongARNFormatFunction.Arn
   CloudformationExecutionRole:
+    Type: AWS::IAM::Role
   EnvironmentManagerRole:
+    Type: AWS::IAM::Role
 `, nil)
 				deployer.EXPECT().UpdateEnvironmentTemplate(
 					"phonetool",
 					"test",
 					`
+Resources:
+  EnableLongARNFormatAction:
+    Type: Custom::EnableLongARNFormatFunction
+    DependsOn:
+    - EnableLongARNFormatFunction
+    Properties:
+    ServiceToken: !GetAtt EnableLongARNFormatFunction.Arn
   CloudformationExecutionRole:
     DeletionPolicy: Retain
+    Type: AWS::IAM::Role
   EnvironmentManagerRole:
     DeletionPolicy: Retain
+    Type: AWS::IAM::Role
 `, "arn").Return(errors.New("some error"))
 
 				prog.EXPECT().Stop(log.Serror("Failed to delete environment test from application phonetool.\n"))
@@ -258,9 +276,11 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 
 				deployer := mocks.NewMockenvironmentDeployer(ctrl)
 				deployer.EXPECT().EnvironmentTemplate(gomock.Any(), gomock.Any()).Return(`
+Resources:
   CloudformationExecutionRole:
     DeletionPolicy: Retain
   EnvironmentManagerRole:
+    # An IAM Role to manage resources in your environment
     DeletionPolicy: Retain`, nil)
 				deployer.EXPECT().DeleteEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 
@@ -292,9 +312,11 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 
 				deployer := mocks.NewMockenvironmentDeployer(ctrl)
 				deployer.EXPECT().EnvironmentTemplate(gomock.Any(), gomock.Any()).Return(`
+Resources:
   CloudformationExecutionRole:
     DeletionPolicy: Retain
   EnvironmentManagerRole:
+    # An IAM Role to manage resources in your environment
     DeletionPolicy: Retain`, nil)
 				deployer.EXPECT().DeleteEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
@@ -335,10 +357,15 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 
 				deployer := mocks.NewMockenvironmentDeployer(ctrl)
 				deployer.EXPECT().EnvironmentTemplate("phonetool", "test").Return(`
+Resources:
   CloudformationExecutionRole:
     DeletionPolicy: Retain
+    Type: AWS::IAM::Role
   EnvironmentManagerRole:
-    DeletionPolicy: Retain`, nil)
+    # An IAM Role to manage resources in your environment
+    DeletionPolicy: Retain
+    Type: AWS::IAM::Role
+`, nil)
 				deployer.EXPECT().DeleteEnvironment("phonetool", "test", "execARN").Return(nil)
 
 				iam := mocks.NewMockroleDeleter(ctrl)

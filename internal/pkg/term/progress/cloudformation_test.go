@@ -89,6 +89,7 @@ func TestStackComponent_Render(t *testing.T) {
 				content: "  - An ECS cluster to hold your services\n",
 			},
 		},
+		separator: '\t',
 	}
 	buf := new(strings.Builder)
 
@@ -98,10 +99,9 @@ func TestStackComponent_Render(t *testing.T) {
 	// THEN
 	require.NoError(t, err)
 	require.Equal(t, 3, nl, "expected 3 entries to be printed to the terminal")
-	require.Equal(t, `- The environment stack "phonetool-test" contains your shared resources between services [CREATE_COMPLETE]
-  - A load balancer to distribute traffic from the internet
-  - An ECS cluster to hold your services
-`, buf.String())
+	require.Equal(t, "- The environment stack \"phonetool-test\" contains your shared resources between services\t[CREATE_COMPLETE]\n"+
+		"  - A load balancer to distribute traffic from the internet\n"+
+		"  - An ECS cluster to hold your services\n", buf.String())
 }
 
 func TestRegularResourceComponent_Listen(t *testing.T) {
@@ -170,6 +170,7 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 	comp := &regularResourceComponent{
 		description: "An ECS cluster to hold your services",
 		status:      "CREATE_COMPLETE",
+		separator:   '\t',
 	}
 	buf := new(strings.Builder)
 
@@ -179,5 +180,5 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 	// THEN
 	require.NoError(t, err)
 	require.Equal(t, 1, nl, "expected to be rendered as a single line component")
-	require.Equal(t, "- An ECS cluster to hold your services [CREATE_COMPLETE]\n", buf.String())
+	require.Equal(t, "- An ECS cluster to hold your services\t[CREATE_COMPLETE]\n", buf.String())
 }
