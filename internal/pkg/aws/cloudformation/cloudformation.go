@@ -237,12 +237,6 @@ func (c *CloudFormation) events(stackName string, match eventMatcher) ([]StackEv
 	return events, nil
 }
 
-// ListStacksWithTags returns all the stacks in the current AWS account and region with the specified matching
-// tags. If a tag key is provided but the value is empty, the method will match tags with any value for the given key.
-func (c *CloudFormation) ListStacksWithTags(tags map[string]string) ([]StackDescription, error) {
-	return c.listStacksWithTags(tags)
-}
-
 // ErrorEvents returns the list of events with "failed" status in **chronological order**
 func (c *CloudFormation) ErrorEvents(stackName string) ([]StackEvent, error) {
 	return c.events(stackName, func(in *cloudformation.StackEvent) bool {
@@ -253,6 +247,36 @@ func (c *CloudFormation) ErrorEvents(stackName string) ([]StackEvent, error) {
 		}
 		return false
 	})
+}
+
+// ListStacksWithTags returns all the stacks in the current AWS account and region with the specified matching
+// tags. If a tag key is provided but the value is empty, the method will match tags with any value for the given key.
+func (c *CloudFormation) ListStacksWithTags(tags map[string]string) ([]StackDescription, error) {
+	match := makeTagMatcher(tags)
+
+	var nextToken *string
+	var summaries []StackDescription
+
+	for {
+		out, err := c.client.DescribeStacks(&cloudformation.DescribeStacksInput{
+			NextToken: nextToken,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("list stacks: %w", err)
+		}
+
+		for _, summary := range out.Stacks {
+			stackTags := summary.Tags
+			if match(stackTags) {
+				summaries = append(summaries, StackDescription(*summary))
+			}
+		}
+		nextToken = out.NextToken
+		if nextToken == nil {
+			break
+		}
+	}
+	return summaries, nil
 }
 
 func (c *CloudFormation) create(stack *Stack) (string, error) {
@@ -327,32 +351,4 @@ func makeTagMatcher(wantedTags map[string]string) func([]*cloudformation.Tag) bo
 
 		return true
 	}
-}
-
-func (c *CloudFormation) listStacksWithTags(tags map[string]string) ([]StackDescription, error) {
-	match := makeTagMatcher(tags)
-
-	var nextToken *string
-	var summaries []StackDescription
-
-	for {
-		out, err := c.client.DescribeStacks(&cloudformation.DescribeStacksInput{
-			NextToken: nextToken,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("list stacks: %w", err)
-		}
-
-		for _, summary := range out.Stacks {
-			stackTags := summary.Tags
-			if match(stackTags) {
-				summaries = append(summaries, StackDescription(*summary))
-			}
-		}
-		nextToken = out.NextToken
-		if nextToken == nil {
-			break
-		}
-	}
-	return summaries, nil
 }
