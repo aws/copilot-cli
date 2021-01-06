@@ -326,7 +326,7 @@ func makeTagMatcher(wantedTags map[string]string) func([]*cloudformation.Tag) bo
 		hsWantedTags := make(map[string]bool)
 
 		// Populate the hash set and match map
-		for k, _ := range wantedTags {
+		for k := range wantedTags {
 			tagsMatched[k] = false
 			hsWantedTags[k] = true
 		}
