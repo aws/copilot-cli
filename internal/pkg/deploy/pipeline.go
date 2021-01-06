@@ -22,7 +22,7 @@ var ghRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P
 var ccRepoExp = regexp.MustCompile(`(https:\/\/(?P<region>.+)(.console.aws.amazon.com\/codesuite\/codecommit\/repositories\/)(?P<repo>.+)(\/browse))`)
 
 const (
-	fmtInvalidRepo = "unable to locate the repository url from the properties: %+v"
+	fmtInvalidRepo = "unable to locate the repository URL from the properties: %+v"
 )
 
 // CreatePipelineInput represents the fields required to deploy a pipeline.

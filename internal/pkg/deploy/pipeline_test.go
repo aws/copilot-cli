@@ -31,7 +31,7 @@ func TestParseOwnerAndRepo(t *testing.T) {
 					"repository": "invalid",
 				},
 			},
-			expectedErrMsg: aws.String("unable to locate the repository url from the properties"),
+			expectedErrMsg: aws.String("unable to locate the repository URL from the properties"),
 		},
 		"valid GH repository property": {
 			src: &Source{
