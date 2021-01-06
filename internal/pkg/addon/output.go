@@ -73,13 +73,10 @@ func parseTypeByLogicalID(resourcesNode *yaml.Node) (typeFor map[string]string, 
 		return nil, errors.New(`"Resources" field in cloudformation template is not a map`)
 	}
 
-	// The content of a !!map, like the "Resources" field, always come in pairs.
-	// The first element represents the key, ex: {Value: "Cluster", Kind: ScalarNode, Tag: "!!str", Content: nil}
-	// The second element holds the values such as "Type" and "Properties", ex: {Value: "", Kind: MappingNode, Tag:"!!map", Content:[...]}
 	typeFor = make(map[string]string)
-	for i := 0; i < len(resourcesNode.Content); i += 2 {
-		logicalIDNode := resourcesNode.Content[i]
-		fieldsNode := resourcesNode.Content[i+1]
+	for _, content := range mappingContents(resourcesNode) {
+		logicalIDNode := content.keyNode
+		fieldsNode := content.valueNode
 		fields := struct {
 			Type string `yaml:"Type"`
 		}{}
@@ -101,17 +98,14 @@ func parseOutputNodes(outputsNode *yaml.Node) ([]*outputNode, error) {
 		return nil, errors.New(`"Outputs" field in cloudformation template is not a map`)
 	}
 
-	// The content of a !!map, like the "Outputs" field, always come in pairs.
-	// The first element represents the key, ex: {Value: "MyDynamoDBTableName", Kind: ScalarNode, Tag: "!!str", Content: nil}
-	// The second element holds the values such as "Value", ex: {Value: "", Kind: MappingNode, Tag:"!!map", Content:[...]}
 	var nodes []*outputNode
-	for i := 0; i < len(outputsNode.Content); i += 2 {
-		nameNode := outputsNode.Content[i]
+	for _, content := range mappingContents(outputsNode) {
+		nameNode := content.keyNode
 
 		fields := struct {
 			Value yaml.Node `yaml:"Value"`
 		}{}
-		if err := outputsNode.Content[i+1].Decode(&fields); err != nil {
+		if err := content.valueNode.Decode(&fields); err != nil {
 			return nil, fmt.Errorf(`decode the "Value" field of output "%s": %w`, nameNode.Value, err)
 		}
 		nodes = append(nodes, &outputNode{
