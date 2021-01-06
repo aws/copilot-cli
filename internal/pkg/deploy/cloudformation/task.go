@@ -86,25 +86,17 @@ func (cf CloudFormation) ListDefaultTaskStacks() ([]deploy.TaskStackInfo, error)
 	var outputTaskStacks []deploy.TaskStackInfo
 	for _, task := range tasks {
 		// Eliminate tasks which are tagged for a particular copilot app or env.
-		var hasAppTag, hasEnvTag bool
 		for _, tag := range task.Tags {
 			if aws.StringValue(tag.Key) == deploy.AppTagKey {
-				hasAppTag = true
+				continue
 			}
 			if aws.StringValue(tag.Key) == deploy.EnvTagKey {
-				hasEnvTag = true
+				continue
 			}
-		}
-		if hasAppTag || hasEnvTag {
-			continue
 		}
 
 		outputTaskStacks = append(outputTaskStacks, deploy.TaskStackInfo{
 			StackName: aws.StringValue(task.StackName),
-			App:       "",
-			Env:       "",
-
-			RoleARN: "",
 		})
 	}
 	return outputTaskStacks, nil

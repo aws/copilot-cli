@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -238,26 +237,10 @@ func (c *CloudFormation) events(stackName string, match eventMatcher) ([]StackEv
 	return events, nil
 }
 
-// ListStacksWithPrefix returns all the stacks in the current AWS account with th
-func (c *CloudFormation) ListStacksWithPrefix(prefix string) ([]StackDescription, error) {
-	emptyTags := make(map[string]string)
-	stacks, err := c.listStacks(emptyTags)
-	if err != nil {
-		return nil, err
-	}
-	var outputStacks []StackDescription
-	for _, stack := range stacks {
-		if strings.HasPrefix(aws.StringValue(stack.StackName), prefix) {
-			outputStacks = append(outputStacks, stack)
-		}
-	}
-	return outputStacks, nil
-}
-
 // ListStacksWithTags returns all the stacks in the current AWS account and region with the specified matching
 // tags. If a tag key is provided but the value is empty, the method will match tags with any value for the given key.
 func (c *CloudFormation) ListStacksWithTags(tags map[string]string) ([]StackDescription, error) {
-	return c.listStacks(tags)
+	return c.listStacksWithTags(tags)
 }
 
 // ErrorEvents returns the list of events with "failed" status in **chronological order**
@@ -321,26 +304,16 @@ func makeTagMatcher(wantedTags map[string]string) func([]*cloudformation.Tag) bo
 		// Define a map to determine whether each wanted tag is a match.
 		tagsMatched := make(map[string]bool, len(wantedTags))
 
-		// We'll use this as a hash set to verify whether the stack's tags are present in the wanted tags list.
-		// We need two of these data structures because the empty tag value "" is shorthand for "just match the key."
-		hsWantedTags := make(map[string]bool)
-
 		// Populate the hash set and match map
 		for k := range wantedTags {
 			tagsMatched[k] = false
-			hsWantedTags[k] = true
 		}
 
 		// Loop over all tags on the stack and decide whether they match any of the wanted tags.
 		for _, tag := range tags {
 			tagKey := aws.StringValue(tag.Key)
 			tagValue := aws.StringValue(tag.Value)
-			/*
-				if  hsWantedTags[tagKey] &&           checks whether the current stack tag is one of the wanted tags.
-				    (wantedTags[tagKey] == tagValue   checks whether the current stack tag's value matches the wanted value
-				    || wantedTags[tagKey] == "") {    checks whether the wanted tag is empty (match all tags with this key, don't worry about value)
-			*/
-			if hsWantedTags[tagKey] && (wantedTags[tagKey] == tagValue || wantedTags[tagKey] == "") {
+			if wantedTags[tagKey] == tagValue || wantedTags[tagKey] == "" {
 				tagsMatched[tagKey] = true
 			}
 		}
@@ -356,7 +329,7 @@ func makeTagMatcher(wantedTags map[string]string) func([]*cloudformation.Tag) bo
 	}
 }
 
-func (c *CloudFormation) listStacks(tags map[string]string) ([]StackDescription, error) {
+func (c *CloudFormation) listStacksWithTags(tags map[string]string) ([]StackDescription, error) {
 	match := makeTagMatcher(tags)
 
 	var nextToken *string

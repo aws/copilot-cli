@@ -74,7 +74,6 @@ EnvironmentManagerRole:
             "cloudformation:Describe*",
             "cloudformation:DetectStackDrift",
             "cloudformation:DetectStackResourceDrift",
-            "cloudformation:ListStacks",
             "cloudformation:ExecuteChangeSet",
             "cloudformation:GetTemplate",
             "cloudformation:GetTemplateSummary",
@@ -225,12 +224,5 @@ EnvironmentManagerRole:
             - 'cloudformation:DeleteStack'
           Resource:
             - !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'
-        - Sid: AdministerTask
-          Effect: Allow
-          Action: [
-            "ecr:BatchDeleteImage"
-          ]
-          Resource: "*"
-          Condition: {"ForAllValues:StringEquals": {"aws:TagKeys": "copilot-task"}}
 
 
