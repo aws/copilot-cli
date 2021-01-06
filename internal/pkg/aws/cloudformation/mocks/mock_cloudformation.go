@@ -276,21 +276,6 @@ func (mr *MockclientMockRecorder) DeleteStack(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteStack", reflect.TypeOf((*Mockclient)(nil).DeleteStack), arg0)
 }
 
-// ListStacks mocks base method
-func (m *Mockclient) ListStacks(arg0 *cloudformation.ListStacksInput) (*cloudformation.ListStacksOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListStacks", arg0)
-	ret0, _ := ret[0].(*cloudformation.ListStacksOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListStacks indicates an expected call of ListStacks
-func (mr *MockclientMockRecorder) ListStacks(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListStacks", reflect.TypeOf((*Mockclient)(nil).ListStacks), arg0)
-}
-
 // WaitUntilStackCreateCompleteWithContext mocks base method
 func (m *Mockclient) WaitUntilStackCreateCompleteWithContext(arg0 aws.Context, arg1 *cloudformation.DescribeStacksInput, arg2 ...request.WaiterOption) error {
 	m.ctrl.T.Helper()
