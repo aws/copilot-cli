@@ -21,6 +21,7 @@ const (
 	cellPaddingWidth       = 2   // number of padding characters added by default to a cell.
 	paddingChar            = ' ' // character in between columns.
 	noAdditionalFormatting = 0
+	maxCellLength          = 70 // Number of characters we want to display at most in a cell before wrapping it to the next line.
 )
 
 // TabRow represents a row in a table where columns are separated with a "\t" character.
