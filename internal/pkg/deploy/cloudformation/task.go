@@ -14,8 +14,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 )
 
-const taskStackPrefix = "task-"
-
 // DeployTask deploys a task stack and waits until the deployment is done.
 // If the task stack doesn't exist, then it creates the stack.
 // If the task stack already exists, it updates the stack.
