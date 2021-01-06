@@ -48,6 +48,7 @@ type cfnClient interface {
 	TemplateBody(stackName string) (string, error)
 	Events(stackName string) ([]cloudformation.StackEvent, error)
 	ListStacksWithPrefix(prefix string) ([]cloudformation.StackDescription, error)
+	ListStacksWithTags(tags map[string]string) ([]cloudformation.StackDescription, error)
 	ErrorEvents(stackName string) ([]cloudformation.StackEvent, error)
 
 	// Methods vended by the aws sdk struct.
