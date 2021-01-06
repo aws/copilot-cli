@@ -218,21 +218,17 @@ func mergeMapNodes(dst, src *yaml.Node, handler keyExistsHandler) error {
 
 	dstMap := mappingNode(dst)
 	var newContent []*yaml.Node
-	for i := 0; i < len(src.Content); i += 2 {
-		// The content of a map always come in pairs.
-		// The first element represents a key, ex: {Value: "ELBIngressGroup", Kind: ScalarNode, Tag: "!!str", Content: nil}
-		// The second element holds the value, ex: {Value: "", Kind: MappingNode, Tag:"!!map", Content:[...]}
-		key := src.Content[i].Value
-		srcValue := src.Content[i+1]
+	for _, srcContent := range mappingContents(src) {
+		srcKey := srcContent.keyNode.Value
 
-		dstValue, ok := dstMap[key]
+		dstValueNode, ok := dstMap[srcKey]
 		if !ok {
 			// The key doesn't exist in dst, we want to retain the two src nodes.
-			newContent = append(newContent, src.Content[i], src.Content[i+1])
+			newContent = append(newContent, srcContent.keyNode, srcContent.valueNode)
 			continue
 		}
 
-		if err := handler(key, dstValue, srcValue); err != nil {
+		if err := handler(srcKey, dstValueNode, srcContent.valueNode); err != nil {
 			return err
 		}
 	}
@@ -280,6 +276,25 @@ func mappingNode(n *yaml.Node) map[string]*yaml.Node {
 		m[n.Content[i].Value] = n.Content[i+1]
 	}
 	return m
+}
+
+type mappingContent struct {
+	keyNode   *yaml.Node
+	valueNode *yaml.Node
+}
+
+func mappingContents(mappingNode *yaml.Node) []mappingContent {
+	var results []mappingContent
+	for i := 0; i < len(mappingNode.Content); i += 2 {
+		// The content of a map always come in pairs.
+		// The first element represents a key, ex: {Value: "ELBIngressGroup", Kind: ScalarNode, Tag: "!!str", Content: nil}
+		// The second element holds the value, ex: {Value: "", Kind: MappingNode, Tag:"!!map", Content:[...]}
+		results = append(results, mappingContent{
+			keyNode:   mappingNode.Content[i],
+			valueNode: mappingNode.Content[i+1],
+		})
+	}
+	return results
 }
 
 // isEqual returns true if the first and second nodes are deeply equal in all of their values except stylistic ones.

@@ -66,7 +66,8 @@ Outputs:
   AdditionalResourcesPolicyArn:
     Value: !Ref AdditionalResourcesPolicy
   MyRDSInstanceRotationSecretArn:
-    Value: !Ref MyRDSInstanceRotationSecret
+    Value:
+      Ref: MyRDSInstanceRotationSecret
   MyDynamoDBTableName:
     Value: !Ref MyDynamoDBTable
   MyDynamoDBTableArn:
