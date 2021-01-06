@@ -147,10 +147,10 @@ func TestCloudFormation_DescribeChangeSet(t *testing.T) {
 		}
 
 		// WHEN
-		out, err := cfn.DescribeChangeSet(mockChangeSetID)
+		out, err := cfn.DescribeChangeSet(mockChangeSetID, "phonetool-test")
 
 		// THEN
-		require.EqualError(t, err, fmt.Sprintf("describe change set %s for stack : some error", mockChangeSetID))
+		require.EqualError(t, err, fmt.Sprintf("describe change set %s for stack phonetool-test: some error", mockChangeSetID))
 		require.Nil(t, out)
 	})
 
@@ -175,7 +175,7 @@ func TestCloudFormation_DescribeChangeSet(t *testing.T) {
 		gomock.InOrder(
 			m.EXPECT().DescribeChangeSet(&cloudformation.DescribeChangeSetInput{
 				ChangeSetName: aws.String(mockChangeSetID),
-				StackName:     aws.String(""),
+				StackName:     aws.String("phonetool-test"),
 				NextToken:     nil,
 			}).Return(&cloudformation.DescribeChangeSetOutput{
 				Changes: []*cloudformation.Change{
@@ -185,7 +185,7 @@ func TestCloudFormation_DescribeChangeSet(t *testing.T) {
 			}, nil),
 			m.EXPECT().DescribeChangeSet(&cloudformation.DescribeChangeSetInput{
 				ChangeSetName: aws.String(mockChangeSetID),
-				StackName:     aws.String(""),
+				StackName:     aws.String("phonetool-test"),
 				NextToken:     aws.String("1111"),
 			}).Return(&cloudformation.DescribeChangeSetOutput{
 				Changes: []*cloudformation.Change{
@@ -199,7 +199,7 @@ func TestCloudFormation_DescribeChangeSet(t *testing.T) {
 		}
 
 		// WHEN
-		out, err := cfn.DescribeChangeSet(mockChangeSetID)
+		out, err := cfn.DescribeChangeSet(mockChangeSetID, "phonetool-test")
 
 		// THEN
 		require.NoError(t, err)

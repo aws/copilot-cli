@@ -260,18 +260,18 @@ func (mr *MockcfnClientMockRecorder) Describe(stackName interface{}) *gomock.Cal
 }
 
 // DescribeChangeSet mocks base method
-func (m *MockcfnClient) DescribeChangeSet(changeSetID string) (*cloudformation0.ChangeSetDescription, error) {
+func (m *MockcfnClient) DescribeChangeSet(changeSetID, stackName string) (*cloudformation0.ChangeSetDescription, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeChangeSet", changeSetID)
+	ret := m.ctrl.Call(m, "DescribeChangeSet", changeSetID, stackName)
 	ret0, _ := ret[0].(*cloudformation0.ChangeSetDescription)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DescribeChangeSet indicates an expected call of DescribeChangeSet
-func (mr *MockcfnClientMockRecorder) DescribeChangeSet(changeSetID interface{}) *gomock.Call {
+func (mr *MockcfnClientMockRecorder) DescribeChangeSet(changeSetID, stackName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeChangeSet", reflect.TypeOf((*MockcfnClient)(nil).DescribeChangeSet), changeSetID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeChangeSet", reflect.TypeOf((*MockcfnClient)(nil).DescribeChangeSet), changeSetID, stackName)
 }
 
 // TemplateBody mocks base method

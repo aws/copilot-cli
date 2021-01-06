@@ -1,6 +1,5 @@
-# The EnvironmentManagerRole definition must be immediately followed with DeletionPolicy: Retain.
-# See #1533.
 EnvironmentManagerRole:
+  # An IAM Role to describe resources in your environment
   DeletionPolicy: Retain
   Type: AWS::IAM::Role
   DependsOn: CloudformationExecutionRole

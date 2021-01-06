@@ -88,3 +88,19 @@ func (c *Cursor) EraseLine() {
 		terminal.EraseLine(cur.Out, terminal.ERASE_LINE_ALL)
 	}
 }
+
+// EraseLine erases a line from a FileWriter.
+func EraseLine(fw terminal.FileWriter) {
+	terminal.EraseLine(fw, terminal.ERASE_LINE_ALL)
+}
+
+// EraseLinesAbove erases a line and moves the cursor up from fw, repeated n times.
+func EraseLinesAbove(fw terminal.FileWriter, n int) {
+	c := &terminal.Cursor{
+		Out: fw,
+	}
+	for i := 0; i < n; i += 1 {
+		EraseLine(fw)
+		c.Up(1)
+	}
+}

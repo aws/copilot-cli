@@ -18,6 +18,7 @@ import (
 var (
 	Grey         = color.New(color.FgWhite)
 	Red          = color.New(color.FgHiRed)
+	DullRed      = color.New(color.FgRed)
 	Green        = color.New(color.FgHiGreen)
 	Yellow       = color.New(color.FgHiYellow)
 	HiBlue       = color.New(color.FgHiBlue)
