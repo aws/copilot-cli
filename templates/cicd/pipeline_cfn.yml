@@ -149,7 +149,11 @@ Resources:
           - Effect: Allow
             Action:
               - codepipeline:*
-              - codecommit:*
+              - codecommit:GetBranch
+              - codecommit:GetCommit
+              - codecommit:UploadArchive
+              - codecommit:GetUploadArchiveStatus
+              - codecommit:CancelUploadArchive
               - iam:ListRoles
               - cloudformation:Describe*
               - cloudFormation:List*

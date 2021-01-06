@@ -17,6 +17,8 @@ import (
 
 // NOTE: this is duplicated from validate.go
 var ghRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
+
+// NOTE: 'region' is not currently parsed out as a Source property, but this enables that possibility.
 var ccRepoExp = regexp.MustCompile(`(https:\/\/(?P<region>.+)(.console.aws.amazon.com\/codesuite\/codecommit\/repositories\/)(?P<repo>.+)(\/browse))`)
 
 const (
@@ -100,8 +102,8 @@ func (s *Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 	return id, nil
 }
 
-// parseOwnerOrRegionAndRepo parses the owner (if GitHub) / region (if CodeCommit) and repo name from the repo URL.
-func (s *Source) parseOwnerOrRegionAndRepo(provider string) (string, string, error) {
+// parseOwnerAndRepo parses the owner (if GitHub is the provider) and repo name from the repo URL.
+func (s *Source) parseOwnerAndRepo(provider string) (string, string, error) {
 	var repoExp *regexp.Regexp
 	if provider == manifest.GithubProviderName {
 		repoExp = ghRepoExp
@@ -129,14 +131,11 @@ func (s *Source) parseOwnerOrRegionAndRepo(provider string) (string, string, err
 			matches[name] = match[i]
 		}
 	}
-	var ownerOrRegion string
+	owner := ""
 	if provider == manifest.GithubProviderName {
-		ownerOrRegion = matches["owner"]
+		owner = matches["owner"]
 	}
-	if provider == manifest.CodeCommitProviderName {
-		ownerOrRegion = matches["region"]
-	}
-	return ownerOrRegion, matches["repo"], nil
+	return owner, matches["repo"], nil
 }
 
 // Repository returns the repository portion. For example,
@@ -145,7 +144,7 @@ func (s *Source) Repository() (string, error) {
 	if s.ProviderName != manifest.GithubProviderName && s.ProviderName != manifest.CodeCommitProviderName {
 		return "", fmt.Errorf("invalid provider: %s", s.ProviderName)
 	}
-	_, repo, err := s.parseOwnerOrRegionAndRepo(s.ProviderName)
+	_, repo, err := s.parseOwnerAndRepo(s.ProviderName)
 	if err != nil {
 		return "", err
 	}
@@ -158,22 +157,12 @@ func (s *Source) Owner() (string, error) {
 	owner := "N/A"
 	var err error
 	if s.ProviderName == manifest.GithubProviderName {
-		owner, _, err = s.parseOwnerOrRegionAndRepo(s.ProviderName)
+		owner, _, err = s.parseOwnerAndRepo(s.ProviderName)
 		if err != nil {
 			return "", err
 		}
 	}
 	return owner, nil
-}
-
-// Note: can combine with above.
-// Region returns the repository region portion.
-func (s *Source) Region() (string, error) {
-	region, _, err := s.parseOwnerOrRegionAndRepo(s.ProviderName)
-	if err != nil {
-		return "", err
-	}
-	return region, nil
 }
 
 // PipelineStage represents configuration for each deployment stage
