@@ -6,10 +6,26 @@ package progress
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/stretchr/testify/require"
 )
+
+var (
+	testDate = time.Date(2021, 1, 6, 0, 0, 0, 0, time.UTC)
+)
+
+type fakeClock struct {
+	index        int
+	wantedValues []time.Time
+}
+
+func (c *fakeClock) now() time.Time {
+	t := c.wantedValues[c.index%len(c.wantedValues)]
+	c.index += 1
+	return t
+}
 
 func TestStackComponent_Listen(t *testing.T) {
 	t.Run("should not add status if no events are received for the logical ID", func(t *testing.T) {
@@ -19,7 +35,12 @@ func TestStackComponent_Listen(t *testing.T) {
 		comp := &stackComponent{
 			logicalID: "phonetool-test",
 			statuses:  []stackStatus{},
-			stream:    ch,
+			stopWatch: &stopWatch{
+				clock: &fakeClock{
+					wantedValues: []time.Time{testDate},
+				},
+			},
+			stream: ch,
 		}
 
 		// WHEN
@@ -42,6 +63,8 @@ func TestStackComponent_Listen(t *testing.T) {
 		// THEN
 		<-done // Wait for listen to exit.
 		require.Empty(t, comp.statuses)
+		_, hasStarted := comp.stopWatch.elapsed()
+		require.False(t, hasStarted, "the stopwatch should not have started")
 	})
 	t.Run("should add status when an event is received for stack", func(t *testing.T) {
 		// GIVEN
@@ -50,7 +73,12 @@ func TestStackComponent_Listen(t *testing.T) {
 		comp := &stackComponent{
 			logicalID: "phonetool-test",
 			statuses:  []stackStatus{},
-			stream:    ch,
+			stopWatch: &stopWatch{
+				clock: &fakeClock{
+					wantedValues: []time.Time{testDate},
+				},
+			},
+			stream: ch,
 		}
 
 		// WHEN
@@ -77,6 +105,9 @@ func TestStackComponent_Listen(t *testing.T) {
 				value: "CREATE_COMPLETE",
 			},
 		}, comp.statuses)
+		elapsed, hasStarted := comp.stopWatch.elapsed()
+		require.True(t, hasStarted, "the stopwatch should have started when an event was received")
+		require.Equal(t, time.Duration(0), elapsed)
 	})
 }
 
@@ -89,6 +120,12 @@ func TestStackComponent_Render(t *testing.T) {
 				{
 					value: "CREATE_COMPLETE",
 				},
+			},
+			stopWatch: &stopWatch{
+				startTime: testDate,
+				stopTime:  testDate,
+				started:   true,
+				stopped:   true,
 			},
 			children: []Renderer{
 				&mockRenderer{
@@ -108,7 +145,7 @@ func TestStackComponent_Render(t *testing.T) {
 		// THEN
 		require.NoError(t, err)
 		require.Equal(t, 3, nl, "expected 3 entries to be printed to the terminal")
-		require.Equal(t, "- The environment stack \"phonetool-test\" contains your shared resources between services\t[create complete]\n"+
+		require.Equal(t, "- The environment stack \"phonetool-test\" contains your shared resources between services\t[create complete]\t[0.0s]\n"+
 			"  - A load balancer to distribute traffic from the internet\n"+
 			"  - An ECS cluster to hold your services\n", buf.String())
 	})
@@ -130,6 +167,12 @@ func TestStackComponent_Render(t *testing.T) {
 					value: "DELETE_COMPLETE",
 				},
 			},
+			stopWatch: &stopWatch{
+				startTime: testDate,
+				stopTime:  testDate,
+				started:   true,
+				stopped:   true,
+			},
 			separator: '\t',
 		}
 		buf := new(strings.Builder)
@@ -140,17 +183,18 @@ func TestStackComponent_Render(t *testing.T) {
 		// THEN
 		require.NoError(t, err)
 		require.Equal(t, 5, nl, "expected 3 entries to be printed to the terminal")
-		require.Equal(t, "- The environment stack \"phonetool-test\" contains your shared resources between services\t[delete complete]\n"+
-			"  The following resource(s) failed to create: [PublicSubnet2, Cloudforma\t\n"+
-			"  tionExecutionRole, PrivateSubnet1, InternetGatewayAttachment, PublicSu\t\n"+
-			"  bnet1, ServiceDiscoveryNamespace, PrivateSubnet2], EnvironmentSecurity\t\n"+
-			"  Group, PublicRouteTable]. Rollback requested by user.\t\n", buf.String())
+		require.Equal(t, "- The environment stack \"phonetool-test\" contains your shared resources between services\t[delete complete]\t[0.0s]\n"+
+			"  The following resource(s) failed to create: [PublicSubnet2, Cloudforma\t\t\n"+
+			"  tionExecutionRole, PrivateSubnet1, InternetGatewayAttachment, PublicSu\t\t\n"+
+			"  bnet1, ServiceDiscoveryNamespace, PrivateSubnet2], EnvironmentSecurity\t\t\n"+
+			"  Group, PublicRouteTable]. Rollback requested by user.\t\t\n", buf.String())
 	})
 	t.Run("renders multiple failure reasons", func(t *testing.T) {
 		// GIVEN
 		comp := &stackComponent{
 			description: `The environment stack "phonetool-test" contains your shared resources between services`,
 			statuses: []stackStatus{
+				notStartedStackStatus,
 				{
 					value: "CREATE_IN_PROGRESS",
 				},
@@ -163,6 +207,12 @@ func TestStackComponent_Render(t *testing.T) {
 					reason: "Resource cannot be deleted",
 				},
 			},
+			stopWatch: &stopWatch{
+				startTime: testDate,
+				stopTime:  testDate,
+				started:   true,
+				stopped:   true,
+			},
 			separator: '\t',
 		}
 		buf := new(strings.Builder)
@@ -173,9 +223,9 @@ func TestStackComponent_Render(t *testing.T) {
 		// THEN
 		require.NoError(t, err)
 		require.Equal(t, 3, nl, "expected 3 entries to be printed to the terminal")
-		require.Equal(t, "- The environment stack \"phonetool-test\" contains your shared resources between services\t[delete failed]\n"+
-			"  Resource creation cancelled\t\n"+
-			"  Resource cannot be deleted\t\n", buf.String())
+		require.Equal(t, "- The environment stack \"phonetool-test\" contains your shared resources between services\t[delete failed]\t[0.0s]\n"+
+			"  Resource creation cancelled\t\t\n"+
+			"  Resource cannot be deleted\t\t\n", buf.String())
 	})
 }
 
@@ -187,7 +237,12 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		comp := &regularResourceComponent{
 			logicalID: "EnvironmentManagerRole",
 			statuses:  []stackStatus{},
-			stream:    ch,
+			stopWatch: &stopWatch{
+				clock: &fakeClock{
+					wantedValues: []time.Time{testDate},
+				},
+			},
+			stream: ch,
 		}
 
 		// WHEN
@@ -206,6 +261,8 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		// THEN
 		<-done // Wait for listen to exit.
 		require.Empty(t, comp.statuses)
+		_, hasStarted := comp.stopWatch.elapsed()
+		require.False(t, hasStarted, "the stopwatch should not have started")
 	})
 	t.Run("should add status when an event is received for the resource", func(t *testing.T) {
 		// GIVEN
@@ -214,7 +271,12 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		comp := &regularResourceComponent{
 			logicalID: "EnvironmentManagerRole",
 			statuses:  []stackStatus{},
-			stream:    ch,
+			stopWatch: &stopWatch{
+				clock: &fakeClock{
+					wantedValues: []time.Time{testDate},
+				},
+			},
+			stream: ch,
 		}
 
 		// WHEN
@@ -243,27 +305,66 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 				reason: "This IAM role already exists.",
 			},
 		}, comp.statuses)
+		elapsed, hasStarted := comp.stopWatch.elapsed()
+		require.True(t, hasStarted, "the stopwatch should have started when an event was received")
+		require.Equal(t, time.Duration(0), elapsed)
 	})
 }
 
 func TestRegularResourceComponent_Render(t *testing.T) {
-	// GIVEN
-	comp := &regularResourceComponent{
-		description: "An ECS cluster to hold your services",
-		statuses: []stackStatus{
-			{
-				value: "CREATE_COMPLETE",
+	t.Run("renders a resource that was created succesfully immediately", func(t *testing.T) {
+		// GIVEN
+		comp := &regularResourceComponent{
+			description: "An ECS cluster to hold your services",
+			statuses: []stackStatus{
+				{
+					value: "CREATE_COMPLETE",
+				},
 			},
-		},
-		separator: '\t',
-	}
-	buf := new(strings.Builder)
+			stopWatch: &stopWatch{
+				startTime: testDate,
+				stopTime:  testDate.Add(1*time.Minute + 10*time.Second + 100*time.Millisecond),
+				started:   true,
+				stopped:   true,
+			},
+			separator: '\t',
+		}
+		buf := new(strings.Builder)
 
-	// WHEN
-	nl, err := comp.Render(buf)
+		// WHEN
+		nl, err := comp.Render(buf)
 
-	// THEN
-	require.NoError(t, err)
-	require.Equal(t, 1, nl, "expected to be rendered as a single line component")
-	require.Equal(t, "- An ECS cluster to hold your services\t[create complete]\n", buf.String())
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, 1, nl, "expected to be rendered as a single line component")
+		require.Equal(t, "- An ECS cluster to hold your services\t[create complete]\t[70.1s]\n", buf.String())
+	})
+	t.Run("renders a resource that is in progress", func(t *testing.T) {
+		// GIVEN
+		comp := &regularResourceComponent{
+			description: "An ECS cluster to hold your services",
+			statuses: []stackStatus{
+				{
+					value: "CREATE_IN_PROGRESS",
+				},
+			},
+			stopWatch: &stopWatch{
+				startTime: testDate,
+				started:   true,
+				clock: &fakeClock{
+					wantedValues: []time.Time{testDate.Add(10 * time.Second)},
+				},
+			},
+			separator: '\t',
+		}
+		buf := new(strings.Builder)
+
+		// WHEN
+		nl, err := comp.Render(buf)
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, 1, nl, "expected to be rendered as a single line component")
+		require.Equal(t, "- An ECS cluster to hold your services\t[create in progress]\t[10.0s]\n", buf.String())
+	})
 }
