@@ -131,8 +131,9 @@ func TestTaskExec_Ask(t *testing.T) {
 		useDefault  bool
 		setupMocks  func(mocks execTaskMocks)
 
-		wantedError error
-		wantedTask  *ecs.Task
+		wantedError      error
+		wantedTask       *ecs.Task
+		wantedUseDefault bool
 	}{
 		"should bubble error if fail to select task in default cluster": {
 			useDefault: true,
@@ -187,7 +188,8 @@ func TestTaskExec_Ask(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(mockTask, nil)
 			},
 
-			wantedTask: mockTask,
+			wantedTask:       mockTask,
+			wantedUseDefault: true,
 		},
 		"success with default option choosed": {
 			setupMocks: func(m execTaskMocks) {
@@ -197,7 +199,8 @@ func TestTaskExec_Ask(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(mockTask, nil)
 			},
 
-			wantedTask: mockTask,
+			wantedTask:       mockTask,
+			wantedUseDefault: true,
 		},
 		"success with env cluster": {
 			setupMocks: func(m execTaskMocks) {
@@ -210,7 +213,8 @@ func TestTaskExec_Ask(t *testing.T) {
 					gomock.Any(), gomock.Any(), gomock.Any()).Return(mockTask, nil)
 			},
 
-			wantedTask: mockTask,
+			wantedTask:       mockTask,
+			wantedUseDefault: false,
 		},
 	}
 
@@ -257,6 +261,7 @@ func TestTaskExec_Ask(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedTask, execTasks.task)
+				require.Equal(t, tc.wantedUseDefault, execTasks.useDefault)
 			}
 		})
 	}

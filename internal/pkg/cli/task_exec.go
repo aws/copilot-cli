@@ -104,6 +104,7 @@ func (o *taskExecOpts) Ask() error {
 			return fmt.Errorf("select application: %w", err)
 		}
 		if appName == useDefaultClusterOption {
+			o.useDefault = true
 			return o.selectTaskInDefaultCluster()
 		}
 		o.appName = appName
@@ -114,6 +115,7 @@ func (o *taskExecOpts) Ask() error {
 			return fmt.Errorf("select environment: %w", err)
 		}
 		if envName == useDefaultClusterOption {
+			o.useDefault = true
 			return o.selectTaskInDefaultCluster()
 		}
 		o.envName = envName
