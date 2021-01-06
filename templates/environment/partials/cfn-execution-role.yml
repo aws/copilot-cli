@@ -1,6 +1,7 @@
 # The CloudformationExecutionRole definition must be immediately followed with DeletionPolicy: Retain.
 # See #1533.
 CloudformationExecutionRole:
+  # An IAM Role for AWS CloudFormation to manage resources
   DeletionPolicy: Retain
   Type: AWS::IAM::Role
 {{- if not .ImportVPC}}
