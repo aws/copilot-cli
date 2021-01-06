@@ -53,30 +53,18 @@ func (cf CloudFormation) DeployTask(input *deploy.CreateTaskResourcesInput, opts
 
 // ListTaskStacks returns all the CF stacks which represent one-off copilot tasks in a given application's environments
 func (cf CloudFormation) ListTaskStacks(appName, envName string) ([]deploy.TaskStackInfo, error) {
-	tasks, err := cf.cfnClient.ListStacksWithPrefix(taskStackPrefix)
+	taskAppEnvTags := map[string]string{
+		deploy.TaskTagKey: "",
+		deploy.AppTagKey:  appName,
+		deploy.EnvTagKey:  envName,
+	}
+	tasks, err := cf.cfnClient.ListStacksWithTags(taskAppEnvTags)
+
 	if err != nil {
 		return nil, err
 	}
 	var outputTaskStacks []deploy.TaskStackInfo
 	for _, task := range tasks {
-		var hasTaskTag, hasAppTag, hasEnvTag bool
-		for _, tag := range task.Tags {
-			if aws.StringValue(tag.Key) == deploy.TaskTagKey {
-				hasTaskTag = true
-			}
-
-			if aws.StringValue(tag.Key) == deploy.AppTagKey && aws.StringValue(tag.Value) == appName {
-				hasAppTag = true
-			}
-
-			if aws.StringValue(tag.Key) == deploy.EnvTagKey && aws.StringValue(tag.Value) == envName {
-				hasEnvTag = true
-			}
-		}
-
-		if !hasTaskTag || !hasAppTag || !hasEnvTag {
-			continue
-		}
 
 		outputTaskStacks = append(outputTaskStacks, deploy.TaskStackInfo{
 			StackName: aws.StringValue(task.StackName),
@@ -91,29 +79,26 @@ func (cf CloudFormation) ListTaskStacks(appName, envName string) ([]deploy.TaskS
 
 // ListDefaultTaskStacks returns all the CF stacks created by copilot but not associated with an application.
 func (cf CloudFormation) ListDefaultTaskStacks() ([]deploy.TaskStackInfo, error) {
-	tasks, err := cf.cfnClient.ListStacksWithPrefix(taskStackPrefix)
+	tasks, err := cf.cfnClient.ListStacksWithTags(map[string]string{deploy.TaskTagKey: ""})
 	if err != nil {
 		return nil, err
 	}
 	var outputTaskStacks []deploy.TaskStackInfo
 	for _, task := range tasks {
-		var hasTaskTag, hasAppTag bool
+		// Eliminate tasks which are tagged for a particular copilot app or env.
+		var hasAppTag, hasEnvTag bool
 		for _, tag := range task.Tags {
-			if aws.StringValue(tag.Key) == deploy.TaskTagKey {
-				hasTaskTag = true
-			}
 			if aws.StringValue(tag.Key) == deploy.AppTagKey {
 				hasAppTag = true
 			}
+			if aws.StringValue(tag.Key) == deploy.EnvTagKey {
+				hasEnvTag = true
+			}
 		}
-		if !hasTaskTag || hasAppTag {
+		if hasAppTag || hasEnvTag {
 			continue
 		}
 
-		// Check the RoleArn of the task to see if it's created using a particular role, which would disqualify it.
-		if aws.StringValue(task.RoleARN) != "" {
-			continue
-		}
 		outputTaskStacks = append(outputTaskStacks, deploy.TaskStackInfo{
 			StackName: aws.StringValue(task.StackName),
 			App:       "",

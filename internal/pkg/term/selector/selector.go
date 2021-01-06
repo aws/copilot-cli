@@ -192,6 +192,7 @@ func TaskWithDefaultCluster() GetDeployedTaskOpts {
 	}
 }
 
+// DeployedTask holds the name and app and env, if applicable, of a one-off task.
 type DeployedTask struct {
 	Name string
 	Env  string

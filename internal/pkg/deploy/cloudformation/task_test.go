@@ -109,6 +109,10 @@ var mockDescription2 = &cloudformation.StackDescription{
 			Key:   aws.String("copilot-application"),
 			Value: aws.String("otherapp"),
 		},
+		{
+			Key:   aws.String("copilot-environment"),
+			Value: aws.String("test"),
+		},
 	},
 	StackName: aws.String("task-example"),
 	RoleARN:   aws.String("arn:aws:iam::123456789012:role/otherapp-staging-CFNExecutionRole"),
@@ -134,9 +138,12 @@ func TestCloudFormation_ListTaskStacks(t *testing.T) {
 		"successfully gets task stacks while excluding wrongly tagged stack": {
 			inAppName: "appname",
 			mockClient: func(m *mocks.MockcfnClient) {
-				m.EXPECT().ListStacksWithPrefix("task-").Return([]cloudformation.StackDescription{
+				m.EXPECT().ListStacksWithTags(map[string]string{
+					"copilot-application": "appname",
+					"copilot-environment": "test",
+					"copilot-task":        "",
+				}).Return([]cloudformation.StackDescription{
 					*mockDescription1,
-					*mockDescription2,
 				}, nil)
 			},
 			wantedTasks: []deploy.TaskStackInfo{
@@ -152,7 +159,7 @@ func TestCloudFormation_ListTaskStacks(t *testing.T) {
 		"error listing stacks": {
 			inAppName: "appname",
 			mockClient: func(m *mocks.MockcfnClient) {
-				m.EXPECT().ListStacksWithPrefix("task-").Return(nil, errors.New("some error"))
+				m.EXPECT().ListStacksWithTags(gomock.Any()).Return(nil, errors.New("some error"))
 			},
 			wantedErr: "some error",
 		},
@@ -190,7 +197,9 @@ func TestCloudFormation_GetTaskDefaultStackInfo(t *testing.T) {
 		"successfully gets task stacks while excluding wrongly tagged stack": {
 			inAppName: "appname",
 			mockClient: func(m *mocks.MockcfnClient) {
-				m.EXPECT().ListStacksWithPrefix("task-").Return([]cloudformation.StackDescription{
+				m.EXPECT().ListStacksWithTags(map[string]string{
+					"copilot-task": "",
+				}).Return([]cloudformation.StackDescription{
 					*mockDescription1,
 					*mockDescription2,
 					*mockDescription3,
@@ -206,7 +215,7 @@ func TestCloudFormation_GetTaskDefaultStackInfo(t *testing.T) {
 		"error listing stacks": {
 			inAppName: "appname",
 			mockClient: func(m *mocks.MockcfnClient) {
-				m.EXPECT().ListStacksWithPrefix("task-").Return(nil, errors.New("some error"))
+				m.EXPECT().ListStacksWithTags(gomock.Any()).Return(nil, errors.New("some error"))
 			},
 			wantedErr: "some error",
 		},
