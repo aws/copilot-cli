@@ -85,7 +85,7 @@ type Source struct {
 // Secrets manager, which stores the GitHub Personal Access token if the
 // provider is "GitHub". Otherwise, it returns the detected provider.
 func (s *Source) GitHubPersonalAccessTokenSecretID() (string, error) {
-	id := "N/A"
+	id := ""
 	var ok bool
 	if s.ProviderName == manifest.GithubProviderName {
 		secretID, exists := s.Properties[manifest.GithubSecretIdKeyName]
@@ -104,6 +104,12 @@ func (s *Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 
 // parseOwnerAndRepo parses the owner (if GitHub is the provider) and repo name from the repo URL.
 func (s *Source) parseOwnerAndRepo(provider string) (string, string, error) {
+	var (
+		// NOTE: this is duplicated from validate.go
+		ghRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
+		// NOTE: 'region' is not currently parsed out as a Source property, but this enables that possibility.
+		ccRepoExp = regexp.MustCompile(`(https:\/\/(?P<region>.+)(.console.aws.amazon.com\/codesuite\/codecommit\/repositories\/)(?P<repo>.+)(\/browse))`)
+	)
 	var repoExp *regexp.Regexp
 	if provider == manifest.GithubProviderName {
 		repoExp = ghRepoExp
