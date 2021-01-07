@@ -79,7 +79,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 	jobInitter := &initialize.WorkloadInitializer{
 		Store:    store,
 		Ws:       ws,
-		Prog:     termprogress.NewSpinner(),
+		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess),
 	}
 

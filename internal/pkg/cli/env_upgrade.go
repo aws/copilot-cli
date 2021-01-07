@@ -71,7 +71,7 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 		legacyEnvTemplater: stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
 			Version: deploy.LegacyEnvTemplateVersion,
 		}),
-		prog: termprogress.NewSpinner(),
+		prog: termprogress.NewSpinner(log.DiagnosticWriter),
 
 		newEnvVersionGetter: func(app, env string) (versionGetter, error) {
 			d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{

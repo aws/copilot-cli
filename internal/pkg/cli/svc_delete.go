@@ -89,7 +89,7 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 		deleteSvcVars: vars,
 
 		store:   store,
-		spinner: termprogress.NewSpinner(),
+		spinner: termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:  prompter,
 		sess:    provider,
 		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
