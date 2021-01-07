@@ -169,7 +169,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		store:        store,
 		appDeployer:  deploycfn.New(defaultSession),
 		identity:     identity.New(defaultSession),
-		prog:         termprogress.NewSpinner(),
+		prog:         termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:       prompter,
 		selCreds: &selector.CredsSelect{
 			Session: sessProvider,

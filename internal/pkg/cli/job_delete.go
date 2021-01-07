@@ -97,7 +97,7 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 		deleteJobVars: vars,
 
 		store:   store,
-		spinner: termprogress.NewSpinner(),
+		spinner: termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:  prompt.New(),
 		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
 		sess:    provider,

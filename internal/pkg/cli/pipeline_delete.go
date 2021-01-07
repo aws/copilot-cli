@@ -72,7 +72,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 
 	opts := &deletePipelineOpts{
 		deletePipelineVars: vars,
-		prog:               termprogress.NewSpinner(),
+		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompt.New(),
 		secretsmanager:     secretsmanager,
 		pipelineDeployer:   cloudformation.New(defaultSess),

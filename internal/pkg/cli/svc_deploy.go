@@ -87,7 +87,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		store:        store,
 		ws:           ws,
 		unmarshal:    manifest.UnmarshalWorkload,
-		spinner:      termprogress.NewSpinner(),
+		spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
 		sel:          selector.NewWorkspaceSelect(prompter, store, ws),
 		prompt:       prompter,
 		cmd:          command.New(),
