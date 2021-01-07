@@ -28,6 +28,14 @@ func prettifyLatestStackStatus(statuses []stackStatus) string {
 	return color("[%s]", pretty)
 }
 
+func prettifyElapsedTime(sw *stopWatch) string {
+	elapsed, hasStarted := sw.elapsed()
+	if !hasStarted {
+		return ""
+	}
+	return color.Faint.Sprintf("[%.1fs]", elapsed.Seconds())
+}
+
 func failureReasons(statuses []stackStatus) []string {
 	var reasons []string
 	for _, status := range statuses {
