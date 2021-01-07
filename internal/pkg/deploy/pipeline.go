@@ -102,12 +102,14 @@ func (s *Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 	return id, nil
 }
 
-// parseOwnerAndRepo parses the owner (if GitHub is the provider) and repo name from the repo URL.
+// parseOwnerAndRepo parses the owner (if GitHub is the provider) and repo name from the repo URL, which was formatted and assigned in cli/pipeline_init.go.
 func (s *Source) parseOwnerAndRepo(provider string) (string, string, error) {
 	var (
 		// NOTE: this is duplicated from validate.go
+		// Ex: https://github.com/koke/grit
 		ghRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
 		// NOTE: 'region' is not currently parsed out as a Source property, but this enables that possibility.
+		// Ex: https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample/browse
 		ccRepoExp = regexp.MustCompile(`(https:\/\/(?P<region>.+)(.console.aws.amazon.com\/codesuite\/codecommit\/repositories\/)(?P<repo>.+)(\/browse))`)
 	)
 	var repoExp *regexp.Regexp
