@@ -42,23 +42,14 @@ nav:
         - docs: docs/commands/docs.md
       - Develop:
         - app init: docs/commands/app-init.md
-        - app ls: docs/commands/app-ls.md
-        - app show: docs/commands/app-show.md
         - app delete: docs/commands/app-delete.md
         - env init: docs/commands/env-init.md
-        - env ls: docs/commands/env-ls.md
-        - env show: docs/commands/env-show.md
         - env delete: docs/commands/env-delete.md
         - job init: docs/commands/job-init.md
-        - job ls: docs/commands/job-ls.md
         - job package: docs/commands/job-package.md
         - job deploy: docs/commands/job-deploy.md
         - job delete: docs/commands/job-delete.md
         - svc init: docs/commands/svc-init.md
-        - svc ls: docs/commands/svc-ls.md
-        - svc show: docs/commands/svc-show.md
-        - svc logs: docs/commands/svc-logs.md
-        - svc status: docs/commands/svc-status.md
         - svc package: docs/commands/svc-package.md
         - svc deploy: docs/commands/svc-deploy.md
         - svc delete: docs/commands/svc-delete.md
@@ -71,6 +62,19 @@ nav:
         - pipeline status: docs/commands/pipeline-status.md
         - pipeline delete: docs/commands/pipeline-delete.md
         - deploy: docs/commands/deploy.md
+      - Observe:
+        - app ls: docs/commands/app-ls.md
+        - app show: docs/commands/app-show.md
+        - env ls: docs/commands/env-ls.md
+        - env show: docs/commands/env-show.md
+        - job ls: docs/commands/job-ls.md
+        - svc ls: docs/commands/svc-ls.md
+        - svc show: docs/commands/svc-show.md
+        - svc status: docs/commands/svc-status.md
+        - svc logs: docs/commands/svc-logs.md
+      - Debug:
+        - svc exec: docs/commands/svc-exec.md
+        - task exec: docs/commands/task-exec.md
       - Addons:
         - storage init: docs/commands/storage-init.md
       - Settings:
