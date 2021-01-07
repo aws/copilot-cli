@@ -13,7 +13,7 @@ Using an automated release tool like CodePipeline helps make your release manage
 Copilot can set up a CodePipeline for you with a few commands - but before we jump into that, let's talk a little bit about the structure of the pipeline we'll be generating. Our pipeline will have the following basic structure:
 
 1. __Source Stage__ - when you push to a configured GitHub or CodeCommit branch ('main' or 'master', respectively, by default), a new pipeline execution is triggered.
-2. __Build Stage__ - after your code is pulled from your provider, your service's container image is built and published to every environment's ECR repository.
+2. __Build Stage__ - after your source code is pulled from your repository host, your service's container image is built and published to every environment's ECR repository.
 3. __Deploy Stages__ - after your code is built, you can deploy to any or all of your environments, with optional post-deployment tests or manual approvals.
 
 Once you've set up a CodePipeline using Copilot, all you'll have to do is push to your GitHub or CodeCommit repository, and CodePipeline will orchestrate the deployments.
