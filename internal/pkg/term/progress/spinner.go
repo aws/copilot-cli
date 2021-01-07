@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/cursor"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/briandowns/spinner"
 )
 
@@ -59,10 +58,10 @@ type Spinner struct {
 	eventsWriter writeFlusher // Writer to pretty format events in a table.
 }
 
-// NewSpinner returns a spinner that outputs to stderr.
-func NewSpinner() *Spinner {
+// NewSpinner returns a spinner that outputs to w.
+func NewSpinner(w io.Writer) *Spinner {
 	s := spinner.New(charset, 125*time.Millisecond, spinner.WithHiddenCursor(true))
-	s.Writer = log.DiagnosticWriter
+	s.Writer = w
 	return &Spinner{
 		spin:         s,
 		cur:          cursor.New(),

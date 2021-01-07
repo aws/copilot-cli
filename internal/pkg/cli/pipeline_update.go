@@ -86,7 +86,7 @@ func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error)
 		updatePipelineVars: vars,
 		envStore:           store,
 		ws:                 ws,
-		prog:               termprogress.NewSpinner(),
+		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompt.New(),
 	}, nil
 }

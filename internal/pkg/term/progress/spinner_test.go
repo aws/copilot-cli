@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -49,12 +49,13 @@ func (m *mockCursor) EraseLine() {
 
 func TestNew(t *testing.T) {
 	t.Run("it should initialize the spin spinner", func(t *testing.T) {
-		got := NewSpinner()
+		buf := new(strings.Builder)
+		got := NewSpinner(buf)
 
 		v, ok := got.spin.(*spin.Spinner)
 		require.True(t, ok)
 
-		require.Equal(t, os.Stderr, v.Writer)
+		require.Equal(t, buf, v.Writer)
 		require.Equal(t, 125*time.Millisecond, v.Delay)
 	})
 }

@@ -112,7 +112,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	initSvc := &initialize.WorkloadInitializer{
 		Store:    store,
 		Ws:       ws,
-		Prog:     termprogress.NewSpinner(),
+		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess),
 	}
 	return &initSvcOpts{
