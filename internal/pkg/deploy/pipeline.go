@@ -15,12 +15,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
-// NOTE: this is duplicated from validate.go
-var ghRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
-
-// NOTE: 'region' is not currently parsed out as a Source property, but this enables that possibility.
-var ccRepoExp = regexp.MustCompile(`(https:\/\/(?P<region>.+)(.console.aws.amazon.com\/codesuite\/codecommit\/repositories\/)(?P<repo>.+)(\/browse))`)
-
 const (
 	fmtInvalidRepo = "unable to locate the repository URL from the properties: %+v"
 )
