@@ -74,7 +74,7 @@ func TestCloudFormation_UpdatePipeline(t *testing.T) {
 	in := &deploy.CreatePipelineInput{
 		AppName: "kudos",
 		Name:    "cicd",
-		Source: &deploy.Source{
+		Source: &deploy.GitHubSource{
 			ProviderName: "GitHub",
 			Properties: map[string]interface{}{
 				"repository":          "aws/somethingCool",

@@ -125,7 +125,7 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 	return &deploy.CreatePipelineInput{
 		AppName: projectName,
 		Name:    pipelineName,
-		Source: &deploy.Source{
+		Source: &deploy.GitHubSource{
 			ProviderName: "GitHub",
 			Properties: map[string]interface{}{
 				"repository":          "hencrice/amazon-ecs-cli-v2",

@@ -7,14 +7,6 @@
 # limitations under the License.
 AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for {{$.AppName}}
-Parameters:
-  ProviderType:
-    Description: For now, either GitHub or CodeCommit
-    Type: String
-    Default: {{.Source.ProviderName}}
-Conditions:
-  IsGitHub:
-    !Equals [!Ref ProviderType, "GitHub"]
 Resources:
   BuildProjectRole:
     Type: AWS::IAM::Role
@@ -240,42 +232,44 @@ Resources:
       RoleArn: !GetAtt PipelineRole.Arn
       Name: !Ref AWS::StackName
       Stages:
+        {{- if eq .Source.ProviderName "GitHub"}}
         - Name: Source
           Actions:
-            !If
-              - IsGitHub
-              -
-                - Name: SourceCodeFor-{{$.AppName}}
-                  ActionTypeId:
-                    Category: Source
-                    Owner: ThirdParty
-                    Version: 1
-                    Provider: {{.Source.ProviderName}}
-                  Configuration:
-                    Owner: {{$.Source.Owner}}
-                    Repo: {{$.Source.Repository}}
-                    Branch: {{index $.Source.Properties "branch"}}
-                    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager
-                    # Use the *entire* SecretString with version AWSCURRENT
-                    OAuthToken: !Sub
-                      - '{{"{{"}}resolve:secretsmanager:${SecretId}{{"}}"}}'
-                      - { SecretId: {{$.Source.GitHubPersonalAccessTokenSecretID}} }
-                  OutputArtifacts:
-                    - Name: SCCheckoutArtifact
-                  RunOrder: 1
-              -
-                - Name: SourceCodeFor-{{$.AppName}}
-                  ActionTypeId:
-                    Category: Source
-                    Owner: AWS
-                    Version: 1
-                    Provider: {{.Source.ProviderName}}
-                  Configuration:
-                    RepositoryName: {{$.Source.Repository}}
-                    BranchName: {{index $.Source.Properties "branch"}}
-                  OutputArtifacts:
-                    - Name: CODE_ZIP
-                  RunOrder: 1
+            - Name: SourceCodeFor-{{$.AppName}}
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: 1
+                Provider: GitHub
+              Configuration:
+                Owner: {{$.Source.Owner}}
+                Repo: {{$.Source.Repository}}
+                Branch: {{index $.Source.Properties "branch"}}
+                # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager
+                # Use the *entire* SecretString with version AWSCURRENT
+                OAuthToken: !Sub
+                  - '{{"{{"}}resolve:secretsmanager:${SecretId}{{"}}"}}'
+                  - { SecretId: {{$.Source.GitHubPersonalAccessTokenSecretID}} }
+              OutputArtifacts:
+                - Name: SCCheckoutArtifact
+              RunOrder: 1
+        {{- end }}
+        {{- if eq .Source.ProviderName "CodeCommit"}}
+        - Name: Source
+          Actions:
+            - Name: SourceCodeFor-{{$.AppName}}
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Version: 1
+                Provider: CodeCommit
+              Configuration:
+                RepositoryName: {{$.Source.Repository}}
+                BranchName: {{index $.Source.Properties "branch"}}
+              OutputArtifacts:
+                - Name: SCCheckoutArtifact
+              RunOrder: 1
+        {{- end }}
         - Name: Build
           Actions:
           - Name: Build
@@ -288,7 +282,7 @@ Resources:
               ProjectName: !Ref BuildProject
             RunOrder: 1
             InputArtifacts:
-              - Name: !If [IsGitHub, SCCheckoutArtifact, CODE_ZIP]
+              - Name: SCCheckoutArtifact
             OutputArtifacts:
               - Name: BuildOutput
         {{- $length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}{{$numWorkloads := len $stage.LocalWorkloads}}{{if gt $numWorkloads 0}}

@@ -212,9 +212,24 @@ func (o *updatePipelineOpts) Execute() error {
 		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
 	}
 	o.pipelineName = pipeline.Name
-	source := &deploy.Source{
-		ProviderName: pipeline.Source.ProviderName,
-		Properties:   pipeline.Source.Properties,
+
+	if pipeline.Source.ProviderName != manifest.GithubProviderName && pipeline.Source.ProviderName != manifest.CodeCommitProviderName {
+		return fmt.Errorf("invalid repo source provider: %s", pipeline.Source.ProviderName)
+	}
+
+	var source interface{}
+	if pipeline.Source.ProviderName == manifest.GithubProviderName {
+		source = &deploy.GitHubSource{
+			ProviderName: pipeline.Source.ProviderName,
+			Properties:   pipeline.Source.Properties,
+		}
+	}
+
+	if pipeline.Source.ProviderName == manifest.CodeCommitProviderName {
+		source = &deploy.CodeCommitSource{
+			ProviderName: pipeline.Source.ProviderName,
+			Properties:   pipeline.Source.Properties,
+		}
 	}
 
 	// convert environments to deployment stages
