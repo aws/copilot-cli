@@ -30,25 +30,31 @@ func newStopWatch() *stopWatch {
 	}
 }
 
+// start records the current time when the watch started.
+// If the watch is already in progress, then calling start multiple times does nothing.
 func (sw *stopWatch) start() {
-	if sw.stopped {
-		sw.reset()
+	if sw.started {
+		return
 	}
-
 	sw.startTime = sw.clock.now()
 	sw.started = true
 }
 
+// stop records the current time when the watch stopped.
+// If the watch never started, then calling stop doesn't do anything.
+// If the watch is already stopped, then calling stop another time doesn't do anything.
 func (sw *stopWatch) stop() {
-	sw.stopTime = sw.clock.now()
-
 	if !sw.started {
-		sw.start()
-		sw.stopTime = sw.startTime
+		return
 	}
+	if sw.stopped {
+		return
+	}
+	sw.stopTime = sw.clock.now()
 	sw.stopped = true
 }
 
+// reset should be called before starting a timer always.
 func (sw *stopWatch) reset() {
 	sw.startTime = time.Time{}
 	sw.stopTime = time.Time{}
@@ -57,7 +63,7 @@ func (sw *stopWatch) reset() {
 }
 
 // elapsed returns the time since starting the stopWatch.
-// If the stopWatch never run, then returns false for the boolean.
+// If the stopWatch never started, then returns false for the boolean.
 func (sw *stopWatch) elapsed() (time.Duration, bool) {
 	if !sw.started { // The stopWatch didn't start, so no time elapsed.
 		return 0, false

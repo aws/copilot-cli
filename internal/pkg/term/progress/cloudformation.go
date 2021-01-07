@@ -150,12 +150,18 @@ func updateComponentTimer(mu *sync.Mutex, statuses []stackStatus, sw *stopWatch)
 	mu.Lock()
 	defer mu.Unlock()
 
-	latestStatus := statuses[len(statuses)-1]
+	// There is always at least two elements {notStartedStatus, <new event>}
+	curStatus, nextStatus := statuses[len(statuses)-2], statuses[len(statuses)-1]
 	switch {
-	case latestStatus.value.InProgress():
+	case nextStatus.value.InProgress():
 		sw.reset()
 		sw.start()
 	default:
+		if curStatus == notStartedStackStatus {
+			// The resource went from [not started] to a finished state immediately.
+			// So start the timer and then immediately finish it.
+			sw.start()
+		}
 		sw.stop()
 	}
 }

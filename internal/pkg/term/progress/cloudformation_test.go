@@ -34,7 +34,7 @@ func TestStackComponent_Listen(t *testing.T) {
 		done := make(chan bool)
 		comp := &stackComponent{
 			logicalID: "phonetool-test",
-			statuses:  []stackStatus{},
+			statuses:  []stackStatus{notStartedStackStatus},
 			stopWatch: &stopWatch{
 				clock: &fakeClock{
 					wantedValues: []time.Time{testDate},
@@ -62,7 +62,7 @@ func TestStackComponent_Listen(t *testing.T) {
 
 		// THEN
 		<-done // Wait for listen to exit.
-		require.Empty(t, comp.statuses)
+		require.ElementsMatch(t, []stackStatus{notStartedStackStatus}, comp.statuses)
 		_, hasStarted := comp.stopWatch.elapsed()
 		require.False(t, hasStarted, "the stopwatch should not have started")
 	})
@@ -72,7 +72,7 @@ func TestStackComponent_Listen(t *testing.T) {
 		done := make(chan bool)
 		comp := &stackComponent{
 			logicalID: "phonetool-test",
-			statuses:  []stackStatus{},
+			statuses:  []stackStatus{notStartedStackStatus},
 			stopWatch: &stopWatch{
 				clock: &fakeClock{
 					wantedValues: []time.Time{testDate},
@@ -101,6 +101,7 @@ func TestStackComponent_Listen(t *testing.T) {
 		// THEN
 		<-done // Wait for listen to exit.
 		require.ElementsMatch(t, []stackStatus{
+			notStartedStackStatus,
 			{
 				value: "CREATE_COMPLETE",
 			},
@@ -117,6 +118,7 @@ func TestStackComponent_Render(t *testing.T) {
 		comp := &stackComponent{
 			description: `The environment stack "phonetool-test" contains your shared resources between services`,
 			statuses: []stackStatus{
+				notStartedStackStatus,
 				{
 					value: "CREATE_COMPLETE",
 				},
@@ -154,6 +156,7 @@ func TestStackComponent_Render(t *testing.T) {
 		comp := &stackComponent{
 			description: `The environment stack "phonetool-test" contains your shared resources between services`,
 			statuses: []stackStatus{
+				notStartedStackStatus,
 				{
 					value: "CREATE_IN_PROGRESS",
 				},
@@ -236,7 +239,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		done := make(chan bool)
 		comp := &regularResourceComponent{
 			logicalID: "EnvironmentManagerRole",
-			statuses:  []stackStatus{},
+			statuses:  []stackStatus{notStartedStackStatus},
 			stopWatch: &stopWatch{
 				clock: &fakeClock{
 					wantedValues: []time.Time{testDate},
@@ -260,7 +263,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 
 		// THEN
 		<-done // Wait for listen to exit.
-		require.Empty(t, comp.statuses)
+		require.ElementsMatch(t, []stackStatus{notStartedStackStatus}, comp.statuses)
 		_, hasStarted := comp.stopWatch.elapsed()
 		require.False(t, hasStarted, "the stopwatch should not have started")
 	})
@@ -270,7 +273,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		done := make(chan bool)
 		comp := &regularResourceComponent{
 			logicalID: "EnvironmentManagerRole",
-			statuses:  []stackStatus{},
+			statuses:  []stackStatus{notStartedStackStatus},
 			stopWatch: &stopWatch{
 				clock: &fakeClock{
 					wantedValues: []time.Time{testDate},
@@ -300,6 +303,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		// THEN
 		<-done // Wait for listen to exit.
 		require.ElementsMatch(t, []stackStatus{
+			notStartedStackStatus,
 			{
 				value:  "CREATE_FAILED",
 				reason: "This IAM role already exists.",
@@ -317,6 +321,7 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 		comp := &regularResourceComponent{
 			description: "An ECS cluster to hold your services",
 			statuses: []stackStatus{
+				notStartedStackStatus,
 				{
 					value: "CREATE_COMPLETE",
 				},
@@ -344,6 +349,7 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 		comp := &regularResourceComponent{
 			description: "An ECS cluster to hold your services",
 			statuses: []stackStatus{
+				notStartedStackStatus,
 				{
 					value: "CREATE_IN_PROGRESS",
 				},
