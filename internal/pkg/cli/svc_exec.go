@@ -15,7 +15,6 @@ import (
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
-	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
@@ -279,8 +278,5 @@ func buildSvcExecCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.containerName, containerFlag, "", containerFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
-	cmd.Annotations = map[string]string{
-		"group": group.Debug,
-	}
 	return cmd
 }

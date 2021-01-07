@@ -11,7 +11,6 @@ import (
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
-	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -225,8 +224,5 @@ func buildTaskExecCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.useDefault, taskDefaultFlag, false, taskExecDefaultFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
-	cmd.Annotations = map[string]string{
-		"group": group.Debug,
-	}
 	return cmd
 }

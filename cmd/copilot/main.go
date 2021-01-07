@@ -72,7 +72,6 @@ func buildRootCmd() *cobra.Command {
 	cmd.AddCommand(cli.BuildDeployCmd())
 
 	// "Debug" command group.
-	cmd.AddCommand(cli.BuildExecCmd())
 	cmd.SetUsageTemplate(template.RootUsage)
 	return cmd
 }
