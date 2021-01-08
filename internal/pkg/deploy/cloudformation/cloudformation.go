@@ -17,6 +17,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/templates"
 	"github.com/gobuffalo/packd"
@@ -134,10 +135,15 @@ type renderStackChangesInput struct {
 }
 
 func (cf CloudFormation) renderStackChanges(in renderStackChangesInput) error {
+	spinner := progress.NewSpinner(in.w)
+	csLabel := fmt.Sprintf("Create change set for %s", in.stackName)
+	spinner.Start(csLabel)
 	changeSetID, err := in.createChangeSet()
 	if err != nil {
+		spinner.Stop(log.Serrorf("%s\n", csLabel))
 		return err
 	}
+	spinner.Stop(log.Ssuccessf("%s\n", csLabel))
 	changeSet, err := cf.cfnClient.DescribeChangeSet(changeSetID, in.stackName)
 	if err != nil {
 		return err
