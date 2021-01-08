@@ -11,10 +11,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/cursor"
 )
 
-const (
-	renderInterval = 100 * time.Millisecond // How frequently Render should be invoked.
-)
-
 // Renderer is the interface to print a component to a writer.
 // It returns the number of lines printed and the error if any.
 type Renderer interface {
