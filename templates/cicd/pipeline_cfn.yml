@@ -253,8 +253,7 @@ Resources:
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1
-        {{- end }}
-        {{- if eq .Source.ProviderName "CodeCommit"}}
+        {{- else if eq .Source.ProviderName "CodeCommit"}}
         - Name: Source
           Actions:
             - Name: SourceCodeFor-{{$.AppName}}
