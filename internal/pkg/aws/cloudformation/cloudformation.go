@@ -28,7 +28,7 @@ var eventErrorStates = []string{
 
 var waiters = []request.WaiterOption{
 	request.WithWaiterDelay(request.ConstantWaiterDelay(5 * time.Second)), // How long to wait in between poll cfn for updates.
-	request.WithWaiterMaxAttempts(1800),                                   // Wait for at most 90 mins for any cfn action.
+	request.WithWaiterMaxAttempts(1080),                                   // Wait for at most 90 mins for any cfn action.
 }
 
 // CloudFormation represents a client to make requests to AWS CloudFormation.

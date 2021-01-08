@@ -488,6 +488,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 	if err := o.envDeployer.DeployAndRenderEnvironment(os.Stderr, deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
+			// Do nothing if the stack already exists.
 			return nil
 		}
 		return err
