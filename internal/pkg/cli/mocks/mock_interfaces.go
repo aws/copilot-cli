@@ -2957,20 +2957,6 @@ func (m *MockenvironmentDeployer) EXPECT() *MockenvironmentDeployerMockRecorder 
 	return m.recorder
 }
 
-// DeployEnvironment mocks base method
-func (m *MockenvironmentDeployer) DeployEnvironment(env *deploy.CreateEnvironmentInput) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeployEnvironment", env)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeployEnvironment indicates an expected call of DeployEnvironment
-func (mr *MockenvironmentDeployerMockRecorder) DeployEnvironment(env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeployEnvironment), env)
-}
-
 // DeployAndRenderEnvironment mocks base method
 func (m *MockenvironmentDeployer) DeployAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
 	m.ctrl.T.Helper()
@@ -2983,21 +2969,6 @@ func (m *MockenvironmentDeployer) DeployAndRenderEnvironment(out progress.FileWr
 func (mr *MockenvironmentDeployerMockRecorder) DeployAndRenderEnvironment(out, env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeployAndRenderEnvironment), out, env)
-}
-
-// StreamEnvironmentCreation mocks base method
-func (m *MockenvironmentDeployer) StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StreamEnvironmentCreation", env)
-	ret0, _ := ret[0].(<-chan []deploy.ResourceEvent)
-	ret1, _ := ret[1].(<-chan deploy.CreateEnvironmentResponse)
-	return ret0, ret1
-}
-
-// StreamEnvironmentCreation indicates an expected call of StreamEnvironmentCreation
-func (mr *MockenvironmentDeployerMockRecorder) StreamEnvironmentCreation(env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamEnvironmentCreation", reflect.TypeOf((*MockenvironmentDeployer)(nil).StreamEnvironmentCreation), env)
 }
 
 // DeleteEnvironment mocks base method
@@ -3631,20 +3602,6 @@ func (m *Mockdeployer) EXPECT() *MockdeployerMockRecorder {
 	return m.recorder
 }
 
-// DeployEnvironment mocks base method
-func (m *Mockdeployer) DeployEnvironment(env *deploy.CreateEnvironmentInput) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeployEnvironment", env)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeployEnvironment indicates an expected call of DeployEnvironment
-func (mr *MockdeployerMockRecorder) DeployEnvironment(env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEnvironment", reflect.TypeOf((*Mockdeployer)(nil).DeployEnvironment), env)
-}
-
 // DeployAndRenderEnvironment mocks base method
 func (m *Mockdeployer) DeployAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
 	m.ctrl.T.Helper()
@@ -3657,21 +3614,6 @@ func (m *Mockdeployer) DeployAndRenderEnvironment(out progress.FileWriter, env *
 func (mr *MockdeployerMockRecorder) DeployAndRenderEnvironment(out, env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployAndRenderEnvironment", reflect.TypeOf((*Mockdeployer)(nil).DeployAndRenderEnvironment), out, env)
-}
-
-// StreamEnvironmentCreation mocks base method
-func (m *Mockdeployer) StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StreamEnvironmentCreation", env)
-	ret0, _ := ret[0].(<-chan []deploy.ResourceEvent)
-	ret1, _ := ret[1].(<-chan deploy.CreateEnvironmentResponse)
-	return ret0, ret1
-}
-
-// StreamEnvironmentCreation indicates an expected call of StreamEnvironmentCreation
-func (mr *MockdeployerMockRecorder) StreamEnvironmentCreation(env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamEnvironmentCreation", reflect.TypeOf((*Mockdeployer)(nil).StreamEnvironmentCreation), env)
 }
 
 // DeleteEnvironment mocks base method

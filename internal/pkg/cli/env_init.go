@@ -526,41 +526,6 @@ func (o *initEnvOpts) delegateDNSFromApp(app *config.Application) error {
 	return nil
 }
 
-func (o *initEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.ResourceEvent) []termprogress.TabRow {
-	matcher := map[termprogress.Text]termprogress.ResourceMatcher{
-		textVPC: func(event deploy.Resource) bool {
-			return event.Type == "AWS::EC2::VPC"
-		},
-		textInternetGateway: func(event deploy.Resource) bool {
-			return event.Type == "AWS::EC2::InternetGateway" ||
-				event.Type == "AWS::EC2::VPCGatewayAttachment"
-		},
-		textPublicSubnets: func(event deploy.Resource) bool {
-			return event.Type == "AWS::EC2::Subnet" &&
-				strings.HasPrefix(event.LogicalName, "Public")
-		},
-		textPrivateSubnets: func(event deploy.Resource) bool {
-			return event.Type == "AWS::EC2::Subnet" &&
-				strings.HasPrefix(event.LogicalName, "Private")
-		},
-		textRouteTables: func(event deploy.Resource) bool {
-			return strings.Contains(event.LogicalName, "Route")
-		},
-		textECSCluster: func(event deploy.Resource) bool {
-			return event.Type == "AWS::ECS::Cluster"
-		},
-	}
-	return termprogress.HumanizeResourceEvents(o.envProgressOrder(), resourceEvents, matcher, defaultResourceCounts)
-}
-
-func (o *initEnvOpts) envProgressOrder() (order []termprogress.Text) {
-	if !o.importVPC.isSet() {
-		order = append(order, []termprogress.Text{textVPC, textInternetGateway, textPublicSubnets, textPrivateSubnets, textRouteTables}...)
-	}
-	order = append(order, textECSCluster)
-	return
-}
-
 func (o *initEnvOpts) validateCredentials() error {
 	if o.profile != "" && o.tempCreds.AccessKeyID != "" {
 		return fmt.Errorf("cannot specify both --%s and --%s", profileFlag, accessKeyIDFlag)

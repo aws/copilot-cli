@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -95,35 +94,6 @@ func (cf CloudFormation) ErrorEvents(conf StackConfiguration) ([]deploy.Resource
 		transformedEvents = append(transformedEvents, transformEvent(cfEvent))
 	}
 	return transformedEvents, nil
-}
-
-// streamResourceEvents sends a list of ResourceEvent every 3 seconds to the events channel.
-// The events channel is closed only when the done channel receives a message.
-// If an error occurs while describing stack events, it is ignored so that the stream is not interrupted.
-func (cf CloudFormation) streamResourceEvents(done <-chan struct{}, events chan []deploy.ResourceEvent, stackName string) {
-	sendStatusUpdates := func() {
-		// Send a list of ResourceEvent to events if there was no error.
-		cfEvents, err := cf.cfnClient.Events(stackName)
-		if err != nil {
-			return
-		}
-		var transformedEvents []deploy.ResourceEvent
-		for _, cfEvent := range cfEvents {
-			transformedEvents = append(transformedEvents, transformEvent(cfEvent))
-		}
-		events <- transformedEvents
-	}
-	for {
-		timeout := time.After(3 * time.Second)
-		select {
-		case <-timeout:
-			sendStatusUpdates()
-		case <-done:
-			sendStatusUpdates() // Send last batch of updates.
-			close(events)       // Close the channel to let receivers know that there won't be any more events.
-			return              // Exit for-loop.
-		}
-	}
 }
 
 type renderStackChangesInput struct {
