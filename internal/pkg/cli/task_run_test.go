@@ -15,8 +15,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 
-	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
-
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
@@ -38,9 +36,8 @@ var defaultOpts = basicOpts{
 // NOTE: mock spinner so that it doesn't create log output when testing Execute
 type mockSpinner struct{}
 
-func (s *mockSpinner) Start(label string)           {}
-func (s *mockSpinner) Stop(label string)            {}
-func (s *mockSpinner) Events([]termprogress.TabRow) {}
+func (s *mockSpinner) Start(label string) {}
+func (s *mockSpinner) Stop(label string)  {}
 
 func TestTaskRunOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {

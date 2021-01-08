@@ -32,6 +32,7 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 
 		// WHEN
 		in := renderStackChangesInput{
+			w: mockFileWriter{Writer: new(strings.Builder)},
 			createChangeSet: func() (string, error) {
 				return "", errors.New("createChangeSet error")
 			},
@@ -51,6 +52,7 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 
 		// WHEN
 		in := renderStackChangesInput{
+			w: mockFileWriter{Writer: new(strings.Builder)},
 			createChangeSet: func() (string, error) {
 				return "", nil
 			},
@@ -71,6 +73,7 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 
 		// WHEN
 		in := renderStackChangesInput{
+			w: mockFileWriter{Writer: new(strings.Builder)},
 			createChangeSet: func() (string, error) {
 				return "", nil
 			},

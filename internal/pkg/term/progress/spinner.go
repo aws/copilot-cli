@@ -1,5 +1,3 @@
-// +build !windows
-
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -8,10 +6,8 @@ package progress
 import (
 	"fmt"
 	"io"
-	"text/tabwriter"
 	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/term/cursor"
 	"github.com/briandowns/spinner"
 )
 
@@ -25,25 +21,10 @@ const (
 	maxCellLength          = 70 // Number of characters we want to display at most in a cell before wrapping it to the next line.
 )
 
-// TabRow represents a row in a table where columns are separated with a "\t" character.
-type TabRow string
-
 // startStopper is the interface to interact with the spinner.
 type startStopper interface {
 	Start()
 	Stop()
-}
-
-// mover is the interface to interact with the cursor.
-type mover interface {
-	Up(n int)
-	Down(n int)
-	EraseLine()
-}
-
-type writeFlusher interface {
-	io.Writer
-	Flush() error
 }
 
 // Spinner represents an indicator that an asynchronous operation is taking place.
@@ -52,10 +33,6 @@ type writeFlusher interface {
 // For longer operations, display intermediate progress events using the Events method.
 type Spinner struct {
 	spin startStopper
-	cur  mover
-
-	pastEvents   []TabRow     // Already written entries.
-	eventsWriter writeFlusher // Writer to pretty format events in a table.
 }
 
 // NewSpinner returns a spinner that outputs to w.
@@ -63,9 +40,7 @@ func NewSpinner(w io.Writer) *Spinner {
 	s := spinner.New(charset, 125*time.Millisecond, spinner.WithHiddenCursor(true))
 	s.Writer = w
 	return &Spinner{
-		spin:         s,
-		cur:          cursor.New(),
-		eventsWriter: tabwriter.NewWriter(s.Writer, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting),
+		spin: s,
 	}
 }
 
@@ -79,49 +54,6 @@ func (s *Spinner) Start(label string) {
 func (s *Spinner) Stop(label string) {
 	s.finalMSG(fmt.Sprint(label))
 	s.spin.Stop()
-
-	// Maintain old progress entries on the screen.
-	for _, event := range s.pastEvents {
-		fmt.Fprintf(s.eventsWriter, "%s\n", event)
-	}
-	s.eventsWriter.Flush()
-	// Reset event entries once the spinner stops.
-	s.pastEvents = nil
-}
-
-// Events writes additional information below the spinner while the spinner is still in progress.
-// If there are already existing events under the spinner, it replaces them with the new information.
-//
-// An event is displayed in a table, where columns are separated with the '\t' character.
-func (s *Spinner) Events(events []TabRow) {
-	done := make(chan struct{})
-	go func() {
-		s.lock()
-		defer s.unlock()
-		// Erase previous entries, and move the cursor back to the spinner.
-		for i := 0; i < len(s.pastEvents); i++ {
-			s.cur.Down(1)
-			s.cur.EraseLine()
-		}
-		if len(s.pastEvents) > 0 {
-			s.cur.Up(len(s.pastEvents))
-		}
-
-		// Add new status updates, and move cursor back to the spinner.
-		for _, event := range events {
-			fmt.Fprintf(s.eventsWriter, "\n%s", event)
-		}
-		s.eventsWriter.Flush()
-		if len(events) > 0 {
-			s.cur.Up(len(events))
-		}
-		// Move the cursor to the beginning so the spinner can delete the existing line.
-		fmt.Fprintf(s.eventsWriter, "\r")
-		s.eventsWriter.Flush()
-		s.pastEvents = events
-		close(done)
-	}()
-	<-done
 }
 
 func (s *Spinner) lock() {

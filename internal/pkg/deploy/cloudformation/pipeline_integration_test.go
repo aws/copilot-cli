@@ -8,6 +8,7 @@ package cloudformation_test
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -142,11 +143,7 @@ func TestPipelineCreation(t *testing.T) {
 
 		// Deploy the environment in the same tools account but in different
 		// region and wait for it to be complete
-		require.NoError(t, envDeployer.DeployEnvironment(&environmentToDeploy))
-		// Make sure the environment was deployed succesfully
-		_, responses := envDeployer.StreamEnvironmentCreation(&environmentToDeploy)
-		resp := <-responses
-		require.NoError(t, resp.Err)
+		require.NoError(t, envDeployer.DeployAndRenderEnvironment(os.Stderr, &environmentToDeploy))
 
 		// Ensure that the newly created env stack exists
 		assertStackExists(t, envCfClient, envStackName)
