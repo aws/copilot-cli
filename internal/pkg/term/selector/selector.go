@@ -11,6 +11,7 @@ import (
 
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -118,6 +119,12 @@ type DeployStoreClient interface {
 	IsServiceDeployed(appName string, envName string, svcName string) (bool, error)
 }
 
+// TaskStackDescriber wraps cloudformation client methods to describe task stacks
+type TaskStackDescriber interface {
+	ListDefaultTaskStacks() ([]deploy.TaskStackInfo, error)
+	ListTaskStacks(appName, envName string) ([]deploy.TaskStackInfo, error)
+}
+
 // TaskLister wraps methods of listing tasks.
 type TaskLister interface {
 	ListActiveAppEnvTasks(opts ecs.ListActiveAppEnvTasksOpts) ([]*awsecs.Task, error)
@@ -149,6 +156,55 @@ type DeploySelect struct {
 	deployStoreSvc DeployStoreClient
 	svc            string
 	env            string
+}
+
+// CFTaskSelect is a selector based on CF methods to get deployed one off tasks.
+type CFTaskSelect struct {
+	*Select
+	cfStore        TaskStackDescriber
+	app            string
+	env            string
+	defaultCluster bool
+}
+
+func NewCFTaskSelect(prompt Prompter, store ConfigLister, cf TaskStackDescriber) *CFTaskSelect {
+	return &CFTaskSelect{
+		Select:  NewSelect(prompt, store),
+		cfStore: cf,
+	}
+}
+
+// GetDeployedTaskOpts sets up optional parameters for GetDeployedTaskOpts function.
+type GetDeployedTaskOpts func(*CFTaskSelect)
+
+// TaskWithAppEnv sets up the env name for TaskSelect.
+func TaskWithAppEnv(app, env string) GetDeployedTaskOpts {
+	return func(in *CFTaskSelect) {
+		in.app = app
+		in.env = env
+	}
+}
+
+// WithDefaultCluster sets up whether CFTaskSelect should use only the default cluster.
+func TaskWithDefaultCluster() GetDeployedTaskOpts {
+	return func(in *CFTaskSelect) {
+		in.defaultCluster = true
+	}
+}
+
+// DeployedTask holds the name and app and env, if applicable, of a one-off task.
+type DeployedTask struct {
+	Name string
+	Env  string
+	App  string
+}
+
+func (t *DeployedTask) String() string {
+	env := t.Env
+	if t.Env == "" {
+		env = "default cluster"
+	}
+	return fmt.Sprintf("%s (%s)", t.Name, env)
 }
 
 // TaskSelect is a Copilot running task selector.
@@ -314,6 +370,66 @@ type DeployedService struct {
 
 func (s *DeployedService) String() string {
 	return fmt.Sprintf("%s (%s)", s.Svc, s.Env)
+}
+
+// Task has the user select a task. Callers can provide an environment, an app, or a "use default cluster" option
+// to filter the returned tasks.
+func (s *CFTaskSelect) Task(prompt, help string, opts ...GetDeployedTaskOpts) (*DeployedTask, error) {
+	for _, opt := range opts {
+		opt(s)
+	}
+	if s.defaultCluster && (s.env != "" || s.app != "") {
+		// Error for callers
+		return nil, fmt.Errorf("cannot specify both default cluster and env")
+	}
+	if !s.defaultCluster && (s.env == "" && s.app == "") {
+		return nil, fmt.Errorf("must specify either app and env or default cluster")
+	}
+
+	var tasks []deploy.TaskStackInfo
+	var err error
+	if s.defaultCluster {
+		defaultTasks, err := s.cfStore.ListDefaultTaskStacks()
+		if err != nil {
+			return nil, fmt.Errorf("get tasks in default cluster: %w", err)
+		}
+		tasks = append(tasks, defaultTasks...)
+	}
+	if s.env != "" && s.app != "" {
+		envTasks, err := s.cfStore.ListTaskStacks(s.app, s.env)
+		if err != nil {
+			return nil, fmt.Errorf("get tasks in environment %s: %w", s.env, err)
+		}
+		tasks = append(tasks, envTasks...)
+	}
+	choices := make([]string, len(tasks))
+	deployedTasks := make(map[string]DeployedTask)
+	var dt DeployedTask
+	for n, task := range tasks {
+		dt = DeployedTask{
+			Name: task.TaskName(),
+			Env:  task.Env,
+			App:  task.App,
+		}
+		deployedTasks[dt.String()] = dt
+		choices[n] = dt.String()
+	}
+
+	if len(choices) == 0 {
+		return nil, fmt.Errorf("no deployed tasks found in selected cluster")
+	}
+	// Return if there's only once option.
+	if len(choices) == 1 {
+		log.Infof("Found only one deployed task: %s\n", color.HighlightUserInput(choices[0]))
+		deployedTask := deployedTasks[choices[0]]
+		return &deployedTask, nil
+	}
+	choice, err := s.prompt.SelectOne(prompt, help, choices)
+	if err != nil {
+		return nil, fmt.Errorf("select task for deletion: %w", err)
+	}
+	deployedTask := deployedTasks[choice]
+	return &deployedTask, nil
 }
 
 // DeployedService has the user select a deployed service. Callers can provide either a particular environment,

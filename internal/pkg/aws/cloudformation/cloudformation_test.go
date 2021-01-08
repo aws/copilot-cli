@@ -672,6 +672,183 @@ func TestCloudFormation_Events(t *testing.T) {
 	}
 }
 
+func TestCloudFormation_ListStacksWithTags(t *testing.T) {
+	mockAppTag := cloudformation.Tag{
+		Key:   aws.String("copilot-application"),
+		Value: aws.String("phonetool"),
+	}
+	mockEnvTag := cloudformation.Tag{
+		Key:   aws.String("copilot-environment"),
+		Value: aws.String("test-pdx"),
+	}
+	mockTaskTag1 := cloudformation.Tag{
+		Key:   aws.String("copilot-task"),
+		Value: aws.String("db-migrate"),
+	}
+	mockTaskTag2 := cloudformation.Tag{
+		Key:   aws.String("copilot-task"),
+		Value: aws.String("default-oneoff"),
+	}
+	mockStack1 := cloudformation.Stack{
+		StackName: aws.String("task-appenv"),
+		Tags: []*cloudformation.Tag{
+			&mockAppTag,
+			&mockEnvTag,
+			&mockTaskTag1,
+		},
+	}
+	mockStack2 := cloudformation.Stack{
+		StackName: aws.String("task-default-oneoff"),
+		Tags: []*cloudformation.Tag{
+			&mockTaskTag2,
+		},
+	}
+	mockStack3 := cloudformation.Stack{
+		StackName: aws.String("phonetool-test-pdx"),
+		Tags: []*cloudformation.Tag{
+			&mockAppTag,
+			&mockEnvTag,
+		},
+	}
+	mockStacks := &cloudformation.DescribeStacksOutput{
+		Stacks: []*cloudformation.Stack{
+			&mockStack1,
+			&mockStack2,
+			&mockStack3,
+		},
+	}
+	testCases := map[string]struct {
+		inTags       map[string]string
+		mockCf       func(*mocks.Mockclient)
+		wantedStacks []StackDescription
+		wantedErr    string
+	}{
+		"successfully lists stacks with tags": {
+			inTags: map[string]string{
+				"copilot-application": "phonetool",
+				"copilot-environment": "test-pdx",
+			},
+			mockCf: func(m *mocks.Mockclient) {
+				m.EXPECT().DescribeStacks(&cloudformation.DescribeStacksInput{}).Return(mockStacks, nil)
+			},
+			wantedStacks: []StackDescription{
+				{
+					StackName: aws.String("task-appenv"),
+					Tags: []*cloudformation.Tag{
+						&mockAppTag,
+						&mockEnvTag,
+						&mockTaskTag1,
+					},
+				},
+				{
+					StackName: aws.String("phonetool-test-pdx"),
+					Tags: []*cloudformation.Tag{
+						&mockAppTag,
+						&mockEnvTag,
+					},
+				},
+			},
+		},
+		"lists all stacks with wildcard tag": {
+			inTags: map[string]string{
+				"copilot-task": "",
+			},
+			mockCf: func(m *mocks.Mockclient) {
+				m.EXPECT().DescribeStacks(&cloudformation.DescribeStacksInput{}).Return(&cloudformation.DescribeStacksOutput{
+					NextToken: aws.String("abc"),
+					Stacks: []*cloudformation.Stack{
+						&mockStack1,
+					},
+				}, nil)
+				m.EXPECT().DescribeStacks(&cloudformation.DescribeStacksInput{
+					NextToken: aws.String("abc"),
+				}).Return(&cloudformation.DescribeStacksOutput{
+					Stacks: []*cloudformation.Stack{
+						&mockStack2,
+						&mockStack3,
+					},
+				}, nil)
+			},
+			wantedStacks: []StackDescription{
+				{
+					StackName: aws.String("task-appenv"),
+					Tags: []*cloudformation.Tag{
+						&mockAppTag,
+						&mockEnvTag,
+						&mockTaskTag1,
+					},
+				},
+				{
+					StackName: aws.String("task-default-oneoff"),
+					Tags: []*cloudformation.Tag{
+						&mockTaskTag2,
+					},
+				},
+			},
+		},
+		"empty map returns all stacks": {
+			inTags: map[string]string{},
+			mockCf: func(m *mocks.Mockclient) {
+				m.EXPECT().DescribeStacks(&cloudformation.DescribeStacksInput{}).Return(mockStacks, nil)
+			},
+			wantedStacks: []StackDescription{
+				{
+					StackName: aws.String("task-appenv"),
+					Tags: []*cloudformation.Tag{
+						&mockAppTag,
+						&mockEnvTag,
+						&mockTaskTag1,
+					},
+				},
+				{
+					StackName: aws.String("task-default-oneoff"),
+					Tags: []*cloudformation.Tag{
+						&mockTaskTag2,
+					},
+				},
+				{
+					StackName: aws.String("phonetool-test-pdx"),
+					Tags: []*cloudformation.Tag{
+						&mockAppTag,
+						&mockEnvTag,
+					},
+				},
+			},
+		},
+		"error listing stacks": {
+			inTags: map[string]string{},
+			mockCf: func(m *mocks.Mockclient) {
+				m.EXPECT().DescribeStacks(&cloudformation.DescribeStacksInput{}).Return(nil, errors.New("some error"))
+			},
+			wantedErr: "list stacks: some error",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockClient := mocks.NewMockclient(ctrl)
+			tc.mockCf(mockClient)
+
+			c := CloudFormation{
+				client: mockClient,
+			}
+
+			// WHEN
+			stacks, err := c.ListStacksWithTags(tc.inTags)
+
+			// THEN
+			if tc.wantedErr != "" {
+				require.EqualError(t, err, tc.wantedErr)
+			} else {
+				require.Equal(t, tc.wantedStacks, stacks)
+			}
+		})
+	}
+}
+
 func addCreateDeployCalls(m *mocks.Mockclient) {
 	addDeployCalls(m, cloudformation.ChangeSetTypeCreate)
 }

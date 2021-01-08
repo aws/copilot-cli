@@ -46,6 +46,7 @@ type cfnClient interface {
 	DescribeChangeSet(changeSetID, stackName string) (*cloudformation.ChangeSetDescription, error)
 	TemplateBody(stackName string) (string, error)
 	Events(stackName string) ([]cloudformation.StackEvent, error)
+	ListStacksWithTags(tags map[string]string) ([]cloudformation.StackDescription, error)
 	ErrorEvents(stackName string) ([]cloudformation.StackEvent, error)
 
 	// Methods vended by the aws sdk struct.
