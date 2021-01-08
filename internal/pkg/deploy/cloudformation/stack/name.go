@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-// TaskStackPrefix is used elsewhere to list CF stacks
-const TaskStackPrefix = "task-"
+// taskStackPrefix is used elsewhere to list CF stacks
+const taskStackPrefix = "task-"
 
 // TaskStackName holds the name of a Copilot one-off task stack.
 type TaskStackName string
@@ -38,5 +38,5 @@ func NameForEnv(app, env string) string {
 
 // NameForTask returns the stack name for a task.
 func NameForTask(task string) TaskStackName {
-	return TaskStackName(TaskStackPrefix + task)
+	return TaskStackName(taskStackPrefix + task)
 }

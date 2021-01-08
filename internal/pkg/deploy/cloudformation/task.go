@@ -51,7 +51,7 @@ func (cf CloudFormation) DeployTask(input *deploy.CreateTaskResourcesInput, opts
 	return nil
 }
 
-// ListTaskStacks returns all the CF stacks which represent one-off copilot tasks in a given application's environments
+// ListTaskStacks returns all the CF stacks which represent one-off copilot tasks in a given application's environments.
 func (cf CloudFormation) ListTaskStacks(appName, envName string) ([]deploy.TaskStackInfo, error) {
 	taskAppEnvTags := map[string]string{
 		deploy.TaskTagKey: "",
