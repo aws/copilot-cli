@@ -62,16 +62,6 @@ func NewWithWriter(out io.Writer) *Cursor {
 	}
 }
 
-// Up moves the cursor n lines.
-func (c *Cursor) Up(n int) {
-	c.c.Up(n)
-}
-
-// Down moves the cursor n lines.
-func (c *Cursor) Down(n int) {
-	c.c.Down(n)
-}
-
 // Hide makes the cursor invisible.
 func (c *Cursor) Hide() {
 	c.c.Hide()
@@ -96,8 +86,10 @@ func EraseLine(fw terminal.FileWriter) {
 
 // EraseLinesAbove erases a line and moves the cursor up from fw, repeated n times.
 func EraseLinesAbove(fw terminal.FileWriter, n int) {
-	c := &terminal.Cursor{
-		Out: fw,
+	c := Cursor{
+		c: &terminal.Cursor{
+			Out: fw,
+		},
 	}
 	for i := 0; i < n; i += 1 {
 		EraseLine(fw)
