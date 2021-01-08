@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -17,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/templates"
 	"github.com/gobuffalo/packd"
@@ -97,35 +97,6 @@ func (cf CloudFormation) ErrorEvents(conf StackConfiguration) ([]deploy.Resource
 	return transformedEvents, nil
 }
 
-// streamResourceEvents sends a list of ResourceEvent every 3 seconds to the events channel.
-// The events channel is closed only when the done channel receives a message.
-// If an error occurs while describing stack events, it is ignored so that the stream is not interrupted.
-func (cf CloudFormation) streamResourceEvents(done <-chan struct{}, events chan []deploy.ResourceEvent, stackName string) {
-	sendStatusUpdates := func() {
-		// Send a list of ResourceEvent to events if there was no error.
-		cfEvents, err := cf.cfnClient.Events(stackName)
-		if err != nil {
-			return
-		}
-		var transformedEvents []deploy.ResourceEvent
-		for _, cfEvent := range cfEvents {
-			transformedEvents = append(transformedEvents, transformEvent(cfEvent))
-		}
-		events <- transformedEvents
-	}
-	for {
-		timeout := time.After(3 * time.Second)
-		select {
-		case <-timeout:
-			sendStatusUpdates()
-		case <-done:
-			sendStatusUpdates() // Send last batch of updates.
-			close(events)       // Close the channel to let receivers know that there won't be any more events.
-			return              // Exit for-loop.
-		}
-	}
-}
-
 type renderStackChangesInput struct {
 	w                progress.FileWriter
 	stackName        string
@@ -135,10 +106,15 @@ type renderStackChangesInput struct {
 }
 
 func (cf CloudFormation) renderStackChanges(in renderStackChangesInput) error {
+	spinner := progress.NewSpinner(in.w)
+	csLabel := fmt.Sprintf("Proposing infrastructure changes for %s", in.stackName)
+	spinner.Start(csLabel)
 	changeSetID, err := in.createChangeSet()
 	if err != nil {
+		spinner.Stop(log.Serrorf("%s\n", csLabel))
 		return err
 	}
+	spinner.Stop(log.Ssuccessf("%s\n", csLabel))
 	changeSet, err := cf.cfnClient.DescribeChangeSet(changeSetID, in.stackName)
 	if err != nil {
 		return err

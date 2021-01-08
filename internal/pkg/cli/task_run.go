@@ -130,7 +130,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		fs:      &afero.Afero{Fs: afero.NewOsFs()},
 		store:   store,
 		sel:     selector.NewSelect(prompt.New(), store),
-		spinner: termprogress.NewSpinner(),
+		spinner: termprogress.NewSpinner(log.DiagnosticWriter),
 	}
 
 	opts.configureRuntimeOpts = func() error {

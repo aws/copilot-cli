@@ -72,7 +72,7 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		ws:          ws,
 		cfn:         cloudformation.New(sess),
 		prompt:      prompt.New(),
-		prog:        termprogress.NewSpinner(),
+		prog:        termprogress.NewSpinner(log.DiagnosticWriter),
 	}, nil
 }
 

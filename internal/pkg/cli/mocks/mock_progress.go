@@ -5,7 +5,6 @@
 package mocks
 
 import (
-	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -55,16 +54,4 @@ func (m *Mockprogress) Stop(label string) {
 func (mr *MockprogressMockRecorder) Stop(label interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*Mockprogress)(nil).Stop), label)
-}
-
-// Events mocks base method
-func (m *Mockprogress) Events(arg0 []progress.TabRow) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Events", arg0)
-}
-
-// Events indicates an expected call of Events
-func (mr *MockprogressMockRecorder) Events(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Events", reflect.TypeOf((*Mockprogress)(nil).Events), arg0)
 }

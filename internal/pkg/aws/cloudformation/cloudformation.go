@@ -27,8 +27,8 @@ var eventErrorStates = []string{
 }
 
 var waiters = []request.WaiterOption{
-	request.WithWaiterDelay(request.ConstantWaiterDelay(3 * time.Second)), // Poll for cfn updates every 3 seconds.
-	request.WithWaiterMaxAttempts(1800),                                   // Wait for at most 90 mins for any cfn action.
+	request.WithWaiterDelay(request.ConstantWaiterDelay(5 * time.Second)), // How long to wait in between poll cfn for updates.
+	request.WithWaiterMaxAttempts(1080),                                   // Wait for at most 90 mins for any cfn action.
 }
 
 // CloudFormation represents a client to make requests to AWS CloudFormation.
