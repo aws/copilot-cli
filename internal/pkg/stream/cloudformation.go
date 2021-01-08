@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package stream
 
 import (
@@ -9,7 +12,7 @@ import (
 )
 
 const (
-	stackFetchIntervalDuration = 3 * time.Second // How long to wait until Fetch is called again for a StackStreamer.
+	stackFetchIntervalDuration = 2 * time.Second // How long to wait until Fetch is called again for a StackStreamer.
 )
 
 // StackEventsDescriber is the CloudFormation interface needed to describe stack events.
