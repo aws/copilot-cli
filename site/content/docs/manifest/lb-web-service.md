@@ -30,6 +30,8 @@ cpu: 256
 memory: 512
 # Number of tasks that should be running in your service. You can also specify a map for autoscaling.
 count: 1
+# Enable running commands in your container.
+# execute_command: true
 
 variables:                    # Optional. Pass environment variables as key value pairs.
   LOG_LEVEL: info
@@ -185,6 +187,11 @@ Scale up or down based on the request count handled per tasks.
 
 <span class="parent-field">count.</span><a id="response-time" href="#count-response-time" class="field">`response_time`</a> <span class="type">Duration</span>  
 Scale up or down based on the service average response time.
+
+<div class="separator"></div>
+
+<a id="execute_command" href="#execute_command" class="field">`execute_command`</a> <span class="type">Boolean</span>   
+Enable running commands in your container. Required for `$ copilot svc exec`.
 
 <div class="separator"></div>
 

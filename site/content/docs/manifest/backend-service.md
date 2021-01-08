@@ -29,6 +29,8 @@ cpu: 256
 memory: 512
 # Number of tasks that should be running in your service.
 count: 1
+# Enable running commands in your container.
+# execute_command: true
 
 variables:                    # Optional. Pass environment variables as key value pairs.
   LOG_LEVEL: info
@@ -145,6 +147,11 @@ Scale up or down based on the average CPU your service should maintain.
 
 <span class="parent-field">count.</span><a id="count-memory-percentage" href="#count-memory-percentage" class="field">`memory_percentage`</a> <span class="type">Integer</span>  
 Scale up or down based on the average memory your service should maintain.  
+
+<div class="separator"></div>
+
+<a id="execute_command" href="#execute_command" class="field">`execute_command`</a> <span class="type">Boolean</span>   
+Enable running commands in your container. Required for `$ copilot svc exec`.
 
 <div class="separator"></div>
 
