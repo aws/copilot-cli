@@ -136,7 +136,7 @@ func TestTaskStackConfig_StackName(t *testing.T) {
 		CreateTaskResourcesInput: &taskInput,
 	}
 	got := task.StackName()
-	require.Equal(t, got, TaskStackPrefix + testTaskName)
+	require.Equal(t, got, taskStackPrefix+testTaskName)
 }
 
 func TestTaskStackConfig_Tags(t *testing.T) {
