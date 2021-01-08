@@ -16,7 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
-	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
@@ -523,7 +522,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			wantedErrorS: "get identity: some identity error",
 		},
-		"errors if environment change set cannot be accepted": {
+		"errors if environment stack cannot be created": {
 			inAppName: "phonetool",
 			inEnvName: "test",
 
@@ -533,98 +532,10 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
-			expectProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
-				m.EXPECT().Stop(log.Serrorf(fmtDeployEnvFailed, "test"))
-			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
-				m.EXPECT().DeployEnvironment(gomock.Any()).Return(errors.New("some deploy error"))
+				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(errors.New("some deploy error"))
 			},
 			wantedErrorS: "some deploy error",
-		},
-		"streams failed events": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-
-			expectstore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
-			},
-			expectIdentity: func(m *mocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
-			},
-			expectProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
-				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
-				m.EXPECT().Events([]termprogress.TabRow{
-					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textVPC, termprogress.StatusFailed)),
-					termprogress.TabRow(fmt.Sprintf("  %s\t", "some reason")),
-					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textInternetGateway, termprogress.StatusInProgress)),
-					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textPublicSubnets, termprogress.StatusInProgress)),
-					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textPrivateSubnets, termprogress.StatusInProgress)),
-					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textRouteTables, termprogress.StatusInProgress)),
-					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textECSCluster, termprogress.StatusInProgress)),
-				})
-				m.EXPECT().Stop(log.Serrorf(fmtStreamEnvFailed, "test"))
-			},
-			expectDeployer: func(m *mocks.Mockdeployer) {
-				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
-				events := make(chan []deploy.ResourceEvent, 1)
-				responses := make(chan deploy.CreateEnvironmentResponse, 1)
-				m.EXPECT().StreamEnvironmentCreation(gomock.Any()).Return(events, responses)
-				events <- []deploy.ResourceEvent{
-					{
-						Resource: deploy.Resource{
-							LogicalName: "VPC",
-							Type:        "AWS::EC2::VPC",
-						},
-						Status:       "CREATE_FAILED",
-						StatusReason: "some reason",
-					},
-				}
-				responses <- deploy.CreateEnvironmentResponse{
-					Err: errors.New("some stream error"),
-				}
-				close(events)
-				close(responses)
-			},
-			wantedErrorS: "some stream error",
-		},
-		"failed to get environment stack": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-
-			expectstore: func(m *mocks.Mockstore) {
-				m.EXPECT().CreateEnvironment(gomock.Any()).Times(0)
-				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
-			},
-			expectIdentity: func(m *mocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
-			},
-			expectProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
-				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
-			},
-			expectDeployer: func(m *mocks.Mockdeployer) {
-				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
-				events := make(chan []deploy.ResourceEvent, 1)
-				responses := make(chan deploy.CreateEnvironmentResponse, 1)
-				m.EXPECT().StreamEnvironmentCreation(gomock.Any()).Return(events, responses)
-				env := &config.Environment{
-					App:       "phonetool",
-					Name:      "test",
-					AccountID: "1234",
-					Region:    "mars-1",
-				}
-				responses <- deploy.CreateEnvironmentResponse{
-					Env: env,
-					Err: nil,
-				}
-				close(events)
-				close(responses)
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, errors.New("some error"))
-			},
-			wantedErrorS: "get environment struct for test: some error",
 		},
 		"failed to create stack set instance": {
 			inAppName: "phonetool",
@@ -638,35 +549,18 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
-				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "mars-1", "phonetool"))
 				m.EXPECT().Stop(log.Serrorf(fmtAddEnvToAppFailed, "1234", "mars-1", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
-				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
-				events := make(chan []deploy.ResourceEvent, 1)
-				responses := make(chan deploy.CreateEnvironmentResponse, 1)
-				m.EXPECT().StreamEnvironmentCreation(gomock.Any()).Return(events, responses)
+				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
 				env := &config.Environment{
 					App:       "phonetool",
 					Name:      "test",
 					AccountID: "1234",
 					Region:    "mars-1",
 				}
-				responses <- deploy.CreateEnvironmentResponse{
-					Env: env,
-					Err: nil,
-				}
-				close(events)
-				close(responses)
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
-					AccountID: "1234",
-					Region:    "mars-1",
-					Name:      "test",
-					App:       "phonetool",
-				}, nil)
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(env, nil)
 				m.EXPECT().AddEnvToApp(&config.Application{Name: "phonetool"}, env).Return(errors.New("some cfn error"))
 			},
 			wantedErrorS: "deploy env test to application phonetool: some cfn error",
@@ -690,33 +584,16 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
-				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "mars-1", "phonetool"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "mars-1", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
-				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
-				events := make(chan []deploy.ResourceEvent, 1)
-				responses := make(chan deploy.CreateEnvironmentResponse, 1)
-				m.EXPECT().StreamEnvironmentCreation(gomock.Any()).Return(events, responses)
-				responses <- deploy.CreateEnvironmentResponse{
-					Env: &config.Environment{
-						App:       "phonetool",
-						Name:      "test",
-						AccountID: "1234",
-						Region:    "mars-1",
-					},
-					Err: nil,
-				}
-				close(events)
-				close(responses)
+				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
+					App:       "phonetool",
+					Name:      "test",
 					AccountID: "1234",
 					Region:    "mars-1",
-					Name:      "test",
-					App:       "phonetool",
 				}, nil)
 				m.EXPECT().AddEnvToApp(gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -741,29 +618,11 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
-				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "mars-1", "phonetool"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "mars-1", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
-				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
-				events := make(chan []deploy.ResourceEvent, 1)
-				responses := make(chan deploy.CreateEnvironmentResponse, 1)
-				m.EXPECT().StreamEnvironmentCreation(gomock.Any()).Return(events, responses)
-				responses <- deploy.CreateEnvironmentResponse{
-					Env: &config.Environment{
-						App:       "phonetool",
-						Name:      "test",
-						AccountID: "1234",
-						Prod:      true,
-						Region:    "mars-1",
-					},
-					Err: nil,
-				}
-				close(events)
-				close(responses)
+				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "1234",
 					Region:    "mars-1",
@@ -791,13 +650,11 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtDeployEnvComplete, "test", "phonetool"))
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "mars-1", "phonetool"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "mars-1", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
-				m.EXPECT().DeployEnvironment(&deploy.CreateEnvironmentInput{
+				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), &deploy.CreateEnvironmentInput{
 					Name:                     "test",
 					AppName:                  "phonetool",
 					ToolsAccountPrincipalARN: "some arn",
@@ -850,29 +707,12 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDNSDelegationStart, "4567"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtDNSDelegationComplete, "4567"))
-				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
-				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "mars-1", "phonetool"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "mars-1", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DelegateDNSPermissions(gomock.Any(), "4567").Return(nil)
-				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
-				events := make(chan []deploy.ResourceEvent, 1)
-				responses := make(chan deploy.CreateEnvironmentResponse, 1)
-				m.EXPECT().StreamEnvironmentCreation(gomock.Any()).Return(events, responses)
-				responses <- deploy.CreateEnvironmentResponse{
-					Env: &config.Environment{
-						App:       "phonetool",
-						Name:      "test",
-						AccountID: "1234",
-						Region:    "mars-1",
-					},
-					Err: nil,
-				}
-				close(events)
-				close(responses)
+				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "1234",
 					Region:    "mars-1",

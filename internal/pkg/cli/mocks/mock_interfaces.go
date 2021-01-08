@@ -20,6 +20,7 @@ import (
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
+	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	prompt "github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	selector "github.com/aws/copilot-cli/internal/pkg/term/selector"
 	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -2970,6 +2971,20 @@ func (mr *MockenvironmentDeployerMockRecorder) DeployEnvironment(env interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeployEnvironment), env)
 }
 
+// DeployAndRenderEnvironment mocks base method
+func (m *MockenvironmentDeployer) DeployAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployAndRenderEnvironment", out, env)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeployAndRenderEnvironment indicates an expected call of DeployAndRenderEnvironment
+func (mr *MockenvironmentDeployerMockRecorder) DeployAndRenderEnvironment(out, env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeployAndRenderEnvironment), out, env)
+}
+
 // StreamEnvironmentCreation mocks base method
 func (m *MockenvironmentDeployer) StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse) {
 	m.ctrl.T.Helper()
@@ -3628,6 +3643,20 @@ func (m *Mockdeployer) DeployEnvironment(env *deploy.CreateEnvironmentInput) err
 func (mr *MockdeployerMockRecorder) DeployEnvironment(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEnvironment", reflect.TypeOf((*Mockdeployer)(nil).DeployEnvironment), env)
+}
+
+// DeployAndRenderEnvironment mocks base method
+func (m *Mockdeployer) DeployAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployAndRenderEnvironment", out, env)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeployAndRenderEnvironment indicates an expected call of DeployAndRenderEnvironment
+func (mr *MockdeployerMockRecorder) DeployAndRenderEnvironment(out, env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployAndRenderEnvironment", reflect.TypeOf((*Mockdeployer)(nil).DeployAndRenderEnvironment), out, env)
 }
 
 // StreamEnvironmentCreation mocks base method

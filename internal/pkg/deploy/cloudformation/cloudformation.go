@@ -136,7 +136,7 @@ type renderStackChangesInput struct {
 
 func (cf CloudFormation) renderStackChanges(in renderStackChangesInput) error {
 	spinner := progress.NewSpinner(in.w)
-	csLabel := fmt.Sprintf("Create change set for %s", in.stackName)
+	csLabel := fmt.Sprintf("Proposing infrastructure changes for %s", in.stackName)
 	spinner.Start(csLabel)
 	changeSetID, err := in.createChangeSet()
 	if err != nil {
