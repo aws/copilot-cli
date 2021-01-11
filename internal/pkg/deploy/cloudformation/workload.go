@@ -40,7 +40,7 @@ func (cf CloudFormation) handleStackError(conf StackConfiguration, err error) er
 	if err == nil {
 		return nil
 	}
-	errors, describeErr := cf.ErrorEvents(conf)
+	errors, describeErr := cf.errorEvents(conf)
 	if describeErr != nil {
 		return fmt.Errorf("%w: describe stack: %v", err, describeErr)
 	}

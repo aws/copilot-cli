@@ -229,7 +229,7 @@ func TestCloudFormation_GetStackErrors(t *testing.T) {
 				template: "template",
 			}
 			// WHEN
-			out, err := c.ErrorEvents(conf)
+			out, err := c.errorEvents(conf)
 
 			// THEN
 			if tc.wantedErr != "" {
