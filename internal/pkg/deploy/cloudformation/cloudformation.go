@@ -6,6 +6,7 @@ package cloudformation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -106,15 +107,10 @@ type renderStackChangesInput struct {
 }
 
 func (cf CloudFormation) renderStackChanges(in renderStackChangesInput) error {
-	spinner := progress.NewSpinner(in.w)
-	csLabel := fmt.Sprintf("Proposing infrastructure changes for %s", in.stackName)
-	spinner.Start(csLabel)
 	changeSetID, err := in.createChangeSet()
 	if err != nil {
-		spinner.Stop(log.Serrorf("%s\n", csLabel))
 		return err
 	}
-	spinner.Stop(log.Ssuccessf("%s\n", csLabel))
 	changeSet, err := cf.cfnClient.DescribeChangeSet(changeSetID, in.stackName)
 	if err != nil {
 		return err
@@ -200,4 +196,17 @@ func resourcesToRender(changes []*sdkcloudformation.Change, descriptions map[str
 		})
 	}
 	return resources
+}
+
+func stopSpinner(spinner *progress.Spinner, err error, label string) {
+	if err == nil {
+		spinner.Stop(log.Ssuccessf("%s\n", label))
+		return
+	}
+	var existsErr *cloudformation.ErrStackAlreadyExists
+	if errors.As(err, &existsErr) {
+		spinner.Stop(log.Ssuccessf("%s\n", label))
+		return
+	}
+	spinner.Stop(log.Serrorf("%s\n", label))
 }
