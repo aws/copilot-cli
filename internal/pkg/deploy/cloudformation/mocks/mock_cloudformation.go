@@ -304,6 +304,21 @@ func (mr *MockcfnClientMockRecorder) Events(stackName interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Events", reflect.TypeOf((*MockcfnClient)(nil).Events), stackName)
 }
 
+// ListStacksWithTags mocks base method
+func (m *MockcfnClient) ListStacksWithTags(tags map[string]string) ([]cloudformation0.StackDescription, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListStacksWithTags", tags)
+	ret0, _ := ret[0].([]cloudformation0.StackDescription)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListStacksWithTags indicates an expected call of ListStacksWithTags
+func (mr *MockcfnClientMockRecorder) ListStacksWithTags(tags interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListStacksWithTags", reflect.TypeOf((*MockcfnClient)(nil).ListStacksWithTags), tags)
+}
+
 // ErrorEvents mocks base method
 func (m *MockcfnClient) ErrorEvents(stackName string) ([]cloudformation0.StackEvent, error) {
 	m.ctrl.T.Helper()

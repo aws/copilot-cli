@@ -3,7 +3,21 @@
 
 package stack
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
+
+// taskStackPrefix is used elsewhere to list CF stacks
+const taskStackPrefix = "task-"
+
+// TaskStackName holds the name of a Copilot one-off task stack.
+type TaskStackName string
+
+// TaskName returns the name of the task family, generated from the stack name
+func (t TaskStackName) TaskName() string {
+	return strings.SplitN(string(t), "-", 2)[1]
+}
 
 // NameForService returns the stack name for a service.
 func NameForService(app, env, svc string) string {
@@ -23,6 +37,6 @@ func NameForEnv(app, env string) string {
 }
 
 // NameForTask returns the stack name for a task.
-func NameForTask(task string) string {
-	return fmt.Sprintf("task-%s", task)
+func NameForTask(task string) TaskStackName {
+	return TaskStackName(taskStackPrefix + task)
 }

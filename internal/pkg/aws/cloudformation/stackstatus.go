@@ -9,15 +9,58 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
+var (
+	successStackStatuses = []string{
+		cloudformation.StackStatusCreateComplete,
+		cloudformation.StackStatusDeleteComplete,
+		cloudformation.StackStatusUpdateComplete,
+		cloudformation.StackStatusUpdateCompleteCleanupInProgress,
+		cloudformation.StackStatusImportComplete,
+	}
+
+	failureStackStatuses = []string{
+		cloudformation.StackStatusCreateFailed,
+		cloudformation.StackStatusDeleteFailed,
+		cloudformation.ResourceStatusUpdateFailed,
+		cloudformation.StackStatusRollbackInProgress,
+		cloudformation.StackStatusRollbackComplete,
+		cloudformation.StackStatusRollbackFailed,
+		cloudformation.StackStatusUpdateRollbackComplete,
+		cloudformation.StackStatusUpdateRollbackCompleteCleanupInProgress,
+		cloudformation.StackStatusUpdateRollbackInProgress,
+		cloudformation.StackStatusUpdateRollbackFailed,
+		cloudformation.ResourceStatusImportRollbackInProgress,
+		cloudformation.ResourceStatusImportRollbackFailed,
+	}
+)
+
 // StackStatus represents the status of a stack.
 type StackStatus string
 
 // requiresCleanup returns true if the stack was created, but failed and should be deleted.
-func (s StackStatus) requiresCleanup() bool {
-	return cloudformation.StackStatusRollbackComplete == string(s) || cloudformation.StackStatusRollbackFailed == string(s)
+func (ss StackStatus) requiresCleanup() bool {
+	return cloudformation.StackStatusRollbackComplete == string(ss) || cloudformation.StackStatusRollbackFailed == string(ss)
 }
 
 // InProgress returns true if the stack is currently being updated.
-func (s StackStatus) InProgress() bool {
-	return strings.HasSuffix(string(s), "IN_PROGRESS")
+func (ss StackStatus) InProgress() bool {
+	return strings.HasSuffix(string(ss), "IN_PROGRESS")
+}
+
+func (ss StackStatus) Success() bool {
+	for _, success := range successStackStatuses {
+		if string(ss) == success {
+			return true
+		}
+	}
+	return false
+}
+
+func (ss StackStatus) Failure() bool {
+	for _, failure := range failureStackStatuses {
+		if string(ss) == failure {
+			return true
+		}
+	}
+	return false
 }

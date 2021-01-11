@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package stream
 
 import (
@@ -9,7 +12,7 @@ import (
 )
 
 const (
-	stackFetchIntervalDuration = 3 * time.Second // How long to wait until Fetch is called again for a StackStreamer.
+	stackFetchIntervalDuration = 2 * time.Second // How long to wait until Fetch is called again for a StackStreamer.
 )
 
 // StackEventsDescriber is the CloudFormation interface needed to describe stack events.
@@ -19,9 +22,10 @@ type StackEventsDescriber interface {
 
 // StackEvent is a CloudFormation stack event.
 type StackEvent struct {
-	LogicalResourceID string
-	ResourceType      string
-	ResourceStatus    string
+	LogicalResourceID    string
+	ResourceType         string
+	ResourceStatus       string
+	ResourceStatusReason string
 }
 
 // StackStreamer is a FetchNotifyStopper for StackEvent events started by a change set.
@@ -80,9 +84,10 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 				break
 			}
 			events = append(events, StackEvent{
-				LogicalResourceID: aws.StringValue(event.LogicalResourceId),
-				ResourceType:      aws.StringValue(event.ResourceType),
-				ResourceStatus:    aws.StringValue(event.ResourceStatus),
+				LogicalResourceID:    aws.StringValue(event.LogicalResourceId),
+				ResourceType:         aws.StringValue(event.ResourceType),
+				ResourceStatus:       aws.StringValue(event.ResourceStatus),
+				ResourceStatusReason: aws.StringValue(event.ResourceStatusReason),
 			})
 			s.pastEventIDs[aws.StringValue(event.EventId)] = true
 		}

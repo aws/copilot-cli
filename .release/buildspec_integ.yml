@@ -12,7 +12,7 @@ env:
 phases:
   install:
     runtime-versions:
-      golang: 1.13
+      golang: 1.14
       nodejs: 10
   build:
     commands:

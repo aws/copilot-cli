@@ -24,7 +24,6 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "aws-sdk": "^2.817.0",
-    "yargs-parser": ">=20.2.4",
     "aws-sdk-mock": "^5.1.0",
     "babel-minify": "^0.5.1",
     "eslint": "^7.16.0",
@@ -37,6 +36,7 @@
     "lambda-tester": "^4.0.1",
     "minimist": ">=1.2.5",
     "nock": "^13.0.5",
-    "ts-jest": "^26.4.4"
+    "ts-jest": "^26.4.4",
+    "yargs-parser": ">=20.2.4"
   }
 }

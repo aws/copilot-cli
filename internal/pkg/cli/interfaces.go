@@ -21,6 +21,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -298,8 +299,7 @@ type bucketEmptier interface {
 
 // Interfaces for deploying resources through CloudFormation. Facilitates mocking.
 type environmentDeployer interface {
-	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
-	StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse)
+	DeployAndRenderEnvironment(out termprogress.FileWriter, env *deploy.CreateEnvironmentInput) error
 	DeleteEnvironment(appName, envName, cfnExecRoleARN string) error
 	GetEnvironment(appName, envName string) (*config.Environment, error)
 	EnvironmentTemplate(appName, envName string) (string, error)

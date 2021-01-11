@@ -30,12 +30,14 @@ Conditions:
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
 Resources: 
   LogGroup:
+    # A CloudWatch log group to hold your service logs
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Join ['', [/copilot/, !Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName]]
       RetentionInDays: !Ref LogRetention
 
   TaskDefinition:
+    # An ECS task definition to group your containers and run them on ECS
     Type: AWS::ECS::TaskDefinition
     DependsOn: LogGroup
     Properties:
@@ -72,6 +74,7 @@ Resources:
         
         
   ExecutionRole:
+    # An IAM Role for the Fargate agent to make AWS API calls on your behalf
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -113,6 +116,7 @@ Resources:
   
 
   TaskRole:
+    # An IAM role to control permissions for the containers in your tasks
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -140,6 +144,7 @@ Resources:
   
 
   Rule:
+    # A CloudWatch event rule to trigger the job's state machine
     Type: AWS::Events::Rule
     Properties:
       ScheduleExpression: !Ref Schedule
@@ -166,6 +171,7 @@ Resources:
             Resource: !Ref StateMachine
 
   StateMachine:
+    # A state machine to invoke your job and handle retry and timeout logic
     Type: AWS::StepFunctions::StateMachine
     Properties:
       StateMachineName: !Sub '${AppName}-${EnvName}-${WorkloadName}'
@@ -302,6 +308,7 @@ Resources:
   
 
   AddonsStack:
+    # An Addons CloudFormation Stack for your additional AWS resources
     Type: AWS::CloudFormation::Stack
     Condition: HasAddons
     Properties:

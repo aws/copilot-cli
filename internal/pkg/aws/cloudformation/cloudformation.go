@@ -27,8 +27,8 @@ var eventErrorStates = []string{
 }
 
 var waiters = []request.WaiterOption{
-	request.WithWaiterDelay(request.ConstantWaiterDelay(3 * time.Second)), // Poll for cfn updates every 3 seconds.
-	request.WithWaiterMaxAttempts(1800),                                   // Wait for at most 90 mins for any cfn action.
+	request.WithWaiterDelay(request.ConstantWaiterDelay(5 * time.Second)), // How long to wait in between poll cfn for updates.
+	request.WithWaiterMaxAttempts(1080),                                   // Wait for at most 90 mins for any cfn action.
 }
 
 // CloudFormation represents a client to make requests to AWS CloudFormation.
@@ -249,6 +249,36 @@ func (c *CloudFormation) ErrorEvents(stackName string) ([]StackEvent, error) {
 	})
 }
 
+// ListStacksWithTags returns all the stacks in the current AWS account and region with the specified matching
+// tags. If a tag key is provided but the value is empty, the method will match tags with any value for the given key.
+func (c *CloudFormation) ListStacksWithTags(tags map[string]string) ([]StackDescription, error) {
+	match := makeTagMatcher(tags)
+
+	var nextToken *string
+	var summaries []StackDescription
+
+	for {
+		out, err := c.client.DescribeStacks(&cloudformation.DescribeStacksInput{
+			NextToken: nextToken,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("list stacks: %w", err)
+		}
+
+		for _, summary := range out.Stacks {
+			stackTags := summary.Tags
+			if match(stackTags) {
+				summaries = append(summaries, StackDescription(*summary))
+			}
+		}
+		nextToken = out.NextToken
+		if nextToken == nil {
+			break
+		}
+	}
+	return summaries, nil
+}
+
 func (c *CloudFormation) create(stack *Stack) (string, error) {
 	cs, err := newCreateChangeSet(c.client, stack.Name)
 	if err != nil {
@@ -284,4 +314,41 @@ func (c *CloudFormation) deleteAndWait(in *cloudformation.DeleteStackInput) erro
 		return fmt.Errorf("wait until stack %s delete is complete: %w", aws.StringValue(in.StackName), err)
 	}
 	return nil
+}
+
+// makeTagMatcher takes a set of wanted tags and returns a function which matches if the given set of
+// `cloudformation.Tag`s contains tags with all wanted keys and values
+func makeTagMatcher(wantedTags map[string]string) func([]*cloudformation.Tag) bool {
+	// Match all stacks if no desired tags are specified.
+	if len(wantedTags) == 0 {
+		return func([]*cloudformation.Tag) bool { return true }
+	}
+
+	return func(tags []*cloudformation.Tag) bool {
+		// Define a map to determine whether each wanted tag is a match.
+		tagsMatched := make(map[string]bool, len(wantedTags))
+
+		// Populate the hash set and match map
+		for k := range wantedTags {
+			tagsMatched[k] = false
+		}
+
+		// Loop over all tags on the stack and decide whether they match any of the wanted tags.
+		for _, tag := range tags {
+			tagKey := aws.StringValue(tag.Key)
+			tagValue := aws.StringValue(tag.Value)
+			if wantedTags[tagKey] == tagValue || wantedTags[tagKey] == "" {
+				tagsMatched[tagKey] = true
+			}
+		}
+
+		// Only return true if all wanted tags are present and match in the stack's tags.
+		for _, v := range tagsMatched {
+			if !v {
+				return false
+			}
+		}
+
+		return true
+	}
 }

@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 // Package stream implements streamers that publish AWS events periodically.
 // A streamer fetches AWS events periodically and notifies subscribed channels of them.
 package stream

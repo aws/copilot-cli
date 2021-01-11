@@ -81,7 +81,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 
 	return &deleteAppOpts{
 		deleteAppVars: vars,
-		spinner:       termprogress.NewSpinner(),
+		spinner:       termprogress.NewSpinner(log.DiagnosticWriter),
 		store:         store,
 		ws:            ws,
 		sessProvider:  provider,
