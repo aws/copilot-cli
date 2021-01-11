@@ -40,14 +40,14 @@ func (cf CloudFormation) handleStackError(conf StackConfiguration, err error) er
 	if err == nil {
 		return nil
 	}
-	errors, describeErr := cf.errorEvents(conf)
+	reasons, describeErr := cf.errorEvents(conf)
 	if describeErr != nil {
 		return fmt.Errorf("%w: describe stack: %v", err, describeErr)
 	}
-	if len(errors) == 0 {
+	if len(reasons) == 0 {
 		return err
 	}
-	return fmt.Errorf("%w: %s", err, errors[0].StatusReason)
+	return fmt.Errorf("%w: %s", err, reasons[0])
 }
 
 // DeleteWorkload removes the CloudFormation stack of a deployed workload.
