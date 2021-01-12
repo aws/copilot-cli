@@ -96,6 +96,11 @@ func updateComponentTimer(mu *sync.Mutex, statuses []stackStatus, sw *stopWatch)
 	curStatus, nextStatus := statuses[len(statuses)-2], statuses[len(statuses)-1]
 	switch {
 	case nextStatus.value.InProgress():
+		// Reset and start only if the status moved to in progress from a static state.
+		// It's possible that CloudFormation sends multiple "CREATE_IN_PROGRESS" events back to back, we don't want to reset the timer then.
+		if !curStatus.value.InProgress() {
+			return
+		}
 		sw.reset()
 		sw.start()
 	default:

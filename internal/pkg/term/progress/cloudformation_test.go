@@ -108,6 +108,44 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		require.True(t, hasStarted, "the stopwatch should have started when an event was received")
 		require.Equal(t, time.Duration(0), elapsed)
 	})
+	t.Run("should keep timer running if multiple in progress events are received", func(t *testing.T) {
+		// GIVEN
+		ch := make(chan stream.StackEvent)
+		done := make(chan bool)
+		comp := &regularResourceComponent{
+			logicalID: "EnvironmentManagerRole",
+			statuses:  []stackStatus{notStartedStackStatus},
+			stopWatch: &stopWatch{
+				clock: &fakeClock{
+					wantedValues: []time.Time{testDate, testDate.Add(10 * time.Second)},
+				},
+			},
+			stream: ch,
+		}
+
+		// WHEN
+		go func() {
+			comp.Listen()
+			done <- true
+		}()
+		go func() {
+			ch <- stream.StackEvent{
+				LogicalResourceID: "EnvironmentManagerRole",
+				ResourceStatus:    "CREATE_IN_PROGRESS",
+			}
+			ch <- stream.StackEvent{
+				LogicalResourceID: "EnvironmentManagerRole",
+				ResourceStatus:    "CREATE_IN_PROGRESS",
+			}
+			close(ch) // Close to notify that no more events will be sent.
+		}()
+
+		// THEN
+		<-done // Wait for listen to exit.
+		elapsed, hasStarted := comp.stopWatch.elapsed()
+		require.True(t, hasStarted, "the stopwatch should have started when an event was received")
+		require.Equal(t, 10*time.Second, elapsed)
+	})
 }
 
 func TestRegularResourceComponent_Render(t *testing.T) {
