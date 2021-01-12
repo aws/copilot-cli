@@ -6,6 +6,7 @@ package cloudformation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -14,7 +15,6 @@ import (
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -84,17 +84,18 @@ func New(sess *session.Session) CloudFormation {
 	}
 }
 
-// ErrorEvents returns the list of CloudFormation Resource Events, filtered by failures and errors.
-func (cf CloudFormation) ErrorEvents(conf StackConfiguration) ([]deploy.ResourceEvent, error) {
+// errorEvents returns the list of status reasons of failed resource events
+func (cf CloudFormation) errorEvents(conf StackConfiguration) ([]string, error) {
 	events, err := cf.cfnClient.ErrorEvents(conf.StackName())
 	if err != nil {
 		return nil, err
 	}
-	var transformedEvents []deploy.ResourceEvent
-	for _, cfEvent := range events {
-		transformedEvents = append(transformedEvents, transformEvent(cfEvent))
+	var reasons []string
+	for _, event := range events {
+		// CFN error messages end with a '. (Service' and only the first sentence is useful, the rest is error codes.
+		reasons = append(reasons, strings.Split(aws.StringValue(event.ResourceStatusReason), ". (Service")[0])
 	}
-	return transformedEvents, nil
+	return reasons, nil
 }
 
 type renderStackChangesInput struct {
@@ -106,15 +107,10 @@ type renderStackChangesInput struct {
 }
 
 func (cf CloudFormation) renderStackChanges(in renderStackChangesInput) error {
-	spinner := progress.NewSpinner(in.w)
-	csLabel := fmt.Sprintf("Proposing infrastructure changes for %s", in.stackName)
-	spinner.Start(csLabel)
 	changeSetID, err := in.createChangeSet()
 	if err != nil {
-		spinner.Stop(log.Serrorf("%s\n", csLabel))
 		return err
 	}
-	spinner.Stop(log.Ssuccessf("%s\n", csLabel))
 	changeSet, err := cf.cfnClient.DescribeChangeSet(changeSetID, in.stackName)
 	if err != nil {
 		return err
@@ -148,18 +144,6 @@ func (cf CloudFormation) renderStackChanges(in renderStackChangesInput) error {
 		return progress.Render(waitCtx, progress.NewTabbedFileWriter(in.w), renderer)
 	})
 	return g.Wait()
-}
-
-func transformEvent(input cloudformation.StackEvent) deploy.ResourceEvent {
-	return deploy.ResourceEvent{
-		Resource: deploy.Resource{
-			LogicalName: aws.StringValue(input.LogicalResourceId),
-			Type:        aws.StringValue(input.ResourceType),
-		},
-		Status: aws.StringValue(input.ResourceStatus),
-		// CFN error messages end with a '. (Service' and only the first sentence is useful, the rest is error codes.
-		StatusReason: strings.Split(aws.StringValue(input.ResourceStatusReason), ". (Service")[0],
-	}
 }
 
 func toStack(config StackConfiguration) (*cloudformation.Stack, error) {
@@ -200,4 +184,17 @@ func resourcesToRender(changes []*sdkcloudformation.Change, descriptions map[str
 		})
 	}
 	return resources
+}
+
+func stopSpinner(spinner *progress.Spinner, err error, label string) {
+	if err == nil {
+		spinner.Stop(log.Ssuccessf("%s\n", label))
+		return
+	}
+	var existsErr *cloudformation.ErrStackAlreadyExists
+	if errors.As(err, &existsErr) {
+		spinner.Stop(log.Ssuccessf("%s\n", label))
+		return
+	}
+	spinner.Stop(log.Serrorf("%s\n", label))
 }
