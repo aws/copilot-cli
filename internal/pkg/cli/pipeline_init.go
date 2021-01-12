@@ -80,6 +80,7 @@ type initPipelineOpts struct {
 	secretsmanager secretsManager
 	parser         template.Parser
 	runner         runner
+	sessProvider   sessionProvider
 	cfnClient      appResourcesGetter
 	store          store
 	prompt         prompter
@@ -133,6 +134,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		workspace:        ws,
 		secretsmanager:   secretsmanager,
 		parser:           template.New(),
+		sessProvider:     p,
 		cfnClient:        cloudformation.New(defaultSession),
 		store:            ssmStore,
 		prompt:           prompter,
@@ -290,12 +292,13 @@ func (o *initPipelineOpts) askCodeCommitRepoDetails() error {
 	o.repoName = repoDetails.name
 	o.ccRegion = repoDetails.region
 
-	// If any one of the chosen environments is in a region besides that of the CodeCommit repo, pipeline init errors out.
-	for _, env := range o.envConfigs {
-		if env.Region != o.ccRegion {
-			return fmt.Errorf("repository %s is in %s, but environment %s is in %s; they must be in the same region", o.repoName, o.ccRegion, env.Name, env.Region)
-		}
+	// If the CodeCommit region is different than that of the app, pipeline init errors out. TODO: compare account from app config against CC acct?
+	sess, _ := o.sessProvider.Default()
+	region := *sess.Config.Region
+	if o.ccRegion != region {
+		return fmt.Errorf("repository %s is in %s, but app %s is in %s; they must be in the same region", o.repoName, o.ccRegion, o.appName, region)
 	}
+
 	if o.repoBranch == "" {
 		o.repoBranch = defaultCCBranch
 	}

@@ -244,12 +244,12 @@ Resources:
               Configuration:
                 Owner: {{$.Source.Owner}}
                 Repo: {{$.Source.Repository}}
-                Branch: {{index $.Source.Properties "branch"}}
+                Branch: {{$.Source.Branch}}
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager
                 # Use the *entire* SecretString with version AWSCURRENT
                 OAuthToken: !Sub
                   - '{{"{{"}}resolve:secretsmanager:${SecretId}{{"}}"}}'
-                  - { SecretId: {{$.Source.GitHubPersonalAccessTokenSecretID}} }
+                  - SecretId: {{$.Source.PersonalAccessTokenSecretID}}
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1
@@ -264,7 +264,7 @@ Resources:
                 Provider: CodeCommit
               Configuration:
                 RepositoryName: {{$.Source.Repository}}
-                BranchName: {{index $.Source.Properties "branch"}}
+                BranchName: {{$.Source.Branch}}
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1

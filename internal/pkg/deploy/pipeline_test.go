@@ -19,26 +19,14 @@ func TestParseOwnerAndRepo(t *testing.T) {
 	}{
 		"missing repository property": {
 			src: &GitHubSource{
-				ProviderName: "GitHub",
-				Properties:   map[string]interface{}{},
+				RepositoryURL: "",
+				Branch:        "main",
 			},
-			expectedErrMsg: aws.String("unable to locate the repository from the properties"),
-		},
-		"invalid repository property": {
-			src: &GitHubSource{
-				ProviderName: "GitHub",
-				Properties: map[string]interface{}{
-					"repository": "invalid",
-				},
-			},
-			expectedErrMsg: aws.String("unable to locate the repository URL from the properties"),
+			expectedErrMsg: aws.String("unable to locate the repository"),
 		},
 		"valid GH repository property": {
 			src: &GitHubSource{
-				ProviderName: "GitHub",
-				Properties: map[string]interface{}{
-					"repository": "chicken/wings",
-				},
+				RepositoryURL: "chicken/wings",
 			},
 			expectedErrMsg: nil,
 			expectedOwner:  "chicken",
@@ -46,10 +34,7 @@ func TestParseOwnerAndRepo(t *testing.T) {
 		},
 		"valid full GH repository name": {
 			src: &GitHubSource{
-				ProviderName: "GitHub",
-				Properties: map[string]interface{}{
-					"repository": "https://github.com/badgoose/chaOS",
-				},
+				RepositoryURL: "https://github.com/badgoose/chaOS",
 			},
 			expectedErrMsg: nil,
 			expectedOwner:  "badgoose",
@@ -71,7 +56,7 @@ func TestParseOwnerAndRepo(t *testing.T) {
 	}
 }
 
-func TestParseRegionAndRepo(t *testing.T) {
+func TestParseRepo(t *testing.T) {
 	testCases := map[string]struct {
 		src            *CodeCommitSource
 		expectedErrMsg *string
@@ -80,26 +65,13 @@ func TestParseRegionAndRepo(t *testing.T) {
 	}{
 		"missing repository property": {
 			src: &CodeCommitSource{
-				ProviderName: "CodeCommit",
-				Properties:   map[string]interface{}{},
+				RepositoryURL: "",
 			},
-			expectedErrMsg: aws.String("unable to locate the repository from the properties"),
-		},
-		"invalid repository property": {
-			src: &CodeCommitSource{
-				ProviderName: "CodeCommit",
-				Properties: map[string]interface{}{
-					"repository": "invalid",
-				},
-			},
-			expectedErrMsg: aws.String("unable to locate the repository URL from the properties"),
+			expectedErrMsg: aws.String("unable to locate the repository"),
 		},
 		"valid full CC repository name": {
 			src: &CodeCommitSource{
-				ProviderName: "CodeCommit",
-				Properties: map[string]interface{}{
-					"repository": "https://us-west-2.console.aws.amazon.com/codesuite/codecommit/repositories/wings/browse",
-				},
+				RepositoryURL: "https://us-west-2.console.aws.amazon.com/codesuite/codecommit/repositories/wings/browse",
 			},
 			expectedErrMsg: nil,
 			expectedOwner:  "",
@@ -109,7 +81,7 @@ func TestParseRegionAndRepo(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			repo, err := tc.src.parseRegionAndRepo()
+			repo, err := tc.src.parseRepo()
 			if tc.expectedErrMsg != nil {
 				require.Contains(t, err.Error(), *tc.expectedErrMsg)
 			} else {

@@ -11,12 +11,18 @@ import (
 	"regexp"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
-
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
 const (
 	fmtInvalidRepo = "unable to locate the repository URL from the properties: %+v"
+)
+
+var (
+	// NOTE: this is duplicated from validate.go
+	// Ex: https://github.com/koke/grit
+	ghRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
+	// Ex: https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample/browse
+	ccRepoExp = regexp.MustCompile(`(https:\/\/(?P<region>.+)(.console.aws.amazon.com\/codesuite\/codecommit\/repositories\/)(?P<repo>.+)(\/browse))`)
 )
 
 // CreatePipelineInput represents the fields required to deploy a pipeline.
@@ -66,57 +72,38 @@ func (a *ArtifactBucket) Region() (string, error) {
 
 // GitHubSource defines the (GH) source of the artifacts to be built and deployed.
 type GitHubSource struct {
-	// The name of the source code provider. For example, "GitHub"
-	ProviderName string
-
-	// Contains provider-specific configurations, such as:
-	// "repository": "aws/amazon-ecs-cli-v2"
-	// "githubPersonalAccessTokenSecretId": "heyyo"
-	Properties map[string]interface{}
+	ProviderName                string
+	Branch                      string
+	RepositoryURL               string
+	PersonalAccessTokenSecretID string
 }
 
 // CodeCommitSource defines the (CC) source of the artifacts to be built and deployed.
 type CodeCommitSource struct {
-	// The name of the source code provider. For example, "GitHub"
-	ProviderName string
-
-	// Contains provider-specific configurations, such as:
-	// "region": "us-west-1"
-	Properties map[string]interface{}
+	ProviderName  string
+	Branch        string
+	RepositoryURL string
 }
 
 // GitHubPersonalAccessTokenSecretID returns the ID of the secret in the
 // Secrets manager, which stores the GitHub Personal Access token if the
 // provider is "GitHub". Otherwise, it returns the detected provider.
 func (s *GitHubSource) GitHubPersonalAccessTokenSecretID() (string, error) {
-	secretID, exists := s.Properties[manifest.GithubSecretIdKeyName]
-	if !exists {
+	if s.PersonalAccessTokenSecretID == "" {
 		return "", errors.New("the GitHub token secretID is not configured")
 	}
-	id, ok := secretID.(string)
-	if !ok {
-		return "", fmt.Errorf("unable to locate the GitHub token secretID from %v", secretID)
-	}
-	return id, nil
+	return s.PersonalAccessTokenSecretID, nil
 }
 
 // parseOwnerAndRepo parses the owner and repo name from the GH repo URL, which was formatted and assigned in cli/pipeline_init.go.
 func (s *GitHubSource) parseOwnerAndRepo() (string, string, error) {
-	// NOTE: this is duplicated from validate.go
-	// Ex: https://github.com/koke/grit
-	ghRepoExp := regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
-	url, exists := s.Properties["repository"]
-	if !exists {
-		return "", "", fmt.Errorf("unable to locate the repository from the properties: %+v", s.Properties)
-	}
-	urlStr, ok := url.(string)
-	if !ok {
-		return "", "", fmt.Errorf(fmtInvalidRepo, url)
+	if s.RepositoryURL == "" {
+		return "", "", fmt.Errorf("unable to locate the repository")
 	}
 
-	match := ghRepoExp.FindStringSubmatch(urlStr)
+	match := ghRepoExp.FindStringSubmatch(s.RepositoryURL)
 	if len(match) == 0 {
-		return "", "", fmt.Errorf(fmtInvalidRepo, urlStr)
+		return "", "", fmt.Errorf(fmtInvalidRepo, s.RepositoryURL)
 	}
 
 	matches := make(map[string]string)
@@ -128,24 +115,15 @@ func (s *GitHubSource) parseOwnerAndRepo() (string, string, error) {
 	return matches["owner"], matches["repo"], nil
 }
 
-// parseRegionAndRepo parses the region (not returned) and repo name from the CC repo URL, which was formatted and assigned in cli/pipeline_init.go.
-func (s *CodeCommitSource) parseRegionAndRepo() (string, error) {
+// parseRepo parses the region (not returned) and repo name from the CC repo URL, which was formatted and assigned in cli/pipeline_init.go.
+func (s *CodeCommitSource) parseRepo() (string, error) {
 	// NOTE: 'region' is not currently parsed out as a Source property, but this enables that possibility.
-	// Ex: https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample/browse
-	ccRepoExp := regexp.MustCompile(`(https:\/\/(?P<region>.+)(.console.aws.amazon.com\/codesuite\/codecommit\/repositories\/)(?P<repo>.+)(\/browse))`)
-
-	url, exists := s.Properties["repository"]
-	if !exists {
-		return "", fmt.Errorf("unable to locate the repository from the properties: %+v", s.Properties)
+	if s.RepositoryURL == "" {
+		return "", fmt.Errorf("unable to locate the repository")
 	}
-	urlStr, ok := url.(string)
-	if !ok {
-		return "", fmt.Errorf(fmtInvalidRepo, url)
-	}
-
-	match := ccRepoExp.FindStringSubmatch(urlStr)
+	match := ccRepoExp.FindStringSubmatch(s.RepositoryURL)
 	if len(match) == 0 {
-		return "", fmt.Errorf(fmtInvalidRepo, urlStr)
+		return "", fmt.Errorf(fmtInvalidRepo, s.RepositoryURL)
 	}
 
 	matches := make(map[string]string)
@@ -171,7 +149,7 @@ func (s *GitHubSource) Repository() (string, error) {
 // Repository returns the repository portion. For example,
 // given "aws/amazon-ecs-cli-v2", this function returns "amazon-ecs-cli-v2".
 func (s *CodeCommitSource) Repository() (string, error) {
-	repo, err := s.parseRegionAndRepo()
+	repo, err := s.parseRepo()
 	if err != nil {
 		return "", err
 	}

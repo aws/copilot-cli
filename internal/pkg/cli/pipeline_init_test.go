@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -159,11 +162,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		inGitHubAccessToken string
 		inGitBranch         string
 
-		mockPrompt   func(m *mocks.Mockprompter)
-		mockRunner   func(m *mocks.Mockrunner)
-		mockSelector func(m *mocks.MockpipelineSelector)
-		mockStore    func(m *mocks.Mockstore)
-		buffer       bytes.Buffer
+		mockPrompt       func(m *mocks.Mockprompter)
+		mockRunner       func(m *mocks.Mockrunner)
+		mockSessProvider func(m *mocks.MocksessionProvider)
+		mockSelector     func(m *mocks.MockpipelineSelector)
+		mockStore        func(m *mocks.Mockstore)
+		buffer           bytes.Buffer
 
 		expectedEnvironments      []string
 		expectedRepoURL           string
@@ -201,6 +205,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return(githubAnotherURL, nil).Times(1)
 				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository bhaOS:"), gomock.Any()).Return(githubToken, nil).Times(1)
 			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
 			expectedRepoURL:           githubAnotherURL,
 			expectedGitHubOwner:       githubAnotherOwner,
@@ -211,11 +216,9 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedError:             nil,
 		},
 		"no flags, success case for CodeCommit": {
-			inEnvironments:      []string{},
-			inRepoURL:           "",
-			inGitHubAccessToken: "",
-			inGitBranch:         "",
-			buffer:              *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\narcher\thttps://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man (fetch)\narcher\tssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-woman (push)\narcher\tcodecommit::us-west-2://repo-man (fetch)\n"),
+			inEnvironments: []string{},
+			inRepoURL:      "",
+			buffer:         *bytes.NewBufferString("archer\tgit@github.com:goodGoose/bhaOS (fetch)\narcher\thttps://github.com/badGoose/chaOS (push)\narcher\thttps://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-man (fetch)\narcher\tssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/repo-woman (push)\narcher\tcodecommit::us-west-2://repo-man (fetch)\n"),
 
 			mockSelector: func(m *mocks.MockpipelineSelector) {
 				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
@@ -236,6 +239,13 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return(codecommitSSHURL, nil).Times(1)
 			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {
+				m.EXPECT().Default().Return(&session.Session{
+					Config: &aws.Config{
+						Region: aws.String("us-west-2"),
+					},
+				}, nil)
+			},
 
 			expectedRepoURL:          codecommitSSHURL,
 			expectedRepoName:         codecommitAnotherRepoName,
@@ -250,9 +260,10 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockSelector: func(m *mocks.MockpipelineSelector) {
 				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return(nil, errors.New("some error"))
 			},
-			mockStore:  func(m *mocks.Mockstore) {},
-			mockRunner: func(m *mocks.Mockrunner) {},
-			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockStore:        func(m *mocks.Mockstore) {},
+			mockRunner:       func(m *mocks.Mockrunner) {},
+			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
 			expectedEnvironments: []string{},
 			expectedError:        fmt.Errorf("select environments: some error"),
@@ -282,6 +293,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return("", errors.New("some error")).Times(1)
 			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
 			expectedGitHubOwner:       "",
 			expectedRepoName:          "",
@@ -313,6 +325,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return("https://bitbub.com/badGoose/chaOS", nil).Times(1)
 			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
 			expectedError: fmt.Errorf("Copilot currently accepts only URLs to GitHub and CodeCommit repository sources"),
 		},
@@ -342,6 +355,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), []string{githubReallyBadURL}).Return(githubReallyBadURL, nil).Times(1)
 			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
 			expectedGitHubOwner:       "",
 			expectedRepoName:          "",
@@ -377,6 +391,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return(githubURL, nil).Times(1)
 				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository chaOS:"), gomock.Any()).Return("", errors.New("some error")).Times(1)
 			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
 			expectedGitHubOwner:       githubOwner,
 			expectedRepoName:          githubRepoName,
@@ -409,6 +424,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return(codecommitBadURL, nil).Times(1)
 			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
 			expectedRepoName:     "",
 			expectedEnvironments: []string{"test", "prod"},
@@ -436,6 +452,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return(codecommitBadRegion, nil).Times(1)
 			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
 			expectedRepoURL:          codecommitHTTPSURL,
 			expectedRepoName:         codecommitRepoName,
@@ -444,7 +461,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedEnvironments:     []string{"test", "prod"},
 			expectedError:            fmt.Errorf("unable to parse the AWS region from %s", codecommitBadRegion),
 		},
-		"returns error if repo region is not an environment's region": {
+		"returns error if repo region is not app's region": {
 			buffer: *bytes.NewBufferString(""),
 
 			mockSelector: func(m *mocks.MockpipelineSelector) {
@@ -466,10 +483,17 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return(codecommitFedURL, nil).Times(1)
 			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {
+				m.EXPECT().Default().Return(&session.Session{
+					Config: &aws.Config{
+						Region: aws.String("us-east-1"),
+					},
+				}, nil)
+			},
 
 			expectedRepoName:     "",
 			expectedEnvironments: []string{},
-			expectedError:        fmt.Errorf("repository repo-man is in us-west-2, but environment prod is in us-east-1; they must be in the same region"),
+			expectedError:        fmt.Errorf("repository repo-man is in us-west-2, but app my-app is in us-east-1; they must be in the same region"),
 		},
 	}
 
@@ -481,6 +505,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockRunner := mocks.NewMockrunner(ctrl)
+			mocksSessProvider := mocks.NewMocksessionProvider(ctrl)
 			mockSelector := mocks.NewMockpipelineSelector(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
 
@@ -491,15 +516,17 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 					repoURL:           tc.inRepoURL,
 					githubAccessToken: tc.inGitHubAccessToken,
 				},
-				prompt: mockPrompt,
-				runner: mockRunner,
-				buffer: tc.buffer,
-				sel:    mockSelector,
-				store:  mockStore,
+				prompt:       mockPrompt,
+				runner:       mockRunner,
+				sessProvider: mocksSessProvider,
+				buffer:       tc.buffer,
+				sel:          mockSelector,
+				store:        mockStore,
 			}
 
 			tc.mockPrompt(mockPrompt)
 			tc.mockRunner(mockRunner)
+			tc.mockSessProvider(mocksSessProvider)
 			tc.mockSelector(mockSelector)
 			tc.mockStore(mockStore)
 
