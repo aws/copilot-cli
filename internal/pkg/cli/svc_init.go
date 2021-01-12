@@ -76,12 +76,12 @@ type initSvcOpts struct {
 	initSvcVars
 
 	// Interfaces to interact with dependencies.
-	fs     afero.Fs
-	init   svcInitializer
-	prompt prompter
-	df     dockerfileParser
-
-	sel dockerfileSelector
+	fs                    afero.Fs
+	init                  svcInitializer
+	prompt                prompter
+	df                    dockerfileParser
+	dockerEngineValidator dockerEngineValidator
+	sel                   dockerfileSelector
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -118,11 +118,11 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	return &initSvcOpts{
 		initSvcVars: vars,
 
-		fs:     &afero.Afero{Fs: afero.NewOsFs()},
-		init:   initSvc,
-		prompt: prompter,
-		sel:    sel,
-
+		fs:                    &afero.Afero{Fs: afero.NewOsFs()},
+		init:                  initSvc,
+		prompt:                prompter,
+		sel:                   sel,
+		dockerEngineValidator: exec.NewDockerCommand(),
 		setupParser: func(o *initSvcOpts) {
 			o.df = exec.NewDockerfile(o.fs, o.dockerfilePath)
 		},
@@ -265,6 +265,14 @@ func (o *initSvcOpts) askImage() error {
 func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 	if o.dockerfilePath != "" || o.image != "" {
 		return true, nil
+	}
+	msg, err := o.dockerEngineValidator.IsDockerEngineRunning()
+	if err != nil {
+		return false, fmt.Errorf("check if docker engine is running: %w", err)
+	}
+	if msg != "" {
+		log.Infof("Docker Engine is not running, Copilot won't build from a Dockerfile: %s\n", msg)
+		return false, nil
 	}
 	df, err := o.sel.Dockerfile(
 		fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(o.name)),

@@ -5318,3 +5318,41 @@ func (mr *MockserviceLinkedRoleCreatorMockRecorder) CreateECSServiceLinkedRole()
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateECSServiceLinkedRole", reflect.TypeOf((*MockserviceLinkedRoleCreator)(nil).CreateECSServiceLinkedRole))
 }
+
+// MockdockerEngineValidator is a mock of dockerEngineValidator interface
+type MockdockerEngineValidator struct {
+	ctrl     *gomock.Controller
+	recorder *MockdockerEngineValidatorMockRecorder
+}
+
+// MockdockerEngineValidatorMockRecorder is the mock recorder for MockdockerEngineValidator
+type MockdockerEngineValidatorMockRecorder struct {
+	mock *MockdockerEngineValidator
+}
+
+// NewMockdockerEngineValidator creates a new mock instance
+func NewMockdockerEngineValidator(ctrl *gomock.Controller) *MockdockerEngineValidator {
+	mock := &MockdockerEngineValidator{ctrl: ctrl}
+	mock.recorder = &MockdockerEngineValidatorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockdockerEngineValidator) EXPECT() *MockdockerEngineValidatorMockRecorder {
+	return m.recorder
+}
+
+// IsDockerEngineRunning mocks base method
+func (m *MockdockerEngineValidator) IsDockerEngineRunning() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsDockerEngineRunning")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsDockerEngineRunning indicates an expected call of IsDockerEngineRunning
+func (mr *MockdockerEngineValidatorMockRecorder) IsDockerEngineRunning() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDockerEngineRunning", reflect.TypeOf((*MockdockerEngineValidator)(nil).IsDockerEngineRunning))
+}

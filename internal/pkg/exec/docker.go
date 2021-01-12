@@ -5,6 +5,8 @@
 package exec
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -16,12 +18,14 @@ import (
 // DockerCommand represents docker commands that can be run.
 type DockerCommand struct {
 	runner
+	buf *bytes.Buffer
 }
 
 // NewDockerCommand returns a DockerCommand.
 func NewDockerCommand() DockerCommand {
 	return DockerCommand{
 		runner: command.New(),
+		buf:    &bytes.Buffer{},
 	}
 }
 
@@ -108,6 +112,32 @@ func (c DockerCommand) Push(uri, imageTag string, additionalTags ...string) erro
 	}
 
 	return nil
+}
+
+// IsDockerEngineRunning will run `docker info` command to check if the docker engine is running.
+// And will return an empty string and nil error if the docker engine is running.
+func (c DockerCommand) IsDockerEngineRunning() (string, error) {
+	err := c.runner.Run("docker", []string{"info", "-f", "'{{json .}}'"}, command.Stdout(c.buf))
+	if err != nil {
+		return "", fmt.Errorf("get docker info: %w", err)
+	}
+	// Trim redundant prefix and suffix. For example: '{"ServerErrors":["Cannot connect...}'\n returns
+	// {"ServerErrors":["Cannot connect...}
+	c.buf = bytes.NewBuffer([]byte(strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(c.buf.String()), "'"), "'")))
+	if strings.Contains(c.buf.String(), "command not found") {
+		return c.buf.String(), nil
+	}
+	type dockerEngineNotRunningMsg struct {
+		ServerErrors []string `json:"ServerErrors"`
+	}
+	var msg dockerEngineNotRunningMsg
+	if err := json.Unmarshal(c.buf.Bytes(), &msg); err != nil {
+		return "", fmt.Errorf("unmarshal docker info message: %w", err)
+	}
+	if len(msg.ServerErrors) == 0 {
+		return "", nil
+	}
+	return strings.Join(msg.ServerErrors, "\n"), nil
 }
 
 func imageName(uri, tag string) string {
