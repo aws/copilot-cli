@@ -126,7 +126,9 @@ func (cf CloudFormation) renderStackChanges(in renderStackChangesInput) error {
 
 	waitCtx, cancelWait := context.WithCancel(context.Background())
 	streamer := stream.NewStackStreamer(cf.cfnClient, in.stackName, changeSet.CreationTime)
-	renderer := progress.ListeningStackRenderer(streamer, in.stackName, in.stackDescription, resourcesToRender(changeSet.Changes, descriptions))
+	rendererOpts := progress.RenderOptions{}
+	children := changeRenderers(streamer, changeSet.Changes, descriptions, rendererOpts)
+	renderer := progress.ListeningStackRenderer(streamer, in.stackName, in.stackDescription, children, rendererOpts)
 
 	// Run the streamer, renderer, and waiter all concurrently until they all exit successfully or one of them errors.
 	// When the waiter exits, the waitCtx is canceled which results in the streamer and renderer to exit.
@@ -168,20 +170,16 @@ func toMap(tags []*sdkcloudformation.Tag) map[string]string {
 	return m
 }
 
-// resourcesToRender filters changes by resources that have a description.
-func resourcesToRender(changes []*sdkcloudformation.Change, descriptions map[string]string) []progress.StackResourceDescription {
-	var resources []progress.StackResourceDescription
+// changeRenderers filters changes by resources that have a description and returns the appropriate progress.Renderer for each resource type.
+func changeRenderers(streamer progress.StackSubscriber, changes []*sdkcloudformation.Change, descriptions map[string]string, opts progress.RenderOptions) []progress.Renderer {
+	var resources []progress.Renderer
 	for _, change := range changes {
 		logicalID := aws.StringValue(change.ResourceChange.LogicalResourceId)
 		description, ok := descriptions[logicalID]
 		if !ok {
 			continue
 		}
-		resources = append(resources, progress.StackResourceDescription{
-			LogicalResourceID: logicalID,
-			ResourceType:      aws.StringValue(change.ResourceChange.PhysicalResourceId),
-			Description:       description,
-		})
+		resources = append(resources, progress.ListeningResourceRenderer(streamer, logicalID, description, progress.NestedRenderOptions(opts)))
 	}
 	return resources
 }
