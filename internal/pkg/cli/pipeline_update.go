@@ -218,15 +218,15 @@ func (o *updatePipelineOpts) Execute() error {
 	case manifest.GithubProviderName:
 		source = &deploy.GitHubSource{
 			ProviderName:                manifest.GithubProviderName,
-			Branch:                      fmt.Sprintf("%v", pipeline.Source.Properties["branch"]),
-			RepositoryURL:               fmt.Sprintf("%v", pipeline.Source.Properties["repository"]),
-			PersonalAccessTokenSecretID: fmt.Sprintf("%v", pipeline.Source.Properties["access_token_secret"]),
+			Branch:                      (pipeline.Source.Properties["branch"]).(string),
+			RepositoryURL:               (pipeline.Source.Properties["repository"]).(string),
+			PersonalAccessTokenSecretID: (pipeline.Source.Properties["access_token_secret"]).(string),
 		}
 	case manifest.CodeCommitProviderName:
 		source = &deploy.CodeCommitSource{
 			ProviderName:  manifest.CodeCommitProviderName,
-			Branch:        fmt.Sprintf("%v", pipeline.Source.Properties["branch"]),
-			RepositoryURL: fmt.Sprintf("%v", pipeline.Source.Properties["repository"]),
+			Branch:        (pipeline.Source.Properties["branch"]).(string),
+			RepositoryURL: (pipeline.Source.Properties["repository"]).(string),
 		}
 	default:
 		return fmt.Errorf("invalid repo source provider: %s", pipeline.Source.ProviderName)
