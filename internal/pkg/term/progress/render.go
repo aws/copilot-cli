@@ -17,6 +17,18 @@ type Renderer interface {
 	Render(out io.Writer) (numLines int, err error)
 }
 
+// RenderOptions holds optional style configuration for renderers.
+type RenderOptions struct {
+	Padding int // Leading spaces before rendering the component.
+}
+
+// NestedRenderOptions takes a RenderOptions and returns the same RenderOptions but with additional padding.
+func NestedRenderOptions(opts RenderOptions) RenderOptions {
+	return RenderOptions{
+		Padding: opts.Padding + nestedComponentPadding,
+	}
+}
+
 // Render renders r periodically to out until the ctx is canceled or an error occurs.
 // While Render is executing, the terminal cursor is hidden and updates are written in-place.
 func Render(ctx context.Context, out FileWriteFlusher, r Renderer) error {
