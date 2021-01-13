@@ -264,7 +264,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			mockSel:        func(m *mocks.MockinitJobSelector) {},
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockValidator: func(m *mocks.MockdockerEngineValidator) {
-				m.EXPECT().CheckDockerEngineRunning().Return(&exec.ErrDockerCommandNotFound{})
+				m.EXPECT().CheckDockerEngineRunning().Return(exec.ErrDockerCommandNotFound)
 			},
 
 			wantedSchedule: wantedCronSchedule,

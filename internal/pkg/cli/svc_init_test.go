@@ -221,7 +221,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
 			mockValidator: func(m *mocks.MockdockerEngineValidator) {
-				m.EXPECT().CheckDockerEngineRunning().Return(&exec.ErrDockerCommandNotFound{})
+				m.EXPECT().CheckDockerEngineRunning().Return(exec.ErrDockerCommandNotFound)
 			},
 			wantedErr: nil,
 		},

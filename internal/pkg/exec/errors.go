@@ -4,6 +4,7 @@
 package exec
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -26,11 +27,7 @@ func (e ErrNoExpose) Error() string {
 }
 
 // ErrDockerCommandNotFound means the docker command is not found.
-type ErrDockerCommandNotFound struct{}
-
-func (e ErrDockerCommandNotFound) Error() string {
-	return "docker: command not found"
-}
+var ErrDockerCommandNotFound = errors.New("docker: command not found")
 
 // ErrDockerDaemonNotResponsive means the docker daemon is not responsive.
 type ErrDockerDaemonNotResponsive struct {

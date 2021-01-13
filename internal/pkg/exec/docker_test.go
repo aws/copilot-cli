@@ -272,7 +272,7 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 				mockRunner.EXPECT().Run("docker", []string{"info", "-f", "'{{json .}}'"}, gomock.Any()).Return(nil)
 			},
 
-			wantedErr: &ErrDockerCommandNotFound{},
+			wantedErr: ErrDockerCommandNotFound,
 		},
 		"return when docker engine is not started": {
 			inBuffer: bytes.NewBufferString(`'{"ServerErrors":["Cannot connect to the Docker daemon at unix:///var/run/docker.sock.", "Is the docker daemon running?"]}'`),

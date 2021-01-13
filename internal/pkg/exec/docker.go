@@ -128,7 +128,7 @@ func (c DockerCommand) CheckDockerEngineRunning() error {
 	// {"ServerErrors":["Cannot connect...}
 	out := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(buf.String()), "'"), "'")
 	if strings.Contains(out, "command not found") {
-		return &ErrDockerCommandNotFound{}
+		return ErrDockerCommandNotFound
 	}
 	type dockerEngineNotRunningMsg struct {
 		ServerErrors []string `json:"ServerErrors"`

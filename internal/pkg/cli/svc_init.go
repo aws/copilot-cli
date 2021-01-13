@@ -268,10 +268,9 @@ func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 		return true, nil
 	}
 	if err = o.dockerEngineValidator.CheckDockerEngineRunning(); err != nil {
-		var errCmd *exec.ErrDockerCommandNotFound
 		var errDaemon *exec.ErrDockerDaemonNotResponsive
 		switch {
-		case errors.As(err, &errCmd):
+		case errors.Is(err, exec.ErrDockerCommandNotFound):
 			log.Info("Docker command is not found, Copilot won't build from a Dockerfile.\n")
 			return false, nil
 		case errors.As(err, &errDaemon):
