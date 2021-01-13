@@ -271,10 +271,10 @@ func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 		var errDaemon *exec.ErrDockerDaemonNotResponsive
 		switch {
 		case errors.Is(err, exec.ErrDockerCommandNotFound):
-			log.Info("Docker command is not found, Copilot won't build from a Dockerfile.\n")
+			log.Info("Docker command is not found; Copilot won't build from a Dockerfile.\n")
 			return false, nil
 		case errors.As(err, &errDaemon):
-			log.Info("Docker daemon is not responsive, Copilot won't build from a Dockerfile.\n")
+			log.Info("Docker daemon is not responsive; Copilot won't build from a Dockerfile.\n")
 			return false, nil
 		default:
 			return false, fmt.Errorf("check if docker engine is running: %w", err)
