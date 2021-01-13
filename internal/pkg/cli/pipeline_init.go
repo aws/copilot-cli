@@ -294,7 +294,7 @@ func (o *initPipelineOpts) askCodeCommitRepoDetails() error {
 	o.repoName = repoDetails.name
 	o.ccRegion = repoDetails.region
 
-	// If the CodeCommit region is different than that of the app, pipeline init errors out. TODO: compare account from app config against CC acct?
+	// If the CodeCommit region is different than that of the app, pipeline init errors out.
 	sess, err := o.sessProvider.Default()
 	if err != nil {
 		return fmt.Errorf("retrieve default session: %w", err)
