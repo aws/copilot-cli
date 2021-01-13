@@ -19,11 +19,13 @@ var (
 type fakeClock struct {
 	index        int
 	wantedValues []time.Time
+	numCalls     int
 }
 
 func (c *fakeClock) now() time.Time {
 	t := c.wantedValues[c.index%len(c.wantedValues)]
 	c.index += 1
+	c.numCalls += 1
 	return t
 }
 
@@ -112,13 +114,14 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		// GIVEN
 		ch := make(chan stream.StackEvent)
 		done := make(chan bool)
+		fc := &fakeClock{
+			wantedValues: []time.Time{testDate, testDate.Add(10 * time.Second)},
+		}
 		comp := &regularResourceComponent{
 			logicalID: "EnvironmentManagerRole",
 			statuses:  []stackStatus{notStartedStackStatus},
 			stopWatch: &stopWatch{
-				clock: &fakeClock{
-					wantedValues: []time.Time{testDate, testDate.Add(10 * time.Second)},
-				},
+				clock: fc,
 			},
 			stream: ch,
 		}
@@ -142,9 +145,9 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 
 		// THEN
 		<-done // Wait for listen to exit.
-		elapsed, hasStarted := comp.stopWatch.elapsed()
+		_, hasStarted := comp.stopWatch.elapsed()
 		require.True(t, hasStarted, "the stopwatch should have started when an event was received")
-		require.Equal(t, 10*time.Second, elapsed)
+		require.Equal(t, 2, fc.numCalls, "stop watch should retrieve the current time only twice, start should not be called twice")
 	})
 }
 
