@@ -47,9 +47,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		}
 
 		// WHEN
-		go func() {
-			comp.Listen()
-		}()
+		go comp.Listen()
 		go func() {
 			ch <- stream.StackEvent{
 				LogicalResourceID: "ServiceDiscoveryNamespace",
@@ -81,9 +79,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		}
 
 		// WHEN
-		go func() {
-			comp.Listen()
-		}()
+		go comp.Listen()
 		go func() {
 			ch <- stream.StackEvent{
 				LogicalResourceID:    "EnvironmentManagerRole",
@@ -113,7 +109,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 	t.Run("should keep timer running if multiple in progress events are received", func(t *testing.T) {
 		// GIVEN
 		ch := make(chan stream.StackEvent)
-		done := make(chan bool)
+		done := make(chan struct{})
 		fc := &fakeClock{
 			wantedValues: []time.Time{testDate, testDate.Add(10 * time.Second)},
 		}
@@ -124,13 +120,11 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 				clock: fc,
 			},
 			stream: ch,
+			done:   done,
 		}
 
 		// WHEN
-		go func() {
-			comp.Listen()
-			done <- true
-		}()
+		go comp.Listen()
 		go func() {
 			ch <- stream.StackEvent{
 				LogicalResourceID: "EnvironmentManagerRole",
