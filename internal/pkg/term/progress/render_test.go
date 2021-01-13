@@ -79,3 +79,16 @@ func TestRender(t *testing.T) {
 
 	require.Equal(t, wanted.String(), actual.String(), "expected the content printed to match")
 }
+
+func TestNestedRenderOptions(t *testing.T) {
+	// GIVEN
+	opts := RenderOptions{}
+
+	// WHEN
+	actual := NestedRenderOptions(opts)
+
+	// THEN
+	require.Equal(t, RenderOptions{
+		Padding: 2,
+	}, actual)
+}
