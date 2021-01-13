@@ -157,7 +157,7 @@ func (s *CodeCommitSource) Repository() (string, error) {
 }
 
 // Owner returns the repository owner portion. For example,
-// given "aws/amazon-ecs-cli-v2", this function returns "aws".
+// given "aws/amazon-copilot", this function returns "aws".
 func (s *GitHubSource) Owner() (string, error) {
 	owner, _, err := s.parseOwnerAndRepo()
 	if err != nil {
