@@ -137,7 +137,7 @@ func (s *CodeCommitSource) parseRepo() (string, error) {
 }
 
 // Repository returns the repository portion. For example,
-// given "aws/amazon-ecs-cli-v2", this function returns "amazon-ecs-cli-v2".
+// given "aws/amazon-copilot", this function returns "amazon-copilot".
 func (s *GitHubSource) Repository() (string, error) {
 	_, repo, err := s.parseOwnerAndRepo()
 	if err != nil {
@@ -147,7 +147,7 @@ func (s *GitHubSource) Repository() (string, error) {
 }
 
 // Repository returns the repository portion. For example,
-// given "aws/amazon-ecs-cli-v2", this function returns "amazon-ecs-cli-v2".
+// given "aws/amazon-copilot", this function returns "amazon-copilot".
 func (s *CodeCommitSource) Repository() (string, error) {
 	repo, err := s.parseRepo()
 	if err != nil {
