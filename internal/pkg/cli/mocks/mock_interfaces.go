@@ -5342,17 +5342,16 @@ func (m *MockdockerEngineValidator) EXPECT() *MockdockerEngineValidatorMockRecor
 	return m.recorder
 }
 
-// IsDockerEngineRunning mocks base method
-func (m *MockdockerEngineValidator) IsDockerEngineRunning() (string, error) {
+// CheckDockerEngineRunning mocks base method
+func (m *MockdockerEngineValidator) CheckDockerEngineRunning() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsDockerEngineRunning")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "CheckDockerEngineRunning")
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// IsDockerEngineRunning indicates an expected call of IsDockerEngineRunning
-func (mr *MockdockerEngineValidatorMockRecorder) IsDockerEngineRunning() *gomock.Call {
+// CheckDockerEngineRunning indicates an expected call of CheckDockerEngineRunning
+func (mr *MockdockerEngineValidatorMockRecorder) CheckDockerEngineRunning() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDockerEngineRunning", reflect.TypeOf((*MockdockerEngineValidator)(nil).IsDockerEngineRunning))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDockerEngineRunning", reflect.TypeOf((*MockdockerEngineValidator)(nil).CheckDockerEngineRunning))
 }

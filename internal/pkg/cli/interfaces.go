@@ -500,5 +500,5 @@ type serviceLinkedRoleCreator interface {
 }
 
 type dockerEngineValidator interface {
-	IsDockerEngineRunning() (string, error)
+	CheckDockerEngineRunning() error
 }

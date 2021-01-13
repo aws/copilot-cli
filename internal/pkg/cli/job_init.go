@@ -229,13 +229,19 @@ func (o *initJobOpts) askDockerfile() (isDfSelected bool, err error) {
 	if o.dockerfilePath != "" || o.image != "" {
 		return true, nil
 	}
-	msg, err := o.dockerEngineValidator.IsDockerEngineRunning()
-	if err != nil {
-		return false, fmt.Errorf("check if docker engine is running: %w", err)
-	}
-	if msg != "" {
-		log.Infof("Docker Engine is not running, Copilot won't build from a Dockerfile: %s\n", msg)
-		return false, nil
+	if err = o.dockerEngineValidator.CheckDockerEngineRunning(); err != nil {
+		var errCmd *exec.ErrDockerCommandNotFound
+		var errDaemon *exec.ErrDockerDaemonNotResponsive
+		switch {
+		case errors.As(err, &errCmd):
+			log.Info("Docker command is not found, Copilot won't build from a Dockerfile.\n")
+			return false, nil
+		case errors.As(err, &errDaemon):
+			log.Info("Docker daemon is not responsive, Copilot won't build from a Dockerfile.\n")
+			return false, nil
+		default:
+			return false, fmt.Errorf("check if docker engine is running: %w", err)
+		}
 	}
 	df, err := o.sel.Dockerfile(
 		fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(o.name)),

@@ -247,7 +247,7 @@ func TestDockerCommand_Push(t *testing.T) {
 	}
 }
 
-func TestDockerCommand_IsDockerEngineRunning(t *testing.T) {
+func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 	mockError := errors.New("some error")
 	var mockRunner *mocks.Mockrunner
 
@@ -255,7 +255,6 @@ func TestDockerCommand_IsDockerEngineRunning(t *testing.T) {
 		setupMocks func(controller *gomock.Controller)
 		inBuffer   *bytes.Buffer
 
-		wantedMsg string
 		wantedErr error
 	}{
 		"error running docker info": {
@@ -273,7 +272,7 @@ func TestDockerCommand_IsDockerEngineRunning(t *testing.T) {
 				mockRunner.EXPECT().Run("docker", []string{"info", "-f", "'{{json .}}'"}, gomock.Any()).Return(nil)
 			},
 
-			wantedMsg: "docker: command not found",
+			wantedErr: &ErrDockerCommandNotFound{},
 		},
 		"return when docker engine is not started": {
 			inBuffer: bytes.NewBufferString(`'{"ServerErrors":["Cannot connect to the Docker daemon at unix:///var/run/docker.sock.", "Is the docker daemon running?"]}'`),
@@ -282,7 +281,9 @@ func TestDockerCommand_IsDockerEngineRunning(t *testing.T) {
 				mockRunner.EXPECT().Run("docker", []string{"info", "-f", "'{{json .}}'"}, gomock.Any()).Return(nil)
 			},
 
-			wantedMsg: "Cannot connect to the Docker daemon at unix:///var/run/docker.sock.\nIs the docker daemon running?",
+			wantedErr: &ErrDockerDaemonNotResponsive{
+				msg: "Cannot connect to the Docker daemon at unix:///var/run/docker.sock.\nIs the docker daemon running?",
+			},
 		},
 		"success": {
 			inBuffer: bytes.NewBufferString(`'{"ID":"A2VY:4WTA:HDKK:UR76:SD2I:EQYZ:GCED:H4GT:6O7X:P72W:LCUP:ZQJD","Containers":15}'
@@ -303,10 +304,9 @@ func TestDockerCommand_IsDockerEngineRunning(t *testing.T) {
 				buf:    tc.inBuffer,
 			}
 
-			msg, err := s.IsDockerEngineRunning()
+			err := s.CheckDockerEngineRunning()
 			if tc.wantedErr == nil {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedMsg, msg)
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			}

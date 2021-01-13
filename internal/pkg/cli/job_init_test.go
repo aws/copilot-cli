@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -246,12 +247,12 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			mockSel:        func(m *mocks.MockinitJobSelector) {},
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockValidator: func(m *mocks.MockdockerEngineValidator) {
-				m.EXPECT().IsDockerEngineRunning().Return("", errors.New("some error"))
+				m.EXPECT().CheckDockerEngineRunning().Return(errors.New("some error"))
 			},
 
 			wantedErr: fmt.Errorf("check if docker engine is running: some error"),
 		},
-		"skip selecting Dockerfile if docker engine is not started": {
+		"skip selecting Dockerfile if docker command is not found": {
 			inJobType:     wantedJobType,
 			inJobName:     wantedJobName,
 			inJobSchedule: wantedCronSchedule,
@@ -263,7 +264,24 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			mockSel:        func(m *mocks.MockinitJobSelector) {},
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockValidator: func(m *mocks.MockdockerEngineValidator) {
-				m.EXPECT().IsDockerEngineRunning().Return("docker: command not found", nil)
+				m.EXPECT().CheckDockerEngineRunning().Return(&exec.ErrDockerCommandNotFound{})
+			},
+
+			wantedSchedule: wantedCronSchedule,
+		},
+		"skip selecting Dockerfile if docker engine is not responsive": {
+			inJobType:     wantedJobType,
+			inJobName:     wantedJobName,
+			inJobSchedule: wantedCronSchedule,
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil, gomock.Any()).
+					Return("mockImage", nil)
+			},
+			mockSel:        func(m *mocks.MockinitJobSelector) {},
+			mockFileSystem: func(mockFS afero.Fs) {},
+			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+				m.EXPECT().CheckDockerEngineRunning().Return(&exec.ErrDockerDaemonNotResponsive{})
 			},
 
 			wantedSchedule: wantedCronSchedule,
@@ -287,7 +305,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 				).Return("Use an existing image instead", nil)
 			},
 			mockValidator: func(m *mocks.MockdockerEngineValidator) {
-				m.EXPECT().IsDockerEngineRunning().Return("", nil)
+				m.EXPECT().CheckDockerEngineRunning().Return(nil)
 			},
 			mockFileSystem: func(mockFS afero.Fs) {},
 
@@ -314,7 +332,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 			},
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockValidator: func(m *mocks.MockdockerEngineValidator) {
-				m.EXPECT().IsDockerEngineRunning().Return("", nil)
+				m.EXPECT().CheckDockerEngineRunning().Return(nil)
 			},
 
 			wantedSchedule: wantedCronSchedule,
@@ -337,7 +355,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 				).Return("cuteness-aggregator/Dockerfile", nil)
 			},
 			mockValidator: func(m *mocks.MockdockerEngineValidator) {
-				m.EXPECT().IsDockerEngineRunning().Return("", nil)
+				m.EXPECT().CheckDockerEngineRunning().Return(nil)
 			},
 
 			wantedSchedule: wantedCronSchedule,
@@ -360,7 +378,7 @@ func TestJobInitOpts_Ask(t *testing.T) {
 				).Return("", errors.New("some error"))
 			},
 			mockValidator: func(m *mocks.MockdockerEngineValidator) {
-				m.EXPECT().IsDockerEngineRunning().Return("", nil)
+				m.EXPECT().CheckDockerEngineRunning().Return(nil)
 			},
 
 			wantedErr: fmt.Errorf("select Dockerfile: some error"),

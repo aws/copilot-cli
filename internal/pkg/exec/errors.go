@@ -24,3 +24,19 @@ type ErrNoExpose struct {
 func (e ErrNoExpose) Error() string {
 	return fmt.Sprintf("no EXPOSE statements in Dockerfile %s", e.Dockerfile)
 }
+
+// ErrDockerCommandNotFound means the docker command is not found.
+type ErrDockerCommandNotFound struct{}
+
+func (e ErrDockerCommandNotFound) Error() string {
+	return "docker: command not found"
+}
+
+// ErrDockerDaemonNotResponsive means the docker daemon is not responsive.
+type ErrDockerDaemonNotResponsive struct {
+	msg string
+}
+
+func (e ErrDockerDaemonNotResponsive) Error() string {
+	return fmt.Sprintf("docker daemon is not responsive: %s", e.msg)
+}
