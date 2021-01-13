@@ -33,7 +33,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 	t.Run("should not add status if no events are received for the logical ID", func(t *testing.T) {
 		// GIVEN
 		ch := make(chan stream.StackEvent)
-		done := make(chan bool)
+		done := make(chan struct{})
 		comp := &regularResourceComponent{
 			logicalID: "EnvironmentManagerRole",
 			statuses:  []stackStatus{notStartedStackStatus},
@@ -43,12 +43,12 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 				},
 			},
 			stream: ch,
+			done:   done,
 		}
 
 		// WHEN
 		go func() {
 			comp.Listen()
-			done <- true
 		}()
 		go func() {
 			ch <- stream.StackEvent{
@@ -67,7 +67,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 	t.Run("should add status when an event is received for the resource", func(t *testing.T) {
 		// GIVEN
 		ch := make(chan stream.StackEvent)
-		done := make(chan bool)
+		done := make(chan struct{})
 		comp := &regularResourceComponent{
 			logicalID: "EnvironmentManagerRole",
 			statuses:  []stackStatus{notStartedStackStatus},
@@ -77,12 +77,12 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 				},
 			},
 			stream: ch,
+			done:   done,
 		}
 
 		// WHEN
 		go func() {
 			comp.Listen()
-			done <- true
 		}()
 		go func() {
 			ch <- stream.StackEvent{

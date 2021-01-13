@@ -14,17 +14,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type mockRenderer struct {
+type mockDynamicRenderer struct {
 	content string
+	done    chan struct{}
 	err     error
 }
 
-func (m *mockRenderer) Render(out io.Writer) (int, error) {
+func (m *mockDynamicRenderer) Render(out io.Writer) (int, error) {
 	if m.err != nil {
 		return 0, m.err
 	}
 	out.Write([]byte(m.content))
 	return 1, nil
+}
+
+func (m *mockDynamicRenderer) Done() <-chan struct{} {
+	return m.done
 }
 
 type mockFileWriteFlusher struct {
@@ -40,44 +45,75 @@ func (m *mockFileWriteFlusher) Flush() error {
 }
 
 func TestRender(t *testing.T) {
-	// GIVEN
-	ctx, cancel := context.WithTimeout(context.Background(), 350*time.Millisecond)
-	defer cancel()
-	actual := new(strings.Builder)
-	r := &mockRenderer{content: "hi\n"}
-	out := &mockFileWriteFlusher{
-		Writer: actual,
-	}
+	t.Run("stops the renderer when context is canceled", func(t *testing.T) {
+		t.Parallel()
+		// GIVEN
+		ctx, cancel := context.WithTimeout(context.Background(), 350*time.Millisecond)
+		defer cancel()
+		actual := new(strings.Builder)
+		r := &mockDynamicRenderer{
+			content: "hi\n",
+			done:    make(chan struct{}),
+		}
+		out := &mockFileWriteFlusher{
+			Writer: actual,
+		}
 
-	// WHEN
-	err := Render(ctx, out, r)
+		// WHEN
+		err := Render(ctx, out, r)
 
-	// THEN
-	require.NoError(t, err)
+		// THEN
+		require.EqualError(t, err, ctx.Err().Error(), "expected the context to be canceled")
+		require.Contains(t, actual.String(), "hi\n", "expected Render to be invoked until the context was canceled")
+	})
+	t.Run("keeps rendering until the renderer is done", func(t *testing.T) {
+		t.Parallel()
+		// GIVEN
+		actual := new(strings.Builder)
+		done := make(chan struct{})
+		r := &mockDynamicRenderer{
+			content: "hi\n",
+			done:    done,
+		}
+		out := &mockFileWriteFlusher{
+			Writer: actual,
+		}
+		go func() {
+			<-time.After(350 * time.Millisecond)
+			close(done)
+		}()
 
-	// We should be doing the following operations in order:
-	// 1. Hide the cursor.
-	// 2. Write "hi\n", erase the line, and move the cursor up (Repeated x3 times)
-	// 3. The <-ctx.Done() is called so we should write one last time "hi\n" and the cursor should be shown.
-	wanted := new(strings.Builder)
-	wantedFW := &mockFileWriteFlusher{
-		Writer: wanted,
-	}
-	c := cursor.NewWithWriter(wantedFW)
-	c.Hide()
-	wanted.WriteString("hi\n")
-	cursor.EraseLine(wantedFW)
-	c.Up(1)
-	wanted.WriteString("hi\n")
-	cursor.EraseLine(wantedFW)
-	c.Up(1)
-	wanted.WriteString("hi\n")
-	cursor.EraseLine(wantedFW)
-	c.Up(1)
-	wanted.WriteString("hi\n")
-	c.Show()
+		// WHEN
+		err := Render(context.Background(), out, r)
 
-	require.Equal(t, wanted.String(), actual.String(), "expected the content printed to match")
+		// THEN
+		require.NoError(t, err)
+
+		// We should be doing the following operations in order:
+		// 1. Hide the cursor.
+		// 2. Write "hi\n", erase the line, and move the cursor up (Repeated x3 times)
+		// 3. The <-ctx.Done() is called so we should write one last time "hi\n" and the cursor should be shown.
+		wanted := new(strings.Builder)
+		wantedFW := &mockFileWriteFlusher{
+			Writer: wanted,
+		}
+		c := cursor.NewWithWriter(wantedFW)
+		c.Hide()
+		wanted.WriteString("hi\n")
+		cursor.EraseLine(wantedFW)
+		c.Up(1)
+		wanted.WriteString("hi\n")
+		cursor.EraseLine(wantedFW)
+		c.Up(1)
+		wanted.WriteString("hi\n")
+		cursor.EraseLine(wantedFW)
+		c.Up(1)
+		wanted.WriteString("hi\n")
+		c.Show()
+
+		require.Equal(t, wanted.String(), actual.String(), "expected the content printed to match")
+	})
+
 }
 
 func TestNestedRenderOptions(t *testing.T) {
