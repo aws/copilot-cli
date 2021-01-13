@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/version"
@@ -295,9 +297,9 @@ func (o *initPipelineOpts) askCodeCommitRepoDetails() error {
 	// If the CodeCommit region is different than that of the app, pipeline init errors out. TODO: compare account from app config against CC acct?
 	sess, err := o.sessProvider.Default()
 	if err != nil {
-		return fmt.Errorf("retrieve session: %w", err)
+		return fmt.Errorf("retrieve default session: %w", err)
 	}
-	region := *sess.Config.Region
+	region := aws.StringValue(sess.Config.Region)
 	if o.ccRegion != region {
 		return fmt.Errorf("repository %s is in %s, but app %s is in %s; they must be in the same region", o.repoName, o.ccRegion, o.appName, region)
 	}

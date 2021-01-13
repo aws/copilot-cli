@@ -461,6 +461,36 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedEnvironments:     []string{"test", "prod"},
 			expectedError:            fmt.Errorf("unable to parse the AWS region from %s", codecommitBadRegion),
 		},
+		"returns error if fail to retrieve default session": {
+			buffer: *bytes.NewBufferString(""),
+
+			mockSelector: func(m *mocks.MockpipelineSelector) {
+				m.EXPECT().Environments(pipelineSelectEnvPrompt, gomock.Any(), "my-app", gomock.Any()).Return([]string{"test", "prod"}, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
+					Name:   "test",
+					Region: "us-west-2",
+				}, nil)
+				m.EXPECT().GetEnvironment("my-app", "prod").Return(&config.Environment{
+					Name:   "prod",
+					Region: "us-east-1",
+				}, nil)
+			},
+			mockRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(pipelineSelectURLPrompt, gomock.Any(), gomock.Any()).Return(codecommitFedURL, nil).Times(1)
+			},
+			mockSessProvider: func(m *mocks.MocksessionProvider) {
+				m.EXPECT().Default().Return(nil, errors.New("some error"))
+			},
+
+			expectedRepoName:     "",
+			expectedEnvironments: []string{},
+			expectedError:        fmt.Errorf("retrieve default session: some error"),
+		},
 		"returns error if repo region is not app's region": {
 			buffer: *bytes.NewBufferString(""),
 

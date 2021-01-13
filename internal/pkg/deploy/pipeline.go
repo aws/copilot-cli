@@ -96,7 +96,7 @@ func (s *GitHubSource) GitHubPersonalAccessTokenSecretID() (string, error) {
 }
 
 // parseOwnerAndRepo parses the owner and repo name from the GH repo URL, which was formatted and assigned in cli/pipeline_init.go.
-func (s *GitHubSource) parseOwnerAndRepo() (string, string, error) {
+func (s *GitHubSource) parseOwnerAndRepo() (owner, repo string, err error) {
 	if s.RepositoryURL == "" {
 		return "", "", fmt.Errorf("unable to locate the repository")
 	}
