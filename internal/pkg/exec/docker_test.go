@@ -4,6 +4,7 @@
 package exec
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"testing"
@@ -242,6 +243,73 @@ func TestDockerCommand_Push(t *testing.T) {
 			got := s.Push(mockURI, mockTag2, mockTag1)
 
 			require.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
+	mockError := errors.New("some error")
+	var mockRunner *mocks.Mockrunner
+
+	tests := map[string]struct {
+		setupMocks func(controller *gomock.Controller)
+		inBuffer   *bytes.Buffer
+
+		wantedErr error
+	}{
+		"error running docker info": {
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner.EXPECT().Run("docker", []string{"info", "-f", "'{{json .}}'"}, gomock.Any()).Return(mockError)
+			},
+
+			wantedErr: fmt.Errorf("get docker info: some error"),
+		},
+		"return when docker is not installed": {
+			inBuffer: bytes.NewBufferString("docker: command not found"),
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner.EXPECT().Run("docker", []string{"info", "-f", "'{{json .}}'"}, gomock.Any()).Return(nil)
+			},
+
+			wantedErr: ErrDockerCommandNotFound,
+		},
+		"return when docker engine is not started": {
+			inBuffer: bytes.NewBufferString(`'{"ServerErrors":["Cannot connect to the Docker daemon at unix:///var/run/docker.sock.", "Is the docker daemon running?"]}'`),
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner.EXPECT().Run("docker", []string{"info", "-f", "'{{json .}}'"}, gomock.Any()).Return(nil)
+			},
+
+			wantedErr: &ErrDockerDaemonNotResponsive{
+				msg: "Cannot connect to the Docker daemon at unix:///var/run/docker.sock.\nIs the docker daemon running?",
+			},
+		},
+		"success": {
+			inBuffer: bytes.NewBufferString(`'{"ID":"A2VY:4WTA:HDKK:UR76:SD2I:EQYZ:GCED:H4GT:6O7X:P72W:LCUP:ZQJD","Containers":15}'
+`),
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner.EXPECT().Run("docker", []string{"info", "-f", "'{{json .}}'"}, gomock.Any()).Return(nil)
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			tc.setupMocks(controller)
+			s := DockerCommand{
+				runner: mockRunner,
+				buf:    tc.inBuffer,
+			}
+
+			err := s.CheckDockerEngineRunning()
+			if tc.wantedErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			}
 		})
 	}
 }

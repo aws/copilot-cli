@@ -11,6 +11,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -49,11 +50,12 @@ type initJobOpts struct {
 	initJobVars
 
 	// Interfaces to interact with dependencies.
-	fs     afero.Fs
-	store  store
-	init   jobInitializer
-	prompt prompter
-	sel    initJobSelector
+	fs                    afero.Fs
+	store                 store
+	init                  jobInitializer
+	prompt                prompter
+	sel                   initJobSelector
+	dockerEngineValidator dockerEngineValidator
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -89,11 +91,12 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 	return &initJobOpts{
 		initJobVars: vars,
 
-		fs:     &afero.Afero{Fs: afero.NewOsFs()},
-		store:  store,
-		init:   jobInitter,
-		prompt: prompter,
-		sel:    sel,
+		fs:                    &afero.Afero{Fs: afero.NewOsFs()},
+		store:                 store,
+		init:                  jobInitter,
+		prompt:                prompter,
+		sel:                   sel,
+		dockerEngineValidator: exec.NewDockerCommand(),
 	}, nil
 }
 
@@ -225,6 +228,19 @@ func (o *initJobOpts) askImage() error {
 func (o *initJobOpts) askDockerfile() (isDfSelected bool, err error) {
 	if o.dockerfilePath != "" || o.image != "" {
 		return true, nil
+	}
+	if err = o.dockerEngineValidator.CheckDockerEngineRunning(); err != nil {
+		var errDaemon *exec.ErrDockerDaemonNotResponsive
+		switch {
+		case errors.Is(err, exec.ErrDockerCommandNotFound):
+			log.Info("Docker command is not found; Copilot won't build from a Dockerfile.\n")
+			return false, nil
+		case errors.As(err, &errDaemon):
+			log.Info("Docker daemon is not responsive; Copilot won't build from a Dockerfile.\n")
+			return false, nil
+		default:
+			return false, fmt.Errorf("check if docker engine is running: %w", err)
+		}
 	}
 	df, err := o.sel.Dockerfile(
 		fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(o.name)),

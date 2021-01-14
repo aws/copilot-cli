@@ -19,11 +19,13 @@ var (
 type fakeClock struct {
 	index        int
 	wantedValues []time.Time
+	numCalls     int
 }
 
 func (c *fakeClock) now() time.Time {
 	t := c.wantedValues[c.index%len(c.wantedValues)]
 	c.index += 1
+	c.numCalls += 1
 	return t
 }
 
@@ -107,6 +109,45 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		elapsed, hasStarted := comp.stopWatch.elapsed()
 		require.True(t, hasStarted, "the stopwatch should have started when an event was received")
 		require.Equal(t, time.Duration(0), elapsed)
+	})
+	t.Run("should keep timer running if multiple in progress events are received", func(t *testing.T) {
+		// GIVEN
+		ch := make(chan stream.StackEvent)
+		done := make(chan bool)
+		fc := &fakeClock{
+			wantedValues: []time.Time{testDate, testDate.Add(10 * time.Second)},
+		}
+		comp := &regularResourceComponent{
+			logicalID: "EnvironmentManagerRole",
+			statuses:  []stackStatus{notStartedStackStatus},
+			stopWatch: &stopWatch{
+				clock: fc,
+			},
+			stream: ch,
+		}
+
+		// WHEN
+		go func() {
+			comp.Listen()
+			done <- true
+		}()
+		go func() {
+			ch <- stream.StackEvent{
+				LogicalResourceID: "EnvironmentManagerRole",
+				ResourceStatus:    "CREATE_IN_PROGRESS",
+			}
+			ch <- stream.StackEvent{
+				LogicalResourceID: "EnvironmentManagerRole",
+				ResourceStatus:    "CREATE_IN_PROGRESS",
+			}
+			close(ch) // Close to notify that no more events will be sent.
+		}()
+
+		// THEN
+		<-done // Wait for listen to exit.
+		_, hasStarted := comp.stopWatch.elapsed()
+		require.True(t, hasStarted, "the stopwatch should have started when an event was received")
+		require.Equal(t, 2, fc.numCalls, "stop watch should retrieve the current time only twice, start should not be called twice")
 	})
 }
 
