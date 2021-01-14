@@ -215,16 +215,16 @@ func (o *updatePipelineOpts) Execute() error {
 
 	var source interface{}
 	switch pipeline.Source.ProviderName {
-	case manifest.GithubProviderName:
+	case ghProviderName:
 		source = &deploy.GitHubSource{
-			ProviderName:                manifest.GithubProviderName,
+			ProviderName:                ghProviderName,
 			Branch:                      (pipeline.Source.Properties["branch"]).(string),
 			RepositoryURL:               (pipeline.Source.Properties["repository"]).(string),
 			PersonalAccessTokenSecretID: (pipeline.Source.Properties["access_token_secret"]).(string),
 		}
-	case manifest.CodeCommitProviderName:
+	case ccProviderName:
 		source = &deploy.CodeCommitSource{
-			ProviderName:  manifest.CodeCommitProviderName,
+			ProviderName:  ccProviderName,
 			Branch:        (pipeline.Source.Properties["branch"]).(string),
 			RepositoryURL: (pipeline.Source.Properties["repository"]).(string),
 		}
