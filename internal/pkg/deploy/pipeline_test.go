@@ -12,51 +12,29 @@ import (
 
 func TestParseOwnerAndRepo(t *testing.T) {
 	testCases := map[string]struct {
-		src            *Source
+		src            *GitHubSource
 		expectedErrMsg *string
 		expectedOwner  string
 		expectedRepo   string
 	}{
-		"unsupported source provider": {
-			src: &Source{
-				ProviderName: "chicken",
-				Properties:   map[string]interface{}{},
-			},
-			expectedErrMsg: aws.String("invalid provider: chicken"),
-		},
 		"missing repository property": {
-			src: &Source{
-				ProviderName: "GitHub",
-				Properties:   map[string]interface{}{},
+			src: &GitHubSource{
+				RepositoryURL: "",
+				Branch:        "main",
 			},
-			expectedErrMsg: aws.String("unable to locate the repository from the properties"),
+			expectedErrMsg: aws.String("unable to locate the repository"),
 		},
-		"invalid repository property": {
-			src: &Source{
-				ProviderName: "GitHub",
-				Properties: map[string]interface{}{
-					"repository": "invalid",
-				},
-			},
-			expectedErrMsg: aws.String("unable to locate the repository from the properties"),
-		},
-		"valid repository property": {
-			src: &Source{
-				ProviderName: "GitHub",
-				Properties: map[string]interface{}{
-					"repository": "chicken/wings",
-				},
+		"valid GH repository property": {
+			src: &GitHubSource{
+				RepositoryURL: "chicken/wings",
 			},
 			expectedErrMsg: nil,
 			expectedOwner:  "chicken",
 			expectedRepo:   "wings",
 		},
-		"valid full repository name": {
-			src: &Source{
-				ProviderName: "GitHub",
-				Properties: map[string]interface{}{
-					"repository": "https://github.com/badgoose/chaOS",
-				},
+		"valid full GH repository name": {
+			src: &GitHubSource{
+				RepositoryURL: "https://github.com/badgoose/chaOS",
 			},
 			expectedErrMsg: nil,
 			expectedOwner:  "badgoose",
@@ -66,13 +44,49 @@ func TestParseOwnerAndRepo(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			oAndR, err := tc.src.parseOwnerAndRepo()
+			owner, repo, err := tc.src.parseOwnerAndRepo()
 			if tc.expectedErrMsg != nil {
 				require.Contains(t, err.Error(), *tc.expectedErrMsg)
 			} else {
 				require.NoError(t, err, "expected error")
-				require.Equal(t, tc.expectedOwner, oAndR.owner, "mismatched owner")
-				require.Equal(t, tc.expectedRepo, oAndR.repo, "mismatched repo")
+				require.Equal(t, tc.expectedOwner, owner, "mismatched owner")
+				require.Equal(t, tc.expectedRepo, repo, "mismatched repo")
+			}
+		})
+	}
+}
+
+func TestParseRepo(t *testing.T) {
+	testCases := map[string]struct {
+		src            *CodeCommitSource
+		expectedErrMsg *string
+		expectedOwner  string
+		expectedRepo   string
+	}{
+		"missing repository property": {
+			src: &CodeCommitSource{
+				RepositoryURL: "",
+			},
+			expectedErrMsg: aws.String("unable to locate the repository"),
+		},
+		"valid full CC repository name": {
+			src: &CodeCommitSource{
+				RepositoryURL: "https://us-west-2.console.aws.amazon.com/codesuite/codecommit/repositories/wings/browse",
+			},
+			expectedErrMsg: nil,
+			expectedOwner:  "",
+			expectedRepo:   "wings",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			repo, err := tc.src.parseRepo()
+			if tc.expectedErrMsg != nil {
+				require.Contains(t, err.Error(), *tc.expectedErrMsg)
+			} else {
+				require.NoError(t, err, "expected error")
+				require.Equal(t, tc.expectedRepo, repo, "mismatched repo")
 			}
 		})
 	}

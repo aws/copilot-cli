@@ -42,7 +42,6 @@ const (
 
 type updatePipelineVars struct {
 	appName          string
-	pipelineName     string
 	skipConfirmation bool
 }
 
@@ -56,6 +55,8 @@ type updatePipelineOpts struct {
 	region           string
 	envStore         environmentStore
 	ws               wsPipelineReader
+
+	pipelineName string
 }
 
 func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error) {
@@ -211,9 +212,24 @@ func (o *updatePipelineOpts) Execute() error {
 		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
 	}
 	o.pipelineName = pipeline.Name
-	source := &deploy.Source{
-		ProviderName: pipeline.Source.ProviderName,
-		Properties:   pipeline.Source.Properties,
+
+	var source interface{}
+	switch pipeline.Source.ProviderName {
+	case ghProviderName:
+		source = &deploy.GitHubSource{
+			ProviderName:                ghProviderName,
+			Branch:                      (pipeline.Source.Properties["branch"]).(string),
+			RepositoryURL:               (pipeline.Source.Properties["repository"]).(string),
+			PersonalAccessTokenSecretID: (pipeline.Source.Properties["access_token_secret"]).(string),
+		}
+	case ccProviderName:
+		source = &deploy.CodeCommitSource{
+			ProviderName:  ccProviderName,
+			Branch:        (pipeline.Source.Properties["branch"]).(string),
+			RepositoryURL: (pipeline.Source.Properties["repository"]).(string),
+		}
+	default:
+		return fmt.Errorf("invalid repo source provider: %s", pipeline.Source.ProviderName)
 	}
 
 	// convert environments to deployment stages

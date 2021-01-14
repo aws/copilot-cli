@@ -31,12 +31,16 @@ func (cf CloudFormation) DeployAndRenderEnvironment(out progress.FileWriter, env
 	if err != nil {
 		return err
 	}
+	spinner := progress.NewSpinner(out)
 	return cf.renderStackChanges(renderStackChangesInput{
 		w:                out,
 		stackName:        s.Name,
 		stackDescription: fmt.Sprintf("Creating the infrastructure for the %s environment.", s.Name),
-		createChangeSet: func() (string, error) {
-			changeSetID, err := cf.cfnClient.Create(s)
+		createChangeSet: func() (changeSetID string, err error) {
+			label := fmt.Sprintf("Proposing infrastructure changes for the %s environment.", s.Name)
+			spinner.Start(label)
+			defer stopSpinner(spinner, err, label)
+			changeSetID, err = cf.cfnClient.Create(s)
 			if err != nil {
 				return "", err
 			}
