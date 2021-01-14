@@ -202,6 +202,8 @@ func (c *CloudFormation) TemplateBody(name string) (string, error) {
 	return aws.StringValue(out.TemplateBody), nil
 }
 
+// TemplateBodyFromChangeSet returns the template body of a stack based on a change set.
+// If the stack does not exist, then returns ErrStackNotFound.
 func (c *CloudFormation) TemplateBodyFromChangeSet(changeSetID, stackName string) (string, error) {
 	out, err := c.client.GetTemplate(&cloudformation.GetTemplateInput{
 		ChangeSetName: aws.String(changeSetID),
