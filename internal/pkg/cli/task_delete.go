@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	awssession "github.com/aws/aws-sdk-go/aws/session"
@@ -27,6 +28,8 @@ const (
 	fmtTaskDeleteFromEnvConfirmPrompt = "Are you sure you want to delete %s from application %s and environment %s?"
 	taskDeleteConfirmHelp             = "This will delete the task's stack and stop all current executions."
 )
+
+var errTaskDeleteCancelled = errors.New("task delete cancelled - no changes made")
 
 type deleteTaskVars struct {
 	name             string
@@ -190,9 +193,14 @@ func (o *deleteTaskOpts) askAppName() error {
 		return nil
 	}
 
-	app, err := o.sel.Application(taskDeleteAppPrompt, "")
+	app, err := o.sel.Application(taskDeleteAppPrompt, "", appEnvOptionNone)
 	if err != nil {
 		return fmt.Errorf("select application name: %w", err)
+	}
+	if app == appEnvOptionNone {
+		o.env = ""
+		o.defaultCluster = true
+		return nil
 	}
 	o.app = app
 	return nil
@@ -206,10 +214,15 @@ func (o *deleteTaskOpts) askEnvName() error {
 	if o.env != "" {
 		return nil
 	}
-
-	env, err := o.sel.Environment(taskDeleteEnvPrompt, "", o.app)
+	env, err := o.sel.Environment(taskDeleteEnvPrompt, "", o.app, appEnvOptionNone)
 	if err != nil {
 		return fmt.Errorf("select environment: %w", err)
+	}
+	if env == appEnvOptionNone {
+		o.env = ""
+		o.app = ""
+		o.defaultCluster = true
+		return nil
 	}
 	o.env = env
 	return nil
@@ -252,7 +265,7 @@ func (o *deleteTaskOpts) Ask() error {
 		return fmt.Errorf("task delete confirmation prompt: %w", err)
 	}
 	if !deleteConfirmed {
-		return errSvcDeleteCancelled
+		return errTaskDeleteCancelled
 	}
 	return nil
 }
@@ -278,6 +291,10 @@ func (o *deleteTaskOpts) getSession() (*awssession.Session, error) {
 }
 
 func (o *deleteTaskOpts) askTaskName() error {
+	if o.name != "" {
+		return nil
+	}
+
 	sess, err := o.getSession()
 	if err != nil {
 		return fmt.Errorf("get task select session: %w", err)
