@@ -859,13 +859,14 @@ func addUpdateDeployCalls(m *mocks.Mockclient) {
 
 func addDeployCalls(m *mocks.Mockclient, changeSetType string) {
 	m.EXPECT().CreateChangeSet(&cloudformation.CreateChangeSetInput{
-		ChangeSetName: aws.String(mockChangeSetName),
-		StackName:     aws.String(mockStack.Name),
-		ChangeSetType: aws.String(changeSetType),
-		TemplateBody:  aws.String(mockStack.Template),
-		Parameters:    nil,
-		Tags:          nil,
-		RoleARN:       nil,
+		ChangeSetName:       aws.String(mockChangeSetName),
+		StackName:           aws.String(mockStack.Name),
+		ChangeSetType:       aws.String(changeSetType),
+		TemplateBody:        aws.String(mockStack.Template),
+		Parameters:          nil,
+		Tags:                nil,
+		RoleARN:             nil,
+		IncludeNestedStacks: aws.Bool(true),
 		Capabilities: aws.StringSlice([]string{
 			cloudformation.CapabilityCapabilityIam,
 			cloudformation.CapabilityCapabilityNamedIam,

@@ -91,13 +91,14 @@ func (cs *changeSet) String() string {
 // create creates a ChangeSet, waits until it's created, and returns the ChangeSet ID on success.
 func (cs *changeSet) create(conf *stackConfig) error {
 	out, err := cs.client.CreateChangeSet(&cloudformation.CreateChangeSetInput{
-		ChangeSetName: aws.String(cs.name),
-		StackName:     aws.String(cs.stackName),
-		ChangeSetType: aws.String(cs.csType.String()),
-		TemplateBody:  aws.String(conf.Template),
-		Parameters:    conf.Parameters,
-		Tags:          conf.Tags,
-		RoleARN:       conf.RoleARN,
+		ChangeSetName:       aws.String(cs.name),
+		StackName:           aws.String(cs.stackName),
+		ChangeSetType:       aws.String(cs.csType.String()),
+		TemplateBody:        aws.String(conf.Template),
+		Parameters:          conf.Parameters,
+		Tags:                conf.Tags,
+		RoleARN:             conf.RoleARN,
+		IncludeNestedStacks: aws.Bool(true),
 		Capabilities: aws.StringSlice([]string{
 			cloudformation.CapabilityCapabilityIam,
 			cloudformation.CapabilityCapabilityNamedIam,
