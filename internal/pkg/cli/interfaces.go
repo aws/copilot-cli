@@ -500,11 +500,6 @@ type tasksStopper interface {
 	StopTasks(tasks []string, opts ...ecs.StopTasksOpts) error
 }
 
-type tasksLister interface {
-	RunningTasksInFamily(cluster, family string) ([]*ecs.Task, error)
-	DefaultCluster() (string, error)
-}
-
 type serviceLinkedRoleCreator interface {
 	CreateECSServiceLinkedRole() error
 }

@@ -4,18 +4,14 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 
 	awssession "github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
-	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -32,11 +28,6 @@ const (
 	taskDeleteConfirmHelp             = "This will delete the task's stack and stop all current executions."
 )
 
-var (
-	errDefaultClusterWithApp = errors.New("")
-	errTaskDeleteCancelled   = errors.New("task delete cancelled - no changes made")
-)
-
 type deleteTaskVars struct {
 	name             string
 	app              string
@@ -49,18 +40,18 @@ type deleteTaskOpts struct {
 	deleteTaskVars
 
 	// Dependencies to interact with other modules
-	store   store
-	prompt  prompter
-	spinner progress
-	sess    sessionProvider
-	sel     wsSelector
+	store  store
+	prompt prompter
+	// spinner progress
+	sess sessionProvider
+	sel  wsSelector
 
 	// Generators for env-specific clients
-	newTaskSel      func(session *awssession.Session) cfTaskSelector
-	newTaskStopper  func(session *awssession.Session) tasksStopper
-	newTaskLister   func(session *awssession.Session) tasksLister
-	newImageRemover func(session *awssession.Session) imageRemover
-	newTaskDeleter  func(session *awssession.Session) taskDeployer
+	newTaskSel func(session *awssession.Session) cfTaskSelector
+	// newTaskStopper  func(session *awssession.Session) tasksStopper
+	// newTaskLister   func(session *awssession.Session) tasksLister
+	// newImageRemover func(session *awssession.Session) imageRemover
+	// newTaskDeleter  func(session *awssession.Session) taskDeployer
 }
 
 func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
@@ -81,28 +72,27 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 	return &deleteTaskOpts{
 		deleteTaskVars: vars,
 
-		store:   store,
-		spinner: termprogress.NewSpinner(log.DiagnosticWriter),
-		prompt:  prompter,
-		sess:    provider,
-		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
-
+		store: store,
+		// spinner: termprogress.NewSpinner(log.DiagnosticWriter),
+		prompt: prompter,
+		sess:   provider,
+		sel:    selector.NewWorkspaceSelect(prompter, store, ws),
 		newTaskSel: func(session *awssession.Session) cfTaskSelector {
 			cfn := cloudformation.New(session)
 			return selector.NewCFTaskSelect(prompter, store, cfn)
 		},
-		newTaskLister: func(session *awssession.Session) tasksLister {
-			return ecs.New(session)
-		},
-		newTaskStopper: func(session *awssession.Session) tasksStopper {
-			return ecs.New(session)
-		},
-		newTaskDeleter: func(session *awssession.Session) taskDeployer {
-			return cloudformation.New(session)
-		},
-		newImageRemover: func(session *awssession.Session) imageRemover {
-			return ecr.New(session)
-		},
+		// newTaskLister: func(session *awssession.Session) tasksLister {
+		// 	return ecs.New(session)
+		// },
+		// newTaskStopper: func(session *awssession.Session) tasksStopper {
+		// 	return ecs.New(session)
+		// },
+		// newTaskDeleter: func(session *awssession.Session) taskDeployer {
+		// 	return cloudformation.New(session)
+		// },
+		// newImageRemover: func(session *awssession.Session) imageRemover {
+		// 	return ecr.New(session)
+		// },
 	}, nil
 }
 
@@ -325,13 +315,13 @@ func (o *deleteTaskOpts) RecommendedActions() []string {
 	return nil
 }
 
-// Execute attempts to delete a task based on best-effort. If it finds an application
-// buildSvcDeleteCmd builds the command to delete application(s).
-func buildTaskDeleteCmd() *cobra.Command {
+// BuildTaskDeleteCmd builds the command to delete application(s).
+func BuildTaskDeleteCmd() *cobra.Command {
 	vars := deleteTaskVars{}
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Short: "Deletes a one-off task from an application or default cluster.",
+		Hidden: true,
+		Use:    "delete",
+		Short:  "Deletes a one-off task from an application or default cluster.",
 		Example: `
   Delete the "test" task from the default cluster.
   /code $ copilot task delete --name test --default
@@ -368,6 +358,6 @@ func buildTaskDeleteCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.env, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
-	cmd.Flags().BoolVar(&vars.defaultCluster, taskDefaultFlag, false, "")
+	cmd.Flags().BoolVar(&vars.defaultCluster, taskDefaultFlag, false, taskDeleteDefaultFlagDescription)
 	return cmd
 }
