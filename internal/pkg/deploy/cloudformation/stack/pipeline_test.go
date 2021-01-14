@@ -125,13 +125,10 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 	return &deploy.CreatePipelineInput{
 		AppName: projectName,
 		Name:    pipelineName,
-		Source: &deploy.Source{
-			ProviderName: "GitHub",
-			Properties: map[string]interface{}{
-				"repository":          "hencrice/amazon-ecs-cli-v2",
-				"branch":              defaultBranch,
-				"access_token_secret": "testGitHubSecret",
-			},
+		Source: &deploy.GitHubSource{
+			RepositoryURL:               "hencrice/amazon-ecs-cli-v2",
+			Branch:                      defaultBranch,
+			PersonalAccessTokenSecretID: "testGitHubSecret",
 		},
 		Stages: []deploy.PipelineStage{
 			{

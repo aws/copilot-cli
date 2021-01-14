@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -116,6 +117,9 @@ func (c DockerCommand) Push(uri, imageTag string, additionalTags ...string) erro
 
 // CheckDockerEngineRunning will run `docker info` command to check if the docker engine is running.
 func (c DockerCommand) CheckDockerEngineRunning() error {
+	if _, err := exec.LookPath("docker"); err != nil {
+		return ErrDockerCommandNotFound
+	}
 	buf := &bytes.Buffer{}
 	err := c.runner.Run("docker", []string{"info", "-f", "'{{json .}}'"}, command.Stdout(buf))
 	if err != nil {
@@ -127,9 +131,6 @@ func (c DockerCommand) CheckDockerEngineRunning() error {
 	// Trim redundant prefix and suffix. For example: '{"ServerErrors":["Cannot connect...}'\n returns
 	// {"ServerErrors":["Cannot connect...}
 	out := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(buf.String()), "'"), "'")
-	if strings.Contains(out, "command not found") {
-		return ErrDockerCommandNotFound
-	}
 	type dockerEngineNotRunningMsg struct {
 		ServerErrors []string `json:"ServerErrors"`
 	}

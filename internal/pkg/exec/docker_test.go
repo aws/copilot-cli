@@ -265,15 +265,6 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 
 			wantedErr: fmt.Errorf("get docker info: some error"),
 		},
-		"return when docker is not installed": {
-			inBuffer: bytes.NewBufferString("docker: command not found"),
-			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
-				mockRunner.EXPECT().Run("docker", []string{"info", "-f", "'{{json .}}'"}, gomock.Any()).Return(nil)
-			},
-
-			wantedErr: ErrDockerCommandNotFound,
-		},
 		"return when docker engine is not started": {
 			inBuffer: bytes.NewBufferString(`'{"ServerErrors":["Cannot connect to the Docker daemon at unix:///var/run/docker.sock.", "Is the docker daemon running?"]}'`),
 			setupMocks: func(controller *gomock.Controller) {

@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/stretchr/testify/require"
@@ -20,13 +22,11 @@ func TestPipeline_Template(t *testing.T) {
 	ps := stack.NewPipelineStackConfig(&deploy.CreatePipelineInput{
 		AppName: "phonetool",
 		Name:    "phonetool-pipeline",
-		Source: &deploy.Source{
-			ProviderName: "GitHub",
-			Properties: map[string]interface{}{
-				"repository":          "https://github.com/aws/phonetool",
-				"branch":              "mainline",
-				"access_token_secret": "mysecret",
-			},
+		Source: &deploy.GitHubSource{
+			ProviderName:                manifest.GithubProviderName,
+			RepositoryURL:               "https://github.com/aws/phonetool",
+			Branch:                      "mainline",
+			PersonalAccessTokenSecretID: "my secret",
 		},
 		Stages: []deploy.PipelineStage{
 			{

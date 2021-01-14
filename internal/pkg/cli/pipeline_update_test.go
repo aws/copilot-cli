@@ -451,6 +451,31 @@ stages:
 			},
 			expectedError: fmt.Errorf("unmarshal pipeline manifest: pipeline.yml contains invalid schema version: 0"),
 		},
+		"returns an error if provider is not a supported type": {
+			inApp:     &app,
+			inAppName: appName,
+			inRegion:  region,
+			callMocks: func(m updatePipelineMocks) {
+				content := `
+name: pipepiper
+version: 1
+
+source:
+  provider: NotGitHub
+  properties:
+    repository: aws/somethingCool
+    access_token_secret: "github-token-badgoose-backend"
+    branch: main
+`
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
+					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+				)
+			},
+			expectedError: fmt.Errorf("invalid repo source provider: NotGitHub"),
+		},
 		"returns an error if unable to convert environments to deployment stage": {
 			inApp:     &app,
 			inRegion:  region,
@@ -601,8 +626,7 @@ stages:
 
 			opts := &updatePipelineOpts{
 				updatePipelineVars: updatePipelineVars{
-					pipelineName: tc.inPipelineName,
-					appName:      tc.inAppName,
+					appName: tc.inAppName,
 				},
 				pipelineDeployer: mockPipelineDeployer,
 				ws:               mockWorkspace,
@@ -611,6 +635,8 @@ stages:
 				envStore:         mockEnvStore,
 				prog:             mockProgress,
 				prompt:           mockPrompt,
+
+				pipelineName: tc.inPipelineName,
 			}
 
 			// WHEN

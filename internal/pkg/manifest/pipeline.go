@@ -65,9 +65,7 @@ func (p *codecommitProvider) Properties() map[string]interface{} {
 type GitHubProperties struct {
 	// use tag from https://godoc.org/github.com/fatih/structs#example-Map--Tags
 	// to specify the name of the field in the output properties
-
-	// An example for OwnerAndRepository would be: "aws/copilot"
-	OwnerAndRepository    string `structs:"repository" yaml:"repository"`
+	RepositoryURL         string `structs:"repository" yaml:"repository"`
 	Branch                string `structs:"branch" yaml:"branch"`
 	GithubSecretIdKeyName string `structs:"access_token_secret" yaml:"access_token_secret"`
 }
@@ -75,8 +73,8 @@ type GitHubProperties struct {
 // CodeCommitProperties contains information for configuring a CodeCommit
 // source provider.
 type CodeCommitProperties struct {
-	Repository string `structs:"repository" yaml:"repository"`
-	Branch     string `structs:"branch" yaml:"branch"`
+	RepositoryURL string `structs:"repository" yaml:"repository"`
+	Branch        string `structs:"branch" yaml:"branch"`
 }
 
 // NewProvider creates a source provider based on the type of
