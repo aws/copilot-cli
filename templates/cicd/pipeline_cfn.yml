@@ -249,7 +249,7 @@ Resources:
                 # Use the *entire* SecretString with version AWSCURRENT
                 OAuthToken: !Sub
                   - '{{"{{"}}resolve:secretsmanager:${SecretId}{{"}}"}}'
-                  - SecretId: {{$.Source.PersonalAccessTokenSecretID}}
+                  - SecretId: {{$.Source.GitHubPersonalAccessTokenSecretID}}
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1
