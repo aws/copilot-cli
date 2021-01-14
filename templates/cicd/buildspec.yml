@@ -20,8 +20,13 @@ phases:
     commands:
       - ls -l
       - export COLOR="false"
-      # First, upgrade the cloudformation stack of every environment.
-      - ./copilot-linux env upgrade --all
+      # First, upgrade the cloudformation stack of every environment in the pipeline.
+      - pipeline=$(cat $CODEBUILD_SRC_DIR/copilot/pipeline.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))')
+      - pl_envs=$(echo $pipeline | jq '.stages[].name' | sed 's/"//g')
+      - >
+        for pl_env in $pl_envs; do
+        ./copilot-linux env upgrade -n $pl_env;
+        done;
       # Find all the local services in the workspace.
       - svcs=$(./copilot-linux svc ls --local --json | jq '.services[].name' | sed 's/"//g')
       # Find all the local jobs in the workspace.
