@@ -551,6 +551,66 @@ func TestCloudFormation_TemplateBody(t *testing.T) {
 	}
 }
 
+func TestCloudFormation_TemplateBodyFromChangeSet(t *testing.T) {
+	testCases := map[string]struct {
+		createMock func(ctrl *gomock.Controller) client
+		wantedBody string
+		wantedErr  string
+	}{
+		"return ErrStackNotFound if stack does not exist": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().GetTemplate(gomock.Any()).Return(nil, errDoesNotExist)
+				return m
+			},
+			wantedErr: (&ErrStackNotFound{name: mockStack.Name}).Error(),
+		},
+		"returns wrapped error on expected error": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().GetTemplate(gomock.Any()).Return(nil, errors.New("some error"))
+				return m
+			},
+			wantedErr: fmt.Sprintf("get template for stack %s and change set %s: some error", mockStack.Name, mockChangeSetID),
+		},
+		"returns the template body if the change set and stack exists": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().GetTemplate(&cloudformation.GetTemplateInput{
+					ChangeSetName: aws.String(mockChangeSetID),
+					StackName:     aws.String(mockStack.Name),
+				}).Return(&cloudformation.GetTemplateOutput{
+					TemplateBody: aws.String("hello"),
+				}, nil)
+				return m
+			},
+			wantedBody: "hello",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			c := CloudFormation{
+				client: tc.createMock(ctrl),
+			}
+
+			// WHEN
+			body, err := c.TemplateBodyFromChangeSet(mockChangeSetID, mockStack.Name)
+
+			// THEN
+			if tc.wantedErr == "" {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedBody, body)
+			} else {
+				require.EqualError(t, err, tc.wantedErr)
+			}
+		})
+	}
+}
+
 func TestCloudFormation_ErrorEvents(t *testing.T) {
 	mockEvents := []*cloudformation.StackEvent{
 		{

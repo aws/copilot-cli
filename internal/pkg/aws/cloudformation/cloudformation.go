@@ -202,6 +202,20 @@ func (c *CloudFormation) TemplateBody(name string) (string, error) {
 	return aws.StringValue(out.TemplateBody), nil
 }
 
+func (c *CloudFormation) TemplateBodyFromChangeSet(changeSetID, stackName string) (string, error) {
+	out, err := c.client.GetTemplate(&cloudformation.GetTemplateInput{
+		ChangeSetName: aws.String(changeSetID),
+		StackName:     aws.String(stackName),
+	})
+	if err != nil {
+		if stackDoesNotExist(err) {
+			return "", &ErrStackNotFound{name: stackName}
+		}
+		return "", fmt.Errorf("get template for stack %s and change set %s: %w", stackName, changeSetID, err)
+	}
+	return aws.StringValue(out.TemplateBody), nil
+}
+
 // Events returns the list of stack events in **chronological** order.
 func (c *CloudFormation) Events(stackName string) ([]StackEvent, error) {
 	return c.events(stackName, func(in *cloudformation.StackEvent) bool { return true })
