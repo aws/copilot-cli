@@ -11,15 +11,18 @@ import (
 	"regexp"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
-
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
-// NOTE: this is duplicated from validate.go
-var githubRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
-
 const (
-	fmtInvalidGitHubRepo = "unable to locate the repository from the properties: %+v"
+	fmtInvalidRepo = "unable to locate the repository URL from the properties: %+v"
+)
+
+var (
+	// NOTE: this is duplicated from validate.go
+	// Ex: https://github.com/koke/grit
+	ghRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
+	// Ex: https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample/browse
+	ccRepoExp = regexp.MustCompile(`(https:\/\/(?P<region>.+)(.console.aws.amazon.com\/codesuite\/codecommit\/repositories\/)(?P<repo>.+)(\/browse))`)
 )
 
 // CreatePipelineInput represents the fields required to deploy a pipeline.
@@ -31,7 +34,7 @@ type CreatePipelineInput struct {
 	Name string
 
 	// The source code provider for this pipeline
-	Source *Source
+	Source interface{}
 
 	// The stages of the pipeline. The order of stages in this list
 	// will be the order we deploy to.
@@ -67,93 +70,100 @@ func (a *ArtifactBucket) Region() (string, error) {
 	return parsedArn.Region, nil
 }
 
-// Source defines the source of the artifacts to be built and deployed.
-type Source struct {
-	// The name of the source code provider. For example, "GitHub"
-	ProviderName string
+// GitHubSource defines the (GH) source of the artifacts to be built and deployed.
+type GitHubSource struct {
+	ProviderName                string
+	Branch                      string
+	RepositoryURL               string
+	PersonalAccessTokenSecretID string
+}
 
-	// Contains provider-specific configurations, such as:
-	// "repository": "aws/amazon-ecs-cli-v2"
-	// "githubPersonalAccessTokenSecretId": "heyyo"
-	Properties map[string]interface{}
+// CodeCommitSource defines the (CC) source of the artifacts to be built and deployed.
+type CodeCommitSource struct {
+	ProviderName  string
+	Branch        string
+	RepositoryURL string
 }
 
 // GitHubPersonalAccessTokenSecretID returns the ID of the secret in the
 // Secrets manager, which stores the GitHub Personal Access token if the
 // provider is "GitHub". Otherwise, it returns the detected provider.
-func (s *Source) GitHubPersonalAccessTokenSecretID() (string, error) {
-	// TODO type check if properties are GitHubProperties?
-	secretID, exists := s.Properties[manifest.GithubSecretIdKeyName]
-	if !exists {
+func (s *GitHubSource) GitHubPersonalAccessTokenSecretID() (string, error) {
+	if s.PersonalAccessTokenSecretID == "" {
 		return "", errors.New("the GitHub token secretID is not configured")
 	}
-
-	id, ok := secretID.(string)
-	if !ok {
-		return "", fmt.Errorf("unable to locate the GitHub token secretID from %v", secretID)
-	}
-
-	if s.ProviderName != manifest.GithubProviderName {
-		return fmt.Sprintf("Non-GitHub provider detected: %s", s.ProviderName), nil
-	}
-
-	return id, nil
+	return s.PersonalAccessTokenSecretID, nil
 }
 
-type ownerAndRepo struct {
-	owner string
-	repo  string
-}
-
-func (s *Source) parseOwnerAndRepo() (*ownerAndRepo, error) {
-	if s.ProviderName != manifest.GithubProviderName {
-		return nil, fmt.Errorf("invalid provider: %s", s.ProviderName)
-	}
-	ownerAndRepoI, exists := s.Properties["repository"]
-	if !exists {
-		return nil, fmt.Errorf("unable to locate the repository from the properties: %+v", s.Properties)
-	}
-	ownerAndRepoStr, ok := ownerAndRepoI.(string)
-	if !ok {
-		return nil, fmt.Errorf(fmtInvalidGitHubRepo, ownerAndRepoI)
+// parseOwnerAndRepo parses the owner and repo name from the GH repo URL, which was formatted and assigned in cli/pipeline_init.go.
+func (s *GitHubSource) parseOwnerAndRepo() (owner, repo string, err error) {
+	if s.RepositoryURL == "" {
+		return "", "", fmt.Errorf("unable to locate the repository")
 	}
 
-	match := githubRepoExp.FindStringSubmatch(ownerAndRepoStr)
+	match := ghRepoExp.FindStringSubmatch(s.RepositoryURL)
 	if len(match) == 0 {
-		return nil, fmt.Errorf(fmtInvalidGitHubRepo, ownerAndRepoStr)
+		return "", "", fmt.Errorf(fmtInvalidRepo, s.RepositoryURL)
 	}
 
 	matches := make(map[string]string)
-	for i, name := range githubRepoExp.SubexpNames() {
+	for i, name := range ghRepoExp.SubexpNames() {
+		if i != 0 && name != "" {
+			matches[name] = match[i]
+		}
+	}
+	return matches["owner"], matches["repo"], nil
+}
+
+// parseRepo parses the region (not returned) and repo name from the CC repo URL, which was formatted and assigned in cli/pipeline_init.go.
+func (s *CodeCommitSource) parseRepo() (string, error) {
+	// NOTE: 'region' is not currently parsed out as a Source property, but this enables that possibility.
+	if s.RepositoryURL == "" {
+		return "", fmt.Errorf("unable to locate the repository")
+	}
+	match := ccRepoExp.FindStringSubmatch(s.RepositoryURL)
+	if len(match) == 0 {
+		return "", fmt.Errorf(fmtInvalidRepo, s.RepositoryURL)
+	}
+
+	matches := make(map[string]string)
+	for i, name := range ccRepoExp.SubexpNames() {
 		if i != 0 && name != "" {
 			matches[name] = match[i]
 		}
 	}
 
-	return &ownerAndRepo{
-		owner: matches["owner"],
-		repo:  matches["repo"],
-	}, nil
+	return matches["repo"], nil
 }
 
 // Repository returns the repository portion. For example,
-// given "aws/amazon-ecs-cli-v2", this function returns "amazon-ecs-cli-v2".
-func (s *Source) Repository() (string, error) {
-	oAndR, err := s.parseOwnerAndRepo()
+// given "aws/amazon-copilot", this function returns "amazon-copilot".
+func (s *GitHubSource) Repository() (string, error) {
+	_, repo, err := s.parseOwnerAndRepo()
 	if err != nil {
 		return "", err
 	}
-	return oAndR.repo, nil
+	return repo, nil
+}
+
+// Repository returns the repository portion. For example,
+// given "aws/amazon-copilot", this function returns "amazon-copilot".
+func (s *CodeCommitSource) Repository() (string, error) {
+	repo, err := s.parseRepo()
+	if err != nil {
+		return "", err
+	}
+	return repo, nil
 }
 
 // Owner returns the repository owner portion. For example,
-// given "aws/amazon-ecs-cli-v2", this function returns "aws".
-func (s *Source) Owner() (string, error) {
-	oAndR, err := s.parseOwnerAndRepo()
+// given "aws/amazon-copilot", this function returns "aws".
+func (s *GitHubSource) Owner() (string, error) {
+	owner, _, err := s.parseOwnerAndRepo()
 	if err != nil {
 		return "", err
 	}
-	return oAndR.owner, nil
+	return owner, nil
 }
 
 // PipelineStage represents configuration for each deployment stage

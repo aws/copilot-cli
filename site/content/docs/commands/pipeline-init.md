@@ -8,10 +8,11 @@ $ copilot pipeline init [flags]
 
 ## What are the flags?
 ```bash
+-a, --app string                   Name of the application.
 -e, --environments strings         Environments to add to the pipeline.
 -b, --git-branch string            Branch used to trigger your pipeline.
 -t, --github-access-token string   GitHub personal access token for your repository.
--u, --github-url string            GitHub repository URL for your service.
+-u, --url string                   The repository URL to trigger your pipeline.
 -h, --help                         help for init
 ```
 
@@ -19,7 +20,7 @@ $ copilot pipeline init [flags]
 Create a pipeline for the services in your workspace.
 ```bash
 $ copilot pipeline init \
---github-url https://github.com/gitHubUserName/myFrontendApp.git \
+--url https://github.com/gitHubUserName/myFrontendApp.git \
 --github-access-token file://myGitHubToken \
 --environments "test,prod" 
 ```

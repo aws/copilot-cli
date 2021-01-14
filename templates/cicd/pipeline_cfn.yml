@@ -7,12 +7,6 @@
 # limitations under the License.
 AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for {{$.AppName}}
-Parameters:
-  # TODO: #273 make this source-provider-agnostic
-  GitHubAccessTokenSecretId:
-    Description: The secretId of the GitHub Personal Access token stored in the Secrets Manager
-    Type: String
-    Default: {{$.Source.GitHubPersonalAccessTokenSecretID}}
 Resources:
   BuildProjectRole:
     Type: AWS::IAM::Role
@@ -147,6 +141,11 @@ Resources:
           - Effect: Allow
             Action:
               - codepipeline:*
+              - codecommit:GetBranch
+              - codecommit:GetCommit
+              - codecommit:UploadArchive
+              - codecommit:GetUploadArchiveStatus
+              - codecommit:CancelUploadArchive
               - iam:ListRoles
               - cloudformation:Describe*
               - cloudFormation:List*
@@ -233,29 +232,43 @@ Resources:
       RoleArn: !GetAtt PipelineRole.Arn
       Name: !Ref AWS::StackName
       Stages:
+        {{- if eq .Source.ProviderName "GitHub"}}
         - Name: Source
           Actions:
             - Name: SourceCodeFor-{{$.AppName}}
               ActionTypeId:
                 Category: Source
-                # TODO: #273 For CodeCommit, this needs to be AWS. Let's do that later
                 Owner: ThirdParty
                 Version: 1
-                Provider: {{.Source.ProviderName}}
+                Provider: GitHub
               Configuration:
-                # TODO: #273 For now this set of configurations is GitHub-specific,
-                # change it to be more generic
                 Owner: {{$.Source.Owner}}
                 Repo: {{$.Source.Repository}}
-                Branch: {{index $.Source.Properties "branch"}}
+                Branch: {{$.Source.Branch}}
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager
                 # Use the *entire* SecretString with version AWSCURRENT
                 OAuthToken: !Sub
-                    - '{{"{{"}}resolve:secretsmanager:${SecretId}{{"}}"}}'
-                    - { SecretId: !Ref GitHubAccessTokenSecretId }
+                  - '{{"{{"}}resolve:secretsmanager:${SecretId}{{"}}"}}'
+                  - SecretId: {{$.Source.PersonalAccessTokenSecretID}}
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1
+        {{- else if eq .Source.ProviderName "CodeCommit"}}
+        - Name: Source
+          Actions:
+            - Name: SourceCodeFor-{{$.AppName}}
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Version: 1
+                Provider: CodeCommit
+              Configuration:
+                RepositoryName: {{$.Source.Repository}}
+                BranchName: {{$.Source.Branch}}
+              OutputArtifacts:
+                - Name: SCCheckoutArtifact
+              RunOrder: 1
+        {{- end }}
         - Name: Build
           Actions:
           - Name: Build
