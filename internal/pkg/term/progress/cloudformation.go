@@ -18,88 +18,30 @@ type StackSubscriber interface {
 	Subscribe(channels ...chan stream.StackEvent)
 }
 
-// StackResourceDescription identifies a CloudFormation stack resource annotated with a human-friendly description.
-type StackResourceDescription struct {
-	LogicalResourceID string
-	ResourceType      string
-	Description       string
+// ListeningStackRenderer returns a tree component that listens for CloudFormation
+// resource events from a stack mutated with a changeSet until the streamer stops.
+func ListeningStackRenderer(streamer StackSubscriber, stackName, description string, changes []Renderer, opts RenderOptions) Renderer {
+	return &treeComponent{
+		Root:     ListeningResourceRenderer(streamer, stackName, description, opts),
+		Children: changes,
+	}
 }
 
-// ListeningStackRenderer returns a tab-separated component that listens for CloudFormation
-// resource events from a stack until the streamer stops.
-//
-// The component only listens for stack resource events for the provided changes in the stack.
-// The state of changes is updated as events are published from the streamer.
-func ListeningStackRenderer(streamer StackSubscriber, stackName, description string, changes []StackResourceDescription) Renderer {
-	var children []Renderer
-	for _, change := range changes {
-		children = append(children, listeningResourceRenderer(streamer, change, nestedComponentPadding))
-	}
-	comp := &stackComponent{
-		logicalID:   stackName,
+// ListeningResourceRenderer returns a tab-separated component that listens for
+// CloudFormation stack events for a particular resource.
+func ListeningResourceRenderer(streamer StackSubscriber, logicalID, description string, opts RenderOptions) Renderer {
+	comp := &regularResourceComponent{
+		logicalID:   logicalID,
 		description: description,
 		statuses:    []stackStatus{notStartedStackStatus},
 		stopWatch:   newStopWatch(),
-		children:    children,
 		stream:      make(chan stream.StackEvent),
+		padding:     opts.Padding,
 		separator:   '\t',
 	}
 	streamer.Subscribe(comp.stream)
 	go comp.Listen()
 	return comp
-}
-
-// listeningResourceRenderer returns a tab-separated component that listens for
-// CloudFormation stack events for a particular resource.
-func listeningResourceRenderer(streamer StackSubscriber, resource StackResourceDescription, padding int) Renderer {
-	comp := &regularResourceComponent{
-		logicalID:   resource.LogicalResourceID,
-		description: resource.Description,
-		statuses:    []stackStatus{notStartedStackStatus},
-		stopWatch:   newStopWatch(),
-		stream:      make(chan stream.StackEvent),
-		padding:     padding,
-		separator:   '\t',
-	}
-	streamer.Subscribe(comp.stream)
-	go comp.Listen()
-	return comp
-}
-
-// stackComponent can display a CloudFormation stack and all of its associated resources.
-type stackComponent struct {
-	logicalID   string        // The CloudFormation stack name.
-	description string        // The human friendly explanation of the purpose of the stack.
-	statuses    []stackStatus // In-order history of the CloudFormation status of the stack throughout the deployment.
-	children    []Renderer    // Resources part of the stack.
-	stopWatch   *stopWatch    // Timer to measure how long the operation takes to complete.
-
-	padding   int  // Leading spaces before rendering the stack.
-	separator rune // Character used to separate columns of text.
-
-	stream chan stream.StackEvent
-	mu     sync.Mutex
-}
-
-// Listen updates the stack's status if a CloudFormation stack event is received.
-func (c *stackComponent) Listen() {
-	for ev := range c.stream {
-		if c.logicalID != ev.LogicalResourceID {
-			continue
-		}
-		updateComponentStatus(&c.mu, &c.statuses, ev)
-		updateComponentTimer(&c.mu, c.statuses, c.stopWatch)
-	}
-}
-
-// Render prints the CloudFormation stack's resource components in order and returns the number of lines written.
-// If any sub-component's Render call fails, then writes nothing and returns an error.
-func (c *stackComponent) Render(out io.Writer) (numLines int, err error) {
-	c.mu.Lock()
-	components := stackResourceComponents(c.description, c.separator, c.statuses, c.stopWatch, c.padding)
-	c.mu.Unlock()
-
-	return renderComponents(out, append(components, c.children...))
 }
 
 // regularResourceComponent can display a simple CloudFormation stack resource event.
@@ -154,6 +96,11 @@ func updateComponentTimer(mu *sync.Mutex, statuses []stackStatus, sw *stopWatch)
 	curStatus, nextStatus := statuses[len(statuses)-2], statuses[len(statuses)-1]
 	switch {
 	case nextStatus.value.InProgress():
+		// It's possible that CloudFormation sends multiple "CREATE_IN_PROGRESS" events back to back,
+		// we don't want to reset the timer then.
+		if curStatus.value.InProgress() {
+			return
+		}
 		sw.reset()
 		sw.start()
 	default:
@@ -184,15 +131,4 @@ func stackResourceComponents(description string, separator rune, statuses []stac
 		}
 	}
 	return components
-}
-
-func renderComponents(out io.Writer, components []Renderer) (numLines int, err error) {
-	for _, comp := range components {
-		nl, err := comp.Render(out)
-		if err != nil {
-			return 0, err
-		}
-		numLines += nl
-	}
-	return numLines, nil
 }
