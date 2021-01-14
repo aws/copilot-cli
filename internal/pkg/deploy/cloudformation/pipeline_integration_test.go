@@ -169,13 +169,11 @@ func TestPipelineCreation(t *testing.T) {
 		pipelineInput := &deploy.CreatePipelineInput{
 			AppName: app.Name,
 			Name:    pipelineStackName,
-			Source: &deploy.Source{
-				ProviderName: manifest.GithubProviderName,
-				Properties: map[string]interface{}{
-					"repository":                   "chicken/wings",
-					"branch":                       "main",
-					manifest.GithubSecretIdKeyName: secretId,
-				},
+			Source: &deploy.GitHubSource{
+				ProviderName:                manifest.GithubProviderName,
+				Branch:                      "main",
+				RepositoryURL:               "https://github.com/chicken/wings",
+				PersonalAccessTokenSecretID: secretId,
 			},
 			Stages: []deploy.PipelineStage{
 				{
