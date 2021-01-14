@@ -16,6 +16,7 @@ import (
 type counterStreamer struct {
 	fetchCount  int
 	notifyCount int
+	done        chan struct{}
 
 	next func() time.Time
 }
@@ -29,11 +30,19 @@ func (s *counterStreamer) Notify() {
 	s.notifyCount += 1
 }
 
-func (s *counterStreamer) Stop() {}
+func (s *counterStreamer) Close() {}
+
+func (s *counterStreamer) Done() <-chan struct{} {
+	if s.done == nil {
+		s.done = make(chan struct{})
+	}
+	return s.done
+}
 
 // errStreamer returns an error when Fetch is invoked.
 type errStreamer struct {
-	err error
+	err  error
+	done chan struct{}
 }
 
 func (s *errStreamer) Fetch() (time.Time, error) {
@@ -42,10 +51,17 @@ func (s *errStreamer) Fetch() (time.Time, error) {
 
 func (s *errStreamer) Notify() {}
 
-func (s *errStreamer) Stop() {}
+func (s *errStreamer) Close() {}
+
+func (s *errStreamer) Done() <-chan struct{} {
+	if s.done == nil {
+		s.done = make(chan struct{})
+	}
+	return s.done
+}
 
 func TestStream(t *testing.T) {
-	t.Run("calls Fetch and Notify if context is canceled", func(t *testing.T) {
+	t.Run("short-circuits immediately if context is canceled", func(t *testing.T) {
 		// GIVEN
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // call cancel immediately.
@@ -59,9 +75,9 @@ func TestStream(t *testing.T) {
 		err := Stream(ctx, streamer)
 
 		// THEN
-		require.NoError(t, err)
-		require.Equal(t, 1, streamer.fetchCount, "expected number of Fetch calls to match")
-		require.Equal(t, 1, streamer.notifyCount, "expected number of Notify calls to match")
+		require.EqualError(t, err, ctx.Err().Error(), "the error returned should be context canceled")
+		require.Equal(t, 0, streamer.fetchCount, "expected number of Fetch calls to match")
+		require.Equal(t, 0, streamer.notifyCount, "expected number of Notify calls to match")
 	})
 
 	t.Run("returns error from Fetch", func(t *testing.T) {
@@ -77,8 +93,9 @@ func TestStream(t *testing.T) {
 	})
 
 	t.Run("calls Fetch and Notify multiple times until context is canceled", func(t *testing.T) {
+		t.Parallel()
 		// GIVEN
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 		defer cancel()
 		streamer := &counterStreamer{
 			next: func() time.Time {
@@ -90,8 +107,33 @@ func TestStream(t *testing.T) {
 		err := Stream(ctx, streamer)
 
 		// THEN
+		require.EqualError(t, err, ctx.Err().Error(), "the error returned should be context canceled")
+		require.Greater(t, streamer.fetchCount, 1, "expected more than one call to Fetch within timeout")
+		require.Greater(t, streamer.notifyCount, 1, "expected more than one call to Notify within timeout")
+	})
+
+	t.Run("calls Fetch and Notify multiple times until there is no more work left", func(t *testing.T) {
+		t.Parallel()
+
+		done := make(chan struct{})
+		streamer := &counterStreamer{
+			next: func() time.Time {
+				return time.Now().Add(100 * time.Millisecond)
+			},
+			done: done,
+		}
+		go func() {
+			// Stop the streamer after 1s of work.
+			<-time.After(300 * time.Millisecond)
+			close(done)
+		}()
+
+		// WHEN
+		err := Stream(context.Background(), streamer)
+
+		// THEN
 		require.NoError(t, err)
-		require.Greater(t, streamer.fetchCount, 1, "expected more than one call to Fetch within a second")
-		require.Greater(t, streamer.notifyCount, 1, "expected more than one call to Notify within a second")
+		require.Greater(t, streamer.fetchCount, 1, "expected more than one call to Fetch within timeout")
+		require.Greater(t, streamer.notifyCount, 1, "expected more than one call to Notify within timeout")
 	})
 }

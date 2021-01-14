@@ -93,3 +93,42 @@ working?
 		})
 	}
 }
+
+func TestDynamicTreeComponent_Render(t *testing.T) {
+	// GIVEN
+	comp := dynamicTreeComponent{
+		Root: &mockDynamicRenderer{
+			content: "hello",
+		},
+		Children: []Renderer{
+			&mockDynamicRenderer{
+				content: " world",
+			},
+		},
+	}
+	buf := new(strings.Builder)
+
+	// WHEN
+	_, err := comp.Render(buf)
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, "hello world", buf.String())
+}
+
+func TestDynamicTreeComponent_Done(t *testing.T) {
+	// GIVEN
+	root := &mockDynamicRenderer{
+		content: "hello",
+		done:    make(chan struct{}),
+	}
+	comp := dynamicTreeComponent{
+		Root: root,
+	}
+
+	// WHEN
+	ch := comp.Done()
+
+	// THEN
+	require.Equal(t, root.Done(), ch)
+}

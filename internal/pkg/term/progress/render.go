@@ -17,6 +17,13 @@ type Renderer interface {
 	Render(out io.Writer) (numLines int, err error)
 }
 
+// DynamicRenderer is a Renderer that can notify that its internal states are Done updating.
+// DynamicRenderer is implemented by components that listen to events from a streamer and update their state.
+type DynamicRenderer interface {
+	Renderer
+	Done() <-chan struct{}
+}
+
 // RenderOptions holds optional style configuration for renderers.
 type RenderOptions struct {
 	Padding int // Leading spaces before rendering the component.
@@ -29,9 +36,10 @@ func NestedRenderOptions(opts RenderOptions) RenderOptions {
 	}
 }
 
-// Render renders r periodically to out until the ctx is canceled or an error occurs.
+// Render renders r periodically to out.
+// Render stops when there the ctx is canceled or r is done listening to new events.
 // While Render is executing, the terminal cursor is hidden and updates are written in-place.
-func Render(ctx context.Context, out FileWriteFlusher, r Renderer) error {
+func Render(ctx context.Context, out FileWriteFlusher, r DynamicRenderer) error {
 	cursor := cursor.NewWithWriter(out)
 	cursor.Hide()
 	defer cursor.Show()
@@ -40,6 +48,8 @@ func Render(ctx context.Context, out FileWriteFlusher, r Renderer) error {
 	for {
 		select {
 		case <-ctx.Done():
+			return ctx.Err()
+		case <-r.Done():
 			if _, err := eraseAndRender(out, r, writtenLines); err != nil {
 				return err
 			}

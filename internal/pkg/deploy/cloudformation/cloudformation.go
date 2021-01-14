@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -21,6 +22,11 @@ import (
 	"github.com/aws/copilot-cli/templates"
 	"github.com/gobuffalo/packd"
 	"golang.org/x/sync/errgroup"
+)
+
+const (
+	// waitForStackTimeout is how long we're willing to wait for a stack to go from in progress to a complete state.
+	waitForStackTimeout = 1*time.Hour + 30*time.Minute
 )
 
 // StackConfiguration represents the set of methods needed to deploy a cloudformation stack.
@@ -103,7 +109,6 @@ type renderStackChangesInput struct {
 	stackName        string
 	stackDescription string
 	createChangeSet  func() (string, error)
-	waitForStack     func(context.Context, string) error
 }
 
 func (cf CloudFormation) renderStackChanges(in renderStackChangesInput) error {
@@ -111,41 +116,59 @@ func (cf CloudFormation) renderStackChanges(in renderStackChangesInput) error {
 	if err != nil {
 		return err
 	}
-	changeSet, err := cf.cfnClient.DescribeChangeSet(changeSetID, in.stackName)
+	waitCtx, cancelWait := context.WithTimeout(context.Background(), waitForStackTimeout)
+	defer cancelWait()
+	g, ctx := errgroup.WithContext(waitCtx)
+
+	renderer, err := cf.createStackRenderer(g, ctx, changeSetID, in.stackName, in.stackDescription, progress.RenderOptions{})
 	if err != nil {
 		return err
 	}
-	body, err := cf.cfnClient.TemplateBody(in.stackName)
-	if err != nil {
+	g.Go(func() error {
+		return progress.Render(ctx, progress.NewTabbedFileWriter(in.w), renderer)
+	})
+	if err := g.Wait(); err != nil {
 		return err
+	}
+	if err := cf.errOnFailedStack(in.stackName); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (cf CloudFormation) createStackRenderer(group *errgroup.Group, ctx context.Context, changeSetID, stackName, description string, opts progress.RenderOptions) (progress.DynamicRenderer, error) {
+	changeSet, err := cf.cfnClient.DescribeChangeSet(changeSetID, stackName)
+	if err != nil {
+		return nil, err
+	}
+	body, err := cf.cfnClient.TemplateBody(stackName)
+	if err != nil {
+		return nil, err
 	}
 	descriptions, err := cloudformation.ParseTemplateDescriptions(body)
 	if err != nil {
-		return fmt.Errorf("parse cloudformation template for resource descriptions: %w", err)
+		return nil, fmt.Errorf("parse cloudformation template for resource descriptions: %w", err)
 	}
 
-	waitCtx, cancelWait := context.WithCancel(context.Background())
-	streamer := stream.NewStackStreamer(cf.cfnClient, in.stackName, changeSet.CreationTime)
-	rendererOpts := progress.RenderOptions{}
-	children := changeRenderers(streamer, changeSet.Changes, descriptions, rendererOpts)
-	renderer := progress.ListeningStackRenderer(streamer, in.stackName, in.stackDescription, children, rendererOpts)
+	streamer := stream.NewStackStreamer(cf.cfnClient, stackName, changeSet.CreationTime)
+	children := changeRenderers(streamer, changeSet.Changes, descriptions, progress.NestedRenderOptions(opts))
+	renderer := progress.ListeningStackRenderer(streamer, stackName, description, children, opts)
+	group.Go(func() error {
+		return stream.Stream(ctx, streamer)
+	})
+	return renderer, nil
+}
 
-	// Run the streamer, renderer, and waiter all concurrently until they all exit successfully or one of them errors.
-	// When the waiter exits, the waitCtx is canceled which results in the streamer and renderer to exit.
-	// When the streamer exits, the group ctx is canceled resulting in the waiter to exit and canceling the renderer.
-	// When the renderer exits, it's the same flow as the streamer.
-	g, ctx := errgroup.WithContext(waitCtx)
-	g.Go(func() error {
-		defer cancelWait()
-		return in.waitForStack(ctx, in.stackName)
-	})
-	g.Go(func() error {
-		return stream.Stream(waitCtx, streamer)
-	})
-	g.Go(func() error {
-		return progress.Render(waitCtx, progress.NewTabbedFileWriter(in.w), renderer)
-	})
-	return g.Wait()
+func (cf CloudFormation) errOnFailedStack(stackName string) error {
+	stack, err := cf.cfnClient.Describe(stackName)
+	if err != nil {
+		return err
+	}
+	status := aws.StringValue(stack.StackStatus)
+	if cloudformation.StackStatus(status).Failure() {
+		return fmt.Errorf("stack %s did not complete successfully and exited with status %s", stackName, status)
+	}
+	return nil
 }
 
 func toStack(config StackConfiguration) (*cloudformation.Stack, error) {

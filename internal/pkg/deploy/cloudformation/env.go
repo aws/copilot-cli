@@ -46,7 +46,6 @@ func (cf CloudFormation) DeployAndRenderEnvironment(out progress.FileWriter, env
 			}
 			return changeSetID, nil
 		},
-		waitForStack: cf.cfnClient.WaitForCreate,
 	})
 }
 

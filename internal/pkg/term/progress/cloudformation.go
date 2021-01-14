@@ -15,13 +15,13 @@ import (
 
 // StackSubscriber is the interface to subscribe channels to a CloudFormation stack stream event.
 type StackSubscriber interface {
-	Subscribe(channels ...chan stream.StackEvent)
+	Subscribe() <-chan stream.StackEvent
 }
 
 // ListeningStackRenderer returns a tree component that listens for CloudFormation
 // resource events from a stack mutated with a changeSet until the streamer stops.
-func ListeningStackRenderer(streamer StackSubscriber, stackName, description string, changes []Renderer, opts RenderOptions) Renderer {
-	return &treeComponent{
+func ListeningStackRenderer(streamer StackSubscriber, stackName, description string, changes []Renderer, opts RenderOptions) DynamicRenderer {
+	return &dynamicTreeComponent{
 		Root:     ListeningResourceRenderer(streamer, stackName, description, opts),
 		Children: changes,
 	}
@@ -29,17 +29,17 @@ func ListeningStackRenderer(streamer StackSubscriber, stackName, description str
 
 // ListeningResourceRenderer returns a tab-separated component that listens for
 // CloudFormation stack events for a particular resource.
-func ListeningResourceRenderer(streamer StackSubscriber, logicalID, description string, opts RenderOptions) Renderer {
+func ListeningResourceRenderer(streamer StackSubscriber, logicalID, description string, opts RenderOptions) DynamicRenderer {
 	comp := &regularResourceComponent{
 		logicalID:   logicalID,
 		description: description,
 		statuses:    []stackStatus{notStartedStackStatus},
 		stopWatch:   newStopWatch(),
-		stream:      make(chan stream.StackEvent),
+		stream:      streamer.Subscribe(),
+		done:        make(chan struct{}),
 		padding:     opts.Padding,
 		separator:   '\t',
 	}
-	streamer.Subscribe(comp.stream)
 	go comp.Listen()
 	return comp
 }
@@ -54,7 +54,8 @@ type regularResourceComponent struct {
 	padding   int  // Leading spaces before rendering the resource.
 	separator rune // Character used to separate columns of text.
 
-	stream chan stream.StackEvent
+	stream <-chan stream.StackEvent
+	done   chan struct{}
 	mu     sync.Mutex
 }
 
@@ -67,6 +68,7 @@ func (c *regularResourceComponent) Listen() {
 		updateComponentStatus(&c.mu, &c.statuses, ev)
 		updateComponentTimer(&c.mu, c.statuses, c.stopWatch)
 	}
+	close(c.done) // No more events will be processed.
 }
 
 // Render prints the resource as a singleLineComponent and returns the number of lines written and the error if any.
@@ -76,6 +78,11 @@ func (c *regularResourceComponent) Render(out io.Writer) (numLines int, err erro
 
 	components := stackResourceComponents(c.description, c.separator, c.statuses, c.stopWatch, c.padding)
 	return renderComponents(out, components)
+}
+
+// Done returns a channel that's closed when there are no more events to Listen.
+func (c *regularResourceComponent) Done() <-chan struct{} {
+	return c.done
 }
 
 func updateComponentStatus(mu *sync.Mutex, statuses *[]stackStatus, event stream.StackEvent) {
