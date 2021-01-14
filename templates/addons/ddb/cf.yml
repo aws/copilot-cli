@@ -10,6 +10,7 @@ Parameters:
     Description: The name of the service, job, or workflow being deployed.
 Resources:
   {{logicalIDSafe .Name}}:
+    # An Amazon DynamoDB table for {{.Name}}
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain
     Properties:
@@ -34,6 +35,7 @@ Resources:
             ProjectionType: ALL{{end}}{{end}}
 
   {{logicalIDSafe .Name}}AccessPolicy:
+    # An IAM ManagedPolicy for your service to access the {{.Name}} db
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: !Sub
