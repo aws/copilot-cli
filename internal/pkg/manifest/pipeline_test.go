@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	defaultBranch = "main"
+	defaultGHBranch = "main"
+	defaultCCBranch = "master"
 )
 
 func TestNewProvider(t *testing.T) {
@@ -28,8 +29,14 @@ func TestNewProvider(t *testing.T) {
 	}{
 		"successfully create GitHub provider": {
 			providerConfig: &GitHubProperties{
-				OwnerAndRepository: "aws/amazon-ecs-cli-v2",
-				Branch:             defaultBranch,
+				RepositoryURL: "aws/amazon-ecs-cli-v2",
+				Branch:        defaultGHBranch,
+			},
+		},
+		"successfully create CodeCommit provider": {
+			providerConfig: &CodeCommitProperties{
+				RepositoryURL: "https://us-west-2.console.aws.amazon.com/codesuite/codecommit/repositories/wings/browse",
+				Branch:        defaultCCBranch,
 			},
 		},
 	}
@@ -61,8 +68,8 @@ func TestNewPipelineManifest(t *testing.T) {
 		"errors out when no stage provided": {
 			provider: func() Provider {
 				p, err := NewProvider(&GitHubProperties{
-					OwnerAndRepository: "aws/amazon-ecs-cli-v2",
-					Branch:             defaultBranch,
+					RepositoryURL: "aws/amazon-ecs-cli-v2",
+					Branch:        defaultGHBranch,
 				})
 				require.NoError(t, err, "failed to create provider")
 				return p
@@ -73,8 +80,8 @@ func TestNewPipelineManifest(t *testing.T) {
 		"happy case with non-default stages": {
 			provider: func() Provider {
 				p, err := NewProvider(&GitHubProperties{
-					OwnerAndRepository: "aws/amazon-ecs-cli-v2",
-					Branch:             defaultBranch,
+					RepositoryURL: "aws/amazon-ecs-cli-v2",
+					Branch:        defaultGHBranch,
 				})
 				require.NoError(t, err, "failed to create provider")
 				return p
@@ -95,8 +102,8 @@ func TestNewPipelineManifest(t *testing.T) {
 				Source: &Source{
 					ProviderName: "GitHub",
 					Properties: structs.Map(GitHubProperties{
-						OwnerAndRepository: "aws/amazon-ecs-cli-v2",
-						Branch:             defaultBranch,
+						RepositoryURL: "aws/amazon-ecs-cli-v2",
+						Branch:        defaultGHBranch,
 					}),
 				},
 				Stages: []PipelineStage{
@@ -239,7 +246,7 @@ stages:
 					Properties: map[string]interface{}{
 						"access_token_secret": "github-token-badgoose-backend",
 						"repository":          "aws/somethingCool",
-						"branch":              defaultBranch,
+						"branch":              defaultGHBranch,
 					},
 				},
 				Stages: []PipelineStage{
