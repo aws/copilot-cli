@@ -348,6 +348,7 @@ type appResourcesGetter interface {
 
 type taskDeployer interface {
 	DeployTask(input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error
+	DeleteTask(task deploy.TaskStackInfo) error
 }
 
 type taskRunner interface {
@@ -457,6 +458,10 @@ type initJobSelector interface {
 	Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error)
 }
 
+type cfTaskSelector interface {
+	Task(prompt, help string, opts ...selector.GetDeployedTaskOpts) (*selector.DeployedTask, error)
+}
+
 type dockerfileSelector interface {
 	Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pv prompt.ValidatorFunc) (string, error)
 }
@@ -493,6 +498,11 @@ type activeWorkloadTasksLister interface {
 
 type tasksStopper interface {
 	StopTasks(tasks []string, opts ...ecs.StopTasksOpts) error
+}
+
+type tasksLister interface {
+	RunningTasksInFamily(cluster, family string) ([]*ecs.Task, error)
+	DefaultCluster() (string, error)
 }
 
 type serviceLinkedRoleCreator interface {
