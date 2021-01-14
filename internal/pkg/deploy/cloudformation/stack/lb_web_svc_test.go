@@ -149,7 +149,11 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).Return(nil, errors.New("some error"))
 				addons := mockTemplater{
-					tpl: `Outputs:
+					tpl: `
+Resources:
+  AdditionalResourcesPolicy:
+    Type: AWS::IAM::ManagedPolicy
+Outputs:
   AdditionalResourcesPolicyArn:
     Value: hello`,
 				}

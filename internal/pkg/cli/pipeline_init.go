@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/version"
@@ -57,7 +59,7 @@ const (
 	fmtGHPipelineName = "pipeline-%s-%s-%s"
 	fmtCCPipelineName = "pipeline-%s-%s"
 	fmtGHRepoURL      = "https://%s/%s/%s"
-	fmtCCRepoURL      = "https://%s.console.%s/codesuite/codecommit/repositories/%s"
+	fmtCCRepoURL      = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse"
 )
 
 var (
@@ -80,6 +82,7 @@ type initPipelineOpts struct {
 	secretsmanager secretsManager
 	parser         template.Parser
 	runner         runner
+	sessProvider   sessionProvider
 	cfnClient      appResourcesGetter
 	store          store
 	prompt         prompter
@@ -133,6 +136,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		workspace:        ws,
 		secretsmanager:   secretsmanager,
 		parser:           template.New(),
+		sessProvider:     p,
 		cfnClient:        cloudformation.New(defaultSession),
 		store:            ssmStore,
 		prompt:           prompter,
@@ -147,10 +151,8 @@ func (o *initPipelineOpts) Validate() error {
 	if o.appName == "" {
 		return errNoAppInWorkspace
 	}
-	if o.appName != "" {
-		if _, err := o.store.GetApplication(o.appName); err != nil {
-			return err
-		}
+	if _, err := o.store.GetApplication(o.appName); err != nil {
+		return err
 	}
 
 	if o.repoURL != "" {
@@ -292,12 +294,16 @@ func (o *initPipelineOpts) askCodeCommitRepoDetails() error {
 	o.repoName = repoDetails.name
 	o.ccRegion = repoDetails.region
 
-	// If any one of the chosen environments is in a region besides that of the CodeCommit repo, pipeline init errors out.
-	for _, env := range o.envConfigs {
-		if env.Region != o.ccRegion {
-			return fmt.Errorf("repository %s is in %s, but environment %s is in %s; they must be in the same region", o.repoName, o.ccRegion, env.Name, env.Region)
-		}
+	// If the CodeCommit region is different than that of the app, pipeline init errors out.
+	sess, err := o.sessProvider.Default()
+	if err != nil {
+		return fmt.Errorf("retrieve default session: %w", err)
 	}
+	region := aws.StringValue(sess.Config.Region)
+	if o.ccRegion != region {
+		return fmt.Errorf("repository %s is in %s, but app %s is in %s; they must be in the same region", o.repoName, o.ccRegion, o.appName, region)
+	}
+
 	if o.repoBranch == "" {
 		o.repoBranch = defaultCCBranch
 	}
@@ -561,7 +567,7 @@ func (o *initPipelineOpts) pipelineName() (string, error) {
 func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	if o.provider == ghProviderName {
 		config := &manifest.GitHubProperties{
-			OwnerAndRepository:    fmt.Sprintf(fmtGHRepoURL, githubURL, o.githubOwner, o.repoName),
+			RepositoryURL:         fmt.Sprintf(fmtGHRepoURL, githubURL, o.githubOwner, o.repoName),
 			Branch:                o.repoBranch,
 			GithubSecretIdKeyName: o.secret,
 		}
@@ -569,8 +575,8 @@ func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	}
 	if o.provider == ccProviderName {
 		config := &manifest.CodeCommitProperties{
-			Repository: fmt.Sprintf(fmtCCRepoURL, o.ccRegion, awsURL, o.repoName),
-			Branch:     o.repoBranch,
+			RepositoryURL: fmt.Sprintf(fmtCCRepoURL, o.ccRegion, awsURL, o.repoName),
+			Branch:        o.repoBranch,
 		}
 		return manifest.NewProvider(config)
 	}

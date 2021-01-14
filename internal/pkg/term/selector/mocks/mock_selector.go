@@ -7,6 +7,7 @@ package mocks
 import (
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
+	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	ecs0 "github.com/aws/copilot-cli/internal/pkg/ecs"
 	prompt "github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -553,6 +554,59 @@ func (m *MockDeployStoreClient) IsServiceDeployed(appName, envName, svcName stri
 func (mr *MockDeployStoreClientMockRecorder) IsServiceDeployed(appName, envName, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsServiceDeployed", reflect.TypeOf((*MockDeployStoreClient)(nil).IsServiceDeployed), appName, envName, svcName)
+}
+
+// MockTaskStackDescriber is a mock of TaskStackDescriber interface
+type MockTaskStackDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockTaskStackDescriberMockRecorder
+}
+
+// MockTaskStackDescriberMockRecorder is the mock recorder for MockTaskStackDescriber
+type MockTaskStackDescriberMockRecorder struct {
+	mock *MockTaskStackDescriber
+}
+
+// NewMockTaskStackDescriber creates a new mock instance
+func NewMockTaskStackDescriber(ctrl *gomock.Controller) *MockTaskStackDescriber {
+	mock := &MockTaskStackDescriber{ctrl: ctrl}
+	mock.recorder = &MockTaskStackDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockTaskStackDescriber) EXPECT() *MockTaskStackDescriberMockRecorder {
+	return m.recorder
+}
+
+// ListDefaultTaskStacks mocks base method
+func (m *MockTaskStackDescriber) ListDefaultTaskStacks() ([]deploy.TaskStackInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDefaultTaskStacks")
+	ret0, _ := ret[0].([]deploy.TaskStackInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDefaultTaskStacks indicates an expected call of ListDefaultTaskStacks
+func (mr *MockTaskStackDescriberMockRecorder) ListDefaultTaskStacks() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDefaultTaskStacks", reflect.TypeOf((*MockTaskStackDescriber)(nil).ListDefaultTaskStacks))
+}
+
+// ListTaskStacks mocks base method
+func (m *MockTaskStackDescriber) ListTaskStacks(appName, envName string) ([]deploy.TaskStackInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTaskStacks", appName, envName)
+	ret0, _ := ret[0].([]deploy.TaskStackInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListTaskStacks indicates an expected call of ListTaskStacks
+func (mr *MockTaskStackDescriberMockRecorder) ListTaskStacks(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTaskStacks", reflect.TypeOf((*MockTaskStackDescriber)(nil).ListTaskStacks), appName, envName)
 }
 
 // MockTaskLister is a mock of TaskLister interface

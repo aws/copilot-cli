@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -76,12 +77,12 @@ type initSvcOpts struct {
 	initSvcVars
 
 	// Interfaces to interact with dependencies.
-	fs     afero.Fs
-	init   svcInitializer
-	prompt prompter
-	df     dockerfileParser
-
-	sel dockerfileSelector
+	fs                    afero.Fs
+	init                  svcInitializer
+	prompt                prompter
+	df                    dockerfileParser
+	dockerEngineValidator dockerEngineValidator
+	sel                   dockerfileSelector
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -112,17 +113,17 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	initSvc := &initialize.WorkloadInitializer{
 		Store:    store,
 		Ws:       ws,
-		Prog:     termprogress.NewSpinner(),
+		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess),
 	}
 	return &initSvcOpts{
 		initSvcVars: vars,
 
-		fs:     &afero.Afero{Fs: afero.NewOsFs()},
-		init:   initSvc,
-		prompt: prompter,
-		sel:    sel,
-
+		fs:                    &afero.Afero{Fs: afero.NewOsFs()},
+		init:                  initSvc,
+		prompt:                prompter,
+		sel:                   sel,
+		dockerEngineValidator: exec.NewDockerCommand(),
 		setupParser: func(o *initSvcOpts) {
 			o.df = exec.NewDockerfile(o.fs, o.dockerfilePath)
 		},
@@ -265,6 +266,19 @@ func (o *initSvcOpts) askImage() error {
 func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 	if o.dockerfilePath != "" || o.image != "" {
 		return true, nil
+	}
+	if err = o.dockerEngineValidator.CheckDockerEngineRunning(); err != nil {
+		var errDaemon *exec.ErrDockerDaemonNotResponsive
+		switch {
+		case errors.Is(err, exec.ErrDockerCommandNotFound):
+			log.Info("Docker command is not found; Copilot won't build from a Dockerfile.\n")
+			return false, nil
+		case errors.As(err, &errDaemon):
+			log.Info("Docker daemon is not responsive; Copilot won't build from a Dockerfile.\n")
+			return false, nil
+		default:
+			return false, fmt.Errorf("check if docker engine is running: %w", err)
+		}
 	}
 	df, err := o.sel.Dockerfile(
 		fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(o.name)),

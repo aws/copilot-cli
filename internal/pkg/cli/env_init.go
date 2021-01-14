@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -56,15 +57,9 @@ https://aws.github.io/copilot-cli/docs/credentials/#environment-credentials`
 	envInitRegionPrompt        = "Which region?"
 	envInitDefaultRegionOption = "us-west-2"
 
-	fmtDeployEnvStart        = "Proposing infrastructure changes for the %s environment."
-	fmtDeployEnvComplete     = "Environment %s already exists in application %s.\n\n"
-	fmtDeployEnvFailed       = "Failed to accept changes for the %s environment.\n\n"
 	fmtDNSDelegationStart    = "Sharing DNS permissions for this application to account %s."
 	fmtDNSDelegationFailed   = "Failed to grant DNS permissions to account %s.\n\n"
 	fmtDNSDelegationComplete = "Shared DNS permissions for this application to account %s.\n\n"
-	fmtStreamEnvStart        = "Creating the infrastructure for the %s environment."
-	fmtStreamEnvFailed       = "Failed to create the infrastructure for the %s environment.\n"
-	fmtStreamEnvComplete     = "Created the infrastructure for the %s environment.\n"
 	fmtAddEnvToAppStart      = "Linking account %s and region %s to application %s."
 	fmtAddEnvToAppFailed     = "Failed to link account %s and region %s to application %s.\n\n"
 	fmtAddEnvToAppComplete   = "Linked account %s and region %s to application %s.\n\n"
@@ -169,7 +164,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		store:        store,
 		appDeployer:  deploycfn.New(defaultSession),
 		identity:     identity.New(defaultSession),
-		prog:         termprogress.NewSpinner(),
+		prog:         termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:       prompter,
 		selCreds: &selector.CredsSelect{
 			Session: sessProvider,
@@ -490,32 +485,14 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 		Version:                  deploy.LatestEnvTemplateVersion,
 	}
 
-	o.prog.Start(fmt.Sprintf(fmtDeployEnvStart, color.HighlightUserInput(o.name)))
-	if err := o.envDeployer.DeployEnvironment(deployEnvInput); err != nil {
+	if err := o.envDeployer.DeployAndRenderEnvironment(os.Stderr, deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
-			o.prog.Stop(log.Ssuccessf(fmtDeployEnvComplete,
-				color.HighlightUserInput(o.name), color.HighlightUserInput(o.appName)))
 			return nil
 		}
-		o.prog.Stop(log.Serrorf(fmtDeployEnvFailed, color.HighlightUserInput(o.name)))
 		return err
 	}
-
-	// Display updates while the deployment is happening.
-	o.prog.Start(fmt.Sprintf(fmtStreamEnvStart, color.HighlightUserInput(o.name)))
-	stackEvents, responses := o.envDeployer.StreamEnvironmentCreation(deployEnvInput)
-	for stackEvent := range stackEvents {
-		o.prog.Events(o.humanizeEnvironmentEvents(stackEvent))
-	}
-	resp := <-responses
-	if resp.Err != nil {
-		o.prog.Stop(log.Serrorf(fmtStreamEnvFailed, color.HighlightUserInput(o.name)))
-		return resp.Err
-	}
-	o.prog.Stop(log.Ssuccessf(fmtStreamEnvComplete, color.HighlightUserInput(o.name)))
-
 	return nil
 }
 
@@ -548,41 +525,6 @@ func (o *initEnvOpts) delegateDNSFromApp(app *config.Application) error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtDNSDelegationComplete, color.HighlightUserInput(envAccount.Account)))
 	return nil
-}
-
-func (o *initEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.ResourceEvent) []termprogress.TabRow {
-	matcher := map[termprogress.Text]termprogress.ResourceMatcher{
-		textVPC: func(event deploy.Resource) bool {
-			return event.Type == "AWS::EC2::VPC"
-		},
-		textInternetGateway: func(event deploy.Resource) bool {
-			return event.Type == "AWS::EC2::InternetGateway" ||
-				event.Type == "AWS::EC2::VPCGatewayAttachment"
-		},
-		textPublicSubnets: func(event deploy.Resource) bool {
-			return event.Type == "AWS::EC2::Subnet" &&
-				strings.HasPrefix(event.LogicalName, "Public")
-		},
-		textPrivateSubnets: func(event deploy.Resource) bool {
-			return event.Type == "AWS::EC2::Subnet" &&
-				strings.HasPrefix(event.LogicalName, "Private")
-		},
-		textRouteTables: func(event deploy.Resource) bool {
-			return strings.Contains(event.LogicalName, "Route")
-		},
-		textECSCluster: func(event deploy.Resource) bool {
-			return event.Type == "AWS::ECS::Cluster"
-		},
-	}
-	return termprogress.HumanizeResourceEvents(o.envProgressOrder(), resourceEvents, matcher, defaultResourceCounts)
-}
-
-func (o *initEnvOpts) envProgressOrder() (order []termprogress.Text) {
-	if !o.importVPC.isSet() {
-		order = append(order, []termprogress.Text{textVPC, textInternetGateway, textPublicSubnets, textPrivateSubnets, textRouteTables}...)
-	}
-	order = append(order, textECSCluster)
-	return
 }
 
 func (o *initEnvOpts) validateCredentials() error {

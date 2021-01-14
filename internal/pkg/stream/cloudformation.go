@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package stream
 
 import (
@@ -6,10 +9,11 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	cfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 )
 
 const (
-	stackFetchIntervalDuration = 3 * time.Second // How long to wait until Fetch is called again for a StackStreamer.
+	stackFetchIntervalDuration = 2 * time.Second // How long to wait until Fetch is called again for a StackStreamer.
 )
 
 // StackEventsDescriber is the CloudFormation interface needed to describe stack events.
@@ -19,18 +23,20 @@ type StackEventsDescriber interface {
 
 // StackEvent is a CloudFormation stack event.
 type StackEvent struct {
-	LogicalResourceID string
-	ResourceType      string
-	ResourceStatus    string
+	LogicalResourceID    string
+	ResourceType         string
+	ResourceStatus       string
+	ResourceStatusReason string
 }
 
-// StackStreamer is a FetchNotifyStopper for StackEvent events started by a change set.
+// StackStreamer is a Streamer for StackEvent events started by a change set.
 type StackStreamer struct {
 	client                StackEventsDescriber
 	stackName             string
 	changeSetCreationTime time.Time
 
 	subscribers   []chan StackEvent
+	done          chan struct{}
 	pastEventIDs  map[string]bool
 	eventsToFlush []StackEvent
 }
@@ -42,12 +48,15 @@ func NewStackStreamer(cfn StackEventsDescriber, stackName string, csCreationTime
 		stackName:             stackName,
 		changeSetCreationTime: csCreationTime,
 		pastEventIDs:          make(map[string]bool),
+		done:                  make(chan struct{}),
 	}
 }
 
-// Subscribe registers the channels to receive notifications from the streamer.
-func (s *StackStreamer) Subscribe(channels ...chan StackEvent) {
-	s.subscribers = append(s.subscribers, channels...)
+// Subscribe returns a read-only channel that will receive stack events from the StackStreamer.
+func (s *StackStreamer) Subscribe() <-chan StackEvent {
+	c := make(chan StackEvent)
+	s.subscribers = append(s.subscribers, c)
+	return c
 }
 
 // Fetch retrieves and stores any new CloudFormation stack events since the ChangeSetCreationTime in chronological order.
@@ -79,10 +88,17 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 				finished = true
 				break
 			}
+
+			logicalID, resourceStatus := aws.StringValue(event.LogicalResourceId), aws.StringValue(event.ResourceStatus)
+			if logicalID == s.stackName && !cfn.StackStatus(resourceStatus).InProgress() {
+				// The stack is done, notify that there is no need for another Fetch call beyond this point.
+				close(s.done)
+			}
 			events = append(events, StackEvent{
-				LogicalResourceID: aws.StringValue(event.LogicalResourceId),
-				ResourceType:      aws.StringValue(event.ResourceType),
-				ResourceStatus:    aws.StringValue(event.ResourceStatus),
+				LogicalResourceID:    logicalID,
+				ResourceType:         aws.StringValue(event.ResourceType),
+				ResourceStatus:       resourceStatus,
+				ResourceStatusReason: aws.StringValue(event.ResourceStatusReason),
 			})
 			s.pastEventIDs[aws.StringValue(event.EventId)] = true
 		}
@@ -108,11 +124,16 @@ func (s *StackStreamer) Notify() {
 	s.eventsToFlush = nil // reset after flushing all events.
 }
 
-// Stop closes all subscribed channels notifying them that no more events will be sent.
-func (s *StackStreamer) Stop() {
+// Close closes all subscribed channels notifying them that no more events will be sent.
+func (s *StackStreamer) Close() {
 	for _, sub := range s.subscribers {
 		close(sub)
 	}
+}
+
+// Done returns a channel that's closed when there are no more events that can be fetched.
+func (s *StackStreamer) Done() <-chan struct{} {
+	return s.done
 }
 
 // Taken from https://github.com/golang/go/wiki/SliceTricks#reversing

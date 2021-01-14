@@ -6,7 +6,6 @@ package stack
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -137,7 +136,7 @@ func TestTaskStackConfig_StackName(t *testing.T) {
 		CreateTaskResourcesInput: &taskInput,
 	}
 	got := task.StackName()
-	require.Equal(t, got, fmt.Sprintf("task-%s", testTaskName))
+	require.Equal(t, got, taskStackPrefix+testTaskName)
 }
 
 func TestTaskStackConfig_Tags(t *testing.T) {

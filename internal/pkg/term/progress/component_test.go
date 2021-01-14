@@ -44,3 +44,91 @@ func TestSingleLineComponent_Render(t *testing.T) {
 		})
 	}
 }
+
+func TestTreeComponent_Render(t *testing.T) {
+	testCases := map[string]struct {
+		inNode     Renderer
+		inChildren []Renderer
+
+		wantedNumLines int
+		wantedOut      string
+	}{
+		"should render all the nodes": {
+			inNode: &singleLineComponent{
+				Text: "is",
+			},
+			inChildren: []Renderer{
+				&singleLineComponent{
+					Text: "this",
+				},
+				&singleLineComponent{
+					Text: "working?",
+				},
+			},
+
+			wantedNumLines: 3,
+			wantedOut: `is
+this
+working?
+`,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			comp := &treeComponent{
+				Root:     tc.inNode,
+				Children: tc.inChildren,
+			}
+			buf := new(strings.Builder)
+
+			// WHEN
+			nl, err := comp.Render(buf)
+
+			// THEN
+			require.NoError(t, err)
+			require.Equal(t, tc.wantedNumLines, nl)
+			require.Equal(t, tc.wantedOut, buf.String())
+		})
+	}
+}
+
+func TestDynamicTreeComponent_Render(t *testing.T) {
+	// GIVEN
+	comp := dynamicTreeComponent{
+		Root: &mockDynamicRenderer{
+			content: "hello",
+		},
+		Children: []Renderer{
+			&mockDynamicRenderer{
+				content: " world",
+			},
+		},
+	}
+	buf := new(strings.Builder)
+
+	// WHEN
+	_, err := comp.Render(buf)
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, "hello world", buf.String())
+}
+
+func TestDynamicTreeComponent_Done(t *testing.T) {
+	// GIVEN
+	root := &mockDynamicRenderer{
+		content: "hello",
+		done:    make(chan struct{}),
+	}
+	comp := dynamicTreeComponent{
+		Root: root,
+	}
+
+	// WHEN
+	ch := comp.Done()
+
+	// THEN
+	require.Equal(t, root.Done(), ch)
+}

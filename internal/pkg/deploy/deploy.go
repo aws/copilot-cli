@@ -27,19 +27,6 @@ const (
 	ecsServiceResourceType = "ecs:service"
 )
 
-// Resource represents an AWS resource.
-type Resource struct {
-	LogicalName string
-	Type        string
-}
-
-// ResourceEvent represents a status update for an AWS resource during a deployment.
-type ResourceEvent struct {
-	Resource
-	Status       string
-	StatusReason string
-}
-
 type resourceGetter interface {
 	GetResourcesByTags(resourceType string, tags map[string]string) ([]*rg.Resource, error)
 }

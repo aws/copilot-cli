@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector/mocks"
@@ -1685,6 +1686,149 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.Equal(t, tc.wantedSchedule, schedule)
+			}
+		})
+	}
+}
+
+func TestSelect_CFTask(t *testing.T) {
+	taskPrompt := "TASK PLX"
+	taskHelp := "NO"
+	testTasks := []DeployedTask{
+		{
+			Name: "abc",
+			App:  "phonetool",
+			Env:  "prod-iad",
+		},
+		{
+			Name: "db-migrate",
+			App:  "phonetool",
+			Env:  "prod-iad",
+		},
+	}
+	testDefaultTask := DeployedTask{
+		Name: "db-migrate",
+	}
+	testCases := map[string]struct {
+		inDefaultCluster string
+		inOpts           []GetDeployedTaskOpts
+
+		mockStore  func(*mocks.MockConfigLister)
+		mockPrompt func(*mocks.MockPrompter)
+		mockCF     func(*mocks.MockTaskStackDescriber)
+
+		wantedErr  error
+		wantedTask *DeployedTask
+	}{
+		"choose an existing task": {
+			inOpts: []GetDeployedTaskOpts{
+				TaskWithAppEnv("phonetool", "prod-iad"),
+			},
+			mockStore: func(m *mocks.MockConfigLister) {},
+			mockCF: func(m *mocks.MockTaskStackDescriber) {
+				m.EXPECT().ListTaskStacks("phonetool", "prod-iad").Return([]deploy.TaskStackInfo{
+					{
+						StackName: "copilot-abc",
+						App:       "phonetool",
+						Env:       "prod-iad",
+					},
+					{
+						StackName: "copilot-db-migrate",
+						App:       "phonetool",
+						Env:       "prod-iad",
+					},
+				}, nil)
+			},
+			mockPrompt: func(m *mocks.MockPrompter) {
+				m.EXPECT().SelectOne(
+					gomock.Any(), gomock.Any(),
+					[]string{
+						"abc (prod-iad)",
+						"db-migrate (prod-iad)",
+					},
+				).Return("abc (prod-iad)", nil)
+			},
+			wantedErr:  nil,
+			wantedTask: &testTasks[0],
+		},
+		"error when retrieving stacks": {
+			inOpts: []GetDeployedTaskOpts{
+				TaskWithAppEnv("phonetool", "prod-iad"),
+			},
+			mockStore: func(m *mocks.MockConfigLister) {},
+			mockCF: func(m *mocks.MockTaskStackDescriber) {
+				m.EXPECT().ListTaskStacks("phonetool", "prod-iad").Return(nil, errors.New("some error"))
+			},
+			mockPrompt: func(m *mocks.MockPrompter) {},
+			wantedErr:  errors.New("get tasks in environment prod-iad: some error"),
+		},
+		"with default cluster task": {
+			inOpts: []GetDeployedTaskOpts{
+				TaskWithDefaultCluster(),
+			},
+			mockStore: func(m *mocks.MockConfigLister) {},
+			mockCF: func(m *mocks.MockTaskStackDescriber) {
+				m.EXPECT().ListDefaultTaskStacks().Return([]deploy.TaskStackInfo{
+					{
+						StackName: "task-oneoff",
+					},
+					{
+						StackName: "copilot-db-migrate",
+					},
+				}, nil)
+			},
+			mockPrompt: func(m *mocks.MockPrompter) {
+				m.EXPECT().SelectOne(
+					gomock.Any(), gomock.Any(),
+					[]string{
+						"oneoff (default cluster)",
+						"db-migrate (default cluster)",
+					},
+				).Return("db-migrate (default cluster)", nil)
+			},
+			wantedErr:  nil,
+			wantedTask: &testDefaultTask,
+		},
+		"with error getting default cluster tasks": {
+			inOpts: []GetDeployedTaskOpts{
+				TaskWithDefaultCluster(),
+			},
+			mockStore: func(m *mocks.MockConfigLister) {},
+			mockCF: func(m *mocks.MockTaskStackDescriber) {
+				m.EXPECT().ListDefaultTaskStacks().Return(nil, errors.New("some error"))
+			},
+			mockPrompt: func(m *mocks.MockPrompter) {},
+			wantedErr:  errors.New("get tasks in default cluster: some error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			p := mocks.NewMockPrompter(ctrl)
+			s := mocks.NewMockConfigLister(ctrl)
+			cf := mocks.NewMockTaskStackDescriber(ctrl)
+			tc.mockPrompt(p)
+			tc.mockCF(cf)
+			tc.mockStore(s)
+
+			sel := CFTaskSelect{
+				Select: &Select{
+					prompt: p,
+					config: s,
+				},
+				cfStore: cf,
+			}
+
+			// WHEN
+			choice, err := sel.Task(taskPrompt, taskHelp, tc.inOpts...)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.Equal(t, tc.wantedTask, choice)
 			}
 		})
 	}

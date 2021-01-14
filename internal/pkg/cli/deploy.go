@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -67,7 +68,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					store:        o.store,
 					ws:           o.ws,
 					unmarshal:    manifest.UnmarshalWorkload,
-					spinner:      termprogress.NewSpinner(),
+					spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
 					sel:          selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
 					prompt:       o.prompt,
 					cmd:          command.New(),
@@ -80,7 +81,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					store:        o.store,
 					ws:           o.ws,
 					unmarshal:    manifest.UnmarshalWorkload,
-					spinner:      termprogress.NewSpinner(),
+					spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
 					sel:          selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
 					prompt:       o.prompt,
 					cmd:          command.New(),

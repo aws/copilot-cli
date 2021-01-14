@@ -95,7 +95,11 @@ func TestBackendService_Template(t *testing.T) {
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
 				svc.addons = mockTemplater{
-					tpl: `Outputs:
+					tpl: `
+Resources:
+  AdditionalResourcesPolicy:
+    Type: AWS::IAM::ManagedPolicy
+Outputs:
   AdditionalResourcesPolicyArn:
     Value: hello`,
 				}
@@ -109,7 +113,11 @@ func TestBackendService_Template(t *testing.T) {
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
 				svc.addons = mockTemplater{
-					tpl: `Outputs:
+					tpl: `
+Resources:
+  AdditionalResourcesPolicy:
+    Type: AWS::IAM::ManagedPolicy
+Outputs:
   AdditionalResourcesPolicyArn:
     Value: hello`,
 				}
@@ -124,7 +132,11 @@ func TestBackendService_Template(t *testing.T) {
 				m.EXPECT().ParseBackendService(gomock.Any()).Return(nil, errors.New("some error"))
 				svc.parser = m
 				svc.addons = mockTemplater{
-					tpl: `Outputs:
+					tpl: `
+Resources:
+  AdditionalResourcesPolicy:
+    Type: AWS::IAM::ManagedPolicy
+Outputs:
   AdditionalResourcesPolicyArn:
     Value: hello`,
 				}
@@ -148,14 +160,18 @@ func TestBackendService_Template(t *testing.T) {
 					ExecuteCommand:     &template.ExecuteCommandOpts{},
 					NestedStack: &template.WorkloadNestedStackOpts{
 						StackName:       addon.StackName,
-						VariableOutputs: []string{"Hello"},
+						VariableOutputs: []string{"MyTable"},
 					},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				svc.parser = m
 				svc.addons = mockTemplater{
-					tpl: `Outputs:
-  Hello:
-    Value: hello`,
+					tpl: `
+Resources:
+  MyTable:
+    Type: AWS::DynamoDB::Table
+Outputs:
+  MyTable:
+    Value: !Ref MyTable`,
 				}
 			},
 			wantedTemplate: "template",

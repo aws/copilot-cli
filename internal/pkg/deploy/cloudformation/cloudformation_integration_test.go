@@ -7,6 +7,7 @@ package cloudformation_test
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -379,12 +380,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		}()
 
 		// Deploy the environment and wait for it to be complete
-		require.NoError(t, deployer.DeployEnvironment(&environmentToDeploy))
-		// Make sure the environment was deployed successfully
-
-		_, responses := deployer.StreamEnvironmentCreation(&environmentToDeploy)
-		resp := <-responses
-		require.NoError(t, resp.Err)
+		require.NoError(t, deployer.DeployAndRenderEnvironment(os.Stderr, &environmentToDeploy))
 
 		// Ensure that the new stack exists
 		output, err = cfClient.DescribeStacks(&awsCF.DescribeStacksInput{

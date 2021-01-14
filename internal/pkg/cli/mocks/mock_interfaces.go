@@ -21,6 +21,7 @@ import (
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
+	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	prompt "github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	selector "github.com/aws/copilot-cli/internal/pkg/term/selector"
 	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -2957,33 +2958,18 @@ func (m *MockenvironmentDeployer) EXPECT() *MockenvironmentDeployerMockRecorder 
 	return m.recorder
 }
 
-// DeployEnvironment mocks base method
-func (m *MockenvironmentDeployer) DeployEnvironment(env *deploy.CreateEnvironmentInput) error {
+// DeployAndRenderEnvironment mocks base method
+func (m *MockenvironmentDeployer) DeployAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeployEnvironment", env)
+	ret := m.ctrl.Call(m, "DeployAndRenderEnvironment", out, env)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeployEnvironment indicates an expected call of DeployEnvironment
-func (mr *MockenvironmentDeployerMockRecorder) DeployEnvironment(env interface{}) *gomock.Call {
+// DeployAndRenderEnvironment indicates an expected call of DeployAndRenderEnvironment
+func (mr *MockenvironmentDeployerMockRecorder) DeployAndRenderEnvironment(out, env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeployEnvironment), env)
-}
-
-// StreamEnvironmentCreation mocks base method
-func (m *MockenvironmentDeployer) StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StreamEnvironmentCreation", env)
-	ret0, _ := ret[0].(<-chan []deploy.ResourceEvent)
-	ret1, _ := ret[1].(<-chan deploy.CreateEnvironmentResponse)
-	return ret0, ret1
-}
-
-// StreamEnvironmentCreation indicates an expected call of StreamEnvironmentCreation
-func (mr *MockenvironmentDeployerMockRecorder) StreamEnvironmentCreation(env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamEnvironmentCreation", reflect.TypeOf((*MockenvironmentDeployer)(nil).StreamEnvironmentCreation), env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeployAndRenderEnvironment), out, env)
 }
 
 // DeleteEnvironment mocks base method
@@ -3617,33 +3603,18 @@ func (m *Mockdeployer) EXPECT() *MockdeployerMockRecorder {
 	return m.recorder
 }
 
-// DeployEnvironment mocks base method
-func (m *Mockdeployer) DeployEnvironment(env *deploy.CreateEnvironmentInput) error {
+// DeployAndRenderEnvironment mocks base method
+func (m *Mockdeployer) DeployAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeployEnvironment", env)
+	ret := m.ctrl.Call(m, "DeployAndRenderEnvironment", out, env)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeployEnvironment indicates an expected call of DeployEnvironment
-func (mr *MockdeployerMockRecorder) DeployEnvironment(env interface{}) *gomock.Call {
+// DeployAndRenderEnvironment indicates an expected call of DeployAndRenderEnvironment
+func (mr *MockdeployerMockRecorder) DeployAndRenderEnvironment(out, env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEnvironment", reflect.TypeOf((*Mockdeployer)(nil).DeployEnvironment), env)
-}
-
-// StreamEnvironmentCreation mocks base method
-func (m *Mockdeployer) StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StreamEnvironmentCreation", env)
-	ret0, _ := ret[0].(<-chan []deploy.ResourceEvent)
-	ret1, _ := ret[1].(<-chan deploy.CreateEnvironmentResponse)
-	return ret0, ret1
-}
-
-// StreamEnvironmentCreation indicates an expected call of StreamEnvironmentCreation
-func (mr *MockdeployerMockRecorder) StreamEnvironmentCreation(env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamEnvironmentCreation", reflect.TypeOf((*Mockdeployer)(nil).StreamEnvironmentCreation), env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployAndRenderEnvironment", reflect.TypeOf((*Mockdeployer)(nil).DeployAndRenderEnvironment), out, env)
 }
 
 // DeleteEnvironment mocks base method
@@ -5516,4 +5487,41 @@ func (mr *MockrunningTaskSelectorMockRecorder) RunningTask(prompt, help interfac
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{prompt, help}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunningTask", reflect.TypeOf((*MockrunningTaskSelector)(nil).RunningTask), varargs...)
+}
+
+// MockdockerEngineValidator is a mock of dockerEngineValidator interface
+type MockdockerEngineValidator struct {
+	ctrl     *gomock.Controller
+	recorder *MockdockerEngineValidatorMockRecorder
+}
+
+// MockdockerEngineValidatorMockRecorder is the mock recorder for MockdockerEngineValidator
+type MockdockerEngineValidatorMockRecorder struct {
+	mock *MockdockerEngineValidator
+}
+
+// NewMockdockerEngineValidator creates a new mock instance
+func NewMockdockerEngineValidator(ctrl *gomock.Controller) *MockdockerEngineValidator {
+	mock := &MockdockerEngineValidator{ctrl: ctrl}
+	mock.recorder = &MockdockerEngineValidatorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockdockerEngineValidator) EXPECT() *MockdockerEngineValidatorMockRecorder {
+	return m.recorder
+}
+
+// CheckDockerEngineRunning mocks base method
+func (m *MockdockerEngineValidator) CheckDockerEngineRunning() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckDockerEngineRunning")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckDockerEngineRunning indicates an expected call of CheckDockerEngineRunning
+func (mr *MockdockerEngineValidatorMockRecorder) CheckDockerEngineRunning() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDockerEngineRunning", reflect.TypeOf((*MockdockerEngineValidator)(nil).CheckDockerEngineRunning))
 }

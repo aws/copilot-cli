@@ -74,13 +74,10 @@ func TestCloudFormation_UpdatePipeline(t *testing.T) {
 	in := &deploy.CreatePipelineInput{
 		AppName: "kudos",
 		Name:    "cicd",
-		Source: &deploy.Source{
-			ProviderName: "GitHub",
-			Properties: map[string]interface{}{
-				"repository":          "aws/somethingCool",
-				"access_token_secret": "github-token-badgoose-backend",
-				"branch":              "main",
-			},
+		Source: &deploy.GitHubSource{
+			RepositoryURL:               "aws/somethingCool",
+			PersonalAccessTokenSecretID: "github-token-badgoose-backend",
+			Branch:                      "main",
 		},
 		Stages:          nil,
 		ArtifactBuckets: nil,

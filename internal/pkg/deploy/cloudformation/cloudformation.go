@@ -6,6 +6,7 @@ package cloudformation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -15,12 +16,17 @@ import (
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/templates"
 	"github.com/gobuffalo/packd"
 	"golang.org/x/sync/errgroup"
+)
+
+const (
+	// waitForStackTimeout is how long we're willing to wait for a stack to go from in progress to a complete state.
+	waitForStackTimeout = 1*time.Hour + 30*time.Minute
 )
 
 // StackConfiguration represents the set of methods needed to deploy a cloudformation stack.
@@ -46,6 +52,7 @@ type cfnClient interface {
 	DescribeChangeSet(changeSetID, stackName string) (*cloudformation.ChangeSetDescription, error)
 	TemplateBody(stackName string) (string, error)
 	Events(stackName string) ([]cloudformation.StackEvent, error)
+	ListStacksWithTags(tags map[string]string) ([]cloudformation.StackDescription, error)
 	ErrorEvents(stackName string) ([]cloudformation.StackEvent, error)
 
 	// Methods vended by the aws sdk struct.
@@ -83,46 +90,18 @@ func New(sess *session.Session) CloudFormation {
 	}
 }
 
-// ErrorEvents returns the list of CloudFormation Resource Events, filtered by failures and errors.
-func (cf CloudFormation) ErrorEvents(conf StackConfiguration) ([]deploy.ResourceEvent, error) {
+// errorEvents returns the list of status reasons of failed resource events
+func (cf CloudFormation) errorEvents(conf StackConfiguration) ([]string, error) {
 	events, err := cf.cfnClient.ErrorEvents(conf.StackName())
 	if err != nil {
 		return nil, err
 	}
-	var transformedEvents []deploy.ResourceEvent
-	for _, cfEvent := range events {
-		transformedEvents = append(transformedEvents, transformEvent(cfEvent))
+	var reasons []string
+	for _, event := range events {
+		// CFN error messages end with a '. (Service' and only the first sentence is useful, the rest is error codes.
+		reasons = append(reasons, strings.Split(aws.StringValue(event.ResourceStatusReason), ". (Service")[0])
 	}
-	return transformedEvents, nil
-}
-
-// streamResourceEvents sends a list of ResourceEvent every 3 seconds to the events channel.
-// The events channel is closed only when the done channel receives a message.
-// If an error occurs while describing stack events, it is ignored so that the stream is not interrupted.
-func (cf CloudFormation) streamResourceEvents(done <-chan struct{}, events chan []deploy.ResourceEvent, stackName string) {
-	sendStatusUpdates := func() {
-		// Send a list of ResourceEvent to events if there was no error.
-		cfEvents, err := cf.cfnClient.Events(stackName)
-		if err != nil {
-			return
-		}
-		var transformedEvents []deploy.ResourceEvent
-		for _, cfEvent := range cfEvents {
-			transformedEvents = append(transformedEvents, transformEvent(cfEvent))
-		}
-		events <- transformedEvents
-	}
-	for {
-		timeout := time.After(3 * time.Second)
-		select {
-		case <-timeout:
-			sendStatusUpdates()
-		case <-done:
-			sendStatusUpdates() // Send last batch of updates.
-			close(events)       // Close the channel to let receivers know that there won't be any more events.
-			return              // Exit for-loop.
-		}
-	}
+	return reasons, nil
 }
 
 type renderStackChangesInput struct {
@@ -130,7 +109,6 @@ type renderStackChangesInput struct {
 	stackName        string
 	stackDescription string
 	createChangeSet  func() (string, error)
-	waitForStack     func(context.Context, string) error
 }
 
 func (cf CloudFormation) renderStackChanges(in renderStackChangesInput) error {
@@ -138,51 +116,59 @@ func (cf CloudFormation) renderStackChanges(in renderStackChangesInput) error {
 	if err != nil {
 		return err
 	}
-	changeSet, err := cf.cfnClient.DescribeChangeSet(changeSetID, in.stackName)
+	waitCtx, cancelWait := context.WithTimeout(context.Background(), waitForStackTimeout)
+	defer cancelWait()
+	g, ctx := errgroup.WithContext(waitCtx)
+
+	renderer, err := cf.createStackRenderer(g, ctx, changeSetID, in.stackName, in.stackDescription, progress.RenderOptions{})
 	if err != nil {
 		return err
 	}
-	body, err := cf.cfnClient.TemplateBody(in.stackName)
-	if err != nil {
+	g.Go(func() error {
+		return progress.Render(ctx, progress.NewTabbedFileWriter(in.w), renderer)
+	})
+	if err := g.Wait(); err != nil {
 		return err
+	}
+	if err := cf.errOnFailedStack(in.stackName); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (cf CloudFormation) createStackRenderer(group *errgroup.Group, ctx context.Context, changeSetID, stackName, description string, opts progress.RenderOptions) (progress.DynamicRenderer, error) {
+	changeSet, err := cf.cfnClient.DescribeChangeSet(changeSetID, stackName)
+	if err != nil {
+		return nil, err
+	}
+	body, err := cf.cfnClient.TemplateBody(stackName)
+	if err != nil {
+		return nil, err
 	}
 	descriptions, err := cloudformation.ParseTemplateDescriptions(body)
 	if err != nil {
-		return fmt.Errorf("parse cloudformation template for resource descriptions: %w", err)
+		return nil, fmt.Errorf("parse cloudformation template for resource descriptions: %w", err)
 	}
 
-	waitCtx, cancelWait := context.WithCancel(context.Background())
-	streamer := stream.NewStackStreamer(cf.cfnClient, in.stackName, changeSet.CreationTime)
-	renderer := progress.ListeningStackRenderer(streamer, in.stackName, in.stackDescription, resourcesToRender(changeSet.Changes, descriptions))
-
-	// Run the streamer, renderer, and waiter all concurrently until they all exit successfully or one of them errors.
-	// When the waiter exits, the waitCtx is canceled which results in the streamer and renderer to exit.
-	// When the streamer exits, the group ctx is canceled resulting in the waiter to exit and canceling the renderer.
-	// When the renderer exits, it's the same flow as the streamer.
-	g, ctx := errgroup.WithContext(waitCtx)
-	g.Go(func() error {
-		defer cancelWait()
-		return in.waitForStack(ctx, in.stackName)
+	streamer := stream.NewStackStreamer(cf.cfnClient, stackName, changeSet.CreationTime)
+	children := changeRenderers(streamer, changeSet.Changes, descriptions, progress.NestedRenderOptions(opts))
+	renderer := progress.ListeningStackRenderer(streamer, stackName, description, children, opts)
+	group.Go(func() error {
+		return stream.Stream(ctx, streamer)
 	})
-	g.Go(func() error {
-		return stream.Stream(waitCtx, streamer)
-	})
-	g.Go(func() error {
-		return progress.Render(waitCtx, progress.NewTabbedFileWriter(in.w), renderer)
-	})
-	return g.Wait()
+	return renderer, nil
 }
 
-func transformEvent(input cloudformation.StackEvent) deploy.ResourceEvent {
-	return deploy.ResourceEvent{
-		Resource: deploy.Resource{
-			LogicalName: aws.StringValue(input.LogicalResourceId),
-			Type:        aws.StringValue(input.ResourceType),
-		},
-		Status: aws.StringValue(input.ResourceStatus),
-		// CFN error messages end with a '. (Service' and only the first sentence is useful, the rest is error codes.
-		StatusReason: strings.Split(aws.StringValue(input.ResourceStatusReason), ". (Service")[0],
+func (cf CloudFormation) errOnFailedStack(stackName string) error {
+	stack, err := cf.cfnClient.Describe(stackName)
+	if err != nil {
+		return err
 	}
+	status := aws.StringValue(stack.StackStatus)
+	if cloudformation.StackStatus(status).Failure() {
+		return fmt.Errorf("stack %s did not complete successfully and exited with status %s", stackName, status)
+	}
+	return nil
 }
 
 func toStack(config StackConfiguration) (*cloudformation.Stack, error) {
@@ -207,20 +193,29 @@ func toMap(tags []*sdkcloudformation.Tag) map[string]string {
 	return m
 }
 
-// resourcesToRender filters changes by resources that have a description.
-func resourcesToRender(changes []*sdkcloudformation.Change, descriptions map[string]string) []progress.StackResourceDescription {
-	var resources []progress.StackResourceDescription
+// changeRenderers filters changes by resources that have a description and returns the appropriate progress.Renderer for each resource type.
+func changeRenderers(streamer progress.StackSubscriber, changes []*sdkcloudformation.Change, descriptions map[string]string, opts progress.RenderOptions) []progress.Renderer {
+	var resources []progress.Renderer
 	for _, change := range changes {
 		logicalID := aws.StringValue(change.ResourceChange.LogicalResourceId)
 		description, ok := descriptions[logicalID]
 		if !ok {
 			continue
 		}
-		resources = append(resources, progress.StackResourceDescription{
-			LogicalResourceID: logicalID,
-			ResourceType:      aws.StringValue(change.ResourceChange.PhysicalResourceId),
-			Description:       description,
-		})
+		resources = append(resources, progress.ListeningResourceRenderer(streamer, logicalID, description, progress.NestedRenderOptions(opts)))
 	}
 	return resources
+}
+
+func stopSpinner(spinner *progress.Spinner, err error, label string) {
+	if err == nil {
+		spinner.Stop(log.Ssuccessf("%s\n", label))
+		return
+	}
+	var existsErr *cloudformation.ErrStackAlreadyExists
+	if errors.As(err, &existsErr) {
+		spinner.Stop(log.Ssuccessf("%s\n", label))
+		return
+	}
+	spinner.Stop(log.Serrorf("%s\n", label))
 }

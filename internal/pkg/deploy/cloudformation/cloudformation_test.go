@@ -4,7 +4,6 @@
 package cloudformation
 
 import (
-	"context"
 	"errors"
 	"io"
 	"strings"
@@ -32,6 +31,7 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 
 		// WHEN
 		in := renderStackChangesInput{
+			w: mockFileWriter{Writer: new(strings.Builder)},
 			createChangeSet: func() (string, error) {
 				return "", errors.New("createChangeSet error")
 			},
@@ -51,6 +51,7 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 
 		// WHEN
 		in := renderStackChangesInput{
+			w: mockFileWriter{Writer: new(strings.Builder)},
 			createChangeSet: func() (string, error) {
 				return "", nil
 			},
@@ -71,6 +72,7 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 
 		// WHEN
 		in := renderStackChangesInput{
+			w: mockFileWriter{Writer: new(strings.Builder)},
 			createChangeSet: func() (string, error) {
 				return "", nil
 			},
@@ -80,33 +82,7 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 		// THEN
 		require.EqualError(t, err, "TemplateBody error")
 	})
-	t.Run("bubbles up waiter error and cancels streamers and renderer on waiter error", func(t *testing.T) {
-		// GIVEN
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		m := mocks.NewMockcfnClient(ctrl)
-		m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(&cloudformation.ChangeSetDescription{}, nil)
-		m.EXPECT().TemplateBody(gomock.Any()).Return("", nil)
-		m.EXPECT().DescribeStackEvents(gomock.Any()).Return(&sdkcloudformation.DescribeStackEventsOutput{}, nil).AnyTimes()
-		client := CloudFormation{cfnClient: m}
-		buf := new(strings.Builder)
-
-		// WHEN
-		in := renderStackChangesInput{
-			w: mockFileWriter{Writer: buf},
-			createChangeSet: func() (string, error) {
-				return "", nil
-			},
-			waitForStack: func(ctx context.Context, s string) error {
-				return errors.New("waiter error")
-			},
-		}
-		err := client.renderStackChanges(in)
-
-		// THEN
-		require.EqualError(t, err, "waiter error")
-	})
-	t.Run("bubbles up streamer error and cancels waiter and renderer on streamer error", func(t *testing.T) {
+	t.Run("bubbles up streamer error and cancels renderer", func(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -124,21 +100,51 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 			createChangeSet: func() (string, error) {
 				return "", nil
 			},
-			waitForStack: func(ctx context.Context, s string) error {
-				select {
-				case <-time.After(10 * time.Second):
-					return errors.New("expected waitForStack to be canceled, instead we waited for a timeout")
-				case <-ctx.Done():
-					return nil
-				}
-			},
 		}
 		err := client.renderStackChanges(in)
 
 		// THEN
 		require.True(t, errors.Is(err, wantedErr), "expected streamer error to be wrapped and returned")
 	})
-	t.Run("renders a resource on success", func(t *testing.T) {
+	t.Run("renders the stack and its resources until stack fails and return an error", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		m := mocks.NewMockcfnClient(ctrl)
+		m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(&cloudformation.ChangeSetDescription{}, nil)
+		m.EXPECT().TemplateBody(gomock.Any()).Return("", nil)
+		m.EXPECT().DescribeStackEvents(gomock.Any()).Return(&sdkcloudformation.DescribeStackEventsOutput{
+			StackEvents: []*sdkcloudformation.StackEvent{
+				{
+					EventId:            aws.String("2"),
+					LogicalResourceId:  aws.String("phonetool-test"),
+					PhysicalResourceId: aws.String("AWS::CloudFormation::Stack"),
+					ResourceStatus:     aws.String("CREATE_FAILED"), // Send failure event for stack.
+					Timestamp:          aws.Time(time.Now()),
+				},
+			},
+		}, nil).AnyTimes()
+		m.EXPECT().Describe("phonetool-test").Return(&cloudformation.StackDescription{
+			StackStatus: aws.String("CREATE_FAILED"),
+		}, nil)
+		client := CloudFormation{cfnClient: m}
+		buf := new(strings.Builder)
+
+		// WHEN
+		in := renderStackChangesInput{
+			w:                mockFileWriter{Writer: buf},
+			stackName:        "phonetool-test",
+			stackDescription: "Creating phonetool-test environment.",
+			createChangeSet: func() (string, error) {
+				return "1234", nil
+			},
+		}
+		err := client.renderStackChanges(in)
+
+		// THEN
+		require.EqualError(t, err, "stack phonetool-test did not complete successfully and exited with status CREATE_FAILED")
+	})
+	t.Run("renders the stack and its resource on success", func(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -163,14 +169,24 @@ Resources:
 		}).Return(&sdkcloudformation.DescribeStackEventsOutput{
 			StackEvents: []*sdkcloudformation.StackEvent{
 				{
-					EventId:            aws.String("some event id"),
+					EventId:            aws.String("1"),
 					LogicalResourceId:  aws.String("Cluster"),
 					PhysicalResourceId: aws.String("AWS::ECS::Cluster"),
 					ResourceStatus:     aws.String("CREATE_COMPLETE"),
 					Timestamp:          aws.Time(time.Now()),
 				},
+				{
+					EventId:            aws.String("2"),
+					LogicalResourceId:  aws.String("phonetool-test"),
+					PhysicalResourceId: aws.String("AWS::CloudFormation::Stack"),
+					ResourceStatus:     aws.String("CREATE_COMPLETE"),
+					Timestamp:          aws.Time(time.Now()),
+				},
 			},
 		}, nil).AnyTimes()
+		m.EXPECT().Describe("phonetool-test").Return(&cloudformation.StackDescription{
+			StackStatus: aws.String("CREATE_COMPLETE"),
+		}, nil)
 		client := CloudFormation{cfnClient: m}
 		buf := new(strings.Builder)
 
@@ -181,9 +197,6 @@ Resources:
 			stackDescription: "Creating phonetool-test environment.",
 			createChangeSet: func() (string, error) {
 				return "1234", nil
-			},
-			waitForStack: func(ctx context.Context, s string) error {
-				return nil
 			},
 		}
 		err := client.renderStackChanges(in)

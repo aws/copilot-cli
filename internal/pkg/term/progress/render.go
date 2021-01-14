@@ -11,19 +11,35 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/cursor"
 )
 
-const (
-	renderInterval = 100 * time.Millisecond // How frequently Render should be invoked.
-)
-
 // Renderer is the interface to print a component to a writer.
 // It returns the number of lines printed and the error if any.
 type Renderer interface {
 	Render(out io.Writer) (numLines int, err error)
 }
 
-// Render renders r periodically to out until the ctx is canceled or an error occurs.
+// DynamicRenderer is a Renderer that can notify that its internal states are Done updating.
+// DynamicRenderer is implemented by components that listen to events from a streamer and update their state.
+type DynamicRenderer interface {
+	Renderer
+	Done() <-chan struct{}
+}
+
+// RenderOptions holds optional style configuration for renderers.
+type RenderOptions struct {
+	Padding int // Leading spaces before rendering the component.
+}
+
+// NestedRenderOptions takes a RenderOptions and returns the same RenderOptions but with additional padding.
+func NestedRenderOptions(opts RenderOptions) RenderOptions {
+	return RenderOptions{
+		Padding: opts.Padding + nestedComponentPadding,
+	}
+}
+
+// Render renders r periodically to out.
+// Render stops when there the ctx is canceled or r is done listening to new events.
 // While Render is executing, the terminal cursor is hidden and updates are written in-place.
-func Render(ctx context.Context, out FileWriteFlusher, r Renderer) error {
+func Render(ctx context.Context, out FileWriteFlusher, r DynamicRenderer) error {
 	cursor := cursor.NewWithWriter(out)
 	cursor.Hide()
 	defer cursor.Show()
@@ -32,6 +48,8 @@ func Render(ctx context.Context, out FileWriteFlusher, r Renderer) error {
 	for {
 		select {
 		case <-ctx.Done():
+			return ctx.Err()
+		case <-r.Done():
 			if _, err := eraseAndRender(out, r, writtenLines); err != nil {
 				return err
 			}

@@ -25,57 +25,28 @@ const (
 	albWorkloadsParamKey        = "ALBWorkloads"
 )
 
-// DeployEnvironment creates the CloudFormation stack for an environment by creating and executing a change set.
-//
-// If the deployment succeeds, returns nil.
-// If the stack already exists, returns a ErrStackAlreadyExists.
-// If the change set to create the stack cannot be executed, returns a ErrNotExecutableChangeSet.
-// Otherwise, returns a wrapped error.
-func (cf CloudFormation) DeployEnvironment(env *deploy.CreateEnvironmentInput) error {
-	s, err := toStack(stack.NewEnvStackConfig(env))
-	if err != nil {
-		return err
-	}
-	if _, err := cf.cfnClient.Create(s); err != nil {
-		return err
-	}
-	return nil
-}
-
 // DeployAndRenderEnvironment creates the CloudFormation stack for an environment, and render the stack creation to out.
 func (cf CloudFormation) DeployAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
 	s, err := toStack(stack.NewEnvStackConfig(env))
 	if err != nil {
 		return err
 	}
+	spinner := progress.NewSpinner(out)
 	return cf.renderStackChanges(renderStackChangesInput{
 		w:                out,
 		stackName:        s.Name,
 		stackDescription: fmt.Sprintf("Creating the infrastructure for the %s environment.", s.Name),
-		createChangeSet: func() (string, error) {
-			changeSetID, err := cf.cfnClient.Create(s)
+		createChangeSet: func() (changeSetID string, err error) {
+			label := fmt.Sprintf("Proposing infrastructure changes for the %s environment.", s.Name)
+			spinner.Start(label)
+			defer stopSpinner(spinner, err, label)
+			changeSetID, err = cf.cfnClient.Create(s)
 			if err != nil {
 				return "", err
 			}
 			return changeSetID, nil
 		},
-		waitForStack: cf.cfnClient.WaitForCreate,
 	})
-}
-
-// StreamEnvironmentCreation streams resource update events while a deployment is taking place.
-// Once the CloudFormation stack operation halts, the update channel is closed and a
-// CreateEnvironmentResponse is sent to the second channel.
-// Deprecated: Use stream.Stream with a stream.StackStreamer instead.
-func (cf CloudFormation) StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse) {
-	done := make(chan struct{})
-	events := make(chan []deploy.ResourceEvent)
-	resp := make(chan deploy.CreateEnvironmentResponse, 1)
-
-	stack := stack.NewEnvStackConfig(env)
-	go cf.streamResourceEvents(done, events, stack.StackName())
-	go cf.streamEnvironmentResponse(done, resp, stack)
-	return events, resp
 }
 
 // DeleteEnvironment deletes the CloudFormation stack of an environment.
@@ -85,26 +56,6 @@ func (cf CloudFormation) DeleteEnvironment(appName, envName, cfnExecRoleARN stri
 		Name:    envName,
 	})
 	return cf.cfnClient.DeleteAndWaitWithRoleARN(conf.StackName(), cfnExecRoleARN)
-}
-
-// streamEnvironmentResponse sends a CreateEnvironmentResponse to the response channel once the stack creation halts.
-// The done channel is closed once this method exits to notify other streams that they should stop working.
-func (cf CloudFormation) streamEnvironmentResponse(done chan struct{}, resp chan deploy.CreateEnvironmentResponse, stack *stack.EnvStackConfig) {
-	defer close(done)
-	if err := cf.cfnClient.WaitForCreate(context.Background(), stack.StackName()); err != nil {
-		resp <- deploy.CreateEnvironmentResponse{Err: err}
-		return
-	}
-	descr, err := cf.cfnClient.Describe(stack.StackName())
-	if err != nil {
-		resp <- deploy.CreateEnvironmentResponse{Err: err}
-		return
-	}
-	env, err := stack.ToEnv(descr.SDK())
-	resp <- deploy.CreateEnvironmentResponse{
-		Env: env,
-		Err: err,
-	}
 }
 
 // GetEnvironment returns the Environment metadata from the CloudFormation stack.
