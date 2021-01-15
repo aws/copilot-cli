@@ -8,9 +8,13 @@ import (
 	"fmt"
 
 	awssession "github.com/aws/aws-sdk-go/aws/session"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+
+	// "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -49,7 +53,11 @@ type deleteTaskOpts struct {
 	sel    wsSelector
 
 	// Generators for env-specific clients
-	newTaskSel func(session *awssession.Session) cfTaskSelector
+	newTaskSel     func(session *awssession.Session) cfTaskSelector
+	newTaskStopper func(session *awssession.Session) tasksStopper
+	newTaskLister  func(session *awssession.Session) tasksLister
+	// newImageRemover func(session *awssession.Session) imageRemover
+	// newTaskDeleter  func(session *awssession.Session) taskDeployer
 }
 
 func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
@@ -78,6 +86,18 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 			cfn := cloudformation.New(session)
 			return selector.NewCFTaskSelect(prompter, store, cfn)
 		},
+		newTaskLister: func(session *awssession.Session) tasksLister {
+			return ecs.New(session)
+		},
+		newTaskStopper: func(session *awssession.Session) tasksStopper {
+			return awsecs.New(session)
+		},
+		// newTaskDeleter: func(session *awssession.Session) taskDeployer {
+		// 	return cloudformation.New(session)
+		// },
+		// newImageRemover: func(session *awssession.Session) imageRemover {
+		// 	return ecr.New(session)
+		// },
 	}, nil
 }
 
@@ -274,9 +294,36 @@ func (o *deleteTaskOpts) askTaskName() error {
 }
 
 func (o *deleteTaskOpts) Execute() error {
+	// Convert task name to task group name and cf stack name
+
 	// Get clients.
+	sess, err := o.getSession()
+	if err != nil {
+		return fmt.Errorf("get session: %w", err)
+	}
+	// taskStopper := o.newTaskStopper(sess)
+	taskLister := o.newTaskLister(sess)
 
 	// Stop tasks.
+	if o.defaultCluster {
+		tasks, err := taskLister.ListActiveDefaultClusterTasks(ecs.ListTasksFilter{})
+		if err != nil {
+			return fmt.Errorf("list running tasks in default cluster: %w", err)
+		}
+		log.Infoln(fmt.Sprintf("%v", tasks))
+	} else {
+		tasks, err := taskLister.ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
+			App: o.app,
+			Env: o.env,
+			ListTasksFilter: ecs.ListTasksFilter{
+				TaskGroup: o.name,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("list running tasks in default cluster: %w", err)
+		}
+		log.Infoln(fmt.Sprintf("%v", tasks))
+	}
 
 	// Clear repository.
 
