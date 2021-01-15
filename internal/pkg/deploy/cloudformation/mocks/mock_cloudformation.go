@@ -289,6 +289,21 @@ func (mr *MockcfnClientMockRecorder) TemplateBody(stackName interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TemplateBody", reflect.TypeOf((*MockcfnClient)(nil).TemplateBody), stackName)
 }
 
+// TemplateBodyFromChangeSet mocks base method
+func (m *MockcfnClient) TemplateBodyFromChangeSet(changeSetID, stackName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TemplateBodyFromChangeSet", changeSetID, stackName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TemplateBodyFromChangeSet indicates an expected call of TemplateBodyFromChangeSet
+func (mr *MockcfnClientMockRecorder) TemplateBodyFromChangeSet(changeSetID, stackName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TemplateBodyFromChangeSet", reflect.TypeOf((*MockcfnClient)(nil).TemplateBodyFromChangeSet), changeSetID, stackName)
+}
+
 // Events mocks base method
 func (m *MockcfnClient) Events(stackName string) ([]cloudformation0.StackEvent, error) {
 	m.ctrl.T.Helper()

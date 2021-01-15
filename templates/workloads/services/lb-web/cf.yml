@@ -124,9 +124,6 @@ Resources:
     DependsOn: WaitUntilListenerRuleIsCreated
     Properties:
 {{include "service-base-properties" . | indent 6}}
-      DeploymentConfiguration:
-        MinimumHealthyPercent: 100
-        MaximumPercent: 200
       # This may need to be adjusted if the container takes a while to start up
       HealthCheckGracePeriodSeconds: 60
       LoadBalancers:

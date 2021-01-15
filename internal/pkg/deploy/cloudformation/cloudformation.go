@@ -51,6 +51,7 @@ type cfnClient interface {
 	Describe(stackName string) (*cloudformation.StackDescription, error)
 	DescribeChangeSet(changeSetID, stackName string) (*cloudformation.ChangeSetDescription, error)
 	TemplateBody(stackName string) (string, error)
+	TemplateBodyFromChangeSet(changeSetID, stackName string) (string, error)
 	Events(stackName string) ([]cloudformation.StackEvent, error)
 	ListStacksWithTags(tags map[string]string) ([]cloudformation.StackDescription, error)
 	ErrorEvents(stackName string) ([]cloudformation.StackEvent, error)
@@ -141,7 +142,7 @@ func (cf CloudFormation) createStackRenderer(group *errgroup.Group, ctx context.
 	if err != nil {
 		return nil, err
 	}
-	body, err := cf.cfnClient.TemplateBody(stackName)
+	body, err := cf.cfnClient.TemplateBodyFromChangeSet(changeSetID, stackName)
 	if err != nil {
 		return nil, err
 	}
@@ -151,12 +152,60 @@ func (cf CloudFormation) createStackRenderer(group *errgroup.Group, ctx context.
 	}
 
 	streamer := stream.NewStackStreamer(cf.cfnClient, stackName, changeSet.CreationTime)
-	children := changeRenderers(streamer, changeSet.Changes, descriptions, progress.NestedRenderOptions(opts))
+	children, err := cf.changeRenderers(changeRenderersInput{
+		g:             group,
+		ctx:           ctx,
+		stackStreamer: streamer,
+		changes:       changeSet.Changes,
+		descriptions:  descriptions,
+		opts:          progress.NestedRenderOptions(opts),
+	})
+	if err != nil {
+		return nil, err
+	}
 	renderer := progress.ListeningStackRenderer(streamer, stackName, description, children, opts)
 	group.Go(func() error {
 		return stream.Stream(ctx, streamer)
 	})
 	return renderer, nil
+}
+
+type changeRenderersInput struct {
+	g             *errgroup.Group             // Group that all goroutines belong.
+	ctx           context.Context             // Context associated with the group.
+	stackStreamer progress.StackSubscriber    // Streamer for the stack where changes belong.
+	changes       []*sdkcloudformation.Change // List of changes that will be applied to the stack.
+	descriptions  map[string]string           // Descriptions for the logical IDs of the changes.
+	opts          progress.RenderOptions      // Display options that should be applied to the changes.
+}
+
+// changeRenderers filters changes by resources that have a description and returns the appropriate progress.Renderer for each resource type.
+func (cf CloudFormation) changeRenderers(in changeRenderersInput) ([]progress.Renderer, error) {
+	var resources []progress.Renderer
+	for _, change := range in.changes {
+		logicalID := aws.StringValue(change.ResourceChange.LogicalResourceId)
+		description, ok := in.descriptions[logicalID]
+		if !ok {
+			continue
+		}
+		var renderer progress.Renderer
+		switch {
+		case change.ResourceChange.ChangeSetId != nil:
+			// The resource change is a nested stack.
+			changeSetID := aws.StringValue(change.ResourceChange.ChangeSetId)
+			stackName := parseStackNameFromARN(aws.StringValue(change.ResourceChange.PhysicalResourceId))
+
+			r, err := cf.createStackRenderer(in.g, in.ctx, changeSetID, stackName, description, in.opts)
+			if err != nil {
+				return nil, err
+			}
+			renderer = r
+		default:
+			renderer = progress.ListeningResourceRenderer(in.stackStreamer, logicalID, description, in.opts)
+		}
+		resources = append(resources, renderer)
+	}
+	return resources, nil
 }
 
 func (cf CloudFormation) errOnFailedStack(stackName string) error {
@@ -193,18 +242,10 @@ func toMap(tags []*sdkcloudformation.Tag) map[string]string {
 	return m
 }
 
-// changeRenderers filters changes by resources that have a description and returns the appropriate progress.Renderer for each resource type.
-func changeRenderers(streamer progress.StackSubscriber, changes []*sdkcloudformation.Change, descriptions map[string]string, opts progress.RenderOptions) []progress.Renderer {
-	var resources []progress.Renderer
-	for _, change := range changes {
-		logicalID := aws.StringValue(change.ResourceChange.LogicalResourceId)
-		description, ok := descriptions[logicalID]
-		if !ok {
-			continue
-		}
-		resources = append(resources, progress.ListeningResourceRenderer(streamer, logicalID, description, progress.NestedRenderOptions(opts)))
-	}
-	return resources
+// parseStackNameFromARN retrieves "my-nested-stack" from an input like:
+// arn:aws:cloudformation:us-west-2:123456789012:stack/my-nested-stack/d0a825a0-e4cd-xmpl-b9fb-061c69e99205
+func parseStackNameFromARN(stackARN string) string {
+	return strings.Split(stackARN, "/")[1]
 }
 
 func stopSpinner(spinner *progress.Spinner, err error, label string) {

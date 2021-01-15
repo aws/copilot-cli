@@ -111,9 +111,6 @@ Resources:
     Type: AWS::ECS::Service
     Properties:
 {{include "service-base-properties" . | indent 6}}
-      DeploymentConfiguration:
-        MinimumHealthyPercent: 100
-        MaximumPercent: 200
       ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref ContainerPort}], !Ref "AWS::NoValue"]
 
 {{include "addons" . | indent 2}}
