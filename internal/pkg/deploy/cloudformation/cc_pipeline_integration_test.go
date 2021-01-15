@@ -160,7 +160,7 @@ func TestCCPipelineCreation(t *testing.T) {
 			Source: &deploy.CodeCommitSource{
 				ProviderName:  manifest.CodeCommitProviderName,
 				Branch:        "master",
-				RepositoryURL: "https://us-west-2.console.aws.amazon.com/codesuite/codecommit/repositories/aws-sample/browse",
+				RepositoryURL: "https://us-west-2.console.aws.amazon.com/codesuite/codecommit/repositories/repo-name/browse",
 			},
 			Stages: []deploy.PipelineStage{
 				{
