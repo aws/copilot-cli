@@ -14,8 +14,8 @@ import (
 
 // Paths of workload cloudformation templates under templates/workloads/.
 const (
-	fmtWkldCFTemplatePath       = "workloads/%s/%s/cf.yml"
-	fmtWkldCommonCFTemplatePath = "workloads/common/cf/%s.yml"
+	fmtWkldCFTemplatePath         = "workloads/%s/%s/cf.yml"
+	fmtWkldPartialsCFTemplatePath = "workloads/partials/cf/%s.yml"
 )
 
 const (
@@ -24,8 +24,8 @@ const (
 )
 
 var (
-	// Template names under "workloads/common/cf/".
-	commonWorkloadCFTemplateNames = []string{
+	// Template names under "workloads/partials/cf/".
+	partialsWorkloadCFTemplateNames = []string{
 		"loggroup",
 		"envvars",
 		"secrets",
@@ -161,8 +161,8 @@ func (t *Template) parseWkld(name, wkldDirName string, data interface{}, options
 	if err != nil {
 		return nil, err
 	}
-	for _, templateName := range commonWorkloadCFTemplateNames {
-		nestedTpl, err := t.parse(templateName, fmt.Sprintf(fmtWkldCommonCFTemplatePath, templateName), options...)
+	for _, templateName := range partialsWorkloadCFTemplateNames {
+		nestedTpl, err := t.parse(templateName, fmt.Sprintf(fmtWkldPartialsCFTemplatePath, templateName), options...)
 		if err != nil {
 			return nil, err
 		}
