@@ -76,7 +76,7 @@ func newTaskExecOpts(vars taskExecVars) (*taskExecOpts, error) {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *taskExecOpts) Validate() error {
-	if o.useDefault && (o.appName != "" || o.envName != "") {
+	if o.useDefault && (o.appName != tryReadingAppName() || o.envName != "") {
 		return fmt.Errorf("cannot specify both default flag and app or env flags")
 	}
 	if o.appName != "" {
