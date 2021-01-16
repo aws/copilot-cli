@@ -3503,20 +3503,6 @@ func (mr *MocktaskDeployerMockRecorder) DeployTask(input interface{}, opts ...in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeployTask), varargs...)
 }
 
-// DeleteTask mocks base method
-func (m *MocktaskDeployer) DeleteTask(task deploy.TaskStackInfo) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteTask", task)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteTask indicates an expected call of DeleteTask
-func (mr *MocktaskDeployerMockRecorder) DeleteTask(task interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeleteTask), task)
-}
-
 // MocktaskRunner is a mock of taskRunner interface
 type MocktaskRunner struct {
 	ctrl     *gomock.Controller
@@ -5337,59 +5323,6 @@ func (mr *MocktasksStopperMockRecorder) StopTasks(tasks interface{}, opts ...int
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{tasks}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopTasks", reflect.TypeOf((*MocktasksStopper)(nil).StopTasks), varargs...)
-}
-
-// MocktasksLister is a mock of tasksLister interface
-type MocktasksLister struct {
-	ctrl     *gomock.Controller
-	recorder *MocktasksListerMockRecorder
-}
-
-// MocktasksListerMockRecorder is the mock recorder for MocktasksLister
-type MocktasksListerMockRecorder struct {
-	mock *MocktasksLister
-}
-
-// NewMocktasksLister creates a new mock instance
-func NewMocktasksLister(ctrl *gomock.Controller) *MocktasksLister {
-	mock := &MocktasksLister{ctrl: ctrl}
-	mock.recorder = &MocktasksListerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MocktasksLister) EXPECT() *MocktasksListerMockRecorder {
-	return m.recorder
-}
-
-// RunningTasksInFamily mocks base method
-func (m *MocktasksLister) RunningTasksInFamily(cluster, family string) ([]*ecs.Task, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RunningTasksInFamily", cluster, family)
-	ret0, _ := ret[0].([]*ecs.Task)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// RunningTasksInFamily indicates an expected call of RunningTasksInFamily
-func (mr *MocktasksListerMockRecorder) RunningTasksInFamily(cluster, family interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunningTasksInFamily", reflect.TypeOf((*MocktasksLister)(nil).RunningTasksInFamily), cluster, family)
-}
-
-// DefaultCluster mocks base method
-func (m *MocktasksLister) DefaultCluster() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DefaultCluster")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DefaultCluster indicates an expected call of DefaultCluster
-func (mr *MocktasksListerMockRecorder) DefaultCluster() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultCluster", reflect.TypeOf((*MocktasksLister)(nil).DefaultCluster))
 }
 
 // MockserviceLinkedRoleCreator is a mock of serviceLinkedRoleCreator interface

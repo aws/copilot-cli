@@ -45,16 +45,11 @@ type deleteTaskOpts struct {
 	// Dependencies to interact with other modules
 	store  store
 	prompt prompter
-	// spinner progress
-	sess sessionProvider
-	sel  wsSelector
+	sess   sessionProvider
+	sel    wsSelector
 
 	// Generators for env-specific clients
 	newTaskSel func(session *awssession.Session) cfTaskSelector
-	// newTaskStopper  func(session *awssession.Session) tasksStopper
-	// newTaskLister   func(session *awssession.Session) tasksLister
-	// newImageRemover func(session *awssession.Session) imageRemover
-	// newTaskDeleter  func(session *awssession.Session) taskDeployer
 }
 
 func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
@@ -75,8 +70,7 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 	return &deleteTaskOpts{
 		deleteTaskVars: vars,
 
-		store: store,
-		// spinner: termprogress.NewSpinner(log.DiagnosticWriter),
+		store:  store,
 		prompt: prompter,
 		sess:   provider,
 		sel:    selector.NewWorkspaceSelect(prompter, store, ws),
@@ -84,18 +78,6 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 			cfn := cloudformation.New(session)
 			return selector.NewCFTaskSelect(prompter, store, cfn)
 		},
-		// newTaskLister: func(session *awssession.Session) tasksLister {
-		// 	return ecs.New(session)
-		// },
-		// newTaskStopper: func(session *awssession.Session) tasksStopper {
-		// 	return ecs.New(session)
-		// },
-		// newTaskDeleter: func(session *awssession.Session) taskDeployer {
-		// 	return cloudformation.New(session)
-		// },
-		// newImageRemover: func(session *awssession.Session) imageRemover {
-		// 	return ecr.New(session)
-		// },
 	}, nil
 }
 
@@ -122,15 +104,13 @@ func (o *deleteTaskOpts) Validate() error {
 
 func (o *deleteTaskOpts) validateFlagsWithEnv() error {
 	if o.app != "" {
-		err := o.validateAppName()
-		if err != nil {
-			return err
+		if _, err := o.store.GetApplication(o.app); err != nil {
+			return fmt.Errorf("get application: %w", err)
 		}
 	}
 
-	if o.env != "" {
-		err := o.validateEnvName()
-		if err != nil {
+	if o.env != "" && o.app != "" {
+		if _, err := o.store.GetEnvironment(o.app, o.env); err != nil {
 			return err
 		}
 	}
@@ -159,29 +139,6 @@ func (o *deleteTaskOpts) validateFlagsWithDefaultCluster() error {
 	}
 
 	return nil
-}
-
-func (o *deleteTaskOpts) validateEnvName() error {
-	if _, err := o.targetEnv(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (o *deleteTaskOpts) validateAppName() error {
-	if _, err := o.store.GetApplication(o.app); err != nil {
-		return fmt.Errorf("get application: %w", err)
-	}
-	return nil
-}
-
-func (o *deleteTaskOpts) targetEnv() (*config.Environment, error) {
-	env, err := o.store.GetEnvironment(o.app, o.env)
-	if err != nil {
-		return nil, fmt.Errorf("get environment %s config: %w", o.env, err)
-	}
-	return env, nil
 }
 
 func (o *deleteTaskOpts) askAppName() error {
