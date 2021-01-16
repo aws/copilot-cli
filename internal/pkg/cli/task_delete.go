@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
 	awssession "github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -17,6 +19,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -35,6 +38,8 @@ const (
 
 var errTaskDeleteCancelled = errors.New("task delete cancelled - no changes made")
 
+var taskDeleteStopTaskReasion = "stopped via Copilot CLI pending task deletion"
+
 type deleteTaskVars struct {
 	name             string
 	app              string
@@ -47,17 +52,18 @@ type deleteTaskOpts struct {
 	deleteTaskVars
 
 	// Dependencies to interact with other modules
-	store  store
-	prompt prompter
-	sess   sessionProvider
-	sel    wsSelector
+	store   store
+	prompt  prompter
+	spinner progress
+	sess    sessionProvider
+	sel     wsSelector
 
 	// Generators for env-specific clients
-	newTaskSel     func(session *awssession.Session) cfTaskSelector
-	newTaskStopper func(session *awssession.Session) tasksStopper
-	newTaskLister  func(session *awssession.Session) tasksLister
-	// newImageRemover func(session *awssession.Session) imageRemover
-	// newTaskDeleter  func(session *awssession.Session) taskDeployer
+	newTaskSel      func(session *awssession.Session) cfTaskSelector
+	newTaskStopper  func(session *awssession.Session) tasksStopper
+	newTaskLister   func(session *awssession.Session) tasksLister
+	newImageRemover func(session *awssession.Session) imageRemover
+	newTaskDeleter  func(session *awssession.Session) taskDeployer
 }
 
 func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
@@ -78,10 +84,11 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 	return &deleteTaskOpts{
 		deleteTaskVars: vars,
 
-		store:  store,
-		prompt: prompter,
-		sess:   provider,
-		sel:    selector.NewWorkspaceSelect(prompter, store, ws),
+		store:   store,
+		spinner: termprogress.NewSpinner(log.DiagnosticWriter),
+		prompt:  prompter,
+		sess:    provider,
+		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
 		newTaskSel: func(session *awssession.Session) cfTaskSelector {
 			cfn := cloudformation.New(session)
 			return selector.NewCFTaskSelect(prompter, store, cfn)
@@ -92,12 +99,12 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 		newTaskStopper: func(session *awssession.Session) tasksStopper {
 			return awsecs.New(session)
 		},
-		// newTaskDeleter: func(session *awssession.Session) taskDeployer {
-		// 	return cloudformation.New(session)
-		// },
-		// newImageRemover: func(session *awssession.Session) imageRemover {
-		// 	return ecr.New(session)
-		// },
+		newTaskDeleter: func(session *awssession.Session) taskDeployer {
+			return cloudformation.New(session)
+		},
+		newImageRemover: func(session *awssession.Session) imageRemover {
+			return ecr.New(session)
+		},
 	}, nil
 }
 
@@ -129,9 +136,9 @@ func (o *deleteTaskOpts) validateFlagsWithEnv() error {
 		}
 	}
 
-	if o.env != "" && o.app != "" {
+	if o.app != "" && o.env != "" {
 		if _, err := o.store.GetEnvironment(o.app, o.env); err != nil {
-			return err
+			return fmt.Errorf("get environment: %w", err)
 		}
 	}
 
@@ -282,37 +289,50 @@ func (o *deleteTaskOpts) askTaskName() error {
 		if err != nil {
 			return fmt.Errorf("select task from default cluster: %w", err)
 		}
-		o.name = task.Name
+		o.name = task
 		return nil
 	}
 	task, err := sel.Task(taskDeleteNamePrompt, "", selector.TaskWithAppEnv(o.app, o.env))
 	if err != nil {
 		return fmt.Errorf("select task from environment: %w", err)
 	}
-	o.name = task.Name
+	o.name = task
 	return nil
 }
 
 func (o *deleteTaskOpts) Execute() error {
-	// Convert task name to task group name and cf stack name
 
 	// Get clients.
 	sess, err := o.getSession()
 	if err != nil {
 		return fmt.Errorf("get session: %w", err)
 	}
-	// taskStopper := o.newTaskStopper(sess)
-	taskLister := o.newTaskLister(sess)
 
-	// Stop tasks.
+	taskStopper := o.newTaskStopper(sess)
+	taskLister := o.newTaskLister(sess)
+	ecrDeleter := o.newImageRemover(sess)
+	taskDeleter := o.newTaskDeleter(sess)
+
+	// Get information about the task stack. This struct will be used to get the names of the ECR
+	// repo and task stack.
+	taskInfo, err := taskDeleter.GetTaskStack(o.name)
+	if err != nil {
+		return fmt.Errorf("error retrieving stack information for task %s: %w", o.name, err)
+	}
+
+	o.spinner.Start(fmt.Sprintf("Cleaninng up resources for task %s.", color.HighlightUserInput(o.name)))
+	// Get running tasks in family.
+	var tasks []*awsecs.Task
 	if o.defaultCluster {
-		tasks, err := taskLister.ListActiveDefaultClusterTasks(ecs.ListTasksFilter{})
+		tasks, err = taskLister.ListActiveDefaultClusterTasks(ecs.ListTasksFilter{
+			TaskGroup: o.name,
+		})
 		if err != nil {
+			o.spinner.Stop(log.Serrorln("Error listing running tasks."))
 			return fmt.Errorf("list running tasks in default cluster: %w", err)
 		}
-		log.Infoln(fmt.Sprintf("%v", tasks))
 	} else {
-		tasks, err := taskLister.ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
+		tasks, err = taskLister.ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
 			App: o.app,
 			Env: o.env,
 			ListTasksFilter: ecs.ListTasksFilter{
@@ -320,15 +340,40 @@ func (o *deleteTaskOpts) Execute() error {
 			},
 		})
 		if err != nil {
+			o.spinner.Stop(log.Serrorln("Error listing running tasks."))
 			return fmt.Errorf("list running tasks in default cluster: %w", err)
 		}
-		log.Infoln(fmt.Sprintf("%v", tasks))
+	}
+
+	// Stop tasks.
+	taskIDs := make([]string, len(tasks))
+	for n, t := range tasks {
+		id, err := awsecs.TaskID(aws.StringValue(t.TaskArn))
+		if err != nil {
+			o.spinner.Stop(log.Serrorln("Error getting ID of running task."))
+			return fmt.Errorf("get task ID: %w", err)
+		}
+		taskIDs[n] = id
+	}
+	if err = taskStopper.StopTasks(taskIDs, awsecs.WithStopTaskReason(taskDeleteStopTaskReasion)); err != nil {
+		o.spinner.Stop(log.Serrorln("Error stopping running tasks."))
+		return fmt.Errorf("stop running tasks in family %s: %w", o.name, err)
 	}
 
 	// Clear repository.
-
+	err = ecrDeleter.ClearRepository(taskInfo.ECRRepoName())
+	if err != nil {
+		o.spinner.Stop(log.Serrorln("Error emptying ECR repository."))
+		return fmt.Errorf("clear ECR repository for task %s: %w", o.name, err)
+	}
 	// Delete stack.
+	err = taskDeleter.DeleteTask(*taskInfo)
+	if err != nil {
+		o.spinner.Stop(log.Serrorln("Error deleting CloudFormation stack."))
+		return fmt.Errorf("delete stack for task %s: %w", o.name, err)
+	}
 
+	o.spinner.Stop(log.Ssuccessf("Deleted resources of task %s.\n", color.HighlightUserInput(o.name)))
 	return nil
 }
 
@@ -347,8 +392,8 @@ func BuildTaskDeleteCmd() *cobra.Command {
   Delete the "test" task from the default cluster.
   /code $ copilot task delete --name test --default
 
-  Delete the "test" task from the prod environment.
-  /code $ copilot task delete --name test --env prod
+  Delete the "db-migrate" task from the prod environment.
+  /code $ copilot task delete --name db-migrate --env prod
 
   Delete the "test" task without confirmation prompt.
   /code $ copilot task delete --name test --yes`,

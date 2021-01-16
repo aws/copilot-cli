@@ -224,6 +224,7 @@ func (e *ECS) RunTask(input RunTaskInput) ([]*Task, error) {
 				SecurityGroups: aws.StringSlice(input.SecurityGroups),
 			},
 		},
+		PropagateTags: aws.String(ecs.PropagateTagsTaskDefinition),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("run task(s) %s: %w", input.TaskFamilyName, err)

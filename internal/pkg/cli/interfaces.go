@@ -349,6 +349,8 @@ type appResourcesGetter interface {
 
 type taskDeployer interface {
 	DeployTask(input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error
+	DeleteTask(task deploy.TaskStackInfo) error
+	GetTaskStack(taskName string) (*deploy.TaskStackInfo, error)
 }
 
 type taskRunner interface {
@@ -459,7 +461,7 @@ type initJobSelector interface {
 }
 
 type cfTaskSelector interface {
-	Task(prompt, help string, opts ...selector.GetDeployedTaskOpts) (*selector.DeployedTask, error)
+	Task(prompt, help string, opts ...selector.GetDeployedTaskOpts) (string, error)
 }
 
 type dockerfileSelector interface {

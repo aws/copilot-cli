@@ -10,7 +10,6 @@ import (
 	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -140,7 +139,7 @@ func TestDeleteTaskOpts_Ask(t *testing.T) {
 			},
 			mockSel: func(m *mocks.MockwsSelector) {},
 			mockTaskSelect: func(m *mocks.MockcfTaskSelector) {
-				m.EXPECT().Task(taskDeleteNamePrompt, "", gomock.Any()).Return(&selector.DeployedTask{Name: "abc"}, nil)
+				m.EXPECT().Task(taskDeleteNamePrompt, "", gomock.Any()).Return("abc", nil)
 			},
 			mockSess: func(m *mocks.MocksessionProvider) {
 				m.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&awssession.Session{}, nil)
@@ -159,7 +158,7 @@ func TestDeleteTaskOpts_Ask(t *testing.T) {
 			},
 			mockSel: func(m *mocks.MockwsSelector) {},
 			mockTaskSelect: func(m *mocks.MockcfTaskSelector) {
-				m.EXPECT().Task(taskDeleteNamePrompt, "", gomock.Any()).Return(&selector.DeployedTask{Name: "abc"}, nil)
+				m.EXPECT().Task(taskDeleteNamePrompt, "", gomock.Any()).Return("abc", nil)
 			},
 			mockSess: func(m *mocks.MocksessionProvider) {
 				m.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&awssession.Session{}, nil)
@@ -176,7 +175,7 @@ func TestDeleteTaskOpts_Ask(t *testing.T) {
 			},
 			mockSel: func(m *mocks.MockwsSelector) {},
 			mockTaskSelect: func(m *mocks.MockcfTaskSelector) {
-				m.EXPECT().Task(taskDeleteNamePrompt, "", gomock.Any()).Return(&selector.DeployedTask{Name: "abc"}, nil)
+				m.EXPECT().Task(taskDeleteNamePrompt, "", gomock.Any()).Return("abc", nil)
 			},
 			mockSess: func(m *mocks.MocksessionProvider) {
 				m.EXPECT().Default().Return(&awssession.Session{}, nil)
@@ -195,7 +194,7 @@ func TestDeleteTaskOpts_Ask(t *testing.T) {
 				m.EXPECT().Environment(taskDeleteEnvPrompt, "", "phonetool", appEnvOptionNone).Return("test", nil)
 			},
 			mockTaskSelect: func(m *mocks.MockcfTaskSelector) {
-				m.EXPECT().Task(taskDeleteNamePrompt, "", gomock.Any()).Return(&selector.DeployedTask{Name: "abc"}, nil)
+				m.EXPECT().Task(taskDeleteNamePrompt, "", gomock.Any()).Return("abc", nil)
 			},
 			mockSess: func(m *mocks.MocksessionProvider) {
 				m.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&awssession.Session{}, nil)
@@ -210,7 +209,7 @@ func TestDeleteTaskOpts_Ask(t *testing.T) {
 				m.EXPECT().Application(taskDeleteAppPrompt, "", appEnvOptionNone).Return(appEnvOptionNone, nil)
 			},
 			mockTaskSelect: func(m *mocks.MockcfTaskSelector) {
-				m.EXPECT().Task(taskDeleteNamePrompt, "", gomock.Any()).Return(&selector.DeployedTask{Name: "abc"}, nil)
+				m.EXPECT().Task(taskDeleteNamePrompt, "", gomock.Any()).Return("abc", nil)
 			},
 			mockSess: func(m *mocks.MocksessionProvider) {
 				m.EXPECT().Default().Return(&awssession.Session{}, nil)

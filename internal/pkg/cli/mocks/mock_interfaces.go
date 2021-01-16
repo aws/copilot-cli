@@ -14,6 +14,7 @@ import (
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	describe "github.com/aws/copilot-cli/internal/pkg/describe"
+	ecs0 "github.com/aws/copilot-cli/internal/pkg/ecs"
 	exec "github.com/aws/copilot-cli/internal/pkg/exec"
 	initialize "github.com/aws/copilot-cli/internal/pkg/initialize"
 	logging "github.com/aws/copilot-cli/internal/pkg/logging"
@@ -3503,6 +3504,35 @@ func (mr *MocktaskDeployerMockRecorder) DeployTask(input interface{}, opts ...in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeployTask), varargs...)
 }
 
+// DeleteTask mocks base method
+func (m *MocktaskDeployer) DeleteTask(task deploy.TaskStackInfo) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteTask", task)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteTask indicates an expected call of DeleteTask
+func (mr *MocktaskDeployerMockRecorder) DeleteTask(task interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeleteTask), task)
+}
+
+// GetTaskStack mocks base method
+func (m *MocktaskDeployer) GetTaskStack(taskName string) (*deploy.TaskStackInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTaskStack", taskName)
+	ret0, _ := ret[0].(*deploy.TaskStackInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTaskStack indicates an expected call of GetTaskStack
+func (mr *MocktaskDeployerMockRecorder) GetTaskStack(taskName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskStack", reflect.TypeOf((*MocktaskDeployer)(nil).GetTaskStack), taskName)
+}
+
 // MocktaskRunner is a mock of taskRunner interface
 type MocktaskRunner struct {
 	ctrl     *gomock.Controller
@@ -4930,14 +4960,14 @@ func (m *MockcfTaskSelector) EXPECT() *MockcfTaskSelectorMockRecorder {
 }
 
 // Task mocks base method
-func (m *MockcfTaskSelector) Task(prompt, help string, opts ...selector.GetDeployedTaskOpts) (*selector.DeployedTask, error) {
+func (m *MockcfTaskSelector) Task(prompt, help string, opts ...selector.GetDeployedTaskOpts) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{prompt, help}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Task", varargs...)
-	ret0, _ := ret[0].(*selector.DeployedTask)
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -5323,6 +5353,59 @@ func (mr *MocktasksStopperMockRecorder) StopTasks(tasks interface{}, opts ...int
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{tasks}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopTasks", reflect.TypeOf((*MocktasksStopper)(nil).StopTasks), varargs...)
+}
+
+// MocktasksLister is a mock of tasksLister interface
+type MocktasksLister struct {
+	ctrl     *gomock.Controller
+	recorder *MocktasksListerMockRecorder
+}
+
+// MocktasksListerMockRecorder is the mock recorder for MocktasksLister
+type MocktasksListerMockRecorder struct {
+	mock *MocktasksLister
+}
+
+// NewMocktasksLister creates a new mock instance
+func NewMocktasksLister(ctrl *gomock.Controller) *MocktasksLister {
+	mock := &MocktasksLister{ctrl: ctrl}
+	mock.recorder = &MocktasksListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocktasksLister) EXPECT() *MocktasksListerMockRecorder {
+	return m.recorder
+}
+
+// ListActiveAppEnvTasks mocks base method
+func (m *MocktasksLister) ListActiveAppEnvTasks(opts ecs0.ListActiveAppEnvTasksOpts) ([]*ecs.Task, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListActiveAppEnvTasks", opts)
+	ret0, _ := ret[0].([]*ecs.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListActiveAppEnvTasks indicates an expected call of ListActiveAppEnvTasks
+func (mr *MocktasksListerMockRecorder) ListActiveAppEnvTasks(opts interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActiveAppEnvTasks", reflect.TypeOf((*MocktasksLister)(nil).ListActiveAppEnvTasks), opts)
+}
+
+// ListActiveDefaultClusterTasks mocks base method
+func (m *MocktasksLister) ListActiveDefaultClusterTasks(filter ecs0.ListTasksFilter) ([]*ecs.Task, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListActiveDefaultClusterTasks", filter)
+	ret0, _ := ret[0].([]*ecs.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListActiveDefaultClusterTasks indicates an expected call of ListActiveDefaultClusterTasks
+func (mr *MocktasksListerMockRecorder) ListActiveDefaultClusterTasks(filter interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActiveDefaultClusterTasks", reflect.TypeOf((*MocktasksLister)(nil).ListActiveDefaultClusterTasks), filter)
 }
 
 // MockserviceLinkedRoleCreator is a mock of serviceLinkedRoleCreator interface

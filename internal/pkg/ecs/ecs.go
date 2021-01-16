@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
 const (
@@ -201,7 +202,10 @@ func (c Client) listActiveCopilotTasks(opts listActiveCopilotTasksOpts) ([]*ecs.
 
 func filterCopilotTask(tasks []*ecs.Task, taskID string) []*ecs.Task {
 	var filteredTasks []*ecs.Task
+
 	for _, task := range tasks {
+		log.Infoln("")
+		log.Infoln(fmt.Sprintf("%v", task))
 		var copilotTask bool
 		for _, tag := range task.Tags {
 			if aws.StringValue(tag.Key) == deploy.TaskTagKey {
@@ -210,6 +214,8 @@ func filterCopilotTask(tasks []*ecs.Task, taskID string) []*ecs.Task {
 			}
 		}
 		id, _ := ecs.TaskID(aws.StringValue(task.TaskArn))
+		log.Infoln(fmt.Sprintf("%v", copilotTask))
+		log.Infoln(aws.StringValue(task.TaskArn))
 		if copilotTask && strings.Contains(id, taskID) {
 			filteredTasks = append(filteredTasks, task)
 		}

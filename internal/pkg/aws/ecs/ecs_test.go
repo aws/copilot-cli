@@ -561,6 +561,7 @@ func TestECS_RunTask(t *testing.T) {
 							SecurityGroups: aws.StringSlice([]string{"sg-1", "sg-2"}),
 						},
 					},
+					PropagateTags: aws.String(ecs.PropagateTagsTaskDefinition),
 				}).
 					Return(&ecs.RunTaskOutput{
 						Tasks: []*ecs.Task{
@@ -626,6 +627,7 @@ func TestECS_RunTask(t *testing.T) {
 							SecurityGroups: aws.StringSlice([]string{"sg-1", "sg-2"}),
 						},
 					},
+					PropagateTags: aws.String(ecs.PropagateTagsTaskDefinition),
 				}).
 					Return(&ecs.RunTaskOutput{}, errors.New("error"))
 				m.EXPECT().WaitUntilTasksRunning(gomock.Any()).Times(0)
