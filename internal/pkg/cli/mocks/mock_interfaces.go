@@ -4906,6 +4906,49 @@ func (mr *MockinitJobSelectorMockRecorder) Schedule(scheduleTypePrompt, schedule
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Schedule", reflect.TypeOf((*MockinitJobSelector)(nil).Schedule), scheduleTypePrompt, scheduleTypeHelp, scheduleValidator, rateValidator)
 }
 
+// MockcfTaskSelector is a mock of cfTaskSelector interface
+type MockcfTaskSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockcfTaskSelectorMockRecorder
+}
+
+// MockcfTaskSelectorMockRecorder is the mock recorder for MockcfTaskSelector
+type MockcfTaskSelectorMockRecorder struct {
+	mock *MockcfTaskSelector
+}
+
+// NewMockcfTaskSelector creates a new mock instance
+func NewMockcfTaskSelector(ctrl *gomock.Controller) *MockcfTaskSelector {
+	mock := &MockcfTaskSelector{ctrl: ctrl}
+	mock.recorder = &MockcfTaskSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockcfTaskSelector) EXPECT() *MockcfTaskSelectorMockRecorder {
+	return m.recorder
+}
+
+// Task mocks base method
+func (m *MockcfTaskSelector) Task(prompt, help string, opts ...selector.GetDeployedTaskOpts) (*selector.DeployedTask, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{prompt, help}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Task", varargs...)
+	ret0, _ := ret[0].(*selector.DeployedTask)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Task indicates an expected call of Task
+func (mr *MockcfTaskSelectorMockRecorder) Task(prompt, help interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{prompt, help}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Task", reflect.TypeOf((*MockcfTaskSelector)(nil).Task), varargs...)
+}
+
 // MockdockerfileSelector is a mock of dockerfileSelector interface
 type MockdockerfileSelector struct {
 	ctrl     *gomock.Controller

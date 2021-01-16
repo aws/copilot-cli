@@ -130,6 +130,8 @@ Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag
 Cannot be specified with '%s' or '%s'.`, appFlag, envFlag)
 	taskDefaultFlagDescription = fmt.Sprintf(`Optional. Run tasks in default cluster and default subnets. 
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, subnetsFlag)
+	taskDeleteDefaultFlagDescription = fmt.Sprintf(`Optional. Delete a task which was launched in the default cluster and subnets.
+Cannot be specified with '%s' or '%s'`, appFlag, envFlag)
 	taskEnvFlagDescription = fmt.Sprintf(`Optional. Name of the environment.
 Cannot be specified with '%s', '%s' or '%s'`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
 	taskAppFlagDescription = fmt.Sprintf(`Optional. Name of the application.
