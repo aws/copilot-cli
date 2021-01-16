@@ -29,16 +29,36 @@ func (c *singleLineComponent) Render(out io.Writer) (numLines int, err error) {
 	return 1, err
 }
 
-// treeComponent can display a node and its children.
+// treeComponent can display a node and its Children.
 type treeComponent struct {
 	Root     Renderer
 	Children []Renderer
 }
 
-// Render writes the Root and its children in order to out. Returns the total number of lines written.
+// Render writes the Root and its Children in order to out. Returns the total number of lines written.
 // In case of an error, returns 0 and the error.
 func (c *treeComponent) Render(out io.Writer) (numLines int, err error) {
 	return renderComponents(out, append([]Renderer{c.Root}, c.Children...))
+}
+
+// dynamicTreeComponent is a treeComponent that can notify that it's done updating once the Root node is done.
+type dynamicTreeComponent struct {
+	Root     DynamicRenderer
+	Children []Renderer
+}
+
+// Render creates a treeComponent and renders it.
+func (c *dynamicTreeComponent) Render(out io.Writer) (numLines int, err error) {
+	comp := &treeComponent{
+		Root:     c.Root,
+		Children: c.Children,
+	}
+	return comp.Render(out)
+}
+
+// Done delegates to Root's Done.
+func (c *dynamicTreeComponent) Done() <-chan struct{} {
+	return c.Root.Done()
 }
 
 func renderComponents(out io.Writer, components []Renderer) (numLines int, err error) {

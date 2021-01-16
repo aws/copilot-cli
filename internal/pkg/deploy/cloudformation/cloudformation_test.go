@@ -4,7 +4,6 @@
 package cloudformation
 
 import (
-	"context"
 	"errors"
 	"io"
 	"strings"
@@ -68,7 +67,7 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 		defer ctrl.Finish()
 		m := mocks.NewMockcfnClient(ctrl)
 		m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(&cloudformation.ChangeSetDescription{}, nil)
-		m.EXPECT().TemplateBody(gomock.Any()).Return("", errors.New("TemplateBody error"))
+		m.EXPECT().TemplateBodyFromChangeSet(gomock.Any(), gomock.Any()).Return("", errors.New("TemplateBody error"))
 		client := CloudFormation{cfnClient: m}
 
 		// WHEN
@@ -83,40 +82,14 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 		// THEN
 		require.EqualError(t, err, "TemplateBody error")
 	})
-	t.Run("bubbles up waiter error and cancels streamers and renderer on waiter error", func(t *testing.T) {
-		// GIVEN
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		m := mocks.NewMockcfnClient(ctrl)
-		m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(&cloudformation.ChangeSetDescription{}, nil)
-		m.EXPECT().TemplateBody(gomock.Any()).Return("", nil)
-		m.EXPECT().DescribeStackEvents(gomock.Any()).Return(&sdkcloudformation.DescribeStackEventsOutput{}, nil).AnyTimes()
-		client := CloudFormation{cfnClient: m}
-		buf := new(strings.Builder)
-
-		// WHEN
-		in := renderStackChangesInput{
-			w: mockFileWriter{Writer: buf},
-			createChangeSet: func() (string, error) {
-				return "", nil
-			},
-			waitForStack: func(ctx context.Context, s string) error {
-				return errors.New("waiter error")
-			},
-		}
-		err := client.renderStackChanges(in)
-
-		// THEN
-		require.EqualError(t, err, "waiter error")
-	})
-	t.Run("bubbles up streamer error and cancels waiter and renderer on streamer error", func(t *testing.T) {
+	t.Run("bubbles up streamer error and cancels renderer", func(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		wantedErr := errors.New("streamer error")
 		m := mocks.NewMockcfnClient(ctrl)
 		m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(&cloudformation.ChangeSetDescription{}, nil)
-		m.EXPECT().TemplateBody(gomock.Any()).Return("", nil)
+		m.EXPECT().TemplateBodyFromChangeSet(gomock.Any(), gomock.Any()).Return("", nil)
 		m.EXPECT().DescribeStackEvents(gomock.Any()).Return(nil, wantedErr)
 		client := CloudFormation{cfnClient: m}
 		buf := new(strings.Builder)
@@ -127,25 +100,57 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 			createChangeSet: func() (string, error) {
 				return "", nil
 			},
-			waitForStack: func(ctx context.Context, s string) error {
-				select {
-				case <-time.After(10 * time.Second):
-					return errors.New("expected waitForStack to be canceled, instead we waited for a timeout")
-				case <-ctx.Done():
-					return nil
-				}
-			},
 		}
 		err := client.renderStackChanges(in)
 
 		// THEN
 		require.True(t, errors.Is(err, wantedErr), "expected streamer error to be wrapped and returned")
 	})
-	t.Run("renders a resource on success", func(t *testing.T) {
+	t.Run("renders the stack and its resources until stack fails and return an error", func(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := mocks.NewMockcfnClient(ctrl)
+		m.EXPECT().DescribeChangeSet(gomock.Any(), gomock.Any()).Return(&cloudformation.ChangeSetDescription{}, nil)
+		m.EXPECT().TemplateBodyFromChangeSet(gomock.Any(), gomock.Any()).Return("", nil)
+		m.EXPECT().DescribeStackEvents(gomock.Any()).Return(&sdkcloudformation.DescribeStackEventsOutput{
+			StackEvents: []*sdkcloudformation.StackEvent{
+				{
+					EventId:            aws.String("2"),
+					LogicalResourceId:  aws.String("phonetool-test"),
+					PhysicalResourceId: aws.String("AWS::CloudFormation::Stack"),
+					ResourceStatus:     aws.String("CREATE_FAILED"), // Send failure event for stack.
+					Timestamp:          aws.Time(time.Now()),
+				},
+			},
+		}, nil).AnyTimes()
+		m.EXPECT().Describe("phonetool-test").Return(&cloudformation.StackDescription{
+			StackStatus: aws.String("CREATE_FAILED"),
+		}, nil)
+		client := CloudFormation{cfnClient: m}
+		buf := new(strings.Builder)
+
+		// WHEN
+		in := renderStackChangesInput{
+			w:                mockFileWriter{Writer: buf},
+			stackName:        "phonetool-test",
+			stackDescription: "Creating phonetool-test environment.",
+			createChangeSet: func() (string, error) {
+				return "1234", nil
+			},
+		}
+		err := client.renderStackChanges(in)
+
+		// THEN
+		require.EqualError(t, err, "stack phonetool-test did not complete successfully and exited with status CREATE_FAILED")
+	})
+	t.Run("renders the stack and its resources on success", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		m := mocks.NewMockcfnClient(ctrl)
+
+		// Mocks for the parent stack.
 		m.EXPECT().DescribeChangeSet("1234", "phonetool-test").Return(&cloudformation.ChangeSetDescription{
 			Changes: []*sdkcloudformation.Change{
 				{
@@ -154,21 +159,91 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 						PhysicalResourceId: aws.String("AWS::ECS::Cluster"),
 					},
 				},
+				{
+					ResourceChange: &sdkcloudformation.ResourceChange{
+						ChangeSetId:        aws.String("5678"),
+						LogicalResourceId:  aws.String("AddonsStack"),
+						PhysicalResourceId: aws.String("arn:aws:cloudformation:us-west-2:12345:stack/my-nested-stack/d0a825a0-e4cd-xmpl-b9fb-061c69e99205"),
+					},
+				},
 			},
 		}, nil)
-		m.EXPECT().TemplateBody("phonetool-test").Return(`
+
+		m.EXPECT().TemplateBodyFromChangeSet("1234", "phonetool-test").Return(`
 Resources:
   Cluster:
     # An ECS cluster
-    Type: AWS::ECS::Cluster`, nil)
+    Type: AWS::ECS::Cluster
+  AddonsStack:
+    # An Addons CloudFormation Stack for your additional AWS resources
+    Type: AWS::CloudFormation::Stack
+`, nil)
+
 		m.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
 			StackName: aws.String("phonetool-test"),
 		}).Return(&sdkcloudformation.DescribeStackEventsOutput{
 			StackEvents: []*sdkcloudformation.StackEvent{
 				{
-					EventId:            aws.String("some event id"),
+					EventId:            aws.String("1"),
 					LogicalResourceId:  aws.String("Cluster"),
 					PhysicalResourceId: aws.String("AWS::ECS::Cluster"),
+					ResourceStatus:     aws.String("CREATE_COMPLETE"),
+					Timestamp:          aws.Time(time.Now()),
+				},
+				{
+					EventId:            aws.String("2"),
+					LogicalResourceId:  aws.String("AddonsStack"),
+					PhysicalResourceId: aws.String("AWS::CloudFormation::Stack"),
+					ResourceStatus:     aws.String("CREATE_COMPLETE"),
+					Timestamp:          aws.Time(time.Now()),
+				},
+				{
+					EventId:            aws.String("3"),
+					LogicalResourceId:  aws.String("phonetool-test"),
+					PhysicalResourceId: aws.String("AWS::CloudFormation::Stack"),
+					ResourceStatus:     aws.String("CREATE_COMPLETE"),
+					Timestamp:          aws.Time(time.Now()),
+				},
+			},
+		}, nil).AnyTimes()
+
+		m.EXPECT().Describe("phonetool-test").Return(&cloudformation.StackDescription{
+			StackStatus: aws.String("CREATE_COMPLETE"),
+		}, nil)
+
+		// Mocks for the addons stack.
+		m.EXPECT().DescribeChangeSet("5678", "my-nested-stack").Return(&cloudformation.ChangeSetDescription{
+			Changes: []*sdkcloudformation.Change{
+				{
+					ResourceChange: &sdkcloudformation.ResourceChange{
+						LogicalResourceId:  aws.String("MyTable"),
+						PhysicalResourceId: aws.String("AWS::DynamoDB::Table"),
+					},
+				},
+			},
+		}, nil)
+
+		m.EXPECT().TemplateBodyFromChangeSet("5678", "my-nested-stack").Return(`
+Resources:
+  MyTable:
+    # A DynamoDB table to store data
+    Type: AWS::DynamoDB::Table`, nil)
+
+		m.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
+			StackName: aws.String("my-nested-stack"),
+		}).Return(&sdkcloudformation.DescribeStackEventsOutput{
+			StackEvents: []*sdkcloudformation.StackEvent{
+				{
+					EventId:            aws.String("1"),
+					LogicalResourceId:  aws.String("MyTable"),
+					PhysicalResourceId: aws.String("AWS::DynamoDB::Table"),
+					ResourceStatus:     aws.String("CREATE_COMPLETE"),
+					Timestamp:          aws.Time(time.Now()),
+				},
+				{
+					EventId:            aws.String("2"),
+					LogicalResourceId:  aws.String("my-nested-stack"),
+					PhysicalResourceId: aws.String("AWS::CloudFormation::Stack"),
 					ResourceStatus:     aws.String("CREATE_COMPLETE"),
 					Timestamp:          aws.Time(time.Now()),
 				},
@@ -185,9 +260,6 @@ Resources:
 			createChangeSet: func() (string, error) {
 				return "1234", nil
 			},
-			waitForStack: func(ctx context.Context, s string) error {
-				return nil
-			},
 		}
 		err := client.renderStackChanges(in)
 
@@ -195,5 +267,7 @@ Resources:
 		require.NoError(t, err)
 		require.Contains(t, buf.String(), in.stackDescription)
 		require.Contains(t, buf.String(), "An ECS cluster")
+		require.Contains(t, buf.String(), "An Addons CloudFormation Stack for your additional AWS resources")
+		require.Contains(t, buf.String(), "A DynamoDB table to store data")
 	})
 }

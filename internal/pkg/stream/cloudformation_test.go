@@ -25,19 +25,17 @@ func (m mockCloudFormation) DescribeStackEvents(*cloudformation.DescribeStackEve
 func TestStackStreamer_Subscribe(t *testing.T) {
 	// GIVEN
 	streamer := &StackStreamer{}
-	sub1 := make(chan StackEvent)
-	sub2 := make(chan StackEvent)
 
 	// WHEN
-	streamer.Subscribe(sub1, sub2)
+	_ = streamer.Subscribe()
+	_ = streamer.Subscribe()
 
 	// THEN
 	require.Equal(t, 2, len(streamer.subscribers), "expected number of subscribers to match")
-	require.ElementsMatch(t, []chan StackEvent{sub1, sub2}, streamer.subscribers)
 }
 
 func TestStackStreamer_Fetch(t *testing.T) {
-	t.Run("stores all events in chronological order on fetch", testStackStreamer_Fetch_Success)
+	t.Run("stores all events in chronological order on fetch and closes done when the stack is no longer in progress", testStackStreamer_Fetch_Success)
 	t.Run("stores only events after the changeset creation time", testStackStreamer_Fetch_PostChangeSet)
 	t.Run("stores only events that have not been seen yet", testStackStreamer_Fetch_WithSeenEvents)
 	t.Run("returns wrapped error if describe call fails", testStackStreamer_Fetch_WithError)
@@ -82,20 +80,26 @@ func testStackStreamer_Fetch_Success(t *testing.T) {
 		out: &cloudformation.DescribeStackEventsOutput{
 			StackEvents: []*cloudformation.StackEvent{
 				{
-					EventId:              aws.String("1"),
+					EventId:           aws.String("1"),
+					LogicalResourceId: aws.String("phonetool-test"),
+					ResourceStatus:    aws.String("CREATE_COMPLETE"),
+					Timestamp:         aws.Time(time.Date(2020, time.November, 23, 20, 0, 0, 0, time.UTC)),
+				},
+				{
+					EventId:              aws.String("2"),
 					LogicalResourceId:    aws.String("CloudformationExecutionRole"),
 					ResourceStatus:       aws.String("CREATE_FAILED"),
 					ResourceStatusReason: aws.String("phonetool-test-CFNExecutionRole already exists"),
 					Timestamp:            aws.Time(time.Date(2020, time.November, 23, 19, 0, 0, 0, time.UTC)),
 				},
 				{
-					EventId:           aws.String("2"),
+					EventId:           aws.String("3"),
 					LogicalResourceId: aws.String("Cluster"),
 					ResourceStatus:    aws.String("CREATE_COMPLETE"),
 					Timestamp:         aws.Time(time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)),
 				},
 				{
-					EventId:           aws.String("3"),
+					EventId:           aws.String("4"),
 					LogicalResourceId: aws.String("PublicLoadBalancer"),
 					ResourceStatus:    aws.String("CREATE_COMPLETE"),
 					Timestamp:         aws.Time(time.Date(2020, time.November, 23, 17, 0, 0, 0, time.UTC)),
@@ -110,12 +114,7 @@ func testStackStreamer_Fetch_Success(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	require.ElementsMatch(t, []StackEvent{
-		{
-			LogicalResourceID:    "CloudformationExecutionRole",
-			ResourceStatus:       "CREATE_FAILED",
-			ResourceStatusReason: "phonetool-test-CFNExecutionRole already exists",
-		},
+	require.Equal(t, []StackEvent{
 		{
 			LogicalResourceID: "PublicLoadBalancer",
 			ResourceStatus:    "CREATE_COMPLETE",
@@ -124,7 +123,18 @@ func testStackStreamer_Fetch_Success(t *testing.T) {
 			LogicalResourceID: "Cluster",
 			ResourceStatus:    "CREATE_COMPLETE",
 		},
+		{
+			LogicalResourceID:    "CloudformationExecutionRole",
+			ResourceStatus:       "CREATE_FAILED",
+			ResourceStatusReason: "phonetool-test-CFNExecutionRole already exists",
+		},
+		{
+			LogicalResourceID: "phonetool-test",
+			ResourceStatus:    "CREATE_COMPLETE",
+		},
 	}, streamer.eventsToFlush, "expected eventsToFlush to appear in chronological order")
+	_, isOpen := <-streamer.Done()
+	require.False(t, isOpen, "there should be no more work to do since the stack is created")
 }
 
 func testStackStreamer_Fetch_PostChangeSet(t *testing.T) {
@@ -213,4 +223,17 @@ func testStackStreamer_Fetch_WithError(t *testing.T) {
 
 	// THEN
 	require.EqualError(t, err, "describe stack events phonetool-test: some error")
+}
+
+func TestStackStreamer_Close(t *testing.T) {
+	// GIVEN
+	streamer := &StackStreamer{}
+	c := streamer.Subscribe()
+
+	// WHEN
+	streamer.Close()
+
+	// THEN
+	_, isOpen := <-c
+	require.False(t, isOpen, "expected subscribed channels to be closed")
 }
