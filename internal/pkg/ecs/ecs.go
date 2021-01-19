@@ -187,7 +187,7 @@ func (c Client) ListActiveDefaultClusterTasks(filter ListTasksFilter) ([]*ecs.Ta
 func (c Client) StopAppEnvTasks(app, env string, tasks []string) error {
 	clusterARN, err := c.ClusterARN(app, env)
 	if err != nil {
-		return fmt.Errorf("get cluster for env %s: %w", env, err)
+		return err
 	}
 	return c.ecsClient.StopTasks(tasks, ecs.WithStopTaskCluster(clusterARN), ecs.WithStopTaskReason(taskStopReason))
 }

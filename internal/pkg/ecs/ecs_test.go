@@ -508,3 +508,147 @@ func TestClient_listActiveCopilotTasks(t *testing.T) {
 		})
 	}
 }
+
+func TestClient_StopAppEnvTasks(t *testing.T) {
+	mockCluster := "arn:aws::ecs:cluster/abcd1234"
+	mockResource := resourcegroups.Resource{
+		ARN: mockCluster,
+	}
+	testCases := map[string]struct {
+		inApp   string
+		inEnv   string
+		inTasks []string
+
+		mockECS func(m *mocks.MockecsClient)
+		mockrg  func(m *mocks.MockresourceGetter)
+
+		wantErr error
+	}{
+		"success": {
+			inApp:   "phonetool",
+			inEnv:   "pdx",
+			inTasks: []string{"deadbeef"},
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().StopTasks([]string{"deadbeef"}, gomock.Any()).Return(nil)
+			},
+			mockrg: func(m *mocks.MockresourceGetter) {
+				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
+					"copilot-application": "phonetool",
+					"copilot-environment": "pdx",
+				}).Return([]*resourcegroups.Resource{&mockResource}, nil)
+			},
+		},
+		"failure getting resources": {
+			inApp:   "phonetool",
+			inEnv:   "pdx",
+			inTasks: []string{"deadbeef"},
+
+			mockECS: func(m *mocks.MockecsClient) {},
+			mockrg: func(m *mocks.MockresourceGetter) {
+				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
+					"copilot-application": "phonetool",
+					"copilot-environment": "pdx",
+				}).Return(nil, errors.New("some error"))
+			},
+			wantErr: errors.New("get cluster resources for environment pdx: some error"),
+		},
+		"failure stopping tasks": {
+			inApp:   "phonetool",
+			inEnv:   "pdx",
+			inTasks: []string{"deadbeef"},
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().StopTasks([]string{"deadbeef"}, gomock.Any()).Return(errors.New("some error"))
+			},
+			mockrg: func(m *mocks.MockresourceGetter) {
+				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
+					"copilot-application": "phonetool",
+					"copilot-environment": "pdx",
+				}).Return([]*resourcegroups.Resource{&mockResource}, nil)
+			},
+			wantErr: errors.New("some error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockECS := mocks.NewMockecsClient(ctrl)
+			mockrg := mocks.NewMockresourceGetter(ctrl)
+
+			tc.mockECS(mockECS)
+			tc.mockrg(mockrg)
+
+			c := Client{
+				ecsClient: mockECS,
+				rgGetter:  mockrg,
+			}
+
+			// WHEN
+			err := c.StopAppEnvTasks(tc.inApp, tc.inEnv, tc.inTasks)
+
+			// THEN
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_StopDefaultClusterTasks(t *testing.T) {
+
+	testCases := map[string]struct {
+		inTasks []string
+
+		mockECS func(m *mocks.MockecsClient)
+
+		wantErr error
+	}{
+		"success": {
+
+			inTasks: []string{"deadbeef"},
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().StopTasks([]string{"deadbeef"}, gomock.Any()).Return(nil)
+			},
+		},
+		"failure stopping tasks": {
+			inTasks: []string{"deadbeef"},
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().StopTasks([]string{"deadbeef"}, gomock.Any()).Return(errors.New("some error"))
+			},
+			wantErr: errors.New("some error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockECS := mocks.NewMockecsClient(ctrl)
+
+			tc.mockECS(mockECS)
+
+			c := Client{
+				ecsClient: mockECS,
+			}
+
+			// WHEN
+			err := c.StopDefaultClusterTasks(tc.inTasks)
+
+			// THEN
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

@@ -14,8 +14,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-
-	// "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -37,8 +35,6 @@ const (
 )
 
 var errTaskDeleteCancelled = errors.New("task delete cancelled - no changes made")
-
-var taskDeleteStopTaskReasion = "stopped via Copilot CLI pending task deletion"
 
 type deleteTaskVars struct {
 	name             string
