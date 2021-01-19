@@ -5355,31 +5355,31 @@ func (mr *MocktasksStopperMockRecorder) StopTasks(tasks interface{}, opts ...int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopTasks", reflect.TypeOf((*MocktasksStopper)(nil).StopTasks), varargs...)
 }
 
-// MocktasksLister is a mock of tasksLister interface
-type MocktasksLister struct {
+// MocktasksListerStopper is a mock of tasksListerStopper interface
+type MocktasksListerStopper struct {
 	ctrl     *gomock.Controller
-	recorder *MocktasksListerMockRecorder
+	recorder *MocktasksListerStopperMockRecorder
 }
 
-// MocktasksListerMockRecorder is the mock recorder for MocktasksLister
-type MocktasksListerMockRecorder struct {
-	mock *MocktasksLister
+// MocktasksListerStopperMockRecorder is the mock recorder for MocktasksListerStopper
+type MocktasksListerStopperMockRecorder struct {
+	mock *MocktasksListerStopper
 }
 
-// NewMocktasksLister creates a new mock instance
-func NewMocktasksLister(ctrl *gomock.Controller) *MocktasksLister {
-	mock := &MocktasksLister{ctrl: ctrl}
-	mock.recorder = &MocktasksListerMockRecorder{mock}
+// NewMocktasksListerStopper creates a new mock instance
+func NewMocktasksListerStopper(ctrl *gomock.Controller) *MocktasksListerStopper {
+	mock := &MocktasksListerStopper{ctrl: ctrl}
+	mock.recorder = &MocktasksListerStopperMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MocktasksLister) EXPECT() *MocktasksListerMockRecorder {
+func (m *MocktasksListerStopper) EXPECT() *MocktasksListerStopperMockRecorder {
 	return m.recorder
 }
 
 // ListActiveAppEnvTasks mocks base method
-func (m *MocktasksLister) ListActiveAppEnvTasks(opts ecs0.ListActiveAppEnvTasksOpts) ([]*ecs.Task, error) {
+func (m *MocktasksListerStopper) ListActiveAppEnvTasks(opts ecs0.ListActiveAppEnvTasksOpts) ([]*ecs.Task, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListActiveAppEnvTasks", opts)
 	ret0, _ := ret[0].([]*ecs.Task)
@@ -5388,13 +5388,13 @@ func (m *MocktasksLister) ListActiveAppEnvTasks(opts ecs0.ListActiveAppEnvTasksO
 }
 
 // ListActiveAppEnvTasks indicates an expected call of ListActiveAppEnvTasks
-func (mr *MocktasksListerMockRecorder) ListActiveAppEnvTasks(opts interface{}) *gomock.Call {
+func (mr *MocktasksListerStopperMockRecorder) ListActiveAppEnvTasks(opts interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActiveAppEnvTasks", reflect.TypeOf((*MocktasksLister)(nil).ListActiveAppEnvTasks), opts)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActiveAppEnvTasks", reflect.TypeOf((*MocktasksListerStopper)(nil).ListActiveAppEnvTasks), opts)
 }
 
 // ListActiveDefaultClusterTasks mocks base method
-func (m *MocktasksLister) ListActiveDefaultClusterTasks(filter ecs0.ListTasksFilter) ([]*ecs.Task, error) {
+func (m *MocktasksListerStopper) ListActiveDefaultClusterTasks(filter ecs0.ListTasksFilter) ([]*ecs.Task, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListActiveDefaultClusterTasks", filter)
 	ret0, _ := ret[0].([]*ecs.Task)
@@ -5403,9 +5403,37 @@ func (m *MocktasksLister) ListActiveDefaultClusterTasks(filter ecs0.ListTasksFil
 }
 
 // ListActiveDefaultClusterTasks indicates an expected call of ListActiveDefaultClusterTasks
-func (mr *MocktasksListerMockRecorder) ListActiveDefaultClusterTasks(filter interface{}) *gomock.Call {
+func (mr *MocktasksListerStopperMockRecorder) ListActiveDefaultClusterTasks(filter interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActiveDefaultClusterTasks", reflect.TypeOf((*MocktasksLister)(nil).ListActiveDefaultClusterTasks), filter)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActiveDefaultClusterTasks", reflect.TypeOf((*MocktasksListerStopper)(nil).ListActiveDefaultClusterTasks), filter)
+}
+
+// StopAppEnvTasks mocks base method
+func (m *MocktasksListerStopper) StopAppEnvTasks(app, env string, taskIDs []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StopAppEnvTasks", app, env, taskIDs)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StopAppEnvTasks indicates an expected call of StopAppEnvTasks
+func (mr *MocktasksListerStopperMockRecorder) StopAppEnvTasks(app, env, taskIDs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopAppEnvTasks", reflect.TypeOf((*MocktasksListerStopper)(nil).StopAppEnvTasks), app, env, taskIDs)
+}
+
+// StopDefaultClusterTasks mocks base method
+func (m *MocktasksListerStopper) StopDefaultClusterTasks(taskIDs []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StopDefaultClusterTasks", taskIDs)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StopDefaultClusterTasks indicates an expected call of StopDefaultClusterTasks
+func (mr *MocktasksListerStopperMockRecorder) StopDefaultClusterTasks(taskIDs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopDefaultClusterTasks", reflect.TypeOf((*MocktasksListerStopper)(nil).StopDefaultClusterTasks), taskIDs)
 }
 
 // MockserviceLinkedRoleCreator is a mock of serviceLinkedRoleCreator interface

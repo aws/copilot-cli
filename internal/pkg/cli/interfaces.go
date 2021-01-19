@@ -502,9 +502,11 @@ type tasksStopper interface {
 	StopTasks(tasks []string, opts ...awsecs.StopTasksOpts) error
 }
 
-type tasksLister interface {
+type tasksListerStopper interface {
 	ListActiveAppEnvTasks(opts ecs.ListActiveAppEnvTasksOpts) ([]*awsecs.Task, error)
 	ListActiveDefaultClusterTasks(filter ecs.ListTasksFilter) ([]*awsecs.Task, error)
+	StopAppEnvTasks(app, env string, taskIDs []string) error
+	StopDefaultClusterTasks(taskIDs []string) error
 }
 
 type serviceLinkedRoleCreator interface {

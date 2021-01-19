@@ -59,11 +59,10 @@ type deleteTaskOpts struct {
 	sel     wsSelector
 
 	// Generators for env-specific clients
-	newTaskSel      func(session *awssession.Session) cfTaskSelector
-	newTaskStopper  func(session *awssession.Session) tasksStopper
-	newTaskLister   func(session *awssession.Session) tasksLister
-	newImageRemover func(session *awssession.Session) imageRemover
-	newTaskDeleter  func(session *awssession.Session) taskDeployer
+	newTaskSel           func(session *awssession.Session) cfTaskSelector
+	newTaskListerStopper func(session *awssession.Session) tasksListerStopper
+	newImageRemover      func(session *awssession.Session) imageRemover
+	newTaskDeleter       func(session *awssession.Session) taskDeployer
 }
 
 func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
@@ -93,11 +92,8 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 			cfn := cloudformation.New(session)
 			return selector.NewCFTaskSelect(prompter, store, cfn)
 		},
-		newTaskLister: func(session *awssession.Session) tasksLister {
+		newTaskListerStopper: func(session *awssession.Session) tasksListerStopper {
 			return ecs.New(session)
-		},
-		newTaskStopper: func(session *awssession.Session) tasksStopper {
-			return awsecs.New(session)
 		},
 		newTaskDeleter: func(session *awssession.Session) taskDeployer {
 			return cloudformation.New(session)
@@ -320,11 +316,11 @@ func (o *deleteTaskOpts) Execute() error {
 		return fmt.Errorf("error retrieving stack information for task %s: %w", o.name, err)
 	}
 
-	o.spinner.Start(fmt.Sprintf("Cleaninng up resources for task %s.", color.HighlightUserInput(o.name)))
+	o.spinner.Start(fmt.Sprintf("Cleaning up resources for task %s.", color.HighlightUserInput(o.name)))
 	// Get running tasks in family.
 	var tasks []*awsecs.Task
 	if o.defaultCluster {
-		tasks, err = taskLister.ListActiveDefaultClusterTasks(ecs.ListTasksFilter{
+		tasks, err = ecsClient.ListActiveDefaultClusterTasks(ecs.ListTasksFilter{
 			TaskGroup: o.name,
 		})
 		if err != nil {
@@ -332,7 +328,7 @@ func (o *deleteTaskOpts) Execute() error {
 			return fmt.Errorf("list running tasks in default cluster: %w", err)
 		}
 	} else {
-		tasks, err = taskLister.ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
+		tasks, err = ecsClient.ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
 			App: o.app,
 			Env: o.env,
 			ListTasksFilter: ecs.ListTasksFilter{
@@ -346,18 +342,21 @@ func (o *deleteTaskOpts) Execute() error {
 	}
 
 	// Stop tasks.
-	taskIDs := make([]string, len(tasks))
+	taskARNs := make([]string, len(tasks))
 	for n, t := range tasks {
-		id, err := awsecs.TaskID(aws.StringValue(t.TaskArn))
-		if err != nil {
-			o.spinner.Stop(log.Serrorln("Error getting ID of running task."))
-			return fmt.Errorf("get task ID: %w", err)
-		}
-		taskIDs[n] = id
+		taskARNs[n] = aws.StringValue(t.TaskArn)
 	}
-	if err = taskStopper.StopTasks(taskIDs, awsecs.WithStopTaskReason(taskDeleteStopTaskReasion)); err != nil {
-		o.spinner.Stop(log.Serrorln("Error stopping running tasks."))
-		return fmt.Errorf("stop running tasks in family %s: %w", o.name, err)
+
+	if o.defaultCluster {
+		if err = ecsClient.StopDefaultClusterTasks(taskARNs); err != nil {
+			o.spinner.Stop(log.Serrorln("Error stopping running tasks in default cluster."))
+			return fmt.Errorf("stop running tasks in family %s: %w", o.name, err)
+		}
+	} else {
+		if err = ecsClient.StopAppEnvTasks(o.app, o.env, taskARNs); err != nil {
+			o.spinner.Stop(log.Serrorln("Error stopping running tasks in environment."))
+			return fmt.Errorf("stop running tasks in family %s: %w", o.name, err)
+		}
 	}
 
 	// Clear repository.
