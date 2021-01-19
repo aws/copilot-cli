@@ -13,7 +13,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
 const (
@@ -21,6 +20,8 @@ const (
 	fmtTaskTaskDefinitionFamily     = "copilot-%s"
 	clusterResourceType             = "ecs:cluster"
 	serviceResourceType             = "ecs:service"
+
+	taskStopReason = "Task stopped because the underlying CloudFormation stack was deleted."
 )
 
 type resourceGetter interface {
@@ -32,6 +33,7 @@ type ecsClient interface {
 	RunningTasks(cluster string) ([]*ecs.Task, error)
 	ServiceTasks(clusterName, serviceName string) ([]*ecs.Task, error)
 	DefaultCluster() (string, error)
+	StopTasks(tasks []string, opts ...ecs.StopTasksOpts) error
 }
 
 // ServiceDesc contains the description of an ECS service.
@@ -181,6 +183,20 @@ func (c Client) ListActiveDefaultClusterTasks(filter ListTasksFilter) ([]*ecs.Ta
 	})
 }
 
+// StopAppEnvTasks stops tasks in the given application and environment with the given IDs or ARNs.
+func (c Client) StopAppEnvTasks(app, env string, tasks []string) error {
+	clusterARN, err := c.ClusterARN(app, env)
+	if err != nil {
+		return fmt.Errorf("get cluster for env %s: %w", env, err)
+	}
+	return c.ecsClient.StopTasks(tasks, ecs.WithStopTaskCluster(clusterARN), ecs.WithStopTaskReason(taskStopReason))
+}
+
+// StopDefaultClusterTasks stops tasks with the given IDs or ARNs in the default cluster.
+func (c Client) StopDefaultClusterTasks(taskIDs []string) error {
+	return c.ecsClient.StopTasks(taskIDs, ecs.WithStopTaskReason(taskStopReason))
+}
+
 func (c Client) listActiveCopilotTasks(opts listActiveCopilotTasksOpts) ([]*ecs.Task, error) {
 	var tasks []*ecs.Task
 	if opts.TaskGroup != "" {
@@ -204,8 +220,6 @@ func filterCopilotTask(tasks []*ecs.Task, taskID string) []*ecs.Task {
 	var filteredTasks []*ecs.Task
 
 	for _, task := range tasks {
-		log.Infoln("")
-		log.Infoln(fmt.Sprintf("%v", task))
 		var copilotTask bool
 		for _, tag := range task.Tags {
 			if aws.StringValue(tag.Key) == deploy.TaskTagKey {
@@ -214,8 +228,6 @@ func filterCopilotTask(tasks []*ecs.Task, taskID string) []*ecs.Task {
 			}
 		}
 		id, _ := ecs.TaskID(aws.StringValue(task.TaskArn))
-		log.Infoln(fmt.Sprintf("%v", copilotTask))
-		log.Infoln(aws.StringValue(task.TaskArn))
 		if copilotTask && strings.Contains(id, taskID) {
 			filteredTasks = append(filteredTasks, task)
 		}
