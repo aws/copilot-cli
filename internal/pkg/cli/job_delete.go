@@ -15,7 +15,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
-	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -46,8 +45,6 @@ const (
 	fmtJobTasksStopStart          = "Stopping running tasks of job %s from environment %s."
 	fmtJobTasksStopFailed         = "Failed to stop running tasks of job %s from environment %s: %v.\n"
 	fmtJobTasksStopComplete       = "Stopped running tasks of job %s from environment %s.\n"
-
-	fmtJobDeleteTaskDeleteReason = "Task stopped because job %s was deleted."
 )
 
 var (
@@ -74,7 +71,7 @@ type deleteJobOpts struct {
 	newWlDeleter                 func(sess *session.Session) wlDeleter
 	newImageRemover              func(sess *session.Session) imageRemover
 	newactiveWorkloadTasksLister func(sess *session.Session) activeWorkloadTasksLister
-	newTaskStopper               func(sess *session.Session) tasksStopper
+	newTaskStopper               func(sess *session.Session) tasksListerStopper
 }
 
 func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
@@ -111,8 +108,8 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 		newactiveWorkloadTasksLister: func(session *session.Session) activeWorkloadTasksLister {
 			return ecs.New(session)
 		},
-		newTaskStopper: func(session *session.Session) tasksStopper {
-			return awsecs.New(session)
+		newTaskStopper: func(session *session.Session) tasksListerStopper {
+			return ecs.New(session)
 		},
 	}, nil
 }
@@ -303,9 +300,7 @@ func (o *deleteJobOpts) deleteTasks(sess *session.Session, env string) error {
 		return nil
 	}
 	o.spinner.Start(fmt.Sprintf(fmtJobTasksStopStart, o.name, env))
-	if err := o.newTaskStopper(sess).StopTasks(taskARNs,
-		awsecs.WithStopTaskCluster(cluster),
-		awsecs.WithStopTaskReason(fmt.Sprintf(fmtJobDeleteTaskDeleteReason, o.name))); err != nil {
+	if err := o.newTaskStopper(sess).StopAppEnvTasks(o.appName, env, taskARNs); err != nil {
 		o.spinner.Stop(log.Serrorf(fmtJobTasksStopFailed, o.name, env, err))
 		return fmt.Errorf("stop tasks for cluster %s: %w", cluster, err)
 	}

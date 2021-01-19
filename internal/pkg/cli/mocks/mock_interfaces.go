@@ -5313,48 +5313,6 @@ func (mr *MockactiveWorkloadTasksListerMockRecorder) ListActiveWorkloadTasks(app
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActiveWorkloadTasks", reflect.TypeOf((*MockactiveWorkloadTasksLister)(nil).ListActiveWorkloadTasks), app, env, workload)
 }
 
-// MocktasksStopper is a mock of tasksStopper interface
-type MocktasksStopper struct {
-	ctrl     *gomock.Controller
-	recorder *MocktasksStopperMockRecorder
-}
-
-// MocktasksStopperMockRecorder is the mock recorder for MocktasksStopper
-type MocktasksStopperMockRecorder struct {
-	mock *MocktasksStopper
-}
-
-// NewMocktasksStopper creates a new mock instance
-func NewMocktasksStopper(ctrl *gomock.Controller) *MocktasksStopper {
-	mock := &MocktasksStopper{ctrl: ctrl}
-	mock.recorder = &MocktasksStopperMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MocktasksStopper) EXPECT() *MocktasksStopperMockRecorder {
-	return m.recorder
-}
-
-// StopTasks mocks base method
-func (m *MocktasksStopper) StopTasks(tasks []string, opts ...ecs.StopTasksOpts) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{tasks}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "StopTasks", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// StopTasks indicates an expected call of StopTasks
-func (mr *MocktasksStopperMockRecorder) StopTasks(tasks interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{tasks}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopTasks", reflect.TypeOf((*MocktasksStopper)(nil).StopTasks), varargs...)
-}
-
 // MocktasksListerStopper is a mock of tasksListerStopper interface
 type MocktasksListerStopper struct {
 	ctrl     *gomock.Controller

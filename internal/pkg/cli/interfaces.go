@@ -498,10 +498,6 @@ type activeWorkloadTasksLister interface {
 	ListActiveWorkloadTasks(app, env, workload string) (clusterARN string, taskARNs []string, err error)
 }
 
-type tasksStopper interface {
-	StopTasks(tasks []string, opts ...awsecs.StopTasksOpts) error
-}
-
 type tasksListerStopper interface {
 	ListActiveAppEnvTasks(opts ecs.ListActiveAppEnvTasksOpts) ([]*awsecs.Task, error)
 	ListActiveDefaultClusterTasks(filter ecs.ListTasksFilter) ([]*awsecs.Task, error)
