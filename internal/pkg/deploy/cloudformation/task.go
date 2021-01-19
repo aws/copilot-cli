@@ -135,6 +135,10 @@ func (cf CloudFormation) ListDefaultTaskStacks() ([]deploy.TaskStackInfo, error)
 }
 
 // DeleteTask deletes a Copilot-created one-off task stack using the RoleARN that stack was created with.
+// If there is no role arn specified, it tries to delete the stack using the default session.
 func (cf CloudFormation) DeleteTask(task deploy.TaskStackInfo) error {
-	return cf.cfnClient.DeleteAndWaitWithRoleARN(task.StackName, task.RoleARN)
+	if task.RoleARN != "" {
+		return cf.cfnClient.DeleteAndWaitWithRoleARN(task.StackName, task.RoleARN)
+	}
+	return cf.cfnClient.DeleteAndWait(task.StackName)
 }
