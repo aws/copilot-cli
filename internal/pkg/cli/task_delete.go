@@ -297,17 +297,21 @@ func (o *deleteTaskOpts) askTaskName() error {
 }
 
 func (o *deleteTaskOpts) Execute() error {
-
 	// Get clients.
 	sess, err := o.getSession()
 	if err != nil {
 		return fmt.Errorf("get session: %w", err)
 	}
 
-	taskStopper := o.newTaskStopper(sess)
-	taskLister := o.newTaskLister(sess)
-	ecrDeleter := o.newImageRemover(sess)
+	ecsClient := o.newTaskListerStopper(sess)
 	taskDeleter := o.newTaskDeleter(sess)
+
+	// ECR Deletion happens from the default profile in app delete. We can do it here too.
+	defaultSess, err := o.sess.DefaultWithRegion(aws.StringValue(sess.Config.Region))
+	if err != nil {
+		return fmt.Errorf("get default session for ECR deletion: %s", err)
+	}
+	ecrDeleter := o.newImageRemover(defaultSess)
 
 	// Get information about the task stack. This struct will be used to get the names of the ECR
 	// repo and task stack.
