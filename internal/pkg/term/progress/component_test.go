@@ -151,7 +151,7 @@ func TestTableComponent_Render(t *testing.T) {
 		},
 		"should render a sample table": {
 			inTitle:  "Deployments",
-			inHeader: []string{"", "Revision", "Rolling", "Desired", "Running", "Failed", "Pending"},
+			inHeader: []string{"", "Revision", "Rollout", "Desired", "Running", "Failed", "Pending"},
 			inRows: [][]string{
 				{"PRIMARY", "3", "[in progress]", "10", "0", "0", "10"},
 				{"ACTIVE", "2", "[completed]", "10", "10", "0", "0"},
@@ -159,7 +159,7 @@ func TestTableComponent_Render(t *testing.T) {
 
 			wantedNumLines: 4,
 			wantedOut: `Deployments
-           Revision  Rolling        Desired  Running  Failed  Pending
+           Revision  Rollout        Desired  Running  Failed  Pending
   PRIMARY  3         [in progress]  10       0        0       10
   ACTIVE   2         [completed]    10       10       0       0
 `,

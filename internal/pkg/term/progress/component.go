@@ -75,8 +75,8 @@ type tableComponent struct {
 	ColumnChar   byte // Character that separates columns.
 }
 
-// newTableComponent returns a table component with no padding, uses the space character ' ' to separate columns,
-// and has 2 spaces between columns.
+// newTableComponent returns a small table component with no padding, that uses the space character ' ' to
+// separate columns, and has two spaces between columns.
 func newTableComponent(title string, header []string, rows [][]string) *tableComponent {
 	return &tableComponent{
 		Title:        title,
@@ -96,7 +96,7 @@ func (c *tableComponent) Render(out io.Writer) (numLines int, err error) {
 		return 0, nil
 	}
 
-	// Write title
+	// Write the table's title.
 	buf := new(bytes.Buffer)
 	if _, err := buf.WriteString(fmt.Sprintf("%s\n", c.Title)); err != nil {
 		return 0, fmt.Errorf("write title %s to buffer: %w", c.Title, err)
@@ -107,7 +107,8 @@ func (c *tableComponent) Render(out io.Writer) (numLines int, err error) {
 	tw := tabwriter.NewWriter(buf, c.MinCellWidth, c.GapWidth, c.MinCellWidth, c.ColumnChar, noAdditionalFormatting)
 	rows := append([][]string{c.Header}, c.Rows...)
 	for _, row := range rows {
-		line := fmt.Sprintf("  %s\n" /* Pad the table by 2 spaces under the Title. */, strings.Join(row, "\t"))
+		// Pad the table to the right under the Title.
+		line := fmt.Sprintf("%s%s\n", strings.Repeat(" ", nestedComponentPadding), strings.Join(row, "\t"))
 		if _, err := tw.Write([]byte(line)); err != nil {
 			return 0, fmt.Errorf("write row %s to tabwriter: %w", line, err)
 		}
