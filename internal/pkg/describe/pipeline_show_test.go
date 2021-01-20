@@ -215,7 +215,7 @@ func TestPipelineDescriber_String(t *testing.T) {
 Stages
 
   Name              Category            Provider            Details
-  ----              ----                ----                ----
+  ----              --------            --------            -------
   Source            Source              GitHub              Repository: badgoose/repo
   Build             Build               CodeBuild           BuildProject: pipeline-dinder-badgoose-repo-BuildProject
   DeployTo-test     Deploy              CloudFormation      StackName: dinder-test-test
@@ -243,7 +243,7 @@ Resources
 Stages
 
   Name              Category            Provider            Details
-  ----              ----                ----                ----
+  ----              --------            --------            -------
   Source            Source              GitHub              Repository: badgoose/repo
   Build             Build               CodeBuild           BuildProject: pipeline-dinder-badgoose-repo-BuildProject
   DeployTo-test     Deploy              CloudFormation      StackName: dinder-test-test

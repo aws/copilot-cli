@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
@@ -68,8 +69,9 @@ func (p PipelineStatus) HumanString() string {
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprint(writer, color.Bold.Sprint("Pipeline Status\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "%s\t%s\t%s\n", "Stage", "Transition", "Status")
-	fmt.Fprintf(writer, "%s\t%s\t%s\n", "-----", "----------", "------")
+	headers := []string{"Stage", "Transition", "Status"}
+	fmt.Fprintf(writer, "%s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(writer, "%s\n", strings.Join(underline(headers), "\t"))
 	for _, stage := range p.StageStates {
 		fmt.Fprint(writer, stage.HumanString())
 	}
