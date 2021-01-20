@@ -228,6 +228,12 @@ func (o *updatePipelineOpts) Execute() error {
 			Branch:        (pipeline.Source.Properties["branch"]).(string),
 			RepositoryURL: (pipeline.Source.Properties["repository"]).(string),
 		}
+	case bbProviderName:
+		source = &deploy.BitBucketSource{
+			ProviderName:  bbProviderName,
+			Branch:        (pipeline.Source.Properties["branch"]).(string),
+			RepositoryURL: (pipeline.Source.Properties["repository"]).(string),
+		}
 	default:
 		return fmt.Errorf("invalid repo source provider: %s", pipeline.Source.ProviderName)
 	}

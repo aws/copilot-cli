@@ -22,7 +22,8 @@ var (
 	// Ex: https://github.com/koke/grit
 	ghRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
 	// Ex: https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample/browse
-	ccRepoExp = regexp.MustCompile(`(https:\/\/(?P<region>.+)(.console.aws.amazon.com\/codesuite\/codecommit\/repositories\/)(?P<repo>.+)(\/browse))`)
+	ccRepoExp = regexp.MustCompile(`(https:\/\/(?P<region>.+).console.aws.amazon.com\/codesuite\/codecommit\/repositories\/(?P<repo>.+)(\/browse))`)
+	bbRepoExp = regexp.MustCompile(`https\/\/(.+)@bitbucket.org/(?P<owner>.+)\/(?P<repo>.+)`)
 )
 
 // CreatePipelineInput represents the fields required to deploy a pipeline.
@@ -85,6 +86,13 @@ type CodeCommitSource struct {
 	RepositoryURL string
 }
 
+// BitBucketSource defines the (BB) source of the artifacts to be built and deployed.
+type BitBucketSource struct {
+	ProviderName  string
+	Branch        string
+	RepositoryURL string
+}
+
 // GitHubPersonalAccessTokenSecretID returns the ID of the secret in the
 // Secrets manager, which stores the GitHub Personal Access token if the
 // provider is "GitHub". Otherwise, it returns the detected provider.
@@ -136,9 +144,39 @@ func (s *CodeCommitSource) parseRepo() (string, error) {
 	return matches["repo"], nil
 }
 
+// parseOwnerAndRepo parses the owner and repo name from the GH repo URL, which was formatted and assigned in cli/pipeline_init.go.
+func (s *BitBucketSource) parseOwnerAndRepo() (owner, repo string, err error) {
+	if s.RepositoryURL == "" {
+		return "", "", fmt.Errorf("unable to locate the repository")
+	}
+
+	match := bbRepoExp.FindStringSubmatch(s.RepositoryURL)
+	if len(match) == 0 {
+		return "", "", fmt.Errorf(fmtInvalidRepo, s.RepositoryURL)
+	}
+
+	matches := make(map[string]string)
+	for i, name := range bbRepoExp.SubexpNames() {
+		if i != 0 && name != "" {
+			matches[name] = match[i]
+		}
+	}
+	return matches["owner"], matches["repo"], nil
+}
+
 // Repository returns the repository portion. For example,
 // given "aws/amazon-copilot", this function returns "amazon-copilot".
 func (s *GitHubSource) Repository() (string, error) {
+	_, repo, err := s.parseOwnerAndRepo()
+	if err != nil {
+		return "", err
+	}
+	return repo, nil
+}
+
+// Repository returns the repository portion. For example,
+// given "aws/amazon-copilot", this function returns "amazon-copilot".
+func (s *BitBucketSource) Repository() (string, error) {
 	_, repo, err := s.parseOwnerAndRepo()
 	if err != nil {
 		return "", err
@@ -159,6 +197,16 @@ func (s *CodeCommitSource) Repository() (string, error) {
 // Owner returns the repository owner portion. For example,
 // given "aws/amazon-copilot", this function returns "aws".
 func (s *GitHubSource) Owner() (string, error) {
+	owner, _, err := s.parseOwnerAndRepo()
+	if err != nil {
+		return "", err
+	}
+	return owner, nil
+}
+
+// Owner returns the repository owner portion. For example,
+// given "aws/amazon-copilot", this function returns "aws".
+func (s *BitBucketSource) Owner() (string, error) {
 	owner, _, err := s.parseOwnerAndRepo()
 	if err != nil {
 		return "", err
