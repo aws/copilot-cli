@@ -102,7 +102,7 @@ type runTaskOpts struct {
 	spinner progress
 
 	// Fields below are configured at runtime.
-	deployer             taskDeployer
+	deployer             taskDeployManager
 	repository           repositoryService
 	runner               taskRunner
 	eventsWriter         eventsWriter

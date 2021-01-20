@@ -480,7 +480,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 			mockGetECS := func(_ *session.Session) taskStopper {
 				return mockECS
 			}
-			mockGetCFN := func(_ *session.Session) taskDeployer {
+			mockGetCFN := func(_ *session.Session) taskDeployManager {
 				return mockCFN
 			}
 
