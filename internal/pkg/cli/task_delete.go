@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
-	awssession "github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -55,13 +55,13 @@ type deleteTaskOpts struct {
 	sel     wsSelector
 
 	// Generators for env-specific clients
-	newTaskSel      func(session *awssession.Session) cfTaskSelector
-	newTaskStopper  func(session *awssession.Session) taskStopper
-	newImageRemover func(session *awssession.Session) imageRemover
-	newStackManager func(session *awssession.Session) taskStackManager
+	newTaskSel      func(session *session.Session) cfTaskSelector
+	newTaskStopper  func(session *session.Session) taskStopper
+	newImageRemover func(session *session.Session) imageRemover
+	newStackManager func(session *session.Session) taskStackManager
 
 	// Cached variables
-	session   *awssession.Session
+	session   *session.Session
 	stackInfo *deploy.TaskStackInfo
 }
 
@@ -88,17 +88,17 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 		prompt:  prompter,
 		sess:    provider,
 		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
-		newTaskSel: func(session *awssession.Session) cfTaskSelector {
+		newTaskSel: func(session *session.Session) cfTaskSelector {
 			cfn := cloudformation.New(session)
 			return selector.NewCFTaskSelect(prompter, store, cfn)
 		},
-		newTaskStopper: func(session *awssession.Session) taskStopper {
+		newTaskStopper: func(session *session.Session) taskStopper {
 			return ecs.New(session)
 		},
-		newStackManager: func(session *awssession.Session) taskStackManager {
+		newStackManager: func(session *session.Session) taskStackManager {
 			return cloudformation.New(session)
 		},
-		newImageRemover: func(session *awssession.Session) imageRemover {
+		newImageRemover: func(session *session.Session) imageRemover {
 			return ecr.New(session)
 		},
 	}, nil
@@ -250,7 +250,7 @@ func (o *deleteTaskOpts) Ask() error {
 	return nil
 }
 
-func (o *deleteTaskOpts) getSession() (*awssession.Session, error) {
+func (o *deleteTaskOpts) getSession() (*session.Session, error) {
 	if o.session != nil {
 		return o.session, nil
 	}
@@ -347,7 +347,7 @@ func (o *deleteTaskOpts) stopTasks() error {
 func (o *deleteTaskOpts) clearECRRepository() error {
 	// ECR Deletion happens from the default profile in app delete. We can do it here too by getting
 	// a default session in whichever region we're deleting from.
-	var defaultSess *awssession.Session
+	var defaultSess *session.Session
 	var err error
 	if o.defaultCluster {
 		defaultSess, err = o.sess.Default()
