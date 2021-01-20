@@ -224,7 +224,7 @@ func (o *initPipelineOpts) validateURL(url string) error {
 	// Note: no longer calling `validateDomainName` because if users use git-remote-codecommit
 	// (the HTTPS (GRC) protocol) to connect to CodeCommit, the url does not have any periods.
 	if !strings.Contains(url, githubURL) && !strings.Contains(url, ccIdentifier) && !strings.Contains(url, bbURL) {
-		return errors.New("Copilot currently accepts only URLs to GitHub and CodeCommit repository sources")
+		return errors.New("Copilot currently accepts URLs to only GitHub, CodeCommit, and BitBucket repository sources")
 	}
 	return nil
 }
