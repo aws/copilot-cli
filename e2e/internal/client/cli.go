@@ -133,6 +133,14 @@ type TaskRunInput struct {
 	Follow  bool
 }
 
+// TaskDeleteInput contains the parameters for calling copilot task delete.
+type TaskDeleteInput struct {
+	App     string
+	Env     string
+	Name    string
+	Default bool
+}
+
 // JobInitInput contains the parameters for calling copilot job init.
 type JobInitInput struct {
 	Name       string
@@ -542,6 +550,35 @@ func (cli *CLI) TaskRun(input *TaskRunInput) (string, error) {
 	}
 
 	return cli.exec(exec.Command(cli.path, commands...))
+}
+
+/*TaskDelete runs:
+copilot task delete
+	--name $n
+	--yes
+	--default (optionally)
+	--app $a (optionally)
+	--env $e (optionally)
+*/
+func (cli *CLI) TaskDelete(opts *TaskDeleteInput) (string, error) {
+	args := []string{
+		"task",
+		"delete",
+		"--name", opts.Name,
+		"--yes",
+	}
+	if opts.App != "" {
+		args = append(args, "--app", opts.App)
+	}
+	if opts.Env != "" {
+		args = append(args, "--env", opts.Env)
+	}
+	if opts.Default {
+		args = append(args, "--default")
+	}
+	return cli.exec(
+		exec.Command(cli.path, args...),
+	)
 }
 
 /*JobInit runs:
