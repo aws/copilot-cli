@@ -294,7 +294,6 @@ type deleteJobMocks struct {
 	spinner        *mocks.Mockprogress
 	jobCFN         *mocks.MockwlDeleter
 	ecr            *mocks.MockimageRemover
-	tasksGetter    *mocks.MockactiveWorkloadTasksLister
 	ecs            *mocks.MocktaskStopper
 }
 
@@ -438,7 +437,6 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 			mockJobCFN := mocks.NewMockwlDeleter(ctrl)
 			mockSpinner := mocks.NewMockprogress(ctrl)
 			mockImageRemover := mocks.NewMockimageRemover(ctrl)
-			mockTasksGetter := mocks.NewMockactiveWorkloadTasksLister(ctrl)
 			mockTaskStopper := mocks.NewMocktaskStopper(ctrl)
 			mockGetJobCFN := func(_ *session.Session) wlDeleter {
 				return mockJobCFN
@@ -458,7 +456,6 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 				spinner:        mockSpinner,
 				jobCFN:         mockJobCFN,
 				ecr:            mockImageRemover,
-				tasksGetter:    mockTasksGetter,
 				ecs:            mockTaskStopper,
 			}
 

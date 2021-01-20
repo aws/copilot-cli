@@ -5272,45 +5272,6 @@ func (mr *MockroleDeleterMockRecorder) DeleteRole(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRole", reflect.TypeOf((*MockroleDeleter)(nil).DeleteRole), arg0)
 }
 
-// MockactiveWorkloadTasksLister is a mock of activeWorkloadTasksLister interface
-type MockactiveWorkloadTasksLister struct {
-	ctrl     *gomock.Controller
-	recorder *MockactiveWorkloadTasksListerMockRecorder
-}
-
-// MockactiveWorkloadTasksListerMockRecorder is the mock recorder for MockactiveWorkloadTasksLister
-type MockactiveWorkloadTasksListerMockRecorder struct {
-	mock *MockactiveWorkloadTasksLister
-}
-
-// NewMockactiveWorkloadTasksLister creates a new mock instance
-func NewMockactiveWorkloadTasksLister(ctrl *gomock.Controller) *MockactiveWorkloadTasksLister {
-	mock := &MockactiveWorkloadTasksLister{ctrl: ctrl}
-	mock.recorder = &MockactiveWorkloadTasksListerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockactiveWorkloadTasksLister) EXPECT() *MockactiveWorkloadTasksListerMockRecorder {
-	return m.recorder
-}
-
-// ListActiveWorkloadTasks mocks base method
-func (m *MockactiveWorkloadTasksLister) ListActiveWorkloadTasks(app, env, workload string) (string, []string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListActiveWorkloadTasks", app, env, workload)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].([]string)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// ListActiveWorkloadTasks indicates an expected call of ListActiveWorkloadTasks
-func (mr *MockactiveWorkloadTasksListerMockRecorder) ListActiveWorkloadTasks(app, env, workload interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActiveWorkloadTasks", reflect.TypeOf((*MockactiveWorkloadTasksLister)(nil).ListActiveWorkloadTasks), app, env, workload)
-}
-
 // MocktaskStopper is a mock of taskStopper interface
 type MocktaskStopper struct {
 	ctrl     *gomock.Controller

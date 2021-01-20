@@ -492,10 +492,6 @@ type roleDeleter interface {
 	DeleteRole(string) error
 }
 
-type activeWorkloadTasksLister interface {
-	ListActiveWorkloadTasks(app, env, workload string) (clusterARN string, taskARNs []string, err error)
-}
-
 type taskStopper interface {
 	StopAppEnvOneOffTasks(app, env, family string) error
 	StopDefaultClusterTasks(familyName string) error
