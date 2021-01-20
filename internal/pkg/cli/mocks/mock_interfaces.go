@@ -3910,6 +3910,21 @@ func (mr *MockdeployerMockRecorder) GetRegionalAppResources(app interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalAppResources", reflect.TypeOf((*Mockdeployer)(nil).GetRegionalAppResources), app)
 }
 
+// ListTaskStacks mocks base method
+func (m *Mockdeployer) ListTaskStacks(appName, envName string) ([]deploy.TaskStackInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTaskStacks", appName, envName)
+	ret0, _ := ret[0].([]deploy.TaskStackInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListTaskStacks indicates an expected call of ListTaskStacks
+func (mr *MockdeployerMockRecorder) ListTaskStacks(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTaskStacks", reflect.TypeOf((*Mockdeployer)(nil).ListTaskStacks), appName, envName)
+}
+
 // MockdomainValidator is a mock of domainValidator interface
 type MockdomainValidator struct {
 	ctrl     *gomock.Controller
