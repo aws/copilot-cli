@@ -47,19 +47,24 @@ const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
 	githubURL             = "github.com"
 	ccIdentifier          = "codecommit"
+	bbURL                 = "bitbucket.org"
 	awsURL                = "aws.amazon.com"
 	ghProviderName        = "GitHub"
 	ccProviderName        = "CodeCommit"
+	bbProviderName        = "BitBucket"
 	defaultGHBranch       = "main"
 	defaultCCBranch       = "master"
+	defaultBBBranch       = "master"
 )
 
 const (
 	fmtSecretName     = "github-token-%s-%s"
 	fmtGHPipelineName = "pipeline-%s-%s-%s"
 	fmtCCPipelineName = "pipeline-%s-%s"
+	fmtBBPipelineName = "pipeline-%s-%s-%s"
 	fmtGHRepoURL      = "https://%s/%s/%s"
 	fmtCCRepoURL      = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse"
+	fmtBBRepoURL      = "https://%s@%s/%s/%s"
 )
 
 var (
@@ -89,11 +94,11 @@ type initPipelineOpts struct {
 	sel            pipelineSelector
 
 	// Outputs stored on successful actions.
-	secret      string
-	provider    string
-	repoName    string
-	githubOwner string
-	ccRegion    string
+	secret    string
+	provider  string
+	repoName  string
+	repoOwner string
+	ccRegion  string
 
 	// Caches variables
 	fs         *afero.Afero
@@ -218,7 +223,7 @@ func (o *initPipelineOpts) RecommendedActions() []string {
 func (o *initPipelineOpts) validateURL(url string) error {
 	// Note: no longer calling `validateDomainName` because if users use git-remote-codecommit
 	// (the HTTPS (GRC) protocol) to connect to CodeCommit, the url does not have any periods.
-	if !strings.Contains(url, githubURL) && !strings.Contains(url, ccIdentifier) {
+	if !strings.Contains(url, githubURL) && !strings.Contains(url, ccIdentifier) && !strings.Contains(url, bbURL) {
 		return errors.New("Copilot currently accepts only URLs to GitHub and CodeCommit repository sources")
 	}
 	return nil
@@ -261,6 +266,8 @@ func (o *initPipelineOpts) askRepository() error {
 		return o.askGitHubRepoDetails()
 	case strings.Contains(o.repoURL, ccIdentifier):
 		return o.askCodeCommitRepoDetails()
+	case strings.Contains(o.repoURL, bbURL):
+		return o.askBitBucketRepoDetails()
 	}
 	return nil
 }
@@ -272,7 +279,7 @@ func (o *initPipelineOpts) askGitHubRepoDetails() error {
 		return err
 	}
 	o.repoName = repoDetails.name
-	o.githubOwner = repoDetails.owner
+	o.repoOwner = repoDetails.owner
 
 	if o.githubAccessToken == "" {
 		if err = o.getGitHubAccessToken(); err != nil {
@@ -306,6 +313,21 @@ func (o *initPipelineOpts) askCodeCommitRepoDetails() error {
 
 	if o.repoBranch == "" {
 		o.repoBranch = defaultCCBranch
+	}
+	return nil
+}
+
+func (o *initPipelineOpts) askBitBucketRepoDetails() error {
+	o.provider = bbProviderName
+	repoDetails, err := bbRepoURL(o.repoURL).parse()
+	if err != nil {
+		return err
+	}
+	o.repoName = repoDetails.name
+	o.repoOwner = repoDetails.owner
+
+	if o.repoBranch == "" {
+		o.repoBranch = defaultBBBranch
 	}
 	return nil
 }
@@ -356,7 +378,7 @@ func (o *initPipelineOpts) parseGitRemoteResult(s string) ([]string, error) {
 	urlSet := make(map[string]bool)
 	items := strings.Split(s, "\n")
 	for _, item := range items {
-		if !strings.Contains(item, githubURL) && !strings.Contains(item, ccIdentifier) {
+		if !strings.Contains(item, githubURL) && !strings.Contains(item, ccIdentifier) && !strings.Contains(item, bbURL) {
 			continue
 		}
 		cols := strings.Split(item, "\t")
@@ -378,6 +400,12 @@ type ccRepoURL string
 type ccRepoDetails struct {
 	name   string
 	region string
+}
+
+type bbRepoURL string
+type bbRepoDetails struct {
+	name  string
+	owner string
 }
 
 func (url ghRepoURL) parse() (ghRepoDetails, error) {
@@ -425,6 +453,21 @@ func (url ccRepoURL) parse() (ccRepoDetails, error) {
 	return ccRepoDetails{
 		name:   repoName,
 		region: region,
+	}, nil
+}
+
+func (url bbRepoURL) parse() (bbRepoDetails, error) {
+	urlString := string(url)
+	splitURL := strings.Split(urlString, "/")
+	if len(splitURL) < 2 {
+		return bbRepoDetails{}, fmt.Errorf("unable to parse the BitBucket repository name from %s", url)
+	}
+	repoName := splitURL[len(splitURL)-1]
+	repoOwner := splitURL[len(splitURL)-2]
+
+	return bbRepoDetails{
+		name:  repoName,
+		owner: repoOwner,
 	}, nil
 }
 
@@ -556,10 +599,13 @@ func (o *initPipelineOpts) secretName() string {
 
 func (o *initPipelineOpts) pipelineName() (string, error) {
 	if o.provider == ghProviderName {
-		return fmt.Sprintf(fmtGHPipelineName, o.appName, o.githubOwner, o.repoName), nil
+		return fmt.Sprintf(fmtGHPipelineName, o.appName, o.repoOwner, o.repoName), nil
 	}
 	if o.provider == ccProviderName {
 		return fmt.Sprintf(fmtCCPipelineName, o.appName, o.repoName), nil
+	}
+	if o.provider == bbProviderName {
+		return fmt.Sprintf(fmtBBPipelineName, o.appName, o.repoOwner, o.repoName), nil
 	}
 	return "", fmt.Errorf("unable to create pipeline name for repo %s from provider %s", o.repoName, o.provider)
 }
@@ -567,7 +613,7 @@ func (o *initPipelineOpts) pipelineName() (string, error) {
 func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	if o.provider == ghProviderName {
 		config := &manifest.GitHubProperties{
-			RepositoryURL:         fmt.Sprintf(fmtGHRepoURL, githubURL, o.githubOwner, o.repoName),
+			RepositoryURL:         fmt.Sprintf(fmtGHRepoURL, githubURL, o.repoOwner, o.repoName),
 			Branch:                o.repoBranch,
 			GithubSecretIdKeyName: o.secret,
 		}
@@ -576,6 +622,13 @@ func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	if o.provider == ccProviderName {
 		config := &manifest.CodeCommitProperties{
 			RepositoryURL: fmt.Sprintf(fmtCCRepoURL, o.ccRegion, awsURL, o.repoName),
+			Branch:        o.repoBranch,
+		}
+		return manifest.NewProvider(config)
+	}
+	if o.provider == bbProviderName {
+		config := &manifest.BitBucketProperties{
+			RepositoryURL: fmt.Sprintf(fmtBBRepoURL, o.repoOwner, bbURL, o.repoOwner, o.repoName),
 			Branch:        o.repoBranch,
 		}
 		return manifest.NewProvider(config)
