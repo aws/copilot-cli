@@ -444,7 +444,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 			mockGetImageRemover := func(_ *session.Session) imageRemover {
 				return mockImageRemover
 			}
-			mockNewTasksListerStopper := func(_ *session.Session) taskStopper {
+			mockNewTaskStopper := func(_ *session.Session) taskStopper {
 				return mockTaskStopper
 			}
 
@@ -473,7 +473,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 				appCFN:          mockAppCFN,
 				newWlDeleter:    mockGetJobCFN,
 				newImageRemover: mockGetImageRemover,
-				newTaskStopper:  mockNewTasksListerStopper,
+				newTaskStopper:  mockNewTaskStopper,
 			}
 
 			// WHEN

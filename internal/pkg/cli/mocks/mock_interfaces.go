@@ -3460,31 +3460,31 @@ func (mr *MockappResourcesGetterMockRecorder) GetRegionalAppResources(app interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalAppResources", reflect.TypeOf((*MockappResourcesGetter)(nil).GetRegionalAppResources), app)
 }
 
-// MocktaskDeployManager is a mock of taskDeployManager interface
-type MocktaskDeployManager struct {
+// MocktaskDeployer is a mock of taskDeployer interface
+type MocktaskDeployer struct {
 	ctrl     *gomock.Controller
-	recorder *MocktaskDeployManagerMockRecorder
+	recorder *MocktaskDeployerMockRecorder
 }
 
-// MocktaskDeployManagerMockRecorder is the mock recorder for MocktaskDeployManager
-type MocktaskDeployManagerMockRecorder struct {
-	mock *MocktaskDeployManager
+// MocktaskDeployerMockRecorder is the mock recorder for MocktaskDeployer
+type MocktaskDeployerMockRecorder struct {
+	mock *MocktaskDeployer
 }
 
-// NewMocktaskDeployManager creates a new mock instance
-func NewMocktaskDeployManager(ctrl *gomock.Controller) *MocktaskDeployManager {
-	mock := &MocktaskDeployManager{ctrl: ctrl}
-	mock.recorder = &MocktaskDeployManagerMockRecorder{mock}
+// NewMocktaskDeployer creates a new mock instance
+func NewMocktaskDeployer(ctrl *gomock.Controller) *MocktaskDeployer {
+	mock := &MocktaskDeployer{ctrl: ctrl}
+	mock.recorder = &MocktaskDeployerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MocktaskDeployManager) EXPECT() *MocktaskDeployManagerMockRecorder {
+func (m *MocktaskDeployer) EXPECT() *MocktaskDeployerMockRecorder {
 	return m.recorder
 }
 
 // DeployTask mocks base method
-func (m *MocktaskDeployManager) DeployTask(input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error {
+func (m *MocktaskDeployer) DeployTask(input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{input}
 	for _, a := range opts {
@@ -3496,14 +3496,37 @@ func (m *MocktaskDeployManager) DeployTask(input *deploy.CreateTaskResourcesInpu
 }
 
 // DeployTask indicates an expected call of DeployTask
-func (mr *MocktaskDeployManagerMockRecorder) DeployTask(input interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MocktaskDeployerMockRecorder) DeployTask(input interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{input}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskDeployManager)(nil).DeployTask), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeployTask), varargs...)
+}
+
+// MocktaskStackManager is a mock of taskStackManager interface
+type MocktaskStackManager struct {
+	ctrl     *gomock.Controller
+	recorder *MocktaskStackManagerMockRecorder
+}
+
+// MocktaskStackManagerMockRecorder is the mock recorder for MocktaskStackManager
+type MocktaskStackManagerMockRecorder struct {
+	mock *MocktaskStackManager
+}
+
+// NewMocktaskStackManager creates a new mock instance
+func NewMocktaskStackManager(ctrl *gomock.Controller) *MocktaskStackManager {
+	mock := &MocktaskStackManager{ctrl: ctrl}
+	mock.recorder = &MocktaskStackManagerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocktaskStackManager) EXPECT() *MocktaskStackManagerMockRecorder {
+	return m.recorder
 }
 
 // DeleteTask mocks base method
-func (m *MocktaskDeployManager) DeleteTask(task deploy.TaskStackInfo) error {
+func (m *MocktaskStackManager) DeleteTask(task deploy.TaskStackInfo) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteTask", task)
 	ret0, _ := ret[0].(error)
@@ -3511,13 +3534,13 @@ func (m *MocktaskDeployManager) DeleteTask(task deploy.TaskStackInfo) error {
 }
 
 // DeleteTask indicates an expected call of DeleteTask
-func (mr *MocktaskDeployManagerMockRecorder) DeleteTask(task interface{}) *gomock.Call {
+func (mr *MocktaskStackManagerMockRecorder) DeleteTask(task interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTask", reflect.TypeOf((*MocktaskDeployManager)(nil).DeleteTask), task)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTask", reflect.TypeOf((*MocktaskStackManager)(nil).DeleteTask), task)
 }
 
 // GetTaskStack mocks base method
-func (m *MocktaskDeployManager) GetTaskStack(taskName string) (*deploy.TaskStackInfo, error) {
+func (m *MocktaskStackManager) GetTaskStack(taskName string) (*deploy.TaskStackInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetTaskStack", taskName)
 	ret0, _ := ret[0].(*deploy.TaskStackInfo)
@@ -3526,9 +3549,9 @@ func (m *MocktaskDeployManager) GetTaskStack(taskName string) (*deploy.TaskStack
 }
 
 // GetTaskStack indicates an expected call of GetTaskStack
-func (mr *MocktaskDeployManagerMockRecorder) GetTaskStack(taskName interface{}) *gomock.Call {
+func (mr *MocktaskStackManagerMockRecorder) GetTaskStack(taskName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskStack", reflect.TypeOf((*MocktaskDeployManager)(nil).GetTaskStack), taskName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskStack", reflect.TypeOf((*MocktaskStackManager)(nil).GetTaskStack), taskName)
 }
 
 // MocktaskRunner is a mock of taskRunner interface

@@ -276,7 +276,7 @@ type deleteTaskMocks struct {
 	sess    *sessions.Provider
 	ecr     *mocks.MockimageRemover
 	ecs     *mocks.MocktaskStopper
-	cfn     *mocks.MocktaskDeployer
+	cfn     *mocks.MocktaskStackManager
 	spinner *mocks.Mockprogress
 }
 
@@ -469,7 +469,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 			// GIVEN
 			mockstore := mocks.NewMockstore(ctrl)
 			mockECR := mocks.NewMockimageRemover(ctrl)
-			mockCFN := mocks.NewMocktaskDeployer(ctrl)
+			mockCFN := mocks.NewMocktaskStackManager(ctrl)
 			mockECS := mocks.NewMocktaskStopper(ctrl)
 			mockSession := sessions.NewProvider()
 			mockSpinner := mocks.NewMockprogress(ctrl)
@@ -480,7 +480,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 			mockGetECS := func(_ *session.Session) taskStopper {
 				return mockECS
 			}
-			mockGetCFN := func(_ *session.Session) taskDeployManager {
+			mockGetCFN := func(_ *session.Session) taskStackManager {
 				return mockCFN
 			}
 

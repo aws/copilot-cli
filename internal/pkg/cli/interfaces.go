@@ -345,8 +345,11 @@ type appResourcesGetter interface {
 	GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error)
 }
 
-type taskDeployManager interface {
+type taskDeployer interface {
 	DeployTask(input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error
+}
+
+type taskStackManager interface {
 	DeleteTask(task deploy.TaskStackInfo) error
 	GetTaskStack(taskName string) (*deploy.TaskStackInfo, error)
 }

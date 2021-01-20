@@ -58,7 +58,7 @@ type deleteTaskOpts struct {
 	newTaskSel      func(session *awssession.Session) cfTaskSelector
 	newTaskStopper  func(session *awssession.Session) taskStopper
 	newImageRemover func(session *awssession.Session) imageRemover
-	newStackManager func(session *awssession.Session) taskDeployManager
+	newStackManager func(session *awssession.Session) taskStackManager
 
 	// Cached variables
 	session   *awssession.Session
@@ -95,7 +95,7 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 		newTaskStopper: func(session *awssession.Session) taskStopper {
 			return ecs.New(session)
 		},
-		newStackManager: func(session *awssession.Session) taskDeployManager {
+		newStackManager: func(session *awssession.Session) taskStackManager {
 			return cloudformation.New(session)
 		},
 		newImageRemover: func(session *awssession.Session) imageRemover {
