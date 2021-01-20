@@ -313,7 +313,7 @@ func (o *deleteTaskOpts) Execute() error {
 	// repo and task stack.
 	taskInfo, err := taskDeleter.GetTaskStack(o.name)
 	if err != nil {
-		return fmt.Errorf("error retrieving stack information for task %s: %w", o.name, err)
+		return fmt.Errorf("retrieve stack information for task %s: %w", o.name, err)
 	}
 
 	o.spinner.Start(fmt.Sprintf("Cleaning up resources for task %s.", color.HighlightUserInput(o.name)))
@@ -337,7 +337,7 @@ func (o *deleteTaskOpts) Execute() error {
 		})
 		if err != nil {
 			o.spinner.Stop(log.Serrorln("Error listing running tasks."))
-			return fmt.Errorf("list running tasks in default cluster: %w", err)
+			return fmt.Errorf("list running tasks in environment %s: %w", o.env, err)
 		}
 	}
 
