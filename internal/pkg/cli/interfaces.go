@@ -10,12 +10,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
-	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
-	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
@@ -498,11 +496,10 @@ type activeWorkloadTasksLister interface {
 	ListActiveWorkloadTasks(app, env, workload string) (clusterARN string, taskARNs []string, err error)
 }
 
-type tasksListerStopper interface {
-	ListActiveAppEnvTasks(opts ecs.ListActiveAppEnvTasksOpts) ([]*awsecs.Task, error)
-	ListActiveDefaultClusterTasks(filter ecs.ListTasksFilter) ([]*awsecs.Task, error)
-	StopAppEnvTasks(app, env string, taskIDs []string) error
-	StopDefaultClusterTasks(taskIDs []string) error
+type taskStopper interface {
+	StopAppEnvOneOffTasks(app, env, family string) error
+	StopDefaultClusterTasks(familyName string) error
+	StopActiveWorkloadTasks(app, env, workload string) error
 }
 
 type serviceLinkedRoleCreator interface {

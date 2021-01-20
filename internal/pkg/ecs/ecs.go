@@ -128,7 +128,7 @@ func (c Client) DescribeService(app, env, svc string) (*ServiceDesc, error) {
 func (c Client) ListActiveWorkloadTasks(app, env, workload string) (clusterARN string, taskARNs []string, err error) {
 	clusterARN, err = c.ClusterARN(app, env)
 	if err != nil {
-		return "", nil, fmt.Errorf("get cluster for env %s: %w", env, err)
+		return "", nil, err
 	}
 	tdFamilyName := fmt.Sprintf(fmtWorkloadTaskDefinitionFamily, app, env, workload)
 	tasks, err := c.ecsClient.RunningTasksInFamily(clusterARN, tdFamilyName)
@@ -150,8 +150,9 @@ type ListActiveAppEnvTasksOpts struct {
 
 // ListTasksFilter contains the filtering parameters for listing Copilot tasks.
 type ListTasksFilter struct {
-	TaskGroup string
-	TaskID    string
+	TaskGroup  string // Returns only tasks with the given TaskGroup name.
+	TaskID     string // Returns only tasks with the given ID.
+	OneOffOnly bool   // Returns only tasks with the `copilot-task` tag.
 }
 
 type listActiveCopilotTasksOpts struct {
@@ -163,7 +164,7 @@ type listActiveCopilotTasksOpts struct {
 func (c Client) ListActiveAppEnvTasks(opts ListActiveAppEnvTasksOpts) ([]*ecs.Task, error) {
 	clusterARN, err := c.ClusterARN(opts.App, opts.Env)
 	if err != nil {
-		return nil, fmt.Errorf("get cluster for env %s: %w", opts.Env, err)
+		return nil, err
 	}
 	return c.listActiveCopilotTasks(listActiveCopilotTasksOpts{
 		Cluster:         clusterARN,
@@ -183,27 +184,64 @@ func (c Client) ListActiveDefaultClusterTasks(filter ListTasksFilter) ([]*ecs.Ta
 	})
 }
 
-// StopAppEnvTasks stops tasks in the given application and environment with the given IDs or ARNs.
-func (c Client) StopAppEnvTasks(app, env string, tasks []string) error {
-	clusterARN, err := c.ClusterARN(app, env)
+// StopActiveWorkloadTasks stops all tasks in the given application, enviornment, and workload.
+func (c Client) StopActiveWorkloadTasks(app, env, workload string) error {
+	tdFamilyName := fmt.Sprintf(fmtWorkloadTaskDefinitionFamily, app, env, workload)
+	return c.stopAppEnvTasks(app, env, tdFamilyName, false)
+}
+
+// StopAppEnvOneOffTasks stops all one-off tasks in the given application and environment with the family name.
+func (c Client) StopAppEnvOneOffTasks(app, env, family string) error {
+	tdFamilyName := fmt.Sprintf(fmtTaskTaskDefinitionFamily, family)
+	return c.stopAppEnvTasks(app, env, tdFamilyName, true)
+}
+
+// StopAppEnvTasks stops all tasks in the given application and environment in the given family.
+func (c Client) stopAppEnvTasks(app, env, family string, oneOffOnly bool) error {
+	tasks, err := c.ListActiveAppEnvTasks(ListActiveAppEnvTasksOpts{
+		App: app,
+		Env: env,
+		ListTasksFilter: ListTasksFilter{
+			TaskGroup: family,
+		},
+	})
 	if err != nil {
 		return err
 	}
-	return c.ecsClient.StopTasks(tasks, ecs.WithStopTaskCluster(clusterARN), ecs.WithStopTaskReason(taskStopReason))
+	taskIDs := make([]string, len(tasks))
+	for n, task := range tasks {
+		taskIDs[n] = aws.StringValue(task.TaskArn)
+	}
+	clusterARN, err := c.ClusterARN(app, env)
+	if err != nil {
+		return fmt.Errorf("get cluster for env %s: %w", env, err)
+	}
+	return c.ecsClient.StopTasks(taskIDs, ecs.WithStopTaskCluster(clusterARN), ecs.WithStopTaskReason(taskStopReason))
 }
 
-// StopDefaultClusterTasks stops tasks with the given IDs or ARNs in the default cluster.
-func (c Client) StopDefaultClusterTasks(taskIDs []string) error {
+// StopDefaultClusterTasks stops all copilot tasks from the given family in the default cluster.
+func (c Client) StopDefaultClusterTasks(familyName string) error {
+	tdFamily := fmt.Sprintf(fmtTaskTaskDefinitionFamily, familyName)
+	tasks, err := c.ListActiveDefaultClusterTasks(ListTasksFilter{
+		TaskGroup:  tdFamily,
+		OneOffOnly: true,
+	})
+	if err != nil {
+		return err
+	}
+	taskIDs := make([]string, len(tasks))
+	for n, task := range tasks {
+		taskIDs[n] = aws.StringValue(task.TaskArn)
+	}
 	return c.ecsClient.StopTasks(taskIDs, ecs.WithStopTaskReason(taskStopReason))
 }
 
 func (c Client) listActiveCopilotTasks(opts listActiveCopilotTasksOpts) ([]*ecs.Task, error) {
 	var tasks []*ecs.Task
 	if opts.TaskGroup != "" {
-		tdFamilyName := fmt.Sprintf(fmtTaskTaskDefinitionFamily, opts.TaskGroup)
-		resp, err := c.ecsClient.RunningTasksInFamily(opts.Cluster, tdFamilyName)
+		resp, err := c.ecsClient.RunningTasksInFamily(opts.Cluster, opts.TaskGroup)
 		if err != nil {
-			return nil, fmt.Errorf("list running tasks that belong to family %s in cluster %s: %w", tdFamilyName, opts.Cluster, err)
+			return nil, fmt.Errorf("list running tasks in family %s and cluster %s: %w", opts.TaskGroup, opts.Cluster, err)
 		}
 		tasks = resp
 	} else {
@@ -213,22 +251,26 @@ func (c Client) listActiveCopilotTasks(opts listActiveCopilotTasksOpts) ([]*ecs.
 		}
 		tasks = resp
 	}
-	return filterCopilotTask(tasks, opts.TaskID), nil
+	return filterCopilotTask(tasks, opts.TaskID, opts.OneOffOnly), nil
 }
 
-func filterCopilotTask(tasks []*ecs.Task, taskID string) []*ecs.Task {
+func filterCopilotTask(tasks []*ecs.Task, taskID string, oneOffOnly bool) []*ecs.Task {
 	var filteredTasks []*ecs.Task
 
 	for _, task := range tasks {
-		var copilotTask bool
-		for _, tag := range task.Tags {
-			if aws.StringValue(tag.Key) == deploy.TaskTagKey {
-				copilotTask = true
-				break
+		var taskOk bool
+		if oneOffOnly {
+			for _, tag := range task.Tags {
+				if aws.StringValue(tag.Key) == deploy.TaskTagKey {
+					taskOk = true
+					break
+				}
 			}
+		} else {
+			taskOk = true
 		}
 		id, _ := ecs.TaskID(aws.StringValue(task.TaskArn))
-		if copilotTask && strings.Contains(id, taskID) {
+		if taskOk && strings.Contains(id, taskID) {
 			filteredTasks = append(filteredTasks, task)
 		}
 	}

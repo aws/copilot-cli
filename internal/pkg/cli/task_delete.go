@@ -10,9 +10,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
-	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -55,10 +55,14 @@ type deleteTaskOpts struct {
 	sel     wsSelector
 
 	// Generators for env-specific clients
-	newTaskSel           func(session *awssession.Session) cfTaskSelector
-	newTaskListerStopper func(session *awssession.Session) tasksListerStopper
-	newImageRemover      func(session *awssession.Session) imageRemover
-	newTaskDeleter       func(session *awssession.Session) taskDeployer
+	newTaskSel      func(session *awssession.Session) cfTaskSelector
+	newTaskStopper  func(session *awssession.Session) taskStopper
+	newImageRemover func(session *awssession.Session) imageRemover
+	newStackManager func(session *awssession.Session) taskDeployer
+
+	// Cached variables
+	session   *awssession.Session
+	stackInfo *deploy.TaskStackInfo
 }
 
 func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
@@ -88,10 +92,10 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 			cfn := cloudformation.New(session)
 			return selector.NewCFTaskSelect(prompter, store, cfn)
 		},
-		newTaskListerStopper: func(session *awssession.Session) tasksListerStopper {
+		newTaskStopper: func(session *awssession.Session) taskStopper {
 			return ecs.New(session)
 		},
-		newTaskDeleter: func(session *awssession.Session) taskDeployer {
+		newStackManager: func(session *awssession.Session) taskDeployer {
 			return cloudformation.New(session)
 		},
 		newImageRemover: func(session *awssession.Session) imageRemover {
@@ -247,11 +251,15 @@ func (o *deleteTaskOpts) Ask() error {
 }
 
 func (o *deleteTaskOpts) getSession() (*awssession.Session, error) {
+	if o.session != nil {
+		return o.session, nil
+	}
 	if o.defaultCluster {
 		sess, err := o.sess.Default()
 		if err != nil {
 			return nil, err
 		}
+		o.session = sess
 		return sess, nil
 	}
 	// Get environment manager role for deleting stack.
@@ -263,6 +271,7 @@ func (o *deleteTaskOpts) getSession() (*awssession.Session, error) {
 	if err != nil {
 		return nil, err
 	}
+	o.session = sess
 	return sess, nil
 }
 
@@ -293,80 +302,113 @@ func (o *deleteTaskOpts) askTaskName() error {
 }
 
 func (o *deleteTaskOpts) Execute() error {
-	// Get clients.
+	// Stop all running tasks in given family.
+	if err := o.stopTasks(); err != nil {
+		return err
+	}
+
+	// Clear repository.
+	if err := o.clearECRRepository(); err != nil {
+		return err
+	}
+
+	// Delete stack.
+	if err := o.deleteStack(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (o *deleteTaskOpts) stopTasks() error {
 	sess, err := o.getSession()
 	if err != nil {
 		return fmt.Errorf("get session: %w", err)
 	}
 
-	ecsClient := o.newTaskListerStopper(sess)
-	taskDeleter := o.newTaskDeleter(sess)
-
-	// ECR Deletion happens from the default profile in app delete. We can do it here too.
-	defaultSess, err := o.sess.DefaultWithRegion(aws.StringValue(sess.Config.Region))
-	if err != nil {
-		return fmt.Errorf("get default session for ECR deletion: %s", err)
-	}
-	ecrDeleter := o.newImageRemover(defaultSess)
-
-	// Get information about the task stack. This struct will be used to get the names of the ECR
-	// repo and task stack.
-	taskInfo, err := taskDeleter.GetTaskStack(o.name)
-	if err != nil {
-		return fmt.Errorf("retrieve stack information for task %s: %w", o.name, err)
-	}
-
-	o.spinner.Start(fmt.Sprintf("Cleaning up resources for task %s.", color.HighlightUserInput(o.name)))
-	// Get running tasks in family.
-	var tasks []*awsecs.Task
-	if o.defaultCluster {
-		tasks, err = ecsClient.ListActiveDefaultClusterTasks(ecs.ListTasksFilter{
-			TaskGroup: o.name,
-		})
-		if err != nil {
-			o.spinner.Stop(log.Serrorln("Error listing running tasks."))
-			return fmt.Errorf("list running tasks in default cluster: %w", err)
-		}
-	} else {
-		tasks, err = ecsClient.ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
-			App: o.app,
-			Env: o.env,
-			ListTasksFilter: ecs.ListTasksFilter{
-				TaskGroup: o.name,
-			},
-		})
-		if err != nil {
-			o.spinner.Stop(log.Serrorln("Error listing running tasks."))
-			return fmt.Errorf("list running tasks in environment %s: %w", o.env, err)
-		}
-	}
+	o.spinner.Start(fmt.Sprintf("Stopping all running tasks in family %s.", color.HighlightUserInput(o.name)))
 
 	// Stop tasks.
-	taskARNs := make([]string, len(tasks))
-	for n, t := range tasks {
-		taskARNs[n] = aws.StringValue(t.TaskArn)
-	}
-
 	if o.defaultCluster {
-		if err = ecsClient.StopDefaultClusterTasks(taskARNs); err != nil {
+		if err = o.newTaskStopper(sess).StopDefaultClusterTasks(o.name); err != nil {
 			o.spinner.Stop(log.Serrorln("Error stopping running tasks in default cluster."))
 			return fmt.Errorf("stop running tasks in family %s: %w", o.name, err)
 		}
 	} else {
-		if err = ecsClient.StopAppEnvTasks(o.app, o.env, taskARNs); err != nil {
+		if err = o.newTaskStopper(sess).StopAppEnvOneOffTasks(o.app, o.env, o.name); err != nil {
 			o.spinner.Stop(log.Serrorln("Error stopping running tasks in environment."))
 			return fmt.Errorf("stop running tasks in family %s: %w", o.name, err)
 		}
 	}
+	o.spinner.Stop(log.Ssuccessf("Stopped all running tasks in family %s.\n", color.HighlightUserInput(o.name)))
+	return nil
+}
 
-	// Clear repository.
-	err = ecrDeleter.ClearRepository(taskInfo.ECRRepoName())
+func (o *deleteTaskOpts) clearECRRepository() error {
+	// ECR Deletion happens from the default profile in app delete. We can do it here too by getting
+	// a default session in whichever region we're deleting from.
+	var defaultSess *awssession.Session
+	var err error
+	if o.defaultCluster {
+		defaultSess, err = o.sess.Default()
+		if err != nil {
+			return fmt.Errorf("get default session for ECR deletion: %s", err)
+		}
+	} else {
+		regionalSession, err := o.getSession()
+		if err != nil {
+			return err
+		}
+		defaultSess, err = o.sess.DefaultWithRegion(aws.StringValue(regionalSession.Config.Region))
+		if err != nil {
+			return fmt.Errorf("get default session for ECR deletion: %s", err)
+		}
+	}
+	info, err := o.getTaskInfo()
+	if err != nil {
+		return err
+	}
+	o.spinner.Start(fmt.Sprintf("Emptying ECR repository for task %s.", color.HighlightUserInput(o.name)))
+	err = o.newImageRemover(defaultSess).ClearRepository(info.ECRRepoName())
 	if err != nil {
 		o.spinner.Stop(log.Serrorln("Error emptying ECR repository."))
 		return fmt.Errorf("clear ECR repository for task %s: %w", o.name, err)
 	}
-	// Delete stack.
-	err = taskDeleter.DeleteTask(*taskInfo)
+
+	o.spinner.Stop(log.Ssuccessf("Emptied ECR repositories for task %s.\n", color.HighlightUserInput(o.name)))
+	return nil
+}
+
+// getTaskInfo returns a struct of information about the task, including the app and env it's deployed to, if
+// applicable, and the ARN of any CF role it's associated with.
+func (o *deleteTaskOpts) getTaskInfo() (*deploy.TaskStackInfo, error) {
+	if o.stackInfo != nil {
+		return o.stackInfo, nil
+	}
+	sess, err := o.getSession()
+	if err != nil {
+		return nil, err
+	}
+	info, err := o.newStackManager(sess).GetTaskStack(o.name)
+	if err != nil {
+		return nil, fmt.Errorf("retrieve stack information for task %s: %w", o.name, err)
+	}
+	o.stackInfo = info
+	return info, nil
+}
+
+func (o *deleteTaskOpts) deleteStack() error {
+	sess, err := o.getSession()
+	if err != nil {
+		return err
+	}
+	info, err := o.getTaskInfo()
+	if err != nil {
+		o.spinner.Stop(log.Serrorln("Error deleting CloudFormation stack."))
+		return err
+	}
+	o.spinner.Start(fmt.Sprintf("Deleting CloudFormation stack for task %s.", color.HighlightUserInput(o.name)))
+	err = o.newStackManager(sess).DeleteTask(*info)
 	if err != nil {
 		o.spinner.Stop(log.Serrorln("Error deleting CloudFormation stack."))
 		return fmt.Errorf("delete stack for task %s: %w", o.name, err)

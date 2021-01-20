@@ -7,15 +7,12 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 
-	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -278,7 +275,7 @@ type deleteTaskMocks struct {
 	store   *mocks.Mockstore
 	sess    *sessions.Provider
 	ecr     *mocks.MockimageRemover
-	ecs     *mocks.MocktasksListerStopper
+	ecs     *mocks.MocktaskStopper
 	cfn     *mocks.MocktaskDeployer
 	spinner *mocks.Mockprogress
 }
@@ -307,13 +304,6 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 	mockDefaultTask := deploy.TaskStackInfo{
 		StackName: mockTaskStackName,
 	}
-	mockTaskArn := "arn:aws:ecs:us-west-2:123455:task/abc"
-	mockECSTask := []*awsecs.Task{
-		{
-			TaskArn: aws.String(mockTaskArn),
-		},
-	}
-
 	mockError := errors.New("some error")
 
 	testCases := map[string]struct {
@@ -334,17 +324,14 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 			setupMocks: func(m deleteTaskMocks) {
 				gomock.InOrder(
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
+					m.spinner.EXPECT().Start(gomock.Any()),
+					m.ecs.EXPECT().StopAppEnvOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecs.EXPECT().ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
-						App: mockApp,
-						Env: mockEnvName,
-						ListTasksFilter: ecs.ListTasksFilter{
-							TaskGroup: mockTaskName,
-						},
-					}).Return(mockECSTask, nil),
-					m.ecs.EXPECT().StopAppEnvTasks(mockApp, mockEnvName, []string{mockTaskArn}).Return(nil),
 					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
+					m.spinner.EXPECT().Start(gomock.Any()),
 					m.cfn.EXPECT().DeleteTask(*mockAppEnvTask).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 				)
@@ -356,13 +343,14 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 
 			setupMocks: func(m deleteTaskMocks) {
 				gomock.InOrder(
+					m.spinner.EXPECT().Start(gomock.Any()),
+					m.ecs.EXPECT().StopDefaultClusterTasks(mockTaskName).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(&mockDefaultTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecs.EXPECT().ListActiveDefaultClusterTasks(ecs.ListTasksFilter{
-						TaskGroup: mockTaskName,
-					}).Return(mockECSTask, nil),
-					m.ecs.EXPECT().StopDefaultClusterTasks([]string{mockTaskArn}).Return(nil),
 					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
+					m.spinner.EXPECT().Start(gomock.Any()),
 					m.cfn.EXPECT().DeleteTask(mockDefaultTask).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 				)
@@ -391,17 +379,14 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 			setupMocks: func(m deleteTaskMocks) {
 				gomock.InOrder(
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
+					m.spinner.EXPECT().Start(gomock.Any()),
+					m.ecs.EXPECT().StopAppEnvOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecs.EXPECT().ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
-						App: mockApp,
-						Env: mockEnvName,
-						ListTasksFilter: ecs.ListTasksFilter{
-							TaskGroup: mockTaskName,
-						},
-					}).Return(mockECSTask, nil),
-					m.ecs.EXPECT().StopAppEnvTasks(mockApp, mockEnvName, []string{mockTaskArn}).Return(nil),
 					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
+					m.spinner.EXPECT().Start(gomock.Any()),
 					m.cfn.EXPECT().DeleteTask(*mockAppEnvTask).Return(mockError),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 				)
@@ -417,16 +402,11 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 			setupMocks: func(m deleteTaskMocks) {
 				gomock.InOrder(
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
+					m.spinner.EXPECT().Start(gomock.Any()),
+					m.ecs.EXPECT().StopAppEnvOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecs.EXPECT().ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
-						App: mockApp,
-						Env: mockEnvName,
-						ListTasksFilter: ecs.ListTasksFilter{
-							TaskGroup: mockTaskName,
-						},
-					}).Return(mockECSTask, nil),
-					m.ecs.EXPECT().StopAppEnvTasks(mockApp, mockEnvName, []string{mockTaskArn}).Return(nil),
 					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(mockError),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 				)
@@ -442,33 +422,8 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 			setupMocks: func(m deleteTaskMocks) {
 				gomock.InOrder(
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
-					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecs.EXPECT().ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
-						App: mockApp,
-						Env: mockEnvName,
-						ListTasksFilter: ecs.ListTasksFilter{
-							TaskGroup: mockTaskName,
-						},
-					}).Return(mockECSTask, nil),
-					m.ecs.EXPECT().StopAppEnvTasks(mockApp, mockEnvName, []string{mockTaskArn}).Return(mockError),
-					m.spinner.EXPECT().Stop(gomock.Any()),
-				)
-			},
-		},
-		"error listing app/env tasks": {
-			inApp:  mockApp,
-			inEnv:  mockEnvName,
-			inName: mockTaskName,
-
-			wantedErr: errors.New("list running tasks in environment pdx: some error"),
-
-			setupMocks: func(m deleteTaskMocks) {
-				gomock.InOrder(
-					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
-					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
-					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecs.EXPECT().ListActiveAppEnvTasks(gomock.Any()).Return(nil, mockError),
+					m.ecs.EXPECT().StopAppEnvOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(mockError),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 				)
 			},
@@ -483,6 +438,9 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 			setupMocks: func(m deleteTaskMocks) {
 				gomock.InOrder(
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
+					m.spinner.EXPECT().Start(gomock.Any()),
+					m.ecs.EXPECT().StopAppEnvOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(nil, mockError),
 				)
 			},
@@ -495,53 +453,8 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 
 			setupMocks: func(m deleteTaskMocks) {
 				gomock.InOrder(
-					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(&mockDefaultTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecs.EXPECT().ListActiveDefaultClusterTasks(ecs.ListTasksFilter{
-						TaskGroup: mockTaskName,
-					}).Return(mockECSTask, nil),
-					m.ecs.EXPECT().StopDefaultClusterTasks([]string{mockTaskArn}).Return(mockError),
-					m.spinner.EXPECT().Stop(gomock.Any()),
-				)
-			},
-		},
-		"error listing default cluster tasks": {
-			inDefault: true,
-			inName:    mockTaskName,
-
-			wantedErr: errors.New("list running tasks in default cluster: some error"),
-
-			setupMocks: func(m deleteTaskMocks) {
-				gomock.InOrder(
-					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(&mockDefaultTask, nil),
-					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecs.EXPECT().ListActiveDefaultClusterTasks(ecs.ListTasksFilter{
-						TaskGroup: mockTaskName,
-					}).Return(nil, mockError),
-					m.spinner.EXPECT().Stop(gomock.Any()),
-				)
-			},
-		},
-		"success with app/env and no running tasks": {
-			inApp:  mockApp,
-			inEnv:  mockEnvName,
-			inName: mockTaskName,
-
-			setupMocks: func(m deleteTaskMocks) {
-				gomock.InOrder(
-					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
-					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
-					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecs.EXPECT().ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
-						App: mockApp,
-						Env: mockEnvName,
-						ListTasksFilter: ecs.ListTasksFilter{
-							TaskGroup: mockTaskName,
-						},
-					}).Return(nil, nil),
-					m.ecs.EXPECT().StopAppEnvTasks(mockApp, mockEnvName, []string{}).Return(nil),
-					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
-					m.cfn.EXPECT().DeleteTask(*mockAppEnvTask).Return(nil),
+					m.ecs.EXPECT().StopDefaultClusterTasks(mockTaskName).Return(mockError),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 				)
 			},
@@ -557,14 +470,14 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 			mockstore := mocks.NewMockstore(ctrl)
 			mockECR := mocks.NewMockimageRemover(ctrl)
 			mockCFN := mocks.NewMocktaskDeployer(ctrl)
-			mockECS := mocks.NewMocktasksListerStopper(ctrl)
+			mockECS := mocks.NewMocktaskStopper(ctrl)
 			mockSession := sessions.NewProvider()
 			mockSpinner := mocks.NewMockprogress(ctrl)
 
 			mockGetECR := func(_ *session.Session) imageRemover {
 				return mockECR
 			}
-			mockGetECS := func(_ *session.Session) tasksListerStopper {
+			mockGetECS := func(_ *session.Session) taskStopper {
 				return mockECS
 			}
 			mockGetCFN := func(_ *session.Session) taskDeployer {
@@ -593,9 +506,9 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 				sess:    mockSession,
 				spinner: mockSpinner,
 
-				newImageRemover:      mockGetECR,
-				newTaskDeleter:       mockGetCFN,
-				newTaskListerStopper: mockGetECS,
+				newImageRemover: mockGetECR,
+				newStackManager: mockGetCFN,
+				newTaskStopper:  mockGetECS,
 			}
 
 			// WHEN
