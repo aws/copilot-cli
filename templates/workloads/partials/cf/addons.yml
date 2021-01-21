@@ -1,5 +1,6 @@
 AddonsStack:
-  # An Addons CloudFormation Stack for your additional AWS resources
+  Metadata:
+    'aws:copilot:description': 'An Addons CloudFormation Stack for your additional AWS resources'
   Type: AWS::CloudFormation::Stack
 {{- if ne .EnvControllerLambda ""}} # Needed for #1848
   DependsOn: EnvControllerAction
