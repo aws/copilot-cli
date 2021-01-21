@@ -344,12 +344,11 @@ func (o *deleteTaskOpts) clearECRRepository() error {
 	// a default session in whichever region we're deleting from.
 	var defaultSess *session.Session
 	var err error
-	if o.defaultCluster {
-		defaultSess, err = o.sess.Default()
-		if err != nil {
-			return fmt.Errorf("get default session for ECR deletion: %s", err)
-		}
-	} else {
+	defaultSess, err = o.getSession()
+	if err != nil {
+		return err
+	}
+	if !o.defaultCluster {
 		regionalSession, err := o.getSession()
 		if err != nil {
 			return err
