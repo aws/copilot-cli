@@ -325,7 +325,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecs.EXPECT().StopAppEnvOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
+					m.ecs.EXPECT().StopOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
@@ -380,7 +380,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecs.EXPECT().StopAppEnvOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
+					m.ecs.EXPECT().StopOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
@@ -403,7 +403,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecs.EXPECT().StopAppEnvOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
+					m.ecs.EXPECT().StopOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
@@ -423,7 +423,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecs.EXPECT().StopAppEnvOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(mockError),
+					m.ecs.EXPECT().StopOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(mockError),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 				)
 			},
@@ -439,7 +439,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecs.EXPECT().StopAppEnvOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
+					m.ecs.EXPECT().StopOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(nil, mockError),
 				)

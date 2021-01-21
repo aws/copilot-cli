@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -18,7 +19,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -289,7 +289,7 @@ func (o *deleteJobOpts) deleteStack(sess *session.Session, env string) error {
 
 func (o *deleteJobOpts) deleteTasks(sess *session.Session, env string) error {
 	o.spinner.Start(fmt.Sprintf(fmtJobTasksStopStart, o.name, env))
-	if err := o.newTaskStopper(sess).StopActiveWorkloadTasks(o.appName, env, o.name); err != nil {
+	if err := o.newTaskStopper(sess).StopWorkloadTasks(o.appName, env, o.name); err != nil {
 		o.spinner.Stop(log.Serrorf(fmtJobTasksStopFailed, o.name, env, err))
 		return fmt.Errorf("stop tasks for environment %s: %w", env, err)
 	}

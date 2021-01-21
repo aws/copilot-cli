@@ -337,7 +337,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobStackDeleteComplete, mockJobName, mockEnvName)),
 					// delete orphan tasks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobTasksStopStart, mockJobName, mockEnvName)),
-					mocks.ecs.EXPECT().StopActiveWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(nil),
+					mocks.ecs.EXPECT().StopWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobTasksStopComplete, mockJobName, mockEnvName)),
 					// emptyECRRepos
 					mocks.ecr.EXPECT().ClearRepository(mockRepo).Return(nil),
@@ -371,7 +371,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobStackDeleteComplete, mockJobName, mockEnvName)),
 					// delete orphan tasks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobTasksStopStart, mockJobName, mockEnvName)),
-					mocks.ecs.EXPECT().StopActiveWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(nil),
+					mocks.ecs.EXPECT().StopWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobTasksStopComplete, mockJobName, mockEnvName)),
 
 					// It should **not** emptyECRRepos
@@ -416,7 +416,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobStackDeleteComplete, mockJobName, mockEnvName)),
 					// delete orphan tasks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobTasksStopStart, mockJobName, mockEnvName)),
-					mocks.ecs.EXPECT().StopActiveWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(testError),
+					mocks.ecs.EXPECT().StopWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(testError),
 					mocks.spinner.EXPECT().Stop(log.Serrorf(fmtJobTasksStopFailed, mockJobName, mockEnvName, fmt.Errorf("some error"))),
 				)
 			},

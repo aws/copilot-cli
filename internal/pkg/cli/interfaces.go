@@ -496,9 +496,9 @@ type roleDeleter interface {
 }
 
 type taskStopper interface {
-	StopAppEnvOneOffTasks(app, env, family string) error
+	StopOneOffTasks(app, env, family string) error
 	StopDefaultClusterTasks(familyName string) error
-	StopActiveWorkloadTasks(app, env, workload string) error
+	StopWorkloadTasks(app, env, workload string) error
 }
 
 type serviceLinkedRoleCreator interface {

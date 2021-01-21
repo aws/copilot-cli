@@ -302,17 +302,12 @@ func (o *deleteTaskOpts) askTaskName() error {
 }
 
 func (o *deleteTaskOpts) Execute() error {
-	// Stop all running tasks in given family.
 	if err := o.stopTasks(); err != nil {
 		return err
 	}
-
-	// Clear repository.
 	if err := o.clearECRRepository(); err != nil {
 		return err
 	}
-
-	// Delete stack.
 	if err := o.deleteStack(); err != nil {
 		return err
 	}
@@ -335,7 +330,7 @@ func (o *deleteTaskOpts) stopTasks() error {
 			return fmt.Errorf("stop running tasks in family %s: %w", o.name, err)
 		}
 	} else {
-		if err = o.newTaskStopper(sess).StopAppEnvOneOffTasks(o.app, o.env, o.name); err != nil {
+		if err = o.newTaskStopper(sess).StopOneOffTasks(o.app, o.env, o.name); err != nil {
 			o.spinner.Stop(log.Serrorln("Error stopping running tasks in environment."))
 			return fmt.Errorf("stop running tasks in family %s: %w", o.name, err)
 		}

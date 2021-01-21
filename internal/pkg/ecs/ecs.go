@@ -150,9 +150,9 @@ type ListActiveAppEnvTasksOpts struct {
 
 // ListTasksFilter contains the filtering parameters for listing Copilot tasks.
 type ListTasksFilter struct {
-	TaskGroup  string // Returns only tasks with the given TaskGroup name.
-	TaskID     string // Returns only tasks with the given ID.
-	OneOffOnly bool   // Returns only tasks with the `copilot-task` tag.
+	TaskGroup   string // Returns only tasks with the given TaskGroup name.
+	TaskID      string // Returns only tasks with the given ID.
+	CopilotOnly bool   // Returns only tasks with the `copilot-task` tag.
 }
 
 type listActiveCopilotTasksOpts struct {
@@ -184,25 +184,26 @@ func (c Client) ListActiveDefaultClusterTasks(filter ListTasksFilter) ([]*ecs.Ta
 	})
 }
 
-// StopActiveWorkloadTasks stops all tasks in the given application, enviornment, and workload.
-func (c Client) StopActiveWorkloadTasks(app, env, workload string) error {
+// StopWorkloadTasks stops all tasks in the given application, enviornment, and workload.
+func (c Client) StopWorkloadTasks(app, env, workload string) error {
 	tdFamilyName := fmt.Sprintf(fmtWorkloadTaskDefinitionFamily, app, env, workload)
-	return c.stopAppEnvTasks(app, env, tdFamilyName, false)
+	return c.stopTasks(app, env, tdFamilyName, false)
 }
 
-// StopAppEnvOneOffTasks stops all one-off tasks in the given application and environment with the family name.
-func (c Client) StopAppEnvOneOffTasks(app, env, family string) error {
+// StopOneOffTasks stops all one-off tasks in the given application and environment with the family name.
+func (c Client) StopOneOffTasks(app, env, family string) error {
 	tdFamilyName := fmt.Sprintf(fmtTaskTaskDefinitionFamily, family)
-	return c.stopAppEnvTasks(app, env, tdFamilyName, true)
+	return c.stopTasks(app, env, tdFamilyName, true)
 }
 
-// StopAppEnvTasks stops all tasks in the given application and environment in the given family.
-func (c Client) stopAppEnvTasks(app, env, family string, oneOffOnly bool) error {
+// stopTasks stops all tasks in the given application and environment in the given family.
+func (c Client) stopTasks(app, env, family string, oneOffOnly bool) error {
 	tasks, err := c.ListActiveAppEnvTasks(ListActiveAppEnvTasksOpts{
 		App: app,
 		Env: env,
 		ListTasksFilter: ListTasksFilter{
-			TaskGroup: family,
+			TaskGroup:   family,
+			CopilotOnly: oneOffOnly,
 		},
 	})
 	if err != nil {
@@ -223,8 +224,8 @@ func (c Client) stopAppEnvTasks(app, env, family string, oneOffOnly bool) error 
 func (c Client) StopDefaultClusterTasks(familyName string) error {
 	tdFamily := fmt.Sprintf(fmtTaskTaskDefinitionFamily, familyName)
 	tasks, err := c.ListActiveDefaultClusterTasks(ListTasksFilter{
-		TaskGroup:  tdFamily,
-		OneOffOnly: true,
+		TaskGroup:   tdFamily,
+		CopilotOnly: true,
 	})
 	if err != nil {
 		return err
@@ -251,26 +252,35 @@ func (c Client) listActiveCopilotTasks(opts listActiveCopilotTasksOpts) ([]*ecs.
 		}
 		tasks = resp
 	}
-	return filterCopilotTask(tasks, opts.TaskID, opts.OneOffOnly), nil
+	if opts.CopilotOnly {
+		return filterCopilotTasks(tasks, opts.TaskID), nil
+	}
+	return filterTasksByID(tasks, opts.TaskID), nil
 }
 
-func filterCopilotTask(tasks []*ecs.Task, taskID string, oneOffOnly bool) []*ecs.Task {
+func filterTasksByID(tasks []*ecs.Task, taskID string) []*ecs.Task {
+	var filteredTasks []*ecs.Task
+	for _, task := range tasks {
+		id, _ := ecs.TaskID(aws.StringValue(task.TaskArn))
+		if strings.Contains(id, taskID) {
+			filteredTasks = append(filteredTasks, task)
+		}
+	}
+	return filteredTasks
+}
+
+func filterCopilotTasks(tasks []*ecs.Task, taskID string) []*ecs.Task {
 	var filteredTasks []*ecs.Task
 
-	for _, task := range tasks {
-		var taskOk bool
-		if oneOffOnly {
-			for _, tag := range task.Tags {
-				if aws.StringValue(tag.Key) == deploy.TaskTagKey {
-					taskOk = true
-					break
-				}
+	for _, task := range filterTasksByID(tasks, taskID) {
+		var copilotTask bool
+		for _, tag := range task.Tags {
+			if aws.StringValue(tag.Key) == deploy.TaskTagKey {
+				copilotTask = true
+				break
 			}
-		} else {
-			taskOk = true
 		}
-		id, _ := ecs.TaskID(aws.StringValue(task.TaskArn))
-		if taskOk && strings.Contains(id, taskID) {
+		if copilotTask {
 			filteredTasks = append(filteredTasks, task)
 		}
 	}

@@ -538,9 +538,9 @@ func TestClient_listActiveCopilotTasks(t *testing.T) {
 			got, err := client.listActiveCopilotTasks(listActiveCopilotTasksOpts{
 				Cluster: mockCluster,
 				ListTasksFilter: ListTasksFilter{
-					TaskGroup:  test.inTaskGroup,
-					TaskID:     test.inTaskID,
-					OneOffOnly: test.inOneOff,
+					TaskGroup:   test.inTaskGroup,
+					TaskID:      test.inTaskID,
+					CopilotOnly: test.inOneOff,
 				},
 			})
 
@@ -555,7 +555,7 @@ func TestClient_listActiveCopilotTasks(t *testing.T) {
 	}
 }
 
-func TestClient_StopActiveWorkloadTasks(t *testing.T) {
+func TestClient_StopWorkloadTasks(t *testing.T) {
 	mockCluster := "arn:aws::ecs:cluster/abcd1234"
 	mockResource := resourcegroups.Resource{
 		ARN: mockCluster,
@@ -563,6 +563,14 @@ func TestClient_StopActiveWorkloadTasks(t *testing.T) {
 	mockECSTask := []*ecs.Task{
 		{
 			TaskArn: aws.String("deadbeef"),
+			Tags: []*awsecs.Tag{
+				{
+					Key: aws.String("copilot-service"),
+				},
+			},
+		},
+		{
+			TaskArn: aws.String("abcd"),
 			Tags: []*awsecs.Tag{
 				{
 					Key: aws.String("copilot-service"),
@@ -587,7 +595,7 @@ func TestClient_StopActiveWorkloadTasks(t *testing.T) {
 
 			mockECS: func(m *mocks.MockecsClient) {
 				m.EXPECT().RunningTasksInFamily(mockCluster, "phonetool-pdx-service").Return(mockECSTask, nil)
-				m.EXPECT().StopTasks([]string{"deadbeef"}, gomock.Any()).Return(nil)
+				m.EXPECT().StopTasks([]string{"deadbeef", "abcd"}, gomock.Any()).Return(nil)
 			},
 			mockrg: func(m *mocks.MockresourceGetter) {
 				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
@@ -633,7 +641,7 @@ func TestClient_StopActiveWorkloadTasks(t *testing.T) {
 
 			mockECS: func(m *mocks.MockecsClient) {
 				m.EXPECT().RunningTasksInFamily(mockCluster, "phonetool-pdx-service").Return(mockECSTask, nil)
-				m.EXPECT().StopTasks([]string{"deadbeef"}, gomock.Any()).Return(errors.New("some error"))
+				m.EXPECT().StopTasks([]string{"deadbeef", "abcd"}, gomock.Any()).Return(errors.New("some error"))
 			},
 			mockrg: func(m *mocks.MockresourceGetter) {
 				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
@@ -662,7 +670,7 @@ func TestClient_StopActiveWorkloadTasks(t *testing.T) {
 			}
 
 			// WHEN
-			err := c.StopActiveWorkloadTasks(tc.inApp, tc.inEnv, tc.inTask)
+			err := c.StopWorkloadTasks(tc.inApp, tc.inEnv, tc.inTask)
 
 			// THEN
 			if tc.wantErr != nil {
@@ -673,7 +681,7 @@ func TestClient_StopActiveWorkloadTasks(t *testing.T) {
 		})
 	}
 }
-func TestClient_StopAppEnvOneOffTasks(t *testing.T) {
+func TestClient_StopOneOffTasks(t *testing.T) {
 	mockCluster := "arn:aws::ecs:cluster/abcd1234"
 	mockResource := resourcegroups.Resource{
 		ARN: mockCluster,
@@ -780,7 +788,7 @@ func TestClient_StopAppEnvOneOffTasks(t *testing.T) {
 			}
 
 			// WHEN
-			err := c.StopAppEnvOneOffTasks(tc.inApp, tc.inEnv, tc.inTask)
+			err := c.StopOneOffTasks(tc.inApp, tc.inEnv, tc.inTask)
 
 			// THEN
 			if tc.wantErr != nil {
@@ -799,6 +807,14 @@ func Test_StopDefaultClusterTasks(t *testing.T) {
 			Tags: []*awsecs.Tag{
 				{
 					Key: aws.String("copilot-task"),
+				},
+			},
+		},
+		{
+			TaskArn: aws.String("deadbeef"),
+			Tags: []*awsecs.Tag{
+				{
+					Key: aws.String("copilot-service"),
 				},
 			},
 		},
