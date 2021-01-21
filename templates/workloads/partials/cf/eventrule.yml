@@ -1,5 +1,6 @@
 Rule:
-  # A CloudWatch event rule to trigger the job's state machine
+  Metadata:
+    'aws:copilot:description': "A CloudWatch event rule to trigger the job's state machine"
   Type: AWS::Events::Rule
   Properties:
     ScheduleExpression: !Ref Schedule

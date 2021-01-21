@@ -32,7 +32,8 @@ Resources:
 {{include "loggroup" . | indent 2}}
 
   TaskDefinition:
-    # An ECS task definition to group your containers and run them on ECS
+    Metadata:
+      'aws:copilot:description': 'An ECS task definition to group your containers and run them on ECS'
     Type: AWS::ECS::TaskDefinition
     DependsOn: LogGroup
     Properties:

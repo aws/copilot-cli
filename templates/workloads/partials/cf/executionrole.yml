@@ -1,5 +1,6 @@
 ExecutionRole:
-  # An IAM Role for the Fargate agent to make AWS API calls on your behalf
+  Metadata:
+    'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:
