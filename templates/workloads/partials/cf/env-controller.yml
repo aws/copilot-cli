@@ -1,5 +1,6 @@
 EnvControllerAction:
-  # Update your environment's shared resources
+  Metadata:
+    'aws:copilot:description': "Update your environment's shared resources"
   Type: Custom::EnvControllerFunction
   Properties:
     ServiceToken: !GetAtt EnvControllerFunction.Arn
