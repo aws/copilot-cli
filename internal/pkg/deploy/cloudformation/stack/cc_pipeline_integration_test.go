@@ -11,22 +11,22 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/stretchr/testify/require"
 )
 
-// TestPipeline_Template ensures that the CloudFormation template generated for a pipeline matches our pre-defined template.
-func TestPipeline_Template(t *testing.T) {
+// TestCC_Pipeline_Template ensures that the CloudFormation template generated for a pipeline matches our pre-defined template.
+func TestCC_Pipeline_Template(t *testing.T) {
 	ps := stack.NewPipelineStackConfig(&deploy.CreatePipelineInput{
 		AppName: "phonetool",
 		Name:    "phonetool-pipeline",
-		Source: &deploy.GitHubSource{
-			ProviderName:                manifest.GithubProviderName,
-			RepositoryURL:               "https://github.com/aws/phonetool",
-			Branch:                      "mainline",
-			PersonalAccessTokenSecretID: "my secret",
+		Source: &deploy.CodeCommitSource{
+			ProviderName:  manifest.CodeCommitProviderName,
+			RepositoryURL: "https://us-west-2.console.aws.amazon.com/codesuite/codecommit/repositories/aws-sample/browse",
+			Branch:        "master",
 		},
 		Stages: []deploy.PipelineStage{
 			{
@@ -51,7 +51,15 @@ func TestPipeline_Template(t *testing.T) {
 
 	actual, err := ps.Template()
 	require.NoError(t, err, "template should have rendered successfully")
-	expected, err := ioutil.ReadFile(filepath.Join("testdata", "pipeline", "template.yaml"))
+	actualInBytes := []byte(actual)
+	m1 := make(map[interface{}]interface{})
+	require.NoError(t, yaml.Unmarshal(actualInBytes, m1))
+
+	wanted, err := ioutil.ReadFile(filepath.Join("testdata", "pipeline", "cc_template.yaml"))
 	require.NoError(t, err, "should be able to read expected template file")
-	require.Equal(t, string(expected), actual)
+	wantedInBytes := []byte(wanted)
+	m2 := make(map[interface{}]interface{})
+	require.NoError(t, yaml.Unmarshal(wantedInBytes, m2))
+
+	require.Equal(t, m1, m2)
 }

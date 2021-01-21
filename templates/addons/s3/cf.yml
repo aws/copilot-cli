@@ -10,6 +10,8 @@ Parameters:
     Description: The name of the service, job, or workflow being deployed.
 Resources:
   {{logicalIDSafe .Name}}:
+    Metadata:
+      'aws:copilot:description': 'An Amazon S3 bucket to store and retrieve objects for {{.Name}}'
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
     Properties:
@@ -24,6 +26,8 @@ Resources:
         BlockPublicPolicy: true
 
   {{logicalIDSafe .Name}}BucketPolicy:
+    Metadata:
+      'aws:copilot:description': 'A bucket policy to deny unencrypted access to the bucket and its contents'
     Type: AWS::S3::BucketPolicy
     DeletionPolicy: Retain
     Properties:
@@ -43,6 +47,8 @@ Resources:
       Bucket: !Ref {{logicalIDSafe .Name}}
 
   {{logicalIDSafe .Name}}AccessPolicy:
+    Metadata:
+      'aws:copilot:description': 'An IAM ManagedPolicy for your service to access the {{.Name}} bucket'
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: !Sub

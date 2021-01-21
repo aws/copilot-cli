@@ -151,7 +151,7 @@ func (p *Provider) FromStaticCreds(accessKeyID, secretAccessKey, sessionToken st
 	conf := newConfig()
 	conf.Credentials = credentials.NewStaticCredentials(accessKeyID, secretAccessKey, sessionToken)
 	sess, err := session.NewSessionWithOptions(session.Options{
-		Config: *newConfig(),
+		Config: *conf,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create session from static credentials: %w", err)

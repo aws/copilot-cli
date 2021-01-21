@@ -155,7 +155,6 @@ func TestCloudFormation_ListTaskStacks(t *testing.T) {
 				},
 			},
 		},
-
 		"error listing stacks": {
 			inAppName: "appname",
 			mockClient: func(m *mocks.MockcfnClient) {

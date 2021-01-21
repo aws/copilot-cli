@@ -7,6 +7,12 @@ DesiredCount: !GetAtt DynamicDesiredCountAction.DesiredCount
 {{- else }}
 DesiredCount: !Ref TaskCount
 {{- end}}
+DeploymentConfiguration:
+  DeploymentCircuitBreaker:
+    Enable: true
+    Rollback: true
+  MinimumHealthyPercent: 100
+  MaximumPercent: 200
 PropagateTags: SERVICE
 {{- if .ExecuteCommand }}
 EnableExecuteCommand: true
