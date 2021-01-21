@@ -5,7 +5,6 @@ package cloudformation
 
 import (
 	"fmt"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -22,24 +21,28 @@ import (
 // The output will be descriptionFor["Cluster"] = "An ECS Cluster to hold your services."
 func ParseTemplateDescriptions(body string) (descriptionFor map[string]string, err error) {
 	type template struct {
-		Resources yaml.Node `yaml:"Resources"`
+		Resources map[string]yaml.Node `yaml:"Resources"`
 	}
 	var tpl template
 	if err := yaml.Unmarshal([]byte(body), &tpl); err != nil {
 		return nil, fmt.Errorf("unmarshal cloudformation template: %w", err)
 	}
+	type metadata struct {
+		Description string `yaml:"aws:copilot:description"`
+	}
+	type resource struct {
+		Metadata metadata `yaml:"Metadata"`
+	}
+
 	descriptionFor = make(map[string]string)
-	for i := 0; i < len(tpl.Resources.Content); i += 2 {
-		// The content of a !!map, like the "Resources" field, always come in pairs.
-		// The first element represents the key, ex: {Value: "Cluster", Kind: ScalarNode, Tag: "!!str", Content: nil}
-		// The second element holds the values such as "Type" and "Properties", ex: {Value: "", Kind: MappingNode, Tag:"!!map", Content:[...]}
-		logicalID := tpl.Resources.Content[i]
-		fields := tpl.Resources.Content[i+1]
-		description := fields.Content[0].HeadComment // The description is the comment above the first property.
-		if description == "" {
-			continue
+	for logicalID, value := range tpl.Resources {
+		var r resource
+		if err := value.Decode(&r); err != nil {
+			return nil, fmt.Errorf("decode resource Metadata for description: %w", err)
 		}
-		descriptionFor[logicalID.Value] = strings.Trim(description, " #" /* remove leading and trailing chars {" ", "#"} */)
+		if description := r.Metadata.Description; description != "" {
+			descriptionFor[logicalID] = description
+		}
 	}
 	return descriptionFor, nil
 }

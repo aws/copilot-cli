@@ -172,10 +172,12 @@ func TestCloudFormation_renderStackChanges(t *testing.T) {
 		m.EXPECT().TemplateBodyFromChangeSet("1234", "phonetool-test").Return(`
 Resources:
   Cluster:
-    # An ECS cluster
+    Metadata:
+      'aws:copilot:description': 'An ECS cluster'
     Type: AWS::ECS::Cluster
   AddonsStack:
-    # An Addons CloudFormation Stack for your additional AWS resources
+    Metadata:
+      'aws:copilot:description': 'An Addons CloudFormation Stack for your additional AWS resources'
     Type: AWS::CloudFormation::Stack
 `, nil)
 
@@ -226,7 +228,8 @@ Resources:
 		m.EXPECT().TemplateBodyFromChangeSet("5678", "my-nested-stack").Return(`
 Resources:
   MyTable:
-    # A DynamoDB table to store data
+    Metadata:
+      'aws:copilot:description': 'A DynamoDB table to store data'
     Type: AWS::DynamoDB::Table`, nil)
 
 		m.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
