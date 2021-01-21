@@ -12,8 +12,8 @@ env:
 phases:
   install:
     runtime-versions:
-      golang: 1.14
-      nodejs: 10
+      golang: 1.15
+      nodejs: 12
   build:
     commands:
       - echo `git rev-parse HEAD` # Do not delete; for pipeline logging purposes
