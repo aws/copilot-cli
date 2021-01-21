@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -100,9 +101,9 @@ func (p *Pipeline) HumanString() string {
 	writer.Flush()
 	fmt.Fprint(writer, color.Bold.Sprint("\nStages\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", "Name", "Category", "Provider", "Details")
-	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%[1]s\t%[1]s\t%[1]s\n", "----")
+	headers := []string{"Name", "Category", "Provider", "Details"}
+	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, stage := range p.Stages {
 		fmt.Fprint(writer, stage.HumanString())
 	}
