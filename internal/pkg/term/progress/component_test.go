@@ -132,3 +132,53 @@ func TestDynamicTreeComponent_Done(t *testing.T) {
 	// THEN
 	require.Equal(t, root.Done(), ch)
 }
+
+func TestTableComponent_Render(t *testing.T) {
+	testCases := map[string]struct {
+		inTitle  string
+		inHeader []string
+		inRows   [][]string
+
+		wantedNumLines int
+		wantedOut      string
+	}{
+		"should not write anything if there are no rows": {
+			inTitle:  "Fancy table",
+			inHeader: []string{"col1", "col2"},
+
+			wantedNumLines: 0,
+			wantedOut:      "",
+		},
+		"should render a sample table": {
+			inTitle:  "Deployments",
+			inHeader: []string{"", "Revision", "Rollout", "Desired", "Running", "Failed", "Pending"},
+			inRows: [][]string{
+				{"PRIMARY", "3", "[in progress]", "10", "0", "0", "10"},
+				{"ACTIVE", "2", "[completed]", "10", "10", "0", "0"},
+			},
+
+			wantedNumLines: 4,
+			wantedOut: `Deployments
+           Revision  Rollout        Desired  Running  Failed  Pending
+  PRIMARY  3         [in progress]  10       0        0       10
+  ACTIVE   2         [completed]    10       10       0       0
+`,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			buf := new(strings.Builder)
+			table := newTableComponent(tc.inTitle, tc.inHeader, tc.inRows)
+
+			// WHEN
+			numLines, err := table.Render(buf)
+
+			// THEN
+			require.NoError(t, err)
+			require.Equal(t, tc.wantedNumLines, numLines, "expected number of lines to match")
+			require.Equal(t, tc.wantedOut, buf.String(), "expected table content to match")
+		})
+	}
+}

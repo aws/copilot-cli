@@ -4,6 +4,7 @@
 package progress
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -26,6 +27,11 @@ func prettifyLatestStackStatus(statuses []stackStatus) string {
 	latest := string(statuses[len(statuses)-1].value)
 	pretty := strings.ToLower(strings.ReplaceAll(latest, "_", " "))
 	return color("[%s]", pretty)
+}
+
+func prettifyRolloutStatus(rollout string) string {
+	pretty := strings.ToLower(strings.ReplaceAll(rollout, "_", " "))
+	return fmt.Sprintf("[%s]", pretty)
 }
 
 func prettifyElapsedTime(sw *stopWatch) string {
