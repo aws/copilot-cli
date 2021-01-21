@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -61,8 +62,7 @@ type deleteTaskOpts struct {
 	newStackManager func(session *session.Session) taskStackManager
 
 	// Cached variables
-	session   *session.Session
-	stackInfo *deploy.TaskStackInfo
+	session *session.Session
 }
 
 func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
@@ -358,12 +358,11 @@ func (o *deleteTaskOpts) clearECRRepository() error {
 			return fmt.Errorf("get default session for ECR deletion: %s", err)
 		}
 	}
-	info, err := o.getTaskInfo()
-	if err != nil {
-		return err
-	}
+	// Best effort to construct ECR repo name.
+	ecrRepoName := fmt.Sprintf(deploy.FmtTaskECRRepoName, o.name)
+
 	o.spinner.Start(fmt.Sprintf("Emptying ECR repository for task %s.", color.HighlightUserInput(o.name)))
-	err = o.newImageRemover(defaultSess).ClearRepository(info.ECRRepoName())
+	err = o.newImageRemover(defaultSess).ClearRepository(ecrRepoName)
 	if err != nil {
 		o.spinner.Stop(log.Serrorln("Error emptying ECR repository."))
 		return fmt.Errorf("clear ECR repository for task %s: %w", o.name, err)
@@ -376,18 +375,21 @@ func (o *deleteTaskOpts) clearECRRepository() error {
 // getTaskInfo returns a struct of information about the task, including the app and env it's deployed to, if
 // applicable, and the ARN of any CF role it's associated with.
 func (o *deleteTaskOpts) getTaskInfo() (*deploy.TaskStackInfo, error) {
-	if o.stackInfo != nil {
-		return o.stackInfo, nil
-	}
 	sess, err := o.getSession()
 	if err != nil {
 		return nil, err
 	}
 	info, err := o.newStackManager(sess).GetTaskStack(o.name)
+
 	if err != nil {
+		// If the stack doesn't exist, return nil.x
+		var errStackNotExist *awscfn.ErrStackNotFound
+		if errors.As(err, &errStackNotExist) {
+			return nil, nil
+		}
+
 		return nil, fmt.Errorf("retrieve stack information for task %s: %w", o.name, err)
 	}
-	o.stackInfo = info
 	return info, nil
 }
 
@@ -398,8 +400,11 @@ func (o *deleteTaskOpts) deleteStack() error {
 	}
 	info, err := o.getTaskInfo()
 	if err != nil {
-		o.spinner.Stop(log.Serrorln("Error deleting CloudFormation stack."))
 		return err
+	}
+	if info == nil {
+		// Stack does not exist; skip deleting it.
+		return nil
 	}
 	o.spinner.Start(fmt.Sprintf("Deleting CloudFormation stack for task %s.", color.HighlightUserInput(o.name)))
 	err = o.newStackManager(sess).DeleteTask(*info)

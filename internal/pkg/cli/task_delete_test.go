@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 
+	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -327,10 +328,10 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					m.spinner.EXPECT().Start(gomock.Any()),
 					m.ecs.EXPECT().StopOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
-					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
 					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
+					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
 					m.cfn.EXPECT().DeleteTask(*mockAppEnvTask).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
@@ -346,10 +347,10 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					m.spinner.EXPECT().Start(gomock.Any()),
 					m.ecs.EXPECT().StopDefaultClusterTasks(mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
-					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(&mockDefaultTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
 					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
+					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(&mockDefaultTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
 					m.cfn.EXPECT().DeleteTask(mockDefaultTask).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
@@ -382,13 +383,32 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					m.spinner.EXPECT().Start(gomock.Any()),
 					m.ecs.EXPECT().StopOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
-					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
 					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
+					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
 					m.cfn.EXPECT().DeleteTask(*mockAppEnvTask).Return(mockError),
 					m.spinner.EXPECT().Stop(gomock.Any()),
+				)
+			},
+		},
+		"task stack does not exist (idempotency check)": {
+			inApp:  mockApp,
+			inEnv:  mockEnvName,
+			inName: mockTaskName,
+
+			setupMocks: func(m deleteTaskMocks) {
+				mockErrStackNotFound := awscfn.ErrStackNotFound{}
+				gomock.InOrder(
+					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
+					m.spinner.EXPECT().Start(gomock.Any()),
+					m.ecs.EXPECT().StopOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
+					m.spinner.EXPECT().Start(gomock.Any()),
+					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
+					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(nil, &mockErrStackNotFound),
 				)
 			},
 		},
@@ -405,7 +425,6 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					m.spinner.EXPECT().Start(gomock.Any()),
 					m.ecs.EXPECT().StopOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
-					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
 					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(mockError),
 					m.spinner.EXPECT().Stop(gomock.Any()),
@@ -440,6 +459,9 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
 					m.ecs.EXPECT().StopOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
+					m.spinner.EXPECT().Start(gomock.Any()),
+					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(nil, mockError),
 				)
