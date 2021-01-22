@@ -149,9 +149,10 @@ func TestDynamicTreeComponent_Done(t *testing.T) {
 
 func TestTableComponent_Render(t *testing.T) {
 	testCases := map[string]struct {
-		inTitle  string
-		inHeader []string
-		inRows   [][]string
+		inTitle   string
+		inHeader  []string
+		inRows    [][]string
+		inPadding int
 
 		wantedNumLines int
 		wantedOut      string
@@ -178,6 +179,20 @@ func TestTableComponent_Render(t *testing.T) {
   ACTIVE   2         [completed]    10       10       0       0
 `,
 		},
+		"should render a sample table with with padding": {
+			inTitle:  "Person",
+			inHeader: []string{"First", "Last"},
+			inRows: [][]string{
+				{"Cookie", "Monster"},
+			},
+			inPadding: 3,
+
+			wantedNumLines: 3,
+			wantedOut: `   Person
+     First   Last
+     Cookie  Monster
+`,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -185,6 +200,7 @@ func TestTableComponent_Render(t *testing.T) {
 			// GIVEN
 			buf := new(strings.Builder)
 			table := newTableComponent(tc.inTitle, tc.inHeader, tc.inRows)
+			table.Padding = tc.inPadding
 
 			// WHEN
 			numLines, err := table.Render(buf)

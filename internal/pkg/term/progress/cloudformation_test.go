@@ -4,12 +4,15 @@
 package progress
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -281,5 +284,120 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 		require.Equal(t, "- The environment stack \"phonetool-test\" contains your shared resources between services\t[delete failed]\t[0.0s]\n"+
 			"  Resource creation cancelled\t\t\n"+
 			"  Resource cannot be deleted\t\t\n", buf.String())
+	})
+}
+
+func TestEcsServiceResourceComponent_Listen(t *testing.T) {
+	t.Run("should create a deployment renderer if the service goes into in progress", func(t *testing.T) {
+		// GIVEN
+		ch := make(chan stream.StackEvent)
+		done := make(chan struct{})
+		c := &ecsServiceResourceComponent{
+			cfnStream: ch,
+			ecsDescriber: &mockECSDescriber{
+				out: &ecs.Service{},
+			},
+			logicalID: "Service",
+			group:     new(errgroup.Group),
+			ctx:       context.Background(),
+			done:      done,
+		}
+
+		// WHEN
+		go c.Listen()
+		go func() {
+			ch <- stream.StackEvent{
+				LogicalResourceID:  "Service",
+				PhysicalResourceID: "arn:aws:ecs:us-west-2:1111:service/webapp-test-Cluster/webapp-test-frontend",
+				ResourceStatus:     "CREATE_IN_PROGRESS",
+			}
+			close(ch) // Close to notify that no more events will be sent.
+		}()
+
+		// THEN
+		<-done // Wait for listen to exit.
+		require.NotNil(t, c.deploymentRenderer, "expected the deployment renderer to be initialized")
+	})
+	t.Run("should not create a deployment renderer if the service never goes in create or update in progress", func(t *testing.T) {
+		// GIVEN
+		ch := make(chan stream.StackEvent)
+		done := make(chan struct{})
+		c := &ecsServiceResourceComponent{
+			cfnStream: ch,
+			ecsDescriber: &mockECSDescriber{
+				out: &ecs.Service{},
+			},
+			logicalID: "Service",
+			group:     new(errgroup.Group),
+			ctx:       context.Background(),
+			done:      done,
+		}
+
+		// WHEN
+		go c.Listen()
+		go func() {
+			ch <- stream.StackEvent{
+				LogicalResourceID:  "Service",
+				PhysicalResourceID: "arn:aws:ecs:us-west-2:1111:service/webapp-test-Cluster/webapp-test-frontend",
+				ResourceStatus:     "CREATE_COMPLETE",
+			}
+			ch <- stream.StackEvent{
+				LogicalResourceID:  "Service",
+				PhysicalResourceID: "arn:aws:ecs:us-west-2:1111:service/webapp-test-Cluster/webapp-test-frontend",
+				ResourceStatus:     "DELETE_IN_PROGRESS",
+			}
+			ch <- stream.StackEvent{
+				LogicalResourceID:  "Service",
+				PhysicalResourceID: "arn:aws:ecs:us-west-2:1111:service/webapp-test-Cluster/webapp-test-frontend",
+				ResourceStatus:     "DELETE_COMPLETE",
+			}
+			close(ch) // Close to notify that no more events will be sent.
+		}()
+
+		// THEN
+		<-done // Wait for listen to exit.
+		require.Nil(t, c.deploymentRenderer, "expected the deployment renderer to be nil")
+	})
+}
+
+func TestEcsServiceResourceComponent_Render(t *testing.T) {
+	t.Run("renders only the resource renderer if there is no deployment in progress", func(t *testing.T) {
+		// GIVEN
+		buf := new(strings.Builder)
+		c := &ecsServiceResourceComponent{
+			resourceRenderer: &mockDynamicRenderer{
+				content: "resource\n",
+			},
+		}
+
+		// WHEN
+		nl, err := c.Render(buf)
+
+		// THEN
+		require.Nil(t, err)
+		require.Equal(t, 1, nl)
+		require.Equal(t, "resource\n", buf.String())
+	})
+	t.Run("renders both resource and deployment if deployment in progress", func(t *testing.T) {
+		// GIVEN
+		buf := new(strings.Builder)
+		c := &ecsServiceResourceComponent{
+			resourceRenderer: &mockDynamicRenderer{
+				content: "resource\n",
+			},
+			deploymentRenderer: &mockDynamicRenderer{
+				content: "deployment\n",
+			},
+		}
+
+		// WHEN
+		nl, err := c.Render(buf)
+
+		// THEN
+		require.Nil(t, err)
+		require.Equal(t, 2, nl)
+		require.Equal(t, `resource
+deployment
+`, buf.String())
 	})
 }

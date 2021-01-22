@@ -13,7 +13,9 @@ import (
 )
 
 const (
+	// ECS service deployment constants.
 	ecsPrimaryDeploymentStatus = "PRIMARY"
+	rollOutInProgress          = "IN_PROGRESS"
 )
 
 var ecsEventFailureKeywords = []string{"fail", "unhealthy", "error", "throttle", "unable", "missing"}
@@ -32,6 +34,15 @@ type ECSDeployment struct {
 	FailedCount     int
 	PendingCount    int
 	RolloutState    string
+	CreatedAt       time.Time
+}
+
+func (d ECSDeployment) isPrimary() bool {
+	return d.Status == ecsPrimaryDeploymentStatus
+}
+
+func (d ECSDeployment) done() bool {
+	return d.DesiredCount == d.RunningCount && d.RolloutState != rollOutInProgress
 }
 
 // ECSService is a description of an ECS service.
@@ -86,7 +97,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 	for _, deployment := range out.Deployments {
 		status := aws.StringValue(deployment.Status)
 		desiredCount, runningCount := aws.Int64Value(deployment.DesiredCount), aws.Int64Value(deployment.RunningCount)
-		deployments = append(deployments, ECSDeployment{
+		rollingDeploy := ECSDeployment{
 			Status:          status,
 			TaskDefRevision: parseRevisionFromTaskDefARN(aws.StringValue(deployment.TaskDefinition)),
 			DesiredCount:    int(desiredCount),
@@ -94,8 +105,10 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 			FailedCount:     int(aws.Int64Value(deployment.FailedTasks)),
 			PendingCount:    int(aws.Int64Value(deployment.PendingCount)),
 			RolloutState:    aws.StringValue(deployment.RolloutState),
-		})
-		if status == ecsPrimaryDeploymentStatus && desiredCount == runningCount {
+			CreatedAt:       aws.TimeValue(deployment.CreatedAt),
+		}
+		deployments = append(deployments, rollingDeploy)
+		if isDeploymentDone(rollingDeploy, s.deploymentCreationTime) {
 			// The deployment is done, notify that there is no need for another Fetch call beyond this point.
 			close(s.done)
 		}
@@ -158,4 +171,14 @@ func isFailureServiceEvent(msg string) bool {
 		}
 	}
 	return false
+}
+
+func isDeploymentDone(d ECSDeployment, startTime time.Time) bool {
+	if !d.isPrimary() {
+		return false
+	}
+	if d.CreatedAt.Before(startTime) {
+		return false
+	}
+	return d.done()
 }
