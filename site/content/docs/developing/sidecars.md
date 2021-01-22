@@ -56,14 +56,14 @@ logging:
   image: {{ image URL }}
   # The configuration options to send to the FireLens log driver. (Optional)
   destination:
-    {{ config key }}: {{ config value}}
+    {{ config key }}: {{ config value }}
   # Whether to include ECS metadata in logs. (Optional, default to true)
   enableMetadata: {{ true|false }}
   # Secret to pass to the log configuration. (Optional)
   secretOptions:
-    {{ key }}: {{ value}
+    {{ key }}: {{ value }}
   # The full config file path in your custom Fluent Bit image.
-  configFile: {{ config file path }}
+  configFilePath: {{ config file path }}
 ```
 For example:
 

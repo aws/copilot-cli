@@ -1,5 +1,6 @@
 StateMachine:
-  # A state machine to invoke your job and handle retry and timeout logic
+  Metadata:
+    'aws:copilot:description': 'A state machine to invoke your job and handle retry and timeout logic'
   Type: AWS::StepFunctions::StateMachine
   Properties:
     StateMachineName: !Sub '${AppName}-${EnvName}-${WorkloadName}'
