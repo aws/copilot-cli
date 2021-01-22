@@ -294,16 +294,13 @@ type deleteJobMocks struct {
 	spinner        *mocks.Mockprogress
 	jobCFN         *mocks.MockwlDeleter
 	ecr            *mocks.MockimageRemover
-	tasksGetter    *mocks.MockactiveWorkloadTasksLister
-	ecs            *mocks.MocktasksStopper
+	ecs            *mocks.MocktaskStopper
 }
 
 func TestDeleteJobOpts_Execute(t *testing.T) {
 	mockJobName := "resizer"
 	mockEnvName := "test"
 	mockAppName := "badgoose"
-	mockCluster := "mockCluster"
-	mockTaskARNs := []string{"mockTask1", "mockTask2"}
 	mockEnv := &config.Environment{
 		App:            mockAppName,
 		Name:           mockEnvName,
@@ -339,9 +336,8 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobStackDeleteComplete, mockJobName, mockEnvName)),
 					// delete orphan tasks
-					mocks.tasksGetter.EXPECT().ListActiveWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(mockCluster, mockTaskARNs, nil),
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobTasksStopStart, mockJobName, mockEnvName)),
-					mocks.ecs.EXPECT().StopTasks(mockTaskARNs, gomock.Any(), gomock.Any()).Return(nil),
+					mocks.ecs.EXPECT().StopWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobTasksStopComplete, mockJobName, mockEnvName)),
 					// emptyECRRepos
 					mocks.ecr.EXPECT().ClearRepository(mockRepo).Return(nil),
@@ -374,9 +370,8 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobStackDeleteComplete, mockJobName, mockEnvName)),
 					// delete orphan tasks
-					mocks.tasksGetter.EXPECT().ListActiveWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(mockCluster, mockTaskARNs, nil),
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobTasksStopStart, mockJobName, mockEnvName)),
-					mocks.ecs.EXPECT().StopTasks(mockTaskARNs, gomock.Any(), gomock.Any()).Return(nil),
+					mocks.ecs.EXPECT().StopWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobTasksStopComplete, mockJobName, mockEnvName)),
 
 					// It should **not** emptyECRRepos
@@ -407,41 +402,6 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("delete job stack: %w", testError),
 		},
-		"errors when deleting orphan tasks: failed to get active tasks": {
-			inAppName: mockAppName,
-			inJobName: mockJobName,
-			inEnvName: mockEnvName,
-			setupMocks: func(mocks deleteJobMocks) {
-				gomock.InOrder(
-					// appEnvironments
-					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
-					// deleteStacks
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobStackDeleteStart, mockJobName, mockEnvName)),
-					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobStackDeleteComplete, mockJobName, mockEnvName)),
-					// delete orphan tasks
-					mocks.tasksGetter.EXPECT().ListActiveWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return("", nil, testError),
-				)
-			},
-			wantedError: fmt.Errorf("list active tasks for job resizer in env test: some error"),
-		},
-		"skip deleting orphan tasks if tney don't exist": {
-			inAppName: mockAppName,
-			inJobName: mockJobName,
-			inEnvName: mockEnvName,
-			setupMocks: func(mocks deleteJobMocks) {
-				gomock.InOrder(
-					// appEnvironments
-					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
-					// deleteStacks
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobStackDeleteStart, mockJobName, mockEnvName)),
-					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobStackDeleteComplete, mockJobName, mockEnvName)),
-					// delete orphan tasks
-					mocks.tasksGetter.EXPECT().ListActiveWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(mockCluster, []string{}, nil),
-				)
-			},
-		},
 		"errors when deleting orphan tasks: failed to stop tasks": {
 			inAppName: mockAppName,
 			inJobName: mockJobName,
@@ -455,13 +415,12 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobStackDeleteComplete, mockJobName, mockEnvName)),
 					// delete orphan tasks
-					mocks.tasksGetter.EXPECT().ListActiveWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(mockCluster, mockTaskARNs, nil),
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobTasksStopStart, mockJobName, mockEnvName)),
-					mocks.ecs.EXPECT().StopTasks(mockTaskARNs, gomock.Any(), gomock.Any()).Return(testError),
+					mocks.ecs.EXPECT().StopWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(testError),
 					mocks.spinner.EXPECT().Stop(log.Serrorf(fmtJobTasksStopFailed, mockJobName, mockEnvName, fmt.Errorf("some error"))),
 				)
 			},
-			wantedError: fmt.Errorf("stop tasks for cluster mockCluster: some error"),
+			wantedError: fmt.Errorf("stop tasks for environment test: some error"),
 		},
 	}
 
@@ -478,19 +437,15 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 			mockJobCFN := mocks.NewMockwlDeleter(ctrl)
 			mockSpinner := mocks.NewMockprogress(ctrl)
 			mockImageRemover := mocks.NewMockimageRemover(ctrl)
-			mockTasksGetter := mocks.NewMockactiveWorkloadTasksLister(ctrl)
-			mockTasksStopper := mocks.NewMocktasksStopper(ctrl)
+			mockTaskStopper := mocks.NewMocktaskStopper(ctrl)
 			mockGetJobCFN := func(_ *session.Session) wlDeleter {
 				return mockJobCFN
 			}
 			mockGetImageRemover := func(_ *session.Session) imageRemover {
 				return mockImageRemover
 			}
-			mockNewTasksGetter := func(_ *session.Session) activeWorkloadTasksLister {
-				return mockTasksGetter
-			}
-			mockNewTasksStopper := func(_ *session.Session) tasksStopper {
-				return mockTasksStopper
+			mockNewTaskStopper := func(_ *session.Session) taskStopper {
+				return mockTaskStopper
 			}
 
 			mocks := deleteJobMocks{
@@ -501,8 +456,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 				spinner:        mockSpinner,
 				jobCFN:         mockJobCFN,
 				ecr:            mockImageRemover,
-				tasksGetter:    mockTasksGetter,
-				ecs:            mockTasksStopper,
+				ecs:            mockTaskStopper,
 			}
 
 			test.setupMocks(mocks)
@@ -513,14 +467,13 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					name:    test.inJobName,
 					envName: test.inEnvName,
 				},
-				store:                        mockstore,
-				sess:                         mockSession,
-				spinner:                      mockSpinner,
-				appCFN:                       mockAppCFN,
-				newWlDeleter:                 mockGetJobCFN,
-				newImageRemover:              mockGetImageRemover,
-				newactiveWorkloadTasksLister: mockNewTasksGetter,
-				newTaskStopper:               mockNewTasksStopper,
+				store:           mockstore,
+				sess:            mockSession,
+				spinner:         mockSpinner,
+				appCFN:          mockAppCFN,
+				newWlDeleter:    mockGetJobCFN,
+				newImageRemover: mockGetImageRemover,
+				newTaskStopper:  mockNewTaskStopper,
 			}
 
 			// WHEN
