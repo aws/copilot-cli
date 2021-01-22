@@ -10,6 +10,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestNoopComponent_Render(t *testing.T) {
+	// GIVEN
+	buf := new(strings.Builder)
+	c := &noopComponent{}
+
+	// WHEN
+	nl, err := c.Render(buf)
+
+	// THEN
+	require.Equal(t, 0, nl, "expected no lines to be written")
+	require.NoError(t, err, "expected err to be nil")
+	require.Equal(t, "", buf.String(), "expected the content to be empty")
+}
+
 func TestSingleLineComponent_Render(t *testing.T) {
 	testCases := map[string]struct {
 		inText    string

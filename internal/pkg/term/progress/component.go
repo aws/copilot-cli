@@ -15,6 +15,15 @@ const (
 	nestedComponentPadding = 2 // Leading space characters for rendering a nested component.
 )
 
+// noopComponent satisfies the Renderer interface but does not write anything.
+type noopComponent struct{}
+
+// Render does not do anything.
+// It returns 0 and nil for the error.
+func (c *noopComponent) Render(out io.Writer) (numLines int, err error) {
+	return 0, nil
+}
+
 // singleLineComponent can display a single line of text.
 type singleLineComponent struct {
 	Text    string // Line of text to print.
