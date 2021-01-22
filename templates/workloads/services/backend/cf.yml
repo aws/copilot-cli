@@ -118,8 +118,8 @@ Resources:
 {{include "addons" . | indent 2}}
 
 Outputs:
-  DiscoveryServiceArn:
+  DiscoveryServiceARN:
     Description: ARN of the Discovery Service.
     Value: !GetAtt DiscoveryService.Arn
     Export:
-      Name: !Sub ${AWS::StackName}-DiscoveryServiceArn
+      Name: !Sub ${AWS::StackName}-DiscoveryServiceARN
