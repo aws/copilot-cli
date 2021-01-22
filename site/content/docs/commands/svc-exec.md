@@ -30,3 +30,6 @@ Runs the 'ls' command in the task prefixed with ID "8c38184" within the "backend
 ```bash
 $ copilot svc exec -a my-app -e test --name backend --task-id 8c38184 --command "ls"
 ```
+
+!!! info
+    `copilot svc exec` is not enabled for your services by default. To enable this feature, please add `execute_command: true` to your manifest before deploying the service.
