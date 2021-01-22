@@ -186,25 +186,25 @@ func (c Client) ListActiveDefaultClusterTasks(filter ListTasksFilter) ([]*ecs.Ta
 
 // StopWorkloadTasks stops all tasks in the given application, enviornment, and workload.
 func (c Client) StopWorkloadTasks(app, env, workload string) error {
-	tdFamilyName := fmt.Sprintf(fmtWorkloadTaskDefinitionFamily, app, env, workload)
-	return c.stopTasks(app, env, tdFamilyName, false)
+	return c.stopTasks(app, env, ListTasksFilter{
+		TaskGroup: fmt.Sprintf(fmtWorkloadTaskDefinitionFamily, app, env, workload),
+	})
 }
 
 // StopOneOffTasks stops all one-off tasks in the given application and environment with the family name.
 func (c Client) StopOneOffTasks(app, env, family string) error {
-	tdFamilyName := fmt.Sprintf(fmtTaskTaskDefinitionFamily, family)
-	return c.stopTasks(app, env, tdFamilyName, true)
+	return c.stopTasks(app, env, ListTasksFilter{
+		TaskGroup:   fmt.Sprintf(fmtTaskTaskDefinitionFamily, family),
+		CopilotOnly: true,
+	})
 }
 
 // stopTasks stops all tasks in the given application and environment in the given family.
-func (c Client) stopTasks(app, env, family string, oneOffOnly bool) error {
+func (c Client) stopTasks(app, env string, filter ListTasksFilter) error {
 	tasks, err := c.ListActiveAppEnvTasks(ListActiveAppEnvTasksOpts{
-		App: app,
-		Env: env,
-		ListTasksFilter: ListTasksFilter{
-			TaskGroup:   family,
-			CopilotOnly: oneOffOnly,
-		},
+		App:             app,
+		Env:             env,
+		ListTasksFilter: filter,
 	})
 	if err != nil {
 		return err
