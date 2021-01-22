@@ -71,3 +71,10 @@ Resources:
           Port: !Ref ContainerPort
 
 {{include "addons" . | indent 2}}
+
+Outputs:
+  DiscoveryServiceArn:
+    Description: ARN of the Discovery Service.
+    Value: !GetAtt DiscoveryService.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-DiscoveryServiceArn
