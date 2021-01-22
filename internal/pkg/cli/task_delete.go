@@ -62,7 +62,8 @@ type deleteTaskOpts struct {
 	newStackManager func(session *session.Session) taskStackManager
 
 	// Cached variables
-	session *session.Session
+	session   *session.Session
+	stackInfo *deploy.TaskStackInfo
 }
 
 func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
@@ -136,8 +137,25 @@ func (o *deleteTaskOpts) validateFlagsWithEnv() error {
 		if _, err := o.store.GetEnvironment(o.app, o.env); err != nil {
 			return fmt.Errorf("get environment: %w", err)
 		}
+
+		if err := o.validateTaskName(); err != nil {
+			return fmt.Errorf("get task: %w", err)
+		}
 	}
 
+	return nil
+}
+
+func (o *deleteTaskOpts) validateTaskName() error {
+	if o.name != "" {
+		// If fully specified, validate that the stack exists and is a task.
+		// This check prevents the command from stopping arbitrary tasks or emptying arbitrary ECR
+		// repositories.
+		_, err := o.getTaskInfo()
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -159,6 +177,10 @@ func (o *deleteTaskOpts) validateFlagsWithDefaultCluster() error {
 
 	if o.env != "" {
 		return fmt.Errorf("cannot specify both `--env` and `--default`")
+	}
+
+	if err := o.validateTaskName(); err != nil {
+		return fmt.Errorf("get task: %w", err)
 	}
 
 	return nil
@@ -375,6 +397,9 @@ func (o *deleteTaskOpts) clearECRRepository() error {
 // getTaskInfo returns a struct of information about the task, including the app and env it's deployed to, if
 // applicable, and the ARN of any CF role it's associated with.
 func (o *deleteTaskOpts) getTaskInfo() (*deploy.TaskStackInfo, error) {
+	if o.stackInfo != nil {
+		return o.stackInfo, nil
+	}
 	sess, err := o.getSession()
 	if err != nil {
 		return nil, err
@@ -382,14 +407,9 @@ func (o *deleteTaskOpts) getTaskInfo() (*deploy.TaskStackInfo, error) {
 	info, err := o.newStackManager(sess).GetTaskStack(o.name)
 
 	if err != nil {
-		// If the stack doesn't exist, return nil.x
-		var errStackNotExist *awscfn.ErrStackNotFound
-		if errors.As(err, &errStackNotExist) {
-			return nil, nil
-		}
-
-		return nil, fmt.Errorf("retrieve stack information for task %s: %w", o.name, err)
+		return nil, err
 	}
+	o.stackInfo = info
 	return info, nil
 }
 
@@ -400,6 +420,11 @@ func (o *deleteTaskOpts) deleteStack() error {
 	}
 	info, err := o.getTaskInfo()
 	if err != nil {
+		// If the stack doesn't exist, don't error.
+		var errStackNotExist *awscfn.ErrStackNotFound
+		if errors.As(err, &errStackNotExist) {
+			return nil
+		}
 		return err
 	}
 	if info == nil {

@@ -18,6 +18,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type validateMocks struct {
+	store *mocks.Mockstore
+	cfn   *mocks.MocktaskStackManager
+}
+
 func TestDeleteTaskOpts_Validate(t *testing.T) {
 
 	testCases := map[string]struct {
@@ -25,48 +30,74 @@ func TestDeleteTaskOpts_Validate(t *testing.T) {
 		inEnvName        string
 		inName           string
 		inDefaultCluster bool
-		setupMocks       func(m *mocks.Mockstore)
+		setupMocks       func(m validateMocks)
 
 		want error
 	}{
 		"with only app flag": {
 			inAppName: "phonetool",
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+			setupMocks: func(m validateMocks) {
+				m.store.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
 			want: nil,
 		},
 		"with no flags": {
-			setupMocks: func(m *mocks.Mockstore) {},
+			setupMocks: func(m validateMocks) {},
 			want:       nil,
 		},
 		"with app/env flags set": {
 			inAppName: "phonetool",
 			inEnvName: "test",
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{Name: "test", App: "phonetool"}, nil)
+			setupMocks: func(m validateMocks) {
+				m.store.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{Name: "test", App: "phonetool"}, nil)
 			},
 			want: nil,
+		},
+		"with all flags": {
+			inAppName: "phonetool",
+			inEnvName: "test",
+			inName: "oneoff",
+			setupMocks: func(m validateMocks) {
+				m.store.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{Name: "test", App: "phonetool"}, nil)
+				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{Name: "test", App: "phonetool"}, nil)
+				m.cfn.EXPECT().GetTaskStack("oneoff")
+			},
+			want: nil,
+		},
+		"task does not exist": {
+			inAppName: "phonetool",
+			inEnvName: "test",
+			inName: "oneoff",
+			want: errors.New("get task: some error"),
+			setupMocks: func(m validateMocks) {
+				m.store.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{Name: "test", App: "phonetool"}, nil)
+				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{Name: "test", App: "phonetool"}, nil)
+				m.cfn.EXPECT().GetTaskStack("oneoff").Return(nil, errors.New("some error"))
+			},
 		},
 		"with default cluster flag set": {
 			inDefaultCluster: true,
 			inName:           "oneoff",
-			setupMocks:       func(m *mocks.Mockstore) {},
+			setupMocks:       func(m validateMocks) {
+				m.cfn.EXPECT().GetTaskStack("oneoff")
+			},
 			want:             nil,
 		},
 		"with default cluster and env flag": {
 			inDefaultCluster: true,
 			inEnvName:        "test",
 			inAppName:        "phonetool",
-			setupMocks:       func(m *mocks.Mockstore) {},
+			setupMocks:       func(m validateMocks) {},
 			want:             errors.New("cannot specify both `--app` and `--default`"),
 		},
 		"with error getting app": {
 			inAppName: "phonetool",
 			inEnvName: "test",
-			setupMocks: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("phonetool").Return(nil, errors.New("some error"))
+			setupMocks: func(m validateMocks) {
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, errors.New("some error"))
 			},
 			want: errors.New("get application: some error"),
 		},
@@ -77,8 +108,14 @@ func TestDeleteTaskOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			mockstore := mocks.NewMockstore(ctrl)
+			mocktaskStackManager := mocks.NewMocktaskStackManager(ctrl)
 
-			tc.setupMocks(mockstore)
+			mocks := validateMocks{
+				store: mockstore,
+				cfn: mocktaskStackManager,
+			}
+
+			tc.setupMocks(mocks)
 
 			opts := deleteTaskOpts{
 				deleteTaskVars: deleteTaskVars{
@@ -89,6 +126,10 @@ func TestDeleteTaskOpts_Validate(t *testing.T) {
 					defaultCluster:   tc.inDefaultCluster,
 				},
 				store: mockstore,
+				newStackManager: func(_ *session.Session) taskStackManager {
+					return mocktaskStackManager
+				},
+				sess: sessions.NewProvider(),
 			}
 
 			// WHEN
@@ -452,7 +493,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 			inEnv:  mockEnvName,
 			inName: mockTaskName,
 
-			wantedErr: errors.New("retrieve stack information for task hide-snacks: some error"),
+			wantedErr: errors.New("some error"),
 
 			setupMocks: func(m deleteTaskMocks) {
 				gomock.InOrder(
