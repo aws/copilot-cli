@@ -4,17 +4,10 @@ $ copilot task delete
 ```
 
 ## What does it do?
-`copilot task delete` removes the resources created by a one-off task.
-
-Generally, the steps involved in `task delete` are:
-
-1. Stop all running instances of the task.
-2. Empty the ECR repository for the task.
-3. Delete the CloudFormation stack, including the ECR repo, log group, and ECS Task Definition.
+`copilot task delete` stops running instances of the task, and deletes associated resources.
 
 !!!info
-    1. Tasks created with versions of Copilot earlier than v1.2.0 cannot be stopped by `copilot task delete`. Customers using tasks launched with earlier versions should manually stop any running tasks via the ECS console after running the command. 
-    2. If you are using the `--default` flag, you cannot also specify the `--app` or `--env` flags. 
+    Tasks created with versions of Copilot earlier than v1.2.0 cannot be stopped by `copilot task delete`. Customers using tasks launched with earlier versions should manually stop any running tasks via the ECS console after running the command. 
 
 ## What are the flags?
 ```
