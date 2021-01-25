@@ -14,6 +14,7 @@ DeploymentConfiguration:
   MinimumHealthyPercent: 100
   MaximumPercent: 200
 PropagateTags: SERVICE
+PlatformVersion: 1.4.0
 {{- if .ExecuteCommand }}
 EnableExecuteCommand: true
 {{- end }}

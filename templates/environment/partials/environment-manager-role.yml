@@ -72,8 +72,8 @@ EnvironmentManagerRole:
           Resource: "*"
           Condition:
             StringEquals:
-              'iam:ResourceTag/copilot-application': !Sub '${AppName}'
-              'iam:ResourceTag/copilot-environment': !Sub '${EnvironmentName}' 
+              'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+              'aws:ResourceTag/copilot-environment': !Sub '${EnvironmentName}' 
         - Sid: CloudFormation
           Effect: Allow
           Action: [

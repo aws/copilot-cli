@@ -13,7 +13,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
 )
@@ -60,12 +59,6 @@ type ExecuteCommandInput struct {
 
 // New returns a Service configured against the input session.
 func New(s *session.Session) *ECS {
-	// This is only for testing in ECS gamma endpoint.
-	// REMOVE THIS WHEN LAUNCHING.
-	s, err := sessions.NewProvider().ECSGammaSess()
-	if err != nil {
-		panic("setting up ecs gamma endpoint")
-	}
 	return &ECS{
 		client: ecs.New(s),
 		newSessStarter: func() ssmSessionStarter {
