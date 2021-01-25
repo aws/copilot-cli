@@ -51,7 +51,7 @@ const (
 	awsURL                = "aws.amazon.com"
 	ghProviderName        = "GitHub"
 	ccProviderName        = "CodeCommit"
-	bbProviderName        = "BitBucket"
+	bbProviderName        = "Bitbucket"
 	defaultGHBranch       = "main"
 	defaultCCBranch       = "master"
 	defaultBBBranch       = "master"
@@ -210,12 +210,10 @@ func (o *initPipelineOpts) Execute() error {
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *initPipelineOpts) RecommendedActions() []string {
+// RequiredActions returns follow-up actions the user can take after successfully executing the command.
+func (o *initPipelineOpts) RequiredActions() []string {
 	return []string{
 		"Commit and push the generated buildspec and manifest file.",
-		fmt.Sprintf("Update the %s phase of your buildspec to unit test your services before pushing the images.", color.HighlightResource("build")),
-		"Update your pipeline manifest to add additional stages.",
 		fmt.Sprintf("Run %s to deploy your pipeline for the repository.", color.HighlightCode("copilot pipeline update")),
 	}
 }
@@ -224,7 +222,7 @@ func (o *initPipelineOpts) validateURL(url string) error {
 	// Note: no longer calling `validateDomainName` because if users use git-remote-codecommit
 	// (the HTTPS (GRC) protocol) to connect to CodeCommit, the url does not have any periods.
 	if !strings.Contains(url, githubURL) && !strings.Contains(url, ccIdentifier) && !strings.Contains(url, bbURL) {
-		return errors.New("Copilot currently accepts URLs to only GitHub, CodeCommit, and BitBucket repository sources")
+		return errors.New("Copilot currently accepts URLs to only GitHub, CodeCommit, and Bitbucket repository sources")
 	}
 	return nil
 }
@@ -267,7 +265,7 @@ func (o *initPipelineOpts) askRepository() error {
 	case strings.Contains(o.repoURL, ccIdentifier):
 		return o.askCodeCommitRepoDetails()
 	case strings.Contains(o.repoURL, bbURL):
-		return o.askBitBucketRepoDetails()
+		return o.askBitbucketRepoDetails()
 	}
 	return nil
 }
@@ -317,7 +315,7 @@ func (o *initPipelineOpts) askCodeCommitRepoDetails() error {
 	return nil
 }
 
-func (o *initPipelineOpts) askBitBucketRepoDetails() error {
+func (o *initPipelineOpts) askBitbucketRepoDetails() error {
 	o.provider = bbProviderName
 	repoDetails, err := bbRepoURL(o.repoURL).parse()
 	if err != nil {
@@ -370,6 +368,7 @@ func (o *initPipelineOpts) selectURL() error {
 // https	https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (fetch)
 // fed		codecommit::us-west-2://aws-sample (fetch)
 // ssh		ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (push)
+// bb	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (fetch)
 
 // parseGitRemoteResults returns just the trimmed middle column (url) of the `git remote -v` results,
 // and skips urls from unsupported sources.
@@ -460,7 +459,7 @@ func (url bbRepoURL) parse() (bbRepoDetails, error) {
 	urlString := string(url)
 	splitURL := strings.Split(urlString, "/")
 	if len(splitURL) < 2 {
-		return bbRepoDetails{}, fmt.Errorf("unable to parse the BitBucket repository name from %s", url)
+		return bbRepoDetails{}, fmt.Errorf("unable to parse the Bitbucket repository name from %s", url)
 	}
 	repoName := splitURL[len(splitURL)-1]
 	repoOwner := splitURL[len(splitURL)-2]
@@ -627,7 +626,7 @@ func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 		return manifest.NewProvider(config)
 	}
 	if o.provider == bbProviderName {
-		config := &manifest.BitBucketProperties{
+		config := &manifest.BitbucketProperties{
 			RepositoryURL: fmt.Sprintf(fmtBBRepoURL, o.repoOwner, bbURL, o.repoOwner, o.repoName),
 			Branch:        o.repoBranch,
 		}
@@ -692,8 +691,8 @@ func buildPipelineInitCmd() *cobra.Command {
 				return err
 			}
 			log.Infoln()
-			log.Infoln("Recommended follow-up actions:")
-			for _, followup := range opts.RecommendedActions() {
+			log.Infoln("Required follow-up actions:")
+			for _, followup := range opts.RequiredActions() {
 				log.Infof("- %s\n", followup)
 			}
 			return nil

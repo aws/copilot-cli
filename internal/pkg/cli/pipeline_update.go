@@ -40,6 +40,12 @@ const (
 	fmtPipelineUpdateExistPrompt = "Are you sure you want to update an existing pipeline: %s?"
 )
 
+const (
+	connectionsURL = "https://console.aws.amazon.com/codesuite/settings/connections"
+	connectionName = "Copilot-Connection"
+	fmtpipelineURL = "https://%s.console.aws.amazon.com/codesuite/codepipeline/pipelines/%s/view?region=%s"
+)
+
 type updatePipelineVars struct {
 	appName          string
 	skipConfirmation bool
@@ -56,7 +62,8 @@ type updatePipelineOpts struct {
 	envStore         environmentStore
 	ws               wsPipelineReader
 
-	pipelineName string
+	pipelineName                 string
+	shouldPromptUpdateConnection bool
 }
 
 func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error) {
@@ -229,11 +236,12 @@ func (o *updatePipelineOpts) Execute() error {
 			RepositoryURL: (pipeline.Source.Properties["repository"]).(string),
 		}
 	case bbProviderName:
-		source = &deploy.BitBucketSource{
+		source = &deploy.BitbucketSource{
 			ProviderName:  bbProviderName,
 			Branch:        (pipeline.Source.Properties["branch"]).(string),
 			RepositoryURL: (pipeline.Source.Properties["repository"]).(string),
 		}
+		o.shouldPromptUpdateConnection = true
 	default:
 		return fmt.Errorf("invalid repo source provider: %s", pipeline.Source.ProviderName)
 	}
@@ -266,6 +274,14 @@ func (o *updatePipelineOpts) Execute() error {
 	return nil
 }
 
+// RequiredActions returns follow-up actions the user can take after successfully executing the command.
+func (o *updatePipelineOpts) RequiredActions() []string {
+	return []string{
+		fmt.Sprintf("Go to %s to update the status of %s from PENDING to AVAILABLE.", color.HighlightResource(connectionsURL), color.HighlightResource(connectionName)),
+		fmt.Sprintf("Then go to %s and click %s.", fmt.Sprintf(fmtpipelineURL, o.region, o.pipelineName, o.region), color.HighlightCode("Retry")),
+	}
+}
+
 // BuildPipelineUpdateCmd build the command for deploying a new pipeline or updating an existing pipeline.
 func buildPipelineUpdateCmd() *cobra.Command {
 	vars := updatePipelineVars{}
@@ -284,7 +300,17 @@ func buildPipelineUpdateCmd() *cobra.Command {
 			if err := opts.Validate(); err != nil {
 				return err
 			}
-			return opts.Execute()
+			if err := opts.Execute(); err != nil {
+				return err
+			}
+			if opts.shouldPromptUpdateConnection {
+				log.Infoln()
+				log.Infoln("Required follow-up actions:")
+				for _, followup := range opts.RequiredActions() {
+					log.Infof("- %s\n", followup)
+				}
+			}
+			return nil
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)

@@ -15,8 +15,7 @@ import (
 const (
 	GithubProviderName     = "GitHub"
 	CodeCommitProviderName = "CodeCommit"
-	BitBucketProviderName  = "BitBucket"
-	GithubSecretIdKeyName  = "access_token_secret"
+	BitbucketProviderName  = "Bitbucket"
 
 	pipelineManifestPath = "cicd/pipeline.yml"
 )
@@ -62,15 +61,15 @@ func (p *codecommitProvider) Properties() map[string]interface{} {
 }
 
 type bitbucketProvider struct {
-	properties *BitBucketProperties
+	properties *BitbucketProperties
 }
 
 func (p *bitbucketProvider) Name() string {
-	return BitBucketProviderName
+	return BitbucketProviderName
 }
 
 func (p *bitbucketProvider) String() string {
-	return BitBucketProviderName
+	return BitbucketProviderName
 }
 
 func (p *bitbucketProvider) Properties() map[string]interface{} {
@@ -94,9 +93,9 @@ type CodeCommitProperties struct {
 	Branch        string `structs:"branch" yaml:"branch"`
 }
 
-// BitBucketProperties contains information for configuring a BitBucket
+// BitbucketProperties contains information for configuring a Bitbucket
 // source provider.
-type BitBucketProperties struct {
+type BitbucketProperties struct {
 	RepositoryURL string `structs:"repository" yaml:"repository"`
 	Branch        string `structs:"branch" yaml:"branch"`
 }
@@ -113,7 +112,7 @@ func NewProvider(configs interface{}) (Provider, error) {
 		return &codecommitProvider{
 			properties: props,
 		}, nil
-	case *BitBucketProperties:
+	case *BitbucketProperties:
 		return &bitbucketProvider{
 			properties: props,
 		}, nil
