@@ -566,6 +566,7 @@ func TestECS_RunTask(t *testing.T) {
 						},
 					},
 					EnableExecuteCommand: aws.Bool(true),
+					PlatformVersion:      aws.String("1.4.0"),
 					PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 				}).
 					Return(&ecs.RunTaskOutput{
@@ -635,6 +636,7 @@ func TestECS_RunTask(t *testing.T) {
 						},
 					},
 					EnableExecuteCommand: aws.Bool(true),
+					PlatformVersion:      aws.String("1.4.0"),
 					PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 				}).
 					Return(&ecs.RunTaskOutput{}, errors.New("error"))
