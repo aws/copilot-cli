@@ -191,7 +191,7 @@ Scale up or down based on the service average response time.
 <div class="separator"></div>
 
 <a id="execute_command" href="#execute_command" class="field">`execute_command`</a> <span class="type">Boolean</span>   
-Enable running commands in your container. Required for `$ copilot svc exec`.
+Enable running commands in your container. Required for `$ copilot svc exec`. Please note that this will update the service's Fargate Platform Version to 1.4.0.
 
 <div class="separator"></div>
 
