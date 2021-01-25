@@ -32,5 +32,5 @@ $ copilot svc exec -a my-app -e test --name backend --task-id 8c38184 --command 
 ```
 
 !!! info
-    1. `copilot svc exec` is not enabled for your services by default. To enable this feature, please add `execute_command: true` to your manifest before deploying the service.
+    1. Please make sure `execute_command: true` is set in your manifest before deploying the service.
     2. Please note that this will update the service's Fargate Platform Version to 1.4.0.

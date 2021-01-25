@@ -19,6 +19,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -135,6 +136,10 @@ func (o *svcExecOpts) Execute() error {
 		Container: container,
 		Task:      taskID,
 	}); err != nil {
+		var errExecCmd *awsecs.ErrExecuteCommand
+		if errors.As(err, &errExecCmd) {
+			log.Errorf("Failed to execute command %s. Is %s set in your manifest?\n", o.command, color.HighlightCode("execute_command: true"))
+		}
 		return fmt.Errorf("execute command %s in container %s: %w", o.command, container, err)
 	}
 	return nil

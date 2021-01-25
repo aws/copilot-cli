@@ -30,7 +30,7 @@ memory: 512
 # Number of tasks that should be running in your service.
 count: 1
 # Enable running commands in your container.
-# execute_command: true
+execute_command: true
 
 variables:                    # Optional. Pass environment variables as key value pairs.
   LOG_LEVEL: info

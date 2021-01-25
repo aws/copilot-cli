@@ -36,6 +36,8 @@ cpu: {{.CPU}}
 memory: {{.Memory}}
 # Number of tasks that should be running in your service.
 count: {{.Count.Value}}
+# Enable running commands in your container.
+execute_command: true
 
 # Optional fields for more advanced use-cases.
 #

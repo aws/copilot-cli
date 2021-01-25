@@ -773,7 +773,7 @@ func TestECS_ExecuteCommand(t *testing.T) {
 				m.EXPECT().ExecuteCommand(mockExecCmdIn).Return(nil, mockErr)
 			},
 			mockSessStarter: func(m *mocks.MockssmSessionStarter) {},
-			wantedError:     fmt.Errorf("execute command: some error"),
+			wantedError:     &ErrExecuteCommand{err: mockErr},
 		},
 		"return error if fail to start the session": {
 			mockAPI: func(m *mocks.Mockapi) {
