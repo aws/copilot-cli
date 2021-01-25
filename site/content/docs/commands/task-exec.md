@@ -37,3 +37,33 @@ Start an interactive bash session with a task prefixed with ID "38c3818" in the 
 ```bash
 $ copilot task exec --default --task-id 38c3818
 ```
+
+!!! info
+    `copilot task exec` cannot be performed without certain task role permissions. If you are using existing task role to run the tasks, please make sure it has the following permissions in order to make `copilot task exec` work.
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "ssmmessages:CreateControlChannel",
+                "ssmmessages:OpenControlChannel",
+                "ssmmessages:CreateDataChannel",
+                "ssmmessages:OpenDataChannel"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "logs:CreateLogStream",
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        }
+    ]
+}
+```
