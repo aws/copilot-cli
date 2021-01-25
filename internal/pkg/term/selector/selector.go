@@ -192,21 +192,6 @@ func TaskWithDefaultCluster() GetDeployedTaskOpts {
 	}
 }
 
-// DeployedTask holds the name and app and env, if applicable, of a one-off task.
-type DeployedTask struct {
-	Name string
-	Env  string
-	App  string
-}
-
-func (t *DeployedTask) String() string {
-	env := t.Env
-	if t.Env == "" {
-		env = "default cluster"
-	}
-	return fmt.Sprintf("%s (%s)", t.Name, env)
-}
-
 // TaskSelect is a Copilot running task selector.
 type TaskSelect struct {
 	prompt         Prompter
@@ -374,16 +359,16 @@ func (s *DeployedService) String() string {
 
 // Task has the user select a task. Callers can provide an environment, an app, or a "use default cluster" option
 // to filter the returned tasks.
-func (s *CFTaskSelect) Task(prompt, help string, opts ...GetDeployedTaskOpts) (*DeployedTask, error) {
+func (s *CFTaskSelect) Task(prompt, help string, opts ...GetDeployedTaskOpts) (string, error) {
 	for _, opt := range opts {
 		opt(s)
 	}
 	if s.defaultCluster && (s.env != "" || s.app != "") {
 		// Error for callers
-		return nil, fmt.Errorf("cannot specify both default cluster and env")
+		return "", fmt.Errorf("cannot specify both default cluster and env")
 	}
 	if !s.defaultCluster && (s.env == "" && s.app == "") {
-		return nil, fmt.Errorf("must specify either app and env or default cluster")
+		return "", fmt.Errorf("must specify either app and env or default cluster")
 	}
 
 	var tasks []deploy.TaskStackInfo
@@ -391,45 +376,35 @@ func (s *CFTaskSelect) Task(prompt, help string, opts ...GetDeployedTaskOpts) (*
 	if s.defaultCluster {
 		defaultTasks, err := s.cfStore.ListDefaultTaskStacks()
 		if err != nil {
-			return nil, fmt.Errorf("get tasks in default cluster: %w", err)
+			return "", fmt.Errorf("get tasks in default cluster: %w", err)
 		}
 		tasks = append(tasks, defaultTasks...)
 	}
 	if s.env != "" && s.app != "" {
 		envTasks, err := s.cfStore.ListTaskStacks(s.app, s.env)
 		if err != nil {
-			return nil, fmt.Errorf("get tasks in environment %s: %w", s.env, err)
+			return "", fmt.Errorf("get tasks in environment %s: %w", s.env, err)
 		}
 		tasks = append(tasks, envTasks...)
 	}
 	choices := make([]string, len(tasks))
-	deployedTasks := make(map[string]DeployedTask)
-	var dt DeployedTask
 	for n, task := range tasks {
-		dt = DeployedTask{
-			Name: task.TaskName(),
-			Env:  task.Env,
-			App:  task.App,
-		}
-		deployedTasks[dt.String()] = dt
-		choices[n] = dt.String()
+		choices[n] = task.TaskName()
 	}
 
 	if len(choices) == 0 {
-		return nil, fmt.Errorf("no deployed tasks found in selected cluster")
+		return "", fmt.Errorf("no deployed tasks found in selected cluster")
 	}
-	// Return if there's only once option.
+	// Return if there's only one option.
 	if len(choices) == 1 {
 		log.Infof("Found only one deployed task: %s\n", color.HighlightUserInput(choices[0]))
-		deployedTask := deployedTasks[choices[0]]
-		return &deployedTask, nil
+		return choices[0], nil
 	}
 	choice, err := s.prompt.SelectOne(prompt, help, choices)
 	if err != nil {
-		return nil, fmt.Errorf("select task for deletion: %w", err)
+		return "", fmt.Errorf("select task for deletion: %w", err)
 	}
-	deployedTask := deployedTasks[choice]
-	return &deployedTask, nil
+	return choice, nil
 }
 
 // DeployedService has the user select a deployed service. Callers can provide either a particular environment,

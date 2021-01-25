@@ -3,15 +3,17 @@
 
 Resources:
   LogGroup:
-  # A CloudWatch log group to store your logs.
+    Metadata:
+      'aws:copilot:description': 'A CloudWatch log group to store your logs.'
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Join ['', [/copilot/, !Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName]]
       RetentionInDays: !Ref LogRetention
 
   TaskDefinition:
-  # An ECS TaskDefinition where your containers are defined.
     Type: AWS::ECS::TaskDefinition
+    Metadata:
+      'aws:copilot:description': 'An ECS TaskDefinition where your containers are defined.'
     DependsOn: LogGroup
     Properties:
       Family: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName]]
@@ -50,7 +52,8 @@ Resources:
               awslogs-stream-prefix: copilot
 
   TaskRole:
-  # A task role to manage permissions for your containers.
+    Metadata:
+      'aws:copilot:description': 'A task role to manage permissions for your containers.'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -77,8 +80,9 @@ Resources:
                     'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
 
   DiscoveryService:
-  # Service discovery to communicate with other services in your VPC.
     Type: AWS::ServiceDiscovery::Service
+    Metadata:
+      'aws:copilot:description': 'Service discovery to communicate with other services in your VPC.'
     Properties:
       Description: Discovery Service for the Copilot services
       DnsConfig:
@@ -97,8 +101,9 @@ Resources:
 
 
   EnvControllerAction:
-  # Updating your environment to enable load balancers.
     Type: Custom::EnvControllerFunction
+    Metadata:
+      'aws:copilot:description': 'Updating your environment to enable load balancers.'
     Properties:
       ServiceToken: !GetAtt EnvControllerFunction.Arn
       Workload: !Ref WorkloadName
@@ -109,8 +114,9 @@ Resources:
       UpdateID: c31b2422-5c1f-48cb-9a58-f0f418984d27
 
   Service:
-  # An ECS service to run and maintain your tasks.
     Type: AWS::ECS::Service
+    Metadata:
+      'aws:copilot:description': 'An ECS service to run and maintain your tasks.'
     DependsOn: WaitUntilListenerRuleIsCreated
     Properties:
       Cluster:
@@ -150,8 +156,9 @@ Resources:
           Port: !Ref ContainerPort
 
   TargetGroup:
-        # A target group to connect your service to the load balancer.
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Metadata:
+      'aws:copilot:description': 'A target group to connect your service to the load balancer.'
     Properties:
       HealthCheckPath: /_healthcheck # Default is '/'.
       Port: !Ref ContainerPort
@@ -188,7 +195,8 @@ Resources:
       Count: 0
 
   AddonsStack:
-  # An addons stack for your additional AWS resources.
+    Metadata:
+      'aws:copilot:description': 'An addons stack for your additional AWS resources.'
     Type: AWS::CloudFormation::Stack
     Condition: HasAddons
     Properties:

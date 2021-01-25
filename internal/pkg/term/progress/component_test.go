@@ -10,6 +10,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestNoopComponent_Render(t *testing.T) {
+	// GIVEN
+	buf := new(strings.Builder)
+	c := &noopComponent{}
+
+	// WHEN
+	nl, err := c.Render(buf)
+
+	// THEN
+	require.Equal(t, 0, nl, "expected no lines to be written")
+	require.NoError(t, err, "expected err to be nil")
+	require.Equal(t, "", buf.String(), "expected the content to be empty")
+}
+
 func TestSingleLineComponent_Render(t *testing.T) {
 	testCases := map[string]struct {
 		inText    string
@@ -131,4 +145,70 @@ func TestDynamicTreeComponent_Done(t *testing.T) {
 
 	// THEN
 	require.Equal(t, root.Done(), ch)
+}
+
+func TestTableComponent_Render(t *testing.T) {
+	testCases := map[string]struct {
+		inTitle   string
+		inHeader  []string
+		inRows    [][]string
+		inPadding int
+
+		wantedNumLines int
+		wantedOut      string
+	}{
+		"should not write anything if there are no rows": {
+			inTitle:  "Fancy table",
+			inHeader: []string{"col1", "col2"},
+
+			wantedNumLines: 0,
+			wantedOut:      "",
+		},
+		"should render a sample table": {
+			inTitle:  "Deployments",
+			inHeader: []string{"", "Revision", "Rollout", "Desired", "Running", "Failed", "Pending"},
+			inRows: [][]string{
+				{"PRIMARY", "3", "[in progress]", "10", "0", "0", "10"},
+				{"ACTIVE", "2", "[completed]", "10", "10", "0", "0"},
+			},
+
+			wantedNumLines: 4,
+			wantedOut: `Deployments
+           Revision  Rollout        Desired  Running  Failed  Pending
+  PRIMARY  3         [in progress]  10       0        0       10
+  ACTIVE   2         [completed]    10       10       0       0
+`,
+		},
+		"should render a sample table with with padding": {
+			inTitle:  "Person",
+			inHeader: []string{"First", "Last"},
+			inRows: [][]string{
+				{"Cookie", "Monster"},
+			},
+			inPadding: 3,
+
+			wantedNumLines: 3,
+			wantedOut: `   Person
+     First   Last
+     Cookie  Monster
+`,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			buf := new(strings.Builder)
+			table := newTableComponent(tc.inTitle, tc.inHeader, tc.inRows)
+			table.Padding = tc.inPadding
+
+			// WHEN
+			numLines, err := table.Render(buf)
+
+			// THEN
+			require.NoError(t, err)
+			require.Equal(t, tc.wantedNumLines, numLines, "expected number of lines to match")
+			require.Equal(t, tc.wantedOut, buf.String(), "expected table content to match")
+		})
+	}
 }

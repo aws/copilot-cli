@@ -1,5 +1,6 @@
 DiscoveryService:
-  # Service discovery for your services to communicate within the VPC
+  Metadata:
+    'aws:copilot:description': 'Service discovery for your services to communicate within the VPC'
   Type: AWS::ServiceDiscovery::Service
   Properties:
     Description: Discovery Service for the Copilot services

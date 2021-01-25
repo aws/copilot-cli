@@ -2,7 +2,7 @@
   LogDriver: awsfirelens
 {{- if .LogConfig.Destination}}
   Options:{{range $name, $value := .LogConfig.Destination}}
-    {{$name}}: {{$value}}{{end}}
+    {{$name}}: {{$value | printf "%q"}}{{end}}
 {{- end}}
 {{- if .LogConfig.SecretOptions}}
   SecretOptions:{{range $name, $valueFrom := .LogConfig.SecretOptions}}

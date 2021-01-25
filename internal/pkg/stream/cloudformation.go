@@ -12,10 +12,6 @@ import (
 	cfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 )
 
-const (
-	stackFetchIntervalDuration = 2 * time.Second // How long to wait until Fetch is called again for a StackStreamer.
-)
-
 // StackEventsDescriber is the CloudFormation interface needed to describe stack events.
 type StackEventsDescriber interface {
 	DescribeStackEvents(*cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error)
@@ -24,9 +20,11 @@ type StackEventsDescriber interface {
 // StackEvent is a CloudFormation stack event.
 type StackEvent struct {
 	LogicalResourceID    string
+	PhysicalResourceID   string
 	ResourceType         string
 	ResourceStatus       string
 	ResourceStatusReason string
+	Timestamp            time.Time
 }
 
 // StackStreamer is a Streamer for StackEvent events started by a change set.
@@ -96,9 +94,11 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 			}
 			events = append(events, StackEvent{
 				LogicalResourceID:    logicalID,
+				PhysicalResourceID:   aws.StringValue(event.PhysicalResourceId),
 				ResourceType:         aws.StringValue(event.ResourceType),
 				ResourceStatus:       resourceStatus,
 				ResourceStatusReason: aws.StringValue(event.ResourceStatusReason),
+				Timestamp:            aws.TimeValue(event.Timestamp),
 			})
 			s.pastEventIDs[aws.StringValue(event.EventId)] = true
 		}
@@ -111,7 +111,7 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 	// Store events to flush in chronological order.
 	reverse(events)
 	s.eventsToFlush = append(s.eventsToFlush, events...)
-	return time.Now().Add(stackFetchIntervalDuration), nil
+	return time.Now().Add(streamerFetchIntervalDuration), nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.

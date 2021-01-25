@@ -15,7 +15,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:4.0
+        image: aws/codebuild/standard:5.0
         variables:
           TEST_SUITE: addons
           APP_REGION: us-west-2
@@ -24,7 +24,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:4.0
+        image: aws/codebuild/standard:5.0
         variables:
           TEST_SUITE: customized-env
           APP_REGION: us-west-1
@@ -33,7 +33,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:4.0
+        image: aws/codebuild/standard:5.0
         variables:
           TEST_SUITE: init
           APP_REGION: us-east-1
@@ -42,7 +42,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:4.0
+        image: aws/codebuild/standard:5.0
         variables:
           TEST_SUITE: multi-env-app
           APP_REGION: us-east-2
@@ -51,7 +51,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:4.0
+        image: aws/codebuild/standard:5.0
         variables:
           TEST_SUITE: multi-svc-app
           APP_REGION: us-west-2
@@ -60,7 +60,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:4.0
+        image: aws/codebuild/standard:5.0
         variables:
           TEST_SUITE: root
           APP_REGION: us-west-1
@@ -69,7 +69,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:4.0
+        image: aws/codebuild/standard:5.0
         variables:
           TEST_SUITE: sidecars
           APP_REGION: us-east-1
@@ -78,7 +78,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:4.0
+        image: aws/codebuild/standard:5.0
         variables:
           TEST_SUITE: task
           APP_REGION: us-east-2
@@ -87,7 +87,7 @@ batch:
         privileged-mode: true
         type: LINUX_CONTAINER
         compute-type: BUILD_GENERAL1_LARGE
-        image: aws/codebuild/standard:4.0
+        image: aws/codebuild/standard:5.0
         variables:
           TEST_SUITE: app-with-domain
           APP_REGION: us-west-2
@@ -96,8 +96,8 @@ batch:
 phases:
   install:
     runtime-versions:
-      golang: 1.14
-      nodejs: 10
+      golang: 1.15
+      nodejs: 12
   pre_build:
     commands:
        - docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_TOKEN}

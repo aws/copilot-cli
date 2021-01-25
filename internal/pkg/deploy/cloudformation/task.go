@@ -77,6 +77,35 @@ func (cf CloudFormation) ListTaskStacks(appName, envName string) ([]deploy.TaskS
 	return outputTaskStacks, nil
 }
 
+// GetTaskStack grabs information about the given one-off task's cloudformation stack
+// and returns it to the user in a convenient struct.
+func (cf CloudFormation) GetTaskStack(taskName string) (*deploy.TaskStackInfo, error) {
+	stackName := string(stack.NameForTask(taskName))
+	desc, err := cf.cfnClient.Describe(stackName)
+	if err != nil {
+		return nil, err
+	}
+	info := deploy.TaskStackInfo{
+		StackName: stackName,
+		RoleARN:   aws.StringValue(desc.RoleARN),
+	}
+	var isTask bool
+	for _, tag := range desc.Tags {
+		switch aws.StringValue(tag.Key) {
+		case deploy.AppTagKey:
+			info.App = aws.StringValue(tag.Value)
+		case deploy.EnvTagKey:
+			info.Env = aws.StringValue(tag.Value)
+		case deploy.TaskTagKey:
+			isTask = true
+		}
+	}
+	if !isTask {
+		return nil, fmt.Errorf("%s is not a Copilot task stack", stackName)
+	}
+	return &info, nil
+}
+
 // ListDefaultTaskStacks returns all the CF stacks created by copilot but not associated with an application.
 func (cf CloudFormation) ListDefaultTaskStacks() ([]deploy.TaskStackInfo, error) {
 	tasks, err := cf.cfnClient.ListStacksWithTags(map[string]string{deploy.TaskTagKey: ""})
@@ -106,6 +135,10 @@ func (cf CloudFormation) ListDefaultTaskStacks() ([]deploy.TaskStackInfo, error)
 }
 
 // DeleteTask deletes a Copilot-created one-off task stack using the RoleARN that stack was created with.
+// If there is no role arn specified, it tries to delete the stack using the default session.
 func (cf CloudFormation) DeleteTask(task deploy.TaskStackInfo) error {
-	return cf.cfnClient.DeleteAndWaitWithRoleARN(task.StackName, task.RoleARN)
+	if task.RoleARN != "" {
+		return cf.cfnClient.DeleteAndWaitWithRoleARN(task.StackName, task.RoleARN)
+	}
+	return cf.cfnClient.DeleteAndWait(task.StackName)
 }

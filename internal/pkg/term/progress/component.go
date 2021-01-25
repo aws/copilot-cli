@@ -4,14 +4,25 @@
 package progress
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
+	"text/tabwriter"
 )
 
 const (
 	nestedComponentPadding = 2 // Leading space characters for rendering a nested component.
 )
+
+// noopComponent satisfies the Renderer interface but does not write anything.
+type noopComponent struct{}
+
+// Render does not do anything.
+// It returns 0 and nil for the error.
+func (c *noopComponent) Render(out io.Writer) (numLines int, err error) {
+	return 0, nil
+}
 
 // singleLineComponent can display a single line of text.
 type singleLineComponent struct {
@@ -59,6 +70,68 @@ func (c *dynamicTreeComponent) Render(out io.Writer) (numLines int, err error) {
 // Done delegates to Root's Done.
 func (c *dynamicTreeComponent) Done() <-chan struct{} {
 	return c.Root.Done()
+}
+
+// tableComponent can display a table.
+type tableComponent struct {
+	Title  string     // The table's label.
+	Header []string   // Titles for the columns.
+	Rows   [][]string // The table's data.
+
+	Padding      int  // Number of leading spaces before writing the Title.
+	MinCellWidth int  // Minimum number of characters per table cell.
+	GapWidth     int  // Number of characters between columns.
+	ColumnChar   byte // Character that separates columns.
+}
+
+// newTableComponent returns a small table component with no padding, that uses the space character ' ' to
+// separate columns, and has two spaces between columns.
+func newTableComponent(title string, header []string, rows [][]string) *tableComponent {
+	return &tableComponent{
+		Title:        title,
+		Header:       header,
+		Rows:         rows,
+		Padding:      0,
+		MinCellWidth: 2,
+		GapWidth:     2,
+		ColumnChar:   ' ',
+	}
+}
+
+// Render writes the table to out.
+// If there are no rows, the table is not rendered.
+func (c *tableComponent) Render(out io.Writer) (numLines int, err error) {
+	if len(c.Rows) == 0 {
+		return 0, nil
+	}
+
+	// Write the table's title.
+	buf := new(bytes.Buffer)
+	if _, err := buf.WriteString(fmt.Sprintf("%s%s\n", strings.Repeat(" ", c.Padding), c.Title)); err != nil {
+		return 0, fmt.Errorf("write title %s to buffer: %w", c.Title, err)
+	}
+	numLines += 1
+
+	// Write rows.
+	tw := tabwriter.NewWriter(buf, c.MinCellWidth, c.GapWidth, c.MinCellWidth, c.ColumnChar, noAdditionalFormatting)
+	rows := append([][]string{c.Header}, c.Rows...)
+	for _, row := range rows {
+		// Pad the table to the right under the Title.
+		line := fmt.Sprintf("%s%s\n", strings.Repeat(" ", c.Padding+nestedComponentPadding), strings.Join(row, "\t"))
+		if _, err := tw.Write([]byte(line)); err != nil {
+			return 0, fmt.Errorf("write row %s to tabwriter: %w", line, err)
+		}
+	}
+	if err := tw.Flush(); err != nil {
+		return 0, fmt.Errorf("flush tabwriter: %w", err)
+	}
+	numLines += len(rows)
+
+	// Flush everything to out.
+	if _, err := buf.WriteTo(out); err != nil {
+		return 0, fmt.Errorf("write buffer to out: %w", err)
+	}
+	return numLines, nil
 }
 
 func renderComponents(out io.Writer, components []Renderer) (numLines int, err error) {

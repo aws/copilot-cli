@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -350,6 +349,11 @@ type taskDeployer interface {
 	DeployTask(input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error
 }
 
+type taskStackManager interface {
+	DeleteTask(task deploy.TaskStackInfo) error
+	GetTaskStack(taskName string) (*deploy.TaskStackInfo, error)
+}
+
 type taskRunner interface {
 	Run() ([]*task.Task, error)
 }
@@ -458,7 +462,7 @@ type initJobSelector interface {
 }
 
 type cfTaskSelector interface {
-	Task(prompt, help string, opts ...selector.GetDeployedTaskOpts) (*selector.DeployedTask, error)
+	Task(prompt, help string, opts ...selector.GetDeployedTaskOpts) (string, error)
 }
 
 type dockerfileSelector interface {
@@ -491,12 +495,10 @@ type roleDeleter interface {
 	DeleteRole(string) error
 }
 
-type activeWorkloadTasksLister interface {
-	ListActiveWorkloadTasks(app, env, workload string) (clusterARN string, taskARNs []string, err error)
-}
-
-type tasksStopper interface {
-	StopTasks(tasks []string, opts ...ecs.StopTasksOpts) error
+type taskStopper interface {
+	StopOneOffTasks(app, env, family string) error
+	StopDefaultClusterTasks(familyName string) error
+	StopWorkloadTasks(app, env, workload string) error
 }
 
 type serviceLinkedRoleCreator interface {

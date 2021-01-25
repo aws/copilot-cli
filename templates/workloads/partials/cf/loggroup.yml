@@ -1,5 +1,6 @@
 LogGroup:
-  # A CloudWatch log group to hold your service logs
+  Metadata:
+    'aws:copilot:description': 'A CloudWatch log group to hold your service logs'
   Type: AWS::Logs::LogGroup
   Properties:
     LogGroupName: !Join ['', [/copilot/, !Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName]]
