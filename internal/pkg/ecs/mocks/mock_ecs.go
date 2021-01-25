@@ -131,3 +131,22 @@ func (mr *MockecsClientMockRecorder) DefaultCluster() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultCluster", reflect.TypeOf((*MockecsClient)(nil).DefaultCluster))
 }
+
+// StopTasks mocks base method
+func (m *MockecsClient) StopTasks(tasks []string, opts ...ecs.StopTasksOpts) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{tasks}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "StopTasks", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StopTasks indicates an expected call of StopTasks
+func (mr *MockecsClientMockRecorder) StopTasks(tasks interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{tasks}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopTasks", reflect.TypeOf((*MockecsClient)(nil).StopTasks), varargs...)
+}

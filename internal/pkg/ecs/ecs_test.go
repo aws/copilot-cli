@@ -332,7 +332,7 @@ func TestClient_ListActiveWorkloadTasks(t *testing.T) {
 						Return(nil, testError),
 				)
 			},
-			wantedError: fmt.Errorf("get cluster for env mockEnv: get cluster resources for environment mockEnv: some error"),
+			wantedError: fmt.Errorf("get cluster resources for environment mockEnv: some error"),
 		},
 		"errors if fail to get running tasks": {
 			setupMocks: func(m clientMocks) {
@@ -413,6 +413,7 @@ func TestClient_listActiveCopilotTasks(t *testing.T) {
 	tests := map[string]struct {
 		inTaskGroup string
 		inTaskID    string
+		inOneOff    bool
 		setupMocks  func(mocks clientMocks)
 
 		wantedError error
@@ -422,11 +423,11 @@ func TestClient_listActiveCopilotTasks(t *testing.T) {
 			inTaskGroup: mockTaskGroup,
 			setupMocks: func(m clientMocks) {
 				gomock.InOrder(
-					m.ecsClient.EXPECT().RunningTasksInFamily(mockCluster, "copilot-mockTaskGroup").
+					m.ecsClient.EXPECT().RunningTasksInFamily(mockCluster, "mockTaskGroup").
 						Return(nil, testError),
 				)
 			},
-			wantedError: fmt.Errorf("list running tasks that belong to family copilot-mockTaskGroup in cluster mockCluster: some error"),
+			wantedError: fmt.Errorf("list running tasks in family mockTaskGroup and cluster mockCluster: some error"),
 		},
 		"errors if fail to list running tasks": {
 			setupMocks: func(m clientMocks) {
@@ -439,6 +440,7 @@ func TestClient_listActiveCopilotTasks(t *testing.T) {
 		},
 		"success": {
 			inTaskID: "123456",
+			inOneOff: true,
 			setupMocks: func(m clientMocks) {
 				gomock.InOrder(
 					m.ecsClient.EXPECT().RunningTasks(mockCluster).
@@ -447,6 +449,12 @@ func TestClient_listActiveCopilotTasks(t *testing.T) {
 								TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/123456789"),
 								Tags: []*awsecs.Tag{
 									{Key: aws.String("copilot-task")},
+								},
+							},
+							{
+								TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/123456789"),
+								Tags: []*awsecs.Tag{
+									{Key: aws.String("copilot-application")},
 								},
 							},
 							{
@@ -466,6 +474,43 @@ func TestClient_listActiveCopilotTasks(t *testing.T) {
 					TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/123456789"),
 					Tags: []*awsecs.Tag{
 						{Key: aws.String("copilot-task")},
+					},
+				},
+			},
+		},
+		"success with oneOff disabled": {
+			inTaskID: "123456",
+			inOneOff: false,
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.ecsClient.EXPECT().RunningTasks(mockCluster).
+						Return([]*ecs.Task{
+							{
+								TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/123456789"),
+								Tags: []*awsecs.Tag{
+									{Key: aws.String("copilot-task")},
+								},
+							},
+							{
+								TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/123456789"),
+								Tags: []*awsecs.Tag{
+									{Key: aws.String("copilot-application")},
+								},
+							},
+						}, nil),
+				)
+			},
+			wanted: []*ecs.Task{
+				{
+					TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/123456789"),
+					Tags: []*awsecs.Tag{
+						{Key: aws.String("copilot-task")},
+					},
+				},
+				{
+					TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/123456789"),
+					Tags: []*awsecs.Tag{
+						{Key: aws.String("copilot-application")},
 					},
 				},
 			},
@@ -493,8 +538,9 @@ func TestClient_listActiveCopilotTasks(t *testing.T) {
 			got, err := client.listActiveCopilotTasks(listActiveCopilotTasksOpts{
 				Cluster: mockCluster,
 				ListTasksFilter: ListTasksFilter{
-					TaskGroup: test.inTaskGroup,
-					TaskID:    test.inTaskID,
+					TaskGroup:   test.inTaskGroup,
+					TaskID:      test.inTaskID,
+					CopilotOnly: test.inOneOff,
 				},
 			})
 
@@ -504,6 +550,340 @@ func TestClient_listActiveCopilotTasks(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, got, test.wanted)
+			}
+		})
+	}
+}
+
+func TestClient_StopWorkloadTasks(t *testing.T) {
+	mockCluster := "arn:aws::ecs:cluster/abcd1234"
+	mockResource := resourcegroups.Resource{
+		ARN: mockCluster,
+	}
+	mockECSTask := []*ecs.Task{
+		{
+			TaskArn: aws.String("deadbeef"),
+			Tags: []*awsecs.Tag{
+				{
+					Key: aws.String("copilot-service"),
+				},
+			},
+		},
+		{
+			TaskArn: aws.String("abcd"),
+			Tags: []*awsecs.Tag{
+				{
+					Key: aws.String("copilot-service"),
+				},
+			},
+		},
+	}
+	testCases := map[string]struct {
+		inApp  string
+		inEnv  string
+		inTask string
+
+		mockECS func(m *mocks.MockecsClient)
+		mockrg  func(m *mocks.MockresourceGetter)
+
+		wantErr error
+	}{
+		"success": {
+			inApp:  "phonetool",
+			inEnv:  "pdx",
+			inTask: "service",
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().RunningTasksInFamily(mockCluster, "phonetool-pdx-service").Return(mockECSTask, nil)
+				m.EXPECT().StopTasks([]string{"deadbeef", "abcd"}, gomock.Any()).Return(nil)
+			},
+			mockrg: func(m *mocks.MockresourceGetter) {
+				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
+					"copilot-application": "phonetool",
+					"copilot-environment": "pdx",
+				}).Return([]*resourcegroups.Resource{&mockResource}, nil).Times(2)
+			},
+		},
+		"no tasks": {
+			inApp:  "phonetool",
+			inEnv:  "pdx",
+			inTask: "service",
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().RunningTasksInFamily(mockCluster, "phonetool-pdx-service").Return([]*ecs.Task{}, nil)
+				m.EXPECT().StopTasks([]string{}, gomock.Any()).Return(nil)
+			},
+			mockrg: func(m *mocks.MockresourceGetter) {
+				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
+					"copilot-application": "phonetool",
+					"copilot-environment": "pdx",
+				}).Return([]*resourcegroups.Resource{&mockResource}, nil).Times(2)
+			},
+		},
+		"failure getting resources": {
+			inApp:  "phonetool",
+			inEnv:  "pdx",
+			inTask: "service",
+
+			mockECS: func(m *mocks.MockecsClient) {},
+			mockrg: func(m *mocks.MockresourceGetter) {
+				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
+					"copilot-application": "phonetool",
+					"copilot-environment": "pdx",
+				}).Return(nil, errors.New("some error"))
+			},
+			wantErr: errors.New("get cluster resources for environment pdx: some error"),
+		},
+		"failure stopping tasks": {
+			inApp:  "phonetool",
+			inEnv:  "pdx",
+			inTask: "service",
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().RunningTasksInFamily(mockCluster, "phonetool-pdx-service").Return(mockECSTask, nil)
+				m.EXPECT().StopTasks([]string{"deadbeef", "abcd"}, gomock.Any()).Return(errors.New("some error"))
+			},
+			mockrg: func(m *mocks.MockresourceGetter) {
+				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
+					"copilot-application": "phonetool",
+					"copilot-environment": "pdx",
+				}).Return([]*resourcegroups.Resource{&mockResource}, nil).Times(2)
+			},
+			wantErr: errors.New("some error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockECS := mocks.NewMockecsClient(ctrl)
+			mockrg := mocks.NewMockresourceGetter(ctrl)
+
+			tc.mockECS(mockECS)
+			tc.mockrg(mockrg)
+
+			c := Client{
+				ecsClient: mockECS,
+				rgGetter:  mockrg,
+			}
+
+			// WHEN
+			err := c.StopWorkloadTasks(tc.inApp, tc.inEnv, tc.inTask)
+
+			// THEN
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+func TestClient_StopOneOffTasks(t *testing.T) {
+	mockCluster := "arn:aws::ecs:cluster/abcd1234"
+	mockResource := resourcegroups.Resource{
+		ARN: mockCluster,
+	}
+	mockECSTask := []*ecs.Task{
+		{
+			TaskArn: aws.String("deadbeef"),
+			Tags: []*awsecs.Tag{
+				{
+					Key: aws.String("copilot-task"),
+				},
+			},
+		},
+	}
+	testCases := map[string]struct {
+		inApp  string
+		inEnv  string
+		inTask string
+
+		mockECS func(m *mocks.MockecsClient)
+		mockrg  func(m *mocks.MockresourceGetter)
+
+		wantErr error
+	}{
+		"success": {
+			inApp:  "phonetool",
+			inEnv:  "pdx",
+			inTask: "cooltask",
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().RunningTasksInFamily(mockCluster, "copilot-cooltask").Return(mockECSTask, nil)
+				m.EXPECT().StopTasks([]string{"deadbeef"}, gomock.Any()).Return(nil)
+			},
+			mockrg: func(m *mocks.MockresourceGetter) {
+				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
+					"copilot-application": "phonetool",
+					"copilot-environment": "pdx",
+				}).Return([]*resourcegroups.Resource{&mockResource}, nil).Times(2)
+			},
+		},
+		"no tasks": {
+			inApp:  "phonetool",
+			inEnv:  "pdx",
+			inTask: "cooltask",
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().RunningTasksInFamily(mockCluster, "copilot-cooltask").Return([]*ecs.Task{}, nil)
+				m.EXPECT().StopTasks([]string{}, gomock.Any()).Return(nil)
+			},
+			mockrg: func(m *mocks.MockresourceGetter) {
+				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
+					"copilot-application": "phonetool",
+					"copilot-environment": "pdx",
+				}).Return([]*resourcegroups.Resource{&mockResource}, nil).Times(2)
+			},
+		},
+		"failure getting resources": {
+			inApp:  "phonetool",
+			inEnv:  "pdx",
+			inTask: "cooltask",
+
+			mockECS: func(m *mocks.MockecsClient) {},
+			mockrg: func(m *mocks.MockresourceGetter) {
+				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
+					"copilot-application": "phonetool",
+					"copilot-environment": "pdx",
+				}).Return(nil, errors.New("some error"))
+			},
+			wantErr: errors.New("get cluster resources for environment pdx: some error"),
+		},
+		"failure stopping tasks": {
+			inApp:  "phonetool",
+			inEnv:  "pdx",
+			inTask: "cooltask",
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().RunningTasksInFamily(mockCluster, "copilot-cooltask").Return(mockECSTask, nil)
+				m.EXPECT().StopTasks([]string{"deadbeef"}, gomock.Any()).Return(errors.New("some error"))
+			},
+			mockrg: func(m *mocks.MockresourceGetter) {
+				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
+					"copilot-application": "phonetool",
+					"copilot-environment": "pdx",
+				}).Return([]*resourcegroups.Resource{&mockResource}, nil).Times(2)
+			},
+			wantErr: errors.New("some error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockECS := mocks.NewMockecsClient(ctrl)
+			mockrg := mocks.NewMockresourceGetter(ctrl)
+
+			tc.mockECS(mockECS)
+			tc.mockrg(mockrg)
+
+			c := Client{
+				ecsClient: mockECS,
+				rgGetter:  mockrg,
+			}
+
+			// WHEN
+			err := c.StopOneOffTasks(tc.inApp, tc.inEnv, tc.inTask)
+
+			// THEN
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_StopDefaultClusterTasks(t *testing.T) {
+	mockECSTask := []*ecs.Task{
+		{
+			TaskArn: aws.String("deadbeef"),
+			Tags: []*awsecs.Tag{
+				{
+					Key: aws.String("copilot-task"),
+				},
+			},
+		},
+		{
+			TaskArn: aws.String("deadbeef"),
+			Tags: []*awsecs.Tag{
+				{
+					Key: aws.String("copilot-service"),
+				},
+			},
+		},
+	}
+	testCases := map[string]struct {
+		inTask string
+
+		mockECS func(m *mocks.MockecsClient)
+
+		wantErr error
+	}{
+		"success": {
+
+			inTask: "cooltask",
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().DefaultCluster().Return("cluster", nil)
+				m.EXPECT().RunningTasksInFamily(gomock.Any(), "copilot-cooltask").Return(mockECSTask, nil)
+				m.EXPECT().StopTasks([]string{"deadbeef"}, gomock.Any()).Return(nil)
+			},
+		},
+		"failure stopping tasks": {
+			inTask: "cooltask",
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().DefaultCluster().Return("cluster", nil)
+				m.EXPECT().RunningTasksInFamily(gomock.Any(), "copilot-cooltask").Return(mockECSTask, nil)
+				m.EXPECT().StopTasks([]string{"deadbeef"}, gomock.Any()).Return(errors.New("some error"))
+			},
+			wantErr: errors.New("some error"),
+		},
+		"failure getting cluster": {
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().DefaultCluster().Return("", errors.New("some error"))
+			},
+			wantErr: errors.New("get default cluster: some error"),
+		},
+		"failure listing tasks": {
+			inTask: "cooltask",
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().DefaultCluster().Return("cluster", nil)
+				m.EXPECT().RunningTasksInFamily(gomock.Any(), "copilot-cooltask").Return(nil, errors.New("some error"))
+			},
+			wantErr: errors.New("list running tasks in family copilot-cooltask and cluster cluster: some error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockECS := mocks.NewMockecsClient(ctrl)
+
+			tc.mockECS(mockECS)
+
+			c := Client{
+				ecsClient: mockECS,
+			}
+
+			// WHEN
+			err := c.StopDefaultClusterTasks(tc.inTask)
+
+			// THEN
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
