@@ -47,6 +47,11 @@ func (ss StackStatus) InProgress() bool {
 	return strings.HasSuffix(string(ss), "IN_PROGRESS")
 }
 
+// UpsertInProgress returns true if the resource is updating or being created.
+func (ss StackStatus) UpsertInProgress() bool {
+	return ss == cloudformation.StackStatusCreateInProgress || ss == cloudformation.StackStatusUpdateInProgress
+}
+
 func (ss StackStatus) Success() bool {
 	for _, success := range successStackStatuses {
 		if string(ss) == success {

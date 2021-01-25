@@ -46,6 +46,34 @@ func TestStackStatus_InProgress(t *testing.T) {
 	}
 }
 
+func TestStackStatus_UpsertInProgress(t *testing.T) {
+	testCases := map[string]struct {
+		status string
+
+		wanted bool
+	}{
+		"should be true for update in progress": {
+			status: cloudformation.StackStatusUpdateInProgress,
+			wanted: true,
+		},
+		"should be true for create in progress": {
+			status: cloudformation.StackStatusCreateInProgress,
+			wanted: true,
+		},
+		"should be false if created": {
+			status: cloudformation.StackStatusCreateComplete,
+			wanted: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			actual := StackStatus(tc.status).UpsertInProgress()
+			require.Equal(t, tc.wanted, actual)
+		})
+	}
+}
+
 func TestStackStatus_Success(t *testing.T) {
 	testCases := map[string]struct {
 		status string
