@@ -285,8 +285,9 @@ func (s *TaskSelect) RunningTask(prompt, help string, opts ...TaskOpts) (*awsecs
 		opt(s)
 	}
 	filter := ecs.ListTasksFilter{
-		TaskGroup: s.taskGroup,
-		TaskID:    s.taskID,
+		TaskGroup:   s.taskGroup,
+		TaskID:      s.taskID,
+		CopilotOnly: true,
 	}
 	if s.defaultCluster {
 		tasks, err = s.lister.ListActiveDefaultClusterTasks(filter)
