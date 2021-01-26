@@ -118,8 +118,10 @@ func (o *deletePipelineOpts) Ask() error {
 
 // Execute deletes the secret and pipeline stack.
 func (o *deletePipelineOpts) Execute() error {
-	if err := o.deleteSecret(); err != nil {
-		return err
+	if o.PipelineSecret != "" {
+		if err := o.deleteSecret(); err != nil {
+			return err
+		}
 	}
 
 	if err := o.deleteStack(); err != nil {
