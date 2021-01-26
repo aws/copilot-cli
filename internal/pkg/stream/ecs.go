@@ -35,6 +35,7 @@ type ECSDeployment struct {
 	PendingCount    int
 	RolloutState    string
 	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 func (d ECSDeployment) isPrimary() bool {
@@ -42,7 +43,7 @@ func (d ECSDeployment) isPrimary() bool {
 }
 
 func (d ECSDeployment) done() bool {
-	return d.DesiredCount == d.RunningCount && d.RolloutState != rollOutInProgress
+	return d.RolloutState != rollOutInProgress
 }
 
 // ECSService is a description of an ECS service.
@@ -106,6 +107,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 			PendingCount:    int(aws.Int64Value(deployment.PendingCount)),
 			RolloutState:    aws.StringValue(deployment.RolloutState),
 			CreatedAt:       aws.TimeValue(deployment.CreatedAt),
+			UpdatedAt:       aws.TimeValue(deployment.UpdatedAt),
 		}
 		deployments = append(deployments, rollingDeploy)
 		if isDeploymentDone(rollingDeploy, s.deploymentCreationTime) {
@@ -177,7 +179,7 @@ func isDeploymentDone(d ECSDeployment, startTime time.Time) bool {
 	if !d.isPrimary() {
 		return false
 	}
-	if d.CreatedAt.Before(startTime) {
+	if d.UpdatedAt.Before(startTime) { // TODO(efekarakus): change to UpdatedAt
 		return false
 	}
 	return d.done()
