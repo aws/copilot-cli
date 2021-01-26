@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"testing"
+	"gopkg.in/yaml.v3"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -50,9 +51,16 @@ func TestScheduledJob_Template(t *testing.T) {
 	})
 
 	t.Run("CF Template should be equal", func(t *testing.T) {
+		actualBytes := []byte(tpl)
+		mActual := make(map[interface{}]interface{})
+		require.NoError(t, yaml.Unmarshal(actualBytes, mActual))
+
 		expected, err := ioutil.ReadFile(filepath.Join("testdata", "workloads", jobStackPath))
 		require.NoError(t, err, "should be able to read expected bytes")
-		require.Equal(t, string(expected), tpl)
+		expectedBytes := []byte(expected)
+		mExpected := make(map[interface{}]interface{})
+		require.NoError(t, yaml.Unmarshal(expectedBytes, mExpected))
+		require.Equal(t, mExpected, mActual)
 	})
 
 	t.Run("Parameter values should render properly", func(t *testing.T) {
