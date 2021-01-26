@@ -191,6 +191,19 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 
 		wantedError error
 	}{
+		"skips delete secret confirmation (and deletion attempt) if there is no secret": {
+			inAppName:      testAppName,
+			inPipelineName: testPipelineName,
+			setupMocks: func(mocks deletePipelineMocks) {
+				gomock.InOrder(
+					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testAppName)),
+					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Return(nil),
+					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testAppName)),
+				)
+			},
+			wantedError: nil,
+		},
+
 		"skips delete secret confirmation when flag is specified": {
 			deleteSecret:     true,
 			inAppName:        testAppName,
