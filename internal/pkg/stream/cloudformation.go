@@ -20,9 +20,11 @@ type StackEventsDescriber interface {
 // StackEvent is a CloudFormation stack event.
 type StackEvent struct {
 	LogicalResourceID    string
+	PhysicalResourceID   string
 	ResourceType         string
 	ResourceStatus       string
 	ResourceStatusReason string
+	Timestamp            time.Time
 }
 
 // StackStreamer is a Streamer for StackEvent events started by a change set.
@@ -92,9 +94,11 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 			}
 			events = append(events, StackEvent{
 				LogicalResourceID:    logicalID,
+				PhysicalResourceID:   aws.StringValue(event.PhysicalResourceId),
 				ResourceType:         aws.StringValue(event.ResourceType),
 				ResourceStatus:       resourceStatus,
 				ResourceStatusReason: aws.StringValue(event.ResourceStatusReason),
+				Timestamp:            aws.TimeValue(event.Timestamp),
 			})
 			s.pastEventIDs[aws.StringValue(event.EventId)] = true
 		}

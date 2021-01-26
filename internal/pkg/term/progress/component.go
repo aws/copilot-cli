@@ -15,6 +15,15 @@ const (
 	nestedComponentPadding = 2 // Leading space characters for rendering a nested component.
 )
 
+// noopComponent satisfies the Renderer interface but does not write anything.
+type noopComponent struct{}
+
+// Render does not do anything.
+// It returns 0 and nil for the error.
+func (c *noopComponent) Render(out io.Writer) (numLines int, err error) {
+	return 0, nil
+}
+
 // singleLineComponent can display a single line of text.
 type singleLineComponent struct {
 	Text    string // Line of text to print.
@@ -98,7 +107,7 @@ func (c *tableComponent) Render(out io.Writer) (numLines int, err error) {
 
 	// Write the table's title.
 	buf := new(bytes.Buffer)
-	if _, err := buf.WriteString(fmt.Sprintf("%s\n", c.Title)); err != nil {
+	if _, err := buf.WriteString(fmt.Sprintf("%s%s\n", strings.Repeat(" ", c.Padding), c.Title)); err != nil {
 		return 0, fmt.Errorf("write title %s to buffer: %w", c.Title, err)
 	}
 	numLines += 1
@@ -108,7 +117,7 @@ func (c *tableComponent) Render(out io.Writer) (numLines int, err error) {
 	rows := append([][]string{c.Header}, c.Rows...)
 	for _, row := range rows {
 		// Pad the table to the right under the Title.
-		line := fmt.Sprintf("%s%s\n", strings.Repeat(" ", nestedComponentPadding), strings.Join(row, "\t"))
+		line := fmt.Sprintf("%s%s\n", strings.Repeat(" ", c.Padding+nestedComponentPadding), strings.Join(row, "\t"))
 		if _, err := tw.Write([]byte(line)); err != nil {
 			return 0, fmt.Errorf("write row %s to tabwriter: %w", line, err)
 		}
