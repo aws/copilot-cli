@@ -7,19 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/stretchr/testify/require"
 )
-
-type mockECSDescriber struct {
-	out *ecs.Service
-	err error
-}
-
-func (m *mockECSDescriber) Service(clusterName, serviceName string) (*ecs.Service, error) {
-	return m.out, m.err
-}
 
 func TestRollingUpdateComponent_Listen(t *testing.T) {
 	t.Run("should update deployments to latest event and respect max number of failed msgs", func(t *testing.T) {
