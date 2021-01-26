@@ -186,7 +186,7 @@ secrets:
 								Value: aws.Int(1),
 							},
 							ExecuteCommand: ExecuteCommand{
-								Enable: aws.Bool(true),
+								Enable: aws.Bool(false),
 							},
 							Secrets: map[string]string{
 								"API_TOKEN": "SUBS_API_TOKEN",

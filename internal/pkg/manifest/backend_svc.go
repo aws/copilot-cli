@@ -141,7 +141,7 @@ func newDefaultBackendService() *BackendService {
 					Value: aws.Int(1),
 				},
 				ExecuteCommand: ExecuteCommand{
-					Enable: aws.Bool(true),
+					Enable: aws.Bool(false),
 				},
 			},
 		},

@@ -51,7 +51,7 @@ func TestNewBackendSvc(t *testing.T) {
 							Value: aws.Int(1),
 						},
 						ExecuteCommand: ExecuteCommand{
-							Enable: aws.Bool(true),
+							Enable: aws.Bool(false),
 						},
 					},
 				},
@@ -96,7 +96,7 @@ func TestNewBackendSvc(t *testing.T) {
 							Value: aws.Int(1),
 						},
 						ExecuteCommand: ExecuteCommand{
-							Enable: aws.Bool(true),
+							Enable: aws.Bool(false),
 						},
 					},
 				},
