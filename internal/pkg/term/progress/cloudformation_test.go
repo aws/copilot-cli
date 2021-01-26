@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
@@ -291,16 +290,22 @@ func TestEcsServiceResourceComponent_Listen(t *testing.T) {
 	t.Run("should create a deployment renderer if the service goes into in progress", func(t *testing.T) {
 		// GIVEN
 		ch := make(chan stream.StackEvent)
-		done := make(chan struct{})
+		deployDone := make(chan struct{})
+		resourceDone := make(chan struct{})
 		c := &ecsServiceResourceComponent{
 			cfnStream: ch,
-			ecsDescriber: &mockECSDescriber{
-				out: &ecs.Service{},
-			},
 			logicalID: "Service",
 			group:     new(errgroup.Group),
 			ctx:       context.Background(),
-			done:      done,
+			done:      make(chan struct{}),
+			resourceRenderer: &mockDynamicRenderer{
+				done: resourceDone,
+			},
+			newDeploymentRender: func(s string, t time.Time) DynamicRenderer {
+				return &mockDynamicRenderer{
+					done: deployDone,
+				}
+			},
 		}
 
 		// WHEN
@@ -311,26 +316,35 @@ func TestEcsServiceResourceComponent_Listen(t *testing.T) {
 				PhysicalResourceID: "arn:aws:ecs:us-west-2:1111:service/webapp-test-Cluster/webapp-test-frontend",
 				ResourceStatus:     "CREATE_IN_PROGRESS",
 			}
-			close(ch) // Close to notify that no more events will be sent.
+			// Close channels to notify that the ecs service deployment is done.
+			close(deployDone)
+			close(resourceDone)
+			close(ch)
 		}()
 
 		// THEN
-		<-done // Wait for listen to exit.
+		<-c.done // Wait for listen to exit.
 		require.NotNil(t, c.deploymentRenderer, "expected the deployment renderer to be initialized")
 	})
 	t.Run("should not create a deployment renderer if the service never goes in create or update in progress", func(t *testing.T) {
 		// GIVEN
 		ch := make(chan stream.StackEvent)
-		done := make(chan struct{})
+		deployDone := make(chan struct{})
+		resourceDone := make(chan struct{})
 		c := &ecsServiceResourceComponent{
 			cfnStream: ch,
-			ecsDescriber: &mockECSDescriber{
-				out: &ecs.Service{},
-			},
 			logicalID: "Service",
 			group:     new(errgroup.Group),
 			ctx:       context.Background(),
-			done:      done,
+			done:      make(chan struct{}),
+			resourceRenderer: &mockDynamicRenderer{
+				done: resourceDone,
+			},
+			newDeploymentRender: func(s string, t time.Time) DynamicRenderer {
+				return &mockDynamicRenderer{
+					done: deployDone,
+				}
+			},
 		}
 
 		// WHEN
@@ -351,11 +365,14 @@ func TestEcsServiceResourceComponent_Listen(t *testing.T) {
 				PhysicalResourceID: "arn:aws:ecs:us-west-2:1111:service/webapp-test-Cluster/webapp-test-frontend",
 				ResourceStatus:     "DELETE_COMPLETE",
 			}
-			close(ch) // Close to notify that no more events will be sent.
+			// Close channels to notify that the ecs service deployment is done.
+			close(deployDone)
+			close(resourceDone)
+			close(ch)
 		}()
 
 		// THEN
-		<-done // Wait for listen to exit.
+		<-c.done // Wait for listen to exit.
 		require.Nil(t, c.deploymentRenderer, "expected the deployment renderer to be nil")
 	})
 }

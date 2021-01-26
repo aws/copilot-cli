@@ -67,9 +67,19 @@ func (c *dynamicTreeComponent) Render(out io.Writer) (numLines int, err error) {
 	return comp.Render(out)
 }
 
-// Done delegates to Root's Done.
+// Done return a channel that is closed when the children and root are done.
 func (c *dynamicTreeComponent) Done() <-chan struct{} {
-	return c.Root.Done()
+	done := make(chan struct{})
+	go func() {
+		for _, child := range c.Children {
+			if dr, ok := child.(DynamicRenderer); ok {
+				<-dr.Done() // Wait for children to be closed.
+			}
+		}
+		<-c.Root.Done() // Then wait for the root to be closed.
+		close(done)
+	}()
+	return done
 }
 
 // tableComponent can display a table.

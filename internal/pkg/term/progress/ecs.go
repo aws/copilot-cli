@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
@@ -157,4 +158,13 @@ func reverseStrings(arr []string) []string {
 		reversed[i], reversed[opp] = reversed[opp], reversed[i]
 	}
 	return reversed
+}
+
+// parseServiceARN returns the cluster name and service name from a service ARN.
+func parseServiceARN(arn string) (cluster, service string) {
+	parsed := ecs.ServiceArn(arn)
+	// Errors can't happen on valid ARNs.
+	cluster, _ = parsed.ClusterName()
+	service, _ = parsed.ServiceName()
+	return cluster, service
 }
