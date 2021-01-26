@@ -53,7 +53,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
 			},
 
-			expectedError: errors.New("Copilot currently accepts URLs to only GitHub, CodeCommit, and BitBucket repository sources"),
+			expectedError: errors.New("Copilot currently accepts URLs to only GitHub, CodeCommit, and Bitbucket repository sources"),
 		},
 		"invalid environments": {
 			inAppName: "my-app",
@@ -327,7 +327,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedError: fmt.Errorf("Copilot currently accepts URLs to only GitHub, CodeCommit, and BitBucket repository sources"),
+			expectedError: fmt.Errorf("Copilot currently accepts URLs to only GitHub, CodeCommit, and Bitbucket repository sources"),
 		},
 		"returns error if fail to parse GitHub URL": {
 			inEnvironments:      []string{},
@@ -682,7 +682,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			expectedError: nil,
 		},
 		"creates secret and writes manifest and buildspecs for BB provider": {
-			inProvider: "BitBucket",
+			inProvider: "Bitbucket",
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -1050,7 +1050,7 @@ func TestInitPipelineOpts_pipelineName(t *testing.T) {
 			inRepoName:     "goose",
 			inAppName:      "badgoose",
 			inAppOwner:     "david",
-			inProviderName: "BitBucket",
+			inProviderName: "Bitbucket",
 
 			expected: "pipeline-badgoose-david-goose",
 		},
@@ -1107,7 +1107,7 @@ bb	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (push)
 			expectedURLs:  []string{"git@github.com:badgoose/grit", "https://github.com/badgoose/cli", "https://github.com/koke/grit", "git://github.com/koke/grit", "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "codecommit::us-west-2://aws-sample", "ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service"},
 			expectedError: nil,
 		},
-		"don't add to URL list if it is not a GitHub or CodeCommit or BitBucket URL": {
+		"don't add to URL list if it is not a GitHub or CodeCommit or Bitbucket URL": {
 			inRemoteResult: `badgoose	verybad@gitlab.com/whatever (fetch)`,
 
 			expectedURLs:  []string{},
