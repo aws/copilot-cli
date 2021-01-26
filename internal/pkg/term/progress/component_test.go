@@ -133,18 +133,25 @@ func TestDynamicTreeComponent_Render(t *testing.T) {
 func TestDynamicTreeComponent_Done(t *testing.T) {
 	// GIVEN
 	root := &mockDynamicRenderer{
-		content: "hello",
-		done:    make(chan struct{}),
+		done: make(chan struct{}),
+	}
+	child := &mockDynamicRenderer{
+		done: make(chan struct{}),
 	}
 	comp := dynamicTreeComponent{
-		Root: root,
+		Root:     root,
+		Children: []Renderer{child, &noopComponent{}},
 	}
 
 	// WHEN
-	ch := comp.Done()
+	go func() {
+		// Close all nodes in the tree.
+		close(child.done)
+		close(root.done)
+	}()
 
 	// THEN
-	require.Equal(t, root.Done(), ch)
+	<-comp.Done() // Should successfully exit instead of hanging.
 }
 
 func TestTableComponent_Render(t *testing.T) {
