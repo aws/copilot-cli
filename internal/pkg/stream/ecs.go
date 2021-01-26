@@ -179,7 +179,7 @@ func isDeploymentDone(d ECSDeployment, startTime time.Time) bool {
 	if !d.isPrimary() {
 		return false
 	}
-	if d.UpdatedAt.Before(startTime) { // TODO(efekarakus): change to UpdatedAt
+	if d.UpdatedAt.Before(startTime) {
 		return false
 	}
 	return d.done()
