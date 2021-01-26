@@ -10,9 +10,9 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"golang.org/x/sync/errgroup"
 )
@@ -79,6 +79,7 @@ func ListeningECSServiceResourceRenderer(streamer StackSubscriber, ecsDescriber 
 
 		done: make(chan struct{}),
 	}
+	comp.newDeploymentRender = comp.newListeningRollingUpdateRenderer
 	go comp.Listen()
 	return comp
 }
@@ -137,37 +138,38 @@ type ecsServiceResourceComponent struct {
 	renderOpts RenderOptions
 
 	// Sub-components.
-	resourceRenderer   Renderer
+	resourceRenderer   DynamicRenderer
 	deploymentRenderer Renderer
 
-	done chan struct{}
-	mu   sync.Mutex
+	done                chan struct{}
+	mu                  sync.Mutex
+	newDeploymentRender func(string, time.Time) DynamicRenderer // Overriden in tests.
 }
 
-// Listen creates a deploymentRenderer if the service is being created, or updated.
+// Listen creates deploymentRenderers if the service is being created, or updated.
+// It closes the Done channel if the CFN resource is Done and the deploymentRenderers are also Done.
 func (c *ecsServiceResourceComponent) Listen() {
 	var prevStatus string
+	renderers := []DynamicRenderer{c.resourceRenderer}
 	for ev := range c.cfnStream {
 		if c.logicalID != ev.LogicalResourceID {
 			continue
 		}
 		curStatus := ev.ResourceStatus
 		if curStatus != prevStatus && cloudformation.StackStatus(curStatus).UpsertInProgress() {
-			c.mu.Lock()
-
 			// Start a deployment renderer if a service deployment is happening.
-			arn := ecs.ServiceArn(ev.PhysicalResourceID)
-			cluster, _ := arn.ClusterName() // Errors can't happen on valid ARNs.
-			service, _ := arn.ServiceName()
-			streamer := stream.NewECSDeploymentStreamer(c.ecsDescriber, cluster, service, ev.Timestamp)
-			c.deploymentRenderer = ListeningRollingUpdateRenderer(streamer, NestedRenderOptions(c.renderOpts))
-			c.group.Go(func() error {
-				return stream.Stream(c.ctx, streamer)
-			})
-
+			renderer := c.newDeploymentRender(ev.PhysicalResourceID, ev.Timestamp)
+			c.mu.Lock()
+			c.deploymentRenderer = renderer
 			c.mu.Unlock()
+			renderers = append(renderers, renderer)
 		}
 		prevStatus = curStatus
+	}
+
+	// Close the done channel once all the renderers are done listening.
+	for _, r := range renderers {
+		<-r.Done()
 	}
 	close(c.done)
 }
@@ -206,6 +208,16 @@ func (c *ecsServiceResourceComponent) Render(out io.Writer) (numLines int, err e
 // Done returns a channel that's closed when there are no more events to Listen.
 func (c *ecsServiceResourceComponent) Done() <-chan struct{} {
 	return c.done
+}
+
+func (c *ecsServiceResourceComponent) newListeningRollingUpdateRenderer(serviceARN string, startTime time.Time) DynamicRenderer {
+	cluster, service := parseServiceARN(serviceARN)
+	streamer := stream.NewECSDeploymentStreamer(c.ecsDescriber, cluster, service, startTime)
+	renderer := ListeningRollingUpdateRenderer(streamer, NestedRenderOptions(c.renderOpts))
+	c.group.Go(func() error {
+		return stream.Stream(c.ctx, streamer)
+	})
+	return renderer
 }
 
 func updateComponentStatus(mu *sync.Mutex, statuses *[]stackStatus, event stream.StackEvent) {
