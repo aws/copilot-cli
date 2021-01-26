@@ -153,7 +153,7 @@ func (e *ECS) listTasks(cluster string, opts ...listTasksOpts) ([]*Task, error) 
 		descTaskResp, err := e.client.DescribeTasks(&ecs.DescribeTasksInput{
 			Cluster: aws.String(cluster),
 			Tasks:   listTaskResp.TaskArns,
-			Include: aws.StringSlice([]string{"TAGS"}),
+			Include: aws.StringSlice([]string{ecs.TaskFieldTags}),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("describe running tasks in cluster %s: %w", cluster, err)
@@ -285,7 +285,7 @@ func (e *ECS) DescribeTasks(cluster string, taskARNs []string) ([]*Task, error) 
 	resp, err := e.client.DescribeTasks(&ecs.DescribeTasksInput{
 		Cluster: aws.String(cluster),
 		Tasks:   aws.StringSlice(taskARNs),
-		Include: aws.StringSlice([]string{"TAGS"}),
+		Include: aws.StringSlice([]string{ecs.TaskFieldTags}),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("describe tasks: %w", err)

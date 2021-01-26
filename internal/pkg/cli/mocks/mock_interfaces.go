@@ -3504,6 +3504,58 @@ func (mr *MocktaskDeployerMockRecorder) DeployTask(input interface{}, opts ...in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeployTask), varargs...)
 }
 
+// MocktaskStackManager is a mock of taskStackManager interface
+type MocktaskStackManager struct {
+	ctrl     *gomock.Controller
+	recorder *MocktaskStackManagerMockRecorder
+}
+
+// MocktaskStackManagerMockRecorder is the mock recorder for MocktaskStackManager
+type MocktaskStackManagerMockRecorder struct {
+	mock *MocktaskStackManager
+}
+
+// NewMocktaskStackManager creates a new mock instance
+func NewMocktaskStackManager(ctrl *gomock.Controller) *MocktaskStackManager {
+	mock := &MocktaskStackManager{ctrl: ctrl}
+	mock.recorder = &MocktaskStackManagerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocktaskStackManager) EXPECT() *MocktaskStackManagerMockRecorder {
+	return m.recorder
+}
+
+// DeleteTask mocks base method
+func (m *MocktaskStackManager) DeleteTask(task deploy.TaskStackInfo) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteTask", task)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteTask indicates an expected call of DeleteTask
+func (mr *MocktaskStackManagerMockRecorder) DeleteTask(task interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTask", reflect.TypeOf((*MocktaskStackManager)(nil).DeleteTask), task)
+}
+
+// GetTaskStack mocks base method
+func (m *MocktaskStackManager) GetTaskStack(taskName string) (*deploy.TaskStackInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTaskStack", taskName)
+	ret0, _ := ret[0].(*deploy.TaskStackInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTaskStack indicates an expected call of GetTaskStack
+func (mr *MocktaskStackManagerMockRecorder) GetTaskStack(taskName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskStack", reflect.TypeOf((*MocktaskStackManager)(nil).GetTaskStack), taskName)
+}
+
 // MocktaskRunner is a mock of taskRunner interface
 type MocktaskRunner struct {
 	ctrl     *gomock.Controller
@@ -4931,14 +4983,14 @@ func (m *MockcfTaskSelector) EXPECT() *MockcfTaskSelectorMockRecorder {
 }
 
 // Task mocks base method
-func (m *MockcfTaskSelector) Task(prompt, help string, opts ...selector.GetDeployedTaskOpts) (*selector.DeployedTask, error) {
+func (m *MockcfTaskSelector) Task(prompt, help string, opts ...selector.GetDeployedTaskOpts) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{prompt, help}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Task", varargs...)
-	ret0, _ := ret[0].(*selector.DeployedTask)
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -5450,6 +5502,71 @@ func (m *MockssmPluginManager) InstallLatestBinary() error {
 func (mr *MockssmPluginManagerMockRecorder) InstallLatestBinary() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallLatestBinary", reflect.TypeOf((*MockssmPluginManager)(nil).InstallLatestBinary))
+}
+
+// MocktaskStopper is a mock of taskStopper interface
+type MocktaskStopper struct {
+	ctrl     *gomock.Controller
+	recorder *MocktaskStopperMockRecorder
+}
+
+// MocktaskStopperMockRecorder is the mock recorder for MocktaskStopper
+type MocktaskStopperMockRecorder struct {
+	mock *MocktaskStopper
+}
+
+// NewMocktaskStopper creates a new mock instance
+func NewMocktaskStopper(ctrl *gomock.Controller) *MocktaskStopper {
+	mock := &MocktaskStopper{ctrl: ctrl}
+	mock.recorder = &MocktaskStopperMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocktaskStopper) EXPECT() *MocktaskStopperMockRecorder {
+	return m.recorder
+}
+
+// StopOneOffTasks mocks base method
+func (m *MocktaskStopper) StopOneOffTasks(app, env, family string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StopOneOffTasks", app, env, family)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StopOneOffTasks indicates an expected call of StopOneOffTasks
+func (mr *MocktaskStopperMockRecorder) StopOneOffTasks(app, env, family interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopOneOffTasks", reflect.TypeOf((*MocktaskStopper)(nil).StopOneOffTasks), app, env, family)
+}
+
+// StopDefaultClusterTasks mocks base method
+func (m *MocktaskStopper) StopDefaultClusterTasks(familyName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StopDefaultClusterTasks", familyName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StopDefaultClusterTasks indicates an expected call of StopDefaultClusterTasks
+func (mr *MocktaskStopperMockRecorder) StopDefaultClusterTasks(familyName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopDefaultClusterTasks", reflect.TypeOf((*MocktaskStopper)(nil).StopDefaultClusterTasks), familyName)
+}
+
+// StopWorkloadTasks mocks base method
+func (m *MocktaskStopper) StopWorkloadTasks(app, env, workload string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StopWorkloadTasks", app, env, workload)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StopWorkloadTasks indicates an expected call of StopWorkloadTasks
+func (mr *MocktaskStopperMockRecorder) StopWorkloadTasks(app, env, workload interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopWorkloadTasks", reflect.TypeOf((*MocktaskStopper)(nil).StopWorkloadTasks), app, env, workload)
 }
 
 // MockserviceLinkedRoleCreator is a mock of serviceLinkedRoleCreator interface

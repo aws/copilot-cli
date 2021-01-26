@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/aws/copilot-cli/internal/pkg/stream"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
 const (
@@ -105,7 +106,7 @@ func (c *rollingUpdateComponent) renderDeployments(out io.Writer) (numLines int,
 			strconv.Itoa(d.PendingCount),
 		})
 	}
-	table := newTableComponent("Deployments", header, rows)
+	table := newTableComponent(color.Faint.Sprintf("Deployments"), header, rows)
 	table.Padding = c.padding
 	nl, err := table.Render(out)
 	if err != nil {
@@ -123,7 +124,9 @@ func (c *rollingUpdateComponent) renderFailureMsgs(out io.Writer) (numLines int,
 	if l := len(c.failureMsgs); l > 1 {
 		title = fmt.Sprintf("Latest %d failure events", l)
 	}
+	title = fmt.Sprintf("%s%s", color.DullRed.Sprintf("✘ "), color.Faint.Sprintf(title))
 	components := []Renderer{
+		&singleLineComponent{}, // Add an empty line before rendering failure events.
 		&singleLineComponent{
 			Text:    title,
 			Padding: c.padding,

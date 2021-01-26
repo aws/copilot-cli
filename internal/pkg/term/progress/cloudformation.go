@@ -4,18 +4,29 @@
 package progress
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"strings"
 	"sync"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
+	"golang.org/x/sync/errgroup"
 )
 
 // StackSubscriber is the interface to subscribe channels to a CloudFormation stack stream event.
 type StackSubscriber interface {
 	Subscribe() <-chan stream.StackEvent
+}
+
+// ECSServiceRendererOpts is optional configuration for a listening ECS service renderer.
+type ECSServiceRendererOpts struct {
+	Group      *errgroup.Group
+	Ctx        context.Context
+	RenderOpts RenderOptions
 }
 
 // ListeningStackRenderer returns a tree component that listens for CloudFormation
@@ -39,6 +50,34 @@ func ListeningResourceRenderer(streamer StackSubscriber, logicalID, description 
 		done:        make(chan struct{}),
 		padding:     opts.Padding,
 		separator:   '\t',
+	}
+	go comp.Listen()
+	return comp
+}
+
+// ListeningECSServiceResourceRenderer is a ListeningResourceRenderer for the ECS service cloudformation resource
+// and a ListeningRollingUpdateRenderer to render deployments.
+func ListeningECSServiceResourceRenderer(streamer StackSubscriber, ecsDescriber stream.ECSServiceDescriber, logicalID, description string, opts ECSServiceRendererOpts) DynamicRenderer {
+	g := new(errgroup.Group)
+	ctx := context.Background()
+	if opts.Group != nil {
+		g = opts.Group
+	}
+	if opts.Ctx != nil {
+		ctx = opts.Ctx
+	}
+	comp := &ecsServiceResourceComponent{
+		cfnStream:    streamer.Subscribe(),
+		ecsDescriber: ecsDescriber,
+		logicalID:    logicalID,
+
+		group:      g,
+		ctx:        ctx,
+		renderOpts: opts.RenderOpts,
+
+		resourceRenderer: ListeningResourceRenderer(streamer, logicalID, description, opts.RenderOpts),
+
+		done: make(chan struct{}),
 	}
 	go comp.Listen()
 	return comp
@@ -82,6 +121,90 @@ func (c *regularResourceComponent) Render(out io.Writer) (numLines int, err erro
 
 // Done returns a channel that's closed when there are no more events to Listen.
 func (c *regularResourceComponent) Done() <-chan struct{} {
+	return c.done
+}
+
+// ecsServiceResourceComponent can display an ECS service created with CloudFormation.
+type ecsServiceResourceComponent struct {
+	// Required inputs.
+	cfnStream    <-chan stream.StackEvent   // Subscribed stream to initialize the deploymentRenderer.
+	ecsDescriber stream.ECSServiceDescriber // Client needed to create an ECSDeploymentStreamer.
+	logicalID    string                     // LogicalID for the service.
+
+	// Optional inputs.
+	group      *errgroup.Group // Existing group to catch ECSDeploymentStreamer errors.
+	ctx        context.Context // Context for the ECSDeploymentStreamer.
+	renderOpts RenderOptions
+
+	// Sub-components.
+	resourceRenderer   Renderer
+	deploymentRenderer Renderer
+
+	done chan struct{}
+	mu   sync.Mutex
+}
+
+// Listen creates a deploymentRenderer if the service is being created, or updated.
+func (c *ecsServiceResourceComponent) Listen() {
+	var prevStatus string
+	for ev := range c.cfnStream {
+		if c.logicalID != ev.LogicalResourceID {
+			continue
+		}
+		curStatus := ev.ResourceStatus
+		if curStatus != prevStatus && cloudformation.StackStatus(curStatus).UpsertInProgress() {
+			c.mu.Lock()
+
+			// Start a deployment renderer if a service deployment is happening.
+			arn := ecs.ServiceArn(ev.PhysicalResourceID)
+			cluster, _ := arn.ClusterName() // Errors can't happen on valid ARNs.
+			service, _ := arn.ServiceName()
+			streamer := stream.NewECSDeploymentStreamer(c.ecsDescriber, cluster, service, ev.Timestamp)
+			c.deploymentRenderer = ListeningRollingUpdateRenderer(streamer, NestedRenderOptions(c.renderOpts))
+			c.group.Go(func() error {
+				return stream.Stream(c.ctx, streamer)
+			})
+
+			c.mu.Unlock()
+		}
+		prevStatus = curStatus
+	}
+	close(c.done)
+}
+
+// Render writes the status of the CloudFormation ECS service resource, followed with details around the
+// service deployment if a deployment is happening.
+func (c *ecsServiceResourceComponent) Render(out io.Writer) (numLines int, err error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	buf := new(bytes.Buffer)
+
+	nl, err := c.resourceRenderer.Render(buf)
+	if err != nil {
+		return 0, err
+	}
+	numLines += nl
+
+	var deploymentRenderer Renderer = &noopComponent{}
+	if c.deploymentRenderer != nil {
+		deploymentRenderer = c.deploymentRenderer
+	}
+
+	nl, err = deploymentRenderer.Render(buf)
+	if err != nil {
+		return 0, err
+	}
+	numLines += nl
+
+	if _, err = buf.WriteTo(out); err != nil {
+		return 0, err
+	}
+	return numLines, nil
+}
+
+// Done returns a channel that's closed when there are no more events to Listen.
+func (c *ecsServiceResourceComponent) Done() <-chan struct{} {
 	return c.done
 }
 

@@ -1694,21 +1694,8 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 func TestSelect_CFTask(t *testing.T) {
 	taskPrompt := "TASK PLX"
 	taskHelp := "NO"
-	testTasks := []DeployedTask{
-		{
-			Name: "abc",
-			App:  "phonetool",
-			Env:  "prod-iad",
-		},
-		{
-			Name: "db-migrate",
-			App:  "phonetool",
-			Env:  "prod-iad",
-		},
-	}
-	testDefaultTask := DeployedTask{
-		Name: "db-migrate",
-	}
+	testTasks := []string{"abc", "db-migrate"}
+	testDefaultTask := "db-migrate"
 	testCases := map[string]struct {
 		inDefaultCluster string
 		inOpts           []GetDeployedTaskOpts
@@ -1718,7 +1705,7 @@ func TestSelect_CFTask(t *testing.T) {
 		mockCF     func(*mocks.MockTaskStackDescriber)
 
 		wantedErr  error
-		wantedTask *DeployedTask
+		wantedTask string
 	}{
 		"choose an existing task": {
 			inOpts: []GetDeployedTaskOpts{
@@ -1743,13 +1730,13 @@ func TestSelect_CFTask(t *testing.T) {
 				m.EXPECT().SelectOne(
 					gomock.Any(), gomock.Any(),
 					[]string{
-						"abc (prod-iad)",
-						"db-migrate (prod-iad)",
+						"abc",
+						"db-migrate",
 					},
-				).Return("abc (prod-iad)", nil)
+				).Return("abc", nil)
 			},
 			wantedErr:  nil,
-			wantedTask: &testTasks[0],
+			wantedTask: testTasks[0],
 		},
 		"error when retrieving stacks": {
 			inOpts: []GetDeployedTaskOpts{
@@ -1781,13 +1768,13 @@ func TestSelect_CFTask(t *testing.T) {
 				m.EXPECT().SelectOne(
 					gomock.Any(), gomock.Any(),
 					[]string{
-						"oneoff (default cluster)",
-						"db-migrate (default cluster)",
+						"oneoff",
+						"db-migrate",
 					},
-				).Return("db-migrate (default cluster)", nil)
+				).Return("db-migrate", nil)
 			},
 			wantedErr:  nil,
-			wantedTask: &testDefaultTask,
+			wantedTask: testDefaultTask,
 		},
 		"with error getting default cluster tasks": {
 			inOpts: []GetDeployedTaskOpts{

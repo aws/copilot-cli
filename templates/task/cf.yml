@@ -31,8 +31,9 @@ Conditions:
     !Not [!Equals [ !Join ["", !Ref Command], ""]]
 Resources:
   TaskDefinition:
-    # An ECS task definition to run your container on ECS.
-    Condition: HasImage # NOTE: We only create TaskDefinition if an image is provided.
+    Metadata:
+      'aws:copilot:description': 'An ECS task definition to run your container on ECS'
+    Condition: HasImage # NOTE: We only create TaskDefinition if an image is provided
     Type: AWS::ECS::TaskDefinition
     DependsOn: ECRRepo
     Properties:
@@ -59,7 +60,8 @@ Resources:
       ExecutionRoleArn: !If [HasExecutionRole, !Ref ExecutionRole, !Ref DefaultExecutionRole]
       TaskRoleArn: !If [HasTaskRole, !Ref TaskRole, !Ref DefaultTaskRole]
   DefaultExecutionRole:
-    # An IAM Role for the Fargate agent to make AWS API calls on your behalf.
+    Metadata:
+      'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -71,7 +73,8 @@ Resources:
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
   DefaultTaskRole:
-    # An IAM Role for the task to make AWS API calls on your behalf. Policies are required by ECS Exec.
+    Metadata:
+      'aws:copilot:description': 'An IAM Role for the task to make AWS API calls on your behalf. Policies are required by ECS Exec'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -102,7 +105,8 @@ Resources:
                 ]
                 Resource: "*"
   ECRRepo:
-    # An ECR repository to store your container images.
+    Metadata:
+      'aws:copilot:description': 'An ECR repository to store your container images'
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: !Join ["-", ["copilot", !Ref TaskName]]
@@ -124,7 +128,8 @@ Resources:
       LifecyclePolicy: # TODO: inject the JSON string instead of hard-coding it here
         LifecyclePolicyText: "{\"rules\":[{\"rulePriority\":1,\"selection\":{\"tagStatus\":\"untagged\",\"countType\":\"sinceImagePushed\",\"countUnit\":\"days\",\"countNumber\":5},\"action\":{\"type\":\"expire\"}}]}"
   LogGroup:
-    # A CloudWatch log group to hold your task logs.
+    Metadata:
+      'aws:copilot:description': 'A CloudWatch log group to hold your task logs'
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Join ['', ["/copilot/", !Ref TaskName]]

@@ -219,7 +219,7 @@ func TestECS_Tasks(t *testing.T) {
 				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
 					Cluster: aws.String("mockCluster"),
 					Tasks:   aws.StringSlice([]string{"mockTaskArn"}),
-					Include: aws.StringSlice([]string{"TAGS"}),
+					Include: aws.StringSlice([]string{ecs.TaskFieldTags}),
 				}).Return(nil, errors.New("some error"))
 			},
 			wantErr: fmt.Errorf("describe running tasks in cluster mockCluster: some error"),
@@ -238,7 +238,7 @@ func TestECS_Tasks(t *testing.T) {
 				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
 					Cluster: aws.String("mockCluster"),
 					Tasks:   aws.StringSlice([]string{"mockTaskArn"}),
-					Include: aws.StringSlice([]string{"TAGS"}),
+					Include: aws.StringSlice([]string{ecs.TaskFieldTags}),
 				}).Return(&ecs.DescribeTasksOutput{
 					Tasks: []*ecs.Task{
 						{
@@ -267,7 +267,7 @@ func TestECS_Tasks(t *testing.T) {
 				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
 					Cluster: aws.String("mockCluster"),
 					Tasks:   aws.StringSlice([]string{"mockTaskArn1"}),
-					Include: aws.StringSlice([]string{"TAGS"}),
+					Include: aws.StringSlice([]string{ecs.TaskFieldTags}),
 				}).Return(&ecs.DescribeTasksOutput{
 					Tasks: []*ecs.Task{
 						{
@@ -286,7 +286,7 @@ func TestECS_Tasks(t *testing.T) {
 				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
 					Cluster: aws.String("mockCluster"),
 					Tasks:   aws.StringSlice([]string{"mockTaskArn2"}),
-					Include: aws.StringSlice([]string{"TAGS"}),
+					Include: aws.StringSlice([]string{ecs.TaskFieldTags}),
 				}).Return(&ecs.DescribeTasksOutput{
 					Tasks: []*ecs.Task{
 						{
@@ -590,7 +590,7 @@ func TestECS_RunTask(t *testing.T) {
 				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
 					Cluster: aws.String("my-cluster"),
 					Tasks:   aws.StringSlice([]string{"task-1", "task-2", "task-3"}),
-					Include: aws.StringSlice([]string{"TAGS"}),
+					Include: aws.StringSlice([]string{ecs.TaskFieldTags}),
 				}).Return(&ecs.DescribeTasksOutput{
 					Tasks: []*ecs.Task{
 						{
@@ -689,7 +689,7 @@ func TestECS_DescribeTasks(t *testing.T) {
 				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
 					Cluster: aws.String(inCluster),
 					Tasks:   aws.StringSlice(inTaskARNs),
-					Include: aws.StringSlice([]string{"TAGS"}),
+					Include: aws.StringSlice([]string{ecs.TaskFieldTags}),
 				}).Return(nil, errors.New("error describing tasks"))
 			},
 			wantedError: fmt.Errorf("describe tasks: %w", errors.New("error describing tasks")),
@@ -699,7 +699,7 @@ func TestECS_DescribeTasks(t *testing.T) {
 				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
 					Cluster: aws.String(inCluster),
 					Tasks:   aws.StringSlice(inTaskARNs),
-					Include: aws.StringSlice([]string{"TAGS"}),
+					Include: aws.StringSlice([]string{ecs.TaskFieldTags}),
 				}).Return(&ecs.DescribeTasksOutput{
 					Tasks: []*ecs.Task{
 						{

@@ -351,6 +351,11 @@ type taskDeployer interface {
 	DeployTask(input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error
 }
 
+type taskStackManager interface {
+	DeleteTask(task deploy.TaskStackInfo) error
+	GetTaskStack(taskName string) (*deploy.TaskStackInfo, error)
+}
+
 type taskRunner interface {
 	Run() ([]*task.Task, error)
 }
@@ -459,7 +464,7 @@ type initJobSelector interface {
 }
 
 type cfTaskSelector interface {
-	Task(prompt, help string, opts ...selector.GetDeployedTaskOpts) (*selector.DeployedTask, error)
+	Task(prompt, help string, opts ...selector.GetDeployedTaskOpts) (string, error)
 }
 
 type dockerfileSelector interface {
@@ -511,6 +516,12 @@ type ecsCommandExecutor interface {
 type ssmPluginManager interface {
 	ValidateBinary() error
 	InstallLatestBinary() error
+}
+
+type taskStopper interface {
+	StopOneOffTasks(app, env, family string) error
+	StopDefaultClusterTasks(familyName string) error
+	StopWorkloadTasks(app, env, workload string) error
 }
 
 type serviceLinkedRoleCreator interface {
