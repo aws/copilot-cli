@@ -196,6 +196,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 			inPipelineName: testPipelineName,
 			setupMocks: func(mocks deletePipelineMocks) {
 				gomock.InOrder(
+					mocks.secretsmanager.EXPECT().DeleteSecret(gomock.Any()).Times(0),
 					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testAppName)),
 					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Return(nil),
 					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testAppName)),
