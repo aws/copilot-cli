@@ -74,6 +74,7 @@ nav:
         - svc exec: docs/commands/svc-exec.md
         - task run: docs/commands/task-run.md
         - task exec: docs/commands/task-exec.md
+        - task delete: docs/commands/task-delete.md
       - Addons:
         - storage init: docs/commands/storage-init.md
       - Settings:
@@ -112,6 +113,7 @@ nav:
         - svc package: docs/commands/svc-package.md
         - svc show: docs/commands/svc-show.md
         - svc status: docs/commands/svc-status.md
+        - task delete: docs/commands/task-delete.md
         - task exec: docs/commands/task-exec.md
         - task run: docs/commands/task-run.md
         - version: docs/commands/version.md

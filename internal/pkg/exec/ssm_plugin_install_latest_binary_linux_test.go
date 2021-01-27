@@ -4,6 +4,7 @@
 package exec
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -21,23 +22,56 @@ func TestSSMPluginCommand_InstallLatestBinary_linux(t *testing.T) {
 	var mockRunner *mocks.Mockrunner
 	mockError := errors.New("some error")
 	tests := map[string]struct {
-		setupMocks  func(controller *gomock.Controller)
-		wantedError error
+		setupMocks   func(controller *gomock.Controller)
+		linuxVersion string
+		wantedError  error
 	}{
-		"return error if fail to install binary": {
+		"return error if fail to check linux distribution": {
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner.EXPECT().Run("uname", []string{"-a"}, gomock.Any()).
+					Return(mockError)
+			},
+			wantedError: fmt.Errorf("get linux distribution version: some error"),
+		},
+		"return error if fail to install binary on linux": {
+			linuxVersion: "Linux ip-172-31-35-135.us-west-2.compute.internal 4.14.203-156.332.amzn2.x86_64 #1 SMP Fri Oct 30 19:19:33 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux"
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner.EXPECT().Run("uname", []string{"-a"}, gomock.Any()).Return(nil)
 				mockRunner.EXPECT().Run("sudo", []string{"yum", "install", "-y",
 					filepath.Join(mockDir, "session-manager-plugin.rpm")}).
 					Return(mockError)
 			},
 			wantedError: fmt.Errorf("some error"),
 		},
-		"success": {
+		"return error if fail to install binary on ubuntu": {
+			linuxVersion: "Linux ip-172-31-0-242 5.4.0-1029-aws #30-Ubuntu SMP Tue Oct 20 10:06:38 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux"
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner.EXPECT().Run("uname", []string{"-a"}, gomock.Any()).Return(nil)
+				mockRunner.EXPECT().Run("sudo", []string{"dpkg", "-i",
+					filepath.Join(mockDir, "session-manager-plugin.deb")}).
+					Return(mockError)
+			},
+			wantedError: fmt.Errorf("some error"),
+		},
+		"success on linux": {
+			linuxVersion: "Linux ip-172-31-35-135.us-west-2.compute.internal 4.14.203-156.332.amzn2.x86_64 #1 SMP Fri Oct 30 19:19:33 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux"
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 				mockRunner.EXPECT().Run("sudo", []string{"yum", "install", "-y",
 					filepath.Join(mockDir, "session-manager-plugin.rpm")}).
+					Return(nil)
+			},
+		},
+		"success on ubuntu": {
+			linuxVersion: "Linux ip-172-31-0-242 5.4.0-1029-aws #30-Ubuntu SMP Tue Oct 20 10:06:38 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux"
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner.EXPECT().Run("uname", []string{"-a"}, gomock.Any()).Return(nil)
+				mockRunner.EXPECT().Run("sudo", []string{"dpkg", "-i",
+					filepath.Join(mockDir, "session-manager-plugin.deb")}).
 					Return(nil)
 			},
 		},
@@ -48,8 +82,9 @@ func TestSSMPluginCommand_InstallLatestBinary_linux(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			tc.setupMocks(ctrl)
 			s := SSMPluginCommand{
-				runner:  mockRunner,
-				tempDir: mockDir,
+				runner:                 mockRunner,
+				tempDir:                mockDir,
+				linuxDistVersionBuffer: *bytes.NewBufferString(tc.linuxVersion),
 			}
 			err := s.InstallLatestBinary()
 			if tc.wantedError != nil {

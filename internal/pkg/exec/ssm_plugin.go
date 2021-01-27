@@ -31,9 +31,10 @@ type SSMPluginCommand struct {
 	runner
 
 	// facilitate unit test.
-	latestVersionBuffer  bytes.Buffer
-	currentVersionBuffer bytes.Buffer
-	tempDir              string
+	latestVersionBuffer    bytes.Buffer
+	currentVersionBuffer   bytes.Buffer
+	linuxDistVersionBuffer bytes.Buffer
+	tempDir                string
 }
 
 // NewSSMPluginCommand returns a SSMPluginCommand.

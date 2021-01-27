@@ -33,4 +33,4 @@ $ copilot svc exec -a my-app -e test --name backend --task-id 8c38184 --command 
 
 !!! info
     1. Please make sure `execute_command: true` is set in your manifest before deploying the service.
-    2. Please note that this will update the service's Fargate Platform Version to 1.4.0.
+    2. Please note that this will update the service's Fargate Platform Version to 1.4.0. And currently since CloudFormation requires [service replacement for Platform Version update](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-service.html#cfn-ecs-service-platformversion), your service will be replaced during the redeployment.
