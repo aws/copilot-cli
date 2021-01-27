@@ -14,6 +14,9 @@ import (
 const (
 	fmtErrPublicSubnetsFromEnv  = "get public subnet IDs from environment %s: %w"
 	fmtErrSecurityGroupsFromEnv = "get security groups from environment %s: %w"
+
+	envSecurityGroupCFNLogicalIDTagKey   = "aws:cloudformation:logical-id"
+	envSecurityGroupCFNLogicalIDTagValue = "EnvironmentSecurityGroup"
 )
 
 // Names for tag filters
@@ -60,7 +63,11 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 		return nil, errNoSubnetFound
 	}
 
-	securityGroups, err := r.VPCGetter.SecurityGroups(filters...)
+	// Use only environment security group https://github.com/aws/copilot-cli/issues/1882.
+	securityGroups, err := r.VPCGetter.SecurityGroups(append(filters, ec2.Filter{
+		Name:   fmt.Sprintf(ec2.TagFilterName, envSecurityGroupCFNLogicalIDTagKey),
+		Values: []string{envSecurityGroupCFNLogicalIDTagValue},
+	})...)
 	if err != nil {
 		return nil, fmt.Errorf(fmtErrSecurityGroupsFromEnv, r.Env, err)
 	}
