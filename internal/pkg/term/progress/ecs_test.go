@@ -103,8 +103,9 @@ func TestRollingUpdateComponent_Render(t *testing.T) {
 		"should render a single failure event": {
 			inFailureMsgs: []string{"(service my-svc) (task 1234) failed container health checks."},
 
-			wantedNumLines: 2,
-			wantedOut: `Latest failure event
+			wantedNumLines: 3,
+			wantedOut: `
+✘ Latest failure event
   - (service my-svc) (task 1234) failed container health checks.
 `,
 		},
@@ -112,8 +113,9 @@ func TestRollingUpdateComponent_Render(t *testing.T) {
 			inFailureMsgs: []string{
 				"(service webapp-test-frontend-Service-ss036XlczgjO) (port 80) is unhealthy in (target-group arn:aws:elasticloadbalancing:us-west-2:1111: targetgroup/aaaaaaaaaaaa) due to (reason some-error).",
 			},
-			wantedNumLines: 4,
-			wantedOut: `Latest failure event
+			wantedNumLines: 5,
+			wantedOut: `
+✘ Latest failure event
   - (service webapp-test-frontend-Service-ss036XlczgjO) (port 80) is unhea
     lthy in (target-group arn:aws:elasticloadbalancing:us-west-2:1111: tar
     getgroup/aaaaaaaaaaaa) due to (reason some-error).
@@ -124,8 +126,9 @@ func TestRollingUpdateComponent_Render(t *testing.T) {
 				"(service my-svc) (task 1234) failed container health checks.",
 				"(service my-svc) (task 5678) failed container health checks.",
 			},
-			wantedNumLines: 3,
-			wantedOut: `Latest 2 failure events
+			wantedNumLines: 4,
+			wantedOut: `
+✘ Latest 2 failure events
   - (service my-svc) (task 5678) failed container health checks.
   - (service my-svc) (task 1234) failed container health checks.
 `,

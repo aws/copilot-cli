@@ -95,4 +95,5 @@ func EraseLinesAbove(fw terminal.FileWriter, n int) {
 		EraseLine(fw)
 		c.Up(1)
 	}
+	EraseLine(fw) // Erase the nth line as well.
 }

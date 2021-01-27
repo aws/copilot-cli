@@ -10,6 +10,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestNoopComponent_Render(t *testing.T) {
+	// GIVEN
+	buf := new(strings.Builder)
+	c := &noopComponent{}
+
+	// WHEN
+	nl, err := c.Render(buf)
+
+	// THEN
+	require.Equal(t, 0, nl, "expected no lines to be written")
+	require.NoError(t, err, "expected err to be nil")
+	require.Equal(t, "", buf.String(), "expected the content to be empty")
+}
+
 func TestSingleLineComponent_Render(t *testing.T) {
 	testCases := map[string]struct {
 		inText    string
@@ -119,25 +133,33 @@ func TestDynamicTreeComponent_Render(t *testing.T) {
 func TestDynamicTreeComponent_Done(t *testing.T) {
 	// GIVEN
 	root := &mockDynamicRenderer{
-		content: "hello",
-		done:    make(chan struct{}),
+		done: make(chan struct{}),
+	}
+	child := &mockDynamicRenderer{
+		done: make(chan struct{}),
 	}
 	comp := dynamicTreeComponent{
-		Root: root,
+		Root:     root,
+		Children: []Renderer{child, &noopComponent{}},
 	}
 
 	// WHEN
-	ch := comp.Done()
+	go func() {
+		// Close all nodes in the tree.
+		close(child.done)
+		close(root.done)
+	}()
 
 	// THEN
-	require.Equal(t, root.Done(), ch)
+	<-comp.Done() // Should successfully exit instead of hanging.
 }
 
 func TestTableComponent_Render(t *testing.T) {
 	testCases := map[string]struct {
-		inTitle  string
-		inHeader []string
-		inRows   [][]string
+		inTitle   string
+		inHeader  []string
+		inRows    [][]string
+		inPadding int
 
 		wantedNumLines int
 		wantedOut      string
@@ -164,6 +186,20 @@ func TestTableComponent_Render(t *testing.T) {
   ACTIVE   2         [completed]    10       10       0       0
 `,
 		},
+		"should render a sample table with with padding": {
+			inTitle:  "Person",
+			inHeader: []string{"First", "Last"},
+			inRows: [][]string{
+				{"Cookie", "Monster"},
+			},
+			inPadding: 3,
+
+			wantedNumLines: 3,
+			wantedOut: `   Person
+     First   Last
+     Cookie  Monster
+`,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -171,6 +207,7 @@ func TestTableComponent_Render(t *testing.T) {
 			// GIVEN
 			buf := new(strings.Builder)
 			table := newTableComponent(tc.inTitle, tc.inHeader, tc.inRows)
+			table.Padding = tc.inPadding
 
 			// WHEN
 			numLines, err := table.Render(buf)

@@ -51,6 +51,8 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 	})
 	t.Run("stores events until deployment is done", func(t *testing.T) {
 		// GIVEN
+		oldStartDate := time.Date(2020, time.November, 23, 17, 0, 0, 0, time.UTC)
+		startDate := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
 		m := mockECS{
 			out: &ecs.Service{
 				Deployments: []*awsecs.Deployment{
@@ -62,6 +64,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						RunningCount:   aws.Int64(10),
 						Status:         aws.String("PRIMARY"),
 						TaskDefinition: aws.String("arn:aws:ecs:us-west-2:1111:task-definition/myapp-test-mysvc:2"),
+						UpdatedAt:      aws.Time(startDate),
 					},
 					{
 						DesiredCount:   aws.Int64(10),
@@ -71,11 +74,12 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						RunningCount:   aws.Int64(0),
 						Status:         aws.String("ACTIVE"),
 						TaskDefinition: aws.String("arn:aws:ecs:us-west-2:1111:task-definition/myapp-test-mysvc:1"),
+						UpdatedAt:      aws.Time(oldStartDate),
 					},
 				},
 			},
 		}
-		streamer := NewECSDeploymentStreamer(m, "my-cluster", "my-svc", time.Now())
+		streamer := NewECSDeploymentStreamer(m, "my-cluster", "my-svc", startDate)
 
 		// WHEN
 		_, err := streamer.Fetch()
@@ -93,6 +97,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						FailedCount:     0,
 						PendingCount:    0,
 						RolloutState:    "COMPLETED",
+						UpdatedAt:       startDate,
 					},
 					{
 						Status:          "ACTIVE",
@@ -102,6 +107,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						FailedCount:     10,
 						PendingCount:    0,
 						RolloutState:    "FAILED",
+						UpdatedAt:       oldStartDate,
 					},
 				},
 				LatestFailureEvents: nil,

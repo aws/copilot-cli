@@ -75,39 +75,44 @@ func TestStackStreamer_Notify(t *testing.T) {
 
 func testStackStreamer_Fetch_Success(t *testing.T) {
 	// GIVEN
+	startTime := time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC)
 	client := mockCloudFormation{
 		// Events are in reverse chronological order.
 		out: &cloudformation.DescribeStackEventsOutput{
 			StackEvents: []*cloudformation.StackEvent{
 				{
-					EventId:           aws.String("1"),
-					LogicalResourceId: aws.String("phonetool-test"),
-					ResourceStatus:    aws.String("CREATE_COMPLETE"),
-					Timestamp:         aws.Time(time.Date(2020, time.November, 23, 20, 0, 0, 0, time.UTC)),
+					EventId:            aws.String("1"),
+					LogicalResourceId:  aws.String("phonetool-test"),
+					PhysicalResourceId: aws.String("phonetool-test"),
+					ResourceStatus:     aws.String("CREATE_COMPLETE"),
+					Timestamp:          aws.Time(startTime.Add(4 * time.Hour)),
 				},
 				{
 					EventId:              aws.String("2"),
 					LogicalResourceId:    aws.String("CloudformationExecutionRole"),
+					PhysicalResourceId:   aws.String("CloudformationExecutionRole-123a"),
 					ResourceStatus:       aws.String("CREATE_FAILED"),
 					ResourceStatusReason: aws.String("phonetool-test-CFNExecutionRole already exists"),
-					Timestamp:            aws.Time(time.Date(2020, time.November, 23, 19, 0, 0, 0, time.UTC)),
+					Timestamp:            aws.Time(startTime.Add(3 * time.Hour)),
 				},
 				{
-					EventId:           aws.String("3"),
-					LogicalResourceId: aws.String("Cluster"),
-					ResourceStatus:    aws.String("CREATE_COMPLETE"),
-					Timestamp:         aws.Time(time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)),
+					EventId:            aws.String("3"),
+					LogicalResourceId:  aws.String("Cluster"),
+					PhysicalResourceId: aws.String("Cluster-6574"),
+					ResourceStatus:     aws.String("CREATE_COMPLETE"),
+					Timestamp:          aws.Time(startTime.Add(2 * time.Hour)),
 				},
 				{
-					EventId:           aws.String("4"),
-					LogicalResourceId: aws.String("PublicLoadBalancer"),
-					ResourceStatus:    aws.String("CREATE_COMPLETE"),
-					Timestamp:         aws.Time(time.Date(2020, time.November, 23, 17, 0, 0, 0, time.UTC)),
+					EventId:            aws.String("4"),
+					LogicalResourceId:  aws.String("PublicLoadBalancer"),
+					PhysicalResourceId: aws.String("PublicLoadBalancer-2139"),
+					ResourceStatus:     aws.String("CREATE_COMPLETE"),
+					Timestamp:          aws.Time(startTime.Add(time.Hour)),
 				},
 			},
 		},
 	}
-	streamer := NewStackStreamer(client, "phonetool-test", time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC))
+	streamer := NewStackStreamer(client, "phonetool-test", startTime)
 
 	// WHEN
 	_, err := streamer.Fetch()
@@ -116,21 +121,29 @@ func testStackStreamer_Fetch_Success(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []StackEvent{
 		{
-			LogicalResourceID: "PublicLoadBalancer",
-			ResourceStatus:    "CREATE_COMPLETE",
+			LogicalResourceID:  "PublicLoadBalancer",
+			PhysicalResourceID: "PublicLoadBalancer-2139",
+			ResourceStatus:     "CREATE_COMPLETE",
+			Timestamp:          startTime.Add(time.Hour),
 		},
 		{
-			LogicalResourceID: "Cluster",
-			ResourceStatus:    "CREATE_COMPLETE",
+			LogicalResourceID:  "Cluster",
+			PhysicalResourceID: "Cluster-6574",
+			ResourceStatus:     "CREATE_COMPLETE",
+			Timestamp:          startTime.Add(2 * time.Hour),
 		},
 		{
 			LogicalResourceID:    "CloudformationExecutionRole",
+			PhysicalResourceID:   "CloudformationExecutionRole-123a",
 			ResourceStatus:       "CREATE_FAILED",
 			ResourceStatusReason: "phonetool-test-CFNExecutionRole already exists",
+			Timestamp:            startTime.Add(3 * time.Hour),
 		},
 		{
-			LogicalResourceID: "phonetool-test",
-			ResourceStatus:    "CREATE_COMPLETE",
+			LogicalResourceID:  "phonetool-test",
+			PhysicalResourceID: "phonetool-test",
+			ResourceStatus:     "CREATE_COMPLETE",
+			Timestamp:          startTime.Add(4 * time.Hour),
 		},
 	}, streamer.eventsToFlush, "expected eventsToFlush to appear in chronological order")
 	_, isOpen := <-streamer.Done()
@@ -167,6 +180,7 @@ func testStackStreamer_Fetch_PostChangeSet(t *testing.T) {
 
 func testStackStreamer_Fetch_WithSeenEvents(t *testing.T) {
 	// GIVEN
+	startTime := time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC)
 	client := mockCloudFormation{
 		out: &cloudformation.DescribeStackEventsOutput{
 			StackEvents: []*cloudformation.StackEvent{
@@ -174,13 +188,13 @@ func testStackStreamer_Fetch_WithSeenEvents(t *testing.T) {
 					EventId:           aws.String("abc"),
 					LogicalResourceId: aws.String("Cluster"),
 					ResourceStatus:    aws.String("CREATE_COMPLETE"),
-					Timestamp:         aws.Time(time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)),
+					Timestamp:         aws.Time(startTime.Add(2 * time.Hour)),
 				},
 				{
 					EventId:           aws.String("def"),
 					LogicalResourceId: aws.String("PublicLoadBalancer"),
 					ResourceStatus:    aws.String("CREATE_COMPLETE"),
-					Timestamp:         aws.Time(time.Date(2020, time.November, 23, 17, 0, 0, 0, time.UTC)),
+					Timestamp:         aws.Time(startTime.Add(time.Hour)),
 				},
 			},
 		},
@@ -188,7 +202,7 @@ func testStackStreamer_Fetch_WithSeenEvents(t *testing.T) {
 	streamer := &StackStreamer{
 		client:                client,
 		stackName:             "phonetool-test",
-		changeSetCreationTime: time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC),
+		changeSetCreationTime: startTime,
 		pastEventIDs: map[string]bool{
 			"def": true,
 		},
@@ -203,6 +217,7 @@ func testStackStreamer_Fetch_WithSeenEvents(t *testing.T) {
 		{
 			LogicalResourceID: "Cluster",
 			ResourceStatus:    "CREATE_COMPLETE",
+			Timestamp:         startTime.Add(2 * time.Hour),
 		},
 	}, streamer.eventsToFlush, "expected only the event not seen yet to be flushed")
 }
