@@ -20,7 +20,7 @@ func TestEnvRunner_Run(t *testing.T) {
 	inApp := "my-app"
 	inEnv := "my-env"
 
-	filtersForVPCFromAppEnv := []ec2.Filter{
+	filtersForSubnetID := []ec2.Filter{
 		{
 			Name:   tagFilterNameForEnv,
 			Values: []string{inEnv},
@@ -30,6 +30,10 @@ func TestEnvRunner_Run(t *testing.T) {
 			Values: []string{inApp},
 		},
 	}
+	filtersForSecurityGroup := append(filtersForSubnetID, ec2.Filter{
+		Name:   fmt.Sprintf(ec2.TagFilterName, envSecurityGroupCFNLogicalIDTagKey),
+		Values: []string{envSecurityGroupCFNLogicalIDTagValue},
+	})
 
 	MockClusterGetter := func(m *mocks.MockClusterGetter) {
 		m.EXPECT().ClusterARN(inApp, inEnv).Return("cluster-1", nil)
@@ -64,7 +68,7 @@ func TestEnvRunner_Run(t *testing.T) {
 		"failed to get subnets": {
 			MockClusterGetter: MockClusterGetter,
 			MockVPCGetter: func(m *mocks.MockVPCGetter) {
-				m.EXPECT().PublicSubnetIDs(filtersForVPCFromAppEnv).
+				m.EXPECT().PublicSubnetIDs(filtersForSubnetID).
 					Return(nil, errors.New("error getting subnets"))
 				m.EXPECT().SecurityGroups(gomock.Any()).AnyTimes()
 			},
@@ -74,7 +78,7 @@ func TestEnvRunner_Run(t *testing.T) {
 		"no subnet is found": {
 			MockClusterGetter: MockClusterGetter,
 			MockVPCGetter: func(m *mocks.MockVPCGetter) {
-				m.EXPECT().PublicSubnetIDs(filtersForVPCFromAppEnv).
+				m.EXPECT().PublicSubnetIDs(filtersForSubnetID).
 					Return([]string{}, nil)
 				m.EXPECT().SecurityGroups(gomock.Any()).AnyTimes()
 			},
@@ -85,7 +89,7 @@ func TestEnvRunner_Run(t *testing.T) {
 			MockClusterGetter: MockClusterGetter,
 			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().PublicSubnetIDs(gomock.Any()).Return([]string{"subnet-1"}, nil)
-				m.EXPECT().SecurityGroups(filtersForVPCFromAppEnv).
+				m.EXPECT().SecurityGroups(filtersForSecurityGroup).
 					Return(nil, errors.New("error getting security groups"))
 			},
 			mockStarter: mockStarterNotRun,
@@ -97,8 +101,8 @@ func TestEnvRunner_Run(t *testing.T) {
 
 			MockClusterGetter: MockClusterGetter,
 			MockVPCGetter: func(m *mocks.MockVPCGetter) {
-				m.EXPECT().PublicSubnetIDs(filtersForVPCFromAppEnv).Return([]string{"subnet-1", "subnet-2"}, nil)
-				m.EXPECT().SecurityGroups(filtersForVPCFromAppEnv).Return([]string{"sg-1", "sg-2"}, nil)
+				m.EXPECT().PublicSubnetIDs(filtersForSubnetID).Return([]string{"subnet-1", "subnet-2"}, nil)
+				m.EXPECT().SecurityGroups(filtersForSecurityGroup).Return([]string{"sg-1", "sg-2"}, nil)
 			},
 			mockStarter: func(m *mocks.MockRunner) {
 				m.EXPECT().RunTask(ecs.RunTaskInput{
@@ -122,8 +126,8 @@ func TestEnvRunner_Run(t *testing.T) {
 
 			MockClusterGetter: MockClusterGetter,
 			MockVPCGetter: func(m *mocks.MockVPCGetter) {
-				m.EXPECT().PublicSubnetIDs(filtersForVPCFromAppEnv).Return([]string{"subnet-1", "subnet-2"}, nil)
-				m.EXPECT().SecurityGroups(filtersForVPCFromAppEnv).Return([]string{"sg-1", "sg-2"}, nil)
+				m.EXPECT().PublicSubnetIDs(filtersForSubnetID).Return([]string{"subnet-1", "subnet-2"}, nil)
+				m.EXPECT().SecurityGroups(filtersForSecurityGroup).Return([]string{"sg-1", "sg-2"}, nil)
 			},
 			mockStarter: func(m *mocks.MockRunner) {
 				m.EXPECT().RunTask(ecs.RunTaskInput{
