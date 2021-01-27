@@ -450,9 +450,8 @@ func (o *deleteTaskOpts) RecommendedActions() []string {
 func BuildTaskDeleteCmd() *cobra.Command {
 	vars := deleteTaskVars{}
 	cmd := &cobra.Command{
-		Hidden: true,
-		Use:    "delete",
-		Short:  "Deletes a one-off task from an application or default cluster.",
+		Use:   "delete",
+		Short: "Deletes a one-off task from an application or default cluster.",
 		Example: `
   Delete the "test" task from the default cluster.
   /code $ copilot task delete --name test --default

@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -134,6 +135,7 @@ type deleteAppMocks struct {
 	svcDeleter      *mocks.Mockexecutor
 	jobDeleter      *mocks.Mockexecutor
 	envDeleter      *mocks.MockexecuteAsker
+	taskDeleter     *mocks.Mockexecutor
 	bucketEmptier   *mocks.MockbucketEmptier
 	pipelineDeleter *mocks.MockdeletePipelineRunner
 }
@@ -164,6 +166,13 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			S3Bucket: "goose-bucket",
 		},
 	}
+	mockTaskStacks := []deploy.TaskStackInfo{
+		{
+			StackName: "task-db-migrate",
+			App:       "badgoose",
+			Env:       "staging",
+		},
+	}
 	tests := map[string]struct {
 		appName    string
 		setupMocks func(mocks deleteAppMocks)
@@ -182,8 +191,14 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.store.EXPECT().ListJobs(mockAppName).Return(mockJobs, nil),
 					mocks.jobDeleter.EXPECT().Execute().Return(nil),
 
-					// deleteEnvs
+					// listEnvs
 					mocks.store.EXPECT().ListEnvironments(mockAppName).Return(mockEnvs, nil),
+
+					// deleteTasks
+					mocks.deployer.EXPECT().ListTaskStacks(mockAppName, mockEnvs[0].Name).Return(mockTaskStacks, nil),
+					mocks.taskDeleter.EXPECT().Execute().Return(nil),
+
+					// deleteEnvs
 					mocks.envDeleter.EXPECT().Ask().Return(nil),
 					mocks.envDeleter.EXPECT().Execute().Return(nil),
 
@@ -227,8 +242,13 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.store.EXPECT().ListJobs(mockAppName).Return(mockJobs, nil),
 					mocks.jobDeleter.EXPECT().Execute().Return(nil),
 
-					// deleteEnvs
+					// listEnvs
 					mocks.store.EXPECT().ListEnvironments(mockAppName).Return(mockEnvs, nil),
+
+					// deleteTasks
+					mocks.deployer.EXPECT().ListTaskStacks(mockAppName, mockEnvs[0].Name).Return(nil, nil),
+
+					// deleteEnvs
 					mocks.envDeleter.EXPECT().Ask().Return(nil),
 					mocks.envDeleter.EXPECT().Execute().Return(nil),
 
@@ -291,6 +311,10 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			mockJobExecutorProvider := func(appName string) (executor, error) {
 				return mockJobDeleteExecutor, nil
 			}
+			mockTaskDeleteExecutor := mocks.NewMockexecutor(ctrl)
+			mockTaskDeleteProvider := func(envName, taskName string) (executor, error) {
+				return mockTaskDeleteExecutor, nil
+			}
 			mockEnvDeleteExecutor := mocks.NewMockexecuteAsker(ctrl)
 			mockAskExecutorProvider := func(envName string) (executeAsker, error) {
 				return mockEnvDeleteExecutor, nil
@@ -310,6 +334,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				svcDeleter:      mockSvcDeleteExecutor,
 				jobDeleter:      mockJobDeleteExecutor,
 				envDeleter:      mockEnvDeleteExecutor,
+				taskDeleter:     mockTaskDeleteExecutor,
 				bucketEmptier:   mockBucketEmptier,
 				pipelineDeleter: mockRunner,
 			}
@@ -328,6 +353,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				svcDeleteExecutor:    mockSvcExecutorProvider,
 				jobDeleteExecutor:    mockJobExecutorProvider,
 				envDeleteExecutor:    mockAskExecutorProvider,
+				taskDeleteExecutor:   mockTaskDeleteProvider,
 				deletePipelineRunner: mockRunnerProvider,
 			}
 
