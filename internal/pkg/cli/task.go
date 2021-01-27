@@ -19,6 +19,7 @@ One-off Amazon ECS tasks that terminate once their work is done.`,
 
 	cmd.AddCommand(BuildTaskRunCmd())
 	cmd.AddCommand(buildTaskExecCmd())
+	cmd.AddCommand(BuildTaskDeleteCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

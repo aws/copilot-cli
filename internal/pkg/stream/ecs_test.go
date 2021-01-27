@@ -64,7 +64,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						RunningCount:   aws.Int64(10),
 						Status:         aws.String("PRIMARY"),
 						TaskDefinition: aws.String("arn:aws:ecs:us-west-2:1111:task-definition/myapp-test-mysvc:2"),
-						CreatedAt:      aws.Time(startDate),
+						UpdatedAt:      aws.Time(startDate),
 					},
 					{
 						DesiredCount:   aws.Int64(10),
@@ -74,7 +74,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						RunningCount:   aws.Int64(0),
 						Status:         aws.String("ACTIVE"),
 						TaskDefinition: aws.String("arn:aws:ecs:us-west-2:1111:task-definition/myapp-test-mysvc:1"),
-						CreatedAt:      aws.Time(oldStartDate),
+						UpdatedAt:      aws.Time(oldStartDate),
 					},
 				},
 			},
@@ -97,8 +97,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						FailedCount:     0,
 						PendingCount:    0,
 						RolloutState:    "COMPLETED",
-
-						CreatedAt: startDate,
+						UpdatedAt:       startDate,
 					},
 					{
 						Status:          "ACTIVE",
@@ -108,8 +107,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 						FailedCount:     10,
 						PendingCount:    0,
 						RolloutState:    "FAILED",
-
-						CreatedAt: oldStartDate,
+						UpdatedAt:       oldStartDate,
 					},
 				},
 				LatestFailureEvents: nil,

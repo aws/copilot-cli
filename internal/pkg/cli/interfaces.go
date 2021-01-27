@@ -368,6 +368,7 @@ type deployer interface {
 	environmentDeployer
 	appDeployer
 	pipelineDeployer
+	ListTaskStacks(appName, envName string) ([]deploy.TaskStackInfo, error)
 }
 
 type domainValidator interface {
