@@ -31,8 +31,8 @@ func TestEnvRunner_Run(t *testing.T) {
 		},
 	}
 	filtersForSecurityGroup := append(filtersForSubnetID, ec2.Filter{
-		Name:   fmt.Sprintf(ec2.TagFilterName, envSecurityGroupCFNLogicalIDTagKey),
-		Values: []string{envSecurityGroupCFNLogicalIDTagValue},
+		Name:   "tag:aws:cloudformation:logical-id",
+		Values: []string{"EnvironmentSecurityGroup"},
 	})
 
 	MockClusterGetter := func(m *mocks.MockClusterGetter) {
