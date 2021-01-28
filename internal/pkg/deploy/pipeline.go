@@ -174,8 +174,8 @@ func (s *GitHubSource) Repository() (string, error) {
 	return repo, nil
 }
 
-// Repository returns the repository portion. For example,
-// given "aws/amazon-copilot", this function returns "amazon-copilot".
+// Repository returns the repository portion. For CodeStar Connections,
+// this needs to be in the format "some-user/my-repo."
 func (s *BitbucketSource) Repository() (string, error) {
 	owner, repo, err := s.parseOwnerAndRepo()
 	if err != nil {
