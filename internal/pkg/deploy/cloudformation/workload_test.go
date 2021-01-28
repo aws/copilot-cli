@@ -4,14 +4,13 @@
 package cloudformation
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -54,88 +53,44 @@ func (m *mockStackConfig) Tags() []*sdkcloudformation.Tag {
 }
 
 func TestCloudFormation_DeployService(t *testing.T) {
-	testCases := map[string]struct {
-		wantedErr  string
-		createMock func(ctrl *gomock.Controller) cfnClient
-	}{
-		"does not call update if the stack is new": {
-			createMock: func(ctrl *gomock.Controller) cfnClient {
-				stack := cloudformation.NewStack("webhook", "template",
-					cloudformation.WithParameters(map[string]string{
-						"port": "80",
-					}),
-					cloudformation.WithTags(map[string]string{
-						"app": "myapp",
-					}),
-					cloudformation.WithRoleARN("myrole"))
-				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().CreateAndWait(stack).Return(nil)
-				m.EXPECT().UpdateAndWait(gomock.Any()).Times(0)
-				return m
-			},
+	serviceConfig := &mockStackConfig{
+		name:     "hello",
+		template: "template",
+		parameters: map[string]string{
+			"port": "80",
 		},
-		"calls update if the stack already exists": {
-			createMock: func(ctrl *gomock.Controller) cfnClient {
-				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().CreateAndWait(gomock.Any()).Return(&cloudformation.ErrStackAlreadyExists{
-					Name: "name",
-				})
-				m.EXPECT().UpdateAndWait(gomock.Any())
-				return m
-			},
-		},
-		"calls describe if create fails": {
-			createMock: func(ctrl *gomock.Controller) cfnClient {
-				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().CreateAndWait(gomock.Any()).Return(errors.New("some error"))
-				m.EXPECT().ErrorEvents(gomock.Any()).Return([]cloudformation.StackEvent{
-					{ResourceStatusReason: aws.String("Bad things happened. (Service abcd)")},
-				}, nil)
-				return m
-			},
-			wantedErr: "some error: Bad things happened",
-		},
-		"returns descriptive error if describe fails": {
-			createMock: func(ctrl *gomock.Controller) cfnClient {
-				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().CreateAndWait(gomock.Any()).Return(errors.New("some error"))
-				m.EXPECT().ErrorEvents(gomock.Any()).Return(nil, errors.New("other error"))
-				return m
-			},
-			wantedErr: "some error: describe stack: other error",
+		tags: map[string]string{
+			"app": "myapp",
 		},
 	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			c := CloudFormation{
-				cfnClient: tc.createMock(ctrl),
-			}
-			conf := &mockStackConfig{
-				name:     "webhook",
-				template: "template",
-				parameters: map[string]string{
-					"port": "80",
-				},
-				tags: map[string]string{
-					"app": "myapp",
-				},
-			}
-
-			// WHEN
-			err := c.DeployService(conf, cloudformation.WithRoleARN("myrole"))
-
-			// THEN
-			if tc.wantedErr != "" {
-				require.EqualError(t, err, tc.wantedErr)
-			} else {
-				require.NoError(t, err)
-			}
-		})
+	when := func(w progress.FileWriter, cf CloudFormation) error {
+		return cf.DeployService(w, serviceConfig)
 	}
+
+	t.Run("returns a wrapped error if creating a change set fails", func(t *testing.T) {
+		testDeployWorkload_OnCreateChangeSetFailure(t, when)
+	})
+	t.Run("calls Update if stack is already created and returns wrapped error if Update fails", func(t *testing.T) {
+		testDeployWorkload_OnUpdateChangeSetFailure(t, when)
+	})
+	t.Run("returns an error when the ChangeSet cannot be described for stack changes before rendering", func(t *testing.T) {
+		testDeployWorkload_OnDescribeChangeSetFailure(t, when)
+	})
+	t.Run("returns an error when stack template body cannot be retrieved to parse resource descriptions", func(t *testing.T) {
+		testDeployWorkload_OnTemplateBodyFailure(t, when)
+	})
+	t.Run("returns a wrapped error if a streamer fails and cancels the renderer", func(t *testing.T) {
+		testDeployWorkload_StackStreamerFailureShouldCancelRenderer(t, when)
+	})
+	t.Run("returns an error if stack creation fails", func(t *testing.T) {
+		testDeployWorkload_StreamUntilStackCreationFails(t, when)
+	})
+	t.Run("renders a stack with an ECS service", func(t *testing.T) {
+		testDeployWorkload_RenderNewlyCreatedStackWithECSService(t, when)
+	})
+	t.Run("renders a stack with addons template if stack creation is successful", func(t *testing.T) {
+		testDeployWorkload_RenderNewlyCreatedStackWithAddons(t, when)
+	})
 }
 
 func TestCloudFormation_DeleteWorkload(t *testing.T) {

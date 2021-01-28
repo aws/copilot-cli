@@ -9,6 +9,7 @@ import (
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	stackset "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
+	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -94,6 +95,44 @@ func (mr *MockStackConfigurationMockRecorder) Tags() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Tags", reflect.TypeOf((*MockStackConfiguration)(nil).Tags))
 }
 
+// MockecsClient is a mock of ecsClient interface
+type MockecsClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockecsClientMockRecorder
+}
+
+// MockecsClientMockRecorder is the mock recorder for MockecsClient
+type MockecsClientMockRecorder struct {
+	mock *MockecsClient
+}
+
+// NewMockecsClient creates a new mock instance
+func NewMockecsClient(ctrl *gomock.Controller) *MockecsClient {
+	mock := &MockecsClient{ctrl: ctrl}
+	mock.recorder = &MockecsClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockecsClient) EXPECT() *MockecsClientMockRecorder {
+	return m.recorder
+}
+
+// Service mocks base method
+func (m *MockecsClient) Service(clusterName, serviceName string) (*ecs.Service, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Service", clusterName, serviceName)
+	ret0, _ := ret[0].(*ecs.Service)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Service indicates an expected call of Service
+func (mr *MockecsClientMockRecorder) Service(clusterName, serviceName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockecsClient)(nil).Service), clusterName, serviceName)
+}
+
 // MockcfnClient is a mock of cfnClient interface
 type MockcfnClient struct {
 	ctrl     *gomock.Controller
@@ -161,11 +200,12 @@ func (mr *MockcfnClientMockRecorder) WaitForCreate(ctx, stackName interface{}) *
 }
 
 // Update mocks base method
-func (m *MockcfnClient) Update(arg0 *cloudformation0.Stack) error {
+func (m *MockcfnClient) Update(arg0 *cloudformation0.Stack) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Update indicates an expected call of Update

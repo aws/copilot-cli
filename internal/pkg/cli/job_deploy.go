@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -271,17 +272,10 @@ func (o *deployJobOpts) deployJob(addonsURL string) error {
 	if err != nil {
 		return err
 	}
-	o.spinner.Start(
-		fmt.Sprintf("Deploying %s to %s",
-			fmt.Sprintf("%s:%s", color.HighlightUserInput(o.name), color.HighlightUserInput(o.imageTag)),
-			color.HighlightUserInput(o.targetEnvironment.Name),
-		),
-	)
-	if err := o.jobCFN.DeployService(conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
+	if err := o.jobCFN.DeployService(os.Stderr, conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
 		o.spinner.Stop(log.Serrorf("Failed to deploy job.\n\n"))
 		return fmt.Errorf("deploy job: %w", err)
 	}
-	o.spinner.Stop("\n\n")
 	log.Successf("Deployed %s.\n", color.HighlightUserInput(o.name))
 	return nil
 }

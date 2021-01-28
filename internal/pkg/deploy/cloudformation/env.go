@@ -32,7 +32,7 @@ func (cf CloudFormation) DeployAndRenderEnvironment(out progress.FileWriter, env
 		return err
 	}
 	spinner := progress.NewSpinner(out)
-	return cf.renderStackChanges(renderStackChangesInput{
+	return cf.renderStackChanges(&renderStackChangesInput{
 		w:                out,
 		stackName:        s.Name,
 		stackDescription: fmt.Sprintf("Creating the infrastructure for the %s environment.", s.Name),
