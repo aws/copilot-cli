@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -433,16 +434,10 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 	if err != nil {
 		return err
 	}
-	o.spinner.Start(
-		fmt.Sprintf("Deploying %s to %s.",
-			fmt.Sprintf("%s:%s", color.HighlightUserInput(o.name), color.HighlightUserInput(o.imageTag)),
-			color.HighlightUserInput(o.targetEnvironment.Name)))
 
-	if err := o.svcCFN.DeployService(conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
-		o.spinner.Stop(log.Serrorf("Failed to deploy service.\n\n"))
+	if err := o.svcCFN.DeployService(os.Stderr, conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
 		return fmt.Errorf("deploy service: %w", err)
 	}
-	o.spinner.Stop("\n\n")
 	return nil
 }
 

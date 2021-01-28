@@ -105,14 +105,14 @@ func (c *CloudFormation) WaitForCreate(ctx context.Context, stackName string) er
 
 // Update updates an existing CloudFormation with the new configuration.
 // If there are no changes for the stack, deletes the empty change set and returns ErrChangeSetEmpty.
-func (c *CloudFormation) Update(stack *Stack) error {
+func (c *CloudFormation) Update(stack *Stack) (changeSetID string, err error) {
 	descr, err := c.Describe(stack.Name)
 	if err != nil {
-		return err
+		return "", err
 	}
 	status := StackStatus(aws.StringValue(descr.StackStatus))
 	if status.InProgress() {
-		return &ErrStackUpdateInProgress{
+		return "", &ErrStackUpdateInProgress{
 			Name: stack.Name,
 		}
 	}
@@ -121,7 +121,7 @@ func (c *CloudFormation) Update(stack *Stack) error {
 
 // UpdateAndWait calls Update and then blocks until the stack is updated or until the max attempt window expires.
 func (c *CloudFormation) UpdateAndWait(stack *Stack) error {
-	if err := c.Update(stack); err != nil {
+	if _, err := c.Update(stack); err != nil {
 		return err
 	}
 	return c.WaitForUpdate(context.Background(), stack.Name)
@@ -306,12 +306,15 @@ func (c *CloudFormation) create(stack *Stack) (string, error) {
 	return cs.name, nil
 }
 
-func (c *CloudFormation) update(stack *Stack) error {
+func (c *CloudFormation) update(stack *Stack) (string, error) {
 	cs, err := newUpdateChangeSet(c.client, stack.Name)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return cs.createAndExecute(stack.stackConfig)
+	if err := cs.createAndExecute(stack.stackConfig); err != nil {
+		return "", err
+	}
+	return cs.name, nil
 }
 
 func (c *CloudFormation) deleteAndWait(in *cloudformation.DeleteStackInput) error {

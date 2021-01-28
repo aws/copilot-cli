@@ -59,6 +59,7 @@ type deleteAppOpts struct {
 	svcDeleteExecutor    func(svcName string) (executor, error)
 	jobDeleteExecutor    func(jobName string) (executor, error)
 	envDeleteExecutor    func(envName string) (executeAsker, error)
+	taskDeleteExecutor   func(envName, taskName string) (executor, error)
 	deletePipelineRunner func() (deletePipelineRunner, error)
 }
 
@@ -117,6 +118,18 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 				skipConfirmation: true,
 				appName:          vars.name,
 				name:             envName,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return opts, nil
+		},
+		taskDeleteExecutor: func(envName, taskName string) (executor, error) {
+			opts, err := newDeleteTaskOpts(deleteTaskVars{
+				app:              vars.name,
+				env:              envName,
+				name:             taskName,
+				skipConfirmation: true,
 			})
 			if err != nil {
 				return nil, err
@@ -250,6 +263,21 @@ func (o *deleteAppOpts) deleteEnvs() error {
 	}
 
 	for _, env := range envs {
+		// Delete tasks from each environment.
+		tasks, err := o.cfn.ListTaskStacks(o.name, env.Name)
+		if err != nil {
+			return err
+		}
+		for _, task := range tasks {
+			taskCmd, err := o.taskDeleteExecutor(env.Name, task.TaskName())
+			if err != nil {
+				return err
+			}
+			if err := taskCmd.Execute(); err != nil {
+				return fmt.Errorf("execute task delete")
+			}
+		}
+
 		cmd, err := o.envDeleteExecutor(env.Name)
 		if err != nil {
 			return err

@@ -43,16 +43,13 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	// Clean ECR repo before deleting the stack.
-	err := aws.DeleteECRRepo(repoName)
-	Expect(err).NotTo(HaveOccurred(), "delete ecr repo")
-	// Delete task stack.
-	err = aws.DeleteStack(taskStackName)
-	Expect(err).NotTo(HaveOccurred(), "start deleting task stack")
-	// Wait until task stack is removed.
-	err = aws.WaitStackDeleteComplete(taskStackName)
-	Expect(err).NotTo(HaveOccurred(), "task stack delete complete")
-	// Delete Copilot application.
+	_, err := cli.TaskDelete(&client.TaskDeleteInput{
+		App:     appName,
+		Env:     envName,
+		Name:    groupName,
+		Default: false,
+	})
+	Expect(err).NotTo(HaveOccurred(), "delete task")
 	_, err = cli.AppDelete()
 	Expect(err).NotTo(HaveOccurred(), "delete Copilot application")
 })

@@ -16,6 +16,7 @@ import (
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -27,6 +28,9 @@ import (
 const (
 	// waitForStackTimeout is how long we're willing to wait for a stack to go from in progress to a complete state.
 	waitForStackTimeout = 1*time.Hour + 30*time.Minute
+
+	// CloudFormation resource types.
+	ecsServiceResourceType = "AWS::ECS::Service"
 )
 
 // StackConfiguration represents the set of methods needed to deploy a cloudformation stack.
@@ -37,12 +41,16 @@ type StackConfiguration interface {
 	Tags() []*sdkcloudformation.Tag
 }
 
+type ecsClient interface {
+	stream.ECSServiceDescriber
+}
+
 type cfnClient interface {
 	// Methods augmented by the aws wrapper struct.
 	Create(*cloudformation.Stack) (string, error)
 	CreateAndWait(*cloudformation.Stack) error
 	WaitForCreate(ctx context.Context, stackName string) error
-	Update(*cloudformation.Stack) error
+	Update(*cloudformation.Stack) (string, error)
 	UpdateAndWait(*cloudformation.Stack) error
 	WaitForUpdate(ctx context.Context, stackName string) error
 	Delete(stackName string) error
@@ -72,6 +80,7 @@ type stackSetClient interface {
 // CloudFormation wraps the CloudFormationAPI interface
 type CloudFormation struct {
 	cfnClient      cfnClient
+	ecsClient      ecsClient
 	regionalClient func(region string) cfnClient
 	appStackSet    stackSetClient
 	box            packd.Box
@@ -79,8 +88,9 @@ type CloudFormation struct {
 
 // New returns a configured CloudFormation client.
 func New(sess *session.Session) CloudFormation {
-	return CloudFormation{
+	client := CloudFormation{
 		cfnClient: cloudformation.New(sess),
+		ecsClient: ecs.New(sess),
 		regionalClient: func(region string) cfnClient {
 			return cloudformation.New(sess.Copy(&aws.Config{
 				Region: aws.String(region),
@@ -89,11 +99,12 @@ func New(sess *session.Session) CloudFormation {
 		appStackSet: stackset.New(sess),
 		box:         templates.Box(),
 	}
+	return client
 }
 
 // errorEvents returns the list of status reasons of failed resource events
-func (cf CloudFormation) errorEvents(conf StackConfiguration) ([]string, error) {
-	events, err := cf.cfnClient.ErrorEvents(conf.StackName())
+func (cf CloudFormation) errorEvents(stackName string) ([]string, error) {
+	events, err := cf.cfnClient.ErrorEvents(stackName)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +123,44 @@ type renderStackChangesInput struct {
 	createChangeSet  func() (string, error)
 }
 
-func (cf CloudFormation) renderStackChanges(in renderStackChangesInput) error {
+func (cf CloudFormation) newRenderWorkloadInput(w progress.FileWriter, stack *cloudformation.Stack) *renderStackChangesInput {
+	in := &renderStackChangesInput{
+		w:                w,
+		stackName:        stack.Name,
+		stackDescription: fmt.Sprintf("Creating the infrastructure for stack %s", stack.Name),
+	}
+	in.createChangeSet = func() (changeSetID string, err error) {
+		spinner := progress.NewSpinner(w)
+		label := fmt.Sprintf("Proposing infrastructure changes for stack %s", stack.Name)
+		spinner.Start(label)
+		changeSetID, err = cf.cfnClient.Create(stack)
+		if err == nil {
+			// Successfully created the change set to create the stack.
+			spinner.Stop(log.Ssuccessf("%s\n", label))
+			return changeSetID, nil
+		}
+
+		var errAlreadyExists *cloudformation.ErrStackAlreadyExists
+		if !errors.As(err, &errAlreadyExists) {
+			// Unexpected error trying to create a stack.
+			spinner.Stop(log.Serrorf("%s\n", label))
+			return "", cf.handleStackError(stack.Name, err)
+		}
+
+		// We have to create an update stack change set instead.
+		in.stackDescription = fmt.Sprintf("Updating the infrastructure for stack %s", stack.Name)
+		changeSetID, err = cf.cfnClient.Update(stack)
+		if err != nil {
+			spinner.Stop(log.Serrorf("%s\n", label))
+			return "", cf.handleStackError(stack.Name, err)
+		}
+		spinner.Stop(log.Ssuccessf("%s\n", label))
+		return changeSetID, nil
+	}
+	return in
+}
+
+func (cf CloudFormation) renderStackChanges(in *renderStackChangesInput) error {
 	changeSetID, err := in.createChangeSet()
 	if err != nil {
 		return err
@@ -190,6 +238,12 @@ func (cf CloudFormation) changeRenderers(in changeRenderersInput) ([]progress.Re
 		}
 		var renderer progress.Renderer
 		switch {
+		case aws.StringValue(change.ResourceChange.ResourceType) == ecsServiceResourceType:
+			renderer = progress.ListeningECSServiceResourceRenderer(in.stackStreamer, cf.ecsClient, logicalID, description, progress.ECSServiceRendererOpts{
+				Group:      in.g,
+				Ctx:        in.ctx,
+				RenderOpts: in.opts,
+			})
 		case change.ResourceChange.ChangeSetId != nil:
 			// The resource change is a nested stack.
 			changeSetID := aws.StringValue(change.ResourceChange.ChangeSetId)
