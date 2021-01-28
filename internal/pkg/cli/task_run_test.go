@@ -591,7 +591,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Return(true, nil)
-				m.deployer.EXPECT().DeployTask(gomock.Any()).Return(nil).AnyTimes()
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				mockRepositoryAnytime(m)
 				m.runner.EXPECT().Run().AnyTimes()
 			},
@@ -605,7 +605,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Return(&config.Environment{
 						ExecutionRoleARN: "env execution role",
 					}, nil)
-				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				mockRepositoryAnytime(m)
 				m.runner.EXPECT().Run().AnyTimes()
 			},
@@ -613,7 +613,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		"error deploying resources": {
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
-				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
 					Name:    inGroupName,
 					Image:   "",
 					Command: []string{},
@@ -625,14 +625,14 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		"error updating resources": {
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
-				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
 					Name:    inGroupName,
 					Image:   "",
 					Command: []string{},
 				}).Return(nil)
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI)
-				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
 					Name:    inGroupName,
 					Image:   "uri/repo:latest",
 					Command: []string{},
@@ -644,7 +644,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		"error running tasks": {
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
-				m.deployer.EXPECT().DeployTask(gomock.Any()).Return(nil).Times(2)
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).Return(nil).Times(2)
 				mockRepositoryAnytime(m)
 				m.runner.EXPECT().Run().Return(nil, errors.New("error running"))
 				mockHasDefaultCluster(m)
@@ -658,7 +658,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Return(&config.Environment{
 						ExecutionRoleARN: "env execution role",
 					}, nil)
-				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(1)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any(), gomock.Len(1)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
 				mockRepositoryAnytime(m)
 				m.runner.EXPECT().Run().AnyTimes()
 				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Times(0)
@@ -667,7 +667,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		"deploy without execution role option if env is empty": {
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
-				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(0)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any(), gomock.Len(0)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
 				mockRepositoryAnytime(m)
 				m.runner.EXPECT().Run().AnyTimes()
 				mockHasDefaultCluster(m)
@@ -677,7 +677,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			inTag: tag,
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
-				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).AnyTimes()
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(
 					&exec.BuildArguments{
 						Context:        filepath.Dir(defaultDockerfilePath),
@@ -694,14 +694,14 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			inCommand: `/bin/sh -c "curl $ECS_CONTAINER_METADATA_URI_V4"`,
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
-				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
 					Name:    inGroupName,
 					Image:   "",
 					Command: []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
 				}).Times(1).Return(nil)
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI)
-				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
 					Name:    inGroupName,
 					Image:   "uri/repo:latest",
 					Command: []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
@@ -714,7 +714,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			inFollow: true,
 			inImage:  "image",
 			setupMocks: func(m runTaskMocks) {
-				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).AnyTimes()
 				m.runner.EXPECT().Run().Return([]*task.Task{
 					{
 						TaskARN: "task-1",
