@@ -43,6 +43,22 @@ efs:
 				},
 			},
 		},
+		"some fields excluded": {
+			inContent: []byte(`
+efs: 
+  filesystem_id: fs-12345
+  authorization_config:
+    access_point_id: ap-567
+`),
+			wantedStruct: EFSIDOrConfig{
+				EFSConfig: EFSVolumeConfiguration{
+					FileSystemID: aws.String("fs-12345"),
+					AuthConfig: AuthorizationConfig{
+						AccessPointID: aws.String("ap-567"),
+					},
+				},
+			},
+		},
 		"error if unmarshalable": {
 			inContent: []byte(`
 efs:
@@ -52,28 +68,25 @@ efs:
 		},
 	}
 
-	type testStorageStruct struct {
-		EFS EFSIDOrConfig `yaml:"efs"`
-	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 
-			s := testStorageStruct{}
+			v := Volume{}
 
-			err := yaml.Unmarshal(tc.inContent, &s)
+			err := yaml.Unmarshal(tc.inContent, &v)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
 				// check memberwise dereferenced pointer equality
-				require.Equal(t, tc.wantedStruct.EFSID, s.EFS.EFSID)
-				require.Equal(t, tc.wantedStruct.EFSConfig.FileSystemID, s.EFS.EFSConfig.FileSystemID)
-				require.Equal(t, tc.wantedStruct.EFSConfig.RootDirectory, s.EFS.EFSConfig.RootDirectory)
-				require.Equal(t, tc.wantedStruct.EFSConfig.TransitEncryption, s.EFS.EFSConfig.TransitEncryption)
-				require.Equal(t, tc.wantedStruct.EFSConfig.AuthConfig.AccessPointID, s.EFS.EFSConfig.AuthConfig.AccessPointID)
-				require.Equal(t, tc.wantedStruct.EFSConfig.AuthConfig.IAM, s.EFS.EFSConfig.AuthConfig.IAM)
-				require.Equal(t, tc.wantedStruct.EFSConfig.isEmpty(), s.EFS.EFSConfig.isEmpty())
+				require.Equal(t, tc.wantedStruct.EFSID, v.EFS.EFSID)
+				require.Equal(t, tc.wantedStruct.EFSConfig.FileSystemID, v.EFS.EFSConfig.FileSystemID)
+				require.Equal(t, tc.wantedStruct.EFSConfig.RootDirectory, v.EFS.EFSConfig.RootDirectory)
+				require.Equal(t, tc.wantedStruct.EFSConfig.TransitEncryption, v.EFS.EFSConfig.TransitEncryption)
+				require.Equal(t, tc.wantedStruct.EFSConfig.AuthConfig.AccessPointID, v.EFS.EFSConfig.AuthConfig.AccessPointID)
+				require.Equal(t, tc.wantedStruct.EFSConfig.AuthConfig.IAM, v.EFS.EFSConfig.AuthConfig.IAM)
+				require.Equal(t, tc.wantedStruct.EFSConfig.isEmpty(), v.EFS.EFSConfig.isEmpty())
+				require.Equal(t, tc.wantedStruct.EFSConfig.AuthConfig.isEmpty(), v.EFS.EFSConfig.AuthConfig.isEmpty())
 			}
 		})
 	}
