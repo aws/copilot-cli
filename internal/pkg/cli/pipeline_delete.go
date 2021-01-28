@@ -153,6 +153,9 @@ func (o *deletePipelineOpts) readPipelineManifest() error {
 }
 
 func (o *deletePipelineOpts) deleteSecret() error {
+	if o.PipelineSecret == "" {
+		return nil
+	}
 	if !o.shouldDeleteSecret {
 		confirmDeletion, err := o.prompt.Confirm(
 			fmt.Sprintf(pipelineSecretDeleteConfirmPrompt, o.PipelineSecret, o.PipelineName),
