@@ -368,7 +368,7 @@ func (o *initPipelineOpts) selectURL() error {
 // https	https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (fetch)
 // fed		codecommit::us-west-2://aws-sample (fetch)
 // ssh		ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (push)
-// bb	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (fetch)
+// bb		https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (fetch)
 
 // parseGitRemoteResults returns just the trimmed middle column (url) of the `git remote -v` results,
 // and skips urls from unsupported sources.
