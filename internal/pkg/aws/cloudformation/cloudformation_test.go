@@ -293,10 +293,15 @@ func TestCloudFormation_Update(t *testing.T) {
 			}
 
 			// WHEN
-			err := c.Update(mockStack)
+			id, err := c.Update(mockStack)
 
 			// THEN
-			require.Equal(t, tc.wantedErr, err)
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, mockChangeSetID, id)
+			}
 		})
 	}
 }

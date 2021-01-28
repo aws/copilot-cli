@@ -313,6 +313,11 @@ func TestEcsServiceResourceComponent_Listen(t *testing.T) {
 		go func() {
 			ch <- stream.StackEvent{
 				LogicalResourceID:  "Service",
+				PhysicalResourceID: "",
+				ResourceStatus:     "CREATE_IN_PROGRESS",
+			}
+			ch <- stream.StackEvent{
+				LogicalResourceID:  "Service",
 				PhysicalResourceID: "arn:aws:ecs:us-west-2:1111:service/webapp-test-Cluster/webapp-test-frontend",
 				ResourceStatus:     "CREATE_IN_PROGRESS",
 			}

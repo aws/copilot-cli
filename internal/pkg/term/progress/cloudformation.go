@@ -149,14 +149,17 @@ type ecsServiceResourceComponent struct {
 // Listen creates deploymentRenderers if the service is being created, or updated.
 // It closes the Done channel if the CFN resource is Done and the deploymentRenderers are also Done.
 func (c *ecsServiceResourceComponent) Listen() {
-	var prevStatus string
 	renderers := []DynamicRenderer{c.resourceRenderer}
 	for ev := range c.cfnStream {
 		if c.logicalID != ev.LogicalResourceID {
 			continue
 		}
-		curStatus := ev.ResourceStatus
-		if curStatus != prevStatus && cloudformation.StackStatus(curStatus).UpsertInProgress() {
+		if cloudformation.StackStatus(ev.ResourceStatus).UpsertInProgress() {
+			if ev.PhysicalResourceID == "" {
+				// New service creates receive two "CREATE_IN_PROGRESS" events.
+				// The first event doesn't have a service name yet, the second one has.
+				continue
+			}
 			// Start a deployment renderer if a service deployment is happening.
 			renderer := c.newDeploymentRender(ev.PhysicalResourceID, ev.Timestamp)
 			c.mu.Lock()
@@ -164,7 +167,6 @@ func (c *ecsServiceResourceComponent) Listen() {
 			c.mu.Unlock()
 			renderers = append(renderers, renderer)
 		}
-		prevStatus = curStatus
 	}
 
 	// Close the done channel once all the renderers are done listening.

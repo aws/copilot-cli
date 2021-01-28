@@ -15,7 +15,8 @@ import (
 const (
 	// ECS service deployment constants.
 	ecsPrimaryDeploymentStatus = "PRIMARY"
-	rollOutInProgress          = "IN_PROGRESS"
+	rollOutCompleted           = "COMPLETED"
+	rollOutFailed              = "FAILED"
 )
 
 var ecsEventFailureKeywords = []string{"fail", "unhealthy", "error", "throttle", "unable", "missing"}
@@ -43,7 +44,14 @@ func (d ECSDeployment) isPrimary() bool {
 }
 
 func (d ECSDeployment) done() bool {
-	return d.RolloutState != rollOutInProgress
+	switch d.RolloutState {
+	case rollOutFailed:
+		return true
+	case rollOutCompleted:
+		return d.DesiredCount == d.RunningCount
+	default:
+		return false
+	}
 }
 
 // ECSService is a description of an ECS service.

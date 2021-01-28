@@ -4,17 +4,17 @@
 package cloudformation
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 )
 
-// DeployService deploys a service stack and waits until the deployment is done.
+// DeployService deploys a service stack and renders progress updates to out until the deployment is done.
 // If the service stack doesn't exist, then it creates the stack.
 // If the service stack already exists, it updates the stack.
-func (cf CloudFormation) DeployService(conf StackConfiguration, opts ...cloudformation.StackOption) error {
+func (cf CloudFormation) DeployService(out progress.FileWriter, conf StackConfiguration, opts ...cloudformation.StackOption) error {
 	stack, err := toStack(conf)
 	if err != nil {
 		return err
@@ -22,25 +22,14 @@ func (cf CloudFormation) DeployService(conf StackConfiguration, opts ...cloudfor
 	for _, opt := range opts {
 		opt(stack)
 	}
-
-	err = cf.cfnClient.CreateAndWait(stack)
-	if err == nil { // Created a new stack, stop execution.
-		return nil
-	}
-	// The stack already exists, we need to update it instead.
-	var errAlreadyExists *cloudformation.ErrStackAlreadyExists
-	if !errors.As(err, &errAlreadyExists) {
-		return cf.handleStackError(conf, err)
-	}
-	err = cf.cfnClient.UpdateAndWait(stack)
-	return cf.handleStackError(conf, err)
+	return cf.renderStackChanges(cf.newRenderWorkloadInput(out, stack))
 }
 
-func (cf CloudFormation) handleStackError(conf StackConfiguration, err error) error {
+func (cf CloudFormation) handleStackError(stackName string, err error) error {
 	if err == nil {
 		return nil
 	}
-	reasons, describeErr := cf.errorEvents(conf)
+	reasons, describeErr := cf.errorEvents(stackName)
 	if describeErr != nil {
 		return fmt.Errorf("%w: describe stack: %v", err, describeErr)
 	}
