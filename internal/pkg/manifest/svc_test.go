@@ -32,7 +32,7 @@ image:
 cpu: 512
 memory: 1024
 count: 1
-execute_command: true
+exec: true
 http:
   path: "svc"
   target_container: "frontend"

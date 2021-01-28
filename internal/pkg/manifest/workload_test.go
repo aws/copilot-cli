@@ -114,7 +114,7 @@ func TestExec_UnmarshalYAML(t *testing.T) {
 		wantedError  error
 	}{
 		"use default with empty value": {
-			inContent: []byte(`execute_command:
+			inContent: []byte(`exec:
 count: 1`),
 
 			wantedStruct: ExecuteCommand{
@@ -129,14 +129,14 @@ count: 1`),
 			},
 		},
 		"simple enable": {
-			inContent: []byte(`execute_command: true`),
+			inContent: []byte(`exec: true`),
 
 			wantedStruct: ExecuteCommand{
 				Enable: aws.Bool(true),
 			},
 		},
 		"with config": {
-			inContent: []byte(`execute_command:
+			inContent: []byte(`exec:
   enable: true`),
 			wantedStruct: ExecuteCommand{
 				Enable: aws.Bool(false),
@@ -146,7 +146,7 @@ count: 1`),
 			},
 		},
 		"Error if unmarshalable": {
-			inContent: []byte(`execute_command:
+			inContent: []byte(`exec:
   badfield: OH NOES
   otherbadfield: DOUBLE BAD`),
 			wantedError: errUnmarshalExec,

@@ -15,8 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
 type api interface {
@@ -309,8 +307,7 @@ func (e *ECS) ExecuteCommand(in ExecuteCommandInput) (err error) {
 		Task:        aws.String(in.Task),
 	})
 	if err != nil {
-		log.Errorf("Failed to execute command %s. Is %s set in your manifest?\n", in.Command, color.HighlightCode("execute_command: true"))
-		return fmt.Errorf("execute command: %w", err)
+		return &ErrExecuteCommand{err: err}
 	}
 	sessID := aws.StringValue(execCmdresp.Session.SessionId)
 	if err = e.newSessStarter().StartSession(execCmdresp.Session); err != nil {

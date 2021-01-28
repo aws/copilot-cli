@@ -322,7 +322,7 @@ type TaskConfig struct {
 	CPU            *int              `yaml:"cpu"`
 	Memory         *int              `yaml:"memory"`
 	Count          Count             `yaml:"count"`
-	ExecuteCommand ExecuteCommand    `yaml:"execute_command"`
+	ExecuteCommand ExecuteCommand    `yaml:"exec"`
 	Variables      map[string]string `yaml:"variables"`
 	Secrets        map[string]string `yaml:"secrets"`
 }

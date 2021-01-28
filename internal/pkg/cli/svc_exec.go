@@ -138,7 +138,7 @@ func (o *svcExecOpts) Execute() error {
 	}); err != nil {
 		var errExecCmd *awsecs.ErrExecuteCommand
 		if errors.As(err, &errExecCmd) {
-			log.Errorf("Failed to execute command %s. Is %s set in your manifest?\n", o.command, color.HighlightCode("execute_command: true"))
+			log.Errorf("Failed to execute command %s. Is %s set in your manifest?\n", o.command, color.HighlightCode("exec: true"))
 		}
 		return fmt.Errorf("execute command %s in container %s: %w", o.command, container, err)
 	}
