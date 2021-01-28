@@ -278,7 +278,7 @@ func (o *updatePipelineOpts) Execute() error {
 func (o *updatePipelineOpts) RequiredActions() []string {
 	return []string{
 		fmt.Sprintf("Go to %s to update the status of %s from PENDING to AVAILABLE.", color.HighlightResource(connectionsURL), color.HighlightResource(connectionName)),
-		fmt.Sprintf("Then go to %s and click %s.", fmt.Sprintf(fmtpipelineURL, o.region, o.pipelineName, o.region), color.HighlightCode("Retry")),
+		fmt.Sprintf("Then go to %s and click %s.", fmt.Sprintf(color.HighlightResource(fmtpipelineURL), o.region, o.pipelineName, o.region), color.HighlightCode("Retry")),
 	}
 }
 
