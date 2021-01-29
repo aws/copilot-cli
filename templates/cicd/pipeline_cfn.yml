@@ -153,22 +153,6 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - codestar-connections:CreateConnection
-              - codestar-connections:DeleteConnection
-              - codestar-connections:GetConnection
-              - codestar-connections:ListConnections
-              - codestar-connections:GetIndividualAccessToken
-              - codestar-connections:GetInstallationUrl
-              - codestar-connections:ListInstallationTargets
-              - codestar-connections:StartOAuthHandshake
-              - codestar-connections:UpdateConnectionInstallation
-              - codestar-connections:UseConnection
-              - codestar-connections:RegisterAppCode
-              - codestar-connections:StartAppRegistrationHandshake
-              - codestar-connections:StartUploadArchiveToS3
-              - codestar-connections:GetUploadArchiveToS3Status
-              - codestar-connections:PassConnection
-              - codestar-connections:PassedToService
               - codepipeline:*
               - codecommit:GetBranch
               - codecommit:GetCommit
@@ -195,6 +179,28 @@ Resources:
               - s3:GetBucketLocation
             Resource:
               - "*"
+          {{- if ne .Source.ProviderName "CodeCommit"}}
+          - Effect: Allow
+            Action:
+              - codestar-connections:CreateConnection
+              - codestar-connections:DeleteConnection
+              - codestar-connections:GetConnection
+              - codestar-connections:ListConnections
+              - codestar-connections:GetIndividualAccessToken
+              - codestar-connections:GetInstallationUrl
+              - codestar-connections:ListInstallationTargets
+              - codestar-connections:StartOAuthHandshake
+              - codestar-connections:UpdateConnectionInstallation
+              - codestar-connections:UseConnection
+              - codestar-connections:RegisterAppCode
+              - codestar-connections:StartAppRegistrationHandshake
+              - codestar-connections:StartUploadArchiveToS3
+              - codestar-connections:GetUploadArchiveToS3Status
+              - codestar-connections:PassConnection
+              - codestar-connections:PassedToService
+            Resource:
+              - !Ref SourceConnection
+          {{- end}}
           - Effect: Allow
             Action:
               - kms:Decrypt
