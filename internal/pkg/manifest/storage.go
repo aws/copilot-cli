@@ -17,12 +17,11 @@ type StorageConfig struct {
 
 // Storage represents the options for external and native storage.
 type Storage struct {
-	Volumes []Volume `yaml:"volumes"`
+	Volumes map[string]Volume `yaml:"volumes"`
 }
 
 // Volume is an abstraction which merges the MountPoint and Volumes concepts from the ECS Task Definition
 type Volume struct {
-	Name           string        `yaml:"name"` // This is used to name the volume and fill the VolumeFrom field in the MountPoint
 	EFS            EFSIDOrConfig `yaml:"efs"`
 	MountPointOpts `yaml:",inline"`
 }
