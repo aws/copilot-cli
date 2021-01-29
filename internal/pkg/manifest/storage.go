@@ -5,6 +5,7 @@ package manifest
 import (
 	"errors"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"gopkg.in/yaml.v3"
 )
 
@@ -28,13 +29,13 @@ type Volume struct {
 
 // MountPointOpts is shared between Volumes for the main container and MountPoints for sidecars.
 type MountPointOpts struct {
-	ContainerPath string `yaml:"path"`
-	ReadOnly      bool   `yaml:"read_only"`
+	ContainerPath *string `yaml:"path"`
+	ReadOnly      *bool   `yaml:"read_only"`
 }
 
 // MountPoint is used to let sidecars mount volumes defined in `storage`
 type MountPoint struct {
-	SourceVolume   string `yaml:"source_volume"`
+	SourceVolume   *string `yaml:"source_volume"`
 	MountPointOpts `yaml:",inline"`
 }
 
@@ -43,6 +44,14 @@ type MountPoint struct {
 type EFSIDOrConfig struct {
 	EFSID     *string
 	EFSConfig EFSVolumeConfiguration
+}
+
+// IsString returns whether the given EFSIDOrConfig uses the string member and not the struct member.
+func (e *EFSIDOrConfig) IsString() bool {
+	if !e.EFSConfig.isEmpty() && aws.StringValue(e.EFSID) == "" {
+		return false
+	}
+	return true
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the EFSIDOrConfig
@@ -74,12 +83,12 @@ func (e *EFSIDOrConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 type EFSVolumeConfiguration struct {
 	FileSystemID      *string             `yaml:"filesystem_id"`      // Required.
 	RootDirectory     *string             `yaml:"root_directory"`     // Default "/"
-	TransitEncryption bool                `yaml:"transit_encryption"` // Default true
+	TransitEncryption *bool               `yaml:"transit_encryption"` // Default true
 	AuthConfig        AuthorizationConfig `yaml:"authorization_config"`
 }
 
 func (e *EFSVolumeConfiguration) isEmpty() bool {
-	if e.FileSystemID == nil && e.RootDirectory == nil && !e.TransitEncryption && e.AuthConfig.isEmpty() {
+	if e.FileSystemID == nil && e.RootDirectory == nil && e.TransitEncryption == nil && e.AuthConfig.isEmpty() {
 		return true
 	}
 	return false
@@ -87,12 +96,12 @@ func (e *EFSVolumeConfiguration) isEmpty() bool {
 
 // AuthorizationConfig holds options relating to access points and IAM authorization.
 type AuthorizationConfig struct {
-	IAM           bool    `yaml:"iam"`             // Default true
+	IAM           *bool   `yaml:"iam"`             // Default true
 	AccessPointID *string `yaml:"access_point_id"` // Default ""
 }
 
 func (a *AuthorizationConfig) isEmpty() bool {
-	if !a.IAM && a.AccessPointID == nil {
+	if a.IAM == nil && a.AccessPointID == nil {
 		return true
 	}
 	return false

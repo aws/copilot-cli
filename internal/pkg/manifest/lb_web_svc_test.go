@@ -267,6 +267,21 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Value: aws.Int(1),
 						},
 					},
+					StorageConfig: StorageConfig{
+						Storage: Storage{
+							Volumes: map[string]Volume{
+								"myEFSVolume": {
+									MountPointOpts: MountPointOpts{
+										ContainerPath: aws.String("/path/to/files"),
+										ReadOnly:      aws.Bool(false),
+									},
+									EFS: EFSIDOrConfig{
+										EFSID: aws.String("fs-1234"),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 			envToApply: "prod-iad",
@@ -298,6 +313,21 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Memory: aws.Int(1024),
 						Count: Count{
 							Value: aws.Int(1),
+						},
+					},
+					StorageConfig: StorageConfig{
+						Storage: Storage{
+							Volumes: map[string]Volume{
+								"myEFSVolume": {
+									MountPointOpts: MountPointOpts{
+										ContainerPath: aws.String("/path/to/files"),
+										ReadOnly:      aws.Bool(false),
+									},
+									EFS: EFSIDOrConfig{
+										EFSID: aws.String("fs-1234"),
+									},
+								},
+							},
 						},
 					},
 				},
@@ -341,6 +371,27 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"TWILIO_TOKEN": "1111",
 						},
 					},
+					StorageConfig: StorageConfig{
+						Storage: Storage{
+							Volumes: map[string]Volume{
+								"myEFSVolume": {
+									MountPointOpts: MountPointOpts{
+										ContainerPath: aws.String("/path/to/files"),
+										ReadOnly:      aws.Bool(false),
+									},
+									EFS: EFSIDOrConfig{
+										EFSConfig: EFSVolumeConfiguration{
+											FileSystemID: aws.String("fs-1234"),
+											AuthConfig: AuthorizationConfig{
+												IAM:           aws.Bool(true),
+												AccessPointID: aws.String("ap-1234"),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
 					Sidecar: Sidecar{
 						Sidecars: map[string]*SidecarConfig{
 							"xray": {
@@ -378,10 +429,35 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								"DDB_TABLE_NAME": "awards-prod",
 							},
 						},
+						StorageConfig: StorageConfig{
+							Storage: Storage{
+								Volumes: map[string]Volume{
+									"myEFSVolume": {
+										EFS: EFSIDOrConfig{
+											EFSConfig: EFSVolumeConfiguration{
+												FileSystemID: aws.String("fs-5678"),
+												AuthConfig: AuthorizationConfig{
+													AccessPointID: aws.String("ap-5678"),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
 						Sidecar: Sidecar{
 							Sidecars: map[string]*SidecarConfig{
 								"xray": {
 									Port: aws.String("2000/udp"),
+									MountPoints: []MountPoint{
+										{
+											SourceVolume: aws.String("myEFSVolume"),
+											MountPointOpts: MountPointOpts{
+												ReadOnly:      aws.Bool(true),
+												ContainerPath: aws.String("/var/www"),
+											},
+										},
+									},
 								},
 							},
 						},
@@ -433,12 +509,42 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"TWILIO_TOKEN": "1111",
 						},
 					},
+					StorageConfig: StorageConfig{
+						Storage: Storage{
+							Volumes: map[string]Volume{
+								"myEFSVolume": {
+									MountPointOpts: MountPointOpts{
+										ContainerPath: aws.String("/path/to/files"),
+										ReadOnly:      aws.Bool(false),
+									},
+									EFS: EFSIDOrConfig{
+										EFSConfig: EFSVolumeConfiguration{
+											FileSystemID: aws.String("fs-5678"),
+											AuthConfig: AuthorizationConfig{
+												IAM:           aws.Bool(true),
+												AccessPointID: aws.String("ap-5678"),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
 					Sidecar: Sidecar{
 						Sidecars: map[string]*SidecarConfig{
 							"xray": {
 								Port:       aws.String("2000/udp"),
 								Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 								CredsParam: aws.String("some arn"),
+								MountPoints: []MountPoint{
+									{
+										SourceVolume: aws.String("myEFSVolume"),
+										MountPointOpts: MountPointOpts{
+											ReadOnly:      aws.Bool(true),
+											ContainerPath: aws.String("/var/www"),
+										},
+									},
+								},
 							},
 						},
 					},

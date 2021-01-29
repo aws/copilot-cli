@@ -35,9 +35,9 @@ efs:
 				EFSConfig: EFSVolumeConfiguration{
 					FileSystemID:      aws.String("fs-12345"),
 					RootDirectory:     aws.String("/"),
-					TransitEncryption: false,
+					TransitEncryption: aws.Bool(false),
 					AuthConfig: AuthorizationConfig{
-						IAM:           true,
+						IAM:           aws.Bool(true),
 						AccessPointID: aws.String("ap-567"),
 					},
 				},
