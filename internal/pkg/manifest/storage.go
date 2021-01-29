@@ -27,27 +27,13 @@ type SidecarMountPoint struct {
 
 // EFSVolumeConfiguration holds options which tell ECS how to reach out to the EFS filesystem.
 type EFSVolumeConfiguration struct {
-	FileSystemID  *string             `yaml:"id"`  // Required.
-	RootDirectory *string             `yaml:"dir"` // Default "/"
+	FileSystemID  *string             `yaml:"id"`       // Required.
+	RootDirectory *string             `yaml:"root_dir"` // Default "/"
 	AuthConfig    AuthorizationConfig `yaml:"auth"`
-}
-
-func (e *EFSVolumeConfiguration) isEmpty() bool {
-	if e.FileSystemID == nil && e.RootDirectory == nil && e.AuthConfig.isEmpty() {
-		return true
-	}
-	return false
 }
 
 // AuthorizationConfig holds options relating to access points and IAM authorization.
 type AuthorizationConfig struct {
 	IAM           *bool   `yaml:"iam"`             // Default true
 	AccessPointID *string `yaml:"access_point_id"` // Default ""
-}
-
-func (a *AuthorizationConfig) isEmpty() bool {
-	if a.IAM == nil && a.AccessPointID == nil {
-		return true
-	}
-	return false
 }
