@@ -204,16 +204,6 @@ func (s *GitHubSource) Owner() (string, error) {
 	return owner, nil
 }
 
-// Owner returns the repository owner portion. For example,
-// given "aws/amazon-copilot", this function returns "aws".
-func (s *BitbucketSource) Owner() (string, error) {
-	owner, _, err := s.parseOwnerAndRepo()
-	if err != nil {
-		return "", err
-	}
-	return owner, nil
-}
-
 // PipelineStage represents configuration for each deployment stage
 // of a workspace. A stage consists of the Config Environment the pipeline
 // is deploying to, the containerized services that will be deployed, and
