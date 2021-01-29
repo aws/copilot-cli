@@ -45,25 +45,25 @@ Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or
 
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
-	githubURL             = "github.com"
-	ccIdentifier          = "codecommit"
-	bbURL                 = "bitbucket.org"
-	awsURL                = "aws.amazon.com"
-	ghProviderName        = "GitHub"
-	ccProviderName        = "CodeCommit"
-	bbProviderName        = "Bitbucket"
-	defaultGHBranch       = "main"
-	defaultCCBranch       = "master"
-	defaultBBBranch       = "master"
-)
-
-const (
-	fmtSecretName     = "github-token-%s-%s"
+	// For a GitHub repository.
+	githubURL         = "github.com"
+	ghProviderName    = "GitHub"
+	defaultGHBranch   = "main"
 	fmtGHPipelineName = "pipeline-%s-%s-%s"
-	fmtCCPipelineName = "pipeline-%s-%s"
-	fmtBBPipelineName = "pipeline-%s-%s-%s"
 	fmtGHRepoURL      = "https://%s/%s/%s"
+	fmtSecretName     = "github-token-%s-%s"
+	// For a CodeCommit repository.
+	awsURL            = "aws.amazon.com"
+	ccIdentifier      = "codecommit"
+	ccProviderName    = "CodeCommit"
+	defaultCCBranch   = "master"
+	fmtCCPipelineName = "pipeline-%s-%s"
 	fmtCCRepoURL      = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse"
+	// For a Bitbucket repository.
+	bbURL             = "bitbucket.org"
+	bbProviderName    = "Bitbucket"
+	defaultBBBranch   = "master"
+	fmtBBPipelineName = "pipeline-%s-%s-%s"
 	fmtBBRepoURL      = "https://%s@%s/%s/%s"
 )
 
@@ -597,42 +597,43 @@ func (o *initPipelineOpts) secretName() string {
 }
 
 func (o *initPipelineOpts) pipelineName() (string, error) {
-	if o.provider == ghProviderName {
-		return fmt.Sprintf(fmtGHPipelineName, o.appName, o.repoOwner, o.repoName), nil
+	var name string
+	switch o.provider {
+	case ghProviderName:
+		name = fmt.Sprintf(fmtGHPipelineName, o.appName, o.repoOwner, o.repoName)
+	case ccProviderName:
+		name = fmt.Sprintf(fmtCCPipelineName, o.appName, o.repoName)
+	case bbProviderName:
+		name = fmt.Sprintf(fmtBBPipelineName, o.appName, o.repoOwner, o.repoName)
+	default:
+		return "", fmt.Errorf("unable to create pipeline name for repo %s from provider %s", o.repoName, o.provider)
 	}
-	if o.provider == ccProviderName {
-		return fmt.Sprintf(fmtCCPipelineName, o.appName, o.repoName), nil
-	}
-	if o.provider == bbProviderName {
-		return fmt.Sprintf(fmtBBPipelineName, o.appName, o.repoOwner, o.repoName), nil
-	}
-	return "", fmt.Errorf("unable to create pipeline name for repo %s from provider %s", o.repoName, o.provider)
+	return name, nil
 }
 
 func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
-	if o.provider == ghProviderName {
-		config := &manifest.GitHubProperties{
+	var config interface{}
+	switch o.provider {
+	case ghProviderName:
+		config = &manifest.GitHubProperties{
 			RepositoryURL:         fmt.Sprintf(fmtGHRepoURL, githubURL, o.repoOwner, o.repoName),
 			Branch:                o.repoBranch,
 			GithubSecretIdKeyName: o.secret,
 		}
-		return manifest.NewProvider(config)
-	}
-	if o.provider == ccProviderName {
-		config := &manifest.CodeCommitProperties{
+	case ccProviderName:
+		config = &manifest.CodeCommitProperties{
 			RepositoryURL: fmt.Sprintf(fmtCCRepoURL, o.ccRegion, awsURL, o.repoName),
 			Branch:        o.repoBranch,
 		}
-		return manifest.NewProvider(config)
-	}
-	if o.provider == bbProviderName {
-		config := &manifest.BitbucketProperties{
+	case bbProviderName:
+		config = &manifest.BitbucketProperties{
 			RepositoryURL: fmt.Sprintf(fmtBBRepoURL, o.repoOwner, bbURL, o.repoOwner, o.repoName),
 			Branch:        o.repoBranch,
 		}
-		return manifest.NewProvider(config)
+	default:
+		return nil, fmt.Errorf("unable to create pipeline source provider for %s", o.repoName)
 	}
-	return nil, fmt.Errorf("unable to create pipeline source provider for %s", o.repoName)
+	return manifest.NewProvider(config)
 }
 
 func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {
