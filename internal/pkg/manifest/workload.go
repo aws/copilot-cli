@@ -23,8 +23,8 @@ const (
 )
 
 var (
-	errUnmarshalBuildOpts = errors.New("unmarshal build field into string or compose-style map")
-	errUnmarshalCountOpts = errors.New(`unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalBuildOpts = errors.New("can't unmarshal build field into string or compose-style map")
+	errUnmarshalCountOpts = errors.New(`can't unmarshal "count" field to an integer or autoscaling configuration`)
 )
 
 var dockerfileDefaultName = "Dockerfile"
