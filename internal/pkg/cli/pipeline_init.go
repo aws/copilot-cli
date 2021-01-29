@@ -49,22 +49,22 @@ const (
 	githubURL         = "github.com"
 	ghProviderName    = "GitHub"
 	defaultGHBranch   = "main"
-	fmtGHPipelineName = "pipeline-%s-%s-%s"
-	fmtGHRepoURL      = "https://%s/%s/%s"
-	fmtSecretName     = "github-token-%s-%s"
+	fmtGHPipelineName = "pipeline-%s-%s-%s"  // Ex: "pipeline-appName-repoOwner-repoName"
+	fmtGHRepoURL      = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
+	fmtSecretName     = "github-token-%s-%s" // Ex: "github-token-appName-repoName"
 	// For a CodeCommit repository.
 	awsURL            = "aws.amazon.com"
 	ccIdentifier      = "codecommit"
 	ccProviderName    = "CodeCommit"
 	defaultCCBranch   = "master"
-	fmtCCPipelineName = "pipeline-%s-%s"
-	fmtCCRepoURL      = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse"
+	fmtCCPipelineName = "pipeline-%s-%s"                                                    // Ex: "pipeline-appName-repoName"
+	fmtCCRepoURL      = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse" // Ex: "https://region.console.aws.amazon.com/codesuite/codecommit/repositories/repoName/browse"
 	// For a Bitbucket repository.
 	bbURL             = "bitbucket.org"
 	bbProviderName    = "Bitbucket"
 	defaultBBBranch   = "master"
-	fmtBBPipelineName = "pipeline-%s-%s-%s"
-	fmtBBRepoURL      = "https://%s@%s/%s/%s"
+	fmtBBPipelineName = "pipeline-%s-%s-%s"   // Ex: "pipeline-appName-repoOwner-repoName"
+	fmtBBRepoURL      = "https://%s@%s/%s/%s" // Ex: "https://repoOwner@bitbucket.org/repoOwner/repoName
 )
 
 var (
