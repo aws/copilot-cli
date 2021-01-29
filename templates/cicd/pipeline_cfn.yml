@@ -19,7 +19,7 @@ Resources:
     Type: AWS::CodeStarConnections::Connection
     Condition: IsBitbucket
     Properties:
-      ConnectionName: Copilot-Connection
+      ConnectionName: {{.Source.ConnectionName}}
       ProviderType: Bitbucket
   BuildProjectRole:
     Type: AWS::IAM::Role

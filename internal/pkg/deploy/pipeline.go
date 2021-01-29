@@ -164,6 +164,20 @@ func (s *BitbucketSource) parseOwnerAndRepo() (owner, repo string, err error) {
 	return matches["owner"], matches["repo"], nil
 }
 
+func (s *BitbucketSource) ConnectionName() (string, error) {
+	owner, repo, err := s.parseOwnerAndRepo()
+	if err != nil {
+		return "", fmt.Errorf("parse owner and repo to generate connection name: %w", err)
+	}
+	if len(owner) > 5 {
+		owner = owner[:5]
+	}
+	if len(repo) > 18 {
+		repo = repo[:18]
+	}
+	return fmt.Sprintf("copilot-%s-%s", owner, repo), nil
+}
+
 // Repository returns the repository portion. For example,
 // given "aws/amazon-copilot", this function returns "amazon-copilot".
 func (s *GitHubSource) Repository() (string, error) {
