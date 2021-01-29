@@ -263,9 +263,9 @@ func (o *initPipelineOpts) askRepository() error {
 	case strings.Contains(o.repoURL, githubURL):
 		return o.askGitHubRepoDetails()
 	case strings.Contains(o.repoURL, ccIdentifier):
-		return o.askCodeCommitRepoDetails()
+		return o.parseCodeCommitRepoDetails()
 	case strings.Contains(o.repoURL, bbURL):
-		return o.askBitbucketRepoDetails()
+		return o.parseBitbucketRepoDetails()
 	}
 	return nil
 }
@@ -290,7 +290,7 @@ func (o *initPipelineOpts) askGitHubRepoDetails() error {
 	return nil
 }
 
-func (o *initPipelineOpts) askCodeCommitRepoDetails() error {
+func (o *initPipelineOpts) parseCodeCommitRepoDetails() error {
 	o.provider = ccProviderName
 	repoDetails, err := ccRepoURL(o.repoURL).parse()
 	if err != nil {
@@ -315,7 +315,7 @@ func (o *initPipelineOpts) askCodeCommitRepoDetails() error {
 	return nil
 }
 
-func (o *initPipelineOpts) askBitbucketRepoDetails() error {
+func (o *initPipelineOpts) parseBitbucketRepoDetails() error {
 	o.provider = bbProviderName
 	repoDetails, err := bbRepoURL(o.repoURL).parse()
 	if err != nil {
