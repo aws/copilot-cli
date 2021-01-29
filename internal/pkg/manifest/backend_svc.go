@@ -35,10 +35,11 @@ type BackendService struct {
 
 // BackendServiceConfig holds the configuration that can be overriden per environments.
 type BackendServiceConfig struct {
-	ImageConfig imageWithPortAndHealthcheck `yaml:"image,flow"`
-	TaskConfig  `yaml:",inline"`
-	*Logging    `yaml:"logging,flow"`
-	Sidecar     `yaml:",inline"`
+	ImageConfig   imageWithPortAndHealthcheck `yaml:"image,flow"`
+	TaskConfig    `yaml:",inline"`
+	*Logging      `yaml:"logging,flow"`
+	Sidecar       `yaml:",inline"`
+	StorageConfig `yaml:",inline"`
 }
 
 // LogConfigOpts converts the service's Firelens configuration into a format parsable by the templates pkg.

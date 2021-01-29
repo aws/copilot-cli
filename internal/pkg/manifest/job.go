@@ -40,6 +40,7 @@ type ScheduledJobConfig struct {
 	TaskConfig              `yaml:",inline"`
 	*Logging                `yaml:"logging,flow"`
 	Sidecar                 `yaml:",inline"`
+	StorageConfig           `yaml:",inline"`
 	On                      JobTriggerConfig `yaml:"on,flow"`
 	JobFailureHandlerConfig `yaml:",inline"`
 }

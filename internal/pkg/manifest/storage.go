@@ -10,17 +10,33 @@ import (
 
 var errUnmarshalEFSOpts = errors.New("unmarshal efs field into string or map")
 
-// StorageConfig represents the options for external and native storage.
+// StorageConfig is embedded into top level manifest structs when unmarshaling.
 type StorageConfig struct {
-	Volumes []Volume `yaml:",flow"`
+	Storage Storage `yaml:"storage"`
+}
+
+// Storage represents the options for external and native storage.
+type Storage struct {
+	Volumes []Volume `yaml:"volumes"`
 }
 
 // Volume is an abstraction which merges the MountPoint and Volumes concepts from the ECS Task Definition
 type Volume struct {
-	Name          string        `yaml:"name"`
-	ContainerPath string        `yaml:"path"`
-	ReadOnly      bool          `yaml:"read_only"`
-	EFS           EFSIDOrConfig `yaml:"efs"`
+	Name           string        `yaml:"name"` // This is used to name the volume and fill the VolumeFrom field in the MountPoint
+	EFS            EFSIDOrConfig `yaml:"efs"`
+	MountPointOpts `yaml:",inline"`
+}
+
+// MountPointOpts is shared between Volumes for the main container and MountPoints for sidecars.
+type MountPointOpts struct {
+	ContainerPath string `yaml:"path"`
+	ReadOnly      bool   `yaml:"read_only"`
+}
+
+// MountPoint is used to let sidecars mount volumes defined in `storage`
+type MountPoint struct {
+	SourceVolume   string `yaml:"source_volume"`
+	MountPointOpts `yaml:",inline"`
 }
 
 // EFSIDOrConfig is a struct with a custom unmarshaler which can read either a string
