@@ -27,23 +27,23 @@ TaskRole:
                 StringEquals:
                   'iam:ResourceTag/copilot-application': !Sub '${AppName}'
                   'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
-      {{- if .EFS.ID -}}
-      - PolicyName: 'GrantEFSAccess'
+      {{- range $EFS := range .Storage.EFSPerms}}
+      - PolicyName: 'GrantEFSAccess{{$EFS.FilesystemID}}'
         PolicyDocument:
           Version: '2012-10-07'
           Statement:
             - Effect: 'Allow'
               Action:
                 - 'elasticfilesystem:ClientMount'
-                {{- if .EFS.Write -}}
+                {{- if $EFS.Write}}
                 - 'elasticfilesystem:ClientWrite'
                 {{- end -}}
-              {{- if .EFS.AccessPointID -}}
+              {{- if $EFS.AccessPointID}}
               Condition:
                 StringEquals:
-                  'elasticfilesystem:AccessPointARN': !Sub 'arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountID}:access-point/{{.EFS.AccessPointID}}'
-              {{- end -}}
+                  'elasticfilesystem:AccessPointARN': !Sub 'arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountID}:access-point/{{$EFS.AccessPointID}}'
+              {{- end}}
               Resource:
-                - !Sub 'arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountID}:filesystem/{{.EFS.ID}}''
+                - !Sub 'arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountID}:filesystem/{{$EFS.FilesystemID}}''
       {{- end}}
 
