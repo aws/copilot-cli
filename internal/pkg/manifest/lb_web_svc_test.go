@@ -439,6 +439,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 												AuthConfig: AuthorizationConfig{
 													AccessPointID: aws.String("ap-5678"),
 												},
+												TransitEncryption: true,
 											},
 										},
 									},
@@ -524,6 +525,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 												IAM:           aws.Bool(true),
 												AccessPointID: aws.String("ap-5678"),
 											},
+											TransitEncryption: true,
 										},
 									},
 								},

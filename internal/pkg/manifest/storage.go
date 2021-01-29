@@ -83,12 +83,12 @@ func (e *EFSIDOrConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 type EFSVolumeConfiguration struct {
 	FileSystemID      *string             `yaml:"filesystem_id"`      // Required.
 	RootDirectory     *string             `yaml:"root_directory"`     // Default "/"
-	TransitEncryption *bool               `yaml:"transit_encryption"` // Default true
+	TransitEncryption bool                `yaml:"transit_encryption"` // Default true
 	AuthConfig        AuthorizationConfig `yaml:"authorization_config"`
 }
 
 func (e *EFSVolumeConfiguration) isEmpty() bool {
-	if e.FileSystemID == nil && e.RootDirectory == nil && e.TransitEncryption == nil && e.AuthConfig.isEmpty() {
+	if e.FileSystemID == nil && e.RootDirectory == nil && !e.TransitEncryption && e.AuthConfig.isEmpty() {
 		return true
 	}
 	return false
