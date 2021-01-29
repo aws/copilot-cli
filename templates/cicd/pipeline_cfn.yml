@@ -7,20 +7,14 @@
 # limitations under the License.
 AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for {{$.AppName}}
-Parameters:
-  ProviderType:
-    Type: String
-    Default: {{.Source.ProviderName}}
-Conditions:
-  IsBitbucket:
-    !Equals [!Ref ProviderType, "Bitbucket"]
 Resources:
+  {{- if eq .Source.ProviderName "Bitbucket"}}
   SourceConnection:
     Type: AWS::CodeStarConnections::Connection
-    Condition: IsBitbucket
     Properties:
       ConnectionName: {{.Source.ConnectionName}}
       ProviderType: Bitbucket
+  {{- end}}
   BuildProjectRole:
     Type: AWS::IAM::Role
     Properties:
