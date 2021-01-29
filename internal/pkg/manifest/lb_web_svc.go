@@ -42,12 +42,12 @@ type LoadBalancedWebService struct {
 
 // LoadBalancedWebServiceConfig holds the configuration for a load balanced web service.
 type LoadBalancedWebServiceConfig struct {
-	ImageConfig   ServiceImageWithPort `yaml:"image,flow"`
-	RoutingRule   `yaml:"http,flow"`
-	TaskConfig    `yaml:",inline"`
-	*Logging      `yaml:"logging,flow"`
-	Sidecar       `yaml:",inline"`
-	StorageConfig `yaml:",inline"`
+	ImageConfig ServiceImageWithPort `yaml:"image,flow"`
+	RoutingRule `yaml:"http,flow"`
+	TaskConfig  `yaml:",inline"`
+	*Logging    `yaml:"logging,flow"`
+	Sidecar     `yaml:",inline"`
+	Storage     `yaml:"storage"`
 }
 
 // LogConfigOpts converts the service's Firelens configuration into a format parsable by the templates pkg.
