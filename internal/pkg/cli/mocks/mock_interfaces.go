@@ -3484,9 +3484,9 @@ func (m *MocktaskDeployer) EXPECT() *MocktaskDeployerMockRecorder {
 }
 
 // DeployTask mocks base method
-func (m *MocktaskDeployer) DeployTask(input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error {
+func (m *MocktaskDeployer) DeployTask(out progress.FileWriter, input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{input}
+	varargs := []interface{}{out, input}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -3496,9 +3496,9 @@ func (m *MocktaskDeployer) DeployTask(input *deploy.CreateTaskResourcesInput, op
 }
 
 // DeployTask indicates an expected call of DeployTask
-func (mr *MocktaskDeployerMockRecorder) DeployTask(input interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MocktaskDeployerMockRecorder) DeployTask(out, input interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{input}, opts...)
+	varargs := append([]interface{}{out, input}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeployTask), varargs...)
 }
 

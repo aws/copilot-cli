@@ -83,13 +83,13 @@ func TestCloudFormation_DeployService(t *testing.T) {
 		testDeployWorkload_StackStreamerFailureShouldCancelRenderer(t, when)
 	})
 	t.Run("returns an error if stack creation fails", func(t *testing.T) {
-		testDeployWorkload_StreamUntilStackCreationFails(t, when)
+		testDeployWorkload_StreamUntilStackCreationFails(t, "hello", when)
 	})
 	t.Run("renders a stack with an ECS service", func(t *testing.T) {
-		testDeployWorkload_RenderNewlyCreatedStackWithECSService(t, when)
+		testDeployWorkload_RenderNewlyCreatedStackWithECSService(t, "hello", when)
 	})
 	t.Run("renders a stack with addons template if stack creation is successful", func(t *testing.T) {
-		testDeployWorkload_RenderNewlyCreatedStackWithAddons(t, when)
+		testDeployWorkload_RenderNewlyCreatedStackWithAddons(t, "hello", when)
 	})
 }
 

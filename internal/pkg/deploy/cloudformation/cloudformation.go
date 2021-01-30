@@ -151,7 +151,12 @@ func (cf CloudFormation) newRenderWorkloadInput(w progress.FileWriter, stack *cl
 		in.stackDescription = fmt.Sprintf("Updating the infrastructure for stack %s", stack.Name)
 		changeSetID, err = cf.cfnClient.Update(stack)
 		if err != nil {
-			spinner.Stop(log.Serrorf("%s\n", label))
+			msg := log.Serrorf("%s\n", label)
+			var errChangeSetEmpty *cloudformation.ErrChangeSetEmpty
+			if errors.As(err, &errChangeSetEmpty) {
+				msg = fmt.Sprintf("- No new infrastructure changes for stack %s\n", stack.Name)
+			}
+			spinner.Stop(msg)
 			return "", cf.handleStackError(stack.Name, err)
 		}
 		spinner.Stop(log.Ssuccessf("%s\n", label))

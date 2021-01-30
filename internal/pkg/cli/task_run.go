@@ -463,22 +463,16 @@ func (o *runTaskOpts) buildAndPushImage() error {
 }
 
 func (o *runTaskOpts) deployTaskResources() error {
-	o.spinner.Start(fmt.Sprintf("Provisioning resources and permissions for task %s.", color.HighlightUserInput(o.groupName)))
 	if err := o.deploy(); err != nil {
-		o.spinner.Stop(log.Serror("Failed to provision task resources.\n\n"))
 		return fmt.Errorf("provision resources for task %s: %w", o.groupName, err)
 	}
-	o.spinner.Stop(log.Ssuccess("Successfully provisioned task resources.\n\n"))
 	return nil
 }
 
 func (o *runTaskOpts) updateTaskResources() error {
-	o.spinner.Start(fmt.Sprintf("Updating image to task %s.", color.HighlightUserInput(o.groupName)))
 	if err := o.deploy(); err != nil {
-		o.spinner.Stop(log.Serror("Failed to update task resources.\n\n"))
 		return fmt.Errorf("update resources for task %s: %w", o.groupName, err)
 	}
-	o.spinner.Stop(log.Ssuccess("Successfully updated image to task.\n\n"))
 	return nil
 }
 
@@ -504,7 +498,7 @@ func (o *runTaskOpts) deploy() error {
 		Env:            o.env,
 		AdditionalTags: o.resourceTags,
 	}
-	return o.deployer.DeployTask(input, deployOpts...)
+	return o.deployer.DeployTask(os.Stderr, input, deployOpts...)
 }
 
 func (o *runTaskOpts) validateAppName() error {
