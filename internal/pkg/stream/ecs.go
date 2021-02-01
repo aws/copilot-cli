@@ -154,9 +154,7 @@ func (s *ECSDeploymentStreamer) Notify() {
 	// notifying previous subscribers of older events.
 	s.mu.Lock()
 	var subs []chan ECSService
-	for _, sub := range s.subscribers {
-		subs = append(subs, sub)
-	}
+	subs = append(subs, s.subscribers...)
 	s.mu.Unlock()
 
 	for _, event := range s.eventsToFlush {
