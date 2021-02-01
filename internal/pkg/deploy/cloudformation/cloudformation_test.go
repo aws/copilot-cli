@@ -5,6 +5,7 @@ package cloudformation
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -43,6 +44,25 @@ func testDeployWorkload_OnCreateChangeSetFailure(t *testing.T, when func(w progr
 
 	// THEN
 	require.True(t, errors.Is(err, wantedErr), `expected returned error to be wrapped with "some error"`)
+}
+
+func testDeployWorkload_ReturnNilOnEmptyChangeSetWhileUpdatingStack(t *testing.T, when func(w progress.FileWriter, cf CloudFormation) error) {
+	// GIVEN
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	wantedErr := &cloudformation.ErrChangeSetEmpty{}
+	m := mocks.NewMockcfnClient(ctrl)
+	m.EXPECT().Create(gomock.Any()).Return("", &cloudformation.ErrStackAlreadyExists{})
+	m.EXPECT().Update(gomock.Any()).Return("", wantedErr)
+	m.EXPECT().ErrorEvents(gomock.Any()).Return(nil, nil)
+	client := CloudFormation{cfnClient: m}
+	buf := new(strings.Builder)
+
+	// WHEN
+	err := when(mockFileWriter{Writer: buf}, client)
+
+	// THEN
+	require.Nil(t, err, "should not fail if the changeset is empty")
 }
 
 func testDeployWorkload_OnUpdateChangeSetFailure(t *testing.T, when func(w progress.FileWriter, cf CloudFormation) error) {
@@ -119,7 +139,7 @@ func testDeployWorkload_StackStreamerFailureShouldCancelRenderer(t *testing.T, w
 	require.True(t, errors.Is(err, wantedErr), "expected streamer error to be wrapped and returned")
 }
 
-func testDeployWorkload_StreamUntilStackCreationFails(t *testing.T, when func(w progress.FileWriter, cf CloudFormation) error) {
+func testDeployWorkload_StreamUntilStackCreationFails(t *testing.T, stackName string, when func(w progress.FileWriter, cf CloudFormation) error) {
 	// GIVEN
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -131,14 +151,14 @@ func testDeployWorkload_StreamUntilStackCreationFails(t *testing.T, when func(w 
 		StackEvents: []*sdkcloudformation.StackEvent{
 			{
 				EventId:            aws.String("2"),
-				LogicalResourceId:  aws.String("hello"),
+				LogicalResourceId:  aws.String(stackName),
 				PhysicalResourceId: aws.String("AWS::CloudFormation::Stack"),
 				ResourceStatus:     aws.String("CREATE_FAILED"), // Send failure event for stack.
 				Timestamp:          aws.Time(time.Now()),
 			},
 		},
 	}, nil).AnyTimes()
-	m.EXPECT().Describe("hello").Return(&cloudformation.StackDescription{
+	m.EXPECT().Describe(stackName).Return(&cloudformation.StackDescription{
 		StackStatus: aws.String("CREATE_FAILED"),
 	}, nil)
 	client := CloudFormation{cfnClient: m}
@@ -148,10 +168,10 @@ func testDeployWorkload_StreamUntilStackCreationFails(t *testing.T, when func(w 
 	err := when(mockFileWriter{Writer: buf}, client)
 
 	// THEN
-	require.EqualError(t, err, "stack hello did not complete successfully and exited with status CREATE_FAILED")
+	require.EqualError(t, err, fmt.Sprintf("stack %s did not complete successfully and exited with status CREATE_FAILED", stackName))
 }
 
-func testDeployWorkload_RenderNewlyCreatedStackWithECSService(t *testing.T, when func(w progress.FileWriter, cf CloudFormation) error) {
+func testDeployWorkload_RenderNewlyCreatedStackWithECSService(t *testing.T, stackName string, when func(w progress.FileWriter, cf CloudFormation) error) {
 	// GIVEN
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -160,7 +180,7 @@ func testDeployWorkload_RenderNewlyCreatedStackWithECSService(t *testing.T, when
 	deploymentTime := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
 
 	mockCFN.EXPECT().Create(gomock.Any()).Return("1234", nil)
-	mockCFN.EXPECT().DescribeChangeSet("1234", "hello").Return(&cloudformation.ChangeSetDescription{
+	mockCFN.EXPECT().DescribeChangeSet("1234", stackName).Return(&cloudformation.ChangeSetDescription{
 		Changes: []*sdkcloudformation.Change{
 			{
 				ResourceChange: &sdkcloudformation.ResourceChange{
@@ -170,7 +190,7 @@ func testDeployWorkload_RenderNewlyCreatedStackWithECSService(t *testing.T, when
 			},
 		},
 	}, nil)
-	mockCFN.EXPECT().TemplateBodyFromChangeSet("1234", "hello").Return(`
+	mockCFN.EXPECT().TemplateBodyFromChangeSet("1234", stackName).Return(`
 Resources:
   Service:
     Metadata:
@@ -178,7 +198,7 @@ Resources:
     Type: AWS::ECS::Service
 `, nil)
 	mockCFN.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
-		StackName: aws.String("hello"),
+		StackName: aws.String(stackName),
 	}).Return(&sdkcloudformation.DescribeStackEventsOutput{
 		StackEvents: []*sdkcloudformation.StackEvent{
 			{
@@ -199,7 +219,7 @@ Resources:
 			},
 			{
 				EventId:           aws.String("3"),
-				LogicalResourceId: aws.String("hello"),
+				LogicalResourceId: aws.String(stackName),
 				ResourceType:      aws.String("AWS::CloudFormation::Stack"),
 				ResourceStatus:    aws.String("CREATE_COMPLETE"),
 				Timestamp:         aws.Time(deploymentTime),
@@ -216,7 +236,7 @@ Resources:
 			},
 		},
 	}, nil)
-	mockCFN.EXPECT().Describe("hello").Return(&cloudformation.StackDescription{
+	mockCFN.EXPECT().Describe(stackName).Return(&cloudformation.StackDescription{
 		StackStatus: aws.String("CREATE_COMPLETE"),
 	}, nil)
 	client := CloudFormation{cfnClient: mockCFN, ecsClient: mockECS}
@@ -232,14 +252,106 @@ Resources:
 	require.Contains(t, buf.String(), "[completed]", "Rollout state of service should be rendered")
 }
 
-func testDeployWorkload_RenderNewlyCreatedStackWithAddons(t *testing.T, when func(w progress.FileWriter, cf CloudFormation) error) {
+func testDeployWorkload_WithEnvControllerRenderer(t *testing.T, svcStackName string, when func(w progress.FileWriter, cf CloudFormation) error) {
+	// GIVEN
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockCFN := mocks.NewMockcfnClient(ctrl)
+	deploymentTime := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
+
+	mockCFN.EXPECT().Create(gomock.Any()).Return("1234", nil)
+	mockCFN.EXPECT().DescribeChangeSet("1234", svcStackName).Return(&cloudformation.ChangeSetDescription{
+		Changes: []*sdkcloudformation.Change{
+			{
+				ResourceChange: &sdkcloudformation.ResourceChange{
+					LogicalResourceId: aws.String("EnvControllerAction"),
+					ResourceType:      aws.String("Custom::EnvControllerFunction"),
+					Action:            aws.String(sdkcloudformation.ChangeActionAdd),
+				},
+			},
+		},
+	}, nil)
+	mockCFN.EXPECT().TemplateBodyFromChangeSet("1234", svcStackName).Return(`
+Resources:
+  EnvControllerAction:
+    Metadata:
+      'aws:copilot:description': "Updating environment"
+`, nil)
+	mockCFN.EXPECT().Describe(svcStackName).Return(&cloudformation.StackDescription{
+		Tags: []*sdkcloudformation.Tag{
+			{
+				Key:   aws.String("copilot-application"),
+				Value: aws.String("my-app"),
+			},
+			{
+				Key:   aws.String("copilot-environment"),
+				Value: aws.String("my-env"),
+			},
+		},
+	}, nil)
+	mockCFN.EXPECT().TemplateBody("my-app-my-env").Return(`
+Resources:
+  PublicLoadBalancer:
+    Metadata:
+      'aws:copilot:description': "Updating ALB"
+`, nil)
+	mockCFN.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
+		StackName: aws.String(svcStackName),
+	}).Return(&sdkcloudformation.DescribeStackEventsOutput{
+		StackEvents: []*sdkcloudformation.StackEvent{
+			{
+				EventId:           aws.String("1"),
+				LogicalResourceId: aws.String(svcStackName),
+				ResourceType:      aws.String("AWS::CloudFormation::Stack"),
+				ResourceStatus:    aws.String("CREATE_COMPLETE"),
+				Timestamp:         aws.Time(deploymentTime),
+			},
+		},
+	}, nil).AnyTimes()
+	mockCFN.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
+		StackName: aws.String("my-app-my-env"),
+	}).Return(&sdkcloudformation.DescribeStackEventsOutput{
+		StackEvents: []*sdkcloudformation.StackEvent{
+			{
+				EventId:           aws.String("1"),
+				LogicalResourceId: aws.String("PublicLoadBalancer"),
+				ResourceType:      aws.String("AWS::ElasticLoadBalancingV2::LoadBalancer"),
+				ResourceStatus:    aws.String("CREATE_COMPLETE"),
+				Timestamp:         aws.Time(deploymentTime),
+			},
+			{
+				EventId:           aws.String("2"),
+				LogicalResourceId: aws.String("my-app-my-env"),
+				ResourceType:      aws.String("AWS::CloudFormation::Stack"),
+				ResourceStatus:    aws.String("CREATE_COMPLETE"),
+				Timestamp:         aws.Time(deploymentTime),
+			},
+		},
+	}, nil).AnyTimes()
+
+	mockCFN.EXPECT().Describe(svcStackName).Return(&cloudformation.StackDescription{
+		StackStatus: aws.String("CREATE_COMPLETE"),
+	}, nil)
+	client := CloudFormation{cfnClient: mockCFN}
+	buf := new(strings.Builder)
+
+	// WHEN
+	err := when(mockFileWriter{Writer: buf}, client)
+
+	// THEN
+	require.NoError(t, err)
+	require.Contains(t, buf.String(), "Updating environment", "env stack description is rendered")
+	require.Contains(t, buf.String(), "Updating ALB", "resource in the env stack should be rendered")
+}
+
+func testDeployWorkload_RenderNewlyCreatedStackWithAddons(t *testing.T, stackName string, when func(w progress.FileWriter, cf CloudFormation) error) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	m := mocks.NewMockcfnClient(ctrl)
 
 	// Mocks for the parent stack.
 	m.EXPECT().Create(gomock.Any()).Return("1234", nil)
-	m.EXPECT().DescribeChangeSet("1234", "hello").Return(&cloudformation.ChangeSetDescription{
+	m.EXPECT().DescribeChangeSet("1234", stackName).Return(&cloudformation.ChangeSetDescription{
 		Changes: []*sdkcloudformation.Change{
 			{
 				ResourceChange: &sdkcloudformation.ResourceChange{
@@ -257,7 +369,7 @@ func testDeployWorkload_RenderNewlyCreatedStackWithAddons(t *testing.T, when fun
 		},
 	}, nil)
 
-	m.EXPECT().TemplateBodyFromChangeSet("1234", "hello").Return(`
+	m.EXPECT().TemplateBodyFromChangeSet("1234", stackName).Return(`
 Resources:
   Cluster:
     Metadata:
@@ -270,7 +382,7 @@ Resources:
 `, nil)
 
 	m.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
-		StackName: aws.String("hello"),
+		StackName: aws.String(stackName),
 	}).Return(&sdkcloudformation.DescribeStackEventsOutput{
 		StackEvents: []*sdkcloudformation.StackEvent{
 			{
@@ -289,7 +401,7 @@ Resources:
 			},
 			{
 				EventId:            aws.String("3"),
-				LogicalResourceId:  aws.String("hello"),
+				LogicalResourceId:  aws.String(stackName),
 				PhysicalResourceId: aws.String("AWS::CloudFormation::Stack"),
 				ResourceStatus:     aws.String("CREATE_COMPLETE"),
 				Timestamp:          aws.Time(time.Now()),
@@ -297,7 +409,7 @@ Resources:
 		},
 	}, nil).AnyTimes()
 
-	m.EXPECT().Describe("hello").Return(&cloudformation.StackDescription{
+	m.EXPECT().Describe(stackName).Return(&cloudformation.StackDescription{
 		StackStatus: aws.String("CREATE_COMPLETE"),
 	}, nil)
 

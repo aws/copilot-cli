@@ -54,7 +54,7 @@ func (m *mockStackConfig) Tags() []*sdkcloudformation.Tag {
 
 func TestCloudFormation_DeployService(t *testing.T) {
 	serviceConfig := &mockStackConfig{
-		name:     "hello",
+		name:     "myapp-myenv-mysvc",
 		template: "template",
 		parameters: map[string]string{
 			"port": "80",
@@ -83,13 +83,16 @@ func TestCloudFormation_DeployService(t *testing.T) {
 		testDeployWorkload_StackStreamerFailureShouldCancelRenderer(t, when)
 	})
 	t.Run("returns an error if stack creation fails", func(t *testing.T) {
-		testDeployWorkload_StreamUntilStackCreationFails(t, when)
+		testDeployWorkload_StreamUntilStackCreationFails(t, "myapp-myenv-mysvc", when)
+	})
+	t.Run("renders a stack with an EnvController", func(t *testing.T) {
+		testDeployWorkload_WithEnvControllerRenderer(t, "myapp-myenv-mysvc", when)
 	})
 	t.Run("renders a stack with an ECS service", func(t *testing.T) {
-		testDeployWorkload_RenderNewlyCreatedStackWithECSService(t, when)
+		testDeployWorkload_RenderNewlyCreatedStackWithECSService(t, "myapp-myenv-mysvc", when)
 	})
 	t.Run("renders a stack with addons template if stack creation is successful", func(t *testing.T) {
-		testDeployWorkload_RenderNewlyCreatedStackWithAddons(t, when)
+		testDeployWorkload_RenderNewlyCreatedStackWithAddons(t, "myapp-myenv-mysvc", when)
 	})
 }
 

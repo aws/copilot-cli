@@ -15,7 +15,7 @@ const (
 	// DesiredStatusStopped represents the desired status "STOPPED" for a task.
 	DesiredStatusStopped = ecs.DesiredStatusStopped
 
-	fmtErrContainerStopped = "task %s: %s"
+	fmtErrTaskStopped = "task %s: %s"
 )
 
 // ErrNoDefaultCluster occurs when the default cluster is not found.
@@ -32,18 +32,25 @@ func (e *ErrWaiterResourceNotReadyForTasks) Error() string {
 		if aws.StringValue(task.LastStatus) != DesiredStatusStopped {
 			continue
 		}
-
-		// TODO: generalize this to be any essential container.
-		container := task.Containers[0] // NOTE: right now we only support one container per task
-		if aws.StringValue(container.LastStatus) != DesiredStatusStopped {
-			continue
-		}
-
 		taskID, err := TaskID(aws.StringValue(task.TaskArn))
 		if err != nil {
-			continue
+			return err.Error()
 		}
-		return fmt.Sprintf(fmtErrContainerStopped, taskID[:shortTaskIDLength], aws.StringValue(container.Reason))
+		// Combine both task stop reason and container stop reason.
+		var errMsg string
+		if task.StoppedReason != nil {
+			errMsg = aws.StringValue(task.StoppedReason)
+		}
+		// TODO: generalize this to be any essential container.
+		container := task.Containers[0] // NOTE: right now we only support one container per task
+		if aws.StringValue(container.LastStatus) == DesiredStatusStopped {
+			if container.Reason != nil {
+				errMsg = fmt.Sprintf("%s: %s", errMsg, aws.StringValue(container.Reason))
+			}
+		}
+		if errMsg != "" {
+			return fmt.Sprintf(fmtErrTaskStopped, taskID[:shortTaskIDLength], errMsg)
+		}
 	}
 	return e.awsErrResourceNotReady.Error()
 }

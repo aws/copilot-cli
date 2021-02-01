@@ -5,7 +5,6 @@
 package manifest
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -21,10 +20,6 @@ const (
 	LoadBalancedWebServiceType = "Load Balanced Web Service"
 	// BackendServiceType is a service that cannot be accessed from the internet but can be reached from other services.
 	BackendServiceType = "Backend Service"
-)
-
-var (
-	errUnmarshalCountOpts = errors.New(`unmarshal "count" field to an integer or autoscaling configuration`)
 )
 
 // ServiceTypes are the supported service manifest types.

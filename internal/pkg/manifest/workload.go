@@ -25,6 +25,7 @@ const (
 var (
 	errUnmarshalBuildOpts = errors.New("can't unmarshal build field into string or compose-style map")
 	errUnmarshalExec      = errors.New("can't unmarshal exec field into boolean or exec configuration")
+	errUnmarshalCountOpts = errors.New(`can't unmarshal "count" field to an integer or autoscaling configuration`)
 )
 
 var dockerfileDefaultName = "Dockerfile"
@@ -293,11 +294,12 @@ func (s *Sidecar) Options() ([]*template.SidecarOpts, error) {
 
 // SidecarConfig represents the configurable options for setting up a sidecar container.
 type SidecarConfig struct {
-	Port       *string           `yaml:"port"`
-	Image      *string           `yaml:"image"`
-	CredsParam *string           `yaml:"credentialsParameter"`
-	Variables  map[string]string `yaml:"variables"`
-	Secrets    map[string]string `yaml:"secrets"`
+	Port        *string             `yaml:"port"`
+	Image       *string             `yaml:"image"`
+	CredsParam  *string             `yaml:"credentialsParameter"`
+	Variables   map[string]string   `yaml:"variables"`
+	Secrets     map[string]string   `yaml:"secrets"`
+	MountPoints []SidecarMountPoint `yaml:"mount_points"`
 }
 
 // Valid sidecar portMapping example: 2000/udp, or 2000 (default to be tcp).
