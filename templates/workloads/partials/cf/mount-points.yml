@@ -1,8 +1,8 @@
 {{- if .Storage.MountPoints}}
 MountPoints:
-{{- range $mp := .MountPoints}}
+{{- range $mp := .Storage.MountPoints}}
   - ContainerPath: {{$mp.ContainerPath}}
     ReadOnly: {{$mp.ReadOnly}}
     SourceVolume: {{$mp.SourceVolume}}
-{{- end}}
-{{- end}}
+{{- end -}}
+{{- end -}}
