@@ -50,6 +50,7 @@ func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput) error {
 		}
 		return fmt.Errorf("update pipeline: %w", err)
 	}
+	// Call codestar's WaitForAvailableConnection here (IF it's a codestar source)?
 	return nil
 }
 

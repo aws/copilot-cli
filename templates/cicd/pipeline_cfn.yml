@@ -373,3 +373,9 @@ Resources:
               RunOrder: 3
               InputArtifacts:
                 - Name: SCCheckoutArtifact{{end}}{{end}}{{end}}{{end}}
+{{- if eq .Source.ProviderName "Bitbucket"}}
+Outputs:
+  PipelineConnection:
+    Description: "The CodeStar Connection ARN"
+    Value: !Ref SourceConnection
+{{- end}}
