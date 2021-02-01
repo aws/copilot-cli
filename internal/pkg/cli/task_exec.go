@@ -133,7 +133,8 @@ func (o *taskExecOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("parse task ARN %s: %w", aws.StringValue(o.task.TaskArn), err)
 	}
-	log.Infof("Execute into container %s in task %s.\n", container, taskID)
+	log.Infof("Execute %s in container %s in task %s.\n", color.HighlightCode(o.command),
+		color.HighlightUserInput(container), color.HighlightResource(taskID))
 	if err = o.newCommandExecutor(sess).ExecuteCommand(awsecs.ExecuteCommandInput{
 		Cluster:   cluster,
 		Command:   o.command,

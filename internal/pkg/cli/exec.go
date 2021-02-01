@@ -4,7 +4,7 @@
 package cli
 
 const (
-	defaultCommand = "/bin/bash"
+	defaultCommand = "/bin/sh"
 )
 
 type execVars struct {

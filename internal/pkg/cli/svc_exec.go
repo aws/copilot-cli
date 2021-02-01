@@ -129,7 +129,8 @@ func (o *svcExecOpts) Execute() error {
 		return err
 	}
 	container := o.selectContainer()
-	log.Infof("Execute into container %s in task %s.\n", container, taskID)
+	log.Infof("Execute %s in container %s in task %s.\n", color.HighlightCode(o.command),
+		color.HighlightUserInput(container), color.HighlightResource(taskID))
 	if err = o.newCommandExecutor(sess).ExecuteCommand(awsecs.ExecuteCommandInput{
 		Cluster:   svcDesc.ClusterName,
 		Command:   o.command,
