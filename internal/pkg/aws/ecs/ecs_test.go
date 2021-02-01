@@ -647,7 +647,9 @@ func TestECS_RunTask(t *testing.T) {
 							SecurityGroups: aws.StringSlice([]string{"sg-1", "sg-2"}),
 						},
 					},
-					PropagateTags: aws.String(ecs.PropagateTagsTaskDefinition),
+					EnableExecuteCommand: aws.Bool(true),
+					PlatformVersion:      aws.String("1.4.0"),
+					PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 				}).
 					Return(&ecs.RunTaskOutput{
 						Tasks: ecsTasks,
@@ -673,7 +675,9 @@ func TestECS_RunTask(t *testing.T) {
 							SecurityGroups: aws.StringSlice([]string{"sg-1", "sg-2"}),
 						},
 					},
-					PropagateTags: aws.String(ecs.PropagateTagsTaskDefinition),
+					EnableExecuteCommand: aws.Bool(true),
+					PlatformVersion:      aws.String("1.4.0"),
+					PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 				}).
 					Return(&ecs.RunTaskOutput{
 						Tasks: ecsTasks}, nil)
