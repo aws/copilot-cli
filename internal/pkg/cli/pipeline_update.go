@@ -42,7 +42,7 @@ const (
 
 const (
 	connectionsURL = "https://console.aws.amazon.com/codesuite/settings/connections"
-	fmtpipelineURL = "https://%s.console.aws.amazon.com/codesuite/codepipeline/pipelines/%s/view?region=%s"
+	fmtPipelineURL = "https://%s.console.aws.amazon.com/codesuite/codepipeline/pipelines/%s/view?region=%s"
 )
 
 type updatePipelineVars struct {
@@ -277,7 +277,7 @@ func (o *updatePipelineOpts) Execute() error {
 func (o *updatePipelineOpts) RequiredActions() []string {
 	return []string{
 		fmt.Sprintf("Go to %s to update the status of your connection from PENDING to AVAILABLE.", color.HighlightResource(connectionsURL)),
-		fmt.Sprintf("Then go to %s and click %s.", fmt.Sprintf(color.HighlightResource(fmtpipelineURL), o.region, o.pipelineName, o.region), color.HighlightCode("Retry")),
+		fmt.Sprintf("Then go to %s and click %s.", fmt.Sprintf(color.HighlightResource(fmtPipelineURL), o.region, o.pipelineName, o.region), color.HighlightCode("Retry")),
 	}
 }
 
