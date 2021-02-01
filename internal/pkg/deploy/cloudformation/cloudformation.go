@@ -17,6 +17,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -303,7 +304,13 @@ type envControllerRendererInput struct {
 func (cf CloudFormation) createEnvControllerRenderer(in *envControllerRendererInput) (progress.DynamicRenderer, error) {
 	switch {
 	case isEnvControllerInAction(in.change):
-		envStackName := parseEnvStackFromWorkload(in.workloadStackName)
+		// We can't use the workloadStackName to retrieve the envStackName because app names and env names can contain
+		// dashes. So we fetch the tags belonging to the workload stack and generate the stack name from there.
+		workload, err := cf.cfnClient.Describe(in.workloadStackName)
+		if err != nil {
+			return nil, err
+		}
+		envStackName := fmt.Sprintf("%s-%s", parseAppNameFromTags(workload.Tags), parseEnvNameFromTags(workload.Tags))
 		body, err := cf.cfnClient.TemplateBody(envStackName)
 		if err != nil {
 			return nil, err
@@ -365,13 +372,6 @@ func parseStackNameFromARN(stackARN string) string {
 	return strings.Split(stackARN, "/")[1]
 }
 
-// parseEnvStackFromWorkload retrieves the environment stack's name from the workload's stack name.
-// A workload stack name follows the pattern "{env stack name}-{workload name}".
-func parseEnvStackFromWorkload(stackName string) string {
-	parts := strings.Split(stackName, "-")
-	return strings.Join(parts[:len(parts)-1], "-")
-}
-
 func isEnvControllerInAction(controller *sdkcloudformation.Change) bool {
 	switch action := aws.StringValue(controller.ResourceChange.Action); action {
 	case sdkcloudformation.ChangeActionAdd:
@@ -388,6 +388,24 @@ func isEnvControllerInAction(controller *sdkcloudformation.Change) bool {
 	default:
 		return false
 	}
+}
+
+func parseAppNameFromTags(tags []*sdkcloudformation.Tag) string {
+	for _, t := range tags {
+		if aws.StringValue(t.Key) == deploy.AppTagKey {
+			return aws.StringValue(t.Value)
+		}
+	}
+	return ""
+}
+
+func parseEnvNameFromTags(tags []*sdkcloudformation.Tag) string {
+	for _, t := range tags {
+		if aws.StringValue(t.Key) == deploy.EnvTagKey {
+			return aws.StringValue(t.Value)
+		}
+	}
+	return ""
 }
 
 func stopSpinner(spinner *progress.Spinner, err error, label string) {

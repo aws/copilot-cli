@@ -252,7 +252,7 @@ Resources:
 	require.Contains(t, buf.String(), "[completed]", "Rollout state of service should be rendered")
 }
 
-func testDeployWorkload_WithEnvControllerRenderer(t *testing.T, svcStackName, envStackName string, when func(w progress.FileWriter, cf CloudFormation) error) {
+func testDeployWorkload_WithEnvControllerRenderer(t *testing.T, svcStackName string, when func(w progress.FileWriter, cf CloudFormation) error) {
 	// GIVEN
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -277,7 +277,19 @@ Resources:
     Metadata:
       'aws:copilot:description': "Updating environment"
 `, nil)
-	mockCFN.EXPECT().TemplateBody(envStackName).Return(`
+	mockCFN.EXPECT().Describe(svcStackName).Return(&cloudformation.StackDescription{
+		Tags: []*sdkcloudformation.Tag{
+			{
+				Key:   aws.String("copilot-application"),
+				Value: aws.String("my-app"),
+			},
+			{
+				Key:   aws.String("copilot-environment"),
+				Value: aws.String("my-env"),
+			},
+		},
+	}, nil)
+	mockCFN.EXPECT().TemplateBody("my-app-my-env").Return(`
 Resources:
   PublicLoadBalancer:
     Metadata:
@@ -297,7 +309,7 @@ Resources:
 		},
 	}, nil).AnyTimes()
 	mockCFN.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
-		StackName: aws.String(envStackName),
+		StackName: aws.String("my-app-my-env"),
 	}).Return(&sdkcloudformation.DescribeStackEventsOutput{
 		StackEvents: []*sdkcloudformation.StackEvent{
 			{
@@ -309,7 +321,7 @@ Resources:
 			},
 			{
 				EventId:           aws.String("2"),
-				LogicalResourceId: aws.String(envStackName),
+				LogicalResourceId: aws.String("my-app-my-env"),
 				ResourceType:      aws.String("AWS::CloudFormation::Stack"),
 				ResourceStatus:    aws.String("CREATE_COMPLETE"),
 				Timestamp:         aws.Time(deploymentTime),

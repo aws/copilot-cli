@@ -86,7 +86,7 @@ func TestCloudFormation_DeployService(t *testing.T) {
 		testDeployWorkload_StreamUntilStackCreationFails(t, "myapp-myenv-mysvc", when)
 	})
 	t.Run("renders a stack with an EnvController", func(t *testing.T) {
-		testDeployWorkload_WithEnvControllerRenderer(t, "myapp-myenv-mysvc", "myapp-myenv", when)
+		testDeployWorkload_WithEnvControllerRenderer(t, "myapp-myenv-mysvc", when)
 	})
 	t.Run("renders a stack with an ECS service", func(t *testing.T) {
 		testDeployWorkload_RenderNewlyCreatedStackWithECSService(t, "myapp-myenv-mysvc", when)
