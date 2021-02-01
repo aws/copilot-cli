@@ -24,7 +24,7 @@ to quickly get going with a scheduled task on AWS. The manifest file can always 
 
 ## [Pipelines](./pipelines.md)
 
-Now that you've got an application with a few services deployed to a couple of environments, staying on top of those deployments can become tricky. Copilot can help by setting up a release pipeline that deploys your service whenever you push to your git repository. (At this time, Copilot supports GitHub and CodeCommit repositories.) When a push is detected, your pipeline will build your service, push the image to ECR, and deploy to your environments.
+Now that you've got an application with a few services deployed to a couple of environments, staying on top of those deployments can become tricky. Copilot can help by setting up a release pipeline that deploys your service whenever you push to your git repository. (At this time, Copilot supports GitHub, Bitbucket, and CodeCommit repositories.) When a push is detected, your pipeline will build your service, push the image to ECR, and deploy to your environments.
 
 A common pattern is to set up a pipeline for a particular service that deploys to a test environment, runs automated testing, then deploys to the production environment.
 
