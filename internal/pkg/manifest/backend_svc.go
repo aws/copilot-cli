@@ -39,7 +39,6 @@ type BackendServiceConfig struct {
 	TaskConfig  `yaml:",inline"`
 	*Logging    `yaml:"logging,flow"`
 	Sidecar     `yaml:",inline"`
-	Storage     `yaml:"storage"`
 }
 
 // LogConfigOpts converts the service's Firelens configuration into a format parsable by the templates pkg.

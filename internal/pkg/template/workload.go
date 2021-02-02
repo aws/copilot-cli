@@ -5,10 +5,13 @@ package template
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"text/template"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/google/uuid"
 )
 
@@ -54,6 +57,25 @@ const (
 	scheduledJobTplName = "scheduled-job"
 )
 
+// Validation errors when rendering manifest into template.
+var (
+	errNoFSID          = errors.New("volume field efs/id cannot be empty")
+	errNoContainerPath = errors.New("volume field path cannot be empty")
+)
+
+var (
+	pEnabled  = aws.String("ENABLED")
+	pDisabled = aws.String("DISABLED")
+)
+
+// Default values for EFS options
+var (
+	defaultRootDirectory   = aws.String("/")
+	defaultIAM             = pDisabled
+	defaultReadOnly        = aws.Bool(true)
+	defaultWritePermission = false
+)
+
 // WorkloadNestedStackOpts holds configuration that's needed if the workload stack has a nested stack.
 type WorkloadNestedStackOpts struct {
 	StackName string
@@ -65,13 +87,14 @@ type WorkloadNestedStackOpts struct {
 
 // SidecarOpts holds configuration that's needed if the service has sidecar containers.
 type SidecarOpts struct {
-	Name       *string
-	Image      *string
-	Port       *string
-	Protocol   *string
-	CredsParam *string
-	Variables  map[string]string
-	Secrets    map[string]string
+	Name        *string
+	Image       *string
+	Port        *string
+	Protocol    *string
+	CredsParam  *string
+	Variables   map[string]string
+	Secrets     map[string]string
+	MountPoints []*MountPoint
 }
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
@@ -79,6 +102,114 @@ type StorageOpts struct {
 	Volumes     []*Volume
 	MountPoints []*MountPoint
 	EFSPerms    []*EFSPermission
+}
+
+// RenderStorageOpts converts a manifest.Storage field into template data structures which can be used
+// to execute CFN templates
+func RenderStorageOpts(in manifest.Storage) (*StorageOpts, error) {
+	v, err := renderVolumes(in.Volumes)
+	if err != nil {
+		return nil, err
+	}
+	mp, err := renderMountPoints(in.Volumes)
+	if err != nil {
+		return nil, err
+	}
+	perms, err := renderStoragePermissions(in.Volumes)
+	if err != nil {
+		return nil, err
+	}
+	return &StorageOpts{
+		Volumes:     v,
+		MountPoints: mp,
+		EFSPerms:    perms,
+	}, nil
+}
+
+func renderStoragePermissions(input map[string]manifest.Volume) ([]*EFSPermission, error) {
+	if len(input == 0) {
+		return nil, nil
+	}
+	output := []*EFSPermission{}
+	for name, volume := range input {
+		// Write defaults to false
+		write := defaultWritePermission
+		if volume.ReadOnly != nil {
+			write = !aws.Bool(volume.ReadOnly)
+		}
+		fsID := aws.StringValue(volume.EFS.FileSystemID)
+		if fsID == "" {
+			return nil, errNoFSID
+		}
+		perm := EFSPermission{
+			Write:         write,
+			AccessPointID: volume.EFS.AuthConfig.AccessPointID,
+			FilesystemID:  fsID,
+		}
+		output := append(output, perm)
+	}
+	return output, nil
+}
+
+func renderMountPoints(input map[string]manifest.Volume) ([]*MountPoint, error) {
+	if len(input) == 0 {
+		return nil
+	}
+	output := []*MountPoint{}
+	for name, volume := range input {
+		// ContainerPath must be specified.
+		if volume.ContainerPath == nil {
+			return nil, errNoContainerPath
+		}
+		// ReadOnly defaults to true.
+		readOnly := defaultReadOnly
+		if volume.ReadOnly != nil {
+			readOnly = volume.ReadOnly
+		}
+		mp := MountPoint{
+			ReadOnly:      readOnly,
+			ContainerPath: volume.ContainerPath,
+			SourceVolume:  aws.String(name),
+		}
+		output = append(output, mp)
+	}
+	return output, nil
+}
+
+func renderVolumes(input map[string]manifest.Volume) ([]*Volume, error) {
+	if len(input) == 0 {
+		return nil, nil
+	}
+	output := []*Volume{}
+	for name, volume := range input {
+		// Set default values correctly.
+		fsID := aws.StringValue(volume.EFS.FileSystemID)
+		if fsID == "" {
+			return nil, errNoFSID
+		}
+		rootDir := aws.StringValue(volume.EFS.RootDirectory)
+		if rootDir == "" {
+			rootDir = aws.String(defaultRootDirectory)
+		}
+		var iam *string
+		if volume.EFS.AuthConfig.IAM == nil {
+			iam = defaultIAM
+		}
+		if aws.BoolValue(volume.EFS.AuthConfig.IAM) {
+			iam = pEnabled
+		}
+		v := Volume{
+			Name: aws.String(name),
+
+			Filesystem:    fsID,
+			RootDirectory: rootDir,
+
+			AccessPointID: aws.StringValue(volume.EFS.AuthConfig.AccessPointID),
+			IAM:           iam,
+		}
+		output = append(output, &Volume)
+	}
+	return output, nil
 }
 
 // EFSPermission holds information needed to render an IAM policy statement.
@@ -91,7 +222,7 @@ type EFSPermission struct {
 // MountPoint holds information needed to render a MountPoint in a containerdefinition.
 type MountPoint struct {
 	ContainerPath *string
-	ReadOnly      *string
+	ReadOnly      *bool
 	SourceVolume  *string
 }
 
@@ -100,9 +231,8 @@ type Volume struct {
 	Name *string
 
 	// EFSVolumeConfiguration
-	TransitEncryption *string // ENABLED or DISABLED
-	Filesystem        *string
-	RootDirectory     *string // "/" or empty are equivalent
+	Filesystem    *string
+	RootDirectory *string // "/" or empty are equivalent
 
 	// Authorization Config
 	AccessPointID *string

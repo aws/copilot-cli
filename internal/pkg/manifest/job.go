@@ -40,7 +40,6 @@ type ScheduledJobConfig struct {
 	TaskConfig              `yaml:",inline"`
 	*Logging                `yaml:"logging,flow"`
 	Sidecar                 `yaml:",inline"`
-	Storage                 `yaml:"storage"`
 	On                      JobTriggerConfig `yaml:"on,flow"`
 	JobFailureHandlerConfig `yaml:",inline"`
 }
@@ -91,7 +90,7 @@ func newDefaultScheduledJob() *ScheduledJob {
 	}
 }
 
-// NewScheduledJob creates a new
+// NewScheduledJob creates a new scheduled job object.
 func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	job := newDefaultScheduledJob()
 	// Apply overrides.
