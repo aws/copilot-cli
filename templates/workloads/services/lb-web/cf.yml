@@ -122,7 +122,7 @@ Resources:
   Service:
     Metadata:
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
-    Type: AMZN::ECS::Service
+    Type: AWS::ECS::Service
     DependsOn: WaitUntilListenerRuleIsCreated
     Properties:
 {{include "service-base-properties" . | indent 6}}
