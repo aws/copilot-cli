@@ -8,6 +8,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/service/codestarconnections"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -16,20 +18,20 @@ import (
 type client interface {
 }
 
-//// CloudFormation represents a client to make requests to AWS CloudFormation.
-type CloudFormation struct {
+// CodeStar represents a client to make requests to AWS CodeStarConnections.
+type Connections struct {
 	client
 }
 
-//// New creates a new CloudFormation client.
-func New(s *session.Session) *CloudFormation {
-	return &CloudFormation{
-		cloudformation.New(s),
+// New creates a new CloudFormation client.
+func New(s *session.Session) Connections {
+	return Connections{
+		codestarconnections.New(s),
 	}
 }
 
 // WaitForAvailableConnection blocks until the connection status has been updated from `PENDING` to `AVAILABLE` or until the max attempt window expires.
-func (c *CloudFormation) WaitForAvailableConnection(ctx context.Context, connectionARN string) error {
+func (c *Connections) WaitForAvailableConnection(ctx context.Context, connectionARN string) error {
 	err := c.client.WaitUntilUpdateCompleteWithContext(ctx, &cloudformation.DescribeStacksInput{
 		StackName: aws.String(stackName),
 	}, waiters...)

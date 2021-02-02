@@ -376,6 +376,6 @@ Resources:
 {{- if eq .Source.ProviderName "Bitbucket"}}
 Outputs:
   PipelineConnection:
-    Description: "The CodeStar Connection ARN"
+    Description: "ARN of CodeStar Connections connection"
     Value: !Ref SourceConnection
 {{- end}}
