@@ -228,14 +228,16 @@ func (s *Sidecar) Options() ([]*template.SidecarOpts, error) {
 		if err != nil {
 			return nil, err
 		}
+		mountPoints := template.RenderSidecarMountPoints(config.MountPoints)
 		sidecars = append(sidecars, &template.SidecarOpts{
-			Name:       aws.String(name),
-			Image:      config.Image,
-			Port:       port,
-			Protocol:   protocol,
-			CredsParam: config.CredsParam,
-			Secrets:    config.Secrets,
-			Variables:  config.Variables,
+			Name:        aws.String(name),
+			Image:       config.Image,
+			Port:        port,
+			Protocol:    protocol,
+			CredsParam:  config.CredsParam,
+			Secrets:     config.Secrets,
+			Variables:   config.Variables,
+			MountPoints: mountPoints,
 		})
 	}
 	return sidecars, nil

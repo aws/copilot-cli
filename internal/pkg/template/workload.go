@@ -126,34 +126,50 @@ func RenderStorageOpts(in manifest.Storage) (*StorageOpts, error) {
 	}, nil
 }
 
+// RenderSidecarMountPoints is used to convert from manifest to template objects.
+func RenderSidecarMountPoints(in []manifest.SidecarMountPoint) []*MountPoint {
+	if len(in) == 0 {
+		return nil
+	}
+	output := []*MountPoint{}
+	for _, smp := range in {
+		mp := MountPoint{
+			ContainerPath: smp.ContainerPath,
+			SourceVolume:  smp.SourceVolume,
+			ReadOnly:      smp.ReadOnly,
+		}
+		output = append(output, &mp)
+	}
+	return output
+}
+
 func renderStoragePermissions(input map[string]manifest.Volume) ([]*EFSPermission, error) {
-	if len(input == 0) {
+	if len(input) == 0 {
 		return nil, nil
 	}
 	output := []*EFSPermission{}
-	for name, volume := range input {
+	for _, volume := range input {
 		// Write defaults to false
 		write := defaultWritePermission
 		if volume.ReadOnly != nil {
-			write = !aws.Bool(volume.ReadOnly)
+			write = !aws.BoolValue(volume.ReadOnly)
 		}
-		fsID := aws.StringValue(volume.EFS.FileSystemID)
-		if fsID == "" {
+		if volume.EFS.FileSystemID == nil {
 			return nil, errNoFSID
 		}
 		perm := EFSPermission{
 			Write:         write,
 			AccessPointID: volume.EFS.AuthConfig.AccessPointID,
-			FilesystemID:  fsID,
+			FilesystemID:  volume.EFS.FileSystemID,
 		}
-		output := append(output, perm)
+		output = append(output, &perm)
 	}
 	return output, nil
 }
 
 func renderMountPoints(input map[string]manifest.Volume) ([]*MountPoint, error) {
 	if len(input) == 0 {
-		return nil
+		return nil, nil
 	}
 	output := []*MountPoint{}
 	for name, volume := range input {
@@ -171,7 +187,7 @@ func renderMountPoints(input map[string]manifest.Volume) ([]*MountPoint, error) 
 			ContainerPath: volume.ContainerPath,
 			SourceVolume:  aws.String(name),
 		}
-		output = append(output, mp)
+		output = append(output, &mp)
 	}
 	return output, nil
 }
@@ -183,13 +199,13 @@ func renderVolumes(input map[string]manifest.Volume) ([]*Volume, error) {
 	output := []*Volume{}
 	for name, volume := range input {
 		// Set default values correctly.
-		fsID := aws.StringValue(volume.EFS.FileSystemID)
-		if fsID == "" {
+		fsID := volume.EFS.FileSystemID
+		if aws.StringValue(fsID) == "" {
 			return nil, errNoFSID
 		}
-		rootDir := aws.StringValue(volume.EFS.RootDirectory)
-		if rootDir == "" {
-			rootDir = aws.String(defaultRootDirectory)
+		rootDir := volume.EFS.RootDirectory
+		if aws.StringValue(rootDir) == "" {
+			rootDir = defaultRootDirectory
 		}
 		var iam *string
 		if volume.EFS.AuthConfig.IAM == nil {
@@ -204,10 +220,10 @@ func renderVolumes(input map[string]manifest.Volume) ([]*Volume, error) {
 			Filesystem:    fsID,
 			RootDirectory: rootDir,
 
-			AccessPointID: aws.StringValue(volume.EFS.AuthConfig.AccessPointID),
+			AccessPointID: volume.EFS.AuthConfig.AccessPointID,
 			IAM:           iam,
 		}
-		output = append(output, &Volume)
+		output = append(output, &v)
 	}
 	return output, nil
 }
