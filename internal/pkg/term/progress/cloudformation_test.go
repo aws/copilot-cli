@@ -498,8 +498,7 @@ func TestEcsServiceResourceComponent_Render(t *testing.T) {
 		// THEN
 		require.Nil(t, err)
 		require.Equal(t, 2, nl)
-		require.Equal(t, `resource
-deployment
-`, buf.String())
+		require.Equal(t, "resource\n"+
+			"deployment\t\t\n", buf.String())
 	})
 }
