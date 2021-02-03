@@ -39,5 +39,14 @@
       awslogs-stream-prefix: copilot
 {{- if $sidecar.CredsParam}}
   RepositoryCredentials:
-    CredentialsParameter: {{$sidecar.CredsParam}}{{- end}}
-{{end}}
+    CredentialsParameter: {{$sidecar.CredsParam}}
+{{- end}}
+{{- if $sidecar.MountPoints}}
+  MountPoints:
+  {{- range $mp := $sidecar.MountPoints}}
+    - SourceVolume: {{$mp.SourceVolume}}
+      ReadOnly: {{$mp.ReadOnly}}
+      ContainerPath: {{$mp.ContainerPath}}
+  {{- end}}
+{{- end}}
+{{- end}}
