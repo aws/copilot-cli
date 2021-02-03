@@ -209,3 +209,59 @@ func TestBuildConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestLogging_LogImage(t *testing.T) {
+	testCases := map[string]struct {
+		inputImage  *string
+		wantedImage *string
+	}{
+		"Image specified": {
+			inputImage:  aws.String("nginx:why-on-earth"),
+			wantedImage: aws.String("nginx:why-on-earth"),
+		},
+		"no image specified": {
+			inputImage:  nil,
+			wantedImage: aws.String(defaultFluentbitImage),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			l := Logging{
+				Image: tc.inputImage,
+			}
+			got := l.LogImage()
+
+			require.Equal(t, tc.wantedImage, got)
+		})
+	}
+}
+
+func TestLogging_GetEnableMetadata(t *testing.T) {
+	testCases := map[string]struct {
+		enable *bool
+		wanted *string
+	}{
+		"specified true": {
+			enable: aws.Bool(true),
+			wanted: aws.String("true"),
+		},
+		"specified false": {
+			enable: aws.Bool(false),
+			wanted: aws.String("false"),
+		},
+		"not specified": {
+			enable: nil,
+			wanted: aws.String("true"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			l := Logging{
+				EnableMetadata: tc.enable,
+			}
+			got := l.GetEnableMetadata()
+
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
