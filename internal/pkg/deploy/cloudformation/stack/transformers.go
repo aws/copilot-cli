@@ -6,6 +6,7 @@ package stack
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -55,4 +56,55 @@ func parsePortMapping(s *string) (port *string, protocol *string, err error) {
 	default:
 		return nil, nil, fmt.Errorf("cannot parse port mapping from %s", *s)
 	}
+}
+
+// convertAutoscaling converts the service's Auto Scaling configuration into a format parsable
+// by the templates pkg.
+func convertAutoscaling(a manifest.Autoscaling) (*template.AutoscalingOpts, error) {
+	if a.IsEmpty() {
+		return nil, nil
+	}
+	min, max, err := a.Range.Parse()
+	if err != nil {
+		return nil, err
+	}
+	autoscalingOpts := template.AutoscalingOpts{
+		MinCapacity: &min,
+		MaxCapacity: &max,
+	}
+	if a.CPU != nil {
+		autoscalingOpts.CPU = aws.Float64(float64(*a.CPU))
+	}
+	if a.Memory != nil {
+		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory))
+	}
+	if a.Requests != nil {
+		autoscalingOpts.Requests = aws.Float64(float64(*a.Requests))
+	}
+	if a.ResponseTime != nil {
+		responseTime := float64(*a.ResponseTime) / float64(time.Second)
+		autoscalingOpts.ResponseTime = aws.Float64(responseTime)
+	}
+	return &autoscalingOpts, nil
+}
+
+// convertHTTPHealthCheck converts the ALB health check configuration into a format parsable by the templates pkg.
+func convertHTTPHealthCheck(hc manifest.HealthCheckArgsOrString) template.HTTPHealthCheckOpts {
+	opts := template.HTTPHealthCheckOpts{
+		HealthCheckPath:    manifest.DefaultHealthCheckPath,
+		HealthyThreshold:   hc.HealthCheckArgs.HealthyThreshold,
+		UnhealthyThreshold: hc.HealthCheckArgs.UnhealthyThreshold,
+	}
+	if hc.HealthCheckArgs.Path != nil {
+		opts.HealthCheckPath = *hc.HealthCheckArgs.Path
+	} else if hc.HealthCheckPath != nil {
+		opts.HealthCheckPath = *hc.HealthCheckPath
+	}
+	if hc.HealthCheckArgs.Interval != nil {
+		opts.Interval = aws.Int64(int64(hc.HealthCheckArgs.Interval.Seconds()))
+	}
+	if hc.HealthCheckArgs.Timeout != nil {
+		opts.Timeout = aws.Int64(int64(hc.HealthCheckArgs.Timeout.Seconds()))
+	}
+	return opts
 }

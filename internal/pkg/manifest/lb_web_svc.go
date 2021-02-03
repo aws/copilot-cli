@@ -22,12 +22,18 @@ const (
 const (
 	// LogRetentionInDays is the default log retention time in days.
 	LogRetentionInDays     = 30
-	defaultHealthCheckPath = "/"
+	DefaultHealthCheckPath = "/"
 )
 
 var (
 	errUnmarshalHealthCheckArgs = errors.New("can't unmarshal healthcheck field into string or compose-style map")
 )
+
+// Durationp is a utility function used to convert a time.Duration to a pointer. Useful for YAML unmarshaling
+// and template execution.
+func Durationp(v time.Duration) *time.Duration {
+	return &v
+}
 
 // LoadBalancedWebService holds the configuration to build a container image with an exposed port that receives
 // requests through a load balancer with AWS Fargate as the compute engine.
@@ -74,27 +80,6 @@ type HTTPHealthCheckArgs struct {
 type HealthCheckArgsOrString struct {
 	HealthCheckPath *string
 	HealthCheckArgs HTTPHealthCheckArgs
-}
-
-// HTTPHealthCheckOpts converts the ALB health check configuration into a format parsable by the templates pkg.
-func (hc HealthCheckArgsOrString) HTTPHealthCheckOpts() template.HTTPHealthCheckOpts {
-	opts := template.HTTPHealthCheckOpts{
-		HealthCheckPath:    defaultHealthCheckPath,
-		HealthyThreshold:   hc.HealthCheckArgs.HealthyThreshold,
-		UnhealthyThreshold: hc.HealthCheckArgs.UnhealthyThreshold,
-	}
-	if hc.HealthCheckArgs.Path != nil {
-		opts.HealthCheckPath = *hc.HealthCheckArgs.Path
-	} else if hc.HealthCheckPath != nil {
-		opts.HealthCheckPath = *hc.HealthCheckPath
-	}
-	if hc.HealthCheckArgs.Interval != nil {
-		opts.Interval = aws.Int64(int64(hc.HealthCheckArgs.Interval.Seconds()))
-	}
-	if hc.HealthCheckArgs.Timeout != nil {
-		opts.Timeout = aws.Int64(int64(hc.HealthCheckArgs.Timeout.Seconds()))
-	}
-	return opts
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the HealthCheckArgsOrString
@@ -164,7 +149,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 			ImageConfig: ServiceImageWithPort{},
 			RoutingRule: RoutingRule{
 				HealthCheck: HealthCheckArgsOrString{
-					HealthCheckPath: aws.String(defaultHealthCheckPath),
+					HealthCheckPath: aws.String(DefaultHealthCheckPath),
 				},
 			},
 			TaskConfig: TaskConfig{

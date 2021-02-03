@@ -151,10 +151,10 @@ func newDefaultBackendService() *BackendService {
 func newDefaultContainerHealthCheck() *ContainerHealthCheck {
 	return &ContainerHealthCheck{
 		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
-		Interval:    durationp(10 * time.Second),
+		Interval:    Durationp(10 * time.Second),
 		Retries:     aws.Int(2),
-		Timeout:     durationp(5 * time.Second),
-		StartPeriod: durationp(0 * time.Second),
+		Timeout:     Durationp(5 * time.Second),
+		StartPeriod: Durationp(0 * time.Second),
 	}
 }
 
