@@ -9,23 +9,18 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"gopkg.in/yaml.v3"
 )
 
-const (
-	defaultSidecarPort = "80"
-
-	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
-)
-
 var (
 	errUnmarshalBuildOpts = errors.New("can't unmarshal build field into string or compose-style map")
 	errUnmarshalCountOpts = errors.New(`can't unmarshal "count" field to an integer or autoscaling configuration`)
 )
+
+const defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
 
 var dockerfileDefaultName = "Dockerfile"
 
@@ -217,30 +212,6 @@ type Sidecar struct {
 	Sidecars map[string]*SidecarConfig `yaml:"sidecars"`
 }
 
-// Options converts the workload's sidecar configuration into a format parsable by the templates pkg.
-func (s *Sidecar) Options() ([]*template.SidecarOpts, error) {
-	if s.Sidecars == nil {
-		return nil, nil
-	}
-	var sidecars []*template.SidecarOpts
-	for name, config := range s.Sidecars {
-		port, protocol, err := parsePortMapping(config.Port)
-		if err != nil {
-			return nil, err
-		}
-		sidecars = append(sidecars, &template.SidecarOpts{
-			Name:       aws.String(name),
-			Image:      config.Image,
-			Port:       port,
-			Protocol:   protocol,
-			CredsParam: config.CredsParam,
-			Secrets:    config.Secrets,
-			Variables:  config.Variables,
-		})
-	}
-	return sidecars, nil
-}
-
 // SidecarConfig represents the configurable options for setting up a sidecar container.
 type SidecarConfig struct {
 	Port        *string             `yaml:"port"`
@@ -249,23 +220,6 @@ type SidecarConfig struct {
 	Variables   map[string]string   `yaml:"variables"`
 	Secrets     map[string]string   `yaml:"secrets"`
 	MountPoints []SidecarMountPoint `yaml:"mount_points"`
-}
-
-// Valid sidecar portMapping example: 2000/udp, or 2000 (default to be tcp).
-func parsePortMapping(s *string) (port *string, protocol *string, err error) {
-	if s == nil {
-		// default port for sidecar container to be 80.
-		return aws.String(defaultSidecarPort), nil, nil
-	}
-	portProtocol := strings.Split(*s, "/")
-	switch len(portProtocol) {
-	case 1:
-		return aws.String(portProtocol[0]), nil, nil
-	case 2:
-		return aws.String(portProtocol[0]), aws.String(portProtocol[1]), nil
-	default:
-		return nil, nil, fmt.Errorf("cannot parse port mapping from %s", *s)
-	}
 }
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.

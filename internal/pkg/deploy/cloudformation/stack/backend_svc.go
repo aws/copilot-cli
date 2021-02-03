@@ -75,7 +75,7 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := s.manifest.Sidecar.Options()
+	sidecars, err := convertSidecar(s.manifest.Sidecar)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
