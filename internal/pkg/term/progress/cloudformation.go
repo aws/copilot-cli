@@ -22,6 +22,12 @@ type StackSubscriber interface {
 	Subscribe() <-chan stream.StackEvent
 }
 
+// ResourceRendererOpts is optional configuration for a listening CloudFormation resource renderer.
+type ResourceRendererOpts struct {
+	StartEvent *stream.StackEvent // Specify the starting event for the resource instead of "[not started]".
+	RenderOpts RenderOptions
+}
+
 // ECSServiceRendererOpts is optional configuration for a listening ECS service renderer.
 type ECSServiceRendererOpts struct {
 	Group      *errgroup.Group
@@ -29,18 +35,44 @@ type ECSServiceRendererOpts struct {
 	RenderOpts RenderOptions
 }
 
-// ListeningStackRenderer returns a tree component that listens for CloudFormation
+// ListeningChangeSetRenderer returns a component that listens for CloudFormation
 // resource events from a stack mutated with a changeSet until the streamer stops.
-func ListeningStackRenderer(streamer StackSubscriber, stackName, description string, changes []Renderer, opts RenderOptions) DynamicRenderer {
+func ListeningChangeSetRenderer(streamer StackSubscriber, stackName, description string, changes []Renderer, opts RenderOptions) DynamicRenderer {
 	return &dynamicTreeComponent{
-		Root:     ListeningResourceRenderer(streamer, stackName, description, opts),
+		Root: ListeningResourceRenderer(streamer, stackName, description, ResourceRendererOpts{
+			RenderOpts: opts,
+		}),
 		Children: changes,
 	}
 }
 
+// ListeningStackRenderer returns a component that listens for CloudFormation resource events
+// from a stack mutated with CreateStack or UpdateStack until the stack is completed.
+func ListeningStackRenderer(streamer StackSubscriber, stackName, description string, resourceDescriptions map[string]string, opts RenderOptions) DynamicRenderer {
+	comp := &stackComponent{
+		cfnStream:            streamer.Subscribe(),
+		stack:                streamer,
+		resourceDescriptions: resourceDescriptions,
+		renderOpts:           opts,
+		resources: []Renderer{
+			// Add the stack as a resource to track.
+			ListeningResourceRenderer(streamer, stackName, description, ResourceRendererOpts{
+				RenderOpts: opts,
+			}),
+		},
+		seenResources: map[string]bool{
+			stackName: true,
+		},
+		done: make(chan struct{}),
+	}
+	comp.addRenderer = comp.addResourceRenderer
+	go comp.Listen()
+	return comp
+}
+
 // ListeningResourceRenderer returns a tab-separated component that listens for
 // CloudFormation stack events for a particular resource.
-func ListeningResourceRenderer(streamer StackSubscriber, logicalID, description string, opts RenderOptions) DynamicRenderer {
+func ListeningResourceRenderer(streamer StackSubscriber, logicalID, description string, opts ResourceRendererOpts) DynamicRenderer {
 	comp := &regularResourceComponent{
 		logicalID:   logicalID,
 		description: description,
@@ -48,8 +80,12 @@ func ListeningResourceRenderer(streamer StackSubscriber, logicalID, description 
 		stopWatch:   newStopWatch(),
 		stream:      streamer.Subscribe(),
 		done:        make(chan struct{}),
-		padding:     opts.Padding,
+		padding:     opts.RenderOpts.Padding,
 		separator:   '\t',
+	}
+	if opts.StartEvent != nil {
+		updateComponentStatus(&comp.mu, &comp.statuses, *opts.StartEvent)
+		updateComponentTimer(&comp.mu, comp.statuses, comp.stopWatch)
 	}
 	go comp.Listen()
 	return comp
@@ -74,9 +110,9 @@ func ListeningECSServiceResourceRenderer(streamer StackSubscriber, ecsDescriber 
 		group:      g,
 		ctx:        ctx,
 		renderOpts: opts.RenderOpts,
-
-		resourceRenderer: ListeningResourceRenderer(streamer, logicalID, description, opts.RenderOpts),
-
+		resourceRenderer: ListeningResourceRenderer(streamer, logicalID, description, ResourceRendererOpts{
+			RenderOpts: opts.RenderOpts,
+		}),
 		done: make(chan struct{}),
 	}
 	comp.newDeploymentRender = comp.newListeningRollingUpdateRenderer
@@ -123,6 +159,70 @@ func (c *regularResourceComponent) Render(out io.Writer) (numLines int, err erro
 // Done returns a channel that's closed when there are no more events to Listen.
 func (c *regularResourceComponent) Done() <-chan struct{} {
 	return c.done
+}
+
+// stackComponent is a DynamicRenderer that can display CloudFormation stack events as they stream in.
+type stackComponent struct {
+	// Required inputs.
+	cfnStream            <-chan stream.StackEvent
+	stack                StackSubscriber
+	resourceDescriptions map[string]string
+
+	// Optional inputs.
+	renderOpts RenderOptions
+
+	// Sub-components.
+	resources     []Renderer
+	seenResources map[string]bool
+	done          chan struct{}
+	mu            sync.Mutex
+
+	// Replaced in tests.
+	addRenderer func(stream.StackEvent, string)
+}
+
+// Listen consumes stack events from the stream.
+// On new resource events, if the resource's LogicalID has a description
+// then the resource is added to the list of sub-components to render.
+func (c *stackComponent) Listen() {
+	for ev := range c.cfnStream {
+		logicalID := ev.LogicalResourceID
+		if _, ok := c.seenResources[logicalID]; ok {
+			continue
+		}
+		c.seenResources[logicalID] = true
+
+		description, ok := c.resourceDescriptions[logicalID]
+		if !ok {
+			continue
+		}
+		c.addRenderer(ev, description)
+	}
+	close(c.done)
+}
+
+// Render renders all resources in the stack to out.
+func (c *stackComponent) Render(out io.Writer) (numLines int, err error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return renderComponents(out, c.resources)
+}
+
+// Done returns a channel that's closed when there are no more events to Listen.
+func (c *stackComponent) Done() <-chan struct{} {
+	return c.done
+}
+
+func (c *stackComponent) addResourceRenderer(ev stream.StackEvent, description string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	opts := ResourceRendererOpts{
+		StartEvent: &ev,
+		RenderOpts: NestedRenderOptions(c.renderOpts),
+	}
+	c.resources = append(c.resources, ListeningResourceRenderer(c.stack, ev.LogicalResourceID, description, opts))
 }
 
 // ecsServiceResourceComponent can display an ECS service created with CloudFormation.
@@ -195,7 +295,11 @@ func (c *ecsServiceResourceComponent) Render(out io.Writer) (numLines int, err e
 		deploymentRenderer = c.deploymentRenderer
 	}
 
-	nl, err = deploymentRenderer.Render(buf)
+	sw := &suffixWriter{
+		buf:    buf,
+		suffix: []byte{'\t', '\t'}, // Add two columns to the deployment renderer so that it aligns with resources.
+	}
+	nl, err = deploymentRenderer.Render(sw)
 	if err != nil {
 		return 0, err
 	}

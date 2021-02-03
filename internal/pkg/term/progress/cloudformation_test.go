@@ -31,6 +31,86 @@ func (c *fakeClock) now() time.Time {
 	return t
 }
 
+func TestStackComponent_Listen(t *testing.T) {
+	// GIVEN
+	ch := make(chan stream.StackEvent)
+	done := make(chan struct{})
+	wantedRenderers := []Renderer{
+		&mockDynamicRenderer{
+			content: "load balancer",
+		},
+		&mockDynamicRenderer{
+			content: "fancy role",
+		},
+	}
+	var actualRenderers []Renderer
+	comp := &stackComponent{
+		cfnStream: ch,
+		resourceDescriptions: map[string]string{
+			"ALB":  "load balancer",
+			"Role": "fancy role",
+		},
+		seenResources: map[string]bool{},
+		done:          done,
+		addRenderer: func(event stream.StackEvent, _ string) {
+			if event.LogicalResourceID == "ALB" {
+				actualRenderers = append(actualRenderers, wantedRenderers[0])
+			} else {
+				actualRenderers = append(actualRenderers, wantedRenderers[1])
+			}
+		},
+	}
+
+	// WHEN
+	go comp.Listen()
+	go func() {
+		ch <- stream.StackEvent{
+			LogicalResourceID: "ALB",
+			ResourceStatus:    "CREATE_IN_PROGRESS",
+		}
+		ch <- stream.StackEvent{
+			LogicalResourceID: "Role",
+			ResourceStatus:    "CREATE_IN_PROGRESS",
+		}
+		// Should not create another renderer.
+		ch <- stream.StackEvent{
+			LogicalResourceID: "ALB",
+			ResourceStatus:    "CREATE_COMPLETE",
+		}
+		// Should not create another renderer.
+		ch <- stream.StackEvent{
+			LogicalResourceID: "Role",
+			ResourceStatus:    "CREATE_COMPLETE",
+		}
+		close(ch)
+	}()
+
+	// THEN
+	<-done
+	require.Equal(t, wantedRenderers, actualRenderers)
+}
+
+func TestStackComponent_Render(t *testing.T) {
+	// GIVEN
+	comp := &stackComponent{
+		resources: []Renderer{
+			&mockDynamicRenderer{content: "hello\n"},
+			&mockDynamicRenderer{content: "world\n"},
+		},
+	}
+	buf := new(strings.Builder)
+
+	// WHEN
+	nl, err := comp.Render(buf)
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, 2, nl, "expected a line for each renderer")
+	require.Equal(t, `hello
+world
+`, buf.String(), "expected each renderer to be rendered")
+}
+
 func TestRegularResourceComponent_Listen(t *testing.T) {
 	t.Run("should not add status if no events are received for the logical ID", func(t *testing.T) {
 		// GIVEN
@@ -418,8 +498,7 @@ func TestEcsServiceResourceComponent_Render(t *testing.T) {
 		// THEN
 		require.Nil(t, err)
 		require.Equal(t, 2, nl)
-		require.Equal(t, `resource
-deployment
-`, buf.String())
+		require.Equal(t, "resource\n"+
+			"deployment\t\t\n", buf.String())
 	})
 }

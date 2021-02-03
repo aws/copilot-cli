@@ -40,6 +40,8 @@ func NestedRenderOptions(opts RenderOptions) RenderOptions {
 // Render stops when there the ctx is canceled or r is done listening to new events.
 // While Render is executing, the terminal cursor is hidden and updates are written in-place.
 func Render(ctx context.Context, out FileWriteFlusher, r DynamicRenderer) error {
+	defer out.Flush() // Make sure every buffered text in out is written before exiting.
+
 	cursor := cursor.NewWithWriter(out)
 	cursor.Hide()
 	defer cursor.Show()

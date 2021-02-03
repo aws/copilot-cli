@@ -20,6 +20,9 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64  go build -o e2e-service ./
 
 # To make our images smaller, use alpine and copy in the service binary.
 FROM alpine:latest
+# curl is needed for container healthchecks.
+RUN apk update
+RUN apk add curl
 # Install certs
 RUN apk --no-cache add ca-certificates
 # Copy the binary from the builder image
