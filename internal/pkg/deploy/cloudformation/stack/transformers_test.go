@@ -68,7 +68,7 @@ func Test_convertSidecar(t *testing.T) {
 					},
 				},
 			}
-			got, err := convertSidecar(sidecar)
+			got, err := convertSidecar(&sidecar)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
@@ -127,7 +127,7 @@ func Test_convertAutoscaling(t *testing.T) {
 				Requests:     aws.Int(tc.inRequests),
 				ResponseTime: &tc.inResponseTime,
 			}
-			got, err := convertAutoscaling(a)
+			got, err := convertAutoscaling(&a)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
@@ -241,7 +241,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 				},
 			}
 			// WHEN
-			actualOpts := convertHTTPHealthCheck(hc)
+			actualOpts := convertHTTPHealthCheck(&hc)
 
 			// THEN
 			require.Equal(t, tc.wantedOpts, actualOpts)

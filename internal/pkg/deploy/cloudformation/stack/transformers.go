@@ -18,7 +18,7 @@ const (
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
-func convertSidecar(s manifest.Sidecar) ([]*template.SidecarOpts, error) {
+func convertSidecar(s *manifest.Sidecar) ([]*template.SidecarOpts, error) {
 	if s.Sidecars == nil {
 		return nil, nil
 	}
@@ -60,7 +60,7 @@ func parsePortMapping(s *string) (port *string, protocol *string, err error) {
 
 // convertAutoscaling converts the service's Auto Scaling configuration into a format parsable
 // by the templates pkg.
-func convertAutoscaling(a manifest.Autoscaling) (*template.AutoscalingOpts, error) {
+func convertAutoscaling(a *manifest.Autoscaling) (*template.AutoscalingOpts, error) {
 	if a.IsEmpty() {
 		return nil, nil
 	}
@@ -89,7 +89,7 @@ func convertAutoscaling(a manifest.Autoscaling) (*template.AutoscalingOpts, erro
 }
 
 // convertHTTPHealthCheck converts the ALB health check configuration into a format parsable by the templates pkg.
-func convertHTTPHealthCheck(hc manifest.HealthCheckArgsOrString) template.HTTPHealthCheckOpts {
+func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPHealthCheckOpts {
 	opts := template.HTTPHealthCheckOpts{
 		HealthCheckPath:    manifest.DefaultHealthCheckPath,
 		HealthyThreshold:   hc.HealthCheckArgs.HealthyThreshold,

@@ -75,11 +75,11 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := convertSidecar(s.manifest.Sidecar)
+	sidecars, err := convertSidecar(&s.manifest.Sidecar)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
-	autoscaling, err := convertAutoscaling(s.manifest.Count.Autoscaling)
+	autoscaling, err := convertAutoscaling(&s.manifest.Count.Autoscaling)
 	if err != nil {
 		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
 	}
