@@ -246,3 +246,279 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		})
 	}
 }
+
+func Test_convertStorageOpts(t *testing.T) {
+	testCases := map[string]struct {
+		inVolumes map[string]manifest.Volume
+		wantOpts  template.StorageOpts
+		wantErr   string
+	}{
+		"minimal configuration": {
+			inVolumes: map[string]manifest.Volume{
+				"wordpress": {
+					EFS: manifest.EFSVolumeConfiguration{
+						FileSystemID: aws.String("fs-1234"),
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+					},
+				},
+			},
+			wantOpts: template.StorageOpts{
+				Volumes: []*template.Volume{
+					{
+						Name:          aws.String("wordpress"),
+						Filesystem:    aws.String("fs-1234"),
+						RootDirectory: aws.String("/"),
+						IAM:           aws.String("DISABLED"),
+					},
+				},
+				MountPoints: []*template.MountPoint{
+					{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+						SourceVolume:  aws.String("wordpress"),
+					},
+				},
+				EFSPerms: []*template.EFSPermission{
+					{
+						FilesystemID: aws.String("fs-1234"),
+						Write:        false,
+					},
+				},
+			},
+		},
+		"fsid not specified": {
+			inVolumes: map[string]manifest.Volume{
+				"wordpress": {},
+			},
+			wantErr: errNoFSID.Error(),
+		},
+		"container path not specified": {
+			inVolumes: map[string]manifest.Volume{
+				"wordpress": {
+					EFS: manifest.EFSVolumeConfiguration{
+						FileSystemID: aws.String("fs-1234"),
+					},
+				},
+			},
+			wantErr: errVolNoContainerPath.Error(),
+		},
+		"full specification with access point renders correctly": {
+			inVolumes: map[string]manifest.Volume{
+				"wordpress": {
+					EFS: manifest.EFSVolumeConfiguration{
+						FileSystemID:  aws.String("fs-1234"),
+						RootDirectory: aws.String("/"),
+						AuthConfig: manifest.AuthorizationConfig{
+							IAM:           aws.Bool(true),
+							AccessPointID: aws.String("ap-1234"),
+						},
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(false),
+					},
+				},
+			},
+			wantOpts: template.StorageOpts{
+				Volumes: []*template.Volume{
+					{
+						Name:          aws.String("wordpress"),
+						Filesystem:    aws.String("fs-1234"),
+						RootDirectory: aws.String("/"),
+						IAM:           aws.String("ENABLED"),
+						AccessPointID: aws.String("ap-1234"),
+					},
+				},
+				MountPoints: []*template.MountPoint{
+					{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(false),
+						SourceVolume:  aws.String("wordpress"),
+					},
+				},
+				EFSPerms: []*template.EFSPermission{
+					{
+						FilesystemID:  aws.String("fs-1234"),
+						AccessPointID: aws.String("ap-1234"),
+						Write:         true,
+					},
+				},
+			},
+		},
+		"full specification without access point renders correctly": {
+			inVolumes: map[string]manifest.Volume{
+				"wordpress": {
+					EFS: manifest.EFSVolumeConfiguration{
+						FileSystemID:  aws.String("fs-1234"),
+						RootDirectory: aws.String("/wordpress"),
+						AuthConfig: manifest.AuthorizationConfig{
+							IAM: aws.Bool(true),
+						},
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(false),
+					},
+				},
+			},
+			wantOpts: template.StorageOpts{
+				Volumes: []*template.Volume{
+					{
+						Name:          aws.String("wordpress"),
+						Filesystem:    aws.String("fs-1234"),
+						RootDirectory: aws.String("/wordpress"),
+						IAM:           aws.String("ENABLED"),
+					},
+				},
+				MountPoints: []*template.MountPoint{
+					{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(false),
+						SourceVolume:  aws.String("wordpress"),
+					},
+				},
+				EFSPerms: []*template.EFSPermission{
+					{
+						FilesystemID: aws.String("fs-1234"),
+						Write:        true,
+					},
+				},
+			},
+		},
+		"error when AP is specified with root dir": {
+			inVolumes: map[string]manifest.Volume{
+				"wordpress": {
+					EFS: manifest.EFSVolumeConfiguration{
+						FileSystemID:  aws.String("fs-1234"),
+						RootDirectory: aws.String("/wordpress"),
+						AuthConfig: manifest.AuthorizationConfig{
+							IAM:           aws.Bool(true),
+							AccessPointID: aws.String("ap-1234"),
+						},
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(false),
+					},
+				},
+			},
+			wantErr: errAcessPointWithRootDirectory.Error(),
+		},
+		"error when AP is specified without IAM": {
+			inVolumes: map[string]manifest.Volume{
+				"wordpress": {
+					EFS: manifest.EFSVolumeConfiguration{
+						FileSystemID:  aws.String("fs-1234"),
+						RootDirectory: aws.String("/wordpress"),
+						AuthConfig: manifest.AuthorizationConfig{
+							IAM:           aws.Bool(false),
+							AccessPointID: aws.String("ap-1234"),
+						},
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(false),
+					},
+				},
+			},
+			wantErr: errAccessPointWithoutIAM.Error(),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			s := manifest.Storage{
+				Volumes: tc.inVolumes,
+			}
+			// WHEN
+			got, err := convertStorageOpts(&s)
+
+			// THEN
+			if tc.wantErr != "" {
+				require.EqualError(t, err, tc.wantErr)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, &tc.wantOpts, got)
+			}
+		})
+	}
+}
+
+func Test_convertSidecarMountPoints(t *testing.T) {
+	testCases := map[string]struct {
+		inMountPoints  []manifest.SidecarMountPoint
+		wantErr        string
+		wantMountPoint []*template.MountPoint
+	}{
+		"fully specified": {
+			inMountPoints: []manifest.SidecarMountPoint{
+				{
+					SourceVolume: aws.String("wordpress"),
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www/wp-content"),
+						ReadOnly:      aws.Bool(false),
+					},
+				},
+			},
+			wantMountPoint: []*template.MountPoint{
+				{
+					ContainerPath: aws.String("/var/www/wp-content"),
+					ReadOnly:      aws.Bool(false),
+					SourceVolume:  aws.String("wordpress"),
+				},
+			},
+		},
+		"readonly defaults to true": {
+			inMountPoints: []manifest.SidecarMountPoint{
+				{
+					SourceVolume: aws.String("wordpress"),
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www/wp-content"),
+					},
+				},
+			},
+			wantMountPoint: []*template.MountPoint{
+				{
+					ContainerPath: aws.String("/var/www/wp-content"),
+					ReadOnly:      aws.Bool(true),
+					SourceVolume:  aws.String("wordpress"),
+				},
+			},
+		},
+		"error when source not specified": {
+			inMountPoints: []manifest.SidecarMountPoint{
+				{
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www/wp-content"),
+						ReadOnly:      aws.Bool(false),
+					},
+				},
+			},
+			wantErr: errNoSourceVolume.Error(),
+		},
+		"error when path not specified": {
+			inMountPoints: []manifest.SidecarMountPoint{
+				{
+					SourceVolume: aws.String("wordpress"),
+					MountPointOpts: manifest.MountPointOpts{
+						ReadOnly: aws.Bool(false),
+					},
+				},
+			},
+			wantErr: errMPNoContainerPath.Error(),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := renderSidecarMountPoints(tc.inMountPoints)
+			if tc.wantErr != "" {
+				require.EqualError(t, err, tc.wantErr)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantMountPoint, got)
+			}
+		})
+	}
+}
