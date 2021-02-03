@@ -37,7 +37,8 @@ func TestSvcExec_Validate(t *testing.T) {
 	)
 	mockErr := errors.New("some error")
 	testCases := map[string]struct {
-		setupMocks func(mocks execSvcMocks)
+		skipConfirmation bool
+		setupMocks       func(mocks execSvcMocks)
 
 		wantedError error
 	}{
@@ -250,7 +251,8 @@ func TestSvcExec_Validate(t *testing.T) {
 
 			wantedError: nil,
 		},
-		"valid case with ssm plugin updating": {
+		"valid case with ssm plugin updating and skip confirming": {
+			skipConfirmation: true,
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
@@ -266,8 +268,6 @@ func TestSvcExec_Validate(t *testing.T) {
 						CurrentVersion: "mockCurrentVersion",
 						LatestVersion:  "mockLatestVersion",
 					}),
-					m.prompter.EXPECT().Confirm(fmt.Sprintf(ssmPluginUpdatePrompt, "mockCurrentVersion", "mockLatestVersion"), "").
-						Return(true, nil),
 					m.ssmPluginManager.EXPECT().InstallLatestBinary().Return(nil),
 				)
 			},
@@ -294,9 +294,10 @@ func TestSvcExec_Validate(t *testing.T) {
 
 			execSvcs := &svcExecOpts{
 				execVars: execVars{
-					name:    inputSvc,
-					appName: inputApp,
-					envName: inputEnv,
+					name:             inputSvc,
+					appName:          inputApp,
+					envName:          inputEnv,
+					skipConfirmation: tc.skipConfirmation,
 				},
 				store:            mockStoreReader,
 				ssmPluginManager: mockSSMPluginManager,

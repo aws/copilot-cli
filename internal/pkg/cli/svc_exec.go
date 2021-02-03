@@ -100,7 +100,7 @@ func (o *svcExecOpts) Validate() error {
 			return err
 		}
 	}
-	return validateSSMBinary(o.prompter, o.ssmPluginManager)
+	return validateSSMBinary(o.prompter, o.ssmPluginManager, o.skipConfirmation)
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -207,7 +207,7 @@ func (o *svcExecOpts) selectContainer() string {
 	return o.name
 }
 
-func validateSSMBinary(prompt prompter, manager ssmPluginManager) error {
+func validateSSMBinary(prompt prompter, manager ssmPluginManager, skipConfirmation bool) error {
 	err := manager.ValidateBinary()
 	if err == nil {
 		return nil
@@ -215,12 +215,14 @@ func validateSSMBinary(prompt prompter, manager ssmPluginManager) error {
 	switch v := err.(type) {
 	case *exec.ErrSSMPluginNotExist:
 		// If ssm plugin is not install, prompt users to install the plugin.
-		confirmInstall, err := prompt.Confirm(ssmPluginInstallPrompt, ssmPluginInstallPromptHelp)
-		if err != nil {
-			return fmt.Errorf("prompt to confirm installing the plugin: %w", err)
-		}
-		if !confirmInstall {
-			return errSSMPluginCommandInstallCancelled
+		if !skipConfirmation {
+			confirmInstall, err := prompt.Confirm(ssmPluginInstallPrompt, ssmPluginInstallPromptHelp)
+			if err != nil {
+				return fmt.Errorf("prompt to confirm installing the plugin: %w", err)
+			}
+			if !confirmInstall {
+				return errSSMPluginCommandInstallCancelled
+			}
 		}
 		if err := manager.InstallLatestBinary(); err != nil {
 			return fmt.Errorf("install ssm plugin: %w", err)
@@ -228,16 +230,18 @@ func validateSSMBinary(prompt prompter, manager ssmPluginManager) error {
 		return nil
 	case *exec.ErrOutdatedSSMPlugin:
 		// If ssm plugin is not up to date, prompt users to update the plugin.
-		confirmUpdate, err := prompt.Confirm(
-			fmt.Sprintf(ssmPluginUpdatePrompt, v.CurrentVersion, v.LatestVersion), "")
-		if err != nil {
-			return fmt.Errorf("prompt to confirm updating the plugin: %w", err)
-		}
-		if !confirmUpdate {
-			log.Infof(`Alright, we won't update the Session Manager plugin.
-It might fail to execute if it is not using the latest plugin.
-`)
-			return nil
+		if !skipConfirmation {
+			confirmUpdate, err := prompt.Confirm(
+				fmt.Sprintf(ssmPluginUpdatePrompt, v.CurrentVersion, v.LatestVersion), "")
+			if err != nil {
+				return fmt.Errorf("prompt to confirm updating the plugin: %w", err)
+			}
+			if !confirmUpdate {
+				log.Infof(`Alright, we won't update the Session Manager plugin.
+	It might fail to execute if it is not using the latest plugin.
+	`)
+				return nil
+			}
 		}
 		if err := manager.InstallLatestBinary(); err != nil {
 			return fmt.Errorf("update ssm plugin: %w", err)
@@ -282,6 +286,7 @@ func buildSvcExecCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.command, commandFlag, commandFlagShort, defaultCommand, execCommandFlagDescription)
 	cmd.Flags().StringVar(&vars.taskID, taskIDFlag, "", taskIDFlagDescription)
 	cmd.Flags().StringVar(&vars.containerName, containerFlag, "", containerFlagDescription)
+	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	return cmd

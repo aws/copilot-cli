@@ -8,10 +8,11 @@ const (
 )
 
 type execVars struct {
-	appName       string
-	envName       string
-	name          string
-	command       string
-	taskID        string
-	containerName string
+	appName          string
+	envName          string
+	name             string
+	command          string
+	taskID           string
+	containerName    string
+	skipConfirmation bool
 }

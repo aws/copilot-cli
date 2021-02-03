@@ -89,7 +89,7 @@ func (o *taskExecOpts) Validate() error {
 			return err
 		}
 	}
-	return validateSSMBinary(o.prompter, o.ssmPluginManager)
+	return validateSSMBinary(o.prompter, o.ssmPluginManager, o.skipConfirmation)
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -223,6 +223,7 @@ func buildTaskExecCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.command, commandFlag, commandFlagShort, defaultCommand, execCommandFlagDescription)
 	cmd.Flags().StringVar(&vars.taskID, taskIDFlag, "", taskIDFlagDescription)
 	cmd.Flags().BoolVar(&vars.useDefault, taskDefaultFlag, false, taskExecDefaultFlagDescription)
+	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	return cmd
