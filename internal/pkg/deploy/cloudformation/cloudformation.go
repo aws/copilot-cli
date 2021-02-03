@@ -71,6 +71,10 @@ type cfnClient interface {
 	DescribeStackEvents(*sdkcloudformation.DescribeStackEventsInput) (*sdkcloudformation.DescribeStackEventsOutput, error)
 }
 
+type codeStarClient interface {
+	WaitForAvailableConnection(ctx context.Context, connectionARN string) error
+}
+
 type stackSetClient interface {
 	Create(name, template string, opts ...stackset.CreateOrUpdateOption) error
 	CreateInstancesAndWait(name string, accounts, regions []string) error
@@ -83,7 +87,7 @@ type stackSetClient interface {
 // CloudFormation wraps the CloudFormationAPI interface
 type CloudFormation struct {
 	cfnClient      cfnClient
-	codeStarClient codestar.Connections
+	codeStarClient codeStarClient
 	ecsClient      ecsClient
 	regionalClient func(region string) cfnClient
 	appStackSet    stackSetClient

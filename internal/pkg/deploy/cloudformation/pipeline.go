@@ -54,10 +54,6 @@ func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput) error {
 		return fmt.Errorf("update pipeline: %w", err)
 	}
 	output, err := cf.cfnClient.Outputs(s)
-	for lineItem := range output {
-		fmt.Printf("output: %v", lineItem)
-	}
-	fmt.Printf("with key: %v", output[aws.String("PipelineConnection")])
 	err = cf.codeStarClient.WaitForAvailableConnection(context.Background(), *output[aws.String("PipelineConnection")])
 	if err != nil {
 		return fmt.Errorf("TKTKTK")
