@@ -118,17 +118,16 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 						{
 							SourceVolume:  aws.String("efs"),
 							ContainerPath: aws.String("/var/www"),
-							ReadOnly:      aws.String("false"),
+							ReadOnly:      aws.Bool(false),
 						},
 					},
 					Volumes: []*template.Volume{
 						{
-							AccessPointID:     aws.String("ap-1234"),
-							Filesystem:        aws.String("fs-5678"),
-							IAM:               aws.String("ENABLED"),
-							Name:              aws.String("efs"),
-							RootDirectory:     aws.String("/"),
-							TransitEncryption: aws.String("ENABLED"),
+							AccessPointID: aws.String("ap-1234"),
+							Filesystem:    aws.String("fs-5678"),
+							IAM:           aws.String("ENABLED"),
+							Name:          aws.String("efs"),
+							RootDirectory: aws.String("/"),
 						},
 					},
 				},
@@ -147,15 +146,14 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 						{
 							SourceVolume:  aws.String("efs"),
 							ContainerPath: aws.String("/var/www"),
-							ReadOnly:      aws.String("true"),
+							ReadOnly:      aws.Bool(true),
 						},
 					},
 					Volumes: []*template.Volume{
 						{
-							Filesystem:        aws.String("fs-5678"),
-							Name:              aws.String("efs"),
-							RootDirectory:     aws.String("/"),
-							TransitEncryption: aws.String("ENABLED"),
+							Filesystem:    aws.String("fs-5678"),
+							Name:          aws.String("efs"),
+							RootDirectory: aws.String("/"),
 						},
 					},
 				},
