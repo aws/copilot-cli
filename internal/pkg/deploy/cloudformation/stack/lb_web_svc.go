@@ -117,7 +117,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Secrets:             s.manifest.Secrets,
 		NestedStack:         outputs,
 		Sidecars:            sidecars,
-		LogConfig:           s.manifest.LogConfigOpts(),
+		LogConfig:           convertLogging(s.manifest.Logging),
 		Autoscaling:         autoscaling,
 		HTTPHealthCheck:     convertHTTPHealthCheck(s.manifest.HealthCheck),
 		AllowedSourceIps:    s.manifest.AllowedSourceIps,

@@ -11,7 +11,6 @@ import (
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"gopkg.in/yaml.v3"
 )
 
@@ -182,24 +181,16 @@ type Logging struct {
 	ConfigFile     *string           `yaml:"configFilePath"`
 }
 
-func (lc *Logging) logConfigOpts() *template.LogConfigOpts {
-	return &template.LogConfigOpts{
-		Image:          lc.image(),
-		ConfigFile:     lc.ConfigFile,
-		EnableMetadata: lc.enableMetadata(),
-		Destination:    lc.Destination,
-		SecretOptions:  lc.SecretOptions,
-	}
-}
-
-func (lc *Logging) image() *string {
+// LogImage returns the default Fluent Bit image if not otherwise configured.
+func (lc *Logging) LogImage() *string {
 	if lc.Image == nil {
 		return aws.String(defaultFluentbitImage)
 	}
 	return lc.Image
 }
 
-func (lc *Logging) enableMetadata() *string {
+// GetEnableMetadata returns the configuration values and sane default for the EnableMEtadata field
+func (lc *Logging) GetEnableMetadata() *string {
 	if lc.EnableMetadata == nil {
 		// Enable ecs log metadata by default.
 		return aws.String("true")

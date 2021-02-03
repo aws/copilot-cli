@@ -108,3 +108,19 @@ func convertHTTPHealthCheck(hc manifest.HealthCheckArgsOrString) template.HTTPHe
 	}
 	return opts
 }
+
+func convertLogging(lc *manifest.Logging) *template.LogConfigOpts {
+	if lc == nil {
+		return nil
+	}
+	return logConfigOpts(lc)
+}
+func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
+	return &template.LogConfigOpts{
+		Image:          lc.LogImage(),
+		ConfigFile:     lc.ConfigFile,
+		EnableMetadata: lc.GetEnableMetadata(),
+		Destination:    lc.Destination,
+		SecretOptions:  lc.SecretOptions,
+	}
+}

@@ -144,7 +144,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		Sidecars:           sidecars,
 		ScheduleExpression: schedule,
 		StateMachine:       stateMachine,
-		LogConfig:          j.manifest.LogConfigOpts(),
+		LogConfig:          convertLogging(j.manifest.Logging),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)

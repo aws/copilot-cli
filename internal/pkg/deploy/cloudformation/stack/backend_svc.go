@@ -90,7 +90,7 @@ func (s *BackendService) Template() (string, error) {
 		Sidecars:           sidecars,
 		Autoscaling:        autoscaling,
 		HealthCheck:        s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),
-		LogConfig:          s.manifest.LogConfigOpts(),
+		LogConfig:          convertLogging(s.manifest.Logging),
 		DesiredCountLambda: desiredCountLambda.String(),
 	})
 	if err != nil {
