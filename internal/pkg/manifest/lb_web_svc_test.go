@@ -18,113 +18,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestHealthCheckArgsOrString_HTTPHealthCheckOpts(t *testing.T) {
-	testCases := map[string]struct {
-		inputPath               *string
-		inputHealthyThreshold   *int64
-		inputUnhealthyThreshold *int64
-		inputInterval           *time.Duration
-		inputTimeout            *time.Duration
-
-		wantedOpts template.HTTPHealthCheckOpts
-	}{
-		"no fields indicated in manifest": {
-			inputPath:               nil,
-			inputHealthyThreshold:   nil,
-			inputUnhealthyThreshold: nil,
-			inputInterval:           nil,
-			inputTimeout:            nil,
-
-			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath: "/",
-			},
-		},
-		"just HealthyThreshold": {
-			inputPath:               nil,
-			inputHealthyThreshold:   aws.Int64(5),
-			inputUnhealthyThreshold: nil,
-			inputInterval:           nil,
-			inputTimeout:            nil,
-
-			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath:  "/",
-				HealthyThreshold: aws.Int64(5),
-			},
-		},
-		"just UnhealthyThreshold": {
-			inputPath:               nil,
-			inputHealthyThreshold:   nil,
-			inputUnhealthyThreshold: aws.Int64(5),
-			inputInterval:           nil,
-			inputTimeout:            nil,
-
-			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath:    "/",
-				UnhealthyThreshold: aws.Int64(5),
-			},
-		},
-		"just Interval": {
-			inputPath:               nil,
-			inputHealthyThreshold:   nil,
-			inputUnhealthyThreshold: nil,
-			inputInterval:           durationp(15 * time.Second),
-			inputTimeout:            nil,
-
-			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath: "/",
-				Interval:        aws.Int64(15),
-			},
-		},
-		"just Timeout": {
-			inputPath:               nil,
-			inputHealthyThreshold:   nil,
-			inputUnhealthyThreshold: nil,
-			inputInterval:           nil,
-			inputTimeout:            durationp(15 * time.Second),
-
-			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath: "/",
-				Timeout:         aws.Int64(15),
-			},
-		},
-		"all values changed in manifest": {
-			inputPath:               aws.String("/road/to/nowhere"),
-			inputHealthyThreshold:   aws.Int64(3),
-			inputUnhealthyThreshold: aws.Int64(3),
-			inputInterval:           durationp(60 * time.Second),
-			inputTimeout:            durationp(60 * time.Second),
-
-			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath:    "/road/to/nowhere",
-				HealthyThreshold:   aws.Int64(3),
-				UnhealthyThreshold: aws.Int64(3),
-				Interval:           aws.Int64(60),
-				Timeout:            aws.Int64(60),
-			},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			hc := HealthCheckArgsOrString{
-				HealthCheckPath: tc.inputPath,
-				HealthCheckArgs: HTTPHealthCheckArgs{
-					Path:               tc.inputPath,
-					HealthyThreshold:   tc.inputHealthyThreshold,
-					UnhealthyThreshold: tc.inputUnhealthyThreshold,
-					Timeout:            tc.inputTimeout,
-					Interval:           tc.inputInterval,
-				},
-			}
-			// WHEN
-			actualOpts := hc.HTTPHealthCheckOpts()
-
-			// THEN
-			require.Equal(t, tc.wantedOpts, actualOpts)
-		})
-	}
-}
-
 func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
 	testCases := map[string]struct {
 		inContent []byte
@@ -384,13 +277,11 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 						},
 					},
-					Sidecar: Sidecar{
-						Sidecars: map[string]*SidecarConfig{
-							"xray": {
-								Port:       aws.String("2000"),
-								Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
-								CredsParam: aws.String("some arn"),
-							},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
 						},
 					},
 					Logging: &Logging{
@@ -433,17 +324,15 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								},
 							},
 						},
-						Sidecar: Sidecar{
-							Sidecars: map[string]*SidecarConfig{
-								"xray": {
-									Port: aws.String("2000/udp"),
-									MountPoints: []SidecarMountPoint{
-										{
-											SourceVolume: aws.String("myEFSVolume"),
-											MountPointOpts: MountPointOpts{
-												ReadOnly:      aws.Bool(true),
-												ContainerPath: aws.String("/var/www"),
-											},
+						Sidecars: map[string]*SidecarConfig{
+							"xray": {
+								Port: aws.String("2000/udp"),
+								MountPoints: []SidecarMountPoint{
+									{
+										SourceVolume: aws.String("myEFSVolume"),
+										MountPointOpts: MountPointOpts{
+											ReadOnly:      aws.Bool(true),
+											ContainerPath: aws.String("/var/www"),
 										},
 									},
 								},
@@ -514,19 +403,17 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 						},
 					},
-					Sidecar: Sidecar{
-						Sidecars: map[string]*SidecarConfig{
-							"xray": {
-								Port:       aws.String("2000/udp"),
-								Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
-								CredsParam: aws.String("some arn"),
-								MountPoints: []SidecarMountPoint{
-									{
-										SourceVolume: aws.String("myEFSVolume"),
-										MountPointOpts: MountPointOpts{
-											ReadOnly:      aws.Bool(true),
-											ContainerPath: aws.String("/var/www"),
-										},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000/udp"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+							MountPoints: []SidecarMountPoint{
+								{
+									SourceVolume: aws.String("myEFSVolume"),
+									MountPointOpts: MountPointOpts{
+										ReadOnly:      aws.Bool(true),
+										ContainerPath: aws.String("/var/www"),
 									},
 								},
 							},

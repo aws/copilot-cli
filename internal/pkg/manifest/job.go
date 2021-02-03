@@ -39,7 +39,7 @@ type ScheduledJobConfig struct {
 	ImageConfig             Image `yaml:"image,flow"`
 	TaskConfig              `yaml:",inline"`
 	*Logging                `yaml:"logging,flow"`
-	Sidecar                 `yaml:",inline"`
+	Sidecars                map[string]*SidecarConfig `yaml:"sidecars"`
 	Storage                 `yaml:"storage"`
 	On                      JobTriggerConfig `yaml:"on,flow"`
 	JobFailureHandlerConfig `yaml:",inline"`
@@ -62,14 +62,6 @@ type ScheduledJobProps struct {
 	Schedule string
 	Timeout  string
 	Retries  int
-}
-
-// LogConfigOpts converts the job's Firelens configuration into a format parsable by the templates pkg.
-func (lc *ScheduledJobConfig) LogConfigOpts() *template.LogConfigOpts {
-	if lc.Logging == nil {
-		return nil
-	}
-	return lc.logConfigOpts()
 }
 
 // newDefaultScheduledJob returns an empty ScheduledJob with only the default values set.

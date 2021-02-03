@@ -38,16 +38,8 @@ type BackendServiceConfig struct {
 	ImageConfig imageWithPortAndHealthcheck `yaml:"image,flow"`
 	TaskConfig  `yaml:",inline"`
 	*Logging    `yaml:"logging,flow"`
-	Sidecar     `yaml:",inline"`
+	Sidecars    map[string]*SidecarConfig `yaml:"sidecars"`
 	Storage     `yaml:"storage"`
-}
-
-// LogConfigOpts converts the service's Firelens configuration into a format parsable by the templates pkg.
-func (bc *BackendServiceConfig) LogConfigOpts() *template.LogConfigOpts {
-	if bc.Logging == nil {
-		return nil
-	}
-	return bc.logConfigOpts()
 }
 
 type imageWithPortAndHealthcheck struct {
