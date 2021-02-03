@@ -39,7 +39,7 @@ type ScheduledJobConfig struct {
 	ImageConfig             Image `yaml:"image,flow"`
 	TaskConfig              `yaml:",inline"`
 	*Logging                `yaml:"logging,flow"`
-	Sidecar                 `yaml:",inline"`
+	Sidecars                map[string]*SidecarConfig `yaml:"sidecars"`
 	Storage                 `yaml:"storage"`
 	On                      JobTriggerConfig `yaml:"on,flow"`
 	JobFailureHandlerConfig `yaml:",inline"`

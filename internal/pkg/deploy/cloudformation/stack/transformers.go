@@ -18,12 +18,12 @@ const (
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
-func convertSidecar(s *manifest.Sidecar) ([]*template.SidecarOpts, error) {
-	if s.Sidecars == nil {
+func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOpts, error) {
+	if s == nil {
 		return nil, nil
 	}
 	var sidecars []*template.SidecarOpts
-	for name, config := range s.Sidecars {
+	for name, config := range s {
 		port, protocol, err := parsePortMapping(config.Port)
 		if err != nil {
 			return nil, err

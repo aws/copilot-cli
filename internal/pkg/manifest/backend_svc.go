@@ -38,7 +38,7 @@ type BackendServiceConfig struct {
 	ImageConfig imageWithPortAndHealthcheck `yaml:"image,flow"`
 	TaskConfig  `yaml:",inline"`
 	*Logging    `yaml:"logging,flow"`
-	Sidecar     `yaml:",inline"`
+	Sidecars    map[string]*SidecarConfig `yaml:"sidecars"`
 	Storage     `yaml:"storage"`
 }
 

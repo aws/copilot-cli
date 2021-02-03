@@ -277,13 +277,11 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 						},
 					},
-					Sidecar: Sidecar{
-						Sidecars: map[string]*SidecarConfig{
-							"xray": {
-								Port:       aws.String("2000"),
-								Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
-								CredsParam: aws.String("some arn"),
-							},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
 						},
 					},
 					Logging: &Logging{
@@ -326,17 +324,15 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								},
 							},
 						},
-						Sidecar: Sidecar{
-							Sidecars: map[string]*SidecarConfig{
-								"xray": {
-									Port: aws.String("2000/udp"),
-									MountPoints: []SidecarMountPoint{
-										{
-											SourceVolume: aws.String("myEFSVolume"),
-											MountPointOpts: MountPointOpts{
-												ReadOnly:      aws.Bool(true),
-												ContainerPath: aws.String("/var/www"),
-											},
+						Sidecars: map[string]*SidecarConfig{
+							"xray": {
+								Port: aws.String("2000/udp"),
+								MountPoints: []SidecarMountPoint{
+									{
+										SourceVolume: aws.String("myEFSVolume"),
+										MountPointOpts: MountPointOpts{
+											ReadOnly:      aws.Bool(true),
+											ContainerPath: aws.String("/var/www"),
 										},
 									},
 								},
@@ -407,19 +403,17 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 						},
 					},
-					Sidecar: Sidecar{
-						Sidecars: map[string]*SidecarConfig{
-							"xray": {
-								Port:       aws.String("2000/udp"),
-								Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
-								CredsParam: aws.String("some arn"),
-								MountPoints: []SidecarMountPoint{
-									{
-										SourceVolume: aws.String("myEFSVolume"),
-										MountPointOpts: MountPointOpts{
-											ReadOnly:      aws.Bool(true),
-											ContainerPath: aws.String("/var/www"),
-										},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000/udp"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+							MountPoints: []SidecarMountPoint{
+								{
+									SourceVolume: aws.String("myEFSVolume"),
+									MountPointOpts: MountPointOpts{
+										ReadOnly:      aws.Bool(true),
+										ContainerPath: aws.String("/var/www"),
 									},
 								},
 							},

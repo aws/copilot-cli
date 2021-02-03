@@ -198,11 +198,6 @@ func (lc *Logging) GetEnableMetadata() *string {
 	return aws.String(strconv.FormatBool(*lc.EnableMetadata))
 }
 
-// Sidecar holds configuration for all sidecar containers in a workload.
-type Sidecar struct {
-	Sidecars map[string]*SidecarConfig `yaml:"sidecars"`
-}
-
 // SidecarConfig represents the configurable options for setting up a sidecar container.
 type SidecarConfig struct {
 	Port        *string             `yaml:"port"`

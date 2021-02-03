@@ -57,18 +57,16 @@ func Test_convertSidecar(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			sidecar := manifest.Sidecar{
-				Sidecars: map[string]*manifest.SidecarConfig{
-					"foo": {
-						CredsParam: mockCredsParam,
-						Image:      mockImage,
-						Secrets:    mockMap,
-						Variables:  mockMap,
-						Port:       aws.String(tc.inPort),
-					},
+			sidecar := map[string]*manifest.SidecarConfig{
+				"foo": {
+					CredsParam: mockCredsParam,
+					Image:      mockImage,
+					Secrets:    mockMap,
+					Variables:  mockMap,
+					Port:       aws.String(tc.inPort),
 				},
 			}
-			got, err := convertSidecar(&sidecar)
+			got, err := convertSidecar(sidecar)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())

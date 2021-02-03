@@ -90,13 +90,11 @@ environments:
 								"DB_PASSWORD": "MYSQL_DB_PASSWORD",
 							},
 						},
-						Sidecar: Sidecar{
-							Sidecars: map[string]*SidecarConfig{
-								"xray": {
-									Port:       aws.String("2000/udp"),
-									Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
-									CredsParam: aws.String("some arn"),
-								},
+						Sidecars: map[string]*SidecarConfig{
+							"xray": {
+								Port:       aws.String("2000/udp"),
+								Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+								CredsParam: aws.String("some arn"),
 							},
 						},
 						Logging: &Logging{

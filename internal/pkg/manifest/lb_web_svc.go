@@ -52,7 +52,7 @@ type LoadBalancedWebServiceConfig struct {
 	RoutingRule `yaml:"http,flow"`
 	TaskConfig  `yaml:",inline"`
 	*Logging    `yaml:"logging,flow"`
-	Sidecar     `yaml:",inline"`
+	Sidecars    map[string]*SidecarConfig `yaml:"sidecars"`
 	Storage     `yaml:"storage"`
 }
 
