@@ -53,11 +53,11 @@ func TestBackendService_Template(t *testing.T) {
 		Port: 8080,
 	}
 	testBackendSvcManifestWithBadSidecar := manifest.NewBackendService(baseProps)
-	testBackendSvcManifestWithBadSidecar.Sidecar = manifest.Sidecar{Sidecars: map[string]*manifest.SidecarConfig{
+	testBackendSvcManifestWithBadSidecar.Sidecars = map[string]*manifest.SidecarConfig{
 		"xray": {
 			Port: aws.String("80/80/80"),
 		},
-	}}
+	}
 	badRange := manifest.Range("badRange")
 	testBackendSvcManifestWithBadAutoScaling := manifest.NewBackendService(baseProps)
 	testBackendSvcManifestWithBadAutoScaling.Count.Autoscaling = manifest.Autoscaling{
