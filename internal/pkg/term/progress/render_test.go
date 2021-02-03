@@ -4,6 +4,7 @@
 package progress
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"strings"
@@ -33,7 +34,12 @@ func (m *mockDynamicRenderer) Done() <-chan struct{} {
 }
 
 type mockFileWriteFlusher struct {
-	io.Writer
+	buf     bytes.Buffer
+	wrapper io.Writer
+}
+
+func (m *mockFileWriteFlusher) Write(p []byte) (n int, err error) {
+	return m.buf.Write(p)
 }
 
 func (m *mockFileWriteFlusher) Fd() uintptr {
@@ -41,7 +47,18 @@ func (m *mockFileWriteFlusher) Fd() uintptr {
 }
 
 func (m *mockFileWriteFlusher) Flush() error {
+	if _, err := m.buf.WriteTo(m.wrapper); err != nil {
+		return err
+	}
 	return nil
+}
+
+type mockFileWriter struct {
+	io.Writer
+}
+
+func (m *mockFileWriter) Fd() uintptr {
+	return 0
 }
 
 func TestRender(t *testing.T) {
@@ -56,7 +73,7 @@ func TestRender(t *testing.T) {
 			done:    make(chan struct{}),
 		}
 		out := &mockFileWriteFlusher{
-			Writer: actual,
+			wrapper: actual,
 		}
 
 		// WHEN
@@ -76,7 +93,7 @@ func TestRender(t *testing.T) {
 			done:    done,
 		}
 		out := &mockFileWriteFlusher{
-			Writer: actual,
+			wrapper: actual,
 		}
 		go func() {
 			<-time.After(350 * time.Millisecond)
@@ -94,7 +111,7 @@ func TestRender(t *testing.T) {
 		// 2. Write "hi\n", erase the line, and move the cursor up (Repeated x3 times)
 		// 3. The <-ctx.Done() is called so we should write one last time "hi\n" and the cursor should be shown.
 		wanted := new(strings.Builder)
-		wantedFW := &mockFileWriteFlusher{
+		wantedFW := &mockFileWriter{
 			Writer: wanted,
 		}
 		c := cursor.NewWithWriter(wantedFW)
