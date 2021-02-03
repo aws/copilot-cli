@@ -168,10 +168,10 @@ secrets:
 							},
 							HealthCheck: &ContainerHealthCheck{
 								Command:     []string{"CMD-SHELL", "curl http://localhost:5000/ || exit 1"},
-								Interval:    Durationp(10 * time.Second),
+								Interval:    durationp(10 * time.Second),
 								Retries:     aws.Int(2),
-								Timeout:     Durationp(5 * time.Second),
-								StartPeriod: Durationp(0 * time.Second),
+								Timeout:     durationp(5 * time.Second),
+								StartPeriod: durationp(0 * time.Second),
 							},
 						},
 						TaskConfig: TaskConfig{

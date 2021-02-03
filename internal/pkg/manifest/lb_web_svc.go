@@ -29,9 +29,9 @@ var (
 	errUnmarshalHealthCheckArgs = errors.New("can't unmarshal healthcheck field into string or compose-style map")
 )
 
-// Durationp is a utility function used to convert a time.Duration to a pointer. Useful for YAML unmarshaling
+// durationp is a utility function used to convert a time.Duration to a pointer. Useful for YAML unmarshaling
 // and template execution.
-func Durationp(v time.Duration) *time.Duration {
+func durationp(v time.Duration) *time.Duration {
 	return &v
 }
 

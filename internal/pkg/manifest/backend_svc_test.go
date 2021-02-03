@@ -80,10 +80,10 @@ func TestNewBackendSvc(t *testing.T) {
 						},
 						HealthCheck: &ContainerHealthCheck{
 							Command:     []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
-							Interval:    Durationp(10 * time.Second),
+							Interval:    durationp(10 * time.Second),
 							Retries:     aws.Int(2),
-							Timeout:     Durationp(5 * time.Second),
-							StartPeriod: Durationp(0 * time.Second),
+							Timeout:     durationp(5 * time.Second),
+							StartPeriod: durationp(0 * time.Second),
 						},
 					},
 					TaskConfig: TaskConfig{
@@ -136,10 +136,10 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 				},
 				HealthCheck: &ContainerHealthCheck{
 					Command:     []string{"CMD-SHELL", "curl -f http://localhost:8080 || exit 1"},
-					Interval:    Durationp(6 * time.Second),
+					Interval:    durationp(6 * time.Second),
 					Retries:     aws.Int(0),
-					Timeout:     Durationp(20 * time.Second),
-					StartPeriod: Durationp(15 * time.Second),
+					Timeout:     durationp(20 * time.Second),
+					StartPeriod: durationp(15 * time.Second),
 				},
 				Port: 8080,
 			},
@@ -185,10 +185,10 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 				},
 				HealthCheck: &ContainerHealthCheck{
 					Command:     []string{"hello", "world"},
-					Interval:    Durationp(1 * time.Second),
+					Interval:    durationp(1 * time.Second),
 					Retries:     aws.Int(100),
-					Timeout:     Durationp(100 * time.Minute),
-					StartPeriod: Durationp(5 * time.Second),
+					Timeout:     durationp(100 * time.Minute),
+					StartPeriod: durationp(5 * time.Second),
 				},
 			},
 			TaskConfig: TaskConfig{

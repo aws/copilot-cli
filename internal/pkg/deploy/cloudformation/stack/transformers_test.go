@@ -140,6 +140,9 @@ func Test_convertAutoscaling(t *testing.T) {
 }
 
 func Test_convertHTTPHealthCheck(t *testing.T) {
+	// These are used by reference to represent the output of the manifest.durationp function.
+	duration15Seconds := time.Duration(15 * time.Second)
+	duration60Seconds := time.Duration(60 * time.Second)
 	testCases := map[string]struct {
 		inputPath               *string
 		inputHealthyThreshold   *int64
@@ -188,7 +191,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputPath:               nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: nil,
-			inputInterval:           manifest.Durationp(15 * time.Second),
+			inputInterval:           &duration15Seconds,
 			inputTimeout:            nil,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
@@ -201,7 +204,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
-			inputTimeout:            manifest.Durationp(15 * time.Second),
+			inputTimeout:            &duration15Seconds,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
@@ -212,8 +215,8 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			inputPath:               aws.String("/road/to/nowhere"),
 			inputHealthyThreshold:   aws.Int64(3),
 			inputUnhealthyThreshold: aws.Int64(3),
-			inputInterval:           manifest.Durationp(60 * time.Second),
-			inputTimeout:            manifest.Durationp(60 * time.Second),
+			inputInterval:           &duration60Seconds,
+			inputTimeout:            &duration60Seconds,
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    "/road/to/nowhere",
