@@ -153,7 +153,7 @@ type WorkloadOpts struct {
 	Sidecars    []*SidecarOpts
 	LogConfig   *LogConfigOpts
 	Autoscaling *AutoscalingOpts
-	Storage     StorageOpts
+	Storage     *StorageOpts
 
 	// Additional options for service templates.
 	HealthCheck         *ecs.HealthCheck
