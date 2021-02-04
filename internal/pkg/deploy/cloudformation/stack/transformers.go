@@ -278,7 +278,8 @@ func renderVolumes(input map[string]manifest.Volume) ([]*template.Volume, error)
 			if !aws.BoolValue(volume.EFS.AuthConfig.IAM) {
 				return nil, errAccessPointWithoutIAM
 			}
-			if !(aws.StringValue(volume.EFS.RootDirectory) == "" || aws.StringValue(volume.EFS.RootDirectory) == "/") {
+			rootDirectory := aws.StringValue(volume.EFS.RootDirectory)
+			if !(rootDirectory == "" || rootDirectory == "/") {
 				return nil, errAcessPointWithRootDirectory
 			}
 		}
