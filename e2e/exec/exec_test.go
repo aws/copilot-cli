@@ -188,7 +188,7 @@ var _ = Describe("exec flow", func() {
 			Expect(len(svc.Routes)).To(Equal(1))
 			route := svc.Routes[0]
 
-			for i := 0; i < 10; i++ {
+			for i := 0; i < 5; i++ {
 				var resp *http.Response
 				var fetchErr error
 				Eventually(func() (int, error) {
@@ -200,40 +200,41 @@ var _ = Describe("exec flow", func() {
 				bodyBytes, err := ioutil.ReadAll(resp.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(strings.TrimSpace(string(bodyBytes))).To(Equal(newContent))
+				time.Sleep(3 * time.Second)
 			}
 		})
-	})
 
-	Context("when checking for logs", func() {
-		BeforeAll(func() {
-			// wait for exec logs to be delivered.
-			time.Sleep(10 * time.Second)
-		})
 		It("svc logs should include exec logs", func() {
-			var svcLogs []client.SvcLogsOutput
-			var svcLogsErr error
-			Eventually(func() ([]client.SvcLogsOutput, error) {
-				svcLogs, svcLogsErr = cli.SvcLogs(&client.SvcLogsRequest{
-					AppName: appName,
-					Name:    svcName,
-					EnvName: envName,
-					Since:   "1m",
-				})
-				return svcLogs, svcLogsErr
-			}, "60s", "10s").ShouldNot(BeEmpty())
-
 			var validTaskExecLogsCount int
-			var prevExecLogStreamName string
-			for _, logLine := range svcLogs {
-				Expect(logLine.Message).NotTo(Equal(""))
-				Expect(logLine.LogStreamName).NotTo(Equal(""))
-				Expect(logLine.Timestamp).NotTo(Equal(0))
-				Expect(logLine.IngestionTime).NotTo(Equal(0))
-				if strings.Contains(logLine.LogStreamName, "ecs-execute-command") &&
-					logLine.LogStreamName != prevExecLogStreamName {
-					validTaskExecLogsCount++
-					prevExecLogStreamName = logLine.LogStreamName
+			for i := 0; i < 10; i++ {
+				var svcLogs []client.SvcLogsOutput
+				var svcLogsErr error
+				Eventually(func() ([]client.SvcLogsOutput, error) {
+					svcLogs, svcLogsErr = cli.SvcLogs(&client.SvcLogsRequest{
+						AppName: appName,
+						Name:    svcName,
+						EnvName: envName,
+						Since:   "1m",
+					})
+					return svcLogs, svcLogsErr
+				}, "60s", "10s").ShouldNot(BeEmpty())
+				var prevExecLogStreamName string
+				for _, logLine := range svcLogs {
+					Expect(logLine.Message).NotTo(Equal(""))
+					Expect(logLine.LogStreamName).NotTo(Equal(""))
+					Expect(logLine.Timestamp).NotTo(Equal(0))
+					Expect(logLine.IngestionTime).NotTo(Equal(0))
+					if strings.Contains(logLine.LogStreamName, "ecs-execute-command") &&
+						logLine.LogStreamName != prevExecLogStreamName {
+						validTaskExecLogsCount++
+						prevExecLogStreamName = logLine.LogStreamName
+					}
 				}
+				if validTaskExecLogsCount == 2 {
+					break
+				}
+				validTaskExecLogsCount = 0
+				time.Sleep(5 * time.Second)
 			}
 			Expect(validTaskExecLogsCount).To(Equal(2))
 		})
@@ -270,8 +271,7 @@ var _ = Describe("exec flow", func() {
 			}, "60s", "10s").ShouldNot(BeEmpty())
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(resp).To(ContainSubstring(`bin   dev  home  lib64		 media	opt   root  sbin  sys  usr`))
-			Expect(resp).To(ContainSubstring(`boot  etc  lib	 managed-agents  mnt	proc  run   srv   tmp  var`))
+			Expect(resp).To(ContainSubstring("hello"))
 		})
 	})
 })
