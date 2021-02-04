@@ -98,6 +98,16 @@ type SvcStatusRequest struct {
 	EnvName string
 }
 
+// SvcExecRequest contains the parameters for calling copilot svc exec.
+type SvcExecRequest struct {
+	Name      string
+	AppName   string
+	Command   string
+	TaskID    string
+	Container string
+	EnvName   string
+}
+
 // SvcLogsRequest contains the parameters for calling copilot svc logs.
 type SvcLogsRequest struct {
 	AppName string
@@ -131,6 +141,14 @@ type TaskRunInput struct {
 
 	Default bool
 	Follow  bool
+}
+
+// TaskExecRequest contains the parameters for calling copilot task exec.
+type TaskExecRequest struct {
+	Name    string
+	AppName string
+	Command string
+	EnvName string
 }
 
 // TaskDeleteInput contains the parameters for calling copilot task delete.
@@ -301,6 +319,28 @@ func (cli *CLI) SvcStatus(opts *SvcStatusRequest) (*SvcStatusOutput, error) {
 	}
 
 	return toSvcStatusOutput(svcJSON)
+}
+
+/*SvcExec runs:
+copilot svc exec
+	--app $p
+	--env $e
+	--name $n
+	--command $cmd
+	--container $ctnr
+	--task-id $td
+	--yes
+*/
+func (cli *CLI) SvcExec(opts *SvcExecRequest) (string, error) {
+	return cli.exec(
+		exec.Command(cli.path, "svc", "exec",
+			"--app", opts.AppName,
+			"--name", opts.Name,
+			"--env", opts.EnvName,
+			"--command", opts.Command,
+			"--container", opts.Container,
+			"--task-id", opts.TaskID,
+			"--yes"))
 }
 
 /*SvcDelete runs:
@@ -520,36 +560,44 @@ copilot task run
 */
 func (cli *CLI) TaskRun(input *TaskRunInput) (string, error) {
 	commands := []string{"task", "run", "-n", input.GroupName, "--dockerfile", input.Dockerfile}
-
 	if input.Image != "" {
 		commands = append(commands, "--image", input.Image)
 	}
-
 	if input.AppName != "" {
 		commands = append(commands, "--app", input.AppName)
 	}
-
 	if input.Env != "" {
 		commands = append(commands, "--env", input.Env)
 	}
-
 	if input.Command != "" {
 		commands = append(commands, "--command", input.Command)
 	}
-
 	if input.EnvVars != "" {
 		commands = append(commands, "--env-vars", input.EnvVars)
 	}
-
 	if input.Default {
 		commands = append(commands, "--default")
 	}
-
 	if input.Follow {
 		commands = append(commands, "--follow")
 	}
-
 	return cli.exec(exec.Command(cli.path, commands...))
+}
+
+/*TaskExec runs:
+copilot task exec
+	--app $p
+	--env $e
+	--name $n
+	--command $cmd
+*/
+func (cli *CLI) TaskExec(opts *TaskExecRequest) (string, error) {
+	return cli.exec(
+		exec.Command(cli.path, "task", "exec",
+			"--app", opts.AppName,
+			"--name", opts.Name,
+			"--env", opts.EnvName,
+			"--command", opts.Command))
 }
 
 /*TaskDelete runs:
