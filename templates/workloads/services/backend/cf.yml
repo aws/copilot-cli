@@ -56,7 +56,9 @@ Resources:
             StartPeriod: {{.HealthCheck.StartPeriod}}
             Timeout: {{.HealthCheck.Timeout}}
 {{- end}}
+{{include "mount-points" . | indent 10}}
 {{include "sidecars" . | indent 8}}
+{{include "volumes" . | indent 6}}
 {{include "executionrole" . | indent 2}}
 {{include "taskrole" . | indent 2}}
 {{include "servicediscovery" . | indent 2}}

@@ -4,6 +4,7 @@
 package stack
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -14,7 +15,32 @@ import (
 )
 
 const (
+	enabled  = "ENABLED"
+	disabled = "DISABLED"
+)
+
+// Default values for EFS options
+const (
+	defaultRootDirectory   = "/"
+	defaultIAM             = disabled
+	defaultReadOnly        = true
+	defaultWritePermission = false
+)
+
+// Default value for Sidecar port.
+const (
 	defaultSidecarPort = "80"
+)
+
+// Validation errors when rendering manifest into template.
+var (
+	errNoFSID                      = errors.New(`volume field efs/id cannot be empty`)
+	errVolNoContainerPath          = errors.New(`field "efs/path" cannot be empty`)
+	errAcessPointWithRootDirectory = errors.New(`root directory must be empty or "/" when access point ID is specified`)
+	errAccessPointWithoutIAM       = errors.New(`"iam" must be true when access point ID is specified`)
+
+	errMPNoContainerPath = errors.New(`"path" cannot be empty`)
+	errNoSourceVolume    = errors.New(`"source_volume" cannot be empty`)
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
@@ -123,4 +149,152 @@ func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
 		Destination:    lc.Destination,
 		SecretOptions:  lc.SecretOptions,
 	}
+}
+
+// convertStorageOpts converts a manifest Storage field into template data structures which can be used
+// to execute CFN templates
+func convertStorageOpts(in *manifest.Storage) (*template.StorageOpts, error) {
+	v, err := renderVolumes(in.Volumes)
+	if err != nil {
+		return nil, err
+	}
+	mp, err := renderMountPoints(in.Volumes)
+	if err != nil {
+		return nil, err
+	}
+	perms, err := renderStoragePermissions(in.Volumes)
+	if err != nil {
+		return nil, err
+	}
+	return &template.StorageOpts{
+		Volumes:     v,
+		MountPoints: mp,
+		EFSPerms:    perms,
+	}, nil
+}
+
+// renderSidecarMountPoints is used to convert from manifest to template objects.
+func renderSidecarMountPoints(in []manifest.SidecarMountPoint) ([]*template.MountPoint, error) {
+	if len(in) == 0 {
+		return nil, nil
+	}
+	output := []*template.MountPoint{}
+	for _, smp := range in {
+		if smp.ContainerPath == nil {
+			return nil, errMPNoContainerPath
+		}
+		if aws.StringValue(smp.SourceVolume) == "" {
+			return nil, errNoSourceVolume
+		}
+		readOnly := aws.Bool(defaultReadOnly)
+		if smp.ReadOnly != nil {
+			readOnly = smp.ReadOnly
+		}
+		mp := template.MountPoint{
+			ContainerPath: smp.ContainerPath,
+			SourceVolume:  smp.SourceVolume,
+			ReadOnly:      readOnly,
+		}
+		output = append(output, &mp)
+	}
+	return output, nil
+}
+
+func renderStoragePermissions(input map[string]manifest.Volume) ([]*template.EFSPermission, error) {
+	if len(input) == 0 {
+		return nil, nil
+	}
+	output := []*template.EFSPermission{}
+	for _, volume := range input {
+		// Write defaults to false
+		write := defaultWritePermission
+		if volume.ReadOnly != nil {
+			write = !aws.BoolValue(volume.ReadOnly)
+		}
+		if volume.EFS.FileSystemID == nil {
+			return nil, errNoFSID
+		}
+		perm := template.EFSPermission{
+			Write:         write,
+			AccessPointID: volume.EFS.AuthConfig.AccessPointID,
+			FilesystemID:  volume.EFS.FileSystemID,
+		}
+		output = append(output, &perm)
+	}
+	return output, nil
+}
+
+func renderMountPoints(input map[string]manifest.Volume) ([]*template.MountPoint, error) {
+	if len(input) == 0 {
+		return nil, nil
+	}
+	output := []*template.MountPoint{}
+	for name, volume := range input {
+		// ContainerPath must be specified.
+		if volume.ContainerPath == nil {
+			return nil, errVolNoContainerPath
+		}
+		// ReadOnly defaults to true.
+		readOnly := aws.Bool(defaultReadOnly)
+		if volume.ReadOnly != nil {
+			readOnly = volume.ReadOnly
+		}
+		mp := template.MountPoint{
+			ReadOnly:      readOnly,
+			ContainerPath: volume.ContainerPath,
+			SourceVolume:  aws.String(name),
+		}
+		output = append(output, &mp)
+	}
+	return output, nil
+}
+
+func renderVolumes(input map[string]manifest.Volume) ([]*template.Volume, error) {
+	if len(input) == 0 {
+		return nil, nil
+	}
+	output := []*template.Volume{}
+	for name, volume := range input {
+		// Set default values correctly.
+		fsID := volume.EFS.FileSystemID
+		if aws.StringValue(fsID) == "" {
+			return nil, errNoFSID
+		}
+		rootDir := volume.EFS.RootDirectory
+		if aws.StringValue(rootDir) == "" {
+			rootDir = aws.String(defaultRootDirectory)
+		}
+		var iam *string
+		if volume.EFS.AuthConfig.IAM == nil {
+			iam = aws.String(defaultIAM)
+		}
+		if aws.BoolValue(volume.EFS.AuthConfig.IAM) {
+			iam = aws.String(enabled)
+		}
+
+		// Validate ECS requirements: when an AP is specified, IAM MUST be true
+		// and root directory MUST be either empty or "/".
+		// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-efsvolumeconfiguration.html
+		if aws.StringValue(volume.EFS.AuthConfig.AccessPointID) != "" {
+			if !aws.BoolValue(volume.EFS.AuthConfig.IAM) {
+				return nil, errAccessPointWithoutIAM
+			}
+			rootDirectory := aws.StringValue(volume.EFS.RootDirectory)
+			if !(rootDirectory == "" || rootDirectory == "/") {
+				return nil, errAcessPointWithRootDirectory
+			}
+		}
+
+		v := template.Volume{
+			Name: aws.String(name),
+
+			Filesystem:    fsID,
+			RootDirectory: rootDir,
+
+			AccessPointID: volume.EFS.AuthConfig.AccessPointID,
+			IAM:           iam,
+		}
+		output = append(output, &v)
+	}
+	return output, nil
 }
