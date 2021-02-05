@@ -24,6 +24,9 @@ http:
   # You can specify whether to enable sticky sessions.
   # stickiness: true
 
+  # CIDR IP addresses permitted to access your service.
+  # allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
+
 # Number of CPU units for the task.
 cpu: 256
 # Amount of memory in MiB used by the task.
