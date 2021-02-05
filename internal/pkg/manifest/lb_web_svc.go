@@ -53,7 +53,6 @@ type LoadBalancedWebServiceConfig struct {
 	TaskConfig  `yaml:",inline"`
 	*Logging    `yaml:"logging,flow"`
 	Sidecars    map[string]*SidecarConfig `yaml:"sidecars"`
-	Storage     `yaml:"storage"`
 }
 
 // HTTPHealthCheckArgs holds the configuration to determine if the load balanced web service is healthy.
