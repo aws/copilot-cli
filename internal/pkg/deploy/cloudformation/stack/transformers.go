@@ -14,16 +14,16 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
-var (
-	pEnabled  = aws.String("ENABLED")
-	pDisabled = aws.String("DISABLED")
+const (
+	enabled  = "ENABLED"
+	disabled = "DISABLED"
 )
 
 // Default values for EFS options
-var (
-	defaultRootDirectory   = aws.String("/")
-	defaultIAM             = pDisabled
-	defaultReadOnly        = aws.Bool(true)
+const (
+	defaultRootDirectory   = "/"
+	defaultIAM             = disabled
+	defaultReadOnly        = true
 	defaultWritePermission = false
 )
 
@@ -186,7 +186,7 @@ func renderSidecarMountPoints(in []manifest.SidecarMountPoint) ([]*template.Moun
 		if aws.StringValue(smp.SourceVolume) == "" {
 			return nil, errNoSourceVolume
 		}
-		readOnly := aws.Bool(true)
+		readOnly := aws.Bool(defaultReadOnly)
 		if smp.ReadOnly != nil {
 			readOnly = smp.ReadOnly
 		}
@@ -235,7 +235,7 @@ func renderMountPoints(input map[string]manifest.Volume) ([]*template.MountPoint
 			return nil, errVolNoContainerPath
 		}
 		// ReadOnly defaults to true.
-		readOnly := defaultReadOnly
+		readOnly := aws.Bool(defaultReadOnly)
 		if volume.ReadOnly != nil {
 			readOnly = volume.ReadOnly
 		}
@@ -262,18 +262,19 @@ func renderVolumes(input map[string]manifest.Volume) ([]*template.Volume, error)
 		}
 		rootDir := volume.EFS.RootDirectory
 		if aws.StringValue(rootDir) == "" {
-			rootDir = defaultRootDirectory
+			rootDir = aws.String(defaultRootDirectory)
 		}
 		var iam *string
 		if volume.EFS.AuthConfig.IAM == nil {
-			iam = defaultIAM
+			iam = aws.String(defaultIAM)
 		}
 		if aws.BoolValue(volume.EFS.AuthConfig.IAM) {
-			iam = pEnabled
+			iam = aws.String(enabled)
 		}
 
 		// Validate ECS requirements: when an AP is specified, IAM MUST be true
-		// and root directory MUST be either empty or "/"
+		// and root directory MUST be either empty or "/".
+		// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-efsvolumeconfiguration.html
 		if aws.StringValue(volume.EFS.AuthConfig.AccessPointID) != "" {
 			if !aws.BoolValue(volume.EFS.AuthConfig.IAM) {
 				return nil, errAccessPointWithoutIAM
