@@ -106,7 +106,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		"renders a valid template with all storage options": {
 			opts: template.WorkloadOpts{
 				HTTPHealthCheck: defaultHttpHealthCheck,
-				Storage: template.StorageOpts{
+				Storage: &template.StorageOpts{
 					EFSPerms: []*template.EFSPermission{
 						{
 							AccessPointID: aws.String("ap-1234"),
@@ -136,7 +136,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		"renders a valid template with minimal storage options": {
 			opts: template.WorkloadOpts{
 				HTTPHealthCheck: defaultHttpHealthCheck,
-				Storage: template.StorageOpts{
+				Storage: &template.StorageOpts{
 					EFSPerms: []*template.EFSPermission{
 						{
 							FilesystemID: aws.String("fs-5678"),
