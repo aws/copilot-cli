@@ -440,7 +440,7 @@ func Test_convertStorageOpts(t *testing.T) {
 				require.EqualError(t, err, tc.wantErr)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantOpts, got)
+				require.Equal(t, &tc.wantOpts, got)
 			}
 		})
 	}

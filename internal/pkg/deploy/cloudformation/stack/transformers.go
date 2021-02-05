@@ -153,20 +153,20 @@ func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
 
 // convertStorageOpts converts a manifest Storage field into template data structures which can be used
 // to execute CFN templates
-func convertStorageOpts(in *manifest.Storage) (template.StorageOpts, error) {
+func convertStorageOpts(in *manifest.Storage) (*template.StorageOpts, error) {
 	v, err := renderVolumes(in.Volumes)
 	if err != nil {
-		return template.StorageOpts{}, err
+		return nil, err
 	}
 	mp, err := renderMountPoints(in.Volumes)
 	if err != nil {
-		return template.StorageOpts{}, err
+		return nil, err
 	}
 	perms, err := renderStoragePermissions(in.Volumes)
 	if err != nil {
-		return template.StorageOpts{}, err
+		return nil, err
 	}
-	return template.StorageOpts{
+	return &template.StorageOpts{
 		Volumes:     v,
 		MountPoints: mp,
 		EFSPerms:    perms,
