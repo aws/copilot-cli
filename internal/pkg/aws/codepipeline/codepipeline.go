@@ -24,6 +24,8 @@ const (
 type api interface {
 	GetPipeline(*cp.GetPipelineInput) (*cp.GetPipelineOutput, error)
 	GetPipelineState(*cp.GetPipelineStateInput) (*cp.GetPipelineStateOutput, error)
+	ListPipelineExecutions(input *cp.ListPipelineExecutionsInput) (*cp.ListPipelineExecutionsOutput, error)
+	RetryStageExecution(input *cp.RetryStageExecutionInput) (*cp.RetryStageExecutionOutput, error)
 }
 
 type resourceGetter interface {
@@ -208,6 +210,39 @@ func (c *CodePipeline) ListPipelineNamesByTags(tags map[string]string) ([]string
 	}
 
 	return pipelineNames, nil
+}
+
+// ListPipelineExecution returns the ExecutionID of the most recent execution of a pipeline.
+func (c *CodePipeline) ListPipelineExecution(pipelineName string) (*string, error) {
+	input := &cp.ListPipelineExecutionsInput{
+		MaxResults:   aws.Int64(1),
+		PipelineName: &pipelineName,
+	}
+	output, err := c.client.ListPipelineExecutions(input)
+	if err != nil {
+		return nil, fmt.Errorf("list pipeline execution for %s: %w", pipelineName, err)
+	}
+	return output.PipelineExecutionSummaries[0].PipelineExecutionId, nil
+}
+
+// RetryStageExecution tries to rebuild a failed pipeline.
+func (c *CodePipeline) RetryStageExecution(pipelineName string) error {
+	executionID, err := c.ListPipelineExecution(pipelineName)
+	if err != nil {
+		return fmt.Errorf("retrieve pipeline execution ID: %w", err)
+	}
+	input :=
+		&cp.RetryStageExecutionInput{
+			PipelineExecutionId: executionID,
+			PipelineName:        &pipelineName,
+			RetryMode:           aws.String("FAILED_ACTIONS"),
+			StageName:           aws.String("Source"),
+		}
+	_, err = c.client.RetryStageExecution(input)
+	if err != nil {
+		return fmt.Errorf("retry pipeline source stage: %w", err)
+	}
+	return nil
 }
 
 // GetPipelineByTags retrieves all of pipelines for an application.

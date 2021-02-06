@@ -9,8 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
-	"github.com/aws/aws-sdk-go/aws"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -37,7 +36,25 @@ func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput) error {
 	if err != nil {
 		return err
 	}
-	return cf.cfnClient.CreateAndWait(s)
+	err = cf.cfnClient.CreateAndWait(s)
+	if err != nil {
+		return err
+	}
+
+	output, _ := cf.cfnClient.Outputs(s)
+	// If the pipeline has a PipelineConnectionARN, indicating that it is has a CodeStarConnections source provider, the user needs to update the connection status; Copilot will wait until that happens.
+	if output["PipelineConnection"] != "" {
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(45*time.Minute))
+		defer cancel()
+
+		if err = cf.codeStarClient.WaitUntilStatusAvailable(ctx, output["PipelineConnection"]); err != nil {
+			return err
+		}
+		if err = cf.cpClient.RetryStageExecution(in.Name); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // UpdatePipeline updates an existing CodePipeline for deploying services.
@@ -52,11 +69,6 @@ func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput) error {
 			return nil
 		}
 		return fmt.Errorf("update pipeline: %w", err)
-	}
-	output, err := cf.cfnClient.Outputs(s)
-	err = cf.codeStarClient.WaitForAvailableConnection(context.Background(), *output[aws.String("PipelineConnection")])
-	if err != nil {
-		return fmt.Errorf("TKTKTK")
 	}
 	return nil
 }

@@ -10,16 +10,9 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-
-	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/codestarconnections"
 )
-
-var waiters = []request.WaiterOption{
-	request.WithWaiterDelay(request.ConstantWaiterDelay(10 * time.Second)), // How long to wait in between poll cfn for updates.
-	request.WithWaiterMaxAttempts(540),                                     // Wait for at most 90 mins for any cfn action.
-}
 
 // Connection represents a client to make requests to AWS CodeStarConnections.
 type Connection struct {
@@ -33,26 +26,20 @@ func New(s *session.Session) *Connection {
 	}
 }
 
-// WaitForAvailableConnection blocks until the connection status has been updated from `PENDING` to `AVAILABLE` or until the max attempt window expires.
-func (c *Connection) WaitForAvailableConnection(ctx context.Context, connectionARN string) error {
-	output, err := c.client.GetConnection(
-		&codestarconnections.GetConnectionInput{ConnectionArn: &connectionARN},
-	)
-	if err != nil {
-		return fmt.Errorf("get connection info: %w", err)
+// WaitUntilStatusAvailable blocks until the connection status has been updated from `PENDING` to `AVAILABLE` or until the max attempt window expires.
+func (c *Connection) WaitUntilStatusAvailable(ctx context.Context, connectionARN string) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timed out waiting for connection %s status to change from PENDING to AVAILABLE", connectionARN)
+		case <-time.After(10 * time.Second):
+			output, err := c.client.GetConnection(&codestarconnections.GetConnectionInput{ConnectionArn: aws.String(connectionARN)})
+			if err != nil {
+				return fmt.Errorf("get connection details: %w", err)
+			}
+			if *output.Connection.ConnectionStatus == codestarconnections.ConnectionStatusAvailable {
+				return nil
+			}
+		}
 	}
-
-	context := context.WithValue(ctx, "ConnectionStatus", output.Connection.ConnectionStatus)
-	err = c.waitUntilStatusAvailableWithContext(context, "ConnectionStatus", waiters...)
-	if err != nil {
-		return fmt.Errorf("wait until connection %s update is complete: %w", connectionARN, err)
-	}
-	return nil
-}
-
-func (c *Connection) waitUntilStatusAvailableWithContext(ctx aws.Context, key string, waiters ...request.WaiterOption) error {
-	if ctx.Value(key) == codestarconnections.ConnectionStatusAvailable {
-		return nil
-	}
-	return fmt.Errorf("placeholder error")
 }
