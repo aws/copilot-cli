@@ -54,14 +54,19 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 		if err != nil {
 			return nil, err
 		}
+		mp, err := renderSidecarMountPoints(config.MountPoints)
+		if err != nil {
+			return nil, err
+		}
 		sidecars = append(sidecars, &template.SidecarOpts{
-			Name:       aws.String(name),
-			Image:      config.Image,
-			Port:       port,
-			Protocol:   protocol,
-			CredsParam: config.CredsParam,
-			Secrets:    config.Secrets,
-			Variables:  config.Variables,
+			Name:        aws.String(name),
+			Image:       config.Image,
+			Port:        port,
+			Protocol:    protocol,
+			CredsParam:  config.CredsParam,
+			Secrets:     config.Secrets,
+			Variables:   config.Variables,
+			MountPoints: mp,
 		})
 	}
 	return sidecars, nil
