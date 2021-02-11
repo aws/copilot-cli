@@ -200,11 +200,13 @@ Resources:
           - Effect: Allow
             Action:
               - s3:PutObject
-              - s3:PutObjectAcl
               - s3:GetBucketPolicy
               - s3:GetObject
-              - s3:GetObjectAcl
               - s3:ListBucket
+              {{- if eq .Source.ProviderName "Bitbucket"}}
+              - s3:PutObjectAcl
+              - s3:GetObjectAcl
+              {{- end}}
             Resource:{{range .ArtifactBuckets}}
               - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}']]
               - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}', '/*']]{{end}}
