@@ -505,3 +505,162 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 		})
 	}
 }
+
+func TestCodePipeline_ListPipelineExecution(t *testing.T) {
+	mockPipelineName := "pipeline-dinder-badgoose-repo"
+	mockErr := errors.New("some error")
+	mockOutput := &codepipeline.ListPipelineExecutionsOutput{
+		PipelineExecutionSummaries: []*codepipeline.PipelineExecutionSummary{
+			{
+				PipelineExecutionId: aws.String("12345678-fake-exec-utio-nid987654321"),
+			},
+		},
+	}
+
+	tests := map[string]struct {
+		callMocks     func(m codepipelineMocks)
+		expectedOut   *string
+		expectedError error
+	}{
+		"happy path": {
+			callMocks: func(m codepipelineMocks) {
+				m.cp.EXPECT().ListPipelineExecutions(
+					&codepipeline.ListPipelineExecutionsInput{
+						MaxResults:   aws.Int64(1),
+						PipelineName: aws.String(mockPipelineName)}).Return(mockOutput, nil)
+			},
+			expectedOut:   aws.String("12345678-fake-exec-utio-nid987654321"),
+			expectedError: nil,
+		},
+		"should return error from api client": {
+			callMocks: func(m codepipelineMocks) {
+				m.cp.EXPECT().ListPipelineExecutions(
+					&codepipeline.ListPipelineExecutionsInput{
+						MaxResults:   aws.Int64(1),
+						PipelineName: aws.String(mockPipelineName)}).Return(nil, mockErr)
+			},
+			expectedOut:   nil,
+			expectedError: fmt.Errorf("list pipeline execution for pipeline-dinder-badgoose-repo: some error"),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockClient := mocks.NewMockapi(ctrl)
+			mockrgClient := mocks.NewMockresourceGetter(ctrl)
+			mocks := codepipelineMocks{
+				cp: mockClient,
+				rg: mockrgClient,
+			}
+			tc.callMocks(mocks)
+
+			cp := CodePipeline{
+				client:   mockClient,
+				rgClient: mockrgClient,
+			}
+
+			// WHEN
+			actualOut, actualErr := cp.ListPipelineExecution(mockPipelineName)
+
+			// THEN
+			if actualErr != nil {
+				require.EqualError(t, tc.expectedError, actualErr.Error())
+			} else {
+				require.Equal(t, tc.expectedOut, actualOut)
+			}
+		})
+	}
+}
+
+func TestCodePipeline_RetryStageExecution(t *testing.T) {
+	mockPipelineName := "pipeline-dinder-badgoose-repo"
+	mockPipelineExecutionID := aws.String("12345678-fake-exec-utio-nid987654321")
+	mockErr := errors.New("some error")
+	mockOutput := &codepipeline.RetryStageExecutionOutput{
+		PipelineExecutionId: aws.String("12345678-fake-exec-utio-nid987654321"),
+	}
+
+	tests := map[string]struct {
+		callMocks     func(m codepipelineMocks)
+		expectedOut   *string
+		expectedError error
+	}{
+		"happy path": {
+			callMocks: func(m codepipelineMocks) {
+				m.cp.EXPECT().ListPipelineExecutions(
+					&codepipeline.ListPipelineExecutionsInput{
+						MaxResults:   aws.Int64(1),
+						PipelineName: aws.String(mockPipelineName)}).Return(&codepipeline.ListPipelineExecutionsOutput{
+					PipelineExecutionSummaries: []*codepipeline.PipelineExecutionSummary{
+						{
+							PipelineExecutionId: aws.String("12345678-fake-exec-utio-nid987654321"),
+						},
+					},
+				}, nil)
+				m.cp.EXPECT().RetryStageExecution(
+					&codepipeline.RetryStageExecutionInput{
+						PipelineExecutionId: mockPipelineExecutionID,
+						PipelineName:        aws.String(mockPipelineName),
+						RetryMode:           aws.String("FAILED_ACTIONS"),
+						StageName:           aws.String("Source"),
+					}).Return(mockOutput, nil)
+			},
+			expectedOut: nil,
+		},
+		"should return error from api client": {
+			callMocks: func(m codepipelineMocks) {
+				m.cp.EXPECT().ListPipelineExecutions(
+					&codepipeline.ListPipelineExecutionsInput{
+						MaxResults:   aws.Int64(1),
+						PipelineName: aws.String(mockPipelineName)}).Return(&codepipeline.ListPipelineExecutionsOutput{
+					PipelineExecutionSummaries: []*codepipeline.PipelineExecutionSummary{
+						{
+							PipelineExecutionId: aws.String("12345678-fake-exec-utio-nid987654321"),
+						},
+					},
+				}, nil)
+				m.cp.EXPECT().RetryStageExecution(
+					&codepipeline.RetryStageExecutionInput{
+						PipelineExecutionId: mockPipelineExecutionID,
+						PipelineName:        aws.String(mockPipelineName),
+						RetryMode:           aws.String("FAILED_ACTIONS"),
+						StageName:           aws.String("Source")}).Return(nil, mockErr)
+			},
+			expectedOut:   nil,
+			expectedError: fmt.Errorf("retry pipeline source stage: some error"),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockClient := mocks.NewMockapi(ctrl)
+			mockrgClient := mocks.NewMockresourceGetter(ctrl)
+			mocks := codepipelineMocks{
+				cp: mockClient,
+				rg: mockrgClient,
+			}
+			tc.callMocks(mocks)
+
+			cp := CodePipeline{
+				client:   mockClient,
+				rgClient: mockrgClient,
+			}
+
+			// WHEN
+			actualErr := cp.RetryStageExecution(mockPipelineName)
+
+			// THEN
+			if actualErr != nil {
+				require.EqualError(t, tc.expectedError, actualErr.Error())
+			}
+		})
+	}
+}

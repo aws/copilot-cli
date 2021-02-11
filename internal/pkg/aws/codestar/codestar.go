@@ -14,9 +14,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/codestarconnections"
 )
 
+type api interface {
+	GetConnection(input *codestarconnections.GetConnectionInput) (*codestarconnections.GetConnectionOutput, error)
+}
+
 // Connection represents a client to make requests to AWS CodeStarConnections.
 type Connection struct {
-	client *codestarconnections.CodeStarConnections
+	client api
 }
 
 // New creates a new CloudFormation client.

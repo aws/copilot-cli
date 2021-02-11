@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"regexp"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -40,10 +41,9 @@ const (
 	fmtPipelineUpdateExistPrompt = "Are you sure you want to update an existing pipeline: %s?"
 )
 
-const (
-	connectionsURL = "https://console.aws.amazon.com/codesuite/settings/connections"
-	fmtPipelineURL = "https://%s.console.aws.amazon.com/codesuite/codepipeline/pipelines/%s/view?region=%s"
-)
+const connectionsURL = "https://console.aws.amazon.com/codesuite/settings/connections"
+
+var bbRepoExp = regexp.MustCompile(`(https:\/\/(.+)@bitbucket.org\/)(?P<owner>.+)\/(?P<repo>.+)`)
 
 type updatePipelineVars struct {
 	appName          string
@@ -62,6 +62,7 @@ type updatePipelineOpts struct {
 	ws               wsPipelineReader
 
 	pipelineName                 string
+	repoURL                      string
 	shouldPromptUpdateConnection bool
 }
 
@@ -169,12 +170,18 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 	}
 	if !exist {
 		o.prog.Start(fmt.Sprintf(fmtPipelineUpdateStart, color.HighlightUserInput(o.pipelineName)))
+
 		// If the source requires CodeStar Connections, the user is prompted to update the connection status.
 		if o.shouldPromptUpdateConnection {
+			connectionName, err := o.ConnectionName()
+			if err != nil {
+				return fmt.Errorf("parse connection name: %w", err)
+			}
 			log.Infoln()
-			log.Infof("%s Go to %s to update the status of your connection from PENDING to AVAILABLE.", color.Emphasize("ACTION REQUIRED!"), color.HighlightResource(connectionsURL))
+			log.Infof("%s Go to %s to update the status of connection %s from PENDING to AVAILABLE.", color.Emphasize("ACTION REQUIRED!"), color.HighlightResource(connectionsURL), color.HighlightUserInput(connectionName))
 			log.Infoln()
 		}
+
 		if err := o.pipelineDeployer.CreatePipeline(in); err != nil {
 			var alreadyExists *cloudformation.ErrStackAlreadyExists
 			if !errors.As(err, &alreadyExists) {
@@ -201,6 +208,36 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 	}
 	o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateProposalComplete, color.HighlightUserInput(o.pipelineName)))
 	return nil
+}
+
+func (o *updatePipelineOpts) ConnectionName() (string, error) {
+	if o.repoURL == "" {
+		return "", fmt.Errorf("unable to locate the repository URL")
+	}
+	match := bbRepoExp.FindStringSubmatch(o.repoURL)
+	if len(match) == 0 {
+		return "", fmt.Errorf("unable to parse the repository URL")
+	}
+	matches := make(map[string]string)
+	for i, name := range bbRepoExp.SubexpNames() {
+		if i != 0 && name != "" {
+			matches[name] = match[i]
+		}
+	}
+	owner := matches["owner"]
+	repo := matches["repo"]
+
+	const (
+		ownerLetters = 5
+		repoLetters  = 18
+	)
+	if len(owner) > ownerLetters {
+		owner = owner[:ownerLetters]
+	}
+	if len(repo) > repoLetters {
+		repo = repo[:repoLetters]
+	}
+	return fmt.Sprintf("copilot-%s-%s", owner, repo), nil
 }
 
 // Execute create a new pipeline or update the current pipeline if it already exists.
@@ -246,6 +283,7 @@ func (o *updatePipelineOpts) Execute() error {
 			Branch:        (pipeline.Source.Properties["branch"]).(string),
 			RepositoryURL: (pipeline.Source.Properties["repository"]).(string),
 		}
+		o.repoURL = pipeline.Source.Properties["repository"].(string)
 		o.shouldPromptUpdateConnection = true
 	default:
 		return fmt.Errorf("invalid repo source provider: %s", pipeline.Source.ProviderName)
@@ -283,7 +321,7 @@ func (o *updatePipelineOpts) Execute() error {
 func (o *updatePipelineOpts) RecommendedActions() []string {
 	return []string{
 		fmt.Sprintf("Run %s to see the state of your pipeline.", color.HighlightCode("copilot pipeline status")),
-		fmt.Sprintf("Run %s to see info about your pipeline.", color.HighlightCode("copilot pipeline show")),
+		fmt.Sprintf("Run %s for info about your pipeline.", color.HighlightCode("copilot pipeline show")),
 	}
 }
 
