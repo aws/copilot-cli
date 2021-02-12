@@ -23,6 +23,10 @@
   - Name: {{$name}}
     Value: {{$value | printf "%q"}}
   {{- end}}
+  {{- range $n, $mp := $sidecar.MountPoints}}
+  - Name: MOUNT_PATH_{{$n}}
+    Value: '{{$mp.ContainerPath}}'
+  {{- end}}
 {{- end}}
 {{- if $sidecar.Secrets}}
   Secrets:
