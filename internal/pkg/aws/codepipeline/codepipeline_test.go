@@ -564,7 +564,7 @@ func TestCodePipeline_ListPipelineExecution(t *testing.T) {
 			}
 
 			// WHEN
-			actualOut, actualErr := cp.ListPipelineExecution(mockPipelineName)
+			actualOut, actualErr := cp.pipelineExecutionID(mockPipelineName)
 
 			// THEN
 			if actualErr != nil {
@@ -655,7 +655,7 @@ func TestCodePipeline_RetryStageExecution(t *testing.T) {
 			}
 
 			// WHEN
-			actualErr := cp.RetryStageExecution(mockPipelineName)
+			actualErr := cp.RetrySourceStageExecution(mockPipelineName)
 
 			// THEN
 			if actualErr != nil {

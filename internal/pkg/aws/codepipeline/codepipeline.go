@@ -212,8 +212,8 @@ func (c *CodePipeline) ListPipelineNamesByTags(tags map[string]string) ([]string
 	return pipelineNames, nil
 }
 
-// ListPipelineExecution returns the ExecutionID of the most recent execution of a pipeline.
-func (c *CodePipeline) ListPipelineExecution(pipelineName string) (*string, error) {
+// pipelineExecutionID returns the ExecutionID of the most recent execution of a pipeline.
+func (c *CodePipeline) pipelineExecutionID(pipelineName string) (*string, error) {
 	input := &cp.ListPipelineExecutionsInput{
 		MaxResults:   aws.Int64(1),
 		PipelineName: &pipelineName,
@@ -225,9 +225,9 @@ func (c *CodePipeline) ListPipelineExecution(pipelineName string) (*string, erro
 	return output.PipelineExecutionSummaries[0].PipelineExecutionId, nil
 }
 
-// RetryStageExecution tries to rebuild a failed pipeline.
-func (c *CodePipeline) RetryStageExecution(pipelineName string) error {
-	executionID, err := c.ListPipelineExecution(pipelineName)
+// RetrySourceStageExecution tries to re-initiate a failed 'Source' stage for the given pipeline.
+func (c *CodePipeline) RetrySourceStageExecution(pipelineName string) error {
+	executionID, err := c.pipelineExecutionID(pipelineName)
 	if err != nil {
 		return fmt.Errorf("retrieve pipeline execution ID: %w", err)
 	}

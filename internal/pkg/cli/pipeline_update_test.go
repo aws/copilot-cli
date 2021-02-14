@@ -679,7 +679,7 @@ func TestUpdatePipelineOpts_ConnectionName(t *testing.T) {
 			}
 
 			// WHEN
-			actual, err := opts.ConnectionName()
+			actual, err := opts.connectionName()
 
 			// THEN
 			if tc.expectedError != nil {

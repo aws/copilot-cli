@@ -46,17 +46,18 @@ func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput) error {
 		return err
 	}
 	// If the pipeline has a PipelineConnectionARN, indicating that it is has a CodeStarConnections source provider, the user needs to update the connection status; Copilot will wait until that happens.
-	if output["PipelineConnection"] != "" {
-		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(45*time.Minute))
-		defer cancel()
-
-		if err = cf.codeStarClient.WaitUntilStatusAvailable(ctx, output["PipelineConnection"]); err != nil {
-			return err
-		}
-		if err = cf.cpClient.RetryStageExecution(in.Name); err != nil {
-			return err
-		}
+	if output["PipelineConnectionARN"] == "" {
+		return nil
 	}
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(45*time.Minute))
+	defer cancel()
+	if err = cf.codeStarClient.WaitUntilStatusAvailable(ctx, output["PipelineConnectionARN"]); err != nil {
+		return err
+	}
+	if err = cf.cpClient.RetrySourceStageExecution(in.Name); err != nil {
+		return err
+	}
+
 	return nil
 }
 

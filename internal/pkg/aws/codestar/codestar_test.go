@@ -22,9 +22,9 @@ import (
 func TestCodestar_WaitUntilStatusAvailable(t *testing.T) {
 	t.Run("times out if connection status not changed to available in allotted time", func(t *testing.T) {
 		// GIVEN
-		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now())
 		defer cancel()
-		connection := &Connection{}
+		connection := &CodeStar{}
 		connectionARN := "mockConnectionARN"
 
 		// WHEN
@@ -41,7 +41,7 @@ func TestCodestar_WaitUntilStatusAvailable(t *testing.T) {
 		m := mocks.NewMockapi(ctrl)
 		m.EXPECT().GetConnection(gomock.Any()).Return(nil, errors.New("some error"))
 
-		connection := &Connection{
+		connection := &CodeStar{
 			client: m,
 		}
 		connectionARN := "mockConnectionARN"
@@ -64,7 +64,7 @@ func TestCodestar_WaitUntilStatusAvailable(t *testing.T) {
 			},
 			}, nil)
 
-		connection := &Connection{
+		connection := &CodeStar{
 			client: m,
 		}
 		connectionARN := "mockConnectionARN"

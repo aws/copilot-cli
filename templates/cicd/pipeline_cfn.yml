@@ -377,7 +377,7 @@ Resources:
                 - Name: SCCheckoutArtifact{{end}}{{end}}{{end}}{{end}}
 {{- if eq .Source.ProviderName "Bitbucket"}}
 Outputs:
-  PipelineConnection:
+  PipelineConnectionARN:
     Description: "ARN of CodeStar Connections connection"
     Value: !Ref SourceConnection
 {{- end}}

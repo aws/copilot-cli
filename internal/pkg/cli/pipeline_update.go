@@ -43,6 +43,7 @@ const (
 
 const connectionsURL = "https://console.aws.amazon.com/codesuite/settings/connections"
 
+// Ex: "https://repoOwner@bitbucket.org/repoOwner/repoName
 var bbRepoExp = regexp.MustCompile(`(https:\/\/(.+)@bitbucket.org\/)(?P<owner>.+)\/(?P<repo>.+)`)
 
 type updatePipelineVars struct {
@@ -173,7 +174,7 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 
 		// If the source requires CodeStar Connections, the user is prompted to update the connection status.
 		if o.shouldPromptUpdateConnection {
-			connectionName, err := o.ConnectionName()
+			connectionName, err := o.connectionName()
 			if err != nil {
 				return fmt.Errorf("parse connection name: %w", err)
 			}
@@ -210,7 +211,7 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 	return nil
 }
 
-func (o *updatePipelineOpts) ConnectionName() (string, error) {
+func (o *updatePipelineOpts) connectionName() (string, error) {
 	if o.repoURL == "" {
 		return "", fmt.Errorf("unable to locate the repository URL")
 	}

@@ -19,31 +19,33 @@ type api interface {
 }
 
 // Connection represents a client to make requests to AWS CodeStarConnections.
-type Connection struct {
+type CodeStar struct {
 	client api
 }
 
 // New creates a new CloudFormation client.
-func New(s *session.Session) *Connection {
-	return &Connection{
+func New(s *session.Session) *CodeStar {
+	return &CodeStar{
 		codestarconnections.New(s),
 	}
 }
 
 // WaitUntilStatusAvailable blocks until the connection status has been updated from `PENDING` to `AVAILABLE` or until the max attempt window expires.
-func (c *Connection) WaitUntilStatusAvailable(ctx context.Context, connectionARN string) error {
+func (c *CodeStar) WaitUntilStatusAvailable(ctx context.Context, connectionARN string) error {
+	var interval time.Duration // Default to 0.
 	for {
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("timed out waiting for connection %s status to change from PENDING to AVAILABLE", connectionARN)
-		case <-time.After(10 * time.Second):
+		case <-time.After(interval):
 			output, err := c.client.GetConnection(&codestarconnections.GetConnectionInput{ConnectionArn: aws.String(connectionARN)})
 			if err != nil {
 				return fmt.Errorf("get connection details: %w", err)
 			}
-			if *output.Connection.ConnectionStatus == codestarconnections.ConnectionStatusAvailable {
+			if aws.StringValue(output.Connection.ConnectionStatus) == codestarconnections.ConnectionStatusAvailable {
 				return nil
 			}
+			interval = 5 * time.Second
 		}
 	}
 }

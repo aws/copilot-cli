@@ -226,7 +226,7 @@ func (c *CloudFormation) Outputs(stack *Stack) (map[string]string, error) {
 	}
 	outputs := make(map[string]string)
 	for _, output := range stackDescription.Outputs {
-		outputs[*output.OutputKey] = *output.OutputValue
+		outputs[aws.StringValue(output.OutputKey)] = aws.StringValue(output.OutputValue)
 	}
 	return outputs, nil
 }
