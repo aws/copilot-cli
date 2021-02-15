@@ -16,6 +16,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 )
 
+const (
+	sourceStage = "Source"
+)
+
 // PipelineExists checks if the pipeline with the provided config exists.
 func (cf CloudFormation) PipelineExists(in *deploy.CreatePipelineInput) (bool, error) {
 	stackConfig := stack.NewPipelineStackConfig(in)
@@ -45,7 +49,7 @@ func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput) error {
 	if err != nil {
 		return err
 	}
-	// If the pipeline has a PipelineConnectionARN, indicating that it is has a CodeStarConnections source provider, the user needs to update the connection status; Copilot will wait until that happens.
+	// If the pipeline has a PipelineConnectionARN in the output map, indicating that it is has a CodeStarConnections source provider, the user needs to update the connection status; Copilot will wait until that happens.
 	if output["PipelineConnectionARN"] == "" {
 		return nil
 	}
@@ -54,7 +58,7 @@ func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput) error {
 	if err = cf.codeStarClient.WaitUntilStatusAvailable(ctx, output["PipelineConnectionARN"]); err != nil {
 		return err
 	}
-	if err = cf.cpClient.RetrySourceStageExecution(in.Name); err != nil {
+	if err = cf.cpClient.RetrySourceStageExecution(in.Name, sourceStage); err != nil {
 		return err
 	}
 

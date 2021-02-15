@@ -5,6 +5,7 @@
 package codepipeline
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -226,7 +227,7 @@ func (c *CodePipeline) pipelineExecutionID(pipelineName string) (*string, error)
 }
 
 // RetrySourceStageExecution tries to re-initiate a failed 'Source' stage for the given pipeline.
-func (c *CodePipeline) RetrySourceStageExecution(pipelineName string) error {
+func (c *CodePipeline) RetrySourceStageExecution(pipelineName, stageName string) error {
 	executionID, err := c.pipelineExecutionID(pipelineName)
 	if err != nil {
 		return fmt.Errorf("retrieve pipeline execution ID: %w", err)
@@ -235,12 +236,15 @@ func (c *CodePipeline) RetrySourceStageExecution(pipelineName string) error {
 		&cp.RetryStageExecutionInput{
 			PipelineExecutionId: executionID,
 			PipelineName:        &pipelineName,
-			RetryMode:           aws.String("FAILED_ACTIONS"),
-			StageName:           aws.String("Source"),
+			RetryMode:           aws.String(cp.StageRetryModeFailedActions),
+			StageName:           &stageName,
 		}
 	_, err = c.client.RetryStageExecution(input)
 	if err != nil {
-		return fmt.Errorf("retry pipeline source stage: %w", err)
+		noFailedActions := &cp.StageNotRetryableException{}
+		if !errors.As(err, &noFailedActions) {
+			return fmt.Errorf("retry pipeline source stage: %w", err)
+		}
 	}
 	return nil
 }

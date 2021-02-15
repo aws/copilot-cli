@@ -578,6 +578,8 @@ func TestCodePipeline_ListPipelineExecution(t *testing.T) {
 
 func TestCodePipeline_RetryStageExecution(t *testing.T) {
 	mockPipelineName := "pipeline-dinder-badgoose-repo"
+	mockStageName := "Source"
+	failedActions := codepipeline.StageRetryModeFailedActions
 	mockPipelineExecutionID := aws.String("12345678-fake-exec-utio-nid987654321")
 	mockErr := errors.New("some error")
 	mockOutput := &codepipeline.RetryStageExecutionOutput{
@@ -605,8 +607,8 @@ func TestCodePipeline_RetryStageExecution(t *testing.T) {
 					&codepipeline.RetryStageExecutionInput{
 						PipelineExecutionId: mockPipelineExecutionID,
 						PipelineName:        aws.String(mockPipelineName),
-						RetryMode:           aws.String("FAILED_ACTIONS"),
-						StageName:           aws.String("Source"),
+						RetryMode:           aws.String(failedActions),
+						StageName:           aws.String(mockStageName),
 					}).Return(mockOutput, nil)
 			},
 			expectedOut: nil,
@@ -627,8 +629,9 @@ func TestCodePipeline_RetryStageExecution(t *testing.T) {
 					&codepipeline.RetryStageExecutionInput{
 						PipelineExecutionId: mockPipelineExecutionID,
 						PipelineName:        aws.String(mockPipelineName),
-						RetryMode:           aws.String("FAILED_ACTIONS"),
-						StageName:           aws.String("Source")}).Return(nil, mockErr)
+						RetryMode:           aws.String(failedActions),
+						StageName:           aws.String(mockStageName),
+					}).Return(nil, mockErr)
 			},
 			expectedOut:   nil,
 			expectedError: fmt.Errorf("retry pipeline source stage: some error"),
@@ -655,7 +658,7 @@ func TestCodePipeline_RetryStageExecution(t *testing.T) {
 			}
 
 			// WHEN
-			actualErr := cp.RetrySourceStageExecution(mockPipelineName)
+			actualErr := cp.RetrySourceStageExecution(mockPipelineName, mockStageName)
 
 			// THEN
 			if actualErr != nil {

@@ -63,7 +63,6 @@ type updatePipelineOpts struct {
 	ws               wsPipelineReader
 
 	pipelineName                 string
-	repoURL                      string
 	shouldPromptUpdateConnection bool
 }
 
@@ -174,7 +173,8 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 
 		// If the source requires CodeStar Connections, the user is prompted to update the connection status.
 		if o.shouldPromptUpdateConnection {
-			connectionName, err := o.connectionName()
+			repo := in.Source.(*deploy.BitbucketSource)
+			connectionName, err := repo.ConnectionName()
 			if err != nil {
 				return fmt.Errorf("parse connection name: %w", err)
 			}
@@ -209,36 +209,6 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 	}
 	o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateProposalComplete, color.HighlightUserInput(o.pipelineName)))
 	return nil
-}
-
-func (o *updatePipelineOpts) connectionName() (string, error) {
-	if o.repoURL == "" {
-		return "", fmt.Errorf("unable to locate the repository URL")
-	}
-	match := bbRepoExp.FindStringSubmatch(o.repoURL)
-	if len(match) == 0 {
-		return "", fmt.Errorf("unable to parse the repository URL")
-	}
-	matches := make(map[string]string)
-	for i, name := range bbRepoExp.SubexpNames() {
-		if i != 0 && name != "" {
-			matches[name] = match[i]
-		}
-	}
-	owner := matches["owner"]
-	repo := matches["repo"]
-
-	const (
-		ownerLetters = 5
-		repoLetters  = 18
-	)
-	if len(owner) > ownerLetters {
-		owner = owner[:ownerLetters]
-	}
-	if len(repo) > repoLetters {
-		repo = repo[:repoLetters]
-	}
-	return fmt.Sprintf("copilot-%s-%s", owner, repo), nil
 }
 
 // Execute create a new pipeline or update the current pipeline if it already exists.
@@ -284,7 +254,6 @@ func (o *updatePipelineOpts) Execute() error {
 			Branch:        (pipeline.Source.Properties["branch"]).(string),
 			RepositoryURL: (pipeline.Source.Properties["repository"]).(string),
 		}
-		o.repoURL = pipeline.Source.Properties["repository"].(string)
 		o.shouldPromptUpdateConnection = true
 	default:
 		return fmt.Errorf("invalid repo source provider: %s", pipeline.Source.ProviderName)

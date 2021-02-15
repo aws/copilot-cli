@@ -58,16 +58,17 @@ func TestCodestar_WaitUntilStatusAvailable(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		m := mocks.NewMockapi(ctrl)
-		m.EXPECT().GetConnection(gomock.Any()).Return(
-			&codestarconnections.GetConnectionOutput{Connection: &codestarconnections.Connection{
-				ConnectionStatus: aws.String(codestarconnections.ConnectionStatusAvailable),
-			},
-			}, nil)
-
 		connection := &CodeStar{
 			client: m,
 		}
 		connectionARN := "mockConnectionARN"
+		m.EXPECT().GetConnection(&codestarconnections.GetConnectionInput{
+			ConnectionArn: aws.String(connectionARN),
+		}).Return(
+			&codestarconnections.GetConnectionOutput{Connection: &codestarconnections.Connection{
+				ConnectionStatus: aws.String(codestarconnections.ConnectionStatusAvailable),
+			},
+			}, nil)
 
 		// WHEN
 		err := connection.WaitUntilStatusAvailable(context.Background(), connectionARN)

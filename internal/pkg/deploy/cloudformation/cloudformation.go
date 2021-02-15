@@ -78,7 +78,7 @@ type codeStarClient interface {
 }
 
 type codePipelineClient interface {
-	RetrySourceStageExecution(pipelineName string) error
+	RetrySourceStageExecution(pipelineName, stageName string) error
 }
 
 type stackSetClient interface {
