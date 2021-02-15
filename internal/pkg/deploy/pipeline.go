@@ -23,6 +23,7 @@ var (
 	ghRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
 	// Ex: https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample/browse
 	ccRepoExp = regexp.MustCompile(`(https:\/\/(?P<region>.+).console.aws.amazon.com\/codesuite\/codecommit\/repositories\/(?P<repo>.+)(\/browse))`)
+	// Ex: https://repoOwner@bitbucket.org/repoOwner/repoName
 	bbRepoExp = regexp.MustCompile(`(https:\/\/(.+)@bitbucket.org\/)(?P<owner>.+)\/(?P<repo>.+)`)
 )
 

@@ -43,7 +43,7 @@ const (
 
 const connectionsURL = "https://console.aws.amazon.com/codesuite/settings/connections"
 
-// Ex: "https://repoOwner@bitbucket.org/repoOwner/repoName
+// Ex: https://repoOwner@bitbucket.org/repoOwner/repoName
 var bbRepoExp = regexp.MustCompile(`(https:\/\/(.+)@bitbucket.org\/)(?P<owner>.+)\/(?P<repo>.+)`)
 
 type updatePipelineVars struct {

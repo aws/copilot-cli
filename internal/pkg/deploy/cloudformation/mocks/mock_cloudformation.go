@@ -479,33 +479,18 @@ func (m *MockcodePipelineClient) EXPECT() *MockcodePipelineClientMockRecorder {
 	return m.recorder
 }
 
-// ListPipelineExecution mocks base method
-func (m *MockcodePipelineClient) ListPipelineExecution(pipelineName string) (*string, error) {
+// RetrySourceStageExecution mocks base method
+func (m *MockcodePipelineClient) RetrySourceStageExecution(pipelineName, stageName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListPipelineExecution", pipelineName)
-	ret0, _ := ret[0].(*string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListPipelineExecution indicates an expected call of ListPipelineExecution
-func (mr *MockcodePipelineClientMockRecorder) ListPipelineExecution(pipelineName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelineExecution", reflect.TypeOf((*MockcodePipelineClient)(nil).ListPipelineExecution), pipelineName)
-}
-
-// RetryStageExecution mocks base method
-func (m *MockcodePipelineClient) RetryStageExecution(pipelineName string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RetryStageExecution", pipelineName)
+	ret := m.ctrl.Call(m, "RetrySourceStageExecution", pipelineName, stageName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// RetryStageExecution indicates an expected call of RetryStageExecution
-func (mr *MockcodePipelineClientMockRecorder) RetryStageExecution(pipelineName interface{}) *gomock.Call {
+// RetrySourceStageExecution indicates an expected call of RetrySourceStageExecution
+func (mr *MockcodePipelineClientMockRecorder) RetrySourceStageExecution(pipelineName, stageName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetryStageExecution", reflect.TypeOf((*MockcodePipelineClient)(nil).RetryStageExecution), pipelineName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetrySourceStageExecution", reflect.TypeOf((*MockcodePipelineClient)(nil).RetrySourceStageExecution), pipelineName, stageName)
 }
 
 // MockstackSetClient is a mock of stackSetClient interface
