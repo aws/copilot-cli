@@ -16,11 +16,18 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	awsCF "github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	fmtIAMRoleARN         = "arn:aws:iam::%s:role/%s"
+	fmtCFNExecutionRoleID = "%s-%s-CFNExecutionRole"
+	fmtEnvManagerRoleID   = "%s-%s-EnvManagerRole"
 )
 
 func init() {
@@ -359,10 +366,13 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	cfClient := awsCF.New(sess)
 	identity := identity.New(sess)
 
+	iamClient := iam.New(sess)
+
 	id, err := identity.Get()
 	require.NoError(t, err)
-
-	environmentToDeploy := deploy.CreateEnvironmentInput{Name: randStringBytes(10), AppName: randStringBytes(10), ToolsAccountPrincipalARN: id.RootUserARN}
+	envName := randStringBytes(10)
+	appName := randStringBytes(10)
+	environmentToDeploy := deploy.CreateEnvironmentInput{Name: envName, AppName: appName, ToolsAccountPrincipalARN: id.RootUserARN}
 	envStackName := fmt.Sprintf("%s-%s", environmentToDeploy.AppName, environmentToDeploy.Name)
 
 	t.Run("Deploys an environment to CloudFormation", func(t *testing.T) {
@@ -377,6 +387,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 			cfClient.DeleteStack(&awsCF.DeleteStackInput{
 				StackName: aws.String(envStackName),
 			})
+			deleteEnvRoles(appName, envName, id.Account, iamClient)
 		}()
 
 		// Deploy the environment and wait for it to be complete
@@ -542,4 +553,22 @@ func randStringBytes(n int) string {
 		b[i] = letterBytes[rand.Intn(len(letterBytes))]
 	}
 	return string(b)
+}
+
+func deleteEnvRoles(app, env, accountNumber string, iam *iam.IAM) error {
+	cfnExecRoleID := fmt.Sprintf(fmtCFNExecutionRoleID, app, env)
+	envManagerRoleID := fmt.Sprintf(fmtEnvManagerRoleID, app, env)
+	cfnExecutionRoleARN := fmt.Sprintf(fmtIAMRoleARN, accountNumber, cfnExecRoleID)
+	envManagerRoleARN := fmt.Sprintf(fmtIAMRoleARN, accountNumber, envManagerRoleID)
+
+	err := iam.DeleteRole(cfnExecutionRoleARN)
+	if err != nil {
+		return err
+	}
+	err = iam.DeleteRole(envManagerRoleARN)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
