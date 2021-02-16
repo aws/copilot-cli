@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	fmtIAMRoleARN         = "arn:aws:sts::%s:role/%s"
+	fmtIAMRoleARN         = "arn:aws:iam::%s:role/%s"
 	fmtCFNExecutionRoleID = "%s-%s-CFNExecutionRole"
 	fmtEnvManagerRoleID   = "%s-%s-EnvManagerRole"
 )
