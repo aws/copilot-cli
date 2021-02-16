@@ -159,6 +159,10 @@ func (o *updatePipelineOpts) shouldUpdate() (bool, error) {
 	return shouldUpdate, nil
 }
 
+type codestar interface {
+	ConnectionName() (string, error)
+}
+
 func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) error {
 	exist, err := o.pipelineDeployer.PipelineExists(in)
 	if err != nil {
@@ -169,8 +173,11 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 
 		// If the source requires CodeStar Connections, the user is prompted to update the connection status.
 		if o.shouldPromptUpdateConnection {
-			repo := in.Source.(*deploy.BitbucketSource)
-			connectionName, err := repo.ConnectionName()
+			source, ok := in.Source.(codestar)
+			if !ok {
+				return fmt.Errorf("source %v does not have a connection name", in.Source)
+			}
+			connectionName, err := source.ConnectionName()
 			if err != nil {
 				return fmt.Errorf("parse connection name: %w", err)
 			}
