@@ -214,16 +214,19 @@ func (c *CodePipeline) ListPipelineNamesByTags(tags map[string]string) ([]string
 }
 
 // pipelineExecutionID returns the ExecutionID of the most recent execution of a pipeline.
-func (c *CodePipeline) pipelineExecutionID(pipelineName string) (*string, error) {
+func (c *CodePipeline) pipelineExecutionID(pipelineName string) (string, error) {
 	input := &cp.ListPipelineExecutionsInput{
 		MaxResults:   aws.Int64(1),
 		PipelineName: &pipelineName,
 	}
 	output, err := c.client.ListPipelineExecutions(input)
 	if err != nil {
-		return nil, fmt.Errorf("list pipeline execution for %s: %w", pipelineName, err)
+		return "", fmt.Errorf("list pipeline execution for %s: %w", pipelineName, err)
 	}
-	return output.PipelineExecutionSummaries[0].PipelineExecutionId, nil
+	if len(output.PipelineExecutionSummaries) == 0 {
+		return "", fmt.Errorf("no pipeline execution IDs found")
+	}
+	return aws.StringValue(output.PipelineExecutionSummaries[0].PipelineExecutionId), nil
 }
 
 // RetrySourceStageExecution tries to re-initiate a failed 'Source' stage for the given pipeline.
@@ -232,15 +235,13 @@ func (c *CodePipeline) RetrySourceStageExecution(pipelineName, stageName string)
 	if err != nil {
 		return fmt.Errorf("retrieve pipeline execution ID: %w", err)
 	}
-	input :=
-		&cp.RetryStageExecutionInput{
-			PipelineExecutionId: executionID,
-			PipelineName:        &pipelineName,
-			RetryMode:           aws.String(cp.StageRetryModeFailedActions),
-			StageName:           &stageName,
-		}
-	_, err = c.client.RetryStageExecution(input)
-	if err != nil {
+
+	if _, err = c.client.RetryStageExecution(&cp.RetryStageExecutionInput{
+		PipelineExecutionId: &executionID,
+		PipelineName:        &pipelineName,
+		RetryMode:           aws.String(cp.StageRetryModeFailedActions),
+		StageName:           &stageName,
+	}); err != nil {
 		noFailedActions := &cp.StageNotRetryableException{}
 		if !errors.As(err, &noFailedActions) {
 			return fmt.Errorf("retry pipeline source stage: %w", err)

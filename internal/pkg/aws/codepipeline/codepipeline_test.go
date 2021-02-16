@@ -516,10 +516,15 @@ func TestCodePipeline_ListPipelineExecution(t *testing.T) {
 			},
 		},
 	}
+	mockBadOutput := &codepipeline.ListPipelineExecutionsOutput{
+		PipelineExecutionSummaries: []*codepipeline.PipelineExecutionSummary{
+			{},
+		},
+	}
 
 	tests := map[string]struct {
 		callMocks     func(m codepipelineMocks)
-		expectedOut   *string
+		expectedOut   string
 		expectedError error
 	}{
 		"happy path": {
@@ -529,7 +534,7 @@ func TestCodePipeline_ListPipelineExecution(t *testing.T) {
 						MaxResults:   aws.Int64(1),
 						PipelineName: aws.String(mockPipelineName)}).Return(mockOutput, nil)
 			},
-			expectedOut:   aws.String("12345678-fake-exec-utio-nid987654321"),
+			expectedOut:   "12345678-fake-exec-utio-nid987654321",
 			expectedError: nil,
 		},
 		"should return error from api client": {
@@ -539,8 +544,18 @@ func TestCodePipeline_ListPipelineExecution(t *testing.T) {
 						MaxResults:   aws.Int64(1),
 						PipelineName: aws.String(mockPipelineName)}).Return(nil, mockErr)
 			},
-			expectedOut:   nil,
+			expectedOut:   "",
 			expectedError: fmt.Errorf("list pipeline execution for pipeline-dinder-badgoose-repo: some error"),
+		},
+		"errors if no pipeline execution IDs are returned": {
+			callMocks: func(m codepipelineMocks) {
+				m.cp.EXPECT().ListPipelineExecutions(
+					&codepipeline.ListPipelineExecutionsInput{
+						MaxResults:   aws.Int64(1),
+						PipelineName: aws.String(mockPipelineName)}).Return(mockBadOutput, nil)
+			},
+			expectedOut:   "",
+			expectedError: fmt.Errorf("no pipeline execution IDs found"),
 		},
 	}
 
