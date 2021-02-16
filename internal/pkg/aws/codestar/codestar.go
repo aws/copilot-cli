@@ -40,7 +40,7 @@ func (c *CodeStar) WaitUntilStatusAvailable(ctx context.Context, connectionARN s
 		case <-time.After(interval):
 			output, err := c.client.GetConnection(&codestarconnections.GetConnectionInput{ConnectionArn: aws.String(connectionARN)})
 			if err != nil {
-				return fmt.Errorf("get connection details: %w", err)
+				return fmt.Errorf("get connection details for %s: %w", connectionARN, err)
 			}
 			if aws.StringValue(output.Connection.ConnectionStatus) == codestarconnections.ConnectionStatusAvailable {
 				return nil

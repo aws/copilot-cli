@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	sourceStage = "Source"
+	sourceStage      = "Source"
+	connectionARNKey = "PipelineConnectionARN"
 )
 
 // PipelineExists checks if the pipeline with the provided config exists.
@@ -50,12 +51,12 @@ func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput) error {
 		return err
 	}
 	// If the pipeline has a PipelineConnectionARN in the output map, indicating that it is has a CodeStarConnections source provider, the user needs to update the connection status; Copilot will wait until that happens.
-	if output["PipelineConnectionARN"] == "" {
+	if output[connectionARNKey] == "" {
 		return nil
 	}
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(45*time.Minute))
 	defer cancel()
-	if err = cf.codeStarClient.WaitUntilStatusAvailable(ctx, output["PipelineConnectionARN"]); err != nil {
+	if err = cf.codeStarClient.WaitUntilStatusAvailable(ctx, output[connectionARNKey]); err != nil {
 		return err
 	}
 	if err = cf.cpClient.RetrySourceStageExecution(in.Name, sourceStage); err != nil {

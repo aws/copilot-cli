@@ -50,7 +50,7 @@ func TestCodestar_WaitUntilStatusAvailable(t *testing.T) {
 		err := connection.WaitUntilStatusAvailable(context.Background(), connectionARN)
 
 		// THEN
-		require.EqualError(t, err, "get connection details: some error")
+		require.EqualError(t, err, "get connection details for mockConnectionARN: some error")
 	})
 
 	t.Run("waits until connection status is returned as 'available' and exits gracefully", func(t *testing.T) {
