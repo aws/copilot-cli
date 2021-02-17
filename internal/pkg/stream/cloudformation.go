@@ -81,9 +81,9 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 		})
 		if err != nil {
 			// Check for throttles and wait to try again using the StackStreamer's interval.
-			s.retries += 1
 			if request.IsErrorThrottle(err) {
-				return sleep(s.retries), nil
+				s.retries += 1
+				return nextFetchDate(s.retries), nil
 			}
 			return next, fmt.Errorf("describe stack events %s: %w", s.stackName, err)
 		}
@@ -126,7 +126,7 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 	reverse(events)
 	s.eventsToFlush = append(s.eventsToFlush, events...)
 	// Only use exponential backoff if there's an error.
-	return sleep(0), nil
+	return nextFetchDate(0), nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.

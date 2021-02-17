@@ -107,9 +107,9 @@ func (s *ECSDeploymentStreamer) Subscribe() <-chan ECSService {
 func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 	out, err := s.client.Service(s.cluster, s.service)
 	if err != nil {
-		s.retries += 1
 		if request.IsErrorThrottle(err) {
-			return sleep(s.retries), nil
+			s.retries += 1
+			return nextFetchDate(s.retries), nil
 		}
 		return next, fmt.Errorf("fetch service description: %w", err)
 	}
@@ -153,7 +153,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 		Deployments:         deployments,
 		LatestFailureEvents: failureMsgs,
 	})
-	return sleep(0), nil
+	return nextFetchDate(0), nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.

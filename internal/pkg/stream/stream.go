@@ -63,8 +63,8 @@ func Stream(ctx context.Context, streamer Streamer) error {
 	}
 }
 
-// sleep returns a time to wait using random jitter and exponential backoff.
-func sleep(retries int) time.Time {
+// nextFetchDate returns a time to wait using random jitter and exponential backoff.
+func nextFetchDate(retries int) time.Time {
 	// waitMs := rand.Intn( 							// Get a random integer between 0 and ...
 	// 	min( 											// the minimum of ...
 	// 		streamerMaxFetchIntervalDuration,           // the max fetch interval and ...
