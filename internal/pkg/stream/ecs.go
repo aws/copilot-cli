@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
 
@@ -73,6 +74,8 @@ type ECSDeploymentStreamer struct {
 	pastEventIDs  map[string]bool
 	eventsToFlush []ECSService
 	mu            sync.Mutex
+
+	retries int
 }
 
 // NewECSDeploymentStreamer creates a new ECSDeploymentStreamer that streams service descriptions
@@ -104,8 +107,13 @@ func (s *ECSDeploymentStreamer) Subscribe() <-chan ECSService {
 func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 	out, err := s.client.Service(s.cluster, s.service)
 	if err != nil {
+		s.retries += 1
+		if request.IsErrorThrottle(err) {
+			return sleep(s.retries), nil
+		}
 		return next, fmt.Errorf("fetch service description: %w", err)
 	}
+	s.retries = 0
 	var deployments []ECSDeployment
 	for _, deployment := range out.Deployments {
 		status := aws.StringValue(deployment.Status)
@@ -145,7 +153,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 		Deployments:         deployments,
 		LatestFailureEvents: failureMsgs,
 	})
-	return time.Now().Add(streamerFetchIntervalDuration), nil
+	return sleep(0), nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.

@@ -7,11 +7,13 @@ package stream
 
 import (
 	"context"
+	"math/rand"
 	"time"
 )
 
 const (
-	streamerFetchIntervalDuration = 3 * time.Second // How long to wait until Fetch is called again for a Streamer.
+	streamerFetchIntervalDurationMs    = 4000  // How long to wait in milliseconds until Fetch is called again for a Streamer.
+	streamerMaxFetchIntervalDurationMs = 32000 // The maximum duration that a client should wait until Fetch is called again.
 )
 
 // Streamer is the interface that groups methods to periodically retrieve events,
@@ -59,4 +61,28 @@ func Stream(ctx context.Context, streamer Streamer) error {
 			streamer.Notify()
 		}
 	}
+}
+
+// sleep returns a time to wait using random jitter and exponential backoff.
+func sleep(retries int) time.Time {
+	// waitMs := rand.Intn( 							// Get a random integer between 0 and ...
+	// 	min( 											// the minimum of ...
+	// 		streamerMaxFetchIntervalDuration,           // the max fetch interval and ...
+	// 		streamerFetchIntervalDuration*(1<<retries), // d*2^r, where r=retries and d= the normal
+	// 	),
+	// )
+	waitMs := rand.Intn(
+		min(
+			streamerMaxFetchIntervalDurationMs,
+			streamerFetchIntervalDurationMs*(1<<retries),
+		),
+	)
+	return time.Now().Add(time.Duration(waitMs) * time.Millisecond)
+}
+
+func min(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
 }
