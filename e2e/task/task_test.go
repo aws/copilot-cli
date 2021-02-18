@@ -101,7 +101,7 @@ var _ = Describe("Task", func() {
 
 				Dockerfile: "./backend/Dockerfile",
 
-				Command: "python main.py",
+				Command: "/bin/sh check_override.sh",
 				EnvVars: "STATUS=OVERRIDDEN",
 
 				Default: true,
