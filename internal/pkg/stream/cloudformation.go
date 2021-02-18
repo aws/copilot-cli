@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	cfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 )
@@ -40,8 +39,6 @@ type StackStreamer struct {
 	pastEventIDs  map[string]bool
 	eventsToFlush []StackEvent
 	mu            sync.Mutex
-
-	retries int
 }
 
 // NewStackStreamer creates a StackStreamer from a cloudformation client, stack name, and the change set creation timestamp.
@@ -80,15 +77,8 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 			StackName: aws.String(s.stackName),
 		})
 		if err != nil {
-			// Check for throttles and wait to try again using the StackStreamer's interval.
-			if request.IsErrorThrottle(err) {
-				s.retries += 1
-				return nextFetchDate(s.retries), nil
-			}
 			return next, fmt.Errorf("describe stack events %s: %w", s.stackName, err)
 		}
-
-		s.retries = 0
 
 		var finished bool
 		for _, event := range out.StackEvents {
@@ -125,8 +115,7 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 	// Store events to flush in chronological order.
 	reverse(events)
 	s.eventsToFlush = append(s.eventsToFlush, events...)
-	// Only use exponential backoff if there's an error.
-	return nextFetchDate(0), nil
+	return time.Now().Add(streamerFetchIntervalDuration), nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.

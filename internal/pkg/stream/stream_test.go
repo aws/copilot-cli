@@ -136,14 +136,4 @@ func TestStream(t *testing.T) {
 		require.Greater(t, streamer.fetchCount, 1, "expected more than one call to Fetch within timeout")
 		require.Greater(t, streamer.notifyCount, 1, "expected more than one call to Notify within timeout")
 	})
-
-	t.Run("nextFetchDate works correctly to grab times before the timeout.", func(t *testing.T) {
-		for r := 0; r < 1000; r++ {
-			a := nextFetchDate(0)
-			require.True(t, a.Before(time.Now().Add(4*time.Second)), "require that the given date for 0 retries is less than 4s in the future")
-			b := nextFetchDate(10)
-			require.True(t, b.Before(time.Now().Add(32*time.Second)), "require that the given date for 10 retries is never more than the max interval")
-		}
-
-	})
 }

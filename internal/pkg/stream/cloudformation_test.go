@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/stretchr/testify/require"
 )
@@ -40,7 +39,6 @@ func TestStackStreamer_Fetch(t *testing.T) {
 	t.Run("stores only events after the changeset creation time", testStackStreamer_Fetch_PostChangeSet)
 	t.Run("stores only events that have not been seen yet", testStackStreamer_Fetch_WithSeenEvents)
 	t.Run("returns wrapped error if describe call fails", testStackStreamer_Fetch_WithError)
-	t.Run("throttle results in a gracefully handled error and exponential backoff", testStackStreamer_Fetch_withThrottle)
 }
 
 func TestStackStreamer_Notify(t *testing.T) {
@@ -184,7 +182,6 @@ func testStackStreamer_Fetch_WithSeenEvents(t *testing.T) {
 	// GIVEN
 	startTime := time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC)
 	client := mockCloudFormation{
-
 		out: &cloudformation.DescribeStackEventsOutput{
 			StackEvents: []*cloudformation.StackEvent{
 				{
@@ -241,27 +238,6 @@ func testStackStreamer_Fetch_WithError(t *testing.T) {
 
 	// THEN
 	require.EqualError(t, err, "describe stack events phonetool-test: some error")
-}
-
-func testStackStreamer_Fetch_withThrottle(t *testing.T) {
-	// GIVEN
-	client := &mockCloudFormation{
-		err: awserr.New("RequestThrottled", "throttle err", errors.New("abc")),
-	}
-	streamer := &StackStreamer{
-		client:                *client,
-		stackName:             "phonetool-test",
-		changeSetCreationTime: time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC),
-		pastEventIDs:          map[string]bool{},
-		retries:               0,
-	}
-
-	// WHEN
-	nextDate, err := streamer.Fetch()
-	maxDuration := 2 * streamerFetchIntervalDurationMs * time.Millisecond
-	require.NoError(t, err, "expect no results and no error for throttle exception")
-	require.True(t, nextDate.Before(time.Now().Add(maxDuration)), "expect that the returned timeout (%s) is less than the maximum for backoff (%d)", time.Until(nextDate), maxDuration)
-	require.Equal(t, 1, streamer.retries)
 }
 
 func TestStackStreamer_Close(t *testing.T) {
