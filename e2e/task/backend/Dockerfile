@@ -1,4 +1,4 @@
-FROM python:3.7-slim
+FROM alpine:3.13.2
 
 RUN mkdir /app
 
