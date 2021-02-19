@@ -151,51 +151,6 @@ func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
 	}, nil
 }
 
-func (c *CodePipeline) getStage(s *cp.StageDeclaration) (*Stage, error) {
-	name := aws.StringValue(s.Name)
-	var category, provider, details string
-
-	if len(s.Actions) > 0 {
-		// Currently, we only support Source, Build and Deploy stages, all of which must contain at least one action.
-		action := s.Actions[0]
-		category = aws.StringValue(action.ActionTypeId.Category)
-		provider = aws.StringValue(action.ActionTypeId.Provider)
-
-		config := action.Configuration
-
-		switch category {
-
-		case "Source":
-			// https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#structure-configuration-examples
-			switch provider {
-			case "GitHub":
-				details = fmt.Sprintf("Repository: %s/%s", aws.StringValue(config["Owner"]), aws.StringValue(config["Repo"]))
-			case "CodeCommit":
-				details = fmt.Sprintf("Repository: %s", aws.StringValue(config["RepositoryName"]))
-			case "CodeStarSourceConnection":
-				details = fmt.Sprintf("Repository: %s", aws.StringValue(config["FullRepositoryId"]))
-			default:
-			}
-		case "Build":
-			// Currently, we use CodeBuild only for the build stage: https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CodeBuild.html#action-reference-CodeBuild-config
-			details = fmt.Sprintf("BuildProject: %s", aws.StringValue(config["ProjectName"]))
-		case "Deploy":
-			// Currently, we use Cloudformation only for the build stage: https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CloudFormation.html#action-reference-CloudFormation-config
-			details = fmt.Sprintf("StackName: %s", aws.StringValue(config["StackName"]))
-		default:
-			// not a currently recognized stage - empty string
-		}
-	}
-
-	stage := &Stage{
-		Name:     name,
-		Category: category,
-		Provider: provider,
-		Details:  details,
-	}
-	return stage, nil
-}
-
 // HumanString returns the stringified Stage struct with human readable format.
 // Example output:
 //   DeployTo-test	Deploy	Cloudformation	stackname: dinder-test-test
@@ -338,13 +293,21 @@ func (c *CodePipeline) getStage(s *cp.StageDeclaration) (*Stage, error) {
 		switch category {
 
 		case "Source":
-			// Currently, our only source provider is GitHub: https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#structure-configuration-examples
-			details = fmt.Sprintf("Repository: %s/%s", aws.StringValue(config["Owner"]), aws.StringValue(config["Repo"]))
+			// https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#structure-configuration-examples
+			switch provider {
+			case "GitHub":
+				details = fmt.Sprintf("Repository: %s/%s", aws.StringValue(config["Owner"]), aws.StringValue(config["Repo"]))
+			case "CodeCommit":
+				details = fmt.Sprintf("Repository: %s", aws.StringValue(config["RepositoryName"]))
+			case "CodeStarSourceConnection":
+				details = fmt.Sprintf("Repository: %s", aws.StringValue(config["FullRepositoryId"]))
+			default:
+			}
 		case "Build":
 			// Currently, we use CodeBuild only for the build stage: https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CodeBuild.html#action-reference-CodeBuild-config
 			details = fmt.Sprintf("BuildProject: %s", aws.StringValue(config["ProjectName"]))
 		case "Deploy":
-			// Currently, we use Cloudformation only for he build stage: https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CloudFormation.html#action-reference-CloudFormation-config
+			// Currently, we use Cloudformation only for the build stage: https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CloudFormation.html#action-reference-CloudFormation-config
 			details = fmt.Sprintf("StackName: %s", aws.StringValue(config["StackName"]))
 		default:
 			// not a currently recognized stage - empty string
