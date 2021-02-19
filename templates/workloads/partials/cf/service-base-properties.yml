@@ -7,6 +7,9 @@ DesiredCount: !GetAtt DynamicDesiredCountAction.DesiredCount
 {{- else }}
 DesiredCount: !Ref TaskCount
 {{- end}}
+{{- if .Storage}}
+PlatformVersion: 1.4.0
+{{- end}}
 DeploymentConfiguration:
   DeploymentCircuitBreaker:
     Enable: true

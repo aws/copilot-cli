@@ -6,6 +6,7 @@ package stream
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -71,6 +72,7 @@ type ECSDeploymentStreamer struct {
 	done          chan struct{}
 	pastEventIDs  map[string]bool
 	eventsToFlush []ECSService
+	mu            sync.Mutex
 }
 
 // NewECSDeploymentStreamer creates a new ECSDeploymentStreamer that streams service descriptions
@@ -88,6 +90,8 @@ func NewECSDeploymentStreamer(ecs ECSServiceDescriber, cluster, service string, 
 
 // Subscribe returns a read-only channel that will receive service descriptions from the ECSDeploymentStreamer.
 func (s *ECSDeploymentStreamer) Subscribe() <-chan ECSService {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	c := make(chan ECSService)
 	s.subscribers = append(s.subscribers, c)
 	return c
@@ -146,8 +150,15 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 
 // Notify flushes all new events to the streamer's subscribers.
 func (s *ECSDeploymentStreamer) Notify() {
+	// Copy current list of subscribers over, so that we can we add more subscribers while
+	// notifying previous subscribers of older events.
+	s.mu.Lock()
+	var subs []chan ECSService
+	subs = append(subs, s.subscribers...)
+	s.mu.Unlock()
+
 	for _, event := range s.eventsToFlush {
-		for _, sub := range s.subscribers {
+		for _, sub := range subs {
 			sub <- event
 		}
 	}
@@ -156,6 +167,9 @@ func (s *ECSDeploymentStreamer) Notify() {
 
 // Close closes all subscribed channels notifying them that no more events will be sent.
 func (s *ECSDeploymentStreamer) Close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	for _, sub := range s.subscribers {
 		close(sub)
 	}

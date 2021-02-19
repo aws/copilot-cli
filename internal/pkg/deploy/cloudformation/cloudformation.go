@@ -21,6 +21,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -34,7 +35,8 @@ const (
 	waitForStackTimeout = 1*time.Hour + 30*time.Minute
 
 	// CloudFormation resource types.
-	ecsServiceResourceType = "AWS::ECS::Service"
+	ecsServiceResourceType    = "AWS::ECS::Service"
+	envControllerResourceType = "Custom::EnvControllerFunction"
 )
 
 // StackConfiguration represents the set of methods needed to deploy a cloudformation stack.
@@ -168,7 +170,12 @@ func (cf CloudFormation) newRenderWorkloadInput(w progress.FileWriter, stack *cl
 		in.stackDescription = fmt.Sprintf("Updating the infrastructure for stack %s", stack.Name)
 		changeSetID, err = cf.cfnClient.Update(stack)
 		if err != nil {
-			spinner.Stop(log.Serrorf("%s\n", label))
+			msg := log.Serrorf("%s\n", label)
+			var errChangeSetEmpty *cloudformation.ErrChangeSetEmpty
+			if errors.As(err, &errChangeSetEmpty) {
+				msg = fmt.Sprintf("- No new infrastructure changes for stack %s\n", stack.Name)
+			}
+			spinner.Stop(msg)
 			return "", cf.handleStackError(stack.Name, err)
 		}
 		spinner.Stop(log.Ssuccessf("%s\n", label))
@@ -186,7 +193,7 @@ func (cf CloudFormation) renderStackChanges(in *renderStackChangesInput) error {
 	defer cancelWait()
 	g, ctx := errgroup.WithContext(waitCtx)
 
-	renderer, err := cf.createStackRenderer(g, ctx, changeSetID, in.stackName, in.stackDescription, progress.RenderOptions{})
+	renderer, err := cf.createChangeSetRenderer(g, ctx, changeSetID, in.stackName, in.stackDescription, progress.RenderOptions{})
 	if err != nil {
 		return err
 	}
@@ -202,7 +209,7 @@ func (cf CloudFormation) renderStackChanges(in *renderStackChangesInput) error {
 	return nil
 }
 
-func (cf CloudFormation) createStackRenderer(group *errgroup.Group, ctx context.Context, changeSetID, stackName, description string, opts progress.RenderOptions) (progress.DynamicRenderer, error) {
+func (cf CloudFormation) createChangeSetRenderer(group *errgroup.Group, ctx context.Context, changeSetID, stackName, description string, opts progress.RenderOptions) (progress.DynamicRenderer, error) {
 	changeSet, err := cf.cfnClient.DescribeChangeSet(changeSetID, stackName)
 	if err != nil {
 		return nil, err
@@ -218,17 +225,19 @@ func (cf CloudFormation) createStackRenderer(group *errgroup.Group, ctx context.
 
 	streamer := stream.NewStackStreamer(cf.cfnClient, stackName, changeSet.CreationTime)
 	children, err := cf.changeRenderers(changeRenderersInput{
-		g:             group,
-		ctx:           ctx,
-		stackStreamer: streamer,
-		changes:       changeSet.Changes,
-		descriptions:  descriptions,
-		opts:          progress.NestedRenderOptions(opts),
+		g:                  group,
+		ctx:                ctx,
+		stackName:          stackName,
+		stackStreamer:      streamer,
+		changes:            changeSet.Changes,
+		changeSetTimestamp: changeSet.CreationTime,
+		descriptions:       descriptions,
+		opts:               progress.NestedRenderOptions(opts),
 	})
 	if err != nil {
 		return nil, err
 	}
-	renderer := progress.ListeningStackRenderer(streamer, stackName, description, children, opts)
+	renderer := progress.ListeningChangeSetRenderer(streamer, stackName, description, children, opts)
 	group.Go(func() error {
 		return stream.Stream(ctx, streamer)
 	})
@@ -236,12 +245,14 @@ func (cf CloudFormation) createStackRenderer(group *errgroup.Group, ctx context.
 }
 
 type changeRenderersInput struct {
-	g             *errgroup.Group             // Group that all goroutines belong.
-	ctx           context.Context             // Context associated with the group.
-	stackStreamer progress.StackSubscriber    // Streamer for the stack where changes belong.
-	changes       []*sdkcloudformation.Change // List of changes that will be applied to the stack.
-	descriptions  map[string]string           // Descriptions for the logical IDs of the changes.
-	opts          progress.RenderOptions      // Display options that should be applied to the changes.
+	g                  *errgroup.Group             // Group that all goroutines belong.
+	ctx                context.Context             // Context associated with the group.
+	stackName          string                      // Name of the stack.
+	stackStreamer      progress.StackSubscriber    // Streamer for the stack where changes belong.
+	changes            []*sdkcloudformation.Change // List of changes that will be applied to the stack.
+	changeSetTimestamp time.Time                   // ChangeSet creation time.
+	descriptions       map[string]string           // Descriptions for the logical IDs of the changes.
+	opts               progress.RenderOptions      // Display options that should be applied to the changes.
 }
 
 // changeRenderers filters changes by resources that have a description and returns the appropriate progress.Renderer for each resource type.
@@ -255,6 +266,21 @@ func (cf CloudFormation) changeRenderers(in changeRenderersInput) ([]progress.Re
 		}
 		var renderer progress.Renderer
 		switch {
+		case aws.StringValue(change.ResourceChange.ResourceType) == envControllerResourceType:
+			r, err := cf.createEnvControllerRenderer(&envControllerRendererInput{
+				g:                 in.g,
+				ctx:               in.ctx,
+				workloadStackName: in.stackName,
+				workloadTimestamp: in.changeSetTimestamp,
+				change:            change,
+				description:       description,
+				serviceStack:      in.stackStreamer,
+				renderOpts:        in.opts,
+			})
+			if err != nil {
+				return nil, err
+			}
+			renderer = r
 		case aws.StringValue(change.ResourceChange.ResourceType) == ecsServiceResourceType:
 			renderer = progress.ListeningECSServiceResourceRenderer(in.stackStreamer, cf.ecsClient, logicalID, description, progress.ECSServiceRendererOpts{
 				Group:      in.g,
@@ -266,17 +292,61 @@ func (cf CloudFormation) changeRenderers(in changeRenderersInput) ([]progress.Re
 			changeSetID := aws.StringValue(change.ResourceChange.ChangeSetId)
 			stackName := parseStackNameFromARN(aws.StringValue(change.ResourceChange.PhysicalResourceId))
 
-			r, err := cf.createStackRenderer(in.g, in.ctx, changeSetID, stackName, description, in.opts)
+			r, err := cf.createChangeSetRenderer(in.g, in.ctx, changeSetID, stackName, description, in.opts)
 			if err != nil {
 				return nil, err
 			}
 			renderer = r
 		default:
-			renderer = progress.ListeningResourceRenderer(in.stackStreamer, logicalID, description, in.opts)
+			renderer = progress.ListeningResourceRenderer(in.stackStreamer, logicalID, description, progress.ResourceRendererOpts{
+				RenderOpts: in.opts,
+			})
 		}
 		resources = append(resources, renderer)
 	}
 	return resources, nil
+}
+
+type envControllerRendererInput struct {
+	g                 *errgroup.Group
+	ctx               context.Context
+	workloadStackName string
+	workloadTimestamp time.Time
+	change            *sdkcloudformation.Change
+	description       string
+	serviceStack      progress.StackSubscriber
+	renderOpts        progress.RenderOptions
+}
+
+func (cf CloudFormation) createEnvControllerRenderer(in *envControllerRendererInput) (progress.DynamicRenderer, error) {
+	switch {
+	case isEnvControllerInAction(in.change):
+		// We can't use the workloadStackName to retrieve the envStackName because app names and env names can contain
+		// dashes. So we fetch the tags belonging to the workload stack and generate the stack name from there.
+		workload, err := cf.cfnClient.Describe(in.workloadStackName)
+		if err != nil {
+			return nil, err
+		}
+		envStackName := fmt.Sprintf("%s-%s", parseAppNameFromTags(workload.Tags), parseEnvNameFromTags(workload.Tags))
+		body, err := cf.cfnClient.TemplateBody(envStackName)
+		if err != nil {
+			return nil, err
+		}
+		descriptions, err := cloudformation.ParseTemplateDescriptions(body)
+		if err != nil {
+			return nil, fmt.Errorf("parse cloudformation template for resource descriptions: %w", err)
+		}
+		streamer := stream.NewStackStreamer(cf.cfnClient, envStackName, in.workloadTimestamp)
+		in.g.Go(func() error {
+			return stream.Stream(in.ctx, streamer)
+		})
+		return progress.ListeningStackRenderer(streamer, envStackName, in.description, descriptions, in.renderOpts), nil
+	default:
+		logicalID := aws.StringValue(in.change.ResourceChange.LogicalResourceId)
+		return progress.ListeningResourceRenderer(in.serviceStack, logicalID, in.description, progress.ResourceRendererOpts{
+			RenderOpts: in.renderOpts,
+		}), nil
+	}
 }
 
 func (cf CloudFormation) errOnFailedStack(stackName string) error {
@@ -317,6 +387,42 @@ func toMap(tags []*sdkcloudformation.Tag) map[string]string {
 // arn:aws:cloudformation:us-west-2:123456789012:stack/my-nested-stack/d0a825a0-e4cd-xmpl-b9fb-061c69e99205
 func parseStackNameFromARN(stackARN string) string {
 	return strings.Split(stackARN, "/")[1]
+}
+
+func isEnvControllerInAction(controller *sdkcloudformation.Change) bool {
+	switch action := aws.StringValue(controller.ResourceChange.Action); action {
+	case sdkcloudformation.ChangeActionAdd:
+		return true
+	case sdkcloudformation.ChangeActionModify:
+		for _, detail := range controller.ResourceChange.Details {
+			attribute := aws.StringValue(detail.Target.Name)
+			if attribute == "Parameters" {
+				// The env controller modifies the env stack only if the "Parameters" field is modified.
+				return true
+			}
+		}
+		return false
+	default:
+		return false
+	}
+}
+
+func parseAppNameFromTags(tags []*sdkcloudformation.Tag) string {
+	for _, t := range tags {
+		if aws.StringValue(t.Key) == deploy.AppTagKey {
+			return aws.StringValue(t.Value)
+		}
+	}
+	return ""
+}
+
+func parseEnvNameFromTags(tags []*sdkcloudformation.Tag) string {
+	for _, t := range tags {
+		if aws.StringValue(t.Key) == deploy.EnvTagKey {
+			return aws.StringValue(t.Value)
+		}
+	}
+	return ""
 }
 
 func stopSpinner(spinner *progress.Spinner, err error, label string) {

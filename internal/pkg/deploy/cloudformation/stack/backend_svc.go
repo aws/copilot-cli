@@ -75,11 +75,11 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := s.manifest.Sidecar.Options()
+	sidecars, err := convertSidecar(s.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
-	autoscaling, err := s.manifest.Count.Autoscaling.Options()
+	autoscaling, err := convertAutoscaling(&s.manifest.Count.Autoscaling)
 	if err != nil {
 		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
 	}
@@ -90,7 +90,7 @@ func (s *BackendService) Template() (string, error) {
 		Sidecars:           sidecars,
 		Autoscaling:        autoscaling,
 		HealthCheck:        s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),
-		LogConfig:          s.manifest.LogConfigOpts(),
+		LogConfig:          convertLogging(s.manifest.Logging),
 		DesiredCountLambda: desiredCountLambda.String(),
 	})
 	if err != nil {

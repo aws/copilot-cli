@@ -42,6 +42,8 @@ var (
 		"state-machine",
 		"state-machine-definition.json",
 		"env-controller",
+		"mount-points",
+		"volumes",
 	}
 )
 
@@ -63,13 +65,48 @@ type WorkloadNestedStackOpts struct {
 
 // SidecarOpts holds configuration that's needed if the service has sidecar containers.
 type SidecarOpts struct {
-	Name       *string
-	Image      *string
-	Port       *string
-	Protocol   *string
-	CredsParam *string
-	Variables  map[string]string
-	Secrets    map[string]string
+	Name        *string
+	Image       *string
+	Port        *string
+	Protocol    *string
+	CredsParam  *string
+	Variables   map[string]string
+	Secrets     map[string]string
+	MountPoints []*MountPoint
+}
+
+// StorageOpts holds data structures for rendering Volumes and Mount Points
+type StorageOpts struct {
+	Volumes     []*Volume
+	MountPoints []*MountPoint
+	EFSPerms    []*EFSPermission
+}
+
+// EFSPermission holds information needed to render an IAM policy statement.
+type EFSPermission struct {
+	FilesystemID  *string
+	Write         bool
+	AccessPointID *string
+}
+
+// MountPoint holds information needed to render a MountPoint in a containerdefinition.
+type MountPoint struct {
+	ContainerPath *string
+	ReadOnly      *bool
+	SourceVolume  *string
+}
+
+// Volume contains fields that render a volume, its name, and EFSVolumeConfiguration
+type Volume struct {
+	Name *string
+
+	// EFSVolumeConfiguration
+	Filesystem    *string
+	RootDirectory *string // "/" or empty are equivalent
+
+	// Authorization Config
+	AccessPointID *string
+	IAM           *string // ENABLED or DISABLED
 }
 
 // LogConfigOpts holds configuration that's needed if the service is configured with Firelens to route
@@ -116,6 +153,7 @@ type WorkloadOpts struct {
 	Sidecars    []*SidecarOpts
 	LogConfig   *LogConfigOpts
 	Autoscaling *AutoscalingOpts
+	Storage     *StorageOpts
 
 	// Additional options for service templates.
 	HealthCheck         *ecs.HealthCheck

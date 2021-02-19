@@ -239,10 +239,11 @@ func (e *ECS) RunTask(input RunTaskInput) ([]*Task, error) {
 	waitErr := e.client.WaitUntilTasksRunning(&ecs.DescribeTasksInput{
 		Cluster: aws.String(input.Cluster),
 		Tasks:   aws.StringSlice(taskARNs),
+		Include: aws.StringSlice([]string{ecs.TaskFieldTags}),
 	})
 
 	if waitErr != nil && !isRequestTimeoutErr(waitErr) {
-		return nil, fmt.Errorf("wait for tasks to be running: %w", err)
+		return nil, fmt.Errorf("wait for tasks to be running: %w", waitErr)
 	}
 
 	tasks, describeErr := e.DescribeTasks(input.Cluster, taskARNs)

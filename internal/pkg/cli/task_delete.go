@@ -476,6 +476,10 @@ func BuildTaskDeleteCmd() *cobra.Command {
 				return err
 			}
 
+			if len(opts.RecommendedActions()) == 0 {
+				return nil
+			}
+
 			log.Infoln("Recommended follow-up actions:")
 			for _, followup := range opts.RecommendedActions() {
 				log.Infof("- %s\n", followup)

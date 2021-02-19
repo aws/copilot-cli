@@ -14,10 +14,12 @@ sidecars:
   {{ sidecar name }}:
     # Port of the container to expose. (Optional)
     port: {{ port number }}
-    # Image URL for sidecar container. (Required)
+    # Image URL for the sidecar container. (Required)
     image: {{ image url }}
     # ARN of the secret containing the private repository credentials. (Optional)
     credentialParameter: {{ credential }}
+    # Environment variables for the sidecar container.
+    variables: {{ env var }}
 ```
 
 Below is an example of specifying the [nginx](https://www.nginx.com/) sidecar container in a load balanced web service manifest.
@@ -44,6 +46,8 @@ sidecars:
   nginx:
     port: 80
     image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/reverse-proxy:revision_1
+    variables:
+      NGINX_PORT: 80
 ```
 
 ### Sidecar patterns
@@ -100,7 +104,7 @@ Outputs:
 ```
 
 !!!info
-    Since the FireLens log driver can route your main container's logs to various destinations, the [`svc logs`](../commands/svc-logs.md) command can track them only when they are sent to the log group we create for your Copilot service in CloudWatch. 
+    Since the FireLens log driver can route your main container's logs to various destinations, the [`svc logs`](../commands/svc-logs.md) command can track them only when they are sent to the log group we create for your Copilot service in CloudWatch.
 
 !!!info
     ** We're going to make this easier and more powerful!** Currently, we only support using remote images for sidecars, which means users need to build and push their local sidecar images. But we are planning to support using local images or Dockerfiles. Additionally, FireLens will be able to route logs for the other sidecars (not just the main container).

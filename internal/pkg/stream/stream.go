@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	streamerFetchIntervalDuration = 2 * time.Second // How long to wait until Fetch is called again for a Streamer.
+	streamerFetchIntervalDuration = 3 * time.Second // How long to wait until Fetch is called again for a Streamer.
 )
 
 // Streamer is the interface that groups methods to periodically retrieve events,

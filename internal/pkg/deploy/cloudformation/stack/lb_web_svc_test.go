@@ -308,11 +308,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		},
 	}
 	testLBWebServiceManifestWithSidecar.TargetContainer = aws.String("xray")
-	testLBWebServiceManifestWithSidecar.Sidecar = manifest.Sidecar{Sidecars: map[string]*manifest.SidecarConfig{
+	testLBWebServiceManifestWithSidecar.Sidecars = map[string]*manifest.SidecarConfig{
 		"xray": {
 			Port: aws.String("5000"),
 		},
-	}}
+	}
 	testLBWebServiceManifestWithStickiness := manifest.NewLoadBalancedWebService(baseProps)
 	testLBWebServiceManifestWithStickinessRange := manifest.Range("2-100")
 	testLBWebServiceManifestWithStickiness.Count = manifest.Count{

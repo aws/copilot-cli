@@ -232,12 +232,10 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					Value: aws.Int(1),
 				},
 			},
-			Sidecar: Sidecar{
-				Sidecars: map[string]*SidecarConfig{
-					"xray": {
-						Port:  aws.String("2000/udp"),
-						Image: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
-					},
+			Sidecars: map[string]*SidecarConfig{
+				"xray": {
+					Port:  aws.String("2000/udp"),
+					Image: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 				},
 			},
 			Logging: &Logging{
@@ -260,11 +258,9 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						"LOG_LEVEL": "",
 					},
 				},
-				Sidecar: Sidecar{
-					Sidecars: map[string]*SidecarConfig{
-						"xray": {
-							CredsParam: aws.String("some arn"),
-						},
+				Sidecars: map[string]*SidecarConfig{
+					"xray": {
+						CredsParam: aws.String("some arn"),
 					},
 				},
 				Logging: &Logging{
@@ -329,13 +325,11 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 							"LOG_LEVEL": "",
 						},
 					},
-					Sidecar: Sidecar{
-						Sidecars: map[string]*SidecarConfig{
-							"xray": {
-								Port:       aws.String("2000/udp"),
-								Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
-								CredsParam: aws.String("some arn"),
-							},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000/udp"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
 						},
 					},
 					Logging: &Logging{

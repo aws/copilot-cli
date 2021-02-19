@@ -47,3 +47,25 @@ func NewTabbedFileWriter(fw FileWriter) *TabbedFileWriter {
 		WriteFlusher: tabwriter.NewWriter(fw, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting),
 	}
 }
+
+// suffixWriter is an io.Writer that adds the suffix before a new line character.
+type suffixWriter struct {
+	buf    io.Writer
+	suffix []byte
+}
+
+// Write adds a suffix before each new line character in p.
+func (w *suffixWriter) Write(p []byte) (n int, err error) {
+	var withSuffix []byte
+	for _, b := range p {
+		suffix := []byte{b}
+		if b == '\n' {
+			suffix = append(w.suffix, b)
+		}
+		withSuffix = append(withSuffix, suffix...)
+	}
+	if _, err := w.buf.Write(withSuffix); err != nil {
+		return 0, err
+	}
+	return len(p), nil
+}

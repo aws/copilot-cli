@@ -20,6 +20,8 @@ func init() {
 func Test_SSM_Application_Integration(t *testing.T) {
 	s, _ := config.NewStore()
 	applicationToCreate := config.Application{Name: randStringBytes(10), Version: "1.0"}
+	defer s.DeleteApplication(applicationToCreate.Name)
+
 	t.Run("Create, Get and List Applications", func(t *testing.T) {
 		// Create our first application
 		err := s.CreateApplication(&applicationToCreate)
@@ -47,6 +49,11 @@ func Test_SSM_Environment_Integration(t *testing.T) {
 	testEnvironment := config.Environment{Name: "test", App: applicationToCreate.Name, Region: "us-west-2", AccountID: " 1234", Prod: false}
 	prodEnvironment := config.Environment{Name: "prod", App: applicationToCreate.Name, Region: "us-west-2", AccountID: " 1234", Prod: true}
 
+	defer func() {
+		s.DeleteEnvironment(applicationToCreate.Name, testEnvironment.Name)
+		s.DeleteEnvironment(applicationToCreate.Name, prodEnvironment.Name)
+		s.DeleteApplication(applicationToCreate.Name)
+	}()
 	t.Run("Create, Get and List Environments", func(t *testing.T) {
 		// Create our first application
 		err := s.CreateApplication(&applicationToCreate)
@@ -96,6 +103,12 @@ func Test_SSM_Service_Integration(t *testing.T) {
 	applicationToCreate := config.Application{Name: randStringBytes(10), Version: "1.0"}
 	apiService := config.Workload{Name: "api", App: applicationToCreate.Name, Type: "LBFargateService"}
 	feService := config.Workload{Name: "front-end", App: applicationToCreate.Name, Type: "LBFargateService"}
+
+	defer func() {
+		s.DeleteService(applicationToCreate.Name, apiService.Name)
+		s.DeleteService(applicationToCreate.Name, feService.Name)
+		s.DeleteApplication(applicationToCreate.Name)
+	}()
 
 	t.Run("Create, Get and List Applications", func(t *testing.T) {
 		// Create our first application

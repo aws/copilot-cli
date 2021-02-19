@@ -103,6 +103,62 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 			},
 		},
+		"renders a valid template with all storage options": {
+			opts: template.WorkloadOpts{
+				HTTPHealthCheck: defaultHttpHealthCheck,
+				Storage: &template.StorageOpts{
+					EFSPerms: []*template.EFSPermission{
+						{
+							AccessPointID: aws.String("ap-1234"),
+							FilesystemID:  aws.String("fs-5678"),
+							Write:         true,
+						},
+					},
+					MountPoints: []*template.MountPoint{
+						{
+							SourceVolume:  aws.String("efs"),
+							ContainerPath: aws.String("/var/www"),
+							ReadOnly:      aws.Bool(false),
+						},
+					},
+					Volumes: []*template.Volume{
+						{
+							AccessPointID: aws.String("ap-1234"),
+							Filesystem:    aws.String("fs-5678"),
+							IAM:           aws.String("ENABLED"),
+							Name:          aws.String("efs"),
+							RootDirectory: aws.String("/"),
+						},
+					},
+				},
+			},
+		},
+		"renders a valid template with minimal storage options": {
+			opts: template.WorkloadOpts{
+				HTTPHealthCheck: defaultHttpHealthCheck,
+				Storage: &template.StorageOpts{
+					EFSPerms: []*template.EFSPermission{
+						{
+							FilesystemID: aws.String("fs-5678"),
+						},
+					},
+					MountPoints: []*template.MountPoint{
+						{
+							SourceVolume:  aws.String("efs"),
+							ContainerPath: aws.String("/var/www"),
+							ReadOnly:      aws.Bool(true),
+						},
+					},
+					Volumes: []*template.Volume{
+						{
+							Filesystem:    aws.String("fs-5678"),
+							Name:          aws.String("efs"),
+							RootDirectory: aws.String("/"),
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {

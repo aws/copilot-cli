@@ -122,7 +122,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		return "", err
 	}
 
-	sidecars, err := j.manifest.Sidecar.Options()
+	sidecars, err := convertSidecar(j.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
 	}
@@ -144,7 +144,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		Sidecars:           sidecars,
 		ScheduleExpression: schedule,
 		StateMachine:       stateMachine,
-		LogConfig:          j.manifest.LogConfigOpts(),
+		LogConfig:          convertLogging(j.manifest.Logging),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)

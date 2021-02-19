@@ -5,6 +5,7 @@ package stream
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -37,6 +38,7 @@ type StackStreamer struct {
 	done          chan struct{}
 	pastEventIDs  map[string]bool
 	eventsToFlush []StackEvent
+	mu            sync.Mutex
 }
 
 // NewStackStreamer creates a StackStreamer from a cloudformation client, stack name, and the change set creation timestamp.
@@ -52,6 +54,8 @@ func NewStackStreamer(cfn StackEventsDescriber, stackName string, csCreationTime
 
 // Subscribe returns a read-only channel that will receive stack events from the StackStreamer.
 func (s *StackStreamer) Subscribe() <-chan StackEvent {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	c := make(chan StackEvent)
 	s.subscribers = append(s.subscribers, c)
 	return c
@@ -116,8 +120,15 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 
 // Notify flushes all new events to the streamer's subscribers.
 func (s *StackStreamer) Notify() {
+	// Copy current list of subscribers over, so that we can we add more subscribers while
+	// notifying previous subscribers of older events.
+	s.mu.Lock()
+	var subs []chan StackEvent
+	subs = append(subs, s.subscribers...)
+	s.mu.Unlock()
+
 	for _, event := range s.eventsToFlush {
-		for _, sub := range s.subscribers {
+		for _, sub := range subs {
 			sub <- event
 		}
 	}
@@ -126,6 +137,9 @@ func (s *StackStreamer) Notify() {
 
 // Close closes all subscribed channels notifying them that no more events will be sent.
 func (s *StackStreamer) Close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	for _, sub := range s.subscribers {
 		close(sub)
 	}

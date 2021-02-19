@@ -4,12 +4,10 @@
 package manifest
 
 import (
-	"fmt"
 	"path/filepath"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -212,68 +210,58 @@ func TestBuildConfig(t *testing.T) {
 	}
 }
 
-func TestSidecar_Options(t *testing.T) {
-	mockImage := aws.String("mockImage")
-	mockMap := map[string]string{"foo": "bar"}
-	mockCredsParam := aws.String("mockCredsParam")
+func TestLogging_LogImage(t *testing.T) {
 	testCases := map[string]struct {
-		inPort string
-
-		wanted    *template.SidecarOpts
-		wantedErr error
+		inputImage  *string
+		wantedImage *string
 	}{
-		"invalid port": {
-			inPort: "b/a/d/P/o/r/t",
-
-			wantedErr: fmt.Errorf("cannot parse port mapping from b/a/d/P/o/r/t"),
+		"Image specified": {
+			inputImage:  aws.String("nginx:why-on-earth"),
+			wantedImage: aws.String("nginx:why-on-earth"),
 		},
-		"good port without protocol": {
-			inPort: "2000",
-
-			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
-				Port:       aws.String("2000"),
-				CredsParam: mockCredsParam,
-				Image:      mockImage,
-				Secrets:    mockMap,
-				Variables:  mockMap,
-			},
-		},
-		"good port with protocol": {
-			inPort: "2000/udp",
-
-			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
-				Port:       aws.String("2000"),
-				Protocol:   aws.String("udp"),
-				CredsParam: mockCredsParam,
-				Image:      mockImage,
-				Secrets:    mockMap,
-				Variables:  mockMap,
-			},
+		"no image specified": {
+			inputImage:  nil,
+			wantedImage: aws.String(defaultFluentbitImage),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			sidecar := Sidecar{
-				Sidecars: map[string]*SidecarConfig{
-					"foo": {
-						CredsParam: mockCredsParam,
-						Image:      mockImage,
-						Secrets:    mockMap,
-						Variables:  mockMap,
-						Port:       aws.String(tc.inPort),
-					},
-				},
+			l := Logging{
+				Image: tc.inputImage,
 			}
-			got, err := sidecar.Options()
+			got := l.LogImage()
 
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, got[0], tc.wanted)
+			require.Equal(t, tc.wantedImage, got)
+		})
+	}
+}
+
+func TestLogging_GetEnableMetadata(t *testing.T) {
+	testCases := map[string]struct {
+		enable *bool
+		wanted *string
+	}{
+		"specified true": {
+			enable: aws.Bool(true),
+			wanted: aws.String("true"),
+		},
+		"specified false": {
+			enable: aws.Bool(false),
+			wanted: aws.String("false"),
+		},
+		"not specified": {
+			enable: nil,
+			wanted: aws.String("true"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			l := Logging{
+				EnableMetadata: tc.enable,
 			}
+			got := l.GetEnableMetadata()
+
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }

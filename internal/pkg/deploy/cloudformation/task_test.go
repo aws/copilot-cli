@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/stretchr/testify/require"
@@ -20,67 +21,36 @@ import (
 
 func TestCloudFormation_DeployTask(t *testing.T) {
 	mockTask := &deploy.CreateTaskResourcesInput{
-		Name: "my-task",
+		Name: "hello",
+	}
+	when := func(w progress.FileWriter, cf CloudFormation) error {
+		return cf.DeployTask(w, mockTask)
 	}
 
-	testCases := map[string]struct {
-		mockCfnClient func(m *mocks.MockcfnClient)
-		wantedError   error
-	}{
-		"create a new stack": {
-			mockCfnClient: func(m *mocks.MockcfnClient) {
-				m.EXPECT().CreateAndWait(gomock.Any()).Return(nil)
-				m.EXPECT().UpdateAndWait(gomock.Any()).Times(0)
-			},
-		},
-		"failed to create stack": {
-			mockCfnClient: func(m *mocks.MockcfnClient) {
-				m.EXPECT().CreateAndWait(gomock.Any()).Return(errors.New("error"))
-				m.EXPECT().UpdateAndWait(gomock.Any()).Times(0)
-			},
-			wantedError: errors.New("create stack: error"),
-		},
-		"update the stack": {
-			mockCfnClient: func(m *mocks.MockcfnClient) {
-				m.EXPECT().CreateAndWait(gomock.Any()).Return(&cloudformation.ErrStackAlreadyExists{
-					Name: "my-task",
-				})
-				m.EXPECT().UpdateAndWait(gomock.Any()).Times(1).Return(nil)
-			},
-		},
-		"failed to update stack": {
-			mockCfnClient: func(m *mocks.MockcfnClient) {
-				m.EXPECT().CreateAndWait(gomock.Any()).Return(&cloudformation.ErrStackAlreadyExists{
-					Name: "my-task",
-				})
-				m.EXPECT().UpdateAndWait(gomock.Any()).Return(errors.New("error"))
-			},
-			wantedError: errors.New("update stack: error"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockCfnClient := mocks.NewMockcfnClient(ctrl)
-			if tc.mockCfnClient != nil {
-				tc.mockCfnClient(mockCfnClient)
-			}
-
-			cf := CloudFormation{
-				cfnClient: mockCfnClient,
-			}
-
-			err := cf.DeployTask(mockTask)
-			if tc.wantedError != nil {
-				require.EqualError(t, tc.wantedError, err.Error())
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
+	t.Run("returns a wrapped error if creating a change set fails", func(t *testing.T) {
+		testDeployWorkload_OnCreateChangeSetFailure(t, when)
+	})
+	t.Run("calls Update if stack is already created and returns wrapped error if Update fails", func(t *testing.T) {
+		testDeployWorkload_OnUpdateChangeSetFailure(t, when)
+	})
+	t.Run("returns nil if the change set is empty when calling Update", func(t *testing.T) {
+		testDeployWorkload_ReturnNilOnEmptyChangeSetWhileUpdatingStack(t, when)
+	})
+	t.Run("returns an error when the ChangeSet cannot be described for stack changes before rendering", func(t *testing.T) {
+		testDeployWorkload_OnDescribeChangeSetFailure(t, when)
+	})
+	t.Run("returns an error when stack template body cannot be retrieved to parse resource descriptions", func(t *testing.T) {
+		testDeployWorkload_OnTemplateBodyFailure(t, when)
+	})
+	t.Run("returns a wrapped error if a streamer fails and cancels the renderer", func(t *testing.T) {
+		testDeployWorkload_StackStreamerFailureShouldCancelRenderer(t, when)
+	})
+	t.Run("returns an error if stack creation fails", func(t *testing.T) {
+		testDeployWorkload_StreamUntilStackCreationFails(t, "task-hello", when)
+	})
+	t.Run("renders a stack with addons template if stack creation is successful", func(t *testing.T) {
+		testDeployWorkload_RenderNewlyCreatedStackWithAddons(t, "task-hello", when)
+	})
 }
 
 var mockDescription1 = &cloudformation.StackDescription{

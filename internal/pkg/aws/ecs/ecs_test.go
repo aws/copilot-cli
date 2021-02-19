@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs/mocks"
 	"github.com/golang/mock/gomock"
@@ -540,7 +542,22 @@ func TestECS_RunTask(t *testing.T) {
 		taskFamilyName: "my-task",
 		startedBy:      "task",
 	}
-
+	ecsTasks := []*ecs.Task{
+		{
+			TaskArn: aws.String("task-1"),
+		},
+		{
+			TaskArn: aws.String("task-2"),
+		},
+		{
+			TaskArn: aws.String("task-3"),
+		},
+	}
+	describeTasksInput := ecs.DescribeTasksInput{
+		Cluster: aws.String("my-cluster"),
+		Tasks:   aws.StringSlice([]string{"task-1", "task-2", "task-3"}),
+		Include: aws.StringSlice([]string{ecs.TaskFieldTags}),
+	}
 	testCases := map[string]struct {
 		input
 
@@ -566,43 +583,14 @@ func TestECS_RunTask(t *testing.T) {
 						},
 					},
 					PropagateTags: aws.String(ecs.PropagateTagsTaskDefinition),
-				}).
-					Return(&ecs.RunTaskOutput{
-						Tasks: []*ecs.Task{
-							{
-								TaskArn: aws.String("task-1"),
-							},
-							{
-								TaskArn: aws.String("task-2"),
-							},
-							{
-								TaskArn: aws.String("task-3"),
-							},
-						},
-					}, nil)
-				m.EXPECT().WaitUntilTasksRunning(&ecs.DescribeTasksInput{
-					Cluster: aws.String("my-cluster"),
-					Tasks:   aws.StringSlice([]string{"task-1", "task-2", "task-3"}),
-				}).Times(1)
-				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
-					Cluster: aws.String("my-cluster"),
-					Tasks:   aws.StringSlice([]string{"task-1", "task-2", "task-3"}),
-					Include: aws.StringSlice([]string{ecs.TaskFieldTags}),
-				}).Return(&ecs.DescribeTasksOutput{
-					Tasks: []*ecs.Task{
-						{
-							TaskArn: aws.String("task-1"),
-						},
-						{
-							TaskArn: aws.String("task-2"),
-						},
-						{
-							TaskArn: aws.String("task-3"),
-						},
-					},
-				}, nil).Times(1)
+				}).Return(&ecs.RunTaskOutput{
+					Tasks: ecsTasks,
+				}, nil)
+				m.EXPECT().WaitUntilTasksRunning(&describeTasksInput).Times(1)
+				m.EXPECT().DescribeTasks(&describeTasksInput).Return(&ecs.DescribeTasksOutput{
+					Tasks: ecsTasks,
+				}, nil)
 			},
-
 			wantedTasks: []*Task{
 				{
 					TaskArn: aws.String("task-1"),
@@ -635,9 +623,81 @@ func TestECS_RunTask(t *testing.T) {
 					PropagateTags: aws.String(ecs.PropagateTagsTaskDefinition),
 				}).
 					Return(&ecs.RunTaskOutput{}, errors.New("error"))
-				m.EXPECT().WaitUntilTasksRunning(gomock.Any()).Times(0)
 			},
 			wantedError: errors.New("run task(s) my-task: error"),
+		},
+		"failed to call WaitUntilTasksRunning": {
+			input: runTaskInput,
+
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().RunTask(&ecs.RunTaskInput{
+					Cluster:        aws.String("my-cluster"),
+					Count:          aws.Int64(3),
+					LaunchType:     aws.String(ecs.LaunchTypeFargate),
+					StartedBy:      aws.String("task"),
+					TaskDefinition: aws.String("my-task"),
+					NetworkConfiguration: &ecs.NetworkConfiguration{
+						AwsvpcConfiguration: &ecs.AwsVpcConfiguration{
+							AssignPublicIp: aws.String(ecs.AssignPublicIpEnabled),
+							Subnets:        aws.StringSlice([]string{"subnet-1", "subnet-2"}),
+							SecurityGroups: aws.StringSlice([]string{"sg-1", "sg-2"}),
+						},
+					},
+					PropagateTags: aws.String(ecs.PropagateTagsTaskDefinition),
+				}).
+					Return(&ecs.RunTaskOutput{
+						Tasks: ecsTasks,
+					}, nil)
+				m.EXPECT().WaitUntilTasksRunning(&describeTasksInput).Return(errors.New("some error"))
+			},
+			wantedError: errors.New("wait for tasks to be running: some error"),
+		},
+		"task failed to start": {
+			input: runTaskInput,
+
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().RunTask(&ecs.RunTaskInput{
+					Cluster:        aws.String("my-cluster"),
+					Count:          aws.Int64(3),
+					LaunchType:     aws.String(ecs.LaunchTypeFargate),
+					StartedBy:      aws.String("task"),
+					TaskDefinition: aws.String("my-task"),
+					NetworkConfiguration: &ecs.NetworkConfiguration{
+						AwsvpcConfiguration: &ecs.AwsVpcConfiguration{
+							AssignPublicIp: aws.String(ecs.AssignPublicIpEnabled),
+							Subnets:        aws.StringSlice([]string{"subnet-1", "subnet-2"}),
+							SecurityGroups: aws.StringSlice([]string{"sg-1", "sg-2"}),
+						},
+					},
+					PropagateTags: aws.String(ecs.PropagateTagsTaskDefinition),
+				}).
+					Return(&ecs.RunTaskOutput{
+						Tasks: ecsTasks}, nil)
+				m.EXPECT().WaitUntilTasksRunning(&describeTasksInput).
+					Return(awserr.New(request.WaiterResourceNotReadyErrorCode, "some error", errors.New("some error")))
+				m.EXPECT().DescribeTasks(&describeTasksInput).Return(&ecs.DescribeTasksOutput{
+					Tasks: []*ecs.Task{
+						{
+							TaskArn: aws.String("task-1"),
+						},
+						{
+							TaskArn:       aws.String("arn:aws:ecs:us-west-2:123456789:task/4082490ee6c245e09d2145010aa1ba8d"),
+							StoppedReason: aws.String("Task failed to start"),
+							LastStatus:    aws.String("STOPPED"),
+							Containers: []*ecs.Container{
+								{
+									Reason:     aws.String("CannotPullContainerError: inspect image has been retried 1 time(s)"),
+									LastStatus: aws.String("STOPPED"),
+								},
+							},
+						},
+						{
+							TaskArn: aws.String("task-3"),
+						},
+					},
+				}, nil)
+			},
+			wantedError: errors.New("task 4082490e: Task failed to start: CannotPullContainerError: inspect image has been retried 1 time(s)"),
 		},
 	}
 

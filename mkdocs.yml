@@ -3,8 +3,9 @@ site_description: 'Develop, Release and Operate Container Apps on AWS.'
 repo_name: 'aws/copilot-cli'
 repo_url: 'https://github.com/aws/copilot-cli'
 edit_uri: 'edit/mainline/site/content'
-copyright: 'Copyright &copy; 2020 Amazon'
+copyright: 'Copyright &copy; 2021 Amazon'
 docs_dir: 'site/content'
+site_dir: 'docs'
 extra_css:
   - stylesheets/extra.css
 
@@ -63,6 +64,7 @@ nav:
         - svc deploy: docs/commands/svc-deploy.md
         - svc delete: docs/commands/svc-delete.md
         - task run: docs/commands/task-run.md
+        - task delete: docs/commands/task-delete.md
       - Release:
         - pipeline init: docs/commands/pipeline-init.md
         - pipeline update: docs/commands/pipeline-update.md

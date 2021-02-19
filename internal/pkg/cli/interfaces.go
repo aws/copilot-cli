@@ -346,7 +346,7 @@ type appResourcesGetter interface {
 }
 
 type taskDeployer interface {
-	DeployTask(input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error
+	DeployTask(out termprogress.FileWriter, input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error
 }
 
 type taskStackManager interface {

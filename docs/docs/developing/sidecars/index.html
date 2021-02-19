@@ -1009,6 +1009,18 @@
   </li>
 
         
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../commands/task-delete/" class="md-nav__link">
+      task delete
+    </a>
+  </li>
+
+        
       </ul>
     </nav>
   </li>
@@ -1350,10 +1362,12 @@
   <span class="p p-Indicator">{{</span> <span class="nv">sidecar name</span> <span class="p p-Indicator">}}:</span>
     <span class="c1"># Port of the container to expose. (Optional)</span>
     <span class="nt">port</span><span class="p">:</span> <span class="p p-Indicator">{{</span> <span class="nv">port number</span> <span class="p p-Indicator">}}</span>
-    <span class="c1"># Image URL for sidecar container. (Required)</span>
+    <span class="c1"># Image URL for the sidecar container. (Required)</span>
     <span class="nt">image</span><span class="p">:</span> <span class="p p-Indicator">{{</span> <span class="nv">image url</span> <span class="p p-Indicator">}}</span>
     <span class="c1"># ARN of the secret containing the private repository credentials. (Optional)</span>
     <span class="nt">credentialParameter</span><span class="p">:</span> <span class="p p-Indicator">{{</span> <span class="nv">credential</span> <span class="p p-Indicator">}}</span>
+    <span class="c1"># Environment variables for the sidecar container.</span>
+    <span class="nt">variables</span><span class="p">:</span> <span class="p p-Indicator">{{</span> <span class="nv">env var</span> <span class="p p-Indicator">}}</span>
 </code></pre></div>
 <p>Below is an example of specifying the <a href="https://www.nginx.com/">nginx</a> sidecar container in a load balanced web service manifest.</p>
 <div class="highlight"><pre><span></span><code><span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">api</span>
@@ -1377,6 +1391,8 @@
   <span class="nt">nginx</span><span class="p">:</span>
     <span class="nt">port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
     <span class="nt">image</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1234567890.dkr.ecr.us-west-2.amazonaws.com/reverse-proxy:revision_1</span>
+    <span class="nt">variables</span><span class="p">:</span>
+      <span class="nt">NGINX_PORT</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">80</span>
 </code></pre></div>
 <h3 id="sidecar-patterns">Sidecar patterns</h3>
 <p>Sidecar patterns are predefined Copilot sidecar configurations. For now, the only supported pattern is FireLens, but we'll add more in the future!</p>
@@ -1386,14 +1402,14 @@
   <span class="nt">image</span><span class="p">:</span> <span class="p p-Indicator">{{</span> <span class="nv">image URL</span> <span class="p p-Indicator">}}</span>
   <span class="c1"># The configuration options to send to the FireLens log driver. (Optional)</span>
   <span class="nt">destination</span><span class="p">:</span>
-    <span class="p p-Indicator">{{</span> <span class="nv">config key</span> <span class="p p-Indicator">}}:</span> <span class="p p-Indicator">{{</span> <span class="nv">config value</span><span class="p p-Indicator">}}</span>
+    <span class="p p-Indicator">{{</span> <span class="nv">config key</span> <span class="p p-Indicator">}}:</span> <span class="p p-Indicator">{{</span> <span class="nv">config value</span> <span class="p p-Indicator">}}</span>
   <span class="c1"># Whether to include ECS metadata in logs. (Optional, default to true)</span>
   <span class="nt">enableMetadata</span><span class="p">:</span> <span class="p p-Indicator">{{</span> <span class="nv">true|false</span> <span class="p p-Indicator">}}</span>
   <span class="c1"># Secret to pass to the log configuration. (Optional)</span>
   <span class="nt">secretOptions</span><span class="p">:</span>
-    <span class="p p-Indicator">{{</span> <span class="nv">key</span> <span class="p p-Indicator">}}:</span> <span class="p p-Indicator">{{</span> <span class="nv">value</span><span class="p p-Indicator">}</span>
+    <span class="p p-Indicator">{{</span> <span class="nv">key</span> <span class="p p-Indicator">}}:</span> <span class="p p-Indicator">{{</span> <span class="nv">value</span> <span class="p p-Indicator">}}</span>
   <span class="c1"># The full config file path in your custom Fluent Bit image.</span>
-<span class="nt">  configFile</span><span class="p">:</span> <span class="p p-Indicator">{{</span> <span class="nv">config file path</span> <span class="p p-Indicator">}}</span>
+  <span class="nt">configFilePath</span><span class="p">:</span> <span class="p p-Indicator">{{</span> <span class="nv">config file path</span> <span class="p p-Indicator">}}</span>
 </code></pre></div>
 For example:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">logging</span><span class="p">:</span>
@@ -1425,7 +1441,7 @@ For example:</p>
 </code></pre></div>
 <div class="admonition info">
 <p class="admonition-title">Info</p>
-<p>Since the FireLens log driver can route your main container's logs to various destinations, the <a href="../../commands/svc-logs/"><code>svc logs</code></a> command can track them only when they are sent to the log group we create for your Copilot service in CloudWatch. </p>
+<p>Since the FireLens log driver can route your main container's logs to various destinations, the <a href="../../commands/svc-logs/"><code>svc logs</code></a> command can track them only when they are sent to the log group we create for your Copilot service in CloudWatch.</p>
 </div>
 <div class="admonition info">
 <p class="admonition-title">Info</p>

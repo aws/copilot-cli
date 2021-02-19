@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -91,13 +90,11 @@ environments:
 								"DB_PASSWORD": "MYSQL_DB_PASSWORD",
 							},
 						},
-						Sidecar: Sidecar{
-							Sidecars: map[string]*SidecarConfig{
-								"xray": {
-									Port:       aws.String("2000/udp"),
-									Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
-									CredsParam: aws.String("some arn"),
-								},
+						Sidecars: map[string]*SidecarConfig{
+							"xray": {
+								Port:       aws.String("2000/udp"),
+								Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+								CredsParam: aws.String("some arn"),
 							},
 						},
 						Logging: &Logging{
@@ -313,65 +310,6 @@ func TestRange_Parse(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, gotMin, tc.wantedMin)
 				require.Equal(t, gotMax, tc.wantedMax)
-			}
-		})
-	}
-}
-
-func TestAutoscaling_Options(t *testing.T) {
-	const (
-		mockRange    = "1-100"
-		mockRequests = 1000
-	)
-	mockResponseTime := 512 * time.Millisecond
-	testCases := map[string]struct {
-		inRange        Range
-		inCPU          int
-		inMemory       int
-		inRequests     int
-		inResponseTime time.Duration
-
-		wanted    *template.AutoscalingOpts
-		wantedErr error
-	}{
-		"invalid range": {
-			inRange: "badRange",
-
-			wantedErr: fmt.Errorf("invalid range value badRange. Should be in format of ${min}-${max}"),
-		},
-		"success": {
-			inRange:        mockRange,
-			inCPU:          70,
-			inMemory:       80,
-			inRequests:     mockRequests,
-			inResponseTime: mockResponseTime,
-
-			wanted: &template.AutoscalingOpts{
-				MaxCapacity:  aws.Int(100),
-				MinCapacity:  aws.Int(1),
-				CPU:          aws.Float64(70),
-				Memory:       aws.Float64(80),
-				Requests:     aws.Float64(1000),
-				ResponseTime: aws.Float64(0.512),
-			},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			a := Autoscaling{
-				Range:        &tc.inRange,
-				CPU:          aws.Int(tc.inCPU),
-				Memory:       aws.Int(tc.inMemory),
-				Requests:     aws.Int(tc.inRequests),
-				ResponseTime: &tc.inResponseTime,
-			}
-			got, err := a.Options()
-
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, got, tc.wanted)
 			}
 		})
 	}

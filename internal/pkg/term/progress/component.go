@@ -145,12 +145,16 @@ func (c *tableComponent) Render(out io.Writer) (numLines int, err error) {
 }
 
 func renderComponents(out io.Writer, components []Renderer) (numLines int, err error) {
+	buf := new(bytes.Buffer)
 	for _, comp := range components {
-		nl, err := comp.Render(out)
+		nl, err := comp.Render(buf)
 		if err != nil {
 			return 0, err
 		}
 		numLines += nl
+	}
+	if _, err := buf.WriteTo(out); err != nil {
+		return 0, err
 	}
 	return numLines, nil
 }
