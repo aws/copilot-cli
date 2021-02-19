@@ -33,6 +33,7 @@ type initEnvMocks struct {
 	selVPC       *mocks.Mockec2Selector
 	selCreds     *mocks.MockcredsSelector
 	ec2Client    *mocks.Mockec2Client
+	selApp       *mocks.MockappSelector
 }
 
 func TestInitEnvOpts_Validate(t *testing.T) {
@@ -61,12 +62,6 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 
 			wantedErrMsg: fmt.Sprintf("environment name 123env is invalid: %s", errValueBadFormat),
-		},
-		"new workspace": {
-			inEnvName: "test-pdx",
-			inAppName: "",
-
-			wantedErrMsg: "no application found: run `app init` or `cd` into your workspace please",
 		},
 		"cannot specify both vpc resources importing flags and configuing flags": {
 			inEnvName:     "test-pdx",
@@ -155,6 +150,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 
 func TestInitEnvOpts_Ask(t *testing.T) {
 	const (
+		mockApp		= "test-app"
 		mockEnv         = "test"
 		mockProfile     = "default"
 		mockVPCCIDR     = "10.10.10.10/24"
@@ -169,6 +165,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
+		inAppName       string
 		inEnv           string
 		inProfile       string
 		inTempCreds     tempCredsVars
@@ -181,7 +178,27 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 
 		wantedError error
 	}{
+		"should prompt for app if currently not under a workspace and none is specified": {
+			inAppName: "",
+			inEnv: mockEnv,
+			inProfile: mockProfile,
+			inDefault: true,
+
+			setupMocks: func(m initEnvMocks) {
+				m.selApp.EXPECT().
+					Application(envInitAppNamePrompt, envInitAppNameHelpPrompt).
+					Return(mockApp, nil)
+				m.sessProvider.EXPECT().FromProfile(mockProfile).Return(&session.Session{
+					Config: &aws.Config{
+						Region: aws.String("us-west-2"),
+					},
+				}, nil)
+			},
+
+			wantedError: nil,
+		},
 		"fail to get env name": {
+			inAppName: mockApp,
 			setupMocks: func(m initEnvMocks) {
 				gomock.InOrder(
 					m.prompt.EXPECT().
@@ -192,6 +209,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("get environment name: some error"),
 		},
 		"should create a session from a named profile if flag is provided": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			inDefault: true,
@@ -204,6 +222,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"should create a session from temporary creds if flags are provided": {
+			inAppName: mockApp,
 			inEnv: mockEnv,
 			inTempCreds: tempCredsVars{
 				AccessKeyID:     "abcd",
@@ -215,6 +234,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"should prompt for credentials if no profile or temp creds flags are provided": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inDefault: true,
 			setupMocks: func(m initEnvMocks) {
@@ -222,6 +242,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"should prompt for region if user configuration does not have one": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			inDefault: true,
@@ -233,6 +254,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"should skip prompting for region if flag is provided": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			inRegion:  mockRegion,
@@ -245,6 +267,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"should not prompt for configuring environment if default config flag is true": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			inDefault: true,
@@ -254,6 +277,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"fail to select whether to adjust or import resources": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -264,6 +288,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("select adjusting or importing resources: some error"),
 		},
 		"success with no custom resources": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -273,6 +298,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"fail to select VPC": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -284,6 +310,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("select VPC: some error"),
 		},
 		"fail to check if VPC has DNS support": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -296,6 +323,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("check if VPC mockVPC has DNS support enabled: some error"),
 		},
 		"fail to import VPC has no DNS support": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -308,6 +336,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("VPC mockVPC has no DNS support enabled"),
 		},
 		"fail to select public subnets": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -322,6 +351,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("select public subnets: some error"),
 		},
 		"fail to select private subnets": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -338,6 +368,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("select private subnets: some error"),
 		},
 		"success with importing env resources with no flags": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -353,6 +384,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"success with importing env resources with flags": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			inImportVPCVars: importVPCVars{
@@ -367,6 +399,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"fail to get VPC CIDR": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -379,6 +412,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("get VPC CIDR: some error"),
 		},
 		"fail to get public subnet CIDRs": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -393,6 +427,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("get public subnet CIDRs: some error"),
 		},
 		"fail to get private subnet CIDRs": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -409,6 +444,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("get private subnet CIDRs: some error"),
 		},
 		"success with adjusting default env config with no flags": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -424,6 +460,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"success with adjusting default env config with flags": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			inAdjustVPCVars: adjustVPCVars{
@@ -452,12 +489,14 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				selVPC:       mocks.NewMockec2Selector(ctrl),
 				selCreds:     mocks.NewMockcredsSelector(ctrl),
 				ec2Client:    mocks.NewMockec2Client(ctrl),
+				selApp:	      mocks.NewMockappSelector(ctrl),
 			}
 
 			tc.setupMocks(mocks)
 			// GIVEN
 			addEnv := &initEnvOpts{
 				initEnvVars: initEnvVars{
+					appName:       tc.inAppName,
 					name:          tc.inEnv,
 					profile:       tc.inProfile,
 					tempCreds:     tc.inTempCreds,
@@ -471,6 +510,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				selCreds:     mocks.selCreds,
 				ec2Client:    mocks.ec2Client,
 				prompt:       mocks.prompt,
+				selApp:       mocks.selApp,
 			}
 
 			// WHEN
