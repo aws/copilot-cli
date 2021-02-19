@@ -15,7 +15,7 @@ Environment:
 - Name: {{toSnakeCase $var}}
   Value:
     Fn::GetAtt: [{{$stackName}}, Outputs.{{$var}}]{{end}}{{end}}
-{{- if .Storage}}
-- Name: MOUNT_POINTS
+{{- if and .Storage .Storage.MountPoints}}
+- Name: COPILOT_MOUNT_POINTS
   Value: '{{jsonMountPoints .Storage.MountPoints}}'
 {{- end}}
