@@ -98,17 +98,23 @@ func QuotePSliceFunc(elems []*string) []string {
 	return quotedElems
 }
 
-// GenerateMountPointJSON turns a list of MountPoint objects into a JSON string:
+// generateMountPointJSON turns a list of MountPoint objects into a JSON string:
 // `{"myEFSVolume": "/var/www", "myEBSVolume": "/usr/data"}`
 // This function must be called on an array of correctly constructed MountPoint objects.
-func GenerateMountPointJSON(mountPoints []MountPoint) string {
+func generateMountPointJSON(mountPoints []MountPoint) string {
 	volumeMap := make(map[string]string)
 
 	for _, mp := range mountPoints {
+		// Skip adding mount points with empty container paths to the map.
+		// This is validated elsewhere so this condition should never happen, but it
+		// will fail to inject mountpoints with empty paths.
+		if aws.StringValue(mp.ContainerPath) == "" {
+			continue
+		}
 		volumeMap[aws.StringValue(mp.SourceVolume)] = aws.StringValue(mp.ContainerPath)
 	}
-
-	if _, ok := volumeMap[""]; ok {
+	// Check for empty maps
+	if len(volumeMap) == 0 {
 		return "{}"
 	}
 

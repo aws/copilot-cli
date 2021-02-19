@@ -224,7 +224,7 @@ func withSvcParsingFuncs() ParseOption {
 			"fmtSlice":        FmtSliceFunc,
 			"quoteSlice":      QuotePSliceFunc,
 			"randomUUID":      randomUUIDFunc,
-			"jsonMountPoints": GenerateMountPointJSON,
+			"jsonMountPoints": generateMountPointJSON,
 		})
 	}
 }
