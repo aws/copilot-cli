@@ -28,7 +28,7 @@ func TestCodestar_WaitUntilStatusAvailable(t *testing.T) {
 		connectionARN := "mockConnectionARN"
 
 		// WHEN
-		err := connection.WaitUntilStatusAvailable(ctx, connectionARN)
+		err := connection.WaitUntilConnectionStatusAvailable(ctx, connectionARN)
 
 		// THEN
 		require.EqualError(t, err, "timed out waiting for connection mockConnectionARN status to change from PENDING to AVAILABLE")
@@ -47,7 +47,7 @@ func TestCodestar_WaitUntilStatusAvailable(t *testing.T) {
 		connectionARN := "mockConnectionARN"
 
 		// WHEN
-		err := connection.WaitUntilStatusAvailable(context.Background(), connectionARN)
+		err := connection.WaitUntilConnectionStatusAvailable(context.Background(), connectionARN)
 
 		// THEN
 		require.EqualError(t, err, "get connection details for mockConnectionARN: some error")
@@ -71,7 +71,7 @@ func TestCodestar_WaitUntilStatusAvailable(t *testing.T) {
 			}, nil)
 
 		// WHEN
-		err := connection.WaitUntilStatusAvailable(context.Background(), connectionARN)
+		err := connection.WaitUntilConnectionStatusAvailable(context.Background(), connectionARN)
 
 		// THEN
 		require.NoError(t, err)

@@ -177,8 +177,8 @@ func (c *CodePipeline) ListPipelineNamesByTags(tags map[string]string) ([]string
 	return pipelineNames, nil
 }
 
-// RetrySourceStageExecution tries to re-initiate a failed 'Source' stage for the given pipeline.
-func (c *CodePipeline) RetrySourceStageExecution(pipelineName, stageName string) error {
+// RetryStageExecution tries to re-initiate a failed stage for the given pipeline.
+func (c *CodePipeline) RetryStageExecution(pipelineName, stageName string) error {
 	executionID, err := c.pipelineExecutionID(pipelineName)
 	if err != nil {
 		return fmt.Errorf("retrieve pipeline execution ID: %w", err)

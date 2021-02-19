@@ -56,10 +56,10 @@ func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput) error {
 	}
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(45*time.Minute))
 	defer cancel()
-	if err = cf.codeStarClient.WaitUntilStatusAvailable(ctx, output[connectionARNKey]); err != nil {
+	if err = cf.codeStarClient.WaitUntilConnectionStatusAvailable(ctx, output[connectionARNKey]); err != nil {
 		return err
 	}
-	if err = cf.cpClient.RetrySourceStageExecution(in.Name, sourceStage); err != nil {
+	if err = cf.cpClient.RetryStageExecution(in.Name, sourceStage); err != nil {
 		return err
 	}
 

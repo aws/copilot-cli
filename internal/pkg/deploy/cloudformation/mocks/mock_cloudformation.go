@@ -442,18 +442,18 @@ func (m *MockcodeStarClient) EXPECT() *MockcodeStarClientMockRecorder {
 	return m.recorder
 }
 
-// WaitUntilStatusAvailable mocks base method
-func (m *MockcodeStarClient) WaitUntilStatusAvailable(ctx context.Context, connectionARN string) error {
+// WaitUntilConnectionStatusAvailable mocks base method
+func (m *MockcodeStarClient) WaitUntilConnectionStatusAvailable(ctx context.Context, connectionARN string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitUntilStatusAvailable", ctx, connectionARN)
+	ret := m.ctrl.Call(m, "WaitUntilConnectionStatusAvailable", ctx, connectionARN)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// WaitUntilStatusAvailable indicates an expected call of WaitUntilStatusAvailable
-func (mr *MockcodeStarClientMockRecorder) WaitUntilStatusAvailable(ctx, connectionARN interface{}) *gomock.Call {
+// WaitUntilConnectionStatusAvailable indicates an expected call of WaitUntilConnectionStatusAvailable
+func (mr *MockcodeStarClientMockRecorder) WaitUntilConnectionStatusAvailable(ctx, connectionARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilStatusAvailable", reflect.TypeOf((*MockcodeStarClient)(nil).WaitUntilStatusAvailable), ctx, connectionARN)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilConnectionStatusAvailable", reflect.TypeOf((*MockcodeStarClient)(nil).WaitUntilConnectionStatusAvailable), ctx, connectionARN)
 }
 
 // MockcodePipelineClient is a mock of codePipelineClient interface
@@ -479,18 +479,18 @@ func (m *MockcodePipelineClient) EXPECT() *MockcodePipelineClientMockRecorder {
 	return m.recorder
 }
 
-// RetrySourceStageExecution mocks base method
-func (m *MockcodePipelineClient) RetrySourceStageExecution(pipelineName, stageName string) error {
+// RetryStageExecution mocks base method
+func (m *MockcodePipelineClient) RetryStageExecution(pipelineName, stageName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RetrySourceStageExecution", pipelineName, stageName)
+	ret := m.ctrl.Call(m, "RetryStageExecution", pipelineName, stageName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// RetrySourceStageExecution indicates an expected call of RetrySourceStageExecution
-func (mr *MockcodePipelineClientMockRecorder) RetrySourceStageExecution(pipelineName, stageName interface{}) *gomock.Call {
+// RetryStageExecution indicates an expected call of RetryStageExecution
+func (mr *MockcodePipelineClientMockRecorder) RetryStageExecution(pipelineName, stageName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetrySourceStageExecution", reflect.TypeOf((*MockcodePipelineClient)(nil).RetrySourceStageExecution), pipelineName, stageName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetryStageExecution", reflect.TypeOf((*MockcodePipelineClient)(nil).RetryStageExecution), pipelineName, stageName)
 }
 
 // MockstackSetClient is a mock of stackSetClient interface

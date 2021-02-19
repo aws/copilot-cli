@@ -74,11 +74,11 @@ type cfnClient interface {
 }
 
 type codeStarClient interface {
-	WaitUntilStatusAvailable(ctx context.Context, connectionARN string) error
+	WaitUntilConnectionStatusAvailable(ctx context.Context, connectionARN string) error
 }
 
 type codePipelineClient interface {
-	RetrySourceStageExecution(pipelineName, stageName string) error
+	RetryStageExecution(pipelineName, stageName string) error
 }
 
 type stackSetClient interface {

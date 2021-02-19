@@ -97,12 +97,12 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
 				m := mocks.NewMockcodeStarClient(ctrl)
-				m.EXPECT().WaitUntilStatusAvailable(gomock.Any(), "mockConnectionARN").Times(0)
+				m.EXPECT().WaitUntilConnectionStatusAvailable(gomock.Any(), "mockConnectionARN").Times(0)
 				return m
 			},
 			createCpMock: func(ctrl *gomock.Controller) codePipelineClient {
 				m := mocks.NewMockcodePipelineClient(ctrl)
-				m.EXPECT().RetrySourceStageExecution(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().RetryStageExecution(gomock.Any(), gomock.Any()).Times(0)
 				return m
 			},
 			wantedErr: nil,
@@ -119,12 +119,12 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
 				m := mocks.NewMockcodeStarClient(ctrl)
-				m.EXPECT().WaitUntilStatusAvailable(gomock.Any(), "mockConnectionARN").Return(nil)
+				m.EXPECT().WaitUntilConnectionStatusAvailable(gomock.Any(), "mockConnectionARN").Return(nil)
 				return m
 			},
 			createCpMock: func(ctrl *gomock.Controller) codePipelineClient {
 				m := mocks.NewMockcodePipelineClient(ctrl)
-				m.EXPECT().RetrySourceStageExecution(gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().RetryStageExecution(gomock.Any(), gomock.Any()).Return(nil)
 				return m
 			},
 			wantedErr: nil,
@@ -138,12 +138,12 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
 				m := mocks.NewMockcodeStarClient(ctrl)
-				m.EXPECT().WaitUntilStatusAvailable(gomock.Any(), "mockConnectionARN").Times(0)
+				m.EXPECT().WaitUntilConnectionStatusAvailable(gomock.Any(), "mockConnectionARN").Times(0)
 				return m
 			},
 			createCpMock: func(ctrl *gomock.Controller) codePipelineClient {
 				m := mocks.NewMockcodePipelineClient(ctrl)
-				m.EXPECT().RetrySourceStageExecution(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().RetryStageExecution(gomock.Any(), gomock.Any()).Times(0)
 				return m
 			},
 			wantedErr: fmt.Errorf("some error"),
@@ -157,12 +157,12 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
 				m := mocks.NewMockcodeStarClient(ctrl)
-				m.EXPECT().WaitUntilStatusAvailable(gomock.Any(), "mockConnectionARN").Times(0)
+				m.EXPECT().WaitUntilConnectionStatusAvailable(gomock.Any(), "mockConnectionARN").Times(0)
 				return m
 			},
 			createCpMock: func(ctrl *gomock.Controller) codePipelineClient {
 				m := mocks.NewMockcodePipelineClient(ctrl)
-				m.EXPECT().RetrySourceStageExecution(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().RetryStageExecution(gomock.Any(), gomock.Any()).Times(0)
 				return m
 			},
 			wantedErr: fmt.Errorf("some error"),
@@ -178,12 +178,12 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
 				m := mocks.NewMockcodeStarClient(ctrl)
-				m.EXPECT().WaitUntilStatusAvailable(gomock.Any(), "mockConnectionARN").Return(errors.New("some error"))
+				m.EXPECT().WaitUntilConnectionStatusAvailable(gomock.Any(), "mockConnectionARN").Return(errors.New("some error"))
 				return m
 			},
 			createCpMock: func(ctrl *gomock.Controller) codePipelineClient {
 				m := mocks.NewMockcodePipelineClient(ctrl)
-				m.EXPECT().RetrySourceStageExecution(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().RetryStageExecution(gomock.Any(), gomock.Any()).Times(0)
 				return m
 			},
 			wantedErr: fmt.Errorf("some error"),
@@ -199,12 +199,12 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
 				m := mocks.NewMockcodeStarClient(ctrl)
-				m.EXPECT().WaitUntilStatusAvailable(gomock.Any(), "mockConnectionARN").Return(nil)
+				m.EXPECT().WaitUntilConnectionStatusAvailable(gomock.Any(), "mockConnectionARN").Return(nil)
 				return m
 			},
 			createCpMock: func(ctrl *gomock.Controller) codePipelineClient {
 				m := mocks.NewMockcodePipelineClient(ctrl)
-				m.EXPECT().RetrySourceStageExecution(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+				m.EXPECT().RetryStageExecution(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 				return m
 			},
 			wantedErr: fmt.Errorf("some error"),

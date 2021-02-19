@@ -648,7 +648,7 @@ func TestCodePipeline_RetryStageExecution(t *testing.T) {
 			}
 
 			// WHEN
-			actualErr := cp.RetrySourceStageExecution(mockPipelineName, mockStageName)
+			actualErr := cp.RetryStageExecution(mockPipelineName, mockStageName)
 
 			// THEN
 			if actualErr != nil {

@@ -30,8 +30,8 @@ func New(s *session.Session) *CodeStar {
 	}
 }
 
-// WaitUntilStatusAvailable blocks until the connection status has been updated from `PENDING` to `AVAILABLE` or until the max attempt window expires.
-func (c *CodeStar) WaitUntilStatusAvailable(ctx context.Context, connectionARN string) error {
+// WaitUntilConnectionStatusAvailable blocks until the connection status has been updated from `PENDING` to `AVAILABLE` or until the max attempt window expires.
+func (c *CodeStar) WaitUntilConnectionStatusAvailable(ctx context.Context, connectionARN string) error {
 	var interval time.Duration // Defaults to 0.
 	for {
 		select {
