@@ -159,6 +159,9 @@ func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
 // convertStorageOpts converts a manifest Storage field into template data structures which can be used
 // to execute CFN templates
 func convertStorageOpts(in *manifest.Storage) (*template.StorageOpts, error) {
+	if in == nil {
+		return nil, nil
+	}
 	v, err := renderVolumes(in.Volumes)
 	if err != nil {
 		return nil, err

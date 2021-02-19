@@ -50,7 +50,7 @@
   {{- range $mp := $sidecar.MountPoints}}
     - SourceVolume: {{$mp.SourceVolume}}
       ReadOnly: {{$mp.ReadOnly}}
-      ContainerPath: {{$mp.ContainerPath}}
+      ContainerPath: '{{$mp.ContainerPath}}'
   {{- end}}
 {{- end}}
 {{- end}}

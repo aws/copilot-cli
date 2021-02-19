@@ -73,6 +73,19 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: copilot
+
+          MountPoints:
+            - ContainerPath: /var/www
+              ReadOnly: true
+              SourceVolume: myEFSVolume
+      Volumes:
+        - Name: myEFSVolume
+          EFSVolumeConfiguration:
+            FilesystemId: fs-12345
+            RootDirectory: /
+            TransitEncryption: ENABLED
+            AuthorizationConfig:
+              IAM: DISABLED
         
         
   ExecutionRole:
@@ -145,7 +158,15 @@ Resources:
                   StringEquals:
                     'iam:ResourceTag/copilot-application': !Sub '${AppName}'
                     'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
-  
+        - PolicyName: 'GrantEFSAccessfs-12345'
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'elasticfilesystem:ClientMount'
+                Resource:
+                  - !Sub 'arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/fs-12345'
 
   Rule:
     Metadata:

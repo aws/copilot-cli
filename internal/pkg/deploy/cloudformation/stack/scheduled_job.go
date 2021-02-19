@@ -137,7 +137,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		return "", fmt.Errorf("convert retry/timeout config for job %s: %w", j.name, err)
 	}
 
-	storage, err := convertStorageOpts(&j.manifest.Storage)
+	storage, err := convertStorageOpts(j.manifest.Storage)
 	if err != nil {
 		return "", fmt.Errorf("convert storage options for job %s: %w", j.name, err)
 	}

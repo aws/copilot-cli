@@ -24,6 +24,14 @@ retries: 3
 # Optional. The timeout after which to stop the job if it's still running. You can use the units (h, m, s).
 timeout: 1h
 
+storage:
+  volumes:
+    myEFSVolume:
+      path: '/var/www'
+      read_only: true
+      efs:
+        id: fs-12345
+
 # Optional fields for more advanced use-cases.
 #
 #variables:                    # Pass environment variables as key value pairs.
