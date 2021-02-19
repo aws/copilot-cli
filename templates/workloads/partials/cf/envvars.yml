@@ -16,8 +16,6 @@ Environment:
   Value:
     Fn::GetAtt: [{{$stackName}}, Outputs.{{$var}}]{{end}}{{end}}
 {{- if .Storage}}
-{{- range $n, $mp := .Storage.MountPoints}}
-- Name: MOUNT_PATH_{{$n}}
-  Value: '{{$mp.ContainerPath}}'
-{{- end}}
+- Name: MOUNT_POINTS
+  Value: '{{jsonMountPoints .Storage.MountPoints}}'
 {{- end}}

@@ -219,11 +219,12 @@ func (t *Template) parseWkld(name, wkldDirName string, data interface{}, options
 func withSvcParsingFuncs() ParseOption {
 	return func(t *template.Template) *template.Template {
 		return t.Funcs(map[string]interface{}{
-			"toSnakeCase": ToSnakeCaseFunc,
-			"hasSecrets":  hasSecrets,
-			"fmtSlice":    FmtSliceFunc,
-			"quoteSlice":  QuotePSliceFunc,
-			"randomUUID":  randomUUIDFunc,
+			"toSnakeCase":     ToSnakeCaseFunc,
+			"hasSecrets":      hasSecrets,
+			"fmtSlice":        FmtSliceFunc,
+			"quoteSlice":      QuotePSliceFunc,
+			"randomUUID":      randomUUIDFunc,
+			"jsonMountPoints": GenerateMountPointJSON,
 		})
 	}
 }

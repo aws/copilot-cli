@@ -4,10 +4,13 @@
 package template
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/aws/aws-sdk-go/aws"
 )
 
 const (
@@ -93,4 +96,26 @@ func QuotePSliceFunc(elems []*string) []string {
 		quotedElems[i] = strconv.Quote(*el)
 	}
 	return quotedElems
+}
+
+// GenerateMountPointJSON turns a list of MountPoint objects into a JSON string:
+// `{"myEFSVolume": "/var/www", "myEBSVolume": "/usr/data"}`
+// This function must be called on an array of correctly constructed MountPoint objects.
+func GenerateMountPointJSON(mountPoints []MountPoint) string {
+	volumeMap := make(map[string]string)
+
+	for _, mp := range mountPoints {
+		volumeMap[aws.StringValue(mp.SourceVolume)] = aws.StringValue(mp.ContainerPath)
+	}
+
+	if _, ok := volumeMap[""]; ok {
+		return "{}"
+	}
+
+	out, err := json.Marshal(volumeMap)
+	if err != nil {
+		return "{}"
+	}
+	return string(out)
+
 }

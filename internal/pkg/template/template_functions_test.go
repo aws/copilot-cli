@@ -231,3 +231,9 @@ func TestQuotePSliceFunc(t *testing.T) {
 	require.Equal(t, []string{`"a"`}, QuotePSliceFunc(aws.StringSlice([]string{"a"})))
 	require.Equal(t, []string{`"a"`, `"b"`, `"c"`}, QuotePSliceFunc(aws.StringSlice([]string{"a", "b", "c"})))
 }
+
+func TestGenerateMountPointJSON(t *testing.T) {
+	require.Equal(t, `{"myEFSVolume":"/var/www"}`, GenerateMountPointJSON([]MountPoint{{ContainerPath: aws.String("/var/www"), SourceVolume: aws.String("myEFSVolume")}}))
+	require.Equal(t, "{}", GenerateMountPointJSON([]MountPoint{}))
+	require.Equal(t, `{}`, GenerateMountPointJSON([]MountPoint{{ContainerPath: nil}, {}}))
+}
