@@ -301,7 +301,6 @@ func (c *CodePipeline) getStage(s *cp.StageDeclaration) (*Stage, error) {
 				details = fmt.Sprintf("Repository: %s", aws.StringValue(config["RepositoryName"]))
 			case "CodeStarSourceConnection":
 				details = fmt.Sprintf("Repository: %s", aws.StringValue(config["FullRepositoryId"]))
-			default:
 			}
 		case "Build":
 			// Currently, we use CodeBuild only for the build stage: https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CodeBuild.html#action-reference-CodeBuild-config
@@ -309,8 +308,6 @@ func (c *CodePipeline) getStage(s *cp.StageDeclaration) (*Stage, error) {
 		case "Deploy":
 			// Currently, we use Cloudformation only for the build stage: https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CloudFormation.html#action-reference-CloudFormation-config
 			details = fmt.Sprintf("StackName: %s", aws.StringValue(config["StackName"]))
-		default:
-			// not a currently recognized stage - empty string
 		}
 	}
 
