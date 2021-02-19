@@ -40,10 +40,7 @@ const (
 	fmtPipelineUpdateExistPrompt = "Are you sure you want to update an existing pipeline: %s?"
 )
 
-const (
-	connectionsURL = "https://console.aws.amazon.com/codesuite/settings/connections"
-	fmtPipelineURL = "https://%s.console.aws.amazon.com/codesuite/codepipeline/pipelines/%s/view?region=%s"
-)
+const connectionsURL = "https://console.aws.amazon.com/codesuite/settings/connections"
 
 type updatePipelineVars struct {
 	appName          string
@@ -162,6 +159,10 @@ func (o *updatePipelineOpts) shouldUpdate() (bool, error) {
 	return shouldUpdate, nil
 }
 
+type codestar interface {
+	ConnectionName() (string, error)
+}
+
 func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) error {
 	exist, err := o.pipelineDeployer.PipelineExists(in)
 	if err != nil {
@@ -169,6 +170,22 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 	}
 	if !exist {
 		o.prog.Start(fmt.Sprintf(fmtPipelineUpdateStart, color.HighlightUserInput(o.pipelineName)))
+
+		// If the source requires CodeStar Connections, the user is prompted to update the connection status.
+		if o.shouldPromptUpdateConnection {
+			source, ok := in.Source.(codestar)
+			if !ok {
+				return fmt.Errorf("source %v does not have a connection name", in.Source)
+			}
+			connectionName, err := source.ConnectionName()
+			if err != nil {
+				return fmt.Errorf("parse connection name: %w", err)
+			}
+			log.Infoln()
+			log.Infof("%s Go to %s to update the status of connection %s from PENDING to AVAILABLE.", color.Emphasize("ACTION REQUIRED!"), color.HighlightResource(connectionsURL), color.HighlightUserInput(connectionName))
+			log.Infoln()
+		}
+
 		if err := o.pipelineDeployer.CreatePipeline(in); err != nil {
 			var alreadyExists *cloudformation.ErrStackAlreadyExists
 			if !errors.As(err, &alreadyExists) {
@@ -273,11 +290,11 @@ func (o *updatePipelineOpts) Execute() error {
 	return nil
 }
 
-// RequiredActions returns follow-up actions the user can take after successfully executing the command.
-func (o *updatePipelineOpts) RequiredActions() []string {
+// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
+func (o *updatePipelineOpts) RecommendedActions() []string {
 	return []string{
-		fmt.Sprintf("Go to %s to update the status of your connection from PENDING to AVAILABLE.", color.HighlightResource(connectionsURL)),
-		fmt.Sprintf("Then go to %s and click %s.", fmt.Sprintf(color.HighlightResource(fmtPipelineURL), o.region, o.pipelineName, o.region), color.HighlightCode("Retry")),
+		fmt.Sprintf("Run %s to see the state of your pipeline.", color.HighlightCode("copilot pipeline status")),
+		fmt.Sprintf("Run %s for info about your pipeline.", color.HighlightCode("copilot pipeline show")),
 	}
 }
 
@@ -302,12 +319,10 @@ func buildPipelineUpdateCmd() *cobra.Command {
 			if err := opts.Execute(); err != nil {
 				return err
 			}
-			if opts.shouldPromptUpdateConnection {
-				log.Infoln()
-				log.Infoln("Required follow-up actions:")
-				for _, followup := range opts.RequiredActions() {
-					log.Infof("- %s\n", followup)
-				}
+			log.Infoln()
+			log.Infoln("Recommended follow-up actions:")
+			for _, followup := range opts.RecommendedActions() {
+				log.Infof("- %s\n", followup)
 			}
 			return nil
 		}),

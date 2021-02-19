@@ -200,11 +200,13 @@ Resources:
           - Effect: Allow
             Action:
               - s3:PutObject
-              - s3:PutObjectAcl
               - s3:GetBucketPolicy
               - s3:GetObject
-              - s3:GetObjectAcl
               - s3:ListBucket
+              {{- if eq .Source.ProviderName "Bitbucket"}}
+              - s3:PutObjectAcl
+              - s3:GetObjectAcl
+              {{- end}}
             Resource:{{range .ArtifactBuckets}}
               - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}']]
               - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}', '/*']]{{end}}
@@ -373,3 +375,9 @@ Resources:
               RunOrder: 3
               InputArtifacts:
                 - Name: SCCheckoutArtifact{{end}}{{end}}{{end}}{{end}}
+{{- if eq .Source.ProviderName "Bitbucket"}}
+Outputs:
+  PipelineConnectionARN:
+    Description: "ARN of CodeStar Connections connection"
+    Value: !Ref SourceConnection
+{{- end}}

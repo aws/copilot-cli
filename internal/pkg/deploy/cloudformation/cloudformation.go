@@ -11,6 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/codestar"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
@@ -63,9 +67,18 @@ type cfnClient interface {
 	Events(stackName string) ([]cloudformation.StackEvent, error)
 	ListStacksWithTags(tags map[string]string) ([]cloudformation.StackDescription, error)
 	ErrorEvents(stackName string) ([]cloudformation.StackEvent, error)
+	Outputs(stack *cloudformation.Stack) (map[string]string, error)
 
 	// Methods vended by the aws sdk struct.
 	DescribeStackEvents(*sdkcloudformation.DescribeStackEventsInput) (*sdkcloudformation.DescribeStackEventsOutput, error)
+}
+
+type codeStarClient interface {
+	WaitUntilConnectionStatusAvailable(ctx context.Context, connectionARN string) error
+}
+
+type codePipelineClient interface {
+	RetryStageExecution(pipelineName, stageName string) error
 }
 
 type stackSetClient interface {
@@ -80,6 +93,8 @@ type stackSetClient interface {
 // CloudFormation wraps the CloudFormationAPI interface
 type CloudFormation struct {
 	cfnClient      cfnClient
+	codeStarClient codeStarClient
+	cpClient       codePipelineClient
 	ecsClient      ecsClient
 	regionalClient func(region string) cfnClient
 	appStackSet    stackSetClient
@@ -89,8 +104,10 @@ type CloudFormation struct {
 // New returns a configured CloudFormation client.
 func New(sess *session.Session) CloudFormation {
 	client := CloudFormation{
-		cfnClient: cloudformation.New(sess),
-		ecsClient: ecs.New(sess),
+		cfnClient:      cloudformation.New(sess),
+		codeStarClient: codestar.New(sess),
+		cpClient:       codepipeline.New(sess),
+		ecsClient:      ecs.New(sess),
 		regionalClient: func(region string) cfnClient {
 			return cloudformation.New(sess.Copy(&aws.Config{
 				Region: aws.String(region),
