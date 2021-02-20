@@ -183,6 +183,10 @@ func renderSidecarMountPoints(in []manifest.SidecarMountPoint) ([]*template.Moun
 		if smp.ContainerPath == nil {
 			return nil, errMPNoContainerPath
 		}
+		path := aws.StringValue(smp.ContainerPath)
+		if err := validateContainerPath(path); err != nil {
+			return nil, fmt.Errorf("validate container path %s: %w", path, err)
+		}
 		if aws.StringValue(smp.SourceVolume) == "" {
 			return nil, errNoSourceVolume
 		}
@@ -234,6 +238,10 @@ func renderMountPoints(input map[string]manifest.Volume) ([]*template.MountPoint
 		if volume.ContainerPath == nil {
 			return nil, errVolNoContainerPath
 		}
+		path := aws.StringValue(volume.ContainerPath)
+		if err := validateContainerPath(path); err != nil {
+			return nil, fmt.Errorf("validate container path %s: %w", path, err)
+		}
 		// ReadOnly defaults to true.
 		readOnly := aws.Bool(defaultReadOnly)
 		if volume.ReadOnly != nil {
@@ -260,10 +268,18 @@ func renderVolumes(input map[string]manifest.Volume) ([]*template.Volume, error)
 		if aws.StringValue(fsID) == "" {
 			return nil, errNoFSID
 		}
+
 		rootDir := volume.EFS.RootDirectory
+
+		// Validate that root directory path doesn't contain spaces or shell injection.
+		if err := validateRootDirPath(aws.StringValue(rootDir)); err != nil {
+			return nil, fmt.Errorf("validate root directory path %s: %w", aws.StringValue(rootDir), err)
+		}
+
 		if aws.StringValue(rootDir) == "" {
 			rootDir = aws.String(defaultRootDirectory)
 		}
+
 		var iam *string
 		if volume.EFS.AuthConfig.IAM == nil {
 			iam = aws.String(defaultIAM)
@@ -279,8 +295,8 @@ func renderVolumes(input map[string]manifest.Volume) ([]*template.Volume, error)
 			if !aws.BoolValue(volume.EFS.AuthConfig.IAM) {
 				return nil, errAccessPointWithoutIAM
 			}
-			rootDirectory := aws.StringValue(volume.EFS.RootDirectory)
-			if !(rootDirectory == "" || rootDirectory == "/") {
+			// Use rootDir var we previously identified.
+			if !(aws.StringValue(rootDir) == "/") {
 				return nil, errAcessPointWithRootDirectory
 			}
 		}

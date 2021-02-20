@@ -355,7 +355,7 @@ func s3BucketNameValidation(val interface{}) error {
 	return nil
 }
 
-// Dynameo table names: 'a-zA-Z0-9.-_'
+// Dynamo table names: 'a-zA-Z0-9.-_'
 func dynamoTableNameValidation(val interface{}) error {
 	// https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html
 	const minDDBTableNameLength = 3
