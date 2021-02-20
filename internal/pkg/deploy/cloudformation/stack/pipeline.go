@@ -10,7 +10,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 )
 
-const pipelineCfnTemplatePath = "cicd/pipeline_cfn.yml"
+const (
+	pipelineCfnTemplatePath = "cicd/pipeline_cfn.yml"
+	maxStackNameLength      = 100
+)
 
 type pipelineStackConfig struct {
 	*deploy.CreatePipelineInput
@@ -25,7 +28,10 @@ func NewPipelineStackConfig(in *deploy.CreatePipelineInput) *pipelineStackConfig
 }
 
 func (p *pipelineStackConfig) StackName() string {
-	return p.Name
+	if len(p.Name) <= maxStackNameLength {
+		return p.Name
+	}
+	return p.Name[len(p.Name)-maxStackNameLength:]
 }
 
 func (p *pipelineStackConfig) Template() (string, error) {

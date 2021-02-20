@@ -20,8 +20,9 @@ import (
 )
 
 const (
-	projectName  = "chickenProject"
-	pipelineName = "wingspipeline"
+	projectName      = "chickenProject"
+	pipelineName     = "wingspipeline"
+	longPipelineName = "thisPipelineNameIsLongerThanOneHundredCharactersSoItWouldCauseProblemsFurtherDownTheRoadIfItWereNotTruncated"
 
 	toolsAccountID = "012345678910"
 	envAccountID   = "109876543210"
@@ -56,11 +57,33 @@ func TestPipelineTags(t *testing.T) {
 }
 
 func TestPipelineStackName(t *testing.T) {
-	pipeline := NewPipelineStackConfig(
-		mockCreatePipelineInput(),
-	)
+	t.Run("returns pipeline name as stack name if under 100 characters", func(t *testing.T) {
+		// GIVEN
+		pipeline := NewPipelineStackConfig(
+			mockCreatePipelineInput(),
+		)
 
-	require.Equal(t, pipelineName, pipeline.StackName(), "unexpected StackName")
+		// WHEN
+		output := pipeline.StackName()
+
+		// THEN
+		require.Equal(t, pipelineName, output)
+	})
+
+	t.Run("returns shortened stack name if pipeline name exceeds 100 characters", func(t *testing.T) {
+		//GIVEN
+		pipeline := NewPipelineStackConfig(
+			&deploy.CreatePipelineInput{
+				AppName: projectName,
+				Name:    longPipelineName,
+			})
+
+		// WHEN
+		output := pipeline.StackName()
+
+		// THEN
+		require.Equal(t, "lineNameIsLongerThanOneHundredCharactersSoItWouldCauseProblemsFurtherDownTheRoadIfItWereNotTruncated", output)
+	})
 }
 
 func TestPipelineStackConfig_Template(t *testing.T) {
