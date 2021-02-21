@@ -205,13 +205,11 @@ func (o *initPipelineOpts) Execute() error {
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *initPipelineOpts) RecommendedActions() []string {
+// RequiredActions returns follow-up actions the user must take after successfully executing the command.
+func (o *initPipelineOpts) RequiredActions() []string {
 	return []string{
-		"Commit and push the generated buildspec and manifest file.",
-		fmt.Sprintf("Update the %s phase of your buildspec to unit test your services before pushing the images.", color.HighlightResource("build")),
-		"Update your pipeline manifest to add additional stages.",
-		fmt.Sprintf("Run %s to deploy your pipeline for the repository.", color.HighlightCode("copilot pipeline update")),
+		"Commit and push the generated buildspec and pipeline manifest files to the repository.",
+		fmt.Sprintf("Run %s to deploy your pipeline for the specified repository and branch.", color.HighlightCode("copilot pipeline update")),
 	}
 }
 
@@ -640,7 +638,7 @@ func buildPipelineInitCmd() *cobra.Command {
 			}
 			log.Infoln()
 			log.Infoln("Recommended follow-up actions:")
-			for _, followup := range opts.RecommendedActions() {
+			for _, followup := range opts.RequiredActions() {
 				log.Infof("- %s\n", followup)
 			}
 			return nil
