@@ -35,7 +35,7 @@ phases:
       - envs=$(./copilot-linux env ls --json | jq '.environments[].name' | sed 's/"//g')
       # Generate the cloudformation templates.
       # The tag is the build ID but we replaced the colon ':' with a dash '-'.
-      - tag=$(sed 's/:/-/g' <<<"$CODEBUILD_BUILD_ID")
+      - tag=$(sed 's/:/-/g' <<<"$CODEBUILD_BUILD_ID" | rev | cut -c 1-128 | rev)
       - >
         for env in $envs; do
           for svc in $svcs; do
