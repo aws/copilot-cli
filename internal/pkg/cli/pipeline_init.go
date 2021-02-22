@@ -208,7 +208,7 @@ func (o *initPipelineOpts) Execute() error {
 // RequiredActions returns follow-up actions the user must take after successfully executing the command.
 func (o *initPipelineOpts) RequiredActions() []string {
 	return []string{
-		"Commit and push the %s directory to your repository.", color.HighlightCode("copilot"),
+		fmt.Sprintf("Commit and push the %s directory to your repository.", color.HighlightCode("copilot")),
 		fmt.Sprintf("Run %s to create your pipeline.", color.HighlightCode("copilot pipeline update")),
 	}
 }
