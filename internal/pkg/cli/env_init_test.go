@@ -206,7 +206,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					Return("", mockErr)
 			},
 
-			wantedError: fmt.Errorf("get application: some error"),
+			wantedError: fmt.Errorf("ask for application: some error"),
 		},
 		"fail to get env name": {
 			inAppName: mockApp,
