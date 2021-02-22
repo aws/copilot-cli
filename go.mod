@@ -5,14 +5,14 @@ go 1.14
 require (
 	github.com/AlecAivazis/survey/v2 v2.2.7
 	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
-	github.com/aws/aws-sdk-go v1.37.10
+	github.com/aws/aws-sdk-go v1.37.15
 	github.com/briandowns/spinner v1.12.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.10.0
 	github.com/fatih/structs v1.1.0
 	github.com/gobuffalo/packd v1.0.0
 	github.com/gobuffalo/packr/v2 v2.8.1
-	github.com/golang/mock v1.4.4
+	github.com/golang/mock v1.5.0
 	github.com/google/go-cmp v0.5.1 // indirect
 	github.com/google/shlex v0.0.0-20150127133951-6f45313302b9
 	github.com/google/uuid v1.2.0
