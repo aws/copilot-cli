@@ -101,7 +101,7 @@ Along with `pipeline.yml`, the `pipeline init` command also generated a `buildsp
 
 When this buildspec runs, it pulls down the version of Copilot which was used when you ran `pipeline init`, to ensure backwards compatibility.
 
-### Step 4 Pushing New Files to your Repo
+### Step 4: Pushing New Files to your Repository
 
 Now that your `pipeline.yml` and `buildspec.yml` have been created, commit and push them to your repository. Both the `pipeline.yml` and `buildspec.yml` are needed for your pipeline's `build` stage to run successfully. 
 
