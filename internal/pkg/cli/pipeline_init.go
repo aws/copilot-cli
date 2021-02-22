@@ -208,8 +208,8 @@ func (o *initPipelineOpts) Execute() error {
 // RequiredActions returns follow-up actions the user must take after successfully executing the command.
 func (o *initPipelineOpts) RequiredActions() []string {
 	return []string{
-		"Commit and push the generated buildspec and pipeline manifest files to the repository.",
-		fmt.Sprintf("Run %s to deploy your pipeline for the specified repository and branch.", color.HighlightCode("copilot pipeline update")),
+		"Commit and push the %s directory to your repository.", color.HighlightCode("copilot"),
+		fmt.Sprintf("Run %s to create your pipeline.", color.HighlightCode("copilot pipeline update")),
 	}
 }
 
@@ -503,7 +503,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		manifestMsgFmt = "Pipeline manifest file for %s already exists at %s, skipping writing it.\n"
 	}
 	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(manifestPath))
-	log.Infoln("The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.")
+	log.Infoln("The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps. Update the file to add additional stages, change the branch to be tracked, or add test commands or manual approval actions.")
 	return nil
 }
 
@@ -543,7 +543,7 @@ func (o *initPipelineOpts) createBuildspec() error {
 		return err
 	}
 	log.Successf(buildspecMsgFmt, color.HighlightResource(buildspecPath))
-	log.Infoln("The buildspec contains the commands to build and push your container images to your ECR repositories.")
+	log.Infoln("The buildspec contains the commands to build and push your container images to your ECR repositories. Update the %s phase to unit test your services before pushing the images.", color.HighlightResource("build"))
 
 	return nil
 }
@@ -637,7 +637,7 @@ func buildPipelineInitCmd() *cobra.Command {
 				return err
 			}
 			log.Infoln()
-			log.Infoln("Recommended follow-up actions:")
+			log.Infoln("Required follow-up actions:")
 			for _, followup := range opts.RequiredActions() {
 				log.Infof("- %s\n", followup)
 			}

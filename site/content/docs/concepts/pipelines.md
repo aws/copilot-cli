@@ -24,14 +24,14 @@ Want to learn more about CodePipeline? Check out their [getting started docs](ht
 Creating a Pipeline requires only three steps:
 
 1. Preparing the pipeline structure.
-2. Committing and pushing the generated `pipeline.yml` and `buildspec.yml`.
+2. Committing and pushing the `copilot/` directory.
 3. Creating the actual CodePipeline.
 
 Follow the three steps below, from your workspace root:
 
 ```bash
 $ copilot pipeline init
-$ git add copilot/pipeline.yml copilot/buildspec.yml && git commit -m "Adding Pipeline Buildspec" && git push
+$ git add copilot && git commit -m "Adding Pipeline Buildspec" && git push
 $ copilot pipeline update
 ```
 
@@ -103,7 +103,7 @@ When this buildspec runs, it pulls down the version of Copilot which was used wh
 
 ### Step 4: Pushing New Files to your Repository
 
-Now that your `pipeline.yml` and `buildspec.yml` have been created, commit and push them to your repository. Both the `pipeline.yml` and `buildspec.yml` are needed for your pipeline's `build` stage to run successfully. 
+Now that your `pipeline.yml`, `buildspec.yml`, and `.workspace` files have been created, add them to your repository. The entire `copilot/` directory is needed for your pipeline's `build` stage to run successfully. 
 
 ### Step 5: Creating your Pipeline
 
