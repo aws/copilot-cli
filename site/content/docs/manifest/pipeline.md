@@ -1,39 +1,29 @@
 List of all available properties for a Copilot pipeline manifest.
-```yaml
-# This YAML file defines the relationship and deployment ordering of your environments.
 
-# The name of the pipeline
-name: pipeline-sample-app-frontend
+???+ note "Sample manifest for a pipeline triggered from a GitHub repo"
 
-# The version of the schema used in this template
-version: 1
+    ```yaml
+    name: pipeline-sample-app-frontend
+    version: 1
 
-# This section defines the source artifacts.
-source:
-  # The name of the provider that is used to store the source artifacts.
-  provider: GitHub
-  # Additional properties that further specifies the exact location
-  # the artifacts should be sourced from. For example, the GitHub provider
-  # has the following properties: repository, branch.
-  properties:
-    access_token_secret: github-token-sample-app
-    branch: main
-    repository: https://github.com/<user>/sample-app-frontend
+    source:
+      provider: GitHub
+      properties:
+        access_token_secret: github-token-sample-app
+        branch: main
+        repository: https://github.com/<user>/sample-app-frontend
+    
+    stages:
+        - 
+          name: test
+          test_commands:
+            - make test
+            - echo "woo! Tests passed"
+        - 
+          name: prod
+          requires_approval: true
+    ```
 
-# The deployment section defines the order the pipeline will deploy
-# to your environments.
-stages:
-    - # The name of the environment to deploy to.
-      name: test
-      # Use test commands to validate your stage's deployment.
-      test_commands:
-        - make test
-        - echo "woo! Tests passed"
-    - # The name of the environment to deploy to.
-      name: prod
-      # Require a manual approval step before deployment.
-      requires_approval: true
-```
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your pipeline.   
 
