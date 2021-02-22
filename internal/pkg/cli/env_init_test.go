@@ -197,6 +197,17 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 
 			wantedError: nil,
 		},
+		"fail to get app name": {
+			inAppName: "",
+
+			setupMocks: func(m initEnvMocks) {
+				m.selApp.EXPECT().
+					Application(envInitAppNamePrompt, envInitAppNameHelpPrompt).
+					Return("", mockErr)
+			},
+
+			wantedError: fmt.Errorf("get application: some error"),
+		},
 		"fail to get env name": {
 			inAppName: mockApp,
 			setupMocks: func(m initEnvMocks) {
