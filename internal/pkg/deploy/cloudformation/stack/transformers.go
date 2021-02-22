@@ -35,12 +35,11 @@ const (
 // Validation errors when rendering manifest into template.
 var (
 	errNoFSID                      = errors.New(`volume field efs/id cannot be empty`)
-	errVolNoContainerPath          = errors.New(`field "efs/path" cannot be empty`)
 	errAcessPointWithRootDirectory = errors.New(`root directory must be empty or "/" when access point ID is specified`)
 	errAccessPointWithoutIAM       = errors.New(`"iam" must be true when access point ID is specified`)
 
-	errMPNoContainerPath = errors.New(`"path" cannot be empty`)
-	errNoSourceVolume    = errors.New(`"source_volume" cannot be empty`)
+	errNoContainerPath = errors.New(`"path" cannot be empty`)
+	errNoSourceVolume  = errors.New(`"source_volume" cannot be empty`)
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
@@ -178,28 +177,53 @@ func renderSidecarMountPoints(in []manifest.SidecarMountPoint) ([]*template.Moun
 	if len(in) == 0 {
 		return nil, nil
 	}
-	output := []*template.MountPoint{}
+	var output []*template.MountPoint
 	for _, smp := range in {
-		if smp.ContainerPath == nil {
-			return nil, errMPNoContainerPath
+		mp, err := renderMountPoint(smp.SourceVolume, smp.ContainerPath, smp.ReadOnly)
+		if err != nil {
+			return nil, err
 		}
-		path := aws.StringValue(smp.ContainerPath)
-		if err := validateContainerPath(path); err != nil {
-			return nil, fmt.Errorf("validate container path %s: %w", path, err)
+		output = append(output, mp)
+	}
+	return output, nil
+}
+
+func renderMountPoint(sourceVolume, containerPath *string, readOnly *bool) (*template.MountPoint, error) {
+	// containerPath must be specified.
+	if aws.StringValue(containerPath) == "" {
+		return nil, errNoContainerPath
+	}
+	path := aws.StringValue(containerPath)
+	if err := validateContainerPath(path); err != nil {
+		return nil, fmt.Errorf("validate container path %s: %w", path, err)
+	}
+	// readOnly defaults to true.
+	oReadOnly := aws.Bool(defaultReadOnly)
+	if readOnly != nil {
+		oReadOnly = readOnly
+	}
+	// sourceVolume must be specified. This is only a concern for sidecars.
+	if aws.StringValue(sourceVolume) == "" {
+		return nil, errNoSourceVolume
+	}
+	return &template.MountPoint{
+		ReadOnly:      oReadOnly,
+		ContainerPath: containerPath,
+		SourceVolume:  sourceVolume,
+	}, nil
+}
+
+func renderMountPoints(input map[string]manifest.Volume) ([]*template.MountPoint, error) {
+	if len(input) == 0 {
+		return nil, nil
+	}
+	var output []*template.MountPoint
+	for name, volume := range input {
+		mp, err := renderMountPoint(aws.String(name), volume.ContainerPath, volume.ReadOnly)
+		if err != nil {
+			return nil, err
 		}
-		if aws.StringValue(smp.SourceVolume) == "" {
-			return nil, errNoSourceVolume
-		}
-		readOnly := aws.Bool(defaultReadOnly)
-		if smp.ReadOnly != nil {
-			readOnly = smp.ReadOnly
-		}
-		mp := template.MountPoint{
-			ContainerPath: smp.ContainerPath,
-			SourceVolume:  smp.SourceVolume,
-			ReadOnly:      readOnly,
-		}
-		output = append(output, &mp)
+		output = append(output, mp)
 	}
 	return output, nil
 }
@@ -224,35 +248,6 @@ func renderStoragePermissions(input map[string]manifest.Volume) ([]*template.EFS
 			FilesystemID:  volume.EFS.FileSystemID,
 		}
 		output = append(output, &perm)
-	}
-	return output, nil
-}
-
-func renderMountPoints(input map[string]manifest.Volume) ([]*template.MountPoint, error) {
-	if len(input) == 0 {
-		return nil, nil
-	}
-	output := []*template.MountPoint{}
-	for name, volume := range input {
-		// ContainerPath must be specified.
-		if volume.ContainerPath == nil {
-			return nil, errVolNoContainerPath
-		}
-		path := aws.StringValue(volume.ContainerPath)
-		if err := validateContainerPath(path); err != nil {
-			return nil, fmt.Errorf("validate container path %s: %w", path, err)
-		}
-		// ReadOnly defaults to true.
-		readOnly := aws.Bool(defaultReadOnly)
-		if volume.ReadOnly != nil {
-			readOnly = volume.ReadOnly
-		}
-		mp := template.MountPoint{
-			ReadOnly:      readOnly,
-			ContainerPath: volume.ContainerPath,
-			SourceVolume:  aws.String(name),
-		}
-		output = append(output, &mp)
 	}
 	return output, nil
 }

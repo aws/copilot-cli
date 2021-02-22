@@ -243,6 +243,9 @@ func validatePath(input string, maxLength int) error {
 	if len(input) > maxLength {
 		return fmt.Errorf("path must be less than %d bytes in length", maxLength)
 	}
+	if len(input) == 0 {
+		return nil
+	}
 	m := pathRegexp.FindStringSubmatch(input)
 	if len(m) == 0 {
 		return fmt.Errorf("paths can only contain the characters a-zA-Z0-9.-_/")
