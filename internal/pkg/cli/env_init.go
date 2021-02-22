@@ -195,12 +195,9 @@ func (o *initEnvOpts) Validate() error {
 
 // Ask asks for fields that are required but not passed in.
 func (o *initEnvOpts) Ask() error {
-	if o.appName == "" {
-		if err := o.askAppName(); err != nil {
-			return err
-		}
+	if err := o.askAppName(); err != nil {
+		return err
 	}
-
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
@@ -285,6 +282,10 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 }
 
 func (o *initEnvOpts) askAppName() error {
+	if o.appName != "" {
+		return nil
+	}
+
 	app, err := o.selApp.Application(envInitAppNamePrompt, envInitAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("ask for application: %w", err)
