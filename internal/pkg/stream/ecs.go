@@ -65,6 +65,7 @@ type ECSService struct {
 // ECSDeploymentStreamer is a Streamer for ECSService descriptions until the deployment is completed.
 type ECSDeploymentStreamer struct {
 	client                 ECSServiceDescriber
+	clock                  clock
 	cluster                string
 	service                string
 	deploymentCreationTime time.Time
@@ -83,6 +84,7 @@ type ECSDeploymentStreamer struct {
 func NewECSDeploymentStreamer(ecs ECSServiceDescriber, cluster, service string, deploymentCreationTime time.Time) *ECSDeploymentStreamer {
 	return &ECSDeploymentStreamer{
 		client:                 ecs,
+		clock:                  realClock{},
 		cluster:                cluster,
 		service:                service,
 		deploymentCreationTime: deploymentCreationTime,
@@ -109,7 +111,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 	if err != nil {
 		if request.IsErrorThrottle(err) {
 			s.retries += 1
-			return nextFetchDate(s.retries), nil
+			return nextFetchDate(s.clock.now(), s.retries), nil
 		}
 		return next, fmt.Errorf("fetch service description: %w", err)
 	}
@@ -153,7 +155,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 		Deployments:         deployments,
 		LatestFailureEvents: failureMsgs,
 	})
-	return nextFetchDate(0), nil
+	return nextFetchDate(s.clock.now(), 0), nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.

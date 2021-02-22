@@ -173,8 +173,15 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 				},
 			},
 		}
-		streamer := NewECSDeploymentStreamer(m, "my-cluster", "my-svc", startDate)
-
+		streamer := &ECSDeploymentStreamer{
+			client:                 m,
+			clock:                  fakeClock{startDate},
+			cluster:                "my-cluster",
+			service:                "my-svc",
+			deploymentCreationTime: startDate,
+			done:                   make(chan struct{}),
+			pastEventIDs:           make(map[string]bool),
+		}
 		// WHEN
 		_, err := streamer.Fetch()
 
@@ -208,8 +215,15 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 				},
 			},
 		}
-		streamer := NewECSDeploymentStreamer(m, "my-cluster", "my-svc", startDate)
-
+		streamer := &ECSDeploymentStreamer{
+			client:                 m,
+			clock:                  fakeClock{startDate},
+			cluster:                "my-cluster",
+			service:                "my-svc",
+			deploymentCreationTime: startDate,
+			done:                   make(chan struct{}),
+			pastEventIDs:           make(map[string]bool),
+		}
 		// WHEN
 		_, err := streamer.Fetch()
 
@@ -233,7 +247,15 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 				},
 			},
 		}
-		streamer := NewECSDeploymentStreamer(m, "my-cluster", "my-svc", startDate)
+		streamer := &ECSDeploymentStreamer{
+			client:                 m,
+			clock:                  fakeClock{startDate},
+			cluster:                "my-cluster",
+			service:                "my-svc",
+			deploymentCreationTime: startDate,
+			done:                   make(chan struct{}),
+			pastEventIDs:           make(map[string]bool),
+		}
 		streamer.pastEventIDs["1"] = true
 
 		// WHEN
@@ -264,6 +286,7 @@ func TestECSDeploymentStreamer_Notify(t *testing.T) {
 	streamer := &ECSDeploymentStreamer{
 		subscribers:   []chan ECSService{sub},
 		eventsToFlush: wantedEvents,
+		clock:         fakeClock{fakeNow: time.Now()},
 	}
 
 	// WHEN

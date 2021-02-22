@@ -168,6 +168,7 @@ func testStackStreamer_Fetch_PostChangeSet(t *testing.T) {
 	}
 	streamer := &StackStreamer{
 		client:                client,
+		clock:                 fakeClock{fakeNow: time.Now()},
 		stackName:             "phonetool-test",
 		changeSetCreationTime: time.Date(2020, time.November, 23, 19, 0, 0, 0, time.UTC), // An hour after the last event.
 	}
@@ -204,6 +205,7 @@ func testStackStreamer_Fetch_WithSeenEvents(t *testing.T) {
 	}
 	streamer := &StackStreamer{
 		client:                client,
+		clock:                 fakeClock{fakeNow: time.Now()},
 		stackName:             "phonetool-test",
 		changeSetCreationTime: startTime,
 		pastEventIDs: map[string]bool{
@@ -232,6 +234,7 @@ func testStackStreamer_Fetch_WithError(t *testing.T) {
 	}
 	streamer := &StackStreamer{
 		client:                client,
+		clock:                 fakeClock{fakeNow: time.Now()},
 		stackName:             "phonetool-test",
 		changeSetCreationTime: time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC),
 	}
@@ -250,6 +253,7 @@ func testStackStreamer_Fetch_withThrottle(t *testing.T) {
 	}
 	streamer := &StackStreamer{
 		client:                *client,
+		clock:                 fakeClock{fakeNow: time.Now()},
 		stackName:             "phonetool-test",
 		changeSetCreationTime: time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC),
 		pastEventIDs:          map[string]bool{},

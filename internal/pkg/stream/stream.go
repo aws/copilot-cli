@@ -64,7 +64,7 @@ func Stream(ctx context.Context, streamer Streamer) error {
 }
 
 // nextFetchDate returns a time to wait using random jitter and exponential backoff.
-func nextFetchDate(retries int) time.Time {
+func nextFetchDate(now time.Time, retries int) time.Time {
 	// waitMs := rand.Intn( 							// Get a random integer between 0 and ...
 	// 	min( 											// the minimum of ...
 	// 		streamerMaxFetchIntervalDuration,           // the max fetch interval and ...
@@ -77,7 +77,7 @@ func nextFetchDate(retries int) time.Time {
 			streamerFetchIntervalDurationMs*(1<<retries),
 		),
 	)
-	return time.Now().Add(time.Duration(waitMs) * time.Millisecond)
+	return now.Add(time.Duration(waitMs) * time.Millisecond)
 }
 
 func min(x, y int) int {

@@ -29,9 +29,26 @@ type StackEvent struct {
 	Timestamp            time.Time
 }
 
+type clock interface {
+	now() time.Time
+}
+
+type realClock struct{}
+
+func (c realClock) now() time.Time {
+	return time.Now()
+}
+
+type fakeClock struct{ fakeNow time.Time }
+
+func (c fakeClock) now() time.Time {
+	return c.fakeNow
+}
+
 // StackStreamer is a Streamer for StackEvent events started by a change set.
 type StackStreamer struct {
 	client                StackEventsDescriber
+	clock                 clock
 	stackName             string
 	changeSetCreationTime time.Time
 
@@ -47,6 +64,7 @@ type StackStreamer struct {
 // NewStackStreamer creates a StackStreamer from a cloudformation client, stack name, and the change set creation timestamp.
 func NewStackStreamer(cfn StackEventsDescriber, stackName string, csCreationTime time.Time) *StackStreamer {
 	return &StackStreamer{
+		clock:                 realClock{},
 		client:                cfn,
 		stackName:             stackName,
 		changeSetCreationTime: csCreationTime,
@@ -83,7 +101,7 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 			// Check for throttles and wait to try again using the StackStreamer's interval.
 			if request.IsErrorThrottle(err) {
 				s.retries += 1
-				return nextFetchDate(s.retries), nil
+				return nextFetchDate(s.clock.now(), s.retries), nil
 			}
 			return next, fmt.Errorf("describe stack events %s: %w", s.stackName, err)
 		}
@@ -126,7 +144,7 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 	reverse(events)
 	s.eventsToFlush = append(s.eventsToFlush, events...)
 	// Only use exponential backoff if there's an error.
-	return nextFetchDate(0), nil
+	return nextFetchDate(s.clock.now(), 0), nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.
