@@ -7,7 +7,7 @@ List of all available properties for a `'Load Balanced Web Service'` manifest.
     name: frontend
     type: Load Balanced Web Service
     
-    # Trigger for your service.
+    # Distribute traffic to your service.
     http:
       path: '/'
       healthcheck:

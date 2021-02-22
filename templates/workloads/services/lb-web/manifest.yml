@@ -6,7 +6,7 @@
 name: {{.Name}}
 type: {{.Type}}
 
-# Trigger for your service.
+# Distribute traffic to your service.
 http:
   # Requests to this path will be forwarded to your service.
   # To match all requests you can use the "/" path.
