@@ -144,6 +144,12 @@ type StateMachineOpts struct {
 	Retries *int
 }
 
+// NetworkOpts holds AWS networking configuration for the workloads.
+type NetworkOpts struct {
+	Placement      string
+	SecurityGroups []string
+}
+
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
@@ -154,6 +160,7 @@ type WorkloadOpts struct {
 	LogConfig   *LogConfigOpts
 	Autoscaling *AutoscalingOpts
 	Storage     *StorageOpts
+	Network     NetworkOpts
 
 	// Additional options for service templates.
 	HealthCheck         *ecs.HealthCheck
