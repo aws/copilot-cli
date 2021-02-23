@@ -503,7 +503,9 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		manifestMsgFmt = "Pipeline manifest file for %s already exists at %s, skipping writing it.\n"
 	}
 	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(manifestPath))
-	log.Infoln("The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.\nUpdate the file to add additional stages, change the branch to be tracked, or add test commands or manual approval actions.")
+	log.Infof(`The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.
+Update the file to add additional stages, change the branch to be tracked, or add test commands or manual approval actions.
+`)
 	return nil
 }
 
