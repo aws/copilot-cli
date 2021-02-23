@@ -545,7 +545,9 @@ func (o *initPipelineOpts) createBuildspec() error {
 		return err
 	}
 	log.Successf(buildspecMsgFmt, color.HighlightResource(buildspecPath))
-	log.Infof("The buildspec contains the commands to build and push your container images to your ECR repositories.\nUpdate the %s phase to unit test your services before pushing the images.\n", color.HighlightResource("build"))
+	log.Infof(`The buildspec contains the commands to build and push your container images to your ECR repositories.
+Update the %s phase to unit test your services before pushing the images.
+`, color.HighlightResource("build"))
 
 	return nil
 }
