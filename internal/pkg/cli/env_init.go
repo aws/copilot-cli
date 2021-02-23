@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	envInitAppNameHelpPrompt = "An environment will be created to the selected application."
+	envInitAppNameHelpPrompt = "An environment will be created in the selected application."
 
 	envInitNamePrompt              = "What is your environment's name?"
 	envInitNameHelpPrompt          = "A unique identifier for an environment (e.g. dev, test, prod)."
