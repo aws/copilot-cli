@@ -211,6 +211,9 @@ func (o *updatePipelineOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
 	}
+	if len(pipeline.Name) > 100 {
+		return fmt.Errorf("pipeline name must be shorter than 100 characters")
+	}
 	o.pipelineName = pipeline.Name
 
 	var source interface{}

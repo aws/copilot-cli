@@ -992,26 +992,12 @@ func TestInitPipelineOpts_pipelineName(t *testing.T) {
 		expected    string
 		expectedErr error
 	}{
-		"pipeline name from GH repo": {
-			inRepoName:     "goose",
-			inAppName:      "badgoose",
-			inAppOwner:     "david",
-			inProviderName: "GitHub",
-
-			expected: "pipeline-badgoose-david-goose",
-		},
 		"pipeline name from CC repo": {
 			inRepoName:     "repo-man",
 			inAppName:      "goodmoose",
 			inProviderName: "CodeCommit",
 
 			expected: "pipeline-goodmoose-repo-man",
-		},
-		"cannot piece together pipeline name bc unidentified provider": {
-			inRepoName:     "repo-man",
-			inProviderName: "BadProvider",
-
-			expectedErr: errors.New("unable to create pipeline name for repo repo-man from provider BadProvider"),
 		},
 	}
 
@@ -1028,14 +1014,10 @@ func TestInitPipelineOpts_pipelineName(t *testing.T) {
 			}
 
 			// WHEN
-			actual, err := opts.pipelineName()
+			actual := opts.pipelineName()
 
 			// THEN
-			if tc.expectedErr != nil {
-				require.EqualError(t, err, tc.expectedErr.Error())
-			} else {
-				require.Equal(t, tc.expected, actual)
-			}
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }

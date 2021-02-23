@@ -12,7 +12,6 @@ import (
 
 const (
 	pipelineCfnTemplatePath = "cicd/pipeline_cfn.yml"
-	maxStackNameLength      = 100
 )
 
 type pipelineStackConfig struct {
@@ -28,10 +27,7 @@ func NewPipelineStackConfig(in *deploy.CreatePipelineInput) *pipelineStackConfig
 }
 
 func (p *pipelineStackConfig) StackName() string {
-	if len(p.Name) <= maxStackNameLength {
-		return p.Name
-	}
-	return p.Name[len(p.Name)-maxStackNameLength:]
+	return p.Name
 }
 
 func (p *pipelineStackConfig) Template() (string, error) {

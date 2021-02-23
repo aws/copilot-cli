@@ -55,11 +55,10 @@ const (
 )
 
 const (
-	fmtSecretName     = "github-token-%s-%s"
-	fmtGHPipelineName = "pipeline-%s-%s-%s"
-	fmtCCPipelineName = "pipeline-%s-%s"
-	fmtGHRepoURL      = "https://%s/%s/%s"
-	fmtCCRepoURL      = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse"
+	fmtSecretName   = "github-token-%s-%s"
+	fmtPipelineName = "pipeline-%s-%s"
+	fmtGHRepoURL    = "https://%s/%s/%s"
+	fmtCCRepoURL    = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse"
 )
 
 var (
@@ -460,10 +459,8 @@ func (o *initPipelineOpts) storeGitHubAccessToken() error {
 }
 
 func (o *initPipelineOpts) createPipelineManifest() error {
-	pipelineName, err := o.pipelineName()
-	if err != nil {
-		return err
-	}
+	pipelineName := o.pipelineName()
+
 	provider, err := o.pipelineProvider()
 	if err != nil {
 		return err
@@ -554,14 +551,8 @@ func (o *initPipelineOpts) secretName() string {
 	return fmt.Sprintf(fmtSecretName, o.appName, o.repoName)
 }
 
-func (o *initPipelineOpts) pipelineName() (string, error) {
-	if o.provider == ghProviderName {
-		return fmt.Sprintf(fmtGHPipelineName, o.appName, o.githubOwner, o.repoName), nil
-	}
-	if o.provider == ccProviderName {
-		return fmt.Sprintf(fmtCCPipelineName, o.appName, o.repoName), nil
-	}
-	return "", fmt.Errorf("unable to create pipeline name for repo %s from provider %s", o.repoName, o.provider)
+func (o *initPipelineOpts) pipelineName() string {
+	return fmt.Sprintf(fmtPipelineName, o.appName, o.repoName)
 }
 
 func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
