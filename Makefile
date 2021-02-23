@@ -104,6 +104,12 @@ run-integ-test:
 	# and runs tests which end in Integration.
 	go test -race -count=1 -timeout 60m -tags=integration ${PACKAGES}
 
+.PHONY: local-integ-test
+local-integ-test: packr-build run-local-integ-test packr-clean
+
+run-local-integ-test:
+	go test -race -count=1 -timeout=60m -tags=integration,!deploy ${PACKAGES}
+
 .PHONY: e2e
 e2e: build-e2e
 	@echo "Building E2E Docker Image" &&\
