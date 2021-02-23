@@ -138,13 +138,15 @@ func TestStream(t *testing.T) {
 	})
 
 	t.Run("nextFetchDate works correctly to grab times before the timeout.", func(t *testing.T) {
-		for r := 0; r < 1000; r++ {
-			now := time.Now()
-			a := nextFetchDate(now, 0)
-			require.True(t, a.Before(now.Add(4*time.Second)), "require that the given date for 0 retries is less than 4s in the future")
-			b := nextFetchDate(now, 10)
-			require.True(t, b.Before(now.Add(32*time.Second)), "require that the given date for 10 retries is never more than the max interval")
+		clock := fakeClock{fakeNow: time.Date(2020, time.November, 1, 0, 0, 0, 0, time.UTC)}
+		rand := func(n int) int { return n }
+		intervalNS := int(streamerFetchIntervalDurationMs * time.Millisecond)
+		for r := 0; r < 4; r++ {
+			a := nextFetchDate(clock, rand, r)
+			require.Equal(t, a, time.Date(2020, time.November, 1, 0, 0, 0, intervalNS*(1<<r), time.UTC), "require that the given date for 0 retries is less than %dms in the future", streamerFetchIntervalDurationMs*(1<<r))
 		}
-
+		maxIntervalNS := int(streamerMaxFetchIntervalDurationMs * time.Millisecond)
+		b := nextFetchDate(clock, rand, 10)
+		require.Equal(t, b, time.Date(2020, time.November, 1, 0, 0, 0, maxIntervalNS, time.UTC), "require that the given date for 10 retries is never more than the max interval")
 	})
 }

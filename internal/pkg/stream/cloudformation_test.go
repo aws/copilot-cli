@@ -169,6 +169,7 @@ func testStackStreamer_Fetch_PostChangeSet(t *testing.T) {
 	streamer := &StackStreamer{
 		client:                client,
 		clock:                 fakeClock{fakeNow: time.Now()},
+		rand:                  func(n int) int { return n },
 		stackName:             "phonetool-test",
 		changeSetCreationTime: time.Date(2020, time.November, 23, 19, 0, 0, 0, time.UTC), // An hour after the last event.
 	}
@@ -206,6 +207,7 @@ func testStackStreamer_Fetch_WithSeenEvents(t *testing.T) {
 	streamer := &StackStreamer{
 		client:                client,
 		clock:                 fakeClock{fakeNow: time.Now()},
+		rand:                  func(n int) int { return n },
 		stackName:             "phonetool-test",
 		changeSetCreationTime: startTime,
 		pastEventIDs: map[string]bool{
@@ -235,6 +237,7 @@ func testStackStreamer_Fetch_WithError(t *testing.T) {
 	streamer := &StackStreamer{
 		client:                client,
 		clock:                 fakeClock{fakeNow: time.Now()},
+		rand:                  func(n int) int { return n },
 		stackName:             "phonetool-test",
 		changeSetCreationTime: time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC),
 	}
@@ -253,7 +256,8 @@ func testStackStreamer_Fetch_withThrottle(t *testing.T) {
 	}
 	streamer := &StackStreamer{
 		client:                *client,
-		clock:                 fakeClock{fakeNow: time.Now()},
+		clock:                 fakeClock{fakeNow: time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC)},
+		rand:                  func(n int) int { return n },
 		stackName:             "phonetool-test",
 		changeSetCreationTime: time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC),
 		pastEventIDs:          map[string]bool{},
@@ -264,7 +268,7 @@ func testStackStreamer_Fetch_withThrottle(t *testing.T) {
 	nextDate, err := streamer.Fetch()
 	maxDuration := 2 * streamerFetchIntervalDurationMs * time.Millisecond
 	require.NoError(t, err, "expect no results and no error for throttle exception")
-	require.True(t, nextDate.Before(time.Now().Add(maxDuration)), "expect that the returned timeout (%s) is less than the maximum for backoff (%d)", time.Until(nextDate), maxDuration)
+	require.Equal(t, nextDate, time.Date(2020, time.November, 23, 16, 0, 8, 0, time.UTC), "expect that the returned timeout (%s) is less than the maximum for backoff (%d)", time.Until(nextDate), maxDuration)
 	require.Equal(t, 1, streamer.retries)
 }
 

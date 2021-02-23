@@ -5,6 +5,7 @@ package stream
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -67,6 +68,7 @@ type ECSDeploymentStreamer struct {
 	client                 ECSServiceDescriber
 	clock                  clock
 	cluster                string
+	rand                   func(n int) int
 	service                string
 	deploymentCreationTime time.Time
 
@@ -85,6 +87,7 @@ func NewECSDeploymentStreamer(ecs ECSServiceDescriber, cluster, service string, 
 	return &ECSDeploymentStreamer{
 		client:                 ecs,
 		clock:                  realClock{},
+		rand:                   rand.Intn,
 		cluster:                cluster,
 		service:                service,
 		deploymentCreationTime: deploymentCreationTime,
@@ -111,7 +114,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 	if err != nil {
 		if request.IsErrorThrottle(err) {
 			s.retries += 1
-			return nextFetchDate(s.clock.now(), s.retries), nil
+			return nextFetchDate(s.clock, s.rand, s.retries), nil
 		}
 		return next, fmt.Errorf("fetch service description: %w", err)
 	}
@@ -155,7 +158,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 		Deployments:         deployments,
 		LatestFailureEvents: failureMsgs,
 	})
-	return nextFetchDate(s.clock.now(), 0), nil
+	return nextFetchDate(s.clock, s.rand, 0), nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.

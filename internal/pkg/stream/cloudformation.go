@@ -5,6 +5,7 @@ package stream
 
 import (
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -49,6 +50,7 @@ func (c fakeClock) now() time.Time {
 type StackStreamer struct {
 	client                StackEventsDescriber
 	clock                 clock
+	rand                  func(int) int
 	stackName             string
 	changeSetCreationTime time.Time
 
@@ -65,6 +67,7 @@ type StackStreamer struct {
 func NewStackStreamer(cfn StackEventsDescriber, stackName string, csCreationTime time.Time) *StackStreamer {
 	return &StackStreamer{
 		clock:                 realClock{},
+		rand:                  rand.Intn,
 		client:                cfn,
 		stackName:             stackName,
 		changeSetCreationTime: csCreationTime,
@@ -101,7 +104,7 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 			// Check for throttles and wait to try again using the StackStreamer's interval.
 			if request.IsErrorThrottle(err) {
 				s.retries += 1
-				return nextFetchDate(s.clock.now(), s.retries), nil
+				return nextFetchDate(s.clock, s.rand, s.retries), nil
 			}
 			return next, fmt.Errorf("describe stack events %s: %w", s.stackName, err)
 		}
@@ -144,7 +147,7 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 	reverse(events)
 	s.eventsToFlush = append(s.eventsToFlush, events...)
 	// Only use exponential backoff if there's an error.
-	return nextFetchDate(s.clock.now(), 0), nil
+	return nextFetchDate(s.clock, s.rand, 0), nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.

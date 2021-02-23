@@ -176,6 +176,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 		streamer := &ECSDeploymentStreamer{
 			client:                 m,
 			clock:                  fakeClock{startDate},
+			rand:                   func(n int) int { return n },
 			cluster:                "my-cluster",
 			service:                "my-svc",
 			deploymentCreationTime: startDate,
@@ -218,6 +219,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 		streamer := &ECSDeploymentStreamer{
 			client:                 m,
 			clock:                  fakeClock{startDate},
+			rand:                   func(n int) int { return n },
 			cluster:                "my-cluster",
 			service:                "my-svc",
 			deploymentCreationTime: startDate,
@@ -250,6 +252,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 		streamer := &ECSDeploymentStreamer{
 			client:                 m,
 			clock:                  fakeClock{startDate},
+			rand:                   func(n int) int { return n },
 			cluster:                "my-cluster",
 			service:                "my-svc",
 			deploymentCreationTime: startDate,
@@ -287,6 +290,7 @@ func TestECSDeploymentStreamer_Notify(t *testing.T) {
 		subscribers:   []chan ECSService{sub},
 		eventsToFlush: wantedEvents,
 		clock:         fakeClock{fakeNow: time.Now()},
+		rand:          func(n int) int { return n },
 	}
 
 	// WHEN
