@@ -4,10 +4,13 @@
 package template
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/aws/aws-sdk-go/aws"
 )
 
 const (
@@ -93,4 +96,32 @@ func QuotePSliceFunc(elems []*string) []string {
 		quotedElems[i] = strconv.Quote(*el)
 	}
 	return quotedElems
+}
+
+// generateMountPointJSON turns a list of MountPoint objects into a JSON string:
+// `{"myEFSVolume": "/var/www", "myEBSVolume": "/usr/data"}`
+// This function must be called on an array of correctly constructed MountPoint objects.
+func generateMountPointJSON(mountPoints []MountPoint) string {
+	volumeMap := make(map[string]string)
+
+	for _, mp := range mountPoints {
+		// Skip adding mount points with empty container paths to the map.
+		// This is validated elsewhere so this condition should never happen, but it
+		// will fail to inject mountpoints with empty paths.
+		if aws.StringValue(mp.ContainerPath) == "" {
+			continue
+		}
+		volumeMap[aws.StringValue(mp.SourceVolume)] = aws.StringValue(mp.ContainerPath)
+	}
+	// Check for empty maps
+	if len(volumeMap) == 0 {
+		return "{}"
+	}
+
+	out, err := json.Marshal(volumeMap)
+	if err != nil {
+		return "{}"
+	}
+	return string(out)
+
 }
