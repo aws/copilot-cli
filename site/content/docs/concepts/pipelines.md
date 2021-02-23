@@ -31,7 +31,7 @@ Follow the three steps below, from your workspace root:
 
 ```bash
 $ copilot pipeline init
-$ git add copilot/pipeline.yml copilot/buildspec.yml copilot/.workspace && git commit -m "Adding Pipeline Buildspec" && git push
+$ git add copilot/pipeline.yml copilot/buildspec.yml copilot/.workspace && git commit -m "Adding pipeline artifacts" && git push
 $ copilot pipeline update
 ```
 
