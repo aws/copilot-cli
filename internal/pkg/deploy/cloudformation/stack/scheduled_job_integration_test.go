@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"testing"
+
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/aws-sdk-go/aws"
