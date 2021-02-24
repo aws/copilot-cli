@@ -66,6 +66,8 @@ Resources:
             Value: !Sub '${EnvName}'
           - Name: COPILOT_SERVICE_NAME
             Value: !Sub '${WorkloadName}'
+          - Name: COPILOT_MOUNT_POINTS
+            Value: '{"myEFSVolume":"/var/www"}'
           
           LogConfiguration:
             LogDriver: awslogs
