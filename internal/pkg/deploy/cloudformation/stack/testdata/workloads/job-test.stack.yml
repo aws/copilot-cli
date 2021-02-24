@@ -67,7 +67,7 @@ Resources:
           - Name: COPILOT_SERVICE_NAME
             Value: !Sub '${WorkloadName}'
           - Name: COPILOT_MOUNT_POINTS
-            Value: '{"myEFSVolume":"/var/www"}'
+            Value: '{"myEFSVolume":"/etc/mount1"}'
           
           LogConfiguration:
             LogDriver: awslogs
@@ -77,9 +77,29 @@ Resources:
               awslogs-stream-prefix: copilot
 
           MountPoints:
-            - ContainerPath: /var/www
+            - ContainerPath: /etc/mount1
               ReadOnly: true
               SourceVolume: myEFSVolume
+        - Name: nginx
+          Image: 'public.ecr.aws/nginx/nginx'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: copilot
+          MountPoints:
+            - ContainerPath: '/var/www'
+              ReadOnly: true
+              SourceVolume: myEFSVolume
+          PortMappings:
+            - ContainerPort: 8080
+          Environment:
+            - Name: NGINX_PORT
+              Value: '8080'
+            - Name: COPILOT_MOUNT_POINTS
+              Value: '{"myEFSVolume":"/var/www"}'
+
       Volumes:
         - Name: myEFSVolume
           EFSVolumeConfiguration:
