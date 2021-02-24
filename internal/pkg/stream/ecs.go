@@ -5,11 +5,13 @@ package stream
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
 
@@ -64,7 +66,9 @@ type ECSService struct {
 // ECSDeploymentStreamer is a Streamer for ECSService descriptions until the deployment is completed.
 type ECSDeploymentStreamer struct {
 	client                 ECSServiceDescriber
+	clock                  clock
 	cluster                string
+	rand                   func(n int) int
 	service                string
 	deploymentCreationTime time.Time
 
@@ -73,6 +77,8 @@ type ECSDeploymentStreamer struct {
 	pastEventIDs  map[string]bool
 	eventsToFlush []ECSService
 	mu            sync.Mutex
+
+	retries int
 }
 
 // NewECSDeploymentStreamer creates a new ECSDeploymentStreamer that streams service descriptions
@@ -80,6 +86,8 @@ type ECSDeploymentStreamer struct {
 func NewECSDeploymentStreamer(ecs ECSServiceDescriber, cluster, service string, deploymentCreationTime time.Time) *ECSDeploymentStreamer {
 	return &ECSDeploymentStreamer{
 		client:                 ecs,
+		clock:                  realClock{},
+		rand:                   rand.Intn,
 		cluster:                cluster,
 		service:                service,
 		deploymentCreationTime: deploymentCreationTime,
@@ -104,8 +112,13 @@ func (s *ECSDeploymentStreamer) Subscribe() <-chan ECSService {
 func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 	out, err := s.client.Service(s.cluster, s.service)
 	if err != nil {
+		if request.IsErrorThrottle(err) {
+			s.retries += 1
+			return nextFetchDate(s.clock, s.rand, s.retries), nil
+		}
 		return next, fmt.Errorf("fetch service description: %w", err)
 	}
+	s.retries = 0
 	var deployments []ECSDeployment
 	for _, deployment := range out.Deployments {
 		status := aws.StringValue(deployment.Status)
@@ -145,7 +158,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 		Deployments:         deployments,
 		LatestFailureEvents: failureMsgs,
 	})
-	return time.Now().Add(streamerFetchIntervalDuration), nil
+	return nextFetchDate(s.clock, s.rand, 0), nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.

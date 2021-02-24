@@ -1,37 +1,28 @@
 List of all available properties for a `'Scheduled Job'` manifest.
-```yaml
-# Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
-name: report-generator
-# The type of job that you're running.
-type: Scheduled Job
 
-image:
-  # Path to your service's Dockerfile.
-  build: ./Dockerfile
-  # Or instead of building, you can specify an existing image name.
-  location: aws_account_id.dkr.ecr.region.amazonaws.com/my-svc:tag
+???+ note "Sample manifest for a report generator cronjob"
 
-on:
-  # The scheduled trigger for your job. You can specify a Unix cron schedule or keyword (@weekly) or a rate (@every 1h30m)
-
-  # AWS Schedule Expressions are also accepted: https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html
-  schedule: @daily
-
-cpu: 256    # Number of CPU units for the task.
-memory: 512 # Amount of memory in MiB used by the task.
-retries: 3  # Optional. The number of times to retry the job before failing.
-timeout: 1h # Optional. The timeout after which to stop the job if it's still running. You can use the units (h, m, s).
-
-variables:                    # Optional. Pass environment variables as key value pairs.
-  LOG_LEVEL: info
-
-secrets:                      # Optional. Pass secrets from AWS Systems Manager (SSM) Parameter Store.
-  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
-
-environments:                 # Optional. You can override any of the values defined above by environment.
-  prod:
-    cpu: 512
-```
+    ```yaml
+    # Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
+    name: report-generator
+    type: Scheduled Job
+    
+    on:
+      schedule: @daily
+    cpu: 256
+    memory: 512
+    retries: 3
+    timeout: 1h
+    
+    image:
+      # Path to your service's Dockerfile.
+      build: ./Dockerfile
+    
+    variables:
+      LOG_LEVEL: info
+    secrets:
+      GITHUB_TOKEN: GITHUB_TOKEN
+    ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your job.   
@@ -41,6 +32,27 @@ The name of your job.
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
 The architecture type for your job.  
 Currently, Copilot only supports the "Scheduled Job" type for tasks that are triggered either on a fixed schedule or periodically.
+
+<div class="separator"></div>
+
+<a id="on" href="#on" class="field">`on`</a> <span class="type">Map</span>  
+The configuration for the event that triggers your job.
+
+<span class="parent-field">on.</span><a id="on-schedule" href="#on-schedule" class="field">`schedule`</a> <span class="type">String</span>  
+You can specify a rate to periodically trigger your job. Supported rates:
+
+* `"@yearly"`
+* `"@monthly"`
+* `"@weekly"`
+* `"@daily"`
+* `"@hourly"`
+* `"@every {duration}"` (For example, "1m", "5m")
+* `"rate({duration})"` based on CloudWatch's [rate expressions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#RateExpressions)
+
+Alternatively, you can specify a cron schedule if you'd like to trigger the job at a specific time:
+
+* `"* * * * *"` based on the standard [cron format](https://en.wikipedia.org/wiki/Cron#Overview).
+* `"cron({fields})"` based on CloudWatch's [cron expressions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions) with six fields.
 
 <div class="separator"></div>
 
@@ -77,27 +89,6 @@ All paths are relative to your workspace root.
 <span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>  
 Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).    
 The `location` field follows the same definition as the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image) in the Amazon ECS task definition.
-
-<div class="separator"></div>
-
-<a id="on" href="#on" class="field">`on`</a> <span class="type">Map</span>  
-The configuration for the event that triggers your job.
-
-<span class="parent-field">on.</span><a id="on-schedule" href="#on-schedule" class="field">`schedule`</a> <span class="type">String</span>  
-You can specify a rate to periodically trigger your job. Supported rates:
-
-* `"@yearly"`
-* `"@monthly"`
-* `"@weekly"`
-* `"@daily"`
-* `"@hourly"`
-* `"@every {duration}"` (For example, "1m", "5m") 
-* `"rate({duration})"` based on CloudWatch's [rate expressions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#RateExpressions) 
-
-Alternatively, you can specify a cron schedule if you'd like to trigger the job at a specific time:  
-
-* `"* * * * *"` based on the standard [cron format](https://en.wikipedia.org/wiki/Cron#Overview).
-* `"cron({fields})"` based on CloudWatch's [cron expressions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions) with six fields.
 
 <div class="separator"></div>
 
