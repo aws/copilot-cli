@@ -195,12 +195,12 @@ func TestTemplate_ParseNetwork(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		input template.NetworkOpts
+		input *template.NetworkOpts
 
 		wantedNetworkConfig string
 	}{
 		"should render AWS VPC configuration for public subnets by default": {
-			input: template.NetworkOpts{},
+			input: nil,
 			wantedNetworkConfig: `
   AwsvpcConfiguration:
     AssignPublicIp: ENABLED
@@ -219,9 +219,10 @@ func TestTemplate_ParseNetwork(t *testing.T) {
       - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
 `,
 		},
-		"should render AWS VPC configuration for private subnets if placement is 'private'": {
-			input: template.NetworkOpts{
-				Placement: "private",
+		"should render AWS VPC configuration for private subnets": {
+			input: &template.NetworkOpts{
+				AssignPublicIP: "DISABLED",
+				SubnetsType:    "PrivateSubnets",
 			},
 			wantedNetworkConfig: `
   AwsvpcConfiguration:
@@ -241,9 +242,10 @@ func TestTemplate_ParseNetwork(t *testing.T) {
       - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
 `,
 		},
-		"should render AWS VPC configuration for 'isolated' placement": {
-			input: template.NetworkOpts{
-				Placement: "isolated",
+		"should render AWS VPC configuration for private subnets with security groups": {
+			input: &template.NetworkOpts{
+				AssignPublicIP: "DISABLED",
+				SubnetsType:    "PrivateSubnets",
 				SecurityGroups: []string{
 					"sg-1bcf1d5b",
 					"sg-asdasdas",

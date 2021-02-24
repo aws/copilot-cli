@@ -12,15 +12,20 @@ import (
 	"github.com/google/uuid"
 )
 
-// Paths of workload cloudformation templates under templates/workloads/.
+// Constants for template paths.
 const (
+	// Paths of workload cloudformation templates under templates/workloads/.
 	fmtWkldCFTemplatePath         = "workloads/%s/%s/cf.yml"
 	fmtWkldPartialsCFTemplatePath = "workloads/partials/cf/%s.yml"
-)
 
-const (
+	// Directories under templates/workloads/.
 	servicesDirName = "services"
 	jobDirName      = "jobs"
+
+	// Names of workload templates.
+	lbWebSvcTplName     = "lb-web"
+	backendSvcTplName   = "backend"
+	scheduledJobTplName = "scheduled-job"
 )
 
 var (
@@ -45,13 +50,6 @@ var (
 		"mount-points",
 		"volumes",
 	}
-)
-
-// Names of workload templates.
-const (
-	lbWebSvcTplName     = "lb-web"
-	backendSvcTplName   = "backend"
-	scheduledJobTplName = "scheduled-job"
 )
 
 // WorkloadNestedStackOpts holds configuration that's needed if the workload stack has a nested stack.
@@ -146,8 +144,16 @@ type StateMachineOpts struct {
 
 // NetworkOpts holds AWS networking configuration for the workloads.
 type NetworkOpts struct {
-	Placement      string
+	AssignPublicIP string
+	SubnetsType    string
 	SecurityGroups []string
+}
+
+func defaultNetworkOpts() *NetworkOpts {
+	return &NetworkOpts{
+		AssignPublicIP: "ENABLED",
+		SubnetsType:    "PublicSubnets",
+	}
 }
 
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
@@ -160,7 +166,7 @@ type WorkloadOpts struct {
 	LogConfig   *LogConfigOpts
 	Autoscaling *AutoscalingOpts
 	Storage     *StorageOpts
-	Network     NetworkOpts
+	Network     *NetworkOpts
 
 	// Additional options for service templates.
 	HealthCheck         *ecs.HealthCheck
@@ -178,16 +184,25 @@ type WorkloadOpts struct {
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
 // with the specified data object and returns its content.
 func (t *Template) ParseLoadBalancedWebService(data WorkloadOpts) (*Content, error) {
+	if data.Network == nil {
+		data.Network = defaultNetworkOpts()
+	}
 	return t.parseSvc(lbWebSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseBackendService parses a backend service's CloudFormation template with the specified data object and returns its content.
 func (t *Template) ParseBackendService(data WorkloadOpts) (*Content, error) {
+	if data.Network == nil {
+		data.Network = defaultNetworkOpts()
+	}
 	return t.parseSvc(backendSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseScheduledJob parses a scheduled job's Cloudformation Template
 func (t *Template) ParseScheduledJob(data WorkloadOpts) (*Content, error) {
+	if data.Network == nil {
+		data.Network = defaultNetworkOpts()
+	}
 	return t.parseJob(scheduledJobTplName, data, withSvcParsingFuncs())
 }
 
