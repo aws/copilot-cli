@@ -39,6 +39,17 @@ List of all available properties for a `'Load Balanced Web Service'` manifest.
       LOG_LEVEL: info
     secrets:
       GITHUB_TOKEN: GITHUB_TOKEN
+
+    # Configuration for task storage using EFS volumes.
+    storage:
+      volumes:
+        myEFSVolume:
+          path: '/etc/mount1'
+          read_only: true
+          efs:
+            id: fs-12345678
+            root_directory: '/'
+            auth
     
     
     # You can override any of the values defined above by environment.
