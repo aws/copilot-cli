@@ -35,6 +35,8 @@ phases:
       - envs=$(./copilot-linux env ls --json | jq '.environments[].name' | sed 's/"//g')
       # Generate the cloudformation templates.
       # The tag is the build ID but we replaced the colon ':' with a dash '-'.
+      # We truncate the tag (from the front) to 128 characters, the limit for Docker tags
+      # (https://docs.docker.com/engine/reference/commandline/tag/)
       - tag=$(sed 's/:/-/g' <<<"$CODEBUILD_BUILD_ID" | rev | cut -c 1-128 | rev)
       - >
         for env in $envs; do
