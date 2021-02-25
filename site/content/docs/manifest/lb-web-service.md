@@ -1,51 +1,51 @@
 List of all available properties for a `'Load Balanced Web Service'` manifest.
-```yaml
-# Your service name will be used in naming your resources like log groups, ECS services, etc.
-name: frontend
-# The "architecture" of the service you're running.
-type: Load Balanced Web Service
 
-image:
-  # Path to your service's Dockerfile.
-  build: ./Dockerfile
-  # Or instead of building, you can specify an existing image name.
-  location: aws_account_id.dkr.ecr.region.amazonaws.com/my-svc:tag
-  # Port exposed through your container to route traffic to it.
-  port: 80
+???+ note "Sample manifest for a frontend service"
 
-http:
-  # Requests to this path will be forwarded to your service.
-  # To match all requests you can use the "/" path.
-  path: '/'
-
-  # You can specify a custom health check path. The default is "/"
-  # healthcheck: "/"
-
-  # You can specify whether to enable sticky sessions.
-  # stickiness: true
-
-  # CIDR IP addresses permitted to access your service.
-  # allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
-
-# Number of CPU units for the task.
-cpu: 256
-# Amount of memory in MiB used by the task.
-memory: 512
-# Number of tasks that should be running in your service. You can also specify a map for autoscaling.
-count: 1
-
-variables:                    # Optional. Pass environment variables as key value pairs.
-  LOG_LEVEL: info
-
-secrets:                      # Optional. Pass secrets from AWS Systems Manager (SSM) Parameter Store.
-  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
-
-
-# Optional. You can override any of the values defined above by environment.
-environments:
-  test:
-    count: 2               # Number of tasks to run for the "test" environment.
-```
+    ```yaml
+    # Your service name will be used in naming your resources like log groups, ECS services, etc.
+    name: frontend
+    type: Load Balanced Web Service
+    
+    # Distribute traffic to your service.
+    http:
+      path: '/'
+      healthcheck:
+        path: '/_healthcheck'
+        healthy_threshold: 3
+        unhealthy_threshold: 2
+        interval: 15s
+        timeout: 10s
+      stickiness: false
+      allowed_source_ips: ["10.24.34.0/23"]
+    
+    # Configuration for your containers and service.
+    image:
+      build:
+        dockerfile: ./frontend/Dockerfile
+        context: ./frontend
+      port: 80
+    
+    cpu: 256
+    memory: 512
+    count:
+      range: 1-10
+      cpu_percentage: 70
+      memory_percentage: 80
+      requests: 10000
+      response_time: 2s
+    
+    variables:
+      LOG_LEVEL: info
+    secrets:
+      GITHUB_TOKEN: GITHUB_TOKEN
+    
+    
+    # You can override any of the values defined above by environment.
+    environments:
+      production:
+        count: 2
+    ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your service.   
@@ -54,45 +54,6 @@ The name of your service.
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
 The architecture type for your service. A [Load Balanced Web Service](../concepts/services.md#load-balanced-web-service) is an internet-facing service that's behind a load balancer, orchestrated by Amazon ECS on AWS Fargate.  
-
-<div class="separator"></div>
-
-<a id="image" href="#image" class="field">`image`</a> <span class="type">Map</span>  
-The image section contains parameters relating to the Docker build configuration and exposed port.  
-
-<span class="parent-field">image.</span><a id="image-build" href="#image-build" class="field">`build`</a> <span class="type">String or Map</span>  
-If you specify a string, Copilot interprets it as the path to your Dockerfile. It will assume that the dirname of the string you specify should be the build context. The manifest:
-```yaml
-image:
-  build: path/to/dockerfile
-```
-will result in the following call to docker build: `$ docker build --file path/to/dockerfile path/to`
-
-You can also specify build as a map:
-```yaml
-image:
-  build:
-    dockerfile: path/to/dockerfile
-    context: context/dir
-    target: build-stage
-    cache_from:
-      - image:tag
-    args:
-      key: value
-```
-In this case, Copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be:  
-`$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir`.
-
-You can omit fields and Copilot will do its best to understand what you mean. For example, if you specify `context` but not `dockerfile`, Copilot will run Docker in the context directory and assume that your Dockerfile is named "Dockerfile." If you specify `dockerfile` but no `context`, Copilot assumes you want to run Docker in the directory that contains `dockerfile`.
-
-All paths are relative to your workspace root.
-
-<span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>  
-Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).    
-The `location` field follows the same definition as the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image) in the Amazon ECS task definition.
-
-<span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  
-The port exposed in your Dockerfile. Copilot should parse this value for you from your `EXPOSE` instruction.
 
 <div class="separator"></div>
 
@@ -143,6 +104,45 @@ CIDR IP addresses permitted to access your service.
 http:
   allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
 ```
+
+<div class="separator"></div>
+
+<a id="image" href="#image" class="field">`image`</a> <span class="type">Map</span>  
+The image section contains parameters relating to the Docker build configuration and exposed port.  
+
+<span class="parent-field">image.</span><a id="image-build" href="#image-build" class="field">`build`</a> <span class="type">String or Map</span>  
+If you specify a string, Copilot interprets it as the path to your Dockerfile. It will assume that the dirname of the string you specify should be the build context. The manifest:
+```yaml
+image:
+  build: path/to/dockerfile
+```
+will result in the following call to docker build: `$ docker build --file path/to/dockerfile path/to`
+
+You can also specify build as a map:
+```yaml
+image:
+  build:
+    dockerfile: path/to/dockerfile
+    context: context/dir
+    target: build-stage
+    cache_from:
+      - image:tag
+    args:
+      key: value
+```
+In this case, Copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be:  
+`$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir`.
+
+You can omit fields and Copilot will do its best to understand what you mean. For example, if you specify `context` but not `dockerfile`, Copilot will run Docker in the context directory and assume that your Dockerfile is named "Dockerfile." If you specify `dockerfile` but no `context`, Copilot assumes you want to run Docker in the directory that contains `dockerfile`.
+
+All paths are relative to your workspace root.
+
+<span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>  
+Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).    
+The `location` field follows the same definition as the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image) in the Amazon ECS task definition.
+
+<span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  
+The port exposed in your Dockerfile. Copilot should parse this value for you from your `EXPOSE` instruction.
 
 <div class="separator"></div>
 

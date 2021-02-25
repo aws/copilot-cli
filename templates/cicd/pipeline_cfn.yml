@@ -350,7 +350,7 @@ Resources:
                 ChangeSetName: {{$.AppName}}-{{$stage.Name}}-{{$workload}}
                 ActionMode: CREATE_UPDATE
                 StackName: {{$.AppName}}-{{$stage.Name}}-{{$workload}}
-                Capabilities: CAPABILITY_NAMED_IAM
+                Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
                 TemplatePath: BuildOutput::infrastructure/{{$stage.WorkloadTemplatePath $workload}}
                 TemplateConfiguration: BuildOutput::infrastructure/{{$stage.WorkloadTemplateConfigurationPath $workload}}
                 # The ARN of the IAM role (in the env account) that
