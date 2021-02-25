@@ -984,20 +984,35 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 func TestInitPipelineOpts_pipelineName(t *testing.T) {
 	testCases := map[string]struct {
-		inRepoName     string
-		inAppName      string
-		inAppOwner     string
-		inProviderName string
+		inRepoName string
+		inAppName  string
 
 		expected    string
 		expectedErr error
 	}{
-		"pipeline name from CC repo": {
-			inRepoName:     "repo-man",
-			inAppName:      "goodmoose",
-			inProviderName: "CodeCommit",
+		"pipeline name from short app, short repo": {
+			inAppName:  "goodmoose",
+			inRepoName: "repo-man",
 
 			expected: "pipeline-goodmoose-repo-man",
+		},
+		"pipeline name from long app, long repo": {
+			inAppName:  "goodmoose01234567820123456783012345678401234567850",
+			inRepoName: "repo-man101234567820123456783012345678401234567850",
+
+			expected: "pipeline-goodmoose012345678201234567830123456784012345-repo-man1012345678201234567830123456784012345",
+		},
+		"pipeline name from short app, long repo": {
+			inAppName:  "goodmoose",
+			inRepoName: "repo-man9012345678201234567830123456784012345678501234567860123456787012345678801234567890",
+
+			expected: "pipeline-goodmoose-repo-man9012345678201234567830123456784012345678501234567860123456787012345678801",
+		},
+		"pipeline name from long app, short repo": {
+			inAppName:  "goodmoose012345678201234567830123456784012345678501234567860123456787012345678801234567890",
+			inRepoName: "repo-man",
+
+			expected: "pipeline-goodmoose0123456782012345678301234567840123456785012345678601234567870123456788012-repo-man",
 		},
 	}
 
@@ -1008,9 +1023,7 @@ func TestInitPipelineOpts_pipelineName(t *testing.T) {
 				initPipelineVars: initPipelineVars{
 					appName: tc.inAppName,
 				},
-				githubOwner: tc.inAppOwner,
-				provider:    tc.inProviderName,
-				repoName:    tc.inRepoName,
+				repoName: tc.inRepoName,
 			}
 
 			// WHEN
