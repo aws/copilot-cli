@@ -32,6 +32,8 @@ import (
 )
 
 const (
+	envInitAppNameHelpPrompt = "An environment will be created in the selected application."
+
 	envInitNamePrompt              = "What is your environment's name?"
 	envInitNameHelpPrompt          = "A unique identifier for an environment (e.g. dev, test, prod)."
 	envInitDefaultEnvConfirmPrompt = `Would you like to use the default configuration for a new environment?
@@ -66,6 +68,7 @@ https://aws.github.io/copilot-cli/docs/credentials/#environment-credentials`
 )
 
 var (
+	envInitAppNamePrompt = fmt.Sprintf("In which %s would you like to create the environment?", color.Emphasize("application"))
 	envInitDefaultConfigSelectOption      = "Yes, use default."
 	envInitAdjustEnvResourcesSelectOption = "Yes, but I'd like configure the default resources (CIDR ranges)."
 	envInitImportEnvResourcesSelectOption = "No, I'd like to import existing resources (VPC, subnets)."
@@ -138,6 +141,7 @@ type initEnvOpts struct {
 	prompt       prompter
 	selVPC       ec2Selector
 	selCreds     credsSelector
+	selApp 	     appSelector
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
 }
@@ -171,6 +175,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 			Profile: cfg,
 			Prompt:  prompter,
 		},
+		selApp: selector.NewSelect(prompt.New(), store),
 	}, nil
 }
 
@@ -181,9 +186,7 @@ func (o *initEnvOpts) Validate() error {
 			return err
 		}
 	}
-	if o.appName == "" {
-		return fmt.Errorf("no application found: run %s or %s into your workspace please", color.HighlightCode("app init"), color.HighlightCode("cd"))
-	}
+
 	if err := o.validateCustomizedResources(); err != nil {
 		return err
 	}
@@ -192,6 +195,9 @@ func (o *initEnvOpts) Validate() error {
 
 // Ask asks for fields that are required but not passed in.
 func (o *initEnvOpts) Ask() error {
+	if err := o.askAppName(); err != nil {
+		return err
+	}
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
@@ -272,6 +278,19 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 	if (o.importVPC.isSet() || o.adjustVPC.isSet()) && o.defaultConfig {
 		return fmt.Errorf("cannot import or configure vpc if --%s is set", defaultConfigFlag)
 	}
+	return nil
+}
+
+func (o *initEnvOpts) askAppName() error {
+	if o.appName != "" {
+		return nil
+	}
+
+	app, err := o.selApp.Application(envInitAppNamePrompt, envInitAppNameHelpPrompt)
+	if err != nil {
+		return fmt.Errorf("ask for application: %w", err)
+	}
+	o.appName = app
 	return nil
 }
 
