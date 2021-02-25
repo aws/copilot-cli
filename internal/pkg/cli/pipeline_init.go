@@ -44,15 +44,14 @@ Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or
 )
 
 const (
-	buildspecTemplatePath  = "cicd/buildspec.yml"
-	githubURL              = "github.com"
-	ccIdentifier           = "codecommit"
-	awsURL                 = "aws.amazon.com"
-	ghProviderName         = "GitHub"
-	ccProviderName         = "CodeCommit"
-	defaultGHBranch        = "main"
-	defaultCCBranch        = "master"
-	maxRemainingCharLength = 90
+	buildspecTemplatePath = "cicd/buildspec.yml"
+	githubURL             = "github.com"
+	ccIdentifier          = "codecommit"
+	awsURL                = "aws.amazon.com"
+	ghProviderName        = "GitHub"
+	ccProviderName        = "CodeCommit"
+	defaultGHBranch       = "main"
+	defaultCCBranch       = "master"
 )
 
 const (
@@ -553,19 +552,11 @@ func (o *initPipelineOpts) secretName() string {
 }
 
 func (o *initPipelineOpts) pipelineName() string {
-	halfRemainingCharLength := maxRemainingCharLength / 2
-	switch {
-	case len(o.appName)+len(o.repoName) < maxRemainingCharLength:
-		return fmt.Sprintf(fmtPipelineName, o.appName, o.repoName)
-	case len(o.appName) > halfRemainingCharLength && len(o.repoName) > halfRemainingCharLength:
-		return fmt.Sprintf(fmtPipelineName, o.appName[:halfRemainingCharLength], o.repoName[:halfRemainingCharLength])
-	case len(o.appName) > len(o.repoName):
-		leeway := maxRemainingCharLength - len(o.repoName)
-		return fmt.Sprintf(fmtPipelineName, o.appName[:leeway], o.repoName)
-	case len(o.appName) < len(o.repoName):
-		leeway := maxRemainingCharLength - len(o.appName)
-		return fmt.Sprintf(fmtPipelineName, o.appName, o.repoName[:leeway])
+	name := fmt.Sprintf(fmtPipelineName, o.appName, o.repoName)
+	if len(name) <= 100 {
+		return name
 	}
+	return name[:100]
 }
 
 func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
