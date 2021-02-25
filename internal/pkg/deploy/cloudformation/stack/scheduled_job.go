@@ -137,6 +137,11 @@ func (j *ScheduledJob) Template() (string, error) {
 		return "", fmt.Errorf("convert retry/timeout config for job %s: %w", j.name, err)
 	}
 
+	storage, err := convertStorageOpts(j.manifest.Storage)
+	if err != nil {
+		return "", fmt.Errorf("convert storage options for job %s: %w", j.name, err)
+	}
+
 	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
 		Variables:          j.manifest.Variables,
 		Secrets:            j.manifest.Secrets,
@@ -145,6 +150,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		ScheduleExpression: schedule,
 		StateMachine:       stateMachine,
 		LogConfig:          convertLogging(j.manifest.Logging),
+		Storage:            storage,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)

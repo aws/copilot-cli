@@ -215,7 +215,7 @@ type TaskConfig struct {
 	Count     Count             `yaml:"count"`
 	Variables map[string]string `yaml:"variables"`
 	Secrets   map[string]string `yaml:"secrets"`
-	Storage   Storage           `yaml:"storage"`
+	Storage   *Storage          `yaml:"storage"`
 }
 
 // WorkloadProps contains properties for creating a new workload manifest.
