@@ -562,7 +562,7 @@ func (o *initPipelineOpts) pipelineName() string {
 	case len(o.appName) > len(o.repoName):
 		leeway := maxRemainingCharLength - len(o.repoName)
 		return fmt.Sprintf(fmtPipelineName, o.appName[:leeway], o.repoName)
-	default:
+	case len(o.appName) < len(o.repoName):
 		leeway := maxRemainingCharLength - len(o.appName)
 		return fmt.Sprintf(fmtPipelineName, o.appName, o.repoName[:leeway])
 	}
