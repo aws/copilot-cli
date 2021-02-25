@@ -23,6 +23,10 @@
   - Name: {{$name}}
     Value: {{$value | printf "%q"}}
   {{- end}}
+  {{- if $sidecar.MountPoints}}
+  - Name: COPILOT_MOUNT_POINTS
+    Value: '{{jsonMountPoints $sidecar.MountPoints}}'
+  {{- end}}
 {{- end}}
 {{- if $sidecar.Secrets}}
   Secrets:
@@ -46,7 +50,7 @@
   {{- range $mp := $sidecar.MountPoints}}
     - SourceVolume: {{$mp.SourceVolume}}
       ReadOnly: {{$mp.ReadOnly}}
-      ContainerPath: {{$mp.ContainerPath}}
+      ContainerPath: '{{$mp.ContainerPath}}'
   {{- end}}
 {{- end}}
 {{- end}}

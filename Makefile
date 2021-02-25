@@ -161,6 +161,7 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/iam/mocks/mock_iam.go -source=./internal/pkg/aws/iam/iam.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/secretsmanager/mocks/mock_secretsmanager.go -source=./internal/pkg/aws/secretsmanager/secretsmanager.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/codepipeline/mocks/mock_codepipeline.go -source=./internal/pkg/aws/codepipeline/codepipeline.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/codestar/mocks/mock_codestar.go -source=./internal/pkg/aws/codestar/codestar.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/cloudwatch/mocks/mock_cloudwatch.go -source=./internal/pkg/aws/cloudwatch/cloudwatch.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/aas/mocks/mock_aas.go -source=./internal/pkg/aws/aas/aas.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/resourcegroups/mocks/mock_resourcegroups.go -source=./internal/pkg/aws/resourcegroups/resourcegroups.go
