@@ -273,7 +273,7 @@ Resources:
                 ChangeSetName: phonetool-test-api
                 ActionMode: CREATE_UPDATE
                 StackName: phonetool-test-api
-                Capabilities: CAPABILITY_NAMED_IAM
+                Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
                 TemplatePath: BuildOutput::infrastructure/api-test.stack.yml
                 TemplateConfiguration: BuildOutput::infrastructure/api-test.params.json
                 # The ARN of the IAM role (in the env account) that

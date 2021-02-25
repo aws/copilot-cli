@@ -20,17 +20,20 @@ PropagateTags: SERVICE
 LaunchType: FARGATE
 NetworkConfiguration:
   AwsvpcConfiguration:
-    AssignPublicIp: ENABLED
+    AssignPublicIp: {{.Network.AssignPublicIP}}
     Subnets:
       - Fn::Select:
         - 0
         - Fn::Split:
           - ','
-          - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+          - Fn::ImportValue: !Sub '${AppName}-${EnvName}-{{.Network.SubnetsType}}'
       - Fn::Select:
         - 1
         - Fn::Split:
           - ','
-          - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+          - Fn::ImportValue: !Sub '${AppName}-${EnvName}-{{.Network.SubnetsType}}'
     SecurityGroups:
       - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+      {{- range $sg := .Network.SecurityGroups}}
+      - {{$sg}}
+      {{- end}}
