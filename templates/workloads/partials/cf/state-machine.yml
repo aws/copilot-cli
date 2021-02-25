@@ -24,16 +24,18 @@ StateMachine:
               - 0
               - Fn::Split:
                 - ','
-                - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+                - Fn::ImportValue: !Sub '${AppName}-${EnvName}-{{.Network.SubnetsType}}'
             - Fn::Select:
               - 1
               - Fn::Split:
                 - ','
-                - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
-      AssignPublicIp: ENABLED # Should be DISABLED if we use private subnets
+                - Fn::ImportValue: !Sub '${AppName}-${EnvName}-{{.Network.SubnetsType}}'
+      AssignPublicIp: {{.Network.AssignPublicIP}}
       SecurityGroups:
-        Fn::ImportValue:
-          !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"
+      - Fn::ImportValue: !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"
+      {{- range $sg := .Network.SecurityGroups }}
+      - {{$sg}}
+      {{- end }}
     DefinitionString: |-
 {{include "state-machine-definition.json" . | indent 6}}      
       
