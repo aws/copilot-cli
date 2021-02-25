@@ -14,17 +14,26 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
+	defaultDockerfileName = "Dockerfile"
+)
+
 var (
+	// WorkloadTypes holds all workload manifest types.
+	WorkloadTypes = append(ServiceTypes, JobTypes...)
+
+	// Error definitions.
 	errUnmarshalBuildOpts = errors.New("can't unmarshal build field into string or compose-style map")
 	errUnmarshalCountOpts = errors.New(`can't unmarshal "count" field to an integer or autoscaling configuration`)
 )
 
-const defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
-
-var dockerfileDefaultName = "Dockerfile"
-
-// WorkloadTypes holds all workload manifest types.
-var WorkloadTypes = append(ServiceTypes, JobTypes...)
+// WorkloadProps contains properties for creating a new workload manifest.
+type WorkloadProps struct {
+	Name       string
+	Dockerfile string
+	Image      string
+}
 
 // Workload holds the basic data that every workload manifest file needs to have.
 type Workload struct {
@@ -52,7 +61,7 @@ func (i Image) GetLocation() string {
 func (i *Image) BuildConfig(rootDirectory string) *DockerBuildArgs {
 	df := i.dockerfile()
 	ctx := i.context()
-	dockerfile := aws.String(filepath.Join(rootDirectory, dockerfileDefaultName))
+	dockerfile := aws.String(filepath.Join(rootDirectory, defaultDockerfileName))
 	context := aws.String(rootDirectory)
 
 	if df != "" && ctx != "" {
@@ -64,7 +73,7 @@ func (i *Image) BuildConfig(rootDirectory string) *DockerBuildArgs {
 		context = aws.String(filepath.Join(rootDirectory, filepath.Dir(df)))
 	}
 	if df == "" && ctx != "" {
-		dockerfile = aws.String(filepath.Join(rootDirectory, ctx, dockerfileDefaultName))
+		dockerfile = aws.String(filepath.Join(rootDirectory, ctx, defaultDockerfileName))
 		context = aws.String(filepath.Join(rootDirectory, ctx))
 	}
 	return &DockerBuildArgs{
@@ -216,13 +225,6 @@ type TaskConfig struct {
 	Variables map[string]string `yaml:"variables"`
 	Secrets   map[string]string `yaml:"secrets"`
 	Storage   *Storage          `yaml:"storage"`
-}
-
-// WorkloadProps contains properties for creating a new workload manifest.
-type WorkloadProps struct {
-	Name       string
-	Dockerfile string
-	Image      string
 }
 
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.
