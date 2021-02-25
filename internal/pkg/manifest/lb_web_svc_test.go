@@ -287,6 +287,16 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Logging: &Logging{
 						ConfigFile: aws.String("mockConfigFile"),
 					},
+					ImageOverride: ImageOverride{
+						EntryPoint: EntryPointOverride{
+							String: nil,
+							StringSlice: []string{"/bin/sh"},
+						},
+						Command: CommandOverride{
+							String: aws.String("-c"),
+							StringSlice: nil,
+						},
+					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
@@ -341,6 +351,16 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Logging: &Logging{
 							SecretOptions: map[string]string{
 								"FOO": "BAR",
+							},
+						},
+						ImageOverride: ImageOverride{
+							EntryPoint: EntryPointOverride{
+								String: nil,
+								StringSlice: []string{"overriden"},
+							},
+							Command: CommandOverride{
+								String: aws.String("--overriden"),
+								StringSlice: nil,
 							},
 						},
 					},
@@ -423,6 +443,16 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						ConfigFile: aws.String("mockConfigFile"),
 						SecretOptions: map[string]string{
 							"FOO": "BAR",
+						},
+					},
+					ImageOverride: ImageOverride{
+						EntryPoint: EntryPointOverride{
+							String: nil,
+							StringSlice: []string{"overriden"},
+						},
+						Command: CommandOverride{
+							String: aws.String("--overriden"),
+							StringSlice: nil,
 						},
 					},
 				},
