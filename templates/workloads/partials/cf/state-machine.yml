@@ -32,10 +32,12 @@ StateMachine:
                 - Fn::ImportValue: !Sub '${AppName}-${EnvName}-{{.Network.SubnetsType}}'
       AssignPublicIp: {{.Network.AssignPublicIP}}
       SecurityGroups:
-      - Fn::ImportValue: !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"
-      {{- range $sg := .Network.SecurityGroups }}
-      - {{$sg}}
-      {{- end }}
+        Fn::Join:
+          - '","'
+          - - Fn::ImportValue: !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"
+            {{- range $sg := .Network.SecurityGroups }}
+            - {{$sg}}
+            {{- end }}
     DefinitionString: |-
 {{include "state-machine-definition.json" . | indent 6}}      
       
