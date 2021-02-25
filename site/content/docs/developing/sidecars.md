@@ -3,6 +3,8 @@ Sidecars are additional containers that run along side the main container. They 
 
 AWS also provides some plugin options that can be seamlessly incorporated with your ECS service, including but not limited to [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html), [AWS X-Ray](https://aws.amazon.com/xray/), and [AWS App Mesh](https://aws.amazon.com/app-mesh/).
 
+If you have defined an EFS volume for your main container through the `storage` field in the manifest, you can also mount that volume in any sidecar containers you have defined.
+
 ## How to add sidecars with Copilot?
 There are two ways of adding sidecars using the Copilot manifest: by specifying [general sidecars](#general-sidecars) or by using [sidecar patterns](#sidecar-patterns).
 
@@ -20,6 +22,14 @@ sidecars:
     credentialParameter: {{ credential }}
     # Environment variables for the sidecar container.
     variables: {{ env var }}
+    # Mount paths for EFS volumes specified at the service level. (Optional)
+    mount_points:
+      - # Source volume to mount in this sidecar. (Required)
+        source_volume: {{ named volume }}
+        # The path inside the sidecar container at which to mount the volume. (Required)
+        path: {{ path }}
+        # Whether to allow the sidecar read-only access to the volume. (Default true)
+        read_only: {{ bool }}
 ```
 
 Below is an example of specifying the [nginx](https://www.nginx.com/) sidecar container in a load balanced web service manifest.
@@ -48,6 +58,28 @@ sidecars:
     image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/reverse-proxy:revision_1
     variables:
       NGINX_PORT: 80
+```
+
+Below is a fragment of a manifest including an EFS volume in both the service and sidecar container.
+
+```yaml
+storage:
+  volumes:
+    myEFSVolume:
+      path: '/etc/mount1'
+      read_only: false
+      efs:
+        id: fs-1234567
+
+sidecars:
+  nginx:
+    port: 80
+    image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/reverse-proxy:revision_1
+    variables:
+      NGINX_PORT: 80
+    mount_points:
+      - source_volume: myEFSVolume
+        path: '/etc/mount1'
 ```
 
 ### Sidecar patterns

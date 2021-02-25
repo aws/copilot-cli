@@ -48,8 +48,10 @@ List of all available properties for a `'Load Balanced Web Service'` manifest.
           read_only: true
           efs:
             id: fs-12345678
-            root_directory: '/'
-            auth
+            root_dir: '/'
+            auth:
+              iam: true
+              access_point_id: fsap-12345678
     
     
     # You can override any of the values defined above by environment.
