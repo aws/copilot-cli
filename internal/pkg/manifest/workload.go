@@ -15,8 +15,10 @@ import (
 )
 
 var (
-	errUnmarshalBuildOpts = errors.New("can't unmarshal build field into string or compose-style map")
-	errUnmarshalCountOpts = errors.New(`can't unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalBuildOpts 	= errors.New("can't unmarshal build field into string or compose-style map")
+	errUnmarshalCountOpts 	= errors.New(`can't unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalEntryPoint 	= errors.New("can't unmarshal entrypoint into string or slice of strings")
+	errUnmarshalCommand 	= errors.New("can't unmarshal command into string or slice of strings")
 )
 
 const defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
@@ -113,6 +115,61 @@ func (i *Image) target() *string {
 // Otherwise it returns nil.
 func (i *Image) cacheFrom() []string {
 	return i.Build.BuildArgs.CacheFrom
+}
+
+// ImageOverride holds fields that override Dockerfile image defaults.
+type ImageOverride struct {
+	EntryPoint EntryPointOverride `yaml:"entrypoint"`
+	Command    CommandOverride    `yaml:"command"`
+}
+
+type EntryPointOverride StringSliceOrString
+type CommandOverride StringSliceOrString
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the EntryPointOverride
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (e *EntryPointOverride) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshalYAMLToStringSliceOrString((*StringSliceOrString)(e), unmarshal); err != nil {
+		return errUnmarshalEntryPoint
+	}
+	return nil
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the CommandOverride
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (c *CommandOverride) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshalYAMLToStringSliceOrString((*StringSliceOrString)(c), unmarshal); err != nil {
+		return errUnmarshalCommand
+	}
+	return nil
+}
+
+// StringSliceOrString is a custom type which supports unmarshaling yaml which
+// can either be of type string or type slice of string.
+type StringSliceOrString struct {
+	String      *string
+	StringSlice []string
+}
+
+func unmarshalYAMLToStringSliceOrString(s *StringSliceOrString, unmarshal func(interface{}) error) error {
+	if err := unmarshal(&s.StringSlice); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if s.StringSlice != nil {
+		// Unmarshaled successfully to s.StringSlice, unset s.String, and return.
+		s.String = nil
+		return nil
+	}
+
+	return unmarshal(&s.String)
 }
 
 // BuildArgsOrString is a custom type which supports unmarshaling yaml which

@@ -49,9 +49,10 @@ type LoadBalancedWebService struct {
 // LoadBalancedWebServiceConfig holds the configuration for a load balanced web service.
 type LoadBalancedWebServiceConfig struct {
 	ImageConfig ServiceImageWithPort `yaml:"image,flow"`
-	RoutingRule `yaml:"http,flow"`
-	TaskConfig  `yaml:",inline"`
-	*Logging    `yaml:"logging,flow"`
+	ImageOverride `yaml:",inline"`
+	RoutingRule   `yaml:"http,flow"`
+	TaskConfig    `yaml:",inline"`
+	*Logging      `yaml:"logging,flow"`
 	Sidecars    map[string]*SidecarConfig `yaml:"sidecars"`
 }
 
