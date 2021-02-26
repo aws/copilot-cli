@@ -53,7 +53,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 		if err != nil {
 			return nil, err
 		}
-		mp, err := renderSidecarMountPoints(config.MountPoints)
+		mp, err := convertSidecarMountPoints(config.MountPoints)
 		if err != nil {
 			return nil, err
 		}
@@ -161,15 +161,15 @@ func convertStorageOpts(in *manifest.Storage) (*template.StorageOpts, error) {
 	if in == nil {
 		return nil, nil
 	}
-	v, err := renderVolumes(in.Volumes)
+	v, err := convertVolumes(in.Volumes)
 	if err != nil {
 		return nil, err
 	}
-	mp, err := renderMountPoints(in.Volumes)
+	mp, err := convertMountPoints(in.Volumes)
 	if err != nil {
 		return nil, err
 	}
-	perms, err := renderStoragePermissions(in.Volumes)
+	perms, err := convertEFSPermissions(in.Volumes)
 	if err != nil {
 		return nil, err
 	}
@@ -180,14 +180,14 @@ func convertStorageOpts(in *manifest.Storage) (*template.StorageOpts, error) {
 	}, nil
 }
 
-// renderSidecarMountPoints is used to convert from manifest to template objects.
-func renderSidecarMountPoints(in []manifest.SidecarMountPoint) ([]*template.MountPoint, error) {
+// convertSidecarMountPoints is used to convert from manifest to template objects.
+func convertSidecarMountPoints(in []manifest.SidecarMountPoint) ([]*template.MountPoint, error) {
 	if len(in) == 0 {
 		return nil, nil
 	}
 	var output []*template.MountPoint
 	for _, smp := range in {
-		mp, err := renderMountPoint(smp.SourceVolume, smp.ContainerPath, smp.ReadOnly)
+		mp, err := convertMountPoint(smp.SourceVolume, smp.ContainerPath, smp.ReadOnly)
 		if err != nil {
 			return nil, err
 		}
@@ -196,7 +196,7 @@ func renderSidecarMountPoints(in []manifest.SidecarMountPoint) ([]*template.Moun
 	return output, nil
 }
 
-func renderMountPoint(sourceVolume, containerPath *string, readOnly *bool) (*template.MountPoint, error) {
+func convertMountPoint(sourceVolume, containerPath *string, readOnly *bool) (*template.MountPoint, error) {
 	// containerPath must be specified.
 	if aws.StringValue(containerPath) == "" {
 		return nil, errNoContainerPath
@@ -221,13 +221,13 @@ func renderMountPoint(sourceVolume, containerPath *string, readOnly *bool) (*tem
 	}, nil
 }
 
-func renderMountPoints(input map[string]manifest.Volume) ([]*template.MountPoint, error) {
+func convertMountPoints(input map[string]manifest.Volume) ([]*template.MountPoint, error) {
 	if len(input) == 0 {
 		return nil, nil
 	}
 	var output []*template.MountPoint
 	for name, volume := range input {
-		mp, err := renderMountPoint(aws.String(name), volume.ContainerPath, volume.ReadOnly)
+		mp, err := convertMountPoint(aws.String(name), volume.ContainerPath, volume.ReadOnly)
 		if err != nil {
 			return nil, err
 		}
@@ -236,7 +236,7 @@ func renderMountPoints(input map[string]manifest.Volume) ([]*template.MountPoint
 	return output, nil
 }
 
-func renderStoragePermissions(input map[string]manifest.Volume) ([]*template.EFSPermission, error) {
+func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPermission, error) {
 	if len(input) == 0 {
 		return nil, nil
 	}
@@ -260,7 +260,7 @@ func renderStoragePermissions(input map[string]manifest.Volume) ([]*template.EFS
 	return output, nil
 }
 
-func renderVolumes(input map[string]manifest.Volume) ([]*template.Volume, error) {
+func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error) {
 	if len(input) == 0 {
 		return nil, nil
 	}
