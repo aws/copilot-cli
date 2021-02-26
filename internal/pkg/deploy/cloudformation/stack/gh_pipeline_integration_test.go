@@ -62,5 +62,5 @@ func TestPipeline_Template(t *testing.T) {
 	m2 := make(map[interface{}]interface{})
 	require.NoError(t, yaml.Unmarshal(wantedInBytes, m2))
 
-	require.Equal(t, m1, m2)
+	require.Equal(t, m2, m1)
 }

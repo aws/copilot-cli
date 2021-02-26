@@ -197,6 +197,8 @@ Resources:
               - s3:GetBucketPolicy
               - s3:GetObject
               - s3:ListBucket
+              - s3:PutObjectAcl
+              - s3:GetObjectAcl
             Resource:
               - !Join ['', ['arn:aws:s3:::', 'fancy-bucket']]
               - !Join ['', ['arn:aws:s3:::', 'fancy-bucket', '/*']]
@@ -254,7 +256,7 @@ Resources:
                 Provider: CodeStarSourceConnection
               Configuration:
                 ConnectionArn: !Ref SourceConnection
-                FullRepositoryId: sample
+                FullRepositoryId: huanjani/sample
                 BranchName: master
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
@@ -288,7 +290,7 @@ Resources:
                 ChangeSetName: phonetool-test-api
                 ActionMode: CREATE_UPDATE
                 StackName: phonetool-test-api
-                Capabilities: CAPABILITY_NAMED_IAM
+                Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
                 TemplatePath: BuildOutput::infrastructure/api-test.stack.yml
                 TemplateConfiguration: BuildOutput::infrastructure/api-test.params.json
                 # The ARN of the IAM role (in the env account) that
@@ -313,3 +315,7 @@ Resources:
               RunOrder: 3
               InputArtifacts:
                 - Name: SCCheckoutArtifact
+Outputs:
+  PipelineConnectionARN:
+    Description: "ARN of CodeStar Connections connection"
+    Value: SourceConnection
