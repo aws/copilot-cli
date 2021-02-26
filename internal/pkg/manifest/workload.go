@@ -19,8 +19,8 @@ const (
 	defaultDockerfileName = "Dockerfile"
 
 	// AWS VPC subnet placement options.
-	publicPlacement  = "public"
-	privatePlacement = "private"
+	PublicSubnetPlacement  = "public"
+	PrivateSubnetPlacement = "private"
 )
 
 var (
@@ -28,7 +28,7 @@ var (
 	WorkloadTypes = append(ServiceTypes, JobTypes...)
 
 	// All placement options.
-	subnetPlacements = []string{publicPlacement, privatePlacement}
+	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
 
 	// Error definitions.
 	errUnmarshalBuildOpts = errors.New("can't unmarshal build field into string or compose-style map")
@@ -234,16 +234,18 @@ type TaskConfig struct {
 	Storage   *Storage          `yaml:"storage"`
 }
 
-// networkConfig represents options for network connection to AWS resources within a VPC.
-type networkConfig struct {
+// NetworkConfig represents options for network connection to AWS resources within a VPC.
+type NetworkConfig struct {
 	VPC vpcConfig `yaml:"vpc"`
 }
 
-func (c *networkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	type networkWithDefaults networkConfig
+// UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.
+// If the user specified a placement that's not valid then throw an error.
+func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type networkWithDefaults NetworkConfig
 	conf := networkWithDefaults{
 		VPC: vpcConfig{
-			Placement: stringP(publicPlacement),
+			Placement: stringP(PublicSubnetPlacement),
 		},
 	}
 	if err := unmarshal(&conf); err != nil {
@@ -252,7 +254,7 @@ func (c *networkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if !conf.VPC.isValidPlacement() {
 		return fmt.Errorf("field '%s' is '%v' must be one of %#v", "network.vpc.placement", aws.StringValue(conf.VPC.Placement), subnetPlacements)
 	}
-	*c = networkConfig(conf)
+	*c = NetworkConfig(conf)
 	return nil
 }
 

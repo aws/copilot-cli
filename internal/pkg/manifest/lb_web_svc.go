@@ -51,7 +51,7 @@ type LoadBalancedWebServiceConfig struct {
 	TaskConfig  `yaml:",inline"`
 	*Logging    `yaml:"logging,flow"`
 	Sidecars    map[string]*SidecarConfig `yaml:"sidecars"`
-	Network     networkConfig             `yaml:"network"`
+	Network     NetworkConfig             `yaml:"network"`
 }
 
 // HTTPHealthCheckArgs holds the configuration to determine if the load balanced web service is healthy.
@@ -149,9 +149,9 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 					Value: aws.Int(1),
 				},
 			},
-			Network: networkConfig{
+			Network: NetworkConfig{
 				VPC: vpcConfig{
-					Placement: stringP(publicPlacement),
+					Placement: stringP(PublicSubnetPlacement),
 				},
 			},
 		},

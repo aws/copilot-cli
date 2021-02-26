@@ -109,7 +109,7 @@ environments:
 								"LOG_TOKEN": "LOG_TOKEN",
 							},
 						},
-						Network: networkConfig{
+						Network: NetworkConfig{
 							VPC: vpcConfig{
 								Placement: stringP("public"),
 							},
@@ -187,7 +187,7 @@ secrets:
 								"API_TOKEN": "SUBS_API_TOKEN",
 							},
 						},
-						Network: networkConfig{
+						Network: NetworkConfig{
 							VPC: vpcConfig{
 								Placement: stringP("public"),
 							},

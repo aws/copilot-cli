@@ -51,7 +51,7 @@ func TestNewBackendSvc(t *testing.T) {
 							Value: aws.Int(1),
 						},
 					},
-					Network: networkConfig{
+					Network: NetworkConfig{
 						VPC: vpcConfig{
 							Placement: stringP("public"),
 						},
@@ -98,7 +98,7 @@ func TestNewBackendSvc(t *testing.T) {
 							Value: aws.Int(1),
 						},
 					},
-					Network: networkConfig{
+					Network: NetworkConfig{
 						VPC: vpcConfig{
 							Placement: stringP("public"),
 						},

@@ -63,7 +63,7 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 							Value: aws.Int(1),
 						},
 					},
-					Network: networkConfig{
+					Network: NetworkConfig{
 						VPC: vpcConfig{
 							Placement: stringP("public"),
 						},
@@ -355,7 +355,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Logging: &Logging{
 						ConfigFile: aws.String("mockConfigFile"),
 					},
-					Network: networkConfig{
+					Network: NetworkConfig{
 						VPC: vpcConfig{
 							Placement:      stringP("public"),
 							SecurityGroups: []string{"sg-123"},
@@ -417,7 +417,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								"FOO": "BAR",
 							},
 						},
-						Network: networkConfig{
+						Network: NetworkConfig{
 							VPC: vpcConfig{
 								SecurityGroups: []string{"sg-456", "sg-789"},
 							},
@@ -504,7 +504,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"FOO": "BAR",
 						},
 					},
-					Network: networkConfig{
+					Network: NetworkConfig{
 						VPC: vpcConfig{
 							Placement:      stringP("public"),
 							SecurityGroups: []string{"sg-456", "sg-789"},

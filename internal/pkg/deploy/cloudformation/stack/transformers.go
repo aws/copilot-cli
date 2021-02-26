@@ -317,3 +317,16 @@ func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error
 	}
 	return output, nil
 }
+
+func convertNetworkConfig(network manifest.NetworkConfig) *template.NetworkOpts {
+	opts := &template.NetworkOpts{
+		AssignPublicIP: template.EnablePublicIP,
+		SubnetsType:    template.PublicSubnetsPlacement,
+		SecurityGroups: network.VPC.SecurityGroups,
+	}
+	if aws.StringValue(network.VPC.Placement) != manifest.PublicSubnetPlacement {
+		opts.AssignPublicIP = template.DisablePublicIP
+		opts.SubnetsType = template.PrivateSubnetsPlacement
+	}
+	return opts
+}
