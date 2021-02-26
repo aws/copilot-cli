@@ -161,6 +161,11 @@ Outputs:
 						StackName:       addon.StackName,
 						VariableOutputs: []string{"MyTable"},
 					},
+					Network: &template.NetworkOpts{
+						AssignPublicIP: template.DisablePublicIP,
+						SubnetsType:    template.PrivateSubnetsPlacement,
+						SecurityGroups: []string{"sg-1234"},
+					},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				svc.parser = m
 				svc.addons = mockTemplater{
@@ -195,6 +200,10 @@ Outputs:
 					},
 				},
 				manifest: tc.manifest,
+			}
+			if tc.manifest != nil {
+				conf.manifest.Network.VPC.Placement = aws.String(manifest.PrivateSubnetPlacement)
+				conf.manifest.Network.VPC.SecurityGroups = []string{"sg-1234"}
 			}
 			tc.mockDependencies(t, ctrl, conf)
 

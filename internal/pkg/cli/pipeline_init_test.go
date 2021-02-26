@@ -47,13 +47,13 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 		},
 		"URL to unsupported repo provider": {
 			inAppName: "my-app",
-			inrepoURL: "bitbucket.org/repositories/repoName",
+			inrepoURL: "unsupported.org/repositories/repoName",
 			inEnvs:    []string{"test"},
 			setupMocks: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
 			},
 
-			expectedError: errors.New("Copilot currently accepts only URLs to GitHub and CodeCommit repository sources"),
+			expectedError: errors.New("Copilot currently accepts URLs to only GitHub, CodeCommit, and Bitbucket repository sources"),
 		},
 		"invalid environments": {
 			inAppName: "my-app",
@@ -327,7 +327,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			},
 			mockSessProvider: func(m *mocks.MocksessionProvider) {},
 
-			expectedError: fmt.Errorf("Copilot currently accepts only URLs to GitHub and CodeCommit repository sources"),
+			expectedError: fmt.Errorf("Copilot currently accepts URLs to only GitHub, CodeCommit, and Bitbucket repository sources"),
 		},
 		"returns error if fail to parse GitHub URL": {
 			inEnvironments:      []string{},
@@ -569,7 +569,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.expectedRepoName, opts.repoName)
-				require.Equal(t, tc.expectedGitHubOwner, opts.githubOwner)
+				require.Equal(t, tc.expectedGitHubOwner, opts.repoOwner)
 				require.Equal(t, tc.expectedGitHubAccessToken, opts.githubAccessToken)
 				require.Equal(t, tc.expectedCodeCommitRegion, opts.ccRegion)
 				require.ElementsMatch(t, tc.expectedEnvironments, opts.environments)
@@ -653,6 +653,45 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inBranch:      "main",
 			inAppName:     "badgoose",
 			inGitHubToken: "",
+
+			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
+			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
+				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
+				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("/buildspec.yml", nil)
+			},
+			mockParser: func(m *templatemocks.MockParser) {
+				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
+					Buffer: bytes.NewBufferString("hello"),
+				}, nil)
+			},
+			mockStoreSvc: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("badgoose").Return(&config.Application{
+					Name: "badgoose",
+				}, nil)
+			},
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {
+				m.EXPECT().GetRegionalAppResources(&config.Application{
+					Name: "badgoose",
+				}).Return([]*stack.AppRegionalResources{
+					{
+						Region:   "us-west-2",
+						S3Bucket: "gooseBucket",
+					},
+				}, nil)
+			},
+			expectedError: nil,
+		},
+		"creates secret and writes manifest and buildspecs for BB provider": {
+			inProvider: "Bitbucket",
+			inEnvConfigs: []*config.Environment{
+				{
+					Name: "test",
+					Prod: false,
+				},
+			},
+			inRepoName: "goose",
+			inBranch:   "dev",
+			inAppName:  "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {},
 			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
@@ -984,34 +1023,23 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 func TestInitPipelineOpts_pipelineName(t *testing.T) {
 	testCases := map[string]struct {
-		inRepoName     string
-		inAppName      string
-		inAppOwner     string
-		inProviderName string
+		inRepoName string
+		inAppName  string
 
 		expected    string
 		expectedErr error
 	}{
-		"pipeline name from GH repo": {
-			inRepoName:     "goose",
-			inAppName:      "badgoose",
-			inAppOwner:     "david",
-			inProviderName: "GitHub",
-
-			expected: "pipeline-badgoose-david-goose",
-		},
-		"pipeline name from CC repo": {
-			inRepoName:     "repo-man",
-			inAppName:      "goodmoose",
-			inProviderName: "CodeCommit",
+		"generates pipeline name": {
+			inAppName:  "goodmoose",
+			inRepoName: "repo-man",
 
 			expected: "pipeline-goodmoose-repo-man",
 		},
-		"cannot piece together pipeline name bc unidentified provider": {
-			inRepoName:     "repo-man",
-			inProviderName: "BadProvider",
+		"generates and truncates pipeline name if it exceeds 100 characters": {
+			inAppName:  "goodmoose01234567820123456783012345678401234567850",
+			inRepoName: "repo-man101234567820123456783012345678401234567850",
 
-			expectedErr: errors.New("unable to create pipeline name for repo repo-man from provider BadProvider"),
+			expected: "pipeline-goodmoose01234567820123456783012345678401234567850-repo-man10123456782012345678301234567840",
 		},
 	}
 
@@ -1022,20 +1050,14 @@ func TestInitPipelineOpts_pipelineName(t *testing.T) {
 				initPipelineVars: initPipelineVars{
 					appName: tc.inAppName,
 				},
-				githubOwner: tc.inAppOwner,
-				provider:    tc.inProviderName,
-				repoName:    tc.inRepoName,
+				repoName: tc.inRepoName,
 			}
 
 			// WHEN
-			actual, err := opts.pipelineName()
+			actual := opts.pipelineName()
 
 			// THEN
-			if tc.expectedErr != nil {
-				require.EqualError(t, err, tc.expectedErr.Error())
-			} else {
-				require.Equal(t, tc.expected, actual)
-			}
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }
@@ -1054,12 +1076,13 @@ origin	https://github.com/koke/grit (fetch)
 koke	git://github.com/koke/grit.git (push)
 https	https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (fetch)
 fed	codecommit::us-west-2://aws-sample (fetch)
-ssh	ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (push)`,
+ssh	ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (push)
+bb	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (push)`,
 
-			expectedURLs:  []string{"git@github.com:badgoose/grit", "https://github.com/badgoose/cli", "https://github.com/koke/grit", "git://github.com/koke/grit", "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "codecommit::us-west-2://aws-sample", "ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample"},
+			expectedURLs:  []string{"git@github.com:badgoose/grit", "https://github.com/badgoose/cli", "https://github.com/koke/grit", "git://github.com/koke/grit", "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "codecommit::us-west-2://aws-sample", "ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample", "https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service"},
 			expectedError: nil,
 		},
-		"don't add to URL list if it is not a GitHub or CodeCommit URL": {
+		"don't add to URL list if it is not a GitHub or CodeCommit or Bitbucket URL": {
 			inRemoteResult: `badgoose	verybad@gitlab.com/whatever (fetch)`,
 
 			expectedURLs:  []string{},
@@ -1171,6 +1194,39 @@ func TestInitPipelineCCRepoURL_parse(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
 			details, err := ccRepoURL.parse(tc.inRepoURL)
+
+			// THEN
+			if tc.expectedError != nil {
+				require.EqualError(t, err, tc.expectedError.Error())
+			} else {
+				require.Equal(t, tc.expectedDetails, details)
+			}
+		})
+	}
+}
+
+func TestInitPipelineBBRepoURL_parse(t *testing.T) {
+	testCases := map[string]struct {
+		inRepoURL bbRepoURL
+
+		expectedDetails bbRepoDetails
+		expectedError   error
+	}{
+		"matches with https url": {
+			inRepoURL: "https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service",
+
+			expectedDetails: bbRepoDetails{
+				name:  "aws-copilot-sample-service",
+				owner: "huanjani",
+			},
+			expectedError: nil,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			details, err := bbRepoURL.parse(tc.inRepoURL)
 
 			// THEN
 			if tc.expectedError != nil {

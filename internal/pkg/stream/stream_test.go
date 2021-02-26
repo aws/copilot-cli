@@ -136,4 +136,17 @@ func TestStream(t *testing.T) {
 		require.Greater(t, streamer.fetchCount, 1, "expected more than one call to Fetch within timeout")
 		require.Greater(t, streamer.notifyCount, 1, "expected more than one call to Notify within timeout")
 	})
+
+	t.Run("nextFetchDate works correctly to grab times before the timeout.", func(t *testing.T) {
+		clock := fakeClock{fakeNow: time.Date(2020, time.November, 1, 0, 0, 0, 0, time.UTC)}
+		rand := func(n int) int { return n }
+		intervalNS := int(streamerFetchIntervalDurationMs * time.Millisecond)
+		for r := 0; r < 4; r++ {
+			a := nextFetchDate(clock, rand, r)
+			require.Equal(t, a, time.Date(2020, time.November, 1, 0, 0, 0, intervalNS*(1<<r), time.UTC), "require that the given date for 0 retries is less than %dms in the future", streamerFetchIntervalDurationMs*(1<<r))
+		}
+		maxIntervalNS := int(streamerMaxFetchIntervalDurationMs * time.Millisecond)
+		b := nextFetchDate(clock, rand, 10)
+		require.Equal(t, b, time.Date(2020, time.November, 1, 0, 0, 0, maxIntervalNS, time.UTC), "require that the given date for 10 retries is never more than the max interval")
+	})
 }

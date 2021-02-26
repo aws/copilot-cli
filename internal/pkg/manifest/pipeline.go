@@ -15,7 +15,7 @@ import (
 const (
 	GithubProviderName     = "GitHub"
 	CodeCommitProviderName = "CodeCommit"
-	GithubSecretIdKeyName  = "access_token_secret"
+	BitbucketProviderName  = "Bitbucket"
 
 	pipelineManifestPath = "cicd/pipeline.yml"
 )
@@ -60,6 +60,22 @@ func (p *codecommitProvider) Properties() map[string]interface{} {
 	return structs.Map(p.properties)
 }
 
+type bitbucketProvider struct {
+	properties *BitbucketProperties
+}
+
+func (p *bitbucketProvider) Name() string {
+	return BitbucketProviderName
+}
+
+func (p *bitbucketProvider) String() string {
+	return BitbucketProviderName
+}
+
+func (p *bitbucketProvider) Properties() map[string]interface{} {
+	return structs.Map(p.properties)
+}
+
 // GitHubProperties contain information for configuring a Github
 // source provider.
 type GitHubProperties struct {
@@ -77,6 +93,13 @@ type CodeCommitProperties struct {
 	Branch        string `structs:"branch" yaml:"branch"`
 }
 
+// BitbucketProperties contains information for configuring a Bitbucket
+// source provider.
+type BitbucketProperties struct {
+	RepositoryURL string `structs:"repository" yaml:"repository"`
+	Branch        string `structs:"branch" yaml:"branch"`
+}
+
 // NewProvider creates a source provider based on the type of
 // the provided provider-specific configurations
 func NewProvider(configs interface{}) (Provider, error) {
@@ -87,6 +110,10 @@ func NewProvider(configs interface{}) (Provider, error) {
 		}, nil
 	case *CodeCommitProperties:
 		return &codecommitProvider{
+			properties: props,
+		}, nil
+	case *BitbucketProperties:
+		return &bitbucketProvider{
 			properties: props,
 		}, nil
 	default:
