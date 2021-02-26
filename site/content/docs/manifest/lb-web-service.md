@@ -173,7 +173,6 @@ count:
   response_time: 2s
 ```
 
-
 <span class="parent-field">count.</span><a id="count-range" href="#count-range" class="field">`range`</a> <span class="type">String</span>  
 Specify a minimum and maximum bound for the number of tasks your service should maintain.  
 
@@ -188,6 +187,26 @@ Scale up or down based on the request count handled per tasks.
 
 <span class="parent-field">count.</span><a id="response-time" href="#count-response-time" class="field">`response_time`</a> <span class="type">Duration</span>  
 Scale up or down based on the service average response time.
+
+<div class="separator"></div>
+
+<a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>    
+The `network` section contains parameters to connect to AWS resources in a VPC.
+
+<span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>  
+Subnets and security groups attached to your tasks.
+
+<span class="parent-field">network.vpc.</span><a id="network-vpc-placement" href="#network-vpc-placement" class="field">`placement`</a> <span class="type">String</span>  
+Must be one of `'public'` or `'private'`. Defaults to launching your tasks in public subnets.  
+
+!!! info inline end
+    Launching tasks in `'private'` subnets that need internet connectivity is only supported if you imported a VPC with 
+    NAT Gateways when running `copilot env init`. See [#1959](https://github.com/aws/copilot-cli/issues/1959) for tracking 
+    NAT Gateways support in Copilot generated VPCs.
+
+<span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of String</span>  
+Additional security group IDs associated with your tasks. Copilot always includes a security group for containers within your environment
+to communicate with each other.
 
 <div class="separator"></div>
 
