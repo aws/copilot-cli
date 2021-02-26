@@ -24,7 +24,7 @@ Want to learn more about CodePipeline? Check out their [getting started docs](ht
 Creating a Pipeline requires only three steps:
 
 1. Preparing the pipeline structure.
-2. Committing and pushing the generated files in the `copilot/` directory.
+2. Committing and pushing the files generated in the `copilot/` directory.
 3. Creating the actual CodePipeline.
 
 Follow the three steps below, from your workspace root:
@@ -103,7 +103,7 @@ When this buildspec runs, it pulls down the version of Copilot which was used wh
 
 ### Step 4: Pushing New Files to your Repository
 
-Now that your `pipeline.yml`, `buildspec.yml`, and `.workspace` files have been created, add them to your repository. The entire `copilot/` directory is needed for your pipeline's `build` stage to run successfully. 
+Now that your `pipeline.yml`, `buildspec.yml`, and `.workspace` files have been created, add them to your repository. These files in your `copilot/` directory are required for your pipeline's `build` stage to run successfully. 
 
 ### Step 5: Creating your Pipeline
 
