@@ -39,7 +39,6 @@ type BackendServiceConfig struct {
 	TaskConfig  `yaml:",inline"`
 	*Logging    `yaml:"logging,flow"`
 	Sidecars    map[string]*SidecarConfig `yaml:"sidecars"`
-	Network     NetworkConfig             `yaml:"network"`
 }
 
 type imageWithPortAndHealthcheck struct {
@@ -132,11 +131,6 @@ func newDefaultBackendService() *BackendService {
 				Memory: aws.Int(512),
 				Count: Count{
 					Value: aws.Int(1),
-				},
-			},
-			Network: NetworkConfig{
-				VPC: vpcConfig{
-					Placement: stringP(PublicSubnetPlacement),
 				},
 			},
 		},

@@ -131,7 +131,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		DesiredCountLambda:  desiredCountLambda.String(),
 		EnvControllerLambda: envControllerLambda.String(),
 		Storage:             storage,
-		Network:             convertNetworkConfig(s.manifest.Network),
 	})
 	if err != nil {
 		return "", err

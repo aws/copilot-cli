@@ -97,7 +97,6 @@ func (s *BackendService) Template() (string, error) {
 		LogConfig:          convertLogging(s.manifest.Logging),
 		DesiredCountLambda: desiredCountLambda.String(),
 		Storage:            storage,
-		Network:            convertNetworkConfig(s.manifest.Network),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)

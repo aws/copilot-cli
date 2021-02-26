@@ -14,33 +14,17 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const (
-	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
-	defaultDockerfileName = "Dockerfile"
-
-	// AWS VPC subnet placement options.
-	PublicSubnetPlacement  = "public"
-	PrivateSubnetPlacement = "private"
-)
-
 var (
-	// WorkloadTypes holds all workload manifest types.
-	WorkloadTypes = append(ServiceTypes, JobTypes...)
-
-	// All placement options.
-	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
-
-	// Error definitions.
 	errUnmarshalBuildOpts = errors.New("can't unmarshal build field into string or compose-style map")
 	errUnmarshalCountOpts = errors.New(`can't unmarshal "count" field to an integer or autoscaling configuration`)
 )
 
-// WorkloadProps contains properties for creating a new workload manifest.
-type WorkloadProps struct {
-	Name       string
-	Dockerfile string
-	Image      string
-}
+const defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
+
+var dockerfileDefaultName = "Dockerfile"
+
+// WorkloadTypes holds all workload manifest types.
+var WorkloadTypes = append(ServiceTypes, JobTypes...)
 
 // Workload holds the basic data that every workload manifest file needs to have.
 type Workload struct {
@@ -68,7 +52,7 @@ func (i Image) GetLocation() string {
 func (i *Image) BuildConfig(rootDirectory string) *DockerBuildArgs {
 	df := i.dockerfile()
 	ctx := i.context()
-	dockerfile := aws.String(filepath.Join(rootDirectory, defaultDockerfileName))
+	dockerfile := aws.String(filepath.Join(rootDirectory, dockerfileDefaultName))
 	context := aws.String(rootDirectory)
 
 	if df != "" && ctx != "" {
@@ -80,7 +64,7 @@ func (i *Image) BuildConfig(rootDirectory string) *DockerBuildArgs {
 		context = aws.String(filepath.Join(rootDirectory, filepath.Dir(df)))
 	}
 	if df == "" && ctx != "" {
-		dockerfile = aws.String(filepath.Join(rootDirectory, ctx, defaultDockerfileName))
+		dockerfile = aws.String(filepath.Join(rootDirectory, ctx, dockerfileDefaultName))
 		context = aws.String(filepath.Join(rootDirectory, ctx))
 	}
 	return &DockerBuildArgs{
@@ -234,46 +218,11 @@ type TaskConfig struct {
 	Storage   *Storage          `yaml:"storage"`
 }
 
-// NetworkConfig represents options for network connection to AWS resources within a VPC.
-type NetworkConfig struct {
-	VPC vpcConfig `yaml:"vpc"`
-}
-
-// UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.
-// If the user specified a placement that's not valid then throw an error.
-func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	type networkWithDefaults NetworkConfig
-	conf := networkWithDefaults{
-		VPC: vpcConfig{
-			Placement: stringP(PublicSubnetPlacement),
-		},
-	}
-	if err := unmarshal(&conf); err != nil {
-		return err
-	}
-	if !conf.VPC.isValidPlacement() {
-		return fmt.Errorf("field '%s' is '%v' must be one of %#v", "network.vpc.placement", aws.StringValue(conf.VPC.Placement), subnetPlacements)
-	}
-	*c = NetworkConfig(conf)
-	return nil
-}
-
-// vpcConfig represents the security groups and subnets attached to a task.
-type vpcConfig struct {
-	Placement      *string  `yaml:"placement"`
-	SecurityGroups []string `yaml:"security_groups"`
-}
-
-func (c vpcConfig) isValidPlacement() bool {
-	if c.Placement == nil {
-		return false
-	}
-	for _, allowed := range subnetPlacements {
-		if *c.Placement == allowed {
-			return true
-		}
-	}
-	return false
+// WorkloadProps contains properties for creating a new workload manifest.
+type WorkloadProps struct {
+	Name       string
+	Dockerfile string
+	Image      string
 }
 
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.

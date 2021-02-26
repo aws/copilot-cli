@@ -28,15 +28,6 @@ const (
 	scheduledJobTplName = "scheduled-job"
 )
 
-// Constants for workload options.
-const (
-	// AWS VPC networking configuration.
-	EnablePublicIP          = "ENABLED"
-	DisablePublicIP         = "DISABLED"
-	PublicSubnetsPlacement  = "PublicSubnets"
-	PrivateSubnetsPlacement = "PrivateSubnets"
-)
-
 var (
 	// Template names under "workloads/partials/cf/".
 	partialsWorkloadCFTemplateNames = []string{
@@ -160,8 +151,8 @@ type NetworkOpts struct {
 
 func defaultNetworkOpts() *NetworkOpts {
 	return &NetworkOpts{
-		AssignPublicIP: EnablePublicIP,
-		SubnetsType:    PublicSubnetsPlacement,
+		AssignPublicIP: "ENABLED",
+		SubnetsType:    "PublicSubnets",
 	}
 }
 

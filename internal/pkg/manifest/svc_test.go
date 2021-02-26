@@ -109,11 +109,6 @@ environments:
 								"LOG_TOKEN": "LOG_TOKEN",
 							},
 						},
-						Network: NetworkConfig{
-							VPC: vpcConfig{
-								Placement: stringP("public"),
-							},
-						},
 					},
 					Environments: map[string]*LoadBalancedWebServiceConfig{
 						"test": {
@@ -185,11 +180,6 @@ secrets:
 							},
 							Secrets: map[string]string{
 								"API_TOKEN": "SUBS_API_TOKEN",
-							},
-						},
-						Network: NetworkConfig{
-							VPC: vpcConfig{
-								Placement: stringP("public"),
 							},
 						},
 					},
