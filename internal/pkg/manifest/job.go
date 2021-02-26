@@ -42,6 +42,7 @@ type ScheduledJobConfig struct {
 	Sidecars                map[string]*SidecarConfig `yaml:"sidecars"`
 	On                      JobTriggerConfig          `yaml:"on,flow"`
 	JobFailureHandlerConfig `yaml:",inline"`
+	Network                 networkConfig `yaml:"network"`
 }
 
 // JobTriggerConfig represents the configuration for the event that triggers the job.
@@ -76,6 +77,11 @@ func newDefaultScheduledJob() *ScheduledJob {
 				Memory: aws.Int(512),
 				Count: Count{
 					Value: aws.Int(1),
+				},
+			},
+			Network: networkConfig{
+				VPC: vpcConfig{
+					Placement: stringP(publicPlacement),
 				},
 			},
 		},

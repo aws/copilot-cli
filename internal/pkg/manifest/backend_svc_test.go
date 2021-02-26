@@ -51,6 +51,11 @@ func TestNewBackendSvc(t *testing.T) {
 							Value: aws.Int(1),
 						},
 					},
+					Network: networkConfig{
+						VPC: vpcConfig{
+							Placement: stringP("public"),
+						},
+					},
 				},
 			},
 		},
@@ -91,6 +96,11 @@ func TestNewBackendSvc(t *testing.T) {
 						Memory: aws.Int(512),
 						Count: Count{
 							Value: aws.Int(1),
+						},
+					},
+					Network: networkConfig{
+						VPC: vpcConfig{
+							Placement: stringP("public"),
 						},
 					},
 				},

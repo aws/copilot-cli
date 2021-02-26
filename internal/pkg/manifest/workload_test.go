@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"errors"
 	"path/filepath"
 	"testing"
 
@@ -262,6 +263,72 @@ func TestLogging_GetEnableMetadata(t *testing.T) {
 			got := l.GetEnableMetadata()
 
 			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestNetworkConfig_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		data string
+
+		wantedConfig networkConfig
+		wantedErr    error
+	}{
+		"defaults to public placement if vpc is empty": {
+			data: `
+network:
+  vpc:
+`,
+			wantedConfig: networkConfig{
+				VPC: vpcConfig{
+					Placement: stringP(publicPlacement),
+				},
+			},
+		},
+		"returns error if placement option is invalid": {
+			data: `
+network:
+  vpc:
+    placement: 'tartarus'
+`,
+			wantedErr: errors.New(`field 'network.vpc.placement' is 'tartarus' must be one of []string{"public", "private"}`),
+		},
+		"unmarshals successfully for public placement with security groups": {
+			data: `
+network:
+  vpc:
+    placement: 'public'
+    security_groups:
+    - 'sg-1234'
+    - 'sg-4567'
+`,
+			wantedConfig: networkConfig{
+				VPC: vpcConfig{
+					Placement:      stringP(publicPlacement),
+					SecurityGroups: []string{"sg-1234", "sg-4567"},
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			type manifest struct {
+				Network networkConfig `yaml:"network"`
+			}
+			var m manifest
+
+			// WHEN
+			err := yaml.Unmarshal([]byte(tc.data), &m)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedConfig, m.Network)
+			}
 		})
 	}
 }

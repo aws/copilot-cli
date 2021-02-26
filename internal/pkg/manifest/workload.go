@@ -17,11 +17,18 @@ import (
 const (
 	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
 	defaultDockerfileName = "Dockerfile"
+
+	// AWS VPC subnet placement options.
+	publicPlacement  = "public"
+	privatePlacement = "private"
 )
 
 var (
 	// WorkloadTypes holds all workload manifest types.
 	WorkloadTypes = append(ServiceTypes, JobTypes...)
+
+	// All placement options.
+	subnetPlacements = []string{publicPlacement, privatePlacement}
 
 	// Error definitions.
 	errUnmarshalBuildOpts = errors.New("can't unmarshal build field into string or compose-style map")
@@ -225,6 +232,46 @@ type TaskConfig struct {
 	Variables map[string]string `yaml:"variables"`
 	Secrets   map[string]string `yaml:"secrets"`
 	Storage   *Storage          `yaml:"storage"`
+}
+
+// networkConfig represents options for network connection to AWS resources within a VPC.
+type networkConfig struct {
+	VPC vpcConfig `yaml:"vpc"`
+}
+
+func (c *networkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type networkWithDefaults networkConfig
+	conf := networkWithDefaults{
+		VPC: vpcConfig{
+			Placement: stringP(publicPlacement),
+		},
+	}
+	if err := unmarshal(&conf); err != nil {
+		return err
+	}
+	if !conf.VPC.isValidPlacement() {
+		return fmt.Errorf("field '%s' is '%v' must be one of %#v", "network.vpc.placement", aws.StringValue(conf.VPC.Placement), subnetPlacements)
+	}
+	*c = networkConfig(conf)
+	return nil
+}
+
+// vpcConfig represents the security groups and subnets attached to a task.
+type vpcConfig struct {
+	Placement      *string  `yaml:"placement"`
+	SecurityGroups []string `yaml:"security_groups"`
+}
+
+func (c vpcConfig) isValidPlacement() bool {
+	if c.Placement == nil {
+		return false
+	}
+	for _, allowed := range subnetPlacements {
+		if *c.Placement == allowed {
+			return true
+		}
+	}
+	return false
 }
 
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.
