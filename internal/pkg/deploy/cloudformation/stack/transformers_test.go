@@ -512,7 +512,7 @@ func Test_convertSidecarMountPoints(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := renderSidecarMountPoints(tc.inMountPoints)
+			got, err := convertSidecarMountPoints(tc.inMountPoints)
 			if tc.wantErr != "" {
 				require.EqualError(t, err, tc.wantErr)
 			} else {

@@ -1023,42 +1023,23 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 func TestInitPipelineOpts_pipelineName(t *testing.T) {
 	testCases := map[string]struct {
-		inRepoName     string
-		inAppName      string
-		inAppOwner     string
-		inProviderName string
+		inRepoName string
+		inAppName  string
 
 		expected    string
 		expectedErr error
 	}{
-		"pipeline name from GH repo": {
-			inRepoName:     "goose",
-			inAppName:      "badgoose",
-			inAppOwner:     "david",
-			inProviderName: "GitHub",
-
-			expected: "pipeline-badgoose-david-goose",
-		},
-		"pipeline name from CC repo": {
-			inRepoName:     "repo-man",
-			inAppName:      "goodmoose",
-			inProviderName: "CodeCommit",
+		"generates pipeline name": {
+			inAppName:  "goodmoose",
+			inRepoName: "repo-man",
 
 			expected: "pipeline-goodmoose-repo-man",
 		},
-		"pipeline name from BB repo": {
-			inRepoName:     "goose",
-			inAppName:      "badgoose",
-			inAppOwner:     "david",
-			inProviderName: "Bitbucket",
+		"generates and truncates pipeline name if it exceeds 100 characters": {
+			inAppName:  "goodmoose01234567820123456783012345678401234567850",
+			inRepoName: "repo-man101234567820123456783012345678401234567850",
 
-			expected: "pipeline-badgoose-david-goose",
-		},
-		"cannot piece together pipeline name bc unidentified provider": {
-			inRepoName:     "repo-man",
-			inProviderName: "BadProvider",
-
-			expectedErr: errors.New("unable to create pipeline name for repo repo-man from provider BadProvider"),
+			expected: "pipeline-goodmoose01234567820123456783012345678401234567850-repo-man10123456782012345678301234567840",
 		},
 	}
 
@@ -1069,20 +1050,14 @@ func TestInitPipelineOpts_pipelineName(t *testing.T) {
 				initPipelineVars: initPipelineVars{
 					appName: tc.inAppName,
 				},
-				repoOwner: tc.inAppOwner,
-				provider:  tc.inProviderName,
-				repoName:  tc.inRepoName,
+				repoName: tc.inRepoName,
 			}
 
 			// WHEN
-			actual, err := opts.pipelineName()
+			actual := opts.pipelineName()
 
 			// THEN
-			if tc.expectedErr != nil {
-				require.EqualError(t, err, tc.expectedErr.Error())
-			} else {
-				require.Equal(t, tc.expected, actual)
-			}
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }
