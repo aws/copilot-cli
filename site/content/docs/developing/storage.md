@@ -1,16 +1,35 @@
 # Storage
-All Copilot workloads which use a manifest can mount externally created EFS volumes using the `storage` field. 
 
-## Adding EFS storage to Copilot
+There are two ways to add persistence to Copilot workloads: using [`copilot storage init`](#database-and-artifacts) to create databases and S3 buckets; and attaching an existing EFS filesystem using the [`storage` key](#file-systems) in the manifest. 
+
+## Database and Artifacts
+
+To add a database or S3 bucket to your job or service, simply run [`copilot storage init`](../commands/storage-init.md).
+```bash
+$ copilot storage init -n my-bucket -t S3 -w api
+```
+The above command will create the Cloudformation template for an S3 bucket in the [addons](../developing/additional-aws-resources.md) directory for the "api" service. The next time you run `copilot deploy -n api`, the bucket will be created, permission to access it will be added to the `api` task role, and the name of the bucket will be injected into the `api` container under the environment variable `MY_BUCKET_NAME`. 
+
+All names are converted into SCREAMING_SNAKE_CASE based on their use of hyphens or underscores. You can view the environment variables for a given service by running `copilot svc show`.
+
+You can also create a [DynamoDB table](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html) using `copilot storage init`. For example, to create the Cloudformation template for a table with a sort key and a local secondary index, you could run the following command.
+
+```bash
+$ copilot storage init -n users -t DynamoDB -w api --partition-key id:N --sort-key email:S --lsi post-count:N
+```
+
+This will create a DynamoDB table called `${app}-${env}-${svc}-users`. Its partition key will be `id`, a `Number` attribute; its sort key will be `email`, a `String` attribute; and it will have a [local secondary index](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/LSI.html) (essentially an alternate sort key) on the `Number` attribute `post-count`. 
+
+## File Systems
 Mounting an EFS volume in Copilot tasks requires two things:
 
-1. That you create an EFS file system in the region of the environment you wish to use it with
-2. That you create an EFS Mount Target using the Copilot environment security group in each subnet of your environment. 
+1. That you create an [EFS file system](https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html) in the region of the environment you wish to use it with
+2. That you create an [EFS Mount Target](https://docs.aws.amazon.com/efs/latest/ug/accessing-fs.html) using the Copilot environment security group in each subnet of your environment. 
 
 When those prerequisites are satisfied, you can enable EFS storage using simple syntax in your manifest. You'll need the filesystem ID and, if using, the access point configuration for the filesystem.
 
 !!!info
-    You can only use a given EFS file system in a single environment at a time. Mount targets are limited to one per availability zone; therefore, you must delete any existing mount targets before bringing the file system to Copilot if you have used it in another way. 
+    You can only use a given EFS file system in a single environment at a time. Mount targets are limited to one per availability zone; therefore, you must delete any existing mount targets before bringing the file system to Copilot if you have used it in another VPC. 
 
 ### Manifest Syntax
 The simplest possible EFS volume can be specified with the following syntax:
@@ -64,19 +83,39 @@ If you `echo` this variable you should be able to find which filesystem you need
 
 You'll also need the public subnets of the Copilot environment and the Environment Security Group. This jq command will filter the output of the describe-stacks call down to simply the desired output value. 
 
+!!!info
+    The filesystem you use MUST be in the same region as your Copilot environment!
+
 ```bash
-$ SUBNETS=$(aws cloudformation describe-stacks --stack-name pdx-app-test \
+$ SUBNETS=$(aws cloudformation describe-stacks --stack-name ${YOUR_APP}-${YOUR_ENV} \
   | jq '.Stacks[] | .Outputs[] | select(.OutputKey == "PublicSubnets") | .OutputValue')
 $ SUBNET1=$(echo $SUBNETS | jq -r 'split(",") | .[0]')
 $ SUBNET2=$(echo $SUBNETS | jq -r 'split(",") | .[1]')
-$ ENV_SG=$(aws cloudformation describe-stacks --stack-name pdx-app-test \
+$ ENV_SG=$(aws cloudformation describe-stacks --stack-name ${YOUR_APP}-${YOUR_ENV} \
   | jq -r '.Stacks[] | .Outputs[] | select(.OutputKey == "EnvironmentSecurityGroup") | .OutputValue')
 ```
 
 Once you have these, creating mount targets is simple. 
 ```bash
-$ aws efs create-mount-target --subnet-id $SUBNET_1 --security-groups $ENV_SG --file-system-id $EFS_ID
-$ aws efs create-mount-target --subnet-id $SUBNET_2 --security-groups $ENV_SG --file-system-id $EFS_ID
+$ MOUNT_TARGET_1_ID=$(aws efs create-mount-target \
+    --subnet-id $SUBNET_1 \
+    --security-groups $ENV_SG \
+    --file-system-id $EFS_ID | jq -r .MountTargetID)
+$ MOUNT_TARGET_2_ID=$(aws efs create-mount-target \
+    --subnet-id $SUBNET_2 \
+    --security-groups $ENV_SG \
+    --file-system-id $EFS_ID | jq -r .MountTargetID)
+```
+
+Once you've done this, you can specify the `storage` configuration in the manifest as above. 
+
+##### Cleanup
+
+Delete the mount targets using the AWS CLI. 
+
+```bash
+$ aws efs delete-mount-target --mount-target-id $MOUNT_TARGET_1
+$ aws efs delete-mount-target --mount-target-id $MOUNT_TARGET_2
 ```
 
 #### With Addons
@@ -173,6 +212,7 @@ storage:
 
 Finally, run `copilot svc deploy` to reconfigure your service to mount the filesystem at `/etc/mount1`. 
 
+##### Cleanup
 To clean this up, do one of the following options: 
 
 1. Remove the `storage` configuration from the manifest and redeploy, then run `copilot job delete -n efs-helper`.

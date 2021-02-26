@@ -122,6 +122,11 @@ Key-value pairs that represent secret values from [AWS Systems Manager Parameter
 
 <div class="separator"></div>
 
+<a id="storage" href="#storage" class="field">`storage`</a> <span class="type">Map</span>  
+The Storage section lets you specify external EFS volumes for your containers and sidecars to mount. This allows you to access persistent storage across regions for data processing or CMS workloads. For more detail, see the [storage](../developing/storage.md) page.
+
+<div class="separator"></div>
+
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 The environment section lets you override any value in your manifest based on the environment you're in. 
 In the example manifest above, we're overriding the CPU parameter so that our production container is more performant.
