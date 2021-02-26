@@ -45,26 +45,25 @@ Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or
 
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
+
 	// For a GitHub repository.
-	githubURL         = "github.com"
-	ghProviderName    = "GitHub"
-	defaultGHBranch   = "main"
-	fmtGHPipelineName = "pipeline-%s-%s-%s"  // Ex: "pipeline-appName-repoOwner-repoName"
-	fmtGHRepoURL      = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
-	fmtSecretName     = "github-token-%s-%s" // Ex: "github-token-appName-repoName"
+	githubURL       = "github.com"
+	ghProviderName  = "GitHub"
+	defaultGHBranch = "main"
+	fmtPipelineName = "pipeline-%s-%s"     // Ex: "pipeline-appName-repoName"
+	fmtGHRepoURL    = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
+	fmtSecretName   = "github-token-%s-%s" // Ex: "github-token-appName-repoName"
 	// For a CodeCommit repository.
-	awsURL            = "aws.amazon.com"
-	ccIdentifier      = "codecommit"
-	ccProviderName    = "CodeCommit"
-	defaultCCBranch   = "master"
-	fmtCCPipelineName = "pipeline-%s-%s"                                                    // Ex: "pipeline-appName-repoName"
-	fmtCCRepoURL      = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse" // Ex: "https://region.console.aws.amazon.com/codesuite/codecommit/repositories/repoName/browse"
+	awsURL          = "aws.amazon.com"
+	ccIdentifier    = "codecommit"
+	ccProviderName  = "CodeCommit"
+	defaultCCBranch = "master"
+	fmtCCRepoURL    = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse" // Ex: "https://region.console.aws.amazon.com/codesuite/codecommit/repositories/repoName/browse"
 	// For a Bitbucket repository.
-	bbURL             = "bitbucket.org"
-	bbProviderName    = "Bitbucket"
-	defaultBBBranch   = "master"
-	fmtBBPipelineName = "pipeline-%s-%s-%s"   // Ex: "pipeline-appName-repoOwner-repoName"
-	fmtBBRepoURL      = "https://%s@%s/%s/%s" // Ex: "https://repoOwner@bitbucket.org/repoOwner/repoName
+	bbURL           = "bitbucket.org"
+	bbProviderName  = "Bitbucket"
+	defaultBBBranch = "master"
+	fmtBBRepoURL    = "https://%s@%s/%s/%s" // Ex: "https://repoOwner@bitbucket.org/repoOwner/repoName
 )
 
 var (
@@ -502,10 +501,8 @@ func (o *initPipelineOpts) storeGitHubAccessToken() error {
 }
 
 func (o *initPipelineOpts) createPipelineManifest() error {
-	pipelineName, err := o.pipelineName()
-	if err != nil {
-		return err
-	}
+	pipelineName := o.pipelineName()
+
 	provider, err := o.pipelineProvider()
 	if err != nil {
 		return err
@@ -596,19 +593,12 @@ func (o *initPipelineOpts) secretName() string {
 	return fmt.Sprintf(fmtSecretName, o.appName, o.repoName)
 }
 
-func (o *initPipelineOpts) pipelineName() (string, error) {
-	var name string
-	switch o.provider {
-	case ghProviderName:
-		name = fmt.Sprintf(fmtGHPipelineName, o.appName, o.repoOwner, o.repoName)
-	case ccProviderName:
-		name = fmt.Sprintf(fmtCCPipelineName, o.appName, o.repoName)
-	case bbProviderName:
-		name = fmt.Sprintf(fmtBBPipelineName, o.appName, o.repoOwner, o.repoName)
-	default:
-		return "", fmt.Errorf("unable to create pipeline name for repo %s from provider %s", o.repoName, o.provider)
+func (o *initPipelineOpts) pipelineName() string {
+	name := fmt.Sprintf(fmtPipelineName, o.appName, o.repoName)
+	if len(name) <= 100 {
+		return name
 	}
-	return name, nil
+	return name[:100]
 }
 
 func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {

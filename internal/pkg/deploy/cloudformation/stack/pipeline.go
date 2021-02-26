@@ -10,7 +10,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 )
 
-const pipelineCfnTemplatePath = "cicd/pipeline_cfn.yml"
+const (
+	pipelineCfnTemplatePath = "cicd/pipeline_cfn.yml"
+)
 
 type pipelineStackConfig struct {
 	*deploy.CreatePipelineInput
