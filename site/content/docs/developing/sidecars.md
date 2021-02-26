@@ -3,7 +3,7 @@ Sidecars are additional containers that run along side the main container. They 
 
 AWS also provides some plugin options that can be seamlessly incorporated with your ECS service, including but not limited to [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html), [AWS X-Ray](https://aws.amazon.com/xray/), and [AWS App Mesh](https://aws.amazon.com/app-mesh/).
 
-If you have defined an EFS volume for your main container through the `storage` field in the manifest, you can also mount that volume in any sidecar containers you have defined.
+If you have defined an EFS volume for your main container through the [`storage` field](../developing/storage.md) in the manifest, you can also mount that volume in any sidecar containers you have defined.
 
 ## How to add sidecars with Copilot?
 There are two ways of adding sidecars using the Copilot manifest: by specifying [general sidecars](#general-sidecars) or by using [sidecar patterns](#sidecar-patterns).

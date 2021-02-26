@@ -46,8 +46,9 @@ storage:
 ```
 
 ### Creating Mount Targets
+There are several ways to create mount targets for an existing EFS filesystem: [using the AWS CLI](#with-the-aws-cli) and [using Addons](#with-addons).
 
-#### Using the AWS CLI
+#### With the AWS CLI
 To create mount targets for an existing filesystem, you'll need 
 
 1. the ID of that filesystem.
@@ -78,7 +79,7 @@ $ aws efs create-mount-target --subnet-id $SUBNET_1 --security-groups $ENV_SG --
 $ aws efs create-mount-target --subnet-id $SUBNET_2 --security-groups $ENV_SG --file-system-id $EFS_ID
 ```
 
-#### Using Addons
+#### With Addons
 Here's an example of how you might create the appropriate EFS infrastructure for an external file system using the [Addons](../developing/additional-aws-resources.md) functionality. 
 
 In a Copilot workspace, create a [Scheduled Job](../manifest/scheduled-job.md) which will never run. We'll use this to deploy our addons template which holds the mount targets we need without worrying about incurring charges for other infrastructure. 
