@@ -1,20 +1,30 @@
 # Storage
 
-There are two ways to add persistence to Copilot workloads: using [`copilot storage init`](#database-and-artifacts) to create databases and S3 buckets; and attaching an existing EFS filesystem using the [`storage` key](#file-systems) in the manifest. 
+There are two ways to add persistence to Copilot workloads: using [`copilot storage init`](#database-and-artifacts) to create databases and S3 buckets; and attaching an existing EFS filesystem using the [`storage` field](#file-systems) in the manifest. 
 
 ## Database and Artifacts
 
 To add a database or S3 bucket to your job or service, simply run [`copilot storage init`](../commands/storage-init.md).
 ```bash
+# For a guided experience.
+$ copilot storage init -t S3
+
+# To create a bucket named "my-bucket" accessible by the "api" service.
 $ copilot storage init -n my-bucket -t S3 -w api
 ```
+
 The above command will create the Cloudformation template for an S3 bucket in the [addons](../developing/additional-aws-resources.md) directory for the "api" service. The next time you run `copilot deploy -n api`, the bucket will be created, permission to access it will be added to the `api` task role, and the name of the bucket will be injected into the `api` container under the environment variable `MY_BUCKET_NAME`. 
 
-All names are converted into SCREAMING_SNAKE_CASE based on their use of hyphens or underscores. You can view the environment variables for a given service by running `copilot svc show`.
+!!!info
+    All names are converted into SCREAMING_SNAKE_CASE based on their use of hyphens or underscores. You can view the environment variables for a given service by running `copilot svc show`.
 
 You can also create a [DynamoDB table](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html) using `copilot storage init`. For example, to create the Cloudformation template for a table with a sort key and a local secondary index, you could run the following command.
 
 ```bash
+# For a guided experience.
+$ copilot storage init -t DynamoDB
+
+# Or by providing flags to skip the prompts.
 $ copilot storage init -n users -t DynamoDB -w api --partition-key id:N --sort-key email:S --lsi post-count:N
 ```
 
@@ -51,7 +61,7 @@ Full syntax for storage follows.
 storage:
   volumes:
     {{ volume name }}:
-      path: {{ path at which to mount }} # Required.
+      path: {{ mount path }}             # Required. The path inside the container.
       read_only: {{ boolean }}           # Default: true
       efs:
         id: {{ filesystem ID }}          # Required.
@@ -65,7 +75,7 @@ storage:
 ```
 
 ### Creating Mount Targets
-There are several ways to create mount targets for an existing EFS filesystem: [using the AWS CLI](#with-the-aws-cli) and [using Addons](#with-addons).
+There are several ways to create mount targets for an existing EFS filesystem: [using the AWS CLI](#with-the-aws-cli) and [using Addons](#cloudformation).
 
 #### With the AWS CLI
 To create mount targets for an existing filesystem, you'll need 
@@ -95,7 +105,7 @@ $ ENV_SG=$(aws cloudformation describe-stacks --stack-name ${YOUR_APP}-${YOUR_EN
   | jq -r '.Stacks[] | .Outputs[] | select(.OutputKey == "EnvironmentSecurityGroup") | .OutputValue')
 ```
 
-Once you have these, creating mount targets is simple. 
+Once you have these, create the mount targets.
 ```bash
 $ MOUNT_TARGET_1_ID=$(aws efs create-mount-target \
     --subnet-id $SUBNET_1 \
@@ -118,22 +128,10 @@ $ aws efs delete-mount-target --mount-target-id $MOUNT_TARGET_1
 $ aws efs delete-mount-target --mount-target-id $MOUNT_TARGET_2
 ```
 
-#### With Addons
+#### CloudFormation
 Here's an example of how you might create the appropriate EFS infrastructure for an external file system using the [Addons](../developing/additional-aws-resources.md) functionality. 
 
-In a Copilot workspace, create a [Scheduled Job](../manifest/scheduled-job.md) which will never run. We'll use this to deploy our addons template which holds the mount targets we need without worrying about incurring charges for other infrastructure. 
-
-```bash
-$ copilot job init -n efs-job --schedule "cron(0 0 21 10 ? 2015)" -i amazon/amazon-ecs-sample 
-$ copilot job deploy -n efs-job
-```
-
-From the root of your workspace, create the addons directory and a file for the EFS infrastructure to live in. 
-
-```bash
-$ mkdir copilot/efs-job/addons && touch copilot/efs-job/addons/efs.yaml
-```
-Add the following CloudFormation template in `efs.yaml`. 
+After creating an environment, deploy the following CloudFormation template:
 
 ```yaml
 Parameters:
@@ -184,19 +182,15 @@ Resources:
             - ","
             - Fn::ImportValue:
                 !Sub "${App}-${Env}-PublicSubnets"
+Outputs:
+  EFSVolumeID:
+    Value: !Ref EFSFileSystem
+    Name: !Sub ${App}-${Env}-FilesystemID
+
 
 ```
 
-Then, deploy your scheduled job again: 
-```bash
-$ copilot job deploy -n efs-job
-```
-
-This will create an EFS file system and the mount targets needed to allow tasks to attach to it. You can get the ID of this filesystem with the AWS CLI and jq.
-```bash
-$ aws efs describe-file-systems | \
-  jq -r '.FileSystems[] | select((.Tags[]|select(.Key=="copilot-service")|.Value) =="efs-helper") | .FileSystemId'
-```
+This will create an EFS file system and the mount targets needed to allow tasks to attach to it using outputs from the Copilot environment stack. 
 
 Then, in the manifest of the service which you would like to have access to the EFS filesystem, add the following configuration.
 
@@ -207,7 +201,7 @@ storage:
       path: '/etc/mount1'
       read_only: true # Set to false if your service needs write access. 
       efs:
-        id: {{ output of describe-file-systems }}
+        id: {{ the ${App}-${Env}-FilesystemID output }}
 ```
 
 Finally, run `copilot svc deploy` to reconfigure your service to mount the filesystem at `/etc/mount1`. 

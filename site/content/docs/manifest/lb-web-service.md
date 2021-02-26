@@ -39,20 +39,6 @@ List of all available properties for a `'Load Balanced Web Service'` manifest.
       LOG_LEVEL: info
     secrets:
       GITHUB_TOKEN: GITHUB_TOKEN
-
-    # Configuration for task storage using EFS volumes.
-    storage:
-      volumes:
-        myEFSVolume:
-          path: '/etc/mount1'
-          read_only: true
-          efs:
-            id: fs-12345678
-            root_dir: '/'
-            auth:
-              iam: true
-              access_point_id: fsap-12345678
-    
     
     # You can override any of the values defined above by environment.
     environments:
@@ -216,6 +202,33 @@ Key-value pairs that represent secret values from [AWS Systems Manager Parameter
 
 <a id="storage" href="#storage" class="field">`storage`</a> <span class="type">Map</span>  
 The Storage section lets you specify external EFS volumes for your containers and sidecars to mount. This allows you to access persistent storage across regions for data processing or CMS workloads. For more detail, see the [storage](../developing/storage.md) page.
+
+<span class="parent-field">storage.</span><a id="volumes" href="#volumes" class="field">`volumes`</a> <span class="type">Map</span>  
+Specify the name and configuration of any EFS volumes you would like to attach. 
+
+<span class="parent-field">volumes.</span><a id="volume" href="#volume" class="field">`volume`</a> <span class="type">Map</span>  
+Specify the configuration of a volume. 
+
+<span class="parent-field">volume.</span><a id="path" href="#path" class="field">`path`</a> <span class="type">String</span>  
+Specify the location in the container where you would like your volume to be mounted. Must be fewer than 242 characters and must consist only of the characters `a-zA-Z0-9.-_/`. 
+
+<span class="parent-field">volume.</span><a id="read_only" href="#read-only" class="field">`read_only`</a> <span class="type">Bool</span>  
+Defines whether the volume is read-only or not. Defaults to true. If false, the container is granted `elasticfilesystem:ClientWrite` permissions to the filesystem and the volume is writable. 
+
+<span class="parent-field">volume.</span><a id="efs" href="#efs" class="field">`efs`</a> <span class="type">Map</span>  
+Specify more detailed EFS configuration.
+
+<span class="parent-field">efs.</span><a id="id" href="#id" class="field">`id`</a> <span class="type">String</span>  
+The ID of the filesystem you would like to mount. 
+
+<span class="parent-field">efs.</span><a id="auth" href="#auth" class="field">`auth`</a> <span class="type">Map</span>  
+Specify advanced authorization configuration for EFS. 
+
+<span class="parent-field">auth.</span><a id="iam" href="#iam" class="field">`iam`</a> <span class="type">Bool</span>  
+Default: true. Whether or not to use IAM authorization to determine whether the volume is allowed to connect to EFS. 
+
+<span class="parent-field">auth.</span><a id="access_point_id" href="#access-point-id" class="field">`access_point_id`</a> <span class="type">String</span>  
+The ID of the EFS access point to connect to. If using access points, IAM must be enabled and the `root_dir` field must be either empty or `/`. 
 
 <div class="separator"></div>
 
