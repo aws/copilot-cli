@@ -209,11 +209,11 @@ func (o *initPipelineOpts) Execute() error {
 	return nil
 }
 
-// RequiredActions returns follow-up actions the user can take after successfully executing the command.
+// RequiredActions returns follow-up actions the user must take after successfully executing the command.
 func (o *initPipelineOpts) RequiredActions() []string {
 	return []string{
-		"Commit and push the generated buildspec and manifest file.",
-		fmt.Sprintf("Run %s to deploy your pipeline for the repository.", color.HighlightCode("copilot pipeline update")),
+		fmt.Sprintf("Commit and push the %s directory to your repository.", color.HighlightCode("copilot")),
+		fmt.Sprintf("Run %s to create your pipeline.", color.HighlightCode("copilot pipeline update")),
 	}
 }
 
@@ -544,7 +544,9 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		manifestMsgFmt = "Pipeline manifest file for %s already exists at %s, skipping writing it.\n"
 	}
 	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(manifestPath))
-	log.Infoln("The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.")
+	log.Infof(`The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.
+Update the file to add additional stages, change the branch to be tracked, or add test commands or manual approval actions.
+`)
 	return nil
 }
 
@@ -584,7 +586,9 @@ func (o *initPipelineOpts) createBuildspec() error {
 		return err
 	}
 	log.Successf(buildspecMsgFmt, color.HighlightResource(buildspecPath))
-	log.Infoln("The buildspec contains the commands to build and push your container images to your ECR repositories.")
+	log.Infof(`The buildspec contains the commands to build and push your container images to your ECR repositories.
+Update the %s phase to unit test your services before pushing the images.
+`, color.HighlightResource("build"))
 
 	return nil
 }
