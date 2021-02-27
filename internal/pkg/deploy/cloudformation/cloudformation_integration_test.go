@@ -407,6 +407,9 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 
 		deployedStack := output.Stacks[0]
 		expectedResultsForKey := map[string]func(*awsCF.Output){
+			"EnabledFeatures": func(output *awsCF.Output) {
+				require.Equal(t, "", aws.StringValue(output.OutputValue), "no env features enabled by default")
+			},
 			"EnvironmentManagerRoleARN": func(output *awsCF.Output) {
 				require.Equal(t,
 					fmt.Sprintf("%s-EnvironmentManagerRoleARN", envStackName),
@@ -486,36 +489,6 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 				require.NotNil(t,
 					output.OutputValue,
 					"EnvironmentSecurityGroup value should not be nil")
-			},
-			"PublicLoadBalancerDNSName": func(output *awsCF.Output) {
-				require.NotNil(t,
-					output.OutputValue,
-					"PublicLoadBalancerDNSName value should not be nil")
-			},
-			"PublicLoadBalancerHostedZone": func(output *awsCF.Output) {
-				require.NotNil(t,
-					output.OutputValue,
-					"PublicLoadBalancerHostedZone value should not be nil")
-			},
-			"HTTPListenerArn": func(output *awsCF.Output) {
-				require.Equal(t,
-					fmt.Sprintf("%s-HTTPListenerArn", envStackName),
-					*output.ExportName,
-					"Should export HTTPListenerArn as stackname-HTTPListenerArn")
-
-				require.NotNil(t,
-					output.OutputValue,
-					"HTTPListenerArn value should not be nil")
-			},
-			"DefaultHTTPTargetGroupArn": func(output *awsCF.Output) {
-				require.Equal(t,
-					fmt.Sprintf("%s-DefaultHTTPTargetGroup", envStackName),
-					*output.ExportName,
-					"Should export HTTPListenerArn as stackname-DefaultHTTPTargetGroup")
-
-				require.NotNil(t,
-					output.OutputValue,
-					"DefaultHTTPTargetGroupArn value should not be nil")
 			},
 		}
 		require.True(t, len(deployedStack.Outputs) == len(expectedResultsForKey),
