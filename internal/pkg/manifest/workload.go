@@ -123,14 +123,19 @@ type ImageOverride struct {
 	Command    CommandOverride    `yaml:"command"`
 }
 
-type EntryPointOverride StringSliceOrString
-type CommandOverride StringSliceOrString
+// EntryPointOverride is a custom type which supports unmarshaling "entrypoint" yaml which
+// can either be of type string or type slice of string.
+type EntryPointOverride stringSliceOrString
+
+// CommandOverride is a custom type which supports unmarshaling "command" yaml which
+// can either be of type string or type slice of string.
+type CommandOverride stringSliceOrString
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the EntryPointOverride
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v2) interface.
 func (e *EntryPointOverride) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshalYAMLToStringSliceOrString((*StringSliceOrString)(e), unmarshal); err != nil {
+	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), unmarshal); err != nil {
 		return errUnmarshalEntryPoint
 	}
 	return nil
@@ -140,20 +145,18 @@ func (e *EntryPointOverride) UnmarshalYAML(unmarshal func(interface{}) error) er
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v2) interface.
 func (c *CommandOverride) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshalYAMLToStringSliceOrString((*StringSliceOrString)(c), unmarshal); err != nil {
+	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(c), unmarshal); err != nil {
 		return errUnmarshalCommand
 	}
 	return nil
 }
 
-// StringSliceOrString is a custom type which supports unmarshaling yaml which
-// can either be of type string or type slice of string.
-type StringSliceOrString struct {
+type stringSliceOrString struct {
 	String      *string
 	StringSlice []string
 }
 
-func unmarshalYAMLToStringSliceOrString(s *StringSliceOrString, unmarshal func(interface{}) error) error {
+func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, unmarshal func(interface{}) error) error {
 	if err := unmarshal(&s.StringSlice); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
