@@ -15,10 +15,10 @@ import (
 )
 
 var (
-	errUnmarshalBuildOpts 	= errors.New("can't unmarshal build field into string or compose-style map")
-	errUnmarshalCountOpts 	= errors.New(`can't unmarshal "count" field to an integer or autoscaling configuration`)
-	errUnmarshalEntryPoint 	= errors.New("can't unmarshal entrypoint into string or slice of strings")
-	errUnmarshalCommand 	= errors.New("can't unmarshal command into string or slice of strings")
+	errUnmarshalBuildOpts 	= errors.New("cannot unmarshal build field into string or compose-style map")
+	errUnmarshalCountOpts 	= errors.New(`cannot unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalEntryPoint 	= errors.New("cannot unmarshal entrypoint into string or slice of strings")
+	errUnmarshalCommand 	= errors.New("cannot unmarshal command into string or slice of strings")
 )
 
 const defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
