@@ -24,7 +24,6 @@ List of all available properties for a `'Backend Service'` manifest.
     memory: 512
     count: 1
 
-    # Configuration for task storage using EFS volumes.
     storage:
       volumes:
         myEFSVolume:

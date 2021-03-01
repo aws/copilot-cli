@@ -33,7 +33,7 @@ This will create a DynamoDB table called `${app}-${env}-${svc}-users`. Its parti
 ## File Systems
 Mounting an EFS volume in Copilot tasks requires two things:
 
-1. That you create an [EFS file system](https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html) in the region of the environment you wish to use it with
+1. That you create an [EFS file system](https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html) in the desired environment's region.
 2. That you create an [EFS Mount Target](https://docs.aws.amazon.com/efs/latest/ug/accessing-fs.html) using the Copilot environment security group in each subnet of your environment. 
 
 When those prerequisites are satisfied, you can enable EFS storage using simple syntax in your manifest. You'll need the filesystem ID and, if using, the access point configuration for the filesystem.
@@ -47,13 +47,13 @@ The simplest possible EFS volume can be specified with the following syntax:
 ```yaml
 storage:
   volumes:
-    myEFSVolume: # This is a variable key and can be set to arbitrary strings.
+    myEFSVolume: # This is a variable key and can be set to an arbitrary string.
       path: '/etc/mount1'
       efs:
         id: fs-1234567 
 ```
 
-This will create a read-only mounted volume in your service or job's container using the filesystem `fs-1234567`. If mount targets are not created in the subnets of the environment, the task will fail to launch. 
+This will create a read-only mounted volume in your service's or job's container using the filesystem `fs-1234567`. If mount targets are not created in the subnets of the environment, the task will fail to launch. 
 
 Full syntax for storage follows. 
 
@@ -75,7 +75,7 @@ storage:
 ```
 
 ### Creating Mount Targets
-There are several ways to create mount targets for an existing EFS filesystem: [using the AWS CLI](#with-the-aws-cli) and [using Addons](#cloudformation).
+There are several ways to create mount targets for an existing EFS filesystem: [using the AWS CLI](#with-the-aws-cli) and [using CloudFormation](#cloudformation).
 
 #### With the AWS CLI
 To create mount targets for an existing filesystem, you'll need 
@@ -106,6 +106,7 @@ $ ENV_SG=$(aws cloudformation describe-stacks --stack-name ${YOUR_APP}-${YOUR_EN
 ```
 
 Once you have these, create the mount targets.
+
 ```bash
 $ MOUNT_TARGET_1_ID=$(aws efs create-mount-target \
     --subnet-id $SUBNET_1 \
@@ -129,9 +130,11 @@ $ aws efs delete-mount-target --mount-target-id $MOUNT_TARGET_2
 ```
 
 #### CloudFormation
-Here's an example of how you might create the appropriate EFS infrastructure for an external file system using the [Addons](../developing/additional-aws-resources.md) functionality. 
+Here's an example of how you might create the appropriate EFS infrastructure for an external file system using a CloudFormation stack. 
 
-After creating an environment, deploy the following CloudFormation template:
+After creating an environment, deploy the following CloudFormation template into the same account and region as the environment.
+
+Place the following CloudFormation template into a file called `efs.yml`.
 
 ```yaml
 Parameters:
@@ -141,9 +144,6 @@ Parameters:
   Env:
     Type: String
     Description: The environment name your service, job, or workflow is being deployed to.
-  Name:
-    Type: String
-    Description: The name of the service, job, or workflow being deployed.
 
 Resources:
   EFSFileSystem:
@@ -185,12 +185,26 @@ Resources:
 Outputs:
   EFSVolumeID:
     Value: !Ref EFSFileSystem
-    Name: !Sub ${App}-${Env}-FilesystemID
-
-
+    Export:
+      Name: !Sub ${App}-${Env}-FilesystemID
 ```
 
-This will create an EFS file system and the mount targets needed to allow tasks to attach to it using outputs from the Copilot environment stack. 
+Then run:
+```bash
+$ aws cloudformation deploy 
+    --stack-name efs-cfn \
+    --template-file ecs.yml
+    --parameter-overrides App=${YOUR_APP} Env=${YOUR_ENV}
+```
+
+This will create an EFS file system and the mount targets your tasks need using outputs from the Copilot environment stack.
+
+To get the EFS filesystem ID, you can run a `describe-stacks` call:
+
+```bash
+$ aws cloudformation describe-stacks --stack-name efs-cfn | \
+    jq -r '.Stacks[] | .Outputs[] | .OutputValue'
+```
 
 Then, in the manifest of the service which you would like to have access to the EFS filesystem, add the following configuration.
 
@@ -201,13 +215,20 @@ storage:
       path: '/etc/mount1'
       read_only: true # Set to false if your service needs write access. 
       efs:
-        id: {{ the ${App}-${Env}-FilesystemID output }}
+        id: {{ your filesystem ID }}
 ```
 
 Finally, run `copilot svc deploy` to reconfigure your service to mount the filesystem at `/etc/mount1`. 
 
 ##### Cleanup
-To clean this up, do one of the following options: 
+To clean this up, remove the `storage` configuration from the manifest and redeploy the service:
+```bash
+$ copilot svc deploy
+```
 
-1. Remove the `storage` configuration from the manifest and redeploy, then run `copilot job delete -n efs-helper`.
-2. Delete the service, then delete the app: `copilot svc delete && copilot app delete`. 
+Then, delete the stack. 
+
+```bash
+$ aws cloudformation delete-stack --stack-name efs-cfn
+```
+
