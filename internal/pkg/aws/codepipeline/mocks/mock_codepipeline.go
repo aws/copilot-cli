@@ -64,6 +64,36 @@ func (mr *MockapiMockRecorder) GetPipelineState(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipelineState", reflect.TypeOf((*Mockapi)(nil).GetPipelineState), arg0)
 }
 
+// ListPipelineExecutions mocks base method
+func (m *Mockapi) ListPipelineExecutions(input *codepipeline.ListPipelineExecutionsInput) (*codepipeline.ListPipelineExecutionsOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPipelineExecutions", input)
+	ret0, _ := ret[0].(*codepipeline.ListPipelineExecutionsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPipelineExecutions indicates an expected call of ListPipelineExecutions
+func (mr *MockapiMockRecorder) ListPipelineExecutions(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelineExecutions", reflect.TypeOf((*Mockapi)(nil).ListPipelineExecutions), input)
+}
+
+// RetryStageExecution mocks base method
+func (m *Mockapi) RetryStageExecution(input *codepipeline.RetryStageExecutionInput) (*codepipeline.RetryStageExecutionOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RetryStageExecution", input)
+	ret0, _ := ret[0].(*codepipeline.RetryStageExecutionOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RetryStageExecution indicates an expected call of RetryStageExecution
+func (mr *MockapiMockRecorder) RetryStageExecution(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetryStageExecution", reflect.TypeOf((*Mockapi)(nil).RetryStageExecution), input)
+}
+
 // MockresourceGetter is a mock of resourceGetter interface
 type MockresourceGetter struct {
 	ctrl     *gomock.Controller

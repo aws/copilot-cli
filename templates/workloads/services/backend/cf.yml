@@ -56,11 +56,11 @@ Resources:
             StartPeriod: {{.HealthCheck.StartPeriod}}
             Timeout: {{.HealthCheck.Timeout}}
 {{- end}}
-{{- if .Storage}}
+{{- if .Storage -}}
 {{include "mount-points" . | indent 10}}
-{{- end}}
+{{- end -}}
 {{include "sidecars" . | indent 8}}
-{{- if .Storage}}
+{{- if .Storage -}}
 {{include "volumes" . | indent 6}}
 {{- end}}
 {{include "executionrole" . | indent 2}}

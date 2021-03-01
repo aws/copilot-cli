@@ -1,6 +1,6 @@
 Having an automated release process is one of the most important parts of software delivery, so Copilot wants to make setting up that process as easy as possible 🚀.
 
-In this section, we'll talk about using Copilot to set up a CodePipeline that automatically builds your service code when you push to your GitHub or AWS CodeCommit repository, deploys to your environments, and runs automated testing.
+In this section, we'll talk about using Copilot to set up a CodePipeline that automatically builds your service code when you push to your GitHub, Bitbucket or AWS CodeCommit repository, deploys to your environments, and runs automated testing.
 
 ## Why?
 
@@ -12,11 +12,11 @@ Using an automated release tool like CodePipeline helps make your release manage
 
 Copilot can set up a CodePipeline for you with a few commands - but before we jump into that, let's talk a little bit about the structure of the pipeline we'll be generating. Our pipeline will have the following basic structure:
 
-1. __Source Stage__ - when you push to a configured GitHub or CodeCommit branch ('main' or 'master', respectively, by default), a new pipeline execution is triggered.
+1. __Source Stage__ - when you push to a configured GitHub, Bitbucket, or CodeCommit repository branch, a new pipeline execution is triggered.
 2. __Build Stage__ - after your source code is pulled from your repository host, your service's container image is built and published to every environment's ECR repository.
 3. __Deploy Stages__ - after your code is built, you can deploy to any or all of your environments, with optional post-deployment tests or manual approvals.
 
-Once you've set up a CodePipeline using Copilot, all you'll have to do is push to your GitHub or CodeCommit repository, and CodePipeline will orchestrate the deployments.
+Once you've set up a CodePipeline using Copilot, all you'll have to do is push to your GitHub, Bitbucket, or CodeCommit repository, and CodePipeline will orchestrate the deployments.
 
 Want to learn more about CodePipeline? Check out their [getting started docs](https://docs.aws.amazon.com/codepipeline/latest/userguide/welcome-introducing.html).
 

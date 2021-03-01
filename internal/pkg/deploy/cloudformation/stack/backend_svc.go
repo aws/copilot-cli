@@ -83,6 +83,10 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
 	}
+	storage, err := convertStorageOpts(s.manifest.Storage)
+	if err != nil {
+		return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
+	}
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		Variables:          s.manifest.BackendServiceConfig.Variables,
 		Secrets:            s.manifest.BackendServiceConfig.Secrets,
@@ -92,6 +96,8 @@ func (s *BackendService) Template() (string, error) {
 		HealthCheck:        s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),
 		LogConfig:          convertLogging(s.manifest.Logging),
 		DesiredCountLambda: desiredCountLambda.String(),
+		Storage:            storage,
+		Network:            convertNetworkConfig(s.manifest.Network),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)

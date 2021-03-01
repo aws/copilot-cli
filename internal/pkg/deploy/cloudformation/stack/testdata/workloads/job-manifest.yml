@@ -24,6 +24,23 @@ retries: 3
 # Optional. The timeout after which to stop the job if it's still running. You can use the units (h, m, s).
 timeout: 1h
 
+storage:
+  volumes:
+    myEFSVolume:
+      path: '/etc/mount1'
+      read_only: true
+      efs:
+        id: fs-12345
+
+sidecars:
+  nginx:
+    image: public.ecr.aws/nginx/nginx
+    port: 8080
+    mount_points:
+      - source_volume: myEFSVolume
+        path: '/var/www'
+    variables:
+      NGINX_PORT: 8080
 # Optional fields for more advanced use-cases.
 #
 #variables:                    # Pass environment variables as key value pairs.

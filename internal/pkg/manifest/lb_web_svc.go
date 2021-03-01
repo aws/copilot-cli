@@ -20,8 +20,6 @@ const (
 
 // Default values for HTTPHealthCheck for a load balanced web service.
 const (
-	// LogRetentionInDays is the default log retention time in days.
-	LogRetentionInDays     = 30
 	DefaultHealthCheckPath = "/"
 )
 
@@ -53,6 +51,7 @@ type LoadBalancedWebServiceConfig struct {
 	TaskConfig  `yaml:",inline"`
 	*Logging    `yaml:"logging,flow"`
 	Sidecars    map[string]*SidecarConfig `yaml:"sidecars"`
+	Network     NetworkConfig             `yaml:"network"`
 }
 
 // HTTPHealthCheckArgs holds the configuration to determine if the load balanced web service is healthy.
@@ -148,6 +147,11 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 				Memory: aws.Int(512),
 				Count: Count{
 					Value: aws.Int(1),
+				},
+			},
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: stringP(PublicSubnetPlacement),
 				},
 			},
 		},

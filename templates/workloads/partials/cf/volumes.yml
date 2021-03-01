@@ -4,7 +4,7 @@ Volumes:
   - Name: {{$vol.Name}}
     EFSVolumeConfiguration:
       FilesystemId: {{$vol.Filesystem}}
-      RootDirectory: {{$vol.RootDirectory}}
+      RootDirectory: '{{$vol.RootDirectory}}'
       TransitEncryption: ENABLED
       {{- if or $vol.AccessPointID $vol.IAM}}
       AuthorizationConfig:
@@ -15,5 +15,5 @@ Volumes:
         IAM: {{$vol.IAM}}
         {{- end}}
       {{- end}}
-{{- end}}
-{{- end}}
+{{- end -}}
+{{- end -}}

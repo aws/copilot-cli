@@ -12,15 +12,29 @@ import (
 	"github.com/google/uuid"
 )
 
-// Paths of workload cloudformation templates under templates/workloads/.
+// Constants for template paths.
 const (
+	// Paths of workload cloudformation templates under templates/workloads/.
 	fmtWkldCFTemplatePath         = "workloads/%s/%s/cf.yml"
 	fmtWkldPartialsCFTemplatePath = "workloads/partials/cf/%s.yml"
-)
 
-const (
+	// Directories under templates/workloads/.
 	servicesDirName = "services"
 	jobDirName      = "jobs"
+
+	// Names of workload templates.
+	lbWebSvcTplName     = "lb-web"
+	backendSvcTplName   = "backend"
+	scheduledJobTplName = "scheduled-job"
+)
+
+// Constants for workload options.
+const (
+	// AWS VPC networking configuration.
+	EnablePublicIP          = "ENABLED"
+	DisablePublicIP         = "DISABLED"
+	PublicSubnetsPlacement  = "PublicSubnets"
+	PrivateSubnetsPlacement = "PrivateSubnets"
 )
 
 var (
@@ -45,13 +59,6 @@ var (
 		"mount-points",
 		"volumes",
 	}
-)
-
-// Names of workload templates.
-const (
-	lbWebSvcTplName     = "lb-web"
-	backendSvcTplName   = "backend"
-	scheduledJobTplName = "scheduled-job"
 )
 
 // WorkloadNestedStackOpts holds configuration that's needed if the workload stack has a nested stack.
@@ -144,6 +151,20 @@ type StateMachineOpts struct {
 	Retries *int
 }
 
+// NetworkOpts holds AWS networking configuration for the workloads.
+type NetworkOpts struct {
+	AssignPublicIP string
+	SubnetsType    string
+	SecurityGroups []string
+}
+
+func defaultNetworkOpts() *NetworkOpts {
+	return &NetworkOpts{
+		AssignPublicIP: EnablePublicIP,
+		SubnetsType:    PublicSubnetsPlacement,
+	}
+}
+
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
@@ -154,6 +175,7 @@ type WorkloadOpts struct {
 	LogConfig   *LogConfigOpts
 	Autoscaling *AutoscalingOpts
 	Storage     *StorageOpts
+	Network     *NetworkOpts
 
 	// Additional options for service templates.
 	HealthCheck         *ecs.HealthCheck
@@ -171,16 +193,25 @@ type WorkloadOpts struct {
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
 // with the specified data object and returns its content.
 func (t *Template) ParseLoadBalancedWebService(data WorkloadOpts) (*Content, error) {
+	if data.Network == nil {
+		data.Network = defaultNetworkOpts()
+	}
 	return t.parseSvc(lbWebSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseBackendService parses a backend service's CloudFormation template with the specified data object and returns its content.
 func (t *Template) ParseBackendService(data WorkloadOpts) (*Content, error) {
+	if data.Network == nil {
+		data.Network = defaultNetworkOpts()
+	}
 	return t.parseSvc(backendSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseScheduledJob parses a scheduled job's Cloudformation Template
 func (t *Template) ParseScheduledJob(data WorkloadOpts) (*Content, error) {
+	if data.Network == nil {
+		data.Network = defaultNetworkOpts()
+	}
 	return t.parseJob(scheduledJobTplName, data, withSvcParsingFuncs())
 }
 
@@ -219,11 +250,12 @@ func (t *Template) parseWkld(name, wkldDirName string, data interface{}, options
 func withSvcParsingFuncs() ParseOption {
 	return func(t *template.Template) *template.Template {
 		return t.Funcs(map[string]interface{}{
-			"toSnakeCase": ToSnakeCaseFunc,
-			"hasSecrets":  hasSecrets,
-			"fmtSlice":    FmtSliceFunc,
-			"quoteSlice":  QuotePSliceFunc,
-			"randomUUID":  randomUUIDFunc,
+			"toSnakeCase":     ToSnakeCaseFunc,
+			"hasSecrets":      hasSecrets,
+			"fmtSlice":        FmtSliceFunc,
+			"quoteSlice":      QuotePSliceFunc,
+			"randomUUID":      randomUUIDFunc,
+			"jsonMountPoints": generateMountPointJSON,
 		})
 	}
 }
