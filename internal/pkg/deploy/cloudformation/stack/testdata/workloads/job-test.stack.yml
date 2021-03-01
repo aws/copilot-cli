@@ -252,8 +252,9 @@ Resources:
                   - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
         AssignPublicIp: ENABLED # Should be DISABLED if we use private subnets
         SecurityGroups:
-          Fn::ImportValue:
-            !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"
+          Fn::Join:
+          - '","'
+          - - Fn::ImportValue: !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"
       DefinitionString: |-
         {
           "Version": "1.0",
