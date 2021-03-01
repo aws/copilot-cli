@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"gopkg.in/yaml.v3"
@@ -157,6 +158,11 @@ func (e *EntryPointOverride) UnmarshalYAML(unmarshal func(interface{}) error) er
 	return nil
 }
 
+// ToStringSlice converts an EntryPointOverride to a slice of string.
+func (e *EntryPointOverride) ToStringSlice() []string {
+	return  toStringSlice((*stringSliceOrString)(e))
+}
+
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the CommandOverride
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v2) interface.
@@ -165,6 +171,11 @@ func (c *CommandOverride) UnmarshalYAML(unmarshal func(interface{}) error) error
 		return errUnmarshalCommand
 	}
 	return nil
+}
+
+// ToStringSlice converts an CommandOverride to a slice of string.
+func (c *CommandOverride) ToStringSlice() []string {
+	return  toStringSlice((*stringSliceOrString)(c))
 }
 
 type stringSliceOrString struct {
@@ -189,6 +200,13 @@ func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, unmarshal func(i
 	}
 
 	return unmarshal(&s.String)
+}
+
+func toStringSlice(s *stringSliceOrString) []string {
+	if s.String != nil {
+		return strings.Split(*s.String, " ")
+	}
+	return s.StringSlice
 }
 
 // BuildArgsOrString is a custom type which supports unmarshaling yaml which

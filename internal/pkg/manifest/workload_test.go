@@ -65,6 +65,44 @@ func TestEntryPointOverrides_UnmarshalYAML(t *testing.T) {
 	}
 }
 
+func TestEntryPointOverrides_ToStringSlice(t *testing.T) {
+	testCases := map[string]struct {
+		inEntryPointOverride EntryPointOverride
+
+		wantedSlice []string
+		wantedError  error
+	}{
+		"Both fields are empty": {
+			inEntryPointOverride: EntryPointOverride{
+				String: nil,
+				StringSlice: nil,
+			},
+			wantedSlice: nil,
+		},
+		"Given a string": {
+			inEntryPointOverride: EntryPointOverride{
+				String: aws.String("/bin/sh -c"),
+				StringSlice: nil,
+			},
+			wantedSlice: []string{"/bin/sh", "-c"},
+		},
+		"Given a string slice": {
+			inEntryPointOverride: EntryPointOverride{
+				String: nil,
+				StringSlice: []string{"/bin/sh", "-c"},
+			},
+			wantedSlice: []string{"/bin/sh", "-c"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			out := tc.inEntryPointOverride.ToStringSlice()
+			require.Equal(t, tc.wantedSlice, out)
+		})
+	}
+}
+
 func TestCommandOverrides_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		inContent []byte
@@ -113,6 +151,43 @@ func TestCommandOverrides_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.StringSlice, e.Command.StringSlice)
 				require.Equal(t, tc.wantedStruct.String, e.Command.String)
 			}
+		})
+	}
+}
+
+func TestCommandOverrides_ToStringSlice(t *testing.T) {
+	testCases := map[string]struct {
+		inCommandOverrides CommandOverride
+
+		wantedSlice []string
+	}{
+		"Both fields are empty": {
+			inCommandOverrides: CommandOverride{
+				String: nil,
+				StringSlice: nil,
+			},
+			wantedSlice: nil,
+		},
+		"Given a string": {
+			inCommandOverrides: CommandOverride{
+				String: aws.String(`-c read some command`),
+				StringSlice: nil,
+			},
+			wantedSlice: []string{"-c", "read", "some", "command"},
+		},
+		"Given a string slice": {
+			inCommandOverrides: CommandOverride{
+				String: nil,
+				StringSlice: []string{"-c", "read", "some", "command"},
+			},
+			wantedSlice: []string{"-c", "read", "some", "command"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			out := tc.inCommandOverrides.ToStringSlice()
+			require.Equal(t, tc.wantedSlice, out)
 		})
 	}
 }
