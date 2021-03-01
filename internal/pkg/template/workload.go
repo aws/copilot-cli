@@ -145,7 +145,7 @@ type AutoscalingOpts struct {
 	ResponseTime *float64
 }
 
-// StateMachineOpts holds configuration neeed for State Machine retries and timeout.
+// StateMachineOpts holds configuration needed for State Machine retries and timeout.
 type StateMachineOpts struct {
 	Timeout *int
 	Retries *int
@@ -168,14 +168,15 @@ func defaultNetworkOpts() *NetworkOpts {
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
-	Variables   map[string]string
-	Secrets     map[string]string
-	NestedStack *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
-	Sidecars    []*SidecarOpts
-	LogConfig   *LogConfigOpts
-	Autoscaling *AutoscalingOpts
-	Storage     *StorageOpts
-	Network     *NetworkOpts
+	Variables    map[string]string
+	Secrets      map[string]string
+	NestedStack  *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	Sidecars     []*SidecarOpts
+	LogConfig    *LogConfigOpts
+	Autoscaling  *AutoscalingOpts
+	Storage      *StorageOpts
+	Network      *NetworkOpts
+	CustomDomain string
 
 	// Additional options for service templates.
 	HealthCheck         *ecs.HealthCheck

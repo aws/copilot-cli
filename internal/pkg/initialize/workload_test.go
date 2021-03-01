@@ -261,6 +261,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 		inSvcName        string
 		inDockerfilePath string
 		inAppName        string
+		inDomain         *string
 		mockstore        func(m *mocks.MockStore)
 
 		wantedErr  error
@@ -317,6 +318,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			inSvcName:        "frontend",
 			inSvcPort:        80,
 			inDockerfilePath: "/Dockerfile",
+			inDomain:         aws.String("example.com"),
 
 			mockstore: func(m *mocks.MockStore) {
 				m.EXPECT().ListServices("app").Return([]*config.Workload{
@@ -348,7 +350,8 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 					App:            tc.inAppName,
 					DockerfilePath: tc.inDockerfilePath,
 				},
-				Port: tc.inSvcPort,
+				Port:   tc.inSvcPort,
+				Domain: tc.inDomain,
 			}
 
 			initter := &WorkloadInitializer{
@@ -363,6 +366,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.inSvcName, aws.StringValue(manifest.Workload.Name))
 				require.Equal(t, tc.inSvcPort, aws.Uint16Value(manifest.ImageConfig.Port))
+				require.Equal(t, tc.inDomain, manifest.Domain)
 				require.Contains(t, tc.inDockerfilePath, aws.StringValue(manifest.ImageConfig.Build.BuildArgs.Dockerfile))
 				require.Equal(t, tc.wantedPath, aws.StringValue(manifest.Path))
 			} else {
@@ -435,6 +439,21 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "frontend"))
 			},
 		},
+		"app error": {
+			inSvcType:        manifest.LoadBalancedWebServiceType,
+			inAppName:        "app",
+			inSvcName:        "frontend",
+			inSvcPort:        80,
+			inDockerfilePath: "frontend/Dockerfile",
+
+			mockWriter: func(m *mocks.MockWorkspace) {
+				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
+			},
+			mockstore: func(m *mocks.MockStore) {
+				m.EXPECT().GetApplication("app").Return(nil, errors.New("some error"))
+			},
+			wantedErr: errors.New("get application app: some error"),
+		},
 		"write manifest error": {
 			inSvcType:        manifest.LoadBalancedWebServiceType,
 			inAppName:        "app",
@@ -448,25 +467,12 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			},
 			mockstore: func(m *mocks.MockStore) {
 				m.EXPECT().ListServices("app")
+				m.EXPECT().GetApplication("app").Return(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, nil)
 			},
 			wantedErr: errors.New("write service manifest: some error"),
-		},
-		"app error": {
-			inSvcType:        manifest.LoadBalancedWebServiceType,
-			inAppName:        "app",
-			inSvcName:        "frontend",
-			inSvcPort:        80,
-			inDockerfilePath: "frontend/Dockerfile",
-
-			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().CopilotDirPath().Return("/frontend", nil)
-				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/copilotfrontend/manifest.yml", nil)
-			},
-			mockstore: func(m *mocks.MockStore) {
-				m.EXPECT().ListServices("app")
-				m.EXPECT().GetApplication("app").Return(nil, errors.New("some error"))
-			},
-			wantedErr: errors.New("get application app: some error"),
 		},
 		"add service to app fails": {
 			inSvcType:        manifest.LoadBalancedWebServiceType,

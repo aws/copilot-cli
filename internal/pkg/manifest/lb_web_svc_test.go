@@ -4,16 +4,13 @@
 package manifest
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/template"
-	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -30,8 +27,9 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 					Name:       "frontend",
 					Dockerfile: "./Dockerfile",
 				},
-				Path: "/",
-				Port: 80,
+				Path:   "/",
+				Port:   80,
+				Domain: aws.String("example.com"),
 			},
 
 			wanted: &LoadBalancedWebService{
@@ -50,6 +48,7 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 						},
 						Port: aws.Uint16(80),
 					},
+					Domain: aws.String("example.com"),
 					RoutingRule: RoutingRule{
 						Path: stringP("/"),
 						HealthCheck: HealthCheckArgsOrString{
@@ -146,46 +145,45 @@ func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
 
 func TestLoadBalancedWebService_MarshalBinary(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, manifest *LoadBalancedWebService)
+		inProps LoadBalancedWebServiceProps
 
-		wantedBinary []byte
-		wantedError  error
+		wantedTestdata string
 	}{
-		"error parsing template": {
-			mockDependencies: func(ctrl *gomock.Controller, manifest *LoadBalancedWebService) {
-				m := mocks.NewMockParser(ctrl)
-				manifest.parser = m
-				m.EXPECT().Parse(lbWebSvcManifestPath, *manifest, gomock.Any()).Return(nil, errors.New("some error"))
+		"default": {
+			inProps: LoadBalancedWebServiceProps{
+				WorkloadProps: &WorkloadProps{
+					Name:       "frontend",
+					Dockerfile: "./frontend/Dockerfile",
+				},
 			},
-
-			wantedError: errors.New("some error"),
+			wantedTestdata: "lb-svc.yml",
 		},
-		"returns rendered content": {
-			mockDependencies: func(ctrl *gomock.Controller, manifest *LoadBalancedWebService) {
-				m := mocks.NewMockParser(ctrl)
-				manifest.parser = m
-				m.EXPECT().Parse(lbWebSvcManifestPath, *manifest, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
-
+		"with domain": {
+			inProps: LoadBalancedWebServiceProps{
+				WorkloadProps: &WorkloadProps{
+					Name:       "frontend",
+					Dockerfile: "./frontend/Dockerfile",
+				},
+				Domain: aws.String("example.com"),
 			},
-
-			wantedBinary: []byte("hello"),
+			wantedTestdata: "lb-svc-with-domain.yml",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			manifest := &LoadBalancedWebService{}
-			tc.mockDependencies(ctrl, manifest)
+			path := filepath.Join("testdata", tc.wantedTestdata)
+			wantedBytes, err := ioutil.ReadFile(path)
+			require.NoError(t, err)
+			manifest := NewLoadBalancedWebService(&tc.inProps)
 
 			// WHEN
-			b, err := manifest.MarshalBinary()
+			tpl, err := manifest.MarshalBinary()
+			require.NoError(t, err)
 
 			// THEN
-			require.Equal(t, tc.wantedError, err)
-			require.Equal(t, tc.wantedBinary, b)
+			require.Equal(t, string(wantedBytes), string(tpl))
 		})
 	}
 }

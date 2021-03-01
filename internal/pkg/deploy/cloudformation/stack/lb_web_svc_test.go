@@ -27,15 +27,6 @@ const (
 	testImageTag     = "manual-bf3678c"
 )
 
-var testLBWebServiceManifest = manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
-	WorkloadProps: &manifest.WorkloadProps{
-		Name:       "frontend",
-		Dockerfile: "frontend/Dockerfile",
-	},
-	Path: "frontend",
-	Port: 80,
-})
-
 type mockTemplater struct {
 	tpl string
 	err error
@@ -93,6 +84,15 @@ func TestLoadBalancedWebService_StackName(t *testing.T) {
 }
 
 func TestLoadBalancedWebService_Template(t *testing.T) {
+	var testLBWebServiceManifest = manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
+		WorkloadProps: &manifest.WorkloadProps{
+			Name:       "frontend",
+			Dockerfile: "frontend/Dockerfile",
+		},
+		Path: "frontend",
+		Port: 80,
+	})
+	testLBWebServiceManifest.Alias = aws.String("v1.example.com")
 	testCases := map[string]struct {
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService)
 		wantedTemplate   string
@@ -177,6 +177,7 @@ Outputs:
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
+					CustomDomain:        "v1.example.com",
 					Network: &template.NetworkOpts{
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
@@ -206,6 +207,7 @@ Outputs:
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: "/",
 					},
+					CustomDomain:        "v1.example.com",
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
@@ -533,6 +535,14 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 }
 
 func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
+	var testLBWebServiceManifest = manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
+		WorkloadProps: &manifest.WorkloadProps{
+			Name:       "frontend",
+			Dockerfile: "frontend/Dockerfile",
+		},
+		Path: "frontend",
+		Port: 80,
+	})
 	testCases := map[string]struct {
 		mockDependencies func(ctrl *gomock.Controller, c *LoadBalancedWebService)
 
@@ -595,6 +605,14 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 
 func TestLoadBalancedWebService_Tags(t *testing.T) {
 	// GIVEN
+	var testLBWebServiceManifest = manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
+		WorkloadProps: &manifest.WorkloadProps{
+			Name:       "frontend",
+			Dockerfile: "frontend/Dockerfile",
+		},
+		Path: "frontend",
+		Port: 80,
+	})
 	conf := &LoadBalancedWebService{
 		wkld: &wkld{
 			name: aws.StringValue(testLBWebServiceManifest.Name),
