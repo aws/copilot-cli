@@ -13,7 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestEntryPointOverrides_UnmarshalYAML(t *testing.T) {
+func TestEntryPointOverride_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		inContent []byte
 
@@ -65,7 +65,7 @@ func TestEntryPointOverrides_UnmarshalYAML(t *testing.T) {
 	}
 }
 
-func TestEntryPointOverrides_ToStringSlice(t *testing.T) {
+func TestEntryPointOverride_ToStringSlice(t *testing.T) {
 	testCases := map[string]struct {
 		inEntryPointOverride EntryPointOverride
 
@@ -103,7 +103,7 @@ func TestEntryPointOverrides_ToStringSlice(t *testing.T) {
 	}
 }
 
-func TestCommandOverrides_UnmarshalYAML(t *testing.T) {
+func TestCommandOverride_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		inContent []byte
 
@@ -155,7 +155,7 @@ func TestCommandOverrides_UnmarshalYAML(t *testing.T) {
 	}
 }
 
-func TestCommandOverrides_ToStringSlice(t *testing.T) {
+func TestCommandOverride_ToStringSlice(t *testing.T) {
 	testCases := map[string]struct {
 		inCommandOverrides CommandOverride
 
