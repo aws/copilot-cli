@@ -36,6 +36,10 @@ List of all available properties for a `'Backend Service'` manifest.
               iam: true
               access_point_id: fsap-12345678
     
+    network:
+      vpc:
+        placement: 'private'
+        security_groups: ['sg-05d7cd12cceeb9a6e']
     
     variables: 
       LOG_LEVEL: info
@@ -151,6 +155,26 @@ Scale up or down based on the average CPU your service should maintain.
 
 <span class="parent-field">count.</span><a id="count-memory-percentage" href="#count-memory-percentage" class="field">`memory_percentage`</a> <span class="type">Integer</span>  
 Scale up or down based on the average memory your service should maintain.  
+
+<div class="separator"></div>
+
+<a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>    
+The `network` section contains parameters for connecting to AWS resources in a VPC.
+
+<span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>  
+Subnets and security groups attached to your tasks.
+
+<span class="parent-field">network.vpc.</span><a id="network-vpc-placement" href="#network-vpc-placement" class="field">`placement`</a> <span class="type">String</span>  
+Must be one of `'public'` or `'private'`. Defaults to launching your tasks in public subnets.
+
+!!! info inline end
+    Launching tasks in `'private'` subnets that need internet connectivity is only supported if you imported a VPC with
+    NAT Gateways when running `copilot env init`. See [#1959](https://github.com/aws/copilot-cli/issues/1959) for tracking
+    NAT Gateways support in Copilot-generated VPCs.
+
+<span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings</span>  
+Additional security group IDs associated with your tasks. Copilot always includes a security group so containers within your environment
+can communicate with each other.
 
 <div class="separator"></div>
 

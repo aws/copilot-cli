@@ -5,10 +5,12 @@ package stream
 
 import (
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	cfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 )
@@ -28,9 +30,27 @@ type StackEvent struct {
 	Timestamp            time.Time
 }
 
+type clock interface {
+	now() time.Time
+}
+
+type realClock struct{}
+
+func (c realClock) now() time.Time {
+	return time.Now()
+}
+
+type fakeClock struct{ fakeNow time.Time }
+
+func (c fakeClock) now() time.Time {
+	return c.fakeNow
+}
+
 // StackStreamer is a Streamer for StackEvent events started by a change set.
 type StackStreamer struct {
 	client                StackEventsDescriber
+	clock                 clock
+	rand                  func(int) int
 	stackName             string
 	changeSetCreationTime time.Time
 
@@ -39,11 +59,15 @@ type StackStreamer struct {
 	pastEventIDs  map[string]bool
 	eventsToFlush []StackEvent
 	mu            sync.Mutex
+
+	retries int
 }
 
 // NewStackStreamer creates a StackStreamer from a cloudformation client, stack name, and the change set creation timestamp.
 func NewStackStreamer(cfn StackEventsDescriber, stackName string, csCreationTime time.Time) *StackStreamer {
 	return &StackStreamer{
+		clock:                 realClock{},
+		rand:                  rand.Intn,
 		client:                cfn,
 		stackName:             stackName,
 		changeSetCreationTime: csCreationTime,
@@ -77,8 +101,15 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 			StackName: aws.String(s.stackName),
 		})
 		if err != nil {
+			// Check for throttles and wait to try again using the StackStreamer's interval.
+			if request.IsErrorThrottle(err) {
+				s.retries += 1
+				return nextFetchDate(s.clock, s.rand, s.retries), nil
+			}
 			return next, fmt.Errorf("describe stack events %s: %w", s.stackName, err)
 		}
+
+		s.retries = 0
 
 		var finished bool
 		for _, event := range out.StackEvents {
@@ -115,7 +146,8 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 	// Store events to flush in chronological order.
 	reverse(events)
 	s.eventsToFlush = append(s.eventsToFlush, events...)
-	return time.Now().Add(streamerFetchIntervalDuration), nil
+	// Only use exponential backoff if there's an error.
+	return nextFetchDate(s.clock, s.rand, 0), nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.

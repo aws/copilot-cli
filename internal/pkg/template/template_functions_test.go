@@ -233,7 +233,7 @@ func TestQuotePSliceFunc(t *testing.T) {
 }
 
 func TestGenerateMountPointJSON(t *testing.T) {
-	require.Equal(t, `{"myEFSVolume":"/var/www"}`, generateMountPointJSON([]MountPoint{{ContainerPath: aws.String("/var/www"), SourceVolume: aws.String("myEFSVolume")}}), "JSON should render correctly")
-	require.Equal(t, "{}", generateMountPointJSON([]MountPoint{}), "nil list of arguments should render ")
-	require.Equal(t, "{}", generateMountPointJSON([]MountPoint{{SourceVolume: aws.String("fromEFS")}}), "empty paths should not get injected")
+	require.Equal(t, `{"myEFSVolume":"/var/www"}`, generateMountPointJSON([]*MountPoint{{ContainerPath: aws.String("/var/www"), SourceVolume: aws.String("myEFSVolume")}}), "JSON should render correctly")
+	require.Equal(t, "{}", generateMountPointJSON([]*MountPoint{}), "nil list of arguments should render ")
+	require.Equal(t, "{}", generateMountPointJSON([]*MountPoint{{SourceVolume: aws.String("fromEFS")}}), "empty paths should not get injected")
 }

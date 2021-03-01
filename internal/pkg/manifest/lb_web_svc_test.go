@@ -18,6 +18,74 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func TestNewLoadBalancedWebService(t *testing.T) {
+	testCases := map[string]struct {
+		props LoadBalancedWebServiceProps
+
+		wanted *LoadBalancedWebService
+	}{
+		"translates to default load balanced web service": {
+			props: LoadBalancedWebServiceProps{
+				WorkloadProps: &WorkloadProps{
+					Name:       "frontend",
+					Dockerfile: "./Dockerfile",
+				},
+				Path: "/",
+				Port: 80,
+			},
+
+			wanted: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: stringP("frontend"),
+					Type: stringP("Load Balanced Web Service"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ServiceImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: stringP("./Dockerfile"),
+								},
+							},
+						},
+						Port: aws.Uint16(80),
+					},
+					RoutingRule: RoutingRule{
+						Path: stringP("/"),
+						HealthCheck: HealthCheckArgsOrString{
+							HealthCheckPath: stringP("/"),
+						},
+					},
+					TaskConfig: TaskConfig{
+						CPU:    aws.Int(256),
+						Memory: aws.Int(512),
+						Count: Count{
+							Value: aws.Int(1),
+						},
+					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: stringP("public"),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			manifest := NewLoadBalancedWebService(&tc.props)
+
+			// THEN
+			require.Equal(t, tc.wanted.Workload, manifest.Workload)
+			require.Equal(t, tc.wanted.LoadBalancedWebServiceConfig, manifest.LoadBalancedWebServiceConfig)
+			require.Equal(t, tc.wanted.Environments, manifest.Environments)
+		})
+	}
+}
+
 func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
 	testCases := map[string]struct {
 		inContent []byte
@@ -159,7 +227,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-						Storage: Storage{
+						Storage: &Storage{
 							Volumes: map[string]Volume{
 								"myEFSVolume": {
 									MountPointOpts: MountPointOpts{
@@ -205,7 +273,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-						Storage: Storage{
+						Storage: &Storage{
 							Volumes: map[string]Volume{
 								"myEFSVolume": {
 									MountPointOpts: MountPointOpts{
@@ -259,7 +327,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"GITHUB_TOKEN": "1111",
 							"TWILIO_TOKEN": "1111",
 						},
-						Storage: Storage{
+						Storage: &Storage{
 							Volumes: map[string]Volume{
 								"myEFSVolume": {
 									MountPointOpts: MountPointOpts{
@@ -287,6 +355,12 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Logging: &Logging{
 						ConfigFile: aws.String("mockConfigFile"),
 					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement:      stringP("public"),
+							SecurityGroups: []string{"sg-123"},
+						},
+					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
@@ -311,7 +385,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Variables: map[string]string{
 								"DDB_TABLE_NAME": "awards-prod",
 							},
-							Storage: Storage{
+							Storage: &Storage{
 								Volumes: map[string]Volume{
 									"myEFSVolume": {
 										EFS: EFSVolumeConfiguration{
@@ -341,6 +415,11 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Logging: &Logging{
 							SecretOptions: map[string]string{
 								"FOO": "BAR",
+							},
+						},
+						Network: NetworkConfig{
+							VPC: vpcConfig{
+								SecurityGroups: []string{"sg-456", "sg-789"},
 							},
 						},
 					},
@@ -385,7 +464,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"GITHUB_TOKEN": "1111",
 							"TWILIO_TOKEN": "1111",
 						},
-						Storage: Storage{
+						Storage: &Storage{
 							Volumes: map[string]Volume{
 								"myEFSVolume": {
 									MountPointOpts: MountPointOpts{
@@ -423,6 +502,12 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						ConfigFile: aws.String("mockConfigFile"),
 						SecretOptions: map[string]string{
 							"FOO": "BAR",
+						},
+					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement:      stringP("public"),
+							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},
 				},

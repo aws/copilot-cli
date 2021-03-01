@@ -14,17 +14,35 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var (
-	errUnmarshalBuildOpts = errors.New("can't unmarshal build field into string or compose-style map")
-	errUnmarshalCountOpts = errors.New(`can't unmarshal "count" field to an integer or autoscaling configuration`)
+const (
+	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
+	defaultDockerfileName = "Dockerfile"
+
+	// AWS VPC subnet placement options.
+	PublicSubnetPlacement  = "public"
+	PrivateSubnetPlacement = "private"
 )
 
-const defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
+var (
+	// WorkloadTypes holds all workload manifest types.
+	WorkloadTypes = append(ServiceTypes, JobTypes...)
 
-var dockerfileDefaultName = "Dockerfile"
+	// All placement options.
+	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
 
-// WorkloadTypes holds all workload manifest types.
-var WorkloadTypes = append(ServiceTypes, JobTypes...)
+	// Error definitions.
+	errUnmarshalBuildOpts 	= errors.New("cannot unmarshal build field into string or compose-style map")
+	errUnmarshalCountOpts 	= errors.New(`cannot unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalEntryPoint 	= errors.New("cannot unmarshal entrypoint into string or slice of strings")
+	errUnmarshalCommand 	= errors.New("cannot unmarshal command into string or slice of strings")
+)
+
+// WorkloadProps contains properties for creating a new workload manifest.
+type WorkloadProps struct {
+	Name       string
+	Dockerfile string
+	Image      string
+}
 
 // Workload holds the basic data that every workload manifest file needs to have.
 type Workload struct {
@@ -52,7 +70,7 @@ func (i Image) GetLocation() string {
 func (i *Image) BuildConfig(rootDirectory string) *DockerBuildArgs {
 	df := i.dockerfile()
 	ctx := i.context()
-	dockerfile := aws.String(filepath.Join(rootDirectory, dockerfileDefaultName))
+	dockerfile := aws.String(filepath.Join(rootDirectory, defaultDockerfileName))
 	context := aws.String(rootDirectory)
 
 	if df != "" && ctx != "" {
@@ -64,7 +82,7 @@ func (i *Image) BuildConfig(rootDirectory string) *DockerBuildArgs {
 		context = aws.String(filepath.Join(rootDirectory, filepath.Dir(df)))
 	}
 	if df == "" && ctx != "" {
-		dockerfile = aws.String(filepath.Join(rootDirectory, ctx, dockerfileDefaultName))
+		dockerfile = aws.String(filepath.Join(rootDirectory, ctx, defaultDockerfileName))
 		context = aws.String(filepath.Join(rootDirectory, ctx))
 	}
 	return &DockerBuildArgs{
@@ -113,6 +131,64 @@ func (i *Image) target() *string {
 // Otherwise it returns nil.
 func (i *Image) cacheFrom() []string {
 	return i.Build.BuildArgs.CacheFrom
+}
+
+// ImageOverride holds fields that override Dockerfile image defaults.
+type ImageOverride struct {
+	EntryPoint EntryPointOverride `yaml:"entrypoint"`
+	Command    CommandOverride    `yaml:"command"`
+}
+
+// EntryPointOverride is a custom type which supports unmarshaling "entrypoint" yaml which
+// can either be of type string or type slice of string.
+type EntryPointOverride stringSliceOrString
+
+// CommandOverride is a custom type which supports unmarshaling "command" yaml which
+// can either be of type string or type slice of string.
+type CommandOverride stringSliceOrString
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the EntryPointOverride
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (e *EntryPointOverride) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), unmarshal); err != nil {
+		return errUnmarshalEntryPoint
+	}
+	return nil
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the CommandOverride
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (c *CommandOverride) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(c), unmarshal); err != nil {
+		return errUnmarshalCommand
+	}
+	return nil
+}
+
+type stringSliceOrString struct {
+	String      *string
+	StringSlice []string
+}
+
+func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, unmarshal func(interface{}) error) error {
+	if err := unmarshal(&s.StringSlice); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if s.StringSlice != nil {
+		// Unmarshaled successfully to s.StringSlice, unset s.String, and return.
+		s.String = nil
+		return nil
+	}
+
+	return unmarshal(&s.String)
 }
 
 // BuildArgsOrString is a custom type which supports unmarshaling yaml which
@@ -215,14 +291,49 @@ type TaskConfig struct {
 	Count     Count             `yaml:"count"`
 	Variables map[string]string `yaml:"variables"`
 	Secrets   map[string]string `yaml:"secrets"`
-	Storage   Storage           `yaml:"storage"`
+	Storage   *Storage          `yaml:"storage"`
 }
 
-// WorkloadProps contains properties for creating a new workload manifest.
-type WorkloadProps struct {
-	Name       string
-	Dockerfile string
-	Image      string
+// NetworkConfig represents options for network connection to AWS resources within a VPC.
+type NetworkConfig struct {
+	VPC vpcConfig `yaml:"vpc"`
+}
+
+// UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.
+// If the user specified a placement that's not valid then throw an error.
+func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type networkWithDefaults NetworkConfig
+	conf := networkWithDefaults{
+		VPC: vpcConfig{
+			Placement: stringP(PublicSubnetPlacement),
+		},
+	}
+	if err := unmarshal(&conf); err != nil {
+		return err
+	}
+	if !conf.VPC.isValidPlacement() {
+		return fmt.Errorf("field '%s' is '%v' must be one of %#v", "network.vpc.placement", aws.StringValue(conf.VPC.Placement), subnetPlacements)
+	}
+	*c = NetworkConfig(conf)
+	return nil
+}
+
+// vpcConfig represents the security groups and subnets attached to a task.
+type vpcConfig struct {
+	Placement      *string  `yaml:"placement"`
+	SecurityGroups []string `yaml:"security_groups"`
+}
+
+func (c vpcConfig) isValidPlacement() bool {
+	if c.Placement == nil {
+		return false
+	}
+	for _, allowed := range subnetPlacements {
+		if *c.Placement == allowed {
+			return true
+		}
+	}
+	return false
 }
 
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.

@@ -1,4 +1,5 @@
-{{if .LogConfig}}- Name: firelens_log_router
+{{if .LogConfig}}
+- Name: firelens_log_router
   Image: {{ .LogConfig.Image }}
   FirelensConfiguration:
     Type: fluentbit
@@ -11,8 +12,10 @@
     Options:
       awslogs-region: !Ref AWS::Region
       awslogs-group: !Ref LogGroup
-      awslogs-stream-prefix: copilot{{end}}
-{{range $sidecar := .Sidecars}}- Name: {{$sidecar.Name}}
+      awslogs-stream-prefix: copilot
+{{- end}}
+{{- range $sidecar := .Sidecars}}
+- Name: {{$sidecar.Name}}
   Image: {{$sidecar.Image}}{{if $sidecar.Port}}
   PortMappings:
     - ContainerPort: {{$sidecar.Port}}{{if $sidecar.Protocol}}
@@ -50,7 +53,7 @@
   {{- range $mp := $sidecar.MountPoints}}
     - SourceVolume: {{$mp.SourceVolume}}
       ReadOnly: {{$mp.ReadOnly}}
-      ContainerPath: {{$mp.ContainerPath}}
+      ContainerPath: '{{$mp.ContainerPath}}'
   {{- end}}
 {{- end}}
 {{- end}}
