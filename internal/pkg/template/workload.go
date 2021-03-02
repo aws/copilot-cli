@@ -58,6 +58,7 @@ var (
 		"env-controller",
 		"mount-points",
 		"volumes",
+		"image-overrides",
 	}
 )
 
