@@ -223,10 +223,17 @@ Key-value pairs that represent secret values from [AWS Systems Manager Parameter
 The Storage section lets you specify external EFS volumes for your containers and sidecars to mount. This allows you to access persistent storage across regions for data processing or CMS workloads. For more detail, see the [storage](../developing/storage.md) page.
 
 <span class="parent-field">storage.</span><a id="volumes" href="#volumes" class="field">`volumes`</a> <span class="type">Map</span>  
-Specify the name and configuration of any EFS volumes you would like to attach. 
+Specify the name and configuration of any EFS volumes you would like to attach. The `volumes` field is specified as a map of the form:
+```yaml
+volumes:
+  {{ volume name }}:
+    path: "/etc/mountpath"
+    efs:
+      ...
+```
 
-<span class="parent-field">volumes.</span><a id="volume" href="#volume" class="field">`volume`</a> <span class="type">Map</span>  
-Specify the configuration of a volume. 
+<span class="parent-field">storage.volumes.</span><a id="volume" href="#volume" class="field">`volume`</a> <span class="type">Map</span>  
+Specify the configuration of a volume.
 
 <span class="parent-field">volume.</span><a id="path" href="#path" class="field">`path`</a> <span class="type">String</span>  
 Specify the location in the container where you would like your volume to be mounted. Must be fewer than 242 characters and must consist only of the characters `a-zA-Z0-9.-_/`. 
@@ -237,17 +244,22 @@ Defines whether the volume is read-only or not. Defaults to true. If false, the 
 <span class="parent-field">volume.</span><a id="efs" href="#efs" class="field">`efs`</a> <span class="type">Map</span>  
 Specify more detailed EFS configuration.
 
-<span class="parent-field">efs.</span><a id="id" href="#id" class="field">`id`</a> <span class="type">String</span>  
+<span class="parent-field">volume.efs.</span><a id="id" href="#id" class="field">`id`</a> <span class="type">String</span>  
 The ID of the filesystem you would like to mount. 
 
-<span class="parent-field">efs.</span><a id="auth" href="#auth" class="field">`auth`</a> <span class="type">Map</span>  
+<span class="parent-field">volume.efs.</span><a id="root_dir" href="#root-dir" class="field">`root_dir`</a> <span class="type">String</span>  
+Specify the location in the EFS filesystem you would like to use as the root of your volume. Must be fewer than 255 characters and must consist only of the characters `a-zA-Z0-9.-_/`. If using an access point, `root_dir` must be either empty or `/` and `auth.iam` must be `true`.
+
+<span class="parent-field">volume.efs.</span><a id="auth" href="#auth" class="field">`auth`</a> <span class="type">Map</span>  
 Specify advanced authorization configuration for EFS. 
 
-<span class="parent-field">auth.</span><a id="iam" href="#iam" class="field">`iam`</a> <span class="type">Bool</span>  
+<span class="parent-field">volume.efs.auth.</span><a id="iam" href="#iam" class="field">`iam`</a> <span class="type">Bool</span>  
 Default: true. Whether or not to use IAM authorization to determine whether the volume is allowed to connect to EFS. 
 
-<span class="parent-field">auth.</span><a id="access_point_id" href="#access-point-id" class="field">`access_point_id`</a> <span class="type">String</span>  
-The ID of the EFS access point to connect to. If using access points, IAM must be enabled and the `root_dir` field must be either empty or `/`. 
+<span class="parent-field">volume.efs.auth.</span><a id="access_point_id" href="#access-point-id" class="field">`access_point_id`</a> <span class="type">String</span>  
+The ID of the EFS access point to connect to. If using an access point, `root_dir` must be either empty or `/` and `auth.iam` must be `true`.
+
+<div class="separator"></div>
 
 <div class="separator"></div>
 
