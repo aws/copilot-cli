@@ -13,7 +13,7 @@
       "Resource": "arn:aws:states:::ecs:runTask.sync",
       "Parameters": {
         "LaunchType": "FARGATE",
-        "PlatformVersion": "LATEST",
+        "PlatformVersion": "1.4.0",
         "Cluster": "${Cluster}",
         "TaskDefinition": "${TaskDefinition}",
         "PropagateTags": "TASK_DEFINITION",

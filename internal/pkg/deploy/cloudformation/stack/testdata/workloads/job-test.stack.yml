@@ -252,8 +252,9 @@ Resources:
                   - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
         AssignPublicIp: ENABLED # Should be DISABLED if we use private subnets
         SecurityGroups:
-          Fn::ImportValue:
-            !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"
+          Fn::Join:
+          - '","'
+          - - Fn::ImportValue: !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"
       DefinitionString: |-
         {
           "Version": "1.0",
@@ -266,7 +267,7 @@ Resources:
               "Resource": "arn:aws:states:::ecs:runTask.sync",
               "Parameters": {
                 "LaunchType": "FARGATE",
-                "PlatformVersion": "LATEST",
+                "PlatformVersion": "1.4.0",
                 "Cluster": "${Cluster}",
                 "TaskDefinition": "${TaskDefinition}",
                 "PropagateTags": "TASK_DEFINITION",
