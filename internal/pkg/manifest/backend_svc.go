@@ -36,8 +36,9 @@ type BackendService struct {
 // BackendServiceConfig holds the configuration that can be overriden per environments.
 type BackendServiceConfig struct {
 	ImageConfig imageWithPortAndHealthcheck `yaml:"image,flow"`
-	TaskConfig  `yaml:",inline"`
-	*Logging    `yaml:"logging,flow"`
+	ImageOverride `yaml:",inline"`
+	TaskConfig    `yaml:",inline"`
+	*Logging      `yaml:"logging,flow"`
 	Sidecars    map[string]*SidecarConfig `yaml:"sidecars"`
 	Network     NetworkConfig             `yaml:"network"`
 }

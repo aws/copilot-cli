@@ -67,37 +67,39 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 
 // Template returns the CloudFormation template for the backend service.
 func (s *BackendService) Template() (string, error) {
-	desiredCountLambda, err := s.parser.Read(desiredCountGeneratorPath)
-	if err != nil {
-		return "", fmt.Errorf("read desired count lambda: %w", err)
-	}
-	outputs, err := s.addonsOutputs()
-	if err != nil {
-		return "", err
-	}
-	sidecars, err := convertSidecar(s.manifest.Sidecars)
-	if err != nil {
-		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
-	}
-	autoscaling, err := convertAutoscaling(&s.manifest.Count.Autoscaling)
-	if err != nil {
-		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
-	}
-	storage, err := convertStorageOpts(s.manifest.Storage)
-	if err != nil {
-		return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
-	}
+	//desiredCountLambda, err := s.parser.Read(desiredCountGeneratorPath)
+	//if err != nil {
+	//	return "", fmt.Errorf("read desired count lambda: %w", err)
+	//}
+	//outputs, err := s.addonsOutputs()
+	//if err != nil {
+	//	return "", err
+	//}
+	//sidecars, err := convertSidecar(s.manifest.Sidecars)
+	//if err != nil {
+	//	return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
+	//}
+	//autoscaling, err := convertAutoscaling(&s.manifest.Count.Autoscaling)
+	//if err != nil {
+	//	return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
+	//}
+	//storage, err := convertStorageOpts(s.manifest.Storage)
+	//if err != nil {
+	//	return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
+	//}
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		Variables:          s.manifest.BackendServiceConfig.Variables,
 		Secrets:            s.manifest.BackendServiceConfig.Secrets,
-		NestedStack:        outputs,
-		Sidecars:           sidecars,
-		Autoscaling:        autoscaling,
+		//NestedStack:        outputs,
+		//Sidecars:           sidecars,
+		//Autoscaling:        autoscaling,
 		HealthCheck:        s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),
 		LogConfig:          convertLogging(s.manifest.Logging),
-		DesiredCountLambda: desiredCountLambda.String(),
-		Storage:            storage,
+		//DesiredCountLambda: desiredCountLambda.String(),
+		//Storage:            storage,
 		Network:            convertNetworkConfig(s.manifest.Network),
+		EntryPoint:         s.manifest.EntryPoint.ToStringSlice(),
+		Command:            s.manifest.Command.ToStringSlice(),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
