@@ -158,16 +158,6 @@ func TestLoadBalancedWebService_MarshalBinary(t *testing.T) {
 			},
 			wantedTestdata: "lb-svc.yml",
 		},
-		"with domain": {
-			inProps: LoadBalancedWebServiceProps{
-				WorkloadProps: &WorkloadProps{
-					Name:       "frontend",
-					Dockerfile: "./frontend/Dockerfile",
-				},
-				AppDomain: aws.String("example.com"),
-			},
-			wantedTestdata: "lb-svc-with-domain.yml",
-		},
 	}
 
 	for name, tc := range testCases {

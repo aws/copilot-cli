@@ -13,10 +13,6 @@ http:
   path: '{{.Path}}'
   # You can specify a custom health check path. The default is "/".
   # healthcheck: '{{.HealthCheck.HealthCheckPath}}'
-{{- if .AppDomain}}
-  # You can specify a custom domain alias. The default domain name is '{{.Name}}.${EnvName}.${AppName}.{{.AppDomain}}'.
-  # alias: 'other.{{.AppDomain}}'
-{{- end}}
 
 # Configuration for your containers and service.
 image:

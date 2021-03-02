@@ -121,7 +121,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		Variables:           s.manifest.Variables,
 		Secrets:             s.manifest.Secrets,
-		DomainAlias:         aws.StringValue(s.manifest.DomainAlias),
 		NestedStack:         outputs,
 		Sidecars:            sidecars,
 		LogConfig:           convertLogging(s.manifest.Logging),
