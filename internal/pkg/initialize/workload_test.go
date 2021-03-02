@@ -350,8 +350,8 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 					App:            tc.inAppName,
 					DockerfilePath: tc.inDockerfilePath,
 				},
-				Port:   tc.inSvcPort,
-				Domain: tc.inDomain,
+				Port:      tc.inSvcPort,
+				appDomain: tc.inDomain,
 			}
 
 			initter := &WorkloadInitializer{
@@ -366,7 +366,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.inSvcName, aws.StringValue(manifest.Workload.Name))
 				require.Equal(t, tc.inSvcPort, aws.Uint16Value(manifest.ImageConfig.Port))
-				require.Equal(t, tc.inDomain, manifest.Domain)
+				require.Equal(t, tc.inDomain, manifest.AppDomain)
 				require.Contains(t, tc.inDockerfilePath, aws.StringValue(manifest.ImageConfig.Build.BuildArgs.Dockerfile))
 				require.Equal(t, tc.wantedPath, aws.StringValue(manifest.Path))
 			} else {

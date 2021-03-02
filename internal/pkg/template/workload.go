@@ -168,15 +168,15 @@ func defaultNetworkOpts() *NetworkOpts {
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
-	Variables    map[string]string
-	Secrets      map[string]string
-	NestedStack  *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
-	Sidecars     []*SidecarOpts
-	LogConfig    *LogConfigOpts
-	Autoscaling  *AutoscalingOpts
-	Storage      *StorageOpts
-	Network      *NetworkOpts
-	CustomDomain string
+	Variables   map[string]string
+	Secrets     map[string]string
+	NestedStack *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	Sidecars    []*SidecarOpts
+	LogConfig   *LogConfigOpts
+	Autoscaling *AutoscalingOpts
+	Storage     *StorageOpts
+	Network     *NetworkOpts
+	DomainAlias string
 
 	// Additional options for service templates.
 	HealthCheck         *ecs.HealthCheck

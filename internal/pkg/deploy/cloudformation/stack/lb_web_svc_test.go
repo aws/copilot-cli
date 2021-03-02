@@ -92,7 +92,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		Path: "frontend",
 		Port: 80,
 	})
-	testLBWebServiceManifest.Alias = aws.String("v1.example.com")
+	testLBWebServiceManifest.DomainAlias = aws.String("v1.example.com")
 	testCases := map[string]struct {
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService)
 		wantedTemplate   string
@@ -177,7 +177,7 @@ Outputs:
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
-					CustomDomain:        "v1.example.com",
+					DomainAlias:         "v1.example.com",
 					Network: &template.NetworkOpts{
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
@@ -207,7 +207,7 @@ Outputs:
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: "/",
 					},
-					CustomDomain:        "v1.example.com",
+					DomainAlias:         "v1.example.com",
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",

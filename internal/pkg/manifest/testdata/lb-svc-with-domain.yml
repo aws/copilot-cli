@@ -14,7 +14,7 @@ http:
   # You can specify a custom health check path. The default is "/".
   # healthcheck: '/'
   # You can specify a custom domain alias. The default domain name is 'frontend.${EnvName}.${AppName}.example.com'.
-  # alias: 'example.com'
+  # alias: 'other.example.com'
 
 # Configuration for your containers and service.
 image:

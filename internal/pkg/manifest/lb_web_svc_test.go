@@ -27,9 +27,9 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 					Name:       "frontend",
 					Dockerfile: "./Dockerfile",
 				},
-				Path:   "/",
-				Port:   80,
-				Domain: aws.String("example.com"),
+				Path:      "/",
+				Port:      80,
+				AppDomain: aws.String("example.com"),
 			},
 
 			wanted: &LoadBalancedWebService{
@@ -48,7 +48,7 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 						},
 						Port: aws.Uint16(80),
 					},
-					Domain: aws.String("example.com"),
+					AppDomain: aws.String("example.com"),
 					RoutingRule: RoutingRule{
 						Path: stringP("/"),
 						HealthCheck: HealthCheckArgsOrString{
@@ -164,7 +164,7 @@ func TestLoadBalancedWebService_MarshalBinary(t *testing.T) {
 					Name:       "frontend",
 					Dockerfile: "./frontend/Dockerfile",
 				},
-				Domain: aws.String("example.com"),
+				AppDomain: aws.String("example.com"),
 			},
 			wantedTestdata: "lb-svc-with-domain.yml",
 		},

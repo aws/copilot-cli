@@ -81,7 +81,7 @@ type ServiceProps struct {
 	WorkloadProps
 	Port        uint16
 	HealthCheck *manifest.ContainerHealthCheck
-	Domain      *string
+	appDomain   *string
 }
 
 // WorkloadInitializer holds the clients necessary to initialize either a
@@ -165,7 +165,12 @@ func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 	log.Infoln(color.Help(helpText))
 	log.Infoln()
 
-	err = w.addJobToAppAndSSM(props.WorkloadProps)
+	app, err := w.Store.GetApplication(props.App)
+	if err != nil {
+		return "", fmt.Errorf("get application %s: %w", props.App, err)
+	}
+
+	err = w.addJobToAppAndSSM(app, props.WorkloadProps)
 	if err != nil {
 		return "", err
 	}
@@ -185,7 +190,7 @@ func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 		return "", fmt.Errorf("get application %s: %w", props.App, err)
 	}
 	if app.Domain != "" {
-		props.Domain = aws.String(app.Domain)
+		props.appDomain = aws.String(app.Domain)
 	}
 
 	var manifestExists bool
@@ -230,16 +235,11 @@ func (w *WorkloadInitializer) addSvcToAppAndSSM(app *config.Application, props W
 	return w.addWlToAppAndSSM(app, props, svcWlType)
 }
 
-func (w *WorkloadInitializer) addJobToAppAndSSM(props WorkloadProps) error {
-	app, err := w.Store.GetApplication(props.App)
-	if err != nil {
-		return fmt.Errorf("get application %s: %w", props.App, err)
-	}
+func (w *WorkloadInitializer) addJobToAppAndSSM(app *config.Application, props WorkloadProps) error {
 	return w.addWlToAppAndSSM(app, props, jobWlType)
 }
 
 func (w *WorkloadInitializer) addWlToAppAndSSM(app *config.Application, props WorkloadProps, wlType string) error {
-	// add workload to application
 	w.Prog.Start(fmt.Sprintf(fmtAddWlToAppStart, wlType, props.Name))
 	if err := w.addWlToApp(app, props.Name, wlType); err != nil {
 		w.Prog.Stop(log.Serrorf(fmtAddWlToAppFailed, wlType, props.Name))
@@ -247,7 +247,6 @@ func (w *WorkloadInitializer) addWlToAppAndSSM(app *config.Application, props Wo
 	}
 	w.Prog.Stop(log.Ssuccessf(fmtAddWlToAppComplete, wlType, props.Name))
 
-	// add job to ssm
 	if err := w.addWlToStore(&config.Workload{
 		App:  props.App,
 		Name: props.Name,
@@ -296,9 +295,9 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *ServiceProps)
 			Dockerfile: i.DockerfilePath,
 			Image:      i.Image,
 		},
-		Port:   i.Port,
-		Domain: i.Domain,
-		Path:   "/",
+		Port:      i.Port,
+		AppDomain: i.appDomain,
+		Path:      "/",
 	}
 	existingSvcs, err := w.Store.ListServices(i.App)
 	if err != nil {
