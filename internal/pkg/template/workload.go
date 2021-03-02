@@ -176,6 +176,8 @@ type WorkloadOpts struct {
 	Autoscaling *AutoscalingOpts
 	Storage     *StorageOpts
 	Network     *NetworkOpts
+	EntryPoint  []string
+	Command     []string
 
 	// Additional options for service templates.
 	HealthCheck         *ecs.HealthCheck
