@@ -44,6 +44,7 @@ Resources:
 {{include "envvars" . | indent 10}}
 {{include "secrets" . | indent 10}}
 {{include "logconfig" . | indent 10}}
+{{include "image-overrides" . | indent 10}}
 {{- if .Storage -}}
 {{include "mount-points" . | indent 10}}
 {{- end -}}
