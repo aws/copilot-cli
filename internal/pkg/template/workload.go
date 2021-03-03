@@ -145,7 +145,7 @@ type AutoscalingOpts struct {
 	ResponseTime *float64
 }
 
-// StateMachineOpts holds configuration neeed for State Machine retries and timeout.
+// StateMachineOpts holds configuration needed for State Machine retries and timeout.
 type StateMachineOpts struct {
 	Timeout *int
 	Retries *int
@@ -176,6 +176,7 @@ type WorkloadOpts struct {
 	Autoscaling *AutoscalingOpts
 	Storage     *StorageOpts
 	Network     *NetworkOpts
+	DomainAlias string
 
 	// Additional options for service templates.
 	HealthCheck         *ecs.HealthCheck

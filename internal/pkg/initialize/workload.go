@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -80,6 +81,7 @@ type ServiceProps struct {
 	WorkloadProps
 	Port        uint16
 	HealthCheck *manifest.ContainerHealthCheck
+	appDomain   *string
 }
 
 // WorkloadInitializer holds the clients necessary to initialize either a
@@ -99,17 +101,6 @@ func (w *WorkloadInitializer) Service(i *ServiceProps) (string, error) {
 // Job writes the job manifest, creates an ECR repository, and adds the job to SSM.
 func (w *WorkloadInitializer) Job(i *JobProps) (string, error) {
 	return w.initJob(i)
-}
-
-func (w *WorkloadInitializer) writeManifest(mf encoding.BinaryMarshaler, wlName string, wlType string) (string, error) {
-	switch wlType {
-	case svcWlType:
-		return w.Ws.WriteServiceManifest(mf, wlName)
-	case jobWlType:
-		return w.Ws.WriteJobManifest(mf, wlName)
-	default:
-		return "", fmt.Errorf(fmtErrUnrecognizedWlType, wlType)
-	}
 }
 
 func (w *WorkloadInitializer) addWlToApp(app *config.Application, wlName string, wlType string) error {
@@ -135,11 +126,6 @@ func (w *WorkloadInitializer) addWlToStore(wl *config.Workload, wlType string) e
 }
 
 func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
-	mf, err := newJobManifest(props)
-	if err != nil {
-		return "", err
-	}
-
 	if props.DockerfilePath != "" {
 		path, err := relativeDockerfilePath(w.Ws, props.DockerfilePath)
 		if err != nil {
@@ -149,7 +135,11 @@ func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 	}
 
 	var manifestExists bool
-	manifestPath, err := w.writeManifest(mf, props.Name, jobWlType)
+	mf, err := newJobManifest(props)
+	if err != nil {
+		return "", err
+	}
+	manifestPath, err := w.Ws.WriteJobManifest(mf, props.Name)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
@@ -175,7 +165,12 @@ func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 	log.Infoln(color.Help(helpText))
 	log.Infoln()
 
-	err = w.addWlToAppAndSSM(props.WorkloadProps, jobWlType)
+	app, err := w.Store.GetApplication(props.App)
+	if err != nil {
+		return "", fmt.Errorf("get application %s: %w", props.App, err)
+	}
+
+	err = w.addJobToAppAndSSM(app, props.WorkloadProps)
 	if err != nil {
 		return "", err
 	}
@@ -183,11 +178,6 @@ func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 }
 
 func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
-	mf, err := w.newServiceManifest(props)
-	if err != nil {
-		return "", err
-	}
-
 	if props.DockerfilePath != "" {
 		path, err := relativeDockerfilePath(w.Ws, props.DockerfilePath)
 		if err != nil {
@@ -195,9 +185,20 @@ func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 		}
 		props.DockerfilePath = path
 	}
+	app, err := w.Store.GetApplication(props.App)
+	if err != nil {
+		return "", fmt.Errorf("get application %s: %w", props.App, err)
+	}
+	if app.Domain != "" {
+		props.appDomain = aws.String(app.Domain)
+	}
 
 	var manifestExists bool
-	manifestPath, err := w.writeManifest(mf, props.Name, svcWlType)
+	mf, err := w.newServiceManifest(props)
+	if err != nil {
+		return "", err
+	}
+	manifestPath, err := w.Ws.WriteServiceManifest(mf, props.Name)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
@@ -223,19 +224,22 @@ func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 	log.Infoln(color.Help(helpText))
 	log.Infoln()
 
-	err = w.addWlToAppAndSSM(props.WorkloadProps, svcWlType)
+	err = w.addSvcToAppAndSSM(app, props.WorkloadProps)
 	if err != nil {
 		return "", err
 	}
 	return manifestPath, nil
 }
 
-func (w *WorkloadInitializer) addWlToAppAndSSM(props WorkloadProps, wlType string) error {
-	// add workload to application
-	app, err := w.Store.GetApplication(props.App)
-	if err != nil {
-		return fmt.Errorf("get application %s: %w", props.App, err)
-	}
+func (w *WorkloadInitializer) addSvcToAppAndSSM(app *config.Application, props WorkloadProps) error {
+	return w.addWlToAppAndSSM(app, props, svcWlType)
+}
+
+func (w *WorkloadInitializer) addJobToAppAndSSM(app *config.Application, props WorkloadProps) error {
+	return w.addWlToAppAndSSM(app, props, jobWlType)
+}
+
+func (w *WorkloadInitializer) addWlToAppAndSSM(app *config.Application, props WorkloadProps, wlType string) error {
 	w.Prog.Start(fmt.Sprintf(fmtAddWlToAppStart, wlType, props.Name))
 	if err := w.addWlToApp(app, props.Name, wlType); err != nil {
 		w.Prog.Stop(log.Serrorf(fmtAddWlToAppFailed, wlType, props.Name))
@@ -243,7 +247,6 @@ func (w *WorkloadInitializer) addWlToAppAndSSM(props WorkloadProps, wlType strin
 	}
 	w.Prog.Stop(log.Ssuccessf(fmtAddWlToAppComplete, wlType, props.Name))
 
-	// add job to ssm
 	if err := w.addWlToStore(&config.Workload{
 		App:  props.App,
 		Name: props.Name,
@@ -292,8 +295,9 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *ServiceProps)
 			Dockerfile: i.DockerfilePath,
 			Image:      i.Image,
 		},
-		Port: i.Port,
-		Path: "/",
+		Port:      i.Port,
+		AppDomain: i.appDomain,
+		Path:      "/",
 	}
 	existingSvcs, err := w.Store.ListServices(i.App)
 	if err != nil {
