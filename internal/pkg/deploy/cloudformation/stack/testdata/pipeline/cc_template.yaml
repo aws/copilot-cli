@@ -185,7 +185,6 @@ Resources:
   BuildTestCommandstest:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: BuildTestCommands-phonetool-test
       EncryptionKey: !ImportValue phonetool-ArtifactKey
       ServiceRole: !GetAtt BuildProjectRole.Arn
       Artifacts:
