@@ -182,7 +182,7 @@ Resources:
               - arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
       Roles:
         - !Ref PipelineRole
-  BuildTestCommands-test:
+  BuildTestCommandstest:
     Type: AWS::CodeBuild::Project
     Properties:
       EncryptionKey: !ImportValue phonetool-ArtifactKey

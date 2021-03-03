@@ -219,7 +219,7 @@ Resources:
         - !Ref PipelineRole
 {{- range $index, $stage := .Stages}}
   {{- if $stage.TestCommands}}
-  BuildTestCommands-{{$stage.Name}}:
+  BuildTestCommands{{$stage.Name}}:
     Type: AWS::CodeBuild::Project
     Properties:
       EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
