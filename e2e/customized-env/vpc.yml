@@ -18,7 +18,7 @@ Resources:
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref VPC
 
-  PublicSubnet1:
+  PublicSubnetOne:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.0.0/24
@@ -26,7 +26,7 @@ Resources:
       AvailabilityZone: !Select [ 0, !GetAZs '' ]
       MapPublicIpOnLaunch: true
 
-  PublicSubnet2:
+  PublicSubnetTwo:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.1.0/24
@@ -34,7 +34,7 @@ Resources:
       AvailabilityZone: !Select [ 1, !GetAZs '' ]
       MapPublicIpOnLaunch: true
 
-  PrivateSubnet1:
+  PrivateSubnetOne:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.2.0/24
@@ -42,7 +42,7 @@ Resources:
       AvailabilityZone: !Select [ 0, !GetAZs '' ]
       MapPublicIpOnLaunch: false
 
-  PrivateSubnet2:
+  PrivateSubnetTwo:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.3.0/24
@@ -63,24 +63,78 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
 
-  PublicSubnet1RouteTableAssociation:
+  PublicSubnetOneRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet1
+      SubnetId: !Ref PublicSubnetOne
 
-  PublicSubnet2RouteTableAssociation:
+  PublicSubnetTwoRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet2
+      SubnetId: !Ref PublicSubnetTwo
+
+  # Setup networking resources for private subnets. Containers will be launched with private IP addresses, and will
+  # need NAT gateways to be able to reach out to the internet to pull the container image for example.
+  NatGatewayOneAttachment:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+  NatGatewayTwoAttachment:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+  NatGatewayOne:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayOneAttachment.AllocationId
+      SubnetId: !Ref PublicSubnetOne
+  NatGatewayTwo:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayTwoAttachment.AllocationId
+      SubnetId: !Ref PublicSubnetTwo
+  PrivateRouteTableOne:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'VPC'
+  PrivateRouteOne:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableOne
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayOne
+  PrivateRouteTableOneAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableOne
+      SubnetId: !Ref PrivateSubnetOne
+  PrivateRouteTableTwo:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'VPC'
+  PrivateRouteTwo:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableTwo
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayTwo
+  PrivateRouteTableTwoAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableTwo
+      SubnetId: !Ref PrivateSubnetTwo
+
 
 Outputs:
   VpcId:
     Value: !Ref VPC
 
   PublicSubnets:
-    Value: !Join [ ',', [ !Ref PublicSubnet1, !Ref PublicSubnet2 ] ]
+    Value: !Join [ ',', [ !Ref PublicSubnetOne, !Ref PublicSubnetTwo ] ]
 
   PrivateSubnets:
-    Value: !Join [ ',', [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ] ]
+    Value: !Join [ ',', [ !Ref PrivateSubnetOne, !Ref PrivateSubnetTwo ] ]

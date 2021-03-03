@@ -24,8 +24,9 @@ import (
 const (
 	userAgentHeader = "User-Agent"
 
-	credsTimeout  = 10 * time.Second
-	clientTimeout = 30 * time.Second
+	maxRetriesOnRecoverableFailures = 8 // Default provided by SDK is 3 which means requests are retried up to only 2 seconds.
+	credsTimeout                    = 10 * time.Second
+	clientTimeout                   = 30 * time.Second
 )
 
 // Provider provides methods to create sessions.
@@ -153,7 +154,8 @@ func newConfig() *aws.Config {
 	}
 	return aws.NewConfig().
 		WithHTTPClient(c).
-		WithCredentialsChainVerboseErrors(true)
+		WithCredentialsChainVerboseErrors(true).
+		WithMaxRetries(maxRetriesOnRecoverableFailures)
 }
 
 // userAgentHandler returns a http request handler that sets a custom user agent to all aws requests.

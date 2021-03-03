@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -140,6 +141,24 @@ var _ = Describe("Customized Env", func() {
 
 		It("svc init should create a svc manifest", func() {
 			Expect("./copilot/front-end/manifest.yml").Should(BeAnExistingFile())
+		})
+
+		It("should copy private placement to the manifest for test environment", func() {
+			f, err := os.OpenFile("./copilot/front-end/manifest.yml", os.O_WRONLY|os.O_APPEND, 0644)
+			Expect(err).NotTo(HaveOccurred(), "should be able to open the file to append content")
+
+			// "test" is the only environment where we import a VPC.
+			_, err = f.WriteString(`
+environments:
+  test:
+    network:
+      vpc:
+        placement: 'private'
+`)
+			Expect(err).NotTo(HaveOccurred(), "should be able to write 'private' placement to manifest file")
+
+			err = f.Close()
+			Expect(err).NotTo(HaveOccurred(), "should have been able to close the manifest file")
 		})
 
 		It("svc ls should list the svc", func() {
