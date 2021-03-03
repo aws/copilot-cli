@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"gopkg.in/yaml.v3"
@@ -31,8 +32,10 @@ var (
 	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
 
 	// Error definitions.
-	errUnmarshalBuildOpts = errors.New("can't unmarshal build field into string or compose-style map")
-	errUnmarshalCountOpts = errors.New(`can't unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalBuildOpts 	= errors.New("cannot unmarshal build field into string or compose-style map")
+	errUnmarshalCountOpts 	= errors.New(`cannot unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalEntryPoint 	= errors.New("cannot unmarshal entrypoint into string or slice of strings")
+	errUnmarshalCommand 	= errors.New("cannot unmarshal command into string or slice of strings")
 )
 
 // WorkloadProps contains properties for creating a new workload manifest.
@@ -129,6 +132,81 @@ func (i *Image) target() *string {
 // Otherwise it returns nil.
 func (i *Image) cacheFrom() []string {
 	return i.Build.BuildArgs.CacheFrom
+}
+
+// ImageOverride holds fields that override Dockerfile image defaults.
+type ImageOverride struct {
+	EntryPoint EntryPointOverride `yaml:"entrypoint"`
+	Command    CommandOverride    `yaml:"command"`
+}
+
+// EntryPointOverride is a custom type which supports unmarshaling "entrypoint" yaml which
+// can either be of type string or type slice of string.
+type EntryPointOverride stringSliceOrString
+
+// CommandOverride is a custom type which supports unmarshaling "command" yaml which
+// can either be of type string or type slice of string.
+type CommandOverride stringSliceOrString
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the EntryPointOverride
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (e *EntryPointOverride) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), unmarshal); err != nil {
+		return errUnmarshalEntryPoint
+	}
+	return nil
+}
+
+// ToStringSlice converts an EntryPointOverride to a slice of string.
+func (e *EntryPointOverride) ToStringSlice() []string {
+	return  toStringSlice((*stringSliceOrString)(e))
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the CommandOverride
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (c *CommandOverride) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(c), unmarshal); err != nil {
+		return errUnmarshalCommand
+	}
+	return nil
+}
+
+// ToStringSlice converts an CommandOverride to a slice of string.
+func (c *CommandOverride) ToStringSlice() []string {
+	return  toStringSlice((*stringSliceOrString)(c))
+}
+
+type stringSliceOrString struct {
+	String      *string
+	StringSlice []string
+}
+
+func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, unmarshal func(interface{}) error) error {
+	if err := unmarshal(&s.StringSlice); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if s.StringSlice != nil {
+		// Unmarshaled successfully to s.StringSlice, unset s.String, and return.
+		s.String = nil
+		return nil
+	}
+
+	return unmarshal(&s.String)
+}
+
+func toStringSlice(s *stringSliceOrString) []string {
+	if s.String != nil {
+		return strings.Split(*s.String, " ")
+	}
+	return s.StringSlice
 }
 
 // BuildArgsOrString is a custom type which supports unmarshaling yaml which

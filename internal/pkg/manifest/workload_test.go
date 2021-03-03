@@ -13,6 +13,185 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func TestEntryPointOverride_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct EntryPointOverride
+		wantedError  error
+	}{
+		"Entrypoint specified in string": {
+			inContent: []byte(`entrypoint: echo hello`),
+			wantedStruct: EntryPointOverride{
+				String: aws.String("echo hello"),
+				StringSlice: nil,
+			},
+		},
+		"Entrypoint specified in slice of strings": {
+			inContent: []byte(`entrypoint: ["/bin/sh", "-c"]`),
+			wantedStruct: EntryPointOverride{
+				String: nil,
+				StringSlice: []string{"/bin/sh", "-c"},
+			},
+		},
+		"Error if unmarshalable": {
+			inContent: []byte(`entrypoint: {"/bin/sh", "-c"}`),
+			wantedStruct: EntryPointOverride{
+				String: nil,
+				StringSlice: nil,
+			},
+			wantedError: errUnmarshalEntryPoint,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			e := ImageOverride{
+				EntryPoint: EntryPointOverride{
+					String: aws.String("wrong"),
+				},
+			}
+
+			err := yaml.Unmarshal(tc.inContent, &e)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				// check memberwise dereferenced pointer equality
+				require.Equal(t, tc.wantedStruct.StringSlice, e.EntryPoint.StringSlice)
+				require.Equal(t, tc.wantedStruct.String, e.EntryPoint.String)
+			}
+		})
+	}
+}
+
+func TestEntryPointOverride_ToStringSlice(t *testing.T) {
+	testCases := map[string]struct {
+		inEntryPointOverride EntryPointOverride
+
+		wantedSlice []string
+		wantedError  error
+	}{
+		"Both fields are empty": {
+			inEntryPointOverride: EntryPointOverride{
+				String: nil,
+				StringSlice: nil,
+			},
+			wantedSlice: nil,
+		},
+		"Given a string": {
+			inEntryPointOverride: EntryPointOverride{
+				String: aws.String("/bin/sh -c"),
+				StringSlice: nil,
+			},
+			wantedSlice: []string{"/bin/sh", "-c"},
+		},
+		"Given a string slice": {
+			inEntryPointOverride: EntryPointOverride{
+				String: nil,
+				StringSlice: []string{"/bin/sh", "-c"},
+			},
+			wantedSlice: []string{"/bin/sh", "-c"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			out := tc.inEntryPointOverride.ToStringSlice()
+			require.Equal(t, tc.wantedSlice, out)
+		})
+	}
+}
+
+func TestCommandOverride_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct CommandOverride
+		wantedError  error
+	}{
+		"Entrypoint specified in string": {
+			inContent: []byte(`command: echo hello`),
+			wantedStruct: CommandOverride{
+				String: aws.String("echo hello"),
+				StringSlice: nil,
+			},
+		},
+		"Entrypoint specified in slice of strings": {
+			inContent: []byte(`command: ["--version"]`),
+			wantedStruct: CommandOverride{
+				String: nil,
+				StringSlice: []string{"--version"},
+			},
+		},
+		"Error if unmarshalable": {
+			inContent: []byte(`command: {-c}`),
+			wantedStruct: CommandOverride{
+				String: nil,
+				StringSlice: nil,
+			},
+			wantedError: errUnmarshalCommand,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			e := ImageOverride{
+				Command: CommandOverride{
+					String: aws.String("wrong"),
+				},
+			}
+
+			err := yaml.Unmarshal(tc.inContent, &e)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				// check memberwise dereferenced pointer equality
+				require.Equal(t, tc.wantedStruct.StringSlice, e.Command.StringSlice)
+				require.Equal(t, tc.wantedStruct.String, e.Command.String)
+			}
+		})
+	}
+}
+
+func TestCommandOverride_ToStringSlice(t *testing.T) {
+	testCases := map[string]struct {
+		inCommandOverrides CommandOverride
+
+		wantedSlice []string
+	}{
+		"Both fields are empty": {
+			inCommandOverrides: CommandOverride{
+				String: nil,
+				StringSlice: nil,
+			},
+			wantedSlice: nil,
+		},
+		"Given a string": {
+			inCommandOverrides: CommandOverride{
+				String: aws.String(`-c read some command`),
+				StringSlice: nil,
+			},
+			wantedSlice: []string{"-c", "read", "some", "command"},
+		},
+		"Given a string slice": {
+			inCommandOverrides: CommandOverride{
+				String: nil,
+				StringSlice: []string{"-c", "read", "some", "command"},
+			},
+			wantedSlice: []string{"-c", "read", "some", "command"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			out := tc.inCommandOverrides.ToStringSlice()
+			require.Equal(t, tc.wantedSlice, out)
+		})
+	}
+}
+
 func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		inContent []byte

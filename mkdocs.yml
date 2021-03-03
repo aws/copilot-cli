@@ -37,6 +37,7 @@ nav:
       - Service Discovery: docs/developing/service-discovery.md
       - Additional AWS Resources: docs/developing/additional-aws-resources.md
       - Sidecars: docs/developing/sidecars.md
+      - Storage: docs/developing/storage.md
     - Commands:
       - Getting Started:
         - init: docs/commands/init.md
