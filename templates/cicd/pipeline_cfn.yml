@@ -222,7 +222,6 @@ Resources:
   BuildTestCommands{{$stage.Name}}:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: BuildTestCommands-{{$.AppName}}-{{$stage.Name}}
       EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
       ServiceRole: !GetAtt BuildProjectRole.Arn
       Artifacts:

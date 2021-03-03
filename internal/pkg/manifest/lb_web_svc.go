@@ -53,6 +53,10 @@ type LoadBalancedWebServiceConfig struct {
 	*Logging      `yaml:"logging,flow"`
 	Sidecars    map[string]*SidecarConfig `yaml:"sidecars"`
 	Network     NetworkConfig             `yaml:"network"`
+
+	// Fields that are used while marshaling the template for additional clarifications,
+	// but don't correspond to a field in the manifests.
+	AppDomain *string
 }
 
 // HTTPHealthCheckArgs holds the configuration to determine if the load balanced web service is healthy.
@@ -112,8 +116,9 @@ type RoutingRule struct {
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
 type LoadBalancedWebServiceProps struct {
 	*WorkloadProps
-	Path string
-	Port uint16
+	Path      string
+	Port      uint16
+	AppDomain *string
 }
 
 // NewLoadBalancedWebService creates a new public load balanced web service, receives all the requests from the load balancer,
@@ -126,6 +131,7 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
 	svc.RoutingRule.Path = aws.String(props.Path)
+	svc.AppDomain = props.AppDomain
 	svc.parser = template.New()
 	return svc
 }
