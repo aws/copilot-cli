@@ -209,10 +209,9 @@ Resources:
               - arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
       Roles:
         - !Ref PipelineRole
-  BuildTestCommandstest:
+  BuildTestCommands-test:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: BuildTestCommands-phonetool-test-huanjani/sample-master
       EncryptionKey: !ImportValue phonetool-ArtifactKey
       ServiceRole: !GetAtt BuildProjectRole.Arn
       Artifacts:
