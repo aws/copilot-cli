@@ -92,6 +92,15 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		Path: "frontend",
 		Port: 80,
 	})
+	testLBWebServiceManifest.EntryPoint = manifest.EntryPointOverride{
+		String: nil,
+		StringSlice: []string{"/bin/echo", "hello"},
+	}
+	testLBWebServiceManifest.Command = manifest.CommandOverride{
+		String: nil,
+		StringSlice: []string{"world"},
+	}
+
 	testCases := map[string]struct {
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService)
 		wantedTemplate   string
@@ -180,6 +189,8 @@ Outputs:
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
+					EntryPoint: []string{"/bin/echo", "hello"},
+					Command: []string{"world"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 
 				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
@@ -212,6 +223,8 @@ Outputs:
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
+					EntryPoint: []string{"/bin/echo", "hello"},
+					Command: []string{"world"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{
 					tpl: `Resources:
