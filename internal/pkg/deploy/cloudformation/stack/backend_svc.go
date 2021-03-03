@@ -98,6 +98,8 @@ func (s *BackendService) Template() (string, error) {
 		DesiredCountLambda: desiredCountLambda.String(),
 		Storage:            storage,
 		Network:            convertNetworkConfig(s.manifest.Network),
+		EntryPoint:         s.manifest.EntryPoint.ToStringSlice(),
+		Command:            s.manifest.Command.ToStringSlice(),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)

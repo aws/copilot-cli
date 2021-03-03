@@ -58,6 +58,7 @@ var (
 		"env-controller",
 		"mount-points",
 		"volumes",
+		"image-overrides",
 	}
 )
 
@@ -176,6 +177,8 @@ type WorkloadOpts struct {
 	Autoscaling *AutoscalingOpts
 	Storage     *StorageOpts
 	Network     *NetworkOpts
+	EntryPoint  []string
+	Command     []string
 	DomainAlias string
 
 	// Additional options for service templates.

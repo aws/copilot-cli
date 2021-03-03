@@ -160,6 +160,13 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 			},
 		},
+		"renders a valid template with entrypoint and command overrides": {
+			opts: template.WorkloadOpts{
+				HTTPHealthCheck: defaultHttpHealthCheck,
+				EntryPoint: []string{"/bin/echo", "hello"},
+				Command: []string{"world"},
+			},
+		},
 	}
 
 	for name, tc := range testCases {
