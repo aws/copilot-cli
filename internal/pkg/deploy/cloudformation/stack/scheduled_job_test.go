@@ -19,16 +19,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var testScheduledJobManifest = manifest.NewScheduledJob(&manifest.ScheduledJobProps{
-	WorkloadProps: &manifest.WorkloadProps{
-		Name:       "mailer",
-		Dockerfile: "mailer/Dockerfile",
-	},
-	Schedule: "@daily",
-	Timeout:  "1h30m",
-	Retries:  3,
-})
-
 // mockTemplater is declared in lb_web_svc_test.go
 const (
 	testJobAppName      = "cuteoverload"
@@ -38,6 +28,24 @@ const (
 )
 
 func TestScheduledJob_Template(t *testing.T) {
+	testScheduledJobManifest := manifest.NewScheduledJob(&manifest.ScheduledJobProps{
+		WorkloadProps: &manifest.WorkloadProps{
+			Name:       "mailer",
+			Dockerfile: "mailer/Dockerfile",
+		},
+		Schedule: "@daily",
+		Timeout:  "1h30m",
+		Retries:  3,
+	})
+	testScheduledJobManifest.EntryPoint = manifest.EntryPointOverride{
+		String: nil,
+		StringSlice: []string{"/bin/echo", "hello"},
+	}
+	testScheduledJobManifest.Command = manifest.CommandOverride{
+		String: nil,
+		StringSlice: []string{"world"},
+	}
+
 	testCases := map[string]struct {
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob)
 
@@ -57,6 +65,8 @@ func TestScheduledJob_Template(t *testing.T) {
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
+					EntryPoint: []string{"/bin/echo", "hello"},
+					Command: []string{"world"},
 				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
 				j.parser = m
@@ -83,6 +93,8 @@ func TestScheduledJob_Template(t *testing.T) {
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
+					EntryPoint: []string{"/bin/echo", "hello"},
+					Command: []string{"world"},
 				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{
 					tpl: `Resources:
@@ -497,6 +509,15 @@ func TestScheduledJob_Parameters(t *testing.T) {
 }
 
 func TestScheduledJob_SerializedParameters(t *testing.T) {
+	testScheduledJobManifest := manifest.NewScheduledJob(&manifest.ScheduledJobProps{
+		WorkloadProps: &manifest.WorkloadProps{
+			Name:       "mailer",
+			Dockerfile: "mailer/Dockerfile",
+		},
+		Schedule: "@daily",
+		Timeout:  "1h30m",
+		Retries:  3,
+	})
 	testCases := map[string]struct {
 		mockDependencies func(ctrl *gomock.Controller, c *ScheduledJob)
 
