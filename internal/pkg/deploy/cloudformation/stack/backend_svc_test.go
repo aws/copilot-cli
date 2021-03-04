@@ -27,45 +27,23 @@ var (
 	testRetries     = 3
 	testTimeout     = 10 * time.Second
 	testStartPeriod = 0 * time.Second
-)
 
-var testBackendSvcManifest = manifest.NewBackendService(manifest.BackendServiceProps{
-	WorkloadProps: manifest.WorkloadProps{
-		Name:       "frontend",
-		Dockerfile: "./frontend/Dockerfile",
-	},
-	Port: 8080,
-	HealthCheck: &manifest.ContainerHealthCheck{
-		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
-		Interval:    &testInterval,
-		Retries:     &testRetries,
-		Timeout:     &testTimeout,
-		StartPeriod: &testStartPeriod,
-	},
-})
+	testServiceName = "frontend"
+	testDockerfile  = "./frontend/Dockerfile"
+)
 
 func TestBackendService_Template(t *testing.T) {
 	baseProps := manifest.BackendServiceProps{
 		WorkloadProps: manifest.WorkloadProps{
-			Name:       "frontend",
-			Dockerfile: "./frontend/Dockerfile",
+			Name:       testServiceName,
+			Dockerfile: testDockerfile,
 		},
 		Port: 8080,
 	}
-	testBackendSvcManifestWithBadSidecar := manifest.NewBackendService(baseProps)
-	testBackendSvcManifestWithBadSidecar.Sidecars = map[string]*manifest.SidecarConfig{
-		"xray": {
-			Port: aws.String("80/80/80"),
-		},
-	}
-	badRange := manifest.Range("badRange")
-	testBackendSvcManifestWithBadAutoScaling := manifest.NewBackendService(baseProps)
-	testBackendSvcManifestWithBadAutoScaling.Count.Autoscaling = manifest.Autoscaling{
-		Range: &badRange,
-	}
+
 	testCases := map[string]struct {
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, svc *BackendService)
-		manifest         *manifest.BackendService
+		setUpManifest    func(svc *BackendService)
 		wantedTemplate   string
 		wantedErr        error
 	}{
@@ -79,17 +57,24 @@ func TestBackendService_Template(t *testing.T) {
 			wantedErr:      fmt.Errorf("read desired count lambda: some error"),
 		},
 		"unexpected addons parsing error": {
-			manifest: testBackendSvcManifest,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
 				svc.addons = mockTemplater{err: errors.New("some error")}
 			},
-			wantedErr: fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testBackendSvcManifest.Name), errors.New("some error")),
+			wantedErr: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")),
 		},
 		"failed parsing sidecars template": {
-			manifest: testBackendSvcManifestWithBadSidecar,
+			setUpManifest: func(svc *BackendService) {
+				testBackendSvcManifestWithBadSidecar := manifest.NewBackendService(baseProps)
+				testBackendSvcManifestWithBadSidecar.Sidecars = map[string]*manifest.SidecarConfig{
+					"xray": {
+						Port: aws.String("80/80/80"),
+					},
+				}
+				svc.manifest = testBackendSvcManifestWithBadSidecar
+			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
@@ -107,7 +92,14 @@ Outputs:
 			wantedErr: fmt.Errorf("convert the sidecar configuration for service frontend: %w", errors.New("cannot parse port mapping from 80/80/80")),
 		},
 		"failed parsing Auto Scaling template": {
-			manifest: testBackendSvcManifestWithBadAutoScaling,
+			setUpManifest: func(svc *BackendService) {
+				testBackendSvcManifestWithBadAutoScaling := manifest.NewBackendService(baseProps)
+				badRange := manifest.Range("badRange")
+				testBackendSvcManifestWithBadAutoScaling.Count.Autoscaling = manifest.Autoscaling{
+					Range: &badRange,
+				}
+				svc.manifest = testBackendSvcManifestWithBadAutoScaling
+			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
@@ -125,7 +117,9 @@ Outputs:
 			wantedErr: fmt.Errorf("convert the Auto Scaling configuration for service frontend: %w", errors.New("invalid range value badRange. Should be in format of ${min}-${max}")),
 		},
 		"failed parsing svc template": {
-			manifest: testBackendSvcManifest,
+			setUpManifest: func(svc *BackendService) {
+				svc.manifest = manifest.NewBackendService(baseProps)
+			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
@@ -144,7 +138,30 @@ Outputs:
 			wantedErr: fmt.Errorf("parse backend service template: %w", errors.New("some error")),
 		},
 		"render template": {
-			manifest: testBackendSvcManifest,
+			setUpManifest: func(svc *BackendService) {
+				svc.manifest = manifest.NewBackendService(manifest.BackendServiceProps{
+					WorkloadProps: manifest.WorkloadProps{
+						Name:       testServiceName,
+						Dockerfile: testDockerfile,
+					},
+					Port: 8080,
+					HealthCheck: &manifest.ContainerHealthCheck{
+						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
+						Interval:    &testInterval,
+						Retries:     &testRetries,
+						Timeout:     &testTimeout,
+						StartPeriod: &testStartPeriod,
+					},
+				})
+				svc.manifest.EntryPoint = manifest.EntryPointOverride{
+					String: nil,
+					StringSlice: []string{"enter", "from"},
+				}
+				svc.manifest.Command = manifest.CommandOverride{
+					String: nil,
+					StringSlice: []string{"here"},
+				}
+			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
@@ -166,6 +183,8 @@ Outputs:
 						SubnetsType:    template.PrivateSubnetsPlacement,
 						SecurityGroups: []string{"sg-1234"},
 					},
+					EntryPoint: []string{"enter", "from"},
+					Command: []string{"here"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				svc.parser = m
 				svc.addons = mockTemplater{
@@ -189,7 +208,7 @@ Outputs:
 			defer ctrl.Finish()
 			conf := &BackendService{
 				wkld: &wkld{
-					name: aws.StringValue(testBackendSvcManifest.Name),
+					name: testServiceName,
 					env:  testEnvName,
 					app:  testAppName,
 					rc: RuntimeConfig{
@@ -199,12 +218,14 @@ Outputs:
 						},
 					},
 				},
-				manifest: tc.manifest,
 			}
-			if tc.manifest != nil {
+
+			if tc.setUpManifest != nil {
+				tc.setUpManifest(conf)
 				conf.manifest.Network.VPC.Placement = aws.String(manifest.PrivateSubnetPlacement)
 				conf.manifest.Network.VPC.SecurityGroups = []string{"sg-1234"}
 			}
+
 			tc.mockDependencies(t, ctrl, conf)
 
 			// WHEN
@@ -222,6 +243,21 @@ Outputs:
 }
 
 func TestBackendService_Parameters(t *testing.T) {
+	 testBackendSvcManifest := manifest.NewBackendService(manifest.BackendServiceProps{
+		WorkloadProps: manifest.WorkloadProps{
+			Name:       testServiceName,
+			Dockerfile: testDockerfile,
+		},
+		Port: 8080,
+		HealthCheck: &manifest.ContainerHealthCheck{
+			Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
+			Interval:    &testInterval,
+			Retries:     &testRetries,
+			Timeout:     &testTimeout,
+			StartPeriod: &testStartPeriod,
+		},
+	})
+
 	// GIVEN
 	conf := &BackendService{
 		wkld: &wkld{
