@@ -107,6 +107,10 @@ func TestTaskStackConfig_Parameters(t *testing.T) {
 			ParameterKey:   aws.String(taskCommandParamKey),
 			ParameterValue: aws.String("echo hooray"),
 		},
+		{
+			ParameterKey:   aws.String(taskEntryPointParamKey),
+			ParameterValue: aws.String("exec,some command"),
+		},
 	}
 
 	taskInput := deploy.CreateTaskResourcesInput{
@@ -118,6 +122,7 @@ func TestTaskStackConfig_Parameters(t *testing.T) {
 		TaskRole:      "task-role",
 		ExecutionRole: "execution-role",
 		Command:       []string{"echo hooray"},
+		EntryPoint:    []string{"exec", "some command"},
 	}
 
 	task := &taskStackConfig{
