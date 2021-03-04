@@ -24,7 +24,7 @@ import (
 var (
 	errValueEmpty                         = errors.New("value must not be empty")
 	errValueTooLong                       = errors.New("value must not exceed 255 characters")
-	errValueBadFormat                     = errors.New("value must start with a letter and contain only lower-case letters, numbers, and hyphens")
+	errValueBadFormat                     = errors.New("value must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
 	errValueNotAString                    = errors.New("value must be a string")
 	errValueNotAStringSlice               = errors.New("value must be a string slice")
 	errValueNotAValidPath                 = errors.New("value must be a valid path")
@@ -58,29 +58,31 @@ var ddbRegExp = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_]+$`)
 
 // s3 validation expressions.
 // s3RegExp matches alphanumeric, .- from 3 to 63 characters long.
-// s3DashesRegExp matches consecutive dashes or periods
-// s3TrailingDashRegExp matches a trailing dash
+// punctuationRegExp matches consecutive dashes or periods.
+// trailingPunctRegExp matches a trailing dash.
 // ipAddressRegExp checks for a bucket in the format of an IP address.
 // https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-s3-bucket-naming-requirements.html
+// The punctuation and trailing punctuation guidelines also apply to ECR repositories, though
+// the requirements are not documented.
 var (
 	s3RegExp = regexp.MustCompile("" +
-		`^` + // start of line
-		`[a-z0-9\.\-]{3,63}` + // main match: lowercase alphanumerics, ., - from 3-63 characters
-		`$`, // end of line
+		`^` + // start of line.
+		`[a-z0-9\.\-]{3,63}` + // Main match: lowercase alphanumerics, ., - from 3-63 characters.
+		`$`, // end of line.
 	)
-	s3DashesRegExp = regexp.MustCompile(
-		`[\.\-]{2,}`, // check for consecutive periods or dashes
+	punctuationRegExp = regexp.MustCompile(
+		`[\.\-]{2,}`, // Check for consecutive periods or dashes.
 	)
-	s3TrailingDashRegExp = regexp.MustCompile(
-		`-$`, // check for trailing dash
+	trailingPunctRegExp = regexp.MustCompile(
+		`[\-\.]$`, // Check for trailing dash or dot.
 	)
 	ipAddressRegexp = regexp.MustCompile(
-		`^(?:\d{1,3}\.){3}\d{1,3}$`, // match any 1-3 digits in xxx.xxx.xxx.xxx format.
+		`^(?:\d{1,3}\.){3}\d{1,3}$`, // Match any 1-3 digits in xxx.xxx.xxx.xxx format.
 	)
 
-	domainNameRegexp = regexp.MustCompile(`\.`) //check for at least one dot in domain name
+	domainNameRegexp = regexp.MustCompile(`\.`) // Check for at least one dot in domain name.
 
-	awsScheduleRegexp = regexp.MustCompile(`(?:rate|cron)\(.*\)`)
+	awsScheduleRegexp = regexp.MustCompile(`(?:rate|cron)\(.*\)`) // Check for strings of the form rate(*) or cron(*).
 )
 
 const regexpFindAllMatches = -1
@@ -276,6 +278,18 @@ func isCorrectFormat(s string) bool {
 	if err != nil {
 		return false // bubble up error?
 	}
+
+	// Check for bad punctuation (no consecutive dashes or dots)
+	formatMatch := punctuationRegExp.FindStringSubmatch(s)
+	if len(formatMatch) != 0 {
+		return false
+	}
+
+	trailingMatch := trailingPunctRegExp.FindStringSubmatch(s)
+	if len(trailingMatch) != 0 {
+		return false
+	}
+
 	return valid
 }
 
@@ -330,19 +344,19 @@ func s3BucketNameValidation(val interface{}) error {
 		return errS3ValueBadSize
 	}
 
-	// Check for bad punctuation (no consecutive dashes or dots)
-	formatMatch := s3DashesRegExp.FindStringSubmatch(s)
-	if len(formatMatch) != 0 {
-		return errS3ValueBadFormat
-	}
-
 	// check for correct character set
 	nameMatch := s3RegExp.FindStringSubmatch(s)
 	if len(nameMatch) == 0 {
 		return errValueBadFormatWithPeriod
 	}
 
-	dashMatch := s3TrailingDashRegExp.FindStringSubmatch(s)
+	// Check for bad punctuation (no consecutive dashes or dots)
+	formatMatch := punctuationRegExp.FindStringSubmatch(s)
+	if len(formatMatch) != 0 {
+		return errS3ValueBadFormat
+	}
+
+	dashMatch := trailingPunctRegExp.FindStringSubmatch(s)
 	if len(dashMatch) != 0 {
 		return errS3ValueTrailingDash
 	}
