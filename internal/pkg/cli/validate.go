@@ -58,29 +58,31 @@ var ddbRegExp = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_]+$`)
 
 // s3 validation expressions.
 // s3RegExp matches alphanumeric, .- from 3 to 63 characters long.
-// punctuationRegExp matches consecutive dashes or periods
-// trailingPunctRegExp matches a trailing dash
+// punctuationRegExp matches consecutive dashes or periods.
+// trailingPunctRegExp matches a trailing dash.
 // ipAddressRegExp checks for a bucket in the format of an IP address.
 // https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-s3-bucket-naming-requirements.html
+// The punctuation and trailing punctuation guidelines also apply to ECR repositories, though
+// the requirements are not documented.
 var (
 	s3RegExp = regexp.MustCompile("" +
-		`^` + // start of line
-		`[a-z0-9\.\-]{3,63}` + // main match: lowercase alphanumerics, ., - from 3-63 characters
-		`$`, // end of line
+		`^` + // start of line.
+		`[a-z0-9\.\-]{3,63}` + // Main match: lowercase alphanumerics, ., - from 3-63 characters.
+		`$`, // end of line.
 	)
 	punctuationRegExp = regexp.MustCompile(
-		`[\.\-]{2,}`, // check for consecutive periods or dashes.
+		`[\.\-]{2,}`, // Check for consecutive periods or dashes.
 	)
 	trailingPunctRegExp = regexp.MustCompile(
-		`[\-\.]$`, // check for trailing dash or dot.
+		`[\-\.]$`, // Check for trailing dash or dot.
 	)
 	ipAddressRegexp = regexp.MustCompile(
-		`^(?:\d{1,3}\.){3}\d{1,3}$`, // match any 1-3 digits in xxx.xxx.xxx.xxx format.
+		`^(?:\d{1,3}\.){3}\d{1,3}$`, // Match any 1-3 digits in xxx.xxx.xxx.xxx format.
 	)
 
-	domainNameRegexp = regexp.MustCompile(`\.`) //check for at least one dot in domain name
+	domainNameRegexp = regexp.MustCompile(`\.`) // Check for at least one dot in domain name.
 
-	awsScheduleRegexp = regexp.MustCompile(`(?:rate|cron)\(.*\)`)
+	awsScheduleRegexp = regexp.MustCompile(`(?:rate|cron)\(.*\)`) // Check for strings of the form rate(*) or cron(*).
 )
 
 const regexpFindAllMatches = -1
