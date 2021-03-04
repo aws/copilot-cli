@@ -10,7 +10,6 @@ import (
 	"github.com/google/shlex"
 	"path/filepath"
 	"strconv"
-	//"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"gopkg.in/yaml.v3"
