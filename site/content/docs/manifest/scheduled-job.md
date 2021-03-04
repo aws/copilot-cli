@@ -95,10 +95,9 @@ The `location` field follows the same definition as the [`image` parameter](http
 <a id="entrypoint" href="#entrypoint" class="field">`entrypoint`</a> <span class="type">String or Array of Strings</span>  
 Override the default entrypoint in the image.
 ```yaml
-entrypoint: /bin/entrypoint --p1 --p2
-```
-
-```yaml
+# String version.
+entrypoint: "/bin/entrypoint --p1 --p2"
+# Alteratively, as an array of strings.
 entrypoint: ["/bin/entrypoint", "--p1", "--p2"]
 ```
 
@@ -108,10 +107,9 @@ entrypoint: ["/bin/entrypoint", "--p1", "--p2"]
 Override the default command in the image.
 
 ```yaml
+# String version.
 command: ps au
-```
-
-```yaml
+# Alteratively, as an array of strings.
 command: ["ps", "au"]
 ```
 

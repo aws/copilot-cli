@@ -128,6 +128,7 @@ Override the default entrypoint in the image.
 entrypoint: "/bin/entrypoint --p1 --p2"
 # Alteratively, as an array of strings.
 entrypoint: ["/bin/entrypoint", "--p1", "--p2"]
+```
 
 <div class="separator"></div>
 
@@ -135,10 +136,9 @@ entrypoint: ["/bin/entrypoint", "--p1", "--p2"]
 Override the default command in the image.
 
 ```yaml
+# String version.
 command: ps au
-```
-
-```yaml
+# Alteratively, as an array of strings.
 command: ["ps", "au"]
 ```
 
