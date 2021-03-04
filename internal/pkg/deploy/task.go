@@ -23,6 +23,7 @@ type CreateTaskResourcesInput struct {
 	TaskRole      string
 	ExecutionRole string
 	Command       []string
+	EntryPoint    []string
 	EnvVars       map[string]string
 
 	App string
