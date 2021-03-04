@@ -200,7 +200,7 @@ Must be of the format '<keyName>:<dataType>'.`
 	executionRoleFlagDescription = "Optional. The ARN of the role that grants the container agent permission to make AWS API calls."
 	envVarsFlagDescription       = "Optional. Environment variables specified by key=value separated with commas."
 	commandFlagDescription       = `Optional. The command that is passed to "docker run" to override the default command.`
-	entrypointFlagDescription    = `Optional. A description for entrypoint.` //TODO
+	entrypointFlagDescription    = `Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.`
 	taskGroupFlagDescription     = `Optional. The group name of the task. 
 Tasks with the same group name share the same set of resources. 
 (default directory name)`

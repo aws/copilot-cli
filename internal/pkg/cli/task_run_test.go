@@ -639,9 +639,9 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
-					Name:    inGroupName,
-					Image:   "uri/repo:latest",
-					Command: []string{},
+					Name:       inGroupName,
+					Image:      "uri/repo:latest",
+					Command:    []string{},
 					EntryPoint: []string{},
 				}).Times(1).Return(errors.New("error updating"))
 				mockHasDefaultCluster(m)
