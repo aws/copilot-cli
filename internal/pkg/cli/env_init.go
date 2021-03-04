@@ -240,7 +240,12 @@ func (o *initEnvOpts) Execute() error {
 		}
 	}
 
-	// 1. Add the stack set instance to the app stackset.
+	// 1. Attempt to create the service linked role if it doesn't exist.
+	// If the call fails because the role already exists, nothing to do.
+	// If the call fails because the user doesn't have permissions, then the role must be created outside of Copilot.
+	_ = o.iam.CreateECSServiceLinkedRole()
+
+	// 2. Add the stack set instance to the app stackset.
 	if err := o.addToStackset(&deploycfn.AddEnvToAppOpts{
 		App:          app,
 		EnvName:      o.name,
@@ -249,11 +254,6 @@ func (o *initEnvOpts) Execute() error {
 	}); err != nil {
 		return err
 	}
-
-	// 2. Attempt to create the service linked role if it doesn't exist.
-	// If the call fails because the role already exists, nothing to do.
-	// If the call fails because the user doesn't have permissions, then the role must be created outside of Copilot.
-	_ = o.iam.CreateECSServiceLinkedRole()
 
 	// 3. Start creating the CloudFormation stack for the environment.
 	if err := o.deployEnv(app); err != nil {
@@ -537,18 +537,18 @@ func (o *initEnvOpts) addToStackset(opts *deploycfn.AddEnvToAppOpts) error {
 	return nil
 }
 
-func (o *initEnvOpts) delegateDNSFromApp(app *config.Application, envAccount string) error {
+func (o *initEnvOpts) delegateDNSFromApp(app *config.Application, accountID string) error {
 	// By default, our DNS Delegation permits same account delegation.
-	if envAccount == app.AccountID {
+	if accountID == app.AccountID {
 		return nil
 	}
 
-	o.prog.Start(fmt.Sprintf(fmtDNSDelegationStart, color.HighlightUserInput(envAccount)))
-	if err := o.appDeployer.DelegateDNSPermissions(app, envAccount); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDNSDelegationFailed, color.HighlightUserInput(envAccount)))
+	o.prog.Start(fmt.Sprintf(fmtDNSDelegationStart, color.HighlightUserInput(accountID)))
+	if err := o.appDeployer.DelegateDNSPermissions(app, accountID); err != nil {
+		o.prog.Stop(log.Serrorf(fmtDNSDelegationFailed, color.HighlightUserInput(accountID)))
 		return err
 	}
-	o.prog.Stop(log.Ssuccessf(fmtDNSDelegationComplete, color.HighlightUserInput(envAccount)))
+	o.prog.Stop(log.Ssuccessf(fmtDNSDelegationComplete, color.HighlightUserInput(accountID)))
 	return nil
 }
 
