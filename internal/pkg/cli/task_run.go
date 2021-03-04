@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -29,11 +30,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
-	"github.com/google/shlex"
-
-	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/dustin/go-humanize/english"
+	"github.com/google/shlex"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -86,6 +85,7 @@ type runTaskVars struct {
 
 	envVars      map[string]string
 	command      string
+	entrypoint   string
 	resourceTags map[string]string
 
 	follow bool
@@ -143,11 +143,11 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	opts.configureRepository = func() error {
 		repoName := fmt.Sprintf(deploy.FmtTaskECRRepoName, opts.groupName)
 		registry := ecr.New(opts.sess)
-		repository, err := repository.New(repoName, registry)
+		repo, err := repository.New(repoName, registry)
 		if err != nil {
 			return fmt.Errorf("initialize repository %s: %w", repoName, err)
 		}
-		opts.repository = repository
+		opts.repository = repo
 		return nil
 	}
 
@@ -481,10 +481,17 @@ func (o *runTaskOpts) deploy() error {
 	if o.env != "" {
 		deployOpts = []awscloudformation.StackOption{awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)}
 	}
+
+	entrypoint, err := shlex.Split(o.entrypoint)
+	if err != nil {
+		return fmt.Errorf("split entrypoint %s into tokens using shell-style rules: %w", o.entrypoint, err)
+	}
+
 	command, err := shlex.Split(o.command)
 	if err != nil {
 		return fmt.Errorf("split command %s into tokens using shell-style rules: %w", o.command, err)
 	}
+
 	input := &deploy.CreateTaskResourcesInput{
 		Name:           o.groupName,
 		CPU:            o.cpu,
@@ -493,6 +500,7 @@ func (o *runTaskOpts) deploy() error {
 		TaskRole:       o.taskRole,
 		ExecutionRole:  o.executionRole,
 		Command:        command,
+		EntryPoint:     entrypoint,
 		EnvVars:        o.envVars,
 		App:            o.appName,
 		Env:            o.env,
@@ -636,6 +644,7 @@ Run a task with a command.
 
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
 	cmd.Flags().StringVar(&vars.command, commandFlag, "", commandFlagDescription)
+	cmd.Flags().StringVar(&vars.entrypoint, entrypointFlag, "", entrypointFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
