@@ -121,6 +121,31 @@ Grace period within which to provide containers time to bootstrap before failed 
 
 <div class="separator"></div>
 
+<a id="entrypoint" href="#entrypoint" class="field">`entrypoint`</a> <span class="type">String or Array of Strings</span>  
+Override the default entrypoint in the image. 
+```yaml
+entrypoint: /bin/entrypoint --p1 --p2
+```
+
+```yaml
+entrypoint: ["/bin/entrypoint", "--p1", "--p2"]
+```
+
+<div class="separator"></div>
+
+<a id="command" href="#command" class="field">`command`</a> <span class="type">String or Array of Strings</span>  
+Override the default command in the image.
+
+```yaml
+command: ps au
+```
+
+```yaml
+command: ["ps", "au"]
+```
+
+<div class="separator"></div>
+
 <a id="cpu" href="#cpu" class="field">`cpu`</a> <span class="type">Integer</span>  
 Number of CPU units for the task. See the [Amazon ECS docs](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html) for valid CPU values.
 
