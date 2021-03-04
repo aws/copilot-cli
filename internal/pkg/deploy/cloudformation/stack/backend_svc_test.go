@@ -28,14 +28,14 @@ var (
 	testTimeout     = 10 * time.Second
 	testStartPeriod = 0 * time.Second
 
-	testName       = "frontend"
-	testDockerfile = "./frontend/Dockerfile"
+	testServiceName = "frontend"
+	testDockerfile  = "./frontend/Dockerfile"
 )
 
 func TestBackendService_Template(t *testing.T) {
 	baseProps := manifest.BackendServiceProps{
 		WorkloadProps: manifest.WorkloadProps{
-			Name:       testName,
+			Name:       testServiceName,
 			Dockerfile: testDockerfile,
 		},
 		Port: 8080,
@@ -63,7 +63,7 @@ func TestBackendService_Template(t *testing.T) {
 				svc.parser = m
 				svc.addons = mockTemplater{err: errors.New("some error")}
 			},
-			wantedErr: fmt.Errorf("generate addons template for %s: %w", testName, errors.New("some error")),
+			wantedErr: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")),
 		},
 		"failed parsing sidecars template": {
 			setUpManifest: func(svc *BackendService) {
@@ -141,7 +141,7 @@ Outputs:
 			setUpManifest: func(svc *BackendService) {
 				svc.manifest = manifest.NewBackendService(manifest.BackendServiceProps{
 					WorkloadProps: manifest.WorkloadProps{
-						Name:       testName,
+						Name:       testServiceName,
 						Dockerfile: testDockerfile,
 					},
 					Port: 8080,
@@ -208,7 +208,7 @@ Outputs:
 			defer ctrl.Finish()
 			conf := &BackendService{
 				wkld: &wkld{
-					name: testName,
+					name: testServiceName,
 					env:  testEnvName,
 					app:  testAppName,
 					rc: RuntimeConfig{
@@ -243,9 +243,9 @@ Outputs:
 }
 
 func TestBackendService_Parameters(t *testing.T) {
-	var testBackendSvcManifest = manifest.NewBackendService(manifest.BackendServiceProps{
+	 testBackendSvcManifest := manifest.NewBackendService(manifest.BackendServiceProps{
 		WorkloadProps: manifest.WorkloadProps{
-			Name:       testName,
+			Name:       testServiceName,
 			Dockerfile: testDockerfile,
 		},
 		Port: 8080,
