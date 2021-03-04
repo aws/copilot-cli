@@ -81,10 +81,10 @@ func TestEntryPointOverride_ToStringSlice(t *testing.T) {
 		},
 		"Given a string": {
 			inEntryPointOverride: EntryPointOverride{
-				String: aws.String("/bin/sh -c"),
+				String: aws.String(`read "some command"`),
 				StringSlice: nil,
 			},
-			wantedSlice: []string{"/bin/sh", "-c"},
+			wantedSlice: []string{"read", "some command"},
 		},
 		"Given a string slice": {
 			inEntryPointOverride: EntryPointOverride{
@@ -97,7 +97,8 @@ func TestEntryPointOverride_ToStringSlice(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			out := tc.inEntryPointOverride.ToStringSlice()
+			out, err := tc.inEntryPointOverride.ToStringSlice()
+			require.NoError(t, err)
 			require.Equal(t, tc.wantedSlice, out)
 		})
 	}
@@ -170,10 +171,10 @@ func TestCommandOverride_ToStringSlice(t *testing.T) {
 		},
 		"Given a string": {
 			inCommandOverrides: CommandOverride{
-				String: aws.String(`-c read some command`),
+				String: aws.String(`-c read "some command"`),
 				StringSlice: nil,
 			},
-			wantedSlice: []string{"-c", "read", "some", "command"},
+			wantedSlice: []string{"-c", "read", "some command"},
 		},
 		"Given a string slice": {
 			inCommandOverrides: CommandOverride{
@@ -186,7 +187,8 @@ func TestCommandOverride_ToStringSlice(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			out := tc.inCommandOverrides.ToStringSlice()
+			out, err := tc.inCommandOverrides.ToStringSlice()
+			require.NoError(t, err)
 			require.Equal(t, tc.wantedSlice, out)
 		})
 	}
