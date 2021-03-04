@@ -7,9 +7,10 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"github.com/google/shlex"
 	"path/filepath"
 	"strconv"
-	"strings"
+	//"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"gopkg.in/yaml.v3"
@@ -158,9 +159,13 @@ func (e *EntryPointOverride) UnmarshalYAML(unmarshal func(interface{}) error) er
 	return nil
 }
 
-// ToStringSlice converts an EntryPointOverride to a slice of string.
-func (e *EntryPointOverride) ToStringSlice() []string {
-	return  toStringSlice((*stringSliceOrString)(e))
+// ToStringSlice converts an EntryPointOverride to a slice of string using shell-style rules.
+func (e *EntryPointOverride) ToStringSlice() ([]string, error) {
+	out, err := toStringSlice((*stringSliceOrString)(e))
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the CommandOverride
@@ -173,9 +178,13 @@ func (c *CommandOverride) UnmarshalYAML(unmarshal func(interface{}) error) error
 	return nil
 }
 
-// ToStringSlice converts an CommandOverride to a slice of string.
-func (c *CommandOverride) ToStringSlice() []string {
-	return  toStringSlice((*stringSliceOrString)(c))
+// ToStringSlice converts an CommandOverride to a slice of string using shell-style rules.
+func (c *CommandOverride) ToStringSlice() ([]string, error) {
+	out, err := toStringSlice((*stringSliceOrString)(c))
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 type stringSliceOrString struct {
@@ -202,11 +211,21 @@ func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, unmarshal func(i
 	return unmarshal(&s.String)
 }
 
-func toStringSlice(s *stringSliceOrString) []string {
-	if s.String != nil {
-		return strings.Split(*s.String, " ")
+func toStringSlice(s *stringSliceOrString) ([]string, error) {
+	if s.StringSlice != nil {
+		return s.StringSlice, nil
 	}
-	return s.StringSlice
+
+	if s.String == nil {
+		return nil, nil
+	}
+
+	out, err := shlex.Split(*s.String)
+	if err != nil {
+		return nil, fmt.Errorf("convert string into tokens using shell-style rules: %w", err)
+	}
+
+	return out, nil
 }
 
 // BuildArgsOrString is a custom type which supports unmarshaling yaml which

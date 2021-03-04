@@ -142,6 +142,14 @@ func (j *ScheduledJob) Template() (string, error) {
 		return "", fmt.Errorf("convert storage options for job %s: %w", j.name, err)
 	}
 
+	entrypoint, err := j.manifest.EntryPoint.ToStringSlice()
+	if err != nil {
+		return "", fmt.Errorf("convert entrypoint to string slice: %w", err)
+	}
+	command, err := j.manifest.Command.ToStringSlice()
+	if err != nil {
+		return "", fmt.Errorf("convert command to string slice: %w", err)
+	}
 	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
 		Variables:          j.manifest.Variables,
 		Secrets:            j.manifest.Secrets,
@@ -152,8 +160,8 @@ func (j *ScheduledJob) Template() (string, error) {
 		LogConfig:          convertLogging(j.manifest.Logging),
 		Storage:            storage,
 		Network:            convertNetworkConfig(j.manifest.Network),
-		EntryPoint:         j.manifest.EntryPoint.ToStringSlice(),
-		Command:            j.manifest.Command.ToStringSlice(),
+		EntryPoint:         entrypoint,
+		Command:            command,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)
