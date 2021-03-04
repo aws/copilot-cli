@@ -22,6 +22,7 @@ import (
 	logging "github.com/aws/copilot-cli/internal/pkg/logging"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
+	template "github.com/aws/copilot-cli/internal/pkg/template"
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
 	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	prompt "github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -1961,6 +1962,44 @@ func (mr *MockdescriberMockRecorder) Describe() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*Mockdescriber)(nil).Describe))
 }
 
+// Mockreader is a mock of reader interface.
+type Mockreader struct {
+	ctrl     *gomock.Controller
+	recorder *MockreaderMockRecorder
+}
+
+// MockreaderMockRecorder is the mock recorder for Mockreader.
+type MockreaderMockRecorder struct {
+	mock *Mockreader
+}
+
+// NewMockreader creates a new mock instance.
+func NewMockreader(ctrl *gomock.Controller) *Mockreader {
+	mock := &Mockreader{ctrl: ctrl}
+	mock.recorder = &MockreaderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *Mockreader) EXPECT() *MockreaderMockRecorder {
+	return m.recorder
+}
+
+// Read mocks base method.
+func (m *Mockreader) Read(path string) (*template.Content, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Read", path)
+	ret0, _ := ret[0].(*template.Content)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Read indicates an expected call of Read.
+func (mr *MockreaderMockRecorder) Read(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*Mockreader)(nil).Read), path)
+}
+
 // MockwsFileDeleter is a mock of wsFileDeleter interface.
 type MockwsFileDeleter struct {
 	ctrl     *gomock.Controller
@@ -2896,6 +2935,43 @@ func (m *MockartifactUploader) PutArtifact(bucket, fileName string, data io.Read
 func (mr *MockartifactUploaderMockRecorder) PutArtifact(bucket, fileName, data interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutArtifact", reflect.TypeOf((*MockartifactUploader)(nil).PutArtifact), bucket, fileName, data)
+}
+
+// MockzipAndUploader is a mock of zipAndUploader interface.
+type MockzipAndUploader struct {
+	ctrl     *gomock.Controller
+	recorder *MockzipAndUploaderMockRecorder
+}
+
+// MockzipAndUploaderMockRecorder is the mock recorder for MockzipAndUploader.
+type MockzipAndUploaderMockRecorder struct {
+	mock *MockzipAndUploader
+}
+
+// NewMockzipAndUploader creates a new mock instance.
+func NewMockzipAndUploader(ctrl *gomock.Controller) *MockzipAndUploader {
+	mock := &MockzipAndUploader{ctrl: ctrl}
+	mock.recorder = &MockzipAndUploaderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockzipAndUploader) EXPECT() *MockzipAndUploaderMockRecorder {
+	return m.recorder
+}
+
+// ZipAndUpload mocks base method.
+func (m *MockzipAndUploader) ZipAndUpload(bucket, name string, data map[string]string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ZipAndUpload", bucket, name, data)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ZipAndUpload indicates an expected call of ZipAndUpload.
+func (mr *MockzipAndUploaderMockRecorder) ZipAndUpload(bucket, name, data interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ZipAndUpload", reflect.TypeOf((*MockzipAndUploader)(nil).ZipAndUpload), bucket, name, data)
 }
 
 // MockbucketEmptier is a mock of bucketEmptier interface.

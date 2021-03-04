@@ -5,6 +5,8 @@
 package s3
 
 import (
+	"archive/zip"
+	"bytes"
 	"fmt"
 	"io"
 	"path"
@@ -21,19 +23,22 @@ const (
 	artifactDirName = "manual"
 )
 
-type s3ManagerApi interface {
+type s3ManagerAPI interface {
 	Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
 }
 
-type s3Api interface {
+type s3API interface {
 	ListObjectVersions(input *s3.ListObjectVersionsInput) (*s3.ListObjectVersionsOutput, error)
 	DeleteObjects(input *s3.DeleteObjectsInput) (*s3.DeleteObjectsOutput, error)
 }
 
 // S3 wraps an Amazon Simple Storage Service client.
 type S3 struct {
-	s3Manager s3ManagerApi
-	s3Client  s3Api
+	s3Manager s3ManagerAPI
+	s3Client  s3API
+
+	// cache variables for unit tests.
+	buf *bytes.Buffer
 }
 
 // New returns an S3 client configured against the input session.
@@ -59,6 +64,41 @@ func (s *S3) PutArtifact(bucket, fileName string, data io.Reader) (string, error
 	}
 
 	return resp.Location, nil
+}
+
+// ZipAndUpload zips the file and uploads data to a S3 bucket.
+func (s *S3) ZipAndUpload(bucket, name string, data map[string]string) error {
+	buf := new(bytes.Buffer)
+	w := zip.NewWriter(buf)
+	for name, content := range data {
+		f, err := w.Create(name)
+		if err != nil {
+			return fmt.Errorf("create zip file %s: %w", name, err)
+		}
+		_, err = f.Write([]byte(content))
+		if err != nil {
+			return fmt.Errorf("write zip file %s: %w", name, err)
+		}
+	}
+	err := w.Close()
+	if err != nil {
+		return err
+	}
+	// For unit test override
+	if s.buf == nil {
+		s.buf = buf
+		defer func() {
+			s.buf = nil
+		}()
+	}
+	if _, err := s.s3Manager.Upload(&s3manager.UploadInput{
+		Body:   s.buf,
+		Bucket: aws.String(bucket),
+		Key:    aws.String(name),
+	}); err != nil {
+		return fmt.Errorf("upload %s to bucket %s: %w", name, bucket, err)
+	}
+	return nil
 }
 
 // EmptyBucket deletes all objects within the bucket.

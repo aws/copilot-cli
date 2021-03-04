@@ -89,6 +89,61 @@ func TestS3_PutArtifact(t *testing.T) {
 	}
 }
 
+func TestS3_ZipAndUpload(t *testing.T) {
+	buf := &bytes.Buffer{}
+	fmt.Fprint(buf, "some data")
+	testCases := map[string]struct {
+		mockS3ManagerClient func(m *mocks.Mocks3ManagerApi)
+
+		wantError error
+	}{
+		"return error if upload fails": {
+			mockS3ManagerClient: func(m *mocks.Mocks3ManagerApi) {
+				m.EXPECT().Upload(&s3manager.UploadInput{
+					Body:   buf,
+					Bucket: aws.String("mockBucket"),
+					Key:    aws.String("mockFileName"),
+				}).Return(nil, errors.New("some error"))
+			},
+			wantError: fmt.Errorf("upload mockFileName to bucket mockBucket: some error"),
+		},
+		"should upload to the s3 bucket": {
+			mockS3ManagerClient: func(m *mocks.Mocks3ManagerApi) {
+				m.EXPECT().Upload(&s3manager.UploadInput{
+					Body:   buf,
+					Bucket: aws.String("mockBucket"),
+					Key:    aws.String("mockFileName"),
+				}).Return(&s3manager.UploadOutput{}, nil)
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockS3ManagerClient := mocks.NewMocks3ManagerApi(ctrl)
+			tc.mockS3ManagerClient(mockS3ManagerClient)
+
+			service := S3{
+				s3Manager: mockS3ManagerClient,
+				buf:       buf,
+			}
+
+			gotErr := service.ZipAndUpload("mockBucket", "mockFileName", make(map[string]string))
+
+			if gotErr != nil {
+				require.EqualError(t, gotErr, tc.wantError.Error())
+			} else {
+				require.Equal(t, gotErr, nil)
+			}
+		})
+
+	}
+}
+
 func TestS3_EmptyBucket(t *testing.T) {
 	batchObject1 := make([]*s3.ObjectVersion, 1000)
 	batchObject2 := make([]*s3.ObjectVersion, 10)

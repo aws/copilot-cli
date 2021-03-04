@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -17,11 +18,13 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -65,7 +68,16 @@ https://aws.github.io/copilot-cli/docs/credentials/#environment-credentials`
 	fmtAddEnvToAppStart      = "Linking account %s and region %s to application %s."
 	fmtAddEnvToAppFailed     = "Failed to link account %s and region %s to application %s.\n\n"
 	fmtAddEnvToAppComplete   = "Linked account %s and region %s to application %s.\n\n"
+
+	envLambdaRootPath         = "custom-resources"
+	envLambdaZippedScriptName = "index.js"
 )
+
+var envLambdas = map[string]string{
+	"dns-cert-validator": "dns-cert-validator.js",
+	"dns-delegation":     "dns-delegation.js",
+	"enable-long-arns":   "enable-long-arns.js",
+}
 
 var (
 	envInitAppNamePrompt                  = fmt.Sprintf("In which %s would you like to create the environment?", color.Emphasize("application"))
@@ -142,6 +154,9 @@ type initEnvOpts struct {
 	selVPC       ec2Selector
 	selCreds     credsSelector
 	selApp       appSelector
+	lambdas      reader
+	appCFN       appResourcesGetter
+	newS3        func(*session.Session) zipAndUploader
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
 }
@@ -175,7 +190,12 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 			Profile: cfg,
 			Prompt:  prompter,
 		},
-		selApp: selector.NewSelect(prompt.New(), store),
+		selApp:  selector.NewSelect(prompt.New(), store),
+		lambdas: template.New(),
+		appCFN:  deploycfn.New(defaultSession),
+		newS3: func(sess *session.Session) zipAndUploader {
+			return s3.New(sess)
+		},
 	}, nil
 }
 
@@ -255,12 +275,23 @@ func (o *initEnvOpts) Execute() error {
 		return err
 	}
 
-	// 3. Start creating the CloudFormation stack for the environment.
+	// 3. Upload environment custom resource scripts to the S3 bucket, because of the 4096 characters limit (see
+	// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-lambda-function-code.html#cfn-lambda-function-code-zipfile)
+	envRegion := aws.StringValue(o.sess.Config.Region)
+	resources, err := o.appCFN.GetAppResourcesByRegion(app, envRegion)
+	if err != nil {
+		return fmt.Errorf("get app resources: %w", err)
+	}
+	if err := uploadLambdaToS3(o.lambdas, o.newS3(o.sess), resources.S3Bucket); err != nil {
+		return err
+	}
+
+	// 4. Start creating the CloudFormation stack for the environment.
 	if err := o.deployEnv(app); err != nil {
 		return err
 	}
 
-	// 4. Get the environment
+	// 5. Get the environment
 	env, err := o.envDeployer.GetEnvironment(o.appName, o.name)
 	if err != nil {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
@@ -268,7 +299,7 @@ func (o *initEnvOpts) Execute() error {
 	env.Prod = o.isProduction
 	env.CustomConfig = config.NewCustomizeEnv(o.importVPCConfig(), o.adjustVPCConfig())
 
-	// 5. Store the environment in SSM.
+	// 6. Store the environment in SSM.
 	if err := o.store.CreateEnvironment(env); err != nil {
 		return fmt.Errorf("store environment: %w", err)
 	}
@@ -561,6 +592,20 @@ func (o *initEnvOpts) validateCredentials() error {
 	}
 	if o.profile != "" && o.tempCreds.SessionToken != "" {
 		return fmt.Errorf("cannot specify both --%s and --%s", profileFlag, sessionTokenFlag)
+	}
+	return nil
+}
+
+func uploadLambdaToS3(reader reader, uploader zipAndUploader, bucket string) error {
+	for name, filePath := range envLambdas {
+		content, err := reader.Read(path.Join(envLambdaRootPath, filePath))
+		if err != nil {
+			return fmt.Errorf("read custom resource %s: %w", name, err)
+		}
+		if err := uploader.ZipAndUpload(bucket, name,
+			map[string]string{envLambdaZippedScriptName: content.Buffer.String()}); err != nil {
+			return fmt.Errorf("upload custom resource %s to bucket %s: %w", name, bucket, err)
+		}
 	}
 	return nil
 }

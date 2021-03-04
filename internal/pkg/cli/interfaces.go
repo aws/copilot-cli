@@ -20,6 +20,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -208,6 +209,10 @@ type describer interface {
 	Describe() (describe.HumanJSONStringer, error)
 }
 
+type reader interface {
+	Read(path string) (*template.Content, error)
+}
+
 type wsFileDeleter interface {
 	DeleteWorkspaceFile() error
 }
@@ -291,6 +296,10 @@ type wsAddonManager interface {
 
 type artifactUploader interface {
 	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
+}
+
+type zipAndUploader interface {
+	ZipAndUpload(bucket, name string, data map[string]string) error
 }
 
 type bucketEmptier interface {
