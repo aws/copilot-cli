@@ -89,11 +89,11 @@ func (s *BackendService) Template() (string, error) {
 	}
 	entrypoint, err := s.manifest.EntryPoint.ToStringSlice()
 	if err != nil {
-		return "", fmt.Errorf("convert entrypoint to string slice: %w", err)
+		return "", fmt.Errorf(`convert 'entrypoint' to string slice: %w`, err)
 	}
 	command, err := s.manifest.Command.ToStringSlice()
 	if err != nil {
-		return "", fmt.Errorf("convert command to string slice: %w", err)
+		return "", fmt.Errorf(`convert 'command' to string slice: %w`, err)
 	}
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		Variables:          s.manifest.BackendServiceConfig.Variables,

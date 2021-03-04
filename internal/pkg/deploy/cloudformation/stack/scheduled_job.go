@@ -144,11 +144,11 @@ func (j *ScheduledJob) Template() (string, error) {
 
 	entrypoint, err := j.manifest.EntryPoint.ToStringSlice()
 	if err != nil {
-		return "", fmt.Errorf("convert entrypoint to string slice: %w", err)
+		return "", fmt.Errorf(`convert 'entrypoint' to string slice: %w`, err)
 	}
 	command, err := j.manifest.Command.ToStringSlice()
 	if err != nil {
-		return "", fmt.Errorf("convert command to string slice: %w", err)
+		return "", fmt.Errorf(`convert 'command' to string slice: %w`, err)
 	}
 	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
 		Variables:          j.manifest.Variables,
