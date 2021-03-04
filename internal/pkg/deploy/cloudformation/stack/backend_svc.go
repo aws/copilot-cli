@@ -87,6 +87,14 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
 	}
+	entrypoint, err := s.manifest.EntryPoint.ToStringSlice()
+	if err != nil {
+		return "", fmt.Errorf(`convert 'entrypoint' to string slice: %w`, err)
+	}
+	command, err := s.manifest.Command.ToStringSlice()
+	if err != nil {
+		return "", fmt.Errorf(`convert 'command' to string slice: %w`, err)
+	}
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		Variables:          s.manifest.BackendServiceConfig.Variables,
 		Secrets:            s.manifest.BackendServiceConfig.Secrets,
@@ -98,8 +106,8 @@ func (s *BackendService) Template() (string, error) {
 		DesiredCountLambda: desiredCountLambda.String(),
 		Storage:            storage,
 		Network:            convertNetworkConfig(s.manifest.Network),
-		EntryPoint:         s.manifest.EntryPoint.ToStringSlice(),
-		Command:            s.manifest.Command.ToStringSlice(),
+		EntryPoint:         entrypoint,
+		Command:            command,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)

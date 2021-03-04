@@ -3,6 +3,7 @@ on:
   push:
     tags:       
       - v*
+      - docs*
 
 jobs:
   build:
