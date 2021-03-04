@@ -143,11 +143,11 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	opts.configureRepository = func() error {
 		repoName := fmt.Sprintf(deploy.FmtTaskECRRepoName, opts.groupName)
 		registry := ecr.New(opts.sess)
-		repository, err := repository.New(repoName, registry)
+		repo, err := repository.New(repoName, registry)
 		if err != nil {
 			return fmt.Errorf("initialize repository %s: %w", repoName, err)
 		}
-		opts.repository = repository
+		opts.repository = repo
 		return nil
 	}
 
