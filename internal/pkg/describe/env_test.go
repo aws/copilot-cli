@@ -71,6 +71,20 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			Value: aws.String("testEnv"),
 		},
 	}
+	stackOutputs := []*cloudformation.Output{
+		{
+			OutputKey:   aws.String("VpcId"),
+			OutputValue: aws.String("vpc-012abcd345"),
+		},
+		{
+			OutputKey:   aws.String("PublicSubnets"),
+			OutputValue: aws.String("subnet-0789ab,subnet-0123cd"),
+		},
+		{
+			OutputKey:   aws.String("PrivateSubnets"),
+			OutputValue: aws.String("subnet-023ff,subnet-04af"),
+		},
+	}
 	mockResource1 := &cloudformation.StackResource{
 		PhysicalResourceId: aws.String("testApp-testEnv-CFNExecutionRole"),
 		ResourceType:       aws.String("AWS::IAM::Role"),
@@ -133,7 +147,8 @@ func TestEnvDescriber_Describe(t *testing.T) {
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
 						Return([]string{"testSvc1", "testSvc2"}, nil),
 					m.stackDescriber.EXPECT().Stack("testApp-testEnv").Return(&cloudformation.Stack{
-						Tags: stackTags,
+						Tags:    stackTags,
+						Outputs: stackOutputs,
 					}, nil),
 					m.stackDescriber.EXPECT().StackResources("testApp-testEnv").Return(nil, mockError),
 				)
@@ -150,7 +165,8 @@ func TestEnvDescriber_Describe(t *testing.T) {
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
 						Return([]string{"testSvc1", "testSvc2"}, nil),
 					m.stackDescriber.EXPECT().Stack("testApp-testEnv").Return(&cloudformation.Stack{
-						Tags: stackTags,
+						Tags:    stackTags,
+						Outputs: stackOutputs,
 					}, nil),
 				)
 			},
@@ -158,6 +174,11 @@ func TestEnvDescriber_Describe(t *testing.T) {
 				Environment: testEnv,
 				Services:    envSvcs,
 				Tags:        map[string]string{"copilot-application": "testApp", "copilot-environment": "testEnv"},
+				EnvironmentVPC: &EnvironmentVPC{
+					ID:               "vpc-012abcd345",
+					PublicSubnetIDs:  []string{"subnet-0789ab", "subnet-0123cd"},
+					PrivateSubnetIDs: []string{"subnet-023ff", "subnet-04af"},
+				},
 			},
 		},
 		"success with resources": {
@@ -170,7 +191,8 @@ func TestEnvDescriber_Describe(t *testing.T) {
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
 						Return([]string{"testSvc1", "testSvc2"}, nil),
 					m.stackDescriber.EXPECT().Stack("testApp-testEnv").Return(&cloudformation.Stack{
-						Tags: stackTags,
+						Tags:    stackTags,
+						Outputs: stackOutputs,
 					}, nil),
 					m.stackDescriber.EXPECT().StackResources("testApp-testEnv").Return([]*cloudformation.StackResource{
 						mockResource1,
@@ -183,10 +205,14 @@ func TestEnvDescriber_Describe(t *testing.T) {
 				Services:    envSvcs,
 				Tags:        map[string]string{"copilot-application": "testApp", "copilot-environment": "testEnv"},
 				Resources:   wantedResources,
+				EnvironmentVPC: &EnvironmentVPC{
+					ID:               "vpc-012abcd345",
+					PublicSubnetIDs:  []string{"subnet-0789ab", "subnet-0123cd"},
+					PrivateSubnetIDs: []string{"subnet-023ff", "subnet-04af"},
+				},
 			},
 		},
 	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
