@@ -21,7 +21,6 @@ import (
 
 const (
 	artifactDirName = "manual"
-	scriptDirName   = "scripts"
 )
 
 type s3ManagerAPI interface {
@@ -88,11 +87,10 @@ func (s *S3) ZipAndUpload(bucket, key string, files ...NamedBinary) (string, err
 	if err := w.Close(); err != nil {
 		return "", err
 	}
-	id := time.Now().Unix()
 	resp, err := s.s3Manager.Upload(&s3manager.UploadInput{
 		Body:   buf,
 		Bucket: aws.String(bucket),
-		Key:    aws.String(path.Join(scriptDirName, strconv.FormatInt(id, 10), key)),
+		Key:    aws.String(key),
 	})
 	if err != nil {
 		return "", fmt.Errorf("upload %s to bucket %s: %w", key, bucket, err)

@@ -6,6 +6,7 @@ package template
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"path"
 	"strings"
@@ -18,6 +19,7 @@ import (
 const (
 	envLambdaRootPath         = "custom-resources"
 	envLambdaZippedScriptName = "index.js"
+	scriptDirName             = "scripts"
 )
 
 var box = templates.Box()
@@ -106,7 +108,11 @@ func (t *Template) uploadCustomResources(upload func(string, ...CustomResource) 
 			return nil, err
 		}
 		cr.content = content.Bytes()
-		url, err := upload(name, cr)
+		h := sha256.New()
+		if _, err := h.Write(cr.content); err != nil {
+			return nil, fmt.Errorf("generate SHA for custom resource %s: %w", name, err)
+		}
+		url, err := upload(fmt.Sprintf("%s/%x/%s", scriptDirName, h.Sum(nil), name), cr)
 		if err != nil {
 			return nil, fmt.Errorf("upload custom resource %s: %w", name, err)
 		}

@@ -89,7 +89,8 @@ func TestTemplate_UploadEnvironmentCustomResources(t *testing.T) {
 			// GIVEN
 			tpl := &Template{}
 			tc.mockDependencies(tpl)
-			mockUploader := func(string, ...CustomResource) (string, error) {
+			mockUploader := func(key string, files ...CustomResource) (string, error) {
+				require.Contains(t, key, "scripts/2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824/")
 				return "mockURL", nil
 			}
 

@@ -90,7 +90,6 @@ func TestS3_PutArtifact(t *testing.T) {
 }
 
 func TestS3_ZipAndUpload(t *testing.T) {
-	timeNow := strconv.FormatInt(time.Now().Unix(), 10)
 	testCases := map[string]struct {
 		mockS3ManagerClient func(m *mocks.Mocks3ManagerAPI)
 
@@ -101,7 +100,7 @@ func TestS3_ZipAndUpload(t *testing.T) {
 			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
 				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput) {
 					require.Equal(t, aws.StringValue(in.Bucket), "mockBucket")
-					require.Equal(t, aws.StringValue(in.Key), fmt.Sprintf("scripts/%s/mockFileName", timeNow))
+					require.Equal(t, aws.StringValue(in.Key), "mockFileName")
 				}).Return(nil, errors.New("some error"))
 			},
 			wantError: fmt.Errorf("upload mockFileName to bucket mockBucket: some error"),
@@ -110,7 +109,7 @@ func TestS3_ZipAndUpload(t *testing.T) {
 			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
 				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput) {
 					require.Equal(t, aws.StringValue(in.Bucket), "mockBucket")
-					require.Equal(t, aws.StringValue(in.Key), fmt.Sprintf("scripts/%s/mockFileName", timeNow))
+					require.Equal(t, aws.StringValue(in.Key), "mockFileName")
 				}).Return(&s3manager.UploadOutput{
 					Location: "mockURL",
 				}, nil)
