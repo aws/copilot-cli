@@ -3,12 +3,12 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for {{$.AppName}}
 Resources:
-  {{- if eq .Source.ProviderName "Bitbucket"}}
+  {{- if or (eq .Source.ProviderName "Bitbucket") (eq .Source.ProviderName "GitHub")}}
   SourceConnection:
     Type: AWS::CodeStarConnections::Connection
     Properties:
       ConnectionName: {{.Source.ConnectionName}}
-      ProviderType: Bitbucket
+      ProviderType: {{.Source.ProviderName}}
   {{- end}}
   BuildProjectRole:
     Type: AWS::IAM::Role
@@ -168,7 +168,7 @@ Resources:
               - s3:GetBucketLocation
             Resource:
               - "*"
-          {{- if eq .Source.ProviderName "Bitbucket"}}
+          {{- if or (eq .Source.ProviderName "Bitbucket") (eq .Source.ProviderName "GitHub")}}
           - Effect: Allow
             Action:
               - codestar-connections:CreateConnection
@@ -203,7 +203,7 @@ Resources:
               - s3:GetBucketPolicy
               - s3:GetObject
               - s3:ListBucket
-              {{- if eq .Source.ProviderName "Bitbucket"}}
+              {{- if or (eq .Source.ProviderName "Bitbucket") (eq .Source.ProviderName "GitHub")}}
               - s3:PutObjectAcl
               - s3:GetObjectAcl
               {{- end}}
@@ -259,7 +259,7 @@ Resources:
       RoleArn: !GetAtt PipelineRole.Arn
       Name: !Ref AWS::StackName
       Stages:
-        {{- if eq .Source.ProviderName "GitHub"}}
+        {{- if eq .Source.ProviderName "GitHubV1"}}
         - Name: Source
           Actions:
             - Name: SourceCodeFor-{{$.AppName}}
@@ -277,6 +277,22 @@ Resources:
                 OAuthToken: !Sub
                   - '{{"{{"}}resolve:secretsmanager:${SecretId}{{"}}"}}'
                   - SecretId: {{$.Source.GitHubPersonalAccessTokenSecretID}}
+              OutputArtifacts:
+                - Name: SCCheckoutArtifact
+              RunOrder: 1
+        {{- else if eq .Source.ProviderName "GitHub"}}
+        - Name: Source
+          Actions:
+            - Name: SourceCodeFor-{{$.AppName}}
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Version: 1
+                Provider: CodeStarSourceConnection
+              Configuration:
+                ConnectionArn: !Ref SourceConnection
+                FullRepositoryId: {{$.Source.Repository}}
+                BranchName: {{$.Source.Branch}}
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1
@@ -374,7 +390,7 @@ Resources:
               RunOrder: 3
               InputArtifacts:
                 - Name: SCCheckoutArtifact{{end}}{{end}}{{end}}{{end}}
-{{- if eq .Source.ProviderName "Bitbucket"}}
+{{- if or (eq .Source.ProviderName "Bitbucket") (eq .Source.ProviderName "GitHub")}}
 Outputs:
   PipelineConnectionARN:
     Description: "ARN of CodeStar Connections connection"

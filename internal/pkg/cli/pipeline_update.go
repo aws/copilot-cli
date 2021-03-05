@@ -241,12 +241,31 @@ func (o *updatePipelineOpts) Execute() error {
 
 	var source interface{}
 	switch pipeline.Source.ProviderName {
-	case ghProviderName:
-		source = &deploy.GitHubSource{
-			ProviderName:                ghProviderName,
+	case ghV1ProviderName:
+		source = &deploy.GitHubV1Source{
+			ProviderName:                ghV1ProviderName,
 			Branch:                      (pipeline.Source.Properties["branch"]).(string),
 			RepositoryURL:               (pipeline.Source.Properties["repository"]).(string),
 			PersonalAccessTokenSecretID: (pipeline.Source.Properties["access_token_secret"]).(string),
+		}
+	case ghProviderName:
+		// If the creation of the user's pipeline manifest predates Copilot's conversion to GHv2/CSC, the provider
+		// listed in the manifest will be "GitHub," not "GitHubV1." To differentiate it from the new default
+		// "GitHub," which refers to v2, we check for the presence of a secret, indicating a v1 GitHub connection.
+		if pipeline.Source.Properties["access_token_secret"] != nil {
+			source = &deploy.GitHubV1Source{
+				ProviderName:                ghV1ProviderName,
+				Branch:                      (pipeline.Source.Properties["branch"]).(string),
+				RepositoryURL:               (pipeline.Source.Properties["repository"]).(string),
+				PersonalAccessTokenSecretID: (pipeline.Source.Properties["access_token_secret"]).(string),
+			}
+		} else {
+			source = &deploy.GitHubSource{
+				ProviderName:  ghProviderName,
+				Branch:        (pipeline.Source.Properties["branch"]).(string),
+				RepositoryURL: (pipeline.Source.Properties["repository"]).(string),
+			}
+			o.shouldPromptUpdateConnection = true
 		}
 	case ccProviderName:
 		source = &deploy.CodeCommitSource{

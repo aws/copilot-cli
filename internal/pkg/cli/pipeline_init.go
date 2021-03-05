@@ -45,14 +45,14 @@ Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or
 
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
-
+	fmtPipelineName       = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
 	// For a GitHub repository.
-	githubURL       = "github.com"
-	ghProviderName  = "GitHub"
-	defaultGHBranch = "main"
-	fmtPipelineName = "pipeline-%s-%s"     // Ex: "pipeline-appName-repoName"
-	fmtGHRepoURL    = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
-	fmtSecretName   = "github-token-%s-%s" // Ex: "github-token-appName-repoName"
+	githubURL        = "github.com"
+	ghProviderName   = "GitHub"
+	ghV1ProviderName = "GitHubV1"
+	defaultGHBranch  = "main"
+	fmtGHRepoURL     = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
+	fmtSecretName    = "github-token-%s-%s" // Ex: "github-token-appName-repoName"
 	// For a CodeCommit repository.
 	awsURL          = "aws.amazon.com"
 	ccIdentifier    = "codecommit"
@@ -190,7 +190,7 @@ func (o *initPipelineOpts) Ask() error {
 
 // Execute writes the pipeline manifest file.
 func (o *initPipelineOpts) Execute() error {
-	if o.provider == ghProviderName {
+	if o.provider == ghV1ProviderName {
 		if err := o.storeGitHubAccessToken(); err != nil {
 			return err
 		}
@@ -270,7 +270,13 @@ func (o *initPipelineOpts) askRepository() error {
 }
 
 func (o *initPipelineOpts) askGitHubRepoDetails() error {
-	o.provider = ghProviderName
+	// If the user uses a flag (now hidden) to specify a GitHub access token,
+	// GitHub version 1 (not CSC) is the provider.
+	if o.githubAccessToken != "" {
+		o.provider = ghV1ProviderName
+	} else {
+		o.provider = ghProviderName
+	}
 	repoDetails, err := ghRepoURL(o.repoURL).parse()
 	if err != nil {
 		return err
@@ -278,11 +284,6 @@ func (o *initPipelineOpts) askGitHubRepoDetails() error {
 	o.repoName = repoDetails.name
 	o.repoOwner = repoDetails.owner
 
-	if o.githubAccessToken == "" {
-		if err = o.getGitHubAccessToken(); err != nil {
-			return err
-		}
-	}
 	if o.repoBranch == "" {
 		o.repoBranch = defaultGHBranch
 	}
@@ -469,20 +470,6 @@ func (url bbRepoURL) parse() (bbRepoDetails, error) {
 	}, nil
 }
 
-func (o *initPipelineOpts) getGitHubAccessToken() error {
-	token, err := o.prompt.GetSecret(
-		fmt.Sprintf("Please enter your GitHub Personal Access Token for your repository %s:", color.HighlightUserInput(o.repoName)),
-		`The personal access token for the GitHub repository linked to your workspace. 
-For more information, please refer to: https://git.io/JfDFD.`,
-	)
-
-	if err != nil {
-		return fmt.Errorf("get GitHub access token: %w", err)
-	}
-	o.githubAccessToken = token
-	return nil
-}
-
 func (o *initPipelineOpts) storeGitHubAccessToken() error {
 	secretName := o.secretName()
 	_, err := o.secretsmanager.CreateSecret(secretName, o.githubAccessToken)
@@ -608,11 +595,16 @@ func (o *initPipelineOpts) pipelineName() string {
 func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	var config interface{}
 	switch o.provider {
-	case ghProviderName:
-		config = &manifest.GitHubProperties{
+	case ghV1ProviderName:
+		config = &manifest.GitHubV1Properties{
 			RepositoryURL:         fmt.Sprintf(fmtGHRepoURL, githubURL, o.repoOwner, o.repoName),
 			Branch:                o.repoBranch,
 			GithubSecretIdKeyName: o.secret,
+		}
+	case ghProviderName:
+		config = &manifest.GitHubProperties{
+			RepositoryURL: fmt.Sprintf(fmtGHRepoURL, githubURL, o.repoOwner, o.repoName),
+			Branch:        o.repoBranch,
 		}
 	case ccProviderName:
 		config = &manifest.CodeCommitProperties{
@@ -669,7 +661,6 @@ func buildPipelineInitCmd() *cobra.Command {
   Create a pipeline for the services in your workspace.
   /code $ copilot pipeline init \
   /code  --url https://github.com/gitHubUserName/myFrontendApp.git \
-  /code  --github-access-token file://myGitHubToken \
   /code  --environments "stage,prod"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitPipelineOpts(vars)
@@ -698,6 +689,7 @@ func buildPipelineInitCmd() *cobra.Command {
 	_ = cmd.Flags().MarkHidden(githubURLFlag)
 	cmd.Flags().StringVarP(&vars.repoURL, repoURLFlag, repoURLFlagShort, "", repoURLFlagDescription)
 	cmd.Flags().StringVarP(&vars.githubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
+	_ = cmd.Flags().MarkHidden(githubAccessTokenFlag)
 	cmd.Flags().StringVarP(&vars.repoBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
 	cmd.Flags().StringSliceVarP(&vars.environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
 
