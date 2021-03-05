@@ -29,6 +29,7 @@ Generally, the steps involved in task run are:
   --default                        Optional. Run tasks in default cluster and default subnets.
                                    Cannot be specified with 'app', 'env' or 'subnets'.
   --dockerfile string              Path to the Dockerfile. (default "Dockerfile")
+  --entrypoint string              Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.
   --env string                     Optional. Name of the environment.
                                    Cannot be specified with 'default', 'subnets' or 'security-groups'
   --env-vars stringToString        Optional. Environment variables specified by key=value separated with commas. (default [])
