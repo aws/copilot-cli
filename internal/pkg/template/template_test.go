@@ -59,6 +59,53 @@ func TestTemplate_Read(t *testing.T) {
 	}
 }
 
+func TestTemplate_UploadEnvironmentCustomResources(t *testing.T) {
+	testCases := map[string]struct {
+		mockDependencies func(t *Template)
+
+		wantedErr error
+	}{
+		"success": {
+			mockDependencies: func(t *Template) {
+				mockBox := packd.NewMemoryBox()
+				for _, file := range envCustomResourceFiles {
+					mockBox.AddString(fmt.Sprintf("custom-resources/%s.js", file), "hello")
+				}
+				t.box = mockBox
+			},
+		},
+		"errors if env custom resource file doesn't exist": {
+			mockDependencies: func(t *Template) {
+				mockBox := packd.NewMemoryBox()
+				mockBox.AddString("badFile", "hello")
+				t.box = mockBox
+			},
+			wantedErr: fmt.Errorf("read template custom-resources/dns-cert-validator.js: file does not exist"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			tpl := &Template{}
+			tc.mockDependencies(tpl)
+			mockUploader := func(string, ...CustomResource) (string, error) {
+				return "mockURL", nil
+			}
+
+			// WHEN
+			gotCustomResources, err := tpl.UploadEnvironmentCustomResources(mockUploader)
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, len(envCustomResourceFiles), len(gotCustomResources))
+			}
+		})
+	}
+}
+
 func TestTemplate_Parse(t *testing.T) {
 	testCases := map[string]struct {
 		inPath           string

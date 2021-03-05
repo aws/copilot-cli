@@ -53,8 +53,8 @@ type envUpgradeOpts struct {
 	sel                appEnvSelector
 	legacyEnvTemplater templater
 	prog               progress
-	lambdas            reader
 	appCFN             appResourcesGetter
+	uploader           customResourcesUploader
 
 	// Constructors for clients that can be initialized only at runtime.
 	// These functions are overriden in tests to provide mocks.
@@ -68,8 +68,7 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to config store: %v", err)
 	}
-	provider := sessions.NewProvider()
-	defaultSession, err := provider.Default()
+	defaultSession, err := sessions.NewProvider().Default()
 	if err != nil {
 		return nil, err
 	}
@@ -81,9 +80,9 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 		legacyEnvTemplater: stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
 			Version: deploy.LegacyEnvTemplateVersion,
 		}),
-		prog:    termprogress.NewSpinner(log.DiagnosticWriter),
-		lambdas: template.New(),
-		appCFN:  cloudformation.New(defaultSession),
+		prog:     termprogress.NewSpinner(log.DiagnosticWriter),
+		uploader: template.New(),
+		appCFN:   cloudformation.New(defaultSession),
 
 		newEnvVersionGetter: func(app, env string) (versionGetter, error) {
 			d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
@@ -97,14 +96,14 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 			return d, nil
 		},
 		newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
-			sess, err := provider.FromRole(conf.ManagerRoleARN, conf.Region)
+			sess, err := sessions.NewProvider().FromRole(conf.ManagerRoleARN, conf.Region)
 			if err != nil {
 				return nil, fmt.Errorf("create session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
 			}
 			return cloudformation.New(sess), nil
 		},
 		newS3: func(region string) (zipAndUploader, error) {
-			sess, err := provider.DefaultWithRegion(region)
+			sess, err := sessions.NewProvider().DefaultWithRegion(region)
 			if err != nil {
 				return nil, fmt.Errorf("create session with region %s: %v", region, err)
 			}
@@ -168,12 +167,19 @@ func (o *envUpgradeOpts) Execute() error {
 		if err != nil {
 			return fmt.Errorf("get app resources: %w", err)
 		}
-		uploader, err := o.newS3(env.Region)
+		s3Client, err := o.newS3(env.Region)
 		if err != nil {
 			return err
 		}
-		if err := uploadLambdaToS3(o.lambdas, uploader, resources.S3Bucket); err != nil {
-			return err
+		if _, err := o.uploader.UploadEnvironmentCustomResources(func(key string, files ...template.CustomResource) (string, error) {
+			// Golang limit. See https://stackoverflow.com/questions/12990338/cannot-convert-string-to-interface/12990540#12990540
+			nameBinaries := make([]s3.NamedBinary, len(files))
+			for _, file := range files {
+				nameBinaries = append(nameBinaries, s3.NamedBinary(file))
+			}
+			return s3Client.ZipAndUpload(resources.S3Bucket, key, nameBinaries...)
+		}); err != nil {
+			return fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
 		}
 		if err := o.upgrade(env); err != nil {
 			return err

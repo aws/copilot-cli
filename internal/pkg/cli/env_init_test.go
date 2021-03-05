@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"net"
@@ -19,7 +18,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -544,17 +542,15 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 }
 
 func TestInitEnvOpts_Execute(t *testing.T) {
-	mockBuffer := bytes.NewBufferString("mockContent")
 	testCases := map[string]struct {
 		inProd bool
 
-		expectstore    func(m *mocks.Mockstore)
-		expectDeployer func(m *mocks.Mockdeployer)
-		expectIdentity func(m *mocks.MockidentityService)
-		expectProgress func(m *mocks.Mockprogress)
-		expectAppCFN   func(m *mocks.MockappResourcesGetter)
-		expectReader   func(m *mocks.Mockreader)
-		expectUploader func(m *mocks.MockzipAndUploader)
+		expectstore             func(m *mocks.Mockstore)
+		expectDeployer          func(m *mocks.Mockdeployer)
+		expectIdentity          func(m *mocks.MockidentityService)
+		expectProgress          func(m *mocks.Mockprogress)
+		expectAppCFN            func(m *mocks.MockappResourcesGetter)
+		expectResourcesUploader func(m *mocks.MockcustomResourcesUploader)
 
 		wantedErrorS string
 	}{
@@ -636,40 +632,10 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						S3Bucket: "mockBucket",
 					}, nil)
 			},
-			expectReader: func(m *mocks.Mockreader) {
-				m.EXPECT().Read("custom-resources/mockPath").Return(nil, fmt.Errorf("some read error"))
+			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
+				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, fmt.Errorf("some error"))
 			},
-			wantedErrorS: "read custom resource mockCustomResource: some read error",
-		},
-		"errors cannot upload lambda scripts to s3": {
-			expectstore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
-			},
-			expectProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
-			},
-			expectIdentity: func(m *mocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil)
-			},
-			expectDeployer: func(m *mocks.Mockdeployer) {
-				m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
-			},
-			expectAppCFN: func(m *mocks.MockappResourcesGetter) {
-				m.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
-					Return(&stack.AppRegionalResources{
-						S3Bucket: "mockBucket",
-					}, nil)
-			},
-			expectReader: func(m *mocks.Mockreader) {
-				m.EXPECT().Read("custom-resources/mockPath").
-					Return(&template.Content{Buffer: mockBuffer}, nil)
-			},
-			expectUploader: func(m *mocks.MockzipAndUploader) {
-				m.EXPECT().ZipAndUpload("mockBucket", "mockCustomResource",
-					map[string]string{"index.js": "mockContent"}).Return(errors.New("some error"))
-			},
-			wantedErrorS: "upload custom resource mockCustomResource to bucket mockBucket: some error",
+			wantedErrorS: "upload custom resources to bucket mockBucket: some error",
 		},
 		"errors if environment stack cannot be created": {
 			expectstore: func(m *mocks.Mockstore) {
@@ -692,13 +658,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						S3Bucket: "mockBucket",
 					}, nil)
 			},
-			expectReader: func(m *mocks.Mockreader) {
-				m.EXPECT().Read("custom-resources/mockPath").
-					Return(&template.Content{Buffer: mockBuffer}, nil)
-			},
-			expectUploader: func(m *mocks.MockzipAndUploader) {
-				m.EXPECT().ZipAndUpload("mockBucket", "mockCustomResource",
-					map[string]string{"index.js": "mockContent"}).Return(nil)
+			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
+				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 			},
 			wantedErrorS: "some deploy error",
 		},
@@ -737,13 +698,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						S3Bucket: "mockBucket",
 					}, nil)
 			},
-			expectReader: func(m *mocks.Mockreader) {
-				m.EXPECT().Read("custom-resources/mockPath").
-					Return(&template.Content{Buffer: mockBuffer}, nil)
-			},
-			expectUploader: func(m *mocks.MockzipAndUploader) {
-				m.EXPECT().ZipAndUpload("mockBucket", "mockCustomResource",
-					map[string]string{"index.js": "mockContent"}).Return(nil)
+			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
+				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 			},
 			wantedErrorS: "store environment: some create error",
 		},
@@ -784,13 +740,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						S3Bucket: "mockBucket",
 					}, nil)
 			},
-			expectReader: func(m *mocks.Mockreader) {
-				m.EXPECT().Read("custom-resources/mockPath").
-					Return(&template.Content{Buffer: mockBuffer}, nil)
-			},
-			expectUploader: func(m *mocks.MockzipAndUploader) {
-				m.EXPECT().ZipAndUpload("mockBucket", "mockCustomResource",
-					map[string]string{"index.js": "mockContent"}).Return(nil)
+			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
+				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 			},
 		},
 		"skips creating stack if environment stack already exists": {
@@ -831,13 +782,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						S3Bucket: "mockBucket",
 					}, nil)
 			},
-			expectReader: func(m *mocks.Mockreader) {
-				m.EXPECT().Read("custom-resources/mockPath").
-					Return(&template.Content{Buffer: mockBuffer}, nil)
-			},
-			expectUploader: func(m *mocks.MockzipAndUploader) {
-				m.EXPECT().ZipAndUpload("mockBucket", "mockCustomResource",
-					map[string]string{"index.js": "mockContent"}).Return(nil)
+			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
+				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 			},
 		},
 		"failed to delegate DNS (app has Domain and env and apps are different)": {
@@ -896,13 +842,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						S3Bucket: "mockBucket",
 					}, nil)
 			},
-			expectReader: func(m *mocks.Mockreader) {
-				m.EXPECT().Read("custom-resources/mockPath").
-					Return(&template.Content{Buffer: mockBuffer}, nil)
-			},
-			expectUploader: func(m *mocks.MockzipAndUploader) {
-				m.EXPECT().ZipAndUpload("mockBucket", "mockCustomResource",
-					map[string]string{"index.js": "mockContent"}).Return(nil)
+			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
+				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 			},
 		},
 	}
@@ -918,7 +859,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			mockIdentity := mocks.NewMockidentityService(ctrl)
 			mockProgress := mocks.NewMockprogress(ctrl)
 			mockAppCFN := mocks.NewMockappResourcesGetter(ctrl)
-			mockReader := mocks.NewMockreader(ctrl)
+			mockResourcesUploader := mocks.NewMockcustomResourcesUploader(ctrl)
 			mockUploader := mocks.NewMockzipAndUploader(ctrl)
 			if tc.expectstore != nil {
 				tc.expectstore(mockstore)
@@ -935,11 +876,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			if tc.expectAppCFN != nil {
 				tc.expectAppCFN(mockAppCFN)
 			}
-			if tc.expectUploader != nil {
-				tc.expectUploader(mockUploader)
-			}
-			if tc.expectReader != nil {
-				tc.expectReader(mockReader)
+			if tc.expectResourcesUploader != nil {
+				tc.expectResourcesUploader(mockResourcesUploader)
 			}
 
 			provider := sessions.NewProvider()
@@ -960,14 +898,13 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				prog:        mockProgress,
 				sess:        sess,
 				appCFN:      mockAppCFN,
-				lambdas:     mockReader,
+				uploader:    mockResourcesUploader,
 				newS3: func(s *session.Session) zipAndUploader {
 					return mockUploader
 				},
 			}
 
 			// WHEN
-			envLambdas = map[string]string{"mockCustomResource": "mockPath"}
 			err := opts.Execute()
 
 			// THEN

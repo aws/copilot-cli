@@ -12,6 +12,7 @@ import (
 	session "github.com/aws/aws-sdk-go/aws/session"
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	s3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -1962,44 +1963,6 @@ func (mr *MockdescriberMockRecorder) Describe() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*Mockdescriber)(nil).Describe))
 }
 
-// Mockreader is a mock of reader interface.
-type Mockreader struct {
-	ctrl     *gomock.Controller
-	recorder *MockreaderMockRecorder
-}
-
-// MockreaderMockRecorder is the mock recorder for Mockreader.
-type MockreaderMockRecorder struct {
-	mock *Mockreader
-}
-
-// NewMockreader creates a new mock instance.
-func NewMockreader(ctrl *gomock.Controller) *Mockreader {
-	mock := &Mockreader{ctrl: ctrl}
-	mock.recorder = &MockreaderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *Mockreader) EXPECT() *MockreaderMockRecorder {
-	return m.recorder
-}
-
-// Read mocks base method.
-func (m *Mockreader) Read(path string) (*template.Content, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Read", path)
-	ret0, _ := ret[0].(*template.Content)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Read indicates an expected call of Read.
-func (mr *MockreaderMockRecorder) Read(path interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*Mockreader)(nil).Read), path)
-}
-
 // MockwsFileDeleter is a mock of wsFileDeleter interface.
 type MockwsFileDeleter struct {
 	ctrl     *gomock.Controller
@@ -2961,17 +2924,61 @@ func (m *MockzipAndUploader) EXPECT() *MockzipAndUploaderMockRecorder {
 }
 
 // ZipAndUpload mocks base method.
-func (m *MockzipAndUploader) ZipAndUpload(bucket, name string, data map[string]string) error {
+func (m *MockzipAndUploader) ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ZipAndUpload", bucket, name, data)
-	ret0, _ := ret[0].(error)
-	return ret0
+	varargs := []interface{}{bucket, key}
+	for _, a := range files {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ZipAndUpload", varargs...)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // ZipAndUpload indicates an expected call of ZipAndUpload.
-func (mr *MockzipAndUploaderMockRecorder) ZipAndUpload(bucket, name, data interface{}) *gomock.Call {
+func (mr *MockzipAndUploaderMockRecorder) ZipAndUpload(bucket, key interface{}, files ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ZipAndUpload", reflect.TypeOf((*MockzipAndUploader)(nil).ZipAndUpload), bucket, name, data)
+	varargs := append([]interface{}{bucket, key}, files...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ZipAndUpload", reflect.TypeOf((*MockzipAndUploader)(nil).ZipAndUpload), varargs...)
+}
+
+// MockcustomResourcesUploader is a mock of customResourcesUploader interface.
+type MockcustomResourcesUploader struct {
+	ctrl     *gomock.Controller
+	recorder *MockcustomResourcesUploaderMockRecorder
+}
+
+// MockcustomResourcesUploaderMockRecorder is the mock recorder for MockcustomResourcesUploader.
+type MockcustomResourcesUploaderMockRecorder struct {
+	mock *MockcustomResourcesUploader
+}
+
+// NewMockcustomResourcesUploader creates a new mock instance.
+func NewMockcustomResourcesUploader(ctrl *gomock.Controller) *MockcustomResourcesUploader {
+	mock := &MockcustomResourcesUploader{ctrl: ctrl}
+	mock.recorder = &MockcustomResourcesUploaderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockcustomResourcesUploader) EXPECT() *MockcustomResourcesUploaderMockRecorder {
+	return m.recorder
+}
+
+// UploadEnvironmentCustomResources mocks base method.
+func (m *MockcustomResourcesUploader) UploadEnvironmentCustomResources(upload func(string, ...template.CustomResource) (string, error)) ([]template.CustomResource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UploadEnvironmentCustomResources", upload)
+	ret0, _ := ret[0].([]template.CustomResource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UploadEnvironmentCustomResources indicates an expected call of UploadEnvironmentCustomResources.
+func (mr *MockcustomResourcesUploaderMockRecorder) UploadEnvironmentCustomResources(upload interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadEnvironmentCustomResources", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadEnvironmentCustomResources), upload)
 }
 
 // MockbucketEmptier is a mock of bucketEmptier interface.

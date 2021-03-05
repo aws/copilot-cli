@@ -7,6 +7,7 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"path"
 	"strings"
 	"text/template"
 
@@ -14,7 +15,18 @@ import (
 	"github.com/gobuffalo/packd"
 )
 
+const (
+	envLambdaRootPath         = "custom-resources"
+	envLambdaZippedScriptName = "index.js"
+)
+
 var box = templates.Box()
+
+var envCustomResourceFiles = []string{
+	"dns-cert-validator",
+	"dns-delegation",
+	"enable-long-arns",
+}
 
 // Parser is the interface that wraps the Parse method.
 type Parser interface {
@@ -25,6 +37,23 @@ type Parser interface {
 type ReadParser interface {
 	Read(path string) (*Content, error)
 	Parser
+}
+
+// CustomResource contains info about an custom resource.
+type CustomResource struct {
+	name    string
+	content []byte
+	URL     string
+}
+
+// Name returns the name of the custom resource script.
+func (e CustomResource) Name() string {
+	return e.name
+}
+
+// Content returns the content of the custom resource script.
+func (e CustomResource) Content() []byte {
+	return e.content
 }
 
 // Template represents the "/templates/" directory that holds static files to be embedded in the binary.
@@ -61,6 +90,30 @@ func (t *Template) Parse(path string, data interface{}, options ...ParseOption) 
 		return nil, fmt.Errorf("execute template %s with data %v: %w", path, data, err)
 	}
 	return &Content{buf}, nil
+}
+
+// UploadEnvironmentCustomResources uploads the environment custom resource scripts.
+func (t *Template) UploadEnvironmentCustomResources(upload func(string, ...CustomResource) (string, error)) ([]CustomResource, error) {
+	return t.uploadCustomResources(upload, envCustomResourceFiles)
+}
+
+func (t *Template) uploadCustomResources(upload func(string, ...CustomResource) (string, error), fileNames []string) ([]CustomResource, error) {
+	customResources := []CustomResource{}
+	for _, name := range fileNames {
+		cr := CustomResource{name: envLambdaZippedScriptName}
+		content, err := t.Read(path.Join(envLambdaRootPath, fmt.Sprintf("%s.js", name)))
+		if err != nil {
+			return nil, err
+		}
+		cr.content = content.Bytes()
+		url, err := upload(name, cr)
+		if err != nil {
+			return nil, fmt.Errorf("upload custom resource %s: %w", name, err)
+		}
+		cr.URL = url
+		customResources = append(customResources, cr)
+	}
+	return customResources, nil
 }
 
 // ParseOption represents a functional option for the Parse method.

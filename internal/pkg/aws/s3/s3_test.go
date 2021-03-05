@@ -27,7 +27,7 @@ func TestS3_PutArtifact(t *testing.T) {
 		inBucket            string
 		inFileName          string
 		inData              *bytes.Buffer
-		mockS3ManagerClient func(m *mocks.Mocks3ManagerApi)
+		mockS3ManagerClient func(m *mocks.Mocks3ManagerAPI)
 
 		wantErr  error
 		wantPath string
@@ -36,7 +36,7 @@ func TestS3_PutArtifact(t *testing.T) {
 			inBucket:   "mockBucket",
 			inData:     buf,
 			inFileName: "my-app.addons.stack.yml",
-			mockS3ManagerClient: func(m *mocks.Mocks3ManagerApi) {
+			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
 				m.EXPECT().Upload(&s3manager.UploadInput{
 					Body:   buf,
 					Bucket: aws.String("mockBucket"),
@@ -52,7 +52,7 @@ func TestS3_PutArtifact(t *testing.T) {
 			inBucket:   "mockBucket",
 			inData:     buf,
 			inFileName: "my-app.addons.stack.yml",
-			mockS3ManagerClient: func(m *mocks.Mocks3ManagerApi) {
+			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
 				m.EXPECT().Upload(&s3manager.UploadInput{
 					Body:   buf,
 					Bucket: aws.String("mockBucket"),
@@ -70,7 +70,7 @@ func TestS3_PutArtifact(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockS3ManagerClient := mocks.NewMocks3ManagerApi(ctrl)
+			mockS3ManagerClient := mocks.NewMocks3ManagerAPI(ctrl)
 			tc.mockS3ManagerClient(mockS3ManagerClient)
 
 			service := S3{
@@ -90,31 +90,32 @@ func TestS3_PutArtifact(t *testing.T) {
 }
 
 func TestS3_ZipAndUpload(t *testing.T) {
-	buf := &bytes.Buffer{}
-	fmt.Fprint(buf, "some data")
+	timeNow := strconv.FormatInt(time.Now().Unix(), 10)
 	testCases := map[string]struct {
-		mockS3ManagerClient func(m *mocks.Mocks3ManagerApi)
+		mockS3ManagerClient func(m *mocks.Mocks3ManagerAPI)
 
+		wantedURL string
 		wantError error
 	}{
 		"return error if upload fails": {
-			mockS3ManagerClient: func(m *mocks.Mocks3ManagerApi) {
-				m.EXPECT().Upload(&s3manager.UploadInput{
-					Body:   buf,
-					Bucket: aws.String("mockBucket"),
-					Key:    aws.String("mockFileName"),
+			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
+				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput) {
+					require.Equal(t, aws.StringValue(in.Bucket), "mockBucket")
+					require.Equal(t, aws.StringValue(in.Key), fmt.Sprintf("scripts/%s/mockFileName", timeNow))
 				}).Return(nil, errors.New("some error"))
 			},
 			wantError: fmt.Errorf("upload mockFileName to bucket mockBucket: some error"),
 		},
 		"should upload to the s3 bucket": {
-			mockS3ManagerClient: func(m *mocks.Mocks3ManagerApi) {
-				m.EXPECT().Upload(&s3manager.UploadInput{
-					Body:   buf,
-					Bucket: aws.String("mockBucket"),
-					Key:    aws.String("mockFileName"),
-				}).Return(&s3manager.UploadOutput{}, nil)
+			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
+				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput) {
+					require.Equal(t, aws.StringValue(in.Bucket), "mockBucket")
+					require.Equal(t, aws.StringValue(in.Key), fmt.Sprintf("scripts/%s/mockFileName", timeNow))
+				}).Return(&s3manager.UploadOutput{
+					Location: "mockURL",
+				}, nil)
 			},
+			wantedURL: "mockURL",
 		},
 	}
 
@@ -124,25 +125,31 @@ func TestS3_ZipAndUpload(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockS3ManagerClient := mocks.NewMocks3ManagerApi(ctrl)
+			mockS3ManagerClient := mocks.NewMocks3ManagerAPI(ctrl)
 			tc.mockS3ManagerClient(mockS3ManagerClient)
 
 			service := S3{
 				s3Manager: mockS3ManagerClient,
-				buf:       buf,
 			}
 
-			gotErr := service.ZipAndUpload("mockBucket", "mockFileName", make(map[string]string))
+			gotURL, gotErr := service.ZipAndUpload("mockBucket", "mockFileName", namedBinary{})
 
 			if gotErr != nil {
 				require.EqualError(t, gotErr, tc.wantError.Error())
 			} else {
 				require.Equal(t, gotErr, nil)
+				require.Equal(t, gotURL, tc.wantedURL)
 			}
 		})
 
 	}
 }
+
+type namedBinary struct{}
+
+func (n namedBinary) Name() string { return "foo" }
+
+func (n namedBinary) Content() []byte { return []byte("bar") }
 
 func TestS3_EmptyBucket(t *testing.T) {
 	batchObject1 := make([]*s3.ObjectVersion, 1000)
@@ -185,13 +192,13 @@ func TestS3_EmptyBucket(t *testing.T) {
 	}
 	testCases := map[string]struct {
 		inBucket     string
-		mockS3Client func(m *mocks.Mocks3Api)
+		mockS3Client func(m *mocks.Mocks3API)
 
 		wantErr error
 	}{
 		"should delete all objects within the bucket": {
 			inBucket: "mockBucket",
-			mockS3Client: func(m *mocks.Mocks3Api) {
+			mockS3Client: func(m *mocks.Mocks3API) {
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
 					Bucket: aws.String("mockBucket"),
 				}).Return(&s3.ListObjectVersionsOutput{
@@ -210,7 +217,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 		},
 		"should batch delete all objects within the bucket": {
 			inBucket: "mockBucket",
-			mockS3Client: func(m *mocks.Mocks3Api) {
+			mockS3Client: func(m *mocks.Mocks3API) {
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
 					Bucket: aws.String("mockBucket"),
 				}).Return(&s3.ListObjectVersionsOutput{
@@ -241,7 +248,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 		},
 		"should delete all objects within the bucket including delete markers": {
 			inBucket: "mockBucket",
-			mockS3Client: func(m *mocks.Mocks3Api) {
+			mockS3Client: func(m *mocks.Mocks3API) {
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
 					Bucket: aws.String("mockBucket"),
 				}).Return(&s3.ListObjectVersionsOutput{
@@ -261,7 +268,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 		},
 		"should wrap up error if fail to list objects": {
 			inBucket: "mockBucket",
-			mockS3Client: func(m *mocks.Mocks3Api) {
+			mockS3Client: func(m *mocks.Mocks3API) {
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
 					Bucket: aws.String("mockBucket"),
 				}).Return(nil, errors.New("some error"))
@@ -271,7 +278,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 		},
 		"should not invoke DeleteObjects if bucket is empty": {
 			inBucket: "mockBucket",
-			mockS3Client: func(m *mocks.Mocks3Api) {
+			mockS3Client: func(m *mocks.Mocks3API) {
 				m.EXPECT().ListObjectVersions(gomock.Any()).Return(&s3.ListObjectVersionsOutput{
 					IsTruncated: aws.Bool(false),
 				}, nil)
@@ -281,7 +288,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 		},
 		"should wrap up error if fail to delete objects": {
 			inBucket: "mockBucket",
-			mockS3Client: func(m *mocks.Mocks3Api) {
+			mockS3Client: func(m *mocks.Mocks3API) {
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
 					Bucket: aws.String("mockBucket"),
 				}).Return(&s3.ListObjectVersionsOutput{
@@ -306,7 +313,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockS3Client := mocks.NewMocks3Api(ctrl)
+			mockS3Client := mocks.NewMocks3API(ctrl)
 			tc.mockS3Client(mockS3Client)
 
 			service := S3{

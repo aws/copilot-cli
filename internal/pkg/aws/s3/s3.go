@@ -21,6 +21,7 @@ import (
 
 const (
 	artifactDirName = "manual"
+	scriptDirName   = "scripts"
 )
 
 type s3ManagerAPI interface {
@@ -32,13 +33,16 @@ type s3API interface {
 	DeleteObjects(input *s3.DeleteObjectsInput) (*s3.DeleteObjectsOutput, error)
 }
 
+// NamedBinary is a named binary to be uploaded.
+type NamedBinary interface {
+	Name() string
+	Content() []byte
+}
+
 // S3 wraps an Amazon Simple Storage Service client.
 type S3 struct {
 	s3Manager s3ManagerAPI
 	s3Client  s3API
-
-	// cache variables for unit tests.
-	buf *bytes.Buffer
 }
 
 // New returns an S3 client configured against the input session.
@@ -66,39 +70,34 @@ func (s *S3) PutArtifact(bucket, fileName string, data io.Reader) (string, error
 	return resp.Location, nil
 }
 
-// ZipAndUpload zips the file and uploads data to a S3 bucket.
-func (s *S3) ZipAndUpload(bucket, name string, data map[string]string) error {
+// ZipAndUpload zips files and uploads data to a S3 bucket under a random path that ends with
+// the file name. Then return the url.
+func (s *S3) ZipAndUpload(bucket, key string, files ...NamedBinary) (string, error) {
 	buf := new(bytes.Buffer)
 	w := zip.NewWriter(buf)
-	for name, content := range data {
-		f, err := w.Create(name)
+	for _, file := range files {
+		f, err := w.Create(file.Name())
 		if err != nil {
-			return fmt.Errorf("create zip file %s: %w", name, err)
+			return "", fmt.Errorf("create zip file %s: %w", file.Name(), err)
 		}
-		_, err = f.Write([]byte(content))
+		_, err = f.Write(file.Content())
 		if err != nil {
-			return fmt.Errorf("write zip file %s: %w", name, err)
+			return "", fmt.Errorf("write zip file %s: %w", file.Name(), err)
 		}
 	}
-	err := w.Close()
-	if err != nil {
-		return err
+	if err := w.Close(); err != nil {
+		return "", err
 	}
-	// For unit test override
-	if s.buf == nil {
-		s.buf = buf
-		defer func() {
-			s.buf = nil
-		}()
-	}
-	if _, err := s.s3Manager.Upload(&s3manager.UploadInput{
-		Body:   s.buf,
+	id := time.Now().Unix()
+	resp, err := s.s3Manager.Upload(&s3manager.UploadInput{
+		Body:   buf,
 		Bucket: aws.String(bucket),
-		Key:    aws.String(name),
-	}); err != nil {
-		return fmt.Errorf("upload %s to bucket %s: %w", name, bucket, err)
+		Key:    aws.String(path.Join(scriptDirName, strconv.FormatInt(id, 10), key)),
+	})
+	if err != nil {
+		return "", fmt.Errorf("upload %s to bucket %s: %w", key, bucket, err)
 	}
-	return nil
+	return resp.Location, nil
 }
 
 // EmptyBucket deletes all objects within the bucket.

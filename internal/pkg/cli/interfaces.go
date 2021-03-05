@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -209,10 +210,6 @@ type describer interface {
 	Describe() (describe.HumanJSONStringer, error)
 }
 
-type reader interface {
-	Read(path string) (*template.Content, error)
-}
-
 type wsFileDeleter interface {
 	DeleteWorkspaceFile() error
 }
@@ -299,7 +296,11 @@ type artifactUploader interface {
 }
 
 type zipAndUploader interface {
-	ZipAndUpload(bucket, name string, data map[string]string) error
+	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
+}
+
+type customResourcesUploader interface {
+	UploadEnvironmentCustomResources(upload func(string, ...template.CustomResource) (string, error)) ([]template.CustomResource, error)
 }
 
 type bucketEmptier interface {

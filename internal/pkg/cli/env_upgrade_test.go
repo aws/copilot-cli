@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"bytes"
 	"errors"
 	"testing"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -199,7 +197,6 @@ to support the latest Copilot features.`,
 }
 
 func TestEnvUpgradeOpts_Execute(t *testing.T) {
-	mockBuffer := bytes.NewBufferString("mockContent")
 	testCases := map[string]struct {
 		given     func(ctrl *gomock.Controller) *envUpgradeOpts
 		wantedErr error
@@ -227,14 +224,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					Return(&stack.AppRegionalResources{
 						S3Bucket: "mockBucket",
 					}, nil)
-				mockReader := mocks.NewMockreader(ctrl)
-				mockReader.EXPECT().Read("custom-resources/mockPath").Return(&template.Content{
-					Buffer: mockBuffer,
-				}, nil).Times(2)
-				mockUploader := mocks.NewMockzipAndUploader(ctrl)
-				mockUploader.EXPECT().ZipAndUpload("mockBucket", "mockName", map[string]string{
-					"index.js": "mockContent",
-				}).Return(nil).Times(2)
+				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
+				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil).Times(2)
 				mockEnvTpl := mocks.NewMockversionGetter(ctrl)
 				mockEnvTpl.EXPECT().Version().Return(deploy.LatestEnvTemplateVersion, nil).Times(2)
 
@@ -247,10 +238,10 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					newEnvVersionGetter: func(_, _ string) (versionGetter, error) {
 						return mockEnvTpl, nil
 					},
-					lambdas: mockReader,
-					appCFN:  mockAppCFN,
+					uploader: mockUploader,
+					appCFN:   mockAppCFN,
 					newS3: func(region string) (zipAndUploader, error) {
-						return mockUploader, nil
+						return mocks.NewMockzipAndUploader(ctrl), nil
 					},
 				}
 			},
@@ -283,14 +274,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					Return(&stack.AppRegionalResources{
 						S3Bucket: "mockBucket",
 					}, nil)
-				mockReader := mocks.NewMockreader(ctrl)
-				mockReader.EXPECT().Read("custom-resources/mockPath").Return(&template.Content{
-					Buffer: mockBuffer,
-				}, nil)
-				mockUploader := mocks.NewMockzipAndUploader(ctrl)
-				mockUploader.EXPECT().ZipAndUpload("mockBucket", "mockName", map[string]string{
-					"index.js": "mockContent",
-				}).Return(nil)
+				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
+				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 
 				mockUpgrader := mocks.NewMockenvTemplateUpgrader(ctrl)
 				mockUpgrader.EXPECT().UpgradeEnvironment(&deploy.CreateEnvironmentInput{
@@ -316,10 +301,10 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
 						return mockUpgrader, nil
 					},
-					lambdas: mockReader,
-					appCFN:  mockAppCFN,
+					uploader: mockUploader,
+					appCFN:   mockAppCFN,
 					newS3: func(region string) (zipAndUploader, error) {
-						return mockUploader, nil
+						return mocks.NewMockzipAndUploader(ctrl), nil
 					},
 				}
 			},
@@ -359,14 +344,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					Return(&stack.AppRegionalResources{
 						S3Bucket: "mockBucket",
 					}, nil)
-				mockReader := mocks.NewMockreader(ctrl)
-				mockReader.EXPECT().Read("custom-resources/mockPath").Return(&template.Content{
-					Buffer: mockBuffer,
-				}, nil)
-				mockUploader := mocks.NewMockzipAndUploader(ctrl)
-				mockUploader.EXPECT().ZipAndUpload("mockBucket", "mockName", map[string]string{
-					"index.js": "mockContent",
-				}).Return(nil)
+				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
+				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 
 				mockTemplater := mocks.NewMocktemplater(ctrl)
 				mockTemplater.EXPECT().Template().Return("template", nil)
@@ -394,10 +373,10 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
 						return mockUpgrader, nil
 					},
-					lambdas: mockReader,
-					appCFN:  mockAppCFN,
+					uploader: mockUploader,
+					appCFN:   mockAppCFN,
 					newS3: func(region string) (zipAndUploader, error) {
-						return mockUploader, nil
+						return mocks.NewMockzipAndUploader(ctrl), nil
 					},
 				}
 			},
@@ -431,14 +410,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					Return(&stack.AppRegionalResources{
 						S3Bucket: "mockBucket",
 					}, nil)
-				mockReader := mocks.NewMockreader(ctrl)
-				mockReader.EXPECT().Read("custom-resources/mockPath").Return(&template.Content{
-					Buffer: mockBuffer,
-				}, nil)
-				mockUploader := mocks.NewMockzipAndUploader(ctrl)
-				mockUploader.EXPECT().ZipAndUpload("mockBucket", "mockName", map[string]string{
-					"index.js": "mockContent",
-				}).Return(nil)
+				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
+				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 
 				mockTemplater := mocks.NewMocktemplater(ctrl)
 				mockTemplater.EXPECT().Template().Return("template", nil)
@@ -469,10 +442,10 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
 						return mockUpgrader, nil
 					},
-					lambdas: mockReader,
-					appCFN:  mockAppCFN,
+					uploader: mockUploader,
+					appCFN:   mockAppCFN,
 					newS3: func(region string) (zipAndUploader, error) {
-						return mockUploader, nil
+						return mocks.NewMockzipAndUploader(ctrl), nil
 					},
 				}
 			},
@@ -501,14 +474,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					Return(&stack.AppRegionalResources{
 						S3Bucket: "mockBucket",
 					}, nil)
-				mockReader := mocks.NewMockreader(ctrl)
-				mockReader.EXPECT().Read("custom-resources/mockPath").Return(&template.Content{
-					Buffer: mockBuffer,
-				}, nil)
-				mockUploader := mocks.NewMockzipAndUploader(ctrl)
-				mockUploader.EXPECT().ZipAndUpload("mockBucket", "mockName", map[string]string{
-					"index.js": "mockContent",
-				}).Return(nil)
+				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
+				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 
 				mockTemplater := mocks.NewMocktemplater(ctrl)
 				mockTemplater.EXPECT().Template().Return("template", nil)
@@ -531,10 +498,10 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
 						return mockUpgrader, nil
 					},
-					lambdas: mockReader,
-					appCFN:  mockAppCFN,
+					uploader: mockUploader,
+					appCFN:   mockAppCFN,
 					newS3: func(region string) (zipAndUploader, error) {
-						return mockUploader, nil
+						return mocks.NewMockzipAndUploader(ctrl), nil
 					},
 				}
 			},
@@ -547,9 +514,6 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			opts := tc.given(ctrl)
-			envLambdas = map[string]string{
-				"mockName": "mockPath",
-			}
 
 			err := opts.Execute()
 

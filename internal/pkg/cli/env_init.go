@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -68,16 +67,7 @@ https://aws.github.io/copilot-cli/docs/credentials/#environment-credentials`
 	fmtAddEnvToAppStart      = "Linking account %s and region %s to application %s."
 	fmtAddEnvToAppFailed     = "Failed to link account %s and region %s to application %s.\n\n"
 	fmtAddEnvToAppComplete   = "Linked account %s and region %s to application %s.\n\n"
-
-	envLambdaRootPath         = "custom-resources"
-	envLambdaZippedScriptName = "index.js"
 )
-
-var envLambdas = map[string]string{
-	"dns-cert-validator": "dns-cert-validator.js",
-	"dns-delegation":     "dns-delegation.js",
-	"enable-long-arns":   "enable-long-arns.js",
-}
 
 var (
 	envInitAppNamePrompt                  = fmt.Sprintf("In which %s would you like to create the environment?", color.Emphasize("application"))
@@ -154,9 +144,9 @@ type initEnvOpts struct {
 	selVPC       ec2Selector
 	selCreds     credsSelector
 	selApp       appSelector
-	lambdas      reader
 	appCFN       appResourcesGetter
 	newS3        func(*session.Session) zipAndUploader
+	uploader     customResourcesUploader
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
 }
@@ -190,9 +180,9 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 			Profile: cfg,
 			Prompt:  prompter,
 		},
-		selApp:  selector.NewSelect(prompt.New(), store),
-		lambdas: template.New(),
-		appCFN:  deploycfn.New(defaultSession),
+		selApp:   selector.NewSelect(prompt.New(), store),
+		uploader: template.New(),
+		appCFN:   deploycfn.New(defaultSession),
 		newS3: func(sess *session.Session) zipAndUploader {
 			return s3.New(sess)
 		},
@@ -282,8 +272,15 @@ func (o *initEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get app resources: %w", err)
 	}
-	if err := uploadLambdaToS3(o.lambdas, o.newS3(o.sess), resources.S3Bucket); err != nil {
-		return err
+	if _, err := o.uploader.UploadEnvironmentCustomResources(func(key string, files ...template.CustomResource) (string, error) {
+		// Golang limit. See https://stackoverflow.com/questions/12990338/cannot-convert-string-to-interface/12990540#12990540
+		nameBinaries := make([]s3.NamedBinary, len(files))
+		for idx, file := range files {
+			nameBinaries[idx] = s3.NamedBinary(file)
+		}
+		return o.newS3(o.sess).ZipAndUpload(resources.S3Bucket, key, nameBinaries...)
+	}); err != nil {
+		return fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
 	}
 
 	// 4. Start creating the CloudFormation stack for the environment.
@@ -592,20 +589,6 @@ func (o *initEnvOpts) validateCredentials() error {
 	}
 	if o.profile != "" && o.tempCreds.SessionToken != "" {
 		return fmt.Errorf("cannot specify both --%s and --%s", profileFlag, sessionTokenFlag)
-	}
-	return nil
-}
-
-func uploadLambdaToS3(reader reader, uploader zipAndUploader, bucket string) error {
-	for name, filePath := range envLambdas {
-		content, err := reader.Read(path.Join(envLambdaRootPath, filePath))
-		if err != nil {
-			return fmt.Errorf("read custom resource %s: %w", name, err)
-		}
-		if err := uploader.ZipAndUpload(bucket, name,
-			map[string]string{envLambdaZippedScriptName: content.Buffer.String()}); err != nil {
-			return fmt.Errorf("upload custom resource %s to bucket %s: %w", name, bucket, err)
-		}
 	}
 	return nil
 }
