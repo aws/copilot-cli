@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 )
 
 // VPCGetter wraps methods of getting VPC info.
@@ -28,6 +29,10 @@ type ClusterGetter interface {
 // DefaultClusterGetter wraps the method of getting a default cluster ARN.
 type DefaultClusterGetter interface {
 	DefaultCluster() (string, error)
+}
+
+type EnvironmentDescriber interface {
+	Describe() (*describe.EnvDescription, error)
 }
 
 // Runner wraps the method of running tasks.

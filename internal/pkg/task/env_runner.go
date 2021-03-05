@@ -37,9 +37,10 @@ type EnvRunner struct {
 	Env string
 
 	// Interfaces to interact with dependencies. Must not be nil.
-	VPCGetter     VPCGetter
-	ClusterGetter ClusterGetter
-	Starter       Runner
+	VPCGetter            VPCGetter
+	ClusterGetter        ClusterGetter
+	Starter              Runner
+	EnvironmentDescriber EnvironmentDescriber
 }
 
 // Run runs tasks in the environment of the application, and returns the tasks.
@@ -53,16 +54,16 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 		return nil, fmt.Errorf("get cluster for environment %s: %w", r.Env, err)
 	}
 
-	filters := r.filtersForVPCFromAppEnv()
-
-	subnets, err := r.VPCGetter.PublicSubnetIDs(filters...)
+	description, err := r.EnvironmentDescriber.Describe()
 	if err != nil {
 		return nil, fmt.Errorf(fmtErrPublicSubnetsFromEnv, r.Env, err)
 	}
-	if len(subnets) == 0 {
+	if description == nil || description.EnvironmentVPC == nil || len(description.EnvironmentVPC.PublicSubnetIDs) == 0 {
 		return nil, errNoSubnetFound
 	}
+	subnets := description.EnvironmentVPC.PublicSubnetIDs
 
+	filters := r.filtersForVPCFromAppEnv()
 	// Use only environment security group https://github.com/aws/copilot-cli/issues/1882.
 	securityGroups, err := r.VPCGetter.SecurityGroups(append(filters, ec2.Filter{
 		Name:   fmt.Sprintf(ec2.TagFilterName, envSecurityGroupCFNLogicalIDTagKey),

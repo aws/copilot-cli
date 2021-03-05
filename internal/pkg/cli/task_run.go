@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 
@@ -134,7 +135,10 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	}
 
 	opts.configureRuntimeOpts = func() error {
-		opts.runner = opts.configureRunner()
+		opts.runner, err = opts.configureRunner()
+		if err != nil {
+			return fmt.Errorf("configure Runtime: %w", err)
+		}
 		opts.deployer = cloudformation.New(opts.sess)
 		opts.defaultClusterGetter = awsecs.New(opts.sess)
 		return nil
@@ -157,11 +161,27 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	return &opts, nil
 }
 
-func (o *runTaskOpts) configureRunner() taskRunner {
+func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 	vpcGetter := ec2.New(o.sess)
 	ecsService := awsecs.New(o.sess)
 
 	if o.env != "" {
+		deployStore, err := deploy.NewStore(o.store)
+		if err != nil {
+			return nil, fmt.Errorf("connect to copilot deploy store: %w", err)
+		}
+
+		d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:             o.appName,
+			Env:             o.env,
+			ConfigStore:     o.store,
+			DeployStore:     deployStore,
+			EnableResources: false, // we don't need show resources
+		})
+		if err != nil {
+			return nil, fmt.Errorf("creating describer for environment %s in application %s: %w", o.env, o.appName, err)
+		}
+
 		return &task.EnvRunner{
 			Count:     o.count,
 			GroupName: o.groupName,
@@ -169,10 +189,11 @@ func (o *runTaskOpts) configureRunner() taskRunner {
 			App: o.appName,
 			Env: o.env,
 
-			VPCGetter:     vpcGetter,
-			ClusterGetter: ecs.New(o.sess),
-			Starter:       ecsService,
-		}
+			VPCGetter:            vpcGetter,
+			ClusterGetter:        ecs.New(o.sess),
+			Starter:              ecsService,
+			EnvironmentDescriber: d,
+		}, nil
 	}
 
 	return &task.NetworkConfigRunner{
@@ -185,7 +206,7 @@ func (o *runTaskOpts) configureRunner() taskRunner {
 		VPCGetter:     vpcGetter,
 		ClusterGetter: ecsService,
 		Starter:       ecsService,
-	}
+	}, nil
 
 }
 
