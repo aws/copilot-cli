@@ -519,3 +519,7 @@ type serviceLinkedRoleCreator interface {
 type dockerEngineValidator interface {
 	CheckDockerEngineRunning() error
 }
+
+type publicIPGetter interface {
+	PublicIP(ENI string) (string, error)
+}

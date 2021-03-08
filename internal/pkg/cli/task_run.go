@@ -108,6 +108,7 @@ type runTaskOpts struct {
 	runner               taskRunner
 	eventsWriter         eventsWriter
 	defaultClusterGetter defaultClusterGetter
+	publicIPGetter       publicIPGetter
 
 	sess              *session.Session
 	targetEnvironment *config.Environment
@@ -141,6 +142,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		}
 		opts.deployer = cloudformation.New(opts.sess)
 		opts.defaultClusterGetter = awsecs.New(opts.sess)
+		opts.publicIPGetter = ec2.New(opts.sess)
 		return nil
 	}
 
@@ -435,6 +437,10 @@ func (o *runTaskOpts) Execute() error {
 		return err
 	}
 
+	if err := o.showPublicIPs(tasks); err != nil {
+		return err
+	}
+
 	if o.follow {
 		o.configureEventsWriter(tasks)
 		if err := o.displayLogStream(); err != nil {
@@ -464,6 +470,27 @@ func (o *runTaskOpts) runTask() ([]*task.Task, error) {
 	}
 	o.spinner.Stop(log.Ssuccessf("%s %s %s running.\n\n", english.PluralWord(o.count, "Task", ""), o.groupName, english.PluralWord(o.count, "is", "are")))
 	return tasks, nil
+}
+
+func (o *runTaskOpts) showPublicIPs(tasks []*task.Task) error {
+	publicIPs := make([]string, len(tasks))
+
+	for idx, t := range tasks {
+		ip, err := o.publicIPGetter.PublicIP(t.ENI)
+		if err != nil {
+			return fmt.Errorf("get public ip for task %s: %w", t.TaskARN, err)
+		}
+		publicIPs[idx] = ip
+	}
+
+	log.Infof("Public %s associated with the tasks %s:\n",
+		english.PluralWord(len(publicIPs), "IP", "IPs"),
+		english.PluralWord(len(publicIPs), "is", "are"))
+	for _, ip := range publicIPs {
+		log.Infof("- %s\n", ip)
+	}
+
+	return nil
 }
 
 func (o *runTaskOpts) buildAndPushImage() error {
