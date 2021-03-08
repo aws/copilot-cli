@@ -4,9 +4,12 @@
 package s3
 
 import (
+	"archive/zip"
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"strconv"
 	"testing"
 	"time"
@@ -108,6 +111,21 @@ func TestS3_ZipAndUpload(t *testing.T) {
 		"should upload to the s3 bucket": {
 			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
 				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput) {
+					b, err := ioutil.ReadAll(in.Body)
+					require.NoError(t, err)
+					reader, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
+					require.NoError(t, err)
+					for _, f := range reader.File {
+						require.Equal(t, f.Name, "foo")
+						rc, err := f.Open()
+						require.NoError(t, err)
+						buf := &bytes.Buffer{}
+						_, err = io.CopyN(buf, rc, 3)
+						require.NoError(t, err)
+						require.Equal(t, buf.String(), "bar")
+						rc.Close()
+						fmt.Println()
+					}
 					require.Equal(t, aws.StringValue(in.Bucket), "mockBucket")
 					require.Equal(t, aws.StringValue(in.Key), "mockFileName")
 				}).Return(&s3manager.UploadOutput{

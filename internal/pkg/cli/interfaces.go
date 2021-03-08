@@ -300,7 +300,7 @@ type zipAndUploader interface {
 }
 
 type customResourcesUploader interface {
-	UploadEnvironmentCustomResources(upload func(string, ...template.CustomResource) (string, error)) ([]template.CustomResource, error)
+	UploadEnvironmentCustomResources(upload func(string, ...template.Uploadable) (string, error)) ([]string, error)
 }
 
 type bucketEmptier interface {

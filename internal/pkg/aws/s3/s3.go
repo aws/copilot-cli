@@ -69,8 +69,7 @@ func (s *S3) PutArtifact(bucket, fileName string, data io.Reader) (string, error
 	return resp.Location, nil
 }
 
-// ZipAndUpload zips files and uploads data to a S3 bucket under a random path that ends with
-// the file name. Then return the url.
+// ZipAndUpload zips files and uploads zips all files and uploads the zipped file to an S3 bucket under the specified key.
 func (s *S3) ZipAndUpload(bucket, key string, files ...NamedBinary) (string, error) {
 	buf := new(bytes.Buffer)
 	w := zip.NewWriter(buf)

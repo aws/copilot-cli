@@ -171,7 +171,7 @@ func (o *envUpgradeOpts) Execute() error {
 		if err != nil {
 			return err
 		}
-		if _, err := o.uploader.UploadEnvironmentCustomResources(func(key string, files ...template.CustomResource) (string, error) {
+		if _, err := o.uploader.UploadEnvironmentCustomResources(func(key string, files ...template.Uploadable) (string, error) {
 			// Golang limit. See https://stackoverflow.com/questions/12990338/cannot-convert-string-to-interface/12990540#12990540
 			nameBinaries := make([]s3.NamedBinary, len(files))
 			for _, file := range files {

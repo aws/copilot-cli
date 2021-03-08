@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	envLambdaRootPath         = "custom-resources"
-	envLambdaZippedScriptName = "index.js"
-	scriptDirName             = "scripts"
+	customResourceRootPath         = "custom-resources"
+	customResourceZippedScriptName = "index.js"
+	scriptDirName                  = "scripts"
 )
 
 var box = templates.Box()
@@ -41,21 +41,26 @@ type ReadParser interface {
 	Parser
 }
 
-// CustomResource contains info about an custom resource.
-type CustomResource struct {
+// Uploadable is an uploadable file.
+type Uploadable struct {
 	name    string
 	content []byte
-	URL     string
+	path    string
 }
 
 // Name returns the name of the custom resource script.
-func (e CustomResource) Name() string {
+func (e Uploadable) Name() string {
 	return e.name
 }
 
 // Content returns the content of the custom resource script.
-func (e CustomResource) Content() []byte {
+func (e Uploadable) Content() []byte {
 	return e.content
+}
+
+type compressedFile struct {
+	name        string
+	uploadables []Uploadable
 }
 
 // Template represents the "/templates/" directory that holds static files to be embedded in the binary.
@@ -95,31 +100,46 @@ func (t *Template) Parse(path string, data interface{}, options ...ParseOption) 
 }
 
 // UploadEnvironmentCustomResources uploads the environment custom resource scripts.
-func (t *Template) UploadEnvironmentCustomResources(upload func(string, ...CustomResource) (string, error)) ([]CustomResource, error) {
+func (t *Template) UploadEnvironmentCustomResources(upload func(string, ...Uploadable) (string, error)) ([]string, error) {
 	return t.uploadCustomResources(upload, envCustomResourceFiles)
 }
 
-func (t *Template) uploadCustomResources(upload func(string, ...CustomResource) (string, error), fileNames []string) ([]CustomResource, error) {
-	customResources := []CustomResource{}
+func (t *Template) uploadCustomResources(upload func(string, ...Uploadable) (string, error), fileNames []string) ([]string, error) {
+	urls := []string{}
 	for _, name := range fileNames {
-		cr := CustomResource{name: envLambdaZippedScriptName}
-		content, err := t.Read(path.Join(envLambdaRootPath, fmt.Sprintf("%s.js", name)))
+		url, err := t.uploadCompressedFile(upload, compressedFile{
+			name: path.Join(scriptDirName, name),
+			uploadables: []Uploadable{
+				{
+					name: customResourceZippedScriptName,
+					path: path.Join(customResourceRootPath, fmt.Sprintf("%s.js", name)),
+				},
+			},
+		})
 		if err != nil {
 			return nil, err
 		}
-		cr.content = content.Bytes()
-		h := sha256.New()
-		if _, err := h.Write(cr.content); err != nil {
-			return nil, fmt.Errorf("generate SHA for custom resource %s: %w", name, err)
-		}
-		url, err := upload(fmt.Sprintf("%s/%x/%s", scriptDirName, h.Sum(nil), name), cr)
-		if err != nil {
-			return nil, fmt.Errorf("upload custom resource %s: %w", name, err)
-		}
-		cr.URL = url
-		customResources = append(customResources, cr)
+		urls = append(urls, url)
 	}
-	return customResources, nil
+	return urls, nil
+}
+
+func (t *Template) uploadCompressedFile(upload func(string, ...Uploadable) (string, error), file compressedFile) (string, error) {
+	contents := []byte{}
+	for _, uploadable := range file.uploadables {
+		content, err := t.Read(uploadable.path)
+		if err != nil {
+			return "", err
+		}
+		uploadable.content = content.Bytes()
+		contents = append(contents, uploadable.content...)
+	}
+	// Use the SHA256 so that we'll upload every time when the file changes.
+	url, err := upload(fmt.Sprintf("%s/%x", file.name, sha256.Sum256(contents)), file.uploadables...)
+	if err != nil {
+		return "", fmt.Errorf("upload %s: %w", file.name, err)
+	}
+	return url, nil
 }
 
 // ParseOption represents a functional option for the Parse method.
