@@ -245,7 +245,7 @@ func (o *updatePipelineOpts) Execute() error {
 		source = &deploy.GitHubV1Source{
 			ProviderName:                ghV1ProviderName,
 			Branch:                      (pipeline.Source.Properties["branch"]).(string),
-			RepositoryURL:               (pipeline.Source.Properties["repository"]).(string),
+			RepositoryURL:               deploy.GitHubURL((pipeline.Source.Properties["repository"]).(string)),
 			PersonalAccessTokenSecretID: (pipeline.Source.Properties["access_token_secret"]).(string),
 		}
 	case ghProviderName:
@@ -256,14 +256,14 @@ func (o *updatePipelineOpts) Execute() error {
 			source = &deploy.GitHubV1Source{
 				ProviderName:                ghV1ProviderName,
 				Branch:                      (pipeline.Source.Properties["branch"]).(string),
-				RepositoryURL:               (pipeline.Source.Properties["repository"]).(string),
+				RepositoryURL:               deploy.GitHubURL((pipeline.Source.Properties["repository"]).(string)),
 				PersonalAccessTokenSecretID: (pipeline.Source.Properties["access_token_secret"]).(string),
 			}
 		} else {
 			source = &deploy.GitHubSource{
 				ProviderName:  ghProviderName,
 				Branch:        (pipeline.Source.Properties["branch"]).(string),
-				RepositoryURL: (pipeline.Source.Properties["repository"]).(string),
+				RepositoryURL: deploy.GitHubURL((pipeline.Source.Properties["repository"]).(string)),
 			}
 			o.shouldPromptUpdateConnection = true
 		}

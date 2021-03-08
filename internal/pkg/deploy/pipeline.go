@@ -75,16 +75,19 @@ func (a *ArtifactBucket) Region() (string, error) {
 type GitHubSource struct {
 	ProviderName  string
 	Branch        string
-	RepositoryURL string
+	RepositoryURL GitHubURL
 }
 
 // GitHubSource defines the (GH) source of the artifacts to be built and deployed.
 type GitHubV1Source struct {
 	ProviderName                string
 	Branch                      string
-	RepositoryURL               string
+	RepositoryURL               GitHubURL
 	PersonalAccessTokenSecretID string
 }
+
+// GitHubURL is the common type for repo URLs for both GitHubSource versions
+type GitHubURL string
 
 // CodeCommitSource defines the (CC) source of the artifacts to be built and deployed.
 type CodeCommitSource struct {
@@ -110,35 +113,15 @@ func (s *GitHubV1Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 	return s.PersonalAccessTokenSecretID, nil
 }
 
-// parseOwnerAndRepo parses the owner and repo name from the GH repo URL, which was formatted and assigned in cli/pipeline_init.go.
-func (s *GitHubSource) parseOwnerAndRepo() (owner, repo string, err error) {
-	if s.RepositoryURL == "" {
+// parse parses the owner and repo name from the GH repo URL, which was formatted and assigned in cli/pipeline_init.go.
+func (url GitHubURL) parse() (owner, repo string, err error) {
+	if url == "" {
 		return "", "", fmt.Errorf("unable to locate the repository")
 	}
 
-	match := ghRepoExp.FindStringSubmatch(s.RepositoryURL)
+	match := ghRepoExp.FindStringSubmatch(string(url))
 	if len(match) == 0 {
-		return "", "", fmt.Errorf(fmtInvalidRepo, s.RepositoryURL)
-	}
-
-	matches := make(map[string]string)
-	for i, name := range ghRepoExp.SubexpNames() {
-		if i != 0 && name != "" {
-			matches[name] = match[i]
-		}
-	}
-	return matches["owner"], matches["repo"], nil
-}
-
-// parseOwnerAndRepo parses the owner and repo name from the GH repo URL, which was formatted and assigned in cli/pipeline_init.go.
-func (s *GitHubV1Source) parseOwnerAndRepo() (owner, repo string, err error) {
-	if s.RepositoryURL == "" {
-		return "", "", fmt.Errorf("unable to locate the repository")
-	}
-
-	match := ghRepoExp.FindStringSubmatch(s.RepositoryURL)
-	if len(match) == 0 {
-		return "", "", fmt.Errorf(fmtInvalidRepo, s.RepositoryURL)
+		return "", "", fmt.Errorf(fmtInvalidRepo, url)
 	}
 
 	matches := make(map[string]string)
@@ -206,35 +189,31 @@ func (s *BitbucketSource) ConnectionName() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parse owner and repo to generate connection name: %w", err)
 	}
-
-	if len(owner) > maxOwnerLength {
-		owner = owner[:maxOwnerLength]
-	}
-	if len(repo) > maxRepoLength {
-		repo = repo[:maxRepoLength]
-	}
-	return fmt.Sprintf(fmtConnectionName, owner, repo), nil
+	return formatConnectionName(owner, repo), nil
 }
 
 func (s *GitHubSource) ConnectionName() (string, error) {
-	owner, repo, err := s.parseOwnerAndRepo()
+	owner, repo, err := s.RepositoryURL.parse()
 	if err != nil {
 		return "", fmt.Errorf("parse owner and repo to generate connection name: %w", err)
 	}
+	return formatConnectionName(owner, repo), nil
+}
 
+func formatConnectionName(owner, repo string) string {
 	if len(owner) > maxOwnerLength {
 		owner = owner[:maxOwnerLength]
 	}
 	if len(repo) > maxRepoLength {
 		repo = repo[:maxRepoLength]
 	}
-	return fmt.Sprintf(fmtConnectionName, owner, repo), nil
+	return fmt.Sprintf(fmtConnectionName, owner, repo)
 }
 
 // Repository returns the repository portion. For example,
 // given "aws/amazon-copilot", this function returns "amazon-copilot".
 func (s *GitHubV1Source) Repository() (string, error) {
-	_, repo, err := s.parseOwnerAndRepo()
+	_, repo, err := s.RepositoryURL.parse()
 	if err != nil {
 		return "", err
 	}
@@ -254,7 +233,7 @@ func (s *BitbucketSource) Repository() (string, error) {
 // Repository returns the repository portion. For CodeStar Connections,
 // this needs to be in the format "some-user/my-repo."
 func (s *GitHubSource) Repository() (string, error) {
-	owner, repo, err := s.parseOwnerAndRepo()
+	owner, repo, err := s.RepositoryURL.parse()
 	if err != nil {
 		return "", err
 	}
@@ -274,7 +253,7 @@ func (s *CodeCommitSource) Repository() (string, error) {
 // Owner returns the repository owner portion. For example,
 // given "aws/amazon-copilot", this function returns "aws".
 func (s *GitHubSource) Owner() (string, error) {
-	owner, _, err := s.parseOwnerAndRepo()
+	owner, _, err := s.RepositoryURL.parse()
 	if err != nil {
 		return "", err
 	}
@@ -284,7 +263,7 @@ func (s *GitHubSource) Owner() (string, error) {
 // Owner returns the repository owner portion. For example,
 // given "aws/amazon-copilot", this function returns "aws".
 func (s *GitHubV1Source) Owner() (string, error) {
-	owner, _, err := s.parseOwnerAndRepo()
+	owner, _, err := s.RepositoryURL.parse()
 	if err != nil {
 		return "", err
 	}
