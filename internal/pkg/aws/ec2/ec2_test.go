@@ -235,6 +235,7 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 		})
 	}
 }
+
 func TestEC2_PublicSubnetIDs(t *testing.T) {
 	testCases := map[string]struct {
 		inFilter []Filter
@@ -286,6 +287,63 @@ func TestEC2_PublicSubnetIDs(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedARNs, arns)
+			}
+		})
+	}
+}
+
+func TestEC2_PublicIP(t *testing.T) {
+	testCases := map[string]struct {
+		inENI string
+		mockEC2Client func(m *mocks.Mockapi)
+
+		wantedIP  string
+		wantedErr error
+	}{
+		"failed to describe network interfaces": {
+			inENI: "eni-1",
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeNetworkInterfaces(&ec2.DescribeNetworkInterfacesInput{
+					NetworkInterfaceIds: aws.StringSlice([]string{"eni-1"}),
+				}).Return(nil, errors.New("some error"))
+			},
+			wantedErr: errors.New("describe network interface: some error"),
+		},
+		"successfully get public ip": {
+			inENI: "eni-1",
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeNetworkInterfaces(&ec2.DescribeNetworkInterfacesInput{
+					NetworkInterfaceIds: aws.StringSlice([]string{"eni-1"}),
+				}).Return(&ec2.DescribeNetworkInterfacesOutput{
+					NetworkInterfaces: []*ec2.NetworkInterface{
+						&ec2.NetworkInterface{
+							Association: &ec2.NetworkInterfaceAssociation{
+								PublicIp: aws.String("1.2.3"),
+							},
+						},
+					},
+				}, nil)
+			},
+			wantedIP: "1.2.3",
+		},
+	}
+
+	for name, tc := range testCases{
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockAPI := mocks.NewMockapi(ctrl)
+			tc.mockEC2Client(mockAPI)
+
+			ec2Client := EC2{
+				client: mockAPI,
+			}
+
+			out, err := ec2Client.PublicIP(tc.inENI)
+			if tc.wantedErr != nil {
+				require.EqualError(t, tc.wantedErr, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedIP, out)
 			}
 		})
 	}
