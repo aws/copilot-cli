@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/gobuffalo/packd"
 	"github.com/stretchr/testify/require"
 )
@@ -89,11 +90,11 @@ func TestTemplate_UploadEnvironmentCustomResources(t *testing.T) {
 			// GIVEN
 			tpl := &Template{}
 			tc.mockDependencies(tpl)
-			mockUploader := func(key string, files ...Uploadable) (string, error) {
+			mockUploader := s3.UploadFunc(func(key string, files ...s3.NamedBinary) (string, error) {
 				require.Contains(t, key, "scripts")
 				require.Contains(t, key, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
 				return "mockURL", nil
-			}
+			})
 
 			// WHEN
 			gotCustomResources, err := tpl.UploadEnvironmentCustomResources(mockUploader)

@@ -21,7 +21,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -300,7 +299,7 @@ type zipAndUploader interface {
 }
 
 type customResourcesUploader interface {
-	UploadEnvironmentCustomResources(upload func(string, ...template.Uploadable) (string, error)) ([]string, error)
+	UploadEnvironmentCustomResources(upload s3.UploadFunc) ([]string, error)
 }
 
 type bucketEmptier interface {

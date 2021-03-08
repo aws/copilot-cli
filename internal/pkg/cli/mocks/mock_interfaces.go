@@ -23,7 +23,6 @@ import (
 	logging "github.com/aws/copilot-cli/internal/pkg/logging"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
-	template "github.com/aws/copilot-cli/internal/pkg/template"
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
 	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	prompt "github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -2967,7 +2966,7 @@ func (m *MockcustomResourcesUploader) EXPECT() *MockcustomResourcesUploaderMockR
 }
 
 // UploadEnvironmentCustomResources mocks base method.
-func (m *MockcustomResourcesUploader) UploadEnvironmentCustomResources(upload func(string, ...template.Uploadable) (string, error)) ([]string, error) {
+func (m *MockcustomResourcesUploader) UploadEnvironmentCustomResources(upload s3.UploadFunc) ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UploadEnvironmentCustomResources", upload)
 	ret0, _ := ret[0].([]string)

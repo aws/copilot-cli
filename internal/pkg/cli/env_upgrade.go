@@ -171,14 +171,9 @@ func (o *envUpgradeOpts) Execute() error {
 		if err != nil {
 			return err
 		}
-		if _, err := o.uploader.UploadEnvironmentCustomResources(func(key string, files ...template.Uploadable) (string, error) {
-			// Golang limit. See https://stackoverflow.com/questions/12990338/cannot-convert-string-to-interface/12990540#12990540
-			nameBinaries := make([]s3.NamedBinary, len(files))
-			for _, file := range files {
-				nameBinaries = append(nameBinaries, s3.NamedBinary(file))
-			}
-			return s3Client.ZipAndUpload(resources.S3Bucket, key, nameBinaries...)
-		}); err != nil {
+		if _, err := o.uploader.UploadEnvironmentCustomResources(s3.UploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
+			return s3Client.ZipAndUpload(resources.S3Bucket, key, objects...)
+		})); err != nil {
 			return fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
 		}
 		if err := o.upgrade(env); err != nil {

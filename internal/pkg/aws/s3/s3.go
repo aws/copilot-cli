@@ -38,6 +38,9 @@ type NamedBinary interface {
 	Content() []byte
 }
 
+// UploadFunc is invoked to zip multiple template contents and upload them to an S3 bucket under the specified key.
+type UploadFunc func(key string, objects ...NamedBinary) (url string, err error)
+
 // S3 wraps an Amazon Simple Storage Service client.
 type S3 struct {
 	s3Manager s3ManagerAPI

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/templates"
 	"github.com/gobuffalo/packd"
 )
@@ -100,12 +101,12 @@ func (t *Template) Parse(path string, data interface{}, options ...ParseOption) 
 }
 
 // UploadEnvironmentCustomResources uploads the environment custom resource scripts.
-func (t *Template) UploadEnvironmentCustomResources(upload func(string, ...Uploadable) (string, error)) ([]string, error) {
+func (t *Template) UploadEnvironmentCustomResources(upload s3.UploadFunc) ([]string, error) {
 	return t.uploadCustomResources(upload, envCustomResourceFiles)
 }
 
-func (t *Template) uploadCustomResources(upload func(string, ...Uploadable) (string, error), fileNames []string) ([]string, error) {
-	urls := []string{}
+func (t *Template) uploadCustomResources(upload s3.UploadFunc, fileNames []string) ([]string, error) {
+	var urls []string
 	for _, name := range fileNames {
 		url, err := t.uploadCompressedFile(upload, compressedFile{
 			name: path.Join(scriptDirName, name),
@@ -124,8 +125,8 @@ func (t *Template) uploadCustomResources(upload func(string, ...Uploadable) (str
 	return urls, nil
 }
 
-func (t *Template) uploadCompressedFile(upload func(string, ...Uploadable) (string, error), file compressedFile) (string, error) {
-	contents := []byte{}
+func (t *Template) uploadCompressedFile(upload s3.UploadFunc, file compressedFile) (string, error) {
+	var contents []byte
 	for _, uploadable := range file.uploadables {
 		content, err := t.Read(uploadable.path)
 		if err != nil {
@@ -134,8 +135,15 @@ func (t *Template) uploadCompressedFile(upload func(string, ...Uploadable) (stri
 		uploadable.content = content.Bytes()
 		contents = append(contents, uploadable.content...)
 	}
-	// Use the SHA256 so that we'll upload every time when the file changes.
-	url, err := upload(fmt.Sprintf("%s/%x", file.name, sha256.Sum256(contents)), file.uploadables...)
+	// Golang limit. See https://stackoverflow.com/questions/12990338/cannot-convert-string-to-interface/12990540#12990540
+	nameBinaries := make([]s3.NamedBinary, len(file.uploadables))
+	for idx, file := range file.uploadables {
+		nameBinaries[idx] = s3.NamedBinary(file)
+	}
+	// Suffix with a SHA256 checksum of the compressedFile so that
+	// only new content gets a new URL. Otherwise, if two compressedFiles have the
+	// same content then the URL generated will be identical.
+	url, err := upload(fmt.Sprintf("%s/%x", file.name, sha256.Sum256(contents)), nameBinaries...)
 	if err != nil {
 		return "", fmt.Errorf("upload %s: %w", file.name, err)
 	}
