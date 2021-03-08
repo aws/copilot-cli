@@ -127,7 +127,7 @@ func (c *EC2) PublicIP(ENI string) (string, error) {
 		NetworkInterfaceIds: aws.StringSlice([]string{ENI}),
 	})
 	if err != nil {
-		return "", fmt.Errorf("describe network interface: %w", err)
+		return "", fmt.Errorf("describe network interface with ENI %s: %w", ENI, err)
 	}
 
 	publicIP := response.NetworkInterfaces[0].Association.PublicIp

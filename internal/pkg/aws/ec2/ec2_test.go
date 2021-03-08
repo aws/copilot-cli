@@ -307,7 +307,7 @@ func TestEC2_PublicIP(t *testing.T) {
 					NetworkInterfaceIds: aws.StringSlice([]string{"eni-1"}),
 				}).Return(nil, errors.New("some error"))
 			},
-			wantedErr: errors.New("describe network interface: some error"),
+			wantedErr: errors.New("describe network interface with ENI eni-1: some error"),
 		},
 		"successfully get public ip": {
 			inENI: "eni-1",

@@ -88,20 +88,20 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 	}, nil
 }
 
-// ENI returns the network interface id of the running task.
-// Every Fargate task is provided an ENI by default (https://docs.aws.amazon.com/AmazonECS/latest/userguide/fargate-task-networking.html).
+// ENI returns the network interface ID of the running task.
+// Every Fargate task is provided with an ENI by default (https://docs.aws.amazon.com/AmazonECS/latest/userguide/fargate-task-networking.html).
 func (t *Task) ENI() (string, error) {
-	attachmentENI := &ecs.Attachment{}
+	var attachmentENI *ecs.Attachment
 	hasENIAttachment := false
 	for _, attachment := range t.Attachments {
-		if *attachment.Type == networkInterfaceAttachmentType {
+		if aws.StringValue(attachment.Type) == networkInterfaceAttachmentType {
 			attachmentENI = attachment
 			hasENIAttachment = true
 			break
 		}
 	}
 	if !hasENIAttachment {
-		return "", fmt.Errorf("cannot find network interface attachment for task %s", *t.TaskArn)
+		return "", fmt.Errorf("cannot find network interface attachment for task %s", aws.StringValue(t.TaskArn))
 	}
 
 	for _, detail := range attachmentENI.Details {
