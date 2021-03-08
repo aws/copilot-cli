@@ -105,11 +105,11 @@ func (t *Task) ENI() (string, error) {
 	}
 
 	for _, detail := range attachmentENI.Details {
-		if *detail.Name == networkInterfaceIDKey {
+		if aws.StringValue(detail.Name) == networkInterfaceIDKey {
 			return *detail.Value, nil
 		}
 	}
-	return "", fmt.Errorf("cannot find network interface id for task %s", *t.TaskArn)
+	return "", fmt.Errorf("cannot find network interface ID for task %s", *t.TaskArn)
 }
 
 // TaskStatus contains the status info of a task.

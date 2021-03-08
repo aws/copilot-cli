@@ -175,7 +175,7 @@ func TestTask_ENI(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: errors.New("cannot find network interface id for task 1"),
+			wantedErr: errors.New("cannot find network interface ID for task 1"),
 		},
 		"successfully retrieve eni id": {
 			taskARN: aws.String("1"),
