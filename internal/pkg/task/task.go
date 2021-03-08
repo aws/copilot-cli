@@ -45,6 +45,7 @@ type Task struct {
 	TaskARN    string
 	ClusterARN string
 	StartedAt  *time.Time
+	ENI        string
 }
 
 const (
@@ -60,10 +61,13 @@ func taskFamilyName(groupName string) string {
 }
 
 func newTaskFromECS(ecsTask *ecs.Task) *Task {
+	eni, _ := ecsTask.ENI() // tasks created by `task run` are fargate tasks that come with ENI by default.
+
 	return &Task{
 		TaskARN:    aws.StringValue(ecsTask.TaskArn),
 		ClusterARN: aws.StringValue(ecsTask.ClusterArn),
 		StartedAt:  ecsTask.StartedAt,
+		ENI:        eni,
 	}
 }
 
