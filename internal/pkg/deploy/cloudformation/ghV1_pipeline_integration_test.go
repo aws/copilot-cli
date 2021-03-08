@@ -28,7 +28,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
-func TestPipelineCreation(t *testing.T) {
+func TestGHv1PipelineCreation(t *testing.T) {
 	appSess, err := testSession(nil)
 	require.NoError(t, err)
 	appId := identity.New(appSess)
@@ -170,8 +170,8 @@ func TestPipelineCreation(t *testing.T) {
 		pipelineInput := &deploy.CreatePipelineInput{
 			AppName: app.Name,
 			Name:    pipelineStackName,
-			Source: &deploy.GitHubSource{
-				ProviderName:                manifest.GithubProviderName,
+			Source: &deploy.GitHubV1Source{
+				ProviderName:                manifest.GithubV1ProviderName,
 				Branch:                      "main",
 				RepositoryURL:               "https://github.com/chicken/wings",
 				PersonalAccessTokenSecretID: secretId,

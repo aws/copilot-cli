@@ -1,5 +1,3 @@
-// +build integration
-
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -18,15 +16,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestGHPipeline_Template ensures that the CloudFormation template generated for a pipeline matches our pre-defined template.
-func TestGHPipeline_Template(t *testing.T) {
+// TestGHv1Pipeline_Template ensures that the CloudFormation template generated for a pipeline matches our pre-defined template.
+func TestGHv1Pipeline_Template(t *testing.T) {
 	ps := stack.NewPipelineStackConfig(&deploy.CreatePipelineInput{
 		AppName: "phonetool",
 		Name:    "phonetool-pipeline",
-		Source: &deploy.GitHubSource{
-			ProviderName:  manifest.GithubProviderName,
-			RepositoryURL: "https://github.com/aws/phonetool",
-			Branch:        "mainline",
+		Source: &deploy.GitHubV1Source{
+			ProviderName:                manifest.GithubV1ProviderName,
+			RepositoryURL:               "https://github.com/aws/phonetool",
+			Branch:                      "mainline",
+			PersonalAccessTokenSecretID: "my secret",
 		},
 		Stages: []deploy.PipelineStage{
 			{
@@ -55,7 +54,7 @@ func TestGHPipeline_Template(t *testing.T) {
 	m1 := make(map[interface{}]interface{})
 	require.NoError(t, yaml.Unmarshal(actualInBytes, m1))
 
-	wanted, err := ioutil.ReadFile(filepath.Join("testdata", "pipeline", "gh_template.yaml"))
+	wanted, err := ioutil.ReadFile(filepath.Join("testdata", "pipeline", "ghv1_template.yml"))
 	require.NoError(t, err, "should be able to read expected template file")
 	wantedInBytes := []byte(wanted)
 	m2 := make(map[interface{}]interface{})
