@@ -309,6 +309,19 @@ func TestEC2_PublicIP(t *testing.T) {
 			},
 			wantedErr: errors.New("describe network interface with ENI eni-1: some error"),
 		},
+		"no association information found": {
+			inENI: "eni-1",
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeNetworkInterfaces(&ec2.DescribeNetworkInterfacesInput{
+					NetworkInterfaceIds: aws.StringSlice([]string{"eni-1"}),
+				}).Return(&ec2.DescribeNetworkInterfacesOutput{
+					NetworkInterfaces: []*ec2.NetworkInterface{
+						&ec2.NetworkInterface{},
+					},
+				}, nil)
+			},
+			wantedErr: errors.New("no association information found for ENI eni-1"),
+		},
 		"successfully get public ip": {
 			inENI: "eni-1",
 			mockEC2Client: func(m *mocks.Mockapi) {

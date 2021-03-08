@@ -130,8 +130,12 @@ func (c *EC2) PublicIP(ENI string) (string, error) {
 		return "", fmt.Errorf("describe network interface with ENI %s: %w", ENI, err)
 	}
 
-	publicIP := response.NetworkInterfaces[0].Association.PublicIp
-	return *publicIP, nil
+	association := response.NetworkInterfaces[0].Association
+	if association == nil {
+		return "", fmt.Errorf("no association information found for ENI %s", ENI)
+	}
+
+	return aws.StringValue(association.PublicIp), nil
 }
 
 // ListVPCs returns names and IDs (or just IDs, if Name tag does not exist) of all VPCs.
