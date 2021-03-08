@@ -20,6 +20,11 @@ const (
 	shortTaskIDLength      = 8
 	shortImageDigestLength = 8
 	imageDigestPrefix      = "sha256:"
+
+	// These names are not defined as const in sdk.
+	// We will need to monitor if they have changed the key name in the future.
+	networkInterfaceIDKey          = "networkInterfaceId"
+	networkInterfaceAttachmentType = "ElasticNetworkInterface"
 )
 
 // humanizeTime is overriden in tests so that its output is constant as time passes.
@@ -81,6 +86,30 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 		StoppedAt:     stoppedAt,
 		StoppedReason: stoppedReason,
 	}, nil
+}
+
+// ENI returns the network interface id of the running task.
+// Every Fargate task is provided an ENI by default (https://docs.aws.amazon.com/AmazonECS/latest/userguide/fargate-task-networking.html).
+func (t *Task) ENI() (string, error) {
+	attachmentENI := &ecs.Attachment{}
+	hasENIAttachment := false
+	for _, attachment := range t.Attachments {
+		if *attachment.Type == networkInterfaceAttachmentType {
+			attachmentENI = attachment
+			hasENIAttachment = true
+			break
+		}
+	}
+	if !hasENIAttachment {
+		return "", fmt.Errorf("cannot find network interface attachment for task %s", *t.TaskArn)
+	}
+
+	for _, detail := range attachmentENI.Details {
+		if *detail.Name == networkInterfaceIDKey {
+			return *detail.Value, nil
+		}
+	}
+	return "", fmt.Errorf("cannot find network interface id for task %s", *t.TaskArn)
 }
 
 // TaskStatus contains the status info of a task.
