@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	fmtErrPublicSubnetsFromEnv  = "get public subnet IDs from environment %s: %w"
 	fmtErrSecurityGroupsFromEnv = "get security groups from environment %s: %w"
+	fmtErrDescribeEnvironment   = "describe environment %s: %w"
 
 	envSecurityGroupCFNLogicalIDTagKey   = "aws:cloudformation:logical-id"
 	envSecurityGroupCFNLogicalIDTagValue = "EnvironmentSecurityGroup"

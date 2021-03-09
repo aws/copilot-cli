@@ -89,7 +89,7 @@ func TestEnvRunner_Run(t *testing.T) {
 			mockEnvironmentDescriber: func(m *mocks.MockEnvironmentDescriber) {
 				m.EXPECT().Describe().Return(nil, errors.New("error getting subnets"))
 			},
-			wantedError: fmt.Errorf(fmtErrPublicSubnetsFromEnv, inEnv, errors.New("error getting subnets")),
+			wantedError: fmt.Errorf(fmtErrDescribeEnvironment, inEnv, errors.New("error getting subnets")),
 		},
 		"no subnet is found": {
 			MockClusterGetter: MockClusterGetter,
