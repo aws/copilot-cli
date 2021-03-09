@@ -135,7 +135,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 					m.stackDescriber.EXPECT().Stack("testApp-testEnv").Return(nil, mockError),
 				)
 			},
-			wantedError: fmt.Errorf("retrieve environment tags: some error"),
+			wantedError: fmt.Errorf("retrieve environment stack: some error"),
 		},
 		"error if fail to get env resources": {
 			shouldOutputResources: true,
