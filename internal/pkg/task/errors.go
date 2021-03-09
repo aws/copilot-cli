@@ -36,7 +36,6 @@ func (e *errGetDefaultCluster) Error() string {
 }
 
 type ErrENIInfoNotFoundForTasks struct {
-	taskARNs []string
 	Errors   []*ecs.ErrTaskENIInfoNotFound
 }
 
