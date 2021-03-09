@@ -4,7 +4,6 @@
 package ecs
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -157,7 +156,10 @@ func TestTask_ENI(t *testing.T) {
 					Type: aws.String("not ElasticNetworkInterface"),
 				},
 			},
-			wantedErr: errors.New("cannot find network interface attachment for task 1"),
+			wantedErr: &ErrTaskENIInfoNotFound{
+				MissingField: missingFieldAttachment,
+				TaskARN:      "1",
+			},
 		},
 		"no matching detail in network interface attachment": {
 			taskARN: aws.String("1"),
@@ -175,7 +177,10 @@ func TestTask_ENI(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: errors.New("cannot find network interface ID for task 1"),
+			wantedErr: &ErrTaskENIInfoNotFound{
+				MissingField: missingFieldDetailENIID,
+				TaskARN:      "1",
+			},
 		},
 		"successfully retrieve eni id": {
 			taskARN: aws.String("1"),

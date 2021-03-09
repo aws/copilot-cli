@@ -101,7 +101,10 @@ func (t *Task) ENI() (string, error) {
 		}
 	}
 	if !hasENIAttachment {
-		return "", fmt.Errorf("cannot find network interface attachment for task %s", aws.StringValue(t.TaskArn))
+		return "", &ErrTaskENIInfoNotFound{
+			MissingField: missingFieldAttachment,
+			TaskARN:      aws.StringValue(t.TaskArn),
+		}
 	}
 
 	for _, detail := range attachmentENI.Details {
@@ -109,7 +112,10 @@ func (t *Task) ENI() (string, error) {
 			return *detail.Value, nil
 		}
 	}
-	return "", fmt.Errorf("cannot find network interface ID for task %s", *t.TaskArn)
+	return "", &ErrTaskENIInfoNotFound{
+		MissingField: missingFieldDetailENIID,
+		TaskARN:      aws.StringValue(t.TaskArn),
+	}
 }
 
 // TaskStatus contains the status info of a task.
