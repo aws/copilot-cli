@@ -92,16 +92,21 @@ type BitbucketSource struct {
 	ProviderName  string
 	Branch        string
 	RepositoryURL string
+	ConnectionARN string
 }
 
 // GitHubPersonalAccessTokenSecretID returns the ID of the secret in the
 // Secrets manager, which stores the GitHub Personal Access token if the
-// provider is "GitHub". Otherwise, it returns the detected provider.
+// provider is "GitHubV1".
 func (s *GitHubSource) GitHubPersonalAccessTokenSecretID() (string, error) {
 	if s.PersonalAccessTokenSecretID == "" {
 		return "", errors.New("the GitHub token secretID is not configured")
 	}
 	return s.PersonalAccessTokenSecretID, nil
+}
+
+func (s *BitbucketSource) Connection() string {
+	return s.ConnectionARN
 }
 
 // parseOwnerAndRepo parses the owner and repo name from the GH repo URL, which was formatted and assigned in cli/pipeline_init.go.

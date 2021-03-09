@@ -259,6 +259,7 @@ func (o *updatePipelineOpts) Execute() error {
 			ProviderName:  bbProviderName,
 			Branch:        (pipeline.Source.Properties["branch"]).(string),
 			RepositoryURL: (pipeline.Source.Properties["repository"]).(string),
+			ConnectionARN: (pipeline.Source.Properties["connection_ARN"]).(string),
 		}
 		o.shouldPromptUpdateConnection = true
 	default:

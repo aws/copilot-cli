@@ -4,11 +4,15 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for {{$.AppName}}
 Resources:
   {{- if eq .Source.ProviderName "Bitbucket"}}
-  SourceConnection:
-    Type: AWS::CodeStarConnections::Connection
-    Properties:
-      ConnectionName: {{.Source.ConnectionName}}
-      ProviderType: Bitbucket
+    SourceConnection:
+      Type: AWS::CodeStarConnections::Connection
+      Properties:
+        {{- if eq .Source.Connection ""}}
+        ConnectionName: {{.Source.ConnectionName}}
+        ProviderType: Bitbucket
+        {{- else}}
+        ConnectionArn: {{.Source.Connection}}
+        {{- end}}
   {{- end}}
   BuildProjectRole:
     Type: AWS::IAM::Role
