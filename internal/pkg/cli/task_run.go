@@ -137,7 +137,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	opts.configureRuntimeOpts = func() error {
 		opts.runner, err = opts.configureRunner()
 		if err != nil {
-			return fmt.Errorf("configure Runtime: %w", err)
+			return fmt.Errorf("configure task runner: %w", err)
 		}
 		opts.deployer = cloudformation.New(opts.sess)
 		opts.defaultClusterGetter = awsecs.New(opts.sess)
