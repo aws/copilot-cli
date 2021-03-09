@@ -109,7 +109,7 @@ type BitbucketSource struct {
 func PipelineSourceFromManifest(source *manifest.Source) (interface{}, bool, error) {
 	switch source.ProviderName {
 	case ghV1ProviderName:
-		return GitHubV1Source{
+		return &GitHubV1Source{
 			ProviderName:                ghV1ProviderName,
 			Branch:                      (source.Properties["branch"]).(string),
 			RepositoryURL:               GitHubURL((source.Properties["repository"]).(string)),
@@ -120,27 +120,27 @@ func PipelineSourceFromManifest(source *manifest.Source) (interface{}, bool, err
 		// listed in the manifest will be "GitHub," not "GitHubV1." To differentiate it from the new default
 		// "GitHub," which refers to v2, we check for the presence of a secret, indicating a v1 GitHub connection.
 		if source.Properties["access_token_secret"] != nil {
-			return GitHubV1Source{
+			return &GitHubV1Source{
 				ProviderName:                ghV1ProviderName,
 				Branch:                      (source.Properties["branch"]).(string),
 				RepositoryURL:               GitHubURL((source.Properties["repository"]).(string)),
 				PersonalAccessTokenSecretID: (source.Properties["access_token_secret"]).(string),
 			}, false, nil
 		} else {
-			return GitHubSource{
+			return &GitHubSource{
 				ProviderName:  ghProviderName,
 				Branch:        (source.Properties["branch"]).(string),
 				RepositoryURL: GitHubURL((source.Properties["repository"]).(string)),
 			}, true, nil
 		}
 	case ccProviderName:
-		return CodeCommitSource{
+		return &CodeCommitSource{
 			ProviderName:  ccProviderName,
 			Branch:        (source.Properties["branch"]).(string),
 			RepositoryURL: (source.Properties["repository"]).(string),
 		}, false, nil
 	case bbProviderName:
-		return BitbucketSource{
+		return &BitbucketSource{
 			ProviderName:  bbProviderName,
 			Branch:        (source.Properties["branch"]).(string),
 			RepositoryURL: (source.Properties["repository"]).(string),
