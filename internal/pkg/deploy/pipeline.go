@@ -105,7 +105,7 @@ type BitbucketSource struct {
 
 // GitHubPersonalAccessTokenSecretID returns the ID of the secret in the
 // Secrets manager, which stores the GitHub Personal Access token if the
-// provider is "GitHub". Otherwise, it returns the detected provider.
+// provider is "GitHubV1".
 func (s *GitHubV1Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 	if s.PersonalAccessTokenSecretID == "" {
 		return "", errors.New("the GitHub token secretID is not configured")
