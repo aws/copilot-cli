@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/gobuffalo/packd"
 	"github.com/stretchr/testify/require"
 )
@@ -54,6 +55,55 @@ func TestTemplate_Read(t *testing.T) {
 				require.Contains(t, err.Error(), tc.wantedErr.Error())
 			} else {
 				require.Equal(t, tc.wantedContent, c.String())
+			}
+		})
+	}
+}
+
+func TestTemplate_UploadEnvironmentCustomResources(t *testing.T) {
+	testCases := map[string]struct {
+		mockDependencies func(t *Template)
+
+		wantedErr error
+	}{
+		"success": {
+			mockDependencies: func(t *Template) {
+				mockBox := packd.NewMemoryBox()
+				for _, file := range envCustomResourceFiles {
+					mockBox.AddString(fmt.Sprintf("custom-resources/%s.js", file), "hello")
+				}
+				t.box = mockBox
+			},
+		},
+		"errors if env custom resource file doesn't exist": {
+			mockDependencies: func(t *Template) {
+				mockBox := packd.NewMemoryBox()
+				mockBox.AddString("badFile", "hello")
+				t.box = mockBox
+			},
+			wantedErr: fmt.Errorf("read template custom-resources/dns-cert-validator.js: file does not exist"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			tpl := &Template{}
+			tc.mockDependencies(tpl)
+			mockUploader := s3.CompressAndUploadFunc(func(key string, files ...s3.NamedBinary) (string, error) {
+				require.Contains(t, key, "scripts")
+				require.Contains(t, key, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
+				return "mockURL", nil
+			})
+
+			// WHEN
+			gotCustomResources, err := tpl.UploadEnvironmentCustomResources(mockUploader)
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, len(envCustomResourceFiles), len(gotCustomResources))
 			}
 		})
 	}
