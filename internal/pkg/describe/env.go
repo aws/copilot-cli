@@ -140,7 +140,7 @@ func (d *EnvDescriber) loadStackInfo() (map[string]string, *EnvironmentVPC, erro
 
 	envStack, err := d.stackDescriber.Stack(stack.NameForEnv(d.app, d.env.Name))
 	if err != nil {
-		return nil, &environmentVPC, fmt.Errorf("retrieve environment tags: %w", err)
+		return nil, nil, fmt.Errorf("retrieve environment stack: %w", err)
 	}
 	for _, tag := range envStack.Tags {
 		tags[*tag.Key] = *tag.Value
