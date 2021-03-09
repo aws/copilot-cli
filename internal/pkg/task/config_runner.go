@@ -74,7 +74,7 @@ func (r *NetworkConfigRunner) Run() ([]*Task, error) {
 		}
 	}
 
-	return convertECSTasks(ecsTasks), nil
+	return convertECSTasks(ecsTasks)
 }
 
 func (r *NetworkConfigRunner) validateDependencies() error {

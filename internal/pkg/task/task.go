@@ -60,21 +60,43 @@ func taskFamilyName(groupName string) string {
 	return fmt.Sprintf(fmtTaskFamilyName, groupName)
 }
 
-func newTaskFromECS(ecsTask *ecs.Task) *Task {
-	eni, _ := ecsTask.ENI() // tasks created by `task run` are fargate tasks that come with ENI by default.
-
+func newTaskFromECS(ecsTask *ecs.Task) (*Task, error) {
+	taskARN := aws.StringValue(ecsTask.TaskArn)
+	eni, err := ecsTask.ENI()
 	return &Task{
-		TaskARN:    aws.StringValue(ecsTask.TaskArn),
+		TaskARN:    taskARN,
 		ClusterARN: aws.StringValue(ecsTask.ClusterArn),
 		StartedAt:  ecsTask.StartedAt,
 		ENI:        eni,
-	}
+	}, err
 }
 
-func convertECSTasks(ecsTasks []*ecs.Task) []*Task {
+func concatenateENINotFoundErrors(errs []*ecs.ErrTaskENIInfoNotFound) error {
+	e := &ErrENIInfoNotFoundForTasks{
+		Errors: make([]*ecs.ErrTaskENIInfoNotFound, 0),
+	}
+	for _, err := range errs {
+		if err != nil {
+			e.Errors = append(e.Errors, err)
+		}
+	}
+	if len(e.Errors) == 0 {
+		return nil
+	}
+	return e
+}
+
+func convertECSTasks(ecsTasks []*ecs.Task) ([]*Task, error) {
+	eniNotFoundErrs := make([]*ecs.ErrTaskENIInfoNotFound, len(ecsTasks))
 	tasks := make([]*Task, len(ecsTasks))
 	for idx, ecsTask := range ecsTasks {
-		tasks[idx] = newTaskFromECS(ecsTask)
+		task, err := newTaskFromECS(ecsTask)
+		serr, ok := err.(*ecs.ErrTaskENIInfoNotFound)
+		if err != nil && !ok {
+			return nil, err
+		}
+		tasks[idx], eniNotFoundErrs[idx] = task, serr
 	}
-	return tasks
+	// Even if ENI information is not found for some tasks, we still want to return the other information as we can
+	return tasks, concatenateENINotFoundErrors(eniNotFoundErrs)
 }
