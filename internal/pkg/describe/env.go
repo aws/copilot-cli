@@ -19,12 +19,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const (
-	OutputKeyVPC            = "VpcId"
-	OutputKeyPublicSubnets  = "PublicSubnets"
-	OutputKeyPrivateSubnets = "PrivateSubnets"
-)
-
 // EnvDescription contains the information about an environment.
 type EnvDescription struct {
 	Environment    *config.Environment `json:"environment"`
@@ -148,13 +142,13 @@ func (d *EnvDescriber) loadStackInfo() (map[string]string, *EnvironmentVPC, erro
 
 	for _, out := range envStack.Outputs {
 		if out.OutputKey != nil {
-			if *out.OutputKey == OutputKeyVPC {
+			if *out.OutputKey == stack.EnvOutputVPCID {
 				environmentVPC.ID = *out.OutputValue
 			}
-			if *out.OutputKey == OutputKeyPublicSubnets {
+			if *out.OutputKey == stack.EnvOutputPublicSubnets {
 				environmentVPC.PublicSubnetIDs = strings.Split(*out.OutputValue, ",")
 			}
-			if *out.OutputKey == OutputKeyPrivateSubnets {
+			if *out.OutputKey == stack.EnvOutputPrivateSubnets {
 				environmentVPC.PrivateSubnetIDs = strings.Split(*out.OutputValue, ",")
 			}
 		}
