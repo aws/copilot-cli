@@ -270,13 +270,13 @@ func (o *initPipelineOpts) askRepository() error {
 }
 
 func (o *initPipelineOpts) askGitHubRepoDetails() error {
-	// If the user uses a flag (now hidden) to specify a GitHub access token,
+	// If the user uses a flag to specify a GitHub access token,
 	// GitHub version 1 (not CSC) is the provider.
+	o.provider = ghProviderName
 	if o.githubAccessToken != "" {
 		o.provider = ghV1ProviderName
-	} else {
-		o.provider = ghProviderName
 	}
+
 	repoDetails, err := ghRepoURL(o.repoURL).parse()
 	if err != nil {
 		return err

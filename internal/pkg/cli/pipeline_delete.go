@@ -118,7 +118,6 @@ func (o *deletePipelineOpts) Ask() error {
 
 // Execute deletes the secret and pipeline stack.
 func (o *deletePipelineOpts) Execute() error {
-	// Pipelines created with GitHubV1 have secrets.
 	if err := o.deleteSecret(); err != nil {
 		return err
 	}
@@ -157,6 +156,7 @@ func (o *deletePipelineOpts) deleteSecret() error {
 	if o.PipelineSecret == "" {
 		return nil
 	}
+	// Only pipelines created with GitHubV1 have personal access tokens saved as secrets.
 	if !o.shouldDeleteSecret {
 		confirmDeletion, err := o.prompt.Confirm(
 			fmt.Sprintf(pipelineSecretDeleteConfirmPrompt, o.PipelineSecret, o.PipelineName),
