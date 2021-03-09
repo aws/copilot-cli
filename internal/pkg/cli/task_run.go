@@ -434,7 +434,11 @@ func (o *runTaskOpts) Execute() error {
 
 	tasks, err := o.runTask()
 	if err != nil {
-		return err
+		serr, ok := err.(*task.ErrENIInfoNotFoundForTasks)
+		if !ok {
+			return err
+		}
+		log.Errorln(serr.Error())
 	}
 
 	if err := o.showPublicIPs(tasks); err != nil {
@@ -463,31 +467,40 @@ func (o *runTaskOpts) displayLogStream() error {
 
 func (o *runTaskOpts) runTask() ([]*task.Task, error) {
 	o.spinner.Start(fmt.Sprintf("Waiting for %s to be running for %s.", english.Plural(o.count, "task", ""), o.groupName))
+
+	var err error
 	tasks, err := o.runner.Run()
-	if err != nil {
+	_, ok := err.(*task.ErrENIInfoNotFoundForTasks)
+	if err != nil && !ok{
 		o.spinner.Stop(log.Serrorf("Failed to run %s.\n\n", o.groupName))
 		return nil, fmt.Errorf("run task %s: %w", o.groupName, err)
 	}
+
+	// err is either nil or ErrENIInfoNotFoundForTasks
 	o.spinner.Stop(log.Ssuccessf("%s %s %s running.\n\n", english.PluralWord(o.count, "Task", ""), o.groupName, english.PluralWord(o.count, "is", "are")))
-	return tasks, nil
+	return tasks, err
 }
 
 func (o *runTaskOpts) showPublicIPs(tasks []*task.Task) error {
-	publicIPs := make([]string, len(tasks))
+	publicIPs := make(map[string]string)
 
-	for idx, t := range tasks {
+	for _, t := range tasks {
+		if t.ENI == "" {
+			continue
+		}
 		ip, err := o.publicIPGetter.PublicIP(t.ENI)
 		if err != nil {
 			return fmt.Errorf("get public ip for task %s: %w", t.TaskARN, err)
 		}
-		publicIPs[idx] = ip
+		publicIPs[t.TaskARN] = ip
 	}
 
-	log.Infof("Public %s associated with the tasks %s:\n",
+	log.Infof("Public %s associated with the %s %s:\n",
 		english.PluralWord(len(publicIPs), "IP", "IPs"),
+		english.PluralWord(len(publicIPs), "task", "tasks"),
 		english.PluralWord(len(publicIPs), "is", "are"))
-	for _, ip := range publicIPs {
-		log.Infof("- %s\n", ip)
+	for taskARN, ip := range publicIPs {
+		log.Infof("- %s (for %s)\n", ip, taskARN)
 	}
 
 	return nil
