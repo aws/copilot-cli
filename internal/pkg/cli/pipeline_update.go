@@ -175,7 +175,7 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 		if o.shouldPromptUpdateConnection {
 			source, ok := in.Source.(codestar)
 			if !ok {
-				return fmt.Errorf("source %v does not have a connection name", in.Source)
+				return fmt.Errorf("source %v does not have a connection", in.Source)
 			}
 			connectionName, err := source.ConnectionName()
 			if err != nil {
