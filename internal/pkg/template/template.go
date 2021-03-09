@@ -59,7 +59,7 @@ func (e Uploadable) Content() []byte {
 	return e.content
 }
 
-type compressedFile struct {
+type fileToCompress struct {
 	name        string
 	uploadables []Uploadable
 }
@@ -101,14 +101,14 @@ func (t *Template) Parse(path string, data interface{}, options ...ParseOption) 
 }
 
 // UploadEnvironmentCustomResources uploads the environment custom resource scripts.
-func (t *Template) UploadEnvironmentCustomResources(upload s3.UploadFunc) ([]string, error) {
+func (t *Template) UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) ([]string, error) {
 	return t.uploadCustomResources(upload, envCustomResourceFiles)
 }
 
-func (t *Template) uploadCustomResources(upload s3.UploadFunc, fileNames []string) ([]string, error) {
+func (t *Template) uploadCustomResources(upload s3.CompressAndUploadFunc, fileNames []string) ([]string, error) {
 	var urls []string
 	for _, name := range fileNames {
-		url, err := t.uploadCompressedFile(upload, compressedFile{
+		url, err := t.uploadfileToCompress(upload, fileToCompress{
 			name: path.Join(scriptDirName, name),
 			uploadables: []Uploadable{
 				{
@@ -125,7 +125,7 @@ func (t *Template) uploadCustomResources(upload s3.UploadFunc, fileNames []strin
 	return urls, nil
 }
 
-func (t *Template) uploadCompressedFile(upload s3.UploadFunc, file compressedFile) (string, error) {
+func (t *Template) uploadfileToCompress(upload s3.CompressAndUploadFunc, file fileToCompress) (string, error) {
 	var contents []byte
 	for _, uploadable := range file.uploadables {
 		content, err := t.Read(uploadable.path)
@@ -140,8 +140,8 @@ func (t *Template) uploadCompressedFile(upload s3.UploadFunc, file compressedFil
 	for idx, file := range file.uploadables {
 		nameBinaries[idx] = s3.NamedBinary(file)
 	}
-	// Suffix with a SHA256 checksum of the compressedFile so that
-	// only new content gets a new URL. Otherwise, if two compressedFiles have the
+	// Suffix with a SHA256 checksum of the fileToCompress so that
+	// only new content gets a new URL. Otherwise, if two fileToCompresss have the
 	// same content then the URL generated will be identical.
 	url, err := upload(fmt.Sprintf("%s/%x", file.name, sha256.Sum256(contents)), nameBinaries...)
 	if err != nil {

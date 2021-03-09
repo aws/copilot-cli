@@ -272,7 +272,7 @@ func (o *initEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get app resources: %w", err)
 	}
-	if _, err := o.uploader.UploadEnvironmentCustomResources(s3.UploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
+	if _, err := o.uploader.UploadEnvironmentCustomResources(s3.CompressAndUploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
 		return o.newS3(o.sess).ZipAndUpload(resources.S3Bucket, key, objects...)
 	})); err != nil {
 		return fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)

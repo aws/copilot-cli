@@ -2966,7 +2966,7 @@ func (m *MockcustomResourcesUploader) EXPECT() *MockcustomResourcesUploaderMockR
 }
 
 // UploadEnvironmentCustomResources mocks base method.
-func (m *MockcustomResourcesUploader) UploadEnvironmentCustomResources(upload s3.UploadFunc) ([]string, error) {
+func (m *MockcustomResourcesUploader) UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UploadEnvironmentCustomResources", upload)
 	ret0, _ := ret[0].([]string)
