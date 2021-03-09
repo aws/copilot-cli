@@ -65,9 +65,16 @@ Resources:
 {{include "envvars" . | indent 10}}
           - Name: COPILOT_LB_DNS
             Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+{{include "image-overrides" . | indent 10}}
 {{include "secrets" . | indent 10}}
 {{include "logconfig" . | indent 10}}
+{{- if .Storage -}}
+{{include "mount-points" . | indent 10}}
+{{- end -}}
 {{include "sidecars" . | indent 8}}
+{{if .Storage -}}
+{{include "volumes" . | indent 6}}
+{{- end}}
 {{include "executionrole" . | indent 2}}
 {{include "taskrole" . | indent 2}}
 {{include "servicediscovery" . | indent 2}}

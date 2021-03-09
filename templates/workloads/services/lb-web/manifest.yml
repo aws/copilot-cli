@@ -4,46 +4,38 @@
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: {{.Name}}
-# The "architecture" of the service you're running.
 type: {{.Type}}
 
+# Distribute traffic to your service.
+http:
+  # Requests to this path will be forwarded to your service.
+  # To match all requests you can use the "/" path.
+  path: '{{.Path}}'
+  # You can specify a custom health check path. The default is "/".
+  # healthcheck: '{{.HealthCheck.HealthCheckPath}}'
+
+# Configuration for your containers and service.
 image:
 {{- if .ImageConfig.Build.BuildArgs.Dockerfile}}
-  # Docker build arguments.
-  # For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#image-build
+  # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#image-build
   build: {{.ImageConfig.Build.BuildArgs.Dockerfile}}
 {{- end}}
 {{- if .ImageConfig.Image.Location}}
-  # The name of the Docker image.
   location: {{.ImageConfig.Image.Location}}
 {{- end}}
   # Port exposed through your container to route traffic to it.
   port: {{.ImageConfig.Port}}
 
-http:
-  # Requests to this path will be forwarded to your service. 
-  # To match all requests you can use the "/" path. 
-  path: '{{.Path}}'
-  # You can specify a custom health check path. The default is "/".
-  # For additional configuration: https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#http-healthcheck
-  # healthcheck: '{{.HealthCheck.HealthCheckPath}}'
-  # You can enable sticky sessions.
-  # stickiness: true
-
-# Number of CPU units for the task.
-cpu: {{.CPU}}
-# Amount of memory in MiB used by the task.
-memory: {{.Memory}}
-# Number of tasks that should be running in your service.
-count: {{.Count.Value}}
-# Enable running commands in your container.
-exec: true
+cpu: {{.CPU}}       # Number of CPU units for the task.
+memory: {{.Memory}}    # Amount of memory in MiB used by the task.
+count: {{.Count.Value}}       # Number of tasks that should be running in your service.
+exec: true     # Enable running commands in your container.
 
 # Optional fields for more advanced use-cases.
 #
 #variables:                    # Pass environment variables as key value pairs.
 #  LOG_LEVEL: info
-#
+
 #secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
 #  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
 

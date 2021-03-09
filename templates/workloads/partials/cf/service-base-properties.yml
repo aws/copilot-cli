@@ -7,6 +7,9 @@ DesiredCount: !GetAtt DynamicDesiredCountAction.DesiredCount
 {{- else }}
 DesiredCount: !Ref TaskCount
 {{- end}}
+{{- if .Storage}}
+PlatformVersion: 1.4.0
+{{- end}}
 DeploymentConfiguration:
   DeploymentCircuitBreaker:
     Enable: true
@@ -21,17 +24,20 @@ EnableExecuteCommand: true
 LaunchType: FARGATE
 NetworkConfiguration:
   AwsvpcConfiguration:
-    AssignPublicIp: ENABLED
+    AssignPublicIp: {{.Network.AssignPublicIP}}
     Subnets:
       - Fn::Select:
         - 0
         - Fn::Split:
           - ','
-          - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+          - Fn::ImportValue: !Sub '${AppName}-${EnvName}-{{.Network.SubnetsType}}'
       - Fn::Select:
         - 1
         - Fn::Split:
           - ','
-          - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+          - Fn::ImportValue: !Sub '${AppName}-${EnvName}-{{.Network.SubnetsType}}'
     SecurityGroups:
       - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+      {{- range $sg := .Network.SecurityGroups}}
+      - {{$sg}}
+      {{- end}}

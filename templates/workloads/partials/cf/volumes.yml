@@ -1,0 +1,19 @@
+{{- if .Storage.Volumes}}
+Volumes:
+{{- range $vol := .Storage.Volumes}}
+  - Name: {{$vol.Name}}
+    EFSVolumeConfiguration:
+      FilesystemId: {{$vol.Filesystem}}
+      RootDirectory: '{{$vol.RootDirectory}}'
+      TransitEncryption: ENABLED
+      {{- if or $vol.AccessPointID $vol.IAM}}
+      AuthorizationConfig:
+        {{- if $vol.AccessPointID}}
+        AccessPointId: {{$vol.AccessPointID}}
+        {{- end}}
+        {{- if $vol.IAM}}
+        IAM: {{$vol.IAM}}
+        {{- end}}
+      {{- end}}
+{{- end -}}
+{{- end -}}

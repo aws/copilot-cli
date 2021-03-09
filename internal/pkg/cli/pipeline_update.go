@@ -40,6 +40,8 @@ const (
 	fmtPipelineUpdateExistPrompt = "Are you sure you want to update an existing pipeline: %s?"
 )
 
+const connectionsURL = "https://console.aws.amazon.com/codesuite/settings/connections"
+
 type updatePipelineVars struct {
 	appName          string
 	skipConfirmation bool
@@ -56,7 +58,8 @@ type updatePipelineOpts struct {
 	envStore         environmentStore
 	ws               wsPipelineReader
 
-	pipelineName string
+	pipelineName                 string
+	shouldPromptUpdateConnection bool
 }
 
 func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error) {
@@ -156,6 +159,10 @@ func (o *updatePipelineOpts) shouldUpdate() (bool, error) {
 	return shouldUpdate, nil
 }
 
+type codestar interface {
+	ConnectionName() (string, error)
+}
+
 func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) error {
 	exist, err := o.pipelineDeployer.PipelineExists(in)
 	if err != nil {
@@ -163,6 +170,22 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 	}
 	if !exist {
 		o.prog.Start(fmt.Sprintf(fmtPipelineUpdateStart, color.HighlightUserInput(o.pipelineName)))
+
+		// If the source requires CodeStar Connections, the user is prompted to update the connection status.
+		if o.shouldPromptUpdateConnection {
+			source, ok := in.Source.(codestar)
+			if !ok {
+				return fmt.Errorf("source %v does not have a connection name", in.Source)
+			}
+			connectionName, err := source.ConnectionName()
+			if err != nil {
+				return fmt.Errorf("parse connection name: %w", err)
+			}
+			log.Infoln()
+			log.Infof("%s Go to %s to update the status of connection %s from PENDING to AVAILABLE.", color.Emphasize("ACTION REQUIRED!"), color.HighlightResource(connectionsURL), color.HighlightUserInput(connectionName))
+			log.Infoln()
+		}
+
 		if err := o.pipelineDeployer.CreatePipeline(in); err != nil {
 			var alreadyExists *cloudformation.ErrStackAlreadyExists
 			if !errors.As(err, &alreadyExists) {
@@ -211,6 +234,9 @@ func (o *updatePipelineOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
 	}
+	if len(pipeline.Name) > 100 {
+		return fmt.Errorf(`pipeline name '%s' must be shorter than 100 characters`, pipeline.Name)
+	}
 	o.pipelineName = pipeline.Name
 
 	var source interface{}
@@ -228,6 +254,13 @@ func (o *updatePipelineOpts) Execute() error {
 			Branch:        (pipeline.Source.Properties["branch"]).(string),
 			RepositoryURL: (pipeline.Source.Properties["repository"]).(string),
 		}
+	case bbProviderName:
+		source = &deploy.BitbucketSource{
+			ProviderName:  bbProviderName,
+			Branch:        (pipeline.Source.Properties["branch"]).(string),
+			RepositoryURL: (pipeline.Source.Properties["repository"]).(string),
+		}
+		o.shouldPromptUpdateConnection = true
 	default:
 		return fmt.Errorf("invalid repo source provider: %s", pipeline.Source.ProviderName)
 	}
@@ -260,6 +293,14 @@ func (o *updatePipelineOpts) Execute() error {
 	return nil
 }
 
+// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
+func (o *updatePipelineOpts) RecommendedActions() []string {
+	return []string{
+		fmt.Sprintf("Run %s to see the state of your pipeline.", color.HighlightCode("copilot pipeline status")),
+		fmt.Sprintf("Run %s for info about your pipeline.", color.HighlightCode("copilot pipeline show")),
+	}
+}
+
 // BuildPipelineUpdateCmd build the command for deploying a new pipeline or updating an existing pipeline.
 func buildPipelineUpdateCmd() *cobra.Command {
 	vars := updatePipelineVars{}
@@ -278,7 +319,15 @@ func buildPipelineUpdateCmd() *cobra.Command {
 			if err := opts.Validate(); err != nil {
 				return err
 			}
-			return opts.Execute()
+			if err := opts.Execute(); err != nil {
+				return err
+			}
+			log.Infoln()
+			log.Infoln("Recommended follow-up actions:")
+			for _, followup := range opts.RecommendedActions() {
+				log.Infof("- %s\n", followup)
+			}
+			return nil
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)

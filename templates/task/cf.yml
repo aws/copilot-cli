@@ -19,6 +19,8 @@ Parameters:
     Type: String
   Command:
     Type: CommaDelimitedList
+  EntryPoint:
+    Type: CommaDelimitedList
 Conditions:
   # NOTE: Image cannot be pushed until the ECR repo is created, at which time ContainerImage would be "".
   HasImage:
@@ -29,6 +31,8 @@ Conditions:
     !Not [!Equals [!Ref ExecutionRole, ""]]
   HasCommand:
     !Not [!Equals [ !Join ["", !Ref Command], ""]]
+  HasEntryPoint:
+    !Not [ !Equals [ !Join [ "", !Ref EntryPoint ], "" ] ]
 Resources:
   TaskDefinition:
     Metadata:
@@ -40,6 +44,7 @@ Resources:
       ContainerDefinitions:
         -
           Image: !Ref ContainerImage
+          EntryPoint: !If [HasEntryPoint, !Ref EntryPoint, !Ref "AWS::NoValue"]
           Command: !If [HasCommand, !Ref Command, !Ref "AWS::NoValue"]
           LogConfiguration:
             LogDriver: awslogs

@@ -75,13 +75,25 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := s.manifest.Sidecar.Options()
+	sidecars, err := convertSidecar(s.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
-	autoscaling, err := s.manifest.Count.Autoscaling.Options()
+	autoscaling, err := convertAutoscaling(&s.manifest.Count.Autoscaling)
 	if err != nil {
 		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
+	}
+	storage, err := convertStorageOpts(s.manifest.Storage)
+	if err != nil {
+		return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
+	}
+	entrypoint, err := s.manifest.EntryPoint.ToStringSlice()
+	if err != nil {
+		return "", fmt.Errorf(`convert 'entrypoint' to string slice: %w`, err)
+	}
+	command, err := s.manifest.Command.ToStringSlice()
+	if err != nil {
+		return "", fmt.Errorf(`convert 'command' to string slice: %w`, err)
 	}
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		Variables:          s.manifest.BackendServiceConfig.Variables,
@@ -89,10 +101,14 @@ func (s *BackendService) Template() (string, error) {
 		NestedStack:        outputs,
 		Sidecars:           sidecars,
 		Autoscaling:        autoscaling,
-		ExecuteCommand:     s.manifest.ExecuteCommand.Options(),
+		ExecuteCommand:     convertExecuteCommand(&s.manifest.ExecuteCommand),
 		HealthCheck:        s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),
-		LogConfig:          s.manifest.LogConfigOpts(),
+		LogConfig:          convertLogging(s.manifest.Logging),
 		DesiredCountLambda: desiredCountLambda.String(),
+		Storage:            storage,
+		Network:            convertNetworkConfig(s.manifest.Network),
+		EntryPoint:         entrypoint,
+		Command:            command,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)

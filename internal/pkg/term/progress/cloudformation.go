@@ -295,7 +295,11 @@ func (c *ecsServiceResourceComponent) Render(out io.Writer) (numLines int, err e
 		deploymentRenderer = c.deploymentRenderer
 	}
 
-	nl, err = deploymentRenderer.Render(buf)
+	sw := &suffixWriter{
+		buf:    buf,
+		suffix: []byte{'\t', '\t'}, // Add two columns to the deployment renderer so that it aligns with resources.
+	}
+	nl, err = deploymentRenderer.Render(sw)
 	if err != nil {
 		return 0, err
 	}

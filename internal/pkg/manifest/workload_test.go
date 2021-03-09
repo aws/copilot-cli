@@ -4,15 +4,195 @@
 package manifest
 
 import (
-	"fmt"
+	"errors"
 	"path/filepath"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
+
+func TestEntryPointOverride_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct EntryPointOverride
+		wantedError  error
+	}{
+		"Entrypoint specified in string": {
+			inContent: []byte(`entrypoint: echo hello`),
+			wantedStruct: EntryPointOverride{
+				String:      aws.String("echo hello"),
+				StringSlice: nil,
+			},
+		},
+		"Entrypoint specified in slice of strings": {
+			inContent: []byte(`entrypoint: ["/bin/sh", "-c"]`),
+			wantedStruct: EntryPointOverride{
+				String:      nil,
+				StringSlice: []string{"/bin/sh", "-c"},
+			},
+		},
+		"Error if unmarshalable": {
+			inContent: []byte(`entrypoint: {"/bin/sh", "-c"}`),
+			wantedStruct: EntryPointOverride{
+				String:      nil,
+				StringSlice: nil,
+			},
+			wantedError: errUnmarshalEntryPoint,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			e := ImageOverride{
+				EntryPoint: EntryPointOverride{
+					String: aws.String("wrong"),
+				},
+			}
+
+			err := yaml.Unmarshal(tc.inContent, &e)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				// check memberwise dereferenced pointer equality
+				require.Equal(t, tc.wantedStruct.StringSlice, e.EntryPoint.StringSlice)
+				require.Equal(t, tc.wantedStruct.String, e.EntryPoint.String)
+			}
+		})
+	}
+}
+
+func TestEntryPointOverride_ToStringSlice(t *testing.T) {
+	testCases := map[string]struct {
+		inEntryPointOverride EntryPointOverride
+
+		wantedSlice []string
+		wantedError error
+	}{
+		"Both fields are empty": {
+			inEntryPointOverride: EntryPointOverride{
+				String:      nil,
+				StringSlice: nil,
+			},
+			wantedSlice: nil,
+		},
+		"Given a string": {
+			inEntryPointOverride: EntryPointOverride{
+				String:      aws.String(`read "some command"`),
+				StringSlice: nil,
+			},
+			wantedSlice: []string{"read", "some command"},
+		},
+		"Given a string slice": {
+			inEntryPointOverride: EntryPointOverride{
+				String:      nil,
+				StringSlice: []string{"/bin/sh", "-c"},
+			},
+			wantedSlice: []string{"/bin/sh", "-c"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			out, err := tc.inEntryPointOverride.ToStringSlice()
+			require.NoError(t, err)
+			require.Equal(t, tc.wantedSlice, out)
+		})
+	}
+}
+
+func TestCommandOverride_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct CommandOverride
+		wantedError  error
+	}{
+		"Entrypoint specified in string": {
+			inContent: []byte(`command: echo hello`),
+			wantedStruct: CommandOverride{
+				String:      aws.String("echo hello"),
+				StringSlice: nil,
+			},
+		},
+		"Entrypoint specified in slice of strings": {
+			inContent: []byte(`command: ["--version"]`),
+			wantedStruct: CommandOverride{
+				String:      nil,
+				StringSlice: []string{"--version"},
+			},
+		},
+		"Error if unmarshalable": {
+			inContent: []byte(`command: {-c}`),
+			wantedStruct: CommandOverride{
+				String:      nil,
+				StringSlice: nil,
+			},
+			wantedError: errUnmarshalCommand,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			e := ImageOverride{
+				Command: CommandOverride{
+					String: aws.String("wrong"),
+				},
+			}
+
+			err := yaml.Unmarshal(tc.inContent, &e)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				// check memberwise dereferenced pointer equality
+				require.Equal(t, tc.wantedStruct.StringSlice, e.Command.StringSlice)
+				require.Equal(t, tc.wantedStruct.String, e.Command.String)
+			}
+		})
+	}
+}
+
+func TestCommandOverride_ToStringSlice(t *testing.T) {
+	testCases := map[string]struct {
+		inCommandOverrides CommandOverride
+
+		wantedSlice []string
+	}{
+		"Both fields are empty": {
+			inCommandOverrides: CommandOverride{
+				String:      nil,
+				StringSlice: nil,
+			},
+			wantedSlice: nil,
+		},
+		"Given a string": {
+			inCommandOverrides: CommandOverride{
+				String:      aws.String(`-c read "some command"`),
+				StringSlice: nil,
+			},
+			wantedSlice: []string{"-c", "read", "some command"},
+		},
+		"Given a string slice": {
+			inCommandOverrides: CommandOverride{
+				String:      nil,
+				StringSlice: []string{"-c", "read", "some", "command"},
+			},
+			wantedSlice: []string{"-c", "read", "some", "command"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			out, err := tc.inCommandOverrides.ToStringSlice()
+			require.NoError(t, err)
+			require.Equal(t, tc.wantedSlice, out)
+		})
+	}
+}
 
 func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
@@ -278,103 +458,124 @@ func TestBuildConfig(t *testing.T) {
 	}
 }
 
-func TestSidecar_Options(t *testing.T) {
-	mockImage := aws.String("mockImage")
-	mockMap := map[string]string{"foo": "bar"}
-	mockCredsParam := aws.String("mockCredsParam")
+func TestLogging_LogImage(t *testing.T) {
 	testCases := map[string]struct {
-		inPort string
-
-		wanted    *template.SidecarOpts
-		wantedErr error
+		inputImage  *string
+		wantedImage *string
 	}{
-		"invalid port": {
-			inPort: "b/a/d/P/o/r/t",
-
-			wantedErr: fmt.Errorf("cannot parse port mapping from b/a/d/P/o/r/t"),
+		"Image specified": {
+			inputImage:  aws.String("nginx:why-on-earth"),
+			wantedImage: aws.String("nginx:why-on-earth"),
 		},
-		"good port without protocol": {
-			inPort: "2000",
-
-			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
-				Port:       aws.String("2000"),
-				CredsParam: mockCredsParam,
-				Image:      mockImage,
-				Secrets:    mockMap,
-				Variables:  mockMap,
-			},
-		},
-		"good port with protocol": {
-			inPort: "2000/udp",
-
-			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
-				Port:       aws.String("2000"),
-				Protocol:   aws.String("udp"),
-				CredsParam: mockCredsParam,
-				Image:      mockImage,
-				Secrets:    mockMap,
-				Variables:  mockMap,
-			},
+		"no image specified": {
+			inputImage:  nil,
+			wantedImage: aws.String(defaultFluentbitImage),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			sidecar := Sidecar{
-				Sidecars: map[string]*SidecarConfig{
-					"foo": {
-						CredsParam: mockCredsParam,
-						Image:      mockImage,
-						Secrets:    mockMap,
-						Variables:  mockMap,
-						Port:       aws.String(tc.inPort),
-					},
-				},
+			l := Logging{
+				Image: tc.inputImage,
 			}
-			got, err := sidecar.Options()
+			got := l.LogImage()
 
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, got[0], tc.wanted)
-			}
+			require.Equal(t, tc.wantedImage, got)
 		})
 	}
 }
 
-func TestExec_Options(t *testing.T) {
+func TestLogging_GetEnableMetadata(t *testing.T) {
 	testCases := map[string]struct {
-		inConfig ExecuteCommand
-
-		wanted *template.ExecuteCommandOpts
+		enable *bool
+		wanted *string
 	}{
-		"without exec enabled": {
-			inConfig: ExecuteCommand{},
-			wanted:   nil,
+		"specified true": {
+			enable: aws.Bool(true),
+			wanted: aws.String("true"),
 		},
-		"exec enabled": {
-			inConfig: ExecuteCommand{
-				Enable: aws.Bool(true),
-			},
-			wanted: &template.ExecuteCommandOpts{},
+		"specified false": {
+			enable: aws.Bool(false),
+			wanted: aws.String("false"),
 		},
-		"exec enabled with config": {
-			inConfig: ExecuteCommand{
-				Config: ExecuteCommandConfig{
-					Enable: aws.Bool(true),
-				},
-			},
-			wanted: &template.ExecuteCommandOpts{},
+		"not specified": {
+			enable: nil,
+			wanted: aws.String("true"),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			exec := tc.inConfig
-			got := exec.Options()
+			l := Logging{
+				EnableMetadata: tc.enable,
+			}
+			got := l.GetEnableMetadata()
 
-			require.Equal(t, got, tc.wanted)
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestNetworkConfig_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		data string
+
+		wantedConfig NetworkConfig
+		wantedErr    error
+	}{
+		"defaults to public placement if vpc is empty": {
+			data: `
+network:
+  vpc:
+`,
+			wantedConfig: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: stringP(PublicSubnetPlacement),
+				},
+			},
+		},
+		"returns error if placement option is invalid": {
+			data: `
+network:
+  vpc:
+    placement: 'tartarus'
+`,
+			wantedErr: errors.New(`field 'network.vpc.placement' is 'tartarus' must be one of []string{"public", "private"}`),
+		},
+		"unmarshals successfully for public placement with security groups": {
+			data: `
+network:
+  vpc:
+    placement: 'public'
+    security_groups:
+    - 'sg-1234'
+    - 'sg-4567'
+`,
+			wantedConfig: NetworkConfig{
+				VPC: vpcConfig{
+					Placement:      stringP(PublicSubnetPlacement),
+					SecurityGroups: []string{"sg-1234", "sg-4567"},
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			type manifest struct {
+				Network NetworkConfig `yaml:"network"`
+			}
+			var m manifest
+
+			// WHEN
+			err := yaml.Unmarshal([]byte(tc.data), &m)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedConfig, m.Network)
+			}
 		})
 	}
 }

@@ -505,3 +505,155 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 		})
 	}
 }
+
+func TestCodePipeline_RetryStageExecution(t *testing.T) {
+	mockPipelineName := "pipeline-dinder-badgoose-repo"
+	mockStageName := "Source"
+	failedActions := codepipeline.StageRetryModeFailedActions
+	notRetryable := codepipeline.StageNotRetryableException{}
+	mockPipelineExecutionID := aws.String("12345678-fake-exec-utio-nid987654321")
+	mockBadOutput := &codepipeline.ListPipelineExecutionsOutput{
+		PipelineExecutionSummaries: []*codepipeline.PipelineExecutionSummary{},
+	}
+	mockErr := errors.New("some error")
+	mockOutput := &codepipeline.RetryStageExecutionOutput{
+		PipelineExecutionId: aws.String("12345678-fake-exec-utio-nid987654321"),
+	}
+
+	tests := map[string]struct {
+		callMocks     func(m codepipelineMocks)
+		expectedOut   *string
+		expectedError error
+	}{
+		"returns nil when executes as expected": {
+			callMocks: func(m codepipelineMocks) {
+				m.cp.EXPECT().ListPipelineExecutions(
+					&codepipeline.ListPipelineExecutionsInput{
+						MaxResults:   aws.Int64(1),
+						PipelineName: aws.String(mockPipelineName)}).Return(&codepipeline.ListPipelineExecutionsOutput{
+					PipelineExecutionSummaries: []*codepipeline.PipelineExecutionSummary{
+						{
+							PipelineExecutionId: aws.String("12345678-fake-exec-utio-nid987654321"),
+						},
+					},
+				}, nil)
+				m.cp.EXPECT().RetryStageExecution(
+					&codepipeline.RetryStageExecutionInput{
+						PipelineExecutionId: mockPipelineExecutionID,
+						PipelineName:        aws.String(mockPipelineName),
+						RetryMode:           aws.String(failedActions),
+						StageName:           aws.String(mockStageName),
+					}).Return(mockOutput, nil)
+			},
+			expectedOut: nil,
+		},
+		"catches error and returns nil if pipeline succeeds before failing so not a 'retry'": {
+			callMocks: func(m codepipelineMocks) {
+				m.cp.EXPECT().ListPipelineExecutions(
+					&codepipeline.ListPipelineExecutionsInput{
+						MaxResults:   aws.Int64(1),
+						PipelineName: aws.String(mockPipelineName)}).Return(&codepipeline.ListPipelineExecutionsOutput{
+					PipelineExecutionSummaries: []*codepipeline.PipelineExecutionSummary{
+						{
+							PipelineExecutionId: aws.String("12345678-fake-exec-utio-nid987654321"),
+						},
+					},
+				}, nil)
+				m.cp.EXPECT().RetryStageExecution(
+					&codepipeline.RetryStageExecutionInput{
+						PipelineExecutionId: mockPipelineExecutionID,
+						PipelineName:        aws.String(mockPipelineName),
+						RetryMode:           aws.String(failedActions),
+						StageName:           aws.String(mockStageName),
+					}).Return(nil, notRetryable.OrigErr()) // OrigErr always returns nil, so may not actually catch the StageNotRetryableException
+			},
+			expectedOut: nil,
+		},
+		"returns wrapped error if ListPipelineExecutions fails": {
+			callMocks: func(m codepipelineMocks) {
+				m.cp.EXPECT().ListPipelineExecutions(
+					&codepipeline.ListPipelineExecutionsInput{
+						MaxResults:   aws.Int64(1),
+						PipelineName: aws.String(mockPipelineName)}).Return(nil, mockErr)
+				m.cp.EXPECT().RetryStageExecution(
+					&codepipeline.RetryStageExecutionInput{
+						PipelineExecutionId: mockPipelineExecutionID,
+						PipelineName:        aws.String(mockPipelineName),
+						RetryMode:           aws.String(failedActions),
+						StageName:           aws.String(mockStageName),
+					}).Times(0)
+			},
+			expectedOut:   nil,
+			expectedError: fmt.Errorf("retrieve pipeline execution ID: list pipeline execution for pipeline-dinder-badgoose-repo: some error"),
+		},
+		"returns wrapped error if no pipeline execution IDs are returned": {
+			callMocks: func(m codepipelineMocks) {
+				m.cp.EXPECT().ListPipelineExecutions(
+					&codepipeline.ListPipelineExecutionsInput{
+						MaxResults:   aws.Int64(1),
+						PipelineName: aws.String(mockPipelineName)}).Return(mockBadOutput, nil)
+				m.cp.EXPECT().RetryStageExecution(
+					&codepipeline.RetryStageExecutionInput{
+						PipelineExecutionId: mockPipelineExecutionID,
+						PipelineName:        aws.String(mockPipelineName),
+						RetryMode:           aws.String(failedActions),
+						StageName:           aws.String(mockStageName),
+					}).Times(0)
+			},
+			expectedOut:   nil,
+			expectedError: fmt.Errorf("retrieve pipeline execution ID: no pipeline execution IDs found for pipeline-dinder-badgoose-repo"),
+		},
+		"returns wrapped error if RetryStageExecution fails": {
+			callMocks: func(m codepipelineMocks) {
+				m.cp.EXPECT().ListPipelineExecutions(
+					&codepipeline.ListPipelineExecutionsInput{
+						MaxResults:   aws.Int64(1),
+						PipelineName: aws.String(mockPipelineName)}).Return(&codepipeline.ListPipelineExecutionsOutput{
+					PipelineExecutionSummaries: []*codepipeline.PipelineExecutionSummary{
+						{
+							PipelineExecutionId: aws.String("12345678-fake-exec-utio-nid987654321"),
+						},
+					},
+				}, nil)
+				m.cp.EXPECT().RetryStageExecution(
+					&codepipeline.RetryStageExecutionInput{
+						PipelineExecutionId: mockPipelineExecutionID,
+						PipelineName:        aws.String(mockPipelineName),
+						RetryMode:           aws.String(failedActions),
+						StageName:           aws.String(mockStageName),
+					}).Return(nil, mockErr)
+			},
+			expectedOut:   nil,
+			expectedError: fmt.Errorf("retry pipeline source stage: some error"),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockClient := mocks.NewMockapi(ctrl)
+			mockrgClient := mocks.NewMockresourceGetter(ctrl)
+			mocks := codepipelineMocks{
+				cp: mockClient,
+				rg: mockrgClient,
+			}
+			tc.callMocks(mocks)
+
+			cp := CodePipeline{
+				client:   mockClient,
+				rgClient: mockrgClient,
+			}
+
+			// WHEN
+			actualErr := cp.RetryStageExecution(mockPipelineName, mockStageName)
+
+			// THEN
+			if actualErr != nil {
+				require.EqualError(t, actualErr, tc.expectedError.Error())
+			}
+		})
+	}
+}

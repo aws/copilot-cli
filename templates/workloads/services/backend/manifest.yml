@@ -4,21 +4,20 @@
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: {{.Name}}
-{{- if .ImageConfig.Port}}
+type: {{.Type}}
+{{if .ImageConfig.Port}}
 # Your service is reachable at "http://{{.Name}}.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:{{.ImageConfig.Port}}" but is not public.
 {{- else}}
 # Your service does not allow any traffic.
 {{- end}}
-type: {{.Type}}
 
+# Configuration for your containers and service.
 image:
 {{- if .ImageConfig.Build.BuildArgs.Dockerfile}}
-  # Docker build arguments.
-  # For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
+  # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
   build: {{.ImageConfig.Build.BuildArgs.Dockerfile}}
 {{- end}}
 {{- if .ImageConfig.Image.Location}}
-  # The name of the Docker image.
   location: {{.ImageConfig.Image.Location}}
 {{- end}}
 {{- if .ImageConfig.Port}}
@@ -27,22 +26,18 @@ image:
 {{- end}}
 {{- if .ImageConfig.HealthCheck}}
   healthcheck:
-    # The command the container runs to determine if it's healthy.
+    # Container health checks: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-healthcheck
     command: {{fmtSlice (quoteSlice .ImageConfig.HealthCheck.Command)}}
-    interval: {{.ImageConfig.HealthCheck.Interval}}  # Time period between healthchecks. Default is 10s.
-    retries: {{.ImageConfig.HealthCheck.Retries}}      # Number of times to retry before container is deemed unhealthy. Default is 2.
-    timeout: {{.ImageConfig.HealthCheck.Timeout}}     # How long to wait before considering the healthcheck failed. Default is 5s.
-    start_period: {{.ImageConfig.HealthCheck.StartPeriod}} # Grace period within which to provide containers time to bootstrap before failed health checks count towards the maximum number of retries. Default is 0s.
+    interval: {{.ImageConfig.HealthCheck.Interval}}
+    retries: {{.ImageConfig.HealthCheck.Retries}}
+    timeout: {{.ImageConfig.HealthCheck.Timeout}}
+    start_period: {{.ImageConfig.HealthCheck.StartPeriod}}
 {{- end}}
 
-# Number of CPU units for the task.
-cpu: {{.CPU}}
-# Amount of memory in MiB used by the task.
-memory: {{.Memory}}
-# Number of tasks that should be running in your service.
-count: {{.Count.Value}}
-# Enable running commands in your container.
-exec: true
+cpu: {{.CPU}}       # Number of CPU units for the task.
+memory: {{.Memory}}    # Amount of memory in MiB used by the task.
+count: {{.Count.Value}}       # Number of tasks that should be running in your service.
+exec: true     # Enable running commands in your container.
 
 # Optional fields for more advanced use-cases.
 #
@@ -50,7 +45,7 @@ exec: true
 #  LOG_LEVEL: info
 
 #secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
-#  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM      parameter.
+#  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
 
 # You can override any of the values defined above by environment.
 #environments:

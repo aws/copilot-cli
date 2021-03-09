@@ -122,7 +122,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		return "", err
 	}
 
-	sidecars, err := j.manifest.Sidecar.Options()
+	sidecars, err := convertSidecar(j.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
 	}
@@ -137,6 +137,19 @@ func (j *ScheduledJob) Template() (string, error) {
 		return "", fmt.Errorf("convert retry/timeout config for job %s: %w", j.name, err)
 	}
 
+	storage, err := convertStorageOpts(j.manifest.Storage)
+	if err != nil {
+		return "", fmt.Errorf("convert storage options for job %s: %w", j.name, err)
+	}
+
+	entrypoint, err := j.manifest.EntryPoint.ToStringSlice()
+	if err != nil {
+		return "", fmt.Errorf(`convert 'entrypoint' to string slice: %w`, err)
+	}
+	command, err := j.manifest.Command.ToStringSlice()
+	if err != nil {
+		return "", fmt.Errorf(`convert 'command' to string slice: %w`, err)
+	}
 	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
 		Variables:          j.manifest.Variables,
 		Secrets:            j.manifest.Secrets,
@@ -144,7 +157,11 @@ func (j *ScheduledJob) Template() (string, error) {
 		Sidecars:           sidecars,
 		ScheduleExpression: schedule,
 		StateMachine:       stateMachine,
-		LogConfig:          j.manifest.LogConfigOpts(),
+		LogConfig:          convertLogging(j.manifest.Logging),
+		Storage:            storage,
+		Network:            convertNetworkConfig(j.manifest.Network),
+		EntryPoint:         entrypoint,
+		Command:            command,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)

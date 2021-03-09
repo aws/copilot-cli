@@ -1,0 +1,12 @@
+{{- if .EntryPoint}}
+EntryPoint:
+{{- range $part := .EntryPoint}}
+- {{$part}}
+{{- end}}
+{{- end}}
+{{- if .Command}}
+Command:
+{{- range $part := .Command}}
+- {{$part}}
+{{- end}}
+{{- end}}

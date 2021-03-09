@@ -36,18 +36,11 @@ type BackendService struct {
 // BackendServiceConfig holds the configuration that can be overriden per environments.
 type BackendServiceConfig struct {
 	ImageConfig imageWithPortAndHealthcheck `yaml:"image,flow"`
-	TaskConfig  `yaml:",inline"`
-	*Logging    `yaml:"logging,flow"`
-	Sidecar     `yaml:",inline"`
-	Storage     `yaml:"storage"`
-}
-
-// LogConfigOpts converts the service's Firelens configuration into a format parsable by the templates pkg.
-func (bc *BackendServiceConfig) LogConfigOpts() *template.LogConfigOpts {
-	if bc.Logging == nil {
-		return nil
-	}
-	return bc.logConfigOpts()
+	ImageOverride `yaml:",inline"`
+	TaskConfig    `yaml:",inline"`
+	*Logging      `yaml:"logging,flow"`
+	Sidecars    map[string]*SidecarConfig `yaml:"sidecars"`
+	Network     NetworkConfig             `yaml:"network"`
 }
 
 type imageWithPortAndHealthcheck struct {
@@ -143,6 +136,11 @@ func newDefaultBackendService() *BackendService {
 				},
 				ExecuteCommand: ExecuteCommand{
 					Enable: aws.Bool(false),
+				},
+			},
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: stringP(PublicSubnetPlacement),
 				},
 			},
 		},

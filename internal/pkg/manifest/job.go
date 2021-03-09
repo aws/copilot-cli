@@ -37,12 +37,13 @@ type ScheduledJob struct {
 // ScheduledJobConfig holds the configuration for a scheduled job
 type ScheduledJobConfig struct {
 	ImageConfig             Image `yaml:"image,flow"`
+	ImageOverride           `yaml:",inline"`
 	TaskConfig              `yaml:",inline"`
 	*Logging                `yaml:"logging,flow"`
-	Sidecar                 `yaml:",inline"`
-	Storage                 `yaml:"storage"`
-	On                      JobTriggerConfig `yaml:"on,flow"`
+	Sidecars                map[string]*SidecarConfig `yaml:"sidecars"`
+	On                      JobTriggerConfig          `yaml:"on,flow"`
 	JobFailureHandlerConfig `yaml:",inline"`
+	Network                 NetworkConfig `yaml:"network"`
 }
 
 // JobTriggerConfig represents the configuration for the event that triggers the job.
@@ -64,14 +65,6 @@ type ScheduledJobProps struct {
 	Retries  int
 }
 
-// LogConfigOpts converts the job's Firelens configuration into a format parsable by the templates pkg.
-func (lc *ScheduledJobConfig) LogConfigOpts() *template.LogConfigOpts {
-	if lc.Logging == nil {
-		return nil
-	}
-	return lc.logConfigOpts()
-}
-
 // newDefaultScheduledJob returns an empty ScheduledJob with only the default values set.
 func newDefaultScheduledJob() *ScheduledJob {
 	return &ScheduledJob{
@@ -87,11 +80,16 @@ func newDefaultScheduledJob() *ScheduledJob {
 					Value: aws.Int(1),
 				},
 			},
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: stringP(PublicSubnetPlacement),
+				},
+			},
 		},
 	}
 }
 
-// NewScheduledJob creates a new
+// NewScheduledJob creates a new scheduled job object.
 func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	job := newDefaultScheduledJob()
 	// Apply overrides.

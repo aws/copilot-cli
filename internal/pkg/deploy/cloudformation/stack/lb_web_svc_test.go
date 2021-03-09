@@ -27,15 +27,6 @@ const (
 	testImageTag     = "manual-bf3678c"
 )
 
-var testLBWebServiceManifest = manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
-	WorkloadProps: &manifest.WorkloadProps{
-		Name:       "frontend",
-		Dockerfile: "frontend/Dockerfile",
-	},
-	Path: "frontend",
-	Port: 80,
-})
-
 type mockTemplater struct {
 	tpl string
 	err error
@@ -93,6 +84,23 @@ func TestLoadBalancedWebService_StackName(t *testing.T) {
 }
 
 func TestLoadBalancedWebService_Template(t *testing.T) {
+	var testLBWebServiceManifest = manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
+		WorkloadProps: &manifest.WorkloadProps{
+			Name:       "frontend",
+			Dockerfile: "frontend/Dockerfile",
+		},
+		Path: "frontend",
+		Port: 80,
+	})
+	testLBWebServiceManifest.EntryPoint = manifest.EntryPointOverride{
+		String: nil,
+		StringSlice: []string{"/bin/echo", "hello"},
+	}
+	testLBWebServiceManifest.Command = manifest.CommandOverride{
+		String: nil,
+		StringSlice: []string{"world"},
+	}
+
 	testCases := map[string]struct {
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService)
 		wantedTemplate   string
@@ -177,6 +185,12 @@ Outputs:
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
+					Network: &template.NetworkOpts{
+						AssignPublicIP: template.EnablePublicIP,
+						SubnetsType:    template.PublicSubnetsPlacement,
+					},
+					EntryPoint: []string{"/bin/echo", "hello"},
+					Command: []string{"world"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 
 				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
@@ -205,6 +219,12 @@ Outputs:
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
+					Network: &template.NetworkOpts{
+						AssignPublicIP: template.EnablePublicIP,
+						SubnetsType:    template.PublicSubnetsPlacement,
+					},
+					EntryPoint: []string{"/bin/echo", "hello"},
+					Command: []string{"world"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{
 					tpl: `Resources:
@@ -301,11 +321,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 	}
 	testLBWebServiceManifestWithSidecar := manifest.NewLoadBalancedWebService(baseProps)
 	testLBWebServiceManifestWithSidecar.TargetContainer = aws.String("xray")
-	testLBWebServiceManifestWithSidecar.Sidecar = manifest.Sidecar{Sidecars: map[string]*manifest.SidecarConfig{
+	testLBWebServiceManifestWithSidecar.Sidecars = map[string]*manifest.SidecarConfig{
 		"xray": {
 			Port: aws.String("5000"),
 		},
-	}}
+	}
 	testLBWebServiceManifestWithStickiness := manifest.NewLoadBalancedWebService(baseProps)
 	testLBWebServiceManifestWithStickiness.Stickiness = aws.Bool(true)
 	testLBWebServiceManifestWithExecEnabled := manifest.NewLoadBalancedWebService(baseProps)
@@ -556,6 +576,14 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 }
 
 func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
+	var testLBWebServiceManifest = manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
+		WorkloadProps: &manifest.WorkloadProps{
+			Name:       "frontend",
+			Dockerfile: "frontend/Dockerfile",
+		},
+		Path: "frontend",
+		Port: 80,
+	})
 	testCases := map[string]struct {
 		mockDependencies func(ctrl *gomock.Controller, c *LoadBalancedWebService)
 
@@ -618,6 +646,14 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 
 func TestLoadBalancedWebService_Tags(t *testing.T) {
 	// GIVEN
+	var testLBWebServiceManifest = manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
+		WorkloadProps: &manifest.WorkloadProps{
+			Name:       "frontend",
+			Dockerfile: "frontend/Dockerfile",
+		},
+		Path: "frontend",
+		Port: 80,
+	})
 	conf := &LoadBalancedWebService{
 		wkld: &wkld{
 			name: aws.StringValue(testLBWebServiceManifest.Name),

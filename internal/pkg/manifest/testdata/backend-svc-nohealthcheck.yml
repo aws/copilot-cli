@@ -4,22 +4,19 @@
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: subscribers
-# Your service does not allow any traffic.
 type: Backend Service
 
+# Your service does not allow any traffic.
+
+# Configuration for your containers and service.
 image:
-  # Docker build arguments.
-  # For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
+  # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
   build: ./subscribers/Dockerfile
 
-# Number of CPU units for the task.
-cpu: 256
-# Amount of memory in MiB used by the task.
-memory: 512
-# Number of tasks that should be running in your service.
-count: 1
-# Enable running commands in your container.
-exec: true
+cpu: 256       # Number of CPU units for the task.
+memory: 512    # Amount of memory in MiB used by the task.
+count: 1       # Number of tasks that should be running in your service.
+exec: true     # Enable running commands in your container.
 
 # Optional fields for more advanced use-cases.
 #
@@ -27,7 +24,7 @@ exec: true
 #  LOG_LEVEL: info
 
 #secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
-#  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM      parameter.
+#  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
 
 # You can override any of the values defined above by environment.
 #environments:

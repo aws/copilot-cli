@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"gopkg.in/yaml.v3"
 )
 
@@ -94,44 +92,10 @@ type Autoscaling struct {
 	ResponseTime *time.Duration `yaml:"response_time"`
 }
 
-// Options converts the service's Auto Scaling configuration into a format parsable
-// by the templates pkg.
-func (a *Autoscaling) Options() (*template.AutoscalingOpts, error) {
-	if a.IsEmpty() {
-		return nil, nil
-	}
-	min, max, err := a.Range.Parse()
-	if err != nil {
-		return nil, err
-	}
-	autoscalingOpts := template.AutoscalingOpts{
-		MinCapacity: &min,
-		MaxCapacity: &max,
-	}
-	if a.CPU != nil {
-		autoscalingOpts.CPU = aws.Float64(float64(*a.CPU))
-	}
-	if a.Memory != nil {
-		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory))
-	}
-	if a.Requests != nil {
-		autoscalingOpts.Requests = aws.Float64(float64(*a.Requests))
-	}
-	if a.ResponseTime != nil {
-		responseTime := float64(*a.ResponseTime) / float64(time.Second)
-		autoscalingOpts.ResponseTime = aws.Float64(responseTime)
-	}
-	return &autoscalingOpts, nil
-}
-
 // IsEmpty returns whether Autoscaling is empty.
 func (a *Autoscaling) IsEmpty() bool {
 	return a.Range == nil && a.CPU == nil && a.Memory == nil &&
 		a.Requests == nil && a.ResponseTime == nil
-}
-
-func durationp(v time.Duration) *time.Duration {
-	return &v
 }
 
 // ServiceDockerfileBuildRequired returns if the service container image should be built from local Dockerfile.

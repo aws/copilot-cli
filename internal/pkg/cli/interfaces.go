@@ -8,11 +8,13 @@ import (
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
@@ -294,6 +296,14 @@ type artifactUploader interface {
 	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
 }
 
+type zipAndUploader interface {
+	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
+}
+
+type customResourcesUploader interface {
+	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) ([]string, error)
+}
+
 type bucketEmptier interface {
 	EmptyBucket(bucket string) error
 }
@@ -337,7 +347,7 @@ type appDeployer interface {
 	DeployApp(in *deploy.CreateAppInput) error
 	AddServiceToApp(app *config.Application, svcName string) error
 	AddJobToApp(app *config.Application, jobName string) error
-	AddEnvToApp(app *config.Application, env *config.Environment) error
+	AddEnvToApp(opts *cloudformation.AddEnvToAppOpts) error
 	DelegateDNSPermissions(app *config.Application, accountID string) error
 	DeleteApp(name string) error
 }
@@ -348,7 +358,7 @@ type appResourcesGetter interface {
 }
 
 type taskDeployer interface {
-	DeployTask(out termprogress.FileWriter, input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error
+	DeployTask(out termprogress.FileWriter, input *deploy.CreateTaskResourcesInput, opts ...awscloudformation.StackOption) error
 }
 
 type taskStackManager interface {

@@ -1,13 +1,15 @@
-# Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-# Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
-# the License. A copy of the License is located at
-#     http://aws.amazon.com/apache2.0/
-# or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-# CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for {{$.AppName}}
 Resources:
+  {{- if eq .Source.ProviderName "Bitbucket"}}
+  SourceConnection:
+    Type: AWS::CodeStarConnections::Connection
+    Properties:
+      ConnectionName: {{.Source.ConnectionName}}
+      ProviderType: Bitbucket
+  {{- end}}
   BuildProjectRole:
     Type: AWS::IAM::Role
     Properties:
@@ -166,6 +168,28 @@ Resources:
               - s3:GetBucketLocation
             Resource:
               - "*"
+          {{- if eq .Source.ProviderName "Bitbucket"}}
+          - Effect: Allow
+            Action:
+              - codestar-connections:CreateConnection
+              - codestar-connections:DeleteConnection
+              - codestar-connections:GetConnection
+              - codestar-connections:ListConnections
+              - codestar-connections:GetIndividualAccessToken
+              - codestar-connections:GetInstallationUrl
+              - codestar-connections:ListInstallationTargets
+              - codestar-connections:StartOAuthHandshake
+              - codestar-connections:UpdateConnectionInstallation
+              - codestar-connections:UseConnection
+              - codestar-connections:RegisterAppCode
+              - codestar-connections:StartAppRegistrationHandshake
+              - codestar-connections:StartUploadArchiveToS3
+              - codestar-connections:GetUploadArchiveToS3Status
+              - codestar-connections:PassConnection
+              - codestar-connections:PassedToService
+            Resource:
+              - !Ref SourceConnection
+          {{- end}}
           - Effect: Allow
             Action:
               - kms:Decrypt
@@ -179,6 +203,10 @@ Resources:
               - s3:GetBucketPolicy
               - s3:GetObject
               - s3:ListBucket
+              {{- if eq .Source.ProviderName "Bitbucket"}}
+              - s3:PutObjectAcl
+              - s3:GetObjectAcl
+              {{- end}}
             Resource:{{range .ArtifactBuckets}}
               - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}']]
               - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}', '/*']]{{end}}
@@ -194,7 +222,6 @@ Resources:
   BuildTestCommands{{$stage.Name}}:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: BuildTestCommands-{{$.AppName}}-{{$stage.Name}}
       EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
       ServiceRole: !GetAtt BuildProjectRole.Arn
       Artifacts:
@@ -268,6 +295,22 @@ Resources:
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1
+        {{- else if eq .Source.ProviderName "Bitbucket"}}
+        - Name: Source
+          Actions:
+              - Name: SourceCodeFor-{{$.AppName}}
+                ActionTypeId:
+                  Category: Source
+                  Owner: AWS
+                  Version: 1
+                  Provider: CodeStarSourceConnection
+                Configuration:
+                  ConnectionArn: !Ref SourceConnection
+                  FullRepositoryId: {{$.Source.Repository}}
+                  BranchName: {{$.Source.Branch}}
+                OutputArtifacts:
+                  - Name: SCCheckoutArtifact
+                RunOrder: 1
         {{- end }}
         - Name: Build
           Actions:
@@ -306,7 +349,7 @@ Resources:
                 ChangeSetName: {{$.AppName}}-{{$stage.Name}}-{{$workload}}
                 ActionMode: CREATE_UPDATE
                 StackName: {{$.AppName}}-{{$stage.Name}}-{{$workload}}
-                Capabilities: CAPABILITY_NAMED_IAM
+                Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
                 TemplatePath: BuildOutput::infrastructure/{{$stage.WorkloadTemplatePath $workload}}
                 TemplateConfiguration: BuildOutput::infrastructure/{{$stage.WorkloadTemplateConfigurationPath $workload}}
                 # The ARN of the IAM role (in the env account) that
@@ -331,3 +374,9 @@ Resources:
               RunOrder: 3
               InputArtifacts:
                 - Name: SCCheckoutArtifact{{end}}{{end}}{{end}}{{end}}
+{{- if eq .Source.ProviderName "Bitbucket"}}
+Outputs:
+  PipelineConnectionARN:
+    Description: "ARN of CodeStar Connections connection"
+    Value: !Ref SourceConnection
+{{- end}}

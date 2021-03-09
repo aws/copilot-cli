@@ -13,8 +13,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -33,6 +36,7 @@ type initEnvMocks struct {
 	selVPC       *mocks.Mockec2Selector
 	selCreds     *mocks.MockcredsSelector
 	ec2Client    *mocks.Mockec2Client
+	selApp       *mocks.MockappSelector
 }
 
 func TestInitEnvOpts_Validate(t *testing.T) {
@@ -61,12 +65,6 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 
 			wantedErrMsg: fmt.Sprintf("environment name 123env is invalid: %s", errValueBadFormat),
-		},
-		"new workspace": {
-			inEnvName: "test-pdx",
-			inAppName: "",
-
-			wantedErrMsg: "no application found: run `app init` or `cd` into your workspace please",
 		},
 		"cannot specify both vpc resources importing flags and configuing flags": {
 			inEnvName:     "test-pdx",
@@ -155,6 +153,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 
 func TestInitEnvOpts_Ask(t *testing.T) {
 	const (
+		mockApp         = "test-app"
 		mockEnv         = "test"
 		mockProfile     = "default"
 		mockVPCCIDR     = "10.10.10.10/24"
@@ -169,6 +168,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
+		inAppName       string
 		inEnv           string
 		inProfile       string
 		inTempCreds     tempCredsVars
@@ -181,7 +181,38 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 
 		wantedError error
 	}{
+		"should prompt for app if currently not under a workspace and none is specified": {
+			inAppName: "",
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			inDefault: true,
+
+			setupMocks: func(m initEnvMocks) {
+				m.selApp.EXPECT().
+					Application(envInitAppNamePrompt, envInitAppNameHelpPrompt).
+					Return(mockApp, nil)
+				m.sessProvider.EXPECT().FromProfile(mockProfile).Return(&session.Session{
+					Config: &aws.Config{
+						Region: aws.String("us-west-2"),
+					},
+				}, nil)
+			},
+
+			wantedError: nil,
+		},
+		"fail to get app name": {
+			inAppName: "",
+
+			setupMocks: func(m initEnvMocks) {
+				m.selApp.EXPECT().
+					Application(envInitAppNamePrompt, envInitAppNameHelpPrompt).
+					Return("", mockErr)
+			},
+
+			wantedError: fmt.Errorf("ask for application: some error"),
+		},
 		"fail to get env name": {
+			inAppName: mockApp,
 			setupMocks: func(m initEnvMocks) {
 				gomock.InOrder(
 					m.prompt.EXPECT().
@@ -192,6 +223,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("get environment name: some error"),
 		},
 		"should create a session from a named profile if flag is provided": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			inDefault: true,
@@ -204,7 +236,8 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"should create a session from temporary creds if flags are provided": {
-			inEnv: mockEnv,
+			inAppName: mockApp,
+			inEnv:     mockEnv,
 			inTempCreds: tempCredsVars{
 				AccessKeyID:     "abcd",
 				SecretAccessKey: "efgh",
@@ -215,6 +248,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"should prompt for credentials if no profile or temp creds flags are provided": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inDefault: true,
 			setupMocks: func(m initEnvMocks) {
@@ -222,6 +256,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"should prompt for region if user configuration does not have one": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			inDefault: true,
@@ -233,6 +268,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"should skip prompting for region if flag is provided": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			inRegion:  mockRegion,
@@ -245,6 +281,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"should not prompt for configuring environment if default config flag is true": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			inDefault: true,
@@ -254,6 +291,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"fail to select whether to adjust or import resources": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -264,6 +302,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("select adjusting or importing resources: some error"),
 		},
 		"success with no custom resources": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -273,6 +312,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"fail to select VPC": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -284,6 +324,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("select VPC: some error"),
 		},
 		"fail to check if VPC has DNS support": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -296,6 +337,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("check if VPC mockVPC has DNS support enabled: some error"),
 		},
 		"fail to import VPC has no DNS support": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -308,6 +350,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("VPC mockVPC has no DNS support enabled"),
 		},
 		"fail to select public subnets": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -322,6 +365,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("select public subnets: some error"),
 		},
 		"fail to select private subnets": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -338,6 +382,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("select private subnets: some error"),
 		},
 		"success with importing env resources with no flags": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -353,6 +398,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"success with importing env resources with flags": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			inImportVPCVars: importVPCVars{
@@ -367,6 +413,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"fail to get VPC CIDR": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -379,6 +426,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("get VPC CIDR: some error"),
 		},
 		"fail to get public subnet CIDRs": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -393,6 +441,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("get public subnet CIDRs: some error"),
 		},
 		"fail to get private subnet CIDRs": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -409,6 +458,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("get private subnet CIDRs: some error"),
 		},
 		"success with adjusting default env config with no flags": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
@@ -424,6 +474,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"success with adjusting default env config with flags": {
+			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
 			inAdjustVPCVars: adjustVPCVars{
@@ -452,12 +503,14 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				selVPC:       mocks.NewMockec2Selector(ctrl),
 				selCreds:     mocks.NewMockcredsSelector(ctrl),
 				ec2Client:    mocks.NewMockec2Client(ctrl),
+				selApp:       mocks.NewMockappSelector(ctrl),
 			}
 
 			tc.setupMocks(mocks)
 			// GIVEN
 			addEnv := &initEnvOpts{
 				initEnvVars: initEnvVars{
+					appName:       tc.inAppName,
 					name:          tc.inEnv,
 					profile:       tc.inProfile,
 					tempCreds:     tc.inTempCreds,
@@ -471,6 +524,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				selCreds:     mocks.selCreds,
 				ec2Client:    mocks.ec2Client,
 				prompt:       mocks.prompt,
+				selApp:       mocks.selApp,
 			}
 
 			// WHEN
@@ -489,21 +543,18 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 
 func TestInitEnvOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
-		inAppName string
-		inEnvName string
-		inProd    bool
+		inProd bool
 
-		expectstore    func(m *mocks.Mockstore)
-		expectDeployer func(m *mocks.Mockdeployer)
-		expectIdentity func(m *mocks.MockidentityService)
-		expectProgress func(m *mocks.Mockprogress)
+		expectstore             func(m *mocks.Mockstore)
+		expectDeployer          func(m *mocks.Mockdeployer)
+		expectIdentity          func(m *mocks.MockidentityService)
+		expectProgress          func(m *mocks.Mockprogress)
+		expectAppCFN            func(m *mocks.MockappResourcesGetter)
+		expectResourcesUploader func(m *mocks.MockcustomResourcesUploader)
 
 		wantedErrorS string
 	}{
 		"returns app exists error": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(nil, errors.New("some error"))
 			},
@@ -511,9 +562,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			wantedErrorS: "some error",
 		},
 		"returns identity get error": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
@@ -522,53 +570,100 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			wantedErrorS: "get identity: some identity error",
 		},
-		"errors if environment stack cannot be created": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-
-			expectstore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
-			},
-			expectIdentity: func(m *mocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
-			},
-			expectDeployer: func(m *mocks.Mockdeployer) {
-				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(errors.New("some deploy error"))
-			},
-			wantedErrorS: "some deploy error",
-		},
 		"failed to create stack set instance": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().CreateEnvironment(gomock.Any()).Times(0)
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
+				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "mars-1", "phonetool"))
-				m.EXPECT().Stop(log.Serrorf(fmtAddEnvToAppFailed, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
+				m.EXPECT().Stop(log.Serrorf(fmtAddEnvToAppFailed, "1234", "us-west-2", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
-				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
-				env := &config.Environment{
-					App:       "phonetool",
-					Name:      "test",
-					AccountID: "1234",
-					Region:    "mars-1",
-				}
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(env, nil)
-				m.EXPECT().AddEnvToApp(&config.Application{Name: "phonetool"}, env).Return(errors.New("some cfn error"))
+				m.EXPECT().AddEnvToApp(&deploycfn.AddEnvToAppOpts{
+					App:          &config.Application{Name: "phonetool"},
+					EnvName:      "test",
+					EnvAccountID: "1234",
+					EnvRegion:    "us-west-2",
+				}).Return(errors.New("some cfn error"))
 			},
 			wantedErrorS: "deploy env test to application phonetool: some cfn error",
 		},
+		"errors cannot get app resources by region": {
+			expectstore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+			},
+			expectProgress: func(m *mocks.Mockprogress) {
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
+			},
+			expectIdentity: func(m *mocks.MockidentityService) {
+				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil)
+			},
+			expectDeployer: func(m *mocks.Mockdeployer) {
+				m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
+			},
+			expectAppCFN: func(m *mocks.MockappResourcesGetter) {
+				m.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
+					Return(nil, errors.New("some error"))
+			},
+			wantedErrorS: "get app resources: some error",
+		},
+		"errors cannot read env lambdas": {
+			expectstore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+			},
+			expectProgress: func(m *mocks.Mockprogress) {
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
+			},
+			expectIdentity: func(m *mocks.MockidentityService) {
+				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil)
+			},
+			expectDeployer: func(m *mocks.Mockdeployer) {
+				m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
+			},
+			expectAppCFN: func(m *mocks.MockappResourcesGetter) {
+				m.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
+					Return(&stack.AppRegionalResources{
+						S3Bucket: "mockBucket",
+					}, nil)
+			},
+			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
+				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, fmt.Errorf("some error"))
+			},
+			wantedErrorS: "upload custom resources to bucket mockBucket: some error",
+		},
+		"errors if environment stack cannot be created": {
+			expectstore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+			},
+			expectProgress: func(m *mocks.Mockprogress) {
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
+			},
+			expectIdentity: func(m *mocks.MockidentityService) {
+				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
+			},
+			expectDeployer: func(m *mocks.Mockdeployer) {
+				m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
+				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(errors.New("some deploy error"))
+			},
+			expectAppCFN: func(m *mocks.MockappResourcesGetter) {
+				m.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
+					Return(&stack.AppRegionalResources{
+						S3Bucket: "mockBucket",
+					}, nil)
+			},
+			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
+				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
+			},
+			wantedErrorS: "some deploy error",
+		},
 		"returns error from CreateEnvironment": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{
 					Name: "phonetool",
@@ -581,11 +676,11 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}).Return(errors.New("some create error"))
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
+				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "mars-1", "phonetool"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
@@ -595,14 +690,21 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					AccountID: "1234",
 					Region:    "mars-1",
 				}, nil)
-				m.EXPECT().AddEnvToApp(gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
+			},
+			expectAppCFN: func(m *mocks.MockappResourcesGetter) {
+				m.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
+					Return(&stack.AppRegionalResources{
+						S3Bucket: "mockBucket",
+					}, nil)
+			},
+			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
+				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 			},
 			wantedErrorS: "store environment: some create error",
 		},
 		"success": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-			inProd:    true,
+			inProd: true,
 
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
@@ -615,11 +717,11 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}).Return(nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
+				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "mars-1", "phonetool"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
@@ -630,13 +732,19 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Prod:      false,
 					App:       "phonetool",
 				}, nil)
-				m.EXPECT().AddEnvToApp(gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
+			},
+			expectAppCFN: func(m *mocks.MockappResourcesGetter) {
+				m.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
+					Return(&stack.AppRegionalResources{
+						S3Bucket: "mockBucket",
+					}, nil)
+			},
+			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
+				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 			},
 		},
 		"skips creating stack if environment stack already exists": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 				m.EXPECT().CreateEnvironment(&config.Environment{
@@ -647,11 +755,11 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}).Return(nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
+				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "mars-1", "phonetool"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), &deploy.CreateEnvironmentInput{
@@ -666,13 +774,19 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Name:      "test",
 					App:       "phonetool",
 				}, nil)
-				m.EXPECT().AddEnvToApp(gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
+			},
+			expectAppCFN: func(m *mocks.MockappResourcesGetter) {
+				m.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
+					Return(&stack.AppRegionalResources{
+						S3Bucket: "mockBucket",
+					}, nil)
+			},
+			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
+				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 			},
 		},
 		"failed to delegate DNS (app has Domain and env and apps are different)": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
 			},
@@ -689,16 +803,13 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			wantedErrorS: "granting DNS permissions: some error",
 		},
 		"success with DNS Delegation (app has Domain and env and app are different)": {
-			inAppName: "phonetool",
-			inEnvName: "test",
-
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
 				m.EXPECT().CreateEnvironment(&config.Environment{
 					App:       "phonetool",
 					Name:      "test",
-					AccountID: "1234",
-					Region:    "mars-1",
+					AccountID: "4567",
+					Region:    "us-west-2",
 				}).Return(nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -707,19 +818,32 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDNSDelegationStart, "4567"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtDNSDelegationComplete, "4567"))
-				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "mars-1", "phonetool"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "4567", "us-west-2", "phonetool"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "4567", "us-west-2", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DelegateDNSPermissions(gomock.Any(), "4567").Return(nil)
 				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
-					AccountID: "1234",
-					Region:    "mars-1",
+					AccountID: "4567",
+					Region:    "us-west-2",
 					Name:      "test",
 					App:       "phonetool",
 				}, nil)
-				m.EXPECT().AddEnvToApp(gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
+			},
+			expectAppCFN: func(m *mocks.MockappResourcesGetter) {
+				m.EXPECT().GetAppResourcesByRegion(&config.Application{
+					Name:      "phonetool",
+					AccountID: "1234",
+					Domain:    "amazon.com",
+				}, "us-west-2").
+					Return(&stack.AppRegionalResources{
+						S3Bucket: "mockBucket",
+					}, nil)
+			},
+			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
+				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 			},
 		},
 	}
@@ -734,6 +858,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			mockDeployer := mocks.NewMockdeployer(ctrl)
 			mockIdentity := mocks.NewMockidentityService(ctrl)
 			mockProgress := mocks.NewMockprogress(ctrl)
+			mockAppCFN := mocks.NewMockappResourcesGetter(ctrl)
+			mockResourcesUploader := mocks.NewMockcustomResourcesUploader(ctrl)
+			mockUploader := mocks.NewMockzipAndUploader(ctrl)
 			if tc.expectstore != nil {
 				tc.expectstore(mockstore)
 			}
@@ -746,11 +873,20 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			if tc.expectProgress != nil {
 				tc.expectProgress(mockProgress)
 			}
+			if tc.expectAppCFN != nil {
+				tc.expectAppCFN(mockAppCFN)
+			}
+			if tc.expectResourcesUploader != nil {
+				tc.expectResourcesUploader(mockResourcesUploader)
+			}
+
+			provider := sessions.NewProvider()
+			sess, _ := provider.DefaultWithRegion("us-west-2")
 
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					name:         tc.inEnvName,
-					appName:      tc.inAppName,
+					name:         "test",
+					appName:      "phonetool",
 					isProduction: tc.inProd,
 				},
 				store:       mockstore,
@@ -760,6 +896,12 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				envIdentity: mockIdentity,
 				iam:         &mockServiceLinkedRoleCreator{},
 				prog:        mockProgress,
+				sess:        sess,
+				appCFN:      mockAppCFN,
+				uploader:    mockResourcesUploader,
+				newS3: func(s *session.Session) zipAndUploader {
+					return mockUploader
+				},
 			}
 
 			// WHEN
@@ -779,7 +921,6 @@ func TestInitEnvOpts_delegateDNSFromApp(t *testing.T) {
 	testCases := map[string]struct {
 		app            *config.Application
 		expectDeployer func(m *mocks.Mockdeployer)
-		expectIdentity func(m *mocks.MockidentityService)
 		expectProgress func(m *mocks.Mockprogress)
 		wantedErr      string
 	}{
@@ -788,9 +929,6 @@ func TestInitEnvOpts_delegateDNSFromApp(t *testing.T) {
 				AccountID: "1234",
 				Name:      "crossaccountapp",
 				Domain:    "amazon.com",
-			},
-			expectIdentity: func(m *mocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{Account: "4567"}, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDNSDelegationStart, "4567"))
@@ -802,12 +940,9 @@ func TestInitEnvOpts_delegateDNSFromApp(t *testing.T) {
 		},
 		"should skip updating when app and env are in same account": {
 			app: &config.Application{
-				AccountID: "1234",
+				AccountID: "4567",
 				Name:      "crossaccountapp",
 				Domain:    "amazon.com",
-			},
-			expectIdentity: func(m *mocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{Account: "1234"}, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(gomock.Any()).Times(0)
@@ -815,32 +950,12 @@ func TestInitEnvOpts_delegateDNSFromApp(t *testing.T) {
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DelegateDNSPermissions(gomock.Any(), gomock.Any()).Times(0)
 			},
-		},
-		"should return errors from identity": {
-			app: &config.Application{
-				AccountID: "1234",
-				Name:      "crossaccountapp",
-				Domain:    "amazon.com",
-			},
-			expectIdentity: func(m *mocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{}, fmt.Errorf("error"))
-			},
-			expectProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(gomock.Any()).Times(0)
-			},
-			expectDeployer: func(m *mocks.Mockdeployer) {
-				m.EXPECT().DelegateDNSPermissions(gomock.Any(), gomock.Any()).Times(0)
-			},
-			wantedErr: "getting environment account ID for DNS Delegation: error",
 		},
 		"should return errors from DelegateDNSPermissions": {
 			app: &config.Application{
 				AccountID: "1234",
 				Name:      "crossaccountapp",
 				Domain:    "amazon.com",
-			},
-			expectIdentity: func(m *mocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{Account: "4567"}, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDNSDelegationStart, "4567"))
@@ -861,13 +976,9 @@ func TestInitEnvOpts_delegateDNSFromApp(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockDeployer := mocks.NewMockdeployer(ctrl)
-			mockIdentity := mocks.NewMockidentityService(ctrl)
 			mockProgress := mocks.NewMockprogress(ctrl)
 			if tc.expectDeployer != nil {
 				tc.expectDeployer(mockDeployer)
-			}
-			if tc.expectIdentity != nil {
-				tc.expectIdentity(mockIdentity)
 			}
 			if tc.expectProgress != nil {
 				tc.expectProgress(mockProgress)
@@ -876,13 +987,12 @@ func TestInitEnvOpts_delegateDNSFromApp(t *testing.T) {
 				initEnvVars: initEnvVars{
 					appName: tc.app.Name,
 				},
-				envIdentity: mockIdentity,
 				appDeployer: mockDeployer,
 				prog:        mockProgress,
 			}
 
 			// WHEN
-			err := opts.delegateDNSFromApp(tc.app)
+			err := opts.delegateDNSFromApp(tc.app, "4567")
 
 			// THEN
 			if tc.wantedErr != "" {

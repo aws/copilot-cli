@@ -4,123 +4,86 @@
 package manifest
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/template"
-	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
-func TestHealthCheckArgsOrString_HTTPHealthCheckOpts(t *testing.T) {
+func TestNewLoadBalancedWebService(t *testing.T) {
 	testCases := map[string]struct {
-		inputPath               *string
-		inputHealthyThreshold   *int64
-		inputUnhealthyThreshold *int64
-		inputInterval           *time.Duration
-		inputTimeout            *time.Duration
+		props LoadBalancedWebServiceProps
 
-		wantedOpts template.HTTPHealthCheckOpts
+		wanted *LoadBalancedWebService
 	}{
-		"no fields indicated in manifest": {
-			inputPath:               nil,
-			inputHealthyThreshold:   nil,
-			inputUnhealthyThreshold: nil,
-			inputInterval:           nil,
-			inputTimeout:            nil,
-
-			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath: "/",
+		"translates to default load balanced web service": {
+			props: LoadBalancedWebServiceProps{
+				WorkloadProps: &WorkloadProps{
+					Name:       "frontend",
+					Dockerfile: "./Dockerfile",
+				},
+				Path:      "/",
+				Port:      80,
+				AppDomain: aws.String("example.com"),
 			},
-		},
-		"just HealthyThreshold": {
-			inputPath:               nil,
-			inputHealthyThreshold:   aws.Int64(5),
-			inputUnhealthyThreshold: nil,
-			inputInterval:           nil,
-			inputTimeout:            nil,
 
-			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath:  "/",
-				HealthyThreshold: aws.Int64(5),
-			},
-		},
-		"just UnhealthyThreshold": {
-			inputPath:               nil,
-			inputHealthyThreshold:   nil,
-			inputUnhealthyThreshold: aws.Int64(5),
-			inputInterval:           nil,
-			inputTimeout:            nil,
-
-			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath:    "/",
-				UnhealthyThreshold: aws.Int64(5),
-			},
-		},
-		"just Interval": {
-			inputPath:               nil,
-			inputHealthyThreshold:   nil,
-			inputUnhealthyThreshold: nil,
-			inputInterval:           durationp(15 * time.Second),
-			inputTimeout:            nil,
-
-			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath: "/",
-				Interval:        aws.Int64(15),
-			},
-		},
-		"just Timeout": {
-			inputPath:               nil,
-			inputHealthyThreshold:   nil,
-			inputUnhealthyThreshold: nil,
-			inputInterval:           nil,
-			inputTimeout:            durationp(15 * time.Second),
-
-			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath: "/",
-				Timeout:         aws.Int64(15),
-			},
-		},
-		"all values changed in manifest": {
-			inputPath:               aws.String("/road/to/nowhere"),
-			inputHealthyThreshold:   aws.Int64(3),
-			inputUnhealthyThreshold: aws.Int64(3),
-			inputInterval:           durationp(60 * time.Second),
-			inputTimeout:            durationp(60 * time.Second),
-
-			wantedOpts: template.HTTPHealthCheckOpts{
-				HealthCheckPath:    "/road/to/nowhere",
-				HealthyThreshold:   aws.Int64(3),
-				UnhealthyThreshold: aws.Int64(3),
-				Interval:           aws.Int64(60),
-				Timeout:            aws.Int64(60),
+			wanted: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: stringP("frontend"),
+					Type: stringP("Load Balanced Web Service"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ServiceImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: stringP("./Dockerfile"),
+								},
+							},
+						},
+						Port: aws.Uint16(80),
+					},
+					AppDomain: aws.String("example.com"),
+					RoutingRule: RoutingRule{
+						Path: stringP("/"),
+						HealthCheck: HealthCheckArgsOrString{
+							HealthCheckPath: stringP("/"),
+						},
+					},
+					TaskConfig: TaskConfig{
+						CPU:    aws.Int(256),
+						Memory: aws.Int(512),
+						Count: Count{
+							Value: aws.Int(1),
+						},
+						ExecuteCommand: ExecuteCommand{
+							Enable: aws.Bool(false),
+						},
+					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: stringP("public"),
+						},
+					},
+				},
 			},
 		},
 	}
+
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			hc := HealthCheckArgsOrString{
-				HealthCheckPath: tc.inputPath,
-				HealthCheckArgs: HTTPHealthCheckArgs{
-					Path:               tc.inputPath,
-					HealthyThreshold:   tc.inputHealthyThreshold,
-					UnhealthyThreshold: tc.inputUnhealthyThreshold,
-					Timeout:            tc.inputTimeout,
-					Interval:           tc.inputInterval,
-				},
-			}
 			// WHEN
-			actualOpts := hc.HTTPHealthCheckOpts()
+			manifest := NewLoadBalancedWebService(&tc.props)
 
 			// THEN
-			require.Equal(t, tc.wantedOpts, actualOpts)
+			require.Equal(t, tc.wanted.Workload, manifest.Workload)
+			require.Equal(t, tc.wanted.LoadBalancedWebServiceConfig, manifest.LoadBalancedWebServiceConfig)
+			require.Equal(t, tc.wanted.Environments, manifest.Environments)
 		})
 	}
 }
@@ -185,46 +148,35 @@ func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
 
 func TestLoadBalancedWebService_MarshalBinary(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, manifest *LoadBalancedWebService)
+		inProps LoadBalancedWebServiceProps
 
-		wantedBinary []byte
-		wantedError  error
+		wantedTestdata string
 	}{
-		"error parsing template": {
-			mockDependencies: func(ctrl *gomock.Controller, manifest *LoadBalancedWebService) {
-				m := mocks.NewMockParser(ctrl)
-				manifest.parser = m
-				m.EXPECT().Parse(lbWebSvcManifestPath, *manifest, gomock.Any()).Return(nil, errors.New("some error"))
+		"default": {
+			inProps: LoadBalancedWebServiceProps{
+				WorkloadProps: &WorkloadProps{
+					Name:       "frontend",
+					Dockerfile: "./frontend/Dockerfile",
+				},
 			},
-
-			wantedError: errors.New("some error"),
-		},
-		"returns rendered content": {
-			mockDependencies: func(ctrl *gomock.Controller, manifest *LoadBalancedWebService) {
-				m := mocks.NewMockParser(ctrl)
-				manifest.parser = m
-				m.EXPECT().Parse(lbWebSvcManifestPath, *manifest, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
-
-			},
-
-			wantedBinary: []byte("hello"),
+			wantedTestdata: "lb-svc.yml",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			manifest := &LoadBalancedWebService{}
-			tc.mockDependencies(ctrl, manifest)
+			path := filepath.Join("testdata", tc.wantedTestdata)
+			wantedBytes, err := ioutil.ReadFile(path)
+			require.NoError(t, err)
+			manifest := NewLoadBalancedWebService(&tc.inProps)
 
 			// WHEN
-			b, err := manifest.MarshalBinary()
+			tpl, err := manifest.MarshalBinary()
+			require.NoError(t, err)
 
 			// THEN
-			require.Equal(t, tc.wantedError, err)
-			require.Equal(t, tc.wantedBinary, b)
+			require.Equal(t, string(wantedBytes), string(tpl))
 		})
 	}
 }
@@ -266,16 +218,16 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-					},
-					Storage: Storage{
-						Volumes: map[string]Volume{
-							"myEFSVolume": {
-								MountPointOpts: MountPointOpts{
-									ContainerPath: aws.String("/path/to/files"),
-									ReadOnly:      aws.Bool(false),
-								},
-								EFS: EFSVolumeConfiguration{
-									FileSystemID: aws.String("fs-1234"),
+						Storage: &Storage{
+							Volumes: map[string]Volume{
+								"myEFSVolume": {
+									MountPointOpts: MountPointOpts{
+										ContainerPath: aws.String("/path/to/files"),
+										ReadOnly:      aws.Bool(false),
+									},
+									EFS: EFSVolumeConfiguration{
+										FileSystemID: aws.String("fs-1234"),
+									},
 								},
 							},
 						},
@@ -312,16 +264,16 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-					},
-					Storage: Storage{
-						Volumes: map[string]Volume{
-							"myEFSVolume": {
-								MountPointOpts: MountPointOpts{
-									ContainerPath: aws.String("/path/to/files"),
-									ReadOnly:      aws.Bool(false),
-								},
-								EFS: EFSVolumeConfiguration{
-									FileSystemID: aws.String("fs-1234"),
+						Storage: &Storage{
+							Volumes: map[string]Volume{
+								"myEFSVolume": {
+									MountPointOpts: MountPointOpts{
+										ContainerPath: aws.String("/path/to/files"),
+										ReadOnly:      aws.Bool(false),
+									},
+									EFS: EFSVolumeConfiguration{
+										FileSystemID: aws.String("fs-1234"),
+									},
 								},
 							},
 						},
@@ -366,35 +318,39 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"GITHUB_TOKEN": "1111",
 							"TWILIO_TOKEN": "1111",
 						},
-					},
-					Storage: Storage{
-						Volumes: map[string]Volume{
-							"myEFSVolume": {
-								MountPointOpts: MountPointOpts{
-									ContainerPath: aws.String("/path/to/files"),
-									ReadOnly:      aws.Bool(false),
-								},
-								EFS: EFSVolumeConfiguration{
-									FileSystemID: aws.String("fs-1234"),
-									AuthConfig: AuthorizationConfig{
-										IAM:           aws.Bool(true),
-										AccessPointID: aws.String("ap-1234"),
+						Storage: &Storage{
+							Volumes: map[string]Volume{
+								"myEFSVolume": {
+									MountPointOpts: MountPointOpts{
+										ContainerPath: aws.String("/path/to/files"),
+										ReadOnly:      aws.Bool(false),
+									},
+									EFS: EFSVolumeConfiguration{
+										FileSystemID: aws.String("fs-1234"),
+										AuthConfig: AuthorizationConfig{
+											IAM:           aws.Bool(true),
+											AccessPointID: aws.String("ap-1234"),
+										},
 									},
 								},
 							},
 						},
 					},
-					Sidecar: Sidecar{
-						Sidecars: map[string]*SidecarConfig{
-							"xray": {
-								Port:       aws.String("2000"),
-								Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
-								CredsParam: aws.String("some arn"),
-							},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
 						},
 					},
 					Logging: &Logging{
 						ConfigFile: aws.String("mockConfigFile"),
+					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement:      stringP("public"),
+							SecurityGroups: []string{"sg-123"},
+						},
 					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
@@ -420,30 +376,28 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Variables: map[string]string{
 								"DDB_TABLE_NAME": "awards-prod",
 							},
-						},
-						Storage: Storage{
-							Volumes: map[string]Volume{
-								"myEFSVolume": {
-									EFS: EFSVolumeConfiguration{
-										FileSystemID: aws.String("fs-5678"),
-										AuthConfig: AuthorizationConfig{
-											AccessPointID: aws.String("ap-5678"),
+							Storage: &Storage{
+								Volumes: map[string]Volume{
+									"myEFSVolume": {
+										EFS: EFSVolumeConfiguration{
+											FileSystemID: aws.String("fs-5678"),
+											AuthConfig: AuthorizationConfig{
+												AccessPointID: aws.String("ap-5678"),
+											},
 										},
 									},
 								},
 							},
 						},
-						Sidecar: Sidecar{
-							Sidecars: map[string]*SidecarConfig{
-								"xray": {
-									Port: aws.String("2000/udp"),
-									MountPoints: []SidecarMountPoint{
-										{
-											SourceVolume: aws.String("myEFSVolume"),
-											MountPointOpts: MountPointOpts{
-												ReadOnly:      aws.Bool(true),
-												ContainerPath: aws.String("/var/www"),
-											},
+						Sidecars: map[string]*SidecarConfig{
+							"xray": {
+								Port: aws.String("2000/udp"),
+								MountPoints: []SidecarMountPoint{
+									{
+										SourceVolume: aws.String("myEFSVolume"),
+										MountPointOpts: MountPointOpts{
+											ReadOnly:      aws.Bool(true),
+											ContainerPath: aws.String("/var/www"),
 										},
 									},
 								},
@@ -452,6 +406,11 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Logging: &Logging{
 							SecretOptions: map[string]string{
 								"FOO": "BAR",
+							},
+						},
+						Network: NetworkConfig{
+							VPC: vpcConfig{
+								SecurityGroups: []string{"sg-456", "sg-789"},
 							},
 						},
 					},
@@ -496,37 +455,35 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"GITHUB_TOKEN": "1111",
 							"TWILIO_TOKEN": "1111",
 						},
-					},
-					Storage: Storage{
-						Volumes: map[string]Volume{
-							"myEFSVolume": {
-								MountPointOpts: MountPointOpts{
-									ContainerPath: aws.String("/path/to/files"),
-									ReadOnly:      aws.Bool(false),
-								},
-								EFS: EFSVolumeConfiguration{
-									FileSystemID: aws.String("fs-5678"),
-									AuthConfig: AuthorizationConfig{
-										IAM:           aws.Bool(true),
-										AccessPointID: aws.String("ap-5678"),
+						Storage: &Storage{
+							Volumes: map[string]Volume{
+								"myEFSVolume": {
+									MountPointOpts: MountPointOpts{
+										ContainerPath: aws.String("/path/to/files"),
+										ReadOnly:      aws.Bool(false),
+									},
+									EFS: EFSVolumeConfiguration{
+										FileSystemID: aws.String("fs-5678"),
+										AuthConfig: AuthorizationConfig{
+											IAM:           aws.Bool(true),
+											AccessPointID: aws.String("ap-5678"),
+										},
 									},
 								},
 							},
 						},
 					},
-					Sidecar: Sidecar{
-						Sidecars: map[string]*SidecarConfig{
-							"xray": {
-								Port:       aws.String("2000/udp"),
-								Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
-								CredsParam: aws.String("some arn"),
-								MountPoints: []SidecarMountPoint{
-									{
-										SourceVolume: aws.String("myEFSVolume"),
-										MountPointOpts: MountPointOpts{
-											ReadOnly:      aws.Bool(true),
-											ContainerPath: aws.String("/var/www"),
-										},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000/udp"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+							MountPoints: []SidecarMountPoint{
+								{
+									SourceVolume: aws.String("myEFSVolume"),
+									MountPointOpts: MountPointOpts{
+										ReadOnly:      aws.Bool(true),
+										ContainerPath: aws.String("/var/www"),
 									},
 								},
 							},
@@ -536,6 +493,12 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						ConfigFile: aws.String("mockConfigFile"),
 						SecretOptions: map[string]string{
 							"FOO": "BAR",
+						},
+					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement:      stringP("public"),
+							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},
 				},

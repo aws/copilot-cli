@@ -1,0 +1,320 @@
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CodePipeline for phonetool
+Resources:
+  SourceConnection:
+    Type: AWS::CodeStarConnections::Connection
+    Properties:
+      ConnectionName: copilot-huanj-sample
+      ProviderType: Bitbucket
+  BuildProjectRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for env ls
+        - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for service package
+      Policies:
+        - PolicyName: assume-env-manager
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Resource: 'arn:aws:iam::1111:role/phonetool-test-EnvManagerRole'
+                Action:
+                  - sts:AssumeRole
+  BuildProjectPolicy:
+    Type: AWS::IAM::Policy
+    DependsOn: BuildProjectRole
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-CodeBuildPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+              - s3:GetObjectVersion
+            # TODO: This might not be necessary. We may only need the bucket
+            # that is in the same region as the pipeline.
+            # Loop through all the artifact buckets created in the stackset
+            Resource:
+              - !Join ['', ['arn:aws:s3:::', 'fancy-bucket']]
+              - !Join ['', ['arn:aws:s3:::', 'fancy-bucket', '/*']]
+          - Effect: Allow
+            Action:
+              # TODO: scope this down if possible
+              - kms:*
+            # TODO: This might not be necessary. We may only need the KMS key
+            # that is in the same region as the pipeline.
+            # Loop through all the KMS keys used to en/decrypt artifacts
+            # across (cross-regional) pipeline stages, with each stage
+            # backed by a (regional) S3 bucket.
+            Resource:
+              - arn:aws:kms:us-west-2:1111:key/abcd
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+              - ecr:GetAuthorizationToken
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - ecr:DescribeImageScanFindings
+              - ecr:GetLifecyclePolicyPreview
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+              - ecr:DescribeImages
+              - ecr:ListTagsForResource
+              - ecr:BatchCheckLayerAvailability
+              - ecr:GetLifecyclePolicy
+              - ecr:GetRepositoryPolicy
+              - ecr:PutImage
+              - ecr:InitiateLayerUpload
+              - ecr:UploadLayerPart
+              - ecr:CompleteLayerUpload
+            Resource: '*'
+            Condition: {StringEquals: {'ecr:ResourceTag/copilot-application': phonetool}}
+      Roles:
+        - !Ref BuildProjectRole
+  BuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${AWS::StackName}-BuildProject
+      Description: !Sub Build for ${AWS::StackName}
+      # ArtifactKey is the KMS key ID or ARN that is used with the artifact bucket
+      # created in the same region as this pipeline.
+      EncryptionKey: !ImportValue phonetool-ArtifactKey
+      ServiceRole: !GetAtt BuildProjectRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Cache:
+        Modes:
+          - LOCAL_DOCKER_LAYER_CACHE
+        Type: LOCAL
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: copilot/buildspec.yml
+      TimeoutInMinutes: 60
+  PipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+  PipelineRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-CodepipelinePolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - codepipeline:*
+              - codecommit:GetBranch
+              - codecommit:GetCommit
+              - codecommit:UploadArchive
+              - codecommit:GetUploadArchiveStatus
+              - codecommit:CancelUploadArchive
+              - iam:ListRoles
+              - cloudformation:Describe*
+              - cloudFormation:List*
+              - codebuild:BatchGetBuilds
+              - codebuild:StartBuild
+              - cloudformation:CreateStack
+              - cloudformation:DeleteStack
+              - cloudformation:DescribeStacks
+              - cloudformation:UpdateStack
+              - cloudformation:CreateChangeSet
+              - cloudformation:DeleteChangeSet
+              - cloudformation:DescribeChangeSet
+              - cloudformation:ExecuteChangeSet
+              - cloudformation:SetStackPolicy
+              - cloudformation:ValidateTemplate
+              - iam:PassRole
+              - s3:ListAllMyBuckets
+              - s3:GetBucketLocation
+            Resource:
+              - "*"
+          - Effect: Allow
+            Action:
+              - codestar-connections:CreateConnection
+              - codestar-connections:DeleteConnection
+              - codestar-connections:GetConnection
+              - codestar-connections:ListConnections
+              - codestar-connections:GetIndividualAccessToken
+              - codestar-connections:GetInstallationUrl
+              - codestar-connections:ListInstallationTargets
+              - codestar-connections:StartOAuthHandshake
+              - codestar-connections:UpdateConnectionInstallation
+              - codestar-connections:UseConnection
+              - codestar-connections:RegisterAppCode
+              - codestar-connections:StartAppRegistrationHandshake
+              - codestar-connections:StartUploadArchiveToS3
+              - codestar-connections:GetUploadArchiveToS3Status
+              - codestar-connections:PassConnection
+              - codestar-connections:PassedToService
+            Resource:
+              - !Ref SourceConnection
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+              - kms:GenerateDataKey
+            Resource:
+              - arn:aws:kms:us-west-2:1111:key/abcd
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetBucketPolicy
+              - s3:GetObject
+              - s3:ListBucket
+              - s3:PutObjectAcl
+              - s3:GetObjectAcl
+            Resource:
+              - !Join ['', ['arn:aws:s3:::', 'fancy-bucket']]
+              - !Join ['', ['arn:aws:s3:::', 'fancy-bucket', '/*']]
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Resource:
+              - arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
+      Roles:
+        - !Ref PipelineRole
+  BuildTestCommandstest:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      EncryptionKey: !ImportValue phonetool-ArtifactKey
+      ServiceRole: !GetAtt BuildProjectRole.Arn
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Type: LINUX_CONTAINER
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        ComputeType: BUILD_GENERAL1_SMALL
+      Source:
+        Type: NO_SOURCE
+        BuildSpec: |
+          version: 0.2
+          phases:
+            build:
+              commands:
+                - echo "test"
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    DependsOn:
+      - PipelineRole
+      - PipelineRolePolicy
+    Properties:
+      ArtifactStores:
+        - Region: us-west-2
+          ArtifactStore:
+            Type: S3
+            Location: fancy-bucket
+            EncryptionKey:
+              Id: arn:aws:kms:us-west-2:1111:key/abcd
+              Type: KMS
+      RoleArn: !GetAtt PipelineRole.Arn
+      Name: !Ref AWS::StackName
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: SourceCodeFor-phonetool
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Version: 1
+                Provider: CodeStarSourceConnection
+              Configuration:
+                ConnectionArn: !Ref SourceConnection
+                FullRepositoryId: huanjani/sample
+                BranchName: master
+              OutputArtifacts:
+                - Name: SCCheckoutArtifact
+              RunOrder: 1
+        - Name: Build
+          Actions:
+            - Name: Build
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref BuildProject
+              RunOrder: 1
+              InputArtifacts:
+                - Name: SCCheckoutArtifact
+              OutputArtifacts:
+                - Name: BuildOutput
+        - Name: DeployTo-test
+          Actions:
+            - Name: CreateOrUpdate-api-test
+              Region: us-west-2
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
+                ChangeSetName: phonetool-test-api
+                ActionMode: CREATE_UPDATE
+                StackName: phonetool-test-api
+                Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
+                TemplatePath: BuildOutput::infrastructure/api-test.stack.yml
+                TemplateConfiguration: BuildOutput::infrastructure/api-test.params.json
+                # The ARN of the IAM role (in the env account) that
+                # AWS CloudFormation assumes when it operates on resources
+                # in a stack in an environment account.
+                RoleArn: arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 2
+              # The ARN of the environment manager IAM role (in the env
+              # account) that performs the declared action. This is assumed
+              # through the roleArn for the pipeline.
+              RoleArn: arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
+            - Name: TestCommands
+              ActionTypeId:
+                Category: Test
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref BuildTestCommandstest
+              RunOrder: 3
+              InputArtifacts:
+                - Name: SCCheckoutArtifact
+Outputs:
+  PipelineConnectionARN:
+    Description: "ARN of CodeStar Connections connection"
+    Value: SourceConnection

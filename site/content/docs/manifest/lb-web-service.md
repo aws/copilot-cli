@@ -1,50 +1,51 @@
 List of all available properties for a `'Load Balanced Web Service'` manifest.
-```yaml
-# Your service name will be used in naming your resources like log groups, ECS services, etc.
-name: frontend
-# The "architecture" of the service you're running.
-type: Load Balanced Web Service
 
-image:
-  # Path to your service's Dockerfile.
-  build: ./Dockerfile
-  # Or instead of building, you can specify an existing image name.
-  location: aws_account_id.dkr.ecr.region.amazonaws.com/my-svc:tag
-  # Port exposed through your container to route traffic to it.
-  port: 80
+???+ note "Sample manifest for a frontend service"
 
-http:
-  # Requests to this path will be forwarded to your service.
-  # To match all requests you can use the "/" path.
-  path: '/'
-
-  # You can specify a custom health check path. The default is "/"
-  # healthcheck: "/"
-
-  # You can specify whether to enable sticky sessions.
-  # stickiness: true
-
-# Number of CPU units for the task.
-cpu: 256
-# Amount of memory in MiB used by the task.
-memory: 512
-# Number of tasks that should be running in your service. You can also specify a map for autoscaling.
-count: 1
-# Enable running commands in your container.
-execute_command: true
-
-variables:                    # Optional. Pass environment variables as key value pairs.
-  LOG_LEVEL: info
-
-secrets:                      # Optional. Pass secrets from AWS Systems Manager (SSM) Parameter Store.
-  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
-
-
-# Optional. You can override any of the values defined above by environment.
-environments:
-  test:
-    count: 2               # Number of tasks to run for the "test" environment.
-```
+    ```yaml
+    # Your service name will be used in naming your resources like log groups, ECS services, etc.
+    name: frontend
+    type: Load Balanced Web Service
+    
+    # Distribute traffic to your service.
+    http:
+      path: '/'
+      healthcheck:
+        path: '/_healthcheck'
+        healthy_threshold: 3
+        unhealthy_threshold: 2
+        interval: 15s
+        timeout: 10s
+      stickiness: false
+      allowed_source_ips: ["10.24.34.0/23"]
+    
+    # Configuration for your containers and service.
+    image:
+      build:
+        dockerfile: ./frontend/Dockerfile
+        context: ./frontend
+      port: 80
+    
+    cpu: 256
+    memory: 512
+    count:
+      range: 1-10
+      cpu_percentage: 70
+      memory_percentage: 80
+      requests: 10000
+      response_time: 2s
+    execute_command: true
+    
+    variables:
+      LOG_LEVEL: info
+    secrets:
+      GITHUB_TOKEN: GITHUB_TOKEN
+    
+    # You can override any of the values defined above by environment.
+    environments:
+      production:
+        count: 2
+    ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your service.   
@@ -53,45 +54,6 @@ The name of your service.
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
 The architecture type for your service. A [Load Balanced Web Service](../concepts/services.md#load-balanced-web-service) is an internet-facing service that's behind a load balancer, orchestrated by Amazon ECS on AWS Fargate.  
-
-<div class="separator"></div>
-
-<a id="image" href="#image" class="field">`image`</a> <span class="type">Map</span>  
-The image section contains parameters relating to the Docker build configuration and exposed port.  
-
-<span class="parent-field">image.</span><a id="image-build" href="#image-build" class="field">`build`</a> <span class="type">String or Map</span>  
-If you specify a string, Copilot interprets it as the path to your Dockerfile. It will assume that the dirname of the string you specify should be the build context. The manifest:
-```yaml
-image:
-  build: path/to/dockerfile
-```
-will result in the following call to docker build: `$ docker build --file path/to/dockerfile path/to`
-
-You can also specify build as a map:
-```yaml
-image:
-  build:
-    dockerfile: path/to/dockerfile
-    context: context/dir
-    target: build-stage
-    cache_from:
-      - image:tag
-    args:
-      key: value
-```
-In this case, Copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be:  
-`$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir`.
-
-You can omit fields and Copilot will do its best to understand what you mean. For example, if you specify `context` but not `dockerfile`, Copilot will run Docker in the context directory and assume that your Dockerfile is named "Dockerfile." If you specify `dockerfile` but no `context`, Copilot assumes you want to run Docker in the directory that contains `dockerfile`.
-
-All paths are relative to your workspace root.
-
-<span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>  
-Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).    
-The `location` field follows the same definition as the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image) in the Amazon ECS task definition.
-
-<span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  
-The port exposed in your Dockerfile. Copilot should parse this value for you from your `EXPOSE` instruction.
 
 <div class="separator"></div>
 
@@ -145,6 +107,68 @@ http:
 
 <div class="separator"></div>
 
+<a id="image" href="#image" class="field">`image`</a> <span class="type">Map</span>  
+The image section contains parameters relating to the Docker build configuration and exposed port.  
+
+<span class="parent-field">image.</span><a id="image-build" href="#image-build" class="field">`build`</a> <span class="type">String or Map</span>  
+If you specify a string, Copilot interprets it as the path to your Dockerfile. It will assume that the dirname of the string you specify should be the build context. The manifest:
+```yaml
+image:
+  build: path/to/dockerfile
+```
+will result in the following call to docker build: `$ docker build --file path/to/dockerfile path/to`
+
+You can also specify build as a map:
+```yaml
+image:
+  build:
+    dockerfile: path/to/dockerfile
+    context: context/dir
+    target: build-stage
+    cache_from:
+      - image:tag
+    args:
+      key: value
+```
+In this case, Copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be:  
+`$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir`.
+
+You can omit fields and Copilot will do its best to understand what you mean. For example, if you specify `context` but not `dockerfile`, Copilot will run Docker in the context directory and assume that your Dockerfile is named "Dockerfile." If you specify `dockerfile` but no `context`, Copilot assumes you want to run Docker in the directory that contains `dockerfile`.
+
+All paths are relative to your workspace root.
+
+<span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>  
+Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).    
+The `location` field follows the same definition as the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image) in the Amazon ECS task definition.
+
+<span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  
+The port exposed in your Dockerfile. Copilot should parse this value for you from your `EXPOSE` instruction.
+
+<div class="separator"></div>
+
+<a id="entrypoint" href="#entrypoint" class="field">`entrypoint`</a> <span class="type">String or Array of Strings</span>  
+Override the default entrypoint in the image.
+```yaml
+# String version.
+entrypoint: "/bin/entrypoint --p1 --p2"
+# Alteratively, as an array of strings.
+entrypoint: ["/bin/entrypoint", "--p1", "--p2"]
+```
+
+<div class="separator"></div>
+
+<a id="command" href="#command" class="field">`command`</a> <span class="type">String or Array of Strings</span>  
+Override the default command in the image.
+
+```yaml
+# String version.
+command: ps au
+# Alteratively, as an array of strings.
+command: ["ps", "au"]
+```
+
+<div class="separator"></div>
+
 <a id="cpu" href="#cpu" class="field">`cpu`</a> <span class="type">Integer</span>  
 Number of CPU units for the task. See the [Amazon ECS docs](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html) for valid CPU values.
 
@@ -172,7 +196,6 @@ count:
   response_time: 2s
 ```
 
-
 <span class="parent-field">count.</span><a id="count-range" href="#count-range" class="field">`range`</a> <span class="type">String</span>  
 Specify a minimum and maximum bound for the number of tasks your service should maintain.  
 
@@ -193,6 +216,24 @@ Scale up or down based on the service average response time.
 <a id="execute_command" href="#execute_command" class="field">`execute_command`</a> <span class="type">Boolean</span>   
 Enable running commands in your container. The default is `false`. Required for `$ copilot svc exec`. Please note that this will update the service's Fargate Platform Version to 1.4.0.
 
+<a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>    
+The `network` section contains parameters for connecting to AWS resources in a VPC.
+
+<span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>  
+Subnets and security groups attached to your tasks.
+
+<span class="parent-field">network.vpc.</span><a id="network-vpc-placement" href="#network-vpc-placement" class="field">`placement`</a> <span class="type">String</span>  
+Must be one of `'public'` or `'private'`. Defaults to launching your tasks in public subnets.  
+
+!!! info inline end
+    Launching tasks in `'private'` subnets that need internet connectivity is only supported if you imported a VPC with 
+    NAT Gateways when running `copilot env init`. See [#1959](https://github.com/aws/copilot-cli/issues/1959) for tracking 
+    NAT Gateways support in Copilot-generated VPCs.
+
+<span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings</span>  
+Additional security group IDs associated with your tasks. Copilot always includes a security group so containers within your environment
+can communicate with each other.
+
 <div class="separator"></div>
 
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>   
@@ -202,6 +243,48 @@ Key-value pairs that represent environment variables that will be passed to your
 
 <a id="secrets" href="#secrets" class="field">`secrets`</a> <span class="type">Map</span>   
 Key-value pairs that represent secret values from [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) that will be securely passed to your service as environment variables.
+
+<div class="separator"></div>
+
+<a id="storage" href="#storage" class="field">`storage`</a> <span class="type">Map</span>  
+The Storage section lets you specify external EFS volumes for your containers and sidecars to mount. This allows you to access persistent storage across regions for data processing or CMS workloads. For more detail, see the [storage](../developing/storage.md) page.
+
+<span class="parent-field">storage.</span><a id="volumes" href="#volumes" class="field">`volumes`</a> <span class="type">Map</span>  
+Specify the name and configuration of any EFS volumes you would like to attach. The `volumes` field is specified as a map of the form:
+```yaml
+volumes:
+  {{ volume name }}:
+    path: "/etc/mountpath"
+    efs:
+      ...
+```
+
+<span class="parent-field">storage.volumes.</span><a id="volume" href="#volume" class="field">`volume`</a> <span class="type">Map</span>  
+Specify the configuration of a volume.
+
+<span class="parent-field">volume.</span><a id="path" href="#path" class="field">`path`</a> <span class="type">String</span>  
+Required. Specify the location in the container where you would like your volume to be mounted. Must be fewer than 242 characters and must consist only of the characters `a-zA-Z0-9.-_/`. 
+
+<span class="parent-field">volume.</span><a id="read_only" href="#read-only" class="field">`read_only`</a> <span class="type">Bool</span>  
+Optional. Defaults to `true`. Defines whether the volume is read-only or not. If false, the container is granted `elasticfilesystem:ClientWrite` permissions to the filesystem and the volume is writable. 
+
+<span class="parent-field">volume.</span><a id="efs" href="#efs" class="field">`efs`</a> <span class="type">Map</span>  
+Specify more detailed EFS configuration.
+
+<span class="parent-field">volume.efs.</span><a id="id" href="#id" class="field">`id`</a> <span class="type">String</span>  
+Required. The ID of the filesystem you would like to mount. 
+
+<span class="parent-field">volume.efs.</span><a id="root_dir" href="#root-dir" class="field">`root_dir`</a> <span class="type">String</span>  
+Optional. Defaults to `/`. Specify the location in the EFS filesystem you would like to use as the root of your volume. Must be fewer than 255 characters and must consist only of the characters `a-zA-Z0-9.-_/`. If using an access point, `root_dir` must be either empty or `/` and `auth.iam` must be `true`. 
+
+<span class="parent-field">volume.efs.</span><a id="auth" href="#auth" class="field">`auth`</a> <span class="type">Map</span>  
+Specify advanced authorization configuration for EFS. 
+
+<span class="parent-field">volume.efs.auth.</span><a id="iam" href="#iam" class="field">`iam`</a> <span class="type">Bool</span>  
+Optional. Defaults to `true`. Whether or not to use IAM authorization to determine whether the volume is allowed to connect to EFS. 
+
+<span class="parent-field">volume.efs.auth.</span><a id="access_point_id" href="#access-point-id" class="field">`access_point_id`</a> <span class="type">String</span>  
+Optional. Defaults to `""`. The ID of the EFS access point to connect to. If using an access point, `root_dir` must be either empty or `/` and `auth.iam` must be `true`.
 
 <div class="separator"></div>
 

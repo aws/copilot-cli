@@ -17,11 +17,13 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -32,6 +34,8 @@ import (
 )
 
 const (
+	envInitAppNameHelpPrompt = "An environment will be created in the selected application."
+
 	envInitNamePrompt              = "What is your environment's name?"
 	envInitNameHelpPrompt          = "A unique identifier for an environment (e.g. dev, test, prod)."
 	envInitDefaultEnvConfirmPrompt = `Would you like to use the default configuration for a new environment?
@@ -66,6 +70,7 @@ https://aws.github.io/copilot-cli/docs/credentials/#environment-credentials`
 )
 
 var (
+	envInitAppNamePrompt                  = fmt.Sprintf("In which %s would you like to create the environment?", color.Emphasize("application"))
 	envInitDefaultConfigSelectOption      = "Yes, use default."
 	envInitAdjustEnvResourcesSelectOption = "Yes, but I'd like configure the default resources (CIDR ranges)."
 	envInitImportEnvResourcesSelectOption = "No, I'd like to import existing resources (VPC, subnets)."
@@ -138,6 +143,10 @@ type initEnvOpts struct {
 	prompt       prompter
 	selVPC       ec2Selector
 	selCreds     credsSelector
+	selApp       appSelector
+	appCFN       appResourcesGetter
+	newS3        func(*session.Session) zipAndUploader
+	uploader     customResourcesUploader
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
 }
@@ -171,6 +180,12 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 			Profile: cfg,
 			Prompt:  prompter,
 		},
+		selApp:   selector.NewSelect(prompt.New(), store),
+		uploader: template.New(),
+		appCFN:   deploycfn.New(defaultSession),
+		newS3: func(sess *session.Session) zipAndUploader {
+			return s3.New(sess)
+		},
 	}, nil
 }
 
@@ -181,9 +196,7 @@ func (o *initEnvOpts) Validate() error {
 			return err
 		}
 	}
-	if o.appName == "" {
-		return fmt.Errorf("no application found: run %s or %s into your workspace please", color.HighlightCode("app init"), color.HighlightCode("cd"))
-	}
+
 	if err := o.validateCustomizedResources(); err != nil {
 		return err
 	}
@@ -192,6 +205,9 @@ func (o *initEnvOpts) Validate() error {
 
 // Ask asks for fields that are required but not passed in.
 func (o *initEnvOpts) Ask() error {
+	if err := o.askAppName(); err != nil {
+		return err
+	}
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
@@ -223,22 +239,51 @@ func (o *initEnvOpts) Execute() error {
 		return err
 	}
 
+	envCaller, err := o.envIdentity.Get()
+	if err != nil {
+		return fmt.Errorf("get identity: %w", err)
+	}
+
 	if app.RequiresDNSDelegation() {
-		if err := o.delegateDNSFromApp(app); err != nil {
+		if err := o.delegateDNSFromApp(app, envCaller.Account); err != nil {
 			return fmt.Errorf("granting DNS permissions: %w", err)
 		}
 	}
+
 	// 1. Attempt to create the service linked role if it doesn't exist.
 	// If the call fails because the role already exists, nothing to do.
 	// If the call fails because the user doesn't have permissions, then the role must be created outside of Copilot.
 	_ = o.iam.CreateECSServiceLinkedRole()
 
-	// 2. Start creating the CloudFormation stack for the environment.
+	// 2. Add the stack set instance to the app stackset.
+	if err := o.addToStackset(&deploycfn.AddEnvToAppOpts{
+		App:          app,
+		EnvName:      o.name,
+		EnvRegion:    aws.StringValue(o.sess.Config.Region),
+		EnvAccountID: envCaller.Account,
+	}); err != nil {
+		return err
+	}
+
+	// 3. Upload environment custom resource scripts to the S3 bucket, because of the 4096 characters limit (see
+	// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-lambda-function-code.html#cfn-lambda-function-code-zipfile)
+	envRegion := aws.StringValue(o.sess.Config.Region)
+	resources, err := o.appCFN.GetAppResourcesByRegion(app, envRegion)
+	if err != nil {
+		return fmt.Errorf("get app resources: %w", err)
+	}
+	if _, err := o.uploader.UploadEnvironmentCustomResources(s3.CompressAndUploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
+		return o.newS3(o.sess).ZipAndUpload(resources.S3Bucket, key, objects...)
+	})); err != nil {
+		return fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
+	}
+
+	// 4. Start creating the CloudFormation stack for the environment.
 	if err := o.deployEnv(app); err != nil {
 		return err
 	}
 
-	// 3. Get the environment
+	// 5. Get the environment
 	env, err := o.envDeployer.GetEnvironment(o.appName, o.name)
 	if err != nil {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
@@ -246,12 +291,7 @@ func (o *initEnvOpts) Execute() error {
 	env.Prod = o.isProduction
 	env.CustomConfig = config.NewCustomizeEnv(o.importVPCConfig(), o.adjustVPCConfig())
 
-	// 4. Add the stack set instance to the app stackset.
-	if err := o.addToStackset(app, env); err != nil {
-		return err
-	}
-
-	// 5. Store the environment in SSM.
+	// 6. Store the environment in SSM.
 	if err := o.store.CreateEnvironment(env); err != nil {
 		return fmt.Errorf("store environment: %w", err)
 	}
@@ -272,6 +312,19 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 	if (o.importVPC.isSet() || o.adjustVPC.isSet()) && o.defaultConfig {
 		return fmt.Errorf("cannot import or configure vpc if --%s is set", defaultConfigFlag)
 	}
+	return nil
+}
+
+func (o *initEnvOpts) askAppName() error {
+	if o.appName != "" {
+		return nil
+	}
+
+	app, err := o.selApp.Application(envInitAppNamePrompt, envInitAppNameHelpPrompt)
+	if err != nil {
+		return fmt.Errorf("ask for application: %w", err)
+	}
+	o.appName = app
 	return nil
 }
 
@@ -496,34 +549,29 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 	return nil
 }
 
-func (o *initEnvOpts) addToStackset(app *config.Application, env *config.Environment) error {
-	o.prog.Start(fmt.Sprintf(fmtAddEnvToAppStart, color.Emphasize(env.AccountID), color.Emphasize(env.Region), color.HighlightUserInput(o.appName)))
-	if err := o.appDeployer.AddEnvToApp(app, env); err != nil {
-		o.prog.Stop(log.Serrorf(fmtAddEnvToAppFailed, color.Emphasize(env.AccountID), color.Emphasize(env.Region), color.HighlightUserInput(o.appName)))
-		return fmt.Errorf("deploy env %s to application %s: %w", env.Name, app.Name, err)
+func (o *initEnvOpts) addToStackset(opts *deploycfn.AddEnvToAppOpts) error {
+	o.prog.Start(fmt.Sprintf(fmtAddEnvToAppStart, color.Emphasize(opts.EnvAccountID), color.Emphasize(opts.EnvRegion), color.HighlightUserInput(o.appName)))
+	if err := o.appDeployer.AddEnvToApp(opts); err != nil {
+		o.prog.Stop(log.Serrorf(fmtAddEnvToAppFailed, color.Emphasize(opts.EnvAccountID), color.Emphasize(opts.EnvRegion), color.HighlightUserInput(o.appName)))
+		return fmt.Errorf("deploy env %s to application %s: %w", opts.EnvName, opts.App.Name, err)
 	}
-	o.prog.Stop(log.Ssuccessf(fmtAddEnvToAppComplete, color.Emphasize(env.AccountID), color.Emphasize(env.Region), color.HighlightUserInput(o.appName)))
+	o.prog.Stop(log.Ssuccessf(fmtAddEnvToAppComplete, color.Emphasize(opts.EnvAccountID), color.Emphasize(opts.EnvRegion), color.HighlightUserInput(o.appName)))
 
 	return nil
 }
 
-func (o *initEnvOpts) delegateDNSFromApp(app *config.Application) error {
-	envAccount, err := o.envIdentity.Get()
-	if err != nil {
-		return fmt.Errorf("getting environment account ID for DNS Delegation: %w", err)
-	}
-
+func (o *initEnvOpts) delegateDNSFromApp(app *config.Application, accountID string) error {
 	// By default, our DNS Delegation permits same account delegation.
-	if envAccount.Account == app.AccountID {
+	if accountID == app.AccountID {
 		return nil
 	}
 
-	o.prog.Start(fmt.Sprintf(fmtDNSDelegationStart, color.HighlightUserInput(envAccount.Account)))
-	if err := o.appDeployer.DelegateDNSPermissions(app, envAccount.Account); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDNSDelegationFailed, color.HighlightUserInput(envAccount.Account)))
+	o.prog.Start(fmt.Sprintf(fmtDNSDelegationStart, color.HighlightUserInput(accountID)))
+	if err := o.appDeployer.DelegateDNSPermissions(app, accountID); err != nil {
+		o.prog.Stop(log.Serrorf(fmtDNSDelegationFailed, color.HighlightUserInput(accountID)))
 		return err
 	}
-	o.prog.Stop(log.Ssuccessf(fmtDNSDelegationComplete, color.HighlightUserInput(envAccount.Account)))
+	o.prog.Stop(log.Ssuccessf(fmtDNSDelegationComplete, color.HighlightUserInput(accountID)))
 	return nil
 }
 

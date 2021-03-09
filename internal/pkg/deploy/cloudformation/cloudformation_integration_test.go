@@ -16,11 +16,18 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	awsCF "github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	fmtIAMRoleARN         = "arn:aws:iam::%s:role/%s"
+	fmtCFNExecutionRoleID = "%s-%s-CFNExecutionRole"
+	fmtEnvManagerRoleID   = "%s-%s-EnvManagerRole"
 )
 
 func init() {
@@ -187,11 +194,11 @@ func Test_App_Infrastructure(t *testing.T) {
 
 		// Add an environment only
 		err = deployer.AddEnvToApp(
-			&app,
-			&config.Environment{
-				Name:      "test",
-				Region:    *sess.Config.Region,
-				AccountID: "000312697014",
+			&cloudformation.AddEnvToAppOpts{
+				App:          &app,
+				EnvName:      "test",
+				EnvAccountID: "000312697014",
+				EnvRegion:    *sess.Config.Region,
 			},
 		)
 
@@ -323,14 +330,12 @@ func Test_App_Infrastructure(t *testing.T) {
 		require.Equal(t, 1, len(stackInstances.Summaries), "Adding 2 pipelines to the same application should not create 2 stack instances")
 
 		// add an environment should not create new stack instance in the same region
-		err = deployer.AddEnvToApp(
-			&app,
-			&config.Environment{
-				Name:      "test",
-				Region:    *sess.Config.Region,
-				AccountID: "000312697014",
-			},
-		)
+		err = deployer.AddEnvToApp(&cloudformation.AddEnvToAppOpts{
+			App:          &app,
+			EnvName:      "test",
+			EnvAccountID: "000312697014",
+			EnvRegion:    *sess.Config.Region,
+		})
 
 		stackInstances, err = cfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
 			StackSetName: aws.String(appStackSetName),
@@ -359,10 +364,18 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	cfClient := awsCF.New(sess)
 	identity := identity.New(sess)
 
+	iamClient := iam.New(sess)
+
 	id, err := identity.Get()
 	require.NoError(t, err)
-
-	environmentToDeploy := deploy.CreateEnvironmentInput{Name: randStringBytes(10), AppName: randStringBytes(10), ToolsAccountPrincipalARN: id.RootUserARN}
+	envName := randStringBytes(10)
+	appName := randStringBytes(10)
+	environmentToDeploy := deploy.CreateEnvironmentInput{
+		Name:                     envName,
+		AppName:                  appName,
+		ToolsAccountPrincipalARN: id.RootUserARN,
+		Version:                  deploy.LatestEnvTemplateVersion,
+	}
 	envStackName := fmt.Sprintf("%s-%s", environmentToDeploy.AppName, environmentToDeploy.Name)
 
 	t.Run("Deploys an environment to CloudFormation", func(t *testing.T) {
@@ -377,6 +390,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 			cfClient.DeleteStack(&awsCF.DeleteStackInput{
 				StackName: aws.String(envStackName),
 			})
+			deleteEnvRoles(appName, envName, id.Account, iamClient)
 		}()
 
 		// Deploy the environment and wait for it to be complete
@@ -391,6 +405,9 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 
 		deployedStack := output.Stacks[0]
 		expectedResultsForKey := map[string]func(*awsCF.Output){
+			"EnabledFeatures": func(output *awsCF.Output) {
+				require.Equal(t, "", aws.StringValue(output.OutputValue), "no env features enabled by default")
+			},
 			"EnvironmentManagerRoleARN": func(output *awsCF.Output) {
 				require.Equal(t,
 					fmt.Sprintf("%s-EnvironmentManagerRoleARN", envStackName),
@@ -471,36 +488,6 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 					output.OutputValue,
 					"EnvironmentSecurityGroup value should not be nil")
 			},
-			"PublicLoadBalancerDNSName": func(output *awsCF.Output) {
-				require.NotNil(t,
-					output.OutputValue,
-					"PublicLoadBalancerDNSName value should not be nil")
-			},
-			"PublicLoadBalancerHostedZone": func(output *awsCF.Output) {
-				require.NotNil(t,
-					output.OutputValue,
-					"PublicLoadBalancerHostedZone value should not be nil")
-			},
-			"HTTPListenerArn": func(output *awsCF.Output) {
-				require.Equal(t,
-					fmt.Sprintf("%s-HTTPListenerArn", envStackName),
-					*output.ExportName,
-					"Should export HTTPListenerArn as stackname-HTTPListenerArn")
-
-				require.NotNil(t,
-					output.OutputValue,
-					"HTTPListenerArn value should not be nil")
-			},
-			"DefaultHTTPTargetGroupArn": func(output *awsCF.Output) {
-				require.Equal(t,
-					fmt.Sprintf("%s-DefaultHTTPTargetGroup", envStackName),
-					*output.ExportName,
-					"Should export HTTPListenerArn as stackname-DefaultHTTPTargetGroup")
-
-				require.NotNil(t,
-					output.OutputValue,
-					"DefaultHTTPTargetGroupArn value should not be nil")
-			},
 		}
 		require.True(t, len(deployedStack.Outputs) == len(expectedResultsForKey),
 			"There should have been %d output values - instead there were %d. The value of the CF stack was %s",
@@ -542,4 +529,22 @@ func randStringBytes(n int) string {
 		b[i] = letterBytes[rand.Intn(len(letterBytes))]
 	}
 	return string(b)
+}
+
+func deleteEnvRoles(app, env, accountNumber string, iam *iam.IAM) error {
+	cfnExecRoleID := fmt.Sprintf(fmtCFNExecutionRoleID, app, env)
+	envManagerRoleID := fmt.Sprintf(fmtEnvManagerRoleID, app, env)
+	cfnExecutionRoleARN := fmt.Sprintf(fmtIAMRoleARN, accountNumber, cfnExecRoleID)
+	envManagerRoleARN := fmt.Sprintf(fmtIAMRoleARN, accountNumber, envManagerRoleID)
+
+	err := iam.DeleteRole(cfnExecutionRoleARN)
+	if err != nil {
+		return err
+	}
+	err = iam.DeleteRole(envManagerRoleARN)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

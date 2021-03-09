@@ -6,15 +6,30 @@ package template
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
+	"path"
 	"strings"
 	"text/template"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/templates"
 	"github.com/gobuffalo/packd"
 )
 
+const (
+	customResourceRootPath         = "custom-resources"
+	customResourceZippedScriptName = "index.js"
+	scriptDirName                  = "scripts"
+)
+
 var box = templates.Box()
+
+var envCustomResourceFiles = []string{
+	"dns-cert-validator",
+	"dns-delegation",
+	"enable-long-arns",
+}
 
 // Parser is the interface that wraps the Parse method.
 type Parser interface {
@@ -25,6 +40,28 @@ type Parser interface {
 type ReadParser interface {
 	Read(path string) (*Content, error)
 	Parser
+}
+
+// Uploadable is an uploadable file.
+type Uploadable struct {
+	name    string
+	content []byte
+	path    string
+}
+
+// Name returns the name of the custom resource script.
+func (e Uploadable) Name() string {
+	return e.name
+}
+
+// Content returns the content of the custom resource script.
+func (e Uploadable) Content() []byte {
+	return e.content
+}
+
+type fileToCompress struct {
+	name        string
+	uploadables []Uploadable
 }
 
 // Template represents the "/templates/" directory that holds static files to be embedded in the binary.
@@ -61,6 +98,56 @@ func (t *Template) Parse(path string, data interface{}, options ...ParseOption) 
 		return nil, fmt.Errorf("execute template %s with data %v: %w", path, data, err)
 	}
 	return &Content{buf}, nil
+}
+
+// UploadEnvironmentCustomResources uploads the environment custom resource scripts.
+func (t *Template) UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) ([]string, error) {
+	return t.uploadCustomResources(upload, envCustomResourceFiles)
+}
+
+func (t *Template) uploadCustomResources(upload s3.CompressAndUploadFunc, fileNames []string) ([]string, error) {
+	var urls []string
+	for _, name := range fileNames {
+		url, err := t.uploadfileToCompress(upload, fileToCompress{
+			name: path.Join(scriptDirName, name),
+			uploadables: []Uploadable{
+				{
+					name: customResourceZippedScriptName,
+					path: path.Join(customResourceRootPath, fmt.Sprintf("%s.js", name)),
+				},
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+		urls = append(urls, url)
+	}
+	return urls, nil
+}
+
+func (t *Template) uploadfileToCompress(upload s3.CompressAndUploadFunc, file fileToCompress) (string, error) {
+	var contents []byte
+	for _, uploadable := range file.uploadables {
+		content, err := t.Read(uploadable.path)
+		if err != nil {
+			return "", err
+		}
+		uploadable.content = content.Bytes()
+		contents = append(contents, uploadable.content...)
+	}
+	// Golang limit. See https://stackoverflow.com/questions/12990338/cannot-convert-string-to-interface/12990540#12990540
+	nameBinaries := make([]s3.NamedBinary, len(file.uploadables))
+	for idx, file := range file.uploadables {
+		nameBinaries[idx] = s3.NamedBinary(file)
+	}
+	// Suffix with a SHA256 checksum of the fileToCompress so that
+	// only new content gets a new URL. Otherwise, if two fileToCompresss have the
+	// same content then the URL generated will be identical.
+	url, err := upload(fmt.Sprintf("%s/%x", file.name, sha256.Sum256(contents)), nameBinaries...)
+	if err != nil {
+		return "", fmt.Errorf("upload %s: %w", file.name, err)
+	}
+	return url, nil
 }
 
 // ParseOption represents a functional option for the Parse method.
