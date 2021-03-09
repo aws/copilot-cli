@@ -83,7 +83,7 @@ func TestEnvRunner_Run(t *testing.T) {
 				m.EXPECT().SecurityGroups(gomock.Any()).AnyTimes()
 			},
 			mockStarter: mockStarterNotRun,
-			wantedError: fmt.Errorf(fmtErrNoSubnetFoundInEnv, inEnv),
+			wantedError: ErrNoSubnetFound,
 		},
 		"failed to get security groups": {
 			MockClusterGetter: MockClusterGetter,

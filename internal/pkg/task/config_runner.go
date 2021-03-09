@@ -53,7 +53,7 @@ func (r *NetworkConfigRunner) Run() ([]*Task, error) {
 			return nil, fmt.Errorf(fmtErrDefaultSubnets, err)
 		}
 		if len(subnets) == 0 {
-			return nil, errNoSubnetFound
+			return nil, ErrNoSubnetFound
 		}
 
 		r.Subnets = subnets
