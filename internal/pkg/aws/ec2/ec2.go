@@ -130,6 +130,8 @@ func (c *EC2) PublicIP(ENI string) (string, error) {
 		return "", fmt.Errorf("describe network interface with ENI %s: %w", ENI, err)
 	}
 
+	// `response.NetworkInterfaces` contains at least one result; if no matching ENI is found, the API call will return
+	// an error instead of an empty list of `NetworkInterfaces` (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeNetworkInterfaces.html)
 	association := response.NetworkInterfaces[0].Association
 	if association == nil {
 		return "", fmt.Errorf("no association information found for ENI %s", ENI)
