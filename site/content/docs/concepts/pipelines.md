@@ -112,7 +112,8 @@ This parses your `pipeline.yml`, creates a CodePipeline in the same account and 
 
 ![Your completed CodePipeline](https://user-images.githubusercontent.com/828419/71861318-c7083980-30aa-11ea-80bb-4bea25bf5d04.png)
 
-Note: If you have selected a GitHub or Bitbucket repository, Copilot will help you connect to your source code with [CodeStar Connections](https://docs.aws.amazon.com/dtconsole/latest/userguide/welcome-connections.html). You will need to install the AWS authentication app on your third-party account and update the connection status. Copilot and the AWS Management Console will guide you through these steps.
+!!! info 
+    If you have selected a GitHub or Bitbucket repository, Copilot will help you connect to your source code with [CodeStar Connections](https://docs.aws.amazon.com/dtconsole/latest/userguide/welcome-connections.html). You will need to install the AWS authentication app on your third-party account and update the connection status. Copilot and the AWS Management Console will guide you through these steps.
 
 ## Adding Tests
 
