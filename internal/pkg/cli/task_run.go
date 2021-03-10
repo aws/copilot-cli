@@ -438,7 +438,7 @@ func (o *runTaskOpts) runTask() ([]*task.Task, error) {
 	o.spinner.Start(fmt.Sprintf("Waiting for %s to be running for %s.", english.Plural(o.count, "task", ""), o.groupName))
 	tasks, err := o.runner.Run()
 	if err != nil {
-		if err == task.ErrNoSubnetFound {
+		if errors.Is(err, task.ErrNoSubnetFound) {
 			log.Warningf("Subnets need to be tagged with %s and %s. Are your subnets tagged?\n", deploy.AppTagKey, deploy.EnvTagKey)
 		}
 
