@@ -105,8 +105,18 @@ func (s *GitHubSource) GitHubPersonalAccessTokenSecretID() (string, error) {
 	return s.PersonalAccessTokenSecretID, nil
 }
 
-func (s *BitbucketSource) Connection() string {
-	return s.ConnectionARN
+func (s *BitbucketSource) Connection() (string, error) {
+	if s.ConnectionARN == "" {
+		return "", nil
+	}
+	parsedARN, err := arn.Parse(s.ConnectionARN)
+	if err != nil {
+		return "", fmt.Errorf("parse connection ARN: %w", err)
+	}
+	if parsedARN.Service != "codestar-connections" {
+		return "", fmt.Errorf("ARN does not identify a CodeStar Connections resource")
+	}
+	return s.ConnectionARN, nil
 }
 
 // parseOwnerAndRepo parses the owner and repo name from the GH repo URL, which was formatted and assigned in cli/pipeline_init.go.

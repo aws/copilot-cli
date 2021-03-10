@@ -7,12 +7,12 @@ Resources:
     SourceConnection:
       Type: AWS::CodeStarConnections::Connection
       Properties:
-        {{- if eq .Source.Connection ""}}
-        ConnectionName: {{.Source.ConnectionName}}
+      {{- if $.Source.Connection}}
+        ConnectionArn: {{$.Source.Connection}}
+      {{- else}}
+        ConnectionName: {{$.Source.ConnectionName}}
         ProviderType: Bitbucket
-        {{- else}}
-        ConnectionArn: {{.Source.Connection}}
-        {{- end}}
+      {{- end}}
   {{- end}}
   BuildProjectRole:
     Type: AWS::IAM::Role
