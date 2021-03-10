@@ -60,6 +60,7 @@ const (
 	missingFieldDetailENIID = "detailENIID"
 )
 
+// ErrTaskENIInfoNotFound when the ENI information is not found in a ECS task.
 type ErrTaskENIInfoNotFound struct {
 	MissingField string
 	TaskARN      string

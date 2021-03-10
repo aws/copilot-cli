@@ -92,15 +92,13 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 // Every Fargate task is provided with an ENI by default (https://docs.aws.amazon.com/AmazonECS/latest/userguide/fargate-task-networking.html).
 func (t *Task) ENI() (string, error) {
 	var attachmentENI *ecs.Attachment
-	hasENIAttachment := false
 	for _, attachment := range t.Attachments {
 		if aws.StringValue(attachment.Type) == networkInterfaceAttachmentType {
 			attachmentENI = attachment
-			hasENIAttachment = true
 			break
 		}
 	}
-	if !hasENIAttachment {
+	if attachmentENI == nil {
 		return "", &ErrTaskENIInfoNotFound{
 			MissingField: missingFieldAttachment,
 			TaskARN:      aws.StringValue(t.TaskArn),
