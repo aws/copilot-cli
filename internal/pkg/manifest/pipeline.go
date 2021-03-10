@@ -14,6 +14,7 @@ import (
 
 const (
 	GithubProviderName     = "GitHub"
+	GithubV1ProviderName   = "GitHubV1"
 	CodeCommitProviderName = "CodeCommit"
 	BitbucketProviderName  = "Bitbucket"
 
@@ -28,6 +29,20 @@ type Provider interface {
 	Properties() map[string]interface{}
 }
 
+type githubV1Provider struct {
+	properties *GitHubV1Properties
+}
+
+func (p *githubV1Provider) Name() string {
+	return GithubV1ProviderName
+}
+func (p *githubV1Provider) String() string {
+	return GithubProviderName
+}
+func (p *githubV1Provider) Properties() map[string]interface{} {
+	return structs.Map(p.properties)
+}
+
 type githubProvider struct {
 	properties *GitHubProperties
 }
@@ -35,11 +50,9 @@ type githubProvider struct {
 func (p *githubProvider) Name() string {
 	return GithubProviderName
 }
-
 func (p *githubProvider) String() string {
 	return GithubProviderName
 }
-
 func (p *githubProvider) Properties() map[string]interface{} {
 	return structs.Map(p.properties)
 }
@@ -51,11 +64,9 @@ type codecommitProvider struct {
 func (p *codecommitProvider) Name() string {
 	return CodeCommitProviderName
 }
-
 func (p *codecommitProvider) String() string {
 	return CodeCommitProviderName
 }
-
 func (p *codecommitProvider) Properties() map[string]interface{} {
 	return structs.Map(p.properties)
 }
@@ -67,18 +78,16 @@ type bitbucketProvider struct {
 func (p *bitbucketProvider) Name() string {
 	return BitbucketProviderName
 }
-
 func (p *bitbucketProvider) String() string {
 	return BitbucketProviderName
 }
-
 func (p *bitbucketProvider) Properties() map[string]interface{} {
 	return structs.Map(p.properties)
 }
 
-// GitHubProperties contain information for configuring a Github
+// GitHubV1Properties contain information for configuring a Githubv1
 // source provider.
-type GitHubProperties struct {
+type GitHubV1Properties struct {
 	// use tag from https://godoc.org/github.com/fatih/structs#example-Map--Tags
 	// to specify the name of the field in the output properties
 	RepositoryURL         string `structs:"repository" yaml:"repository"`
@@ -86,9 +95,9 @@ type GitHubProperties struct {
 	GithubSecretIdKeyName string `structs:"access_token_secret" yaml:"access_token_secret"`
 }
 
-// CodeCommitProperties contains information for configuring a CodeCommit
+// GitHubProperties contains information for configuring a GitHubv2
 // source provider.
-type CodeCommitProperties struct {
+type GitHubProperties struct {
 	RepositoryURL string `structs:"repository" yaml:"repository"`
 	Branch        string `structs:"branch" yaml:"branch"`
 }
@@ -100,10 +109,21 @@ type BitbucketProperties struct {
 	Branch        string `structs:"branch" yaml:"branch"`
 }
 
+// CodeCommitProperties contains information for configuring a CodeCommit
+// source provider.
+type CodeCommitProperties struct {
+	RepositoryURL string `structs:"repository" yaml:"repository"`
+	Branch        string `structs:"branch" yaml:"branch"`
+}
+
 // NewProvider creates a source provider based on the type of
 // the provided provider-specific configurations
 func NewProvider(configs interface{}) (Provider, error) {
 	switch props := configs.(type) {
+	case *GitHubV1Properties:
+		return &githubV1Provider{
+			properties: props,
+		}, nil
 	case *GitHubProperties:
 		return &githubProvider{
 			properties: props,

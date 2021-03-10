@@ -30,48 +30,56 @@ type TasksDescriber interface {
 
 // TaskClient retrieves the logs of Amazon ECS tasks.
 type TaskClient struct {
-	GroupName string
-	Tasks     []*task.Task
+	// Inputs to the task client.
+	groupName string
+	tasks     []*task.Task
 
-	Writer       io.Writer
-	EventsLogger logGetter
-	Describer    TasksDescriber
+	eventsWriter  io.Writer
+	eventsLogger  logGetter
+	taskDescriber TasksDescriber
+
+	// Replaced in tests.
+	sleep func()
 }
 
 // NewTaskClient returns a TaskClient that can retrieve logs from the given tasks under the groupName.
 func NewTaskClient(sess *session.Session, groupName string, tasks []*task.Task) *TaskClient {
 	return &TaskClient{
-		GroupName: groupName,
-		Tasks:     tasks,
+		groupName: groupName,
+		tasks:     tasks,
 
-		Describer:    ecs.New(sess),
-		EventsLogger: cloudwatchlogs.New(sess),
-		Writer:       log.OutputWriter,
+		taskDescriber: ecs.New(sess),
+		eventsLogger:  cloudwatchlogs.New(sess),
+		eventsWriter:  log.OutputWriter,
+
+		sleep: func() {
+			time.Sleep(cloudwatchlogs.SleepDuration)
+		},
 	}
 }
 
 // WriteEventsUntilStopped writes tasks' events to a writer until all tasks have stopped.
 func (t *TaskClient) WriteEventsUntilStopped() error {
 	in := cloudwatchlogs.LogEventsOpts{
-		LogGroup: fmt.Sprintf(fmtTaskLogGroupName, t.GroupName),
+		LogGroup: fmt.Sprintf(fmtTaskLogGroupName, t.groupName),
 	}
 	for {
-		logStreams, err := t.logStreamNamesFromTasks(t.Tasks)
+		logStreams, err := t.logStreamNamesFromTasks(t.tasks)
 		if err != nil {
 			return err
 		}
 		in.LogStreams = logStreams
 		for i := 0; i < numCWLogsCallsPerRound; i++ {
-			logEventsOutput, err := t.EventsLogger.LogEvents(in)
+			logEventsOutput, err := t.eventsLogger.LogEvents(in)
 			if err != nil {
 				return fmt.Errorf("get task log events: %w", err)
 			}
-			if err := WriteHumanLogs(t.Writer, cwEventsToHumanJSONStringers(logEventsOutput.Events)); err != nil {
+			if err := WriteHumanLogs(t.eventsWriter, cwEventsToHumanJSONStringers(logEventsOutput.Events)); err != nil {
 				return fmt.Errorf("write log event: %w", err)
 			}
 			in.StreamLastEventTime = logEventsOutput.StreamLastEventTime
 
-			time.Sleep(cloudwatchlogs.SleepDuration)
+			t.sleep()
 		}
 		stopped, err := t.allTasksStopped()
 		if err != nil {
@@ -84,15 +92,15 @@ func (t *TaskClient) WriteEventsUntilStopped() error {
 }
 
 func (t *TaskClient) allTasksStopped() (bool, error) {
-	taskARNs := make([]string, len(t.Tasks))
-	for idx, task := range t.Tasks {
+	taskARNs := make([]string, len(t.tasks))
+	for idx, task := range t.tasks {
 		taskARNs[idx] = task.TaskARN
 	}
 
 	// NOTE: all tasks are deployed to the same cluster and there are at least one tasks being deployed
-	cluster := t.Tasks[0].ClusterARN
+	cluster := t.tasks[0].ClusterARN
 
-	tasksResp, err := t.Describer.DescribeTasks(cluster, taskARNs)
+	tasksResp, err := t.taskDescriber.DescribeTasks(cluster, taskARNs)
 	if err != nil {
 		return false, fmt.Errorf("describe tasks: %w", err)
 	}
@@ -108,7 +116,7 @@ func (t *TaskClient) allTasksStopped() (bool, error) {
 			})
 		}
 	}
-	t.Tasks = runningTasks
+	t.tasks = runningTasks
 	return stopped, nil
 }
 
@@ -119,7 +127,7 @@ func (t *TaskClient) logStreamNamesFromTasks(tasks []*task.Task) ([]string, erro
 		if err != nil {
 			return nil, fmt.Errorf("parse task ID from ARN %s", task.TaskARN)
 		}
-		logStreamNames = append(logStreamNames, fmt.Sprintf(fmtTaskLogStreamName, t.GroupName, id))
+		logStreamNames = append(logStreamNames, fmt.Sprintf(fmtTaskLogStreamName, t.groupName, id))
 	}
 	return logStreamNames, nil
 }

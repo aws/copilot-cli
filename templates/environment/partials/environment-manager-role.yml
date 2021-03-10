@@ -193,7 +193,8 @@ EnvironmentManagerRole:
           Effect: Allow
           Action: [
             "ec2:DescribeSubnets",
-            "ec2:DescribeSecurityGroups"
+            "ec2:DescribeSecurityGroups",
+            "ec2:DescribeNetworkInterfaces"
           ]
           Resource: "*"
         - Sid: Tags

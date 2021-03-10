@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -293,6 +294,14 @@ type artifactUploader interface {
 	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
 }
 
+type zipAndUploader interface {
+	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
+}
+
+type customResourcesUploader interface {
+	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) ([]string, error)
+}
+
 type bucketEmptier interface {
 	EmptyBucket(bucket string) error
 }
@@ -509,4 +518,8 @@ type serviceLinkedRoleCreator interface {
 
 type dockerEngineValidator interface {
 	CheckDockerEngineRunning() error
+}
+
+type publicIPGetter interface {
+	PublicIP(ENI string) (string, error)
 }
