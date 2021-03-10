@@ -133,12 +133,14 @@ func TestEventsWriter_WriteEventsUntilStopped(t *testing.T) {
 			tc.setUpMocks(mocks)
 
 			ew := &TaskClient{
-				GroupName: groupName,
-				Tasks:     tc.tasks,
+				groupName: groupName,
+				tasks:     tc.tasks,
 
-				Writer:       mockWriter{},
-				EventsLogger: mocks.logGetter,
-				Describer:    mocks.describer,
+				eventsWriter:  mockWriter{},
+				eventsLogger:  mocks.logGetter,
+				taskDescriber: mocks.describer,
+
+				sleep: func() {}, // no-op.
 			}
 
 			err := ew.WriteEventsUntilStopped()
