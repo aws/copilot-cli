@@ -201,7 +201,12 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 				appStackSet: tc.mockStackSet(t, ctrl),
 				box:         templates.Box(),
 			}
-			got := cf.AddEnvToApp(tc.app, tc.env)
+			got := cf.AddEnvToApp(&AddEnvToAppOpts{
+				App:          tc.app,
+				EnvName:      tc.env.Name,
+				EnvAccountID: tc.env.AccountID,
+				EnvRegion:    tc.env.Region,
+			})
 
 			if tc.want != nil {
 				require.EqualError(t, got, tc.want.Error())

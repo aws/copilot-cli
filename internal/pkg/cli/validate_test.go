@@ -420,6 +420,14 @@ func TestIsCorrectFormat(t *testing.T) {
 			input:   "badGoose",
 			isLegit: false,
 		},
+		"contains consecutive dashes": {
+			input:   "bad--goose",
+			isLegit: false,
+		},
+		"contains trailing dash": {
+			input:   "badgoose-",
+			isLegit: false,
+		},
 	}
 
 	for name, tc := range testCases {

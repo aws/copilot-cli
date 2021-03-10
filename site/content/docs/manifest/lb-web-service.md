@@ -145,6 +145,29 @@ The port exposed in your Dockerfile. Copilot should parse this value for you fro
 
 <div class="separator"></div>
 
+<a id="entrypoint" href="#entrypoint" class="field">`entrypoint`</a> <span class="type">String or Array of Strings</span>  
+Override the default entrypoint in the image.
+```yaml
+# String version.
+entrypoint: "/bin/entrypoint --p1 --p2"
+# Alteratively, as an array of strings.
+entrypoint: ["/bin/entrypoint", "--p1", "--p2"]
+```
+
+<div class="separator"></div>
+
+<a id="command" href="#command" class="field">`command`</a> <span class="type">String or Array of Strings</span>  
+Override the default command in the image.
+
+```yaml
+# String version.
+command: ps au
+# Alteratively, as an array of strings.
+command: ["ps", "au"]
+```
+
+<div class="separator"></div>
+
 <a id="cpu" href="#cpu" class="field">`cpu`</a> <span class="type">Integer</span>  
 Number of CPU units for the task. See the [Amazon ECS docs](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html) for valid CPU values.
 

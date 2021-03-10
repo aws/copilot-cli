@@ -492,7 +492,7 @@ source:
 					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
 				)
 			},
-			expectedError: fmt.Errorf("invalid repo source provider: NotGitHub"),
+			expectedError: fmt.Errorf("read source from manifest: invalid repo source provider: NotGitHub"),
 		},
 		"returns an error if unable to convert environments to deployment stage": {
 			inApp:     &app,

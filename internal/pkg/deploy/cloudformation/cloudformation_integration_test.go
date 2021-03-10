@@ -194,11 +194,11 @@ func Test_App_Infrastructure(t *testing.T) {
 
 		// Add an environment only
 		err = deployer.AddEnvToApp(
-			&app,
-			&config.Environment{
-				Name:      "test",
-				Region:    *sess.Config.Region,
-				AccountID: "000312697014",
+			&cloudformation.AddEnvToAppOpts{
+				App:          &app,
+				EnvName:      "test",
+				EnvAccountID: "000312697014",
+				EnvRegion:    *sess.Config.Region,
 			},
 		)
 
@@ -330,14 +330,12 @@ func Test_App_Infrastructure(t *testing.T) {
 		require.Equal(t, 1, len(stackInstances.Summaries), "Adding 2 pipelines to the same application should not create 2 stack instances")
 
 		// add an environment should not create new stack instance in the same region
-		err = deployer.AddEnvToApp(
-			&app,
-			&config.Environment{
-				Name:      "test",
-				Region:    *sess.Config.Region,
-				AccountID: "000312697014",
-			},
-		)
+		err = deployer.AddEnvToApp(&cloudformation.AddEnvToAppOpts{
+			App:          &app,
+			EnvName:      "test",
+			EnvAccountID: "000312697014",
+			EnvRegion:    *sess.Config.Region,
+		})
 
 		stackInstances, err = cfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
 			StackSetName: aws.String(appStackSetName),
