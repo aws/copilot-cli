@@ -89,6 +89,7 @@ type GitHubSource struct {
 	ProviderName  string
 	Branch        string
 	RepositoryURL GitHubURL
+	ConnectionARN string
 }
 
 // GitHubURL is the common type for repo URLs for both GitHubSource versions:
@@ -137,6 +138,7 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 				ProviderName:  manifest.GithubProviderName,
 				Branch:        (mfSource.Properties["branch"]).(string),
 				RepositoryURL: GitHubURL((mfSource.Properties["repository"]).(string)),
+				ConnectionARN: (mfSource.Properties["connection_ARN"]).(string),
 			}, true, nil
 		}
 	case manifest.CodeCommitProviderName:
@@ -150,6 +152,7 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 			ProviderName:  manifest.BitbucketProviderName,
 			Branch:        (mfSource.Properties["branch"]).(string),
 			RepositoryURL: (mfSource.Properties["repository"]).(string),
+			ConnectionARN: (mfSource.Properties["connection_ARN"]).(string),
 		}, true, nil
 	default:
 		return nil, false, fmt.Errorf("invalid repo source provider: %s", mfSource.ProviderName)
@@ -167,6 +170,21 @@ func (s *GitHubV1Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 }
 
 func (s *BitbucketSource) Connection() (string, error) {
+	if s.ConnectionARN == "" {
+		return "", nil
+	}
+	parsedARN, err := arn.Parse(s.ConnectionARN)
+	if err != nil {
+		return "", fmt.Errorf("parse connection ARN: %w", err)
+	}
+	if parsedARN.Service != "codestar-connections" {
+		return "", fmt.Errorf("ARN does not identify a CodeStar Connections resource")
+	}
+
+	return s.ConnectionARN, nil
+}
+
+func (s *GitHubSource) Connection() (string, error) {
 	if s.ConnectionARN == "" {
 		return "", nil
 	}

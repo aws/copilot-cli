@@ -3,13 +3,13 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for {{$.AppName}}
 Resources:
-  {{- if isCodeStarConnection .Source}}
+  {{- if isCodeStarConnection .Source}}{{if eq .Source.ConnectionARN ""}}
   SourceConnection:
     Type: AWS::CodeStarConnections::Connection
     Properties:
       ConnectionName: {{.Source.ConnectionName}}
       ProviderType: {{.Source.ProviderName}}
-  {{- end}}
+  {{- end}}{{- end}}
   BuildProjectRole:
     Type: AWS::IAM::Role
     Properties:
@@ -188,7 +188,11 @@ Resources:
               - codestar-connections:PassConnection
               - codestar-connections:PassedToService
             Resource:
+              {{- if eq .Source.ConnectionARN ""}}
               - !Ref SourceConnection
+              {{- else}}
+              - {{$.Source.Connection}}
+              {{- end}}
           {{- end}}
           - Effect: Allow
             Action:
@@ -290,7 +294,12 @@ Resources:
                 Version: 1
                 Provider: CodeStarSourceConnection
               Configuration:
-                ConnectionArn: !Ref SourceConnection
+                ConnectionArn:
+                {{- if eq .Source.ConnectionARN ""}}
+                  !Ref SourceConnection
+                {{- else}}
+                  {{$.Source.Connection}}
+                {{- end}}
                 FullRepositoryId: {{$.Source.Repository}}
                 BranchName: {{$.Source.Branch}}
               OutputArtifacts:
@@ -378,5 +387,10 @@ Resources:
 Outputs:
   PipelineConnectionARN:
     Description: "ARN of CodeStar Connections connection"
-    Value: !Ref SourceConnection
+    Value:
+    {{- if eq .Source.ConnectionARN ""}}
+      !Ref SourceConnection
+    {{- else}}
+      {{$.Source.Connection}}
+    {{- end}}
 {{- end}}
