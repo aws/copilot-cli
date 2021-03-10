@@ -5786,3 +5786,41 @@ func (mr *MockdockerEngineValidatorMockRecorder) CheckDockerEngineRunning() *gom
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDockerEngineRunning", reflect.TypeOf((*MockdockerEngineValidator)(nil).CheckDockerEngineRunning))
 }
+
+// MockpublicIPGetter is a mock of publicIPGetter interface.
+type MockpublicIPGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockpublicIPGetterMockRecorder
+}
+
+// MockpublicIPGetterMockRecorder is the mock recorder for MockpublicIPGetter.
+type MockpublicIPGetterMockRecorder struct {
+	mock *MockpublicIPGetter
+}
+
+// NewMockpublicIPGetter creates a new mock instance.
+func NewMockpublicIPGetter(ctrl *gomock.Controller) *MockpublicIPGetter {
+	mock := &MockpublicIPGetter{ctrl: ctrl}
+	mock.recorder = &MockpublicIPGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockpublicIPGetter) EXPECT() *MockpublicIPGetterMockRecorder {
+	return m.recorder
+}
+
+// PublicIP mocks base method.
+func (m *MockpublicIPGetter) PublicIP(ENI string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublicIP", ENI)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PublicIP indicates an expected call of PublicIP.
+func (mr *MockpublicIPGetterMockRecorder) PublicIP(ENI interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicIP", reflect.TypeOf((*MockpublicIPGetter)(nil).PublicIP), ENI)
+}

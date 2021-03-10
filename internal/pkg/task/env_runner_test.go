@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"testing"
 
+	awsecs "github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -36,10 +38,10 @@ func TestEnvRunner_Run(t *testing.T) {
 		Values: []string{"EnvironmentSecurityGroup"},
 	})
 
-	MockClusterGetter := func(m *mocks.MockClusterGetter) {
+	mockClusterGetter := func(m *mocks.MockClusterGetter) {
 		m.EXPECT().ClusterARN(inApp, inEnv).Return("cluster-1", nil)
 	}
-	MockVPCGetterAny := func(m *mocks.MockVPCGetter) {
+	mockVPCGetterAny := func(m *mocks.MockVPCGetter) {
 		m.EXPECT().SubnetIDs(gomock.Any()).AnyTimes()
 		m.EXPECT().SecurityGroups(gomock.Any()).AnyTimes()
 	}
@@ -59,6 +61,24 @@ func TestEnvRunner_Run(t *testing.T) {
 		}, nil)
 	}
 
+	taskWithENI = ecs.Task{
+		TaskArn: aws.String("task-1"),
+		Attachments: []*awsecs.Attachment{
+			{
+				Type: aws.String(attachmentTypeName),
+				Details: []*awsecs.KeyValuePair{
+					{
+						Name:  aws.String(detailsKeyName),
+						Value: aws.String("eni-1"),
+					},
+				},
+			},
+		},
+	}
+	taskWithNoENI = ecs.Task{
+		TaskArn: aws.String("task-2"),
+	}
+
 	testCases := map[string]struct {
 		count     int
 		groupName string
@@ -75,13 +95,13 @@ func TestEnvRunner_Run(t *testing.T) {
 			MockClusterGetter: func(m *mocks.MockClusterGetter) {
 				m.EXPECT().ClusterARN(inApp, inEnv).Return("", errors.New("error getting resources"))
 			},
-			MockVPCGetter:            MockVPCGetterAny,
+			MockVPCGetter:            mockVPCGetterAny,
 			mockStarter:              mockStarterNotRun,
 			mockEnvironmentDescriber: mockEnvironmentDescriberAny,
 			wantedError:              fmt.Errorf("get cluster for environment %s: %w", inEnv, errors.New("error getting resources")),
 		},
 		"failed to get env description": {
-			MockClusterGetter: MockClusterGetter,
+			MockClusterGetter: mockClusterGetter,
 			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().SecurityGroups(gomock.Any()).AnyTimes()
 			},
@@ -92,7 +112,7 @@ func TestEnvRunner_Run(t *testing.T) {
 			wantedError: fmt.Errorf(fmtErrDescribeEnvironment, inEnv, errors.New("error getting env description")),
 		},
 		"no subnet is found": {
-			MockClusterGetter: MockClusterGetter,
+			MockClusterGetter: mockClusterGetter,
 			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().SecurityGroups(gomock.Any()).AnyTimes()
 			},
@@ -109,7 +129,7 @@ func TestEnvRunner_Run(t *testing.T) {
 			wantedError: errNoSubnetFound,
 		},
 		"failed to get security groups": {
-			MockClusterGetter: MockClusterGetter,
+			MockClusterGetter: mockClusterGetter,
 			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().SecurityGroups(filtersForSecurityGroup).
 					Return(nil, errors.New("error getting security groups"))
@@ -122,7 +142,7 @@ func TestEnvRunner_Run(t *testing.T) {
 			count:     1,
 			groupName: "my-task",
 
-			MockClusterGetter: MockClusterGetter,
+			MockClusterGetter: mockClusterGetter,
 			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().SecurityGroups(filtersForSecurityGroup).Return([]string{"sg-1", "sg-2"}, nil)
 			},
@@ -146,7 +166,33 @@ func TestEnvRunner_Run(t *testing.T) {
 			count:     1,
 			groupName: "my-task",
 
-			MockClusterGetter: MockClusterGetter,
+			MockClusterGetter: mockClusterGetter,
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
+				m.EXPECT().SecurityGroups(filtersForSecurityGroup).Return([]string{"sg-1", "sg-2"}, nil)
+			},
+			mockStarter: func(m *mocks.MockRunner) {
+				m.EXPECT().RunTask(ecs.RunTaskInput{
+					Cluster:        "cluster-1",
+					Count:          1,
+					Subnets:        []string{"subnet-0789ab", "subnet-0123cd"},
+					SecurityGroups: []string{"sg-1", "sg-2"},
+					TaskFamilyName: taskFamilyName("my-task"),
+					StartedBy:      startedBy,
+				}).Return([]*ecs.Task{&taskWithENI}, nil)
+			},
+			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
+			wantedTasks: []*Task{
+				{
+					TaskARN: "task-1",
+					ENI:     "eni-1",
+				},
+			},
+		},
+		"eni information not found for several tasks": {
+			count:     1,
+			groupName: "my-task",
+
+			MockClusterGetter: mockClusterGetter,
 			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().SecurityGroups(filtersForSecurityGroup).Return([]string{"sg-1", "sg-2"}, nil)
 			},
@@ -159,15 +205,22 @@ func TestEnvRunner_Run(t *testing.T) {
 					TaskFamilyName: taskFamilyName("my-task"),
 					StartedBy:      startedBy,
 				}).Return([]*ecs.Task{
-					{
-						TaskArn: aws.String("task-1"),
-					},
+					&taskWithENI,
+					&taskWithNoENI,
+					&taskWithNoENI,
 				}, nil)
 			},
 			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
 			wantedTasks: []*Task{
 				{
 					TaskARN: "task-1",
+					ENI:     "eni-1",
+				},
+				{
+					TaskARN: "task-2",
+				},
+				{
+					TaskARN: "task-2",
 				},
 			},
 		},

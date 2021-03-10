@@ -3,7 +3,8 @@ on:
   push:
     tags:       
       - v*
-      - docs*
+  # Allow the workflow to be triggered also manually.
+  workflow_dispatch:
 
 jobs:
   build:

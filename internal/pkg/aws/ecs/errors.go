@@ -63,3 +63,24 @@ type ErrExecuteCommand struct {
 func (e *ErrExecuteCommand) Error() string {
 	return fmt.Sprintf("execute command: %s", e.err.Error())
 }
+
+const (
+	missingFieldAttachment  = "attachment"
+	missingFieldDetailENIID = "detailENIID"
+)
+
+// ErrTaskENIInfoNotFound when the ENI information is not found in a ECS task.
+type ErrTaskENIInfoNotFound struct {
+	MissingField string
+	TaskARN      string
+}
+
+func (e *ErrTaskENIInfoNotFound) Error() string {
+	switch e.MissingField {
+	case missingFieldAttachment:
+		return fmt.Sprintf("cannot find network interface attachment for task %s", e.TaskARN)
+	case missingFieldDetailENIID:
+		return fmt.Sprintf("cannot find network interface ID for task %s", e.TaskARN)
+	}
+	return ""
+}

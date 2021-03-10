@@ -42,6 +42,7 @@ const (
 	appEnvOptionNone      = "None (run in default VPC)"
 	defaultDockerfilePath = "Dockerfile"
 	imageTagLatest        = "latest"
+	shortTaskIDLength     = 8
 )
 
 const (
@@ -108,6 +109,7 @@ type runTaskOpts struct {
 	runner               taskRunner
 	eventsWriter         eventsWriter
 	defaultClusterGetter defaultClusterGetter
+	publicIPGetter       publicIPGetter
 
 	sess              *session.Session
 	targetEnvironment *config.Environment
@@ -141,6 +143,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		}
 		opts.deployer = cloudformation.New(opts.sess)
 		opts.defaultClusterGetter = awsecs.New(opts.sess)
+		opts.publicIPGetter = ec2.New(opts.sess)
 		return nil
 	}
 
@@ -435,6 +438,8 @@ func (o *runTaskOpts) Execute() error {
 		return err
 	}
 
+	o.showPublicIPs(tasks)
+
 	if o.follow {
 		o.configureEventsWriter(tasks)
 		if err := o.displayLogStream(); err != nil {
@@ -464,6 +469,35 @@ func (o *runTaskOpts) runTask() ([]*task.Task, error) {
 	}
 	o.spinner.Stop(log.Ssuccessf("%s %s %s running.\n\n", english.PluralWord(o.count, "Task", ""), o.groupName, english.PluralWord(o.count, "is", "are")))
 	return tasks, nil
+}
+
+func (o *runTaskOpts) showPublicIPs(tasks []*task.Task) {
+	publicIPs := make(map[string]string)
+	for _, t := range tasks {
+		if t.ENI == "" {
+			continue
+		}
+		ip, err := o.publicIPGetter.PublicIP(t.ENI) // We will just not show the ip address if an error occurs.
+		if err == nil {
+			publicIPs[t.TaskARN] = ip
+		}
+	}
+
+	if len(publicIPs) == 0 {
+		return
+	}
+
+	log.Infof("%s associated with the %s %s:\n",
+		english.PluralWord(len(publicIPs), "The public IP", "Public IPs"),
+		english.PluralWord(len(publicIPs), "task", "tasks"),
+		english.PluralWord(len(publicIPs), "is", "are"))
+	for taskARN, ip := range publicIPs {
+		if len(taskARN) >= shortTaskIDLength {
+			taskARN = taskARN[len(taskARN)-shortTaskIDLength:]
+		}
+		log.Infof("- %s (for %s)\n", ip, taskARN)
+	}
+
 }
 
 func (o *runTaskOpts) buildAndPushImage() error {
