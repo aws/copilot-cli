@@ -176,7 +176,7 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 			Env:             o.env,
 			ConfigStore:     o.store,
 			DeployStore:     deployStore,
-			EnableResources: false, // we don't need show resources
+			EnableResources: false, // We don't need to show detailed resources.
 		})
 		if err != nil {
 			return nil, fmt.Errorf("create describer for environment %s in application %s: %w", o.env, o.appName, err)
