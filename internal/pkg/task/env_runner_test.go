@@ -167,19 +167,19 @@ func TestEnvRunner_Run(t *testing.T) {
 
 			MockClusterGetter: mockClusterGetter,
 			MockVPCGetter: func(m *mocks.MockVPCGetter) {
-				m.EXPECT().PublicSubnetIDs(filtersForSubnetID).Return([]string{"subnet-1", "subnet-2"}, nil)
 				m.EXPECT().SecurityGroups(filtersForSecurityGroup).Return([]string{"sg-1", "sg-2"}, nil)
 			},
 			mockStarter: func(m *mocks.MockRunner) {
 				m.EXPECT().RunTask(ecs.RunTaskInput{
 					Cluster:        "cluster-1",
 					Count:          1,
-					Subnets:        []string{"subnet-1", "subnet-2"},
+					Subnets:        []string{"subnet-0789ab", "subnet-0123cd"},
 					SecurityGroups: []string{"sg-1", "sg-2"},
 					TaskFamilyName: taskFamilyName("my-task"),
 					StartedBy:      startedBy,
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
+			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
 			wantedTasks: []*Task{
 				{
 					TaskARN: "task-1",
