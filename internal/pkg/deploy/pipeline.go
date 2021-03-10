@@ -17,11 +17,6 @@ import (
 
 const (
 	fmtInvalidRepo = "unable to locate the repository URL from the properties: %+v"
-	// Redefining these consts from the cli package here so as to avoid an import cycle
-	ghProviderName   = "GitHub"
-	ghV1ProviderName = "GitHubV1"
-	ccProviderName   = "CodeCommit"
-	bbProviderName   = "Bitbucket"
 )
 
 var (
@@ -79,7 +74,8 @@ func (a *ArtifactBucket) Region() (string, error) {
 	return parsedArn.Region, nil
 }
 
-// GitHubSource defines the (GH) source of the artifacts to be built and deployed.
+// GitHubV1Source defines the source of the artifacts to be built and deployed. This version uses personal access tokens
+// and is not recommended. https://docs.aws.amazon.com/codepipeline/latest/userguide/update-github-action-connections.html
 type GitHubV1Source struct {
 	ProviderName                string
 	Branch                      string
@@ -87,7 +83,16 @@ type GitHubV1Source struct {
 	PersonalAccessTokenSecretID string
 }
 
-// GitHubURL is the common type for repo URLs for both GitHubSource versions.
+// GitHubSource (version 2) defines the source of the artifacts to be built and deployed. This version uses CodeStar
+// Connections to authenticate access to the remote repo.
+type GitHubSource struct {
+	ProviderName  string
+	Branch        string
+	RepositoryURL GitHubURL
+}
+
+// GitHubURL is the common type for repo URLs for both GitHubSource versions:
+// GitHubV1 (w/ access tokens) and GitHub (V2 w CodeStar Connections).
 type GitHubURL string
 
 // CodeCommitSource defines the (CC) source of the artifacts to be built and deployed.
@@ -106,54 +111,48 @@ type BitbucketSource struct {
 
 // PipelineSourceFromManifest processes manifest info about the source based on provider type.
 // The return boolean is true for CodeStar Connections sources that require a polling prompt.
-func PipelineSourceFromManifest(source *manifest.Source) (interface{}, bool, error) {
-	switch source.ProviderName {
-	case ghV1ProviderName:
+func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, usesCodeStar bool, err error) {
+	switch mfSource.ProviderName {
+	case manifest.GithubV1ProviderName:
 		return &GitHubV1Source{
-			ProviderName:                ghV1ProviderName,
-			Branch:                      (source.Properties["branch"]).(string),
-			RepositoryURL:               GitHubURL((source.Properties["repository"]).(string)),
-			PersonalAccessTokenSecretID: (source.Properties["access_token_secret"]).(string),
+			ProviderName:                manifest.GithubV1ProviderName,
+			Branch:                      (mfSource.Properties["branch"]).(string),
+			RepositoryURL:               GitHubURL((mfSource.Properties["repository"]).(string)),
+			PersonalAccessTokenSecretID: (mfSource.Properties["access_token_secret"]).(string),
 		}, false, nil
-	case ghProviderName:
+	case manifest.GithubProviderName:
 		// If the creation of the user's pipeline manifest predates Copilot's conversion to GHv2/CSC, the provider
 		// listed in the manifest will be "GitHub," not "GitHubV1." To differentiate it from the new default
 		// "GitHub," which refers to v2, we check for the presence of a secret, indicating a v1 GitHub connection.
-		if source.Properties["access_token_secret"] != nil {
+		if mfSource.Properties["access_token_secret"] != nil {
 			return &GitHubV1Source{
-				ProviderName:                ghV1ProviderName,
-				Branch:                      (source.Properties["branch"]).(string),
-				RepositoryURL:               GitHubURL((source.Properties["repository"]).(string)),
-				PersonalAccessTokenSecretID: (source.Properties["access_token_secret"]).(string),
+				ProviderName:                manifest.GithubV1ProviderName,
+				Branch:                      (mfSource.Properties["branch"]).(string),
+				RepositoryURL:               GitHubURL((mfSource.Properties["repository"]).(string)),
+				PersonalAccessTokenSecretID: (mfSource.Properties["access_token_secret"]).(string),
 			}, false, nil
 		} else {
 			return &GitHubSource{
-				ProviderName:  ghProviderName,
-				Branch:        (source.Properties["branch"]).(string),
-				RepositoryURL: GitHubURL((source.Properties["repository"]).(string)),
+				ProviderName:  manifest.GithubProviderName,
+				Branch:        (mfSource.Properties["branch"]).(string),
+				RepositoryURL: GitHubURL((mfSource.Properties["repository"]).(string)),
 			}, true, nil
 		}
-	case ccProviderName:
+	case manifest.CodeCommitProviderName:
 		return &CodeCommitSource{
-			ProviderName:  ccProviderName,
-			Branch:        (source.Properties["branch"]).(string),
-			RepositoryURL: (source.Properties["repository"]).(string),
+			ProviderName:  manifest.CodeCommitProviderName,
+			Branch:        (mfSource.Properties["branch"]).(string),
+			RepositoryURL: (mfSource.Properties["repository"]).(string),
 		}, false, nil
-	case bbProviderName:
+	case manifest.BitbucketProviderName:
 		return &BitbucketSource{
-			ProviderName:  bbProviderName,
-			Branch:        (source.Properties["branch"]).(string),
-			RepositoryURL: (source.Properties["repository"]).(string),
+			ProviderName:  manifest.BitbucketProviderName,
+			Branch:        (mfSource.Properties["branch"]).(string),
+			RepositoryURL: (mfSource.Properties["repository"]).(string),
 		}, true, nil
 	default:
-		return nil, false, fmt.Errorf("invalid repo source provider: %s", source.ProviderName)
+		return nil, false, fmt.Errorf("invalid repo source provider: %s", mfSource.ProviderName)
 	}
-}
-
-type GitHubSource struct {
-	ProviderName  string
-	Branch        string
-	RepositoryURL GitHubURL
 }
 
 // GitHubPersonalAccessTokenSecretID returns the ID of the secret in the
@@ -237,6 +236,7 @@ const (
 	fmtConnectionName = "copilot-%s-%s"
 )
 
+// ConnectionName generates a recognizable string by which the connection may be identified.
 func (s *BitbucketSource) ConnectionName() (string, error) {
 	owner, repo, err := s.parseOwnerAndRepo()
 	if err != nil {
@@ -245,6 +245,7 @@ func (s *BitbucketSource) ConnectionName() (string, error) {
 	return formatConnectionName(owner, repo), nil
 }
 
+// ConnectionName generates a recognizable string by which the connection may be identified.
 func (s *GitHubSource) ConnectionName() (string, error) {
 	owner, repo, err := s.RepositoryURL.parse()
 	if err != nil {
