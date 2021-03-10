@@ -236,9 +236,8 @@ func TestCloudFormation_UpdatePipeline(t *testing.T) {
 		AppName: "kudos",
 		Name:    "cicd",
 		Source: &deploy.GitHubSource{
-			RepositoryURL:               "aws/somethingCool",
-			PersonalAccessTokenSecretID: "github-token-badgoose-backend",
-			Branch:                      "main",
+			RepositoryURL: "aws/somethingCool",
+			Branch:        "main",
 		},
 		Stages:          nil,
 		ArtifactBuckets: nil,
