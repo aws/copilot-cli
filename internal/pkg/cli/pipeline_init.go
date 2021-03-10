@@ -47,21 +47,17 @@ const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
 	fmtPipelineName       = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
 	// For a GitHub repository.
-	githubURL        = "github.com"
-	ghProviderName   = "GitHub"
-	ghV1ProviderName = "GitHubV1"
-	defaultGHBranch  = "main"
-	fmtGHRepoURL     = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
-	fmtSecretName    = "github-token-%s-%s" // Ex: "github-token-appName-repoName"
+	githubURL       = "github.com"
+	defaultGHBranch = "main"
+	fmtGHRepoURL    = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
+	fmtSecretName   = "github-token-%s-%s" // Ex: "github-token-appName-repoName"
 	// For a CodeCommit repository.
 	awsURL          = "aws.amazon.com"
 	ccIdentifier    = "codecommit"
-	ccProviderName  = "CodeCommit"
 	defaultCCBranch = "master"
 	fmtCCRepoURL    = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse" // Ex: "https://region.console.aws.amazon.com/codesuite/codecommit/repositories/repoName/browse"
 	// For a Bitbucket repository.
 	bbURL           = "bitbucket.org"
-	bbProviderName  = "Bitbucket"
 	defaultBBBranch = "master"
 	fmtBBRepoURL    = "https://%s@%s/%s/%s" // Ex: "https://repoOwner@bitbucket.org/repoOwner/repoName
 )
@@ -190,7 +186,7 @@ func (o *initPipelineOpts) Ask() error {
 
 // Execute writes the pipeline manifest file.
 func (o *initPipelineOpts) Execute() error {
-	if o.provider == ghV1ProviderName {
+	if o.provider == manifest.GithubV1ProviderName {
 		if err := o.storeGitHubAccessToken(); err != nil {
 			return err
 		}
@@ -270,13 +266,13 @@ func (o *initPipelineOpts) askRepository() error {
 }
 
 func (o *initPipelineOpts) askGitHubRepoDetails() error {
-	// If the user uses a flag (now hidden) to specify a GitHub access token,
+	// If the user uses a flag to specify a GitHub access token,
 	// GitHub version 1 (not CSC) is the provider.
+	o.provider = manifest.GithubProviderName
 	if o.githubAccessToken != "" {
-		o.provider = ghV1ProviderName
-	} else {
-		o.provider = ghProviderName
+		o.provider = manifest.GithubV1ProviderName
 	}
+
 	repoDetails, err := ghRepoURL(o.repoURL).parse()
 	if err != nil {
 		return err
@@ -291,7 +287,7 @@ func (o *initPipelineOpts) askGitHubRepoDetails() error {
 }
 
 func (o *initPipelineOpts) parseCodeCommitRepoDetails() error {
-	o.provider = ccProviderName
+	o.provider = manifest.CodeCommitProviderName
 	repoDetails, err := ccRepoURL(o.repoURL).parse()
 	if err != nil {
 		return err
@@ -316,7 +312,7 @@ func (o *initPipelineOpts) parseCodeCommitRepoDetails() error {
 }
 
 func (o *initPipelineOpts) parseBitbucketRepoDetails() error {
-	o.provider = bbProviderName
+	o.provider = manifest.BitbucketProviderName
 	repoDetails, err := bbRepoURL(o.repoURL).parse()
 	if err != nil {
 		return err
@@ -595,23 +591,23 @@ func (o *initPipelineOpts) pipelineName() string {
 func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	var config interface{}
 	switch o.provider {
-	case ghV1ProviderName:
+	case manifest.GithubV1ProviderName:
 		config = &manifest.GitHubV1Properties{
 			RepositoryURL:         fmt.Sprintf(fmtGHRepoURL, githubURL, o.repoOwner, o.repoName),
 			Branch:                o.repoBranch,
 			GithubSecretIdKeyName: o.secret,
 		}
-	case ghProviderName:
+	case manifest.GithubProviderName:
 		config = &manifest.GitHubProperties{
 			RepositoryURL: fmt.Sprintf(fmtGHRepoURL, githubURL, o.repoOwner, o.repoName),
 			Branch:        o.repoBranch,
 		}
-	case ccProviderName:
+	case manifest.CodeCommitProviderName:
 		config = &manifest.CodeCommitProperties{
 			RepositoryURL: fmt.Sprintf(fmtCCRepoURL, o.ccRegion, awsURL, o.repoName),
 			Branch:        o.repoBranch,
 		}
-	case bbProviderName:
+	case manifest.BitbucketProviderName:
 		config = &manifest.BitbucketProperties{
 			RepositoryURL: fmt.Sprintf(fmtBBRepoURL, o.repoOwner, bbURL, o.repoOwner, o.repoName),
 			Branch:        o.repoBranch,
