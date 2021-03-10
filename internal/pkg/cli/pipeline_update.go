@@ -239,31 +239,11 @@ func (o *updatePipelineOpts) Execute() error {
 	}
 	o.pipelineName = pipeline.Name
 
-	var source interface{}
-	switch pipeline.Source.ProviderName {
-	case ghProviderName:
-		source = &deploy.GitHubSource{
-			ProviderName:                ghProviderName,
-			Branch:                      (pipeline.Source.Properties["branch"]).(string),
-			RepositoryURL:               (pipeline.Source.Properties["repository"]).(string),
-			PersonalAccessTokenSecretID: (pipeline.Source.Properties["access_token_secret"]).(string),
-		}
-	case ccProviderName:
-		source = &deploy.CodeCommitSource{
-			ProviderName:  ccProviderName,
-			Branch:        (pipeline.Source.Properties["branch"]).(string),
-			RepositoryURL: (pipeline.Source.Properties["repository"]).(string),
-		}
-	case bbProviderName:
-		source = &deploy.BitbucketSource{
-			ProviderName:  bbProviderName,
-			Branch:        (pipeline.Source.Properties["branch"]).(string),
-			RepositoryURL: (pipeline.Source.Properties["repository"]).(string),
-		}
-		o.shouldPromptUpdateConnection = true
-	default:
-		return fmt.Errorf("invalid repo source provider: %s", pipeline.Source.ProviderName)
+	source, bool, err := deploy.PipelineSourceFromManifest(pipeline.Source)
+	if err != nil {
+		return fmt.Errorf("read source from manifest: %w", err)
 	}
+	o.shouldPromptUpdateConnection = bool
 
 	// convert environments to deployment stages
 	stages, err := o.convertStages(pipeline.Stages)

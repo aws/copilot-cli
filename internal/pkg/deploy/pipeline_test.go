@@ -44,7 +44,7 @@ func TestParseOwnerAndRepo(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			owner, repo, err := tc.src.parseOwnerAndRepo()
+			owner, repo, err := tc.src.RepositoryURL.parse()
 			if tc.expectedErrMsg != nil {
 				require.Contains(t, err.Error(), *tc.expectedErrMsg)
 			} else {
