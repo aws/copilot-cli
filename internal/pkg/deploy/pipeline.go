@@ -134,6 +134,7 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 				PersonalAccessTokenSecretID: (mfSource.Properties["access_token_secret"]).(string),
 			}, false, nil
 		} else {
+			// If an existing CSC connection is being used, don't prompt to update connection from 'PENDING' to 'AVAILABLE'.
 			var shouldPrompt bool
 			if (mfSource.Properties["connection_ARN"]).(string) == "" {
 				shouldPrompt = true
@@ -152,6 +153,7 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 			RepositoryURL: (mfSource.Properties["repository"]).(string),
 		}, false, nil
 	case manifest.BitbucketProviderName:
+		// If an existing CSC connection is being used, don't prompt to update connection from 'PENDING' to 'AVAILABLE'.
 		var shouldPrompt bool
 		if (mfSource.Properties["connection_ARN"]).(string) == "" {
 			shouldPrompt = true
@@ -177,33 +179,37 @@ func (s *GitHubV1Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 	return s.PersonalAccessTokenSecretID, nil
 }
 
+// Connection parses the ARN to check that it's a valid ARN and of CSC Service type.
 func (s *BitbucketSource) Connection() (string, error) {
 	if s.ConnectionARN == "" {
 		return "", nil
 	}
-	parsedARN, err := arn.Parse(s.ConnectionARN)
-	if err != nil {
-		return "", fmt.Errorf("parse connection ARN: %w", err)
+	if err := parseAndCheckARN(s.ConnectionARN); err != nil {
+		return "", err
 	}
-	if parsedARN.Service != "codestar-connections" {
-		return "", fmt.Errorf("ARN does not identify a CodeStar Connections resource")
-	}
-
 	return s.ConnectionARN, nil
 }
 
+// Connection parses the ARN to check that it's a valid ARN and of CSC Service type.
 func (s *GitHubSource) Connection() (string, error) {
 	if s.ConnectionARN == "" {
 		return "", nil
 	}
-	parsedARN, err := arn.Parse(s.ConnectionARN)
-	if err != nil {
-		return "", fmt.Errorf("parse connection ARN: %w", err)
-	}
-	if parsedARN.Service != "codestar-connections" {
-		return "", fmt.Errorf("ARN does not identify a CodeStar Connections resource")
+	if err := parseAndCheckARN(s.ConnectionARN); err != nil {
+		return "", err
 	}
 	return s.ConnectionARN, nil
+}
+
+func parseAndCheckARN(ARN string) error {
+	parsedARN, err := arn.Parse(ARN)
+	if err != nil {
+		fmt.Errorf("parse connection ARN: %w", err)
+	}
+	if parsedARN.Service != "codestar-connections" {
+		fmt.Errorf("ARN does not identify a CodeStar Connections resource")
+	}
+	return nil
 }
 
 // parse parses the owner and repo name from the GH repo URL, which was formatted and assigned in cli/pipeline_init.go.
