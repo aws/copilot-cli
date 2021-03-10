@@ -42,6 +42,7 @@ const (
 	appEnvOptionNone      = "None (run in default VPC)"
 	defaultDockerfilePath = "Dockerfile"
 	imageTagLatest        = "latest"
+	shortTaskIDLength     = 8
 )
 
 const (
@@ -434,14 +435,10 @@ func (o *runTaskOpts) Execute() error {
 
 	tasks, err := o.runTask()
 	if err != nil {
-		serr, ok := err.(*task.ErrENIInfoNotFoundForTasks)
-		if !ok {
-			return err
-		}
-		log.Errorln(serr.Error())
+		return err
 	}
 
-	if err := o.showPublicIPs(tasks); err != nil {
+	if err = o.showPublicIPs(tasks); err != nil {
 		return err
 	}
 
@@ -467,42 +464,39 @@ func (o *runTaskOpts) displayLogStream() error {
 
 func (o *runTaskOpts) runTask() ([]*task.Task, error) {
 	o.spinner.Start(fmt.Sprintf("Waiting for %s to be running for %s.", english.Plural(o.count, "task", ""), o.groupName))
-
-	var err error
 	tasks, err := o.runner.Run()
-	_, ok := err.(*task.ErrENIInfoNotFoundForTasks)
-	if err != nil && !ok{
+	if err != nil {
 		o.spinner.Stop(log.Serrorf("Failed to run %s.\n\n", o.groupName))
 		return nil, fmt.Errorf("run task %s: %w", o.groupName, err)
 	}
-
-	// err is either nil or ErrENIInfoNotFoundForTasks
 	o.spinner.Stop(log.Ssuccessf("%s %s %s running.\n\n", english.PluralWord(o.count, "Task", ""), o.groupName, english.PluralWord(o.count, "is", "are")))
-	return tasks, err
+	return tasks, nil
 }
 
 func (o *runTaskOpts) showPublicIPs(tasks []*task.Task) error {
 	publicIPs := make(map[string]string)
-
 	for _, t := range tasks {
 		if t.ENI == "" {
 			continue
 		}
-		ip, err := o.publicIPGetter.PublicIP(t.ENI)
-		if err != nil {
-			return fmt.Errorf("get public ip for task %s: %w", t.TaskARN, err)
+		ip, err := o.publicIPGetter.PublicIP(t.ENI) // We will just not show the ip address if an error occurs.
+		if err == nil {
+			publicIPs[t.TaskARN] = ip
 		}
-		publicIPs[t.TaskARN] = ip
 	}
 
-	log.Infof("Public %s associated with the %s %s:\n",
-		english.PluralWord(len(publicIPs), "IP", "IPs"),
-		english.PluralWord(len(publicIPs), "task", "tasks"),
-		english.PluralWord(len(publicIPs), "is", "are"))
-	for taskARN, ip := range publicIPs {
-		log.Infof("- %s (for %s)\n", ip, taskARN)
+	if len(publicIPs) > 0 {
+		log.Infof("%s associated with the %s %s:\n",
+			english.PluralWord(len(publicIPs), "The public IP", "Public IPs"),
+			english.PluralWord(len(publicIPs), "task", "tasks"),
+			english.PluralWord(len(publicIPs), "is", "are"))
+		for taskARN, ip := range publicIPs {
+			if len(taskARN) >= shortTaskIDLength {
+				taskARN = taskARN[len(taskARN)-shortTaskIDLength:]
+			}
+			log.Infof("- %s (for %s)\n", ip, taskARN)
+		}
 	}
-
 	return nil
 }
 

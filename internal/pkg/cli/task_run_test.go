@@ -6,7 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"path/filepath"
 	"testing"
 
@@ -736,24 +735,11 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					{
 						TaskARN: "task-3",
 					},
-				}, &task.ErrENIInfoNotFoundForTasks{
-					Errors: []*ecs.ErrTaskENIInfoNotFound{
-						{
-							MissingField: "attachment",
-							TaskARN:      "task-2",
-						},
-						{
-							MissingField: "attachment",
-							TaskARN:      "task-3",
-						},
-					},
-				})
+				}, nil)
 				m.publicIPGetter.EXPECT().PublicIP("eni-1").Return("1.2.3", nil)
 				mockHasDefaultCluster(m)
 				mockRepositoryAnytime(m)
 			},
-			// we dont want to return error; instead, we just want to print logs that listing the tasks for which we cannot
-			// find the ENI information
 		},
 		"fail to get public ips": {
 			setupMocks: func(m runTaskMocks) {
@@ -768,7 +754,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				mockHasDefaultCluster(m)
 				mockRepositoryAnytime(m)
 			},
-			wantedError: errors.New("get public ip for task task-1: some error"),
+			// wantedError is nil because we will just not show the IP address if we can't instead of erroring out.
 		},
 		"fail to write events": {
 			inFollow: true,
@@ -838,6 +824,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			err := opts.Execute()
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
+				fmt.Println("there??")
 			} else {
 				require.NoError(t, err)
 			}

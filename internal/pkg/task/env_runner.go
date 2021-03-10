@@ -88,7 +88,7 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 			parentErr: err,
 		}
 	}
-	return convertECSTasks(ecsTasks)
+	return convertECSTasks(ecsTasks), nil
 }
 
 func (r *EnvRunner) filtersForVPCFromAppEnv() []ec2.Filter {

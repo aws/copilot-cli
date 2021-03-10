@@ -222,18 +222,6 @@ func TestEnvRunner_Run(t *testing.T) {
 					TaskARN: "task-2",
 				},
 			},
-			wantedError: &ErrENIInfoNotFoundForTasks{
-				Errors: []*ecs.ErrTaskENIInfoNotFound{
-					{
-						MissingField: "attachment",
-						TaskARN: "task-2",
-					},
-					{
-						MissingField: "attachment",
-						TaskARN: "task-2",
-					},
-				},
-			},
 		},
 	}
 	for name, tc := range testCases {
@@ -269,8 +257,6 @@ func TestEnvRunner_Run(t *testing.T) {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
 				require.NoError(t, err)
-			}
-			if tc.wantedTasks != nil {
 				require.Equal(t, tc.wantedTasks, tasks)
 			}
 		})

@@ -6,8 +6,6 @@ package task
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	"strings"
 )
 
 var (
@@ -33,16 +31,4 @@ type errGetDefaultCluster struct {
 
 func (e *errGetDefaultCluster) Error() string {
 	return fmt.Sprintf("get default cluster: %v", e.parentErr)
-}
-
-type ErrENIInfoNotFoundForTasks struct {
-	Errors   []*ecs.ErrTaskENIInfoNotFound
-}
-
-func (e *ErrENIInfoNotFoundForTasks) Error() string{
-	errorMsgs := make([]string, len(e.Errors))
-	for idx, err := range e.Errors {
-		errorMsgs[idx]= err.Error()
-	}
-	return strings.Join(errorMsgs, "\n")
 }
