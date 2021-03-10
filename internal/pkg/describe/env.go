@@ -26,14 +26,14 @@ type EnvDescription struct {
 	Services       []*config.Workload  `json:"services"`
 	Tags           map[string]string   `json:"tags,omitempty"`
 	Resources      []*CfnResource      `json:"resources,omitempty"`
-	EnvironmentVPC EnvironmentVPC      `json:"environment_vpc"`
+	EnvironmentVPC EnvironmentVPC      `json:"environmentVPC"`
 }
 
 // EnvironmentVPC holds the ID of the environment's VPC configuration.
 type EnvironmentVPC struct {
-	ID               string
-	PublicSubnetIDs  []string
-	PrivateSubnetIDs []string
+	ID               string   `json:"id"`
+	PublicSubnetIDs  []string `json:"publicSubnetIDs"`
+	PrivateSubnetIDs []string `json:"privateSubnetIDs"`
 }
 
 // EnvDescriber retrieves information about an environment.
@@ -130,7 +130,7 @@ func (d *EnvDescriber) Version() (string, error) {
 }
 
 func (d *EnvDescriber) loadStackInfo() (map[string]string, EnvironmentVPC, error) {
-	environmentVPC := EnvironmentVPC{}
+	var environmentVPC EnvironmentVPC
 	tags := make(map[string]string)
 
 	envStack, err := d.stackDescriber.Stack(stack.NameForEnv(d.app, d.env.Name))

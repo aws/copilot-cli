@@ -6,6 +6,7 @@ package task
 import (
 	"errors"
 	"fmt"
+	awsecs "github.com/aws/aws-sdk-go/service/ecs"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -15,6 +16,31 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+const (
+	attachmentTypeName = "ElasticNetworkInterface"
+	detailsKeyName     = "networkInterfaceId"
+)
+
+var taskWithENI = ecs.Task{
+	TaskArn: aws.String("task-1"),
+	Attachments: []*awsecs.Attachment{
+		{
+			Type: aws.String(attachmentTypeName),
+			Details: []*awsecs.KeyValuePair{
+				{
+					Name: aws.String(detailsKeyName),
+					Value: aws.String("eni-1"),
+				},
+			},
+		},
+	},
+}
+
+var taskWithNoENI = ecs.Task{
+	TaskArn: aws.String("task-2"),
+}
+
 
 func TestNetworkConfigRunner_Run(t *testing.T) {
 	testCases := map[string]struct {
@@ -91,16 +117,13 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					SecurityGroups: []string{"sg-1", "sg-2"},
 					TaskFamilyName: taskFamilyName("my-task"),
 					StartedBy:      startedBy,
-				}).Return([]*ecs.Task{
-					{
-						TaskArn: aws.String("task-1"),
-					},
-				}, nil)
+				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 
 			wantedTasks: []*Task{
 				{
 					TaskARN: "task-1",
+					ENI: "eni-1",
 				},
 			},
 		},
@@ -137,16 +160,53 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					SecurityGroups: []string{"sg-1", "sg-2"},
 					TaskFamilyName: taskFamilyName("my-task"),
 					StartedBy:      startedBy,
-				}).Return([]*ecs.Task{
-					{
-						TaskArn: aws.String("task-1"),
-					},
-				}, nil)
+				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 
 			wantedTasks: []*Task{
 				{
 					TaskARN: "task-1",
+					ENI: "eni-1",
+				},
+			},
+		},
+		"eni information not found for several tasks": {
+			count:     1,
+			groupName: "my-task",
+
+			securityGroups: []string{"sg-1", "sg-2"},
+
+			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
+				m.EXPECT().DefaultCluster().Return("cluster-1", nil)
+			},
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
+				m.EXPECT().SubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).
+					Return([]string{"default-subnet-1", "default-subnet-2"}, nil)
+			},
+			mockStarter: func(m *mocks.MockRunner) {
+				m.EXPECT().RunTask(ecs.RunTaskInput{
+					Cluster:        "cluster-1",
+					Count:          1,
+					Subnets:        []string{"default-subnet-1", "default-subnet-2"},
+					SecurityGroups: []string{"sg-1", "sg-2"},
+					TaskFamilyName: taskFamilyName("my-task"),
+					StartedBy:      startedBy,
+				}).Return([]*ecs.Task{
+					&taskWithENI,
+					&taskWithNoENI,
+					&taskWithNoENI,
+				}, nil)
+			},
+			wantedTasks: []*Task{
+				{
+					TaskARN: "task-1",
+					ENI: "eni-1",
+				},
+				{
+					TaskARN: "task-2",
+				},
+				{
+					TaskARN: "task-2",
 				},
 			},
 		},
