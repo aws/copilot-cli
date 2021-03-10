@@ -64,10 +64,11 @@ func TestStream(t *testing.T) {
 	t.Run("short-circuits immediately if context is canceled", func(t *testing.T) {
 		// GIVEN
 		ctx, cancel := context.WithCancel(context.Background())
-		cancel() // call cancel immediately.
+		cancel()
+		blockUntil := time.Now().Add(1 * time.Minute)
 		streamer := &counterStreamer{
 			next: func() time.Time {
-				return time.Now()
+				return blockUntil // Should never be invoked since the context is canceled.
 			},
 		}
 

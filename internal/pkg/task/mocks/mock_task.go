@@ -7,6 +7,7 @@ package mocks
 import (
 	ec2 "github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	describe "github.com/aws/copilot-cli/internal/pkg/describe"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -165,6 +166,44 @@ func (m *MockDefaultClusterGetter) DefaultCluster() (string, error) {
 func (mr *MockDefaultClusterGetterMockRecorder) DefaultCluster() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultCluster", reflect.TypeOf((*MockDefaultClusterGetter)(nil).DefaultCluster))
+}
+
+// MockEnvironmentDescriber is a mock of EnvironmentDescriber interface.
+type MockEnvironmentDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockEnvironmentDescriberMockRecorder
+}
+
+// MockEnvironmentDescriberMockRecorder is the mock recorder for MockEnvironmentDescriber.
+type MockEnvironmentDescriberMockRecorder struct {
+	mock *MockEnvironmentDescriber
+}
+
+// NewMockEnvironmentDescriber creates a new mock instance.
+func NewMockEnvironmentDescriber(ctrl *gomock.Controller) *MockEnvironmentDescriber {
+	mock := &MockEnvironmentDescriber{ctrl: ctrl}
+	mock.recorder = &MockEnvironmentDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockEnvironmentDescriber) EXPECT() *MockEnvironmentDescriberMockRecorder {
+	return m.recorder
+}
+
+// Describe mocks base method.
+func (m *MockEnvironmentDescriber) Describe() (*describe.EnvDescription, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Describe")
+	ret0, _ := ret[0].(*describe.EnvDescription)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Describe indicates an expected call of Describe.
+func (mr *MockEnvironmentDescriberMockRecorder) Describe() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockEnvironmentDescriber)(nil).Describe))
 }
 
 // MockRunner is a mock of Runner interface

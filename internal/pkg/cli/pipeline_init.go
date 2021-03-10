@@ -45,23 +45,19 @@ Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or
 
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
-
+	fmtPipelineName       = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
 	// For a GitHub repository.
 	githubURL       = "github.com"
-	ghProviderName  = "GitHub"
 	defaultGHBranch = "main"
-	fmtPipelineName = "pipeline-%s-%s"     // Ex: "pipeline-appName-repoName"
 	fmtGHRepoURL    = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
 	fmtSecretName   = "github-token-%s-%s" // Ex: "github-token-appName-repoName"
 	// For a CodeCommit repository.
 	awsURL          = "aws.amazon.com"
 	ccIdentifier    = "codecommit"
-	ccProviderName  = "CodeCommit"
 	defaultCCBranch = "master"
 	fmtCCRepoURL    = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse" // Ex: "https://region.console.aws.amazon.com/codesuite/codecommit/repositories/repoName/browse"
 	// For a Bitbucket repository.
 	bbURL           = "bitbucket.org"
-	bbProviderName  = "Bitbucket"
 	defaultBBBranch = "master"
 	fmtBBRepoURL    = "https://%s@%s/%s/%s" // Ex: "https://repoOwner@bitbucket.org/repoOwner/repoName
 )
@@ -190,7 +186,7 @@ func (o *initPipelineOpts) Ask() error {
 
 // Execute writes the pipeline manifest file.
 func (o *initPipelineOpts) Execute() error {
-	if o.provider == ghProviderName {
+	if o.provider == manifest.GithubV1ProviderName {
 		if err := o.storeGitHubAccessToken(); err != nil {
 			return err
 		}
@@ -270,7 +266,13 @@ func (o *initPipelineOpts) askRepository() error {
 }
 
 func (o *initPipelineOpts) askGitHubRepoDetails() error {
-	o.provider = ghProviderName
+	// If the user uses a flag to specify a GitHub access token,
+	// GitHub version 1 (not CSC) is the provider.
+	o.provider = manifest.GithubProviderName
+	if o.githubAccessToken != "" {
+		o.provider = manifest.GithubV1ProviderName
+	}
+
 	repoDetails, err := ghRepoURL(o.repoURL).parse()
 	if err != nil {
 		return err
@@ -278,11 +280,6 @@ func (o *initPipelineOpts) askGitHubRepoDetails() error {
 	o.repoName = repoDetails.name
 	o.repoOwner = repoDetails.owner
 
-	if o.githubAccessToken == "" {
-		if err = o.getGitHubAccessToken(); err != nil {
-			return err
-		}
-	}
 	if o.repoBranch == "" {
 		o.repoBranch = defaultGHBranch
 	}
@@ -290,7 +287,7 @@ func (o *initPipelineOpts) askGitHubRepoDetails() error {
 }
 
 func (o *initPipelineOpts) parseCodeCommitRepoDetails() error {
-	o.provider = ccProviderName
+	o.provider = manifest.CodeCommitProviderName
 	repoDetails, err := ccRepoURL(o.repoURL).parse()
 	if err != nil {
 		return err
@@ -315,7 +312,7 @@ func (o *initPipelineOpts) parseCodeCommitRepoDetails() error {
 }
 
 func (o *initPipelineOpts) parseBitbucketRepoDetails() error {
-	o.provider = bbProviderName
+	o.provider = manifest.BitbucketProviderName
 	repoDetails, err := bbRepoURL(o.repoURL).parse()
 	if err != nil {
 		return err
@@ -469,20 +466,6 @@ func (url bbRepoURL) parse() (bbRepoDetails, error) {
 	}, nil
 }
 
-func (o *initPipelineOpts) getGitHubAccessToken() error {
-	token, err := o.prompt.GetSecret(
-		fmt.Sprintf("Please enter your GitHub Personal Access Token for your repository %s:", color.HighlightUserInput(o.repoName)),
-		`The personal access token for the GitHub repository linked to your workspace. 
-For more information, please refer to: https://git.io/JfDFD.`,
-	)
-
-	if err != nil {
-		return fmt.Errorf("get GitHub access token: %w", err)
-	}
-	o.githubAccessToken = token
-	return nil
-}
-
 func (o *initPipelineOpts) storeGitHubAccessToken() error {
 	secretName := o.secretName()
 	_, err := o.secretsmanager.CreateSecret(secretName, o.githubAccessToken)
@@ -608,18 +591,23 @@ func (o *initPipelineOpts) pipelineName() string {
 func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 	var config interface{}
 	switch o.provider {
-	case ghProviderName:
-		config = &manifest.GitHubProperties{
+	case manifest.GithubV1ProviderName:
+		config = &manifest.GitHubV1Properties{
 			RepositoryURL:         fmt.Sprintf(fmtGHRepoURL, githubURL, o.repoOwner, o.repoName),
 			Branch:                o.repoBranch,
 			GithubSecretIdKeyName: o.secret,
 		}
-	case ccProviderName:
+	case manifest.GithubProviderName:
+		config = &manifest.GitHubProperties{
+			RepositoryURL: fmt.Sprintf(fmtGHRepoURL, githubURL, o.repoOwner, o.repoName),
+			Branch:        o.repoBranch,
+		}
+	case manifest.CodeCommitProviderName:
 		config = &manifest.CodeCommitProperties{
 			RepositoryURL: fmt.Sprintf(fmtCCRepoURL, o.ccRegion, awsURL, o.repoName),
 			Branch:        o.repoBranch,
 		}
-	case bbProviderName:
+	case manifest.BitbucketProviderName:
 		config = &manifest.BitbucketProperties{
 			RepositoryURL: fmt.Sprintf(fmtBBRepoURL, o.repoOwner, bbURL, o.repoOwner, o.repoName),
 			Branch:        o.repoBranch,
@@ -669,7 +657,6 @@ func buildPipelineInitCmd() *cobra.Command {
   Create a pipeline for the services in your workspace.
   /code $ copilot pipeline init \
   /code  --url https://github.com/gitHubUserName/myFrontendApp.git \
-  /code  --github-access-token file://myGitHubToken \
   /code  --environments "stage,prod"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitPipelineOpts(vars)
@@ -698,6 +685,7 @@ func buildPipelineInitCmd() *cobra.Command {
 	_ = cmd.Flags().MarkHidden(githubURLFlag)
 	cmd.Flags().StringVarP(&vars.repoURL, repoURLFlag, repoURLFlagShort, "", repoURLFlagDescription)
 	cmd.Flags().StringVarP(&vars.githubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
+	_ = cmd.Flags().MarkHidden(githubAccessTokenFlag)
 	cmd.Flags().StringVarP(&vars.repoBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
 	cmd.Flags().StringSliceVarP(&vars.environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
 
