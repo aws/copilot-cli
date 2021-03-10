@@ -26,7 +26,7 @@ type EnvDescription struct {
 	Services       []*config.Workload  `json:"services"`
 	Tags           map[string]string   `json:"tags,omitempty"`
 	Resources      []*CfnResource      `json:"resources,omitempty"`
-	EnvironmentVPC *EnvironmentVPC     `json:"environment_vpc,omitempty"`
+	EnvironmentVPC EnvironmentVPC      `json:"environment_vpc"`
 }
 
 // EnvironmentVPC holds the ID of the environment's VPC configuration.
@@ -129,13 +129,13 @@ func (d *EnvDescriber) Version() (string, error) {
 	return metadata.Version, nil
 }
 
-func (d *EnvDescriber) loadStackInfo() (map[string]string, *EnvironmentVPC, error) {
+func (d *EnvDescriber) loadStackInfo() (map[string]string, EnvironmentVPC, error) {
 	environmentVPC := EnvironmentVPC{}
 	tags := make(map[string]string)
 
 	envStack, err := d.stackDescriber.Stack(stack.NameForEnv(d.app, d.env.Name))
 	if err != nil {
-		return nil, nil, fmt.Errorf("retrieve environment stack: %w", err)
+		return nil, environmentVPC, fmt.Errorf("retrieve environment stack: %w", err)
 	}
 	for _, tag := range envStack.Tags {
 		tags[*tag.Key] = *tag.Value
@@ -154,7 +154,7 @@ func (d *EnvDescriber) loadStackInfo() (map[string]string, *EnvironmentVPC, erro
 		}
 	}
 
-	return tags, &environmentVPC, nil
+	return tags, environmentVPC, nil
 }
 
 func (d *EnvDescriber) filterDeployedSvcs() ([]*config.Workload, error) {

@@ -174,7 +174,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 				Environment: testEnv,
 				Services:    envSvcs,
 				Tags:        map[string]string{"copilot-application": "testApp", "copilot-environment": "testEnv"},
-				EnvironmentVPC: &EnvironmentVPC{
+				EnvironmentVPC: EnvironmentVPC{
 					ID:               "vpc-012abcd345",
 					PublicSubnetIDs:  []string{"subnet-0789ab", "subnet-0123cd"},
 					PrivateSubnetIDs: []string{"subnet-023ff", "subnet-04af"},
@@ -205,7 +205,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 				Services:    envSvcs,
 				Tags:        map[string]string{"copilot-application": "testApp", "copilot-environment": "testEnv"},
 				Resources:   wantedResources,
-				EnvironmentVPC: &EnvironmentVPC{
+				EnvironmentVPC: EnvironmentVPC{
 					ID:               "vpc-012abcd345",
 					PublicSubnetIDs:  []string{"subnet-0789ab", "subnet-0123cd"},
 					PrivateSubnetIDs: []string{"subnet-023ff", "subnet-04af"},
@@ -341,17 +341,18 @@ func TestEnvDescription_JSONString(t *testing.T) {
 		Type: "load-balanced",
 	}
 	allSvcs := []*config.Workload{testSvc1, testSvc2, testSvc3}
-	wantedContent := "{\"environment\":{\"app\":\"testApp\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\",\"customConfig\":{}},\"services\":[{\"app\":\"testApp\",\"name\":\"testSvc1\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc2\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc3\",\"type\":\"load-balanced\"}],\"tags\":{\"key1\":\"value1\",\"key2\":\"value2\"},\"resources\":[{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"testApp-testEnv-CFNExecutionRole\"},{\"type\":\"testApp-testEnv-Cluster\",\"physicalID\":\"AWS::ECS::Cluster-jI63pYBWU6BZ\"}]}\n"
+	wantedContent := "{\"environment\":{\"app\":\"testApp\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\",\"customConfig\":{}},\"services\":[{\"app\":\"testApp\",\"name\":\"testSvc1\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc2\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc3\",\"type\":\"load-balanced\"}],\"tags\":{\"key1\":\"value1\",\"key2\":\"value2\"},\"resources\":[{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"testApp-testEnv-CFNExecutionRole\"},{\"type\":\"testApp-testEnv-Cluster\",\"physicalID\":\"AWS::ECS::Cluster-jI63pYBWU6BZ\"}],\"environment_vpc\":{\"ID\":\"\",\"PublicSubnetIDs\":null,\"PrivateSubnetIDs\":null}}\n"
 
 	// GIVEN
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	d := &EnvDescription{
-		Environment: testEnv,
-		Services:    allSvcs,
-		Tags:        testApp.Tags,
-		Resources:   wantedResources,
+		Environment:    testEnv,
+		EnvironmentVPC: EnvironmentVPC{},
+		Services:       allSvcs,
+		Tags:           testApp.Tags,
+		Resources:      wantedResources,
 	}
 
 	// WHEN

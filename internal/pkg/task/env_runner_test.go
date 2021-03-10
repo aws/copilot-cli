@@ -51,7 +51,7 @@ func TestEnvRunner_Run(t *testing.T) {
 	}
 	mockEnvironmentDescriberValid := func(m *mocks.MockEnvironmentDescriber) {
 		m.EXPECT().Describe().Return(&describe.EnvDescription{
-			EnvironmentVPC: &describe.EnvironmentVPC{
+			EnvironmentVPC: describe.EnvironmentVPC{
 				ID:               "vpc-012abcd345",
 				PublicSubnetIDs:  []string{"subnet-0789ab", "subnet-0123cd"},
 				PrivateSubnetIDs: []string{"subnet-023ff", "subnet-04af"},
@@ -80,16 +80,16 @@ func TestEnvRunner_Run(t *testing.T) {
 			mockEnvironmentDescriber: mockEnvironmentDescriberAny,
 			wantedError:              fmt.Errorf("get cluster for environment %s: %w", inEnv, errors.New("error getting resources")),
 		},
-		"failed to get subnets": {
+		"failed to get env description": {
 			MockClusterGetter: MockClusterGetter,
 			MockVPCGetter: func(m *mocks.MockVPCGetter) {
 				m.EXPECT().SecurityGroups(gomock.Any()).AnyTimes()
 			},
 			mockStarter: mockStarterNotRun,
 			mockEnvironmentDescriber: func(m *mocks.MockEnvironmentDescriber) {
-				m.EXPECT().Describe().Return(nil, errors.New("error getting subnets"))
+				m.EXPECT().Describe().Return(nil, errors.New("error getting env description"))
 			},
-			wantedError: fmt.Errorf(fmtErrDescribeEnvironment, inEnv, errors.New("error getting subnets")),
+			wantedError: fmt.Errorf(fmtErrDescribeEnvironment, inEnv, errors.New("error getting env description")),
 		},
 		"no subnet is found": {
 			MockClusterGetter: MockClusterGetter,
@@ -99,7 +99,7 @@ func TestEnvRunner_Run(t *testing.T) {
 			mockStarter: mockStarterNotRun,
 			mockEnvironmentDescriber: func(m *mocks.MockEnvironmentDescriber) {
 				m.EXPECT().Describe().Return(&describe.EnvDescription{
-					EnvironmentVPC: &describe.EnvironmentVPC{
+					EnvironmentVPC: describe.EnvironmentVPC{
 						ID:               "vpc-012abcd345",
 						PublicSubnetIDs:  []string{},
 						PrivateSubnetIDs: []string{"subnet-023ff", "subnet-04af"},

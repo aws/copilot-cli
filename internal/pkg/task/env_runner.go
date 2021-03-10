@@ -58,9 +58,10 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 	if err != nil {
 		return nil, fmt.Errorf(fmtErrDescribeEnvironment, r.Env, err)
 	}
-	if description == nil || description.EnvironmentVPC == nil || len(description.EnvironmentVPC.PublicSubnetIDs) == 0 {
+	if len(description.EnvironmentVPC.PublicSubnetIDs) == 0 {
 		return nil, errNoSubnetFound
 	}
+
 	subnets := description.EnvironmentVPC.PublicSubnetIDs
 
 	filters := r.filtersForVPCFromAppEnv()
