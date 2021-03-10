@@ -8,6 +8,7 @@ import (
 	"fmt"
 )
 
+// Errors returned while trying to run a task.
 var (
 	ErrNoSubnetFound = errors.New("no subnets found")
 
