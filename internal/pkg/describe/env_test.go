@@ -71,6 +71,20 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			Value: aws.String("testEnv"),
 		},
 	}
+	stackOutputs := []*cloudformation.Output{
+		{
+			OutputKey:   aws.String("VpcId"),
+			OutputValue: aws.String("vpc-012abcd345"),
+		},
+		{
+			OutputKey:   aws.String("PublicSubnets"),
+			OutputValue: aws.String("subnet-0789ab,subnet-0123cd"),
+		},
+		{
+			OutputKey:   aws.String("PrivateSubnets"),
+			OutputValue: aws.String("subnet-023ff,subnet-04af"),
+		},
+	}
 	mockResource1 := &cloudformation.StackResource{
 		PhysicalResourceId: aws.String("testApp-testEnv-CFNExecutionRole"),
 		ResourceType:       aws.String("AWS::IAM::Role"),
@@ -121,7 +135,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 					m.stackDescriber.EXPECT().Stack("testApp-testEnv").Return(nil, mockError),
 				)
 			},
-			wantedError: fmt.Errorf("retrieve environment tags: some error"),
+			wantedError: fmt.Errorf("retrieve environment stack: some error"),
 		},
 		"error if fail to get env resources": {
 			shouldOutputResources: true,
@@ -133,7 +147,8 @@ func TestEnvDescriber_Describe(t *testing.T) {
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
 						Return([]string{"testSvc1", "testSvc2"}, nil),
 					m.stackDescriber.EXPECT().Stack("testApp-testEnv").Return(&cloudformation.Stack{
-						Tags: stackTags,
+						Tags:    stackTags,
+						Outputs: stackOutputs,
 					}, nil),
 					m.stackDescriber.EXPECT().StackResources("testApp-testEnv").Return(nil, mockError),
 				)
@@ -150,7 +165,8 @@ func TestEnvDescriber_Describe(t *testing.T) {
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
 						Return([]string{"testSvc1", "testSvc2"}, nil),
 					m.stackDescriber.EXPECT().Stack("testApp-testEnv").Return(&cloudformation.Stack{
-						Tags: stackTags,
+						Tags:    stackTags,
+						Outputs: stackOutputs,
 					}, nil),
 				)
 			},
@@ -158,6 +174,11 @@ func TestEnvDescriber_Describe(t *testing.T) {
 				Environment: testEnv,
 				Services:    envSvcs,
 				Tags:        map[string]string{"copilot-application": "testApp", "copilot-environment": "testEnv"},
+				EnvironmentVPC: EnvironmentVPC{
+					ID:               "vpc-012abcd345",
+					PublicSubnetIDs:  []string{"subnet-0789ab", "subnet-0123cd"},
+					PrivateSubnetIDs: []string{"subnet-023ff", "subnet-04af"},
+				},
 			},
 		},
 		"success with resources": {
@@ -170,7 +191,8 @@ func TestEnvDescriber_Describe(t *testing.T) {
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
 						Return([]string{"testSvc1", "testSvc2"}, nil),
 					m.stackDescriber.EXPECT().Stack("testApp-testEnv").Return(&cloudformation.Stack{
-						Tags: stackTags,
+						Tags:    stackTags,
+						Outputs: stackOutputs,
 					}, nil),
 					m.stackDescriber.EXPECT().StackResources("testApp-testEnv").Return([]*cloudformation.StackResource{
 						mockResource1,
@@ -183,10 +205,14 @@ func TestEnvDescriber_Describe(t *testing.T) {
 				Services:    envSvcs,
 				Tags:        map[string]string{"copilot-application": "testApp", "copilot-environment": "testEnv"},
 				Resources:   wantedResources,
+				EnvironmentVPC: EnvironmentVPC{
+					ID:               "vpc-012abcd345",
+					PublicSubnetIDs:  []string{"subnet-0789ab", "subnet-0123cd"},
+					PrivateSubnetIDs: []string{"subnet-023ff", "subnet-04af"},
+				},
 			},
 		},
 	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
@@ -315,17 +341,18 @@ func TestEnvDescription_JSONString(t *testing.T) {
 		Type: "load-balanced",
 	}
 	allSvcs := []*config.Workload{testSvc1, testSvc2, testSvc3}
-	wantedContent := "{\"environment\":{\"app\":\"testApp\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\",\"customConfig\":{}},\"services\":[{\"app\":\"testApp\",\"name\":\"testSvc1\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc2\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc3\",\"type\":\"load-balanced\"}],\"tags\":{\"key1\":\"value1\",\"key2\":\"value2\"},\"resources\":[{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"testApp-testEnv-CFNExecutionRole\"},{\"type\":\"testApp-testEnv-Cluster\",\"physicalID\":\"AWS::ECS::Cluster-jI63pYBWU6BZ\"}]}\n"
+	wantedContent := "{\"environment\":{\"app\":\"testApp\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\",\"customConfig\":{}},\"services\":[{\"app\":\"testApp\",\"name\":\"testSvc1\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc2\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc3\",\"type\":\"load-balanced\"}],\"tags\":{\"key1\":\"value1\",\"key2\":\"value2\"},\"resources\":[{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"testApp-testEnv-CFNExecutionRole\"},{\"type\":\"testApp-testEnv-Cluster\",\"physicalID\":\"AWS::ECS::Cluster-jI63pYBWU6BZ\"}],\"environment_vpc\":{\"ID\":\"\",\"PublicSubnetIDs\":null,\"PrivateSubnetIDs\":null}}\n"
 
 	// GIVEN
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	d := &EnvDescription{
-		Environment: testEnv,
-		Services:    allSvcs,
-		Tags:        testApp.Tags,
-		Resources:   wantedResources,
+		Environment:    testEnv,
+		EnvironmentVPC: EnvironmentVPC{},
+		Services:       allSvcs,
+		Tags:           testApp.Tags,
+		Resources:      wantedResources,
 	}
 
 	// WHEN

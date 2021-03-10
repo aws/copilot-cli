@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -21,10 +22,18 @@ import (
 
 // EnvDescription contains the information about an environment.
 type EnvDescription struct {
-	Environment *config.Environment `json:"environment"`
-	Services    []*config.Workload  `json:"services"`
-	Tags        map[string]string   `json:"tags,omitempty"`
-	Resources   []*CfnResource      `json:"resources,omitempty"`
+	Environment    *config.Environment `json:"environment"`
+	Services       []*config.Workload  `json:"services"`
+	Tags           map[string]string   `json:"tags,omitempty"`
+	Resources      []*CfnResource      `json:"resources,omitempty"`
+	EnvironmentVPC EnvironmentVPC      `json:"environment_vpc"`
+}
+
+// EnvironmentVPC holds the ID of the environment's VPC configuration.
+type EnvironmentVPC struct {
+	ID               string
+	PublicSubnetIDs  []string
+	PrivateSubnetIDs []string
 }
 
 // EnvDescriber retrieves information about an environment.
@@ -76,9 +85,9 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 		return nil, err
 	}
 
-	tags, err := d.stackTags()
+	tags, environmentVPC, err := d.loadStackInfo()
 	if err != nil {
-		return nil, fmt.Errorf("retrieve environment tags: %w", err)
+		return nil, err
 	}
 
 	var stackResources []*CfnResource
@@ -90,10 +99,11 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 	}
 
 	return &EnvDescription{
-		Environment: d.env,
-		Services:    svcs,
-		Tags:        tags,
-		Resources:   stackResources,
+		Environment:    d.env,
+		Services:       svcs,
+		Tags:           tags,
+		Resources:      stackResources,
+		EnvironmentVPC: environmentVPC,
 	}, nil
 }
 
@@ -119,23 +129,32 @@ func (d *EnvDescriber) Version() (string, error) {
 	return metadata.Version, nil
 }
 
-// EnvironmentVPC holds the ID of the environment's VPC configuration.
-type EnvironmentVPC struct {
-	ID               string
-	PublicSubnetIDs  []string
-	PrivateSubnetIDs []string
-}
-
-func (d *EnvDescriber) stackTags() (map[string]string, error) {
+func (d *EnvDescriber) loadStackInfo() (map[string]string, EnvironmentVPC, error) {
+	environmentVPC := EnvironmentVPC{}
 	tags := make(map[string]string)
+
 	envStack, err := d.stackDescriber.Stack(stack.NameForEnv(d.app, d.env.Name))
 	if err != nil {
-		return nil, err
+		return nil, environmentVPC, fmt.Errorf("retrieve environment stack: %w", err)
 	}
 	for _, tag := range envStack.Tags {
 		tags[*tag.Key] = *tag.Value
 	}
-	return tags, nil
+
+	for _, out := range envStack.Outputs {
+		value := aws.StringValue(out.OutputValue)
+
+		switch aws.StringValue(out.OutputKey) {
+		case stack.EnvOutputVPCID:
+			environmentVPC.ID = value
+		case stack.EnvOutputPublicSubnets:
+			environmentVPC.PublicSubnetIDs = strings.Split(value, ",")
+		case stack.EnvOutputPrivateSubnets:
+			environmentVPC.PrivateSubnetIDs = strings.Split(value, ",")
+		}
+	}
+
+	return tags, environmentVPC, nil
 }
 
 func (d *EnvDescriber) filterDeployedSvcs() ([]*config.Workload, error) {
