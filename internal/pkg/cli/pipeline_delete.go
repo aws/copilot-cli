@@ -118,7 +118,6 @@ func (o *deletePipelineOpts) Ask() error {
 
 // Execute deletes the secret and pipeline stack.
 func (o *deletePipelineOpts) Execute() error {
-	// Pipelines created with GitHubV1 have secrets.
 	if err := o.deleteSecret(); err != nil {
 		return err
 	}
