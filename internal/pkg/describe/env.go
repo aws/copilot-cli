@@ -32,8 +32,8 @@ type EnvDescription struct {
 // EnvironmentVPC holds the ID of the environment's VPC configuration.
 type EnvironmentVPC struct {
 	ID               string   `json:"id"`
-	PublicSubnetIDs  []string `json:"publicSubnets"`
-	PrivateSubnetIDs []string `json:"privateSubnets"`
+	PublicSubnetIDs  []string `json:"publicSubnetIDs"`
+	PrivateSubnetIDs []string `json:"privateSubnetIDs"`
 }
 
 // EnvDescriber retrieves information about an environment.
