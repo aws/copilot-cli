@@ -212,10 +212,10 @@ func (s *GitHubSource) Connection() (string, error) {
 func parseAndCheckARN(ARN string) error {
 	parsedARN, err := arn.Parse(ARN)
 	if err != nil {
-		fmt.Errorf("parse connection ARN: %w", err)
+		return fmt.Errorf("parse connection ARN: %w", err)
 	}
 	if parsedARN.Service != "codestar-connections" {
-		fmt.Errorf("ARN does not identify a CodeStar Connections resource")
+		return fmt.Errorf("ARN does not identify a CodeStar Connections resource")
 	}
 	return nil
 }
