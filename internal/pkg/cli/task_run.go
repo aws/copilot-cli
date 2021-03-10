@@ -438,9 +438,7 @@ func (o *runTaskOpts) Execute() error {
 		return err
 	}
 
-	if err = o.showPublicIPs(tasks); err != nil {
-		return err
-	}
+	o.showPublicIPs(tasks)
 
 	if o.follow {
 		o.configureEventsWriter(tasks)
@@ -473,7 +471,7 @@ func (o *runTaskOpts) runTask() ([]*task.Task, error) {
 	return tasks, nil
 }
 
-func (o *runTaskOpts) showPublicIPs(tasks []*task.Task) error {
+func (o *runTaskOpts) showPublicIPs(tasks []*task.Task) {
 	publicIPs := make(map[string]string)
 	for _, t := range tasks {
 		if t.ENI == "" {
@@ -485,19 +483,21 @@ func (o *runTaskOpts) showPublicIPs(tasks []*task.Task) error {
 		}
 	}
 
-	if len(publicIPs) > 0 {
-		log.Infof("%s associated with the %s %s:\n",
-			english.PluralWord(len(publicIPs), "The public IP", "Public IPs"),
-			english.PluralWord(len(publicIPs), "task", "tasks"),
-			english.PluralWord(len(publicIPs), "is", "are"))
-		for taskARN, ip := range publicIPs {
-			if len(taskARN) >= shortTaskIDLength {
-				taskARN = taskARN[len(taskARN)-shortTaskIDLength:]
-			}
-			log.Infof("- %s (for %s)\n", ip, taskARN)
-		}
+	if len(publicIPs) == 0 {
+		return
 	}
-	return nil
+
+	log.Infof("%s associated with the %s %s:\n",
+		english.PluralWord(len(publicIPs), "The public IP", "Public IPs"),
+		english.PluralWord(len(publicIPs), "task", "tasks"),
+		english.PluralWord(len(publicIPs), "is", "are"))
+	for taskARN, ip := range publicIPs {
+		if len(taskARN) >= shortTaskIDLength {
+			taskARN = taskARN[len(taskARN)-shortTaskIDLength:]
+		}
+		log.Infof("- %s (for %s)\n", ip, taskARN)
+	}
+
 }
 
 func (o *runTaskOpts) buildAndPushImage() error {

@@ -21,8 +21,7 @@ const (
 	shortImageDigestLength = 8
 	imageDigestPrefix      = "sha256:"
 
-	// These names are not defined as const in sdk.
-	// We will need to monitor if they have changed the key name in the future.
+	// These field names are not defined as const in sdk.
 	networkInterfaceIDKey          = "networkInterfaceId"
 	networkInterfaceAttachmentType = "ElasticNetworkInterface"
 )
