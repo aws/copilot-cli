@@ -107,7 +107,7 @@ func (t *Task) ENI() (string, error) {
 
 	for _, detail := range attachmentENI.Details {
 		if aws.StringValue(detail.Name) == networkInterfaceIDKey {
-			return *detail.Value, nil
+			return aws.StringValue(detail.Value), nil
 		}
 	}
 	return "", &ErrTaskENIInfoNotFound{
