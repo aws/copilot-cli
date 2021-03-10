@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -141,16 +142,15 @@ func (d *EnvDescriber) loadStackInfo() (map[string]string, *EnvironmentVPC, erro
 	}
 
 	for _, out := range envStack.Outputs {
-		if out.OutputKey != nil {
-			if *out.OutputKey == stack.EnvOutputVPCID {
-				environmentVPC.ID = *out.OutputValue
-			}
-			if *out.OutputKey == stack.EnvOutputPublicSubnets {
-				environmentVPC.PublicSubnetIDs = strings.Split(*out.OutputValue, ",")
-			}
-			if *out.OutputKey == stack.EnvOutputPrivateSubnets {
-				environmentVPC.PrivateSubnetIDs = strings.Split(*out.OutputValue, ",")
-			}
+		value := aws.StringValue(out.OutputValue)
+
+		switch aws.StringValue(out.OutputKey) {
+		case stack.EnvOutputVPCID:
+			environmentVPC.ID = value
+		case stack.EnvOutputPublicSubnets:
+			environmentVPC.PublicSubnetIDs = strings.Split(value, ",")
+		case stack.EnvOutputPrivateSubnets:
+			environmentVPC.PrivateSubnetIDs = strings.Split(value, ",")
 		}
 	}
 
