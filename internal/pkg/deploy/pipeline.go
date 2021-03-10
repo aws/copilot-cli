@@ -136,14 +136,18 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 		} else {
 			// If an existing CSC connection is being used, don't prompt to update connection from 'PENDING' to 'AVAILABLE'.
 			var shouldPrompt bool
-			if (mfSource.Properties["connection_ARN"]).(string) == "" {
+			var connection string
+			if (mfSource.Properties["connection_ARN"]) == nil {
 				shouldPrompt = true
+				connection = ""
+			} else {
+				connection = mfSource.Properties["connection_ARN"].(string)
 			}
 			return &GitHubSource{
 				ProviderName:  manifest.GithubProviderName,
 				Branch:        (mfSource.Properties["branch"]).(string),
 				RepositoryURL: GitHubURL((mfSource.Properties["repository"]).(string)),
-				ConnectionARN: (mfSource.Properties["connection_ARN"]).(string),
+				ConnectionARN: connection,
 			}, shouldPrompt, nil
 		}
 	case manifest.CodeCommitProviderName:
@@ -155,14 +159,18 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 	case manifest.BitbucketProviderName:
 		// If an existing CSC connection is being used, don't prompt to update connection from 'PENDING' to 'AVAILABLE'.
 		var shouldPrompt bool
-		if (mfSource.Properties["connection_ARN"]).(string) == "" {
+		var connection string
+		if (mfSource.Properties["connection_ARN"]) == nil {
 			shouldPrompt = true
+			connection = ""
+		} else {
+			connection = mfSource.Properties["connection_ARN"].(string)
 		}
 		return &BitbucketSource{
 			ProviderName:  manifest.BitbucketProviderName,
 			Branch:        (mfSource.Properties["branch"]).(string),
 			RepositoryURL: (mfSource.Properties["repository"]).(string),
-			ConnectionARN: (mfSource.Properties["connection_ARN"]).(string),
+			ConnectionARN: connection,
 		}, shouldPrompt, nil
 	default:
 		return nil, false, fmt.Errorf("invalid repo source provider: %s", mfSource.ProviderName)
