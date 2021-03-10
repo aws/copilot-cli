@@ -113,7 +113,7 @@ type BitbucketSource struct {
 
 // PipelineSourceFromManifest processes manifest info about the source based on provider type.
 // The return boolean is true for CodeStar Connections sources that require a polling prompt.
-func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, usesCodeStar bool, err error) {
+func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, shouldPrompt bool, err error) {
 	switch mfSource.ProviderName {
 	case manifest.GithubV1ProviderName:
 		return &GitHubV1Source{
@@ -134,12 +134,16 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 				PersonalAccessTokenSecretID: (mfSource.Properties["access_token_secret"]).(string),
 			}, false, nil
 		} else {
+			var shouldPrompt bool
+			if (mfSource.Properties["connection_ARN"]).(string) == "" {
+				shouldPrompt = true
+			}
 			return &GitHubSource{
 				ProviderName:  manifest.GithubProviderName,
 				Branch:        (mfSource.Properties["branch"]).(string),
 				RepositoryURL: GitHubURL((mfSource.Properties["repository"]).(string)),
 				ConnectionARN: (mfSource.Properties["connection_ARN"]).(string),
-			}, true, nil
+			}, shouldPrompt, nil
 		}
 	case manifest.CodeCommitProviderName:
 		return &CodeCommitSource{
@@ -148,12 +152,16 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 			RepositoryURL: (mfSource.Properties["repository"]).(string),
 		}, false, nil
 	case manifest.BitbucketProviderName:
+		var shouldPrompt bool
+		if (mfSource.Properties["connection_ARN"]).(string) == "" {
+			shouldPrompt = true
+		}
 		return &BitbucketSource{
 			ProviderName:  manifest.BitbucketProviderName,
 			Branch:        (mfSource.Properties["branch"]).(string),
 			RepositoryURL: (mfSource.Properties["repository"]).(string),
 			ConnectionARN: (mfSource.Properties["connection_ARN"]).(string),
-		}, true, nil
+		}, shouldPrompt, nil
 	default:
 		return nil, false, fmt.Errorf("invalid repo source provider: %s", mfSource.ProviderName)
 	}
