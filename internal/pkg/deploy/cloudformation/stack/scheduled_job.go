@@ -203,32 +203,33 @@ func (j *ScheduledJob) SerializedParameters() (string, error) {
 // Exception is made for strings of the form "rate( )" or "cron( )". These are accepted as-is and
 // validated server-side by CloudFormation.
 func (j *ScheduledJob) awsSchedule() (string, error) {
-	if j.manifest.On.Schedule == "" {
+	schedule := aws.StringValue(j.manifest.On.Schedule)
+	if schedule == "" {
 		return "", fmt.Errorf(`missing required field "schedule" in manifest for job %s`, j.name)
 	}
 	// If the schedule uses default CloudWatch Events syntax, pass it through for server-side validation.
-	if match := awsScheduleRegexp.FindStringSubmatch(j.manifest.On.Schedule); match != nil {
-		return j.manifest.On.Schedule, nil
+	if match := awsScheduleRegexp.FindStringSubmatch(schedule); match != nil {
+		return aws.StringValue(j.manifest.On.Schedule), nil
 	}
 	// Try parsing the string as a cron expression to validate it.
-	if _, err := cron.ParseStandard(j.manifest.On.Schedule); err != nil {
+	if _, err := cron.ParseStandard(schedule); err != nil {
 		return "", errScheduleInvalid{reason: err}
 	}
 	var scheduleExpression string
 	var err error
 	switch {
-	case strings.HasPrefix(j.manifest.On.Schedule, every):
-		scheduleExpression, err = toRate(j.manifest.On.Schedule[len(every):])
+	case strings.HasPrefix(schedule, every):
+		scheduleExpression, err = toRate(schedule[len(every):])
 		if err != nil {
 			return "", fmt.Errorf("parse fixed interval: %w", err)
 		}
-	case strings.HasPrefix(j.manifest.On.Schedule, "@"):
-		scheduleExpression, err = toFixedSchedule(j.manifest.On.Schedule)
+	case strings.HasPrefix(schedule, "@"):
+		scheduleExpression, err = toFixedSchedule(schedule)
 		if err != nil {
 			return "", fmt.Errorf("parse preset schedule: %w", err)
 		}
 	default:
-		scheduleExpression, err = toAWSCron(j.manifest.On.Schedule)
+		scheduleExpression, err = toAWSCron(schedule)
 		if err != nil {
 			return "", fmt.Errorf("parse cron schedule: %w", err)
 		}
@@ -357,8 +358,8 @@ func toAWSCron(schedule string) (string, error) {
 // It also performs basic validations to provide a fast feedback loop to the customer.
 func (j *ScheduledJob) stateMachineOpts() (*template.StateMachineOpts, error) {
 	var timeoutSeconds *int
-	if j.manifest.Timeout != "" {
-		parsedTimeout, err := time.ParseDuration(j.manifest.Timeout)
+	if inTimeout := aws.StringValue(j.manifest.Timeout); inTimeout != "" {
+		parsedTimeout, err := time.ParseDuration(inTimeout)
 		if err != nil {
 			return nil, errDurationInvalid{reason: err}
 		}
@@ -372,11 +373,11 @@ func (j *ScheduledJob) stateMachineOpts() (*template.StateMachineOpts, error) {
 	}
 
 	var retries *int
-	if j.manifest.Retries != 0 {
-		if j.manifest.Retries < 0 {
+	if inRetries := aws.IntValue(j.manifest.Retries); inRetries != 0 {
+		if inRetries < 0 {
 			return nil, errors.New("number of retries cannot be negative")
 		}
-		retries = aws.Int(j.manifest.Retries)
+		retries = aws.Int(inRetries)
 	}
 	return &template.StateMachineOpts{
 		Timeout: timeoutSeconds,

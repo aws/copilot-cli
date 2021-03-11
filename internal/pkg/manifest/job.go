@@ -48,13 +48,13 @@ type ScheduledJobConfig struct {
 
 // JobTriggerConfig represents the configuration for the event that triggers the job.
 type JobTriggerConfig struct {
-	Schedule string `yaml:"schedule"`
+	Schedule *string `yaml:"schedule"`
 }
 
 // JobFailureHandlerConfig represents the error handling configuration for the job.
 type JobFailureHandlerConfig struct {
-	Timeout string `yaml:"timeout"`
-	Retries int    `yaml:"retries"`
+	Timeout *string `yaml:"timeout"`
+	Retries *int    `yaml:"retries"`
 }
 
 // ScheduledJobProps contains properties for creating a new scheduled job manifest.
@@ -93,13 +93,24 @@ func newDefaultScheduledJob() *ScheduledJob {
 func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 	job := newDefaultScheduledJob()
 	// Apply overrides.
-	job.Name = aws.String(props.Name)
-	job.ScheduledJobConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
-	job.ScheduledJobConfig.ImageConfig.Location = stringP(props.Image)
-	job.On.Schedule = props.Schedule
-	job.Retries = props.Retries
-	job.Timeout = props.Timeout
-
+	if props.Name != "" {
+		job.Name = aws.String(props.Name)
+	}
+	if props.Dockerfile != "" {
+		job.ScheduledJobConfig.ImageConfig.Build.BuildArgs.Dockerfile = aws.String(props.Dockerfile)
+	}
+	if props.Image != "" {
+		job.ScheduledJobConfig.ImageConfig.Location = aws.String(props.Image)
+	}
+	if props.Schedule != "" {
+		job.On.Schedule = aws.String(props.Schedule)
+	}
+	if props.Retries != 0 {
+		job.Retries = aws.Int(props.Retries)
+	}
+	if props.Timeout != "" {
+		job.Timeout = aws.String(props.Timeout)
+	}
 	job.parser = template.New()
 	return job
 }
