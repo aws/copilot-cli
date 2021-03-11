@@ -189,13 +189,15 @@ func (e *ECS) DefaultCluster() (string, error) {
 		return "", fmt.Errorf("get default cluster: %w", err)
 	}
 
-	if len(resp.Clusters) == 0 {
-		return "", ErrNoDefaultCluster
+	for _, cluster := range resp.Clusters {
+		// NOTE: right now at most 1 default cluster is possible, so first cluster must be the default cluster
+
+		if aws.StringValue(cluster.Status) != "INACTIVE" {
+			return aws.StringValue(cluster.ClusterArn), nil
+		}
 	}
 
-	// NOTE: right now at most 1 default cluster is possible, so cluster[0] must be the default cluster
-	cluster := resp.Clusters[0]
-	return aws.StringValue(cluster.ClusterArn), nil
+	return "", ErrNoDefaultCluster
 }
 
 // HasDefaultCluster tries to find the default cluster and returns true if there is one.

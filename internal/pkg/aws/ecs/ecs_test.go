@@ -433,6 +433,27 @@ func TestECS_DefaultCluster(t *testing.T) {
 
 			wantedClusters: "arn:aws:ecs:us-east-1:0123456:cluster/cluster1",
 		},
+		"ignore inactive cluster": {
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().
+					DescribeClusters(&ecs.DescribeClustersInput{}).
+					Return(&ecs.DescribeClustersOutput{
+						Clusters: []*ecs.Cluster{
+							{
+								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster1"),
+								ClusterName: aws.String("cluster1"),
+								Status:      aws.String("INACTIVE"),
+							},
+							{
+								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster2"),
+								ClusterName: aws.String("cluster2"),
+							},
+						},
+					}, nil)
+			},
+
+			wantedClusters: "arn:aws:ecs:us-east-1:0123456:cluster/cluster2",
+		},
 		"failed to get default clusters": {
 			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().
