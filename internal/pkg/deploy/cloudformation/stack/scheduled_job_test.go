@@ -38,11 +38,11 @@ func TestScheduledJob_Template(t *testing.T) {
 		Retries:  3,
 	})
 	testScheduledJobManifest.EntryPoint = manifest.EntryPointOverride{
-		String: nil,
+		String:      nil,
 		StringSlice: []string{"/bin/echo", "hello"},
 	}
 	testScheduledJobManifest.Command = manifest.CommandOverride{
-		String: nil,
+		String:      nil,
 		StringSlice: []string{"world"},
 	}
 
@@ -66,7 +66,7 @@ func TestScheduledJob_Template(t *testing.T) {
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
 					EntryPoint: []string{"/bin/echo", "hello"},
-					Command: []string{"world"},
+					Command:    []string{"world"},
 				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
 				j.parser = m
@@ -94,7 +94,7 @@ func TestScheduledJob_Template(t *testing.T) {
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
 					EntryPoint: []string{"/bin/echo", "hello"},
-					Command: []string{"world"},
+					Command:    []string{"world"},
 				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{
 					tpl: `Resources:
@@ -305,7 +305,7 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 				manifest: &manifest.ScheduledJob{
 					ScheduledJobConfig: manifest.ScheduledJobConfig{
 						On: manifest.JobTriggerConfig{
-							Schedule: tc.inputSchedule,
+							Schedule: aws.String(tc.inputSchedule),
 						},
 					},
 				},
@@ -385,8 +385,8 @@ func TestScheduledJob_stateMachine(t *testing.T) {
 				manifest: &manifest.ScheduledJob{
 					ScheduledJobConfig: manifest.ScheduledJobConfig{
 						JobFailureHandlerConfig: manifest.JobFailureHandlerConfig{
-							Retries: tc.inputRetries,
-							Timeout: tc.inputTimeout,
+							Retries: aws.Int(tc.inputRetries),
+							Timeout: aws.String(tc.inputTimeout),
 						},
 					},
 				},
