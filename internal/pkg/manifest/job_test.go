@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
 )
 
@@ -79,6 +80,115 @@ func TestScheduledJob_MarshalBinary(t *testing.T) {
 
 			// THEN
 			require.Equal(t, string(wantedBytes), string(tpl))
+		})
+	}
+}
+
+func TestScheduledJob_ApplyEnv(t *testing.T) {
+	testCases := map[string]struct {
+		inputManifest *ScheduledJob
+		inputEnv      string
+
+		wantedManifest *ScheduledJob
+		wantedErr      error
+	}{
+		"should return the same scheduled job if the environment does not exist": {
+			inputManifest: newDefaultScheduledJob(),
+			inputEnv:      "test",
+
+			wantedManifest: newDefaultScheduledJob(),
+		},
+		"should preserve defaults and only override fields under 'environment'": {
+			inputManifest: &ScheduledJob{
+				Workload: Workload{
+					Name: aws.String("report-generator"),
+					Type: aws.String(ScheduledJobType),
+				},
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: Image{
+						Location: aws.String("nginx"),
+					},
+					On: JobTriggerConfig{
+						Schedule: aws.String("@hourly"),
+					},
+					JobFailureHandlerConfig: JobFailureHandlerConfig{
+						Timeout: aws.String("5m"),
+						Retries: aws.Int(1),
+					},
+					TaskConfig: TaskConfig{
+						CPU:    aws.Int(256),
+						Memory: aws.Int(512),
+						Count: Count{
+							Value: aws.Int(1),
+						},
+					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: stringP(PublicSubnetPlacement),
+						},
+					},
+				},
+				Environments: map[string]*ScheduledJobConfig{
+					"prod": {
+						TaskConfig: TaskConfig{
+							Variables: map[string]string{
+								"LOG_LEVEL": "prod",
+							},
+						},
+					},
+				},
+			},
+			inputEnv: "prod",
+
+			wantedManifest: &ScheduledJob{
+				Workload: Workload{
+					Name: aws.String("report-generator"),
+					Type: aws.String(ScheduledJobType),
+				},
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: Image{
+						Location: aws.String("nginx"),
+					},
+					On: JobTriggerConfig{
+						Schedule: aws.String("@hourly"),
+					},
+					JobFailureHandlerConfig: JobFailureHandlerConfig{
+						Timeout: aws.String("5m"),
+						Retries: aws.Int(1),
+					},
+					TaskConfig: TaskConfig{
+						CPU:    aws.Int(256),
+						Memory: aws.Int(512),
+						Count: Count{
+							Value: aws.Int(1),
+						},
+						Variables: map[string]string{
+							"LOG_LEVEL": "prod",
+						},
+					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: stringP(PublicSubnetPlacement),
+						},
+					},
+				},
+				Environments: nil,
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actualManifest, actualErr := tc.inputManifest.ApplyEnv(tc.inputEnv)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, actualErr, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, actualErr)
+				require.Equal(t, tc.wantedManifest, actualManifest)
+			}
 		})
 	}
 }
