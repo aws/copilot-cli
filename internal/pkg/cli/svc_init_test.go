@@ -34,7 +34,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 		"invalid service type": {
 			inAppName: "phonetool",
 			inSvcType: "TestSvcType",
-			wantedErr: errors.New(`invalid service type TestSvcType: must be one of "Load Balanced Web Service", "Backend Service"`),
+			wantedErr: errors.New(`invalid service type TestSvcType: must be one of "Load Balanced Web Service", "Request-Driven Web Service", "Backend Service"`),
 		},
 		"invalid service name": {
 			inAppName: "phonetool",
@@ -135,6 +135,10 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					{
 						Value: manifest.LoadBalancedWebServiceType,
 						Hint:  "Internet to ECS on Fargate",
+					},
+					{
+						Value: manifest.RequestDrivenWebServiceType,
+						Hint:  "App Runner",
 					},
 					{
 						Value: manifest.BackendServiceType,

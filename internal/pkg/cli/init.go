@@ -216,7 +216,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				o.initWlCmd = &opts
 				o.schedule = &opts.schedule // Surfaced via pointer for logging
 				o.initWkldVars = &opts.initWkldVars
-			case t == manifest.LoadBalancedWebServiceType || t == manifest.BackendServiceType:
+			case manifest.IsTypeAService(t):
 				svcVars := initSvcVars{
 					initWkldVars: wkldVars,
 					port:         vars.port,
@@ -342,6 +342,7 @@ func (o *initOpts) askWorkload() (string, error) {
 	// Build the workload help prompt from existing helps text.
 	wkldHelp := fmt.Sprintf(fmtSvcInitSvcTypeHelpPrompt,
 		manifest.LoadBalancedWebServiceType,
+		manifest.RequestDrivenWebServiceType,
 		manifest.BackendServiceType,
 	) + `
 

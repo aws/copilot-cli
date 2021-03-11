@@ -17,6 +17,8 @@ import (
 const (
 	// LoadBalancedWebServiceType is a web service with a load balancer and Fargate as compute.
 	LoadBalancedWebServiceType = "Load Balanced Web Service"
+	// RequestDrivenWebServiceType is a Request-Driven Web Service managed by AppRunner
+	RequestDrivenWebServiceType = "Request-Driven Web Service"
 	// BackendServiceType is a service that cannot be accessed from the internet but can be reached from other services.
 	BackendServiceType = "Backend Service"
 )
@@ -24,6 +26,7 @@ const (
 // ServiceTypes are the supported service manifest types.
 var ServiceTypes = []string{
 	LoadBalancedWebServiceType,
+	RequestDrivenWebServiceType,
 	BackendServiceType,
 }
 
@@ -215,4 +218,14 @@ func (a *AdvancedCount) IsValid() error {
 // ServiceDockerfileBuildRequired returns if the service container image should be built from local Dockerfile.
 func ServiceDockerfileBuildRequired(svc interface{}) (bool, error) {
 	return dockerfileBuildRequired("service", svc)
+}
+
+func IsTypeAService(t string) bool {
+	for _, serviceType := range ServiceTypes {
+		if t == serviceType {
+			return true
+		}
+	}
+
+	return false
 }

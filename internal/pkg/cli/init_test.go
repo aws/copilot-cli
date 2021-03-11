@@ -115,6 +115,10 @@ func TestInitOpts_Run(t *testing.T) {
 						Hint:  "Internet to ECS on Fargate",
 					},
 					{
+						Value: manifest.RequestDrivenWebServiceType,
+						Hint:  "App Runner",
+					},
+					{
 						Value: manifest.BackendServiceType,
 						Hint:  "ECS on Fargate",
 					},
