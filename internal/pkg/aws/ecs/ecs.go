@@ -16,6 +16,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
+const clusterStatusActive = "ACTIVE"
+
 type api interface {
 	DescribeClusters(input *ecs.DescribeClustersInput) (*ecs.DescribeClustersOutput, error)
 	DescribeServices(input *ecs.DescribeServicesInput) (*ecs.DescribeServicesOutput, error)
@@ -189,15 +191,17 @@ func (e *ECS) DefaultCluster() (string, error) {
 		return "", fmt.Errorf("get default cluster: %w", err)
 	}
 
-	for _, cluster := range resp.Clusters {
-		// NOTE: right now at most 1 default cluster is possible, so first cluster must be the default cluster
-
-		if aws.StringValue(cluster.Status) != "INACTIVE" {
-			return aws.StringValue(cluster.ClusterArn), nil
-		}
+	if len(resp.Clusters) == 0 {
+		return "", ErrNoDefaultCluster
 	}
 
-	return "", ErrNoDefaultCluster
+	// NOTE: right now at most 1 default cluster is possible, so cluster[0] must be the default cluster
+	cluster := resp.Clusters[0]
+	if aws.StringValue(cluster.Status) != clusterStatusActive {
+		return "", ErrNoDefaultCluster
+	}
+
+	return aws.StringValue(cluster.ClusterArn), nil
 }
 
 // HasDefaultCluster tries to find the default cluster and returns true if there is one.
