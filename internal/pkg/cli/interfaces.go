@@ -508,14 +508,6 @@ type roleDeleter interface {
 	DeleteRole(string) error
 }
 
-type activeWorkloadTasksLister interface {
-	ListActiveWorkloadTasks(app, env, workload string) (clusterARN string, taskARNs []string, err error)
-}
-
-type tasksStopper interface {
-	StopTasks(tasks []string, opts ...awsecs.StopTasksOpts) error
-}
-
 type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
 }

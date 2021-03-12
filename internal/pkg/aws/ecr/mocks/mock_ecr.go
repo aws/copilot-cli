@@ -5,80 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	ecr "github.com/aws/aws-sdk-go/service/ecr"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// Mockapi is a mock of api interface
+// Mockapi is a mock of api interface.
 type Mockapi struct {
 	ctrl     *gomock.Controller
 	recorder *MockapiMockRecorder
 }
 
-// MockapiMockRecorder is the mock recorder for Mockapi
+// MockapiMockRecorder is the mock recorder for Mockapi.
 type MockapiMockRecorder struct {
 	mock *Mockapi
 }
 
-// NewMockapi creates a new mock instance
+// NewMockapi creates a new mock instance.
 func NewMockapi(ctrl *gomock.Controller) *Mockapi {
 	mock := &Mockapi{ctrl: ctrl}
 	mock.recorder = &MockapiMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
-// DescribeImages mocks base method
-func (m *Mockapi) DescribeImages(arg0 *ecr.DescribeImagesInput) (*ecr.DescribeImagesOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeImages", arg0)
-	ret0, _ := ret[0].(*ecr.DescribeImagesOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DescribeImages indicates an expected call of DescribeImages
-func (mr *MockapiMockRecorder) DescribeImages(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeImages", reflect.TypeOf((*Mockapi)(nil).DescribeImages), arg0)
-}
-
-// GetAuthorizationToken mocks base method
-func (m *Mockapi) GetAuthorizationToken(arg0 *ecr.GetAuthorizationTokenInput) (*ecr.GetAuthorizationTokenOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAuthorizationToken", arg0)
-	ret0, _ := ret[0].(*ecr.GetAuthorizationTokenOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetAuthorizationToken indicates an expected call of GetAuthorizationToken
-func (mr *MockapiMockRecorder) GetAuthorizationToken(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAuthorizationToken", reflect.TypeOf((*Mockapi)(nil).GetAuthorizationToken), arg0)
-}
-
-// DescribeRepositories mocks base method
-func (m *Mockapi) DescribeRepositories(arg0 *ecr.DescribeRepositoriesInput) (*ecr.DescribeRepositoriesOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeRepositories", arg0)
-	ret0, _ := ret[0].(*ecr.DescribeRepositoriesOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DescribeRepositories indicates an expected call of DescribeRepositories
-func (mr *MockapiMockRecorder) DescribeRepositories(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeRepositories", reflect.TypeOf((*Mockapi)(nil).DescribeRepositories), arg0)
-}
-
-// BatchDeleteImage mocks base method
+// BatchDeleteImage mocks base method.
 func (m *Mockapi) BatchDeleteImage(arg0 *ecr.BatchDeleteImageInput) (*ecr.BatchDeleteImageOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BatchDeleteImage", arg0)
@@ -87,8 +43,53 @@ func (m *Mockapi) BatchDeleteImage(arg0 *ecr.BatchDeleteImageInput) (*ecr.BatchD
 	return ret0, ret1
 }
 
-// BatchDeleteImage indicates an expected call of BatchDeleteImage
+// BatchDeleteImage indicates an expected call of BatchDeleteImage.
 func (mr *MockapiMockRecorder) BatchDeleteImage(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchDeleteImage", reflect.TypeOf((*Mockapi)(nil).BatchDeleteImage), arg0)
+}
+
+// DescribeImages mocks base method.
+func (m *Mockapi) DescribeImages(arg0 *ecr.DescribeImagesInput) (*ecr.DescribeImagesOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeImages", arg0)
+	ret0, _ := ret[0].(*ecr.DescribeImagesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeImages indicates an expected call of DescribeImages.
+func (mr *MockapiMockRecorder) DescribeImages(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeImages", reflect.TypeOf((*Mockapi)(nil).DescribeImages), arg0)
+}
+
+// DescribeRepositories mocks base method.
+func (m *Mockapi) DescribeRepositories(arg0 *ecr.DescribeRepositoriesInput) (*ecr.DescribeRepositoriesOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeRepositories", arg0)
+	ret0, _ := ret[0].(*ecr.DescribeRepositoriesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeRepositories indicates an expected call of DescribeRepositories.
+func (mr *MockapiMockRecorder) DescribeRepositories(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeRepositories", reflect.TypeOf((*Mockapi)(nil).DescribeRepositories), arg0)
+}
+
+// GetAuthorizationToken mocks base method.
+func (m *Mockapi) GetAuthorizationToken(arg0 *ecr.GetAuthorizationTokenInput) (*ecr.GetAuthorizationTokenOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAuthorizationToken", arg0)
+	ret0, _ := ret[0].(*ecr.GetAuthorizationTokenOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAuthorizationToken indicates an expected call of GetAuthorizationToken.
+func (mr *MockapiMockRecorder) GetAuthorizationToken(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAuthorizationToken", reflect.TypeOf((*Mockapi)(nil).GetAuthorizationToken), arg0)
 }

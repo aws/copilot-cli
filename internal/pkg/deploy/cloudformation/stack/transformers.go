@@ -140,7 +140,7 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 }
 
 func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandOpts {
-	if e.Config.IsEmpty() && aws.BoolValue(e.Enable) == false {
+	if e.Config.IsEmpty() && !aws.BoolValue(e.Enable) {
 		return nil
 	}
 	return &template.ExecuteCommandOpts{}

@@ -5,36 +5,37 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	cloudwatch "github.com/aws/aws-sdk-go/service/cloudwatch"
 	resourcegroups "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// Mockapi is a mock of api interface
+// Mockapi is a mock of api interface.
 type Mockapi struct {
 	ctrl     *gomock.Controller
 	recorder *MockapiMockRecorder
 }
 
-// MockapiMockRecorder is the mock recorder for Mockapi
+// MockapiMockRecorder is the mock recorder for Mockapi.
 type MockapiMockRecorder struct {
 	mock *Mockapi
 }
 
-// NewMockapi creates a new mock instance
+// NewMockapi creates a new mock instance.
 func NewMockapi(ctrl *gomock.Controller) *Mockapi {
 	mock := &Mockapi{ctrl: ctrl}
 	mock.recorder = &MockapiMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
-// DescribeAlarms mocks base method
+// DescribeAlarms mocks base method.
 func (m *Mockapi) DescribeAlarms(input *cloudwatch.DescribeAlarmsInput) (*cloudwatch.DescribeAlarmsOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeAlarms", input)
@@ -43,36 +44,36 @@ func (m *Mockapi) DescribeAlarms(input *cloudwatch.DescribeAlarmsInput) (*cloudw
 	return ret0, ret1
 }
 
-// DescribeAlarms indicates an expected call of DescribeAlarms
+// DescribeAlarms indicates an expected call of DescribeAlarms.
 func (mr *MockapiMockRecorder) DescribeAlarms(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeAlarms", reflect.TypeOf((*Mockapi)(nil).DescribeAlarms), input)
 }
 
-// MockresourceGetter is a mock of resourceGetter interface
+// MockresourceGetter is a mock of resourceGetter interface.
 type MockresourceGetter struct {
 	ctrl     *gomock.Controller
 	recorder *MockresourceGetterMockRecorder
 }
 
-// MockresourceGetterMockRecorder is the mock recorder for MockresourceGetter
+// MockresourceGetterMockRecorder is the mock recorder for MockresourceGetter.
 type MockresourceGetterMockRecorder struct {
 	mock *MockresourceGetter
 }
 
-// NewMockresourceGetter creates a new mock instance
+// NewMockresourceGetter creates a new mock instance.
 func NewMockresourceGetter(ctrl *gomock.Controller) *MockresourceGetter {
 	mock := &MockresourceGetter{ctrl: ctrl}
 	mock.recorder = &MockresourceGetterMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockresourceGetter) EXPECT() *MockresourceGetterMockRecorder {
 	return m.recorder
 }
 
-// GetResourcesByTags mocks base method
+// GetResourcesByTags mocks base method.
 func (m *MockresourceGetter) GetResourcesByTags(resourceType string, tags map[string]string) ([]*resourcegroups.Resource, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetResourcesByTags", resourceType, tags)
@@ -81,7 +82,7 @@ func (m *MockresourceGetter) GetResourcesByTags(resourceType string, tags map[st
 	return ret0, ret1
 }
 
-// GetResourcesByTags indicates an expected call of GetResourcesByTags
+// GetResourcesByTags indicates an expected call of GetResourcesByTags.
 func (mr *MockresourceGetterMockRecorder) GetResourcesByTags(resourceType, tags interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResourcesByTags", reflect.TypeOf((*MockresourceGetter)(nil).GetResourcesByTags), resourceType, tags)

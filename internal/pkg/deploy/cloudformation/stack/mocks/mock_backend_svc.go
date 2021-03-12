@@ -5,50 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	template "github.com/aws/copilot-cli/internal/pkg/template"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockbackendSvcReadParser is a mock of backendSvcReadParser interface
+// MockbackendSvcReadParser is a mock of backendSvcReadParser interface.
 type MockbackendSvcReadParser struct {
 	ctrl     *gomock.Controller
 	recorder *MockbackendSvcReadParserMockRecorder
 }
 
-// MockbackendSvcReadParserMockRecorder is the mock recorder for MockbackendSvcReadParser
+// MockbackendSvcReadParserMockRecorder is the mock recorder for MockbackendSvcReadParser.
 type MockbackendSvcReadParserMockRecorder struct {
 	mock *MockbackendSvcReadParser
 }
 
-// NewMockbackendSvcReadParser creates a new mock instance
+// NewMockbackendSvcReadParser creates a new mock instance.
 func NewMockbackendSvcReadParser(ctrl *gomock.Controller) *MockbackendSvcReadParser {
 	mock := &MockbackendSvcReadParser{ctrl: ctrl}
 	mock.recorder = &MockbackendSvcReadParserMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockbackendSvcReadParser) EXPECT() *MockbackendSvcReadParserMockRecorder {
 	return m.recorder
 }
 
-// Read mocks base method
-func (m *MockbackendSvcReadParser) Read(path string) (*template.Content, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Read", path)
-	ret0, _ := ret[0].(*template.Content)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Read indicates an expected call of Read
-func (mr *MockbackendSvcReadParserMockRecorder) Read(path interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockbackendSvcReadParser)(nil).Read), path)
-}
-
-// Parse mocks base method
+// Parse mocks base method.
 func (m *MockbackendSvcReadParser) Parse(path string, data interface{}, options ...template.ParseOption) (*template.Content, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{path, data}
@@ -61,14 +47,14 @@ func (m *MockbackendSvcReadParser) Parse(path string, data interface{}, options 
 	return ret0, ret1
 }
 
-// Parse indicates an expected call of Parse
+// Parse indicates an expected call of Parse.
 func (mr *MockbackendSvcReadParserMockRecorder) Parse(path, data interface{}, options ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{path, data}, options...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parse", reflect.TypeOf((*MockbackendSvcReadParser)(nil).Parse), varargs...)
 }
 
-// ParseBackendService mocks base method
+// ParseBackendService mocks base method.
 func (m *MockbackendSvcReadParser) ParseBackendService(arg0 template.WorkloadOpts) (*template.Content, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ParseBackendService", arg0)
@@ -77,8 +63,23 @@ func (m *MockbackendSvcReadParser) ParseBackendService(arg0 template.WorkloadOpt
 	return ret0, ret1
 }
 
-// ParseBackendService indicates an expected call of ParseBackendService
+// ParseBackendService indicates an expected call of ParseBackendService.
 func (mr *MockbackendSvcReadParserMockRecorder) ParseBackendService(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseBackendService", reflect.TypeOf((*MockbackendSvcReadParser)(nil).ParseBackendService), arg0)
+}
+
+// Read mocks base method.
+func (m *MockbackendSvcReadParser) Read(path string) (*template.Content, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Read", path)
+	ret0, _ := ret[0].(*template.Content)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Read indicates an expected call of Read.
+func (mr *MockbackendSvcReadParserMockRecorder) Read(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockbackendSvcReadParser)(nil).Read), path)
 }

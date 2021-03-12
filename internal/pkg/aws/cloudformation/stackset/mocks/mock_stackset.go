@@ -5,110 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// Mockapi is a mock of api interface
+// Mockapi is a mock of api interface.
 type Mockapi struct {
 	ctrl     *gomock.Controller
 	recorder *MockapiMockRecorder
 }
 
-// MockapiMockRecorder is the mock recorder for Mockapi
+// MockapiMockRecorder is the mock recorder for Mockapi.
 type MockapiMockRecorder struct {
 	mock *Mockapi
 }
 
-// NewMockapi creates a new mock instance
+// NewMockapi creates a new mock instance.
 func NewMockapi(ctrl *gomock.Controller) *Mockapi {
 	mock := &Mockapi{ctrl: ctrl}
 	mock.recorder = &MockapiMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
-// CreateStackSet mocks base method
-func (m *Mockapi) CreateStackSet(arg0 *cloudformation.CreateStackSetInput) (*cloudformation.CreateStackSetOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateStackSet", arg0)
-	ret0, _ := ret[0].(*cloudformation.CreateStackSetOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateStackSet indicates an expected call of CreateStackSet
-func (mr *MockapiMockRecorder) CreateStackSet(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateStackSet", reflect.TypeOf((*Mockapi)(nil).CreateStackSet), arg0)
-}
-
-// UpdateStackSet mocks base method
-func (m *Mockapi) UpdateStackSet(arg0 *cloudformation.UpdateStackSetInput) (*cloudformation.UpdateStackSetOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateStackSet", arg0)
-	ret0, _ := ret[0].(*cloudformation.UpdateStackSetOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UpdateStackSet indicates an expected call of UpdateStackSet
-func (mr *MockapiMockRecorder) UpdateStackSet(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStackSet", reflect.TypeOf((*Mockapi)(nil).UpdateStackSet), arg0)
-}
-
-// DeleteStackSet mocks base method
-func (m *Mockapi) DeleteStackSet(arg0 *cloudformation.DeleteStackSetInput) (*cloudformation.DeleteStackSetOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteStackSet", arg0)
-	ret0, _ := ret[0].(*cloudformation.DeleteStackSetOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DeleteStackSet indicates an expected call of DeleteStackSet
-func (mr *MockapiMockRecorder) DeleteStackSet(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteStackSet", reflect.TypeOf((*Mockapi)(nil).DeleteStackSet), arg0)
-}
-
-// DescribeStackSet mocks base method
-func (m *Mockapi) DescribeStackSet(arg0 *cloudformation.DescribeStackSetInput) (*cloudformation.DescribeStackSetOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeStackSet", arg0)
-	ret0, _ := ret[0].(*cloudformation.DescribeStackSetOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DescribeStackSet indicates an expected call of DescribeStackSet
-func (mr *MockapiMockRecorder) DescribeStackSet(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStackSet", reflect.TypeOf((*Mockapi)(nil).DescribeStackSet), arg0)
-}
-
-// DescribeStackSetOperation mocks base method
-func (m *Mockapi) DescribeStackSetOperation(arg0 *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeStackSetOperation", arg0)
-	ret0, _ := ret[0].(*cloudformation.DescribeStackSetOperationOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DescribeStackSetOperation indicates an expected call of DescribeStackSetOperation
-func (mr *MockapiMockRecorder) DescribeStackSetOperation(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStackSetOperation", reflect.TypeOf((*Mockapi)(nil).DescribeStackSetOperation), arg0)
-}
-
-// CreateStackInstances mocks base method
+// CreateStackInstances mocks base method.
 func (m *Mockapi) CreateStackInstances(arg0 *cloudformation.CreateStackInstancesInput) (*cloudformation.CreateStackInstancesOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateStackInstances", arg0)
@@ -117,13 +43,28 @@ func (m *Mockapi) CreateStackInstances(arg0 *cloudformation.CreateStackInstances
 	return ret0, ret1
 }
 
-// CreateStackInstances indicates an expected call of CreateStackInstances
+// CreateStackInstances indicates an expected call of CreateStackInstances.
 func (mr *MockapiMockRecorder) CreateStackInstances(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateStackInstances", reflect.TypeOf((*Mockapi)(nil).CreateStackInstances), arg0)
 }
 
-// DeleteStackInstances mocks base method
+// CreateStackSet mocks base method.
+func (m *Mockapi) CreateStackSet(arg0 *cloudformation.CreateStackSetInput) (*cloudformation.CreateStackSetOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateStackSet", arg0)
+	ret0, _ := ret[0].(*cloudformation.CreateStackSetOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateStackSet indicates an expected call of CreateStackSet.
+func (mr *MockapiMockRecorder) CreateStackSet(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateStackSet", reflect.TypeOf((*Mockapi)(nil).CreateStackSet), arg0)
+}
+
+// DeleteStackInstances mocks base method.
 func (m *Mockapi) DeleteStackInstances(arg0 *cloudformation.DeleteStackInstancesInput) (*cloudformation.DeleteStackInstancesOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteStackInstances", arg0)
@@ -132,13 +73,58 @@ func (m *Mockapi) DeleteStackInstances(arg0 *cloudformation.DeleteStackInstances
 	return ret0, ret1
 }
 
-// DeleteStackInstances indicates an expected call of DeleteStackInstances
+// DeleteStackInstances indicates an expected call of DeleteStackInstances.
 func (mr *MockapiMockRecorder) DeleteStackInstances(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteStackInstances", reflect.TypeOf((*Mockapi)(nil).DeleteStackInstances), arg0)
 }
 
-// ListStackInstances mocks base method
+// DeleteStackSet mocks base method.
+func (m *Mockapi) DeleteStackSet(arg0 *cloudformation.DeleteStackSetInput) (*cloudformation.DeleteStackSetOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteStackSet", arg0)
+	ret0, _ := ret[0].(*cloudformation.DeleteStackSetOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteStackSet indicates an expected call of DeleteStackSet.
+func (mr *MockapiMockRecorder) DeleteStackSet(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteStackSet", reflect.TypeOf((*Mockapi)(nil).DeleteStackSet), arg0)
+}
+
+// DescribeStackSet mocks base method.
+func (m *Mockapi) DescribeStackSet(arg0 *cloudformation.DescribeStackSetInput) (*cloudformation.DescribeStackSetOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeStackSet", arg0)
+	ret0, _ := ret[0].(*cloudformation.DescribeStackSetOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeStackSet indicates an expected call of DescribeStackSet.
+func (mr *MockapiMockRecorder) DescribeStackSet(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStackSet", reflect.TypeOf((*Mockapi)(nil).DescribeStackSet), arg0)
+}
+
+// DescribeStackSetOperation mocks base method.
+func (m *Mockapi) DescribeStackSetOperation(arg0 *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeStackSetOperation", arg0)
+	ret0, _ := ret[0].(*cloudformation.DescribeStackSetOperationOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeStackSetOperation indicates an expected call of DescribeStackSetOperation.
+func (mr *MockapiMockRecorder) DescribeStackSetOperation(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStackSetOperation", reflect.TypeOf((*Mockapi)(nil).DescribeStackSetOperation), arg0)
+}
+
+// ListStackInstances mocks base method.
 func (m *Mockapi) ListStackInstances(arg0 *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListStackInstances", arg0)
@@ -147,8 +133,23 @@ func (m *Mockapi) ListStackInstances(arg0 *cloudformation.ListStackInstancesInpu
 	return ret0, ret1
 }
 
-// ListStackInstances indicates an expected call of ListStackInstances
+// ListStackInstances indicates an expected call of ListStackInstances.
 func (mr *MockapiMockRecorder) ListStackInstances(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListStackInstances", reflect.TypeOf((*Mockapi)(nil).ListStackInstances), arg0)
+}
+
+// UpdateStackSet mocks base method.
+func (m *Mockapi) UpdateStackSet(arg0 *cloudformation.UpdateStackSetInput) (*cloudformation.UpdateStackSetOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateStackSet", arg0)
+	ret0, _ := ret[0].(*cloudformation.UpdateStackSetOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateStackSet indicates an expected call of UpdateStackSet.
+func (mr *MockapiMockRecorder) UpdateStackSet(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStackSet", reflect.TypeOf((*Mockapi)(nil).UpdateStackSet), arg0)
 }

@@ -30,7 +30,7 @@ func (e ErrNoExpose) Error() string {
 type ErrSSMPluginNotExist struct{}
 
 func (e ErrSSMPluginNotExist) Error() string {
-	return fmt.Sprint("Session Manager plugin does not exist")
+	return "Session Manager plugin does not exist"
 }
 
 // ErrOutdatedSSMPlugin means the ssm plugin is not up-to-date.
@@ -40,7 +40,7 @@ type ErrOutdatedSSMPlugin struct {
 }
 
 func (e ErrOutdatedSSMPlugin) Error() string {
-	return fmt.Sprint("Session Manager plugin is not up-to-date")
+	return "Session Manager plugin is not up-to-date"
 }
 
 // ErrDockerCommandNotFound means the docker command is not found.

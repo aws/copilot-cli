@@ -5396,111 +5396,30 @@ func (mr *MockroleDeleterMockRecorder) DeleteRole(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRole", reflect.TypeOf((*MockroleDeleter)(nil).DeleteRole), arg0)
 }
 
-// MockactiveWorkloadTasksLister is a mock of activeWorkloadTasksLister interface
-type MockactiveWorkloadTasksLister struct {
-	ctrl     *gomock.Controller
-	recorder *MockactiveWorkloadTasksListerMockRecorder
-}
-
-// MockactiveWorkloadTasksListerMockRecorder is the mock recorder for MockactiveWorkloadTasksLister
-type MockactiveWorkloadTasksListerMockRecorder struct {
-	mock *MockactiveWorkloadTasksLister
-}
-
-// NewMockactiveWorkloadTasksLister creates a new mock instance
-func NewMockactiveWorkloadTasksLister(ctrl *gomock.Controller) *MockactiveWorkloadTasksLister {
-	mock := &MockactiveWorkloadTasksLister{ctrl: ctrl}
-	mock.recorder = &MockactiveWorkloadTasksListerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockactiveWorkloadTasksLister) EXPECT() *MockactiveWorkloadTasksListerMockRecorder {
-	return m.recorder
-}
-
-// ListActiveWorkloadTasks mocks base method
-func (m *MockactiveWorkloadTasksLister) ListActiveWorkloadTasks(app, env, workload string) (string, []string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListActiveWorkloadTasks", app, env, workload)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].([]string)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// ListActiveWorkloadTasks indicates an expected call of ListActiveWorkloadTasks
-func (mr *MockactiveWorkloadTasksListerMockRecorder) ListActiveWorkloadTasks(app, env, workload interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActiveWorkloadTasks", reflect.TypeOf((*MockactiveWorkloadTasksLister)(nil).ListActiveWorkloadTasks), app, env, workload)
-}
-
-// MocktasksStopper is a mock of tasksStopper interface
-type MocktasksStopper struct {
-	ctrl     *gomock.Controller
-	recorder *MocktasksStopperMockRecorder
-}
-
-// MocktasksStopperMockRecorder is the mock recorder for MocktasksStopper
-type MocktasksStopperMockRecorder struct {
-	mock *MocktasksStopper
-}
-
-// NewMocktasksStopper creates a new mock instance
-func NewMocktasksStopper(ctrl *gomock.Controller) *MocktasksStopper {
-	mock := &MocktasksStopper{ctrl: ctrl}
-	mock.recorder = &MocktasksStopperMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MocktasksStopper) EXPECT() *MocktasksStopperMockRecorder {
-	return m.recorder
-}
-
-// StopTasks mocks base method
-func (m *MocktasksStopper) StopTasks(tasks []string, opts ...ecs.StopTasksOpts) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{tasks}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "StopTasks", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// StopTasks indicates an expected call of StopTasks
-func (mr *MocktasksStopperMockRecorder) StopTasks(tasks interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{tasks}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopTasks", reflect.TypeOf((*MocktasksStopper)(nil).StopTasks), varargs...)
-}
-
-// MockserviceDescriber is a mock of serviceDescriber interface
+// MockserviceDescriber is a mock of serviceDescriber interface.
 type MockserviceDescriber struct {
 	ctrl     *gomock.Controller
 	recorder *MockserviceDescriberMockRecorder
 }
 
-// MockserviceDescriberMockRecorder is the mock recorder for MockserviceDescriber
+// MockserviceDescriberMockRecorder is the mock recorder for MockserviceDescriber.
 type MockserviceDescriberMockRecorder struct {
 	mock *MockserviceDescriber
 }
 
-// NewMockserviceDescriber creates a new mock instance
+// NewMockserviceDescriber creates a new mock instance.
 func NewMockserviceDescriber(ctrl *gomock.Controller) *MockserviceDescriber {
 	mock := &MockserviceDescriber{ctrl: ctrl}
 	mock.recorder = &MockserviceDescriberMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockserviceDescriber) EXPECT() *MockserviceDescriberMockRecorder {
 	return m.recorder
 }
 
-// DescribeService mocks base method
+// DescribeService mocks base method.
 func (m *MockserviceDescriber) DescribeService(app, env, svc string) (*ecs0.ServiceDesc, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeService", app, env, svc)
@@ -5509,36 +5428,36 @@ func (m *MockserviceDescriber) DescribeService(app, env, svc string) (*ecs0.Serv
 	return ret0, ret1
 }
 
-// DescribeService indicates an expected call of DescribeService
+// DescribeService indicates an expected call of DescribeService.
 func (mr *MockserviceDescriberMockRecorder) DescribeService(app, env, svc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockserviceDescriber)(nil).DescribeService), app, env, svc)
 }
 
-// MockecsCommandExecutor is a mock of ecsCommandExecutor interface
+// MockecsCommandExecutor is a mock of ecsCommandExecutor interface.
 type MockecsCommandExecutor struct {
 	ctrl     *gomock.Controller
 	recorder *MockecsCommandExecutorMockRecorder
 }
 
-// MockecsCommandExecutorMockRecorder is the mock recorder for MockecsCommandExecutor
+// MockecsCommandExecutorMockRecorder is the mock recorder for MockecsCommandExecutor.
 type MockecsCommandExecutorMockRecorder struct {
 	mock *MockecsCommandExecutor
 }
 
-// NewMockecsCommandExecutor creates a new mock instance
+// NewMockecsCommandExecutor creates a new mock instance.
 func NewMockecsCommandExecutor(ctrl *gomock.Controller) *MockecsCommandExecutor {
 	mock := &MockecsCommandExecutor{ctrl: ctrl}
 	mock.recorder = &MockecsCommandExecutorMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockecsCommandExecutor) EXPECT() *MockecsCommandExecutorMockRecorder {
 	return m.recorder
 }
 
-// ExecuteCommand mocks base method
+// ExecuteCommand mocks base method.
 func (m *MockecsCommandExecutor) ExecuteCommand(in ecs.ExecuteCommandInput) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ExecuteCommand", in)
@@ -5546,50 +5465,36 @@ func (m *MockecsCommandExecutor) ExecuteCommand(in ecs.ExecuteCommandInput) erro
 	return ret0
 }
 
-// ExecuteCommand indicates an expected call of ExecuteCommand
+// ExecuteCommand indicates an expected call of ExecuteCommand.
 func (mr *MockecsCommandExecutorMockRecorder) ExecuteCommand(in interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteCommand", reflect.TypeOf((*MockecsCommandExecutor)(nil).ExecuteCommand), in)
 }
 
-// MockssmPluginManager is a mock of ssmPluginManager interface
+// MockssmPluginManager is a mock of ssmPluginManager interface.
 type MockssmPluginManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockssmPluginManagerMockRecorder
 }
 
-// MockssmPluginManagerMockRecorder is the mock recorder for MockssmPluginManager
+// MockssmPluginManagerMockRecorder is the mock recorder for MockssmPluginManager.
 type MockssmPluginManagerMockRecorder struct {
 	mock *MockssmPluginManager
 }
 
-// NewMockssmPluginManager creates a new mock instance
+// NewMockssmPluginManager creates a new mock instance.
 func NewMockssmPluginManager(ctrl *gomock.Controller) *MockssmPluginManager {
 	mock := &MockssmPluginManager{ctrl: ctrl}
 	mock.recorder = &MockssmPluginManagerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockssmPluginManager) EXPECT() *MockssmPluginManagerMockRecorder {
 	return m.recorder
 }
 
-// ValidateBinary mocks base method
-func (m *MockssmPluginManager) ValidateBinary() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateBinary")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ValidateBinary indicates an expected call of ValidateBinary
-func (mr *MockssmPluginManagerMockRecorder) ValidateBinary() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateBinary", reflect.TypeOf((*MockssmPluginManager)(nil).ValidateBinary))
-}
-
-// InstallLatestBinary mocks base method
+// InstallLatestBinary mocks base method.
 func (m *MockssmPluginManager) InstallLatestBinary() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InstallLatestBinary")
@@ -5597,13 +5502,26 @@ func (m *MockssmPluginManager) InstallLatestBinary() error {
 	return ret0
 }
 
-// InstallLatestBinary indicates an expected call of InstallLatestBinary
+// InstallLatestBinary indicates an expected call of InstallLatestBinary.
 func (mr *MockssmPluginManagerMockRecorder) InstallLatestBinary() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallLatestBinary", reflect.TypeOf((*MockssmPluginManager)(nil).InstallLatestBinary))
 }
 
-// MocktaskStopper is a mock of taskStopper interface
+// ValidateBinary mocks base method.
+func (m *MockssmPluginManager) ValidateBinary() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateBinary")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateBinary indicates an expected call of ValidateBinary.
+func (mr *MockssmPluginManagerMockRecorder) ValidateBinary() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateBinary", reflect.TypeOf((*MockssmPluginManager)(nil).ValidateBinary))
+}
+
 // MocktaskStopper is a mock of taskStopper interface.
 type MocktaskStopper struct {
 	ctrl     *gomock.Controller
@@ -5706,30 +5624,30 @@ func (mr *MockserviceLinkedRoleCreatorMockRecorder) CreateECSServiceLinkedRole()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateECSServiceLinkedRole", reflect.TypeOf((*MockserviceLinkedRoleCreator)(nil).CreateECSServiceLinkedRole))
 }
 
-// MockrunningTaskSelector is a mock of runningTaskSelector interface
+// MockrunningTaskSelector is a mock of runningTaskSelector interface.
 type MockrunningTaskSelector struct {
 	ctrl     *gomock.Controller
 	recorder *MockrunningTaskSelectorMockRecorder
 }
 
-// MockrunningTaskSelectorMockRecorder is the mock recorder for MockrunningTaskSelector
+// MockrunningTaskSelectorMockRecorder is the mock recorder for MockrunningTaskSelector.
 type MockrunningTaskSelectorMockRecorder struct {
 	mock *MockrunningTaskSelector
 }
 
-// NewMockrunningTaskSelector creates a new mock instance
+// NewMockrunningTaskSelector creates a new mock instance.
 func NewMockrunningTaskSelector(ctrl *gomock.Controller) *MockrunningTaskSelector {
 	mock := &MockrunningTaskSelector{ctrl: ctrl}
 	mock.recorder = &MockrunningTaskSelectorMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockrunningTaskSelector) EXPECT() *MockrunningTaskSelectorMockRecorder {
 	return m.recorder
 }
 
-// RunningTask mocks base method
+// RunningTask mocks base method.
 func (m *MockrunningTaskSelector) RunningTask(prompt, help string, opts ...selector.TaskOpts) (*ecs.Task, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{prompt, help}
@@ -5742,14 +5660,13 @@ func (m *MockrunningTaskSelector) RunningTask(prompt, help string, opts ...selec
 	return ret0, ret1
 }
 
-// RunningTask indicates an expected call of RunningTask
+// RunningTask indicates an expected call of RunningTask.
 func (mr *MockrunningTaskSelectorMockRecorder) RunningTask(prompt, help interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{prompt, help}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunningTask", reflect.TypeOf((*MockrunningTaskSelector)(nil).RunningTask), varargs...)
 }
 
-// MockdockerEngineValidator is a mock of dockerEngineValidator interface
 // MockdockerEngineValidator is a mock of dockerEngineValidator interface.
 type MockdockerEngineValidator struct {
 	ctrl     *gomock.Controller

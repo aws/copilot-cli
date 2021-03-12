@@ -422,16 +422,34 @@ func TestECS_DefaultCluster(t *testing.T) {
 							{
 								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster1"),
 								ClusterName: aws.String("cluster1"),
+								Status:      aws.String(clusterStatusActive),
 							},
 							{
 								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster2"),
 								ClusterName: aws.String("cluster2"),
+								Status:      aws.String(clusterStatusActive),
 							},
 						},
 					}, nil)
 			},
 
 			wantedClusters: "arn:aws:ecs:us-east-1:0123456:cluster/cluster1",
+		},
+		"ignore inactive cluster": {
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().
+					DescribeClusters(&ecs.DescribeClustersInput{}).
+					Return(&ecs.DescribeClustersOutput{
+						Clusters: []*ecs.Cluster{
+							{
+								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster1"),
+								ClusterName: aws.String("cluster1"),
+								Status:      aws.String("INACTIVE"),
+							},
+						},
+					}, nil)
+			},
+			wantedError: fmt.Errorf("default cluster does not exist"),
 		},
 		"failed to get default clusters": {
 			mockECSClient: func(m *mocks.Mockapi) {
@@ -492,7 +510,10 @@ func TestECS_HasDefaultCluster(t *testing.T) {
 				m.EXPECT().DescribeClusters(&ecs.DescribeClustersInput{}).
 					Return(&ecs.DescribeClustersOutput{
 						Clusters: []*ecs.Cluster{
-							{ClusterArn: aws.String("cluster")},
+							{
+								ClusterArn: aws.String("cluster"),
+								Status:     aws.String(clusterStatusActive),
+							},
 						},
 					}, nil)
 			},

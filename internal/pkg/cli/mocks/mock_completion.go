@@ -5,35 +5,36 @@
 package mocks
 
 import (
-	gomock "github.com/golang/mock/gomock"
 	io "io"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
-// MockshellCompleter is a mock of shellCompleter interface
+// MockshellCompleter is a mock of shellCompleter interface.
 type MockshellCompleter struct {
 	ctrl     *gomock.Controller
 	recorder *MockshellCompleterMockRecorder
 }
 
-// MockshellCompleterMockRecorder is the mock recorder for MockshellCompleter
+// MockshellCompleterMockRecorder is the mock recorder for MockshellCompleter.
 type MockshellCompleterMockRecorder struct {
 	mock *MockshellCompleter
 }
 
-// NewMockshellCompleter creates a new mock instance
+// NewMockshellCompleter creates a new mock instance.
 func NewMockshellCompleter(ctrl *gomock.Controller) *MockshellCompleter {
 	mock := &MockshellCompleter{ctrl: ctrl}
 	mock.recorder = &MockshellCompleterMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockshellCompleter) EXPECT() *MockshellCompleterMockRecorder {
 	return m.recorder
 }
 
-// GenBashCompletion mocks base method
+// GenBashCompletion mocks base method.
 func (m *MockshellCompleter) GenBashCompletion(w io.Writer) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GenBashCompletion", w)
@@ -41,13 +42,13 @@ func (m *MockshellCompleter) GenBashCompletion(w io.Writer) error {
 	return ret0
 }
 
-// GenBashCompletion indicates an expected call of GenBashCompletion
+// GenBashCompletion indicates an expected call of GenBashCompletion.
 func (mr *MockshellCompleterMockRecorder) GenBashCompletion(w interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenBashCompletion", reflect.TypeOf((*MockshellCompleter)(nil).GenBashCompletion), w)
 }
 
-// GenZshCompletion mocks base method
+// GenZshCompletion mocks base method.
 func (m *MockshellCompleter) GenZshCompletion(w io.Writer) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GenZshCompletion", w)
@@ -55,7 +56,7 @@ func (m *MockshellCompleter) GenZshCompletion(w io.Writer) error {
 	return ret0
 }
 
-// GenZshCompletion indicates an expected call of GenZshCompletion
+// GenZshCompletion indicates an expected call of GenZshCompletion.
 func (mr *MockshellCompleterMockRecorder) GenZshCompletion(w interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenZshCompletion", reflect.TypeOf((*MockshellCompleter)(nil).GenZshCompletion), w)
