@@ -6,9 +6,9 @@ List of all available properties for a `'Backend Service'` manifest.
     # Your service name will be used in naming your resources like log groups, ECS services, etc.
     name: api
     type: Backend Service
-    
+
     # Your service is reachable at "http://api.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:8080" but is not public.
-    
+
     # Configuration for your containers and service.
     image:
       build: ./api/Dockerfile
@@ -17,9 +17,9 @@ List of all available properties for a `'Backend Service'` manifest.
         command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
         interval: 10s
         retries: 2
-        timeout: 5s 
+        timeout: 5s
         start_period: 0s
-    
+
     cpu: 256
     memory: 512
     count: 1
@@ -36,17 +36,17 @@ List of all available properties for a `'Backend Service'` manifest.
             auth:
               iam: true
               access_point_id: fsap-12345678
-    
+
     network:
       vpc:
         placement: 'private'
         security_groups: ['sg-05d7cd12cceeb9a6e']
-    
-    variables: 
+
+    variables:
       LOG_LEVEL: info
     secrets:
       GITHUB_TOKEN: GITHUB_TOKEN
-    
+
     # You can override any of the values defined above by environment.
     environments:
       production:
@@ -123,7 +123,7 @@ Grace period within which to provide containers time to bootstrap before failed 
 <div class="separator"></div>
 
 <a id="entrypoint" href="#entrypoint" class="field">`entrypoint`</a> <span class="type">String or Array of Strings</span>  
-Override the default entrypoint in the image. 
+Override the default entrypoint in the image.
 ```yaml
 # String version.
 entrypoint: "/bin/entrypoint --p1 --p2"
@@ -182,7 +182,7 @@ Scale up or down based on the average memory your service should maintain.
 
 <div class="separator"></div>
 
-<a id="execute_command" href="#execute_command" class="field">`execute_command`</a> <span class="type">Boolean</span>   
+<a id="exec" href="#exec" class="field">`exec`</a> <span class="type">Boolean</span>   
 Enable running commands in your container. The default is `false`. Required for `$ copilot svc exec`. Please note that this will update the service's Fargate Platform Version to 1.4.0.
 
 <a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>    
@@ -232,25 +232,25 @@ volumes:
 Specify the configuration of a volume.
 
 <span class="parent-field">volume.</span><a id="path" href="#path" class="field">`path`</a> <span class="type">String</span>  
-Required. Specify the location in the container where you would like your volume to be mounted. Must be fewer than 242 characters and must consist only of the characters `a-zA-Z0-9.-_/`. 
+Required. Specify the location in the container where you would like your volume to be mounted. Must be fewer than 242 characters and must consist only of the characters `a-zA-Z0-9.-_/`.
 
 <span class="parent-field">volume.</span><a id="read_only" href="#read-only" class="field">`read_only`</a> <span class="type">Bool</span>  
-Optional. Defaults to `true`. Defines whether the volume is read-only or not. If false, the container is granted `elasticfilesystem:ClientWrite` permissions to the filesystem and the volume is writable. 
+Optional. Defaults to `true`. Defines whether the volume is read-only or not. If false, the container is granted `elasticfilesystem:ClientWrite` permissions to the filesystem and the volume is writable.
 
 <span class="parent-field">volume.</span><a id="efs" href="#efs" class="field">`efs`</a> <span class="type">Map</span>  
 Specify more detailed EFS configuration.
 
 <span class="parent-field">volume.efs.</span><a id="id" href="#id" class="field">`id`</a> <span class="type">String</span>  
-Required. The ID of the filesystem you would like to mount. 
+Required. The ID of the filesystem you would like to mount.
 
 <span class="parent-field">volume.efs.</span><a id="root_dir" href="#root-dir" class="field">`root_dir`</a> <span class="type">String</span>  
-Optional. Defaults to `/`. Specify the location in the EFS filesystem you would like to use as the root of your volume. Must be fewer than 255 characters and must consist only of the characters `a-zA-Z0-9.-_/`. If using an access point, `root_dir` must be either empty or `/` and `auth.iam` must be `true`. 
+Optional. Defaults to `/`. Specify the location in the EFS filesystem you would like to use as the root of your volume. Must be fewer than 255 characters and must consist only of the characters `a-zA-Z0-9.-_/`. If using an access point, `root_dir` must be either empty or `/` and `auth.iam` must be `true`.
 
 <span class="parent-field">volume.efs.</span><a id="auth" href="#auth" class="field">`auth`</a> <span class="type">Map</span>  
-Specify advanced authorization configuration for EFS. 
+Specify advanced authorization configuration for EFS.
 
 <span class="parent-field">volume.efs.auth.</span><a id="iam" href="#iam" class="field">`iam`</a> <span class="type">Bool</span>  
-Optional. Defaults to `true`. Whether or not to use IAM authorization to determine whether the volume is allowed to connect to EFS. 
+Optional. Defaults to `true`. Whether or not to use IAM authorization to determine whether the volume is allowed to connect to EFS.
 
 <span class="parent-field">volume.efs.auth.</span><a id="access_point_id" href="#access-point-id" class="field">`access_point_id`</a> <span class="type">String</span>  
 Optional. Defaults to `""`. The ID of the EFS access point to connect to. If using an access point, `root_dir` must be either empty or `/` and `auth.iam` must be `true`.
