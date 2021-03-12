@@ -404,6 +404,11 @@ func (o *runTaskOpts) Execute() error {
 			return fmt.Errorf(`find "default" cluster to deploy the task to: %v`, err)
 		}
 		if !hasDefaultCluster {
+			log.Errorf(
+				"Looks like there is no \"default\" cluster in your region!\nPlease run %s to create the cluster first, and then re-run %s.\n",
+				color.HighlightCode("aws ecs create-cluster"),
+				color.HighlightCode("copilot task run"),
+			)
 			return errors.New(`cannot find a "default" cluster to deploy the task to`)
 		}
 	}
