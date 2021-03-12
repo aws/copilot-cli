@@ -422,12 +422,12 @@ func TestECS_DefaultCluster(t *testing.T) {
 							{
 								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster1"),
 								ClusterName: aws.String("cluster1"),
-								Status:      aws.String("ACTIVE"),
+								Status:      aws.String(clusterStatusActive),
 							},
 							{
 								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster2"),
 								ClusterName: aws.String("cluster2"),
-								Status:      aws.String("ACTIVE"),
+								Status:      aws.String(clusterStatusActive),
 							},
 						},
 					}, nil)
@@ -510,7 +510,10 @@ func TestECS_HasDefaultCluster(t *testing.T) {
 				m.EXPECT().DescribeClusters(&ecs.DescribeClustersInput{}).
 					Return(&ecs.DescribeClustersOutput{
 						Clusters: []*ecs.Cluster{
-							{ClusterArn: aws.String("cluster"), Status: aws.String("ACTIVE")},
+							{
+								ClusterArn: aws.String("cluster"),
+								Status:     aws.String(clusterStatusActive),
+							},
 						},
 					}, nil)
 			},
