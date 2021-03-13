@@ -135,20 +135,17 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 			}, false, nil
 		} else {
 			// If an existing CSC connection is being used, don't prompt to update connection from 'PENDING' to 'AVAILABLE'.
-			var shouldPrompt bool
-			var connection string
-			if (mfSource.Properties["connection_ARN"]) == nil {
-				shouldPrompt = true
-				connection = ""
-			} else {
-				connection = mfSource.Properties["connection_ARN"].(string)
-			}
-			return &GitHubSource{
+			connection, ok := mfSource.Properties["connection_arn"]
+			repo := &GitHubSource{
 				ProviderName:  manifest.GithubProviderName,
 				Branch:        (mfSource.Properties["branch"]).(string),
 				RepositoryURL: GitHubURL((mfSource.Properties["repository"]).(string)),
-				ConnectionARN: connection,
-			}, shouldPrompt, nil
+			}
+			if !ok {
+				return repo, true, nil
+			}
+			repo.ConnectionARN = connection.(string)
+			return repo, false, nil
 		}
 	case manifest.CodeCommitProviderName:
 		return &CodeCommitSource{
@@ -158,20 +155,17 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 		}, false, nil
 	case manifest.BitbucketProviderName:
 		// If an existing CSC connection is being used, don't prompt to update connection from 'PENDING' to 'AVAILABLE'.
-		var shouldPrompt bool
-		var connection string
-		if (mfSource.Properties["connection_ARN"]) == nil {
-			shouldPrompt = true
-			connection = ""
-		} else {
-			connection = mfSource.Properties["connection_ARN"].(string)
-		}
-		return &BitbucketSource{
+		connection, ok := mfSource.Properties["connection_arn"]
+		repo := &BitbucketSource{
 			ProviderName:  manifest.BitbucketProviderName,
 			Branch:        (mfSource.Properties["branch"]).(string),
 			RepositoryURL: (mfSource.Properties["repository"]).(string),
-			ConnectionARN: connection,
-		}, shouldPrompt, nil
+		}
+		if !ok {
+			return repo, true, nil
+		}
+		repo.ConnectionARN = connection.(string)
+		return repo, false, nil
 	default:
 		return nil, false, fmt.Errorf("invalid repo source provider: %s", mfSource.ProviderName)
 	}
@@ -187,37 +181,20 @@ func (s *GitHubV1Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 	return s.PersonalAccessTokenSecretID, nil
 }
 
-// Connection parses the ARN to check that it's a valid ARN and of CSC Service type.
+// Connection returns the ARN correlated with a ConnectionName in the pipeline manifest.
 func (s *BitbucketSource) Connection() (string, error) {
 	if s.ConnectionARN == "" {
 		return "", nil
 	}
-	if err := parseAndCheckARN(s.ConnectionARN); err != nil {
-		return "", err
-	}
 	return s.ConnectionARN, nil
 }
 
-// Connection parses the ARN to check that it's a valid ARN and of CSC Service type.
+// Connection returns the ARN correlated with a ConnectionName in the pipeline manifest.
 func (s *GitHubSource) Connection() (string, error) {
 	if s.ConnectionARN == "" {
 		return "", nil
 	}
-	if err := parseAndCheckARN(s.ConnectionARN); err != nil {
-		return "", err
-	}
 	return s.ConnectionARN, nil
-}
-
-func parseAndCheckARN(ARN string) error {
-	parsedARN, err := arn.Parse(ARN)
-	if err != nil {
-		return fmt.Errorf("parse connection ARN: %w", err)
-	}
-	if parsedARN.Service != "codestar-connections" {
-		return fmt.Errorf("ARN does not identify a CodeStar Connections resource")
-	}
-	return nil
 }
 
 // parse parses the owner and repo name from the GH repo URL, which was formatted and assigned in cli/pipeline_init.go.

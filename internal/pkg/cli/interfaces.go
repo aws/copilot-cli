@@ -519,3 +519,7 @@ type serviceLinkedRoleCreator interface {
 type dockerEngineValidator interface {
 	CheckDockerEngineRunning() error
 }
+
+type codestar interface {
+	GetConnectionARN(string) (string, error)
+}

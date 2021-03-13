@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	cs "github.com/aws/copilot-cli/internal/pkg/aws/codestar"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -57,6 +58,7 @@ type updatePipelineOpts struct {
 	region           string
 	envStore         environmentStore
 	ws               wsPipelineReader
+	codestar         codestar
 
 	pipelineName                 string
 	shouldPromptUpdateConnection bool
@@ -92,6 +94,7 @@ func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error)
 		ws:                 ws,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompt.New(),
+		codestar:           cs.New(defaultSession),
 	}, nil
 }
 
@@ -159,7 +162,7 @@ func (o *updatePipelineOpts) shouldUpdate() (bool, error) {
 	return shouldUpdate, nil
 }
 
-type codestar interface {
+type codeStar interface {
 	ConnectionName() (string, error)
 }
 
@@ -173,7 +176,7 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 
 		// If the source requires CodeStar Connections, the user is prompted to update the connection status.
 		if o.shouldPromptUpdateConnection {
-			source, ok := in.Source.(codestar)
+			source, ok := in.Source.(codeStar)
 			if !ok {
 				return fmt.Errorf("source %v does not have a connection name", in.Source)
 			}
@@ -238,6 +241,16 @@ func (o *updatePipelineOpts) Execute() error {
 		return fmt.Errorf(`pipeline name '%s' must be shorter than 100 characters`, pipeline.Name)
 	}
 	o.pipelineName = pipeline.Name
+
+	// If the source has an existing connection, get the correlating ConnectionARN .
+	connection, ok := pipeline.Source.Properties["connection_name"]
+	if ok {
+		arn, err := o.codestar.GetConnectionARN((connection).(string))
+		if err != nil {
+			return fmt.Errorf("get connection ARN: %w", err)
+		}
+		pipeline.Source.Properties["connection_arn"] = arn
+	}
 
 	source, bool, err := deploy.PipelineSourceFromManifest(pipeline.Source)
 	if err != nil {

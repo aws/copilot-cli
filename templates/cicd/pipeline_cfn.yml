@@ -3,13 +3,15 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for {{$.AppName}}
 Resources:
-  {{- if isCodeStarConnection .Source}}{{if eq .Source.ConnectionARN ""}}
+  {{- if isCodeStarConnection .Source}}
+  {{if eq .Source.ConnectionARN ""}}
   SourceConnection:
     Type: AWS::CodeStarConnections::Connection
     Properties:
       ConnectionName: {{.Source.ConnectionName}}
       ProviderType: {{.Source.ProviderName}}
-  {{- end}}{{- end}}
+  {{- end}}
+  {{- end}}
   BuildProjectRole:
     Type: AWS::IAM::Role
     Properties:
