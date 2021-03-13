@@ -38,24 +38,30 @@ release-docker:
 	docker rm -f amazon-ecs-copilot-builder
 	@echo "Built binaries under ./local/"
 
+.PHONY: compile-local
 compile-local:
 	go build -ldflags "${LINKER_FLAGS}" -o ${DESTINATION} ./cmd/copilot
 
+.PHONY: compile-windows
 compile-windows:
 	CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}.exe ./cmd/copilot
 
+.PHONY: compile-linux
 compile-linux:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}-linux-amd64 ./cmd/copilot
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}-linux-arm64 ./cmd/copilot
 
+.PHONY: compile-darwin
 compile-darwin:
 	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION} ./cmd/copilot
 
+.PHONY: packr-build
 packr-build: tools package-custom-resources
 	@echo "Packaging static files" &&\
 	env -i PATH="$$PATH":${GOBIN} GOCACHE=$$(go env GOCACHE) GOPATH=$$(go env GOPATH) \
 	go generate ./...
 
+.PHONY: packr-clean
 packr-clean: tools package-custom-resources-clean
 	@echo "Cleaning up static files generated code" &&\
 	cd templates &&\
@@ -65,6 +71,7 @@ packr-clean: tools package-custom-resources-clean
 .PHONY: test
 test: packr-build run-unit-test custom-resource-tests packr-clean
 
+.PHONY: custom-resource-tests
 custom-resource-tests:
 	@echo "Running custom resource unit tests" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} &&\
@@ -74,6 +81,7 @@ custom-resource-tests:
 # Minifies the resources in cf-custom-resources/lib and copies
 # those minified assets into templates/custom-resources so that
 # they can be packed.
+.PHONY: package-custom-resources
 package-custom-resources:
 	@echo "Packaging custom resources to templates/custom-resources" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} &&\
@@ -82,13 +90,16 @@ package-custom-resources:
 
 # We only need the minified custom resources during building. After
 # they're packed, we can remove them.
+.PHONY: package-custom-resources-clean
 package-custom-resources-clean:
 	@echo "Removing minified templates/custom-resources" &&\
 	rm ${BUILT_CUSTOM_RESOURCES}/*.js
 
+.PHONY: run-unit-test
 run-unit-test:
 	go test -race -cover -count=1 -coverprofile ${COVERAGE} ${PACKAGES}
 
+.PHONY: generate-coverage
 generate-coverage: ${COVERAGE}
 	go tool cover -html=${COVERAGE}
 
@@ -97,6 +108,7 @@ ${COVERAGE}: test
 .PHONY: integ-test
 integ-test: packr-build run-integ-test packr-clean
 
+.PHONY: run-integ-test
 run-integ-test:
 	# These tests have a long timeout as they create and teardown CloudFormation stacks.
 	# Also adding count=1 so the test results aren't cached.
@@ -126,6 +138,7 @@ start-docs:
 	hugo server -D
 
 # Build and minify the documentation to the docs/ directory.
+.PHONY: build-docs
 build-docs:
 	cd ${SOURDE_DOCS} &&\
 	git submodule update --init --recursive &&\

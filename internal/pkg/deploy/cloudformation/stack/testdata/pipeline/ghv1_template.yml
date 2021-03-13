@@ -3,11 +3,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for phonetool
 Resources:
-  SourceConnection:
-    Type: AWS::CodeStarConnections::Connection
-    Properties:
-      ConnectionName: copilot-aws-phonetool
-      ProviderType: GitHub
   BuildProjectRole:
     Type: AWS::IAM::Role
     Properties:
@@ -166,26 +161,6 @@ Resources:
               - "*"
           - Effect: Allow
             Action:
-              - codestar-connections:CreateConnection
-              - codestar-connections:DeleteConnection
-              - codestar-connections:GetConnection
-              - codestar-connections:ListConnections
-              - codestar-connections:GetIndividualAccessToken
-              - codestar-connections:GetInstallationUrl
-              - codestar-connections:ListInstallationTargets
-              - codestar-connections:StartOAuthHandshake
-              - codestar-connections:UpdateConnectionInstallation
-              - codestar-connections:UseConnection
-              - codestar-connections:RegisterAppCode
-              - codestar-connections:StartAppRegistrationHandshake
-              - codestar-connections:StartUploadArchiveToS3
-              - codestar-connections:GetUploadArchiveToS3Status
-              - codestar-connections:PassConnection
-              - codestar-connections:PassedToService
-            Resource:
-              - !Ref SourceConnection
-          - Effect: Allow
-            Action:
               - kms:Decrypt
               - kms:Encrypt
               - kms:GenerateDataKey
@@ -197,8 +172,6 @@ Resources:
               - s3:GetBucketPolicy
               - s3:GetObject
               - s3:ListBucket
-              - s3:PutObjectAcl
-              - s3:GetObjectAcl
             Resource:
               - !Join ['', ['arn:aws:s3:::', 'fancy-bucket']]
               - !Join ['', ['arn:aws:s3:::', 'fancy-bucket', '/*']]
@@ -250,13 +223,18 @@ Resources:
             - Name: SourceCodeFor-phonetool
               ActionTypeId:
                 Category: Source
-                Owner: AWS
+                Owner: ThirdParty
                 Version: 1
-                Provider: CodeStarSourceConnection
+                Provider: GitHub
               Configuration:
-                ConnectionArn: !Ref SourceConnection
-                FullRepositoryId: aws/phonetool
-                BranchName: mainline
+                Owner: aws
+                Repo: phonetool
+                Branch: mainline
+                # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager
+                # Use the *entire* SecretString with version AWSCURRENT
+                OAuthToken: !Sub
+                  - '{{resolve:secretsmanager:${SecretId}}}'
+                  - SecretId: my secret
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1
@@ -314,7 +292,3 @@ Resources:
               RunOrder: 3
               InputArtifacts:
                 - Name: SCCheckoutArtifact
-Outputs:
-  PipelineConnectionARN:
-    Description: "ARN of CodeStar Connections connection"
-    Value: SourceConnection
