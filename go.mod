@@ -17,7 +17,7 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.2.0
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c // indirect
-	github.com/imdario/mergo v0.3.9
+	github.com/imdario/mergo v0.3.12
 	github.com/lnquy/cron v1.1.1
 	github.com/moby/buildkit v0.8.2
 	github.com/onsi/ginkgo v1.15.1
