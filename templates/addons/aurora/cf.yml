@@ -13,6 +13,8 @@ Parameters:
     Type: String
     Description: The name of the table.
     Default: mydatatable #{{.TableName}}
+    # Cannot have special characters
+    # Naming constraints: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html#RDS_Limits.Constraints
   DBPort:
     Type: Number
     Description: The traffic port for connections to the database.
@@ -106,7 +108,7 @@ Resources:
       Name: !Sub '/${App}/${Env}/${Name}/${DBTableName}'
       Description: !Sub Aurora PostgreSQL main user secret for ${AWS::StackName}
       GenerateSecretString:
-        SecretStringTemplate: !Sub '{"username": "postgres", "port", "${DBPort}"}'
+        SecretStringTemplate: '{"username": "postgres"}'
         GenerateStringKey: "password"
         ExcludePunctuation: true
         IncludeSpace: false
@@ -127,7 +129,7 @@ Resources:
         !Join [ "", [ "{{resolve:secretsmanager:", !Ref AuroraSecret, ":SecretString:username}}" ]]
       MasterUserPassword:
         !Join [ "", [ "{{resolve:secretsmanager:", !Ref AuroraSecret, ":SecretString:password}}" ]]
-      DatabaseName: !Sub "${App}-${Env}-${Name}-${DBTableName}"
+      DatabaseName: !Ref DBTableName
       Engine: aurora-postgresql # aurora-mysql
       EngineVersion: '10.7'
       EngineMode: serverless
@@ -152,6 +154,6 @@ Resources:
       TargetType: AWS::RDS::DBCluster
 
 Outputs:
-  PostgresData: # injected as AURORA_METADATA environment variable by Copilot. 
+  AuroraMetadata: # injected as AURORA_METADATA environment variable by Copilot. 
     Description: "The JSON secret that holds the database username and password. Fields are 'host', 'dbname', 'username', 'password'"
     Value: !Ref AuroraSecret
