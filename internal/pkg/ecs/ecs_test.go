@@ -9,11 +9,11 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	awsecs "github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs/mocks"
-	awsecs "github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
