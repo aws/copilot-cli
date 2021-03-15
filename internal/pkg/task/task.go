@@ -45,6 +45,7 @@ type Task struct {
 	TaskARN    string
 	ClusterARN string
 	StartedAt  *time.Time
+	ENI        string
 }
 
 const (
@@ -60,10 +61,13 @@ func taskFamilyName(groupName string) string {
 }
 
 func newTaskFromECS(ecsTask *ecs.Task) *Task {
+	taskARN := aws.StringValue(ecsTask.TaskArn)
+	eni, _ := ecsTask.ENI() //  Best-effort parse the ENI. If we can't find an IP address, we won't show it to the customers instead of erroring.
 	return &Task{
-		TaskARN:    aws.StringValue(ecsTask.TaskArn),
+		TaskARN:    taskARN,
 		ClusterARN: aws.StringValue(ecsTask.ClusterArn),
 		StartedAt:  ecsTask.StartedAt,
+		ENI:        eni,
 	}
 }
 
@@ -72,5 +76,6 @@ func convertECSTasks(ecsTasks []*ecs.Task) []*Task {
 	for idx, ecsTask := range ecsTasks {
 		tasks[idx] = newTaskFromECS(ecsTask)
 	}
+	// Even if ENI information is not found for some tasks, we still want to return the other information as we can
 	return tasks
 }

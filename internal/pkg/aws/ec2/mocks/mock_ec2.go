@@ -5,50 +5,51 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	ec2 "github.com/aws/aws-sdk-go/service/ec2"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// Mockapi is a mock of api interface
+// Mockapi is a mock of api interface.
 type Mockapi struct {
 	ctrl     *gomock.Controller
 	recorder *MockapiMockRecorder
 }
 
-// MockapiMockRecorder is the mock recorder for Mockapi
+// MockapiMockRecorder is the mock recorder for Mockapi.
 type MockapiMockRecorder struct {
 	mock *Mockapi
 }
 
-// NewMockapi creates a new mock instance
+// NewMockapi creates a new mock instance.
 func NewMockapi(ctrl *gomock.Controller) *Mockapi {
 	mock := &Mockapi{ctrl: ctrl}
 	mock.recorder = &MockapiMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
-// DescribeSubnets mocks base method
-func (m *Mockapi) DescribeSubnets(arg0 *ec2.DescribeSubnetsInput) (*ec2.DescribeSubnetsOutput, error) {
+// DescribeNetworkInterfaces mocks base method.
+func (m *Mockapi) DescribeNetworkInterfaces(input *ec2.DescribeNetworkInterfacesInput) (*ec2.DescribeNetworkInterfacesOutput, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeSubnets", arg0)
-	ret0, _ := ret[0].(*ec2.DescribeSubnetsOutput)
+	ret := m.ctrl.Call(m, "DescribeNetworkInterfaces", input)
+	ret0, _ := ret[0].(*ec2.DescribeNetworkInterfacesOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DescribeSubnets indicates an expected call of DescribeSubnets
-func (mr *MockapiMockRecorder) DescribeSubnets(arg0 interface{}) *gomock.Call {
+// DescribeNetworkInterfaces indicates an expected call of DescribeNetworkInterfaces.
+func (mr *MockapiMockRecorder) DescribeNetworkInterfaces(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeSubnets", reflect.TypeOf((*Mockapi)(nil).DescribeSubnets), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeNetworkInterfaces", reflect.TypeOf((*Mockapi)(nil).DescribeNetworkInterfaces), input)
 }
 
-// DescribeSecurityGroups mocks base method
+// DescribeSecurityGroups mocks base method.
 func (m *Mockapi) DescribeSecurityGroups(arg0 *ec2.DescribeSecurityGroupsInput) (*ec2.DescribeSecurityGroupsOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeSecurityGroups", arg0)
@@ -57,28 +58,28 @@ func (m *Mockapi) DescribeSecurityGroups(arg0 *ec2.DescribeSecurityGroupsInput) 
 	return ret0, ret1
 }
 
-// DescribeSecurityGroups indicates an expected call of DescribeSecurityGroups
+// DescribeSecurityGroups indicates an expected call of DescribeSecurityGroups.
 func (mr *MockapiMockRecorder) DescribeSecurityGroups(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeSecurityGroups", reflect.TypeOf((*Mockapi)(nil).DescribeSecurityGroups), arg0)
 }
 
-// DescribeVpcs mocks base method
-func (m *Mockapi) DescribeVpcs(input *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error) {
+// DescribeSubnets mocks base method.
+func (m *Mockapi) DescribeSubnets(arg0 *ec2.DescribeSubnetsInput) (*ec2.DescribeSubnetsOutput, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeVpcs", input)
-	ret0, _ := ret[0].(*ec2.DescribeVpcsOutput)
+	ret := m.ctrl.Call(m, "DescribeSubnets", arg0)
+	ret0, _ := ret[0].(*ec2.DescribeSubnetsOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DescribeVpcs indicates an expected call of DescribeVpcs
-func (mr *MockapiMockRecorder) DescribeVpcs(input interface{}) *gomock.Call {
+// DescribeSubnets indicates an expected call of DescribeSubnets.
+func (mr *MockapiMockRecorder) DescribeSubnets(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeVpcs", reflect.TypeOf((*Mockapi)(nil).DescribeVpcs), input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeSubnets", reflect.TypeOf((*Mockapi)(nil).DescribeSubnets), arg0)
 }
 
-// DescribeVpcAttribute mocks base method
+// DescribeVpcAttribute mocks base method.
 func (m *Mockapi) DescribeVpcAttribute(input *ec2.DescribeVpcAttributeInput) (*ec2.DescribeVpcAttributeOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeVpcAttribute", input)
@@ -87,8 +88,23 @@ func (m *Mockapi) DescribeVpcAttribute(input *ec2.DescribeVpcAttributeInput) (*e
 	return ret0, ret1
 }
 
-// DescribeVpcAttribute indicates an expected call of DescribeVpcAttribute
+// DescribeVpcAttribute indicates an expected call of DescribeVpcAttribute.
 func (mr *MockapiMockRecorder) DescribeVpcAttribute(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeVpcAttribute", reflect.TypeOf((*Mockapi)(nil).DescribeVpcAttribute), input)
+}
+
+// DescribeVpcs mocks base method.
+func (m *Mockapi) DescribeVpcs(input *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeVpcs", input)
+	ret0, _ := ret[0].(*ec2.DescribeVpcsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeVpcs indicates an expected call of DescribeVpcs.
+func (mr *MockapiMockRecorder) DescribeVpcs(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeVpcs", reflect.TypeOf((*Mockapi)(nil).DescribeVpcs), input)
 }

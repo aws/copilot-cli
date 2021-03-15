@@ -51,8 +51,6 @@ This won't create your pipeline, but it will create some local files that will b
 
 * __Tracking repository__: After you've selected the environments you want to deploy to, you'll be prompted to select which repository you want your CodePipeline to track. This is the repository that, when pushed to, will trigger a pipeline execution. (If the repository you're interested in doesn't show up, you can pass it in using the `--url` flag.)
 
-* __Personal access token__: If you have selected a GitHub repository, you'll need to provide a GitHub Personal Access Token in order for CodePipeline to track that repository. You can read how to do that [here](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line). Your token needs to have _repo_ and _admin:repo_hook_ permissions (so CodePipeline can create a webHook on your behalf). Your GitHub Personal Access Token is stored securely in [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/).
-
 ### Step 2: Updating the Pipeline manifest (optional)
 
 Just like your service has a simple manifest file, so does your pipeline. After you run `pipeline init`, two files are created: `pipeline.yml` and `buildspec.yml`, both in your `copilot/` directory. If you poke in, you'll see that the `pipeline.yml` looks something like this (for a service called "api-frontend" with two environments, "test" and "prod"):
@@ -74,7 +72,6 @@ source:
   # the artifacts should be sourced from. For example, the GitHub provider
   # has the following properties: repository, branch.
   properties:
-    access_token_secret: github-token-ecs-kudos-demo-api-frontend
     branch: main
     repository: https://github.com/kohidave/demo-api-frontend
 
@@ -115,6 +112,9 @@ This parses your `pipeline.yml`, creates a CodePipeline in the same account and 
 
 ![Your completed CodePipeline](https://user-images.githubusercontent.com/828419/71861318-c7083980-30aa-11ea-80bb-4bea25bf5d04.png)
 
+!!! info 
+    If you have selected a GitHub or Bitbucket repository, Copilot will help you connect to your source code with [CodeStar Connections](https://docs.aws.amazon.com/dtconsole/latest/userguide/welcome-connections.html). You will need to install the AWS authentication app on your third-party account and update the connection status. Copilot and the AWS Management Console will guide you through these steps.
+
 ## Adding Tests
 
 Of course, one of the most important parts of a pipeline is the automated testing. To add tests, such as integration or end-to-end tests, that run after a deployment stage, include those commands in the `test_commands` section. If all the tests succeed, your change is promoted to the next stage. 
@@ -129,7 +129,6 @@ version: 1
 source:
   provider: GitHub
   properties:
-    access_token_secret: github-token-ecs-kudos-demo-api-frontend
     branch: main
     repository: https://github.com/kohidave/demo-api-frontend
 
