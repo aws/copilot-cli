@@ -1,8 +1,3 @@
----
-AWSTemplateFormatVersion: 2010-09-09
-Transform:
-  - "AWS::Serverless-2016-10-31"
-  - "AWS::SecretsManager-2020-07-23"
 Parameters:
   App:
     Type: String
@@ -13,190 +8,150 @@ Parameters:
   Name:
     Type: String
     Description: The name of the service, job, or workflow being deployed.
-  EnableRotation:
+# Customize your Aurora Serverless cluster by setting the default value of these parameters. 
+  DBTableName:
     Type: String
-    Description: Whether or not to enable credential rotation with a lambda function.
-    Default: true # {{.EnableRotation}}
+    Description: The name of the table.
+    Default: mydatatable #{{.TableName}}
+  DBPort:
+    Type: Number
+    Description: The traffic port for connections to the database.
+    Default: 5432 # Postgres
+    # Default: 3306
+  DBMinCapacity:
+    Type: Number
+    Description: The minimum scaling capacity for the cluster.
+    AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384] # Postgres.
+    # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256] # MySQL
+    Default: 2 #{{.MinCapacity}}
+  DBMaxCapacity:
+    Type: Number
+    Description: The maximum scaling capacity for the cluster.  
+    AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384] # Postgres.
+    # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256] # MySQL
+    Default: 8 #{{.MaxCapacity}}
+  DBAutoPauseSeconds:
+    Type: Number
+    Description: The duration in seconds before the cluster pauses.
+    Default: 1000 #{{.TimeoutSeconds}}
 
-Conditions:
-  CreateLambdaRotation: !Equals
-    - !Ref EnableRotation
-    - true
 Resources:
-  SecretsManagerEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Condition: CreateLambdaRotation
-    Properties: 
-      PrivateDnsEnabled: true
-      SecurityGroupIds: 
-        - !Ref SecretsManagerEndpointSecurityGroup
-      ServiceName: com.amazonaws.us-west-2.secretsmanager
-      SubnetIds: !Split [",", { "Fn::ImportValue": !Sub "${App}-${Env}-PrivateSubnets" }]
-      VpcEndpointType: Interface
-      VpcId: 
-        Fn::ImportValue: 
-          !Sub "${App}-${Env}-VpcId"
-  SGIngressToRotationLambdaFromSecretsManager:
-    Type: AWS::EC2::SecurityGroupIngress
-    Condition: CreateLambdaRotation
+  AuroraKMSCMK:
+    Type: 'AWS::KMS::Key'
+    DeletionPolicy: Retain
     Properties:
-      Description: Allows traffic from secrets manager to rotation lambda. 
-      GroupId: !Ref RotationSecurityGroup
-      SourceSecurityGroupId: !Ref SecretsManagerEndpointSecurityGroup
-      IpProtocol: tcp
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+          - Effect: Allow
+            Principal:
+              AWS: '*'
+            Action:
+              - 'kms:Encrypt'
+              - 'kms:Decrypt'
+              - 'kms:ReEncrypt*'
+              - 'kms:GenerateDataKey*'
+              - 'kms:CreateGrant'
+              - 'kms:ListGrants'
+              - 'kms:DescribeKey'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                'kms:CallerAccount': !Ref 'AWS::AccountId'
+                'kms:ViaService': !Sub 'rds.${AWS::Region}.amazonaws.com'
 
-  SecretsManagerEndpointSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Condition: CreateLambdaRotation
+  AuroraKMSCMKAlias:
+    Type: 'AWS::KMS::Alias'
+    DeletionPolicy: Retain
+    DependsOn: ['AuroraDBCluster']
     Properties:
-      GroupDescription: The Security Group for the VPC Endpoint  
-      SecurityGroupIngress:
-        - IpProtocol: '-1'
-          Description: Allow traffic from Rotation Security Group
-          SourceSecurityGroupId: !Ref RotationSecurityGroup
-      VpcId: 
-        Fn::ImportValue: 
-          !Sub "${App}-${Env}-VpcId"
-      SecurityGroupEgress:
-        - IpProtocol: '-1'
-          Description: Allow all outbound traffic by default
-          CidrIp: 0.0.0.0/0
+      AliasName: !Sub 'alias/${AuroraDBCluster}'
+      TargetKeyId: !Ref AuroraKMSCMK
 
   DBSubnetGroup:
-    Type: AWS::RDS::DBSubnetGroup
+    Type: 'AWS::RDS::DBSubnetGroup'
     Properties:
-      DBSubnetGroupDescription: !Ref "AWS::StackName"
+      DBSubnetGroupDescription: Group of Copilot private subnets for Aurora cluster. 
       SubnetIds:
-        !Split [",", { "Fn::ImportValue": !Sub "${App}-${Env}-PrivateSubnets" }]
-  ClusterSecurityGroup:
+        !Split [',', { 'Fn::ImportValue': !Sub '${App}-${Env}-PrivateSubnets' }]
+
+  DBClusterSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
+      GroupDescription: The Security Group for the database cluster. 
       SecurityGroupIngress:
-        - ToPort: 5432
-          FromPort: 5432
+        - ToPort: !Ref DBPort
+          FromPort: !Ref DBPort
           IpProtocol: tcp
-          Description: "from 0.0.0.0/0:5432"
-          CidrIp: 0.0.0.0/0
-      VpcId: { "Fn::ImportValue": !Sub "${App}-${Env}-VpcId" }
-      GroupDescription: RDS security group
+          Description: From Environment Security Group
+          SourceSecurityGroupId: 
+            Fn::ImportValue: 
+              !Sub '${App}-${Env}-EnvironmentSecurityGroup'
+      VpcId: 
+        Fn::ImportValue: 
+          !Sub '${App}-${Env}-VpcId'
       SecurityGroupEgress:
-        - IpProtocol: "-1"
+        - IpProtocol: '-1'
           Description: Allow all outbound traffic by default
           CidrIp: 0.0.0.0/0
-  SecurityGroupfromRDSStackdbCredentialsRotationSecurityGroup:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      IpProtocol: tcp
-      Description: !Sub ${AWS::StackName}
-      FromPort: 5432
-      GroupId: !Ref ClusterSecurityGroup
-      SourceSecurityGroupId: !Ref RotationSecurityGroup
-      ToPort: 5432
-  RotationSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      VpcId: { "Fn::ImportValue": !Sub "${App}-${Env}-VpcId" }
-      GroupDescription: !Ref "AWS::StackName"
-      SecurityGroupEgress:
-        - IpProtocol: "-1"
-          Description: Allow all outbound traffic by default
-          CidrIp: 0.0.0.0/0
+
   AuroraSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: !Join ["/", [!Ref App, !Ref Env, !Ref Name, "aurora-pg"]]
-      Description: Aurora PostgreSQL main user secret. 
+      Name: !Sub '/${App}/${Env}/${Name}/${DBTableName}'
+      Description: !Sub Aurora PostgreSQL main user secret for ${AWS::StackName}
       GenerateSecretString:
-        SecretStringTemplate: '{"username": "postgres"}'
+        SecretStringTemplate: !Sub '{"username": "postgres", "port", "${DBPort}"}'
         GenerateStringKey: "password"
         ExcludePunctuation: true
         IncludeSpace: false
         PasswordLength: 16
-
-  SecretRotationTemplate:
-    Type: AWS::Serverless::Application
+  
+  DBClusterParameterGroup:
+    Type: 'AWS::RDS::DBClusterParameterGroup'
     Properties:
-      Location:
-        ApplicationId: arn:aws:serverlessrepo:us-east-1:297356227824:applications/SecretsManagerRDSPostgreSQLRotationSingleUser
-        SemanticVersion: 1.1.60
+      Description: !Ref 'AWS::StackName'
+      Family: 'aurora-postgresql10'
       Parameters:
-        endpoint: !Sub https://secretsmanager.${AWS::Region}.amazonaws.com
-        functionName: !Sub ${AWS::StackName}-func
-        vpcSecurityGroupIds: !Ref RotationSecurityGroup
-        vpcSubnetIds:
-          Fn::ImportValue:
-            !Sub "${App}-${Env}-PrivateSubnets"
+        client_encoding: 'UTF8'
 
-  SecretCredentialPolicy:
-    Type: AWS::SecretsManager::ResourcePolicy
-    Properties:
-      SecretId: !Ref AuroraSecret
-      ResourcePolicy:
-        Version: 2012-10-17
-        Statement:
-          - Action: "secretsmanager:DeleteSecret"
-            Resource: "*"
-            Effect: Deny
-            Principal:
-              AWS: !Join
-                - ""
-                - - "arn:"
-                  - !Ref "AWS::Partition"
-                  - ":iam::"
-                  - !Ref "AWS::AccountId"
-                  - ":root"
-  SecretRotationSchedule:
-    Type: AWS::SecretsManager::RotationSchedule
-    DependsOn: SecretAuroraClusterAttachment
-    Properties:
-      SecretId: !Ref AuroraSecret
-      RotationLambdaARN: !GetAtt SecretRotationTemplate.Outputs.RotationLambdaARN
-      RotationRules:
-        AutomaticallyAfterDays: 30
   AuroraDBCluster:
-    Type: AWS::RDS::DBCluster
+    Type: 'AWS::RDS::DBCluster'
     Properties:
       MasterUsername:
-        !Join [
-          "",
-          [
-            "{{resolve:secretsmanager:",
-            !Ref AuroraSecret,
-            ":SecretString:username}}",
-          ],
-        ]
+        !Join [ "", [ "{{resolve:secretsmanager:", !Ref AuroraSecret, ":SecretString:username}}" ]]
       MasterUserPassword:
-        !Join [
-          "",
-          [
-            "{{resolve:secretsmanager:",
-            !Ref AuroraSecret,
-            ":SecretString:password}}",
-          ],
-        ]
-      DatabaseName: "tododb"
-      Engine: aurora-postgresql
-      EngineVersion: "10.7"
+        !Join [ "", [ "{{resolve:secretsmanager:", !Ref AuroraSecret, ":SecretString:password}}" ]]
+      DatabaseName: !Sub "${App}-${Env}-${Name}-${DBTableName}"
+      Engine: aurora-postgresql # aurora-mysql
+      EngineVersion: '10.7'
       EngineMode: serverless
       EnableHttpEndpoint: true
       StorageEncrypted: true
-      DBClusterParameterGroupName: default.aurora-postgresql10
+      KmsKeyId: !Ref AuroraKMSCMK
+      DBClusterParameterGroupName: !Ref DBClusterParameterGroup
       DBSubnetGroupName: !Ref DBSubnetGroup
       VpcSecurityGroupIds:
-        - !Ref ClusterSecurityGroup
+        - !Ref DBClusterSecurityGroup
       ScalingConfiguration:
         AutoPause: true
-        MinCapacity: 2
-        MaxCapacity: 8
-        SecondsUntilAutoPause: 1000
-    DeletionPolicy: Delete
+        MinCapacity: !Ref DBMinCapacity
+        MaxCapacity: !Ref DBMaxCapacity
+        SecondsUntilAutoPause: !Ref DBAutoPauseSeconds
+
   SecretAuroraClusterAttachment:
     Type: AWS::SecretsManager::SecretTargetAttachment
     Properties:
       SecretId: !Ref AuroraSecret
       TargetId: !Ref AuroraDBCluster
       TargetType: AWS::RDS::DBCluster
+
 Outputs:
-  PostgresData: # injected as POSTGRES_DATA environment variable by Copilot.
+  PostgresData: # injected as AURORA_METADATA environment variable by Copilot. 
     Description: "The JSON secret that holds the database username and password. Fields are 'host', 'dbname', 'username', 'password'"
     Value: !Ref AuroraSecret
