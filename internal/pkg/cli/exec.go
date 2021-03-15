@@ -15,4 +15,5 @@ type execVars struct {
 	taskID           string
 	containerName    string
 	skipConfirmation bool
+	yes              *bool
 }

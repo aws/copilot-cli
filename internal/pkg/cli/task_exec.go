@@ -89,7 +89,7 @@ func (o *taskExecOpts) Validate() error {
 			return err
 		}
 	}
-	return validateSSMBinary(o.prompter, o.ssmPluginManager, o.skipConfirmation)
+	return validateSSMBinary(o.prompter, o.ssmPluginManager, o.yes)
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -208,6 +208,12 @@ func buildTaskExecCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if cmd.Flags().Changed(yesFlag) {
+				opts.yes = aws.Bool(false)
+				if opts.skipConfirmation {
+					opts.yes = aws.Bool(true)
+				}
+			}
 			if err := opts.Validate(); err != nil {
 				return err
 			}
@@ -223,7 +229,7 @@ func buildTaskExecCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.command, commandFlag, commandFlagShort, defaultCommand, execCommandFlagDescription)
 	cmd.Flags().StringVar(&vars.taskID, taskIDFlag, "", taskIDFlagDescription)
 	cmd.Flags().BoolVar(&vars.useDefault, taskDefaultFlag, false, taskExecDefaultFlagDescription)
-	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
+	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, execYesFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	return cmd

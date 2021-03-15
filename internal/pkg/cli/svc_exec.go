@@ -100,7 +100,7 @@ func (o *svcExecOpts) Validate() error {
 			return err
 		}
 	}
-	return validateSSMBinary(o.prompter, o.ssmPluginManager, o.skipConfirmation)
+	return validateSSMBinary(o.prompter, o.ssmPluginManager, o.yes)
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -207,7 +207,10 @@ func (o *svcExecOpts) selectContainer() string {
 	return o.name
 }
 
-func validateSSMBinary(prompt prompter, manager ssmPluginManager, skipConfirmation bool) error {
+func validateSSMBinary(prompt prompter, manager ssmPluginManager, yes *bool) error {
+	if yes != nil && !aws.BoolValue(yes) {
+		return nil
+	}
 	err := manager.ValidateBinary()
 	if err == nil {
 		return nil
@@ -215,7 +218,7 @@ func validateSSMBinary(prompt prompter, manager ssmPluginManager, skipConfirmati
 	switch v := err.(type) {
 	case *exec.ErrSSMPluginNotExist:
 		// If ssm plugin is not install, prompt users to install the plugin.
-		if !skipConfirmation {
+		if yes == nil {
 			confirmInstall, err := prompt.Confirm(ssmPluginInstallPrompt, ssmPluginInstallPromptHelp)
 			if err != nil {
 				return fmt.Errorf("prompt to confirm installing the plugin: %w", err)
@@ -230,7 +233,7 @@ func validateSSMBinary(prompt prompter, manager ssmPluginManager, skipConfirmati
 		return nil
 	case *exec.ErrOutdatedSSMPlugin:
 		// If ssm plugin is not up to date, prompt users to update the plugin.
-		if !skipConfirmation {
+		if yes == nil {
 			confirmUpdate, err := prompt.Confirm(
 				fmt.Sprintf(ssmPluginUpdatePrompt, v.CurrentVersion, v.LatestVersion), "")
 			if err != nil {
@@ -271,6 +274,12 @@ func buildSvcExecCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if cmd.Flags().Changed(yesFlag) {
+				opts.yes = aws.Bool(false)
+				if opts.skipConfirmation {
+					opts.yes = aws.Bool(true)
+				}
+			}
 			if err := opts.Validate(); err != nil {
 				return err
 			}
@@ -286,7 +295,7 @@ func buildSvcExecCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.command, commandFlag, commandFlagShort, defaultCommand, execCommandFlagDescription)
 	cmd.Flags().StringVar(&vars.taskID, taskIDFlag, "", taskIDFlagDescription)
 	cmd.Flags().StringVar(&vars.containerName, containerFlag, "", containerFlagDescription)
-	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
+	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, execYesFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	return cmd
