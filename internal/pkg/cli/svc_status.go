@@ -17,10 +17,8 @@ import (
 )
 
 const (
-	svcStatusAppNamePrompt     = "Which application is the service in?"
-	svcStatusAppNameHelpPrompt = "An application groups all of your services together."
-	svcStatusNamePrompt        = "Which service's status would you like to show?"
-	svcStatusNameHelpPrompt    = "Displays the service's task status, most recent deployment and alarm statuses."
+	svcStatusNamePrompt     = "Which service's status would you like to show?"
+	svcStatusNameHelpPrompt = "Displays the service's task status, most recent deployment and alarm statuses."
 )
 
 type svcStatusVars struct {
@@ -125,7 +123,7 @@ func (o *svcStatusOpts) askApp() error {
 	if o.appName != "" {
 		return nil
 	}
-	app, err := o.sel.Application(svcStatusAppNamePrompt, svcStatusAppNameHelpPrompt)
+	app, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application: %w", err)
 	}

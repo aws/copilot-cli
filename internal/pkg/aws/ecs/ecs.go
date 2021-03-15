@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 )
 
 const clusterStatusActive = "ACTIVE"
@@ -23,15 +24,21 @@ type api interface {
 	DescribeServices(input *ecs.DescribeServicesInput) (*ecs.DescribeServicesOutput, error)
 	DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.DescribeTasksOutput, error)
 	DescribeTaskDefinition(input *ecs.DescribeTaskDefinitionInput) (*ecs.DescribeTaskDefinitionOutput, error)
+	ExecuteCommand(input *ecs.ExecuteCommandInput) (*ecs.ExecuteCommandOutput, error)
 	ListTasks(input *ecs.ListTasksInput) (*ecs.ListTasksOutput, error)
 	RunTask(input *ecs.RunTaskInput) (*ecs.RunTaskOutput, error)
 	StopTask(input *ecs.StopTaskInput) (*ecs.StopTaskOutput, error)
 	WaitUntilTasksRunning(input *ecs.DescribeTasksInput) error
 }
 
+type ssmSessionStarter interface {
+	StartSession(ssmSession *ecs.Session) error
+}
+
 // ECS wraps an AWS ECS client.
 type ECS struct {
-	client api
+	client         api
+	newSessStarter func() ssmSessionStarter
 }
 
 // RunTaskInput holds the fields needed to run tasks.
@@ -44,10 +51,21 @@ type RunTaskInput struct {
 	StartedBy      string
 }
 
+// ExecuteCommandInput holds the fields needed to execute commands in a running container.
+type ExecuteCommandInput struct {
+	Cluster   string
+	Command   string
+	Task      string
+	Container string
+}
+
 // New returns a Service configured against the input session.
 func New(s *session.Session) *ECS {
 	return &ECS{
 		client: ecs.New(s),
+		newSessStarter: func() ssmSessionStarter {
+			return exec.NewSSMPluginCommand(s)
+		},
 	}
 }
 
@@ -231,7 +249,9 @@ func (e *ECS) RunTask(input RunTaskInput) ([]*Task, error) {
 				SecurityGroups: aws.StringSlice(input.SecurityGroups),
 			},
 		},
-		PropagateTags: aws.String(ecs.PropagateTagsTaskDefinition),
+		EnableExecuteCommand: aws.Bool(true),
+		PlatformVersion:      aws.String("1.4.0"),
+		PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("run task(s) %s: %w", input.TaskFamilyName, err)
@@ -281,6 +301,25 @@ func (e *ECS) DescribeTasks(cluster string, taskARNs []string) ([]*Task, error) 
 		tasks[idx] = &t
 	}
 	return tasks, nil
+}
+
+// ExecuteCommand executes commands in a running container, and then terminate the session.
+func (e *ECS) ExecuteCommand(in ExecuteCommandInput) (err error) {
+	execCmdresp, err := e.client.ExecuteCommand(&ecs.ExecuteCommandInput{
+		Cluster:     aws.String(in.Cluster),
+		Command:     aws.String(in.Command),
+		Container:   aws.String(in.Container),
+		Interactive: aws.Bool(true),
+		Task:        aws.String(in.Task),
+	})
+	if err != nil {
+		return &ErrExecuteCommand{err: err}
+	}
+	sessID := aws.StringValue(execCmdresp.Session.SessionId)
+	if err = e.newSessStarter().StartSession(execCmdresp.Session); err != nil {
+		err = fmt.Errorf("start session %s using ssm plugin: %w", sessID, err)
+	}
+	return err
 }
 
 func isRequestTimeoutErr(err error) bool {

@@ -7,9 +7,10 @@ package manifest
 import (
 	"errors"
 	"fmt"
-	"github.com/google/shlex"
 	"path/filepath"
 	"strconv"
+
+	"github.com/google/shlex"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"gopkg.in/yaml.v3"
@@ -32,10 +33,11 @@ var (
 	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
 
 	// Error definitions.
-	errUnmarshalBuildOpts 	= errors.New("cannot unmarshal build field into string or compose-style map")
-	errUnmarshalCountOpts 	= errors.New(`cannot unmarshal "count" field to an integer or autoscaling configuration`)
-	errUnmarshalEntryPoint 	= errors.New("cannot unmarshal entrypoint into string or slice of strings")
-	errUnmarshalCommand 	= errors.New("cannot unmarshal command into string or slice of strings")
+	errUnmarshalBuildOpts  = errors.New("cannot unmarshal build field into string or compose-style map")
+	errUnmarshalCountOpts  = errors.New(`cannot unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalExec       = errors.New("cannot unmarshal exec field into boolean or exec configuration")
+	errUnmarshalEntryPoint = errors.New("cannot unmarshal entrypoint into string or slice of strings")
+	errUnmarshalCommand    = errors.New("cannot unmarshal command into string or slice of strings")
 )
 
 // WorkloadProps contains properties for creating a new workload manifest.
@@ -284,6 +286,47 @@ func (b *DockerBuildArgs) isEmpty() bool {
 	return false
 }
 
+// ExecuteCommand is a custom type which supports unmarshaling yaml which
+// can either be of type bool or type ExecuteCommandConfig.
+type ExecuteCommand struct {
+	Enable *bool
+	Config ExecuteCommandConfig
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the BuildArgsOrString
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (e *ExecuteCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshal(&e.Config); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if !e.Config.IsEmpty() {
+		return nil
+	}
+
+	if err := unmarshal(&e.Enable); err != nil {
+		return errUnmarshalExec
+	}
+	return nil
+}
+
+// ExecuteCommandConfig represents the configuration for ECS Execute Command.
+type ExecuteCommandConfig struct {
+	Enable *bool `yaml:"enable"`
+	// Reserved for future use.
+}
+
+// IsEmpty returns whether ExecuteCommandConfig is empty.
+func (e ExecuteCommandConfig) IsEmpty() bool {
+	return e.Enable == nil
+}
+
 // Logging holds configuration for Firelens to route your logs.
 type Logging struct {
 	Image          *string           `yaml:"image"`
@@ -322,12 +365,13 @@ type SidecarConfig struct {
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
 type TaskConfig struct {
-	CPU       *int              `yaml:"cpu"`
-	Memory    *int              `yaml:"memory"`
-	Count     Count             `yaml:"count"`
-	Variables map[string]string `yaml:"variables"`
-	Secrets   map[string]string `yaml:"secrets"`
-	Storage   *Storage          `yaml:"storage"`
+	CPU            *int              `yaml:"cpu"`
+	Memory         *int              `yaml:"memory"`
+	Count          Count             `yaml:"count"`
+	ExecuteCommand ExecuteCommand    `yaml:"exec"`
+	Variables      map[string]string `yaml:"variables"`
+	Secrets        map[string]string `yaml:"secrets"`
+	Storage        *Storage          `yaml:"storage"`
 }
 
 // NetworkConfig represents options for network connection to AWS resources within a VPC.

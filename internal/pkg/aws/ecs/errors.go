@@ -55,6 +55,15 @@ func (e *ErrWaiterResourceNotReadyForTasks) Error() string {
 	return e.awsErrResourceNotReady.Error()
 }
 
+// ErrExecuteCommand occurs when ecs:ExecuteCommand fails.
+type ErrExecuteCommand struct {
+	err error
+}
+
+func (e *ErrExecuteCommand) Error() string {
+	return fmt.Sprintf("execute command: %s", e.err.Error())
+}
+
 const (
 	missingFieldAttachment  = "attachment"
 	missingFieldDetailENIID = "detailENIID"

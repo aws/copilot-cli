@@ -17,6 +17,10 @@ DeploymentConfiguration:
   MinimumHealthyPercent: 100
   MaximumPercent: 200
 PropagateTags: SERVICE
+{{- if .ExecuteCommand }}
+PlatformVersion: 1.4.0
+EnableExecuteCommand: true
+{{- end }}
 LaunchType: FARGATE
 NetworkConfiguration:
   AwsvpcConfiguration:

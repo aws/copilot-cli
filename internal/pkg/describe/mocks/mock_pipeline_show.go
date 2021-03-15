@@ -5,36 +5,37 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockstackResourcesDescriber is a mock of stackResourcesDescriber interface
+// MockstackResourcesDescriber is a mock of stackResourcesDescriber interface.
 type MockstackResourcesDescriber struct {
 	ctrl     *gomock.Controller
 	recorder *MockstackResourcesDescriberMockRecorder
 }
 
-// MockstackResourcesDescriberMockRecorder is the mock recorder for MockstackResourcesDescriber
+// MockstackResourcesDescriberMockRecorder is the mock recorder for MockstackResourcesDescriber.
 type MockstackResourcesDescriberMockRecorder struct {
 	mock *MockstackResourcesDescriber
 }
 
-// NewMockstackResourcesDescriber creates a new mock instance
+// NewMockstackResourcesDescriber creates a new mock instance.
 func NewMockstackResourcesDescriber(ctrl *gomock.Controller) *MockstackResourcesDescriber {
 	mock := &MockstackResourcesDescriber{ctrl: ctrl}
 	mock.recorder = &MockstackResourcesDescriberMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockstackResourcesDescriber) EXPECT() *MockstackResourcesDescriberMockRecorder {
 	return m.recorder
 }
 
-// StackResources mocks base method
+// StackResources mocks base method.
 func (m *MockstackResourcesDescriber) StackResources(stackName string) ([]*cloudformation.StackResource, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StackResources", stackName)
@@ -43,36 +44,36 @@ func (m *MockstackResourcesDescriber) StackResources(stackName string) ([]*cloud
 	return ret0, ret1
 }
 
-// StackResources indicates an expected call of StackResources
+// StackResources indicates an expected call of StackResources.
 func (mr *MockstackResourcesDescriberMockRecorder) StackResources(stackName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackResources", reflect.TypeOf((*MockstackResourcesDescriber)(nil).StackResources), stackName)
 }
 
-// MockpipelineGetter is a mock of pipelineGetter interface
+// MockpipelineGetter is a mock of pipelineGetter interface.
 type MockpipelineGetter struct {
 	ctrl     *gomock.Controller
 	recorder *MockpipelineGetterMockRecorder
 }
 
-// MockpipelineGetterMockRecorder is the mock recorder for MockpipelineGetter
+// MockpipelineGetterMockRecorder is the mock recorder for MockpipelineGetter.
 type MockpipelineGetterMockRecorder struct {
 	mock *MockpipelineGetter
 }
 
-// NewMockpipelineGetter creates a new mock instance
+// NewMockpipelineGetter creates a new mock instance.
 func NewMockpipelineGetter(ctrl *gomock.Controller) *MockpipelineGetter {
 	mock := &MockpipelineGetter{ctrl: ctrl}
 	mock.recorder = &MockpipelineGetterMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockpipelineGetter) EXPECT() *MockpipelineGetterMockRecorder {
 	return m.recorder
 }
 
-// GetPipeline mocks base method
+// GetPipeline mocks base method.
 func (m *MockpipelineGetter) GetPipeline(pipelineName string) (*codepipeline.Pipeline, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPipeline", pipelineName)
@@ -81,7 +82,7 @@ func (m *MockpipelineGetter) GetPipeline(pipelineName string) (*codepipeline.Pip
 	return ret0, ret1
 }
 
-// GetPipeline indicates an expected call of GetPipeline
+// GetPipeline indicates an expected call of GetPipeline.
 func (mr *MockpipelineGetterMockRecorder) GetPipeline(pipelineName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipeline", reflect.TypeOf((*MockpipelineGetter)(nil).GetPipeline), pipelineName)

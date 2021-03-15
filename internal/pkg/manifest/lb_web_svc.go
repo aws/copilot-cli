@@ -155,6 +155,9 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 				Count: Count{
 					Value: aws.Int(1),
 				},
+				ExecuteCommand: ExecuteCommand{
+					Enable: aws.Bool(false),
+				},
 			},
 			Network: NetworkConfig{
 				VPC: vpcConfig{

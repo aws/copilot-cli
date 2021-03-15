@@ -5,50 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockcfnStackDescriber is a mock of cfnStackDescriber interface
+// MockcfnStackDescriber is a mock of cfnStackDescriber interface.
 type MockcfnStackDescriber struct {
 	ctrl     *gomock.Controller
 	recorder *MockcfnStackDescriberMockRecorder
 }
 
-// MockcfnStackDescriberMockRecorder is the mock recorder for MockcfnStackDescriber
+// MockcfnStackDescriberMockRecorder is the mock recorder for MockcfnStackDescriber.
 type MockcfnStackDescriberMockRecorder struct {
 	mock *MockcfnStackDescriber
 }
 
-// NewMockcfnStackDescriber creates a new mock instance
+// NewMockcfnStackDescriber creates a new mock instance.
 func NewMockcfnStackDescriber(ctrl *gomock.Controller) *MockcfnStackDescriber {
 	mock := &MockcfnStackDescriber{ctrl: ctrl}
 	mock.recorder = &MockcfnStackDescriberMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockcfnStackDescriber) EXPECT() *MockcfnStackDescriberMockRecorder {
 	return m.recorder
 }
 
-// DescribeStacks mocks base method
-func (m *MockcfnStackDescriber) DescribeStacks(input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeStacks", input)
-	ret0, _ := ret[0].(*cloudformation.DescribeStacksOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DescribeStacks indicates an expected call of DescribeStacks
-func (mr *MockcfnStackDescriberMockRecorder) DescribeStacks(input interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStacks", reflect.TypeOf((*MockcfnStackDescriber)(nil).DescribeStacks), input)
-}
-
-// DescribeStackResources mocks base method
+// DescribeStackResources mocks base method.
 func (m *MockcfnStackDescriber) DescribeStackResources(input *cloudformation.DescribeStackResourcesInput) (*cloudformation.DescribeStackResourcesOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeStackResources", input)
@@ -57,13 +43,28 @@ func (m *MockcfnStackDescriber) DescribeStackResources(input *cloudformation.Des
 	return ret0, ret1
 }
 
-// DescribeStackResources indicates an expected call of DescribeStackResources
+// DescribeStackResources indicates an expected call of DescribeStackResources.
 func (mr *MockcfnStackDescriberMockRecorder) DescribeStackResources(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStackResources", reflect.TypeOf((*MockcfnStackDescriber)(nil).DescribeStackResources), input)
 }
 
-// GetTemplateSummary mocks base method
+// DescribeStacks mocks base method.
+func (m *MockcfnStackDescriber) DescribeStacks(input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeStacks", input)
+	ret0, _ := ret[0].(*cloudformation.DescribeStacksOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeStacks indicates an expected call of DescribeStacks.
+func (mr *MockcfnStackDescriberMockRecorder) DescribeStacks(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStacks", reflect.TypeOf((*MockcfnStackDescriber)(nil).DescribeStacks), input)
+}
+
+// GetTemplateSummary mocks base method.
 func (m *MockcfnStackDescriber) GetTemplateSummary(in *cloudformation.GetTemplateSummaryInput) (*cloudformation.GetTemplateSummaryOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetTemplateSummary", in)
@@ -72,7 +73,7 @@ func (m *MockcfnStackDescriber) GetTemplateSummary(in *cloudformation.GetTemplat
 	return ret0, ret1
 }
 
-// GetTemplateSummary indicates an expected call of GetTemplateSummary
+// GetTemplateSummary indicates an expected call of GetTemplateSummary.
 func (mr *MockcfnStackDescriberMockRecorder) GetTemplateSummary(in interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplateSummary", reflect.TypeOf((*MockcfnStackDescriber)(nil).GetTemplateSummary), in)

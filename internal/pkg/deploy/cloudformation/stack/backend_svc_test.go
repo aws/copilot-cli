@@ -154,13 +154,14 @@ Outputs:
 					},
 				})
 				svc.manifest.EntryPoint = manifest.EntryPointOverride{
-					String: nil,
+					String:      nil,
 					StringSlice: []string{"enter", "from"},
 				}
 				svc.manifest.Command = manifest.CommandOverride{
-					String: nil,
+					String:      nil,
 					StringSlice: []string{"here"},
 				}
+				svc.manifest.ExecuteCommand = manifest.ExecuteCommand{Enable: aws.Bool(true)}
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
@@ -174,6 +175,7 @@ Outputs:
 						Timeout:     aws.Int64(10),
 					},
 					DesiredCountLambda: "something",
+					ExecuteCommand:     &template.ExecuteCommandOpts{},
 					NestedStack: &template.WorkloadNestedStackOpts{
 						StackName:       addon.StackName,
 						VariableOutputs: []string{"MyTable"},
@@ -184,7 +186,7 @@ Outputs:
 						SecurityGroups: []string{"sg-1234"},
 					},
 					EntryPoint: []string{"enter", "from"},
-					Command: []string{"here"},
+					Command:    []string{"here"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				svc.parser = m
 				svc.addons = mockTemplater{
@@ -243,7 +245,7 @@ Outputs:
 }
 
 func TestBackendService_Parameters(t *testing.T) {
-	 testBackendSvcManifest := manifest.NewBackendService(manifest.BackendServiceProps{
+	testBackendSvcManifest := manifest.NewBackendService(manifest.BackendServiceProps{
 		WorkloadProps: manifest.WorkloadProps{
 			Name:       testServiceName,
 			Dockerfile: testDockerfile,
@@ -258,7 +260,6 @@ func TestBackendService_Parameters(t *testing.T) {
 		},
 	})
 
-	// GIVEN
 	conf := &BackendService{
 		wkld: &wkld{
 			name: aws.StringValue(testBackendSvcManifest.Name),

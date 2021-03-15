@@ -21,6 +21,7 @@ const (
 	shortImageDigestLength = 8
 	imageDigestPrefix      = "sha256:"
 
+	lastStatusRunning = "RUNNING"
 	// These field names are not defined as const in sdk.
 	networkInterfaceIDKey          = "networkInterfaceId"
 	networkInterfaceAttachmentType = "ElasticNetworkInterface"
@@ -215,6 +216,17 @@ func TaskID(taskARN string) (string, error) {
 	resources := strings.Split(parsedARN.Resource, "/")
 	taskID := resources[len(resources)-1]
 	return taskID, nil
+}
+
+// FilterRunningTasks returns only tasks with the last status to be RUNNING.
+func FilterRunningTasks(tasks []*Task) []*Task {
+	var filtered []*Task
+	for _, task := range tasks {
+		if aws.StringValue(task.LastStatus) == lastStatusRunning {
+			filtered = append(filtered, task)
+		}
+	}
+	return filtered
 }
 
 func taskHealthColor(status string) string {

@@ -23,21 +23,21 @@ func TestEntryPointOverride_UnmarshalYAML(t *testing.T) {
 		"Entrypoint specified in string": {
 			inContent: []byte(`entrypoint: echo hello`),
 			wantedStruct: EntryPointOverride{
-				String: aws.String("echo hello"),
+				String:      aws.String("echo hello"),
 				StringSlice: nil,
 			},
 		},
 		"Entrypoint specified in slice of strings": {
 			inContent: []byte(`entrypoint: ["/bin/sh", "-c"]`),
 			wantedStruct: EntryPointOverride{
-				String: nil,
+				String:      nil,
 				StringSlice: []string{"/bin/sh", "-c"},
 			},
 		},
 		"Error if unmarshalable": {
 			inContent: []byte(`entrypoint: {"/bin/sh", "-c"}`),
 			wantedStruct: EntryPointOverride{
-				String: nil,
+				String:      nil,
 				StringSlice: nil,
 			},
 			wantedError: errUnmarshalEntryPoint,
@@ -70,25 +70,25 @@ func TestEntryPointOverride_ToStringSlice(t *testing.T) {
 		inEntryPointOverride EntryPointOverride
 
 		wantedSlice []string
-		wantedError  error
+		wantedError error
 	}{
 		"Both fields are empty": {
 			inEntryPointOverride: EntryPointOverride{
-				String: nil,
+				String:      nil,
 				StringSlice: nil,
 			},
 			wantedSlice: nil,
 		},
 		"Given a string": {
 			inEntryPointOverride: EntryPointOverride{
-				String: aws.String(`read "some command"`),
+				String:      aws.String(`read "some command"`),
 				StringSlice: nil,
 			},
 			wantedSlice: []string{"read", "some command"},
 		},
 		"Given a string slice": {
 			inEntryPointOverride: EntryPointOverride{
-				String: nil,
+				String:      nil,
 				StringSlice: []string{"/bin/sh", "-c"},
 			},
 			wantedSlice: []string{"/bin/sh", "-c"},
@@ -114,21 +114,21 @@ func TestCommandOverride_UnmarshalYAML(t *testing.T) {
 		"Entrypoint specified in string": {
 			inContent: []byte(`command: echo hello`),
 			wantedStruct: CommandOverride{
-				String: aws.String("echo hello"),
+				String:      aws.String("echo hello"),
 				StringSlice: nil,
 			},
 		},
 		"Entrypoint specified in slice of strings": {
 			inContent: []byte(`command: ["--version"]`),
 			wantedStruct: CommandOverride{
-				String: nil,
+				String:      nil,
 				StringSlice: []string{"--version"},
 			},
 		},
 		"Error if unmarshalable": {
 			inContent: []byte(`command: {-c}`),
 			wantedStruct: CommandOverride{
-				String: nil,
+				String:      nil,
 				StringSlice: nil,
 			},
 			wantedError: errUnmarshalCommand,
@@ -164,21 +164,21 @@ func TestCommandOverride_ToStringSlice(t *testing.T) {
 	}{
 		"Both fields are empty": {
 			inCommandOverrides: CommandOverride{
-				String: nil,
+				String:      nil,
 				StringSlice: nil,
 			},
 			wantedSlice: nil,
 		},
 		"Given a string": {
 			inCommandOverrides: CommandOverride{
-				String: aws.String(`-c read "some command"`),
+				String:      aws.String(`-c read "some command"`),
 				StringSlice: nil,
 			},
 			wantedSlice: []string{"-c", "read", "some command"},
 		},
 		"Given a string slice": {
 			inCommandOverrides: CommandOverride{
-				String: nil,
+				String:      nil,
 				StringSlice: []string{"-c", "read", "some", "command"},
 			},
 			wantedSlice: []string{"-c", "read", "some", "command"},
@@ -281,6 +281,72 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.BuildArgs.Args, b.Build.BuildArgs.Args)
 				require.Equal(t, tc.wantedStruct.BuildArgs.Target, b.Build.BuildArgs.Target)
 				require.Equal(t, tc.wantedStruct.BuildArgs.CacheFrom, b.Build.BuildArgs.CacheFrom)
+			}
+		})
+	}
+}
+
+func TestExec_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct ExecuteCommand
+		wantedError  error
+	}{
+		"use default with empty value": {
+			inContent: []byte(`exec:
+count: 1`),
+
+			wantedStruct: ExecuteCommand{
+				Enable: aws.Bool(false),
+			},
+		},
+		"use default without any input": {
+			inContent: []byte(`count: 1`),
+
+			wantedStruct: ExecuteCommand{
+				Enable: aws.Bool(false),
+			},
+		},
+		"simple enable": {
+			inContent: []byte(`exec: true`),
+
+			wantedStruct: ExecuteCommand{
+				Enable: aws.Bool(true),
+			},
+		},
+		"with config": {
+			inContent: []byte(`exec:
+  enable: true`),
+			wantedStruct: ExecuteCommand{
+				Enable: aws.Bool(false),
+				Config: ExecuteCommandConfig{
+					Enable: aws.Bool(true),
+				},
+			},
+		},
+		"Error if unmarshalable": {
+			inContent: []byte(`exec:
+  badfield: OH NOES
+  otherbadfield: DOUBLE BAD`),
+			wantedError: errUnmarshalExec,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			b := TaskConfig{
+				ExecuteCommand: ExecuteCommand{
+					Enable: aws.Bool(false),
+				},
+			}
+			err := yaml.Unmarshal(tc.inContent, &b)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				// check memberwise dereferenced pointer equality
+				require.Equal(t, tc.wantedStruct.Enable, b.ExecuteCommand.Enable)
+				require.Equal(t, tc.wantedStruct.Config, b.ExecuteCommand.Config)
 			}
 		})
 	}

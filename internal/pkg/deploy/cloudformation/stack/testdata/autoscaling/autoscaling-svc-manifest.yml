@@ -29,6 +29,8 @@ count:
   range: 1-10
   cpu_percentage: 70
   memory_percentage: 80
+# Enable running commands in your container.
+exec: true
 
 # Optional fields for more advanced use-cases.
 #

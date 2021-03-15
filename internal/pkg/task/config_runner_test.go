@@ -6,8 +6,9 @@ package task
 import (
 	"errors"
 	"fmt"
-	awsecs "github.com/aws/aws-sdk-go/service/ecs"
 	"testing"
+
+	awsecs "github.com/aws/aws-sdk-go/service/ecs"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
@@ -29,7 +30,7 @@ var taskWithENI = ecs.Task{
 			Type: aws.String(attachmentTypeName),
 			Details: []*awsecs.KeyValuePair{
 				{
-					Name: aws.String(detailsKeyName),
+					Name:  aws.String(detailsKeyName),
 					Value: aws.String("eni-1"),
 				},
 			},
@@ -40,7 +41,6 @@ var taskWithENI = ecs.Task{
 var taskWithNoENI = ecs.Task{
 	TaskArn: aws.String("task-2"),
 }
-
 
 func TestNetworkConfigRunner_Run(t *testing.T) {
 	testCases := map[string]struct {
@@ -123,7 +123,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			wantedTasks: []*Task{
 				{
 					TaskARN: "task-1",
-					ENI: "eni-1",
+					ENI:     "eni-1",
 				},
 			},
 		},
@@ -166,7 +166,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			wantedTasks: []*Task{
 				{
 					TaskARN: "task-1",
-					ENI: "eni-1",
+					ENI:     "eni-1",
 				},
 			},
 		},
@@ -200,7 +200,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			wantedTasks: []*Task{
 				{
 					TaskARN: "task-1",
-					ENI: "eni-1",
+					ENI:     "eni-1",
 				},
 				{
 					TaskARN: "task-2",

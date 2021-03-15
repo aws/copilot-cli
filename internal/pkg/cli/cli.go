@@ -16,6 +16,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	svcAppNamePrompt     = "Which application does your service belong to?"
+	svcAppNameHelpPrompt = "An application groups all of your services and jobs together."
+)
+
 // tryReadingAppName retrieves the application's name from the workspace if it exists and returns it.
 // If there is an error while retrieving the workspace summary, returns the empty string.
 func tryReadingAppName() string {

@@ -42,30 +42,19 @@ nav:
       - Getting Started:
         - init: docs/commands/init.md
         - docs: docs/commands/docs.md
-      - Develop:
+      - Build:
         - app init: docs/commands/app-init.md
-        - app ls: docs/commands/app-ls.md
-        - app show: docs/commands/app-show.md
         - app delete: docs/commands/app-delete.md
         - env init: docs/commands/env-init.md
-        - env ls: docs/commands/env-ls.md
-        - env show: docs/commands/env-show.md
         - env delete: docs/commands/env-delete.md
         - job init: docs/commands/job-init.md
-        - job ls: docs/commands/job-ls.md
         - job package: docs/commands/job-package.md
         - job deploy: docs/commands/job-deploy.md
         - job delete: docs/commands/job-delete.md
         - svc init: docs/commands/svc-init.md
-        - svc ls: docs/commands/svc-ls.md
-        - svc show: docs/commands/svc-show.md
-        - svc logs: docs/commands/svc-logs.md
-        - svc status: docs/commands/svc-status.md
         - svc package: docs/commands/svc-package.md
         - svc deploy: docs/commands/svc-deploy.md
         - svc delete: docs/commands/svc-delete.md
-        - task run: docs/commands/task-run.md
-        - task delete: docs/commands/task-delete.md
       - Release:
         - pipeline init: docs/commands/pipeline-init.md
         - pipeline update: docs/commands/pipeline-update.md
@@ -74,11 +63,62 @@ nav:
         - pipeline status: docs/commands/pipeline-status.md
         - pipeline delete: docs/commands/pipeline-delete.md
         - deploy: docs/commands/deploy.md
+      - Operate:
+        - app ls: docs/commands/app-ls.md
+        - app show: docs/commands/app-show.md
+        - env ls: docs/commands/env-ls.md
+        - env show: docs/commands/env-show.md
+        - job ls: docs/commands/job-ls.md
+        - svc ls: docs/commands/svc-ls.md
+        - svc show: docs/commands/svc-show.md
+        - svc status: docs/commands/svc-status.md
+        - svc logs: docs/commands/svc-logs.md
+        - svc exec: docs/commands/svc-exec.md
+        - task run: docs/commands/task-run.md
+        - task exec: docs/commands/task-exec.md
+        - task delete: docs/commands/task-delete.md
       - Addons:
         - storage init: docs/commands/storage-init.md
       - Settings:
         - version: docs/commands/version.md
         - completion: docs/commands/completion.md
+      - All:
+        - app delete: docs/commands/app-delete.md
+        - app init: docs/commands/app-init.md
+        - app ls: docs/commands/app-ls.md
+        - app show: docs/commands/app-show.md
+        - completion: docs/commands/completion.md
+        - docs: docs/commands/docs.md
+        - env delete: docs/commands/env-delete.md
+        - env init: docs/commands/env-init.md
+        - env ls: docs/commands/env-ls.md
+        - env show: docs/commands/env-show.md
+        - init: docs/commands/init.md
+        - job delete: docs/commands/job-delete.md
+        - job deploy: docs/commands/job-deploy.md
+        - job init: docs/commands/job-init.md
+        - job ls: docs/commands/job-ls.md
+        - job package: docs/commands/job-package.md
+        - pipeline delete: docs/commands/pipeline-delete.md
+        - pipeline init: docs/commands/pipeline-init.md
+        - pipeline ls: docs/commands/pipeline-ls.md
+        - pipeline show: docs/commands/pipeline-show.md
+        - pipeline status: docs/commands/pipeline-status.md
+        - pipeline update: docs/commands/pipeline-update.md
+        - storage init: docs/commands/storage-init.md
+        - svc delete: docs/commands/svc-delete.md
+        - svc deploy: docs/commands/svc-deploy.md
+        - svc exec: docs/commands/svc-exec.md
+        - svc init: docs/commands/svc-init.md
+        - svc logs: docs/commands/svc-logs.md
+        - svc ls: docs/commands/svc-ls.md
+        - svc package: docs/commands/svc-package.md
+        - svc show: docs/commands/svc-show.md
+        - svc status: docs/commands/svc-status.md
+        - task delete: docs/commands/task-delete.md
+        - task exec: docs/commands/task-exec.md
+        - task run: docs/commands/task-run.md
+        - version: docs/commands/version.md
   - Community:
       - Get Involved: community/get-involved.md
       - Guides and resources: community/guides.md
