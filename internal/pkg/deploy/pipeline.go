@@ -182,19 +182,19 @@ func (s *GitHubV1Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 }
 
 // Connection returns the ARN correlated with a ConnectionName in the pipeline manifest.
-func (s *BitbucketSource) Connection() (string, error) {
+func (s *BitbucketSource) Connection() string {
 	if s.ConnectionARN == "" {
-		return "", nil
+		return ""
 	}
-	return s.ConnectionARN, nil
+	return s.ConnectionARN
 }
 
 // Connection returns the ARN correlated with a ConnectionName in the pipeline manifest.
-func (s *GitHubSource) Connection() (string, error) {
+func (s *GitHubSource) Connection() string {
 	if s.ConnectionARN == "" {
-		return "", nil
+		return ""
 	}
-	return s.ConnectionARN, nil
+	return s.ConnectionARN
 }
 
 // parse parses the owner and repo name from the GH repo URL, which was formatted and assigned in cli/pipeline_init.go.

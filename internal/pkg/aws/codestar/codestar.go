@@ -60,7 +60,6 @@ func (c *CodeStar) GetConnectionARN(connectionName string) (connectionARN string
 	}
 	connections := output.Connections
 	for _, connection := range connections {
-		fmt.Println(connection)
 		if aws.StringValue(connection.ConnectionName) == connectionName {
 			// Duplicate connection names are supposed to result in replacement, so okay to return first match.
 			return aws.StringValue(connection.ConnectionArn), nil
