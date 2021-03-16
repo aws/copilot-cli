@@ -130,22 +130,6 @@ tools:
 	@echo "Installing custom resource dependencies" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} && npm install
 
-# Run the docs locally.
-.PHONY: start-docs
-start-docs:
-	cd ${SOURDE_DOCS} &&\
-	git submodule update --init --recursive &&\
-	hugo server -D
-
-# Build and minify the documentation to the docs/ directory.
-.PHONY: build-docs
-build-docs:
-	cd ${SOURDE_DOCS} &&\
-	git submodule update --init --recursive &&\
-	npm install &&\
-	hugo &&\
-	cd ..
-
 .PHONY: gen-mocks
 gen-mocks: tools
 	# TODO: make this more extensible?
