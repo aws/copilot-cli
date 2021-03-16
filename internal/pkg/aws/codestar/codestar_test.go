@@ -120,7 +120,7 @@ func TestCodeStar_GetConnectionARN(t *testing.T) {
 
 		// THEN
 		require.Equal(t, "", ARN)
-		require.EqualError(t, err, "did not find a connectionARN associated with string cheese")
+		require.EqualError(t, err, "cannot find a connectionARN associated with string cheese")
 	})
 
 	t.Run("returns a match", func(t *testing.T) {
@@ -155,6 +155,50 @@ func TestCodeStar_GetConnectionARN(t *testing.T) {
 
 		// THEN
 		require.Equal(t, "thisCheesyFakeARN", ARN)
+		require.NoError(t, err)
+	})
+
+	t.Run("checks all connections and returns a match when paginated", func(t *testing.T) {
+		// GIVEN
+		connectionName := "string cheese"
+		mockNextToken := "next"
+		ctrl := gomock.NewController(t)
+		m := mocks.NewMockapi(ctrl)
+		m.EXPECT().ListConnections(gomock.Any()).Return(
+			&codestarconnections.ListConnectionsOutput{
+				Connections: []*codestarconnections.Connection{
+					{
+						ConnectionName: aws.String("gouda"),
+						ConnectionArn:  aws.String("notThisOne"),
+					},
+					{
+						ConnectionName: aws.String("fontina"),
+						ConnectionArn:  aws.String("thisCheesyFakeARN"),
+					},
+				},
+				NextToken: &mockNextToken,
+			}, nil)
+		m.EXPECT().ListConnections(&codestarconnections.ListConnectionsInput{
+			NextToken: &mockNextToken,
+		}).Return(
+			&codestarconnections.ListConnectionsOutput{
+				Connections: []*codestarconnections.Connection{
+					{
+						ConnectionName: aws.String("string cheese"),
+						ConnectionArn:  aws.String("thisOne"),
+					},
+				},
+			}, nil)
+
+		connection := &CodeStar{
+			client: m,
+		}
+
+		// WHEN
+		ARN, err := connection.GetConnectionARN(connectionName)
+
+		// THEN
+		require.Equal(t, "thisOne", ARN)
 		require.NoError(t, err)
 	})
 }

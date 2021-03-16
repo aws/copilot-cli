@@ -162,10 +162,6 @@ func (o *updatePipelineOpts) shouldUpdate() (bool, error) {
 	return shouldUpdate, nil
 }
 
-type codeStar interface {
-	ConnectionName() (string, error)
-}
-
 func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) error {
 	exist, err := o.pipelineDeployer.PipelineExists(in)
 	if err != nil {
@@ -176,7 +172,9 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 
 		// If the source requires CodeStar Connections, the user is prompted to update the connection status.
 		if o.shouldPromptUpdateConnection {
-			source, ok := in.Source.(codeStar)
+			source, ok := in.Source.(interface {
+				ConnectionName() (string, error)
+			})
 			if !ok {
 				return fmt.Errorf("source %v does not have a connection name", in.Source)
 			}

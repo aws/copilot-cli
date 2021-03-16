@@ -183,17 +183,11 @@ func (s *GitHubV1Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 
 // Connection returns the ARN correlated with a ConnectionName in the pipeline manifest.
 func (s *BitbucketSource) Connection() string {
-	if s.ConnectionARN == "" {
-		return ""
-	}
 	return s.ConnectionARN
 }
 
 // Connection returns the ARN correlated with a ConnectionName in the pipeline manifest.
 func (s *GitHubSource) Connection() string {
-	if s.ConnectionARN == "" {
-		return ""
-	}
 	return s.ConnectionARN
 }
 

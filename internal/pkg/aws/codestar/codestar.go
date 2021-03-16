@@ -59,11 +59,23 @@ func (c *CodeStar) GetConnectionARN(connectionName string) (connectionARN string
 		return "", fmt.Errorf("get list of connections in AWS account: %w", err)
 	}
 	connections := output.Connections
+	for output.NextToken != nil {
+		output, err = c.client.ListConnections(&codestarconnections.ListConnectionsInput{
+			NextToken: output.NextToken,
+		})
+		if err != nil {
+			return "", fmt.Errorf("get list of connections in AWS account: %w", err)
+		}
+		for _, connection := range output.Connections {
+			connections = append(connections, connection)
+		}
+	}
+
 	for _, connection := range connections {
 		if aws.StringValue(connection.ConnectionName) == connectionName {
 			// Duplicate connection names are supposed to result in replacement, so okay to return first match.
 			return aws.StringValue(connection.ConnectionArn), nil
 		}
 	}
-	return "", fmt.Errorf("did not find a connectionARN associated with %s", connectionName)
+	return "", fmt.Errorf("cannot find a connectionARN associated with %s", connectionName)
 }
