@@ -1,0 +1,16 @@
+AccessPoint:
+  Type: AWS::EFS::AccessPoint
+  Properties:
+    ClientToken: String
+    FileSystemId: 
+      Fn::ImportValue:
+        !Sub '${AppName}-${EnvName}-FilesystemID'
+    PosixUser: 
+      Uid: {{.Storage.AccessPoint.Uid}}
+      Gid: {{.Storage.AccessPoint.Gid}}
+    RootDirectory: 
+      Path: !Sub '/${WorkloadName}'
+      CreationInfo:
+        OwnerUid: {{.Storage.AccessPoint.Uid}}
+        OwnerGid: {{.Storage.AccessPoint.Gid}}
+        Permissions: 0755

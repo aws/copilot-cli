@@ -1,7 +1,7 @@
 # Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 Metadata:
-  Version: 'v1.2.0'
+  Version: 'v1.3.0'
 
 Parameters:
   AppName:
@@ -11,6 +11,10 @@ Parameters:
     Type: String
 
   ALBWorkloads:
+    Type: String
+    Default: ""
+
+  EFSWorkloads:
     Type: String
     Default: ""
 
@@ -33,6 +37,8 @@ Conditions:
   ExportHTTPSListener: !And
     - !Condition DelegateDNS
     - !Condition CreateALB
+  CreateEFS:
+    !Not [!Equals [ !Ref EFSWorkloads, ""]]
 
 Resources:
 {{- if not .ImportVPC}}
@@ -183,6 +189,90 @@ Resources:
       Port: 443
       Protocol: HTTPS
 
+  FileSystem:
+    Condition: CreateEFS
+    Type: AWS::EFS::FileSystem
+    Properties:
+      BackupPolicy: 
+        Status: ENABLED
+      Encrypted: true
+      FileSystemPolicy:
+        Version: 2012-10-07
+        Id: CopilotEFSPolicy
+        Statement:
+          - Sid: AllowIAMFromTaggedRoles
+            Effect: Allow
+            Principal:
+              AWS: !Ref AWS::AccountId
+            Action:
+              - elasticfilesystem:ClientWrite
+              - elasticfilesystem:ClientMount
+            Condition:
+              StringEquals:
+                'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+                'iam:ResourceTag/copilot-environment': !Sub '${EnvironmentName}'
+          - Sid: DenyUnencryptedAccess
+            Effect: Deny
+            Principal: '*'
+            Action: 'elasticfilesystem:*'
+            Condition:
+              Bool:
+                'aws:SecureTransport': false
+      LifecyclePolicies: 
+        - TransitionToIA: AFTER_30_DAYS
+      PerformanceMode: generalPurpose
+      ThroughputMode: bursting
+  
+  EFSSecurityGroup:
+    Metadata:
+      'aws:copilot:description': 'A security group to allow your containers to talk to EFS storage'
+    Type: AWS::EC2::SecurityGroup
+    Condition: CreateEFS
+    Properties:
+      GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, EFSSecurityGroup]]
+{{- if .ImportVPC}}
+      VpcId: {{.ImportVPC.ID}}
+{{- else}}
+      VpcId: !Ref VPC
+{{- end}}
+      Tags:
+        - Key: Name
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-efs'
+ 
+  EFSSecurityGroupIngressFromEnvironment:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateEFS
+    Properties:
+      Description: Ingress from containers in the Environment Security Group.
+      GroupId: !Ref EFSSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
+
+{{- if .ImportVPC}}
+{{- range $ind, $id := .ImportVPC.PublicSubnetIDs}}
+  MountTarget{{inc $ind}}:
+    Type: AWS::EFS::MountTarget
+    Condition: CreateEFS
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId: {{$id}}
+      SecurityGroups:
+        - !Ref EFSSecurityGroup
+{{- end}}
+{{- else}}
+{{- range $ind, $cidr := .PublicSubnetCIDRs}}
+  MountTarget{{inc $ind}}:
+    Type: AWS::EFS::MountTarget
+    Condition: CreateEFS
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId: !Ref PublicSubnet{{inc $ind}}
+      SecurityGroups:
+        - !Ref EFSSecurityGroup
+{{- end}}
+{{- end}}
+  
+
 {{include "cfn-execution-role" . | indent 2}}
 
 {{include "environment-manager-role" . | indent 2}}
@@ -306,5 +396,12 @@ Outputs:
       Name: !Sub ${AWS::StackName}-SubDomain
 
   EnabledFeatures:
-    Value: !Ref ALBWorkloads
+    Value: !Sub '${ALBWorkloads},${EFSWorkloads}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
+  
+  ManagedFileSystemID:
+    Condition: CreateEFS
+    Value: !Ref FileSystem
+    Description: The ID of the Copilot-managed EFS filesystem. 
+    Export:
+      Name: !Sub ${AWS::StackName}-FilesystemID
