@@ -66,9 +66,7 @@ func (c *CodeStar) GetConnectionARN(connectionName string) (connectionARN string
 		if err != nil {
 			return "", fmt.Errorf("get list of connections in AWS account: %w", err)
 		}
-		for _, connection := range output.Connections {
-			connections = append(connections, connection)
-		}
+		connections = append(connections, output.Connections...)
 	}
 
 	for _, connection := range connections {
