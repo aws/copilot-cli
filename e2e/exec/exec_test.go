@@ -160,6 +160,14 @@ var _ = Describe("exec flow", func() {
 			Expect(string(bodyBytes)).To(Equal(svcName))
 		})
 
+		It("session manager should be installed", func() {
+			// Use custom SSM plugin as the public version is not compatible to Alpine Linux.
+			err := client.BashExec("chmod +x ./session-manager-plugin")
+			Expect(err).NotTo(HaveOccurred())
+			err = client.BashExec("mv ./session-manager-plugin /bin/session-manager-plugin")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("svc exec should be able to modify the content of the website", func() {
 			_, err := cli.SvcExec(&client.SvcExecRequest{
 				Name:    svcName,
