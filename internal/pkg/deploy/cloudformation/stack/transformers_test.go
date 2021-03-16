@@ -446,6 +446,41 @@ func Test_convertStorageOpts(t *testing.T) {
 	}
 }
 
+func Test_convertExecuteCommand(t *testing.T) {
+	testCases := map[string]struct {
+		inConfig manifest.ExecuteCommand
+
+		wanted *template.ExecuteCommandOpts
+	}{
+		"without exec enabled": {
+			inConfig: manifest.ExecuteCommand{},
+			wanted:   nil,
+		},
+		"exec enabled": {
+			inConfig: manifest.ExecuteCommand{
+				Enable: aws.Bool(true),
+			},
+			wanted: &template.ExecuteCommandOpts{},
+		},
+		"exec enabled with config": {
+			inConfig: manifest.ExecuteCommand{
+				Config: manifest.ExecuteCommandConfig{
+					Enable: aws.Bool(true),
+				},
+			},
+			wanted: &template.ExecuteCommandOpts{},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			exec := tc.inConfig
+			got := convertExecuteCommand(&exec)
+
+			require.Equal(t, got, tc.wanted)
+		})
+	}
+}
+
 func Test_convertSidecarMountPoints(t *testing.T) {
 	testCases := map[string]struct {
 		inMountPoints  []manifest.SidecarMountPoint

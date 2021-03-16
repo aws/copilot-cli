@@ -139,12 +139,20 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 	return opts
 }
 
+func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandOpts {
+	if e.Config.IsEmpty() && !aws.BoolValue(e.Enable) {
+		return nil
+	}
+	return &template.ExecuteCommandOpts{}
+}
+
 func convertLogging(lc *manifest.Logging) *template.LogConfigOpts {
 	if lc == nil {
 		return nil
 	}
 	return logConfigOpts(lc)
 }
+
 func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
 	return &template.LogConfigOpts{
 		Image:          lc.LogImage(),

@@ -27,7 +27,6 @@ import (
 
 const (
 	svcDeleteNamePrompt              = "Which service would you like to delete?"
-	svcDeleteAppNamePrompt           = "Which application's service would you like to delete?"
 	fmtSvcDeleteConfirmPrompt        = "Are you sure you want to delete %s from application %s?"
 	fmtSvcDeleteFromEnvConfirmPrompt = "Are you sure you want to delete %s from environment %s?"
 	svcDeleteConfirmHelp             = "This will remove the service from all environments and delete it from your app."
@@ -216,7 +215,7 @@ func (o *deleteSvcOpts) askAppName() error {
 		return nil
 	}
 
-	name, err := o.sel.Application(svcDeleteAppNamePrompt, "")
+	name, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application name: %w", err)
 	}

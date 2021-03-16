@@ -122,7 +122,7 @@ func TestSvcStatus_Ask(t *testing.T) {
 	}{
 		"errors if failed to select application": {
 			mockSelector: func(m *mocks.MockdeploySelector) {
-				m.EXPECT().Application(svcStatusAppNamePrompt, svcStatusAppNameHelpPrompt).Return("", mockError)
+				m.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("", mockError)
 			},
 
 			wantedError: fmt.Errorf("select application: some error"),

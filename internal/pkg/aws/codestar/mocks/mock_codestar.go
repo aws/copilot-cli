@@ -5,35 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	codestarconnections "github.com/aws/aws-sdk-go/service/codestarconnections"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// Mockapi is a mock of api interface
+// Mockapi is a mock of api interface.
 type Mockapi struct {
 	ctrl     *gomock.Controller
 	recorder *MockapiMockRecorder
 }
 
-// MockapiMockRecorder is the mock recorder for Mockapi
+// MockapiMockRecorder is the mock recorder for Mockapi.
 type MockapiMockRecorder struct {
 	mock *Mockapi
 }
 
-// NewMockapi creates a new mock instance
+// NewMockapi creates a new mock instance.
 func NewMockapi(ctrl *gomock.Controller) *Mockapi {
 	mock := &Mockapi{ctrl: ctrl}
 	mock.recorder = &MockapiMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
-// GetConnection mocks base method
+// GetConnection mocks base method.
 func (m *Mockapi) GetConnection(input *codestarconnections.GetConnectionInput) (*codestarconnections.GetConnectionOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetConnection", input)
@@ -42,7 +43,7 @@ func (m *Mockapi) GetConnection(input *codestarconnections.GetConnectionInput) (
 	return ret0, ret1
 }
 
-// GetConnection indicates an expected call of GetConnection
+// GetConnection indicates an expected call of GetConnection.
 func (mr *MockapiMockRecorder) GetConnection(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConnection", reflect.TypeOf((*Mockapi)(nil).GetConnection), input)

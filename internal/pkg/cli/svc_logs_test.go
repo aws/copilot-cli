@@ -190,7 +190,7 @@ func TestSvcLogs_Ask(t *testing.T) {
 		"with no flag set": {
 			setupMocks: func(m svcLogsMock) {
 				gomock.InOrder(
-					m.sel.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil),
+					m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("mockApp", nil),
 					m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, "mockApp",
 						gomock.Any(), gomock.Any()).Return(&selector.DeployedService{
 						Env: "mockEnv",
@@ -204,7 +204,7 @@ func TestSvcLogs_Ask(t *testing.T) {
 		"returns error if fail to select app": {
 			setupMocks: func(m svcLogsMock) {
 				gomock.InOrder(
-					m.sel.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("", errors.New("some error")),
+					m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("", errors.New("some error")),
 				)
 			},
 

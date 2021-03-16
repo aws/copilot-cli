@@ -5,35 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	resourcegroupstaggingapi "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockresourceGetter is a mock of resourceGetter interface
+// MockresourceGetter is a mock of resourceGetter interface.
 type MockresourceGetter struct {
 	ctrl     *gomock.Controller
 	recorder *MockresourceGetterMockRecorder
 }
 
-// MockresourceGetterMockRecorder is the mock recorder for MockresourceGetter
+// MockresourceGetterMockRecorder is the mock recorder for MockresourceGetter.
 type MockresourceGetterMockRecorder struct {
 	mock *MockresourceGetter
 }
 
-// NewMockresourceGetter creates a new mock instance
+// NewMockresourceGetter creates a new mock instance.
 func NewMockresourceGetter(ctrl *gomock.Controller) *MockresourceGetter {
 	mock := &MockresourceGetter{ctrl: ctrl}
 	mock.recorder = &MockresourceGetterMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockresourceGetter) EXPECT() *MockresourceGetterMockRecorder {
 	return m.recorder
 }
 
-// GetResources mocks base method
+// GetResources mocks base method.
 func (m *MockresourceGetter) GetResources(arg0 *resourcegroupstaggingapi.GetResourcesInput) (*resourcegroupstaggingapi.GetResourcesOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetResources", arg0)
@@ -42,7 +43,7 @@ func (m *MockresourceGetter) GetResources(arg0 *resourcegroupstaggingapi.GetReso
 	return ret0, ret1
 }
 
-// GetResources indicates an expected call of GetResources
+// GetResources indicates an expected call of GetResources.
 func (mr *MockresourceGetterMockRecorder) GetResources(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResources", reflect.TypeOf((*MockresourceGetter)(nil).GetResources), arg0)

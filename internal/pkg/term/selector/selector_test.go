@@ -1854,7 +1854,7 @@ func TestTaskSelect_Task(t *testing.T) {
 		"return error if fail to list active cluster tasks": {
 			useDefault: true,
 			setupMocks: func(m taskSelectMocks) {
-				m.taskLister.EXPECT().ListActiveDefaultClusterTasks(ecs.ListTasksFilter{}).Return(nil, mockErr)
+				m.taskLister.EXPECT().ListActiveDefaultClusterTasks(ecs.ListTasksFilter{CopilotOnly: true}).Return(nil, mockErr)
 			},
 			wantErr: fmt.Errorf("list active tasks for default cluster: some error"),
 		},
@@ -1865,6 +1865,9 @@ func TestTaskSelect_Task(t *testing.T) {
 				m.taskLister.EXPECT().ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
 					App: mockApp,
 					Env: mockEnv,
+					ListTasksFilter: ecs.ListTasksFilter{
+						CopilotOnly: true,
+					},
 				}).Return(nil, mockErr)
 			},
 			wantErr: fmt.Errorf("list active tasks in environment mockEnv: some error"),
@@ -1876,6 +1879,9 @@ func TestTaskSelect_Task(t *testing.T) {
 				m.taskLister.EXPECT().ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
 					App: mockApp,
 					Env: mockEnv,
+					ListTasksFilter: ecs.ListTasksFilter{
+						CopilotOnly: true,
+					},
 				}).Return([]*awsecs.Task{}, nil)
 			},
 			wantErr: fmt.Errorf("no running tasks found"),
@@ -1887,6 +1893,9 @@ func TestTaskSelect_Task(t *testing.T) {
 				m.taskLister.EXPECT().ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
 					App: mockApp,
 					Env: mockEnv,
+					ListTasksFilter: ecs.ListTasksFilter{
+						CopilotOnly: true,
+					},
 				}).Return([]*awsecs.Task{mockTask1, mockTask2}, nil)
 				m.prompt.EXPECT().SelectOne(mockPromptText, mockHelpText, []string{
 					"4082490e (sample-fargate:2)",
@@ -1902,6 +1911,9 @@ func TestTaskSelect_Task(t *testing.T) {
 				m.taskLister.EXPECT().ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
 					App: mockApp,
 					Env: mockEnv,
+					ListTasksFilter: ecs.ListTasksFilter{
+						CopilotOnly: true,
+					},
 				}).Return([]*awsecs.Task{mockTask1}, nil)
 			},
 			wantTask: mockTask1,
@@ -1913,6 +1925,9 @@ func TestTaskSelect_Task(t *testing.T) {
 				m.taskLister.EXPECT().ListActiveAppEnvTasks(ecs.ListActiveAppEnvTasksOpts{
 					App: mockApp,
 					Env: mockEnv,
+					ListTasksFilter: ecs.ListTasksFilter{
+						CopilotOnly: true,
+					},
 				}).Return([]*awsecs.Task{mockTask1, mockTask2}, nil)
 				m.prompt.EXPECT().SelectOne(mockPromptText, mockHelpText, []string{
 					"4082490e (sample-fargate:2)",

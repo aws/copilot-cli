@@ -6,8 +6,9 @@ package task
 import (
 	"errors"
 	"fmt"
-	awsecs "github.com/aws/aws-sdk-go/service/ecs"
 	"testing"
+
+	awsecs "github.com/aws/aws-sdk-go/service/ecs"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
@@ -67,7 +68,7 @@ func TestEnvRunner_Run(t *testing.T) {
 				Type: aws.String(attachmentTypeName),
 				Details: []*awsecs.KeyValuePair{
 					{
-						Name: aws.String(detailsKeyName),
+						Name:  aws.String(detailsKeyName),
 						Value: aws.String("eni-1"),
 					},
 				},
@@ -213,7 +214,7 @@ func TestEnvRunner_Run(t *testing.T) {
 			wantedTasks: []*Task{
 				{
 					TaskARN: "task-1",
-					ENI: "eni-1",
+					ENI:     "eni-1",
 				},
 				{
 					TaskARN: "task-2",

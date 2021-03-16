@@ -146,13 +146,13 @@ func TestTask_ENI(t *testing.T) {
 	testCases := map[string]struct {
 		taskARN     *string
 		attachments []*ecs.Attachment
-		wantedENI string
-		wantedErr error
+		wantedENI   string
+		wantedErr   error
 	}{
 		"no matching attachment": {
 			taskARN: aws.String("1"),
 			attachments: []*ecs.Attachment{
-				&ecs.Attachment{
+				{
 					Type: aws.String("not ElasticNetworkInterface"),
 				},
 			},
@@ -164,14 +164,14 @@ func TestTask_ENI(t *testing.T) {
 		"no matching detail in network interface attachment": {
 			taskARN: aws.String("1"),
 			attachments: []*ecs.Attachment{
-				&ecs.Attachment{
+				{
 					Type: aws.String("not ElasticNetworkInterface"),
 				},
-				&ecs.Attachment{
+				{
 					Type: aws.String("ElasticNetworkInterface"),
 					Details: []*ecs.KeyValuePair{
-						&ecs.KeyValuePair{
-							Name: aws.String("not networkInterfaceId"),
+						{
+							Name:  aws.String("not networkInterfaceId"),
 							Value: aws.String("val"),
 						},
 					},
@@ -185,18 +185,18 @@ func TestTask_ENI(t *testing.T) {
 		"successfully retrieve eni id": {
 			taskARN: aws.String("1"),
 			attachments: []*ecs.Attachment{
-				&ecs.Attachment{
+				{
 					Type: aws.String("not ElasticNetworkInterface"),
 				},
-				&ecs.Attachment{
+				{
 					Type: aws.String("ElasticNetworkInterface"),
 					Details: []*ecs.KeyValuePair{
-						&ecs.KeyValuePair{
-							Name: aws.String("not networkInterfaceId"),
+						{
+							Name:  aws.String("not networkInterfaceId"),
 							Value: aws.String("val"),
 						},
-						&ecs.KeyValuePair{
-							Name: aws.String("networkInterfaceId"),
+						{
+							Name:  aws.String("networkInterfaceId"),
 							Value: aws.String("eni-123"),
 						},
 					},
@@ -209,7 +209,7 @@ func TestTask_ENI(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			task := Task{
-				TaskArn: tc.taskARN,
+				TaskArn:     tc.taskARN,
 				Attachments: tc.attachments,
 			}
 
@@ -434,3 +434,41 @@ func TestTaskDefinition_Secrets(t *testing.T) {
 	}
 }
 
+func TestFilterRunningTasks(t *testing.T) {
+	testCases := map[string]struct {
+		inTasks     []*Task
+		wantedTasks []*Task
+	}{
+		"should return only running tasks": {
+			inTasks: []*Task{
+				{
+					TaskArn:    aws.String("mockTask1"),
+					LastStatus: aws.String("STOPPED"),
+				},
+				{
+					TaskArn:    aws.String("mockTask2"),
+					LastStatus: aws.String("RUNNING"),
+				},
+			},
+			wantedTasks: []*Task{
+				{
+					TaskArn:    aws.String("mockTask2"),
+					LastStatus: aws.String("RUNNING"),
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			got := FilterRunningTasks(tc.inTasks)
+
+			require.Equal(t, tc.wantedTasks, got)
+		})
+
+	}
+}

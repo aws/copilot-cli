@@ -5,35 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	exec "github.com/aws/copilot-cli/internal/pkg/exec"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockContainerLoginBuildPusher is a mock of ContainerLoginBuildPusher interface
+// MockContainerLoginBuildPusher is a mock of ContainerLoginBuildPusher interface.
 type MockContainerLoginBuildPusher struct {
 	ctrl     *gomock.Controller
 	recorder *MockContainerLoginBuildPusherMockRecorder
 }
 
-// MockContainerLoginBuildPusherMockRecorder is the mock recorder for MockContainerLoginBuildPusher
+// MockContainerLoginBuildPusherMockRecorder is the mock recorder for MockContainerLoginBuildPusher.
 type MockContainerLoginBuildPusherMockRecorder struct {
 	mock *MockContainerLoginBuildPusher
 }
 
-// NewMockContainerLoginBuildPusher creates a new mock instance
+// NewMockContainerLoginBuildPusher creates a new mock instance.
 func NewMockContainerLoginBuildPusher(ctrl *gomock.Controller) *MockContainerLoginBuildPusher {
 	mock := &MockContainerLoginBuildPusher{ctrl: ctrl}
 	mock.recorder = &MockContainerLoginBuildPusherMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockContainerLoginBuildPusher) EXPECT() *MockContainerLoginBuildPusherMockRecorder {
 	return m.recorder
 }
 
-// Build mocks base method
+// Build mocks base method.
 func (m *MockContainerLoginBuildPusher) Build(args *exec.BuildArguments) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Build", args)
@@ -41,13 +42,13 @@ func (m *MockContainerLoginBuildPusher) Build(args *exec.BuildArguments) error {
 	return ret0
 }
 
-// Build indicates an expected call of Build
+// Build indicates an expected call of Build.
 func (mr *MockContainerLoginBuildPusherMockRecorder) Build(args interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockContainerLoginBuildPusher)(nil).Build), args)
 }
 
-// Login mocks base method
+// Login mocks base method.
 func (m *MockContainerLoginBuildPusher) Login(uri, username, password string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Login", uri, username, password)
@@ -55,13 +56,13 @@ func (m *MockContainerLoginBuildPusher) Login(uri, username, password string) er
 	return ret0
 }
 
-// Login indicates an expected call of Login
+// Login indicates an expected call of Login.
 func (mr *MockContainerLoginBuildPusherMockRecorder) Login(uri, username, password interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockContainerLoginBuildPusher)(nil).Login), uri, username, password)
 }
 
-// Push mocks base method
+// Push mocks base method.
 func (m *MockContainerLoginBuildPusher) Push(uri, imageTag string, additionalTags ...string) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{uri, imageTag}
@@ -73,52 +74,37 @@ func (m *MockContainerLoginBuildPusher) Push(uri, imageTag string, additionalTag
 	return ret0
 }
 
-// Push indicates an expected call of Push
+// Push indicates an expected call of Push.
 func (mr *MockContainerLoginBuildPusherMockRecorder) Push(uri, imageTag interface{}, additionalTags ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{uri, imageTag}, additionalTags...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Push", reflect.TypeOf((*MockContainerLoginBuildPusher)(nil).Push), varargs...)
 }
 
-// MockRegistry is a mock of Registry interface
+// MockRegistry is a mock of Registry interface.
 type MockRegistry struct {
 	ctrl     *gomock.Controller
 	recorder *MockRegistryMockRecorder
 }
 
-// MockRegistryMockRecorder is the mock recorder for MockRegistry
+// MockRegistryMockRecorder is the mock recorder for MockRegistry.
 type MockRegistryMockRecorder struct {
 	mock *MockRegistry
 }
 
-// NewMockRegistry creates a new mock instance
+// NewMockRegistry creates a new mock instance.
 func NewMockRegistry(ctrl *gomock.Controller) *MockRegistry {
 	mock := &MockRegistry{ctrl: ctrl}
 	mock.recorder = &MockRegistryMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockRegistry) EXPECT() *MockRegistryMockRecorder {
 	return m.recorder
 }
 
-// RepositoryURI mocks base method
-func (m *MockRegistry) RepositoryURI(name string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RepositoryURI", name)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// RepositoryURI indicates an expected call of RepositoryURI
-func (mr *MockRegistryMockRecorder) RepositoryURI(name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RepositoryURI", reflect.TypeOf((*MockRegistry)(nil).RepositoryURI), name)
-}
-
-// Auth mocks base method
+// Auth mocks base method.
 func (m *MockRegistry) Auth() (string, string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Auth")
@@ -128,8 +114,23 @@ func (m *MockRegistry) Auth() (string, string, error) {
 	return ret0, ret1, ret2
 }
 
-// Auth indicates an expected call of Auth
+// Auth indicates an expected call of Auth.
 func (mr *MockRegistryMockRecorder) Auth() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Auth", reflect.TypeOf((*MockRegistry)(nil).Auth))
+}
+
+// RepositoryURI mocks base method.
+func (m *MockRegistry) RepositoryURI(name string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RepositoryURI", name)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RepositoryURI indicates an expected call of RepositoryURI.
+func (mr *MockRegistryMockRecorder) RepositoryURI(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RepositoryURI", reflect.TypeOf((*MockRegistry)(nil).RepositoryURI), name)
 }

@@ -5,35 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockTasksDescriber is a mock of TasksDescriber interface
+// MockTasksDescriber is a mock of TasksDescriber interface.
 type MockTasksDescriber struct {
 	ctrl     *gomock.Controller
 	recorder *MockTasksDescriberMockRecorder
 }
 
-// MockTasksDescriberMockRecorder is the mock recorder for MockTasksDescriber
+// MockTasksDescriberMockRecorder is the mock recorder for MockTasksDescriber.
 type MockTasksDescriberMockRecorder struct {
 	mock *MockTasksDescriber
 }
 
-// NewMockTasksDescriber creates a new mock instance
+// NewMockTasksDescriber creates a new mock instance.
 func NewMockTasksDescriber(ctrl *gomock.Controller) *MockTasksDescriber {
 	mock := &MockTasksDescriber{ctrl: ctrl}
 	mock.recorder = &MockTasksDescriberMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTasksDescriber) EXPECT() *MockTasksDescriberMockRecorder {
 	return m.recorder
 }
 
-// DescribeTasks mocks base method
+// DescribeTasks mocks base method.
 func (m *MockTasksDescriber) DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeTasks", cluster, taskARNs)
@@ -42,7 +43,7 @@ func (m *MockTasksDescriber) DescribeTasks(cluster string, taskARNs []string) ([
 	return ret0, ret1
 }
 
-// DescribeTasks indicates an expected call of DescribeTasks
+// DescribeTasks indicates an expected call of DescribeTasks.
 func (mr *MockTasksDescriberMockRecorder) DescribeTasks(cluster, taskARNs interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTasks", reflect.TypeOf((*MockTasksDescriber)(nil).DescribeTasks), cluster, taskARNs)

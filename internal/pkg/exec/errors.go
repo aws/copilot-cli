@@ -26,6 +26,23 @@ func (e ErrNoExpose) Error() string {
 	return fmt.Sprintf("no EXPOSE statements in Dockerfile %s", e.Dockerfile)
 }
 
+// ErrSSMPluginNotExist means the ssm plugin is not installed.
+type ErrSSMPluginNotExist struct{}
+
+func (e ErrSSMPluginNotExist) Error() string {
+	return "Session Manager plugin does not exist"
+}
+
+// ErrOutdatedSSMPlugin means the ssm plugin is not up-to-date.
+type ErrOutdatedSSMPlugin struct {
+	CurrentVersion string
+	LatestVersion  string
+}
+
+func (e ErrOutdatedSSMPlugin) Error() string {
+	return "Session Manager plugin is not up-to-date"
+}
+
 // ErrDockerCommandNotFound means the docker command is not found.
 var ErrDockerCommandNotFound = errors.New("docker: command not found")
 

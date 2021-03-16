@@ -5,35 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	session "github.com/aws/aws-sdk-go/aws/session"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockNames is a mock of Names interface
+// MockNames is a mock of Names interface.
 type MockNames struct {
 	ctrl     *gomock.Controller
 	recorder *MockNamesMockRecorder
 }
 
-// MockNamesMockRecorder is the mock recorder for MockNames
+// MockNamesMockRecorder is the mock recorder for MockNames.
 type MockNamesMockRecorder struct {
 	mock *MockNames
 }
 
-// NewMockNames creates a new mock instance
+// NewMockNames creates a new mock instance.
 func NewMockNames(ctrl *gomock.Controller) *MockNames {
 	mock := &MockNames{ctrl: ctrl}
 	mock.recorder = &MockNamesMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockNames) EXPECT() *MockNamesMockRecorder {
 	return m.recorder
 }
 
-// Names mocks base method
+// Names mocks base method.
 func (m *MockNames) Names() []string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Names")
@@ -41,36 +42,36 @@ func (m *MockNames) Names() []string {
 	return ret0
 }
 
-// Names indicates an expected call of Names
+// Names indicates an expected call of Names.
 func (mr *MockNamesMockRecorder) Names() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Names", reflect.TypeOf((*MockNames)(nil).Names))
 }
 
-// MockSessionProvider is a mock of SessionProvider interface
+// MockSessionProvider is a mock of SessionProvider interface.
 type MockSessionProvider struct {
 	ctrl     *gomock.Controller
 	recorder *MockSessionProviderMockRecorder
 }
 
-// MockSessionProviderMockRecorder is the mock recorder for MockSessionProvider
+// MockSessionProviderMockRecorder is the mock recorder for MockSessionProvider.
 type MockSessionProviderMockRecorder struct {
 	mock *MockSessionProvider
 }
 
-// NewMockSessionProvider creates a new mock instance
+// NewMockSessionProvider creates a new mock instance.
 func NewMockSessionProvider(ctrl *gomock.Controller) *MockSessionProvider {
 	mock := &MockSessionProvider{ctrl: ctrl}
 	mock.recorder = &MockSessionProviderMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockSessionProvider) EXPECT() *MockSessionProviderMockRecorder {
 	return m.recorder
 }
 
-// Default mocks base method
+// Default mocks base method.
 func (m *MockSessionProvider) Default() (*session.Session, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Default")
@@ -79,13 +80,13 @@ func (m *MockSessionProvider) Default() (*session.Session, error) {
 	return ret0, ret1
 }
 
-// Default indicates an expected call of Default
+// Default indicates an expected call of Default.
 func (mr *MockSessionProviderMockRecorder) Default() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Default", reflect.TypeOf((*MockSessionProvider)(nil).Default))
 }
 
-// FromProfile mocks base method
+// FromProfile mocks base method.
 func (m *MockSessionProvider) FromProfile(name string) (*session.Session, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FromProfile", name)
@@ -94,13 +95,13 @@ func (m *MockSessionProvider) FromProfile(name string) (*session.Session, error)
 	return ret0, ret1
 }
 
-// FromProfile indicates an expected call of FromProfile
+// FromProfile indicates an expected call of FromProfile.
 func (mr *MockSessionProviderMockRecorder) FromProfile(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromProfile", reflect.TypeOf((*MockSessionProvider)(nil).FromProfile), name)
 }
 
-// FromStaticCreds mocks base method
+// FromStaticCreds mocks base method.
 func (m *MockSessionProvider) FromStaticCreds(accessKeyID, secretAccessKey, sessionToken string) (*session.Session, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FromStaticCreds", accessKeyID, secretAccessKey, sessionToken)
@@ -109,7 +110,7 @@ func (m *MockSessionProvider) FromStaticCreds(accessKeyID, secretAccessKey, sess
 	return ret0, ret1
 }
 
-// FromStaticCreds indicates an expected call of FromStaticCreds
+// FromStaticCreds indicates an expected call of FromStaticCreds.
 func (mr *MockSessionProviderMockRecorder) FromStaticCreds(accessKeyID, secretAccessKey, sessionToken interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromStaticCreds", reflect.TypeOf((*MockSessionProvider)(nil).FromStaticCreds), accessKeyID, secretAccessKey, sessionToken)
