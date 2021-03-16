@@ -37,8 +37,8 @@ func TestSvcExec_Validate(t *testing.T) {
 	)
 	mockErr := errors.New("some error")
 	testCases := map[string]struct {
-		yes        *bool
-		setupMocks func(mocks execSvcMocks)
+		skipConfirmation *bool
+		setupMocks       func(mocks execSvcMocks)
 
 		wantedError error
 	}{
@@ -77,7 +77,7 @@ func TestSvcExec_Validate(t *testing.T) {
 			wantedError: fmt.Errorf("some error"),
 		},
 		"skip without installing/updating if yes flag is set to be false": {
-			yes: aws.Bool(false),
+			skipConfirmation: aws.Bool(false),
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
@@ -266,7 +266,7 @@ func TestSvcExec_Validate(t *testing.T) {
 			wantedError: nil,
 		},
 		"valid case with ssm plugin updating and skip confirming to install": {
-			yes: aws.Bool(true),
+			skipConfirmation: aws.Bool(true),
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
@@ -308,10 +308,10 @@ func TestSvcExec_Validate(t *testing.T) {
 
 			execSvcs := &svcExecOpts{
 				execVars: execVars{
-					name:    inputSvc,
-					appName: inputApp,
-					envName: inputEnv,
-					yes:     tc.yes,
+					name:             inputSvc,
+					appName:          inputApp,
+					envName:          inputEnv,
+					skipConfirmation: tc.skipConfirmation,
 				},
 				store:            mockStoreReader,
 				ssmPluginManager: mockSSMPluginManager,

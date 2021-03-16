@@ -89,7 +89,7 @@ func (o *taskExecOpts) Validate() error {
 			return err
 		}
 	}
-	return validateSSMBinary(o.prompter, o.ssmPluginManager, o.yes)
+	return validateSSMBinary(o.prompter, o.ssmPluginManager, o.skipConfirmation)
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -192,6 +192,7 @@ func (o *taskExecOpts) configSession() (*session.Session, error) {
 
 // buildTaskExecCmd builds the command for execute a running container in a one-off task.
 func buildTaskExecCmd() *cobra.Command {
+	var skipPrompt bool
 	vars := taskExecVars{}
 	cmd := &cobra.Command{
 		Use:   "exec",
@@ -209,9 +210,9 @@ func buildTaskExecCmd() *cobra.Command {
 				return err
 			}
 			if cmd.Flags().Changed(yesFlag) {
-				opts.yes = aws.Bool(false)
-				if opts.skipConfirmation {
-					opts.yes = aws.Bool(true)
+				opts.skipConfirmation = aws.Bool(false)
+				if skipPrompt {
+					opts.skipConfirmation = aws.Bool(true)
 				}
 			}
 			if err := opts.Validate(); err != nil {
@@ -229,7 +230,7 @@ func buildTaskExecCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.command, commandFlag, commandFlagShort, defaultCommand, execCommandFlagDescription)
 	cmd.Flags().StringVar(&vars.taskID, taskIDFlag, "", taskIDFlagDescription)
 	cmd.Flags().BoolVar(&vars.useDefault, taskDefaultFlag, false, taskExecDefaultFlagDescription)
-	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, execYesFlagDescription)
+	cmd.Flags().BoolVar(&skipPrompt, yesFlag, false, execYesFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	return cmd

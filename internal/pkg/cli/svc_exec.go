@@ -100,7 +100,7 @@ func (o *svcExecOpts) Validate() error {
 			return err
 		}
 	}
-	return validateSSMBinary(o.prompter, o.ssmPluginManager, o.yes)
+	return validateSSMBinary(o.prompter, o.ssmPluginManager, o.skipConfirmation)
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -207,8 +207,8 @@ func (o *svcExecOpts) selectContainer() string {
 	return o.name
 }
 
-func validateSSMBinary(prompt prompter, manager ssmPluginManager, yes *bool) error {
-	if yes != nil && !aws.BoolValue(yes) {
+func validateSSMBinary(prompt prompter, manager ssmPluginManager, skipConfirmation *bool) error {
+	if skipConfirmation != nil && !aws.BoolValue(skipConfirmation) {
 		return nil
 	}
 	err := manager.ValidateBinary()
@@ -218,7 +218,7 @@ func validateSSMBinary(prompt prompter, manager ssmPluginManager, yes *bool) err
 	switch v := err.(type) {
 	case *exec.ErrSSMPluginNotExist:
 		// If ssm plugin is not install, prompt users to install the plugin.
-		if yes == nil {
+		if skipConfirmation == nil {
 			confirmInstall, err := prompt.Confirm(ssmPluginInstallPrompt, ssmPluginInstallPromptHelp)
 			if err != nil {
 				return fmt.Errorf("prompt to confirm installing the plugin: %w", err)
@@ -233,7 +233,7 @@ func validateSSMBinary(prompt prompter, manager ssmPluginManager, yes *bool) err
 		return nil
 	case *exec.ErrOutdatedSSMPlugin:
 		// If ssm plugin is not up to date, prompt users to update the plugin.
-		if yes == nil {
+		if skipConfirmation == nil {
 			confirmUpdate, err := prompt.Confirm(
 				fmt.Sprintf(ssmPluginUpdatePrompt, v.CurrentVersion, v.LatestVersion), "")
 			if err != nil {
@@ -261,6 +261,7 @@ https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-wor
 // buildSvcExecCmd builds the command for execute a running container in a service.
 func buildSvcExecCmd() *cobra.Command {
 	vars := execVars{}
+	var skipPrompt bool
 	cmd := &cobra.Command{
 		Use:   "exec",
 		Short: "Execute a command in a running container part of a service.",
@@ -275,9 +276,9 @@ func buildSvcExecCmd() *cobra.Command {
 				return err
 			}
 			if cmd.Flags().Changed(yesFlag) {
-				opts.yes = aws.Bool(false)
-				if opts.skipConfirmation {
-					opts.yes = aws.Bool(true)
+				opts.skipConfirmation = aws.Bool(false)
+				if skipPrompt {
+					opts.skipConfirmation = aws.Bool(true)
 				}
 			}
 			if err := opts.Validate(); err != nil {
@@ -295,7 +296,7 @@ func buildSvcExecCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.command, commandFlag, commandFlagShort, defaultCommand, execCommandFlagDescription)
 	cmd.Flags().StringVar(&vars.taskID, taskIDFlag, "", taskIDFlagDescription)
 	cmd.Flags().StringVar(&vars.containerName, containerFlag, "", containerFlagDescription)
-	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, execYesFlagDescription)
+	cmd.Flags().BoolVar(&skipPrompt, yesFlag, false, execYesFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	return cmd

@@ -155,7 +155,7 @@ const (
 	pipelineFlagDescription = "Name of the pipeline."
 	profileFlagDescription  = "Name of the profile."
 	yesFlagDescription      = "Skips confirmation prompt."
-	execYesFlagDescription  = "Optional. Whether to install/update the Session Manager Plugin."
+	execYesFlagDescription  = "Optional. Whether to update the Session Manager Plugin."
 	jsonFlagDescription     = "Optional. Outputs in JSON format."
 
 	imageTagFlagDescription     = `Optional. The container image tag.`

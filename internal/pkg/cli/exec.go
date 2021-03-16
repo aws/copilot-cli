@@ -14,6 +14,5 @@ type execVars struct {
 	command          string
 	taskID           string
 	containerName    string
-	skipConfirmation bool
-	yes              *bool
+	skipConfirmation *bool // If nil, we will prompt to upgrade the ssm plugin.
 }
