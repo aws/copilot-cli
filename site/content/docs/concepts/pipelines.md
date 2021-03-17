@@ -74,6 +74,8 @@ source:
   properties:
     branch: main
     repository: https://github.com/kohidave/demo-api-frontend
+    # Optional: specify the name of an existing CodeStar Connections connection.
+    # connection_name:
 
 # The deployment section defines the order the pipeline will deploy
 # to your environments.
@@ -90,7 +92,7 @@ stages:
 
 There are 3 main parts of this file: the `name` field, which is the name of your CodePipeline, the `source` section, which details the repository and branch to track, and the `stages` section, which lists the environments you want this pipeline to deploy to. You can update this anytime, but you must run `copilot pipeline update` afterwards.
 
-Typically, you'll update this file if you add new environments you want to deploy to, or want to track a different branch. The pipeline manifest is also where you may add a manual approval step before deployment or commands to run tests (see "Adding Tests," below) after deployment.
+Typically, you'll update this file if you add new environments you want to deploy to, or want to track a different branch. If you are using CodeStar Connections to connect to your repository and would like to utilize an existing connection rather than let Copilot generate one for you, you may add the connection name here. The pipeline manifest is also where you may add a manual approval step before deployment or commands to run tests (see "Adding Tests," below) after deployment.
 
 ### Step 3: Updating the Buildspec (optional)
 

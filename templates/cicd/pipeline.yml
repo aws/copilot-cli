@@ -15,6 +15,10 @@ source:
   # has the following properties: repository, branch.
   properties:{{range $key, $value := .Source.Properties}}
     {{$key}}: {{$value}}{{end}}
+    {{- if .Source.IsCodeStarConnection}}
+    # Optional: specify the name of an existing CodeStar Connections connection.
+    # connection_name:
+    {{- end}}
 {{$length := len .Stages}}{{if gt $length 0}}
 # The deployment section defines the order the pipeline will deploy
 # to your environments.
