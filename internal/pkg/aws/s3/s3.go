@@ -11,6 +11,7 @@ import (
 	"io"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -146,4 +147,17 @@ func (s *S3) EmptyBucket(bucket string) error {
 		listParams.KeyMarker = listResp.NextKeyMarker
 		listParams.VersionIdMarker = listResp.NextVersionIdMarker
 	}
+}
+
+// ParseURL parses S3 object URL and returns the bucket name and the key.
+// For example: https://stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3
+// returns "stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r" and
+// "scripts/dns-cert-validator/dd2278811c3"
+func ParseURL(url string) (bucket string, key string, err error) {
+	parsedURL := strings.SplitN(strings.TrimPrefix(url, "https://"), "/", 2)
+	if len(parsedURL) != 2 {
+		return "", "", fmt.Errorf("cannot parse S3 URL %s into bucket name and key", url)
+	}
+	bucket, key = strings.Split(parsedURL[0], ".")[0], parsedURL[1]
+	return
 }

@@ -4,8 +4,8 @@ CertificateValidationFunction:
   Condition: DelegateDNS
   Properties:
     Code:
-      ZipFile: |
-        {{.ACMValidationLambda}}
+      S3Bucket: {{.ScriptBucketName}}
+      S3Key: {{.DNSCertValidatorLambda}}
     Handler: "index.certificateRequestHandler"
     Timeout: 600
     MemorySize: 512
@@ -17,8 +17,8 @@ DNSDelegationFunction:
   Condition: DelegateDNS
   Properties:
     Code:
-      ZipFile: |
-        {{.DNSDelegationLambda}}
+      S3Bucket: {{.ScriptBucketName}}
+      S3Key: {{.DNSDelegationLambda}}
     Handler: "index.domainDelegationHandler"
     Timeout: 600
     MemorySize: 512
@@ -30,8 +30,8 @@ EnableLongARNFormatFunction:
   Type: AWS::Lambda::Function
   Properties:
     Code:
-      ZipFile: |
-        {{.EnableLongARNFormatLambda}}
+      S3Bucket: {{.ScriptBucketName}}
+      S3Key: {{.EnableLongARNFormatLambda}}
     Handler: "index.handler"
     Timeout: 600
     MemorySize: 512

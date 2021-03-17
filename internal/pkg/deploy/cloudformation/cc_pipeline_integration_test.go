@@ -15,10 +15,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 func TestCCPipelineCreation(t *testing.T) {
@@ -51,6 +53,8 @@ func TestCCPipelineCreation(t *testing.T) {
 		envCallerInfo, err := envId.Get()
 		require.NoError(t, err)
 		envDeployer := cloudformation.New(envSess)
+		s3Client := s3.New(envSess)
+		uploader := template.New()
 
 		environmentToDeploy := deploy.CreateEnvironmentInput{
 			Name:                     randStringBytes(10),
@@ -130,6 +134,22 @@ func TestCCPipelineCreation(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		err = appDeployer.AddEnvToApp(&cloudformation.AddEnvToAppOpts{
+			App:          &app,
+			EnvName:      environmentToDeploy.Name,
+			EnvRegion:    envRegion.ID(),
+			EnvAccountID: envCallerInfo.Account,
+		})
+		require.NoError(t, err)
+
+		regionalResource, err := appDeployer.GetAppResourcesByRegion(&app, envRegion.ID())
+		require.NoError(t, err)
+		urls, err := uploader.UploadEnvironmentCustomResources(s3.CompressAndUploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
+			return s3Client.ZipAndUpload(regionalResource.S3Bucket, key, objects...)
+		}))
+		require.NoError(t, err)
+		environmentToDeploy.CustomResourcesURLs = urls
+
 		// Deploy the environment in the same tools account but in different
 		// region and wait for it to be complete
 		require.NoError(t, envDeployer.DeployAndRenderEnvironment(os.Stderr, &environmentToDeploy))
@@ -148,7 +168,7 @@ func TestCCPipelineCreation(t *testing.T) {
 			StackSetName: aws.String(appStackSetName),
 		})
 		require.NoError(t, err)
-		require.Equal(t, 1, len(stackInstances.Summaries),
+		require.Equal(t, 2, len(stackInstances.Summaries),
 			"application stack instance should exist")
 
 		resources, err := appDeployer.GetRegionalAppResources(&app)

@@ -275,7 +275,7 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 						S3Bucket: "mockBucket",
 					}, nil)
 				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
-				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
+				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(map[string]string{"mockCustomResource": "mockURL"}, nil)
 
 				mockUpgrader := mocks.NewMockenvTemplateUpgrader(ctrl)
 				mockUpgrader.EXPECT().UpgradeEnvironment(&deploy.CreateEnvironmentInput{
@@ -285,7 +285,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					ImportVPCConfig: &config.ImportVPC{
 						ID: "abc",
 					},
-					CFNServiceRoleARN: "execARN",
+					CFNServiceRoleARN:   "execARN",
+					CustomResourcesURLs: map[string]string{"mockCustomResource": "mockURL"},
 				}).Return(nil)
 
 				return &envUpgradeOpts{
@@ -345,7 +346,7 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 						S3Bucket: "mockBucket",
 					}, nil)
 				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
-				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
+				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(map[string]string{"mockCustomResource": "mockURL"}, nil)
 
 				mockTemplater := mocks.NewMocktemplater(ctrl)
 				mockTemplater.EXPECT().Template().Return("template", nil)
@@ -353,10 +354,11 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 				mockUpgrader := mocks.NewMockenvTemplateUpgrader(ctrl)
 				mockUpgrader.EXPECT().EnvironmentTemplate("phonetool", "test").Return("template", nil)
 				mockUpgrader.EXPECT().UpgradeLegacyEnvironment(&deploy.CreateEnvironmentInput{
-					Version:           deploy.LatestEnvTemplateVersion,
-					AppName:           "phonetool",
-					Name:              "test",
-					CFNServiceRoleARN: "execARN",
+					Version:             deploy.LatestEnvTemplateVersion,
+					AppName:             "phonetool",
+					Name:                "test",
+					CFNServiceRoleARN:   "execARN",
+					CustomResourcesURLs: map[string]string{"mockCustomResource": "mockURL"},
 				}, "frontend").Return(nil)
 
 				return &envUpgradeOpts{

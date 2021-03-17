@@ -23,12 +23,19 @@ const (
 	scriptDirName                  = "scripts"
 )
 
+// Environment custom resource file names.
+const (
+	DNSCertValidatorFileName = "dns-cert-validator"
+	DNSDelegationFileName    = "dns-delegation"
+	EnableLongARNsFileName   = "enable-long-arns"
+)
+
 var box = templates.Box()
 
 var envCustomResourceFiles = []string{
-	"dns-cert-validator",
-	"dns-delegation",
-	"enable-long-arns",
+	DNSCertValidatorFileName,
+	DNSDelegationFileName,
+	EnableLongARNsFileName,
 }
 
 // Parser is the interface that wraps the Parse method.
@@ -101,12 +108,12 @@ func (t *Template) Parse(path string, data interface{}, options ...ParseOption) 
 }
 
 // UploadEnvironmentCustomResources uploads the environment custom resource scripts.
-func (t *Template) UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) ([]string, error) {
+func (t *Template) UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
 	return t.uploadCustomResources(upload, envCustomResourceFiles)
 }
 
-func (t *Template) uploadCustomResources(upload s3.CompressAndUploadFunc, fileNames []string) ([]string, error) {
-	var urls []string
+func (t *Template) uploadCustomResources(upload s3.CompressAndUploadFunc, fileNames []string) (map[string]string, error) {
+	urls := make(map[string]string)
 	for _, name := range fileNames {
 		url, err := t.uploadfileToCompress(upload, fileToCompress{
 			name: path.Join(scriptDirName, name),
@@ -120,13 +127,14 @@ func (t *Template) uploadCustomResources(upload s3.CompressAndUploadFunc, fileNa
 		if err != nil {
 			return nil, err
 		}
-		urls = append(urls, url)
+		urls[name] = url
 	}
 	return urls, nil
 }
 
 func (t *Template) uploadfileToCompress(upload s3.CompressAndUploadFunc, file fileToCompress) (string, error) {
 	var contents []byte
+	var nameBinaries []s3.NamedBinary
 	for _, uploadable := range file.uploadables {
 		content, err := t.Read(uploadable.path)
 		if err != nil {
@@ -134,11 +142,7 @@ func (t *Template) uploadfileToCompress(upload s3.CompressAndUploadFunc, file fi
 		}
 		uploadable.content = content.Bytes()
 		contents = append(contents, uploadable.content...)
-	}
-	// Golang limit. See https://stackoverflow.com/questions/12990338/cannot-convert-string-to-interface/12990540#12990540
-	nameBinaries := make([]s3.NamedBinary, len(file.uploadables))
-	for idx, file := range file.uploadables {
-		nameBinaries[idx] = s3.NamedBinary(file)
+		nameBinaries = append(nameBinaries, uploadable)
 	}
 	// Suffix with a SHA256 checksum of the fileToCompress so that
 	// only new content gets a new URL. Otherwise, if two fileToCompresss have the
