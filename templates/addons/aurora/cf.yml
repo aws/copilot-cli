@@ -8,35 +8,51 @@ Parameters:
   Name:
     Type: String
     Description: The name of the service, job, or workflow being deployed.
-# Customize your Aurora Serverless cluster by setting the default value of these parameters. 
-  DBTableName:
+# Customize your Aurora Serverless cluster by setting the default value of the following parameters.
+  InitialDBName:
     Type: String
     Description: The name of the table.
-    Default: mydatatable #{{.TableName}}
+    Default: {{.InitialDBName}}
     # Cannot have special characters
     # Naming constraints: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html#RDS_Limits.Constraints
   DBPort:
     Type: Number
     Description: The traffic port for connections to the database.
-    Default: 5432 # Postgres
-    # Default: 3306
+    Default:
+    {{- if eq .Engine "aurora-mysql"}} 3306 # MySQL
+    # Default: 5432 # PostgreSQL
+    {{- else}} 5432 # PostgreSQL
+    # Default: 3306 # MySQL
+    {{- end}}
   DBMinCapacity:
     Type: Number
     Description: The minimum scaling capacity for the cluster.
-    AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384] # Postgres.
+    AllowedValues:
+    {{- if eq .Engine "aurora-mysql"}} [1, 2, 4, 8, 16, 32, 64, 128, 256] # MySQL
+    # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384] # PostgreSQL
+    {{- else}} [2, 4, 8, 16, 32, 64, 192, 384] # PostgreSQL
     # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256] # MySQL
-    Default: 2 #{{.MinCapacity}}
+    {{- end}}
+    Default:
+    {{- if eq .Engine "aurora-mysql"}} 1 # MySQL
+    # Default: 2 # PostgreSQL
+    {{- else}} 2 # PostgreSQL
+    # Default: 1 # MySQL
+    {{- end}}
   DBMaxCapacity:
     Type: Number
     Description: The maximum scaling capacity for the cluster.  
-    AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384] # Postgres.
+    AllowedValues:
+    {{- if eq .Engine "aurora-mysql"}} [1, 2, 4, 8, 16, 32, 64, 128, 256] # MySQL
+    # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384] # PostgreSQL
+    {{- else}} [ 2, 4, 8, 16, 32, 64, 192, 384 ] # PostgreSQL
     # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256] # MySQL
-    Default: 8 #{{.MaxCapacity}}
+    {{- end}}
+    Default: 8
   DBAutoPauseSeconds:
     Type: Number
     Description: The duration in seconds before the cluster pauses.
-    Default: 1000 #{{.TimeoutSeconds}}
-
+    Default: 1000
 Resources:
   AuroraKMSCMK:
     Type: 'AWS::KMS::Key'
@@ -70,9 +86,9 @@ Resources:
   AuroraKMSCMKAlias:
     Type: 'AWS::KMS::Alias'
     DeletionPolicy: Retain
-    DependsOn: ['AuroraDBCluster']
+    DependsOn: ['{{logicalIDSafe .Name}}']
     Properties:
-      AliasName: !Sub 'alias/${AuroraDBCluster}'
+      AliasName: !Sub 'alias/${ {{- logicalIDSafe .Name -}} }'
       TargetKeyId: !Ref AuroraKMSCMK
 
   DBSubnetGroup:
@@ -105,38 +121,56 @@ Resources:
   AuroraSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: !Sub '/${App}/${Env}/${Name}/${DBTableName}'
-      Description: !Sub Aurora PostgreSQL main user secret for ${AWS::StackName}
+      Name: !Sub '/${App}/${Env}/${Name}'
+      Description: !Sub Aurora main user secret for ${AWS::StackName}
       GenerateSecretString:
-        SecretStringTemplate: '{"username": "postgres"}'
+        SecretStringTemplate:
+        {{- if eq .Engine "aurora-mysql"}} '{"username": "admin"}'
+        {{- else}} '{"username": "postgres"}'
+        {{- end}}
         GenerateStringKey: "password"
         ExcludePunctuation: true
         IncludeSpace: false
         PasswordLength: 16
-  
+
+  {{- if .ParameterGroup}}
+
+  #   DBClusterParameterGroup:
+  #     Type: 'AWS::RDS::DBClusterParameterGroup'
+  #     Properties:
+  #       Description: !Ref 'AWS::StackName'
+  #       Family: {{- if eq .Engine "aurora-mysql"}} 'aurora-mysql5.7' {{- else}} 'aurora-postgresql10' {{- end}}
+  #       Parameters:
+  #         client_encoding: 'UTF8'
+  {{- else}}
+
   DBClusterParameterGroup:
     Type: 'AWS::RDS::DBClusterParameterGroup'
     Properties:
       Description: !Ref 'AWS::StackName'
-      Family: 'aurora-postgresql10'
+      Family:
+      {{- if eq .Engine "aurora-mysql"}} 'aurora-mysql5.7'
+      {{- else}} 'aurora-postgresql10'
+      {{- end}}
       Parameters:
         client_encoding: 'UTF8'
+  {{- end}}
 
-  AuroraDBCluster:
+  {{logicalIDSafe .Name}}:
     Type: 'AWS::RDS::DBCluster'
     Properties:
       MasterUsername:
-        !Join [ "", [ "{{resolve:secretsmanager:", !Ref AuroraSecret, ":SecretString:username}}" ]]
+        "admin"
       MasterUserPassword:
-        !Join [ "", [ "{{resolve:secretsmanager:", !Ref AuroraSecret, ":SecretString:password}}" ]]
-      DatabaseName: !Ref DBTableName
-      Engine: aurora-postgresql # aurora-mysql
-      EngineVersion: '10.7'
+        "11111111"
+      DatabaseName: !Ref InitialDBName
+      Engine: {{.Engine}}
+#      EngineVersion: '10.7'
       EngineMode: serverless
       EnableHttpEndpoint: true
       StorageEncrypted: true
       KmsKeyId: !Ref AuroraKMSCMK
-      DBClusterParameterGroupName: !Ref DBClusterParameterGroup
+      DBClusterParameterGroupName: {{- if .ParameterGroup}} {{.ParameterGroup}} {{- else}} !Ref DBClusterParameterGroup {{- end}}
       DBSubnetGroupName: !Ref DBSubnetGroup
       VpcSecurityGroupIds:
         - !Ref DBClusterSecurityGroup
