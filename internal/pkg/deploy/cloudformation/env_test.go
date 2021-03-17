@@ -13,9 +13,21 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+var mockCreateEnvInput = deploy.CreateEnvironmentInput{
+	AppName: "phonetool",
+	Name:    "test",
+	Version: "v1.0.0",
+	CustomResourcesURLs: map[string]string{
+		template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
+		template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
+		template.EnableLongARNsFileName:   "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey3",
+	},
+}
 
 func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 	testCases := map[string]struct {
@@ -25,11 +37,7 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 		wantedErr error
 	}{
 		"upgrades using previous values when stack is available": {
-			in: &deploy.CreateEnvironmentInput{
-				AppName: "phonetool",
-				Name:    "test",
-				Version: "v1.0.0",
-			},
+			in: &mockCreateEnvInput,
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().Describe("phonetool-test").Return(&cloudformation.StackDescription{
@@ -55,11 +63,7 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 			},
 		},
 		"waits until stack is available for update": {
-			in: &deploy.CreateEnvironmentInput{
-				AppName: "phonetool",
-				Name:    "test",
-				Version: "v1.0.0",
-			},
+			in: &mockCreateEnvInput,
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
 				m := mocks.NewMockcfnClient(ctrl)
 
@@ -81,11 +85,7 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 			},
 		},
 		"should exit successfully if there are no updates needed": {
-			in: &deploy.CreateEnvironmentInput{
-				AppName: "phonetool",
-				Name:    "test",
-				Version: "v1.0.0",
-			},
+			in: &mockCreateEnvInput,
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{}, nil)
@@ -96,11 +96,7 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 			},
 		},
 		"should retry if the changeset request becomes obsolete": {
-			in: &deploy.CreateEnvironmentInput{
-				AppName: "phonetool",
-				Name:    "test",
-				Version: "v1.0.0",
-			},
+			in: &mockCreateEnvInput,
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{}, nil).Times(2)
@@ -112,11 +108,7 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 			},
 		},
 		"wrap error on unexpected update err": {
-			in: &deploy.CreateEnvironmentInput{
-				AppName: "phonetool",
-				Name:    "test",
-				Version: "v1.0.0",
-			},
+			in: &mockCreateEnvInput,
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{}, nil)
@@ -160,11 +152,7 @@ func TestCloudFormation_UpgradeLegacyEnvironment(t *testing.T) {
 		wantedErr error
 	}{
 		"replaces IncludePublicLoadBalancer param with ALBWorkloads and preserves existing params": {
-			in: &deploy.CreateEnvironmentInput{
-				AppName: "phonetool",
-				Name:    "test",
-				Version: "v1.0.0",
-			},
+			in:            &mockCreateEnvInput,
 			lbWebServices: []string{"frontend", "admin"},
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
 				m := mocks.NewMockcfnClient(ctrl)

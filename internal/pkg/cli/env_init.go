@@ -145,7 +145,7 @@ type initEnvOpts struct {
 	selCreds     credsSelector
 	selApp       appSelector
 	appCFN       appResourcesGetter
-	newS3        func(*session.Session) zipAndUploader
+	newS3        func(string) (zipAndUploader, error)
 	uploader     customResourcesUploader
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
@@ -183,8 +183,12 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		selApp:   selector.NewSelect(prompt.New(), store),
 		uploader: template.New(),
 		appCFN:   deploycfn.New(defaultSession),
-		newS3: func(sess *session.Session) zipAndUploader {
-			return s3.New(sess)
+		newS3: func(region string) (zipAndUploader, error) {
+			sess, err := sessProvider.DefaultWithRegion(region)
+			if err != nil {
+				return nil, err
+			}
+			return s3.New(sess), nil
 		},
 	}, nil
 }
@@ -272,14 +276,19 @@ func (o *initEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get app resources: %w", err)
 	}
-	if _, err := o.uploader.UploadEnvironmentCustomResources(s3.CompressAndUploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
-		return o.newS3(o.sess).ZipAndUpload(resources.S3Bucket, key, objects...)
-	})); err != nil {
+	s3Client, err := o.newS3(envRegion)
+	if err != nil {
+		return err
+	}
+	urls, err := o.uploader.UploadEnvironmentCustomResources(s3.CompressAndUploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
+		return s3Client.ZipAndUpload(resources.S3Bucket, key, objects...)
+	}))
+	if err != nil {
 		return fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
 	}
 
 	// 4. Start creating the CloudFormation stack for the environment.
-	if err := o.deployEnv(app); err != nil {
+	if err := o.deployEnv(app, urls); err != nil {
 		return err
 	}
 
@@ -521,7 +530,7 @@ func (o *initEnvOpts) adjustVPCConfig() *config.AdjustVPC {
 	}
 }
 
-func (o *initEnvOpts) deployEnv(app *config.Application) error {
+func (o *initEnvOpts) deployEnv(app *config.Application, customResourcesURLs map[string]string) error {
 	caller, err := o.identity.Get()
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
@@ -533,6 +542,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 		ToolsAccountPrincipalARN: caller.RootUserARN,
 		AppDNSName:               app.Domain,
 		AdditionalTags:           app.Tags,
+		CustomResourcesURLs:      customResourcesURLs,
 		AdjustVPCConfig:          o.adjustVPCConfig(),
 		ImportVPCConfig:          o.importVPCConfig(),
 		Version:                  deploy.LatestEnvTemplateVersion,

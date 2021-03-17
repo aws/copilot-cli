@@ -16,11 +16,15 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	awsCF "github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	awss3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 )
 
@@ -363,6 +367,9 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	deployer := cloudformation.New(sess)
 	cfClient := awsCF.New(sess)
 	identity := identity.New(sess)
+	s3ManagerClient := s3manager.NewUploader(sess)
+	s3Client := awss3.New(sess)
+	uploader := template.New()
 
 	iamClient := iam.New(sess)
 
@@ -370,6 +377,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	require.NoError(t, err)
 	envName := randStringBytes(10)
 	appName := randStringBytes(10)
+	bucketName := randStringBytes(10)
 	environmentToDeploy := deploy.CreateEnvironmentInput{
 		Name:                     envName,
 		AppName:                  appName,
@@ -385,13 +393,35 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		})
 		require.True(t, len(output.Stacks) == 0, "Stack %s should not exist.", envStackName)
 
+		// Create a temporary S3 bucket to store custom resource scripts.
+		_, err = s3ManagerClient.S3.CreateBucket(&s3.CreateBucketInput{
+			Bucket: aws.String(bucketName),
+		})
+		require.NoError(t, err)
+
 		// Make sure we delete the stack after the test is done
 		defer func() {
-			cfClient.DeleteStack(&awsCF.DeleteStackInput{
+			_, err := cfClient.DeleteStack(&awsCF.DeleteStackInput{
 				StackName: aws.String(envStackName),
 			})
-			deleteEnvRoles(appName, envName, id.Account, iamClient)
+			require.NoError(t, err)
+
+			err = deleteEnvRoles(appName, envName, id.Account, iamClient)
+			require.NoError(t, err)
+
+			err = s3Client.EmptyBucket(bucketName)
+			require.NoError(t, err)
+			_, err = s3ManagerClient.S3.DeleteBucket(&s3.DeleteBucketInput{
+				Bucket: aws.String(bucketName),
+			})
+			require.NoError(t, err)
 		}()
+
+		urls, err := uploader.UploadEnvironmentCustomResources(awss3.CompressAndUploadFunc(func(key string, objects ...awss3.NamedBinary) (string, error) {
+			return s3Client.ZipAndUpload(bucketName, key, objects...)
+		}))
+		require.NoError(t, err)
+		environmentToDeploy.CustomResourcesURLs = urls
 
 		// Deploy the environment and wait for it to be complete
 		require.NoError(t, deployer.DeployAndRenderEnvironment(os.Stderr, &environmentToDeploy))

@@ -301,7 +301,7 @@ type zipAndUploader interface {
 }
 
 type customResourcesUploader interface {
-	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) ([]string, error)
+	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
 }
 
 type bucketEmptier interface {

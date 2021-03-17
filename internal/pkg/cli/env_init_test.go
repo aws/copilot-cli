@@ -766,6 +766,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Name:                     "test",
 					AppName:                  "phonetool",
 					ToolsAccountPrincipalARN: "some arn",
+					CustomResourcesURLs:      map[string]string{"mockCustomResource": "mockURL"},
 					Version:                  deploy.LatestEnvTemplateVersion,
 				}).Return(&cloudformation.ErrStackAlreadyExists{})
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
@@ -783,7 +784,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					}, nil)
 			},
 			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
-				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
+				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(map[string]string{"mockCustomResource": "mockURL"}, nil)
 			},
 		},
 		"failed to delegate DNS (app has Domain and env and apps are different)": {
@@ -899,8 +900,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				sess:        sess,
 				appCFN:      mockAppCFN,
 				uploader:    mockResourcesUploader,
-				newS3: func(s *session.Session) zipAndUploader {
-					return mockUploader
+				newS3: func(region string) (zipAndUploader, error) {
+					return mockUploader, nil
 				},
 			}
 
