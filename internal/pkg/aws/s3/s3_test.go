@@ -346,3 +346,37 @@ func TestS3_EmptyBucket(t *testing.T) {
 
 	}
 }
+
+func TestS3_ParseURL(t *testing.T) {
+	testCases := map[string]struct {
+		inURL string
+
+		wantedBucketName string
+		wantedKey        string
+		wantError        error
+	}{
+		"return error if fail to parse": {
+			inURL:     "badURL",
+			wantError: fmt.Errorf("cannot parse S3 URL badURL into bucket name and key"),
+		},
+		"success": {
+			inURL:            "https://stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3",
+			wantedBucketName: "stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r",
+			wantedKey:        "scripts/dns-cert-validator/dd2278811c3",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotBucketName, gotKey, gotErr := ParseURL(tc.inURL)
+
+			if gotErr != nil {
+				require.EqualError(t, gotErr, tc.wantError.Error())
+			} else {
+				require.Equal(t, gotErr, nil)
+				require.Equal(t, gotBucketName, tc.wantedBucketName)
+				require.Equal(t, gotKey, tc.wantedKey)
+			}
+		})
+	}
+}
