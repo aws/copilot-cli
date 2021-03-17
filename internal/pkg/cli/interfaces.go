@@ -539,6 +539,10 @@ type dockerEngineValidator interface {
 	CheckDockerEngineRunning() error
 }
 
+type codestar interface {
+	GetConnectionARN(string) (string, error)
+}
+
 type publicIPGetter interface {
 	PublicIP(ENI string) (string, error)
 }

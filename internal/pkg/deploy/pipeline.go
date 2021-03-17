@@ -89,6 +89,7 @@ type GitHubSource struct {
 	ProviderName  string
 	Branch        string
 	RepositoryURL GitHubURL
+	ConnectionARN string
 }
 
 // GitHubURL is the common type for repo URLs for both GitHubSource versions:
@@ -107,11 +108,12 @@ type BitbucketSource struct {
 	ProviderName  string
 	Branch        string
 	RepositoryURL string
+	ConnectionARN string
 }
 
 // PipelineSourceFromManifest processes manifest info about the source based on provider type.
 // The return boolean is true for CodeStar Connections sources that require a polling prompt.
-func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, usesCodeStar bool, err error) {
+func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, shouldPrompt bool, err error) {
 	switch mfSource.ProviderName {
 	case manifest.GithubV1ProviderName:
 		return &GitHubV1Source{
@@ -132,11 +134,18 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 				PersonalAccessTokenSecretID: (mfSource.Properties["access_token_secret"]).(string),
 			}, false, nil
 		} else {
-			return &GitHubSource{
+			// If an existing CSC connection is being used, don't prompt to update connection from 'PENDING' to 'AVAILABLE'.
+			connection, ok := mfSource.Properties["connection_arn"]
+			repo := &GitHubSource{
 				ProviderName:  manifest.GithubProviderName,
 				Branch:        (mfSource.Properties["branch"]).(string),
 				RepositoryURL: GitHubURL((mfSource.Properties["repository"]).(string)),
-			}, true, nil
+			}
+			if !ok {
+				return repo, true, nil
+			}
+			repo.ConnectionARN = connection.(string)
+			return repo, false, nil
 		}
 	case manifest.CodeCommitProviderName:
 		return &CodeCommitSource{
@@ -145,11 +154,18 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 			RepositoryURL: (mfSource.Properties["repository"]).(string),
 		}, false, nil
 	case manifest.BitbucketProviderName:
-		return &BitbucketSource{
+		// If an existing CSC connection is being used, don't prompt to update connection from 'PENDING' to 'AVAILABLE'.
+		connection, ok := mfSource.Properties["connection_arn"]
+		repo := &BitbucketSource{
 			ProviderName:  manifest.BitbucketProviderName,
 			Branch:        (mfSource.Properties["branch"]).(string),
 			RepositoryURL: (mfSource.Properties["repository"]).(string),
-		}, true, nil
+		}
+		if !ok {
+			return repo, true, nil
+		}
+		repo.ConnectionARN = connection.(string)
+		return repo, false, nil
 	default:
 		return nil, false, fmt.Errorf("invalid repo source provider: %s", mfSource.ProviderName)
 	}
@@ -163,6 +179,16 @@ func (s *GitHubV1Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 		return "", errors.New("the GitHub token secretID is not configured")
 	}
 	return s.PersonalAccessTokenSecretID, nil
+}
+
+// Connection returns the ARN correlated with a ConnectionName in the pipeline manifest.
+func (s *BitbucketSource) Connection() string {
+	return s.ConnectionARN
+}
+
+// Connection returns the ARN correlated with a ConnectionName in the pipeline manifest.
+func (s *GitHubSource) Connection() string {
+	return s.ConnectionARN
 }
 
 // parse parses the owner and repo name from the GH repo URL, which was formatted and assigned in cli/pipeline_init.go.
