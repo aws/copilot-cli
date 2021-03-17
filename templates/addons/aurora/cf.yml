@@ -1,3 +1,5 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::SecretsManager-2020-07-23
 Parameters:
   App:
     Type: String
@@ -36,6 +38,15 @@ Parameters:
     Type: Number
     Description: The duration in seconds before the cluster pauses.
     Default: 1000 #{{.TimeoutSeconds}}
+  RotationIntervalDays:
+    Type: Number
+    Description: The number of days to wait before rotating the secret. Specify "0" to disable rotation.
+    MaxValue: 1000
+    MinValue: 0
+    Default: 30
+  
+Conditions:
+  EnableRotation: !Not [ !Equals [ !Ref RotationIntervalDays, 0 ] ]
 
 Resources:
   AuroraKMSCMK:
@@ -153,7 +164,73 @@ Resources:
       TargetId: !Ref AuroraDBCluster
       TargetType: AWS::RDS::DBCluster
 
+  RotationSecurityGroup:
+    Condition: EnableRotation
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: The Security Group for the rotation lambda. 
+      VpcId: 
+        Fn::ImportValue: 
+          !Sub '${App}-${Env}-VpcId'
+  
+  RotationSecurityGroupIngressFromSelf:
+    Condition: EnableRotation
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from other containers in the same security group
+      GroupId: !Ref RotationSecurityGroup
+      IpProtocol: '-1'
+      SourceSecurityGroupId: !Ref RotationSecurityGroup
+  
+  DBSecurityGroupIngressFromRotation:
+    Condition: EnableRotation
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress to the database from the rotation lambda and secrets manager.
+      GroupId: !Ref DBClusterSecurityGroup
+      IpProtocol: '-1'
+      SourceSecurityGroupId: !Ref RotationSecurityGroup
+  
+  SecretsManagerEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Condition: EnableRotation
+    Properties: 
+      PrivateDnsEnabled: true
+      SecurityGroupIds: 
+        - !Ref RotationSecurityGroup
+        - Fn::ImportValue: 
+            !Sub '${App}-${Env}-EnvironmentSecurityGroup'
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.secretsmanager
+      SubnetIds: 
+        !Split [",", { "Fn::ImportValue": !Sub "${App}-${Env}-PrivateSubnets" }]
+      VpcEndpointType: Interface
+      VpcId: 
+        Fn::ImportValue: 
+          !Sub '${App}-${Env}-VpcId'
+  
+  SecretRotationSchedule:
+    Type: AWS::SecretsManager::RotationSchedule
+    Condition: EnableRotation
+    Properties:
+      SecretId: !Ref AuroraSecret
+      RotationRules:
+        AutomaticallyAfterDays: !Ref RotationIntervalDays
+      HostedRotationLambda:
+        RotationLambdaName: !Sub '${App}-${Env}-${Name}-SecretRotation'
+        RotationType: PostgreSQLSingleUser
+        VpcSecurityGroupIds: !Ref RotationSecurityGroup
+        VpcSubnetIds:
+          Fn::ImportValue: !Sub ${App}-${Env}-PrivateSubnets
+
 Outputs:
-  AuroraMetadata: # injected as AURORA_METADATA environment variable by Copilot. 
-    Description: "The JSON secret that holds the database username and password. Fields are 'host', 'dbname', 'username', 'password'"
+  AuroraSecret: # injected as AURORA_SECRET environment variable by Copilot. 
+    Description: 'The JSON secret that holds the database username and password.'
     Value: !Ref AuroraSecret
+  RdsEndpoint: # injected as RDS_ENDPOINT environment variable by Copilot.
+    Description: 'The connection endpoint for the DB cluster.'
+    Value: !GetAtt 'AuroraDBCluster.Endpoint.Address'
+  RotationSecurityGroup:
+    Description: 'The security group used for rotation lambdas in the environment.'
+    Value: !Ref RotationSecurityGroup
+    Export:
+      Name: !Sub '${App}-${Env}-LambdaRotationSecurityGroup'
