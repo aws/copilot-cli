@@ -17,7 +17,7 @@ source:
     {{$key}}: {{$value}}{{end}}
     {{- if .Source.IsCodeStarConnection}}
     # Optional: specify the name of an existing CodeStar Connections connection.
-    # connection_name:
+    # connection_name: a-connection
     {{- end}}
 {{$length := len .Stages}}{{if gt $length 0}}
 # The deployment section defines the order the pipeline will deploy

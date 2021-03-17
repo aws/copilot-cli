@@ -75,7 +75,7 @@ source:
     branch: main
     repository: https://github.com/kohidave/demo-api-frontend
     # Optional: specify the name of an existing CodeStar Connections connection.
-    # connection_name:
+    # connection_name: a-connection
 
 # The deployment section defines the order the pipeline will deploy
 # to your environments.

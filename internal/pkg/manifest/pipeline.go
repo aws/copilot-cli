@@ -232,10 +232,14 @@ func UnmarshalPipeline(in []byte) (*PipelineManifest, error) {
 
 // IsCodeStarConnection indicates to the manifest if this source requires a CSC connection.
 func (s Source) IsCodeStarConnection() bool {
-	if s.ProviderName == "GitHub" || s.ProviderName == "Bitbucket" {
+	switch s.ProviderName {
+	case GithubProviderName:
 		return true
+	case BitbucketProviderName:
+		return true
+	default:
+		return false
 	}
-	return false
 }
 
 func validateVersion(pm *PipelineManifest) (PipelineSchemaMajorVersion, error) {

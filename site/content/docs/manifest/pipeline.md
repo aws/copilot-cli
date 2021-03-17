@@ -12,7 +12,7 @@ List of all available properties for a Copilot pipeline manifest.
         branch: main
         repository: https://github.com/<user>/sample-app-frontend
         # Optional: specify the name of an existing CodeStar Connections connection.
-        connection_name: MyPreexistingConnection
+        connection_name: a-connection
     
     stages:
         - 
@@ -56,7 +56,7 @@ The name of the branch in your repository that triggers the pipeline. The defaul
 The URL of your repository.
 
 <span class="parent-field">source.properties.</span><a id="source-properties-connection-name" href="#source-properties-connection-name" class="field">`connection_name`</a> <span class="type">String</span>  
-The name of an existing CodeStar Connections connection. By default, Copilot will generate a connection for you.
+The name of an existing CodeStar Connections connection. If omitted, Copilot will generate a connection for you.
 
 <div class="separator"></div>
 
