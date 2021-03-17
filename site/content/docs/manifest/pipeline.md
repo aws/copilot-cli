@@ -12,7 +12,7 @@ List of all available properties for a Copilot pipeline manifest.
         branch: main
         repository: https://github.com/<user>/sample-app-frontend
         # Optional: specify the name of an existing CodeStar Connections connection.
-        connection_name:
+        connection_name: MyPreexistingConnection
     
     stages:
         - 
