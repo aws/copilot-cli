@@ -5704,6 +5704,44 @@ func (mr *MockdockerEngineValidatorMockRecorder) CheckDockerEngineRunning() *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDockerEngineRunning", reflect.TypeOf((*MockdockerEngineValidator)(nil).CheckDockerEngineRunning))
 }
 
+// Mockcodestar is a mock of codestar interface.
+type Mockcodestar struct {
+	ctrl     *gomock.Controller
+	recorder *MockcodestarMockRecorder
+}
+
+// MockcodestarMockRecorder is the mock recorder for Mockcodestar.
+type MockcodestarMockRecorder struct {
+	mock *Mockcodestar
+}
+
+// NewMockcodestar creates a new mock instance.
+func NewMockcodestar(ctrl *gomock.Controller) *Mockcodestar {
+	mock := &Mockcodestar{ctrl: ctrl}
+	mock.recorder = &MockcodestarMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *Mockcodestar) EXPECT() *MockcodestarMockRecorder {
+	return m.recorder
+}
+
+// GetConnectionARN mocks base method.
+func (m *Mockcodestar) GetConnectionARN(arg0 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetConnectionARN", arg0)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetConnectionARN indicates an expected call of GetConnectionARN.
+func (mr *MockcodestarMockRecorder) GetConnectionARN(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConnectionARN", reflect.TypeOf((*Mockcodestar)(nil).GetConnectionARN), arg0)
+}
+
 // MockpublicIPGetter is a mock of publicIPGetter interface.
 type MockpublicIPGetter struct {
 	ctrl     *gomock.Controller
