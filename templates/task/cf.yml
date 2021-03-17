@@ -63,8 +63,7 @@ Resources:
       Cpu: !Ref TaskCPU
       Memory: !Ref TaskMemory
       ExecutionRoleArn: !If [HasExecutionRole, !Ref ExecutionRole, !Ref DefaultExecutionRole]
-      TaskRoleArn:
-        !If [HasTaskRole, !Ref TaskRole, !Ref "AWS::NoValue"]
+      TaskRoleArn: !If [HasTaskRole, !Ref TaskRole, !Ref DefaultTaskRole]
   DefaultExecutionRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'
@@ -78,6 +77,38 @@ Resources:
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+  DefaultTaskRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM Role for the task to make AWS API calls on your behalf. Policies are required by ECS Exec'
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'ExecuteCommand'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: [
+                  "ssmmessages:CreateControlChannel",
+                  "ssmmessages:OpenControlChannel",
+                  "ssmmessages:CreateDataChannel",
+                  "ssmmessages:OpenDataChannel"
+                ]
+                Resource: "*"
+              - Effect: 'Allow'
+                Action: [
+                  "logs:CreateLogStream",
+                  "logs:DescribeLogGroups",
+                  "logs:DescribeLogStreams",
+                  "logs:PutLogEvents"
+                ]
+                Resource: "*"
   ECRRepo:
     Metadata:
       'aws:copilot:description': 'An ECR repository to store your container images'

@@ -5,50 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	template "github.com/aws/copilot-cli/internal/pkg/template"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockloadBalancedWebSvcReadParser is a mock of loadBalancedWebSvcReadParser interface
+// MockloadBalancedWebSvcReadParser is a mock of loadBalancedWebSvcReadParser interface.
 type MockloadBalancedWebSvcReadParser struct {
 	ctrl     *gomock.Controller
 	recorder *MockloadBalancedWebSvcReadParserMockRecorder
 }
 
-// MockloadBalancedWebSvcReadParserMockRecorder is the mock recorder for MockloadBalancedWebSvcReadParser
+// MockloadBalancedWebSvcReadParserMockRecorder is the mock recorder for MockloadBalancedWebSvcReadParser.
 type MockloadBalancedWebSvcReadParserMockRecorder struct {
 	mock *MockloadBalancedWebSvcReadParser
 }
 
-// NewMockloadBalancedWebSvcReadParser creates a new mock instance
+// NewMockloadBalancedWebSvcReadParser creates a new mock instance.
 func NewMockloadBalancedWebSvcReadParser(ctrl *gomock.Controller) *MockloadBalancedWebSvcReadParser {
 	mock := &MockloadBalancedWebSvcReadParser{ctrl: ctrl}
 	mock.recorder = &MockloadBalancedWebSvcReadParserMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockloadBalancedWebSvcReadParser) EXPECT() *MockloadBalancedWebSvcReadParserMockRecorder {
 	return m.recorder
 }
 
-// Read mocks base method
-func (m *MockloadBalancedWebSvcReadParser) Read(path string) (*template.Content, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Read", path)
-	ret0, _ := ret[0].(*template.Content)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Read indicates an expected call of Read
-func (mr *MockloadBalancedWebSvcReadParserMockRecorder) Read(path interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockloadBalancedWebSvcReadParser)(nil).Read), path)
-}
-
-// Parse mocks base method
+// Parse mocks base method.
 func (m *MockloadBalancedWebSvcReadParser) Parse(path string, data interface{}, options ...template.ParseOption) (*template.Content, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{path, data}
@@ -61,14 +47,14 @@ func (m *MockloadBalancedWebSvcReadParser) Parse(path string, data interface{}, 
 	return ret0, ret1
 }
 
-// Parse indicates an expected call of Parse
+// Parse indicates an expected call of Parse.
 func (mr *MockloadBalancedWebSvcReadParserMockRecorder) Parse(path, data interface{}, options ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{path, data}, options...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parse", reflect.TypeOf((*MockloadBalancedWebSvcReadParser)(nil).Parse), varargs...)
 }
 
-// ParseLoadBalancedWebService mocks base method
+// ParseLoadBalancedWebService mocks base method.
 func (m *MockloadBalancedWebSvcReadParser) ParseLoadBalancedWebService(arg0 template.WorkloadOpts) (*template.Content, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ParseLoadBalancedWebService", arg0)
@@ -77,8 +63,23 @@ func (m *MockloadBalancedWebSvcReadParser) ParseLoadBalancedWebService(arg0 temp
 	return ret0, ret1
 }
 
-// ParseLoadBalancedWebService indicates an expected call of ParseLoadBalancedWebService
+// ParseLoadBalancedWebService indicates an expected call of ParseLoadBalancedWebService.
 func (mr *MockloadBalancedWebSvcReadParserMockRecorder) ParseLoadBalancedWebService(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseLoadBalancedWebService", reflect.TypeOf((*MockloadBalancedWebSvcReadParser)(nil).ParseLoadBalancedWebService), arg0)
+}
+
+// Read mocks base method.
+func (m *MockloadBalancedWebSvcReadParser) Read(path string) (*template.Content, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Read", path)
+	ret0, _ := ret[0].(*template.Content)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Read indicates an expected call of Read.
+func (mr *MockloadBalancedWebSvcReadParserMockRecorder) Read(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockloadBalancedWebSvcReadParser)(nil).Read), path)
 }

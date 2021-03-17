@@ -89,6 +89,9 @@ const (
 	retriesFlag  = "retries"
 	timeoutFlag  = "timeout"
 	scheduleFlag = "schedule"
+
+	taskIDFlag    = "task-id"
+	containerFlag = "container"
 )
 
 // Short flag names.
@@ -101,6 +104,7 @@ const (
 	workloadFlagShort = "w"
 
 	dockerFileFlagShort        = "d"
+	commandFlagShort           = "c"
 	imageFlagShort             = "i"
 	repoURLFlagShort           = "u"
 	githubAccessTokenFlagShort = "t"
@@ -129,8 +133,10 @@ Mutually exclusive with -%s, --%s`, imageFlagShort, imageFlag)
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
 	securityGroupsFlagDescription = fmt.Sprintf(`Optional. The security group IDs for the task to use. Can be specified multiple times.
 Cannot be specified with '%s' or '%s'.`, appFlag, envFlag)
-	taskDefaultFlagDescription = fmt.Sprintf(`Optional. Run tasks in default cluster and default subnets. 
+	taskRunDefaultFlagDescription = fmt.Sprintf(`Optional. Run tasks in default cluster and default subnets. 
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, subnetsFlag)
+	taskExecDefaultFlagDescription = fmt.Sprintf(`Optional. Execute commands in running tasks in default cluster and default subnets. 
+Cannot be specified with '%s' or '%s'.`, appFlag, envFlag)
 	taskDeleteDefaultFlagDescription = fmt.Sprintf(`Optional. Delete a task which was launched in the default cluster and subnets.
 Cannot be specified with '%s' or '%s'`, appFlag, envFlag)
 	taskEnvFlagDescription = fmt.Sprintf(`Optional. Name of the environment.
@@ -145,9 +151,11 @@ const (
 	svcFlagDescription      = "Name of the service."
 	jobFlagDescription      = "Name of the job."
 	workloadFlagDescription = "Name of the service or job."
+	nameFlagDescription     = "Name of the service, job, or task group."
 	pipelineFlagDescription = "Name of the pipeline."
 	profileFlagDescription  = "Name of the profile."
 	yesFlagDescription      = "Skips confirmation prompt."
+	execYesFlagDescription  = "Optional. Whether to update the Session Manager Plugin."
 	jsonFlagDescription     = "Optional. Outputs in JSON format."
 
 	imageTagFlagDescription     = `Optional. The container image tag.`
@@ -199,7 +207,7 @@ Must be of the format '<keyName>:<dataType>'.`
 	taskRoleFlagDescription      = "Optional. The ARN of the role for the task to use."
 	executionRoleFlagDescription = "Optional. The ARN of the role that grants the container agent permission to make AWS API calls."
 	envVarsFlagDescription       = "Optional. Environment variables specified by key=value separated with commas."
-	commandFlagDescription       = `Optional. The command that is passed to "docker run" to override the default command.`
+	runCommandFlagDescription    = `Optional. The command that is passed to "docker run" to override the default command.`
 	entrypointFlagDescription    = `Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.`
 	taskGroupFlagDescription     = `Optional. The group name of the task. 
 Tasks with the same group name share the same set of resources. 
@@ -231,4 +239,8 @@ AWS Schedule Expressions of the form "rate(10 minutes)" or "cron(0 12 L * ? 2021
 are also accepted.`
 
 	upgradeAllEnvsDescription = "Optional. Upgrade all environments."
+
+	taskIDFlagDescription      = "Optional. ID of the task you want to exec in."
+	execCommandFlagDescription = `Optional. The command that is passed to a running container.`
+	containerFlagDescription   = "Optional. The specific container you want to exec in. By default the first essential container will be used."
 )

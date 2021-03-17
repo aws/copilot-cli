@@ -11,4 +11,5 @@ const (
 	Settings       = "Settings"
 	Release        = "Release"
 	Addons         = "Addons"
+	Debug          = "Debug"
 )

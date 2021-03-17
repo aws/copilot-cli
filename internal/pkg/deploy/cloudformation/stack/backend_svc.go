@@ -101,6 +101,7 @@ func (s *BackendService) Template() (string, error) {
 		NestedStack:        outputs,
 		Sidecars:           sidecars,
 		Autoscaling:        autoscaling,
+		ExecuteCommand:     convertExecuteCommand(&s.manifest.ExecuteCommand),
 		HealthCheck:        s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),
 		LogConfig:          convertLogging(s.manifest.Logging),
 		DesiredCountLambda: desiredCountLambda.String(),

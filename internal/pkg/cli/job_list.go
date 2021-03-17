@@ -58,7 +58,7 @@ func (o *listJobOpts) Ask() error {
 		return nil
 	}
 
-	name, err := o.sel.Application(jobListAppNamePrompt, wkldListAppNameHelp)
+	name, err := o.sel.Application(jobListAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application name: %w", err)
 	}

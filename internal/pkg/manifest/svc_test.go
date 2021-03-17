@@ -31,6 +31,7 @@ image:
 cpu: 512
 memory: 1024
 count: 1
+exec: true
 http:
   path: "svc"
   target_container: "frontend"
@@ -82,6 +83,9 @@ environments:
 							Memory: aws.Int(1024),
 							Count: Count{
 								Value: aws.Int(1),
+							},
+							ExecuteCommand: ExecuteCommand{
+								Enable: aws.Bool(true),
 							},
 							Variables: map[string]string{
 								"LOG_LEVEL": "WARN",
@@ -183,6 +187,9 @@ secrets:
 							Count: Count{
 								Value: aws.Int(1),
 							},
+							ExecuteCommand: ExecuteCommand{
+								Enable: aws.Bool(false),
+							},
 							Secrets: map[string]string{
 								"API_TOKEN": "SUBS_API_TOKEN",
 							},
@@ -213,6 +220,7 @@ type: 'OH NO'
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
+				require.NoError(t, err)
 				tc.requireCorrectValues(t, m)
 			}
 		})

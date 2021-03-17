@@ -10,12 +10,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
@@ -506,6 +508,19 @@ type roleDeleter interface {
 	DeleteRole(string) error
 }
 
+type serviceDescriber interface {
+	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
+}
+
+type ecsCommandExecutor interface {
+	ExecuteCommand(in awsecs.ExecuteCommandInput) error
+}
+
+type ssmPluginManager interface {
+	ValidateBinary() error
+	InstallLatestBinary() error
+}
+
 type taskStopper interface {
 	StopOneOffTasks(app, env, family string) error
 	StopDefaultClusterTasks(familyName string) error
@@ -514,6 +529,10 @@ type taskStopper interface {
 
 type serviceLinkedRoleCreator interface {
 	CreateECSServiceLinkedRole() error
+}
+
+type runningTaskSelector interface {
+	RunningTask(prompt, help string, opts ...selector.TaskOpts) (*awsecs.Task, error)
 }
 
 type dockerEngineValidator interface {
