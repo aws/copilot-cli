@@ -162,7 +162,7 @@ Resources:
     Type: AWS::SecretsManager::SecretTargetAttachment
     Properties:
       SecretId: !Ref AuroraSecret
-      TargetId: !Ref AuroraDBCluster
+      TargetId: !Ref {{- logicalIDSafe .Name -}}
       TargetType: AWS::RDS::DBCluster
 
 Outputs:
