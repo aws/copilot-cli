@@ -11,27 +11,19 @@ Parameters:
   # Customize your Aurora Serverless cluster by setting the default value of the following parameters.
   InitialDBName:
     Type: String
-    Description: The name of the table.
+    Description: The name of the table to be created in the DB cluster.
     Default: {{.InitialDBName}}
     # Cannot have special characters
     # Naming constraints: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html#RDS_Limits.Constraints
-  DBPort:
-    Type: Number
-    Description: The traffic port for connections to the database.
-    Default: 5432 # PostgreSQL
-    # Default: 3306 # MySQL
   DBMinCapacity:
     Type: Number
     Description: The minimum scaling capacity for the cluster.
-    AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384] # PostgreSQL
-    # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256] # MySQL
-    Default: 2 # PostgreSQL
-    # Default: 1 # MySQL
+    AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
+    Default: 2
   DBMaxCapacity:
     Type: Number
     Description: The maximum scaling capacity for the cluster.
-    AllowedValues: [ 2, 4, 8, 16, 32, 64, 192, 384 ] # PostgreSQL
-    # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256] # MySQL
+    AllowedValues: [ 2, 4, 8, 16, 32, 64, 192, 384 ]
     Default: 8
   DBAutoPauseSeconds:
     Type: Number
@@ -66,7 +58,6 @@ Resources:
               StringEquals:
                 'kms:CallerAccount': !Ref 'AWS::AccountId'
                 'kms:ViaService': !Sub 'rds.${AWS::Region}.amazonaws.com'
-
   AuroraKMSCMKAlias:
     Type: 'AWS::KMS::Alias'
     DeletionPolicy: Retain
@@ -74,21 +65,19 @@ Resources:
     Properties:
       AliasName: !Sub 'alias/${ {{- logicalIDSafe .Name -}} }'
       TargetKeyId: !Ref AuroraKMSCMK
-
   DBSubnetGroup:
     Type: 'AWS::RDS::DBSubnetGroup'
     Properties:
       DBSubnetGroupDescription: Group of Copilot private subnets for Aurora cluster.
       SubnetIds:
         !Split [',', { 'Fn::ImportValue': !Sub '${App}-${Env}-PrivateSubnets' }]
-
   DBClusterSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: The Security Group for the database cluster.
       SecurityGroupIngress:
-        - ToPort: !Ref DBPort
-          FromPort: !Ref DBPort
+        - ToPort: 5432
+          FromPort: 5432
           IpProtocol: tcp
           Description: From Environment Security Group
           SourceSecurityGroupId:
@@ -101,7 +90,6 @@ Resources:
         - IpProtocol: '-1'
           Description: Allow all outbound traffic by default
           CidrIp: 0.0.0.0/0
-
   AuroraSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -113,18 +101,15 @@ Resources:
         ExcludePunctuation: true
         IncludeSpace: false
         PasswordLength: 16
-
   {{- if .ParameterGroup}}
-
-  #   DBClusterParameterGroup:
-  #     Type: 'AWS::RDS::DBClusterParameterGroup'
-  #     Properties:
-  #       Description: !Ref 'AWS::StackName'
-  #       Family: 'aurora-postgresql10'
-  #       Parameters:
-  #         client_encoding: 'UTF8'
+  # DBClusterParameterGroup:
+  #   Type: 'AWS::RDS::DBClusterParameterGroup'
+  #   Properties:
+  #     Description: !Ref 'AWS::StackName'
+  #     Family: 'aurora-postgresql10'
+  #     Parameters:
+  #       client_encoding: 'UTF8'
   {{- else}}
-
   DBClusterParameterGroup:
     Type: 'AWS::RDS::DBClusterParameterGroup'
     Properties:
@@ -133,38 +118,35 @@ Resources:
       Parameters:
         client_encoding: 'UTF8'
   {{- end}}
-
   {{logicalIDSafe .Name}}:
-  Type: 'AWS::RDS::DBCluster'
-  Properties:
-    MasterUsername:
-      !Join [ "", [ "{{resolve:secretsmanager:", !Ref AuroraSecret, ":SecretString:username}}" ]]
-    MasterUserPassword:
-      !Join [ "", [ "{{resolve:secretsmanager:", !Ref AuroraSecret, ":SecretString:password}}" ]]
-    DatabaseName: !Ref InitialDBName
-    Engine: {{.Engine}}
-    #      EngineVersion: '10.7'
-    EngineMode: serverless
-    EnableHttpEndpoint: true
-    StorageEncrypted: true
-    KmsKeyId: !Ref AuroraKMSCMK
-    DBClusterParameterGroupName: {{- if .ParameterGroup}} {{.ParameterGroup}} {{- else}} !Ref DBClusterParameterGroup {{- end}}
-    DBSubnetGroupName: !Ref DBSubnetGroup
-    VpcSecurityGroupIds:
-      - !Ref DBClusterSecurityGroup
-    ScalingConfiguration:
-      AutoPause: true
-      MinCapacity: !Ref DBMinCapacity
-      MaxCapacity: !Ref DBMaxCapacity
-      SecondsUntilAutoPause: !Ref DBAutoPauseSeconds
-
-  SecretAuroraClusterAttachment:
-    Type: AWS::SecretsManager::SecretTargetAttachment
+    Type: 'AWS::RDS::DBCluster'
     Properties:
-      SecretId: !Ref AuroraSecret
-      TargetId: !Ref {{- logicalIDSafe .Name -}}
-      TargetType: AWS::RDS::DBCluster
-
+      MasterUsername:
+        !Join [ "", [ "{{resolve:secretsmanager:", !Ref AuroraSecret, ":SecretString:username}}" ]]
+      MasterUserPassword:
+        !Join [ "", [ "{{resolve:secretsmanager:", !Ref AuroraSecret, ":SecretString:password}}" ]]
+      DatabaseName: !Ref InitialDBName
+      Engine: 'aurora-postgresql'
+      EngineVersion: '10.12'
+      EngineMode: serverless
+      EnableHttpEndpoint: true
+      StorageEncrypted: true
+      KmsKeyId: !Ref AuroraKMSCMK
+      DBClusterParameterGroupName: {{- if .ParameterGroup}} {{.ParameterGroup}} {{- else}} !Ref DBClusterParameterGroup {{- end}}
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref DBClusterSecurityGroup
+      ScalingConfiguration:
+        AutoPause: true
+        MinCapacity: !Ref DBMinCapacity
+        MaxCapacity: !Ref DBMaxCapacity
+        SecondsUntilAutoPause: !Ref DBAutoPauseSeconds
+    SecretAuroraClusterAttachment:
+      Type: AWS::SecretsManager::SecretTargetAttachment
+      Properties:
+        SecretId: !Ref AuroraSecret
+        TargetId: !Ref {{- logicalIDSafe .Name -}}
+        TargetType: AWS::RDS::DBCluster
 Outputs:
   AuroraMetadata: # injected as AURORA_METADATA environment variable by Copilot.
     Description: "The JSON secret that holds the database username and password. Fields are 'host', 'dbname', 'username', 'password'"
