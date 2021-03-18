@@ -134,7 +134,7 @@ Resources:
         client_encoding: 'UTF8'
   {{- end}}
 
-  {{logicalIDSafe .Name}}:
+  c:
   Type: 'AWS::RDS::DBCluster'
   Properties:
     MasterUsername:
@@ -162,7 +162,7 @@ Resources:
     Type: AWS::SecretsManager::SecretTargetAttachment
     Properties:
       SecretId: !Ref AuroraSecret
-      TargetId: !Ref AuroraDBCluster
+      TargetId: !Ref {{- logicalIDSafe .Name -}}
       TargetType: AWS::RDS::DBCluster
 
 Outputs:
