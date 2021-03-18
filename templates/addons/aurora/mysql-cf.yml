@@ -11,7 +11,7 @@ Parameters:
   # Customize your Aurora Serverless cluster by setting the default value of the following parameters.
   InitialDBName:
     Type: String
-    Description: The name of the table to be created in the DB cluster.
+    Description: The name of the initial database to be created in the DB cluster.
     Default: {{.InitialDBName}}
     # Cannot have special characters
     # Naming constraints: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html#RDS_Limits.Constraints
