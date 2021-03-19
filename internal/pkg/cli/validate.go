@@ -114,9 +114,11 @@ var (
     // The storage name for RDS storage type is used as the logical ID of the Aurora Serverless DB cluster in the CFN template.
     // When creating the DB cluster, CFN will use the logical ID to generate a DB cluster identifier.
     // Therefore, the validation needs to take into account the constraints for DB cluster identifier.
+    // https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.CreateInstance.html#Aurora.CreateInstance.Settings
 	rdsStorageNameRegExp = regexp.MustCompile("" +
-        "^" +               // Start of string.
-        "[A-Za-z]",         // Starts with a letter. The DB cluster identifier must start with a letter.
+        "^" +                   // Start of string.
+        "[A-Za-z]" +            // Starts with a letter. The DB cluster identifier must start with a letter.
+		`[a-zA-Z0-9\-\.\_]*$`, // Followed by alphanumeric, ._-
     )
 )
 
