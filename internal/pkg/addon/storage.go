@@ -158,9 +158,9 @@ func (r *RDS) MarshalBinary() ([]byte, error) {
 }
 
 // NewRDS creates a new RDS marshaler which can be used to write CF via addonWriter.
-func NewRDS(input *RDSProps) *RDS {
+func NewRDS(input RDSProps) *RDS {
 	return &RDS{
-		RDSProps: *input,
+		RDSProps: input,
 
 		parser: template.New(),
 	}

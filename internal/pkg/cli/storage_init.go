@@ -646,7 +646,7 @@ func (o *initStorageOpts) newRDSAddon() (*addon.RDS, error) {
 		return nil, errors.New("unknown engine type")
 	}
 
-	return addon.NewRDS(&addon.RDSProps{
+	return addon.NewRDS(addon.RDSProps{
 		StorageProps: &addon.StorageProps{
 			Name: o.storageName,
 		},
