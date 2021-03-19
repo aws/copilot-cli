@@ -280,8 +280,9 @@ func TestValidateStorageType(t *testing.T) {
 			want:  nil,
 		},
 		"RDS okay": {
+			// Hiding RDS for now.
 			input: "RDS",
-			want:  nil,
+			want:  fmt.Errorf(fmtErrInvalidStorageType, "RDS", prettify(storageTypes)),
 		},
 		"Bad name": {
 			input: "Dropbox",
