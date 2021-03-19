@@ -6,7 +6,6 @@ package cli
 import (
 	"encoding"
 	"fmt"
-
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -21,23 +20,40 @@ import (
 )
 
 const (
-	dynamoDBStorageType = "DynamoDB"
-	s3StorageType       = "S3"
-)
+	dynamoDBStorageType     = "DynamoDB"
+	s3StorageType           = "S3"
+	rdsStorageType          = "RDS"
 
-const (
-	s3BucketFriendlyText      = "S3 Bucket"
-	dynamoDBTableFriendlyText = "DynamoDB Table"
-)
-
-const (
-	ddbKeyString = "key"
+	dynamoDBStorageTypeFriendly = "DynamoDB"
+	s3StorageTypeFriendly       = "S3"
+	rdsStorageTypeFriendly      = "RDS (Aurora Serverless)"
 )
 
 var storageTypes = []string{
 	dynamoDBStorageType,
 	s3StorageType,
+	rdsStorageType,
 }
+
+// Friendly options to display when prompting to select a storage type.
+var storageTypesFriendly = []string{
+	dynamoDBStorageTypeFriendly,
+	s3StorageTypeFriendly,
+	rdsStorageTypeFriendly,
+}
+
+// Map friendly options to storage type
+var storageType = map[string]string{
+	dynamoDBStorageTypeFriendly:    dynamoDBStorageType,
+	s3StorageTypeFriendly:          s3StorageType,
+	rdsStorageTypeFriendly:         rdsStorageType,
+}
+
+const (
+	s3BucketFriendlyText      = "S3 Bucket"
+	dynamoDBTableFriendlyText = "DynamoDB Table"
+	rdsFriendlyText           = "RDS Aurora Serverless Cluster"
+)
 
 // General-purpose prompts, collected for all storage resources.
 var (
@@ -74,6 +90,20 @@ partition key but a different sort key. You may specify up to 5 alternate sort k
 	storageInitDDBLSINameHelp   = "You can use the characters [a-zA-Z0-9.-_]"
 )
 
+// RDS Aurora Serverless specific questions and help prompts.
+var (
+	storageInitRDSInitialDBNamePrompt = "What would you like to name your initial database?"
+	storageInitRDSInitialDBNameHelp   = "The name of the initial database in the cluster."
+
+	storageInitRDSDBEnginePrompt = "Which database engine would you like to use?"
+	storageInitRDSDBEngineHelp   = "The database engine used in the cluster."
+)
+
+// DynamoDB specific constants and variables.
+const (
+	ddbKeyString = "key"
+)
+
 const (
 	ddbStringType = "String"
 	ddbIntType    = "Number"
@@ -84,6 +114,17 @@ var attributeTypes = []string{
 	ddbStringType,
 	ddbIntType,
 	ddbBinaryType,
+}
+
+// RDS Aurora Serverless specific constants and variables.
+const (
+	engineTypeMySQL      = "MySQL"
+	engineTypePostgreSQL = "PostgreSQL"
+)
+
+var engineTypes = []string{
+	engineTypeMySQL,
+	engineTypePostgreSQL,
 }
 
 type initStorageVars struct {
@@ -97,6 +138,11 @@ type initStorageVars struct {
 	lsiSorts     []string // lsi sort keys collected as "name:T" where T is one of [SNB]
 	noLSI        bool
 	noSort       bool
+
+	// RDS Aurora Serverless specific values collected via flags or prompts
+	engine         string
+	parameterGroup string
+	initialDBName  string
 }
 
 type initStorageOpts struct {
@@ -168,8 +214,14 @@ func (o *initStorageOpts) Validate() error {
 		return err
 	}
 
+	if o.engine != "" {
+		if err := validateEngine(o.engine); err != nil {
+			return err
+		}
+	}
 	return nil
 }
+
 func (o *initStorageOpts) validateDDB() error {
 	if o.partitionKey != "" {
 		if err := validateKey(o.partitionKey); err != nil {
@@ -219,6 +271,14 @@ func (o *initStorageOpts) Ask() error {
 		if err := o.askDynamoLSIConfig(); err != nil {
 			return err
 		}
+	case rdsStorageType:
+		if err := o.askAuroraEngineType(); err != nil {
+			return err
+		}
+		// Ask for initial db name after engine type since the name needs to be validated accordingly.
+		if err := o.askAuroraInitialDBName(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -228,16 +288,16 @@ func (o *initStorageOpts) askStorageType() error {
 		return nil
 	}
 
-	storageType, err := o.prompt.SelectOne(fmt.Sprintf(
+	t, err := o.prompt.SelectOne(fmt.Sprintf(
 		fmtStorageInitTypePrompt, color.HighlightUserInput(o.workloadName)),
 		storageInitTypeHelp,
-		storageTypes,
+		storageTypesFriendly,
 		prompt.WithFinalMessage("Storage type:"))
 	if err != nil {
 		return fmt.Errorf("select storage type: %w", err)
 	}
 
-	o.storageType = storageType
+	o.storageType = storageType[t]
 	return nil
 }
 
@@ -245,6 +305,7 @@ func (o *initStorageOpts) askStorageName() error {
 	if o.storageName != "" {
 		return nil
 	}
+
 	var validator func(interface{}) error
 	var friendlyText string
 	switch o.storageType {
@@ -254,6 +315,9 @@ func (o *initStorageOpts) askStorageName() error {
 	case dynamoDBStorageType:
 		validator = dynamoTableNameValidation
 		friendlyText = dynamoDBTableFriendlyText
+	case rdsStorageType:
+		validator = rdsNameValidation
+		friendlyText = rdsFriendlyText
 	}
 
 	name, err := o.prompt.Get(fmt.Sprintf(fmtStorageInitNamePrompt,
@@ -358,6 +422,7 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 	o.sortKey = key + ":" + keyType
 	return nil
 }
+
 func (o *initStorageOpts) askDynamoLSIConfig() error {
 	// LSI has already been specified by flags.
 	if len(o.lsiSorts) > 0 {
@@ -420,6 +485,47 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 	}
 }
 
+func (o *initStorageOpts) askAuroraEngineType() error {
+	if o.engine != "" {
+		return nil
+	}
+
+	engine, err := o.prompt.SelectOne(storageInitRDSDBEnginePrompt,
+		storageInitRDSDBEngineHelp,
+		engineTypes,
+		prompt.WithFinalMessage("Database engine:"))
+	if err != nil {
+		return fmt.Errorf("select database engine: %w", err)
+	}
+	o.engine = engine
+	return nil
+}
+
+func (o *initStorageOpts) askAuroraInitialDBName() error {
+	var validator func(interface{}) error
+	switch o.engine {
+	case engineTypeMySQL:
+		validator = validateMySQLDBName
+	case engineTypePostgreSQL:
+		validator = validatePostgreSQLDBName
+	}
+
+	if o.initialDBName != "" {
+		// The flag input is validated here because it needs engine type to determine which validator to use.
+		return validator(o.initialDBName)
+	}
+
+	dbName, err := o.prompt.Get(storageInitRDSInitialDBNamePrompt,
+		storageInitRDSInitialDBNameHelp,
+		validator,
+		prompt.WithFinalMessage("Initial database name:"))
+	if err != nil {
+		return fmt.Errorf("input initial database name: %w", err)
+	}
+	o.initialDBName = dbName
+	return nil
+}
+
 func (o *initStorageOpts) validateWorkloadName() error {
 	names, err := o.ws.WorkloadNames()
 	if err != nil {
@@ -434,7 +540,6 @@ func (o *initStorageOpts) validateWorkloadName() error {
 }
 
 func (o *initStorageOpts) Execute() error {
-
 	return o.createAddon()
 }
 
@@ -464,6 +569,8 @@ func (o *initStorageOpts) createAddon() error {
 		addonFriendlyText = dynamoDBTableFriendlyText
 	case s3StorageType:
 		addonFriendlyText = s3BucketFriendlyText
+	case rdsStorageType:
+		addonFriendlyText = rdsFriendlyText
 	default:
 		return fmt.Errorf(fmtErrInvalidStorageType, o.storageType, prettify(storageTypes))
 	}
@@ -476,12 +583,15 @@ func (o *initStorageOpts) createAddon() error {
 
 	return nil
 }
+
 func (o *initStorageOpts) newAddon() (encoding.BinaryMarshaler, error) {
 	switch o.storageType {
 	case dynamoDBStorageType:
 		return o.newDynamoDBAddon()
 	case s3StorageType:
 		return o.newS3Addon()
+	case rdsStorageType:
+		return o.newRDSAddon()
 	default:
 		return nil, fmt.Errorf("storage type %s doesn't have a CF template", o.storageType)
 	}
@@ -520,6 +630,27 @@ func (o *initStorageOpts) newS3Addon() (*addon.S3, error) {
 		},
 	}
 	return addon.NewS3(props), nil
+}
+
+func (o *initStorageOpts) newRDSAddon() (*addon.RDS, error) {
+	var engine string
+	switch o.engine {
+	case engineTypeMySQL:
+		engine = addon.RDSEngineTypeMySQL
+	case engineTypePostgreSQL:
+		engine = addon.RDSEngineTypePostgreSQL
+	}
+
+	props := &addon.RDSProps{
+		StorageProps: &addon.StorageProps{
+			Name: o.storageName,
+		},
+
+		Engine:         engine,
+		InitialDBName:  o.initialDBName,
+		ParameterGroup: o.parameterGroup,
+	}
+	return addon.NewRDS(props), nil
 }
 
 func (o *initStorageOpts) RecommendedActions() []string {
@@ -581,6 +712,8 @@ are injected into your containers as environment variables for easy access.`,
 	cmd.Flags().StringArrayVar(&vars.lsiSorts, storageLSIConfigFlag, []string{}, storageLSIConfigFlagDescription)
 	cmd.Flags().BoolVar(&vars.noLSI, storageNoLSIFlag, false, storageNoLSIFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSort, storageNoSortFlag, false, storageNoSortFlagDescription)
+
+	cmd.Flags().StringVar(&vars.parameterGroup, "param", "", "paramee")
 
 	requiredFlags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
