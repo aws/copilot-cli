@@ -118,7 +118,8 @@ var (
 	rdsStorageNameRegExp = regexp.MustCompile("" +
         "^" +                   // Start of string.
         "[A-Za-z]" +            // Starts with a letter. The DB cluster identifier must start with a letter.
-		`[a-zA-Z0-9\-\.\_]*$`, // Followed by alphanumeric, ._-
+        `[a-zA-Z0-9\-\.\_]*` +  // Followed by alphanumeric, ._-
+        "$",                    // End of string.
     )
 )
 

@@ -971,6 +971,9 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 					lsiSorts:     tc.inLSISorts,
 					noLSI:        tc.inNoLSI,
 					noSort:       tc.inNoSort,
+
+					engine:         tc.inEngine,
+					parameterGroup: tc.inParameterGroup,
 				},
 				appName: tc.inAppName,
 				ws:      mockAddon,

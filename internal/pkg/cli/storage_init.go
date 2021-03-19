@@ -5,6 +5,7 @@ package cli
 
 import (
 	"encoding"
+	"errors"
 	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -508,6 +509,8 @@ func (o *initStorageOpts) askAuroraInitialDBName() error {
 		validator = validateMySQLDBName
 	case engineTypePostgreSQL:
 		validator = validatePostgreSQLDBName
+	default:
+		return errors.New("unknown engine type")
 	}
 
 	if o.initialDBName != "" {
@@ -639,9 +642,11 @@ func (o *initStorageOpts) newRDSAddon() (*addon.RDS, error) {
 		engine = addon.RDSEngineTypeMySQL
 	case engineTypePostgreSQL:
 		engine = addon.RDSEngineTypePostgreSQL
+	default:
+		return nil, errors.New("unknown engine type")
 	}
 
-	props := &addon.RDSProps{
+	return addon.NewRDS(&addon.RDSProps{
 		StorageProps: &addon.StorageProps{
 			Name: o.storageName,
 		},
@@ -649,8 +654,7 @@ func (o *initStorageOpts) newRDSAddon() (*addon.RDS, error) {
 		Engine:         engine,
 		InitialDBName:  o.initialDBName,
 		ParameterGroup: o.parameterGroup,
-	}
-	return addon.NewRDS(props), nil
+	}), nil
 }
 
 func (o *initStorageOpts) RecommendedActions() []string {
@@ -712,8 +716,6 @@ are injected into your containers as environment variables for easy access.`,
 	cmd.Flags().StringArrayVar(&vars.lsiSorts, storageLSIConfigFlag, []string{}, storageLSIConfigFlagDescription)
 	cmd.Flags().BoolVar(&vars.noLSI, storageNoLSIFlag, false, storageNoLSIFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSort, storageNoSortFlag, false, storageNoSortFlagDescription)
-
-	cmd.Flags().StringVar(&vars.parameterGroup, "param", "", "paramee")
 
 	requiredFlags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
