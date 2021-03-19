@@ -5,7 +5,6 @@
 package addon
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -21,11 +20,12 @@ const (
 )
 
 const (
+	// Engine type for RDS Aurora Serverless.
 	RDSEngineTypeMySQL      = "mysql"
 	RDSEngineTypePostgreSQL = "postgresql"
 )
 
-var errInvalidEngineType = errors.New("unknown engine type")
+const fmtErrInvalidEngineType = "unknown RDS engine type %s"
 
 var regexpMatchAttribute = regexp.MustCompile(`^(\S+):([sbnSBN])`)
 
@@ -63,13 +63,6 @@ type StorageProps struct {
 	Name string
 }
 
-type RDSProps struct {
-	*StorageProps
-	Engine         string
-	InitialDBName  string
-	ParameterGroup string
-}
-
 // S3Props contains S3-specific properties for addon.NewS3().
 type S3Props struct {
 	*StorageProps
@@ -85,7 +78,6 @@ type DynamoDBProps struct {
 	HasLSI       bool
 }
 
-
 // DDBAttribute holds the attribute definition of a DynamoDB attribute (keys, local secondary indices).
 type DDBAttribute struct {
 	Name     *string
@@ -97,6 +89,14 @@ type DDBLocalSecondaryIndex struct {
 	PartitionKey *string
 	SortKey      *string
 	Name         *string
+}
+
+// RDSProps holds RDS-specific properties for addon.NewRDS().
+type RDSProps struct {
+	*StorageProps
+	Engine         string
+	InitialDBName  string
+	ParameterGroup string
 }
 
 // MarshalBinary serializes the DynamoDB object into a binary YAML CF template.
@@ -148,7 +148,7 @@ func (r *RDS) MarshalBinary() ([]byte, error) {
 	case RDSEngineTypePostgreSQL:
 		addonPath = rdsPostgreSQLAddonPath
 	default:
-		return nil, errInvalidEngineType
+		return nil, fmt.Errorf(fmtErrInvalidEngineType, r.Engine)
 	}
 	content, err := r.parser.Parse(addonPath, *r, template.WithFuncs(storageTemplateFunctions))
 	if err != nil {

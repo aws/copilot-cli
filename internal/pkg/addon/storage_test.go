@@ -150,7 +150,7 @@ func TestRDS_MarshalBinary(t *testing.T) {
 		"invalid engine": {
 			engine: "weird-engine",
 			mockDependencies: func(ctrl *gomock.Controller, r *RDS) {},
-			wantedError: errInvalidEngineType,
+			wantedError: errors.New("unknown RDS engine type weird-engine"),
 		},
 	}
 
