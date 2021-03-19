@@ -193,6 +193,29 @@ func TestValidateDDBName(t *testing.T) {
 	}
 }
 
+func TestValidateRDSName(t *testing.T) {
+	testCases := map[string]testCase{
+		"good case": {
+			input: "goodname",
+			want:  nil,
+		},
+		"too long": {
+			input: "AprilisthecruellestmonthbreedingLilacsoutofthedeadlandmixingMemoryanddesire",
+			want:  errRDSNameBadSize,
+		},
+		"bad character": {
+			input: "not-good!",
+			want:  errInvalidRDSNameCharacters,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := rdsNameValidation(tc.input)
+			require.True(t, errors.Is(got, tc.want))
+		})
+	}
+}
+
 func TestValidatePath(t *testing.T) {
 	testCases := map[string]struct {
 		input interface{}
@@ -254,6 +277,10 @@ func TestValidateStorageType(t *testing.T) {
 		},
 		"DDB okay": {
 			input: "DynamoDB",
+			want:  nil,
+		},
+		"RDS okay": {
+			input: "RDS",
 			want:  nil,
 		},
 		"Bad name": {
@@ -480,3 +507,93 @@ func TestValidateCron(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateEngine(t *testing.T) {
+	testCases := map[string]testCase {
+		"mysql": {
+			input: "MySQL",
+			want:  nil,
+		},
+		"postgresql": {
+			input: "PostgreSQL",
+			want:  nil,
+		},
+		"invalid engine type": {
+			input: "weird-engine",
+			want:  errors.New("invalid engine type weird-engine: must be one of \"MySQL\", \"PostgreSQL\""),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := validateEngine(tc.input)
+			if tc.want != nil {
+				require.EqualError(t, got, tc.want.Error())
+			} else {
+				require.NoError(t, got)
+			}
+		})
+	}
+}
+
+func TestValidateMySQLDBName(t *testing.T) {
+	testCases := map[string]testCase {
+		"good case": {
+			input: "my_db_123_",
+			want:  nil,
+		},
+		"too long": {
+			input: "April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m",
+			want:  errMySQLDBNameBadSize,
+		},
+		"bad character": {
+			input: "bad_db_name:(",
+			want:  fmt.Errorf(fmtErrInvalidDBNameCharacters, "bad_db_name:("),
+		},
+		"bad starting character": {
+			input: "_not_good",
+			want:  fmt.Errorf(fmtErrInvalidDBNameCharacters, "_not_good"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := validateMySQLDBName(tc.input)
+			if tc.want != nil {
+				require.EqualError(t, got, tc.want.Error())
+			} else {
+				require.NoError(t, got)
+			}
+		})
+	}
+}
+
+func TestValidatePostgreSQLDBName(t *testing.T) {
+	testCases := map[string]testCase{
+		"good case": {
+			input: "my_db_123_",
+			want:  nil,
+		},
+		"too long": {
+			input: "April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m",
+			want:  errPostgreSQLDBNameBadSize,
+		},
+		"bad character": {
+			input: "bad_db_name:(",
+			want:  fmt.Errorf(fmtErrInvalidDBNameCharacters, "bad_db_name:("),
+		},
+		"bad starting character": {
+			input: "_not_good",
+			want:  fmt.Errorf(fmtErrInvalidDBNameCharacters, "_not_good"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := validatePostgreSQLDBName(tc.input)
+			if tc.want != nil {
+				require.EqualError(t, got, tc.want.Error())
+			} else {
+				require.NoError(t, got)
+			}
+		})
+	}
+}
+
