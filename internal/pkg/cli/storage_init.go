@@ -32,14 +32,14 @@ const (
 var storageTypes = []string{
 	dynamoDBStorageType,
 	s3StorageType,
-	rdsStorageType,
+	//rdsStorageType, // Hide RDS option for now.
 }
 
 // Friendly options to display when prompting to select a storage type.
 var storageTypesFriendly = []string{
 	dynamoDBStorageTypeFriendly,
 	s3StorageTypeFriendly,
-	rdsStorageTypeFriendly,
+	//rdsStorageTypeFriendly, // Hide RDS option for now.
 }
 
 // Map friendly options to storage type
