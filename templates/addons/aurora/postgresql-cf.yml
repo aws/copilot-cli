@@ -122,9 +122,9 @@ Resources:
     Type: 'AWS::RDS::DBCluster'
     Properties:
       MasterUsername:
-        !Join [ "", [ "{{resolve:secretsmanager:", !Ref AuroraSecret, ":SecretString:username}}" ]]
+        !Join [ "",  [ {{`'{{resolve:secretsmanager:'`}}, !Ref AuroraSecret, ":SecretString:username}}" ]]
       MasterUserPassword:
-        !Join [ "", [ "{{resolve:secretsmanager:", !Ref AuroraSecret, ":SecretString:password}}" ]]
+        !Join [ "",  [ {{`'{{resolve:secretsmanager:'`}}, !Ref AuroraSecret, ":SecretString:username}}" ]]
       DatabaseName: !Ref InitialDBName
       Engine: 'aurora-postgresql'
       EngineVersion: '10.12'
