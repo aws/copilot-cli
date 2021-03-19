@@ -108,6 +108,74 @@ func TestS3_MarshalBinary(t *testing.T) {
 	}
 }
 
+func TestRDS_MarshalBinary(t *testing.T) {
+	testCases := map[string]struct {
+		engine       string
+		mockDependencies func(ctrl *gomock.Controller, r *RDS)
+
+		wantedBinary []byte
+		wantedError  error
+	}{
+		"error parsing template": {
+			engine: RDSEngineTypePostgreSQL,
+			mockDependencies: func(ctrl *gomock.Controller, r *RDS) {
+				m := mocks.NewMockParser(ctrl)
+				r.parser = m
+				m.EXPECT().Parse(gomock.Any(), *r, gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantedError: errors.New("some error"),
+		},
+		"renders postgresql content": {
+			engine: RDSEngineTypePostgreSQL,
+			mockDependencies: func(ctrl *gomock.Controller, r *RDS) {
+				m := mocks.NewMockParser(ctrl)
+				r.parser = m
+				m.EXPECT().Parse(gomock.Eq(rdsPostgreSQLAddonPath), *r, gomock.Any()).
+					Return(&template.Content{Buffer: bytes.NewBufferString("psql")}, nil)
+
+			},
+			wantedBinary: []byte("psql"),
+		},
+		"renders mysql content": {
+			engine: RDSEngineTypeMySQL,
+			mockDependencies: func(ctrl *gomock.Controller, r *RDS) {
+				m := mocks.NewMockParser(ctrl)
+				r.parser = m
+				m.EXPECT().Parse(gomock.Eq(rdsMySQLAddonPath), *r, gomock.Any()).
+					Return(&template.Content{Buffer: bytes.NewBufferString("mysql")}, nil)
+
+			},
+			wantedBinary: []byte("mysql"),
+		},
+		"invalid engine": {
+			engine: "weird-engine",
+			mockDependencies: func(ctrl *gomock.Controller, r *RDS) {},
+			wantedError: errInvalidEngineType,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			addon := &RDS{
+				RDSProps: RDSProps{
+					Engine: tc.engine,
+				},
+			}
+			tc.mockDependencies(ctrl, addon)
+
+			// WHEN
+			b, err := addon.MarshalBinary()
+
+			// THEN
+			require.Equal(t, tc.wantedError, err)
+			require.Equal(t, tc.wantedBinary, b)
+		})
+	}
+}
+
 func TestDDBAttributeFromKey(t *testing.T) {
 	testCases := map[string]struct {
 		input     string
