@@ -224,34 +224,6 @@ func (p Prompt) GetSecret(message, help string, promptOpts ...Option) (string, e
 	return result, err
 }
 
-// SelectOne prompts the user with a list of options to choose from with the arrow keys.
-func (p Prompt) SelectOne(message, help string, options []string, promptOpts ...Option) (string, error) {
-	if len(options) <= 0 {
-		return "", ErrEmptyOptions
-	}
-
-	sel := &survey.Select{
-		Message: message,
-		Options: options,
-		// TODO: we can expose this if we want to enable consumers to set an explicit default.
-		Default: options[0],
-	}
-	if help != "" {
-		sel.Help = color.Help(help)
-	}
-
-	prompt := &prompt{
-		prompter: sel,
-	}
-	for _, opt := range promptOpts {
-		opt(prompt)
-	}
-
-	var result string
-	err := p(prompt, &result, stdio(), icons())
-	return result, err
-}
-
 // MultiSelect prompts the user with a list of options to choose from with the arrow keys and enter key.
 func (p Prompt) MultiSelect(message, help string, options []string, promptOpts ...Option) ([]string, error) {
 	var result []string
