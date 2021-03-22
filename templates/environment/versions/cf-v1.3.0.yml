@@ -260,13 +260,13 @@ Resources:
         - !Ref EFSSecurityGroup
 {{- end}}
 {{- else}}
-{{- range $ind, $cidr := .PublicSubnetCIDRs}}
+{{- range $ind, $cidr := .PrivateSubnetCIDRs}}
   MountTarget{{inc $ind}}:
     Type: AWS::EFS::MountTarget
     Condition: CreateEFS
     Properties:
       FileSystemId: !Ref FileSystem
-      SubnetId: !Ref PublicSubnet{{inc $ind}}
+      SubnetId: !Ref PrivateSubnet{{inc $ind}}
       SecurityGroups:
         - !Ref EFSSecurityGroup
 {{- end}}
