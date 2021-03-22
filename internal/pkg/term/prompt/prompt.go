@@ -153,7 +153,7 @@ func (p *prompt) Cleanup(config *survey.PromptConfig, val interface{}) error {
 }
 
 // Get prompts the user for free-form text input.
-func (p Prompt) Get(message, help string, validator ValidatorFunc, promptOpts ...Option) (string, error) {
+func (p Prompt) Get(message, help string, validator ValidatorFunc, promptOpts ...PromptConfig) (string, error) {
 	input := &survey.Input{
 		Message: message,
 	}
@@ -202,7 +202,7 @@ func (pp *passwordPrompt) Cleanup(config *survey.PromptConfig, val interface{}) 
 }
 
 // GetSecret prompts the user for sensitive input. Wraps survey.Password
-func (p Prompt) GetSecret(message, help string, promptOpts ...Option) (string, error) {
+func (p Prompt) GetSecret(message, help string, promptOpts ...PromptConfig) (string, error) {
 	passwd := &passwordPrompt{
 		Password: &survey.Password{
 			Message: message,
@@ -225,7 +225,7 @@ func (p Prompt) GetSecret(message, help string, promptOpts ...Option) (string, e
 }
 
 // MultiSelect prompts the user with a list of options to choose from with the arrow keys and enter key.
-func (p Prompt) MultiSelect(message, help string, options []string, promptOpts ...Option) ([]string, error) {
+func (p Prompt) MultiSelect(message, help string, options []string, promptCfgs ...PromptConfig) ([]string, error) {
 	var result []string
 	if len(options) <= 0 {
 		// returns nil slice if error
@@ -243,8 +243,8 @@ func (p Prompt) MultiSelect(message, help string, options []string, promptOpts .
 	prompt := &prompt{
 		prompter: multiselect,
 	}
-	for _, option := range promptOpts {
-		option(prompt)
+	for _, cfg := range promptCfgs {
+		cfg(prompt)
 	}
 
 	err := p(prompt, &result, stdio(), icons())
@@ -252,7 +252,7 @@ func (p Prompt) MultiSelect(message, help string, options []string, promptOpts .
 }
 
 // Confirm prompts the user with a yes/no option.
-func (p Prompt) Confirm(message, help string, promptOpts ...Option) (bool, error) {
+func (p Prompt) Confirm(message, help string, promptCfgs ...PromptConfig) (bool, error) {
 	confirm := &survey.Confirm{
 		Message: message,
 	}
@@ -263,8 +263,8 @@ func (p Prompt) Confirm(message, help string, promptOpts ...Option) (bool, error
 	prompt := &prompt{
 		prompter: confirm,
 	}
-	for _, option := range promptOpts {
-		option(prompt)
+	for _, cfg := range promptCfgs {
+		cfg(prompt)
 	}
 
 	var result bool
@@ -272,11 +272,11 @@ func (p Prompt) Confirm(message, help string, promptOpts ...Option) (bool, error
 	return result, err
 }
 
-// Option is a functional option to configure the prompt.
-type Option func(*prompt)
+// PromptConfig is a functional option to configure the prompt.
+type PromptConfig func(*prompt)
 
 // WithDefaultInput sets a default message for an input prompt.
-func WithDefaultInput(s string) Option {
+func WithDefaultInput(s string) PromptConfig {
 	return func(p *prompt) {
 		if get, ok := p.prompter.(*survey.Input); ok {
 			get.Default = s
@@ -285,14 +285,14 @@ func WithDefaultInput(s string) Option {
 }
 
 // WithFinalMessage sets a final message that replaces the question prompt once the user enters an answer.
-func WithFinalMessage(msg string) Option {
+func WithFinalMessage(msg string) PromptConfig {
 	return func(p *prompt) {
 		p.FinalMessage = color.Emphasize(msg)
 	}
 }
 
 // WithTrueDefault sets the default for a confirm prompt to true.
-func WithTrueDefault() Option {
+func WithTrueDefault() PromptConfig {
 	return func(p *prompt) {
 		if confirm, ok := p.prompter.(*survey.Confirm); ok {
 			confirm.Default = true

@@ -8,11 +8,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
-type selectWithHints
-
-
 // SelectOne prompts the user with a list of options to choose from with the arrow keys.
-func (p Prompt) SelectOne(message, help string, options []string, promptOpts ...Option) (string, error) {
+func (p Prompt) SelectOne(message, help string, options []string, promptCfgs ...PromptConfig) (string, error) {
 	if len(options) <= 0 {
 		return "", ErrEmptyOptions
 	}
@@ -29,8 +26,8 @@ func (p Prompt) SelectOne(message, help string, options []string, promptOpts ...
 	prompt := &prompt{
 		prompter: sel,
 	}
-	for _, opt := range promptOpts {
-		opt(prompt)
+	for _, cfg := range promptCfgs {
+		cfg(prompt)
 	}
 
 	var result string
