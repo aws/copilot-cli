@@ -11,5 +11,6 @@ type CreateAppInput struct {
 	AccountID             string            // AWS account ID to administrate the application.
 	DNSDelegationAccounts []string          // Accounts to grant DNS access to for this application.
 	DomainName            string            // DNS Name used for this application.
+	DomainHostedZone      string            // Hosted Zone ID for the domain.
 	AdditionalTags        map[string]string // AdditionalTags are labels applied to resources under the application.
 }

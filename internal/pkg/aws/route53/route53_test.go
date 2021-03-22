@@ -15,14 +15,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRoute53_DomainExists(t *testing.T) {
+func TestRoute53_DomainHostedZone(t *testing.T) {
 
 	testCases := map[string]struct {
 		domainName        string
 		mockRoute53Client func(m *mocks.Mockapi)
 
-		wantErr    error
-		wantExists bool
+		wantErr          error
+		wantHostedZoneID string
 	}{
 		"domain exists": {
 			domainName: "mockDomain.com",
@@ -32,14 +32,15 @@ func TestRoute53_DomainExists(t *testing.T) {
 				}).Return(&route53.ListHostedZonesByNameOutput{
 					IsTruncated: aws.Bool(false),
 					HostedZones: []*route53.HostedZone{
-						&route53.HostedZone{
+						{
 							Name: aws.String("mockDomain.com"),
+							Id:   aws.String("mockID"),
 						},
 					},
 				}, nil)
 			},
-			wantExists: true,
-			wantErr:    nil,
+			wantHostedZoneID: "mockID",
+			wantErr:          nil,
 		},
 		"DNS with subdomain": {
 			domainName: "mockDomain.subdomain.com",
@@ -49,14 +50,15 @@ func TestRoute53_DomainExists(t *testing.T) {
 				}).Return(&route53.ListHostedZonesByNameOutput{
 					IsTruncated: aws.Bool(false),
 					HostedZones: []*route53.HostedZone{
-						&route53.HostedZone{
+						{
 							Name: aws.String("mockDomain.subdomain.com."),
+							Id:   aws.String("mockID"),
 						},
 					},
 				}, nil)
 			},
-			wantExists: true,
-			wantErr:    nil,
+			wantHostedZoneID: "mockID",
+			wantErr:          nil,
 		},
 		"domain exists within more than one page": {
 			domainName: "mockDomain3.com",
@@ -68,8 +70,9 @@ func TestRoute53_DomainExists(t *testing.T) {
 					NextDNSName:      aws.String("mockDomain2.com"),
 					NextHostedZoneId: aws.String("mockID"),
 					HostedZones: []*route53.HostedZone{
-						&route53.HostedZone{
+						{
 							Name: aws.String("mockDomain1.com"),
+							Id:   aws.String("mockID1"),
 						},
 					},
 				}, nil)
@@ -79,17 +82,19 @@ func TestRoute53_DomainExists(t *testing.T) {
 				}).Return(&route53.ListHostedZonesByNameOutput{
 					IsTruncated: aws.Bool(false),
 					HostedZones: []*route53.HostedZone{
-						&route53.HostedZone{
+						{
 							Name: aws.String("mockDomain2.com"),
+							Id:   aws.String("mockID2"),
 						},
-						&route53.HostedZone{
+						{
 							Name: aws.String("mockDomain3.com"),
+							Id:   aws.String("mockID3"),
 						},
 					},
 				}, nil)
 			},
-			wantExists: true,
-			wantErr:    nil,
+			wantHostedZoneID: "mockID3",
+			wantErr:          nil,
 		},
 		"domain does not exist": {
 			domainName: "mockDomain4.com",
@@ -101,7 +106,7 @@ func TestRoute53_DomainExists(t *testing.T) {
 					NextDNSName:      aws.String("mockDomain2.com"),
 					NextHostedZoneId: aws.String("mockID"),
 					HostedZones: []*route53.HostedZone{
-						&route53.HostedZone{
+						{
 							Name: aws.String("mockDomain1.com"),
 						},
 					},
@@ -112,17 +117,16 @@ func TestRoute53_DomainExists(t *testing.T) {
 				}).Return(&route53.ListHostedZonesByNameOutput{
 					IsTruncated: aws.Bool(false),
 					HostedZones: []*route53.HostedZone{
-						&route53.HostedZone{
+						{
 							Name: aws.String("mockDomain2.com"),
 						},
-						&route53.HostedZone{
+						{
 							Name: aws.String("mockDomain3.com"),
 						},
 					},
 				}, nil)
 			},
-			wantExists: false,
-			wantErr:    nil,
+			wantErr: nil,
 		},
 		"failed to validate if domain exists": {
 			domainName: "mockDomain.com",
@@ -131,8 +135,7 @@ func TestRoute53_DomainExists(t *testing.T) {
 					DNSName: aws.String("mockDomain.com"),
 				}).Return(nil, errors.New("some error"))
 			},
-			wantExists: false,
-			wantErr:    fmt.Errorf("list hosted zone for mockDomain.com: some error"),
+			wantErr: fmt.Errorf("list hosted zone for mockDomain.com: some error"),
 		},
 	}
 
@@ -149,12 +152,12 @@ func TestRoute53_DomainExists(t *testing.T) {
 				client: mockRoute53Client,
 			}
 
-			gotExists, gotErr := service.DomainExists(tc.domainName)
+			gotID, gotErr := service.DomainHostedZone(tc.domainName)
 
 			if gotErr != nil {
 				require.EqualError(t, tc.wantErr, gotErr.Error())
 			} else {
-				require.Equal(t, tc.wantExists, gotExists)
+				require.Equal(t, tc.wantHostedZoneID, gotID)
 			}
 		})
 

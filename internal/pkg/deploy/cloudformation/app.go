@@ -53,9 +53,10 @@ func (cf CloudFormation) DeployApp(in *deploy.CreateAppInput) error {
 // DNS HostedZone. This allows us to perform cross account DNS delegation.
 func (cf CloudFormation) DelegateDNSPermissions(app *config.Application, accountID string) error {
 	deployApp := deploy.CreateAppInput{
-		Name:       app.Name,
-		AccountID:  app.AccountID,
-		DomainName: app.Domain,
+		Name:             app.Name,
+		AccountID:        app.AccountID,
+		DomainName:       app.Domain,
+		DomainHostedZone: app.DomainHostedZone,
 	}
 
 	appConfig := stack.NewAppStackConfig(&deployApp)

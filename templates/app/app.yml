@@ -16,6 +16,9 @@ Parameters:
   AppDomainName:
     Type: String
     Default: ""
+  AppDomainHostedZone:
+    Type: String
+    Default: ""
   AppName:
     Type: String
 Conditions:
@@ -140,6 +143,7 @@ Resources:
                   - route53:ChangeResourceRecordSets
                 Resource:
                   - !Sub arn:${AWS::Partition}:route53:::hostedzone/${AppHostedZone}
+                  - !Sub arn:${AWS::Partition}:route53:::hostedzone/${AppDomainHostedZone}
 
   AppHostedZone:
     Type: AWS::Route53::HostedZone

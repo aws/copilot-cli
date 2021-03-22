@@ -381,8 +381,8 @@ type deployer interface {
 	ListTaskStacks(appName, envName string) ([]deploy.TaskStackInfo, error)
 }
 
-type domainValidator interface {
-	DomainExists(domainName string) (bool, error)
+type domainHostedZoneGetter interface {
+	DomainHostedZone(domainName string) (string, error)
 }
 
 type dockerfileParser interface {

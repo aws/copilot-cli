@@ -6,6 +6,7 @@ package route53
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -35,35 +36,35 @@ func New(s *session.Session) *Route53 {
 	}
 }
 
-// DomainExists returns if a domain exists under a certain AWS account.
-func (r *Route53) DomainExists(domainName string) (bool, error) {
+// DomainHostedZone returns the Hosted Zone ID of a domain under a certain AWS account.
+func (r *Route53) DomainHostedZone(domainName string) (string, error) {
 	in := &route53.ListHostedZonesByNameInput{DNSName: aws.String(domainName)}
 	resp, err := r.client.ListHostedZonesByName(in)
 	if err != nil {
-		return false, fmt.Errorf("list hosted zone for %s: %w", domainName, err)
+		return "", fmt.Errorf("list hosted zone for %s: %w", domainName, err)
 	}
 	for {
-		if hostedZoneExists(resp.HostedZones, domainName) {
-			return true, nil
+		hostedZoneID := hostedZone(resp.HostedZones, domainName)
+		if hostedZoneID != "" {
+			return hostedZoneID, nil
 		}
 		if !aws.BoolValue(resp.IsTruncated) {
-			return false, nil
+			return "", nil
 		}
 		in = &route53.ListHostedZonesByNameInput{DNSName: resp.NextDNSName, HostedZoneId: resp.NextHostedZoneId}
 		resp, err = r.client.ListHostedZonesByName(in)
 		if err != nil {
-			return false, fmt.Errorf("list hosted zone for %s: %w", domainName, err)
+			return "", fmt.Errorf("list hosted zone for %s: %w", domainName, err)
 		}
 	}
 }
 
-// hostedZoneExists checks if certain domain exists in any of the hosted zones.
-func hostedZoneExists(hostedZones []*route53.HostedZone, domain string) bool {
+func hostedZone(hostedZones []*route53.HostedZone, domain string) string {
 	for _, hostedZone := range hostedZones {
 		// example.com. should match example.com
 		if domain == aws.StringValue(hostedZone.Name) || domain+"." == aws.StringValue(hostedZone.Name) {
-			return true
+			return strings.TrimPrefix(aws.StringValue(hostedZone.Id), "/hostedzone/")
 		}
 	}
-	return false
+	return ""
 }

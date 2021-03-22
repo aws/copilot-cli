@@ -57,6 +57,7 @@ const (
 	appOutputECRRepoPrefix        = "ECRRepo"
 	appDNSDelegatedAccountsKey    = "AppDNSDelegatedAccounts"
 	appDomainNameKey              = "AppDomainName"
+	appDomainHostedZoneKey        = "AppDomainHostedZone"
 	appNameKey                    = "AppName"
 	appDNSDelegationRoleName      = "DNSDelegationRole"
 )
@@ -128,6 +129,10 @@ func (c *AppStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(appDomainNameKey),
 			ParameterValue: aws.String(c.DomainName),
+		},
+		{
+			ParameterKey:   aws.String(appDomainHostedZoneKey),
+			ParameterValue: aws.String(c.DomainHostedZone),
 		},
 		{
 			ParameterKey:   aws.String(appNameKey),
