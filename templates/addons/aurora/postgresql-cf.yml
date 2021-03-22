@@ -15,20 +15,16 @@ Parameters:
     Default: {{.InitialDBName}}
     # Cannot have special characters
     # Naming constraints: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html#RDS_Limits.Constraints
-  DBMinCapacity:
-    Type: Number
-    Description: The minimum scaling capacity for the cluster.
-    AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
-    Default: 2
-  DBMaxCapacity:
-    Type: Number
-    Description: The maximum scaling capacity for the cluster.
-    AllowedValues: [ 2, 4, 8, 16, 32, 64, 192, 384 ]
-    Default: 8
   DBAutoPauseSeconds:
     Type: Number
     Description: The duration in seconds before the cluster pauses.
     Default: 1000
+Mappings:
+  EnvScalingConfigurationMap: {{range $env := .Envs}}
+    {{$env}}:
+      "DBMinCapacity": 2 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
+      "DBMaxCapacity": 8 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
+    {{end}}
 Resources:
   AuroraKMSCMK:
     Type: 'AWS::KMS::Key'
@@ -138,8 +134,8 @@ Resources:
         - !Ref DBClusterSecurityGroup
       ScalingConfiguration:
         AutoPause: true
-        MinCapacity: !Ref DBMinCapacity
-        MaxCapacity: !Ref DBMaxCapacity
+        MinCapacity: !FindInMap [EnvScalingConfigurationMap, !Ref Env, DBMinCapacity]
+        MaxCapacity: !FindInMap [EnvScalingConfigurationMap, !Ref Env, DBMaxCapacity]
         SecondsUntilAutoPause: !Ref DBAutoPauseSeconds
     SecretAuroraClusterAttachment:
       Type: AWS::SecretsManager::SecretTargetAttachment
