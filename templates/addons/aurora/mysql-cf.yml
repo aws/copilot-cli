@@ -93,7 +93,7 @@ Resources:
   AuroraSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: !Sub '/${App}/${Env}/${Name}'
+      Name: !Sub '/${App}/${Env}/${Name}/MySQLSecret'
       Description: !Sub Aurora main user secret for ${AWS::StackName}
       GenerateSecretString:
         SecretStringTemplate: '{"username": "admin"}'
