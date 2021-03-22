@@ -2,33 +2,25 @@
 # SPDX-License-Identifier: Apache-2.0
 Metadata:
   Version: 'v1.3.0'
-
 Parameters:
   AppName:
     Type: String
-
   EnvironmentName:
     Type: String
-
   ALBWorkloads:
     Type: String
     Default: ""
-
   EFSWorkloads:
     Type: String
     Default: ""
-
   ToolsAccountPrincipalARN:
     Type: String
-
   AppDNSName:
     Type: String
     Default: ""
-
   AppDNSDelegationRole:
     Type: String
     Default: ""
-
 Conditions:
   CreateALB:
     !Not [!Equals [ !Ref ALBWorkloads, "" ]]
@@ -39,12 +31,10 @@ Conditions:
     - !Condition CreateALB
   CreateEFS:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
-
 Resources:
 {{- if not .ImportVPC}}
 {{include "vpc-resources" .VPCConfig | indent 2}}
 {{- end}}
-
   # Creates a service discovery namespace with the form:
   # {svc}.{appname}.local
   ServiceDiscoveryNamespace:
@@ -56,7 +46,6 @@ Resources:
 {{- else}}
         Vpc: !Ref VPC
 {{- end}}
-
   Cluster:
     Metadata:
       'aws:copilot:description': 'An ECS cluster to group your services'
@@ -66,7 +55,6 @@ Resources:
       Configuration:
         ExecuteCommandConfiguration:
           Logging: DEFAULT
-
   PublicLoadBalancerSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your load balancer allowing HTTP and HTTPS traffic'
@@ -93,7 +81,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
-
   # Only accept requests coming from the public ALB or other containers in the same security group.
   EnvironmentSecurityGroup:
     Metadata:
@@ -109,7 +96,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-env'
-
   EnvironmentSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: CreateALB
@@ -118,7 +104,6 @@ Resources:
       GroupId: !Ref EnvironmentSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref PublicLoadBalancerSecurityGroup
-
   EnvironmentSecurityGroupIngressFromSelf:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -126,7 +111,6 @@ Resources:
       GroupId: !Ref EnvironmentSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
-
   PublicLoadBalancer:
     Metadata:
       'aws:copilot:description': 'An Application Load Balancer to distribute public traffic to your services'
@@ -141,7 +125,6 @@ Resources:
       Subnets: [ {{range $ind, $cidr := .VPCConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}} ]
 {{- end}}
       Type: application
-
   # Assign a dummy target group that with no real services as targets, so that we can create
   # the listeners for the services.
   DefaultHTTPTargetGroup:
@@ -163,7 +146,6 @@ Resources:
 {{- else}}
       VpcId: !Ref VPC
 {{- end}}
-
   HTTPListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Condition: CreateALB
@@ -174,7 +156,6 @@ Resources:
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 80
       Protocol: HTTP
-
   HTTPSListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn: HTTPSCert
@@ -188,7 +169,6 @@ Resources:
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 443
       Protocol: HTTPS
-
   FileSystem:
     Condition: CreateEFS
     Type: AWS::EFS::FileSystem
@@ -222,7 +202,6 @@ Resources:
         - TransitionToIA: AFTER_30_DAYS
       PerformanceMode: generalPurpose
       ThroughputMode: bursting
-  
   EFSSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group to allow your containers to talk to EFS storage'
@@ -238,7 +217,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-efs'
- 
   EFSSecurityGroupIngressFromEnvironment:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: CreateEFS
@@ -247,7 +225,6 @@ Resources:
       GroupId: !Ref EFSSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
-
 {{- if .ImportVPC}}
 {{- range $ind, $id := .ImportVPC.PublicSubnetIDs}}
   MountTarget{{inc $ind}}:
@@ -271,14 +248,9 @@ Resources:
         - !Ref EFSSecurityGroup
 {{- end}}
 {{- end}}
-  
-
 {{include "cfn-execution-role" . | indent 2}}
-
 {{include "environment-manager-role" . | indent 2}}
-
 {{include "custom-resources-role" . | indent 2}}
-
   EnvironmentHostedZone:
     Type: "AWS::Route53::HostedZone"
     Condition: DelegateDNS
@@ -286,9 +258,7 @@ Resources:
       HostedZoneConfig:
         Comment: !Sub "HostedZone for environment ${EnvironmentName} - ${EnvironmentName}.${AppName}.${AppDNSName}"
       Name: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
-
 {{include "lambdas" . | indent 2}}
-
 {{include "custom-resources" . | indent 2}}
 Outputs:
   VpcId:
@@ -299,7 +269,6 @@ Outputs:
 {{- end}}
     Export:
       Name: !Sub ${AWS::StackName}-VpcId
-
   PublicSubnets:
 {{- if .ImportVPC}}
     Value: !Join [ ',', [ {{range $id := .ImportVPC.PublicSubnetIDs}}{{$id}}, {{end}}] ]
@@ -308,7 +277,6 @@ Outputs:
 {{- end}}
     Export:
       Name: !Sub ${AWS::StackName}-PublicSubnets
-
   PrivateSubnets:
 {{- if .ImportVPC}}
     Value: !Join [ ',', [ {{range $id := .ImportVPC.PrivateSubnetIDs}}{{$id}}, {{end}}] ]
@@ -317,88 +285,73 @@ Outputs:
 {{- end}}
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
-
   ServiceDiscoveryNamespaceID:
     Value: !GetAtt ServiceDiscoveryNamespace.Id
     Export:
       Name: !Sub ${AWS::StackName}-ServiceDiscoveryNamespaceID
-
   EnvironmentSecurityGroup:
     Value: !Ref EnvironmentSecurityGroup
     Export:
       Name: !Sub ${AWS::StackName}-EnvironmentSecurityGroup
-
   PublicLoadBalancerDNSName:
     Condition: CreateALB
     Value: !GetAtt PublicLoadBalancer.DNSName
     Export:
       Name: !Sub ${AWS::StackName}-PublicLoadBalancerDNS
-
   PublicLoadBalancerFullName:
     Condition: CreateALB
     Value: !GetAtt PublicLoadBalancer.LoadBalancerFullName
     Export:
       Name: !Sub ${AWS::StackName}-PublicLoadBalancerFullName
-
   PublicLoadBalancerHostedZone:
     Condition: CreateALB
     Value: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
     Export:
       Name: !Sub ${AWS::StackName}-CanonicalHostedZoneID
-
   HTTPListenerArn:
     Condition: CreateALB
     Value: !Ref HTTPListener
     Export:
       Name: !Sub ${AWS::StackName}-HTTPListenerArn
-
   HTTPSListenerArn:
     Condition: ExportHTTPSListener
     Value: !Ref HTTPSListener
     Export:
       Name: !Sub ${AWS::StackName}-HTTPSListenerArn
-
   DefaultHTTPTargetGroupArn:
     Condition: CreateALB
     Value: !Ref DefaultHTTPTargetGroup
     Export:
       Name: !Sub ${AWS::StackName}-DefaultHTTPTargetGroup
-
   ClusterId:
     Value: !Ref Cluster
     Export:
       Name: !Sub ${AWS::StackName}-ClusterId
-
   EnvironmentManagerRoleARN:
     Value: !GetAtt EnvironmentManagerRole.Arn
     Description: The role to be assumed by the ecs-cli to manage environments.
     Export:
       Name: !Sub ${AWS::StackName}-EnvironmentManagerRoleARN
-
   CFNExecutionRoleARN:
     Value: !GetAtt CloudformationExecutionRole.Arn
     Description: The role to be assumed by the Cloudformation service when it deploys application infrastructure.
     Export:
       Name: !Sub ${AWS::StackName}-CFNExecutionRoleARN
-
   EnvironmentHostedZone:
     Condition: DelegateDNS
     Value: !Ref EnvironmentHostedZone
     Description: The HostedZone for this environment's private DNS.
     Export:
       Name: !Sub ${AWS::StackName}-HostedZone
-
   EnvironmentSubdomain:
     Condition: DelegateDNS
     Value: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
     Description: The domain name of this environment.
     Export:
       Name: !Sub ${AWS::StackName}-SubDomain
-
   EnabledFeatures:
     Value: !Sub '${ALBWorkloads},${EFSWorkloads}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
-  
   ManagedFileSystemID:
     Condition: CreateEFS
     Value: !Ref FileSystem
