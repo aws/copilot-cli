@@ -60,4 +60,6 @@ Resources:
 
 {{include "state-machine" . | indent 2}}
 
+{{include "efs-access-point" . | indent 2}}
+
 {{include "addons" . | indent 2}}
