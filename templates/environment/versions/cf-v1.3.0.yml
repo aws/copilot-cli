@@ -226,7 +226,7 @@ Resources:
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
 {{- if .ImportVPC}}
-{{- range $ind, $id := .ImportVPC.PublicSubnetIDs}}
+{{- range $ind, $id := .ImportVPC.PrivateSubnetIDs}}
   MountTarget{{inc $ind}}:
     Type: AWS::EFS::MountTarget
     Condition: CreateEFS
