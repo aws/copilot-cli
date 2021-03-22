@@ -276,7 +276,7 @@ var _ = Describe("exec flow", func() {
 					EnvName: envName,
 				})
 				return resp, err
-			}, "60s", "10s").ShouldNot(BeEmpty())
+			}, "120s", "20s").ShouldNot(BeEmpty())
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp).To(ContainSubstring("hello"))
