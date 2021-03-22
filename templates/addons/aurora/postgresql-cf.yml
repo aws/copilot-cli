@@ -89,7 +89,7 @@ Resources:
   AuroraSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: !Sub '/${App}/${Env}/${Name}/PostgreSQLSecret'
+      Name: !Sub '/${App}/${Env}/${Name}/{{logicalIDSafe .Name}}/PostgreSQLSecret'
       Description: !Sub Aurora main user secret for ${AWS::StackName}
       GenerateSecretString:
         SecretStringTemplate: '{"username": "postgres"}'
