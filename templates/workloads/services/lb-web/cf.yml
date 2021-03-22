@@ -357,8 +357,9 @@ Resources:
       Timeout: "1"
       Count: 0
 
-{{include "addons" . | indent 2}}
+{{include "efs-access-point" . | indent 2}}
 
+{{include "addons" . | indent 2}}
 
 Outputs:
   DiscoveryServiceARN:

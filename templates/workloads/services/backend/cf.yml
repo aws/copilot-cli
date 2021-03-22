@@ -122,6 +122,8 @@ Resources:
 {{include "service-base-properties" . | indent 6}}
       ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref ContainerPort}], !Ref "AWS::NoValue"]
 
+{{include "efs-access-point" . | indent 2}}
+
 {{include "addons" . | indent 2}}
 
 Outputs:
