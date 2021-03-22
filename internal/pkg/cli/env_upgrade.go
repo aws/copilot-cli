@@ -171,12 +171,13 @@ func (o *envUpgradeOpts) Execute() error {
 		if err != nil {
 			return err
 		}
-		if _, err := o.uploader.UploadEnvironmentCustomResources(s3.CompressAndUploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
+		urls, err := o.uploader.UploadEnvironmentCustomResources(s3.CompressAndUploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
 			return s3Client.ZipAndUpload(resources.S3Bucket, key, objects...)
-		})); err != nil {
+		}))
+		if err != nil {
 			return fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
 		}
-		if err := o.upgrade(env); err != nil {
+		if err := o.upgrade(env, urls); err != nil {
 			return err
 		}
 	}
@@ -204,7 +205,7 @@ func (o *envUpgradeOpts) listEnvsToUpgrade() ([]*config.Environment, error) {
 	return envs, nil
 }
 
-func (o *envUpgradeOpts) upgrade(env *config.Environment) (err error) {
+func (o *envUpgradeOpts) upgrade(env *config.Environment, customResourcesURLs map[string]string) (err error) {
 	version, err := o.envVersion(env.Name)
 	if err != nil {
 		return err
@@ -230,9 +231,9 @@ func (o *envUpgradeOpts) upgrade(env *config.Environment) (err error) {
 		return err
 	}
 	if version == deploy.LegacyEnvTemplateVersion {
-		return o.upgradeLegacyEnvironment(upgrader, env, version, deploy.LatestEnvTemplateVersion)
+		return o.upgradeLegacyEnvironment(upgrader, env, customResourcesURLs, version, deploy.LatestEnvTemplateVersion)
 	}
-	return o.upgradeEnvironment(upgrader, env, version, deploy.LatestEnvTemplateVersion)
+	return o.upgradeEnvironment(upgrader, env, customResourcesURLs, version, deploy.LatestEnvTemplateVersion)
 }
 
 func (o *envUpgradeOpts) envVersion(name string) (string, error) {
@@ -266,7 +267,8 @@ Are you using the latest version of AWS Copilot?`, env, deploy.LatestEnvTemplate
 	return false, nil
 }
 
-func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.Environment, fromVersion, toVersion string) error {
+func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.Environment,
+	customResourcesURLs map[string]string, fromVersion, toVersion string) error {
 	var importedVPC *config.ImportVPC
 	var adjustedVPC *config.AdjustVPC
 	if conf.CustomConfig != nil {
@@ -275,19 +277,21 @@ func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.E
 	}
 
 	if err := upgrader.UpgradeEnvironment(&deploy.CreateEnvironmentInput{
-		Version:           toVersion,
-		AppName:           conf.App,
-		Name:              conf.Name,
-		ImportVPCConfig:   importedVPC,
-		AdjustVPCConfig:   adjustedVPC,
-		CFNServiceRoleARN: conf.ExecutionRoleARN,
+		Version:             toVersion,
+		AppName:             conf.App,
+		Name:                conf.Name,
+		CustomResourcesURLs: customResourcesURLs,
+		ImportVPCConfig:     importedVPC,
+		AdjustVPCConfig:     adjustedVPC,
+		CFNServiceRoleARN:   conf.ExecutionRoleARN,
 	}); err != nil {
 		return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
 	}
 	return nil
 }
 
-func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, conf *config.Environment, fromVersion, toVersion string) error {
+func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, conf *config.Environment,
+	customResourcesURLs map[string]string, fromVersion, toVersion string) error {
 	isDefaultEnv, err := o.isDefaultLegacyTemplate(upgrader, conf.App, conf.Name)
 	if err != nil {
 		return err
@@ -298,10 +302,11 @@ func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, co
 	}
 	if isDefaultEnv {
 		if err := upgrader.UpgradeLegacyEnvironment(&deploy.CreateEnvironmentInput{
-			Version:           toVersion,
-			AppName:           conf.App,
-			Name:              conf.Name,
-			CFNServiceRoleARN: conf.ExecutionRoleARN,
+			Version:             toVersion,
+			AppName:             conf.App,
+			Name:                conf.Name,
+			CustomResourcesURLs: customResourcesURLs,
+			CFNServiceRoleARN:   conf.ExecutionRoleARN,
 		}, albWorkloads...); err != nil {
 			return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
 		}

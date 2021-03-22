@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	cmdtemplate "github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
@@ -132,8 +131,12 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		identity:    id,
 		appCFN:      cloudformation.New(defaultSess),
 		uploader:    template.New(),
-		newS3: func(sess *session.Session) zipAndUploader {
-			return s3.New(sess)
+		newS3: func(region string) (zipAndUploader, error) {
+			sess, err := sessProvider.DefaultWithRegion(region)
+			if err != nil {
+				return nil, err
+			}
+			return s3.New(sess), nil
 		},
 
 		sess: defaultSess,

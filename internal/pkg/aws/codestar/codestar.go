@@ -16,6 +16,7 @@ import (
 
 type api interface {
 	GetConnection(input *codestarconnections.GetConnectionInput) (*codestarconnections.GetConnectionOutput, error)
+	ListConnections(input *codestarconnections.ListConnectionsInput) (*codestarconnections.ListConnectionsOutput, error)
 }
 
 // Connection represents a client to make requests to AWS CodeStarConnections.
@@ -48,4 +49,31 @@ func (c *CodeStar) WaitUntilConnectionStatusAvailable(ctx context.Context, conne
 			interval = 5 * time.Second
 		}
 	}
+}
+
+// GetConnectionARN retrieves all of the CSC connections in the current account and returns the ARN correlating to the
+// connection name passed in.
+func (c *CodeStar) GetConnectionARN(connectionName string) (connectionARN string, err error) {
+	output, err := c.client.ListConnections(&codestarconnections.ListConnectionsInput{})
+	if err != nil {
+		return "", fmt.Errorf("get list of connections in AWS account: %w", err)
+	}
+	connections := output.Connections
+	for output.NextToken != nil {
+		output, err = c.client.ListConnections(&codestarconnections.ListConnectionsInput{
+			NextToken: output.NextToken,
+		})
+		if err != nil {
+			return "", fmt.Errorf("get list of connections in AWS account: %w", err)
+		}
+		connections = append(connections, output.Connections...)
+	}
+
+	for _, connection := range connections {
+		if aws.StringValue(connection.ConnectionName) == connectionName {
+			// Duplicate connection names are supposed to result in replacement, so okay to return first match.
+			return aws.StringValue(connection.ConnectionArn), nil
+		}
+	}
+	return "", fmt.Errorf("cannot find a connectionARN associated with %s", connectionName)
 }

@@ -27,6 +27,7 @@ type CreateEnvironmentInput struct {
 	ToolsAccountPrincipalARN string            // The Principal ARN of the tools account.
 	AppDNSName               string            // The DNS name of this application, if it exists
 	AdditionalTags           map[string]string // AdditionalTags are labels applied to resources under the application.
+	CustomResourcesURLs      map[string]string // Environment custom resource script S3 object URLs.
 	ImportVPCConfig          *config.ImportVPC // Optional configuration if users have an existing VPC.
 	AdjustVPCConfig          *config.AdjustVPC // Optional configuration if users want to override default VPC configuration.
 

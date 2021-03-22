@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -21,11 +22,18 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
+)
+
+const (
+	maxDeleteStackSetRetryNum   = 10
+	deleteStackSetRetryInterval = 10 * time.Second
 )
 
 func TestGHv1PipelineCreation(t *testing.T) {
@@ -61,6 +69,9 @@ func TestGHv1PipelineCreation(t *testing.T) {
 		envCallerInfo, err := envId.Get()
 		require.NoError(t, err)
 		envDeployer := cloudformation.New(envSess)
+		s3Client := s3.New(envSess)
+		uploader := template.New()
+		var bucketName string
 
 		environmentToDeploy := deploy.CreateEnvironmentInput{
 			Name:                     randStringBytes(10),
@@ -85,28 +96,44 @@ func TestGHv1PipelineCreation(t *testing.T) {
 			require.NoError(t, err)
 
 			// Clean up any StackInstances we may have created.
-			if stackInstances, err := appCfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
+			stackInstances, err := appCfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
 				StackSetName: aws.String(appStackSetName),
-			}); err == nil && stackInstances.Summaries != nil && stackInstances.Summaries[0] != nil {
-				appStackInstance := stackInstances.Summaries[0]
+			})
+			require.NoError(t, err)
+
+			for _, summary := range stackInstances.Summaries {
+				if aws.StringValue(summary.Region) == envRegion.ID() {
+					err := s3Client.EmptyBucket(bucketName)
+					require.NoError(t, err)
+				}
 				_, err := appCfClient.DeleteStackInstances(&awsCF.DeleteStackInstancesInput{
-					Accounts:     []*string{appStackInstance.Account},
-					Regions:      []*string{appStackInstance.Region},
+					Accounts:     []*string{summary.Account},
+					Regions:      []*string{summary.Region},
 					RetainStacks: aws.Bool(false),
-					StackSetName: appStackInstance.StackSetId,
+					StackSetName: summary.StackSetId,
 				})
 				require.NoError(t, err)
 
 				err = appCfClient.WaitUntilStackDeleteComplete(&awsCF.DescribeStacksInput{
-					StackName: appStackInstance.StackId,
+					StackName: summary.StackId,
 				})
 				require.NoError(t, err)
 			}
-			// Delete the StackSet once all the StackInstances are cleaned up
-			_, err = appCfClient.DeleteStackSet(&awsCF.DeleteStackSetInput{
-				StackSetName: aws.String(appStackSetName),
-			})
-			require.NoError(t, err)
+
+			// Delete the StackSet once all the StackInstances are cleaned up. There could be a delay that
+			// stack instances are all deleted but still returns OperationInProgressException error.
+			retry := 0
+			for ; retry < maxDeleteStackSetRetryNum; retry++ {
+				if _, err = appCfClient.DeleteStackSet(&awsCF.DeleteStackSetInput{
+					StackSetName: aws.String(appStackSetName),
+				}); isOperationInProgress(err) {
+					time.Sleep(deleteStackSetRetryInterval)
+					continue
+				}
+				require.NoError(t, err)
+				break
+			}
+			require.NotEqual(t, retry, maxDeleteStackSetRetryNum)
 
 			_, err = appCfClient.DeleteStack(&awsCF.DeleteStackInput{
 				StackName: aws.String(appRoleStackName),
@@ -142,6 +169,23 @@ func TestGHv1PipelineCreation(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		err = appDeployer.AddEnvToApp(&cloudformation.AddEnvToAppOpts{
+			App:          &app,
+			EnvName:      environmentToDeploy.Name,
+			EnvRegion:    envRegion.ID(),
+			EnvAccountID: envCallerInfo.Account,
+		})
+		require.NoError(t, err)
+
+		regionalResource, err := appDeployer.GetAppResourcesByRegion(&app, envRegion.ID())
+		require.NoError(t, err)
+		bucketName = regionalResource.S3Bucket
+		urls, err := uploader.UploadEnvironmentCustomResources(s3.CompressAndUploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
+			return s3Client.ZipAndUpload(bucketName, key, objects...)
+		}))
+		require.NoError(t, err)
+		environmentToDeploy.CustomResourcesURLs = urls
+
 		// Deploy the environment in the same tools account but in different
 		// region and wait for it to be complete
 		require.NoError(t, envDeployer.DeployAndRenderEnvironment(os.Stderr, &environmentToDeploy))
@@ -160,7 +204,7 @@ func TestGHv1PipelineCreation(t *testing.T) {
 			StackSetName: aws.String(appStackSetName),
 		})
 		require.NoError(t, err)
-		require.Equal(t, 1, len(stackInstances.Summaries),
+		require.Equal(t, 2, len(stackInstances.Summaries),
 			"application stack instance should exist")
 
 		resources, err := appDeployer.GetRegionalAppResources(&app)
@@ -270,4 +314,14 @@ func findUnusedRegion(regionPrefix string, usedRegions ...string) (*endpoints.Re
 		}
 	}
 	return nil, errors.New("all regions are used")
+}
+
+func isOperationInProgress(err error) bool {
+	if aerr, ok := err.(awserr.Error); ok {
+		switch aerr.Code() {
+		case awsCF.ErrCodeOperationInProgressException:
+			return true
+		}
+	}
+	return false
 }

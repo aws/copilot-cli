@@ -48,3 +48,18 @@ func (mr *MockapiMockRecorder) GetConnection(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConnection", reflect.TypeOf((*Mockapi)(nil).GetConnection), input)
 }
+
+// ListConnections mocks base method.
+func (m *Mockapi) ListConnections(input *codestarconnections.ListConnectionsInput) (*codestarconnections.ListConnectionsOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListConnections", input)
+	ret0, _ := ret[0].(*codestarconnections.ListConnectionsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListConnections indicates an expected call of ListConnections.
+func (mr *MockapiMockRecorder) ListConnections(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConnections", reflect.TypeOf((*Mockapi)(nil).ListConnections), input)
+}
