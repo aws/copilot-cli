@@ -237,7 +237,7 @@ Resources:
         - !Ref EFSSecurityGroup
 {{- end}}
 {{- else}}
-{{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+{{- range $ind, $cidr := .VPCConfig.PrivateSubnetCIDRs}}
   MountTarget{{inc $ind}}:
     Type: AWS::EFS::MountTarget
     Condition: CreateEFS
