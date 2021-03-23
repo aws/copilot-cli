@@ -49,7 +49,7 @@ type initAppOpts struct {
 	prompt   prompter
 	prog     progress
 
-	hostedZoneID string
+	cachedHostedZoneID string
 }
 
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
@@ -93,7 +93,7 @@ func (o *initAppOpts) Validate() error {
 		if err != nil {
 			return err
 		}
-		o.hostedZoneID = id
+		o.cachedHostedZoneID = id
 	}
 	return nil
 }
@@ -168,11 +168,18 @@ func (o *initAppOpts) Execute() error {
 		return fmt.Errorf("create new workspace with application name %s: %w", o.name, err)
 	}
 	o.prog.Start(fmt.Sprintf(fmtAppInitStart, color.HighlightUserInput(o.name)))
+	var hostedZoneID string
+	if o.domainName != "" {
+		hostedZoneID, err = o.domainHostedZoneID(o.domainName)
+		if err != nil {
+			return err
+		}
+	}
 	err = o.cfn.DeployApp(&deploy.CreateAppInput{
 		Name:               o.name,
 		AccountID:          caller.Account,
 		DomainName:         o.domainName,
-		DomainHostedZoneID: o.hostedZoneID,
+		DomainHostedZoneID: hostedZoneID,
 		AdditionalTags:     o.resourceTags,
 	})
 	if err != nil {
@@ -185,7 +192,7 @@ func (o *initAppOpts) Execute() error {
 		AccountID:          caller.Account,
 		Name:               o.name,
 		Domain:             o.domainName,
-		DomainHostedZoneID: o.hostedZoneID,
+		DomainHostedZoneID: hostedZoneID,
 		Tags:               o.resourceTags,
 	})
 }
@@ -209,12 +216,12 @@ func (o *initAppOpts) validateAppName(name string) error {
 }
 
 func (o *initAppOpts) domainHostedZoneID(domainName string) (string, error) {
+	if o.cachedHostedZoneID != "" {
+		return o.cachedHostedZoneID, nil
+	}
 	hostedZoneID, err := o.route53.DomainHostedZoneID(domainName)
 	if err != nil {
-		return "", err
-	}
-	if hostedZoneID == "" {
-		return "", fmt.Errorf("no hosted zone found for %s", domainName)
+		return "", fmt.Errorf("get hosted zone ID for domain %s: %w", domainName, err)
 	}
 	return hostedZoneID, nil
 }

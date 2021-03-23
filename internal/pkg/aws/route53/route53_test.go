@@ -126,7 +126,7 @@ func TestRoute53_DomainHostedZoneID(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantErr: nil,
+			wantErr: ErrDomainNotExist,
 		},
 		"failed to validate if domain exists": {
 			domainName: "mockDomain.com",

@@ -36,7 +36,7 @@ func New(s *session.Session) *Route53 {
 	}
 }
 
-// DomainHostedZoneID returns the Hosted Zone ID of a domain under a certain AWS account.
+// DomainHostedZoneID returns the Hosted Zone ID of a domain.
 func (r *Route53) DomainHostedZoneID(domainName string) (string, error) {
 	in := &route53.ListHostedZonesByNameInput{DNSName: aws.String(domainName)}
 	resp, err := r.client.ListHostedZonesByName(in)
@@ -44,12 +44,13 @@ func (r *Route53) DomainHostedZoneID(domainName string) (string, error) {
 		return "", fmt.Errorf("list hosted zone for %s: %w", domainName, err)
 	}
 	for {
-		hostedZoneID := hostedZone(resp.HostedZones, domainName)
-		if hostedZoneID != "" {
-			return hostedZoneID, nil
+		hostedZones := filterHostedZones(resp.HostedZones, matchesDomain(domainName))
+		if len(hostedZones) > 0 {
+			// return the first match.
+			return strings.TrimPrefix(aws.StringValue(hostedZones[0].Id), "/hostedzone/"), nil
 		}
 		if !aws.BoolValue(resp.IsTruncated) {
-			return "", nil
+			return "", ErrDomainNotExist
 		}
 		in = &route53.ListHostedZonesByNameInput{DNSName: resp.NextDNSName, HostedZoneId: resp.NextHostedZoneId}
 		resp, err = r.client.ListHostedZonesByName(in)
@@ -59,12 +60,21 @@ func (r *Route53) DomainHostedZoneID(domainName string) (string, error) {
 	}
 }
 
-func hostedZone(hostedZones []*route53.HostedZone, domain string) string {
-	for _, hostedZone := range hostedZones {
-		// example.com. should match example.com
-		if domain == aws.StringValue(hostedZone.Name) || domain+"." == aws.StringValue(hostedZone.Name) {
-			return strings.TrimPrefix(aws.StringValue(hostedZone.Id), "/hostedzone/")
+type filterZoneFunc func(*route53.HostedZone) bool
+
+func filterHostedZones(zones []*route53.HostedZone, fn filterZoneFunc) []*route53.HostedZone {
+	var hostedZones []*route53.HostedZone
+	for _, hostedZone := range zones {
+		if fn(hostedZone) {
+			hostedZones = append(hostedZones, hostedZone)
 		}
 	}
-	return ""
+	return hostedZones
+}
+
+func matchesDomain(domain string) filterZoneFunc {
+	return func(z *route53.HostedZone) bool {
+		// example.com. should match example.com
+		return domain == aws.StringValue(z.Name) || domain+"." == aws.StringValue(z.Name)
+	}
 }
