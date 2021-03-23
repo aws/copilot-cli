@@ -382,7 +382,7 @@ type deployer interface {
 }
 
 type domainHostedZoneGetter interface {
-	DomainHostedZone(domainName string) (string, error)
+	DomainHostedZoneID(domainName string) (string, error)
 }
 
 type dockerfileParser interface {

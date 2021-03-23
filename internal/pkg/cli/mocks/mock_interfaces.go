@@ -4034,19 +4034,19 @@ func (m *MockdomainHostedZoneGetter) EXPECT() *MockdomainHostedZoneGetterMockRec
 	return m.recorder
 }
 
-// DomainHostedZone mocks base method.
-func (m *MockdomainHostedZoneGetter) DomainHostedZone(domainName string) (string, error) {
+// DomainHostedZoneID mocks base method.
+func (m *MockdomainHostedZoneGetter) DomainHostedZoneID(domainName string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DomainHostedZone", domainName)
+	ret := m.ctrl.Call(m, "DomainHostedZoneID", domainName)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DomainHostedZone indicates an expected call of DomainHostedZone.
-func (mr *MockdomainHostedZoneGetterMockRecorder) DomainHostedZone(domainName interface{}) *gomock.Call {
+// DomainHostedZoneID indicates an expected call of DomainHostedZoneID.
+func (mr *MockdomainHostedZoneGetterMockRecorder) DomainHostedZoneID(domainName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainHostedZone", reflect.TypeOf((*MockdomainHostedZoneGetter)(nil).DomainHostedZone), domainName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainHostedZoneID", reflect.TypeOf((*MockdomainHostedZoneGetter)(nil).DomainHostedZoneID), domainName)
 }
 
 // MockdockerfileParser is a mock of dockerfileParser interface.

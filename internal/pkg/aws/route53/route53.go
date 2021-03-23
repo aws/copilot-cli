@@ -36,8 +36,8 @@ func New(s *session.Session) *Route53 {
 	}
 }
 
-// DomainHostedZone returns the Hosted Zone ID of a domain under a certain AWS account.
-func (r *Route53) DomainHostedZone(domainName string) (string, error) {
+// DomainHostedZoneID returns the Hosted Zone ID of a domain under a certain AWS account.
+func (r *Route53) DomainHostedZoneID(domainName string) (string, error) {
 	in := &route53.ListHostedZonesByNameInput{DNSName: aws.String(domainName)}
 	resp, err := r.client.ListHostedZonesByName(in)
 	if err != nil {

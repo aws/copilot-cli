@@ -49,7 +49,7 @@ type initAppOpts struct {
 	prompt   prompter
 	prog     progress
 
-	domainHostedZoneID string
+	hostedZoneID string
 }
 
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
@@ -89,11 +89,11 @@ func (o *initAppOpts) Validate() error {
 		if err := validateDomainName(o.domainName); err != nil {
 			return fmt.Errorf("domain name %s is invalid: %w", o.domainName, err)
 		}
-		id, err := o.domainHostedZone(o.domainName)
+		id, err := o.domainHostedZoneID(o.domainName)
 		if err != nil {
 			return err
 		}
-		o.domainHostedZoneID = id
+		o.hostedZoneID = id
 	}
 	return nil
 }
@@ -169,11 +169,11 @@ func (o *initAppOpts) Execute() error {
 	}
 	o.prog.Start(fmt.Sprintf(fmtAppInitStart, color.HighlightUserInput(o.name)))
 	err = o.cfn.DeployApp(&deploy.CreateAppInput{
-		Name:             o.name,
-		AccountID:        caller.Account,
-		DomainName:       o.domainName,
-		DomainHostedZone: o.domainHostedZoneID,
-		AdditionalTags:   o.resourceTags,
+		Name:               o.name,
+		AccountID:          caller.Account,
+		DomainName:         o.domainName,
+		DomainHostedZoneID: o.hostedZoneID,
+		AdditionalTags:     o.resourceTags,
 	})
 	if err != nil {
 		o.prog.Stop(log.Serrorf(fmtAppInitFailed, color.HighlightUserInput(o.name)))
@@ -182,11 +182,11 @@ func (o *initAppOpts) Execute() error {
 	o.prog.Stop(log.Ssuccessf(fmtAppInitComplete, color.HighlightUserInput(o.name)))
 
 	return o.store.CreateApplication(&config.Application{
-		AccountID:        caller.Account,
-		Name:             o.name,
-		Domain:           o.domainName,
-		DomainHostedZone: o.domainHostedZoneID,
-		Tags:             o.resourceTags,
+		AccountID:          caller.Account,
+		Name:               o.name,
+		Domain:             o.domainName,
+		DomainHostedZoneID: o.hostedZoneID,
+		Tags:               o.resourceTags,
 	})
 }
 
@@ -208,8 +208,8 @@ func (o *initAppOpts) validateAppName(name string) error {
 	return nil
 }
 
-func (o *initAppOpts) domainHostedZone(domainName string) (string, error) {
-	hostedZoneID, err := o.route53.DomainHostedZone(domainName)
+func (o *initAppOpts) domainHostedZoneID(domainName string) (string, error) {
+	hostedZoneID, err := o.route53.DomainHostedZoneID(domainName)
 	if err != nil {
 		return "", err
 	}

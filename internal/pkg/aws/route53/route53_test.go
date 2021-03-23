@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRoute53_DomainHostedZone(t *testing.T) {
+func TestRoute53_DomainHostedZoneID(t *testing.T) {
 
 	testCases := map[string]struct {
 		domainName        string
@@ -152,7 +152,7 @@ func TestRoute53_DomainHostedZone(t *testing.T) {
 				client: mockRoute53Client,
 			}
 
-			gotID, gotErr := service.DomainHostedZone(tc.domainName)
+			gotID, gotErr := service.DomainHostedZoneID(tc.domainName)
 
 			if gotErr != nil {
 				require.EqualError(t, tc.wantErr, gotErr.Error())

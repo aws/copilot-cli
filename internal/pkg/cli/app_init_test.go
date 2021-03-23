@@ -211,7 +211,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 		"valid domain name": {
 			inDomainName: "mockDomain.com",
 			mockRoute53Svc: func(m *mocks.MockdomainHostedZoneGetter) {
-				m.EXPECT().DomainHostedZone("mockDomain.com").Return("mockHostedZoneID", nil)
+				m.EXPECT().DomainHostedZoneID("mockDomain.com").Return("mockHostedZoneID", nil)
 			},
 			mockStore:   func(m *mocks.Mockstore) {},
 			wantedError: "",
@@ -219,7 +219,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 		"invalid domain name that does not exist": {
 			inDomainName: "badMockDomain.com",
 			mockRoute53Svc: func(m *mocks.MockdomainHostedZoneGetter) {
-				m.EXPECT().DomainHostedZone("badMockDomain.com").Return("", nil)
+				m.EXPECT().DomainHostedZoneID("badMockDomain.com").Return("", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {},
 
@@ -228,7 +228,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 		"errors if failed to validate domain name": {
 			inDomainName: "mockDomain.com",
 			mockRoute53Svc: func(m *mocks.MockdomainHostedZoneGetter) {
-				m.EXPECT().DomainHostedZone("mockDomain.com").Return("", errors.New("some error"))
+				m.EXPECT().DomainHostedZoneID("mockDomain.com").Return("", errors.New("some error"))
 			},
 			mockStore: func(m *mocks.Mockstore) {},
 
@@ -244,7 +244,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 		"domain name contains multiple dots": {
 			inDomainName: "hello.dog.com",
 			mockRoute53Svc: func(m *mocks.MockdomainHostedZoneGetter) {
-				m.EXPECT().DomainHostedZone("hello.dog.com").Return("mockHostedZoneID", nil)
+				m.EXPECT().DomainHostedZoneID("hello.dog.com").Return("mockHostedZoneID", nil)
 			},
 			mockStore:   func(m *mocks.Mockstore) {},
 			wantedError: "",
@@ -311,10 +311,10 @@ func TestInitAppOpts_Execute(t *testing.T) {
 				mockstore.
 					EXPECT().
 					CreateApplication(&config.Application{
-						AccountID:        "12345",
-						Name:             "myapp",
-						Domain:           "amazon.com",
-						DomainHostedZone: "mockID",
+						AccountID:          "12345",
+						Name:               "myapp",
+						Domain:             "amazon.com",
+						DomainHostedZoneID: "mockID",
 						Tags: map[string]string{
 							"owner": "boss",
 						},
@@ -325,10 +325,10 @@ func TestInitAppOpts_Execute(t *testing.T) {
 				mockProgress.EXPECT().Start(fmt.Sprintf(fmtAppInitStart, "myapp"))
 				mockDeployer.EXPECT().
 					DeployApp(&deploy.CreateAppInput{
-						Name:             "myapp",
-						AccountID:        "12345",
-						DomainName:       "amazon.com",
-						DomainHostedZone: "mockID",
+						Name:               "myapp",
+						AccountID:          "12345",
+						DomainName:         "amazon.com",
+						DomainHostedZoneID: "mockID",
 						AdditionalTags: map[string]string{
 							"owner": "boss",
 						},
@@ -417,12 +417,12 @@ func TestInitAppOpts_Execute(t *testing.T) {
 						"owner": "boss",
 					},
 				},
-				store:              mockstore,
-				identity:           mockIdentityService,
-				cfn:                mockDeployer,
-				ws:                 mockWorkspace,
-				prog:               mockProgress,
-				domainHostedZoneID: tc.inDomainHostedZoneID,
+				store:        mockstore,
+				identity:     mockIdentityService,
+				cfn:          mockDeployer,
+				ws:           mockWorkspace,
+				prog:         mockProgress,
+				hostedZoneID: tc.inDomainHostedZoneID,
 			}
 			tc.mocking(t, mockstore, mockWorkspace, mockIdentityService, mockDeployer, mockProgress)
 
