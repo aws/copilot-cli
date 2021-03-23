@@ -43,6 +43,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				mockBox.AddString("workloads/partials/cf/state-machine-definition.json.yml", "state-machine-definition")
 				mockBox.AddString("workloads/partials/cf/eventrule.yml", "eventrule")
 				mockBox.AddString("workloads/partials/cf/state-machine.yml", "state-machine")
+				mockBox.AddString("workloads/partials/cf/efs-access-point.yml", "efs-access-point")
 				mockBox.AddString("workloads/partials/cf/env-controller.yml", "env-controller")
 				mockBox.AddString("workloads/partials/cf/mount-points.yml", "mount-points")
 				mockBox.AddString("workloads/partials/cf/volumes.yml", "volumes")
@@ -65,6 +66,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
   eventrule
   state-machine
   state-machine-definition
+  efs-access-point
   env-controller
   mount-points
   volumes

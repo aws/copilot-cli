@@ -55,6 +55,7 @@ var (
 		"eventrule",
 		"state-machine",
 		"state-machine-definition.json",
+		"efs-access-point",
 		"env-controller",
 		"mount-points",
 		"volumes",

@@ -69,7 +69,6 @@ TaskRole:
               Resource:
                 - !Sub 'arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/{{$EFS.FilesystemID}}'
       {{- end}}
-      {{- end -}}
       {{- if .Storage.ManagedVolumeInfo}}
       - PolicyName: 'GrantAccessCopilotManagedEFS'
         PolicyDocument:
@@ -90,4 +89,6 @@ TaskRole:
                     fsid: Fn::ImportValue:
                       !Sub ${AppName}-${EnvName}-FilesystemID
       {{- end}}
+      {{- end -}}
+
 
