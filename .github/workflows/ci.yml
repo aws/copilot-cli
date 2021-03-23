@@ -55,6 +55,7 @@ jobs:
 
   integ-test:
     runs-on: ubuntu-latest
+    environment: ci
     steps:
       - name: Set up Go
         uses: actions/setup-go@v2
