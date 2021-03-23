@@ -11,6 +11,75 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestOption_String(t *testing.T) {
+	testCases := map[string]struct {
+		input  Option
+		wanted string
+	}{
+		"should render the value with a tab if there is no hint": {
+			input: Option{
+				Value: "Help me decide!",
+			},
+			wanted: "Help me decide!\t",
+		},
+		"should render a hint in parenthesis separated by a tab": {
+			input: Option{
+				Value: "Load Balanced Web Service",
+				Hint:  "ELB -> ECS on Fargate",
+			},
+			wanted: "Load Balanced Web Service\t(ELB -> ECS on Fargate)",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.input.String())
+		})
+	}
+}
+
+func TestPrompt_SelectOption(t *testing.T) {
+	t.Run("should return ErrEmptyOptions if there are no options", func(t *testing.T) {
+		_, err := New().SelectOption("to be or not to be?", nil)
+		require.EqualError(t, err, ErrEmptyOptions.Error())
+	})
+	t.Run("should render tab separated options", func(t *testing.T) {
+		// GIVEN
+		var p Prompt = func(p survey.Prompt, out interface{}, _ ...survey.AskOpt) error {
+			sel := p.(*prompt).prompter.(*survey.Select)
+			require.ElementsMatch(t, []string{
+				"Load Balanced Web Service  (ELB -> ECS on Fargate)",
+				"Backend Service            (ECS on Fargate)",
+				"Scheduled Job              (CW Event -> StateMachine -> Fargate)",
+			}, sel.Options)
+			result := out.(*string)
+			*result = "Load Balanced Web Service     (ELB -> ECS on Fargate)"
+			return nil
+		}
+		opts := []Option{
+			{
+				Value: "Load Balanced Web Service",
+				Hint:  "ELB -> ECS on Fargate",
+			},
+			{
+				Value: "Backend Service",
+				Hint:  "ECS on Fargate",
+			},
+			{
+				Value: "Scheduled Job",
+				Hint:  "CW Event -> StateMachine -> Fargate",
+			},
+		}
+
+		// WHEN
+		actual, err := p.SelectOption("Which workload type?", opts)
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, "Load Balanced Web Service", actual)
+	})
+}
+
 func TestPrompt_SelectOne(t *testing.T) {
 	mockError := fmt.Errorf("error")
 	mockMessage := "Which droid is best droid?"
