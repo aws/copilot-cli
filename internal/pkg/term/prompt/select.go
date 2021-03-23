@@ -49,7 +49,7 @@ func (p Prompt) SelectOption(message string, opts []Option, promptCfgs ...Prompt
 	if err != nil {
 		return "", err
 	}
-	return parseValueFromOptionFmt(result)
+	return parseValueFromOptionFmt(result), nil
 }
 
 // SelectOne prompts the user with a list of options to choose from with the arrow keys.
@@ -95,10 +95,9 @@ func stringifyOptions(opts []Option) ([]string, error) {
 	return strings.Split(buf.String(), "\n"), nil
 }
 
-func parseValueFromOptionFmt(formatted string) (string, error) {
-	idx := strings.Index(formatted, "(")
-	if idx == -1 {
-		return "", fmt.Errorf("option '%s' does not contain '('", formatted)
+func parseValueFromOptionFmt(formatted string) string {
+	if idx := strings.Index(formatted, "("); idx != -1 {
+		return strings.TrimSpace(formatted[:idx])
 	}
-	return strings.TrimSpace(formatted[:idx]), nil
+	return formatted
 }

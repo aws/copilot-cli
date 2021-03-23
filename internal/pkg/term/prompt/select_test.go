@@ -43,7 +43,7 @@ func TestPrompt_SelectOption(t *testing.T) {
 		_, err := New().SelectOption("to be or not to be?", nil)
 		require.EqualError(t, err, ErrEmptyOptions.Error())
 	})
-	t.Run("should render tab separated options", func(t *testing.T) {
+	t.Run("should return value without hint", func(t *testing.T) {
 		// GIVEN
 		var p Prompt = func(p survey.Prompt, out interface{}, _ ...survey.AskOpt) error {
 			sel := p.(*prompt).prompter.(*survey.Select)
@@ -77,6 +77,35 @@ func TestPrompt_SelectOption(t *testing.T) {
 		// THEN
 		require.NoError(t, err)
 		require.Equal(t, "Load Balanced Web Service", actual)
+	})
+	t.Run("should return value without extra spaces when there are no hints", func(t *testing.T) {
+		// GIVEN
+		var p Prompt = func(p survey.Prompt, out interface{}, _ ...survey.AskOpt) error {
+			sel := p.(*prompt).prompter.(*survey.Select)
+			require.ElementsMatch(t, []string{
+				"Load Balanced Web Service  (ELB -> ECS on Fargate)",
+				"Help me decide!",
+			}, sel.Options)
+			result := out.(*string)
+			*result = "Help me decide!"
+			return nil
+		}
+		opts := []Option{
+			{
+				Value: "Load Balanced Web Service",
+				Hint:  "ELB -> ECS on Fargate",
+			},
+			{
+				Value: "Help me decide!",
+			},
+		}
+
+		// WHEN
+		actual, err := p.SelectOption("Which workload type?", opts)
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, "Help me decide!", actual)
 	})
 }
 
