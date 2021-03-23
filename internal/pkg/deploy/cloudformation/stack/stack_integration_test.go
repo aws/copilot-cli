@@ -9,9 +9,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/stretchr/testify/require"
@@ -45,16 +42,6 @@ func Test_Autoscaling_Integration(t *testing.T) {
 	require.NoError(t, err)
 	tpl, err := serializer.Template()
 	require.NoError(t, err)
-	sess, err := sessions.NewProvider().Default()
-	require.NoError(t, err)
-	cfn := cloudformation.New(sess)
-
-	t.Run("CloudFormation template must be valid", func(t *testing.T) {
-		_, err := cfn.ValidateTemplate(&cloudformation.ValidateTemplateInput{
-			TemplateBody: aws.String(tpl),
-		})
-		require.NoError(t, err)
-	})
 
 	t.Run("CloudFormation template must contain autoscaling resources", func(t *testing.T) {
 		path := filepath.Join("testdata", "autoscaling", wantedCFNTemplatePath)

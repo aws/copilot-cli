@@ -11,9 +11,6 @@ import (
 	"testing"
 	"gopkg.in/yaml.v3"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -38,17 +35,6 @@ func TestScheduledJob_Template(t *testing.T) {
 
 	tpl, err := serializer.Template()
 	require.NoError(t, err, "template should render")
-
-	sess, err := sessions.NewProvider().Default()
-	require.NoError(t, err)
-	cfn := cloudformation.New(sess)
-
-	t.Run("CF template should be valid", func(t *testing.T) {
-		_, err := cfn.ValidateTemplate(&cloudformation.ValidateTemplateInput{
-			TemplateBody: aws.String(tpl),
-		})
-		require.NoError(t, err)
-	})
 
 	t.Run("CF Template should be equal", func(t *testing.T) {
 		actualBytes := []byte(tpl)
