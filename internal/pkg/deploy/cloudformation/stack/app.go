@@ -47,8 +47,8 @@ type AppRegionalResources struct {
 }
 
 const (
-	appTemplatePath               = "app/app.yml"
-	appResourcesTemplatePath      = "app/cf.yml"
+	appTemplatePath               = "app/versions/v1.0.0/app.yml"
+	appResourcesTemplatePath      = "app/versions/v1.0.0/cf.yml"
 	appAdminRoleParamName         = "AdminRoleName"
 	appExecutionRoleParamName     = "ExecutionRoleName"
 	appDNSDelegationRoleParamName = "DNSDelegationRoleName"
