@@ -1,4 +1,4 @@
-// +build integration,integration-remote
+// +build integration,!local
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
