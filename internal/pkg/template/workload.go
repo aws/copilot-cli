@@ -85,10 +85,10 @@ type SidecarOpts struct {
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
 type StorageOpts struct {
-	Volumes     []*Volume
-	MountPoints []*MountPoint
-	EFSPerms    []*EFSPermission
-	AccessPoint *AccessPointInfo // Used for delegating CreationInfo for Copilot-managed EFS.
+	Volumes           []*Volume
+	MountPoints       []*MountPoint
+	EFSPerms          []*EFSPermission
+	CopilotVolumeInfo *CopilotVolumeCreationInfo // Used for delegating CreationInfo for Copilot-managed EFS.
 }
 
 // EFSPermission holds information needed to render an IAM policy statement.
@@ -118,10 +118,11 @@ type Volume struct {
 	IAM           *string // ENABLED or DISABLED
 }
 
-// AccessPointInfo holds information about how to create Copilot-managed access points
-type AccessPointInfo struct {
-	Uid *string
-	Gid *string
+// CopilotVolumeCreationInfo holds information about how to create Copilot-managed access points
+type CopilotVolumeCreationInfo struct {
+	Name *string
+	UID  *string
+	GID  *string
 }
 
 // LogConfigOpts holds configuration that's needed if the service is configured with Firelens to route
