@@ -1,7 +1,7 @@
 {{- if .Storage.Volumes}}
 Volumes:
-{{- if .Storage.CopilotVolumeInfo}}
-  - Name: {{.Storage.CopilotVolumeInfo.Name}}
+{{- if .Storage.ManagedVolumeInfo}}
+  - Name: {{.Storage.ManagedVolumeInfo.Name}}
     EFSVolumeConfiguration:
       FilesystemId:
         Fn::ImportValue:

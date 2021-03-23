@@ -1,5 +1,5 @@
 {{- if .Storage}}
-{{- if .Storage.CopilotVolumeInfo}}
+{{- if .Storage.ManagedVolumeInfo}}
 AccessPoint:
   Type: AWS::EFS::AccessPoint
   Properties:
@@ -8,13 +8,13 @@ AccessPoint:
       Fn::ImportValue:
         !Sub '${AppName}-${EnvName}-FilesystemID'
     PosixUser: 
-      Uid: {{.Storage.CopilotVolumeInfo.UID}}
-      Gid: {{.Storage.CopilotVolumeInfo.GID}}
+      Uid: {{.Storage.ManagedVolumeInfo.UID}}
+      Gid: {{.Storage.ManagedVolumeInfo.GID}}
     RootDirectory: 
       Path: !Sub '/${WorkloadName}'
       CreationInfo:
-        OwnerUid: {{.Storage.CopilotVolumeInfo.UID}}
-        OwnerGid: {{.Storage.CopilotVolumeInfo.GID}}
+        OwnerUid: {{.Storage.ManagedVolumeInfo.UID}}
+        OwnerGid: {{.Storage.ManagedVolumeInfo.GID}}
         Permissions: 0755
 {{- end}}
 {{- end}}

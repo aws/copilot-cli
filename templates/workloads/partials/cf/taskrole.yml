@@ -70,7 +70,7 @@ TaskRole:
                 - !Sub 'arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/{{$EFS.FilesystemID}}'
       {{- end}}
       {{- end -}}
-      {{- if .Storage.CopilotVolumeInfo}}
+      {{- if .Storage.ManagedVolumeInfo}}
       - PolicyName: 'GrantAccessCopilotManagedEFS'
         PolicyDocument:
           Version: '2012-10-17'
