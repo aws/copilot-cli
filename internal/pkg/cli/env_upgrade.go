@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -14,6 +15,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -51,17 +53,24 @@ type envUpgradeOpts struct {
 	sel                appEnvSelector
 	legacyEnvTemplater templater
 	prog               progress
+	appCFN             appResourcesGetter
+	uploader           customResourcesUploader
 
 	// Constructors for clients that can be initialized only at runtime.
 	// These functions are overriden in tests to provide mocks.
 	newEnvVersionGetter func(app, env string) (versionGetter, error)
 	newTemplateUpgrader func(conf *config.Environment) (envTemplateUpgrader, error)
+	newS3               func(region string) (zipAndUploader, error)
 }
 
 func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to config store: %v", err)
+	}
+	defaultSession, err := sessions.NewProvider().Default()
+	if err != nil {
+		return nil, err
 	}
 	return &envUpgradeOpts{
 		envUpgradeVars: vars,
@@ -71,7 +80,9 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 		legacyEnvTemplater: stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
 			Version: deploy.LegacyEnvTemplateVersion,
 		}),
-		prog: termprogress.NewSpinner(log.DiagnosticWriter),
+		prog:     termprogress.NewSpinner(log.DiagnosticWriter),
+		uploader: template.New(),
+		appCFN:   cloudformation.New(defaultSession),
 
 		newEnvVersionGetter: func(app, env string) (versionGetter, error) {
 			d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
@@ -90,6 +101,13 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 				return nil, fmt.Errorf("create session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
 			}
 			return cloudformation.New(sess), nil
+		},
+		newS3: func(region string) (zipAndUploader, error) {
+			sess, err := sessions.NewProvider().DefaultWithRegion(region)
+			if err != nil {
+				return nil, fmt.Errorf("create session with region %s: %v", region, err)
+			}
+			return s3.New(sess), nil
 		},
 	}, nil
 }
@@ -140,8 +158,26 @@ func (o *envUpgradeOpts) Execute() error {
 	if err != nil {
 		return err
 	}
+	app, err := o.store.GetApplication(o.appName)
+	if err != nil {
+		return fmt.Errorf("get application %s: %w", o.appName, err)
+	}
 	for _, env := range envs {
-		if err := o.upgrade(env); err != nil {
+		resources, err := o.appCFN.GetAppResourcesByRegion(app, env.Region)
+		if err != nil {
+			return fmt.Errorf("get app resources: %w", err)
+		}
+		s3Client, err := o.newS3(env.Region)
+		if err != nil {
+			return err
+		}
+		urls, err := o.uploader.UploadEnvironmentCustomResources(s3.CompressAndUploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
+			return s3Client.ZipAndUpload(resources.S3Bucket, key, objects...)
+		}))
+		if err != nil {
+			return fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
+		}
+		if err := o.upgrade(env, urls); err != nil {
 			return err
 		}
 	}
@@ -153,28 +189,28 @@ func (o *envUpgradeOpts) RecommendedActions() []string {
 	return nil
 }
 
-func (o *envUpgradeOpts) listEnvsToUpgrade() ([]string, error) {
+func (o *envUpgradeOpts) listEnvsToUpgrade() ([]*config.Environment, error) {
 	if !o.all {
-		return []string{o.name}, nil
+		env, err := o.store.GetEnvironment(o.appName, o.name)
+		if err != nil {
+			return nil, fmt.Errorf("get environment %s in app %s: %w", o.appName, o.name, err)
+		}
+		return []*config.Environment{env}, nil
 	}
 
 	envs, err := o.store.ListEnvironments(o.appName)
 	if err != nil {
-		return nil, fmt.Errorf("list environments in app %s: %v", o.appName, err)
+		return nil, fmt.Errorf("list environments in app %s: %w", o.appName, err)
 	}
-	var names []string
-	for _, env := range envs {
-		names = append(names, env.Name)
-	}
-	return names, nil
+	return envs, nil
 }
 
-func (o *envUpgradeOpts) upgrade(env string) (err error) {
-	version, err := o.envVersion(env)
+func (o *envUpgradeOpts) upgrade(env *config.Environment, customResourcesURLs map[string]string) (err error) {
+	version, err := o.envVersion(env.Name)
 	if err != nil {
 		return err
 	}
-	yes, err := shouldUpgradeEnv(env, version)
+	yes, err := shouldUpgradeEnv(env.Name, version)
 	if err != nil {
 		return err
 	}
@@ -182,26 +218,22 @@ func (o *envUpgradeOpts) upgrade(env string) (err error) {
 		return nil
 	}
 
-	o.prog.Start(fmt.Sprintf(fmtEnvUpgradeStart, color.HighlightUserInput(env), color.Emphasize(version), color.Emphasize(deploy.LatestEnvTemplateVersion)))
+	o.prog.Start(fmt.Sprintf(fmtEnvUpgradeStart, color.HighlightUserInput(env.Name), color.Emphasize(version), color.Emphasize(deploy.LatestEnvTemplateVersion)))
 	defer func() {
 		if err != nil {
-			o.prog.Stop(log.Serrorf(fmtEnvUpgradeFailed, color.HighlightUserInput(env), color.Emphasize(deploy.LatestEnvTemplateVersion)))
+			o.prog.Stop(log.Serrorf(fmtEnvUpgradeFailed, color.HighlightUserInput(env.Name), color.Emphasize(deploy.LatestEnvTemplateVersion)))
 			return
 		}
-		o.prog.Stop(log.Ssuccessf(fmtEnvUpgradeComplete, color.HighlightUserInput(env), color.Emphasize(deploy.LatestEnvTemplateVersion)))
+		o.prog.Stop(log.Ssuccessf(fmtEnvUpgradeComplete, color.HighlightUserInput(env.Name), color.Emphasize(deploy.LatestEnvTemplateVersion)))
 	}()
-	conf, err := o.store.GetEnvironment(o.appName, env)
-	if err != nil {
-		return err
-	}
-	upgrader, err := o.newTemplateUpgrader(conf)
+	upgrader, err := o.newTemplateUpgrader(env)
 	if err != nil {
 		return err
 	}
 	if version == deploy.LegacyEnvTemplateVersion {
-		return o.upgradeLegacyEnvironment(upgrader, conf, version, deploy.LatestEnvTemplateVersion)
+		return o.upgradeLegacyEnvironment(upgrader, env, customResourcesURLs, version, deploy.LatestEnvTemplateVersion)
 	}
-	return o.upgradeEnvironment(upgrader, conf, version, deploy.LatestEnvTemplateVersion)
+	return o.upgradeEnvironment(upgrader, env, customResourcesURLs, version, deploy.LatestEnvTemplateVersion)
 }
 
 func (o *envUpgradeOpts) envVersion(name string) (string, error) {
@@ -235,7 +267,8 @@ Are you using the latest version of AWS Copilot?`, env, deploy.LatestEnvTemplate
 	return false, nil
 }
 
-func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.Environment, fromVersion, toVersion string) error {
+func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.Environment,
+	customResourcesURLs map[string]string, fromVersion, toVersion string) error {
 	var importedVPC *config.ImportVPC
 	var adjustedVPC *config.AdjustVPC
 	if conf.CustomConfig != nil {
@@ -244,19 +277,21 @@ func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.E
 	}
 
 	if err := upgrader.UpgradeEnvironment(&deploy.CreateEnvironmentInput{
-		Version:           toVersion,
-		AppName:           conf.App,
-		Name:              conf.Name,
-		ImportVPCConfig:   importedVPC,
-		AdjustVPCConfig:   adjustedVPC,
-		CFNServiceRoleARN: conf.ExecutionRoleARN,
+		Version:             toVersion,
+		AppName:             conf.App,
+		Name:                conf.Name,
+		CustomResourcesURLs: customResourcesURLs,
+		ImportVPCConfig:     importedVPC,
+		AdjustVPCConfig:     adjustedVPC,
+		CFNServiceRoleARN:   conf.ExecutionRoleARN,
 	}); err != nil {
 		return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
 	}
 	return nil
 }
 
-func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, conf *config.Environment, fromVersion, toVersion string) error {
+func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, conf *config.Environment,
+	customResourcesURLs map[string]string, fromVersion, toVersion string) error {
 	isDefaultEnv, err := o.isDefaultLegacyTemplate(upgrader, conf.App, conf.Name)
 	if err != nil {
 		return err
@@ -267,10 +302,11 @@ func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, co
 	}
 	if isDefaultEnv {
 		if err := upgrader.UpgradeLegacyEnvironment(&deploy.CreateEnvironmentInput{
-			Version:           toVersion,
-			AppName:           conf.App,
-			Name:              conf.Name,
-			CFNServiceRoleARN: conf.ExecutionRoleARN,
+			Version:             toVersion,
+			AppName:             conf.App,
+			Name:                conf.Name,
+			CustomResourcesURLs: customResourcesURLs,
+			CFNServiceRoleARN:   conf.ExecutionRoleARN,
 		}, albWorkloads...); err != nil {
 			return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
 		}

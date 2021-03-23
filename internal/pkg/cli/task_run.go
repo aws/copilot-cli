@@ -11,9 +11,11 @@ import (
 	"strings"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -29,11 +31,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
-	"github.com/google/shlex"
-
-	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/dustin/go-humanize/english"
+	"github.com/google/shlex"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -42,6 +42,7 @@ const (
 	appEnvOptionNone      = "None (run in default VPC)"
 	defaultDockerfilePath = "Dockerfile"
 	imageTagLatest        = "latest"
+	shortTaskIDLength     = 8
 )
 
 const (
@@ -86,6 +87,7 @@ type runTaskVars struct {
 
 	envVars      map[string]string
 	command      string
+	entrypoint   string
 	resourceTags map[string]string
 
 	follow bool
@@ -107,6 +109,7 @@ type runTaskOpts struct {
 	runner               taskRunner
 	eventsWriter         eventsWriter
 	defaultClusterGetter defaultClusterGetter
+	publicIPGetter       publicIPGetter
 
 	sess              *session.Session
 	targetEnvironment *config.Environment
@@ -134,20 +137,24 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	}
 
 	opts.configureRuntimeOpts = func() error {
-		opts.runner = opts.configureRunner()
+		opts.runner, err = opts.configureRunner()
+		if err != nil {
+			return fmt.Errorf("configure task runner: %w", err)
+		}
 		opts.deployer = cloudformation.New(opts.sess)
 		opts.defaultClusterGetter = awsecs.New(opts.sess)
+		opts.publicIPGetter = ec2.New(opts.sess)
 		return nil
 	}
 
 	opts.configureRepository = func() error {
 		repoName := fmt.Sprintf(deploy.FmtTaskECRRepoName, opts.groupName)
 		registry := ecr.New(opts.sess)
-		repository, err := repository.New(repoName, registry)
+		repo, err := repository.New(repoName, registry)
 		if err != nil {
 			return fmt.Errorf("initialize repository %s: %w", repoName, err)
 		}
-		opts.repository = repository
+		opts.repository = repo
 		return nil
 	}
 
@@ -157,11 +164,27 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	return &opts, nil
 }
 
-func (o *runTaskOpts) configureRunner() taskRunner {
+func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 	vpcGetter := ec2.New(o.sess)
 	ecsService := awsecs.New(o.sess)
 
 	if o.env != "" {
+		deployStore, err := deploy.NewStore(o.store)
+		if err != nil {
+			return nil, fmt.Errorf("connect to copilot deploy store: %w", err)
+		}
+
+		d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:             o.appName,
+			Env:             o.env,
+			ConfigStore:     o.store,
+			DeployStore:     deployStore,
+			EnableResources: false, // We don't need to show detailed resources.
+		})
+		if err != nil {
+			return nil, fmt.Errorf("create describer for environment %s in application %s: %w", o.env, o.appName, err)
+		}
+
 		return &task.EnvRunner{
 			Count:     o.count,
 			GroupName: o.groupName,
@@ -169,10 +192,11 @@ func (o *runTaskOpts) configureRunner() taskRunner {
 			App: o.appName,
 			Env: o.env,
 
-			VPCGetter:     vpcGetter,
-			ClusterGetter: ecs.New(o.sess),
-			Starter:       ecsService,
-		}
+			VPCGetter:            vpcGetter,
+			ClusterGetter:        ecs.New(o.sess),
+			Starter:              ecsService,
+			EnvironmentDescriber: d,
+		}, nil
 	}
 
 	return &task.NetworkConfigRunner{
@@ -185,7 +209,7 @@ func (o *runTaskOpts) configureRunner() taskRunner {
 		VPCGetter:     vpcGetter,
 		ClusterGetter: ecsService,
 		Starter:       ecsService,
-	}
+	}, nil
 
 }
 
@@ -380,6 +404,11 @@ func (o *runTaskOpts) Execute() error {
 			return fmt.Errorf(`find "default" cluster to deploy the task to: %v`, err)
 		}
 		if !hasDefaultCluster {
+			log.Errorf(
+				"Looks like there is no \"default\" cluster in your region!\nPlease run %s to create the cluster first, and then re-run %s.\n",
+				color.HighlightCode("aws ecs create-cluster"),
+				color.HighlightCode("copilot task run"),
+			)
 			return errors.New(`cannot find a "default" cluster to deploy the task to`)
 		}
 	}
@@ -414,6 +443,8 @@ func (o *runTaskOpts) Execute() error {
 		return err
 	}
 
+	o.showPublicIPs(tasks)
+
 	if o.follow {
 		o.configureEventsWriter(tasks)
 		if err := o.displayLogStream(); err != nil {
@@ -443,6 +474,35 @@ func (o *runTaskOpts) runTask() ([]*task.Task, error) {
 	}
 	o.spinner.Stop(log.Ssuccessf("%s %s %s running.\n\n", english.PluralWord(o.count, "Task", ""), o.groupName, english.PluralWord(o.count, "is", "are")))
 	return tasks, nil
+}
+
+func (o *runTaskOpts) showPublicIPs(tasks []*task.Task) {
+	publicIPs := make(map[string]string)
+	for _, t := range tasks {
+		if t.ENI == "" {
+			continue
+		}
+		ip, err := o.publicIPGetter.PublicIP(t.ENI) // We will just not show the ip address if an error occurs.
+		if err == nil {
+			publicIPs[t.TaskARN] = ip
+		}
+	}
+
+	if len(publicIPs) == 0 {
+		return
+	}
+
+	log.Infof("%s associated with the %s %s:\n",
+		english.PluralWord(len(publicIPs), "The public IP", "Public IPs"),
+		english.PluralWord(len(publicIPs), "task", "tasks"),
+		english.PluralWord(len(publicIPs), "is", "are"))
+	for taskARN, ip := range publicIPs {
+		if len(taskARN) >= shortTaskIDLength {
+			taskARN = taskARN[len(taskARN)-shortTaskIDLength:]
+		}
+		log.Infof("- %s (for %s)\n", ip, taskARN)
+	}
+
 }
 
 func (o *runTaskOpts) buildAndPushImage() error {
@@ -481,10 +541,17 @@ func (o *runTaskOpts) deploy() error {
 	if o.env != "" {
 		deployOpts = []awscloudformation.StackOption{awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)}
 	}
+
+	entrypoint, err := shlex.Split(o.entrypoint)
+	if err != nil {
+		return fmt.Errorf("split entrypoint %s into tokens using shell-style rules: %w", o.entrypoint, err)
+	}
+
 	command, err := shlex.Split(o.command)
 	if err != nil {
 		return fmt.Errorf("split command %s into tokens using shell-style rules: %w", o.command, err)
 	}
+
 	input := &deploy.CreateTaskResourcesInput{
 		Name:           o.groupName,
 		CPU:            o.cpu,
@@ -493,6 +560,7 @@ func (o *runTaskOpts) deploy() error {
 		TaskRole:       o.taskRole,
 		ExecutionRole:  o.executionRole,
 		Command:        command,
+		EntryPoint:     entrypoint,
 		EnvVars:        o.envVars,
 		App:            o.appName,
 		Env:            o.env,
@@ -632,10 +700,11 @@ Run a task with a command.
 	cmd.Flags().StringVar(&vars.env, envFlag, "", taskEnvFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.subnets, subnetsFlag, nil, subnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.securityGroups, securityGroupsFlag, nil, securityGroupsFlagDescription)
-	cmd.Flags().BoolVar(&vars.useDefaultSubnets, taskDefaultFlag, false, taskDefaultFlagDescription)
+	cmd.Flags().BoolVar(&vars.useDefaultSubnets, taskDefaultFlag, false, taskRunDefaultFlagDescription)
 
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
-	cmd.Flags().StringVar(&vars.command, commandFlag, "", commandFlagDescription)
+	cmd.Flags().StringVar(&vars.command, commandFlag, "", runCommandFlagDescription)
+	cmd.Flags().StringVar(&vars.entrypoint, entrypointFlag, "", entrypointFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)

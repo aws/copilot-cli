@@ -65,13 +65,14 @@ Resources:
 {{include "envvars" . | indent 10}}
           - Name: COPILOT_LB_DNS
             Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+{{include "image-overrides" . | indent 10}}
 {{include "secrets" . | indent 10}}
 {{include "logconfig" . | indent 10}}
-{{- if .Storage}}
+{{- if .Storage -}}
 {{include "mount-points" . | indent 10}}
-{{- end}}
+{{- end -}}
 {{include "sidecars" . | indent 8}}
-{{if .Storage}}
+{{if .Storage -}}
 {{include "volumes" . | indent 6}}
 {{- end}}
 {{include "executionrole" . | indent 2}}
@@ -356,8 +357,9 @@ Resources:
       Timeout: "1"
       Count: 0
 
-{{include "addons" . | indent 2}}
+{{include "efs-access-point" . | indent 2}}
 
+{{include "addons" . | indent 2}}
 
 Outputs:
   DiscoveryServiceARN:

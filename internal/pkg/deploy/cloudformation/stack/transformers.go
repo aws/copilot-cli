@@ -35,12 +35,11 @@ const (
 // Validation errors when rendering manifest into template.
 var (
 	errNoFSID                      = errors.New(`volume field efs/id cannot be empty`)
-	errVolNoContainerPath          = errors.New(`field "efs/path" cannot be empty`)
 	errAcessPointWithRootDirectory = errors.New(`root directory must be empty or "/" when access point ID is specified`)
 	errAccessPointWithoutIAM       = errors.New(`"iam" must be true when access point ID is specified`)
 
-	errMPNoContainerPath = errors.New(`"path" cannot be empty`)
-	errNoSourceVolume    = errors.New(`"source_volume" cannot be empty`)
+	errNoContainerPath = errors.New(`"path" cannot be empty`)
+	errNoSourceVolume  = errors.New(`"source_volume" cannot be empty`)
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
@@ -54,14 +53,19 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 		if err != nil {
 			return nil, err
 		}
+		mp, err := convertSidecarMountPoints(config.MountPoints)
+		if err != nil {
+			return nil, err
+		}
 		sidecars = append(sidecars, &template.SidecarOpts{
-			Name:       aws.String(name),
-			Image:      config.Image,
-			Port:       port,
-			Protocol:   protocol,
-			CredsParam: config.CredsParam,
-			Secrets:    config.Secrets,
-			Variables:  config.Variables,
+			Name:        aws.String(name),
+			Image:       config.Image,
+			Port:        port,
+			Protocol:    protocol,
+			CredsParam:  config.CredsParam,
+			Secrets:     config.Secrets,
+			Variables:   config.Variables,
+			MountPoints: mp,
 		})
 	}
 	return sidecars, nil
@@ -135,12 +139,20 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 	return opts
 }
 
+func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandOpts {
+	if e.Config.IsEmpty() && !aws.BoolValue(e.Enable) {
+		return nil
+	}
+	return &template.ExecuteCommandOpts{}
+}
+
 func convertLogging(lc *manifest.Logging) *template.LogConfigOpts {
 	if lc == nil {
 		return nil
 	}
 	return logConfigOpts(lc)
 }
+
 func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
 	return &template.LogConfigOpts{
 		Image:          lc.LogImage(),
@@ -154,15 +166,18 @@ func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
 // convertStorageOpts converts a manifest Storage field into template data structures which can be used
 // to execute CFN templates
 func convertStorageOpts(in *manifest.Storage) (*template.StorageOpts, error) {
-	v, err := renderVolumes(in.Volumes)
+	if in == nil {
+		return nil, nil
+	}
+	v, err := convertVolumes(in.Volumes)
 	if err != nil {
 		return nil, err
 	}
-	mp, err := renderMountPoints(in.Volumes)
+	mp, err := convertMountPoints(in.Volumes)
 	if err != nil {
 		return nil, err
 	}
-	perms, err := renderStoragePermissions(in.Volumes)
+	perms, err := convertEFSPermissions(in.Volumes)
 	if err != nil {
 		return nil, err
 	}
@@ -173,34 +188,63 @@ func convertStorageOpts(in *manifest.Storage) (*template.StorageOpts, error) {
 	}, nil
 }
 
-// renderSidecarMountPoints is used to convert from manifest to template objects.
-func renderSidecarMountPoints(in []manifest.SidecarMountPoint) ([]*template.MountPoint, error) {
+// convertSidecarMountPoints is used to convert from manifest to template objects.
+func convertSidecarMountPoints(in []manifest.SidecarMountPoint) ([]*template.MountPoint, error) {
 	if len(in) == 0 {
 		return nil, nil
 	}
-	output := []*template.MountPoint{}
+	var output []*template.MountPoint
 	for _, smp := range in {
-		if smp.ContainerPath == nil {
-			return nil, errMPNoContainerPath
+		mp, err := convertMountPoint(smp.SourceVolume, smp.ContainerPath, smp.ReadOnly)
+		if err != nil {
+			return nil, err
 		}
-		if aws.StringValue(smp.SourceVolume) == "" {
-			return nil, errNoSourceVolume
-		}
-		readOnly := aws.Bool(defaultReadOnly)
-		if smp.ReadOnly != nil {
-			readOnly = smp.ReadOnly
-		}
-		mp := template.MountPoint{
-			ContainerPath: smp.ContainerPath,
-			SourceVolume:  smp.SourceVolume,
-			ReadOnly:      readOnly,
-		}
-		output = append(output, &mp)
+		output = append(output, mp)
 	}
 	return output, nil
 }
 
-func renderStoragePermissions(input map[string]manifest.Volume) ([]*template.EFSPermission, error) {
+func convertMountPoint(sourceVolume, containerPath *string, readOnly *bool) (*template.MountPoint, error) {
+	// containerPath must be specified.
+	if aws.StringValue(containerPath) == "" {
+		return nil, errNoContainerPath
+	}
+	path := aws.StringValue(containerPath)
+	if err := validateContainerPath(path); err != nil {
+		return nil, fmt.Errorf("validate container path %s: %w", path, err)
+	}
+	// readOnly defaults to true.
+	oReadOnly := aws.Bool(defaultReadOnly)
+	if readOnly != nil {
+		oReadOnly = readOnly
+	}
+	// sourceVolume must be specified. This is only a concern for sidecars.
+	if aws.StringValue(sourceVolume) == "" {
+		return nil, errNoSourceVolume
+	}
+	return &template.MountPoint{
+		ReadOnly:      oReadOnly,
+		ContainerPath: containerPath,
+		SourceVolume:  sourceVolume,
+	}, nil
+}
+
+func convertMountPoints(input map[string]manifest.Volume) ([]*template.MountPoint, error) {
+	if len(input) == 0 {
+		return nil, nil
+	}
+	var output []*template.MountPoint
+	for name, volume := range input {
+		mp, err := convertMountPoint(aws.String(name), volume.ContainerPath, volume.ReadOnly)
+		if err != nil {
+			return nil, err
+		}
+		output = append(output, mp)
+	}
+	return output, nil
+}
+
+func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPermission, error) {
 	if len(input) == 0 {
 		return nil, nil
 	}
@@ -224,32 +268,7 @@ func renderStoragePermissions(input map[string]manifest.Volume) ([]*template.EFS
 	return output, nil
 }
 
-func renderMountPoints(input map[string]manifest.Volume) ([]*template.MountPoint, error) {
-	if len(input) == 0 {
-		return nil, nil
-	}
-	output := []*template.MountPoint{}
-	for name, volume := range input {
-		// ContainerPath must be specified.
-		if volume.ContainerPath == nil {
-			return nil, errVolNoContainerPath
-		}
-		// ReadOnly defaults to true.
-		readOnly := aws.Bool(defaultReadOnly)
-		if volume.ReadOnly != nil {
-			readOnly = volume.ReadOnly
-		}
-		mp := template.MountPoint{
-			ReadOnly:      readOnly,
-			ContainerPath: volume.ContainerPath,
-			SourceVolume:  aws.String(name),
-		}
-		output = append(output, &mp)
-	}
-	return output, nil
-}
-
-func renderVolumes(input map[string]manifest.Volume) ([]*template.Volume, error) {
+func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error) {
 	if len(input) == 0 {
 		return nil, nil
 	}
@@ -260,10 +279,18 @@ func renderVolumes(input map[string]manifest.Volume) ([]*template.Volume, error)
 		if aws.StringValue(fsID) == "" {
 			return nil, errNoFSID
 		}
+
 		rootDir := volume.EFS.RootDirectory
+
+		// Validate that root directory path doesn't contain spaces or shell injection.
+		if err := validateRootDirPath(aws.StringValue(rootDir)); err != nil {
+			return nil, fmt.Errorf("validate root directory path %s: %w", aws.StringValue(rootDir), err)
+		}
+
 		if aws.StringValue(rootDir) == "" {
 			rootDir = aws.String(defaultRootDirectory)
 		}
+
 		var iam *string
 		if volume.EFS.AuthConfig.IAM == nil {
 			iam = aws.String(defaultIAM)
@@ -279,8 +306,8 @@ func renderVolumes(input map[string]manifest.Volume) ([]*template.Volume, error)
 			if !aws.BoolValue(volume.EFS.AuthConfig.IAM) {
 				return nil, errAccessPointWithoutIAM
 			}
-			rootDirectory := aws.StringValue(volume.EFS.RootDirectory)
-			if !(rootDirectory == "" || rootDirectory == "/") {
+			// Use rootDir var we previously identified.
+			if !(aws.StringValue(rootDir) == "/") {
 				return nil, errAcessPointWithRootDirectory
 			}
 		}
@@ -297,4 +324,17 @@ func renderVolumes(input map[string]manifest.Volume) ([]*template.Volume, error)
 		output = append(output, &v)
 	}
 	return output, nil
+}
+
+func convertNetworkConfig(network manifest.NetworkConfig) *template.NetworkOpts {
+	opts := &template.NetworkOpts{
+		AssignPublicIP: template.EnablePublicIP,
+		SubnetsType:    template.PublicSubnetsPlacement,
+		SecurityGroups: network.VPC.SecurityGroups,
+	}
+	if aws.StringValue(network.VPC.Placement) != manifest.PublicSubnetPlacement {
+		opts.AssignPublicIP = template.DisablePublicIP
+		opts.SubnetsType = template.PrivateSubnetsPlacement
+	}
+	return opts
 }

@@ -1,10 +1,5 @@
-# Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-# Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
-# the License. A copy of the License is located at
-#     http://aws.amazon.com/apache2.0/
-# or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-# CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for phonetool
 Resources:
@@ -111,7 +106,10 @@ Resources:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
         PrivilegedMode: true
-        Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        EnvironmentVariables:
+          - Name: AWS_ACCOUNT_ID
+            Value: !Sub '${AWS::AccountId}'
       Source:
         Type: CODEPIPELINE
         BuildSpec: copilot/buildspec.yml
@@ -190,7 +188,6 @@ Resources:
   BuildTestCommandstest:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: BuildTestCommands-phonetool-test
       EncryptionKey: !ImportValue phonetool-ArtifactKey
       ServiceRole: !GetAtt BuildProjectRole.Arn
       Artifacts:
@@ -267,7 +264,7 @@ Resources:
                 ChangeSetName: phonetool-test-api
                 ActionMode: CREATE_UPDATE
                 StackName: phonetool-test-api
-                Capabilities: CAPABILITY_NAMED_IAM
+                Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
                 TemplatePath: BuildOutput::infrastructure/api-test.stack.yml
                 TemplateConfiguration: BuildOutput::infrastructure/api-test.params.json
                 # The ARN of the IAM role (in the env account) that

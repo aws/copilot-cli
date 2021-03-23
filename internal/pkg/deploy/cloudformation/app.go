@@ -258,14 +258,22 @@ func (cf CloudFormation) removeWorkloadFromApp(app *config.Application, wlName s
 	return nil
 }
 
+// AddEnvToAppOpts contains the parameters to call AddEnvToApp.
+type AddEnvToAppOpts struct {
+	App          *config.Application
+	EnvName      string
+	EnvAccountID string
+	EnvRegion    string
+}
+
 // AddEnvToApp takes a new environment and updates the application configuration
 // with new Account IDs in resource policies (KMS Keys and ECR Repos) - and
 // sets up a new stack instance if the environment is in a new region.
-func (cf CloudFormation) AddEnvToApp(app *config.Application, env *config.Environment) error {
+func (cf CloudFormation) AddEnvToApp(opts *AddEnvToAppOpts) error {
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
-		Name:           app.Name,
-		AccountID:      app.AccountID,
-		AdditionalTags: app.Tags,
+		Name:           opts.App.Name,
+		AccountID:      opts.App.AccountID,
+		AdditionalTags: opts.App.Tags,
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
 	if err != nil {
@@ -279,13 +287,13 @@ func (cf CloudFormation) AddEnvToApp(app *config.Application, env *config.Enviro
 	shouldAddNewAccountID := true
 	for _, accountID := range previouslyDeployedConfig.Accounts {
 		accountList = append(accountList, accountID)
-		if accountID == env.AccountID {
+		if accountID == opts.EnvAccountID {
 			shouldAddNewAccountID = false
 		}
 	}
 
 	if shouldAddNewAccountID {
-		accountList = append(accountList, env.AccountID)
+		accountList = append(accountList, opts.EnvAccountID)
 	}
 
 	newDeploymentConfig := stack.AppResourcesConfig{
@@ -296,11 +304,11 @@ func (cf CloudFormation) AddEnvToApp(app *config.Application, env *config.Enviro
 	}
 
 	if err := cf.deployAppConfig(appConfig, &newDeploymentConfig); err != nil {
-		return fmt.Errorf("adding %s environment resources to application: %w", env.Name, err)
+		return fmt.Errorf("adding %s environment resources to application: %w", opts.EnvName, err)
 	}
 
-	if err := cf.addNewAppStackInstances(appConfig, env.Region); err != nil {
-		return fmt.Errorf("adding new stack instance for environment %s: %w", env.Name, err)
+	if err := cf.addNewAppStackInstances(appConfig, opts.EnvRegion); err != nil {
+		return fmt.Errorf("adding new stack instance for environment %s: %w", opts.EnvName, err)
 	}
 
 	return nil

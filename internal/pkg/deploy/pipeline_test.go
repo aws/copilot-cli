@@ -6,9 +6,147 @@ package deploy
 import (
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
 )
+
+func TestPipelineSourceFromManifest(t *testing.T) {
+	testCases := map[string]struct {
+		mfSource             *manifest.Source
+		expectedDeploySource interface{}
+		expectedShouldPrompt bool
+		expectedErr          *string
+	}{
+		"transforms GitHubV1 source": {
+			mfSource: &manifest.Source{
+				ProviderName: manifest.GithubV1ProviderName,
+				Properties: map[string]interface{}{
+					"branch":              "test",
+					"repository":          "some/repository/URL",
+					"access_token_secret": "secretiveSecret",
+				},
+			},
+			expectedDeploySource: &GitHubV1Source{
+				ProviderName:                manifest.GithubV1ProviderName,
+				Branch:                      "test",
+				RepositoryURL:               "some/repository/URL",
+				PersonalAccessTokenSecretID: "secretiveSecret",
+			},
+			expectedShouldPrompt: false,
+			expectedErr:          nil,
+		},
+		"transforms GitHub (v2) source without existing connection": {
+			mfSource: &manifest.Source{
+				ProviderName: manifest.GithubProviderName,
+				Properties: map[string]interface{}{
+					"branch":     "test",
+					"repository": "some/repository/URL",
+				},
+			},
+			expectedDeploySource: &GitHubSource{
+				ProviderName:  manifest.GithubProviderName,
+				Branch:        "test",
+				RepositoryURL: "some/repository/URL",
+			},
+			expectedShouldPrompt: true,
+			expectedErr:          nil,
+		},
+		"transforms GitHub (v2) source with existing connection": {
+			mfSource: &manifest.Source{
+				ProviderName: manifest.GithubProviderName,
+				Properties: map[string]interface{}{
+					"branch":         "test",
+					"repository":     "some/repository/URL",
+					"connection_arn": "barnARN",
+				},
+			},
+			expectedDeploySource: &GitHubSource{
+				ProviderName:  manifest.GithubProviderName,
+				Branch:        "test",
+				RepositoryURL: "some/repository/URL",
+				ConnectionARN: "barnARN",
+			},
+			expectedShouldPrompt: false,
+			expectedErr:          nil,
+		},
+		"transforms Bitbucket source without existing connection": {
+			mfSource: &manifest.Source{
+				ProviderName: manifest.BitbucketProviderName,
+				Properties: map[string]interface{}{
+					"branch":     "test",
+					"repository": "some/repository/URL",
+				},
+			},
+			expectedDeploySource: &BitbucketSource{
+				ProviderName:  manifest.BitbucketProviderName,
+				Branch:        "test",
+				RepositoryURL: "some/repository/URL",
+			},
+			expectedShouldPrompt: true,
+			expectedErr:          nil,
+		},
+		"transforms Bitbucket source with existing connection": {
+			mfSource: &manifest.Source{
+				ProviderName: manifest.BitbucketProviderName,
+				Properties: map[string]interface{}{
+					"branch":         "test",
+					"repository":     "some/repository/URL",
+					"connection_arn": "yarnARN",
+				},
+			},
+			expectedDeploySource: &BitbucketSource{
+				ProviderName:  manifest.BitbucketProviderName,
+				Branch:        "test",
+				RepositoryURL: "some/repository/URL",
+				ConnectionARN: "yarnARN",
+			},
+			expectedShouldPrompt: false,
+			expectedErr:          nil,
+		},
+		"transforms CodeCommit source": {
+			mfSource: &manifest.Source{
+				ProviderName: manifest.CodeCommitProviderName,
+				Properties: map[string]interface{}{
+					"branch":     "test",
+					"repository": "some/repository/URL",
+				},
+			},
+			expectedDeploySource: &CodeCommitSource{
+				ProviderName:  manifest.CodeCommitProviderName,
+				Branch:        "test",
+				RepositoryURL: "some/repository/URL",
+			},
+			expectedShouldPrompt: false,
+			expectedErr:          nil,
+		},
+		"errors if user changed provider name in manifest to unsupported source": {
+			mfSource: &manifest.Source{
+				ProviderName: "BitCommitHubBucket",
+				Properties: map[string]interface{}{
+					"branch":     "test",
+					"repository": "some/repository/URL",
+				},
+			},
+			expectedDeploySource: nil,
+			expectedShouldPrompt: false,
+			expectedErr:          aws.String("invalid repo source provider: BitCommitHubBucket"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			source, shouldPrompt, err := PipelineSourceFromManifest(tc.mfSource)
+			if tc.expectedErr != nil {
+				require.Contains(t, err.Error(), *tc.expectedErr)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expectedDeploySource, source, "mismatched source")
+				require.Equal(t, tc.expectedShouldPrompt, shouldPrompt, "mismatched bool for prompting")
+			}
+		})
+	}
+}
 
 func TestParseOwnerAndRepo(t *testing.T) {
 	testCases := map[string]struct {
@@ -44,7 +182,7 @@ func TestParseOwnerAndRepo(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			owner, repo, err := tc.src.parseOwnerAndRepo()
+			owner, repo, err := tc.src.RepositoryURL.parse()
 			if tc.expectedErrMsg != nil {
 				require.Contains(t, err.Error(), *tc.expectedErrMsg)
 			} else {

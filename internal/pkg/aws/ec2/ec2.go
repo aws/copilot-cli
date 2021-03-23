@@ -62,6 +62,7 @@ type api interface {
 	DescribeSecurityGroups(*ec2.DescribeSecurityGroupsInput) (*ec2.DescribeSecurityGroupsOutput, error)
 	DescribeVpcs(input *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error)
 	DescribeVpcAttribute(input *ec2.DescribeVpcAttributeInput) (*ec2.DescribeVpcAttributeOutput, error)
+	DescribeNetworkInterfaces(input *ec2.DescribeNetworkInterfacesInput) (*ec2.DescribeNetworkInterfacesOutput, error)
 }
 
 // Filter contains the name and values of a filter.
@@ -118,6 +119,25 @@ func ExtractVPC(label string) (*VPC, error) {
 		ID:   splitVPC[0],
 		Name: name,
 	}, nil
+}
+
+// PublicIP returns the public ip associated with the network interface.
+func (c *EC2) PublicIP(eni string) (string, error) {
+	response, err := c.client.DescribeNetworkInterfaces(&ec2.DescribeNetworkInterfacesInput{
+		NetworkInterfaceIds: aws.StringSlice([]string{eni}),
+	})
+	if err != nil {
+		return "", fmt.Errorf("describe network interface with ENI %s: %w", eni, err)
+	}
+
+	// `response.NetworkInterfaces` contains at least one result; if no matching ENI is found, the API call will return
+	// an error instead of an empty list of `NetworkInterfaces` (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeNetworkInterfaces.html)
+	association := response.NetworkInterfaces[0].Association
+	if association == nil {
+		return "", fmt.Errorf("no association information found for ENI %s", eni)
+	}
+
+	return aws.StringValue(association.PublicIp), nil
 }
 
 // ListVPCs returns names and IDs (or just IDs, if Name tag does not exist) of all VPCs.

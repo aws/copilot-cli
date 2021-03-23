@@ -10,6 +10,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -205,12 +206,26 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 				mockStore := mocks.NewMockstore(ctrl)
 				mockStore.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
 					{
-						Name: "test",
+						Name:   "test",
+						Region: "us-west-2",
 					},
 					{
-						Name: "prod",
+						Name:   "prod",
+						Region: "us-east-1",
 					},
 				}, nil)
+				mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+				mockAppCFN := mocks.NewMockappResourcesGetter(ctrl)
+				mockAppCFN.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
+					Return(&stack.AppRegionalResources{
+						S3Bucket: "mockBucket",
+					}, nil)
+				mockAppCFN.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-east-1").
+					Return(&stack.AppRegionalResources{
+						S3Bucket: "mockBucket",
+					}, nil)
+				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
+				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil).Times(2)
 				mockEnvTpl := mocks.NewMockversionGetter(ctrl)
 				mockEnvTpl.EXPECT().Version().Return(deploy.LatestEnvTemplateVersion, nil).Times(2)
 
@@ -222,6 +237,11 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					store: mockStore,
 					newEnvVersionGetter: func(_, _ string) (versionGetter, error) {
 						return mockEnvTpl, nil
+					},
+					uploader: mockUploader,
+					appCFN:   mockAppCFN,
+					newS3: func(region string) (zipAndUploader, error) {
+						return mocks.NewMockzipAndUploader(ctrl), nil
 					},
 				}
 			},
@@ -240,6 +260,7 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					Return(&config.Environment{
 						App:              "phonetool",
 						Name:             "test",
+						Region:           "us-west-2",
 						ExecutionRoleARN: "execARN",
 						CustomConfig: &config.CustomizeEnv{
 							ImportVPC: &config.ImportVPC{
@@ -247,6 +268,14 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 							},
 						},
 					}, nil)
+				mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+				mockAppCFN := mocks.NewMockappResourcesGetter(ctrl)
+				mockAppCFN.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
+					Return(&stack.AppRegionalResources{
+						S3Bucket: "mockBucket",
+					}, nil)
+				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
+				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(map[string]string{"mockCustomResource": "mockURL"}, nil)
 
 				mockUpgrader := mocks.NewMockenvTemplateUpgrader(ctrl)
 				mockUpgrader.EXPECT().UpgradeEnvironment(&deploy.CreateEnvironmentInput{
@@ -256,7 +285,8 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					ImportVPCConfig: &config.ImportVPC{
 						ID: "abc",
 					},
-					CFNServiceRoleARN: "execARN",
+					CFNServiceRoleARN:   "execARN",
+					CustomResourcesURLs: map[string]string{"mockCustomResource": "mockURL"},
 				}).Return(nil)
 
 				return &envUpgradeOpts{
@@ -271,6 +301,11 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
 						return mockUpgrader, nil
+					},
+					uploader: mockUploader,
+					appCFN:   mockAppCFN,
+					newS3: func(region string) (zipAndUploader, error) {
+						return mocks.NewMockzipAndUploader(ctrl), nil
 					},
 				}
 			},
@@ -289,6 +324,7 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					Return(&config.Environment{
 						App:              "phonetool",
 						Name:             "test",
+						Region:           "us-west-2",
 						ExecutionRoleARN: "execARN",
 					}, nil)
 				mockStore.EXPECT().ListServices("phonetool").Return([]*config.Workload{
@@ -303,6 +339,14 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 						Type: manifest.BackendServiceType,
 					},
 				}, nil)
+				mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+				mockAppCFN := mocks.NewMockappResourcesGetter(ctrl)
+				mockAppCFN.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
+					Return(&stack.AppRegionalResources{
+						S3Bucket: "mockBucket",
+					}, nil)
+				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
+				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(map[string]string{"mockCustomResource": "mockURL"}, nil)
 
 				mockTemplater := mocks.NewMocktemplater(ctrl)
 				mockTemplater.EXPECT().Template().Return("template", nil)
@@ -310,10 +354,11 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 				mockUpgrader := mocks.NewMockenvTemplateUpgrader(ctrl)
 				mockUpgrader.EXPECT().EnvironmentTemplate("phonetool", "test").Return("template", nil)
 				mockUpgrader.EXPECT().UpgradeLegacyEnvironment(&deploy.CreateEnvironmentInput{
-					Version:           deploy.LatestEnvTemplateVersion,
-					AppName:           "phonetool",
-					Name:              "test",
-					CFNServiceRoleARN: "execARN",
+					Version:             deploy.LatestEnvTemplateVersion,
+					AppName:             "phonetool",
+					Name:                "test",
+					CFNServiceRoleARN:   "execARN",
+					CustomResourcesURLs: map[string]string{"mockCustomResource": "mockURL"},
 				}, "frontend").Return(nil)
 
 				return &envUpgradeOpts{
@@ -329,6 +374,11 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
 						return mockUpgrader, nil
+					},
+					uploader: mockUploader,
+					appCFN:   mockAppCFN,
+					newS3: func(region string) (zipAndUploader, error) {
+						return mocks.NewMockzipAndUploader(ctrl), nil
 					},
 				}
 			},
@@ -347,6 +397,7 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					Return(&config.Environment{
 						App:              "phonetool",
 						Name:             "test",
+						Region:           "us-west-2",
 						ExecutionRoleARN: "execARN",
 						CustomConfig: &config.CustomizeEnv{
 							ImportVPC: &config.ImportVPC{
@@ -355,6 +406,14 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 						},
 					}, nil)
 				mockStore.EXPECT().ListServices("phonetool").Return([]*config.Workload{}, nil)
+				mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+				mockAppCFN := mocks.NewMockappResourcesGetter(ctrl)
+				mockAppCFN.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
+					Return(&stack.AppRegionalResources{
+						S3Bucket: "mockBucket",
+					}, nil)
+				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
+				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 
 				mockTemplater := mocks.NewMocktemplater(ctrl)
 				mockTemplater.EXPECT().Template().Return("template", nil)
@@ -385,6 +444,11 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
 						return mockUpgrader, nil
 					},
+					uploader: mockUploader,
+					appCFN:   mockAppCFN,
+					newS3: func(region string) (zipAndUploader, error) {
+						return mocks.NewMockzipAndUploader(ctrl), nil
+					},
 				}
 			},
 		},
@@ -402,9 +466,18 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					Return(&config.Environment{
 						App:              "phonetool",
 						Name:             "test",
+						Region:           "us-west-2",
 						ExecutionRoleARN: "execARN",
 					}, nil)
 				mockStore.EXPECT().ListServices("phonetool").Return([]*config.Workload{}, nil)
+				mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+				mockAppCFN := mocks.NewMockappResourcesGetter(ctrl)
+				mockAppCFN.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
+					Return(&stack.AppRegionalResources{
+						S3Bucket: "mockBucket",
+					}, nil)
+				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
+				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 
 				mockTemplater := mocks.NewMocktemplater(ctrl)
 				mockTemplater.EXPECT().Template().Return("template", nil)
@@ -426,6 +499,11 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
 						return mockUpgrader, nil
+					},
+					uploader: mockUploader,
+					appCFN:   mockAppCFN,
+					newS3: func(region string) (zipAndUploader, error) {
+						return mocks.NewMockzipAndUploader(ctrl), nil
 					},
 				}
 			},

@@ -9,9 +9,10 @@ List of all available properties for a Copilot pipeline manifest.
     source:
       provider: GitHub
       properties:
-        access_token_secret: github-token-sample-app
         branch: main
         repository: https://github.com/<user>/sample-app-frontend
+        # Optional: specify the name of an existing CodeStar Connections connection.
+        connection_name: a-connection
     
     stages:
         - 
@@ -38,19 +39,24 @@ The schema version for the template. There is only one version, `1`, supported a
 Configuration for how your pipeline is triggered.
 
 <span class="parent-field">source.</span><a id="source-provider" href="#source-provider" class="field">`provider`</a> <span class="type">String</span>  
-The name of your provider. Currently, only `GitHub` and `CodeCommit` are supported.
+The name of your provider. Currently, `GitHub`, `Bitbucket`, and `CodeCommit` are supported.
 
 <span class="parent-field">source.</span><a id="source-properties" href="#source-properties" class="field">`properties`</a> <span class="type">Map</span>  
 Provider-specific configuration on how the pipeline is triggered.
 
 <span class="parent-field">source.properties.</span><a id="source-properties-ats" href="#source-properties-ats" class="field">`access_token_secret`</a> <span class="type">String</span>  
-The name of AWS Secrets Manager secret that holds the GitHub access token to trigger the pipeline if your provider is GitHub.
+The name of AWS Secrets Manager secret that holds the GitHub access token to trigger the pipeline if your provider is GitHub and you created your pipeline with a personal access token.
+!!! info
+    As of AWS Copilot v1.4.0, the access token is no longer needed for GitHub repository sources. Instead, Copilot will trigger the pipeline [using AWS CodeStar connections](https://docs.aws.amazon.com/codepipeline/latest/userguide/update-github-action-connections.html). 
 
 <span class="parent-field">source.properties.</span><a id="source-properties-branch" href="#source-properties-branch" class="field">`branch`</a> <span class="type">String</span>  
-The name of the branch in your repository that triggers the pipeline. The default for GitHub is `main`; the default for CodeCommit is `master`.
+The name of the branch in your repository that triggers the pipeline. The default for GitHub is `main`; the default for Bitbucket and CodeCommit is `master`.
 
 <span class="parent-field">source.properties.</span><a id="source-properties-repository" href="#source-properties-repository" class="field">`repository`</a> <span class="type">String</span>  
 The URL of your repository.
+
+<span class="parent-field">source.properties.</span><a id="source-properties-connection-name" href="#source-properties-connection-name" class="field">`connection_name`</a> <span class="type">String</span>  
+The name of an existing CodeStar Connections connection. If omitted, Copilot will generate a connection for you.
 
 <div class="separator"></div>
 

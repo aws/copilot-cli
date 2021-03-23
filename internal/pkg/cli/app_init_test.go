@@ -173,7 +173,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			mockRoute53Svc: func(m *mocks.MockdomainValidator) {},
 			mockStore:      func(m *mocks.Mockstore) {},
 
-			wantedError: "application name 123chicken is invalid: value must start with a letter and contain only lower-case letters, numbers, and hyphens",
+			wantedError: "application name 123chicken is invalid: value must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen",
 		},
 		"errors if application with different domain already exists": {
 			inAppName:      "metrics",

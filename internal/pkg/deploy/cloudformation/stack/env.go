@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -28,10 +29,6 @@ type EnvStackConfig struct {
 }
 
 const (
-	acmValidationTemplatePath  = "custom-resources/dns-cert-validator.js"
-	dnsDelegationTemplatePath  = "custom-resources/dns-delegation.js"
-	enableLongARNsTemplatePath = "custom-resources/enable-long-arns.js"
-
 	// Mandatory parameter keys.
 	envParamAppNameKey               = "AppName"
 	envParamEnvNameKey               = "EnvironmentName"
@@ -63,22 +60,22 @@ func NewEnvStackConfig(input *deploy.CreateEnvironmentInput) *EnvStackConfig {
 
 // Template returns the environment CloudFormation template.
 func (e *EnvStackConfig) Template() (string, error) {
-	dnsLambda, err := e.parser.Read(dnsDelegationTemplatePath)
-	if err != nil {
-		return "", err
-	}
-	acmLambda, err := e.parser.Read(acmValidationTemplatePath)
-	if err != nil {
-		return "", err
-	}
-	enableLongARNsLambda, err := e.parser.Read(enableLongARNsTemplatePath)
-	if err != nil {
-		return "", err
-	}
 	vpcConf := &config.AdjustVPC{
 		CIDR:               DefaultVPCCIDR,
 		PrivateSubnetCIDRs: strings.Split(DefaultPrivateSubnetCIDRs, ","),
 		PublicSubnetCIDRs:  strings.Split(DefaultPublicSubnetCIDRs, ","),
+	}
+	bucket, dnsCertValidator, err := s3.ParseURL(e.in.CustomResourcesURLs[template.DNSCertValidatorFileName])
+	if err != nil {
+		return "", err
+	}
+	_, dnsDelegation, err := s3.ParseURL(e.in.CustomResourcesURLs[template.DNSDelegationFileName])
+	if err != nil {
+		return "", err
+	}
+	_, enableLongARN, err := s3.ParseURL(e.in.CustomResourcesURLs[template.EnableLongARNsFileName])
+	if err != nil {
+		return "", err
 	}
 
 	if e.in.AdjustVPCConfig != nil {
@@ -86,9 +83,10 @@ func (e *EnvStackConfig) Template() (string, error) {
 	}
 
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
-		ACMValidationLambda:       acmLambda.String(),
-		DNSDelegationLambda:       dnsLambda.String(),
-		EnableLongARNFormatLambda: enableLongARNsLambda.String(),
+		DNSCertValidatorLambda:    dnsCertValidator,
+		DNSDelegationLambda:       dnsDelegation,
+		EnableLongARNFormatLambda: enableLongARN,
+		ScriptBucketName:          bucket,
 		ImportVPC:                 e.in.ImportVPCConfig,
 		VPCConfig:                 vpcConf,
 		Version:                   e.in.Version,
@@ -98,7 +96,6 @@ func (e *EnvStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return content.String(), nil
 }
 

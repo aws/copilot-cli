@@ -50,6 +50,14 @@ func TestNewBackendSvc(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
+						ExecuteCommand: ExecuteCommand{
+							Enable: aws.Bool(false),
+						},
+					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: stringP("public"),
+						},
 					},
 				},
 			},
@@ -91,6 +99,14 @@ func TestNewBackendSvc(t *testing.T) {
 						Memory: aws.Int(512),
 						Count: Count{
 							Value: aws.Int(1),
+						},
+						ExecuteCommand: ExecuteCommand{
+							Enable: aws.Bool(false),
+						},
+					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: stringP("public"),
 						},
 					},
 				},

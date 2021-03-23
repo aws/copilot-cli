@@ -8,12 +8,16 @@ import (
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
@@ -292,6 +296,14 @@ type artifactUploader interface {
 	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
 }
 
+type zipAndUploader interface {
+	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
+}
+
+type customResourcesUploader interface {
+	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
+}
+
 type bucketEmptier interface {
 	EmptyBucket(bucket string) error
 }
@@ -335,7 +347,7 @@ type appDeployer interface {
 	DeployApp(in *deploy.CreateAppInput) error
 	AddServiceToApp(app *config.Application, svcName string) error
 	AddJobToApp(app *config.Application, jobName string) error
-	AddEnvToApp(app *config.Application, env *config.Environment) error
+	AddEnvToApp(opts *cloudformation.AddEnvToAppOpts) error
 	DelegateDNSPermissions(app *config.Application, accountID string) error
 	DeleteApp(name string) error
 }
@@ -346,7 +358,7 @@ type appResourcesGetter interface {
 }
 
 type taskDeployer interface {
-	DeployTask(out termprogress.FileWriter, input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error
+	DeployTask(out termprogress.FileWriter, input *deploy.CreateTaskResourcesInput, opts ...awscloudformation.StackOption) error
 }
 
 type taskStackManager interface {
@@ -496,6 +508,19 @@ type roleDeleter interface {
 	DeleteRole(string) error
 }
 
+type serviceDescriber interface {
+	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
+}
+
+type ecsCommandExecutor interface {
+	ExecuteCommand(in awsecs.ExecuteCommandInput) error
+}
+
+type ssmPluginManager interface {
+	ValidateBinary() error
+	InstallLatestBinary() error
+}
+
 type taskStopper interface {
 	StopOneOffTasks(app, env, family string) error
 	StopDefaultClusterTasks(familyName string) error
@@ -506,6 +531,18 @@ type serviceLinkedRoleCreator interface {
 	CreateECSServiceLinkedRole() error
 }
 
+type runningTaskSelector interface {
+	RunningTask(prompt, help string, opts ...selector.TaskOpts) (*awsecs.Task, error)
+}
+
 type dockerEngineValidator interface {
 	CheckDockerEngineRunning() error
+}
+
+type codestar interface {
+	GetConnectionARN(string) (string, error)
+}
+
+type publicIPGetter interface {
+	PublicIP(ENI string) (string, error)
 }

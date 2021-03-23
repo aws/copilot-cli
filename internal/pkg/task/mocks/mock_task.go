@@ -5,74 +5,38 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	ec2 "github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	describe "github.com/aws/copilot-cli/internal/pkg/describe"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockVPCGetter is a mock of VPCGetter interface
+// MockVPCGetter is a mock of VPCGetter interface.
 type MockVPCGetter struct {
 	ctrl     *gomock.Controller
 	recorder *MockVPCGetterMockRecorder
 }
 
-// MockVPCGetterMockRecorder is the mock recorder for MockVPCGetter
+// MockVPCGetterMockRecorder is the mock recorder for MockVPCGetter.
 type MockVPCGetterMockRecorder struct {
 	mock *MockVPCGetter
 }
 
-// NewMockVPCGetter creates a new mock instance
+// NewMockVPCGetter creates a new mock instance.
 func NewMockVPCGetter(ctrl *gomock.Controller) *MockVPCGetter {
 	mock := &MockVPCGetter{ctrl: ctrl}
 	mock.recorder = &MockVPCGetterMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockVPCGetter) EXPECT() *MockVPCGetterMockRecorder {
 	return m.recorder
 }
 
-// SubnetIDs mocks base method
-func (m *MockVPCGetter) SubnetIDs(filters ...ec2.Filter) ([]string, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range filters {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "SubnetIDs", varargs...)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SubnetIDs indicates an expected call of SubnetIDs
-func (mr *MockVPCGetterMockRecorder) SubnetIDs(filters ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubnetIDs", reflect.TypeOf((*MockVPCGetter)(nil).SubnetIDs), filters...)
-}
-
-// SecurityGroups mocks base method
-func (m *MockVPCGetter) SecurityGroups(filters ...ec2.Filter) ([]string, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range filters {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "SecurityGroups", varargs...)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SecurityGroups indicates an expected call of SecurityGroups
-func (mr *MockVPCGetterMockRecorder) SecurityGroups(filters ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SecurityGroups", reflect.TypeOf((*MockVPCGetter)(nil).SecurityGroups), filters...)
-}
-
-// PublicSubnetIDs mocks base method
+// PublicSubnetIDs mocks base method.
 func (m *MockVPCGetter) PublicSubnetIDs(filters ...ec2.Filter) ([]string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{}
@@ -85,36 +49,74 @@ func (m *MockVPCGetter) PublicSubnetIDs(filters ...ec2.Filter) ([]string, error)
 	return ret0, ret1
 }
 
-// PublicSubnetIDs indicates an expected call of PublicSubnetIDs
+// PublicSubnetIDs indicates an expected call of PublicSubnetIDs.
 func (mr *MockVPCGetterMockRecorder) PublicSubnetIDs(filters ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicSubnetIDs", reflect.TypeOf((*MockVPCGetter)(nil).PublicSubnetIDs), filters...)
 }
 
-// MockClusterGetter is a mock of ClusterGetter interface
+// SecurityGroups mocks base method.
+func (m *MockVPCGetter) SecurityGroups(filters ...ec2.Filter) ([]string, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range filters {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SecurityGroups", varargs...)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SecurityGroups indicates an expected call of SecurityGroups.
+func (mr *MockVPCGetterMockRecorder) SecurityGroups(filters ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SecurityGroups", reflect.TypeOf((*MockVPCGetter)(nil).SecurityGroups), filters...)
+}
+
+// SubnetIDs mocks base method.
+func (m *MockVPCGetter) SubnetIDs(filters ...ec2.Filter) ([]string, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range filters {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SubnetIDs", varargs...)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubnetIDs indicates an expected call of SubnetIDs.
+func (mr *MockVPCGetterMockRecorder) SubnetIDs(filters ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubnetIDs", reflect.TypeOf((*MockVPCGetter)(nil).SubnetIDs), filters...)
+}
+
+// MockClusterGetter is a mock of ClusterGetter interface.
 type MockClusterGetter struct {
 	ctrl     *gomock.Controller
 	recorder *MockClusterGetterMockRecorder
 }
 
-// MockClusterGetterMockRecorder is the mock recorder for MockClusterGetter
+// MockClusterGetterMockRecorder is the mock recorder for MockClusterGetter.
 type MockClusterGetterMockRecorder struct {
 	mock *MockClusterGetter
 }
 
-// NewMockClusterGetter creates a new mock instance
+// NewMockClusterGetter creates a new mock instance.
 func NewMockClusterGetter(ctrl *gomock.Controller) *MockClusterGetter {
 	mock := &MockClusterGetter{ctrl: ctrl}
 	mock.recorder = &MockClusterGetterMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockClusterGetter) EXPECT() *MockClusterGetterMockRecorder {
 	return m.recorder
 }
 
-// ClusterARN mocks base method
+// ClusterARN mocks base method.
 func (m *MockClusterGetter) ClusterARN(app, env string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ClusterARN", app, env)
@@ -123,36 +125,36 @@ func (m *MockClusterGetter) ClusterARN(app, env string) (string, error) {
 	return ret0, ret1
 }
 
-// ClusterARN indicates an expected call of ClusterARN
+// ClusterARN indicates an expected call of ClusterARN.
 func (mr *MockClusterGetterMockRecorder) ClusterARN(app, env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterARN", reflect.TypeOf((*MockClusterGetter)(nil).ClusterARN), app, env)
 }
 
-// MockDefaultClusterGetter is a mock of DefaultClusterGetter interface
+// MockDefaultClusterGetter is a mock of DefaultClusterGetter interface.
 type MockDefaultClusterGetter struct {
 	ctrl     *gomock.Controller
 	recorder *MockDefaultClusterGetterMockRecorder
 }
 
-// MockDefaultClusterGetterMockRecorder is the mock recorder for MockDefaultClusterGetter
+// MockDefaultClusterGetterMockRecorder is the mock recorder for MockDefaultClusterGetter.
 type MockDefaultClusterGetterMockRecorder struct {
 	mock *MockDefaultClusterGetter
 }
 
-// NewMockDefaultClusterGetter creates a new mock instance
+// NewMockDefaultClusterGetter creates a new mock instance.
 func NewMockDefaultClusterGetter(ctrl *gomock.Controller) *MockDefaultClusterGetter {
 	mock := &MockDefaultClusterGetter{ctrl: ctrl}
 	mock.recorder = &MockDefaultClusterGetterMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockDefaultClusterGetter) EXPECT() *MockDefaultClusterGetterMockRecorder {
 	return m.recorder
 }
 
-// DefaultCluster mocks base method
+// DefaultCluster mocks base method.
 func (m *MockDefaultClusterGetter) DefaultCluster() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DefaultCluster")
@@ -161,36 +163,74 @@ func (m *MockDefaultClusterGetter) DefaultCluster() (string, error) {
 	return ret0, ret1
 }
 
-// DefaultCluster indicates an expected call of DefaultCluster
+// DefaultCluster indicates an expected call of DefaultCluster.
 func (mr *MockDefaultClusterGetterMockRecorder) DefaultCluster() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultCluster", reflect.TypeOf((*MockDefaultClusterGetter)(nil).DefaultCluster))
 }
 
-// MockRunner is a mock of Runner interface
+// MockEnvironmentDescriber is a mock of EnvironmentDescriber interface.
+type MockEnvironmentDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockEnvironmentDescriberMockRecorder
+}
+
+// MockEnvironmentDescriberMockRecorder is the mock recorder for MockEnvironmentDescriber.
+type MockEnvironmentDescriberMockRecorder struct {
+	mock *MockEnvironmentDescriber
+}
+
+// NewMockEnvironmentDescriber creates a new mock instance.
+func NewMockEnvironmentDescriber(ctrl *gomock.Controller) *MockEnvironmentDescriber {
+	mock := &MockEnvironmentDescriber{ctrl: ctrl}
+	mock.recorder = &MockEnvironmentDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockEnvironmentDescriber) EXPECT() *MockEnvironmentDescriberMockRecorder {
+	return m.recorder
+}
+
+// Describe mocks base method.
+func (m *MockEnvironmentDescriber) Describe() (*describe.EnvDescription, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Describe")
+	ret0, _ := ret[0].(*describe.EnvDescription)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Describe indicates an expected call of Describe.
+func (mr *MockEnvironmentDescriberMockRecorder) Describe() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockEnvironmentDescriber)(nil).Describe))
+}
+
+// MockRunner is a mock of Runner interface.
 type MockRunner struct {
 	ctrl     *gomock.Controller
 	recorder *MockRunnerMockRecorder
 }
 
-// MockRunnerMockRecorder is the mock recorder for MockRunner
+// MockRunnerMockRecorder is the mock recorder for MockRunner.
 type MockRunnerMockRecorder struct {
 	mock *MockRunner
 }
 
-// NewMockRunner creates a new mock instance
+// NewMockRunner creates a new mock instance.
 func NewMockRunner(ctrl *gomock.Controller) *MockRunner {
 	mock := &MockRunner{ctrl: ctrl}
 	mock.recorder = &MockRunnerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockRunner) EXPECT() *MockRunnerMockRecorder {
 	return m.recorder
 }
 
-// RunTask mocks base method
+// RunTask mocks base method.
 func (m *MockRunner) RunTask(input ecs.RunTaskInput) ([]*ecs.Task, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunTask", input)
@@ -199,7 +239,7 @@ func (m *MockRunner) RunTask(input ecs.RunTaskInput) ([]*ecs.Task, error) {
 	return ret0, ret1
 }
 
-// RunTask indicates an expected call of RunTask
+// RunTask indicates an expected call of RunTask.
 func (mr *MockRunnerMockRecorder) RunTask(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunTask", reflect.TypeOf((*MockRunner)(nil).RunTask), input)

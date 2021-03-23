@@ -302,7 +302,7 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errVolNoContainerPath.Error(),
+			wantErr: errNoContainerPath.Error(),
 		},
 		"full specification with access point renders correctly": {
 			inVolumes: map[string]manifest.Volume{
@@ -446,6 +446,41 @@ func Test_convertStorageOpts(t *testing.T) {
 	}
 }
 
+func Test_convertExecuteCommand(t *testing.T) {
+	testCases := map[string]struct {
+		inConfig manifest.ExecuteCommand
+
+		wanted *template.ExecuteCommandOpts
+	}{
+		"without exec enabled": {
+			inConfig: manifest.ExecuteCommand{},
+			wanted:   nil,
+		},
+		"exec enabled": {
+			inConfig: manifest.ExecuteCommand{
+				Enable: aws.Bool(true),
+			},
+			wanted: &template.ExecuteCommandOpts{},
+		},
+		"exec enabled with config": {
+			inConfig: manifest.ExecuteCommand{
+				Config: manifest.ExecuteCommandConfig{
+					Enable: aws.Bool(true),
+				},
+			},
+			wanted: &template.ExecuteCommandOpts{},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			exec := tc.inConfig
+			got := convertExecuteCommand(&exec)
+
+			require.Equal(t, got, tc.wanted)
+		})
+	}
+}
+
 func Test_convertSidecarMountPoints(t *testing.T) {
 	testCases := map[string]struct {
 		inMountPoints  []manifest.SidecarMountPoint
@@ -507,12 +542,12 @@ func Test_convertSidecarMountPoints(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errMPNoContainerPath.Error(),
+			wantErr: errNoContainerPath.Error(),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := renderSidecarMountPoints(tc.inMountPoints)
+			got, err := convertSidecarMountPoints(tc.inMountPoints)
 			if tc.wantErr != "" {
 				require.EqualError(t, err, tc.wantErr)
 			} else {
@@ -521,4 +556,12 @@ func Test_convertSidecarMountPoints(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_validatePaths(t *testing.T) {
+	t.Run("containerPath should be properly validated", func(t *testing.T) {
+		require.NoError(t, validateContainerPath("/abc/90_"), "contains underscore")
+		require.EqualError(t, validateContainerPath("/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), "path must be less than 242 bytes in length", "too long")
+		require.EqualError(t, validateContainerPath("/etc /bin/sh cat `i'm evil` > /dev/null"), "paths can only contain the characters a-zA-Z0-9.-_/", "invalid characters disallowed")
+	})
 }

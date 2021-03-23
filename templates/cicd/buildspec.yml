@@ -35,7 +35,9 @@ phases:
       - envs=$(./copilot-linux env ls --json | jq '.environments[].name' | sed 's/"//g')
       # Generate the cloudformation templates.
       # The tag is the build ID but we replaced the colon ':' with a dash '-'.
-      - tag=$(sed 's/:/-/g' <<<"$CODEBUILD_BUILD_ID")
+      # We truncate the tag (from the front) to 128 characters, the limit for Docker tags
+      # (https://docs.docker.com/engine/reference/commandline/tag/)
+      - tag=$(sed 's/:/-/g' <<<"$CODEBUILD_BUILD_ID" | rev | cut -c 1-128 | rev)
       - >
         for env in $envs; do
           for svc in $svcs; do
@@ -113,7 +115,7 @@ phases:
           for env in $envs; do
             repo=$(cat $CODEBUILD_SRC_DIR/infrastructure/$workload-$env.params.json | jq '.Parameters.ContainerImage' | sed 's/"//g');
             region=$(echo $repo | cut -d'.' -f4);
-            $(aws ecr get-login --no-include-email --region $region);
+            $(aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$region.amazonaws.com);
             docker tag $image_id $repo;
             docker push $repo;
           done;

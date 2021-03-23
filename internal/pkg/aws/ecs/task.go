@@ -20,6 +20,11 @@ const (
 	shortTaskIDLength      = 8
 	shortImageDigestLength = 8
 	imageDigestPrefix      = "sha256:"
+
+	lastStatusRunning = "RUNNING"
+	// These field names are not defined as const in sdk.
+	networkInterfaceIDKey          = "networkInterfaceId"
+	networkInterfaceAttachmentType = "ElasticNetworkInterface"
 )
 
 // humanizeTime is overriden in tests so that its output is constant as time passes.
@@ -81,6 +86,34 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 		StoppedAt:     stoppedAt,
 		StoppedReason: stoppedReason,
 	}, nil
+}
+
+// ENI returns the network interface ID of the running task.
+// Every Fargate task is provided with an ENI by default (https://docs.aws.amazon.com/AmazonECS/latest/userguide/fargate-task-networking.html).
+func (t *Task) ENI() (string, error) {
+	var attachmentENI *ecs.Attachment
+	for _, attachment := range t.Attachments {
+		if aws.StringValue(attachment.Type) == networkInterfaceAttachmentType {
+			attachmentENI = attachment
+			break
+		}
+	}
+	if attachmentENI == nil {
+		return "", &ErrTaskENIInfoNotFound{
+			MissingField: missingFieldAttachment,
+			TaskARN:      aws.StringValue(t.TaskArn),
+		}
+	}
+
+	for _, detail := range attachmentENI.Details {
+		if aws.StringValue(detail.Name) == networkInterfaceIDKey {
+			return aws.StringValue(detail.Value), nil
+		}
+	}
+	return "", &ErrTaskENIInfoNotFound{
+		MissingField: missingFieldDetailENIID,
+		TaskARN:      aws.StringValue(t.TaskArn),
+	}
 }
 
 // TaskStatus contains the status info of a task.
@@ -183,6 +216,17 @@ func TaskID(taskARN string) (string, error) {
 	resources := strings.Split(parsedARN.Resource, "/")
 	taskID := resources[len(resources)-1]
 	return taskID, nil
+}
+
+// FilterRunningTasks returns only tasks with the last status to be RUNNING.
+func FilterRunningTasks(tasks []*Task) []*Task {
+	var filtered []*Task
+	for _, task := range tasks {
+		if aws.StringValue(task.LastStatus) == lastStatusRunning {
+			filtered = append(filtered, task)
+		}
+	}
+	return filtered
 }
 
 func taskHealthColor(status string) string {

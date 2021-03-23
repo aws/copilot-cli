@@ -14,8 +14,9 @@ import (
 
 const (
 	GithubProviderName     = "GitHub"
+	GithubV1ProviderName   = "GitHubV1"
 	CodeCommitProviderName = "CodeCommit"
-	GithubSecretIdKeyName  = "access_token_secret"
+	BitbucketProviderName  = "Bitbucket"
 
 	pipelineManifestPath = "cicd/pipeline.yml"
 )
@@ -28,6 +29,20 @@ type Provider interface {
 	Properties() map[string]interface{}
 }
 
+type githubV1Provider struct {
+	properties *GitHubV1Properties
+}
+
+func (p *githubV1Provider) Name() string {
+	return GithubV1ProviderName
+}
+func (p *githubV1Provider) String() string {
+	return GithubProviderName
+}
+func (p *githubV1Provider) Properties() map[string]interface{} {
+	return structs.Map(p.properties)
+}
+
 type githubProvider struct {
 	properties *GitHubProperties
 }
@@ -35,11 +50,9 @@ type githubProvider struct {
 func (p *githubProvider) Name() string {
 	return GithubProviderName
 }
-
 func (p *githubProvider) String() string {
 	return GithubProviderName
 }
-
 func (p *githubProvider) Properties() map[string]interface{} {
 	return structs.Map(p.properties)
 }
@@ -51,23 +64,49 @@ type codecommitProvider struct {
 func (p *codecommitProvider) Name() string {
 	return CodeCommitProviderName
 }
-
 func (p *codecommitProvider) String() string {
 	return CodeCommitProviderName
 }
-
 func (p *codecommitProvider) Properties() map[string]interface{} {
 	return structs.Map(p.properties)
 }
 
-// GitHubProperties contain information for configuring a Github
+type bitbucketProvider struct {
+	properties *BitbucketProperties
+}
+
+func (p *bitbucketProvider) Name() string {
+	return BitbucketProviderName
+}
+func (p *bitbucketProvider) String() string {
+	return BitbucketProviderName
+}
+func (p *bitbucketProvider) Properties() map[string]interface{} {
+	return structs.Map(p.properties)
+}
+
+// GitHubV1Properties contain information for configuring a Githubv1
 // source provider.
-type GitHubProperties struct {
+type GitHubV1Properties struct {
 	// use tag from https://godoc.org/github.com/fatih/structs#example-Map--Tags
 	// to specify the name of the field in the output properties
 	RepositoryURL         string `structs:"repository" yaml:"repository"`
 	Branch                string `structs:"branch" yaml:"branch"`
 	GithubSecretIdKeyName string `structs:"access_token_secret" yaml:"access_token_secret"`
+}
+
+// GitHubProperties contains information for configuring a GitHubv2
+// source provider.
+type GitHubProperties struct {
+	RepositoryURL string `structs:"repository" yaml:"repository"`
+	Branch        string `structs:"branch" yaml:"branch"`
+}
+
+// BitbucketProperties contains information for configuring a Bitbucket
+// source provider.
+type BitbucketProperties struct {
+	RepositoryURL string `structs:"repository" yaml:"repository"`
+	Branch        string `structs:"branch" yaml:"branch"`
 }
 
 // CodeCommitProperties contains information for configuring a CodeCommit
@@ -81,12 +120,20 @@ type CodeCommitProperties struct {
 // the provided provider-specific configurations
 func NewProvider(configs interface{}) (Provider, error) {
 	switch props := configs.(type) {
+	case *GitHubV1Properties:
+		return &githubV1Provider{
+			properties: props,
+		}, nil
 	case *GitHubProperties:
 		return &githubProvider{
 			properties: props,
 		}, nil
 	case *CodeCommitProperties:
 		return &codecommitProvider{
+			properties: props,
+		}, nil
+	case *BitbucketProperties:
+		return &bitbucketProvider{
 			properties: props,
 		}, nil
 	default:
@@ -181,6 +228,18 @@ func UnmarshalPipeline(in []byte) (*PipelineManifest, error) {
 	}
 	// we should never reach here, this is just to make the compiler happy
 	return nil, errors.New("unexpected error occurs while unmarshalling pipeline.yml")
+}
+
+// IsCodeStarConnection indicates to the manifest if this source requires a CSC connection.
+func (s Source) IsCodeStarConnection() bool {
+	switch s.ProviderName {
+	case GithubProviderName:
+		return true
+	case BitbucketProviderName:
+		return true
+	default:
+		return false
+	}
 }
 
 func validateVersion(pm *PipelineManifest) (PipelineSchemaMajorVersion, error) {

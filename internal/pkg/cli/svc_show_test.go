@@ -147,7 +147,7 @@ func TestSvcShow_Ask(t *testing.T) {
 
 			setupMocks: func(m showSvcMocks) {
 				gomock.InOrder(
-					m.sel.EXPECT().Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt).Return("my-app", nil),
+					m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("my-app", nil),
 					m.sel.EXPECT().Service(fmt.Sprintf(svcShowSvcNamePrompt, "my-app"), svcShowSvcNameHelpPrompt, "my-app").Return("my-svc", nil),
 				)
 			},
@@ -161,7 +161,7 @@ func TestSvcShow_Ask(t *testing.T) {
 			inputSvc: "",
 
 			setupMocks: func(m showSvcMocks) {
-				m.sel.EXPECT().Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt).Return("", errors.New("some error"))
+				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("", errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("select application name: some error"),
@@ -172,7 +172,7 @@ func TestSvcShow_Ask(t *testing.T) {
 
 			setupMocks: func(m showSvcMocks) {
 				gomock.InOrder(
-					m.sel.EXPECT().Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt).Return("my-app", nil),
+					m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("my-app", nil),
 					m.sel.EXPECT().Service(fmt.Sprintf(svcShowSvcNamePrompt, "my-app"), svcShowSvcNameHelpPrompt, "my-app").Return("", errors.New("some error")),
 				)
 			},

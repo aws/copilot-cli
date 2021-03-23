@@ -64,6 +64,16 @@ EnvironmentManagerRole:
             "ecs:RunTask"
           ]
           Resource: "*"
+        - Sid: ExecuteCommand
+          Effect: Allow
+          Action: [
+            "ecs:ExecuteCommand"
+          ]
+          Resource: "*"
+          Condition:
+            StringEquals:
+              'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+              'aws:ResourceTag/copilot-environment': !Sub '${EnvironmentName}' 
         - Sid: CloudFormation
           Effect: Allow
           Action: [
@@ -193,7 +203,8 @@ EnvironmentManagerRole:
           Effect: Allow
           Action: [
             "ec2:DescribeSubnets",
-            "ec2:DescribeSecurityGroups"
+            "ec2:DescribeSecurityGroups",
+            "ec2:DescribeNetworkInterfaces"
           ]
           Resource: "*"
         - Sid: Tags

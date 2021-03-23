@@ -218,6 +218,19 @@ func (c *CloudFormation) TemplateBodyFromChangeSet(changeSetID, stackName string
 	return aws.StringValue(out.TemplateBody), nil
 }
 
+// Outputs returns the outputs of a stack description.
+func (c *CloudFormation) Outputs(stack *Stack) (map[string]string, error) {
+	stackDescription, err := c.Describe(stack.Name)
+	if err != nil {
+		return nil, fmt.Errorf("retrieve outputs of stack description: %w", err)
+	}
+	outputs := make(map[string]string)
+	for _, output := range stackDescription.Outputs {
+		outputs[aws.StringValue(output.OutputKey)] = aws.StringValue(output.OutputValue)
+	}
+	return outputs, nil
+}
+
 // Events returns the list of stack events in **chronological** order.
 func (c *CloudFormation) Events(stackName string) ([]StackEvent, error) {
 	return c.events(stackName, func(in *cloudformation.StackEvent) bool { return true })

@@ -5,35 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	template "github.com/aws/copilot-cli/internal/pkg/template"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockscheduledJobParser is a mock of scheduledJobParser interface
+// MockscheduledJobParser is a mock of scheduledJobParser interface.
 type MockscheduledJobParser struct {
 	ctrl     *gomock.Controller
 	recorder *MockscheduledJobParserMockRecorder
 }
 
-// MockscheduledJobParserMockRecorder is the mock recorder for MockscheduledJobParser
+// MockscheduledJobParserMockRecorder is the mock recorder for MockscheduledJobParser.
 type MockscheduledJobParserMockRecorder struct {
 	mock *MockscheduledJobParser
 }
 
-// NewMockscheduledJobParser creates a new mock instance
+// NewMockscheduledJobParser creates a new mock instance.
 func NewMockscheduledJobParser(ctrl *gomock.Controller) *MockscheduledJobParser {
 	mock := &MockscheduledJobParser{ctrl: ctrl}
 	mock.recorder = &MockscheduledJobParserMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockscheduledJobParser) EXPECT() *MockscheduledJobParserMockRecorder {
 	return m.recorder
 }
 
-// ParseScheduledJob mocks base method
+// ParseScheduledJob mocks base method.
 func (m *MockscheduledJobParser) ParseScheduledJob(arg0 template.WorkloadOpts) (*template.Content, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ParseScheduledJob", arg0)
@@ -42,7 +43,7 @@ func (m *MockscheduledJobParser) ParseScheduledJob(arg0 template.WorkloadOpts) (
 	return ret0, ret1
 }
 
-// ParseScheduledJob indicates an expected call of ParseScheduledJob
+// ParseScheduledJob indicates an expected call of ParseScheduledJob.
 func (mr *MockscheduledJobParserMockRecorder) ParseScheduledJob(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseScheduledJob", reflect.TypeOf((*MockscheduledJobParser)(nil).ParseScheduledJob), arg0)

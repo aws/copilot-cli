@@ -17,11 +17,15 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	awsCF "github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	awss3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 )
 
@@ -195,11 +199,11 @@ func Test_App_Infrastructure(t *testing.T) {
 
 		// Add an environment only
 		err = deployer.AddEnvToApp(
-			&app,
-			&config.Environment{
-				Name:      "test",
-				Region:    *sess.Config.Region,
-				AccountID: "000312697014",
+			&cloudformation.AddEnvToAppOpts{
+				App:          &app,
+				EnvName:      "test",
+				EnvAccountID: "000312697014",
+				EnvRegion:    *sess.Config.Region,
 			},
 		)
 
@@ -331,14 +335,12 @@ func Test_App_Infrastructure(t *testing.T) {
 		require.Equal(t, 1, len(stackInstances.Summaries), "Adding 2 pipelines to the same application should not create 2 stack instances")
 
 		// add an environment should not create new stack instance in the same region
-		err = deployer.AddEnvToApp(
-			&app,
-			&config.Environment{
-				Name:      "test",
-				Region:    *sess.Config.Region,
-				AccountID: "000312697014",
-			},
-		)
+		err = deployer.AddEnvToApp(&cloudformation.AddEnvToAppOpts{
+			App:          &app,
+			EnvName:      "test",
+			EnvAccountID: "000312697014",
+			EnvRegion:    *sess.Config.Region,
+		})
 
 		stackInstances, err = cfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
 			StackSetName: aws.String(appStackSetName),
@@ -366,6 +368,9 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	deployer := cloudformation.New(sess)
 	cfClient := awsCF.New(sess)
 	identity := identity.New(sess)
+	s3ManagerClient := s3manager.NewUploader(sess)
+	s3Client := awss3.New(sess)
+	uploader := template.New()
 
 	iamClient := iam.New(sess)
 
@@ -373,7 +378,13 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	require.NoError(t, err)
 	envName := randStringBytes(10)
 	appName := randStringBytes(10)
-	environmentToDeploy := deploy.CreateEnvironmentInput{Name: envName, AppName: appName, ToolsAccountPrincipalARN: id.RootUserARN}
+	bucketName := randStringBytes(10)
+	environmentToDeploy := deploy.CreateEnvironmentInput{
+		Name:                     envName,
+		AppName:                  appName,
+		ToolsAccountPrincipalARN: id.RootUserARN,
+		Version:                  deploy.LatestEnvTemplateVersion,
+	}
 	envStackName := fmt.Sprintf("%s-%s", environmentToDeploy.AppName, environmentToDeploy.Name)
 
 	t.Run("Deploys an environment to CloudFormation", func(t *testing.T) {
@@ -383,13 +394,35 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		})
 		require.True(t, len(output.Stacks) == 0, "Stack %s should not exist.", envStackName)
 
+		// Create a temporary S3 bucket to store custom resource scripts.
+		_, err = s3ManagerClient.S3.CreateBucket(&s3.CreateBucketInput{
+			Bucket: aws.String(bucketName),
+		})
+		require.NoError(t, err)
+
 		// Make sure we delete the stack after the test is done
 		defer func() {
-			cfClient.DeleteStack(&awsCF.DeleteStackInput{
+			_, err := cfClient.DeleteStack(&awsCF.DeleteStackInput{
 				StackName: aws.String(envStackName),
 			})
-			deleteEnvRoles(appName, envName, id.Account, iamClient)
+			require.NoError(t, err)
+
+			err = deleteEnvRoles(appName, envName, id.Account, iamClient)
+			require.NoError(t, err)
+
+			err = s3Client.EmptyBucket(bucketName)
+			require.NoError(t, err)
+			_, err = s3ManagerClient.S3.DeleteBucket(&s3.DeleteBucketInput{
+				Bucket: aws.String(bucketName),
+			})
+			require.NoError(t, err)
 		}()
+
+		urls, err := uploader.UploadEnvironmentCustomResources(awss3.CompressAndUploadFunc(func(key string, objects ...awss3.NamedBinary) (string, error) {
+			return s3Client.ZipAndUpload(bucketName, key, objects...)
+		}))
+		require.NoError(t, err)
+		environmentToDeploy.CustomResourcesURLs = urls
 
 		// Deploy the environment and wait for it to be complete
 		require.NoError(t, deployer.DeployAndRenderEnvironment(os.Stderr, &environmentToDeploy))
@@ -403,6 +436,9 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 
 		deployedStack := output.Stacks[0]
 		expectedResultsForKey := map[string]func(*awsCF.Output){
+			"EnabledFeatures": func(output *awsCF.Output) {
+				require.Equal(t, "", aws.StringValue(output.OutputValue), "no env features enabled by default")
+			},
 			"EnvironmentManagerRoleARN": func(output *awsCF.Output) {
 				require.Equal(t,
 					fmt.Sprintf("%s-EnvironmentManagerRoleARN", envStackName),
@@ -482,36 +518,6 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 				require.NotNil(t,
 					output.OutputValue,
 					"EnvironmentSecurityGroup value should not be nil")
-			},
-			"PublicLoadBalancerDNSName": func(output *awsCF.Output) {
-				require.NotNil(t,
-					output.OutputValue,
-					"PublicLoadBalancerDNSName value should not be nil")
-			},
-			"PublicLoadBalancerHostedZone": func(output *awsCF.Output) {
-				require.NotNil(t,
-					output.OutputValue,
-					"PublicLoadBalancerHostedZone value should not be nil")
-			},
-			"HTTPListenerArn": func(output *awsCF.Output) {
-				require.Equal(t,
-					fmt.Sprintf("%s-HTTPListenerArn", envStackName),
-					*output.ExportName,
-					"Should export HTTPListenerArn as stackname-HTTPListenerArn")
-
-				require.NotNil(t,
-					output.OutputValue,
-					"HTTPListenerArn value should not be nil")
-			},
-			"DefaultHTTPTargetGroupArn": func(output *awsCF.Output) {
-				require.Equal(t,
-					fmt.Sprintf("%s-DefaultHTTPTargetGroup", envStackName),
-					*output.ExportName,
-					"Should export HTTPListenerArn as stackname-DefaultHTTPTargetGroup")
-
-				require.NotNil(t,
-					output.OutputValue,
-					"DefaultHTTPTargetGroupArn value should not be nil")
 			},
 		}
 		require.True(t, len(deployedStack.Outputs) == len(expectedResultsForKey),

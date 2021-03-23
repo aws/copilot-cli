@@ -10,7 +10,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 )
 
-const pipelineCfnTemplatePath = "cicd/pipeline_cfn.yml"
+const (
+	pipelineCfnTemplatePath = "cicd/pipeline_cfn.yml"
+)
 
 type pipelineStackConfig struct {
 	*deploy.CreatePipelineInput
@@ -29,7 +31,15 @@ func (p *pipelineStackConfig) StackName() string {
 }
 
 func (p *pipelineStackConfig) Template() (string, error) {
-	content, err := p.parser.Parse(pipelineCfnTemplatePath, p, template.WithFuncs(cfTemplateFunctions))
+	content, err := p.parser.Parse(pipelineCfnTemplatePath, p, template.WithFuncs(cfTemplateFunctions), template.WithFuncs(map[string]interface{}{
+		"isCodeStarConnection": func(source interface{}) bool {
+			type connectionName interface {
+				ConnectionName() (string, error)
+			}
+			_, ok := source.(connectionName)
+			return ok
+		},
+	}))
 	if err != nil {
 		return "", err
 	}

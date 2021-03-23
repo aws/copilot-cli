@@ -5,52 +5,53 @@
 package mocks
 
 import (
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
-// MockstartStopper is a mock of startStopper interface
+// MockstartStopper is a mock of startStopper interface.
 type MockstartStopper struct {
 	ctrl     *gomock.Controller
 	recorder *MockstartStopperMockRecorder
 }
 
-// MockstartStopperMockRecorder is the mock recorder for MockstartStopper
+// MockstartStopperMockRecorder is the mock recorder for MockstartStopper.
 type MockstartStopperMockRecorder struct {
 	mock *MockstartStopper
 }
 
-// NewMockstartStopper creates a new mock instance
+// NewMockstartStopper creates a new mock instance.
 func NewMockstartStopper(ctrl *gomock.Controller) *MockstartStopper {
 	mock := &MockstartStopper{ctrl: ctrl}
 	mock.recorder = &MockstartStopperMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockstartStopper) EXPECT() *MockstartStopperMockRecorder {
 	return m.recorder
 }
 
-// Start mocks base method
+// Start mocks base method.
 func (m *MockstartStopper) Start() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Start")
 }
 
-// Start indicates an expected call of Start
+// Start indicates an expected call of Start.
 func (mr *MockstartStopperMockRecorder) Start() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockstartStopper)(nil).Start))
 }
 
-// Stop mocks base method
+// Stop mocks base method.
 func (m *MockstartStopper) Stop() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Stop")
 }
 
-// Stop indicates an expected call of Stop
+// Stop indicates an expected call of Stop.
 func (mr *MockstartStopperMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockstartStopper)(nil).Stop))

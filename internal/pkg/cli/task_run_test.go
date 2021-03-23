@@ -54,8 +54,9 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		inSubnets        []string
 		inSecurityGroups []string
 
-		inEnvVars map[string]string
-		inCommand string
+		inEnvVars    map[string]string
+		inCommand    string
+		inEntryPoint string
 
 		inDefault bool
 
@@ -86,6 +87,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				"ENV":  "dev",
 			},
 			inCommand: "echo hello world",
+			inEntryPoint: "exec 'enter here'",
 
 			appName: "my-app",
 			mockStore: func(m *mocks.Mockstore) {
@@ -295,6 +297,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					dockerfilePath:    tc.inDockerfilePath,
 					envVars:           tc.inEnvVars,
 					command:           tc.inCommand,
+					entrypoint:        tc.inEntryPoint,
 					useDefaultSubnets: tc.inDefault,
 				},
 				isDockerfileSet: tc.isDockerfileSet,
@@ -553,6 +556,7 @@ type runTaskMocks struct {
 	store                *mocks.Mockstore
 	eventsWriter         *mocks.MockeventsWriter
 	defaultClusterGetter *mocks.MockdefaultClusterGetter
+	publicIPGetter       *mocks.MockpublicIPGetter
 }
 
 func mockHasDefaultCluster(m runTaskMocks) {
@@ -576,10 +580,11 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		inImage   string
-		inTag     string
-		inFollow  bool
-		inCommand string
+		inImage      string
+		inTag        string
+		inFollow     bool
+		inCommand    string
+		inEntryPoint string
 
 		inEnv string
 
@@ -614,9 +619,10 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
-					Name:    inGroupName,
-					Image:   "",
-					Command: []string{},
+					Name:       inGroupName,
+					Image:      "",
+					Command:    []string{},
+					EntryPoint: []string{},
 				}).Return(errors.New("error deploying"))
 				mockHasDefaultCluster(m)
 			},
@@ -626,16 +632,18 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
-					Name:    inGroupName,
-					Image:   "",
-					Command: []string{},
+					Name:       inGroupName,
+					Image:      "",
+					Command:    []string{},
+					EntryPoint: []string{},
 				}).Return(nil)
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
-					Name:    inGroupName,
-					Image:   "uri/repo:latest",
-					Command: []string{},
+					Name:       inGroupName,
+					Image:      "uri/repo:latest",
+					Command:    []string{},
+					EntryPoint: []string{},
 				}).Times(1).Return(errors.New("error updating"))
 				mockHasDefaultCluster(m)
 			},
@@ -691,24 +699,62 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			},
 		},
 		"update image to task resource if image is not provided": {
-			inCommand: `/bin/sh -c "curl $ECS_CONTAINER_METADATA_URI_V4"`,
+			inCommand:    `/bin/sh -c "curl $ECS_CONTAINER_METADATA_URI_V4"`,
+			inEntryPoint: `exec "some command"`,
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
-					Name:    inGroupName,
-					Image:   "",
-					Command: []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
+					Name:       inGroupName,
+					Image:      "",
+					Command:    []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
+					EntryPoint: []string{"exec", "some command"},
 				}).Times(1).Return(nil)
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
-					Name:    inGroupName,
-					Image:   "uri/repo:latest",
-					Command: []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
+					Name:       inGroupName,
+					Image:      "uri/repo:latest",
+					Command:    []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
+					EntryPoint: []string{"exec", "some command"},
 				}).Times(1).Return(nil)
 				m.runner.EXPECT().Run().AnyTimes()
 				mockHasDefaultCluster(m)
 			},
+		},
+		"fail to get ENI information for some tasks": {
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).AnyTimes()
+				m.runner.EXPECT().Run().Return([]*task.Task{
+					{
+						TaskARN: "task-1",
+						ENI:      "eni-1",
+					},
+					{
+						TaskARN: "task-2",
+					},
+					{
+						TaskARN: "task-3",
+					},
+				}, nil)
+				m.publicIPGetter.EXPECT().PublicIP("eni-1").Return("1.2.3", nil)
+				mockHasDefaultCluster(m)
+				mockRepositoryAnytime(m)
+			},
+		},
+		"fail to get public ips": {
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).AnyTimes()
+				m.runner.EXPECT().Run().Return([]*task.Task{
+					{
+						TaskARN: "task-1",
+						ENI:      "eni-1",
+					},
+				}, nil)
+				m.publicIPGetter.EXPECT().PublicIP("eni-1").Return("", errors.New("some error"))
+				mockHasDefaultCluster(m)
+				mockRepositoryAnytime(m)
+			},
+			// wantedError is nil because we will just not show the IP address if we can't instead of erroring out.
 		},
 		"fail to write events": {
 			inFollow: true,
@@ -718,14 +764,10 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.runner.EXPECT().Run().Return([]*task.Task{
 					{
 						TaskARN: "task-1",
-					},
-					{
-						TaskARN: "task-2",
-					},
-					{
-						TaskARN: "task-3",
+						ENI:      "eni-1",
 					},
 				}, nil)
+				m.publicIPGetter.EXPECT().PublicIP("eni-1").Return("1.2.3", nil)
 				m.eventsWriter.EXPECT().WriteEventsUntilStopped().Times(1).
 					Return(errors.New("error writing events"))
 				mockHasDefaultCluster(m)
@@ -746,6 +788,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				store:                mocks.NewMockstore(ctrl),
 				eventsWriter:         mocks.NewMockeventsWriter(ctrl),
 				defaultClusterGetter: mocks.NewMockdefaultClusterGetter(ctrl),
+				publicIPGetter:       mocks.NewMockpublicIPGetter(ctrl),
 			}
 			tc.setupMocks(mocks)
 
@@ -753,11 +796,12 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				runTaskVars: runTaskVars{
 					groupName: inGroupName,
 
-					image:    tc.inImage,
-					imageTag: tc.inTag,
-					env:      tc.inEnv,
-					follow:   tc.inFollow,
-					command:  tc.inCommand,
+					image:      tc.inImage,
+					imageTag:   tc.inTag,
+					env:        tc.inEnv,
+					follow:     tc.inFollow,
+					command:    tc.inCommand,
+					entrypoint: tc.inEntryPoint,
 				},
 				spinner: &mockSpinner{},
 				store:   mocks.store,
@@ -766,6 +810,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				opts.runner = mocks.runner
 				opts.deployer = mocks.deployer
 				opts.defaultClusterGetter = mocks.defaultClusterGetter
+				opts.publicIPGetter = mocks.publicIPGetter
 				return nil
 			}
 			opts.configureRepository = func() error {
@@ -779,6 +824,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			err := opts.Execute()
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
+				fmt.Println("there??")
 			} else {
 				require.NoError(t, err)
 			}

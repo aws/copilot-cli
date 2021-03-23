@@ -12,15 +12,29 @@ import (
 	"github.com/google/uuid"
 )
 
-// Paths of workload cloudformation templates under templates/workloads/.
+// Constants for template paths.
 const (
+	// Paths of workload cloudformation templates under templates/workloads/.
 	fmtWkldCFTemplatePath         = "workloads/%s/%s/cf.yml"
 	fmtWkldPartialsCFTemplatePath = "workloads/partials/cf/%s.yml"
-)
 
-const (
+	// Directories under templates/workloads/.
 	servicesDirName = "services"
 	jobDirName      = "jobs"
+
+	// Names of workload templates.
+	lbWebSvcTplName     = "lb-web"
+	backendSvcTplName   = "backend"
+	scheduledJobTplName = "scheduled-job"
+)
+
+// Constants for workload options.
+const (
+	// AWS VPC networking configuration.
+	EnablePublicIP          = "ENABLED"
+	DisablePublicIP         = "DISABLED"
+	PublicSubnetsPlacement  = "PublicSubnets"
+	PrivateSubnetsPlacement = "PrivateSubnets"
 )
 
 var (
@@ -44,14 +58,8 @@ var (
 		"env-controller",
 		"mount-points",
 		"volumes",
+		"image-overrides",
 	}
-)
-
-// Names of workload templates.
-const (
-	lbWebSvcTplName     = "lb-web"
-	backendSvcTplName   = "backend"
-	scheduledJobTplName = "scheduled-job"
 )
 
 // WorkloadNestedStackOpts holds configuration that's needed if the workload stack has a nested stack.
@@ -138,22 +146,44 @@ type AutoscalingOpts struct {
 	ResponseTime *float64
 }
 
-// StateMachineOpts holds configuration neeed for State Machine retries and timeout.
+// ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.
+type ExecuteCommandOpts struct{}
+
+// StateMachineOpts holds configuration needed for State Machine retries and timeout.
 type StateMachineOpts struct {
 	Timeout *int
 	Retries *int
 }
 
+// NetworkOpts holds AWS networking configuration for the workloads.
+type NetworkOpts struct {
+	AssignPublicIP string
+	SubnetsType    string
+	SecurityGroups []string
+}
+
+func defaultNetworkOpts() *NetworkOpts {
+	return &NetworkOpts{
+		AssignPublicIP: EnablePublicIP,
+		SubnetsType:    PublicSubnetsPlacement,
+	}
+}
+
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
-	Variables   map[string]string
-	Secrets     map[string]string
-	NestedStack *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
-	Sidecars    []*SidecarOpts
-	LogConfig   *LogConfigOpts
-	Autoscaling *AutoscalingOpts
-	Storage     *StorageOpts
+	Variables      map[string]string
+	Secrets        map[string]string
+	NestedStack    *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	Sidecars       []*SidecarOpts
+	LogConfig      *LogConfigOpts
+	Autoscaling    *AutoscalingOpts
+	Storage        *StorageOpts
+	Network        *NetworkOpts
+	ExecuteCommand *ExecuteCommandOpts
+	EntryPoint     []string
+	Command        []string
+	DomainAlias    string
 
 	// Additional options for service templates.
 	HealthCheck         *ecs.HealthCheck
@@ -171,16 +201,25 @@ type WorkloadOpts struct {
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
 // with the specified data object and returns its content.
 func (t *Template) ParseLoadBalancedWebService(data WorkloadOpts) (*Content, error) {
+	if data.Network == nil {
+		data.Network = defaultNetworkOpts()
+	}
 	return t.parseSvc(lbWebSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseBackendService parses a backend service's CloudFormation template with the specified data object and returns its content.
 func (t *Template) ParseBackendService(data WorkloadOpts) (*Content, error) {
+	if data.Network == nil {
+		data.Network = defaultNetworkOpts()
+	}
 	return t.parseSvc(backendSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseScheduledJob parses a scheduled job's Cloudformation Template
 func (t *Template) ParseScheduledJob(data WorkloadOpts) (*Content, error) {
+	if data.Network == nil {
+		data.Network = defaultNetworkOpts()
+	}
 	return t.parseJob(scheduledJobTplName, data, withSvcParsingFuncs())
 }
 

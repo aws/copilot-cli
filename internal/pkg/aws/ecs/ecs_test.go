@@ -422,16 +422,34 @@ func TestECS_DefaultCluster(t *testing.T) {
 							{
 								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster1"),
 								ClusterName: aws.String("cluster1"),
+								Status:      aws.String(clusterStatusActive),
 							},
 							{
 								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster2"),
 								ClusterName: aws.String("cluster2"),
+								Status:      aws.String(clusterStatusActive),
 							},
 						},
 					}, nil)
 			},
 
 			wantedClusters: "arn:aws:ecs:us-east-1:0123456:cluster/cluster1",
+		},
+		"ignore inactive cluster": {
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().
+					DescribeClusters(&ecs.DescribeClustersInput{}).
+					Return(&ecs.DescribeClustersOutput{
+						Clusters: []*ecs.Cluster{
+							{
+								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster1"),
+								ClusterName: aws.String("cluster1"),
+								Status:      aws.String("INACTIVE"),
+							},
+						},
+					}, nil)
+			},
+			wantedError: fmt.Errorf("default cluster does not exist"),
 		},
 		"failed to get default clusters": {
 			mockECSClient: func(m *mocks.Mockapi) {
@@ -492,7 +510,10 @@ func TestECS_HasDefaultCluster(t *testing.T) {
 				m.EXPECT().DescribeClusters(&ecs.DescribeClustersInput{}).
 					Return(&ecs.DescribeClustersOutput{
 						Clusters: []*ecs.Cluster{
-							{ClusterArn: aws.String("cluster")},
+							{
+								ClusterArn: aws.String("cluster"),
+								Status:     aws.String(clusterStatusActive),
+							},
 						},
 					}, nil)
 			},
@@ -582,7 +603,9 @@ func TestECS_RunTask(t *testing.T) {
 							SecurityGroups: aws.StringSlice([]string{"sg-1", "sg-2"}),
 						},
 					},
-					PropagateTags: aws.String(ecs.PropagateTagsTaskDefinition),
+					EnableExecuteCommand: aws.Bool(true),
+					PlatformVersion:      aws.String("1.4.0"),
+					PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 				}).Return(&ecs.RunTaskOutput{
 					Tasks: ecsTasks,
 				}, nil)
@@ -620,7 +643,9 @@ func TestECS_RunTask(t *testing.T) {
 							SecurityGroups: aws.StringSlice([]string{"sg-1", "sg-2"}),
 						},
 					},
-					PropagateTags: aws.String(ecs.PropagateTagsTaskDefinition),
+					EnableExecuteCommand: aws.Bool(true),
+					PlatformVersion:      aws.String("1.4.0"),
+					PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 				}).
 					Return(&ecs.RunTaskOutput{}, errors.New("error"))
 			},
@@ -643,7 +668,9 @@ func TestECS_RunTask(t *testing.T) {
 							SecurityGroups: aws.StringSlice([]string{"sg-1", "sg-2"}),
 						},
 					},
-					PropagateTags: aws.String(ecs.PropagateTagsTaskDefinition),
+					EnableExecuteCommand: aws.Bool(true),
+					PlatformVersion:      aws.String("1.4.0"),
+					PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 				}).
 					Return(&ecs.RunTaskOutput{
 						Tasks: ecsTasks,
@@ -669,7 +696,9 @@ func TestECS_RunTask(t *testing.T) {
 							SecurityGroups: aws.StringSlice([]string{"sg-1", "sg-2"}),
 						},
 					},
-					PropagateTags: aws.String(ecs.PropagateTagsTaskDefinition),
+					EnableExecuteCommand: aws.Bool(true),
+					PlatformVersion:      aws.String("1.4.0"),
+					PropagateTags:        aws.String(ecs.PropagateTagsTaskDefinition),
 				}).
 					Return(&ecs.RunTaskOutput{
 						Tasks: ecsTasks}, nil)
@@ -801,6 +830,91 @@ func TestECS_DescribeTasks(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedTasks, tasks)
+			}
+		})
+	}
+}
+
+func TestECS_ExecuteCommand(t *testing.T) {
+	mockExecCmdIn := &ecs.ExecuteCommandInput{
+		Cluster:     aws.String("mockCluster"),
+		Command:     aws.String("mockCommand"),
+		Interactive: aws.Bool(true),
+		Container:   aws.String("mockContainer"),
+		Task:        aws.String("mockTask"),
+	}
+	mockSess := &ecs.Session{
+		SessionId: aws.String("mockSessID"),
+	}
+	mockErr := errors.New("some error")
+	testCases := map[string]struct {
+		mockAPI         func(m *mocks.Mockapi)
+		mockSessStarter func(m *mocks.MockssmSessionStarter)
+		wantedError     error
+	}{
+		"return error if fail to call ExecuteCommand": {
+			mockAPI: func(m *mocks.Mockapi) {
+				m.EXPECT().ExecuteCommand(mockExecCmdIn).Return(nil, mockErr)
+			},
+			mockSessStarter: func(m *mocks.MockssmSessionStarter) {},
+			wantedError:     &ErrExecuteCommand{err: mockErr},
+		},
+		"return error if fail to start the session": {
+			mockAPI: func(m *mocks.Mockapi) {
+				m.EXPECT().ExecuteCommand(&ecs.ExecuteCommandInput{
+					Cluster:     aws.String("mockCluster"),
+					Command:     aws.String("mockCommand"),
+					Interactive: aws.Bool(true),
+					Container:   aws.String("mockContainer"),
+					Task:        aws.String("mockTask"),
+				}).Return(&ecs.ExecuteCommandOutput{
+					Session: mockSess,
+				}, nil)
+			},
+			mockSessStarter: func(m *mocks.MockssmSessionStarter) {
+				m.EXPECT().StartSession(mockSess).Return(mockErr)
+			},
+			wantedError: fmt.Errorf("start session mockSessID using ssm plugin: some error"),
+		},
+		"success": {
+			mockAPI: func(m *mocks.Mockapi) {
+				m.EXPECT().ExecuteCommand(mockExecCmdIn).Return(&ecs.ExecuteCommandOutput{
+					Session: mockSess,
+				}, nil)
+			},
+			mockSessStarter: func(m *mocks.MockssmSessionStarter) {
+				m.EXPECT().StartSession(mockSess).Return(nil)
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockAPI := mocks.NewMockapi(ctrl)
+			mockSessStarter := mocks.NewMockssmSessionStarter(ctrl)
+			tc.mockAPI(mockAPI)
+			tc.mockSessStarter(mockSessStarter)
+
+			ecs := ECS{
+				client: mockAPI,
+				newSessStarter: func() ssmSessionStarter {
+					return mockSessStarter
+				},
+			}
+
+			err := ecs.ExecuteCommand(ExecuteCommandInput{
+				Cluster:   "mockCluster",
+				Command:   "mockCommand",
+				Container: "mockContainer",
+				Task:      "mockTask",
+			})
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

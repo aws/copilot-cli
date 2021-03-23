@@ -16,8 +16,7 @@ Generally, the steps involved in task run are:
 !!!info
     1. Tasks with the same group name share the same set of resources, including the CloudFormation stack, ECR repository, CloudWatch log group and task definition.
     2. If the tasks are deployed to a Copilot environment (i.e. by specifying `--env`), only public subnets that are created by that environment will be used. 
-    3. The `--env` flag only works with environments created with v0.3.0 of Copilot or later. Customers using environments created with v0.2.0 or earlier can update their environment manager role with [this](https://github.com/aws/copilot-cli/blob/mainline/templates/environment/cf/environment-manager-role.yml) policy. 
-    4. If you are using the `--default` flag and get an error saying there's no default cluster, run `aws ecs create-cluster` and then re-run the Copilot command. 
+    3. If you are using the `--default` flag and get an error saying there's no default cluster, run `aws ecs create-cluster` and then re-run the Copilot command. 
 
 ## What are the flags?
 ```
@@ -29,6 +28,7 @@ Generally, the steps involved in task run are:
   --default                        Optional. Run tasks in default cluster and default subnets.
                                    Cannot be specified with 'app', 'env' or 'subnets'.
   --dockerfile string              Path to the Dockerfile. (default "Dockerfile")
+  --entrypoint string              Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.
   --env string                     Optional. Name of the environment.
                                    Cannot be specified with 'default', 'subnets' or 'security-groups'
   --env-vars stringToString        Optional. Environment variables specified by key=value separated with commas. (default [])

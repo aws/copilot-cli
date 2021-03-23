@@ -34,6 +34,8 @@ const (
 	yearly  = "Yearly"
 
 	pipelineEscapeOpt = "[No additional environments]"
+
+	fmtCopilotTaskGroup = "copilot-%s"
 )
 
 const (
@@ -265,7 +267,9 @@ func WithDefault() TaskOpts {
 // WithTaskGroup sets up the task group name for TaskSelect.
 func WithTaskGroup(taskGroup string) TaskOpts {
 	return func(in *TaskSelect) {
-		in.taskGroup = taskGroup
+		if taskGroup != "" {
+			in.taskGroup = fmt.Sprintf(fmtCopilotTaskGroup, taskGroup)
+		}
 	}
 }
 
@@ -285,8 +289,9 @@ func (s *TaskSelect) RunningTask(prompt, help string, opts ...TaskOpts) (*awsecs
 		opt(s)
 	}
 	filter := ecs.ListTasksFilter{
-		TaskGroup: s.taskGroup,
-		TaskID:    s.taskID,
+		TaskGroup:   s.taskGroup,
+		TaskID:      s.taskID,
+		CopilotOnly: true,
 	}
 	if s.defaultCluster {
 		tasks, err = s.lister.ListActiveDefaultClusterTasks(filter)

@@ -5,50 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	ec2 "github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockVPCSubnetLister is a mock of VPCSubnetLister interface
+// MockVPCSubnetLister is a mock of VPCSubnetLister interface.
 type MockVPCSubnetLister struct {
 	ctrl     *gomock.Controller
 	recorder *MockVPCSubnetListerMockRecorder
 }
 
-// MockVPCSubnetListerMockRecorder is the mock recorder for MockVPCSubnetLister
+// MockVPCSubnetListerMockRecorder is the mock recorder for MockVPCSubnetLister.
 type MockVPCSubnetListerMockRecorder struct {
 	mock *MockVPCSubnetLister
 }
 
-// NewMockVPCSubnetLister creates a new mock instance
+// NewMockVPCSubnetLister creates a new mock instance.
 func NewMockVPCSubnetLister(ctrl *gomock.Controller) *MockVPCSubnetLister {
 	mock := &MockVPCSubnetLister{ctrl: ctrl}
 	mock.recorder = &MockVPCSubnetListerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockVPCSubnetLister) EXPECT() *MockVPCSubnetListerMockRecorder {
 	return m.recorder
 }
 
-// ListVPCs mocks base method
-func (m *MockVPCSubnetLister) ListVPCs() ([]ec2.VPC, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListVPCs")
-	ret0, _ := ret[0].([]ec2.VPC)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListVPCs indicates an expected call of ListVPCs
-func (mr *MockVPCSubnetListerMockRecorder) ListVPCs() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCs", reflect.TypeOf((*MockVPCSubnetLister)(nil).ListVPCs))
-}
-
-// ListVPCSubnets mocks base method
+// ListVPCSubnets mocks base method.
 func (m *MockVPCSubnetLister) ListVPCSubnets(vpcID string, opts ...ec2.ListVPCSubnetsOpts) ([]string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{vpcID}
@@ -61,9 +47,24 @@ func (m *MockVPCSubnetLister) ListVPCSubnets(vpcID string, opts ...ec2.ListVPCSu
 	return ret0, ret1
 }
 
-// ListVPCSubnets indicates an expected call of ListVPCSubnets
+// ListVPCSubnets indicates an expected call of ListVPCSubnets.
 func (mr *MockVPCSubnetListerMockRecorder) ListVPCSubnets(vpcID interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{vpcID}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCSubnets", reflect.TypeOf((*MockVPCSubnetLister)(nil).ListVPCSubnets), varargs...)
+}
+
+// ListVPCs mocks base method.
+func (m *MockVPCSubnetLister) ListVPCs() ([]ec2.VPC, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListVPCs")
+	ret0, _ := ret[0].([]ec2.VPC)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListVPCs indicates an expected call of ListVPCs.
+func (mr *MockVPCSubnetListerMockRecorder) ListVPCs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCs", reflect.TypeOf((*MockVPCSubnetLister)(nil).ListVPCs))
 }

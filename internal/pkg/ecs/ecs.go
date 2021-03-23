@@ -124,23 +124,6 @@ func (c Client) DescribeService(app, env, svc string) (*ServiceDesc, error) {
 	}, nil
 }
 
-// ListActiveWorkloadTasks lists all active workload tasks (with desired status to be RUNNING) in the environment.
-func (c Client) ListActiveWorkloadTasks(app, env, workload string) (clusterARN string, taskARNs []string, err error) {
-	clusterARN, err = c.ClusterARN(app, env)
-	if err != nil {
-		return "", nil, err
-	}
-	tdFamilyName := fmt.Sprintf(fmtWorkloadTaskDefinitionFamily, app, env, workload)
-	tasks, err := c.ecsClient.RunningTasksInFamily(clusterARN, tdFamilyName)
-	if err != nil {
-		return "", nil, fmt.Errorf("list tasks that belong to family %s: %w", tdFamilyName, err)
-	}
-	for _, task := range tasks {
-		taskARNs = append(taskARNs, *task.TaskArn)
-	}
-	return
-}
-
 // ListActiveAppEnvTasksOpts contains the parameters for ListActiveAppEnvTasks.
 type ListActiveAppEnvTasksOpts struct {
 	App string

@@ -18,16 +18,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestPipeline_Template ensures that the CloudFormation template generated for a pipeline matches our pre-defined template.
-func TestPipeline_Template(t *testing.T) {
+// TestGHPipeline_Template ensures that the CloudFormation template generated for a pipeline matches our pre-defined template.
+func TestGHPipeline_Template(t *testing.T) {
 	ps := stack.NewPipelineStackConfig(&deploy.CreatePipelineInput{
 		AppName: "phonetool",
 		Name:    "phonetool-pipeline",
 		Source: &deploy.GitHubSource{
-			ProviderName:                manifest.GithubProviderName,
-			RepositoryURL:               "https://github.com/aws/phonetool",
-			Branch:                      "mainline",
-			PersonalAccessTokenSecretID: "my secret",
+			ProviderName:  manifest.GithubProviderName,
+			RepositoryURL: "https://github.com/aws/phonetool",
+			Branch:        "mainline",
 		},
 		Stages: []deploy.PipelineStage{
 			{
@@ -62,5 +61,5 @@ func TestPipeline_Template(t *testing.T) {
 	m2 := make(map[interface{}]interface{})
 	require.NoError(t, yaml.Unmarshal(wantedInBytes, m2))
 
-	require.Equal(t, m1, m2)
+	require.Equal(t, m2, m1)
 }

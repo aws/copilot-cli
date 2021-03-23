@@ -20,8 +20,6 @@ const (
 
 // Default values for HTTPHealthCheck for a load balanced web service.
 const (
-	// LogRetentionInDays is the default log retention time in days.
-	LogRetentionInDays     = 30
 	DefaultHealthCheckPath = "/"
 )
 
@@ -49,10 +47,16 @@ type LoadBalancedWebService struct {
 // LoadBalancedWebServiceConfig holds the configuration for a load balanced web service.
 type LoadBalancedWebServiceConfig struct {
 	ImageConfig ServiceImageWithPort `yaml:"image,flow"`
-	RoutingRule `yaml:"http,flow"`
-	TaskConfig  `yaml:",inline"`
-	*Logging    `yaml:"logging,flow"`
+	ImageOverride `yaml:",inline"`
+	RoutingRule   `yaml:"http,flow"`
+	TaskConfig    `yaml:",inline"`
+	*Logging      `yaml:"logging,flow"`
 	Sidecars    map[string]*SidecarConfig `yaml:"sidecars"`
+	Network     NetworkConfig             `yaml:"network"`
+
+	// Fields that are used while marshaling the template for additional clarifications,
+	// but don't correspond to a field in the manifests.
+	AppDomain *string
 }
 
 // HTTPHealthCheckArgs holds the configuration to determine if the load balanced web service is healthy.
@@ -112,8 +116,9 @@ type RoutingRule struct {
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
 type LoadBalancedWebServiceProps struct {
 	*WorkloadProps
-	Path string
-	Port uint16
+	Path      string
+	Port      uint16
+	AppDomain *string
 }
 
 // NewLoadBalancedWebService creates a new public load balanced web service, receives all the requests from the load balancer,
@@ -126,6 +131,7 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
 	svc.RoutingRule.Path = aws.String(props.Path)
+	svc.AppDomain = props.AppDomain
 	svc.parser = template.New()
 	return svc
 }
@@ -148,6 +154,14 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 				Memory: aws.Int(512),
 				Count: Count{
 					Value: aws.Int(1),
+				},
+				ExecuteCommand: ExecuteCommand{
+					Enable: aws.Bool(false),
+				},
+			},
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: stringP(PublicSubnetPlacement),
 				},
 			},
 		},

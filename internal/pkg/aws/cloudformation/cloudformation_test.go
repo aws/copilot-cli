@@ -616,6 +616,66 @@ func TestCloudFormation_TemplateBodyFromChangeSet(t *testing.T) {
 	}
 }
 
+func TestCloudFormation_Outputs(t *testing.T) {
+	testCases := map[string]struct {
+		createMock    func(ctrl *gomock.Controller) client
+		wantedOutputs map[string]string
+		wantedErr     string
+	}{
+		"successfully returns outputs": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
+					Stacks: []*cloudformation.Stack{
+						{
+							StackName: aws.String(mockStack.Name),
+							Outputs: []*cloudformation.Output{
+								{
+									OutputKey:   aws.String("PipelineConnection"),
+									OutputValue: aws.String("mockARN"),
+								},
+							},
+						},
+					},
+				}, nil)
+				return m
+			},
+			wantedOutputs: map[string]string{
+				"PipelineConnection": "mockARN",
+			},
+		},
+		"wraps error from Describe()": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().DescribeStacks(gomock.Any()).Return(nil, fmt.Errorf("some error"))
+				return m
+			},
+			wantedOutputs: nil,
+			wantedErr:     "retrieve outputs of stack description: describe stack id: some error",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			c := CloudFormation{
+				client: tc.createMock(ctrl),
+			}
+
+			// WHEN
+			outputs, err := c.Outputs(mockStack)
+
+			// THEN
+			if tc.wantedErr != "" {
+				require.EqualError(t, err, tc.wantedErr)
+			} else {
+				require.Equal(t, tc.wantedOutputs, outputs)
+			}
+		})
+	}
+}
+
 func TestCloudFormation_ErrorEvents(t *testing.T) {
 	mockEvents := []*cloudformation.StackEvent{
 		{
