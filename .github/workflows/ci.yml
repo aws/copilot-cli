@@ -69,6 +69,13 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CF_LINT }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CF_LINT }}
+          aws-region: us-west-2
+
       - name: Run tests
         run: make local-integ-test
 
