@@ -223,11 +223,15 @@ Resources:
         Type: LINUX_CONTAINER
         Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
         ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
       Source:
         Type: NO_SOURCE
         BuildSpec: |
           version: 0.2
           phases:
+            install:
+                runtime-versions:
+                  docker: 18
             build:
               commands:
                 - echo "test"
