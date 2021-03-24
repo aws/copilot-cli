@@ -84,10 +84,11 @@ func TestPrompt_SelectOption(t *testing.T) {
 			sel := p.(*prompt).prompter.(*survey.Select)
 			require.ElementsMatch(t, []string{
 				"Load Balanced Web Service  (ELB -> ECS on Fargate)",
-				"Help me decide!",
+				"Help me decide!            ",
+				"Backend Service            (ECS on Fargate)",
 			}, sel.Options)
 			result := out.(*string)
-			*result = "Help me decide!"
+			*result = "Help me decide!            "
 			return nil
 		}
 		opts := []Option{
@@ -97,6 +98,10 @@ func TestPrompt_SelectOption(t *testing.T) {
 			},
 			{
 				Value: "Help me decide!",
+			},
+			{
+				Value: "Backend Service",
+				Hint:  "ECS on Fargate",
 			},
 		}
 

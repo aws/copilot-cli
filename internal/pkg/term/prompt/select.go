@@ -99,5 +99,5 @@ func parseValueFromOptionFmt(formatted string) string {
 	if idx := strings.Index(formatted, "("); idx != -1 {
 		return strings.TrimSpace(formatted[:idx])
 	}
-	return formatted
+	return strings.TrimSpace(formatted)
 }
