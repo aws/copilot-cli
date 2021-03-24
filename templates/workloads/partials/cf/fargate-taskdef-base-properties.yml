@@ -4,5 +4,11 @@ RequiresCompatibilities:
   - FARGATE
 Cpu: !Ref TaskCPU
 Memory: !Ref TaskMemory
+{{- if .Storage}}
+{{- if .Storage.Ephemeral}}
+EphemeralStorage:
+  SizeInGiB: {{.Storage.Ephemeral}}
+{{- end}}
+{{- end}}
 ExecutionRoleArn: !Ref ExecutionRole
 TaskRoleArn: !Ref TaskRole

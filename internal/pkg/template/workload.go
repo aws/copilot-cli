@@ -86,6 +86,7 @@ type SidecarOpts struct {
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
 type StorageOpts struct {
+	Ephemeral         *int
 	Volumes           []*Volume
 	MountPoints       []*MountPoint
 	EFSPerms          []*EFSPermission

@@ -32,6 +32,11 @@ const (
 	defaultSidecarPort = "80"
 )
 
+const (
+	ephemeralMinValueGiB = 20
+	ephemeralMaxValueGiB = 16000
+)
+
 // Validation errors when rendering manifest into template.
 var (
 	errNoFSID                      = errors.New(`volume field efs/id cannot be empty`)
@@ -40,6 +45,8 @@ var (
 
 	errNoContainerPath = errors.New(`"path" cannot be empty`)
 	errNoSourceVolume  = errors.New(`"source_volume" cannot be empty`)
+
+	errEphemeralBadSize = errors.New("ephemeral storage must be between 20 GiB and 16000 GiB")
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
@@ -181,11 +188,28 @@ func convertStorageOpts(in *manifest.Storage) (*template.StorageOpts, error) {
 	if err != nil {
 		return nil, err
 	}
+	ephemeral, err := convertEphemeral(in.Ephemeral)
+	if err != nil {
+		return nil, err
+	}
 	return &template.StorageOpts{
+		Ephemeral:   ephemeral,
 		Volumes:     v,
 		MountPoints: mp,
 		EFSPerms:    perms,
 	}, nil
+}
+
+func convertEphemeral(in *int) (*int, error) {
+	if in == nil {
+		return nil, nil
+	}
+
+	if aws.IntValue(in) < ephemeralMinValueGiB || aws.IntValue(in) > ephemeralMaxValueGiB {
+		return nil, errEphemeralBadSize
+	}
+
+	return in, nil
 }
 
 // convertSidecarMountPoints is used to convert from manifest to template objects.

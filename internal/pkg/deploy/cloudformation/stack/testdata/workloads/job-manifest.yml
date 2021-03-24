@@ -25,6 +25,7 @@ retries: 3
 timeout: 1h
 
 storage:
+  ephemeral: 1000
   volumes:
     myEFSVolume:
       path: '/etc/mount1'
