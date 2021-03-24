@@ -30,8 +30,15 @@ HTTPSCert:
   - DelegateDNSAction
   Properties:
     ServiceToken: !GetAtt CertificateValidationFunction.Arn
-    DomainName: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
-    HostedZoneId: !Ref EnvironmentHostedZone
+    AppName: !Ref AppName
+    EnvName: !Ref EnvironmentName
+    DomainName: !Ref AppDNSName
+    EnvHostedZoneId: !Ref EnvironmentHostedZone
     Region: !Ref AWS::Region
+    RootDNSRole: !Ref AppDNSDelegationRole
     SubjectAlternativeNames:
+    - !Sub "${AppDNSName}"
+    - !Sub "*.${AppDNSName}"
+    - !Sub "${AppName}.${AppDNSName}"
+    - !Sub "*.${AppName}.${AppDNSName}"
     - !Sub "*.${EnvironmentName}.${AppName}.${AppDNSName}"
