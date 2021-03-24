@@ -1287,7 +1287,7 @@ func TestSelect_Environments(t *testing.T) {
 				config: mockenvLister,
 			}
 
-			got, err := sel.Environments("Select an environment", "Help text", appName, func(order int) prompt.Option {
+			got, err := sel.Environments("Select an environment", "Help text", appName, func(order int) prompt.PromptConfig {
 				return prompt.WithFinalMessage(fmt.Sprintf("%s stage:", humanize.Ordinal(order)))
 			})
 			if tc.wantErr != nil {

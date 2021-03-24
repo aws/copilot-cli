@@ -76,10 +76,10 @@ var presetSchedules = []string{
 
 // Prompter wraps the methods to ask for inputs from the terminal.
 type Prompter interface {
-	Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.Option) (string, error)
-	SelectOne(message, help string, options []string, promptOpts ...prompt.Option) (string, error)
-	MultiSelect(message, help string, options []string, promptOpts ...prompt.Option) ([]string, error)
-	Confirm(message, help string, promptOpts ...prompt.Option) (bool, error)
+	Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.PromptConfig) (string, error)
+	SelectOne(message, help string, options []string, promptOpts ...prompt.PromptConfig) (string, error)
+	MultiSelect(message, help string, options []string, promptOpts ...prompt.PromptConfig) ([]string, error)
+	Confirm(message, help string, promptOpts ...prompt.PromptConfig) (bool, error)
 }
 
 // AppEnvLister wraps methods to list apps and envs in config store.
@@ -640,7 +640,7 @@ func (s *Select) Environment(prompt, help, app string, additionalOpts ...string)
 
 // Environments fetches all the environments in an app and prompts the user to select one OR MORE.
 // The List of options decreases as envs are chosen. Chosen envs displayed above with the finalMsg.
-func (s *Select) Environments(prompt, help, app string, finalMsgFunc func(int) prompt.Option) ([]string, error) {
+func (s *Select) Environments(prompt, help, app string, finalMsgFunc func(int) prompt.PromptConfig) ([]string, error) {
 	envs, err := s.retrieveEnvironments(app)
 	if err != nil {
 		return nil, fmt.Errorf("get environments for app %s from metadata store: %w", app, err)
