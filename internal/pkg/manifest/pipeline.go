@@ -230,6 +230,18 @@ func UnmarshalPipeline(in []byte) (*PipelineManifest, error) {
 	return nil, errors.New("unexpected error occurs while unmarshalling pipeline.yml")
 }
 
+// IsCodeStarConnection indicates to the manifest if this source requires a CSC connection.
+func (s Source) IsCodeStarConnection() bool {
+	switch s.ProviderName {
+	case GithubProviderName:
+		return true
+	case BitbucketProviderName:
+		return true
+	default:
+		return false
+	}
+}
+
 func validateVersion(pm *PipelineManifest) (PipelineSchemaMajorVersion, error) {
 	switch pm.Version {
 	case Ver1:

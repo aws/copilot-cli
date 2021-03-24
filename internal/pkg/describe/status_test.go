@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	ecsapi "github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
-	ecsapi "github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
 
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/dustin/go-humanize"

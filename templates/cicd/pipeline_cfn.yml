@@ -4,11 +4,13 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for {{$.AppName}}
 Resources:
   {{- if isCodeStarConnection .Source}}
+  {{if eq .Source.ConnectionARN ""}}
   SourceConnection:
     Type: AWS::CodeStarConnections::Connection
     Properties:
       ConnectionName: {{.Source.ConnectionName}}
       ProviderType: {{.Source.ProviderName}}
+  {{- end}}
   {{- end}}
   BuildProjectRole:
     Type: AWS::IAM::Role
@@ -115,7 +117,10 @@ Resources:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
         PrivilegedMode: true
-        Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        EnvironmentVariables:
+          - Name: AWS_ACCOUNT_ID
+            Value: !Sub '${AWS::AccountId}'
       Source:
         Type: CODEPIPELINE
         BuildSpec: copilot/buildspec.yml
@@ -188,7 +193,11 @@ Resources:
               - codestar-connections:PassConnection
               - codestar-connections:PassedToService
             Resource:
+              {{- if eq .Source.ConnectionARN ""}}
               - !Ref SourceConnection
+              {{- else}}
+              - {{$.Source.Connection}}
+              {{- end}}
           {{- end}}
           - Effect: Allow
             Action:
@@ -230,11 +239,15 @@ Resources:
         Type: LINUX_CONTAINER
         Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
         ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
       Source:
         Type: NO_SOURCE
         BuildSpec: |
           version: 0.2
           phases:
+            install:
+                runtime-versions:
+                  docker: 18
             build:
               commands:
               {{- range $index, $command := $stage.TestCommands}}
@@ -290,7 +303,12 @@ Resources:
                 Version: 1
                 Provider: CodeStarSourceConnection
               Configuration:
-                ConnectionArn: !Ref SourceConnection
+                ConnectionArn:
+                {{- if eq .Source.ConnectionARN ""}}
+                  !Ref SourceConnection
+                {{- else}}
+                  {{$.Source.Connection}}
+                {{- end}}
                 FullRepositoryId: {{$.Source.Repository}}
                 BranchName: {{$.Source.Branch}}
               OutputArtifacts:
@@ -378,5 +396,10 @@ Resources:
 Outputs:
   PipelineConnectionARN:
     Description: "ARN of CodeStar Connections connection"
-    Value: !Ref SourceConnection
+    Value:
+    {{- if eq .Source.ConnectionARN ""}}
+      !Ref SourceConnection
+    {{- else}}
+      {{$.Source.Connection}}
+    {{- end}}
 {{- end}}

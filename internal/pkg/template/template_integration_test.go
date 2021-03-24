@@ -1,4 +1,4 @@
-// +build integration
+// +build integration,local
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -163,8 +163,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 		"renders a valid template with entrypoint and command overrides": {
 			opts: template.WorkloadOpts{
 				HTTPHealthCheck: defaultHttpHealthCheck,
-				EntryPoint: []string{"/bin/echo", "hello"},
-				Command: []string{"world"},
+				EntryPoint:      []string{"/bin/echo", "hello"},
+				Command:         []string{"world"},
 			},
 		},
 	}

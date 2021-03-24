@@ -11,7 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
+	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 // Service wraps up ECS Service struct.

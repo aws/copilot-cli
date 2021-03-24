@@ -192,6 +192,7 @@ func (o *taskExecOpts) configSession() (*session.Session, error) {
 
 // buildTaskExecCmd builds the command for execute a running container in a one-off task.
 func buildTaskExecCmd() *cobra.Command {
+	var skipPrompt bool
 	vars := taskExecVars{}
 	cmd := &cobra.Command{
 		Use:   "exec",
@@ -208,6 +209,12 @@ func buildTaskExecCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if cmd.Flags().Changed(yesFlag) {
+				opts.skipConfirmation = aws.Bool(false)
+				if skipPrompt {
+					opts.skipConfirmation = aws.Bool(true)
+				}
+			}
 			if err := opts.Validate(); err != nil {
 				return err
 			}
@@ -223,7 +230,7 @@ func buildTaskExecCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.command, commandFlag, commandFlagShort, defaultCommand, execCommandFlagDescription)
 	cmd.Flags().StringVar(&vars.taskID, taskIDFlag, "", taskIDFlagDescription)
 	cmd.Flags().BoolVar(&vars.useDefault, taskDefaultFlag, false, taskExecDefaultFlagDescription)
-	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
+	cmd.Flags().BoolVar(&skipPrompt, yesFlag, false, execYesFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	return cmd

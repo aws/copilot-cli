@@ -301,7 +301,7 @@ type zipAndUploader interface {
 }
 
 type customResourcesUploader interface {
-	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) ([]string, error)
+	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
 }
 
 type bucketEmptier interface {
@@ -381,8 +381,8 @@ type deployer interface {
 	ListTaskStacks(appName, envName string) ([]deploy.TaskStackInfo, error)
 }
 
-type domainValidator interface {
-	DomainExists(domainName string) (bool, error)
+type domainHostedZoneGetter interface {
+	DomainHostedZoneID(domainName string) (string, error)
 }
 
 type dockerfileParser interface {
@@ -508,14 +508,6 @@ type roleDeleter interface {
 	DeleteRole(string) error
 }
 
-type activeWorkloadTasksLister interface {
-	ListActiveWorkloadTasks(app, env, workload string) (clusterARN string, taskARNs []string, err error)
-}
-
-type tasksStopper interface {
-	StopTasks(tasks []string, opts ...awsecs.StopTasksOpts) error
-}
-
 type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
 }
@@ -545,6 +537,10 @@ type runningTaskSelector interface {
 
 type dockerEngineValidator interface {
 	CheckDockerEngineRunning() error
+}
+
+type codestar interface {
+	GetConnectionARN(string) (string, error)
 }
 
 type publicIPGetter interface {

@@ -5,35 +5,50 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// Mockrunner is a mock of runner interface
+// Mockrunner is a mock of runner interface.
 type Mockrunner struct {
 	ctrl     *gomock.Controller
 	recorder *MockrunnerMockRecorder
 }
 
-// MockrunnerMockRecorder is the mock recorder for Mockrunner
+// MockrunnerMockRecorder is the mock recorder for Mockrunner.
 type MockrunnerMockRecorder struct {
 	mock *Mockrunner
 }
 
-// NewMockrunner creates a new mock instance
+// NewMockrunner creates a new mock instance.
 func NewMockrunner(ctrl *gomock.Controller) *Mockrunner {
 	mock := &Mockrunner{ctrl: ctrl}
 	mock.recorder = &MockrunnerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *Mockrunner) EXPECT() *MockrunnerMockRecorder {
 	return m.recorder
 }
 
-// Run mocks base method
+// InteractiveRun mocks base method.
+func (m *Mockrunner) InteractiveRun(name string, args []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InteractiveRun", name, args)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InteractiveRun indicates an expected call of InteractiveRun.
+func (mr *MockrunnerMockRecorder) InteractiveRun(name, args interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InteractiveRun", reflect.TypeOf((*Mockrunner)(nil).InteractiveRun), name, args)
+}
+
+// Run mocks base method.
 func (m *Mockrunner) Run(name string, args []string, options ...command.Option) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{name, args}
@@ -45,23 +60,9 @@ func (m *Mockrunner) Run(name string, args []string, options ...command.Option) 
 	return ret0
 }
 
-// Run indicates an expected call of Run
+// Run indicates an expected call of Run.
 func (mr *MockrunnerMockRecorder) Run(name, args interface{}, options ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{name, args}, options...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*Mockrunner)(nil).Run), varargs...)
-}
-
-// InteractiveRun mocks base method
-func (m *Mockrunner) InteractiveRun(name string, args []string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InteractiveRun", name, args)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// InteractiveRun indicates an expected call of InteractiveRun
-func (mr *MockrunnerMockRecorder) InteractiveRun(name, args interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InteractiveRun", reflect.TypeOf((*Mockrunner)(nil).InteractiveRun), name, args)
 }

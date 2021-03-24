@@ -329,7 +329,7 @@ copilot svc exec
 	--command $cmd
 	--container $ctnr
 	--task-id $td
-	--yes
+	--yes=false
 */
 func (cli *CLI) SvcExec(opts *SvcExecRequest) (string, error) {
 	return cli.exec(
@@ -340,7 +340,7 @@ func (cli *CLI) SvcExec(opts *SvcExecRequest) (string, error) {
 			"--command", opts.Command,
 			"--container", opts.Container,
 			"--task-id", opts.TaskID,
-			"--yes"))
+			"--yes=false"))
 }
 
 /*SvcDelete runs:
@@ -590,6 +590,7 @@ copilot task exec
 	--env $e
 	--name $n
 	--command $cmd
+	--yes=false
 */
 func (cli *CLI) TaskExec(opts *TaskExecRequest) (string, error) {
 	return cli.exec(
@@ -597,7 +598,8 @@ func (cli *CLI) TaskExec(opts *TaskExecRequest) (string, error) {
 			"--app", opts.AppName,
 			"--name", opts.Name,
 			"--env", opts.EnvName,
-			"--command", opts.Command))
+			"--command", opts.Command,
+			"--yes=false"))
 }
 
 /*TaskDelete runs:

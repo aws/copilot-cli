@@ -13,7 +13,7 @@ const (
 	// LegacyEnvTemplateVersion is the version associated with the environment template before we started versioning.
 	LegacyEnvTemplateVersion = "v0.0.0"
 	// LatestEnvTemplateVersion is the latest version number available for environment templates.
-	LatestEnvTemplateVersion = "v1.2.0"
+	LatestEnvTemplateVersion = "v1.3.0"
 )
 
 // CreateEnvironmentInput holds the fields required to deploy an environment.
@@ -27,6 +27,7 @@ type CreateEnvironmentInput struct {
 	ToolsAccountPrincipalARN string            // The Principal ARN of the tools account.
 	AppDNSName               string            // The DNS name of this application, if it exists
 	AdditionalTags           map[string]string // AdditionalTags are labels applied to resources under the application.
+	CustomResourcesURLs      map[string]string // Environment custom resource script S3 object URLs.
 	ImportVPCConfig          *config.ImportVPC // Optional configuration if users have an existing VPC.
 	AdjustVPCConfig          *config.AdjustVPC // Optional configuration if users want to override default VPC configuration.
 

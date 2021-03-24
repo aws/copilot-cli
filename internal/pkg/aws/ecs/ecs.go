@@ -13,9 +13,11 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
-	"github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
 )
+
+const clusterStatusActive = "ACTIVE"
 
 type api interface {
 	DescribeClusters(input *ecs.DescribeClustersInput) (*ecs.DescribeClustersOutput, error)
@@ -213,6 +215,10 @@ func (e *ECS) DefaultCluster() (string, error) {
 
 	// NOTE: right now at most 1 default cluster is possible, so cluster[0] must be the default cluster
 	cluster := resp.Clusters[0]
+	if aws.StringValue(cluster.Status) != clusterStatusActive {
+		return "", ErrNoDefaultCluster
+	}
+
 	return aws.StringValue(cluster.ClusterArn), nil
 }
 

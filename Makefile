@@ -116,6 +116,12 @@ run-integ-test:
 	# and runs tests which end in Integration.
 	go test -race -count=1 -timeout 60m -tags=integration ${PACKAGES}
 
+.PHONY: local-integ-test
+local-integ-test: packr-build run-local-integ-test packr-clean
+
+run-local-integ-test:
+	go test -race -count=1 -timeout=60m -tags=integration,local ${PACKAGES}
+
 .PHONY: e2e
 e2e: build-e2e
 	@echo "Building E2E Docker Image" &&\
@@ -129,22 +135,6 @@ tools:
 	GOBIN=${GOBIN} go get github.com/gobuffalo/packr/v2/packr2
 	@echo "Installing custom resource dependencies" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} && npm install
-
-# Run the docs locally.
-.PHONY: start-docs
-start-docs:
-	cd ${SOURDE_DOCS} &&\
-	git submodule update --init --recursive &&\
-	hugo server -D
-
-# Build and minify the documentation to the docs/ directory.
-.PHONY: build-docs
-build-docs:
-	cd ${SOURDE_DOCS} &&\
-	git submodule update --init --recursive &&\
-	npm install &&\
-	hugo &&\
-	cd ..
 
 .PHONY: gen-mocks
 gen-mocks: tools

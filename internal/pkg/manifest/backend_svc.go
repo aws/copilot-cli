@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -35,12 +35,12 @@ type BackendService struct {
 
 // BackendServiceConfig holds the configuration that can be overriden per environments.
 type BackendServiceConfig struct {
-	ImageConfig imageWithPortAndHealthcheck `yaml:"image,flow"`
+	ImageConfig   imageWithPortAndHealthcheck `yaml:"image,flow"`
 	ImageOverride `yaml:",inline"`
 	TaskConfig    `yaml:",inline"`
 	*Logging      `yaml:"logging,flow"`
-	Sidecars    map[string]*SidecarConfig `yaml:"sidecars"`
-	Network     NetworkConfig             `yaml:"network"`
+	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
+	Network       NetworkConfig             `yaml:"network"`
 }
 
 type imageWithPortAndHealthcheck struct {

@@ -1,0 +1,20 @@
+{{- if .Storage}}
+{{- if .Storage.ManagedVolumeInfo}}
+AccessPoint:
+  Type: AWS::EFS::AccessPoint
+  Properties:
+    ClientToken: String
+    FileSystemId: 
+      Fn::ImportValue:
+        !Sub '${AppName}-${EnvName}-FilesystemID'
+    PosixUser: 
+      Uid: {{.Storage.ManagedVolumeInfo.UID}}
+      Gid: {{.Storage.ManagedVolumeInfo.GID}}
+    RootDirectory: 
+      Path: !Sub '/${WorkloadName}'
+      CreationInfo:
+        OwnerUid: {{.Storage.ManagedVolumeInfo.UID}}
+        OwnerGid: {{.Storage.ManagedVolumeInfo.GID}}
+        Permissions: 0755
+{{- end}}
+{{- end}}

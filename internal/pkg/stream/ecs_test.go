@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	awsecs "github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	awsecs "github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
 	"github.com/stretchr/testify/require"
 )
 

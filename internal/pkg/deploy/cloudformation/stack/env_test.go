@@ -5,7 +5,6 @@ package stack
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -20,30 +19,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEnvTemplate(t *testing.T) {
+func TestEnv_Template(t *testing.T) {
 	testCases := map[string]struct {
 		mockDependencies func(ctrl *gomock.Controller, e *EnvStackConfig)
 		expectedOutput   string
 		want             error
 	}{
-		"should return error given template not found": {
-			mockDependencies: func(ctrl *gomock.Controller, e *EnvStackConfig) {
-				m := mocks.NewMockenvReadParser(ctrl)
-				m.EXPECT().Read(dnsDelegationTemplatePath).Return(nil, errors.New("some error"))
-				e.parser = m
-			},
-			want: errors.New("some error"),
-		},
 		"should return template body when present": {
 			mockDependencies: func(ctrl *gomock.Controller, e *EnvStackConfig) {
 				m := mocks.NewMockenvReadParser(ctrl)
-				m.EXPECT().Read(dnsDelegationTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
-				m.EXPECT().Read(acmValidationTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
-				m.EXPECT().Read(enableLongARNsTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
 				m.EXPECT().ParseEnv(&template.EnvOpts{
-					ACMValidationLambda:       "customresources",
-					DNSDelegationLambda:       "customresources",
-					EnableLongARNFormatLambda: "customresources",
+					ScriptBucketName:          "mockbucket",
+					DNSCertValidatorLambda:    "mockkey1",
+					DNSDelegationLambda:       "mockkey2",
+					EnableLongARNFormatLambda: "mockkey3",
 					ImportVPC:                 nil,
 					VPCConfig: &config.AdjustVPC{
 						CIDR:               DefaultVPCCIDR,
@@ -81,7 +70,7 @@ func TestEnvTemplate(t *testing.T) {
 	}
 }
 
-func TestEnvParameters(t *testing.T) {
+func TestEnv_Parameters(t *testing.T) {
 	deploymentInput := mockDeployEnvironmentInput()
 	deploymentInputWithDNS := mockDeployEnvironmentInput()
 	deploymentInputWithDNS.AppDNSName = "ecs.aws"
@@ -152,7 +141,7 @@ func TestEnvParameters(t *testing.T) {
 	}
 }
 
-func TestEnvDNSDelegationRole(t *testing.T) {
+func TestEnv_DNSDelegationRole(t *testing.T) {
 	testCases := map[string]struct {
 		input *EnvStackConfig
 		want  string
@@ -202,7 +191,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 	}
 }
 
-func TestEnvTags(t *testing.T) {
+func TestEnv_Tags(t *testing.T) {
 	env := &EnvStackConfig{
 		in: &deploy.CreateEnvironmentInput{
 			Name:    "env",
@@ -305,5 +294,10 @@ func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 		AppName:                  "project",
 		Prod:                     true,
 		ToolsAccountPrincipalARN: "arn:aws:iam::000000000:root",
+		CustomResourcesURLs: map[string]string{
+			template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
+			template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
+			template.EnableLongARNsFileName:   "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey3",
+		},
 	}
 }

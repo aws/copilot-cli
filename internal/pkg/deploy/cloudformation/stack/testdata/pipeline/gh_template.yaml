@@ -111,7 +111,10 @@ Resources:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
         PrivilegedMode: true
-        Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        EnvironmentVariables:
+          - Name: AWS_ACCOUNT_ID
+            Value: !Sub '${AWS::AccountId}'
       Source:
         Type: CODEPIPELINE
         BuildSpec: copilot/buildspec.yml
@@ -220,11 +223,15 @@ Resources:
         Type: LINUX_CONTAINER
         Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
         ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
       Source:
         Type: NO_SOURCE
         BuildSpec: |
           version: 0.2
           phases:
+            install:
+                runtime-versions:
+                  docker: 18
             build:
               commands:
                 - echo "test"

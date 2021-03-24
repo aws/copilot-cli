@@ -32,8 +32,9 @@ type EnvOpts struct {
 	Version string // The template version to use for the environment. If empty uses the "legacy" template.
 
 	DNSDelegationLambda       string
-	ACMValidationLambda       string
+	DNSCertValidatorLambda    string
 	EnableLongARNFormatLambda string
+	ScriptBucketName          string
 
 	ImportVPC *config.ImportVPC
 	VPCConfig *config.AdjustVPC

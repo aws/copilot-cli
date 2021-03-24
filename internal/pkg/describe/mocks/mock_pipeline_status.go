@@ -5,35 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockpipelineStateGetter is a mock of pipelineStateGetter interface
+// MockpipelineStateGetter is a mock of pipelineStateGetter interface.
 type MockpipelineStateGetter struct {
 	ctrl     *gomock.Controller
 	recorder *MockpipelineStateGetterMockRecorder
 }
 
-// MockpipelineStateGetterMockRecorder is the mock recorder for MockpipelineStateGetter
+// MockpipelineStateGetterMockRecorder is the mock recorder for MockpipelineStateGetter.
 type MockpipelineStateGetterMockRecorder struct {
 	mock *MockpipelineStateGetter
 }
 
-// NewMockpipelineStateGetter creates a new mock instance
+// NewMockpipelineStateGetter creates a new mock instance.
 func NewMockpipelineStateGetter(ctrl *gomock.Controller) *MockpipelineStateGetter {
 	mock := &MockpipelineStateGetter{ctrl: ctrl}
 	mock.recorder = &MockpipelineStateGetterMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockpipelineStateGetter) EXPECT() *MockpipelineStateGetterMockRecorder {
 	return m.recorder
 }
 
-// GetPipelineState mocks base method
+// GetPipelineState mocks base method.
 func (m *MockpipelineStateGetter) GetPipelineState(pipelineName string) (*codepipeline.PipelineState, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPipelineState", pipelineName)
@@ -42,7 +43,7 @@ func (m *MockpipelineStateGetter) GetPipelineState(pipelineName string) (*codepi
 	return ret0, ret1
 }
 
-// GetPipelineState indicates an expected call of GetPipelineState
+// GetPipelineState indicates an expected call of GetPipelineState.
 func (mr *MockpipelineStateGetterMockRecorder) GetPipelineState(pipelineName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipelineState", reflect.TypeOf((*MockpipelineStateGetter)(nil).GetPipelineState), pipelineName)

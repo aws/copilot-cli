@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
+	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 const (

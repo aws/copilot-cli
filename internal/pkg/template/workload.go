@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/aws/copilot-cli/internal/pkg/new-sdk-go/ecs"
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/google/uuid"
 )
 
@@ -55,6 +55,7 @@ var (
 		"eventrule",
 		"state-machine",
 		"state-machine-definition.json",
+		"efs-access-point",
 		"env-controller",
 		"mount-points",
 		"volumes",
@@ -85,9 +86,10 @@ type SidecarOpts struct {
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
 type StorageOpts struct {
-	Volumes     []*Volume
-	MountPoints []*MountPoint
-	EFSPerms    []*EFSPermission
+	Volumes           []*Volume
+	MountPoints       []*MountPoint
+	EFSPerms          []*EFSPermission
+	ManagedVolumeInfo *ManagedVolumeCreationInfo // Used for delegating CreationInfo for Copilot-managed EFS.
 }
 
 // EFSPermission holds information needed to render an IAM policy statement.
@@ -115,6 +117,13 @@ type Volume struct {
 	// Authorization Config
 	AccessPointID *string
 	IAM           *string // ENABLED or DISABLED
+}
+
+// ManagedVolumeCreationInfo holds information about how to create Copilot-managed access points.
+type ManagedVolumeCreationInfo struct {
+	Name *string
+	UID  *string
+	GID  *string
 }
 
 // LogConfigOpts holds configuration that's needed if the service is configured with Firelens to route
