@@ -6,6 +6,7 @@ package route53
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -35,35 +36,45 @@ func New(s *session.Session) *Route53 {
 	}
 }
 
-// DomainExists returns if a domain exists under a certain AWS account.
-func (r *Route53) DomainExists(domainName string) (bool, error) {
+// DomainHostedZoneID returns the Hosted Zone ID of a domain.
+func (r *Route53) DomainHostedZoneID(domainName string) (string, error) {
 	in := &route53.ListHostedZonesByNameInput{DNSName: aws.String(domainName)}
 	resp, err := r.client.ListHostedZonesByName(in)
 	if err != nil {
-		return false, fmt.Errorf("list hosted zone for %s: %w", domainName, err)
+		return "", fmt.Errorf("list hosted zone for %s: %w", domainName, err)
 	}
 	for {
-		if hostedZoneExists(resp.HostedZones, domainName) {
-			return true, nil
+		hostedZones := filterHostedZones(resp.HostedZones, matchesDomain(domainName))
+		if len(hostedZones) > 0 {
+			// return the first match.
+			return strings.TrimPrefix(aws.StringValue(hostedZones[0].Id), "/hostedzone/"), nil
 		}
 		if !aws.BoolValue(resp.IsTruncated) {
-			return false, nil
+			return "", ErrDomainNotExist
 		}
 		in = &route53.ListHostedZonesByNameInput{DNSName: resp.NextDNSName, HostedZoneId: resp.NextHostedZoneId}
 		resp, err = r.client.ListHostedZonesByName(in)
 		if err != nil {
-			return false, fmt.Errorf("list hosted zone for %s: %w", domainName, err)
+			return "", fmt.Errorf("list hosted zone for %s: %w", domainName, err)
 		}
 	}
 }
 
-// hostedZoneExists checks if certain domain exists in any of the hosted zones.
-func hostedZoneExists(hostedZones []*route53.HostedZone, domain string) bool {
-	for _, hostedZone := range hostedZones {
-		// example.com. should match example.com
-		if domain == aws.StringValue(hostedZone.Name) || domain+"." == aws.StringValue(hostedZone.Name) {
-			return true
+type filterZoneFunc func(*route53.HostedZone) bool
+
+func filterHostedZones(zones []*route53.HostedZone, fn filterZoneFunc) []*route53.HostedZone {
+	var hostedZones []*route53.HostedZone
+	for _, hostedZone := range zones {
+		if fn(hostedZone) {
+			hostedZones = append(hostedZones, hostedZone)
 		}
 	}
-	return false
+	return hostedZones
+}
+
+func matchesDomain(domain string) filterZoneFunc {
+	return func(z *route53.HostedZone) bool {
+		// example.com. should match example.com
+		return domain == aws.StringValue(z.Name) || domain+"." == aws.StringValue(z.Name)
+	}
 }

@@ -1,5 +1,17 @@
 {{- if .Storage.Volumes}}
 Volumes:
+{{- if .Storage.ManagedVolumeInfo}}
+  - Name: {{.Storage.ManagedVolumeInfo.Name}}
+    EFSVolumeConfiguration:
+      FilesystemId:
+        Fn::ImportValue:
+          !Sub '${AppName}-${EnvName}-FilesystemID'
+      RootDirectory: "/"
+      TransitEncryption: ENABLED
+      AuthorizationConfig:
+        AccessPointId: !Ref AccessPoint
+        IAM: ENABLED
+{{- end}}
 {{- range $vol := .Storage.Volumes}}
   - Name: {{$vol.Name}}
     EFSVolumeConfiguration:

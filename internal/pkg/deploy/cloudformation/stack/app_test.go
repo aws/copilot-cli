@@ -191,6 +191,10 @@ func TestAppParameters(t *testing.T) {
 			ParameterValue: aws.String("amazon.com"),
 		},
 		{
+			ParameterKey:   aws.String(appDomainHostedZoneIDKey),
+			ParameterValue: aws.String("mockHostedZoneID"),
+		},
+		{
 			ParameterKey:   aws.String(appDNSDelegationRoleParamName),
 			ParameterValue: aws.String("testapp-DNSDelegationRole"),
 		},
@@ -200,7 +204,7 @@ func TestAppParameters(t *testing.T) {
 		},
 	}
 	app := &AppStackConfig{
-		CreateAppInput: &deploy.CreateAppInput{Name: "testapp", AccountID: "1234", DomainName: "amazon.com"},
+		CreateAppInput: &deploy.CreateAppInput{Name: "testapp", AccountID: "1234", DomainName: "amazon.com", DomainHostedZoneID: "mockHostedZoneID"},
 	}
 	params, _ := app.Parameters()
 	require.ElementsMatch(t, expectedParams, params)
