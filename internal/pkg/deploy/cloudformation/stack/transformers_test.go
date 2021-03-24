@@ -18,6 +18,7 @@ func Test_convertSidecar(t *testing.T) {
 	mockImage := aws.String("mockImage")
 	mockMap := map[string]string{"foo": "bar"}
 	mockCredsParam := aws.String("mockCredsParam")
+	mockEssential := aws.Bool(false)
 	testCases := map[string]struct {
 		inPort string
 
@@ -39,6 +40,7 @@ func Test_convertSidecar(t *testing.T) {
 				Image:      mockImage,
 				Secrets:    mockMap,
 				Variables:  mockMap,
+				Essential:  mockEssential,
 			},
 		},
 		"good port with protocol": {
@@ -52,6 +54,7 @@ func Test_convertSidecar(t *testing.T) {
 				Image:      mockImage,
 				Secrets:    mockMap,
 				Variables:  mockMap,
+				Essential:  mockEssential,
 			},
 		},
 	}
@@ -63,6 +66,7 @@ func Test_convertSidecar(t *testing.T) {
 					Image:      mockImage,
 					Secrets:    mockMap,
 					Variables:  mockMap,
+					Essential:  mockEssential,
 					Port:       aws.String(tc.inPort),
 				},
 			}
