@@ -43,11 +43,13 @@ type initAppOpts struct {
 
 	identity identityService
 	store    applicationStore
-	route53  domainValidator
+	route53  domainHostedZoneGetter
 	ws       wsAppManager
 	cfn      appDeployer
 	prompt   prompter
 	prog     progress
+
+	cachedHostedZoneID string
 }
 
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
@@ -87,9 +89,11 @@ func (o *initAppOpts) Validate() error {
 		if err := validateDomainName(o.domainName); err != nil {
 			return fmt.Errorf("domain name %s is invalid: %w", o.domainName, err)
 		}
-		if err := o.validateDomain(o.domainName); err != nil {
+		id, err := o.domainHostedZoneID(o.domainName)
+		if err != nil {
 			return err
 		}
+		o.cachedHostedZoneID = id
 	}
 	return nil
 }
@@ -164,11 +168,19 @@ func (o *initAppOpts) Execute() error {
 		return fmt.Errorf("create new workspace with application name %s: %w", o.name, err)
 	}
 	o.prog.Start(fmt.Sprintf(fmtAppInitStart, color.HighlightUserInput(o.name)))
+	var hostedZoneID string
+	if o.domainName != "" {
+		hostedZoneID, err = o.domainHostedZoneID(o.domainName)
+		if err != nil {
+			return err
+		}
+	}
 	err = o.cfn.DeployApp(&deploy.CreateAppInput{
-		Name:           o.name,
-		AccountID:      caller.Account,
-		DomainName:     o.domainName,
-		AdditionalTags: o.resourceTags,
+		Name:               o.name,
+		AccountID:          caller.Account,
+		DomainName:         o.domainName,
+		DomainHostedZoneID: hostedZoneID,
+		AdditionalTags:     o.resourceTags,
 	})
 	if err != nil {
 		o.prog.Stop(log.Serrorf(fmtAppInitFailed, color.HighlightUserInput(o.name)))
@@ -177,10 +189,11 @@ func (o *initAppOpts) Execute() error {
 	o.prog.Stop(log.Ssuccessf(fmtAppInitComplete, color.HighlightUserInput(o.name)))
 
 	return o.store.CreateApplication(&config.Application{
-		AccountID: caller.Account,
-		Name:      o.name,
-		Domain:    o.domainName,
-		Tags:      o.resourceTags,
+		AccountID:          caller.Account,
+		Name:               o.name,
+		Domain:             o.domainName,
+		DomainHostedZoneID: hostedZoneID,
+		Tags:               o.resourceTags,
 	})
 }
 
@@ -202,15 +215,15 @@ func (o *initAppOpts) validateAppName(name string) error {
 	return nil
 }
 
-func (o *initAppOpts) validateDomain(domainName string) error {
-	domainExist, err := o.route53.DomainExists(domainName)
+func (o *initAppOpts) domainHostedZoneID(domainName string) (string, error) {
+	if o.cachedHostedZoneID != "" {
+		return o.cachedHostedZoneID, nil
+	}
+	hostedZoneID, err := o.route53.DomainHostedZoneID(domainName)
 	if err != nil {
-		return err
+		return "", fmt.Errorf("get hosted zone ID for domain %s: %w", domainName, err)
 	}
-	if !domainExist {
-		return fmt.Errorf("no hosted zone found for %s", domainName)
-	}
-	return nil
+	return hostedZoneID, nil
 }
 
 // RecommendedActions returns a list of suggested additional commands users can run after successfully executing this command.

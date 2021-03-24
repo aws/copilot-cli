@@ -4011,42 +4011,42 @@ func (mr *MockdeployerMockRecorder) UpdatePipeline(env interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePipeline", reflect.TypeOf((*Mockdeployer)(nil).UpdatePipeline), env)
 }
 
-// MockdomainValidator is a mock of domainValidator interface.
-type MockdomainValidator struct {
+// MockdomainHostedZoneGetter is a mock of domainHostedZoneGetter interface.
+type MockdomainHostedZoneGetter struct {
 	ctrl     *gomock.Controller
-	recorder *MockdomainValidatorMockRecorder
+	recorder *MockdomainHostedZoneGetterMockRecorder
 }
 
-// MockdomainValidatorMockRecorder is the mock recorder for MockdomainValidator.
-type MockdomainValidatorMockRecorder struct {
-	mock *MockdomainValidator
+// MockdomainHostedZoneGetterMockRecorder is the mock recorder for MockdomainHostedZoneGetter.
+type MockdomainHostedZoneGetterMockRecorder struct {
+	mock *MockdomainHostedZoneGetter
 }
 
-// NewMockdomainValidator creates a new mock instance.
-func NewMockdomainValidator(ctrl *gomock.Controller) *MockdomainValidator {
-	mock := &MockdomainValidator{ctrl: ctrl}
-	mock.recorder = &MockdomainValidatorMockRecorder{mock}
+// NewMockdomainHostedZoneGetter creates a new mock instance.
+func NewMockdomainHostedZoneGetter(ctrl *gomock.Controller) *MockdomainHostedZoneGetter {
+	mock := &MockdomainHostedZoneGetter{ctrl: ctrl}
+	mock.recorder = &MockdomainHostedZoneGetterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockdomainValidator) EXPECT() *MockdomainValidatorMockRecorder {
+func (m *MockdomainHostedZoneGetter) EXPECT() *MockdomainHostedZoneGetterMockRecorder {
 	return m.recorder
 }
 
-// DomainExists mocks base method.
-func (m *MockdomainValidator) DomainExists(domainName string) (bool, error) {
+// DomainHostedZoneID mocks base method.
+func (m *MockdomainHostedZoneGetter) DomainHostedZoneID(domainName string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DomainExists", domainName)
-	ret0, _ := ret[0].(bool)
+	ret := m.ctrl.Call(m, "DomainHostedZoneID", domainName)
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DomainExists indicates an expected call of DomainExists.
-func (mr *MockdomainValidatorMockRecorder) DomainExists(domainName interface{}) *gomock.Call {
+// DomainHostedZoneID indicates an expected call of DomainHostedZoneID.
+func (mr *MockdomainHostedZoneGetterMockRecorder) DomainHostedZoneID(domainName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainExists", reflect.TypeOf((*MockdomainValidator)(nil).DomainExists), domainName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainHostedZoneID", reflect.TypeOf((*MockdomainHostedZoneGetter)(nil).DomainHostedZoneID), domainName)
 }
 
 // MockdockerfileParser is a mock of dockerfileParser interface.

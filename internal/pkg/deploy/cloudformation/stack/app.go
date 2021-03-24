@@ -47,8 +47,8 @@ type AppRegionalResources struct {
 }
 
 const (
-	appTemplatePath               = "app/app.yml"
-	appResourcesTemplatePath      = "app/cf.yml"
+	appTemplatePath               = "app/versions/v1.0.0/app.yml"
+	appResourcesTemplatePath      = "app/versions/v1.0.0/cf.yml"
 	appAdminRoleParamName         = "AdminRoleName"
 	appExecutionRoleParamName     = "ExecutionRoleName"
 	appDNSDelegationRoleParamName = "DNSDelegationRoleName"
@@ -57,6 +57,7 @@ const (
 	appOutputECRRepoPrefix        = "ECRRepo"
 	appDNSDelegatedAccountsKey    = "AppDNSDelegatedAccounts"
 	appDomainNameKey              = "AppDomainName"
+	appDomainHostedZoneIDKey      = "AppDomainHostedZoneID"
 	appNameKey                    = "AppName"
 	appDNSDelegationRoleName      = "DNSDelegationRole"
 )
@@ -128,6 +129,10 @@ func (c *AppStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(appDomainNameKey),
 			ParameterValue: aws.String(c.DomainName),
+		},
+		{
+			ParameterKey:   aws.String(appDomainHostedZoneIDKey),
+			ParameterValue: aws.String(c.DomainHostedZoneID),
 		},
 		{
 			ParameterKey:   aws.String(appNameKey),

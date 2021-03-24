@@ -1,0 +1,175 @@
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+AWSTemplateFormatVersion: 2010-09-09
+Description: Configure the AWSCloudFormationStackSetAdministrationRole to enable use of AWS CloudFormation StackSets.
+Metadata:
+  TemplateVersion: 'v1.0.0'
+Parameters:
+  AdminRoleName:
+    Type: String
+  ExecutionRoleName:
+    Type: String
+  DNSDelegationRoleName:
+    Type: String
+    Default: ""
+  AppDNSDelegatedAccounts:
+    Type: CommaDelimitedList
+    Default: ""
+  AppDomainName:
+    Type: String
+    Default: ""
+  AppDomainHostedZoneID:
+    Type: String
+    Default: ""
+  AppName:
+    Type: String
+Conditions:
+  DelegateDNS:
+    !Not [!Equals [ !Ref AppDomainName, "" ]]
+
+Resources:
+  AdministrationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref AdminRoleName
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: AssumeRole-AWSCloudFormationStackSetExecutionRole
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                Resource:
+                  - !Sub 'arn:aws:iam::*:role/${AdminRoleName}'
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref ExecutionRoleName
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !GetAtt AdministrationRole.Arn
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: ExecutionRolePolicy
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+              - Sid: StackSetRequiredPermissions
+                Effect: Allow
+                Action:
+                  - cloudformation:*
+                  - s3:*
+                  - sns:*
+                Resource: "*"
+              - Sid: ManageKMSKeys
+                Effect: Allow
+                Action:
+                  - kms:*
+                Resource: "*"
+              - Sid: ManageECRRepos
+                Effect: Allow
+                Action:
+                  - ecr:DescribeImageScanFindings
+                  - ecr:GetLifecyclePolicyPreview
+                  - ecr:CreateRepository
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:GetAuthorizationToken
+                  - ecr:ListTagsForResource
+                  - ecr:ListImages
+                  - ecr:DeleteLifecyclePolicy
+                  - ecr:DeleteRepository
+                  - ecr:SetRepositoryPolicy
+                  - ecr:BatchGetImage
+                  - ecr:DescribeImages
+                  - ecr:DescribeRepositories
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetRepositoryPolicy
+                  - ecr:GetLifecyclePolicy
+                  - ecr:TagResource
+                Resource: "*"
+
+  DNSDelegationRole:
+    Type: AWS::IAM::Role
+    Condition: DelegateDNS
+    Properties:
+      RoleName: !Ref DNSDelegationRoleName
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:  !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action:
+              - sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              AWS: !Split
+                - ','
+                - !Sub
+                    - 'arn:aws:iam::${inner}:root'
+                    - inner: !Join
+                      - ':root,arn:aws:iam::'
+                      - Ref: "AppDNSDelegatedAccounts"
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: DNSDelegationPolicy
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+              - Sid: HostedZoneReadRecords
+                Effect: Allow
+                Action:
+                  - route53:Get*
+                  - route53:List*
+                Resource: "*"
+              - Sid: HostedZoneUpdate
+                Effect: Allow
+                Action:
+                  - route53:ChangeResourceRecordSets
+                Resource:
+                  - !Sub arn:${AWS::Partition}:route53:::hostedzone/${AppHostedZone}
+                  - !Sub arn:${AWS::Partition}:route53:::hostedzone/${AppDomainHostedZoneID}
+
+  AppHostedZone:
+    Type: AWS::Route53::HostedZone
+    Condition: DelegateDNS
+    Properties:
+      HostedZoneConfig:
+        Comment: !Sub "Hosted zone for copilot application ${AppName}: ${AppName}.${AppDomainName}"
+      Name: !Sub ${AppName}.${AppDomainName}
+
+  AppDomainDelegationRecordSet:
+    Type: AWS::Route53::RecordSet
+    Condition: DelegateDNS
+    Properties:
+      HostedZoneName: !Sub ${AppDomainName}.
+      Comment: !Sub "Record for copilot domain delegation for application ${AppDomainName}"
+      Name: !Sub ${AppName}.${AppDomainName}.
+      Type: NS
+      TTL: '900'
+      ResourceRecords: !GetAtt AppHostedZone.NameServers
+
+Outputs:
+  ExecutionRoleARN:
+    Description: ExecutionRole used by this application to set up ECR Repos, KMS Keys and S3 buckets
+    Value: !GetAtt ExecutionRole.Arn
+  AdministrationRoleARN:
+    Description: AdministrationRole used by this application to manage this application's StackSet
+    Value: !GetAtt AdministrationRole.Arn
