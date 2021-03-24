@@ -9,24 +9,24 @@ Parameters:
     Type: String
     Description: The name of the service, job, or workflow being deployed.
   # Customize your Aurora Serverless cluster by setting the default value of the following parameters.
-  InitialDBName:
+  {{logicalIDSafe .Name}}InitialDBName:
     Type: String
     Description: The name of the initial database to be created in the DB cluster.
     Default: {{.InitialDBName}}
     # Cannot have special characters
     # Naming constraints: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html#RDS_Limits.Constraints
-  DBAutoPauseSeconds:
+  {{logicalIDSafe .Name}}DBAutoPauseSeconds:
     Type: Number
     Description: The duration in seconds before the cluster pauses.
     Default: 1000
 Mappings:
-  EnvScalingConfigurationMap: {{range $env := .Envs}}
+  {{logicalIDSafe .Name}}EnvScalingConfigurationMap: {{range $env := .Envs}}
     {{$env}}:
-      "DBMinCapacity": 2 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
-      "DBMaxCapacity": 8 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
+      "DBMinCapacity": 1 # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256]
+      "DBMaxCapacity": 8 # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256]
     {{end}}
 Resources:
-  AuroraKMSCMK:
+  {{logicalIDSafe .Name}}AuroraKMSCMK:
     Type: 'AWS::KMS::Key'
     DeletionPolicy: Retain
     Properties:
@@ -54,20 +54,32 @@ Resources:
               StringEquals:
                 'kms:CallerAccount': !Ref 'AWS::AccountId'
                 'kms:ViaService': !Sub 'rds.${AWS::Region}.amazonaws.com'
-  AuroraKMSCMKAlias:
+  {{logicalIDSafe .Name}}AuroraKMSCMKAlias:
     Type: 'AWS::KMS::Alias'
     DeletionPolicy: Retain
     DependsOn: ['{{logicalIDSafe .Name}}']
     Properties:
       AliasName: !Sub 'alias/${ {{- logicalIDSafe .Name -}} }'
-      TargetKeyId: !Ref AuroraKMSCMK
-  DBSubnetGroup:
+      TargetKeyId: !Ref {{logicalIDSafe .Name}}AuroraKMSCMK
+  {{logicalIDSafe .Name}}DBSubnetGroup:
     Type: 'AWS::RDS::DBSubnetGroup'
     Properties:
       DBSubnetGroupDescription: Group of Copilot private subnets for Aurora cluster.
       SubnetIds:
         !Split [',', { 'Fn::ImportValue': !Sub '${App}-${Env}-PrivateSubnets' }]
-  DBClusterSecurityGroup:
+  {{logicalIDSafe .Name}}SecurityGroup:
+    Metadata:
+      'aws:copilot:description': 'A security group for your workload to access the DB cluster {{logicalIDSafe .Name}}'
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: !Sub 'The Security Group for ${Name} to access DB cluster {{logicalIDSafe .Name}}.'
+      VpcId:
+        Fn::ImportValue:
+          !Sub '${App}-${Env}-VpcId'
+      Tags:
+        - Key: Name
+          Value: !Sub 'copilot-${App}-${Env}-${Name}-Aurora'
+  {{logicalIDSafe .Name}}DBClusterSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: The Security Group for the database cluster.
@@ -75,10 +87,8 @@ Resources:
         - ToPort: 3306
           FromPort: 3306
           IpProtocol: tcp
-          Description: From Environment Security Group
-          SourceSecurityGroupId:
-            Fn::ImportValue:
-              !Sub '${App}-${Env}-EnvironmentSecurityGroup'
+          Description: !Sub 'From the Aurora Security Group of the workload ${Name}.'
+          SourceSecurityGroupId: !Ref {{logicalIDSafe .Name}}SecurityGroup
       VpcId:
         Fn::ImportValue:
           !Sub '${App}-${Env}-VpcId'
@@ -86,10 +96,10 @@ Resources:
         - IpProtocol: '-1'
           Description: Allow all outbound traffic by default
           CidrIp: 0.0.0.0/0
-  AuroraSecret:
+  {{logicalIDSafe .Name}}AuroraSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: !Sub '/${App}/${Env}/${Name}/{{logicalIDSafe .Name}}/MySQLSecret'
+      Name: !Sub '/${App}/${Env}/${Name}/{{logicalIDSafe .Name}}/PostgreSQLSecret'
       Description: !Sub Aurora main user secret for ${AWS::StackName}
       GenerateSecretString:
         SecretStringTemplate: '{"username": "admin"}'
@@ -98,7 +108,7 @@ Resources:
         IncludeSpace: false
         PasswordLength: 16
   {{- if .ParameterGroup}}
-  # DBClusterParameterGroup:
+  # {{logicalIDSafe .Name}}DBClusterParameterGroup:
   #   Type: 'AWS::RDS::DBClusterParameterGroup'
   #   Properties:
   #     Description: !Ref 'AWS::StackName'
@@ -106,7 +116,7 @@ Resources:
   #     Parameters:
   #       character_set_client: 'utf8'
   {{- else}}
-  DBClusterParameterGroup:
+  {{logicalIDSafe .Name}}DBClusterParameterGroup:
     Type: 'AWS::RDS::DBClusterParameterGroup'
     Properties:
       Description: !Ref 'AWS::StackName'
@@ -118,32 +128,35 @@ Resources:
     Type: 'AWS::RDS::DBCluster'
     Properties:
       MasterUsername:
-        !Join [ "",  [ {{`'{{resolve:secretsmanager:'`}}, !Ref AuroraSecret, ":SecretString:username}}" ]]
+        !Join [ "",  [ {{`'{{resolve:secretsmanager:'`}}, !Ref {{logicalIDSafe .Name}}AuroraSecret, ":SecretString:username}}" ]]
       MasterUserPassword:
-        !Join [ "",  [ {{`'{{resolve:secretsmanager:'`}}, !Ref AuroraSecret, ":SecretString:username}}" ]]
-      DatabaseName: !Ref InitialDBName
+        !Join [ "",  [ {{`'{{resolve:secretsmanager:'`}}, !Ref {{logicalIDSafe .Name}}AuroraSecret, ":SecretString:password}}" ]]
+      DatabaseName: !Ref {{logicalIDSafe .Name}}InitialDBName
       Engine: 'aurora-mysql'
       EngineVersion: '5.7.mysql_aurora.2.07.1'
       EngineMode: serverless
       EnableHttpEndpoint: true
       StorageEncrypted: true
-      KmsKeyId: !Ref AuroraKMSCMK
-      DBClusterParameterGroupName: {{- if .ParameterGroup}} {{.ParameterGroup}} {{- else}} !Ref DBClusterParameterGroup {{- end}}
-      DBSubnetGroupName: !Ref DBSubnetGroup
+      KmsKeyId: !Ref {{logicalIDSafe .Name}}AuroraKMSCMK
+      DBClusterParameterGroupName: {{- if .ParameterGroup}} {{.ParameterGroup}} {{- else}} !Ref {{logicalIDSafe .Name}}DBClusterParameterGroup {{- end}}
+      DBSubnetGroupName: !Ref {{logicalIDSafe .Name}}DBSubnetGroup
       VpcSecurityGroupIds:
-        - !Ref DBClusterSecurityGroup
+        - !Ref {{logicalIDSafe .Name}}DBClusterSecurityGroup
       ScalingConfiguration:
         AutoPause: true
-        MinCapacity: !FindInMap [EnvScalingConfigurationMap, !Ref Env, DBMinCapacity]
-        MaxCapacity: !FindInMap [EnvScalingConfigurationMap, !Ref Env, DBMaxCapacity]
-        SecondsUntilAutoPause: !Ref DBAutoPauseSeconds
-  SecretAuroraClusterAttachment:
+        MinCapacity: !FindInMap [{{logicalIDSafe .Name}}EnvScalingConfigurationMap, !Ref Env, DBMinCapacity]
+        MaxCapacity: !FindInMap [{{logicalIDSafe .Name}}EnvScalingConfigurationMap, !Ref Env, DBMaxCapacity]
+        SecondsUntilAutoPause: !Ref {{logicalIDSafe .Name}}DBAutoPauseSeconds
+  {{logicalIDSafe .Name}}SecretAuroraClusterAttachment:
     Type: AWS::SecretsManager::SecretTargetAttachment
     Properties:
-      SecretId: !Ref AuroraSecret
-      TargetId: !Ref {{- logicalIDSafe .Name -}}
+      SecretId: !Ref {{logicalIDSafe .Name}}AuroraSecret
+      TargetId: !Ref {{logicalIDSafe .Name}}
       TargetType: AWS::RDS::DBCluster
 Outputs:
-  AuroraMetadata: # injected as AURORA_METADATA environment variable by Copilot.
+  {{logicalIDSafe .Name}}AuroraMetadata: # injected as AURORA_METADATA environment variable by Copilot.
     Description: "The JSON secret that holds the database username and password. Fields are 'host', 'dbname', 'username', 'password'"
-    Value: !Ref AuroraSecret
+    Value: !Ref {{logicalIDSafe .Name}}AuroraSecret
+  {{logicalIDSafe .Name}}SecurityGroup:
+    Description: "The security group to attach to the workload."
+    Value: !Ref {{logicalIDSafe .Name}}SecurityGroup
