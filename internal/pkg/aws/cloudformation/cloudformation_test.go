@@ -101,6 +101,9 @@ func TestCloudFormation_Create(t *testing.T) {
 				m.EXPECT().DeleteStack(&cloudformation.DeleteStackInput{
 					StackName: aws.String(mockStack.Name),
 				})
+				m.EXPECT().WaitUntilStackDeleteCompleteWithContext(gomock.Any(), &cloudformation.DescribeStacksInput{
+					StackName: aws.String(mockStack.Name),
+				}, gomock.Any(), gomock.Any())
 				addCreateDeployCalls(m)
 				return m
 			},
