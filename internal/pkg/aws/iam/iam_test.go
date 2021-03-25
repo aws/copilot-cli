@@ -15,6 +15,84 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestIAM_ListRoleTags(t *testing.T) {
+	testCases := map[string]struct {
+		inRoleName string
+		inClient   func(ctrl *gomock.Controller) *mocks.Mockapi
+
+		wantedTags map[string]string
+		wantedErr  error
+	}{
+		"wraps error when cannot list role tags": {
+			inRoleName: "read-only",
+			inClient: func(ctrl *gomock.Controller) *mocks.Mockapi {
+				m := mocks.NewMockapi(ctrl)
+				m.EXPECT().ListRoleTags(gomock.Any()).Return(nil, errors.New("some error"))
+				return m
+			},
+			wantedErr: errors.New("list role tags for role read-only and marker <nil>: some error"),
+		},
+		"collects multiple tags until the response is no longer truncated": {
+			inRoleName: "read-only",
+			inClient: func(ctrl *gomock.Controller) *mocks.Mockapi {
+				m := mocks.NewMockapi(ctrl)
+				gomock.InOrder(
+					m.EXPECT().ListRoleTags(&iam.ListRoleTagsInput{
+						RoleName: aws.String("read-only"),
+					}).Return(&iam.ListRoleTagsOutput{
+						IsTruncated: aws.Bool(true),
+						Marker:      aws.String("marker"),
+						Tags: []*iam.Tag{
+							{
+								Key:   aws.String("copilot-application"),
+								Value: aws.String("hello"),
+							},
+						},
+					}, nil),
+					m.EXPECT().ListRoleTags(&iam.ListRoleTagsInput{
+						RoleName: aws.String("read-only"),
+						Marker:   aws.String("marker"),
+					}).Return(&iam.ListRoleTagsOutput{
+						Tags: []*iam.Tag{
+							{
+								Key:   aws.String("copilot-environment"),
+								Value: aws.String("world"),
+							},
+						},
+					}, nil),
+				)
+				return m
+			},
+			wantedTags: map[string]string{
+				"copilot-application": "hello",
+				"copilot-environment": "world",
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			iam := &IAM{
+				client: tc.inClient(ctrl),
+			}
+
+			// WHEN
+			actual, err := iam.ListRoleTags(tc.inRoleName)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedTags, actual)
+			}
+		})
+	}
+}
+
 func TestIAM_DeleteRole(t *testing.T) {
 	testCases := map[string]struct {
 		inRoleARN string

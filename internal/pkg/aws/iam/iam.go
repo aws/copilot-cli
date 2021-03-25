@@ -20,6 +20,7 @@ const (
 )
 
 type api interface {
+	ListRoleTags(input *iam.ListRoleTagsInput) (*iam.ListRoleTagsOutput, error)
 	DeleteRolePolicy(input *iam.DeleteRolePolicyInput) (*iam.DeleteRolePolicyOutput, error)
 	ListRolePolicies(input *iam.ListRolePoliciesInput) (*iam.ListRolePoliciesOutput, error)
 	DeleteRole(input *iam.DeleteRoleInput) (*iam.DeleteRoleOutput, error)
@@ -35,6 +36,28 @@ type IAM struct {
 func New(s *session.Session) *IAM {
 	return &IAM{
 		client: iam.New(s),
+	}
+}
+
+// ListRoleTags gathers all the tags associated with an IAM role.
+func (c *IAM) ListRoleTags(roleName string) (map[string]string, error) {
+	tags := make(map[string]string)
+	var marker *string
+	for {
+		out, err := c.client.ListRoleTags(&iam.ListRoleTagsInput{
+			RoleName: aws.String(roleName),
+			Marker:   marker,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("list role tags for role %s and marker %v: %w", roleName, marker, err)
+		}
+		for _, tag := range out.Tags {
+			tags[aws.StringValue(tag.Key)] = aws.StringValue(tag.Value)
+		}
+		if !aws.BoolValue(out.IsTruncated) {
+			return tags, nil
+		}
+		marker = out.Marker
 	}
 }
 
