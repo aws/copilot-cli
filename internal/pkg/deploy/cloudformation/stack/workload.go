@@ -213,6 +213,9 @@ func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
 
 func isAuroraSecret(output addon.Output) bool {
 	isSecret := output.IsSecret
+	if len(output.Name) < len(suffixAuroraSecret) {
+		return false
+	}
 	isFromAurora := output.Name[len(output.Name)-len(suffixAuroraSecret):] == suffixAuroraSecret
 	return isSecret && isFromAurora
 }
