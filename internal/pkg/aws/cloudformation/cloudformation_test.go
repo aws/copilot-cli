@@ -566,6 +566,67 @@ func TestCloudFormation_Describe(t *testing.T) {
 	}
 }
 
+func TestCloudFormation_Exists(t *testing.T) {
+	t.Run("should return underlying error on unexpected describe error", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		wantedErr := errors.New("some error")
+
+		m := mocks.NewMockclient(ctrl)
+		m.EXPECT().DescribeStacks(gomock.Any()).Return(nil, wantedErr)
+		c := CloudFormation{
+			client: m,
+		}
+
+		// WHEN
+		_, err := c.Exists("phonetool-test")
+
+		// THEN
+		require.EqualError(t, err, "describe stack phonetool-test: some error")
+	})
+	t.Run("should return false if the stack is not found", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		m := mocks.NewMockclient(ctrl)
+		m.EXPECT().DescribeStacks(gomock.Any()).Return(nil, errDoesNotExist)
+		c := CloudFormation{
+			client: m,
+		}
+
+		// WHEN
+		exists, err := c.Exists("phonetool-test")
+
+		// THEN
+		require.NoError(t, err)
+		require.False(t, exists)
+	})
+	t.Run("should return true if the stack is found", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		m := mocks.NewMockclient(ctrl)
+		m.EXPECT().DescribeStacks(&cloudformation.DescribeStacksInput{
+			StackName: aws.String("phonetool-test"),
+		}).Return(&cloudformation.DescribeStacksOutput{
+			Stacks: []*cloudformation.Stack{{}},
+		}, nil)
+		c := CloudFormation{
+			client: m,
+		}
+
+		// WHEN
+		exists, err := c.Exists("phonetool-test")
+
+		// THEN
+		require.NoError(t, err)
+		require.True(t, exists)
+	})
+}
+
 func TestCloudFormation_TemplateBody(t *testing.T) {
 	testCases := map[string]struct {
 		createMock func(ctrl *gomock.Controller) client

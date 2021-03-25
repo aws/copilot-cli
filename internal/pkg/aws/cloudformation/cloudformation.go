@@ -187,6 +187,19 @@ func (c *CloudFormation) Describe(name string) (*StackDescription, error) {
 	return &descr, nil
 }
 
+// Exists returns true if the environment stack exists, false otherwise.
+// If an error occurs for another reason than ErrStackNotFound, then returns the error.
+func (c *CloudFormation) Exists(name string) (bool, error) {
+	if _, err := c.Describe(name); err != nil {
+		var notFound *ErrStackNotFound
+		if errors.As(err, &notFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 // Metadata returns the Metadata property of the CloudFormation stack's template.
 func (c *CloudFormation) Metadata(name string) (string, error) {
 	out, err := c.GetTemplateSummary(&cloudformation.GetTemplateSummaryInput{
