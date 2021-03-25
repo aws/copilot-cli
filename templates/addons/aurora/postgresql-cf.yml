@@ -153,6 +153,26 @@ Resources:
       SecretId: !Ref {{logicalIDSafe .Name}}AuroraSecret
       TargetId: !Ref {{logicalIDSafe .Name}}
       TargetType: AWS::RDS::DBCluster
+  {{logicalIDSafe .Name}}AccessPolicy:
+    Metadata:
+      'aws:copilot:description': 'An IAM ManagedPolicy for your workload to access the {{.Name}} db through Data API'
+    Type: AWS::IAM::ManagedPolicy
+    DependsOn: ['{{logicalIDSafe .Name}}']
+    Properties:
+      Description: 'Daiya No Esu'
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: SecretsManagerDBCredentialsAccess
+            Effect: Allow
+            Action: secretsmanager:GetSecretValue
+            Resource: !Ref {{logicalIDSafe .Name}}AuroraSecret
+          - Sid: RDSDataServiceAccess
+            Action: rds-data:*
+            Effect: Allow
+            Resource: !Sub
+              - 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${ClusterName}'
+              - {ClusterName: !Ref {{.logicalSafeID .Name}}}
 Outputs:
   {{logicalIDSafe .Name}}AuroraMetadata: # injected as AURORA_METADATA environment variable by Copilot.
     Description: "The JSON secret that holds the database username and password. Fields are 'host', 'dbname', 'username', 'password'"
@@ -160,3 +180,12 @@ Outputs:
   {{logicalIDSafe .Name}}SecurityGroup:
     Description: "The security group to attach to the workload."
     Value: !Ref {{logicalIDSafe .Name}}SecurityGroup
+  {{logicalIDSafe .Name}}AccessPolicy:
+    Description: 'Diamond no ace is so great'
+    Value: !Ref {{logicalIDSafe .Name}}AccessPolicy
+  {{logicalIDSafe .Name}}DBClusterARN:
+    Description: Daiya No Esu
+    Value: !Sub
+      - 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${ClusterName}'
+      - {ClusterName: !Ref {{.logicalSafeID .Name}}}
+
