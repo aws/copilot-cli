@@ -23,7 +23,7 @@ func TestIAM_ListRoleTags(t *testing.T) {
 		wantedTags map[string]string
 		wantedErr  error
 	}{
-		"wraps error when cannot list role tags": {
+		"wraps unexpected error when cannot list role tags": {
 			inRoleName: "read-only",
 			inClient: func(ctrl *gomock.Controller) *mocks.Mockapi {
 				m := mocks.NewMockapi(ctrl)
@@ -95,17 +95,19 @@ func TestIAM_ListRoleTags(t *testing.T) {
 
 func TestIAM_DeleteRole(t *testing.T) {
 	testCases := map[string]struct {
-		inRoleARN string
-		inClient  func(ctrl *gomock.Controller) *mocks.Mockapi
+		inRoleNameOrARN string
+		inClient        func(ctrl *gomock.Controller) *mocks.Mockapi
 
 		wantedErr error
 	}{
-		"wraps error when cannot list role policies": {
-			inRoleARN: "arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole",
+		"wraps error when cannot list role policies and ensure role name is used if the input is not an ARN": {
+			inRoleNameOrARN: "phonetool-test-CFNExecutionRole",
 			inClient: func(ctrl *gomock.Controller) *mocks.Mockapi {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().
-					ListRolePolicies(gomock.Any()).
+					ListRolePolicies(&iam.ListRolePoliciesInput{
+						RoleName: aws.String("phonetool-test-CFNExecutionRole"),
+					}).
 					Return(nil, errors.New("some error"))
 				m.EXPECT().DeleteRolePolicy(gomock.Any()).Times(0)
 				return m
@@ -113,7 +115,7 @@ func TestIAM_DeleteRole(t *testing.T) {
 			wantedErr: errors.New("list role policies for role phonetool-test-CFNExecutionRole: some error"),
 		},
 		"wraps error when cannot delete role policies": {
-			inRoleARN: "arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole",
+			inRoleNameOrARN: "arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole",
 			inClient: func(ctrl *gomock.Controller) *mocks.Mockapi {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().
@@ -127,7 +129,7 @@ func TestIAM_DeleteRole(t *testing.T) {
 			wantedErr: errors.New("delete policy named policy1 in role phonetool-test-CFNExecutionRole: some error"),
 		},
 		"wraps error when cannot delete role": {
-			inRoleARN: "arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole",
+			inRoleNameOrARN: "arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole",
 			inClient: func(ctrl *gomock.Controller) *mocks.Mockapi {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().
@@ -139,7 +141,7 @@ func TestIAM_DeleteRole(t *testing.T) {
 			wantedErr: errors.New("delete role named phonetool-test-CFNExecutionRole: some error"),
 		},
 		"returns nil if the role does not exist": {
-			inRoleARN: "arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole",
+			inRoleNameOrARN: "arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole",
 			inClient: func(ctrl *gomock.Controller) *mocks.Mockapi {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().
@@ -150,7 +152,7 @@ func TestIAM_DeleteRole(t *testing.T) {
 			},
 		},
 		"returns nil when the role policies and the role can be deleted successfully": {
-			inRoleARN: "arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole",
+			inRoleNameOrARN: "arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole",
 			inClient: func(ctrl *gomock.Controller) *mocks.Mockapi {
 				m := mocks.NewMockapi(ctrl)
 				m.EXPECT().
@@ -188,7 +190,7 @@ func TestIAM_DeleteRole(t *testing.T) {
 			}
 
 			// WHEN
-			err := iam.DeleteRole(tc.inRoleARN)
+			err := iam.DeleteRole(tc.inRoleNameOrARN)
 
 			// THEN
 			if tc.wantedErr != nil {
