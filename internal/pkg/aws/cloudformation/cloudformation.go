@@ -187,6 +187,17 @@ func (c *CloudFormation) Describe(name string) (*StackDescription, error) {
 	return &descr, nil
 }
 
+// Metadata returns the Metadata property of the CloudFormation stack's template.
+func (c *CloudFormation) Metadata(name string) (string, error) {
+	out, err := c.GetTemplateSummary(&cloudformation.GetTemplateSummaryInput{
+		StackName: aws.String(name),
+	})
+	if err != nil {
+		return "", fmt.Errorf("get template summary for stack %s: %w", name, err)
+	}
+	return aws.StringValue(out.Metadata), nil
+}
+
 // TemplateBody returns the template body of an existing stack.
 // If the stack does not exist, returns ErrStackNotFound.
 func (c *CloudFormation) TemplateBody(name string) (string, error) {

@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	cfn2 "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 )
 
 type cfnStackDescriber interface {
@@ -17,15 +18,21 @@ type cfnStackDescriber interface {
 	GetTemplateSummary(in *cloudformation.GetTemplateSummaryInput) (*cloudformation.GetTemplateSummaryOutput, error)
 }
 
+type cfn interface {
+	Metadata(name string) (string, error)
+}
+
 // stackDescriber retrieves information of a CloudFormation Stack.
 type stackDescriber struct {
 	stackDescribers cfnStackDescriber
+	client          cfn
 }
 
 // newStackDescriber instantiates a new StackDescriber struct.
 func newStackDescriber(s *session.Session) *stackDescriber {
 	return &stackDescriber{
 		stackDescribers: cloudformation.New(s),
+		client:          cfn2.New(s),
 	}
 }
 
@@ -56,11 +63,5 @@ func (d *stackDescriber) StackResources(stackName string) ([]*cloudformation.Sta
 
 // Metadata returns the Metadata property of the CloudFormation stack's template.
 func (d *stackDescriber) Metadata(stackName string) (string, error) {
-	out, err := d.stackDescribers.GetTemplateSummary(&cloudformation.GetTemplateSummaryInput{
-		StackName: aws.String(stackName),
-	})
-	if err != nil {
-		return "", fmt.Errorf("get template summary for stack %s: %w", stackName, err)
-	}
-	return aws.StringValue(out.Metadata), nil
+	return d.client.Metadata(stackName)
 }

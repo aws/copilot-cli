@@ -258,6 +258,21 @@ func (mr *MockclientMockRecorder) GetTemplate(input interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplate", reflect.TypeOf((*Mockclient)(nil).GetTemplate), input)
 }
 
+// GetTemplateSummary mocks base method.
+func (m *Mockclient) GetTemplateSummary(in *cloudformation.GetTemplateSummaryInput) (*cloudformation.GetTemplateSummaryOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTemplateSummary", in)
+	ret0, _ := ret[0].(*cloudformation.GetTemplateSummaryOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTemplateSummary indicates an expected call of GetTemplateSummary.
+func (mr *MockclientMockRecorder) GetTemplateSummary(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplateSummary", reflect.TypeOf((*Mockclient)(nil).GetTemplateSummary), in)
+}
+
 // WaitUntilChangeSetCreateCompleteWithContext mocks base method.
 func (m *Mockclient) WaitUntilChangeSetCreateCompleteWithContext(arg0 aws.Context, arg1 *cloudformation.DescribeChangeSetInput, arg2 ...request.WaiterOption) error {
 	m.ctrl.T.Helper()

@@ -451,6 +451,60 @@ func TestCloudFormation_DeleteAndWait(t *testing.T) {
 	}
 }
 
+func TestStackDescriber_Metadata(t *testing.T) {
+	testCases := map[string]struct {
+		createMock func(ctrl *gomock.Controller) client
+
+		wantedMetadata string
+		wantedErr      error
+	}{
+		"should wrap cfn error on unexpected error": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().GetTemplateSummary(gomock.Any()).Return(nil, errors.New("some error"))
+				return m
+			},
+
+			wantedErr: errors.New("get template summary for stack phonetool-test: some error"),
+		},
+		"should return Metadata property of template summary on success": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().GetTemplateSummary(&cloudformation.GetTemplateSummaryInput{
+					StackName: aws.String("phonetool-test"),
+				}).Return(&cloudformation.GetTemplateSummaryOutput{
+					Metadata: aws.String("hello"),
+				}, nil)
+				return m
+			},
+
+			wantedMetadata: "hello",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			c := CloudFormation{
+				client: tc.createMock(ctrl),
+			}
+
+			// WHEN
+			actual, err := c.Metadata("phonetool-test")
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedMetadata, actual)
+			}
+		})
+	}
+}
+
 func TestCloudFormation_Describe(t *testing.T) {
 	testCases := map[string]struct {
 		createMock  func(ctrl *gomock.Controller) client
