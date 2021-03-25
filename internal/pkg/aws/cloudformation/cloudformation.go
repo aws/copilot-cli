@@ -247,6 +247,25 @@ func (c *CloudFormation) Events(stackName string) ([]StackEvent, error) {
 	return c.events(stackName, func(in *cloudformation.StackEvent) bool { return true })
 }
 
+// StackResources returns the list of resources created part of a CloudFormation stack.
+func (c *CloudFormation) StackResources(name string) ([]*StackResource, error) {
+	out, err := c.DescribeStackResources(&cloudformation.DescribeStackResourcesInput{
+		StackName: aws.String(name),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("describe resources for stack %s: %w", name, err)
+	}
+	var resources []*StackResource
+	for _, r := range out.StackResources {
+		if r == nil {
+			continue
+		}
+		sr := StackResource(*r)
+		resources = append(resources, &sr)
+	}
+	return resources, nil
+}
+
 func (c *CloudFormation) events(stackName string, match eventMatcher) ([]StackEvent, error) {
 	var nextToken *string
 	var events []StackEvent

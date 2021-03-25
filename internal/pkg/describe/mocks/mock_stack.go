@@ -7,74 +7,74 @@ package mocks
 import (
 	reflect "reflect"
 
-	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
+	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockcfnStackDescriber is a mock of cfnStackDescriber interface.
-type MockcfnStackDescriber struct {
+// Mockcfn is a mock of cfn interface.
+type Mockcfn struct {
 	ctrl     *gomock.Controller
-	recorder *MockcfnStackDescriberMockRecorder
+	recorder *MockcfnMockRecorder
 }
 
-// MockcfnStackDescriberMockRecorder is the mock recorder for MockcfnStackDescriber.
-type MockcfnStackDescriberMockRecorder struct {
-	mock *MockcfnStackDescriber
+// MockcfnMockRecorder is the mock recorder for Mockcfn.
+type MockcfnMockRecorder struct {
+	mock *Mockcfn
 }
 
-// NewMockcfnStackDescriber creates a new mock instance.
-func NewMockcfnStackDescriber(ctrl *gomock.Controller) *MockcfnStackDescriber {
-	mock := &MockcfnStackDescriber{ctrl: ctrl}
-	mock.recorder = &MockcfnStackDescriberMockRecorder{mock}
+// NewMockcfn creates a new mock instance.
+func NewMockcfn(ctrl *gomock.Controller) *Mockcfn {
+	mock := &Mockcfn{ctrl: ctrl}
+	mock.recorder = &MockcfnMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockcfnStackDescriber) EXPECT() *MockcfnStackDescriberMockRecorder {
+func (m *Mockcfn) EXPECT() *MockcfnMockRecorder {
 	return m.recorder
 }
 
-// DescribeStackResources mocks base method.
-func (m *MockcfnStackDescriber) DescribeStackResources(input *cloudformation.DescribeStackResourcesInput) (*cloudformation.DescribeStackResourcesOutput, error) {
+// Describe mocks base method.
+func (m *Mockcfn) Describe(name string) (*cloudformation.StackDescription, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeStackResources", input)
-	ret0, _ := ret[0].(*cloudformation.DescribeStackResourcesOutput)
+	ret := m.ctrl.Call(m, "Describe", name)
+	ret0, _ := ret[0].(*cloudformation.StackDescription)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DescribeStackResources indicates an expected call of DescribeStackResources.
-func (mr *MockcfnStackDescriberMockRecorder) DescribeStackResources(input interface{}) *gomock.Call {
+// Describe indicates an expected call of Describe.
+func (mr *MockcfnMockRecorder) Describe(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStackResources", reflect.TypeOf((*MockcfnStackDescriber)(nil).DescribeStackResources), input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*Mockcfn)(nil).Describe), name)
 }
 
-// DescribeStacks mocks base method.
-func (m *MockcfnStackDescriber) DescribeStacks(input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+// Metadata mocks base method.
+func (m *Mockcfn) Metadata(name string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeStacks", input)
-	ret0, _ := ret[0].(*cloudformation.DescribeStacksOutput)
+	ret := m.ctrl.Call(m, "Metadata", name)
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DescribeStacks indicates an expected call of DescribeStacks.
-func (mr *MockcfnStackDescriberMockRecorder) DescribeStacks(input interface{}) *gomock.Call {
+// Metadata indicates an expected call of Metadata.
+func (mr *MockcfnMockRecorder) Metadata(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStacks", reflect.TypeOf((*MockcfnStackDescriber)(nil).DescribeStacks), input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Metadata", reflect.TypeOf((*Mockcfn)(nil).Metadata), name)
 }
 
-// GetTemplateSummary mocks base method.
-func (m *MockcfnStackDescriber) GetTemplateSummary(in *cloudformation.GetTemplateSummaryInput) (*cloudformation.GetTemplateSummaryOutput, error) {
+// StackResources mocks base method.
+func (m *Mockcfn) StackResources(name string) ([]*cloudformation.StackResource, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTemplateSummary", in)
-	ret0, _ := ret[0].(*cloudformation.GetTemplateSummaryOutput)
+	ret := m.ctrl.Call(m, "StackResources", name)
+	ret0, _ := ret[0].([]*cloudformation.StackResource)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetTemplateSummary indicates an expected call of GetTemplateSummary.
-func (mr *MockcfnStackDescriberMockRecorder) GetTemplateSummary(in interface{}) *gomock.Call {
+// StackResources indicates an expected call of StackResources.
+func (mr *MockcfnMockRecorder) StackResources(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplateSummary", reflect.TypeOf((*MockcfnStackDescriber)(nil).GetTemplateSummary), in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackResources", reflect.TypeOf((*Mockcfn)(nil).StackResources), name)
 }
