@@ -35,6 +35,9 @@ const (
 	WorkloadAddonsTemplateURLParamKey = "AddonsTemplateURL"
 )
 
+// suffixAuroraSecret notes the suffix for outputs that are secrets for Aurora.
+const suffixAuroraSecret = "AuroraSecret"
+
 // Matches alphanumeric characters and -._
 var pathRegexp = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
 
@@ -208,6 +211,12 @@ func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
 	}, nil
 }
 
+func isAuroraSecret(output addon.Output) bool {
+	isSecret := output.IsSecret
+	isFromAurora := output.Name[len(output.Name)-len(suffixAuroraSecret):] == suffixAuroraSecret
+	return isSecret && isFromAurora
+}
+
 func securityGroupOutputNames(outputs []addon.Output) []string {
 	var securityGroups []string
 	for _, out := range outputs {
@@ -221,6 +230,12 @@ func securityGroupOutputNames(outputs []addon.Output) []string {
 func secretOutputNames(outputs []addon.Output) []string {
 	var secrets []string
 	for _, out := range outputs {
+		if isAuroraSecret(out) {
+			// Do not include Aurora secrets in the secret output, as it will cause complication during secret rotation.
+			// Aurora secrets should be passed as environment variables to the container. The ARN itself, instead of the
+			// JSON secret string, will be used.
+			continue
+		}
 		if out.IsSecret {
 			secrets = append(secrets, out.Name)
 		}
@@ -241,6 +256,9 @@ func managedPolicyOutputNames(outputs []addon.Output) []string {
 func envVarOutputNames(outputs []addon.Output) []string {
 	var envVars []string
 	for _, out := range outputs {
+		if isAuroraSecret(out) {
+			envVars = append(envVars, out.Name)
+		}
 		if !out.IsSecret && !out.IsManagedPolicy {
 			envVars = append(envVars, out.Name)
 		}

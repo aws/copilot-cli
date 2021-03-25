@@ -174,17 +174,17 @@ Resources:
               - 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${ClusterName}'
               - {ClusterName: !Ref {{.logicalSafeID .Name}}}
 Outputs:
-  {{logicalIDSafe .Name}}AuroraMetadata: # injected as AURORA_METADATA environment variable by Copilot.
-    Description: "The JSON secret that holds the database username and password. Fields are 'host', 'dbname', 'username', 'password'"
+  {{logicalIDSafe .Name}}AuroraSecret: # injected as {{logicalIDSafe .Name}}_AURORA_SECRET environment variable by Copilot.
+    Description: "The secret ARN used to access the DB Cluster through Data API."
     Value: !Ref {{logicalIDSafe .Name}}AuroraSecret
   {{logicalIDSafe .Name}}SecurityGroup:
-    Description: "The security group to attach to the workload."
+    Description: "The security group to attach to the workload to access the DB Cluster."
     Value: !Ref {{logicalIDSafe .Name}}SecurityGroup
   {{logicalIDSafe .Name}}AccessPolicy:
-    Description: 'Diamond no ace is so great'
+    Description: "The Access Policy required for the workload to access the DB Cluster through Data API."
     Value: !Ref {{logicalIDSafe .Name}}AccessPolicy
   {{logicalIDSafe .Name}}DBClusterARN:
-    Description: Daiya No Esu
+    Description: "The DB Cluster ARN used to access the DB Cluster through Data API."
     Value: !Sub
       - 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${ClusterName}'
       - {ClusterName: !Ref {{.logicalSafeID .Name}}}
