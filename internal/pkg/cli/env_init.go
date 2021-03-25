@@ -138,7 +138,8 @@ type initEnvOpts struct {
 	identity     identityService
 	envIdentity  identityService
 	ec2Client    ec2Client
-	iam          serviceLinkedRoleCreator
+	iam          roleManager
+	cfn          stackExister
 	prog         progress
 	prompt       prompter
 	selVPC       ec2Selector
@@ -226,17 +227,7 @@ func (o *initEnvOpts) Ask() error {
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initEnvOpts) Execute() error {
-	// Initialize environment clients if not set.
-	if o.envIdentity == nil {
-		o.envIdentity = identity.New(o.sess)
-	}
-	if o.envDeployer == nil {
-		o.envDeployer = deploycfn.New(o.sess)
-	}
-	if o.iam == nil {
-		o.iam = iam.New(o.sess)
-	}
-
+	o.initRuntimeClients()
 	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
 		// Ensure the app actually exists before we do a deployment.
@@ -312,6 +303,22 @@ func (o *initEnvOpts) Execute() error {
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
 func (o *initEnvOpts) RecommendedActions() []string {
 	return nil
+}
+
+func (o *initEnvOpts) initRuntimeClients() {
+	// Initialize environment clients if not set.
+	if o.envIdentity == nil {
+		o.envIdentity = identity.New(o.sess)
+	}
+	if o.envDeployer == nil {
+		o.envDeployer = deploycfn.New(o.sess)
+	}
+	if o.cfn == nil {
+		o.cfn = cloudformation.New(o.sess)
+	}
+	if o.iam == nil {
+		o.iam = iam.New(o.sess)
+	}
 }
 
 func (o *initEnvOpts) validateCustomizedResources() error {
@@ -548,12 +555,18 @@ func (o *initEnvOpts) deployEnv(app *config.Application, customResourcesURLs map
 		Version:                  deploy.LatestEnvTemplateVersion,
 	}
 
+	if err := o.cleanUpDanglingRoles(o.appName, o.name); err != nil {
+		return err
+	}
 	if err := o.envDeployer.DeployAndRenderEnvironment(os.Stderr, deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
 			return nil
 		}
+		// The stack failed to create due to an unexpect reason.
+		// Delete the retained roles created part of the stack.
+		o.tryDeletingEnvRoles(o.appName, o.name)
 		return err
 	}
 	return nil
@@ -596,6 +609,43 @@ func (o *initEnvOpts) validateCredentials() error {
 		return fmt.Errorf("cannot specify both --%s and --%s", profileFlag, sessionTokenFlag)
 	}
 	return nil
+}
+
+// cleanUpDanglingRoles deletes any IAM roles created for the same app and env that were left over from a previous
+// environment creation.
+func (o *initEnvOpts) cleanUpDanglingRoles(app, env string) error {
+	exists, err := o.cfn.Exists(stack.NameForEnv(app, env))
+	if err != nil {
+		return fmt.Errorf("check if stack %s exists: %w", stack.NameForEnv(app, env), err)
+	}
+	if exists {
+		return nil
+	}
+	// There is no environment stack.
+	// We should clean up any IAM roles that might not have been deleted during "env delete"
+	// before re-creating the stack otherwise the deployment will fail.
+	o.tryDeletingEnvRoles(app, env)
+	return nil
+}
+
+// tryDeletingEnvRoles attempts a best effort deletion of IAM roles created from an environment.
+// To ensure that the roles being deleted were created by Copilot, we check if the copilot-environment tag
+// is applied to the role.
+func (o *initEnvOpts) tryDeletingEnvRoles(app, env string) {
+	roleNames := []string{
+		fmt.Sprintf("%s-CFNExecutionRole", stack.NameForEnv(app, env)),
+		fmt.Sprintf("%s-EnvManagerRole", stack.NameForEnv(app, env)),
+	}
+	for _, roleName := range roleNames {
+		tags, err := o.iam.ListRoleTags(roleName)
+		if err != nil {
+			continue
+		}
+		if _, hasTag := tags[deploy.EnvTagKey]; !hasTag {
+			continue
+		}
+		_ = o.iam.DeleteRole(roleName)
+	}
 }
 
 // buildEnvInitCmd builds the command for adding an environment.

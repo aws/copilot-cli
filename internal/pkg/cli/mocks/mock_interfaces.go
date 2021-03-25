@@ -5624,6 +5624,148 @@ func (mr *MockserviceLinkedRoleCreatorMockRecorder) CreateECSServiceLinkedRole()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateECSServiceLinkedRole", reflect.TypeOf((*MockserviceLinkedRoleCreator)(nil).CreateECSServiceLinkedRole))
 }
 
+// MockroleTagsLister is a mock of roleTagsLister interface.
+type MockroleTagsLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockroleTagsListerMockRecorder
+}
+
+// MockroleTagsListerMockRecorder is the mock recorder for MockroleTagsLister.
+type MockroleTagsListerMockRecorder struct {
+	mock *MockroleTagsLister
+}
+
+// NewMockroleTagsLister creates a new mock instance.
+func NewMockroleTagsLister(ctrl *gomock.Controller) *MockroleTagsLister {
+	mock := &MockroleTagsLister{ctrl: ctrl}
+	mock.recorder = &MockroleTagsListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockroleTagsLister) EXPECT() *MockroleTagsListerMockRecorder {
+	return m.recorder
+}
+
+// ListRoleTags mocks base method.
+func (m *MockroleTagsLister) ListRoleTags(arg0 string) (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRoleTags", arg0)
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRoleTags indicates an expected call of ListRoleTags.
+func (mr *MockroleTagsListerMockRecorder) ListRoleTags(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRoleTags", reflect.TypeOf((*MockroleTagsLister)(nil).ListRoleTags), arg0)
+}
+
+// MockroleManager is a mock of roleManager interface.
+type MockroleManager struct {
+	ctrl     *gomock.Controller
+	recorder *MockroleManagerMockRecorder
+}
+
+// MockroleManagerMockRecorder is the mock recorder for MockroleManager.
+type MockroleManagerMockRecorder struct {
+	mock *MockroleManager
+}
+
+// NewMockroleManager creates a new mock instance.
+func NewMockroleManager(ctrl *gomock.Controller) *MockroleManager {
+	mock := &MockroleManager{ctrl: ctrl}
+	mock.recorder = &MockroleManagerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockroleManager) EXPECT() *MockroleManagerMockRecorder {
+	return m.recorder
+}
+
+// CreateECSServiceLinkedRole mocks base method.
+func (m *MockroleManager) CreateECSServiceLinkedRole() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateECSServiceLinkedRole")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateECSServiceLinkedRole indicates an expected call of CreateECSServiceLinkedRole.
+func (mr *MockroleManagerMockRecorder) CreateECSServiceLinkedRole() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateECSServiceLinkedRole", reflect.TypeOf((*MockroleManager)(nil).CreateECSServiceLinkedRole))
+}
+
+// DeleteRole mocks base method.
+func (m *MockroleManager) DeleteRole(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteRole", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteRole indicates an expected call of DeleteRole.
+func (mr *MockroleManagerMockRecorder) DeleteRole(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRole", reflect.TypeOf((*MockroleManager)(nil).DeleteRole), arg0)
+}
+
+// ListRoleTags mocks base method.
+func (m *MockroleManager) ListRoleTags(arg0 string) (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRoleTags", arg0)
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRoleTags indicates an expected call of ListRoleTags.
+func (mr *MockroleManagerMockRecorder) ListRoleTags(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRoleTags", reflect.TypeOf((*MockroleManager)(nil).ListRoleTags), arg0)
+}
+
+// MockstackExister is a mock of stackExister interface.
+type MockstackExister struct {
+	ctrl     *gomock.Controller
+	recorder *MockstackExisterMockRecorder
+}
+
+// MockstackExisterMockRecorder is the mock recorder for MockstackExister.
+type MockstackExisterMockRecorder struct {
+	mock *MockstackExister
+}
+
+// NewMockstackExister creates a new mock instance.
+func NewMockstackExister(ctrl *gomock.Controller) *MockstackExister {
+	mock := &MockstackExister{ctrl: ctrl}
+	mock.recorder = &MockstackExisterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockstackExister) EXPECT() *MockstackExisterMockRecorder {
+	return m.recorder
+}
+
+// Exists mocks base method.
+func (m *MockstackExister) Exists(arg0 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Exists", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Exists indicates an expected call of Exists.
+func (mr *MockstackExisterMockRecorder) Exists(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockstackExister)(nil).Exists), arg0)
+}
+
 // MockrunningTaskSelector is a mock of runningTaskSelector interface.
 type MockrunningTaskSelector struct {
 	ctrl     *gomock.Controller
