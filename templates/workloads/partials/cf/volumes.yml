@@ -14,18 +14,20 @@ Volumes:
 {{- end}}
 {{- range $vol := .Storage.Volumes}}
   - Name: {{$vol.Name}}
+  {{- if $vol.EFS}}
     EFSVolumeConfiguration:
-      FilesystemId: {{$vol.Filesystem}}
-      RootDirectory: '{{$vol.RootDirectory}}'
+      FilesystemId: {{$vol.EFS.Filesystem}}
+      RootDirectory: '{{$vol.EFS.RootDirectory}}'
       TransitEncryption: ENABLED
-      {{- if or $vol.AccessPointID $vol.IAM}}
+      {{- if or $vol.EFS.AccessPointID $vol.EFS.IAM}}
       AuthorizationConfig:
-        {{- if $vol.AccessPointID}}
-        AccessPointId: {{$vol.AccessPointID}}
+        {{- if $vol.EFS.AccessPointID}}
+        AccessPointId: {{$vol.EFS.AccessPointID}}
         {{- end}}
-        {{- if $vol.IAM}}
-        IAM: {{$vol.IAM}}
+        {{- if $vol.EFS.IAM}}
+        IAM: {{$vol.EFS.IAM}}
         {{- end}}
       {{- end}}
+  {{- end}}
 {{- end -}}
 {{- end -}}

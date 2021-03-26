@@ -250,7 +250,14 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 	}
 	output := []*template.EFSPermission{}
 	for _, volume := range input {
-		// Write defaults to false
+		if volume.EFS == nil {
+			// Return nil if there is only one volume and no EFS configuration; otherwise continue.
+			if len(input) == 1 {
+				return nil, nil
+			}
+			continue
+		}
+		// Write defaults to false.
 		write := defaultWritePermission
 		if volume.ReadOnly != nil {
 			write = !aws.BoolValue(volume.ReadOnly)
@@ -258,9 +265,13 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 		if volume.EFS.FileSystemID == nil {
 			return nil, errNoFSID
 		}
+		var accessPointID *string = nil
+		if volume.EFS.AuthConfig != nil {
+			accessPointID = volume.EFS.AuthConfig.AccessPointID
+		}
 		perm := template.EFSPermission{
 			Write:         write,
-			AccessPointID: volume.EFS.AuthConfig.AccessPointID,
+			AccessPointID: accessPointID,
 			FilesystemID:  volume.EFS.FileSystemID,
 		}
 		output = append(output, &perm)
@@ -274,56 +285,82 @@ func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error
 	}
 	output := []*template.Volume{}
 	for name, volume := range input {
-		// Set default values correctly.
-		fsID := volume.EFS.FileSystemID
-		if aws.StringValue(fsID) == "" {
-			return nil, errNoFSID
-		}
+		// Volumes can contain either:
+		//   a) an EFS configuration, which must be valid
+		//   b) no EFS configuration, in which case the volume is created using task scratch storage in order to share
+		//      data between containers.
 
-		rootDir := volume.EFS.RootDirectory
-
-		// Validate that root directory path doesn't contain spaces or shell injection.
-		if err := validateRootDirPath(aws.StringValue(rootDir)); err != nil {
-			return nil, fmt.Errorf("validate root directory path %s: %w", aws.StringValue(rootDir), err)
-		}
-
-		if aws.StringValue(rootDir) == "" {
-			rootDir = aws.String(defaultRootDirectory)
-		}
-
-		var iam *string
-		if volume.EFS.AuthConfig.IAM == nil {
-			iam = aws.String(defaultIAM)
-		}
-		if aws.BoolValue(volume.EFS.AuthConfig.IAM) {
-			iam = aws.String(enabled)
-		}
-
-		// Validate ECS requirements: when an AP is specified, IAM MUST be true
-		// and root directory MUST be either empty or "/".
-		// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-efsvolumeconfiguration.html
-		if aws.StringValue(volume.EFS.AuthConfig.AccessPointID) != "" {
-			if !aws.BoolValue(volume.EFS.AuthConfig.IAM) {
-				return nil, errAccessPointWithoutIAM
+		// If there is no EFS information, just add the Name to the volume.
+		if volume.EFS == nil {
+			v := template.Volume{
+				Name: aws.String(name),
 			}
-			// Use rootDir var we previously identified.
-			if !(aws.StringValue(rootDir) == "/") {
-				return nil, errAcessPointWithRootDirectory
-			}
+			output = append(output, &v)
+			continue
 		}
 
+		// Convert EFS configuration to templaate struct.
+		efs, err := convertEFSConfiguration(volume.EFS)
+		if err != nil {
+			return nil, err
+		}
 		v := template.Volume{
 			Name: aws.String(name),
-
-			Filesystem:    fsID,
-			RootDirectory: rootDir,
-
-			AccessPointID: volume.EFS.AuthConfig.AccessPointID,
-			IAM:           iam,
+			EFS:  efs,
 		}
 		output = append(output, &v)
 	}
 	return output, nil
+}
+
+func convertEFSConfiguration(in *manifest.EFSVolumeConfiguration) (*template.EFSVolumeConfiguration, error) {
+	// Set default values correctly.
+	fsID := in.FileSystemID
+	if aws.StringValue(fsID) == "" {
+		return nil, errNoFSID
+	}
+
+	rootDir := in.RootDirectory
+	// Validate that root directory path doesn't contain spaces or shell injection.
+	if err := validateRootDirPath(aws.StringValue(rootDir)); err != nil {
+		return nil, fmt.Errorf("validate root directory path %s: %w", aws.StringValue(rootDir), err)
+	}
+	if aws.StringValue(rootDir) == "" {
+		rootDir = aws.String(defaultRootDirectory)
+	}
+
+	// Set default values for IAM and AccessPointID
+	var iam *string = aws.String(defaultIAM)
+	if in.AuthConfig == nil {
+		return &template.EFSVolumeConfiguration{
+			Filesystem:    fsID,
+			RootDirectory: rootDir,
+			IAM:           iam,
+		}, nil
+	}
+	// AuthConfig exists; check the properties.
+	if aws.BoolValue(in.AuthConfig.IAM) {
+		iam = aws.String(enabled)
+	}
+	// Validate ECS requirements: when an AP is specified, IAM MUST be true
+	// and root directory MUST be either empty or "/".
+	// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-efsvolumeconfiguration.html
+	if aws.StringValue(in.AuthConfig.AccessPointID) != "" {
+		if !aws.BoolValue(in.AuthConfig.IAM) {
+			return nil, errAccessPointWithoutIAM
+		}
+		// Use rootDir value we previously identified.
+		if !(aws.StringValue(rootDir) == "/") {
+			return nil, errAcessPointWithRootDirectory
+		}
+	}
+
+	return &template.EFSVolumeConfiguration{
+		Filesystem:    fsID,
+		RootDirectory: rootDir,
+		IAM:           iam,
+		AccessPointID: in.AuthConfig.AccessPointID,
+	}, nil
 }
 
 func convertNetworkConfig(network manifest.NetworkConfig) *template.NetworkOpts {
