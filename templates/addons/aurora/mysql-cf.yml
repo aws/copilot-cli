@@ -9,7 +9,7 @@ Parameters:
     Type: String
     Description: The name of the service, job, or workflow being deployed.
   # Customize your Aurora Serverless cluster by setting the default value of the following parameters.
-  {{logicalIDSafe .Name}}InitialDBName:
+  {{logicalIDSafe .Name}}DBName:
     Type: String
     Description: The name of the initial database to be created in the DB cluster.
     Default: {{.InitialDBName}}
@@ -54,13 +54,6 @@ Resources:
               StringEquals:
                 'kms:CallerAccount': !Ref 'AWS::AccountId'
                 'kms:ViaService': !Sub 'rds.${AWS::Region}.amazonaws.com'
-  {{logicalIDSafe .Name}}AuroraKMSCMKAlias:
-    Type: 'AWS::KMS::Alias'
-    DeletionPolicy: Retain
-    DependsOn: ['{{logicalIDSafe .Name}}']
-    Properties:
-      AliasName: !Sub 'alias/${ {{- logicalIDSafe .Name -}} }'
-      TargetKeyId: !Ref {{logicalIDSafe .Name}}AuroraKMSCMK
   {{logicalIDSafe .Name}}DBSubnetGroup:
     Type: 'AWS::RDS::DBSubnetGroup'
     Properties:
@@ -92,14 +85,9 @@ Resources:
       VpcId:
         Fn::ImportValue:
           !Sub '${App}-${Env}-VpcId'
-      SecurityGroupEgress:
-        - IpProtocol: '-1'
-          Description: Allow all outbound traffic by default
-          CidrIp: 0.0.0.0/0
   {{logicalIDSafe .Name}}AuroraSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: !Sub '/${App}/${Env}/${Name}/{{logicalIDSafe .Name}}/PostgreSQLSecret'
       Description: !Sub Aurora main user secret for ${AWS::StackName}
       GenerateSecretString:
         SecretStringTemplate: '{"username": "admin"}'
@@ -124,18 +112,17 @@ Resources:
       Parameters:
         character_set_client: 'utf8'
   {{- end}}
-  {{logicalIDSafe .Name}}:
+  {{logicalIDSafe .Name}}DBCluster:
     Type: 'AWS::RDS::DBCluster'
     Properties:
       MasterUsername:
         !Join [ "",  [ {{`'{{resolve:secretsmanager:'`}}, !Ref {{logicalIDSafe .Name}}AuroraSecret, ":SecretString:username}}" ]]
       MasterUserPassword:
         !Join [ "",  [ {{`'{{resolve:secretsmanager:'`}}, !Ref {{logicalIDSafe .Name}}AuroraSecret, ":SecretString:password}}" ]]
-      DatabaseName: !Ref {{logicalIDSafe .Name}}InitialDBName
+      DatabaseName: !Ref {{logicalIDSafe .Name}}DBName
       Engine: 'aurora-mysql'
       EngineVersion: '5.7.mysql_aurora.2.07.1'
       EngineMode: serverless
-      EnableHttpEndpoint: true
       StorageEncrypted: true
       KmsKeyId: !Ref {{logicalIDSafe .Name}}AuroraKMSCMK
       DBClusterParameterGroupName: {{- if .ParameterGroup}} {{.ParameterGroup}} {{- else}} !Ref {{logicalIDSafe .Name}}DBClusterParameterGroup {{- end}}
@@ -151,28 +138,8 @@ Resources:
     Type: AWS::SecretsManager::SecretTargetAttachment
     Properties:
       SecretId: !Ref {{logicalIDSafe .Name}}AuroraSecret
-      TargetId: !Ref {{logicalIDSafe .Name}}
+      TargetId: !Ref {{logicalIDSafe .Name}}DBCluster
       TargetType: AWS::RDS::DBCluster
-  {{logicalIDSafe .Name}}AccessPolicy:
-    Metadata:
-      'aws:copilot:description': 'An IAM ManagedPolicy for your workload to access the {{.Name}} db through Data API'
-    Type: AWS::IAM::ManagedPolicy
-    DependsOn: ['{{logicalIDSafe .Name}}']
-    Properties:
-      Description: 'Daiya No Esu'
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: SecretsManagerDBCredentialsAccess
-            Effect: Allow
-            Action: secretsmanager:GetSecretValue
-            Resource: !Ref {{logicalIDSafe .Name}}AuroraSecret
-          - Sid: RDSDataServiceAccess
-            Action: rds-data:*
-            Effect: Allow
-            Resource: !Sub
-              - 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${ClusterName}'
-              - {ClusterName: !Ref {{.logicalSafeID .Name}}}
 Outputs:
   {{logicalIDSafe .Name}}AuroraMetadata: # injected as AURORA_METADATA environment variable by Copilot.
     Description: "The JSON secret that holds the database username and password. Fields are 'host', 'dbname', 'username', 'password'"
@@ -180,11 +147,4 @@ Outputs:
   {{logicalIDSafe .Name}}SecurityGroup:
     Description: "The security group to attach to the workload."
     Value: !Ref {{logicalIDSafe .Name}}SecurityGroup
-  {{logicalIDSafe .Name}}AccessPolicy:
-    Description: 'Diamond no ace is so great'
-    Value: !Ref {{logicalIDSafe .Name}}AccessPolicy
-  {{logicalIDSafe .Name}}DBClusterARN:
-    Description: Daiya No Esu
-    Value: !Sub
-      - 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${ClusterName}'
-      - {ClusterName: !Ref {{.logicalSafeID .Name}}}
+
