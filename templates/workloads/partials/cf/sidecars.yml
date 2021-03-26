@@ -16,7 +16,8 @@
 {{- end}}
 {{- range $sidecar := .Sidecars}}
 - Name: {{$sidecar.Name}}
-  Image: {{$sidecar.Image}}{{if $sidecar.Port}}
+  Image: {{$sidecar.Image}}{{if $sidecar.Essential}}
+  Essential: {{$sidecar.Essential}}{{end}}{{if $sidecar.Port}}
   PortMappings:
     - ContainerPort: {{$sidecar.Port}}{{if $sidecar.Protocol}}
       Protocol: {{$sidecar.Protocol}}{{end}}{{end}}
