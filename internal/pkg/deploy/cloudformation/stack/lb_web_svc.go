@@ -19,6 +19,7 @@ const (
 	lbWebSvcRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
 	desiredCountGeneratorPath         = "custom-resources/desired-count-delegation.js"
 	envControllerPath                 = "custom-resources/env-controller.js"
+	lbWebSvcType                      = "Load Balanced Web Service"
 )
 
 // Parameter logical IDs for a load balanced web service.
@@ -134,6 +135,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		LogConfig:           convertLogging(s.manifest.Logging),
 		Autoscaling:         autoscaling,
 		ExecuteCommand:      convertExecuteCommand(&s.manifest.ExecuteCommand),
+		WorkloadType:        lbWebSvcType,
 		HTTPHealthCheck:     convertHTTPHealthCheck(&s.manifest.HealthCheck),
 		AllowedSourceIps:    s.manifest.AllowedSourceIps,
 		RulePriorityLambda:  rulePriorityLambda.String(),

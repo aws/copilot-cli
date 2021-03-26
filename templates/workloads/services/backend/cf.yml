@@ -126,6 +126,10 @@ Resources:
 
 {{include "addons" . | indent 2}}
 
+{{- if eq .Network.SubnetsType "PrivateSubnets"}}
+{{include "env-controller" . | indent 2}}
+{{- end}}
+
 Outputs:
   DiscoveryServiceARN:
     Description: ARN of the Discovery Service.

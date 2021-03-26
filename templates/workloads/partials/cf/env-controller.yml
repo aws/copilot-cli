@@ -6,8 +6,13 @@ EnvControllerAction:
     ServiceToken: !GetAtt EnvControllerFunction.Arn
     Workload: !Ref WorkloadName
     EnvStack: !Sub '${AppName}-${EnvName}'
-    Parameters: 
+    Parameters:
+      {{- if eq .WorkloadType "Load Balanced Web Service"}}
       - 'ALBWorkloads'
+      {{- end}}
+      {{- if requiresNATGateways .}}
+      - 'NATWorkloads'
+      {{- end}}
     # We need to force trigger this lambda function on all deployments, so we give it a random ID as input on all event types.
     UpdateID: {{ randomUUID }}
 

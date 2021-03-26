@@ -34,6 +34,7 @@ func TestTemplate_ParseEnv(t *testing.T) {
   environment-manager-role
   lambdas
   vpc-resources
+  nat-gateways
 `,
 		},
 		"renders v1.0.0 template": {
@@ -58,6 +59,7 @@ func TestTemplate_ParseEnv(t *testing.T) {
 			tpl.box.AddString("environment/partials/environment-manager-role.yml", "environment-manager-role")
 			tpl.box.AddString("environment/partials/lambdas.yml", "lambdas")
 			tpl.box.AddString("environment/partials/vpc-resources.yml", "vpc-resources")
+			tpl.box.AddString("environment/partials/nat-gateways.yml", "nat-gateways")
 
 			// WHEN
 			c, err := tpl.ParseEnv(&EnvOpts{
