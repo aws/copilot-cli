@@ -141,7 +141,7 @@ Resources:
       TargetId: !Ref {{logicalIDSafe .Name}}DBCluster
       TargetType: AWS::RDS::DBCluster
 Outputs:
-  {{logicalIDSafe .Name}}AuroraMetadata: # injected as AURORA_METADATA environment variable by Copilot.
+  {{logicalIDSafe .Name}}Secret: # injected as AURORA_METADATA environment variable by Copilot.
     Description: "The JSON secret that holds the database username and password. Fields are 'host', 'dbname', 'username', 'password'"
     Value: !Ref {{logicalIDSafe .Name}}AuroraSecret
   {{logicalIDSafe .Name}}SecurityGroup:
