@@ -357,6 +357,7 @@ func (lc *Logging) GetEnableMetadata() *string {
 type SidecarConfig struct {
 	Port        *string             `yaml:"port"`
 	Image       *string             `yaml:"image"`
+	Essential   *bool               `yaml:"essential"`
 	CredsParam  *string             `yaml:"credentialsParameter"`
 	Variables   map[string]string   `yaml:"variables"`
 	Secrets     map[string]string   `yaml:"secrets"`
