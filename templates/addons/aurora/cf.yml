@@ -22,8 +22,13 @@ Parameters:
 Mappings:
   {{logicalIDSafe .ClusterName}}EnvScalingConfigurationMap: {{range $env := .Envs}}
     {{$env}}:
+      {{- if eq $.Engine "MySQL"}}
+      "DBMinCapacity": 1 # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256]
+      "DBMaxCapacity": 8 # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256]
+      {{- else}}
       "DBMinCapacity": 2 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
       "DBMaxCapacity": 8 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
+      {{end -}}
     {{end}}
 Resources:
   {{logicalIDSafe .ClusterName}}DBSubnetGroup:
@@ -49,8 +54,13 @@ Resources:
     Properties:
       GroupDescription: The Security Group for the database cluster.
       SecurityGroupIngress:
+        {{- if eq .Engine "MySQL"}}
+        - ToPort: 3306
+          FromPort: 3306
+        {{- else}}
         - ToPort: 5432
           FromPort: 5432
+        {{- end}}
           IpProtocol: tcp
           Description: !Sub 'From the Aurora Security Group of the workload ${Name}.'
           SourceSecurityGroupId: !Ref {{logicalIDSafe .ClusterName}}SecurityGroup
@@ -62,7 +72,11 @@ Resources:
     Properties:
       Description: !Sub Aurora main user secret for ${AWS::StackName}
       GenerateSecretString:
+        {{- if eq .Engine "MySQL"}}
+        SecretStringTemplate: '{"username": "admin"}'
+        {{- else}}
         SecretStringTemplate: '{"username": "postgres"}'
+        {{- end}}
         GenerateStringKey: "password"
         ExcludePunctuation: true
         IncludeSpace: false
@@ -72,17 +86,23 @@ Resources:
   #   Type: 'AWS::RDS::DBClusterParameterGroup'
   #   Properties:
   #     Description: !Ref 'AWS::StackName'
-  #     Family: 'aurora-postgresql10'
+  #     Family: 'aurora-mysql5.7'
   #     Parameters:
-  #       client_encoding: 'UTF8'
+  #       character_set_client: 'utf8'
   {{- else}}
   {{logicalIDSafe .ClusterName}}DBClusterParameterGroup:
     Type: 'AWS::RDS::DBClusterParameterGroup'
     Properties:
       Description: !Ref 'AWS::StackName'
+      {{- if eq .Engine "MySQL"}}
+      Family: 'aurora-mysql5.7'
+      Parameters:
+        character_set_client: 'utf8'
+      {{- else}}
       Family: 'aurora-postgresql10'
       Parameters:
         client_encoding: 'UTF8'
+      {{- end}}
   {{- end}}
   {{logicalIDSafe .ClusterName}}DBCluster:
     Type: 'AWS::RDS::DBCluster'
@@ -92,8 +112,13 @@ Resources:
       MasterUserPassword:
         !Join [ "",  [ {{`'{{resolve:secretsmanager:'`}}, !Ref {{logicalIDSafe .ClusterName}}AuroraSecret, ":SecretString:password}}" ]]
       DatabaseName: !Ref {{logicalIDSafe .ClusterName}}DBName
+      {{- if eq .Engine "MySQL"}}
+      Engine: 'aurora-mysql'
+      EngineVersion: '5.7.mysql_aurora.2.07.1'
+      {{- else}}
       Engine: 'aurora-postgresql'
       EngineVersion: '10.12'
+      {{- end}}
       EngineMode: serverless
       StorageEncrypted: true
       KmsKeyId:
@@ -121,5 +146,4 @@ Outputs:
   {{logicalIDSafe .ClusterName}}SecurityGroup:
     Description: "The security group to attach to the workload."
     Value: !Ref {{logicalIDSafe .ClusterName}}SecurityGroup
-
 
