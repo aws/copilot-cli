@@ -200,11 +200,22 @@ func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
 		return nil, fmt.Errorf("get addons outputs for %s: %w", w.name, err)
 	}
 	return &template.WorkloadNestedStackOpts{
-		StackName:       addon.StackName,
-		VariableOutputs: envVarOutputNames(out),
-		SecretOutputs:   secretOutputNames(out),
-		PolicyOutputs:   managedPolicyOutputNames(out),
+		StackName:            addon.StackName,
+		VariableOutputs:      envVarOutputNames(out),
+		SecretOutputs:        secretOutputNames(out),
+		PolicyOutputs:        managedPolicyOutputNames(out),
+		SecurityGroupOutputs: securityGroupOutputNames(out),
 	}, nil
+}
+
+func securityGroupOutputNames(outputs []addon.Output) []string {
+	var securityGroups []string
+	for _, out := range outputs {
+		if out.IsSecurityGroup {
+			securityGroups = append(securityGroups, out.Name)
+		}
+	}
+	return securityGroups
 }
 
 func secretOutputNames(outputs []addon.Output) []string {
