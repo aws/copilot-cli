@@ -26,34 +26,6 @@ Mappings:
       "DBMaxCapacity": 8 # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256]
     {{end}}
 Resources:
-  {{logicalIDSafe .ClusterName}}AuroraKMSCMK:
-    Type: 'AWS::KMS::Key'
-    DeletionPolicy: Retain
-    Properties:
-      KeyPolicy:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
-            Action: 'kms:*'
-            Resource: '*'
-          - Effect: Allow
-            Principal:
-              AWS: '*'
-            Action:
-              - 'kms:Encrypt'
-              - 'kms:Decrypt'
-              - 'kms:ReEncrypt*'
-              - 'kms:GenerateDataKey*'
-              - 'kms:CreateGrant'
-              - 'kms:ListGrants'
-              - 'kms:DescribeKey'
-            Resource: '*'
-            Condition:
-              StringEquals:
-                'kms:CallerAccount': !Ref 'AWS::AccountId'
-                'kms:ViaService': !Sub 'rds.${AWS::Region}.amazonaws.com'
   {{logicalIDSafe .ClusterName}}DBSubnetGroup:
     Type: 'AWS::RDS::DBSubnetGroup'
     Properties:
@@ -124,7 +96,9 @@ Resources:
       EngineVersion: '5.7.mysql_aurora.2.07.1'
       EngineMode: serverless
       StorageEncrypted: true
-      KmsKeyId: !Ref {{logicalIDSafe .ClusterName}}AuroraKMSCMK
+      KmsKeyId:
+        Fn::ImportValue:
+          !Sub '${App}-ArtifactKey'
       DBClusterParameterGroupName: {{- if .ParameterGroup}} {{.ParameterGroup}} {{- else}} !Ref {{logicalIDSafe .ClusterName}}DBClusterParameterGroup {{- end}}
       DBSubnetGroupName: !Ref {{logicalIDSafe .ClusterName}}DBSubnetGroup
       VpcSecurityGroupIds:
