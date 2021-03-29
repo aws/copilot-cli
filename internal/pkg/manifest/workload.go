@@ -65,6 +65,12 @@ type Image struct {
 	DockerLabels map[string]string `yaml:"labels,flow"` // Apply Docker labels to the container at runtime.
 }
 
+// ImageWithPort represents a container image with an exposed port.
+type ImageWithPort struct {
+	Image `yaml:",inline"`
+	Port  *uint16 `yaml:"port"`
+}
+
 // GetLocation returns the location of the image.
 func (i Image) GetLocation() string {
 	return aws.StringValue(i.Location)

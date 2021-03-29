@@ -44,8 +44,8 @@ type BackendServiceConfig struct {
 }
 
 type imageWithPortAndHealthcheck struct {
-	ServiceImageWithPort `yaml:",inline"`
-	HealthCheck          *ContainerHealthCheck `yaml:"healthcheck"`
+	ImageWithPort `yaml:",inline"`
+	HealthCheck   *ContainerHealthCheck `yaml:"healthcheck"`
 }
 
 // ContainerHealthCheck holds the configuration to determine if the service container is healthy.

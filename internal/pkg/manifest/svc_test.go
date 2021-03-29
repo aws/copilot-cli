@@ -77,7 +77,7 @@ environments:
 				wantedManifest := &LoadBalancedWebService{
 					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-						ImageConfig: ServiceImageWithPort{Image: Image{Build: BuildArgsOrString{},
+						ImageConfig: ImageWithPort{Image: Image{Build: BuildArgsOrString{},
 							Location: aws.String("foo/bar"),
 						}, Port: aws.Uint16(80)},
 						RoutingRule: RoutingRule{
@@ -200,7 +200,7 @@ secrets:
 					},
 					BackendServiceConfig: BackendServiceConfig{
 						ImageConfig: imageWithPortAndHealthcheck{
-							ServiceImageWithPort: ServiceImageWithPort{
+							ImageWithPort: ImageWithPort{
 								Image: Image{
 									Build: BuildArgsOrString{
 										BuildString: aws.String("./subscribers/Dockerfile"),
@@ -516,7 +516,7 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 		"success with false": {
 			svc: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ServiceImageWithPort{
+					ImageConfig: ImageWithPort{
 						Image: Image{
 							Location: aws.String("mockLocation"),
 						},
@@ -527,7 +527,7 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 		"success with true": {
 			svc: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ServiceImageWithPort{
+					ImageConfig: ImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildString: aws.String("mockDockerfile"),

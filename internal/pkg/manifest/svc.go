@@ -111,12 +111,6 @@ func (r *RangeConfig) IsEmpty() bool {
 	return r.Min == nil && r.Max == nil && r.SpotFrom == nil
 }
 
-// ServiceImageWithPort represents a container image with an exposed port.
-type ServiceImageWithPort struct {
-	Image `yaml:",inline"`
-	Port  *uint16 `yaml:"port"`
-}
-
 // Count is a custom type which supports unmarshaling yaml which
 // can either be of type int or type AdvantedCount.
 type Count struct {

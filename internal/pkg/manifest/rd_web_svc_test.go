@@ -42,7 +42,7 @@ func TestNewRequestDrivenWebService(t *testing.T) {
 					Type: aws.String(RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
-					ImageConfig: AppRunnerImageConfig{
+					ImageConfig: ImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
@@ -101,7 +101,7 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 					Type: aws.String(RequestDrivenWebServiceType),
 				},
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
-					ImageConfig: AppRunnerImageConfig{
+					ImageConfig: ImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildString: aws.String("./Dockerfile"),
@@ -124,7 +124,7 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 
 			wantedStruct: RequestDrivenWebService{
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
-					ImageConfig: AppRunnerImageConfig{
+					ImageConfig: ImageWithPort{
 						Image: Image{
 							Location: aws.String("test-repository/image@digest"),
 						},
@@ -148,7 +148,7 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 
 			wantedStruct: RequestDrivenWebService{
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
-					ImageConfig: AppRunnerImageConfig{
+					ImageConfig: ImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{

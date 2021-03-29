@@ -159,14 +159,16 @@ Outputs:
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			conf := &ScheduledJob{
-				wkld: &wkld{
-					name: aws.StringValue(testScheduledJobManifest.Name),
-					env:  testJobEnvName,
-					app:  testJobAppName,
-					rc: RuntimeConfig{
-						Image: &ECRImage{
-							ImageTag: testJobImageTag,
-							RepoURL:  testJobImageRepoURL,
+				ecsWkld: &ecsWkld{
+					wkld: &wkld{
+						name: aws.StringValue(testScheduledJobManifest.Name),
+						env:  testJobEnvName,
+						app:  testJobAppName,
+						rc: RuntimeConfig{
+							Image: &ECRImage{
+								ImageTag: testJobImageTag,
+								RepoURL:  testJobImageRepoURL,
+							},
 						},
 					},
 				},
@@ -304,8 +306,10 @@ func TestScheduledJob_awsSchedule(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			job := &ScheduledJob{
-				wkld: &wkld{
-					name: "mailer",
+				ecsWkld: &ecsWkld{
+					wkld: &wkld{
+						name: "mailer",
+					},
 				},
 				manifest: &manifest.ScheduledJob{
 					ScheduledJobConfig: manifest.ScheduledJobConfig{
@@ -384,8 +388,10 @@ func TestScheduledJob_stateMachine(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			job := &ScheduledJob{
-				wkld: &wkld{
-					name: "mailer",
+				ecsWkld: &ecsWkld{
+					wkld: &wkld{
+						name: "mailer",
+					},
 				},
 				manifest: &manifest.ScheduledJob{
 					ScheduledJobConfig: manifest.ScheduledJobConfig{
@@ -485,17 +491,19 @@ func TestScheduledJob_Parameters(t *testing.T) {
 
 			// GIVEN
 			conf := &ScheduledJob{
-				wkld: &wkld{
-					name: aws.StringValue(tc.manifest.Name),
-					env:  testEnvName,
-					app:  testAppName,
-					tc:   tc.manifest.TaskConfig,
-					rc: RuntimeConfig{
-						Image: &ECRImage{
-							RepoURL:  testImageRepoURL,
-							ImageTag: testImageTag,
+				ecsWkld: &ecsWkld{
+					wkld: &wkld{
+						name: aws.StringValue(tc.manifest.Name),
+						env:  testEnvName,
+						app:  testAppName,
+						rc: RuntimeConfig{
+							Image: &ECRImage{
+								RepoURL:  testImageRepoURL,
+								ImageTag: testImageTag,
+							},
 						},
 					},
+					tc: tc.manifest.TaskConfig,
 				},
 				manifest: tc.manifest,
 			}
@@ -554,20 +562,22 @@ func TestScheduledJob_SerializedParameters(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			c := &ScheduledJob{
-				wkld: &wkld{
-					name: aws.StringValue(testScheduledJobManifest.Name),
-					env:  testEnvName,
-					app:  testAppName,
-					tc:   testScheduledJobManifest.TaskConfig,
-					rc: RuntimeConfig{
-						Image: &ECRImage{
-							RepoURL:  testImageRepoURL,
-							ImageTag: testImageTag,
-						},
-						AdditionalTags: map[string]string{
-							"owner": "boss",
+				ecsWkld: &ecsWkld{
+					wkld: &wkld{
+						name: aws.StringValue(testScheduledJobManifest.Name),
+						env:  testEnvName,
+						app:  testAppName,
+						rc: RuntimeConfig{
+							Image: &ECRImage{
+								RepoURL:  testImageRepoURL,
+								ImageTag: testImageTag,
+							},
+							AdditionalTags: map[string]string{
+								"owner": "boss",
+							},
 						},
 					},
+					tc: testScheduledJobManifest.TaskConfig,
 				},
 				manifest: testScheduledJobManifest,
 			}

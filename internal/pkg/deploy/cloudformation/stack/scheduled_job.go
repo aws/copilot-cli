@@ -32,7 +32,7 @@ type scheduledJobReadParser interface {
 // ScheduledJob represents the configuration needed to create a Cloudformation stack from a
 // scheduled job manfiest.
 type ScheduledJob struct {
-	*wkld
+	*ecsWkld
 	manifest *manifest.ScheduledJob
 
 	parser scheduledJobReadParser
@@ -100,15 +100,17 @@ func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConf
 		return nil, fmt.Errorf("apply environment %s override: %w", env, err)
 	}
 	return &ScheduledJob{
-		wkld: &wkld{
-			name:   aws.StringValue(mft.Name),
-			env:    env,
-			app:    app,
-			tc:     envManifest.ScheduledJobConfig.TaskConfig,
-			rc:     rc,
-			image:  envManifest.ImageConfig,
-			parser: parser,
-			addons: addons,
+		ecsWkld: &ecsWkld{
+			wkld: &wkld{
+				name:   aws.StringValue(mft.Name),
+				env:    env,
+				app:    app,
+				rc:     rc,
+				image:  envManifest.ImageConfig,
+				parser: parser,
+				addons: addons,
+			},
+			tc: envManifest.TaskConfig,
 		},
 		manifest: envManifest,
 
@@ -180,7 +182,7 @@ func (j *ScheduledJob) Template() (string, error) {
 
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (j *ScheduledJob) Parameters() ([]*cloudformation.Parameter, error) {
-	wkldParams, err := j.wkld.Parameters()
+	wkldParams, err := j.ecsWkld.Parameters()
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +201,7 @@ func (j *ScheduledJob) Parameters() ([]*cloudformation.Parameter, error) {
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability.
 func (j *ScheduledJob) SerializedParameters() (string, error) {
-	return j.wkld.templateConfiguration(j)
+	return j.templateConfiguration(j)
 }
 
 // awsSchedule converts the Schedule string to the format required by Cloudwatch Events

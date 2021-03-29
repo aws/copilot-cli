@@ -26,7 +26,7 @@ type RequestDrivenWebService struct {
 type RequestDrivenWebServiceConfig struct {
 	RequestDrivenWebServiceHttpConfig `yaml:"http,flow"`
 	InstanceConfig                    AppRunnerInstanceConfig `yaml:",inline"`
-	ImageConfig                       AppRunnerImageConfig    `yaml:"image"`
+	ImageConfig                       ImageWithPort           `yaml:"image"`
 	Variables                         map[string]string       `yaml:"variables"`
 	Tags                              map[string]string       `yaml:"tags"`
 }
@@ -39,12 +39,6 @@ type RequestDrivenWebServiceHttpConfig struct {
 type RequestDrivenWebServiceProps struct {
 	*WorkloadProps
 	Port uint16
-}
-
-// AppRunnerImageConfig contains image configuration properties for an App Runner service.
-type AppRunnerImageConfig struct {
-	Image `yaml:",inline"`
-	Port  *uint16 `yaml:"port"`
 }
 
 // AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
@@ -71,7 +65,7 @@ func newDefaultRequestDrivenWebService() *RequestDrivenWebService {
 			Type: aws.String(RequestDrivenWebServiceType),
 		},
 		RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
-			ImageConfig: AppRunnerImageConfig{},
+			ImageConfig: ImageWithPort{},
 			InstanceConfig: AppRunnerInstanceConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),
