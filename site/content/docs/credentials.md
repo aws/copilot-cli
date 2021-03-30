@@ -5,9 +5,6 @@ Copilot uses the AWS credentials from the [default credential provider chain](ht
 
 !!! tip
     We **recommend using a [named profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html)** to store your application's credentials. 
-
-!!! caution
-    You **can not** use AWS account root user credentials for Copilot.
     
 The most convenient way is having the `[default]` profile point to your application's credentials:
 ```ini
@@ -21,6 +18,10 @@ aws_secret_access_key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 region=us-west-2
 ```
 Alternatively, you can set the `AWS_PROFILE` environment variable to point to a different named profile. For example, we can have a `[my-app]` profile that can be used for your Copilot application instead of the `[default]` profile.
+
+!!! note
+    You **cannot** use the AWS account root user credentials for your application. Please first create an IAM user instead as described [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html).
+
 ```ini
 # ~/.aws/config
 [my-app]
