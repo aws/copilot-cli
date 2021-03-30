@@ -621,8 +621,9 @@ func (o *initEnvOpts) cleanUpDanglingRoles(app, env string) error {
 	if exists {
 		return nil
 	}
-	// There is no environment stack.
-	// We should clean up any IAM roles that might not have been deleted during "env delete"
+	// There is no environment stack. Either the customer ran "env delete" before, or it's their
+	// first time running this command.
+	// We should clean up any IAM roles that were *not* deleted during "env delete"
 	// before re-creating the stack otherwise the deployment will fail.
 	o.tryDeletingEnvRoles(app, env)
 	return nil
