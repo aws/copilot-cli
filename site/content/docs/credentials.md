@@ -5,7 +5,7 @@ Copilot uses the AWS credentials from the [default credential provider chain](ht
 
 !!! tip
     We **recommend using a [named profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html)** to store your application's credentials. 
-    
+
 The most convenient way is having the `[default]` profile point to your application's credentials:
 ```ini
 # ~/.aws/credentials
