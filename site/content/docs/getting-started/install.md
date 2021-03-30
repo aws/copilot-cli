@@ -13,19 +13,19 @@ Copy and paste the command into your terminal.
 
     | Command to install    |
     | :---------- |
-    | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-darwin && chmod +x /usr/local/bin/copilot && copilot --help` |
+    | `sudo curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-darwin && sudo chmod +x /usr/local/bin/copilot && copilot --help` |
     
 === "Linux x86 (64-bit)"
 
     | Command to install    |
     | :---------- |
-    | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux && chmod +x /usr/local/bin/copilot && copilot --help` |
+    | `sudo curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux && sudo chmod +x /usr/local/bin/copilot && copilot --help` |
     
 === "Linux (ARM)"
     
     | Command to install    |
     | :---------- |
-    | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux-arm64 && chmod +x /usr/local/bin/copilot && copilot --help` |
+    | `sudo curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux-arm64 && sudo chmod +x /usr/local/bin/copilot && copilot --help` |
 
 
 === "Windows"
