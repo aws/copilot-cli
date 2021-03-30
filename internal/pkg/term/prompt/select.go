@@ -38,7 +38,7 @@ func (o Option) String() string {
 }
 
 // SelectOption prompts the user to select one option from options and returns the Value of the option.
-func (p Prompt) SelectOption(message string, opts []Option, promptCfgs ...PromptConfig) (value string, err error) {
+func (p Prompt) SelectOption(message, help string, opts []Option, promptCfgs ...PromptConfig) (value string, err error) {
 	if len(opts) <= 0 {
 		return "", ErrEmptyOptions
 	}
@@ -47,7 +47,7 @@ func (p Prompt) SelectOption(message string, opts []Option, promptCfgs ...Prompt
 	if err != nil {
 		return "", err
 	}
-	result, err := p.SelectOne(message, "", choices, promptCfgs...)
+	result, err := p.SelectOne(message, help, choices, promptCfgs...)
 	if err != nil {
 		return "", err
 	}

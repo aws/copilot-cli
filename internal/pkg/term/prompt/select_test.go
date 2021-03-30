@@ -40,7 +40,7 @@ func TestOption_String(t *testing.T) {
 
 func TestPrompt_SelectOption(t *testing.T) {
 	t.Run("should return ErrEmptyOptions if there are no options", func(t *testing.T) {
-		_, err := New().SelectOption("to be or not to be?", nil)
+		_, err := New().SelectOption("to be or not to be?", "this is the question", nil)
 		require.EqualError(t, err, ErrEmptyOptions.Error())
 	})
 	t.Run("should return value without hint", func(t *testing.T) {
@@ -72,7 +72,7 @@ func TestPrompt_SelectOption(t *testing.T) {
 		}
 
 		// WHEN
-		actual, err := p.SelectOption("Which workload type?", opts)
+		actual, err := p.SelectOption("Which workload type?", "choose!", opts)
 
 		// THEN
 		require.NoError(t, err)
@@ -106,7 +106,7 @@ func TestPrompt_SelectOption(t *testing.T) {
 		}
 
 		// WHEN
-		actual, err := p.SelectOption("Which workload type?", opts)
+		actual, err := p.SelectOption("Which workload type?", "choose!", opts)
 
 		// THEN
 		require.NoError(t, err)
