@@ -91,7 +91,8 @@ type DDBLocalSecondaryIndex struct {
 
 // RDSProps holds RDS-specific properties for addon.NewRDS().
 type RDSProps struct {
-	*StorageProps
+	// The name of the cluster.
+	ClusterName   string
 	// The engine type of the RDS Aurora Serverless cluster.
 	Engine         string
 	// The name of the initial database created inside the cluster.
