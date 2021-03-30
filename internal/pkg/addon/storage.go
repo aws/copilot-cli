@@ -15,6 +15,13 @@ import (
 const (
 	dynamoDbAddonPath = "addons/ddb/cf.yml"
 	s3AddonPath       = "addons/s3/cf.yml"
+	rdsAddonPath      = "addons/aurora/cf.yml"
+)
+
+const (
+	// Engine types for RDS Aurora Serverless.
+	RDSEngineTypeMySQL      = "MySQL"
+	RDSEngineTypePostgreSQL = "PostgreSQL"
 )
 
 var regexpMatchAttribute = regexp.MustCompile(`^(\S+):([sbnSBN])`)
@@ -22,9 +29,10 @@ var regexpMatchAttribute = regexp.MustCompile(`^(\S+):([sbnSBN])`)
 var storageTemplateFunctions = map[string]interface{}{
 	"logicalIDSafe": template.StripNonAlphaNumFunc,
 	"envVarName":    template.EnvVarNameFunc,
+	"toSnakeCase":   template.ToSnakeCaseFunc,
 }
 
-// DynamoDB contains configuration options which fully descibe a DynamoDB table.
+// DynamoDB contains configuration options which fully describe a DynamoDB table.
 // Implements the encoding.BinaryMarshaler interface.
 type DynamoDB struct {
 	DynamoDBProps
@@ -36,6 +44,14 @@ type DynamoDB struct {
 // Implements the encoding.BinaryMarshaler interface.
 type S3 struct {
 	S3Props
+
+	parser template.Parser
+}
+
+// RDS contains configuration options which fully describe a RDS Aurora Serverless cluster.
+// Implements the encoding.BinaryMarshaler interface.
+type RDS struct {
+	RDSProps
 
 	parser template.Parser
 }
@@ -73,6 +89,19 @@ type DDBLocalSecondaryIndex struct {
 	Name         *string
 }
 
+// RDSProps holds RDS-specific properties for addon.NewRDS().
+type RDSProps struct {
+	*StorageProps
+	// The engine type of the RDS Aurora Serverless cluster.
+	Engine         string
+	// The name of the initial database created inside the cluster.
+	InitialDBName  string
+	// The parameter group to use for the cluster.
+	ParameterGroup string
+	// The copilot environments found inside the current app.
+	Envs           []string
+}
+
 // MarshalBinary serializes the DynamoDB object into a binary YAML CF template.
 // Implements the encoding.BinaryMarshaler interface.
 func (d *DynamoDB) MarshalBinary() ([]byte, error) {
@@ -107,6 +136,25 @@ func (s *S3) MarshalBinary() ([]byte, error) {
 func NewS3(input *S3Props) *S3 {
 	return &S3{
 		S3Props: *input,
+
+		parser: template.New(),
+	}
+}
+
+// MarshalBinary serializes the RDS object into a binary YAML CF template.
+// Implements the encoding.BinaryMarshaler interface.
+func (r *RDS) MarshalBinary() ([]byte, error) {
+	content, err := r.parser.Parse(rdsAddonPath, *r, template.WithFuncs(storageTemplateFunctions))
+	if err != nil {
+		return nil, err
+	}
+	return content.Bytes(), nil
+}
+
+// NewRDS creates a new RDS marshaler which can be used to write CF via addonWriter.
+func NewRDS(input RDSProps) *RDS {
+	return &RDS{
+		RDSProps: input,
 
 		parser: template.New(),
 	}
