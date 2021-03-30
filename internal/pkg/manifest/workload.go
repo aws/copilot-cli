@@ -447,6 +447,12 @@ func UnmarshalWorkload(in []byte) (interface{}, error) {
 			return nil, fmt.Errorf("unmarshal to load balanced web service: %w", err)
 		}
 		return m, nil
+	case RequestDrivenWebServiceType:
+		m := newDefaultRequestDrivenWebService()
+		if err := yaml.Unmarshal(in, m); err != nil {
+			return nil, fmt.Errorf("unmarshal to request-driven web service: %w", err)
+		}
+		return m, nil
 	case BackendServiceType:
 		m := newDefaultBackendService()
 		if err := yaml.Unmarshal(in, m); err != nil {

@@ -25,6 +25,7 @@ const (
 
 	// Names of workload templates.
 	lbWebSvcTplName     = "lb-web"
+	rdWebSvcTplName     = "rd-web"
 	backendSvcTplName   = "backend"
 	scheduledJobTplName = "scheduled-job"
 )
@@ -218,6 +219,7 @@ type WorkloadOpts struct {
 	Variables          map[string]string
 	Secrets            map[string]string
 	Aliases            []string
+	Tags               map[string]string        // Used by App Runner workloads to tag App Runner service resources
 	NestedStack        *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	Sidecars           []*SidecarOpts
 	LogConfig          *LogConfigOpts
@@ -253,6 +255,12 @@ func (t *Template) ParseLoadBalancedWebService(data WorkloadOpts) (*Content, err
 		data.Network = defaultNetworkOpts()
 	}
 	return t.parseSvc(lbWebSvcTplName, data, withSvcParsingFuncs())
+}
+
+// ParseRequestDrivenWebService parses a request-driven web service's CloudFormation template
+// with the specified data object and returns its content.
+func (t *Template) ParseRequestDrivenWebService(data WorkloadOpts) (*Content, error) {
+	return t.parseSvc(rdWebSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseBackendService parses a backend service's CloudFormation template with the specified data object and returns its content.
