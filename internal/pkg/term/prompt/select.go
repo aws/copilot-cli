@@ -5,11 +5,11 @@ package prompt
 
 import (
 	"fmt"
-	"strings"
-	"text/tabwriter"
-
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"regexp"
+	"strings"
+	"text/tabwriter"
 )
 
 // Configuration while spacing text with a tabwriter.
@@ -20,6 +20,8 @@ const (
 	paddingChar            = ' ' // character in between columns.
 	noAdditionalFormatting = 0
 )
+
+var regexpSGR = regexp.MustCompile("\x1b\\[([0-9]{1,2}(;[0-9]{1,2})?)?m")
 
 // Option represents a choice with a hint for clarification.
 type Option struct {
@@ -97,7 +99,8 @@ func stringifyOptions(opts []Option) ([]string, error) {
 
 func parseValueFromOptionFmt(formatted string) string {
 	if idx := strings.Index(formatted, "("); idx != -1 {
-		return strings.TrimSpace(formatted[:idx])
+		s := regexpSGR.ReplaceAllString(formatted[:idx], "")
+		return strings.TrimSpace(s)
 	}
 	return strings.TrimSpace(formatted)
 }
