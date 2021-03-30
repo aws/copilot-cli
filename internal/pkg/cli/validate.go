@@ -4,21 +4,21 @@
 package cli
 
 import (
-	"errors"
-	"fmt"
-	"net"
-	"regexp"
-	"strconv"
-	"strings"
-	"time"
+      "errors"
+      "fmt"
+      "net"
+      "regexp"
+      "strconv"
+      "strings"
+      "time"
 
-	"github.com/robfig/cron/v3"
+      "github.com/robfig/cron/v3"
 
-	"github.com/spf13/afero"
+      "github.com/spf13/afero"
 
-	"github.com/aws/copilot-cli/internal/pkg/addon"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/template"
+      "github.com/aws/copilot-cli/internal/pkg/addon"
+      "github.com/aws/copilot-cli/internal/pkg/manifest"
+      "github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 var (
@@ -43,6 +43,18 @@ var (
 	errDurationInvalid                    = errors.New("value must be a valid Go duration string (example: 1h30m)")
 	errDurationBadUnits                   = errors.New("duration cannot be in units smaller than a second")
 	errScheduleInvalid                    = errors.New("value must be a valid cron expression (examples: @weekly; @every 30m; 0 0 * * 0)")
+
+	// Aurora-Serverless-specific errors.
+	errInvalidRDSNameCharacters = errors.New("value must start with a letter")
+)
+
+var (
+    fmtErrInvalidStorageType      = "invalid storage type %s: must be one of %s"
+
+    // Aurora-Serverless-specific errors.
+    fmtErrRDSNameBadSize          = "value must be between %d and %d characters in length"
+    fmtErrInvalidEngineType       = "invalid engine type %s: must be one of %s"
+    fmtErrInvalidDBNameCharacters = "invalid database name %s: must contain only alphanumeric characters and underscore; should start with a letter"
 )
 
 var (
@@ -50,7 +62,6 @@ var (
 	emptyIP    = net.IP{}
 )
 
-var fmtErrInvalidStorageType = "invalid storage type %s: must be one of %s"
 
 // matches alphanumeric, ._-, from 3 to 255 characters long
 // https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html
@@ -83,6 +94,33 @@ var (
 	domainNameRegexp = regexp.MustCompile(`\.`) // Check for at least one dot in domain name.
 
 	awsScheduleRegexp = regexp.MustCompile(`(?:rate|cron)\(.*\)`) // Check for strings of the form rate(*) or cron(*).
+)
+
+// RDS Aurora Serverless validation expressions.
+var (
+	// Referred to name constraints here: https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.CreateInstance.html#Aurora.CreateInstance.Settings
+	// However, the doc on name constraints is somewhat misleading.
+	// PostgreSQL db name cannot start with an underscore (doc says it must begin with a letter or an underscore).
+	// MySQL db name can contain underscores (not limited to alphanumeric as described in the doc).
+	dbNameCharacterRegExp = regexp.MustCompile("" +
+		"^" +                   // Start of string.
+		"[A-Za-z]" +            // Starts with a letter.
+		"[0-9A-Za-z_]*" +       // Subsequent characters can be letters, underscores or digits
+		"$",                    // End of string.
+	)
+
+    // The storage name for RDS storage type is used as the logical ID of the Aurora Serverless DB cluster in the CFN template.
+    // When creating the DB cluster, CFN will use the logical ID to generate a DB cluster identifier.
+    // Since the logical ID has stricter character restrictions than cluster identifier, we only need to check if the
+    // starting character is a letter.
+    // https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.CreateInstance.html#Aurora.CreateInstance.Settings
+    // https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
+	rdsStorageNameRegExp = regexp.MustCompile("" +
+        "^" +                   // Start of string.
+        "[A-Za-z]" +            // Starts with a letter. The DB cluster identifier must start with a letter.
+        `[a-zA-Z0-9\-\.\_]*` +  // Followed by alphanumeric, ._-. Refers to POSIX portable file name character set.
+        "$",                    // End of string.
+    )
 )
 
 const regexpFindAllMatches = -1
@@ -207,6 +245,67 @@ func validateStorageType(val interface{}) error {
 		}
 	}
 	return fmt.Errorf(fmtErrInvalidStorageType, storageType, prettify(storageTypes))
+}
+
+func validateMySQLDBName(val interface{}) error {
+	const (
+		minMySQLDBNameLength = 1
+		maxMySQLDBNameLength = 64
+	)
+
+	dbName, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+
+	// Check for db name length.
+	if len(dbName) < minMySQLDBNameLength || len(dbName) > maxMySQLDBNameLength {
+		return fmt.Errorf(fmtErrRDSNameBadSize, minMySQLDBNameLength, maxMySQLDBNameLength)
+	}
+
+	return validateDBNameCharacters(dbName)
+}
+
+func validatePostgreSQLDBName(val interface{}) error {
+	const (
+		minPostgreSQLDBNameLength = 1
+		maxPostgreSQLDBNameLength = 63
+	)
+
+	dbName, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+
+	// Check for db name length.
+	if len(dbName) < minPostgreSQLDBNameLength || len(dbName) > maxPostgreSQLDBNameLength {
+		return fmt.Errorf(fmtErrRDSNameBadSize, minPostgreSQLDBNameLength, maxPostgreSQLDBNameLength)
+	}
+
+	return validateDBNameCharacters(dbName)
+}
+
+func validateDBNameCharacters(name string) error {
+	// Check for character constraints.
+	match := dbNameCharacterRegExp.FindStringSubmatch(name)
+	if match != nil {
+		return nil
+	}
+
+	return fmt.Errorf(fmtErrInvalidDBNameCharacters, name)
+}
+
+func validateEngine(val interface{}) error {
+	engine, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	for _, valid := range engineTypes {
+		if engine == valid {
+			return nil
+		}
+	}
+	return fmt.Errorf(fmtErrInvalidEngineType, engine, prettify(engineTypes))
 }
 
 func validateEnvironmentName(val interface{}) error {
@@ -387,6 +486,30 @@ func dynamoTableNameValidation(val interface{}) error {
 		return errValueBadFormatWithPeriodUnderscore
 	}
 	return nil
+}
+
+// RDS storage name: '[a-zA-Z][a-zA-Z0-9]*'
+func rdsNameValidation(val interface{}) error {
+	// This length constrains needs to satisfy: 1. logical ID length; 2. DB Cluster identifier length.
+	// For 1. logical ID, there is no documented length limit.
+	// For 2. DB Cluster identifier, the maximal length is 63.
+    // DB Cluster identifier is auto-generated by CFN using the cluster's logical ID, which is the storage name appended
+	// by "DBCluster". Hence the maximal length of the storage name is 63 - len("DBCluster")
+    const minRDSNameLength = 1
+    const maxRDSNameLength = 63 - len("DBCluster")
+
+    s, ok := val.(string)
+    if !ok {
+        return errValueNotAString
+    }
+    if len(s) < minRDSNameLength || len(s) > maxRDSNameLength {
+        return fmt.Errorf(fmtErrRDSNameBadSize, minRDSNameLength, maxRDSNameLength)
+    }
+    m := rdsStorageNameRegExp.FindStringSubmatch(s)
+    if m == nil {
+        return errInvalidRDSNameCharacters
+    }
+    return nil
 }
 
 func validateKey(val interface{}) error {
