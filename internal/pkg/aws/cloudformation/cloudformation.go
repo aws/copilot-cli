@@ -187,7 +187,7 @@ func (c *CloudFormation) Describe(name string) (*StackDescription, error) {
 	return &descr, nil
 }
 
-// Exists returns true if the environment stack exists, false otherwise.
+// Exists returns true if the CloudFormation stack exists, false otherwise.
 // If an error occurs for another reason than ErrStackNotFound, then returns the error.
 func (c *CloudFormation) Exists(name string) (bool, error) {
 	if _, err := c.Describe(name); err != nil {
@@ -260,7 +260,7 @@ func (c *CloudFormation) Events(stackName string) ([]StackEvent, error) {
 	return c.events(stackName, func(in *cloudformation.StackEvent) bool { return true })
 }
 
-// StackResources returns the list of resources created part of a CloudFormation stack.
+// StackResources returns the list of resources created as part of a CloudFormation stack.
 func (c *CloudFormation) StackResources(name string) ([]*StackResource, error) {
 	out, err := c.DescribeStackResources(&cloudformation.DescribeStackResourcesInput{
 		StackName: aws.String(name),
