@@ -545,7 +545,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 		expectIdentity          func(m *mocks.MockidentityService)
 		expectProgress          func(m *mocks.Mockprogress)
 		expectIAM               func(m *mocks.MockroleManager)
-		expectCFN               func(m *mocks.MockstackExister)
+		expectCFN               func(m *mocks.MockstackExistChecker)
 		expectAppCFN            func(m *mocks.MockappResourcesGetter)
 		expectResourcesUploader func(m *mocks.MockcustomResourcesUploader)
 
@@ -670,7 +670,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					m.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-EnvManagerRole")).Return(nil, errors.New("does not exist")),
 				)
 			},
-			expectCFN: func(m *mocks.MockstackExister) {
+			expectCFN: func(m *mocks.MockstackExistChecker) {
 				m.EXPECT().Exists("phonetool-test").Return(false, nil)
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
@@ -708,7 +708,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().ListRoleTags(gomock.Any()).
 					Return(nil, errors.New("does not exist")).AnyTimes()
 			},
-			expectCFN: func(m *mocks.MockstackExister) {
+			expectCFN: func(m *mocks.MockstackExistChecker) {
 				m.EXPECT().Exists("phonetool-test").Return(false, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
@@ -757,7 +757,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-CFNExecutionRole")).Return(nil, errors.New("does not exist"))
 				m.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-EnvManagerRole")).Return(nil, errors.New("does not exist"))
 			},
-			expectCFN: func(m *mocks.MockstackExister) {
+			expectCFN: func(m *mocks.MockstackExistChecker) {
 				m.EXPECT().Exists("phonetool-test").Return(false, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
@@ -803,7 +803,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				// Don't attempt to delete any roles since an environment stack already exists.
 				m.EXPECT().ListRoleTags(gomock.Any()).Times(0)
 			},
-			expectCFN: func(m *mocks.MockstackExister) {
+			expectCFN: func(m *mocks.MockstackExistChecker) {
 				m.EXPECT().Exists("phonetool-test").Return(true, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
@@ -870,7 +870,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().ListRoleTags(gomock.Any()).
 					Return(nil, errors.New("does not exist")).AnyTimes()
 			},
-			expectCFN: func(m *mocks.MockstackExister) {
+			expectCFN: func(m *mocks.MockstackExistChecker) {
 				m.EXPECT().Exists("phonetool-test").Return(false, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
@@ -918,7 +918,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			mockProgress := mocks.NewMockprogress(ctrl)
 			mockAppCFN := mocks.NewMockappResourcesGetter(ctrl)
 			mockIAM := mocks.NewMockroleManager(ctrl)
-			mockCFN := mocks.NewMockstackExister(ctrl)
+			mockCFN := mocks.NewMockstackExistChecker(ctrl)
 			mockResourcesUploader := mocks.NewMockcustomResourcesUploader(ctrl)
 			mockUploader := mocks.NewMockzipAndUploader(ctrl)
 			if tc.expectStore != nil {

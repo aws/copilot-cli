@@ -541,7 +541,7 @@ type roleManager interface {
 	serviceLinkedRoleCreator
 }
 
-type stackExister interface {
+type stackExistChecker interface {
 	Exists(string) (bool, error)
 }
 

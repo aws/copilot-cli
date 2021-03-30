@@ -5728,31 +5728,31 @@ func (mr *MockroleManagerMockRecorder) ListRoleTags(arg0 interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRoleTags", reflect.TypeOf((*MockroleManager)(nil).ListRoleTags), arg0)
 }
 
-// MockstackExister is a mock of stackExister interface.
-type MockstackExister struct {
+// MockstackExistChecker is a mock of stackExistChecker interface.
+type MockstackExistChecker struct {
 	ctrl     *gomock.Controller
-	recorder *MockstackExisterMockRecorder
+	recorder *MockstackExistCheckerMockRecorder
 }
 
-// MockstackExisterMockRecorder is the mock recorder for MockstackExister.
-type MockstackExisterMockRecorder struct {
-	mock *MockstackExister
+// MockstackExistCheckerMockRecorder is the mock recorder for MockstackExistChecker.
+type MockstackExistCheckerMockRecorder struct {
+	mock *MockstackExistChecker
 }
 
-// NewMockstackExister creates a new mock instance.
-func NewMockstackExister(ctrl *gomock.Controller) *MockstackExister {
-	mock := &MockstackExister{ctrl: ctrl}
-	mock.recorder = &MockstackExisterMockRecorder{mock}
+// NewMockstackExistChecker creates a new mock instance.
+func NewMockstackExistChecker(ctrl *gomock.Controller) *MockstackExistChecker {
+	mock := &MockstackExistChecker{ctrl: ctrl}
+	mock.recorder = &MockstackExistCheckerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockstackExister) EXPECT() *MockstackExisterMockRecorder {
+func (m *MockstackExistChecker) EXPECT() *MockstackExistCheckerMockRecorder {
 	return m.recorder
 }
 
 // Exists mocks base method.
-func (m *MockstackExister) Exists(arg0 string) (bool, error) {
+func (m *MockstackExistChecker) Exists(arg0 string) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Exists", arg0)
 	ret0, _ := ret[0].(bool)
@@ -5761,9 +5761,9 @@ func (m *MockstackExister) Exists(arg0 string) (bool, error) {
 }
 
 // Exists indicates an expected call of Exists.
-func (mr *MockstackExisterMockRecorder) Exists(arg0 interface{}) *gomock.Call {
+func (mr *MockstackExistCheckerMockRecorder) Exists(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockstackExister)(nil).Exists), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockstackExistChecker)(nil).Exists), arg0)
 }
 
 // MockrunningTaskSelector is a mock of runningTaskSelector interface.

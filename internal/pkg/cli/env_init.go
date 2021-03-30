@@ -139,7 +139,7 @@ type initEnvOpts struct {
 	envIdentity  identityService
 	ec2Client    ec2Client
 	iam          roleManager
-	cfn          stackExister
+	cfn          stackExistChecker
 	prog         progress
 	prompt       prompter
 	selVPC       ec2Selector
