@@ -1,20 +1,10 @@
 EnvControllerAction:
-  Metadata:
-    'aws:copilot:description': "Update your environment's shared resources"
-  Type: Custom::EnvControllerFunction
-  Properties:
-    ServiceToken: !GetAtt EnvControllerFunction.Arn
-    Workload: !Ref WorkloadName
-    EnvStack: !Sub '${AppName}-${EnvName}'
-    Parameters:
-      {{- if eq .WorkloadType "Load Balanced Web Service"}}
-      - 'ALBWorkloads'
-      {{- end}}
-      {{- if requiresNATGateways .}}
-      - 'NATWorkloads'
-      {{- end}}
-    # We need to force trigger this lambda function on all deployments, so we give it a random ID as input on all event types.
-    UpdateID: {{ randomUUID }}
+{{- if eq .WorkloadType "Load Balanced Web Service"}}
+{{include "env-controller-action-with-alb" . | indent 2}}
+{{- end}}
+{{- if eq .WorkloadType "Backend Service"}}
+{{include "env-controller-action" . | indent 2}}
+{{- end}}
 
 EnvControllerFunction:
   Type: AWS::Lambda::Function

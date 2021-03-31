@@ -19,7 +19,6 @@ const (
 	lbWebSvcRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
 	desiredCountGeneratorPath         = "custom-resources/desired-count-delegation.js"
 	envControllerPath                 = "custom-resources/env-controller.js"
-	lbWebSvcType                      = "Load Balanced Web Service"
 )
 
 // Parameter logical IDs for a load balanced web service.

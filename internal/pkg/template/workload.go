@@ -57,6 +57,8 @@ var (
 		"state-machine-definition.json",
 		"efs-access-point",
 		"env-controller",
+		"env-controller-action",
+		"env-controller-action-with-alb",
 		"mount-points",
 		"volumes",
 		"image-overrides",
@@ -268,13 +270,12 @@ func (t *Template) parseWkld(name, wkldDirName string, data interface{}, options
 func withSvcParsingFuncs() ParseOption {
 	return func(t *template.Template) *template.Template {
 		return t.Funcs(map[string]interface{}{
-			"toSnakeCase":         ToSnakeCaseFunc,
-			"hasSecrets":          hasSecrets,
-			"fmtSlice":            FmtSliceFunc,
-			"quoteSlice":          QuotePSliceFunc,
-			"randomUUID":          randomUUIDFunc,
-			"jsonMountPoints":     generateMountPointJSON,
-			"requiresNATGateways": requiresNAT,
+			"toSnakeCase":     ToSnakeCaseFunc,
+			"hasSecrets":      hasSecrets,
+			"fmtSlice":        FmtSliceFunc,
+			"quoteSlice":      QuotePSliceFunc,
+			"randomUUID":      randomUUIDFunc,
+			"jsonMountPoints": generateMountPointJSON,
 		})
 	}
 }
@@ -295,18 +296,4 @@ func randomUUIDFunc() (string, error) {
 		return "", fmt.Errorf("generate random uuid: %w", err)
 	}
 	return id.String(), err
-}
-
-func requiresNAT(opts WorkloadOpts) bool {
-	// This function is being called from within the EnvController template; for backend services, this partial template
-	// is included only if the service is placed in a private subnet, so there's no need to check for that here.
-	if opts.WorkloadType == "Backend Service" {
-		return true
-	}
-	// For all LBWS, the EnvController partial is included for ALBWorkloads, so we need to check here for private subnet
-	// placement.
-	if opts.Network.SubnetsType == PrivateSubnetsPlacement {
-		return true
-	}
-	return false
 }

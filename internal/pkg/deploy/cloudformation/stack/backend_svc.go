@@ -22,7 +22,6 @@ const (
 const (
 	// NoExposedContainerPort indicates no port should be exposed for the service container.
 	NoExposedContainerPort = "-1"
-	backendSvcType         = "Backend Service"
 )
 
 type backendSvcReadParser interface {
