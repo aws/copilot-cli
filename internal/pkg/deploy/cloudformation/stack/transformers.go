@@ -283,7 +283,7 @@ func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error
 		//   b) no EFS configuration, in which case the volume is created using task scratch storage in order to share
 		//      data between containers.
 
-		// Convert EFS configuration to templaate struct.
+		// Convert EFS configuration to template struct.
 		efs, err := convertEFSConfiguration(volume.EFS)
 		if err != nil {
 			return nil, err
