@@ -11,4 +11,5 @@ type prompter interface {
 	SelectOne(message, help string, options []string, promptOpts ...prompt.PromptConfig) (string, error)
 	MultiSelect(message, help string, options []string, promptOpts ...prompt.PromptConfig) ([]string, error)
 	Confirm(message, help string, promptOpts ...prompt.PromptConfig) (bool, error)
+	SelectOption(message, help string, opts []prompt.Option, promptCfgs ...prompt.PromptConfig) (value string, err error)
 }
