@@ -824,7 +824,6 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			err := opts.Execute()
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
-				fmt.Println("there??")
 			} else {
 				require.NoError(t, err)
 			}
