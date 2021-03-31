@@ -17,6 +17,7 @@ const (
 	GithubV1ProviderName   = "GitHubV1"
 	CodeCommitProviderName = "CodeCommit"
 	BitbucketProviderName  = "Bitbucket"
+	DefaultImage           = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 
 	pipelineManifestPath = "cicd/pipeline.yml"
 )
@@ -157,6 +158,7 @@ type PipelineManifest struct {
 	Name    string                     `yaml:"name"`
 	Version PipelineSchemaMajorVersion `yaml:"version"`
 	Source  *Source                    `yaml:"source"`
+	Build   *Build                     `yaml:"build"`
 	Stages  []PipelineStage            `yaml:"stages"`
 
 	parser template.Parser
@@ -166,6 +168,11 @@ type PipelineManifest struct {
 type Source struct {
 	ProviderName string                 `yaml:"provider"`
 	Properties   map[string]interface{} `yaml:"properties"`
+}
+
+// Build defines the build project to build and test image.
+type Build struct {
+	Image string                 `yaml:"image"`
 }
 
 // PipelineStage represents a stage in the pipeline manifest
@@ -189,6 +196,9 @@ func NewPipelineManifest(pipelineName string, provider Provider, stages []Pipeli
 		Source: &Source{
 			ProviderName: provider.Name(),
 			Properties:   provider.Properties(),
+		},
+		Build: &Build{
+			Image: DefaultImage,
 		},
 		Stages: stages,
 
