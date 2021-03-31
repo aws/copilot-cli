@@ -35,7 +35,7 @@ func (m *Mockprompter) EXPECT() *MockprompterMockRecorder {
 }
 
 // Confirm mocks base method.
-func (m *Mockprompter) Confirm(message, help string, promptOpts ...prompt.Option) (bool, error) {
+func (m *Mockprompter) Confirm(message, help string, promptOpts ...prompt.PromptConfig) (bool, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{message, help}
 	for _, a := range promptOpts {
@@ -55,7 +55,7 @@ func (mr *MockprompterMockRecorder) Confirm(message, help interface{}, promptOpt
 }
 
 // Get mocks base method.
-func (m *Mockprompter) Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.Option) (string, error) {
+func (m *Mockprompter) Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.PromptConfig) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{message, help, validator}
 	for _, a := range promptOpts {
@@ -75,7 +75,7 @@ func (mr *MockprompterMockRecorder) Get(message, help, validator interface{}, pr
 }
 
 // GetSecret mocks base method.
-func (m *Mockprompter) GetSecret(message, help string, promptOpts ...prompt.Option) (string, error) {
+func (m *Mockprompter) GetSecret(message, help string, promptOpts ...prompt.PromptConfig) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{message, help}
 	for _, a := range promptOpts {
@@ -95,7 +95,7 @@ func (mr *MockprompterMockRecorder) GetSecret(message, help interface{}, promptO
 }
 
 // MultiSelect mocks base method.
-func (m *Mockprompter) MultiSelect(message, help string, options []string, promptOpts ...prompt.Option) ([]string, error) {
+func (m *Mockprompter) MultiSelect(message, help string, options []string, promptOpts ...prompt.PromptConfig) ([]string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{message, help, options}
 	for _, a := range promptOpts {
@@ -115,7 +115,7 @@ func (mr *MockprompterMockRecorder) MultiSelect(message, help, options interface
 }
 
 // SelectOne mocks base method.
-func (m *Mockprompter) SelectOne(message, help string, options []string, promptOpts ...prompt.Option) (string, error) {
+func (m *Mockprompter) SelectOne(message, help string, options []string, promptOpts ...prompt.PromptConfig) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{message, help, options}
 	for _, a := range promptOpts {
@@ -132,4 +132,24 @@ func (mr *MockprompterMockRecorder) SelectOne(message, help, options interface{}
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{message, help, options}, promptOpts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SelectOne", reflect.TypeOf((*Mockprompter)(nil).SelectOne), varargs...)
+}
+
+// SelectOption mocks base method.
+func (m *Mockprompter) SelectOption(message, help string, opts []prompt.Option, promptCfgs ...prompt.PromptConfig) (string, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{message, help, opts}
+	for _, a := range promptCfgs {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SelectOption", varargs...)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SelectOption indicates an expected call of SelectOption.
+func (mr *MockprompterMockRecorder) SelectOption(message, help, opts interface{}, promptCfgs ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{message, help, opts}, promptCfgs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SelectOption", reflect.TypeOf((*Mockprompter)(nil).SelectOption), varargs...)
 }

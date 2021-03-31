@@ -224,7 +224,7 @@ func (o *initPipelineOpts) validateURL(url string) error {
 
 func (o *initPipelineOpts) askEnvs() error {
 	if len(o.environments) == 0 {
-		envs, err := o.sel.Environments(pipelineSelectEnvPrompt, pipelineSelectEnvHelpPrompt, o.appName, func(order int) prompt.Option {
+		envs, err := o.sel.Environments(pipelineSelectEnvPrompt, pipelineSelectEnvHelpPrompt, o.appName, func(order int) prompt.PromptConfig {
 			return prompt.WithFinalMessage(fmt.Sprintf("%s stage:", humanize.Ordinal(order)))
 		})
 		if err != nil {
