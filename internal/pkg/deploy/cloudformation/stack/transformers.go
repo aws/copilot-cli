@@ -245,16 +245,9 @@ func convertMountPoints(input map[string]manifest.Volume) ([]*template.MountPoin
 }
 
 func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPermission, error) {
-	if len(input) == 0 {
-		return nil, nil
-	}
-	output := []*template.EFSPermission{}
+	var output []*template.EFSPermission
 	for _, volume := range input {
 		if volume.EFS == nil {
-			// Return nil if there is only one volume and no EFS configuration; otherwise continue.
-			if len(input) == 1 {
-				return nil, nil
-			}
 			continue
 		}
 		// Write defaults to false.
@@ -265,7 +258,7 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 		if volume.EFS.FileSystemID == nil {
 			return nil, errNoFSID
 		}
-		var accessPointID *string = nil
+		var accessPointID *string
 		if volume.EFS.AuthConfig != nil {
 			accessPointID = volume.EFS.AuthConfig.AccessPointID
 		}
@@ -283,21 +276,12 @@ func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error
 	if len(input) == 0 {
 		return nil, nil
 	}
-	output := []*template.Volume{}
+	var output []*template.Volume
 	for name, volume := range input {
 		// Volumes can contain either:
 		//   a) an EFS configuration, which must be valid
 		//   b) no EFS configuration, in which case the volume is created using task scratch storage in order to share
 		//      data between containers.
-
-		// If there is no EFS information, just add the Name to the volume.
-		if volume.EFS == nil {
-			v := template.Volume{
-				Name: aws.String(name),
-			}
-			output = append(output, &v)
-			continue
-		}
 
 		// Convert EFS configuration to templaate struct.
 		efs, err := convertEFSConfiguration(volume.EFS)
@@ -314,6 +298,10 @@ func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error
 }
 
 func convertEFSConfiguration(in *manifest.EFSVolumeConfiguration) (*template.EFSVolumeConfiguration, error) {
+	// If there is no EFS information, just add the Name to the volume.
+	if in == nil {
+		return nil, nil
+	}
 	// Set default values correctly.
 	fsID := in.FileSystemID
 	if aws.StringValue(fsID) == "" {
@@ -330,7 +318,7 @@ func convertEFSConfiguration(in *manifest.EFSVolumeConfiguration) (*template.EFS
 	}
 
 	// Set default values for IAM and AccessPointID
-	var iam *string = aws.String(defaultIAM)
+	iam := aws.String(defaultIAM)
 	if in.AuthConfig == nil {
 		return &template.EFSVolumeConfiguration{
 			Filesystem:    fsID,
