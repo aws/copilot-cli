@@ -21,7 +21,21 @@ const (
 	noAdditionalFormatting = 0
 )
 
-var regexpSGR = regexp.MustCompile("\x1b\\[([0-9]{1,2}(;[0-9]{1,2})?)?m")
+// SGR(Select Graphic Rendition) is used to colorize outputs in terminals.
+// Example matches:
+// '\x1b[2m'        (for Faint output)
+// '\x1b[1;31m'     (for bold, red output)
+const (
+	sgrStart = "\x1b\\["            // SGR sequences start with "\[".
+	sgrEnd = "m"                    // SGR sequences end with "m".
+	sgrParameter = "[0-9]{1,2,3}"   // SGR parameter values range from 0 to 107.
+)
+
+var (
+	sgrParameterGroups = fmt.Sprintf("%s(;%s)*", sgrParameter, sgrParameter)            // One or more SGR parameters separated by ";"
+	sgr                = fmt.Sprintf("%s(%s)?%s", sgrStart, sgrParameterGroups, sgrEnd) // A complete SGR sequence: \x1b\\[([0-9]{1,2,3}(;[0-9]{1,2,3})*)?m
+)
+var regexpSGR = regexp.MustCompile(sgr)
 
 // Option represents a choice with a hint for clarification.
 type Option struct {
