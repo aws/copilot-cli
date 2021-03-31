@@ -10,16 +10,13 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 
-	"github.com/aws/aws-sdk-go/service/cloudformation" // TODO refactor this into our own pkg
+	// TODO refactor this into our own pkg
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
-
-type stackResourcesDescriber interface {
-	StackResources(stackName string) ([]*cloudformation.StackResource, error)
-}
 
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
@@ -37,8 +34,8 @@ type PipelineDescriber struct {
 	pipelineName  string
 	showResources bool
 
-	pipelineSvc             pipelineGetter
-	stackResourcesDescriber stackResourcesDescriber
+	pipelineSvc pipelineGetter
+	cfn         cfn
 }
 
 // NewPipelineDescriber instantiates a new pipeline describer
@@ -48,14 +45,13 @@ func NewPipelineDescriber(pipelineName string, showResources bool) (*PipelineDes
 		return nil, err
 	}
 
-	describer := newStackDescriber(sess)
 	pipelineSvc := codepipeline.New(sess)
 
 	return &PipelineDescriber{
-		pipelineName:            pipelineName,
-		pipelineSvc:             pipelineSvc,
-		showResources:           showResources,
-		stackResourcesDescriber: describer,
+		pipelineName:  pipelineName,
+		pipelineSvc:   pipelineSvc,
+		showResources: showResources,
+		cfn:           cloudformation.New(sess),
 	}, nil
 }
 
@@ -67,7 +63,7 @@ func (d *PipelineDescriber) Describe() (HumanJSONStringer, error) {
 	}
 	var resources []*CfnResource
 	if d.showResources {
-		stackResources, err := d.stackResourcesDescriber.StackResources(d.pipelineName)
+		stackResources, err := d.cfn.StackResources(d.pipelineName)
 		if err != nil && !IsStackNotExistsErr(err) {
 			return nil, fmt.Errorf("retrieve pipeline resources: %w", err)
 		}
