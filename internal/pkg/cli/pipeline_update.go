@@ -257,9 +257,6 @@ func (o *updatePipelineOpts) Execute() error {
 	o.shouldPromptUpdateConnection = bool
 
 	build := deploy.PipelineBuildFromManifest(pipeline.Build)
-	if err != nil {
-		return fmt.Errorf("read build from manifest: %w", err)
-	}
 
 	// convert environments to deployment stages
 	stages, err := o.convertStages(pipeline.Stages)
