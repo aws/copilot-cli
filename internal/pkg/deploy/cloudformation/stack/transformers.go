@@ -60,6 +60,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 		sidecars = append(sidecars, &template.SidecarOpts{
 			Name:        aws.String(name),
 			Image:       config.Image,
+			Essential:   config.Essential,
 			Port:        port,
 			Protocol:    protocol,
 			CredsParam:  config.CredsParam,

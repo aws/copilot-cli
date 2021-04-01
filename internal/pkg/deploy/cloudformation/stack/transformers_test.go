@@ -19,7 +19,8 @@ func Test_convertSidecar(t *testing.T) {
 	mockMap := map[string]string{"foo": "bar"}
 	mockCredsParam := aws.String("mockCredsParam")
 	testCases := map[string]struct {
-		inPort string
+		inPort      string
+		inEssential bool
 
 		wanted    *template.SidecarOpts
 		wantedErr error
@@ -30,7 +31,8 @@ func Test_convertSidecar(t *testing.T) {
 			wantedErr: fmt.Errorf("cannot parse port mapping from b/a/d/P/o/r/t"),
 		},
 		"good port without protocol": {
-			inPort: "2000",
+			inPort:      "2000",
+			inEssential: true,
 
 			wanted: &template.SidecarOpts{
 				Name:       aws.String("foo"),
@@ -39,10 +41,12 @@ func Test_convertSidecar(t *testing.T) {
 				Image:      mockImage,
 				Secrets:    mockMap,
 				Variables:  mockMap,
+				Essential:  aws.Bool(true),
 			},
 		},
 		"good port with protocol": {
-			inPort: "2000/udp",
+			inPort:      "2000/udp",
+			inEssential: true,
 
 			wanted: &template.SidecarOpts{
 				Name:       aws.String("foo"),
@@ -52,6 +56,21 @@ func Test_convertSidecar(t *testing.T) {
 				Image:      mockImage,
 				Secrets:    mockMap,
 				Variables:  mockMap,
+				Essential:  aws.Bool(true),
+			},
+		},
+		"specify essential as false": {
+			inPort:     "2000",
+			inEssential: false,
+
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				Port:       aws.String("2000"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(false),
 			},
 		},
 	}
@@ -63,6 +82,7 @@ func Test_convertSidecar(t *testing.T) {
 					Image:      mockImage,
 					Secrets:    mockMap,
 					Variables:  mockMap,
+					Essential:  aws.Bool(tc.inEssential),
 					Port:       aws.String(tc.inPort),
 				},
 			}

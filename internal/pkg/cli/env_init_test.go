@@ -25,11 +25,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 )
 
-// mockServiceLinkedRoleCreator satisfies the serviceLinkedRoleCreator and is a no-op.
-type mockServiceLinkedRoleCreator struct{}
-
-func (m *mockServiceLinkedRoleCreator) CreateECSServiceLinkedRole() error { return nil }
-
 type initEnvMocks struct {
 	sessProvider *mocks.MocksessionProvider
 	prompt       *mocks.Mockprompter
@@ -545,24 +540,26 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		inProd bool
 
-		expectstore             func(m *mocks.Mockstore)
+		expectStore             func(m *mocks.Mockstore)
 		expectDeployer          func(m *mocks.Mockdeployer)
 		expectIdentity          func(m *mocks.MockidentityService)
 		expectProgress          func(m *mocks.Mockprogress)
+		expectIAM               func(m *mocks.MockroleManager)
+		expectCFN               func(m *mocks.MockstackExistChecker)
 		expectAppCFN            func(m *mocks.MockappResourcesGetter)
 		expectResourcesUploader func(m *mocks.MockcustomResourcesUploader)
 
 		wantedErrorS string
 	}{
 		"returns app exists error": {
-			expectstore: func(m *mocks.Mockstore) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(nil, errors.New("some error"))
 			},
 
 			wantedErrorS: "some error",
 		},
 		"returns identity get error": {
-			expectstore: func(m *mocks.Mockstore) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -571,12 +568,15 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			wantedErrorS: "get identity: some identity error",
 		},
 		"failed to create stack set instance": {
-			expectstore: func(m *mocks.Mockstore) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().CreateEnvironment(gomock.Any()).Times(0)
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil)
+			},
+			expectIAM: func(m *mocks.MockroleManager) {
+				m.EXPECT().CreateECSServiceLinkedRole().Return(nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
@@ -593,7 +593,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			wantedErrorS: "deploy env test to application phonetool: some cfn error",
 		},
 		"errors cannot get app resources by region": {
-			expectstore: func(m *mocks.Mockstore) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
@@ -602,6 +602,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil)
+			},
+			expectIAM: func(m *mocks.MockroleManager) {
+				m.EXPECT().CreateECSServiceLinkedRole().Return(nil)
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
@@ -613,7 +616,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			wantedErrorS: "get app resources: some error",
 		},
 		"errors cannot read env lambdas": {
-			expectstore: func(m *mocks.Mockstore) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
@@ -622,6 +625,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil)
+			},
+			expectIAM: func(m *mocks.MockroleManager) {
+				m.EXPECT().CreateECSServiceLinkedRole().Return(nil)
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
@@ -637,8 +643,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			wantedErrorS: "upload custom resources to bucket mockBucket: some error",
 		},
-		"errors if environment stack cannot be created": {
-			expectstore: func(m *mocks.Mockstore) {
+		"deletes retained IAM roles if environment stack fails creation": {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
@@ -647,6 +653,25 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
+			},
+			expectIAM: func(m *mocks.MockroleManager) {
+				gomock.InOrder(
+					m.EXPECT().CreateECSServiceLinkedRole().Return(nil),
+					// Skip deleting non-existing roles.
+					m.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-CFNExecutionRole")).Return(nil, errors.New("does not exist")),
+					m.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-EnvManagerRole")).Return(nil, errors.New("does not exist")),
+
+					// Cleanup after created roles.
+					m.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-CFNExecutionRole")).Return(map[string]string{
+						"copilot-application": "phonetool",
+						"copilot-environment": "test",
+					}, nil),
+					m.EXPECT().DeleteRole(gomock.Eq("phonetool-test-CFNExecutionRole")).Return(nil),
+					m.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-EnvManagerRole")).Return(nil, errors.New("does not exist")),
+				)
+			},
+			expectCFN: func(m *mocks.MockstackExistChecker) {
+				m.EXPECT().Exists("phonetool-test").Return(false, nil)
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
@@ -664,7 +689,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			wantedErrorS: "some deploy error",
 		},
 		"returns error from CreateEnvironment": {
-			expectstore: func(m *mocks.Mockstore) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{
 					Name: "phonetool",
 				}, nil)
@@ -677,6 +702,14 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
+			},
+			expectIAM: func(m *mocks.MockroleManager) {
+				m.EXPECT().CreateECSServiceLinkedRole().Return(nil)
+				m.EXPECT().ListRoleTags(gomock.Any()).
+					Return(nil, errors.New("does not exist")).AnyTimes()
+			},
+			expectCFN: func(m *mocks.MockstackExistChecker) {
+				m.EXPECT().Exists("phonetool-test").Return(false, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
@@ -706,7 +739,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 		"success": {
 			inProd: true,
 
-			expectstore: func(m *mocks.Mockstore) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 				m.EXPECT().CreateEnvironment(&config.Environment{
 					App:       "phonetool",
@@ -718,6 +751,14 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
+			},
+			expectIAM: func(m *mocks.MockroleManager) {
+				m.EXPECT().CreateECSServiceLinkedRole().Return(nil)
+				m.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-CFNExecutionRole")).Return(nil, errors.New("does not exist"))
+				m.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-EnvManagerRole")).Return(nil, errors.New("does not exist"))
+			},
+			expectCFN: func(m *mocks.MockstackExistChecker) {
+				m.EXPECT().Exists("phonetool-test").Return(false, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
@@ -745,7 +786,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 		},
 		"skips creating stack if environment stack already exists": {
-			expectstore: func(m *mocks.Mockstore) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 				m.EXPECT().CreateEnvironment(&config.Environment{
 					App:       "phonetool",
@@ -756,6 +797,14 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
+			},
+			expectIAM: func(m *mocks.MockroleManager) {
+				m.EXPECT().CreateECSServiceLinkedRole().Return(nil)
+				// Don't attempt to delete any roles since an environment stack already exists.
+				m.EXPECT().ListRoleTags(gomock.Any()).Times(0)
+			},
+			expectCFN: func(m *mocks.MockstackExistChecker) {
+				m.EXPECT().Exists("phonetool-test").Return(true, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
@@ -788,7 +837,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 		},
 		"failed to delegate DNS (app has Domain and env and apps are different)": {
-			expectstore: func(m *mocks.Mockstore) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -804,7 +853,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			wantedErrorS: "granting DNS permissions: some error",
 		},
 		"success with DNS Delegation (app has Domain and env and app are different)": {
-			expectstore: func(m *mocks.Mockstore) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
 				m.EXPECT().CreateEnvironment(&config.Environment{
 					App:       "phonetool",
@@ -815,6 +864,14 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "4567"}, nil).Times(2)
+			},
+			expectIAM: func(m *mocks.MockroleManager) {
+				m.EXPECT().CreateECSServiceLinkedRole().Return(nil)
+				m.EXPECT().ListRoleTags(gomock.Any()).
+					Return(nil, errors.New("does not exist")).AnyTimes()
+			},
+			expectCFN: func(m *mocks.MockstackExistChecker) {
+				m.EXPECT().Exists("phonetool-test").Return(false, nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDNSDelegationStart, "4567"))
@@ -855,21 +912,29 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockstore := mocks.NewMockstore(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			mockDeployer := mocks.NewMockdeployer(ctrl)
 			mockIdentity := mocks.NewMockidentityService(ctrl)
 			mockProgress := mocks.NewMockprogress(ctrl)
 			mockAppCFN := mocks.NewMockappResourcesGetter(ctrl)
+			mockIAM := mocks.NewMockroleManager(ctrl)
+			mockCFN := mocks.NewMockstackExistChecker(ctrl)
 			mockResourcesUploader := mocks.NewMockcustomResourcesUploader(ctrl)
 			mockUploader := mocks.NewMockzipAndUploader(ctrl)
-			if tc.expectstore != nil {
-				tc.expectstore(mockstore)
+			if tc.expectStore != nil {
+				tc.expectStore(mockStore)
 			}
 			if tc.expectDeployer != nil {
 				tc.expectDeployer(mockDeployer)
 			}
 			if tc.expectIdentity != nil {
 				tc.expectIdentity(mockIdentity)
+			}
+			if tc.expectIAM != nil {
+				tc.expectIAM(mockIAM)
+			}
+			if tc.expectCFN != nil {
+				tc.expectCFN(mockCFN)
 			}
 			if tc.expectProgress != nil {
 				tc.expectProgress(mockProgress)
@@ -890,12 +955,13 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					appName:      "phonetool",
 					isProduction: tc.inProd,
 				},
-				store:       mockstore,
+				store:       mockStore,
 				envDeployer: mockDeployer,
 				appDeployer: mockDeployer,
 				identity:    mockIdentity,
 				envIdentity: mockIdentity,
-				iam:         &mockServiceLinkedRoleCreator{},
+				iam:         mockIAM,
+				cfn:         mockCFN,
 				prog:        mockProgress,
 				sess:        sess,
 				appCFN:      mockAppCFN,

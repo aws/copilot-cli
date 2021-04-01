@@ -7,79 +7,10 @@ package mocks
 import (
 	reflect "reflect"
 
-	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	gomock "github.com/golang/mock/gomock"
 )
-
-// MockstackAndResourcesDescriber is a mock of stackAndResourcesDescriber interface.
-type MockstackAndResourcesDescriber struct {
-	ctrl     *gomock.Controller
-	recorder *MockstackAndResourcesDescriberMockRecorder
-}
-
-// MockstackAndResourcesDescriberMockRecorder is the mock recorder for MockstackAndResourcesDescriber.
-type MockstackAndResourcesDescriberMockRecorder struct {
-	mock *MockstackAndResourcesDescriber
-}
-
-// NewMockstackAndResourcesDescriber creates a new mock instance.
-func NewMockstackAndResourcesDescriber(ctrl *gomock.Controller) *MockstackAndResourcesDescriber {
-	mock := &MockstackAndResourcesDescriber{ctrl: ctrl}
-	mock.recorder = &MockstackAndResourcesDescriberMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockstackAndResourcesDescriber) EXPECT() *MockstackAndResourcesDescriberMockRecorder {
-	return m.recorder
-}
-
-// Metadata mocks base method.
-func (m *MockstackAndResourcesDescriber) Metadata(stackName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Metadata", stackName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Metadata indicates an expected call of Metadata.
-func (mr *MockstackAndResourcesDescriberMockRecorder) Metadata(stackName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Metadata", reflect.TypeOf((*MockstackAndResourcesDescriber)(nil).Metadata), stackName)
-}
-
-// Stack mocks base method.
-func (m *MockstackAndResourcesDescriber) Stack(stackName string) (*cloudformation.Stack, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Stack", stackName)
-	ret0, _ := ret[0].(*cloudformation.Stack)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Stack indicates an expected call of Stack.
-func (mr *MockstackAndResourcesDescriberMockRecorder) Stack(stackName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stack", reflect.TypeOf((*MockstackAndResourcesDescriber)(nil).Stack), stackName)
-}
-
-// StackResources mocks base method.
-func (m *MockstackAndResourcesDescriber) StackResources(stackName string) ([]*cloudformation.StackResource, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StackResources", stackName)
-	ret0, _ := ret[0].([]*cloudformation.StackResource)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// StackResources indicates an expected call of StackResources.
-func (mr *MockstackAndResourcesDescriberMockRecorder) StackResources(stackName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackResources", reflect.TypeOf((*MockstackAndResourcesDescriber)(nil).StackResources), stackName)
-}
 
 // MockecsClient is a mock of ecsClient interface.
 type MockecsClient struct {

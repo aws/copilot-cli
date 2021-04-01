@@ -19,9 +19,11 @@ sidecars:
     # Image URL for the sidecar container. (Required)
     image: {{ image url }}
     # ARN of the secret containing the private repository credentials. (Optional)
-    credentialParameter: {{ credential }}
+    credentialsParameter: {{ credential }}
     # Environment variables for the sidecar container.
     variables: {{ env var }}
+    # Secrets to expose to the sidecar container.
+    secrets: {{ secret }}
     # Mount paths for EFS volumes specified at the service level. (Optional)
     mount_points:
       - # Source volume to mount in this sidecar. (Required)

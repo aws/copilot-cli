@@ -5,11 +5,11 @@ package prompt
 
 import (
 	"fmt"
-	"strings"
-	"text/tabwriter"
-
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"regexp"
+	"strings"
+	"text/tabwriter"
 )
 
 // Configuration while spacing text with a tabwriter.
@@ -20,6 +20,22 @@ const (
 	paddingChar            = ' ' // character in between columns.
 	noAdditionalFormatting = 0
 )
+
+// SGR(Select Graphic Rendition) is used to colorize outputs in terminals.
+// Example matches:
+// '\x1b[2m'        (for Faint output)
+// '\x1b[1;31m'     (for bold, red output)
+const (
+	sgrStart = "\x1b\\["            // SGR sequences start with "ESC[".
+	sgrEnd = "m"                    // SGR sequences end with "m".
+	sgrParameter = "[0-9]{1,3}"     // SGR parameter values range from 0 to 107.
+)
+
+var (
+	sgrParameterGroups = fmt.Sprintf("%s(;%s)*", sgrParameter, sgrParameter)            // One or more SGR parameters separated by ";"
+	sgr                = fmt.Sprintf("%s(%s)?%s", sgrStart, sgrParameterGroups, sgrEnd) // A complete SGR sequence: \x1b\\[([0-9]{1,2,3}(;[0-9]{1,2,3})*)?m
+)
+var regexpSGR = regexp.MustCompile(sgr)
 
 // Option represents a choice with a hint for clarification.
 type Option struct {
@@ -36,7 +52,7 @@ func (o Option) String() string {
 }
 
 // SelectOption prompts the user to select one option from options and returns the Value of the option.
-func (p Prompt) SelectOption(message string, opts []Option, promptCfgs ...PromptConfig) (value string, err error) {
+func (p Prompt) SelectOption(message, help string, opts []Option, promptCfgs ...PromptConfig) (value string, err error) {
 	if len(opts) <= 0 {
 		return "", ErrEmptyOptions
 	}
@@ -45,7 +61,7 @@ func (p Prompt) SelectOption(message string, opts []Option, promptCfgs ...Prompt
 	if err != nil {
 		return "", err
 	}
-	result, err := p.SelectOne(message, "", choices, promptCfgs...)
+	result, err := p.SelectOne(message, help, choices, promptCfgs...)
 	if err != nil {
 		return "", err
 	}
@@ -97,7 +113,8 @@ func stringifyOptions(opts []Option) ([]string, error) {
 
 func parseValueFromOptionFmt(formatted string) string {
 	if idx := strings.Index(formatted, "("); idx != -1 {
-		return strings.TrimSpace(formatted[:idx])
+		s := regexpSGR.ReplaceAllString(formatted[:idx], "")
+		return strings.TrimSpace(s)
 	}
 	return strings.TrimSpace(formatted)
 }

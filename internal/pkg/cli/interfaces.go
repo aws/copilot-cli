@@ -531,6 +531,20 @@ type serviceLinkedRoleCreator interface {
 	CreateECSServiceLinkedRole() error
 }
 
+type roleTagsLister interface {
+	ListRoleTags(string) (map[string]string, error)
+}
+
+type roleManager interface {
+	roleTagsLister
+	roleDeleter
+	serviceLinkedRoleCreator
+}
+
+type stackExistChecker interface {
+	Exists(string) (bool, error)
+}
+
 type runningTaskSelector interface {
 	RunningTask(prompt, help string, opts ...selector.TaskOpts) (*awsecs.Task, error)
 }

@@ -301,52 +301,7 @@ Resources:
 
 			wantedError: errors.New("delete environment test stack: some error"),
 		},
-		"returns wrapped error when role cannot be deleted": {
-			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {
-				rg := mocks.NewMockresourceGetter(ctrl)
-				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
-					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
-
-				prog := mocks.NewMockprogress(ctrl)
-				prog.EXPECT().Start(gomock.Any())
-
-				deployer := mocks.NewMockenvironmentDeployer(ctrl)
-				deployer.EXPECT().EnvironmentTemplate(gomock.Any(), gomock.Any()).Return(`
-Resources:
-  CloudformationExecutionRole:
-    DeletionPolicy: Retain
-  EnvironmentManagerRole:
-    # An IAM Role to manage resources in your environment
-    DeletionPolicy: Retain`, nil)
-				deployer.EXPECT().DeleteEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-
-				iam := mocks.NewMockroleDeleter(ctrl)
-				gomock.InOrder(
-					iam.EXPECT().DeleteRole("execARN").Return(nil),
-					iam.EXPECT().DeleteRole("managerRoleARN").Return(errors.New("some error")),
-				)
-
-				prog.EXPECT().Stop(log.Serror("Failed to delete environment test from application phonetool.\n"))
-
-				return &deleteEnvOpts{
-					deleteEnvVars: deleteEnvVars{
-						appName: "phonetool",
-						name:    "test",
-					},
-					rg:       rg,
-					deployer: deployer,
-					prog:     prog,
-					iam:      iam,
-					envConfig: &config.Environment{
-						ExecutionRoleARN: "execARN",
-						ManagerRoleARN:   "managerRoleARN",
-					},
-					initRuntimeClients: noopInitRuntimeClients,
-				}
-			},
-			wantedError: errors.New("delete role managerRoleARN: some error"),
-		},
-		"deletes the stack, then the roles, then SSM by default": {
+		"deletes the stack, then attemps a best-effort deletion of the IAM roles, and finally cleans up SSM on success": {
 			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {
 				rg := mocks.NewMockresourceGetter(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
