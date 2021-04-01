@@ -3,7 +3,7 @@
 AccessPoint:
   Type: AWS::EFS::AccessPoint
   Properties:
-    ClientToken: String
+    ClientToken: !Sub ${AppName}-${EnvName}-${WorkloadName}
     FileSystemId: 
       Fn::ImportValue:
         !Sub '${AppName}-${EnvName}-FilesystemID'

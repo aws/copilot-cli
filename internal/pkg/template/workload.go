@@ -94,6 +94,13 @@ type StorageOpts struct {
 	ManagedVolumeInfo *ManagedVolumeCreationInfo // Used for delegating CreationInfo for Copilot-managed EFS.
 }
 
+func (s *StorageOpts) RequiresEFSCreation() bool {
+	if s.ManagedVolumeInfo != nil {
+		return true
+	}
+	return false
+}
+
 // EFSPermission holds information needed to render an IAM policy statement.
 type EFSPermission struct {
 	FilesystemID  *string
@@ -279,6 +286,7 @@ func withSvcParsingFuncs() ParseOption {
 			"quoteSlice":      QuotePSliceFunc,
 			"randomUUID":      randomUUIDFunc,
 			"jsonMountPoints": generateMountPointJSON,
+			"requiresEFS":     requiresEFS,
 		})
 	}
 }
@@ -288,6 +296,13 @@ func hasSecrets(opts WorkloadOpts) bool {
 		return true
 	}
 	if opts.NestedStack != nil && (len(opts.NestedStack.SecretOutputs) > 0) {
+		return true
+	}
+	return false
+}
+
+func requiresEFS(opts WorkloadOpts) bool {
+	if opts.Storage != nil && opts.Storage.RequiresEFSCreation() {
 		return true
 	}
 	return false
