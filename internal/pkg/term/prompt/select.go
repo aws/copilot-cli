@@ -28,7 +28,7 @@ const (
 const (
 	sgrStart = "\x1b\\["            // SGR sequences start with "ESC[".
 	sgrEnd = "m"                    // SGR sequences end with "m".
-	sgrParameter = "[0-9]{1,2,3}"   // SGR parameter values range from 0 to 107.
+	sgrParameter = "[0-9]{1,3}"     // SGR parameter values range from 0 to 107.
 )
 
 var (
