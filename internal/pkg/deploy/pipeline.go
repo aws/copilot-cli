@@ -40,6 +40,9 @@ type CreatePipelineInput struct {
 	// The source code provider for this pipeline
 	Source interface{}
 
+	// The build project settings for this pipeline
+	Build *Build
+
 	// The stages of the pipeline. The order of stages in this list
 	// will be the order we deploy to.
 	Stages []PipelineStage
@@ -50,6 +53,13 @@ type CreatePipelineInput struct {
 
 	// AdditionalTags are labels applied to resources under the application.
 	AdditionalTags map[string]string
+}
+
+// Build represents CodeBuild project used in the CodePipeline
+// to build and test Docker image.
+type Build struct {
+	// The URI that identifies the Docker image to use for this build project. 
+	Image string
 }
 
 // ArtifactBucket represents an S3 bucket used by the CodePipeline to store
@@ -168,6 +178,19 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 		return repo, false, nil
 	default:
 		return nil, false, fmt.Errorf("invalid repo source provider: %s", mfSource.ProviderName)
+	}
+}
+
+// PipelineBuildFromManifest processes manifest info about the build project settings.
+func PipelineBuildFromManifest(mfBuild *manifest.Build) (build *Build) {
+	var imageURI string
+	if (mfBuild == nil || mfBuild.Image == "") {
+		imageURI = manifest.DefaultImage
+	} else {
+		imageURI = mfBuild.Image
+	}
+	return &Build{
+		Image: imageURI,
 	}
 }
 
