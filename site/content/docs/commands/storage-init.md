@@ -3,7 +3,7 @@
 $ copilot storage init
 ```
 ## What does it do?
-`copilot storage init` creates a new storage resource attached to one of your services, accessible from inside your service container via a friendly environment variable. You can specify either *S3* or *DynamoDB* as the resource type.
+`copilot storage init` creates a new storage resource attached to one of your workloads, accessible from inside your service container via a friendly environment variable. You can specify either *S3*, *DynamoDB*, *RDS* as the resource type.
 
 After running this command, the CLI creates an `addons` subdirectory inside your `copilot/service` directory if it does not exist. When you run `copilot svc deploy`, your newly initialized storage resource is created in the environment you're deploying to. By default, only the service you specify during `storage init` will have access to that storage resource.
 
@@ -12,7 +12,7 @@ After running this command, the CLI creates an `addons` subdirectory inside your
 Required Flags
   -n, --name string           Name of the storage resource to create.
   -t, --storage-type string   Type of storage to add. Must be one of:
-                              "DynamoDB", "S3"
+                              "DynamoDB", "S3", "RDS"
   -w, --workload string       Name of the service or job to associate with storage.
 
 DynamoDB Flags
@@ -24,6 +24,12 @@ DynamoDB Flags
                                Must be of the format '<keyName>:<dataType>'.
       --sort-key string        Optional. Sort key for the DDB table.
                                Must be of the format '<keyName>:<dataType>'.
+RDS Flags
+      --engine string           Type of database engine to use.
+                                Must be one of "MySQL" or "PostgreSQL".
+      --parameter-group string  Optional. The ARN of the parameter group used for engine configurations in your 
+                                RDS Aurora Serverless cluster.
+      --initial-db-name string  The name of the initial database for RDS Aurora Serverless cluster.
 ```
 
 ## How can I use it? 
@@ -49,6 +55,11 @@ $ copilot storage init \
   --lsi Goodness:N
 ```
 
+Create an RDS Aurora Serverless cluster using PostgreSQL as database engine.
+```
+$ copilot storage init \
+  -n my-cluster -t RDS -w frontend --engine PostgreSQL
+```
 
 ## What happens under the hood?
 Copilot writes a Cloudformation template specifying the S3 bucket or DDB table to the `addons` dir. When you run `copilot svc deploy`, the CLI merges this template with all the other templates in the addons directory to create a nested stack associated with your service. This nested stack describes all the additional resources you've associated with that service and is deployed wherever your service is deployed. 
