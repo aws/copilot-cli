@@ -3,6 +3,8 @@
 
 package manifest
 
+import "gopkg.in/yaml.v3"
+
 // Storage represents the options for external and native storage.
 type Storage struct {
 	Volumes map[string]Volume `yaml:"volumes"`
@@ -31,6 +33,37 @@ type EFSVolumeConfiguration struct {
 	FileSystemID  *string              `yaml:"id"`       // Required.
 	RootDirectory *string              `yaml:"root_dir"` // Default "/"
 	AuthConfig    *AuthorizationConfig `yaml:"auth"`
+}
+
+func (e *EFSVolumeConfiguration) isEmpty() bool {
+	return e.FileSystemID == nil && e.RootDirectory == nil && e.AuthConfig == nil
+}
+
+type EFSConfigOrID struct {
+	Config EFSVolumeConfiguration
+	ID     *string
+}
+
+func (e *EFSConfigOrID) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshal(&e.Config); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if !e.Config.isEmpty() {
+		// Unmarshaled successfully to b.BuildArgs, unset b.BuildString, and return.
+		e.ID = nil
+		return nil
+	}
+
+	if err := unmarshal(&e.ID); err != nil {
+		return errUnmarshalBuildOpts
+	}
+	return nil
 }
 
 // AuthorizationConfig holds options relating to access points and IAM authorization.
