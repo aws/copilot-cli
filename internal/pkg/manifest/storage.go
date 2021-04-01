@@ -10,7 +10,7 @@ type Storage struct {
 
 // Volume is an abstraction which merges the MountPoint and Volumes concepts from the ECS Task Definition
 type Volume struct {
-	EFS            EFSVolumeConfiguration `yaml:"efs"`
+	EFS            *EFSVolumeConfiguration `yaml:"efs"`
 	MountPointOpts `yaml:",inline"`
 }
 
@@ -28,9 +28,9 @@ type SidecarMountPoint struct {
 
 // EFSVolumeConfiguration holds options which tell ECS how to reach out to the EFS filesystem.
 type EFSVolumeConfiguration struct {
-	FileSystemID  *string             `yaml:"id"`       // Required.
-	RootDirectory *string             `yaml:"root_dir"` // Default "/"
-	AuthConfig    AuthorizationConfig `yaml:"auth"`
+	FileSystemID  *string              `yaml:"id"`       // Required.
+	RootDirectory *string              `yaml:"root_dir"` // Default "/"
+	AuthConfig    *AuthorizationConfig `yaml:"auth"`
 }
 
 // AuthorizationConfig holds options relating to access points and IAM authorization.

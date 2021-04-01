@@ -112,13 +112,7 @@ type MountPoint struct {
 type Volume struct {
 	Name *string
 
-	// EFSVolumeConfiguration
-	Filesystem    *string
-	RootDirectory *string // "/" or empty are equivalent
-
-	// Authorization Config
-	AccessPointID *string
-	IAM           *string // ENABLED or DISABLED
+	EFS *EFSVolumeConfiguration
 }
 
 // ManagedVolumeCreationInfo holds information about how to create Copilot-managed access points.
@@ -126,6 +120,16 @@ type ManagedVolumeCreationInfo struct {
 	Name *string
 	UID  *string
 	GID  *string
+}
+
+type EFSVolumeConfiguration struct {
+	// EFSVolumeConfiguration
+	Filesystem    *string
+	RootDirectory *string // "/" or empty are equivalent
+
+	// Authorization Config
+	AccessPointID *string
+	IAM           *string // ENABLED or DISABLED
 }
 
 // LogConfigOpts holds configuration that's needed if the service is configured with Firelens to route
