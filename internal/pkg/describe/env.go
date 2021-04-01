@@ -12,6 +12,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -42,9 +43,9 @@ type EnvDescriber struct {
 	env             *config.Environment
 	enableResources bool
 
-	configStore    ConfigStoreSvc
-	deployStore    DeployedEnvServicesLister
-	stackDescriber stackAndResourcesDescriber
+	configStore ConfigStoreSvc
+	deployStore DeployedEnvServicesLister
+	cfn         cfn
 }
 
 // NewEnvDescriberConfig contains fields that initiates EnvDescriber struct.
@@ -66,15 +67,14 @@ func NewEnvDescriber(opt NewEnvDescriberConfig) (*EnvDescriber, error) {
 	if err != nil {
 		return nil, fmt.Errorf("assume role for environment %s: %w", env.ManagerRoleARN, err)
 	}
-	d := newStackDescriber(sess)
 	return &EnvDescriber{
 		app:             opt.App,
 		env:             env,
 		enableResources: opt.EnableResources,
 
-		configStore:    opt.ConfigStore,
-		deployStore:    opt.DeployStore,
-		stackDescriber: d,
+		configStore: opt.ConfigStore,
+		deployStore: opt.DeployStore,
+		cfn:         cloudformation.New(sess),
 	}, nil
 }
 
@@ -112,7 +112,7 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 //
 // If the Version field does not exist, then it's a legacy template and it returns an deploy.LegacyEnvTemplateVersion and nil error.
 func (d *EnvDescriber) Version() (string, error) {
-	raw, err := d.stackDescriber.Metadata(stack.NameForEnv(d.app, d.env.Name))
+	raw, err := d.cfn.Metadata(stack.NameForEnv(d.app, d.env.Name))
 	if err != nil {
 		return "", err
 	}
@@ -133,7 +133,7 @@ func (d *EnvDescriber) loadStackInfo() (map[string]string, EnvironmentVPC, error
 	var environmentVPC EnvironmentVPC
 	tags := make(map[string]string)
 
-	envStack, err := d.stackDescriber.Stack(stack.NameForEnv(d.app, d.env.Name))
+	envStack, err := d.cfn.Describe(stack.NameForEnv(d.app, d.env.Name))
 	if err != nil {
 		return nil, environmentVPC, fmt.Errorf("retrieve environment stack: %w", err)
 	}
@@ -178,7 +178,7 @@ func (d *EnvDescriber) filterDeployedSvcs() ([]*config.Workload, error) {
 }
 
 func (d *EnvDescriber) resources() ([]*CfnResource, error) {
-	envStack, err := d.stackDescriber.StackResources(stack.NameForEnv(d.app, d.env.Name))
+	envStack, err := d.cfn.StackResources(stack.NameForEnv(d.app, d.env.Name))
 	if err != nil {
 		return nil, err
 	}
