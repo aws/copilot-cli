@@ -20,6 +20,7 @@ import (
 const (
 	defaultGHBranch = "main"
 	defaultCCBranch = "master"
+	defaultImage    = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 )
 
 func TestNewProvider(t *testing.T) {
@@ -105,6 +106,9 @@ func TestNewPipelineManifest(t *testing.T) {
 						RepositoryURL: "aws/amazon-ecs-cli-v2",
 						Branch:        defaultGHBranch,
 					}),
+				},
+				Build: &Build{
+					Image: defaultImage,
 				},
 				Stages: []PipelineStage{
 					{
@@ -218,7 +222,7 @@ stages:
 			inContent:   `corrupted yaml`,
 			expectedErr: errors.New("yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `corrupt...` into manifest.PipelineManifest"),
 		},
-		"valid pipeline.yml": {
+		"valid pipeline.yml without build": {
 			inContent: `
 name: pipepiper
 version: 1
@@ -256,6 +260,48 @@ stages:
 					},
 					{
 						Name:         "wings",
+						TestCommands: []string{},
+					},
+				},
+			},
+		},
+		"valid pipeline.yml with build": {
+			inContent: `
+name: pipepiper
+version: 1
+
+source:
+  provider: GitHub
+  properties:
+    repository: aws/somethingCool
+    access_token_secret: "github-token-badgoose-backend"
+    branch: main
+
+build:
+  image: aws/codebuild/standard:3.0
+
+stages:
+    -
+      name: chicken
+      test_commands: []
+`,
+			expectedManifest: &PipelineManifest{
+				Name:    "pipepiper",
+				Version: Ver1,
+				Source: &Source{
+					ProviderName: "GitHub",
+					Properties: map[string]interface{}{
+						"access_token_secret": "github-token-badgoose-backend",
+						"repository":          "aws/somethingCool",
+						"branch":              defaultGHBranch,
+					},
+				},
+				Build: &Build{
+					Image: "aws/codebuild/standard:3.0",
+				},
+				Stages: []PipelineStage{
+					{
+						Name:         "chicken",
 						TestCommands: []string{},
 					},
 				},
