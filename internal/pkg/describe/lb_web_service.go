@@ -14,12 +14,10 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-
 	"github.com/aws/aws-sdk-go/aws/arn"
-
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"

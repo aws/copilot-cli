@@ -213,6 +213,21 @@ func (mr *MockclientMockRecorder) DescribeStackEvents(arg0 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStackEvents", reflect.TypeOf((*Mockclient)(nil).DescribeStackEvents), arg0)
 }
 
+// DescribeStackResources mocks base method.
+func (m *Mockclient) DescribeStackResources(input *cloudformation.DescribeStackResourcesInput) (*cloudformation.DescribeStackResourcesOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeStackResources", input)
+	ret0, _ := ret[0].(*cloudformation.DescribeStackResourcesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeStackResources indicates an expected call of DescribeStackResources.
+func (mr *MockclientMockRecorder) DescribeStackResources(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStackResources", reflect.TypeOf((*Mockclient)(nil).DescribeStackResources), input)
+}
+
 // DescribeStacks mocks base method.
 func (m *Mockclient) DescribeStacks(arg0 *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
 	m.ctrl.T.Helper()
@@ -256,6 +271,21 @@ func (m *Mockclient) GetTemplate(input *cloudformation.GetTemplateInput) (*cloud
 func (mr *MockclientMockRecorder) GetTemplate(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplate", reflect.TypeOf((*Mockclient)(nil).GetTemplate), input)
+}
+
+// GetTemplateSummary mocks base method.
+func (m *Mockclient) GetTemplateSummary(in *cloudformation.GetTemplateSummaryInput) (*cloudformation.GetTemplateSummaryOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTemplateSummary", in)
+	ret0, _ := ret[0].(*cloudformation.GetTemplateSummaryOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTemplateSummary indicates an expected call of GetTemplateSummary.
+func (mr *MockclientMockRecorder) GetTemplateSummary(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplateSummary", reflect.TypeOf((*Mockclient)(nil).GetTemplateSummary), in)
 }
 
 // WaitUntilChangeSetCreateCompleteWithContext mocks base method.

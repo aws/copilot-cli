@@ -69,15 +69,17 @@ var (
 type WorkloadNestedStackOpts struct {
 	StackName string
 
-	VariableOutputs []string
-	SecretOutputs   []string
-	PolicyOutputs   []string
+	VariableOutputs      []string
+	SecretOutputs        []string
+	PolicyOutputs        []string
+	SecurityGroupOutputs []string
 }
 
 // SidecarOpts holds configuration that's needed if the service has sidecar containers.
 type SidecarOpts struct {
 	Name        *string
 	Image       *string
+	Essential   *bool
 	Port        *string
 	Protocol    *string
 	CredsParam  *string

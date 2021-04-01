@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -22,12 +22,6 @@ const (
 	waitCondition        = "AWS::CloudFormation::WaitCondition"
 	waitConditionHandle  = "AWS::CloudFormation::WaitConditionHandle"
 )
-
-type stackAndResourcesDescriber interface {
-	Stack(stackName string) (*cloudformation.Stack, error)
-	StackResources(stackName string) ([]*cloudformation.StackResource, error)
-	Metadata(stackName string) (string, error)
-}
 
 type ecsClient interface {
 	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
@@ -72,8 +66,8 @@ type ServiceDescriber struct {
 	service string
 	env     string
 
-	ecsClient      ecsClient
-	stackDescriber stackAndResourcesDescriber
+	ecsClient ecsClient
+	cfn       cfn
 }
 
 // NewServiceConfig contains fields that initiates ServiceDescriber struct.
@@ -94,14 +88,13 @@ func NewServiceDescriber(opt NewServiceConfig) (*ServiceDescriber, error) {
 	if err != nil {
 		return nil, err
 	}
-	d := newStackDescriber(sess)
 	return &ServiceDescriber{
 		app:     opt.App,
 		service: opt.Svc,
 		env:     opt.Env,
 
-		ecsClient:      ecs.New(sess),
-		stackDescriber: d,
+		ecsClient: ecs.New(sess),
+		cfn:       cloudformation.New(sess),
 	}, nil
 }
 
@@ -127,7 +120,7 @@ func (d *ServiceDescriber) Secrets() ([]*ecs.ContainerSecret, error) {
 
 // ServiceStackResources returns the filtered service stack resources created by CloudFormation.
 func (d *ServiceDescriber) ServiceStackResources() ([]*cloudformation.StackResource, error) {
-	svcResources, err := d.stackDescriber.StackResources(stack.NameForService(d.app, d.env, d.service))
+	svcResources, err := d.cfn.StackResources(stack.NameForService(d.app, d.env, d.service))
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +142,7 @@ func (d *ServiceDescriber) ServiceStackResources() ([]*cloudformation.StackResou
 
 // EnvOutputs returns the output of the environment stack.
 func (d *ServiceDescriber) EnvOutputs() (map[string]string, error) {
-	envStack, err := d.stackDescriber.Stack(stack.NameForEnv(d.app, d.env))
+	envStack, err := d.cfn.Describe(stack.NameForEnv(d.app, d.env))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +155,7 @@ func (d *ServiceDescriber) EnvOutputs() (map[string]string, error) {
 
 // Params returns the parameters of the service stack.
 func (d *ServiceDescriber) Params() (map[string]string, error) {
-	svcStack, err := d.stackDescriber.Stack(stack.NameForService(d.app, d.env, d.service))
+	svcStack, err := d.cfn.Describe(stack.NameForService(d.app, d.env, d.service))
 	if err != nil {
 		return nil, err
 	}

@@ -6,14 +6,24 @@ describe("DNS Validated Certificate Handler", () => {
   const AWS = require("aws-sdk-mock");
   const LambdaTester = require("lambda-tester").noVersionCheck();
   const sinon = require("sinon");
-  const handler = require("../lib/dns-cert-validator");
+  const handler = require("../lib/dns-cert-validator-v2");
   const nock = require("nock");
   const ResponseURL = "https://cloudwatch-response-mock.example.com/";
 
   let origLog = console.log;
   const testRequestId = "f4ef1b10-c39a-44e3-99c0-fbf7e53c3943";
-  const testDomainName = "test.example.com";
-  const testHostedZoneId = "/hostedzone/Z3P5QSUBK4POTI";
+  const testAppName = "myapp";
+  const testEnvName = "test";
+  const testDomainName = "example.com";
+  const testHostedZoneId = "Z3P5QSUBK4POTI";
+  const testRootDNSRole = "mockRole";
+  const testSubjectAlternativeNames = [
+    "example.com",
+    "*.example.com",
+    "myapp.example.com",
+    "*.myapp.example.com",
+    "*.test.myapp.example.com",
+  ];
   const testCertificateArn =
     "arn:aws:acm:region:123456789012:certificate/12345678-1234-1234-1234-123456789012";
   const testRRName = "_3639ac514e785e898d2646601fa951d5.example.com";
@@ -96,6 +106,25 @@ describe("DNS Validated Certificate Handler", () => {
         CertificateArn: testCertificateArn,
         DomainValidationOptions: [
           {
+            DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
+            ValidationStatus: "SUCCESS",
+            ResourceRecord: {
+              Name: testRRName,
+              Type: "CNAME",
+              Value: testRRValue,
+            },
+          },
+          {
+            DomainName: `${testAppName}.${testDomainName}`,
+            ValidationStatus: "SUCCESS",
+            ResourceRecord: {
+              Name: testRRName,
+              Type: "CNAME",
+              Value: testRRValue,
+            },
+          },
+          {
+            DomainName: `${testDomainName}`,
             ValidationStatus: "SUCCESS",
             ResourceRecord: {
               Name: testRRName,
@@ -113,6 +142,14 @@ describe("DNS Validated Certificate Handler", () => {
       },
     });
 
+    const listHostedZonesByNameFake = sinon.fake.resolves({
+      HostedZones: [
+        {
+          Id: `/hostedzone/${testHostedZoneId}`
+        }
+      ]
+    });
+
     AWS.mock("ACM", "requestCertificate", requestCertificateFake);
     AWS.mock("ACM", "describeCertificate", describeCertificateFake);
     AWS.mock(
@@ -120,6 +157,7 @@ describe("DNS Validated Certificate Handler", () => {
       "changeResourceRecordSets",
       changeResourceRecordSetsFake
     );
+    AWS.mock("Route53", "listHostedZonesByName", listHostedZonesByNameFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -132,16 +170,27 @@ describe("DNS Validated Certificate Handler", () => {
         RequestType: "Create",
         RequestId: testRequestId,
         ResourceProperties: {
+          AppName: testAppName,
+          EnvName: testEnvName,
           DomainName: testDomainName,
-          HostedZoneId: testHostedZoneId,
+          EnvHostedZoneId: testHostedZoneId,
           Region: "us-east-1",
+          RootDNSRole: testRootDNSRole,
+          SubjectAlternativeNames: testSubjectAlternativeNames
         },
       })
       .expectResolve(() => {
         sinon.assert.calledWith(
+          describeCertificateFake,
+          sinon.match({
+            CertificateArn: testCertificateArn,
+          })
+        );
+        sinon.assert.calledWith(
           requestCertificateFake,
           sinon.match({
-            DomainName: testDomainName,
+            DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
+            SubjectAlternativeNames: testSubjectAlternativeNames,
             ValidationMethod: "DNS",
           })
         );
@@ -168,6 +217,20 @@ describe("DNS Validated Certificate Handler", () => {
             HostedZoneId: testHostedZoneId,
           })
         );
+        sinon.assert.calledWith(
+          listHostedZonesByNameFake,
+          sinon.match({
+            DNSName: `${testAppName}.${testDomainName}`,
+            MaxItems: "1"
+          })
+        );
+        sinon.assert.calledWith(
+          listHostedZonesByNameFake,
+          sinon.match({
+            DNSName: `${testDomainName}`,
+            MaxItems: "1"
+          })
+        );
         expect(request.isDone()).toBe(true);
       });
   });
@@ -182,6 +245,30 @@ describe("DNS Validated Certificate Handler", () => {
       Certificate: {
         CertificateArn: testCertificateArn,
       },
+      DomainValidationOptions: [
+        {
+          DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
+          ValidationStatus: "SUCCESS",
+          ResourceRecord: {
+            Name: testRRName,
+            Type: "CNAME",
+            Value: testRRValue,
+          },
+        },
+        {
+          DomainName: `${testAppName}.${testDomainName}`,
+          ValidationStatus: "SUCCESS",
+          ResourceRecord: {
+            Name: testRRName,
+            Type: "CNAME",
+            Value: testRRValue,
+          },
+        },
+        {
+          DomainName: `${testDomainName}`,
+          ValidationStatus: "PENDING_VALIDATION",
+        },
+      ],
     });
 
     AWS.mock("ACM", "requestCertificate", requestCertificateFake);
@@ -203,16 +290,21 @@ describe("DNS Validated Certificate Handler", () => {
         RequestType: "Create",
         RequestId: testRequestId,
         ResourceProperties: {
+          AppName: testAppName,
+          EnvName: testEnvName,
           DomainName: testDomainName,
-          HostedZoneId: testHostedZoneId,
+          EnvHostedZoneId: testHostedZoneId,
           Region: "us-east-1",
+          RootDNSRole: testRootDNSRole,
+          SubjectAlternativeNames: testSubjectAlternativeNames
         },
       })
       .expectResolve(() => {
         sinon.assert.calledWith(
           requestCertificateFake,
           sinon.match({
-            DomainName: testDomainName,
+            DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
+            SubjectAlternativeNames: testSubjectAlternativeNames,
             ValidationMethod: "DNS",
           })
         );
@@ -256,16 +348,21 @@ describe("DNS Validated Certificate Handler", () => {
         RequestType: "Create",
         RequestId: testRequestId,
         ResourceProperties: {
+          AppName: testAppName,
+          EnvName: testEnvName,
           DomainName: testDomainName,
-          HostedZoneId: testHostedZoneId,
+          EnvHostedZoneId: testHostedZoneId,
           Region: "us-east-1",
+          RootDNSRole: testRootDNSRole,
+          SubjectAlternativeNames: testSubjectAlternativeNames
         },
       })
       .expectResolve(() => {
         sinon.assert.calledWith(
           requestCertificateFake,
           sinon.match({
-            DomainName: testDomainName,
+            DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
+            SubjectAlternativeNames: testSubjectAlternativeNames,
             ValidationMethod: "DNS",
           })
         );
@@ -276,6 +373,98 @@ describe("DNS Validated Certificate Handler", () => {
           .map((call) => call.args[0])
           .reduce((p, n) => p + n, 0);
         expect(totalSleep).toBeLessThan(360 * 1000);
+      });
+  });
+
+  test("Create operation fails because no hosted zone found", () => {
+    const requestCertificateFake = sinon.fake.resolves({
+      CertificateArn: testCertificateArn,
+    });
+
+    const describeCertificateFake = sinon.stub();
+    describeCertificateFake.onFirstCall().resolves({
+      Certificate: {
+        CertificateArn: testCertificateArn,
+      },
+    });
+    describeCertificateFake.resolves({
+      Certificate: {
+        CertificateArn: testCertificateArn,
+        DomainValidationOptions: [
+          {
+            DomainName: `${testAppName}.${testDomainName}`,
+            ValidationStatus: "SUCCESS",
+            ResourceRecord: {
+              Name: testRRName,
+              Type: "CNAME",
+              Value: testRRValue,
+            },
+          },
+        ],
+      },
+    });
+
+    const changeResourceRecordSetsFake = sinon.fake.resolves({
+      ChangeInfo: {
+        Id: "bogus",
+      },
+    });
+
+    const listHostedZonesByNameFake = sinon.fake.resolves({
+      HostedZones: []
+    });
+
+    AWS.mock("ACM", "requestCertificate", requestCertificateFake);
+    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    AWS.mock(
+      "Route53",
+      "changeResourceRecordSets",
+      changeResourceRecordSetsFake
+    );
+    AWS.mock("Route53", "listHostedZonesByName", listHostedZonesByNameFake);
+
+    const request = nock(ResponseURL)
+      .put("/", (body) => {
+        return (
+          body.Status === "FAILED" &&
+          body.Reason.startsWith(
+            "Couldn't find any Hosted Zone"
+          )
+        );
+      })
+      .reply(200);
+
+    return LambdaTester(handler.certificateRequestHandler)
+      .event({
+        RequestType: "Create",
+        RequestId: testRequestId,
+        ResourceProperties: {
+          AppName: testAppName,
+          EnvName: testEnvName,
+          DomainName: testDomainName,
+          EnvHostedZoneId: testHostedZoneId,
+          Region: "us-east-1",
+          RootDNSRole: testRootDNSRole,
+          SubjectAlternativeNames: testSubjectAlternativeNames
+        },
+      })
+      .expectResolve(() => {
+        sinon.assert.calledWith(
+          requestCertificateFake,
+          sinon.match({
+            DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
+            SubjectAlternativeNames: testSubjectAlternativeNames,
+            ValidationMethod: "DNS",
+          })
+        );
+        sinon.assert.calledWith(
+          listHostedZonesByNameFake,
+          sinon.match({
+            DNSName: `${testAppName}.${testDomainName}`,
+            MaxItems: "1"
+          })
+        );
+        expect(request.isDone()).toBe(true);
       });
   });
 
@@ -326,9 +515,13 @@ describe("DNS Validated Certificate Handler", () => {
         RequestType: "Create",
         RequestId: testRequestId,
         ResourceProperties: {
+          AppName: testAppName,
+          EnvName: testEnvName,
           DomainName: testDomainName,
-          HostedZoneId: testHostedZoneId,
+          EnvHostedZoneId: testHostedZoneId,
           Region: "us-east-1",
+          RootDNSRole: testRootDNSRole,
+          SubjectAlternativeNames: testSubjectAlternativeNames
         },
       })
       .expectResolve(() => {
@@ -366,8 +559,12 @@ describe("DNS Validated Certificate Handler", () => {
         RequestId: testRequestId,
         PhysicalResourceId: testCertificateArn,
         ResourceProperties: {
-          HostedZoneId: testHostedZoneId,
+          AppName: testAppName,
+          EnvName: testEnvName,
+          DomainName: testDomainName,
+          EnvHostedZoneId: testHostedZoneId,
           Region: "us-east-1",
+          RootDNSRole: testRootDNSRole,
         },
       })
       .expectResolve(() => {
@@ -409,7 +606,12 @@ describe("DNS Validated Certificate Handler", () => {
         RequestId: testRequestId,
         PhysicalResourceId: testCertificateArn,
         ResourceProperties: {
+          AppName: testAppName,
+          EnvName: testEnvName,
+          DomainName: testDomainName,
+          EnvHostedZoneId: testHostedZoneId,
           Region: "us-east-1",
+          RootDNSRole: testRootDNSRole,
         },
       })
       .expectResolve(() => {
@@ -438,16 +640,6 @@ describe("DNS Validated Certificate Handler", () => {
       Certificate: {
         CertificateArn: testCertificateArn,
         InUseBy: [usedByArn],
-        DomainValidationOptions: [
-          {
-            ValidationStatus: "SUCCESS",
-            ResourceRecord: {
-              Name: testRRName,
-              Type: "CNAME",
-              Value: testRRValue,
-            },
-          },
-        ],
       },
     });
 
@@ -457,6 +649,25 @@ describe("DNS Validated Certificate Handler", () => {
         InUseBy: [],
         DomainValidationOptions: [
           {
+            DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
+            ValidationStatus: "SUCCESS",
+            ResourceRecord: {
+              Name: testRRName,
+              Type: "CNAME",
+              Value: testRRValue,
+            },
+          },
+          {
+            DomainName: `${testAppName}.${testDomainName}`,
+            ValidationStatus: "SUCCESS",
+            ResourceRecord: {
+              Name: testRRName,
+              Type: "CNAME",
+              Value: testRRValue,
+            },
+          },
+          {
+            DomainName: `${testDomainName}`,
             ValidationStatus: "SUCCESS",
             ResourceRecord: {
               Name: testRRName,
@@ -473,6 +684,15 @@ describe("DNS Validated Certificate Handler", () => {
         Id: "bogus",
       },
     });
+
+    const listHostedZonesByNameFake = sinon.fake.resolves({
+      HostedZones: [
+        {
+          Id: `/hostedzone/${testHostedZoneId}`
+        }
+      ]
+    });
+
     AWS.mock(
       "Route53",
       "changeResourceRecordSets",
@@ -482,6 +702,8 @@ describe("DNS Validated Certificate Handler", () => {
 
     const deleteCertificateFake = sinon.fake.resolves({});
     AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+    AWS.mock("Route53", "listHostedZonesByName", listHostedZonesByNameFake);
+
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -495,8 +717,12 @@ describe("DNS Validated Certificate Handler", () => {
         RequestId: testRequestId,
         PhysicalResourceId: testCertificateArn,
         ResourceProperties: {
-          HostedZoneId: testHostedZoneId,
+          AppName: testAppName,
+          EnvName: testEnvName,
+          DomainName: testDomainName,
+          EnvHostedZoneId: testHostedZoneId,
           Region: "us-east-1",
+          RootDNSRole: testRootDNSRole,
         },
       })
       .expectResolve(() => {
@@ -535,6 +761,20 @@ describe("DNS Validated Certificate Handler", () => {
             HostedZoneId: testHostedZoneId,
           })
         );
+        sinon.assert.calledWith(
+          listHostedZonesByNameFake,
+          sinon.match({
+            DNSName: `${testAppName}.${testDomainName}`,
+            MaxItems: "1"
+          })
+        );
+        sinon.assert.calledWith(
+          listHostedZonesByNameFake,
+          sinon.match({
+            DNSName: `${testDomainName}`,
+            MaxItems: "1"
+          })
+        );
         expect(request.isDone()).toBe(true);
       });
   });
@@ -568,8 +808,12 @@ describe("DNS Validated Certificate Handler", () => {
         RequestId: testRequestId,
         PhysicalResourceId: testCertificateArn,
         ResourceProperties: {
-          HostedZoneId: testHostedZoneId,
+          AppName: testAppName,
+          EnvName: testEnvName,
+          DomainName: testDomainName,
+          EnvHostedZoneId: testHostedZoneId,
           Region: "us-east-1",
+          RootDNSRole: testRootDNSRole,
         },
       })
       .expectResolve(() => {
@@ -617,8 +861,12 @@ describe("DNS Validated Certificate Handler", () => {
         RequestId: testRequestId,
         PhysicalResourceId: testCertificateArn,
         ResourceProperties: {
-          HostedZoneId: testHostedZoneId,
+          AppName: testAppName,
+          EnvName: testEnvName,
+          DomainName: testDomainName,
+          EnvHostedZoneId: testHostedZoneId,
           Region: "us-east-1",
+          RootDNSRole: testRootDNSRole,
         },
       })
       .expectResolve(() => {
@@ -663,8 +911,12 @@ describe("DNS Validated Certificate Handler", () => {
         RequestId: testRequestId,
         PhysicalResourceId: testCertificateArn,
         ResourceProperties: {
-          HostedZoneId: testHostedZoneId,
+          AppName: testAppName,
+          EnvName: testEnvName,
+          DomainName: testDomainName,
+          EnvHostedZoneId: testHostedZoneId,
           Region: "us-east-1",
+          RootDNSRole: testRootDNSRole,
         },
       })
       .expectResolve(() => {
@@ -708,8 +960,12 @@ describe("DNS Validated Certificate Handler", () => {
         RequestId: testRequestId,
         PhysicalResourceId: testCertificateArn,
         ResourceProperties: {
-          HostedZoneId: testHostedZoneId,
+          AppName: testAppName,
+          EnvName: testEnvName,
+          DomainName: testDomainName,
+          EnvHostedZoneId: testHostedZoneId,
           Region: "us-east-1",
+          RootDNSRole: testRootDNSRole,
         },
       })
       .expectResolve(() => {

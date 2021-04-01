@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/dustin/go-humanize"
 )
 

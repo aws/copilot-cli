@@ -20,6 +20,7 @@ const (
 )
 
 type api interface {
+	ListRoleTags(input *iam.ListRoleTagsInput) (*iam.ListRoleTagsOutput, error)
 	DeleteRolePolicy(input *iam.DeleteRolePolicyInput) (*iam.DeleteRolePolicyOutput, error)
 	ListRolePolicies(input *iam.ListRolePoliciesInput) (*iam.ListRolePoliciesOutput, error)
 	DeleteRole(input *iam.DeleteRoleInput) (*iam.DeleteRoleOutput, error)
@@ -38,15 +39,38 @@ func New(s *session.Session) *IAM {
 	}
 }
 
+// ListRoleTags gathers all the tags associated with an IAM role.
+func (c *IAM) ListRoleTags(roleName string) (map[string]string, error) {
+	tags := make(map[string]string)
+	var marker *string
+	for {
+		out, err := c.client.ListRoleTags(&iam.ListRoleTagsInput{
+			RoleName: aws.String(roleName),
+			Marker:   marker,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("list role tags for role %s and marker %v: %w", roleName, marker, err)
+		}
+		for _, tag := range out.Tags {
+			tags[aws.StringValue(tag.Key)] = aws.StringValue(tag.Value)
+		}
+		if !aws.BoolValue(out.IsTruncated) {
+			return tags, nil
+		}
+		marker = out.Marker
+	}
+}
+
 // DeleteRole deletes an IAM role based on its ARN.
 // If the role does not exist it returns nil.
-func (c *IAM) DeleteRole(roleARN string) error {
-	parsed, err := arn.Parse(roleARN)
-	if err != nil {
-		return fmt.Errorf("parse role ARN %s: %w", roleARN, err)
+func (c *IAM) DeleteRole(roleNameOrARN string) error {
+	roleName := roleNameOrARN
+	if parsed, err := arn.Parse(roleNameOrARN); err == nil {
+		// The parameter is an ARN instead!
+		// Sample ARN format: arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole
+		roleName = strings.TrimPrefix(parsed.Resource, "role/")
 	}
 
-	roleName := strings.TrimPrefix(parsed.Resource, "role/") // Sample ARN format: arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole
 	if err := c.deleteRolePolicies(roleName); err != nil {
 		return err
 	}

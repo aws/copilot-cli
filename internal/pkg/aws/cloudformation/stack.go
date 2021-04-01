@@ -73,11 +73,14 @@ func WithRoleARN(roleARN string) StackOption {
 	}
 }
 
-// StackEvent represents a stack event for a resource.
+// StackEvent is an alias the SDK's StackEvent type.
 type StackEvent cloudformation.StackEvent
 
-// StackDescription represents an existing AWS CloudFormation stack.
+// StackDescription is an alias the SDK's Stack type.
 type StackDescription cloudformation.Stack
+
+// StackResource is an alias the SDK's StackResource type.
+type StackResource cloudformation.StackResource
 
 // SDK returns the underlying struct from the AWS SDK.
 func (d *StackDescription) SDK() *cloudformation.Stack {

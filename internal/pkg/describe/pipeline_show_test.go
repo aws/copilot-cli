@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/dustin/go-humanize"
@@ -19,8 +19,8 @@ import (
 )
 
 type pipelineDescriberMocks struct {
-	stackResourceDescriber *mocks.MockstackResourcesDescriber
-	pipelineGetter         *mocks.MockpipelineGetter
+	cfn            *mocks.Mockcfn
+	pipelineGetter *mocks.MockpipelineGetter
 }
 
 var pipelineName = "pipeline-dinder-badgoose-repo"
@@ -121,7 +121,7 @@ func TestPipelineDescriber_Describe(t *testing.T) {
 		"happy path with resources": {
 			callMocks: func(m pipelineDescriberMocks) {
 				m.pipelineGetter.EXPECT().GetPipeline(pipelineName).Return(mockPipeline, nil)
-				m.stackResourceDescriber.EXPECT().StackResources(pipelineName).Return(mockResources, nil)
+				m.cfn.EXPECT().StackResources(pipelineName).Return(mockResources, nil)
 			},
 			inShowResource: true,
 			expectedError:  nil,
@@ -146,7 +146,7 @@ func TestPipelineDescriber_Describe(t *testing.T) {
 		"wraps stack resources error": {
 			callMocks: func(m pipelineDescriberMocks) {
 				m.pipelineGetter.EXPECT().GetPipeline(pipelineName).Return(mockPipeline, nil)
-				m.stackResourceDescriber.EXPECT().StackResources(pipelineName).Return(nil, mockError)
+				m.cfn.EXPECT().StackResources(pipelineName).Return(nil, mockError)
 			},
 			inShowResource: true,
 			expectedError:  fmt.Errorf("retrieve pipeline resources: %w", mockError),
@@ -158,20 +158,20 @@ func TestPipelineDescriber_Describe(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStackDescriber := mocks.NewMockstackResourcesDescriber(ctrl)
+			mockCFN := mocks.NewMockcfn(ctrl)
 			mockPipelineGetter := mocks.NewMockpipelineGetter(ctrl)
 
 			mocks := pipelineDescriberMocks{
-				stackResourceDescriber: mockStackDescriber,
-				pipelineGetter:         mockPipelineGetter,
+				cfn:            mockCFN,
+				pipelineGetter: mockPipelineGetter,
 			}
 			tc.callMocks(mocks)
 
 			describer := &PipelineDescriber{
-				pipelineName:            pipelineName,
-				showResources:           tc.inShowResource,
-				pipelineSvc:             mockPipelineGetter,
-				stackResourcesDescriber: mockStackDescriber,
+				pipelineName:  pipelineName,
+				showResources: tc.inShowResource,
+				pipelineSvc:   mockPipelineGetter,
+				cfn:           mockCFN,
 			}
 
 			// WHEN

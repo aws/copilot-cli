@@ -15,6 +15,7 @@ import (
 const (
 	secretManagerSecretType = "AWS::SecretsManager::Secret"
 	iamManagedPolicyType    = "AWS::IAM::ManagedPolicy"
+	securityGroupType       = "AWS::EC2::SecurityGroup"
 )
 
 // Output represents an output from a CloudFormation template.
@@ -25,6 +26,8 @@ type Output struct {
 	IsSecret bool
 	// IsManagedPolicy is true if the output value refers to an IAM ManagedPolicy ARN. Otherwise, false.
 	IsManagedPolicy bool
+	// SecurityGroup is true if the output value refers a SecurityGroup ARN. Otherwise, false.
+	IsSecurityGroup bool
 }
 
 // Outputs parses the Outputs section of a CloudFormation template to extract logical IDs and returns them.
@@ -54,11 +57,13 @@ func Outputs(template string) ([]Output, error) {
 			Name:            outputNode.name(),
 			IsSecret:        false,
 			IsManagedPolicy: false,
+			IsSecurityGroup: false,
 		}
 		ref, ok := outputNode.ref()
 		if ok {
 			output.IsSecret = typeFor[ref] == secretManagerSecretType
 			output.IsManagedPolicy = typeFor[ref] == iamManagedPolicyType
+			output.IsSecurityGroup = typeFor[ref] == securityGroupType
 		}
 		outputs = append(outputs, output)
 	}

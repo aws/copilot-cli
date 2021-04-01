@@ -7,48 +7,9 @@ package mocks
 import (
 	reflect "reflect"
 
-	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	gomock "github.com/golang/mock/gomock"
 )
-
-// MockstackResourcesDescriber is a mock of stackResourcesDescriber interface.
-type MockstackResourcesDescriber struct {
-	ctrl     *gomock.Controller
-	recorder *MockstackResourcesDescriberMockRecorder
-}
-
-// MockstackResourcesDescriberMockRecorder is the mock recorder for MockstackResourcesDescriber.
-type MockstackResourcesDescriberMockRecorder struct {
-	mock *MockstackResourcesDescriber
-}
-
-// NewMockstackResourcesDescriber creates a new mock instance.
-func NewMockstackResourcesDescriber(ctrl *gomock.Controller) *MockstackResourcesDescriber {
-	mock := &MockstackResourcesDescriber{ctrl: ctrl}
-	mock.recorder = &MockstackResourcesDescriberMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockstackResourcesDescriber) EXPECT() *MockstackResourcesDescriberMockRecorder {
-	return m.recorder
-}
-
-// StackResources mocks base method.
-func (m *MockstackResourcesDescriber) StackResources(stackName string) ([]*cloudformation.StackResource, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StackResources", stackName)
-	ret0, _ := ret[0].([]*cloudformation.StackResource)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// StackResources indicates an expected call of StackResources.
-func (mr *MockstackResourcesDescriberMockRecorder) StackResources(stackName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackResources", reflect.TypeOf((*MockstackResourcesDescriber)(nil).StackResources), stackName)
-}
 
 // MockpipelineGetter is a mock of pipelineGetter interface.
 type MockpipelineGetter struct {
