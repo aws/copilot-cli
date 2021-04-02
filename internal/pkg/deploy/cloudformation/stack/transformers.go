@@ -6,6 +6,7 @@ package stack
 import (
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"strings"
 	"time"
 
@@ -40,6 +41,10 @@ var (
 
 	errNoContainerPath = errors.New(`"path" cannot be empty`)
 	errNoSourceVolume  = errors.New(`"source_volume" cannot be empty`)
+
+	errUIDWithNonManagedFS = errors.New(`UID and GID cannot be specified with non-managed EFS`)
+	errInvalidUIDGIDConfig = errors.New("set managed filesystem access point creation info: must specify both UID and GID, or neither")
+	errReservedUID         = errors.New(`set managed filesystem access point creation info: UID must not be 0`)
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
@@ -166,11 +171,11 @@ func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
 
 // convertStorageOpts converts a manifest Storage field into template data structures which can be used
 // to execute CFN templates
-func convertStorageOpts(in *manifest.Storage) (*template.StorageOpts, error) {
+func convertStorageOpts(name string, in *manifest.Storage) (*template.StorageOpts, error) {
 	if in == nil {
 		return nil, nil
 	}
-	mv, err := convertManagedFSInfo(in.Volumes)
+	mv, err := convertManagedFSInfo(name, in.Volumes)
 	if err != nil {
 		return nil, err
 	}
@@ -287,17 +292,30 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 	return output, nil
 }
 
-func convertManagedFSInfo(input map[string]manifest.Volume) (*template.ManagedVolumeCreationInfo, error) {
+func convertManagedFSInfo(name string, input map[string]manifest.Volume) (*template.ManagedVolumeCreationInfo, error) {
 	var output *template.ManagedVolumeCreationInfo
 	for name, volume := range input {
 		if output != nil {
 			return nil, fmt.Errorf("validate managed EFS: cannot specify more than one managed volume per service")
 		}
-		if volume.EFS != nil && volume.EFS.UseManagedFS() {
+		if volume.EFS == nil {
+			continue
+		}
+
+		if volume.EFS.UseManagedFS() {
 			var uid, gid *uint32
 			if volume.EFS.Config != nil {
 				uid = volume.EFS.Config.UID
 				gid = volume.EFS.Config.GID
+			}
+			if err := validateUIDGID(uid, gid); err != nil {
+				return nil, err
+			}
+
+			if uid == nil && gid == nil {
+				crc := aws.Uint32(getRandomUIDGID(name))
+				uid = crc
+				gid = crc
 			}
 			output = &template.ManagedVolumeCreationInfo{
 				Name: aws.String(name),
@@ -307,6 +325,30 @@ func convertManagedFSInfo(input map[string]manifest.Volume) (*template.ManagedVo
 		}
 	}
 	return output, nil
+}
+
+// getRandomUIDGID returns the 32-bit checksum of the service name for use as CreationInfo in the EFS Access Point.
+// See https://stackoverflow.com/a/14210379/5890422 for discussion of the possibility of collisions in CRC32 with
+// small numbers of hashes.
+func getRandomUIDGID(name string) uint32 {
+	return crc32.ChecksumIEEE([]byte(name))
+}
+
+func validateUIDGID(uid, gid *uint32) error {
+	if uid == nil && gid == nil {
+		return nil
+	}
+	if uid != nil && gid == nil {
+		return errInvalidUIDGIDConfig
+	}
+	if uid == nil && gid != nil {
+		return errInvalidUIDGIDConfig
+	}
+	// Check for root UID.
+	if aws.Uint32Value(uid) == 0 {
+		return errReservedUID
+	}
+	return nil
 }
 
 func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error) {
@@ -337,6 +379,15 @@ func convertEFS(in *manifest.EFSConfigOrID) (*template.EFSVolumeConfiguration, e
 	// If there is no EFS information, just add the Name to the volume.
 	if in == nil {
 		return nil, nil
+	}
+	// UID and GID should not be specified for non-managed volumes.
+	if !in.UseManagedFS() && in.Config != nil {
+		if in.Config.UID != nil {
+			return nil, errUIDWithNonManagedFS
+		}
+		if in.Config.GID != nil {
+			return nil, errUIDWithNonManagedFS
+		}
 	}
 	// EFS is specified as a string with just the filesystem ID.
 	if in.ID != nil {
