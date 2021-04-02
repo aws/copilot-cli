@@ -53,6 +53,25 @@ jobs:
       - name: Run tests
         run: make test
 
+  integ-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
+
+      - name: Set up Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Run tests
+        run: make local-integ-test
+
   staticcheck:
     runs-on: ubuntu-latest
     steps:
