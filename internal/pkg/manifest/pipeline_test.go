@@ -20,7 +20,6 @@ import (
 const (
 	defaultGHBranch = "main"
 	defaultCCBranch = "master"
-	defaultImage    = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 )
 
 func TestNewProvider(t *testing.T) {
@@ -106,9 +105,6 @@ func TestNewPipelineManifest(t *testing.T) {
 						RepositoryURL: "aws/amazon-ecs-cli-v2",
 						Branch:        defaultGHBranch,
 					}),
-				},
-				Build: &Build{
-					Image: defaultImage,
 				},
 				Stages: []PipelineStage{
 					{

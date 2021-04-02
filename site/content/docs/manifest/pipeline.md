@@ -14,6 +14,9 @@ List of all available properties for a Copilot pipeline manifest.
         # Optional: specify the name of an existing CodeStar Connections connection.
         connection_name: a-connection
     
+    build:
+      image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+    
     stages:
         - 
           name: test
@@ -57,6 +60,17 @@ The URL of your repository.
 
 <span class="parent-field">source.properties.</span><a id="source-properties-connection-name" href="#source-properties-connection-name" class="field">`connection_name`</a> <span class="type">String</span>  
 The name of an existing CodeStar Connections connection. If omitted, Copilot will generate a connection for you.
+
+<div class="separator"></div>
+
+<a id="build" href="#build" class="field">`build`</a> <span class="type">Map</span>  
+Configuration for CodeBuild project.
+
+<span class="parent-field">build.</span><a id="build-image" href="#build-image" class="field">`image`</a> <span class="type">String</span>  
+The URI that identifies the Docker image to use for this build project. As of now, `aws/codebuild/amazonlinux2-x86_64-standard:3.0` is used by default.
+
+!!! info
+    Copilot does not support cross-account ECR repository or private registry other than ECR because [imagePullCredentialsType](https://docs.aws.amazon.com/codebuild/latest/APIReference/API_ProjectEnvironment.html#CodeBuild-Type-ProjectEnvironment-imagePullCredentialsType) is fixed to `CODEBUILD`.
 
 <div class="separator"></div>
 

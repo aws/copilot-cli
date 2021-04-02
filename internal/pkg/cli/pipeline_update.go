@@ -256,8 +256,6 @@ func (o *updatePipelineOpts) Execute() error {
 	}
 	o.shouldPromptUpdateConnection = bool
 
-	build := deploy.PipelineBuildFromManifest(pipeline.Build)
-
 	// convert environments to deployment stages
 	stages, err := o.convertStages(pipeline.Stages)
 	if err != nil {
@@ -274,7 +272,7 @@ func (o *updatePipelineOpts) Execute() error {
 		AppName:         o.appName,
 		Name:            pipeline.Name,
 		Source:          source,
-		Build:           build,
+		Build:           deploy.PipelineBuildFromManifest(pipeline.Build),
 		Stages:          stages,
 		ArtifactBuckets: artifactBuckets,
 		AdditionalTags:  o.app.Tags,

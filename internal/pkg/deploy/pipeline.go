@@ -17,6 +17,8 @@ import (
 
 const (
 	fmtInvalidRepo = "unable to locate the repository URL from the properties: %+v"
+
+	defaultPipelineBuildImage = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 )
 
 var (
@@ -183,14 +185,12 @@ func PipelineSourceFromManifest(mfSource *manifest.Source) (source interface{}, 
 
 // PipelineBuildFromManifest processes manifest info about the build project settings.
 func PipelineBuildFromManifest(mfBuild *manifest.Build) (build *Build) {
-	var imageURI string
-	if (mfBuild == nil || mfBuild.Image == "") {
-		imageURI = manifest.DefaultImage
-	} else {
-		imageURI = mfBuild.Image
+	image := defaultPipelineBuildImage
+	if mfBuild != nil && mfBuild.Image != "" {
+		image = mfBuild.Image
 	}
 	return &Build{
-		Image: imageURI,
+		Image: image,
 	}
 }
 
