@@ -22,21 +22,21 @@ import (
 )
 
 const (
-	dynamoDBStorageType     = "DynamoDB"
-	s3StorageType           = "S3"
-	rdsStorageType          = "RDS"
+	dynamoDBStorageType = "DynamoDB"
+	s3StorageType       = "S3"
+	rdsStorageType      = "Aurora Serverless"
 )
 
 var storageTypes = []string{
 	dynamoDBStorageType,
 	s3StorageType,
-	//rdsStorageType, // Hide RDS option for now.
+	rdsStorageType,
 }
 
 var storageTypeHints = map[string]string {
-	dynamoDBStorageType: "",
-	s3StorageType: 		 "",
-	rdsStorageType: 	 "Aurora Serverless",
+	dynamoDBStorageType: "NoSQL",
+	s3StorageType:       "Objects",
+	rdsStorageType:      "SQL",
 }
 
 const (
@@ -51,7 +51,7 @@ var (
 	storageInitTypeHelp      = `The type of storage you'd like to add to your workload. 
 DynamoDB is a key-value and document database that delivers single-digit millisecond performance at any scale.
 S3 is a web object store built to store and retrieve any amount of data from anywhere on the Internet.
-RDS Aurora Serverless is a fully-managed auto-scaling service for relational databases.
+RDS Aurora Serverless is an on-demand autoscaling configuration for Amazon Aurora, a MySQL and PostgreSQL-compatible relational database.
 `
 
 	fmtStorageInitNamePrompt = "What would you like to " + color.Emphasize("name") + " this %s?"
@@ -102,10 +102,7 @@ var attributeTypes = []string{
 // RDS Aurora Serverless specific questions and help prompts.
 var (
 	storageInitRDSInitialDBNamePrompt = "What would you like to name the initial database in your cluster?"
-	storageInitRDSInitialDBNameHelp   = "The name of the initial database in the cluster."
-
 	storageInitRDSDBEnginePrompt = "Which database engine would you like to use?"
-	storageInitRDSDBEngineHelp   = "The database engine used in the cluster."
 )
 
 // RDS Aurora Serverless specific constants and variables.
@@ -504,7 +501,7 @@ func (o *initStorageOpts) askAuroraEngineType() error {
 		return nil
 	}
 	engine, err := o.prompt.SelectOne(storageInitRDSDBEnginePrompt,
-		storageInitRDSDBEngineHelp,
+		"",
 		engineTypes,
 		prompt.WithFinalMessage("Database engine:"))
 	if err != nil {
@@ -531,7 +528,7 @@ func (o *initStorageOpts) askAuroraInitialDBName() error {
 	}
 
 	dbName, err := o.prompt.Get(storageInitRDSInitialDBNamePrompt,
-		storageInitRDSInitialDBNameHelp,
+		"",
 		validator,
 		prompt.WithFinalMessage("Initial database name:"))
 	if err != nil {
