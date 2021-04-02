@@ -125,8 +125,8 @@ type Volume struct {
 // ManagedVolumeCreationInfo holds information about how to create Copilot-managed access points.
 type ManagedVolumeCreationInfo struct {
 	Name *string
-	UID  *string
-	GID  *string
+	UID  *uint32
+	GID  *uint32
 }
 
 type EFSVolumeConfiguration struct {

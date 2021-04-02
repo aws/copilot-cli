@@ -170,6 +170,10 @@ func convertStorageOpts(in *manifest.Storage) (*template.StorageOpts, error) {
 	if in == nil {
 		return nil, nil
 	}
+	mv, err := convertManagedFSInfo(in.Volumes)
+	if err != nil {
+		return nil, err
+	}
 	v, err := convertVolumes(in.Volumes)
 	if err != nil {
 		return nil, err
@@ -183,9 +187,10 @@ func convertStorageOpts(in *manifest.Storage) (*template.StorageOpts, error) {
 		return nil, err
 	}
 	return &template.StorageOpts{
-		Volumes:     v,
-		MountPoints: mp,
-		EFSPerms:    perms,
+		Volumes:           v,
+		MountPoints:       mp,
+		EFSPerms:          perms,
+		ManagedVolumeInfo: mv,
 	}, nil
 }
 
@@ -251,41 +256,71 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 		if volume.EFS == nil {
 			continue
 		}
+		if volume.EFS.UseManagedFS() {
+			continue
+		}
 		// Write defaults to false.
 		write := defaultWritePermission
 		if volume.ReadOnly != nil {
 			write = !aws.BoolValue(volume.ReadOnly)
 		}
-		if volume.EFS.FileSystemID == nil {
+
+		id, err := volume.EFS.FSID()
+		if err != nil {
+			return nil, err
+		}
+		if id == nil {
 			return nil, errNoFSID
 		}
+
 		var accessPointID *string
-		if volume.EFS.AuthConfig != nil {
-			accessPointID = volume.EFS.AuthConfig.AccessPointID
+		if volume.EFS.Config != nil && volume.EFS.Config.AuthConfig != nil {
+			accessPointID = volume.EFS.Config.AuthConfig.AccessPointID
 		}
 		perm := template.EFSPermission{
 			Write:         write,
 			AccessPointID: accessPointID,
-			FilesystemID:  volume.EFS.FileSystemID,
+			FilesystemID:  id,
 		}
 		output = append(output, &perm)
 	}
 	return output, nil
 }
 
-func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error) {
-	if len(input) == 0 {
-		return nil, nil
+func convertManagedFSInfo(input map[string]manifest.Volume) (*template.ManagedVolumeCreationInfo, error) {
+	var output *template.ManagedVolumeCreationInfo
+	for name, volume := range input {
+		if output != nil {
+			return nil, fmt.Errorf("validate managed EFS: cannot specify more than one managed volume per service")
+		}
+		if volume.EFS != nil && volume.EFS.UseManagedFS() {
+			var uid, gid *uint32
+			if volume.EFS.Config != nil {
+				uid = volume.EFS.Config.UID
+				gid = volume.EFS.Config.GID
+			}
+			output = &template.ManagedVolumeCreationInfo{
+				Name: aws.String(name),
+				UID:  uid,
+				GID:  gid,
+			}
+		}
 	}
+	return output, nil
+}
+
+func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error) {
 	var output []*template.Volume
 	for name, volume := range input {
 		// Volumes can contain either:
 		//   a) an EFS configuration, which must be valid
 		//   b) no EFS configuration, in which case the volume is created using task scratch storage in order to share
 		//      data between containers.
-
+		if volume.EFS != nil && volume.EFS.UseManagedFS() {
+			continue
+		}
 		// Convert EFS configuration to template struct.
-		efs, err := convertEFSConfiguration(volume.EFS)
+		efs, err := convertEFS(volume.EFS)
 		if err != nil {
 			return nil, err
 		}
@@ -298,11 +333,25 @@ func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error
 	return output, nil
 }
 
-func convertEFSConfiguration(in *manifest.EFSVolumeConfiguration) (*template.EFSVolumeConfiguration, error) {
+func convertEFS(in *manifest.EFSConfigOrID) (*template.EFSVolumeConfiguration, error) {
 	// If there is no EFS information, just add the Name to the volume.
 	if in == nil {
 		return nil, nil
 	}
+	// EFS is specified as a string with just the filesystem ID.
+	if in.ID != nil {
+		return &template.EFSVolumeConfiguration{
+			Filesystem:    in.ID,
+			IAM:           aws.String(defaultIAM),
+			RootDirectory: aws.String(defaultRootDirectory),
+		}, nil
+	}
+	// ID is nil and we received a value; therefore Config must be not nil.
+	return convertEFSConfiguration(in.Config)
+
+}
+
+func convertEFSConfiguration(in *manifest.EFSVolumeConfiguration) (*template.EFSVolumeConfiguration, error) {
 	// Set default values correctly.
 	fsID := in.FileSystemID
 	if aws.StringValue(fsID) == "" {

@@ -276,8 +276,10 @@ func Test_convertStorageOpts(t *testing.T) {
 		"minimal configuration": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSVolumeConfiguration{
-						FileSystemID: aws.String("fs-1234"),
+					EFS: &manifest.EFSConfigOrID{
+						Config: &manifest.EFSVolumeConfiguration{
+							FileSystemID: aws.String("fs-1234"),
+						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
 						ContainerPath: aws.String("/var/www"),
@@ -339,8 +341,10 @@ func Test_convertStorageOpts(t *testing.T) {
 					MountPointOpts: manifest.MountPointOpts{
 						ContainerPath: aws.String("/var/www"),
 					},
-					EFS: &manifest.EFSVolumeConfiguration{
-						RootDirectory: aws.String("/"),
+					EFS: &manifest.EFSConfigOrID{
+						Config: &manifest.EFSVolumeConfiguration{
+							RootDirectory: aws.String("/"),
+						},
 					},
 				},
 			},
@@ -349,8 +353,10 @@ func Test_convertStorageOpts(t *testing.T) {
 		"container path not specified": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSVolumeConfiguration{
-						FileSystemID: aws.String("fs-1234"),
+					EFS: &manifest.EFSConfigOrID{
+						Config: &manifest.EFSVolumeConfiguration{
+							FileSystemID: aws.String("fs-1234"),
+						},
 					},
 				},
 			},
@@ -359,12 +365,14 @@ func Test_convertStorageOpts(t *testing.T) {
 		"full specification with access point renders correctly": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSVolumeConfiguration{
-						FileSystemID:  aws.String("fs-1234"),
-						RootDirectory: aws.String("/"),
-						AuthConfig: &manifest.AuthorizationConfig{
-							IAM:           aws.Bool(true),
-							AccessPointID: aws.String("ap-1234"),
+					EFS: &manifest.EFSConfigOrID{
+						Config: &manifest.EFSVolumeConfiguration{
+							FileSystemID:  aws.String("fs-1234"),
+							RootDirectory: aws.String("/"),
+							AuthConfig: &manifest.AuthorizationConfig{
+								IAM:           aws.Bool(true),
+								AccessPointID: aws.String("ap-1234"),
+							},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -404,11 +412,13 @@ func Test_convertStorageOpts(t *testing.T) {
 		"full specification without access point renders correctly": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSVolumeConfiguration{
-						FileSystemID:  aws.String("fs-1234"),
-						RootDirectory: aws.String("/wordpress"),
-						AuthConfig: &manifest.AuthorizationConfig{
-							IAM: aws.Bool(true),
+					EFS: &manifest.EFSConfigOrID{
+						Config: &manifest.EFSVolumeConfiguration{
+							FileSystemID:  aws.String("fs-1234"),
+							RootDirectory: aws.String("/wordpress"),
+							AuthConfig: &manifest.AuthorizationConfig{
+								IAM: aws.Bool(true),
+							},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -446,12 +456,14 @@ func Test_convertStorageOpts(t *testing.T) {
 		"error when AP is specified with root dir": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSVolumeConfiguration{
-						FileSystemID:  aws.String("fs-1234"),
-						RootDirectory: aws.String("/wordpress"),
-						AuthConfig: &manifest.AuthorizationConfig{
-							IAM:           aws.Bool(true),
-							AccessPointID: aws.String("ap-1234"),
+					EFS: &manifest.EFSConfigOrID{
+						Config: &manifest.EFSVolumeConfiguration{
+							FileSystemID:  aws.String("fs-1234"),
+							RootDirectory: aws.String("/wordpress"),
+							AuthConfig: &manifest.AuthorizationConfig{
+								IAM:           aws.Bool(true),
+								AccessPointID: aws.String("ap-1234"),
+							},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -464,13 +476,15 @@ func Test_convertStorageOpts(t *testing.T) {
 		},
 		"error when AP is specified without IAM": {
 			inVolumes: map[string]manifest.Volume{
-				"wordpress": {
-					EFS: &manifest.EFSVolumeConfiguration{
-						FileSystemID:  aws.String("fs-1234"),
-						RootDirectory: aws.String("/wordpress"),
-						AuthConfig: &manifest.AuthorizationConfig{
-							IAM:           aws.Bool(false),
-							AccessPointID: aws.String("ap-1234"),
+				"wdpress": {
+					EFS: &manifest.EFSConfigOrID{
+						Config: &manifest.EFSVolumeConfiguration{
+							FileSystemID:  aws.String("fs-1234"),
+							RootDirectory: aws.String("/wordpress"),
+							AuthConfig: &manifest.AuthorizationConfig{
+								IAM:           aws.Bool(false),
+								AccessPointID: aws.String("ap-1234"),
+							},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{

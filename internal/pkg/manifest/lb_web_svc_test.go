@@ -225,8 +225,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSVolumeConfiguration{
-										FileSystemID: aws.String("fs-1234"),
+									EFS: &EFSConfigOrID{
+										Config: &EFSVolumeConfiguration{
+											FileSystemID: aws.String("fs-1234"),
+										},
 									},
 								},
 							},
@@ -271,8 +273,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSVolumeConfiguration{
-										FileSystemID: aws.String("fs-1234"),
+									EFS: &EFSConfigOrID{
+										Config: &EFSVolumeConfiguration{
+											FileSystemID: aws.String("fs-1234"),
+										},
 									},
 								},
 							},
@@ -325,11 +329,13 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSVolumeConfiguration{
-										FileSystemID: aws.String("fs-1234"),
-										AuthConfig: &AuthorizationConfig{
-											IAM:           aws.Bool(true),
-											AccessPointID: aws.String("ap-1234"),
+									EFS: &EFSConfigOrID{
+										Config: &EFSVolumeConfiguration{
+											FileSystemID: aws.String("fs-1234"),
+											AuthConfig: &AuthorizationConfig{
+												IAM:           aws.Bool(true),
+												AccessPointID: aws.String("ap-1234"),
+											},
 										},
 									},
 								},
@@ -379,10 +385,12 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Storage: &Storage{
 								Volumes: map[string]Volume{
 									"myEFSVolume": {
-										EFS: &EFSVolumeConfiguration{
-											FileSystemID: aws.String("fs-5678"),
-											AuthConfig: &AuthorizationConfig{
-												AccessPointID: aws.String("ap-5678"),
+										EFS: &EFSConfigOrID{
+											Config: &EFSVolumeConfiguration{
+												FileSystemID: aws.String("fs-5678"),
+												AuthConfig: &AuthorizationConfig{
+													AccessPointID: aws.String("ap-5678"),
+												},
 											},
 										},
 									},
@@ -462,11 +470,13 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSVolumeConfiguration{
-										FileSystemID: aws.String("fs-5678"),
-										AuthConfig: &AuthorizationConfig{
-											IAM:           aws.Bool(true),
-											AccessPointID: aws.String("ap-5678"),
+									EFS: &EFSConfigOrID{
+										Config: &EFSVolumeConfiguration{
+											FileSystemID: aws.String("fs-5678"),
+											AuthConfig: &AuthorizationConfig{
+												IAM:           aws.Bool(true),
+												AccessPointID: aws.String("ap-5678"),
+											},
 										},
 									},
 								},

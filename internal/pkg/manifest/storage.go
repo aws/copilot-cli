@@ -3,7 +3,14 @@
 
 package manifest
 
-import "gopkg.in/yaml.v3"
+import (
+	"fmt"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"gopkg.in/yaml.v3"
+)
+
+var managedFSIDKeys = []string{"copilot", "managed"}
 
 // Storage represents the options for external and native storage.
 type Storage struct {
@@ -12,7 +19,7 @@ type Storage struct {
 
 // Volume is an abstraction which merges the MountPoint and Volumes concepts from the ECS Task Definition
 type Volume struct {
-	EFS            *EFSVolumeConfiguration `yaml:"efs"`
+	EFS            *EFSConfigOrID `yaml:"efs"`
 	MountPointOpts `yaml:",inline"`
 }
 
@@ -30,22 +37,27 @@ type SidecarMountPoint struct {
 
 // EFSVolumeConfiguration holds options which tell ECS how to reach out to the EFS filesystem.
 type EFSVolumeConfiguration struct {
-	FileSystemID  *string              `yaml:"id"`       // Required.
-	RootDirectory *string              `yaml:"root_dir"` // Default "/"
-	AuthConfig    *AuthorizationConfig `yaml:"auth"`
+	FileSystemID  *string              `yaml:"id"`       // Required. Can be specified as "copilot" or "managed" magic keys.
+	RootDirectory *string              `yaml:"root_dir"` // Default "/". For BYO EFS.
+	AuthConfig    *AuthorizationConfig `yaml:"auth"`     // Auth config for BYO EFS.
+	UID           *uint32              `yaml:"uid"`      // UID for managed EFS.
+	GID           *uint32              `yaml:"gid"`      // GID for managed EFS.
 }
 
 func (e *EFSVolumeConfiguration) isEmpty() bool {
 	return e.FileSystemID == nil && e.RootDirectory == nil && e.AuthConfig == nil
 }
 
+// EFSConfigOrID contains custom unmarshaling logic for the `efs` field in the manifest.
 type EFSConfigOrID struct {
-	Config EFSVolumeConfiguration
+	Config *EFSVolumeConfiguration
 	ID     *string
 }
 
+// UnmarshalYAML implements the yaml(v2) interface. It allows EFS to be specified as a
+// string or a struct alternately.
 func (e *EFSConfigOrID) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&e.Config); err != nil {
+	if err := unmarshal(e.Config); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -54,8 +66,8 @@ func (e *EFSConfigOrID) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	if !e.Config.isEmpty() {
-		// Unmarshaled successfully to b.BuildArgs, unset b.BuildString, and return.
+	if e.Config != nil && !e.Config.isEmpty() {
+		// Unmarshaled successfully to e.Config, unset e.ID, and return.
 		e.ID = nil
 		return nil
 	}
@@ -66,8 +78,42 @@ func (e *EFSConfigOrID) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
+// UseManagedFS returns true if the user has specified "copilot" or "managed" as a FSID; false otherwise.
+func (e *EFSConfigOrID) UseManagedFS() bool {
+	if contains(managedFSIDKeys, aws.StringValue(e.ID)) {
+		return true
+	}
+	if e.Config != nil && contains(managedFSIDKeys, aws.StringValue(e.Config.FileSystemID)) {
+		return true
+	}
+	return false
+}
+
+// FSID returns the correct value of the EFS filesystem ID. If the ID is set improperly (via a bad merge
+// of environment overrides), it throws an error.
+func (e *EFSConfigOrID) FSID() (*string, error) {
+	fromID := aws.StringValue(e.ID)
+	if e.Config == nil {
+		return aws.String(fromID), nil
+	}
+	fromConfig := aws.StringValue(e.Config.FileSystemID)
+	if fromID != "" && fromID != fromConfig {
+		return nil, fmt.Errorf("read EFS ID: multiple values specified (%s, %s)", fromID, fromConfig)
+	}
+	return aws.String(fromConfig), nil
+}
+
 // AuthorizationConfig holds options relating to access points and IAM authorization.
 type AuthorizationConfig struct {
 	IAM           *bool   `yaml:"iam"`             // Default true
 	AccessPointID *string `yaml:"access_point_id"` // Default ""
+}
+
+func contains(l []string, k string) bool {
+	for _, i := range l {
+		if i == k {
+			return true
+		}
+	}
+	return false
 }
