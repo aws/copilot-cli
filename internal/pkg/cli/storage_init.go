@@ -30,7 +30,6 @@ const (
 var storageTypes = []string{
 	dynamoDBStorageType,
 	s3StorageType,
-	rdsStorageType,
 }
 
 var storageTypeHints = map[string]string {

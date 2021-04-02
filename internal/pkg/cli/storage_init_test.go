@@ -254,16 +254,12 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				options := []prompt.Option {
 					{
 						Value: dynamoDBStorageType,
-						Hint: "",
+						Hint: "NoSQL",
 					},
 					{
 						Value: s3StorageType,
-						Hint: "",
+						Hint: "Objects",
 					},
-					//{
-					//	Value: rdsStorageType,
-					//	Hint: "Aurora Serverless",
-					//}, // RDS is hidden for now
 				}
 				m.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Eq(options), gomock.Any()).Return(s3StorageType, nil)
 			},
