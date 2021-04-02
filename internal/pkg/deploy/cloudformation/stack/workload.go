@@ -35,12 +35,6 @@ const (
 	WorkloadAddonsTemplateURLParamKey = "AddonsTemplateURL"
 )
 
-// Workload types.
-const (
-	backendSvcType = "Backend Service"
-	lbWebSvcType   = "Load Balanced Web Service"
-)
-
 // Matches alphanumeric characters and -._
 var pathRegexp = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
 

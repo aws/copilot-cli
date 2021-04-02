@@ -1,10 +1,12 @@
 EnvControllerAction:
-{{- if eq .WorkloadType "Load Balanced Web Service"}}
-{{include "env-controller-action-with-alb" . | indent 2}}
-{{- end}}
-{{- if eq .WorkloadType "Backend Service"}}
-{{include "env-controller-action" . | indent 2}}
-{{- end}}
+  Metadata:
+    'aws:copilot:description': "Update your environment's shared resources"
+  Type: Custom::EnvControllerFunction
+  Properties:
+    ServiceToken: !GetAtt EnvControllerFunction.Arn
+    Workload: !Ref WorkloadName
+    EnvStack: !Sub '${AppName}-${EnvName}'
+    Parameters: {{ envControllerParams . }}
 
 EnvControllerFunction:
   Type: AWS::Lambda::Function

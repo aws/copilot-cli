@@ -179,7 +179,7 @@ Outputs:
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.WorkloadOpts{
-					WorkloadType: lbWebSvcType,
+					WorkloadType: manifest.LoadBalancedWebServiceType,
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: "/",
 					},
@@ -214,7 +214,7 @@ Outputs:
 						SecretOutputs:   []string{"MySecretArn"},
 						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 					},
-					WorkloadType: lbWebSvcType,
+					WorkloadType: manifest.LoadBalancedWebServiceType,
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: "/",
 					},
