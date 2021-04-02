@@ -232,7 +232,7 @@ var _ = Describe("exec flow", func() {
 					Expect(logLine.LogStreamName).NotTo(Equal(""))
 					Expect(logLine.Timestamp).NotTo(Equal(0))
 					Expect(logLine.IngestionTime).NotTo(Equal(0))
-					if strings.Contains(logLine.LogStreamName, "ecs-execute-command") &&
+					if (strings.Contains(logLine.LogStreamName, "ecs-execute-command") || strings.Contains(logLine.LogStreamName, "ecs-eni-provisioning")) &&
 						logLine.LogStreamName != prevExecLogStreamName {
 						validTaskExecLogsCount++
 						prevExecLogStreamName = logLine.LogStreamName
