@@ -551,10 +551,6 @@ func (o *initStorageOpts) validateWorkloadName() error {
 }
 
 func (o *initStorageOpts) Execute() error {
-	return o.createAddon()
-}
-
-func (o *initStorageOpts) createAddon() error {
 	addonCf, err := o.newAddon()
 	if err != nil {
 		return err
