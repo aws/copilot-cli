@@ -253,11 +253,11 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				options := []prompt.Option {
 					{
-						Value: dynamoDBStorageType,
+						Value: dynamoDBStorageTypeOption,
 						Hint: "NoSQL",
 					},
 					{
-						Value: s3StorageType,
+						Value: s3StorageTypeOption,
 						Hint: "Objects",
 					},
 				}

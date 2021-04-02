@@ -24,18 +24,41 @@ import (
 const (
 	dynamoDBStorageType = "DynamoDB"
 	s3StorageType       = "S3"
-	rdsStorageType      = "Aurora Serverless"
+	rdsStorageType      = "Aurora"
 )
 
 var storageTypes = []string{
 	dynamoDBStorageType,
 	s3StorageType,
+	//rdsStorageType,
 }
 
-var storageTypeHints = map[string]string {
-	dynamoDBStorageType: "NoSQL",
-	s3StorageType:       "Objects",
-	rdsStorageType:      "SQL",
+// Displayed options for storage types
+const (
+	dynamoDBStorageTypeOption = "DynamoDB"
+	s3StorageTypeOption       = "S3"
+	rdsStorageTypeOption      = "Aurora Serverless"
+)
+
+var optionToStorageType = map[string]string {
+	dynamoDBStorageTypeOption: dynamoDBStorageType,
+	s3StorageTypeOption:       s3StorageType,
+	rdsStorageTypeOption:      rdsStorageType,
+}
+
+var storageTypeOptions = map[string]prompt.Option {
+	dynamoDBStorageType: {
+		Value: dynamoDBStorageTypeOption,
+		Hint:  "NoSQL",
+	},
+	s3StorageType: {
+		Value: s3StorageTypeOption,
+		Hint:  "Objects",
+	},
+	rdsStorageType: {
+		Value: rdsStorageTypeOption,
+		Hint:  "SQL",
+	},
 }
 
 const (
@@ -282,12 +305,9 @@ func (o *initStorageOpts) askStorageType() error {
 
 	var options []prompt.Option
 	for _, st := range storageTypes {
-		options = append(options, prompt.Option{
-			Value: st,
-			Hint:  storageTypeHints[st],
-		})
+		options = append(options, storageTypeOptions[st])
 	}
-	storageType, err := o.prompt.SelectOption(fmt.Sprintf(
+	storageTypeOption, err := o.prompt.SelectOption(fmt.Sprintf(
 		fmtStorageInitTypePrompt, color.HighlightUserInput(o.workloadName)),
 		storageInitTypeHelp,
 		options,
@@ -295,7 +315,7 @@ func (o *initStorageOpts) askStorageType() error {
 	if err != nil {
 		return fmt.Errorf("select storage type: %w", err)
 	}
-	o.storageType = storageType
+	o.storageType = optionToStorageType[storageTypeOption]
 	return nil
 }
 
