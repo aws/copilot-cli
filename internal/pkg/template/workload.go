@@ -67,15 +67,17 @@ var (
 type WorkloadNestedStackOpts struct {
 	StackName string
 
-	VariableOutputs []string
-	SecretOutputs   []string
-	PolicyOutputs   []string
+	VariableOutputs      []string
+	SecretOutputs        []string
+	PolicyOutputs        []string
+	SecurityGroupOutputs []string
 }
 
 // SidecarOpts holds configuration that's needed if the service has sidecar containers.
 type SidecarOpts struct {
 	Name        *string
 	Image       *string
+	Essential   *bool
 	Port        *string
 	Protocol    *string
 	CredsParam  *string
@@ -110,13 +112,7 @@ type MountPoint struct {
 type Volume struct {
 	Name *string
 
-	// EFSVolumeConfiguration
-	Filesystem    *string
-	RootDirectory *string // "/" or empty are equivalent
-
-	// Authorization Config
-	AccessPointID *string
-	IAM           *string // ENABLED or DISABLED
+	EFS *EFSVolumeConfiguration
 }
 
 // ManagedVolumeCreationInfo holds information about how to create Copilot-managed access points.
@@ -124,6 +120,16 @@ type ManagedVolumeCreationInfo struct {
 	Name *string
 	UID  *string
 	GID  *string
+}
+
+type EFSVolumeConfiguration struct {
+	// EFSVolumeConfiguration
+	Filesystem    *string
+	RootDirectory *string // "/" or empty are equivalent
+
+	// Authorization Config
+	AccessPointID *string
+	IAM           *string // ENABLED or DISABLED
 }
 
 // LogConfigOpts holds configuration that's needed if the service is configured with Firelens to route

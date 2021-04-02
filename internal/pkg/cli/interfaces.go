@@ -459,7 +459,7 @@ type deploySelector interface {
 }
 
 type pipelineSelector interface {
-	Environments(prompt, help, app string, finalMsgFunc func(int) prompt.Option) ([]string, error)
+	Environments(prompt, help, app string, finalMsgFunc func(int) prompt.PromptConfig) ([]string, error)
 }
 
 type wsSelector interface {
@@ -529,6 +529,20 @@ type taskStopper interface {
 
 type serviceLinkedRoleCreator interface {
 	CreateECSServiceLinkedRole() error
+}
+
+type roleTagsLister interface {
+	ListRoleTags(string) (map[string]string, error)
+}
+
+type roleManager interface {
+	roleTagsLister
+	roleDeleter
+	serviceLinkedRoleCreator
+}
+
+type stackExistChecker interface {
+	Exists(string) (bool, error)
 }
 
 type runningTaskSelector interface {

@@ -93,3 +93,18 @@ func (mr *MockapiMockRecorder) ListRolePolicies(input interface{}) *gomock.Call 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRolePolicies", reflect.TypeOf((*Mockapi)(nil).ListRolePolicies), input)
 }
+
+// ListRoleTags mocks base method.
+func (m *Mockapi) ListRoleTags(input *iam.ListRoleTagsInput) (*iam.ListRoleTagsOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRoleTags", input)
+	ret0, _ := ret[0].(*iam.ListRoleTagsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRoleTags indicates an expected call of ListRoleTags.
+func (mr *MockapiMockRecorder) ListRoleTags(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRoleTags", reflect.TypeOf((*Mockapi)(nil).ListRoleTags), input)
+}

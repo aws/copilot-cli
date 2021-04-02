@@ -123,11 +123,13 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					},
 					Volumes: []*template.Volume{
 						{
-							AccessPointID: aws.String("ap-1234"),
-							Filesystem:    aws.String("fs-5678"),
-							IAM:           aws.String("ENABLED"),
-							Name:          aws.String("efs"),
-							RootDirectory: aws.String("/"),
+							EFS: &template.EFSVolumeConfiguration{
+								AccessPointID: aws.String("ap-1234"),
+								Filesystem:    aws.String("fs-5678"),
+								IAM:           aws.String("ENABLED"),
+								RootDirectory: aws.String("/"),
+							},
+							Name: aws.String("efs"),
 						},
 					},
 				},
@@ -151,9 +153,11 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					},
 					Volumes: []*template.Volume{
 						{
-							Filesystem:    aws.String("fs-5678"),
-							Name:          aws.String("efs"),
-							RootDirectory: aws.String("/"),
+							Name: aws.String("efs"),
+							EFS: &template.EFSVolumeConfiguration{
+								Filesystem:    aws.String("fs-5678"),
+								RootDirectory: aws.String("/"),
+							},
 						},
 					},
 				},

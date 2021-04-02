@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
 	ecsapi "github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
@@ -19,17 +19,15 @@ import (
 )
 
 type svcDescriberMocks struct {
-	mockStackDescriber *mocks.MockstackAndResourcesDescriber
-	mockecsClient      *mocks.MockecsClient
+	mockCFN       *mocks.Mockcfn
+	mockecsClient *mocks.MockecsClient
 }
 
 func TestServiceDescriber_EnvVars(t *testing.T) {
 	const (
-		testApp            = "phonetool"
-		testSvc            = "jobs"
-		testEnv            = "test"
-		testRegion         = "us-west-2"
-		testManagerRoleARN = "arn:aws:iam::1111:role/manager"
+		testApp = "phonetool"
+		testSvc = "jobs"
+		testEnv = "test"
 	)
 	testCases := map[string]struct {
 		setupMocks func(mocks svcDescriberMocks)
@@ -90,10 +88,8 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockecsClient := mocks.NewMockecsClient(ctrl)
-			mockStackDescriber := mocks.NewMockstackAndResourcesDescriber(ctrl)
 			mocks := svcDescriberMocks{
-				mockecsClient:      mockecsClient,
-				mockStackDescriber: mockStackDescriber,
+				mockecsClient: mockecsClient,
 			}
 
 			tc.setupMocks(mocks)
@@ -103,8 +99,7 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 				service: testSvc,
 				env:     testEnv,
 
-				ecsClient:      mockecsClient,
-				stackDescriber: mockStackDescriber,
+				ecsClient: mockecsClient,
 			}
 
 			// WHEN
@@ -186,10 +181,8 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockecsClient := mocks.NewMockecsClient(ctrl)
-			mockStackDescriber := mocks.NewMockstackAndResourcesDescriber(ctrl)
 			mocks := svcDescriberMocks{
-				mockecsClient:      mockecsClient,
-				mockStackDescriber: mockStackDescriber,
+				mockecsClient: mockecsClient,
 			}
 
 			tc.setupMocks(mocks)
@@ -199,8 +192,7 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 				service: testSvc,
 				env:     testEnv,
 
-				ecsClient:      mockecsClient,
-				stackDescriber: mockStackDescriber,
+				ecsClient: mockecsClient,
 			}
 
 			// WHEN
@@ -219,10 +211,9 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 
 func TestServiceDescriber_ServiceStackResources(t *testing.T) {
 	const (
-		testApp            = "phonetool"
-		testEnv            = "test"
-		testManagerRoleARN = "arn:aws:iam::1111:role/manager"
-		testSvc            = "jobs"
+		testApp = "phonetool"
+		testEnv = "test"
+		testSvc = "jobs"
 	)
 	testCfnResources := []*cloudformation.StackResource{
 		{
@@ -239,7 +230,7 @@ func TestServiceDescriber_ServiceStackResources(t *testing.T) {
 		"returns error when fail to describe stack resources": {
 			setupMocks: func(m svcDescriberMocks) {
 				gomock.InOrder(
-					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testApp, testEnv, testSvc)).Return(nil, errors.New("some error")),
+					m.mockCFN.EXPECT().StackResources(stack.NameForService(testApp, testEnv, testSvc)).Return(nil, errors.New("some error")),
 				)
 			},
 
@@ -248,7 +239,7 @@ func TestServiceDescriber_ServiceStackResources(t *testing.T) {
 		"ignores dummy stack resources": {
 			setupMocks: func(m svcDescriberMocks) {
 				gomock.InOrder(
-					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testApp, testEnv, testSvc)).Return([]*cloudformation.StackResource{
+					m.mockCFN.EXPECT().StackResources(stack.NameForService(testApp, testEnv, testSvc)).Return([]*cloudformation.StackResource{
 						{
 							ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
 							PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
@@ -279,18 +270,18 @@ func TestServiceDescriber_ServiceStackResources(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStackDescriber := mocks.NewMockstackAndResourcesDescriber(ctrl)
+			mockCFN := mocks.NewMockcfn(ctrl)
 			mocks := svcDescriberMocks{
-				mockStackDescriber: mockStackDescriber,
+				mockCFN: mockCFN,
 			}
 
 			tc.setupMocks(mocks)
 
 			d := &ServiceDescriber{
-				app:            testApp,
-				service:        testSvc,
-				env:            testEnv,
-				stackDescriber: mockStackDescriber,
+				app:     testApp,
+				service: testSvc,
+				env:     testEnv,
+				cfn:     mockCFN,
 			}
 
 			// WHEN

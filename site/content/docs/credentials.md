@@ -18,6 +18,10 @@ aws_secret_access_key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 region=us-west-2
 ```
 Alternatively, you can set the `AWS_PROFILE` environment variable to point to a different named profile. For example, we can have a `[my-app]` profile that can be used for your Copilot application instead of the `[default]` profile.
+
+!!! note
+    You **cannot** use the AWS account root user credentials for your application. Please first create an IAM user instead as described [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html).
+
 ```ini
 # ~/.aws/config
 [my-app]

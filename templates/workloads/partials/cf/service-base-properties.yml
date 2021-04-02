@@ -41,3 +41,6 @@ NetworkConfiguration:
       {{- range $sg := .Network.SecurityGroups}}
       - {{$sg}}
       {{- end}}
+      {{- if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{range $sg := .NestedStack.SecurityGroupOutputs}}
+      - Fn::GetAtt: [{{$stackName}}, Outputs.{{$sg}}]
+      {{- end}}{{end}}

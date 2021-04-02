@@ -1,3 +1,4 @@
+
 CustomResourceRole:
   Type: AWS::IAM::Role
   Condition: DelegateDNS
@@ -26,12 +27,12 @@ CustomResourceRole:
                 - "acm:GetCertificate"
                 - "acm:DeleteCertificate"
                 - "acm:AddTagsToCertificate"
-                - "route53:ListHostedZonesByName"
                 - "sts:AssumeRole"
                 - "logs:*"
                 - "route53:ChangeResourceRecordSets"
-                - "route53:ListResourceRecordSets"
                 - "route53:Get*"
                 - "route53:Describe*"
+                - "route53:ListResourceRecordSets"
+                - "route53:ListHostedZonesByName"
               Resource:
                 - "*"
