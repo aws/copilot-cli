@@ -95,10 +95,7 @@ type StorageOpts struct {
 }
 
 func (s *StorageOpts) RequiresEFSCreation() bool {
-	if s.ManagedVolumeInfo != nil {
-		return true
-	}
-	return false
+	return s.ManagedVolumeInfo != nil
 }
 
 // EFSPermission holds information needed to render an IAM policy statement.
