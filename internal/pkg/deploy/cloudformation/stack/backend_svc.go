@@ -106,7 +106,7 @@ func (s *BackendService) Template() (string, error) {
 		Sidecars:            sidecars,
 		Autoscaling:         autoscaling,
 		ExecuteCommand:      convertExecuteCommand(&s.manifest.ExecuteCommand),
-		WorkloadType:        backendSvcType,
+		WorkloadType:        manifest.BackendServiceType,
 		HealthCheck:         s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),
 		LogConfig:           convertLogging(s.manifest.Logging),
 		DesiredCountLambda:  desiredCountLambda.String(),

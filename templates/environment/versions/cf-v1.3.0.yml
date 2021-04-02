@@ -14,15 +14,15 @@ Parameters:
   EFSWorkloads:
     Type: String
     Default: ""
+  NATWorkloads:
+    Type: String
+    Default: ""
   ToolsAccountPrincipalARN:
     Type: String
   AppDNSName:
     Type: String
     Default: ""
   AppDNSDelegationRole:
-    Type: String
-    Default: ""
-  NATWorkloads:
     Type: String
     Default: ""
 Conditions:
