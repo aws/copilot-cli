@@ -182,7 +182,7 @@ Outputs:
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(template.WorkloadOpts{
-					WorkloadType: backendSvcType,
+					WorkloadType: manifest.BackendServiceType,
 					HealthCheck: &ecs.HealthCheck{
 						Command:     aws.StringSlice([]string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"}),
 						Interval:    aws.Int64(5),

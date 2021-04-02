@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/google/uuid"
+
+	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 // Constants for template paths.
@@ -57,8 +58,6 @@ var (
 		"state-machine-definition.json",
 		"efs-access-point",
 		"env-controller",
-		"env-controller-action",
-		"env-controller-action-with-alb",
 		"mount-points",
 		"volumes",
 		"image-overrides",
@@ -272,12 +271,13 @@ func (t *Template) parseWkld(name, wkldDirName string, data interface{}, options
 func withSvcParsingFuncs() ParseOption {
 	return func(t *template.Template) *template.Template {
 		return t.Funcs(map[string]interface{}{
-			"toSnakeCase":     ToSnakeCaseFunc,
-			"hasSecrets":      hasSecrets,
-			"fmtSlice":        FmtSliceFunc,
-			"quoteSlice":      QuotePSliceFunc,
-			"randomUUID":      randomUUIDFunc,
-			"jsonMountPoints": generateMountPointJSON,
+			"toSnakeCase":         ToSnakeCaseFunc,
+			"hasSecrets":          hasSecrets,
+			"fmtSlice":            FmtSliceFunc,
+			"quoteSlice":          QuotePSliceFunc,
+			"randomUUID":          randomUUIDFunc,
+			"jsonMountPoints":     generateMountPointJSON,
+			"envControllerParams": envControllerParameters,
 		})
 	}
 }
@@ -298,4 +298,16 @@ func randomUUIDFunc() (string, error) {
 		return "", fmt.Errorf("generate random uuid: %w", err)
 	}
 	return id.String(), err
+}
+
+// envControllerParameters determines which parameters to include in the EnvController template.
+func envControllerParameters(o WorkloadOpts) []string {
+	parameters := []string{}
+	if o.WorkloadType == "Load Balanced Web Service" {
+		parameters = append(parameters, "ALBWorkloads,") // YAML needs the comma separator; okay if trailing.
+	}
+	if o.Network.SubnetsType == PrivateSubnetsPlacement {
+		parameters = append(parameters, "NATWorkloads,") // YAML needs the comma separator; okay if trailing.
+	}
+	return parameters
 }
