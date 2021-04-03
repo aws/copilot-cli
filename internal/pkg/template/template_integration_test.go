@@ -103,6 +103,12 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 			},
 		},
+		"renders a valid template with private subnet placement": {
+			opts: template.WorkloadOpts{
+				HTTPHealthCheck: defaultHttpHealthCheck,
+				Network:         template.PrivateSubnetsPlacement,
+			},
+		},
 		"renders a valid template with all storage options": {
 			opts: template.WorkloadOpts{
 				HTTPHealthCheck: defaultHttpHealthCheck,
