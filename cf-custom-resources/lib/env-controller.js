@@ -77,7 +77,7 @@ let report = function (
  *
  * @param {string} stackName Name of the stack.
  * @param {string} workload Name of the copilot workload.
- * @param {[]} envControllerParameters List of parameters from the environment stack to update.
+ * @param {string[]} envControllerParameters List of parameters from the environment stack to update.
  *
  * @returns {parameters} The updated parameters.
  */
@@ -98,13 +98,11 @@ const controlEnv = async function (
     }
     var updatedEnvStack = describeStackResp.Stacks[0];
     var params = JSON.parse(JSON.stringify(updatedEnvStack.Parameters));
-
     const envSet = setOfParameterKeysWithWorkload(params, workload);
     const controllerSet = new Set(envControllerParameters);
 
     const parametersToRemove = [...envSet].filter(param => !controllerSet.has(param));
     const parametersToAdd = [...controllerSet].filter(param => !envSet.has(param));
-
     const exportedValues = getExportedValues(updatedEnvStack);
     // Return if there are no parameter changes.
     if (parametersToRemove.length + parametersToAdd.length === 0)  {
@@ -113,14 +111,14 @@ const controlEnv = async function (
 
     for (const param of params) {
       if (parametersToRemove.includes(param.ParameterKey)) {
-        var values = new Set(param.ParameterValue);
+        var values = new Set(param.ParameterValue.split(','));
         values.delete(workload);
-        param.ParameterValue = Array.from(values).join(",");
+        param.ParameterValue = [...values].join(',');
       }
       if (parametersToAdd.includes(param.ParameterKey)) {
-        var values = new Set(param.ParameterValue);
+        var values = new Set(param.ParameterValue.split(','));
         values.add(workload);
-        param.ParameterValue = Array.from(values).join(",");
+        param.ParameterValue = [...values].join(',');
       }
     }
 
@@ -189,7 +187,7 @@ exports.handler = async function (event, context) {
             props.Parameters
           ),
         ]);
-        physicalResourceId = `envcontroller/${props.EnvStack}/${props.Workload}`;
+        physicalResourceId = `envcontoller/${props.EnvStack}/${props.Workload}`;
         break;
       case "Update":
         responseData = await Promise.race([
@@ -233,7 +231,7 @@ exports.handler = async function (event, context) {
 function setOfParameterKeysWithWorkload(cfnParams, workload) {
   const envSet = new Set();
   cfnParams.forEach(param => {
-    var values = new Set(param.Value);
+    var values = new Set(param.ParameterValue.split(','));
     if (!values.has(workload)) {
       return;
     }
