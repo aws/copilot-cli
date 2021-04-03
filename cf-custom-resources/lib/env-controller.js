@@ -77,7 +77,7 @@ let report = function (
  *
  * @param {string} stackName Name of the stack.
  * @param {string} workload Name of the copilot workload.
- * @param {string[]} envParameters List of parameters from the environment stack to update.
+ * @param {[]} envControllerParameters List of parameters from the environment stack to update.
  *
  * @returns {parameters} The updated parameters.
  */
@@ -98,46 +98,30 @@ const controlEnv = async function (
     }
     var updatedEnvStack = describeStackResp.Stacks[0];
     var params = JSON.parse(JSON.stringify(updatedEnvStack.Parameters));
-    var updated = false;
 
-    const envSet = setOfParametersWithWorkload(params, workload);
+    const envSet = setOfParameterKeysWithWorkload(params, workload);
     const controllerSet = new Set(envControllerParameters);
 
-    const parametersToRemove = [...envSet].filter(x => !controllerSet.has(x));
-    const parametersToAdd = [...controllerSet].filter(x => !envSet.has(x));
+    const parametersToRemove = [...envSet].filter(param => !controllerSet.has(param));
+    const parametersToAdd = [...controllerSet].filter(param => !envSet.has(param));
 
     const exportedValues = getExportedValues(updatedEnvStack);
     // Return if there are no parameter changes.
-    if (parametersToRemove.size + parametersToAdd.size === 0)  {
+    if (parametersToRemove.length + parametersToAdd.length === 0)  {
       return exportedValues;
     }
 
-    if (parametersToAdd.length > 0) {
-      for (const param of parametersToAdd) {
-        const [updatedParamValue, paramUpdated] = updateParameter(
-            "Create",
-            workload,
-            param.ParameterValue
-        );
-        param.ParameterValue = updatedParamValue;
-        updated = updated || paramUpdated;
+    for (const param of params) {
+      if (parametersToRemove.includes(param.ParameterKey)) {
+        var values = new Set(param.ParameterValue);
+        values.delete(workload);
+        param.ParameterValue = Array.from(values).join(",");
       }
-    }
-
-    if (parametersToRemove.length > 0) {
-      for (const param of parametersToRemove) {
-        const [updatedParamValue, paramUpdated] = updateParameter(
-            "Delete",
-            workload,
-            param.ParameterValue
-        );
-        param.ParameterValue = updatedParamValue;
-        updated = updated || paramUpdated;
+      if (parametersToAdd.includes(param.ParameterKey)) {
+        var values = new Set(param.ParameterValue);
+        values.add(workload);
+        param.ParameterValue = Array.from(values).join(",");
       }
-    }
-
-    if (!updated) {
-      return exportedValues;
     }
 
     try {
@@ -246,14 +230,14 @@ exports.handler = async function (event, context) {
   }
 };
 
-function setOfParametersWithWorkload(cfnParams, workload) {
+function setOfParameterKeysWithWorkload(cfnParams, workload) {
   const envSet = new Set();
   cfnParams.forEach(param => {
     var values = new Set(param.Value);
     if (!values.has(workload)) {
       return;
     }
-    envSet.add(param);
+    envSet.add(param.ParameterKey);
   })
   return envSet
 }
@@ -276,28 +260,6 @@ const getExportedValues = function (stack) {
  * @returns {string} The updated parameter.
  * @returns {bool} whether the parameter is modified.
  */
-const updateParameter = function (requestType, workload, paramValue) {
-  var set = new Set(
-    paramValue.split(",").filter(function (el) {
-      return el != "";
-    })
-  );
-  switch (requestType) {
-    case "Create":
-      set.add(workload);
-      break;
-    case "Update":
-      set.add(workload);
-      break;
-    case "Delete":
-      set.delete(workload);
-      break;
-    default:
-      throw new Error(`Unsupported request type ${requestType}`);
-  }
-  var updatedParamValue = Array.from(set).join(",");
-  return [updatedParamValue, updatedParamValue !== paramValue];
-};
 
 exports.deadlineExpired = function () {
   return new Promise(function (resolve, reject) {

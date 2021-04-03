@@ -306,5 +306,8 @@ func envControllerParameters(o WorkloadOpts) []string {
 	if o.WorkloadType == "Load Balanced Web Service" {
 		parameters = append(parameters, "ALBWorkloads,") // YAML needs the comma separator; okay if trailing.
 	}
+	if o.Network.SubnetsType == PrivateSubnetsPlacement {
+		parameters = append(parameters, "NATWorkloads,") // YAML needs the comma separator; okay if trailing.
+	}
 	return parameters
 }
