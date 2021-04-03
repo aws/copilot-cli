@@ -277,7 +277,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
 					EFS: &manifest.EFSConfigOrID{
-						Config: &manifest.EFSVolumeConfiguration{
+						Config: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("fs-1234"),
 						},
 					},
@@ -342,7 +342,7 @@ func Test_convertStorageOpts(t *testing.T) {
 						ContainerPath: aws.String("/var/www"),
 					},
 					EFS: &manifest.EFSConfigOrID{
-						Config: &manifest.EFSVolumeConfiguration{
+						Config: manifest.EFSVolumeConfiguration{
 							RootDirectory: aws.String("/"),
 						},
 					},
@@ -354,7 +354,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
 					EFS: &manifest.EFSConfigOrID{
-						Config: &manifest.EFSVolumeConfiguration{
+						Config: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("fs-1234"),
 						},
 					},
@@ -366,7 +366,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
 					EFS: &manifest.EFSConfigOrID{
-						Config: &manifest.EFSVolumeConfiguration{
+						Config: manifest.EFSVolumeConfiguration{
 							FileSystemID:  aws.String("fs-1234"),
 							RootDirectory: aws.String("/"),
 							AuthConfig: &manifest.AuthorizationConfig{
@@ -413,7 +413,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
 					EFS: &manifest.EFSConfigOrID{
-						Config: &manifest.EFSVolumeConfiguration{
+						Config: manifest.EFSVolumeConfiguration{
 							FileSystemID:  aws.String("fs-1234"),
 							RootDirectory: aws.String("/wordpress"),
 							AuthConfig: &manifest.AuthorizationConfig{
@@ -457,7 +457,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
 					EFS: &manifest.EFSConfigOrID{
-						Config: &manifest.EFSVolumeConfiguration{
+						Config: manifest.EFSVolumeConfiguration{
 							FileSystemID:  aws.String("fs-1234"),
 							RootDirectory: aws.String("/wordpress"),
 							AuthConfig: &manifest.AuthorizationConfig{
@@ -478,7 +478,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
 					EFS: &manifest.EFSConfigOrID{
-						Config: &manifest.EFSVolumeConfiguration{
+						Config: manifest.EFSVolumeConfiguration{
 							FileSystemID:  aws.String("fs-1234"),
 							RootDirectory: aws.String("/wordpress"),
 							AuthConfig: &manifest.AuthorizationConfig{
@@ -499,7 +499,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
 					EFS: &manifest.EFSConfigOrID{
-						ID: aws.String("fs-1234"),
+						ID: "fs-1234",
 					},
 					MountPointOpts: manifest.MountPointOpts{
 						ContainerPath: aws.String("/var/www"),
@@ -537,7 +537,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			inVolumes: map[string]manifest.Volume{
 				"efs": {
 					EFS: &manifest.EFSConfigOrID{
-						ID: aws.String("copilot"),
+						ID: "copilot",
 					},
 					MountPointOpts: manifest.MountPointOpts{
 						ContainerPath: aws.String("/var/www"),
@@ -564,7 +564,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			inVolumes: map[string]manifest.Volume{
 				"efs": {
 					EFS: &manifest.EFSConfigOrID{
-						Config: &manifest.EFSVolumeConfiguration{
+						Config: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("copilot"),
 							UID:          aws.Uint32(1000),
 							GID:          aws.Uint32(10000),
@@ -595,7 +595,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			inVolumes: map[string]manifest.Volume{
 				"efs": {
 					EFS: &manifest.EFSConfigOrID{
-						Config: &manifest.EFSVolumeConfiguration{
+						Config: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("fs-1234"),
 							UID:          aws.Uint32(1234),
 							GID:          aws.Uint32(5678),
@@ -613,7 +613,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			inVolumes: map[string]manifest.Volume{
 				"efs": {
 					EFS: &manifest.EFSConfigOrID{
-						Config: &manifest.EFSVolumeConfiguration{
+						Config: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("managed"),
 							UID:          aws.Uint32(0),
 							GID:          aws.Uint32(100),
@@ -631,7 +631,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			inVolumes: map[string]manifest.Volume{
 				"efs": {
 					EFS: &manifest.EFSConfigOrID{
-						Config: &manifest.EFSVolumeConfiguration{
+						Config: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("managed"),
 							UID:          aws.Uint32(10000),
 						},
@@ -648,7 +648,7 @@ func Test_convertStorageOpts(t *testing.T) {
 			inVolumes: map[string]manifest.Volume{
 				"efs": {
 					EFS: &manifest.EFSConfigOrID{
-						Config: &manifest.EFSVolumeConfiguration{
+						Config: manifest.EFSVolumeConfiguration{
 							FileSystemID: aws.String("managed"),
 							GID:          aws.Uint32(10000),
 						},

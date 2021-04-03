@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"gopkg.in/yaml.v3"
@@ -44,20 +45,24 @@ type EFSVolumeConfiguration struct {
 	GID           *uint32              `yaml:"gid"`      // GID for managed EFS.
 }
 
-func (e *EFSVolumeConfiguration) isEmpty() bool {
-	return e.FileSystemID == nil && e.RootDirectory == nil && e.AuthConfig == nil
+// IsEmpty returns empty if the struct has all zero members.
+func (e *EFSVolumeConfiguration) IsEmpty() bool {
+	if e.FileSystemID == nil && e.RootDirectory == nil && e.AuthConfig == nil && e.UID == nil && e.GID == nil {
+		return true
+	}
+	return false
 }
 
 // EFSConfigOrID contains custom unmarshaling logic for the `efs` field in the manifest.
 type EFSConfigOrID struct {
-	Config *EFSVolumeConfiguration
-	ID     *string
+	Config EFSVolumeConfiguration
+	ID     string
 }
 
 // UnmarshalYAML implements the yaml(v2) interface. It allows EFS to be specified as a
 // string or a struct alternately.
 func (e *EFSConfigOrID) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(e.Config); err != nil {
+	if err := unmarshal(&e.Config); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -66,9 +71,9 @@ func (e *EFSConfigOrID) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	if e.Config != nil && !e.Config.isEmpty() {
+	if !e.Config.IsEmpty() {
 		// Unmarshaled successfully to e.Config, unset e.ID, and return.
-		e.ID = nil
+		e.ID = ""
 		return nil
 	}
 
@@ -80,10 +85,10 @@ func (e *EFSConfigOrID) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // UseManagedFS returns true if the user has specified "copilot" or "managed" as a FSID; false otherwise.
 func (e *EFSConfigOrID) UseManagedFS() bool {
-	if contains(managedFSIDKeys, aws.StringValue(e.ID)) {
+	if contains(managedFSIDKeys, e.ID) {
 		return true
 	}
-	if e.Config != nil && contains(managedFSIDKeys, aws.StringValue(e.Config.FileSystemID)) {
+	if contains(managedFSIDKeys, aws.StringValue(e.Config.FileSystemID)) {
 		return true
 	}
 	return false
@@ -92,8 +97,8 @@ func (e *EFSConfigOrID) UseManagedFS() bool {
 // FSID returns the correct value of the EFS filesystem ID. If the ID is set improperly (via a bad merge
 // of environment overrides), it throws an error.
 func (e *EFSConfigOrID) FSID() (*string, error) {
-	fromID := aws.StringValue(e.ID)
-	if e.Config == nil {
+	fromID := e.ID
+	if e.Config.IsEmpty() {
 		return aws.String(fromID), nil
 	}
 	fromConfig := aws.StringValue(e.Config.FileSystemID)
@@ -111,7 +116,7 @@ type AuthorizationConfig struct {
 
 func contains(l []string, k string) bool {
 	for _, i := range l {
-		if i == k {
+		if i == strings.ToLower(k) {
 			return true
 		}
 	}

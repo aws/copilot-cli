@@ -29,8 +29,7 @@ storage:
     myEFSVolume:
       path: '/etc/mount1'
       read_only: true
-      efs:
-        id: fs-12345
+      efs: fs-12345
 
 sidecars:
   nginx:

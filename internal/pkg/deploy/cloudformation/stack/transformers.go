@@ -279,7 +279,7 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 		}
 
 		var accessPointID *string
-		if volume.EFS.Config != nil && volume.EFS.Config.AuthConfig != nil {
+		if volume.EFS.Config.AuthConfig != nil {
 			accessPointID = volume.EFS.Config.AuthConfig.AccessPointID
 		}
 		perm := template.EFSPermission{
@@ -303,11 +303,8 @@ func convertManagedFSInfo(name string, input map[string]manifest.Volume) (*templ
 		}
 
 		if volume.EFS.UseManagedFS() {
-			var uid, gid *uint32
-			if volume.EFS.Config != nil {
-				uid = volume.EFS.Config.UID
-				gid = volume.EFS.Config.GID
-			}
+			uid := volume.EFS.Config.UID
+			gid := volume.EFS.Config.GID
 			if err := validateUIDGID(uid, gid); err != nil {
 				return nil, err
 			}
@@ -381,7 +378,7 @@ func convertEFS(in *manifest.EFSConfigOrID) (*template.EFSVolumeConfiguration, e
 		return nil, nil
 	}
 	// UID and GID should not be specified for non-managed volumes.
-	if !in.UseManagedFS() && in.Config != nil {
+	if !in.UseManagedFS() && !in.Config.IsEmpty() {
 		if in.Config.UID != nil {
 			return nil, errUIDWithNonManagedFS
 		}
@@ -390,9 +387,9 @@ func convertEFS(in *manifest.EFSConfigOrID) (*template.EFSVolumeConfiguration, e
 		}
 	}
 	// EFS is specified as a string with just the filesystem ID.
-	if in.ID != nil {
+	if in.ID != "" {
 		return &template.EFSVolumeConfiguration{
-			Filesystem:    in.ID,
+			Filesystem:    aws.String(in.ID),
 			IAM:           aws.String(defaultIAM),
 			RootDirectory: aws.String(defaultRootDirectory),
 		}, nil
@@ -402,7 +399,7 @@ func convertEFS(in *manifest.EFSConfigOrID) (*template.EFSVolumeConfiguration, e
 
 }
 
-func convertEFSConfiguration(in *manifest.EFSVolumeConfiguration) (*template.EFSVolumeConfiguration, error) {
+func convertEFSConfiguration(in manifest.EFSVolumeConfiguration) (*template.EFSVolumeConfiguration, error) {
 	// Set default values correctly.
 	fsID := in.FileSystemID
 	if aws.StringValue(fsID) == "" {
