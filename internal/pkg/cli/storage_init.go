@@ -86,6 +86,17 @@ var attributeTypes = []string{
 	ddbBinaryType,
 }
 
+// RDS Aurora Serverless specific constants and variables.
+const (
+	engineTypeMySQL      = "MySQL"
+	engineTypePostgreSQL = "PostgreSQL"
+)
+
+var engineTypes = []string{
+	engineTypeMySQL,
+	engineTypePostgreSQL,
+}
+
 type initStorageVars struct {
 	storageType  string
 	storageName  string
