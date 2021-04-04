@@ -539,7 +539,7 @@ func validateKey(val interface{}) error {
 	}
 	err = dynamoAttributeNameValidation(*attr.Name)
 	if err != nil {
-		return errDDBAttributeBadSize
+		return err
 	}
 	err = validateDynamoDataType(*attr.DataType)
 	if err != nil {
