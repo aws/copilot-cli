@@ -111,12 +111,14 @@ const controlEnv = async function (
 
     for (const param of params) {
       if (parametersToRemove.includes(param.ParameterKey)) {
-        var values = new Set(param.ParameterValue.split(','));
+        var values = new Set(param.ParameterValue.split(',').filter(Boolean)); // Filter out the empty string
+        // in the output array to prevent a leading comma in the parameters list.
         values.delete(workload);
         param.ParameterValue = [...values].join(',');
       }
       if (parametersToAdd.includes(param.ParameterKey)) {
-        var values = new Set(param.ParameterValue.split(','));
+        var values = new Set(param.ParameterValue.split(',').filter(Boolean)); // Filter out the empty string
+        // in the output array to prevent a leading comma in the parameters list.
         values.add(workload);
         param.ParameterValue = [...values].join(',');
       }
