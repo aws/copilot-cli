@@ -116,6 +116,16 @@ type SvcLogsRequest struct {
 	Since   string
 }
 
+// StorageInitRequest contains the parameters for calling copilot storage init.
+type StorageInitRequest struct {
+	StorageName     string
+	StorageType     string
+	WorkloadName    string
+
+	RDSEngine       string
+	InitialDBName   string
+}
+
 // SvcDeployInput contains the parameters for calling copilot svc deploy.
 type SvcDeployInput struct {
 	Name     string
@@ -189,7 +199,7 @@ func NewCLI() (*CLI, error) {
 	// These tests should be run in a dockerfile so that
 	// your file system and docker image repo isn't polluted
 	// with test data and files. Since this is going to run
-	// from Docker, the binary will localted in the root bin.
+	// from Docker, the binary will be located in the root bin.
 	cliPath := filepath.Join("/", "bin", "copilot")
 	if _, err := os.Stat(cliPath); err != nil {
 		return nil, err
@@ -405,6 +415,24 @@ func (cli *CLI) SvcLogs(opts *SvcLogsRequest) ([]SvcLogsOutput, error) {
 		return nil, err
 	}
 	return toSvcLogsOutput(output)
+}
+
+/*StorageInit runs:
+copilot storage init
+	--name $n
+	--storage-type $t
+	--workload $w
+	--engine $e
+    --initial-db $d
+*/
+func (cli *CLI) StorageInit(opts *StorageInitRequest)(string, error) {
+	return cli.exec(
+		exec.Command(cli.path, "storage", "init",
+			"--name", opts.StorageName,
+		    "--storage-type", opts.StorageType,
+		    "--workload", opts.WorkloadName,
+		    "--engine", opts.RDSEngine,
+		    "--initial-db", opts.InitialDBName))
 }
 
 /*EnvDelete runs:
