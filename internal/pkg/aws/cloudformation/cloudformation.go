@@ -200,13 +200,32 @@ func (c *CloudFormation) Exists(name string) (bool, error) {
 	return true, nil
 }
 
-// Metadata returns the Metadata property of the CloudFormation stack's template.
-func (c *CloudFormation) Metadata(name string) (string, error) {
-	out, err := c.GetTemplateSummary(&cloudformation.GetTemplateSummaryInput{
-		StackName: aws.String(name),
-	})
+// MetadataOpts sets up optional parameters for Metadata function.
+type MetadataOpts func() *cloudformation.GetTemplateSummaryInput
+
+// WithStackName sets up the stack name for cloudformation.GetTemplateSummaryInput.
+func WithStackName(name string) MetadataOpts {
+	return func() *cloudformation.GetTemplateSummaryInput {
+		return &cloudformation.GetTemplateSummaryInput{
+			StackName: aws.String(name),
+		}
+	}
+}
+
+// WithStackSetName sets up the stack set name for cloudformation.GetTemplateSummaryInput.
+func WithStackSetName(name string) MetadataOpts {
+	return func() *cloudformation.GetTemplateSummaryInput {
+		return &cloudformation.GetTemplateSummaryInput{
+			StackSetName: aws.String(name),
+		}
+	}
+}
+
+// Metadata returns the Metadata property of the CloudFormation stack(set)'s template.
+func (c *CloudFormation) Metadata(opt MetadataOpts) (string, error) {
+	out, err := c.GetTemplateSummary(opt())
 	if err != nil {
-		return "", fmt.Errorf("get template summary for stack %s: %w", name, err)
+		return "", fmt.Errorf("get template summary: %w", err)
 	}
 	return aws.StringValue(out.Metadata), nil
 }

@@ -453,6 +453,7 @@ func TestCloudFormation_DeleteAndWait(t *testing.T) {
 
 func TestStackDescriber_Metadata(t *testing.T) {
 	testCases := map[string]struct {
+		isStackSet bool
 		createMock func(ctrl *gomock.Controller) client
 
 		wantedMetadata string
@@ -465,13 +466,27 @@ func TestStackDescriber_Metadata(t *testing.T) {
 				return m
 			},
 
-			wantedErr: errors.New("get template summary for stack phonetool-test: some error"),
+			wantedErr: errors.New("get template summary: some error"),
 		},
-		"should return Metadata property of template summary on success": {
+		"should return Metadata property of template summary on success for stack": {
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
 				m.EXPECT().GetTemplateSummary(&cloudformation.GetTemplateSummaryInput{
-					StackName: aws.String("phonetool-test"),
+					StackName: aws.String("phonetool"),
+				}).Return(&cloudformation.GetTemplateSummaryOutput{
+					Metadata: aws.String("hello"),
+				}, nil)
+				return m
+			},
+
+			wantedMetadata: "hello",
+		},
+		"should return Metadata property of template summary on success for stack set": {
+			isStackSet: true,
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().GetTemplateSummary(&cloudformation.GetTemplateSummaryInput{
+					StackSetName: aws.String("phonetool"),
 				}).Return(&cloudformation.GetTemplateSummaryOutput{
 					Metadata: aws.String("hello"),
 				}, nil)
@@ -492,7 +507,11 @@ func TestStackDescriber_Metadata(t *testing.T) {
 			}
 
 			// WHEN
-			actual, err := c.Metadata("phonetool-test")
+			name := WithStackName("phonetool")
+			if tc.isStackSet {
+				name = WithStackSetName("phonetool")
+			}
+			actual, err := c.Metadata(name)
 
 			// THEN
 			if tc.wantedErr != nil {

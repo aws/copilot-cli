@@ -112,7 +112,7 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 //
 // If the Version field does not exist, then it's a legacy template and it returns an deploy.LegacyEnvTemplateVersion and nil error.
 func (d *EnvDescriber) Version() (string, error) {
-	raw, err := d.cfn.Metadata(stack.NameForEnv(d.app, d.env.Name))
+	raw, err := d.cfn.Metadata(cloudformation.WithStackName(stack.NameForEnv(d.app, d.env.Name)))
 	if err != nil {
 		return "", err
 	}

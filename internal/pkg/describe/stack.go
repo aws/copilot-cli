@@ -10,5 +10,5 @@ import (
 type cfn interface {
 	Describe(name string) (*cloudformation.StackDescription, error)
 	StackResources(name string) ([]*cloudformation.StackResource, error)
-	Metadata(name string) (string, error)
+	Metadata(opt cloudformation.MetadataOpts) (string, error)
 }
