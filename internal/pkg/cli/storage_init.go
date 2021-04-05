@@ -30,7 +30,6 @@ const (
 var storageTypes = []string{
 	dynamoDBStorageType,
 	s3StorageType,
-	//rdsStorageType,
 }
 
 // Displayed options for storage types
@@ -64,7 +63,7 @@ var storageTypeOptions = map[string]prompt.Option {
 const (
 	s3BucketFriendlyText      = "S3 Bucket"
 	dynamoDBTableFriendlyText = "DynamoDB Table"
-	rdsFriendlyText           = "RDS Aurora Serverless Cluster"
+	rdsFriendlyText           = "Database Cluster"
 )
 
 // General-purpose prompts, collected for all storage resources.
@@ -73,7 +72,7 @@ var (
 	storageInitTypeHelp      = `The type of storage you'd like to add to your workload. 
 DynamoDB is a key-value and document database that delivers single-digit millisecond performance at any scale.
 S3 is a web object store built to store and retrieve any amount of data from anywhere on the Internet.
-RDS Aurora Serverless is an on-demand autoscaling configuration for Amazon Aurora, a MySQL and PostgreSQL-compatible relational database.
+Aurora Serverless is an on-demand autoscaling configuration for Amazon Aurora, a MySQL and PostgreSQL-compatible relational database.
 `
 
 	fmtStorageInitNamePrompt = "What would you like to " + color.Emphasize("name") + " this %s?"
