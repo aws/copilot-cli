@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
@@ -67,4 +68,27 @@ func (a *App) HumanString() string {
 	}
 	writer.Flush()
 	return b.String()
+}
+
+// AppDescriber retrieves information about an application.
+type AppDescriber struct {
+}
+
+// NewAppDescriberConfig contains fields that initiates AppDescriber struct.
+type NewAppDescriberConfig struct {
+}
+
+// NewAppDescriber instantiates an application describer.
+func NewAppDescriber(opt NewAppDescriberConfig) (*AppDescriber, error) {
+	return &AppDescriber{}, nil
+}
+
+// Version returns the app CloudFormation template version associated with
+// the application by reading the Metadata.Version field from the template.
+// Specifically it will get both app CFN stack template version and app StackSet template version,
+// and return the minimum as the current app version.
+//
+// If the Version field does not exist, then it's a legacy template and it returns an deploy.LegacyAppTemplateVersion and nil error.
+func (d *AppDescriber) Version() (string, error) {
+	return deploy.LegacyAppTemplateVersion, nil
 }
