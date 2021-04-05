@@ -210,7 +210,7 @@ func (o *envUpgradeOpts) upgrade(env *config.Environment, customResourcesURLs ma
 	if err != nil {
 		return err
 	}
-	if !o.shouldUpgradeEnv(env.Name, version) {
+	if !shouldUpgradeEnv(env.Name, version) {
 		return nil
 	}
 
@@ -244,7 +244,7 @@ func (o *envUpgradeOpts) envVersion(name string) (string, error) {
 	return version, err
 }
 
-func (o *envUpgradeOpts) shouldUpgradeEnv(env, version string) bool {
+func shouldUpgradeEnv(env, version string) bool {
 	diff := semver.Compare(version, deploy.LatestEnvTemplateVersion)
 	if diff < 0 {
 		// Newer version available.

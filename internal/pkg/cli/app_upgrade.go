@@ -69,7 +69,7 @@ func (o *appUpgradeOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get template version of application %s: %v", o.name, err)
 	}
-	if !o.shouldUpgradeApp(o.name, version) {
+	if !shouldUpgradeApp(o.name, version) {
 		return nil
 	}
 
@@ -88,7 +88,7 @@ func (o *appUpgradeOpts) Execute() error {
 	return o.upgradeApplication(app, version, deploy.LatestAppTemplateVersion)
 }
 
-func (o *appUpgradeOpts) shouldUpgradeApp(appName string, version string) bool {
+func shouldUpgradeApp(appName string, version string) bool {
 	diff := semver.Compare(version, deploy.LatestAppTemplateVersion)
 	if diff < 0 {
 		// Newer version available.
