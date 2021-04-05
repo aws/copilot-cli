@@ -30,6 +30,7 @@ const (
 var storageTypes = []string{
 	dynamoDBStorageType,
 	s3StorageType,
+	rdsStorageType,
 }
 
 // Displayed options for storage types
@@ -754,6 +755,10 @@ are injected into your containers as environment variables for easy access.`,
 	cmd.Flags().StringArrayVar(&vars.lsiSorts, storageLSIConfigFlag, []string{}, storageLSIConfigFlagDescription)
 	cmd.Flags().BoolVar(&vars.noLSI, storageNoLSIFlag, false, storageNoLSIFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSort, storageNoSortFlag, false, storageNoSortFlagDescription)
+
+	cmd.Flags().StringVar(&vars.rdsEngine, storageRDSEngineFlag, "", storageRDSEngineFlagDescription)
+	cmd.Flags().StringVar(&vars.rdsInitialDBName, storageRDSInitialDBFlag, "", storageRDSInitialDBFlagDescription)
+	cmd.Flags().StringVar(&vars.rdsParameterGroup, storageRDSParameterGroupFlag, "", storageRDSParameterGroupFlagDescription)
 
 	requiredFlags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
