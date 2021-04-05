@@ -13,6 +13,6 @@ AccessPoint:
       CreationInfo:
         OwnerUid: {{.Storage.ManagedVolumeInfo.UID}}
         OwnerGid: {{.Storage.ManagedVolumeInfo.GID}}
-        Permissions: 0755
+        Permissions: '0755'
 {{- end}}
 {{- end}}

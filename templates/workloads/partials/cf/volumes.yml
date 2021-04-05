@@ -1,4 +1,4 @@
-{{- if .Storage.Volumes}}
+{{- if or .Storage.Volumes .Storage.ManagedVolumeInfo}}
 Volumes:
 {{- if .Storage.ManagedVolumeInfo}}
   - Name: {{.Storage.ManagedVolumeInfo.Name}}
