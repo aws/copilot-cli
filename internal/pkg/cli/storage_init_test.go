@@ -332,7 +332,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(
-					gomock.Eq("What would you like to name this RDS Aurora Serverless Cluster?"),
+					gomock.Eq("What would you like to name this Database Cluster?"),
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
