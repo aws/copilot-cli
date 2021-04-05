@@ -4,9 +4,7 @@ AccessPoint:
   Type: AWS::EFS::AccessPoint
   Properties:
     ClientToken: !Sub ${AppName}-${EnvName}-${WorkloadName}
-    FileSystemId: 
-      Fn::ImportValue:
-        !Sub '${AppName}-${EnvName}-FilesystemID'
+    FileSystemId: !GetAtt EnvControllerAction.ManagedFileSystemID
     PosixUser: 
       Uid: {{.Storage.ManagedVolumeInfo.UID}}
       Gid: {{.Storage.ManagedVolumeInfo.GID}}

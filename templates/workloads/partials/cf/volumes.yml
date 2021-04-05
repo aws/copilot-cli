@@ -3,9 +3,7 @@ Volumes:
 {{- if .Storage.ManagedVolumeInfo}}
   - Name: {{.Storage.ManagedVolumeInfo.Name}}
     EFSVolumeConfiguration:
-      FilesystemId:
-        Fn::ImportValue:
-          !Sub '${AppName}-${EnvName}-FilesystemID'
+      FilesystemId: !GetAtt EnvControllerAction.ManagedFileSystemID
       RootDirectory: "/"
       TransitEncryption: ENABLED
       AuthorizationConfig:
