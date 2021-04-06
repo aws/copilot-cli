@@ -337,6 +337,8 @@ func (cf CloudFormation) createEnvControllerRenderer(in *envControllerRendererIn
 	in.g.Go(func() error {
 		if err := stream.Stream(ctx, envStreamer); err != nil {
 			if errors.Is(err, context.Canceled) {
+				// The stack streamer was canceled on purposed, do not return an error.
+				// This occurs if we detect that the environment stack has no updates.
 				return nil
 			}
 			return err
