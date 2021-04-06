@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/google/uuid"
+
+	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 // Constants for template paths.
@@ -112,13 +113,7 @@ type MountPoint struct {
 type Volume struct {
 	Name *string
 
-	// EFSVolumeConfiguration
-	Filesystem    *string
-	RootDirectory *string // "/" or empty are equivalent
-
-	// Authorization Config
-	AccessPointID *string
-	IAM           *string // ENABLED or DISABLED
+	EFS *EFSVolumeConfiguration
 }
 
 // ManagedVolumeCreationInfo holds information about how to create Copilot-managed access points.
@@ -126,6 +121,16 @@ type ManagedVolumeCreationInfo struct {
 	Name *string
 	UID  *string
 	GID  *string
+}
+
+type EFSVolumeConfiguration struct {
+	// EFSVolumeConfiguration
+	Filesystem    *string
+	RootDirectory *string // "/" or empty are equivalent
+
+	// Authorization Config
+	AccessPointID *string
+	IAM           *string // ENABLED or DISABLED
 }
 
 // LogConfigOpts holds configuration that's needed if the service is configured with Firelens to route
@@ -197,6 +202,7 @@ type WorkloadOpts struct {
 	DomainAlias    string
 
 	// Additional options for service templates.
+	WorkloadType        string
 	HealthCheck         *ecs.HealthCheck
 	HTTPHealthCheck     HTTPHealthCheckOpts
 	AllowedSourceIps    []string
@@ -269,12 +275,13 @@ func (t *Template) parseWkld(name, wkldDirName string, data interface{}, options
 func withSvcParsingFuncs() ParseOption {
 	return func(t *template.Template) *template.Template {
 		return t.Funcs(map[string]interface{}{
-			"toSnakeCase":     ToSnakeCaseFunc,
-			"hasSecrets":      hasSecrets,
-			"fmtSlice":        FmtSliceFunc,
-			"quoteSlice":      QuotePSliceFunc,
-			"randomUUID":      randomUUIDFunc,
-			"jsonMountPoints": generateMountPointJSON,
+			"toSnakeCase":         ToSnakeCaseFunc,
+			"hasSecrets":          hasSecrets,
+			"fmtSlice":            FmtSliceFunc,
+			"quoteSlice":          QuotePSliceFunc,
+			"randomUUID":          randomUUIDFunc,
+			"jsonMountPoints":     generateMountPointJSON,
+			"envControllerParams": envControllerParameters,
 		})
 	}
 }
@@ -295,4 +302,13 @@ func randomUUIDFunc() (string, error) {
 		return "", fmt.Errorf("generate random uuid: %w", err)
 	}
 	return id.String(), err
+}
+
+// envControllerParameters determines which parameters to include in the EnvController template.
+func envControllerParameters(o WorkloadOpts) []string {
+	parameters := []string{}
+	if o.WorkloadType == "Load Balanced Web Service" {
+		parameters = append(parameters, "ALBWorkloads,") // YAML needs the comma separator; okay if trailing.
+	}
+	return parameters
 }

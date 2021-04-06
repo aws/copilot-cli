@@ -6,10 +6,7 @@ EnvControllerAction:
     ServiceToken: !GetAtt EnvControllerFunction.Arn
     Workload: !Ref WorkloadName
     EnvStack: !Sub '${AppName}-${EnvName}'
-    Parameters: 
-      - 'ALBWorkloads'
-    # We need to force trigger this lambda function on all deployments, so we give it a random ID as input on all event types.
-    UpdateID: {{ randomUUID }}
+    Parameters: {{ envControllerParams . }}
 
 EnvControllerFunction:
   Type: AWS::Lambda::Function
