@@ -1,6 +1,8 @@
 {{- if .Storage}}
 {{- if .Storage.ManagedVolumeInfo}}
 AccessPoint:
+  Metadata:
+    'aws:copilot:description': 'An EFS access point to handle POSIX permissions'
   Type: AWS::EFS::AccessPoint
   Properties:
     ClientToken: !Sub ${AppName}-${EnvName}-${WorkloadName}

@@ -172,6 +172,8 @@ Resources:
   FileSystem:
     Condition: CreateEFS
     Type: AWS::EFS::FileSystem
+    Metadata:
+      'aws:copilot:description': 'An EFS filesystem for persistent task storage'
     Properties:
       BackupPolicy: 
         Status: ENABLED
