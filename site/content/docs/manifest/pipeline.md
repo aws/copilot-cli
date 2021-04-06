@@ -69,9 +69,6 @@ Configuration for CodeBuild project.
 <span class="parent-field">build.</span><a id="build-image" href="#build-image" class="field">`image`</a> <span class="type">String</span>  
 The URI that identifies the Docker image to use for this build project. As of now, `aws/codebuild/amazonlinux2-x86_64-standard:3.0` is used by default.
 
-!!! info
-    Copilot does not support cross-account ECR repository or private registry other than ECR because [imagePullCredentialsType](https://docs.aws.amazon.com/codebuild/latest/APIReference/API_ProjectEnvironment.html#CodeBuild-Type-ProjectEnvironment-imagePullCredentialsType) is fixed to `CODEBUILD`.
-
 <div class="separator"></div>
 
 <a id="stages" href="#stages" class="field">`stages`</a> <span class="type">Array of Maps</span>  
