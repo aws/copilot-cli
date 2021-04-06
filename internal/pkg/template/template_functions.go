@@ -44,6 +44,12 @@ func EnvVarNameFunc(s string) string {
 	return StripNonAlphaNumFunc(s) + "Name"
 }
 
+// EnvVarSecretFunc converts an input resource name to LogicalIDSafe, then appends
+// "Secret" to the end.
+func EnvVarSecretFunc(s string) string {
+	return StripNonAlphaNumFunc(s) + "Secret"
+}
+
 // Grabs word boundaries in default CamelCase. Matches lowercase letters & numbers
 // before the next capital as capturing group 1, and the first capital in the
 // next word as capturing group 2. Will match "yC" in "MyCamel" and "y2ndC" in"My2ndCamel"

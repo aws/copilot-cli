@@ -39,13 +39,13 @@ const (
 	rdsStorageTypeOption      = "Aurora Serverless"
 )
 
-var optionToStorageType = map[string]string {
+var optionToStorageType = map[string]string{
 	dynamoDBStorageTypeOption: dynamoDBStorageType,
 	s3StorageTypeOption:       s3StorageType,
 	rdsStorageTypeOption:      rdsStorageType,
 }
 
-var storageTypeOptions = map[string]prompt.Option {
+var storageTypeOptions = map[string]prompt.Option{
 	dynamoDBStorageType: {
 		Value: dynamoDBStorageTypeOption,
 		Hint:  "NoSQL",
@@ -123,12 +123,12 @@ var attributeTypes = []string{
 // RDS Aurora Serverless specific questions and help prompts.
 var (
 	storageInitRDSInitialDBNamePrompt = "What would you like to name the initial database in your cluster?"
-	storageInitRDSDBEnginePrompt = "Which database engine would you like to use?"
+	storageInitRDSDBEnginePrompt      = "Which database engine would you like to use?"
 )
 
 // RDS Aurora Serverless specific constants and variables.
 const (
-	rdsStorageNameDefault = "aurora-cluster"
+	fmtRDSStorageNameDefault = "%s-cluster"
 
 	engineTypeMySQL      = "MySQL"
 	engineTypePostgreSQL = "PostgreSQL"
@@ -271,6 +271,7 @@ func (o *initStorageOpts) Ask() error {
 	if err := o.askStorageType(); err != nil {
 		return err
 	}
+	// Storage name needs to be asked after workload because for Aurora the default storage name uses the workload name.
 	if err := o.askStorageName(); err != nil {
 		return err
 	}
@@ -347,7 +348,7 @@ func (o *initStorageOpts) askStorageName() error {
 		validator = dynamoTableNameValidation
 		friendlyText = dynamoDBTableFriendlyText
 	case rdsStorageType:
-		return o.askStorageNameWithDefault(rdsFriendlyText, rdsStorageNameDefault, rdsNameValidation)
+		return o.askStorageNameWithDefault(rdsFriendlyText, fmt.Sprintf(fmtRDSStorageNameDefault, o.workloadName), rdsNameValidation)
 	}
 
 	name, err := o.prompt.Get(fmt.Sprintf(fmtStorageInitNamePrompt,
@@ -696,8 +697,13 @@ func (o *initStorageOpts) environmentNames() ([]string, error) {
 }
 
 func (o *initStorageOpts) RecommendedActions() []string {
-
-	newVar := template.ToSnakeCaseFunc(template.EnvVarNameFunc(o.storageName))
+	var newVar string
+	switch o.storageType {
+	case dynamoDBStorageType, s3StorageType:
+		newVar = template.ToSnakeCaseFunc(template.EnvVarNameFunc(o.storageName))
+	case rdsStorageType:
+		newVar = template.ToSnakeCaseFunc(template.EnvVarSecretFunc(o.storageName))
+	}
 
 	deployCmd := fmt.Sprintf("copilot deploy --name %s", o.workloadName)
 
