@@ -11,7 +11,7 @@ AccessPoint:
       Uid: {{.Storage.ManagedVolumeInfo.UID}}
       Gid: {{.Storage.ManagedVolumeInfo.GID}}
     RootDirectory: 
-      Path: !Sub '/${WorkloadName}'
+      Path: !Sub '/{{.Storage.ManagedVolumeInfo.DirName}}'
       CreationInfo:
         OwnerUid: {{.Storage.ManagedVolumeInfo.UID}}
         OwnerGid: {{.Storage.ManagedVolumeInfo.GID}}

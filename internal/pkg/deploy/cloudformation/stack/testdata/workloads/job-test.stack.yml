@@ -67,7 +67,7 @@ Resources:
           - Name: COPILOT_SERVICE_NAME
             Value: !Sub '${WorkloadName}'
           - Name: COPILOT_MOUNT_POINTS
-            Value: '{"myEFSVolume":"/etc/mount1"}'
+            Value: '{"managedEFSVolume":"/etc/mount2","myEFSVolume":"/etc/mount1"}'
           
           LogConfiguration:
             LogDriver: awslogs
@@ -80,6 +80,9 @@ Resources:
             - ContainerPath: /etc/mount1
               ReadOnly: true
               SourceVolume: myEFSVolume
+            - ContainerPath: /etc/mount2
+              ReadOnly: false
+              SourceVolume: managedEFSVolume
         - Name: nginx
           Image: 'public.ecr.aws/nginx/nginx'
           LogConfiguration:
@@ -101,6 +104,14 @@ Resources:
               Value: '{"myEFSVolume":"/var/www"}'
 
       Volumes:
+        - Name: managedEFSVolume
+          EFSVolumeConfiguration:
+            FilesystemId: !GetAtt EnvControllerAction.ManagedFileSystemID
+            RootDirectory: /
+            TransitEncryption: ENABLED
+            AuthorizationConfig:
+              IAM: ENABLED
+              AccessPointId: !Ref AccessPoint
         - Name: myEFSVolume
           EFSVolumeConfiguration:
             FilesystemId: fs-12345
@@ -108,6 +119,7 @@ Resources:
             TransitEncryption: ENABLED
             AuthorizationConfig:
               IAM: DISABLED
+            
         
         
   ExecutionRole:
@@ -189,6 +201,24 @@ Resources:
                   - 'elasticfilesystem:ClientMount'
                 Resource:
                   - !Sub 'arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/fs-12345'
+        - PolicyName: 'GrantAccessCopilotManagedEFS'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'elasticfilesystem:ClientMount'
+                  - 'elasticfilesystem:ClientWrite'
+                Condition:
+                  StringEquals:
+                    'elasticfilesystem:AccessPointArn': !GetAtt AccessPoint.Arn
+                Resource: 
+                  - Fn::Sub:
+                    - 'arn:aws:elasticfilesystem:${region}:${account}:file-system/${fsid}'
+                    - region: !Ref AWS::Region
+                      account: !Ref AWS::AccountId
+                      fsid: !GetAtt EnvControllerAction.ManagedFileSystemID
+
 
   Rule:
     Metadata:
@@ -356,6 +386,22 @@ Resources:
             - events:DescribeRule
             Resource: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForECSTaskRule
   
+  AccessPoint:
+    Metadata:
+      'aws:copilot:description': 'An EFS access point to handle POSIX permissions'
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      ClientToken: !Sub ${AppName}-${EnvName}-${WorkloadName}
+      FileSystemId: !GetAtt EnvControllerAction.ManagedFileSystemID
+      PosixUser: 
+        Uid: 1412617205
+        Gid: 1412617205
+      RootDirectory: 
+        Path: '/job/job'
+        CreationInfo:
+          OwnerUid: 1412617205
+          OwnerGid: 1412617205
+          Permissions: '0755'
 
   AddonsStack:
     Metadata:

@@ -171,11 +171,11 @@ func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
 
 // convertStorageOpts converts a manifest Storage field into template data structures which can be used
 // to execute CFN templates
-func convertStorageOpts(name string, in *manifest.Storage) (*template.StorageOpts, error) {
+func convertStorageOpts(wl manifest.Workload, in *manifest.Storage) (*template.StorageOpts, error) {
 	if in == nil {
 		return nil, nil
 	}
-	mv, err := convertManagedFSInfo(name, in.Volumes)
+	mv, err := convertManagedFSInfo(wl, in.Volumes)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 	return output, nil
 }
 
-func convertManagedFSInfo(name string, input map[string]manifest.Volume) (*template.ManagedVolumeCreationInfo, error) {
+func convertManagedFSInfo(wl manifest.Workload, input map[string]manifest.Volume) (*template.ManagedVolumeCreationInfo, error) {
 	var output *template.ManagedVolumeCreationInfo
 	for name, volume := range input {
 		if output != nil {
@@ -305,19 +305,22 @@ func convertManagedFSInfo(name string, input map[string]manifest.Volume) (*templ
 		if volume.EFS.UseManagedFS() {
 			uid := volume.EFS.Config.UID
 			gid := volume.EFS.Config.GID
+			dirName := getDirName(wl)
+
 			if err := validateUIDGID(uid, gid); err != nil {
 				return nil, err
 			}
 
 			if uid == nil && gid == nil {
-				crc := aws.Uint32(getRandomUIDGID(name))
+				crc := aws.Uint32(getRandomUIDGID(dirName))
 				uid = crc
 				gid = crc
 			}
 			output = &template.ManagedVolumeCreationInfo{
-				Name: aws.String(name),
-				UID:  uid,
-				GID:  gid,
+				Name:    aws.String(name),
+				DirName: aws.String(dirName),
+				UID:     uid,
+				GID:     gid,
 			}
 		}
 	}
@@ -329,6 +332,15 @@ func convertManagedFSInfo(name string, input map[string]manifest.Volume) (*templ
 // small numbers of hashes.
 func getRandomUIDGID(name string) uint32 {
 	return crc32.ChecksumIEEE([]byte(name))
+}
+
+func getDirName(wl manifest.Workload) string {
+	for _, w := range manifest.ServiceTypes {
+		if aws.StringValue(wl.Type) == w {
+			return svcWlType + "/" + aws.StringValue(wl.Name)
+		}
+	}
+	return jobWlType + "/" + aws.StringValue(wl.Name)
 }
 
 func validateUIDGID(uid, gid *uint32) error {

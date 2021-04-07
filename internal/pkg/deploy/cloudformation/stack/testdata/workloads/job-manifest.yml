@@ -30,6 +30,10 @@ storage:
       path: '/etc/mount1'
       read_only: true
       efs: fs-12345
+    managedEFSVolume:
+      path: '/etc/mount2'
+      read_only: false
+      efs: copilot
 
 sidecars:
   nginx:

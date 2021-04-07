@@ -20,6 +20,9 @@ import (
 // Template rendering configuration common across workloads.
 const (
 	wkldParamsTemplatePath = "workloads/params.json.tmpl"
+
+	svcWlType = "svc"
+	jobWlType = "job"
 )
 
 // Parameter logical IDs common across workloads.
