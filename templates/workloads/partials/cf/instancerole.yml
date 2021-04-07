@@ -1,0 +1,21 @@
+InstanceRole:
+  Metadata:
+    'aws:copilot:description': 'An IAM role to control permissions for the containers in your App Runner services'
+  Type: AWS::IAM::Role
+  Properties:{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{if gt (len .NestedStack.PolicyOutputs) 0}}
+    ManagedPolicyArns:{{range $managedPolicy := .NestedStack.PolicyOutputs}}
+    - Fn::GetAtt: [{{$stackName}}, Outputs.{{$managedPolicy}}]{{end}}{{end}}{{end}}
+    AssumeRolePolicyDocument:
+      Statement:
+        # Note: This is the only statement that should be included upon release. All others are temporary and for testing purposes only.
+        # - Effect: Allow
+        #   Principal:
+        #     Service: tasks.apprunner.amazonaws.com
+        #   Action: 'sts:AssumeRole'
+        - Effect: Allow
+          Principal:
+            Service:
+              - us-east-1.gamma.credentialvendingserviceproxy.bullet.aws.internal
+              - eu-west-1.gamma.credentialvendingserviceproxy.bullet.aws.internal
+              - us-west-2.gamma.credentialvendingserviceproxy.bullet.aws.internal
+          Action: 'sts:AssumeRole'

@@ -63,6 +63,8 @@ var (
 		"mount-points",
 		"volumes",
 		"image-overrides",
+		"instancerole",
+		"ecraccessrole",
 	}
 )
 
