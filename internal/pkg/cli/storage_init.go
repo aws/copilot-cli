@@ -712,7 +712,8 @@ func (o *initStorageOpts) RecommendedActions() []string {
 	}
 
 	actionRetrieveEnvVar := fmt.Sprintf(
-		"Update %s's code to leverage the injected environment variable %s. For example, in JavaScript you can write %s.",
+		`Update %s's code to leverage the injected environment variable %s.
+For example, in JavaScript you can write %s.`,
 		o.workloadName,
 		newVar,
 		color.HighlightCode(retrieveEnvVarCode))
@@ -720,8 +721,8 @@ func (o *initStorageOpts) RecommendedActions() []string {
 	deployCmd := fmt.Sprintf("copilot deploy --name %s", o.workloadName)
 	actionDeploy := fmt.Sprintf("Run %s to deploy your storage resources.", color.HighlightCode(deployCmd))
 	return []string{
-		fmt.Sprintf("1. %s", actionRetrieveEnvVar),
-		fmt.Sprintf("2. %s", actionDeploy),
+		fmt.Sprintf("%s", actionRetrieveEnvVar),
+		fmt.Sprintf("%s", actionDeploy),
 	}
 }
 
