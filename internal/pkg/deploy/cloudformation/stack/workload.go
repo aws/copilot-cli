@@ -298,14 +298,7 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 		return nil, err
 	}
 
-	var healthCheckPath string
-	if w.healthCheckConfig.HealthCheckPath != nil {
-		healthCheckPath = *w.healthCheckConfig.HealthCheckPath
-	} else if w.healthCheckConfig.HealthCheckArgs.Path != nil {
-		healthCheckPath = *w.healthCheckConfig.HealthCheckArgs.Path
-	}
-
-	return append(wkldParameters, []*cloudformation.Parameter{
+	appRunnerParameters := []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
 			ParameterValue: aws.String(strconv.Itoa(int(*w.imageConfig.Port))),
@@ -318,25 +311,47 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterKey:   aws.String(WorkloadInstanceMemoryParamKey),
 			ParameterValue: aws.String(strconv.Itoa(*w.instanceConfig.Memory)),
 		},
-		{
+	}
+
+	// Optional HealthCheckPath parameter
+	if w.healthCheckConfig.Path() != nil {
+		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
 			ParameterKey:   aws.String(WorkloadHealthCheckPathParamKey),
-			ParameterValue: aws.String(healthCheckPath),
-		},
-		{
+			ParameterValue: aws.String(*w.healthCheckConfig.Path()),
+		})
+	}
+
+	// Optional HealthCheckInterval parameter
+	if w.healthCheckConfig.HealthCheckArgs.Interval != nil {
+		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
 			ParameterKey:   aws.String(WorkloadHealthCheckIntervalParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.HealthCheckArgs.Interval))),
-		},
-		{
+			ParameterValue: aws.String(strconv.Itoa(int(w.healthCheckConfig.HealthCheckArgs.Interval.Seconds()))),
+		})
+	}
+
+	// Optional HealthCheckTimeout parameter
+	if w.healthCheckConfig.HealthCheckArgs.Timeout != nil {
+		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
 			ParameterKey:   aws.String(WorkloadHealthCheckTimeoutParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.HealthCheckArgs.Timeout))),
-		},
-		{
+			ParameterValue: aws.String(strconv.Itoa(int(w.healthCheckConfig.HealthCheckArgs.Timeout.Seconds()))),
+		})
+	}
+
+	// Optional HealthCheckHealthyThreshold parameter
+	if w.healthCheckConfig.HealthCheckArgs.HealthyThreshold != nil {
+		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
 			ParameterKey:   aws.String(WorkloadHealthCheckHealthyThresholdParamKey),
 			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.HealthCheckArgs.HealthyThreshold))),
-		},
-		{
+		})
+	}
+
+	// Optional HealthCheckUnhealthyThreshold parameter
+	if w.healthCheckConfig.HealthCheckArgs.UnhealthyThreshold != nil {
+		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
 			ParameterKey:   aws.String(WorkloadHealthCheckUnhealthyThresholdParamKey),
 			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.HealthCheckArgs.UnhealthyThreshold))),
-		},
-	}...), nil
+		})
+	}
+
+	return append(wkldParameters, appRunnerParameters...), nil
 }
