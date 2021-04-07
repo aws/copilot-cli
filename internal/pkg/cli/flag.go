@@ -205,7 +205,7 @@ Must be of the format '<keyName>:<dataType>'.`
 Must be of the format '<keyName>:<dataType>'.`
 	storageRDSEngineFlagDescription         = "The database engine used in the cluster."
 	storageRDSInitialDBFlagDescription      = "The initial database to create in the cluster."
-	storageRDSParameterGroupFlagDescription = "The name of the parameter group to associate with the cluster."
+	storageRDSParameterGroupFlagDescription = "Optional. The name of the parameter group to associate with the cluster."
 
 	countFlagDescription         = "Optional. The number of tasks to set up."
 	cpuFlagDescription           = "Optional. The number of CPU units to reserve for each task."
