@@ -30,6 +30,7 @@ const (
 var storageTypes = []string{
 	dynamoDBStorageType,
 	s3StorageType,
+	rdsStorageType,
 }
 
 // Displayed options for storage types
@@ -39,13 +40,13 @@ const (
 	rdsStorageTypeOption      = "Aurora Serverless"
 )
 
-var optionToStorageType = map[string]string {
+var optionToStorageType = map[string]string{
 	dynamoDBStorageTypeOption: dynamoDBStorageType,
 	s3StorageTypeOption:       s3StorageType,
 	rdsStorageTypeOption:      rdsStorageType,
 }
 
-var storageTypeOptions = map[string]prompt.Option {
+var storageTypeOptions = map[string]prompt.Option{
 	dynamoDBStorageType: {
 		Value: dynamoDBStorageTypeOption,
 		Hint:  "NoSQL",
@@ -123,12 +124,12 @@ var attributeTypes = []string{
 // RDS Aurora Serverless specific questions and help prompts.
 var (
 	storageInitRDSInitialDBNamePrompt = "What would you like to name the initial database in your cluster?"
-	storageInitRDSDBEnginePrompt = "Which database engine would you like to use?"
+	storageInitRDSDBEnginePrompt      = "Which database engine would you like to use?"
 )
 
 // RDS Aurora Serverless specific constants and variables.
 const (
-	rdsStorageNameDefault = "aurora-cluster"
+	fmtRDSStorageNameDefault = "%s-cluster"
 
 	engineTypeMySQL      = "MySQL"
 	engineTypePostgreSQL = "PostgreSQL"
@@ -271,6 +272,7 @@ func (o *initStorageOpts) Ask() error {
 	if err := o.askStorageType(); err != nil {
 		return err
 	}
+	// Storage name needs to be asked after workload because for Aurora the default storage name uses the workload name.
 	if err := o.askStorageName(); err != nil {
 		return err
 	}
@@ -347,7 +349,7 @@ func (o *initStorageOpts) askStorageName() error {
 		validator = dynamoTableNameValidation
 		friendlyText = dynamoDBTableFriendlyText
 	case rdsStorageType:
-		return o.askStorageNameWithDefault(rdsFriendlyText, rdsStorageNameDefault, rdsNameValidation)
+		return o.askStorageNameWithDefault(rdsFriendlyText, fmt.Sprintf(fmtRDSStorageNameDefault, o.workloadName), rdsNameValidation)
 	}
 
 	name, err := o.prompt.Get(fmt.Sprintf(fmtStorageInitNamePrompt,
@@ -696,14 +698,32 @@ func (o *initStorageOpts) environmentNames() ([]string, error) {
 }
 
 func (o *initStorageOpts) RecommendedActions() []string {
+	var (
+		retrieveEnvVarCode string
+		newVar             string
+	)
+	switch o.storageType {
+	case dynamoDBStorageType, s3StorageType:
+		newVar = template.ToSnakeCaseFunc(template.EnvVarNameFunc(o.storageName))
+		retrieveEnvVarCode = fmt.Sprintf("const storageName = process.env.%s", newVar)
+	case rdsStorageType:
+		newVar = template.ToSnakeCaseFunc(template.EnvVarSecretFunc(o.storageName))
+		retrieveEnvVarCode = fmt.Sprintf("const {username, host, dbname, password, port} = JSON.parse(process.env.%s)", newVar)
 
-	newVar := template.ToSnakeCaseFunc(template.EnvVarNameFunc(o.storageName))
+	}
+
+	actionRetrieveEnvVar := fmt.Sprintf(
+		`Update %s's code to leverage the injected environment variable %s.
+For example, in JavaScript you can write %s.`,
+		o.workloadName,
+		newVar,
+		color.HighlightCode(retrieveEnvVarCode))
 
 	deployCmd := fmt.Sprintf("copilot deploy --name %s", o.workloadName)
-
+	actionDeploy := fmt.Sprintf("Run %s to deploy your storage resources.", color.HighlightCode(deployCmd))
 	return []string{
-		fmt.Sprintf("Update %s's code to leverage the injected environment variable %s", color.HighlightUserInput(o.workloadName), color.HighlightCode(newVar)),
-		fmt.Sprintf("Run %s to deploy your storage resources.", color.HighlightCode(deployCmd)),
+		actionRetrieveEnvVar,
+		actionDeploy,
 	}
 }
 
@@ -714,16 +734,17 @@ func buildStorageInitCmd() *cobra.Command {
 		Use:   "init",
 		Short: "Creates a new AWS CloudFormation template for a storage resource.",
 		Long: `Creates a new AWS CloudFormation template for a storage resource.
-Storage resources are stored in the Copilot addons directory (e.g. ./copilot/frontend/addons) for a given
-workload and deployed to your environments when you run ` + color.HighlightCode("copilot deploy") + `. Resource names
-are injected into your containers as environment variables for easy access.`,
+Storage resources are stored in the Copilot addons directory (e.g. ./copilot/frontend/addons) for a given workload and deployed to your environments when you run ` + color.HighlightCode("copilot deploy") + `. 
+Resource names are injected into your containers as environment variables for easy access.`,
 		Example: `
   Create an S3 bucket named "my-bucket" attached to the "frontend" service.
   /code $ copilot storage init -n my-bucket -t S3 -w frontend
   Create a basic DynamoDB table named "my-table" attached to the "frontend" service with a sort key specified.
   /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --no-lsi
   Create a DynamoDB table with multiple alternate sort keys.
-  /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N`,
+  /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N
+  Create an RDS Aurora Serverless cluster using PostgreSQL as database engine.
+  /code $ copilot storage init -n my-cluster -t RDS -w frontend --engine PostgreSQL`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {
@@ -755,6 +776,10 @@ are injected into your containers as environment variables for easy access.`,
 	cmd.Flags().BoolVar(&vars.noLSI, storageNoLSIFlag, false, storageNoLSIFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSort, storageNoSortFlag, false, storageNoSortFlagDescription)
 
+	cmd.Flags().StringVar(&vars.rdsEngine, storageRDSEngineFlag, "", storageRDSEngineFlagDescription)
+	cmd.Flags().StringVar(&vars.rdsInitialDBName, storageRDSInitialDBFlag, "", storageRDSInitialDBFlagDescription)
+	cmd.Flags().StringVar(&vars.rdsParameterGroup, storageRDSParameterGroupFlag, "", storageRDSParameterGroupFlagDescription)
+
 	requiredFlags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(storageTypeFlag))
@@ -766,11 +791,18 @@ are injected into your containers as environment variables for easy access.`,
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoSortFlag))
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageLSIConfigFlag))
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoLSIFlag))
+
+	auroraFlags := pflag.NewFlagSet("Aurora Serverless", pflag.ContinueOnError)
+	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSEngineFlag))
+	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSInitialDBFlag))
+	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSParameterGroupFlag))
+
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
-		"sections": `Required,DynamoDB`,
-		"Required": requiredFlags.FlagUsages(),
-		"DynamoDB": ddbFlags.FlagUsages(),
+		"sections":          `Required,DynamoDB,Aurora Serverless`,
+		"Required":          requiredFlags.FlagUsages(),
+		"DynamoDB":          ddbFlags.FlagUsages(),
+		"Aurora Serverless": auroraFlags.FlagUsages(),
 	}
 	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
   {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}
