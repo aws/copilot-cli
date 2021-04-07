@@ -126,6 +126,8 @@ Resources:
 
 {{include "addons" . | indent 2}}
 
+{{include "env-controller" . | indent 2}}
+
 Outputs:
   DiscoveryServiceARN:
     Description: ARN of the Discovery Service.

@@ -134,6 +134,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		LogConfig:           convertLogging(s.manifest.Logging),
 		Autoscaling:         autoscaling,
 		ExecuteCommand:      convertExecuteCommand(&s.manifest.ExecuteCommand),
+		WorkloadType:        manifest.LoadBalancedWebServiceType,
 		HTTPHealthCheck:     convertHTTPHealthCheck(&s.manifest.HealthCheck),
 		AllowedSourceIps:    s.manifest.AllowedSourceIps,
 		RulePriorityLambda:  rulePriorityLambda.String(),

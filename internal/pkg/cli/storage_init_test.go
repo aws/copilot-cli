@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
@@ -27,6 +28,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 		inLSISorts    []string
 		inNoSort      bool
 		inNoLSI       bool
+		inEngine      string
 
 		mockWs    func(m *mocks.MockwsAddonManager)
 		mockStore func(m *mocks.Mockstore)
@@ -161,6 +163,15 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inNoSort:      true,
 			wantedErr:     fmt.Errorf("validate LSI configuration: cannot specify --no-sort and --lsi options at once"),
 		},
+		"invalid database engine type": {
+			inAppName: "meow",
+			inEngine:  "mysql",
+
+			mockWs:        func(m *mocks.MockwsAddonManager) {},
+			mockStore:     func(m *mocks.Mockstore) {},
+
+			wantedErr: errors.New("invalid engine type mysql: must be one of \"MySQL\", \"PostgreSQL\""),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -181,6 +192,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 					lsiSorts:     tc.inLSISorts,
 					noLSI:        tc.inNoLSI,
 					noSort:       tc.inNoSort,
+					rdsEngine:    tc.inEngine,
 				},
 				appName: tc.inAppName,
 				ws:      mockWs,
@@ -208,6 +220,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		wantedTableName    = "coolTable"
 		wantedPartitionKey = "DogName:String"
 		wantedSortKey      = "PhotoId:Number"
+
+		wantedInitialDBName = "mydb"
+		wantedDBEngine      = engineTypePostgreSQL
 	)
 	testCases := map[string]struct {
 		inAppName     string
@@ -219,6 +234,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		inLSISorts    []string
 		inNoLSI       bool
 		inNoSort      bool
+
+		inDBEngine      string
+		inInitialDBName string
 
 		mockPrompt func(m *mocks.Mockprompter)
 		mockCfg    func(m *mocks.MockwsSelector)
@@ -233,7 +251,17 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: wantedBucketName,
 
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Eq(storageTypes), gomock.Any()).Return(s3StorageType, nil)
+				options := []prompt.Option {
+					{
+						Value: dynamoDBStorageTypeOption,
+						Hint: "NoSQL",
+					},
+					{
+						Value: s3StorageTypeOption,
+						Hint: "Objects",
+					},
+				}
+				m.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Eq(options), gomock.Any()).Return(s3StorageType, nil)
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
 
@@ -245,7 +273,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: wantedBucketName,
 
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+				m.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
 
@@ -294,6 +322,32 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedErr: nil,
+		},
+		"Asks for cluster name for RDS storage": {
+			inAppName:       wantedAppName,
+			inSvcName:       wantedSvcName,
+			inStorageType:   rdsStorageType,
+			inDBEngine:      wantedDBEngine,
+			inInitialDBName: wantedInitialDBName,
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(
+					gomock.Eq("What would you like to name this Database Cluster?"),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).Return(wantedBucketName, nil)
+			},
+			mockCfg: func(m *mocks.MockwsSelector) {},
+
+			wantedErr: nil,
+			wantedVars: &initStorageVars{
+				storageType:      rdsStorageType,
+				storageName:      wantedBucketName,
+				workloadName:     wantedSvcName,
+				rdsEngine:        wantedDBEngine,
+				rdsInitialDBName: wantedInitialDBName,
+			},
 		},
 		"error if storage name not returned": {
 			inAppName:     wantedAppName,
@@ -707,6 +761,83 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			wantedErr: nil,
 		},
+		"asks for engine if not specified": {
+			inAppName:       wantedAppName,
+			inSvcName:       wantedSvcName,
+			inStorageName:   wantedBucketName,
+
+			inStorageType:   rdsStorageType,
+			inInitialDBName: wantedInitialDBName,
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(gomock.Eq(storageInitRDSDBEnginePrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(wantedDBEngine, nil)
+			},
+			mockCfg: func(m *mocks.MockwsSelector) {},
+
+			wantedVars: &initStorageVars{
+				storageType:      rdsStorageType,
+				storageName:      wantedBucketName,
+				workloadName:     wantedSvcName,
+				rdsInitialDBName: wantedInitialDBName,
+				rdsEngine:        wantedDBEngine,
+			},
+		},
+		"error if engine not gotten": {
+			inAppName:       wantedAppName,
+			inSvcName:       wantedSvcName,
+			inStorageName:   wantedBucketName,
+
+			inStorageType:   rdsStorageType,
+			inInitialDBName: wantedInitialDBName,
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(storageInitRDSDBEnginePrompt, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", errors.New("some error"))
+			},
+			mockCfg: func(m *mocks.MockwsSelector) {},
+
+			wantedErr: errors.New("select database engine: some error"),
+		},
+		"asks for initial database name": {
+			inAppName:     wantedAppName,
+			inSvcName:     wantedSvcName,
+			inStorageName: wantedBucketName,
+
+			inStorageType: rdsStorageType,
+			inDBEngine:    wantedDBEngine,
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Eq(storageInitRDSInitialDBNamePrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(wantedInitialDBName, nil)
+			},
+			mockCfg: func(m *mocks.MockwsSelector) {},
+
+			wantedVars: &initStorageVars{
+				storageType:      rdsStorageType,
+				storageName:      wantedBucketName,
+				workloadName:     wantedSvcName,
+				rdsEngine:        wantedDBEngine,
+				rdsInitialDBName: wantedInitialDBName,
+			},
+		},
+		"error if initial database name not gotten": {
+			inAppName:     wantedAppName,
+			inSvcName:     wantedSvcName,
+			inStorageName: wantedBucketName,
+
+			inStorageType: rdsStorageType,
+			inDBEngine:    wantedDBEngine,
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(storageInitRDSInitialDBNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", errors.New("some error"))
+			},
+			mockCfg: func(m *mocks.MockwsSelector) {},
+
+			wantedErr: fmt.Errorf("input initial database name: some error"),
+		},
+
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -726,6 +857,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					lsiSorts:     tc.inLSISorts,
 					noLSI:        tc.inNoLSI,
 					noSort:       tc.inNoSort,
+
+					rdsEngine:        tc.inDBEngine,
+					rdsInitialDBName: tc.inInitialDBName,
 				},
 				appName: tc.inAppName,
 				sel:     mockConfig,
@@ -753,8 +887,6 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 	const (
 		wantedAppName      = "ddos"
 		wantedSvcName      = "frontend"
-		wantedBucketName   = "coolBucket"
-		wantedTableName    = "coolTable"
 		wantedPartitionKey = "DogName:String"
 		wantedSortKey      = "PhotoId:Number"
 	)
@@ -764,13 +896,19 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 		inStorageType string
 		inSvcName     string
 		inStorageName string
+
 		inPartition   string
 		inSort        string
 		inLSISorts    []string
 		inNoLSI       bool
 		inNoSort      bool
 
-		mockWs func(m *mocks.MockwsAddonManager)
+		inEngine            string
+		inInitialDBName     string
+		inParameterGroup    string
+
+		mockWs    func(m *mocks.MockwsAddonManager)
+		mockStore func(m *mocks.Mockstore)
 
 		wantedErr error
 	}{
@@ -816,6 +954,22 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 			wantedErr: nil,
 		},
+		"happy calls for RDS": {
+			inSvcName: wantedSvcName,
+
+			inStorageType:      rdsStorageType,
+			inStorageName:      "mycluster",
+			inEngine:           engineTypeMySQL,
+			inParameterGroup:    "mygroup",
+
+			mockWs: func(m *mocks.MockwsAddonManager) {
+				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "mycluster").Return("/frontend/addons/mycluster.yml", nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
+			},
+			wantedErr: nil,
+		},
 		"error addon exists": {
 			inAppName:     wantedAppName,
 			inStorageType: s3StorageType,
@@ -824,6 +978,9 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "my-bucket").Return("", fileExistsError)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
 			},
 
 			wantedErr: fmt.Errorf("addon already exists: %w", fileExistsError),
@@ -848,6 +1005,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockAddon := mocks.NewMockwsAddonManager(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
 					storageType:  tc.inStorageType,
@@ -858,11 +1016,19 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 					lsiSorts:     tc.inLSISorts,
 					noLSI:        tc.inNoLSI,
 					noSort:       tc.inNoSort,
+
+					rdsEngine:         tc.inEngine,
+					rdsParameterGroup: tc.inParameterGroup,
 				},
 				appName: tc.inAppName,
 				ws:      mockAddon,
+				store:   mockStore,
 			}
 			tc.mockWs(mockAddon)
+			if tc.mockStore != nil {
+				tc.mockStore(mockStore)
+			}
+
 			// WHEN
 			err := opts.Execute()
 

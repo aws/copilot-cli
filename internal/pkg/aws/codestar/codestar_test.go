@@ -24,8 +24,6 @@ func TestCodestar_WaitUntilStatusAvailable(t *testing.T) {
 		// GIVEN
 		ctx, cancel := context.WithDeadline(context.Background(), time.Now())
 		defer cancel()
-		connection := &CodeStar{}
-		connectionARN := "mockConnectionARN"
 
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -35,6 +33,11 @@ func TestCodestar_WaitUntilStatusAvailable(t *testing.T) {
 				ConnectionStatus: aws.String(codestarconnections.ConnectionStatusPending),
 			},
 			}, nil).AnyTimes()
+
+		connection := &CodeStar{
+			client: m,
+		}
+		connectionARN := "mockConnectionARN"
 
 		// WHEN
 		err := connection.WaitUntilConnectionStatusAvailable(ctx, connectionARN)

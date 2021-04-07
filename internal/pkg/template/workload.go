@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/google/uuid"
+
+	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 // Constants for template paths.
@@ -206,6 +207,7 @@ type WorkloadOpts struct {
 	DomainAlias    string
 
 	// Additional options for service templates.
+	WorkloadType        string
 	HealthCheck         *ecs.HealthCheck
 	HTTPHealthCheck     HTTPHealthCheckOpts
 	AllowedSourceIps    []string
@@ -278,13 +280,13 @@ func (t *Template) parseWkld(name, wkldDirName string, data interface{}, options
 func withSvcParsingFuncs() ParseOption {
 	return func(t *template.Template) *template.Template {
 		return t.Funcs(map[string]interface{}{
-			"toSnakeCase":     ToSnakeCaseFunc,
-			"hasSecrets":      hasSecrets,
-			"fmtSlice":        FmtSliceFunc,
-			"quoteSlice":      QuotePSliceFunc,
-			"randomUUID":      randomUUIDFunc,
-			"jsonMountPoints": generateMountPointJSON,
-			"requiresEFS":     requiresEFS,
+			"toSnakeCase":         ToSnakeCaseFunc,
+			"hasSecrets":          hasSecrets,
+			"fmtSlice":            FmtSliceFunc,
+			"quoteSlice":          QuotePSliceFunc,
+			"randomUUID":          randomUUIDFunc,
+			"jsonMountPoints":     generateMountPointJSON,
+			"envControllerParams": envControllerParameters,
 		})
 	}
 }
@@ -299,17 +301,22 @@ func hasSecrets(opts WorkloadOpts) bool {
 	return false
 }
 
-func requiresEFS(opts WorkloadOpts) bool {
-	if opts.Storage != nil && opts.Storage.RequiresEFSCreation() {
-		return true
-	}
-	return false
-}
-
 func randomUUIDFunc() (string, error) {
 	id, err := uuid.NewRandom()
 	if err != nil {
 		return "", fmt.Errorf("generate random uuid: %w", err)
 	}
 	return id.String(), err
+}
+
+// envControllerParameters determines which parameters to include in the EnvController template.
+func envControllerParameters(o WorkloadOpts) []string {
+	parameters := []string{}
+	if o.WorkloadType == "Load Balanced Web Service" {
+		parameters = append(parameters, "ALBWorkloads,") // YAML needs the comma separator; okay if trailing.
+	}
+	if o.Storage != nil && o.Storage.RequiresEFSCreation() {
+		parameters = append(parameters, "EFSWorkloads,")
+	}
+	return parameters
 }

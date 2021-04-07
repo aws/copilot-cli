@@ -14,3 +14,10 @@ type CreateAppInput struct {
 	DomainHostedZoneID    string            // Hosted Zone ID for the domain.
 	AdditionalTags        map[string]string // AdditionalTags are labels applied to resources under the application.
 }
+
+const (
+	// LegacyAppTemplateVersion is the version associated with the application template before we started versioning.
+	LegacyAppTemplateVersion = "v0.0.0"
+	// LatestAppTemplateVersion is the latest version number available for application templates.
+	LatestAppTemplateVersion = "v1.0.0"
+)

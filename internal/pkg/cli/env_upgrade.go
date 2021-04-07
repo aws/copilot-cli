@@ -210,11 +210,7 @@ func (o *envUpgradeOpts) upgrade(env *config.Environment, customResourcesURLs ma
 	if err != nil {
 		return err
 	}
-	yes, err := shouldUpgradeEnv(env.Name, version)
-	if err != nil {
-		return err
-	}
-	if !yes {
+	if !shouldUpgradeEnv(env.Name, version) {
 		return nil
 	}
 
@@ -248,11 +244,11 @@ func (o *envUpgradeOpts) envVersion(name string) (string, error) {
 	return version, err
 }
 
-func shouldUpgradeEnv(env, version string) (bool, error) {
+func shouldUpgradeEnv(env, version string) bool {
 	diff := semver.Compare(version, deploy.LatestEnvTemplateVersion)
 	if diff < 0 {
 		// Newer version available.
-		return true, nil
+		return true
 	}
 
 	msg := fmt.Sprintf("Environment %s is already on the latest version %s, skip upgrade.", env, deploy.LatestEnvTemplateVersion)
@@ -264,7 +260,7 @@ func shouldUpgradeEnv(env, version string) (bool, error) {
 Are you using the latest version of AWS Copilot?`, env, deploy.LatestEnvTemplateVersion, version)
 	}
 	log.Debugln(msg)
-	return false, nil
+	return false
 }
 
 func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.Environment,

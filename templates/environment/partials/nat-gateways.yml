@@ -1,11 +1,13 @@
 {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
 NatGateway{{inc $ind}}Attachment:
   Type: AWS::EC2::EIP
+  Condition: CreateNATGateways
   DependsOn: InternetGatewayAttachment
   Properties:
     Domain: vpc
 NatGateway{{inc $ind}}:
   Type: AWS::EC2::NatGateway
+  Condition: CreateNATGateways
   Properties:
     AllocationId: !GetAtt NatGateway{{inc $ind}}Attachment.AllocationId
     SubnetId: !Ref PublicSubnet{{inc $ind}}
@@ -14,16 +16,19 @@ NatGateway{{inc $ind}}:
         Value: !Sub 'copilot-${AppName}-${EnvironmentName}-{{$ind}}'
 PrivateRouteTable{{inc $ind}}:
   Type: AWS::EC2::RouteTable
+  Condition: CreateNATGateways
   Properties:
     VpcId: !Ref 'VPC'
 PrivateRoute{{inc $ind}}:
   Type: AWS::EC2::Route
+  Condition: CreateNATGateways
   Properties:
     RouteTableId: !Ref PrivateRouteTable{{inc $ind}}
     DestinationCidrBlock: 0.0.0.0/0
     NatGatewayId: !Ref NatGateway{{inc $ind}}
 PrivateRouteTable{{inc $ind}}Association:
   Type: AWS::EC2::SubnetRouteTableAssociation
+  Condition: CreateNATGateways
   Properties:
     RouteTableId: !Ref PrivateRouteTable{{inc $ind}}
     SubnetId: !Ref PrivateSubnet{{inc $ind}}
