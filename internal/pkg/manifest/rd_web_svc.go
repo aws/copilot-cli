@@ -67,8 +67,8 @@ func newDefaultRequestDrivenWebService() *RequestDrivenWebService {
 		RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 			ImageConfig: ImageWithPort{},
 			InstanceConfig: AppRunnerInstanceConfig{
-				CPU:    aws.Int(256),
-				Memory: aws.Int(512),
+				CPU:    aws.Int(1024),
+				Memory: aws.Int(2048),
 			},
 		},
 	}

@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -57,50 +56,6 @@ type LoadBalancedWebServiceConfig struct {
 	// Fields that are used while marshaling the template for additional clarifications,
 	// but don't correspond to a field in the manifests.
 	AppDomain *string
-}
-
-// HTTPHealthCheckArgs holds the configuration to determine if the load balanced web service is healthy.
-// These options are specifiable under the "healthcheck" field.
-// See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html.
-type HTTPHealthCheckArgs struct {
-	Path               *string        `yaml:"path"`
-	SuccessCodes       *string        `yaml:"success_codes"`
-	HealthyThreshold   *int64         `yaml:"healthy_threshold"`
-	UnhealthyThreshold *int64         `yaml:"unhealthy_threshold"`
-	Timeout            *time.Duration `yaml:"timeout"`
-	Interval           *time.Duration `yaml:"interval"`
-}
-
-// HealthCheckArgsOrString is a custom type which supports unmarshaling yaml which
-// can either be of type string or type HealthCheckArgs.
-type HealthCheckArgsOrString struct {
-	HealthCheckPath *string
-	HealthCheckArgs HTTPHealthCheckArgs
-}
-
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the HealthCheckArgsOrString
-// struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (hc *HealthCheckArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&hc.HealthCheckArgs); err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
-			return err
-		}
-	}
-
-	if !hc.HealthCheckArgs.isEmpty() {
-		// Unmarshaled successfully to hc.HealthCheckArgs, reset hc.HealthCheckPath, and return.
-		hc.HealthCheckPath = nil
-		return nil
-	}
-
-	if err := unmarshal(&hc.HealthCheckPath); err != nil {
-		return errUnmarshalHealthCheckArgs
-	}
-	return nil
 }
 
 // RoutingRule holds the path to route requests to the service.
@@ -168,10 +123,6 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 			},
 		},
 	}
-}
-
-func (h *HTTPHealthCheckArgs) isEmpty() bool {
-	return h.Path == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil && h.Interval == nil && h.Timeout == nil
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.

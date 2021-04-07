@@ -27,7 +27,7 @@ func TestNewRequestDrivenWebService(t *testing.T) {
 
 		wantedStruct *RequestDrivenWebService
 	}{
-		"should should return an instance of RequestDrivenWebService": {
+		"should return an instance of RequestDrivenWebService": {
 			input: &RequestDrivenWebServiceProps{
 				WorkloadProps: &WorkloadProps{
 					Name:       "frontend",
@@ -53,8 +53,8 @@ func TestNewRequestDrivenWebService(t *testing.T) {
 						Port: aws.Uint16(80),
 					},
 					InstanceConfig: AppRunnerInstanceConfig{
-						CPU:    aws.Int(256),
-						Memory: aws.Int(512),
+						CPU:    aws.Int(1024),
+						Memory: aws.Int(2048),
 					},
 				},
 			},
