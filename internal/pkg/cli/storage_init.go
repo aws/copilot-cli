@@ -721,8 +721,8 @@ For example, in JavaScript you can write %s.`,
 	deployCmd := fmt.Sprintf("copilot deploy --name %s", o.workloadName)
 	actionDeploy := fmt.Sprintf("Run %s to deploy your storage resources.", color.HighlightCode(deployCmd))
 	return []string{
-		fmt.Sprintf("%s", actionRetrieveEnvVar),
-		fmt.Sprintf("%s", actionDeploy),
+		actionRetrieveEnvVar,
+		actionDeploy,
 	}
 }
 
