@@ -118,12 +118,12 @@ type SvcLogsRequest struct {
 
 // StorageInitRequest contains the parameters for calling copilot storage init.
 type StorageInitRequest struct {
-	StorageName     string
-	StorageType     string
-	WorkloadName    string
+	StorageName  string
+	StorageType  string
+	WorkloadName string
 
-	RDSEngine       string
-	InitialDBName   string
+	RDSEngine     string
+	InitialDBName string
 }
 
 // SvcDeployInput contains the parameters for calling copilot svc deploy.
@@ -425,14 +425,14 @@ copilot storage init
 	--engine $e
     --initial-db $d
 */
-func (cli *CLI) StorageInit(opts *StorageInitRequest)(string, error) {
+func (cli *CLI) StorageInit(opts *StorageInitRequest) (string, error) {
 	return cli.exec(
 		exec.Command(cli.path, "storage", "init",
 			"--name", opts.StorageName,
-		    "--storage-type", opts.StorageType,
-		    "--workload", opts.WorkloadName,
-		    "--engine", opts.RDSEngine,
-		    "--initial-db", opts.InitialDBName))
+			"--storage-type", opts.StorageType,
+			"--workload", opts.WorkloadName,
+			"--engine", opts.RDSEngine,
+			"--initial-db", opts.InitialDBName))
 }
 
 /*EnvDelete runs:
