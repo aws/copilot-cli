@@ -697,19 +697,31 @@ func (o *initStorageOpts) environmentNames() ([]string, error) {
 }
 
 func (o *initStorageOpts) RecommendedActions() []string {
-	var newVar string
+	var (
+		retrieveEnvVarCode string
+		newVar             string
+	)
 	switch o.storageType {
 	case dynamoDBStorageType, s3StorageType:
 		newVar = template.ToSnakeCaseFunc(template.EnvVarNameFunc(o.storageName))
+		retrieveEnvVarCode = fmt.Sprintf("const storageName = process.env.%s", newVar)
 	case rdsStorageType:
 		newVar = template.ToSnakeCaseFunc(template.EnvVarSecretFunc(o.storageName))
+		retrieveEnvVarCode = fmt.Sprintf("const {username, host, dbname, password, port} = JSON.parse(process.env.%s)", newVar)
+
 	}
 
-	deployCmd := fmt.Sprintf("copilot deploy --name %s", o.workloadName)
+	actionRetrieveEnvVar := fmt.Sprintf(
+		"Update %s's code to leverage the injected environment variable %s. For example, in JavaScript you can write %s.",
+		o.workloadName,
+		newVar,
+		color.HighlightCode(retrieveEnvVarCode))
 
+	deployCmd := fmt.Sprintf("copilot deploy --name %s", o.workloadName)
+	actionDeploy := fmt.Sprintf("Run %s to deploy your storage resources.", color.HighlightCode(deployCmd))
 	return []string{
-		fmt.Sprintf("Update %s's code to leverage the injected environment variable %s", color.HighlightUserInput(o.workloadName), color.HighlightCode(newVar)),
-		fmt.Sprintf("Run %s to deploy your storage resources.", color.HighlightCode(deployCmd)),
+		fmt.Sprintf("1. %s", actionRetrieveEnvVar),
+		fmt.Sprintf("2. %s", actionDeploy),
 	}
 }
 
