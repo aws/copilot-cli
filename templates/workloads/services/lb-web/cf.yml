@@ -268,6 +268,31 @@ Resources:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
 
+  HTTPListenerRuleWithDomain:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: HTTPSLoadBalancer
+    Properties:
+      Actions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: 443
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: HTTP_301
+      Conditions:
+        - Field: 'host-header'
+          HostHeaderConfig:
+            Values:
+              - Fn::Join:
+                - '.'
+                - - !Ref WorkloadName
+                  - Fn::ImportValue:
+                      !Sub "${AppName}-${EnvName}-SubDomain"
+      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+      Priority: !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
+
   HTTPSListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Condition: HTTPSLoadBalancer
