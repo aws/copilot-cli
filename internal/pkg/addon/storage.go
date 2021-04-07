@@ -29,6 +29,7 @@ var regexpMatchAttribute = regexp.MustCompile(`^(\S+):([sbnSBN])`)
 var storageTemplateFunctions = map[string]interface{}{
 	"logicalIDSafe": template.StripNonAlphaNumFunc,
 	"envVarName":    template.EnvVarNameFunc,
+	"envVarSecret":  template.EnvVarSecretFunc,
 	"toSnakeCase":   template.ToSnakeCaseFunc,
 }
 
@@ -92,15 +93,15 @@ type DDBLocalSecondaryIndex struct {
 // RDSProps holds RDS-specific properties for addon.NewRDS().
 type RDSProps struct {
 	// The name of the cluster.
-	ClusterName   string
+	ClusterName string
 	// The engine type of the RDS Aurora Serverless cluster.
-	Engine         string
+	Engine string
 	// The name of the initial database created inside the cluster.
-	InitialDBName  string
+	InitialDBName string
 	// The parameter group to use for the cluster.
 	ParameterGroup string
 	// The copilot environments found inside the current app.
-	Envs           []string
+	Envs []string
 }
 
 // MarshalBinary serializes the DynamoDB object into a binary YAML CF template.
