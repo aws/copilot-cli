@@ -507,9 +507,9 @@ func TestStackDescriber_Metadata(t *testing.T) {
 			}
 
 			// WHEN
-			name := WithStackName("phonetool")
+			name := MetadataWithStackName("phonetool")
 			if tc.isStackSet {
-				name = WithStackSetName("phonetool")
+				name = MetadataWithStackSetName("phonetool")
 			}
 			actual, err := c.Metadata(name)
 

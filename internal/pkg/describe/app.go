@@ -100,32 +100,33 @@ func NewAppDescriber(appName string) (*AppDescriber, error) {
 //
 // If the Version field does not exist, then it's a legacy template and it returns an deploy.LegacyAppTemplateVersion and nil error.
 func (d *AppDescriber) Version() (string, error) {
-	metadata := struct {
+	type metadata struct {
 		TemplateVersion string `yaml:"TemplateVersion"`
-	}{}
+	}
+	stackMetadata, stackSetMetadata := metadata{}, metadata{}
 
 	appStackName := stack.NameForAppStack(d.app)
-	appStackMetadata, err := d.cfn.Metadata(cloudformation.WithStackName(appStackName))
+	appStackMetadata, err := d.cfn.Metadata(cloudformation.MetadataWithStackName(appStackName))
 	if err != nil {
 		return "", fmt.Errorf("get metadata for app stack %s: %w", appStackName, err)
 	}
-	if err := yaml.Unmarshal([]byte(appStackMetadata), &metadata); err != nil {
+	if err := yaml.Unmarshal([]byte(appStackMetadata), &stackMetadata); err != nil {
 		return "", fmt.Errorf("unmarshal Metadata property for app stack %s: %w", appStackName, err)
 	}
-	appStackVersion := metadata.TemplateVersion
+	appStackVersion := stackMetadata.TemplateVersion
 	if appStackVersion == "" {
 		appStackVersion = deploy.LegacyAppTemplateVersion
 	}
 
 	appStackSetName := stack.NameForAppStackSet(d.app)
-	appStackSetMetadata, err := d.cfn.Metadata(cloudformation.WithStackSetName(appStackSetName))
+	appStackSetMetadata, err := d.cfn.Metadata(cloudformation.MetadataWithStackSetName(appStackSetName))
 	if err != nil {
 		return "", fmt.Errorf("get metadata for app stack set %s: %w", appStackSetName, err)
 	}
-	if err := yaml.Unmarshal([]byte(appStackSetMetadata), &metadata); err != nil {
+	if err := yaml.Unmarshal([]byte(appStackSetMetadata), &stackSetMetadata); err != nil {
 		return "", fmt.Errorf("unmarshal Metadata property for app stack set %s: %w", appStackSetName, err)
 	}
-	appStackSetVersion := metadata.TemplateVersion
+	appStackSetVersion := stackSetMetadata.TemplateVersion
 	if appStackSetVersion == "" {
 		appStackSetVersion = deploy.LegacyAppTemplateVersion
 	}

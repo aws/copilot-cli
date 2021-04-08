@@ -203,8 +203,8 @@ func (c *CloudFormation) Exists(name string) (bool, error) {
 // MetadataOpts sets up optional parameters for Metadata function.
 type MetadataOpts func() *cloudformation.GetTemplateSummaryInput
 
-// WithStackName sets up the stack name for cloudformation.GetTemplateSummaryInput.
-func WithStackName(name string) MetadataOpts {
+// MetadataWithStackName sets up the stack name for cloudformation.GetTemplateSummaryInput.
+func MetadataWithStackName(name string) MetadataOpts {
 	return func() *cloudformation.GetTemplateSummaryInput {
 		return &cloudformation.GetTemplateSummaryInput{
 			StackName: aws.String(name),
@@ -212,8 +212,8 @@ func WithStackName(name string) MetadataOpts {
 	}
 }
 
-// WithStackSetName sets up the stack set name for cloudformation.GetTemplateSummaryInput.
-func WithStackSetName(name string) MetadataOpts {
+// MetadataWithStackSetName sets up the stack set name for cloudformation.GetTemplateSummaryInput.
+func MetadataWithStackSetName(name string) MetadataOpts {
 	return func() *cloudformation.GetTemplateSummaryInput {
 		return &cloudformation.GetTemplateSummaryInput{
 			StackSetName: aws.String(name),
