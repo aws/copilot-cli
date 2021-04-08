@@ -319,34 +319,42 @@ type envControllerRendererInput struct {
 }
 
 func (cf CloudFormation) createEnvControllerRenderer(in *envControllerRendererInput) (progress.DynamicRenderer, error) {
-	switch {
-	case isEnvControllerInAction(in.change):
-		// We can't use the workloadStackName to retrieve the envStackName because app names and env names can contain
-		// dashes. So we fetch the tags belonging to the workload stack and generate the stack name from there.
-		workload, err := cf.cfnClient.Describe(in.workloadStackName)
-		if err != nil {
-			return nil, err
-		}
-		envStackName := fmt.Sprintf("%s-%s", parseAppNameFromTags(workload.Tags), parseEnvNameFromTags(workload.Tags))
-		body, err := cf.cfnClient.TemplateBody(envStackName)
-		if err != nil {
-			return nil, err
-		}
-		descriptions, err := cloudformation.ParseTemplateDescriptions(body)
-		if err != nil {
-			return nil, fmt.Errorf("parse cloudformation template for resource descriptions: %w", err)
-		}
-		streamer := stream.NewStackStreamer(cf.cfnClient, envStackName, in.workloadTimestamp)
-		in.g.Go(func() error {
-			return stream.Stream(in.ctx, streamer)
-		})
-		return progress.ListeningStackRenderer(streamer, envStackName, in.description, descriptions, in.renderOpts), nil
-	default:
-		logicalID := aws.StringValue(in.change.ResourceChange.LogicalResourceId)
-		return progress.ListeningResourceRenderer(in.serviceStack, logicalID, in.description, progress.ResourceRendererOpts{
-			RenderOpts: in.renderOpts,
-		}), nil
+	workload, err := cf.cfnClient.Describe(in.workloadStackName)
+	if err != nil {
+		return nil, err
 	}
+	envStackName := fmt.Sprintf("%s-%s", parseAppNameFromTags(workload.Tags), parseEnvNameFromTags(workload.Tags))
+	body, err := cf.cfnClient.TemplateBody(envStackName)
+	if err != nil {
+		return nil, err
+	}
+	envResourceDescriptions, err := cloudformation.ParseTemplateDescriptions(body)
+	if err != nil {
+		return nil, fmt.Errorf("parse cloudformation template for resource descriptions: %w", err)
+	}
+	envStreamer := stream.NewStackStreamer(cf.cfnClient, envStackName, in.workloadTimestamp)
+	ctx, cancel := context.WithCancel(in.ctx)
+	in.g.Go(func() error {
+		if err := stream.Stream(ctx, envStreamer); err != nil {
+			if errors.Is(err, context.Canceled) {
+				// The stack streamer was canceled on purposed, do not return an error.
+				// This occurs if we detect that the environment stack has no updates.
+				return nil
+			}
+			return err
+		}
+		return nil
+	})
+	return progress.ListeningEnvControllerRenderer(progress.EnvControllerConfig{
+		Description:     in.description,
+		RenderOpts:      in.renderOpts,
+		ActionStreamer:  in.serviceStack,
+		ActionLogicalID: aws.StringValue(in.change.ResourceChange.LogicalResourceId),
+		EnvStreamer:     envStreamer,
+		CancelEnvStream: cancel,
+		EnvStackName:    envStackName,
+		EnvResources:    envResourceDescriptions,
+	}), nil
 }
 
 func (cf CloudFormation) errOnFailedStack(stackName string) error {
@@ -387,24 +395,6 @@ func toMap(tags []*sdkcloudformation.Tag) map[string]string {
 // arn:aws:cloudformation:us-west-2:123456789012:stack/my-nested-stack/d0a825a0-e4cd-xmpl-b9fb-061c69e99205
 func parseStackNameFromARN(stackARN string) string {
 	return strings.Split(stackARN, "/")[1]
-}
-
-func isEnvControllerInAction(controller *sdkcloudformation.Change) bool {
-	switch action := aws.StringValue(controller.ResourceChange.Action); action {
-	case sdkcloudformation.ChangeActionAdd:
-		return true
-	case sdkcloudformation.ChangeActionModify:
-		for _, detail := range controller.ResourceChange.Details {
-			attribute := aws.StringValue(detail.Target.Name)
-			if attribute == "Parameters" {
-				// The env controller modifies the env stack only if the "Parameters" field is modified.
-				return true
-			}
-		}
-		return false
-	default:
-		return false
-	}
 }
 
 func parseAppNameFromTags(tags []*sdkcloudformation.Tag) string {

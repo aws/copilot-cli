@@ -30,6 +30,7 @@ const (
 var storageTypes = []string{
 	dynamoDBStorageType,
 	s3StorageType,
+	rdsStorageType,
 }
 
 // Displayed options for storage types
@@ -733,16 +734,17 @@ func buildStorageInitCmd() *cobra.Command {
 		Use:   "init",
 		Short: "Creates a new AWS CloudFormation template for a storage resource.",
 		Long: `Creates a new AWS CloudFormation template for a storage resource.
-Storage resources are stored in the Copilot addons directory (e.g. ./copilot/frontend/addons) for a given
-workload and deployed to your environments when you run ` + color.HighlightCode("copilot deploy") + `. Resource names
-are injected into your containers as environment variables for easy access.`,
+Storage resources are stored in the Copilot addons directory (e.g. ./copilot/frontend/addons) for a given workload and deployed to your environments when you run ` + color.HighlightCode("copilot deploy") + `. 
+Resource names are injected into your containers as environment variables for easy access.`,
 		Example: `
   Create an S3 bucket named "my-bucket" attached to the "frontend" service.
   /code $ copilot storage init -n my-bucket -t S3 -w frontend
   Create a basic DynamoDB table named "my-table" attached to the "frontend" service with a sort key specified.
   /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --no-lsi
   Create a DynamoDB table with multiple alternate sort keys.
-  /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N`,
+  /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N
+  Create an RDS Aurora Serverless cluster using PostgreSQL as database engine.
+  /code $ copilot storage init -n my-cluster -t RDS -w frontend --engine PostgreSQL`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {
@@ -774,6 +776,10 @@ are injected into your containers as environment variables for easy access.`,
 	cmd.Flags().BoolVar(&vars.noLSI, storageNoLSIFlag, false, storageNoLSIFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSort, storageNoSortFlag, false, storageNoSortFlagDescription)
 
+	cmd.Flags().StringVar(&vars.rdsEngine, storageRDSEngineFlag, "", storageRDSEngineFlagDescription)
+	cmd.Flags().StringVar(&vars.rdsInitialDBName, storageRDSInitialDBFlag, "", storageRDSInitialDBFlagDescription)
+	cmd.Flags().StringVar(&vars.rdsParameterGroup, storageRDSParameterGroupFlag, "", storageRDSParameterGroupFlagDescription)
+
 	requiredFlags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(storageTypeFlag))
@@ -785,11 +791,18 @@ are injected into your containers as environment variables for easy access.`,
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoSortFlag))
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageLSIConfigFlag))
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoLSIFlag))
+
+	auroraFlags := pflag.NewFlagSet("Aurora Serverless", pflag.ContinueOnError)
+	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSEngineFlag))
+	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSInitialDBFlag))
+	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSParameterGroupFlag))
+
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
-		"sections": `Required,DynamoDB`,
-		"Required": requiredFlags.FlagUsages(),
-		"DynamoDB": ddbFlags.FlagUsages(),
+		"sections":          `Required,DynamoDB,Aurora Serverless`,
+		"Required":          requiredFlags.FlagUsages(),
+		"DynamoDB":          ddbFlags.FlagUsages(),
+		"Aurora Serverless": auroraFlags.FlagUsages(),
 	}
 	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
   {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}
