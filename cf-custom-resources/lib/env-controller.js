@@ -96,9 +96,9 @@ const controlEnv = async function (
     if (describeStackResp.Stacks.length !== 1) {
       throw new Error(`Cannot find environment stack ${stackName}`);
     }
-    var updatedEnvStack = describeStackResp.Stacks[0];
-    var params = JSON.parse(JSON.stringify(updatedEnvStack.Parameters));
-    const envSet = setOfParameterKeysWithWorkload(params, workload);
+    const updatedEnvStack = describeStackResp.Stacks[0];
+    const envParams = JSON.parse(JSON.stringify(updatedEnvStack.Parameters));
+    const envSet = setOfParameterKeysWithWorkload(envParams, workload);
     const controllerSet = new Set(envControllerParameters);
 
     const parametersToRemove = [...envSet].filter(param => !controllerSet.has(param));
@@ -109,18 +109,18 @@ const controlEnv = async function (
       return exportedValues;
     }
 
-    for (const param of params) {
-      if (parametersToRemove.includes(param.ParameterKey)) {
-        var values = new Set(param.ParameterValue.split(',').filter(Boolean)); // Filter out the empty string
+    for (const envParam of envParams) {
+      if (parametersToRemove.includes(envParam.ParameterKey)) {
+        const values = new Set(envParam.ParameterValue.split(',').filter(Boolean)); // Filter out the empty string
         // in the output array to prevent a leading comma in the parameters list.
         values.delete(workload);
-        param.ParameterValue = [...values].join(',');
+        envParam.ParameterValue = [...values].join(',');
       }
-      if (parametersToAdd.includes(param.ParameterKey)) {
-        var values = new Set(param.ParameterValue.split(',').filter(Boolean)); // Filter out the empty string
+      if (parametersToAdd.includes(envParam.ParameterKey)) {
+        const values = new Set(envParam.ParameterValue.split(',').filter(Boolean)); // Filter out the empty string
         // in the output array to prevent a leading comma in the parameters list.
         values.add(workload);
-        param.ParameterValue = [...values].join(',');
+        envParam.ParameterValue = [...values].join(',');
       }
     }
 
@@ -128,7 +128,7 @@ const controlEnv = async function (
       await cfn
         .updateStack({
           StackName: stackName,
-          Parameters: params,
+          Parameters: envParams,
           UsePreviousTemplate: true,
           RoleARN: exportedValues["CFNExecutionRoleARN"],
           Capabilities: updatedEnvStack.Capabilities,
@@ -208,7 +208,7 @@ exports.handler = async function (event, context) {
           controlEnv(
             props.EnvStack,
             props.Workload,
-            []
+            [] // Set to empty to denote that Workload should not be included in any env stack parameter.
           ),
         ]);
         physicalResourceId = event.PhysicalResourceId;

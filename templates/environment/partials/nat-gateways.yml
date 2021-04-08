@@ -1,7 +1,7 @@
 {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
 NatGateway{{inc $ind}}Attachment:
   Metadata:
-    'aws:copilot:description': 'NAT Gateways enabling services placed in private subnets to reach the internet'
+    'aws:copilot:description': 'NAT Gateway {{inc $ind}} enabling workloads placed in private subnet {{inc $ind}} to reach the internet'
   Type: AWS::EC2::EIP
   Condition: CreateNATGateways
   DependsOn: InternetGatewayAttachment
