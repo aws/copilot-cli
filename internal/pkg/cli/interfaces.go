@@ -420,6 +420,10 @@ type envTemplateUpgrader interface {
 	legacyEnvUpgrader
 }
 
+type appUpgrader interface {
+	UpgradeApplication(in *deploy.CreateAppInput) error
+}
+
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 	ListPipelineNamesByTags(tags map[string]string) ([]string, error)

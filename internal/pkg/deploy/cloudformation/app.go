@@ -49,6 +49,10 @@ func (cf CloudFormation) DeployApp(in *deploy.CreateAppInput) error {
 		stackset.WithTags(toMap(appConfig.Tags())))
 }
 
+func (cf CloudFormation) UpgradeApplication(in *deploy.CreateAppInput) error {
+	return nil
+}
+
 // DelegateDNSPermissions grants the provided account ID the ability to write to this application's
 // DNS HostedZone. This allows us to perform cross account DNS delegation.
 func (cf CloudFormation) DelegateDNSPermissions(app *config.Application, accountID string) error {
