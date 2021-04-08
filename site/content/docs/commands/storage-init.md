@@ -3,7 +3,7 @@
 $ copilot storage init
 ```
 ## What does it do?
-`copilot storage init` creates a new storage resource attached to one of your workloads, accessible from inside your service container via a friendly environment variable. You can specify either *S3*, *DynamoDB*, *RDS* as the resource type.
+`copilot storage init` creates a new storage resource attached to one of your workloads, accessible from inside your service container via a friendly environment variable. You can specify either *S3*, *DynamoDB*, *Aurora* as the resource type.
 
 After running this command, the CLI creates an `addons` subdirectory inside your `copilot/service` directory if it does not exist. When you run `copilot svc deploy`, your newly initialized storage resource is created in the environment you're deploying to. By default, only the service you specify during `storage init` will have access to that storage resource.
 
@@ -12,7 +12,7 @@ After running this command, the CLI creates an `addons` subdirectory inside your
 Required Flags
   -n, --name string           Name of the storage resource to create.
   -t, --storage-type string   Type of storage to add. Must be one of:
-                              "DynamoDB", "S3", "RDS"
+                              "DynamoDB", "S3", "Aurora"
   -w, --workload string       Name of the service or job to associate with storage.
 
 DynamoDB Flags
@@ -25,11 +25,10 @@ DynamoDB Flags
       --sort-key string        Optional. Sort key for the DDB table.
                                Must be of the format '<keyName>:<dataType>'.
 RDS Flags
-      --engine string           Type of database engine to use.
+      --engine string           The database engine used in the cluster.
                                 Must be one of "MySQL" or "PostgreSQL".
-      --parameter-group string  Optional. The ARN of the parameter group used for engine configurations in your 
-                                RDS Aurora Serverless cluster.
-      --initial-db-name string  The name of the initial database for RDS Aurora Serverless cluster.
+      --parameter-group string  Optional. The name of the parameter group to associate with the cluster.
+      --initial-db string       The initial database to create in the cluster.
 ```
 
 ## How can I use it? 
@@ -58,7 +57,7 @@ $ copilot storage init \
 Create an RDS Aurora Serverless cluster using PostgreSQL as database engine.
 ```
 $ copilot storage init \
-  -n my-cluster -t RDS -w frontend --engine PostgreSQL
+  -n my-cluster -t Aurora -w frontend --engine PostgreSQL
 ```
 
 ## What happens under the hood?
