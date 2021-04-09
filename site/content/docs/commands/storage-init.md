@@ -24,7 +24,7 @@ DynamoDB Flags
                                Must be of the format '<keyName>:<dataType>'.
       --sort-key string        Optional. Sort key for the DDB table.
                                Must be of the format '<keyName>:<dataType>'.
-RDS Flags
+Aurora Serverless Flags
       --engine string           The database engine used in the cluster.
                                 Must be either "MySQL" or "PostgreSQL".
       --parameter-group string  Optional. The name of the parameter group to associate with the cluster.
