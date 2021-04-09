@@ -19,15 +19,6 @@ batch:
         variables:
           TEST_SUITE: addons
           APP_REGION: us-west-2
-    - identifier: s3
-        env:
-          privileged-mode: true
-          type: LINUX_CONTAINER
-          compute-type: BUILD_GENERAL1_LARGE
-          image: aws/codebuild/standard:5.0
-          variables:
-            TEST_SUITE: s3
-            APP_REGION: us-west-2
     - identifier: customized_env
       env:
         privileged-mode: true

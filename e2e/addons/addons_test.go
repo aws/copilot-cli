@@ -105,8 +105,8 @@ var _ = Describe("addons flow", func() {
 		var testStorageInitErr error
 		BeforeAll(func() {
 			_, testStorageInitErr = cli.StorageInit(&client.StorageInitRequest{
-				StorageName:   storageName,
-				StorageType:   storageType,
+				StorageName:   rdsStorageName,
+				StorageType:   rdsStorageType,
 				WorkloadName:  svcName,
 				RDSEngine:     rdsEngine,
 				InitialDBName: rdsInitialDB,
@@ -118,7 +118,27 @@ var _ = Describe("addons flow", func() {
 		})
 
 		It("storage init should create an addon template", func() {
-			addonFilePath := fmt.Sprintf("./copilot/%s/addons/%s.yml", svcName, storageName)
+			addonFilePath := fmt.Sprintf("./copilot/%s/addons/%s.yml", svcName, rdsStorageName)
+			Expect(addonFilePath).Should(BeAnExistingFile())
+		})
+	})
+
+	Context("when adding a S3 storage", func() {
+		var testStorageInitErr error
+		BeforeAll(func() {
+			_, testStorageInitErr = cli.StorageInit(&client.StorageInitRequest{
+				StorageName:  s3StorageName,
+				StorageType:  s3StorageType,
+				WorkloadName: svcName,
+			})
+		})
+
+		It("storage init should succeed", func() {
+			Expect(testStorageInitErr).NotTo(HaveOccurred())
+		})
+
+		It("storage init should create an addon template", func() {
+			addonFilePath := fmt.Sprintf("./copilot/%s/addons/%s.yml", svcName, s3StorageName)
 			Expect(addonFilePath).Should(BeAnExistingFile())
 		})
 	})
@@ -159,7 +179,7 @@ var _ = Describe("addons flow", func() {
 			}, "30s", "1s").Should(Equal(200))
 		})
 
-		It("initial database should have been created", func() {
+		It("initial database should have been created for the Aurora stroage", func() {
 			svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
 				AppName: appName,
 				Name:    svcName,
@@ -174,6 +194,25 @@ var _ = Describe("addons flow", func() {
 			endpoint := fmt.Sprintf("%s/%s", "databases", rdsInitialDB)
 			Eventually(func() (int, error) {
 				url := fmt.Sprintf("%s/%s", route.URL, endpoint)
+				resp, fetchErr := http.Get(url)
+				return resp.StatusCode, fetchErr
+			}, "30s", "1s").Should(Equal(200))
+		})
+
+		It("should be able to peek into s3 bucket", func() {
+			svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
+				AppName: appName,
+				Name:    svcName,
+			})
+			Expect(svcShowErr).NotTo(HaveOccurred())
+			Expect(len(svc.Routes)).To(Equal(1))
+
+			// Make a GET request to the API to make sure we can peek into the s3 bucket.
+			route := svc.Routes[0]
+			Expect(route.Environment).To(Equal("test"))
+
+			Eventually(func() (int, error) {
+				url := fmt.Sprintf("%s/%s", route.URL, "peeks3")
 				resp, fetchErr := http.Get(url)
 				return resp.StatusCode, fetchErr
 			}, "30s", "1s").Should(Equal(200))
