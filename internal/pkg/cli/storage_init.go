@@ -743,7 +743,7 @@ Resource names are injected into your containers as environment variables for ea
   /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --no-lsi
   Create a DynamoDB table with multiple alternate sort keys.
   /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N
-  Create an RDS Aurora Serverless cluster using PostgreSQL as database engine.
+  Create an RDS Aurora Serverless cluster using PostgreSQL as the database engine.
   /code $ copilot storage init -n my-cluster -t Aurora -w frontend --engine PostgreSQL`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)

@@ -141,7 +141,7 @@ Resources:
       TargetType: AWS::RDS::DBCluster
 Outputs:
   {{logicalIDSafe .ClusterName}}Secret: # injected as {{envVarSecret .ClusterName | toSnakeCase}} environment variable by Copilot.
-    Description: "The JSON secret that holds the database username and password. Fields are 'host', 'port', 'dbname', 'username', 'password', 'dbClusterIdentifier', 'engine'"
+    Description: "The JSON secret that holds the database username and password. Fields are 'host', 'port', 'dbname', 'username', 'password', 'dbClusterIdentifier' and 'engine'"
     Value: !Ref {{logicalIDSafe .ClusterName}}AuroraSecret
   {{logicalIDSafe .ClusterName}}SecurityGroup:
     Description: "The security group to attach to the workload."
