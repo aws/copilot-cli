@@ -24,11 +24,21 @@ You can also create a [DynamoDB table](https://docs.aws.amazon.com/amazondynamod
 # For a guided experience.
 $ copilot storage init -t DynamoDB
 
-# Or by providing flags to skip the prompts.
+# Or skip the prompts by providing flags.
 $ copilot storage init -n users -t DynamoDB -w api --partition-key id:N --sort-key email:S --lsi post-count:N
 ```
 
 This will create a DynamoDB table called `${app}-${env}-${svc}-users`. Its partition key will be `id`, a `Number` attribute; its sort key will be `email`, a `String` attribute; and it will have a [local secondary index](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/LSI.html) (essentially an alternate sort key) on the `Number` attribute `post-count`. 
+
+It is also possible to create an [RDS Aurora Serverless](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless.html) cluster using `copilot storage init`. 
+```bash
+# For a guided experience.
+$ copilot storage init -t Aurora
+
+# Or skip the prompts by providing flags.
+$ copilot storage init -n my-cluster -t Aurora -w api --engine PostgreSQL --initial-db my_db
+```
+This will create an RDS Aurora Serverless cluster that uses PostgreSQL engine with a database named `my_db`. An environment variable named `MYCLUSTER_SECRET` is injected into your workload as a JSON string. The fields are `'host'`, `'port'`, `'dbname'`, `'username'`, `'password'`, `'dbClusterIdentifier'` and `'engine'`.
 
 ## File Systems
 Mounting an EFS volume in Copilot tasks requires two things:
