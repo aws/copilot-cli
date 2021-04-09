@@ -207,7 +207,7 @@ var _ = Describe("addons flow", func() {
 			Expect(svcShowErr).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
 
-			// Make a GET request to the API to make sure we can peek into the s3 bucket.
+			// Make a GET request to the API to make sure we can access the s3 bucket.
 			route := svc.Routes[0]
 			Expect(route.Environment).To(Equal("test"))
 
