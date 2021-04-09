@@ -125,13 +125,13 @@ var _ = Describe("addons flow", func() {
 
 	Context("when deploying svc", func() {
 		var (
-			appDeployErr error
+			svcDeployErr error
 			svcInitErr   error
 			initErr      error
 		)
 
 		BeforeAll(func() {
-			_, appDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
+			_, svcDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
 				Name:     svcName,
 				EnvName:  "test",
 				ImageTag: "gallopinggurdey",
@@ -139,7 +139,7 @@ var _ = Describe("addons flow", func() {
 		})
 
 		It("svc deploy should succeed", func() {
-			Expect(appDeployErr).NotTo(HaveOccurred())
+			Expect(svcDeployErr).NotTo(HaveOccurred())
 		})
 
 		It("should be able to make a GET request", func() {
