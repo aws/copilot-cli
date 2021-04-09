@@ -70,6 +70,7 @@ const (
 	subnetsFlag        = "subnets"
 	securityGroupsFlag = "security-groups"
 	envVarsFlag        = "env-vars"
+	secretsFlag        = "secrets"
 	commandFlag        = "command"
 	entrypointFlag     = "entrypoint"
 	taskDefaultFlag    = "default"
@@ -213,6 +214,7 @@ Must be of the format '<keyName>:<dataType>'.`
 	taskRoleFlagDescription      = "Optional. The ARN of the role for the task to use."
 	executionRoleFlagDescription = "Optional. The ARN of the role that grants the container agent permission to make AWS API calls."
 	envVarsFlagDescription       = "Optional. Environment variables specified by key=value separated with commas."
+	secretsFlagDescription       = "Optional. Secrets to inject into the container. Specified by key=value separated with commas."
 	runCommandFlagDescription    = `Optional. The command that is passed to "docker run" to override the default command.`
 	entrypointFlagDescription    = `Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.`
 	taskGroupFlagDescription     = `Optional. The group name of the task. 

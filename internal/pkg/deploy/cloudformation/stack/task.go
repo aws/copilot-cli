@@ -55,8 +55,10 @@ func (t *taskStackConfig) StackName() string {
 func (t *taskStackConfig) Template() (string, error) {
 	content, err := t.parser.Parse(taskTemplatePath, struct {
 		EnvVars map[string]string
+		Secrets map[string]string
 	}{
 		EnvVars: t.EnvVars,
+		Secrets: t.Secrets,
 	})
 	if err != nil {
 		return "", fmt.Errorf("read template for task stack: %w", err)

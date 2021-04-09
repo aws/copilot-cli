@@ -56,6 +56,11 @@ Resources:
           Environment:{{range $name, $value := .EnvVars}}
           - Name: {{$name}}
             Value: {{$value}}{{end}}{{end}}
+          {{- if .Secrets}}
+          Secrets:{{range $name, $valueFrom := .Secrets}}
+          - Name: {{$name}}
+            ValueFrom: {{$valueFrom}}{{end}}
+          {{- end}}
       Family: !Join ['-', ["copilot", !Ref TaskName]]
       RequiresCompatibilities:
         - "FARGATE"
