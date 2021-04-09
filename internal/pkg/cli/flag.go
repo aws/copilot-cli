@@ -67,6 +67,7 @@ const (
 	imageFlag          = "image"
 	taskRoleFlag       = "task-role"
 	executionRoleFlag  = "execution-role"
+	clusterFlag        = "cluster"
 	subnetsFlag        = "subnets"
 	securityGroupsFlag = "security-groups"
 	envVarsFlag        = "env-vars"
@@ -132,6 +133,8 @@ Mutually exclusive with -%s, --%s`, imageFlagShort, imageFlag)
 	wkldTypeFlagDescription = fmt.Sprintf(`Type of job or svc to create. Must be one of:
 %s`, strings.Join(template.QuoteSliceFunc(manifest.WorkloadTypes), ", "))
 
+	clusterFlagDescription = fmt.Sprintf(`Optional. The ARN of the clsuter to run the task in. 
+Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
 	subnetsFlagDescription = fmt.Sprintf(`Optional. The subnet IDs for the task to use. Can be specified multiple times.
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
 	securityGroupsFlagDescription = fmt.Sprintf(`Optional. The security group IDs for the task to use. Can be specified multiple times.
