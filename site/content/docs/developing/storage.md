@@ -33,7 +33,7 @@ This will create a DynamoDB table called `${app}-${env}-${svc}-users`. Its parti
 It is also possible to create an [RDS Aurora Serverless](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless.html) cluster using `copilot storage init`. 
 ```bash
 # For a guided experience.
-$ copilot storage init -t RDS
+$ copilot storage init -t Aurora
 
 # Or skip the prompts by providing flags.
 $ copilot storage init -n my-cluster -t Aurora -w api --engine PostgreSQL --initial-db my_db
