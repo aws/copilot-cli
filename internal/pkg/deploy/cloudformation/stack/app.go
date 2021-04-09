@@ -154,12 +154,12 @@ func (c *AppStackConfig) Tags() []*cloudformation.Tag {
 
 // StackName returns the name of the CloudFormation stack (based on the application name).
 func (c *AppStackConfig) StackName() string {
-	return fmt.Sprintf("%s-infrastructure-roles", c.Name)
+	return NameForAppStack(c.Name)
 }
 
 // StackSetName returns the name of the CloudFormation StackSet (based on the application name).
 func (c *AppStackConfig) StackSetName() string {
-	return fmt.Sprintf("%s-infrastructure", c.Name)
+	return NameForAppStackSet(c.Name)
 }
 
 // StackSetDescription returns the description of the StackSet for application resources.

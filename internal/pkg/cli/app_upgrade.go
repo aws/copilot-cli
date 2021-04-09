@@ -49,7 +49,7 @@ func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	d, err := describe.NewAppDescriber(describe.NewAppDescriberConfig{})
+	d, err := describe.NewAppDescriber(vars.name)
 	if err != nil {
 		return nil, fmt.Errorf("new app describer for application %s: %v", vars.name, err)
 	}

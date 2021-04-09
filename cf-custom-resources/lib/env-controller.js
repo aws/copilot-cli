@@ -75,18 +75,16 @@ let report = function (
 /**
  * Update the environment stack's parameters by adding or removing {workload} from the provided {parameters}.
  *
- * @param {string} requestType Type of the request.
  * @param {string} stackName Name of the stack.
  * @param {string} workload Name of the copilot workload.
- * @param {string[]} envParameters List of parameters from the environment stack to update.
+ * @param {string[]} envControllerParameters List of parameters from the environment stack to update.
  *
  * @returns {parameters} The updated parameters.
  */
 const controlEnv = async function (
-  requestType,
   stackName,
   workload,
-  envParameters
+  envControllerParameters
 ) {
   var cfn = new aws.CloudFormation();
   while (true) {
@@ -98,32 +96,39 @@ const controlEnv = async function (
     if (describeStackResp.Stacks.length !== 1) {
       throw new Error(`Cannot find environment stack ${stackName}`);
     }
-    var updatedEnvStack = describeStackResp.Stacks[0];
-    var params = JSON.parse(JSON.stringify(updatedEnvStack.Parameters));
-    var updated = false;
-    for (const param of params) {
-      for (const envParam of envParameters) {
-        if (param.ParameterKey === envParam) {
-          const [updatedParamValue, paramUpdated] = updateParameter(
-            requestType,
-            workload,
-            param.ParameterValue
-          );
-          param.ParameterValue = updatedParamValue;
-          updated = updated || paramUpdated;
-        }
-      }
-    }
+    const updatedEnvStack = describeStackResp.Stacks[0];
+    const envParams = JSON.parse(JSON.stringify(updatedEnvStack.Parameters));
+    const envSet = setOfParameterKeysWithWorkload(envParams, workload);
+    const controllerSet = new Set(envControllerParameters);
+
+    const parametersToRemove = [...envSet].filter(param => !controllerSet.has(param));
+    const parametersToAdd = [...controllerSet].filter(param => !envSet.has(param));
     const exportedValues = getExportedValues(updatedEnvStack);
-    // Return if there's no parameter changes.
-    if (!updated) {
+    // Return if there are no parameter changes.
+    if (parametersToRemove.length + parametersToAdd.length === 0)  {
       return exportedValues;
     }
+
+    for (const envParam of envParams) {
+      if (parametersToRemove.includes(envParam.ParameterKey)) {
+        const values = new Set(envParam.ParameterValue.split(',').filter(Boolean)); // Filter out the empty string
+        // in the output array to prevent a leading comma in the parameters list.
+        values.delete(workload);
+        envParam.ParameterValue = [...values].join(',');
+      }
+      if (parametersToAdd.includes(envParam.ParameterKey)) {
+        const values = new Set(envParam.ParameterValue.split(',').filter(Boolean)); // Filter out the empty string
+        // in the output array to prevent a leading comma in the parameters list.
+        values.add(workload);
+        envParam.ParameterValue = [...values].join(',');
+      }
+    }
+
     try {
       await cfn
         .updateStack({
           StackName: stackName,
-          Parameters: params,
+          Parameters: envParams,
           UsePreviousTemplate: true,
           RoleARN: exportedValues["CFNExecutionRoleARN"],
           Capabilities: updatedEnvStack.Capabilities,
@@ -132,27 +137,27 @@ const controlEnv = async function (
     } catch (err) {
       if (
         !err.message.match(
-          /^Stack.*is in UPDATE_IN_PROGRESS state and can not be updated/
+            /^Stack.*is in UPDATE_IN_PROGRESS state and can not be updated/
         )
       ) {
         throw err;
       }
       // If the other workload is updating the env stack, wait until update completes.
       await cfn
+          .waitFor("stackUpdateComplete", {
+            StackName: stackName,
+            $waiter: updateStackWaiter,
+          })
+          .promise();
+      continue;
+    }
+    // Wait until update complete, then return the updated env stack output.
+    await cfn
         .waitFor("stackUpdateComplete", {
           StackName: stackName,
           $waiter: updateStackWaiter,
         })
         .promise();
-      continue;
-    }
-    // Wait until update complete, then return the updated env stack output.
-    await cfn
-      .waitFor("stackUpdateComplete", {
-        StackName: stackName,
-        $waiter: updateStackWaiter,
-      })
-      .promise();
     describeStackResp = await cfn
       .describeStacks({
         StackName: stackName,
@@ -179,7 +184,6 @@ exports.handler = async function (event, context) {
         responseData = await Promise.race([
           exports.deadlineExpired(),
           controlEnv(
-            "Create",
             props.EnvStack,
             props.Workload,
             props.Parameters
@@ -191,7 +195,6 @@ exports.handler = async function (event, context) {
         responseData = await Promise.race([
           exports.deadlineExpired(),
           controlEnv(
-            "Update",
             props.EnvStack,
             props.Workload,
             props.Parameters
@@ -203,10 +206,9 @@ exports.handler = async function (event, context) {
         responseData = await Promise.race([
           exports.deadlineExpired(),
           controlEnv(
-            "Delete",
             props.EnvStack,
             props.Workload,
-            props.Parameters
+            [] // Set to empty to denote that Workload should not be included in any env stack parameter.
           ),
         ]);
         physicalResourceId = event.PhysicalResourceId;
@@ -228,6 +230,18 @@ exports.handler = async function (event, context) {
   }
 };
 
+function setOfParameterKeysWithWorkload(cfnParams, workload) {
+  const envSet = new Set();
+  cfnParams.forEach(param => {
+    var values = new Set(param.ParameterValue.split(','));
+    if (!values.has(workload)) {
+      return;
+    }
+    envSet.add(param.ParameterKey);
+  })
+  return envSet
+}
+
 const getExportedValues = function (stack) {
   const exportedValues = {};
   stack.Outputs.forEach((output) => {
@@ -246,28 +260,6 @@ const getExportedValues = function (stack) {
  * @returns {string} The updated parameter.
  * @returns {bool} whether the parameter is modified.
  */
-const updateParameter = function (requestType, workload, paramValue) {
-  var set = new Set(
-    paramValue.split(",").filter(function (el) {
-      return el != "";
-    })
-  );
-  switch (requestType) {
-    case "Create":
-      set.add(workload);
-      break;
-    case "Update":
-      set.add(workload);
-      break;
-    case "Delete":
-      set.delete(workload);
-      break;
-    default:
-      throw new Error(`Unsupported request type ${requestType}`);
-  }
-  var updatedParamValue = Array.from(set).join(",");
-  return [updatedParamValue, updatedParamValue !== paramValue];
-};
 
 exports.deadlineExpired = function () {
   return new Promise(function (resolve, reject) {

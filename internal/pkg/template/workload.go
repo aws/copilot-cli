@@ -308,7 +308,10 @@ func randomUUIDFunc() (string, error) {
 func envControllerParameters(o WorkloadOpts) []string {
 	parameters := []string{}
 	if o.WorkloadType == "Load Balanced Web Service" {
-		parameters = append(parameters, "ALBWorkloads,") // YAML needs the comma separator; okay if trailing.
+		parameters = append(parameters, "ALBWorkloads,") // YAML needs the comma separator; resolved in EnvContr.
+	}
+	if o.Network.SubnetsType == PrivateSubnetsPlacement {
+		parameters = append(parameters, "NATWorkloads,") // YAML needs the comma separator; resolved in EnvContr.
 	}
 	return parameters
 }
