@@ -48,6 +48,10 @@ Resources:
 {{- if .Storage -}}
 {{include "mount-points" . | indent 10}}
 {{- end -}}
+{{- if .DockerLabels}}
+          DockerLabels:{{range $name, $value := .DockerLabels}}
+            {{$name | printf "%q"}}: {{$value | printf "%q"}}{{end}}
+{{- end -}}
 {{include "sidecars" . | indent 8}}
 {{- if .Storage -}}
 {{include "volumes" . | indent 6}}

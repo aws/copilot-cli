@@ -46,13 +46,14 @@ type LoadBalancedWebService struct {
 
 // LoadBalancedWebServiceConfig holds the configuration for a load balanced web service.
 type LoadBalancedWebServiceConfig struct {
-	ImageConfig ServiceImageWithPort `yaml:"image,flow"`
+	ImageConfig   ServiceImageWithPort `yaml:"image,flow"`
 	ImageOverride `yaml:",inline"`
 	RoutingRule   `yaml:"http,flow"`
 	TaskConfig    `yaml:",inline"`
 	*Logging      `yaml:"logging,flow"`
-	Sidecars    map[string]*SidecarConfig `yaml:"sidecars"`
-	Network     NetworkConfig             `yaml:"network"`
+	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
+	Network       NetworkConfig             `yaml:"network"`
+	DockerLabels  map[string]string         `yaml:"docker_labels,flow"`
 
 	// Fields that are used while marshaling the template for additional clarifications,
 	// but don't correspond to a field in the manifests.

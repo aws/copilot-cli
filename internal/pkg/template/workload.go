@@ -200,6 +200,7 @@ type WorkloadOpts struct {
 	EntryPoint     []string
 	Command        []string
 	DomainAlias    string
+	DockerLabels   map[string]string
 
 	// Additional options for service templates.
 	WorkloadType        string

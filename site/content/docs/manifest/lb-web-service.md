@@ -288,3 +288,6 @@ Optional. Defaults to `""`. The ID of the EFS access point to connect to. If usi
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.
+
+<a id="docker-labels" href="#docker-labels" class="field">`docker_labels`</a> <span class="type">Map</span>  
+An optional key/value map of labels to add to the container.
