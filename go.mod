@@ -20,7 +20,7 @@ require (
 	github.com/imdario/mergo v0.3.9
 	github.com/lnquy/cron v1.1.1
 	github.com/moby/buildkit v0.8.2
-	github.com/onsi/ginkgo v1.16.0
+	github.com/onsi/ginkgo v1.16.1
 	github.com/onsi/gomega v1.11.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rogpeppe/go-internal v1.6.1 // indirect
