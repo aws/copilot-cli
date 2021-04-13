@@ -301,11 +301,13 @@ func TestPipelineStatus_Execute(t *testing.T) {
 		expectedContent string
 		expectedError   error
 	}{
-		"errors if fail to describe the status of the pipeline": {
+		"returns nil if pipeline name is empty": {
+			pipelineName: "",
 			setupMocks: func(m pipelineStatusMocks) {
-				m.describer.EXPECT().Describe().Return(nil, mockError)
+				m.describer.EXPECT().Describe().Return(&mockPipelineStatus, nil).Times(0)
 			},
-			expectedError: fmt.Errorf("describe status of pipeline: %w", mockError),
+			expectedContent: "",
+			expectedError:   nil,
 		},
 		"errors if fail to return JSON output": {
 			pipelineName:     mockPipelineName,
