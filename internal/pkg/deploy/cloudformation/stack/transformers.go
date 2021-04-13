@@ -33,6 +33,12 @@ const (
 	defaultSidecarPort = "80"
 )
 
+// Supported capacity providers for Fargate services
+const (
+	capacityProviderFargateSpot = "FARGATE_SPOT"
+	capacityProviderFargate     = "FARGATE"
+)
+
 // Validation errors when rendering manifest into template.
 var (
 	errNoFSID                      = errors.New(`volume field efs/id cannot be empty`)
@@ -45,6 +51,7 @@ var (
 	errUIDWithNonManagedFS = errors.New("UID and GID cannot be specified with non-managed EFS")
 	errInvalidUIDGIDConfig = errors.New("set managed filesystem access point creation info: must specify both UID and GID, or neither")
 	errReservedUID         = errors.New("set managed filesystem access point creation info: UID must not be 0")
+	errInvalidSpotConfig   = errors.New(`invalid spot configuration`)
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
@@ -94,12 +101,41 @@ func parsePortMapping(s *string) (port *string, protocol *string, err error) {
 	}
 }
 
+// convertCapacityProviders transforms the manifest fields into a format
+// parsable by the templates pkg.
+func convertCapacityProviders(a *manifest.Autoscaling) ([]*template.CapacityProviderStrategy, error) {
+	if a.IsEmpty() {
+		return nil, nil
+	}
+
+	if a.Spot != nil && a.Range != nil {
+		return nil, errInvalidSpotConfig
+	}
+
+	var cps []*template.CapacityProviderStrategy
+
+	// if Base is not nil, then that's what the desired count should be on the service
+
+	// if Spot specified as count, then weight on Spot CPS should be 1
+	spotCapacity := &template.CapacityProviderStrategy{
+		Weight:           aws.Int(1),
+		CapacityProvider: capacityProviderFargateSpot,
+	}
+	cps = append(cps, spotCapacity)
+
+	return cps, nil
+}
+
 // convertAutoscaling converts the service's Auto Scaling configuration into a format parsable
 // by the templates pkg.
 func convertAutoscaling(a *manifest.Autoscaling) (*template.AutoscalingOpts, error) {
 	if a.IsEmpty() {
 		return nil, nil
 	}
+	if a.Spot != nil {
+		return nil, nil
+	}
+
 	min, max, err := a.Range.Parse()
 	if err != nil {
 		return nil, err

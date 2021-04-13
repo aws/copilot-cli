@@ -105,6 +105,11 @@ func (a *Autoscaling) IsEmpty() bool {
 		a.Requests == nil && a.ResponseTime == nil && a.Spot == nil
 }
 
+// IgnoreRange returns whether desiredCount is specified on spot capacity
+func (a *Autoscaling) IgnoreRange() bool {
+	return a.Spot != nil
+}
+
 // IsValid checks to make sure Spot fields are compatible with other values in Autoscaling
 func (a *Autoscaling) IsValid() bool {
 	if a.Spot != nil && a.Range != nil {
