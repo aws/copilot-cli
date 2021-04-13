@@ -459,13 +459,13 @@ Resources:
       ClientToken: !Sub ${AppName}-${EnvName}-${WorkloadName}
       FileSystemId: !GetAtt EnvControllerAction.ManagedFileSystemID
       PosixUser: 
-        Uid: 1412617205
-        Gid: 1412617205
+        Uid: 4225294584
+        Gid: 4225294584
       RootDirectory: 
-        Path: '/job/job'
+        Path: '/job'
         CreationInfo:
-          OwnerUid: 1412617205
-          OwnerGid: 1412617205
+          OwnerUid: 4225294584
+          OwnerGid: 4225294584
           Permissions: '0755'
 
 

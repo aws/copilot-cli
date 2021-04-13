@@ -113,7 +113,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
 	}
 
-	storage, err := convertStorageOpts(s.manifest.Workload, s.manifest.Storage)
+	storage, err := convertStorageOpts(s.manifest.Name, s.manifest.Storage)
 	if err != nil {
 		return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
 	}
