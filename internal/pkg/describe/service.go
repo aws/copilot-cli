@@ -8,9 +8,11 @@ import (
 	"io"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -24,7 +26,12 @@ const (
 )
 
 type ecsClient interface {
-	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
+	TaskDefinition(taskDefName string) (*awsecs.TaskDefinition, error)
+	Service(clusterName, serviceName string) (*awsecs.Service, error)
+}
+
+type clusterDescriber interface {
+	ClusterARN(app, env string) (string, error)
 }
 
 // ConfigStoreSvc wraps methods of config store.
@@ -66,8 +73,9 @@ type ServiceDescriber struct {
 	service string
 	env     string
 
-	ecsClient ecsClient
-	cfn       cfn
+	ecsClient        ecsClient
+	cfn              cfn
+	clusterDescriber clusterDescriber
 }
 
 // NewServiceConfig contains fields that initiates ServiceDescriber struct.
@@ -93,13 +101,14 @@ func NewServiceDescriber(opt NewServiceConfig) (*ServiceDescriber, error) {
 		service: opt.Svc,
 		env:     opt.Env,
 
-		ecsClient: ecs.New(sess),
-		cfn:       cloudformation.New(sess),
+		ecsClient:        awsecs.New(sess),
+		cfn:              cloudformation.New(sess),
+		clusterDescriber: ecs.New(sess),
 	}, nil
 }
 
 // EnvVars returns the environment variables of the task definition.
-func (d *ServiceDescriber) EnvVars() ([]*ecs.ContainerEnvVar, error) {
+func (d *ServiceDescriber) EnvVars() ([]*awsecs.ContainerEnvVar, error) {
 	taskDefName := fmt.Sprintf("%s-%s-%s", d.app, d.env, d.service)
 	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)
 	if err != nil {
@@ -109,13 +118,37 @@ func (d *ServiceDescriber) EnvVars() ([]*ecs.ContainerEnvVar, error) {
 }
 
 // Secrets returns the secrets of the task definition.
-func (d *ServiceDescriber) Secrets() ([]*ecs.ContainerSecret, error) {
+func (d *ServiceDescriber) Secrets() ([]*awsecs.ContainerSecret, error) {
 	taskDefName := fmt.Sprintf("%s-%s-%s", d.app, d.env, d.service)
 	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)
 	if err != nil {
 		return nil, err
 	}
 	return taskDefinition.Secrets(), nil
+}
+
+// NetworkConfiguration returns the network configuration of the service.
+func (d *ServiceDescriber) NetworkConfiguration() (*awsecs.NetworkConfiguration, error) {
+	clusterARN, err := d.clusterDescriber.ClusterARN(d.app, d.env)
+	if err != nil {
+		return nil, fmt.Errorf("get cluster ARN for service %s: %w", d.service, err)
+	}
+
+	service, err := d.ecsClient.Service(clusterARN, d.service)
+	if err != nil {
+		return nil, fmt.Errorf("get service %s running on cluster %s: %w", d.service, clusterARN, err)
+	}
+
+	networkConfig := service.NetworkConfiguration
+	if networkConfig == nil || networkConfig.AwsvpcConfiguration == nil {
+		return nil, fmt.Errorf("unable to retrieve network information for service %s", d.service)
+	}
+
+	return &awsecs.NetworkConfiguration{
+		AssignPublicIp: aws.StringValue(networkConfig.AwsvpcConfiguration.AssignPublicIp),
+		SecurityGroups: aws.StringValueSlice(networkConfig.AwsvpcConfiguration.SecurityGroups),
+		Subnets:        aws.StringValueSlice(networkConfig.AwsvpcConfiguration.Subnets),
+	}, nil
 }
 
 // ServiceStackResources returns the filtered service stack resources created by CloudFormation.
@@ -164,4 +197,34 @@ func (d *ServiceDescriber) Params() (map[string]string, error) {
 		params[*param.ParameterKey] = *param.ParameterValue
 	}
 	return params, nil
+}
+
+// TaskDefinition holds task definition information of the service, including container-level information.
+type TaskDefinition struct {
+	Image         string // Exactly one image per copilot service.
+	ExecutionRole string
+	TaskRole      string
+	EnvVars       []*awsecs.ContainerEnvVar
+	Secrets       []*awsecs.ContainerSecret
+	EntryPoint    []string // At most one entrypoint override per copilot service.
+	Command       []string // At most one command override per copilot service.
+}
+
+// TaskDefinition returns the task definition, including the container-level ones, of the service.
+func (d *ServiceDescriber) TaskDefinition() (*TaskDefinition, error) {
+	taskDefName := fmt.Sprintf("%s-%s-%s", d.app, d.env, d.service)
+	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)
+	if err != nil {
+		return nil, fmt.Errorf("get task definition %s of service %s: %w", taskDefName, d.service, err)
+	}
+
+	return &TaskDefinition{
+		Image:         taskDefinition.Images()[0].Image, // There is exactly one container per service, hence one image.
+		ExecutionRole: aws.StringValue(taskDefinition.ExecutionRoleArn),
+		TaskRole:      aws.StringValue(taskDefinition.TaskRoleArn),
+		EnvVars:       taskDefinition.EnvironmentVariables(),
+		Secrets:       taskDefinition.Secrets(),
+		EntryPoint:    taskDefinition.EntryPoints()[0].EntryPoint, // There is exactly one container per service, hence one entrypoint.
+		Command:       taskDefinition.Commands()[0].Command,       // There is exactly one container per service, hence one command.
+	}, nil
 }

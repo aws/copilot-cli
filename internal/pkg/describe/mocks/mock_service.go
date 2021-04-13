@@ -35,6 +35,21 @@ func (m *MockecsClient) EXPECT() *MockecsClientMockRecorder {
 	return m.recorder
 }
 
+// Service mocks base method.
+func (m *MockecsClient) Service(clusterName, serviceName string) (*ecs.Service, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Service", clusterName, serviceName)
+	ret0, _ := ret[0].(*ecs.Service)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Service indicates an expected call of Service.
+func (mr *MockecsClientMockRecorder) Service(clusterName, serviceName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockecsClient)(nil).Service), clusterName, serviceName)
+}
+
 // TaskDefinition mocks base method.
 func (m *MockecsClient) TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error) {
 	m.ctrl.T.Helper()
@@ -48,6 +63,44 @@ func (m *MockecsClient) TaskDefinition(taskDefName string) (*ecs.TaskDefinition,
 func (mr *MockecsClientMockRecorder) TaskDefinition(taskDefName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockecsClient)(nil).TaskDefinition), taskDefName)
+}
+
+// MockclusterDescriber is a mock of clusterDescriber interface.
+type MockclusterDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockclusterDescriberMockRecorder
+}
+
+// MockclusterDescriberMockRecorder is the mock recorder for MockclusterDescriber.
+type MockclusterDescriberMockRecorder struct {
+	mock *MockclusterDescriber
+}
+
+// NewMockclusterDescriber creates a new mock instance.
+func NewMockclusterDescriber(ctrl *gomock.Controller) *MockclusterDescriber {
+	mock := &MockclusterDescriber{ctrl: ctrl}
+	mock.recorder = &MockclusterDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockclusterDescriber) EXPECT() *MockclusterDescriberMockRecorder {
+	return m.recorder
+}
+
+// ClusterARN mocks base method.
+func (m *MockclusterDescriber) ClusterARN(app, env string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClusterARN", app, env)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ClusterARN indicates an expected call of ClusterARN.
+func (mr *MockclusterDescriberMockRecorder) ClusterARN(app, env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterARN", reflect.TypeOf((*MockclusterDescriber)(nil).ClusterARN), app, env)
 }
 
 // MockConfigStoreSvc is a mock of ConfigStoreSvc interface.
