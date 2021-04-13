@@ -95,7 +95,8 @@ type StorageOpts struct {
 	ManagedVolumeInfo *ManagedVolumeCreationInfo // Used for delegating CreationInfo for Copilot-managed EFS.
 }
 
-func (s *StorageOpts) RequiresEFSCreation() bool {
+// requiresEFSCreation returns true if managed volume information is specified; false otherwise.
+func (s *StorageOpts) requiresEFSCreation() bool {
 	return s.ManagedVolumeInfo != nil
 }
 
@@ -315,7 +316,7 @@ func envControllerParameters(o WorkloadOpts) []string {
 	if o.WorkloadType == "Load Balanced Web Service" {
 		parameters = append(parameters, "ALBWorkloads,") // YAML needs the comma separator; okay if trailing.
 	}
-	if o.Storage != nil && o.Storage.RequiresEFSCreation() {
+	if o.Storage != nil && o.Storage.requiresEFSCreation() {
 		parameters = append(parameters, "EFSWorkloads,")
 	}
 	return parameters

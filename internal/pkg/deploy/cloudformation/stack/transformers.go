@@ -374,13 +374,15 @@ func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error
 	return output, nil
 }
 
+// convertEFS converts a volume from a manfiest object to a template object. This function
+// should not be called on non-managed volumes.
 func convertEFS(in *manifest.EFSConfigOrID) (*template.EFSVolumeConfiguration, error) {
 	// If there is no EFS information, just add the Name to the volume.
 	if in == nil {
 		return nil, nil
 	}
 	// UID and GID should not be specified for non-managed volumes.
-	if !in.UseManagedFS() && !in.Config.IsEmpty() {
+	if !in.Config.IsEmpty() {
 		if in.Config.UID != nil {
 			return nil, errUIDWithNonManagedFS
 		}
