@@ -73,6 +73,7 @@ func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error)
 		store:              store,
 		pipelineSvc:        codepipeline.New(session),
 		sel:                selector.NewSelect(prompter, store),
+		prompt:             prompter,
 		initDescriber: func(o *pipelineStatusOpts) error {
 			d, err := describe.NewPipelineStatusDescriber(o.pipelineName)
 			if err != nil {
@@ -109,6 +110,9 @@ func (o *pipelineStatusOpts) Ask() error {
 
 // Execute displays the status of the pipeline.
 func (o *pipelineStatusOpts) Execute() error {
+	if o.pipelineName == "" {
+		return nil
+	}
 	err := o.initDescriber(o)
 	if err != nil {
 		return fmt.Errorf("describe status of pipeline: %w", err)
