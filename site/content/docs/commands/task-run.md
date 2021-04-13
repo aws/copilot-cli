@@ -31,15 +31,15 @@ Generally, the steps involved in task run are:
   --entrypoint string              Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.
   --env string                     Optional. Name of the environment.
                                    Cannot be specified with 'default', 'subnets' or 'security-groups'
-  --env-vars stringToString        Optional. Environment variables specified by key=value separated with commas. (default [])
+  --env-vars stringToString        Optional. Environment variables specified by key=value separated by commas. (default [])
   --execution-role string          Optional. The role that grants the container agent permission to make AWS API calls.
   --follow                         Optional. Specifies if the logs should be streamed.
 -h, --help                         help for run
   --image string                   Optional. The image to run instead of building a Dockerfile.
   --memory int                     Optional. The amount of memory to reserve in MiB for each task. (default 512)
-  --resource-tags stringToString   Optional. Labels with a key and value separated with commas.
+  --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                    Allows you to categorize resources. (default [])
-  --secrets stringToString         Optional. Secrets to inject into the container. Specified by key=value separated with commas. (default [])
+  --secrets stringToString         Optional. Secrets to inject into the container. Specified by key=value separated by commas. (default [])
   --security-groups strings        Optional. The security group IDs for the task to use. Can be specified multiple times.
                                    Cannot be specified with 'app' or 'env'.
   --subnets strings                Optional. The subnet IDs for the task to use. Can be specified multiple times.

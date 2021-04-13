@@ -163,7 +163,7 @@ const (
 	jsonFlagDescription     = "Optional. Outputs in JSON format."
 
 	imageTagFlagDescription     = `Optional. The container image tag.`
-	resourceTagsFlagDescription = `Optional. Labels with a key and value separated with commas.
+	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
 Allows you to categorize resources.`
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
 	prodEnvFlagDescription        = "If the environment contains production services."
@@ -213,8 +213,8 @@ Must be of the format '<keyName>:<dataType>'.`
 	memoryFlagDescription        = "Optional. The amount of memory to reserve in MiB for each task."
 	taskRoleFlagDescription      = "Optional. The ARN of the role for the task to use."
 	executionRoleFlagDescription = "Optional. The ARN of the role that grants the container agent permission to make AWS API calls."
-	envVarsFlagDescription       = "Optional. Environment variables specified by key=value separated with commas."
-	secretsFlagDescription       = "Optional. Secrets to inject into the container. Specified by key=value separated with commas."
+	envVarsFlagDescription       = "Optional. Environment variables specified by key=value separated by commas."
+	secretsFlagDescription       = "Optional. Secrets to inject into the container. Specified by key=value separated by commas."
 	runCommandFlagDescription    = `Optional. The command that is passed to "docker run" to override the default command.`
 	entrypointFlagDescription    = `Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.`
 	taskGroupFlagDescription     = `Optional. The group name of the task. 
