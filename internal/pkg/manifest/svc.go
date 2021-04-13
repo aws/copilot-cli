@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"gopkg.in/yaml.v3"
 )
 
@@ -110,18 +111,13 @@ func (s *Spot) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	if *s.Base != 0 {
+	if aws.IntValue(s.Base) != 0 {
 		s.Enabled = nil
 		return nil
 	}
 
 	if err := unmarshal(&s.Enabled); err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
-			return err
-		}
+		return err
 	}
 
 	if s.Enabled != nil {
