@@ -434,6 +434,156 @@ func TestTaskDefinition_Secrets(t *testing.T) {
 	}
 }
 
+func TestTaskDefinition_Images(t *testing.T) {
+	testCases := map[string]struct {
+		inContainers []*ecs.ContainerDefinition
+		wantedImages []*ContainerImage
+	}{
+		"should return images of the task definition as a list of ContainerImage": {
+			inContainers: []*ecs.ContainerDefinition{
+				{
+					Name:  aws.String("container-1"),
+					Image: aws.String("image-1"),
+				},
+				{
+					Name:  aws.String("container-2"),
+					Image: aws.String("image-2"),
+				},
+			},
+
+			wantedImages: []*ContainerImage{
+				{
+					Container: "container-1",
+					Image:     "image-1",
+				},
+				{
+					Container: "container-2",
+					Image:     "image-2",
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			taskDefinition := TaskDefinition{
+				ContainerDefinitions: tc.inContainers,
+			}
+
+			gotImages := taskDefinition.Images()
+
+			require.Equal(t, tc.wantedImages, gotImages)
+		})
+
+	}
+}
+
+func TestTaskDefinition_Commands(t *testing.T) {
+	testCases := map[string]struct {
+		inContainers   []*ecs.ContainerDefinition
+		wantedCommands []*ContainerCommand
+	}{
+		"should return command overrides of the task definition as a list of ContainerCommand": {
+			inContainers: []*ecs.ContainerDefinition{
+				{
+					Name:    aws.String("container-1"),
+					Command: aws.StringSlice([]string{"echo", "strikes", "three"}),
+				},
+				{
+					Name:    aws.String("container-2"),
+					Command: aws.StringSlice([]string{"echo", "ball", "four"}),
+				},
+				{
+					Name: aws.String("container-3"),
+				},
+			},
+
+			wantedCommands: []*ContainerCommand{
+				{
+					Container: "container-1",
+					Command:   []string{"echo", "strikes", "three"},
+				},
+				{
+					Container: "container-2",
+					Command:   []string{"echo", "ball", "four"},
+				},
+				{
+					Container: "container-3",
+					Command:   []string{},
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			taskDefinition := TaskDefinition{
+				ContainerDefinitions: tc.inContainers,
+			}
+
+			gotCommands := taskDefinition.Commands()
+
+			require.Equal(t, tc.wantedCommands, gotCommands)
+		})
+
+	}
+}
+
+func TestTaskDefinition_EntryPoints(t *testing.T) {
+	testCases := map[string]struct {
+		inContainers      []*ecs.ContainerDefinition
+		wantedEntryPoints []*ContainerEntrypoint
+	}{
+		"should return command overrides of the task definition as a list of ContainerCommand": {
+			inContainers: []*ecs.ContainerDefinition{
+				{
+					Name:       aws.String("container-1"),
+					EntryPoint: aws.StringSlice([]string{"echo", "strikes", "three"}),
+				},
+				{
+					Name: aws.String("container-2"),
+				},
+			},
+
+			wantedEntryPoints: []*ContainerEntrypoint{
+				{
+					Container:  "container-1",
+					EntryPoint: []string{"echo", "strikes", "three"},
+				},
+				{
+					Container:  "container-2",
+					EntryPoint: []string{},
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			taskDefinition := TaskDefinition{
+				ContainerDefinitions: tc.inContainers,
+			}
+
+			gotEntryPoints := taskDefinition.EntryPoints()
+
+			require.Equal(t, tc.wantedEntryPoints, gotEntryPoints)
+		})
+
+	}
+}
+
 func TestFilterRunningTasks(t *testing.T) {
 	testCases := map[string]struct {
 		inTasks     []*Task
