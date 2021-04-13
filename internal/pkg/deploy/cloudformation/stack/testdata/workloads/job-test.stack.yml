@@ -133,7 +133,7 @@ Resources:
           - Name: COPILOT_SERVICE_NAME
             Value: !Sub '${WorkloadName}'
           - Name: COPILOT_MOUNT_POINTS
-            Value: '{"emptyVolume":"/etc/mount3","managedEFSVolume":"/etc/mount2","myEFSVolume":"/etc/mount1"}'
+            Value: '{"managedEFSVolume":"/etc/mount2","myEFSVolume":"/etc/mount1"}'
           
           LogConfiguration:
             LogDriver: awslogs
@@ -148,9 +148,6 @@ Resources:
             - ContainerPath: /etc/mount2
               ReadOnly: false
               SourceVolume: managedEFSVolume
-            - ContainerPath: /etc/mount3
-              ReadOnly: false
-              SourceVolume: emptyVolume
         - Name: nginx
           Image: 'public.ecr.aws/nginx/nginx'
           LogConfiguration:
@@ -187,9 +184,7 @@ Resources:
             RootDirectory: /
             TransitEncryption: ENABLED
             AuthorizationConfig:
-              IAM: DISABLED
-        - Name: emptyVolume
-            
+              IAM: DISABLED            
         
         
   ExecutionRole:

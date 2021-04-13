@@ -35,9 +35,6 @@ storage:
       path: '/etc/mount2'
       read_only: false
       efs: true
-    emptyVolume:
-      path: '/etc/mount3'
-      read_only: false
 
 sidecars:
   nginx:

@@ -8,8 +8,8 @@ package stack_test
 import (
 	"io/ioutil"
 	"path/filepath"
-	"testing"
 	"strings"
+	"testing"
 
 	"gopkg.in/yaml.v3"
 
@@ -47,6 +47,7 @@ func TestScheduledJob_Template(t *testing.T) {
 	t.Run("CF Template should be equal", func(t *testing.T) {
 		actualBytes := []byte(tpl)
 		actualString := string(actualBytes)
+		// Cut out zip file from EnvControllerAction for more readable output
 		actualString = strings.ReplaceAll(actualString, zipFile, "Abracadabra")
 		actualBytes = []byte(actualString)
 		mActual := make(map[interface{}]interface{})
@@ -57,7 +58,6 @@ func TestScheduledJob_Template(t *testing.T) {
 		expectedBytes := []byte(expected)
 		mExpected := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal(expectedBytes, mExpected))
-		// Cut out zip file from EnvControllerAction
 		require.Equal(t, mExpected, mActual)
 	})
 
