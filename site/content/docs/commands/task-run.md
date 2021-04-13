@@ -39,6 +39,7 @@ Generally, the steps involved in task run are:
   --memory int                     Optional. The amount of memory to reserve in MiB for each task. (default 512)
   --resource-tags stringToString   Optional. Labels with a key and value separated with commas.
                                    Allows you to categorize resources. (default [])
+  --secrets stringToString         Optional. Secrets to inject into the container. Specified by key=value separated with commas. (default [])
   --security-groups strings        Optional. The security group IDs for the task to use. Can be specified multiple times.
                                    Cannot be specified with 'app' or 'env'.
   --subnets strings                Optional. The subnet IDs for the task to use. Can be specified multiple times.
