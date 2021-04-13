@@ -35,6 +35,7 @@ var (
 	// Error definitions.
 	errUnmarshalBuildOpts  = errors.New("cannot unmarshal build field into string or compose-style map")
 	errUnmarshalCountOpts  = errors.New(`cannot unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalSpot       = errors.New(`cannot unmarshal "spot" field to an integer or boolean`)
 	errUnmarshalExec       = errors.New("cannot unmarshal exec field into boolean or exec configuration")
 	errUnmarshalEntryPoint = errors.New("cannot unmarshal entrypoint into string or slice of strings")
 	errUnmarshalCommand    = errors.New("cannot unmarshal command into string or slice of strings")
