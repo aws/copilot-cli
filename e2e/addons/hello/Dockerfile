@@ -1,32 +1,17 @@
-# We specify the base image we need for our
-# go application
-FROM golang:1.15 AS builder
-# We create an /app directory within our
-# image that will hold our application source
-# files
-RUN mkdir /app
-# We copy everything in the root directory
-# into our /app directory
-ADD . /app
-# We specify that we now wish to execute
-# any further commands inside our /app
-# directory
-WORKDIR /app
-# Avoid the GoProxy
-ENV GOPROXY=direct
-# we run go build to compile the binary
-# executable of our Go program
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64  go build -o api ./
+FROM node:14
 
-# To make our images smaller, use alpine and copy in the service binary.
-FROM alpine:latest
-# Install certs
-RUN apk --no-cache add ca-certificates
-# Copy the binary from the builder image
-COPY --from=builder /app ./
-# Make the binary executable
-RUN chmod +x ./api
-# Start the service
-ENTRYPOINT ["./api"]
-# The service runs on port 80
+# Create app directory
+WORKDIR /usr/src/app
+
+# Install app dependencies
+# A wildcard is used to ensure both package.json AND package-lock.json are copied
+# where available (npm@5+)
+COPY package*.json ./
+
+RUN npm install
+
+COPY . .
+
 EXPOSE 80
+
+CMD [ "node", "server.js" ]

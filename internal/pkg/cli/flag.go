@@ -50,12 +50,15 @@ const (
 	deleteSecretFlag      = "delete-secret"
 	svcPortFlag           = "port"
 
-	storageTypeFlag         = "storage-type"
-	storagePartitionKeyFlag = "partition-key"
-	storageSortKeyFlag      = "sort-key"
-	storageNoSortFlag       = "no-sort"
-	storageLSIConfigFlag    = "lsi"
-	storageNoLSIFlag        = "no-lsi"
+	storageTypeFlag              = "storage-type"
+	storagePartitionKeyFlag      = "partition-key"
+	storageSortKeyFlag           = "sort-key"
+	storageNoSortFlag            = "no-sort"
+	storageLSIConfigFlag         = "lsi"
+	storageNoLSIFlag             = "no-lsi"
+	storageRDSEngineFlag         = "engine"
+	storageRDSInitialDBFlag      = "initial-db"
+	storageRDSParameterGroupFlag = "parameter-group"
 
 	taskGroupNameFlag  = "task-group-name"
 	countFlag          = "count"
@@ -200,6 +203,10 @@ Must be of the format '<keyName>:<dataType>'.`
 	storageNoLSIFlagDescription     = `Optional. Don't ask about configuring alternate sort keys.`
 	storageLSIConfigFlagDescription = `Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
 Must be of the format '<keyName>:<dataType>'.`
+	storageRDSEngineFlagDescription = `The database engine used in the cluster.
+Must be either "MySQL" or "PostgreSQL".`
+	storageRDSInitialDBFlagDescription      = "The initial database to create in the cluster."
+	storageRDSParameterGroupFlagDescription = "Optional. The name of the parameter group to associate with the cluster."
 
 	countFlagDescription         = "Optional. The number of tasks to set up."
 	cpuFlagDescription           = "Optional. The number of CPU units to reserve for each task."

@@ -115,6 +115,8 @@ Resources:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 {{- end }}
   Service:
+    DependsOn:
+    - EnvControllerAction
     Metadata:
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
     Type: AWS::ECS::Service
@@ -125,6 +127,8 @@ Resources:
 {{include "efs-access-point" . | indent 2}}
 
 {{include "addons" . | indent 2}}
+
+{{include "env-controller" . | indent 2}}
 
 Outputs:
   DiscoveryServiceARN:
