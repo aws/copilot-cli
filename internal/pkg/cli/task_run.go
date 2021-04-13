@@ -204,7 +204,7 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 		Count:     o.count,
 		GroupName: o.groupName,
 
-		Cluster:        "data-api-expr-tutorial",
+		Cluster:        o.cluster,
 		Subnets:        o.subnets,
 		SecurityGroups: o.securityGroups,
 
