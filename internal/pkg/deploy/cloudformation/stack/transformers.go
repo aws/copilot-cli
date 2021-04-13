@@ -333,15 +333,6 @@ func getRandomUIDGID(name string) uint32 {
 	return crc32.ChecksumIEEE([]byte(name))
 }
 
-func getDirName(wl manifest.Workload) string {
-	for _, w := range manifest.ServiceTypes {
-		if aws.StringValue(wl.Type) == w {
-			return svcWlType + "/" + aws.StringValue(wl.Name)
-		}
-	}
-	return jobWlType + "/" + aws.StringValue(wl.Name)
-}
-
 func validateUIDGID(uid, gid *uint32) error {
 	if uid == nil && gid == nil {
 		return nil
