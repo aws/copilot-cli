@@ -29,14 +29,19 @@ storage:
     myEFSVolume:
       path: '/etc/mount1'
       read_only: true
-      efs: fs-12345
+      efs: 
+        id: fs-12345
     managedEFSVolume:
       path: '/etc/mount2'
       read_only: false
-      efs: copilot
+      efs: true
+    emptyVolume:
+      path: '/etc/mount3'
+      read_only: false
 
 sidecars:
   nginx:
+    essential: true
     image: public.ecr.aws/nginx/nginx
     port: 8080
     mount_points:
