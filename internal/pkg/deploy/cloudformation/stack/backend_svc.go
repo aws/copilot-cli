@@ -83,10 +83,23 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
-	autoscaling, err := convertAutoscaling(&s.manifest.Count.Autoscaling)
-	if err != nil {
-		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
+
+	// desiredCountOnSpot and Autoscaling are mutually exclusive
+	var autoscaling *template.AutoscalingOpts
+	desiredCountOnSpot := s.manifest.Count.Autoscaling.Spot
+	if desiredCountOnSpot == nil {
+		var err error
+		autoscaling, err = convertAutoscaling(&s.manifest.Count.Autoscaling)
+		if err != nil {
+			return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
+		}
 	}
+
+	capacityProviders, err := convertCapacityProviders(&s.manifest.Count.Autoscaling)
+	if err != nil {
+		return "", fmt.Errorf("convert the Capacity Provider configuration for service %s: %w", s.name, err)
+	}
+
 	storage, err := convertStorageOpts(s.manifest.Name, s.manifest.Storage)
 	if err != nil {
 		return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
@@ -105,6 +118,8 @@ func (s *BackendService) Template() (string, error) {
 		NestedStack:         outputs,
 		Sidecars:            sidecars,
 		Autoscaling:         autoscaling,
+		CapacityProviders:   capacityProviders,
+		DesiredCountOnSpot:  desiredCountOnSpot,
 		ExecuteCommand:      convertExecuteCommand(&s.manifest.ExecuteCommand),
 		WorkloadType:        manifest.BackendServiceType,
 		HealthCheck:         s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),

@@ -106,33 +106,74 @@ func Test_convertSidecar(t *testing.T) {
 	}
 }
 
+func Test_convertCapacityProviders(t *testing.T) {
+	mockRange := manifest.Range("1-10")
+	testCases := map[string]struct {
+		input     *manifest.Autoscaling
+		wanted    []*template.CapacityProviderStrategy
+		wantedErr error
+	}{
+		"with spot as desiredCount": {
+			input: &manifest.Autoscaling{
+				Spot: aws.Int(3),
+			},
+
+			wanted: []*template.CapacityProviderStrategy{
+				{
+					Weight:           aws.Int(1),
+					CapacityProvider: capacityProviderFargateSpot,
+				},
+			},
+		},
+		"errors if spot specified with range": {
+			input: &manifest.Autoscaling{
+				Range: &mockRange,
+				Spot:  aws.Int(3),
+			},
+			wantedErr: errInvalidSpotConfig,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := convertCapacityProviders(tc.input)
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, got, tc.wanted)
+			}
+		})
+	}
+}
+
 func Test_convertAutoscaling(t *testing.T) {
-	const (
-		mockRange    = "1-100"
-		mockRequests = 1000
-	)
+	mockRange := manifest.Range("1-100")
+	badRange := manifest.Range("badRange")
+	mockRequests := 1000
 	mockResponseTime := 512 * time.Millisecond
 	testCases := map[string]struct {
-		inRange        manifest.Range
-		inCPU          int
-		inMemory       int
-		inRequests     int
-		inResponseTime time.Duration
+		input *manifest.Autoscaling
 
 		wanted    *template.AutoscalingOpts
 		wantedErr error
 	}{
 		"invalid range": {
-			inRange: "badRange",
+			input: &manifest.Autoscaling{
+				Range: &badRange,
+			},
 
 			wantedErr: fmt.Errorf("invalid range value badRange. Should be in format of ${min}-${max}"),
 		},
 		"success": {
-			inRange:        mockRange,
-			inCPU:          70,
-			inMemory:       80,
-			inRequests:     mockRequests,
-			inResponseTime: mockResponseTime,
+			input: &manifest.Autoscaling{
+				Range:        &mockRange,
+				CPU:          aws.Int(70),
+				Memory:       aws.Int(80),
+				Requests:     aws.Int(mockRequests),
+				ResponseTime: &mockResponseTime,
+			},
 
 			wanted: &template.AutoscalingOpts{
 				MaxCapacity:  aws.Int(100),
@@ -143,17 +184,16 @@ func Test_convertAutoscaling(t *testing.T) {
 				ResponseTime: aws.Float64(0.512),
 			},
 		},
+		"returns nil if spot specified": {
+			input: &manifest.Autoscaling{
+				Spot: aws.Int(5),
+			},
+			wanted: nil,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			a := manifest.Autoscaling{
-				Range:        &tc.inRange,
-				CPU:          aws.Int(tc.inCPU),
-				Memory:       aws.Int(tc.inMemory),
-				Requests:     aws.Int(tc.inRequests),
-				ResponseTime: &tc.inResponseTime,
-			}
-			got, err := convertAutoscaling(&a)
+			got, err := convertAutoscaling(tc.input)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
