@@ -40,3 +40,13 @@ func NameForEnv(app, env string) string {
 func NameForTask(task string) TaskStackName {
 	return TaskStackName(taskStackPrefix + task)
 }
+
+// NameForAppStack returns the stack name for an app.
+func NameForAppStack(app string) string {
+	return fmt.Sprintf("%s-infrastructure-roles", app)
+}
+
+// NameForAppStackSet returns the stackset name for an app.
+func NameForAppStackSet(app string) string {
+	return fmt.Sprintf("%s-infrastructure", app)
+}
