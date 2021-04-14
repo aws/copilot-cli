@@ -182,7 +182,7 @@ stages:
 			expectedPipeline: mockPipelineName,
 			expectedErr:      nil,
 		},
-		"does not error if no pipeline found": {
+		"throws error if no pipeline found": {
 			testAppName:      mockAppName,
 			testPipelineName: "",
 			setupMocks: func(mocks pipelineStatusMocks) {
@@ -193,7 +193,7 @@ stages:
 			},
 			expectedApp:      mockAppName,
 			expectedPipeline: "",
-			expectedErr:      nil,
+			expectedErr:      fmt.Errorf("no pipelines found for application %s", mockAppName),
 		},
 		"wraps error when no applications selected": {
 			testAppName: "",
@@ -301,14 +301,6 @@ func TestPipelineStatus_Execute(t *testing.T) {
 		expectedContent string
 		expectedError   error
 	}{
-		"returns nil if pipeline name is empty": {
-			pipelineName: "",
-			setupMocks: func(m pipelineStatusMocks) {
-				m.describer.EXPECT().Describe().Return(&mockPipelineStatus, nil).Times(0)
-			},
-			expectedContent: "",
-			expectedError:   nil,
-		},
 		"errors if fail to return JSON output": {
 			pipelineName:     mockPipelineName,
 			shouldOutputJSON: true,

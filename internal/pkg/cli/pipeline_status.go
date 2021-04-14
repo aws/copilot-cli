@@ -110,9 +110,6 @@ func (o *pipelineStatusOpts) Ask() error {
 
 // Execute displays the status of the pipeline.
 func (o *pipelineStatusOpts) Execute() error {
-	if o.pipelineName == "" {
-		return nil
-	}
 	err := o.initDescriber(o)
 	if err != nil {
 		return fmt.Errorf("describe status of pipeline: %w", err)
@@ -171,8 +168,7 @@ func (o *pipelineStatusOpts) askPipelineName() error {
 	}
 
 	if len(pipelineNames) == 0 {
-		log.Infof("No pipelines found for application %s.\n", color.HighlightUserInput(o.appName))
-		return nil
+		return fmt.Errorf("no pipelines found for application %s", color.HighlightUserInput(o.appName))
 	}
 
 	if len(pipelineNames) == 1 {
