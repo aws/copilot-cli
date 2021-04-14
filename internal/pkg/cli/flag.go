@@ -204,7 +204,8 @@ Must be of the format '<keyName>:<dataType>'.`
 	storageNoLSIFlagDescription     = `Optional. Don't ask about configuring alternate sort keys.`
 	storageLSIConfigFlagDescription = `Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
 Must be of the format '<keyName>:<dataType>'.`
-	storageRDSEngineFlagDescription         = "The database engine used in the cluster."
+	storageRDSEngineFlagDescription = `The database engine used in the cluster.
+Must be either "MySQL" or "PostgreSQL".`
 	storageRDSInitialDBFlagDescription      = "The initial database to create in the cluster."
 	storageRDSParameterGroupFlagDescription = "Optional. The name of the parameter group to associate with the cluster."
 
