@@ -28,6 +28,7 @@ func TestGHPipeline_Template(t *testing.T) {
 			RepositoryURL: "https://github.com/aws/phonetool",
 			Branch:        "mainline",
 		},
+		Build: deploy.PipelineBuildFromManifest(nil),
 		Stages: []deploy.PipelineStage{
 			{
 				AssociatedEnvironment: &deploy.AssociatedEnvironment{
