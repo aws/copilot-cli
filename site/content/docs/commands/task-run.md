@@ -22,7 +22,7 @@ Generally, the steps involved in task run are:
 ```
   --app string                     Optional. Name of the application.
                                    Cannot be specified with 'default', 'subnets' or 'security-groups'
-  --cluster string                 Optional. The ARN of the cluster to run the task in.
+  --cluster string                 Optional. The short name or full ARN of the cluster to run the task in.
   --command string                 Optional. The command that is passed to "docker run" to override the default command.
   --count int                      Optional. The number of tasks to set up. (default 1)
   --cpu int                        Optional. The number of CPU units to reserve for each task. (default 256)

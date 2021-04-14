@@ -133,7 +133,7 @@ Mutually exclusive with -%s, --%s`, imageFlagShort, imageFlag)
 	wkldTypeFlagDescription = fmt.Sprintf(`Type of job or svc to create. Must be one of:
 %s`, strings.Join(template.QuoteSliceFunc(manifest.WorkloadTypes), ", "))
 
-	clusterFlagDescription = fmt.Sprintf(`Optional. The ARN of the cluster to run the task in. 
+	clusterFlagDescription = fmt.Sprintf(`Optional. The short name or full ARN of the cluster to run the task in. 
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
 	subnetsFlagDescription = fmt.Sprintf(`Optional. The subnet IDs for the task to use. Can be specified multiple times.
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
