@@ -50,18 +50,18 @@ func (mr *MockcfnMockRecorder) Describe(name interface{}) *gomock.Call {
 }
 
 // Metadata mocks base method.
-func (m *Mockcfn) Metadata(name string) (string, error) {
+func (m *Mockcfn) Metadata(opt cloudformation.MetadataOpts) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Metadata", name)
+	ret := m.ctrl.Call(m, "Metadata", opt)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Metadata indicates an expected call of Metadata.
-func (mr *MockcfnMockRecorder) Metadata(name interface{}) *gomock.Call {
+func (mr *MockcfnMockRecorder) Metadata(opt interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Metadata", reflect.TypeOf((*Mockcfn)(nil).Metadata), name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Metadata", reflect.TypeOf((*Mockcfn)(nil).Metadata), opt)
 }
 
 // StackResources mocks base method.

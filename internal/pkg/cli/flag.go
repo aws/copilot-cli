@@ -50,12 +50,15 @@ const (
 	deleteSecretFlag      = "delete-secret"
 	svcPortFlag           = "port"
 
-	storageTypeFlag         = "storage-type"
-	storagePartitionKeyFlag = "partition-key"
-	storageSortKeyFlag      = "sort-key"
-	storageNoSortFlag       = "no-sort"
-	storageLSIConfigFlag    = "lsi"
-	storageNoLSIFlag        = "no-lsi"
+	storageTypeFlag              = "storage-type"
+	storagePartitionKeyFlag      = "partition-key"
+	storageSortKeyFlag           = "sort-key"
+	storageNoSortFlag            = "no-sort"
+	storageLSIConfigFlag         = "lsi"
+	storageNoLSIFlag             = "no-lsi"
+	storageRDSEngineFlag         = "engine"
+	storageRDSInitialDBFlag      = "initial-db"
+	storageRDSParameterGroupFlag = "parameter-group"
 
 	taskGroupNameFlag  = "task-group-name"
 	countFlag          = "count"
@@ -67,6 +70,7 @@ const (
 	subnetsFlag        = "subnets"
 	securityGroupsFlag = "security-groups"
 	envVarsFlag        = "env-vars"
+	secretsFlag        = "secrets"
 	commandFlag        = "command"
 	entrypointFlag     = "entrypoint"
 	taskDefaultFlag    = "default"
@@ -159,7 +163,7 @@ const (
 	jsonFlagDescription     = "Optional. Outputs in JSON format."
 
 	imageTagFlagDescription     = `Optional. The container image tag.`
-	resourceTagsFlagDescription = `Optional. Labels with a key and value separated with commas.
+	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
 Allows you to categorize resources.`
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
 	prodEnvFlagDescription        = "If the environment contains production services."
@@ -200,13 +204,18 @@ Must be of the format '<keyName>:<dataType>'.`
 	storageNoLSIFlagDescription     = `Optional. Don't ask about configuring alternate sort keys.`
 	storageLSIConfigFlagDescription = `Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
 Must be of the format '<keyName>:<dataType>'.`
+	storageRDSEngineFlagDescription = `The database engine used in the cluster.
+Must be either "MySQL" or "PostgreSQL".`
+	storageRDSInitialDBFlagDescription      = "The initial database to create in the cluster."
+	storageRDSParameterGroupFlagDescription = "Optional. The name of the parameter group to associate with the cluster."
 
 	countFlagDescription         = "Optional. The number of tasks to set up."
 	cpuFlagDescription           = "Optional. The number of CPU units to reserve for each task."
 	memoryFlagDescription        = "Optional. The amount of memory to reserve in MiB for each task."
 	taskRoleFlagDescription      = "Optional. The ARN of the role for the task to use."
 	executionRoleFlagDescription = "Optional. The ARN of the role that grants the container agent permission to make AWS API calls."
-	envVarsFlagDescription       = "Optional. Environment variables specified by key=value separated with commas."
+	envVarsFlagDescription       = "Optional. Environment variables specified by key=value separated by commas."
+	secretsFlagDescription       = "Optional. Secrets to inject into the container. Specified by key=value separated by commas."
 	runCommandFlagDescription    = `Optional. The command that is passed to "docker run" to override the default command.`
 	entrypointFlagDescription    = `Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.`
 	taskGroupFlagDescription     = `Optional. The group name of the task. 

@@ -117,6 +117,11 @@ var _ = Describe("App With Domain", func() {
 				resp, fetchErr = http.Get(route.URL)
 				return resp.StatusCode, fetchErr
 			}, "60s", "1s").Should(Equal(200))
+			Eventually(func() (int, error) {
+				httpRoute := fmt.Sprintf("http://%s.%s.%s.%s", svcName, envName, appName, domainName)
+				resp, fetchErr = http.Get(httpRoute)
+				return resp.StatusCode, fetchErr
+			}, "60s", "1s").Should(Equal(200))
 		})
 	})
 })
