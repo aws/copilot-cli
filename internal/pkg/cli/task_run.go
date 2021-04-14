@@ -396,7 +396,7 @@ func (o *runTaskOpts) Ask() error {
 func (o *runTaskOpts) shouldPromptForAppEnv() bool {
 	// NOTE: if security groups are specified but subnets are not, then we use the default subnets with the
 	// specified security groups.
-	useDefault := o.useDefaultSubnetsAndCluster || (o.securityGroups != nil && o.subnets == nil)
+	useDefault := o.useDefaultSubnetsAndCluster || (o.securityGroups != nil && o.subnets == nil && o.cluster == "")
 	useConfig := o.subnets != nil
 
 	// if user hasn't specified that they want to use the default subnets, and that they didn't provide specific subnets
@@ -424,7 +424,7 @@ func (o *runTaskOpts) Execute() error {
 		return err
 	}
 
-	if o.env == "" {
+	if o.env == "" && o.cluster == "" {
 		hasDefaultCluster, err := o.defaultClusterGetter.HasDefaultCluster()
 		if err != nil {
 			return fmt.Errorf(`find "default" cluster to deploy the task to: %v`, err)

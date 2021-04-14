@@ -353,6 +353,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inName string
 
+		inCluster        string
 		inSubnets        []string
 		inSecurityGroups []string
 
@@ -457,8 +458,28 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
 			},
 		},
+		"don't prompt for app if cluster is specified": {
+			inCluster: "cluster-1",
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).Times(0)
+			},
+		},
 		"don't prompt for env if subnets are specified": {
 			inSubnets: []string{"subnet-1"},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).Times(0)
+			},
+		},
+		"don't prompt for env if cluster is specified": {
+			inCluster: "cluster-1",
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 			},
@@ -554,6 +575,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 					useDefaultSubnetsAndCluster: tc.inDefault,
 					subnets:                     tc.inSubnets,
 					securityGroups:              tc.inSecurityGroups,
+					cluster:                     tc.inCluster,
 				},
 				sel: mockSel,
 			}
