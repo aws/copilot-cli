@@ -443,7 +443,12 @@ func TestServiceDescriber_TaskDefinition(t *testing.T) {
 				}, nil)
 			},
 			wantedTaskDefinition: &TaskDefinition{
-				Image:         "beautiful-image",
+				Images: []*awsecs.ContainerImage{
+					{
+						Container: "the-container",
+						Image:     "beautiful-image",
+					},
+				},
 				ExecutionRole: "execution-role",
 				TaskRole:      "task-role",
 				EnvVars: []*awsecs.ContainerEnvVar{
@@ -470,8 +475,18 @@ func TestServiceDescriber_TaskDefinition(t *testing.T) {
 						ValueFrom: "then get on the HAYABUSA",
 					},
 				},
-				EntryPoint: []string{"do", "not", "enter"},
-				Command:    []string{"--force", "--verbose"},
+				EntryPoints: []*awsecs.ContainerEntrypoint{
+					{
+						Container:  "the-container",
+						EntryPoint: []string{"do", "not", "enter"},
+					},
+				},
+				Commands: []*awsecs.ContainerCommand{
+					{
+						Container: "the-container",
+						Command:   []string{"--force", "--verbose"},
+					},
+				},
 			},
 		},
 	}

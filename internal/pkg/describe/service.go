@@ -201,13 +201,13 @@ func (d *ServiceDescriber) Params() (map[string]string, error) {
 
 // TaskDefinition holds task definition information of the service, including container-level information.
 type TaskDefinition struct {
-	Image         string // Exactly one image per copilot service.
+	Images        []*awsecs.ContainerImage
 	ExecutionRole string
 	TaskRole      string
 	EnvVars       []*awsecs.ContainerEnvVar
 	Secrets       []*awsecs.ContainerSecret
-	EntryPoint    []string // At most one entrypoint override per copilot service.
-	Command       []string // At most one command override per copilot service.
+	EntryPoints   []*awsecs.ContainerEntrypoint
+	Commands      []*awsecs.ContainerCommand
 }
 
 // TaskDefinition returns the task definition, including the container-level ones, of the service.
@@ -219,12 +219,12 @@ func (d *ServiceDescriber) TaskDefinition() (*TaskDefinition, error) {
 	}
 
 	return &TaskDefinition{
-		Image:         taskDefinition.Images()[0].Image, // There is exactly one container per service, hence one image.
+		Images:        taskDefinition.Images(),
 		ExecutionRole: aws.StringValue(taskDefinition.ExecutionRoleArn),
 		TaskRole:      aws.StringValue(taskDefinition.TaskRoleArn),
 		EnvVars:       taskDefinition.EnvironmentVariables(),
 		Secrets:       taskDefinition.Secrets(),
-		EntryPoint:    taskDefinition.EntryPoints()[0].EntryPoint, // There is exactly one container per service, hence one entrypoint.
-		Command:       taskDefinition.Commands()[0].Command,       // There is exactly one container per service, hence one command.
+		EntryPoints:   taskDefinition.EntryPoints(),
+		Commands:      taskDefinition.Commands(),
 	}, nil
 }
