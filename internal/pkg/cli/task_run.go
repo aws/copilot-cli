@@ -87,6 +87,7 @@ type runTaskVars struct {
 	useDefaultSubnetsAndCluster bool
 
 	envVars      map[string]string
+	secrets      map[string]string
 	command      string
 	entrypoint   string
 	resourceTags map[string]string
@@ -588,6 +589,7 @@ func (o *runTaskOpts) deploy() error {
 		Command:        command,
 		EntryPoint:     entrypoint,
 		EnvVars:        o.envVars,
+		Secrets:        o.secrets,
 		App:            o.appName,
 		Env:            o.env,
 		AdditionalTags: o.resourceTags,
@@ -730,6 +732,7 @@ Run a task with a command.
 	cmd.Flags().BoolVar(&vars.useDefaultSubnetsAndCluster, taskDefaultFlag, false, taskRunDefaultFlagDescription)
 
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.secrets, secretsFlag, nil, secretsFlagDescription)
 	cmd.Flags().StringVar(&vars.command, commandFlag, "", runCommandFlagDescription)
 	cmd.Flags().StringVar(&vars.entrypoint, entrypointFlag, "", entrypointFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)

@@ -56,6 +56,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		inSecurityGroups []string
 
 		inEnvVars    map[string]string
+		inSecrets    map[string]string
 		inCommand    string
 		inEntryPoint string
 
@@ -86,6 +87,9 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inEnvVars: map[string]string{
 				"NAME": "my-app",
 				"ENV":  "dev",
+			},
+			inSecrets: map[string]string{
+				"quiet": "barky doggo",
 			},
 			inCommand:    "echo hello world",
 			inEntryPoint: "exec 'enter here'",
@@ -322,6 +326,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					securityGroups:              tc.inSecurityGroups,
 					dockerfilePath:              tc.inDockerfilePath,
 					envVars:                     tc.inEnvVars,
+					secrets:                     tc.inSecrets,
 					command:                     tc.inCommand,
 					entrypoint:                  tc.inEntryPoint,
 					useDefaultSubnetsAndCluster: tc.inDefault,
@@ -627,6 +632,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
+		inSecrets    map[string]string
 		inImage      string
 		inTag        string
 		inFollow     bool
@@ -746,21 +752,30 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			},
 		},
 		"update image to task resource if image is not provided": {
+			inSecrets: map[string]string{
+				"quiet": "shh",
+			},
 			inCommand:    `/bin/sh -c "curl $ECS_CONTAINER_METADATA_URI_V4"`,
 			inEntryPoint: `exec "some command"`,
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
-					Name:       inGroupName,
-					Image:      "",
+					Name:  inGroupName,
+					Image: "",
+					Secrets: map[string]string{
+						"quiet": "shh",
+					},
 					Command:    []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
 					EntryPoint: []string{"exec", "some command"},
 				}).Times(1).Return(nil)
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), &deploy.CreateTaskResourcesInput{
-					Name:       inGroupName,
-					Image:      "uri/repo:latest",
+					Name:  inGroupName,
+					Image: "uri/repo:latest",
+					Secrets: map[string]string{
+						"quiet": "shh",
+					},
 					Command:    []string{"/bin/sh", "-c", "curl $ECS_CONTAINER_METADATA_URI_V4"},
 					EntryPoint: []string{"exec", "some command"},
 				}).Times(1).Return(nil)
@@ -847,6 +862,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					imageTag:   tc.inTag,
 					env:        tc.inEnv,
 					follow:     tc.inFollow,
+					secrets:    tc.inSecrets,
 					command:    tc.inCommand,
 					entrypoint: tc.inEntryPoint,
 				},
