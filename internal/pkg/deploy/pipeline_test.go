@@ -148,6 +148,36 @@ func TestPipelineSourceFromManifest(t *testing.T) {
 	}
 }
 
+func TestPipelineBuildFromManifest(t *testing.T) {
+	const defaultImage = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+
+	testCases := map[string]struct {
+		mfBuild             *manifest.Build
+		expectedBuild       *Build
+	}{
+		"set default image if not be specified in manifest": {
+			mfBuild: nil,
+			expectedBuild: &Build{
+				Image: defaultImage,
+			},
+		},
+		"set image according to manifest": {
+			mfBuild: &manifest.Build{
+				Image: "aws/codebuild/standard:3.0",
+			},
+			expectedBuild: &Build{
+				Image: "aws/codebuild/standard:3.0",
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			build := PipelineBuildFromManifest(tc.mfBuild)
+			require.Equal(t, tc.expectedBuild, build, "mismatched build")
+		})
+	}
+}
+
 func TestParseOwnerAndRepo(t *testing.T) {
 	testCases := map[string]struct {
 		src            *GitHubSource
