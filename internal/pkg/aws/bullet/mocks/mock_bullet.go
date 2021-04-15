@@ -5,35 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	bullet "github.com/aws/copilot-cli/internal/pkg/new-sdk-go/bullet"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// Mockapi is a mock of api interface
+// Mockapi is a mock of api interface.
 type Mockapi struct {
 	ctrl     *gomock.Controller
 	recorder *MockapiMockRecorder
 }
 
-// MockapiMockRecorder is the mock recorder for Mockapi
+// MockapiMockRecorder is the mock recorder for Mockapi.
 type MockapiMockRecorder struct {
 	mock *Mockapi
 }
 
-// NewMockapi creates a new mock instance
+// NewMockapi creates a new mock instance.
 func NewMockapi(ctrl *gomock.Controller) *Mockapi {
 	mock := &Mockapi{ctrl: ctrl}
 	mock.recorder = &MockapiMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
-// DescribeService mocks base method
+// DescribeService mocks base method.
 func (m *Mockapi) DescribeService(input *bullet.DescribeServiceInput) (*bullet.DescribeServiceOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeService", input)
@@ -42,13 +43,13 @@ func (m *Mockapi) DescribeService(input *bullet.DescribeServiceInput) (*bullet.D
 	return ret0, ret1
 }
 
-// DescribeService indicates an expected call of DescribeService
+// DescribeService indicates an expected call of DescribeService.
 func (mr *MockapiMockRecorder) DescribeService(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*Mockapi)(nil).DescribeService), input)
 }
 
-// ListOperations mocks base method
+// ListOperations mocks base method.
 func (m *Mockapi) ListOperations(input *bullet.ListOperationsInput) (*bullet.ListOperationsOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListOperations", input)
@@ -57,7 +58,7 @@ func (m *Mockapi) ListOperations(input *bullet.ListOperationsInput) (*bullet.Lis
 	return ret0, ret1
 }
 
-// ListOperations indicates an expected call of ListOperations
+// ListOperations indicates an expected call of ListOperations.
 func (mr *MockapiMockRecorder) ListOperations(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOperations", reflect.TypeOf((*Mockapi)(nil).ListOperations), input)
