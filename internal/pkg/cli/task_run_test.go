@@ -51,6 +51,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		inTaskRole string
 
 		inEnv            string
+		inCluster        string
 		inSubnets        []string
 		inSecurityGroups []string
 
@@ -277,6 +278,30 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 
 			wantedError: errors.New("cannot specify both `--subnets` and `--default`"),
 		},
+		"both cluster and default specified": {
+			basicOpts: defaultOpts,
+
+			inDefault: true,
+			inCluster: "special-cluster",
+
+			wantedError: errors.New("cannot specify both `--default` and `--cluster`"),
+		},
+		"both cluster and application specified": {
+			basicOpts: defaultOpts,
+
+			inCluster: "special-cluster",
+			appName:   "my-app",
+
+			wantedError: errors.New("cannot specify both `--app` and `--cluster`"),
+		},
+		"both cluster and environment specified": {
+			basicOpts: defaultOpts,
+
+			inCluster: "special-cluster",
+			inEnv:     "my-env",
+
+			wantedError: errors.New("cannot specify both `--env` and `--cluster`"),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -288,22 +313,23 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 
 			opts := runTaskOpts{
 				runTaskVars: runTaskVars{
-					appName:           tc.appName,
-					count:             tc.inCount,
-					cpu:               tc.inCPU,
-					memory:            tc.inMemory,
-					groupName:         tc.inName,
-					image:             tc.inImage,
-					env:               tc.inEnv,
-					taskRole:          tc.inTaskRole,
-					subnets:           tc.inSubnets,
-					securityGroups:    tc.inSecurityGroups,
-					dockerfilePath:    tc.inDockerfilePath,
-					envVars:           tc.inEnvVars,
-					secrets:           tc.inSecrets,
-					command:           tc.inCommand,
-					entrypoint:        tc.inEntryPoint,
-					useDefaultSubnets: tc.inDefault,
+					appName:                     tc.appName,
+					count:                       tc.inCount,
+					cpu:                         tc.inCPU,
+					memory:                      tc.inMemory,
+					groupName:                   tc.inName,
+					image:                       tc.inImage,
+					env:                         tc.inEnv,
+					taskRole:                    tc.inTaskRole,
+					cluster:                     tc.inCluster,
+					subnets:                     tc.inSubnets,
+					securityGroups:              tc.inSecurityGroups,
+					dockerfilePath:              tc.inDockerfilePath,
+					envVars:                     tc.inEnvVars,
+					secrets:                     tc.inSecrets,
+					command:                     tc.inCommand,
+					entrypoint:                  tc.inEntryPoint,
+					useDefaultSubnetsAndCluster: tc.inDefault,
 				},
 				isDockerfileSet: tc.isDockerfileSet,
 
@@ -319,7 +345,6 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			}
 
 			err := opts.Validate()
-
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
@@ -333,6 +358,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inName string
 
+		inCluster        string
 		inSubnets        []string
 		inSecurityGroups []string
 
@@ -437,8 +463,28 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
 			},
 		},
+		"don't prompt for app if cluster is specified": {
+			inCluster: "cluster-1",
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).Times(0)
+			},
+		},
 		"don't prompt for env if subnets are specified": {
 			inSubnets: []string{"subnet-1"},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).Times(0)
+			},
+		},
+		"don't prompt for env if cluster is specified": {
+			inCluster: "cluster-1",
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 			},
@@ -528,12 +574,13 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			opts := runTaskOpts{
 				runTaskVars: runTaskVars{
-					appName:           tc.appName,
-					groupName:         tc.inName,
-					env:               tc.inEnv,
-					useDefaultSubnets: tc.inDefault,
-					subnets:           tc.inSubnets,
-					securityGroups:    tc.inSecurityGroups,
+					appName:                     tc.appName,
+					groupName:                   tc.inName,
+					env:                         tc.inEnv,
+					useDefaultSubnetsAndCluster: tc.inDefault,
+					subnets:                     tc.inSubnets,
+					securityGroups:              tc.inSecurityGroups,
+					cluster:                     tc.inCluster,
 				},
 				sel: mockSel,
 			}
