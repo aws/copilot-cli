@@ -90,6 +90,7 @@ type stackSetClient interface {
 	Describe(name string) (stackset.Description, error)
 	InstanceSummaries(name string, opts ...stackset.InstanceSummariesOption) ([]stackset.InstanceSummary, error)
 	Delete(name string) error
+	WaitForStackSetLastOperationComplete(name string) error
 }
 
 // CloudFormation wraps the CloudFormationAPI interface
@@ -426,4 +427,31 @@ func stopSpinner(spinner *progress.Spinner, err error, label string) {
 		return
 	}
 	spinner.Stop(log.Serrorf("%s\n", label))
+}
+
+// upgradeStackUpdateErrorHandling is used to handle the error returned by CFN
+// stack update when upgrading the application/environment.
+func upgradeStackUpdateErrorHandling(name string, err error) (bool, error) {
+	var emptyChangeSet *cloudformation.ErrChangeSetEmpty
+	var alreadyInProgErr *cloudformation.ErrStackUpdateInProgress
+	var obsoleteChangeSetErr *cloudformation.ErrChangeSetNotExecutable
+	switch updateErr := err; {
+	case errors.As(updateErr, &emptyChangeSet):
+		// The changes are already applied, nothing to do. Exit successfully.
+		return false, nil
+	case errors.As(updateErr, &alreadyInProgErr):
+		// There is another update going on in the environment, retry the upgrade.
+		return true, nil
+	case errors.As(updateErr, &obsoleteChangeSetErr):
+		// If there are two "upgradeEnvironments" calls happening in parallel, it's possible that
+		// both invocations created a changeset to upgrade the environment stack.
+		// CloudFormation will ensure that one of them goes through, while the other returns
+		// an ErrChangeSetNotExecutable error.
+		//
+		// In that scenario, we should loop again, wait until the stack is updated,
+		// and exit due to changeset is empty.
+		return true, nil
+	default:
+		return false, fmt.Errorf("update and wait for stack %s: %w", name, err)
+	}
 }

@@ -24,24 +24,26 @@ const (
 
 func TestAppTemplate(t *testing.T) {
 	testCases := map[string]struct {
+		inVersion        string
 		mockDependencies func(ctrl *gomock.Controller, c *AppStackConfig)
 
 		wantedTemplate string
 		wantedError    error
 	}{
 		"should return error given template not found": {
+			inVersion: "v1.0.0",
 			mockDependencies: func(ctrl *gomock.Controller, c *AppStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
-				m.EXPECT().Read(appTemplatePath).Return(nil, errors.New("some error"))
+				m.EXPECT().Read(fmt.Sprintf(fmtAppTemplatePath, "v1.0.0")).Return(nil, errors.New("some error"))
 				c.parser = m
 			},
 
 			wantedError: errors.New("some error"),
 		},
-		"should return template body when present": {
+		"should return template body when present for legacy template": {
 			mockDependencies: func(ctrl *gomock.Controller, c *AppStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
-				m.EXPECT().Read(appTemplatePath).Return(&template.Content{
+				m.EXPECT().Read(fmt.Sprintf(fmtAppTemplatePath, "v0.0.0")).Return(&template.Content{
 					Buffer: bytes.NewBufferString("template"),
 				}, nil)
 				c.parser = m
@@ -56,7 +58,11 @@ func TestAppTemplate(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			appStack := &AppStackConfig{}
+			appStack := &AppStackConfig{
+				CreateAppInput: &deploy.CreateAppInput{
+					Version: tc.inVersion,
+				},
+			}
 			tc.mockDependencies(ctrl, appStack)
 
 			// WHEN
@@ -134,7 +140,7 @@ func TestAppResourceTemplate(t *testing.T) {
 			},
 			mockDependencies: func(ctrl *gomock.Controller, c *AppStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
-				m.EXPECT().Parse(appResourcesTemplatePath, struct {
+				m.EXPECT().Parse(fmt.Sprintf(fmtAppResourcesTemplatePath, "v0.0.0"), struct {
 					*AppResourcesConfig
 					ServiceTagKey string
 				}{

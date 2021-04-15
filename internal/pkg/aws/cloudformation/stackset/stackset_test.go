@@ -328,6 +328,80 @@ func TestStackSet_UpdateAndWait(t *testing.T) {
 	}
 }
 
+func TestStackSet_WaitForStackSetLastOperationComplete(t *testing.T) {
+	testCases := map[string]struct {
+		mockClient  func(ctrl *gomock.Controller) api
+		wantedError error
+	}{
+		"waits until operation succeeds": {
+			mockClient: func(ctrl *gomock.Controller) api {
+				m := mocks.NewMockapi(ctrl)
+				m.EXPECT().ListStackSetOperations(&cloudformation.ListStackSetOperationsInput{
+					StackSetName: aws.String(testName),
+				}).Return(&cloudformation.ListStackSetOperationsOutput{
+					Summaries: []*cloudformation.StackSetOperationSummary{
+						{
+							Status: aws.String(cloudformation.StackSetOperationStatusRunning),
+						},
+					},
+				}, nil)
+				m.EXPECT().ListStackSetOperations(&cloudformation.ListStackSetOperationsInput{
+					StackSetName: aws.String(testName),
+				}).Return(&cloudformation.ListStackSetOperationsOutput{
+					Summaries: []*cloudformation.StackSetOperationSummary{
+						{
+							Status: aws.String(cloudformation.StackSetOperationStatusSucceeded),
+						},
+					},
+				}, nil)
+				return m
+			},
+		},
+		"return if no operation": {
+			mockClient: func(ctrl *gomock.Controller) api {
+				m := mocks.NewMockapi(ctrl)
+				m.EXPECT().ListStackSetOperations(&cloudformation.ListStackSetOperationsInput{
+					StackSetName: aws.String(testName),
+				}).Return(&cloudformation.ListStackSetOperationsOutput{
+					Summaries: []*cloudformation.StackSetOperationSummary{},
+				}, nil)
+				return m
+			},
+		},
+		"error if fail to list stackset operation": {
+			mockClient: func(ctrl *gomock.Controller) api {
+				m := mocks.NewMockapi(ctrl)
+				m.EXPECT().ListStackSetOperations(&cloudformation.ListStackSetOperationsInput{
+					StackSetName: aws.String(testName),
+				}).Return(nil, errors.New("some error"))
+				return m
+			},
+			wantedError: fmt.Errorf("list operations for stack set stackset: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			client := StackSet{
+				client: tc.mockClient(ctrl),
+			}
+
+			// WHEN
+			err := client.WaitForStackSetLastOperationComplete(testName)
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestStackSet_Delete(t *testing.T) {
 	testCases := map[string]struct {
 		mockClient  func(ctrl *gomock.Controller) api

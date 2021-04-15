@@ -4,9 +4,11 @@
 package cloudformation
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	sdkcloudformationiface "github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -50,7 +52,66 @@ func (cf CloudFormation) DeployApp(in *deploy.CreateAppInput) error {
 }
 
 func (cf CloudFormation) UpgradeApplication(in *deploy.CreateAppInput) error {
-	return nil
+	appConfig := stack.NewAppStackConfig(in)
+	s, err := toStack(appConfig)
+	if err != nil {
+		return err
+	}
+	if err := cf.upgradeAppStack(s); err != nil {
+		return err
+	}
+	return cf.upgradeAppStackSet(appConfig)
+}
+
+func (cf CloudFormation) upgradeAppStackSet(config *stack.AppStackConfig) error {
+	for {
+		ssName := config.StackSetName()
+		if err := cf.appStackSet.WaitForStackSetLastOperationComplete(ssName); err != nil {
+			return fmt.Errorf("wait for stack set %s last operation complete: %w", ssName, err)
+		}
+		previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(config)
+		if err != nil {
+			return err
+		}
+		previouslyDeployedConfig.Version += 1
+		err = cf.deployAppConfig(config, previouslyDeployedConfig)
+		if err == nil {
+			return nil
+		}
+		var stackSetOutOfDateErr *stackset.ErrStackSetOutOfDate
+		if errors.As(err, &stackSetOutOfDateErr) {
+			continue
+		}
+		return err
+	}
+}
+
+func (cf CloudFormation) upgradeAppStack(s *cloudformation.Stack) error {
+	for {
+		// Upgrade app stack.
+		descr, err := cf.cfnClient.Describe(s.Name)
+		if err != nil {
+			return fmt.Errorf("describe stack %s: %w", s.Name, err)
+		}
+		if cloudformation.StackStatus(aws.StringValue(descr.StackStatus)).InProgress() {
+			// There is already an update happening to the environment stack.
+			// Best-effort try to wait for the existing update to be over before retrying.
+			_ = cf.cfnClient.WaitForUpdate(context.Background(), s.Name)
+			continue
+		}
+		s.Parameters = descr.Parameters
+		s.Tags = descr.Tags
+
+		err = cf.cfnClient.UpdateAndWait(s)
+		if err == nil { // Success.
+			return nil
+		}
+		wait, err := upgradeStackUpdateErrorHandling(s.Name, err)
+		if wait {
+			continue
+		}
+		return err
+	}
 }
 
 // DelegateDNSPermissions grants the provided account ID the ability to write to this application's

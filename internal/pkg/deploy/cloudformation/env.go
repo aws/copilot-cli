@@ -6,7 +6,6 @@ package cloudformation
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -161,29 +160,11 @@ func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, t
 		if err == nil { // Success.
 			break
 		}
-
-		var emptyChangeSet *cloudformation.ErrChangeSetEmpty
-		var alreadyInProgErr *cloudformation.ErrStackUpdateInProgress
-		var obsoleteChangeSetErr *cloudformation.ErrChangeSetNotExecutable
-		switch updateErr := err; {
-		case errors.As(updateErr, &emptyChangeSet):
-			// The changes are already applied, nothing to do. Exit successfully.
-			return nil
-		case errors.As(updateErr, &alreadyInProgErr):
-			// There is another update going on in the environment, retry the upgrade.
+		wait, err := upgradeStackUpdateErrorHandling(s.Name, err)
+		if wait {
 			continue
-		case errors.As(updateErr, &obsoleteChangeSetErr):
-			// If there are two "upgradeEnvironments" calls happening in parallel, it's possible that
-			// both invocations created a changeset to upgrade the environment stack.
-			// CloudFormation will ensure that one of them goes through, while the other returns
-			// an ErrChangeSetNotExecutable error.
-			//
-			// In that scenario, we should loop again, wait until the stack is updated,
-			// and exit due to changeset is empty.
-			continue
-		default:
-			return fmt.Errorf("update and wait for stack %s: %w", s.Name, err)
 		}
+		return err
 	}
 	return nil
 }

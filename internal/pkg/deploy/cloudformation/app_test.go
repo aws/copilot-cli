@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
+	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
@@ -100,6 +100,119 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 	}
 }
 
+func TestCloudFormation_UpgradeApplication(t *testing.T) {
+	testCases := map[string]struct {
+		mockDeployer func(t *testing.T, ctrl *gomock.Controller) *CloudFormation
+
+		wantedErr error
+	}{
+		"error if fail to describe app stack": {
+			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Describe("phonetool-infrastructure-roles").Return(nil, errors.New("some error"))
+
+				return &CloudFormation{
+					cfnClient: m,
+				}
+			},
+			wantedErr: fmt.Errorf("describe stack phonetool-infrastructure-roles: some error"),
+		},
+		"error if fail to update app stack": {
+			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil)
+				m.EXPECT().UpdateAndWait(gomock.Any()).Return(errors.New("some error"))
+				return &CloudFormation{
+					cfnClient: m,
+				}
+			},
+			wantedErr: fmt.Errorf("update and wait for stack phonetool-infrastructure-roles: some error"),
+		},
+		"error if fail to wait until stack set last operation complete": {
+			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
+				mockCFNClient := mocks.NewMockcfnClient(ctrl)
+				mockCFNClient.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil)
+				mockCFNClient.EXPECT().UpdateAndWait(gomock.Any()).Return(nil)
+
+				mockAppStackSet := mocks.NewMockstackSetClient(ctrl)
+				mockAppStackSet.EXPECT().WaitForStackSetLastOperationComplete("phonetool-infrastructure").
+					Return(errors.New("some error"))
+
+				return &CloudFormation{
+					cfnClient:   mockCFNClient,
+					appStackSet: mockAppStackSet,
+				}
+			},
+			wantedErr: fmt.Errorf("wait for stack set phonetool-infrastructure last operation complete: some error"),
+		},
+		"success": {
+			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
+				mockCFNClient := mocks.NewMockcfnClient(ctrl)
+				mockCFNClient.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil)
+				mockCFNClient.EXPECT().UpdateAndWait(gomock.Any()).Return(nil)
+
+				mockAppStackSet := mocks.NewMockstackSetClient(ctrl)
+				mockAppStackSet.EXPECT().WaitForStackSetLastOperationComplete("phonetool-infrastructure").Return(nil)
+				mockAppStackSet.EXPECT().Describe("phonetool-infrastructure").Return(stackset.Description{}, nil)
+				mockAppStackSet.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				return &CloudFormation{
+					cfnClient:   mockCFNClient,
+					appStackSet: mockAppStackSet,
+				}
+			},
+		},
+		"success with multiple tries and waitings": {
+			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
+				mockCFNClient := mocks.NewMockcfnClient(ctrl)
+				mockCFNClient.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{
+					StackStatus: aws.String(awscfn.StackStatusCreateInProgress),
+				}, nil)
+				mockCFNClient.EXPECT().WaitForUpdate(gomock.Any(), "phonetool-infrastructure-roles").Return(nil)
+				mockCFNClient.EXPECT().Describe("phonetool-infrastructure-roles").Return(&cloudformation.StackDescription{}, nil)
+				mockCFNClient.EXPECT().UpdateAndWait(gomock.Any()).Return(nil)
+
+				mockAppStackSet := mocks.NewMockstackSetClient(ctrl)
+				mockAppStackSet.EXPECT().WaitForStackSetLastOperationComplete("phonetool-infrastructure").Return(nil)
+				mockAppStackSet.EXPECT().Describe("phonetool-infrastructure").Return(stackset.Description{}, nil)
+				mockAppStackSet.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&stackset.ErrStackSetOutOfDate{})
+				mockAppStackSet.EXPECT().WaitForStackSetLastOperationComplete("phonetool-infrastructure").Return(nil)
+				mockAppStackSet.EXPECT().Describe("phonetool-infrastructure").Return(stackset.Description{}, nil)
+				mockAppStackSet.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				return &CloudFormation{
+					cfnClient:   mockCFNClient,
+					appStackSet: mockAppStackSet,
+				}
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			cf := tc.mockDeployer(t, ctrl)
+
+			// WHEN
+			err := cf.UpgradeApplication(&deploy.CreateAppInput{
+				Name: "phonetool",
+			})
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestCloudFormation_AddEnvToApp(t *testing.T) {
 	mockApp := config.Application{
 		Name:      "testapp",
@@ -124,9 +237,9 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).
 					Do(func(_, _ string, op, _, _, _, _ stackset.CreateOrUpdateOption) {
-						actual := &sdkcloudformation.UpdateStackSetInput{}
+						actual := &awscfn.UpdateStackSetInput{}
 						op(actual)
-						wanted := &sdkcloudformation.UpdateStackSetInput{}
+						wanted := &awscfn.UpdateStackSetInput{}
 						stackset.WithOperationID("1")(wanted)
 						require.Equal(t, actual, wanted)
 					})
@@ -174,9 +287,9 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).
 					Do(func(_, _ string, op, _, _, _, _ stackset.CreateOrUpdateOption) {
-						actual := &sdkcloudformation.UpdateStackSetInput{}
+						actual := &awscfn.UpdateStackSetInput{}
 						op(actual)
-						wanted := &sdkcloudformation.UpdateStackSetInput{}
+						wanted := &awscfn.UpdateStackSetInput{}
 						stackset.WithOperationID("2")(wanted)
 						require.Equal(t, actual, wanted)
 					})
@@ -466,10 +579,10 @@ func TestCloudFormation_GetRegionalAppResources(t *testing.T) {
 						},
 					}, nil).
 					Do(func(_ string, opt stackset.InstanceSummariesOption) {
-						wanted := &sdkcloudformation.ListStackInstancesInput{
+						wanted := &awscfn.ListStackInstancesInput{
 							StackInstanceAccount: aws.String("12345"),
 						}
-						actual := &sdkcloudformation.ListStackInstancesInput{}
+						actual := &awscfn.ListStackInstancesInput{}
 						opt(actual)
 						require.Equal(t, wanted, actual)
 					})
@@ -567,11 +680,11 @@ func TestCloudFormation_GetAppResourcesByRegion(t *testing.T) {
 						},
 					}, nil).
 					Do(func(_ string, optAcc, optRegion stackset.InstanceSummariesOption) {
-						wanted := &sdkcloudformation.ListStackInstancesInput{
+						wanted := &awscfn.ListStackInstancesInput{
 							StackInstanceAccount: aws.String("12345"),
 							StackInstanceRegion:  aws.String("us-east-9"),
 						}
-						actual := &sdkcloudformation.ListStackInstancesInput{}
+						actual := &awscfn.ListStackInstancesInput{}
 						optAcc(actual)
 						optRegion(actual)
 						require.Equal(t, wanted, actual)
@@ -720,9 +833,9 @@ func mockValidAppResourceStack() *cloudformation.StackDescription {
 }
 
 func mockAppResourceStack(stackArn string, outputs map[string]string) *cloudformation.StackDescription {
-	outputList := []*sdkcloudformation.Output{}
+	outputList := []*awscfn.Output{}
 	for key, val := range outputs {
-		outputList = append(outputList, &sdkcloudformation.Output{
+		outputList = append(outputList, &awscfn.Output{
 			OutputKey:   aws.String(key),
 			OutputValue: aws.String(val),
 		})
@@ -735,9 +848,9 @@ func mockAppResourceStack(stackArn string, outputs map[string]string) *cloudform
 }
 
 func mockAppRolesStack(stackArn string, parameters map[string]string) *cloudformation.StackDescription {
-	parametersList := []*sdkcloudformation.Parameter{}
+	parametersList := []*awscfn.Parameter{}
 	for key, val := range parameters {
-		parametersList = append(parametersList, &sdkcloudformation.Parameter{
+		parametersList = append(parametersList, &awscfn.Parameter{
 			ParameterKey:   aws.String(key),
 			ParameterValue: aws.String(val),
 		})
