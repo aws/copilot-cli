@@ -42,7 +42,7 @@ var (
 	errNoContainerPath = errors.New(`"path" cannot be empty`)
 	errNoSourceVolume  = errors.New(`"source_volume" cannot be empty`)
 
-	errUIDWithNonManagedFS = errors.New(`UID and GID cannot be specified with non-managed EFS`)
+	errUIDWithNonManagedFS = errors.New("UID and GID cannot be specified with non-managed EFS")
 	errInvalidUIDGIDConfig = errors.New("set managed filesystem access point creation info: must specify both UID and GID, or neither")
 	errReservedUID         = errors.New("set managed filesystem access point creation info: UID must not be 0")
 )
