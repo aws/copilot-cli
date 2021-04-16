@@ -24,6 +24,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	job = "job"
+)
+
 var (
 	jobInitSchedulePrompt = "How would you like to " + color.Emphasize("schedule") + " this job?"
 	jobInitScheduleHelp   = `How to determine this job's schedule. "Rate" lets you define the time between 
@@ -34,9 +38,9 @@ jobs or those which require specific execution schedules.`
 	fmtJobInitTypeHelp = "A %s is a task which is invoked on a set schedule, with optional retry logic."
 )
 
-const (
-	job = "job"
-)
+var jobTypeHints = map[string]string{
+	manifest.ScheduledJobType: "Scheduled event to State Machine to Fargate",
+}
 
 type initJobVars struct {
 	initWkldVars
@@ -184,6 +188,16 @@ func (o *initJobOpts) Execute() error {
 	return nil
 }
 
+// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
+func (o *initJobOpts) RecommendedActions() []string {
+	return []string{
+		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath)),
+		fmt.Sprintf("Run %s to deploy your job to a %s environment.",
+			color.HighlightCode(fmt.Sprintf("copilot job deploy --name %s --env %s", o.name, defaultEnvironmentName)),
+			defaultEnvironmentName),
+	}
+}
+
 func (o *initJobOpts) askJobType() error {
 	if o.wkldType != "" {
 		return nil
@@ -279,14 +293,15 @@ func (o *initJobOpts) askSchedule() error {
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *initJobOpts) RecommendedActions() []string {
-	return []string{
-		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath)),
-		fmt.Sprintf("Run %s to deploy your job to a %s environment.",
-			color.HighlightCode(fmt.Sprintf("copilot job deploy --name %s --env %s", o.name, defaultEnvironmentName)),
-			defaultEnvironmentName),
+func jobTypePromptOpts() []prompt.Option {
+	var options []prompt.Option
+	for _, jobType := range manifest.JobTypes {
+		options = append(options, prompt.Option{
+			Value: jobType,
+			Hint:  jobTypeHints[jobType],
+		})
 	}
+	return options
 }
 
 // buildJobInitCmd builds the command for creating a new job.
