@@ -8,11 +8,12 @@ import (
 	"io"
 	"strings"
 
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -26,12 +27,11 @@ const (
 )
 
 type ecsClient interface {
-	TaskDefinition(taskDefName string) (*awsecs.TaskDefinition, error)
-	NetworkConfiguration(cluster, serviceName string) (*awsecs.NetworkConfiguration, error)
-}
-
-type clusterDescriber interface {
 	ClusterARN(app, env string) (string, error)
+	EnvVars(app, env, svc string) ([]*awsecs.ContainerEnvVar, error)
+	Secrets(app, env, svc string) ([]*awsecs.ContainerSecret, error)
+	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
+	NetworkConfiguration(app, env, svc string) (*awsecs.NetworkConfiguration, error)
 }
 
 // ConfigStoreSvc wraps methods of config store.
@@ -73,9 +73,8 @@ type ServiceDescriber struct {
 	service string
 	env     string
 
-	ecsClient        ecsClient
-	cfn              cfn
-	clusterDescriber clusterDescriber
+	cfn       cfn
+	ecsClient ecsClient
 }
 
 // NewServiceConfig contains fields that initiates ServiceDescriber struct.
@@ -101,39 +100,27 @@ func NewServiceDescriber(opt NewServiceConfig) (*ServiceDescriber, error) {
 		service: opt.Svc,
 		env:     opt.Env,
 
-		ecsClient:        awsecs.New(sess),
-		cfn:              cloudformation.New(sess),
-		clusterDescriber: ecs.New(sess),
+		cfn:       cloudformation.New(sess),
+		ecsClient: ecs.New(sess),
 	}, nil
 }
 
 // EnvVars returns the environment variables of the task definition.
 func (d *ServiceDescriber) EnvVars() ([]*awsecs.ContainerEnvVar, error) {
-	taskDefName := fmt.Sprintf("%s-%s-%s", d.app, d.env, d.service)
-	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)
+	envVars, err := d.ecsClient.EnvVars(d.app, d.env, d.service)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("describe environment variables for service %s: %w", d.service, err)
 	}
-	return taskDefinition.EnvironmentVariables(), nil
+	return envVars, nil
 }
 
 // Secrets returns the secrets of the task definition.
 func (d *ServiceDescriber) Secrets() ([]*awsecs.ContainerSecret, error) {
-	taskDefName := fmt.Sprintf("%s-%s-%s", d.app, d.env, d.service)
-	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)
+	secrets, err := d.ecsClient.Secrets(d.app, d.env, d.service)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("describe secrets for service %s: %w", d.service, err)
 	}
-	return taskDefinition.Secrets(), nil
-}
-
-// NetworkConfiguration returns the network configuration of the service.
-func (d *ServiceDescriber) NetworkConfiguration() (*awsecs.NetworkConfiguration, error) {
-	clusterARN, err := d.clusterDescriber.ClusterARN(d.app, d.env)
-	if err != nil {
-		return nil, fmt.Errorf("get cluster ARN for service %s: %w", d.service, err)
-	}
-	return d.ecsClient.NetworkConfiguration(clusterARN, d.service)
+	return secrets, nil
 }
 
 // ServiceStackResources returns the filtered service stack resources created by CloudFormation.
@@ -182,34 +169,4 @@ func (d *ServiceDescriber) Params() (map[string]string, error) {
 		params[*param.ParameterKey] = *param.ParameterValue
 	}
 	return params, nil
-}
-
-// TaskDefinition holds task definition information of the service, including container-level information.
-type TaskDefinition struct {
-	Images        []*awsecs.ContainerImage
-	ExecutionRole string
-	TaskRole      string
-	EnvVars       []*awsecs.ContainerEnvVar
-	Secrets       []*awsecs.ContainerSecret
-	EntryPoints   []*awsecs.ContainerEntrypoint
-	Commands      []*awsecs.ContainerCommand
-}
-
-// TaskDefinition returns the task definition, including the container-level information, of the service.
-func (d *ServiceDescriber) TaskDefinition() (*TaskDefinition, error) {
-	taskDefName := fmt.Sprintf("%s-%s-%s", d.app, d.env, d.service)
-	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)
-	if err != nil {
-		return nil, fmt.Errorf("get task definition %s of service %s: %w", taskDefName, d.service, err)
-	}
-
-	return &TaskDefinition{
-		Images:        taskDefinition.Images(),
-		ExecutionRole: aws.StringValue(taskDefinition.ExecutionRoleArn),
-		TaskRole:      aws.StringValue(taskDefinition.TaskRoleArn),
-		EnvVars:       taskDefinition.EnvironmentVariables(),
-		Secrets:       taskDefinition.Secrets(),
-		EntryPoints:   taskDefinition.EntryPoints(),
-		Commands:      taskDefinition.Commands(),
-	}, nil
 }
