@@ -142,7 +142,7 @@ type Select struct {
 // ConfigSelect is an application and environment selector, but can also choose a service from the config store.
 type ConfigSelect struct {
 	*Select
-	svcLister ConfigWorkloadLister
+	workloadLister ConfigWorkloadLister
 }
 
 // WorkspaceSelect  is an application and environment selector, but can also choose a service from the workspace.
@@ -216,8 +216,8 @@ func NewSelect(prompt Prompter, store ConfigLister) *Select {
 // NewConfigSelect returns a new selector that chooses applications, environments, or services from the config store.
 func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
 	return &ConfigSelect{
-		Select:    NewSelect(prompt, store),
-		svcLister: store,
+		Select:         NewSelect(prompt, store),
+		workloadLister: store,
 	}
 }
 
@@ -593,7 +593,7 @@ func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
 func (s *ConfigSelect) Service(prompt, help, app string) (string, error) {
 	services, err := s.retrieveServices(app)
 	if err != nil {
-		return "", fmt.Errorf("get services for app %s: %w", app, err)
+		return "", err
 	}
 	if len(services) == 0 {
 		log.Infof("Couldn't find any services associated with app %s, try initializing one: %s\n",
@@ -605,11 +605,34 @@ func (s *ConfigSelect) Service(prompt, help, app string) (string, error) {
 		log.Infof("Only found one service, defaulting to: %s\n", color.HighlightUserInput(services[0]))
 		return services[0], nil
 	}
-	selectedAppName, err := s.prompt.SelectOne(prompt, help, services)
+	selectedSvcName, err := s.prompt.SelectOne(prompt, help, services)
 	if err != nil {
 		return "", fmt.Errorf("select service: %w", err)
 	}
-	return selectedAppName, nil
+	return selectedSvcName, nil
+}
+
+// Job fetches all jobs in an app and prompts the user to select one.
+func (s *ConfigSelect) Job(prompt, help, app string) (string, error) {
+	jobs, err := s.retrieveJobs(app)
+	if err != nil {
+		return "", err
+	}
+	if len(jobs) == 0 {
+		log.Infof("Couldn't find any jobs associated with app %s, try initializing one: %s\n",
+			color.HighlightUserInput(app),
+			color.HighlightCode("copilot job init"))
+		return "", fmt.Errorf("no jobs found in app %s", app)
+	}
+	if len(jobs) == 1 {
+		log.Infof("Only found one job, defaulting to: %s\n", color.HighlightUserInput(jobs[0]))
+		return jobs[0], nil
+	}
+	selectedJobName, err := s.prompt.SelectOne(prompt, help, jobs)
+	if err != nil {
+		return "", fmt.Errorf("select job: %w", err)
+	}
+	return selectedJobName, nil
 }
 
 // Environment fetches all the environments in an app and prompts the user to select one.
@@ -730,7 +753,7 @@ func (s *Select) retrieveEnvironments(app string) ([]string, error) {
 }
 
 func (s *ConfigSelect) retrieveServices(app string) ([]string, error) {
-	services, err := s.svcLister.ListServices(app)
+	services, err := s.workloadLister.ListServices(app)
 	if err != nil {
 		return nil, fmt.Errorf("list services: %w", err)
 	}
@@ -739,6 +762,18 @@ func (s *ConfigSelect) retrieveServices(app string) ([]string, error) {
 		serviceNames[ind] = service.Name
 	}
 	return serviceNames, nil
+}
+
+func (s *ConfigSelect) retrieveJobs(app string) ([]string, error) {
+	jobs, err := s.workloadLister.ListJobs(app)
+	if err != nil {
+		return nil, fmt.Errorf("list jobs: %w", err)
+	}
+	jobNames := make([]string, len(jobs))
+	for ind, job := range jobs {
+		jobNames[ind] = job.Name
+	}
+	return jobNames, nil
 }
 
 func (s *WorkspaceSelect) retrieveWorkspaceServices() ([]string, error) {
