@@ -270,10 +270,7 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 			write = !aws.BoolValue(volume.ReadOnly)
 		}
 
-		id, err := volume.EFS.FSID()
-		if err != nil {
-			return nil, err
-		}
+		id := volume.EFS.FSID()
 		if id == nil {
 			return nil, errNoFSID
 		}
@@ -295,15 +292,16 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 func convertManagedFSInfo(wlName *string, input map[string]manifest.Volume) (*template.ManagedVolumeCreationInfo, error) {
 	var output *template.ManagedVolumeCreationInfo
 	for name, volume := range input {
-		if output != nil {
-			return nil, fmt.Errorf("validate managed EFS: cannot specify more than one managed volume per service")
-		}
 		if volume.EFS == nil {
 			continue
 		}
 
 		if !volume.EFS.UseManagedFS() {
 			continue
+		}
+
+		if output != nil {
+			return nil, fmt.Errorf("validate managed EFS: cannot specify more than one managed volume per service")
 		}
 
 		uid := volume.EFS.Config.UID

@@ -4,7 +4,6 @@
 package manifest
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -93,16 +92,14 @@ func (e *EFSConfigOrID) UseManagedFS() bool {
 
 // FSID returns the correct value of the EFS filesystem ID. If the ID is set improperly (via a bad merge
 // of environment overrides), it throws an error.
-func (e *EFSConfigOrID) FSID() (*string, error) {
+func (e *EFSConfigOrID) FSID() *string {
 	fromID := e.ID
+	// If config is empty, use ID; otherwise ignore string and use struct.
 	if e.Config.IsEmpty() {
-		return aws.String(fromID), nil
+		return aws.String(fromID)
 	}
-	fromConfig := aws.StringValue(e.Config.FileSystemID)
-	if fromID != "" && fromID != fromConfig {
-		return nil, fmt.Errorf("read EFS ID: multiple values specified (%s, %s)", fromID, fromConfig)
-	}
-	return aws.String(fromConfig), nil
+
+	return e.Config.FileSystemID
 }
 
 // AuthorizationConfig holds options relating to access points and IAM authorization.
