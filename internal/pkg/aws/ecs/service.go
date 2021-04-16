@@ -71,3 +71,10 @@ func (s *ServiceArn) ServiceName() (string, error) {
 	}
 	return resources[2], nil
 }
+
+// NetworkConfiguration holds service's NetworkConfiguration.
+type NetworkConfiguration struct {
+	AssignPublicIp string
+	SecurityGroups []string
+	Subnets        []string
+}

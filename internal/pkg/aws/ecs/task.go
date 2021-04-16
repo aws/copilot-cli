@@ -204,6 +204,60 @@ func (t *TaskDefinition) Secrets() []*ContainerSecret {
 	return secrets
 }
 
+// ContainerImage holds basic info of an image.
+type ContainerImage struct {
+	Container string
+	Image     string
+}
+
+// Images returns the container images of the task definition.
+func (t *TaskDefinition) Images() []*ContainerImage {
+	var images []*ContainerImage
+	for _, container := range t.ContainerDefinitions {
+		images = append(images, &ContainerImage{
+			Container: aws.StringValue(container.Name),
+			Image:     aws.StringValue(container.Image),
+		})
+	}
+	return images
+}
+
+// ContainerCommand holds basic info of a command override.
+type ContainerCommand struct {
+	Container string
+	Command   []string
+}
+
+// Commands returns the containers' command overrides of the task definition.
+func (t *TaskDefinition) Commands() []*ContainerCommand {
+	var commands []*ContainerCommand
+	for _, container := range t.ContainerDefinitions {
+		commands = append(commands, &ContainerCommand{
+			Container: aws.StringValue(container.Name),
+			Command:   aws.StringValueSlice(container.Command),
+		})
+	}
+	return commands
+}
+
+// ContainerEntrypoint holds basic info of a entrypoint override.
+type ContainerEntrypoint struct {
+	Container  string
+	EntryPoint []string
+}
+
+// EntryPoints returns the containers' entrypoint overrides of the task definition.
+func (t *TaskDefinition) EntryPoints() []*ContainerEntrypoint {
+	var entryPoints []*ContainerEntrypoint
+	for _, container := range t.ContainerDefinitions {
+		entryPoints = append(entryPoints, &ContainerEntrypoint{
+			Container:  aws.StringValue(container.Name),
+			EntryPoint: aws.StringValueSlice(container.EntryPoint),
+		})
+	}
+	return entryPoints
+}
+
 // TaskID parses the task ARN and returns the task ID.
 // For example: arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d,
 // arn:aws:ecs:us-west-2:123456789:task/4082490ee6c245e09d2145010aa1ba8d

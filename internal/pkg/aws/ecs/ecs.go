@@ -83,20 +83,7 @@ func (e *ECS) TaskDefinition(taskDefName string) (*TaskDefinition, error) {
 
 // Service calls ECS API and returns the specified service running in the cluster.
 func (e *ECS) Service(clusterName, serviceName string) (*Service, error) {
-	resp, err := e.client.DescribeServices(&ecs.DescribeServicesInput{
-		Cluster:  aws.String(clusterName),
-		Services: aws.StringSlice([]string{serviceName}),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("describe service %s: %w", serviceName, err)
-	}
-	for _, service := range resp.Services {
-		if aws.StringValue(service.ServiceName) == serviceName {
-			svc := Service(*service)
-			return &svc, nil
-		}
-	}
-	return nil, fmt.Errorf("cannot find service %s", serviceName)
+	return e.service(clusterName, serviceName)
 }
 
 // ServiceTasks calls ECS API and returns ECS tasks running by a service.
@@ -320,6 +307,42 @@ func (e *ECS) ExecuteCommand(in ExecuteCommandInput) (err error) {
 		err = fmt.Errorf("start session %s using ssm plugin: %w", sessID, err)
 	}
 	return err
+}
+
+// NetworkConfiguration returns the network configuration of a service.
+func (e *ECS) NetworkConfiguration(cluster, serviceName string) (*NetworkConfiguration, error) {
+	service, err := e.service(cluster, serviceName)
+	if err != nil {
+		return nil, err
+	}
+
+	networkConfig := service.NetworkConfiguration
+	if networkConfig == nil || networkConfig.AwsvpcConfiguration == nil {
+		return nil, fmt.Errorf("cannot find the awsvpc configuration for service %s", serviceName)
+	}
+
+	return &NetworkConfiguration{
+		AssignPublicIp: aws.StringValue(networkConfig.AwsvpcConfiguration.AssignPublicIp),
+		SecurityGroups: aws.StringValueSlice(networkConfig.AwsvpcConfiguration.SecurityGroups),
+		Subnets:        aws.StringValueSlice(networkConfig.AwsvpcConfiguration.Subnets),
+	}, nil
+}
+
+func (e *ECS) service(clusterName, serviceName string) (*Service, error) {
+	resp, err := e.client.DescribeServices(&ecs.DescribeServicesInput{
+		Cluster:  aws.String(clusterName),
+		Services: aws.StringSlice([]string{serviceName}),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("describe service %s: %w", serviceName, err)
+	}
+	for _, service := range resp.Services {
+		if aws.StringValue(service.ServiceName) == serviceName {
+			svc := Service(*service)
+			return &svc, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot find service %s", serviceName)
 }
 
 func isRequestTimeoutErr(err error) bool {
