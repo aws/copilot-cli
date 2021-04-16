@@ -94,7 +94,7 @@ func (cf CloudFormation) upgradeAppStack(s *cloudformation.Stack) error {
 			return fmt.Errorf("describe stack %s: %w", s.Name, err)
 		}
 		if cloudformation.StackStatus(aws.StringValue(descr.StackStatus)).InProgress() {
-			// There is already an update happening to the environment stack.
+			// There is already an update happening to the app stack.
 			// Best-effort try to wait for the existing update to be over before retrying.
 			_ = cf.cfnClient.WaitForUpdate(context.Background(), s.Name)
 			continue

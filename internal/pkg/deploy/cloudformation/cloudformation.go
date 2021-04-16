@@ -430,7 +430,8 @@ func stopSpinner(spinner *progress.Spinner, err error, label string) {
 }
 
 // upgradeStackUpdateErrorHandling is used to handle the error returned by CFN
-// stack update when upgrading the application/environment.
+// stack update when upgrading the application/environment. It returns true if the CFN stack
+// is being updated.
 func upgradeStackUpdateErrorHandling(name string, err error) (bool, error) {
 	var emptyChangeSet *cloudformation.ErrChangeSetEmpty
 	var alreadyInProgErr *cloudformation.ErrStackUpdateInProgress
@@ -440,11 +441,11 @@ func upgradeStackUpdateErrorHandling(name string, err error) (bool, error) {
 		// The changes are already applied, nothing to do. Exit successfully.
 		return false, nil
 	case errors.As(updateErr, &alreadyInProgErr):
-		// There is another update going on in the environment, retry the upgrade.
+		// There is another update going on, retry the upgrade.
 		return true, nil
 	case errors.As(updateErr, &obsoleteChangeSetErr):
-		// If there are two "upgradeEnvironments" calls happening in parallel, it's possible that
-		// both invocations created a changeset to upgrade the environment stack.
+		// If there are two "upgrade" calls happening in parallel, it's possible that
+		// both invocations created a changeset to upgrade the stack.
 		// CloudFormation will ensure that one of them goes through, while the other returns
 		// an ErrChangeSetNotExecutable error.
 		//
