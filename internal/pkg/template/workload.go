@@ -129,6 +129,7 @@ type ManagedVolumeCreationInfo struct {
 	GID     *uint32
 }
 
+// EFSVolumeConfiguration contains information about how to specify externally managed file systems.
 type EFSVolumeConfiguration struct {
 	// EFSVolumeConfiguration
 	Filesystem    *string
