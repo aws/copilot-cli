@@ -141,7 +141,7 @@ func (d *ServiceDescriber) NetworkConfiguration() (*awsecs.NetworkConfiguration,
 
 	networkConfig := service.NetworkConfiguration
 	if networkConfig == nil || networkConfig.AwsvpcConfiguration == nil {
-		return nil, fmt.Errorf("unable to retrieve network information for service %s", d.service)
+		return nil, fmt.Errorf("cannot find the awsvpc configuration for service %s", d.service)
 	}
 
 	return &awsecs.NetworkConfiguration{

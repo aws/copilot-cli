@@ -330,7 +330,7 @@ func TestServiceDescriber_NetworkConfiguration(t *testing.T) {
 				mocks.mockClusterDescriber.EXPECT().ClusterARN(testApp, testEnv).Return("cluster-1", nil)
 				mocks.mockECSClient.EXPECT().Service("cluster-1", testSvc).Return(&awsecs.Service{}, nil)
 			},
-			wantedError: errors.New("unable to retrieve network information for service svc"),
+			wantedError: errors.New("cannot find the awsvpc configuration for service svc"),
 		},
 		"successfully retrieve network configuration": {
 			setupMocks: func(mocks svcDescriberMocks) {
