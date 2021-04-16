@@ -44,7 +44,7 @@ var (
 
 	errUIDWithNonManagedFS = errors.New(`UID and GID cannot be specified with non-managed EFS`)
 	errInvalidUIDGIDConfig = errors.New("set managed filesystem access point creation info: must specify both UID and GID, or neither")
-	errReservedUID         = errors.New(`set managed filesystem access point creation info: UID must not be 0`)
+	errReservedUID         = errors.New("set managed filesystem access point creation info: UID must not be 0")
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
@@ -302,25 +302,27 @@ func convertManagedFSInfo(wlName *string, input map[string]manifest.Volume) (*te
 			continue
 		}
 
-		if volume.EFS.UseManagedFS() {
-			uid := volume.EFS.Config.UID
-			gid := volume.EFS.Config.GID
+		if !volume.EFS.UseManagedFS() {
+			continue
+		}
 
-			if err := validateUIDGID(uid, gid); err != nil {
-				return nil, err
-			}
+		uid := volume.EFS.Config.UID
+		gid := volume.EFS.Config.GID
 
-			if uid == nil && gid == nil {
-				crc := aws.Uint32(getRandomUIDGID(aws.StringValue(wlName)))
-				uid = crc
-				gid = crc
-			}
-			output = &template.ManagedVolumeCreationInfo{
-				Name:    aws.String(name),
-				DirName: wlName,
-				UID:     uid,
-				GID:     gid,
-			}
+		if err := validateUIDGID(uid, gid); err != nil {
+			return nil, err
+		}
+
+		if uid == nil && gid == nil {
+			crc := aws.Uint32(getRandomUIDGID(aws.StringValue(wlName)))
+			uid = crc
+			gid = crc
+		}
+		output = &template.ManagedVolumeCreationInfo{
+			Name:    aws.String(name),
+			DirName: wlName,
+			UID:     uid,
+			GID:     gid,
 		}
 	}
 	return output, nil
@@ -337,10 +339,7 @@ func validateUIDGID(uid, gid *uint32) error {
 	if uid == nil && gid == nil {
 		return nil
 	}
-	if uid != nil && gid == nil {
-		return errInvalidUIDGIDConfig
-	}
-	if uid == nil && gid != nil {
+	if (uid == nil) != (gid == nil) {
 		return errInvalidUIDGIDConfig
 	}
 	// Check for root UID.
