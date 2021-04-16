@@ -269,8 +269,6 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 
 func Test_convertManagedFSInfo(t *testing.T) {
 	testCases := map[string]struct {
-		inName            string
-		inType            string
 		inVolumes         map[string]manifest.Volume
 		wantManagedConfig *template.ManagedVolumeCreationInfo
 		wantVolumes       map[string]manifest.Volume
@@ -289,8 +287,6 @@ func Test_convertManagedFSInfo(t *testing.T) {
 					},
 				},
 			},
-			inName:            "fe",
-			inType:            manifest.LoadBalancedWebServiceType,
 			wantManagedConfig: nil,
 			wantVolumes: map[string]manifest.Volume{
 				"wordpress": {
@@ -316,13 +312,11 @@ func Test_convertManagedFSInfo(t *testing.T) {
 					},
 				},
 			},
-			inName: "fe",
-			inType: manifest.LoadBalancedWebServiceType,
 			wantManagedConfig: &template.ManagedVolumeCreationInfo{
 				Name:    aws.String("wordpress"),
-				DirName: aws.String("svc/fe"),
-				UID:     aws.Uint32(1578879845),
-				GID:     aws.Uint32(1578879845),
+				DirName: aws.String("fe"),
+				UID:     aws.Uint32(1336298249),
+				GID:     aws.Uint32(1336298249),
 			},
 			wantVolumes: map[string]manifest.Volume{},
 		},
@@ -340,11 +334,9 @@ func Test_convertManagedFSInfo(t *testing.T) {
 					},
 				},
 			},
-			inName: "fe",
-			inType: manifest.LoadBalancedWebServiceType,
 			wantManagedConfig: &template.ManagedVolumeCreationInfo{
 				Name:    aws.String("wordpress"),
-				DirName: aws.String("svc/fe"),
+				DirName: aws.String("fe"),
 				UID:     aws.Uint32(10000),
 				GID:     aws.Uint32(100000),
 			},
@@ -353,13 +345,8 @@ func Test_convertManagedFSInfo(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			wl := manifest.Workload{
-				Name: aws.String(tc.inName),
-				Type: aws.String(tc.inType),
-			}
 			// WHEN
-			gotManaged, err := convertManagedFSInfo(wl, tc.inVolumes)
+			gotManaged, err := convertManagedFSInfo(aws.String("fe"), tc.inVolumes)
 
 			// THEN
 			if tc.wantErr != "" {
@@ -374,8 +361,6 @@ func Test_convertManagedFSInfo(t *testing.T) {
 func Test_convertStorageOpts(t *testing.T) {
 	testCases := map[string]struct {
 		inVolumes map[string]manifest.Volume
-		inName    string
-		inType    string
 		wantOpts  template.StorageOpts
 		wantErr   string
 	}{
@@ -392,8 +377,6 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 			},
-			inName: "fe",
-			inType: manifest.LoadBalancedWebServiceType,
 			wantOpts: template.StorageOpts{
 				Volumes: []*template.Volume{
 					{
@@ -431,8 +414,6 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 			},
-			inName: "fe",
-			inType: manifest.LoadBalancedWebServiceType,
 			wantOpts: template.StorageOpts{
 				Volumes: []*template.Volume{
 					{
@@ -461,8 +442,6 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 			},
-			inName:  "fe",
-			inType:  manifest.LoadBalancedWebServiceType,
 			wantErr: fmt.Sprintf("validate EFS configuration for volume wordpress: %s", errNoFSID.Error()),
 		},
 		"container path not specified": {
@@ -475,8 +454,6 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 			},
-			inName:  "fe",
-			inType:  manifest.LoadBalancedWebServiceType,
 			wantErr: fmt.Sprintf("validate container configuration for volume wordpress: %s", errNoContainerPath.Error()),
 		},
 		"full specification with access point renders correctly": {
@@ -498,8 +475,6 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 			},
-			inName: "fe",
-			inType: manifest.LoadBalancedWebServiceType,
 			wantOpts: template.StorageOpts{
 				Volumes: []*template.Volume{
 					{
@@ -546,8 +521,6 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 			},
-			inName: "fe",
-			inType: manifest.LoadBalancedWebServiceType,
 			wantOpts: template.StorageOpts{
 				Volumes: []*template.Volume{
 					{
@@ -593,8 +566,6 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 			},
-			inName:  "fe",
-			inType:  manifest.LoadBalancedWebServiceType,
 			wantErr: fmt.Sprintf("validate EFS configuration for volume wordpress: %s", errAccessPointWithRootDirectory.Error()),
 		},
 		"error when AP is specified without IAM": {
@@ -616,8 +587,6 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 			},
-			inName:  "fe",
-			inType:  manifest.LoadBalancedWebServiceType,
 			wantErr: fmt.Sprintf("validate EFS configuration for volume wordpress: %s", errAccessPointWithoutIAM.Error()),
 		},
 		"managed EFS": {
@@ -632,44 +601,12 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 			},
-			inName: "fe",
-			inType: manifest.LoadBalancedWebServiceType,
 			wantOpts: template.StorageOpts{
 				ManagedVolumeInfo: &template.ManagedVolumeCreationInfo{
 					Name:    aws.String("efs"),
-					DirName: aws.String("svc/fe"),
-					UID:     aws.Uint32(1578879845),
-					GID:     aws.Uint32(1578879845),
-				},
-				MountPoints: []*template.MountPoint{
-					{
-						ContainerPath: aws.String("/var/www"),
-						ReadOnly:      aws.Bool(true),
-						SourceVolume:  aws.String("efs"),
-					},
-				},
-			},
-		},
-		"managed EFS with scheduled job": {
-			inVolumes: map[string]manifest.Volume{
-				"efs": {
-					EFS: &manifest.EFSConfigOrBool{
-						Enabled: aws.Bool(true),
-					},
-					MountPointOpts: manifest.MountPointOpts{
-						ContainerPath: aws.String("/var/www"),
-						ReadOnly:      aws.Bool(true),
-					},
-				},
-			},
-			inName: "backend",
-			inType: manifest.ScheduledJobType,
-			wantOpts: template.StorageOpts{
-				ManagedVolumeInfo: &template.ManagedVolumeCreationInfo{
-					Name:    aws.String("efs"),
-					DirName: aws.String("job/backend"),
-					UID:     aws.Uint32(3109744506),
-					GID:     aws.Uint32(3109744506),
+					DirName: aws.String("fe"),
+					UID:     aws.Uint32(1336298249),
+					GID:     aws.Uint32(1336298249),
 				},
 				MountPoints: []*template.MountPoint{
 					{
@@ -695,12 +632,10 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 			},
-			inName: "fe",
-			inType: manifest.LoadBalancedWebServiceType,
 			wantOpts: template.StorageOpts{
 				ManagedVolumeInfo: &template.ManagedVolumeCreationInfo{
 					Name:    aws.String("efs"),
-					DirName: aws.String("svc/fe"),
+					DirName: aws.String("fe"),
 					UID:     aws.Uint32(1000),
 					GID:     aws.Uint32(10000),
 				},
@@ -832,14 +767,12 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 			},
-			inName: "fe",
-			inType: manifest.LoadBalancedWebServiceType,
 			wantOpts: template.StorageOpts{
 				ManagedVolumeInfo: &template.ManagedVolumeCreationInfo{
 					Name:    aws.String("efs"),
-					DirName: aws.String("svc/fe"),
-					UID:     aws.Uint32(1578879845),
-					GID:     aws.Uint32(1578879845),
+					DirName: aws.String("fe"),
+					UID:     aws.Uint32(1336298249),
+					GID:     aws.Uint32(1336298249),
 				},
 				Volumes: []*template.Volume{
 					{
@@ -886,12 +819,9 @@ func Test_convertStorageOpts(t *testing.T) {
 			s := manifest.Storage{
 				Volumes: tc.inVolumes,
 			}
-			wl := manifest.Workload{
-				Name: aws.String(tc.inName),
-				Type: aws.String(tc.inType),
-			}
+
 			// WHEN
-			got, err := convertStorageOpts(wl, &s)
+			got, err := convertStorageOpts(aws.String("fe"), &s)
 
 			// THEN
 			if tc.wantErr != "" {

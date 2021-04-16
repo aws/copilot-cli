@@ -48,10 +48,7 @@ type EFSVolumeConfiguration struct {
 
 // IsEmpty returns empty if the struct has all zero members.
 func (e *EFSVolumeConfiguration) IsEmpty() bool {
-	if e.FileSystemID == nil && e.RootDirectory == nil && e.AuthConfig == nil && e.UID == nil && e.GID == nil {
-		return true
-	}
-	return false
+	return e.FileSystemID == nil && e.RootDirectory == nil && e.AuthConfig == nil && e.UID == nil && e.GID == nil
 }
 
 // EFSConfigOrBool contains custom unmarshaling logic for the `efs` field in the manifest.

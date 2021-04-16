@@ -205,6 +205,7 @@ func TestCCPipelineCreation(t *testing.T) {
 				Branch:        "master",
 				RepositoryURL: "https://us-west-2.console.aws.amazon.com/codesuite/codecommit/repositories/repo-name/browse",
 			},
+			Build: deploy.PipelineBuildFromManifest(nil),
 			Stages: []deploy.PipelineStage{
 				{
 					AssociatedEnvironment: &deploy.AssociatedEnvironment{
