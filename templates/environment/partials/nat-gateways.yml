@@ -6,6 +6,8 @@ NatGateway{{inc $ind}}Attachment:
   Properties:
     Domain: vpc
 NatGateway{{inc $ind}}:
+  Metadata:
+    'aws:copilot:description': 'NAT Gateway {{inc $ind}} enabling workloads placed in private subnet {{inc $ind}} to reach the internet'
   Type: AWS::EC2::NatGateway
   Condition: CreateNATGateways
   Properties:

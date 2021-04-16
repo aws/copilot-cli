@@ -205,6 +205,98 @@ describe("Env Controller Handler", () => {
       });
   });
 
+  test("Remove the workload if the action parameter set is empty but workload is in the environment", () => {
+    // GIVEN
+    const fakeDescribeStacks = sinon.fake.resolves({
+      Stacks: [
+        {
+          StackName: "mockEnvStack",
+          Parameters: [
+            {
+              ParameterKey: "AppName",
+              ParameterValue: "demo",
+            },
+            {
+              ParameterKey: "NATWorkloads",
+              ParameterValue: "frontend,api",
+            },
+            {
+              ParameterKey: "EFSWorkloads",
+              ParameterValue: "api",
+            },
+            {
+              ParameterKey: "ALBWorkloads",
+              ParameterValue: "frontend,api",
+            },
+          ],
+          Outputs: testOutputs,
+        },
+      ],
+    });
+    const fakeUpdateStack = sinon.fake.resolves({});
+    const fakeWaitFor = sinon.fake.resolves({});
+
+    AWS.mock("CloudFormation", "describeStacks", fakeDescribeStacks);
+    AWS.mock("CloudFormation", "updateStack", fakeUpdateStack);
+    AWS.mock("CloudFormation", "waitFor", fakeWaitFor);
+
+    const wantedRequest = nock(ResponseURL)
+      .put("/", (body) => {
+        return body.Status === "SUCCESS" &&
+          body.Data.CFNExecutionRoleARN === "arn:aws:iam::1234567890:role/my-project-prod-CFNExecutionRole";
+      })
+      .reply(200);
+
+    // WHEN
+    const lambda = LambdaTester(EnvController.handler)
+      .event({
+        RequestType: "Create",
+        RequestId: testRequestId,
+        ResponseURL: ResponseURL,
+        ResourceProperties: {
+          EnvStack: "demo-test",
+          Workload: "frontend",
+          Parameters: [], // Remove frontend from then env stack.
+        },
+      });
+
+    // THEN
+    return lambda.expectResolve(() => {
+      sinon.assert.calledWith(
+        fakeDescribeStacks,
+        sinon.match({
+          StackName: "demo-test",
+        })
+      );
+      sinon.assert.calledWith(
+        fakeUpdateStack,
+        sinon.match({
+          Parameters: [
+            {
+              ParameterKey: "AppName",
+              ParameterValue: "demo",
+            },
+            {
+              ParameterKey: "NATWorkloads",
+              ParameterValue: "api",
+            },
+            {
+              ParameterKey: "EFSWorkloads",
+              ParameterValue: "api",
+            },
+            {
+              ParameterKey: "ALBWorkloads",
+              ParameterValue: "api",
+            },
+          ],
+          StackName: "demo-test",
+          UsePreviousTemplate: true,
+        })
+      );
+      expect(wantedRequest.isDone()).toBe(true);
+    });
+  });
+
   test("Wait if the stack is updating in progress", () => {
     const describeStacksFake = sinon.fake.resolves({
       Stacks: [

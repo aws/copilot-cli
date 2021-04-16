@@ -49,46 +49,13 @@ func ListeningChangeSetRenderer(streamer StackSubscriber, stackName, description
 // ListeningStackRenderer returns a component that listens for CloudFormation resource events
 // from a stack mutated with CreateStack or UpdateStack until the stack is completed.
 func ListeningStackRenderer(streamer StackSubscriber, stackName, description string, resourceDescriptions map[string]string, opts RenderOptions) DynamicRenderer {
-	comp := &stackComponent{
-		cfnStream:            streamer.Subscribe(),
-		stack:                streamer,
-		resourceDescriptions: resourceDescriptions,
-		renderOpts:           opts,
-		resources: []Renderer{
-			// Add the stack as a resource to track.
-			ListeningResourceRenderer(streamer, stackName, description, ResourceRendererOpts{
-				RenderOpts: opts,
-			}),
-		},
-		seenResources: map[string]bool{
-			stackName: true,
-		},
-		done: make(chan struct{}),
-	}
-	comp.addRenderer = comp.addResourceRenderer
-	go comp.Listen()
-	return comp
+	return listeningStackComponent(streamer, stackName, description, resourceDescriptions, opts)
 }
 
 // ListeningResourceRenderer returns a tab-separated component that listens for
 // CloudFormation stack events for a particular resource.
 func ListeningResourceRenderer(streamer StackSubscriber, logicalID, description string, opts ResourceRendererOpts) DynamicRenderer {
-	comp := &regularResourceComponent{
-		logicalID:   logicalID,
-		description: description,
-		statuses:    []stackStatus{notStartedStackStatus},
-		stopWatch:   newStopWatch(),
-		stream:      streamer.Subscribe(),
-		done:        make(chan struct{}),
-		padding:     opts.RenderOpts.Padding,
-		separator:   '\t',
-	}
-	if opts.StartEvent != nil {
-		updateComponentStatus(&comp.mu, &comp.statuses, *opts.StartEvent)
-		updateComponentTimer(&comp.mu, comp.statuses, comp.stopWatch)
-	}
-	go comp.Listen()
-	return comp
+	return listeningResourceComponent(streamer, logicalID, description, opts)
 }
 
 // ListeningECSServiceResourceRenderer is a ListeningResourceRenderer for the ECS service cloudformation resource
@@ -135,6 +102,25 @@ type regularResourceComponent struct {
 	mu     sync.Mutex
 }
 
+func listeningResourceComponent(streamer StackSubscriber, logicalID, description string, opts ResourceRendererOpts) *regularResourceComponent {
+	comp := &regularResourceComponent{
+		logicalID:   logicalID,
+		description: description,
+		statuses:    []stackStatus{notStartedStackStatus},
+		stopWatch:   newStopWatch(),
+		stream:      streamer.Subscribe(),
+		done:        make(chan struct{}),
+		padding:     opts.RenderOpts.Padding,
+		separator:   '\t',
+	}
+	if opts.StartEvent != nil {
+		updateComponentStatus(&comp.mu, &comp.statuses, *opts.StartEvent)
+		updateComponentTimer(&comp.mu, comp.statuses, comp.stopWatch)
+	}
+	go comp.Listen()
+	return comp
+}
+
 // Listen updates the resource's status if a CloudFormation stack resource event is received.
 func (c *regularResourceComponent) Listen() {
 	for ev := range c.stream {
@@ -179,6 +165,28 @@ type stackComponent struct {
 
 	// Replaced in tests.
 	addRenderer func(stream.StackEvent, string)
+}
+
+func listeningStackComponent(streamer StackSubscriber, stackName, description string, resourceDescriptions map[string]string, opts RenderOptions) *stackComponent {
+	comp := &stackComponent{
+		cfnStream:            streamer.Subscribe(),
+		stack:                streamer,
+		resourceDescriptions: resourceDescriptions,
+		renderOpts:           opts,
+		resources: []Renderer{
+			// Add the stack as a resource to track.
+			ListeningResourceRenderer(streamer, stackName, description, ResourceRendererOpts{
+				RenderOpts: opts,
+			}),
+		},
+		seenResources: map[string]bool{
+			stackName: true,
+		},
+		done: make(chan struct{}),
+	}
+	comp.addRenderer = comp.addResourceRenderer
+	go comp.Listen()
+	return comp
 }
 
 // Listen consumes stack events from the stream.

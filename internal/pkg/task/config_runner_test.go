@@ -47,6 +47,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 		count     int
 		groupName string
 
+		cluster        string
 		subnets        []string
 		securityGroups []string
 
@@ -210,6 +211,38 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 				},
 			},
 		},
+		"successfully kick off task with specified cluster": {
+			count:     1,
+			groupName: "my-task",
+
+			cluster:        "special-cluster",
+			subnets:        []string{"subnet-1", "subnet-2"},
+			securityGroups: []string{"sg-1", "sg-2"},
+
+			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
+				m.EXPECT().DefaultCluster().Times(0)
+			},
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
+				m.EXPECT().SubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).Times(0)
+			},
+			mockStarter: func(m *mocks.MockRunner) {
+				m.EXPECT().RunTask(ecs.RunTaskInput{
+					Cluster:        "special-cluster",
+					Count:          1,
+					Subnets:        []string{"subnet-1", "subnet-2"},
+					SecurityGroups: []string{"sg-1", "sg-2"},
+					TaskFamilyName: taskFamilyName("my-task"),
+					StartedBy:      startedBy,
+				}).Return([]*ecs.Task{&taskWithENI}, nil)
+			},
+
+			wantedTasks: []*Task{
+				{
+					TaskARN: "task-1",
+					ENI:     "eni-1",
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -225,10 +258,11 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			tc.mockClusterGetter(mockClusterGetter)
 			tc.mockStarter(mockStarter)
 
-			task := &NetworkConfigRunner{
+			task := &ConfigRunner{
 				Count:     tc.count,
 				GroupName: tc.groupName,
 
+				Cluster:        tc.cluster,
 				Subnets:        tc.subnets,
 				SecurityGroups: tc.securityGroups,
 
