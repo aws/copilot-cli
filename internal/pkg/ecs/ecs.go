@@ -205,26 +205,6 @@ func (c Client) StopDefaultClusterTasks(familyName string) error {
 	return c.ecsClient.StopTasks(taskIDs, ecs.WithStopTaskReason(taskStopReason))
 }
 
-// EnvVars returns the environment variables of the service's task definition.
-func (c Client) EnvVars(app, env, svc string) ([]*ecs.ContainerEnvVar, error) {
-	taskDefName := fmt.Sprintf("%s-%s-%s", app, env, svc)
-	taskDefinition, err := c.ecsClient.TaskDefinition(taskDefName)
-	if err != nil {
-		return nil, fmt.Errorf("get task definition of service %s: %w", svc, err)
-	}
-	return taskDefinition.EnvironmentVariables(), nil
-}
-
-// Secrets returns the secrets of the service's task definition.
-func (c Client) Secrets(app, env, svc string) ([]*ecs.ContainerSecret, error) {
-	taskDefName := fmt.Sprintf("%s-%s-%s", app, env, svc)
-	taskDefinition, err := c.ecsClient.TaskDefinition(taskDefName)
-	if err != nil {
-		return nil, fmt.Errorf("get task definition of service %s: %w", svc, err)
-	}
-	return taskDefinition.Secrets(), nil
-}
-
 // TaskDefinition returns the task definition of the service.
 func (c Client) TaskDefinition(app, env, svc string) (*ecs.TaskDefinition, error) {
 	taskDefName := fmt.Sprintf("%s-%s-%s", app, env, svc)

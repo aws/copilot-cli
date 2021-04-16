@@ -35,66 +35,6 @@ func (m *MockecsClient) EXPECT() *MockecsClientMockRecorder {
 	return m.recorder
 }
 
-// ClusterARN mocks base method.
-func (m *MockecsClient) ClusterARN(app, env string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClusterARN", app, env)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ClusterARN indicates an expected call of ClusterARN.
-func (mr *MockecsClientMockRecorder) ClusterARN(app, env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterARN", reflect.TypeOf((*MockecsClient)(nil).ClusterARN), app, env)
-}
-
-// EnvVars mocks base method.
-func (m *MockecsClient) EnvVars(app, env, svc string) ([]*ecs.ContainerEnvVar, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvVars", app, env, svc)
-	ret0, _ := ret[0].([]*ecs.ContainerEnvVar)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// EnvVars indicates an expected call of EnvVars.
-func (mr *MockecsClientMockRecorder) EnvVars(app, env, svc interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvVars", reflect.TypeOf((*MockecsClient)(nil).EnvVars), app, env, svc)
-}
-
-// NetworkConfiguration mocks base method.
-func (m *MockecsClient) NetworkConfiguration(app, env, svc string) (*ecs.NetworkConfiguration, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NetworkConfiguration", app, env, svc)
-	ret0, _ := ret[0].(*ecs.NetworkConfiguration)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// NetworkConfiguration indicates an expected call of NetworkConfiguration.
-func (mr *MockecsClientMockRecorder) NetworkConfiguration(app, env, svc interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkConfiguration", reflect.TypeOf((*MockecsClient)(nil).NetworkConfiguration), app, env, svc)
-}
-
-// Secrets mocks base method.
-func (m *MockecsClient) Secrets(app, env, svc string) ([]*ecs.ContainerSecret, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Secrets", app, env, svc)
-	ret0, _ := ret[0].([]*ecs.ContainerSecret)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Secrets indicates an expected call of Secrets.
-func (mr *MockecsClientMockRecorder) Secrets(app, env, svc interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Secrets", reflect.TypeOf((*MockecsClient)(nil).Secrets), app, env, svc)
-}
-
 // TaskDefinition mocks base method.
 func (m *MockecsClient) TaskDefinition(app, env, svc string) (*ecs.TaskDefinition, error) {
 	m.ctrl.T.Helper()

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"testing"
 
+	ecsapi "github.com/aws/aws-sdk-go/service/ecs"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -35,26 +37,31 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 		wantedEnvVars []*awsecs.ContainerEnvVar
 		wantedError   error
 	}{
-		"returns error if fails to get environment variables": {
+		"returns error if fails to get task definition": {
 			setupMocks: func(m svcDescriberMocks) {
-				m.mockECSClient.EXPECT().EnvVars(testApp, testEnv, testSvc).Return(nil, errors.New("some error"))
+				m.mockECSClient.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(nil, errors.New("some error"))
 			},
 
-			wantedError: errors.New("describe environment variables for service svc: some error"),
+			wantedError: errors.New("describe task definition for service svc: some error"),
 		},
 		"get environment variables": {
 			setupMocks: func(m svcDescriberMocks) {
 				gomock.InOrder(
-					m.mockECSClient.EXPECT().EnvVars(testApp, testEnv, testSvc).Return([]*ecs.ContainerEnvVar{
-						{
-							Container: "container",
-							Name:      "COPILOT_SERVICE_NAME",
-							Value:     "my-svc",
-						},
-						{
-							Container: "container",
-							Name:      "COPILOT_ENVIRONMENT_NAME",
-							Value:     "prod",
+					m.mockECSClient.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(&ecs.TaskDefinition{
+						ContainerDefinitions: []*ecsapi.ContainerDefinition{
+							{
+								Name: aws.String("container"),
+								Environment: []*ecsapi.KeyValuePair{
+									{
+										Name:  aws.String("COPILOT_SERVICE_NAME"),
+										Value: aws.String("my-svc"),
+									},
+									{
+										Name:  aws.String("COPILOT_ENVIRONMENT_NAME"),
+										Value: aws.String("prod"),
+									},
+								},
+							},
 						},
 					}, nil),
 				)
@@ -121,28 +128,33 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 		wantedSecrets []*awsecs.ContainerSecret
 		wantedError   error
 	}{
-		"returns error if fails to get secrets": {
+		"returns error if fails to get task definition": {
 			setupMocks: func(m svcDescriberMocks) {
 				gomock.InOrder(
-					m.mockECSClient.EXPECT().Secrets(testApp, testEnv, testSvc).Return(nil, errors.New("some error")),
+					m.mockECSClient.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(nil, errors.New("some error")),
 				)
 			},
 
-			wantedError: fmt.Errorf("describe secrets for service svc: some error"),
+			wantedError: fmt.Errorf("describe task definition for service svc: some error"),
 		},
 		"successfully gets secrets": {
 			setupMocks: func(m svcDescriberMocks) {
 				gomock.InOrder(
-					m.mockECSClient.EXPECT().Secrets(testApp, testEnv, testSvc).Return([]*ecs.ContainerSecret{
-						{
-							Container: "container",
-							Name:      "GITHUB_WEBHOOK_SECRET",
-							ValueFrom: "GH_WEBHOOK_SECRET",
-						},
-						{
-							Container: "container",
-							Name:      "SOME_OTHER_SECRET",
-							ValueFrom: "SHHHHHHHH",
+					m.mockECSClient.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(&ecs.TaskDefinition{
+						ContainerDefinitions: []*ecsapi.ContainerDefinition{
+							{
+								Name: aws.String("container"),
+								Secrets: []*ecsapi.Secret{
+									{
+										Name:      aws.String("GITHUB_WEBHOOK_SECRET"),
+										ValueFrom: aws.String("GH_WEBHOOK_SECRET"),
+									},
+									{
+										Name:      aws.String("SOME_OTHER_SECRET"),
+										ValueFrom: aws.String("SHHHHHHHH"),
+									},
+								},
+							},
 						},
 					}, nil),
 				)

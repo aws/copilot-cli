@@ -27,11 +27,7 @@ const (
 )
 
 type ecsClient interface {
-	ClusterARN(app, env string) (string, error)
-	EnvVars(app, env, svc string) ([]*awsecs.ContainerEnvVar, error)
-	Secrets(app, env, svc string) ([]*awsecs.ContainerSecret, error)
 	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
-	NetworkConfiguration(app, env, svc string) (*awsecs.NetworkConfiguration, error)
 }
 
 // ConfigStoreSvc wraps methods of config store.
@@ -107,20 +103,20 @@ func NewServiceDescriber(opt NewServiceConfig) (*ServiceDescriber, error) {
 
 // EnvVars returns the environment variables of the task definition.
 func (d *ServiceDescriber) EnvVars() ([]*awsecs.ContainerEnvVar, error) {
-	envVars, err := d.ecsClient.EnvVars(d.app, d.env, d.service)
+	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
 	if err != nil {
-		return nil, fmt.Errorf("describe environment variables for service %s: %w", d.service, err)
+		return nil, fmt.Errorf("describe task definition for service %s: %w", d.service, err)
 	}
-	return envVars, nil
+	return taskDefinition.EnvironmentVariables(), nil
 }
 
 // Secrets returns the secrets of the task definition.
 func (d *ServiceDescriber) Secrets() ([]*awsecs.ContainerSecret, error) {
-	secrets, err := d.ecsClient.Secrets(d.app, d.env, d.service)
+	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
 	if err != nil {
-		return nil, fmt.Errorf("describe secrets for service %s: %w", d.service, err)
+		return nil, fmt.Errorf("describe task definition for service %s: %w", d.service, err)
 	}
-	return secrets, nil
+	return taskDefinition.Secrets(), nil
 }
 
 // ServiceStackResources returns the filtered service stack resources created by CloudFormation.
