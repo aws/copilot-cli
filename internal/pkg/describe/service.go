@@ -27,7 +27,7 @@ const (
 
 type ecsClient interface {
 	TaskDefinition(taskDefName string) (*awsecs.TaskDefinition, error)
-	Service(clusterName, serviceName string) (*awsecs.Service, error)
+	NetworkConfiguration(cluster, serviceName string) (*awsecs.NetworkConfiguration, error)
 }
 
 type clusterDescriber interface {
@@ -133,22 +133,7 @@ func (d *ServiceDescriber) NetworkConfiguration() (*awsecs.NetworkConfiguration,
 	if err != nil {
 		return nil, fmt.Errorf("get cluster ARN for service %s: %w", d.service, err)
 	}
-
-	service, err := d.ecsClient.Service(clusterARN, d.service)
-	if err != nil {
-		return nil, fmt.Errorf("get service %s running on cluster %s: %w", d.service, clusterARN, err)
-	}
-
-	networkConfig := service.NetworkConfiguration
-	if networkConfig == nil || networkConfig.AwsvpcConfiguration == nil {
-		return nil, fmt.Errorf("cannot find the awsvpc configuration for service %s", d.service)
-	}
-
-	return &awsecs.NetworkConfiguration{
-		AssignPublicIp: aws.StringValue(networkConfig.AwsvpcConfiguration.AssignPublicIp),
-		SecurityGroups: aws.StringValueSlice(networkConfig.AwsvpcConfiguration.SecurityGroups),
-		Subnets:        aws.StringValueSlice(networkConfig.AwsvpcConfiguration.Subnets),
-	}, nil
+	return d.ecsClient.NetworkConfiguration(clusterARN, d.service)
 }
 
 // ServiceStackResources returns the filtered service stack resources created by CloudFormation.
@@ -210,7 +195,7 @@ type TaskDefinition struct {
 	Commands      []*awsecs.ContainerCommand
 }
 
-// TaskDefinition returns the task definition, including the container-level ones, of the service.
+// TaskDefinition returns the task definition, including the container-level information, of the service.
 func (d *ServiceDescriber) TaskDefinition() (*TaskDefinition, error) {
 	taskDefName := fmt.Sprintf("%s-%s-%s", d.app, d.env, d.service)
 	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)

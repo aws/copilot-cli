@@ -919,3 +919,87 @@ func TestECS_ExecuteCommand(t *testing.T) {
 		})
 	}
 }
+
+func TestECS_NetworkConfiguration(t *testing.T) {
+	testCases := map[string]struct {
+		mockAPI func(m *mocks.Mockapi)
+
+		wantedError                error
+		wantedNetworkConfiguration *NetworkConfiguration
+	}{
+		"success": {
+			mockAPI: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeServices(&ecs.DescribeServicesInput{
+					Cluster:  aws.String("crowded-cluster"),
+					Services: aws.StringSlice([]string{"cool-service"}),
+				}).Return(&ecs.DescribeServicesOutput{
+					Services: []*ecs.Service{
+						{
+							ServiceName: aws.String("cool-service"),
+							NetworkConfiguration: &ecs.NetworkConfiguration{
+								AwsvpcConfiguration: &ecs.AwsVpcConfiguration{
+									AssignPublicIp: aws.String("1.2.3.4"),
+									SecurityGroups: aws.StringSlice([]string{"sg-1", "sg-2"}),
+									Subnets:        aws.StringSlice([]string{"sbn-1", "sbn-2"}),
+								},
+							},
+						},
+					},
+				}, nil)
+			},
+			wantedNetworkConfiguration: &NetworkConfiguration{
+				AssignPublicIp: "1.2.3.4",
+				SecurityGroups: []string{"sg-1", "sg-2"},
+				Subnets:        []string{"sbn-1", "sbn-2"},
+			},
+		},
+		"fail to describe service": {
+			mockAPI: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeServices(&ecs.DescribeServicesInput{
+					Cluster:  aws.String("crowded-cluster"),
+					Services: aws.StringSlice([]string{"cool-service"}),
+				}).Return(nil, errors.New("some error"))
+			},
+			wantedError: fmt.Errorf("describe service cool-service: some error"),
+		},
+		"fail to find awsvpc configuration": {
+			mockAPI: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeServices(&ecs.DescribeServicesInput{
+					Cluster:  aws.String("crowded-cluster"),
+					Services: aws.StringSlice([]string{"cool-service"}),
+				}).Return(&ecs.DescribeServicesOutput{
+					Services: []*ecs.Service{
+						{
+							ServiceName: aws.String("cool-service"),
+						},
+					},
+				}, nil)
+			},
+			wantedError: errors.New("cannot find the awsvpc configuration for service cool-service"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockAPI := mocks.NewMockapi(ctrl)
+			tc.mockAPI(mockAPI)
+
+			e := ECS{
+				client: mockAPI,
+			}
+
+			inCluster := "crowded-cluster"
+			inServiceName := "cool-service"
+			got, err := e.NetworkConfiguration(inCluster, inServiceName)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedNetworkConfiguration, got)
+			}
+		})
+	}
+}

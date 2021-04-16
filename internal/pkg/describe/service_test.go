@@ -318,31 +318,13 @@ func TestServiceDescriber_NetworkConfiguration(t *testing.T) {
 			},
 			wantedError: errors.New("get cluster ARN for service svc: some error"),
 		},
-		"unable to get service": {
-			setupMocks: func(mocks svcDescriberMocks) {
-				mocks.mockClusterDescriber.EXPECT().ClusterARN(testApp, testEnv).Return("cluster-1", nil)
-				mocks.mockECSClient.EXPECT().Service("cluster-1", testSvc).Return(nil, errors.New("some error"))
-			},
-			wantedError: errors.New("get service svc running on cluster cluster-1: some error"),
-		},
-		"unable to find network configuration": {
-			setupMocks: func(mocks svcDescriberMocks) {
-				mocks.mockClusterDescriber.EXPECT().ClusterARN(testApp, testEnv).Return("cluster-1", nil)
-				mocks.mockECSClient.EXPECT().Service("cluster-1", testSvc).Return(&awsecs.Service{}, nil)
-			},
-			wantedError: errors.New("cannot find the awsvpc configuration for service svc"),
-		},
 		"successfully retrieve network configuration": {
 			setupMocks: func(mocks svcDescriberMocks) {
 				mocks.mockClusterDescriber.EXPECT().ClusterARN(testApp, testEnv).Return("cluster-1", nil)
-				mocks.mockECSClient.EXPECT().Service("cluster-1", testSvc).Return(&awsecs.Service{
-					NetworkConfiguration: &ecsapi.NetworkConfiguration{
-						AwsvpcConfiguration: &ecsapi.AwsVpcConfiguration{
-							AssignPublicIp: aws.String("1.2.3.4"),
-							SecurityGroups: aws.StringSlice([]string{"sg-1", "sg-2"}),
-							Subnets:        aws.StringSlice([]string{"sn-1", "sn-2"}),
-						},
-					},
+				mocks.mockECSClient.EXPECT().NetworkConfiguration("cluster-1", testSvc).Return(&awsecs.NetworkConfiguration{
+					AssignPublicIp: "1.2.3.4",
+					SecurityGroups: []string{"sg-1", "sg-2"},
+					Subnets:        []string{"sn-1", "sn-2"},
 				}, nil)
 			},
 			wantedNetworkConfig: &awsecs.NetworkConfiguration{

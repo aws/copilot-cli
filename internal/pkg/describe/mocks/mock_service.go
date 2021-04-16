@@ -35,19 +35,19 @@ func (m *MockecsClient) EXPECT() *MockecsClientMockRecorder {
 	return m.recorder
 }
 
-// Service mocks base method.
-func (m *MockecsClient) Service(clusterName, serviceName string) (*ecs.Service, error) {
+// NetworkConfiguration mocks base method.
+func (m *MockecsClient) NetworkConfiguration(cluster, serviceName string) (*ecs.NetworkConfiguration, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Service", clusterName, serviceName)
-	ret0, _ := ret[0].(*ecs.Service)
+	ret := m.ctrl.Call(m, "NetworkConfiguration", cluster, serviceName)
+	ret0, _ := ret[0].(*ecs.NetworkConfiguration)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Service indicates an expected call of Service.
-func (mr *MockecsClientMockRecorder) Service(clusterName, serviceName interface{}) *gomock.Call {
+// NetworkConfiguration indicates an expected call of NetworkConfiguration.
+func (mr *MockecsClientMockRecorder) NetworkConfiguration(cluster, serviceName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockecsClient)(nil).Service), clusterName, serviceName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkConfiguration", reflect.TypeOf((*MockecsClient)(nil).NetworkConfiguration), cluster, serviceName)
 }
 
 // TaskDefinition mocks base method.
