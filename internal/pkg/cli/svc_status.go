@@ -59,7 +59,7 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 				return fmt.Errorf("retrieve %s from application %s: %w", o.appName, o.svcName, err)
 			}
 			if wkld.Type == manifest.RequestDrivenWebServiceType {
-				d, err := describe.NewAppRunnerServiceDescriber(&describe.NewServiceStatusConfig{
+				d, err := describe.NewAppRunnerStatusDescriber(&describe.NewServiceStatusConfig{
 					App:         o.appName,
 					Env:         o.envName,
 					Svc:         o.svcName,
@@ -70,7 +70,7 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 				}
 				o.statusDescriber = d
 			} else {
-				d, err := describe.NewECSServiceDescriber(&describe.NewServiceStatusConfig{
+				d, err := describe.NewECSStatusDescriber(&describe.NewServiceStatusConfig{
 					App:         o.appName,
 					Env:         o.envName,
 					Svc:         o.svcName,

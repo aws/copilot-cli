@@ -30,6 +30,21 @@ type ecsClient interface {
 	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
 }
 
+type ecsSvcDescriber interface {
+	Params() (map[string]string, error)
+	EnvOutputs() (map[string]string, error)
+	EnvVars() ([]*awsecs.ContainerEnvVar, error)
+	Secrets() ([]*awsecs.ContainerSecret, error)
+	ServiceStackResources() ([]*cloudformation.StackResource, error)
+}
+
+type appRunnerSvcDescriber interface {
+	Params() (map[string]string, error)
+	EnvOutputs() (map[string]string, error)
+	SvcOutputs() (map[string]string, error)
+	ServiceStackResources() ([]*cloudformation.StackResource, error)
+}
+
 // ConfigStoreSvc wraps methods of config store.
 type ConfigStoreSvc interface {
 	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
@@ -166,4 +181,17 @@ func (d *ServiceDescriber) Params() (map[string]string, error) {
 		params[*param.ParameterKey] = *param.ParameterValue
 	}
 	return params, nil
+}
+
+// SvcOutputs returns the outputs of the service stack.
+func (d *ServiceDescriber) SvcOutputs() (map[string]string, error) {
+	svcStack, err := d.cfn.Describe(stack.NameForService(d.app, d.env, d.service))
+	if err != nil {
+		return nil, err
+	}
+	outputs := make(map[string]string)
+	for _, out := range svcStack.Outputs {
+		outputs[*out.OutputKey] = *out.OutputValue
+	}
+	return outputs, nil
 }

@@ -97,8 +97,8 @@ type NewServiceStatusConfig struct {
 	ConfigStore ConfigStoreSvc
 }
 
-// NewECSServiceDescriber instantiates a new ECSStatusDescriber struct.
-func NewECSServiceDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, error) {
+// NewECSStatusDescriber instantiates a new ECSStatusDescriber struct.
+func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, error) {
 	env, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
@@ -118,8 +118,8 @@ func NewECSServiceDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, e
 	}, nil
 }
 
-// NewAppRunnerServiceDescriber instantiates a new AppRunnerStatusDescriber struct.
-func NewAppRunnerServiceDescriber(opt *NewServiceStatusConfig) (*AppRunnerStatusDescriber, error) {
+// NewAppRunnerStatusDescriber instantiates a new AppRunnerStatusDescriber struct.
+func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*AppRunnerStatusDescriber, error) {
 	env, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)

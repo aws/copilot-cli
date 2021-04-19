@@ -419,6 +419,8 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 		} else {
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
+	case *manifest.RequestDrivenWebService:
+		conf, err = stack.NewRequestDrivenWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 	case *manifest.BackendService:
 		conf, err = stack.NewBackendService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 	default:
@@ -451,7 +453,15 @@ func (o *deploySvcOpts) showSvcURI() error {
 	var err error
 	switch o.targetSvc.Type {
 	case manifest.LoadBalancedWebServiceType:
-		svcDescriber, err = describe.NewWebServiceDescriber(describe.NewWebServiceConfig{
+		svcDescriber, err = describe.NewLBWebServiceDescriber(describe.NewLBWebServiceConfig{
+			NewServiceConfig: describe.NewServiceConfig{
+				App:         o.appName,
+				Svc:         o.name,
+				ConfigStore: o.store,
+			},
+		})
+	case manifest.RequestDrivenWebServiceType:
+		svcDescriber, err = describe.NewRDWebServiceDescriber(describe.NewRDWebServiceConfig{
 			NewServiceConfig: describe.NewServiceConfig{
 				App:         o.appName,
 				Svc:         o.name,

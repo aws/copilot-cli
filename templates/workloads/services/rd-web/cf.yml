@@ -69,13 +69,17 @@ Resources:
           ImageRepositoryType: ECR
           ImageConfiguration:
             Port: !Ref ContainerPort
-            # RuntimeEnvironmentVariables:
-            #   COPILOT_APPLICATION_NAME: !Ref AppName
-            #   COPILOT_ENVIRONMENT_NAME: !Ref EnvName
-            #   COPILOT_SERVICE_NAME: !Ref WorkloadName{{if .Variables}}{{range $name, $value := .Variables}}
-            #   {{$name}}: {{$value}}{{end}}{{end}}
+            RuntimeEnvironmentVariables:
+              - Name: COPILOT_APPLICATION_NAME
+                Value: !Ref AppName
+              - Name: COPILOT_ENVIRONMENT_NAME
+                Value: !Ref EnvName
+              - Name: COPILOT_SERVICE_NAME
+                Value: !Ref WorkloadName{{if .Variables}}{{range $name, $value := .Variables}}
+              - Name: {{$name}}
+                Value: {{$value}}{{end}}{{end}}
       InstanceConfiguration:
-        CPU: !Ref InstanceCPU
+        Cpu: !Ref InstanceCPU
         Memory: !Ref InstanceMemory
         InstanceRoleArn: !GetAtt InstanceRole.Arn
       HealthCheckConfiguration:
@@ -84,10 +88,15 @@ Resources:
         Timeout: !If [HasHealthCheckTimeout, !Ref HealthCheckTimeout, !Ref AWS::NoValue]
         HealthyThreshold: !If [HasHealthCheckHealthyThreshold, !Ref HealthCheckHealthyThreshold, !Ref AWS::NoValue]
         UnhealthyThreshold: !If [HasHealthCheckUnhealthyThreshold, !Ref HealthCheckUnhealthyThreshold, !Ref AWS::NoValue]
-      # {{if .Tags}}
-      # Tags:{{range $name, $value := .Tags}}
-      #   - Key: {{$name}}
-      #   - Value: {{$value}}{{end}}{{end}}
+      Tags:              
+        - Key: copilot-application
+          Value: !Ref AppName
+        - Key: copilot-environment
+          Value: !Ref EnvName
+        - Key: copilot-service
+          Value: !Ref WorkloadName{{if .Tags}}{{range $name, $value := .Tags}}
+        - Key: {{$name}}
+          Value: {{$value}}{{end}}{{end}}
 
 {{include "addons" . | indent 2}}
 

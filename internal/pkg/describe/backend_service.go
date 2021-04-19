@@ -28,7 +28,7 @@ type BackendServiceDescriber struct {
 	enableResources bool
 
 	store                DeployedEnvServicesLister
-	svcDescriber         map[string]svcDescriber
+	svcDescriber         map[string]ecsSvcDescriber
 	initServiceDescriber func(string) error
 }
 
@@ -46,7 +46,7 @@ func NewBackendServiceDescriber(opt NewBackendServiceConfig) (*BackendServiceDes
 		svc:             opt.Svc,
 		enableResources: opt.EnableResources,
 		store:           opt.DeployStore,
-		svcDescriber:    make(map[string]svcDescriber),
+		svcDescriber:    make(map[string]ecsSvcDescriber),
 	}
 	describer.initServiceDescriber = func(env string) error {
 		if _, ok := describer.svcDescriber[env]; ok {

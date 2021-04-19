@@ -18,11 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type backendSvcDescriberMocks struct {
-	storeSvc     *mocks.MockDeployedEnvServicesLister
-	svcDescriber *mocks.MocksvcDescriber
-}
-
 func TestBackendServiceDescriber_Describe(t *testing.T) {
 	const (
 		testApp = "phonetool"
@@ -35,13 +30,13 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 	testCases := map[string]struct {
 		shouldOutputResources bool
 
-		setupMocks func(mocks backendSvcDescriberMocks)
+		setupMocks func(mocks ecsSvcDescriberMocks)
 
 		wantedBackendSvc *backendSvcDesc
 		wantedError      error
 	}{
 		"return error if fail to list environment": {
-			setupMocks: func(m backendSvcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return(nil, mockErr),
 				)
@@ -49,7 +44,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("list deployed environments for application phonetool: some error"),
 		},
 		"return error if fail to retrieve service deployment configuration": {
-			setupMocks: func(m backendSvcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.svcDescriber.EXPECT().Params().Return(nil, mockErr),
@@ -58,7 +53,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("retrieve service deployment configuration: some error"),
 		},
 		"return error if fail to retrieve environment variables": {
-			setupMocks: func(m backendSvcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
@@ -73,7 +68,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
 		},
 		"return error if fail to retrieve secrets": {
-			setupMocks: func(m backendSvcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 
@@ -97,7 +92,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 		},
 		"success": {
 			shouldOutputResources: true,
-			setupMocks: func(m backendSvcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv, mockEnv}, nil),
 
@@ -273,8 +268,8 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
-			mockSvcDescriber := mocks.NewMocksvcDescriber(ctrl)
-			mocks := backendSvcDescriberMocks{
+			mockSvcDescriber := mocks.NewMockecsSvcDescriber(ctrl)
+			mocks := ecsSvcDescriberMocks{
 				storeSvc:     mockStore,
 				svcDescriber: mockSvcDescriber,
 			}
@@ -286,7 +281,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				svc:             testSvc,
 				enableResources: tc.shouldOutputResources,
 				store:           mockStore,
-				svcDescriber: map[string]svcDescriber{
+				svcDescriber: map[string]ecsSvcDescriber{
 					"test":    mockSvcDescriber,
 					"prod":    mockSvcDescriber,
 					"mockEnv": mockSvcDescriber,

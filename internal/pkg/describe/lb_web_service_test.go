@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestWebServiceURI_String(t *testing.T) {
+func TestLBWebServiceURI_String(t *testing.T) {
 	testCases := map[string]struct {
 		dnsName string
 		path    string
@@ -47,7 +47,7 @@ func TestWebServiceURI_String(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			uri := &WebServiceURI{
+			uri := &LBWebServiceURI{
 				DNSName: tc.dnsName,
 				Path:    tc.path,
 			}
@@ -57,12 +57,12 @@ func TestWebServiceURI_String(t *testing.T) {
 	}
 }
 
-type webSvcDescriberMocks struct {
+type ecsSvcDescriberMocks struct {
 	storeSvc     *mocks.MockDeployedEnvServicesLister
-	svcDescriber *mocks.MocksvcDescriber
+	svcDescriber *mocks.MockecsSvcDescriber
 }
 
-func TestWebServiceDescriber_URI(t *testing.T) {
+func TestLBWebServiceDescriber_URI(t *testing.T) {
 	const (
 		testApp          = "phonetool"
 		testEnv          = "test"
@@ -73,13 +73,13 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 	)
 	mockErr := errors.New("some error")
 	testCases := map[string]struct {
-		setupMocks func(mocks webSvcDescriberMocks)
+		setupMocks func(mocks ecsSvcDescriberMocks)
 
 		wantedURI   string
 		wantedError error
 	}{
 		"fail to get output of environment stack": {
-			setupMocks: func(m webSvcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.svcDescriber.EXPECT().EnvOutputs().Return(nil, mockErr),
 				)
@@ -87,7 +87,7 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 			wantedError: fmt.Errorf("get output for environment test: some error"),
 		},
 		"fail to get parameters of service stack": {
-			setupMocks: func(m webSvcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
@@ -99,7 +99,7 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 			wantedError: fmt.Errorf("get parameters for service jobs: some error"),
 		},
 		"https web service": {
-			setupMocks: func(m webSvcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
@@ -114,7 +114,7 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 			wantedURI: "https://jobs.test.phonetool.com",
 		},
 		"http web service": {
-			setupMocks: func(m webSvcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
@@ -135,17 +135,17 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockSvcDescriber := mocks.NewMocksvcDescriber(ctrl)
-			mocks := webSvcDescriberMocks{
+			mockSvcDescriber := mocks.NewMockecsSvcDescriber(ctrl)
+			mocks := ecsSvcDescriberMocks{
 				svcDescriber: mockSvcDescriber,
 			}
 
 			tc.setupMocks(mocks)
 
-			d := &WebServiceDescriber{
+			d := &LBWebServiceDescriber{
 				app: testApp,
 				svc: testSvc,
-				svcDescriber: map[string]svcDescriber{
+				svcDescriber: map[string]ecsSvcDescriber{
 					"test": mockSvcDescriber,
 				},
 				initServiceDescriber: func(string) error { return nil },
@@ -165,7 +165,7 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 	}
 }
 
-func TestWebServiceDescriber_Describe(t *testing.T) {
+func TestLBWebServiceDescriber_Describe(t *testing.T) {
 	const (
 		testApp          = "phonetool"
 		testEnv          = "test"
@@ -180,13 +180,13 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 	testCases := map[string]struct {
 		shouldOutputResources bool
 
-		setupMocks func(mocks webSvcDescriberMocks)
+		setupMocks func(mocks ecsSvcDescriberMocks)
 
 		wantedWebSvc *webSvcDesc
 		wantedError  error
 	}{
 		"return error if fail to list environment": {
-			setupMocks: func(m webSvcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return(nil, mockErr),
 				)
@@ -194,7 +194,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("list deployed environments for application phonetool: some error"),
 		},
 		"return error if fail to retrieve URI": {
-			setupMocks: func(m webSvcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.svcDescriber.EXPECT().EnvOutputs().Return(nil, mockErr),
@@ -203,7 +203,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("retrieve service URI: get output for environment test: some error"),
 		},
 		"return error if fail to retrieve service deployment configuration": {
-			setupMocks: func(m webSvcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
@@ -222,7 +222,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
 		},
 		"return error if fail to retrieve environment variables": {
-			setupMocks: func(m webSvcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
@@ -241,7 +241,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
 		},
 		"return error if fail to retrieve secrets": {
-			setupMocks: func(m webSvcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
@@ -269,7 +269,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 		},
 		"return error if fail to retrieve service resources": {
 			shouldOutputResources: true,
-			setupMocks: func(m webSvcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
@@ -308,7 +308,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 		},
 		"success": {
 			shouldOutputResources: true,
-			setupMocks: func(m webSvcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv}, nil),
 
@@ -462,20 +462,20 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
-			mockSvcDescriber := mocks.NewMocksvcDescriber(ctrl)
-			mocks := webSvcDescriberMocks{
+			mockSvcDescriber := mocks.NewMockecsSvcDescriber(ctrl)
+			mocks := ecsSvcDescriberMocks{
 				storeSvc:     mockStore,
 				svcDescriber: mockSvcDescriber,
 			}
 
 			tc.setupMocks(mocks)
 
-			d := &WebServiceDescriber{
+			d := &LBWebServiceDescriber{
 				app:             testApp,
 				svc:             testSvc,
 				enableResources: tc.shouldOutputResources,
 				store:           mockStore,
-				svcDescriber: map[string]svcDescriber{
+				svcDescriber: map[string]ecsSvcDescriber{
 					"test": mockSvcDescriber,
 					"prod": mockSvcDescriber,
 				},
@@ -496,7 +496,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 	}
 }
 
-func TestWebServiceDesc_String(t *testing.T) {
+func TestLBWebServiceDesc_String(t *testing.T) {
 	testCases := map[string]struct {
 		wantedHumanString string
 		wantedJSONString  string

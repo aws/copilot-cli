@@ -64,7 +64,7 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 		}
 		switch svc.Type {
 		case manifest.LoadBalancedWebServiceType:
-			d, err = describe.NewWebServiceDescriber(describe.NewWebServiceConfig{
+			d, err = describe.NewLBWebServiceDescriber(describe.NewLBWebServiceConfig{
 				NewServiceConfig: describe.NewServiceConfig{
 					App:         opts.appName,
 					Svc:         opts.svcName,
