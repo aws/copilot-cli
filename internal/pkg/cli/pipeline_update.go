@@ -103,6 +103,75 @@ func (o *updatePipelineOpts) Validate() error {
 	return nil
 }
 
+// Execute create a new pipeline or update the current pipeline if it already exists.
+func (o *updatePipelineOpts) Execute() error {
+	// bootstrap pipeline resources
+	o.prog.Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, color.HighlightUserInput(o.appName)))
+	err := o.pipelineDeployer.AddPipelineResourcesToApp(o.app, o.region)
+	if err != nil {
+		o.prog.Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, color.HighlightUserInput(o.appName)))
+		return fmt.Errorf("add pipeline resources to application %s in %s: %w", o.appName, o.region, err)
+	}
+	o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, color.HighlightUserInput(o.appName)))
+
+	// read pipeline manifest
+	data, err := o.ws.ReadPipelineManifest()
+	if err != nil {
+		return fmt.Errorf("read pipeline manifest: %w", err)
+	}
+	pipeline, err := manifest.UnmarshalPipeline(data)
+	if err != nil {
+		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
+	}
+	if len(pipeline.Name) > 100 {
+		return fmt.Errorf(`pipeline name '%s' must be shorter than 100 characters`, pipeline.Name)
+	}
+	o.pipelineName = pipeline.Name
+
+	// If the source has an existing connection, get the correlating ConnectionARN .
+	connection, ok := pipeline.Source.Properties["connection_name"]
+	if ok {
+		arn, err := o.codestar.GetConnectionARN((connection).(string))
+		if err != nil {
+			return fmt.Errorf("get connection ARN: %w", err)
+		}
+		pipeline.Source.Properties["connection_arn"] = arn
+	}
+
+	source, bool, err := deploy.PipelineSourceFromManifest(pipeline.Source)
+	if err != nil {
+		return fmt.Errorf("read source from manifest: %w", err)
+	}
+	o.shouldPromptUpdateConnection = bool
+
+	// convert environments to deployment stages
+	stages, err := o.convertStages(pipeline.Stages)
+	if err != nil {
+		return fmt.Errorf("convert environments to deployment stage: %w", err)
+	}
+
+	// get cross-regional resources
+	artifactBuckets, err := o.getArtifactBuckets()
+	if err != nil {
+		return fmt.Errorf("get cross-regional resources: %w", err)
+	}
+
+	deployPipelineInput := &deploy.CreatePipelineInput{
+		AppName:         o.appName,
+		Name:            pipeline.Name,
+		Source:          source,
+		Stages:          stages,
+		ArtifactBuckets: artifactBuckets,
+		AdditionalTags:  o.app.Tags,
+	}
+
+	if err := o.deployPipeline(deployPipelineInput); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
 	var stages []deploy.PipelineStage
 	workloads, err := o.ws.WorkloadNames()
@@ -212,75 +281,6 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 		return fmt.Errorf("update pipeline: %w", err)
 	}
 	o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateProposalComplete, color.HighlightUserInput(o.pipelineName)))
-	return nil
-}
-
-// Execute create a new pipeline or update the current pipeline if it already exists.
-func (o *updatePipelineOpts) Execute() error {
-	// bootstrap pipeline resources
-	o.prog.Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, color.HighlightUserInput(o.appName)))
-	err := o.pipelineDeployer.AddPipelineResourcesToApp(o.app, o.region)
-	if err != nil {
-		o.prog.Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, color.HighlightUserInput(o.appName)))
-		return fmt.Errorf("add pipeline resources to application %s in %s: %w", o.appName, o.region, err)
-	}
-	o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, color.HighlightUserInput(o.appName)))
-
-	// read pipeline manifest
-	data, err := o.ws.ReadPipelineManifest()
-	if err != nil {
-		return fmt.Errorf("read pipeline manifest: %w", err)
-	}
-	pipeline, err := manifest.UnmarshalPipeline(data)
-	if err != nil {
-		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
-	}
-	if len(pipeline.Name) > 100 {
-		return fmt.Errorf(`pipeline name '%s' must be shorter than 100 characters`, pipeline.Name)
-	}
-	o.pipelineName = pipeline.Name
-
-	// If the source has an existing connection, get the correlating ConnectionARN .
-	connection, ok := pipeline.Source.Properties["connection_name"]
-	if ok {
-		arn, err := o.codestar.GetConnectionARN((connection).(string))
-		if err != nil {
-			return fmt.Errorf("get connection ARN: %w", err)
-		}
-		pipeline.Source.Properties["connection_arn"] = arn
-	}
-
-	source, bool, err := deploy.PipelineSourceFromManifest(pipeline.Source)
-	if err != nil {
-		return fmt.Errorf("read source from manifest: %w", err)
-	}
-	o.shouldPromptUpdateConnection = bool
-
-	// convert environments to deployment stages
-	stages, err := o.convertStages(pipeline.Stages)
-	if err != nil {
-		return fmt.Errorf("convert environments to deployment stage: %w", err)
-	}
-
-	// get cross-regional resources
-	artifactBuckets, err := o.getArtifactBuckets()
-	if err != nil {
-		return fmt.Errorf("get cross-regional resources: %w", err)
-	}
-
-	deployPipelineInput := &deploy.CreatePipelineInput{
-		AppName:         o.appName,
-		Name:            pipeline.Name,
-		Source:          source,
-		Stages:          stages,
-		ArtifactBuckets: artifactBuckets,
-		AdditionalTags:  o.app.Tags,
-	}
-
-	if err := o.deployPipeline(deployPipelineInput); err != nil {
-		return err
-	}
-
 	return nil
 }
 
