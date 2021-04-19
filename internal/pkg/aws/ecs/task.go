@@ -204,58 +204,34 @@ func (t *TaskDefinition) Secrets() []*ContainerSecret {
 	return secrets
 }
 
-// ContainerImage holds basic info of an image.
-type ContainerImage struct {
-	Container string
-	Image     string
-}
-
-// Images returns the container images of the task definition.
-func (t *TaskDefinition) Images() []*ContainerImage {
-	var images []*ContainerImage
+// Image returns the container's image of the task definition.
+func (t *TaskDefinition) Image(containerName string) (string, error) {
 	for _, container := range t.ContainerDefinitions {
-		images = append(images, &ContainerImage{
-			Container: aws.StringValue(container.Name),
-			Image:     aws.StringValue(container.Image),
-		})
+		if aws.StringValue(container.Name) == containerName {
+			return aws.StringValue(container.Image), nil
+		}
 	}
-	return images
+	return "", fmt.Errorf("container %s not found", containerName)
 }
 
-// ContainerCommand holds basic info of a command override.
-type ContainerCommand struct {
-	Container string
-	Command   []string
-}
-
-// Commands returns the containers' command overrides of the task definition.
-func (t *TaskDefinition) Commands() []*ContainerCommand {
-	var commands []*ContainerCommand
+// Command returns the container's command overrides of the task definition.
+func (t *TaskDefinition) Command(containerName string) ([]string, error) {
 	for _, container := range t.ContainerDefinitions {
-		commands = append(commands, &ContainerCommand{
-			Container: aws.StringValue(container.Name),
-			Command:   aws.StringValueSlice(container.Command),
-		})
+		if aws.StringValue(container.Name) == containerName {
+			return aws.StringValueSlice(container.Command), nil
+		}
 	}
-	return commands
+	return nil, fmt.Errorf("container %s not found", containerName)
 }
 
-// ContainerEntrypoint holds basic info of a entrypoint override.
-type ContainerEntrypoint struct {
-	Container  string
-	EntryPoint []string
-}
-
-// EntryPoints returns the containers' entrypoint overrides of the task definition.
-func (t *TaskDefinition) EntryPoints() []*ContainerEntrypoint {
-	var entryPoints []*ContainerEntrypoint
+// EntryPoint returns the container's entrypoint overrides of the task definition.
+func (t *TaskDefinition) EntryPoint(containerName string) ([]string, error) {
 	for _, container := range t.ContainerDefinitions {
-		entryPoints = append(entryPoints, &ContainerEntrypoint{
-			Container:  aws.StringValue(container.Name),
-			EntryPoint: aws.StringValueSlice(container.EntryPoint),
-		})
+		if aws.StringValue(container.Name) == containerName {
+			return aws.StringValueSlice(container.EntryPoint), nil
+		}
 	}
-	return entryPoints
+	return nil, fmt.Errorf("container %s not found", containerName)
 }
 
 // TaskID parses the task ARN and returns the task ID.

@@ -4,6 +4,7 @@
 package ecs
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -434,12 +435,15 @@ func TestTaskDefinition_Secrets(t *testing.T) {
 	}
 }
 
-func TestTaskDefinition_Images(t *testing.T) {
+func TestTaskDefinition_Image(t *testing.T) {
 	testCases := map[string]struct {
-		inContainers []*ecs.ContainerDefinition
-		wantedImages []*ContainerImage
+		inContainers    []*ecs.ContainerDefinition
+		inContainerName string
+
+		wantedImage string
+		wantedError error
 	}{
-		"should return images of the task definition as a list of ContainerImage": {
+		"should return the container's image": {
 			inContainers: []*ecs.ContainerDefinition{
 				{
 					Name:  aws.String("container-1"),
@@ -450,17 +454,22 @@ func TestTaskDefinition_Images(t *testing.T) {
 					Image: aws.String("image-2"),
 				},
 			},
-
-			wantedImages: []*ContainerImage{
+			inContainerName: "container-2",
+			wantedImage:     "image-2",
+		},
+		"container not found": {
+			inContainers: []*ecs.ContainerDefinition{
 				{
-					Container: "container-1",
-					Image:     "image-1",
+					Name:  aws.String("container-1"),
+					Image: aws.String("image-1"),
 				},
 				{
-					Container: "container-2",
-					Image:     "image-2",
+					Name:  aws.String("container-2"),
+					Image: aws.String("image-2"),
 				},
 			},
+			inContainerName: "container-3",
+			wantedError:     errors.New("container container-3 not found"),
 		},
 	}
 
@@ -474,18 +483,24 @@ func TestTaskDefinition_Images(t *testing.T) {
 				ContainerDefinitions: tc.inContainers,
 			}
 
-			gotImages := taskDefinition.Images()
-
-			require.Equal(t, tc.wantedImages, gotImages)
+			gotImages, err := taskDefinition.Image(tc.inContainerName)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.Equal(t, tc.wantedImage, gotImages)
+			}
 		})
 
 	}
 }
 
-func TestTaskDefinition_Commands(t *testing.T) {
+func TestTaskDefinition_Command(t *testing.T) {
 	testCases := map[string]struct {
-		inContainers   []*ecs.ContainerDefinition
-		wantedCommands []*ContainerCommand
+		inContainers    []*ecs.ContainerDefinition
+		inContainerName string
+
+		wantedCommand []string
+		wantedError   error
 	}{
 		"should return command overrides of the task definition as a list of ContainerCommand": {
 			inContainers: []*ecs.ContainerDefinition{
@@ -501,21 +516,22 @@ func TestTaskDefinition_Commands(t *testing.T) {
 					Name: aws.String("container-3"),
 				},
 			},
-
-			wantedCommands: []*ContainerCommand{
+			inContainerName: "container-1",
+			wantedCommand:   []string{"echo", "strikes", "three"},
+		},
+		"container not found": {
+			inContainers: []*ecs.ContainerDefinition{
 				{
-					Container: "container-1",
-					Command:   []string{"echo", "strikes", "three"},
+					Name:    aws.String("container-1"),
+					Command: aws.StringSlice([]string{"echo", "strikes", "three"}),
 				},
 				{
-					Container: "container-2",
-					Command:   []string{"echo", "ball", "four"},
-				},
-				{
-					Container: "container-3",
-					Command:   []string{},
+					Name:    aws.String("container-2"),
+					Command: aws.StringSlice([]string{"echo", "ball", "four"}),
 				},
 			},
+			inContainerName: "container-3",
+			wantedError:     errors.New("container container-3 not found"),
 		},
 	}
 
@@ -529,18 +545,24 @@ func TestTaskDefinition_Commands(t *testing.T) {
 				ContainerDefinitions: tc.inContainers,
 			}
 
-			gotCommands := taskDefinition.Commands()
-
-			require.Equal(t, tc.wantedCommands, gotCommands)
+			gotCommands, err := taskDefinition.Command(tc.inContainerName)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.Equal(t, tc.wantedCommand, gotCommands)
+			}
 		})
 
 	}
 }
 
-func TestTaskDefinition_EntryPoints(t *testing.T) {
+func TestTaskDefinition_EntryPoint(t *testing.T) {
 	testCases := map[string]struct {
-		inContainers      []*ecs.ContainerDefinition
-		wantedEntryPoints []*ContainerEntrypoint
+		inContainers    []*ecs.ContainerDefinition
+		inContainerName string
+
+		wantedEntryPoints []string
+		wantedError       error
 	}{
 		"should return command overrides of the task definition as a list of ContainerCommand": {
 			inContainers: []*ecs.ContainerDefinition{
@@ -553,16 +575,22 @@ func TestTaskDefinition_EntryPoints(t *testing.T) {
 				},
 			},
 
-			wantedEntryPoints: []*ContainerEntrypoint{
+			inContainerName:   "container-1",
+			wantedEntryPoints: []string{"echo", "strikes", "three"},
+		},
+		"container not found": {
+			inContainers: []*ecs.ContainerDefinition{
 				{
-					Container:  "container-1",
-					EntryPoint: []string{"echo", "strikes", "three"},
+					Name:    aws.String("container-1"),
+					Command: aws.StringSlice([]string{"echo", "strikes", "three"}),
 				},
 				{
-					Container:  "container-2",
-					EntryPoint: []string{},
+					Name:    aws.String("container-2"),
+					Command: aws.StringSlice([]string{"echo", "ball", "four"}),
 				},
 			},
+			inContainerName: "container-3",
+			wantedError:     errors.New("container container-3 not found"),
 		},
 	}
 
@@ -576,9 +604,12 @@ func TestTaskDefinition_EntryPoints(t *testing.T) {
 				ContainerDefinitions: tc.inContainers,
 			}
 
-			gotEntryPoints := taskDefinition.EntryPoints()
-
-			require.Equal(t, tc.wantedEntryPoints, gotEntryPoints)
+			gotEntryPoints, err := taskDefinition.EntryPoint(tc.inContainerName)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.Equal(t, tc.wantedEntryPoints, gotEntryPoints)
+			}
 		})
 
 	}
