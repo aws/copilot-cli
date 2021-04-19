@@ -181,6 +181,7 @@ func (o *initAppOpts) Execute() error {
 		DomainName:         o.domainName,
 		DomainHostedZoneID: hostedZoneID,
 		AdditionalTags:     o.resourceTags,
+		Version:            deploy.LatestAppTemplateVersion,
 	})
 	if err != nil {
 		o.prog.Stop(log.Serrorf(fmtAppInitFailed, color.HighlightUserInput(o.name)))
