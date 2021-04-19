@@ -80,6 +80,9 @@ Resources:
             - ContainerPath: /etc/mount1
               ReadOnly: true
               SourceVolume: myEFSVolume
+          DockerLabels:
+            com.amazonaws.ecs.copilot.coollabel: Synecdoche
+            com.amazonaws.ecs.copilot.description: Hello orld!
         - Name: nginx
           Image: 'public.ecr.aws/nginx/nginx'
           LogConfiguration:
