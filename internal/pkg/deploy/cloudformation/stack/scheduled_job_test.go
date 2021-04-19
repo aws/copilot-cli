@@ -54,7 +54,8 @@ func TestScheduledJob_Template(t *testing.T) {
 	}{
 		"render template without addons successfully": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
-				m := mocks.NewMockscheduledJobParser(ctrl)
+				m := mocks.NewMockscheduledJobReadParser(ctrl)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseScheduledJob(gomock.Eq(template.WorkloadOpts{
 					ScheduleExpression: "cron(0 0 * * ? *)",
 					StateMachine: &template.StateMachineOpts{
@@ -67,6 +68,7 @@ func TestScheduledJob_Template(t *testing.T) {
 					},
 					EntryPoint: []string{"/bin/echo", "hello"},
 					Command:    []string{"world"},
+					EnvControllerLambda: "something",
 				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
 				j.parser = m
@@ -76,7 +78,8 @@ func TestScheduledJob_Template(t *testing.T) {
 		},
 		"render template with addons": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
-				m := mocks.NewMockscheduledJobParser(ctrl)
+				m := mocks.NewMockscheduledJobReadParser(ctrl)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseScheduledJob(gomock.Eq(template.WorkloadOpts{
 					NestedStack: &template.WorkloadNestedStackOpts{
 						StackName:       addon.StackName,
@@ -95,6 +98,7 @@ func TestScheduledJob_Template(t *testing.T) {
 					},
 					EntryPoint: []string{"/bin/echo", "hello"},
 					Command:    []string{"world"},
+					EnvControllerLambda: "something",
 				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{
 					tpl: `Resources:
@@ -130,7 +134,7 @@ Outputs:
 		},
 		"error parsing addons": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
-				m := mocks.NewMockscheduledJobParser(ctrl)
+				m := mocks.NewMockscheduledJobReadParser(ctrl)
 				addons := mockTemplater{err: errors.New("some error")}
 				j.parser = m
 				j.wkld.addons = addons
@@ -139,7 +143,8 @@ Outputs:
 		},
 		"template parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
-				m := mocks.NewMockscheduledJobParser(ctrl)
+				m := mocks.NewMockscheduledJobReadParser(ctrl)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseScheduledJob(gomock.Any()).Return(nil, errors.New("some error"))
 				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
 				j.parser = m
