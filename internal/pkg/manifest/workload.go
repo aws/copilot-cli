@@ -55,8 +55,9 @@ type Workload struct {
 
 // Image represents the workload's container image.
 type Image struct {
-	Build    BuildArgsOrString `yaml:"build"`    // Build an image from a Dockerfile.
-	Location *string           `yaml:"location"` // Use an existing image instead.
+	Build        BuildArgsOrString `yaml:"build"`       // Build an image from a Dockerfile.
+	Location     *string           `yaml:"location"`    // Use an existing image instead.
+	DockerLabels map[string]string `yaml:"labels,flow"` // Apply Docker labels to the container at runtime.
 }
 
 // GetLocation returns the location of the image.

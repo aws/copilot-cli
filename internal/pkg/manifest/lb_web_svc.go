@@ -53,7 +53,6 @@ type LoadBalancedWebServiceConfig struct {
 	*Logging      `yaml:"logging,flow"`
 	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
 	Network       NetworkConfig             `yaml:"network"`
-	DockerLabels  map[string]string         `yaml:"docker_labels,flow"`
 
 	// Fields that are used while marshaling the template for additional clarifications,
 	// but don't correspond to a field in the manifests.

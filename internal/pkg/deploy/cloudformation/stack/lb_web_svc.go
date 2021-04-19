@@ -132,7 +132,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		NestedStack:         outputs,
 		Sidecars:            sidecars,
 		LogConfig:           convertLogging(s.manifest.Logging),
-		DockerLabels:        s.manifest.DockerLabels,
+		DockerLabels:        s.manifest.ImageConfig.DockerLabels,
 		Autoscaling:         autoscaling,
 		ExecuteCommand:      convertExecuteCommand(&s.manifest.ExecuteCommand),
 		WorkloadType:        manifest.LoadBalancedWebServiceType,

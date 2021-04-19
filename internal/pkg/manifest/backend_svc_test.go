@@ -241,6 +241,9 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					Port: aws.Uint16(80),
 				},
 			},
+			DockerLabels: map[string]string{
+				"com.amazonaws.ecs.copilot.description": "Hello world!",
+			},
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(256),
@@ -285,6 +288,10 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						"exclude-pattern": "fe/",
 					},
 				},
+
+				DockerLabels: map[string]string{
+					"com.amazonaws.ecs.copilot.description": "Overridden!",
+				},
 			},
 		},
 	}
@@ -327,6 +334,9 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						ServiceImageWithPort: ServiceImageWithPort{
 							Port: aws.Uint16(80),
 						},
+					},
+					DockerLabels: map[string]string{
+						"com.amazonaws.ecs.copilot.description": "Overridden!",
 					},
 					TaskConfig: TaskConfig{
 						CPU:    aws.Int(512),
