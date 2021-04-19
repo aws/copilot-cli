@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"gopkg.in/yaml.v3"
 )
 
@@ -89,48 +88,10 @@ func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-// Spot is a custom type that can either be represented as a boolean, when
-// specified with a Range, or as an integer, which indicates the `desiredCount`
-// on a service that does not use application autoscaling.
-type Spot struct {
-	Enabled *bool
-	Base    *int
-}
-
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the Spot
-// struct, allowing it to be unmarshalled into either an int value provided by
-// Base or a boolean value provided by Enabled.
-// This method implements the yaml.Unmarshaler (v2) interface.
-func (s *Spot) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&s.Base); err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
-			return err
-		}
-	}
-
-	if aws.IntValue(s.Base) != 0 {
-		s.Enabled = nil
-		return nil
-	}
-
-	if err := unmarshal(&s.Enabled); err != nil {
-		return err
-	}
-
-	if s.Enabled != nil {
-		s.Base = nil
-		return nil
-	}
-
-	return nil
-}
-
-// Autoscaling represents the configurable options for Auto Scaling.
+// Autoscaling represents the configurable options for Auto Scaling as well as
+// Capacity configuration (spot).
 type Autoscaling struct {
-	Spot         *Spot          `yaml:"spot"`
+	Spot         *int           `yaml:"spot"` // mutually exclusive with Range
 	Range        *Range         `yaml:"range"`
 	CPU          *int           `yaml:"cpu_percentage"`
 	Memory       *int           `yaml:"memory_percentage"`
@@ -146,19 +107,10 @@ func (a *Autoscaling) IsEmpty() bool {
 
 // IsValid checks to make sure Spot fields are compatible with other values in Autoscaling
 func (a *Autoscaling) IsValid() bool {
-	spot := a.Spot
-	if spot != nil {
-		if spot.Base != nil && a.Range != nil {
-			return false
-		}
+	if a.Spot != nil && a.Range != nil {
+		return false
 	}
-
 	return true
-}
-
-// IsEmpty returns whether Spot is empty.
-func (s *Spot) IsEmpty() bool {
-	return s.Enabled == nil && s.Base == nil
 }
 
 // ServiceDockerfileBuildRequired returns if the service container image should be built from local Dockerfile.

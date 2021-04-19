@@ -58,13 +58,7 @@ environments:
     count: 3
   staging1:
     count:
-      spot: true
-      range: 1-10
-      cpu_percentage: 70
-  staging2:
-    count:
       spot: 5
-      cpu_percentage: 70
   prod:
     count:
       range: 1-10
@@ -140,23 +134,7 @@ environments:
 							TaskConfig: TaskConfig{
 								Count: Count{
 									Autoscaling: Autoscaling{
-										Range: &mockRange,
-										Spot: &Spot{
-											Enabled: aws.Bool(true),
-										},
-										CPU: aws.Int(70),
-									},
-								},
-							},
-						},
-						"staging2": {
-							TaskConfig: TaskConfig{
-								Count: Count{
-									Autoscaling: Autoscaling{
-										Spot: &Spot{
-											Base: aws.Int(5),
-										},
-										CPU: aws.Int(70),
+										Spot: aws.Int(5),
 									},
 								},
 							},
@@ -301,23 +279,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 `),
 			wantedStruct: Count{
 				Autoscaling: Autoscaling{
-					Spot: &Spot{
-						Base: aws.Int(42),
-					},
-				},
-			},
-		},
-		"With spot enabled with autoscaling range": {
-			inContent: []byte(`count:
-  range: 1-10
-  spot: true
-`),
-			wantedStruct: Count{
-				Autoscaling: Autoscaling{
-					Range: &mockRange,
-					Spot: &Spot{
-						Enabled: aws.Bool(true),
-					},
+					Spot: aws.Int(42),
 				},
 			},
 		},
@@ -349,10 +311,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.Autoscaling.Memory, b.Count.Autoscaling.Memory)
 				require.Equal(t, tc.wantedStruct.Autoscaling.Requests, b.Count.Autoscaling.Requests)
 				require.Equal(t, tc.wantedStruct.Autoscaling.ResponseTime, b.Count.Autoscaling.ResponseTime)
-				if tc.wantedStruct.Autoscaling.Spot != nil {
-					require.Equal(t, tc.wantedStruct.Autoscaling.Spot.Enabled, b.Count.Autoscaling.Spot.Enabled)
-					require.Equal(t, tc.wantedStruct.Autoscaling.Spot.Base, b.Count.Autoscaling.Spot.Base)
-				}
+				require.Equal(t, tc.wantedStruct.Autoscaling.Spot, b.Count.Autoscaling.Spot)
 			}
 		})
 	}
