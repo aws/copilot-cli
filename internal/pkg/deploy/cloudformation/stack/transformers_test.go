@@ -735,7 +735,7 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "validate managed EFS: cannot specify more than one managed volume per service",
+			wantErr: "cannot specify more than one managed volume per service",
 		},
 		"managed EFS and BYO": {
 			inVolumes: map[string]manifest.Volume{

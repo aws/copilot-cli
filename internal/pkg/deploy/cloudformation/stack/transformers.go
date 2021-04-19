@@ -43,10 +43,10 @@ var (
 	errNoSourceVolume  = errors.New(`"source_volume" cannot be empty`)
 
 	errUIDWithNonManagedFS = errors.New("UID and GID cannot be specified with non-managed EFS")
-	errInvalidUIDGIDConfig = errors.New("set managed filesystem access point creation info: must specify both UID and GID, or neither")
+	errInvalidUIDGIDConfig = errors.New("must specify both UID and GID, or neither")
 
 	errInvalidEFSConfig = errors.New("bad EFS configuration: cannot specify both bool and config")
-	errReservedUID      = errors.New("set managed filesystem access point creation info: UID must not be 0")
+	errReservedUID      = errors.New("UID must not be 0")
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
@@ -286,7 +286,7 @@ func convertManagedFSInfo(wlName *string, input map[string]manifest.Volume) (*te
 		}
 
 		if output != nil {
-			return nil, fmt.Errorf("validate managed EFS: cannot specify more than one managed volume per service")
+			return nil, fmt.Errorf("cannot specify more than one managed volume per service")
 		}
 
 		uid := volume.EFS.Config.UID
