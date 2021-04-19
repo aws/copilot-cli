@@ -41,11 +41,10 @@ var testRDWebServiceManifest = &manifest.RequestDrivenWebService{
 
 func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 	type testInput struct {
-		mft       *manifest.RequestDrivenWebService
-		env       string
-		app       string
-		kmsKeyArn string
-		rc        RuntimeConfig
+		mft *manifest.RequestDrivenWebService
+		env string
+		app string
+		rc  RuntimeConfig
 	}
 
 	testCases := map[string]struct {

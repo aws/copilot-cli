@@ -397,7 +397,7 @@ type dockerfileParser interface {
 }
 
 type statusDescriber interface {
-	Describe() (*describe.ServiceStatusDesc, error)
+	Describe() (describe.HumanJSONStringer, error)
 }
 
 type envDescriber interface {

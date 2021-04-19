@@ -11,7 +11,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	ecsapi "github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 
@@ -22,10 +24,12 @@ import (
 )
 
 type serviceStatusMocks struct {
-	ecsServiceGetter  *mocks.MockecsServiceGetter
-	alarmStatusGetter *mocks.MockalarmStatusGetter
-	serviceDescriber  *mocks.MockserviceDescriber
-	aas               *mocks.MockautoscalingAlarmNamesGetter
+	apprunnerServiceGetter *mocks.MockapprunnerServiceGetter
+	ecsServiceGetter       *mocks.MockecsServiceGetter
+	alarmStatusGetter      *mocks.MockalarmStatusGetter
+	serviceDescriber       *mocks.MockserviceDescriber
+	aas                    *mocks.MockautoscalingAlarmNamesGetter
+	logGetter              *mocks.MocklogGetter
 }
 
 func TestServiceStatus_Describe(t *testing.T) {
@@ -51,7 +55,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 		setupMocks func(mocks serviceStatusMocks)
 
 		wantedError   error
-		wantedContent *ServiceStatusDesc
+		wantedContent *ecsServiceStatus
 	}{
 		"errors if failed to describe a service": {
 			setupMocks: func(m serviceStatusMocks) {
@@ -192,7 +196,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 				)
 			},
 
-			wantedContent: &ServiceStatusDesc{
+			wantedContent: &ecsServiceStatus{
 				Service: awsecs.ServiceStatus{
 					DesiredCount:     1,
 					RunningCount:     1,
@@ -260,7 +264,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 
 			tc.setupMocks(mocks)
 
-			svcStatus := &ServiceStatus{
+			svcStatus := &ECSStatusDescriber{
 				svc:          "mockSvc",
 				env:          "mockEnv",
 				app:          "mockApp",
@@ -299,12 +303,12 @@ func TestServiceStatusDesc_String(t *testing.T) {
 	updateTime, _ := time.Parse(time.RFC3339, "2020-03-13T19:50:30+00:00")
 
 	testCases := map[string]struct {
-		desc  *ServiceStatusDesc
+		desc  *ecsServiceStatus
 		human string
 		json  string
 	}{
 		"while provisioning": {
-			desc: &ServiceStatusDesc{
+			desc: &ecsServiceStatus{
 				Service: awsecs.ServiceStatus{
 					DesiredCount:     1,
 					RunningCount:     0,
@@ -367,7 +371,7 @@ Alarms
 			json: "{\"Service\":{\"desiredCount\":1,\"runningCount\":0,\"status\":\"ACTIVE\",\"lastDeploymentAt\":\"2006-01-02T15:04:05Z\",\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":null,\"lastStatus\":\"PROVISIONING\",\"startedAt\":\"0001-01-01T00:00:00Z\",\"stoppedAt\":\"0001-01-01T00:00:00Z\",\"stoppedReason\":\"\",\"capacityProvider\":\"\"}],\"alarms\":[{\"arn\":\"mockAlarmArn1\",\"name\":\"mySupercalifragilisticexpialidociousAlarm\",\"condition\":\"RequestCount \\u003e 100.00 for 3 datapoints within 25 minutes\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"},{\"arn\":\"mockAlarmArn2\",\"name\":\"Um-dittle-ittl-um-dittle-I-Alarm\",\"condition\":\"CPUUtilization \\u003e 70.00 for 3 datapoints within 3 minutes\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"}]}\n",
 		},
 		"running": {
-			desc: &ServiceStatusDesc{
+			desc: &ecsServiceStatus{
 				Service: awsecs.ServiceStatus{
 					DesiredCount:     1,
 					RunningCount:     1,
@@ -434,6 +438,152 @@ Alarms
 		t.Run(name, func(t *testing.T) {
 			json, err := tc.desc.JSONString()
 			require.NoError(t, err)
+			require.Equal(t, tc.human, tc.desc.HumanString())
+			require.Equal(t, tc.json, json)
+		})
+	}
+}
+
+func TestServiceStatus_DescribeAppRunnerService(t *testing.T) {
+	updateTime := time.Unix(int64(1613145765), 0)
+	mockError := errors.New("some error")
+	mockAppRunnerServiceDesc := apprunner.Service{
+		ServiceARN:  "arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf",
+		Status:      "RUNNING",
+		DateUpdated: updateTime,
+	}
+	logEvents := []*cloudwatchlogs.Event{
+		{
+			LogStreamName: "events",
+			Message:       `[AppRunner] Service creation started.`,
+		},
+	}
+	testCases := map[string]struct {
+		setupMocks func(mocks serviceStatusMocks)
+		desc       *appRunnerServiceStatus
+
+		wantedError   error
+		wantedContent *appRunnerServiceStatus
+	}{
+		"errors if failed to describe a service": {
+			setupMocks: func(m serviceStatusMocks) {
+				gomock.InOrder(
+					m.apprunnerServiceGetter.EXPECT().DescribeService("arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf").Return(apprunner.Service{}, mockError),
+				)
+			},
+
+			wantedError: fmt.Errorf("get AppRunner service description for arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf: some error"),
+		},
+		"success": {
+			setupMocks: func(m serviceStatusMocks) {
+				m.apprunnerServiceGetter.EXPECT().DescribeService("arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf").Return(mockAppRunnerServiceDesc, nil)
+				m.logGetter.EXPECT().LogEvents(cloudwatchlogs.LogEventsOpts{LogGroup: "/aws/apprunner/my-service/fc1098ac269245959ba78fd58bdd4bf/service", Limit: aws.Int64(10)}).Return(&cloudwatchlogs.LogEventsOutput{
+					Events: logEvents,
+				}, nil)
+			},
+			wantedContent: &appRunnerServiceStatus{
+				Service: apprunner.Service{
+					ServiceARN:  "arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf",
+					Status:      "RUNNING",
+					DateUpdated: updateTime,
+				},
+				LogEvents: []*cloudwatchlogs.Event{
+					{
+						LogStreamName: "events",
+						Message:       `[AppRunner] Service creation started.`,
+					},
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockAppRunnerSvc := mocks.NewMockapprunnerServiceGetter(ctrl)
+			mockLogsSvc := mocks.NewMocklogGetter(ctrl)
+			mocks := serviceStatusMocks{
+				apprunnerServiceGetter: mockAppRunnerSvc,
+				logGetter:              mockLogsSvc,
+			}
+			tc.setupMocks(mocks)
+
+			svcStatus := &AppRunnerStatusDescriber{
+				apprunnerSvc: mockAppRunnerSvc,
+				svcARN:       "arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf",
+				eventsGetter: mockLogsSvc,
+			}
+
+			statusDesc, err := svcStatus.Describe()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedContent, statusDesc, "expected output content match")
+			}
+		})
+	}
+}
+
+func TestServiceStatusDesc_AppRunnerServiceString(t *testing.T) {
+	oldHumanize := humanizeTime
+	humanizeTime = func(then time.Time) string {
+		now := time.Unix(int64(1613145765), 0)
+		return humanize.Time(now)
+	}
+	defer func() {
+		humanizeTime = oldHumanize
+	}()
+
+	updateTime := time.Unix(int64(1613145765), 0)
+
+	logEvents := []*cloudwatchlogs.Event{
+		{
+			LogStreamName: "events",
+			Message:       `[AppRunner] Service creation started.`,
+			Timestamp:     1617894791771,
+		},
+	}
+
+	testCases := map[string]struct {
+		desc  *appRunnerServiceStatus
+		human string
+		json  string
+	}{
+		"RUNNING": {
+			desc: &appRunnerServiceStatus{
+				Service: apprunner.Service{
+					ServiceARN:  "mock-svc-arn",
+					Status:      "RUNNING",
+					DateUpdated: updateTime,
+				},
+				LogEvents: logEvents,
+			},
+			human: `Service Status
+
+ Status RUNNING 
+
+Last Deployment
+
+  Updated At        2 months ago
+  Target ARN        mock-svc-arn
+
+System Logs
+
+  2021-04-08T08:13:11-07:00    [AppRunner] Service creation started.
+`,
+			json: "{\"Service\":{\"ServiceARN\":\"mock-svc-arn\",\"Name\":\"\",\"ID\":\"\",\"Status\":\"RUNNING\",\"ServiceURL\":\"\",\"DateCreated\":\"0001-01-01T00:00:00Z\",\"DateUpdated\":\"2021-02-12T08:02:45-08:00\"},\"LogEvents\":[{\"logStreamName\":\"events\",\"ingestionTime\":0,\"message\":\"[AppRunner] Service creation started.\",\"timestamp\":1617894791771}]}\n",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			json, err := tc.desc.JSONString()
+			require.NoError(t, err)
+			print(tc.desc.HumanString())
 			require.Equal(t, tc.human, tc.desc.HumanString())
 			require.Equal(t, tc.json, json)
 		})

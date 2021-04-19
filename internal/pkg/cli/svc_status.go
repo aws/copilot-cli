@@ -10,6 +10,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -53,16 +54,33 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 		w:             log.OutputWriter,
 		sel:           selector.NewDeploySelect(prompt.New(), configStore, deployStore),
 		initStatusDescriber: func(o *svcStatusOpts) error {
-			d, err := describe.NewServiceStatus(&describe.NewServiceStatusConfig{
-				App:         o.appName,
-				Env:         o.envName,
-				Svc:         o.svcName,
-				ConfigStore: configStore,
-			})
+			wkld, err := configStore.GetWorkload(o.appName, o.svcName)
 			if err != nil {
-				return fmt.Errorf("creating status describer for service %s in application %s: %w", o.svcName, o.appName, err)
+				return fmt.Errorf("retrieve %s from application %s: %w", o.appName, o.svcName, err)
 			}
-			o.statusDescriber = d
+			if wkld.Type == manifest.RequestDrivenWebServiceType {
+				d, err := describe.NewAppRunnerServiceDescriber(&describe.NewServiceStatusConfig{
+					App:         o.appName,
+					Env:         o.envName,
+					Svc:         o.svcName,
+					ConfigStore: configStore,
+				})
+				if err != nil {
+					return fmt.Errorf("creating status describer for apprunner service %s in application %s: %w", o.svcName, o.appName, err)
+				}
+				o.statusDescriber = d
+			} else {
+				d, err := describe.NewECSServiceDescriber(&describe.NewServiceStatusConfig{
+					App:         o.appName,
+					Env:         o.envName,
+					Svc:         o.svcName,
+					ConfigStore: configStore,
+				})
+				if err != nil {
+					return fmt.Errorf("creating status describer for service %s in application %s: %w", o.svcName, o.appName, err)
+				}
+				o.statusDescriber = d
+			}
 			return nil
 		},
 	}, nil
