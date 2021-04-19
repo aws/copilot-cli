@@ -6,6 +6,7 @@ package cloudformation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -158,13 +159,16 @@ func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, t
 		// Attempt to update the stack template.
 		err = cf.cfnClient.UpdateAndWait(s)
 		if err == nil { // Success.
-			break
+			return nil
 		}
-		wait, err := upgradeStackUpdateErrorHandling(s.Name, err)
-		if wait {
+		if retryable := isRetryableUpdateError(s.Name, err); retryable {
 			continue
 		}
-		return err
+		// The changes are already applied, nothing to do. Exit successfully.
+		var emptyChangeSet *cloudformation.ErrChangeSetEmpty
+		if errors.As(err, &emptyChangeSet) {
+			return nil
+		}
+		return fmt.Errorf("update and wait for stack %s: %w", s.Name, err)
 	}
-	return nil
 }

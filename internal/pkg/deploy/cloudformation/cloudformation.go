@@ -429,20 +429,14 @@ func stopSpinner(spinner *progress.Spinner, err error, label string) {
 	spinner.Stop(log.Serrorf("%s\n", label))
 }
 
-// upgradeStackUpdateErrorHandling is used to handle the error returned by CFN
-// stack update when upgrading the application/environment. It returns true if the CFN stack
-// is being updated.
-func upgradeStackUpdateErrorHandling(name string, err error) (bool, error) {
-	var emptyChangeSet *cloudformation.ErrChangeSetEmpty
+// isRetryableUpdateError returns true if the stack update error is retryable.
+func isRetryableUpdateError(name string, err error) bool {
 	var alreadyInProgErr *cloudformation.ErrStackUpdateInProgress
 	var obsoleteChangeSetErr *cloudformation.ErrChangeSetNotExecutable
 	switch updateErr := err; {
-	case errors.As(updateErr, &emptyChangeSet):
-		// The changes are already applied, nothing to do. Exit successfully.
-		return false, nil
 	case errors.As(updateErr, &alreadyInProgErr):
 		// There is another update going on, retry the upgrade.
-		return true, nil
+		return true
 	case errors.As(updateErr, &obsoleteChangeSetErr):
 		// If there are two "upgrade" calls happening in parallel, it's possible that
 		// both invocations created a changeset to upgrade the stack.
@@ -451,8 +445,8 @@ func upgradeStackUpdateErrorHandling(name string, err error) (bool, error) {
 		//
 		// In that scenario, we should loop again, wait until the stack is updated,
 		// and exit due to changeset is empty.
-		return true, nil
+		return true
 	default:
-		return false, fmt.Errorf("update and wait for stack %s: %w", name, err)
+		return false
 	}
 }

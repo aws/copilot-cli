@@ -85,7 +85,10 @@ func NewAppStackConfig(in *deploy.CreateAppInput) *AppStackConfig {
 
 // Template returns the environment CloudFormation template.
 func (c *AppStackConfig) Template() (string, error) {
-	content, err := c.parser.Read(appTemplatePath(c.Version))
+	// content, err := c.parser.Read(appTemplatePath(c.Version))
+	content, err := c.parser.Parse(appTemplatePath(c.Version), struct {
+		TemplateVersion string
+	}{c.Version})
 	if err != nil {
 		return "", err
 	}
@@ -100,10 +103,12 @@ func (c *AppStackConfig) ResourceTemplate(config *AppResourcesConfig) (string, e
 
 	content, err := c.parser.Parse(appResourcesTemplatePath(c.Version), struct {
 		*AppResourcesConfig
-		ServiceTagKey string
+		ServiceTagKey   string
+		TemplateVersion string
 	}{
 		config,
 		deploy.ServiceTagKey,
+		c.Version,
 	}, template.WithFuncs(cfTemplateFunctions))
 	if err != nil {
 		return "", err

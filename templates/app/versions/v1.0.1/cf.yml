@@ -128,4 +128,4 @@ Outputs:
 {{- end}}
   TemplateVersion:
     Description: Required output to force the stackset to update if mutating version.
-    Value: "v1.0.1"
+    Value: {{.TemplateVersion}}

@@ -182,6 +182,9 @@ func TestStackSet_Update(t *testing.T) {
 							Value: aws.String("boss"),
 						},
 					},
+					OperationPreferences: &cloudformation.StackSetOperationPreferences{
+						RegionConcurrencyType: aws.String(cloudformation.RegionConcurrencyTypeParallel),
+					},
 					TemplateBody: aws.String(testTemplate),
 				}).Return(&cloudformation.UpdateStackSetOutput{
 					OperationId: aws.String(testOperationID),

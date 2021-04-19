@@ -106,11 +106,15 @@ func (cf CloudFormation) upgradeAppStack(s *cloudformation.Stack) error {
 		if err == nil { // Success.
 			return nil
 		}
-		wait, err := upgradeStackUpdateErrorHandling(s.Name, err)
-		if wait {
+		if retryable := isRetryableUpdateError(s.Name, err); retryable {
 			continue
 		}
-		return err
+		// The changes are already applied, nothing to do. Exit successfully.
+		var emptyChangeSet *cloudformation.ErrChangeSetEmpty
+		if errors.As(err, &emptyChangeSet) {
+			return nil
+		}
+		return fmt.Errorf("update and wait for stack %s: %w", s.Name, err)
 	}
 }
 
@@ -122,6 +126,7 @@ func (cf CloudFormation) DelegateDNSPermissions(app *config.Application, account
 		AccountID:          app.AccountID,
 		DomainName:         app.Domain,
 		DomainHostedZoneID: app.DomainHostedZoneID,
+		Version:            deploy.LatestAppTemplateVersion,
 	}
 
 	appConfig := stack.NewAppStackConfig(&deployApp)
@@ -231,6 +236,7 @@ func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string
 		Name:           app.Name,
 		AccountID:      app.AccountID,
 		AdditionalTags: app.Tags,
+		Version:        deploy.LatestAppTemplateVersion,
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
 	if err != nil {
@@ -288,6 +294,7 @@ func (cf CloudFormation) removeWorkloadFromApp(app *config.Application, wlName s
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:      app.Name,
 		AccountID: app.AccountID,
+		Version:   deploy.LatestAppTemplateVersion,
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
 	if err != nil {
@@ -340,6 +347,7 @@ func (cf CloudFormation) AddEnvToApp(opts *AddEnvToAppOpts) error {
 		Name:           opts.App.Name,
 		AccountID:      opts.App.AccountID,
 		AdditionalTags: opts.App.Tags,
+		Version:        deploy.LatestAppTemplateVersion,
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
 	if err != nil {
@@ -396,6 +404,7 @@ func (cf CloudFormation) AddPipelineResourcesToApp(
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:      app.Name,
 		AccountID: app.AccountID,
+		Version:   deploy.LatestAppTemplateVersion,
 	})
 
 	// conditionally create a new stack instance in the application region

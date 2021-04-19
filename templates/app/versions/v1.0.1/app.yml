@@ -175,4 +175,4 @@ Outputs:
     Value: !GetAtt AdministrationRole.Arn
   TemplateVersion:
     Description: Required output to force the stack to update if mutating version.
-    Value: "v1.0.1"
+    Value: {{.TemplateVersion}}

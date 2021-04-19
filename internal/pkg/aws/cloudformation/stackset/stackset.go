@@ -202,6 +202,9 @@ func (ss *StackSet) update(name, template string, opts ...CreateOrUpdateOption) 
 	in := &cloudformation.UpdateStackSetInput{
 		StackSetName: aws.String(name),
 		TemplateBody: aws.String(template),
+		OperationPreferences: &cloudformation.StackSetOperationPreferences{
+			RegionConcurrencyType: aws.String(cloudformation.RegionConcurrencyTypeParallel),
+		},
 	}
 	for _, opt := range opts {
 		opt(in)
@@ -232,6 +235,7 @@ func (ss *StackSet) createInstances(name string, accounts, regions []string) (st
 	return aws.StringValue(resp.OperationId), nil
 }
 
+// WaitForStackSetLastOperationComplete waits until the stackset's last operation completes.
 func (ss *StackSet) WaitForStackSetLastOperationComplete(name string) error {
 	for {
 		resp, err := ss.client.ListStackSetOperations(&cloudformation.ListStackSetOperationsInput{
