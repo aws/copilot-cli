@@ -18,14 +18,14 @@ type ecsServiceGetter interface {
 	NetworkConfiguration(cluster, serviceName string) (*ecs.NetworkConfiguration, error)
 }
 
-//TODO
+// ECSServiceCommandGenerator generates task run command given an ECS service.
 type ECSServiceCommandGenerator struct {
 	Cluster          string
 	Service          string
 	ECSServiceGetter ecsServiceGetter
 }
 
-// Generate TODO
+// Generate generates a task run command.
 func (g ECSServiceCommandGenerator) Generate() (*GenerateCommandOpts, error) {
 	networkConfig, err := g.ECSServiceGetter.NetworkConfiguration(g.Cluster, g.Service)
 	if err != nil {

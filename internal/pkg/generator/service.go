@@ -17,6 +17,7 @@ type ecsInformationGetter interface {
 	ClusterARN(app, env string) (string, error)
 }
 
+// ServiceCommandGenerator generates task run command given a Copilot service.
 type ServiceCommandGenerator struct {
 	App     string
 	Env     string
@@ -25,6 +26,7 @@ type ServiceCommandGenerator struct {
 	ECSInformationGetter ecsInformationGetter
 }
 
+// Generate generates a task run command.
 func (g ServiceCommandGenerator) Generate() (*GenerateCommandOpts, error) {
 	networkConfig, err := g.ECSInformationGetter.NetworkConfiguration(g.App, g.Env, g.Service)
 	if err != nil {

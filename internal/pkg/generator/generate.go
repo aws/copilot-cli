@@ -33,17 +33,17 @@ type containerInfo struct {
 func containerInformation(taskDef *ecs.TaskDefinition, containerName string) (*containerInfo, error) {
 	image, err := taskDef.Image(containerName)
 	if err != nil {
-		return nil, err // TODO
+		return nil, err
 	}
 
 	entrypoint, err := taskDef.EntryPoint(containerName)
 	if err != nil {
-		return nil, err // TODO
+		return nil, err
 	}
 
 	command, err := taskDef.Command(containerName)
 	if err != nil {
-		return nil, err // TODO
+		return nil, err
 	}
 
 	envVars := make(map[string]string)
