@@ -36,7 +36,7 @@ const (
 // Supported capacity providers for Fargate services
 const (
 	capacityProviderFargateSpot = "FARGATE_SPOT"
-	capacityProviderFargate     = "FARGATE"
+	// capacityProviderFargate     = "FARGATE"
 )
 
 // Validation errors when rendering manifest into template.
