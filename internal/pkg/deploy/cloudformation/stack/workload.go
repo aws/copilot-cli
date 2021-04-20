@@ -102,9 +102,9 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 		if w.tc.Count.Autoscaling.IgnoreRange() {
 			desiredCount = w.tc.Count.Autoscaling.Spot
 		} else {
-			min, _, err := w.tc.Count.Autoscaling.Range.Parse()
+			min, _, err := w.tc.Count.Autoscaling.Range.Parse() // TODO fix
 			if err != nil {
-				return nil, fmt.Errorf("parse task count value %s: %w", aws.StringValue((*string)(w.tc.Count.Autoscaling.Range)), err)
+				return nil, fmt.Errorf("parse task count value %s: %w", aws.StringValue((*string)(w.tc.Count.Autoscaling.Range.Range)), err)
 			}
 			desiredCount = aws.Int(min)
 		}

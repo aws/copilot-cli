@@ -59,6 +59,12 @@ environments:
   staging1:
     count:
       spot: 5
+  staging2:
+    count:
+      range:
+        min: 2
+        max: 8
+        spot_from: 4
   prod:
     count:
       range: 1-10
@@ -139,12 +145,29 @@ environments:
 								},
 							},
 						},
+						"staging2": {
+							TaskConfig: TaskConfig{
+								Count: Count{
+									Autoscaling: Autoscaling{
+										Range: &RangeOpts{
+											RangeConfig: RangeConfig{
+												Min:      aws.Int(2),
+												Max:      aws.Int(8),
+												SpotFrom: aws.Int(4),
+											},
+										},
+									},
+								},
+							},
+						},
 						"prod": {
 							TaskConfig: TaskConfig{
 								Count: Count{
 									Autoscaling: Autoscaling{
-										Range: &mockRange,
-										CPU:   aws.Int(70),
+										Range: &RangeOpts{
+											Range: &mockRange,
+										},
+										CPU: aws.Int(70),
 									},
 								},
 							},
@@ -265,7 +288,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 `),
 			wantedStruct: Count{
 				Autoscaling: Autoscaling{
-					Range:        &mockRange,
+					Range:        &RangeOpts{Range: &mockRange},
 					CPU:          aws.Int(70),
 					Memory:       aws.Int(80),
 					Requests:     aws.Int(1000),
@@ -280,6 +303,42 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 			wantedStruct: Count{
 				Autoscaling: Autoscaling{
 					Spot: aws.Int(42),
+				},
+			},
+		},
+		"With range specified as min-max": {
+			inContent: []byte(`count:
+  range:
+    min: 5
+    max: 15
+`),
+			wantedStruct: Count{
+				Autoscaling: Autoscaling{
+					Range: &RangeOpts{
+						RangeConfig: RangeConfig{
+							Min: aws.Int(5),
+							Max: aws.Int(15),
+						},
+					},
+				},
+			},
+		},
+		"With all RangeConfig fields specified": {
+			inContent: []byte(`count:
+  range:
+    min: 2
+    max: 8
+    spot_from: 3
+`),
+			wantedStruct: Count{
+				Autoscaling: Autoscaling{
+					Range: &RangeOpts{
+						RangeConfig: RangeConfig{
+							Min:      aws.Int(2),
+							Max:      aws.Int(8),
+							SpotFrom: aws.Int(3),
+						},
+					},
 				},
 			},
 		},
@@ -351,6 +410,53 @@ func TestRange_Parse(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			r := Range(tc.inRange)
 			gotMin, gotMax, err := r.Parse()
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, gotMin, tc.wantedMin)
+				require.Equal(t, gotMax, tc.wantedMax)
+			}
+		})
+	}
+}
+
+func TestRangeOpts_Parse(t *testing.T) {
+	mockRange := Range("1-10")
+	testCases := map[string]struct {
+		input RangeOpts
+
+		wantedMin int
+		wantedMax int
+		wantedErr error
+	}{
+		"error when both range and RangeConfig specified": {
+			input: RangeOpts{
+				Range: &mockRange,
+				RangeConfig: RangeConfig{
+					Min: aws.Int(1),
+					Max: aws.Int(3),
+				},
+			},
+
+			wantedErr: errInvalidRangeOpts,
+		},
+		"success": {
+			input: RangeOpts{
+				RangeConfig: RangeConfig{
+					Min: aws.Int(2),
+					Max: aws.Int(8),
+				},
+			},
+
+			wantedMin: 2,
+			wantedMax: 8,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotMin, gotMax, err := tc.input.Parse()
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())

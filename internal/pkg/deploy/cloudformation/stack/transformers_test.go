@@ -127,8 +127,10 @@ func Test_convertCapacityProviders(t *testing.T) {
 		},
 		"errors if spot specified with range": {
 			input: &manifest.Autoscaling{
-				Range: &mockRange,
-				Spot:  aws.Int(3),
+				Range: &manifest.RangeOpts{
+					Range: &mockRange,
+				},
+				Spot: aws.Int(3),
 			},
 			wantedErr: errInvalidSpotConfig,
 		},
@@ -161,14 +163,18 @@ func Test_convertAutoscaling(t *testing.T) {
 	}{
 		"invalid range": {
 			input: &manifest.Autoscaling{
-				Range: &badRange,
+				Range: &manifest.RangeOpts{
+					Range: &badRange,
+				},
 			},
 
 			wantedErr: fmt.Errorf("invalid range value badRange. Should be in format of ${min}-${max}"),
 		},
 		"success": {
 			input: &manifest.Autoscaling{
-				Range:        &mockRange,
+				Range: &manifest.RangeOpts{
+					Range: &mockRange,
+				},
 				CPU:          aws.Int(70),
 				Memory:       aws.Int(80),
 				Requests:     aws.Int(mockRequests),
