@@ -100,7 +100,7 @@ func Test_convertSidecar(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, got[0], tc.wanted)
+				require.Equal(t, tc.wanted, got[0])
 			}
 		})
 	}
@@ -108,20 +108,63 @@ func Test_convertSidecar(t *testing.T) {
 
 func Test_convertCapacityProviders(t *testing.T) {
 	mockRange := manifest.Range("1-10")
+	minCapacity := 1
+	spotFrom := 3
 	testCases := map[string]struct {
-		input     *manifest.Autoscaling
-		wanted    []*template.CapacityProviderStrategy
-		wantedErr error
+		input       *manifest.Autoscaling
+		expected    []*template.CapacityProviderStrategy
+		expectedErr error
 	}{
 		"with spot as desiredCount": {
 			input: &manifest.Autoscaling{
 				Spot: aws.Int(3),
 			},
 
-			wanted: []*template.CapacityProviderStrategy{
+			expected: []*template.CapacityProviderStrategy{
 				{
 					Weight:           aws.Int(1),
 					CapacityProvider: capacityProviderFargateSpot,
+				},
+			},
+		},
+		"with scaling only on spot": {
+			input: &manifest.Autoscaling{
+				Range: &manifest.RangeOpts{
+					RangeConfig: manifest.RangeConfig{
+						Min:      aws.Int(minCapacity),
+						Max:      aws.Int(10),
+						SpotFrom: aws.Int(minCapacity),
+					},
+				},
+			},
+
+			expected: []*template.CapacityProviderStrategy{
+				{
+					Weight:           aws.Int(1),
+					CapacityProvider: capacityProviderFargateSpot,
+				},
+			},
+		},
+		"with scaling into spot": {
+			input: &manifest.Autoscaling{
+				Range: &manifest.RangeOpts{
+					RangeConfig: manifest.RangeConfig{
+						Min:      aws.Int(minCapacity),
+						Max:      aws.Int(10),
+						SpotFrom: aws.Int(spotFrom),
+					},
+				},
+			},
+
+			expected: []*template.CapacityProviderStrategy{
+				{
+					Weight:           aws.Int(1),
+					CapacityProvider: capacityProviderFargateSpot,
+				},
+				{
+					Base:             aws.Int(spotFrom - 1),
+					Weight:           aws.Int(0),
+					CapacityProvider: capacityProviderFargate,
 				},
 			},
 		},
@@ -132,19 +175,19 @@ func Test_convertCapacityProviders(t *testing.T) {
 				},
 				Spot: aws.Int(3),
 			},
-			wantedErr: errInvalidSpotConfig,
+			expectedErr: errInvalidSpotConfig,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := convertCapacityProviders(tc.input)
+			actual, err := convertCapacityProviders(tc.input)
 
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, got, tc.wanted)
+				require.Equal(t, tc.expected, actual)
 			}
 		})
 	}
@@ -190,6 +233,30 @@ func Test_convertAutoscaling(t *testing.T) {
 				ResponseTime: aws.Float64(0.512),
 			},
 		},
+		"success with range subfields": {
+			input: &manifest.Autoscaling{
+				Range: &manifest.RangeOpts{
+					RangeConfig: manifest.RangeConfig{
+						Min:      aws.Int(5),
+						Max:      aws.Int(10),
+						SpotFrom: aws.Int(5),
+					},
+				},
+				CPU:          aws.Int(70),
+				Memory:       aws.Int(80),
+				Requests:     aws.Int(mockRequests),
+				ResponseTime: &mockResponseTime,
+			},
+
+			wanted: &template.AutoscalingOpts{
+				MaxCapacity:  aws.Int(10),
+				MinCapacity:  aws.Int(5),
+				CPU:          aws.Float64(70),
+				Memory:       aws.Float64(80),
+				Requests:     aws.Float64(1000),
+				ResponseTime: aws.Float64(0.512),
+			},
+		},
 		"returns nil if spot specified": {
 			input: &manifest.Autoscaling{
 				Spot: aws.Int(5),
@@ -205,7 +272,7 @@ func Test_convertAutoscaling(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, got, tc.wanted)
+				require.Equal(t, tc.wanted, got)
 			}
 		})
 	}
@@ -769,7 +836,7 @@ func Test_convertExecuteCommand(t *testing.T) {
 			exec := tc.inConfig
 			got := convertExecuteCommand(&exec)
 
-			require.Equal(t, got, tc.wanted)
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }

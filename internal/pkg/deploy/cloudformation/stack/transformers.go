@@ -36,7 +36,7 @@ const (
 // Supported capacity providers for Fargate services
 const (
 	capacityProviderFargateSpot = "FARGATE_SPOT"
-	// capacityProviderFargate     = "FARGATE"
+	capacityProviderFargate     = "FARGATE"
 )
 
 // Validation errors when rendering manifest into template.
@@ -113,6 +113,7 @@ func convertCapacityProviders(a *manifest.Autoscaling) ([]*template.CapacityProv
 		return nil, errInvalidSpotConfig
 	}
 
+	// User case 1: if spot count specified
 	var cps []*template.CapacityProviderStrategy
 
 	// if Base is not nil, then that's what the desired count should be on the service
@@ -123,6 +124,31 @@ func convertCapacityProviders(a *manifest.Autoscaling) ([]*template.CapacityProv
 		CapacityProvider: capacityProviderFargateSpot,
 	}
 	cps = append(cps, spotCapacity)
+
+	// Return if only spot is specifed as count
+	if a.Range == nil {
+		return cps, nil
+	}
+
+	// Scaling with spot
+	rc := a.Range.RangeConfig
+	if !rc.IsEmpty() {
+		spotFrom := aws.IntValue(rc.SpotFrom)
+		min := aws.IntValue(rc.Min)
+
+		// If spotFrom value is not equal to the autoscaling min, then
+		// the base value on the Fargate Capacity provider must be set
+		// to one less than spotFrom
+		if spotFrom > min {
+			base := spotFrom - 1
+			fgCapacity := &template.CapacityProviderStrategy{
+				Base:             aws.Int(base),
+				Weight:           aws.Int(0),
+				CapacityProvider: capacityProviderFargate,
+			}
+			cps = append(cps, fgCapacity)
+		}
+	}
 
 	return cps, nil
 }
