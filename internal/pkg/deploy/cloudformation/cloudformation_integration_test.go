@@ -114,6 +114,10 @@ func Test_App_Infrastructure(t *testing.T) {
 					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("role/%s-adminrole", app.Name)),
 					fmt.Sprintf("AdministrationRoleARN should be named {app}-adminrole but was %s", *output.OutputValue))
 			},
+			"TemplateVersion": func(output *awsCF.Output) {
+				require.Equal(t, *output.OutputValue, deploy.LatestAppTemplateVersion,
+					fmt.Sprintf("TemplateVersion should be %s but was %s", deploy.LatestAppTemplateVersion, *output.OutputValue))
+			},
 		}
 		require.True(t, len(deployedStack.Outputs) == len(expectedResultsForKey),
 			"There should have been %d output values - instead there were %d. The value of the CF stack was %s",
@@ -244,6 +248,10 @@ func Test_App_Infrastructure(t *testing.T) {
 				require.NotNil(t,
 					*output.OutputValue,
 					"PipelineBucket should not be nil")
+			},
+			"TemplateVersion": func(output *awsCF.Output) {
+				require.Equal(t, *output.OutputValue, deploy.LatestAppTemplateVersion,
+					fmt.Sprintf("TemplateVersion should be %s but was %s", deploy.LatestAppTemplateVersion, *output.OutputValue))
 			},
 			"ECRRepomysvc": func(output *awsCF.Output) {
 				require.True(t,
