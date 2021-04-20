@@ -204,6 +204,36 @@ func (t *TaskDefinition) Secrets() []*ContainerSecret {
 	return secrets
 }
 
+// Image returns the container's image of the task definition.
+func (t *TaskDefinition) Image(containerName string) (string, error) {
+	for _, container := range t.ContainerDefinitions {
+		if aws.StringValue(container.Name) == containerName {
+			return aws.StringValue(container.Image), nil
+		}
+	}
+	return "", fmt.Errorf("container %s not found", containerName)
+}
+
+// Command returns the container's command overrides of the task definition.
+func (t *TaskDefinition) Command(containerName string) ([]string, error) {
+	for _, container := range t.ContainerDefinitions {
+		if aws.StringValue(container.Name) == containerName {
+			return aws.StringValueSlice(container.Command), nil
+		}
+	}
+	return nil, fmt.Errorf("container %s not found", containerName)
+}
+
+// EntryPoint returns the container's entrypoint overrides of the task definition.
+func (t *TaskDefinition) EntryPoint(containerName string) ([]string, error) {
+	for _, container := range t.ContainerDefinitions {
+		if aws.StringValue(container.Name) == containerName {
+			return aws.StringValueSlice(container.EntryPoint), nil
+		}
+	}
+	return nil, fmt.Errorf("container %s not found", containerName)
+}
+
 // TaskID parses the task ARN and returns the task ID.
 // For example: arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d,
 // arn:aws:ecs:us-west-2:123456789:task/4082490ee6c245e09d2145010aa1ba8d
