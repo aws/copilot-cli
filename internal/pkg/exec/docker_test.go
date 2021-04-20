@@ -214,56 +214,6 @@ func TestDockerCommand_Login(t *testing.T) {
 }
 
 func TestDockerCommand_Push(t *testing.T) {
-	mockError := errors.New("mockError")
-
-	mockURI := "mockURI"
-
-	mockTag1 := "tag1"
-	mockTag2 := "tag2"
-
-	var mockRunner *mocks.Mockrunner
-
-	tests := map[string]struct {
-		setupMocks func(controller *gomock.Controller)
-
-		want error
-	}{
-		"error running push": {
-			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
-
-				mockRunner.EXPECT().Run("docker", []string{"push", mockURI + ":" + mockTag1}).Return(mockError).Times(1)
-				mockRunner.EXPECT().Run("docker", []string{"push", mockURI + ":" + mockTag2}).Times(0)
-			},
-			want: fmt.Errorf("docker push %s: %w", mockURI+":"+mockTag1, mockError),
-		},
-		"success": {
-			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
-
-				mockRunner.EXPECT().Run("docker", []string{"push", mockURI + ":" + mockTag1}).Return(nil)
-				mockRunner.EXPECT().Run("docker", []string{"push", mockURI + ":" + mockTag2}).Return(nil)
-			},
-			want: nil,
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			test.setupMocks(controller)
-			s := DockerCommand{
-				runner: mockRunner,
-			}
-
-			got := s.Push(mockURI, mockTag2, mockTag1)
-
-			require.Equal(t, test.want, got)
-		})
-	}
-}
-
-func TestDockerCommand_PushAndReturnDigest(t *testing.T) {
 	t.Run("pushes an image with multiple tags and returns its digest", func(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
@@ -282,7 +232,7 @@ func TestDockerCommand_PushAndReturnDigest(t *testing.T) {
 		cmd := DockerCommand{
 			runner: m,
 		}
-		digest, err := cmd.PushAndReturnDigest("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "g123bfc")
+		digest, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "g123bfc")
 
 		// THEN
 		require.NoError(t, err)
@@ -299,7 +249,7 @@ func TestDockerCommand_PushAndReturnDigest(t *testing.T) {
 		cmd := DockerCommand{
 			runner: m,
 		}
-		_, err := cmd.PushAndReturnDigest("uri")
+		_, err := cmd.Push("uri")
 
 		// THEN
 		require.EqualError(t, err, "docker push uri: some error")
@@ -316,7 +266,7 @@ func TestDockerCommand_PushAndReturnDigest(t *testing.T) {
 		cmd := DockerCommand{
 			runner: m,
 		}
-		_, err := cmd.PushAndReturnDigest("uri")
+		_, err := cmd.Push("uri")
 
 		// THEN
 		require.EqualError(t, err, "inspect image digest for uri: some error")

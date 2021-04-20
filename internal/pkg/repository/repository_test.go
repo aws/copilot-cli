@@ -23,11 +23,10 @@ func TestRepository_BuildAndPush(t *testing.T) {
 	mockRepoURI := "mockURI"
 
 	defaultDockerArguments := exec.BuildArguments{
-		URI:            mockRepoURI,
-		Dockerfile:     inDockerfilePath,
-		Context:        filepath.Dir(inDockerfilePath),
-		ImageTag:       mockTag1,
-		AdditionalTags: []string{mockTag2, mockTag3},
+		URI:        mockRepoURI,
+		Dockerfile: inDockerfilePath,
+		Context:    filepath.Dir(inDockerfilePath),
+		Tags:       []string{mockTag1, mockTag2, mockTag3},
 	}
 
 	testCases := map[string]struct {
@@ -37,8 +36,8 @@ func TestRepository_BuildAndPush(t *testing.T) {
 
 		mockRegistry func(m *mocks.MockRegistry)
 
-		wantedError error
-		wantedURI   string
+		wantedError  error
+		wantedDigest string
 	}{
 		"failed to get auth": {
 			mockRegistry: func(m *mocks.MockRegistry) {
@@ -80,7 +79,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(&defaultDockerArguments).Times(1)
 				m.EXPECT().Login(gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
-				m.EXPECT().Push(mockRepoURI, mockTag1, mockTag2, mockTag3).Return(errors.New("error pushing image"))
+				m.EXPECT().Push(mockRepoURI, mockTag1, mockTag2, mockTag3).Return("", errors.New("error pushing image"))
 			},
 			wantedError: errors.New("push to repo my-repo: error pushing image"),
 		},
@@ -91,9 +90,9 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(&defaultDockerArguments).Return(nil).Times(1)
 				m.EXPECT().Login(mockRepoURI, "my-name", "my-pwd").Return(nil).Times(1)
-				m.EXPECT().Push(mockRepoURI, mockTag1, mockTag2, mockTag3).Return(nil)
+				m.EXPECT().Push(mockRepoURI, mockTag1, mockTag2, mockTag3).Return("sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807", nil)
 			},
-			wantedURI: mockRepoURI,
+			wantedDigest: "sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807",
 		},
 	}
 	for name, tc := range testCases {
@@ -118,16 +117,16 @@ func TestRepository_BuildAndPush(t *testing.T) {
 				uri: mockRepoURI,
 			}
 
-			err := repo.BuildAndPush(mockDocker, &exec.BuildArguments{
-				Dockerfile:     inDockerfilePath,
-				Context:        filepath.Dir(inDockerfilePath),
-				ImageTag:       mockTag1,
-				AdditionalTags: []string{mockTag2, mockTag3},
+			digest, err := repo.BuildAndPush(mockDocker, &exec.BuildArguments{
+				Dockerfile: inDockerfilePath,
+				Context:    filepath.Dir(inDockerfilePath),
+				Tags:       []string{mockTag1, mockTag2, mockTag3},
 			})
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedDigest, digest)
 			}
 		})
 	}

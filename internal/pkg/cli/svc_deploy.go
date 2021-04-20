@@ -298,7 +298,7 @@ func (o *deploySvcOpts) configureContainerImage() error {
 	if err != nil {
 		return err
 	}
-	if err := o.imageBuilderPusher.BuildAndPush(exec.NewDockerCommand(), buildArg); err != nil {
+	if _, err := o.imageBuilderPusher.BuildAndPush(exec.NewDockerCommand(), buildArg); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
 	o.buildRequired = true
@@ -328,9 +328,9 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 		Dockerfile: *args.Dockerfile,
 		Context:    *args.Context,
 		Args:       args.Args,
-		ImageTag:   imageTag,
 		CacheFrom:  args.CacheFrom,
 		Target:     aws.StringValue(args.Target),
+		Tags:       []string{imageTag},
 	}, nil
 }
 

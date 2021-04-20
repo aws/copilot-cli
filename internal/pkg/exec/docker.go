@@ -32,15 +32,13 @@ func NewDockerCommand() DockerCommand {
 
 // BuildArguments holds the arguments we can pass in as flags from the manifest.
 type BuildArguments struct {
-	URI            string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
-	ImageTag       string            // Required. Tag to pass to `docker build` via -t flag. Usually Git commit short ID.
-	Dockerfile     string            // Required. Dockerfile to pass to `docker build` via --file flag.
-	Context        string            // Optional. Build context directory to pass to `docker build`
-	Target         string            // Optional. The target build stage to pass to `docker build`
-	CacheFrom      []string          // Optional. Images to consider as cache sources to pass to `docker build`
-	Args           map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
-	AdditionalTags []string          // Optional. Additional image tags to pass to docker.
-	Tags           []string          // Optional. List of tags to apply to the image besides "latest".
+	URI        string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
+	Tags       []string          // Optional. List of tags to apply to the image besides "latest".
+	Dockerfile string            // Required. Dockerfile to pass to `docker build` via --file flag.
+	Context    string            // Optional. Build context directory to pass to `docker build`
+	Target     string            // Optional. The target build stage to pass to `docker build`
+	CacheFrom  []string          // Optional. Images to consider as cache sources to pass to `docker build`
+	Args       map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
 }
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
@@ -102,21 +100,8 @@ func (c DockerCommand) Login(uri, username, password string) error {
 	return nil
 }
 
-// Push will run `docker push` command against the repository URI with the input uri and image tags.
-func (c DockerCommand) Push(uri, imageTag string, additionalTags ...string) error {
-	for _, imageTag := range append(additionalTags, imageTag) {
-		path := imageName(uri, imageTag)
-
-		err := c.Run("docker", []string{"push", path})
-		if err != nil {
-			return fmt.Errorf("docker push %s: %w", path, err)
-		}
-	}
-	return nil
-}
-
-// PushAndReturnDigest pushes the images with the specified tags and ecr repository URI, and returns the image digest on success.
-func (c DockerCommand) PushAndReturnDigest(uri string, tags ...string) (digest string, err error) {
+// Push pushes the images with the specified tags and ecr repository URI, and returns the image digest on success.
+func (c DockerCommand) Push(uri string, tags ...string) (digest string, err error) {
 	images := []string{uri}
 	for _, tag := range tags {
 		images = append(images, imageName(uri, tag))
