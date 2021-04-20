@@ -225,7 +225,7 @@ func TestDockerCommand_Push(t *testing.T) {
 			Do(func(_ string, _ []string, opt command.Option) {
 				cmd := &exec.Cmd{}
 				opt(cmd)
-				_, _ = cmd.Stdout.Write([]byte("sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807"))
+				_, _ = cmd.Stdout.Write([]byte("\"aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app@sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807\"\n"))
 			}).Return(nil)
 
 		// WHEN
@@ -270,6 +270,29 @@ func TestDockerCommand_Push(t *testing.T) {
 
 		// THEN
 		require.EqualError(t, err, "inspect image digest for uri: some error")
+	})
+	t.Run("returns an error if the repo digest cannot be parsed for the pushed image", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		m := mocks.NewMockrunner(ctrl)
+		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}).Return(nil)
+		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:g123bfc"}).Return(nil)
+		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}, gomock.Any()).
+			Do(func(_ string, _ []string, opt command.Option) {
+				cmd := &exec.Cmd{}
+				opt(cmd)
+				_, _ = cmd.Stdout.Write([]byte(""))
+			}).Return(nil)
+
+		// WHEN
+		cmd := DockerCommand{
+			runner: m,
+		}
+		_, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "g123bfc")
+
+		// THEN
+		require.EqualError(t, err, "parse the digest from the repo digest ''")
 	})
 }
 

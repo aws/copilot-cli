@@ -1330,11 +1330,12 @@ func (m *MockimageBuilderPusher) EXPECT() *MockimageBuilderPusherMockRecorder {
 }
 
 // BuildAndPush mocks base method.
-func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *exec.BuildArguments) error {
+func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *exec.BuildArguments) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BuildAndPush", docker, args)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush.
@@ -1404,11 +1405,12 @@ func (m *MockrepositoryService) EXPECT() *MockrepositoryServiceMockRecorder {
 }
 
 // BuildAndPush mocks base method.
-func (m *MockrepositoryService) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *exec.BuildArguments) error {
+func (m *MockrepositoryService) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *exec.BuildArguments) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BuildAndPush", docker, args)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush.

@@ -52,7 +52,7 @@ func (c DockerCommand) Build(in *BuildArguments) error {
 
 	// Add additional image tags to the docker build call.
 	args = append(args, "-t", in.URI)
-	for _, tag := range append(in.Tags) {
+	for _, tag := range in.Tags {
 		args = append(args, "-t", imageName(in.URI, tag))
 	}
 
@@ -116,7 +116,12 @@ func (c DockerCommand) Push(uri string, tags ...string) (digest string, err erro
 	if err := c.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, command.Stdout(buf)); err != nil {
 		return "", fmt.Errorf("inspect image digest for %s: %w", uri, err)
 	}
-	return buf.String(), nil
+	repoDigest := strings.Trim(strings.TrimSpace(buf.String()), `"'`) // remove new lines and quotes from output
+	parts := strings.SplitAfter(repoDigest, "@")
+	if len(parts) != 2 {
+		return "", fmt.Errorf("parse the digest from the repo digest '%s'", repoDigest)
+	}
+	return parts[1], nil
 }
 
 // CheckDockerEngineRunning will run `docker info` command to check if the docker engine is running.

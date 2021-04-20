@@ -6,7 +6,10 @@ package cli
 import (
 	"bytes"
 	"errors"
+	"os/exec"
 	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/term/command"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
@@ -127,21 +130,73 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 		wantedTag     string
 		wantedErrorS  string
 	}{
-		"prompt for all options": {
+		"sets the image tag if not in a git repository": {
 			expectRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("not a git repo"))
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("not a git repo"))
 			},
 			expectSelector: func(m *mocks.MockwsSelector) {
 				m.EXPECT().Service(svcPackageSvcNamePrompt, "").Return("frontend", nil)
 				m.EXPECT().Environment(svcPackageEnvNamePrompt, "", testAppName).Return("test", nil)
 			},
-			expectPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(inputImageTagPrompt, "", gomock.Any()).Return("v1.0.0", nil)
-			},
+			expectPrompt: func(m *mocks.Mockprompter) {},
 
 			wantedSvcName: "frontend",
 			wantedEnvName: "test",
-			wantedTag:     "v1.0.0",
+			wantedTag:     "", // No tag if there is no git repository.
+		},
+		"sets the image tag if the commit is valid": {
+			expectRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run("git", []string{"describe", "--always"}, gomock.Any(), gomock.Any()).
+					Do(func(_ string, _ []string, stdout command.Option, _ command.Option) {
+						cmd := &exec.Cmd{}
+						stdout(cmd)
+						_, _ = cmd.Stdout.Write([]byte("02f87ed\n"))
+					}).
+					Return(nil)
+				m.EXPECT().Run("git", []string{"status", "--porcelain"}, gomock.Any(), gomock.Any()).
+					Do(func(_ string, _ []string, stdout command.Option, _ command.Option) {
+						cmd := &exec.Cmd{}
+						stdout(cmd)
+						_, _ = cmd.Stdout.Write([]byte("\n"))
+					}).
+					Return(nil)
+			},
+			expectSelector: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Service(svcPackageSvcNamePrompt, "").Return("frontend", nil)
+				m.EXPECT().Environment(svcPackageEnvNamePrompt, "", testAppName).Return("test", nil)
+			},
+			expectPrompt: func(m *mocks.Mockprompter) {},
+
+			wantedSvcName: "frontend",
+			wantedEnvName: "test",
+			wantedTag:     "02f87ed",
+		},
+		"leaves the image tag empty if the repository is dirty": {
+			expectRunner: func(m *mocks.Mockrunner) {
+				m.EXPECT().Run("git", []string{"describe", "--always"}, gomock.Any(), gomock.Any()).
+					Do(func(_ string, _ []string, stdout command.Option, _ command.Option) {
+						cmd := &exec.Cmd{}
+						stdout(cmd)
+						_, _ = cmd.Stdout.Write([]byte("02f87ed\n"))
+					}).
+					Return(nil)
+				m.EXPECT().Run("git", []string{"status", "--porcelain"}, gomock.Any(), gomock.Any()).
+					Do(func(_ string, _ []string, stdout command.Option, _ command.Option) {
+						cmd := &exec.Cmd{}
+						stdout(cmd)
+						_, _ = cmd.Stdout.Write([]byte(" M frontend/server.js\n"))
+					}).
+					Return(nil)
+			},
+			expectSelector: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Service(svcPackageSvcNamePrompt, "").Return("frontend", nil)
+				m.EXPECT().Environment(svcPackageEnvNamePrompt, "", testAppName).Return("test", nil)
+			},
+			expectPrompt: func(m *mocks.Mockprompter) {},
+
+			wantedSvcName: "frontend",
+			wantedEnvName: "test",
+			wantedTag:     "",
 		},
 		"prompt only for the service name": {
 			inEnvName: "test",

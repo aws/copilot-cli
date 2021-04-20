@@ -68,6 +68,7 @@ type deploySvcOpts struct {
 	targetApp         *config.Application
 	targetEnvironment *config.Environment
 	targetSvc         *config.Workload
+	imageDigest       string
 	buildRequired     bool
 }
 
@@ -122,11 +123,7 @@ func (o *deploySvcOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	tag, err := askImageTag(o.imageTag, o.prompt, o.cmd)
-	if err != nil {
-		return err
-	}
-	o.imageTag = tag
+	o.imageTag = imageTagFromGit(o.cmd, o.imageTag)
 	return nil
 }
 
@@ -298,9 +295,11 @@ func (o *deploySvcOpts) configureContainerImage() error {
 	if err != nil {
 		return err
 	}
-	if _, err := o.imageBuilderPusher.BuildAndPush(exec.NewDockerCommand(), buildArg); err != nil {
+	digest, err := o.imageBuilderPusher.BuildAndPush(exec.NewDockerCommand(), buildArg)
+	if err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
+	o.imageDigest = digest
 	o.buildRequired = true
 	return nil
 }
@@ -321,16 +320,18 @@ func buildArgs(name, imageTag, copilotDir string, unmarshaledManifest interface{
 	if !ok {
 		return nil, fmt.Errorf("%s does not have required method BuildArgs()", name)
 	}
-
-	wsRoot := filepath.Dir(copilotDir)
-	args := mf.BuildArgs(wsRoot)
+	var tags []string
+	if imageTag != "" {
+		tags = append(tags, imageTag)
+	}
+	args := mf.BuildArgs(filepath.Dir(copilotDir))
 	return &exec.BuildArguments{
 		Dockerfile: *args.Dockerfile,
 		Context:    *args.Context,
 		Args:       args.Args,
 		CacheFrom:  args.CacheFrom,
 		Target:     aws.StringValue(args.Target),
-		Tags:       []string{imageTag},
+		Tags:       tags,
 	}, nil
 }
 
@@ -397,6 +398,7 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 		Image: &stack.ECRImage{
 			RepoURL:  repoURL,
 			ImageTag: o.imageTag,
+			Digest:   o.imageDigest,
 		},
 	}, nil
 }

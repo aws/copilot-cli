@@ -59,11 +59,21 @@ type RuntimeConfig struct {
 type ECRImage struct {
 	RepoURL  string // RepoURL is the ECR repository URL the container image should be pushed to.
 	ImageTag string // Tag is the container image's unique tag.
+	Digest   string // The image digest.
 }
 
-// GetLocation returns the location of the ECR image.
+// GetLocation returns the ECR image URI.
+// If a tag is provided for the image than prioritize refering to the image via the tag.
+// If a digest is present then refer to the image via the digest.
+// Otherwise, use the "latest" tag.
 func (i ECRImage) GetLocation() string {
-	return fmt.Sprintf("%s:%s", i.RepoURL, i.ImageTag)
+	if i.ImageTag != "" {
+		return fmt.Sprintf("%s:%s", i.RepoURL, i.ImageTag)
+	}
+	if i.Digest != "" {
+		return fmt.Sprintf("%s@%s", i.RepoURL, i.Digest)
+	}
+	return fmt.Sprintf("%s:%s", i.RepoURL, "latest")
 }
 
 type templater interface {

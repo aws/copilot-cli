@@ -126,19 +126,17 @@ func TestPackageJobOpts_Ask(t *testing.T) {
 	}{
 		"prompt for all options": {
 			expectRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("not a git repo"))
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("not a git repo"))
 			},
 			expectSelector: func(m *mocks.MockwsSelector) {
 				m.EXPECT().Job(jobPackageJobNamePrompt, "").Return("resizer", nil)
 				m.EXPECT().Environment(jobPackageEnvNamePrompt, "", testAppName).Return("test", nil)
 			},
-			expectPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(inputImageTagPrompt, "", gomock.Any()).Return("v1.0.0", nil)
-			},
+			expectPrompt: func(m *mocks.Mockprompter) {},
 
 			wantedJobName: "resizer",
 			wantedEnvName: "test",
-			wantedTag:     "v1.0.0",
+			wantedTag:     "", // No tag if there is no git repository.
 		},
 		"prompt only for the job name": {
 			inEnvName: "test",

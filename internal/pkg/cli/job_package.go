@@ -137,11 +137,7 @@ func (o *packageJobOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	tag, err := askImageTag(o.tag, o.prompt, o.runner)
-	if err != nil {
-		return err
-	}
-	o.tag = tag
+	o.tag = imageTagFromGit(o.runner, o.tag)
 	return nil
 }
 
