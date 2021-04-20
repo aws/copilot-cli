@@ -40,7 +40,7 @@ func init() {
 {{ end }}{{- end }}{{color "reset"}}{{end}}
 {{- color .Config.Icons.Question.Format }}{{if not .ShowAnswer}}  {{ .Config.Icons.Question.Text }}{{else}}{{ .Config.Icons.Question.Text }}{{end}}{{color "reset"}}
 {{- color "default"}}{{ .Message }}{{ .FilterMessage }}{{color "reset"}}
-{{- if .ShowAnswer}}{{color "default"}} {{.Answer}}{{color "reset"}}{{"\n"}}
+{{- if .ShowAnswer}}{{color "default"}} {{parseAnswer .Answer}}{{color "reset"}}{{"\n"}}
 {{- else}}
   {{- "  "}}{{- color "white"}}[Use arrows to move, type to filter{{- if and .Help (not .ShowHelp)}}, {{ .Config.HelpInput }} for more help{{end}}]{{color "reset"}}
   {{- "\n"}}
@@ -100,7 +100,9 @@ func init() {
 		return strings.Split(s, sep)
 	}
 	core.TemplateFuncsWithColor["split"] = split
+	core.TemplateFuncsWithColor["parseAnswer"] = parseValueFromOptionFmt
 	core.TemplateFuncsNoColor["split"] = split
+	core.TemplateFuncsNoColor["parseAnswer"] = parseValueFromOptionFmt
 }
 
 // ErrEmptyOptions indicates the input options list was empty.
@@ -135,7 +137,6 @@ func (p *prompt) Cleanup(config *survey.PromptConfig, val interface{}) error {
 	if p.FinalMessage == "" {
 		return p.prompter.Cleanup(config, val) // Delegate to the parent Cleanup.
 	}
-
 	// Update the message of the underlying struct.
 	switch typedPrompt := p.prompter.(type) {
 	case *survey.Select:

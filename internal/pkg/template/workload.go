@@ -95,6 +95,11 @@ type StorageOpts struct {
 	ManagedVolumeInfo *ManagedVolumeCreationInfo // Used for delegating CreationInfo for Copilot-managed EFS.
 }
 
+// requiresEFSCreation returns true if managed volume information is specified; false otherwise.
+func (s *StorageOpts) requiresEFSCreation() bool {
+	return s.ManagedVolumeInfo != nil
+}
+
 // EFSPermission holds information needed to render an IAM policy statement.
 type EFSPermission struct {
 	FilesystemID  *string
@@ -118,11 +123,13 @@ type Volume struct {
 
 // ManagedVolumeCreationInfo holds information about how to create Copilot-managed access points.
 type ManagedVolumeCreationInfo struct {
-	Name *string
-	UID  *string
-	GID  *string
+	Name    *string
+	DirName *string
+	UID     *uint32
+	GID     *uint32
 }
 
+// EFSVolumeConfiguration contains information about how to specify externally managed file systems.
 type EFSVolumeConfiguration struct {
 	// EFSVolumeConfiguration
 	Filesystem    *string
@@ -313,6 +320,9 @@ func envControllerParameters(o WorkloadOpts) []string {
 	}
 	if o.Network.SubnetsType == PrivateSubnetsPlacement {
 		parameters = append(parameters, "NATWorkloads,") // YAML needs the comma separator; resolved in EnvContr.
+	}
+	if o.Storage != nil && o.Storage.requiresEFSCreation() {
+		parameters = append(parameters, "EFSWorkloads,")
 	}
 	return parameters
 }

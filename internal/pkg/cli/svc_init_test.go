@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
@@ -129,7 +131,16 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: wantedDockerfilePath,
 
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtSvcInitSvcTypePrompt, "service type")), gomock.Any(), gomock.Eq(manifest.ServiceTypes), gomock.Any()).
+				m.EXPECT().SelectOption(gomock.Eq(fmt.Sprintf(fmtSvcInitSvcTypePrompt, "service type")), gomock.Any(), gomock.Eq([]prompt.Option{
+					{
+						Value: manifest.LoadBalancedWebServiceType,
+						Hint:  "Internet to ECS on Fargate",
+					},
+					{
+						Value: manifest.BackendServiceType,
+						Hint:  "ECS on Fargate",
+					},
+				}), gomock.Any()).
 					Return(wantedSvcType, nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
@@ -144,7 +155,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inDockerfilePath: wantedDockerfilePath,
 
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Eq(manifest.ServiceTypes), gomock.Any()).
+				m.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},

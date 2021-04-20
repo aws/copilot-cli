@@ -18,16 +18,19 @@ var (
 	appName string
 	svcName string
 
-	storageName  string
-	storageType  string
-	rdsEngine    string
-	rdsInitialDB string
+	rdsStorageName string
+	rdsStorageType string
+	rdsEngine      string
+	rdsInitialDB   string
+
+	s3StorageName string
+	s3StorageType string
 )
 
 // The Addons suite runs creates a new application with additional resources.
 func TestAddons(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Addons RDS Suite")
+	RunSpecs(t, "Addons Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -38,10 +41,13 @@ var _ = BeforeSuite(func() {
 	appName = fmt.Sprintf("e2e-addons-%d", time.Now().Unix())
 	svcName = "hello"
 
-	storageName = "mystorage"
-	storageType = "Aurora"
+	rdsStorageName = "mycluster"
+	rdsStorageType = "Aurora"
 	rdsEngine = "PostgreSQL"
 	rdsInitialDB = "initdb"
+
+	s3StorageName = "mybucket"
+	s3StorageType = "S3"
 })
 
 var _ = AfterSuite(func() {

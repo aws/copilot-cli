@@ -17,6 +17,7 @@ import (
 type api interface {
 	CreateStackSet(*cloudformation.CreateStackSetInput) (*cloudformation.CreateStackSetOutput, error)
 	UpdateStackSet(*cloudformation.UpdateStackSetInput) (*cloudformation.UpdateStackSetOutput, error)
+	ListStackSetOperations(input *cloudformation.ListStackSetOperationsInput) (*cloudformation.ListStackSetOperationsOutput, error)
 	DeleteStackSet(*cloudformation.DeleteStackSetInput) (*cloudformation.DeleteStackSetOutput, error)
 	DescribeStackSet(*cloudformation.DescribeStackSetInput) (*cloudformation.DescribeStackSetOutput, error)
 	DescribeStackSetOperation(*cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error)
@@ -201,6 +202,9 @@ func (ss *StackSet) update(name, template string, opts ...CreateOrUpdateOption) 
 	in := &cloudformation.UpdateStackSetInput{
 		StackSetName: aws.String(name),
 		TemplateBody: aws.String(template),
+		OperationPreferences: &cloudformation.StackSetOperationPreferences{
+			RegionConcurrencyType: aws.String(cloudformation.RegionConcurrencyTypeParallel),
+		},
 	}
 	for _, opt := range opts {
 		opt(in)
@@ -229,6 +233,30 @@ func (ss *StackSet) createInstances(name string, accounts, regions []string) (st
 			name, regions, accounts, err)
 	}
 	return aws.StringValue(resp.OperationId), nil
+}
+
+// WaitForStackSetLastOperationComplete waits until the stackset's last operation completes.
+func (ss *StackSet) WaitForStackSetLastOperationComplete(name string) error {
+	for {
+		resp, err := ss.client.ListStackSetOperations(&cloudformation.ListStackSetOperationsInput{
+			StackSetName: aws.String(name),
+		})
+		if err != nil {
+			return fmt.Errorf("list operations for stack set %s: %w", name, err)
+		}
+		if len(resp.Summaries) == 0 {
+			return nil
+		}
+		operation := resp.Summaries[0]
+		switch aws.StringValue(operation.Status) {
+		case cloudformation.StackSetOperationStatusRunning:
+		case cloudformation.StackSetOperationStatusStopping:
+		case cloudformation.StackSetOperationStatusQueued:
+		default:
+			return nil
+		}
+		time.Sleep(3 * time.Second)
+	}
 }
 
 func (ss *StackSet) waitForOperation(name, operationID string) error {

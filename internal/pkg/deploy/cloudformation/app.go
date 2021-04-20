@@ -4,9 +4,11 @@
 package cloudformation
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	sdkcloudformationiface "github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -50,7 +52,70 @@ func (cf CloudFormation) DeployApp(in *deploy.CreateAppInput) error {
 }
 
 func (cf CloudFormation) UpgradeApplication(in *deploy.CreateAppInput) error {
-	return nil
+	appConfig := stack.NewAppStackConfig(in)
+	s, err := toStack(appConfig)
+	if err != nil {
+		return err
+	}
+	if err := cf.upgradeAppStack(s); err != nil {
+		return err
+	}
+	return cf.upgradeAppStackSet(appConfig)
+}
+
+func (cf CloudFormation) upgradeAppStackSet(config *stack.AppStackConfig) error {
+	for {
+		ssName := config.StackSetName()
+		if err := cf.appStackSet.WaitForStackSetLastOperationComplete(ssName); err != nil {
+			return fmt.Errorf("wait for stack set %s last operation complete: %w", ssName, err)
+		}
+		previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(config)
+		if err != nil {
+			return err
+		}
+		previouslyDeployedConfig.Version += 1
+		err = cf.deployAppConfig(config, previouslyDeployedConfig)
+		if err == nil {
+			return nil
+		}
+		var stackSetOutOfDateErr *stackset.ErrStackSetOutOfDate
+		if errors.As(err, &stackSetOutOfDateErr) {
+			continue
+		}
+		return err
+	}
+}
+
+func (cf CloudFormation) upgradeAppStack(s *cloudformation.Stack) error {
+	for {
+		// Upgrade app stack.
+		descr, err := cf.cfnClient.Describe(s.Name)
+		if err != nil {
+			return fmt.Errorf("describe stack %s: %w", s.Name, err)
+		}
+		if cloudformation.StackStatus(aws.StringValue(descr.StackStatus)).InProgress() {
+			// There is already an update happening to the app stack.
+			// Best-effort try to wait for the existing update to be over before retrying.
+			_ = cf.cfnClient.WaitForUpdate(context.Background(), s.Name)
+			continue
+		}
+		s.Parameters = descr.Parameters
+		s.Tags = descr.Tags
+
+		err = cf.cfnClient.UpdateAndWait(s)
+		if err == nil { // Success.
+			return nil
+		}
+		if retryable := isRetryableUpdateError(s.Name, err); retryable {
+			continue
+		}
+		// The changes are already applied, nothing to do. Exit successfully.
+		var emptyChangeSet *cloudformation.ErrChangeSetEmpty
+		if errors.As(err, &emptyChangeSet) {
+			return nil
+		}
+		return fmt.Errorf("update and wait for stack %s: %w", s.Name, err)
+	}
 }
 
 // DelegateDNSPermissions grants the provided account ID the ability to write to this application's
@@ -61,6 +126,7 @@ func (cf CloudFormation) DelegateDNSPermissions(app *config.Application, account
 		AccountID:          app.AccountID,
 		DomainName:         app.Domain,
 		DomainHostedZoneID: app.DomainHostedZoneID,
+		Version:            deploy.LatestAppTemplateVersion,
 	}
 
 	appConfig := stack.NewAppStackConfig(&deployApp)
@@ -170,6 +236,7 @@ func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string
 		Name:           app.Name,
 		AccountID:      app.AccountID,
 		AdditionalTags: app.Tags,
+		Version:        deploy.LatestAppTemplateVersion,
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
 	if err != nil {
@@ -227,6 +294,7 @@ func (cf CloudFormation) removeWorkloadFromApp(app *config.Application, wlName s
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:      app.Name,
 		AccountID: app.AccountID,
+		Version:   deploy.LatestAppTemplateVersion,
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
 	if err != nil {
@@ -279,6 +347,7 @@ func (cf CloudFormation) AddEnvToApp(opts *AddEnvToAppOpts) error {
 		Name:           opts.App.Name,
 		AccountID:      opts.App.AccountID,
 		AdditionalTags: opts.App.Tags,
+		Version:        deploy.LatestAppTemplateVersion,
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
 	if err != nil {
@@ -335,6 +404,7 @@ func (cf CloudFormation) AddPipelineResourcesToApp(
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:      app.Name,
 		AccountID: app.AccountID,
+		Version:   deploy.LatestAppTemplateVersion,
 	})
 
 	// conditionally create a new stack instance in the application region

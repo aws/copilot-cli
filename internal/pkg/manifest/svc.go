@@ -63,8 +63,8 @@ type Count struct {
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Count
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v2) interface.
-func (a *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&a.Autoscaling); err != nil {
+func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshal(&c.Autoscaling); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -73,18 +73,25 @@ func (a *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	if !a.Autoscaling.IsEmpty() {
+	if !c.Autoscaling.IsValid() {
+		return errUnmarshalSpot
+	}
+
+	if !c.Autoscaling.IsEmpty() {
+		// Successfully unmarshalled Autoscaling fields, return
 		return nil
 	}
 
-	if err := unmarshal(&a.Value); err != nil {
+	if err := unmarshal(&c.Value); err != nil {
 		return errUnmarshalCountOpts
 	}
 	return nil
 }
 
-// Autoscaling represents the configurable options for Auto Scaling.
+// Autoscaling represents the configurable options for Auto Scaling as well as
+// Capacity configuration (spot).
 type Autoscaling struct {
+	Spot         *int           `yaml:"spot"` // mutually exclusive with Range
 	Range        *Range         `yaml:"range"`
 	CPU          *int           `yaml:"cpu_percentage"`
 	Memory       *int           `yaml:"memory_percentage"`
@@ -95,7 +102,15 @@ type Autoscaling struct {
 // IsEmpty returns whether Autoscaling is empty.
 func (a *Autoscaling) IsEmpty() bool {
 	return a.Range == nil && a.CPU == nil && a.Memory == nil &&
-		a.Requests == nil && a.ResponseTime == nil
+		a.Requests == nil && a.ResponseTime == nil && a.Spot == nil
+}
+
+// IsValid checks to make sure Spot fields are compatible with other values in Autoscaling
+func (a *Autoscaling) IsValid() bool {
+	if a.Spot != nil && a.Range != nil {
+		return false
+	}
+	return true
 }
 
 // ServiceDockerfileBuildRequired returns if the service container image should be built from local Dockerfile.

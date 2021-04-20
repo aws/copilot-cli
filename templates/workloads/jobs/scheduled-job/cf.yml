@@ -31,6 +31,8 @@ Conditions:
 Resources: 
 {{include "loggroup" . | indent 2}}
 
+{{include "env-controller" . | indent 2}}
+
   TaskDefinition:
     Metadata:
       'aws:copilot:description': 'An ECS task definition to group your containers and run them on ECS'

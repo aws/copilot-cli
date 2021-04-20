@@ -36,18 +36,18 @@ func (m *MockecsClient) EXPECT() *MockecsClientMockRecorder {
 }
 
 // TaskDefinition mocks base method.
-func (m *MockecsClient) TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error) {
+func (m *MockecsClient) TaskDefinition(app, env, svc string) (*ecs.TaskDefinition, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TaskDefinition", taskDefName)
+	ret := m.ctrl.Call(m, "TaskDefinition", app, env, svc)
 	ret0, _ := ret[0].(*ecs.TaskDefinition)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // TaskDefinition indicates an expected call of TaskDefinition.
-func (mr *MockecsClientMockRecorder) TaskDefinition(taskDefName interface{}) *gomock.Call {
+func (mr *MockecsClientMockRecorder) TaskDefinition(app, env, svc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockecsClient)(nil).TaskDefinition), taskDefName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockecsClient)(nil).TaskDefinition), app, env, svc)
 }
 
 // MockConfigStoreSvc is a mock of ConfigStoreSvc interface.

@@ -28,6 +28,7 @@ func TestCC_Pipeline_Template(t *testing.T) {
 			RepositoryURL: "https://us-west-2.console.aws.amazon.com/codesuite/codecommit/repositories/aws-sample/browse",
 			Branch:        "master",
 		},
+		Build: deploy.PipelineBuildFromManifest(nil),
 		Stages: []deploy.PipelineStage{
 			{
 				AssociatedEnvironment: &deploy.AssociatedEnvironment{
