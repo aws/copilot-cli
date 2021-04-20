@@ -108,7 +108,9 @@ Outputs:
 				testBackendSvcManifestWithBadAutoScaling := manifest.NewBackendService(baseProps)
 				badRange := manifest.Range("badRange")
 				testBackendSvcManifestWithBadAutoScaling.Count.Autoscaling = manifest.Autoscaling{
-					Range: &badRange,
+					Range: &manifest.RangeOpts{
+						Range: &badRange,
+					},
 				}
 				svc.manifest = testBackendSvcManifestWithBadAutoScaling
 			},

@@ -36,9 +36,12 @@ var (
 	errUnmarshalBuildOpts  = errors.New("cannot unmarshal build field into string or compose-style map")
 	errUnmarshalCountOpts  = errors.New(`cannot unmarshal "count" field to an integer or autoscaling configuration`)
 	errUnmarshalSpot       = errors.New(`cannot unmarshal "spot" field to an integer if range is specified`)
+	errUnmarshalRangeOpts  = errors.New(`cannot unmarshal "range" field`)
 	errUnmarshalExec       = errors.New("cannot unmarshal exec field into boolean or exec configuration")
 	errUnmarshalEntryPoint = errors.New("cannot unmarshal entrypoint into string or slice of strings")
 	errUnmarshalCommand    = errors.New("cannot unmarshal command into string or slice of strings")
+
+	errInvalidRangeOpts = errors.New(`cannot specify both "range" and "min"/"max"`)
 )
 
 // WorkloadProps contains properties for creating a new workload manifest.
