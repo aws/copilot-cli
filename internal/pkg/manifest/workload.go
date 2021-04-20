@@ -357,13 +357,14 @@ func (lc *Logging) GetEnableMetadata() *string {
 
 // SidecarConfig represents the configurable options for setting up a sidecar container.
 type SidecarConfig struct {
-	Port        *string             `yaml:"port"`
-	Image       *string             `yaml:"image"`
-	Essential   *bool               `yaml:"essential"`
-	CredsParam  *string             `yaml:"credentialsParameter"`
-	Variables   map[string]string   `yaml:"variables"`
-	Secrets     map[string]string   `yaml:"secrets"`
-	MountPoints []SidecarMountPoint `yaml:"mount_points"`
+	Port         *string             `yaml:"port"`
+	Image        *string             `yaml:"image"`
+	Essential    *bool               `yaml:"essential"`
+	CredsParam   *string             `yaml:"credentialsParameter"`
+	Variables    map[string]string   `yaml:"variables"`
+	Secrets      map[string]string   `yaml:"secrets"`
+	MountPoints  []SidecarMountPoint `yaml:"mount_points"`
+	DockerLabels map[string]string   `yaml:"labels"`
 }
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.

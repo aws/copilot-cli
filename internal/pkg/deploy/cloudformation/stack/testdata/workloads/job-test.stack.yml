@@ -170,6 +170,8 @@ Resources:
               Value: '8080'
             - Name: COPILOT_MOUNT_POINTS
               Value: '{"myEFSVolume":"/var/www"}'
+          DockerLabels:
+            com.amazonaws.ecs.copilot.sidecars.nginx.description: tricky
 
       Volumes:
         - Name: managedEFSVolume

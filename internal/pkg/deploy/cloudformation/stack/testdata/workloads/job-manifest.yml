@@ -46,6 +46,8 @@ sidecars:
         path: '/var/www'
     variables:
       NGINX_PORT: 8080
+    labels:
+      com.amazonaws.ecs.copilot.sidecars.nginx.description: tricky
 
 environments:
   test:
