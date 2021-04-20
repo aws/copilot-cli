@@ -40,9 +40,10 @@ type BuildArguments struct {
 	CacheFrom      []string          // Optional. Images to consider as cache sources to pass to `docker build`
 	Args           map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
 	AdditionalTags []string          // Optional. Additional image tags to pass to docker.
+	Tags           []string          // Optional. List of tags to apply to the image besides "latest".
 }
 
-// Build will run a `docker build` command with the input uri, tag, and Dockerfile path.
+// Build will run a `docker build` command for the given ecr repo URI and build arguments.
 func (c DockerCommand) Build(in *BuildArguments) error {
 	dfDir := in.Context
 	if dfDir == "" { // Context wasn't specified use the Dockerfile's directory as context.
@@ -52,7 +53,8 @@ func (c DockerCommand) Build(in *BuildArguments) error {
 	args := []string{"build"}
 
 	// Add additional image tags to the docker build call.
-	for _, tag := range append(in.AdditionalTags, in.ImageTag) {
+	args = append(args, "-t", in.URI)
+	for _, tag := range append(in.Tags) {
 		args = append(args, "-t", imageName(in.URI, tag))
 	}
 
@@ -80,8 +82,7 @@ func (c DockerCommand) Build(in *BuildArguments) error {
 
 	args = append(args, dfDir, "-f", in.Dockerfile)
 
-	err := c.Run("docker", args)
-	if err != nil {
+	if err := c.Run("docker", args); err != nil {
 		return fmt.Errorf("building image: %w", err)
 	}
 
@@ -111,8 +112,26 @@ func (c DockerCommand) Push(uri, imageTag string, additionalTags ...string) erro
 			return fmt.Errorf("docker push %s: %w", path, err)
 		}
 	}
-
 	return nil
+}
+
+// PushAndReturnDigest pushes the images with the specified tags and ecr repository URI, and returns the image digest on success.
+func (c DockerCommand) PushAndReturnDigest(uri string, tags ...string) (digest string, err error) {
+	images := []string{uri}
+	for _, tag := range tags {
+		images = append(images, imageName(uri, tag))
+	}
+
+	for _, img := range images {
+		if err := c.Run("docker", []string{"push", img}); err != nil {
+			return "", fmt.Errorf("docker push %s: %w", img, err)
+		}
+	}
+	buf := new(strings.Builder)
+	if err := c.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, command.Stdout(buf)); err != nil {
+		return "", fmt.Errorf("inspect image digest for %s: %w", uri, err)
+	}
+	return buf.String(), nil
 }
 
 // CheckDockerEngineRunning will run `docker info` command to check if the docker engine is running.
@@ -147,5 +166,8 @@ func (c DockerCommand) CheckDockerEngineRunning() error {
 }
 
 func imageName(uri, tag string) string {
+	if tag == "" {
+		return uri // If no tag is specified build with latest.
+	}
 	return fmt.Sprintf("%s:%s", uri, tag)
 }
