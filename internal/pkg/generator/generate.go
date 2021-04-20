@@ -32,6 +32,7 @@ type containerInfo struct {
 }
 
 func containerInformation(taskDef *ecs.TaskDefinition, containerName string) (*containerInfo, error) {
+
 	image, err := taskDef.Image(containerName)
 	if err != nil {
 		return nil, err

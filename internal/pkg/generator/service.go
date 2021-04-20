@@ -28,9 +28,15 @@ type ServiceCommandGenerator struct {
 
 // Generate generates a task run command.
 func (g ServiceCommandGenerator) Generate() (*GenerateCommandOpts, error) {
+
 	networkConfig, err := g.ECSInformationGetter.NetworkConfiguration(g.App, g.Env, g.Service)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve network configuration for service %s: %w", g.Service, err)
+	}
+
+	cluster, err := g.ECSInformationGetter.ClusterARN(g.App, g.Env)
+	if err != nil {
+		return nil, fmt.Errorf("retrieve cluster ARN created for environment %s in application %s: %w", g.Env, g.App, err)
 	}
 
 	taskDef, err := g.ECSInformationGetter.TaskDefinition(g.App, g.Env, g.Service)
@@ -43,8 +49,6 @@ func (g ServiceCommandGenerator) Generate() (*GenerateCommandOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	cluster, err := g.ECSInformationGetter.ClusterARN(g.App, g.Env)
 
 	return &GenerateCommandOpts{
 		networkConfiguration: *networkConfig,

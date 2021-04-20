@@ -99,6 +99,7 @@ func TestServiceCommandGenerator_Generate(t *testing.T) {
 			setUpMock: func(m *mocks.MockecsInformationGetter) {
 				m.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(nil, errors.New("some error"))
 				m.EXPECT().NetworkConfiguration(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().ClusterARN(gomock.Any(), gomock.Any()).AnyTimes()
 			},
 			wantedError: errors.New("retrieve task definition for service svc: some error"),
 		},
@@ -106,8 +107,17 @@ func TestServiceCommandGenerator_Generate(t *testing.T) {
 			setUpMock: func(m *mocks.MockecsInformationGetter) {
 				m.EXPECT().TaskDefinition(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				m.EXPECT().NetworkConfiguration(testApp, testEnv, testSvc).Return(nil, errors.New("some error"))
+				m.EXPECT().ClusterARN(gomock.Any(), gomock.Any()).AnyTimes()
 			},
 			wantedError: errors.New("retrieve network configuration for service svc: some error"),
+		},
+		"unable to obtain cluster ARN": {
+			setUpMock: func(m *mocks.MockecsInformationGetter) {
+				m.EXPECT().TaskDefinition(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().NetworkConfiguration(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().ClusterARN(testApp, testEnv).Return("", errors.New("some error"))
+			},
+			wantedError: errors.New("retrieve cluster ARN created for environment env in application app: some error"),
 		},
 	}
 
