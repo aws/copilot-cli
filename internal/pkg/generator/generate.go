@@ -11,6 +11,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
 
+// GenerateCommandOpts contains information to generate a task run command.
 type GenerateCommandOpts struct {
 	networkConfiguration ecs.NetworkConfiguration
 
@@ -69,6 +70,7 @@ func containerInformation(taskDef *ecs.TaskDefinition, containerName string) (*c
 	}, nil
 }
 
+// String stringifies a GenerateCommandOpts.
 func (o GenerateCommandOpts) String() string {
 	output := []string{"copilot task run"}
 	if o.executionRole != "" {
