@@ -29,8 +29,11 @@ storage:
     myEFSVolume:
       path: '/etc/mount1'
       read_only: true
-      efs:
-        id: fs-12345
+      efs: fs-12345
+    managedEFSVolume:
+      path: '/etc/mount2'
+      read_only: false
+      efs: copilot
 
 sidecars:
   nginx:

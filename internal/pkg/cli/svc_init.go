@@ -26,12 +26,23 @@ import (
 	"github.com/spf13/pflag"
 )
 
+const (
+	wkldInitImagePrompt     = `What's the location of the image to use?`
+	wkldInitImagePromptHelp = `The name of an existing Docker image. Images in the Docker Hub registry are available by default.
+Other repositories are specified with either repository-url/image:tag or repository-url/image@digest`
+)
+
+const (
+	defaultSvcPortString = "80"
+	service              = "service"
+)
+
 var (
 	fmtSvcInitSvcTypePrompt     = "Which %s best represents your service's architecture?"
 	fmtSvcInitSvcTypeHelpPrompt = `A %s is a public, internet-facing, HTTP server that's behind a load balancer. 
 To learn more see: https://git.io/JfIpv
 
-A %s is a private, non internet-facing service.
+A %s is a private, non internet-facing service accessible from other services in your VPC.
 To learn more see: https://git.io/JfIpT`
 
 	fmtWkldInitNamePrompt     = "What do you want to %s this %s?"
@@ -48,16 +59,10 @@ Deployed resources (such as your ECR repository, logs) will contain this %[1]s's
 You should set this to the port which your Dockerfile uses to communicate with the internet.`
 )
 
-const (
-	wkldInitImagePrompt     = `What's the location of the image to use?`
-	wkldInitImagePromptHelp = `The name of an existing Docker image. Images in the Docker Hub registry are available by default.
-Other repositories are specified with either repository-url/image:tag or repository-url/image@digest`
-)
-
-const (
-	defaultSvcPortString = "80"
-	service              = "service"
-)
+var serviceTypeHints = map[string]string{
+	manifest.LoadBalancedWebServiceType: "Internet to ECS on Fargate",
+	manifest.BackendServiceType:         "ECS on Fargate",
+}
 
 type initWkldVars struct {
 	appName        string
@@ -214,6 +219,16 @@ func (o *initSvcOpts) Execute() error {
 	return nil
 }
 
+// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
+func (o *initSvcOpts) RecommendedActions() []string {
+	return []string{
+		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath)),
+		fmt.Sprintf("Run %s to deploy your service to a %s environment.",
+			color.HighlightCode(fmt.Sprintf("copilot svc deploy --name %s --env %s", o.name, defaultEnvironmentName)),
+			defaultEnvironmentName),
+	}
+}
+
 func (o *initSvcOpts) askSvcType() error {
 	if o.wkldType != "" {
 		return nil
@@ -224,7 +239,8 @@ func (o *initSvcOpts) askSvcType() error {
 		manifest.BackendServiceType,
 	)
 	msg := fmt.Sprintf(fmtSvcInitSvcTypePrompt, color.Emphasize("service type"))
-	t, err := o.prompt.SelectOne(msg, help, manifest.ServiceTypes, prompt.WithFinalMessage("Service type:"))
+
+	t, err := o.prompt.SelectOption(msg, help, svcTypePromptOpts(), prompt.WithFinalMessage("Service type:"))
 	if err != nil {
 		return fmt.Errorf("select service type: %w", err)
 	}
@@ -377,14 +393,15 @@ func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error)
 	}, nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *initSvcOpts) RecommendedActions() []string {
-	return []string{
-		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath)),
-		fmt.Sprintf("Run %s to deploy your service to a %s environment.",
-			color.HighlightCode(fmt.Sprintf("copilot svc deploy --name %s --env %s", o.name, defaultEnvironmentName)),
-			defaultEnvironmentName),
+func svcTypePromptOpts() []prompt.Option {
+	var options []prompt.Option
+	for _, svcType := range manifest.ServiceTypes {
+		options = append(options, prompt.Option{
+			Value: svcType,
+			Hint:  serviceTypeHints[svcType],
+		})
 	}
+	return options
 }
 
 // buildSvcInitCmd build the command for creating a new service.

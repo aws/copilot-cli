@@ -11,31 +11,51 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockscheduledJobParser is a mock of scheduledJobParser interface.
-type MockscheduledJobParser struct {
+// MockscheduledJobReadParser is a mock of scheduledJobReadParser interface.
+type MockscheduledJobReadParser struct {
 	ctrl     *gomock.Controller
-	recorder *MockscheduledJobParserMockRecorder
+	recorder *MockscheduledJobReadParserMockRecorder
 }
 
-// MockscheduledJobParserMockRecorder is the mock recorder for MockscheduledJobParser.
-type MockscheduledJobParserMockRecorder struct {
-	mock *MockscheduledJobParser
+// MockscheduledJobReadParserMockRecorder is the mock recorder for MockscheduledJobReadParser.
+type MockscheduledJobReadParserMockRecorder struct {
+	mock *MockscheduledJobReadParser
 }
 
-// NewMockscheduledJobParser creates a new mock instance.
-func NewMockscheduledJobParser(ctrl *gomock.Controller) *MockscheduledJobParser {
-	mock := &MockscheduledJobParser{ctrl: ctrl}
-	mock.recorder = &MockscheduledJobParserMockRecorder{mock}
+// NewMockscheduledJobReadParser creates a new mock instance.
+func NewMockscheduledJobReadParser(ctrl *gomock.Controller) *MockscheduledJobReadParser {
+	mock := &MockscheduledJobReadParser{ctrl: ctrl}
+	mock.recorder = &MockscheduledJobReadParserMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockscheduledJobParser) EXPECT() *MockscheduledJobParserMockRecorder {
+func (m *MockscheduledJobReadParser) EXPECT() *MockscheduledJobReadParserMockRecorder {
 	return m.recorder
 }
 
+// Parse mocks base method.
+func (m *MockscheduledJobReadParser) Parse(path string, data interface{}, options ...template.ParseOption) (*template.Content, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{path, data}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Parse", varargs...)
+	ret0, _ := ret[0].(*template.Content)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Parse indicates an expected call of Parse.
+func (mr *MockscheduledJobReadParserMockRecorder) Parse(path, data interface{}, options ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{path, data}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parse", reflect.TypeOf((*MockscheduledJobReadParser)(nil).Parse), varargs...)
+}
+
 // ParseScheduledJob mocks base method.
-func (m *MockscheduledJobParser) ParseScheduledJob(arg0 template.WorkloadOpts) (*template.Content, error) {
+func (m *MockscheduledJobReadParser) ParseScheduledJob(arg0 template.WorkloadOpts) (*template.Content, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ParseScheduledJob", arg0)
 	ret0, _ := ret[0].(*template.Content)
@@ -44,7 +64,22 @@ func (m *MockscheduledJobParser) ParseScheduledJob(arg0 template.WorkloadOpts) (
 }
 
 // ParseScheduledJob indicates an expected call of ParseScheduledJob.
-func (mr *MockscheduledJobParserMockRecorder) ParseScheduledJob(arg0 interface{}) *gomock.Call {
+func (mr *MockscheduledJobReadParserMockRecorder) ParseScheduledJob(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseScheduledJob", reflect.TypeOf((*MockscheduledJobParser)(nil).ParseScheduledJob), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseScheduledJob", reflect.TypeOf((*MockscheduledJobReadParser)(nil).ParseScheduledJob), arg0)
+}
+
+// Read mocks base method.
+func (m *MockscheduledJobReadParser) Read(path string) (*template.Content, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Read", path)
+	ret0, _ := ret[0].(*template.Content)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Read indicates an expected call of Read.
+func (mr *MockscheduledJobReadParserMockRecorder) Read(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockscheduledJobReadParser)(nil).Read), path)
 }

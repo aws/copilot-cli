@@ -73,6 +73,7 @@ func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error)
 		store:              store,
 		pipelineSvc:        codepipeline.New(session),
 		sel:                selector.NewSelect(prompter, store),
+		prompt:             prompter,
 		initDescriber: func(o *pipelineStatusOpts) error {
 			d, err := describe.NewPipelineStatusDescriber(o.pipelineName)
 			if err != nil {
@@ -167,8 +168,7 @@ func (o *pipelineStatusOpts) askPipelineName() error {
 	}
 
 	if len(pipelineNames) == 0 {
-		log.Infof("No pipelines found for application %s.\n", color.HighlightUserInput(o.appName))
-		return nil
+		return fmt.Errorf("no pipelines found for application %s", color.HighlightUserInput(o.appName))
 	}
 
 	if len(pipelineNames) == 1 {

@@ -6,6 +6,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -37,6 +38,7 @@ type appUpgradeOpts struct {
 	store         store
 	prog          progress
 	versionGetter versionGetter
+	identity      identityService
 	upgrader      appUpgrader
 }
 
@@ -49,13 +51,14 @@ func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	d, err := describe.NewAppDescriber(describe.NewAppDescriberConfig{})
+	d, err := describe.NewAppDescriber(vars.name)
 	if err != nil {
 		return nil, fmt.Errorf("new app describer for application %s: %v", vars.name, err)
 	}
 	return &appUpgradeOpts{
 		appUpgradeVars: vars,
 		store:          store,
+		identity:       identity.New(sess),
 		prog:           termprogress.NewSpinner(log.DiagnosticWriter),
 		versionGetter:  d,
 		upgrader:       cloudformation.New(sess),
@@ -72,7 +75,10 @@ func (o *appUpgradeOpts) Execute() error {
 	if !shouldUpgradeApp(o.name, version) {
 		return nil
 	}
-
+	app, err := o.store.GetApplication(o.name)
+	if err != nil {
+		return fmt.Errorf("get application %s: %w", o.name, err)
+	}
 	o.prog.Start(fmt.Sprintf(fmtAppUpgradeStart, color.HighlightUserInput(o.name), color.Emphasize(version), color.Emphasize(deploy.LatestAppTemplateVersion)))
 	defer func() {
 		if err != nil {
@@ -81,11 +87,11 @@ func (o *appUpgradeOpts) Execute() error {
 		}
 		o.prog.Stop(log.Ssuccessf(fmtAppUpgradeComplete, color.HighlightUserInput(o.name), color.Emphasize(deploy.LatestAppTemplateVersion)))
 	}()
-	app, err := o.store.GetApplication(o.name)
+	err = o.upgradeApplication(app, version, deploy.LatestAppTemplateVersion)
 	if err != nil {
-		return fmt.Errorf("get application %s: %w", o.name, err)
+		return err
 	}
-	return o.upgradeApplication(app, version, deploy.LatestAppTemplateVersion)
+	return nil
 }
 
 func shouldUpgradeApp(appName string, version string) bool {
@@ -108,7 +114,17 @@ Are you using the latest version of AWS Copilot?`, appName, deploy.LatestAppTemp
 }
 
 func (o *appUpgradeOpts) upgradeApplication(app *config.Application, fromVersion, toVersion string) error {
-	if err := o.upgrader.UpgradeApplication(&deploy.CreateAppInput{}); err != nil {
+	caller, err := o.identity.Get()
+	if err != nil {
+		return fmt.Errorf("get identity: %w", err)
+	}
+	if err := o.upgrader.UpgradeApplication(&deploy.CreateAppInput{
+		Name:               o.name,
+		AccountID:          caller.Account,
+		DomainName:         app.Domain,
+		DomainHostedZoneID: app.DomainHostedZoneID,
+		Version:            toVersion,
+	}); err != nil {
 		return fmt.Errorf("upgrade application %s from version %s to version %s: %v", app.Name, fromVersion, toVersion, err)
 	}
 	return nil

@@ -277,7 +277,7 @@ func TestEnvDescriber_Version(t *testing.T) {
 		"should read the version from the Metadata field": {
 			given: func(ctrl *gomock.Controller) *EnvDescriber {
 				m := mocks.NewMockcfn(ctrl)
-				m.EXPECT().Metadata("phonetool-test").Return(`{"Version":"1.0.0"}`, nil)
+				m.EXPECT().Metadata(gomock.Any()).Return(`{"Version":"1.0.0"}`, nil)
 				return &EnvDescriber{
 					app: "phonetool",
 					env: &config.Environment{Name: "test"},
