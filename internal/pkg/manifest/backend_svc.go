@@ -41,7 +41,6 @@ type BackendServiceConfig struct {
 	*Logging      `yaml:"logging,flow"`
 	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
 	Network       NetworkConfig             `yaml:"network"`
-	DockerLabels  map[string]string         `yaml:"docker_labels,flow"`
 }
 
 type imageWithPortAndHealthcheck struct {

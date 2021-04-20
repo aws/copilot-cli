@@ -82,7 +82,7 @@ Resources:
               SourceVolume: myEFSVolume
           DockerLabels:
             com.amazonaws.ecs.copilot.coollabel: Synecdoche
-            com.amazonaws.ecs.copilot.description: Hello orld!
+            com.amazonaws.ecs.copilot.description: Hello world!
         - Name: nginx
           Image: 'public.ecr.aws/nginx/nginx'
           LogConfiguration:
