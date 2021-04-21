@@ -9,9 +9,6 @@ DesiredCount: !GetAtt DynamicDesiredCountAction.DesiredCount
 {{- else }}
 DesiredCount: !Ref TaskCount
 {{- end}}
-{{- if .Storage}}
-PlatformVersion: 1.4.0
-{{- end}}
 DeploymentConfiguration:
   DeploymentCircuitBreaker:
     Enable: true
@@ -20,7 +17,6 @@ DeploymentConfiguration:
   MaximumPercent: 200
 PropagateTags: SERVICE
 {{- if .ExecuteCommand }}
-PlatformVersion: 1.4.0
 EnableExecuteCommand: true
 {{- end }}
 {{- if not .CapacityProviders }}
