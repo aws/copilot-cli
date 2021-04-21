@@ -526,3 +526,66 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 		})
 	}
 }
+
+func TestCount_Desired(t *testing.T) {
+	mockRange := Range("1-10")
+	testCases := map[string]struct {
+		input *Count
+
+		expected    *int
+		expectedErr error
+	}{
+		"with value": {
+			input: &Count{
+				Value: aws.Int(42),
+			},
+
+			expected: aws.Int(42),
+		},
+		"with spot count": {
+			input: &Count{
+				AdvancedCount: AdvancedCount{
+					Spot: aws.Int(31),
+				},
+			},
+			expected: aws.Int(31),
+		},
+		"with autoscaling range on dedicated capacity": {
+			input: &Count{
+				AdvancedCount: AdvancedCount{
+					Range: &RangeOpts{
+						Range: &mockRange,
+					},
+				},
+			},
+			expected: aws.Int(1),
+		},
+		"with autoscaling range with spot capacity": {
+			input: &Count{
+				AdvancedCount: AdvancedCount{
+					Range: &RangeOpts{
+						RangeConfig: RangeConfig{
+							Min: aws.Int(5),
+							Max: aws.Int(10),
+						},
+					},
+				},
+			},
+			expected: aws.Int(5),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual, err := tc.input.Desired()
+
+			// THEN
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expected, actual)
+			}
+		})
+	}
+}

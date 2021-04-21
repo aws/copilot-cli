@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"gopkg.in/yaml.v3"
 )
 
@@ -146,6 +147,25 @@ func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return errUnmarshalCountOpts
 	}
 	return nil
+}
+
+// Desired returns the desiredCount to be set on the CFN template
+func (c *Count) Desired() (*int, error) {
+	desiredCount := c.Value
+
+	// If auto scaling is configured, override the desired count value.
+	if !c.AdvancedCount.IsEmpty() {
+		if c.AdvancedCount.IgnoreRange() {
+			desiredCount = c.AdvancedCount.Spot
+		} else {
+			min, _, err := c.AdvancedCount.Range.Parse()
+			if err != nil {
+				return nil, fmt.Errorf("parse task count value %s: %w", aws.StringValue((*string)(c.AdvancedCount.Range.Range)), err)
+			}
+			desiredCount = aws.Int(min)
+		}
+	}
+	return desiredCount, nil
 }
 
 // AdvancedCount represents the configurable options for Auto Scaling as well as
