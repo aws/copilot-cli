@@ -120,6 +120,9 @@ How long to wait before considering the health check failed, in seconds. Default
 <span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-start-period" href="#image-healthcheck-start-period" class="field">`start_period`</a> <span class="type">Duration</span>  
 Grace period within which to provide containers time to bootstrap before failed health checks count towards the maximum number of retries. Default is 0s.
 
+<span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a><span class="type">Map</span>
+An optional key/value map of [Docker labels](https://docs.docker.com/config/labels-custom-metadata/) to add to the container.
+
 <div class="separator"></div>
 
 <a id="entrypoint" href="#entrypoint" class="field">`entrypoint`</a> <span class="type">String or Array of Strings</span>  
@@ -258,5 +261,3 @@ Optional. Defaults to `""`. The ID of the EFS access point to connect to. If usi
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.
 
-<a id="image-labels" href="#image-labels" class="field">`labels`</a> <span class="type">Map</span>  
-An optional key/value map of [Docker labels](https://docs.docker.com/config/labels-custom-metadata/) to add to the container.
