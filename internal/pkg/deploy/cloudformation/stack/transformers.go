@@ -51,7 +51,7 @@ var (
 	errUIDWithNonManagedFS = errors.New("UID and GID cannot be specified with non-managed EFS")
 	errInvalidUIDGIDConfig = errors.New("set managed filesystem access point creation info: must specify both UID and GID, or neither")
 	errReservedUID         = errors.New("set managed filesystem access point creation info: UID must not be 0")
-	errInvalidSpotConfig   = errors.New(`invalid spot configuration`)
+	errInvalidSpotConfig   = errors.New(`"count.spot" and "count.range" cannot be specified together`)
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
