@@ -310,8 +310,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"generate-cmd specified with another flag": {
 			basicOpts: defaultOpts,
 
-			inGenerateCMDTarget: "cluster/service",
-			inEnv:               "env",
+			inGenerateCMDTarget: "cluster/service", // nFlag is set to 2.
 
 			wantedError: errors.New("cannot specify `--generate-cmd` with any other flag"),
 		},
@@ -343,8 +342,10 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					command:                     tc.inCommand,
 					entrypoint:                  tc.inEntryPoint,
 					useDefaultSubnetsAndCluster: tc.inDefault,
+					generateCMDTarget:           tc.inGenerateCMDTarget,
 				},
 				isDockerfileSet: tc.isDockerfileSet,
+				nFlag:           2,
 
 				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
 				store: mockStore,
