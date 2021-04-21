@@ -119,11 +119,10 @@ func convertCapacityProviders(a *manifest.Autoscaling) ([]*template.CapacityProv
 	// if Base is not nil, then that's what the desired count should be on the service
 
 	// if Spot specified as count, then weight on Spot CPS should be 1
-	spotCapacity := &template.CapacityProviderStrategy{
+	cps = append(cps, &template.CapacityProviderStrategy{
 		Weight:           aws.Int(1),
 		CapacityProvider: capacityProviderFargateSpot,
-	}
-	cps = append(cps, spotCapacity)
+	})
 
 	// Return if only spot is specifed as count
 	if a.Range == nil {
