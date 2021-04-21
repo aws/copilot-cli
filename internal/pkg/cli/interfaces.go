@@ -455,6 +455,7 @@ type appEnvSelector interface {
 type configSelector interface {
 	appEnvSelector
 	Service(prompt, help, app string) (string, error)
+	Job(prompt, help, app string) (string, error)
 }
 
 type deploySelector interface {

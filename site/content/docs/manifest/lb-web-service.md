@@ -144,6 +144,9 @@ The `location` field follows the same definition as the [`image` parameter](http
 <span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  
 The port exposed in your Dockerfile. Copilot should parse this value for you from your `EXPOSE` instruction.
 
+<span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a><span class="type">Map</span>
+An optional key/value map of [Docker labels](https://docs.docker.com/config/labels-custom-metadata/) to add to the container.
+
 <div class="separator"></div>
 
 <a id="entrypoint" href="#entrypoint" class="field">`entrypoint`</a> <span class="type">String or Array of Strings</span>  
@@ -288,3 +291,4 @@ Optional. Defaults to `""`. The ID of the EFS access point to connect to. If usi
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.
+

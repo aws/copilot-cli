@@ -6,6 +6,8 @@ package exec
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -15,6 +17,20 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+type fakeHTTPClient struct {
+	content []byte
+	err     error
+}
+
+func (c *fakeHTTPClient) Get(url string) (resp *http.Response, err error) {
+	if c.err != nil {
+		return nil, c.err
+	}
+	r := httptest.NewRecorder()
+	_, _ = r.Write(c.content)
+	return r.Result(), nil
+}
 
 func TestSSMPluginCommand_StartSession(t *testing.T) {
 	mockSession := &ecs.Session{

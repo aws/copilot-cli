@@ -41,15 +41,7 @@ Resources:
     Properties:
 {{include "fargate-taskdef-base-properties" . | indent 6}}
       ContainerDefinitions:
-        - Name: !Ref WorkloadName
-          Image: !Ref ContainerImage
-{{include "envvars" . | indent 10}}
-{{include "secrets" . | indent 10}}
-{{include "logconfig" . | indent 10}}
-{{include "image-overrides" . | indent 10}}
-{{- if .Storage -}}
-{{include "mount-points" . | indent 10}}
-{{- end -}}
+{{include "workload-container" . | indent 8}}
 {{include "sidecars" . | indent 8}}
 {{- if .Storage -}}
 {{include "volumes" . | indent 6}}

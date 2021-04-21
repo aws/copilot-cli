@@ -9,6 +9,8 @@ name: job
 type: Scheduled Job
 
 image:
+  labels:
+    com.amazonaws.ecs.copilot.description: Hello world!
   location: alpine
 
 # Number of CPU units for the task.
@@ -44,6 +46,15 @@ sidecars:
         path: '/var/www'
     variables:
       NGINX_PORT: 8080
+    labels:
+      com.amazonaws.ecs.copilot.sidecars.nginx.description: tricky
+
+environments:
+  test:
+    image:
+      labels:
+        com.amazonaws.ecs.copilot.coollabel: Synecdoche
+
 # Optional fields for more advanced use-cases.
 #
 #variables:                    # Pass environment variables as key value pairs.

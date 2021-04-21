@@ -34,6 +34,8 @@ type ecsClient interface {
 	ServiceTasks(clusterName, serviceName string) ([]*ecs.Task, error)
 	DefaultCluster() (string, error)
 	StopTasks(tasks []string, opts ...ecs.StopTasksOpts) error
+	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
+	NetworkConfiguration(cluster, serviceName string) (*ecs.NetworkConfiguration, error)
 }
 
 // ServiceDesc contains the description of an ECS service.
@@ -59,44 +61,12 @@ func New(sess *session.Session) *Client {
 
 // ClusterARN returns the ARN of the cluster in an environment.
 func (c Client) ClusterARN(app, env string) (string, error) {
-	clusters, err := c.rgGetter.GetResourcesByTags(clusterResourceType, map[string]string{
-		deploy.AppTagKey: app,
-		deploy.EnvTagKey: env,
-	})
-
-	if err != nil {
-		return "", fmt.Errorf("get cluster resources for environment %s: %w", env, err)
-	}
-
-	if len(clusters) == 0 {
-		return "", fmt.Errorf("no cluster found in environment %s", env)
-	}
-
-	// NOTE: only one cluster is associated with an application and an environment.
-	if len(clusters) > 1 {
-		return "", fmt.Errorf("more than one cluster is found in environment %s", env)
-	}
-	return clusters[0].ARN, nil
+	return c.clusterARN(app, env)
 }
 
 // ServiceARN returns the ARN of an ECS service created with Copilot.
 func (c Client) ServiceARN(app, env, svc string) (*ecs.ServiceArn, error) {
-	services, err := c.rgGetter.GetResourcesByTags(serviceResourceType, map[string]string{
-		deploy.AppTagKey:     app,
-		deploy.EnvTagKey:     env,
-		deploy.ServiceTagKey: svc,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("get ECS service with tags (%s, %s, %s): %w", app, env, svc, err)
-	}
-	if len(services) == 0 {
-		return nil, fmt.Errorf("no ECS service found for %s in environment %s", svc, env)
-	}
-	if len(services) > 1 {
-		return nil, fmt.Errorf("more than one ECS service with the name %s found in environment %s", svc, env)
-	}
-	serviceArn := ecs.ServiceArn(services[0].ARN)
-	return &serviceArn, nil
+	return c.serviceARN(app, env, svc)
 }
 
 // DescribeService returns the description of an ECS service given Copilot service info.
@@ -220,6 +190,36 @@ func (c Client) StopDefaultClusterTasks(familyName string) error {
 	return c.ecsClient.StopTasks(taskIDs, ecs.WithStopTaskReason(taskStopReason))
 }
 
+// TaskDefinition returns the task definition of the service.
+func (c Client) TaskDefinition(app, env, svc string) (*ecs.TaskDefinition, error) {
+	taskDefName := fmt.Sprintf("%s-%s-%s", app, env, svc)
+	taskDefinition, err := c.ecsClient.TaskDefinition(taskDefName)
+	if err != nil {
+		return nil, fmt.Errorf("get task definition %s of service %s: %w", taskDefName, svc, err)
+	}
+	return taskDefinition, nil
+}
+
+// NetworkConfiguration returns the network configuration of the service.
+func (c Client) NetworkConfiguration(app, env, svc string) (*ecs.NetworkConfiguration, error) {
+	clusterARN, err := c.clusterARN(app, env)
+	if err != nil {
+		return nil, err
+	}
+
+	arn, err := c.serviceARN(app, env, svc)
+	if err != nil {
+		return nil, err
+	}
+
+	svcName, err := arn.ServiceName()
+	if err != nil {
+		return nil, fmt.Errorf("extract service name from arn %s: %w", *arn, err)
+	}
+
+	return c.ecsClient.NetworkConfiguration(clusterARN, svcName)
+}
+
 func (c Client) listActiveCopilotTasks(opts listActiveCopilotTasksOpts) ([]*ecs.Task, error) {
 	var tasks []*ecs.Task
 	if opts.TaskGroup != "" {
@@ -268,4 +268,44 @@ func filterCopilotTasks(tasks []*ecs.Task, taskID string) []*ecs.Task {
 		}
 	}
 	return filteredTasks
+}
+
+func (c Client) clusterARN(app, env string) (string, error) {
+	clusters, err := c.rgGetter.GetResourcesByTags(clusterResourceType, map[string]string{
+		deploy.AppTagKey: app,
+		deploy.EnvTagKey: env,
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("get cluster resources for environment %s: %w", env, err)
+	}
+
+	if len(clusters) == 0 {
+		return "", fmt.Errorf("no cluster found in environment %s", env)
+	}
+
+	// NOTE: only one cluster is associated with an application and an environment.
+	if len(clusters) > 1 {
+		return "", fmt.Errorf("more than one cluster is found in environment %s", env)
+	}
+	return clusters[0].ARN, nil
+}
+
+func (c Client) serviceARN(app, env, svc string) (*ecs.ServiceArn, error) {
+	services, err := c.rgGetter.GetResourcesByTags(serviceResourceType, map[string]string{
+		deploy.AppTagKey:     app,
+		deploy.EnvTagKey:     env,
+		deploy.ServiceTagKey: svc,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get ECS service with tags (%s, %s, %s): %w", app, env, svc, err)
+	}
+	if len(services) == 0 {
+		return nil, fmt.Errorf("no ECS service found for %s in environment %s", svc, env)
+	}
+	if len(services) > 1 {
+		return nil, fmt.Errorf("more than one ECS service with the name %s found in environment %s", svc, env)
+	}
+	serviceArn := ecs.ServiceArn(services[0].ARN)
+	return &serviceArn, nil
 }

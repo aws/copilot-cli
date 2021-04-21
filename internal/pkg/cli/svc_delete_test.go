@@ -124,7 +124,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 		envName          string
 		appName          string
 
-		mockSel    func(m *mocks.MockwsSelector)
+		mockSel    func(m *mocks.MockconfigSelector)
 		mockPrompt func(m *mocks.Mockprompter)
 
 		wantedName  string
@@ -134,7 +134,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			appName:          "",
 			inName:           testSvcName,
 			skipConfirmation: true,
-			mockSel: func(m *mocks.MockwsSelector) {
+			mockSel: func(m *mocks.MockconfigSelector) {
 				m.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return(testAppName, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
@@ -145,8 +145,8 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			appName:          testAppName,
 			inName:           "",
 			skipConfirmation: true,
-			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service("Which service would you like to delete?", "").Return(testSvcName, nil)
+			mockSel: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Service("Which service would you like to delete?", "", testAppName).Return(testSvcName, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
@@ -156,8 +156,8 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			appName:          testAppName,
 			inName:           "",
 			skipConfirmation: true,
-			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service("Which service would you like to delete?", "").Return("", mockError)
+			mockSel: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Service("Which service would you like to delete?", "", testAppName).Return("", mockError)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
@@ -167,8 +167,8 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			appName:          testAppName,
 			inName:           "",
 			skipConfirmation: true,
-			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service("Which service would you like to delete?", "").Return("", mockError)
+			mockSel: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Service("Which service would you like to delete?", "", testAppName).Return("", mockError)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 			},
@@ -179,8 +179,8 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			appName:          testAppName,
 			inName:           testSvcName,
 			skipConfirmation: true,
-			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
+			mockSel: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Service(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
@@ -190,8 +190,8 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			appName:          testAppName,
 			inName:           testSvcName,
 			skipConfirmation: false,
-			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
+			mockSel: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Service(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
@@ -206,8 +206,8 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			appName:          testAppName,
 			inName:           testSvcName,
 			skipConfirmation: false,
-			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
+			mockSel: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Service(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
@@ -222,8 +222,8 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			appName:          testAppName,
 			inName:           testSvcName,
 			skipConfirmation: false,
-			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
+			mockSel: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Service(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
@@ -239,8 +239,8 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           testSvcName,
 			envName:          "test",
 			skipConfirmation: false,
-			mockSel: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
+			mockSel: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Service(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
@@ -259,7 +259,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockPrompter := mocks.NewMockprompter(ctrl)
-			mockSel := mocks.NewMockwsSelector(ctrl)
+			mockSel := mocks.NewMockconfigSelector(ctrl)
 			test.mockPrompt(mockPrompter)
 			test.mockSel(mockSel)
 
