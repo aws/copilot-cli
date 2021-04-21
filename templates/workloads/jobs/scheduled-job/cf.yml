@@ -40,20 +40,8 @@ Resources:
     DependsOn: LogGroup
     Properties:
 {{include "fargate-taskdef-base-properties" . | indent 6}}
-      ContainerDefinitions:
-        - Name: !Ref WorkloadName
-          Image: !Ref ContainerImage
+{{include "container-definition-base-properties" . | indent 6}}
 {{include "envvars" . | indent 10}}
-{{include "secrets" . | indent 10}}
-{{include "logconfig" . | indent 10}}
-{{include "image-overrides" . | indent 10}}
-{{- if .Storage -}}
-{{include "mount-points" . | indent 10}}
-{{- end -}}
-{{- if .DockerLabels}}
-          DockerLabels:{{range $name, $value := .DockerLabels}}
-            {{$name | printf "%q"}}: {{$value | printf "%q"}}{{end}}
-{{- end -}}
 {{include "sidecars" . | indent 8}}
 {{- if .Storage -}}
 {{include "volumes" . | indent 6}}
