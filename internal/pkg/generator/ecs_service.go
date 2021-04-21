@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 )
 
-type ecsServiceGetter interface {
+type ecsClient interface {
 	Service(clusterName, serviceName string) (*ecs.Service, error)
 	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
 	NetworkConfiguration(cluster, serviceName string) (*ecs.NetworkConfiguration, error)
@@ -20,31 +20,31 @@ type ecsServiceGetter interface {
 
 // ECSServiceCommandGenerator generates task run command given an ECS service.
 type ECSServiceCommandGenerator struct {
-	Cluster          string
-	Service          string
-	ECSServiceGetter ecsServiceGetter
+	Cluster   string
+	Service   string
+	ECSClient ecsClient
 }
 
 // Generate generates a task run command.
 func (g ECSServiceCommandGenerator) Generate() (*GenerateCommandOpts, error) {
-	networkConfig, err := g.ECSServiceGetter.NetworkConfiguration(g.Cluster, g.Service)
+	networkConfig, err := g.ECSClient.NetworkConfiguration(g.Cluster, g.Service)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve network configuration for service %s in cluster %s: %w", g.Service, g.Cluster, err)
 	}
 
-	svc, err := g.ECSServiceGetter.Service(g.Cluster, g.Service)
+	svc, err := g.ECSClient.Service(g.Cluster, g.Service)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve service %s in cluster %s: %w", g.Service, g.Cluster, err)
 	}
 
 	taskDefNameOrARN := aws.StringValue(svc.TaskDefinition)
-	taskDef, err := g.ECSServiceGetter.TaskDefinition(taskDefNameOrARN)
+	taskDef, err := g.ECSClient.TaskDefinition(taskDefNameOrARN)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve task definition %s: %w", taskDefNameOrARN, err)
 	}
 
 	if len(taskDef.ContainerDefinitions) > 1 {
-		return nil, fmt.Errorf("found more that one container in task definition: %s", taskDefNameOrARN)
+		return nil, fmt.Errorf("found more than one container in task definition: %s", taskDefNameOrARN)
 	}
 
 	containerName := aws.StringValue(taskDef.ContainerDefinitions[0].Name)
@@ -55,12 +55,9 @@ func (g ECSServiceCommandGenerator) Generate() (*GenerateCommandOpts, error) {
 
 	return &GenerateCommandOpts{
 		networkConfiguration: *networkConfig,
-
-		executionRole: aws.StringValue(taskDef.ExecutionRoleArn),
-		taskRole:      aws.StringValue(taskDef.TaskRoleArn),
-
-		containerInfo: *containerInfo,
-
-		cluster: g.Cluster,
+		executionRole:        aws.StringValue(taskDef.ExecutionRoleArn),
+		taskRole:             aws.StringValue(taskDef.TaskRoleArn),
+		containerInfo:        *containerInfo,
+		cluster:              g.Cluster,
 	}, nil
 }

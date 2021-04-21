@@ -140,7 +140,7 @@ func TestECSServiceCommandGenerator_Generate(t *testing.T) {
 				}, nil)
 				m.EXPECT().NetworkConfiguration(gomock.Any(), gomock.Any()).AnyTimes()
 			},
-			wantedError: errors.New("found more that one container in task definition: task-def"),
+			wantedError: errors.New("found more than one container in task definition: task-def"),
 		},
 	}
 
@@ -153,9 +153,9 @@ func TestECSServiceCommandGenerator_Generate(t *testing.T) {
 			tc.setUpMock(m)
 
 			g := ECSServiceCommandGenerator{
-				Cluster:          testCluster,
-				Service:          testService,
-				ECSServiceGetter: m,
+				Cluster:   testCluster,
+				Service:   testService,
+				ECSClient: m,
 			}
 
 			got, err := g.Generate()

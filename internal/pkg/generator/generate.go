@@ -18,10 +18,9 @@ type GenerateCommandOpts struct {
 
 	executionRole string
 	taskRole      string
+	cluster       string
 
 	containerInfo
-
-	cluster string
 }
 
 type containerInfo struct {
@@ -33,7 +32,6 @@ type containerInfo struct {
 }
 
 func containerInformation(taskDef *ecs.TaskDefinition, containerName string) (*containerInfo, error) {
-
 	image, err := taskDef.Image(containerName)
 	if err != nil {
 		return nil, err
@@ -96,11 +94,11 @@ func (o GenerateCommandOpts) String() string {
 	}
 
 	if o.envVars != nil && len(o.envVars) != 0 {
-		output = append(output, fmt.Sprintf("--env-vars %s", printStringToStringMap(o.envVars)))
+		output = append(output, fmt.Sprintf("--env-vars %s", fmtStringMapToString(o.envVars)))
 	}
 
 	if o.secrets != nil && len(o.secrets) != 0 {
-		output = append(output, fmt.Sprintf("--secrets %s", printStringToStringMap(o.secrets)))
+		output = append(output, fmt.Sprintf("--secrets %s", fmtStringMapToString(o.secrets)))
 	}
 
 	if o.networkConfiguration.Subnets != nil && len(o.networkConfiguration.Subnets) != 0 {
@@ -118,7 +116,8 @@ func (o GenerateCommandOpts) String() string {
 	return strings.Join(output, " \\\n")
 }
 
-func printStringToStringMap(m map[string]string) string {
+// This function will format a map to a string as "key1=value1,key2=value2,key3=value3".
+func fmtStringMapToString(m map[string]string) string {
 	var output []string
 
 	// Sort the map so that `output` is consistent and the unit test won't be flaky.

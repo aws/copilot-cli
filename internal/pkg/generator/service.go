@@ -19,16 +19,14 @@ type ecsInformationGetter interface {
 
 // ServiceCommandGenerator generates task run command given a Copilot service.
 type ServiceCommandGenerator struct {
-	App     string
-	Env     string
-	Service string
-
+	App                  string
+	Env                  string
+	Service              string
 	ECSInformationGetter ecsInformationGetter
 }
 
 // Generate generates a task run command.
 func (g ServiceCommandGenerator) Generate() (*GenerateCommandOpts, error) {
-
 	networkConfig, err := g.ECSInformationGetter.NetworkConfiguration(g.App, g.Env, g.Service)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve network configuration for service %s: %w", g.Service, err)
@@ -52,12 +50,9 @@ func (g ServiceCommandGenerator) Generate() (*GenerateCommandOpts, error) {
 
 	return &GenerateCommandOpts{
 		networkConfiguration: *networkConfig,
-
-		executionRole: aws.StringValue(taskDef.ExecutionRoleArn),
-		taskRole:      aws.StringValue(taskDef.TaskRoleArn),
-
-		containerInfo: *containerInfo,
-
-		cluster: cluster,
+		executionRole:        aws.StringValue(taskDef.ExecutionRoleArn),
+		taskRole:             aws.StringValue(taskDef.TaskRoleArn),
+		containerInfo:        *containerInfo,
+		cluster:              cluster,
 	}, nil
 }
