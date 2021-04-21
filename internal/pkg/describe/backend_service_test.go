@@ -175,27 +175,33 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				Service: testSvc,
 				Type:    "Backend Service",
 				App:     testApp,
-				Configurations: []*ServiceConfig{
+				Configurations: []*ECSServiceConfig{
 					{
-						CPU:         "256",
-						Environment: "test",
-						Memory:      "512",
-						Port:        "5000",
-						Tasks:       "1",
+						ServiceConfig: &ServiceConfig{
+							CPU:         "256",
+							Environment: "test",
+							Memory:      "512",
+							Port:        "5000",
+						},
+						Tasks: "1",
 					},
 					{
-						CPU:         "512",
-						Environment: "prod",
-						Memory:      "1024",
-						Port:        "5000",
-						Tasks:       "2",
+						ServiceConfig: &ServiceConfig{
+							CPU:         "512",
+							Environment: "prod",
+							Memory:      "1024",
+							Port:        "5000",
+						},
+						Tasks: "2",
 					},
 					{
-						CPU:         "512",
-						Environment: "mockEnv",
-						Memory:      "1024",
-						Port:        "-",
-						Tasks:       "2",
+						ServiceConfig: &ServiceConfig{
+							CPU:         "512",
+							Environment: "mockEnv",
+							Memory:      "1024",
+							Port:        "-",
+						},
+						Tasks: "2",
 					},
 				},
 				ServiceDiscovery: []*ServiceDiscovery{
@@ -204,24 +210,30 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						Namespace:   "jobs.phonetool.local:5000",
 					},
 				},
-				Variables: []*envVar{
+				Variables: []*containerEnvVar{
 					{
-						Container:   "container",
-						Environment: "test",
-						Name:        "COPILOT_ENVIRONMENT_NAME",
-						Value:       "test",
+						envVar: &envVar{
+							Environment: "test",
+							Name:        "COPILOT_ENVIRONMENT_NAME",
+							Value:       "test",
+						},
+						Container: "container",
 					},
 					{
-						Container:   "container",
-						Environment: "prod",
-						Name:        "COPILOT_ENVIRONMENT_NAME",
-						Value:       "prod",
+						envVar: &envVar{
+							Environment: "prod",
+							Name:        "COPILOT_ENVIRONMENT_NAME",
+							Value:       "prod",
+						},
+						Container: "container",
 					},
 					{
-						Container:   "container",
-						Environment: "mockEnv",
-						Name:        "COPILOT_ENVIRONMENT_NAME",
-						Value:       "mockEnv",
+						envVar: &envVar{
+							Environment: "mockEnv",
+							Name:        "COPILOT_ENVIRONMENT_NAME",
+							Value:       "mockEnv",
+						},
+						Container: "container",
 					},
 				},
 				Secrets: []*secret{
@@ -258,6 +270,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						},
 					},
 				},
+				environments: []string{"test", "prod", "mockEnv"},
 			},
 		},
 	}
@@ -350,40 +363,48 @@ Resources
   prod
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
-			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Backend Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"serviceDiscovery\":[{\"environment\":[\"test\",\"prod\"],\"namespace\":\"http://my-svc.my-app.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"container\":\"container\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"container\":\"container\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Backend Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"256\",\"memory\":\"512\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"5000\",\"cpu\":\"512\",\"memory\":\"1024\",\"tasks\":\"3\"}],\"serviceDiscovery\":[{\"environment\":[\"test\",\"prod\"],\"namespace\":\"http://my-svc.my-app.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			config := []*ServiceConfig{
+			config := []*ECSServiceConfig{
 				{
-					CPU:         "256",
-					Environment: "test",
-					Memory:      "512",
-					Port:        "80",
-					Tasks:       "1",
+					ServiceConfig: &ServiceConfig{
+						CPU:         "256",
+						Environment: "test",
+						Memory:      "512",
+						Port:        "80",
+					},
+					Tasks: "1",
 				},
 				{
-					CPU:         "512",
-					Environment: "prod",
-					Memory:      "1024",
-					Port:        "5000",
-					Tasks:       "3",
+					ServiceConfig: &ServiceConfig{
+						CPU:         "512",
+						Environment: "prod",
+						Memory:      "1024",
+						Port:        "5000",
+					},
+					Tasks: "3",
 				},
 			}
-			envVars := []*envVar{
+			envVars := []*containerEnvVar{
 				{
-					Container:   "container",
-					Environment: "prod",
-					Name:        "COPILOT_ENVIRONMENT_NAME",
-					Value:       "prod",
+					envVar: &envVar{
+						Environment: "prod",
+						Name:        "COPILOT_ENVIRONMENT_NAME",
+						Value:       "prod",
+					},
+					Container: "container",
 				},
 				{
-					Container:   "container",
-					Environment: "test",
-					Name:        "COPILOT_ENVIRONMENT_NAME",
-					Value:       "test",
+					envVar: &envVar{
+						Environment: "test",
+						Name:        "COPILOT_ENVIRONMENT_NAME",
+						Value:       "test",
+					},
+					Container: "container",
 				},
 			}
 			secrets := []*secret{
@@ -429,6 +450,7 @@ Resources
 				Secrets:          secrets,
 				ServiceDiscovery: sds,
 				Resources:        resources,
+				environments:     []string{"test", "prod"},
 			}
 			human := backendSvc.HumanString()
 			json, _ := backendSvc.JSONString()

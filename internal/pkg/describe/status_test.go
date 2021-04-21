@@ -268,10 +268,10 @@ func TestServiceStatus_Describe(t *testing.T) {
 				svc:          "mockSvc",
 				env:          "mockEnv",
 				app:          "mockApp",
-				cwSvc:        mockcwSvc,
-				ecsSvc:       mockecsSvc,
+				cwSvcGetter:  mockcwSvc,
+				ecsSvcGetter: mockecsSvc,
 				svcDescriber: mockSvcDescriber,
-				aasSvc:       mockaasClient,
+				aasSvcGetter: mockaasClient,
 			}
 
 			// WHEN
@@ -460,15 +460,15 @@ func TestServiceStatus_DescribeAppRunnerService(t *testing.T) {
 	}
 	testCases := map[string]struct {
 		setupMocks func(mocks serviceStatusMocks)
-		desc       *appRunnerServiceStatus
+		desc       *apprunnerServiceStatus
 
 		wantedError   error
-		wantedContent *appRunnerServiceStatus
+		wantedContent *apprunnerServiceStatus
 	}{
 		"errors if failed to describe a service": {
 			setupMocks: func(m serviceStatusMocks) {
 				gomock.InOrder(
-					m.apprunnerServiceGetter.EXPECT().DescribeService("arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf").Return(apprunner.Service{}, mockError),
+					m.apprunnerServiceGetter.EXPECT().DescribeService("arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf").Return(nil, mockError),
 				)
 			},
 
@@ -476,12 +476,12 @@ func TestServiceStatus_DescribeAppRunnerService(t *testing.T) {
 		},
 		"success": {
 			setupMocks: func(m serviceStatusMocks) {
-				m.apprunnerServiceGetter.EXPECT().DescribeService("arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf").Return(mockAppRunnerServiceDesc, nil)
+				m.apprunnerServiceGetter.EXPECT().DescribeService("arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf").Return(&mockAppRunnerServiceDesc, nil)
 				m.logGetter.EXPECT().LogEvents(cloudwatchlogs.LogEventsOpts{LogGroup: "/aws/apprunner/my-service/fc1098ac269245959ba78fd58bdd4bf/service", Limit: aws.Int64(10)}).Return(&cloudwatchlogs.LogEventsOutput{
 					Events: logEvents,
 				}, nil)
 			},
-			wantedContent: &appRunnerServiceStatus{
+			wantedContent: &apprunnerServiceStatus{
 				Service: apprunner.Service{
 					ServiceARN:  "arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf",
 					Status:      "RUNNING",
@@ -511,9 +511,9 @@ func TestServiceStatus_DescribeAppRunnerService(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			svcStatus := &AppRunnerStatusDescriber{
-				apprunnerSvc: mockAppRunnerSvc,
-				svcARN:       "arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf",
-				eventsGetter: mockLogsSvc,
+				apprunnerSvcGetter: mockAppRunnerSvc,
+				svcARN:             "arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf",
+				eventsGetter:       mockLogsSvc,
 			}
 
 			statusDesc, err := svcStatus.Describe()
@@ -549,12 +549,12 @@ func TestServiceStatusDesc_AppRunnerServiceString(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		desc  *appRunnerServiceStatus
+		desc  *apprunnerServiceStatus
 		human string
 		json  string
 	}{
 		"RUNNING": {
-			desc: &appRunnerServiceStatus{
+			desc: &apprunnerServiceStatus{
 				Service: apprunner.Service{
 					ServiceARN:  "mock-svc-arn",
 					Status:      "RUNNING",
@@ -575,7 +575,7 @@ System Logs
 
   2021-04-08T08:13:11-07:00    [AppRunner] Service creation started.
 `,
-			json: "{\"Service\":{\"ServiceARN\":\"mock-svc-arn\",\"Name\":\"\",\"ID\":\"\",\"Status\":\"RUNNING\",\"ServiceURL\":\"\",\"DateCreated\":\"0001-01-01T00:00:00Z\",\"DateUpdated\":\"2021-02-12T08:02:45-08:00\"},\"LogEvents\":[{\"logStreamName\":\"events\",\"ingestionTime\":0,\"message\":\"[AppRunner] Service creation started.\",\"timestamp\":1617894791771}]}\n",
+			json: "{\"Service\":{\"ServiceARN\":\"mock-svc-arn\",\"Name\":\"\",\"ID\":\"\",\"Status\":\"RUNNING\",\"ServiceURL\":\"\",\"DateCreated\":\"0001-01-01T00:00:00Z\",\"DateUpdated\":\"2021-02-12T08:02:45-08:00\",\"CPU\":\"\",\"Memory\":\"\",\"Port\":\"\",\"EnvironmentVariables\":null},\"LogEvents\":[{\"logStreamName\":\"events\",\"ingestionTime\":0,\"message\":\"[AppRunner] Service creation started.\",\"timestamp\":1617894791771}]}\n",
 		},
 	}
 

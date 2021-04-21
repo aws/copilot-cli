@@ -49,7 +49,7 @@ type serviceDescriber interface {
 }
 
 type apprunnerServiceGetter interface {
-	DescribeService(svcARN string) (apprunner.Service, error)
+	DescribeService(svcARN string) (*apprunner.Service, error)
 }
 
 type autoscalingAlarmNamesGetter interface {
@@ -63,17 +63,17 @@ type ECSStatusDescriber struct {
 	svc string
 
 	svcDescriber serviceDescriber
-	ecsSvc       ecsServiceGetter
-	cwSvc        alarmStatusGetter
-	aasSvc       autoscalingAlarmNamesGetter
+	ecsSvcGetter ecsServiceGetter
+	cwSvcGetter  alarmStatusGetter
+	aasSvcGetter autoscalingAlarmNamesGetter
 }
 
 // AppRunnerStatusDescriber retrieves status of an AppRunner service.
 type AppRunnerStatusDescriber struct {
 	svcARN string
 
-	apprunnerSvc apprunnerServiceGetter
-	eventsGetter logGetter
+	apprunnerSvcGetter apprunnerServiceGetter
+	eventsGetter       logGetter
 }
 
 // ecsServiceStatus contains the status for an ECS service.
@@ -83,8 +83,8 @@ type ecsServiceStatus struct {
 	Alarms  []cloudwatch.AlarmStatus `json:"alarms"`
 }
 
-// appRunnerServiceStatus contains the status for an AppRunner service.
-type appRunnerServiceStatus struct {
+// apprunnerServiceStatus contains the status for an AppRunner service.
+type apprunnerServiceStatus struct {
 	Service   apprunner.Service
 	LogEvents []*cloudwatchlogs.Event
 }
@@ -112,9 +112,9 @@ func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, er
 		env:          opt.Env,
 		svc:          opt.Svc,
 		svcDescriber: ecs.New(sess),
-		cwSvc:        cloudwatch.New(sess),
-		ecsSvc:       awsECS.New(sess),
-		aasSvc:       aas.New(sess),
+		cwSvcGetter:  cloudwatch.New(sess),
+		ecsSvcGetter: awsECS.New(sess),
+		aasSvcGetter: aas.New(sess),
 	}, nil
 }
 
@@ -134,9 +134,9 @@ func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*AppRunnerStatusD
 		return nil, fmt.Errorf("retrieve ServiceARN for %s: %w", opt.Svc, err)
 	}
 	return &AppRunnerStatusDescriber{
-		apprunnerSvc: svc,
-		eventsGetter: cloudwatchlogs.New(sess),
-		svcARN:       svcARN,
+		apprunnerSvcGetter: svc,
+		eventsGetter:       cloudwatchlogs.New(sess),
+		svcARN:             svcARN,
 	}, nil
 }
 
@@ -146,7 +146,7 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get ECS service description for %s: %w", s.svc, err)
 	}
-	service, err := s.ecsSvc.Service(svcDesc.ClusterName, svcDesc.Name)
+	service, err := s.ecsSvcGetter.Service(svcDesc.ClusterName, svcDesc.Name)
 	if err != nil {
 		return nil, fmt.Errorf("get service %s: %w", svcDesc.Name, err)
 	}
@@ -159,7 +159,7 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 		taskStatus = append(taskStatus, *status)
 	}
 	var alarms []cloudwatch.AlarmStatus
-	taggedAlarms, err := s.cwSvc.AlarmsWithTags(map[string]string{
+	taggedAlarms, err := s.cwSvcGetter.AlarmsWithTags(map[string]string{
 		deploy.AppTagKey:     s.app,
 		deploy.EnvTagKey:     s.env,
 		deploy.ServiceTagKey: s.svc,
@@ -182,7 +182,7 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 
 // Describe returns status of an AppRunner service.
 func (a *AppRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
-	apprunnerSvc, err := a.apprunnerSvc.DescribeService(a.svcARN)
+	apprunnerSvc, err := a.apprunnerSvcGetter.DescribeService(a.svcARN)
 	if err != nil {
 		return nil, fmt.Errorf("get AppRunner service description for %s: %w", a.svcARN, err)
 	}
@@ -203,18 +203,18 @@ func (a *AppRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get log events for log group %s: %w", logGroupName, err)
 	}
-	return &appRunnerServiceStatus{
-		Service:   apprunnerSvc,
+	return &apprunnerServiceStatus{
+		Service:   *apprunnerSvc,
 		LogEvents: logEventsOutput.Events,
 	}, nil
 }
 
 func (s *ECSStatusDescriber) ecsServiceAutoscalingAlarms(cluster, service string) ([]cloudwatch.AlarmStatus, error) {
-	alarmNames, err := s.aasSvc.ECSServiceAlarmNames(cluster, service)
+	alarmNames, err := s.aasSvcGetter.ECSServiceAlarmNames(cluster, service)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve auto scaling alarm names for ECS service %s/%s: %w", cluster, service, err)
 	}
-	alarms, err := s.cwSvc.AlarmStatus(alarmNames)
+	alarms, err := s.cwSvcGetter.AlarmStatus(alarmNames)
 	if err != nil {
 		return nil, fmt.Errorf("get auto scaling CloudWatch alarms: %w", err)
 	}
@@ -230,8 +230,8 @@ func (s *ecsServiceStatus) JSONString() (string, error) {
 	return fmt.Sprintf("%s\n", b), nil
 }
 
-// JSONString returns the stringified appRunnerServiceStatus struct with json format.
-func (a *appRunnerServiceStatus) JSONString() (string, error) {
+// JSONString returns the stringified apprunnerServiceStatus struct with json format.
+func (a *apprunnerServiceStatus) JSONString() (string, error) {
 	b, err := json.Marshal(a)
 	if err != nil {
 		return "", fmt.Errorf("marshal services: %w", err)
@@ -274,8 +274,8 @@ func (s *ecsServiceStatus) HumanString() string {
 	return b.String()
 }
 
-// HumanString returns the stringified appRunnerServiceStatus struct with human readable format.
-func (a *appRunnerServiceStatus) HumanString() string {
+// HumanString returns the stringified apprunnerServiceStatus struct with human readable format.
+func (a *apprunnerServiceStatus) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, statusCellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprint(writer, color.Bold.Sprint("Service Status\n\n"))

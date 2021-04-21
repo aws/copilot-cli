@@ -221,10 +221,10 @@ func (m *MockapprunnerServiceGetter) EXPECT() *MockapprunnerServiceGetterMockRec
 }
 
 // DescribeService mocks base method.
-func (m *MockapprunnerServiceGetter) DescribeService(svcARN string) (apprunner.Service, error) {
+func (m *MockapprunnerServiceGetter) DescribeService(svcARN string) (*apprunner.Service, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeService", svcARN)
-	ret0, _ := ret[0].(apprunner.Service)
+	ret0, _ := ret[0].(*apprunner.Service)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -33,16 +33,53 @@ func TestAppRunner_DescribeService(t *testing.T) {
 					ServiceArn: aws.String("mock-svc-arn"),
 				}).Return(&apprunner.DescribeServiceOutput{
 					Service: &apprunner.Service{
-						ServiceArn: aws.String("mock-svc-arn"),
-						CreatedAt:  &mockTime,
-						UpdatedAt:  &mockTime,
+						ServiceArn:  aws.String("111111111111.apprunner.us-east-1.amazonaws.com/service/testsvc/test-svc-id"),
+						ServiceId:   aws.String("test-svc-id"),
+						ServiceName: aws.String("testapp-testenv-testsvc"),
+						ServiceUrl:  aws.String("tumkjmvjif.public.us-east-1.apprunner.aws.dev"),
+						Status:      aws.String("RUNNING"),
+						CreatedAt:   &mockTime,
+						UpdatedAt:   &mockTime,
+						InstanceConfiguration: &apprunner.InstanceConfiguration{
+							Cpu:    aws.String("1024"),
+							Memory: aws.String("2048"),
+						},
+						SourceConfiguration: &apprunner.SourceConfiguration{
+							ImageRepository: &apprunner.ImageRepository{
+								ImageIdentifier: aws.String("111111111111.dkr.ecr.us-east-1.amazonaws.com/testapp/testsvc:8cdef9a"),
+								ImageConfiguration: &apprunner.ImageConfiguration{
+									RuntimeEnvironmentVariables: aws.StringMap(map[string]string{
+										"LOG_LEVEL":                "info",
+										"COPILOT_APPLICATION_NAME": "testapp",
+									}),
+									Port: aws.String("80"),
+								},
+							},
+						},
 					},
 				}, nil)
 			},
 			wantSvc: Service{
-				ServiceARN:  "mock-svc-arn",
+				ServiceARN:  "111111111111.apprunner.us-east-1.amazonaws.com/service/testsvc/test-svc-id",
+				Name:        "testapp-testenv-testsvc",
+				ID:          "test-svc-id",
+				Status:      "RUNNING",
+				ServiceURL:  "tumkjmvjif.public.us-east-1.apprunner.aws.dev",
 				DateCreated: mockTime,
 				DateUpdated: mockTime,
+				EnvironmentVariables: []*EnvironmentVariable{
+					{
+						Name:  "COPILOT_APPLICATION_NAME",
+						Value: "testapp",
+					},
+					{
+						Name:  "LOG_LEVEL",
+						Value: "info",
+					},
+				},
+				CPU:    "1024",
+				Memory: "2048",
+				Port:   "80",
 			},
 		},
 	}
@@ -65,7 +102,7 @@ func TestAppRunner_DescribeService(t *testing.T) {
 			if gotErr != nil {
 				require.EqualError(t, tc.wantErr, gotErr.Error())
 			} else {
-				require.Equal(t, tc.wantSvc, gotSvc)
+				require.Equal(t, tc.wantSvc, *gotSvc)
 			}
 		})
 	}

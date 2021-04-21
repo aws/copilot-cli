@@ -37,7 +37,7 @@ type showSvcOpts struct {
 	store         store
 	describer     describer
 	sel           configSelector
-	initDescriber func() error // Overriden in tests.
+	initDescriber func() error // Overridden in tests.
 }
 
 func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
@@ -65,6 +65,16 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 		switch svc.Type {
 		case manifest.LoadBalancedWebServiceType:
 			d, err = describe.NewLBWebServiceDescriber(describe.NewLBWebServiceConfig{
+				NewServiceConfig: describe.NewServiceConfig{
+					App:         opts.appName,
+					Svc:         opts.svcName,
+					ConfigStore: ssmStore,
+				},
+				DeployStore:     deployStore,
+				EnableResources: opts.shouldOutputResources,
+			})
+		case manifest.RequestDrivenWebServiceType:
+			d, err = describe.NewRDWebServiceDescriber(describe.NewRDWebServiceConfig{
 				NewServiceConfig: describe.NewServiceConfig{
 					App:         opts.appName,
 					Svc:         opts.svcName,

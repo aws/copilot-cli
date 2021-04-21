@@ -100,8 +100,3 @@ Resources:
 
 {{include "addons" . | indent 2}}
 
-Outputs:
-  ServiceArn:
-    Value: !GetAtt Service.ServiceArn
-  ServiceURL:
-    Value: !GetAtt Service.ServiceUrl

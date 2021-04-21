@@ -8,11 +8,20 @@ import "time"
 
 // Service wraps up AppRunner Service struct.
 type Service struct {
-	ServiceARN  string
-	Name        string
-	ID          string
-	Status      string
-	ServiceURL  string
-	DateCreated time.Time
-	DateUpdated time.Time
+	ServiceARN           string
+	Name                 string
+	ID                   string
+	Status               string
+	ServiceURL           string
+	DateCreated          time.Time
+	DateUpdated          time.Time
+	CPU                  string
+	Memory               string
+	Port                 string
+	EnvironmentVariables []*EnvironmentVariable
+}
+
+type EnvironmentVariable struct {
+	Name  string
+	Value string
 }

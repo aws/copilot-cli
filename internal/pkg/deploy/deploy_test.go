@@ -35,7 +35,7 @@ func TestStore_ListDeployedServices(t *testing.T) {
 
 			setupMocks: func(m storeMock) {
 				gomock.InOrder(
-					m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
+					m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{
 						AppTagKey: "mockApp",
 						EnvTagKey: "mockEnv",
 					}).Return(nil, errors.New("some error")),
@@ -50,7 +50,7 @@ func TestStore_ListDeployedServices(t *testing.T) {
 
 			setupMocks: func(m storeMock) {
 				gomock.InOrder(
-					m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
+					m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{
 						AppTagKey: "mockApp",
 						EnvTagKey: "mockEnv",
 					}).Return([]*rg.Resource{{ARN: "mockARN", Tags: map[string]string{}}}, nil),
@@ -65,7 +65,7 @@ func TestStore_ListDeployedServices(t *testing.T) {
 
 			setupMocks: func(m storeMock) {
 				gomock.InOrder(
-					m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
+					m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{
 						AppTagKey: "mockApp",
 						EnvTagKey: "mockEnv",
 					}).Return([]*rg.Resource{{ARN: "mockARN", Tags: map[string]string{ServiceTagKey: "mockSvc"}}}, nil),
@@ -81,7 +81,7 @@ func TestStore_ListDeployedServices(t *testing.T) {
 
 			setupMocks: func(m storeMock) {
 				gomock.InOrder(
-					m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
+					m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{
 						AppTagKey: "mockApp",
 						EnvTagKey: "mockEnv",
 					}).Return([]*rg.Resource{{ARN: "mockARN1", Tags: map[string]string{ServiceTagKey: "mockSvc1"}},
@@ -150,7 +150,7 @@ func TestStore_ListDeployedJobs(t *testing.T) {
 
 			setupMocks: func(m storeMock) {
 				gomock.InOrder(
-					m.rgGetter.EXPECT().GetResourcesByTags(stateMachineResourceType, map[string]string{
+					m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{
 						AppTagKey: "mockApp",
 						EnvTagKey: "mockEnv",
 					}).Return([]*rg.Resource{{ARN: "mockARN1", Tags: map[string]string{ServiceTagKey: "mockJob1"}},
@@ -174,7 +174,7 @@ func TestStore_ListDeployedJobs(t *testing.T) {
 
 			setupMocks: func(m storeMock) {
 				gomock.InOrder(
-					m.rgGetter.EXPECT().GetResourcesByTags(stateMachineResourceType, map[string]string{
+					m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{
 						AppTagKey: "mockApp",
 						EnvTagKey: "mockEnv",
 					}).Return([]*rg.Resource{{ARN: "mockARN", Tags: map[string]string{}}}, nil),
@@ -250,7 +250,7 @@ func TestStore_ListEnvironmentsDeployedTo(t *testing.T) {
 							Name: "mockEnv",
 						},
 					}, nil),
-					m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
+					m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{
 						AppTagKey:     "mockApp",
 						EnvTagKey:     "mockEnv",
 						ServiceTagKey: "mockSvc",
@@ -275,12 +275,12 @@ func TestStore_ListEnvironmentsDeployedTo(t *testing.T) {
 						Name: "mockEnv2",
 					},
 				}, nil)
-				m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
+				m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{
 					AppTagKey:     "mockApp",
 					EnvTagKey:     "mockEnv1",
 					ServiceTagKey: "mockSvc",
 				}).Return([]*rg.Resource{{ARN: "mockSvcARN"}}, nil)
-				m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
+				m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{
 					AppTagKey:     "mockApp",
 					EnvTagKey:     "mockEnv2",
 					ServiceTagKey: "mockSvc",
@@ -342,7 +342,7 @@ func TestStore_IsServiceDeployed(t *testing.T) {
 
 			setupMocks: func(m storeMock) {
 				gomock.InOrder(
-					m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
+					m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{
 						AppTagKey:     "mockApp",
 						EnvTagKey:     "mockEnv",
 						ServiceTagKey: "mockSvc",
@@ -359,7 +359,7 @@ func TestStore_IsServiceDeployed(t *testing.T) {
 
 			setupMocks: func(m storeMock) {
 				gomock.InOrder(
-					m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
+					m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{
 						AppTagKey:     "mockApp",
 						EnvTagKey:     "mockEnv",
 						ServiceTagKey: "mockSvc",
@@ -376,7 +376,7 @@ func TestStore_IsServiceDeployed(t *testing.T) {
 
 			setupMocks: func(m storeMock) {
 				gomock.InOrder(
-					m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
+					m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{
 						AppTagKey:     "mockApp",
 						EnvTagKey:     "mockEnv",
 						ServiceTagKey: "mockSvc",
@@ -439,7 +439,7 @@ func Test_IsJobDeployed(t *testing.T) {
 
 			setupMocks: func(m storeMock) {
 				gomock.InOrder(
-					m.rgGetter.EXPECT().GetResourcesByTags(stateMachineResourceType, map[string]string{
+					m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{
 						AppTagKey:     "mockApp",
 						EnvTagKey:     "mockEnv",
 						ServiceTagKey: "mockJob",
@@ -456,7 +456,7 @@ func Test_IsJobDeployed(t *testing.T) {
 
 			setupMocks: func(m storeMock) {
 				gomock.InOrder(
-					m.rgGetter.EXPECT().GetResourcesByTags(stateMachineResourceType, map[string]string{
+					m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{
 						AppTagKey:     "mockApp",
 						EnvTagKey:     "mockEnv",
 						ServiceTagKey: "mockJob",
@@ -472,7 +472,7 @@ func Test_IsJobDeployed(t *testing.T) {
 
 			setupMocks: func(m storeMock) {
 				gomock.InOrder(
-					m.rgGetter.EXPECT().GetResourcesByTags(stateMachineResourceType, map[string]string{
+					m.rgGetter.EXPECT().GetResourcesByTags(stackResourceType, map[string]string{
 						AppTagKey:     "mockApp",
 						EnvTagKey:     "mockEnv",
 						ServiceTagKey: "mockJob",

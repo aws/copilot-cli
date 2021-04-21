@@ -24,13 +24,9 @@ const (
 )
 
 const (
-	svcWorkloadType = "service"
-	jobWorkloadType = "job"
-)
-
-const (
-	ecsServiceResourceType   = "ecs:service"
-	stateMachineResourceType = "states:stateMachine"
+	svcWorkloadType   = "service"
+	jobWorkloadType   = "job"
+	stackResourceType = "cloudformation:stack"
 )
 
 type resourceGetter interface {
@@ -89,14 +85,11 @@ func (s *Store) ListDeployedJobs(appName string, envName string) ([]string, erro
 }
 
 func (s *Store) listDeployedWorkloads(appName string, envName string, workloadType string) ([]string, error) {
-	var keyResourceType string
 	var getWorkload func(string, string) (*config.Workload, error)
 	switch workloadType {
 	case jobWorkloadType:
-		keyResourceType = stateMachineResourceType
 		getWorkload = s.configStore.GetJob
 	case svcWorkloadType:
-		keyResourceType = ecsServiceResourceType
 		getWorkload = s.configStore.GetService
 	default:
 		return nil, fmt.Errorf("unrecognized workload type %s", workloadType)
@@ -105,7 +98,7 @@ func (s *Store) listDeployedWorkloads(appName string, envName string, workloadTy
 	if err != nil {
 		return nil, err
 	}
-	resources, err := rgClient.GetResourcesByTags(keyResourceType, map[string]string{
+	resources, err := rgClient.GetResourcesByTags(stackResourceType, map[string]string{
 		AppTagKey: appName,
 		EnvTagKey: envName,
 	})
@@ -133,7 +126,7 @@ type result struct {
 }
 
 func (s *Store) deployedServices(rgClient resourceGetter, app, env, svc string) result {
-	resources, err := rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
+	resources, err := rgClient.GetResourcesByTags(stackResourceType, map[string]string{
 		AppTagKey:     app,
 		EnvTagKey:     env,
 		ServiceTagKey: svc,
@@ -182,30 +175,20 @@ func (s *Store) ListEnvironmentsDeployedTo(appName string, svcName string) ([]st
 
 // IsServiceDeployed returns whether a service is deployed in an environment or not.
 func (s *Store) IsServiceDeployed(appName string, envName string, svcName string) (bool, error) {
-	return s.isWorkloadDeployed(appName, envName, svcName, svcWorkloadType)
+	return s.isWorkloadDeployed(appName, envName, svcName)
 }
 
 // IsJobDeployed returnds whether a job is deployed in an environment or not by checking for a state machine.
 func (s *Store) IsJobDeployed(appName, envName, jobName string) (bool, error) {
-	return s.isWorkloadDeployed(appName, envName, jobName, jobWorkloadType)
+	return s.isWorkloadDeployed(appName, envName, jobName)
 }
 
-func (s *Store) isWorkloadDeployed(appName, envName, name string, workloadType string) (bool, error) {
-	var keyResourceType string
-	switch workloadType {
-	case jobWorkloadType:
-		keyResourceType = stateMachineResourceType
-	case svcWorkloadType:
-		keyResourceType = ecsServiceResourceType
-	default:
-		return false, fmt.Errorf("unrecognized workload type %s", workloadType)
-	}
-
+func (s *Store) isWorkloadDeployed(appName, envName, name string) (bool, error) {
 	rgClient, err := s.newRgClientFromIDs(appName, envName)
 	if err != nil {
 		return false, err
 	}
-	wkldARNs, err := rgClient.GetResourcesByTags(keyResourceType, map[string]string{
+	stacks, err := rgClient.GetResourcesByTags(stackResourceType, map[string]string{
 		AppTagKey:     appName,
 		EnvTagKey:     envName,
 		ServiceTagKey: name,
@@ -213,7 +196,7 @@ func (s *Store) isWorkloadDeployed(appName, envName, name string, workloadType s
 	if err != nil {
 		return false, fmt.Errorf("get resources by Copilot tags: %w", err)
 	}
-	if len(wkldARNs) != 0 {
+	if len(stacks) != 0 {
 		return true, nil
 	}
 	return false, nil

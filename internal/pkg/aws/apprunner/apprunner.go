@@ -6,6 +6,7 @@ package apprunner
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -32,26 +33,40 @@ type AppRunner struct {
 // New returns a Service configured against the input session.
 func New(s *session.Session) *AppRunner {
 	return &AppRunner{
-		client: apprunner.New(s),
+		// TODO: remove endpoint override
+		client: apprunner.New(s, &aws.Config{Endpoint: aws.String("https://fusion.gamma.us-east-1.bullet.aws.dev")}),
 	}
 }
 
 // DescribeService returns a description of an AppRunner service given its ARN.
-func (a *AppRunner) DescribeService(svcARN string) (Service, error) {
+func (a *AppRunner) DescribeService(svcARN string) (*Service, error) {
 	resp, err := a.client.DescribeService(&apprunner.DescribeServiceInput{
 		ServiceArn: aws.String(svcARN),
 	})
 	if err != nil {
-		return Service{}, fmt.Errorf("describe service %s: %w", svcARN, err)
+		return nil, fmt.Errorf("describe service %s: %w", svcARN, err)
 	}
-	return Service{
-		ServiceARN:  aws.StringValue(resp.Service.ServiceArn),
-		Name:        aws.StringValue(resp.Service.ServiceName),
-		ID:          aws.StringValue(resp.Service.ServiceId),
-		Status:      aws.StringValue(resp.Service.Status),
-		ServiceURL:  aws.StringValue(resp.Service.ServiceUrl),
-		DateCreated: *resp.Service.CreatedAt,
-		DateUpdated: *resp.Service.UpdatedAt,
+	var envVars []*EnvironmentVariable
+	for k, v := range resp.Service.SourceConfiguration.ImageRepository.ImageConfiguration.RuntimeEnvironmentVariables {
+		envVars = append(envVars, &EnvironmentVariable{
+			Name:  k,
+			Value: aws.StringValue(v),
+		})
+	}
+	sort.SliceStable(envVars, func(i int, j int) bool { return envVars[i].Name < envVars[j].Name })
+
+	return &Service{
+		ServiceARN:           aws.StringValue(resp.Service.ServiceArn),
+		Name:                 aws.StringValue(resp.Service.ServiceName),
+		ID:                   aws.StringValue(resp.Service.ServiceId),
+		Status:               aws.StringValue(resp.Service.Status),
+		ServiceURL:           aws.StringValue(resp.Service.ServiceUrl),
+		DateCreated:          *resp.Service.CreatedAt,
+		DateUpdated:          *resp.Service.UpdatedAt,
+		EnvironmentVariables: envVars,
+		CPU:                  *resp.Service.InstanceConfiguration.Cpu,
+		Memory:               *resp.Service.InstanceConfiguration.Memory,
+		Port:                 *resp.Service.SourceConfiguration.ImageRepository.ImageConfiguration.Port,
 	}, nil
 }
 
