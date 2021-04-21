@@ -65,6 +65,10 @@ func TestStream(t *testing.T) {
 		// GIVEN
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
+		// This test is flaky and sometimes results in a single call to fetch instead of none if there is no delay between
+		// cancel() and Stream().
+		// We wait 5 ms to ensure the cancel message is received.
+		time.Sleep(5 * time.Millisecond)
 		blockUntil := time.Now().Add(1 * time.Minute)
 		streamer := &counterStreamer{
 			next: func() time.Time {
