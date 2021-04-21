@@ -58,6 +58,7 @@ func TestScheduledJob_Template(t *testing.T) {
 		expectedBytes := []byte(expected)
 		mExpected := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal(expectedBytes, mExpected))
+		// Cut out zip file from EnvControllerAction
 		require.Equal(t, mExpected, mActual)
 	})
 

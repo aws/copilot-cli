@@ -86,6 +86,9 @@ func TestSSMPluginCommand_InstallLatestBinary_linux(t *testing.T) {
 				runner:                 mockRunner,
 				tempDir:                mockDir,
 				linuxDistVersionBuffer: *bytes.NewBufferString(tc.linuxVersion),
+				http: &fakeHTTPClient{
+					content: []byte("hello"),
+				},
 			}
 			err := s.InstallLatestBinary()
 			if tc.wantedError != nil {

@@ -152,6 +152,7 @@ func TestCCPipelineCreation(t *testing.T) {
 		err = appDeployer.DeployApp(&deploy.CreateAppInput{
 			Name:      app.Name,
 			AccountID: app.AccountID,
+			Version:   deploy.LatestAppTemplateVersion,
 		})
 		require.NoError(t, err)
 

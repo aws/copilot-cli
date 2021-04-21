@@ -29,6 +29,7 @@ const (
 type SSMPluginCommand struct {
 	sess *session.Session
 	runner
+	http httpClient
 
 	// facilitate unit test.
 	latestVersionBuffer    bytes.Buffer
@@ -42,6 +43,7 @@ func NewSSMPluginCommand(s *session.Session) SSMPluginCommand {
 	return SSMPluginCommand{
 		runner: command.New(),
 		sess:   s,
+		http:   http.DefaultClient,
 	}
 }
 
@@ -58,8 +60,8 @@ func (s SSMPluginCommand) StartSession(ssmSess *ecs.Session) error {
 	return nil
 }
 
-func download(filepath string, url string) error {
-	resp, err := http.Get(url)
+func download(client httpClient, filepath string, url string) error {
+	resp, err := client.Get(url)
 	if err != nil {
 		return err
 	}
