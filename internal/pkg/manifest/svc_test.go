@@ -71,7 +71,7 @@ environments:
       cpu_percentage: 70
 `,
 			requireCorrectValues: func(t *testing.T, i interface{}) {
-				mockRange := Range("1-10")
+				mockRange := IntRangeBand("1-10")
 				actualManifest, ok := i.(*LoadBalancedWebService)
 				require.True(t, ok)
 				wantedManifest := &LoadBalancedWebService{
@@ -149,7 +149,7 @@ environments:
 							TaskConfig: TaskConfig{
 								Count: Count{
 									AdvancedCount: AdvancedCount{
-										Range: &RangeOpts{
+										Range: &Range{
 											RangeConfig: RangeConfig{
 												Min:      aws.Int(2),
 												Max:      aws.Int(8),
@@ -164,8 +164,8 @@ environments:
 							TaskConfig: TaskConfig{
 								Count: Count{
 									AdvancedCount: AdvancedCount{
-										Range: &RangeOpts{
-											Range: &mockRange,
+										Range: &Range{
+											Value: &mockRange,
 										},
 										CPU: aws.Int(70),
 									},
@@ -264,7 +264,7 @@ type: 'OH NO'
 
 func TestCount_UnmarshalYAML(t *testing.T) {
 	mockResponseTime := 500 * time.Millisecond
-	mockRange := Range("1-10")
+	mockRange := IntRangeBand("1-10")
 	testCases := map[string]struct {
 		inContent []byte
 
@@ -288,7 +288,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 `),
 			wantedStruct: Count{
 				AdvancedCount: AdvancedCount{
-					Range:        &RangeOpts{Range: &mockRange},
+					Range:        &Range{Value: &mockRange},
 					CPU:          aws.Int(70),
 					Memory:       aws.Int(80),
 					Requests:     aws.Int(1000),
@@ -314,7 +314,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 `),
 			wantedStruct: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &RangeOpts{
+					Range: &Range{
 						RangeConfig: RangeConfig{
 							Min: aws.Int(5),
 							Max: aws.Int(15),
@@ -332,7 +332,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 `),
 			wantedStruct: Count{
 				AdvancedCount: AdvancedCount{
-					Range: &RangeOpts{
+					Range: &Range{
 						RangeConfig: RangeConfig{
 							Min:      aws.Int(2),
 							Max:      aws.Int(8),
@@ -376,7 +376,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 	}
 }
 
-func TestRange_Parse(t *testing.T) {
+func TestIntRangeBand_Parse(t *testing.T) {
 	testCases := map[string]struct {
 		inRange string
 
@@ -408,7 +408,7 @@ func TestRange_Parse(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			r := Range(tc.inRange)
+			r := IntRangeBand(tc.inRange)
 			gotMin, gotMax, err := r.Parse()
 
 			if tc.wantedErr != nil {
@@ -422,18 +422,18 @@ func TestRange_Parse(t *testing.T) {
 	}
 }
 
-func TestRangeOpts_Parse(t *testing.T) {
-	mockRange := Range("1-10")
+func TestRange_Parse(t *testing.T) {
+	mockRange := IntRangeBand("1-10")
 	testCases := map[string]struct {
-		input RangeOpts
+		input Range
 
 		wantedMin int
 		wantedMax int
 		wantedErr error
 	}{
 		"error when both range and RangeConfig specified": {
-			input: RangeOpts{
-				Range: &mockRange,
+			input: Range{
+				Value: &mockRange,
 				RangeConfig: RangeConfig{
 					Min: aws.Int(1),
 					Max: aws.Int(3),
@@ -443,7 +443,7 @@ func TestRangeOpts_Parse(t *testing.T) {
 			wantedErr: errInvalidRangeOpts,
 		},
 		"success": {
-			input: RangeOpts{
+			input: Range{
 				RangeConfig: RangeConfig{
 					Min: aws.Int(2),
 					Max: aws.Int(8),
@@ -528,7 +528,7 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 }
 
 func TestCount_Desired(t *testing.T) {
-	mockRange := Range("1-10")
+	mockRange := IntRangeBand("1-10")
 	testCases := map[string]struct {
 		input *Count
 
@@ -553,8 +553,8 @@ func TestCount_Desired(t *testing.T) {
 		"with autoscaling range on dedicated capacity": {
 			input: &Count{
 				AdvancedCount: AdvancedCount{
-					Range: &RangeOpts{
-						Range: &mockRange,
+					Range: &Range{
+						Value: &mockRange,
 					},
 				},
 			},
@@ -563,7 +563,7 @@ func TestCount_Desired(t *testing.T) {
 		"with autoscaling range with spot capacity": {
 			input: &Count{
 				AdvancedCount: AdvancedCount{
-					Range: &RangeOpts{
+					Range: &Range{
 						RangeConfig: RangeConfig{
 							Min: aws.Int(5),
 							Max: aws.Int(10),

@@ -106,10 +106,10 @@ Outputs:
 		"failed parsing Auto Scaling template": {
 			setUpManifest: func(svc *BackendService) {
 				testBackendSvcManifestWithBadAutoScaling := manifest.NewBackendService(baseProps)
-				badRange := manifest.Range("badRange")
+				badRange := manifest.IntRangeBand("badRange")
 				testBackendSvcManifestWithBadAutoScaling.Count.AdvancedCount = manifest.AdvancedCount{
-					Range: &manifest.RangeOpts{
-						Range: &badRange,
+					Range: &manifest.Range{
+						Value: &badRange,
 					},
 				}
 				svc.manifest = testBackendSvcManifestWithBadAutoScaling

@@ -27,20 +27,20 @@ var ServiceTypes = []string{
 	BackendServiceType,
 }
 
-// RangeOpts contains either a Range or a range configuration for Autoscaling ranges
-type RangeOpts struct {
-	Range       *Range // Mutually exclusive with RangeConfig
+// Range contains either a Range or a range configuration for Autoscaling ranges
+type Range struct {
+	Value       *IntRangeBand // Mutually exclusive with RangeConfig
 	RangeConfig RangeConfig
 }
 
 // Parse extracts the min and max from RangeOpts
-func (r RangeOpts) Parse() (min int, max int, err error) {
-	if r.Range != nil && !r.RangeConfig.IsEmpty() {
+func (r Range) Parse() (min int, max int, err error) {
+	if r.Value != nil && !r.RangeConfig.IsEmpty() {
 		return 0, 0, errInvalidRangeOpts
 	}
 
-	if r.Range != nil {
-		return r.Range.Parse()
+	if r.Value != nil {
+		return r.Value.Parse()
 	}
 
 	return *r.RangeConfig.Min, *r.RangeConfig.Max, nil
@@ -49,7 +49,7 @@ func (r RangeOpts) Parse() (min int, max int, err error) {
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the RangeOpts
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v2) interface.
-func (r *RangeOpts) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (r *Range) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err := unmarshal(&r.RangeConfig); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
@@ -61,22 +61,22 @@ func (r *RangeOpts) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	if !r.RangeConfig.IsEmpty() {
 		// Unmarshaled successfully to r.RangeConfig, unset r.Range, and return.
-		r.Range = nil
+		r.Value = nil
 		return nil
 	}
 
-	if err := unmarshal(&r.Range); err != nil {
+	if err := unmarshal(&r.Value); err != nil {
 		return errUnmarshalRangeOpts
 	}
 	return nil
 }
 
-// Range is a number range with maximum and minimum values.
-type Range string
+// IntRangeBand is a number range with maximum and minimum values.
+type IntRangeBand string
 
 // Parse parses Range string and returns the min and max values.
 // For example: 1-100 returns 1 and 100.
-func (r Range) Parse() (min int, max int, err error) {
+func (r IntRangeBand) Parse() (min int, max int, err error) {
 	minMax := strings.Split(string(r), "-")
 	if len(minMax) != 2 {
 		return 0, 0, fmt.Errorf("invalid range value %s. Should be in format of ${min}-${max}", string(r))
@@ -160,7 +160,7 @@ func (c *Count) Desired() (*int, error) {
 		} else {
 			min, _, err := c.AdvancedCount.Range.Parse()
 			if err != nil {
-				return nil, fmt.Errorf("parse task count value %s: %w", aws.StringValue((*string)(c.AdvancedCount.Range.Range)), err)
+				return nil, fmt.Errorf("parse task count value %s: %w", aws.StringValue((*string)(c.AdvancedCount.Range.Value)), err)
 			}
 			desiredCount = aws.Int(min)
 		}
@@ -172,7 +172,7 @@ func (c *Count) Desired() (*int, error) {
 // Capacity configuration (spot).
 type AdvancedCount struct {
 	Spot         *int           `yaml:"spot"` // mutually exclusive with Range
-	Range        *RangeOpts     `yaml:"range"`
+	Range        *Range         `yaml:"range"`
 	CPU          *int           `yaml:"cpu_percentage"`
 	Memory       *int           `yaml:"memory_percentage"`
 	Requests     *int           `yaml:"requests"`

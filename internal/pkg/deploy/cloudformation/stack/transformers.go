@@ -140,7 +140,7 @@ func convertCapacityProviders(a *manifest.AdvancedCount) ([]*template.CapacityPr
 	}
 
 	// return if autoscaling range specified without spot scaling
-	if a.Range != nil && a.Range.Range != nil {
+	if a.Range != nil && a.Range.Value != nil {
 		return nil, nil
 	}
 

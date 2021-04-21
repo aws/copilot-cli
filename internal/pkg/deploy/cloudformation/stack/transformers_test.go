@@ -107,7 +107,7 @@ func Test_convertSidecar(t *testing.T) {
 }
 
 func Test_convertAdvancedCount(t *testing.T) {
-	mockRange := manifest.Range("1-10")
+	mockRange := manifest.IntRangeBand("1-10")
 	testCases := map[string]struct {
 		input       *manifest.AdvancedCount
 		expected    *template.AdvancedCount
@@ -137,8 +137,8 @@ func Test_convertAdvancedCount(t *testing.T) {
 		},
 		"success with fargate autoscaling": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.RangeOpts{
-					Range: &mockRange,
+				Range: &manifest.Range{
+					Value: &mockRange,
 				},
 				CPU: aws.Int(70),
 			},
@@ -152,7 +152,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 		},
 		"success with spot autoscaling": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.RangeOpts{
+				Range: &manifest.Range{
 					RangeConfig: manifest.RangeConfig{
 						Min:      aws.Int(2),
 						Max:      aws.Int(20),
@@ -196,7 +196,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 }
 
 func Test_convertCapacityProviders(t *testing.T) {
-	mockRange := manifest.Range("1-10")
+	mockRange := manifest.IntRangeBand("1-10")
 	minCapacity := 1
 	spotFrom := 3
 	testCases := map[string]struct {
@@ -218,7 +218,7 @@ func Test_convertCapacityProviders(t *testing.T) {
 		},
 		"with scaling only on spot": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.RangeOpts{
+				Range: &manifest.Range{
 					RangeConfig: manifest.RangeConfig{
 						Min:      aws.Int(minCapacity),
 						Max:      aws.Int(10),
@@ -236,7 +236,7 @@ func Test_convertCapacityProviders(t *testing.T) {
 		},
 		"with scaling into spot": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.RangeOpts{
+				Range: &manifest.Range{
 					RangeConfig: manifest.RangeConfig{
 						Min:      aws.Int(minCapacity),
 						Max:      aws.Int(10),
@@ -259,16 +259,16 @@ func Test_convertCapacityProviders(t *testing.T) {
 		},
 		"returns nil if no spot config specified": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.RangeOpts{
-					Range: &mockRange,
+				Range: &manifest.Range{
+					Value: &mockRange,
 				},
 			},
 			expected: nil,
 		},
 		"errors if spot specified with range": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.RangeOpts{
-					Range: &mockRange,
+				Range: &manifest.Range{
+					Value: &mockRange,
 				},
 				Spot: aws.Int(3),
 			},
@@ -291,8 +291,8 @@ func Test_convertCapacityProviders(t *testing.T) {
 }
 
 func Test_convertAutoscaling(t *testing.T) {
-	mockRange := manifest.Range("1-100")
-	badRange := manifest.Range("badRange")
+	mockRange := manifest.IntRangeBand("1-100")
+	badRange := manifest.IntRangeBand("badRange")
 	mockRequests := 1000
 	mockResponseTime := 512 * time.Millisecond
 	testCases := map[string]struct {
@@ -303,8 +303,8 @@ func Test_convertAutoscaling(t *testing.T) {
 	}{
 		"invalid range": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.RangeOpts{
-					Range: &badRange,
+				Range: &manifest.Range{
+					Value: &badRange,
 				},
 			},
 
@@ -312,8 +312,8 @@ func Test_convertAutoscaling(t *testing.T) {
 		},
 		"success": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.RangeOpts{
-					Range: &mockRange,
+				Range: &manifest.Range{
+					Value: &mockRange,
 				},
 				CPU:          aws.Int(70),
 				Memory:       aws.Int(80),
@@ -332,7 +332,7 @@ func Test_convertAutoscaling(t *testing.T) {
 		},
 		"success with range subfields": {
 			input: &manifest.AdvancedCount{
-				Range: &manifest.RangeOpts{
+				Range: &manifest.Range{
 					RangeConfig: manifest.RangeConfig{
 						Min:      aws.Int(5),
 						Max:      aws.Int(10),
