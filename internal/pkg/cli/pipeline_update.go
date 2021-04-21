@@ -160,6 +160,7 @@ func (o *updatePipelineOpts) Execute() error {
 		AppName:         o.appName,
 		Name:            pipeline.Name,
 		Source:          source,
+		Build:           deploy.PipelineBuildFromManifest(pipeline.Build),
 		Stages:          stages,
 		ArtifactBuckets: artifactBuckets,
 		AdditionalTags:  o.app.Tags,
