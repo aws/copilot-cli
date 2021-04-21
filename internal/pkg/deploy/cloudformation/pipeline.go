@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -17,8 +18,9 @@ import (
 )
 
 const (
-	sourceStage      = "Source"
-	connectionARNKey = "PipelineConnectionARN"
+	sourceStage                = "Source"
+	connectionARNKey           = "PipelineConnectionARN"
+	fmtPipelineCfnTemplateName = "%s.pipeline.stack.yml"
 )
 
 // PipelineExists checks if the pipeline with the provided config exists.
@@ -36,8 +38,12 @@ func (cf CloudFormation) PipelineExists(in *deploy.CreatePipelineInput) (bool, e
 }
 
 // CreatePipeline sets up a new CodePipeline for deploying services.
-func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput) error {
-	s, err := toStack(stack.NewPipelineStackConfig(in))
+func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput, bucketName string) error {
+	templateURL, err := cf.pushTemplateToS3Bucket(bucketName, stack.NewPipelineStackConfig(in))
+	if err != nil {
+		return err
+	}
+	s, err := toStackFromS3(stack.NewPipelineStackConfig(in), templateURL)
 	if err != nil {
 		return err
 	}
@@ -67,8 +73,12 @@ func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput) error {
 }
 
 // UpdatePipeline updates an existing CodePipeline for deploying services.
-func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput) error {
-	s, err := toStack(stack.NewPipelineStackConfig(in))
+func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput, bucketName string) error {
+	url, err := cf.pushTemplateToS3Bucket(bucketName, stack.NewPipelineStackConfig(in))
+	if err != nil {
+		return err
+	}
+	s, err := toStackFromS3(stack.NewPipelineStackConfig(in), url)
 	if err != nil {
 		return err
 	}
@@ -85,4 +95,17 @@ func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput) error {
 // DeletePipeline removes the CodePipeline stack.
 func (cf CloudFormation) DeletePipeline(stackName string) error {
 	return cf.cfnClient.DeleteAndWait(stackName)
+}
+
+func (cf CloudFormation) pushTemplateToS3Bucket(bucket string, config StackConfiguration) (string, error) {
+	template, err := config.Template()
+	if err != nil {
+		return "", err
+	}
+	reader := strings.NewReader(template)
+	url, err := cf.s3Client.PutArtifact(bucket, fmt.Sprintf(fmtPipelineCfnTemplateName, config.StackName()), reader)
+	if err != nil {
+		return "", fmt.Errorf("upload pipeline template to S3 bucket %s: %w", bucket, err)
+	}
+	return url, nil
 }

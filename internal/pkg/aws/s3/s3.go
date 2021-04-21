@@ -31,6 +31,7 @@ type s3ManagerAPI interface {
 type s3API interface {
 	ListObjectVersions(input *s3.ListObjectVersionsInput) (*s3.ListObjectVersionsOutput, error)
 	DeleteObjects(input *s3.DeleteObjectsInput) (*s3.DeleteObjectsOutput, error)
+	CreateBucket(input *s3.CreateBucketInput) (*s3.CreateBucketOutput, error)
 }
 
 // NamedBinary is a named binary to be uploaded.

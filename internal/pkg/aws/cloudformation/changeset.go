@@ -6,6 +6,7 @@ package cloudformation
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -123,6 +124,41 @@ func (cs *changeSet) create(conf *stackConfig) error {
 	return nil
 }
 
+// createWithTemplateURL creates a ChangeSet with the TemplateURL (as opposed to TemplateBody) field, waits until it's created, and returns the ChangeSet ID on success.
+func (cs *changeSet) createWithTemplateURL(conf *stackConfig) error {
+	out, err := cs.client.CreateChangeSet(&cloudformation.CreateChangeSetInput{
+		ChangeSetName:       aws.String(cs.name),
+		StackName:           aws.String(cs.stackName),
+		ChangeSetType:       aws.String(cs.csType.String()),
+		TemplateURL:         aws.String(conf.Template),
+		Parameters:          conf.Parameters,
+		Tags:                conf.Tags,
+		RoleARN:             conf.RoleARN,
+		IncludeNestedStacks: aws.Bool(true),
+		Capabilities: aws.StringSlice([]string{
+			cloudformation.CapabilityCapabilityIam,
+			cloudformation.CapabilityCapabilityNamedIam,
+			cloudformation.CapabilityCapabilityAutoExpand,
+		}),
+	})
+	if err != nil {
+		return fmt.Errorf("create %s: %w", cs, err)
+	}
+	err = cs.client.WaitUntilChangeSetCreateCompleteWithContext(context.Background(), &cloudformation.DescribeChangeSetInput{
+		ChangeSetName: out.Id,
+	}, waiters...)
+	if err != nil {
+		return fmt.Errorf("wait for creation of %s: %w", cs, err)
+	}
+
+	// Since the ChangeSet creation succeeded, use the full ARN instead of the name.
+	// Using the full ID is essential in case the ChangeSet execution status is obsolete.
+	// If we call DescribeChangeSet using the ChangeSet name and Stack name on an obsolete changeset, the results is empty.
+	// On the other hand, if you DescribeChangeSet using the full ID then the ChangeSet summary is retrieved correctly.
+	cs.name = aws.StringValue(out.Id)
+	return nil
+}
+
 // describe collects all the changes and statuses that the change set will apply and returns them.
 func (cs *changeSet) describe() (*ChangeSetDescription, error) {
 	var executionStatus, statusReason string
@@ -188,6 +224,22 @@ func (cs *changeSet) execute() error {
 // createAndExecute calls create and then execute.
 // If the change set is empty, returns a ErrChangeSetEmpty.
 func (cs *changeSet) createAndExecute(conf *stackConfig) error {
+	if strings.Contains(conf.Template, "pipeline.stack.yml") {
+		if err := cs.createWithTemplateURL(conf); err != nil {
+			descr, descrErr := cs.describe()
+			if descrErr != nil {
+				return fmt.Errorf("check if changeset is empty: %v: %w", err, descrErr)
+			}
+			if len(descr.Changes) == 0 {
+				_ = cs.delete()
+				return &ErrChangeSetEmpty{
+					cs: cs,
+				}
+			}
+			return err
+		}
+		return cs.execute()
+	}
 	if err := cs.create(conf); err != nil {
 		// It's possible that there are no changes between the previous and proposed stack change sets.
 		// We make a call to describe the change set to see if that is indeed the case and handle it gracefully.

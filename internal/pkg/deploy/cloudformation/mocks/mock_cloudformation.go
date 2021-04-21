@@ -6,6 +6,7 @@ package mocks
 
 import (
 	context "context"
+	io "io"
 	reflect "reflect"
 
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
@@ -492,6 +493,44 @@ func (m *MockcodePipelineClient) RetryStageExecution(pipelineName, stageName str
 func (mr *MockcodePipelineClientMockRecorder) RetryStageExecution(pipelineName, stageName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetryStageExecution", reflect.TypeOf((*MockcodePipelineClient)(nil).RetryStageExecution), pipelineName, stageName)
+}
+
+// Mocks3Client is a mock of s3Client interface.
+type Mocks3Client struct {
+	ctrl     *gomock.Controller
+	recorder *Mocks3ClientMockRecorder
+}
+
+// Mocks3ClientMockRecorder is the mock recorder for Mocks3Client.
+type Mocks3ClientMockRecorder struct {
+	mock *Mocks3Client
+}
+
+// NewMocks3Client creates a new mock instance.
+func NewMocks3Client(ctrl *gomock.Controller) *Mocks3Client {
+	mock := &Mocks3Client{ctrl: ctrl}
+	mock.recorder = &Mocks3ClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *Mocks3Client) EXPECT() *Mocks3ClientMockRecorder {
+	return m.recorder
+}
+
+// PutArtifact mocks base method.
+func (m *Mocks3Client) PutArtifact(bucket, fileName string, data io.Reader) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PutArtifact", bucket, fileName, data)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PutArtifact indicates an expected call of PutArtifact.
+func (mr *Mocks3ClientMockRecorder) PutArtifact(bucket, fileName, data interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutArtifact", reflect.TypeOf((*Mocks3Client)(nil).PutArtifact), bucket, fileName, data)
 }
 
 // MockstackSetClient is a mock of stackSetClient interface.

@@ -277,6 +277,10 @@ stages:
 		},
 	}
 
+	mockResource := &stack.AppRegionalResources{
+		S3Bucket: "someOtherBucket",
+	}
+
 	mockEnv := &config.Environment{
 		Name:      "test",
 		App:       appName,
@@ -316,8 +320,9 @@ stages:
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, nil),
+					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateStart, pipelineName)).Times(1),
-					m.deployer.EXPECT().CreatePipeline(gomock.Any()).Return(nil),
+					m.deployer.EXPECT().CreatePipeline(gomock.Any(), gomock.Any()).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateComplete, pipelineName)).Times(1),
 				)
 			},
@@ -345,9 +350,10 @@ stages:
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
+					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
 					m.prompt.EXPECT().Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, pipelineName), "").Return(true, nil),
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateProposalStart, pipelineName)).Times(1),
-					m.deployer.EXPECT().UpdatePipeline(gomock.Any()).Return(nil),
+					m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).Return(nil),
 					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateProposalComplete, pipelineName)).Times(1),
 				)
 			},
@@ -375,6 +381,7 @@ stages:
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
+					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
 					m.prompt.EXPECT().Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, pipelineName), "").Return(false, nil),
 				)
 			},
@@ -402,6 +409,7 @@ stages:
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
+					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
 					m.prompt.EXPECT().Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, pipelineName), "").Return(false, errors.New("some error")),
 				)
 			},
@@ -581,8 +589,9 @@ source:
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, nil),
+					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateStart, pipelineName)).Times(1),
-					m.deployer.EXPECT().CreatePipeline(gomock.Any()).Return(errors.New("some error")),
+					m.deployer.EXPECT().CreatePipeline(gomock.Any(), gomock.Any()).Return(errors.New("some error")),
 					m.prog.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateFailed, pipelineName)).Times(1),
 				)
 			},
@@ -610,9 +619,10 @@ source:
 
 					// deployPipeline
 					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
+					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
 					m.prompt.EXPECT().Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, pipelineName), "").Return(true, nil),
 					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateProposalStart, pipelineName)).Times(1),
-					m.deployer.EXPECT().UpdatePipeline(gomock.Any()).Return(errors.New("some error")),
+					m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).Return(errors.New("some error")),
 					m.prog.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateProposalFailed, pipelineName)).Times(1),
 				)
 			},
