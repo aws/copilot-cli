@@ -31,6 +31,9 @@ CapacityProviderStrategy:
   {{- range $cps := .CapacityProviders}}
   - CapacityProvider: {{$cps.CapacityProvider}}
     Weight: {{$cps.Weight}}
+    {{- if $cps.Base }}
+    Base: {{$cps.Base}}
+    {{- end}}
   {{- end}}
 {{- end }}
 NetworkConfiguration:
