@@ -108,9 +108,20 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
-	autoscaling, err := convertAutoscaling(&s.manifest.Count.Autoscaling)
+
+	advancedCount, err := convertAdvancedCount(&s.manifest.Count.AdvancedCount)
 	if err != nil {
-		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
+		return "", fmt.Errorf("convert the advanced count configuration for service %s: %w", s.name, err)
+	}
+
+	var autoscaling *template.AutoscalingOpts
+	var desiredCountOnSpot *int
+	var capacityProviders []*template.CapacityProviderStrategy
+
+	if advancedCount != nil {
+		autoscaling = advancedCount.Autoscaling
+		desiredCountOnSpot = advancedCount.Spot
+		capacityProviders = advancedCount.Cps
 	}
 
 	storage, err := convertStorageOpts(s.manifest.Name, s.manifest.Storage)
@@ -134,6 +145,8 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		LogConfig:           convertLogging(s.manifest.Logging),
 		DockerLabels:        s.manifest.ImageConfig.DockerLabels,
 		Autoscaling:         autoscaling,
+		CapacityProviders:   capacityProviders,
+		DesiredCountOnSpot:  desiredCountOnSpot,
 		ExecuteCommand:      convertExecuteCommand(&s.manifest.ExecuteCommand),
 		WorkloadType:        manifest.LoadBalancedWebServiceType,
 		HTTPHealthCheck:     convertHTTPHealthCheck(&s.manifest.HealthCheck),

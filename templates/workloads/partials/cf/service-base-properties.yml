@@ -2,7 +2,9 @@ Cluster:
   Fn::ImportValue:
     !Sub '${AppName}-${EnvName}-ClusterId'
 TaskDefinition: !Ref TaskDefinition
-{{- if .Autoscaling }}
+{{- if .DesiredCountOnSpot}}
+DesiredCount: !Ref TaskCount
+{{- else if .Autoscaling}}
 DesiredCount: !GetAtt DynamicDesiredCountAction.DesiredCount
 {{- else }}
 DesiredCount: !Ref TaskCount
@@ -17,7 +19,19 @@ PropagateTags: SERVICE
 {{- if .ExecuteCommand }}
 EnableExecuteCommand: true
 {{- end }}
+{{- if not .CapacityProviders }}
 LaunchType: FARGATE
+{{- end }}
+{{- if .CapacityProviders }}
+CapacityProviderStrategy:
+  {{- range $cps := .CapacityProviders}}
+  - CapacityProvider: {{$cps.CapacityProvider}}
+    Weight: {{$cps.Weight}}
+    {{- if $cps.Base }}
+    Base: {{$cps.Base}}
+    {{- end}}
+  {{- end}}
+{{- end }}
 NetworkConfiguration:
   AwsvpcConfiguration:
     AssignPublicIp: {{.Network.AssignPublicIP}}

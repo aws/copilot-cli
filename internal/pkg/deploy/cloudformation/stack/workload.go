@@ -95,15 +95,11 @@ func (w *wkld) StackName() string {
 
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
-	desiredCount := w.tc.Count.Value
-	// If auto scaling is configured, override the desired count value.
-	if !w.tc.Count.Autoscaling.IsEmpty() {
-		min, _, err := w.tc.Count.Autoscaling.Range.Parse()
-		if err != nil {
-			return nil, fmt.Errorf("parse task count value %s: %w", aws.StringValue((*string)(w.tc.Count.Autoscaling.Range)), err)
-		}
-		desiredCount = aws.Int(min)
+	desiredCount, err := w.tc.Count.Desired()
+	if err != nil {
+		return nil, err
 	}
+
 	var img string
 	if w.image != nil {
 		img = w.image.GetLocation()
