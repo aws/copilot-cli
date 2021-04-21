@@ -9,6 +9,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+
+	"github.com/aws/copilot-cli/internal/pkg/generator"
+
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
@@ -60,7 +64,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		inCommand    string
 		inEntryPoint string
 
-		inDefault bool
+		inDefault           bool
+		inGenerateCMDTarget string
 
 		appName         string
 		isDockerfileSet bool
@@ -301,6 +306,14 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inEnv:     "my-env",
 
 			wantedError: errors.New("cannot specify both `--env` and `--cluster`"),
+		},
+		"generate-cmd specified with another flag": {
+			basicOpts: defaultOpts,
+
+			inGenerateCMDTarget: "cluster/service",
+			inEnv:               "env",
+
+			wantedError: errors.New("cannot specify `--generate-cmd` with any other flag"),
 		},
 	}
 
@@ -892,4 +905,74 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTaskRunOpts_configureGenerator(t *testing.T) {
+	testCases := map[string]struct {
+		inGenerateCommandTarget string
+
+		wantedGenerator cmdGenerator
+		wantedError     error
+	}{
+		"should configure an ECS service command generator given an service ARN": {
+			inGenerateCommandTarget: "arn:aws:ecs:us-east-1:123456789012:service/crowded-cluster/good-service",
+			wantedGenerator: generator.ECSServiceCommandGenerator{
+				Cluster: "crowded-cluster",
+				Service: "good-service",
+			},
+		},
+		"should configure an ECS service command generator given a cluster/service target": {
+			inGenerateCommandTarget: "crowded-cluster/good-service",
+			wantedGenerator: generator.ECSServiceCommandGenerator{
+				Cluster: "crowded-cluster",
+				Service: "good-service",
+			},
+		},
+		"should configure a service command generator given an app/env/svc target": {
+			inGenerateCommandTarget: "good-app/good-env/good-service",
+			wantedGenerator: generator.ServiceCommandGenerator{
+				App:     "good-app",
+				Env:     "good-env",
+				Service: "good-service",
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			sess, _ := sessions.NewProvider().Default()
+			opts := &runTaskOpts{
+				runTaskVars: runTaskVars{
+					generateCMDTarget: tc.inGenerateCommandTarget,
+				},
+				sess: sess,
+			}
+
+			got, err := opts.configureGenerator()
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.True(t, equalGenerator(tc.wantedGenerator, got))
+			}
+		})
+	}
+}
+
+func equalGenerator(wanted, got cmdGenerator) bool {
+	switch wantedG := wanted.(type) {
+	case generator.ECSServiceCommandGenerator:
+		gotG, ok := got.(generator.ECSServiceCommandGenerator)
+		if !ok {
+			return false
+		}
+		return gotG.Cluster == wantedG.Cluster && gotG.Service == wantedG.Service
+	case generator.ServiceCommandGenerator:
+		gotG, ok := got.(generator.ServiceCommandGenerator)
+		if !ok {
+			return false
+		}
+		return gotG.App == wantedG.App && gotG.Env == wantedG.Env && gotG.Service == wantedG.Service
+	}
+	return false
 }

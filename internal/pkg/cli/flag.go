@@ -75,6 +75,7 @@ const (
 	commandFlag        = "command"
 	entrypointFlag     = "entrypoint"
 	taskDefaultFlag    = "default"
+	generateCMDFlag    = "generate-cmd"
 
 	vpcIDFlag          = "import-vpc-id"
 	publicSubnetsFlag  = "import-public-subnets"
@@ -225,6 +226,10 @@ Must be either "MySQL" or "PostgreSQL".`
 Tasks with the same group name share the same set of resources. 
 (default directory name)`
 	taskImageTagFlagDescription = `Optional. The container image tag in addition to "latest".`
+	generateCMDFlagDescription  = `Optional. Given a non-Copilot ECS service or a Copilot service, generate a command with pre-filled values for each flags.
+To provide a non-Copilot ECS service, specify --generate-cmd <cluster name>/<service name>.
+To provide a Copilot service, specify --generate-cmd <application>/<environment>/<service>.
+Cannot be specified with any other flags.`
 
 	vpcIDFlagDescription          = "Optional. Use an existing VPC ID."
 	publicSubnetsFlagDescription  = "Optional. Use existing public subnet IDs."

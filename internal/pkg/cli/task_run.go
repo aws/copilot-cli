@@ -10,6 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/generator"
+
+	"github.com/aws/aws-sdk-go/aws/arn"
+
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
@@ -48,6 +52,10 @@ const (
 const (
 	fmtImageURI = "%s:%s"
 )
+
+type cmdGenerator interface {
+	Generate() (*generator.GenerateCommandOpts, error)
+}
 
 var (
 	errNumNotPositive = errors.New("number of tasks must be positive")
@@ -92,12 +100,14 @@ type runTaskVars struct {
 	entrypoint   string
 	resourceTags map[string]string
 
-	follow bool
+	follow            bool
+	generateCMDTarget string
 }
 
 type runTaskOpts struct {
 	runTaskVars
 	isDockerfileSet bool
+	nFlag           int
 
 	// Interfaces to interact with dependencies.
 	fs      afero.Fs
@@ -247,6 +257,12 @@ func (o *runTaskOpts) configureSessAndEnv() error {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *runTaskOpts) Validate() error {
+	if o.generateCMDTarget != "" {
+		if o.nFlag >= 2 {
+			return errors.New("cannot specify `--generate-cmd` with any other flag")
+		}
+	}
+
 	if o.count <= 0 {
 		return errNumNotPositive
 	}
@@ -383,6 +399,9 @@ func (o *runTaskOpts) validateFlagsWithSecurityGroups() error {
 
 // Ask prompts the user for any required or important fields that are not provided.
 func (o *runTaskOpts) Ask() error {
+	if o.generateCMDTarget != "" {
+		return nil
+	}
 	if o.shouldPromptForAppEnv() {
 		if err := o.askAppName(); err != nil {
 			return err
@@ -407,6 +426,10 @@ func (o *runTaskOpts) shouldPromptForAppEnv() bool {
 
 // Execute deploys and runs the task.
 func (o *runTaskOpts) Execute() error {
+	if o.generateCMDTarget != "" {
+		return o.generateCommand()
+	}
+
 	if o.groupName == "" {
 		dir, err := os.Getwd()
 		if err != nil {
@@ -479,6 +502,68 @@ func (o *runTaskOpts) Execute() error {
 		}
 	}
 	return nil
+}
+
+func (o *runTaskOpts) generateCommand() error {
+	g, err := o.configureGenerator()
+	if err != nil {
+		return err
+	}
+
+	command, err := g.Generate()
+	if err != nil {
+		return fmt.Errorf("generate command: %w", err)
+	}
+	log.Infoln(command.String())
+	return nil
+}
+
+func (o *runTaskOpts) configureGenerator() (cmdGenerator, error) {
+	var g cmdGenerator
+	sess, err := sessions.NewProvider().Default()
+	if err != nil {
+		return nil, fmt.Errorf("get default session: %s", err)
+	}
+
+	if arn.IsARN(o.generateCMDTarget) {
+		svcARN := awsecs.ServiceArn(o.generateCMDTarget)
+		clusterName, err := svcARN.ClusterName()
+		if err != nil {
+			return nil, fmt.Errorf("extract cluster name from arn %s", svcARN)
+		}
+		serviceName, err := svcARN.ServiceName()
+		if err != nil {
+			return nil, fmt.Errorf("extract service name from arn %s", svcARN)
+		}
+		g = generator.ECSServiceCommandGenerator{
+			Cluster:   clusterName,
+			Service:   serviceName,
+			ECSClient: awsecs.New(sess),
+		}
+		return g, nil
+	}
+
+	parts := strings.Split(o.generateCMDTarget, "/")
+	switch len(parts) {
+	case 2:
+		clusterName, serviceName := parts[0], parts[1]
+		g = generator.ECSServiceCommandGenerator{
+			Cluster:   clusterName,
+			Service:   serviceName,
+			ECSClient: awsecs.New(sess),
+		}
+	case 3:
+		appName, envName, serviceName := parts[0], parts[1], parts[2]
+		g = generator.ServiceCommandGenerator{
+			App:                  appName,
+			Env:                  envName,
+			Service:              serviceName,
+			ECSInformationGetter: ecs.New(sess),
+		}
+	default:
+		return nil, fmt.Errorf("invalid input") //TODO
+	}
+	return g, nil
 }
 
 func (o *runTaskOpts) displayLogStream() error {
@@ -688,6 +773,7 @@ Run a task with a command.
 /code $ copilot task run --command "python migrate-script.py"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newTaskRunOpts(vars)
+			opts.nFlag = cmd.Flags().NFlag()
 			if err != nil {
 				return err
 			}
@@ -738,5 +824,7 @@ Run a task with a command.
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
+	cmd.Flags().StringVar(&vars.generateCMDTarget, generateCMDFlag, "", generateCMDFlagDescription)
+
 	return cmd
 }
