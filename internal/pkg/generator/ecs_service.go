@@ -37,14 +37,14 @@ func (g ECSServiceCommandGenerator) Generate() (*GenerateCommandOpts, error) {
 		return nil, fmt.Errorf("retrieve service %s in cluster %s: %w", g.Service, g.Cluster, err)
 	}
 
-	taskDefARNOrName := aws.StringValue(svc.TaskDefinition)
-	taskDef, err := g.ECSServiceGetter.TaskDefinition(taskDefARNOrName)
+	taskDefNameOrARN := aws.StringValue(svc.TaskDefinition)
+	taskDef, err := g.ECSServiceGetter.TaskDefinition(taskDefNameOrARN)
 	if err != nil {
-		return nil, fmt.Errorf("retrieve task definition %s: %w", taskDefARNOrName, err)
+		return nil, fmt.Errorf("retrieve task definition %s: %w", taskDefNameOrARN, err)
 	}
 
 	if len(taskDef.ContainerDefinitions) > 1 {
-		return nil, fmt.Errorf("found more that one container in task definition: %s", taskDefARNOrName)
+		return nil, fmt.Errorf("found more that one container in task definition: %s", taskDefNameOrARN)
 	}
 
 	containerName := aws.StringValue(taskDef.ContainerDefinitions[0].Name)
