@@ -417,7 +417,7 @@ func (o *runTaskOpts) shouldPromptForAppEnv() bool {
 	// NOTE: if security groups are specified but subnets are not, then we use the default subnets with the
 	// specified security groups.
 	useDefault := o.useDefaultSubnetsAndCluster || (o.securityGroups != nil && o.subnets == nil && o.cluster == "")
-	useConfig := o.subnets != nil
+	useConfig := o.subnets != nil || o.cluster != ""
 
 	// if user hasn't specified that they want to use the default subnets, and that they didn't provide specific subnets
 	// that they want to use, then we prompt.
@@ -509,7 +509,6 @@ func (o *runTaskOpts) generateCommand() error {
 	if err != nil {
 		return err
 	}
-
 	command, err := g.Generate()
 	if err != nil {
 		return fmt.Errorf("generate command: %w", err)
