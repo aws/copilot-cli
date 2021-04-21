@@ -161,6 +161,14 @@ type HTTPHealthCheckOpts struct {
 	Timeout            *int64
 }
 
+// AdvancedCount holds configuration for autoscaling and capacity provider
+// parameters.
+type AdvancedCount struct {
+	Spot        *int
+	Autoscaling *AutoscalingOpts
+	Cps         []*CapacityProviderStrategy
+}
+
 // CapacityProviderStrategy holds the configuration needed for a
 // CapacityProviderStrategyItem on a Service
 type CapacityProviderStrategy struct {

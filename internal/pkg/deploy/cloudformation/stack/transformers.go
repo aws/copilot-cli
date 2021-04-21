@@ -102,6 +102,36 @@ func parsePortMapping(s *string) (port *string, protocol *string, err error) {
 	}
 }
 
+func convertAdvancedCount(a *manifest.AdvancedCount) (*template.AdvancedCount, error) {
+	if a == nil {
+		return nil, nil
+	}
+
+	if a.IsEmpty() {
+		return nil, nil
+	}
+
+	spot := a.Spot
+
+	autoscaling, err := convertAutoscaling(a)
+	if err != nil {
+		return nil, err
+	}
+
+	cps, err := convertCapacityProviders(a)
+	if err != nil {
+		return nil, err
+	}
+
+	ac := &template.AdvancedCount{
+		Spot:        spot,
+		Autoscaling: autoscaling,
+		Cps:         cps,
+	}
+
+	return ac, nil
+}
+
 // convertCapacityProviders transforms the manifest fields into a format
 // parsable by the templates pkg.
 func convertCapacityProviders(a *manifest.AdvancedCount) ([]*template.CapacityProviderStrategy, error) {
@@ -113,10 +143,12 @@ func convertCapacityProviders(a *manifest.AdvancedCount) ([]*template.CapacityPr
 		return nil, errInvalidSpotConfig
 	}
 
-	// User case 1: if spot count specified
-	var cps []*template.CapacityProviderStrategy
+	// return if autoscaling range specified without spot scaling
+	if a.Range != nil && a.Range.Range != nil {
+		return nil, nil
+	}
 
-	// if Base is not nil, then that's what the desired count should be on the service
+	var cps []*template.CapacityProviderStrategy
 
 	// if Spot specified as count, then weight on Spot CPS should be 1
 	cps = append(cps, &template.CapacityProviderStrategy{

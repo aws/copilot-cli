@@ -129,7 +129,7 @@ Outputs:
     Value: hello`,
 				}
 			},
-			wantedErr: fmt.Errorf("convert the Auto Scaling configuration for service frontend: %w", errors.New("invalid range value badRange. Should be in format of ${min}-${max}")),
+			wantedErr: fmt.Errorf("convert the advanced count configuration for service frontend: %w", errors.New("invalid range value badRange. Should be in format of ${min}-${max}")),
 		},
 		"failed parsing svc template": {
 			setUpManifest: func(svc *BackendService) {

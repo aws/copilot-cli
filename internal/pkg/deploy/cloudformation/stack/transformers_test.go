@@ -106,6 +106,95 @@ func Test_convertSidecar(t *testing.T) {
 	}
 }
 
+func Test_convertAdvancedCount(t *testing.T) {
+	mockRange := manifest.Range("1-10")
+	testCases := map[string]struct {
+		input       *manifest.AdvancedCount
+		expected    *template.AdvancedCount
+		expectedErr error
+	}{
+		"returns nil if nil": {
+			input:    nil,
+			expected: nil,
+		},
+		"returns nil if empty": {
+			input:    &manifest.AdvancedCount{},
+			expected: nil,
+		},
+		"success with spot count": {
+			input: &manifest.AdvancedCount{
+				Spot: aws.Int(1),
+			},
+			expected: &template.AdvancedCount{
+				Spot: aws.Int(1),
+				Cps: []*template.CapacityProviderStrategy{
+					{
+						Weight:           aws.Int(1),
+						CapacityProvider: capacityProviderFargateSpot,
+					},
+				},
+			},
+		},
+		"success with fargate autoscaling": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.RangeOpts{
+					Range: &mockRange,
+				},
+				CPU: aws.Int(70),
+			},
+			expected: &template.AdvancedCount{
+				Autoscaling: &template.AutoscalingOpts{
+					MinCapacity: aws.Int(1),
+					MaxCapacity: aws.Int(10),
+					CPU:         aws.Float64(70),
+				},
+			},
+		},
+		"success with spot autoscaling": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.RangeOpts{
+					RangeConfig: manifest.RangeConfig{
+						Min:      aws.Int(2),
+						Max:      aws.Int(20),
+						SpotFrom: aws.Int(5),
+					},
+				},
+				CPU: aws.Int(70),
+			},
+			expected: &template.AdvancedCount{
+				Autoscaling: &template.AutoscalingOpts{
+					MinCapacity: aws.Int(2),
+					MaxCapacity: aws.Int(20),
+					CPU:         aws.Float64(70),
+				},
+				Cps: []*template.CapacityProviderStrategy{
+					{
+						Weight:           aws.Int(1),
+						CapacityProvider: capacityProviderFargateSpot,
+					},
+					{
+						Base:             aws.Int(4),
+						Weight:           aws.Int(0),
+						CapacityProvider: capacityProviderFargate,
+					},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			actual, err := convertAdvancedCount(tc.input)
+
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expected, actual)
+			}
+		})
+	}
+}
+
 func Test_convertCapacityProviders(t *testing.T) {
 	mockRange := manifest.Range("1-10")
 	minCapacity := 1
@@ -167,6 +256,14 @@ func Test_convertCapacityProviders(t *testing.T) {
 					CapacityProvider: capacityProviderFargate,
 				},
 			},
+		},
+		"returns nil if no spot config specified": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.RangeOpts{
+					Range: &mockRange,
+				},
+			},
+			expected: nil,
 		},
 		"errors if spot specified with range": {
 			input: &manifest.AdvancedCount{
