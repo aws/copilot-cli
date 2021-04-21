@@ -28,6 +28,7 @@ func TestBB_Pipeline_Template(t *testing.T) {
 			RepositoryURL: "https://huanjani@bitbucket.org/huanjani/sample",
 			Branch:        "master",
 		},
+		Build: deploy.PipelineBuildFromManifest(nil),
 		Stages: []deploy.PipelineStage{
 			{
 				AssociatedEnvironment: &deploy.AssociatedEnvironment{

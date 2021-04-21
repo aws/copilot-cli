@@ -13,7 +13,6 @@ Resources:
     Metadata:
       'aws:copilot:description': 'An Amazon DynamoDB table for {{.Name}}'
     Type: AWS::DynamoDB::Table
-    DeletionPolicy: Retain
     Properties:
       TableName: !Sub ${App}-${Env}-${Name}-{{.Name}}
       AttributeDefinitions:{{range .Attributes}}

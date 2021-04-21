@@ -629,6 +629,62 @@ source:
 
 			expectedError: fmt.Errorf("update pipeline: some error"),
 		},
+		"update and deploy pipeline with specifying build property": {
+			inApp:     &app,
+			inAppName: appName,
+			inRegion:  region,
+			callMocks: func(m updatePipelineMocks) {
+				content := `
+name: pipepiper
+version: 1
+
+source:
+  provider: GitHub
+  properties:
+    repository: aws/somethingCool
+    access_token_secret: "github-token-badgoose-backend"
+    branch: main
+
+build:
+  image: aws/codebuild/standard:3.0
+
+stages:
+    -
+      name: chicken
+      test_commands:
+        - make test
+        - echo "made test"
+    -
+      name: wings
+      test_commands:
+        - echo "bok bok bok"
+`
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
+
+					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().WorkloadNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+
+					// convertStages
+					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+
+					// getArtifactBuckets
+					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+
+					// deployPipeline
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
+					m.deployer.EXPECT().GetAppResourcesByRegion(&app, region).Return(mockResource, nil),
+					m.prompt.EXPECT().Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, pipelineName), "").Return(true, nil),
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateProposalStart, pipelineName)).Times(1),
+					m.deployer.EXPECT().UpdatePipeline(gomock.Any(), gomock.Any()).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateProposalComplete, pipelineName)).Times(1),
+				)
+			},
+			expectedError: nil,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

@@ -97,6 +97,7 @@ type stackSetClient interface {
 	Describe(name string) (stackset.Description, error)
 	InstanceSummaries(name string, opts ...stackset.InstanceSummariesOption) ([]stackset.InstanceSummary, error)
 	Delete(name string) error
+	WaitForStackSetLastOperationComplete(name string) error
 }
 
 // CloudFormation wraps the CloudFormationAPI interface
@@ -446,4 +447,26 @@ func stopSpinner(spinner *progress.Spinner, err error, label string) {
 		return
 	}
 	spinner.Stop(log.Serrorf("%s\n", label))
+}
+
+// isRetryableUpdateError returns true if the stack update error is retryable.
+func isRetryableUpdateError(name string, err error) bool {
+	var alreadyInProgErr *cloudformation.ErrStackUpdateInProgress
+	var obsoleteChangeSetErr *cloudformation.ErrChangeSetNotExecutable
+	switch updateErr := err; {
+	case errors.As(updateErr, &alreadyInProgErr):
+		// There is another update going on, retry the upgrade.
+		return true
+	case errors.As(updateErr, &obsoleteChangeSetErr):
+		// If there are two "upgrade" calls happening in parallel, it's possible that
+		// both invocations created a changeset to upgrade the stack.
+		// CloudFormation will ensure that one of them goes through, while the other returns
+		// an ErrChangeSetNotExecutable error.
+		//
+		// In that scenario, we should loop again, wait until the stack is updated,
+		// and exit due to changeset is empty.
+		return true
+	default:
+		return false
+	}
 }

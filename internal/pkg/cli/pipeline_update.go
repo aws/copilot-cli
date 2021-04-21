@@ -103,7 +103,7 @@ func (o *updatePipelineOpts) Validate() error {
 	return nil
 }
 
-// Execute create a new pipeline or update the current pipeline if it already exists.
+// Execute creates a new pipeline or updates the current pipeline if it already exists.
 func (o *updatePipelineOpts) Execute() error {
 	// bootstrap pipeline resources
 	o.prog.Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, color.HighlightUserInput(o.appName)))

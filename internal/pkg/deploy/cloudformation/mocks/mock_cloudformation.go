@@ -656,3 +656,17 @@ func (mr *MockstackSetClientMockRecorder) UpdateAndWait(name, template interface
 	varargs := append([]interface{}{name, template}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAndWait", reflect.TypeOf((*MockstackSetClient)(nil).UpdateAndWait), varargs...)
 }
+
+// WaitForStackSetLastOperationComplete mocks base method.
+func (m *MockstackSetClient) WaitForStackSetLastOperationComplete(name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitForStackSetLastOperationComplete", name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitForStackSetLastOperationComplete indicates an expected call of WaitForStackSetLastOperationComplete.
+func (mr *MockstackSetClientMockRecorder) WaitForStackSetLastOperationComplete(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForStackSetLastOperationComplete", reflect.TypeOf((*MockstackSetClient)(nil).WaitForStackSetLastOperationComplete), name)
+}

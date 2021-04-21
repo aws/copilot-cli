@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const defaultImage = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+
 func TestCloudFormation_PipelineExists(t *testing.T) {
 	in := &deploy.CreatePipelineInput{
 		AppName: "kudos",
@@ -78,6 +80,9 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			RepositoryURL: "https://aws@bitbucket.org/aws/somethingCool",
 			ProviderName:  "Bitbucket",
 			Branch:        "main",
+		},
+		Build: &deploy.Build{
+			Image: defaultImage,
 		},
 		Stages:          nil,
 		ArtifactBuckets: nil,
@@ -301,6 +306,9 @@ func TestCloudFormation_UpdatePipeline(t *testing.T) {
 		Source: &deploy.GitHubSource{
 			RepositoryURL: "aws/somethingCool",
 			Branch:        "main",
+		},
+		Build: &deploy.Build{
+			Image: defaultImage,
 		},
 		Stages:          nil,
 		ArtifactBuckets: nil,

@@ -37,6 +37,72 @@ Resources:
       LogGroupName: !Join ['', [/copilot/, !Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName]]
       RetentionInDays: !Ref LogRetention
 
+  EnvControllerAction:
+    Metadata:
+      'aws:copilot:description': "Update your environment's shared resources"
+    Type: Custom::EnvControllerFunction
+    Properties:
+      ServiceToken: !GetAtt EnvControllerFunction.Arn
+      Workload: !Ref WorkloadName
+      EnvStack: !Sub '${AppName}-${EnvName}'
+      Parameters:
+      - EFSWorkloads
+
+  EnvControllerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          Abracadabra
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt 'EnvControllerRole.Arn'
+      Runtime: nodejs12.x
+
+  EnvControllerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: "EnvControllerStackUpdate"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - cloudformation:DescribeStacks
+                - cloudformation:UpdateStack
+              Resource:  !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}-${EnvName}/*'
+              Condition:
+                StringEquals:
+                  'cloudformation:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'cloudformation:ResourceTag/copilot-environment': !Sub '${EnvName}'
+        - PolicyName: "EnvControllerRolePass"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - iam:PassRole
+              Resource:  !Sub 'arn:aws:iam::${AWS::AccountId}:role/${AppName}-${EnvName}-CFNExecutionRole'
+              Condition:
+                StringEquals:
+                  'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
   TaskDefinition:
     Metadata:
       'aws:copilot:description': 'An ECS task definition to group your containers and run them on ECS'
@@ -67,7 +133,7 @@ Resources:
           - Name: COPILOT_SERVICE_NAME
             Value: !Sub '${WorkloadName}'
           - Name: COPILOT_MOUNT_POINTS
-            Value: '{"myEFSVolume":"/etc/mount1"}'
+            Value: '{"managedEFSVolume":"/etc/mount2","myEFSVolume":"/etc/mount1"}'
           
           LogConfiguration:
             LogDriver: awslogs
@@ -75,11 +141,13 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: copilot
-
           MountPoints:
             - ContainerPath: /etc/mount1
               ReadOnly: true
               SourceVolume: myEFSVolume
+            - ContainerPath: /etc/mount2
+              ReadOnly: false
+              SourceVolume: managedEFSVolume
         - Name: nginx
           Image: 'public.ecr.aws/nginx/nginx'
           LogConfiguration:
@@ -101,6 +169,14 @@ Resources:
               Value: '{"myEFSVolume":"/var/www"}'
 
       Volumes:
+        - Name: managedEFSVolume
+          EFSVolumeConfiguration:
+            FilesystemId: !GetAtt EnvControllerAction.ManagedFileSystemID
+            RootDirectory: /
+            TransitEncryption: ENABLED
+            AuthorizationConfig:
+              IAM: ENABLED
+              AccessPointId: !Ref AccessPoint
         - Name: myEFSVolume
           EFSVolumeConfiguration:
             FilesystemId: fs-12345
@@ -108,6 +184,7 @@ Resources:
             TransitEncryption: ENABLED
             AuthorizationConfig:
               IAM: DISABLED
+            
         
         
   ExecutionRole:
@@ -189,6 +266,24 @@ Resources:
                   - 'elasticfilesystem:ClientMount'
                 Resource:
                   - !Sub 'arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/fs-12345'
+        - PolicyName: 'GrantAccessCopilotManagedEFS'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'elasticfilesystem:ClientMount'
+                  - 'elasticfilesystem:ClientWrite'
+                Condition:
+                  StringEquals:
+                    'elasticfilesystem:AccessPointArn': !GetAtt AccessPoint.Arn
+                Resource: 
+                  - Fn::Sub:
+                    - 'arn:aws:elasticfilesystem:${region}:${account}:file-system/${fsid}'
+                    - region: !Ref AWS::Region
+                      account: !Ref AWS::AccountId
+                      fsid: !GetAtt EnvControllerAction.ManagedFileSystemID
+
 
   Rule:
     Metadata:
@@ -356,11 +451,29 @@ Resources:
             - events:DescribeRule
             Resource: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForECSTaskRule
   
+  AccessPoint:
+    Metadata:
+      'aws:copilot:description': 'An EFS access point to handle POSIX permissions'
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      ClientToken: !Sub ${AppName}-${EnvName}-${WorkloadName}
+      FileSystemId: !GetAtt EnvControllerAction.ManagedFileSystemID
+      PosixUser: 
+        Uid: 4225294584
+        Gid: 4225294584
+      RootDirectory: 
+        Path: '/job'
+        CreationInfo:
+          OwnerUid: 4225294584
+          OwnerGid: 4225294584
+          Permissions: '0755'
+
 
   AddonsStack:
     Metadata:
       'aws:copilot:description': 'An Addons CloudFormation Stack for your additional AWS resources'
     Type: AWS::CloudFormation::Stack
+    DependsOn: EnvControllerAction
     Condition: HasAddons
     Properties:
       Parameters:

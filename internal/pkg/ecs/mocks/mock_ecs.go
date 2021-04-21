@@ -88,6 +88,21 @@ func (mr *MockecsClientMockRecorder) DefaultCluster() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultCluster", reflect.TypeOf((*MockecsClient)(nil).DefaultCluster))
 }
 
+// NetworkConfiguration mocks base method.
+func (m *MockecsClient) NetworkConfiguration(cluster, serviceName string) (*ecs.NetworkConfiguration, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NetworkConfiguration", cluster, serviceName)
+	ret0, _ := ret[0].(*ecs.NetworkConfiguration)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NetworkConfiguration indicates an expected call of NetworkConfiguration.
+func (mr *MockecsClientMockRecorder) NetworkConfiguration(cluster, serviceName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkConfiguration", reflect.TypeOf((*MockecsClient)(nil).NetworkConfiguration), cluster, serviceName)
+}
+
 // RunningTasks mocks base method.
 func (m *MockecsClient) RunningTasks(cluster string) ([]*ecs.Task, error) {
 	m.ctrl.T.Helper()
@@ -150,4 +165,19 @@ func (mr *MockecsClientMockRecorder) StopTasks(tasks interface{}, opts ...interf
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{tasks}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopTasks", reflect.TypeOf((*MockecsClient)(nil).StopTasks), varargs...)
+}
+
+// TaskDefinition mocks base method.
+func (m *MockecsClient) TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TaskDefinition", taskDefName)
+	ret0, _ := ret[0].(*ecs.TaskDefinition)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TaskDefinition indicates an expected call of TaskDefinition.
+func (mr *MockecsClientMockRecorder) TaskDefinition(taskDefName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockecsClient)(nil).TaskDefinition), taskDefName)
 }

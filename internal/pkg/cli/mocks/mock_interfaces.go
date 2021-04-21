@@ -4818,6 +4818,21 @@ func (mr *MockconfigSelectorMockRecorder) Environment(prompt, help, app interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockconfigSelector)(nil).Environment), varargs...)
 }
 
+// Job mocks base method.
+func (m *MockconfigSelector) Job(prompt, help, app string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Job", prompt, help, app)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Job indicates an expected call of Job.
+func (mr *MockconfigSelectorMockRecorder) Job(prompt, help, app interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Job", reflect.TypeOf((*MockconfigSelector)(nil).Job), prompt, help, app)
+}
+
 // Service mocks base method.
 func (m *MockconfigSelector) Service(prompt, help, app string) (string, error) {
 	m.ctrl.T.Helper()

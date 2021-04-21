@@ -56,6 +56,9 @@ logging:
 environments:
   test:
     count: 3
+  staging1:
+    count:
+      spot: 5
   prod:
     count:
       range: 1-10
@@ -124,6 +127,15 @@ environments:
 							TaskConfig: TaskConfig{
 								Count: Count{
 									Value: aws.Int(3),
+								},
+							},
+						},
+						"staging1": {
+							TaskConfig: TaskConfig{
+								Count: Count{
+									Autoscaling: Autoscaling{
+										Spot: aws.Int(5),
+									},
 								},
 							},
 						},
@@ -261,6 +273,23 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 				},
 			},
 		},
+		"With spot specified as count": {
+			inContent: []byte(`count:
+  spot: 42
+`),
+			wantedStruct: Count{
+				Autoscaling: Autoscaling{
+					Spot: aws.Int(42),
+				},
+			},
+		},
+		"Error if spot specified as int with range": {
+			inContent: []byte(`count:
+  range: 1-10
+  spot: 3
+`),
+			wantedError: errUnmarshalSpot,
+		},
 		"Error if unmarshalable": {
 			inContent: []byte(`count: badNumber
 `),
@@ -282,6 +311,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.Autoscaling.Memory, b.Count.Autoscaling.Memory)
 				require.Equal(t, tc.wantedStruct.Autoscaling.Requests, b.Count.Autoscaling.Requests)
 				require.Equal(t, tc.wantedStruct.Autoscaling.ResponseTime, b.Count.Autoscaling.ResponseTime)
+				require.Equal(t, tc.wantedStruct.Autoscaling.Spot, b.Count.Autoscaling.Spot)
 			}
 		})
 	}
