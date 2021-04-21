@@ -46,7 +46,7 @@ var (
 		"secrets",
 		"executionrole",
 		"taskrole",
-		"container-definition-base-properties",
+		"workload-container",
 		"fargate-taskdef-base-properties",
 		"service-base-properties",
 		"servicediscovery",

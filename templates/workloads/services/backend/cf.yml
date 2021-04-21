@@ -41,17 +41,8 @@ Resources:
     DependsOn: LogGroup
     Properties:
 {{include "fargate-taskdef-base-properties" . | indent 6}}
-{{include "container-definition-base-properties" . | indent 6}}
-{{include "envvars" . | indent 10}}
-          PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort}], !Ref "AWS::NoValue"]
-{{- if .HealthCheck}}
-          HealthCheck:
-            Command: {{quoteSlice .HealthCheck.Command | fmtSlice}}
-            Interval: {{.HealthCheck.Interval}}
-            Retries: {{.HealthCheck.Retries}}
-            StartPeriod: {{.HealthCheck.StartPeriod}}
-            Timeout: {{.HealthCheck.Timeout}}
-{{- end}}
+      ContainerDefinitions:
+{{include "workload-container" . | indent 8}}
 {{include "sidecars" . | indent 8}}
 {{- if .Storage -}}
 {{include "volumes" . | indent 6}}
