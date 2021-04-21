@@ -936,6 +936,10 @@ func TestTaskRunOpts_configureGenerator(t *testing.T) {
 				Service: "good-service",
 			},
 		},
+		"invalid input": {
+			inGenerateCommandTarget: "good-service",
+			wantedError:             errors.New("invalid input to --generate-cmd"),
+		},
 	}
 
 	for name, tc := range testCases {

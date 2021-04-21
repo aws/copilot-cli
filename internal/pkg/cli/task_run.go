@@ -525,21 +525,7 @@ func (o *runTaskOpts) configureGenerator() (cmdGenerator, error) {
 	}
 
 	if arn.IsARN(o.generateCMDTarget) {
-		svcARN := awsecs.ServiceArn(o.generateCMDTarget)
-		clusterName, err := svcARN.ClusterName()
-		if err != nil {
-			return nil, fmt.Errorf("extract cluster name from arn %s", svcARN)
-		}
-		serviceName, err := svcARN.ServiceName()
-		if err != nil {
-			return nil, fmt.Errorf("extract service name from arn %s", svcARN)
-		}
-		g = generator.ECSServiceCommandGenerator{
-			Cluster:   clusterName,
-			Service:   serviceName,
-			ECSClient: awsecs.New(sess),
-		}
-		return g, nil
+		return o.configureGeneratorFromARN(sess)
 	}
 
 	parts := strings.Split(o.generateCMDTarget, "/")
@@ -560,9 +546,26 @@ func (o *runTaskOpts) configureGenerator() (cmdGenerator, error) {
 			ECSInformationGetter: ecs.New(sess),
 		}
 	default:
-		return nil, fmt.Errorf("invalid input") //TODO
+		return nil, errors.New("invalid input to --generate-cmd")
 	}
 	return g, nil
+}
+
+func (o *runTaskOpts) configureGeneratorFromARN(sess *session.Session) (cmdGenerator, error) {
+	svcARN := awsecs.ServiceArn(o.generateCMDTarget)
+	clusterName, err := svcARN.ClusterName()
+	if err != nil {
+		return nil, fmt.Errorf("extract cluster name from arn %s", svcARN)
+	}
+	serviceName, err := svcARN.ServiceName()
+	if err != nil {
+		return nil, fmt.Errorf("extract service name from arn %s", svcARN)
+	}
+	return generator.ECSServiceCommandGenerator{
+		Cluster:   clusterName,
+		Service:   serviceName,
+		ECSClient: awsecs.New(sess),
+	}, nil
 }
 
 func (o *runTaskOpts) displayLogStream() error {
