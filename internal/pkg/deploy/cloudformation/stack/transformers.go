@@ -123,13 +123,11 @@ func convertAdvancedCount(a *manifest.AdvancedCount) (*template.AdvancedCount, e
 		return nil, err
 	}
 
-	ac := &template.AdvancedCount{
-		Spot:        spot,
+	return &template.AdvancedCount{
+		Spot:        a.Spot,
 		Autoscaling: autoscaling,
 		Cps:         cps,
-	}
-
-	return ac, nil
+	}, nil
 }
 
 // convertCapacityProviders transforms the manifest fields into a format
