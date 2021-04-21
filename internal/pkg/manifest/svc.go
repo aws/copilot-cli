@@ -151,21 +151,18 @@ func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // Desired returns the desiredCount to be set on the CFN template
 func (c *Count) Desired() (*int, error) {
-	desiredCount := c.Value
-
-	// If auto scaling is configured, override the desired count value.
-	if !c.AdvancedCount.IsEmpty() {
-		if c.AdvancedCount.IgnoreRange() {
-			desiredCount = c.AdvancedCount.Spot
-		} else {
-			min, _, err := c.AdvancedCount.Range.Parse()
-			if err != nil {
-				return nil, fmt.Errorf("parse task count value %s: %w", aws.StringValue((*string)(c.AdvancedCount.Range.Value)), err)
-			}
-			desiredCount = aws.Int(min)
-		}
+	if c.AdvancedCount.IsEmpty() {
+		return c.Value, nil
 	}
-	return desiredCount, nil
+
+	if c.AdvancedCount.IgnoreRange() {
+		return c.AdvancedCount.Spot, nil
+	}
+	min, _, err := c.AdvancedCount.Range.Parse()
+	if err != nil {
+		return nil, fmt.Errorf("parse task count value %s: %w", aws.StringValue((*string)(c.AdvancedCount.Range.Value)), err)
+	}
+	return aws.Int(min), nil
 }
 
 // AdvancedCount represents the configurable options for Auto Scaling as well as
