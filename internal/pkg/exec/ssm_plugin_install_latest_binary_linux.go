@@ -42,7 +42,7 @@ func (s SSMPluginCommand) isUbuntu() (bool, error) {
 }
 
 func (s SSMPluginCommand) installLinuxBinary() error {
-	if err := download(filepath.Join(s.tempDir, "session-manager-plugin.rpm"), linuxSSMPluginBinaryURL); err != nil {
+	if err := download(s.http, filepath.Join(s.tempDir, "session-manager-plugin.rpm"), linuxSSMPluginBinaryURL); err != nil {
 		return fmt.Errorf("download ssm plugin: %w", err)
 	}
 	if err := s.runner.Run("sudo", []string{"yum", "install", "-y",
@@ -53,7 +53,7 @@ func (s SSMPluginCommand) installLinuxBinary() error {
 }
 
 func (s SSMPluginCommand) installUbuntuBinary() error {
-	if err := download(filepath.Join(s.tempDir, "session-manager-plugin.deb"), ubuntuSSMPluginBinaryURL); err != nil {
+	if err := download(s.http, filepath.Join(s.tempDir, "session-manager-plugin.deb"), ubuntuSSMPluginBinaryURL); err != nil {
 		return fmt.Errorf("download ssm plugin: %w", err)
 	}
 	if err := s.runner.Run("sudo", []string{"dpkg", "-i",
