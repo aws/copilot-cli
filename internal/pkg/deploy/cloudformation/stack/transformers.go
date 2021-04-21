@@ -111,8 +111,6 @@ func convertAdvancedCount(a *manifest.AdvancedCount) (*template.AdvancedCount, e
 		return nil, nil
 	}
 
-	spot := a.Spot
-
 	autoscaling, err := convertAutoscaling(a)
 	if err != nil {
 		return nil, err
