@@ -519,7 +519,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					TaskConfig: TaskConfig{
 						Count: Count{
-							Autoscaling: Autoscaling{
+							AdvancedCount: AdvancedCount{
 								Range: &RangeOpts{Range: &mockRange},
 								CPU:   aws.Int(80),
 							},
@@ -537,7 +537,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							Value: nil,
-							Autoscaling: Autoscaling{
+							AdvancedCount: AdvancedCount{
 								Range: &RangeOpts{Range: &mockRange},
 								CPU:   aws.Int(80),
 							},

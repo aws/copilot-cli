@@ -111,17 +111,17 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 
 	// desiredCountOnSpot and Autoscaling are mutually exclusive
 	var autoscaling *template.AutoscalingOpts
-	desiredCountOnSpot := s.manifest.Count.Autoscaling.Spot
+	desiredCountOnSpot := s.manifest.Count.AdvancedCount.Spot
 
 	if desiredCountOnSpot == nil {
 		var err error
-		autoscaling, err = convertAutoscaling(&s.manifest.Count.Autoscaling)
+		autoscaling, err = convertAutoscaling(&s.manifest.Count.AdvancedCount)
 		if err != nil {
 			return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
 		}
 	}
 
-	capacityProviders, err := convertCapacityProviders(&s.manifest.Count.Autoscaling)
+	capacityProviders, err := convertCapacityProviders(&s.manifest.Count.AdvancedCount)
 	if err != nil {
 		return "", fmt.Errorf("convert the Capacity Provider configuration for service %s: %w", s.name, err)
 	}

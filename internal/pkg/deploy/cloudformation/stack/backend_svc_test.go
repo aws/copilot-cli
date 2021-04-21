@@ -107,7 +107,7 @@ Outputs:
 			setUpManifest: func(svc *BackendService) {
 				testBackendSvcManifestWithBadAutoScaling := manifest.NewBackendService(baseProps)
 				badRange := manifest.Range("badRange")
-				testBackendSvcManifestWithBadAutoScaling.Count.Autoscaling = manifest.Autoscaling{
+				testBackendSvcManifestWithBadAutoScaling.Count.AdvancedCount = manifest.AdvancedCount{
 					Range: &manifest.RangeOpts{
 						Range: &badRange,
 					},

@@ -111,12 +111,12 @@ func Test_convertCapacityProviders(t *testing.T) {
 	minCapacity := 1
 	spotFrom := 3
 	testCases := map[string]struct {
-		input       *manifest.Autoscaling
+		input       *manifest.AdvancedCount
 		expected    []*template.CapacityProviderStrategy
 		expectedErr error
 	}{
 		"with spot as desiredCount": {
-			input: &manifest.Autoscaling{
+			input: &manifest.AdvancedCount{
 				Spot: aws.Int(3),
 			},
 
@@ -128,7 +128,7 @@ func Test_convertCapacityProviders(t *testing.T) {
 			},
 		},
 		"with scaling only on spot": {
-			input: &manifest.Autoscaling{
+			input: &manifest.AdvancedCount{
 				Range: &manifest.RangeOpts{
 					RangeConfig: manifest.RangeConfig{
 						Min:      aws.Int(minCapacity),
@@ -146,7 +146,7 @@ func Test_convertCapacityProviders(t *testing.T) {
 			},
 		},
 		"with scaling into spot": {
-			input: &manifest.Autoscaling{
+			input: &manifest.AdvancedCount{
 				Range: &manifest.RangeOpts{
 					RangeConfig: manifest.RangeConfig{
 						Min:      aws.Int(minCapacity),
@@ -169,7 +169,7 @@ func Test_convertCapacityProviders(t *testing.T) {
 			},
 		},
 		"errors if spot specified with range": {
-			input: &manifest.Autoscaling{
+			input: &manifest.AdvancedCount{
 				Range: &manifest.RangeOpts{
 					Range: &mockRange,
 				},
@@ -199,13 +199,13 @@ func Test_convertAutoscaling(t *testing.T) {
 	mockRequests := 1000
 	mockResponseTime := 512 * time.Millisecond
 	testCases := map[string]struct {
-		input *manifest.Autoscaling
+		input *manifest.AdvancedCount
 
 		wanted    *template.AutoscalingOpts
 		wantedErr error
 	}{
 		"invalid range": {
-			input: &manifest.Autoscaling{
+			input: &manifest.AdvancedCount{
 				Range: &manifest.RangeOpts{
 					Range: &badRange,
 				},
@@ -214,7 +214,7 @@ func Test_convertAutoscaling(t *testing.T) {
 			wantedErr: fmt.Errorf("invalid range value badRange. Should be in format of ${min}-${max}"),
 		},
 		"success": {
-			input: &manifest.Autoscaling{
+			input: &manifest.AdvancedCount{
 				Range: &manifest.RangeOpts{
 					Range: &mockRange,
 				},
@@ -234,7 +234,7 @@ func Test_convertAutoscaling(t *testing.T) {
 			},
 		},
 		"success with range subfields": {
-			input: &manifest.Autoscaling{
+			input: &manifest.AdvancedCount{
 				Range: &manifest.RangeOpts{
 					RangeConfig: manifest.RangeConfig{
 						Min:      aws.Int(5),
@@ -258,7 +258,7 @@ func Test_convertAutoscaling(t *testing.T) {
 			},
 		},
 		"returns nil if spot specified": {
-			input: &manifest.Autoscaling{
+			input: &manifest.AdvancedCount{
 				Spot: aws.Int(5),
 			},
 			wanted: nil,

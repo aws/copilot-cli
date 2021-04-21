@@ -114,17 +114,17 @@ type ServiceImageWithPort struct {
 }
 
 // Count is a custom type which supports unmarshaling yaml which
-// can either be of type int or type Autoscaling.
+// can either be of type int or type AdvantedCount.
 type Count struct {
-	Value       *int        // 0 is a valid value, so we want the default value to be nil.
-	Autoscaling Autoscaling // Mutually exclusive with Value.
+	Value         *int          // 0 is a valid value, so we want the default value to be nil.
+	AdvancedCount AdvancedCount // Mutually exclusive with Value.
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Count
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v2) interface.
 func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&c.Autoscaling); err != nil {
+	if err := unmarshal(&c.AdvancedCount); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -133,12 +133,12 @@ func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	if !c.Autoscaling.IsValid() {
+	if !c.AdvancedCount.IsValid() {
 		return errUnmarshalSpot
 	}
 
-	if !c.Autoscaling.IsEmpty() {
-		// Successfully unmarshalled Autoscaling fields, return
+	if !c.AdvancedCount.IsEmpty() {
+		// Successfully unmarshalled AdvancedCount fields, return
 		return nil
 	}
 
@@ -148,9 +148,9 @@ func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-// Autoscaling represents the configurable options for Auto Scaling as well as
+// AdvancedCount represents the configurable options for Auto Scaling as well as
 // Capacity configuration (spot).
-type Autoscaling struct {
+type AdvancedCount struct {
 	Spot         *int           `yaml:"spot"` // mutually exclusive with Range
 	Range        *RangeOpts     `yaml:"range"`
 	CPU          *int           `yaml:"cpu_percentage"`
@@ -159,19 +159,19 @@ type Autoscaling struct {
 	ResponseTime *time.Duration `yaml:"response_time"`
 }
 
-// IsEmpty returns whether Autoscaling is empty.
-func (a *Autoscaling) IsEmpty() bool {
+// IsEmpty returns whether AdvancedCount is empty.
+func (a *AdvancedCount) IsEmpty() bool {
 	return a.Range == nil && a.CPU == nil && a.Memory == nil &&
 		a.Requests == nil && a.ResponseTime == nil && a.Spot == nil
 }
 
 // IgnoreRange returns whether desiredCount is specified on spot capacity
-func (a *Autoscaling) IgnoreRange() bool {
+func (a *AdvancedCount) IgnoreRange() bool {
 	return a.Spot != nil
 }
 
-// IsValid checks to make sure Spot fields are compatible with other values in Autoscaling
-func (a *Autoscaling) IsValid() bool {
+// IsValid checks to make sure Spot fields are compatible with other values in AdvancedCount
+func (a *AdvancedCount) IsValid() bool {
 	if a.Spot != nil && a.Range != nil {
 		return false
 	}

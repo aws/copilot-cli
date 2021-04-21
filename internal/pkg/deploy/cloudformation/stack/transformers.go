@@ -104,7 +104,7 @@ func parsePortMapping(s *string) (port *string, protocol *string, err error) {
 
 // convertCapacityProviders transforms the manifest fields into a format
 // parsable by the templates pkg.
-func convertCapacityProviders(a *manifest.Autoscaling) ([]*template.CapacityProviderStrategy, error) {
+func convertCapacityProviders(a *manifest.AdvancedCount) ([]*template.CapacityProviderStrategy, error) {
 	if a.IsEmpty() {
 		return nil, nil
 	}
@@ -154,7 +154,7 @@ func convertCapacityProviders(a *manifest.Autoscaling) ([]*template.CapacityProv
 
 // convertAutoscaling converts the service's Auto Scaling configuration into a format parsable
 // by the templates pkg.
-func convertAutoscaling(a *manifest.Autoscaling) (*template.AutoscalingOpts, error) {
+func convertAutoscaling(a *manifest.AdvancedCount) (*template.AutoscalingOpts, error) {
 	if a.IsEmpty() {
 		return nil, nil
 	}

@@ -310,7 +310,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 	testLBWebServiceManifestRange := manifest.Range("2-100")
 	testLBWebServiceManifest.Count = manifest.Count{
 		Value: aws.Int(1),
-		Autoscaling: manifest.Autoscaling{
+		AdvancedCount: manifest.AdvancedCount{
 			Range: &manifest.RangeOpts{
 				Range: &testLBWebServiceManifestRange,
 			},
@@ -319,7 +319,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 	testLBWebServiceManifestWithBadCount := manifest.NewLoadBalancedWebService(baseProps)
 	testLBWebServiceManifestWithBadCountRange := manifest.Range("badCount")
 	testLBWebServiceManifestWithBadCount.Count = manifest.Count{
-		Autoscaling: manifest.Autoscaling{
+		AdvancedCount: manifest.AdvancedCount{
 			Range: &manifest.RangeOpts{
 				Range: &testLBWebServiceManifestWithBadCountRange,
 			},
