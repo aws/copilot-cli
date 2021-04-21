@@ -66,22 +66,7 @@ func (c Client) ClusterARN(app, env string) (string, error) {
 
 // ServiceARN returns the ARN of an ECS service created with Copilot.
 func (c Client) ServiceARN(app, env, svc string) (*ecs.ServiceArn, error) {
-	services, err := c.rgGetter.GetResourcesByTags(serviceResourceType, map[string]string{
-		deploy.AppTagKey:     app,
-		deploy.EnvTagKey:     env,
-		deploy.ServiceTagKey: svc,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("get ECS service with tags (%s, %s, %s): %w", app, env, svc, err)
-	}
-	if len(services) == 0 {
-		return nil, fmt.Errorf("no ECS service found for %s in environment %s", svc, env)
-	}
-	if len(services) > 1 {
-		return nil, fmt.Errorf("more than one ECS service with the name %s found in environment %s", svc, env)
-	}
-	serviceArn := ecs.ServiceArn(services[0].ARN)
-	return &serviceArn, nil
+	return c.serviceARN(app, env, svc)
 }
 
 // DescribeService returns the description of an ECS service given Copilot service info.
@@ -221,7 +206,18 @@ func (c Client) NetworkConfiguration(app, env, svc string) (*ecs.NetworkConfigur
 	if err != nil {
 		return nil, err
 	}
-	return c.ecsClient.NetworkConfiguration(clusterARN, svc)
+
+	arn, err := c.serviceARN(app, env, svc)
+	if err != nil {
+		return nil, err
+	}
+
+	svcName, err := arn.ServiceName()
+	if err != nil {
+		return nil, fmt.Errorf("extract service name from arn %s: %w", *arn, err)
+	}
+
+	return c.ecsClient.NetworkConfiguration(clusterARN, svcName)
 }
 
 func (c Client) listActiveCopilotTasks(opts listActiveCopilotTasksOpts) ([]*ecs.Task, error) {
@@ -293,4 +289,23 @@ func (c Client) clusterARN(app, env string) (string, error) {
 		return "", fmt.Errorf("more than one cluster is found in environment %s", env)
 	}
 	return clusters[0].ARN, nil
+}
+
+func (c Client) serviceARN(app, env, svc string) (*ecs.ServiceArn, error) {
+	services, err := c.rgGetter.GetResourcesByTags(serviceResourceType, map[string]string{
+		deploy.AppTagKey:     app,
+		deploy.EnvTagKey:     env,
+		deploy.ServiceTagKey: svc,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get ECS service with tags (%s, %s, %s): %w", app, env, svc, err)
+	}
+	if len(services) == 0 {
+		return nil, fmt.Errorf("no ECS service found for %s in environment %s", svc, env)
+	}
+	if len(services) > 1 {
+		return nil, fmt.Errorf("more than one ECS service with the name %s found in environment %s", svc, env)
+	}
+	serviceArn := ecs.ServiceArn(services[0].ARN)
+	return &serviceArn, nil
 }
