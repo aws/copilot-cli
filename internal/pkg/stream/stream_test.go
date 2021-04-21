@@ -61,30 +61,6 @@ func (s *errStreamer) Done() <-chan struct{} {
 }
 
 func TestStream(t *testing.T) {
-	t.Run("short-circuits immediately if context is canceled", func(t *testing.T) {
-		// GIVEN
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel()
-		// This test is flaky and sometimes results in a single call to fetch instead of none if there is no delay between
-		// cancel() and Stream().
-		// We wait 5 ms to ensure the cancel message is received.
-		time.Sleep(5 * time.Millisecond)
-		blockUntil := time.Now().Add(1 * time.Minute)
-		streamer := &counterStreamer{
-			next: func() time.Time {
-				return blockUntil // Should never be invoked since the context is canceled.
-			},
-		}
-
-		// WHEN
-		err := Stream(ctx, streamer)
-
-		// THEN
-		require.EqualError(t, err, ctx.Err().Error(), "the error returned should be context canceled")
-		require.Equal(t, 0, streamer.fetchCount, "expected number of Fetch calls to match")
-		require.Equal(t, 0, streamer.notifyCount, "expected number of Notify calls to match")
-	})
-
 	t.Run("returns error from Fetch", func(t *testing.T) {
 		// GIVEN
 		wantedErr := errors.New("unexpected fetch error")
