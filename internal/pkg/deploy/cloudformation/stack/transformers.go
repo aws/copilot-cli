@@ -66,15 +66,16 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 		mp := convertSidecarMountPoints(config.MountPoints)
 
 		sidecars = append(sidecars, &template.SidecarOpts{
-			Name:        aws.String(name),
-			Image:       config.Image,
-			Essential:   config.Essential,
-			Port:        port,
-			Protocol:    protocol,
-			CredsParam:  config.CredsParam,
-			Secrets:     config.Secrets,
-			Variables:   config.Variables,
-			MountPoints: mp,
+			Name:         aws.String(name),
+			Image:        config.Image,
+			Essential:    config.Essential,
+			Port:         port,
+			Protocol:     protocol,
+			CredsParam:   config.CredsParam,
+			Secrets:      config.Secrets,
+			Variables:    config.Variables,
+			MountPoints:  mp,
+			DockerLabels: config.DockerLabels,
 		})
 	}
 	return sidecars, nil

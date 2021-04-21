@@ -21,6 +21,7 @@ func Test_convertSidecar(t *testing.T) {
 	testCases := map[string]struct {
 		inPort      string
 		inEssential bool
+		inLabels    map[string]string
 
 		wanted    *template.SidecarOpts
 		wantedErr error
@@ -62,6 +63,9 @@ func Test_convertSidecar(t *testing.T) {
 		"specify essential as false": {
 			inPort:      "2000",
 			inEssential: false,
+			inLabels: map[string]string{
+				"com.amazonaws.ecs.copilot.sidecar.description": "wow",
+			},
 
 			wanted: &template.SidecarOpts{
 				Name:       aws.String("foo"),
@@ -71,6 +75,9 @@ func Test_convertSidecar(t *testing.T) {
 				Secrets:    mockMap,
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
+				DockerLabels: map[string]string{
+					"com.amazonaws.ecs.copilot.sidecar.description": "wow",
+				},
 			},
 		},
 	}
@@ -78,12 +85,13 @@ func Test_convertSidecar(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			sidecar := map[string]*manifest.SidecarConfig{
 				"foo": {
-					CredsParam: mockCredsParam,
-					Image:      mockImage,
-					Secrets:    mockMap,
-					Variables:  mockMap,
-					Essential:  aws.Bool(tc.inEssential),
-					Port:       aws.String(tc.inPort),
+					CredsParam:   mockCredsParam,
+					Image:        mockImage,
+					Secrets:      mockMap,
+					Variables:    mockMap,
+					Essential:    aws.Bool(tc.inEssential),
+					Port:         aws.String(tc.inPort),
+					DockerLabels: tc.inLabels,
 				},
 			}
 			got, err := convertSidecar(sidecar)
