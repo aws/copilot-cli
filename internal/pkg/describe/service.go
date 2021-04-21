@@ -8,9 +8,12 @@ import (
 	"io"
 	"strings"
 
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -24,7 +27,7 @@ const (
 )
 
 type ecsClient interface {
-	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
+	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
 }
 
 // ConfigStoreSvc wraps methods of config store.
@@ -66,8 +69,8 @@ type ServiceDescriber struct {
 	service string
 	env     string
 
-	ecsClient ecsClient
 	cfn       cfn
+	ecsClient ecsClient
 }
 
 // NewServiceConfig contains fields that initiates ServiceDescriber struct.
@@ -93,27 +96,25 @@ func NewServiceDescriber(opt NewServiceConfig) (*ServiceDescriber, error) {
 		service: opt.Svc,
 		env:     opt.Env,
 
-		ecsClient: ecs.New(sess),
 		cfn:       cloudformation.New(sess),
+		ecsClient: ecs.New(sess),
 	}, nil
 }
 
 // EnvVars returns the environment variables of the task definition.
-func (d *ServiceDescriber) EnvVars() ([]*ecs.ContainerEnvVar, error) {
-	taskDefName := fmt.Sprintf("%s-%s-%s", d.app, d.env, d.service)
-	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)
+func (d *ServiceDescriber) EnvVars() ([]*awsecs.ContainerEnvVar, error) {
+	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("describe task definition for service %s: %w", d.service, err)
 	}
 	return taskDefinition.EnvironmentVariables(), nil
 }
 
 // Secrets returns the secrets of the task definition.
-func (d *ServiceDescriber) Secrets() ([]*ecs.ContainerSecret, error) {
-	taskDefName := fmt.Sprintf("%s-%s-%s", d.app, d.env, d.service)
-	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)
+func (d *ServiceDescriber) Secrets() ([]*awsecs.ContainerSecret, error) {
+	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("describe task definition for service %s: %w", d.service, err)
 	}
 	return taskDefinition.Secrets(), nil
 }

@@ -86,8 +86,7 @@ TaskRole:
                   - 'arn:aws:elasticfilesystem:${region}:${account}:file-system/${fsid}'
                   - region: !Ref AWS::Region
                     account: !Ref AWS::AccountId
-                    fsid: Fn::ImportValue:
-                      !Sub ${AppName}-${EnvName}-FilesystemID
+                    fsid: !GetAtt EnvControllerAction.ManagedFileSystemID
       {{- end}}
       {{- end -}}
 

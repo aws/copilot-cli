@@ -24,6 +24,7 @@ const (
 
 func TestAppTemplate(t *testing.T) {
 	testCases := map[string]struct {
+		inVersion        string
 		mockDependencies func(ctrl *gomock.Controller, c *AppStackConfig)
 
 		wantedTemplate string
@@ -32,16 +33,36 @@ func TestAppTemplate(t *testing.T) {
 		"should return error given template not found": {
 			mockDependencies: func(ctrl *gomock.Controller, c *AppStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
-				m.EXPECT().Read(appTemplatePath).Return(nil, errors.New("some error"))
+				m.EXPECT().Parse(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 				c.parser = m
 			},
 
 			wantedError: errors.New("some error"),
 		},
-		"should return template body when present": {
+		"success": {
+			inVersion: "v1.0.0",
 			mockDependencies: func(ctrl *gomock.Controller, c *AppStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
-				m.EXPECT().Read(appTemplatePath).Return(&template.Content{
+				m.EXPECT().Parse(fmt.Sprintf(fmtAppTemplatePath, "v1.0.0"), struct {
+					TemplateVersion string
+				}{
+					"v1.0.0",
+				}, gomock.Any()).Return(&template.Content{
+					Buffer: bytes.NewBufferString("template"),
+				}, nil)
+				c.parser = m
+			},
+
+			wantedTemplate: "template",
+		},
+		"success for legacy template": {
+			mockDependencies: func(ctrl *gomock.Controller, c *AppStackConfig) {
+				m := mocks.NewMockReadParser(ctrl)
+				m.EXPECT().Parse(fmt.Sprintf(fmtAppTemplatePath, "v0.0.0"), struct {
+					TemplateVersion string
+				}{
+					"",
+				}, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("template"),
 				}, nil)
 				c.parser = m
@@ -56,7 +77,11 @@ func TestAppTemplate(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			appStack := &AppStackConfig{}
+			appStack := &AppStackConfig{
+				CreateAppInput: &deploy.CreateAppInput{
+					Version: tc.inVersion,
+				},
+			}
 			tc.mockDependencies(ctrl, appStack)
 
 			// WHEN
@@ -134,9 +159,10 @@ func TestAppResourceTemplate(t *testing.T) {
 			},
 			mockDependencies: func(ctrl *gomock.Controller, c *AppStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
-				m.EXPECT().Parse(appResourcesTemplatePath, struct {
+				m.EXPECT().Parse(fmt.Sprintf(fmtAppResourcesTemplatePath, "v0.0.0"), struct {
 					*AppResourcesConfig
-					ServiceTagKey string
+					ServiceTagKey   string
+					TemplateVersion string
 				}{
 					&AppResourcesConfig{
 						Accounts: []string{"1234", "4567"},
@@ -145,6 +171,7 @@ func TestAppResourceTemplate(t *testing.T) {
 						App:      "testapp",
 					},
 					deploy.ServiceTagKey,
+					"",
 				}, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("template"),
 				}, nil)

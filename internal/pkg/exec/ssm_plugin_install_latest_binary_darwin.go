@@ -25,7 +25,7 @@ func (s SSMPluginCommand) InstallLatestBinary() error {
 		defer os.RemoveAll(dir)
 		s.tempDir = dir
 	}
-	if err := download(filepath.Join(s.tempDir, "sessionmanager-bundle.zip"), ssmPluginBinaryURL); err != nil {
+	if err := download(s.http, filepath.Join(s.tempDir, "sessionmanager-bundle.zip"), ssmPluginBinaryURL); err != nil {
 		return fmt.Errorf("download ssm plugin: %w", err)
 	}
 	if err := s.runner.Run("unzip", []string{"-o", filepath.Join(s.tempDir, "sessionmanager-bundle.zip"),

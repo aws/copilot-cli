@@ -60,7 +60,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 		},
 		"specify essential as false": {
-			inPort:     "2000",
+			inPort:      "2000",
 			inEssential: false,
 
 			wanted: &template.SidecarOpts{
@@ -276,8 +276,10 @@ func Test_convertStorageOpts(t *testing.T) {
 		"minimal configuration": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSVolumeConfiguration{
-						FileSystemID: aws.String("fs-1234"),
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID: aws.String("fs-1234"),
+						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
 						ContainerPath: aws.String("/var/www"),
@@ -339,8 +341,10 @@ func Test_convertStorageOpts(t *testing.T) {
 					MountPointOpts: manifest.MountPointOpts{
 						ContainerPath: aws.String("/var/www"),
 					},
-					EFS: &manifest.EFSVolumeConfiguration{
-						RootDirectory: aws.String("/"),
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							RootDirectory: aws.String("/"),
+						},
 					},
 				},
 			},
@@ -349,8 +353,10 @@ func Test_convertStorageOpts(t *testing.T) {
 		"container path not specified": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSVolumeConfiguration{
-						FileSystemID: aws.String("fs-1234"),
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID: aws.String("fs-1234"),
+						},
 					},
 				},
 			},
@@ -359,12 +365,14 @@ func Test_convertStorageOpts(t *testing.T) {
 		"full specification with access point renders correctly": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSVolumeConfiguration{
-						FileSystemID:  aws.String("fs-1234"),
-						RootDirectory: aws.String("/"),
-						AuthConfig: &manifest.AuthorizationConfig{
-							IAM:           aws.Bool(true),
-							AccessPointID: aws.String("ap-1234"),
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID:  aws.String("fs-1234"),
+							RootDirectory: aws.String("/"),
+							AuthConfig: &manifest.AuthorizationConfig{
+								IAM:           aws.Bool(true),
+								AccessPointID: aws.String("ap-1234"),
+							},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -404,11 +412,13 @@ func Test_convertStorageOpts(t *testing.T) {
 		"full specification without access point renders correctly": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSVolumeConfiguration{
-						FileSystemID:  aws.String("fs-1234"),
-						RootDirectory: aws.String("/wordpress"),
-						AuthConfig: &manifest.AuthorizationConfig{
-							IAM: aws.Bool(true),
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID:  aws.String("fs-1234"),
+							RootDirectory: aws.String("/wordpress"),
+							AuthConfig: &manifest.AuthorizationConfig{
+								IAM: aws.Bool(true),
+							},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -446,12 +456,14 @@ func Test_convertStorageOpts(t *testing.T) {
 		"error when AP is specified with root dir": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSVolumeConfiguration{
-						FileSystemID:  aws.String("fs-1234"),
-						RootDirectory: aws.String("/wordpress"),
-						AuthConfig: &manifest.AuthorizationConfig{
-							IAM:           aws.Bool(true),
-							AccessPointID: aws.String("ap-1234"),
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID:  aws.String("fs-1234"),
+							RootDirectory: aws.String("/wordpress"),
+							AuthConfig: &manifest.AuthorizationConfig{
+								IAM:           aws.Bool(true),
+								AccessPointID: aws.String("ap-1234"),
+							},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -465,12 +477,14 @@ func Test_convertStorageOpts(t *testing.T) {
 		"error when AP is specified without IAM": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: &manifest.EFSVolumeConfiguration{
-						FileSystemID:  aws.String("fs-1234"),
-						RootDirectory: aws.String("/wordpress"),
-						AuthConfig: &manifest.AuthorizationConfig{
-							IAM:           aws.Bool(false),
-							AccessPointID: aws.String("ap-1234"),
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID:  aws.String("fs-1234"),
+							RootDirectory: aws.String("/wordpress"),
+							AuthConfig: &manifest.AuthorizationConfig{
+								IAM:           aws.Bool(false),
+								AccessPointID: aws.String("ap-1234"),
+							},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -481,6 +495,174 @@ func Test_convertStorageOpts(t *testing.T) {
 			},
 			wantErr: errAccessPointWithoutIAM.Error(),
 		},
+		"efs specified with just ID": {
+			inVolumes: map[string]manifest.Volume{
+				"wordpress": {
+					EFS: &manifest.EFSConfigOrID{
+						ID: "fs-1234",
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+					},
+				},
+			},
+			wantOpts: template.StorageOpts{
+				Volumes: []*template.Volume{
+					{
+						Name: aws.String("wordpress"),
+						EFS: &template.EFSVolumeConfiguration{
+							Filesystem:    aws.String("fs-1234"),
+							RootDirectory: aws.String("/"),
+							IAM:           aws.String("DISABLED"),
+						},
+					},
+				},
+				MountPoints: []*template.MountPoint{
+					{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+						SourceVolume:  aws.String("wordpress"),
+					},
+				},
+				EFSPerms: []*template.EFSPermission{
+					{
+						FilesystemID: aws.String("fs-1234"),
+						Write:        false,
+					},
+				},
+			},
+		},
+		"managed EFS": {
+			inVolumes: map[string]manifest.Volume{
+				"efs": {
+					EFS: &manifest.EFSConfigOrID{
+						ID: "copilot",
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+					},
+				},
+			},
+			wantOpts: template.StorageOpts{
+				ManagedVolumeInfo: &template.ManagedVolumeCreationInfo{
+					Name:    aws.String("efs"),
+					DirName: aws.String("fe"),
+					UID:     aws.Uint32(1336298249),
+					GID:     aws.Uint32(1336298249),
+				},
+				MountPoints: []*template.MountPoint{
+					{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+						SourceVolume:  aws.String("efs"),
+					},
+				},
+			},
+		},
+		"managed EFS with config": {
+			inVolumes: map[string]manifest.Volume{
+				"efs": {
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID: aws.String("copilot"),
+							UID:          aws.Uint32(1000),
+							GID:          aws.Uint32(10000),
+						},
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+					},
+				},
+			},
+			wantOpts: template.StorageOpts{
+				ManagedVolumeInfo: &template.ManagedVolumeCreationInfo{
+					Name:    aws.String("efs"),
+					DirName: aws.String("fe"),
+					UID:     aws.Uint32(1000),
+					GID:     aws.Uint32(10000),
+				},
+				MountPoints: []*template.MountPoint{
+					{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+						SourceVolume:  aws.String("efs"),
+					},
+				},
+			},
+		},
+		"error when gid/uid are specified for non-managed efs": {
+			inVolumes: map[string]manifest.Volume{
+				"efs": {
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID: aws.String("fs-1234"),
+							UID:          aws.Uint32(1234),
+							GID:          aws.Uint32(5678),
+						},
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+					},
+				},
+			},
+			wantErr: errUIDWithNonManagedFS.Error(),
+		},
+		"uid/gid out of bounds": {
+			inVolumes: map[string]manifest.Volume{
+				"efs": {
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID: aws.String("managed"),
+							UID:          aws.Uint32(0),
+							GID:          aws.Uint32(100),
+						},
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+					},
+				},
+			},
+			wantErr: errReservedUID.Error(),
+		},
+		"uid specified without gid": {
+			inVolumes: map[string]manifest.Volume{
+				"efs": {
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID: aws.String("managed"),
+							UID:          aws.Uint32(10000),
+						},
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+					},
+				},
+			},
+			wantErr: errInvalidUIDGIDConfig.Error(),
+		},
+		"gid specified without uid": {
+			inVolumes: map[string]manifest.Volume{
+				"efs": {
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID: aws.String("managed"),
+							GID:          aws.Uint32(10000),
+						},
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+					},
+				},
+			},
+			wantErr: errInvalidUIDGIDConfig.Error(),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -488,8 +670,9 @@ func Test_convertStorageOpts(t *testing.T) {
 			s := manifest.Storage{
 				Volumes: tc.inVolumes,
 			}
+
 			// WHEN
-			got, err := convertStorageOpts(&s)
+			got, err := convertStorageOpts(aws.String("fe"), &s)
 
 			// THEN
 			if tc.wantErr != "" {

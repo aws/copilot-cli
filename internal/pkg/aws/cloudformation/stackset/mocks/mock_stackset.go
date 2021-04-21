@@ -139,6 +139,21 @@ func (mr *MockapiMockRecorder) ListStackInstances(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListStackInstances", reflect.TypeOf((*Mockapi)(nil).ListStackInstances), arg0)
 }
 
+// ListStackSetOperations mocks base method.
+func (m *Mockapi) ListStackSetOperations(input *cloudformation.ListStackSetOperationsInput) (*cloudformation.ListStackSetOperationsOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListStackSetOperations", input)
+	ret0, _ := ret[0].(*cloudformation.ListStackSetOperationsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListStackSetOperations indicates an expected call of ListStackSetOperations.
+func (mr *MockapiMockRecorder) ListStackSetOperations(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListStackSetOperations", reflect.TypeOf((*Mockapi)(nil).ListStackSetOperations), input)
+}
+
 // UpdateStackSet mocks base method.
 func (m *Mockapi) UpdateStackSet(arg0 *cloudformation.UpdateStackSetInput) (*cloudformation.UpdateStackSetOutput, error) {
 	m.ctrl.T.Helper()

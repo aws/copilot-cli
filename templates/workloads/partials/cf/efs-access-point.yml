@@ -1,20 +1,20 @@
 {{- if .Storage}}
 {{- if .Storage.ManagedVolumeInfo}}
 AccessPoint:
+  Metadata:
+    'aws:copilot:description': 'An EFS access point to handle POSIX permissions'
   Type: AWS::EFS::AccessPoint
   Properties:
-    ClientToken: String
-    FileSystemId: 
-      Fn::ImportValue:
-        !Sub '${AppName}-${EnvName}-FilesystemID'
+    ClientToken: !Sub ${AppName}-${EnvName}-${WorkloadName}
+    FileSystemId: !GetAtt EnvControllerAction.ManagedFileSystemID
     PosixUser: 
       Uid: {{.Storage.ManagedVolumeInfo.UID}}
       Gid: {{.Storage.ManagedVolumeInfo.GID}}
     RootDirectory: 
-      Path: !Sub '/${WorkloadName}'
+      Path: !Sub '/{{.Storage.ManagedVolumeInfo.DirName}}'
       CreationInfo:
         OwnerUid: {{.Storage.ManagedVolumeInfo.UID}}
         OwnerGid: {{.Storage.ManagedVolumeInfo.GID}}
-        Permissions: 0755
+        Permissions: '0755'
 {{- end}}
 {{- end}}

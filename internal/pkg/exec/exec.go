@@ -5,8 +5,14 @@
 package exec
 
 import (
+	"net/http"
+
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 )
+
+type httpClient interface {
+	Get(url string) (resp *http.Response, err error)
+}
 
 type runner interface {
 	Run(name string, args []string, options ...command.Option) error
