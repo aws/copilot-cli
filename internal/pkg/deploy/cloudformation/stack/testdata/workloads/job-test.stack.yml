@@ -145,6 +145,9 @@ Resources:
             - ContainerPath: /etc/mount1
               ReadOnly: false
               SourceVolume: managedEFSVolume
+          DockerLabels:
+            com.amazonaws.ecs.copilot.coollabel: Synecdoche
+            com.amazonaws.ecs.copilot.description: Hello world!
         - Name: nginx
           Image: 'public.ecr.aws/nginx/nginx'
           LogConfiguration:
@@ -164,6 +167,8 @@ Resources:
               Value: '8080'
             - Name: COPILOT_MOUNT_POINTS
               Value: '{"managedEFSVolume":"/var/www"}'
+          DockerLabels:
+            com.amazonaws.ecs.copilot.sidecars.nginx.description: tricky
 
       Volumes:
         - Name: managedEFSVolume
