@@ -133,7 +133,7 @@ Resources:
           - Name: COPILOT_SERVICE_NAME
             Value: !Sub '${WorkloadName}'
           - Name: COPILOT_MOUNT_POINTS
-            Value: '{"managedEFSVolume":"/etc/mount2","myEFSVolume":"/etc/mount1"}'
+            Value: '{"managedEFSVolume":"/etc/mount1"}'
           
           LogConfiguration:
             LogDriver: awslogs
@@ -143,9 +143,6 @@ Resources:
               awslogs-stream-prefix: copilot
           MountPoints:
             - ContainerPath: /etc/mount1
-              ReadOnly: true
-              SourceVolume: myEFSVolume
-            - ContainerPath: /etc/mount2
               ReadOnly: false
               SourceVolume: managedEFSVolume
           DockerLabels:
@@ -162,14 +159,14 @@ Resources:
           MountPoints:
             - ContainerPath: '/var/www'
               ReadOnly: true
-              SourceVolume: myEFSVolume
+              SourceVolume: managedEFSVolume
           PortMappings:
             - ContainerPort: 8080
           Environment:
             - Name: NGINX_PORT
               Value: '8080'
             - Name: COPILOT_MOUNT_POINTS
-              Value: '{"myEFSVolume":"/var/www"}'
+              Value: '{"managedEFSVolume":"/var/www"}'
           DockerLabels:
             com.amazonaws.ecs.copilot.sidecars.nginx.description: tricky
 
@@ -182,13 +179,6 @@ Resources:
             AuthorizationConfig:
               IAM: ENABLED
               AccessPointId: !Ref AccessPoint
-        - Name: myEFSVolume
-          EFSVolumeConfiguration:
-            FilesystemId: fs-12345
-            RootDirectory: /
-            TransitEncryption: ENABLED
-            AuthorizationConfig:
-              IAM: DISABLED
             
         
         
@@ -262,15 +252,6 @@ Resources:
                   StringEquals:
                     'iam:ResourceTag/copilot-application': !Sub '${AppName}'
                     'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
-        - PolicyName: 'GrantEFSAccessfs-12345'
-          PolicyDocument: 
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action:
-                  - 'elasticfilesystem:ClientMount'
-                Resource:
-                  - !Sub 'arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/fs-12345'
         - PolicyName: 'GrantAccessCopilotManagedEFS'
           PolicyDocument:
             Version: '2012-10-17'
