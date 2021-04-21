@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
-	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
@@ -61,7 +60,7 @@ type deleteSvcOpts struct {
 	sess      sessionProvider
 	spinner   progress
 	prompt    prompter
-	sel       wsSelector
+	sel       configSelector
 	appCFN    svcRemoverFromApp
 	getSvcCFN func(session *awssession.Session) wlDeleter
 	getECR    func(session *awssession.Session) imageRemover
@@ -79,10 +78,6 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 		return nil, err
 	}
 	prompter := prompt.New()
-	ws, err := workspace.New()
-	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
-	}
 
 	return &deleteSvcOpts{
 		deleteSvcVars: vars,
@@ -91,7 +86,7 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 		spinner: termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:  prompter,
 		sess:    provider,
-		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
+		sel:     selector.NewConfigSelect(prompter, store),
 		appCFN:  cloudformation.New(defaultSession),
 		getSvcCFN: func(session *awssession.Session) wlDeleter {
 			return cloudformation.New(session)
@@ -228,7 +223,7 @@ func (o *deleteSvcOpts) askSvcName() error {
 		return nil
 	}
 
-	name, err := o.sel.Service(svcDeleteNamePrompt, "")
+	name, err := o.sel.Service(svcDeleteNamePrompt, "", o.appName)
 	if err != nil {
 		return fmt.Errorf("select service: %w", err)
 	}

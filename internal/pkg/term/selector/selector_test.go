@@ -791,8 +791,8 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 }
 
 type configSelectMocks struct {
-	serviceLister *mocks.MockConfigLister
-	prompt        *mocks.MockPrompter
+	workloadLister *mocks.MockConfigLister
+	prompt         *mocks.MockPrompter
 }
 
 func TestConfigSelect_Service(t *testing.T) {
@@ -804,7 +804,7 @@ func TestConfigSelect_Service(t *testing.T) {
 	}{
 		"with no services": {
 			setupMocks: func(m configSelectMocks) {
-				m.serviceLister.
+				m.workloadLister.
 					EXPECT().
 					ListServices(gomock.Eq(appName)).
 					Return([]*config.Workload{}, nil).
@@ -819,7 +819,7 @@ func TestConfigSelect_Service(t *testing.T) {
 		},
 		"with only one service (skips prompting)": {
 			setupMocks: func(m configSelectMocks) {
-				m.serviceLister.
+				m.workloadLister.
 					EXPECT().
 					ListServices(gomock.Eq(appName)).
 					Return([]*config.Workload{
@@ -840,7 +840,7 @@ func TestConfigSelect_Service(t *testing.T) {
 		},
 		"with multiple services": {
 			setupMocks: func(m configSelectMocks) {
-				m.serviceLister.
+				m.workloadLister.
 					EXPECT().
 					ListServices(gomock.Eq(appName)).
 					Return([]*config.Workload{
@@ -869,7 +869,7 @@ func TestConfigSelect_Service(t *testing.T) {
 		},
 		"with error selecting services": {
 			setupMocks: func(m configSelectMocks) {
-				m.serviceLister.
+				m.workloadLister.
 					EXPECT().
 					ListServices(gomock.Eq(appName)).
 					Return([]*config.Workload{
@@ -903,8 +903,8 @@ func TestConfigSelect_Service(t *testing.T) {
 			mockconfigLister := mocks.NewMockConfigLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := configSelectMocks{
-				serviceLister: mockconfigLister,
-				prompt:        mockprompt,
+				workloadLister: mockconfigLister,
+				prompt:         mockprompt,
 			}
 			tc.setupMocks(mocks)
 
@@ -912,10 +912,140 @@ func TestConfigSelect_Service(t *testing.T) {
 				Select: &Select{
 					prompt: mockprompt,
 				},
-				svcLister: mockconfigLister,
+				workloadLister: mockconfigLister,
 			}
 
 			got, err := sel.Service("Select a service", "Help text", appName)
+			if tc.wantErr != nil {
+				require.EqualError(t, tc.wantErr, err.Error())
+			} else {
+				require.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestConfigSelect_Job(t *testing.T) {
+	appName := "myapp"
+	testCases := map[string]struct {
+		setupMocks func(m configSelectMocks)
+		wantErr    error
+		want       string
+	}{
+		"with no jobs": {
+			setupMocks: func(m configSelectMocks) {
+				m.workloadLister.
+					EXPECT().
+					ListJobs(gomock.Eq(appName)).
+					Return([]*config.Workload{}, nil).
+					Times(1)
+				m.prompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+
+			},
+			wantErr: fmt.Errorf("no jobs found in app myapp"),
+		},
+		"with only one job (skips prompting)": {
+			setupMocks: func(m configSelectMocks) {
+				m.workloadLister.
+					EXPECT().
+					ListJobs(gomock.Eq(appName)).
+					Return([]*config.Workload{
+						{
+							App:  appName,
+							Name: "job1",
+							Type: "load balanced web service",
+						},
+					}, nil).
+					Times(1)
+				m.prompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+
+			},
+			want: "job1",
+		},
+		"with multiple jobs": {
+			setupMocks: func(m configSelectMocks) {
+				m.workloadLister.
+					EXPECT().
+					ListJobs(gomock.Eq(appName)).
+					Return([]*config.Workload{
+						{
+							App:  appName,
+							Name: "job1",
+							Type: "load balanced web service",
+						},
+						{
+							App:  appName,
+							Name: "job2",
+							Type: "backend service",
+						},
+					}, nil).
+					Times(1)
+				m.prompt.
+					EXPECT().
+					SelectOne(
+						gomock.Eq("Select a job"),
+						gomock.Eq("Help text"),
+						gomock.Eq([]string{"job1", "job2"})).
+					Return("job2", nil).
+					Times(1)
+			},
+			want: "job2",
+		},
+		"with error selecting jobs": {
+			setupMocks: func(m configSelectMocks) {
+				m.workloadLister.
+					EXPECT().
+					ListJobs(gomock.Eq(appName)).
+					Return([]*config.Workload{
+						{
+							App:  appName,
+							Name: "job1",
+							Type: "load balanced web service",
+						},
+						{
+							App:  appName,
+							Name: "job2",
+							Type: "backend service",
+						},
+					}, nil).
+					Times(1)
+				m.prompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"job1", "job2"})).
+					Return("", fmt.Errorf("error selecting")).
+					Times(1)
+			},
+			wantErr: fmt.Errorf("select job: error selecting"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockconfigLister := mocks.NewMockConfigLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := configSelectMocks{
+				workloadLister: mockconfigLister,
+				prompt:         mockprompt,
+			}
+			tc.setupMocks(mocks)
+
+			sel := ConfigSelect{
+				Select: &Select{
+					prompt: mockprompt,
+				},
+				workloadLister: mockconfigLister,
+			}
+
+			got, err := sel.Job("Select a job", "Help text", appName)
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {
