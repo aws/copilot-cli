@@ -56,8 +56,9 @@ type Workload struct {
 
 // Image represents the workload's container image.
 type Image struct {
-	Build    BuildArgsOrString `yaml:"build"`    // Build an image from a Dockerfile.
-	Location *string           `yaml:"location"` // Use an existing image instead.
+	Build        BuildArgsOrString `yaml:"build"`       // Build an image from a Dockerfile.
+	Location     *string           `yaml:"location"`    // Use an existing image instead.
+	DockerLabels map[string]string `yaml:"labels,flow"` // Apply Docker labels to the container at runtime.
 }
 
 // GetLocation returns the location of the image.
@@ -356,13 +357,14 @@ func (lc *Logging) GetEnableMetadata() *string {
 
 // SidecarConfig represents the configurable options for setting up a sidecar container.
 type SidecarConfig struct {
-	Port        *string             `yaml:"port"`
-	Image       *string             `yaml:"image"`
-	Essential   *bool               `yaml:"essential"`
-	CredsParam  *string             `yaml:"credentialsParameter"`
-	Variables   map[string]string   `yaml:"variables"`
-	Secrets     map[string]string   `yaml:"secrets"`
-	MountPoints []SidecarMountPoint `yaml:"mount_points"`
+	Port         *string             `yaml:"port"`
+	Image        *string             `yaml:"image"`
+	Essential    *bool               `yaml:"essential"`
+	CredsParam   *string             `yaml:"credentialsParameter"`
+	Variables    map[string]string   `yaml:"variables"`
+	Secrets      map[string]string   `yaml:"secrets"`
+	MountPoints  []SidecarMountPoint `yaml:"mount_points"`
+	DockerLabels map[string]string   `yaml:"labels"`
 }
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.

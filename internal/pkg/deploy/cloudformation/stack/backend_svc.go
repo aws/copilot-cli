@@ -109,6 +109,7 @@ func (s *BackendService) Template() (string, error) {
 		WorkloadType:        manifest.BackendServiceType,
 		HealthCheck:         s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),
 		LogConfig:           convertLogging(s.manifest.Logging),
+		DockerLabels:        s.manifest.ImageConfig.DockerLabels,
 		DesiredCountLambda:  desiredCountLambda.String(),
 		EnvControllerLambda: envControllerLambda.String(),
 		Storage:             storage,

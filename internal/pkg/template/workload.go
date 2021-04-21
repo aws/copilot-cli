@@ -46,6 +46,7 @@ var (
 		"secrets",
 		"executionrole",
 		"taskrole",
+		"workload-container",
 		"fargate-taskdef-base-properties",
 		"service-base-properties",
 		"servicediscovery",
@@ -76,15 +77,16 @@ type WorkloadNestedStackOpts struct {
 
 // SidecarOpts holds configuration that's needed if the service has sidecar containers.
 type SidecarOpts struct {
-	Name        *string
-	Image       *string
-	Essential   *bool
-	Port        *string
-	Protocol    *string
-	CredsParam  *string
-	Variables   map[string]string
-	Secrets     map[string]string
-	MountPoints []*MountPoint
+	Name         *string
+	Image        *string
+	Essential    *bool
+	Port         *string
+	Protocol     *string
+	CredsParam   *string
+	Variables    map[string]string
+	Secrets      map[string]string
+	MountPoints  []*MountPoint
+	DockerLabels map[string]string
 }
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
@@ -207,6 +209,7 @@ type WorkloadOpts struct {
 	EntryPoint     []string
 	Command        []string
 	DomainAlias    string
+	DockerLabels   map[string]string
 
 	// Additional options for service templates.
 	WorkloadType        string
