@@ -49,8 +49,8 @@ func TestGenerateCommandOpts_String(t *testing.T) {
 --image beautiful-image \
 --entrypoint "enter from here" \
 --command "do not enter" \
---env-vars weather=snowy,hasHotChocolate=yes \
---secrets truth=ask-the-wise,lie=ask-the-villagers \
+--env-vars hasHotChocolate=yes,weather=snowy \
+--secrets lie=ask-the-villagers,truth=ask-the-wise \
 --subnets sbn-1,sbn-2 \
 --security-groups sg-1,sg-2 \
 --cluster kamura-village`,

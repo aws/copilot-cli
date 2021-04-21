@@ -6,6 +6,7 @@ package generator
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -119,8 +120,16 @@ func (o GenerateCommandOpts) String() string {
 
 func printStringToStringMap(m map[string]string) string {
 	var output []string
-	for k, v := range m {
-		output = append(output, fmt.Sprintf("%s=%v", k, v))
+
+	// Sort the map so that `output` is consistent and the unit test won't be flaky.
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		output = append(output, fmt.Sprintf("%s=%v", k, m[k]))
 	}
 	return strings.Join(output, ",")
 }
