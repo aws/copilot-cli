@@ -182,7 +182,7 @@ func TestLoadBalancedWebService_MarshalBinary(t *testing.T) {
 }
 
 func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
-	mockRange := Range("1-10")
+	mockRange := IntRangeBand("1-10")
 	testCases := map[string]struct {
 		in         *LoadBalancedWebService
 		envToApply string
@@ -519,8 +519,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					TaskConfig: TaskConfig{
 						Count: Count{
-							Autoscaling: Autoscaling{
-								Range: &mockRange,
+							AdvancedCount: AdvancedCount{
+								Range: &Range{Value: &mockRange},
 								CPU:   aws.Int(80),
 							},
 						},
@@ -537,8 +537,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							Value: nil,
-							Autoscaling: Autoscaling{
-								Range: &mockRange,
+							AdvancedCount: AdvancedCount{
+								Range: &Range{Value: &mockRange},
 								CPU:   aws.Int(80),
 							},
 						},
