@@ -415,8 +415,8 @@ func TestRange_Parse(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, gotMin, tc.wantedMin)
-				require.Equal(t, gotMax, tc.wantedMax)
+				require.Equal(t, tc.wantedMin, gotMin)
+				require.Equal(t, tc.wantedMax, gotMax)
 			}
 		})
 	}
@@ -462,8 +462,8 @@ func TestRangeOpts_Parse(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, gotMin, tc.wantedMin)
-				require.Equal(t, gotMax, tc.wantedMax)
+				require.Equal(t, tc.wantedMin, gotMin)
+				require.Equal(t, tc.wantedMax, gotMax)
 			}
 		})
 	}
@@ -521,7 +521,7 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, got, tc.wanted)
+				require.Equal(t, tc.wanted, got)
 			}
 		})
 	}
