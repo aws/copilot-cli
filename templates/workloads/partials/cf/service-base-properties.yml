@@ -2,13 +2,12 @@ Cluster:
   Fn::ImportValue:
     !Sub '${AppName}-${EnvName}-ClusterId'
 TaskDefinition: !Ref TaskDefinition
-{{- if .Autoscaling }}
+{{- if .DesiredCountOnSpot}}
+DesiredCount: !Ref TaskCount
+{{- else if .Autoscaling}}
 DesiredCount: !GetAtt DynamicDesiredCountAction.DesiredCount
 {{- else }}
 DesiredCount: !Ref TaskCount
-{{- end}}
-{{- if .Storage}}
-PlatformVersion: 1.4.0
 {{- end}}
 DeploymentConfiguration:
   DeploymentCircuitBreaker:
@@ -18,10 +17,21 @@ DeploymentConfiguration:
   MaximumPercent: 200
 PropagateTags: SERVICE
 {{- if .ExecuteCommand }}
-PlatformVersion: 1.4.0
 EnableExecuteCommand: true
 {{- end }}
+{{- if not .CapacityProviders }}
 LaunchType: FARGATE
+{{- end }}
+{{- if .CapacityProviders }}
+CapacityProviderStrategy:
+  {{- range $cps := .CapacityProviders}}
+  - CapacityProvider: {{$cps.CapacityProvider}}
+    Weight: {{$cps.Weight}}
+    {{- if $cps.Base }}
+    Base: {{$cps.Base}}
+    {{- end}}
+  {{- end}}
+{{- end }}
 NetworkConfiguration:
   AwsvpcConfiguration:
     AssignPublicIp: {{.Network.AssignPublicIP}}
