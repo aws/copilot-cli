@@ -31,6 +31,34 @@ Mappings:
       {{end -}}
     {{end}}
 Resources:
+  {{logicalIDSafe .ClusterName}}AuroraKMSCMK:
+    Type: 'AWS::KMS::Key'
+    DeletionPolicy: Retain
+    Properties:
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+          - Effect: Allow
+            Principal:
+              AWS: '*'
+            Action:
+              - 'kms:Encrypt'
+              - 'kms:Decrypt'
+              - 'kms:ReEncrypt*'
+              - 'kms:GenerateDataKey*'
+              - 'kms:CreateGrant'
+              - 'kms:ListGrants'
+              - 'kms:DescribeKey'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                'kms:CallerAccount': !Ref 'AWS::AccountId'
+                'kms:ViaService': !Sub 'rds.${AWS::Region}.amazonaws.com'
   {{logicalIDSafe .ClusterName}}DBSubnetGroup:
     Type: 'AWS::RDS::DBSubnetGroup'
     Properties:
@@ -121,9 +149,7 @@ Resources:
       {{- end}}
       EngineMode: serverless
       StorageEncrypted: true
-      KmsKeyId:
-        Fn::ImportValue:
-          !Sub '${App}-ArtifactKey'
+      KmsKeyId: !Ref {{logicalIDSafe .ClusterName}}AuroraKMSCMK
       DBClusterParameterGroupName: {{- if .ParameterGroup}} {{.ParameterGroup}} {{- else}} !Ref {{logicalIDSafe .ClusterName}}DBClusterParameterGroup {{- end}}
       DBSubnetGroupName: !Ref {{logicalIDSafe .ClusterName}}DBSubnetGroup
       VpcSecurityGroupIds:
