@@ -342,7 +342,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					command:                     tc.inCommand,
 					entrypoint:                  tc.inEntryPoint,
 					useDefaultSubnetsAndCluster: tc.inDefault,
-					generateCMDTarget:           tc.inGenerateCMDTarget,
+					generateCommandTarget:       tc.inGenerateCMDTarget,
 				},
 				isDockerfileSet: tc.isDockerfileSet,
 				nFlag:           2,
@@ -948,7 +948,7 @@ func TestTaskRunOpts_configureGenerator(t *testing.T) {
 			sess, _ := sessions.NewProvider().Default()
 			opts := &runTaskOpts{
 				runTaskVars: runTaskVars{
-					generateCMDTarget: tc.inGenerateCommandTarget,
+					generateCommandTarget: tc.inGenerateCommandTarget,
 				},
 				sess: sess,
 			}

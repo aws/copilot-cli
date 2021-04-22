@@ -100,8 +100,8 @@ type runTaskVars struct {
 	entrypoint   string
 	resourceTags map[string]string
 
-	follow            bool
-	generateCMDTarget string
+	follow                bool
+	generateCommandTarget string
 }
 
 type runTaskOpts struct {
@@ -257,7 +257,7 @@ func (o *runTaskOpts) configureSessAndEnv() error {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *runTaskOpts) Validate() error {
-	if o.generateCMDTarget != "" {
+	if o.generateCommandTarget != "" {
 		if o.nFlag >= 2 {
 			return errors.New("cannot specify `--generate-cmd` with any other flag")
 		}
@@ -399,7 +399,7 @@ func (o *runTaskOpts) validateFlagsWithSecurityGroups() error {
 
 // Ask prompts the user for any required or important fields that are not provided.
 func (o *runTaskOpts) Ask() error {
-	if o.generateCMDTarget != "" {
+	if o.generateCommandTarget != "" {
 		return nil
 	}
 	if o.shouldPromptForAppEnv() {
@@ -426,7 +426,7 @@ func (o *runTaskOpts) shouldPromptForAppEnv() bool {
 
 // Execute deploys and runs the task.
 func (o *runTaskOpts) Execute() error {
-	if o.generateCMDTarget != "" {
+	if o.generateCommandTarget != "" {
 		return o.generateCommand()
 	}
 
@@ -524,11 +524,11 @@ func (o *runTaskOpts) configureGenerator() (cmdGenerator, error) {
 		return nil, fmt.Errorf("get default session: %s", err)
 	}
 
-	if arn.IsARN(o.generateCMDTarget) {
+	if arn.IsARN(o.generateCommandTarget) {
 		return o.configureGeneratorFromARN(sess)
 	}
 
-	parts := strings.Split(o.generateCMDTarget, "/")
+	parts := strings.Split(o.generateCommandTarget, "/")
 	switch len(parts) {
 	case 2:
 		clusterName, serviceName := parts[0], parts[1]
@@ -552,7 +552,7 @@ func (o *runTaskOpts) configureGenerator() (cmdGenerator, error) {
 }
 
 func (o *runTaskOpts) configureGeneratorFromARN(sess *session.Session) (cmdGenerator, error) {
-	svcARN := awsecs.ServiceArn(o.generateCMDTarget)
+	svcARN := awsecs.ServiceArn(o.generateCommandTarget)
 	clusterName, err := svcARN.ClusterName()
 	if err != nil {
 		return nil, fmt.Errorf("extract cluster name from arn %s", svcARN)
@@ -826,7 +826,7 @@ Run a task with a command.
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
-	cmd.Flags().StringVar(&vars.generateCMDTarget, generateCMDFlag, "", generateCMDFlagDescription)
+	cmd.Flags().StringVar(&vars.generateCommandTarget, generateCommandFlag, "", generateCommandFlagDescription)
 
 	return cmd
 }
