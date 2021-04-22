@@ -17,10 +17,10 @@ import (
 )
 
 type showAppMocks struct {
-	storeSvc    *mocks.Mockstore
-	prompt      *mocks.Mockprompter
-	sel         *mocks.MockappSelector
-	pipelineSvc *mocks.MockpipelineGetter
+	storeSvc      *mocks.Mockstore
+	sel           *mocks.MockappSelector
+	pipelineSvc   *mocks.MockpipelineGetter
+	versionGetter *mocks.MockversionGetter
 }
 
 func TestShowAppOpts_Validate(t *testing.T) {
@@ -58,11 +58,9 @@ func TestShowAppOpts_Validate(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStoreReader := mocks.NewMockstore(ctrl)
-			mockPrompter := mocks.NewMockprompter(ctrl)
 
 			mocks := showAppMocks{
 				storeSvc: mockStoreReader,
-				prompt:   mockPrompter,
 			}
 			tc.setupMocks(mocks)
 
@@ -70,8 +68,7 @@ func TestShowAppOpts_Validate(t *testing.T) {
 				showAppVars: showAppVars{
 					name: tc.inAppName,
 				},
-				store:  mockStoreReader,
-				prompt: mockPrompter,
+				store: mockStoreReader,
 			}
 
 			// WHEN
@@ -202,9 +199,10 @@ func TestShowAppOpts_Execute(t *testing.T) {
 						{Name: "pipeline1"},
 						{Name: "pipeline2"},
 					}, nil)
+				m.versionGetter.EXPECT().Version().Return("v0.0.0", nil)
 			},
 
-			wantedContent: "{\"name\":\"my-app\",\"uri\":\"example.com\",\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"app\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"services\":[{\"app\":\"\",\"name\":\"my-svc\",\"type\":\"lb-web-svc\"}],\"pipelines\":[{\"name\":\"pipeline1\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"},{\"name\":\"pipeline2\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"}]}\n",
+			wantedContent: "{\"name\":\"my-app\",\"version\":\"v0.0.0\",\"uri\":\"example.com\",\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"app\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"services\":[{\"app\":\"\",\"name\":\"my-svc\",\"type\":\"lb-web-svc\"}],\"pipelines\":[{\"name\":\"pipeline1\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"},{\"name\":\"pipeline2\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"}]}\n",
 		},
 		"correctly shows human output": {
 			setupMocks: func(m showAppMocks) {
@@ -236,11 +234,13 @@ func TestShowAppOpts_Execute(t *testing.T) {
 						{Name: "pipeline1"},
 						{Name: "pipeline2"},
 					}, nil)
+				m.versionGetter.EXPECT().Version().Return("v0.0.0", nil)
 			},
 
 			wantedContent: `About
 
   Name              my-app
+  Version           v0.0.0 (latest: v1.0.1)
   URI               example.com
 
 Environments
@@ -341,6 +341,42 @@ Pipelines
 			},
 			wantedError: fmt.Errorf("list pipelines in application %s: %w", "my-app", testError),
 		},
+		"returns error if fail to get app version": {
+			shouldOutputJSON: false,
+
+			setupMocks: func(m showAppMocks) {
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
+					Name:   "my-app",
+					Domain: "example.com",
+				}, nil)
+				m.storeSvc.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
+					{
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "123456789",
+					},
+					{
+						Name:      "prod",
+						AccountID: "123456789",
+						Region:    "us-west-1",
+					},
+				}, nil)
+				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Workload{
+					{
+						Name: "my-svc",
+						Type: "lb-web-svc",
+					},
+				}, nil)
+				m.pipelineSvc.EXPECT().
+					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
+					Return([]*codepipeline.Pipeline{
+						{Name: "pipeline1"},
+						{Name: "pipeline2"},
+					}, nil)
+				m.versionGetter.EXPECT().Version().Return("", testError)
+			},
+			wantedError: fmt.Errorf("get version for application %s: %w", "my-app", testError),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -351,10 +387,12 @@ Pipelines
 			b := &bytes.Buffer{}
 			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockPLSvc := mocks.NewMockpipelineGetter(ctrl)
+			mockVersionGetter := mocks.NewMockversionGetter(ctrl)
 
 			mocks := showAppMocks{
-				storeSvc:    mockStoreReader,
-				pipelineSvc: mockPLSvc,
+				storeSvc:      mockStoreReader,
+				pipelineSvc:   mockPLSvc,
+				versionGetter: mockVersionGetter,
 			}
 			tc.setupMocks(mocks)
 
@@ -363,9 +401,10 @@ Pipelines
 					shouldOutputJSON: tc.shouldOutputJSON,
 					name:             testAppName,
 				},
-				store:       mockStoreReader,
-				w:           b,
-				pipelineSvc: mockPLSvc,
+				store:         mockStoreReader,
+				w:             b,
+				pipelineSvc:   mockPLSvc,
+				versionGetter: mockVersionGetter,
 			}
 
 			// WHEN
