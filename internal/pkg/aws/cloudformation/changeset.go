@@ -6,7 +6,6 @@ package cloudformation
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -224,7 +223,7 @@ func (cs *changeSet) execute() error {
 // createAndExecute calls create and then execute.
 // If the change set is empty, returns a ErrChangeSetEmpty.
 func (cs *changeSet) createAndExecute(conf *stackConfig) error {
-	if strings.Contains(conf.Template, "pipeline.stack.yml") {
+	if conf.IsURL {
 		if err := cs.createWithTemplateURL(conf); err != nil {
 			descr, descrErr := cs.describe()
 			if descrErr != nil {

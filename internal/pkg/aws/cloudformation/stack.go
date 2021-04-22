@@ -16,6 +16,7 @@ type Stack struct {
 
 type stackConfig struct {
 	Template   string
+	IsURL      bool
 	Parameters []*cloudformation.Parameter
 	Tags       []*cloudformation.Tag
 	RoleARN    *string
@@ -70,6 +71,13 @@ func WithTags(tags map[string]string) StackOption {
 func WithRoleARN(roleARN string) StackOption {
 	return func(s *Stack) {
 		s.RoleARN = aws.String(roleARN)
+	}
+}
+
+// WithTemplateURL passes a URL to the S3 location of the template rather than the TemplateBody.
+func WithTemplateURL() StackOption {
+	return func(s *Stack) {
+		s.IsURL = true
 	}
 }
 

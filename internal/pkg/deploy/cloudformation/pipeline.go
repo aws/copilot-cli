@@ -38,12 +38,15 @@ func (cf CloudFormation) PipelineExists(in *deploy.CreatePipelineInput) (bool, e
 }
 
 // CreatePipeline sets up a new CodePipeline for deploying services.
-func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput, bucketName string) error {
+func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput, bucketName string, opts ...cloudformation.StackOption) error {
 	templateURL, err := cf.pushTemplateToS3Bucket(bucketName, stack.NewPipelineStackConfig(in))
 	if err != nil {
 		return err
 	}
 	s, err := toStackFromS3(stack.NewPipelineStackConfig(in), templateURL)
+	for _, opt := range opts {
+		opt(s)
+	}
 	if err != nil {
 		return err
 	}
@@ -73,7 +76,7 @@ func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput, bucketNa
 }
 
 // UpdatePipeline updates an existing CodePipeline for deploying services.
-func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput, bucketName string) error {
+func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput, bucketName string, opts ...cloudformation.StackOption) error {
 	url, err := cf.pushTemplateToS3Bucket(bucketName, stack.NewPipelineStackConfig(in))
 	if err != nil {
 		return err
@@ -81,6 +84,9 @@ func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput, bucketNa
 	s, err := toStackFromS3(stack.NewPipelineStackConfig(in), url)
 	if err != nil {
 		return err
+	}
+	for _, opt := range opts {
+		opt(s)
 	}
 	if err := cf.cfnClient.UpdateAndWait(s); err != nil {
 		var errNoUpdates *cloudformation.ErrChangeSetEmpty
