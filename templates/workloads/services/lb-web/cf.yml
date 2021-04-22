@@ -149,6 +149,10 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPath: {{.HTTPHealthCheck.HealthCheckPath}} # Default is '/'.
+{{- if .HTTPHealthCheck.SuccessCodes}}
+      Matcher: 
+        HttpCode: {{.HTTPHealthCheck.SuccessCodes}}
+{{- end}}
 {{- if .HTTPHealthCheck.HealthyThreshold}}
       HealthyThresholdCount: {{.HTTPHealthCheck.HealthyThreshold}}
 {{- end}}

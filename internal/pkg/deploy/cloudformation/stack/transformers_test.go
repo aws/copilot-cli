@@ -163,6 +163,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 	duration60Seconds := time.Duration(60 * time.Second)
 	testCases := map[string]struct {
 		inputPath               *string
+		inputSuccessCodes       *string
 		inputHealthyThreshold   *int64
 		inputUnhealthyThreshold *int64
 		inputInterval           *time.Duration
@@ -172,6 +173,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 	}{
 		"no fields indicated in manifest": {
 			inputPath:               nil,
+			inputSuccessCodes:       nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
@@ -183,6 +185,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just HealthyThreshold": {
 			inputPath:               nil,
+			inputSuccessCodes:       nil,
 			inputHealthyThreshold:   aws.Int64(5),
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
@@ -195,6 +198,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just UnhealthyThreshold": {
 			inputPath:               nil,
+			inputSuccessCodes:       nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: aws.Int64(5),
 			inputInterval:           nil,
@@ -207,6 +211,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just Interval": {
 			inputPath:               nil,
+			inputSuccessCodes:       nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: nil,
 			inputInterval:           &duration15Seconds,
@@ -219,6 +224,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just Timeout": {
 			inputPath:               nil,
+			inputSuccessCodes:       nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
@@ -229,8 +235,22 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 				Timeout:         aws.Int64(15),
 			},
 		},
+		"just SuccessCodes": {
+			inputPath:               nil,
+			inputSuccessCodes:       aws.String("200,301"),
+			inputHealthyThreshold:   nil,
+			inputUnhealthyThreshold: nil,
+			inputInterval:           nil,
+			inputTimeout:            nil,
+
+			wantedOpts: template.HTTPHealthCheckOpts{
+				HealthCheckPath: "/",
+				SuccessCodes:    "200,301",
+			},
+		},
 		"all values changed in manifest": {
 			inputPath:               aws.String("/road/to/nowhere"),
+			inputSuccessCodes:       aws.String("200-299"),
 			inputHealthyThreshold:   aws.Int64(3),
 			inputUnhealthyThreshold: aws.Int64(3),
 			inputInterval:           &duration60Seconds,
@@ -238,6 +258,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    "/road/to/nowhere",
+				SuccessCodes:       "200-299",
 				HealthyThreshold:   aws.Int64(3),
 				UnhealthyThreshold: aws.Int64(3),
 				Interval:           aws.Int64(60),
@@ -252,6 +273,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 				HealthCheckPath: tc.inputPath,
 				HealthCheckArgs: manifest.HTTPHealthCheckArgs{
 					Path:               tc.inputPath,
+					SuccessCodes:       tc.inputSuccessCodes,
 					HealthyThreshold:   tc.inputHealthyThreshold,
 					UnhealthyThreshold: tc.inputUnhealthyThreshold,
 					Timeout:            tc.inputTimeout,
