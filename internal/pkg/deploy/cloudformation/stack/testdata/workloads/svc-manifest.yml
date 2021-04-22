@@ -11,8 +11,8 @@ image:
   # Port exposed through your container to route traffic to it.
   port: 4000
 http:
-  # Requests to this path will be forwarded to your service. 
-  # To match all requests you can use the "/" path. 
+  # Requests to this path will be forwarded to your service.
+  # To match all requests you can use the "/" path.
   path: '/'
   # You can specify a custom health check path. The default is "/".
   # For additional configuration: https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#http-healthcheck
@@ -26,7 +26,6 @@ memory: 512
 # Number of tasks that should be running in your service.
 count:
   range: 2-10
-
 storage:
   volumes:
     persistence:
@@ -40,6 +39,13 @@ variables:                    # Pass environment variables as key value pairs.
 #secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
 #  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
 # You can override any of the values defined above by environment.
-#environments:
-#  test:
-#    count: 2               # Number of tasks to run for the "test" environment.
+environments:
+  staging:
+    count:
+      spot: 5
+  prod:
+    count:
+      range:
+        min: 3
+        max: 12
+        spot_from: 6
