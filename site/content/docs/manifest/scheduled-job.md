@@ -90,6 +90,9 @@ All paths are relative to your workspace root.
 Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).    
 The `location` field follows the same definition as the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image) in the Amazon ECS task definition.
 
+<span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a><span class="type">Map</span>
+An optional key/value map of [Docker labels](https://docs.docker.com/config/labels-custom-metadata/) to add to the container.
+
 <div class="separator"></div>
 
 <a id="entrypoint" href="#entrypoint" class="field">`entrypoint`</a> <span class="type">String or Array of Strings</span>  

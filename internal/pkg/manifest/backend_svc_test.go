@@ -239,8 +239,14 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			ImageConfig: imageWithPortAndHealthcheck{
 				ServiceImageWithPort: ServiceImageWithPort{
 					Port: aws.Uint16(80),
+					Image: Image{
+						DockerLabels: map[string]string{
+							"com.amazonaws.ecs.copilot.description": "Hello world!",
+						},
+					},
 				},
 			},
+
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(256),
@@ -263,9 +269,18 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		},
 		Environments: map[string]*BackendServiceConfig{
 			"test": {
+				ImageConfig: imageWithPortAndHealthcheck{
+					ServiceImageWithPort: ServiceImageWithPort{
+						Image: Image{
+							DockerLabels: map[string]string{
+								"com.amazonaws.ecs.copilot.description": "Overridden!",
+							},
+						},
+					},
+				},
 				TaskConfig: TaskConfig{
 					Count: Count{
-						Autoscaling: Autoscaling{
+						AdvancedCount: AdvancedCount{
 							CPU: aws.Int(70),
 						},
 					},
@@ -326,6 +341,11 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					ImageConfig: imageWithPortAndHealthcheck{
 						ServiceImageWithPort: ServiceImageWithPort{
 							Port: aws.Uint16(80),
+							Image: Image{
+								DockerLabels: map[string]string{
+									"com.amazonaws.ecs.copilot.description": "Overridden!",
+								},
+							},
 						},
 					},
 					TaskConfig: TaskConfig{
@@ -333,7 +353,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						Memory: aws.Int(256),
 						Count: Count{
 							Value: aws.Int(1),
-							Autoscaling: Autoscaling{
+							AdvancedCount: AdvancedCount{
 								CPU: aws.Int(70),
 							},
 						},

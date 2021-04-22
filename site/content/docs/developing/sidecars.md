@@ -32,6 +32,10 @@ sidecars:
         path: {{ path }}
         # Whether to allow the sidecar read-only access to the volume. (Default true)
         read_only: {{ bool }}
+    # Optional Docker labels to apply to this container.
+    labels:
+      {{ label key }} : {{ label value }}
+      
 ```
 
 Below is an example of specifying the [nginx](https://www.nginx.com/) sidecar container in a load balanced web service manifest.

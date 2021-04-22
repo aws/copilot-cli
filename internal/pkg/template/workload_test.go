@@ -34,6 +34,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				mockBox.AddString("workloads/partials/cf/secrets.yml", "secrets")
 				mockBox.AddString("workloads/partials/cf/executionrole.yml", "executionrole")
 				mockBox.AddString("workloads/partials/cf/taskrole.yml", "taskrole")
+				mockBox.AddString("workloads/partials/cf/workload-container.yml", "workload-container")
 				mockBox.AddString("workloads/partials/cf/fargate-taskdef-base-properties.yml", "fargate-taskdef-base-properties")
 				mockBox.AddString("workloads/partials/cf/service-base-properties.yml", "service-base-properties")
 				mockBox.AddString("workloads/partials/cf/servicediscovery.yml", "servicediscovery")
@@ -57,6 +58,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
   secrets
   executionrole
   taskrole
+  workload-container
   fargate-taskdef-base-properties
   service-base-properties
   servicediscovery

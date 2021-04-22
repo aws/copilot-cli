@@ -164,6 +164,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		ScheduleExpression: schedule,
 		StateMachine:       stateMachine,
 		LogConfig:          convertLogging(j.manifest.Logging),
+		DockerLabels:       j.manifest.ImageConfig.DockerLabels,
 		Storage:            storage,
 		Network:            convertNetworkConfig(j.manifest.Network),
 		EntryPoint:         entrypoint,
