@@ -49,6 +49,9 @@ List of all available properties for a `'Load Balanced Web Service'` manifest.
             min: 1
             max: 10
             spot_from: 2
+      staging:
+        count:
+          spot: 2
       production:
         count: 2
     ```
