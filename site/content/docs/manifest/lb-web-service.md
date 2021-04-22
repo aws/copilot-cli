@@ -43,6 +43,12 @@ List of all available properties for a `'Load Balanced Web Service'` manifest.
 
     # You can override any of the values defined above by environment.
     environments:
+      test:
+        count:
+          range:
+            min: 1
+            max: 10
+            spot_from: 2
       production:
         count: 2
     ```
@@ -199,8 +205,34 @@ count:
   response_time: 2s
 ```
 
-<span class="parent-field">count.</span><a id="count-range" href="#count-range" class="field">`range`</a> <span class="type">String</span>  
-Specify a minimum and maximum bound for the number of tasks your service should maintain.  
+<span class="parent-field">count.</span><a id="count-range" href="#count-range" class="field">`range`</a> <span class="type">String or Map</span>
+You can specify a minimum and maximum bound for the number of tasks your service should maintain.
+```yaml
+count:
+  range: n-m
+```
+This will set up an Application Autoscaling Target with the `MinCapacity` of `n` and `MaxCapacity` of `m`.
+
+Alternatively, if you wish to scale your service onto Fargate Spot instances, specify `min` and `max` under `range` and then specify `spot_from` with the desired count you wish to start placing your services onto spot capacity. For example:
+
+```yaml
+count:
+  range:
+    min: 1
+    max: 10
+    spot_from: 3
+```
+
+This will set your range as 1-10 as before, but will place two copies of your service on dedicated Fargate capacity. Once your service scales to 3 copies, they will be placed on spot until the maximum is reached.
+
+<span class="parent-field">range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>
+The minimum desired count for your service using autoscaling.
+
+<span class="parent-field">range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>
+The maximum desired count for your service using autoscaling.
+
+<span class="parent-field">range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>
+The desired count at which you wish to start placing your service using Fargate Spot capacity providers.
 
 <span class="parent-field">count.</span><a id="count-cpu-percentage" href="#count-cpu-percentage" class="field">`cpu_percentage`</a> <span class="type">Integer</span>  
 Scale up or down based on the average CPU your service should maintain.  
