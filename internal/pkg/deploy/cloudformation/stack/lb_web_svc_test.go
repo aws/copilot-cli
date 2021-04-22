@@ -307,18 +307,22 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		Port: 80,
 	}
 	testLBWebServiceManifest := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestRange := manifest.Range("2-100")
+	testLBWebServiceManifestRange := manifest.IntRangeBand("2-100")
 	testLBWebServiceManifest.Count = manifest.Count{
 		Value: aws.Int(1),
-		Autoscaling: manifest.Autoscaling{
-			Range: &testLBWebServiceManifestRange,
+		AdvancedCount: manifest.AdvancedCount{
+			Range: &manifest.Range{
+				Value: &testLBWebServiceManifestRange,
+			},
 		},
 	}
 	testLBWebServiceManifestWithBadCount := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestWithBadCountRange := manifest.Range("badCount")
+	testLBWebServiceManifestWithBadCountRange := manifest.IntRangeBand("badCount")
 	testLBWebServiceManifestWithBadCount.Count = manifest.Count{
-		Autoscaling: manifest.Autoscaling{
-			Range: &testLBWebServiceManifestWithBadCountRange,
+		AdvancedCount: manifest.AdvancedCount{
+			Range: &manifest.Range{
+				Value: &testLBWebServiceManifestWithBadCountRange,
+			},
 		},
 	}
 	testLBWebServiceManifestWithSidecar := manifest.NewLoadBalancedWebService(baseProps)
