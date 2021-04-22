@@ -131,23 +131,24 @@ type initEnvOpts struct {
 	initEnvVars
 
 	// Interfaces to interact with dependencies.
-	sessProvider sessionProvider
-	store        store
-	envDeployer  deployer
-	appDeployer  deployer
-	identity     identityService
-	envIdentity  identityService
-	ec2Client    ec2Client
-	iam          roleManager
-	cfn          stackExistChecker
-	prog         progress
-	prompt       prompter
-	selVPC       ec2Selector
-	selCreds     credsSelector
-	selApp       appSelector
-	appCFN       appResourcesGetter
-	newS3        func(string) (zipAndUploader, error)
-	uploader     customResourcesUploader
+	sessProvider  sessionProvider
+	store         store
+	envDeployer   deployer
+	appDeployer   deployer
+	identity      identityService
+	envIdentity   identityService
+	ec2Client     ec2Client
+	iam           roleManager
+	cfn           stackExistChecker
+	prog          progress
+	prompt        prompter
+	selVPC        ec2Selector
+	selCreds      credsSelector
+	selApp        appSelector
+	appCFN        appResourcesGetter
+	newS3         func(string) (zipAndUploader, error)
+	uploader      customResourcesUploader
+	appUpgradeCmd actionCommand
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
 }
@@ -165,6 +166,10 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	cfg, err := profile.NewConfig()
 	if err != nil {
 		return nil, fmt.Errorf("read named profiles: %w", err)
+	}
+	cmd, err := newAppUpgradeOpts(appUpgradeVars{name: vars.appName})
+	if err != nil {
+		return nil, fmt.Errorf("new app upgrade command: %w", err)
 	}
 
 	prompter := prompt.New()
@@ -191,6 +196,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 			}
 			return s3.New(sess), nil
 		},
+		appUpgradeCmd: cmd,
 	}, nil
 }
 
@@ -228,10 +234,15 @@ func (o *initEnvOpts) Ask() error {
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initEnvOpts) Execute() error {
 	o.initRuntimeClients()
+	// Ensure the app actually exists before we do a deployment.
 	app, err := o.store.GetApplication(o.appName)
 	if err != nil {
-		// Ensure the app actually exists before we do a deployment.
 		return err
+	}
+
+	// Ensure the app is in the latest version.
+	if err := o.appUpgradeCmd.Execute(); err != nil {
+		return fmt.Errorf(`execute "app upgrade --name %s": %w`, o.appName, err)
 	}
 
 	envCaller, err := o.envIdentity.Get()

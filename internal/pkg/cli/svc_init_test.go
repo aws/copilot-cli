@@ -490,6 +490,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		mockSvcInit      func(m *mocks.MocksvcInitializer)
 		mockDockerfile   func(m *mocks.MockdockerfileParser)
+		mockUpgrader     func(m *mocks.MockactionCommand)
 		inSvcPort        uint16
 		inSvcType        string
 		inSvcName        string
@@ -519,6 +520,9 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 					Port: 80,
 				}).Return("manifest/path", nil)
 			},
+			mockUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
+			},
 
 			wantedManifestPath: "manifest/path",
 		},
@@ -541,6 +545,9 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetHealthCheck().Return(nil, nil)
 			},
+			mockUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
+			},
 
 			wantedManifestPath: "manifest/path",
 		},
@@ -562,6 +569,9 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				}).Return("manifest/path", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
+			mockUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
+			},
 
 			wantedManifestPath: "manifest/path",
 		},
@@ -583,10 +593,23 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				}).Return("manifest/path", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
+			mockUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
+			},
 
 			wantedManifestPath: "manifest/path",
 		},
-		"failure": {
+		"failed to upgrade application": {
+			inAppName: "sample",
+			mockUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(errors.New("some error"))
+			},
+			wantedErr: errors.New(`execute "app upgrade --name sample": some error`),
+		},
+		"failed to init a service": {
+			mockUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
+			},
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(gomock.Any()).Return("", errors.New("some error"))
 			},
@@ -602,12 +625,16 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 
 			mockSvcInitializer := mocks.NewMocksvcInitializer(ctrl)
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
+			mockUpgrader := mocks.NewMockactionCommand(ctrl)
 
 			if tc.mockSvcInit != nil {
 				tc.mockSvcInit(mockSvcInitializer)
 			}
 			if tc.mockDockerfile != nil {
 				tc.mockDockerfile(mockDockerfile)
+			}
+			if tc.mockUpgrader != nil {
+				tc.mockUpgrader(mockUpgrader)
 			}
 
 			opts := initSvcOpts{
@@ -621,9 +648,10 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 					},
 					port: tc.inSvcPort,
 				},
-				init:        mockSvcInitializer,
-				setupParser: func(*initSvcOpts) {},
-				df:          mockDockerfile,
+				init:          mockSvcInitializer,
+				setupParser:   func(*initSvcOpts) {},
+				df:            mockDockerfile,
+				appUpgradeCmd: mockUpgrader,
 			}
 
 			// WHEN

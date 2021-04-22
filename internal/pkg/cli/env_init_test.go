@@ -548,6 +548,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 		expectCFN               func(m *mocks.MockstackExistChecker)
 		expectAppCFN            func(m *mocks.MockappResourcesGetter)
 		expectResourcesUploader func(m *mocks.MockcustomResourcesUploader)
+		expectAppUpgrader       func(m *mocks.MockactionCommand)
 
 		wantedErrorS string
 	}{
@@ -558,9 +559,22 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 
 			wantedErrorS: "some error",
 		},
+		"failed to upgrade application": {
+			expectStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+			},
+			expectAppUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(errors.New("some error"))
+			},
+
+			wantedErrorS: `execute "app upgrade --name phonetool": some error`,
+		},
 		"returns identity get error": {
 			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+			},
+			expectAppUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{}, errors.New("some identity error"))
@@ -571,6 +585,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().CreateEnvironment(gomock.Any()).Times(0)
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+			},
+			expectAppUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil)
@@ -596,6 +613,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
+			expectAppUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
+			},
 			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
@@ -618,6 +638,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 		"errors cannot read env lambdas": {
 			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+			},
+			expectAppUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
@@ -646,6 +669,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 		"deletes retained IAM roles if environment stack fails creation": {
 			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+			},
+			expectAppUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
@@ -700,6 +726,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Region:    "mars-1",
 				}).Return(errors.New("some create error"))
 			},
+			expectAppUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
+			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
 			},
@@ -749,6 +778,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Region:    "mars-1",
 				}).Return(nil)
 			},
+			expectAppUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
+			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
 			},
@@ -795,6 +827,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Region:    "mars-1",
 				}).Return(nil)
 			},
+			expectAppUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
+			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
 			},
@@ -840,6 +875,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
 			},
+			expectAppUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
+			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "4567"}, nil).Times(1)
 			},
@@ -861,6 +899,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					AccountID: "4567",
 					Region:    "us-west-2",
 				}).Return(nil)
+			},
+			expectAppUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "4567"}, nil).Times(2)
@@ -921,6 +962,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			mockCFN := mocks.NewMockstackExistChecker(ctrl)
 			mockResourcesUploader := mocks.NewMockcustomResourcesUploader(ctrl)
 			mockUploader := mocks.NewMockzipAndUploader(ctrl)
+			mockUpgrader := mocks.NewMockactionCommand(ctrl)
 			if tc.expectStore != nil {
 				tc.expectStore(mockStore)
 			}
@@ -944,6 +986,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			}
 			if tc.expectResourcesUploader != nil {
 				tc.expectResourcesUploader(mockResourcesUploader)
+			}
+			if tc.expectAppUpgrader != nil {
+				tc.expectAppUpgrader(mockUpgrader)
 			}
 
 			provider := sessions.NewProvider()
@@ -969,6 +1014,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				newS3: func(region string) (zipAndUploader, error) {
 					return mockUploader, nil
 				},
+				appUpgradeCmd: mockUpgrader,
 			}
 
 			// WHEN

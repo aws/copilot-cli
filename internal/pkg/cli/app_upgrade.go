@@ -65,6 +65,16 @@ func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
 	}, nil
 }
 
+// Validate is a no-op for this command.
+func (o *appUpgradeOpts) Validate() error {
+	return nil
+}
+
+// Ask prompts is a no-op for this command.
+func (o *appUpgradeOpts) Ask() error {
+	return nil
+}
+
 // Execute updates the cloudformation stack as well as the stackset of an application to the latest version.
 // If any stack is busy updating, it spins and waits until the stack can be updated.
 func (o *appUpgradeOpts) Execute() error {
@@ -91,6 +101,11 @@ func (o *appUpgradeOpts) Execute() error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// RecommendedActions is a no-op for this command.
+func (o *appUpgradeOpts) RecommendedActions() []string {
 	return nil
 }
 
@@ -130,11 +145,6 @@ func (o *appUpgradeOpts) upgradeApplication(app *config.Application, fromVersion
 	return nil
 }
 
-// RecommendedActions is a no-op for this command.
-func (o *appUpgradeOpts) RecommendedActions() []string {
-	return nil
-}
-
 // buildAppUpgradeCmd builds the command to update an application to the latest version.
 func buildAppUpgradeCmd() *cobra.Command {
 	vars := appUpgradeVars{}
@@ -150,6 +160,6 @@ func buildAppUpgradeCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, tryReadingAppName(), appFlagDescription)
 	return cmd
 }

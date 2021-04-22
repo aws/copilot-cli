@@ -478,7 +478,8 @@ func TestJobInitOpts_Ask(t *testing.T) {
 
 func TestJobInitOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
-		mockJobInit func(m *mocks.MockjobInitializer)
+		mockJobInit  func(m *mocks.MockjobInitializer)
+		mockUpgrader func(m *mocks.MockactionCommand)
 
 		inApp  string
 		inName string
@@ -509,8 +510,21 @@ func TestJobInitOpts_Execute(t *testing.T) {
 					Schedule: "@hourly",
 				}).Return("manifest/path", nil)
 			},
+			mockUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
+			},
 		},
-		"failure": {
+		"fail to upgrade application": {
+			inApp: "sample",
+			mockUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(errors.New("some error"))
+			},
+			wantedErr: errors.New(`execute "app upgrade --name sample": some error`),
+		},
+		"fail to init a job": {
+			mockUpgrader: func(m *mocks.MockactionCommand) {
+				m.EXPECT().Execute().Return(nil)
+			},
 			mockJobInit: func(m *mocks.MockjobInitializer) {
 				m.EXPECT().Job(gomock.Any()).Return("", errors.New("some error"))
 			},
@@ -524,9 +538,13 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockJobInitializer := mocks.NewMockjobInitializer(ctrl)
+			mockUpgrader := mocks.NewMockactionCommand(ctrl)
 
 			if tc.mockJobInit != nil {
 				tc.mockJobInit(mockJobInitializer)
+			}
+			if tc.mockUpgrader != nil {
+				tc.mockUpgrader(mockUpgrader)
 			}
 
 			opts := initJobOpts{
@@ -539,7 +557,8 @@ func TestJobInitOpts_Execute(t *testing.T) {
 					},
 					schedule: tc.inSchedule,
 				},
-				init: mockJobInitializer,
+				init:          mockJobInitializer,
+				appUpgradeCmd: mockUpgrader,
 			}
 
 			// WHEN

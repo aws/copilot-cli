@@ -63,6 +63,8 @@ type initJobOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
+
+	appUpgradeCmd actionCommand
 }
 
 func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
@@ -70,27 +72,27 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("couldn't connect to config store: %w", err)
 	}
-
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
-
 	p := sessions.NewProvider()
 	sess, err := p.Default()
 	if err != nil {
 		return nil, err
 	}
-
 	jobInitter := &initialize.WorkloadInitializer{
 		Store:    store,
 		Ws:       ws,
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess),
 	}
-
 	prompter := prompt.New()
 	sel := selector.NewWorkspaceSelect(prompter, store, ws)
+	cmd, err := newAppUpgradeOpts(appUpgradeVars{name: vars.appName})
+	if err != nil {
+		return nil, fmt.Errorf("new app upgrade command: %w", err)
+	}
 
 	return &initJobOpts{
 		initJobVars: vars,
@@ -101,6 +103,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		prompt:                prompter,
 		sel:                   sel,
 		dockerEngineValidator: exec.NewDockerCommand(),
+		appUpgradeCmd:         cmd,
 	}, nil
 }
 
@@ -168,6 +171,11 @@ func (o *initJobOpts) Ask() error {
 
 // Execute writes the job's manifest file, creates an ECR repo, and stores the name in SSM.
 func (o *initJobOpts) Execute() error {
+	// Ensure the app is in the latest version.
+	if err := o.appUpgradeCmd.Execute(); err != nil {
+		return fmt.Errorf(`execute "app upgrade --name %s": %w`, o.appName, err)
+	}
+
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,

@@ -93,7 +93,8 @@ type initSvcOpts struct {
 	manifestPath string
 
 	// Sets up Dockerfile parser using fs and input path
-	setupParser func(*initSvcOpts)
+	setupParser   func(*initSvcOpts)
+	appUpgradeCmd actionCommand
 }
 
 func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
@@ -114,6 +115,10 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	}
 	prompter := prompt.New()
 	sel := selector.NewWorkspaceSelect(prompter, store, ws)
+	cmd, err := newAppUpgradeOpts(appUpgradeVars{name: vars.appName})
+	if err != nil {
+		return nil, fmt.Errorf("new app upgrade command: %w", err)
+	}
 
 	initSvc := &initialize.WorkloadInitializer{
 		Store:    store,
@@ -132,6 +137,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		setupParser: func(o *initSvcOpts) {
 			o.df = exec.NewDockerfile(o.fs, o.dockerfilePath)
 		},
+		appUpgradeCmd: cmd,
 	}, nil
 }
 
@@ -194,8 +200,12 @@ func (o *initSvcOpts) Ask() error {
 
 // Execute writes the service's manifest file and stores the service in SSM.
 func (o *initSvcOpts) Execute() error {
+	// Ensure the app is in the latest version.
+	if err := o.appUpgradeCmd.Execute(); err != nil {
+		return fmt.Errorf(`execute "app upgrade --name %s": %w`, o.appName, err)
+	}
+
 	// Check for a valid healthcheck and add it to the opts.
-	var hc *manifest.ContainerHealthCheck
 	hc, err := o.parseHealthCheck()
 	if err != nil {
 		return err
