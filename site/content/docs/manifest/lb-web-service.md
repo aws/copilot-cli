@@ -81,16 +81,16 @@ http:
 ```
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-healthy-threshold" href="#http-healthcheck-healthy-threshold" class="field">`healthy_threshold`</a> <span class="type">Integer</span>  
-The number of consecutive health check successes required before considering an unhealthy target healthy. The Copilot default is 2. Range: 2-10.
+The number of consecutive health check successes required before considering an unhealthy target healthy. The default is 5. Range: 2-10.
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-unhealthy-threshold" href="#http-healthcheck-unhealthy-threshold" class="field">`unhealthy_threshold`</a> <span class="type">Integer</span>  
-The number of consecutive health check failures required before considering a target unhealthy. The Copilot default is 2. Range: 2-10.
+The number of consecutive health check failures required before considering a target unhealthy. The default is 2. Range: 2-10.
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-interval" href="#http-healthcheck-interval" class="field">`interval`</a> <span class="type">Duration</span>  
-The approximate amount of time, in seconds, between health checks of an individual target. The Copilot default is 10s. Range: 5s–300s.
+The approximate amount of time, in seconds, between health checks of an individual target. The default is 30s. Range: 5s–300s.
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-timeout" href="#http-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
-The amount of time, in seconds, during which no response from a target means a failed health check. The Copilot default is 5s. Range 5s-300s.
+The amount of time, in seconds, during which no response from a target means a failed health check. The default is 5s. Range 5s-300s.
 
 <span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>  
 A sidecar container that takes the place of a service container.
