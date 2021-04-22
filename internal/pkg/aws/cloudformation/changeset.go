@@ -124,7 +124,7 @@ func (cs *changeSet) create(conf *stackConfig) error {
 	return nil
 }
 
-// createWithTemplateURL creates a ChangeSet with the TemplateURL (as opposed to TemplateBody) field, waits until it's created, and returns the ChangeSet ID on success.
+// createWithTemplateURL creates a ChangeSet with the TemplateURL (as opposed to TemplateBody) field, waits until it's created, and returns the ChangeSet ID on success. There is a 1,024 max length for the TemplateURL value.
 func (cs *changeSet) createWithTemplateURL(conf *stackConfig) error {
 	out, err := cs.client.CreateChangeSet(&cloudformation.CreateChangeSetInput{
 		ChangeSetName:       aws.String(cs.name),
