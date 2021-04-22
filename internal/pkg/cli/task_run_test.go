@@ -64,8 +64,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		inCommand    string
 		inEntryPoint string
 
-		inDefault           bool
-		inGenerateCMDTarget string
+		inDefault               bool
+		inGenerateCommandTarget string
 
 		appName         string
 		isDockerfileSet bool
@@ -310,7 +310,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"generate-cmd specified with another flag": {
 			basicOpts: defaultOpts,
 
-			inGenerateCMDTarget: "cluster/service", // nFlag is set to 2.
+			inGenerateCommandTarget: "cluster/service", // nFlag is set to 2.
 
 			wantedError: errors.New("cannot specify `--generate-cmd` with any other flag"),
 		},
@@ -342,7 +342,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					command:                     tc.inCommand,
 					entrypoint:                  tc.inEntryPoint,
 					useDefaultSubnetsAndCluster: tc.inDefault,
-					generateCommandTarget:       tc.inGenerateCMDTarget,
+					generateCommandTarget:       tc.inGenerateCommandTarget,
 				},
 				isDockerfileSet: tc.isDockerfileSet,
 				nFlag:           2,
