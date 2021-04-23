@@ -106,9 +106,11 @@ Outputs:
 		"failed parsing Auto Scaling template": {
 			setUpManifest: func(svc *BackendService) {
 				testBackendSvcManifestWithBadAutoScaling := manifest.NewBackendService(baseProps)
-				badRange := manifest.Range("badRange")
-				testBackendSvcManifestWithBadAutoScaling.Count.Autoscaling = manifest.Autoscaling{
-					Range: &badRange,
+				badRange := manifest.IntRangeBand("badRange")
+				testBackendSvcManifestWithBadAutoScaling.Count.AdvancedCount = manifest.AdvancedCount{
+					Range: &manifest.Range{
+						Value: &badRange,
+					},
 				}
 				svc.manifest = testBackendSvcManifestWithBadAutoScaling
 			},
@@ -127,7 +129,7 @@ Outputs:
     Value: hello`,
 				}
 			},
-			wantedErr: fmt.Errorf("convert the Auto Scaling configuration for service frontend: %w", errors.New("invalid range value badRange. Should be in format of ${min}-${max}")),
+			wantedErr: fmt.Errorf("convert the advanced count configuration for service frontend: %w", errors.New("invalid range value badRange. Should be in format of ${min}-${max}")),
 		},
 		"failed parsing svc template": {
 			setUpManifest: func(svc *BackendService) {

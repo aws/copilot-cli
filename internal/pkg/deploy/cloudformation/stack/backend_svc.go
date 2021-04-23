@@ -83,10 +83,22 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
-	autoscaling, err := convertAutoscaling(&s.manifest.Count.Autoscaling)
+
+	advancedCount, err := convertAdvancedCount(&s.manifest.Count.AdvancedCount)
 	if err != nil {
-		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
+		return "", fmt.Errorf("convert the advanced count configuration for service %s: %w", s.name, err)
 	}
+
+	var autoscaling *template.AutoscalingOpts
+	var desiredCountOnSpot *int
+	var capacityProviders []*template.CapacityProviderStrategy
+
+	if advancedCount != nil {
+		autoscaling = advancedCount.Autoscaling
+		desiredCountOnSpot = advancedCount.Spot
+		capacityProviders = advancedCount.Cps
+	}
+
 	storage, err := convertStorageOpts(s.manifest.Name, s.manifest.Storage)
 	if err != nil {
 		return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
@@ -105,10 +117,13 @@ func (s *BackendService) Template() (string, error) {
 		NestedStack:         outputs,
 		Sidecars:            sidecars,
 		Autoscaling:         autoscaling,
+		CapacityProviders:   capacityProviders,
+		DesiredCountOnSpot:  desiredCountOnSpot,
 		ExecuteCommand:      convertExecuteCommand(&s.manifest.ExecuteCommand),
 		WorkloadType:        manifest.BackendServiceType,
 		HealthCheck:         s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),
 		LogConfig:           convertLogging(s.manifest.Logging),
+		DockerLabels:        s.manifest.ImageConfig.DockerLabels,
 		DesiredCountLambda:  desiredCountLambda.String(),
 		EnvControllerLambda: envControllerLambda.String(),
 		Storage:             storage,

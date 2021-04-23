@@ -42,24 +42,7 @@ Resources:
     Properties:
 {{include "fargate-taskdef-base-properties" . | indent 6}}
       ContainerDefinitions:
-        - Name: !Ref WorkloadName
-          Image: !Ref ContainerImage
-          PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort}], !Ref "AWS::NoValue"]
-{{include "envvars" . | indent 10}}
-{{include "secrets" . | indent 10}}
-{{include "logconfig" . | indent 10}}
-{{include "image-overrides" . | indent 10}}
-{{- if .HealthCheck}}
-          HealthCheck:
-            Command: {{quoteSlice .HealthCheck.Command | fmtSlice}}
-            Interval: {{.HealthCheck.Interval}}
-            Retries: {{.HealthCheck.Retries}}
-            StartPeriod: {{.HealthCheck.StartPeriod}}
-            Timeout: {{.HealthCheck.Timeout}}
-{{- end}}
-{{- if .Storage -}}
-{{include "mount-points" . | indent 10}}
-{{- end -}}
+{{include "workload-container" . | indent 8}}
 {{include "sidecars" . | indent 8}}
 {{- if .Storage -}}
 {{include "volumes" . | indent 6}}

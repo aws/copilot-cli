@@ -59,13 +59,19 @@ environments:
   staging1:
     count:
       spot: 5
+  staging2:
+    count:
+      range:
+        min: 2
+        max: 8
+        spot_from: 4
   prod:
     count:
       range: 1-10
       cpu_percentage: 70
 `,
 			requireCorrectValues: func(t *testing.T, i interface{}) {
-				mockRange := Range("1-10")
+				mockRange := IntRangeBand("1-10")
 				actualManifest, ok := i.(*LoadBalancedWebService)
 				require.True(t, ok)
 				wantedManifest := &LoadBalancedWebService{
@@ -133,8 +139,23 @@ environments:
 						"staging1": {
 							TaskConfig: TaskConfig{
 								Count: Count{
-									Autoscaling: Autoscaling{
+									AdvancedCount: AdvancedCount{
 										Spot: aws.Int(5),
+									},
+								},
+							},
+						},
+						"staging2": {
+							TaskConfig: TaskConfig{
+								Count: Count{
+									AdvancedCount: AdvancedCount{
+										Range: &Range{
+											RangeConfig: RangeConfig{
+												Min:      aws.Int(2),
+												Max:      aws.Int(8),
+												SpotFrom: aws.Int(4),
+											},
+										},
 									},
 								},
 							},
@@ -142,9 +163,11 @@ environments:
 						"prod": {
 							TaskConfig: TaskConfig{
 								Count: Count{
-									Autoscaling: Autoscaling{
-										Range: &mockRange,
-										CPU:   aws.Int(70),
+									AdvancedCount: AdvancedCount{
+										Range: &Range{
+											Value: &mockRange,
+										},
+										CPU: aws.Int(70),
 									},
 								},
 							},
@@ -241,7 +264,7 @@ type: 'OH NO'
 
 func TestCount_UnmarshalYAML(t *testing.T) {
 	mockResponseTime := 500 * time.Millisecond
-	mockRange := Range("1-10")
+	mockRange := IntRangeBand("1-10")
 	testCases := map[string]struct {
 		inContent []byte
 
@@ -264,8 +287,8 @@ func TestCount_UnmarshalYAML(t *testing.T) {
   response_time: 500ms
 `),
 			wantedStruct: Count{
-				Autoscaling: Autoscaling{
-					Range:        &mockRange,
+				AdvancedCount: AdvancedCount{
+					Range:        &Range{Value: &mockRange},
 					CPU:          aws.Int(70),
 					Memory:       aws.Int(80),
 					Requests:     aws.Int(1000),
@@ -278,8 +301,44 @@ func TestCount_UnmarshalYAML(t *testing.T) {
   spot: 42
 `),
 			wantedStruct: Count{
-				Autoscaling: Autoscaling{
+				AdvancedCount: AdvancedCount{
 					Spot: aws.Int(42),
+				},
+			},
+		},
+		"With range specified as min-max": {
+			inContent: []byte(`count:
+  range:
+    min: 5
+    max: 15
+`),
+			wantedStruct: Count{
+				AdvancedCount: AdvancedCount{
+					Range: &Range{
+						RangeConfig: RangeConfig{
+							Min: aws.Int(5),
+							Max: aws.Int(15),
+						},
+					},
+				},
+			},
+		},
+		"With all RangeConfig fields specified": {
+			inContent: []byte(`count:
+  range:
+    min: 2
+    max: 8
+    spot_from: 3
+`),
+			wantedStruct: Count{
+				AdvancedCount: AdvancedCount{
+					Range: &Range{
+						RangeConfig: RangeConfig{
+							Min:      aws.Int(2),
+							Max:      aws.Int(8),
+							SpotFrom: aws.Int(3),
+						},
+					},
 				},
 			},
 		},
@@ -306,18 +365,18 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 				require.NoError(t, err)
 				// check memberwise dereferenced pointer equality
 				require.Equal(t, tc.wantedStruct.Value, b.Count.Value)
-				require.Equal(t, tc.wantedStruct.Autoscaling.Range, b.Count.Autoscaling.Range)
-				require.Equal(t, tc.wantedStruct.Autoscaling.CPU, b.Count.Autoscaling.CPU)
-				require.Equal(t, tc.wantedStruct.Autoscaling.Memory, b.Count.Autoscaling.Memory)
-				require.Equal(t, tc.wantedStruct.Autoscaling.Requests, b.Count.Autoscaling.Requests)
-				require.Equal(t, tc.wantedStruct.Autoscaling.ResponseTime, b.Count.Autoscaling.ResponseTime)
-				require.Equal(t, tc.wantedStruct.Autoscaling.Spot, b.Count.Autoscaling.Spot)
+				require.Equal(t, tc.wantedStruct.AdvancedCount.Range, b.Count.AdvancedCount.Range)
+				require.Equal(t, tc.wantedStruct.AdvancedCount.CPU, b.Count.AdvancedCount.CPU)
+				require.Equal(t, tc.wantedStruct.AdvancedCount.Memory, b.Count.AdvancedCount.Memory)
+				require.Equal(t, tc.wantedStruct.AdvancedCount.Requests, b.Count.AdvancedCount.Requests)
+				require.Equal(t, tc.wantedStruct.AdvancedCount.ResponseTime, b.Count.AdvancedCount.ResponseTime)
+				require.Equal(t, tc.wantedStruct.AdvancedCount.Spot, b.Count.AdvancedCount.Spot)
 			}
 		})
 	}
 }
 
-func TestRange_Parse(t *testing.T) {
+func TestIntRangeBand_Parse(t *testing.T) {
 	testCases := map[string]struct {
 		inRange string
 
@@ -349,15 +408,62 @@ func TestRange_Parse(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			r := Range(tc.inRange)
+			r := IntRangeBand(tc.inRange)
 			gotMin, gotMax, err := r.Parse()
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, gotMin, tc.wantedMin)
-				require.Equal(t, gotMax, tc.wantedMax)
+				require.Equal(t, tc.wantedMin, gotMin)
+				require.Equal(t, tc.wantedMax, gotMax)
+			}
+		})
+	}
+}
+
+func TestRange_Parse(t *testing.T) {
+	mockRange := IntRangeBand("1-10")
+	testCases := map[string]struct {
+		input Range
+
+		wantedMin int
+		wantedMax int
+		wantedErr error
+	}{
+		"error when both range and RangeConfig specified": {
+			input: Range{
+				Value: &mockRange,
+				RangeConfig: RangeConfig{
+					Min: aws.Int(1),
+					Max: aws.Int(3),
+				},
+			},
+
+			wantedErr: errInvalidRangeOpts,
+		},
+		"success": {
+			input: Range{
+				RangeConfig: RangeConfig{
+					Min: aws.Int(2),
+					Max: aws.Int(8),
+				},
+			},
+
+			wantedMin: 2,
+			wantedMax: 8,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotMin, gotMax, err := tc.input.Parse()
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedMin, gotMin)
+				require.Equal(t, tc.wantedMax, gotMax)
 			}
 		})
 	}
@@ -415,7 +521,70 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, got, tc.wanted)
+				require.Equal(t, tc.wanted, got)
+			}
+		})
+	}
+}
+
+func TestCount_Desired(t *testing.T) {
+	mockRange := IntRangeBand("1-10")
+	testCases := map[string]struct {
+		input *Count
+
+		expected    *int
+		expectedErr error
+	}{
+		"with value": {
+			input: &Count{
+				Value: aws.Int(42),
+			},
+
+			expected: aws.Int(42),
+		},
+		"with spot count": {
+			input: &Count{
+				AdvancedCount: AdvancedCount{
+					Spot: aws.Int(31),
+				},
+			},
+			expected: aws.Int(31),
+		},
+		"with autoscaling range on dedicated capacity": {
+			input: &Count{
+				AdvancedCount: AdvancedCount{
+					Range: &Range{
+						Value: &mockRange,
+					},
+				},
+			},
+			expected: aws.Int(1),
+		},
+		"with autoscaling range with spot capacity": {
+			input: &Count{
+				AdvancedCount: AdvancedCount{
+					Range: &Range{
+						RangeConfig: RangeConfig{
+							Min: aws.Int(5),
+							Max: aws.Int(10),
+						},
+					},
+				},
+			},
+			expected: aws.Int(5),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual, err := tc.input.Desired()
+
+			// THEN
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expected, actual)
 			}
 		})
 	}
