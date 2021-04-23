@@ -46,6 +46,7 @@ var (
 		"secrets",
 		"executionrole",
 		"taskrole",
+		"workload-container",
 		"fargate-taskdef-base-properties",
 		"service-base-properties",
 		"servicediscovery",
@@ -76,15 +77,16 @@ type WorkloadNestedStackOpts struct {
 
 // SidecarOpts holds configuration that's needed if the service has sidecar containers.
 type SidecarOpts struct {
-	Name        *string
-	Image       *string
-	Essential   *bool
-	Port        *string
-	Protocol    *string
-	CredsParam  *string
-	Variables   map[string]string
-	Secrets     map[string]string
-	MountPoints []*MountPoint
+	Name         *string
+	Image        *string
+	Essential    *bool
+	Port         *string
+	Protocol     *string
+	CredsParam   *string
+	Variables    map[string]string
+	Secrets      map[string]string
+	MountPoints  []*MountPoint
+	DockerLabels map[string]string
 }
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
@@ -159,6 +161,22 @@ type HTTPHealthCheckOpts struct {
 	Timeout            *int64
 }
 
+// AdvancedCount holds configuration for autoscaling and capacity provider
+// parameters.
+type AdvancedCount struct {
+	Spot        *int
+	Autoscaling *AutoscalingOpts
+	Cps         []*CapacityProviderStrategy
+}
+
+// CapacityProviderStrategy holds the configuration needed for a
+// CapacityProviderStrategyItem on a Service
+type CapacityProviderStrategy struct {
+	Base             *int
+	Weight           *int
+	CapacityProvider string
+}
+
 // AutoscalingOpts holds configuration that's needed for Auto Scaling.
 type AutoscalingOpts struct {
 	MinCapacity  *int
@@ -195,18 +213,21 @@ func defaultNetworkOpts() *NetworkOpts {
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
-	Variables      map[string]string
-	Secrets        map[string]string
-	NestedStack    *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
-	Sidecars       []*SidecarOpts
-	LogConfig      *LogConfigOpts
-	Autoscaling    *AutoscalingOpts
-	Storage        *StorageOpts
-	Network        *NetworkOpts
-	ExecuteCommand *ExecuteCommandOpts
-	EntryPoint     []string
-	Command        []string
-	DomainAlias    string
+	Variables          map[string]string
+	Secrets            map[string]string
+	NestedStack        *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	Sidecars           []*SidecarOpts
+	LogConfig          *LogConfigOpts
+	Autoscaling        *AutoscalingOpts
+	CapacityProviders  []*CapacityProviderStrategy
+	DesiredCountOnSpot *int
+	Storage            *StorageOpts
+	Network            *NetworkOpts
+	ExecuteCommand     *ExecuteCommandOpts
+	EntryPoint         []string
+	Command            []string
+	DomainAlias        string
+	DockerLabels       map[string]string
 
 	// Additional options for service templates.
 	WorkloadType        string
