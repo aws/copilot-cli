@@ -63,9 +63,9 @@ type ECRImage struct {
 }
 
 // GetLocation returns the ECR image URI.
-// If a tag is provided for the image than prioritize refering to the image via the tag.
-// If a digest is present then refer to the image via the digest.
-// Otherwise, use the "latest" tag.
+// If a tag is provided by the user or discovered from git then prioritize referring to the image via the tag.
+// Otherwise, each image after a push to ECR will get a digest and we refer to the image via the digest.
+// Finally, if no digest or tag is present, this occurs with the "package" commands, we default to the "latest" tag.
 func (i ECRImage) GetLocation() string {
 	if i.ImageTag != "" {
 		return fmt.Sprintf("%s:%s", i.RepoURL, i.ImageTag)

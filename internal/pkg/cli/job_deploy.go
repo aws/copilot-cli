@@ -114,12 +114,12 @@ func (o *deployJobOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	o.imageTag = imageTagFromGit(o.cmd, o.imageTag)
 	return nil
 }
 
 // Execute builds and pushes the container image for the job.
 func (o *deployJobOpts) Execute() error {
+	o.imageTag = imageTagFromGit(o.cmd, o.imageTag) // Best effort assign git tag.
 	env, err := targetEnv(o.store, o.appName, o.envName)
 	if err != nil {
 		return err

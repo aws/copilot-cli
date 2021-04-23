@@ -113,21 +113,15 @@ func TestPackageJobOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inJobName string
 		inEnvName string
-		inTag     string
 
 		expectSelector func(m *mocks.MockwsSelector)
 		expectPrompt   func(m *mocks.Mockprompter)
-		expectRunner   func(m *mocks.Mockrunner)
 
 		wantedJobName string
 		wantedEnvName string
-		wantedTag     string
 		wantedErrorS  string
 	}{
 		"prompt for all options": {
-			expectRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("not a git repo"))
-			},
 			expectSelector: func(m *mocks.MockwsSelector) {
 				m.EXPECT().Job(jobPackageJobNamePrompt, "").Return("resizer", nil)
 				m.EXPECT().Environment(jobPackageEnvNamePrompt, "", testAppName).Return("test", nil)
@@ -136,11 +130,9 @@ func TestPackageJobOpts_Ask(t *testing.T) {
 
 			wantedJobName: "resizer",
 			wantedEnvName: "test",
-			wantedTag:     "", // No tag if there is no git repository.
 		},
 		"prompt only for the job name": {
 			inEnvName: "test",
-			inTag:     "v1.0.0",
 
 			expectSelector: func(m *mocks.MockwsSelector) {
 				m.EXPECT().Job(jobPackageJobNamePrompt, "").Return("resizer", nil)
@@ -149,15 +141,12 @@ func TestPackageJobOpts_Ask(t *testing.T) {
 			expectPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			expectRunner: func(m *mocks.Mockrunner) {},
 
 			wantedJobName: "resizer",
 			wantedEnvName: "test",
-			wantedTag:     "v1.0.0",
 		},
 		"prompt only for the env name": {
 			inJobName: "resizer",
-			inTag:     "v1.0.0",
 
 			expectSelector: func(m *mocks.MockwsSelector) {
 				m.EXPECT().Job(gomock.Any(), gomock.Any()).Times(0)
@@ -166,16 +155,13 @@ func TestPackageJobOpts_Ask(t *testing.T) {
 			expectPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			expectRunner: func(m *mocks.Mockrunner) {},
 
 			wantedJobName: "resizer",
 			wantedEnvName: "test",
-			wantedTag:     "v1.0.0",
 		},
 		"don't prompt": {
 			inJobName: "resizer",
 			inEnvName: "test",
-			inTag:     "v1.0.0",
 
 			expectSelector: func(m *mocks.MockwsSelector) {
 				m.EXPECT().Job(gomock.Any(), gomock.Any()).Times(0)
@@ -184,11 +170,9 @@ func TestPackageJobOpts_Ask(t *testing.T) {
 			expectPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			expectRunner: func(m *mocks.Mockrunner) {},
 
 			wantedJobName: "resizer",
 			wantedEnvName: "test",
-			wantedTag:     "v1.0.0",
 		},
 	}
 
@@ -204,13 +188,11 @@ func TestPackageJobOpts_Ask(t *testing.T) {
 
 			tc.expectSelector(mockSelector)
 			tc.expectPrompt(mockPrompt)
-			tc.expectRunner(mockRunner)
 
 			opts := &packageJobOpts{
 				packageJobVars: packageJobVars{
 					name:    tc.inJobName,
 					envName: tc.inEnvName,
-					tag:     tc.inTag,
 					appName: testAppName,
 				},
 				sel:    mockSelector,
@@ -224,7 +206,6 @@ func TestPackageJobOpts_Ask(t *testing.T) {
 			// THEN
 			require.Equal(t, tc.wantedJobName, opts.name)
 			require.Equal(t, tc.wantedEnvName, opts.envName)
-			require.Equal(t, tc.wantedTag, opts.tag)
 
 			if tc.wantedErrorS != "" {
 				require.EqualError(t, err, tc.wantedErrorS)
