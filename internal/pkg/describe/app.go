@@ -24,6 +24,7 @@ import (
 // App contains serialized parameters for an application.
 type App struct {
 	Name      string                   `json:"name"`
+	Version   string                   `json:"version"`
 	URI       string                   `json:"uri"`
 	Envs      []*config.Environment    `json:"environments"`
 	Services  []*config.Workload       `json:"services"`
@@ -46,6 +47,11 @@ func (a *App) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("About\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", a.Name)
+	availableVersion := ""
+	if deploy.LatestAppTemplateVersion != a.Version {
+		availableVersion = color.Yellow.Sprintf("(latest available: %s)", deploy.LatestAppTemplateVersion)
+	}
+	fmt.Fprintf(writer, "  %s\t%s %s\n", "Version", a.Version, availableVersion)
 	fmt.Fprintf(writer, "  %s\t%s\n", "URI", a.URI)
 	fmt.Fprint(writer, color.Bold.Sprint("\nEnvironments\n\n"))
 	writer.Flush()

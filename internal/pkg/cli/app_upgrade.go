@@ -15,6 +15,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
 )
@@ -23,6 +25,9 @@ const (
 	fmtAppUpgradeStart    = "Upgrading application %s from version %s to version %s."
 	fmtAppUpgradeFailed   = "Failed to upgrade application %s's template to version %s.\n"
 	fmtAppUpgradeComplete = "Upgraded application %s's template to version %s.\n"
+
+	appUpgradeNamePrompt     = "Which application would you like to upgrade?"
+	appUpgradeNameHelpPrompt = "An application is a collection of related services."
 )
 
 // appUpgradeVars holds flag values.
@@ -38,6 +43,7 @@ type appUpgradeOpts struct {
 	store         store
 	prog          progress
 	versionGetter versionGetter
+	sel           appSelector
 	identity      identityService
 	upgrader      appUpgrader
 }
@@ -60,9 +66,29 @@ func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
 		store:          store,
 		identity:       identity.New(sess),
 		prog:           termprogress.NewSpinner(log.DiagnosticWriter),
+		sel:            selector.NewSelect(prompt.New(), store),
 		versionGetter:  d,
 		upgrader:       cloudformation.New(sess),
 	}, nil
+}
+
+// Validate returns an error if the values provided by the user are invalid.
+func (o *appUpgradeOpts) Validate() error {
+	if o.name != "" {
+		_, err := o.store.GetApplication(o.name)
+		if err != nil {
+			return fmt.Errorf("get application %s: %w", o.name, err)
+		}
+	}
+	return nil
+}
+
+// Ask asks for fields that are required but not passed in.
+func (o *appUpgradeOpts) Ask() error {
+	if err := o.askName(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Execute updates the cloudformation stack as well as the stackset of an application to the latest version.
@@ -91,6 +117,18 @@ func (o *appUpgradeOpts) Execute() error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (o *appUpgradeOpts) askName() error {
+	if o.name != "" {
+		return nil
+	}
+	name, err := o.sel.Application(appUpgradeNamePrompt, appUpgradeNameHelpPrompt)
+	if err != nil {
+		return fmt.Errorf("select application: %w", err)
+	}
+	o.name = name
 	return nil
 }
 
@@ -130,18 +168,15 @@ func (o *appUpgradeOpts) upgradeApplication(app *config.Application, fromVersion
 	return nil
 }
 
-// RecommendedActions is a no-op for this command.
-func (o *appUpgradeOpts) RecommendedActions() []string {
-	return nil
-}
-
 // buildAppUpgradeCmd builds the command to update an application to the latest version.
 func buildAppUpgradeCmd() *cobra.Command {
 	vars := appUpgradeVars{}
 	cmd := &cobra.Command{
-		Use:    "upgrade",
-		Short:  "Upgrades the template of an application to the latest version.",
-		Hidden: true,
+		Use:   "upgrade",
+		Short: "Upgrades the template of an application to the latest version.",
+		Example: `
+    Upgrade the application "my-app" to the latest version
+    /code $ copilot app upgrade -n my-app`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newAppUpgradeOpts(vars)
 			if err != nil {
@@ -150,6 +185,6 @@ func buildAppUpgradeCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, tryReadingAppName(), appFlagDescription)
 	return cmd
 }

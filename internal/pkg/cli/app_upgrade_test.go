@@ -16,6 +16,142 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type appUpgradeMocks struct {
+	storeSvc *mocks.Mockstore
+	sel      *mocks.MockappSelector
+}
+
+func TestAppUpgradeOpts_Validate(t *testing.T) {
+	testError := errors.New("some error")
+	testCases := map[string]struct {
+		inAppName  string
+		setupMocks func(mocks appUpgradeMocks)
+
+		wantedError error
+	}{
+		"valid app name": {
+			inAppName: "my-app",
+
+			setupMocks: func(m appUpgradeMocks) {
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
+					Name: "my-app",
+				}, nil)
+			},
+			wantedError: nil,
+		},
+		"invalid app name": {
+			inAppName: "my-app",
+
+			setupMocks: func(m appUpgradeMocks) {
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(nil, testError)
+			},
+
+			wantedError: fmt.Errorf("get application %s: %w", "my-app", testError),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockStoreReader := mocks.NewMockstore(ctrl)
+
+			mocks := appUpgradeMocks{
+				storeSvc: mockStoreReader,
+			}
+			tc.setupMocks(mocks)
+
+			opts := &appUpgradeOpts{
+				appUpgradeVars: appUpgradeVars{
+					name: tc.inAppName,
+				},
+				store: mockStoreReader,
+			}
+
+			// WHEN
+			err := opts.Validate()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestAppUpgradeOpts_Ask(t *testing.T) {
+	testError := errors.New("some error")
+	testCases := map[string]struct {
+		inApp string
+
+		setupMocks func(mocks appUpgradeMocks)
+
+		wantedApp   string
+		wantedError error
+	}{
+		"with all flags": {
+			inApp: "my-app",
+
+			setupMocks: func(m appUpgradeMocks) {},
+
+			wantedApp:   "my-app",
+			wantedError: nil,
+		},
+		"prompt for all input": {
+			inApp: "",
+
+			setupMocks: func(m appUpgradeMocks) {
+				m.sel.EXPECT().Application(appUpgradeNamePrompt, appUpgradeNameHelpPrompt).Return("my-app", nil)
+			},
+			wantedApp:   "my-app",
+			wantedError: nil,
+		},
+		"returns error if failed to select application": {
+			inApp: "",
+
+			setupMocks: func(m appUpgradeMocks) {
+				m.sel.EXPECT().Application(gomock.Any(), gomock.Any()).Return("", testError)
+			},
+
+			wantedError: fmt.Errorf("select application: %w", testError),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mocks := appUpgradeMocks{
+				sel: mocks.NewMockappSelector(ctrl),
+			}
+			tc.setupMocks(mocks)
+
+			opts := &appUpgradeOpts{
+				appUpgradeVars: appUpgradeVars{
+					name: tc.inApp,
+				},
+				sel: mocks.sel,
+			}
+
+			// WHEN
+			err := opts.Ask()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedApp, opts.name, "expected app names to match")
+
+			}
+		})
+	}
+}
+
 func TestAppUpgradeOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		given     func(ctrl *gomock.Controller) *appUpgradeOpts
