@@ -78,21 +78,6 @@ func (m *Mocks3API) EXPECT() *Mocks3APIMockRecorder {
 	return m.recorder
 }
 
-// CreateBucket mocks base method.
-func (m *Mocks3API) CreateBucket(input *s3.CreateBucketInput) (*s3.CreateBucketOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateBucket", input)
-	ret0, _ := ret[0].(*s3.CreateBucketOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateBucket indicates an expected call of CreateBucket.
-func (mr *Mocks3APIMockRecorder) CreateBucket(input interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBucket", reflect.TypeOf((*Mocks3API)(nil).CreateBucket), input)
-}
-
 // DeleteObjects mocks base method.
 func (m *Mocks3API) DeleteObjects(input *s3.DeleteObjectsInput) (*s3.DeleteObjectsOutput, error) {
 	m.ctrl.T.Helper()

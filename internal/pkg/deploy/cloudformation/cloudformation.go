@@ -394,7 +394,7 @@ func toStack(config StackConfiguration) (*cloudformation.Stack, error) {
 }
 
 func toStackFromS3(config StackConfiguration, s3url string) (*cloudformation.Stack, error) {
-	stack := cloudformation.NewStack(config.StackName(), s3url)
+	stack := cloudformation.NewStackWithURL(config.StackName(), s3url)
 	var err error
 	stack.Parameters, err = config.Parameters()
 	if err != nil {
