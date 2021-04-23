@@ -53,14 +53,14 @@ func (e *EFSVolumeConfiguration) IsEmpty() bool {
 
 // EFSConfigOrBool contains custom unmarshaling logic for the `efs` field in the manifest.
 type EFSConfigOrBool struct {
-	Config  EFSVolumeConfiguration
-	Enabled *bool
+	Advanced EFSVolumeConfiguration
+	Enabled  *bool
 }
 
 // UnmarshalYAML implements the yaml(v2) interface. It allows EFS to be specified as a
 // string or a struct alternately.
 func (e *EFSConfigOrBool) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal(&e.Config); err != nil {
+	if err := unmarshal(&e.Advanced); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -69,7 +69,7 @@ func (e *EFSConfigOrBool) UnmarshalYAML(unmarshal func(interface{}) error) error
 		}
 	}
 
-	if !e.Config.IsEmpty() {
+	if !e.Advanced.IsEmpty() {
 		// Unmarshaled successfully to e.Config, unset e.ID, and return.
 		e.Enabled = nil
 		return nil
@@ -88,7 +88,7 @@ func (e *EFSConfigOrBool) UseManagedFS() bool {
 		return aws.BoolValue(e.Enabled)
 	}
 	// Check whether we're implicitly enabling managed EFS via UID/GID.
-	if !e.Config.EmptyUIDConfig() {
+	if !e.Advanced.EmptyUIDConfig() {
 		return true
 	}
 
@@ -110,7 +110,7 @@ func (e *EFSConfigOrBool) EmptyVolume() bool {
 	}
 
 	// If config is totally empty, the volume doesn't have an EFS config.
-	if e.Config.EmptyBYOConfig() && e.Config.EmptyUIDConfig() {
+	if e.Advanced.EmptyBYOConfig() && e.Advanced.EmptyUIDConfig() {
 		return true
 	}
 

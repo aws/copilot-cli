@@ -263,13 +263,13 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 			write = !aws.BoolValue(volume.ReadOnly)
 		}
 		var accessPointID *string
-		if volume.EFS.Config.AuthConfig != nil {
-			accessPointID = volume.EFS.Config.AuthConfig.AccessPointID
+		if volume.EFS.Advanced.AuthConfig != nil {
+			accessPointID = volume.EFS.Advanced.AuthConfig.AccessPointID
 		}
 		perm := template.EFSPermission{
 			Write:         write,
 			AccessPointID: accessPointID,
-			FilesystemID:  volume.EFS.Config.FileSystemID,
+			FilesystemID:  volume.EFS.Advanced.FileSystemID,
 		}
 		output = append(output, &perm)
 	}
@@ -290,8 +290,8 @@ func convertManagedFSInfo(wlName *string, input map[string]manifest.Volume) (*te
 			return nil, fmt.Errorf("cannot specify more than one managed volume per service")
 		}
 
-		uid := volume.EFS.Config.UID
-		gid := volume.EFS.Config.GID
+		uid := volume.EFS.Advanced.UID
+		gid := volume.EFS.Advanced.GID
 
 		if err := validateUIDGID(uid, gid); err != nil {
 			return nil, err
@@ -342,7 +342,7 @@ func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error
 		}
 
 		// Convert EFS configuration to template struct.
-		efs := convertEFSConfiguration(volume.EFS.Config)
+		efs := convertEFSConfiguration(volume.EFS.Advanced)
 		v := template.Volume{
 			Name: aws.String(name),
 			EFS:  efs,

@@ -323,7 +323,7 @@ func validateEFSConfig(in manifest.Volume) error {
 		return nil
 	}
 	// This should never happen but error when EFS is Enabled with a non-empty configuration.
-	if aws.BoolValue(in.EFS.Enabled) && !in.EFS.Config.IsEmpty() {
+	if aws.BoolValue(in.EFS.Enabled) && !in.EFS.Advanced.IsEmpty() {
 		return errInvalidEFSConfig
 	}
 
@@ -333,26 +333,26 @@ func validateEFSConfig(in manifest.Volume) error {
 	}
 
 	// UID and GID are mutually exclusive with any other fields.
-	if !in.EFS.Config.EmptyBYOConfig() && !in.EFS.Config.EmptyUIDConfig() {
+	if !in.EFS.Advanced.EmptyBYOConfig() && !in.EFS.Advanced.EmptyUIDConfig() {
 		return errUIDWithNonManagedFS
 	}
 
 	// Check that required fields for BYO EFS are satisfied.
-	if !in.EFS.Config.EmptyBYOConfig() && !in.EFS.Config.IsEmpty() {
-		if aws.StringValue(in.EFS.Config.FileSystemID) == "" {
+	if !in.EFS.Advanced.EmptyBYOConfig() && !in.EFS.Advanced.IsEmpty() {
+		if aws.StringValue(in.EFS.Advanced.FileSystemID) == "" {
 			return errNoFSID
 		}
 	}
 
-	if err := validateRootDirPath(aws.StringValue(in.EFS.Config.RootDirectory)); err != nil {
+	if err := validateRootDirPath(aws.StringValue(in.EFS.Advanced.RootDirectory)); err != nil {
 		return err
 	}
 
-	if err := validateAuthConfig(in.EFS.Config); err != nil {
+	if err := validateAuthConfig(in.EFS.Advanced); err != nil {
 		return err
 	}
 
-	if err := validateUIDGID(in.EFS.Config.UID, in.EFS.Config.GID); err != nil {
+	if err := validateUIDGID(in.EFS.Advanced.UID, in.EFS.Advanced.GID); err != nil {
 		return err
 	}
 
