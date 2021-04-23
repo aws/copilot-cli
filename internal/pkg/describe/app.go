@@ -47,7 +47,11 @@ func (a *App) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("About\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", a.Name)
-	fmt.Fprintf(writer, "  %s\t%s (latest: %s)\n", "Version", a.Version, deploy.LatestAppTemplateVersion)
+	availableVersion := ""
+	if deploy.LatestAppTemplateVersion != a.Version {
+		availableVersion = color.Yellow.Sprintf("(latest available: %s)", deploy.LatestAppTemplateVersion)
+	}
+	fmt.Fprintf(writer, "  %s\t%s %s\n", "Version", a.Version, availableVersion)
 	fmt.Fprintf(writer, "  %s\t%s\n", "URI", a.URI)
 	fmt.Fprint(writer, color.Bold.Sprint("\nEnvironments\n\n"))
 	writer.Flush()

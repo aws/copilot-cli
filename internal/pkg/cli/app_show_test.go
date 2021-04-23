@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -240,7 +241,67 @@ func TestShowAppOpts_Execute(t *testing.T) {
 			wantedContent: `About
 
   Name              my-app
-  Version           v0.0.0 (latest: v1.0.1)
+  Version           v0.0.0 (latest available: v1.0.1)
+  URI               example.com
+
+Environments
+
+  Name              AccountID           Region
+  ----              ---------           ------
+  test              123456789           us-west-2
+  prod              123456789           us-west-1
+
+Services
+
+  Name              Type
+  ----              ----
+  my-svc            lb-web-svc
+
+Pipelines
+
+  Name
+  ----
+  pipeline1
+  pipeline2
+`,
+		},
+		"correctly shows human output with latest version": {
+			setupMocks: func(m showAppMocks) {
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
+					Name:   "my-app",
+					Domain: "example.com",
+				}, nil)
+				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Workload{
+					{
+						Name: "my-svc",
+						Type: "lb-web-svc",
+					},
+				}, nil)
+				m.storeSvc.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
+					{
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "123456789",
+					},
+					{
+						Name:      "prod",
+						AccountID: "123456789",
+						Region:    "us-west-1",
+					},
+				}, nil)
+				m.pipelineSvc.EXPECT().
+					GetPipelinesByTags(gomock.Eq(map[string]string{"copilot-application": "my-app"})).
+					Return([]*codepipeline.Pipeline{
+						{Name: "pipeline1"},
+						{Name: "pipeline2"},
+					}, nil)
+				m.versionGetter.EXPECT().Version().Return(deploy.LatestAppTemplateVersion, nil)
+			},
+
+			wantedContent: `About
+
+  Name              my-app
+  Version           v1.0.1 
   URI               example.com
 
 Environments

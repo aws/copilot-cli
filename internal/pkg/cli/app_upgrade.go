@@ -72,7 +72,7 @@ func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
 	}, nil
 }
 
-// Validate is a no-op for this command.
+// Validate returns an error if the values provided by the user are invalid.
 func (o *appUpgradeOpts) Validate() error {
 	if o.name != "" {
 		_, err := o.store.GetApplication(o.name)
@@ -83,7 +83,7 @@ func (o *appUpgradeOpts) Validate() error {
 	return nil
 }
 
-// Ask prompts is a no-op for this command.
+// Ask asks for fields that are required but not passed in.
 func (o *appUpgradeOpts) Ask() error {
 	if err := o.askName(); err != nil {
 		return err
