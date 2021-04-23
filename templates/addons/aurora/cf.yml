@@ -33,7 +33,6 @@ Mappings:
 Resources:
   {{logicalIDSafe .ClusterName}}AuroraKMSCMK:
     Type: 'AWS::KMS::Key'
-    DeletionPolicy: Retain
     Properties:
       KeyPolicy:
         Version: '2012-10-17'
