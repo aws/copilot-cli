@@ -34,19 +34,22 @@ const (
 )
 
 // Validation errors when rendering manifest into template.
-var (
-	errNoFSID                       = errors.New(`volume field efs/id cannot be empty`)
-	errAccessPointWithRootDirectory = errors.New(`root directory must be empty or "/" when access point ID is specified`)
-	errAccessPointWithoutIAM        = errors.New(`"iam" must be true when access point ID is specified`)
 
+// Empty field errors.
+var (
+	errNoFSID          = errors.New(`volume field efs/id cannot be empty`)
 	errNoContainerPath = errors.New(`"path" cannot be empty`)
 	errNoSourceVolume  = errors.New(`"source_volume" cannot be empty`)
+)
 
-	errUIDWithNonManagedFS = errors.New("UID and GID cannot be specified with non-managed EFS")
-	errInvalidUIDGIDConfig = errors.New("must specify both UID and GID, or neither")
-
-	errInvalidEFSConfig = errors.New("bad EFS configuration: cannot specify both bool and config")
-	errReservedUID      = errors.New("UID must not be 0")
+// Conditional errors.
+var (
+	errAccessPointWithRootDirectory = errors.New(`root directory must be empty or "/" when access point ID is specified`)
+	errAccessPointWithoutIAM        = errors.New(`"iam" must be true when access point ID is specified`)
+	errUIDWithNonManagedFS          = errors.New("UID and GID cannot be specified with non-managed EFS")
+	errInvalidUIDGIDConfig          = errors.New("must specify both UID and GID, or neither")
+	errInvalidEFSConfig             = errors.New("bad EFS configuration: cannot specify both bool and config")
+	errReservedUID                  = errors.New("UID must not be 0")
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
