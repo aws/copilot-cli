@@ -188,19 +188,28 @@ func Test_ParseServiceName(t *testing.T) {
 		wantErr     error
 		wantSvcName string
 	}{
-		"bad unparsable svc ARN": {
+		"invalid ARN": {
 			svcARN:  "mockBadSvcARN",
 			wantErr: fmt.Errorf("arn: invalid prefix"),
+		},
+		"empty svc ARN": {
+			svcARN:  "",
+			wantErr: fmt.Errorf("arn: invalid prefix"),
+		},
+		"successfully parse name from service ARN": {
+			svcARN:      "arn:aws:apprunner:us-west-2:1234567890:service/my-service/svc-id",
+			wantSvcName: "my-service",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			svcName, gotErr := ParseServiceName(tc.svcARN)
-			if gotErr != nil {
-				require.EqualError(t, gotErr, tc.wantErr.Error())
+			svcName, err := ParseServiceName(tc.svcARN)
+
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
-				require.NoError(t, gotErr)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantSvcName, svcName)
 			}
 		})
@@ -214,19 +223,28 @@ func Test_ParseServiceID(t *testing.T) {
 		wantErr   error
 		wantSvcID string
 	}{
-		"bad unparsable svc ARN": {
+		"invalid ARN": {
 			svcARN:  "mockBadSvcARN",
 			wantErr: fmt.Errorf("arn: invalid prefix"),
+		},
+		"empty svc ARN": {
+			svcARN:  "",
+			wantErr: fmt.Errorf("arn: invalid prefix"),
+		},
+		"successfully parse ID from service ARN": {
+			svcARN:    "arn:aws:apprunner:us-west-2:1234567890:service/my-service/svc-id",
+			wantSvcID: "svc-id",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			svcID, gotErr := ParseServiceID(tc.svcARN)
-			if gotErr != nil {
-				require.EqualError(t, gotErr, tc.wantErr.Error())
+			svcID, err := ParseServiceID(tc.svcARN)
+
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
-				require.NoError(t, gotErr)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantSvcID, svcID)
 			}
 		})
@@ -234,103 +252,67 @@ func Test_ParseServiceID(t *testing.T) {
 }
 
 func Test_LogGroupName(t *testing.T) {
-	testError := errors.New("some error")
 	testCases := map[string]struct {
-		svcARN              string
-		svcName             string
-		svcID               string
-		mockAppRunnerClient func(m *mocks.Mockapi)
+		svcARN string
 
 		wantErr          error
 		wantLogGroupName string
 	}{
-		"errors if fail to get log group name": {
-			mockAppRunnerClient: func(m *mocks.Mockapi) {
-				m.EXPECT().ListServices(&apprunner.ListServicesInput{}).Return(nil, testError)
-			},
-			wantErr: fmt.Errorf("get AppRunner service my-service: list AppRunner services: some error"),
+		"errors if ARN is invalid": {
+			svcARN:  "this is not a valid arn",
+			wantErr: fmt.Errorf("get service name: arn: invalid prefix"),
+		},
+		"errors if ARN is missing ID": {
+			svcARN:  "arn:aws:apprunner:us-west-2:1234567890:service/my-service",
+			wantErr: fmt.Errorf("get service name: cannot parse resource for ARN arn:aws:apprunner:us-west-2:1234567890:service/my-service"),
 		},
 		"success": {
-			mockAppRunnerClient: func(m *mocks.Mockapi) {
-				m.EXPECT().ListServices(&apprunner.ListServicesInput{}).Return(&apprunner.ListServicesOutput{
-					ServiceSummaryList: []*apprunner.ServiceSummary{
-						{
-							ServiceName: aws.String("my-service"),
-							ServiceArn:  aws.String("arn:aws:apprunner:us-west-2:1234567890:service/my-service/svc-id"),
-						},
-					},
-				}, nil)
-			},
+			svcARN:           "arn:aws:apprunner:us-west-2:1234567890:service/my-service/svc-id",
 			wantLogGroupName: "/aws/apprunner/my-service/svc-id/application",
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
+			logGroupName, err := LogGroupName(tc.svcARN)
 
-			mockAppRunnerClient := mocks.NewMockapi(ctrl)
-			tc.mockAppRunnerClient(mockAppRunnerClient)
-
-			service := AppRunner{
-				client: mockAppRunnerClient,
-			}
-			logGroupName, err := service.LogGroupName("my-service")
-			if err != nil {
-				require.EqualError(t, tc.wantErr, err.Error())
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
+				require.Equal(t, nil, err)
 				require.Equal(t, tc.wantLogGroupName, logGroupName)
 			}
 		})
 	}
 }
 
-func Test_ServiceLogGroupName(t *testing.T) {
-	testError := errors.New("some error")
+func Test_SystemLogGroupName(t *testing.T) {
 	testCases := map[string]struct {
-		svcARN              string
-		svcName             string
-		svcID               string
-		mockAppRunnerClient func(m *mocks.Mockapi)
+		svcARN string
 
 		wantErr          error
 		wantLogGroupName string
 	}{
-		"errors if fail to get service log group name": {
-			mockAppRunnerClient: func(m *mocks.Mockapi) {
-				m.EXPECT().ListServices(&apprunner.ListServicesInput{}).Return(nil, testError)
-			},
-			wantErr: fmt.Errorf("get AppRunner service my-service: list AppRunner services: some error"),
+		"errors if ARN is invalid": {
+			svcARN:  "this is not a valid arn",
+			wantErr: fmt.Errorf("get service name: arn: invalid prefix"),
+		},
+		"errors if ARN is missing ID": {
+			svcARN:  "arn:aws:apprunner:us-west-2:1234567890:service/my-service",
+			wantErr: fmt.Errorf("get service name: cannot parse resource for ARN arn:aws:apprunner:us-west-2:1234567890:service/my-service"),
 		},
 		"success": {
-			mockAppRunnerClient: func(m *mocks.Mockapi) {
-				m.EXPECT().ListServices(&apprunner.ListServicesInput{}).Return(&apprunner.ListServicesOutput{
-					ServiceSummaryList: []*apprunner.ServiceSummary{
-						{
-							ServiceName: aws.String("my-service"),
-							ServiceArn:  aws.String("arn:aws:apprunner:us-west-2:1234567890:service/my-service/svc-id"),
-						},
-					},
-				}, nil)
-			},
+			svcARN:           "arn:aws:apprunner:us-west-2:1234567890:service/my-service/svc-id",
 			wantLogGroupName: "/aws/apprunner/my-service/svc-id/service",
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
+			logGroupName, err := SystemLogGroupName(tc.svcARN)
 
-			mockAppRunnerClient := mocks.NewMockapi(ctrl)
-			tc.mockAppRunnerClient(mockAppRunnerClient)
-
-			service := AppRunner{
-				client: mockAppRunnerClient,
-			}
-			logGroupName, err := service.SystemLogGroupName("my-service")
-			if err != nil {
-				require.EqualError(t, tc.wantErr, err.Error())
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
+				require.Equal(t, nil, err)
 				require.Equal(t, tc.wantLogGroupName, logGroupName)
 			}
 		})

@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
@@ -50,13 +51,14 @@ type WriteLogEventsOpts struct {
 
 // NewServiceLogsConfig contains fields that initiates ServiceClient struct.
 type NewServiceLogsConfig struct {
-	App      string
-	Env      string
-	Svc      string
-	Sess     *session.Session
-	LogGroup string
-	WkldType string
-	TaskIDs  []string
+	App         string
+	Env         string
+	Svc         string
+	Sess        *session.Session
+	LogGroup    string
+	WkldType    string
+	TaskIDs     []string
+	ConfigStore describe.ConfigStoreSvc
 }
 
 func (o WriteLogEventsOpts) limit() *int64 {
@@ -93,17 +95,26 @@ func newAppRunnerServiceClient(opts *NewServiceLogsConfig) (*ServiceClient, erro
 	if opts.TaskIDs != nil {
 		return nil, fmt.Errorf("cannot use --tasks for App Runner service logs")
 	}
-	svc := apprunner.New(opts.Sess)
+	serviceDescriber, err := describe.NewAppRunnerServiceDescriber(describe.NewServiceConfig{
+		App: opts.App,
+		Env: opts.Env,
+		Svc: opts.Svc,
+
+		ConfigStore: opts.ConfigStore,
+	})
+	if err != nil {
+		return nil, err
+	}
+	serviceArn, err := serviceDescriber.ServiceARN()
 	logGroup := opts.LogGroup
-	var err error
 	switch strings.ToLower(logGroup) {
 	case "system":
-		logGroup, err = svc.SystemLogGroupName(opts.Svc)
+		logGroup, err = apprunner.SystemLogGroupName(serviceArn)
 		if err != nil {
 			return nil, fmt.Errorf("get system log group name: %w", err)
 		}
 	case "":
-		logGroup, err = svc.LogGroupName(opts.Svc)
+		logGroup, err = apprunner.LogGroupName(serviceArn)
 		if err != nil {
 			return nil, fmt.Errorf("get log group name: %w", err)
 		}

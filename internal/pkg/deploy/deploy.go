@@ -111,6 +111,10 @@ func (s *Store) listDeployedWorkloads(appName string, envName string, workloadTy
 		if name == "" {
 			return nil, fmt.Errorf("%s resource with ARN %s is not tagged with %s", workloadType, resource.ARN, ServiceTagKey)
 		}
+		if contains(name, wklds) {
+			// To avoid listing duplicate service entry in a case when service has addons stack.
+			continue
+		}
 		wkld, err := getWorkload(appName, name)
 		if err != nil {
 			return nil, fmt.Errorf("get %s %s: %w", workloadType, name, err)
@@ -118,6 +122,15 @@ func (s *Store) listDeployedWorkloads(appName string, envName string, workloadTy
 		wklds[ind] = wkld.Name
 	}
 	return wklds, nil
+}
+
+func contains(name string, names []string) bool {
+	for _, n := range names {
+		if name == n {
+			return true
+		}
+	}
+	return false
 }
 
 type result struct {

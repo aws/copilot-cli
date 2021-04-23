@@ -125,11 +125,7 @@ func ParseServiceID(svcARN string) (string, error) {
 
 // LogGroupName returns the log group name given the app runner service's name.
 // An application log group is formatted as "/aws/apprunner/<svcName>/<svcID>/application".
-func (a *AppRunner) LogGroupName(svc string) (string, error) {
-	svcARN, err := a.ServiceARN(svc)
-	if err != nil {
-		return "", fmt.Errorf("get AppRunner service %s: %w", svc, err)
-	}
+func LogGroupName(svcARN string) (string, error) {
 	svcName, err := ParseServiceName(svcARN)
 	if err != nil {
 		return "", fmt.Errorf("get service name: %w", err)
@@ -143,11 +139,7 @@ func (a *AppRunner) LogGroupName(svc string) (string, error) {
 
 // SystemLogGroupName returns the service log group name given the app runner service's name.
 // A service log group is formatted as "/aws/apprunner/<svcName>/<svcID>/service".
-func (a *AppRunner) SystemLogGroupName(svc string) (string, error) {
-	svcARN, err := a.ServiceARN(svc)
-	if err != nil {
-		return "", fmt.Errorf("get AppRunner service %s: %w", svc, err)
-	}
+func SystemLogGroupName(svcARN string) (string, error) {
 	svcName, err := ParseServiceName(svcARN)
 	if err != nil {
 		return "", fmt.Errorf("get service name: %w", err)

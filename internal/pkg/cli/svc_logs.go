@@ -91,13 +91,14 @@ func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
 			return err
 		}
 		opts.logsSvc, err = logging.NewServiceClient(&logging.NewServiceLogsConfig{
-			App:      opts.appName,
-			Env:      opts.envName,
-			Svc:      opts.svcName,
-			Sess:     sess,
-			LogGroup: opts.logGroup,
-			WkldType: workload.Type,
-			TaskIDs:  opts.taskIDs,
+			App:         opts.appName,
+			Env:         opts.envName,
+			Svc:         opts.svcName,
+			Sess:        sess,
+			LogGroup:    opts.logGroup,
+			WkldType:    workload.Type,
+			TaskIDs:     opts.taskIDs,
+			ConfigStore: configStore,
 		})
 		if err != nil {
 			return err

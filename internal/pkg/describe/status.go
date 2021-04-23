@@ -48,8 +48,8 @@ type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
 }
 
-type apprunnerServiceGetter interface {
-	DescribeService(svcARN string) (*apprunner.Service, error)
+type apprunnerServiceDescriber interface {
+	Service() (*apprunner.Service, error)
 }
 
 type autoscalingAlarmNamesGetter interface {
@@ -70,10 +70,12 @@ type ECSStatusDescriber struct {
 
 // AppRunnerStatusDescriber retrieves status of an AppRunner service.
 type AppRunnerStatusDescriber struct {
-	svcARN string
+	app string
+	env string
+	svc string
 
-	apprunnerSvcGetter apprunnerServiceGetter
-	eventsGetter       logGetter
+	svcDescriber apprunnerServiceDescriber
+	eventsGetter logGetter
 }
 
 // ecsServiceStatus contains the status for an ECS service.
@@ -120,23 +122,23 @@ func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, er
 
 // NewAppRunnerStatusDescriber instantiates a new AppRunnerStatusDescriber struct.
 func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*AppRunnerStatusDescriber, error) {
-	env, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
+	svcDescriber, err := NewAppRunnerServiceDescriber(NewServiceConfig{
+		App: opt.App,
+		Env: opt.Env,
+		Svc: opt.Svc,
+
+		ConfigStore: opt.ConfigStore,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
+		return nil, err
 	}
-	sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
-	if err != nil {
-		return nil, fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
-	}
-	svc := apprunner.New(sess)
-	svcARN, err := svc.ServiceARN(opt.Svc)
-	if err != nil {
-		return nil, fmt.Errorf("retrieve ServiceARN for %s: %w", opt.Svc, err)
-	}
+
 	return &AppRunnerStatusDescriber{
-		apprunnerSvcGetter: svc,
-		eventsGetter:       cloudwatchlogs.New(sess),
-		svcARN:             svcARN,
+		app:          opt.App,
+		env:          opt.Env,
+		svc:          opt.Svc,
+		svcDescriber: svcDescriber,
+		eventsGetter: cloudwatchlogs.New(svcDescriber.sess),
 	}, nil
 }
 
@@ -182,19 +184,14 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 
 // Describe returns status of an AppRunner service.
 func (a *AppRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
-	apprunnerSvc, err := a.apprunnerSvcGetter.DescribeService(a.svcARN)
+	svc, err := a.svcDescriber.Service()
 	if err != nil {
-		return nil, fmt.Errorf("get AppRunner service description for %s: %w", a.svcARN, err)
+		return nil, fmt.Errorf("get AppRunner service description for App Runner service %s in environment %s: %w", a.svc, a.env, err)
 	}
-	svcName, err := apprunner.ParseServiceName(a.svcARN)
-	if err != nil {
-		return nil, fmt.Errorf("get service name: %w", err)
-	}
-	svcID, err := apprunner.ParseServiceID(a.svcARN)
 	if err != nil {
 		return nil, fmt.Errorf("get service id: %w", err)
 	}
-	logGroupName := fmt.Sprintf(fmtAppRunnerSvcLogGroupName, svcName, svcID)
+	logGroupName := fmt.Sprintf(fmtAppRunnerSvcLogGroupName, svc.Name, svc.ID)
 	logEventsOpts := cloudwatchlogs.LogEventsOpts{
 		LogGroup: logGroupName,
 		Limit:    aws.Int64(defaultServiceLogsLimit),
@@ -204,7 +201,7 @@ func (a *AppRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
 		return nil, fmt.Errorf("get log events for log group %s: %w", logGroupName, err)
 	}
 	return &apprunnerServiceStatus{
-		Service:   *apprunnerSvc,
+		Service:   *svc,
 		LogEvents: logEventsOutput.Events,
 	}, nil
 }

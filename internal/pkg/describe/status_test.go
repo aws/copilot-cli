@@ -24,12 +24,12 @@ import (
 )
 
 type serviceStatusMocks struct {
-	apprunnerServiceGetter *mocks.MockapprunnerServiceGetter
-	ecsServiceGetter       *mocks.MockecsServiceGetter
-	alarmStatusGetter      *mocks.MockalarmStatusGetter
-	serviceDescriber       *mocks.MockserviceDescriber
-	aas                    *mocks.MockautoscalingAlarmNamesGetter
-	logGetter              *mocks.MocklogGetter
+	apprunnerSvcDescriber *mocks.MockapprunnerSvcDescriber
+	ecsServiceGetter      *mocks.MockecsServiceGetter
+	alarmStatusGetter     *mocks.MockalarmStatusGetter
+	serviceDescriber      *mocks.MockserviceDescriber
+	aas                   *mocks.MockautoscalingAlarmNamesGetter
+	logGetter             *mocks.MocklogGetter
 }
 
 func TestServiceStatus_Describe(t *testing.T) {
@@ -444,11 +444,16 @@ Alarms
 	}
 }
 
-func TestServiceStatus_DescribeAppRunnerService(t *testing.T) {
+func TestAppRunnerStatusDescriber_Describe(t *testing.T) {
+	appName := "testapp"
+	envName := "test"
+	svcName := "frontend"
 	updateTime := time.Unix(int64(1613145765), 0)
 	mockError := errors.New("some error")
-	mockAppRunnerServiceDesc := apprunner.Service{
-		ServiceARN:  "arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf",
+	mockAppRunnerService := apprunner.Service{
+		ServiceARN:  "arn:aws:apprunner:us-west-2:1234567890:service/testapp-test-frontend/fc1098ac269245959ba78fd58bdd4bf",
+		Name:        "testapp-test-frontend",
+		ID:          "fc1098ac269245959ba78fd58bdd4bf",
 		Status:      "RUNNING",
 		DateUpdated: updateTime,
 	}
@@ -468,31 +473,22 @@ func TestServiceStatus_DescribeAppRunnerService(t *testing.T) {
 		"errors if failed to describe a service": {
 			setupMocks: func(m serviceStatusMocks) {
 				gomock.InOrder(
-					m.apprunnerServiceGetter.EXPECT().DescribeService("arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf").Return(nil, mockError),
+					m.apprunnerSvcDescriber.EXPECT().Service().Return(nil, mockError),
 				)
 			},
 
-			wantedError: fmt.Errorf("get AppRunner service description for arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf: some error"),
+			wantedError: fmt.Errorf("get AppRunner service description for App Runner service frontend in environment test: some error"),
 		},
 		"success": {
 			setupMocks: func(m serviceStatusMocks) {
-				m.apprunnerServiceGetter.EXPECT().DescribeService("arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf").Return(&mockAppRunnerServiceDesc, nil)
-				m.logGetter.EXPECT().LogEvents(cloudwatchlogs.LogEventsOpts{LogGroup: "/aws/apprunner/my-service/fc1098ac269245959ba78fd58bdd4bf/service", Limit: aws.Int64(10)}).Return(&cloudwatchlogs.LogEventsOutput{
+				m.apprunnerSvcDescriber.EXPECT().Service().Return(&mockAppRunnerService, nil)
+				m.logGetter.EXPECT().LogEvents(cloudwatchlogs.LogEventsOpts{LogGroup: "/aws/apprunner/testapp-test-frontend/fc1098ac269245959ba78fd58bdd4bf/service", Limit: aws.Int64(10)}).Return(&cloudwatchlogs.LogEventsOutput{
 					Events: logEvents,
 				}, nil)
 			},
 			wantedContent: &apprunnerServiceStatus{
-				Service: apprunner.Service{
-					ServiceARN:  "arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf",
-					Status:      "RUNNING",
-					DateUpdated: updateTime,
-				},
-				LogEvents: []*cloudwatchlogs.Event{
-					{
-						LogStreamName: "events",
-						Message:       `[AppRunner] Service creation started.`,
-					},
-				},
+				Service:   mockAppRunnerService,
+				LogEvents: logEvents,
 			},
 		},
 	}
@@ -502,18 +498,20 @@ func TestServiceStatus_DescribeAppRunnerService(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockAppRunnerSvc := mocks.NewMockapprunnerServiceGetter(ctrl)
+			mockSvcDesc := mocks.NewMockapprunnerSvcDescriber(ctrl)
 			mockLogsSvc := mocks.NewMocklogGetter(ctrl)
 			mocks := serviceStatusMocks{
-				apprunnerServiceGetter: mockAppRunnerSvc,
-				logGetter:              mockLogsSvc,
+				apprunnerSvcDescriber: mockSvcDesc,
+				logGetter:             mockLogsSvc,
 			}
 			tc.setupMocks(mocks)
 
 			svcStatus := &AppRunnerStatusDescriber{
-				apprunnerSvcGetter: mockAppRunnerSvc,
-				svcARN:             "arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf",
-				eventsGetter:       mockLogsSvc,
+				app:          appName,
+				env:          envName,
+				svc:          svcName,
+				svcDescriber: mockSvcDesc,
+				eventsGetter: mockLogsSvc,
 			}
 
 			statusDesc, err := svcStatus.Describe()
