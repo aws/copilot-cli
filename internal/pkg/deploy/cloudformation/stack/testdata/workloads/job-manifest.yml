@@ -9,6 +9,8 @@ name: job
 type: Scheduled Job
 
 image:
+  labels:
+    com.amazonaws.ecs.copilot.description: Hello world!
   location: alpine
 
 # Number of CPU units for the task.
@@ -26,12 +28,8 @@ timeout: 1h
 
 storage:
   volumes:
-    myEFSVolume:
-      path: '/etc/mount1'
-      read_only: true
-      efs: fs-12345
     managedEFSVolume:
-      path: '/etc/mount2'
+      path: '/etc/mount1'
       read_only: false
       efs: copilot
 
@@ -40,10 +38,19 @@ sidecars:
     image: public.ecr.aws/nginx/nginx
     port: 8080
     mount_points:
-      - source_volume: myEFSVolume
+      - source_volume: managedEFSVolume
         path: '/var/www'
     variables:
       NGINX_PORT: 8080
+    labels:
+      com.amazonaws.ecs.copilot.sidecars.nginx.description: tricky
+
+environments:
+  test:
+    image:
+      labels:
+        com.amazonaws.ecs.copilot.coollabel: Synecdoche
+
 # Optional fields for more advanced use-cases.
 #
 #variables:                    # Pass environment variables as key value pairs.
