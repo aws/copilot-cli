@@ -341,7 +341,6 @@ func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error
 			continue
 		}
 
-		// If
 		// Convert EFS configuration to template struct.
 		efs := convertEFSConfiguration(volume.EFS.Config)
 		v := template.Volume{
