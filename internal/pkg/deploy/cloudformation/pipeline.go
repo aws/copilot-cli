@@ -100,7 +100,7 @@ func (cf CloudFormation) DeletePipeline(stackName string) error {
 func (cf CloudFormation) pushTemplateToS3Bucket(bucket string, config StackConfiguration) (string, error) {
 	template, err := config.Template()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("generate template: %w", err)
 	}
 	reader := strings.NewReader(template)
 	url, err := cf.s3Client.PutArtifact(bucket, fmt.Sprintf(fmtPipelineCfnTemplateName, config.StackName()), reader)
