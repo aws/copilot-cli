@@ -83,7 +83,7 @@ http:
 ```
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-success-codes" href="#http-healthcheck-success-codes" class="field">`success_codes`</a> <span class="type">String</span>  
-The HTTP status codes that healthy targets must use when responding to an HTTP health check. The Copilot default is 200, and you can specify values between 200 and 499. You can specify multiple values (for example, "200,202") or a range of values (for example, "200-299").
+The HTTP status codes that healthy targets must use when responding to an HTTP health check. You can specify values between 200 and 499. You can specify multiple values (for example, "200,202") or a range of values (for example, "200-299"). The default is 200. 
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-healthy-threshold" href="#http-healthcheck-healthy-threshold" class="field">`healthy_threshold`</a> <span class="type">Integer</span>  
 The number of consecutive health check successes required before considering an unhealthy target healthy. The Copilot default is 2. Range: 2-10.
