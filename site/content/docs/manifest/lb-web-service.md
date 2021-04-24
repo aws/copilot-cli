@@ -297,7 +297,7 @@ The Storage section lets you specify external EFS volumes for your containers an
 Specify the name and configuration of any EFS volumes you would like to attach. The `volumes` field is specified as a map of the form:
 ```yaml
 volumes:
-  {{ volume name }}:
+  <volume name>:
     path: "/etc/mountpath"
     efs:
       ...

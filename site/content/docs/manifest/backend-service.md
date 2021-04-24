@@ -266,7 +266,7 @@ The Storage section lets you specify external EFS volumes for your containers an
 Specify the name and configuration of any EFS volumes you would like to attach. The `volumes` field is specified as a map of the form:
 ```yaml
 volumes:
-  {{ volume name }}:
+  <volume name>:
     path: "/etc/mountpath"
     efs:
       ...
@@ -299,8 +299,4 @@ Optional. Defaults to `true`. Whether or not to use IAM authorization to determi
 <span class="parent-field">volume.efs.auth.</span><a id="access_point_id" href="#access-point-id" class="field">`access_point_id`</a> <span class="type">String</span>
 Optional. Defaults to `""`. The ID of the EFS access point to connect to. If using an access point, `root_dir` must be either empty or `/` and `auth.iam` must be `true`.
 
-<div class="separator"></div>
-
-<a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>
-The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.
-
+{% include 'common-svc-fields.md' %}
