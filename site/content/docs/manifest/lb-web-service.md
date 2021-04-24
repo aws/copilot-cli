@@ -198,6 +198,14 @@ count: 5
 ```
 The service will set the desired count to 5 and maintain 5 tasks in your service.
 
+If you want to use Fargate Spot capacity to run your services, you can specify a number under the `spot` subfield:
+```yaml
+count:
+  spot: 5
+```
+
+<span class="parent-field">count.</span><a id="count-spot" href="#count-spot" class="field">`spot`</a> <span class="type">Integer</span>
+
 Alternatively, you can specify a map for setting up autoscaling:
 ```yaml
 count:

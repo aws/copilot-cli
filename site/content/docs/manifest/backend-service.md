@@ -49,6 +49,9 @@ List of all available properties for a `'Backend Service'` manifest.
 
     # You can override any of the values defined above by environment.
     environments:
+      test:
+        count:
+          spot: 2
       production:
         count: 2
     ```
@@ -165,17 +168,52 @@ count: 5
 ```
 The service will set the desired count to 5 and maintain 5 tasks in your service.
 
+If you want to use Fargate Spot capacity to run your services, you can specify a number under the `spot` subfield:
+```yaml
+count:
+  spot: 5
+```
+
+<span class="parent-field">count.</span><a id="count-spot" href="#count-spot" class="field">`spot`</a> <span class="type">Integer</span>
+
 Alternatively, you can specify a map for setting up autoscaling:
 ```yaml
 count:
   range: 1-10
   cpu_percentage: 70
   memory_percentage: 80
+  requests: 10000
+  response_time: 2s
 ```
 
+<span class="parent-field">count.</span><a id="count-range" href="#count-range" class="field">`range`</a> <span class="type">String or Map</span>
+You can specify a minimum and maximum bound for the number of tasks your service should maintain.
+```yaml
+count:
+  range: n-m
+```
+This will set up an Application Autoscaling Target with the `MinCapacity` of `n` and `MaxCapacity` of `m`.
 
-<span class="parent-field">count.</span><a id="count-range" href="#count-range" class="field">`range`</a> <span class="type">String</span>
-Specify a minimum and maximum bound for the number of tasks your service should maintain.
+Alternatively, if you wish to scale your service onto Fargate Spot instances, specify `min` and `max` under `range` and then specify `spot_from` with the desired count you wish to start placing your services onto spot capacity. For example:
+
+```yaml
+count:
+  range:
+    min: 1
+    max: 10
+    spot_from: 3
+```
+
+This will set your range as 1-10 as before, but will place two copies of your service on dedicated Fargate capacity. Once your service scales to 3 copies, they will be placed on spot until the maximum is reached.
+
+<span class="parent-field">range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>
+The minimum desired count for your service using autoscaling.
+
+<span class="parent-field">range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>
+The maximum desired count for your service using autoscaling.
+
+<span class="parent-field">range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>
+The desired count at which you wish to start placing your service using Fargate Spot capacity providers.
 
 <span class="parent-field">count.</span><a id="count-cpu-percentage" href="#count-cpu-percentage" class="field">`cpu_percentage`</a> <span class="type">Integer</span>
 Scale up or down based on the average CPU your service should maintain.
@@ -183,6 +221,11 @@ Scale up or down based on the average CPU your service should maintain.
 <span class="parent-field">count.</span><a id="count-memory-percentage" href="#count-memory-percentage" class="field">`memory_percentage`</a> <span class="type">Integer</span>
 Scale up or down based on the average memory your service should maintain.
 
+<span class="parent-field">count.</span><a id="requests" href="#count-requests" class="field">`requests`</a> <span class="type">Integer</span>
+Scale up or down based on the request count handled per tasks.
+
+<span class="parent-field">count.</span><a id="response-time" href="#count-response-time" class="field">`response_time`</a> <span class="type">Duration</span>
+Scale up or down based on the service average response time.
 <div class="separator"></div>
 
 <a id="exec" href="#exec" class="field">`exec`</a> <span class="type">Boolean</span>
