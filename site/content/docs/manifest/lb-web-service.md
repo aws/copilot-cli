@@ -224,7 +224,7 @@ count:
 ```
 This will set up an Application Autoscaling Target with the `MinCapacity` of `n` and `MaxCapacity` of `m`.
 
-Alternatively, if you wish to scale your service onto Fargate Spot instances, specify `min` and `max` under `range` and then specify `spot_from` with the desired count you wish to start placing your services onto spot capacity. For example:
+Alternatively, if you wish to scale your service onto Fargate Spot instances, specify `min` and `max` under `range` and then specify `spot_from` with the desired count you wish to start placing your services onto Spot capacity. For example:
 
 ```yaml
 count:
