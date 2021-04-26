@@ -1330,11 +1330,12 @@ func (m *MockimageBuilderPusher) EXPECT() *MockimageBuilderPusherMockRecorder {
 }
 
 // BuildAndPush mocks base method.
-func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *exec.BuildArguments) error {
+func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *exec.BuildArguments) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BuildAndPush", docker, args)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush.
@@ -1404,11 +1405,12 @@ func (m *MockrepositoryService) EXPECT() *MockrepositoryServiceMockRecorder {
 }
 
 // BuildAndPush mocks base method.
-func (m *MockrepositoryService) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *exec.BuildArguments) error {
+func (m *MockrepositoryService) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *exec.BuildArguments) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BuildAndPush", docker, args)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush.
@@ -3300,17 +3302,17 @@ func (mr *MockpipelineDeployerMockRecorder) AddPipelineResourcesToApp(app, regio
 }
 
 // CreatePipeline mocks base method.
-func (m *MockpipelineDeployer) CreatePipeline(env *deploy.CreatePipelineInput) error {
+func (m *MockpipelineDeployer) CreatePipeline(env *deploy.CreatePipelineInput, bucketName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreatePipeline", env)
+	ret := m.ctrl.Call(m, "CreatePipeline", env, bucketName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreatePipeline indicates an expected call of CreatePipeline.
-func (mr *MockpipelineDeployerMockRecorder) CreatePipeline(env interface{}) *gomock.Call {
+func (mr *MockpipelineDeployerMockRecorder) CreatePipeline(env, bucketName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePipeline", reflect.TypeOf((*MockpipelineDeployer)(nil).CreatePipeline), env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePipeline", reflect.TypeOf((*MockpipelineDeployer)(nil).CreatePipeline), env, bucketName)
 }
 
 // DeletePipeline mocks base method.
@@ -3373,17 +3375,17 @@ func (mr *MockpipelineDeployerMockRecorder) PipelineExists(env interface{}) *gom
 }
 
 // UpdatePipeline mocks base method.
-func (m *MockpipelineDeployer) UpdatePipeline(env *deploy.CreatePipelineInput) error {
+func (m *MockpipelineDeployer) UpdatePipeline(env *deploy.CreatePipelineInput, bucketName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdatePipeline", env)
+	ret := m.ctrl.Call(m, "UpdatePipeline", env, bucketName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdatePipeline indicates an expected call of UpdatePipeline.
-func (mr *MockpipelineDeployerMockRecorder) UpdatePipeline(env interface{}) *gomock.Call {
+func (mr *MockpipelineDeployerMockRecorder) UpdatePipeline(env, bucketName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePipeline", reflect.TypeOf((*MockpipelineDeployer)(nil).UpdatePipeline), env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePipeline", reflect.TypeOf((*MockpipelineDeployer)(nil).UpdatePipeline), env, bucketName)
 }
 
 // MockappDeployer is a mock of appDeployer interface.
@@ -3796,17 +3798,17 @@ func (mr *MockdeployerMockRecorder) AddServiceToApp(app, svcName interface{}) *g
 }
 
 // CreatePipeline mocks base method.
-func (m *Mockdeployer) CreatePipeline(env *deploy.CreatePipelineInput) error {
+func (m *Mockdeployer) CreatePipeline(env *deploy.CreatePipelineInput, bucketName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreatePipeline", env)
+	ret := m.ctrl.Call(m, "CreatePipeline", env, bucketName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreatePipeline indicates an expected call of CreatePipeline.
-func (mr *MockdeployerMockRecorder) CreatePipeline(env interface{}) *gomock.Call {
+func (mr *MockdeployerMockRecorder) CreatePipeline(env, bucketName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePipeline", reflect.TypeOf((*Mockdeployer)(nil).CreatePipeline), env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePipeline", reflect.TypeOf((*Mockdeployer)(nil).CreatePipeline), env, bucketName)
 }
 
 // DelegateDNSPermissions mocks base method.
@@ -3998,17 +4000,17 @@ func (mr *MockdeployerMockRecorder) UpdateEnvironmentTemplate(appName, envName, 
 }
 
 // UpdatePipeline mocks base method.
-func (m *Mockdeployer) UpdatePipeline(env *deploy.CreatePipelineInput) error {
+func (m *Mockdeployer) UpdatePipeline(env *deploy.CreatePipelineInput, bucketName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdatePipeline", env)
+	ret := m.ctrl.Call(m, "UpdatePipeline", env, bucketName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdatePipeline indicates an expected call of UpdatePipeline.
-func (mr *MockdeployerMockRecorder) UpdatePipeline(env interface{}) *gomock.Call {
+func (mr *MockdeployerMockRecorder) UpdatePipeline(env, bucketName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePipeline", reflect.TypeOf((*Mockdeployer)(nil).UpdatePipeline), env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePipeline", reflect.TypeOf((*Mockdeployer)(nil).UpdatePipeline), env, bucketName)
 }
 
 // MockdomainHostedZoneGetter is a mock of domainHostedZoneGetter interface.
@@ -4419,6 +4421,43 @@ func (mr *MockenvTemplateUpgraderMockRecorder) UpgradeLegacyEnvironment(in inter
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeLegacyEnvironment", reflect.TypeOf((*MockenvTemplateUpgrader)(nil).UpgradeLegacyEnvironment), varargs...)
 }
 
+// MockappUpgrader is a mock of appUpgrader interface.
+type MockappUpgrader struct {
+	ctrl     *gomock.Controller
+	recorder *MockappUpgraderMockRecorder
+}
+
+// MockappUpgraderMockRecorder is the mock recorder for MockappUpgrader.
+type MockappUpgraderMockRecorder struct {
+	mock *MockappUpgrader
+}
+
+// NewMockappUpgrader creates a new mock instance.
+func NewMockappUpgrader(ctrl *gomock.Controller) *MockappUpgrader {
+	mock := &MockappUpgrader{ctrl: ctrl}
+	mock.recorder = &MockappUpgraderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockappUpgrader) EXPECT() *MockappUpgraderMockRecorder {
+	return m.recorder
+}
+
+// UpgradeApplication mocks base method.
+func (m *MockappUpgrader) UpgradeApplication(in *deploy.CreateAppInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpgradeApplication", in)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpgradeApplication indicates an expected call of UpgradeApplication.
+func (mr *MockappUpgraderMockRecorder) UpgradeApplication(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeApplication", reflect.TypeOf((*MockappUpgrader)(nil).UpgradeApplication), in)
+}
+
 // MockpipelineGetter is a mock of pipelineGetter interface.
 type MockpipelineGetter struct {
 	ctrl     *gomock.Controller
@@ -4781,6 +4820,21 @@ func (mr *MockconfigSelectorMockRecorder) Environment(prompt, help, app interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockconfigSelector)(nil).Environment), varargs...)
 }
 
+// Job mocks base method.
+func (m *MockconfigSelector) Job(prompt, help, app string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Job", prompt, help, app)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Job indicates an expected call of Job.
+func (mr *MockconfigSelectorMockRecorder) Job(prompt, help, app interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Job", reflect.TypeOf((*MockconfigSelector)(nil).Job), prompt, help, app)
+}
+
 // Service mocks base method.
 func (m *MockconfigSelector) Service(prompt, help, app string) (string, error) {
 	m.ctrl.T.Helper()
@@ -4883,7 +4937,7 @@ func (m *MockpipelineSelector) EXPECT() *MockpipelineSelectorMockRecorder {
 }
 
 // Environments mocks base method.
-func (m *MockpipelineSelector) Environments(prompt, help, app string, finalMsgFunc func(int) prompt.Option) ([]string, error) {
+func (m *MockpipelineSelector) Environments(prompt, help, app string, finalMsgFunc func(int) prompt.PromptConfig) ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Environments", prompt, help, app, finalMsgFunc)
 	ret0, _ := ret[0].([]string)
@@ -5622,6 +5676,148 @@ func (m *MockserviceLinkedRoleCreator) CreateECSServiceLinkedRole() error {
 func (mr *MockserviceLinkedRoleCreatorMockRecorder) CreateECSServiceLinkedRole() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateECSServiceLinkedRole", reflect.TypeOf((*MockserviceLinkedRoleCreator)(nil).CreateECSServiceLinkedRole))
+}
+
+// MockroleTagsLister is a mock of roleTagsLister interface.
+type MockroleTagsLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockroleTagsListerMockRecorder
+}
+
+// MockroleTagsListerMockRecorder is the mock recorder for MockroleTagsLister.
+type MockroleTagsListerMockRecorder struct {
+	mock *MockroleTagsLister
+}
+
+// NewMockroleTagsLister creates a new mock instance.
+func NewMockroleTagsLister(ctrl *gomock.Controller) *MockroleTagsLister {
+	mock := &MockroleTagsLister{ctrl: ctrl}
+	mock.recorder = &MockroleTagsListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockroleTagsLister) EXPECT() *MockroleTagsListerMockRecorder {
+	return m.recorder
+}
+
+// ListRoleTags mocks base method.
+func (m *MockroleTagsLister) ListRoleTags(arg0 string) (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRoleTags", arg0)
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRoleTags indicates an expected call of ListRoleTags.
+func (mr *MockroleTagsListerMockRecorder) ListRoleTags(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRoleTags", reflect.TypeOf((*MockroleTagsLister)(nil).ListRoleTags), arg0)
+}
+
+// MockroleManager is a mock of roleManager interface.
+type MockroleManager struct {
+	ctrl     *gomock.Controller
+	recorder *MockroleManagerMockRecorder
+}
+
+// MockroleManagerMockRecorder is the mock recorder for MockroleManager.
+type MockroleManagerMockRecorder struct {
+	mock *MockroleManager
+}
+
+// NewMockroleManager creates a new mock instance.
+func NewMockroleManager(ctrl *gomock.Controller) *MockroleManager {
+	mock := &MockroleManager{ctrl: ctrl}
+	mock.recorder = &MockroleManagerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockroleManager) EXPECT() *MockroleManagerMockRecorder {
+	return m.recorder
+}
+
+// CreateECSServiceLinkedRole mocks base method.
+func (m *MockroleManager) CreateECSServiceLinkedRole() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateECSServiceLinkedRole")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateECSServiceLinkedRole indicates an expected call of CreateECSServiceLinkedRole.
+func (mr *MockroleManagerMockRecorder) CreateECSServiceLinkedRole() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateECSServiceLinkedRole", reflect.TypeOf((*MockroleManager)(nil).CreateECSServiceLinkedRole))
+}
+
+// DeleteRole mocks base method.
+func (m *MockroleManager) DeleteRole(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteRole", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteRole indicates an expected call of DeleteRole.
+func (mr *MockroleManagerMockRecorder) DeleteRole(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRole", reflect.TypeOf((*MockroleManager)(nil).DeleteRole), arg0)
+}
+
+// ListRoleTags mocks base method.
+func (m *MockroleManager) ListRoleTags(arg0 string) (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRoleTags", arg0)
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRoleTags indicates an expected call of ListRoleTags.
+func (mr *MockroleManagerMockRecorder) ListRoleTags(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRoleTags", reflect.TypeOf((*MockroleManager)(nil).ListRoleTags), arg0)
+}
+
+// MockstackExistChecker is a mock of stackExistChecker interface.
+type MockstackExistChecker struct {
+	ctrl     *gomock.Controller
+	recorder *MockstackExistCheckerMockRecorder
+}
+
+// MockstackExistCheckerMockRecorder is the mock recorder for MockstackExistChecker.
+type MockstackExistCheckerMockRecorder struct {
+	mock *MockstackExistChecker
+}
+
+// NewMockstackExistChecker creates a new mock instance.
+func NewMockstackExistChecker(ctrl *gomock.Controller) *MockstackExistChecker {
+	mock := &MockstackExistChecker{ctrl: ctrl}
+	mock.recorder = &MockstackExistCheckerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockstackExistChecker) EXPECT() *MockstackExistCheckerMockRecorder {
+	return m.recorder
+}
+
+// Exists mocks base method.
+func (m *MockstackExistChecker) Exists(arg0 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Exists", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Exists indicates an expected call of Exists.
+func (mr *MockstackExistCheckerMockRecorder) Exists(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockstackExistChecker)(nil).Exists), arg0)
 }
 
 // MockrunningTaskSelector is a mock of runningTaskSelector interface.

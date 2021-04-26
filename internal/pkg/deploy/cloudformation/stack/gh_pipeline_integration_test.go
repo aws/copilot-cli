@@ -1,4 +1,4 @@
-// +build integration,local
+// +build integration localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -28,6 +28,7 @@ func TestGHPipeline_Template(t *testing.T) {
 			RepositoryURL: "https://github.com/aws/phonetool",
 			Branch:        "mainline",
 		},
+		Build: deploy.PipelineBuildFromManifest(nil),
 		Stages: []deploy.PipelineStage{
 			{
 				AssociatedEnvironment: &deploy.AssociatedEnvironment{

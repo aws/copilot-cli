@@ -47,8 +47,8 @@ type AppRegionalResources struct {
 }
 
 const (
-	appTemplatePath               = "app/versions/v1.0.0/app.yml"
-	appResourcesTemplatePath      = "app/versions/v1.0.0/cf.yml"
+	fmtAppTemplatePath            = "app/versions/%s/app.yml"
+	fmtAppResourcesTemplatePath   = "app/versions/%s/cf.yml"
 	appAdminRoleParamName         = "AdminRoleName"
 	appExecutionRoleParamName     = "ExecutionRoleName"
 	appDNSDelegationRoleParamName = "DNSDelegationRoleName"
@@ -85,7 +85,10 @@ func NewAppStackConfig(in *deploy.CreateAppInput) *AppStackConfig {
 
 // Template returns the environment CloudFormation template.
 func (c *AppStackConfig) Template() (string, error) {
-	content, err := c.parser.Read(appTemplatePath)
+	// content, err := c.parser.Read(appTemplatePath(c.Version))
+	content, err := c.parser.Parse(appTemplatePath(c.Version), struct {
+		TemplateVersion string
+	}{c.Version})
 	if err != nil {
 		return "", err
 	}
@@ -98,17 +101,33 @@ func (c *AppStackConfig) ResourceTemplate(config *AppResourcesConfig) (string, e
 	sort.Strings(config.Accounts)
 	sort.Strings(config.Services)
 
-	content, err := c.parser.Parse(appResourcesTemplatePath, struct {
+	content, err := c.parser.Parse(appResourcesTemplatePath(c.Version), struct {
 		*AppResourcesConfig
-		ServiceTagKey string
+		ServiceTagKey   string
+		TemplateVersion string
 	}{
 		config,
 		deploy.ServiceTagKey,
+		c.Version,
 	}, template.WithFuncs(cfTemplateFunctions))
 	if err != nil {
 		return "", err
 	}
 	return content.String(), err
+}
+
+func appTemplatePath(version string) string {
+	if version == "" {
+		return fmt.Sprintf(fmtAppTemplatePath, "v0.0.0")
+	}
+	return fmt.Sprintf(fmtAppTemplatePath, version)
+}
+
+func appResourcesTemplatePath(version string) string {
+	if version == "" {
+		return fmt.Sprintf(fmtAppResourcesTemplatePath, "v0.0.0")
+	}
+	return fmt.Sprintf(fmtAppResourcesTemplatePath, version)
 }
 
 // Parameters returns a list of parameters which accompany the app CloudFormation template.
@@ -154,12 +173,12 @@ func (c *AppStackConfig) Tags() []*cloudformation.Tag {
 
 // StackName returns the name of the CloudFormation stack (based on the application name).
 func (c *AppStackConfig) StackName() string {
-	return fmt.Sprintf("%s-infrastructure-roles", c.Name)
+	return NameForAppStack(c.Name)
 }
 
 // StackSetName returns the name of the CloudFormation StackSet (based on the application name).
 func (c *AppStackConfig) StackSetName() string {
-	return fmt.Sprintf("%s-infrastructure", c.Name)
+	return NameForAppStackSet(c.Name)
 }
 
 // StackSetDescription returns the description of the StackSet for application resources.

@@ -46,13 +46,13 @@ type LoadBalancedWebService struct {
 
 // LoadBalancedWebServiceConfig holds the configuration for a load balanced web service.
 type LoadBalancedWebServiceConfig struct {
-	ImageConfig ServiceImageWithPort `yaml:"image,flow"`
+	ImageConfig   ServiceImageWithPort `yaml:"image,flow"`
 	ImageOverride `yaml:",inline"`
 	RoutingRule   `yaml:"http,flow"`
 	TaskConfig    `yaml:",inline"`
 	*Logging      `yaml:"logging,flow"`
-	Sidecars    map[string]*SidecarConfig `yaml:"sidecars"`
-	Network     NetworkConfig             `yaml:"network"`
+	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
+	Network       NetworkConfig             `yaml:"network"`
 
 	// Fields that are used while marshaling the template for additional clarifications,
 	// but don't correspond to a field in the manifests.
@@ -64,6 +64,7 @@ type LoadBalancedWebServiceConfig struct {
 // See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html.
 type HTTPHealthCheckArgs struct {
 	Path               *string        `yaml:"path"`
+	SuccessCodes       *string        `yaml:"success_codes"`
 	HealthyThreshold   *int64         `yaml:"healthy_threshold"`
 	UnhealthyThreshold *int64         `yaml:"unhealthy_threshold"`
 	Timeout            *time.Duration `yaml:"timeout"`

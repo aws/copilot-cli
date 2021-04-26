@@ -71,6 +71,10 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("read desired count lambda: %w", err)
 	}
+	envControllerLambda, err := s.parser.Read(envControllerPath)
+	if err != nil {
+		return "", fmt.Errorf("read env controller lambda: %w", err)
+	}
 	outputs, err := s.addonsOutputs()
 	if err != nil {
 		return "", err
@@ -79,11 +83,23 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
-	autoscaling, err := convertAutoscaling(&s.manifest.Count.Autoscaling)
+
+	advancedCount, err := convertAdvancedCount(&s.manifest.Count.AdvancedCount)
 	if err != nil {
-		return "", fmt.Errorf("convert the Auto Scaling configuration for service %s: %w", s.name, err)
+		return "", fmt.Errorf("convert the advanced count configuration for service %s: %w", s.name, err)
 	}
-	storage, err := convertStorageOpts(s.manifest.Storage)
+
+	var autoscaling *template.AutoscalingOpts
+	var desiredCountOnSpot *int
+	var capacityProviders []*template.CapacityProviderStrategy
+
+	if advancedCount != nil {
+		autoscaling = advancedCount.Autoscaling
+		desiredCountOnSpot = advancedCount.Spot
+		capacityProviders = advancedCount.Cps
+	}
+
+	storage, err := convertStorageOpts(s.manifest.Name, s.manifest.Storage)
 	if err != nil {
 		return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
 	}
@@ -96,19 +112,24 @@ func (s *BackendService) Template() (string, error) {
 		return "", fmt.Errorf(`convert 'command' to string slice: %w`, err)
 	}
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
-		Variables:          s.manifest.BackendServiceConfig.Variables,
-		Secrets:            s.manifest.BackendServiceConfig.Secrets,
-		NestedStack:        outputs,
-		Sidecars:           sidecars,
-		Autoscaling:        autoscaling,
-		ExecuteCommand:     convertExecuteCommand(&s.manifest.ExecuteCommand),
-		HealthCheck:        s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),
-		LogConfig:          convertLogging(s.manifest.Logging),
-		DesiredCountLambda: desiredCountLambda.String(),
-		Storage:            storage,
-		Network:            convertNetworkConfig(s.manifest.Network),
-		EntryPoint:         entrypoint,
-		Command:            command,
+		Variables:           s.manifest.BackendServiceConfig.Variables,
+		Secrets:             s.manifest.BackendServiceConfig.Secrets,
+		NestedStack:         outputs,
+		Sidecars:            sidecars,
+		Autoscaling:         autoscaling,
+		CapacityProviders:   capacityProviders,
+		DesiredCountOnSpot:  desiredCountOnSpot,
+		ExecuteCommand:      convertExecuteCommand(&s.manifest.ExecuteCommand),
+		WorkloadType:        manifest.BackendServiceType,
+		HealthCheck:         s.manifest.BackendServiceConfig.ImageConfig.HealthCheckOpts(),
+		LogConfig:           convertLogging(s.manifest.Logging),
+		DockerLabels:        s.manifest.ImageConfig.DockerLabels,
+		DesiredCountLambda:  desiredCountLambda.String(),
+		EnvControllerLambda: envControllerLambda.String(),
+		Storage:             storage,
+		Network:             convertNetworkConfig(s.manifest.Network),
+		EntryPoint:          entrypoint,
+		Command:             command,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)

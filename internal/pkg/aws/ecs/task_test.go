@@ -4,6 +4,7 @@
 package ecs
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -238,30 +239,32 @@ func TestTaskStatus_HumanString(t *testing.T) {
 	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
 	mockImageDigest := "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"
 	testCases := map[string]struct {
-		id          string
-		health      string
-		lastStatus  string
-		imageDigest string
-		startedAt   time.Time
-		stoppedAt   time.Time
+		id               string
+		health           string
+		lastStatus       string
+		imageDigest      string
+		startedAt        time.Time
+		stoppedAt        time.Time
+		capacityProvider string
 
 		wantTaskStatus string
 	}{
 		"all params": {
-			health:      "HEALTHY",
-			id:          "aslhfnqo39j8qomimvoiqm89349",
-			lastStatus:  "RUNNING",
-			startedAt:   startTime,
-			stoppedAt:   stopTime,
-			imageDigest: mockImageDigest,
+			health:           "HEALTHY",
+			id:               "aslhfnqo39j8qomimvoiqm89349",
+			lastStatus:       "RUNNING",
+			startedAt:        startTime,
+			stoppedAt:        stopTime,
+			imageDigest:      mockImageDigest,
+			capacityProvider: "FARGATE",
 
-			wantTaskStatus: "  aslhfnqo\t18f7eb6c\tRUNNING\t14 years ago\t14 years ago\tHEALTHY\n",
+			wantTaskStatus: "  aslhfnqo\t18f7eb6c\tRUNNING\t14 years ago\t14 years ago\tFARGATE\tHEALTHY\n",
 		},
 		"missing params": {
 			health:     "HEALTHY",
 			lastStatus: "RUNNING",
 
-			wantTaskStatus: "  -\t-\tRUNNING\t-\t-\tHEALTHY\n",
+			wantTaskStatus: "  -\t-\tRUNNING\t-\t-\t-\tHEALTHY\n",
 		},
 	}
 
@@ -279,9 +282,10 @@ func TestTaskStatus_HumanString(t *testing.T) {
 						Digest: tc.imageDigest,
 					},
 				},
-				LastStatus: tc.lastStatus,
-				StartedAt:  tc.startedAt,
-				StoppedAt:  tc.stoppedAt,
+				LastStatus:       tc.lastStatus,
+				StartedAt:        tc.startedAt,
+				StoppedAt:        tc.stoppedAt,
+				CapacityProvider: tc.capacityProvider,
 			}
 
 			gotTaskStatus := task.HumanString()
@@ -429,6 +433,186 @@ func TestTaskDefinition_Secrets(t *testing.T) {
 			gotSecrets := taskDefinition.Secrets()
 
 			require.Equal(t, tc.wantedSecrets, gotSecrets)
+		})
+
+	}
+}
+
+func TestTaskDefinition_Image(t *testing.T) {
+	testCases := map[string]struct {
+		inContainers    []*ecs.ContainerDefinition
+		inContainerName string
+
+		wantedImage string
+		wantedError error
+	}{
+		"should return the container's image": {
+			inContainers: []*ecs.ContainerDefinition{
+				{
+					Name:  aws.String("container-1"),
+					Image: aws.String("image-1"),
+				},
+				{
+					Name:  aws.String("container-2"),
+					Image: aws.String("image-2"),
+				},
+			},
+			inContainerName: "container-2",
+			wantedImage:     "image-2",
+		},
+		"container not found": {
+			inContainers: []*ecs.ContainerDefinition{
+				{
+					Name:  aws.String("container-1"),
+					Image: aws.String("image-1"),
+				},
+				{
+					Name:  aws.String("container-2"),
+					Image: aws.String("image-2"),
+				},
+			},
+			inContainerName: "container-3",
+			wantedError:     errors.New("container container-3 not found"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			taskDefinition := TaskDefinition{
+				ContainerDefinitions: tc.inContainers,
+			}
+
+			gotImages, err := taskDefinition.Image(tc.inContainerName)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.Equal(t, tc.wantedImage, gotImages)
+			}
+		})
+
+	}
+}
+
+func TestTaskDefinition_Command(t *testing.T) {
+	testCases := map[string]struct {
+		inContainers    []*ecs.ContainerDefinition
+		inContainerName string
+
+		wantedCommand []string
+		wantedError   error
+	}{
+		"should return command overrides of the task definition as a list of ContainerCommand": {
+			inContainers: []*ecs.ContainerDefinition{
+				{
+					Name:    aws.String("container-1"),
+					Command: aws.StringSlice([]string{"echo", "strikes", "three"}),
+				},
+				{
+					Name:    aws.String("container-2"),
+					Command: aws.StringSlice([]string{"echo", "ball", "four"}),
+				},
+				{
+					Name: aws.String("container-3"),
+				},
+			},
+			inContainerName: "container-1",
+			wantedCommand:   []string{"echo", "strikes", "three"},
+		},
+		"container not found": {
+			inContainers: []*ecs.ContainerDefinition{
+				{
+					Name:    aws.String("container-1"),
+					Command: aws.StringSlice([]string{"echo", "strikes", "three"}),
+				},
+				{
+					Name:    aws.String("container-2"),
+					Command: aws.StringSlice([]string{"echo", "ball", "four"}),
+				},
+			},
+			inContainerName: "container-3",
+			wantedError:     errors.New("container container-3 not found"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			taskDefinition := TaskDefinition{
+				ContainerDefinitions: tc.inContainers,
+			}
+
+			gotCommands, err := taskDefinition.Command(tc.inContainerName)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.Equal(t, tc.wantedCommand, gotCommands)
+			}
+		})
+
+	}
+}
+
+func TestTaskDefinition_EntryPoint(t *testing.T) {
+	testCases := map[string]struct {
+		inContainers    []*ecs.ContainerDefinition
+		inContainerName string
+
+		wantedEntryPoints []string
+		wantedError       error
+	}{
+		"should return command overrides of the task definition as a list of ContainerCommand": {
+			inContainers: []*ecs.ContainerDefinition{
+				{
+					Name:       aws.String("container-1"),
+					EntryPoint: aws.StringSlice([]string{"echo", "strikes", "three"}),
+				},
+				{
+					Name: aws.String("container-2"),
+				},
+			},
+
+			inContainerName:   "container-1",
+			wantedEntryPoints: []string{"echo", "strikes", "three"},
+		},
+		"container not found": {
+			inContainers: []*ecs.ContainerDefinition{
+				{
+					Name:    aws.String("container-1"),
+					Command: aws.StringSlice([]string{"echo", "strikes", "three"}),
+				},
+				{
+					Name:    aws.String("container-2"),
+					Command: aws.StringSlice([]string{"echo", "ball", "four"}),
+				},
+			},
+			inContainerName: "container-3",
+			wantedError:     errors.New("container container-3 not found"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			taskDefinition := TaskDefinition{
+				ContainerDefinitions: tc.inContainers,
+			}
+
+			gotEntryPoints, err := taskDefinition.EntryPoint(tc.inContainerName)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.Equal(t, tc.wantedEntryPoints, gotEntryPoints)
+			}
 		})
 
 	}

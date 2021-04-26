@@ -22,7 +22,7 @@ The steps involved in `job deploy` are:
   -e, --env string                     Name of the environment.
   -h, --help                           help for deploy
   -n, --name string                    Name of the job.
-      --resource-tags stringToString   Optional. Labels with a key and value separated with commas.
+      --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
       --tag string                     Optional. The container image tag.
 ```

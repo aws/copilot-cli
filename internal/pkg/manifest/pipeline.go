@@ -157,6 +157,7 @@ type PipelineManifest struct {
 	Name    string                     `yaml:"name"`
 	Version PipelineSchemaMajorVersion `yaml:"version"`
 	Source  *Source                    `yaml:"source"`
+	Build   *Build                     `yaml:"build"`
 	Stages  []PipelineStage            `yaml:"stages"`
 
 	parser template.Parser
@@ -166,6 +167,11 @@ type PipelineManifest struct {
 type Source struct {
 	ProviderName string                 `yaml:"provider"`
 	Properties   map[string]interface{} `yaml:"properties"`
+}
+
+// Build defines the build project to build and test image.
+type Build struct {
+	Image string `yaml:"image"`
 }
 
 // PipelineStage represents a stage in the pipeline manifest

@@ -59,11 +59,21 @@ type RuntimeConfig struct {
 type ECRImage struct {
 	RepoURL  string // RepoURL is the ECR repository URL the container image should be pushed to.
 	ImageTag string // Tag is the container image's unique tag.
+	Digest   string // The image digest.
 }
 
-// GetLocation returns the location of the ECR image.
+// GetLocation returns the ECR image URI.
+// If a tag is provided by the user or discovered from git then prioritize referring to the image via the tag.
+// Otherwise, each image after a push to ECR will get a digest and we refer to the image via the digest.
+// Finally, if no digest or tag is present, this occurs with the "package" commands, we default to the "latest" tag.
 func (i ECRImage) GetLocation() string {
-	return fmt.Sprintf("%s:%s", i.RepoURL, i.ImageTag)
+	if i.ImageTag != "" {
+		return fmt.Sprintf("%s:%s", i.RepoURL, i.ImageTag)
+	}
+	if i.Digest != "" {
+		return fmt.Sprintf("%s@%s", i.RepoURL, i.Digest)
+	}
+	return fmt.Sprintf("%s:%s", i.RepoURL, "latest")
 }
 
 type templater interface {
@@ -95,15 +105,11 @@ func (w *wkld) StackName() string {
 
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
-	desiredCount := w.tc.Count.Value
-	// If auto scaling is configured, override the desired count value.
-	if !w.tc.Count.Autoscaling.IsEmpty() {
-		min, _, err := w.tc.Count.Autoscaling.Range.Parse()
-		if err != nil {
-			return nil, fmt.Errorf("parse task count value %s: %w", aws.StringValue((*string)(w.tc.Count.Autoscaling.Range)), err)
-		}
-		desiredCount = aws.Int(min)
+	desiredCount, err := w.tc.Count.Desired()
+	if err != nil {
+		return nil, err
 	}
+
 	var img string
 	if w.image != nil {
 		img = w.image.GetLocation()
@@ -200,11 +206,22 @@ func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
 		return nil, fmt.Errorf("get addons outputs for %s: %w", w.name, err)
 	}
 	return &template.WorkloadNestedStackOpts{
-		StackName:       addon.StackName,
-		VariableOutputs: envVarOutputNames(out),
-		SecretOutputs:   secretOutputNames(out),
-		PolicyOutputs:   managedPolicyOutputNames(out),
+		StackName:            addon.StackName,
+		VariableOutputs:      envVarOutputNames(out),
+		SecretOutputs:        secretOutputNames(out),
+		PolicyOutputs:        managedPolicyOutputNames(out),
+		SecurityGroupOutputs: securityGroupOutputNames(out),
 	}, nil
+}
+
+func securityGroupOutputNames(outputs []addon.Output) []string {
+	var securityGroups []string
+	for _, out := range outputs {
+		if out.IsSecurityGroup {
+			securityGroups = append(securityGroups, out.Name)
+		}
+	}
+	return securityGroups
 }
 
 func secretOutputNames(outputs []addon.Output) []string {

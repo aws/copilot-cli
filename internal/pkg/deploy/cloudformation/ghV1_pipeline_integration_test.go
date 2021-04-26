@@ -1,4 +1,4 @@
-// +build integration,!local
+// +build integration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -100,21 +100,24 @@ func TestGHv1PipelineCreation(t *testing.T) {
 				StackSetName: aws.String(appStackSetName),
 			})
 			require.NoError(t, err)
+			require.Equal(t, len(stackInstances.Summaries), 2)
+
+			err = s3Client.EmptyBucket(bucketName)
+			require.NoError(t, err)
+
+			_, err = appCfClient.DeleteStackInstances(&awsCF.DeleteStackInstancesInput{
+				Accounts:     []*string{stackInstances.Summaries[0].Account},
+				Regions:      []*string{aws.String(envRegion.ID()), appSess.Config.Region},
+				RetainStacks: aws.Bool(false),
+				StackSetName: aws.String(appStackSetName),
+			})
+			require.NoError(t, err)
 
 			for _, summary := range stackInstances.Summaries {
-				if aws.StringValue(summary.Region) == envRegion.ID() {
-					err := s3Client.EmptyBucket(bucketName)
-					require.NoError(t, err)
-				}
-				_, err := appCfClient.DeleteStackInstances(&awsCF.DeleteStackInstancesInput{
-					Accounts:     []*string{summary.Account},
-					Regions:      []*string{summary.Region},
-					RetainStacks: aws.Bool(false),
-					StackSetName: summary.StackSetId,
-				})
+				sess, err := testSession(summary.Region)
 				require.NoError(t, err)
-
-				err = appCfClient.WaitUntilStackDeleteComplete(&awsCF.DescribeStacksInput{
+				client := awsCF.New(sess)
+				err = client.WaitUntilStackDeleteComplete(&awsCF.DescribeStacksInput{
 					StackName: summary.StackId,
 				})
 				require.NoError(t, err)
@@ -166,6 +169,7 @@ func TestGHv1PipelineCreation(t *testing.T) {
 		err = appDeployer.DeployApp(&deploy.CreateAppInput{
 			Name:      app.Name,
 			AccountID: app.AccountID,
+			Version:   deploy.LatestAppTemplateVersion,
 		})
 		require.NoError(t, err)
 
@@ -220,6 +224,7 @@ func TestGHv1PipelineCreation(t *testing.T) {
 				RepositoryURL:               "https://github.com/chicken/wings",
 				PersonalAccessTokenSecretID: secretId,
 			},
+			Build: deploy.PipelineBuildFromManifest(nil),
 			Stages: []deploy.PipelineStage{
 				{
 					AssociatedEnvironment: &deploy.AssociatedEnvironment{
@@ -232,7 +237,7 @@ func TestGHv1PipelineCreation(t *testing.T) {
 			},
 			ArtifactBuckets: artifactBuckets,
 		}
-		require.NoError(t, appDeployer.CreatePipeline(pipelineInput))
+		require.NoError(t, appDeployer.CreatePipeline(pipelineInput, bucketName))
 
 		// Ensure that the new stack exists
 		assertStackExists(t, appCfClient, pipelineStackName)

@@ -93,11 +93,11 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		Port: 80,
 	})
 	testLBWebServiceManifest.EntryPoint = manifest.EntryPointOverride{
-		String: nil,
+		String:      nil,
 		StringSlice: []string{"/bin/echo", "hello"},
 	}
 	testLBWebServiceManifest.Command = manifest.CommandOverride{
-		String: nil,
+		String:      nil,
 		StringSlice: []string{"world"},
 	}
 
@@ -179,6 +179,7 @@ Outputs:
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.WorkloadOpts{
+					WorkloadType: manifest.LoadBalancedWebServiceType,
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: "/",
 					},
@@ -190,7 +191,7 @@ Outputs:
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
 					EntryPoint: []string{"/bin/echo", "hello"},
-					Command: []string{"world"},
+					Command:    []string{"world"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 
 				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
@@ -213,6 +214,7 @@ Outputs:
 						SecretOutputs:   []string{"MySecretArn"},
 						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 					},
+					WorkloadType: manifest.LoadBalancedWebServiceType,
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: "/",
 					},
@@ -224,7 +226,7 @@ Outputs:
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
 					EntryPoint: []string{"/bin/echo", "hello"},
-					Command: []string{"world"},
+					Command:    []string{"world"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{
 					tpl: `Resources:
@@ -305,18 +307,22 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		Port: 80,
 	}
 	testLBWebServiceManifest := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestRange := manifest.Range("2-100")
+	testLBWebServiceManifestRange := manifest.IntRangeBand("2-100")
 	testLBWebServiceManifest.Count = manifest.Count{
 		Value: aws.Int(1),
-		Autoscaling: manifest.Autoscaling{
-			Range: &testLBWebServiceManifestRange,
+		AdvancedCount: manifest.AdvancedCount{
+			Range: &manifest.Range{
+				Value: &testLBWebServiceManifestRange,
+			},
 		},
 	}
 	testLBWebServiceManifestWithBadCount := manifest.NewLoadBalancedWebService(baseProps)
-	testLBWebServiceManifestWithBadCountRange := manifest.Range("badCount")
+	testLBWebServiceManifestWithBadCountRange := manifest.IntRangeBand("badCount")
 	testLBWebServiceManifestWithBadCount.Count = manifest.Count{
-		Autoscaling: manifest.Autoscaling{
-			Range: &testLBWebServiceManifestWithBadCountRange,
+		AdvancedCount: manifest.AdvancedCount{
+			Range: &manifest.Range{
+				Value: &testLBWebServiceManifestWithBadCountRange,
+			},
 		},
 	}
 	testLBWebServiceManifestWithSidecar := manifest.NewLoadBalancedWebService(baseProps)

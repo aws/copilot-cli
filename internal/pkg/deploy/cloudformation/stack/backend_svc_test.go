@@ -56,10 +56,21 @@ func TestBackendService_Template(t *testing.T) {
 			wantedTemplate: "",
 			wantedErr:      fmt.Errorf("read desired count lambda: some error"),
 		},
+		"unavailable env controller lambda template": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(nil, errors.New("some error"))
+				svc.parser = m
+			},
+			wantedTemplate: "",
+			wantedErr:      fmt.Errorf("read env controller lambda: some error"),
+		},
 		"unexpected addons parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
 				svc.addons = mockTemplater{err: errors.New("some error")}
 			},
@@ -78,6 +89,7 @@ func TestBackendService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
 				svc.addons = mockTemplater{
 					tpl: `
@@ -94,15 +106,18 @@ Outputs:
 		"failed parsing Auto Scaling template": {
 			setUpManifest: func(svc *BackendService) {
 				testBackendSvcManifestWithBadAutoScaling := manifest.NewBackendService(baseProps)
-				badRange := manifest.Range("badRange")
-				testBackendSvcManifestWithBadAutoScaling.Count.Autoscaling = manifest.Autoscaling{
-					Range: &badRange,
+				badRange := manifest.IntRangeBand("badRange")
+				testBackendSvcManifestWithBadAutoScaling.Count.AdvancedCount = manifest.AdvancedCount{
+					Range: &manifest.Range{
+						Value: &badRange,
+					},
 				}
 				svc.manifest = testBackendSvcManifestWithBadAutoScaling
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
 				svc.addons = mockTemplater{
 					tpl: `
@@ -114,7 +129,7 @@ Outputs:
     Value: hello`,
 				}
 			},
-			wantedErr: fmt.Errorf("convert the Auto Scaling configuration for service frontend: %w", errors.New("invalid range value badRange. Should be in format of ${min}-${max}")),
+			wantedErr: fmt.Errorf("convert the advanced count configuration for service frontend: %w", errors.New("invalid range value badRange. Should be in format of ${min}-${max}")),
 		},
 		"failed parsing svc template": {
 			setUpManifest: func(svc *BackendService) {
@@ -123,6 +138,7 @@ Outputs:
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(gomock.Any()).Return(nil, errors.New("some error"))
 				svc.parser = m
 				svc.addons = mockTemplater{
@@ -166,7 +182,9 @@ Outputs:
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(template.WorkloadOpts{
+					WorkloadType: manifest.BackendServiceType,
 					HealthCheck: &ecs.HealthCheck{
 						Command:     aws.StringSlice([]string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"}),
 						Interval:    aws.Int64(5),
@@ -174,8 +192,9 @@ Outputs:
 						StartPeriod: aws.Int64(0),
 						Timeout:     aws.Int64(10),
 					},
-					DesiredCountLambda: "something",
-					ExecuteCommand:     &template.ExecuteCommandOpts{},
+					DesiredCountLambda:  "something",
+					EnvControllerLambda: "something",
+					ExecuteCommand:      &template.ExecuteCommandOpts{},
 					NestedStack: &template.WorkloadNestedStackOpts{
 						StackName:       addon.StackName,
 						VariableOutputs: []string{"MyTable"},

@@ -24,6 +24,7 @@ var (
 		"environment-manager-role",
 		"lambdas",
 		"vpc-resources",
+		"nat-gateways",
 	}
 )
 

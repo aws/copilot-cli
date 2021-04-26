@@ -8,8 +8,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 
@@ -83,6 +86,10 @@ type codePipelineClient interface {
 	RetryStageExecution(pipelineName, stageName string) error
 }
 
+type s3Client interface {
+	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
+}
+
 type stackSetClient interface {
 	Create(name, template string, opts ...stackset.CreateOrUpdateOption) error
 	CreateInstancesAndWait(name string, accounts, regions []string) error
@@ -90,6 +97,7 @@ type stackSetClient interface {
 	Describe(name string) (stackset.Description, error)
 	InstanceSummaries(name string, opts ...stackset.InstanceSummariesOption) ([]stackset.InstanceSummary, error)
 	Delete(name string) error
+	WaitForStackSetLastOperationComplete(name string) error
 }
 
 // CloudFormation wraps the CloudFormationAPI interface
@@ -101,6 +109,7 @@ type CloudFormation struct {
 	regionalClient func(region string) cfnClient
 	appStackSet    stackSetClient
 	box            packd.Box
+	s3Client       s3Client
 }
 
 // New returns a configured CloudFormation client.
@@ -117,6 +126,7 @@ func New(sess *session.Session) CloudFormation {
 		},
 		appStackSet: stackset.New(sess),
 		box:         templates.Box(),
+		s3Client:    s3.New(sess),
 	}
 	return client
 }
@@ -319,34 +329,42 @@ type envControllerRendererInput struct {
 }
 
 func (cf CloudFormation) createEnvControllerRenderer(in *envControllerRendererInput) (progress.DynamicRenderer, error) {
-	switch {
-	case isEnvControllerInAction(in.change):
-		// We can't use the workloadStackName to retrieve the envStackName because app names and env names can contain
-		// dashes. So we fetch the tags belonging to the workload stack and generate the stack name from there.
-		workload, err := cf.cfnClient.Describe(in.workloadStackName)
-		if err != nil {
-			return nil, err
-		}
-		envStackName := fmt.Sprintf("%s-%s", parseAppNameFromTags(workload.Tags), parseEnvNameFromTags(workload.Tags))
-		body, err := cf.cfnClient.TemplateBody(envStackName)
-		if err != nil {
-			return nil, err
-		}
-		descriptions, err := cloudformation.ParseTemplateDescriptions(body)
-		if err != nil {
-			return nil, fmt.Errorf("parse cloudformation template for resource descriptions: %w", err)
-		}
-		streamer := stream.NewStackStreamer(cf.cfnClient, envStackName, in.workloadTimestamp)
-		in.g.Go(func() error {
-			return stream.Stream(in.ctx, streamer)
-		})
-		return progress.ListeningStackRenderer(streamer, envStackName, in.description, descriptions, in.renderOpts), nil
-	default:
-		logicalID := aws.StringValue(in.change.ResourceChange.LogicalResourceId)
-		return progress.ListeningResourceRenderer(in.serviceStack, logicalID, in.description, progress.ResourceRendererOpts{
-			RenderOpts: in.renderOpts,
-		}), nil
+	workload, err := cf.cfnClient.Describe(in.workloadStackName)
+	if err != nil {
+		return nil, err
 	}
+	envStackName := fmt.Sprintf("%s-%s", parseAppNameFromTags(workload.Tags), parseEnvNameFromTags(workload.Tags))
+	body, err := cf.cfnClient.TemplateBody(envStackName)
+	if err != nil {
+		return nil, err
+	}
+	envResourceDescriptions, err := cloudformation.ParseTemplateDescriptions(body)
+	if err != nil {
+		return nil, fmt.Errorf("parse cloudformation template for resource descriptions: %w", err)
+	}
+	envStreamer := stream.NewStackStreamer(cf.cfnClient, envStackName, in.workloadTimestamp)
+	ctx, cancel := context.WithCancel(in.ctx)
+	in.g.Go(func() error {
+		if err := stream.Stream(ctx, envStreamer); err != nil {
+			if errors.Is(err, context.Canceled) {
+				// The stack streamer was canceled on purposed, do not return an error.
+				// This occurs if we detect that the environment stack has no updates.
+				return nil
+			}
+			return err
+		}
+		return nil
+	})
+	return progress.ListeningEnvControllerRenderer(progress.EnvControllerConfig{
+		Description:     in.description,
+		RenderOpts:      in.renderOpts,
+		ActionStreamer:  in.serviceStack,
+		ActionLogicalID: aws.StringValue(in.change.ResourceChange.LogicalResourceId),
+		EnvStreamer:     envStreamer,
+		CancelEnvStream: cancel,
+		EnvStackName:    envStackName,
+		EnvResources:    envResourceDescriptions,
+	}), nil
 }
 
 func (cf CloudFormation) errOnFailedStack(stackName string) error {
@@ -375,6 +393,17 @@ func toStack(config StackConfiguration) (*cloudformation.Stack, error) {
 	return stack, nil
 }
 
+func toStackFromS3(config StackConfiguration, s3url string) (*cloudformation.Stack, error) {
+	stack := cloudformation.NewStackWithURL(config.StackName(), s3url)
+	var err error
+	stack.Parameters, err = config.Parameters()
+	if err != nil {
+		return nil, err
+	}
+	stack.Tags = config.Tags()
+	return stack, nil
+}
+
 func toMap(tags []*sdkcloudformation.Tag) map[string]string {
 	m := make(map[string]string)
 	for _, t := range tags {
@@ -387,24 +416,6 @@ func toMap(tags []*sdkcloudformation.Tag) map[string]string {
 // arn:aws:cloudformation:us-west-2:123456789012:stack/my-nested-stack/d0a825a0-e4cd-xmpl-b9fb-061c69e99205
 func parseStackNameFromARN(stackARN string) string {
 	return strings.Split(stackARN, "/")[1]
-}
-
-func isEnvControllerInAction(controller *sdkcloudformation.Change) bool {
-	switch action := aws.StringValue(controller.ResourceChange.Action); action {
-	case sdkcloudformation.ChangeActionAdd:
-		return true
-	case sdkcloudformation.ChangeActionModify:
-		for _, detail := range controller.ResourceChange.Details {
-			attribute := aws.StringValue(detail.Target.Name)
-			if attribute == "Parameters" {
-				// The env controller modifies the env stack only if the "Parameters" field is modified.
-				return true
-			}
-		}
-		return false
-	default:
-		return false
-	}
 }
 
 func parseAppNameFromTags(tags []*sdkcloudformation.Tag) string {
@@ -436,4 +447,26 @@ func stopSpinner(spinner *progress.Spinner, err error, label string) {
 		return
 	}
 	spinner.Stop(log.Serrorf("%s\n", label))
+}
+
+// isRetryableUpdateError returns true if the stack update error is retryable.
+func isRetryableUpdateError(name string, err error) bool {
+	var alreadyInProgErr *cloudformation.ErrStackUpdateInProgress
+	var obsoleteChangeSetErr *cloudformation.ErrChangeSetNotExecutable
+	switch updateErr := err; {
+	case errors.As(updateErr, &alreadyInProgErr):
+		// There is another update going on, retry the upgrade.
+		return true
+	case errors.As(updateErr, &obsoleteChangeSetErr):
+		// If there are two "upgrade" calls happening in parallel, it's possible that
+		// both invocations created a changeset to upgrade the stack.
+		// CloudFormation will ensure that one of them goes through, while the other returns
+		// an ErrChangeSetNotExecutable error.
+		//
+		// In that scenario, we should loop again, wait until the stack is updated,
+		// and exit due to changeset is empty.
+		return true
+	default:
+		return false
+	}
 }

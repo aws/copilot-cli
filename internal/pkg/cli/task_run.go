@@ -79,13 +79,15 @@ type runTaskVars struct {
 	taskRole      string
 	executionRole string
 
-	subnets           []string
-	securityGroups    []string
-	env               string
-	appName           string
-	useDefaultSubnets bool
+	cluster                     string
+	subnets                     []string
+	securityGroups              []string
+	env                         string
+	appName                     string
+	useDefaultSubnetsAndCluster bool
 
 	envVars      map[string]string
+	secrets      map[string]string
 	command      string
 	entrypoint   string
 	resourceTags map[string]string
@@ -199,10 +201,11 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 		}, nil
 	}
 
-	return &task.NetworkConfigRunner{
+	return &task.ConfigRunner{
 		Count:     o.count,
 		GroupName: o.groupName,
 
+		Cluster:        o.cluster,
 		Subnets:        o.subnets,
 		SecurityGroups: o.securityGroups,
 
@@ -272,6 +275,10 @@ func (o *runTaskOpts) Validate() error {
 		}
 	}
 
+	if err := o.validateFlagsWithCluster(); err != nil {
+		return err
+	}
+
 	if err := o.validateFlagsWithDefaultCluster(); err != nil {
 		return err
 	}
@@ -299,8 +306,28 @@ func (o *runTaskOpts) Validate() error {
 	return nil
 }
 
+func (o *runTaskOpts) validateFlagsWithCluster() error {
+	if o.cluster == "" {
+		return nil
+	}
+
+	if o.appName != "" {
+		return fmt.Errorf("cannot specify both `--app` and `--cluster`")
+	}
+
+	if o.env != "" {
+		return fmt.Errorf("cannot specify both `--env` and `--cluster`")
+	}
+
+	if o.useDefaultSubnetsAndCluster {
+		return fmt.Errorf("cannot specify both `--default` and `--cluster`")
+	}
+
+	return nil
+}
+
 func (o *runTaskOpts) validateFlagsWithDefaultCluster() error {
-	if !o.useDefaultSubnets {
+	if !o.useDefaultSubnetsAndCluster {
 		return nil
 	}
 
@@ -324,7 +351,7 @@ func (o *runTaskOpts) validateFlagsWithSubnets() error {
 		return nil
 	}
 
-	if o.useDefaultSubnets {
+	if o.useDefaultSubnetsAndCluster {
 		return fmt.Errorf("cannot specify both `--subnets` and `--default`")
 	}
 
@@ -370,7 +397,7 @@ func (o *runTaskOpts) Ask() error {
 func (o *runTaskOpts) shouldPromptForAppEnv() bool {
 	// NOTE: if security groups are specified but subnets are not, then we use the default subnets with the
 	// specified security groups.
-	useDefault := o.useDefaultSubnets || (o.securityGroups != nil && o.subnets == nil)
+	useDefault := o.useDefaultSubnetsAndCluster || (o.securityGroups != nil && o.subnets == nil && o.cluster == "")
 	useConfig := o.subnets != nil
 
 	// if user hasn't specified that they want to use the default subnets, and that they didn't provide specific subnets
@@ -398,7 +425,7 @@ func (o *runTaskOpts) Execute() error {
 		return err
 	}
 
-	if o.env == "" {
+	if o.env == "" && o.cluster == "" {
 		hasDefaultCluster, err := o.defaultClusterGetter.HasDefaultCluster()
 		if err != nil {
 			return fmt.Errorf(`find "default" cluster to deploy the task to: %v`, err)
@@ -511,11 +538,10 @@ func (o *runTaskOpts) buildAndPushImage() error {
 		additionalTags = append(additionalTags, o.imageTag)
 	}
 
-	if err := o.repository.BuildAndPush(exec.NewDockerCommand(), &exec.BuildArguments{
-		Dockerfile:     o.dockerfilePath,
-		Context:        filepath.Dir(o.dockerfilePath),
-		ImageTag:       imageTagLatest,
-		AdditionalTags: additionalTags,
+	if _, err := o.repository.BuildAndPush(exec.NewDockerCommand(), &exec.BuildArguments{
+		Dockerfile: o.dockerfilePath,
+		Context:    filepath.Dir(o.dockerfilePath),
+		Tags:       append([]string{imageTagLatest}, additionalTags...),
 	}); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
@@ -562,6 +588,7 @@ func (o *runTaskOpts) deploy() error {
 		Command:        command,
 		EntryPoint:     entrypoint,
 		EnvVars:        o.envVars,
+		Secrets:        o.secrets,
 		App:            o.appName,
 		Env:            o.env,
 		AdditionalTags: o.resourceTags,
@@ -645,8 +672,8 @@ func BuildTaskRunCmd() *cobra.Command {
 		Use:   "run",
 		Short: "Run a one-off task on Amazon ECS.",
 		Example: `
-Run a task using your local Dockerfile. 
-You will be prompted to specify a task group name and an environment for the tasks to run in.
+Run a task using your local Dockerfile and display log streams after the task is running. 
+You will be prompted to specify an environment for the tasks to run in.
 /code $ copilot task run
 Run a task named "db-migrate" in the "test" environment under the current workspace.
 /code $ copilot task run -n db-migrate --env test
@@ -698,11 +725,13 @@ Run a task with a command.
 
 	cmd.Flags().StringVar(&vars.appName, appFlag, "", taskAppFlagDescription)
 	cmd.Flags().StringVar(&vars.env, envFlag, "", taskEnvFlagDescription)
+	cmd.Flags().StringVar(&vars.cluster, clusterFlag, "", clusterFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.subnets, subnetsFlag, nil, subnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.securityGroups, securityGroupsFlag, nil, securityGroupsFlagDescription)
-	cmd.Flags().BoolVar(&vars.useDefaultSubnets, taskDefaultFlag, false, taskRunDefaultFlagDescription)
+	cmd.Flags().BoolVar(&vars.useDefaultSubnetsAndCluster, taskDefaultFlag, false, taskRunDefaultFlagDescription)
 
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.secrets, secretsFlag, nil, secretsFlagDescription)
 	cmd.Flags().StringVar(&vars.command, commandFlag, "", runCommandFlagDescription)
 	cmd.Flags().StringVar(&vars.entrypoint, entrypointFlag, "", entrypointFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)

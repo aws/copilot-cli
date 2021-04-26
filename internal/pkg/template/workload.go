@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/google/uuid"
+
+	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 // Constants for template paths.
@@ -45,6 +46,7 @@ var (
 		"secrets",
 		"executionrole",
 		"taskrole",
+		"workload-container",
 		"fargate-taskdef-base-properties",
 		"service-base-properties",
 		"servicediscovery",
@@ -67,21 +69,24 @@ var (
 type WorkloadNestedStackOpts struct {
 	StackName string
 
-	VariableOutputs []string
-	SecretOutputs   []string
-	PolicyOutputs   []string
+	VariableOutputs      []string
+	SecretOutputs        []string
+	PolicyOutputs        []string
+	SecurityGroupOutputs []string
 }
 
 // SidecarOpts holds configuration that's needed if the service has sidecar containers.
 type SidecarOpts struct {
-	Name        *string
-	Image       *string
-	Port        *string
-	Protocol    *string
-	CredsParam  *string
-	Variables   map[string]string
-	Secrets     map[string]string
-	MountPoints []*MountPoint
+	Name         *string
+	Image        *string
+	Essential    *bool
+	Port         *string
+	Protocol     *string
+	CredsParam   *string
+	Variables    map[string]string
+	Secrets      map[string]string
+	MountPoints  []*MountPoint
+	DockerLabels map[string]string
 }
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
@@ -91,6 +96,11 @@ type StorageOpts struct {
 	MountPoints       []*MountPoint
 	EFSPerms          []*EFSPermission
 	ManagedVolumeInfo *ManagedVolumeCreationInfo // Used for delegating CreationInfo for Copilot-managed EFS.
+}
+
+// requiresEFSCreation returns true if managed volume information is specified; false otherwise.
+func (s *StorageOpts) requiresEFSCreation() bool {
+	return s.ManagedVolumeInfo != nil
 }
 
 // EFSPermission holds information needed to render an IAM policy statement.
@@ -111,6 +121,19 @@ type MountPoint struct {
 type Volume struct {
 	Name *string
 
+	EFS *EFSVolumeConfiguration
+}
+
+// ManagedVolumeCreationInfo holds information about how to create Copilot-managed access points.
+type ManagedVolumeCreationInfo struct {
+	Name    *string
+	DirName *string
+	UID     *uint32
+	GID     *uint32
+}
+
+// EFSVolumeConfiguration contains information about how to specify externally managed file systems.
+type EFSVolumeConfiguration struct {
 	// EFSVolumeConfiguration
 	Filesystem    *string
 	RootDirectory *string // "/" or empty are equivalent
@@ -118,13 +141,6 @@ type Volume struct {
 	// Authorization Config
 	AccessPointID *string
 	IAM           *string // ENABLED or DISABLED
-}
-
-// ManagedVolumeCreationInfo holds information about how to create Copilot-managed access points.
-type ManagedVolumeCreationInfo struct {
-	Name *string
-	UID  *string
-	GID  *string
 }
 
 // LogConfigOpts holds configuration that's needed if the service is configured with Firelens to route
@@ -140,10 +156,27 @@ type LogConfigOpts struct {
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
 type HTTPHealthCheckOpts struct {
 	HealthCheckPath    string
+	SuccessCodes       string
 	HealthyThreshold   *int64
 	UnhealthyThreshold *int64
 	Interval           *int64
 	Timeout            *int64
+}
+
+// AdvancedCount holds configuration for autoscaling and capacity provider
+// parameters.
+type AdvancedCount struct {
+	Spot        *int
+	Autoscaling *AutoscalingOpts
+	Cps         []*CapacityProviderStrategy
+}
+
+// CapacityProviderStrategy holds the configuration needed for a
+// CapacityProviderStrategyItem on a Service
+type CapacityProviderStrategy struct {
+	Base             *int
+	Weight           *int
+	CapacityProvider string
 }
 
 // AutoscalingOpts holds configuration that's needed for Auto Scaling.
@@ -182,20 +215,24 @@ func defaultNetworkOpts() *NetworkOpts {
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
-	Variables      map[string]string
-	Secrets        map[string]string
-	NestedStack    *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
-	Sidecars       []*SidecarOpts
-	LogConfig      *LogConfigOpts
-	Autoscaling    *AutoscalingOpts
-	Storage        *StorageOpts
-	Network        *NetworkOpts
-	ExecuteCommand *ExecuteCommandOpts
-	EntryPoint     []string
-	Command        []string
-	DomainAlias    string
+	Variables          map[string]string
+	Secrets            map[string]string
+	NestedStack        *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	Sidecars           []*SidecarOpts
+	LogConfig          *LogConfigOpts
+	Autoscaling        *AutoscalingOpts
+	CapacityProviders  []*CapacityProviderStrategy
+	DesiredCountOnSpot *int
+	Storage            *StorageOpts
+	Network            *NetworkOpts
+	ExecuteCommand     *ExecuteCommandOpts
+	EntryPoint         []string
+	Command            []string
+	DomainAlias        string
+	DockerLabels       map[string]string
 
 	// Additional options for service templates.
+	WorkloadType        string
 	HealthCheck         *ecs.HealthCheck
 	HTTPHealthCheck     HTTPHealthCheckOpts
 	AllowedSourceIps    []string
@@ -268,12 +305,13 @@ func (t *Template) parseWkld(name, wkldDirName string, data interface{}, options
 func withSvcParsingFuncs() ParseOption {
 	return func(t *template.Template) *template.Template {
 		return t.Funcs(map[string]interface{}{
-			"toSnakeCase":     ToSnakeCaseFunc,
-			"hasSecrets":      hasSecrets,
-			"fmtSlice":        FmtSliceFunc,
-			"quoteSlice":      QuotePSliceFunc,
-			"randomUUID":      randomUUIDFunc,
-			"jsonMountPoints": generateMountPointJSON,
+			"toSnakeCase":         ToSnakeCaseFunc,
+			"hasSecrets":          hasSecrets,
+			"fmtSlice":            FmtSliceFunc,
+			"quoteSlice":          QuotePSliceFunc,
+			"randomUUID":          randomUUIDFunc,
+			"jsonMountPoints":     generateMountPointJSON,
+			"envControllerParams": envControllerParameters,
 		})
 	}
 }
@@ -294,4 +332,19 @@ func randomUUIDFunc() (string, error) {
 		return "", fmt.Errorf("generate random uuid: %w", err)
 	}
 	return id.String(), err
+}
+
+// envControllerParameters determines which parameters to include in the EnvController template.
+func envControllerParameters(o WorkloadOpts) []string {
+	parameters := []string{}
+	if o.WorkloadType == "Load Balanced Web Service" {
+		parameters = append(parameters, "ALBWorkloads,") // YAML needs the comma separator; resolved in EnvContr.
+	}
+	if o.Network.SubnetsType == PrivateSubnetsPlacement {
+		parameters = append(parameters, "NATWorkloads,") // YAML needs the comma separator; resolved in EnvContr.
+	}
+	if o.Storage != nil && o.Storage.requiresEFSCreation() {
+		parameters = append(parameters, "EFSWorkloads,")
+	}
+	return parameters
 }

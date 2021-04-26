@@ -22,6 +22,7 @@ Generally, the steps involved in task run are:
 ```
   --app string                     Optional. Name of the application.
                                    Cannot be specified with 'default', 'subnets' or 'security-groups'
+  --cluster string                 Optional. The short name or full ARN of the cluster to run the task in.
   --command string                 Optional. The command that is passed to "docker run" to override the default command.
   --count int                      Optional. The number of tasks to set up. (default 1)
   --cpu int                        Optional. The number of CPU units to reserve for each task. (default 256)
@@ -31,14 +32,15 @@ Generally, the steps involved in task run are:
   --entrypoint string              Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.
   --env string                     Optional. Name of the environment.
                                    Cannot be specified with 'default', 'subnets' or 'security-groups'
-  --env-vars stringToString        Optional. Environment variables specified by key=value separated with commas. (default [])
+  --env-vars stringToString        Optional. Environment variables specified by key=value separated by commas. (default [])
   --execution-role string          Optional. The role that grants the container agent permission to make AWS API calls.
   --follow                         Optional. Specifies if the logs should be streamed.
 -h, --help                         help for run
   --image string                   Optional. The image to run instead of building a Dockerfile.
   --memory int                     Optional. The amount of memory to reserve in MiB for each task. (default 512)
-  --resource-tags stringToString   Optional. Labels with a key and value separated with commas.
+  --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                    Allows you to categorize resources. (default [])
+  --secrets stringToString         Optional. Secrets to inject into the container. Specified by key=value separated by commas. (default [])
   --security-groups strings        Optional. The security group IDs for the task to use. Can be specified multiple times.
                                    Cannot be specified with 'app' or 'env'.
   --subnets strings                Optional. The subnet IDs for the task to use. Can be specified multiple times.
@@ -48,8 +50,8 @@ Generally, the steps involved in task run are:
   --task-role string               Optional. The role for the task to use.
 ```
 ## Example
-Run a task using your local Dockerfile. 
-You will be prompted to specify a task group name and an environment for the tasks to run in.
+Run a task using your local Dockerfile and display log streams after the task is running. 
+You will be prompted to specify an environment for the tasks to run in.
 ```
 $ copilot task run --follow
 ```

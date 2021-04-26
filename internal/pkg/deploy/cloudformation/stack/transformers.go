@@ -6,6 +6,7 @@ package stack
 import (
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"strings"
 	"time"
 
@@ -32,9 +33,16 @@ const (
 	defaultSidecarPort = "80"
 )
 
+// Min and Max values for task ephemeral storage in GiB.
 const (
 	ephemeralMinValueGiB = 20
 	ephemeralMaxValueGiB = 16000
+)
+
+// Supported capacity providers for Fargate services
+const (
+	capacityProviderFargateSpot = "FARGATE_SPOT"
+	capacityProviderFargate     = "FARGATE"
 )
 
 // Validation errors when rendering manifest into template.
@@ -46,7 +54,11 @@ var (
 	errNoContainerPath = errors.New(`"path" cannot be empty`)
 	errNoSourceVolume  = errors.New(`"source_volume" cannot be empty`)
 
-	errEphemeralBadSize = errors.New("ephemeral storage must be between 20 GiB and 16000 GiB")
+	errEphemeralBadSize    = errors.New("ephemeral storage must be between 20 GiB and 16000 GiB")
+	errUIDWithNonManagedFS = errors.New("UID and GID cannot be specified with non-managed EFS")
+	errInvalidUIDGIDConfig = errors.New("set managed filesystem access point creation info: must specify both UID and GID, or neither")
+	errReservedUID         = errors.New("set managed filesystem access point creation info: UID must not be 0")
+	errInvalidSpotConfig   = errors.New(`"count.spot" and "count.range" cannot be specified together`)
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
@@ -65,14 +77,16 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 			return nil, err
 		}
 		sidecars = append(sidecars, &template.SidecarOpts{
-			Name:        aws.String(name),
-			Image:       config.Image,
-			Port:        port,
-			Protocol:    protocol,
-			CredsParam:  config.CredsParam,
-			Secrets:     config.Secrets,
-			Variables:   config.Variables,
-			MountPoints: mp,
+			Name:         aws.String(name),
+			Image:        config.Image,
+			Essential:    config.Essential,
+			Port:         port,
+			Protocol:     protocol,
+			CredsParam:   config.CredsParam,
+			Secrets:      config.Secrets,
+			Variables:    config.Variables,
+			MountPoints:  mp,
+			DockerLabels: config.DockerLabels,
 		})
 	}
 	return sidecars, nil
@@ -95,12 +109,94 @@ func parsePortMapping(s *string) (port *string, protocol *string, err error) {
 	}
 }
 
-// convertAutoscaling converts the service's Auto Scaling configuration into a format parsable
-// by the templates pkg.
-func convertAutoscaling(a *manifest.Autoscaling) (*template.AutoscalingOpts, error) {
+func convertAdvancedCount(a *manifest.AdvancedCount) (*template.AdvancedCount, error) {
+	if a == nil {
+		return nil, nil
+	}
+
 	if a.IsEmpty() {
 		return nil, nil
 	}
+
+	autoscaling, err := convertAutoscaling(a)
+	if err != nil {
+		return nil, err
+	}
+
+	cps, err := convertCapacityProviders(a)
+	if err != nil {
+		return nil, err
+	}
+
+	return &template.AdvancedCount{
+		Spot:        a.Spot,
+		Autoscaling: autoscaling,
+		Cps:         cps,
+	}, nil
+}
+
+// convertCapacityProviders transforms the manifest fields into a format
+// parsable by the templates pkg.
+func convertCapacityProviders(a *manifest.AdvancedCount) ([]*template.CapacityProviderStrategy, error) {
+	if a.IsEmpty() {
+		return nil, nil
+	}
+
+	if a.Spot != nil && a.Range != nil {
+		return nil, errInvalidSpotConfig
+	}
+
+	// return if autoscaling range specified without spot scaling
+	if a.Range != nil && a.Range.Value != nil {
+		return nil, nil
+	}
+
+	var cps []*template.CapacityProviderStrategy
+
+	// if Spot specified as count, then weight on Spot CPS should be 1
+	cps = append(cps, &template.CapacityProviderStrategy{
+		Weight:           aws.Int(1),
+		CapacityProvider: capacityProviderFargateSpot,
+	})
+
+	// Return if only spot is specifed as count
+	if a.Range == nil {
+		return cps, nil
+	}
+
+	// Scaling with spot
+	rc := a.Range.RangeConfig
+	if !rc.IsEmpty() {
+		spotFrom := aws.IntValue(rc.SpotFrom)
+		min := aws.IntValue(rc.Min)
+
+		// If spotFrom value is not equal to the autoscaling min, then
+		// the base value on the Fargate Capacity provider must be set
+		// to one less than spotFrom
+		if spotFrom > min {
+			base := spotFrom - 1
+			fgCapacity := &template.CapacityProviderStrategy{
+				Base:             aws.Int(base),
+				Weight:           aws.Int(0),
+				CapacityProvider: capacityProviderFargate,
+			}
+			cps = append(cps, fgCapacity)
+		}
+	}
+
+	return cps, nil
+}
+
+// convertAutoscaling converts the service's Auto Scaling configuration into a format parsable
+// by the templates pkg.
+func convertAutoscaling(a *manifest.AdvancedCount) (*template.AutoscalingOpts, error) {
+	if a.IsEmpty() {
+		return nil, nil
+	}
+	if a.Spot != nil {
+		return nil, nil
+	}
+
 	min, max, err := a.Range.Parse()
 	if err != nil {
 		return nil, err
@@ -137,6 +233,9 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 	} else if hc.HealthCheckPath != nil {
 		opts.HealthCheckPath = *hc.HealthCheckPath
 	}
+	if hc.HealthCheckArgs.SuccessCodes != nil {
+		opts.SuccessCodes = *hc.HealthCheckArgs.SuccessCodes
+	}
 	if hc.HealthCheckArgs.Interval != nil {
 		opts.Interval = aws.Int64(int64(hc.HealthCheckArgs.Interval.Seconds()))
 	}
@@ -172,9 +271,13 @@ func logConfigOpts(lc *manifest.Logging) *template.LogConfigOpts {
 
 // convertStorageOpts converts a manifest Storage field into template data structures which can be used
 // to execute CFN templates
-func convertStorageOpts(in *manifest.Storage) (*template.StorageOpts, error) {
+func convertStorageOpts(wlName *string, in *manifest.Storage) (*template.StorageOpts, error) {
 	if in == nil {
 		return nil, nil
+	}
+	mv, err := convertManagedFSInfo(wlName, in.Volumes)
+	if err != nil {
+		return nil, err
 	}
 	v, err := convertVolumes(in.Volumes)
 	if err != nil {
@@ -193,10 +296,11 @@ func convertStorageOpts(in *manifest.Storage) (*template.StorageOpts, error) {
 		return nil, err
 	}
 	return &template.StorageOpts{
-		Ephemeral:   ephemeral,
-		Volumes:     v,
-		MountPoints: mp,
-		EFSPerms:    perms,
+		Ephemeral:         ephemeral,
+		Volumes:           v,
+		MountPoints:       mp,
+		EFSPerms:          perms,
+		ManagedVolumeInfo: mv,
 	}, nil
 }
 
@@ -269,85 +373,198 @@ func convertMountPoints(input map[string]manifest.Volume) ([]*template.MountPoin
 }
 
 func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPermission, error) {
-	if len(input) == 0 {
-		return nil, nil
-	}
-	output := []*template.EFSPermission{}
+	var output []*template.EFSPermission
 	for _, volume := range input {
-		// Write defaults to false
+		if volume.EFS == nil {
+			continue
+		}
+		if volume.EFS.UseManagedFS() {
+			continue
+		}
+		// Write defaults to false.
 		write := defaultWritePermission
 		if volume.ReadOnly != nil {
 			write = !aws.BoolValue(volume.ReadOnly)
 		}
-		if volume.EFS.FileSystemID == nil {
+
+		id := volume.EFS.FSID()
+		if id == nil {
 			return nil, errNoFSID
+		}
+
+		var accessPointID *string
+		if volume.EFS.Config.AuthConfig != nil {
+			accessPointID = volume.EFS.Config.AuthConfig.AccessPointID
 		}
 		perm := template.EFSPermission{
 			Write:         write,
-			AccessPointID: volume.EFS.AuthConfig.AccessPointID,
-			FilesystemID:  volume.EFS.FileSystemID,
+			AccessPointID: accessPointID,
+			FilesystemID:  id,
 		}
 		output = append(output, &perm)
 	}
 	return output, nil
 }
 
-func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error) {
-	if len(input) == 0 {
-		return nil, nil
-	}
-	output := []*template.Volume{}
+func convertManagedFSInfo(wlName *string, input map[string]manifest.Volume) (*template.ManagedVolumeCreationInfo, error) {
+	var output *template.ManagedVolumeCreationInfo
 	for name, volume := range input {
-		// Set default values correctly.
-		fsID := volume.EFS.FileSystemID
-		if aws.StringValue(fsID) == "" {
-			return nil, errNoFSID
+		if volume.EFS == nil {
+			continue
 		}
 
-		rootDir := volume.EFS.RootDirectory
-
-		// Validate that root directory path doesn't contain spaces or shell injection.
-		if err := validateRootDirPath(aws.StringValue(rootDir)); err != nil {
-			return nil, fmt.Errorf("validate root directory path %s: %w", aws.StringValue(rootDir), err)
+		if !volume.EFS.UseManagedFS() {
+			continue
 		}
 
-		if aws.StringValue(rootDir) == "" {
-			rootDir = aws.String(defaultRootDirectory)
+		if output != nil {
+			return nil, fmt.Errorf("validate managed EFS: cannot specify more than one managed volume per service")
 		}
 
-		var iam *string
-		if volume.EFS.AuthConfig.IAM == nil {
-			iam = aws.String(defaultIAM)
-		}
-		if aws.BoolValue(volume.EFS.AuthConfig.IAM) {
-			iam = aws.String(enabled)
+		uid := volume.EFS.Config.UID
+		gid := volume.EFS.Config.GID
+
+		if err := validateUIDGID(uid, gid); err != nil {
+			return nil, err
 		}
 
-		// Validate ECS requirements: when an AP is specified, IAM MUST be true
-		// and root directory MUST be either empty or "/".
-		// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-efsvolumeconfiguration.html
-		if aws.StringValue(volume.EFS.AuthConfig.AccessPointID) != "" {
-			if !aws.BoolValue(volume.EFS.AuthConfig.IAM) {
-				return nil, errAccessPointWithoutIAM
-			}
-			// Use rootDir var we previously identified.
-			if !(aws.StringValue(rootDir) == "/") {
-				return nil, errAcessPointWithRootDirectory
-			}
+		if uid == nil && gid == nil {
+			crc := aws.Uint32(getRandomUIDGID(aws.StringValue(wlName)))
+			uid = crc
+			gid = crc
 		}
+		output = &template.ManagedVolumeCreationInfo{
+			Name:    aws.String(name),
+			DirName: wlName,
+			UID:     uid,
+			GID:     gid,
+		}
+	}
+	return output, nil
+}
 
+// getRandomUIDGID returns the 32-bit checksum of the service name for use as CreationInfo in the EFS Access Point.
+// See https://stackoverflow.com/a/14210379/5890422 for discussion of the possibility of collisions in CRC32 with
+// small numbers of hashes.
+func getRandomUIDGID(name string) uint32 {
+	return crc32.ChecksumIEEE([]byte(name))
+}
+
+func validateUIDGID(uid, gid *uint32) error {
+	if uid == nil && gid == nil {
+		return nil
+	}
+	if (uid == nil) != (gid == nil) {
+		return errInvalidUIDGIDConfig
+	}
+	// Check for root UID.
+	if aws.Uint32Value(uid) == 0 {
+		return errReservedUID
+	}
+	return nil
+}
+
+func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error) {
+	var output []*template.Volume
+	for name, volume := range input {
+		// Volumes can contain either:
+		//   a) an EFS configuration, which must be valid
+		//   b) no EFS configuration, in which case the volume is created using task scratch storage in order to share
+		//      data between containers.
+		if volume.EFS != nil && volume.EFS.UseManagedFS() {
+			continue
+		}
+		// Convert EFS configuration to template struct.
+		efs, err := convertEFS(volume.EFS)
+		if err != nil {
+			return nil, err
+		}
 		v := template.Volume{
 			Name: aws.String(name),
-
-			Filesystem:    fsID,
-			RootDirectory: rootDir,
-
-			AccessPointID: volume.EFS.AuthConfig.AccessPointID,
-			IAM:           iam,
+			EFS:  efs,
 		}
 		output = append(output, &v)
 	}
 	return output, nil
+}
+
+// convertEFS converts a volume from a manfiest object to a template object. This function
+// should not be called on non-managed volumes.
+func convertEFS(in *manifest.EFSConfigOrID) (*template.EFSVolumeConfiguration, error) {
+	// If there is no EFS information, just add the Name to the volume.
+	if in == nil {
+		return nil, nil
+	}
+	// UID and GID should not be specified for non-managed volumes.
+	if !in.Config.IsEmpty() {
+		if in.Config.UID != nil {
+			return nil, errUIDWithNonManagedFS
+		}
+		if in.Config.GID != nil {
+			return nil, errUIDWithNonManagedFS
+		}
+	}
+	// EFS is specified as a string with just the filesystem ID.
+	if in.ID != "" {
+		return &template.EFSVolumeConfiguration{
+			Filesystem:    aws.String(in.ID),
+			IAM:           aws.String(defaultIAM),
+			RootDirectory: aws.String(defaultRootDirectory),
+		}, nil
+	}
+	// ID is nil and we received a value; therefore Config must be not nil.
+	return convertEFSConfiguration(in.Config)
+
+}
+
+func convertEFSConfiguration(in manifest.EFSVolumeConfiguration) (*template.EFSVolumeConfiguration, error) {
+	// Set default values correctly.
+	fsID := in.FileSystemID
+	if aws.StringValue(fsID) == "" {
+		return nil, errNoFSID
+	}
+
+	rootDir := in.RootDirectory
+	// Validate that root directory path doesn't contain spaces or shell injection.
+	if err := validateRootDirPath(aws.StringValue(rootDir)); err != nil {
+		return nil, fmt.Errorf("validate root directory path %s: %w", aws.StringValue(rootDir), err)
+	}
+	if aws.StringValue(rootDir) == "" {
+		rootDir = aws.String(defaultRootDirectory)
+	}
+
+	// Set default values for IAM and AccessPointID
+	iam := aws.String(defaultIAM)
+	if in.AuthConfig == nil {
+		return &template.EFSVolumeConfiguration{
+			Filesystem:    fsID,
+			RootDirectory: rootDir,
+			IAM:           iam,
+		}, nil
+	}
+	// AuthConfig exists; check the properties.
+	if aws.BoolValue(in.AuthConfig.IAM) {
+		iam = aws.String(enabled)
+	}
+	// Validate ECS requirements: when an AP is specified, IAM MUST be true
+	// and root directory MUST be either empty or "/".
+	// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-efsvolumeconfiguration.html
+	if aws.StringValue(in.AuthConfig.AccessPointID) != "" {
+		if !aws.BoolValue(in.AuthConfig.IAM) {
+			return nil, errAccessPointWithoutIAM
+		}
+		// Use rootDir value we previously identified.
+		if !(aws.StringValue(rootDir) == "/") {
+			return nil, errAcessPointWithRootDirectory
+		}
+	}
+
+	return &template.EFSVolumeConfiguration{
+		Filesystem:    fsID,
+		RootDirectory: rootDir,
+		IAM:           iam,
+		AccessPointID: in.AuthConfig.AccessPointID,
+	}, nil
 }
 
 func convertNetworkConfig(network manifest.NetworkConfig) *template.NetworkOpts {

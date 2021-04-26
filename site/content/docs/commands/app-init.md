@@ -15,7 +15,7 @@ Like all commands in the Copilot CLI, if you don't provide required flags, we'll
 ```bash
       --domain string                  Optional. Your existing custom domain name.
   -h, --help                           help for init
-      --resource-tags stringToString   Optional. Labels with a key and value separated with commas.
+      --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
 ```
 The `--domain` flag allows you to specify a domain name registered with Amazon Route 53 in your app's account. This will allow all the services in your app to share the same domain name. You'll be able to access your services at: [https://{svcName}.{envName}.{appName}.{domain}](https://{svcName}.{envName}.{appName}.{domain})

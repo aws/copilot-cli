@@ -31,6 +31,8 @@ Conditions:
 Resources: 
 {{include "loggroup" . | indent 2}}
 
+{{include "env-controller" . | indent 2}}
+
   TaskDefinition:
     Metadata:
       'aws:copilot:description': 'An ECS task definition to group your containers and run them on ECS'
@@ -39,15 +41,7 @@ Resources:
     Properties:
 {{include "fargate-taskdef-base-properties" . | indent 6}}
       ContainerDefinitions:
-        - Name: !Ref WorkloadName
-          Image: !Ref ContainerImage
-{{include "envvars" . | indent 10}}
-{{include "secrets" . | indent 10}}
-{{include "logconfig" . | indent 10}}
-{{include "image-overrides" . | indent 10}}
-{{- if .Storage -}}
-{{include "mount-points" . | indent 10}}
-{{- end -}}
+{{include "workload-container" . | indent 8}}
 {{include "sidecars" . | indent 8}}
 {{- if .Storage -}}
 {{include "volumes" . | indent 6}}

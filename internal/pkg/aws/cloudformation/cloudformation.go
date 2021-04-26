@@ -58,7 +58,7 @@ func (c *CloudFormation) Create(stack *Stack) (changeSetID string, err error) {
 	status := StackStatus(aws.StringValue(descr.StackStatus))
 	if status.requiresCleanup() {
 		// If the stack exists, but failed to create, we'll clean it up and then re-create it.
-		if err := c.Delete(stack.Name); err != nil {
+		if err := c.DeleteAndWait(stack.Name); err != nil {
 			return "", fmt.Errorf("clean up previously failed stack %s: %w", stack.Name, err)
 		}
 		return c.create(stack)
@@ -187,6 +187,45 @@ func (c *CloudFormation) Describe(name string) (*StackDescription, error) {
 	return &descr, nil
 }
 
+// Exists returns true if the CloudFormation stack exists, false otherwise.
+// If an error occurs for another reason than ErrStackNotFound, then returns the error.
+func (c *CloudFormation) Exists(name string) (bool, error) {
+	if _, err := c.Describe(name); err != nil {
+		var notFound *ErrStackNotFound
+		if errors.As(err, &notFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+// MetadataOpts sets up optional parameters for Metadata function.
+type MetadataOpts *cloudformation.GetTemplateSummaryInput
+
+// MetadataWithStackName sets up the stack name for cloudformation.GetTemplateSummaryInput.
+func MetadataWithStackName(name string) MetadataOpts {
+	return &cloudformation.GetTemplateSummaryInput{
+		StackName: aws.String(name),
+	}
+}
+
+// MetadataWithStackSetName sets up the stack set name for cloudformation.GetTemplateSummaryInput.
+func MetadataWithStackSetName(name string) MetadataOpts {
+	return &cloudformation.GetTemplateSummaryInput{
+		StackSetName: aws.String(name),
+	}
+}
+
+// Metadata returns the Metadata property of the CloudFormation stack(set)'s template.
+func (c *CloudFormation) Metadata(opt MetadataOpts) (string, error) {
+	out, err := c.GetTemplateSummary(opt)
+	if err != nil {
+		return "", fmt.Errorf("get template summary: %w", err)
+	}
+	return aws.StringValue(out.Metadata), nil
+}
+
 // TemplateBody returns the template body of an existing stack.
 // If the stack does not exist, returns ErrStackNotFound.
 func (c *CloudFormation) TemplateBody(name string) (string, error) {
@@ -234,6 +273,25 @@ func (c *CloudFormation) Outputs(stack *Stack) (map[string]string, error) {
 // Events returns the list of stack events in **chronological** order.
 func (c *CloudFormation) Events(stackName string) ([]StackEvent, error) {
 	return c.events(stackName, func(in *cloudformation.StackEvent) bool { return true })
+}
+
+// StackResources returns the list of resources created as part of a CloudFormation stack.
+func (c *CloudFormation) StackResources(name string) ([]*StackResource, error) {
+	out, err := c.DescribeStackResources(&cloudformation.DescribeStackResourcesInput{
+		StackName: aws.String(name),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("describe resources for stack %s: %w", name, err)
+	}
+	var resources []*StackResource
+	for _, r := range out.StackResources {
+		if r == nil {
+			continue
+		}
+		sr := StackResource(*r)
+		resources = append(resources, &sr)
+	}
+	return resources, nil
 }
 
 func (c *CloudFormation) events(stackName string, match eventMatcher) ([]StackEvent, error) {

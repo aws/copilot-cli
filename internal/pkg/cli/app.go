@@ -24,6 +24,7 @@ Applications are a collection of services and environments.`,
 	cmd.AddCommand(buildAppListCommand())
 	cmd.AddCommand(buildAppShowCmd())
 	cmd.AddCommand(buildAppDeleteCommand())
+	cmd.AddCommand(buildAppUpgradeCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

@@ -1,4 +1,4 @@
-// +build integration,!local
+// +build integration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -80,6 +80,7 @@ func Test_App_Infrastructure(t *testing.T) {
 		err = deployer.DeployApp(&deploy.CreateAppInput{
 			Name:      app.Name,
 			AccountID: app.AccountID,
+			Version:   deploy.LatestAppTemplateVersion,
 		})
 		require.NoError(t, err)
 
@@ -112,6 +113,10 @@ func Test_App_Infrastructure(t *testing.T) {
 				require.True(t,
 					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("role/%s-adminrole", app.Name)),
 					fmt.Sprintf("AdministrationRoleARN should be named {app}-adminrole but was %s", *output.OutputValue))
+			},
+			"TemplateVersion": func(output *awsCF.Output) {
+				require.Equal(t, *output.OutputValue, deploy.LatestAppTemplateVersion,
+					fmt.Sprintf("TemplateVersion should be %s but was %s", deploy.LatestAppTemplateVersion, *output.OutputValue))
 			},
 		}
 		require.True(t, len(deployedStack.Outputs) == len(expectedResultsForKey),
@@ -171,6 +176,7 @@ func Test_App_Infrastructure(t *testing.T) {
 		err = deployer.DeployApp(&deploy.CreateAppInput{
 			Name:      app.Name,
 			AccountID: app.AccountID,
+			Version:   deploy.LatestAppTemplateVersion,
 		})
 		require.NoError(t, err)
 
@@ -242,6 +248,10 @@ func Test_App_Infrastructure(t *testing.T) {
 				require.NotNil(t,
 					*output.OutputValue,
 					"PipelineBucket should not be nil")
+			},
+			"TemplateVersion": func(output *awsCF.Output) {
+				require.Equal(t, *output.OutputValue, deploy.LatestAppTemplateVersion,
+					fmt.Sprintf("TemplateVersion should be %s but was %s", deploy.LatestAppTemplateVersion, *output.OutputValue))
 			},
 			"ECRRepomysvc": func(output *awsCF.Output) {
 				require.True(t,
@@ -316,6 +326,7 @@ func Test_App_Infrastructure(t *testing.T) {
 		err = deployer.DeployApp(&deploy.CreateAppInput{
 			Name:      app.Name,
 			AccountID: app.AccountID,
+			Version:   deploy.LatestAppTemplateVersion,
 		})
 		require.NoError(t, err)
 
@@ -437,7 +448,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		deployedStack := output.Stacks[0]
 		expectedResultsForKey := map[string]func(*awsCF.Output){
 			"EnabledFeatures": func(output *awsCF.Output) {
-				require.Equal(t, "", aws.StringValue(output.OutputValue), "no env features enabled by default")
+				require.Equal(t, ",,", aws.StringValue(output.OutputValue), "no env features enabled by default")
 			},
 			"EnvironmentManagerRoleARN": func(output *awsCF.Output) {
 				require.Equal(t,

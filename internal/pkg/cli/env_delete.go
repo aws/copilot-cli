@@ -152,7 +152,7 @@ func (o *deleteEnvOpts) Execute() error {
 		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.name, o.appName))
 		return err
 	}
-	if err := o.deleteRoles(); err != nil {
+	if err := o.tryDeleteRoles(); err != nil {
 		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.name, o.appName))
 		return err
 	}
@@ -310,17 +310,21 @@ func (o *deleteEnvOpts) deleteStack() error {
 	return nil
 }
 
-func (o *deleteEnvOpts) deleteRoles() error {
+// tryDeleteRoles attempts to delete the retained IAM roles part of an environment stack.
+// The operation is best-effort because of the ManagerRole. Since the iam client is created with a
+// session that assumes the ManagerRole, attempting to delete the same role can result in the following error:
+// "AccessDenied: User: arn:aws:sts::1111:assumed-role/app-env-EnvManagerRole is not authorized to perform:
+// iam:DeleteRole on resource: role app-env-EnvManagerRole"
+// This error occurs because to delete a role you have to first remove all of its policies, so the role loses
+// permission to delete itself and then attempts to delete itself. We think that due to eventual consistency this
+// operation succeeds most of the time but on occasions we have observed it to fail.
+func (o *deleteEnvOpts) tryDeleteRoles() error {
 	env, err := o.getEnvConfig()
 	if err != nil {
 		return err
 	}
-	if err := o.iam.DeleteRole(env.ExecutionRoleARN); err != nil {
-		return fmt.Errorf("delete role %s: %w", env.ExecutionRoleARN, err)
-	}
-	if err := o.iam.DeleteRole(env.ManagerRoleARN); err != nil {
-		return fmt.Errorf("delete role %s: %w", env.ManagerRoleARN, err)
-	}
+	_ = o.iam.DeleteRole(env.ExecutionRoleARN)
+	_ = o.iam.DeleteRole(env.ManagerRoleARN)
 	return nil
 }
 

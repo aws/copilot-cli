@@ -16,7 +16,8 @@
 {{- end}}
 {{- range $sidecar := .Sidecars}}
 - Name: {{$sidecar.Name}}
-  Image: {{$sidecar.Image}}{{if $sidecar.Port}}
+  Image: {{$sidecar.Image}}{{if $sidecar.Essential}}
+  Essential: {{$sidecar.Essential}}{{end}}{{if $sidecar.Port}}
   PortMappings:
     - ContainerPort: {{$sidecar.Port}}{{if $sidecar.Protocol}}
       Protocol: {{$sidecar.Protocol}}{{end}}{{end}}
@@ -44,6 +45,10 @@
       awslogs-region: !Ref AWS::Region
       awslogs-group: !Ref LogGroup
       awslogs-stream-prefix: copilot
+{{- if $sidecar.DockerLabels}}
+  DockerLabels:{{range $name, $value := $sidecar.DockerLabels}}
+    {{$name | printf "%q"}}: {{$value | printf "%q"}}{{end}}
+{{- end -}}
 {{- if $sidecar.CredsParam}}
   RepositoryCredentials:
     CredentialsParameter: {{$sidecar.CredsParam}}

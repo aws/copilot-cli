@@ -90,9 +90,10 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 				name:      o.name,
 				envName:   o.envName,
 				appName:   o.appName,
-				tag:       o.tag,
+				tag:       imageTagFromGit(o.runner, o.tag),
 				outputDir: o.outputDir,
 			},
+			runner:           o.runner,
 			initAddonsClient: initPackageAddonsClient,
 			ws:               ws,
 			store:            o.store,
@@ -137,11 +138,6 @@ func (o *packageJobOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	tag, err := askImageTag(o.tag, o.prompt, o.runner)
-	if err != nil {
-		return err
-	}
-	o.tag = tag
 	return nil
 }
 

@@ -120,6 +120,9 @@ How long to wait before considering the health check failed, in seconds. Default
 <span class="parent-field">image.healthcheck.</span><a id="image-healthcheck-start-period" href="#image-healthcheck-start-period" class="field">`start_period`</a> <span class="type">Duration</span>  
 Grace period within which to provide containers time to bootstrap before failed health checks count towards the maximum number of retries. Default is 0s.
 
+<span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a><span class="type">Map</span>
+An optional key/value map of [Docker labels](https://docs.docker.com/config/labels-custom-metadata/) to add to the container.
+
 <div class="separator"></div>
 
 <a id="entrypoint" href="#entrypoint" class="field">`entrypoint`</a> <span class="type">String or Array of Strings</span>  
@@ -195,9 +198,7 @@ Subnets and security groups attached to your tasks.
 Must be one of `'public'` or `'private'`. Defaults to launching your tasks in public subnets.
 
 !!! info inline end
-    Launching tasks in `'private'` subnets that need internet connectivity is only supported if you imported a VPC with
-    NAT Gateways when running `copilot env init`. See [#1959](https://github.com/aws/copilot-cli/issues/1959) for tracking
-    NAT Gateways support in Copilot-generated VPCs.
+    If you launch tasks in `'private'` subnets and use a Copilot-generated VPC, Copilot will add NAT Gateways to your environment. Alternatively, you can import a VPC with NAT Gateways when running `copilot env init` for internet connectivity.
 
 <span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings</span>  
 Additional security group IDs associated with your tasks. Copilot always includes a security group so containers within your environment
@@ -259,3 +260,4 @@ Optional. Defaults to `""`. The ID of the EFS access point to connect to. If usi
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.
+

@@ -348,9 +348,9 @@ func (o *initOpts) askWorkload() (string, error) {
 
 ` + fmt.Sprintf(fmtJobInitTypeHelp, manifest.ScheduledJobType)
 
-	t, err := o.prompt.SelectOne(wkldInitTypePrompt, wkldHelp, manifest.WorkloadTypes, prompt.WithFinalMessage("Workload type:"))
+	t, err := o.prompt.SelectOption(wkldInitTypePrompt, wkldHelp, append(svcTypePromptOpts(), jobTypePromptOpts()...), prompt.WithFinalMessage("Workload type:"))
 	if err != nil {
-		return "", fmt.Errorf("select service type: %w", err)
+		return "", fmt.Errorf("select workload type: %w", err)
 	}
 	o.wkldType = t
 	return t, nil

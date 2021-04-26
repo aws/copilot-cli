@@ -9,6 +9,7 @@ import (
 
 	"github.com/gobuffalo/packd"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestTemplate_ParseSvc(t *testing.T) {
@@ -33,6 +34,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				mockBox.AddString("workloads/partials/cf/secrets.yml", "secrets")
 				mockBox.AddString("workloads/partials/cf/executionrole.yml", "executionrole")
 				mockBox.AddString("workloads/partials/cf/taskrole.yml", "taskrole")
+				mockBox.AddString("workloads/partials/cf/workload-container.yml", "workload-container")
 				mockBox.AddString("workloads/partials/cf/fargate-taskdef-base-properties.yml", "fargate-taskdef-base-properties")
 				mockBox.AddString("workloads/partials/cf/service-base-properties.yml", "service-base-properties")
 				mockBox.AddString("workloads/partials/cf/servicediscovery.yml", "servicediscovery")
@@ -56,6 +58,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
   secrets
   executionrole
   taskrole
+  workload-container
   fargate-taskdef-base-properties
   service-base-properties
   servicediscovery
@@ -130,6 +133,119 @@ func TestHasSecrets(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, tc.wanted, hasSecrets(tc.in))
+		})
+	}
+}
+
+func TestTemplate_ParseNetwork(t *testing.T) {
+	type cfn struct {
+		Resources struct {
+			Service struct {
+				Properties struct {
+					NetworkConfiguration map[interface{}]interface{} `yaml:"NetworkConfiguration"`
+				} `yaml:"Properties"`
+			} `yaml:"Service"`
+		} `yaml:"Resources"`
+	}
+
+	testCases := map[string]struct {
+		input *NetworkOpts
+
+		wantedNetworkConfig string
+	}{
+		"should render AWS VPC configuration for public subnets by default": {
+			input: nil,
+			wantedNetworkConfig: `
+  AwsvpcConfiguration:
+    AssignPublicIp: ENABLED
+    Subnets:
+    - Fn::Select:
+      - 0
+      - Fn::Split:
+        - ','
+        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+    - Fn::Select:
+      - 1
+      - Fn::Split:
+        - ','
+        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+    SecurityGroups:
+      - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+`,
+		},
+		"should render AWS VPC configuration for private subnets": {
+			input: &NetworkOpts{
+				AssignPublicIP: "DISABLED",
+				SubnetsType:    "PrivateSubnets",
+			},
+			wantedNetworkConfig: `
+  AwsvpcConfiguration:
+    AssignPublicIp: DISABLED
+    Subnets:
+    - Fn::Select:
+      - 0
+      - Fn::Split:
+        - ','
+        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
+    - Fn::Select:
+      - 1
+      - Fn::Split:
+        - ','
+        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
+    SecurityGroups:
+      - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+`,
+		},
+		"should render AWS VPC configuration for private subnets with security groups": {
+			input: &NetworkOpts{
+				AssignPublicIP: "DISABLED",
+				SubnetsType:    "PrivateSubnets",
+				SecurityGroups: []string{
+					"sg-1bcf1d5b",
+					"sg-asdasdas",
+				},
+			},
+			wantedNetworkConfig: `
+  AwsvpcConfiguration:
+    AssignPublicIp: DISABLED
+    Subnets:
+    - Fn::Select:
+      - 0
+      - Fn::Split:
+        - ','
+        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
+    - Fn::Select:
+      - 1
+      - Fn::Split:
+        - ','
+        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
+    SecurityGroups:
+      - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+      - "sg-1bcf1d5b"
+      - "sg-asdasdas"
+`,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			tpl := New()
+			wanted := make(map[interface{}]interface{})
+			err := yaml.Unmarshal([]byte(tc.wantedNetworkConfig), &wanted)
+			require.NoError(t, err, "unmarshal wanted config")
+
+			// WHEN
+			content, err := tpl.ParseLoadBalancedWebService(WorkloadOpts{
+				Network: tc.input,
+			})
+
+			// THEN
+			require.NoError(t, err, "parse load balanced web service")
+			var actual cfn
+			err = yaml.Unmarshal(content.Bytes(), &actual)
+			require.NoError(t, err, "unmarshal actual config")
+			require.Equal(t, wanted, actual.Resources.Service.Properties.NetworkConfiguration)
 		})
 	}
 }

@@ -24,7 +24,8 @@ const (
 	ScheduledJobScheduleParamKey = "Schedule"
 )
 
-type scheduledJobParser interface {
+type scheduledJobReadParser interface {
+	template.ReadParser
 	ParseScheduledJob(template.WorkloadOpts) (*template.Content, error)
 }
 
@@ -34,7 +35,7 @@ type ScheduledJob struct {
 	*wkld
 	manifest *manifest.ScheduledJob
 
-	parser scheduledJobParser
+	parser scheduledJobReadParser
 }
 
 var (
@@ -137,9 +138,14 @@ func (j *ScheduledJob) Template() (string, error) {
 		return "", fmt.Errorf("convert retry/timeout config for job %s: %w", j.name, err)
 	}
 
-	storage, err := convertStorageOpts(j.manifest.Storage)
+	storage, err := convertStorageOpts(j.manifest.Name, j.manifest.Storage)
 	if err != nil {
 		return "", fmt.Errorf("convert storage options for job %s: %w", j.name, err)
+	}
+
+	envControllerLambda, err := j.parser.Read(envControllerPath)
+	if err != nil {
+		return "", fmt.Errorf("read env controller lambda: %w", err)
 	}
 
 	entrypoint, err := j.manifest.EntryPoint.ToStringSlice()
@@ -158,10 +164,13 @@ func (j *ScheduledJob) Template() (string, error) {
 		ScheduleExpression: schedule,
 		StateMachine:       stateMachine,
 		LogConfig:          convertLogging(j.manifest.Logging),
+		DockerLabels:       j.manifest.ImageConfig.DockerLabels,
 		Storage:            storage,
 		Network:            convertNetworkConfig(j.manifest.Network),
 		EntryPoint:         entrypoint,
 		Command:            command,
+
+		EnvControllerLambda: envControllerLambda.String(),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)

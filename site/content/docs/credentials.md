@@ -1,7 +1,7 @@
 This section explains our recommendations around credentials to provide the best experience with the AWS Copilot CLI.
 
 ## Application credentials
-Copilot uses the AWS credentials from the [default credential provider chain](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials) to store and look up your [application's metadata](/docs/concepts/applications/): which services and environments belong to it. 
+Copilot uses the AWS credentials from the [default credential provider chain](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials) to store and look up your [application's metadata](concepts/applications.md): which services and environments belong to it. 
 
 !!! tip
     We **recommend using a [named profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html)** to store your application's credentials. 
@@ -18,6 +18,10 @@ aws_secret_access_key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 region=us-west-2
 ```
 Alternatively, you can set the `AWS_PROFILE` environment variable to point to a different named profile. For example, we can have a `[my-app]` profile that can be used for your Copilot application instead of the `[default]` profile.
+
+!!! note
+    You **cannot** use the AWS account root user credentials for your application. Please first create an IAM user instead as described [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html).
+
 ```ini
 # ~/.aws/config
 [my-app]
@@ -35,7 +39,7 @@ $ copilot deploy
 To learn more about all the supported `config` file settings: [Configuration and credential file settings](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-settings).
 
 ## Environment credentials
-Copilot [environments](/docs/concepts/environments/) can be created in AWS accounts and regions separate from your application's. While initializing an environment, Copilot will prompt you to enter temporary credentials or a [named profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html) to create your environment:
+Copilot [environments](concepts/environments.md) can be created in AWS accounts and regions separate from your application's. While initializing an environment, Copilot will prompt you to enter temporary credentials or a [named profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html) to create your environment:
 ```bash
 $ copilot env init
 

@@ -146,7 +146,7 @@ type secretDeleter interface {
 }
 
 type imageBuilderPusher interface {
-	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *exec.BuildArguments) error
+	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *exec.BuildArguments) (string, error)
 }
 
 type repositoryURIGetter interface {
@@ -334,8 +334,8 @@ type imageRemover interface {
 }
 
 type pipelineDeployer interface {
-	CreatePipeline(env *deploy.CreatePipelineInput) error
-	UpdatePipeline(env *deploy.CreatePipelineInput) error
+	CreatePipeline(env *deploy.CreatePipelineInput, bucketName string) error
+	UpdatePipeline(env *deploy.CreatePipelineInput, bucketName string) error
 	PipelineExists(env *deploy.CreatePipelineInput) (bool, error)
 	DeletePipeline(pipelineName string) error
 	AddPipelineResourcesToApp(app *config.Application, region string) error
@@ -420,6 +420,10 @@ type envTemplateUpgrader interface {
 	legacyEnvUpgrader
 }
 
+type appUpgrader interface {
+	UpgradeApplication(in *deploy.CreateAppInput) error
+}
+
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 	ListPipelineNamesByTags(tags map[string]string) ([]string, error)
@@ -451,6 +455,7 @@ type appEnvSelector interface {
 type configSelector interface {
 	appEnvSelector
 	Service(prompt, help, app string) (string, error)
+	Job(prompt, help, app string) (string, error)
 }
 
 type deploySelector interface {
@@ -459,7 +464,7 @@ type deploySelector interface {
 }
 
 type pipelineSelector interface {
-	Environments(prompt, help, app string, finalMsgFunc func(int) prompt.Option) ([]string, error)
+	Environments(prompt, help, app string, finalMsgFunc func(int) prompt.PromptConfig) ([]string, error)
 }
 
 type wsSelector interface {
@@ -529,6 +534,20 @@ type taskStopper interface {
 
 type serviceLinkedRoleCreator interface {
 	CreateECSServiceLinkedRole() error
+}
+
+type roleTagsLister interface {
+	ListRoleTags(string) (map[string]string, error)
+}
+
+type roleManager interface {
+	roleTagsLister
+	roleDeleter
+	serviceLinkedRoleCreator
+}
+
+type stackExistChecker interface {
+	Exists(string) (bool, error)
 }
 
 type runningTaskSelector interface {

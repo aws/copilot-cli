@@ -27,6 +27,9 @@ func TestGHv1Pipeline_Template(t *testing.T) {
 			Branch:                      "mainline",
 			PersonalAccessTokenSecretID: "my secret",
 		},
+		Build: &deploy.Build{
+			Image: "aws/codebuild/amazonlinux2-x86_64-standard:3.0",
+		},
 		Stages: []deploy.PipelineStage{
 			{
 				AssociatedEnvironment: &deploy.AssociatedEnvironment{

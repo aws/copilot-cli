@@ -35,9 +35,13 @@ var (
 	// Error definitions.
 	errUnmarshalBuildOpts  = errors.New("cannot unmarshal build field into string or compose-style map")
 	errUnmarshalCountOpts  = errors.New(`cannot unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalSpot       = errors.New(`cannot unmarshal "spot" field to an integer if range is specified`)
+	errUnmarshalRangeOpts  = errors.New(`cannot unmarshal "range" field`)
 	errUnmarshalExec       = errors.New("cannot unmarshal exec field into boolean or exec configuration")
 	errUnmarshalEntryPoint = errors.New("cannot unmarshal entrypoint into string or slice of strings")
 	errUnmarshalCommand    = errors.New("cannot unmarshal command into string or slice of strings")
+
+	errInvalidRangeOpts = errors.New(`cannot specify both "range" and "min"/"max"`)
 )
 
 // WorkloadProps contains properties for creating a new workload manifest.
@@ -55,8 +59,9 @@ type Workload struct {
 
 // Image represents the workload's container image.
 type Image struct {
-	Build    BuildArgsOrString `yaml:"build"`    // Build an image from a Dockerfile.
-	Location *string           `yaml:"location"` // Use an existing image instead.
+	Build        BuildArgsOrString `yaml:"build"`       // Build an image from a Dockerfile.
+	Location     *string           `yaml:"location"`    // Use an existing image instead.
+	DockerLabels map[string]string `yaml:"labels,flow"` // Apply Docker labels to the container at runtime.
 }
 
 // GetLocation returns the location of the image.
@@ -355,12 +360,14 @@ func (lc *Logging) GetEnableMetadata() *string {
 
 // SidecarConfig represents the configurable options for setting up a sidecar container.
 type SidecarConfig struct {
-	Port        *string             `yaml:"port"`
-	Image       *string             `yaml:"image"`
-	CredsParam  *string             `yaml:"credentialsParameter"`
-	Variables   map[string]string   `yaml:"variables"`
-	Secrets     map[string]string   `yaml:"secrets"`
-	MountPoints []SidecarMountPoint `yaml:"mount_points"`
+	Port         *string             `yaml:"port"`
+	Image        *string             `yaml:"image"`
+	Essential    *bool               `yaml:"essential"`
+	CredsParam   *string             `yaml:"credentialsParameter"`
+	Variables    map[string]string   `yaml:"variables"`
+	Secrets      map[string]string   `yaml:"secrets"`
+	MountPoints  []SidecarMountPoint `yaml:"mount_points"`
+	DockerLabels map[string]string   `yaml:"labels"`
 }
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.

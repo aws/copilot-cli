@@ -19,7 +19,9 @@ func Test_convertSidecar(t *testing.T) {
 	mockMap := map[string]string{"foo": "bar"}
 	mockCredsParam := aws.String("mockCredsParam")
 	testCases := map[string]struct {
-		inPort string
+		inPort      string
+		inEssential bool
+		inLabels    map[string]string
 
 		wanted    *template.SidecarOpts
 		wantedErr error
@@ -30,7 +32,8 @@ func Test_convertSidecar(t *testing.T) {
 			wantedErr: fmt.Errorf("cannot parse port mapping from b/a/d/P/o/r/t"),
 		},
 		"good port without protocol": {
-			inPort: "2000",
+			inPort:      "2000",
+			inEssential: true,
 
 			wanted: &template.SidecarOpts{
 				Name:       aws.String("foo"),
@@ -39,10 +42,12 @@ func Test_convertSidecar(t *testing.T) {
 				Image:      mockImage,
 				Secrets:    mockMap,
 				Variables:  mockMap,
+				Essential:  aws.Bool(true),
 			},
 		},
 		"good port with protocol": {
-			inPort: "2000/udp",
+			inPort:      "2000/udp",
+			inEssential: true,
 
 			wanted: &template.SidecarOpts{
 				Name:       aws.String("foo"),
@@ -52,6 +57,27 @@ func Test_convertSidecar(t *testing.T) {
 				Image:      mockImage,
 				Secrets:    mockMap,
 				Variables:  mockMap,
+				Essential:  aws.Bool(true),
+			},
+		},
+		"specify essential as false": {
+			inPort:      "2000",
+			inEssential: false,
+			inLabels: map[string]string{
+				"com.amazonaws.ecs.copilot.sidecar.description": "wow",
+			},
+
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				Port:       aws.String("2000"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(false),
+				DockerLabels: map[string]string{
+					"com.amazonaws.ecs.copilot.sidecar.description": "wow",
+				},
 			},
 		},
 	}
@@ -59,11 +85,13 @@ func Test_convertSidecar(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			sidecar := map[string]*manifest.SidecarConfig{
 				"foo": {
-					CredsParam: mockCredsParam,
-					Image:      mockImage,
-					Secrets:    mockMap,
-					Variables:  mockMap,
-					Port:       aws.String(tc.inPort),
+					CredsParam:   mockCredsParam,
+					Image:        mockImage,
+					Secrets:      mockMap,
+					Variables:    mockMap,
+					Essential:    aws.Bool(tc.inEssential),
+					Port:         aws.String(tc.inPort),
+					DockerLabels: tc.inLabels,
 				},
 			}
 			got, err := convertSidecar(sidecar)
@@ -72,39 +100,226 @@ func Test_convertSidecar(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, got[0], tc.wanted)
+				require.Equal(t, tc.wanted, got[0])
+			}
+		})
+	}
+}
+
+func Test_convertAdvancedCount(t *testing.T) {
+	mockRange := manifest.IntRangeBand("1-10")
+	testCases := map[string]struct {
+		input       *manifest.AdvancedCount
+		expected    *template.AdvancedCount
+		expectedErr error
+	}{
+		"returns nil if nil": {
+			input:    nil,
+			expected: nil,
+		},
+		"returns nil if empty": {
+			input:    &manifest.AdvancedCount{},
+			expected: nil,
+		},
+		"success with spot count": {
+			input: &manifest.AdvancedCount{
+				Spot: aws.Int(1),
+			},
+			expected: &template.AdvancedCount{
+				Spot: aws.Int(1),
+				Cps: []*template.CapacityProviderStrategy{
+					{
+						Weight:           aws.Int(1),
+						CapacityProvider: capacityProviderFargateSpot,
+					},
+				},
+			},
+		},
+		"success with fargate autoscaling": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					Value: &mockRange,
+				},
+				CPU: aws.Int(70),
+			},
+			expected: &template.AdvancedCount{
+				Autoscaling: &template.AutoscalingOpts{
+					MinCapacity: aws.Int(1),
+					MaxCapacity: aws.Int(10),
+					CPU:         aws.Float64(70),
+				},
+			},
+		},
+		"success with spot autoscaling": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					RangeConfig: manifest.RangeConfig{
+						Min:      aws.Int(2),
+						Max:      aws.Int(20),
+						SpotFrom: aws.Int(5),
+					},
+				},
+				CPU: aws.Int(70),
+			},
+			expected: &template.AdvancedCount{
+				Autoscaling: &template.AutoscalingOpts{
+					MinCapacity: aws.Int(2),
+					MaxCapacity: aws.Int(20),
+					CPU:         aws.Float64(70),
+				},
+				Cps: []*template.CapacityProviderStrategy{
+					{
+						Weight:           aws.Int(1),
+						CapacityProvider: capacityProviderFargateSpot,
+					},
+					{
+						Base:             aws.Int(4),
+						Weight:           aws.Int(0),
+						CapacityProvider: capacityProviderFargate,
+					},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			actual, err := convertAdvancedCount(tc.input)
+
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expected, actual)
+			}
+		})
+	}
+}
+
+func Test_convertCapacityProviders(t *testing.T) {
+	mockRange := manifest.IntRangeBand("1-10")
+	minCapacity := 1
+	spotFrom := 3
+	testCases := map[string]struct {
+		input       *manifest.AdvancedCount
+		expected    []*template.CapacityProviderStrategy
+		expectedErr error
+	}{
+		"with spot as desiredCount": {
+			input: &manifest.AdvancedCount{
+				Spot: aws.Int(3),
+			},
+
+			expected: []*template.CapacityProviderStrategy{
+				{
+					Weight:           aws.Int(1),
+					CapacityProvider: capacityProviderFargateSpot,
+				},
+			},
+		},
+		"with scaling only on spot": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					RangeConfig: manifest.RangeConfig{
+						Min:      aws.Int(minCapacity),
+						Max:      aws.Int(10),
+						SpotFrom: aws.Int(minCapacity),
+					},
+				},
+			},
+
+			expected: []*template.CapacityProviderStrategy{
+				{
+					Weight:           aws.Int(1),
+					CapacityProvider: capacityProviderFargateSpot,
+				},
+			},
+		},
+		"with scaling into spot": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					RangeConfig: manifest.RangeConfig{
+						Min:      aws.Int(minCapacity),
+						Max:      aws.Int(10),
+						SpotFrom: aws.Int(spotFrom),
+					},
+				},
+			},
+
+			expected: []*template.CapacityProviderStrategy{
+				{
+					Weight:           aws.Int(1),
+					CapacityProvider: capacityProviderFargateSpot,
+				},
+				{
+					Base:             aws.Int(spotFrom - 1),
+					Weight:           aws.Int(0),
+					CapacityProvider: capacityProviderFargate,
+				},
+			},
+		},
+		"returns nil if no spot config specified": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					Value: &mockRange,
+				},
+			},
+			expected: nil,
+		},
+		"errors if spot specified with range": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					Value: &mockRange,
+				},
+				Spot: aws.Int(3),
+			},
+			expectedErr: errInvalidSpotConfig,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			actual, err := convertCapacityProviders(tc.input)
+
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expected, actual)
 			}
 		})
 	}
 }
 
 func Test_convertAutoscaling(t *testing.T) {
-	const (
-		mockRange    = "1-100"
-		mockRequests = 1000
-	)
+	mockRange := manifest.IntRangeBand("1-100")
+	badRange := manifest.IntRangeBand("badRange")
+	mockRequests := 1000
 	mockResponseTime := 512 * time.Millisecond
 	testCases := map[string]struct {
-		inRange        manifest.Range
-		inCPU          int
-		inMemory       int
-		inRequests     int
-		inResponseTime time.Duration
+		input *manifest.AdvancedCount
 
 		wanted    *template.AutoscalingOpts
 		wantedErr error
 	}{
 		"invalid range": {
-			inRange: "badRange",
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					Value: &badRange,
+				},
+			},
 
 			wantedErr: fmt.Errorf("invalid range value badRange. Should be in format of ${min}-${max}"),
 		},
 		"success": {
-			inRange:        mockRange,
-			inCPU:          70,
-			inMemory:       80,
-			inRequests:     mockRequests,
-			inResponseTime: mockResponseTime,
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					Value: &mockRange,
+				},
+				CPU:          aws.Int(70),
+				Memory:       aws.Int(80),
+				Requests:     aws.Int(mockRequests),
+				ResponseTime: &mockResponseTime,
+			},
 
 			wanted: &template.AutoscalingOpts{
 				MaxCapacity:  aws.Int(100),
@@ -115,23 +330,46 @@ func Test_convertAutoscaling(t *testing.T) {
 				ResponseTime: aws.Float64(0.512),
 			},
 		},
+		"success with range subfields": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					RangeConfig: manifest.RangeConfig{
+						Min:      aws.Int(5),
+						Max:      aws.Int(10),
+						SpotFrom: aws.Int(5),
+					},
+				},
+				CPU:          aws.Int(70),
+				Memory:       aws.Int(80),
+				Requests:     aws.Int(mockRequests),
+				ResponseTime: &mockResponseTime,
+			},
+
+			wanted: &template.AutoscalingOpts{
+				MaxCapacity:  aws.Int(10),
+				MinCapacity:  aws.Int(5),
+				CPU:          aws.Float64(70),
+				Memory:       aws.Float64(80),
+				Requests:     aws.Float64(1000),
+				ResponseTime: aws.Float64(0.512),
+			},
+		},
+		"returns nil if spot specified": {
+			input: &manifest.AdvancedCount{
+				Spot: aws.Int(5),
+			},
+			wanted: nil,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			a := manifest.Autoscaling{
-				Range:        &tc.inRange,
-				CPU:          aws.Int(tc.inCPU),
-				Memory:       aws.Int(tc.inMemory),
-				Requests:     aws.Int(tc.inRequests),
-				ResponseTime: &tc.inResponseTime,
-			}
-			got, err := convertAutoscaling(&a)
+			got, err := convertAutoscaling(tc.input)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, got, tc.wanted)
+				require.Equal(t, tc.wanted, got)
 			}
 		})
 	}
@@ -143,6 +381,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 	duration60Seconds := time.Duration(60 * time.Second)
 	testCases := map[string]struct {
 		inputPath               *string
+		inputSuccessCodes       *string
 		inputHealthyThreshold   *int64
 		inputUnhealthyThreshold *int64
 		inputInterval           *time.Duration
@@ -152,6 +391,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 	}{
 		"no fields indicated in manifest": {
 			inputPath:               nil,
+			inputSuccessCodes:       nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
@@ -163,6 +403,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just HealthyThreshold": {
 			inputPath:               nil,
+			inputSuccessCodes:       nil,
 			inputHealthyThreshold:   aws.Int64(5),
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
@@ -175,6 +416,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just UnhealthyThreshold": {
 			inputPath:               nil,
+			inputSuccessCodes:       nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: aws.Int64(5),
 			inputInterval:           nil,
@@ -187,6 +429,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just Interval": {
 			inputPath:               nil,
+			inputSuccessCodes:       nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: nil,
 			inputInterval:           &duration15Seconds,
@@ -199,6 +442,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just Timeout": {
 			inputPath:               nil,
+			inputSuccessCodes:       nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
@@ -209,8 +453,22 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 				Timeout:         aws.Int64(15),
 			},
 		},
+		"just SuccessCodes": {
+			inputPath:               nil,
+			inputSuccessCodes:       aws.String("200,301"),
+			inputHealthyThreshold:   nil,
+			inputUnhealthyThreshold: nil,
+			inputInterval:           nil,
+			inputTimeout:            nil,
+
+			wantedOpts: template.HTTPHealthCheckOpts{
+				HealthCheckPath: "/",
+				SuccessCodes:    "200,301",
+			},
+		},
 		"all values changed in manifest": {
 			inputPath:               aws.String("/road/to/nowhere"),
+			inputSuccessCodes:       aws.String("200-299"),
 			inputHealthyThreshold:   aws.Int64(3),
 			inputUnhealthyThreshold: aws.Int64(3),
 			inputInterval:           &duration60Seconds,
@@ -218,6 +476,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    "/road/to/nowhere",
+				SuccessCodes:       "200-299",
 				HealthyThreshold:   aws.Int64(3),
 				UnhealthyThreshold: aws.Int64(3),
 				Interval:           aws.Int64(60),
@@ -232,6 +491,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 				HealthCheckPath: tc.inputPath,
 				HealthCheckArgs: manifest.HTTPHealthCheckArgs{
 					Path:               tc.inputPath,
+					SuccessCodes:       tc.inputSuccessCodes,
 					HealthyThreshold:   tc.inputHealthyThreshold,
 					UnhealthyThreshold: tc.inputUnhealthyThreshold,
 					Timeout:            tc.inputTimeout,
@@ -257,8 +517,10 @@ func Test_convertStorageOpts(t *testing.T) {
 		"minimal configuration": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: manifest.EFSVolumeConfiguration{
-						FileSystemID: aws.String("fs-1234"),
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID: aws.String("fs-1234"),
+						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
 						ContainerPath: aws.String("/var/www"),
@@ -268,10 +530,12 @@ func Test_convertStorageOpts(t *testing.T) {
 			wantOpts: template.StorageOpts{
 				Volumes: []*template.Volume{
 					{
-						Name:          aws.String("wordpress"),
-						Filesystem:    aws.String("fs-1234"),
-						RootDirectory: aws.String("/"),
-						IAM:           aws.String("DISABLED"),
+						Name: aws.String("wordpress"),
+						EFS: &template.EFSVolumeConfiguration{
+							Filesystem:    aws.String("fs-1234"),
+							RootDirectory: aws.String("/"),
+							IAM:           aws.String("DISABLED"),
+						},
 					},
 				},
 				MountPoints: []*template.MountPoint{
@@ -289,17 +553,51 @@ func Test_convertStorageOpts(t *testing.T) {
 				},
 			},
 		},
+		"empty volume for shareable storage between sidecar and main container": {
+			inVolumes: map[string]manifest.Volume{
+				"scratch": {
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/scratch"),
+					},
+				},
+			},
+			wantOpts: template.StorageOpts{
+				Volumes: []*template.Volume{
+					{
+						Name: aws.String("scratch"),
+					},
+				},
+				MountPoints: []*template.MountPoint{
+					{
+						ContainerPath: aws.String("/var/scratch"),
+						ReadOnly:      aws.Bool(true),
+						SourceVolume:  aws.String("scratch"),
+					},
+				},
+			},
+		},
 		"fsid not specified": {
 			inVolumes: map[string]manifest.Volume{
-				"wordpress": {},
+				"wordpress": {
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+					},
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							RootDirectory: aws.String("/"),
+						},
+					},
+				},
 			},
 			wantErr: errNoFSID.Error(),
 		},
 		"container path not specified": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: manifest.EFSVolumeConfiguration{
-						FileSystemID: aws.String("fs-1234"),
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID: aws.String("fs-1234"),
+						},
 					},
 				},
 			},
@@ -308,12 +606,14 @@ func Test_convertStorageOpts(t *testing.T) {
 		"full specification with access point renders correctly": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: manifest.EFSVolumeConfiguration{
-						FileSystemID:  aws.String("fs-1234"),
-						RootDirectory: aws.String("/"),
-						AuthConfig: manifest.AuthorizationConfig{
-							IAM:           aws.Bool(true),
-							AccessPointID: aws.String("ap-1234"),
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID:  aws.String("fs-1234"),
+							RootDirectory: aws.String("/"),
+							AuthConfig: &manifest.AuthorizationConfig{
+								IAM:           aws.Bool(true),
+								AccessPointID: aws.String("ap-1234"),
+							},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -325,11 +625,13 @@ func Test_convertStorageOpts(t *testing.T) {
 			wantOpts: template.StorageOpts{
 				Volumes: []*template.Volume{
 					{
-						Name:          aws.String("wordpress"),
-						Filesystem:    aws.String("fs-1234"),
-						RootDirectory: aws.String("/"),
-						IAM:           aws.String("ENABLED"),
-						AccessPointID: aws.String("ap-1234"),
+						Name: aws.String("wordpress"),
+						EFS: &template.EFSVolumeConfiguration{
+							Filesystem:    aws.String("fs-1234"),
+							RootDirectory: aws.String("/"),
+							IAM:           aws.String("ENABLED"),
+							AccessPointID: aws.String("ap-1234"),
+						},
 					},
 				},
 				MountPoints: []*template.MountPoint{
@@ -351,11 +653,13 @@ func Test_convertStorageOpts(t *testing.T) {
 		"full specification without access point renders correctly": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: manifest.EFSVolumeConfiguration{
-						FileSystemID:  aws.String("fs-1234"),
-						RootDirectory: aws.String("/wordpress"),
-						AuthConfig: manifest.AuthorizationConfig{
-							IAM: aws.Bool(true),
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID:  aws.String("fs-1234"),
+							RootDirectory: aws.String("/wordpress"),
+							AuthConfig: &manifest.AuthorizationConfig{
+								IAM: aws.Bool(true),
+							},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -367,10 +671,12 @@ func Test_convertStorageOpts(t *testing.T) {
 			wantOpts: template.StorageOpts{
 				Volumes: []*template.Volume{
 					{
-						Name:          aws.String("wordpress"),
-						Filesystem:    aws.String("fs-1234"),
-						RootDirectory: aws.String("/wordpress"),
-						IAM:           aws.String("ENABLED"),
+						Name: aws.String("wordpress"),
+						EFS: &template.EFSVolumeConfiguration{
+							Filesystem:    aws.String("fs-1234"),
+							RootDirectory: aws.String("/wordpress"),
+							IAM:           aws.String("ENABLED"),
+						},
 					},
 				},
 				MountPoints: []*template.MountPoint{
@@ -391,12 +697,14 @@ func Test_convertStorageOpts(t *testing.T) {
 		"error when AP is specified with root dir": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: manifest.EFSVolumeConfiguration{
-						FileSystemID:  aws.String("fs-1234"),
-						RootDirectory: aws.String("/wordpress"),
-						AuthConfig: manifest.AuthorizationConfig{
-							IAM:           aws.Bool(true),
-							AccessPointID: aws.String("ap-1234"),
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID:  aws.String("fs-1234"),
+							RootDirectory: aws.String("/wordpress"),
+							AuthConfig: &manifest.AuthorizationConfig{
+								IAM:           aws.Bool(true),
+								AccessPointID: aws.String("ap-1234"),
+							},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -410,12 +718,14 @@ func Test_convertStorageOpts(t *testing.T) {
 		"error when AP is specified without IAM": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
-					EFS: manifest.EFSVolumeConfiguration{
-						FileSystemID:  aws.String("fs-1234"),
-						RootDirectory: aws.String("/wordpress"),
-						AuthConfig: manifest.AuthorizationConfig{
-							IAM:           aws.Bool(false),
-							AccessPointID: aws.String("ap-1234"),
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID:  aws.String("fs-1234"),
+							RootDirectory: aws.String("/wordpress"),
+							AuthConfig: &manifest.AuthorizationConfig{
+								IAM:           aws.Bool(false),
+								AccessPointID: aws.String("ap-1234"),
+							},
 						},
 					},
 					MountPointOpts: manifest.MountPointOpts{
@@ -433,6 +743,174 @@ func Test_convertStorageOpts(t *testing.T) {
 				Ephemeral: aws.Int(500),
 			},
 		},
+		"efs specified with just ID": {
+			inVolumes: map[string]manifest.Volume{
+				"wordpress": {
+					EFS: &manifest.EFSConfigOrID{
+						ID: "fs-1234",
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+					},
+				},
+			},
+			wantOpts: template.StorageOpts{
+				Volumes: []*template.Volume{
+					{
+						Name: aws.String("wordpress"),
+						EFS: &template.EFSVolumeConfiguration{
+							Filesystem:    aws.String("fs-1234"),
+							RootDirectory: aws.String("/"),
+							IAM:           aws.String("DISABLED"),
+						},
+					},
+				},
+				MountPoints: []*template.MountPoint{
+					{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+						SourceVolume:  aws.String("wordpress"),
+					},
+				},
+				EFSPerms: []*template.EFSPermission{
+					{
+						FilesystemID: aws.String("fs-1234"),
+						Write:        false,
+					},
+				},
+			},
+		},
+		"managed EFS": {
+			inVolumes: map[string]manifest.Volume{
+				"efs": {
+					EFS: &manifest.EFSConfigOrID{
+						ID: "copilot",
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+					},
+				},
+			},
+			wantOpts: template.StorageOpts{
+				ManagedVolumeInfo: &template.ManagedVolumeCreationInfo{
+					Name:    aws.String("efs"),
+					DirName: aws.String("fe"),
+					UID:     aws.Uint32(1336298249),
+					GID:     aws.Uint32(1336298249),
+				},
+				MountPoints: []*template.MountPoint{
+					{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+						SourceVolume:  aws.String("efs"),
+					},
+				},
+			},
+		},
+		"managed EFS with config": {
+			inVolumes: map[string]manifest.Volume{
+				"efs": {
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID: aws.String("copilot"),
+							UID:          aws.Uint32(1000),
+							GID:          aws.Uint32(10000),
+						},
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+					},
+				},
+			},
+			wantOpts: template.StorageOpts{
+				ManagedVolumeInfo: &template.ManagedVolumeCreationInfo{
+					Name:    aws.String("efs"),
+					DirName: aws.String("fe"),
+					UID:     aws.Uint32(1000),
+					GID:     aws.Uint32(10000),
+				},
+				MountPoints: []*template.MountPoint{
+					{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+						SourceVolume:  aws.String("efs"),
+					},
+				},
+			},
+		},
+		"error when gid/uid are specified for non-managed efs": {
+			inVolumes: map[string]manifest.Volume{
+				"efs": {
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID: aws.String("fs-1234"),
+							UID:          aws.Uint32(1234),
+							GID:          aws.Uint32(5678),
+						},
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+					},
+				},
+			},
+			wantErr: errUIDWithNonManagedFS.Error(),
+		},
+		"uid/gid out of bounds": {
+			inVolumes: map[string]manifest.Volume{
+				"efs": {
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID: aws.String("managed"),
+							UID:          aws.Uint32(0),
+							GID:          aws.Uint32(100),
+						},
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+					},
+				},
+			},
+			wantErr: errReservedUID.Error(),
+		},
+		"uid specified without gid": {
+			inVolumes: map[string]manifest.Volume{
+				"efs": {
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID: aws.String("managed"),
+							UID:          aws.Uint32(10000),
+						},
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+					},
+				},
+			},
+			wantErr: errInvalidUIDGIDConfig.Error(),
+		},
+		"gid specified without uid": {
+			inVolumes: map[string]manifest.Volume{
+				"efs": {
+					EFS: &manifest.EFSConfigOrID{
+						Config: manifest.EFSVolumeConfiguration{
+							FileSystemID: aws.String("managed"),
+							GID:          aws.Uint32(10000),
+						},
+					},
+					MountPointOpts: manifest.MountPointOpts{
+						ContainerPath: aws.String("/var/www"),
+						ReadOnly:      aws.Bool(true),
+					},
+				},
+			},
+			wantErr: errInvalidUIDGIDConfig.Error(),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -441,8 +919,9 @@ func Test_convertStorageOpts(t *testing.T) {
 				Volumes:   tc.inVolumes,
 				Ephemeral: tc.inEphemeral,
 			}
+
 			// WHEN
-			got, err := convertStorageOpts(&s)
+			got, err := convertStorageOpts(aws.String("fe"), &s)
 
 			// THEN
 			if tc.wantErr != "" {
@@ -485,7 +964,7 @@ func Test_convertExecuteCommand(t *testing.T) {
 			exec := tc.inConfig
 			got := convertExecuteCommand(&exec)
 
-			require.Equal(t, got, tc.wanted)
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }

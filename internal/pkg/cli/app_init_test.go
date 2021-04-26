@@ -333,6 +333,7 @@ func TestInitAppOpts_Execute(t *testing.T) {
 						AdditionalTags: map[string]string{
 							"owner": "boss",
 						},
+						Version: deploy.LatestAppTemplateVersion,
 					}).Return(nil)
 				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtAppInitComplete, "myapp"))
 			},

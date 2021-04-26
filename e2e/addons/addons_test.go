@@ -4,12 +4,8 @@
 package addons_test
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
-	"os"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
 	. "github.com/onsi/ginkgo"
@@ -105,38 +101,57 @@ var _ = Describe("addons flow", func() {
 		})
 	})
 
-	Context("copy addons file to copilot dir", func() {
-		It("should copy all addons/ files to the app's workspace", func() {
-			err := os.MkdirAll("./copilot/hello/addons", 0777)
-			Expect(err).NotTo(HaveOccurred(), "create addons dir")
+	Context("when adding an RDS storage", func() {
+		var testStorageInitErr error
+		BeforeAll(func() {
+			_, testStorageInitErr = cli.StorageInit(&client.StorageInitRequest{
+				StorageName:   rdsStorageName,
+				StorageType:   rdsStorageType,
+				WorkloadName:  svcName,
+				RDSEngine:     rdsEngine,
+				InitialDBName: rdsInitialDB,
+			})
+		})
 
-			fds, err := ioutil.ReadDir("./hello/addons")
-			Expect(err).NotTo(HaveOccurred(), "read addons dir")
+		It("storage init should succeed", func() {
+			Expect(testStorageInitErr).NotTo(HaveOccurred())
+		})
 
-			for _, fd := range fds {
-				destFile, err := os.Create(fmt.Sprintf("./copilot/hello/addons/%s", fd.Name()))
-				Expect(err).NotTo(HaveOccurred(), "create destination file")
-				defer destFile.Close()
+		It("storage init should create an addon template", func() {
+			addonFilePath := fmt.Sprintf("./copilot/%s/addons/%s.yml", svcName, rdsStorageName)
+			Expect(addonFilePath).Should(BeAnExistingFile())
+		})
+	})
 
-				srcFile, err := os.Open(fmt.Sprintf("./hello/addons/%s", fd.Name()))
-				Expect(err).NotTo(HaveOccurred(), "open source file")
-				defer srcFile.Close()
+	Context("when adding a S3 storage", func() {
+		var testStorageInitErr error
+		BeforeAll(func() {
+			_, testStorageInitErr = cli.StorageInit(&client.StorageInitRequest{
+				StorageName:  s3StorageName,
+				StorageType:  s3StorageType,
+				WorkloadName: svcName,
+			})
+		})
 
-				_, err = io.Copy(destFile, srcFile)
-				Expect(err).NotTo(HaveOccurred(), "copy file")
+		It("storage init should succeed", func() {
+			Expect(testStorageInitErr).NotTo(HaveOccurred())
+		})
 
-			}
+		It("storage init should create an addon template", func() {
+			addonFilePath := fmt.Sprintf("./copilot/%s/addons/%s.yml", svcName, s3StorageName)
+			Expect(addonFilePath).Should(BeAnExistingFile())
 		})
 	})
 
 	Context("when deploying svc", func() {
 		var (
-			appDeployErr error
+			svcDeployErr error
 			svcInitErr   error
 			initErr      error
 		)
+
 		BeforeAll(func() {
-			_, appDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
+			_, svcDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
 				Name:     svcName,
 				EnvName:  "test",
 				ImageTag: "gallopinggurdey",
@@ -144,10 +159,10 @@ var _ = Describe("addons flow", func() {
 		})
 
 		It("svc deploy should succeed", func() {
-			Expect(appDeployErr).NotTo(HaveOccurred())
+			Expect(svcDeployErr).NotTo(HaveOccurred())
 		})
 
-		It("should be able to make a POST request", func() {
+		It("should be able to make a GET request", func() {
 			svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
 				AppName: appName,
 				Name:    svcName,
@@ -155,16 +170,16 @@ var _ = Describe("addons flow", func() {
 			Expect(svcShowErr).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
 
-			// Make a POST request to the API to store the user name in DynamoDB.
+			// Make a GET request to the API.
 			route := svc.Routes[0]
 			Expect(route.Environment).To(Equal("test"))
 			Eventually(func() (int, error) {
-				resp, fetchErr := http.Post(fmt.Sprintf("%s/%s/%s", route.URL, svcName, appName), "application/json", nil)
+				resp, fetchErr := http.Get(route.URL)
 				return resp.StatusCode, fetchErr
-			}, "30s", "1s").Should(Equal(201))
+			}, "30s", "1s").Should(Equal(200))
 		})
 
-		It("should be able to retrieve the results", func() {
+		It("initial database should have been created for the Aurora stroage", func() {
 			svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
 				AppName: appName,
 				Name:    svcName,
@@ -172,26 +187,35 @@ var _ = Describe("addons flow", func() {
 			Expect(svcShowErr).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
 
-			// Make a GET request to the API to retrieve the list of user names from DynamoDB.
+			// Make a GET request to the API to make sure initial database exists.
 			route := svc.Routes[0]
 			Expect(route.Environment).To(Equal("test"))
-			var resp *http.Response
-			var fetchErr error
+
+			endpoint := fmt.Sprintf("%s/%s", "databases", rdsInitialDB)
 			Eventually(func() (int, error) {
-				resp, fetchErr = http.Get(fmt.Sprintf("%s/hello", route.URL))
+				url := fmt.Sprintf("%s/%s", route.URL, endpoint)
+				resp, fetchErr := http.Get(url)
 				return resp.StatusCode, fetchErr
-			}, "10s", "1s").Should(Equal(200))
+			}, "30s", "1s").Should(Equal(200))
+		})
 
-			bodyBytes, err := ioutil.ReadAll(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
+		It("should be able to peek into s3 bucket", func() {
+			svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
+				AppName: appName,
+				Name:    svcName,
+			})
+			Expect(svcShowErr).NotTo(HaveOccurred())
+			Expect(len(svc.Routes)).To(Equal(1))
 
-			type Result struct {
-				Names []string
-			}
-			result := Result{}
-			err = json.Unmarshal(bodyBytes, &result)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result.Names[0]).To(Equal(appName))
+			// Make a GET request to the API to make sure we can access the s3 bucket.
+			route := svc.Routes[0]
+			Expect(route.Environment).To(Equal("test"))
+
+			Eventually(func() (int, error) {
+				url := fmt.Sprintf("%s/%s", route.URL, "peeks3")
+				resp, fetchErr := http.Get(url)
+				return resp.StatusCode, fetchErr
+			}, "30s", "1s").Should(Equal(200))
 		})
 
 		It("svc logs should display logs", func() {

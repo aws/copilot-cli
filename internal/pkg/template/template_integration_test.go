@@ -1,4 +1,4 @@
-// +build integration,local
+// +build integration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -13,7 +13,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
 func TestTemplate_ParseScheduledJob(t *testing.T) {
@@ -104,6 +103,15 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 			},
 		},
+		"renders a valid template with private subnet placement": {
+			opts: template.WorkloadOpts{
+				HTTPHealthCheck: defaultHttpHealthCheck,
+				Network: &template.NetworkOpts{
+					AssignPublicIP: "DISABLED",
+					SubnetsType:    "PrivateSubnets",
+				},
+			},
+		},
 		"renders a valid template with all storage options": {
 			opts: template.WorkloadOpts{
 				HTTPHealthCheck: defaultHttpHealthCheck,
@@ -125,11 +133,13 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					},
 					Volumes: []*template.Volume{
 						{
-							AccessPointID: aws.String("ap-1234"),
-							Filesystem:    aws.String("fs-5678"),
-							IAM:           aws.String("ENABLED"),
-							Name:          aws.String("efs"),
-							RootDirectory: aws.String("/"),
+							EFS: &template.EFSVolumeConfiguration{
+								AccessPointID: aws.String("ap-1234"),
+								Filesystem:    aws.String("fs-5678"),
+								IAM:           aws.String("ENABLED"),
+								RootDirectory: aws.String("/"),
+							},
+							Name: aws.String("efs"),
 						},
 					},
 				},
@@ -153,9 +163,11 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					},
 					Volumes: []*template.Volume{
 						{
-							Filesystem:    aws.String("fs-5678"),
-							Name:          aws.String("efs"),
-							RootDirectory: aws.String("/"),
+							Name: aws.String("efs"),
+							EFS: &template.EFSVolumeConfiguration{
+								Filesystem:    aws.String("fs-5678"),
+								RootDirectory: aws.String("/"),
+							},
 						},
 					},
 				},
@@ -195,119 +207,6 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				TemplateBody: aws.String(content.String()),
 			})
 			require.NoError(t, err, content.String())
-		})
-	}
-}
-
-func TestTemplate_ParseNetwork(t *testing.T) {
-	type cfn struct {
-		Resources struct {
-			Service struct {
-				Properties struct {
-					NetworkConfiguration map[interface{}]interface{} `yaml:"NetworkConfiguration"`
-				} `yaml:"Properties"`
-			} `yaml:"Service"`
-		} `yaml:"Resources"`
-	}
-
-	testCases := map[string]struct {
-		input *template.NetworkOpts
-
-		wantedNetworkConfig string
-	}{
-		"should render AWS VPC configuration for public subnets by default": {
-			input: nil,
-			wantedNetworkConfig: `
-  AwsvpcConfiguration:
-    AssignPublicIp: ENABLED
-    Subnets:
-    - Fn::Select:
-      - 0
-      - Fn::Split:
-        - ','
-        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
-    - Fn::Select:
-      - 1
-      - Fn::Split:
-        - ','
-        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
-    SecurityGroups:
-      - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
-`,
-		},
-		"should render AWS VPC configuration for private subnets": {
-			input: &template.NetworkOpts{
-				AssignPublicIP: "DISABLED",
-				SubnetsType:    "PrivateSubnets",
-			},
-			wantedNetworkConfig: `
-  AwsvpcConfiguration:
-    AssignPublicIp: DISABLED
-    Subnets:
-    - Fn::Select:
-      - 0
-      - Fn::Split:
-        - ','
-        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
-    - Fn::Select:
-      - 1
-      - Fn::Split:
-        - ','
-        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
-    SecurityGroups:
-      - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
-`,
-		},
-		"should render AWS VPC configuration for private subnets with security groups": {
-			input: &template.NetworkOpts{
-				AssignPublicIP: "DISABLED",
-				SubnetsType:    "PrivateSubnets",
-				SecurityGroups: []string{
-					"sg-1bcf1d5b",
-					"sg-asdasdas",
-				},
-			},
-			wantedNetworkConfig: `
-  AwsvpcConfiguration:
-    AssignPublicIp: DISABLED
-    Subnets:
-    - Fn::Select:
-      - 0
-      - Fn::Split:
-        - ','
-        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
-    - Fn::Select:
-      - 1
-      - Fn::Split:
-        - ','
-        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
-    SecurityGroups:
-      - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
-      - "sg-1bcf1d5b"
-      - "sg-asdasdas"
-`,
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			tpl := template.New()
-			wanted := make(map[interface{}]interface{})
-			err := yaml.Unmarshal([]byte(tc.wantedNetworkConfig), &wanted)
-			require.NoError(t, err, "unmarshal wanted config")
-
-			// WHEN
-			content, err := tpl.ParseLoadBalancedWebService(template.WorkloadOpts{
-				Network: tc.input,
-			})
-
-			// THEN
-			require.NoError(t, err, "parse load balanced web service")
-			var actual cfn
-			err = yaml.Unmarshal(content.Bytes(), &actual)
-			require.NoError(t, err, "unmarshal actual config")
-			require.Equal(t, wanted, actual.Resources.Service.Properties.NetworkConfiguration)
 		})
 	}
 }

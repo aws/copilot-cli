@@ -8,9 +8,12 @@ import (
 	"io"
 	"strings"
 
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
+
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -23,14 +26,8 @@ const (
 	waitConditionHandle  = "AWS::CloudFormation::WaitConditionHandle"
 )
 
-type stackAndResourcesDescriber interface {
-	Stack(stackName string) (*cloudformation.Stack, error)
-	StackResources(stackName string) ([]*cloudformation.StackResource, error)
-	Metadata(stackName string) (string, error)
-}
-
 type ecsClient interface {
-	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
+	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
 }
 
 // ConfigStoreSvc wraps methods of config store.
@@ -72,8 +69,8 @@ type ServiceDescriber struct {
 	service string
 	env     string
 
-	ecsClient      ecsClient
-	stackDescriber stackAndResourcesDescriber
+	cfn       cfn
+	ecsClient ecsClient
 }
 
 // NewServiceConfig contains fields that initiates ServiceDescriber struct.
@@ -94,40 +91,37 @@ func NewServiceDescriber(opt NewServiceConfig) (*ServiceDescriber, error) {
 	if err != nil {
 		return nil, err
 	}
-	d := newStackDescriber(sess)
 	return &ServiceDescriber{
 		app:     opt.App,
 		service: opt.Svc,
 		env:     opt.Env,
 
-		ecsClient:      ecs.New(sess),
-		stackDescriber: d,
+		cfn:       cloudformation.New(sess),
+		ecsClient: ecs.New(sess),
 	}, nil
 }
 
 // EnvVars returns the environment variables of the task definition.
-func (d *ServiceDescriber) EnvVars() ([]*ecs.ContainerEnvVar, error) {
-	taskDefName := fmt.Sprintf("%s-%s-%s", d.app, d.env, d.service)
-	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)
+func (d *ServiceDescriber) EnvVars() ([]*awsecs.ContainerEnvVar, error) {
+	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("describe task definition for service %s: %w", d.service, err)
 	}
 	return taskDefinition.EnvironmentVariables(), nil
 }
 
 // Secrets returns the secrets of the task definition.
-func (d *ServiceDescriber) Secrets() ([]*ecs.ContainerSecret, error) {
-	taskDefName := fmt.Sprintf("%s-%s-%s", d.app, d.env, d.service)
-	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)
+func (d *ServiceDescriber) Secrets() ([]*awsecs.ContainerSecret, error) {
+	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("describe task definition for service %s: %w", d.service, err)
 	}
 	return taskDefinition.Secrets(), nil
 }
 
 // ServiceStackResources returns the filtered service stack resources created by CloudFormation.
 func (d *ServiceDescriber) ServiceStackResources() ([]*cloudformation.StackResource, error) {
-	svcResources, err := d.stackDescriber.StackResources(stack.NameForService(d.app, d.env, d.service))
+	svcResources, err := d.cfn.StackResources(stack.NameForService(d.app, d.env, d.service))
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +143,7 @@ func (d *ServiceDescriber) ServiceStackResources() ([]*cloudformation.StackResou
 
 // EnvOutputs returns the output of the environment stack.
 func (d *ServiceDescriber) EnvOutputs() (map[string]string, error) {
-	envStack, err := d.stackDescriber.Stack(stack.NameForEnv(d.app, d.env))
+	envStack, err := d.cfn.Describe(stack.NameForEnv(d.app, d.env))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +156,7 @@ func (d *ServiceDescriber) EnvOutputs() (map[string]string, error) {
 
 // Params returns the parameters of the service stack.
 func (d *ServiceDescriber) Params() (map[string]string, error) {
-	svcStack, err := d.stackDescriber.Stack(stack.NameForService(d.app, d.env, d.service))
+	svcStack, err := d.cfn.Describe(stack.NameForService(d.app, d.env, d.service))
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-// +build integration,local
+// +build integration localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -9,22 +9,23 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"testing"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
+
 	"github.com/stretchr/testify/require"
 )
 
 const (
-	jobManifestPath = "job-manifest.yml"
-	jobStackPath    = "job-test.stack.yml"
-	jobParamsPath   = "job-test.params.json"
+	jobManifestPath   = "job-manifest.yml"
+	jobStackPath      = "job-test.stack.yml"
+	jobParamsPath     = "job-test.params.json"
+	envControllerPath = "custom-resources/env-controller.js"
 )
 
 func TestScheduledJob_Template(t *testing.T) {
@@ -39,20 +40,15 @@ func TestScheduledJob_Template(t *testing.T) {
 
 	tpl, err := serializer.Template()
 	require.NoError(t, err, "template should render")
-
-	sess, err := sessions.NewProvider().Default()
+	parser := template.New()
+	envController, err := parser.Read(envControllerPath)
 	require.NoError(t, err)
-	cfn := cloudformation.New(sess)
-
-	t.Run("CF template should be valid", func(t *testing.T) {
-		_, err := cfn.ValidateTemplate(&cloudformation.ValidateTemplateInput{
-			TemplateBody: aws.String(tpl),
-		})
-		require.NoError(t, err)
-	})
-
+	zipFile := envController.String()
 	t.Run("CF Template should be equal", func(t *testing.T) {
 		actualBytes := []byte(tpl)
+		actualString := string(actualBytes)
+		actualString = strings.ReplaceAll(actualString, zipFile, "Abracadabra")
+		actualBytes = []byte(actualString)
 		mActual := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal(actualBytes, mActual))
 
@@ -61,6 +57,7 @@ func TestScheduledJob_Template(t *testing.T) {
 		expectedBytes := []byte(expected)
 		mExpected := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal(expectedBytes, mExpected))
+		// Cut out zip file from EnvControllerAction
 		require.Equal(t, mExpected, mActual)
 	})
 
