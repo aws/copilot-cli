@@ -134,7 +134,7 @@ tools:
 	GOBIN=${GOBIN} go get github.com/golang/mock/mockgen
 	GOBIN=${GOBIN} go get github.com/gobuffalo/packr/v2/packr2
 	@echo "Installing custom resource dependencies" &&\
-	cd ${SOURCE_CUSTOM_RESOURCES} && npm install
+	cd ${SOURCE_CUSTOM_RESOURCES} && npm ci
 
 .PHONY: gen-mocks
 gen-mocks: tools
@@ -188,3 +188,6 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/list/mocks/mock_list.go -source=./internal/pkg/list/list.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/initialize/mocks/mock_workload.go -source=./internal/pkg/initialize/workload.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_ecs.go -source=./internal/pkg/ecs/ecs.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/generator/mocks/mock_ecs_service.go -source=./internal/pkg/generator/ecs_service.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/generator/mocks/mock_service.go -source=./internal/pkg/generator/service.go
+

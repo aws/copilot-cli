@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
 	ecsapi "github.com/aws/aws-sdk-go/service/ecs"
+
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/golang/mock/gomock"
@@ -20,36 +22,35 @@ import (
 
 type svcDescriberMocks struct {
 	mockCFN       *mocks.Mockcfn
-	mockecsClient *mocks.MockecsClient
+	mockECSClient *mocks.MockecsClient
 }
 
 func TestServiceDescriber_EnvVars(t *testing.T) {
 	const (
 		testApp = "phonetool"
-		testSvc = "jobs"
+		testSvc = "svc"
 		testEnv = "test"
 	)
 	testCases := map[string]struct {
 		setupMocks func(mocks svcDescriberMocks)
 
-		wantedEnvVars []*ecs.ContainerEnvVar
+		wantedEnvVars []*awsecs.ContainerEnvVar
 		wantedError   error
 	}{
-		"returns error if fails to get environment variables": {
+		"returns error if fails to get task definition": {
 			setupMocks: func(m svcDescriberMocks) {
-				gomock.InOrder(
-					m.mockecsClient.EXPECT().TaskDefinition("phonetool-test-jobs").Return(nil, errors.New("some error")),
-				)
+				m.mockECSClient.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(nil, errors.New("some error"))
 			},
 
-			wantedError: fmt.Errorf("some error"),
+			wantedError: errors.New("describe task definition for service svc: some error"),
 		},
 		"get environment variables": {
 			setupMocks: func(m svcDescriberMocks) {
 				gomock.InOrder(
-					m.mockecsClient.EXPECT().TaskDefinition("phonetool-test-jobs").Return(&ecs.TaskDefinition{
+					m.mockECSClient.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(&ecs.TaskDefinition{
 						ContainerDefinitions: []*ecsapi.ContainerDefinition{
 							{
+								Name: aws.String("container"),
 								Environment: []*ecsapi.KeyValuePair{
 									{
 										Name:  aws.String("COPILOT_SERVICE_NAME"),
@@ -60,7 +61,6 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 										Value: aws.String("prod"),
 									},
 								},
-								Name: aws.String("container"),
 							},
 						},
 					}, nil),
@@ -89,7 +89,7 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 
 			mockecsClient := mocks.NewMockecsClient(ctrl)
 			mocks := svcDescriberMocks{
-				mockecsClient: mockecsClient,
+				mockECSClient: mockecsClient,
 			}
 
 			tc.setupMocks(mocks)
@@ -119,28 +119,28 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 func TestServiceDescriber_Secrets(t *testing.T) {
 	const (
 		testApp = "phonetool"
-		testSvc = "jobs"
+		testSvc = "svc"
 		testEnv = "test"
 	)
 	testCases := map[string]struct {
 		setupMocks func(mocks svcDescriberMocks)
 
-		wantedSecrets []*ecs.ContainerSecret
+		wantedSecrets []*awsecs.ContainerSecret
 		wantedError   error
 	}{
-		"returns error if fails to get secrets": {
+		"returns error if fails to get task definition": {
 			setupMocks: func(m svcDescriberMocks) {
 				gomock.InOrder(
-					m.mockecsClient.EXPECT().TaskDefinition("phonetool-test-jobs").Return(nil, errors.New("some error")),
+					m.mockECSClient.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(nil, errors.New("some error")),
 				)
 			},
 
-			wantedError: fmt.Errorf("some error"),
+			wantedError: fmt.Errorf("describe task definition for service svc: some error"),
 		},
 		"successfully gets secrets": {
 			setupMocks: func(m svcDescriberMocks) {
 				gomock.InOrder(
-					m.mockecsClient.EXPECT().TaskDefinition("phonetool-test-jobs").Return(&ecs.TaskDefinition{
+					m.mockECSClient.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(&ecs.TaskDefinition{
 						ContainerDefinitions: []*ecsapi.ContainerDefinition{
 							{
 								Name: aws.String("container"),
@@ -182,7 +182,7 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 
 			mockecsClient := mocks.NewMockecsClient(ctrl)
 			mocks := svcDescriberMocks{
-				mockecsClient: mockecsClient,
+				mockECSClient: mockecsClient,
 			}
 
 			tc.setupMocks(mocks)

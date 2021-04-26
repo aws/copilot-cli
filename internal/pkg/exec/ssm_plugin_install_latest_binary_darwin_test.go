@@ -67,6 +67,9 @@ func TestSSMPluginCommand_InstallLatestBinary_darwin(t *testing.T) {
 			s := SSMPluginCommand{
 				runner:  mockRunner,
 				tempDir: mockDir,
+				http: &fakeHTTPClient{
+					content: []byte("hello"),
+				},
 			}
 			err := s.InstallLatestBinary()
 			if tc.wantedError != nil {

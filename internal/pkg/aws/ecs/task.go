@@ -78,13 +78,14 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 		})
 	}
 	return &TaskStatus{
-		Health:        aws.StringValue(t.HealthStatus),
-		ID:            taskID,
-		Images:        images,
-		LastStatus:    aws.StringValue(t.LastStatus),
-		StartedAt:     startedAt,
-		StoppedAt:     stoppedAt,
-		StoppedReason: stoppedReason,
+		Health:           aws.StringValue(t.HealthStatus),
+		ID:               taskID,
+		Images:           images,
+		LastStatus:       aws.StringValue(t.LastStatus),
+		StartedAt:        startedAt,
+		StoppedAt:        stoppedAt,
+		StoppedReason:    stoppedReason,
+		CapacityProvider: aws.StringValue(t.CapacityProviderName),
 	}, nil
 }
 
@@ -118,13 +119,14 @@ func (t *Task) ENI() (string, error) {
 
 // TaskStatus contains the status info of a task.
 type TaskStatus struct {
-	Health        string    `json:"health"`
-	ID            string    `json:"id"`
-	Images        []Image   `json:"images"`
-	LastStatus    string    `json:"lastStatus"`
-	StartedAt     time.Time `json:"startedAt"`
-	StoppedAt     time.Time `json:"stoppedAt"`
-	StoppedReason string    `json:"stoppedReason"`
+	Health           string    `json:"health"`
+	ID               string    `json:"id"`
+	Images           []Image   `json:"images"`
+	LastStatus       string    `json:"lastStatus"`
+	StartedAt        time.Time `json:"startedAt"`
+	StoppedAt        time.Time `json:"stoppedAt"`
+	StoppedReason    string    `json:"stoppedReason"`
+	CapacityProvider string    `json:"capacityProvider"`
 }
 
 // HumanString returns the stringified TaskStatus struct with human readable format.
@@ -154,7 +156,12 @@ func (t TaskStatus) HumanString() string {
 	if len(t.ID) >= shortTaskIDLength {
 		shortTaskID = t.ID[:shortTaskIDLength]
 	}
-	return fmt.Sprintf("  %s\t%s\t%s\t%s\t%s\t%s\n", shortTaskID, imageDigest, t.LastStatus, startedSince, stoppedSince, taskHealthColor(t.Health))
+	cp := "-"
+	if t.CapacityProvider != "" {
+		cp = t.CapacityProvider
+	}
+
+	return fmt.Sprintf("  %s\t%s\t%s\t%s\t%s\t%s\t%s\n", shortTaskID, imageDigest, t.LastStatus, startedSince, stoppedSince, cp, taskHealthColor(t.Health))
 }
 
 // TaskDefinition wraps up ECS TaskDefinition struct.
@@ -202,6 +209,36 @@ func (t *TaskDefinition) Secrets() []*ContainerSecret {
 		}
 	}
 	return secrets
+}
+
+// Image returns the container's image of the task definition.
+func (t *TaskDefinition) Image(containerName string) (string, error) {
+	for _, container := range t.ContainerDefinitions {
+		if aws.StringValue(container.Name) == containerName {
+			return aws.StringValue(container.Image), nil
+		}
+	}
+	return "", fmt.Errorf("container %s not found", containerName)
+}
+
+// Command returns the container's command overrides of the task definition.
+func (t *TaskDefinition) Command(containerName string) ([]string, error) {
+	for _, container := range t.ContainerDefinitions {
+		if aws.StringValue(container.Name) == containerName {
+			return aws.StringValueSlice(container.Command), nil
+		}
+	}
+	return nil, fmt.Errorf("container %s not found", containerName)
+}
+
+// EntryPoint returns the container's entrypoint overrides of the task definition.
+func (t *TaskDefinition) EntryPoint(containerName string) ([]string, error) {
+	for _, container := range t.ContainerDefinitions {
+		if aws.StringValue(container.Name) == containerName {
+			return aws.StringValueSlice(container.EntryPoint), nil
+		}
+	}
+	return nil, fmt.Errorf("container %s not found", containerName)
 }
 
 // TaskID parses the task ARN and returns the task ID.

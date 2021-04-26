@@ -289,7 +289,7 @@ func TestCloudFormation_UpdateEnvironmentTemplate(t *testing.T) {
 						require.Equal(t, "phonetool-test", s.Name)
 						require.Equal(t, params, s.Parameters)
 						require.Equal(t, tags, s.Tags)
-						require.Equal(t, "hello", s.Template)
+						require.Equal(t, "hello", s.TemplateBody)
 						require.Equal(t, aws.String("arn"), s.RoleARN)
 					})
 				return m

@@ -584,6 +584,7 @@ func TestClient_StopWorkloadTasks(t *testing.T) {
 		})
 	}
 }
+
 func TestClient_StopOneOffTasks(t *testing.T) {
 	mockCluster := "arn:aws::ecs:cluster/abcd1234"
 	mockResource := resourcegroups.Resource{
@@ -787,6 +788,230 @@ func Test_StopDefaultClusterTasks(t *testing.T) {
 				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestServiceDescriber_TaskDefinition(t *testing.T) {
+	const (
+		testApp = "phonetool"
+		testSvc = "svc"
+		testEnv = "test"
+	)
+	testCases := map[string]struct {
+		setupMocks func(m *mocks.MockecsClient)
+
+		wantedTaskDefinition *ecs.TaskDefinition
+		wantedError          error
+	}{
+		"unable to retrieve task definition": {
+			setupMocks: func(m *mocks.MockecsClient) {
+				m.EXPECT().TaskDefinition("phonetool-test-svc").Return(nil, errors.New("some error"))
+			},
+			wantedError: errors.New("get task definition phonetool-test-svc of service svc: some error"),
+		},
+		"successfully return task definition information": {
+			setupMocks: func(m *mocks.MockecsClient) {
+				m.EXPECT().TaskDefinition("phonetool-test-svc").Return(&ecs.TaskDefinition{
+					ExecutionRoleArn: aws.String("execution-role"),
+					TaskRoleArn:      aws.String("task-role"),
+					ContainerDefinitions: []*awsecs.ContainerDefinition{
+						{
+							Name:  aws.String("the-container"),
+							Image: aws.String("beautiful-image"),
+							Environment: []*awsecs.KeyValuePair{
+								{
+									Name:  aws.String("weather"),
+									Value: aws.String("snowy"),
+								},
+								{
+									Name:  aws.String("temperature"),
+									Value: aws.String("low"),
+								},
+							},
+							Secrets: []*awsecs.Secret{
+								{
+									Name:      aws.String("secret-1"),
+									ValueFrom: aws.String("first walk to Hokkaido"),
+								},
+								{
+									Name:      aws.String("secret-2"),
+									ValueFrom: aws.String("then get on the HAYABUSA"),
+								},
+							},
+							EntryPoint: aws.StringSlice([]string{"do", "not", "enter"}),
+							Command:    aws.StringSlice([]string{"--force", "--verbose"}),
+						},
+					},
+				}, nil)
+			},
+			wantedTaskDefinition: &ecs.TaskDefinition{
+				ExecutionRoleArn: aws.String("execution-role"),
+				TaskRoleArn:      aws.String("task-role"),
+				ContainerDefinitions: []*awsecs.ContainerDefinition{
+					{
+						Name:  aws.String("the-container"),
+						Image: aws.String("beautiful-image"),
+						Environment: []*awsecs.KeyValuePair{
+							{
+								Name:  aws.String("weather"),
+								Value: aws.String("snowy"),
+							},
+							{
+								Name:  aws.String("temperature"),
+								Value: aws.String("low"),
+							},
+						},
+						Secrets: []*awsecs.Secret{
+							{
+								Name:      aws.String("secret-1"),
+								ValueFrom: aws.String("first walk to Hokkaido"),
+							},
+							{
+								Name:      aws.String("secret-2"),
+								ValueFrom: aws.String("then get on the HAYABUSA"),
+							},
+						},
+						EntryPoint: aws.StringSlice([]string{"do", "not", "enter"}),
+						Command:    aws.StringSlice([]string{"--force", "--verbose"}),
+					},
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockECS := mocks.NewMockecsClient(ctrl)
+			tc.setupMocks(mockECS)
+
+			c := Client{
+				ecsClient: mockECS,
+			}
+
+			// WHEN
+			got, err := c.TaskDefinition(testApp, testEnv, testSvc)
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedTaskDefinition, got)
+			}
+		})
+	}
+}
+
+func Test_NetworkConfiguration(t *testing.T) {
+	const (
+		testApp = "phonetool"
+		testSvc = "svc"
+		testEnv = "test"
+	)
+	getRgInput := map[string]string{
+		deploy.AppTagKey: testApp,
+		deploy.EnvTagKey: testEnv,
+	}
+
+	testCases := map[string]struct {
+		setupMocks func(m clientMocks)
+
+		wantedNetworkConfig *ecs.NetworkConfiguration
+		wantedError         error
+	}{
+		"errors if fail to get resources by tags": {
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.resourceGetter.EXPECT().GetResourcesByTags(clusterResourceType, getRgInput).
+						Return(nil, errors.New("some error")),
+				)
+			},
+			wantedError: fmt.Errorf("get cluster resources for environment test: some error"),
+		},
+		"errors if no cluster found": {
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.resourceGetter.EXPECT().GetResourcesByTags(clusterResourceType, getRgInput).
+						Return([]*resourcegroups.Resource{}, nil),
+				)
+			},
+			wantedError: fmt.Errorf("no cluster found in environment test"),
+		},
+		"errors if more than one cluster found": {
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.resourceGetter.EXPECT().GetResourcesByTags(clusterResourceType, getRgInput).
+						Return([]*resourcegroups.Resource{
+							{ARN: "mockARN1"}, {ARN: "mockARN2"},
+						}, nil),
+				)
+			},
+			wantedError: fmt.Errorf("more than one cluster is found in environment test"),
+		},
+		"successfully retrieve network configuration": {
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.resourceGetter.EXPECT().GetResourcesByTags(clusterResourceType, getRgInput).
+						Return([]*resourcegroups.Resource{
+							{ARN: "cluster-1"},
+						}, nil),
+					m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, map[string]string{
+						deploy.AppTagKey:     testApp,
+						deploy.EnvTagKey:     testEnv,
+						deploy.ServiceTagKey: testSvc,
+					}).Return([]*resourcegroups.Resource{
+						{ARN: "arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-myService-JSOH5GYBFAIB"},
+					}, nil),
+					m.ecsClient.EXPECT().NetworkConfiguration("cluster-1", "my-project-test-myService-JSOH5GYBFAIB").Return(&ecs.NetworkConfiguration{
+						AssignPublicIp: "1.2.3.4",
+						SecurityGroups: []string{"sg-1", "sg-2"},
+						Subnets:        []string{"sn-1", "sn-2"},
+					}, nil),
+				)
+
+			},
+			wantedNetworkConfig: &ecs.NetworkConfiguration{
+				AssignPublicIp: "1.2.3.4",
+				SecurityGroups: []string{"sg-1", "sg-2"},
+				Subnets:        []string{"sn-1", "sn-2"},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// GIVEN
+			m := clientMocks{
+				resourceGetter: mocks.NewMockresourceGetter(ctrl),
+				ecsClient:      mocks.NewMockecsClient(ctrl),
+			}
+
+			tc.setupMocks(m)
+
+			client := Client{
+				rgGetter:  m.resourceGetter,
+				ecsClient: m.ecsClient,
+			}
+
+			// WHEN
+			get, err := client.NetworkConfiguration(testApp, testEnv, testSvc)
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, get, tc.wantedNetworkConfig)
 			}
 		})
 	}
