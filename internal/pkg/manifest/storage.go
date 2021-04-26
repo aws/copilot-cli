@@ -108,7 +108,7 @@ func (e *EFSConfigOrBool) UseManagedFS() bool {
 // This function is useful for checking that the EFS config has been intentionally turned off
 // and whether we should ignore any values of the struct which have been populated erroneously.
 func (e *EFSConfigOrBool) Disabled() bool {
-	if e.Enabled != nil && aws.BoolValue(e.Enabled) == false {
+	if e.Enabled != nil && !aws.BoolValue(e.Enabled) {
 		return true
 	}
 	return false

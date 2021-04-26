@@ -123,6 +123,7 @@ func validateEFSConfig(in manifest.Volume) error {
 	}
 
 	// UID and GID are mutually exclusive with any other fields.
+      // lint:ignore S1002 we want to clarify the intent here by comparing to a boolean.
 	if in.EFS.Advanced.EmptyBYOConfig() == false && !in.EFS.Advanced.EmptyUIDConfig() {
 		return errUIDWithNonManagedFS
 	}
