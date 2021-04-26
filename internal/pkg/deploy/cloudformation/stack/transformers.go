@@ -4,6 +4,7 @@
 package stack
 
 import (
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"strings"
@@ -30,6 +31,17 @@ const (
 // Default value for Sidecar port.
 const (
 	defaultSidecarPort = "80"
+)
+
+// Supported capacity providers for Fargate services
+const (
+	capacityProviderFargateSpot = "FARGATE_SPOT"
+	capacityProviderFargate     = "FARGATE"
+)
+
+var (
+
+	errInvalidSpotConfig   = errors.New(`"count.spot" and "count.range" cannot be specified together`)
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
@@ -81,12 +93,94 @@ func parsePortMapping(s *string) (port *string, protocol *string, err error) {
 	}
 }
 
-// convertAutoscaling converts the service's Auto Scaling configuration into a format parsable
-// by the templates pkg.
-func convertAutoscaling(a *manifest.Autoscaling) (*template.AutoscalingOpts, error) {
+func convertAdvancedCount(a *manifest.AdvancedCount) (*template.AdvancedCount, error) {
+	if a == nil {
+		return nil, nil
+	}
+
 	if a.IsEmpty() {
 		return nil, nil
 	}
+
+	autoscaling, err := convertAutoscaling(a)
+	if err != nil {
+		return nil, err
+	}
+
+	cps, err := convertCapacityProviders(a)
+	if err != nil {
+		return nil, err
+	}
+
+	return &template.AdvancedCount{
+		Spot:        a.Spot,
+		Autoscaling: autoscaling,
+		Cps:         cps,
+	}, nil
+}
+
+// convertCapacityProviders transforms the manifest fields into a format
+// parsable by the templates pkg.
+func convertCapacityProviders(a *manifest.AdvancedCount) ([]*template.CapacityProviderStrategy, error) {
+	if a.IsEmpty() {
+		return nil, nil
+	}
+
+	if a.Spot != nil && a.Range != nil {
+		return nil, errInvalidSpotConfig
+	}
+
+	// return if autoscaling range specified without spot scaling
+	if a.Range != nil && a.Range.Value != nil {
+		return nil, nil
+	}
+
+	var cps []*template.CapacityProviderStrategy
+
+	// if Spot specified as count, then weight on Spot CPS should be 1
+	cps = append(cps, &template.CapacityProviderStrategy{
+		Weight:           aws.Int(1),
+		CapacityProvider: capacityProviderFargateSpot,
+	})
+
+	// Return if only spot is specifed as count
+	if a.Range == nil {
+		return cps, nil
+	}
+
+	// Scaling with spot
+	rc := a.Range.RangeConfig
+	if !rc.IsEmpty() {
+		spotFrom := aws.IntValue(rc.SpotFrom)
+		min := aws.IntValue(rc.Min)
+
+		// If spotFrom value is not equal to the autoscaling min, then
+		// the base value on the Fargate Capacity provider must be set
+		// to one less than spotFrom
+		if spotFrom > min {
+			base := spotFrom - 1
+			fgCapacity := &template.CapacityProviderStrategy{
+				Base:             aws.Int(base),
+				Weight:           aws.Int(0),
+				CapacityProvider: capacityProviderFargate,
+			}
+			cps = append(cps, fgCapacity)
+		}
+	}
+
+	return cps, nil
+}
+
+// convertAutoscaling converts the service's Auto Scaling configuration into a format parsable
+// by the templates pkg.
+func convertAutoscaling(a *manifest.AdvancedCount) (*template.AutoscalingOpts, error) {
+	if a.IsEmpty() {
+		return nil, nil
+	}
+	if a.Spot != nil {
+		return nil, nil
+	}
+
 	min, max, err := a.Range.Parse()
 	if err != nil {
 		return nil, err
@@ -122,6 +216,9 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 		opts.HealthCheckPath = *hc.HealthCheckArgs.Path
 	} else if hc.HealthCheckPath != nil {
 		opts.HealthCheckPath = *hc.HealthCheckPath
+	}
+	if hc.HealthCheckArgs.SuccessCodes != nil {
+		opts.SuccessCodes = *hc.HealthCheckArgs.SuccessCodes
 	}
 	if hc.HealthCheckArgs.Interval != nil {
 		opts.Interval = aws.Int64(int64(hc.HealthCheckArgs.Interval.Seconds()))

@@ -165,7 +165,7 @@ func (s *ServiceStatusDesc) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Task Definition", s.Service.TaskDefinition)
 	fmt.Fprint(writer, color.Bold.Sprint("\nTask Status\n\n"))
 	writer.Flush()
-	headers := []string{"ID", "Image Digest", "Last Status", "Started At", "Stopped At", "Health Status"}
+	headers := []string{"ID", "Image Digest", "Last Status", "Started At", "Stopped At", "Capacity Provider", "Health Status"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, task := range s.Tasks {

@@ -222,7 +222,8 @@ image:
 		inputSvc   string
 		setupMocks func(mocks deployJobMocks)
 
-		wantErr error
+		wantErr      error
+		wantedDigest string
 	}{
 		"should return error if ws ReadFile returns error": {
 			inputSvc: "mailer",
@@ -259,7 +260,7 @@ image:
 				gomock.InOrder(
 					m.mockWs.EXPECT().ReadJobManifest("mailer").Return(mockManifest, nil),
 					m.mockWs.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil),
-					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).Return(mockError),
+					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).Return("", mockError),
 				)
 			},
 			wantErr: fmt.Errorf("build and push image: mockError"),
@@ -273,9 +274,10 @@ image:
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &exec.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
 						Context:    filepath.Join("/ws", "root", "path"),
-					}).Return(nil),
+					}).Return("sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49", nil),
 				)
 			},
+			wantedDigest: "sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49",
 		},
 		"using simple buildstring (backwards compatible)": {
 			inputSvc: "mailer",
@@ -286,9 +288,10 @@ image:
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &exec.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
 						Context:    filepath.Join("/ws", "root", "path", "to"),
-					}).Return(nil),
+					}).Return("sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49", nil),
 				)
 			},
+			wantedDigest: "sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49",
 		},
 		"without context field in overrides": {
 			inputSvc: "mailer",
@@ -299,9 +302,10 @@ image:
 					m.mockimageBuilderPusher.EXPECT().BuildAndPush(gomock.Any(), &exec.BuildArguments{
 						Dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
 						Context:    filepath.Join("/ws", "root", "path", "to"),
-					}).Return(nil),
+					}).Return("sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49", nil),
 				)
 			},
+			wantedDigest: "sha256:741d3e95eefa2c3b594f970a938ed6e497b50b3541a5fdc28af3ad8959e76b49",
 		},
 	}
 
@@ -331,7 +335,8 @@ image:
 			if test.wantErr != nil {
 				require.EqualError(t, gotErr, test.wantErr.Error())
 			} else {
-				require.Nil(t, gotErr)
+				require.NoError(t, gotErr)
+				require.Equal(t, test.wantedDigest, opts.imageDigest)
 			}
 		})
 	}

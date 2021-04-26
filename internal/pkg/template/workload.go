@@ -155,10 +155,27 @@ type LogConfigOpts struct {
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
 type HTTPHealthCheckOpts struct {
 	HealthCheckPath    string
+	SuccessCodes       string
 	HealthyThreshold   *int64
 	UnhealthyThreshold *int64
 	Interval           *int64
 	Timeout            *int64
+}
+
+// AdvancedCount holds configuration for autoscaling and capacity provider
+// parameters.
+type AdvancedCount struct {
+	Spot        *int
+	Autoscaling *AutoscalingOpts
+	Cps         []*CapacityProviderStrategy
+}
+
+// CapacityProviderStrategy holds the configuration needed for a
+// CapacityProviderStrategyItem on a Service
+type CapacityProviderStrategy struct {
+	Base             *int
+	Weight           *int
+	CapacityProvider string
 }
 
 // AutoscalingOpts holds configuration that's needed for Auto Scaling.
@@ -197,19 +214,21 @@ func defaultNetworkOpts() *NetworkOpts {
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
-	Variables      map[string]string
-	Secrets        map[string]string
-	NestedStack    *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
-	Sidecars       []*SidecarOpts
-	LogConfig      *LogConfigOpts
-	Autoscaling    *AutoscalingOpts
-	Storage        *StorageOpts
-	Network        *NetworkOpts
-	ExecuteCommand *ExecuteCommandOpts
-	EntryPoint     []string
-	Command        []string
-	DomainAlias    string
-	DockerLabels   map[string]string
+	Variables          map[string]string
+	Secrets            map[string]string
+	NestedStack        *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	Sidecars           []*SidecarOpts
+	LogConfig          *LogConfigOpts
+	Autoscaling        *AutoscalingOpts
+	CapacityProviders  []*CapacityProviderStrategy
+	DesiredCountOnSpot *int
+	Storage            *StorageOpts
+	Network            *NetworkOpts
+	ExecuteCommand     *ExecuteCommandOpts
+	EntryPoint         []string
+	Command            []string
+	DomainAlias        string
+	DockerLabels       map[string]string
 
 	// Additional options for service templates.
 	WorkloadType        string

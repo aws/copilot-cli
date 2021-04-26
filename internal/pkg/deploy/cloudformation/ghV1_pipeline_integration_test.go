@@ -237,7 +237,7 @@ func TestGHv1PipelineCreation(t *testing.T) {
 			},
 			ArtifactBuckets: artifactBuckets,
 		}
-		require.NoError(t, appDeployer.CreatePipeline(pipelineInput))
+		require.NoError(t, appDeployer.CreatePipeline(pipelineInput, bucketName))
 
 		// Ensure that the new stack exists
 		assertStackExists(t, appCfClient, pipelineStackName)

@@ -100,39 +100,226 @@ func Test_convertSidecar(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, got[0], tc.wanted)
+				require.Equal(t, tc.wanted, got[0])
+			}
+		})
+	}
+}
+
+func Test_convertAdvancedCount(t *testing.T) {
+	mockRange := manifest.IntRangeBand("1-10")
+	testCases := map[string]struct {
+		input       *manifest.AdvancedCount
+		expected    *template.AdvancedCount
+		expectedErr error
+	}{
+		"returns nil if nil": {
+			input:    nil,
+			expected: nil,
+		},
+		"returns nil if empty": {
+			input:    &manifest.AdvancedCount{},
+			expected: nil,
+		},
+		"success with spot count": {
+			input: &manifest.AdvancedCount{
+				Spot: aws.Int(1),
+			},
+			expected: &template.AdvancedCount{
+				Spot: aws.Int(1),
+				Cps: []*template.CapacityProviderStrategy{
+					{
+						Weight:           aws.Int(1),
+						CapacityProvider: capacityProviderFargateSpot,
+					},
+				},
+			},
+		},
+		"success with fargate autoscaling": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					Value: &mockRange,
+				},
+				CPU: aws.Int(70),
+			},
+			expected: &template.AdvancedCount{
+				Autoscaling: &template.AutoscalingOpts{
+					MinCapacity: aws.Int(1),
+					MaxCapacity: aws.Int(10),
+					CPU:         aws.Float64(70),
+				},
+			},
+		},
+		"success with spot autoscaling": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					RangeConfig: manifest.RangeConfig{
+						Min:      aws.Int(2),
+						Max:      aws.Int(20),
+						SpotFrom: aws.Int(5),
+					},
+				},
+				CPU: aws.Int(70),
+			},
+			expected: &template.AdvancedCount{
+				Autoscaling: &template.AutoscalingOpts{
+					MinCapacity: aws.Int(2),
+					MaxCapacity: aws.Int(20),
+					CPU:         aws.Float64(70),
+				},
+				Cps: []*template.CapacityProviderStrategy{
+					{
+						Weight:           aws.Int(1),
+						CapacityProvider: capacityProviderFargateSpot,
+					},
+					{
+						Base:             aws.Int(4),
+						Weight:           aws.Int(0),
+						CapacityProvider: capacityProviderFargate,
+					},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			actual, err := convertAdvancedCount(tc.input)
+
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expected, actual)
+			}
+		})
+	}
+}
+
+func Test_convertCapacityProviders(t *testing.T) {
+	mockRange := manifest.IntRangeBand("1-10")
+	minCapacity := 1
+	spotFrom := 3
+	testCases := map[string]struct {
+		input       *manifest.AdvancedCount
+		expected    []*template.CapacityProviderStrategy
+		expectedErr error
+	}{
+		"with spot as desiredCount": {
+			input: &manifest.AdvancedCount{
+				Spot: aws.Int(3),
+			},
+
+			expected: []*template.CapacityProviderStrategy{
+				{
+					Weight:           aws.Int(1),
+					CapacityProvider: capacityProviderFargateSpot,
+				},
+			},
+		},
+		"with scaling only on spot": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					RangeConfig: manifest.RangeConfig{
+						Min:      aws.Int(minCapacity),
+						Max:      aws.Int(10),
+						SpotFrom: aws.Int(minCapacity),
+					},
+				},
+			},
+
+			expected: []*template.CapacityProviderStrategy{
+				{
+					Weight:           aws.Int(1),
+					CapacityProvider: capacityProviderFargateSpot,
+				},
+			},
+		},
+		"with scaling into spot": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					RangeConfig: manifest.RangeConfig{
+						Min:      aws.Int(minCapacity),
+						Max:      aws.Int(10),
+						SpotFrom: aws.Int(spotFrom),
+					},
+				},
+			},
+
+			expected: []*template.CapacityProviderStrategy{
+				{
+					Weight:           aws.Int(1),
+					CapacityProvider: capacityProviderFargateSpot,
+				},
+				{
+					Base:             aws.Int(spotFrom - 1),
+					Weight:           aws.Int(0),
+					CapacityProvider: capacityProviderFargate,
+				},
+			},
+		},
+		"returns nil if no spot config specified": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					Value: &mockRange,
+				},
+			},
+			expected: nil,
+		},
+		"errors if spot specified with range": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					Value: &mockRange,
+				},
+				Spot: aws.Int(3),
+			},
+			expectedErr: errInvalidSpotConfig,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			actual, err := convertCapacityProviders(tc.input)
+
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expected, actual)
 			}
 		})
 	}
 }
 
 func Test_convertAutoscaling(t *testing.T) {
-	const (
-		mockRange    = "1-100"
-		mockRequests = 1000
-	)
+	mockRange := manifest.IntRangeBand("1-100")
+	badRange := manifest.IntRangeBand("badRange")
+	mockRequests := 1000
 	mockResponseTime := 512 * time.Millisecond
 	testCases := map[string]struct {
-		inRange        manifest.Range
-		inCPU          int
-		inMemory       int
-		inRequests     int
-		inResponseTime time.Duration
+		input *manifest.AdvancedCount
 
 		wanted    *template.AutoscalingOpts
 		wantedErr error
 	}{
 		"invalid range": {
-			inRange: "badRange",
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					Value: &badRange,
+				},
+			},
 
 			wantedErr: fmt.Errorf("invalid range value badRange. Should be in format of ${min}-${max}"),
 		},
 		"success": {
-			inRange:        mockRange,
-			inCPU:          70,
-			inMemory:       80,
-			inRequests:     mockRequests,
-			inResponseTime: mockResponseTime,
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					Value: &mockRange,
+				},
+				CPU:          aws.Int(70),
+				Memory:       aws.Int(80),
+				Requests:     aws.Int(mockRequests),
+				ResponseTime: &mockResponseTime,
+			},
 
 			wanted: &template.AutoscalingOpts{
 				MaxCapacity:  aws.Int(100),
@@ -143,23 +330,46 @@ func Test_convertAutoscaling(t *testing.T) {
 				ResponseTime: aws.Float64(0.512),
 			},
 		},
+		"success with range subfields": {
+			input: &manifest.AdvancedCount{
+				Range: &manifest.Range{
+					RangeConfig: manifest.RangeConfig{
+						Min:      aws.Int(5),
+						Max:      aws.Int(10),
+						SpotFrom: aws.Int(5),
+					},
+				},
+				CPU:          aws.Int(70),
+				Memory:       aws.Int(80),
+				Requests:     aws.Int(mockRequests),
+				ResponseTime: &mockResponseTime,
+			},
+
+			wanted: &template.AutoscalingOpts{
+				MaxCapacity:  aws.Int(10),
+				MinCapacity:  aws.Int(5),
+				CPU:          aws.Float64(70),
+				Memory:       aws.Float64(80),
+				Requests:     aws.Float64(1000),
+				ResponseTime: aws.Float64(0.512),
+			},
+		},
+		"returns nil if spot specified": {
+			input: &manifest.AdvancedCount{
+				Spot: aws.Int(5),
+			},
+			wanted: nil,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			a := manifest.Autoscaling{
-				Range:        &tc.inRange,
-				CPU:          aws.Int(tc.inCPU),
-				Memory:       aws.Int(tc.inMemory),
-				Requests:     aws.Int(tc.inRequests),
-				ResponseTime: &tc.inResponseTime,
-			}
-			got, err := convertAutoscaling(&a)
+			got, err := convertAutoscaling(tc.input)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, got, tc.wanted)
+				require.Equal(t, tc.wanted, got)
 			}
 		})
 	}
@@ -171,6 +381,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 	duration60Seconds := time.Duration(60 * time.Second)
 	testCases := map[string]struct {
 		inputPath               *string
+		inputSuccessCodes       *string
 		inputHealthyThreshold   *int64
 		inputUnhealthyThreshold *int64
 		inputInterval           *time.Duration
@@ -180,6 +391,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 	}{
 		"no fields indicated in manifest": {
 			inputPath:               nil,
+			inputSuccessCodes:       nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
@@ -191,6 +403,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just HealthyThreshold": {
 			inputPath:               nil,
+			inputSuccessCodes:       nil,
 			inputHealthyThreshold:   aws.Int64(5),
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
@@ -203,6 +416,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just UnhealthyThreshold": {
 			inputPath:               nil,
+			inputSuccessCodes:       nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: aws.Int64(5),
 			inputInterval:           nil,
@@ -215,6 +429,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just Interval": {
 			inputPath:               nil,
+			inputSuccessCodes:       nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: nil,
 			inputInterval:           &duration15Seconds,
@@ -227,6 +442,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just Timeout": {
 			inputPath:               nil,
+			inputSuccessCodes:       nil,
 			inputHealthyThreshold:   nil,
 			inputUnhealthyThreshold: nil,
 			inputInterval:           nil,
@@ -237,8 +453,22 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 				Timeout:         aws.Int64(15),
 			},
 		},
+		"just SuccessCodes": {
+			inputPath:               nil,
+			inputSuccessCodes:       aws.String("200,301"),
+			inputHealthyThreshold:   nil,
+			inputUnhealthyThreshold: nil,
+			inputInterval:           nil,
+			inputTimeout:            nil,
+
+			wantedOpts: template.HTTPHealthCheckOpts{
+				HealthCheckPath: "/",
+				SuccessCodes:    "200,301",
+			},
+		},
 		"all values changed in manifest": {
 			inputPath:               aws.String("/road/to/nowhere"),
+			inputSuccessCodes:       aws.String("200-299"),
 			inputHealthyThreshold:   aws.Int64(3),
 			inputUnhealthyThreshold: aws.Int64(3),
 			inputInterval:           &duration60Seconds,
@@ -246,6 +476,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    "/road/to/nowhere",
+				SuccessCodes:       "200-299",
 				HealthyThreshold:   aws.Int64(3),
 				UnhealthyThreshold: aws.Int64(3),
 				Interval:           aws.Int64(60),
@@ -260,6 +491,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 				HealthCheckPath: tc.inputPath,
 				HealthCheckArgs: manifest.HTTPHealthCheckArgs{
 					Path:               tc.inputPath,
+					SuccessCodes:       tc.inputSuccessCodes,
 					HealthyThreshold:   tc.inputHealthyThreshold,
 					UnhealthyThreshold: tc.inputUnhealthyThreshold,
 					Timeout:            tc.inputTimeout,
@@ -791,7 +1023,7 @@ func Test_convertExecuteCommand(t *testing.T) {
 			exec := tc.inConfig
 			got := convertExecuteCommand(&exec)
 
-			require.Equal(t, got, tc.wanted)
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }

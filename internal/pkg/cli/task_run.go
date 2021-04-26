@@ -538,11 +538,10 @@ func (o *runTaskOpts) buildAndPushImage() error {
 		additionalTags = append(additionalTags, o.imageTag)
 	}
 
-	if err := o.repository.BuildAndPush(exec.NewDockerCommand(), &exec.BuildArguments{
-		Dockerfile:     o.dockerfilePath,
-		Context:        filepath.Dir(o.dockerfilePath),
-		ImageTag:       imageTagLatest,
-		AdditionalTags: additionalTags,
+	if _, err := o.repository.BuildAndPush(exec.NewDockerCommand(), &exec.BuildArguments{
+		Dockerfile: o.dockerfilePath,
+		Context:    filepath.Dir(o.dockerfilePath),
+		Tags:       append([]string{imageTagLatest}, additionalTags...),
 	}); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
@@ -673,8 +672,8 @@ func BuildTaskRunCmd() *cobra.Command {
 		Use:   "run",
 		Short: "Run a one-off task on Amazon ECS.",
 		Example: `
-Run a task using your local Dockerfile. 
-You will be prompted to specify a task group name and an environment for the tasks to run in.
+Run a task using your local Dockerfile and display log streams after the task is running. 
+You will be prompted to specify an environment for the tasks to run in.
 /code $ copilot task run
 Run a task named "db-migrate" in the "test" environment under the current workspace.
 /code $ copilot task run -n db-migrate --env test

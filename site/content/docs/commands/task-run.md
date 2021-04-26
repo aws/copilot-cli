@@ -50,8 +50,8 @@ Generally, the steps involved in task run are:
   --task-role string               Optional. The role for the task to use.
 ```
 ## Example
-Run a task using your local Dockerfile. 
-You will be prompted to specify a task group name and an environment for the tasks to run in.
+Run a task using your local Dockerfile and display log streams after the task is running. 
+You will be prompted to specify an environment for the tasks to run in.
 ```
 $ copilot task run --follow
 ```
