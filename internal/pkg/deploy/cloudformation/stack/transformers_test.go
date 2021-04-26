@@ -437,21 +437,6 @@ func Test_convertStorageOpts(t *testing.T) {
 				},
 			},
 		},
-		"fsid not specified": {
-			inVolumes: map[string]manifest.Volume{
-				"wordpress": {
-					MountPointOpts: manifest.MountPointOpts{
-						ContainerPath: aws.String("/var/www"),
-					},
-					EFS: &manifest.EFSConfigOrBool{
-						Advanced: manifest.EFSVolumeConfiguration{
-							RootDirectory: aws.String("/"),
-						},
-					},
-				},
-			},
-			wantErr: fmt.Sprintf("validate EFS configuration for volume wordpress: %s", errNoFSID.Error()),
-		},
 		"container path not specified": {
 			inVolumes: map[string]manifest.Volume{
 				"wordpress": {
@@ -555,48 +540,6 @@ func Test_convertStorageOpts(t *testing.T) {
 				},
 			},
 		},
-		"error when AP is specified with root dir": {
-			inVolumes: map[string]manifest.Volume{
-				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
-						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID:  aws.String("fs-1234"),
-							RootDirectory: aws.String("/wordpress"),
-							AuthConfig: &manifest.AuthorizationConfig{
-								IAM:           aws.Bool(true),
-								AccessPointID: aws.String("ap-1234"),
-							},
-						},
-					},
-					MountPointOpts: manifest.MountPointOpts{
-						ContainerPath: aws.String("/var/www"),
-						ReadOnly:      aws.Bool(false),
-					},
-				},
-			},
-			wantErr: fmt.Sprintf("validate EFS configuration for volume wordpress: %s", errAccessPointWithRootDirectory.Error()),
-		},
-		"error when AP is specified without IAM": {
-			inVolumes: map[string]manifest.Volume{
-				"wordpress": {
-					EFS: &manifest.EFSConfigOrBool{
-						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID:  aws.String("fs-1234"),
-							RootDirectory: aws.String("/"),
-							AuthConfig: &manifest.AuthorizationConfig{
-								IAM:           aws.Bool(false),
-								AccessPointID: aws.String("ap-1234"),
-							},
-						},
-					},
-					MountPointOpts: manifest.MountPointOpts{
-						ContainerPath: aws.String("/var/www"),
-						ReadOnly:      aws.Bool(false),
-					},
-				},
-			},
-			wantErr: fmt.Sprintf("validate EFS configuration for volume wordpress: %s", errAccessPointWithoutIAM.Error()),
-		},
 		"managed EFS": {
 			inVolumes: map[string]manifest.Volume{
 				"efs": {
@@ -655,55 +598,6 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 			},
-		},
-		"uid/gid out of bounds": {
-			inVolumes: map[string]manifest.Volume{
-				"efs": {
-					EFS: &manifest.EFSConfigOrBool{
-						Advanced: manifest.EFSVolumeConfiguration{
-							UID: aws.Uint32(0),
-							GID: aws.Uint32(100),
-						},
-					},
-					MountPointOpts: manifest.MountPointOpts{
-						ContainerPath: aws.String("/var/www"),
-						ReadOnly:      aws.Bool(true),
-					},
-				},
-			},
-			wantErr: fmt.Sprintf("validate EFS configuration for volume efs: %s", errReservedUID.Error()),
-		},
-		"uid specified without gid": {
-			inVolumes: map[string]manifest.Volume{
-				"efs": {
-					EFS: &manifest.EFSConfigOrBool{
-						Advanced: manifest.EFSVolumeConfiguration{
-							UID: aws.Uint32(10000),
-						},
-					},
-					MountPointOpts: manifest.MountPointOpts{
-						ContainerPath: aws.String("/var/www"),
-						ReadOnly:      aws.Bool(true),
-					},
-				},
-			},
-			wantErr: fmt.Sprintf("validate EFS configuration for volume efs: %s", errInvalidUIDGIDConfig.Error()),
-		},
-		"gid specified without uid": {
-			inVolumes: map[string]manifest.Volume{
-				"efs": {
-					EFS: &manifest.EFSConfigOrBool{
-						Advanced: manifest.EFSVolumeConfiguration{
-							GID: aws.Uint32(10000),
-						},
-					},
-					MountPointOpts: manifest.MountPointOpts{
-						ContainerPath: aws.String("/var/www"),
-						ReadOnly:      aws.Bool(true),
-					},
-				},
-			},
-			wantErr: fmt.Sprintf("validate EFS configuration for volume efs: %s", errInvalidUIDGIDConfig.Error()),
 		},
 		"error when multiple managed volumes specified": {
 			inVolumes: map[string]manifest.Volume{
@@ -841,24 +735,6 @@ func Test_convertStorageOpts(t *testing.T) {
 					},
 				},
 			},
-		},
-		"error when gid/uid are specified for non-managed efs": {
-			inVolumes: map[string]manifest.Volume{
-				"efs": {
-					EFS: &manifest.EFSConfigOrBool{
-						Advanced: manifest.EFSVolumeConfiguration{
-							FileSystemID: aws.String("fs-1234"),
-							UID:          aws.Uint32(1234),
-							GID:          aws.Uint32(5678),
-						},
-					},
-					MountPointOpts: manifest.MountPointOpts{
-						ContainerPath: aws.String("/var/www"),
-						ReadOnly:      aws.Bool(true),
-					},
-				},
-			},
-			wantErr: fmt.Sprintf("validate EFS configuration for volume efs: %s", errUIDWithNonManagedFS.Error()),
 		},
 	}
 	for name, tc := range testCases {

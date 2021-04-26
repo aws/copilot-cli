@@ -4,10 +4,31 @@
 package stack
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+)
+
+// Validation errors when rendering manifest into template.
+
+// Empty field errors.
+var (
+	errNoFSID          = errors.New("volume field `efs.id` cannot be empty")
+	errNoContainerPath = errors.New("`path` cannot be empty")
+	errNoSourceVolume  = errors.New("`source_volume` cannot be empty")
+	errEmptyEFSConfig  = errors.New("bad EFS configuration: `efs` cannot be empty")
+)
+
+// Conditional errors.
+var (
+	errAccessPointWithRootDirectory = errors.New("`root_directory` must be empty or \"/\" when `access_point` is specified")
+	errAccessPointWithoutIAM        = errors.New("`iam` must be true when `access_point` is specified")
+	errUIDWithNonManagedFS          = errors.New("UID and GID cannot be specified with non-managed EFS")
+	errInvalidUIDGIDConfig          = errors.New("must specify both UID and GID, or neither")
+	errInvalidEFSConfig             = errors.New("bad EFS configuration: cannot specify both bool and config")
+	errReservedUID                  = errors.New("UID must not be 0")
 )
 
 // Validate that paths contain only an approved set of characters to guard against command injection.
@@ -84,18 +105,24 @@ func validateEFSConfig(in manifest.Volume) error {
 	if in.EFS == nil {
 		return nil
 	}
-	// This should never happen but error when EFS is Enabled with a non-empty configuration.
+
+	// EFS cannot have both Enabled and nonempty Advanced config.
 	if aws.BoolValue(in.EFS.Enabled) && !in.EFS.Advanced.IsEmpty() {
 		return errInvalidEFSConfig
 	}
 
-	// If EFS is disabled explicitly, return nil.
-	if in.EFS.Enabled != nil && !aws.BoolValue(in.EFS.Enabled) {
+	// EFS can be disabled explicitly.
+	if in.EFS.Disabled() {
 		return nil
 	}
 
+	// EFS cannot be an empty map.
+	if in.EFS.Enabled == nil && in.EFS.Advanced.IsEmpty() {
+		return errEmptyEFSConfig
+	}
+
 	// UID and GID are mutually exclusive with any other fields.
-	if !in.EFS.Advanced.EmptyBYOConfig() && !in.EFS.Advanced.EmptyUIDConfig() {
+	if in.EFS.Advanced.EmptyBYOConfig() == false && !in.EFS.Advanced.EmptyUIDConfig() {
 		return errUIDWithNonManagedFS
 	}
 

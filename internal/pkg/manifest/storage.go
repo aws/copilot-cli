@@ -88,10 +88,14 @@ func (e *EFSConfigOrBool) UseManagedFS() bool {
 		return aws.BoolValue(e.Enabled)
 	}
 	// Check whether we're implicitly enabling managed EFS via UID/GID.
-	if !e.Advanced.EmptyUIDConfig() {
+	return !e.Advanced.EmptyUIDConfig()
+}
+
+// Disabled returns true if Enabled is explicitly set to false.
+func (e *EFSConfigOrBool) Disabled() bool {
+	if e.Enabled != nil && aws.BoolValue(e.Enabled) == false {
 		return true
 	}
-
 	return false
 }
 

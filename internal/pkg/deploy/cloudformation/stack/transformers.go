@@ -4,7 +4,6 @@
 package stack
 
 import (
-	"errors"
 	"fmt"
 	"hash/crc32"
 	"strings"
@@ -31,25 +30,6 @@ const (
 // Default value for Sidecar port.
 const (
 	defaultSidecarPort = "80"
-)
-
-// Validation errors when rendering manifest into template.
-
-// Empty field errors.
-var (
-	errNoFSID          = errors.New(`volume field efs/id cannot be empty`)
-	errNoContainerPath = errors.New(`"path" cannot be empty`)
-	errNoSourceVolume  = errors.New(`"source_volume" cannot be empty`)
-)
-
-// Conditional errors.
-var (
-	errAccessPointWithRootDirectory = errors.New(`root directory must be empty or "/" when access point ID is specified`)
-	errAccessPointWithoutIAM        = errors.New(`"iam" must be true when access point ID is specified`)
-	errUIDWithNonManagedFS          = errors.New("UID and GID cannot be specified with non-managed EFS")
-	errInvalidUIDGIDConfig          = errors.New("must specify both UID and GID, or neither")
-	errInvalidEFSConfig             = errors.New("bad EFS configuration: cannot specify both bool and config")
-	errReservedUID                  = errors.New("UID must not be 0")
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
@@ -216,8 +196,7 @@ func convertSidecarMountPoints(in []manifest.SidecarMountPoint) []*template.Moun
 	}
 	var output []*template.MountPoint
 	for _, smp := range in {
-		mp := convertMountPoint(smp.SourceVolume, smp.ContainerPath, smp.ReadOnly)
-		output = append(output, mp)
+		output = append(output, convertMountPoint(smp.SourceVolume, smp.ContainerPath, smp.ReadOnly))
 	}
 	return output
 }
@@ -250,16 +229,19 @@ func convertMountPoints(input map[string]manifest.Volume) ([]*template.MountPoin
 func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPermission, error) {
 	var output []*template.EFSPermission
 	for _, volume := range input {
+		// If there's no EFS configuration, we don't need to generate any permissions.
 		if volume.EFS == nil {
 			continue
 		}
+		// If EFS is explicitly disabled, we don't need to generate permisisons.
+		if volume.EFS.Disabled() {
+			continue
+		}
+		// Managed FS permissions are rendered separately in the template.
 		if volume.EFS.UseManagedFS() {
 			continue
 		}
-		// We're not using a managed volume and the EFS config is empty.
-		if volume.EFS.EmptyVolume() {
-			continue
-		}
+
 		// Write defaults to false.
 		write := defaultWritePermission
 		if volume.ReadOnly != nil {
@@ -269,12 +251,11 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 		if volume.EFS.Advanced.AuthConfig != nil {
 			accessPointID = volume.EFS.Advanced.AuthConfig.AccessPointID
 		}
-		perm := template.EFSPermission{
+		output = append(output, &template.EFSPermission{
 			Write:         write,
 			AccessPointID: accessPointID,
 			FilesystemID:  volume.EFS.Advanced.FileSystemID,
-		}
-		output = append(output, &perm)
+		})
 	}
 	return output, nil
 }
