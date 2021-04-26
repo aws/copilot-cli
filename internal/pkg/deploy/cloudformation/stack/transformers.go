@@ -226,6 +226,9 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 	} else if hc.HealthCheckPath != nil {
 		opts.HealthCheckPath = *hc.HealthCheckPath
 	}
+	if hc.HealthCheckArgs.SuccessCodes != nil {
+		opts.SuccessCodes = *hc.HealthCheckArgs.SuccessCodes
+	}
 	if hc.HealthCheckArgs.Interval != nil {
 		opts.Interval = aws.Int64(int64(hc.HealthCheckArgs.Interval.Seconds()))
 	}

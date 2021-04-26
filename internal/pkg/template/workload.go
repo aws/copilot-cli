@@ -155,6 +155,7 @@ type LogConfigOpts struct {
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
 type HTTPHealthCheckOpts struct {
 	HealthCheckPath    string
+	SuccessCodes       string
 	HealthyThreshold   *int64
 	UnhealthyThreshold *int64
 	Interval           *int64

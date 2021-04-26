@@ -538,11 +538,10 @@ func (o *runTaskOpts) buildAndPushImage() error {
 		additionalTags = append(additionalTags, o.imageTag)
 	}
 
-	if err := o.repository.BuildAndPush(exec.NewDockerCommand(), &exec.BuildArguments{
-		Dockerfile:     o.dockerfilePath,
-		Context:        filepath.Dir(o.dockerfilePath),
-		ImageTag:       imageTagLatest,
-		AdditionalTags: additionalTags,
+	if _, err := o.repository.BuildAndPush(exec.NewDockerCommand(), &exec.BuildArguments{
+		Dockerfile: o.dockerfilePath,
+		Context:    filepath.Dir(o.dockerfilePath),
+		Tags:       append([]string{imageTagLatest}, additionalTags...),
 	}); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}

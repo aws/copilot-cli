@@ -12,6 +12,7 @@ List of all available properties for a `'Load Balanced Web Service'` manifest.
       path: '/'
       healthcheck:
         path: '/_healthcheck'
+        success_codes: '200,301'
         healthy_threshold: 3
         unhealthy_threshold: 2
         interval: 15s

@@ -627,8 +627,8 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		tag         = "tag"
 	)
 	defaultBuildArguments := exec.BuildArguments{
-		Context:  filepath.Dir(defaultDockerfilePath),
-		ImageTag: imageTagLatest,
+		Context: filepath.Dir(defaultDockerfilePath),
+		Tags:    []string{imageTagLatest},
 	}
 
 	testCases := map[string]struct {
@@ -741,9 +741,8 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).AnyTimes()
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(
 					&exec.BuildArguments{
-						Context:        filepath.Dir(defaultDockerfilePath),
-						ImageTag:       imageTagLatest,
-						AdditionalTags: []string{tag},
+						Context: filepath.Dir(defaultDockerfilePath),
+						Tags:    []string{imageTagLatest, tag},
 					}),
 				)
 				m.repository.EXPECT().URI().AnyTimes()

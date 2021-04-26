@@ -116,36 +116,16 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inSvcName string
 		inEnvName string
-		inTag     string
 
 		expectSelector func(m *mocks.MockwsSelector)
 		expectPrompt   func(m *mocks.Mockprompter)
-		expectRunner   func(m *mocks.Mockrunner)
 
 		wantedSvcName string
 		wantedEnvName string
-		wantedTag     string
 		wantedErrorS  string
 	}{
-		"prompt for all options": {
-			expectRunner: func(m *mocks.Mockrunner) {
-				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("not a git repo"))
-			},
-			expectSelector: func(m *mocks.MockwsSelector) {
-				m.EXPECT().Service(svcPackageSvcNamePrompt, "").Return("frontend", nil)
-				m.EXPECT().Environment(svcPackageEnvNamePrompt, "", testAppName).Return("test", nil)
-			},
-			expectPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(inputImageTagPrompt, "", gomock.Any()).Return("v1.0.0", nil)
-			},
-
-			wantedSvcName: "frontend",
-			wantedEnvName: "test",
-			wantedTag:     "v1.0.0",
-		},
 		"prompt only for the service name": {
 			inEnvName: "test",
-			inTag:     "v1.0.0",
 
 			expectSelector: func(m *mocks.MockwsSelector) {
 				m.EXPECT().Service(svcPackageSvcNamePrompt, "").Return("frontend", nil)
@@ -154,15 +134,12 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 			expectPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			expectRunner: func(m *mocks.Mockrunner) {},
 
 			wantedSvcName: "frontend",
 			wantedEnvName: "test",
-			wantedTag:     "v1.0.0",
 		},
 		"prompt only for the env name": {
 			inSvcName: "frontend",
-			inTag:     "v1.0.0",
 
 			expectSelector: func(m *mocks.MockwsSelector) {
 				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
@@ -171,16 +148,13 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 			expectPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			expectRunner: func(m *mocks.Mockrunner) {},
 
 			wantedSvcName: "frontend",
 			wantedEnvName: "test",
-			wantedTag:     "v1.0.0",
 		},
 		"don't prompt": {
 			inSvcName: "frontend",
 			inEnvName: "test",
-			inTag:     "v1.0.0",
 
 			expectSelector: func(m *mocks.MockwsSelector) {
 				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
@@ -189,11 +163,9 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 			expectPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			expectRunner: func(m *mocks.Mockrunner) {},
 
 			wantedSvcName: "frontend",
 			wantedEnvName: "test",
-			wantedTag:     "v1.0.0",
 		},
 	}
 
@@ -209,13 +181,11 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 
 			tc.expectSelector(mockSelector)
 			tc.expectPrompt(mockPrompt)
-			tc.expectRunner(mockRunner)
 
 			opts := &packageSvcOpts{
 				packageSvcVars: packageSvcVars{
 					name:    tc.inSvcName,
 					envName: tc.inEnvName,
-					tag:     tc.inTag,
 					appName: testAppName,
 				},
 				sel:    mockSelector,
@@ -229,7 +199,6 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 			// THEN
 			require.Equal(t, tc.wantedSvcName, opts.name)
 			require.Equal(t, tc.wantedEnvName, opts.envName)
-			require.Equal(t, tc.wantedTag, opts.tag)
 
 			if tc.wantedErrorS != "" {
 				require.EqualError(t, err, tc.wantedErrorS)
