@@ -156,16 +156,12 @@ func (o *packageSvcOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	tag, err := askImageTag(o.tag, o.prompt, o.runner)
-	if err != nil {
-		return err
-	}
-	o.tag = tag
 	return nil
 }
 
 // Execute prints the CloudFormation template of the application for the environment.
 func (o *packageSvcOpts) Execute() error {
+	o.tag = imageTagFromGit(o.runner, o.tag) // Best effort assign git tag.
 	env, err := o.store.GetEnvironment(o.appName, o.envName)
 	if err != nil {
 		return err
