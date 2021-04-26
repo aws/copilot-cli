@@ -738,9 +738,9 @@ func Test_convertStorageOpts(t *testing.T) {
 		},
 		"ephemeral volume renders correctly": {
 			inVolumes:   nil,
-			inEphemeral: aws.Int(500),
+			inEphemeral: aws.Int(200),
 			wantOpts: template.StorageOpts{
-				Ephemeral: aws.Int(500),
+				Ephemeral: aws.Int(200),
 			},
 		},
 		"efs specified with just ID": {
@@ -1074,8 +1074,12 @@ func Test_convertEphemeral(t *testing.T) {
 			wantedError: errEphemeralBadSize,
 		},
 		"ephemeral specified correctly": {
-			inEphemeral: aws.Int(2000),
-			wanted:      aws.Int(2000),
+			inEphemeral: aws.Int(100),
+			wanted:      aws.Int(100),
+		},
+		"ephemeral specified at 20 GiB": {
+			inEphemeral: aws.Int(20),
+			wanted:      nil,
 		},
 	}
 	for name, tc := range testCases {

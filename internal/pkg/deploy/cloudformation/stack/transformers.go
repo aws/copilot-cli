@@ -35,11 +35,17 @@ const (
 
 // Min and Max values for task ephemeral storage in GiB.
 const (
-	ephemeralMinValueGiB = 20
-	ephemeralMaxValueGiB = 16000
+	ephemeralMinValueGiB = 21
+	ephemeralMaxValueGiB = 200
 )
 
-// Supported capacity providers for Fargate services
+
+
+
+
+
+
+// Supported capacityroviders for Fargate services
 const (
 	capacityProviderFargateSpot = "FARGATE_SPOT"
 	capacityProviderFargate     = "FARGATE"
@@ -54,7 +60,7 @@ var (
 	errNoContainerPath = errors.New(`"path" cannot be empty`)
 	errNoSourceVolume  = errors.New(`"source_volume" cannot be empty`)
 
-	errEphemeralBadSize    = errors.New("ephemeral storage must be between 20 GiB and 16000 GiB")
+	errEphemeralBadSize    = errors.New("ephemeral storage must be between 20 GiB and 200 GiB")
 	errUIDWithNonManagedFS = errors.New("UID and GID cannot be specified with non-managed EFS")
 	errInvalidUIDGIDConfig = errors.New("set managed filesystem access point creation info: must specify both UID and GID, or neither")
 	errReservedUID         = errors.New("set managed filesystem access point creation info: UID must not be 0")
@@ -306,6 +312,13 @@ func convertStorageOpts(wlName *string, in *manifest.Storage) (*template.Storage
 
 func convertEphemeral(in *int) (*int, error) {
 	if in == nil {
+		return nil, nil
+	}
+	
+
+	// Min value for extensible ephemeral storage is 21; if customer specifies 20, which is the default size, 
+	// we shouldn't let CF error out. Instead, we'll just omit it from the config. 
+	if aws.IntValue(in) == 20 {
 		return nil, nil
 	}
 
