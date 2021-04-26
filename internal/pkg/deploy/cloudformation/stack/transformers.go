@@ -220,8 +220,7 @@ func convertMountPoints(input map[string]manifest.Volume) ([]*template.MountPoin
 	}
 	var output []*template.MountPoint
 	for name, volume := range input {
-		mp := convertMountPoint(aws.String(name), volume.ContainerPath, volume.ReadOnly)
-		output = append(output, mp)
+		output = append(output, convertMountPoint(aws.String(name), volume.ContainerPath, volume.ReadOnly))
 	}
 	return output, nil
 }
@@ -230,7 +229,7 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 	var output []*template.EFSPermission
 	for _, volume := range input {
 		// If there's no EFS configuration, we don't need to generate any permissions.
-		if volume.EFS == nil {
+		if volume.EmptyVolume() {
 			continue
 		}
 		// If EFS is explicitly disabled, we don't need to generate permisisons.
@@ -263,7 +262,7 @@ func convertEFSPermissions(input map[string]manifest.Volume) ([]*template.EFSPer
 func convertManagedFSInfo(wlName *string, input map[string]manifest.Volume) (*template.ManagedVolumeCreationInfo, error) {
 	var output *template.ManagedVolumeCreationInfo
 	for name, volume := range input {
-		if volume.EFS == nil {
+		if volume.EmptyVolume() {
 			continue
 		}
 		if !volume.EFS.UseManagedFS() {
@@ -276,10 +275,6 @@ func convertManagedFSInfo(wlName *string, input map[string]manifest.Volume) (*te
 
 		uid := volume.EFS.Advanced.UID
 		gid := volume.EFS.Advanced.GID
-
-		if err := validateUIDGID(uid, gid); err != nil {
-			return nil, err
-		}
 
 		if uid == nil && gid == nil {
 			crc := aws.Uint32(getRandomUIDGID(wlName))
@@ -313,10 +308,12 @@ func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error
 
 		// If EFS is not configured, just add the name to create an empty volume and continue.
 		if volume.EmptyVolume() {
-			v := template.Volume{
-				Name: aws.String(name),
-			}
-			output = append(output, &v)
+			output = append(
+				output,
+				&template.Volume{
+					Name: aws.String(name),
+				},
+			)
 			continue
 		}
 
@@ -326,12 +323,13 @@ func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error
 		}
 
 		// Convert EFS configuration to template struct.
-		efs := convertEFSConfiguration(volume.EFS.Advanced)
-		v := template.Volume{
-			Name: aws.String(name),
-			EFS:  efs,
-		}
-		output = append(output, &v)
+		output = append(
+			output,
+			&template.Volume{
+				Name: aws.String(name),
+				EFS:  convertEFSConfiguration(volume.EFS.Advanced),
+			},
+		)
 	}
 	return output, nil
 }

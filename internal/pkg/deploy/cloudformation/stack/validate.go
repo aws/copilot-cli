@@ -101,7 +101,8 @@ func validateSidecarMountPoints(in []manifest.SidecarMountPoint) error {
 }
 
 func validateEFSConfig(in manifest.Volume) error {
-	// EFS is implicitly disabled.
+	// EFS is implicitly disabled. We don't use the attached EmptyVolume function here
+	// because it may hide invalid config.
 	if in.EFS == nil {
 		return nil
 	}
