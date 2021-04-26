@@ -13,29 +13,29 @@ You'll need to provide the URL for the sidecar image. Optionally, you can specif
 
 ``` yaml
 sidecars:
-  {{ sidecar name }}:
+  <sidecar name>:
     # Port of the container to expose. (Optional)
-    port: {{ port number }}
+    port: <port number>
     # Image URL for the sidecar container. (Required)
-    image: {{ image url }}
+    image: <image url>
     # ARN of the secret containing the private repository credentials. (Optional)
-    credentialsParameter: {{ credential }}
+    credentialsParameter: <credential>
     # Environment variables for the sidecar container.
-    variables: {{ env var }}
+    variables: <env var>
     # Secrets to expose to the sidecar container.
-    secrets: {{ secret }}
+    secrets: <secret>
     # Mount paths for EFS volumes specified at the service level. (Optional)
     mount_points:
       - # Source volume to mount in this sidecar. (Required)
-        source_volume: {{ named volume }}
+        source_volume: <named volume>
         # The path inside the sidecar container at which to mount the volume. (Required)
-        path: {{ path }}
+        path: <path>
         # Whether to allow the sidecar read-only access to the volume. (Default true)
-        read_only: {{ bool }}
+        read_only: <bool>
     # Optional Docker labels to apply to this container.
     labels:
-      {{ label key }} : {{ label value }}
-      
+      {label key} : <label value>
+
 ```
 
 Below is an example of specifying the [nginx](https://www.nginx.com/) sidecar container in a load balanced web service manifest.
@@ -95,17 +95,17 @@ Sidecar patterns are predefined Copilot sidecar configurations. For now, the onl
 # In the manifest.
 logging:
   # The Fluent Bit image. (Optional, we'll use "amazon/aws-for-fluent-bit:latest" by default)
-  image: {{ image URL }}
+  image: <image URL>
   # The configuration options to send to the FireLens log driver. (Optional)
   destination:
-    {{ config key }}: {{ config value }}
+    <config key>: <config value>
   # Whether to include ECS metadata in logs. (Optional, default to true)
-  enableMetadata: {{ true|false }}
+  enableMetadata: <true|false>
   # Secret to pass to the log configuration. (Optional)
   secretOptions:
-    {{ key }}: {{ value }}
+    <key>: <value>
   # The full config file path in your custom Fluent Bit image.
-  configFilePath: {{ config file path }}
+  configFilePath: <config file path>
 ```
 For example:
 
@@ -134,7 +134,7 @@ Resources:
           - logs:CreateLogGroup
           - logs:DescribeLogStreams
           - logs:PutLogEvents
-          Resource: "{{ resource ARN }}"
+          Resource: "<resource ARN>"
 Outputs:
   FireLensPolicyArn:
     Description: An addon ManagedPolicy gets used by the ECS task role

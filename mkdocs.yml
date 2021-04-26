@@ -153,3 +153,5 @@ plugins:
         redirect_maps:
             'docs/installing.md': 'docs/getting-started/install.md'
             'docs/getting-started.md': 'docs/getting-started/first-app-tutorial.md'
+    - macros:
+        include_dir: site/content/docs/include
