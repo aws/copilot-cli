@@ -80,7 +80,7 @@ storage:
         auth:
           iam: <boolean>             # Optional. Whether to use IAM authorization when
                                          # mounting this filesystem.
-          access_point_id: <access point ID}} # Optional. The ID of the EFS Access Point
+          access_point_id: <access point ID> # Optional. The ID of the EFS Access Point
                                                 # to use when mounting this filesystem.
 ```
 

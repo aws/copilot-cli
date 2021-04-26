@@ -131,6 +131,7 @@ theme:
   icon:
     logo: octicons/terminal-16
   favicon: assets/images/cli.png
+  language: en
   features:
     - tabs
     - instant

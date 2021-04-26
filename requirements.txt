@@ -1,0 +1,2 @@
+# Dependencies to render the Copilot website needed by mkdocs.
+mkdocs-macros-plugin==0.5.5

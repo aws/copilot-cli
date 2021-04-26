@@ -2,35 +2,28 @@
 <header class="md-header" data-md-component="header">
 
   <!-- Top-level navigation -->
-  <nav class="md-header-nav md-grid" aria-label="{{ lang.t('header.title') }}">
+  <nav class="md-header__inner md-grid" aria-label="{{ lang.t('header.title') }}">
 
     <!-- Link to home -->
-    <a
-      href="{{ config.site_url | default(nav.homepage.url, true) | url }}"
-      title="{{ config.site_name }}"
-      class="md-header-nav__button md-logo"
-      aria-label="{{ config.site_name }}"
-    >
+    <a href="{{ config.site_url }}" title="{{ config.site_name | e }}" class="md-header__button md-logo" aria-label="{{ config.site_name }}">
       {% include "partials/logo.html" %}
     </a>
 
     <!-- Button to open drawer -->
-    <label class="md-header-nav__button md-icon" for="__drawer">
+    <label class="md-header__button md-icon" for="__drawer">
       {% include ".icons/material/menu" ~ ".svg" %}
     </label>
 
     <!-- Header title -->
-    <div class="md-header-nav__title" data-md-component="header-title">
-      {% if config.site_name == page.title %}
-        <div class="md-header-nav__ellipsis md-ellipsis title">
-          {{ config.site_name }}
-        </div>
-      {% else %}
-        <div class="md-header-nav__ellipsis">
-          <span class="md-header-nav__topic md-ellipsis title">
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
             {{ config.site_name }}
           </span>
-          <span class="md-header-nav__topic md-ellipsis">
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
             {% if page and page.meta and page.meta.title %}
               {{ page.meta.title }}
             {% else %}
@@ -38,12 +31,39 @@
             {% endif %}
           </span>
         </div>
-      {% endif %}
+      </div>
     </div>
+
+    <!-- Site language selector -->
+    {% if config.extra.alternate %}
+    <div class="md-header__option"></form>
+      <div class="md-select">
+        {% set icon = config.theme.icon.alternate or "material/translate" %}
+        <button class="md-header__button md-icon">
+          {% include ".icons/" ~ icon ~ ".svg" %}
+        </button>
+        <div class="md-select__inner">
+          <ul class="md-select__list">
+            {% for alt in config.extra.alternate %}
+            <li class="md-select__item">
+              <a
+                      href="{{ alt.link | url }}"
+                      hreflang="{{ alt.lang }}"
+                      class="md-select__link"
+              >
+                {{ alt.name }}
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    {% endif %}
 
     <!-- Button to open search dialogue -->
     {% if "search" in config["plugins"] %}
-      <label class="md-header-nav__button md-icon" for="__search">
+      <label class="md-header__button md-icon" for="__search">
         {% include ".icons/material/magnify.svg" %}
       </label>
 
@@ -53,7 +73,7 @@
 
     <!-- Repository containing source -->
     {% if config.repo_url %}
-      <div class="md-header-nav__source">
+      <div class="md-header__source">
         {% include "partials/source.html" %}
       </div>
     {% endif %}
