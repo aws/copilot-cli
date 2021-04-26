@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/aws/copilot-cli/internal/pkg/exec/mocks"
 	"github.com/golang/mock/gomock"
 )
 
@@ -20,7 +19,7 @@ func TestCmd_Run(t *testing.T) {
 		cmd := &Cmd{
 			command: func(name string, args []string, opts ...CmdOption) cmdRunner {
 				require.Equal(t, "ls", name)
-				m := mocks.NewMockcmdRunner(ctrl)
+				m := NewMockcmdRunner(ctrl)
 				m.EXPECT().Run().Return(nil)
 				return m
 			},

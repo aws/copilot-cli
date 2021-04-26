@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/exec"
+
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -71,7 +72,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
 					sel:          selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
 					prompt:       o.prompt,
-					cmd:          command.New(),
+					cmd:          exec.NewCmd(),
 					sessProvider: sessions.NewProvider(),
 				}
 			case contains(workloadType, manifest.ServiceTypes):
@@ -84,7 +85,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
 					sel:          selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
 					prompt:       o.prompt,
-					cmd:          command.New(),
+					cmd:          exec.NewCmd(),
 					sessProvider: sessions.NewProvider(),
 				}
 			}

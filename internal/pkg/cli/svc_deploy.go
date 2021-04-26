@@ -28,7 +28,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -92,7 +91,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
 		sel:          selector.NewWorkspaceSelect(prompter, store, ws),
 		prompt:       prompter,
-		cmd:          command.New(),
+		cmd:          exec.NewCmd(),
 		sessProvider: sessions.NewProvider(),
 	}, nil
 }

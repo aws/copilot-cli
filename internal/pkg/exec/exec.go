@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
 )
 
 type httpClient interface {
@@ -18,7 +16,7 @@ type httpClient interface {
 }
 
 type runner interface {
-	Run(name string, args []string, options ...command.Option) error
+	Run(name string, args []string, options ...CmdOption) error
 	InteractiveRun(name string, args []string) error
 }
 
