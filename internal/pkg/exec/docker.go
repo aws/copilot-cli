@@ -32,17 +32,16 @@ func NewDockerCommand() DockerCommand {
 
 // BuildArguments holds the arguments we can pass in as flags from the manifest.
 type BuildArguments struct {
-	URI            string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
-	ImageTag       string            // Required. Tag to pass to `docker build` via -t flag. Usually Git commit short ID.
-	Dockerfile     string            // Required. Dockerfile to pass to `docker build` via --file flag.
-	Context        string            // Optional. Build context directory to pass to `docker build`
-	Target         string            // Optional. The target build stage to pass to `docker build`
-	CacheFrom      []string          // Optional. Images to consider as cache sources to pass to `docker build`
-	Args           map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
-	AdditionalTags []string          // Optional. Additional image tags to pass to docker.
+	URI        string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
+	Tags       []string          // Optional. List of tags to apply to the image besides "latest".
+	Dockerfile string            // Required. Dockerfile to pass to `docker build` via --file flag.
+	Context    string            // Optional. Build context directory to pass to `docker build`
+	Target     string            // Optional. The target build stage to pass to `docker build`
+	CacheFrom  []string          // Optional. Images to consider as cache sources to pass to `docker build`
+	Args       map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
 }
 
-// Build will run a `docker build` command with the input uri, tag, and Dockerfile path.
+// Build will run a `docker build` command for the given ecr repo URI and build arguments.
 func (c DockerCommand) Build(in *BuildArguments) error {
 	dfDir := in.Context
 	if dfDir == "" { // Context wasn't specified use the Dockerfile's directory as context.
@@ -52,7 +51,8 @@ func (c DockerCommand) Build(in *BuildArguments) error {
 	args := []string{"build"}
 
 	// Add additional image tags to the docker build call.
-	for _, tag := range append(in.AdditionalTags, in.ImageTag) {
+	args = append(args, "-t", in.URI)
+	for _, tag := range in.Tags {
 		args = append(args, "-t", imageName(in.URI, tag))
 	}
 
@@ -80,8 +80,7 @@ func (c DockerCommand) Build(in *BuildArguments) error {
 
 	args = append(args, dfDir, "-f", in.Dockerfile)
 
-	err := c.Run("docker", args)
-	if err != nil {
+	if err := c.Run("docker", args); err != nil {
 		return fmt.Errorf("building image: %w", err)
 	}
 
@@ -101,18 +100,28 @@ func (c DockerCommand) Login(uri, username, password string) error {
 	return nil
 }
 
-// Push will run `docker push` command against the repository URI with the input uri and image tags.
-func (c DockerCommand) Push(uri, imageTag string, additionalTags ...string) error {
-	for _, imageTag := range append(additionalTags, imageTag) {
-		path := imageName(uri, imageTag)
-
-		err := c.Run("docker", []string{"push", path})
-		if err != nil {
-			return fmt.Errorf("docker push %s: %w", path, err)
-		}
+// Push pushes the images with the specified tags and ecr repository URI, and returns the image digest on success.
+func (c DockerCommand) Push(uri string, tags ...string) (digest string, err error) {
+	images := []string{uri}
+	for _, tag := range tags {
+		images = append(images, imageName(uri, tag))
 	}
 
-	return nil
+	for _, img := range images {
+		if err := c.Run("docker", []string{"push", img}); err != nil {
+			return "", fmt.Errorf("docker push %s: %w", img, err)
+		}
+	}
+	buf := new(strings.Builder)
+	if err := c.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, command.Stdout(buf)); err != nil {
+		return "", fmt.Errorf("inspect image digest for %s: %w", uri, err)
+	}
+	repoDigest := strings.Trim(strings.TrimSpace(buf.String()), `"'`) // remove new lines and quotes from output
+	parts := strings.SplitAfter(repoDigest, "@")
+	if len(parts) != 2 {
+		return "", fmt.Errorf("parse the digest from the repo digest '%s'", repoDigest)
+	}
+	return parts[1], nil
 }
 
 // CheckDockerEngineRunning will run `docker info` command to check if the docker engine is running.
@@ -147,5 +156,8 @@ func (c DockerCommand) CheckDockerEngineRunning() error {
 }
 
 func imageName(uri, tag string) string {
+	if tag == "" {
+		return uri // If no tag is specified build with latest.
+	}
 	return fmt.Sprintf("%s:%s", uri, tag)
 }

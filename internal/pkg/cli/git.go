@@ -5,41 +5,45 @@ package cli
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
-	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 )
 
-const (
-	inputImageTagPrompt = "Input an image tag value:"
-)
-
-func getVersionTag(runner runner) (string, error) {
+func describeGitChanges(exec runner) (string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	if err := runner.Run("git", []string{"describe", "--always"}, command.Stdout(&stdout), command.Stderr(&stderr)); err != nil {
+	if err := exec.Run("git", []string{"describe", "--always"}, command.Stdout(&stdout), command.Stderr(&stderr)); err != nil {
 		return "", err
 	}
-
 	// NOTE: `git describe` output bytes includes a `\n` character, so we trim it out.
 	return strings.TrimSpace(stdout.String()), nil
 }
 
-func askImageTag(tag string, prompter prompter, cmd runner) (string, error) {
-	if tag != "" {
-		return tag, nil
+func hasUncommitedGitChanges(exec runner) (bool, error) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if err := exec.Run("git", []string{"status", "--porcelain"}, command.Stdout(&stdout), command.Stderr(&stderr)); err != nil {
+		return false, err
 	}
-	tag, err := getVersionTag(cmd)
+	return strings.TrimSpace(stdout.String()) != "", nil
+}
+
+// imageTagFromGit returns the image tag to apply in case the user is in a git repository.
+// If the user provided their own tag, then just use that.
+// If there is a clean git commit with no local changes, then return the git commit id.
+// Otherwise, returns the empty string.
+func imageTagFromGit(exec runner, userTag string) string {
+	if userTag != "" {
+		return userTag
+	}
+	commit, err := describeGitChanges(exec)
 	if err != nil {
-		log.Warningln("Couldn't find a git commit sha to use as an image tag. Are you in a git repository?")
-		// User is not in a Git repository, so prompt for a tag.
-		tag, err = prompter.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
-		if err != nil {
-			return "", fmt.Errorf("prompt get image tag: %w", err)
-		}
+		return ""
 	}
-	return tag, err
+	isRepoDirty, _ := hasUncommitedGitChanges(exec)
+	if isRepoDirty {
+		return ""
+	}
+	return commit
 }

@@ -239,30 +239,32 @@ func TestTaskStatus_HumanString(t *testing.T) {
 	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
 	mockImageDigest := "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"
 	testCases := map[string]struct {
-		id          string
-		health      string
-		lastStatus  string
-		imageDigest string
-		startedAt   time.Time
-		stoppedAt   time.Time
+		id               string
+		health           string
+		lastStatus       string
+		imageDigest      string
+		startedAt        time.Time
+		stoppedAt        time.Time
+		capacityProvider string
 
 		wantTaskStatus string
 	}{
 		"all params": {
-			health:      "HEALTHY",
-			id:          "aslhfnqo39j8qomimvoiqm89349",
-			lastStatus:  "RUNNING",
-			startedAt:   startTime,
-			stoppedAt:   stopTime,
-			imageDigest: mockImageDigest,
+			health:           "HEALTHY",
+			id:               "aslhfnqo39j8qomimvoiqm89349",
+			lastStatus:       "RUNNING",
+			startedAt:        startTime,
+			stoppedAt:        stopTime,
+			imageDigest:      mockImageDigest,
+			capacityProvider: "FARGATE",
 
-			wantTaskStatus: "  aslhfnqo\t18f7eb6c\tRUNNING\t14 years ago\t14 years ago\tHEALTHY\n",
+			wantTaskStatus: "  aslhfnqo\t18f7eb6c\tRUNNING\t14 years ago\t14 years ago\tFARGATE\tHEALTHY\n",
 		},
 		"missing params": {
 			health:     "HEALTHY",
 			lastStatus: "RUNNING",
 
-			wantTaskStatus: "  -\t-\tRUNNING\t-\t-\tHEALTHY\n",
+			wantTaskStatus: "  -\t-\tRUNNING\t-\t-\t-\tHEALTHY\n",
 		},
 	}
 
@@ -280,9 +282,10 @@ func TestTaskStatus_HumanString(t *testing.T) {
 						Digest: tc.imageDigest,
 					},
 				},
-				LastStatus: tc.lastStatus,
-				StartedAt:  tc.startedAt,
-				StoppedAt:  tc.stoppedAt,
+				LastStatus:       tc.lastStatus,
+				StartedAt:        tc.startedAt,
+				StoppedAt:        tc.stoppedAt,
+				CapacityProvider: tc.capacityProvider,
 			}
 
 			gotTaskStatus := task.HumanString()
