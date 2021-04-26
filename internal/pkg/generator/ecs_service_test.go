@@ -26,13 +26,13 @@ func TestECSServiceCommandGenerator_Generate(t *testing.T) {
 		testService = "good-service"
 	)
 	testCases := map[string]struct {
-		setUpMock func(m *mocks.MockecsServiceGetter)
+		setUpMock func(m *mocks.MockecsClient)
 
 		wantedGenerateCommandOpts *GenerateCommandOpts
 		wantedError               error
 	}{
 		"success": {
-			setUpMock: func(m *mocks.MockecsServiceGetter) {
+			setUpMock: func(m *mocks.MockecsClient) {
 				m.EXPECT().Service(testCluster, testService).Return(&ecs.Service{
 					TaskDefinition: aws.String("task-def"),
 				}, nil)
@@ -97,14 +97,14 @@ func TestECSServiceCommandGenerator_Generate(t *testing.T) {
 			},
 		},
 		"unable to retrieve service": {
-			setUpMock: func(m *mocks.MockecsServiceGetter) {
+			setUpMock: func(m *mocks.MockecsClient) {
 				m.EXPECT().Service(testCluster, testService).Return(nil, errors.New("some error"))
 				m.EXPECT().NetworkConfiguration(gomock.Any(), gomock.Any()).AnyTimes()
 			},
 			wantedError: errors.New("retrieve service good-service in cluster crowded-cluster: some error"),
 		},
 		"unable to retrieve task definition": {
-			setUpMock: func(m *mocks.MockecsServiceGetter) {
+			setUpMock: func(m *mocks.MockecsClient) {
 				m.EXPECT().Service(testCluster, testService).Return(&ecs.Service{
 					TaskDefinition: aws.String("task-def"),
 				}, nil)
@@ -114,7 +114,7 @@ func TestECSServiceCommandGenerator_Generate(t *testing.T) {
 			wantedError: errors.New("retrieve task definition task-def: some error"),
 		},
 		"unable to retrieve network configuration": {
-			setUpMock: func(m *mocks.MockecsServiceGetter) {
+			setUpMock: func(m *mocks.MockecsClient) {
 				m.EXPECT().Service(gomock.Any(), gomock.Any()).AnyTimes()
 				m.EXPECT().TaskDefinition(gomock.Any()).AnyTimes()
 				m.EXPECT().NetworkConfiguration(testCluster, testService).Return(nil, errors.New("some error"))
@@ -122,7 +122,7 @@ func TestECSServiceCommandGenerator_Generate(t *testing.T) {
 			wantedError: errors.New("retrieve network configuration for service good-service in cluster crowded-cluster: some error"),
 		},
 		"error if found more than one container": {
-			setUpMock: func(m *mocks.MockecsServiceGetter) {
+			setUpMock: func(m *mocks.MockecsClient) {
 				m.EXPECT().Service(testCluster, testService).Return(&ecs.Service{
 					TaskDefinition: aws.String("task-def"),
 				}, nil)
@@ -149,7 +149,7 @@ func TestECSServiceCommandGenerator_Generate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			m := mocks.NewMockecsServiceGetter(ctrl)
+			m := mocks.NewMockecsClient(ctrl)
 			tc.setUpMock(m)
 
 			g := ECSServiceCommandGenerator{

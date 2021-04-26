@@ -105,3 +105,40 @@ func (mr *MockrunnerMockRecorder) Run(name, args interface{}, options ...interfa
 	varargs := append([]interface{}{name, args}, options...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*Mockrunner)(nil).Run), varargs...)
 }
+
+// MockcmdRunner is a mock of cmdRunner interface.
+type MockcmdRunner struct {
+	ctrl     *gomock.Controller
+	recorder *MockcmdRunnerMockRecorder
+}
+
+// MockcmdRunnerMockRecorder is the mock recorder for MockcmdRunner.
+type MockcmdRunnerMockRecorder struct {
+	mock *MockcmdRunner
+}
+
+// NewMockcmdRunner creates a new mock instance.
+func NewMockcmdRunner(ctrl *gomock.Controller) *MockcmdRunner {
+	mock := &MockcmdRunner{ctrl: ctrl}
+	mock.recorder = &MockcmdRunnerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockcmdRunner) EXPECT() *MockcmdRunnerMockRecorder {
+	return m.recorder
+}
+
+// Run mocks base method.
+func (m *MockcmdRunner) Run() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Run")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Run indicates an expected call of Run.
+func (mr *MockcmdRunnerMockRecorder) Run() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockcmdRunner)(nil).Run))
+}
