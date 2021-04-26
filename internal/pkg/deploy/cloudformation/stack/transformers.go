@@ -312,7 +312,7 @@ func convertVolumes(input map[string]manifest.Volume) ([]*template.Volume, error
 		//      data between containers.
 
 		// If EFS is not configured, just add the name to create an empty volume and continue.
-		if volume.EFS == nil || volume.EFS.EmptyVolume() {
+		if volume.EmptyVolume() {
 			v := template.Volume{
 				Name: aws.String(name),
 			}

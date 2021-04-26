@@ -104,23 +104,23 @@ efs:
 
 func Test_EmptyVolume(t *testing.T) {
 	testCases := map[string]struct {
-		in   EFSConfigOrBool
+		in   *EFSConfigOrBool
 		want bool
 	}{
 		"with bool set": {
-			in: EFSConfigOrBool{
+			in: &EFSConfigOrBool{
 				Enabled: aws.Bool(true),
 			},
 			want: false,
 		},
 		"with bool set to false": {
-			in: EFSConfigOrBool{
+			in: &EFSConfigOrBool{
 				Enabled: aws.Bool(false),
 			},
 			want: true,
 		},
 		"with uid/gid set": {
-			in: EFSConfigOrBool{
+			in: &EFSConfigOrBool{
 				Advanced: EFSVolumeConfiguration{
 					UID: aws.Uint32(1000),
 					GID: aws.Uint32(10000),
@@ -129,11 +129,11 @@ func Test_EmptyVolume(t *testing.T) {
 			want: false,
 		},
 		"empty": {
-			in:   EFSConfigOrBool{},
+			in:   nil,
 			want: true,
 		},
 		"misconfigured with boolean enabled": {
-			in: EFSConfigOrBool{
+			in: &EFSConfigOrBool{
 				Enabled: aws.Bool(true),
 				Advanced: EFSVolumeConfiguration{
 					FileSystemID: aws.String("fs-1234"),
@@ -142,7 +142,7 @@ func Test_EmptyVolume(t *testing.T) {
 			want: false,
 		},
 		"misconfigured with FSID and UID": {
-			in: EFSConfigOrBool{
+			in: &EFSConfigOrBool{
 				Advanced: EFSVolumeConfiguration{
 					FileSystemID: aws.String("fs-12345"),
 					UID:          aws.Uint32(6777),
@@ -152,7 +152,7 @@ func Test_EmptyVolume(t *testing.T) {
 			want: false,
 		},
 		"misconfigured with bool set to false and extra config (should respect bool)": {
-			in: EFSConfigOrBool{
+			in: &EFSConfigOrBool{
 				Enabled: aws.Bool(false),
 				Advanced: EFSVolumeConfiguration{
 					UID: aws.Uint32(6777),
@@ -163,8 +163,11 @@ func Test_EmptyVolume(t *testing.T) {
 		},
 	}
 	for name, tc := range testCases {
+		v := Volume{
+			EFS: tc.in,
+		}
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.want, tc.in.EmptyVolume())
+			require.Equal(t, tc.want, v.EmptyVolume())
 		})
 	}
 

@@ -25,6 +25,19 @@ type Volume struct {
 	MountPointOpts `yaml:",inline"`
 }
 
+// EmptyVolume returns true if the EFS configuration is nil or explicitly/implicitly disabled.
+func (v *Volume) EmptyVolume() bool {
+	if v.EFS == nil {
+		return true
+	}
+	// Respect Bool value first: return true if EFS is explicitly disabled.
+	if v.EFS.Disabled() {
+		return true
+	}
+
+	return false
+}
+
 // MountPointOpts is shared between Volumes for the main container and MountPoints for sidecars.
 type MountPointOpts struct {
 	ContainerPath *string `yaml:"path"`
@@ -92,6 +105,8 @@ func (e *EFSConfigOrBool) UseManagedFS() bool {
 }
 
 // Disabled returns true if Enabled is explicitly set to false.
+// This function is useful for checking that the EFS config has been intentionally turned off
+// and whether we should ignore any values of the struct which have been populated erroneously.
 func (e *EFSConfigOrBool) Disabled() bool {
 	if e.Enabled != nil && aws.BoolValue(e.Enabled) == false {
 		return true
@@ -99,26 +114,16 @@ func (e *EFSConfigOrBool) Disabled() bool {
 	return false
 }
 
+// EmptyBYOConfig returns true if the `id`, `root_directory`, and `auth` fields are all empty.
+// This would mean that no custom EFS information has been specified.
 func (e *EFSVolumeConfiguration) EmptyBYOConfig() bool {
 	return e.FileSystemID == nil && e.AuthConfig == nil && e.RootDirectory == nil
 }
 
+// EmptyUIDConfig returns true if the `uid` and `gid` fields are empty. These fields are mutually exclusive
+// with BYO EFS. If they are nonempty, then we should use managed EFS instead.
 func (e *EFSVolumeConfiguration) EmptyUIDConfig() bool {
 	return e.UID == nil && e.GID == nil
-}
-
-func (e *EFSConfigOrBool) EmptyVolume() bool {
-	// Respect Bool value first: return true if Enabled is false; false if true.
-	if e.Enabled != nil {
-		return !aws.BoolValue(e.Enabled)
-	}
-
-	// If config is totally empty, the volume doesn't have an EFS config.
-	if e.Advanced.EmptyBYOConfig() && e.Advanced.EmptyUIDConfig() {
-		return true
-	}
-
-	return false
 }
 
 // AuthorizationConfig holds options relating to access points and IAM authorization.
