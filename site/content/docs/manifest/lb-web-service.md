@@ -86,16 +86,16 @@ http:
 The HTTP status codes that healthy targets must use when responding to an HTTP health check. You can specify values between 200 and 499. You can specify multiple values (for example, "200,202") or a range of values (for example, "200-299"). The default is 200. 
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-healthy-threshold" href="#http-healthcheck-healthy-threshold" class="field">`healthy_threshold`</a> <span class="type">Integer</span>  
-The number of consecutive health check successes required before considering an unhealthy target healthy. The Copilot default is 2. Range: 2-10.
+The number of consecutive health check successes required before considering an unhealthy target healthy. The default is 5. Range: 2-10.
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-unhealthy-threshold" href="#http-healthcheck-unhealthy-threshold" class="field">`unhealthy_threshold`</a> <span class="type">Integer</span>  
-The number of consecutive health check failures required before considering a target unhealthy. The Copilot default is 2. Range: 2-10.
+The number of consecutive health check failures required before considering a target unhealthy. The default is 2. Range: 2-10.
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-interval" href="#http-healthcheck-interval" class="field">`interval`</a> <span class="type">Duration</span>  
-The approximate amount of time, in seconds, between health checks of an individual target. The Copilot default is 10s. Range: 5s–300s.
+The approximate amount of time, in seconds, between health checks of an individual target. The default is 30s. Range: 5s–300s.
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-timeout" href="#http-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
-The amount of time, in seconds, during which no response from a target means a failed health check. The Copilot default is 5s. Range 5s-300s.
+The amount of time, in seconds, during which no response from a target means a failed health check. The default is 5s. Range 5s-300s.
 
 <span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>  
 A sidecar container that takes the place of a service container.
@@ -148,6 +148,9 @@ The `location` field follows the same definition as the [`image` parameter](http
 
 <span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  
 The port exposed in your Dockerfile. Copilot should parse this value for you from your `EXPOSE` instruction.
+
+<span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a><span class="type">Map</span>
+An optional key/value map of [Docker labels](https://docs.docker.com/config/labels-custom-metadata/) to add to the container.
 
 <div class="separator"></div>
 
@@ -293,3 +296,4 @@ Optional. Defaults to `""`. The ID of the EFS access point to connect to. If usi
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.
+

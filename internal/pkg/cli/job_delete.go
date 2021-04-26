@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
@@ -64,7 +63,7 @@ type deleteJobOpts struct {
 	// Interfaces to dependencies.
 	store           store
 	prompt          prompter
-	sel             wsSelector
+	sel             configSelector
 	sess            sessionProvider
 	spinner         progress
 	appCFN          jobRemoverFromApp
@@ -84,10 +83,6 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	ws, err := workspace.New()
-	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
-	}
 	prompter := prompt.New()
 	return &deleteJobOpts{
 		deleteJobVars: vars,
@@ -95,7 +90,7 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 		store:   store,
 		spinner: termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:  prompt.New(),
-		sel:     selector.NewWorkspaceSelect(prompter, store, ws),
+		sel:     selector.NewConfigSelect(prompter, store),
 		sess:    provider,
 		appCFN:  cloudformation.New(defaultSession),
 		newWlDeleter: func(session *session.Session) wlDeleter {
@@ -228,7 +223,7 @@ func (o *deleteJobOpts) askJobName() error {
 		return nil
 	}
 
-	name, err := o.sel.Job(jobDeleteJobNamePrompt, "")
+	name, err := o.sel.Job(jobDeleteJobNamePrompt, "", o.appName)
 	if err != nil {
 		return fmt.Errorf("select job: %w", err)
 	}

@@ -120,10 +120,6 @@ Resources:
       EngineVersion: '10.12'
       {{- end}}
       EngineMode: serverless
-      StorageEncrypted: true
-      KmsKeyId:
-        Fn::ImportValue:
-          !Sub '${App}-ArtifactKey'
       DBClusterParameterGroupName: {{- if .ParameterGroup}} {{.ParameterGroup}} {{- else}} !Ref {{logicalIDSafe .ClusterName}}DBClusterParameterGroup {{- end}}
       DBSubnetGroupName: !Ref {{logicalIDSafe .ClusterName}}DBSubnetGroup
       VpcSecurityGroupIds:

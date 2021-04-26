@@ -961,7 +961,14 @@ func Test_NetworkConfiguration(t *testing.T) {
 						Return([]*resourcegroups.Resource{
 							{ARN: "cluster-1"},
 						}, nil),
-					m.ecsClient.EXPECT().NetworkConfiguration("cluster-1", testSvc).Return(&ecs.NetworkConfiguration{
+					m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, map[string]string{
+						deploy.AppTagKey:     testApp,
+						deploy.EnvTagKey:     testEnv,
+						deploy.ServiceTagKey: testSvc,
+					}).Return([]*resourcegroups.Resource{
+						{ARN: "arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-myService-JSOH5GYBFAIB"},
+					}, nil),
+					m.ecsClient.EXPECT().NetworkConfiguration("cluster-1", "my-project-test-myService-JSOH5GYBFAIB").Return(&ecs.NetworkConfiguration{
 						AssignPublicIp: "1.2.3.4",
 						SecurityGroups: []string{"sg-1", "sg-2"},
 						Subnets:        []string{"sn-1", "sn-2"},

@@ -477,6 +477,7 @@ func (cf CloudFormation) getLastDeployedAppConfig(appConfig *stack.AppStackConfi
 	if err != nil {
 		return nil, fmt.Errorf("parse previous deployed stackset %w", err)
 	}
+	previouslyDeployedConfig.App = appConfig.Name
 	return previouslyDeployedConfig, nil
 }
 
