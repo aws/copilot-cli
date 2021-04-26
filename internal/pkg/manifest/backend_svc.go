@@ -109,6 +109,7 @@ func (s BackendService) ApplyEnv(envName string) (*BackendService, error) {
 	if !ok {
 		return &s, nil
 	}
+	// check Count value and convert it
 	// Apply overrides to the original service s.
 	err := mergo.Merge(&s, BackendService{
 		BackendServiceConfig: *overrideConfig,

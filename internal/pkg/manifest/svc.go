@@ -149,6 +149,11 @@ func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
+// IsEmpty returns whether Count is empty.
+func (c *Count) IsEmpty() bool {
+	return c.Value == nil && c.AdvancedCount.IsEmpty()
+}
+
 // Desired returns the desiredCount to be set on the CFN template
 func (c *Count) Desired() (*int, error) {
 	if c.AdvancedCount.IsEmpty() {

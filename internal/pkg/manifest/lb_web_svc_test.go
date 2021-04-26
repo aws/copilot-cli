@@ -514,7 +514,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 			},
 		},
-		"with range override": {
+		"with empty range override": {
 			in: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					TaskConfig: TaskConfig{
@@ -546,12 +546,187 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 			},
 		},
+		"with count value overriden by count value": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							Value: aws.Int(5),
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						TaskConfig: TaskConfig{
+							Count: Count{
+								Value: aws.Int(7),
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							Value: aws.Int(7),
+						},
+					},
+				},
+			},
+		},
+		"with count value overriden by spot count": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{Value: aws.Int(3)},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						TaskConfig: TaskConfig{
+							Count: Count{
+								AdvancedCount: AdvancedCount{
+									Spot: aws.Int(6),
+								},
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot: aws.Int(6),
+							},
+						},
+					},
+				},
+			},
+		},
+		"with range overriden by spot count": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Range: &Range{Value: &mockRange},
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						TaskConfig: TaskConfig{
+							Count: Count{
+								AdvancedCount: AdvancedCount{
+									Spot: aws.Int(5),
+								},
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot: aws.Int(5),
+							},
+						},
+					},
+				},
+			},
+		},
+		"with range overriden by range config": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Range: &Range{Value: &mockRange},
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						TaskConfig: TaskConfig{
+							Count: Count{
+								AdvancedCount: AdvancedCount{
+									Range: &Range{
+										RangeConfig: RangeConfig{
+											Min: aws.Int(2),
+											Max: aws.Int(8),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Range: &Range{
+									RangeConfig: RangeConfig{
+										Min: aws.Int(2),
+										Max: aws.Int(8),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"with spot overriden by count value": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot: aws.Int(5),
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						TaskConfig: TaskConfig{
+							Count: Count{Value: aws.Int(15)},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{Value: aws.Int(15)},
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// GIVEN
-
 			// WHEN
 			conf, _ := tc.in.ApplyEnv(tc.envToApply)
 
