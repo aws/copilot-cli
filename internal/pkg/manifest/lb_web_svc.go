@@ -206,11 +206,12 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (*LoadBalancedWebServic
 	if !ok {
 		return &s, nil
 	}
-	envCount := overrideConfig.TaskConfig.Count
 
+	envCount := overrideConfig.TaskConfig.Count
 	if !envCount.IsEmpty() {
 		s.TaskConfig.Count = envCount
 	}
+
 	// Apply overrides to the original service s.
 	err := mergo.Merge(&s, LoadBalancedWebService{
 		LoadBalancedWebServiceConfig: *overrideConfig,
