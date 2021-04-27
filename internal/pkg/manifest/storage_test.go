@@ -12,7 +12,7 @@ import (
 )
 
 type testVolume struct {
-	EFS *EFSConfigOrID `yaml:"efs"`
+	EFS *EFSConfigOrBool `yaml:"efs"`
 }
 
 func Test_UnmarshalEFS(t *testing.T) {
@@ -26,43 +26,33 @@ func Test_UnmarshalEFS(t *testing.T) {
 efs: 
   id: fs-12345`),
 			want: testVolume{
-				EFS: &EFSConfigOrID{
-					Config: EFSVolumeConfiguration{
+				EFS: &EFSConfigOrBool{
+					Advanced: EFSVolumeConfiguration{
 						FileSystemID: aws.String("fs-12345"),
 					},
 				},
 			},
 		},
-		"with just ID": {
-			manifest: []byte(`efs: fs-12345`),
-			want: testVolume{
-				EFS: &EFSConfigOrID{
-					ID: "fs-12345",
-				},
-			},
-		},
-		"with magic ID and custom UID": {
+		"with managed FS and custom UID": {
 			manifest: []byte(`
 efs: 
-  id: copilot
   uid: 1000
   gid: 10000`),
 			want: testVolume{
-				EFS: &EFSConfigOrID{
-					Config: EFSVolumeConfiguration{
-						FileSystemID: aws.String("copilot"),
-						UID:          aws.Uint32(1000),
-						GID:          aws.Uint32(10000),
+				EFS: &EFSConfigOrBool{
+					Advanced: EFSVolumeConfiguration{
+						UID: aws.Uint32(1000),
+						GID: aws.Uint32(10000),
 					},
 				},
 			},
 		},
-		"with just magic ID": {
+		"with just managed ": {
 			manifest: []byte(`
-efs: managed`),
+efs: true`),
 			want: testVolume{
-				EFS: &EFSConfigOrID{
-					ID: "managed",
+				EFS: &EFSConfigOrBool{
+					Enabled: aws.Bool(true),
 				},
 			},
 		},
@@ -75,8 +65,8 @@ efs:
     iam: true
     access_point_id: fsap-1234`),
 			want: testVolume{
-				EFS: &EFSConfigOrID{
-					Config: EFSVolumeConfiguration{
+				EFS: &EFSConfigOrBool{
+					Advanced: EFSVolumeConfiguration{
 						FileSystemID:  aws.String("fs-12345"),
 						RootDirectory: aws.String("/"),
 						AuthConfig: &AuthorizationConfig{
@@ -92,7 +82,7 @@ efs:
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			v := testVolume{
-				EFS: &EFSConfigOrID{},
+				EFS: &EFSConfigOrBool{},
 			}
 
 			// WHEN
@@ -100,14 +90,151 @@ efs:
 			// THEN
 			if tc.wantErr == "" {
 				require.NoError(t, err)
-				require.Equal(t, tc.want.EFS.ID, v.EFS.ID)
-				require.Equal(t, tc.want.EFS.Config.FileSystemID, v.EFS.Config.FileSystemID)
-				require.Equal(t, tc.want.EFS.Config.AuthConfig, v.EFS.Config.AuthConfig)
-				require.Equal(t, tc.want.EFS.Config.UID, v.EFS.Config.UID)
-				require.Equal(t, tc.want.EFS.Config.GID, v.EFS.Config.GID)
+				require.Equal(t, tc.want.EFS.Enabled, v.EFS.Enabled)
+				require.Equal(t, tc.want.EFS.Advanced.FileSystemID, v.EFS.Advanced.FileSystemID)
+				require.Equal(t, tc.want.EFS.Advanced.AuthConfig, v.EFS.Advanced.AuthConfig)
+				require.Equal(t, tc.want.EFS.Advanced.UID, v.EFS.Advanced.UID)
+				require.Equal(t, tc.want.EFS.Advanced.GID, v.EFS.Advanced.GID)
 			} else {
 				require.EqualError(t, err, tc.wantErr)
 			}
+		})
+	}
+}
+
+func Test_EmptyVolume(t *testing.T) {
+	testCases := map[string]struct {
+		in   *EFSConfigOrBool
+		want bool
+	}{
+		"with bool set": {
+			in: &EFSConfigOrBool{
+				Enabled: aws.Bool(true),
+			},
+			want: false,
+		},
+		"with bool set to false": {
+			in: &EFSConfigOrBool{
+				Enabled: aws.Bool(false),
+			},
+			want: true,
+		},
+		"with uid/gid set": {
+			in: &EFSConfigOrBool{
+				Advanced: EFSVolumeConfiguration{
+					UID: aws.Uint32(1000),
+					GID: aws.Uint32(10000),
+				},
+			},
+			want: false,
+		},
+		"empty": {
+			in:   nil,
+			want: true,
+		},
+		"misconfigured with boolean enabled": {
+			in: &EFSConfigOrBool{
+				Enabled: aws.Bool(true),
+				Advanced: EFSVolumeConfiguration{
+					FileSystemID: aws.String("fs-1234"),
+				},
+			},
+			want: false,
+		},
+		"misconfigured with FSID and UID": {
+			in: &EFSConfigOrBool{
+				Advanced: EFSVolumeConfiguration{
+					FileSystemID: aws.String("fs-12345"),
+					UID:          aws.Uint32(6777),
+					GID:          aws.Uint32(6777),
+				},
+			},
+			want: false,
+		},
+		"misconfigured with bool set to false and extra config (should respect bool)": {
+			in: &EFSConfigOrBool{
+				Enabled: aws.Bool(false),
+				Advanced: EFSVolumeConfiguration{
+					UID: aws.Uint32(6777),
+					GID: aws.Uint32(6777),
+				},
+			},
+			want: true,
+		},
+	}
+	for name, tc := range testCases {
+		v := Volume{
+			EFS: tc.in,
+		}
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.want, v.EmptyVolume())
+		})
+	}
+
+}
+func Test_UseManagedFS(t *testing.T) {
+	testCases := map[string]struct {
+		in   EFSConfigOrBool
+		want bool
+	}{
+		"with bool set": {
+			in: EFSConfigOrBool{
+				Enabled: aws.Bool(true),
+			},
+			want: true,
+		},
+		"with bool set to false": {
+			in: EFSConfigOrBool{
+				Enabled: aws.Bool(false),
+			},
+			want: false,
+		},
+		"with uid/gid set": {
+			in: EFSConfigOrBool{
+				Advanced: EFSVolumeConfiguration{
+					UID: aws.Uint32(1000),
+					GID: aws.Uint32(10000),
+				},
+			},
+			want: true,
+		},
+		"empty": {
+			in:   EFSConfigOrBool{},
+			want: false,
+		},
+		"misconfigured with boolean enabled": {
+			in: EFSConfigOrBool{
+				Enabled: aws.Bool(true),
+				Advanced: EFSVolumeConfiguration{
+					FileSystemID: aws.String("fs-1234"),
+				},
+			},
+			want: true,
+		},
+		"misconfigured with FSID and UID": {
+			in: EFSConfigOrBool{
+				Advanced: EFSVolumeConfiguration{
+					FileSystemID: aws.String("fs-12345"),
+					UID:          aws.Uint32(6777),
+					GID:          aws.Uint32(6777),
+				},
+			},
+			want: true,
+		},
+		"misconfigured with bool set to false and extra config (should respect bool)": {
+			in: EFSConfigOrBool{
+				Enabled: aws.Bool(false),
+				Advanced: EFSVolumeConfiguration{
+					UID: aws.Uint32(6777),
+					GID: aws.Uint32(6777),
+				},
+			},
+			want: false,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.want, tc.in.UseManagedFS())
 		})
 	}
 }

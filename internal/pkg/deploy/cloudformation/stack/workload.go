@@ -253,27 +253,3 @@ func envVarOutputNames(outputs []addon.Output) []string {
 	}
 	return envVars
 }
-
-// Validate that paths contain only an approved set of characters to guard against command injection.
-// We can accept 0-9A-Za-z-_.
-func validatePath(input string, maxLength int) error {
-	if len(input) > maxLength {
-		return fmt.Errorf("path must be less than %d bytes in length", maxLength)
-	}
-	if len(input) == 0 {
-		return nil
-	}
-	m := pathRegexp.FindStringSubmatch(input)
-	if len(m) == 0 {
-		return fmt.Errorf("paths can only contain the characters a-zA-Z0-9.-_/")
-	}
-	return nil
-}
-
-func validateRootDirPath(input string) error {
-	return validatePath(input, maxEFSPathLength)
-}
-
-func validateContainerPath(input string) error {
-	return validatePath(input, maxDockerContainerPathLength)
-}
