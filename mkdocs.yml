@@ -131,6 +131,7 @@ theme:
   icon:
     logo: octicons/terminal-16
   favicon: assets/images/cli.png
+  language: en
   features:
     - tabs
     - instant
@@ -153,3 +154,5 @@ plugins:
         redirect_maps:
             'docs/installing.md': 'docs/getting-started/install.md'
             'docs/getting-started.md': 'docs/getting-started/first-app-tutorial.md'
+    - macros:
+        include_dir: site/content/docs/include
