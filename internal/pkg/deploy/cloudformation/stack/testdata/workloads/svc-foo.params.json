@@ -1,0 +1,24 @@
+{
+  "Parameters" : { 
+    "AppName": "my-app",
+    "EnvName": "foo",
+    "WorkloadName": "fe",
+    "ContainerImage": "",
+    "TaskCPU": "512",
+    "TaskMemory": "1024",
+    "TaskCount": "2",
+    "LogRetention": "30",
+    "AddonsTemplateURL": "",
+    "ContainerPort": "4000",
+    "RulePath": "/",
+    "HTTPSEnabled": "false",
+    "TargetContainer": "fe",
+    "TargetPort": "4000",
+    "Stickiness": "false"
+  },
+  "Tags": { 
+    "copilot-application": "my-app",
+    "copilot-environment": "foo",
+    "copilot-service": "fe"
+  }
+}

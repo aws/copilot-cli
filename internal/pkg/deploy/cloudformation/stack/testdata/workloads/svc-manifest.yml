@@ -49,3 +49,6 @@ environments:
         min: 3
         max: 12
         spot_from: 6
+  foo:
+    cpu: 512
+    memory: 1024
