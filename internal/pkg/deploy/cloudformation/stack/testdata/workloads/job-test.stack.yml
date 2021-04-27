@@ -167,6 +167,7 @@ Resources:
               Value: '8080'
             - Name: COPILOT_MOUNT_POINTS
               Value: '{"managedEFSVolume":"/var/www"}'
+          Essential: true
           DockerLabels:
             com.amazonaws.ecs.copilot.sidecars.nginx.description: tricky
 
@@ -179,8 +180,6 @@ Resources:
             AuthorizationConfig:
               IAM: ENABLED
               AccessPointId: !Ref AccessPoint
-            
-        
         
   ExecutionRole:
     Metadata:
