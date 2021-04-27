@@ -2,7 +2,7 @@ When you first run `copilot init`, you're asked if you want to create a _test_ e
 
 While Copilot creates a test environment for you when you get started, it's common to create a new, separate environment for production. This production environment will be completely independent from the test environment, with its own networking stack and its own copy of services. By having both a test environment and a production environment, you can deploy changes to your test environment, validate them, then promote them to the production environment.
 
-In the diagram below we have an application called _MyApp_ with two services, _API_ and _Backend_. Those two services are deployed to the two environments, _test_ and _prod_. You can see that in the _test_ environment, both services are running only one container while the _prod_ services have more containers running. Services can use different configurations depending on the environment they're deployed in. For more, check out the [using environment variables](../developing/environment-variables.md) guide.
+In the diagram below we have an application called _MyApp_ with two services, _API_ and _Backend_. Those two services are deployed to the two environments, _test_ and _prod_. You can see that in the _test_ environment, both services are running only one container while the _prod_ services have more containers running. Services can use different configurations depending on the environment they're deployed in. For more, check out the [using environment variables](../developing/environment-variables.en.md) guide.
 
 ![](https://user-images.githubusercontent.com/879348/85873795-7da9c480-b786-11ea-9990-9604a3cc5f01.png)
 
