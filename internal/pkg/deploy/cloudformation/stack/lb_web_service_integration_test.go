@@ -42,13 +42,13 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		},
 		"staging env": {
 			envName:       "staging",
-			svcStackPath:  "svc-test.staging.stack.yml",
-			svcParamsPath: "svc-test.staging.params.json",
+			svcStackPath:  "svc-staging.stack.yml",
+			svcParamsPath: "svc-staging.params.json",
 		},
 		"prod env": {
 			envName:       "prod",
-			svcStackPath:  "svc-test.prod.stack.yml",
-			svcParamsPath: "svc-test.prod.params.json",
+			svcStackPath:  "svc-prod.stack.yml",
+			svcParamsPath: "svc-prod.params.json",
 		},
 	}
 	path := filepath.Join("testdata", "workloads", svcManifestPath)
