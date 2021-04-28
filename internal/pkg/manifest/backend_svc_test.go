@@ -182,7 +182,7 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 }
 
 func TestBackendSvc_ApplyEnv(t *testing.T) {
-	mockBackendServiceWithNoOverride := BackendService{
+	mockBackendServiceWithNoEnvironments := BackendService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
 			Type: aws.String(BackendServiceType),
@@ -214,6 +214,18 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					Value: aws.Int(1),
 				},
 			},
+		},
+	}
+	mockBackendServiceWithNilEnvironment := BackendService{
+		BackendServiceConfig: BackendServiceConfig{
+			ImageConfig: imageWithPortAndHealthcheck{
+				ServiceImageWithPort: ServiceImageWithPort{
+					Port: aws.Uint16(80),
+				},
+			},
+		},
+		Environments: map[string]*BackendServiceConfig{
+			"test": nil,
 		},
 	}
 	mockBackendServiceWithMinimalOverride := BackendService{
@@ -311,11 +323,18 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		original *BackendService
 	}{
 		"no env override": {
-			svc:       &mockBackendServiceWithNoOverride,
+			svc:       &mockBackendServiceWithNoEnvironments,
 			inEnvName: "test",
 
-			wanted:   &mockBackendServiceWithNoOverride,
-			original: &mockBackendServiceWithNoOverride,
+			wanted:   &mockBackendServiceWithNoEnvironments,
+			original: &mockBackendServiceWithNoEnvironments,
+		},
+		"with nil env override": {
+			svc:       &mockBackendServiceWithNilEnvironment,
+			inEnvName: "test",
+
+			wanted:   &mockBackendServiceWithNilEnvironment,
+			original: &mockBackendServiceWithNilEnvironment,
 		},
 		"uses env minimal overrides": {
 			svc:       &mockBackendServiceWithMinimalOverride,

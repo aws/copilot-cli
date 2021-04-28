@@ -207,6 +207,10 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (*LoadBalancedWebServic
 		return &s, nil
 	}
 
+	if overrideConfig == nil {
+		return &s, nil
+	}
+
 	envCount := overrideConfig.TaskConfig.Count
 	if !envCount.IsEmpty() {
 		s.TaskConfig.Count = envCount

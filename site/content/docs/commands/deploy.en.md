@@ -5,7 +5,7 @@ $ copilot deploy
 
 ## What does it do? 
 
-This command is used to run either [`copilot svc deploy`](../commands/svc-deploy.md) or [`copilot job deploy`](../commands/job-deploy.md) under the hood. The steps involved in `copilot deploy` are the same as those involved in `copilot svc deploy` and `copilot job deploy`:
+This command is used to run either [`copilot svc deploy`](../commands/svc-deploy.en.md) or [`copilot job deploy`](../commands/job-deploy.en.md) under the hood. The steps involved in `copilot deploy` are the same as those involved in `copilot svc deploy` and `copilot job deploy`:
 
 1. Build your local Dockerfile into an image
 2. Tag it with the value from `--tag` or the latest git sha (if you're in a git directory)
