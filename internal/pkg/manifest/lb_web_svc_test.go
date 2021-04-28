@@ -225,8 +225,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSConfigOrID{
-										Config: EFSVolumeConfiguration{
+									EFS: &EFSConfigOrBool{
+										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-1234"),
 										},
 									},
@@ -273,8 +273,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSConfigOrID{
-										Config: EFSVolumeConfiguration{
+									EFS: &EFSConfigOrBool{
+										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-1234"),
 										},
 									},
@@ -329,8 +329,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSConfigOrID{
-										Config: EFSVolumeConfiguration{
+									EFS: &EFSConfigOrBool{
+										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-1234"),
 											AuthConfig: &AuthorizationConfig{
 												IAM:           aws.Bool(true),
@@ -385,8 +385,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Storage: &Storage{
 								Volumes: map[string]Volume{
 									"myEFSVolume": {
-										EFS: &EFSConfigOrID{
-											Config: EFSVolumeConfiguration{
+										EFS: &EFSConfigOrBool{
+											Advanced: EFSVolumeConfiguration{
 												FileSystemID: aws.String("fs-5678"),
 												AuthConfig: &AuthorizationConfig{
 													AccessPointID: aws.String("ap-5678"),
@@ -470,8 +470,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSConfigOrID{
-										Config: EFSVolumeConfiguration{
+									EFS: &EFSConfigOrBool{
+										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-5678"),
 											AuthConfig: &AuthorizationConfig{
 												IAM:           aws.Bool(true),
@@ -511,6 +511,41 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},
+				},
+			},
+		},
+		"with empty env override": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Range: &Range{Value: &mockRange},
+								CPU:   aws.Int(80),
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": nil,
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							Value: nil,
+							AdvancedCount: AdvancedCount{
+								Range: &Range{Value: &mockRange},
+								CPU:   aws.Int(80),
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": nil,
 				},
 			},
 		},

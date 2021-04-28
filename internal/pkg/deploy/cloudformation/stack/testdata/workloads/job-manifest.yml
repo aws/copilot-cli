@@ -32,10 +32,11 @@ storage:
     managedEFSVolume:
       path: '/etc/mount1'
       read_only: false
-      efs: copilot
+      efs: true
 
 sidecars:
   nginx:
+    essential: true
     image: public.ecr.aws/nginx/nginx
     port: 8080
     mount_points:
