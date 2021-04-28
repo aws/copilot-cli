@@ -352,7 +352,6 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						CPU:    aws.Int(512),
 						Memory: aws.Int(256),
 						Count: Count{
-							Value: aws.Int(1),
 							AdvancedCount: AdvancedCount{
 								CPU: aws.Int(70),
 							},
