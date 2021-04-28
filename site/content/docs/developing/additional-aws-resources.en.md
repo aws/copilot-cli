@@ -1,12 +1,12 @@
 # Additional AWS Resources
 
-Additional AWS resources, referred to as "addons" in the CLI, are any additional AWS services that a [service manifest](../manifest/overview.md) does not integrate by default. For example, an addon can be a DynamoDB table or S3 bucket that your service needs to read or write to.
+Additional AWS resources, referred to as "addons" in the CLI, are any additional AWS services that a [service manifest](../manifest/overview.en.md) does not integrate by default. For example, an addon can be a DynamoDB table or S3 bucket that your service needs to read or write to.
 
 ## How do I add an S3 bucket or DDB Table?
 
 Copilot provides the following commands to help you create certain kinds of addons:
 
-* [`storage init`](../commands/storage-init.md) will create a DynamoDB table or S3 bucket.  
+* [`storage init`](../commands/storage-init.en.md) will create a DynamoDB table or S3 bucket.  
 
 You can run `copilot storage init` from your workspace and be guided through some questions to help you set up these resources.
 
