@@ -371,7 +371,6 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						CPU:    aws.Int(512),
 						Memory: aws.Int(256),
 						Count: Count{
-							Value: aws.Int(1),
 							AdvancedCount: AdvancedCount{
 								CPU: aws.Int(70),
 							},
@@ -408,6 +407,166 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			require.Equal(t, tc.wanted, got)
 			// Should not impact the original manifest struct.
 			require.Equal(t, tc.svc, tc.original)
+		})
+	}
+}
+
+func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
+	mockRange := IntRangeBand("1-10")
+	testCases := map[string]struct {
+		svcCount Count
+		envCount Count
+
+		expected *BackendService
+	}{
+		"empty env advanced count override": {
+			svcCount: Count{
+				AdvancedCount: AdvancedCount{
+					Range: &Range{Value: &mockRange},
+					CPU:   aws.Int(80),
+				},
+			},
+			envCount: Count{},
+			expected: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Range: &Range{Value: &mockRange},
+								CPU:   aws.Int(80),
+							},
+						},
+					},
+				},
+			},
+		},
+		"with count value overriden by count value": {
+			svcCount: Count{Value: aws.Int(5)},
+			envCount: Count{Value: aws.Int(8)},
+			expected: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{Value: aws.Int(8)},
+					},
+				},
+			},
+		},
+		"with count value overriden by spot count": {
+			svcCount: Count{Value: aws.Int(4)},
+			envCount: Count{
+				AdvancedCount: AdvancedCount{
+					Spot: aws.Int(6),
+				},
+			},
+			expected: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot: aws.Int(6),
+							},
+						},
+					},
+				},
+			},
+		},
+		"with range overriden by spot count": {
+			svcCount: Count{
+				AdvancedCount: AdvancedCount{
+					Range: &Range{Value: &mockRange},
+				},
+			},
+			envCount: Count{
+				AdvancedCount: AdvancedCount{
+					Spot: aws.Int(6),
+				},
+			},
+			expected: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot: aws.Int(6),
+							},
+						},
+					},
+				},
+			},
+		},
+		"with range overriden by range config": {
+			svcCount: Count{
+				AdvancedCount: AdvancedCount{
+					Range: &Range{Value: &mockRange},
+				},
+			},
+			envCount: Count{
+				AdvancedCount: AdvancedCount{
+					Range: &Range{
+						RangeConfig: RangeConfig{
+							Min: aws.Int(2),
+							Max: aws.Int(8),
+						},
+					},
+				},
+			},
+			expected: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Range: &Range{
+									RangeConfig: RangeConfig{
+										Min: aws.Int(2),
+										Max: aws.Int(8),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"with spot overriden by count value": {
+			svcCount: Count{
+				AdvancedCount: AdvancedCount{
+					Spot: aws.Int(5),
+				},
+			},
+			envCount: Count{Value: aws.Int(12)},
+			expected: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{Value: aws.Int(12)},
+					},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		// GIVEN
+		svc := BackendService{
+			BackendServiceConfig: BackendServiceConfig{
+				TaskConfig: TaskConfig{
+					Count: tc.svcCount,
+				},
+			},
+			Environments: map[string]*BackendServiceConfig{
+				"test": {
+					TaskConfig: TaskConfig{
+						Count: tc.envCount,
+					},
+				},
+				"staging": {
+					TaskConfig: TaskConfig{},
+				},
+			},
+		}
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual, _ := svc.ApplyEnv("test")
+
+			// THEN
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }
