@@ -28,7 +28,7 @@ IngressFromVPCEndpoints:
   Type: AWS::EC2::SecurityGroupIngress
   Properties:
     Description: Ingress from VPC endpoints.
-    GroupId: !Ref 'EnvironmentSecurityGroup'
+    GroupId: !Ref 'ContainerSecurityGroup'
     IpProtocol: -1
     SourceSecurityGroupId: !Ref 'VPCEndpointSecurityGroup'
 
