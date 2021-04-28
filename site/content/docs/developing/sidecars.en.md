@@ -3,7 +3,7 @@ Sidecars are additional containers that run along side the main container. They 
 
 AWS also provides some plugin options that can be seamlessly incorporated with your ECS service, including but not limited to [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html), [AWS X-Ray](https://aws.amazon.com/xray/), and [AWS App Mesh](https://aws.amazon.com/app-mesh/).
 
-If you have defined an EFS volume for your main container through the [`storage` field](../developing/storage.md) in the manifest, you can also mount that volume in any sidecar containers you have defined.
+If you have defined an EFS volume for your main container through the [`storage` field](../developing/storage.en.md) in the manifest, you can also mount that volume in any sidecar containers you have defined.
 
 ## How to add sidecars with Copilot?
 There are two ways of adding sidecars using the Copilot manifest: by specifying [general sidecars](#general-sidecars) or by using [sidecar patterns](#sidecar-patterns).
@@ -118,7 +118,7 @@ logging:
     log_stream_prefix: copilot/
 ```
 
-You might need to add necessary permissions to the task role so that FireLens can forward your data. You can add permissions by specifying them in your [addons](../developing/additional-aws-resources.md). For example:
+You might need to add necessary permissions to the task role so that FireLens can forward your data. You can add permissions by specifying them in your [addons](../developing/additional-aws-resources.en.md). For example:
 
 ``` yaml
 Resources:
@@ -142,7 +142,7 @@ Outputs:
 ```
 
 !!!info
-    Since the FireLens log driver can route your main container's logs to various destinations, the [`svc logs`](../commands/svc-logs.md) command can track them only when they are sent to the log group we create for your Copilot service in CloudWatch.
+    Since the FireLens log driver can route your main container's logs to various destinations, the [`svc logs`](../commands/svc-logs.en.md) command can track them only when they are sent to the log group we create for your Copilot service in CloudWatch.
 
 !!!info
     ** We're going to make this easier and more powerful!** Currently, we only support using remote images for sidecars, which means users need to build and push their local sidecar images. But we are planning to support using local images or Dockerfiles. Additionally, FireLens will be able to route logs for the other sidecars (not just the main container).
