@@ -342,6 +342,27 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 				},
 			},
 		},
+		"With all RangeConfig fields specified and autoscaling field": {
+			inContent: []byte(`count:
+  range:
+    min: 2
+    max: 8
+    spot_from: 3
+  cpu_percentage: 50
+`),
+			wantedStruct: Count{
+				AdvancedCount: AdvancedCount{
+					Range: &Range{
+						RangeConfig: RangeConfig{
+							Min:      aws.Int(2),
+							Max:      aws.Int(8),
+							SpotFrom: aws.Int(3),
+						},
+					},
+					CPU: aws.Int(50),
+				},
+			},
+		},
 		"Error if spot specified as int with range": {
 			inContent: []byte(`count:
   range: 1-10
@@ -623,8 +644,9 @@ func TestAdvancedCount_IsValid(t *testing.T) {
 			input: &AdvancedCount{
 				Range: &Range{
 					RangeConfig: RangeConfig{
-						Min: aws.Int(1),
-						Max: aws.Int(10),
+						Min:      aws.Int(1),
+						Max:      aws.Int(10),
+						SpotFrom: aws.Int(2),
 					},
 				},
 			},
