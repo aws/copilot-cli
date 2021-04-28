@@ -76,7 +76,7 @@ environments:
   prod:
     count: 2               # Number of tasks to run for the "prod" environment.
 ```
-To learn about the specification of manifest files, see the [manifest](../manifest/overview.md) page.
+To learn about the specification of manifest files, see the [manifest](../manifest/overview.en.md) page.
 
 ## Deploying a Service
 

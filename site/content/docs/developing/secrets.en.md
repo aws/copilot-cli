@@ -1,10 +1,10 @@
 # Secrets
 
-Secrets are sensitive bits of information like OAuth tokens, secret keys or API keys - information that you need in your application code, but shouldn't commit to your source code. In the AWS Copilot CLI, secrets are passed in as environment variables (read more about [developing with environment variables](../developing/environment-variables.md)), but they're treated differently due to their sensitive nature. 
+Secrets are sensitive bits of information like OAuth tokens, secret keys or API keys - information that you need in your application code, but shouldn't commit to your source code. In the AWS Copilot CLI, secrets are passed in as environment variables (read more about [developing with environment variables](../developing/environment-variables.en.md)), but they're treated differently due to their sensitive nature. 
 
 ## How do I add Secrets?
 
-Adding secrets currently requires you to store your secret as a secure string in [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) (SSM), then add a reference to the SSM parameter to your [manifest](../manifest/overview.md). 
+Adding secrets currently requires you to store your secret as a secure string in [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) (SSM), then add a reference to the SSM parameter to your [manifest](../manifest/overview.en.md). 
 
 We'll walk through an example where we want to store a secret called `GH_WEBHOOK_SECRET` with the value `secretvalue1234`. 
 

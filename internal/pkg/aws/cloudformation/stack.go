@@ -15,11 +15,10 @@ type Stack struct {
 }
 
 type stackConfig struct {
-	TemplateBody string
-	TemplateURL  string
-	Parameters   []*cloudformation.Parameter
-	Tags         []*cloudformation.Tag
-	RoleARN      *string
+	Template   string
+	Parameters []*cloudformation.Parameter
+	Tags       []*cloudformation.Tag
+	RoleARN    *string
 }
 
 // StackOption allows you to initialize a Stack with additional properties.
@@ -30,21 +29,7 @@ func NewStack(name, template string, opts ...StackOption) *Stack {
 	s := &Stack{
 		Name: name,
 		stackConfig: &stackConfig{
-			TemplateBody: template,
-		},
-	}
-	for _, opt := range opts {
-		opt(s)
-	}
-	return s
-}
-
-// NewStackWithURL creates a stack with a URL to the template.
-func NewStackWithURL(name, templateURL string, opts ...StackOption) *Stack {
-	s := &Stack{
-		Name: name,
-		stackConfig: &stackConfig{
-			TemplateURL: templateURL,
+			Template: template,
 		},
 	}
 	for _, opt := range opts {

@@ -169,7 +169,7 @@ Key-value pairs that represent secret values from [AWS Systems Manager Parameter
 <div class="separator"></div>
 
 <a id="storage" href="#storage" class="field">`storage`</a> <span class="type">Map</span>  
-The Storage section lets you specify external EFS volumes for your containers and sidecars to mount. This allows you to access persistent storage across regions for data processing or CMS workloads. For more detail, see the [storage](../developing/storage.md) page.
+The Storage section lets you specify external EFS volumes for your containers and sidecars to mount. This allows you to access persistent storage across regions for data processing or CMS workloads. For more detail, see the [storage](../developing/storage.en.md) page.
 
 <span class="parent-field">storage.</span><a id="volumes" href="#volumes" class="field">`volumes`</a> <span class="type">Map</span>  
 Specify the name and configuration of any EFS volumes you would like to attach. The `volumes` field is specified as a map of the form:
