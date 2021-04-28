@@ -8,11 +8,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"time"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 
@@ -86,10 +83,6 @@ type codePipelineClient interface {
 	RetryStageExecution(pipelineName, stageName string) error
 }
 
-type s3Client interface {
-	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
-}
-
 type stackSetClient interface {
 	Create(name, template string, opts ...stackset.CreateOrUpdateOption) error
 	CreateInstancesAndWait(name string, accounts, regions []string) error
@@ -109,7 +102,6 @@ type CloudFormation struct {
 	regionalClient func(region string) cfnClient
 	appStackSet    stackSetClient
 	box            packd.Box
-	s3Client       s3Client
 }
 
 // New returns a configured CloudFormation client.
@@ -126,7 +118,6 @@ func New(sess *session.Session) CloudFormation {
 		},
 		appStackSet: stackset.New(sess),
 		box:         templates.Box(),
-		s3Client:    s3.New(sess),
 	}
 	return client
 }
@@ -385,17 +376,6 @@ func toStack(config StackConfiguration) (*cloudformation.Stack, error) {
 		return nil, err
 	}
 	stack := cloudformation.NewStack(config.StackName(), template)
-	stack.Parameters, err = config.Parameters()
-	if err != nil {
-		return nil, err
-	}
-	stack.Tags = config.Tags()
-	return stack, nil
-}
-
-func toStackFromS3(config StackConfiguration, s3url string) (*cloudformation.Stack, error) {
-	stack := cloudformation.NewStackWithURL(config.StackName(), s3url)
-	var err error
 	stack.Parameters, err = config.Parameters()
 	if err != nil {
 		return nil, err
