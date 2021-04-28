@@ -39,7 +39,7 @@ const (
 	ephemeralMaxValueGiB = 200
 )
 
-// Supported capacityroviders for Fargate services
+// Supported capacityproviders for Fargate services
 const (
 	capacityProviderFargateSpot = "FARGATE_SPOT"
 	capacityProviderFargate     = "FARGATE"
