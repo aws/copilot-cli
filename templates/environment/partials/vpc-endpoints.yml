@@ -1,0 +1,233 @@
+# A security group for the containers we will run in Fargate.
+# Rules are added to this security group based on what ingress you
+# add for the cluster.
+ContainerSecurityGroup:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::SecurityGroup
+  Properties:
+    GroupDescription: Access to the Fargate containers
+    VpcId: !Ref 'VPC'
+
+# Security group to allow receiving HTTPS traffic.
+VPCEndpointSecurityGroup:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::SecurityGroup
+  Properties:
+    GroupDescription: Security Group to allow use of VPC Endpoints.
+    VpcId: !Ref VPC
+    SecurityGroupIngress:
+      - IpProtocol: tcp
+        Description: HTTPS
+        FromPort: 443
+        ToPort: 443
+        CidrIp: 10.0.0.0/0
+
+# Allow ingress traffic from VPC endpoints to our containers.
+IngressFromVPCEndpoints:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::SecurityGroupIngress
+  Properties:
+    Description: Ingress from VPC endpoints.
+    GroupId: !Ref 'EnvironmentSecurityGroup'
+    IpProtocol: -1
+    SourceSecurityGroupId: !Ref 'VPCEndpointSecurityGroup'
+
+# Allow traffic from VPC endpoints.
+IngressFromItself:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::SecurityGroupIngress
+  Properties:
+    Description: Ingress from VPC endpoints.
+    GroupId: !Ref 'ContainerSecurityGroup'
+    IpProtocol: -1
+    SourceSecurityGroupId: !Ref 'ContainerSecurityGroup'
+
+PrivateECRRepo:
+  Condition: CreateVPCEndpoints
+  Type: AWS::ECR::Repository
+  Properties:
+    RepositoryName: !Sub ${EnvironmentName}/${PrivateServiceName}
+    RepositoryPolicyText:
+      Version: '2008-10-17'
+      Statement:
+        - Sid: AllowPushPull
+          Effect: Allow
+          Principal:
+            AWS:
+              - !Sub arn:aws:iam::${AWS::AccountId}:root
+          Action:
+            - ecr:GetDownloadUrlForLayer
+            - ecr:BatchGetImage
+            - ecr:BatchCheckLayerAvailability
+            - ecr:PutImage
+            - ecr:InitiateLayerUpload
+            - ecr:UploadLayerPart
+            - ecr:CompleteLayerUpload
+
+# Interface endpoint for ecr.api and other mandatory endpoints.
+EcrApiVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    SubnetIds:
+      - !Ref PrivateSubnetOne
+      - !Ref PrivateSubnetTwo
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.api
+    VpcId: !Ref VPC
+    PrivateDnsEnabled: true
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup
+
+EcrDkrVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    SubnetIds:
+      - !Ref PrivateSubnetOne
+      - !Ref PrivateSubnetTwo
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.dkr
+    VpcId: !Ref VPC
+    PrivateDnsEnabled: true
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup
+
+LogVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    SubnetIds:
+      - !Ref PrivateSubnetOne
+      - !Ref PrivateSubnetTwo
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.logs
+    VpcId: !Ref VPC
+    PrivateDnsEnabled: true
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup
+
+# Gateway endpoint for S3.
+S3GatewayVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Gateway
+    RouteTableIds:
+      - !Ref 'PrivateRouteTableOne'
+      - !Ref 'PrivateRouteTableTwo'
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+    VpcId: !Ref VPC
+
+# ECS Resources
+ECSCluster:
+  Condition: CreateVPCEndpoints
+  Type: AWS::ECS::Cluster
+
+ECSTaskExecutionRole:
+  Condition: CreateVPCEndpoints
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+    Path: /
+    Policies:
+      - PolicyName: AmazonECSTaskExecutionRolePolicy
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Action:
+                # Allow the ECS Tasks to download images from ECR
+                - 'ecr:GetAuthorizationToken'
+                - 'ecr:BatchCheckLayerAvailability'
+                - 'ecr:GetDownloadUrlForLayer'
+                - 'ecr:BatchGetImage'
+
+                # Allow the ECS tasks to upload logs to CloudWatch
+                - 'logs:CreateLogStream'
+                - 'logs:PutLogEvents'
+              Resource: '*'
+
+# Service discovery namespace for services to talk to each other in the VPC.
+ServiceDiscoveryNamespace:
+  Condition: CreateVPCEndpoints
+  Type: AWS::ServiceDiscovery::PrivateDnsNamespace
+  Properties:
+    Name: !Ref Domain
+    Vpc: !Ref 'VPC'
+
+# ECS Service integration
+# A log group for storing the stdout logs from this service's containers
+PrivateLogGroup:
+  Condition: CreateVPCEndpoints
+  Type: AWS::Logs::LogGroup
+  Properties:
+    LogGroupName: !Sub ${EnvironmentName}-service-${PrivateServiceName}
+
+# The task definition. This is a simple metadata description of what
+# container to run, and what resource requirements it has.
+PrivateTaskDefinition:
+  Condition: CreateVPCEndpoints
+  Type: AWS::ECS::TaskDefinition
+  Properties:
+    Family: !Ref 'PrivateServiceName'
+    Cpu: !Ref 'ContainerCpu'
+    Memory: !Ref 'ContainerMemory'
+    NetworkMode: awsvpc
+    RequiresCompatibilities:
+      - FARGATE
+    ExecutionRoleArn: !Ref 'ECSTaskExecutionRole'
+    TaskRoleArn: !Ref "AWS::NoValue"
+    ContainerDefinitions:
+      - Name: !Ref 'PrivateServiceName'
+        Cpu: !Ref 'ContainerCpu'
+        Memory: !Ref 'ContainerMemory'
+        Image: !Ref 'PrivateServiceImageUrl'
+        PortMappings:
+          - ContainerPort: !Ref 'ContainerPort'
+        LogConfiguration:
+          LogDriver: 'awslogs'
+          Options:
+            awslogs-group: !Sub ${EnvironmentName}-service-${PrivateServiceName}
+            awslogs-region: !Ref 'AWS::Region'
+            awslogs-stream-prefix: !Ref 'PrivateServiceName'
+
+# The service. The service is a resource which allows you to run multiple
+# copies of a type of task, and gather up their logs and metrics, as well
+# as monitor the number of running tasks and replace any that have crashed
+# Create a service discovery service in the private service namespace.
+PrivateServiceDiscoveryService:
+  Condition: CreateVPCEndpoints
+  Type: AWS::ServiceDiscovery::Service
+  Properties:
+    Name: !Ref PrivateServiceName
+    DnsConfig:
+      DnsRecords: [ { Type: A, TTL: "10" } ]
+      NamespaceId: !Ref ServiceDiscoveryNamespace
+    HealthCheckCustomConfig:
+      FailureThreshold: 1
+PrivateService:
+  Condition: CreateVPCEndpoints
+  Type: AWS::ECS::Service
+  Properties:
+    ServiceName: !Ref 'PrivateServiceName'
+    Cluster: !Ref 'ECSCluster'
+    LaunchType: FARGATE
+    DeploymentConfiguration:
+      MaximumPercent: 200
+      MinimumHealthyPercent: 100
+    DesiredCount: !Ref 'DesiredCount'
+    NetworkConfiguration:
+      AwsvpcConfiguration:
+        SecurityGroups:
+          - !Ref 'ContainerSecurityGroup'
+        Subnets:
+          - !Ref 'PrivateSubnetOne'
+          - !Ref 'PrivateSubnetTwo'
+    TaskDefinition: !Ref 'PrivateTaskDefinition'
+    ServiceRegistries:
+      - RegistryArn: !GetAtt PrivateServiceDiscoveryService.Arn
