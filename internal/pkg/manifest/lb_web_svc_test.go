@@ -514,6 +514,41 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 			},
 		},
+		"with empty env override": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Range: &Range{Value: &mockRange},
+								CPU:   aws.Int(80),
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": nil,
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							Value: nil,
+							AdvancedCount: AdvancedCount{
+								Range: &Range{Value: &mockRange},
+								CPU:   aws.Int(80),
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": nil,
+				},
+			},
+		},
 		"with range override": {
 			in: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
