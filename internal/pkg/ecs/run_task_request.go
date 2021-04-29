@@ -2,26 +2,45 @@ package ecs
 
 import (
 	"fmt"
-
-	"github.com/aws/copilot-cli/internal/pkg/cli"
+	"sort"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
 
 type ecsServiceDescriber interface {
-	Service(clusterName, serviceName string) (*ecs.Service, error)
-	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
-	NetworkConfiguration(cluster, serviceName string) (*ecs.NetworkConfiguration, error)
+	Service(clusterName, serviceName string) (*awsecs.Service, error)
+	TaskDefinition(taskDefName string) (*awsecs.TaskDefinition, error)
+	NetworkConfiguration(cluster, serviceName string) (*awsecs.NetworkConfiguration, error)
 }
 
 type serviceDescriber interface {
-	TaskDefinition(app, env, svc string) (*ecs.TaskDefinition, error)
-	NetworkConfiguration(app, env, svc string) (*ecs.NetworkConfiguration, error)
+	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
+	NetworkConfiguration(app, env, svc string) (*awsecs.NetworkConfiguration, error)
 	ClusterARN(app, env string) (string, error)
 }
 
-func RunTaskRequestFromECSService(client ecsServiceDescriber, cluster, service string) (*cli.RunTaskRequest, error) {
+// RunTaskRequest contains information to generate a task run command.
+type RunTaskRequest struct {
+	networkConfiguration awsecs.NetworkConfiguration
+
+	executionRole string
+	taskRole      string
+	cluster       string
+
+	containerInfo
+}
+
+type containerInfo struct {
+	image      string
+	entryPoint []string
+	command    []string
+	envVars    map[string]string
+	secrets    map[string]string
+}
+
+func RunTaskRequestFromECSService(client ecsServiceDescriber, cluster, service string) (*RunTaskRequest, error) {
 	networkConfig, err := client.NetworkConfiguration(cluster, service)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve network configuration for service %s in cluster %s: %w", service, cluster, err)
@@ -48,16 +67,16 @@ func RunTaskRequestFromECSService(client ecsServiceDescriber, cluster, service s
 		return nil, err
 	}
 
-	return &cli.RunTaskRequest{
-		NetworkConfiguration: *networkConfig,
-		ExecutionRole:        aws.StringValue(taskDef.ExecutionRoleArn),
-		TaskRole:             aws.StringValue(taskDef.TaskRoleArn),
-		ContainerInfo:        *containerInfo,
-		Cluster:              cluster,
+	return &RunTaskRequest{
+		networkConfiguration: *networkConfig,
+		executionRole:        aws.StringValue(taskDef.ExecutionRoleArn),
+		taskRole:             aws.StringValue(taskDef.TaskRoleArn),
+		containerInfo:        *containerInfo,
+		cluster:              cluster,
 	}, nil
 }
 
-func RunTaskRequestFromService(client serviceDescriber, app, env, svc string) (*cli.RunTaskRequest, error) {
+func RunTaskRequestFromService(client serviceDescriber, app, env, svc string) (*RunTaskRequest, error) {
 	networkConfig, err := client.NetworkConfiguration(app, env, svc)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve network configuration for service %s: %w", svc, err)
@@ -79,16 +98,16 @@ func RunTaskRequestFromService(client serviceDescriber, app, env, svc string) (*
 		return nil, err
 	}
 
-	return &cli.RunTaskRequest{
-		NetworkConfiguration: *networkConfig,
-		ExecutionRole:        aws.StringValue(taskDef.ExecutionRoleArn),
-		TaskRole:             aws.StringValue(taskDef.TaskRoleArn),
-		ContainerInfo:        *containerInfo,
-		Cluster:              cluster,
+	return &RunTaskRequest{
+		networkConfiguration: *networkConfig,
+		executionRole:        aws.StringValue(taskDef.ExecutionRoleArn),
+		taskRole:             aws.StringValue(taskDef.TaskRoleArn),
+		containerInfo:        *containerInfo,
+		cluster:              cluster,
 	}, nil
 }
 
-func containerInformation(taskDef *ecs.TaskDefinition, containerName string) (*cli.ContainerInfo, error) {
+func containerInformation(taskDef *awsecs.TaskDefinition, containerName string) (*containerInfo, error) {
 	image, err := taskDef.Image(containerName)
 	if err != nil {
 		return nil, err
@@ -118,11 +137,74 @@ func containerInformation(taskDef *ecs.TaskDefinition, containerName string) (*c
 		}
 	}
 
-	return &cli.ContainerInfo{
-		Image:      image,
-		EntryPoint: entrypoint,
-		Command:    command,
-		EnvVars:    envVars,
-		Secrets:    secrets,
+	return &containerInfo{
+		image:      image,
+		entryPoint: entrypoint,
+		command:    command,
+		envVars:    envVars,
+		secrets:    secrets,
 	}, nil
+}
+
+// String stringifies a GenerateCommandOpts.
+func (r RunTaskRequest) String() string {
+	output := []string{"copilot task run"}
+	if r.executionRole != "" {
+		output = append(output, fmt.Sprintf("--execution-role %s", r.executionRole))
+	}
+
+	if r.taskRole != "" {
+		output = append(output, fmt.Sprintf("--task-role %s", r.taskRole))
+	}
+
+	if r.image != "" {
+		output = append(output, fmt.Sprintf("--image %s", r.image))
+	}
+
+	if r.entryPoint != nil {
+		output = append(output, fmt.Sprintf("--entrypoint %s", fmt.Sprintf("\"%s\"", strings.Join(r.entryPoint, " "))))
+	}
+
+	if r.command != nil {
+		output = append(output, fmt.Sprintf("--command %s", fmt.Sprintf("\"%s\"", strings.Join(r.command, " "))))
+	}
+
+	if r.envVars != nil && len(r.envVars) != 0 {
+		output = append(output, fmt.Sprintf("--env-vars %s", fmtStringMapToString(r.envVars)))
+	}
+
+	if r.secrets != nil && len(r.secrets) != 0 {
+		output = append(output, fmt.Sprintf("--secrets %s", fmtStringMapToString(r.secrets)))
+	}
+
+	if r.networkConfiguration.Subnets != nil && len(r.networkConfiguration.Subnets) != 0 {
+		output = append(output, fmt.Sprintf("--subnets %s", strings.Join(r.networkConfiguration.Subnets, ",")))
+	}
+
+	if r.networkConfiguration.SecurityGroups != nil && len(r.networkConfiguration.SecurityGroups) != 0 {
+		output = append(output, fmt.Sprintf("--security-groups %s", strings.Join(r.networkConfiguration.SecurityGroups, ",")))
+	}
+
+	if r.cluster != "" {
+		output = append(output, fmt.Sprintf("--cluster %s", r.cluster))
+	}
+
+	return strings.Join(output, " \\\n")
+}
+
+// This function will format a map to a string as "key1=value1,key2=value2,key3=value3".
+func fmtStringMapToString(m map[string]string) string {
+	var output []string
+
+	// Sort the map so that `output` is consistent and the unit test won't be flaky.
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		output = append(output, fmt.Sprintf("%s=%v", k, m[k]))
+	}
+	return strings.Join(output, ",")
 }

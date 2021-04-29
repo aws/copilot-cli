@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/generator"
-
 	"github.com/aws/aws-sdk-go/aws/arn"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -53,10 +51,6 @@ const (
 	fmtImageURI = "%s:%s"
 )
 
-type cmdGenerator interface {
-	Generate() (*generator.GenerateCommandOpts, error)
-}
-
 var (
 	errNumNotPositive = errors.New("number of tasks must be positive")
 	errCPUNotPositive = errors.New("CPU units must be positive")
@@ -86,8 +80,8 @@ type runTaskVars struct {
 
 	taskRole      string
 	executionRole string
+	cluster       string
 
-	cluster                     string
 	subnets                     []string
 	securityGroups              []string
 	env                         string
@@ -505,53 +499,47 @@ func (o *runTaskOpts) Execute() error {
 }
 
 func (o *runTaskOpts) generateCommand() error {
-	g, err := o.configureGenerator()
+	command, err := o.runTaskCommand()
 	if err != nil {
 		return err
-	}
-	command, err := g.Generate()
-	if err != nil {
-		return fmt.Errorf("generate command: %w", err)
 	}
 	log.Infoln(command.String())
 	return nil
 }
 
-func (o *runTaskOpts) configureGenerator() (cmdGenerator, error) {
-	var g cmdGenerator
+func (o *runTaskOpts) runTaskCommand() (*ecs.RunTaskRequest, error) {
+	var cmd *ecs.RunTaskRequest
 	sess, err := sessions.NewProvider().Default()
 	if err != nil {
 		return nil, fmt.Errorf("get default session: %s", err)
 	}
 
 	if arn.IsARN(o.generateCommandTarget) {
-		return o.configureGeneratorFromARN(sess)
+		return o.runTaskCommandFromARN(sess)
 	}
 
 	parts := strings.Split(o.generateCommandTarget, "/")
 	switch len(parts) {
 	case 2:
 		clusterName, serviceName := parts[0], parts[1]
-		g = generator.ECSServiceCommandGenerator{
-			Cluster:   clusterName,
-			Service:   serviceName,
-			ECSClient: awsecs.New(sess),
+		cmd, err = ecs.RunTaskRequestFromECSService(awsecs.New(sess), clusterName, serviceName)
+		if err != nil {
+			return nil, fmt.Errorf("generate task run command from ECS service: %w", err)
 		}
 	case 3:
 		appName, envName, serviceName := parts[0], parts[1], parts[2]
-		g = generator.ServiceCommandGenerator{
-			App:                  appName,
-			Env:                  envName,
-			Service:              serviceName,
-			ECSInformationGetter: ecs.New(sess),
+		cmd, err = ecs.RunTaskRequestFromService(ecs.New(sess), appName, envName, serviceName)
+		if err != nil {
+			return nil, fmt.Errorf("generate task run command from service: %w", err)
 		}
 	default:
-		return nil, errors.New("invalid input to --generate-cmd")
+		return nil, errors.New("invalid input to --generate-cmd: must be of the form <cluster>/<service> or <app>/<env>/<workload>")
 	}
-	return g, nil
+
+	return cmd, nil
 }
 
-func (o *runTaskOpts) configureGeneratorFromARN(sess *session.Session) (cmdGenerator, error) {
+func (o *runTaskOpts) runTaskCommandFromARN(sess *session.Session) (*ecs.RunTaskRequest, error) {
 	svcARN := awsecs.ServiceArn(o.generateCommandTarget)
 	clusterName, err := svcARN.ClusterName()
 	if err != nil {
@@ -561,11 +549,11 @@ func (o *runTaskOpts) configureGeneratorFromARN(sess *session.Session) (cmdGener
 	if err != nil {
 		return nil, fmt.Errorf("extract service name from arn %s", svcARN)
 	}
-	return generator.ECSServiceCommandGenerator{
-		Cluster:   clusterName,
-		Service:   serviceName,
-		ECSClient: awsecs.New(sess),
-	}, nil
+	cmd, err := ecs.RunTaskRequestFromECSService(awsecs.New(sess), clusterName, serviceName)
+	if err != nil {
+		return nil, fmt.Errorf("generate task run command from ECS service: %w", err)
+	}
+	return cmd, nil
 }
 
 func (o *runTaskOpts) displayLogStream() error {
