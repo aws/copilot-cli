@@ -172,8 +172,9 @@ func (o *appUpgradeOpts) upgradeApplication(app *config.Application, fromVersion
 func buildAppUpgradeCmd() *cobra.Command {
 	vars := appUpgradeVars{}
 	cmd := &cobra.Command{
-		Use:   "upgrade",
-		Short: "Upgrades the template of an application to the latest version.",
+		Use:    "upgrade",
+		Short:  "Upgrades the template of an application to the latest version.",
+		Hidden: true,
 		Example: `
     Upgrade the application "my-app" to the latest version
     /code $ copilot app upgrade -n my-app`,
