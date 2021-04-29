@@ -56,7 +56,7 @@ storage:
       read_only: false
 ```
 
-This manifest will result in an EFS volume being created at the environment level, with an Access Point and dedicated directory at the path `/frontend` created specifically for your service. This path and EFS volume will persist until you delete your environment. 
+This manifest will result in an EFS volume being created at the environment level, with an Access Point and dedicated directory at the path `/frontend` in the EFS filesystem created specifically for your service. Your container will be able to access this directory and all its subdirectories at the `/var/efs` path in its own filesystem. The `/frontend` directory and EFS filesystem will persist until you delete your environment. 
 
 The use of an access point for each service ensures that no two services can access each others' data unless you specifically intend for them to do so by specifying the full advanced configuration. You can read more in [Advanced Use Cases](#advanced-use-cases).
 
@@ -111,7 +111,7 @@ exec: true
 storage:
   volumes:
     myVolume:
-      efs: enabled
+      efs: true
       path: /var/efs
       read_only: false
 ```
@@ -133,7 +133,7 @@ image:
 storage:
   volumes:
     myVolume:
-      efs: enabled
+      efs: true
       path: /var/efs
       read_only: false
 ```
