@@ -342,12 +342,39 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 				},
 			},
 		},
+		"With all RangeConfig fields specified and autoscaling field": {
+			inContent: []byte(`count:
+  range:
+    min: 2
+    max: 8
+    spot_from: 3
+  cpu_percentage: 50
+`),
+			wantedStruct: Count{
+				AdvancedCount: AdvancedCount{
+					Range: &Range{
+						RangeConfig: RangeConfig{
+							Min:      aws.Int(2),
+							Max:      aws.Int(8),
+							SpotFrom: aws.Int(3),
+						},
+					},
+					CPU: aws.Int(50),
+				},
+			},
+		},
 		"Error if spot specified as int with range": {
 			inContent: []byte(`count:
   range: 1-10
   spot: 3
 `),
-			wantedError: errUnmarshalSpot,
+			wantedError: errInvalidAdvancedCount,
+		},
+		"Error if autoscaling specified without range": {
+			inContent: []byte(`count:
+  cpu_percentage: 30
+`),
+			wantedError: errInvalidAutoscaling,
 		},
 		"Error if unmarshalable": {
 			inContent: []byte(`count: badNumber
@@ -585,6 +612,144 @@ func TestCount_Desired(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.expected, actual)
+			}
+		})
+	}
+}
+
+func TestAdvancedCount_IsValid(t *testing.T) {
+	mockRange := IntRangeBand("1-10")
+	testCases := map[string]struct {
+		input *AdvancedCount
+
+		expectedErr error
+	}{
+		"with spot count": {
+			input: &AdvancedCount{
+				Spot: aws.Int(42),
+			},
+
+			expectedErr: nil,
+		},
+		"with range value": {
+			input: &AdvancedCount{
+				Range: &Range{
+					Value: &mockRange,
+				},
+			},
+
+			expectedErr: nil,
+		},
+		"with range config": {
+			input: &AdvancedCount{
+				Range: &Range{
+					RangeConfig: RangeConfig{
+						Min:      aws.Int(1),
+						Max:      aws.Int(10),
+						SpotFrom: aws.Int(2),
+					},
+				},
+			},
+
+			expectedErr: nil,
+		},
+		"with range and autoscaling config": {
+			input: &AdvancedCount{
+				Range: &Range{
+					Value: &mockRange,
+				},
+				CPU:      aws.Int(512),
+				Memory:   aws.Int(1024),
+				Requests: aws.Int(1000),
+			},
+
+			expectedErr: nil,
+		},
+		"with range config and autoscaling config": {
+			input: &AdvancedCount{
+				Range: &Range{
+					RangeConfig: RangeConfig{
+						Min: aws.Int(1),
+						Max: aws.Int(10),
+					},
+				},
+				CPU:      aws.Int(512),
+				Memory:   aws.Int(1024),
+				Requests: aws.Int(1000),
+			},
+
+			expectedErr: nil,
+		},
+		"with range config with spot and autoscaling config": {
+			input: &AdvancedCount{
+				Range: &Range{
+					RangeConfig: RangeConfig{
+						Min:      aws.Int(1),
+						Max:      aws.Int(10),
+						SpotFrom: aws.Int(3),
+					},
+				},
+				CPU:      aws.Int(512),
+				Memory:   aws.Int(1024),
+				Requests: aws.Int(1000),
+			},
+
+			expectedErr: nil,
+		},
+		"invalid with spot count and autoscaling config": {
+			input: &AdvancedCount{
+				Spot:     aws.Int(42),
+				CPU:      aws.Int(512),
+				Memory:   aws.Int(1024),
+				Requests: aws.Int(1000),
+			},
+
+			expectedErr: errInvalidAdvancedCount,
+		},
+		"invalid with spot count and range": {
+			input: &AdvancedCount{
+				Spot: aws.Int(42),
+				Range: &Range{
+					Value: &mockRange,
+				},
+			},
+
+			expectedErr: errInvalidAdvancedCount,
+		},
+		"invalid with spot count and range config": {
+			input: &AdvancedCount{
+				Spot: aws.Int(42),
+				Range: &Range{
+					RangeConfig: RangeConfig{
+						Min:      aws.Int(1),
+						Max:      aws.Int(10),
+						SpotFrom: aws.Int(3),
+					},
+				},
+			},
+
+			expectedErr: errInvalidAdvancedCount,
+		},
+		"invalid with autoscaling fields and no range": {
+			input: &AdvancedCount{
+				CPU:      aws.Int(512),
+				Memory:   aws.Int(1024),
+				Requests: aws.Int(1000),
+			},
+
+			expectedErr: errInvalidAutoscaling,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			err := tc.input.IsValid()
+
+			// THEN
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

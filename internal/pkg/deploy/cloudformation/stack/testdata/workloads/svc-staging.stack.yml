@@ -1,0 +1,528 @@
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFormation template that represents a load balanced web service on Amazon ECS.
+Parameters:
+  AppName:
+    Type: String
+  EnvName:
+    Type: String
+  WorkloadName:
+    Type: String
+  ContainerImage:
+    Type: String
+  ContainerPort:
+    Type: Number
+  RulePath:
+    Type: String
+  TaskCPU:
+    Type: String
+  TaskMemory:
+    Type: String
+  TaskCount:
+    Type: Number
+  HTTPSEnabled:
+    Type: String
+    AllowedValues: [true, false]
+  LogRetention:
+    Type: Number
+  AddonsTemplateURL:
+    Description: 'URL of the addons nested stack template within the S3 bucket.'
+    Type: String
+    Default: ""
+  TargetContainer:
+    Type: String
+  TargetPort:
+    Type: Number
+  Stickiness:
+    Type: String
+    Default: false
+Conditions:
+  HTTPLoadBalancer:
+    !Not
+      - !Condition HTTPSLoadBalancer
+  HTTPSLoadBalancer:
+    !Equals [!Ref HTTPSEnabled, true]
+  HasAddons: # If a bucket URL is specified, that means the template exists.
+    !Not [!Equals [!Ref AddonsTemplateURL, ""]]
+  HTTPRootPath: # If we're using path based routing and use the root path, we have some special logic
+    !Equals [!Ref RulePath, "/"]
+Resources:
+  LogGroup:
+    Metadata:
+      'aws:copilot:description': 'A CloudWatch log group to hold your service logs'
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['', [/copilot/, !Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName]]
+      RetentionInDays: !Ref LogRetention
+
+  TaskDefinition:
+    Metadata:
+      'aws:copilot:description': 'An ECS task definition to group your containers and run them on ECS'
+    Type: AWS::ECS::TaskDefinition
+    DependsOn: LogGroup
+    Properties:
+      Family: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName]]
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: !Ref TaskCPU
+      Memory: !Ref TaskMemory
+      ExecutionRoleArn: !Ref ExecutionRole
+      TaskRoleArn: !Ref TaskRole
+      ContainerDefinitions:
+        - Name: !Ref WorkloadName
+          Image: !Ref ContainerImage
+          
+          # We pipe certain environment variables directly into the task definition.
+          # This lets customers have access to, for example, their LB endpoint - which they'd
+          # have no way of otherwise determining.
+          Environment:
+          - Name: COPILOT_APPLICATION_NAME
+            Value: !Sub '${AppName}'
+          - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
+            Value: !Sub '${AppName}.local'
+          - Name: COPILOT_ENVIRONMENT_NAME
+            Value: !Sub '${EnvName}'
+          - Name: COPILOT_SERVICE_NAME
+            Value: !Sub '${WorkloadName}'
+          - Name: LOG_LEVEL
+            Value: "info"
+          - Name: COPILOT_MOUNT_POINTS
+            Value: '{"persistence":"/etc/scratch"}'
+          - Name: COPILOT_LB_DNS
+            Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+          
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-region: !Ref AWS::Region
+              awslogs-group: !Ref LogGroup
+              awslogs-stream-prefix: copilot
+            
+          MountPoints:
+            - ContainerPath: '/etc/scratch'
+              ReadOnly: true
+              SourceVolume: persistence
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort        
+
+      
+      Volumes:
+        - Name: persistence
+  ExecutionRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, SecretsPolicy]]
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'ssm:GetParameters'
+                Resource:
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
+                Condition:
+                  StringEquals:
+                    'ssm:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'ssm:ResourceTag/copilot-environment': !Sub '${EnvName}'
+              - Effect: 'Allow'
+                Action:
+                  - 'secretsmanager:GetSecretValue'
+                Resource:
+                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+                Condition:
+                  StringEquals:
+                    'secretsmanager:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'secretsmanager:ResourceTag/copilot-environment': !Sub '${EnvName}'
+              - Effect: 'Allow'
+                Action:
+                  - 'kms:Decrypt'
+                Resource:
+                  - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+  
+  TaskRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM role to control permissions for the containers in your tasks'
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'DenyIAMExceptTaggedRoles'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Deny'
+                Action: 'iam:*'
+                Resource: '*'
+              - Effect: 'Allow'
+                Action: 'sts:AssumeRole'
+                Resource:
+                  - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
+                Condition:
+                  StringEquals:
+                    'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+                    'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
+  DiscoveryService:
+    Metadata:
+      'aws:copilot:description': 'Service discovery for your services to communicate within the VPC'
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Description: Discovery Service for the Copilot services
+      DnsConfig:
+        RoutingPolicy: MULTIVALUE
+        DnsRecords:
+          - TTL: 10
+            Type: A
+          - TTL: 10
+            Type: SRV
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+      Name:  !Ref WorkloadName
+      NamespaceId:
+        Fn::ImportValue:
+          !Sub '${AppName}-${EnvName}-ServiceDiscoveryNamespaceID'
+  
+
+  EnvControllerAction:
+    Metadata:
+      'aws:copilot:description': "Update your environment's shared resources"
+    Type: Custom::EnvControllerFunction
+    Properties:
+      ServiceToken: !GetAtt EnvControllerFunction.Arn
+      Workload: !Ref WorkloadName
+      EnvStack: !Sub '${AppName}-${EnvName}'
+      Parameters: [ALBWorkloads,]
+  
+  EnvControllerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          "use strict";const aws=require("aws-sdk");let defaultResponseURL;const updateStackWaiter={delay:30,maxAttempts:29};let report=function(a,b,c,d,e,f){return new Promise((g,h)=>{const i=require("https"),{URL:j}=require("url");var k=JSON.stringify({Status:c,Reason:f,PhysicalResourceId:d||b.logStreamName,StackId:a.StackId,RequestId:a.RequestId,LogicalResourceId:a.LogicalResourceId,Data:e});const l=new j(a.ResponseURL||defaultResponseURL),m={hostname:l.hostname,port:443,path:l.pathname+l.search,method:"PUT",headers:{"Content-Type":"","Content-Length":k.length}};i.request(m).on("error",h).on("response",a=>{a.resume(),400<=a.statusCode?h(new Error(`Error ${a.statusCode}: ${a.statusMessage}`)):g()}).end(k,"utf8")})};const controlEnv=async function(a,b,c){for(var d,e=new aws.CloudFormation;;){if(d=await e.describeStacks({StackName:a}).promise(),1!==d.Stacks.length)throw new Error(`Cannot find environment stack ${a}`);const f=d.Stacks[0],g=JSON.parse(JSON.stringify(f.Parameters)),h=setOfParameterKeysWithWorkload(g,b),i=new Set(c),j=[...h].filter(a=>!i.has(a)),k=[...i].filter(a=>!h.has(a)),l=getExportedValues(f);if(0===j.length+k.length)return l;for(const a of g){if(j.includes(a.ParameterKey)){const c=new Set(a.ParameterValue.split(",").filter(Boolean));c.delete(b),a.ParameterValue=[...c].join(",")}if(k.includes(a.ParameterKey)){const c=new Set(a.ParameterValue.split(",").filter(Boolean));c.add(b),a.ParameterValue=[...c].join(",")}}try{await e.updateStack({StackName:a,Parameters:g,UsePreviousTemplate:!0,RoleARN:l.CFNExecutionRoleARN,Capabilities:f.Capabilities}).promise()}catch(b){if(!b.message.match(/^Stack.*is in UPDATE_IN_PROGRESS state and can not be updated/))throw b;await e.waitFor("stackUpdateComplete",{StackName:a,$waiter:updateStackWaiter}).promise();continue}if(await e.waitFor("stackUpdateComplete",{StackName:a,$waiter:updateStackWaiter}).promise(),d=await e.describeStacks({StackName:a}).promise(),1!==d.Stacks.length)throw new Error(`Cannot find environment stack ${a}`);return getExportedValues(d.Stacks[0])}};exports.handler=async function(a,b){var c,d={};const e=a.ResourceProperties;try{switch(a.RequestType){case"Create":d=await Promise.race([exports.deadlineExpired(),controlEnv(e.EnvStack,e.Workload,e.Parameters)]),c=`envcontoller/${e.EnvStack}/${e.Workload}`;break;case"Update":d=await Promise.race([exports.deadlineExpired(),controlEnv(e.EnvStack,e.Workload,e.Parameters)]),c=a.PhysicalResourceId;break;case"Delete":d=await Promise.race([exports.deadlineExpired(),controlEnv(e.EnvStack,e.Workload,[])]),c=a.PhysicalResourceId;break;default:throw new Error(`Unsupported request type ${a.RequestType}`);}await report(a,b,"SUCCESS",c,d)}catch(d){console.log(`Caught error ${d}.`),await report(a,b,"FAILED",c,null,d.message)}};function setOfParameterKeysWithWorkload(a,b){const c=new Set;return a.forEach(a=>{var d=new Set(a.ParameterValue.split(","));d.has(b)&&c.add(a.ParameterKey)}),c}const getExportedValues=function(a){const b={};return a.Outputs.forEach(a=>{b[a.OutputKey]=a.OutputValue}),b};exports.deadlineExpired=function(){return new Promise(function(a,b){setTimeout(b,870000,new Error("Lambda took longer than 14.5 minutes to update environment"))})},exports.withDefaultResponseURL=function(a){defaultResponseURL=a};
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt 'EnvControllerRole.Arn'
+      Runtime: nodejs12.x
+  
+  EnvControllerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: "EnvControllerStackUpdate"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - cloudformation:DescribeStacks
+                - cloudformation:UpdateStack
+              Resource:  !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}-${EnvName}/*'
+              Condition:
+                StringEquals:
+                  'cloudformation:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'cloudformation:ResourceTag/copilot-environment': !Sub '${EnvName}'
+        - PolicyName: "EnvControllerRolePass"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - iam:PassRole
+              Resource:  !Sub 'arn:aws:iam::${AWS::AccountId}:role/${AppName}-${EnvName}-CFNExecutionRole'
+              Condition:
+                StringEquals:
+                  'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  Service:
+    Metadata:
+      'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
+    Type: AWS::ECS::Service
+    DependsOn: WaitUntilListenerRuleIsCreated
+    Properties:
+      Cluster:
+        Fn::ImportValue:
+          !Sub '${AppName}-${EnvName}-ClusterId'
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: !Ref TaskCount
+      DeploymentConfiguration:
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+      PropagateTags: SERVICE
+      CapacityProviderStrategy:
+        - CapacityProvider: FARGATE_SPOT
+          Weight: 1
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - Fn::Select:
+              - 0
+              - Fn::Split:
+                - ','
+                - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+            - Fn::Select:
+              - 1
+              - Fn::Split:
+                - ','
+                - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+          SecurityGroups:
+            - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+      
+      # This may need to be adjusted if the container takes a while to start up
+      HealthCheckGracePeriodSeconds: 60
+      LoadBalancers:
+        - ContainerName: !Ref TargetContainer
+          ContainerPort: !Ref TargetPort
+          TargetGroupArn: !Ref TargetGroup
+      ServiceRegistries:
+        - RegistryArn: !GetAtt DiscoveryService.Arn
+          Port: !Ref ContainerPort
+
+  TargetGroup:
+    Metadata:
+      'aws:copilot:description': 'A target group to connect the load balancer to your service'
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPath: / # Default is '/'.
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60                  # Default is 300.
+        - Key: stickiness.enabled
+          Value: !Ref Stickiness
+      TargetType: ip
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${AppName}-${EnvName}-VpcId"
+
+  LoadBalancerDNSAlias:
+    Type: AWS::Route53::RecordSetGroup
+    Condition: HTTPSLoadBalancer
+    Properties:
+      HostedZoneId:
+        Fn::ImportValue:
+          !Sub "${AppName}-${EnvName}-HostedZone"
+      Comment: !Sub "LoadBalancer alias for service ${WorkloadName}"
+      RecordSets:
+      - Name:
+          !Join
+            - '.'
+            - - !Ref WorkloadName
+              - Fn::ImportValue:
+                  !Sub "${AppName}-${EnvName}-SubDomain"
+              - ""
+        Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
+          DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+
+  RulePriorityFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          "use strict";const aws=require("aws-sdk"),priorityForRootRule="50000";let defaultResponseURL,report=function(a,b,c,d,e,f){return new Promise((g,h)=>{const i=require("https"),{URL:j}=require("url");var k=JSON.stringify({Status:c,Reason:f,PhysicalResourceId:d||b.logStreamName,StackId:a.StackId,RequestId:a.RequestId,LogicalResourceId:a.LogicalResourceId,Data:e});const l=new j(a.ResponseURL||defaultResponseURL),m={hostname:l.hostname,port:443,path:l.pathname+l.search,method:"PUT",headers:{"Content-Type":"","Content-Length":k.length}};i.request(m).on("error",h).on("response",a=>{a.resume(),400<=a.statusCode?h(new Error(`Error ${a.statusCode}: ${a.statusMessage}`)):g()}).end(k,"utf8")})};const calculateNextRulePriority=async function(a){var b,c=new aws.ELBv2,d=[];do{const e=await c.describeRules({ListenerArn:a,Marker:b}).promise();d=d.concat(e.Rules),b=e.NextMarker}while(b);let e=1;if(0<d.length){const a=d.map(a=>"default"===a.Priority||a.Priority===priorityForRootRule?0:parseInt(a.Priority)),b=Math.max(...a);e=b+1}return e};exports.nextAvailableRulePriorityHandler=async function(a,b){var c,d,e={};try{switch(a.RequestType){case"Create":d=await calculateNextRulePriority(a.ResourceProperties.ListenerArn),e.Priority=d,c=`alb-rule-priority-${a.LogicalResourceId}`;break;case"Update":case"Delete":c=a.PhysicalResourceId;break;default:throw new Error(`Unsupported request type ${a.RequestType}`);}await report(a,b,"SUCCESS",c,e)}catch(d){console.log(`Caught error ${d}.`),await report(a,b,"FAILED",c,null,d.message)}},exports.withDefaultResponseURL=function(a){defaultResponseURL=a};
+      Handler: "index.nextAvailableRulePriorityHandler"
+      Timeout: 600
+      MemorySize: 512
+      Role: !GetAtt 'CustomResourceRole.Arn'
+      Runtime: nodejs10.x
+
+  CustomResourceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: "DNSandACMAccess"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - elasticloadbalancing:DescribeRules
+              Resource: "*"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  HTTPSRulePriorityAction:
+    Condition: HTTPSLoadBalancer
+    Type: Custom::RulePriorityFunction
+    Properties:
+      ServiceToken: !GetAtt RulePriorityFunction.Arn
+      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+
+  HTTPListenerRuleWithDomain:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: HTTPSLoadBalancer
+    Properties:
+      Actions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: 443
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: HTTP_301
+      Conditions:
+        - Field: 'host-header'
+          HostHeaderConfig:
+            Values:
+              - Fn::Join:
+                - '.'
+                - - !Ref WorkloadName
+                  - Fn::ImportValue:
+                      !Sub "${AppName}-${EnvName}-SubDomain"
+      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+      Priority: !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
+
+  HTTPSListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: HTTPSLoadBalancer
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      Conditions:
+        - Field: 'host-header'
+          HostHeaderConfig:
+            Values:
+              - Fn::Join:
+                - '.'
+                - - !Ref WorkloadName
+                  - Fn::ImportValue:
+                      !Sub "${AppName}-${EnvName}-SubDomain"
+      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+      Priority: !GetAtt HTTPSRulePriorityAction.Priority
+
+  HTTPRulePriorityAction:
+    Condition: HTTPLoadBalancer
+    Type: Custom::RulePriorityFunction
+    Properties:
+      ServiceToken: !GetAtt RulePriorityFunction.Arn
+      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+
+  HTTPListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: HTTPLoadBalancer
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      Conditions:
+        - Field: 'path-pattern'
+          PathPatternConfig:
+            Values:
+              !If
+                - HTTPRootPath
+                -
+                  - "/*"
+                -
+                  - !Sub "/${RulePath}"
+                  - !Sub "/${RulePath}/*"
+      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+      Priority: 
+        !If
+          - HTTPRootPath
+          - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
+          - !GetAtt HTTPRulePriorityAction.Priority
+
+  # Force a conditional dependency from the ECS service on the listener rules.
+  # Our service depends on our HTTP/S listener to be set up before it can
+  # be created. But, since our environment is either HTTPS or not, we
+  # have a conditional dependency (we have to wait for the HTTPS listener
+  # to be created or the HTTP listener to be created). In order to have a
+  # conditional dependency, we use the WaitHandle resource as a way to force
+  # a single dependency. The Ref in the WaitCondition implicitly creates a conditional
+  # dependency - if the condition is satisfied (HTTPLoadBalancer) - the ref resolves
+  # the HTTPWaitHandle, which depends on the HTTPListenerRule.
+
+  HTTPSWaitHandle:
+    Condition: HTTPSLoadBalancer
+    DependsOn: HTTPSListenerRule
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  HTTPWaitHandle:
+    Condition: HTTPLoadBalancer
+    DependsOn: HTTPListenerRule
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  # We don't actually need to wait for the condition to
+  # be completed, that's why we set a count of 0. The timeout
+  # is a required field, but useless, so we set it to one.
+  WaitUntilListenerRuleIsCreated:
+    Type: AWS::CloudFormation::WaitCondition
+    Properties:
+      Handle: !If [HTTPLoadBalancer, !Ref HTTPWaitHandle, !Ref HTTPSWaitHandle]
+      Timeout: "1"
+      Count: 0
+
+  
+  
+
+  AddonsStack:
+    Metadata:
+      'aws:copilot:description': 'An Addons CloudFormation Stack for your additional AWS resources'
+    Type: AWS::CloudFormation::Stack # Needed for #1848
+    DependsOn: EnvControllerAction
+    Condition: HasAddons
+    Properties:
+      Parameters:
+        App: !Ref AppName
+        Env: !Ref EnvName
+        Name: !Ref WorkloadName
+      TemplateURL:
+        !Ref AddonsTemplateURL
+
+Outputs:
+  DiscoveryServiceARN:
+    Description: ARN of the Discovery Service.
+    Value: !GetAtt DiscoveryService.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-DiscoveryServiceARN

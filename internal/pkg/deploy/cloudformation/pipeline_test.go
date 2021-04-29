@@ -87,14 +87,10 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 		Stages:          nil,
 		ArtifactBuckets: nil,
 	}
-	mockS3BucketName := "BitterBucket"
-	mockURL := "templateURL"
-
 	testCases := map[string]struct {
 		createCfnMock func(ctrl *gomock.Controller) cfnClient
 		createCsMock  func(ctrl *gomock.Controller) codeStarClient
 		createCpMock  func(ctrl *gomock.Controller) codePipelineClient
-		createS3Mock  func(ctrl *gomock.Controller) s3Client
 		wantedErr     error
 	}{
 		"exits successfully with base case (no connection)": {
@@ -102,11 +98,6 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().CreateAndWait(gomock.Any()).Times(1)
 				m.EXPECT().Outputs(gomock.Any()).Return(nil, nil)
-				return m
-			},
-			createS3Mock: func(ctrl *gomock.Controller) s3Client {
-				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
 				return m
 			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
@@ -131,11 +122,6 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 					}, nil)
 				return m
 			},
-			createS3Mock: func(ctrl *gomock.Controller) s3Client {
-				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
-				return m
-			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
 				m := mocks.NewMockcodeStarClient(ctrl)
 				m.EXPECT().WaitUntilConnectionStatusAvailable(gomock.Any(), "mockConnectionARN").Return(nil)
@@ -155,11 +141,6 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 				m.EXPECT().Outputs(gomock.Any()).Times(0)
 				return m
 			},
-			createS3Mock: func(ctrl *gomock.Controller) s3Client {
-				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
-				return m
-			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
 				m := mocks.NewMockcodeStarClient(ctrl)
 				m.EXPECT().WaitUntilConnectionStatusAvailable(gomock.Any(), "mockConnectionARN").Times(0)
@@ -172,40 +153,11 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 			},
 			wantedErr: fmt.Errorf("some error"),
 		},
-		"returns error if fails to upload template to S3 bucket": {
-			createCfnMock: func(ctrl *gomock.Controller) cfnClient {
-				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().CreateAndWait(gomock.Any()).Times(0)
-				m.EXPECT().Outputs(gomock.Any()).Times(0)
-				return m
-			},
-			createS3Mock: func(ctrl *gomock.Controller) s3Client {
-				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
-				return m
-			},
-			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
-				m := mocks.NewMockcodeStarClient(ctrl)
-				m.EXPECT().WaitUntilConnectionStatusAvailable(gomock.Any(), "mockConnectionARN").Times(0)
-				return m
-			},
-			createCpMock: func(ctrl *gomock.Controller) codePipelineClient {
-				m := mocks.NewMockcodePipelineClient(ctrl)
-				m.EXPECT().RetryStageExecution(gomock.Any(), gomock.Any()).Times(0)
-				return m
-			},
-			wantedErr: fmt.Errorf("upload pipeline template to S3 bucket %s: some error", "BitterBucket"),
-		},
 		"returns err if retrieving outputs fails": {
 			createCfnMock: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().CreateAndWait(gomock.Any()).Times(1)
 				m.EXPECT().Outputs(gomock.Any()).Return(nil, errors.New("some error"))
-				return m
-			},
-			createS3Mock: func(ctrl *gomock.Controller) s3Client {
-				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
 				return m
 			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
@@ -229,11 +181,6 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 				}, nil)
 				return m
 			},
-			createS3Mock: func(ctrl *gomock.Controller) s3Client {
-				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
-				return m
-			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
 				m := mocks.NewMockcodeStarClient(ctrl)
 				m.EXPECT().WaitUntilConnectionStatusAvailable(gomock.Any(), "mockConnectionARN").Return(errors.New("some error"))
@@ -253,11 +200,6 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 				m.EXPECT().Outputs(gomock.Any()).Return(map[string]string{
 					"PipelineConnectionARN": "mockConnectionARN",
 				}, nil)
-				return m
-			},
-			createS3Mock: func(ctrl *gomock.Controller) s3Client {
-				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
 				return m
 			},
 			createCsMock: func(ctrl *gomock.Controller) codeStarClient {
@@ -283,18 +225,13 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 				cfnClient:      tc.createCfnMock(ctrl),
 				codeStarClient: tc.createCsMock(ctrl),
 				cpClient:       tc.createCpMock(ctrl),
-				s3Client:       tc.createS3Mock(ctrl),
 			}
 
 			// WHEN
-			err := c.CreatePipeline(in, mockS3BucketName)
+			err := c.CreatePipeline(in)
 
 			// THEN
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				require.NoError(t, err)
-			}
+			require.Equal(t, tc.wantedErr, err)
 		})
 	}
 }
@@ -313,12 +250,9 @@ func TestCloudFormation_UpdatePipeline(t *testing.T) {
 		Stages:          nil,
 		ArtifactBuckets: nil,
 	}
-	mockS3BucketName := "BitterBucket"
-	mockURL := "templateURL"
 	testCases := map[string]struct {
-		createMock   func(ctrl *gomock.Controller) cfnClient
-		createS3Mock func(ctrl *gomock.Controller) s3Client
-		wantedErr    error
+		createMock func(ctrl *gomock.Controller) cfnClient
+		wantedErr  error
 	}{
 		"exits successfully if there are no updates": {
 			createMock: func(ctrl *gomock.Controller) cfnClient {
@@ -326,25 +260,6 @@ func TestCloudFormation_UpdatePipeline(t *testing.T) {
 				m.EXPECT().UpdateAndWait(gomock.Any()).Return(&cloudformation.ErrChangeSetEmpty{})
 				return m
 			},
-			createS3Mock: func(ctrl *gomock.Controller) s3Client {
-				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return(mockURL, nil)
-				return m
-			},
-			wantedErr: nil,
-		},
-		"returns an error if can't push template to S3 bucket": {
-			createMock: func(ctrl *gomock.Controller) cfnClient {
-				m := mocks.NewMockcfnClient(ctrl)
-				//m.EXPECT().UpdateAndWait(gomock.Any()).Return(&cloudformation.ErrChangeSetEmpty{})
-				return m
-			},
-			createS3Mock: func(ctrl *gomock.Controller) s3Client {
-				m := mocks.NewMocks3Client(ctrl)
-				m.EXPECT().PutArtifact(mockS3BucketName, gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
-				return m
-			},
-			wantedErr: fmt.Errorf("upload pipeline template to S3 bucket %s: some error", "BitterBucket"),
 		},
 	}
 
@@ -355,18 +270,13 @@ func TestCloudFormation_UpdatePipeline(t *testing.T) {
 			defer ctrl.Finish()
 			c := CloudFormation{
 				cfnClient: tc.createMock(ctrl),
-				s3Client:  tc.createS3Mock(ctrl),
 			}
 
 			// WHEN
-			err := c.UpdatePipeline(in, mockS3BucketName)
+			err := c.UpdatePipeline(in)
 
 			// THEN
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				require.NoError(t, err)
-			}
+			require.Equal(t, tc.wantedErr, err)
 		})
 	}
 }

@@ -4,7 +4,7 @@ $ copilot app init [name] [flags]
 ```
 
 ## What does it do?
-`copilot app init` creates a new [application](../concepts/applications.md) within the directory that will contain your service(s).
+`copilot app init` creates a new [application](../concepts/applications.en.md) within the directory that will contain your service(s).
 
 After you answer the questions, the CLI creates AWS Identity and Access Management roles to manage the release infrastructure for your services. You'll also see a new sub-directory created under your working directory: `copilot/`. The `copilot` directory will hold the manifest files and additional infrastructure for your services.
 
