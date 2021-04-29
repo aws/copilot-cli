@@ -116,6 +116,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 			opts: template.WorkloadOpts{
 				HTTPHealthCheck: defaultHttpHealthCheck,
 				Storage: &template.StorageOpts{
+					Ephemeral: aws.Int(500),
 					EFSPerms: []*template.EFSPermission{
 						{
 							AccessPointID: aws.String("ap-1234"),
@@ -169,6 +170,14 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+		},
+		"renders a valid template with ephemeral storage": {
+			opts: template.WorkloadOpts{
+				HTTPHealthCheck: defaultHttpHealthCheck,
+				Storage: &template.StorageOpts{
+					Ephemeral: aws.Int(500),
 				},
 			},
 		},
