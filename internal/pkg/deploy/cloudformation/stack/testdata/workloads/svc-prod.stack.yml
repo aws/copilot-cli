@@ -223,7 +223,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs14.x
+      Runtime: nodejs12.x
   
   AutoScalingRole:
     Type: AWS::IAM::Role
@@ -279,7 +279,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'EnvControllerRole.Arn'
-      Runtime: nodejs14.x
+      Runtime: nodejs12.x
   
   EnvControllerRole:
     Type: AWS::IAM::Role
@@ -424,7 +424,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs14.x
+      Runtime: nodejs12.x
 
   CustomResourceRole:
     Type: AWS::IAM::Role

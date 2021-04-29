@@ -10,7 +10,7 @@ CertificateValidationFunction:
     Timeout: 600
     MemorySize: 512
     Role: !GetAtt 'CustomResourceRole.Arn'
-    Runtime: nodejs14.x
+    Runtime: nodejs12.x
 
 DNSDelegationFunction:
   Type: AWS::Lambda::Function
@@ -23,7 +23,7 @@ DNSDelegationFunction:
     Timeout: 600
     MemorySize: 512
     Role: !GetAtt 'CustomResourceRole.Arn'
-    Runtime: nodejs14.x
+    Runtime: nodejs12.x
 
 # Resources to enable long ARN formats for the CF execution role.
 EnableLongARNFormatFunction:
@@ -36,4 +36,4 @@ EnableLongARNFormatFunction:
     Timeout: 600
     MemorySize: 512
     Role: !GetAtt 'CloudformationExecutionRole.Arn'
-    Runtime: nodejs14.x
+    Runtime: nodejs12.x
