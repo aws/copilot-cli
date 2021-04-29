@@ -77,10 +77,13 @@ storage:
 
 #### Under the Hood
 When you enable managed EFS, Copilot creates the following resources at the environment level:
+
 * An [EFS file system](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-efs-filesystem.html).
 * [Mount targets](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-efs-mounttarget.html) in each of your environment's private subnets
 * Security group rules allowing the Environment Security Group to access the mount targets. 
+
 At the service level, Copilot creates:
+
 * An [EFS Access Point](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-efs-accesspoint.html). The Access Point refers to a directory created by CFN named after the service or job you wish to use EFS with. 
 
 You can see the environment-level resources created by calling `copilot env show --json --resources` and parsing the output with your favorite command line JSON processor. For example:
