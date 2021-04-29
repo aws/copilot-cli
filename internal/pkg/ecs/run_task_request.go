@@ -40,6 +40,7 @@ type containerInfo struct {
 	secrets    map[string]string
 }
 
+// RunTaskRequestFromECSService populates a RunTaskRequest with information from an ECS service.
 func RunTaskRequestFromECSService(client ecsServiceDescriber, cluster, service string) (*RunTaskRequest, error) {
 	networkConfig, err := client.NetworkConfiguration(cluster, service)
 	if err != nil {
@@ -76,6 +77,7 @@ func RunTaskRequestFromECSService(client ecsServiceDescriber, cluster, service s
 	}, nil
 }
 
+// RunTaskRequestFromECSService populates a RunTaskRequest with information from a Copilot service.
 func RunTaskRequestFromService(client serviceDescriber, app, env, svc string) (*RunTaskRequest, error) {
 	networkConfig, err := client.NetworkConfiguration(app, env, svc)
 	if err != nil {
@@ -146,7 +148,7 @@ func containerInformation(taskDef *awsecs.TaskDefinition, containerName string) 
 	}, nil
 }
 
-// String stringifies a GenerateCommandOpts.
+// String stringifies a RunTaskRequest.
 func (r RunTaskRequest) String() string {
 	output := []string{"copilot task run"}
 	if r.executionRole != "" {
