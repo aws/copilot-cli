@@ -159,7 +159,16 @@ Required. Specify the location in the container where you would like your volume
 Optional. Defaults to `true`. Defines whether the volume is read-only or not. If false, the container is granted `elasticfilesystem:ClientWrite` permissions to the filesystem and the volume is writable.
 
 <span class="parent-field">volume.</span><a id="efs" href="#efs" class="field">`efs`</a> <span class="type">Bool or Map</span>  
-Specify more detailed EFS configuration. If specified as a Boolean, creates a managed EFS filesystem and dedicated Access Point for this workload.
+Specify more detailed EFS configuration. If specified as a Boolean, or using only the `uid` and `gid` subfields, creates a managed EFS filesystem and dedicated Access Point for this workload.
+```yaml
+// Simple managed EFS
+efs: true
+
+// Managed EFS with custom POSIX info
+efs:
+  uid: 10000
+  gid: 110000
+```
 
 <span class="parent-field">volume.efs.</span><a id="id" href="#id" class="field">`id`</a> <span class="type">String</span>  
 Required. The ID of the filesystem you would like to mount.
