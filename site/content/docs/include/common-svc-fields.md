@@ -158,14 +158,29 @@ Required. Specify the location in the container where you would like your volume
 <span class="parent-field">volume.</span><a id="read_only" href="#read-only" class="field">`read_only`</a> <span class="type">Bool</span>  
 Optional. Defaults to `true`. Defines whether the volume is read-only or not. If false, the container is granted `elasticfilesystem:ClientWrite` permissions to the filesystem and the volume is writable.
 
-<span class="parent-field">volume.</span><a id="efs" href="#efs" class="field">`efs`</a> <span class="type">Map</span>  
-Specify more detailed EFS configuration.
+<span class="parent-field">volume.</span><a id="efs" href="#efs" class="field">`efs`</a> <span class="type">Bool or Map</span>  
+Specify more detailed EFS configuration. If specified as a boolean, or using only the `uid` and `gid` subfields, creates a managed EFS filesystem and dedicated Access Point for this workload.
+```yaml
+// Simple managed EFS
+efs: true
+
+// Managed EFS with custom POSIX info
+efs:
+  uid: 10000
+  gid: 110000
+```
 
 <span class="parent-field">volume.efs.</span><a id="id" href="#id" class="field">`id`</a> <span class="type">String</span>  
 Required. The ID of the filesystem you would like to mount.
 
-<span class="parent-field">volume.efs.</span><a id="root_dir" href="#root-dir" class="field">`root_dir`</a> <span class="type">String</span>  
+<span class="parent-field">volume.efs.</span><a id="root_dir" href="#root-dir" class="field">`root_dir`</a> <span class="type">String</span>
 Optional. Defaults to `/`. Specify the location in the EFS filesystem you would like to use as the root of your volume. Must be fewer than 255 characters and must consist only of the characters `a-zA-Z0-9.-_/`. If using an access point, `root_dir` must be either empty or `/` and `auth.iam` must be `true`.
+
+<span class="parent-field">volume.efs.</span><a id="uid" href="#uid" class="field">`uid`</a> <span class="type">Uint32</span>
+Optional. Must be specified with `gid`. Mutually exclusive with `root_dir`, `auth`, and `id`. The POSIX UID to use for the dedicated access point created for the managed EFS filesystem. 
+
+<span class="parent-field">volume.efs.</span><a id="gid" href="#gid" class="field">`gid`</a> <span class="type">Uint32</span>
+Optional. Must be specified with `uid`. Mutually exclusive with `root_dir`, `auth`, and `id`. The POSIX GID to use for the dedicated access point created for the managed EFS filesystem. 
 
 <span class="parent-field">volume.efs.</span><a id="auth" href="#auth" class="field">`auth`</a> <span class="type">Map</span>  
 Specify advanced authorization configuration for EFS.
@@ -180,4 +195,3 @@ Optional. Defaults to `""`. The ID of the EFS access point to connect to. If usi
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.
-

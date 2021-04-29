@@ -41,7 +41,105 @@ $ copilot storage init -n my-cluster -t Aurora -w api --engine PostgreSQL --init
 This will create an RDS Aurora Serverless cluster that uses PostgreSQL engine with a database named `my_db`. An environment variable named `MYCLUSTER_SECRET` is injected into your workload as a JSON string. The fields are `'host'`, `'port'`, `'dbname'`, `'username'`, `'password'`, `'dbClusterIdentifier'` and `'engine'`.
 
 ## File Systems
-Mounting an EFS volume in Copilot tasks requires two things:
+There are two ways to use an EFS file system with Copilot: using managed EFS, and importing your own filesystem.
+
+### Managed EFS
+The easiest way to get started using EFS for service- or job-level storage is via Copilot's built-in managed EFS capability. To get started, simply enable the `efs` key in the manifest under your volume's name.
+```yaml
+name: frontend
+
+storage:
+  volumes:
+    myManagedEFSVolume:
+      efs: true
+      path: /var/efs
+      read_only: false
+```
+
+This manifest will result in an EFS volume being created at the environment level, with an Access Point and dedicated directory at the path `/frontend` in the EFS filesystem created specifically for your service. Your container will be able to access this directory and all its subdirectories at the `/var/efs` path in its own filesystem. The `/frontend` directory and EFS filesystem will persist until you delete your environment. 
+
+The use of an access point for each service ensures that no two services can access each other's data unless you specifically intend for them to do so by specifying the full advanced configuration. You can read more in [Advanced Use Cases](#advanced-use-cases).
+
+You can also customize the UID and GID used for the access point by specifying the `uid` and `gid` fields in advanced EFS configuration. If you do not specify a UID or GID, Copilot picks a pseudorandom UID and GID for the access point based on the [CRC32 checksum](https://stackoverflow.com/a/14210379/5890422) of the service's name. 
+
+```yaml
+storage:
+  volumes:
+    myManagedEFSVolume:
+      efs: 
+        uid: 1000
+        gid: 10000
+      path: /var/efs
+      read_only: false
+```
+
+`uid` and `gid` may not be specified with any other advanced EFS configuration.
+
+#### Under the Hood
+When you enable managed EFS, Copilot creates the following resources at the environment level:
+* An [EFS file system](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-efs-filesystem.html).
+* [Mount targets](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-efs-mounttarget.html) in each of your environment's private subnets
+* Security group rules allowing the Environment Security Group to access the mount targets. 
+At the service level, Copilot creates:
+* An [EFS Access Point](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-efs-accesspoint.html). The Access Point refers to a directory created by CFN named after the service or job you wish to use EFS with. 
+
+You can see the environment-level resources created by calling `copilot env show --json --resources` and parsing the output with your favorite command line JSON processor. For example:
+```
+> copilot env show -n test --json --resources | jq '.resources[] | select( .type | contains("EFS") )'
+```
+
+#### Advanced Use Cases
+##### Hydrating a Managed EFS Volume
+Sometimes, you may wish to populate the created EFS volume with data before your service begins accepting traffic. There are several ways you can do this, depending on your main container's requirements and whether it requires this data for startup. 
+
+###### Using a Sidecar
+You can mount the created EFS volume in a sidecar using the [`mount_points`](../developing/sidecars.en.md) field, and use your sidecar's `COMMAND` or `ENTRYPOINT` directives to copy data from the sidecar's filesystem or pull data down from S3 or another cloud service. 
+
+If you mark the sidecar as nonessential with `essential:false`, it will start, do its work, and exit as the service containers come up and stabilize. 
+
+This may not be suitable for workloads which depend on the correct data being present in the EFS volume. 
+
+###### Using `copilot svc exec`
+For workloads where data must be present prior to your task containers coming up, we recommend using a placeholder container first. 
+
+For example, deploy your service with the following values in the manifest:
+```yaml
+image:
+  location: amazon/amazon-ecs-sample
+exec: true
+
+storage:
+  volumes:
+    myVolume:
+      efs: true
+      path: /var/efs
+      read_only: false
+```
+
+Then, when your service is stable, run:
+```bash
+$ copilot svc exec
+```
+This will open an interactive shell from which you can add packages like `curl` or `wget`, download data from the internet, create a directory structure, etc.
+
+!!!info 
+    This method of configuring containers is not recommended for production environments; containers are ephemeral and if you wish for a piece of software to be present in your service containers, be sure to add it using the `RUN` directive in a Dockerfile. 
+
+When you have populated the directory, modify your manifest to remove the `exec` directive and update the `build` field to your desired Docker build config or image location.
+
+```yaml
+image:
+  build: ./Dockerfile
+storage:
+  volumes:
+    myVolume:
+      efs: true
+      path: /var/efs
+      read_only: false
+```
+
+### External EFS
+Mounting an externally-managed EFS volume in Copilot tasks requires two things:
 
 1. That you create an [EFS file system](https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html) in the desired environment's region.
 2. That you create an [EFS Mount Target](https://docs.aws.amazon.com/efs/latest/ug/accessing-fs.html) using the Copilot environment security group in each subnet of your environment.
@@ -65,7 +163,7 @@ storage:
 
 This will create a read-only mounted volume in your service's or job's container using the filesystem `fs-1234567`. If mount targets are not created in the subnets of the environment, the task will fail to launch.
 
-Full syntax for storage follows.
+Full syntax for external EFS volumes follows.
 
 ```yaml
 storage:
@@ -82,6 +180,9 @@ storage:
                                          # mounting this filesystem.
           access_point_id: <access point ID> # Optional. The ID of the EFS Access Point
                                                 # to use when mounting this filesystem.
+        uid: <uint32>                # Optional. UID for managed EFS access point.
+        gid: <uint32>                # Optional. GID for managed EFS access point. Cannot be specified
+                                     # with `id`, `root_dir`, or `auth`. 
 ```
 
 ### Creating Mount Targets
@@ -241,4 +342,3 @@ Then, delete the stack.
 ```bash
 $ aws cloudformation delete-stack --stack-name efs-cfn
 ```
-
