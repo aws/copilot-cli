@@ -416,7 +416,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs10.x
+      Runtime: nodejs12.x
 
   CustomResourceRole:
     Type: AWS::IAM::Role
