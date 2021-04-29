@@ -16,6 +16,7 @@ import (
 
 // Get the env var "MAGIC_WORDS" for testing if the build arg was overridden.
 var magicWords string = os.Getenv("MAGIC_WORDS")
+var volumeName string = "efsTestVolume"
 
 // SimpleGet just returns true no matter what
 func SimpleGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
@@ -80,7 +81,7 @@ func PutEFSCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	fileObj, err := os.Create(fmt.Sprintf("%s/testfile", copilotMountPoints["efsTestVolume"]))
+	fileObj, err := os.Create(fmt.Sprintf("%s/testfile", copilotMountPoints[volumeName]))
 	if err != nil {
 		log.Println("Create test file in EFS volume FAILED")
 		w.WriteHeader(http.StatusInternalServerError)
