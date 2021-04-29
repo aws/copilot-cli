@@ -324,6 +324,26 @@ var _ = Describe("Multiple Service App", func() {
 
 		})
 
+		It("should be able to write to EFS volume", func() {
+			svcName := "front-end"
+			svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
+				AppName: appName,
+				Name:    svcName,
+			})
+			Expect(svcShowErr).NotTo(HaveOccurred())
+			Expect(len(svc.Routes)).To(Equal(1))
+
+			// Calls the front end's efs test endpoint - which should create a file in the EFS filesystem.
+			route := svc.Routes[0]
+
+			Expect(route.Environment).To(Equal("test"))
+			routeURL = route.URL
+
+			resp, fetchErr := http.Get(fmt.Sprintf("%s/efs-putter", route.URL))
+			Expect(fetchErr).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+		})
+
 		It("job should have run", func() {
 			// Job should have run. We check this by hitting the "job-checker" path, which tells us the value
 			// of the "TEST_JOB_CHECK_VAR" in the frontend service, which will have been updated by a GET on

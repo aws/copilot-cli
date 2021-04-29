@@ -4,6 +4,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -69,6 +70,31 @@ func SetJobCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params)
 	w.WriteHeader(http.StatusOK)
 }
 
+// PutEFSCheck writes a file to the EFS folder in the container.
+func PutEFSCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	log.Println("Get /efs-putter succeeded")
+	efsVar := os.Getenv("COPILOT_MOUNT_POINTS")
+	copilotMountPoints := make(map[string]string)
+	if err := json.Unmarshal([]byte(efsVar), &copilotMountPoints); err != nil {
+		log.Println("Unmarshal COPILOT_MOUNT_POINTS env var FAILED")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	fileObj, err := os.Create(fmt.Sprintf("%s/testfile", copilotMountPoints["efsTestVolume"]))
+	if err != nil {
+		log.Println("Create test file in EFS volume FAILED")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if err := fileObj.Truncate(1e7); err != nil {
+		log.Println("Resize test file in EFS volume FAILED")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func main() {
 	router := httprouter.New()
 	router.GET("/", SimpleGet)
@@ -76,6 +102,7 @@ func main() {
 	router.GET("/magicwords/", GetMagicWords)
 	router.GET("/job-checker/", GetJobCheck)
 	router.GET("/job-setter/", SetJobCheck)
+	router.GET("/efs-putter", PutEFSCheck)
 
 	log.Fatal(http.ListenAndServe(":80", router))
 }
