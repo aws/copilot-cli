@@ -159,7 +159,7 @@ Required. Specify the location in the container where you would like your volume
 Optional. Defaults to `true`. Defines whether the volume is read-only or not. If false, the container is granted `elasticfilesystem:ClientWrite` permissions to the filesystem and the volume is writable.
 
 <span class="parent-field">volume.</span><a id="efs" href="#efs" class="field">`efs`</a> <span class="type">Bool or Map</span>  
-Specify more detailed EFS configuration. If specified as a Boolean, or using only the `uid` and `gid` subfields, creates a managed EFS filesystem and dedicated Access Point for this workload.
+Specify more detailed EFS configuration. If specified as a boolean, or using only the `uid` and `gid` subfields, creates a managed EFS filesystem and dedicated Access Point for this workload.
 ```yaml
 // Simple managed EFS
 efs: true
@@ -195,4 +195,3 @@ Optional. Defaults to `""`. The ID of the EFS access point to connect to. If usi
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.
-
