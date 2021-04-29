@@ -110,7 +110,7 @@ Here's the fun part! Run:
 
 `copilot pipeline update`
 
-This parses your `pipeline.yml`, creates a CodePipeline in the same account and region as your project and kicks off a pipeline execution. Log into the AWS Console to watch your pipeline go, or run `copilot pipeline status` to check in on its execution.
+This parses your `pipeline.yml`, creates a CodePipeline in the same account and region as your application and kicks off a pipeline execution. Log into the AWS Console to watch your pipeline go, or run `copilot pipeline status` to check in on its execution.
 
 ![Your completed CodePipeline](https://user-images.githubusercontent.com/828419/71861318-c7083980-30aa-11ea-80bb-4bea25bf5d04.png)
 

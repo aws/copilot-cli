@@ -600,9 +600,10 @@ func Test_convertManagedFSInfo(t *testing.T) {
 }
 func Test_convertStorageOpts(t *testing.T) {
 	testCases := map[string]struct {
-		inVolumes map[string]manifest.Volume
-		wantOpts  template.StorageOpts
-		wantErr   string
+		inVolumes   map[string]manifest.Volume
+		inEphemeral *int
+		wantOpts    template.StorageOpts
+		wantErr     string
 	}{
 		"minimal configuration": {
 			inVolumes: map[string]manifest.Volume{
@@ -973,7 +974,8 @@ func Test_convertStorageOpts(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			s := manifest.Storage{
-				Volumes: tc.inVolumes,
+				Volumes:   tc.inVolumes,
+				Ephemeral: tc.inEphemeral,
 			}
 
 			// WHEN
@@ -1112,4 +1114,44 @@ func Test_validatePaths(t *testing.T) {
 		require.EqualError(t, validateContainerPath("/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), "path must be less than 242 bytes in length", "too long")
 		require.EqualError(t, validateContainerPath("/etc /bin/sh cat `i'm evil` > /dev/null"), "paths can only contain the characters a-zA-Z0-9.-_/", "invalid characters disallowed")
 	})
+}
+
+func Test_convertEphemeral(t *testing.T) {
+	testCases := map[string]struct {
+		inEphemeral *int
+
+		wanted      *int
+		wantedError error
+	}{
+		"without storage enabled": {
+			inEphemeral: nil,
+			wanted:      nil,
+		},
+		"ephemeral errors when size is too big": {
+			inEphemeral: aws.Int(25000),
+			wantedError: errEphemeralBadSize,
+		},
+		"ephemeral errors when size is too small": {
+			inEphemeral: aws.Int(10),
+			wantedError: errEphemeralBadSize,
+		},
+		"ephemeral specified correctly": {
+			inEphemeral: aws.Int(100),
+			wanted:      aws.Int(100),
+		},
+		"ephemeral specified at 20 GiB": {
+			inEphemeral: aws.Int(20),
+			wanted:      nil,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := convertEphemeral(tc.inEphemeral)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Equal(t, got, tc.wanted)
+			}
+		})
+	}
 }
