@@ -134,8 +134,7 @@ func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	err := c.AdvancedCount.IsValid()
-	if err != nil {
+	if err := c.AdvancedCount.IsValid(); err != nil {
 		return err
 	}
 
