@@ -58,7 +58,7 @@ storage:
 
 This manifest will result in an EFS volume being created at the environment level, with an Access Point and dedicated directory at the path `/frontend` in the EFS filesystem created specifically for your service. Your container will be able to access this directory and all its subdirectories at the `/var/efs` path in its own filesystem. The `/frontend` directory and EFS filesystem will persist until you delete your environment. 
 
-The use of an access point for each service ensures that no two services can access each others' data unless you specifically intend for them to do so by specifying the full advanced configuration. You can read more in [Advanced Use Cases](#advanced-use-cases).
+The use of an access point for each service ensures that no two services can access each other's data unless you specifically intend for them to do so by specifying the full advanced configuration. You can read more in [Advanced Use Cases](#advanced-use-cases).
 
 You can also customize the UID and GID used for the access point by specifying the `uid` and `gid` fields in advanced EFS configuration. If you do not specify a UID or GID, Copilot picks a pseudorandom UID and GID for the access point based on the [CRC32 checksum](https://stackoverflow.com/a/14210379/5890422) of the service's name. 
 
@@ -342,4 +342,3 @@ Then, delete the stack.
 ```bash
 $ aws cloudformation delete-stack --stack-name efs-cfn
 ```
-
