@@ -6,6 +6,7 @@
 package stack_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
@@ -29,6 +30,27 @@ const (
 )
 
 func TestLoadBalancedWebService_Template(t *testing.T) {
+	testCases := map[string]struct {
+		envName       string
+		svcStackPath  string
+		svcParamsPath string
+	}{
+		"default env": {
+			envName:       "test",
+			svcStackPath:  "svc-test.stack.yml",
+			svcParamsPath: "svc-test.params.json",
+		},
+		"staging env": {
+			envName:       "staging",
+			svcStackPath:  "svc-staging.stack.yml",
+			svcParamsPath: "svc-staging.params.json",
+		},
+		"prod env": {
+			envName:       "prod",
+			svcStackPath:  "svc-prod.stack.yml",
+			svcParamsPath: "svc-prod.params.json",
+		},
+	}
 	path := filepath.Join("testdata", "workloads", svcManifestPath)
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
@@ -36,36 +58,42 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	require.NoError(t, err)
 	v, ok := mft.(*manifest.LoadBalancedWebService)
 	require.True(t, ok)
-	serializer, err := stack.NewLoadBalancedWebService(v, envName, appName, stack.RuntimeConfig{})
 
-	tpl, err := serializer.Template()
-	require.NoError(t, err, "template should render")
-	regExpGUID := regexp.MustCompile(`([a-f\d]{8}-)([a-f\d]{4}-){3}([a-f\d]{12})`) // Matches random guids
-	t.Run("CF Template should be equal", func(t *testing.T) {
-		actualBytes := []byte(tpl)
-		// Cut random GUID from template.
-		actualBytes = regExpGUID.ReplaceAll(actualBytes, []byte("RandomGUID"))
-		actualString := string(actualBytes)
-		actualBytes = []byte(actualString)
-		mActual := make(map[interface{}]interface{})
-		require.NoError(t, yaml.Unmarshal(actualBytes, mActual))
-		expected, err := ioutil.ReadFile(filepath.Join("testdata", "workloads", svcStackPath))
-		require.NoError(t, err, "should be able to read expected bytes")
-		expectedBytes := []byte(expected)
-		mExpected := make(map[interface{}]interface{})
-		require.NoError(t, yaml.Unmarshal(expectedBytes, mExpected))
-		require.Equal(t, mExpected, mActual)
-	})
+	for name, tc := range testCases {
 
-	t.Run("Parameter values should render properly", func(t *testing.T) {
-		actualParams, err := serializer.SerializedParameters()
-		require.NoError(t, err)
+		serializer, err := stack.NewLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{})
 
-		path := filepath.Join("testdata", "workloads", svcParamsPath)
-		wantedCFNParamsBytes, err := ioutil.ReadFile(path)
-		require.NoError(t, err)
+		tpl, err := serializer.Template()
+		require.NoError(t, err, "template should render")
+		regExpGUID := regexp.MustCompile(`([a-f\d]{8}-)([a-f\d]{4}-){3}([a-f\d]{12})`) // Matches random guids
+		testName := fmt.Sprintf("CF Template should be equal/%s", name)
+		t.Run(testName, func(t *testing.T) {
+			actualBytes := []byte(tpl)
+			// Cut random GUID from template.
+			actualBytes = regExpGUID.ReplaceAll(actualBytes, []byte("RandomGUID"))
+			actualString := string(actualBytes)
+			actualBytes = []byte(actualString)
+			mActual := make(map[interface{}]interface{})
+			require.NoError(t, yaml.Unmarshal(actualBytes, mActual))
 
-		require.Equal(t, string(wantedCFNParamsBytes), actualParams)
-	})
+			expected, err := ioutil.ReadFile(filepath.Join("testdata", "workloads", tc.svcStackPath))
+			require.NoError(t, err, "should be able to read expected bytes")
+			expectedBytes := []byte(expected)
+			mExpected := make(map[interface{}]interface{})
+			require.NoError(t, yaml.Unmarshal(expectedBytes, mExpected))
+			require.Equal(t, mExpected, mActual)
+		})
 
+		testName = fmt.Sprintf("Parameter values should render properly/%s", name)
+		t.Run(testName, func(t *testing.T) {
+			actualParams, err := serializer.SerializedParameters()
+			require.NoError(t, err)
+
+			path := filepath.Join("testdata", "workloads", tc.svcParamsPath)
+			wantedCFNParamsBytes, err := ioutil.ReadFile(path)
+			require.NoError(t, err)
+
+			require.Equal(t, string(wantedCFNParamsBytes), actualParams)
+		})
+	}
 }
