@@ -1,3 +1,7 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Package ecs provides a client to retrieve Copilot ECS information.
 package ecs
 
 import (
