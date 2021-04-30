@@ -241,33 +241,39 @@ func (c Client) NetworkConfigurationForJob(app, env, job string) (*ecs.NetworkCo
 		return nil, fmt.Errorf("get state machine definition for job %s: %w", job, err)
 	}
 
-	var definition definition
-	err = json.Unmarshal([]byte(raw), &definition)
+	var config NetworkConfiguration
+	err = json.Unmarshal([]byte(raw), &config)
+
+	return (*ecs.NetworkConfiguration)(&config), nil
+}
+
+type NetworkConfiguration ecs.NetworkConfiguration
+
+func (n *NetworkConfiguration) UnmarshalJSON(b []byte) error {
+	var f interface{}
+	err := json.Unmarshal(b, &f)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal state machine definition: %w", err)
+		return err
 	}
 
-	state := definition.States[targetState]
-	config := state.parameter.NetworkConfiguration
-	return &ecs.NetworkConfiguration{
-		Subnets:        config.AWSVPCConfiguration.Subnets,
-		SecurityGroups: config.AWSVPCConfiguration.SecurityGroups,
-		AssignPublicIp: config.AWSVPCConfiguration.AssignPublicIp,
-	}, nil
-}
+	states := f.(map[string]interface{})["States"].(map[string]interface{})
+	parameters := states["Run Fargate Task"].(map[string]interface{})["Parameters"].(map[string]interface{})
+	networkConfig := parameters["NetworkConfiguration"].(map[string]interface{})["AwsvpcConfiguration"].(map[string]interface{})
 
-type parameter struct {
-	NetworkConfiguration struct {
-		AWSVPCConfiguration ecs.NetworkConfiguration `json:"AwsvpcConfiguration"`
-	} `json:"NetworkConfiguration"`
-}
+	var subnets []string
+	for _, subnet := range networkConfig["Subnets"].([]interface{}) {
+		subnets = append(subnets, subnet.(string))
+	}
 
-type state struct {
-	parameter `json:"Parameters"`
-}
+	var securityGroups []string
+	for _, sg := range networkConfig["SecurityGroups"].([]interface{}) {
+		securityGroups = append(securityGroups, sg.(string))
+	}
 
-type definition struct {
-	States map[string]state `json:"States"`
+	n.Subnets = subnets
+	n.SecurityGroups = securityGroups
+	n.AssignPublicIp = networkConfig["AssignPublicIp"].(string)
+	return nil
 }
 
 func (c Client) listActiveCopilotTasks(opts listActiveCopilotTasksOpts) ([]*ecs.Task, error) {
