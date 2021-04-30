@@ -15,7 +15,6 @@ import (
 
 const (
 	fmtStateMachineName = "%s-%s-%s" // refer to workload's state-machine partial template.
-	targetState         = "Run Fargate Task"
 )
 
 // ECSServiceDescriber provides information on an ECS service.
@@ -130,6 +129,9 @@ func RunTaskRequestFromService(client ServiceDescriber, app, env, svc string) (*
 
 func RunTaskRequestFromJob(client jobDescriber, app, env, job string) (*RunTaskRequest, error) {
 	config, err := client.NetworkConfigurationForJob(app, env, job)
+	if err != nil {
+		return nil, fmt.Errorf("retrieve network configuration for job %s: %w", job, err)
+	}
 
 	cluster, err := client.ClusterARN(app, env)
 	if err != nil {
