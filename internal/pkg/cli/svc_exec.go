@@ -19,6 +19,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -116,6 +117,13 @@ func (o *svcExecOpts) Ask() error {
 
 // Execute executes a command in a running container.
 func (o *svcExecOpts) Execute() error {
+	wkld, err := o.store.GetWorkload(o.appName, o.name)
+	if err != nil {
+		return fmt.Errorf("get workload: %w", err)
+	}
+	if wkld.Type == manifest.RequestDrivenWebServiceType {
+		return fmt.Errorf("executing a command in a running container part of a service is not supported for services with type: '%s'", manifest.RequestDrivenWebServiceType)
+	}
 	sess, err := o.envSession()
 	if err != nil {
 		return err
