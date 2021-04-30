@@ -243,6 +243,9 @@ func (c Client) NetworkConfigurationForJob(app, env, job string) (*ecs.NetworkCo
 
 	var config NetworkConfiguration
 	err = json.Unmarshal([]byte(raw), &config)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal state machine definition: %w", err)
+	}
 
 	return (*ecs.NetworkConfiguration)(&config), nil
 }
