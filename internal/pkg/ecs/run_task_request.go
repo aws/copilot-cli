@@ -13,6 +13,11 @@ import (
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
 
+const (
+	fmtStateMachineName = "%s-%s-%s" // refer to workload's state-machine partial template.
+	targetState         = "Run Fargate Task"
+)
+
 // ECSServiceDescriber provides information on an ECS service.
 type ECSServiceDescriber interface {
 	Service(clusterName, serviceName string) (*awsecs.Service, error)
@@ -24,6 +29,12 @@ type ECSServiceDescriber interface {
 type ServiceDescriber interface {
 	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
 	NetworkConfiguration(app, env, svc string) (*awsecs.NetworkConfiguration, error)
+	ClusterARN(app, env string) (string, error)
+}
+
+type jobDescriber interface {
+	TaskDefinition(app, env, job string) (*awsecs.TaskDefinition, error)
+	NetworkConfigurationForJob(app, env, job string) (*awsecs.NetworkConfiguration, error)
 	ClusterARN(app, env string) (string, error)
 }
 
@@ -110,6 +121,35 @@ func RunTaskRequestFromService(client ServiceDescriber, app, env, svc string) (*
 
 	return &RunTaskRequest{
 		networkConfiguration: *networkConfig,
+		executionRole:        aws.StringValue(taskDef.ExecutionRoleArn),
+		taskRole:             aws.StringValue(taskDef.TaskRoleArn),
+		containerInfo:        *containerInfo,
+		cluster:              cluster,
+	}, nil
+}
+
+func RunTaskRequestFromJob(client jobDescriber, app, env, job string) (*RunTaskRequest, error) {
+	config, err := client.NetworkConfigurationForJob(app, env, job)
+
+	cluster, err := client.ClusterARN(app, env)
+	if err != nil {
+		return nil, fmt.Errorf("retrieve cluster ARN created for environment %s in application %s: %w", env, app, err)
+	}
+
+	// container info?
+	taskDef, err := client.TaskDefinition(app, env, job)
+	if err != nil {
+		return nil, fmt.Errorf("retrieve task definition for job %s: %w", job, err)
+	}
+
+	containerName := job // NOTE: refer to workload's CloudFormation template. The container name is set to be the workload's name.
+	containerInfo, err := containerInformation(taskDef, containerName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RunTaskRequest{
+		networkConfiguration: *config,
 		executionRole:        aws.StringValue(taskDef.ExecutionRoleArn),
 		taskRole:             aws.StringValue(taskDef.TaskRoleArn),
 		containerInfo:        *containerInfo,
