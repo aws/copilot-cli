@@ -109,45 +109,6 @@ func RunTaskRequestFromService(client serviceDescriber, app, env, svc string) (*
 	}, nil
 }
 
-func containerInformation(taskDef *awsecs.TaskDefinition, containerName string) (*containerInfo, error) {
-	image, err := taskDef.Image(containerName)
-	if err != nil {
-		return nil, err
-	}
-
-	entrypoint, err := taskDef.EntryPoint(containerName)
-	if err != nil {
-		return nil, err
-	}
-
-	command, err := taskDef.Command(containerName)
-	if err != nil {
-		return nil, err
-	}
-
-	envVars := make(map[string]string)
-	for _, envVar := range taskDef.EnvironmentVariables() {
-		if envVar.Container == containerName {
-			envVars[envVar.Name] = envVar.Value
-		}
-	}
-
-	secrets := make(map[string]string)
-	for _, secret := range taskDef.Secrets() {
-		if secret.Container == containerName {
-			secrets[secret.Name] = secret.ValueFrom
-		}
-	}
-
-	return &containerInfo{
-		image:      image,
-		entryPoint: entrypoint,
-		command:    command,
-		envVars:    envVars,
-		secrets:    secrets,
-	}, nil
-}
-
 // String stringifies a RunTaskRequest.
 func (r RunTaskRequest) String() string {
 	output := []string{"copilot task run"}
@@ -192,6 +153,45 @@ func (r RunTaskRequest) String() string {
 	}
 
 	return strings.Join(output, " \\\n")
+}
+
+func containerInformation(taskDef *awsecs.TaskDefinition, containerName string) (*containerInfo, error) {
+	image, err := taskDef.Image(containerName)
+	if err != nil {
+		return nil, err
+	}
+
+	entrypoint, err := taskDef.EntryPoint(containerName)
+	if err != nil {
+		return nil, err
+	}
+
+	command, err := taskDef.Command(containerName)
+	if err != nil {
+		return nil, err
+	}
+
+	envVars := make(map[string]string)
+	for _, envVar := range taskDef.EnvironmentVariables() {
+		if envVar.Container == containerName {
+			envVars[envVar.Name] = envVar.Value
+		}
+	}
+
+	secrets := make(map[string]string)
+	for _, secret := range taskDef.Secrets() {
+		if secret.Container == containerName {
+			secrets[secret.Name] = secret.ValueFrom
+		}
+	}
+
+	return &containerInfo{
+		image:      image,
+		entryPoint: entrypoint,
+		command:    command,
+		envVars:    envVars,
+		secrets:    secrets,
+	}, nil
 }
 
 // This function will format a map to a string as "key1=value1,key2=value2,key3=value3".
