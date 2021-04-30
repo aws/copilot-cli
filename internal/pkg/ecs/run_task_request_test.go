@@ -2,7 +2,12 @@ package ecs
 
 import (
 	"errors"
+	"fmt"
 	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/aws/stepfunctions"
 
 	"github.com/aws/copilot-cli/internal/pkg/ecs/mocks"
 
@@ -277,4 +282,24 @@ func Test_RunTaskRequestFromService(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_RunTaskRequestFromJob(t *testing.T) {
+	sess, err := sessions.NewProvider().Default()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	j := &Client{
+		//JobDescriber: ecs.New(sess),
+		StepFuncClient: stepfunctions.New(sess),
+		rgGetter:       resourcegroups.New(sess),
+	}
+
+	config, err := j.NetworkConfigurationForJob("generate", "test", "job-delete")
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(config)
 }
