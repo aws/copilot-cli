@@ -21,8 +21,8 @@ func Test_RunTaskRequestFromECSService(t *testing.T) {
 	testCases := map[string]struct {
 		setUpMock func(m *mocks.MockecsServiceDescriber)
 
-		wantedGenerateCommandOpts *RunTaskRequest
-		wantedError               error
+		wantedRunTaskRequest *RunTaskRequest
+		wantedError          error
 	}{
 		"success": {
 			setUpMock: func(m *mocks.MockecsServiceDescriber) {
@@ -63,7 +63,7 @@ func Test_RunTaskRequestFromECSService(t *testing.T) {
 					SecurityGroups: []string{"sg-1", "sg-2"},
 				}, nil)
 			},
-			wantedGenerateCommandOpts: &RunTaskRequest{
+			wantedRunTaskRequest: &RunTaskRequest{
 				networkConfiguration: ecs.NetworkConfiguration{
 					AssignPublicIp: "1.2.3.4",
 					Subnets:        []string{"sbn-1", "sbn-2"},
@@ -150,7 +150,7 @@ func Test_RunTaskRequestFromECSService(t *testing.T) {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedGenerateCommandOpts, got)
+				require.Equal(t, tc.wantedRunTaskRequest, got)
 			}
 		})
 	}
@@ -165,10 +165,10 @@ func Test_RunTaskRequestFromService(t *testing.T) {
 	testCases := map[string]struct {
 		setUpMock func(m *mocks.MockserviceDescriber)
 
-		wantedGenerateCommandOpts *RunTaskRequest
-		wantedError               error
+		wantedRunTaskRequest *RunTaskRequest
+		wantedError          error
 	}{
-		"returns generateCommandOpts with service's main container": {
+		"returns RunTaskRequest with service's main container": {
 			setUpMock: func(m *mocks.MockserviceDescriber) {
 				m.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(&ecs.TaskDefinition{
 					ExecutionRoleArn: aws.String("execution-role"),
@@ -208,7 +208,7 @@ func Test_RunTaskRequestFromService(t *testing.T) {
 				}, nil)
 				m.EXPECT().ClusterARN(testApp, testEnv).Return("kamura-village", nil)
 			},
-			wantedGenerateCommandOpts: &RunTaskRequest{
+			wantedRunTaskRequest: &RunTaskRequest{
 				networkConfiguration: ecs.NetworkConfiguration{
 					AssignPublicIp: "1.2.3.4",
 					Subnets:        []string{"sbn-1", "sbn-2"},
@@ -273,7 +273,7 @@ func Test_RunTaskRequestFromService(t *testing.T) {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedGenerateCommandOpts, got)
+				require.Equal(t, tc.wantedRunTaskRequest, got)
 			}
 		})
 	}
