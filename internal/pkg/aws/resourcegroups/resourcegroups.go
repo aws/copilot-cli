@@ -13,6 +13,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 )
 
+const (
+	ResourceTypeStateMachine = "states:stateMachine"
+)
+
 type api interface {
 	GetResources(input *resourcegroupstaggingapi.GetResourcesInput) (*resourcegroupstaggingapi.GetResourcesOutput, error)
 }
