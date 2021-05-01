@@ -71,6 +71,7 @@ type workloadListWriter interface {
 
 type applicationStore interface {
 	applicationCreator
+	applicationUpdator
 	applicationGetter
 	applicationLister
 	applicationDeleter
@@ -78,6 +79,10 @@ type applicationStore interface {
 
 type applicationCreator interface {
 	CreateApplication(app *config.Application) error
+}
+
+type applicationUpdator interface {
+	UpdateApplication(app *config.Application) error
 }
 
 type applicationGetter interface {

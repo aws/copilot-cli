@@ -298,6 +298,55 @@ func TestStore_CreateApplication(t *testing.T) {
 		})
 	}
 }
+func TestStore_UpdateApplication(t *testing.T) {
+	testCases := map[string]struct {
+		inApplication *Application
+
+		mockPutParameter func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
+		wantedErr        error
+	}{
+		"success": {
+			inApplication: &Application{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com", DomainHostedZoneID: "mockHostedZoneID", Tags: map[string]string{"owner": "boss"}},
+			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
+				require.Equal(t, fmt.Sprintf(fmtApplicationPath, "phonetool"), *param.Name)
+				require.Equal(t, fmt.Sprintf(`{"name":"phonetool","account":"1234","domain":"phonetool.com","domainHostedZoneID":"mockHostedZoneID","version":"%s","tags":{"owner":"boss"}}`, schemaVersion), *param.Value)
+
+				return &ssm.PutParameterOutput{
+					Version: aws.Int64(1),
+				}, nil
+			},
+			wantedErr: nil,
+		},
+		"with SSM error": {
+			inApplication: &Application{Name: "phonetool", AccountID: "1234"},
+			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
+				return nil, fmt.Errorf("broken")
+			},
+			wantedErr: fmt.Errorf("update application phonetool: broken"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			store := &Store{
+				ssmClient: &mockSSM{
+					t:                t,
+					mockPutParameter: tc.mockPutParameter,
+				},
+			}
+
+			// WHEN
+			err := store.UpdateApplication(tc.inApplication)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
 
 func TestDeleteApplication(t *testing.T) {
 	mockApplicationName := "mockApplicationName"
