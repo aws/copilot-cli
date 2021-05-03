@@ -318,3 +318,159 @@ func Test_SystemLogGroupName(t *testing.T) {
 		})
 	}
 }
+
+func TestAppRunner_DescribeOperation(t *testing.T) {
+	const (
+		mockOperationId = "mock-operation"
+		mockSvcARN      = "mockSvcArn"
+	)
+	mockOperationSummary := apprunner.OperationSummary{
+		Id:        aws.String("mock-operation"),
+		TargetArn: aws.String("mockSvcArn"),
+		Status:    aws.String("SUCCEEDED"),
+	}
+	testError := errors.New("some error")
+	testCases := map[string]struct {
+		mockAppRunnerClient func(m *mocks.Mockapi)
+
+		wantErr          error
+		wantSvcOperation *apprunner.OperationSummary
+	}{
+		"error if fail to get operation": {
+			mockAppRunnerClient: func(m *mocks.Mockapi) {
+				m.EXPECT().ListOperations(&apprunner.ListOperationsInput{ServiceArn: aws.String(mockSvcARN)}).Return(nil, testError)
+			},
+			wantErr: fmt.Errorf("list operations: some error"),
+		},
+		"error if no operation found for given operation id": {
+			mockAppRunnerClient: func(m *mocks.Mockapi) {
+				m.EXPECT().ListOperations(&apprunner.ListOperationsInput{ServiceArn: aws.String(mockSvcARN)}).Return(&apprunner.ListOperationsOutput{
+					OperationSummaryList: []*apprunner.OperationSummary{
+						{
+							Id:        aws.String("badOperationId"),
+							TargetArn: aws.String(mockSvcARN),
+						},
+					},
+				}, nil)
+			},
+			wantErr: fmt.Errorf("no operation found mock-operation"),
+		},
+		"success": {
+			mockAppRunnerClient: func(m *mocks.Mockapi) {
+				m.EXPECT().ListOperations(&apprunner.ListOperationsInput{ServiceArn: aws.String(mockSvcARN)}).Return(&apprunner.ListOperationsOutput{
+					OperationSummaryList: []*apprunner.OperationSummary{
+						{
+							Id:        aws.String(mockOperationId),
+							TargetArn: aws.String(mockSvcARN),
+							Status:    aws.String("SUCCEEDED"),
+						},
+					},
+				}, nil)
+			},
+			wantSvcOperation: &mockOperationSummary,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockAppRunnerClient := mocks.NewMockapi(ctrl)
+			tc.mockAppRunnerClient(mockAppRunnerClient)
+
+			service := AppRunner{
+				client: mockAppRunnerClient,
+			}
+
+			operation, err := service.DescribeOperation(mockOperationId, mockSvcARN)
+
+			if err != nil {
+				require.EqualError(t, tc.wantErr, err.Error())
+			} else {
+				require.Equal(t, tc.wantSvcOperation, operation)
+			}
+		})
+	}
+}
+
+func TestAppRunner_PauseService(t *testing.T) {
+	const (
+		mockOperationId = "mock-operation"
+		mockSvcARN      = "mockSvcArn"
+	)
+	testCases := map[string]struct {
+		mockAppRunnerClient func(m *mocks.Mockapi)
+
+		wantErr          error
+		wantSvcOperation *apprunner.OperationSummary
+	}{
+		"success if service is already paused": {
+			mockAppRunnerClient: func(m *mocks.Mockapi) {
+				m.EXPECT().PauseService(&apprunner.PauseServiceInput{ServiceArn: aws.String(mockSvcARN)}).Return(&apprunner.PauseServiceOutput{
+					OperationId: nil,
+					Service: &apprunner.Service{
+						ServiceArn: aws.String(mockSvcARN),
+						Status:     aws.String("PAUSED"),
+					},
+				}, nil)
+			},
+		},
+		"waits until operation succeeds": {
+			mockAppRunnerClient: func(m *mocks.Mockapi) {
+				m.EXPECT().PauseService(&apprunner.PauseServiceInput{ServiceArn: aws.String(mockSvcARN)}).Return(&apprunner.PauseServiceOutput{
+					OperationId: aws.String(mockOperationId),
+					Service: &apprunner.Service{
+						ServiceArn: aws.String(mockSvcARN),
+					},
+				}, nil)
+				m.EXPECT().ListOperations(&apprunner.ListOperationsInput{ServiceArn: aws.String(mockSvcARN)}).Return(&apprunner.ListOperationsOutput{
+					OperationSummaryList: []*apprunner.OperationSummary{
+						{
+							Id:        aws.String(mockOperationId),
+							TargetArn: aws.String(mockSvcARN),
+							Status:    aws.String("SUCCEEDED"),
+						},
+					},
+				}, nil)
+			},
+		},
+		"return error if operation failed": {
+			mockAppRunnerClient: func(m *mocks.Mockapi) {
+				m.EXPECT().PauseService(&apprunner.PauseServiceInput{ServiceArn: aws.String(mockSvcARN)}).Return(&apprunner.PauseServiceOutput{
+					OperationId: aws.String(mockOperationId),
+					Service: &apprunner.Service{
+						ServiceArn: aws.String(mockSvcARN),
+					},
+				}, nil)
+				m.EXPECT().ListOperations(&apprunner.ListOperationsInput{ServiceArn: aws.String(mockSvcARN)}).Return(&apprunner.ListOperationsOutput{
+					OperationSummaryList: []*apprunner.OperationSummary{
+						{
+							Id:        aws.String(mockOperationId),
+							TargetArn: aws.String(mockSvcARN),
+							Status:    aws.String("FAILED"),
+						},
+					},
+				}, nil)
+			},
+			wantErr: fmt.Errorf("operation failed mock-operation"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockAppRunnerClient := mocks.NewMockapi(ctrl)
+			tc.mockAppRunnerClient(mockAppRunnerClient)
+
+			service := AppRunner{
+				client: mockAppRunnerClient,
+			}
+
+			err := service.PauseService(mockSvcARN)
+
+			require.Equal(t, tc.wantErr, err)
+		})
+	}
+}

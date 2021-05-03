@@ -6115,3 +6115,40 @@ func (mr *MocksecretPutterMockRecorder) PutSecret(in interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutSecret", reflect.TypeOf((*MocksecretPutter)(nil).PutSecret), in)
 }
+
+// MockservicePauser is a mock of servicePauser interface.
+type MockservicePauser struct {
+	ctrl     *gomock.Controller
+	recorder *MockservicePauserMockRecorder
+}
+
+// MockservicePauserMockRecorder is the mock recorder for MockservicePauser.
+type MockservicePauserMockRecorder struct {
+	mock *MockservicePauser
+}
+
+// NewMockservicePauser creates a new mock instance.
+func NewMockservicePauser(ctrl *gomock.Controller) *MockservicePauser {
+	mock := &MockservicePauser{ctrl: ctrl}
+	mock.recorder = &MockservicePauserMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockservicePauser) EXPECT() *MockservicePauserMockRecorder {
+	return m.recorder
+}
+
+// PauseService mocks base method.
+func (m *MockservicePauser) PauseService(svcARN string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PauseService", svcARN)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PauseService indicates an expected call of PauseService.
+func (mr *MockservicePauserMockRecorder) PauseService(svcARN interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PauseService", reflect.TypeOf((*MockservicePauser)(nil).PauseService), svcARN)
+}

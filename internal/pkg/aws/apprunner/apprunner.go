@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -18,11 +19,17 @@ import (
 const (
 	fmtAppRunnerServiceLogGroupName     = "/aws/apprunner/%s/%s/service"
 	fmtAppRunnerApplicationLogGroupName = "/aws/apprunner/%s/%s/application"
+
+	opStatusSucceeded = "SUCCEEDED"
+	opStatusFailed    = "FAILED"
+	svcStatusPaused   = "PAUSED"
 )
 
 type api interface {
 	DescribeService(input *apprunner.DescribeServiceInput) (*apprunner.DescribeServiceOutput, error)
 	ListServices(input *apprunner.ListServicesInput) (*apprunner.ListServicesOutput, error)
+	PauseService(input *apprunner.PauseServiceInput) (*apprunner.PauseServiceOutput, error)
+	ListOperations(input *apprunner.ListOperationsInput) (*apprunner.ListOperationsOutput, error)
 }
 
 // AppRunner wraps an AWS AppRunner client.
@@ -149,4 +156,61 @@ func SystemLogGroupName(svcARN string) (string, error) {
 		return "", fmt.Errorf("get service id: %w", err)
 	}
 	return fmt.Sprintf(fmtAppRunnerServiceLogGroupName, svcName, svcID), nil
+}
+
+//PauseService pause the running App Runner service.
+func (a *AppRunner) PauseService(svcARN string) error {
+	resp, err := a.client.PauseService(&apprunner.PauseServiceInput{
+		ServiceArn: aws.String(svcARN),
+	})
+	if err != nil {
+		return fmt.Errorf("pause service operation failed: %w", err)
+	}
+	if resp.OperationId == nil && aws.StringValue(resp.Service.Status) == svcStatusPaused {
+		return nil
+	}
+	if err := a.waitForOperation(aws.StringValue(resp.OperationId), svcARN); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *AppRunner) waitForOperation(operationId, svcARN string) error {
+	for {
+		resp, err := a.DescribeOperation(operationId, svcARN)
+		if err != nil {
+			return fmt.Errorf("error describing operation %s: %w", operationId, err)
+		}
+		switch status := aws.StringValue(resp.Status); status {
+		case opStatusSucceeded:
+			return nil
+		case opStatusFailed:
+			return fmt.Errorf("operation failed %s", operationId)
+		}
+		time.Sleep(3 * time.Second)
+	}
+}
+
+//DescribeOperation return OperationSummary for given OperationId and ServiceARN.
+func (a *AppRunner) DescribeOperation(operationId, svcARN string) (*apprunner.OperationSummary, error) {
+	var nextToken *string
+	for {
+		resp, err := a.client.ListOperations(&apprunner.ListOperationsInput{
+			ServiceArn: aws.String(svcARN),
+			NextToken:  nextToken,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("list operations: %w", err)
+		}
+		for _, operation := range resp.OperationSummaryList {
+			if aws.StringValue(operation.Id) == operationId {
+				return operation, nil
+			}
+		}
+		if resp.NextToken == nil {
+			break
+		}
+		nextToken = resp.NextToken
+	}
+	return nil, fmt.Errorf("no operation found %s", operationId)
 }

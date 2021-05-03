@@ -49,6 +49,21 @@ func (mr *MockapiMockRecorder) DescribeService(input interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*Mockapi)(nil).DescribeService), input)
 }
 
+// ListOperations mocks base method.
+func (m *Mockapi) ListOperations(input *apprunner.ListOperationsInput) (*apprunner.ListOperationsOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListOperations", input)
+	ret0, _ := ret[0].(*apprunner.ListOperationsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListOperations indicates an expected call of ListOperations.
+func (mr *MockapiMockRecorder) ListOperations(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOperations", reflect.TypeOf((*Mockapi)(nil).ListOperations), input)
+}
+
 // ListServices mocks base method.
 func (m *Mockapi) ListServices(input *apprunner.ListServicesInput) (*apprunner.ListServicesOutput, error) {
 	m.ctrl.T.Helper()
@@ -62,4 +77,19 @@ func (m *Mockapi) ListServices(input *apprunner.ListServicesInput) (*apprunner.L
 func (mr *MockapiMockRecorder) ListServices(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*Mockapi)(nil).ListServices), input)
+}
+
+// PauseService mocks base method.
+func (m *Mockapi) PauseService(input *apprunner.PauseServiceInput) (*apprunner.PauseServiceOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PauseService", input)
+	ret0, _ := ret[0].(*apprunner.PauseServiceOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PauseService indicates an expected call of PauseService.
+func (mr *MockapiMockRecorder) PauseService(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PauseService", reflect.TypeOf((*Mockapi)(nil).PauseService), input)
 }

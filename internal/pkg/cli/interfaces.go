@@ -579,3 +579,7 @@ type cliStringer interface {
 type secretPutter interface {
 	PutSecret(in ssm.PutSecretInput) (*ssm.PutSecretOutput, error)
 }
+
+type servicePauser interface {
+	PauseService(svcARN string) error
+}
