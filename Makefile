@@ -171,6 +171,7 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/s3/mocks/mock_s3.go -source=./internal/pkg/aws/s3/s3.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/cloudformation/mocks/mock_cloudformation.go -source=./internal/pkg/aws/cloudformation/interfaces.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/cloudformation/stackset/mocks/mock_stackset.go -source=./internal/pkg/aws/cloudformation/stackset/stackset.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/ssm/mocks/mock_ssm.go -source=./internal/pkg/aws/ssm/ssm.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/addon/mocks/mock_addons.go -source=./internal/pkg/addon/addons.go
 	${GOBIN}/mockgen -package=mocks -source=./internal/pkg/exec/exec.go -destination=./internal/pkg/exec/mocks/mock_exec.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/mocks/mock_deploy.go -source=./internal/pkg/deploy/deploy.go
