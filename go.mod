@@ -5,7 +5,7 @@ go 1.15
 require (
 	github.com/AlecAivazis/survey/v2 v2.2.12
 	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
-	github.com/aws/aws-sdk-go v1.38.25
+	github.com/aws/aws-sdk-go v1.38.30
 	github.com/briandowns/spinner v1.12.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.10.0
@@ -19,7 +19,7 @@ require (
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c // indirect
 	github.com/imdario/mergo v0.3.9
 	github.com/lnquy/cron v1.1.1
-	github.com/moby/buildkit v0.8.2
+	github.com/moby/buildkit v0.8.3
 	github.com/onsi/ginkgo v1.16.1
 	github.com/onsi/gomega v1.11.0
 	github.com/robfig/cron/v3 v3.0.1
