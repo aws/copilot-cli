@@ -6,6 +6,7 @@ package ssm
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -35,13 +36,24 @@ type PutSecretInput struct {
 	Tags      map[string]string
 }
 
+// PutSecretOutput wraps an ssm PutParameterOutput struct.
+type PutSecretOutput ssm.PutParameterOutput
+
 // PutSecret creates or updates a SecureString parameter.
-func (s *SSM) PutSecret(in PutSecretInput) error {
-	tags := make([]*ssm.Tag, 0)
-	for key, value := range in.Tags {
+func (s *SSM) PutSecret(in PutSecretInput) (*PutSecretOutput, error) {
+	tags := make([]*ssm.Tag, 0, len(in.Tags))
+
+	// Sort the map so that the unit test won't be flaky.
+	keys := make([]string, 0, len(in.Tags))
+	for k := range in.Tags {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
 		tags = append(tags, &ssm.Tag{
 			Key:   aws.String(key),
-			Value: aws.String(value),
+			Value: aws.String(in.Tags[key]),
 		})
 	}
 
@@ -53,9 +65,9 @@ func (s *SSM) PutSecret(in PutSecretInput) error {
 		Overwrite: aws.Bool(in.Overwrite),
 		Tags:      tags,
 	}
-	_, err := s.client.PutParameter(input)
+	output, err := s.client.PutParameter(input)
 	if err != nil {
-		return fmt.Errorf("put parameter %s: %w", in.Name, err)
+		return nil, fmt.Errorf("put parameter %s: %w", in.Name, err)
 	}
-	return nil
+	return (*PutSecretOutput)(output), nil
 }
