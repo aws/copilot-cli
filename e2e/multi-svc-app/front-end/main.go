@@ -73,7 +73,6 @@ func SetJobCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params)
 
 // PutEFSCheck writes a file to the EFS folder in the container.
 func PutEFSCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-	log.Println("Get /efs-putter succeeded")
 	efsVar := os.Getenv("COPILOT_MOUNT_POINTS")
 	copilotMountPoints := make(map[string]string)
 	if err := json.Unmarshal([]byte(efsVar), &copilotMountPoints); err != nil {
@@ -92,7 +91,7 @@ func PutEFSCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
+	log.Println("Get /efs-putter succeeded")
 	w.WriteHeader(http.StatusOK)
 }
 

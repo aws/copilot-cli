@@ -344,6 +344,28 @@ var _ = Describe("Multiple Service App", func() {
 			Expect(resp.StatusCode).To(Equal(200))
 		})
 
+		It("EFS volume should appear in `env show`", func() {
+			envShowOutput, envShowErr := cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "test",
+			})
+			Expect(envShowErr).NotTo(HaveOccurred())
+			Expect(envShowOutput.Resources).To(ContainElement(HaveKeyWithValue("type", "AWS::EFS::FileSystem")))
+		})
+
+		It("EFS filesystem size should be greater than 1 MiB", func() {
+			Eventually(func() (bool, error) {
+				size, err := aws.GetFileSystemSize()
+				if err != nil {
+					return false, err
+				}
+				return size > 1024*1024, nil
+			}, "4m", "15s").Should(BeTrue())
+			// This is shorthand for "error is nil and comparison is true"
+			// These numbers are based on an experiment I did: it takes about 100 seconds for the new size
+			// of an EFS filesystem to show up in metering. We should allow for the possibility of it taking longer.
+		})
+
 		It("job should have run", func() {
 			// Job should have run. We check this by hitting the "job-checker" path, which tells us the value
 			// of the "TEST_JOB_CHECK_VAR" in the frontend service, which will have been updated by a GET on
@@ -358,7 +380,7 @@ var _ = Describe("Multiple Service App", func() {
 					return "", err
 				}
 				return string(bodyBytes), nil
-			}, "4m", "15s").Should(Equal("yes")) // This is shorthand for "error is nil and resp is yes"
+			}, "4m", "10s").Should(Equal("yes")) // This is shorthand for "error is nil and resp is yes"
 		})
 
 		It("environment variable should be overridden and accessible through GET /magicwords", func() {
