@@ -5,7 +5,6 @@ BINARY_NAME=copilot
 PACKAGES=./internal...
 SOURCE_CUSTOM_RESOURCES=${PWD}/cf-custom-resources
 BUILT_CUSTOM_RESOURCES=${PWD}/templates/custom-resources
-SOURDE_DOCS=${PWD}/site
 GOBIN=${PWD}/bin/tools
 COVERAGE=coverage.out
 

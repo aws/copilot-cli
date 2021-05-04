@@ -73,8 +73,7 @@ Resources:
       ContainerDefinitions:
         - Name: !Ref WorkloadName
           Image: !Ref ContainerImage
-          PortMappings:
-            - ContainerPort: !Ref ContainerPort
+          
           # We pipe certain environment variables directly into the task definition.
           # This lets customers have access to, for example, their LB endpoint - which they'd
           # have no way of otherwise determining.
@@ -94,17 +93,20 @@ Resources:
           - Name: COPILOT_LB_DNS
             Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
           
-          
           LogConfiguration:
             LogDriver: awslogs
             Options:
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
-              awslogs-stream-prefix: copilot          
+              awslogs-stream-prefix: copilot
+            
           MountPoints:
             - ContainerPath: '/etc/scratch'
               ReadOnly: true
-              SourceVolume: persistence        
+              SourceVolume: persistence
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort        
+
       
       Volumes:
         - Name: persistence
@@ -240,8 +242,8 @@ Resources:
       'aws:copilot:description': "An AutoScaling target to scale your service's desired count"
     Type: AWS::ApplicationAutoScaling::ScalableTarget
     Properties:
-      MinCapacity: 2
-      MaxCapacity: 10
+      MinCapacity: 3
+      MaxCapacity: 12
       ResourceId:
         Fn::Join:
           - '/'
@@ -340,7 +342,12 @@ Resources:
         MinimumHealthyPercent: 100
         MaximumPercent: 200
       PropagateTags: SERVICE
-      LaunchType: FARGATE
+      CapacityProviderStrategy:
+        - CapacityProvider: FARGATE_SPOT
+          Weight: 1
+        - CapacityProvider: FARGATE
+          Weight: 0
+          Base: 5
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
@@ -357,6 +364,7 @@ Resources:
                 - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
           SecurityGroups:
             - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+      
       # This may need to be adjusted if the container takes a while to start up
       HealthCheckGracePeriodSeconds: 60
       LoadBalancers:

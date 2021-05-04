@@ -15,7 +15,7 @@ job you'd like to create. Currently, Copilot only supports "Scheduled Job".
 ## Config and the Manifest
 
 After you've run `copilot init`, the CLI will create a file called `manifest.yml`.
-The [scheduled job manifest](../manifest/scheduled-job.md) is a simple declarative file that 
+The [scheduled job manifest](../manifest/scheduled-job.en.md) is a simple declarative file that 
 contains the most common configuration for a task that's triggered by a scheduled event. For example,
 you can configure when you'd like to trigger the job, the container size, the timeout for the task, as well as
 how many times to retry in case of failures.

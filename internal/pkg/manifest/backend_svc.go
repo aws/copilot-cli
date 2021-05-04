@@ -109,6 +109,16 @@ func (s BackendService) ApplyEnv(envName string) (*BackendService, error) {
 	if !ok {
 		return &s, nil
 	}
+
+	if overrideConfig == nil {
+		return &s, nil
+	}
+
+	envCount := overrideConfig.TaskConfig.Count
+	if !envCount.IsEmpty() {
+		s.TaskConfig.Count = envCount
+	}
+
 	// Apply overrides to the original service s.
 	err := mergo.Merge(&s, BackendService{
 		BackendServiceConfig: *overrideConfig,

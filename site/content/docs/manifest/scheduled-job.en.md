@@ -6,18 +6,18 @@ List of all available properties for a `'Scheduled Job'` manifest.
     # Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
     name: report-generator
     type: Scheduled Job
-    
+
     on:
       schedule: @daily
     cpu: 256
     memory: 512
     retries: 3
     timeout: 1h
-    
+
     image:
       # Path to your service's Dockerfile.
       build: ./Dockerfile
-    
+
     variables:
       LOG_LEVEL: info
     secrets:
@@ -25,12 +25,12 @@ List of all available properties for a `'Scheduled Job'` manifest.
     ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
-The name of your job.   
+The name of your job.
 
 <div class="separator"></div>
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
-The architecture type for your job.  
+The architecture type for your job.
 Currently, Copilot only supports the "Scheduled Job" type for tasks that are triggered either on a fixed schedule or periodically.
 
 <div class="separator"></div>
@@ -57,7 +57,7 @@ Alternatively, you can specify a cron schedule if you'd like to trigger the job 
 <div class="separator"></div>
 
 <a id="image" href="#image" class="field">`image`</a> <span class="type">Map</span>  
-The image section contains parameters relating to the Docker build configuration.  
+The image section contains parameters relating to the Docker build configuration.
 
 <span class="parent-field">image.</span><a id="image-build" href="#image-build" class="field">`build`</a> <span class="type">String or Map</span>  
 If you specify a string, Copilot interprets it as the path to your Dockerfile. It will assume that the dirname of the string you specify should be the build context. The manifest:
@@ -65,7 +65,7 @@ If you specify a string, Copilot interprets it as the path to your Dockerfile. I
 image:
   build: path/to/dockerfile
 ```
-will result in the following call to docker build: `$ docker build --file path/to/dockerfile path/to` 
+will result in the following call to docker build: `$ docker build --file path/to/dockerfile path/to`
 
 You can also specify build as a map:
 ```yaml
@@ -79,21 +79,21 @@ image:
     args:
       key: value
 ```
-In this case, Copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be:  
+In this case, Copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be:
 `$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir`.
 
 You can omit fields and Copilot will do its best to understand what you mean. For example, if you specify `context` but not `dockerfile`, Copilot will run Docker in the context directory and assume that your Dockerfile is named "Dockerfile." If you specify `dockerfile` but no `context`, Copilot assumes you want to run Docker in the directory that contains `dockerfile`.
- 
-All paths are relative to your workspace root. 
+
+All paths are relative to your workspace root.
 
 <span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>  
-Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).    
+Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).
 The `location` field follows the same definition as the [`image` parameter](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image) in the Amazon ECS task definition.
 
-<span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a><span class="type">Map</span>
+<span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a><span class="type">Map</span>  
 An optional key/value map of [Docker labels](https://docs.docker.com/config/labels-custom-metadata/) to add to the container.
 
-<div class="separator"></div>
+<div class="separator"></div>  
 
 <a id="entrypoint" href="#entrypoint" class="field">`entrypoint`</a> <span class="type">String or Array of Strings</span>  
 Override the default entrypoint in the image.
@@ -138,7 +138,7 @@ How long the job should run before it aborts and fails. You can use the units: `
 
 <div class="separator"></div>
 
-<a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>    
+<a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>  
 The `network` section contains parameters for connecting to AWS resources in a VPC.
 
 <span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>  
@@ -147,7 +147,7 @@ Subnets and security groups attached to your tasks.
 <span class="parent-field">network.vpc.</span><a id="network-vpc-placement" href="#network-vpc-placement" class="field">`placement`</a> <span class="type">String</span>    
 Must be one of `'public'` or `'private'`. Defaults to launching your tasks in public subnets.
 
-!!! info inline end
+!!! info
     Launching tasks in `'private'` subnets that need internet connectivity is only supported if you imported a VPC with
     NAT Gateways when running `copilot env init`. See [#1959](https://github.com/aws/copilot-cli/issues/1959) for tracking
     NAT Gateways support in Copilot-generated VPCs.
@@ -158,24 +158,24 @@ can communicate with each other.
 
 <div class="separator"></div>
 
-<a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>   
+<a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>  
 Key-value pairs that represent environment variables that will be passed to your job. Copilot will include a number of environment variables by default for you.
 
 <div class="separator"></div>
 
-<a id="secrets" href="#secrets" class="field">`secrets`</a> <span class="type">Map</span>   
-Key-value pairs that represent secret values from [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) that will be securely passed to your job as environment variables. 
+<a id="secrets" href="#secrets" class="field">`secrets`</a> <span class="type">Map</span>  
+Key-value pairs that represent secret values from [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) that will be securely passed to your job as environment variables.
 
 <div class="separator"></div>
 
 <a id="storage" href="#storage" class="field">`storage`</a> <span class="type">Map</span>  
-The Storage section lets you specify external EFS volumes for your containers and sidecars to mount. This allows you to access persistent storage across regions for data processing or CMS workloads. For more detail, see the [storage](../developing/storage.md) page.
+The Storage section lets you specify external EFS volumes for your containers and sidecars to mount. This allows you to access persistent storage across regions for data processing or CMS workloads. For more detail, see the [storage](../developing/storage.en.md) page.
 
 <span class="parent-field">storage.</span><a id="volumes" href="#volumes" class="field">`volumes`</a> <span class="type">Map</span>  
 Specify the name and configuration of any EFS volumes you would like to attach. The `volumes` field is specified as a map of the form:
 ```yaml
 volumes:
-  {{ volume name }}:
+  <volume name>:
     path: "/etc/mountpath"
     efs:
       ...
@@ -185,29 +185,29 @@ volumes:
 Specify the configuration of a volume.
 
 <span class="parent-field">volume.</span><a id="path" href="#path" class="field">`path`</a> <span class="type">String</span>  
-Required. Specify the location in the container where you would like your volume to be mounted. Must be fewer than 242 characters and must consist only of the characters `a-zA-Z0-9.-_/`. 
+Required. Specify the location in the container where you would like your volume to be mounted. Must be fewer than 242 characters and must consist only of the characters `a-zA-Z0-9.-_/`.
 
-<span class="parent-field">volume.</span><a id="read_only" href="#read-only" class="field">`read_only`</a> <span class="type">Bool</span>  
-Optional. Defaults to `true`. Defines whether the volume is read-only or not. If false, the container is granted `elasticfilesystem:ClientWrite` permissions to the filesystem and the volume is writable. 
+<span class="parent-field">volume.</span><a id="read_only" href="#read-only" class="field">`read_only`</a> <span class="type">Boolean</span>  
+Optional. Defaults to `true`. Defines whether the volume is read-only or not. If false, the container is granted `elasticfilesystem:ClientWrite` permissions to the filesystem and the volume is writable.
 
 <span class="parent-field">volume.</span><a id="efs" href="#efs" class="field">`efs`</a> <span class="type">Map</span>  
 Specify more detailed EFS configuration.
 
 <span class="parent-field">volume.efs.</span><a id="id" href="#id" class="field">`id`</a> <span class="type">String</span>  
-Required. The ID of the filesystem you would like to mount. 
+Required. The ID of the filesystem you would like to mount.
 
 <span class="parent-field">volume.efs.</span><a id="root_dir" href="#root-dir" class="field">`root_dir`</a> <span class="type">String</span>  
-Optional. Defaults to `/`. Specify the location in the EFS filesystem you would like to use as the root of your volume. Must be fewer than 255 characters and must consist only of the characters `a-zA-Z0-9.-_/`. If using an access point, `root_dir` must be either empty or `/` and `auth.iam` must be `true`. 
+Optional. Defaults to `/`. Specify the location in the EFS filesystem you would like to use as the root of your volume. Must be fewer than 255 characters and must consist only of the characters `a-zA-Z0-9.-_/`. If using an access point, `root_dir` must be either empty or `/` and `auth.iam` must be `true`.
 
 <span class="parent-field">volume.efs.</span><a id="auth" href="#auth" class="field">`auth`</a> <span class="type">Map</span>  
-Specify advanced authorization configuration for EFS. 
+Specify advanced authorization configuration for EFS.
 
-<span class="parent-field">volume.efs.auth.</span><a id="iam" href="#iam" class="field">`iam`</a> <span class="type">Bool</span>  
-Optional. Defaults to `true`. Whether or not to use IAM authorization to determine whether the volume is allowed to connect to EFS. 
+<span class="parent-field">volume.efs.auth.</span><a id="iam" href="#iam" class="field">`iam`</a> <span class="type">Boolean</span>  
+Optional. Defaults to `true`. Whether or not to use IAM authorization to determine whether the volume is allowed to connect to EFS.
 
 <span class="parent-field">volume.efs.auth.</span><a id="access_point_id" href="#access-point-id" class="field">`access_point_id`</a> <span class="type">String</span>  
 Optional. Defaults to `""`. The ID of the EFS access point to connect to. If using an access point, `root_dir` must be either empty or `/` and `auth.iam` must be `true`.
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
-The environment section lets you override any value in your manifest based on the environment you're in. 
+The environment section lets you override any value in your manifest based on the environment you're in.
 In the example manifest above, we're overriding the CPU parameter so that our production container is more performant.

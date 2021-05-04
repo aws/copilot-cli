@@ -1,12 +1,12 @@
 # Additional AWS Resources
 
-Additional AWS resources, referred to as "addons" in the CLI, are any additional AWS services that a [service manifest](../manifest/overview.md) does not integrate by default. For example, an addon can be a DynamoDB table or S3 bucket that your service needs to read or write to.
+Additional AWS resources, referred to as "addons" in the CLI, are any additional AWS services that a [service manifest](../manifest/overview.en.md) does not integrate by default. For example, an addon can be a DynamoDB table or S3 bucket that your service needs to read or write to.
 
 ## How do I add an S3 bucket or DDB Table?
 
 Copilot provides the following commands to help you create certain kinds of addons:
 
-* [`storage init`](../commands/storage-init.md) will create a DynamoDB table or S3 bucket.  
+* [`storage init`](../commands/storage-init.en.md) will create a DynamoDB table or S3 bucket.  
 
 You can run `copilot storage init` from your workspace and be guided through some questions to help you set up these resources.
 
@@ -110,6 +110,6 @@ On your next release, Copilot will include this template as a nested stack under
 !!! info
     We recommend following [Amazon IAM best practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html) while defining AWS Managed Policies for the additional resources, including:
     
-    * [Grant least privilege](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#grant-least-privilege) to the policies defined in your addons/ directory.  
+    * [Grant least privilege](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#grant-least-privilege) to the policies defined in your `addons/` directory.  
     * [Use policy conditions for extra security](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#use-policy-conditions) to restrict your policies to access only the resources defined in your `addons/` directory.   
 

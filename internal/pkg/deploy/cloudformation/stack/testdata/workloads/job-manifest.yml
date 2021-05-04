@@ -27,14 +27,16 @@ retries: 3
 timeout: 1h
 
 storage:
+  ephemeral: 200
   volumes:
     managedEFSVolume:
       path: '/etc/mount1'
       read_only: false
-      efs: copilot
+      efs: true
 
 sidecars:
   nginx:
+    essential: true
     image: public.ecr.aws/nginx/nginx
     port: 8080
     mount_points:

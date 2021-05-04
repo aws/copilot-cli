@@ -225,8 +225,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSConfigOrID{
-										Config: EFSVolumeConfiguration{
+									EFS: &EFSConfigOrBool{
+										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-1234"),
 										},
 									},
@@ -273,8 +273,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSConfigOrID{
-										Config: EFSVolumeConfiguration{
+									EFS: &EFSConfigOrBool{
+										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-1234"),
 										},
 									},
@@ -329,8 +329,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSConfigOrID{
-										Config: EFSVolumeConfiguration{
+									EFS: &EFSConfigOrBool{
+										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-1234"),
 											AuthConfig: &AuthorizationConfig{
 												IAM:           aws.Bool(true),
@@ -385,8 +385,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Storage: &Storage{
 								Volumes: map[string]Volume{
 									"myEFSVolume": {
-										EFS: &EFSConfigOrID{
-											Config: EFSVolumeConfiguration{
+										EFS: &EFSConfigOrBool{
+											Advanced: EFSVolumeConfiguration{
 												FileSystemID: aws.String("fs-5678"),
 												AuthConfig: &AuthorizationConfig{
 													AccessPointID: aws.String("ap-5678"),
@@ -470,8 +470,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 										ContainerPath: aws.String("/path/to/files"),
 										ReadOnly:      aws.Bool(false),
 									},
-									EFS: &EFSConfigOrID{
-										Config: EFSVolumeConfiguration{
+									EFS: &EFSConfigOrBool{
+										Advanced: EFSVolumeConfiguration{
 											FileSystemID: aws.String("fs-5678"),
 											AuthConfig: &AuthorizationConfig{
 												IAM:           aws.Bool(true),
@@ -514,6 +514,41 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 			},
 		},
+		"with empty env override": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Range: &Range{Value: &mockRange},
+								CPU:   aws.Int(80),
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": nil,
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							Value: nil,
+							AdvancedCount: AdvancedCount{
+								Range: &Range{Value: &mockRange},
+								CPU:   aws.Int(80),
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": nil,
+				},
+			},
+		},
 		"with range override": {
 			in: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
@@ -546,12 +581,187 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 			},
 		},
+		"with count value overriden by count value": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							Value: aws.Int(5),
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						TaskConfig: TaskConfig{
+							Count: Count{
+								Value: aws.Int(7),
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							Value: aws.Int(7),
+						},
+					},
+				},
+			},
+		},
+		"with count value overriden by spot count": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{Value: aws.Int(3)},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						TaskConfig: TaskConfig{
+							Count: Count{
+								AdvancedCount: AdvancedCount{
+									Spot: aws.Int(6),
+								},
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot: aws.Int(6),
+							},
+						},
+					},
+				},
+			},
+		},
+		"with range overriden by spot count": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Range: &Range{Value: &mockRange},
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						TaskConfig: TaskConfig{
+							Count: Count{
+								AdvancedCount: AdvancedCount{
+									Spot: aws.Int(5),
+								},
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot: aws.Int(5),
+							},
+						},
+					},
+				},
+			},
+		},
+		"with range overriden by range config": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Range: &Range{Value: &mockRange},
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						TaskConfig: TaskConfig{
+							Count: Count{
+								AdvancedCount: AdvancedCount{
+									Range: &Range{
+										RangeConfig: RangeConfig{
+											Min: aws.Int(2),
+											Max: aws.Int(8),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Range: &Range{
+									RangeConfig: RangeConfig{
+										Min: aws.Int(2),
+										Max: aws.Int(8),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"with spot overriden by count value": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot: aws.Int(5),
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						TaskConfig: TaskConfig{
+							Count: Count{Value: aws.Int(15)},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					TaskConfig: TaskConfig{
+						Count: Count{Value: aws.Int(15)},
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// GIVEN
-
 			// WHEN
 			conf, _ := tc.in.ApplyEnv(tc.envToApply)
 
