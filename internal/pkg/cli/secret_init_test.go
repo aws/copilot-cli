@@ -79,8 +79,8 @@ func TestSecretInitOpts_Validate(t *testing.T) {
 			inApp: "dragon_slaying",
 			setupMocks: func(m secretInitMocks) {
 				m.mockStore.EXPECT().GetApplication("dragon_slaying").Return(&config.Application{}, nil)
-				m.mockStore.EXPECT().GetEnvironment("dragon_slaying", "good_village").Return(&config.Environment{}, nil)
-				m.mockStore.EXPECT().GetEnvironment("dragon_slaying", "bad_village").Return(&config.Environment{}, nil)
+				m.mockStore.EXPECT().GetEnvironment("dragon_slaying", "good_village").Return(&config.Environment{}, nil).MinTimes(0).MaxTimes(1)
+				m.mockStore.EXPECT().GetEnvironment("dragon_slaying", "bad_village").Return(&config.Environment{}, nil).MinTimes(0).MaxTimes(1)
 				m.mockStore.EXPECT().GetEnvironment("dragon_slaying", "neutral_village").Return(nil, errors.New("some error"))
 			},
 			wantedError: errors.New("get environment neutral_village in application dragon_slaying: some error"),

@@ -59,7 +59,7 @@ func (o *secretInitOpts) Validate() error {
 	}
 
 	if o.values != nil {
-		for env, _ := range o.values {
+		for env := range o.values {
 			if _, err := o.store.GetEnvironment(o.appName, env); err != nil {
 				return fmt.Errorf("get environment %s in application %s: %w", env, o.appName, err)
 			}
