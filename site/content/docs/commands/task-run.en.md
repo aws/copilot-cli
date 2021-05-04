@@ -63,7 +63,7 @@ $ copilot task run -n db-migrate --env test --follow
 
 Run 4 tasks with 2GB memory, an existing image, and a custom task role.
 ```
-$ copilot task run --num 4 --memory 2048 --image=rds-migrate --task-role migrate-role --follow
+$ copilot task run --count 4 --memory 2048 --image=rds-migrate --task-role migrate-role --follow
 ```
 
 Run a task with environment variables.
