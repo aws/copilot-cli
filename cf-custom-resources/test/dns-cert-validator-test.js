@@ -1061,6 +1061,10 @@ describe("DNS Validated Certificate Handler", () => {
     const deleteCertificateFake = sinon.fake.resolves({});
     AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
 
+    const listCertificatesFake = sinon.stub();
+    listCertificatesFake.resolves({});
+    AWS.mock("ACM", "listCertificates", listCertificatesFake);
+
     const request = nock(ResponseURL)
       .put("/", (body) => {
         return body.Status === "SUCCESS";
@@ -1088,6 +1092,7 @@ describe("DNS Validated Certificate Handler", () => {
             CertificateArn: testCertificateArn,
           })
         );
+        sinon.assert.calledWith(listCertificatesFake, sinon.match({}));
         sinon.assert.calledWith(
           deleteCertificateFake,
           sinon.match({
@@ -1218,6 +1223,10 @@ describe("DNS Validated Certificate Handler", () => {
     const deleteCertificateFake = sinon.fake.rejects(error);
     AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
 
+    const listCertificatesFake = sinon.stub();
+    listCertificatesFake.resolves({});
+    AWS.mock("ACM", "listCertificates", listCertificatesFake);
+
     const request = nock(ResponseURL)
       .put("/", (body) => {
         return body.Status === "FAILED";
@@ -1245,6 +1254,7 @@ describe("DNS Validated Certificate Handler", () => {
             CertificateArn: testCertificateArn,
           })
         );
+        sinon.assert.calledWith(listCertificatesFake, sinon.match({}));
         sinon.assert.calledWith(
           deleteCertificateFake,
           sinon.match({
@@ -1266,6 +1276,10 @@ describe("DNS Validated Certificate Handler", () => {
 
     const deleteCertificateFake = sinon.fake.resolves({});
     AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
+
+    const listCertificatesFake = sinon.stub();
+    listCertificatesFake.resolves({});
+    AWS.mock("ACM", "listCertificates", listCertificatesFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -1294,6 +1308,7 @@ describe("DNS Validated Certificate Handler", () => {
             CertificateArn: testCertificateArn,
           })
         );
+        sinon.assert.calledWith(listCertificatesFake, sinon.match({}));
         sinon.assert.calledWith(
           deleteCertificateFake,
           sinon.match({
