@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/exec"
+
 	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -27,7 +29,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
@@ -141,7 +142,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		store:            ssmStore,
 		prompt:           prompter,
 		sel:              selector.NewSelect(prompter, ssmStore),
-		runner:           command.New(),
+		runner:           exec.NewCmd(),
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 	}, nil
 }
@@ -328,7 +329,7 @@ func (o *initPipelineOpts) parseBitbucketRepoDetails() error {
 
 func (o *initPipelineOpts) selectURL() error {
 	// Fetches and parses all remote repositories.
-	err := o.runner.Run("git", []string{"remote", "-v"}, command.Stdout(&o.buffer))
+	err := o.runner.Run("git", []string{"remote", "-v"}, exec.Stdout(&o.buffer))
 	if err != nil {
 		return fmt.Errorf("get remote repository info: %w; make sure you have installed Git and are in a Git repository", err)
 	}

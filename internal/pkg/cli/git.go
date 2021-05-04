@@ -7,23 +7,23 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
+	"github.com/aws/copilot-cli/internal/pkg/exec"
 )
 
-func describeGitChanges(exec runner) (string, error) {
+func describeGitChanges(r runner) (string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	if err := exec.Run("git", []string{"describe", "--always"}, command.Stdout(&stdout), command.Stderr(&stderr)); err != nil {
+	if err := r.Run("git", []string{"describe", "--always"}, exec.Stdout(&stdout), exec.Stderr(&stderr)); err != nil {
 		return "", err
 	}
 	// NOTE: `git describe` output bytes includes a `\n` character, so we trim it out.
 	return strings.TrimSpace(stdout.String()), nil
 }
 
-func hasUncommitedGitChanges(exec runner) (bool, error) {
+func hasUncommitedGitChanges(r runner) (bool, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	if err := exec.Run("git", []string{"status", "--porcelain"}, command.Stdout(&stdout), command.Stderr(&stderr)); err != nil {
+	if err := r.Run("git", []string{"status", "--porcelain"}, exec.Stdout(&stdout), exec.Stderr(&stderr)); err != nil {
 		return false, err
 	}
 	return strings.TrimSpace(stdout.String()) != "", nil
@@ -33,15 +33,15 @@ func hasUncommitedGitChanges(exec runner) (bool, error) {
 // If the user provided their own tag, then just use that.
 // If there is a clean git commit with no local changes, then return the git commit id.
 // Otherwise, returns the empty string.
-func imageTagFromGit(exec runner, userTag string) string {
+func imageTagFromGit(r runner, userTag string) string {
 	if userTag != "" {
 		return userTag
 	}
-	commit, err := describeGitChanges(exec)
+	commit, err := describeGitChanges(r)
 	if err != nil {
 		return ""
 	}
-	isRepoDirty, _ := hasUncommitedGitChanges(exec)
+	isRepoDirty, _ := hasUncommitedGitChanges(r)
 	if isRepoDirty {
 		return ""
 	}

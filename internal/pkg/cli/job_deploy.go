@@ -26,7 +26,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -83,7 +82,7 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 		spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
 		sel:          selector.NewWorkspaceSelect(prompter, store, ws),
 		prompt:       prompter,
-		cmd:          command.New(),
+		cmd:          exec.NewCmd(),
 		sessProvider: sessions.NewProvider(),
 	}, nil
 }
