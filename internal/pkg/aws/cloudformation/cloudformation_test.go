@@ -88,6 +88,14 @@ func TestCloudFormation_Create(t *testing.T) {
 				return m
 			},
 		},
+		"creates the stack with templateURL": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().DescribeStacks(gomock.Any()).Return(nil, errDoesNotExist)
+				addCreateDeployCalls(m)
+				return m
+			},
+		},
 		"creates the stack after cleaning the previously failed execution": {
 			createMock: func(ctrl *gomock.Controller) client {
 				m := mocks.NewMockclient(ctrl)
@@ -1184,7 +1192,7 @@ func addDeployCalls(m *mocks.Mockclient, changeSetType string) {
 		ChangeSetName:       aws.String(mockChangeSetName),
 		StackName:           aws.String(mockStack.Name),
 		ChangeSetType:       aws.String(changeSetType),
-		TemplateBody:        aws.String(mockStack.Template),
+		TemplateBody:        aws.String(mockStack.TemplateBody),
 		Parameters:          nil,
 		Tags:                nil,
 		RoleARN:             nil,

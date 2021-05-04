@@ -37,7 +37,7 @@ After that, if you already have an environment set up, you can run `copilot job 
 
  Creates a "reaper" scheduled task to run once per day.
 ```bash
-$ copilot job init --name reaper --dockerfile ./frontend/Dockerfile --schedule "every 2 hours"
+$ copilot job init --name reaper --dockerfile ./frontend/Dockerfile --schedule "@daily"
 ```
 Creates a "report-generator" scheduled task with retries.
 ```bash
