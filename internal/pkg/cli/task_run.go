@@ -522,16 +522,20 @@ func (o *runTaskOpts) runTaskCommand() (*ecs.RunTaskRequest, error) {
 	}
 
 	if arn.IsARN(o.generateCommandTarget) {
-		return o.runTaskCommandFromARN(sess)
+		clusterName, serviceName, err := o.parseARN()
+		if err != nil {
+			return nil, err
+		}
+		return o.runTaskCommandFromECSService(sess, clusterName, serviceName)
 	}
 
 	parts := strings.Split(o.generateCommandTarget, "/")
 	switch len(parts) {
 	case 2:
 		clusterName, serviceName := parts[0], parts[1]
-		cmd, err = o.runTaskRequestFromECSService(awsecs.New(sess), clusterName, serviceName)
+		cmd, err = o.runTaskCommandFromECSService(sess, clusterName, serviceName)
 		if err != nil {
-			return nil, fmt.Errorf("generate task run command from ECS service %s: %w", clusterName+"/"+serviceName, err)
+			return nil, err
 		}
 	case 3:
 		appName, envName, serviceName := parts[0], parts[1], parts[2]
@@ -546,19 +550,27 @@ func (o *runTaskOpts) runTaskCommand() (*ecs.RunTaskRequest, error) {
 	return cmd, nil
 }
 
-func (o *runTaskOpts) runTaskCommandFromARN(sess *session.Session) (*ecs.RunTaskRequest, error) {
+func (o *runTaskOpts) parseARN() (string, string, error) {
 	svcARN := awsecs.ServiceArn(o.generateCommandTarget)
 	clusterName, err := svcARN.ClusterName()
 	if err != nil {
-		return nil, fmt.Errorf("extract cluster name from arn %s: %w", svcARN, err)
+		return "", "", fmt.Errorf("extract cluster name from arn %s: %w", svcARN, err)
 	}
 	serviceName, err := svcARN.ServiceName()
 	if err != nil {
-		return nil, fmt.Errorf("extract service name from arn %s: %w", svcARN, err)
+		return "", "", fmt.Errorf("extract service name from arn %s: %w", svcARN, err)
 	}
+	return clusterName, serviceName, nil
+}
+
+func (o *runTaskOpts) runTaskCommandFromECSService(sess *session.Session, clusterName, serviceName string) (*ecs.RunTaskRequest, error) {
 	cmd, err := o.runTaskRequestFromECSService(awsecs.New(sess), clusterName, serviceName)
 	if err != nil {
 		return nil, fmt.Errorf("generate task run command from ECS service %s: %w", clusterName+"/"+serviceName, err)
+	}
+	var errMultipleContainers *ecs.ErrMultipleContainersInTaskDef
+	if errors.As(err, &errMultipleContainers) {
+		log.Errorf("`copilot task run` does not support running more than one container")
 	}
 	return cmd, nil
 }

@@ -65,7 +65,9 @@ func RunTaskRequestFromECSService(client ECSServiceDescriber, cluster, service s
 	}
 
 	if len(taskDef.ContainerDefinitions) > 1 {
-		return nil, fmt.Errorf("found more than one container in task definition: %s", taskDefNameOrARN)
+		return nil, &ErrMultipleContainersInTaskDef{
+			taskDefIdentifier: taskDefNameOrARN,
+		}
 	}
 
 	containerName := aws.StringValue(taskDef.ContainerDefinitions[0].Name)
