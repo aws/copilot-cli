@@ -13,12 +13,14 @@ import (
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
 
+// ECSServiceDescriber provides information on an ECS service.
 type ECSServiceDescriber interface {
 	Service(clusterName, serviceName string) (*awsecs.Service, error)
 	TaskDefinition(taskDefName string) (*awsecs.TaskDefinition, error)
 	NetworkConfiguration(cluster, serviceName string) (*awsecs.NetworkConfiguration, error)
 }
 
+// ServiceDescriber provides information on a Copilot service.
 type ServiceDescriber interface {
 	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
 	NetworkConfiguration(app, env, svc string) (*awsecs.NetworkConfiguration, error)

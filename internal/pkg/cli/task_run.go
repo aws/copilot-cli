@@ -537,7 +537,7 @@ func (o *runTaskOpts) runTaskCommand() (*ecs.RunTaskRequest, error) {
 		appName, envName, serviceName := parts[0], parts[1], parts[2]
 		cmd, err = o.runTaskRequestFromService(ecs.New(sess), appName, envName, serviceName)
 		if err != nil {
-			return nil, fmt.Errorf("generate task run command from service %s: %w", serviceName, err)
+			return nil, fmt.Errorf("generate task run command from service %s of application %s deployed in environment %s: %w", serviceName, appName, envName, err)
 		}
 	default:
 		return nil, errors.New("invalid input to --generate-cmd: must be of one the form <cluster>/<service> or <app>/<env>/<workload>")

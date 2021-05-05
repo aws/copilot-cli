@@ -227,8 +227,8 @@ Tasks with the same group name share the same set of resources.
 (default directory name)`
 	taskImageTagFlagDescription    = `Optional. The container image tag in addition to "latest".`
 	generateCommandFlagDescription = `Optional. Generate a command with a pre-filled value for each flag.
-To use a non-Copilot ECS service, specify --generate-cmd <cluster name>/<service name>.
-To use a Copilot service, specify --generate-cmd <application>/<environment>/<service>.
+To use it for an ECS service, specify --generate-cmd <cluster name>/<service name>.
+Alternatively, if the service is created with Copilot, specify --generate-cmd <application>/<environment>/<service>.
 Cannot be specified with any other flags.`
 
 	vpcIDFlagDescription          = "Optional. Use an existing VPC ID."

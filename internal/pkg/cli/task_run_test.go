@@ -974,7 +974,7 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 					return nil, errors.New("some error")
 				},
 			},
-			wantedError: fmt.Errorf("generate task run command from service good-service: some error"),
+			wantedError: fmt.Errorf("generate task run command from service good-service of application good-app deployed in environment good-env: some error"),
 		},
 		"invalid input": {
 			inGenerateCommandTarget: "invalid/illegal/not-good/input/is/bad",
