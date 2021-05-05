@@ -495,31 +495,31 @@ func (mr *MockapplicationCreatorMockRecorder) CreateApplication(app interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateApplication", reflect.TypeOf((*MockapplicationCreator)(nil).CreateApplication), app)
 }
 
-// MockapplicationUpdator is a mock of applicationUpdator interface.
-type MockapplicationUpdator struct {
+// MockapplicationUpdater is a mock of applicationUpdater interface.
+type MockapplicationUpdater struct {
 	ctrl     *gomock.Controller
-	recorder *MockapplicationUpdatorMockRecorder
+	recorder *MockapplicationUpdaterMockRecorder
 }
 
-// MockapplicationUpdatorMockRecorder is the mock recorder for MockapplicationUpdator.
-type MockapplicationUpdatorMockRecorder struct {
-	mock *MockapplicationUpdator
+// MockapplicationUpdaterMockRecorder is the mock recorder for MockapplicationUpdater.
+type MockapplicationUpdaterMockRecorder struct {
+	mock *MockapplicationUpdater
 }
 
-// NewMockapplicationUpdator creates a new mock instance.
-func NewMockapplicationUpdator(ctrl *gomock.Controller) *MockapplicationUpdator {
-	mock := &MockapplicationUpdator{ctrl: ctrl}
-	mock.recorder = &MockapplicationUpdatorMockRecorder{mock}
+// NewMockapplicationUpdater creates a new mock instance.
+func NewMockapplicationUpdater(ctrl *gomock.Controller) *MockapplicationUpdater {
+	mock := &MockapplicationUpdater{ctrl: ctrl}
+	mock.recorder = &MockapplicationUpdaterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockapplicationUpdator) EXPECT() *MockapplicationUpdatorMockRecorder {
+func (m *MockapplicationUpdater) EXPECT() *MockapplicationUpdaterMockRecorder {
 	return m.recorder
 }
 
 // UpdateApplication mocks base method.
-func (m *MockapplicationUpdator) UpdateApplication(app *config.Application) error {
+func (m *MockapplicationUpdater) UpdateApplication(app *config.Application) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateApplication", app)
 	ret0, _ := ret[0].(error)
@@ -527,9 +527,9 @@ func (m *MockapplicationUpdator) UpdateApplication(app *config.Application) erro
 }
 
 // UpdateApplication indicates an expected call of UpdateApplication.
-func (mr *MockapplicationUpdatorMockRecorder) UpdateApplication(app interface{}) *gomock.Call {
+func (mr *MockapplicationUpdaterMockRecorder) UpdateApplication(app interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateApplication", reflect.TypeOf((*MockapplicationUpdator)(nil).UpdateApplication), app)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateApplication", reflect.TypeOf((*MockapplicationUpdater)(nil).UpdateApplication), app)
 }
 
 // MockapplicationGetter is a mock of applicationGetter interface.
