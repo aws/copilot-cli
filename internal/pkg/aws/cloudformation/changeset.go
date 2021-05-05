@@ -6,6 +6,7 @@ package cloudformation
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -201,11 +202,12 @@ func (cs *changeSet) createAndExecute(conf *stackConfig) error {
 		if descrErr != nil {
 			return fmt.Errorf("check if changeset is empty: %v: %w", err, descrErr)
 		}
-		// The change set was empty - so we clean it up.
+		// The change set was empty - so we clean it up. The status reason will be like
+		// "The submitted information didn't contain changes. Submit different information to create a change set."
 		// We try to clean up the change set because there's a limit on the number
 		// of failed change sets a customer can have on a particular stack.
 		// See https://cloudonaut.io/aws-cli-cloudformation-deploy-limit-exceeded/.
-		if len(descr.Changes) == 0 {
+		if len(descr.Changes) == 0 && strings.Contains(descr.StatusReason, "didn't contain changes") {
 			_ = cs.delete()
 			return &ErrChangeSetEmpty{
 				cs: cs,
