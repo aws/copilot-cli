@@ -52,7 +52,7 @@ func TestChangeSet_createAndExecute(t *testing.T) {
 					}, nil)
 				return m
 			},
-			wantedErr: fmt.Errorf("create change set mockChangeSet for stack phonetool: some error"),
+			wantedErr: fmt.Errorf("create change set mockChangeSet for stack phonetool: some error: some other reason"),
 		},
 		"error if fail to wait until the changeset creation complete": {
 			inConfig: stackConfig{
@@ -80,10 +80,12 @@ func TestChangeSet_createAndExecute(t *testing.T) {
 				m.EXPECT().DescribeChangeSet(&cloudformation.DescribeChangeSetInput{
 					ChangeSetName: aws.String(mockChangeSetName),
 					StackName:     aws.String(mockStackName)}).
-					Return(&cloudformation.DescribeChangeSetOutput{}, nil)
+					Return(&cloudformation.DescribeChangeSetOutput{
+						StatusReason: aws.String("some reason"),
+					}, nil)
 				return m
 			},
-			wantedErr: fmt.Errorf("wait for creation of change set mockChangeSet for stack phonetool: some error"),
+			wantedErr: fmt.Errorf("wait for creation of change set mockChangeSet for stack phonetool: some error: some reason"),
 		},
 		"error if fail to describe change set after creation failed": {
 			inConfig: stackConfig{

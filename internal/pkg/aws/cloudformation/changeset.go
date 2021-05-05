@@ -213,7 +213,7 @@ func (cs *changeSet) createAndExecute(conf *stackConfig) error {
 				cs: cs,
 			}
 		}
-		return err
+		return fmt.Errorf("%w: %s", err, descr.StatusReason)
 	}
 	return cs.execute()
 }
