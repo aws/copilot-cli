@@ -103,119 +103,7 @@ func (o *updatePipelineOpts) Validate() error {
 	return nil
 }
 
-func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
-	var stages []deploy.PipelineStage
-	workloads, err := o.ws.WorkloadNames()
-	if err != nil {
-		return nil, fmt.Errorf("get workload names from workspace: %w", err)
-	}
-
-	for _, stage := range manifestStages {
-		env, err := o.envStore.GetEnvironment(o.appName, stage.Name)
-		if err != nil {
-			return nil, fmt.Errorf("get environment %s in application %s: %w", stage.Name, o.appName, err)
-		}
-
-		pipelineStage := deploy.PipelineStage{
-			LocalWorkloads: workloads,
-			AssociatedEnvironment: &deploy.AssociatedEnvironment{
-				Name:      stage.Name,
-				Region:    env.Region,
-				AccountID: env.AccountID,
-			},
-			RequiresApproval: stage.RequiresApproval,
-			TestCommands:     stage.TestCommands,
-		}
-		stages = append(stages, pipelineStage)
-	}
-
-	return stages, nil
-}
-
-func (o *updatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, error) {
-	regionalResources, err := o.pipelineDeployer.GetRegionalAppResources(o.app)
-	if err != nil {
-		return nil, err
-	}
-
-	var buckets []deploy.ArtifactBucket
-	for _, resource := range regionalResources {
-		bucket := deploy.ArtifactBucket{
-			BucketName: resource.S3Bucket,
-			KeyArn:     resource.KMSKeyARN,
-		}
-		buckets = append(buckets, bucket)
-	}
-
-	return buckets, nil
-}
-
-func (o *updatePipelineOpts) shouldUpdate() (bool, error) {
-	if o.skipConfirmation {
-		return true, nil
-	}
-
-	shouldUpdate, err := o.prompt.Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, o.pipelineName), "")
-	if err != nil {
-		return false, fmt.Errorf("prompt for pipeline update: %w", err)
-	}
-	return shouldUpdate, nil
-}
-
-func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) error {
-	exist, err := o.pipelineDeployer.PipelineExists(in)
-	if err != nil {
-		return fmt.Errorf("check if pipeline exists: %w", err)
-	}
-	if !exist {
-		o.prog.Start(fmt.Sprintf(fmtPipelineUpdateStart, color.HighlightUserInput(o.pipelineName)))
-
-		// If the source requires CodeStar Connections, the user is prompted to update the connection status.
-		if o.shouldPromptUpdateConnection {
-			source, ok := in.Source.(interface {
-				ConnectionName() (string, error)
-			})
-			if !ok {
-				return fmt.Errorf("source %v does not have a connection name", in.Source)
-			}
-			connectionName, err := source.ConnectionName()
-			if err != nil {
-				return fmt.Errorf("parse connection name: %w", err)
-			}
-			log.Infoln()
-			log.Infof("%s Go to %s to update the status of connection %s from PENDING to AVAILABLE.", color.Emphasize("ACTION REQUIRED!"), color.HighlightResource(connectionsURL), color.HighlightUserInput(connectionName))
-			log.Infoln()
-		}
-
-		if err := o.pipelineDeployer.CreatePipeline(in); err != nil {
-			var alreadyExists *cloudformation.ErrStackAlreadyExists
-			if !errors.As(err, &alreadyExists) {
-				o.prog.Stop(log.Serrorf(fmtPipelineUpdateFailed, color.HighlightUserInput(o.pipelineName)))
-				return fmt.Errorf("create pipeline: %w", err)
-			}
-		}
-		o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateComplete, color.HighlightUserInput(o.pipelineName)))
-		return nil
-	}
-
-	// If the stack already exists - we update it
-	shouldUpdate, err := o.shouldUpdate()
-	if err != nil {
-		return err
-	}
-	if !shouldUpdate {
-		return nil
-	}
-	o.prog.Start(fmt.Sprintf(fmtPipelineUpdateProposalStart, color.HighlightUserInput(o.pipelineName)))
-	if err := o.pipelineDeployer.UpdatePipeline(in); err != nil {
-		o.prog.Stop(log.Serrorf(fmtPipelineUpdateProposalFailed, color.HighlightUserInput(o.pipelineName)))
-		return fmt.Errorf("update pipeline: %w", err)
-	}
-	o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateProposalComplete, color.HighlightUserInput(o.pipelineName)))
-	return nil
-}
-
-// Execute create a new pipeline or update the current pipeline if it already exists.
+// Execute creates a new pipeline or updates the current pipeline if it already exists.
 func (o *updatePipelineOpts) Execute() error {
 	// bootstrap pipeline resources
 	o.prog.Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, color.HighlightUserInput(o.appName)))
@@ -282,6 +170,131 @@ func (o *updatePipelineOpts) Execute() error {
 		return err
 	}
 
+	return nil
+}
+
+func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
+	var stages []deploy.PipelineStage
+	workloads, err := o.ws.WorkloadNames()
+	if err != nil {
+		return nil, fmt.Errorf("get workload names from workspace: %w", err)
+	}
+
+	for _, stage := range manifestStages {
+		env, err := o.envStore.GetEnvironment(o.appName, stage.Name)
+		if err != nil {
+			return nil, fmt.Errorf("get environment %s in application %s: %w", stage.Name, o.appName, err)
+		}
+
+		pipelineStage := deploy.PipelineStage{
+			LocalWorkloads: workloads,
+			AssociatedEnvironment: &deploy.AssociatedEnvironment{
+				Name:      stage.Name,
+				Region:    env.Region,
+				AccountID: env.AccountID,
+			},
+			RequiresApproval: stage.RequiresApproval,
+			TestCommands:     stage.TestCommands,
+		}
+		stages = append(stages, pipelineStage)
+	}
+
+	return stages, nil
+}
+
+func (o *updatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, error) {
+	regionalResources, err := o.pipelineDeployer.GetRegionalAppResources(o.app)
+	if err != nil {
+		return nil, err
+	}
+
+	var buckets []deploy.ArtifactBucket
+	for _, resource := range regionalResources {
+		bucket := deploy.ArtifactBucket{
+			BucketName: resource.S3Bucket,
+			KeyArn:     resource.KMSKeyARN,
+		}
+		buckets = append(buckets, bucket)
+	}
+
+	return buckets, nil
+}
+
+func (o *updatePipelineOpts) getBucketName() (string, error) {
+	resources, err := o.pipelineDeployer.GetAppResourcesByRegion(o.app, o.region)
+	if err != nil {
+		return "", fmt.Errorf("get app resources: %w", err)
+	}
+	return resources.S3Bucket, nil
+}
+
+func (o *updatePipelineOpts) shouldUpdate() (bool, error) {
+	if o.skipConfirmation {
+		return true, nil
+	}
+
+	shouldUpdate, err := o.prompt.Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, o.pipelineName), "")
+	if err != nil {
+		return false, fmt.Errorf("prompt for pipeline update: %w", err)
+	}
+	return shouldUpdate, nil
+}
+
+func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) error {
+	exist, err := o.pipelineDeployer.PipelineExists(in)
+	if err != nil {
+		return fmt.Errorf("check if pipeline exists: %w", err)
+	}
+
+	// Find the bucket to push the pipeline template to.
+	bucketName, err := o.getBucketName()
+	if err != nil {
+		return fmt.Errorf("get bucket name: %w", err)
+	}
+	if !exist {
+		o.prog.Start(fmt.Sprintf(fmtPipelineUpdateStart, color.HighlightUserInput(o.pipelineName)))
+
+		// If the source requires CodeStar Connections, the user is prompted to update the connection status.
+		if o.shouldPromptUpdateConnection {
+			source, ok := in.Source.(interface {
+				ConnectionName() (string, error)
+			})
+			if !ok {
+				return fmt.Errorf("source %v does not have a connection name", in.Source)
+			}
+			connectionName, err := source.ConnectionName()
+			if err != nil {
+				return fmt.Errorf("parse connection name: %w", err)
+			}
+			log.Infoln()
+			log.Infof("%s Go to %s to update the status of connection %s from PENDING to AVAILABLE.", color.Emphasize("ACTION REQUIRED!"), color.HighlightResource(connectionsURL), color.HighlightUserInput(connectionName))
+			log.Infoln()
+		}
+		if err := o.pipelineDeployer.CreatePipeline(in, bucketName); err != nil {
+			var alreadyExists *cloudformation.ErrStackAlreadyExists
+			if !errors.As(err, &alreadyExists) {
+				o.prog.Stop(log.Serrorf(fmtPipelineUpdateFailed, color.HighlightUserInput(o.pipelineName)))
+				return fmt.Errorf("create pipeline: %w", err)
+			}
+		}
+		o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateComplete, color.HighlightUserInput(o.pipelineName)))
+		return nil
+	}
+
+	// If the stack already exists - we update it
+	shouldUpdate, err := o.shouldUpdate()
+	if err != nil {
+		return err
+	}
+	if !shouldUpdate {
+		return nil
+	}
+	o.prog.Start(fmt.Sprintf(fmtPipelineUpdateProposalStart, color.HighlightUserInput(o.pipelineName)))
+	if err := o.pipelineDeployer.UpdatePipeline(in, bucketName); err != nil {
+		o.prog.Stop(log.Serrorf(fmtPipelineUpdateProposalFailed, color.HighlightUserInput(o.pipelineName)))
+		return fmt.Errorf("update pipeline: %w", err)
+	}
+	o.prog.Stop(log.Ssuccessf(fmtPipelineUpdateProposalComplete, color.HighlightUserInput(o.pipelineName)))
 	return nil
 }
 

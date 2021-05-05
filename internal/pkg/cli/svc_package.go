@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/copilot-cli/internal/pkg/exec"
+
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
@@ -19,7 +21,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -89,7 +90,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		ws:               ws,
 		store:            store,
 		appCFN:           cloudformation.New(sess),
-		runner:           command.New(),
+		runner:           exec.NewCmd(),
 		sel:              selector.NewWorkspaceSelect(prompter, store, ws),
 		prompt:           prompter,
 		stackWriter:      os.Stdout,
@@ -156,16 +157,12 @@ func (o *packageSvcOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	tag, err := askImageTag(o.tag, o.prompt, o.runner)
-	if err != nil {
-		return err
-	}
-	o.tag = tag
 	return nil
 }
 
 // Execute prints the CloudFormation template of the application for the environment.
 func (o *packageSvcOpts) Execute() error {
+	o.tag = imageTagFromGit(o.runner, o.tag) // Best effort assign git tag.
 	env, err := o.store.GetEnvironment(o.appName, o.envName)
 	if err != nil {
 		return err

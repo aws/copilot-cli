@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/exec/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -38,7 +37,7 @@ func TestSSMPluginCommand_StartSession(t *testing.T) {
 		StreamUrl:  aws.String("mockStreamURL"),
 		TokenValue: aws.String("mockTokenValue"),
 	}
-	var mockRunner *mocks.Mockrunner
+	var mockRunner *Mockrunner
 	mockError := errors.New("some error")
 	tests := map[string]struct {
 		inSession   *ecs.Session
@@ -48,7 +47,7 @@ func TestSSMPluginCommand_StartSession(t *testing.T) {
 		"return error if fail to start session": {
 			inSession: mockSession,
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().InteractiveRun(ssmPluginBinaryName,
 					[]string{`{"SessionId":"mockSessionID","StreamUrl":"mockStreamURL","TokenValue":"mockTokenValue"}`, "us-west-2", "StartSession"}).Return(mockError)
 			},
@@ -57,7 +56,7 @@ func TestSSMPluginCommand_StartSession(t *testing.T) {
 		"success with no update and no install": {
 			inSession: mockSession,
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().InteractiveRun(ssmPluginBinaryName,
 					[]string{`{"SessionId":"mockSessionID","StreamUrl":"mockStreamURL","TokenValue":"mockTokenValue"}`, "us-west-2", "StartSession"}).Return(nil)
 			},

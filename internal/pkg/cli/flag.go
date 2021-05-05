@@ -98,6 +98,10 @@ const (
 
 	taskIDFlag    = "task-id"
 	containerFlag = "container"
+
+	valuesFlag        = "values"
+	overwriteFlag     = "overwrite"
+	inputFilePathFlag = "cli-input-yaml"
 )
 
 // Short flag names.
@@ -151,6 +155,13 @@ Cannot be specified with '%s' or '%s'`, appFlag, envFlag)
 Cannot be specified with '%s', '%s' or '%s'`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
 	taskAppFlagDescription = fmt.Sprintf(`Optional. Name of the application.
 Cannot be specified with '%s', '%s' or '%s'`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
+
+	secretNameFlagDescription = fmt.Sprintf(`The name of the secret.
+Mutually exclusive with %s flag.`, inputFilePathFlag)
+	secretValuesFlagDescription = fmt.Sprintf(`Values of the secret in each environment. Specified as <environment>=<value> separated by commas.
+Mutually exclusive with %s flag.`, inputFilePathFlag)
+	secretInputFilePathFlagDescription = fmt.Sprintf(`Optional. A file in which the secret values are specified.
+Mutually exclusive with %s flag and %s flag"`, nameFlag, valuesFlag)
 )
 
 const (
@@ -260,4 +271,6 @@ are also accepted.`
 	taskIDFlagDescription      = "Optional. ID of the task you want to exec in."
 	execCommandFlagDescription = `Optional. The command that is passed to a running container.`
 	containerFlagDescription   = "Optional. The specific container you want to exec in. By default the first essential container will be used."
+
+	secretOverwriteFlagDescription = "Optional. Whether to overwrite an existing secret."
 )

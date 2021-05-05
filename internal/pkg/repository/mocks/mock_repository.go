@@ -63,21 +63,22 @@ func (mr *MockContainerLoginBuildPusherMockRecorder) Login(uri, username, passwo
 }
 
 // Push mocks base method.
-func (m *MockContainerLoginBuildPusher) Push(uri, imageTag string, additionalTags ...string) error {
+func (m *MockContainerLoginBuildPusher) Push(uri string, tags ...string) (string, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{uri, imageTag}
-	for _, a := range additionalTags {
+	varargs := []interface{}{uri}
+	for _, a := range tags {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Push", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Push indicates an expected call of Push.
-func (mr *MockContainerLoginBuildPusherMockRecorder) Push(uri, imageTag interface{}, additionalTags ...interface{}) *gomock.Call {
+func (mr *MockContainerLoginBuildPusherMockRecorder) Push(uri interface{}, tags ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{uri, imageTag}, additionalTags...)
+	varargs := append([]interface{}{uri}, tags...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Push", reflect.TypeOf((*MockContainerLoginBuildPusher)(nil).Push), varargs...)
 }
 

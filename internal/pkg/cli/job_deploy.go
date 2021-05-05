@@ -26,7 +26,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -56,6 +55,7 @@ type deployJobOpts struct {
 	targetApp         *config.Application
 	targetEnvironment *config.Environment
 	targetJob         *config.Workload
+	imageDigest       string
 	buildRequired     bool
 }
 
@@ -82,7 +82,7 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 		spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
 		sel:          selector.NewWorkspaceSelect(prompter, store, ws),
 		prompt:       prompter,
-		cmd:          command.New(),
+		cmd:          exec.NewCmd(),
 		sessProvider: sessions.NewProvider(),
 	}, nil
 }
@@ -113,16 +113,12 @@ func (o *deployJobOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	tag, err := askImageTag(o.imageTag, o.prompt, o.cmd)
-	if err != nil {
-		return err
-	}
-	o.imageTag = tag
 	return nil
 }
 
 // Execute builds and pushes the container image for the job.
 func (o *deployJobOpts) Execute() error {
+	o.imageTag = imageTagFromGit(o.cmd, o.imageTag) // Best effort assign git tag.
 	env, err := targetEnv(o.store, o.appName, o.envName)
 	if err != nil {
 		return err
@@ -252,9 +248,11 @@ func (o *deployJobOpts) configureContainerImage() error {
 	if err != nil {
 		return err
 	}
-	if err := o.imageBuilderPusher.BuildAndPush(exec.NewDockerCommand(), buildArg); err != nil {
+	digest, err := o.imageBuilderPusher.BuildAndPush(exec.NewDockerCommand(), buildArg)
+	if err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
+	o.imageDigest = digest
 	o.buildRequired = true
 	return nil
 }
@@ -324,6 +322,7 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 		Image: &stack.ECRImage{
 			RepoURL:  repoURL,
 			ImageTag: o.imageTag,
+			Digest:   o.imageDigest,
 		},
 		AddonsTemplateURL: addonsURL,
 		AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),

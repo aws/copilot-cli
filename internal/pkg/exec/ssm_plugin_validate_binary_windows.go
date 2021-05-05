@@ -6,13 +6,11 @@ package exec
 
 import (
 	"bytes"
-
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
 )
 
 // ValidateBinary validates if the ssm plugin exists.
 func (s SSMPluginCommand) ValidateBinary() error {
 	// Hinder output on the screen.
 	var b bytes.Buffer
-	return s.runner.Run(ssmPluginBinaryName, []string{}, command.Stdout(&b))
+	return s.runner.Run(ssmPluginBinaryName, []string{}, Stdout(&b))
 }

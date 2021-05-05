@@ -99,11 +99,11 @@ func (cf CloudFormation) upgradeAppStack(s *cloudformation.Stack) error {
 			_ = cf.cfnClient.WaitForUpdate(context.Background(), s.Name)
 			continue
 		}
-		s.Parameters = descr.Parameters
+		// We only need the tags from the previously deployed stack.
 		s.Tags = descr.Tags
 
 		err = cf.cfnClient.UpdateAndWait(s)
-		if err == nil { // Success.
+		if err == nil {
 			return nil
 		}
 		if retryable := isRetryableUpdateError(s.Name, err); retryable {
@@ -477,6 +477,7 @@ func (cf CloudFormation) getLastDeployedAppConfig(appConfig *stack.AppStackConfi
 	if err != nil {
 		return nil, fmt.Errorf("parse previous deployed stackset %w", err)
 	}
+	previouslyDeployedConfig.App = appConfig.Name
 	return previouslyDeployedConfig, nil
 }
 

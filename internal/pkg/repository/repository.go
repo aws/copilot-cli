@@ -14,7 +14,7 @@ import (
 type ContainerLoginBuildPusher interface {
 	Build(args *exec.BuildArguments) error
 	Login(uri, username, password string) error
-	Push(uri, imageTag string, additionalTags ...string) error
+	Push(uri string, tags ...string) (digest string, err error)
 }
 
 // Registry gets information of repositories.
@@ -46,27 +46,28 @@ func New(name string, registry Registry) (*Repository, error) {
 }
 
 // BuildAndPush builds the image from Dockerfile and pushes it to the repository with tags.
-func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, args *exec.BuildArguments) error {
+func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, args *exec.BuildArguments) (digest string, err error) {
 	if args.URI == "" {
 		args.URI = r.uri
 	}
 	if err := docker.Build(args); err != nil {
-		return fmt.Errorf("build Dockerfile at %s: %w", args.Dockerfile, err)
+		return "", fmt.Errorf("build Dockerfile at %s: %w", args.Dockerfile, err)
 	}
 
 	username, password, err := r.registry.Auth()
 	if err != nil {
-		return fmt.Errorf("get auth: %w", err)
+		return "", fmt.Errorf("get auth: %w", err)
 	}
 
 	if err := docker.Login(args.URI, username, password); err != nil {
-		return fmt.Errorf("login to repo %s: %w", r.name, err)
+		return "", fmt.Errorf("login to repo %s: %w", r.name, err)
 	}
 
-	if err := docker.Push(args.URI, args.ImageTag, args.AdditionalTags...); err != nil {
-		return fmt.Errorf("push to repo %s: %w", r.name, err)
+	digest, err = docker.Push(args.URI, args.Tags...)
+	if err != nil {
+		return "", fmt.Errorf("push to repo %s: %w", r.name, err)
 	}
-	return nil
+	return digest, nil
 }
 
 // URI returns the uri of the repository.

@@ -134,8 +134,8 @@ func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 	}
 
-	if !c.AdvancedCount.IsValid() {
-		return errUnmarshalSpot
+	if err := c.AdvancedCount.IsValid(); err != nil {
+		return err
 	}
 
 	if !c.AdvancedCount.IsEmpty() {
@@ -147,6 +147,11 @@ func (c *Count) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return errUnmarshalCountOpts
 	}
 	return nil
+}
+
+// IsEmpty returns whether Count is empty.
+func (c *Count) IsEmpty() bool {
+	return c.Value == nil && c.AdvancedCount.IsEmpty()
 }
 
 // Desired returns the desiredCount to be set on the CFN template
@@ -168,7 +173,7 @@ func (c *Count) Desired() (*int, error) {
 // AdvancedCount represents the configurable options for Auto Scaling as well as
 // Capacity configuration (spot).
 type AdvancedCount struct {
-	Spot         *int           `yaml:"spot"` // mutually exclusive with Range
+	Spot         *int           `yaml:"spot"` // mutually exclusive with other fields
 	Range        *Range         `yaml:"range"`
 	CPU          *int           `yaml:"cpu_percentage"`
 	Memory       *int           `yaml:"memory_percentage"`
@@ -187,12 +192,24 @@ func (a *AdvancedCount) IgnoreRange() bool {
 	return a.Spot != nil
 }
 
+func (a *AdvancedCount) hasAutoscaling() bool {
+	return a.Range != nil || a.CPU != nil || a.Memory != nil ||
+		a.Requests != nil || a.ResponseTime != nil
+}
+
 // IsValid checks to make sure Spot fields are compatible with other values in AdvancedCount
-func (a *AdvancedCount) IsValid() bool {
-	if a.Spot != nil && a.Range != nil {
-		return false
+func (a *AdvancedCount) IsValid() error {
+	// Spot translates to desiredCount; cannot specify with autoscaling
+	if a.Spot != nil && a.hasAutoscaling() {
+		return errInvalidAdvancedCount
 	}
-	return true
+
+	// Range must be specified if using autoscaling
+	if a.Range == nil && (a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil) {
+		return errInvalidAutoscaling
+	}
+
+	return nil
 }
 
 // ServiceDockerfileBuildRequired returns if the service container image should be built from local Dockerfile.

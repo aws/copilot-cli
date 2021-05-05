@@ -59,11 +59,21 @@ type RuntimeConfig struct {
 type ECRImage struct {
 	RepoURL  string // RepoURL is the ECR repository URL the container image should be pushed to.
 	ImageTag string // Tag is the container image's unique tag.
+	Digest   string // The image digest.
 }
 
-// GetLocation returns the location of the ECR image.
+// GetLocation returns the ECR image URI.
+// If a tag is provided by the user or discovered from git then prioritize referring to the image via the tag.
+// Otherwise, each image after a push to ECR will get a digest and we refer to the image via the digest.
+// Finally, if no digest or tag is present, this occurs with the "package" commands, we default to the "latest" tag.
 func (i ECRImage) GetLocation() string {
-	return fmt.Sprintf("%s:%s", i.RepoURL, i.ImageTag)
+	if i.ImageTag != "" {
+		return fmt.Sprintf("%s:%s", i.RepoURL, i.ImageTag)
+	}
+	if i.Digest != "" {
+		return fmt.Sprintf("%s@%s", i.RepoURL, i.Digest)
+	}
+	return fmt.Sprintf("%s:%s", i.RepoURL, "latest")
 }
 
 type templater interface {
@@ -242,28 +252,4 @@ func envVarOutputNames(outputs []addon.Output) []string {
 		}
 	}
 	return envVars
-}
-
-// Validate that paths contain only an approved set of characters to guard against command injection.
-// We can accept 0-9A-Za-z-_.
-func validatePath(input string, maxLength int) error {
-	if len(input) > maxLength {
-		return fmt.Errorf("path must be less than %d bytes in length", maxLength)
-	}
-	if len(input) == 0 {
-		return nil
-	}
-	m := pathRegexp.FindStringSubmatch(input)
-	if len(m) == 0 {
-		return fmt.Errorf("paths can only contain the characters a-zA-Z0-9.-_/")
-	}
-	return nil
-}
-
-func validateRootDirPath(input string) error {
-	return validatePath(input, maxEFSPathLength)
-}
-
-func validateContainerPath(input string) error {
-	return validatePath(input, maxDockerContainerPathLength)
 }

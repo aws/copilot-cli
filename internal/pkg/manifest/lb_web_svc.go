@@ -64,6 +64,7 @@ type LoadBalancedWebServiceConfig struct {
 // See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html.
 type HTTPHealthCheckArgs struct {
 	Path               *string        `yaml:"path"`
+	SuccessCodes       *string        `yaml:"success_codes"`
 	HealthyThreshold   *int64         `yaml:"healthy_threshold"`
 	UnhealthyThreshold *int64         `yaml:"unhealthy_threshold"`
 	Timeout            *time.Duration `yaml:"timeout"`
@@ -205,6 +206,16 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (*LoadBalancedWebServic
 	if !ok {
 		return &s, nil
 	}
+
+	if overrideConfig == nil {
+		return &s, nil
+	}
+
+	envCount := overrideConfig.TaskConfig.Count
+	if !envCount.IsEmpty() {
+		s.TaskConfig.Count = envCount
+	}
+
 	// Apply overrides to the original service s.
 	err := mergo.Merge(&s, LoadBalancedWebService{
 		LoadBalancedWebServiceConfig: *overrideConfig,

@@ -8,12 +8,13 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/aws/copilot-cli/internal/pkg/exec"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -69,7 +70,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 		packageJobVars: vars,
 		ws:             ws,
 		store:          store,
-		runner:         command.New(),
+		runner:         exec.NewCmd(),
 		sel:            selector.NewWorkspaceSelect(prompter, store, ws),
 		prompt:         prompter,
 	}
@@ -90,9 +91,10 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 				name:      o.name,
 				envName:   o.envName,
 				appName:   o.appName,
-				tag:       o.tag,
+				tag:       imageTagFromGit(o.runner, o.tag),
 				outputDir: o.outputDir,
 			},
+			runner:           o.runner,
 			initAddonsClient: initPackageAddonsClient,
 			ws:               ws,
 			store:            o.store,
@@ -137,11 +139,6 @@ func (o *packageJobOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	tag, err := askImageTag(o.tag, o.prompt, o.runner)
-	if err != nil {
-		return err
-	}
-	o.tag = tag
 	return nil
 }
 
