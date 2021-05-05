@@ -50,6 +50,8 @@ Resources:
         - Key: Name
           Value: !Sub 'copilot-${App}-${Env}-${Name}-Aurora'
   {{logicalIDSafe .ClusterName}}DBClusterSecurityGroup:
+    Metadata:
+      'aws:copilot:description': 'A security group for your DB cluster {{logicalIDSafe .ClusterName}}'
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: The Security Group for the database cluster.
@@ -68,6 +70,8 @@ Resources:
         Fn::ImportValue:
           !Sub '${App}-${Env}-VpcId'
   {{logicalIDSafe .ClusterName}}AuroraSecret:
+    Metadata:
+      'aws:copilot:description': 'A SecretsManager secret to store your DB credentials'
     Type: AWS::SecretsManager::Secret
     Properties:
       Description: !Sub Aurora main user secret for ${AWS::StackName}
@@ -91,6 +95,8 @@ Resources:
   #       character_set_client: 'utf8'
   {{- else}}
   {{logicalIDSafe .ClusterName}}DBClusterParameterGroup:
+    Metadata:
+      'aws:copilot:description': 'A DB parameter group for engine configuration values'
     Type: 'AWS::RDS::DBClusterParameterGroup'
     Properties:
       Description: !Ref 'AWS::StackName'
@@ -105,6 +111,8 @@ Resources:
       {{- end}}
   {{- end}}
   {{logicalIDSafe .ClusterName}}DBCluster:
+    Metadata:
+      'aws:copilot:description': 'The {{logicalIDSafe .ClusterName}} Aurora Serverless database cluster'
     Type: 'AWS::RDS::DBCluster'
     Properties:
       MasterUsername:
