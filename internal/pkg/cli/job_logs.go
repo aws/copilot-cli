@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -21,31 +20,22 @@ import (
 )
 
 const (
-	svcLogNamePrompt     = "Which service's logs would you like to show?"
-	svcLogNameHelpPrompt = "The logs of a deployed service will be shown."
-
-	cwGetLogEventsLimitMin = 1
-	cwGetLogEventsLimitMax = 10000
+	jobLogNamePrompt     = "Which job's logs would you like to show?"
+	jobLogNameHelpPrompt = "The logs of a deployed job will be shown."
 )
 
-type wkldLogsVars struct {
-	shouldOutputJSON bool
-	follow           bool
-	limit            int
-	name             string
-	envName          string
-	appName          string
-	humanStartTime   string
-	humanEndTime     string
-	taskIDs          []string
-	since            time.Duration
-}
-
-type svcLogsOpts struct {
+type jobLogsVars struct {
 	wkldLogsVars
 
+	includeStateMachineLogs bool // Whether to include the logs from the state machine log streams
+	excludeJobLogs          bool // Whether to exclude the logs from the job containers.
+}
+
+type jobLogsOpts struct {
+	jobLogsVars
+
 	// internal states
-	logTimekeeping
+	logTimeKeeping
 
 	w           io.Writer
 	configStore store
@@ -55,7 +45,7 @@ type svcLogsOpts struct {
 	initLogsSvc func() error // Overriden in tests.
 }
 
-func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
+func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
 	configStore, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to environment config store: %w", err)
@@ -64,12 +54,12 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
-	opts := &svcLogsOpts{
-		wkldLogsVars: vars,
-		w:            log.OutputWriter,
-		configStore:  configStore,
-		deployStore:  deployStore,
-		sel:          selector.NewDeploySelect(prompt.New(), configStore, deployStore),
+	opts := &jobLogsOpts{
+		jobLogsVars: vars,
+		w:           log.OutputWriter,
+		configStore: configStore,
+		deployStore: deployStore,
+		sel:         selector.NewDeploySelect(prompt.New(), configStore, deployStore),
 	}
 	opts.initLogsSvc = func() error {
 		configStore, err := config.NewStore()
@@ -91,7 +81,7 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 }
 
 // Validate returns an error if the values provided by flags are invalid.
-func (o *svcLogsOpts) Validate() error {
+func (o *jobLogsOpts) Validate() error {
 	if o.appName != "" {
 		_, err := o.configStore.GetApplication(o.appName)
 		if err != nil {
@@ -139,102 +129,37 @@ func (o *svcLogsOpts) Validate() error {
 }
 
 // Ask asks for fields that are required but not passed in.
-func (o *svcLogsOpts) Ask() error {
-	if err := o.askApp(); err != nil {
-		return err
-	}
-	return o.askSvcEnvName()
-}
-
-// Execute outputs logs of the service.
-func (o *svcLogsOpts) Execute() error {
-	if err := o.initLogsSvc(); err != nil {
-		return err
-	}
-	eventsWriter := logging.WriteHumanLogs
-	if o.shouldOutputJSON {
-		eventsWriter = logging.WriteJSONLogs
-	}
-	var limit *int64
-	if o.limit != 0 {
-		limit = aws.Int64(int64(o.limit))
-	}
-	err := o.logsSvc.WriteLogEvents(logging.WriteLogEventsOpts{
-		Follow:    o.follow,
-		Limit:     limit,
-		EndTime:   o.endTime,
-		StartTime: o.startTime,
-		TaskIDs:   o.taskIDs,
-		OnEvents:  eventsWriter,
-	})
-	if err != nil {
-		return fmt.Errorf("write log events for service %s: %w", o.name, err)
-	}
+func (o *jobLogsOpts) Ask() error {
 	return nil
 }
 
-func (o *svcLogsOpts) askApp() error {
-	if o.appName != "" {
-		return nil
-	}
-	app, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
-	if err != nil {
-		return fmt.Errorf("select application: %w", err)
-	}
-	o.appName = app
+// Execute outputs logs of the job.
+func (o *jobLogsOpts) Execute() error {
 	return nil
 }
 
-func (o *svcLogsOpts) askSvcEnvName() error {
-	deployedService, err := o.sel.DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithSvc(o.name))
-	if err != nil {
-		return fmt.Errorf("select deployed services for application %s: %w", o.appName, err)
-	}
-	o.name = deployedService.Svc
-	o.envName = deployedService.Env
-	return nil
-}
-
-// logTimekeeping
-type logTimekeeping struct {
-	startTime *int64
-	endTime   *int64
-}
-
-func (o *logTimekeeping) parseSince(since time.Duration) *int64 {
-	sinceSec := int64(since.Round(time.Second).Seconds())
-	timeNow := time.Now().Add(time.Duration(-sinceSec) * time.Second)
-	return aws.Int64(timeNow.Unix() * 1000)
-}
-
-func (o *logTimekeeping) parseRFC3339(timeStr string) (int64, error) {
-	startTimeTmp, err := time.Parse(time.RFC3339, timeStr)
-	if err != nil {
-		return 0, fmt.Errorf("reading time value %s: %w", timeStr, err)
-	}
-	return startTimeTmp.Unix() * 1000, nil
-}
-
-// buildSvcLogsCmd builds the command for displaying service logs in an application.
-func buildSvcLogsCmd() *cobra.Command {
-	vars := wkldLogsVars{}
+// buildJobLogsCmd builds the command for displaying job logs in an application.
+func buildJobLogsCmd() *cobra.Command {
+	vars := jobLogsVars{}
 	cmd := &cobra.Command{
-		Use:   "logs",
-		Short: "Displays logs of a deployed service.",
-
+		Use:    "logs",
+		Short:  "Displays logs of a deployed job.",
+		Hidden: true,
 		Example: `
-  Displays logs of the service "my-svc" in environment "test".
-  /code $ copilot svc logs -n my-svc -e test
+  Displays logs of the job "my-job" in environment "test".
+  /code $ copilot job logs -n my-job -e test
   Displays logs in the last hour.
-  /code $ copilot svc logs --since 1h
+  /code $ copilot job logs --since 1h
   Displays logs from 2006-01-02T15:04:05 to 2006-01-02T15:05:05.
-  /code $ copilot svc logs --start-time 2006-01-02T15:04:05+00:00 --end-time 2006-01-02T15:05:05+00:00
+  /code $ copilot job logs --start-time 2006-01-02T15:04:05+00:00 --end-time 2006-01-02T15:05:05+00:00
 	Displays logs from specific task IDs.
-  /code $ copilot svc logs --tasks 709c7eae05f947f6861b150372ddc443,1de57fd63c6a4920ac416d02add891b9
+  /code $ copilot job logs --tasks 709c7eae05f947f6861b150372ddc443,1de57fd63c6a4920ac416d02add891b9
   Displays logs in real time.
-  /code $ copilot svc logs --follow`,
+  /code $ copilot job logs --follow
+  Displays container logs and state machine execution logs from the last execution.
+  /code $ copilot job logs --include-state-machine`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts, err := newSvcLogOpts(vars)
+			opts, err := newJobLogOpts(vars)
 			if err != nil {
 				return err
 			}
@@ -257,5 +182,6 @@ func buildSvcLogsCmd() *cobra.Command {
 	cmd.Flags().DurationVar(&vars.since, sinceFlag, 0, sinceFlagDescription)
 	cmd.Flags().IntVar(&vars.limit, limitFlag, 0, limitFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.taskIDs, tasksFlag, nil, tasksLogsFlagDescription)
+	cmd.Flags().BoolVar(&vars.includeStateMachineLogs, includeStateMachineLogsFlag, false, includeStateMachineLogsFlagDescription)
 	return cmd
 }
