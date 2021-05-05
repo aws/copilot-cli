@@ -118,7 +118,7 @@ func RunTaskRequestFromService(client ServiceDescriber, app, env, svc string) (*
 }
 
 // String stringifies a RunTaskRequest.
-func (r RunTaskRequest) String() string {
+func (r RunTaskRequest) CLIString() string {
 	output := []string{"copilot task run"}
 	if r.executionRole != "" {
 		output = append(output, fmt.Sprintf("--execution-role %s", r.executionRole))

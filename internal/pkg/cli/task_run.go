@@ -510,12 +510,12 @@ func (o *runTaskOpts) generateCommand() error {
 	if err != nil {
 		return err
 	}
-	log.Infoln(command.String())
+	log.Infoln(command.CLIString())
 	return nil
 }
 
-func (o *runTaskOpts) runTaskCommand() (*ecs.RunTaskRequest, error) {
-	var cmd *ecs.RunTaskRequest
+func (o *runTaskOpts) runTaskCommand() (cliStringer, error) {
+	var cmd cliStringer
 	sess, err := sessions.NewProvider().Default()
 	if err != nil {
 		return nil, fmt.Errorf("get default session: %s", err)
@@ -563,7 +563,7 @@ func (o *runTaskOpts) parseARN() (string, string, error) {
 	return clusterName, serviceName, nil
 }
 
-func (o *runTaskOpts) runTaskCommandFromECSService(sess *session.Session, clusterName, serviceName string) (*ecs.RunTaskRequest, error) {
+func (o *runTaskOpts) runTaskCommandFromECSService(sess *session.Session, clusterName, serviceName string) (cliStringer, error) {
 	cmd, err := o.runTaskRequestFromECSService(awsecs.New(sess), clusterName, serviceName)
 	if err != nil {
 		var errMultipleContainers *ecs.ErrMultipleContainersInTaskDef
