@@ -11,14 +11,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/exec/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSSMPluginCommand_InstallLatestBinary_darwin(t *testing.T) {
 	var mockDir string
-	var mockRunner *mocks.Mockrunner
+	var mockRunner *Mockrunner
 	mockError := errors.New("some error")
 	tests := map[string]struct {
 		setupMocks  func(controller *gomock.Controller)
@@ -26,7 +25,7 @@ func TestSSMPluginCommand_InstallLatestBinary_darwin(t *testing.T) {
 	}{
 		"return error if fail to unzip binary": {
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("unzip", []string{"-o", filepath.Join(mockDir, "sessionmanager-bundle.zip"),
 					"-d", mockDir}).
 					Return(mockError)
@@ -35,7 +34,7 @@ func TestSSMPluginCommand_InstallLatestBinary_darwin(t *testing.T) {
 		},
 		"return error if fail to install binary": {
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("unzip", []string{"-o", filepath.Join(mockDir, "sessionmanager-bundle.zip"),
 					"-d", mockDir}).
 					Return(nil)
@@ -48,7 +47,7 @@ func TestSSMPluginCommand_InstallLatestBinary_darwin(t *testing.T) {
 		},
 		"success": {
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("unzip", []string{"-o", filepath.Join(mockDir, "sessionmanager-bundle.zip"),
 					"-d", mockDir}).
 					Return(nil)

@@ -12,8 +12,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
 )
 
 // DockerCommand represents docker commands that can be run.
@@ -26,7 +24,7 @@ type DockerCommand struct {
 // NewDockerCommand returns a DockerCommand.
 func NewDockerCommand() DockerCommand {
 	return DockerCommand{
-		runner: command.New(),
+		runner: NewCmd(),
 	}
 }
 
@@ -91,7 +89,7 @@ func (c DockerCommand) Build(in *BuildArguments) error {
 func (c DockerCommand) Login(uri, username, password string) error {
 	err := c.Run("docker",
 		[]string{"login", "-u", username, "--password-stdin", uri},
-		command.Stdin(strings.NewReader(password)))
+		Stdin(strings.NewReader(password)))
 
 	if err != nil {
 		return fmt.Errorf("authenticate to ECR: %w", err)
@@ -113,7 +111,7 @@ func (c DockerCommand) Push(uri string, tags ...string) (digest string, err erro
 		}
 	}
 	buf := new(strings.Builder)
-	if err := c.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, command.Stdout(buf)); err != nil {
+	if err := c.Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", uri}, Stdout(buf)); err != nil {
 		return "", fmt.Errorf("inspect image digest for %s: %w", uri, err)
 	}
 	repoDigest := strings.Trim(strings.TrimSpace(buf.String()), `"'`) // remove new lines and quotes from output
@@ -130,7 +128,7 @@ func (c DockerCommand) CheckDockerEngineRunning() error {
 		return ErrDockerCommandNotFound
 	}
 	buf := &bytes.Buffer{}
-	err := c.runner.Run("docker", []string{"info", "-f", "'{{json .}}'"}, command.Stdout(buf))
+	err := c.runner.Run("docker", []string{"info", "-f", "'{{json .}}'"}, Stdout(buf))
 	if err != nil {
 		return fmt.Errorf("get docker info: %w", err)
 	}

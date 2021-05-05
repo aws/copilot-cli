@@ -15,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
 )
 
 const (
@@ -41,7 +40,7 @@ type SSMPluginCommand struct {
 // NewSSMPluginCommand returns a SSMPluginCommand.
 func NewSSMPluginCommand(s *session.Session) SSMPluginCommand {
 	return SSMPluginCommand{
-		runner: command.New(),
+		runner: NewCmd(),
 		sess:   s,
 		http:   http.DefaultClient,
 	}

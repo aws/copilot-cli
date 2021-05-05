@@ -25,7 +25,6 @@ import (
 	logging "github.com/aws/copilot-cli/internal/pkg/logging"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
-	command "github.com/aws/copilot-cli/internal/pkg/term/command"
 	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	prompt "github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	selector "github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -1585,7 +1584,7 @@ func (m *Mockrunner) EXPECT() *MockrunnerMockRecorder {
 }
 
 // Run mocks base method.
-func (m *Mockrunner) Run(name string, args []string, options ...command.Option) error {
+func (m *Mockrunner) Run(name string, args []string, options ...exec.CmdOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{name, args}
 	for _, a := range options {

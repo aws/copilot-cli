@@ -23,7 +23,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -172,7 +171,7 @@ type stackSerializer interface {
 }
 
 type runner interface {
-	Run(name string, args []string, options ...command.Option) error
+	Run(name string, args []string, options ...exec.CmdOption) error
 }
 
 type eventsWriter interface {
