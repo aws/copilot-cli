@@ -71,7 +71,8 @@ func TestGHv1PipelineCreation(t *testing.T) {
 		envDeployer := cloudformation.New(envSess)
 		s3Client := s3.New(envSess)
 		uploader := template.New()
-		var bucketName string
+		var envBucketName string
+		var appBucketName string
 
 		environmentToDeploy := deploy.CreateEnvironmentInput{
 			Name:                     randStringBytes(10),
@@ -100,9 +101,13 @@ func TestGHv1PipelineCreation(t *testing.T) {
 				StackSetName: aws.String(appStackSetName),
 			})
 			require.NoError(t, err)
-			require.Equal(t, len(stackInstances.Summaries), 2)
+			require.Equal(t, 2, len(stackInstances.Summaries))
 
-			err = s3Client.EmptyBucket(bucketName)
+			err = s3Client.EmptyBucket(envBucketName)
+			require.NoError(t, err)
+
+			appS3Client := s3.New(appSess)
+			err = appS3Client.EmptyBucket(appBucketName)
 			require.NoError(t, err)
 
 			_, err = appCfClient.DeleteStackInstances(&awsCF.DeleteStackInstancesInput{
@@ -183,9 +188,9 @@ func TestGHv1PipelineCreation(t *testing.T) {
 
 		regionalResource, err := appDeployer.GetAppResourcesByRegion(&app, envRegion.ID())
 		require.NoError(t, err)
-		bucketName = regionalResource.S3Bucket
+		envBucketName = regionalResource.S3Bucket
 		urls, err := uploader.UploadEnvironmentCustomResources(s3.CompressAndUploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
-			return s3Client.ZipAndUpload(bucketName, key, objects...)
+			return s3Client.ZipAndUpload(envBucketName, key, objects...)
 		}))
 		require.NoError(t, err)
 		environmentToDeploy.CustomResourcesURLs = urls
@@ -237,7 +242,10 @@ func TestGHv1PipelineCreation(t *testing.T) {
 			},
 			ArtifactBuckets: artifactBuckets,
 		}
-		require.NoError(t, appDeployer.CreatePipeline(pipelineInput))
+		appRegionResources, err := appDeployer.GetAppResourcesByRegion(&app, *appSess.Config.Region)
+		require.NoError(t, err)
+		appBucketName = appRegionResources.S3Bucket
+		require.NoError(t, appDeployer.CreatePipeline(pipelineInput, appBucketName))
 
 		// Ensure that the new stack exists
 		assertStackExists(t, appCfClient, pipelineStackName)
@@ -281,7 +289,7 @@ func assertStackDoesNotExist(t *testing.T, cfClient *awsCF.CloudFormation, stack
 	require.Error(t, err, "DescribeStacks should return an error because the stack does not exist")
 	awsErr, ok := err.(awserr.Error)
 	require.True(t, ok, "the returned error should be an awserr")
-	require.Equal(t, awsErr.Code(), "ValidationError")
+	require.Equal(t, "ValidationError", awsErr.Code())
 	require.Contains(t, awsErr.Message(), "does not exist", "the returned error should indicate that the stack does not exist")
 }
 

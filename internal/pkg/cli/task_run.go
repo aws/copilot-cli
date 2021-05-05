@@ -678,7 +678,7 @@ You will be prompted to specify an environment for the tasks to run in.
 Run a task named "db-migrate" in the "test" environment under the current workspace.
 /code $ copilot task run -n db-migrate --env test
 Run 4 tasks with 2GB memory, an existing image, and a custom task role.
-/code $ copilot task run --num 4 --memory 2048 --image=rds-migrate --task-role migrate-role
+/code $ copilot task run --count 4 --memory 2048 --image=rds-migrate --task-role migrate-role
 Run a task with environment variables.
 /code $ copilot task run --env-vars name=myName,user=myUser
 Run a task using the current workspace with specific subnets and security groups.

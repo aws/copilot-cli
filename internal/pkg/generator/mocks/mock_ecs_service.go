@@ -11,31 +11,31 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockecsServiceGetter is a mock of ecsServiceGetter interface.
-type MockecsServiceGetter struct {
+// MockecsClient is a mock of ecsClient interface.
+type MockecsClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockecsServiceGetterMockRecorder
+	recorder *MockecsClientMockRecorder
 }
 
-// MockecsServiceGetterMockRecorder is the mock recorder for MockecsServiceGetter.
-type MockecsServiceGetterMockRecorder struct {
-	mock *MockecsServiceGetter
+// MockecsClientMockRecorder is the mock recorder for MockecsClient.
+type MockecsClientMockRecorder struct {
+	mock *MockecsClient
 }
 
-// NewMockecsServiceGetter creates a new mock instance.
-func NewMockecsServiceGetter(ctrl *gomock.Controller) *MockecsServiceGetter {
-	mock := &MockecsServiceGetter{ctrl: ctrl}
-	mock.recorder = &MockecsServiceGetterMockRecorder{mock}
+// NewMockecsClient creates a new mock instance.
+func NewMockecsClient(ctrl *gomock.Controller) *MockecsClient {
+	mock := &MockecsClient{ctrl: ctrl}
+	mock.recorder = &MockecsClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockecsServiceGetter) EXPECT() *MockecsServiceGetterMockRecorder {
+func (m *MockecsClient) EXPECT() *MockecsClientMockRecorder {
 	return m.recorder
 }
 
 // NetworkConfiguration mocks base method.
-func (m *MockecsServiceGetter) NetworkConfiguration(cluster, serviceName string) (*ecs.NetworkConfiguration, error) {
+func (m *MockecsClient) NetworkConfiguration(cluster, serviceName string) (*ecs.NetworkConfiguration, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NetworkConfiguration", cluster, serviceName)
 	ret0, _ := ret[0].(*ecs.NetworkConfiguration)
@@ -44,13 +44,13 @@ func (m *MockecsServiceGetter) NetworkConfiguration(cluster, serviceName string)
 }
 
 // NetworkConfiguration indicates an expected call of NetworkConfiguration.
-func (mr *MockecsServiceGetterMockRecorder) NetworkConfiguration(cluster, serviceName interface{}) *gomock.Call {
+func (mr *MockecsClientMockRecorder) NetworkConfiguration(cluster, serviceName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkConfiguration", reflect.TypeOf((*MockecsServiceGetter)(nil).NetworkConfiguration), cluster, serviceName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkConfiguration", reflect.TypeOf((*MockecsClient)(nil).NetworkConfiguration), cluster, serviceName)
 }
 
 // Service mocks base method.
-func (m *MockecsServiceGetter) Service(clusterName, serviceName string) (*ecs.Service, error) {
+func (m *MockecsClient) Service(clusterName, serviceName string) (*ecs.Service, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Service", clusterName, serviceName)
 	ret0, _ := ret[0].(*ecs.Service)
@@ -59,13 +59,13 @@ func (m *MockecsServiceGetter) Service(clusterName, serviceName string) (*ecs.Se
 }
 
 // Service indicates an expected call of Service.
-func (mr *MockecsServiceGetterMockRecorder) Service(clusterName, serviceName interface{}) *gomock.Call {
+func (mr *MockecsClientMockRecorder) Service(clusterName, serviceName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockecsServiceGetter)(nil).Service), clusterName, serviceName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockecsClient)(nil).Service), clusterName, serviceName)
 }
 
 // TaskDefinition mocks base method.
-func (m *MockecsServiceGetter) TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error) {
+func (m *MockecsClient) TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "TaskDefinition", taskDefName)
 	ret0, _ := ret[0].(*ecs.TaskDefinition)
@@ -74,7 +74,7 @@ func (m *MockecsServiceGetter) TaskDefinition(taskDefName string) (*ecs.TaskDefi
 }
 
 // TaskDefinition indicates an expected call of TaskDefinition.
-func (mr *MockecsServiceGetterMockRecorder) TaskDefinition(taskDefName interface{}) *gomock.Call {
+func (mr *MockecsClientMockRecorder) TaskDefinition(taskDefName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockecsServiceGetter)(nil).TaskDefinition), taskDefName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockecsClient)(nil).TaskDefinition), taskDefName)
 }

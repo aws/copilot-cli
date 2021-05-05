@@ -137,7 +137,7 @@ Key-value pairs that represent secret values from [AWS Systems Manager Parameter
 <div class="separator"></div>  
 
 <a id="storage" href="#storage" class="field">`storage`</a> <span class="type">Map</span>  
-The Storage section lets you specify external EFS volumes for your containers and sidecars to mount. This allows you to access persistent storage across regions for data processing or CMS workloads. For more detail, see the [storage](../developing/storage.en.md) page. You can also specify extensible ephemeral storage at the task level.
+The Storage section lets you specify external EFS volumes for your containers and sidecars to mount. This allows you to access persistent storage across availability zones in a region for data processing or CMS workloads. For more detail, see the [storage](../developing/storage.en.md) page. You can also specify extensible ephemeral storage at the task level.
 
 <span class="parent-field">storage.</span><a id="ephemeral" href="#ephemeral" class="field">`ephemeral`</a> <span class="type">Int</span>
 Specify how much ephemeral task storage to provision in GiB. The default value and minimum is 20 GiB. The maximum size is 200 GiB. Sizes above 20 GiB incur additional charges.

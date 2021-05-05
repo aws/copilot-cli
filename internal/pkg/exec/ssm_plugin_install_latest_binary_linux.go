@@ -10,8 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
 )
 
 // InstallLatestBinary installs the latest ssm plugin.
@@ -35,7 +33,7 @@ func (s SSMPluginCommand) InstallLatestBinary() error {
 }
 
 func (s SSMPluginCommand) isUbuntu() (bool, error) {
-	if err := s.runner.Run("uname", []string{"-a"}, command.Stdout(&s.linuxDistVersionBuffer)); err != nil {
+	if err := s.runner.Run("uname", []string{"-a"}, Stdout(&s.linuxDistVersionBuffer)); err != nil {
 		return false, fmt.Errorf("get linux distribution version: %w", err)
 	}
 	return strings.Contains(s.linuxDistVersionBuffer.String(), "Ubuntu"), nil
