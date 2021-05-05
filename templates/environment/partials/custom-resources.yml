@@ -37,7 +37,7 @@ HTTPSCert:
     EnvHostedZoneId: !Ref EnvironmentHostedZone
     Region: !Ref AWS::Region
     RootDNSRole: !Ref AppDNSDelegationRole
-    IsAliasEnabled: !If [HasAliases, "true", "false"]
+    IsAliasEnabled: !If [HasAliases, true, false]
     SubjectAlternativeNames:
     - !Sub "${AppDNSName}"
     - !Sub "*.${AppDNSName}"

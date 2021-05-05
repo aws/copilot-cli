@@ -80,10 +80,28 @@ describe("DNS Validated Certificate Handler", () => {
         Value: testRRValue,
       },
     },
+    {
+      DomainName: `*.${testEnvName}.${testAppName}.${testDomainName}`,
+      ValidationStatus: "SUCCESS",
+      ResourceRecord: {
+        Name: testRRName,
+        Type: "CNAME",
+        Value: testRRValue,
+      },
+    },
   ];
   const newCertValidateOptions = [
     {
       DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
+      ValidationStatus: "SUCCESS",
+      ResourceRecord: {
+        Name: testRRName,
+        Type: "CNAME",
+        Value: testRRValue,
+      },
+    },
+    {
+      DomainName: `*.${testEnvName}.${testAppName}.${testDomainName}`,
       ValidationStatus: "SUCCESS",
       ResourceRecord: {
         Name: testRRName,
@@ -101,7 +119,25 @@ describe("DNS Validated Certificate Handler", () => {
       },
     },
     {
+      DomainName: `*.${testAppName}.${testDomainName}`,
+      ValidationStatus: "SUCCESS",
+      ResourceRecord: {
+        Name: testRRName,
+        Type: "CNAME",
+        Value: testRRValue,
+      },
+    },
+    {
       DomainName: `${testDomainName}`,
+      ValidationStatus: "SUCCESS",
+      ResourceRecord: {
+        Name: testRRName,
+        Type: "CNAME",
+        Value: testRRValue,
+      },
+    },
+    {
+      DomainName: `*.${testDomainName}`,
       ValidationStatus: "SUCCESS",
       ResourceRecord: {
         Name: testRRName,
@@ -414,7 +450,7 @@ describe("DNS Validated Certificate Handler", () => {
       });
   });
 
-  test("Create operation fails within 360s and 10 attempts if certificate has no DomainValidationOptions", () => {
+  test("Create operation fails within 360s and 10 attempts if certificate has not enough DomainValidationOptions", () => {
     handler.withRandom(() => 1);
     const requestCertificateFake = sinon.fake.resolves({
       CertificateArn: testCertificateArn,
@@ -424,6 +460,7 @@ describe("DNS Validated Certificate Handler", () => {
       Certificate: {
         CertificateArn: testCertificateArn,
       },
+      DomainValidationOptions: legacyCertValidatorOptions,
     });
 
     AWS.mock("ACM", "requestCertificate", requestCertificateFake);
@@ -448,6 +485,7 @@ describe("DNS Validated Certificate Handler", () => {
           AppName: testAppName,
           EnvName: testEnvName,
           DomainName: testDomainName,
+          IsAliasEnabled: "true",
           EnvHostedZoneId: testHostedZoneId,
           Region: "us-east-1",
           RootDNSRole: testRootDNSRole,
@@ -487,17 +525,7 @@ describe("DNS Validated Certificate Handler", () => {
     describeCertificateFake.resolves({
       Certificate: {
         CertificateArn: testCertificateArn,
-        DomainValidationOptions: [
-          {
-            DomainName: `${testAppName}.${testDomainName}`,
-            ValidationStatus: "SUCCESS",
-            ResourceRecord: {
-              Name: testRRName,
-              Type: "CNAME",
-              Value: testRRValue,
-            },
-          },
-        ],
+        DomainValidationOptions: newCertValidateOptions,
       },
     });
 
@@ -606,7 +634,7 @@ describe("DNS Validated Certificate Handler", () => {
           EnvName: testEnvName,
           DomainName: testDomainName,
           EnvHostedZoneId: testHostedZoneId,
-          IsAliasEnabled: "true",
+          IsAliasEnabled: "false",
           Region: "us-east-1",
           RootDNSRole: testRootDNSRole,
           SubjectAlternativeNames: testSubjectAlternativeNames,

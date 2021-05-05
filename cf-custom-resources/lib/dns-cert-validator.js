@@ -108,14 +108,14 @@ const requestCertificate = async function (
 ) {
   const crypto = require("crypto");
   const [acm, envRoute53, appRoute53] = clients(region, rootDnsRole);
-  subjectAlternativeNames =
+  var sansToUse =
     isAliasEnabled === "false"
       ? [`*.${envName}.${appName}.${domainName}`]
       : subjectAlternativeNames;
   const reqCertResponse = await acm
     .requestCertificate({
       DomainName: `${envName}.${appName}.${domainName}`,
-      SubjectAlternativeNames: subjectAlternativeNames,
+      SubjectAlternativeNames: sansToUse,
       IdempotencyToken: crypto
         .createHash("sha256")
         .update(requestId)
@@ -137,6 +137,8 @@ const requestCertificate = async function (
 
   let options;
   let attempt;
+  // We need to count the domain name itself.
+  const expectedValidationOptionsNum = sansToUse.length + 1;
   for (attempt = 0; attempt < maxAttempts; attempt++) {
     const { Certificate } = await acm
       .describeCertificate({
@@ -144,15 +146,13 @@ const requestCertificate = async function (
       })
       .promise();
     options = Certificate.DomainValidationOptions || [];
-    var areAllResourceRecordsReady = false;
+    var readyRecordsNum = 0;
     for (const option of options) {
-      if (!option.ResourceRecord) {
-        areAllResourceRecordsReady = false;
-        break;
+      if (option.ResourceRecord) {
+        readyRecordsNum++;
       }
-      areAllResourceRecordsReady = true;
     }
-    if (areAllResourceRecordsReady) {
+    if (readyRecordsNum === expectedValidationOptionsNum) {
       break;
     }
     // Exponential backoff with jitter based on 200ms base
@@ -252,34 +252,17 @@ const deleteHostedZoneRecords = async function (
   envHostedZoneId
 ) {
   let isLegacyCert = false;
-  // Legacy cert only has two DomainValidationOptions.
+  // Legacy cert only has two DomainValidationOptions:
+  // `${envName}.${appName}.${domainName}` and `*.${envName}.${appName}.${domainName}`
   if (options.length <= 2) {
     isLegacyCert = true;
   }
 
+  let certWithDomainCount = await numOfGeneratedCertificates(
+    acm,
+    `${envName}.${appName}.${domainName}`
+  );
   let isLastOne = false;
-  let certWithDomainCount = 0;
-  let listCertResp = await acm.listCertificates({}).promise();
-  for (const certSummary of listCertResp.CertificateSummaryList || []) {
-    if (certSummary.DomainName === `${envName}.${appName}.${domainName}`) {
-      certWithDomainCount++;
-    }
-  }
-  let nextToken = listCertResp.NextToken;
-  // Though very unlikely, we'll handle the pagination.
-  while (nextToken && certWithDomainCount < 2) {
-    listCertResp = await acm
-      .listCertificates({
-        NextToken: nextToken,
-      })
-      .promise();
-    for (const certSummary of listCertResp.CertificateSummaryList || []) {
-      if (certSummary.DomainName === `${envName}.${appName}.${domainName}`) {
-        certWithDomainCount++;
-      }
-    }
-    nextToken = listCertResp.NextToken;
-  }
   if (certWithDomainCount < 2) {
     isLastOne = true;
   }
@@ -297,7 +280,7 @@ const deleteHostedZoneRecords = async function (
       // in the env hosted zone.
       break;
     case `false|true`:
-      // If it is not a legacy cert and it is not the last Copilot cert,
+      // If it is not a legacy cert and it is the last Copilot cert,
       // we'll remove all validation CNAME records in env/app/root hosted zone.
       newOptions.push(...options);
       break;
@@ -323,6 +306,36 @@ const deleteHostedZoneRecords = async function (
     appRoute53,
     envHostedZoneId
   );
+};
+
+// numOfGeneratedCertificates returns the number of Copilot generated certificates. Specifically it returns
+// the number of certificate with domain name as `${envName}.${appName}.${domainName}`, since if any of
+// the other certificate with this domain name still exists, we cannot remove the validation record in our
+// env hosted zone.
+const numOfGeneratedCertificates = async function (acm, defaultEnvDomain) {
+  let certWithDomainCount = 0;
+  let listCertResp = await acm.listCertificates({}).promise();
+  for (const certSummary of listCertResp.CertificateSummaryList || []) {
+    if (certSummary.DomainName === defaultEnvDomain) {
+      certWithDomainCount++;
+    }
+  }
+  let nextToken = listCertResp.NextToken;
+  // Though very unlikely, we'll handle the pagination.
+  while (nextToken && certWithDomainCount < 2) {
+    listCertResp = await acm
+      .listCertificates({
+        NextToken: nextToken,
+      })
+      .promise();
+    for (const certSummary of listCertResp.CertificateSummaryList || []) {
+      if (certSummary.DomainName === defaultEnvDomain) {
+        certWithDomainCount++;
+      }
+    }
+    nextToken = listCertResp.NextToken;
+  }
+  return certWithDomainCount;
 };
 
 const validateDomain = async function ({
