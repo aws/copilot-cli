@@ -566,11 +566,11 @@ func (o *runTaskOpts) parseARN() (string, string, error) {
 func (o *runTaskOpts) runTaskCommandFromECSService(sess *session.Session, clusterName, serviceName string) (*ecs.RunTaskRequest, error) {
 	cmd, err := o.runTaskRequestFromECSService(awsecs.New(sess), clusterName, serviceName)
 	if err != nil {
+		var errMultipleContainers *ecs.ErrMultipleContainersInTaskDef
+		if errors.As(err, &errMultipleContainers) {
+			log.Errorln("`copilot task run` does not support running more than one container.")
+		}
 		return nil, fmt.Errorf("generate task run command from ECS service %s: %w", clusterName+"/"+serviceName, err)
-	}
-	var errMultipleContainers *ecs.ErrMultipleContainersInTaskDef
-	if errors.As(err, &errMultipleContainers) {
-		log.Errorf("`copilot task run` does not support running more than one container")
 	}
 	return cmd, nil
 }
