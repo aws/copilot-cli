@@ -569,3 +569,7 @@ type codestar interface {
 type publicIPGetter interface {
 	PublicIP(ENI string) (string, error)
 }
+
+type cliStringer interface {
+	CLIString() string
+}
