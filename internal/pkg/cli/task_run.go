@@ -524,16 +524,16 @@ func (o *runTaskOpts) runTaskCommand() (*ecs.RunTaskRequest, error) {
 		clusterName, serviceName := parts[0], parts[1]
 		cmd, err = ecs.RunTaskRequestFromECSService(awsecs.New(sess), clusterName, serviceName)
 		if err != nil {
-			return nil, fmt.Errorf("generate task run command from ECS service: %w", err)
+			return nil, fmt.Errorf("generate task run command from ECS service %s: %w", clusterName+"/"+serviceName, err)
 		}
 	case 3:
 		appName, envName, serviceName := parts[0], parts[1], parts[2]
 		cmd, err = ecs.RunTaskRequestFromService(ecs.New(sess), appName, envName, serviceName)
 		if err != nil {
-			return nil, fmt.Errorf("generate task run command from service: %w", err)
+			return nil, fmt.Errorf("generate task run command from service %s: %w", serviceName, err)
 		}
 	default:
-		return nil, errors.New("invalid input to --generate-cmd: must be of the form <cluster>/<service> or <app>/<env>/<workload>")
+		return nil, errors.New("invalid input to --generate-cmd: must be of one the form <cluster>/<service> or <app>/<env>/<workload>")
 	}
 
 	return cmd, nil
@@ -543,15 +543,15 @@ func (o *runTaskOpts) runTaskCommandFromARN(sess *session.Session) (*ecs.RunTask
 	svcARN := awsecs.ServiceArn(o.generateCommandTarget)
 	clusterName, err := svcARN.ClusterName()
 	if err != nil {
-		return nil, fmt.Errorf("extract cluster name from arn %s", svcARN)
+		return nil, fmt.Errorf("extract cluster name from arn %s: %w", svcARN, err)
 	}
 	serviceName, err := svcARN.ServiceName()
 	if err != nil {
-		return nil, fmt.Errorf("extract service name from arn %s", svcARN)
+		return nil, fmt.Errorf("extract service name from arn %s: %w", svcARN, err)
 	}
 	cmd, err := ecs.RunTaskRequestFromECSService(awsecs.New(sess), clusterName, serviceName)
 	if err != nil {
-		return nil, fmt.Errorf("generate task run command from ECS service: %w", err)
+		return nil, fmt.Errorf("generate task run command from ECS service %s: %w", clusterName+"/"+serviceName, err)
 	}
 	return cmd, nil
 }
