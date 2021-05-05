@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -80,17 +81,36 @@ func PutEFSCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	fileObj, err := os.Create(fmt.Sprintf("%s/testfile", copilotMountPoints[volumeName]))
+	fileName := fmt.Sprintf("%s/testfile", copilotMountPoints[volumeName])
+	fileObj, err := os.Create(fileName)
 	if err != nil {
-		log.Println("Create test file in EFS volume FAILED")
+		log.Printf("Create test file %s in EFS volume FAILED\n", fileName)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	// Resize file to 10M
 	if err := fileObj.Truncate(1e7); err != nil {
-		log.Println("Resize test file in EFS volume FAILED")
+		log.Printf("Resize test file %s in EFS volume FAILED\n", fileName)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	fileObj.Close()
+
+	// Shred file to ensure metered size increases and it's not read as sparse.
+	shredCmd := exec.Command("shred", "-n", "1", fileName)
+	if err := shredCmd.Run(); err != nil {
+		log.Println("Shred test file in EFS volume FAILED")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	fi, err := os.Stat(fileName)
+	if err != nil {
+		log.Printf("Get info for file %s\n", fileName)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	log.Printf("File size: %d\n", fi.Size())
 	log.Println("Get /efs-putter succeeded")
 	w.WriteHeader(http.StatusOK)
 }
@@ -104,5 +124,6 @@ func main() {
 	router.GET("/job-setter/", SetJobCheck)
 	router.GET("/efs-putter", PutEFSCheck)
 
+	log.Println("Listening on port 80...")
 	log.Fatal(http.ListenAndServe(":80", router))
 }
