@@ -23,7 +23,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -172,7 +171,7 @@ type stackSerializer interface {
 }
 
 type runner interface {
-	Run(name string, args []string, options ...command.Option) error
+	Run(name string, args []string, options ...exec.CmdOption) error
 }
 
 type eventsWriter interface {
@@ -334,8 +333,8 @@ type imageRemover interface {
 }
 
 type pipelineDeployer interface {
-	CreatePipeline(env *deploy.CreatePipelineInput) error
-	UpdatePipeline(env *deploy.CreatePipelineInput) error
+	CreatePipeline(env *deploy.CreatePipelineInput, bucketName string) error
+	UpdatePipeline(env *deploy.CreatePipelineInput, bucketName string) error
 	PipelineExists(env *deploy.CreatePipelineInput) (bool, error)
 	DeletePipeline(pipelineName string) error
 	AddPipelineResourcesToApp(app *config.Application, region string) error
