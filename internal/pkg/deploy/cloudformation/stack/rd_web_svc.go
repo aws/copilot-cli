@@ -58,9 +58,14 @@ func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env, app 
 
 // Template returns the CloudFormation template for the service parametrized for the environment.
 func (s *RequestDrivenWebService) Template() (string, error) {
+	outputs, err := s.addonsOutputs()
+	if err != nil {
+		return "", err
+	}
 	content, err := s.parser.ParseRequestDrivenWebService(template.WorkloadOpts{
-		Variables: s.manifest.Variables,
-		Tags:      s.manifest.Tags,
+		Variables:   s.manifest.Variables,
+		Tags:        s.manifest.Tags,
+		NestedStack: outputs,
 	})
 	if err != nil {
 		return "", err

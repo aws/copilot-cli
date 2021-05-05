@@ -64,7 +64,7 @@ var (
 		"volumes",
 		"image-overrides",
 		"instancerole",
-		"ecraccessrole",
+		"accessrole",
 	}
 )
 

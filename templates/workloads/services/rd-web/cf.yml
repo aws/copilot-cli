@@ -52,17 +52,17 @@ Conditions:
     !Not [!Equals [!Ref AddonsTemplateURL, '']]
 
 Resources:
-{{include "ecraccessrole" . | indent 2}}
+{{include "accessrole" . | indent 2}}
 {{include "instancerole" . | indent 2}}
   Service:
     Metadata:
-      'aws:copilot:description': 'An AppRunner service to run and manage your container image'
-    Type: AWS::AppRunner::Service # Resource type will change once we have public resource type
+      'aws:copilot:description': 'An App Runner service to run and manage your containers'
+    Type: AWS::AppRunner::Service
     Properties:
       ServiceName: !Sub '${AppName}-${EnvName}-${WorkloadName}'
       SourceConfiguration:
         AuthenticationConfiguration:
-          AccessRoleArn: !GetAtt ECRAccessRole.Arn
+          AccessRoleArn: !GetAtt AccessRole.Arn
         AutoDeploymentsEnabled: false
         ImageRepository:
           ImageIdentifier: !Ref ContainerImage
@@ -75,9 +75,20 @@ Resources:
               - Name: COPILOT_ENVIRONMENT_NAME
                 Value: !Ref EnvName
               - Name: COPILOT_SERVICE_NAME
-                Value: !Ref WorkloadName{{if .Variables}}{{range $name, $value := .Variables}}
+                Value: !Ref WorkloadName
+              {{- if .Variables}}
+              {{- range $name, $value := .Variables}}
               - Name: {{$name}}
-                Value: {{$value}}{{end}}{{end}}
+                Value: {{$value | printf "%q"}}
+              {{- end}}
+              {{- end}}
+              {{- if .NestedStack}}{{$stackName := .NestedStack.StackName}}
+              {{- range $var := .NestedStack.VariableOutputs}}
+              - Name: {{toSnakeCase $var}}
+                Value:
+                  Fn::GetAtt: [ {{$stackName}}, Outputs.{{$var}}]
+              {{- end}}
+              {{- end}}
       InstanceConfiguration:
         Cpu: !Ref InstanceCPU
         Memory: !Ref InstanceMemory

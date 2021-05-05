@@ -6,7 +6,10 @@ package stack
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
@@ -112,25 +115,64 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 		wantedTemplate   string
 		wantedError      error
 	}{
-		"should parse template": {
+		"should throw an error if addons template cannot be parsed": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
+				addons := mockTemplater{err: errors.New("some error")}
+				c.parser = mockParser
+				c.wkld.addons = addons
+			},
+			wantedError: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")), // TODO
+		},
+		"should parse template with addons": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
+				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
+				addons := mockTemplater{
+					tpl: `Resources:
+  AdditionalResourcesPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action: '*'
+          Resource: '*'
+  DDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: 'Hello'
+Outputs:
+  AdditionalResourcesPolicyArn:
+    Value: !Ref AdditionalResourcesPolicy
+  DDBTableName:
+    Value: !Ref DDBTable
+  Hello:
+    Value: hello`,
+				}
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
 					Variables: c.manifest.Variables,
 					Tags:      c.manifest.Tags,
+					NestedStack: &template.WorkloadNestedStackOpts{
+						StackName:       addon.StackName,
+						VariableOutputs: []string{"DDBTableName", "Hello"},
+						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
+					},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				c.parser = mockParser
+				c.addons = addons
 			},
 			wantedTemplate: "template",
 		},
 		"should return parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
+				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
 					Variables: c.manifest.Variables,
 					Tags:      c.manifest.Tags,
 				}).Return(nil, errors.New("parsing error"))
 				c.parser = mockParser
+				c.addons = addons
 			},
 			wantedError: errors.New("parsing error"),
 		},
