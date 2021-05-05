@@ -12,7 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 )
 
-type initSecretVars struct {
+type secretInitVars struct {
 	appName string
 
 	name          string
@@ -24,20 +24,20 @@ type initSecretVars struct {
 }
 
 type secretInitOpts struct {
-	initSecretVars
+	secretInitVars
 
 	store store
 	fs    afero.Fs
 }
 
-func newSecretInitOpts(vars initSecretVars) (*secretInitOpts, error) {
+func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
 
 	opts := secretInitOpts{
-		initSecretVars: vars,
+		secretInitVars: vars,
 		store:          store,
 		fs:             &afero.Afero{Fs: afero.NewOsFs()},
 	}
@@ -84,7 +84,7 @@ func (o *secretInitOpts) Execute() error {
 
 // BuildSecretInitCmd build the command for creating or updating a new secret.
 func BuildSecretInitCmd() *cobra.Command {
-	vars := initSecretVars{}
+	vars := secretInitVars{}
 	cmd := &cobra.Command{
 		Use:     "init",
 		Short:   "Create or update an SSM SecureString parameter.",

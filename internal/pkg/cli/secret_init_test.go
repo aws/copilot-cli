@@ -100,7 +100,7 @@ func TestSecretInitOpts_Validate(t *testing.T) {
 			mockStore := mocks.NewMockstore(ctrl)
 
 			opts := secretInitOpts{
-				initSecretVars: initSecretVars{
+				secretInitVars: secretInitVars{
 					appName:       tc.inApp,
 					name:          tc.inName,
 					values:        tc.inValues,
