@@ -17,6 +17,7 @@ type api interface {
 	PutParameter(input *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
 }
 
+// SSM wraps an AWS SSM client.
 type SSM struct {
 	client api
 }
