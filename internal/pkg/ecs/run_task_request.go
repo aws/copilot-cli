@@ -13,13 +13,13 @@ import (
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
 
-type ecsServiceDescriber interface {
+type ECSServiceDescriber interface {
 	Service(clusterName, serviceName string) (*awsecs.Service, error)
 	TaskDefinition(taskDefName string) (*awsecs.TaskDefinition, error)
 	NetworkConfiguration(cluster, serviceName string) (*awsecs.NetworkConfiguration, error)
 }
 
-type serviceDescriber interface {
+type ServiceDescriber interface {
 	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
 	NetworkConfiguration(app, env, svc string) (*awsecs.NetworkConfiguration, error)
 	ClusterARN(app, env string) (string, error)
@@ -45,7 +45,7 @@ type containerInfo struct {
 }
 
 // RunTaskRequestFromECSService populates a RunTaskRequest with information from an ECS service.
-func RunTaskRequestFromECSService(client ecsServiceDescriber, cluster, service string) (*RunTaskRequest, error) {
+func RunTaskRequestFromECSService(client ECSServiceDescriber, cluster, service string) (*RunTaskRequest, error) {
 	networkConfig, err := client.NetworkConfiguration(cluster, service)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve network configuration for service %s in cluster %s: %w", service, cluster, err)
@@ -82,7 +82,7 @@ func RunTaskRequestFromECSService(client ecsServiceDescriber, cluster, service s
 }
 
 // RunTaskRequestFromECSService populates a RunTaskRequest with information from a Copilot service.
-func RunTaskRequestFromService(client serviceDescriber, app, env, svc string) (*RunTaskRequest, error) {
+func RunTaskRequestFromService(client ServiceDescriber, app, env, svc string) (*RunTaskRequest, error) {
 	networkConfig, err := client.NetworkConfiguration(app, env, svc)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve network configuration for service %s: %w", svc, err)

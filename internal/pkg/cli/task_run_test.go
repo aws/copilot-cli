@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
+
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
@@ -899,6 +901,102 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+type mockRunTaskRequester struct {
+	mockRunTaskRequestFromECSService func(client ecs.ECSServiceDescriber, cluster string, service string) (*ecs.RunTaskRequest, error)
+	mockRunTaskRequestFromService    func(client ecs.ServiceDescriber, app, env, svc string) (*ecs.RunTaskRequest, error)
+}
+
+func TestTaskRunOpts_runTaskCommand(t *testing.T) {
+	wantedCommand := ecs.RunTaskRequest{}
+
+	testCases := map[string]struct {
+		inGenerateCommandTarget string
+
+		m mockRunTaskRequester
+
+		wantedCommand *ecs.RunTaskRequest
+		wantedError   error
+	}{
+		"should generate a command given an service ARN": {
+			inGenerateCommandTarget: "arn:aws:ecs:us-east-1:123456789012:service/crowded-cluster/good-service",
+			m: mockRunTaskRequester{
+				mockRunTaskRequestFromECSService: func(client ecs.ECSServiceDescriber, cluster string, service string) (*ecs.RunTaskRequest, error) {
+					return &wantedCommand, nil
+				},
+			},
+			wantedCommand: &wantedCommand,
+		},
+		"fail to generate a command given an service ARN": {
+			inGenerateCommandTarget: "arn:aws:ecs:us-east-1:123456789012:service/crowded-cluster/good-service",
+			m: mockRunTaskRequester{
+				mockRunTaskRequestFromECSService: func(client ecs.ECSServiceDescriber, cluster string, service string) (*ecs.RunTaskRequest, error) {
+					return nil, errors.New("some error")
+				},
+			},
+			wantedError: fmt.Errorf("generate task run command from ECS service crowded-cluster/good-service: some error"),
+		},
+		"should generate a command given a cluster/service target": {
+			inGenerateCommandTarget: "crowded-cluster/good-service",
+			m: mockRunTaskRequester{
+				mockRunTaskRequestFromECSService: func(client ecs.ECSServiceDescriber, cluster string, service string) (*ecs.RunTaskRequest, error) {
+					return &wantedCommand, nil
+				},
+			},
+			wantedCommand: &wantedCommand,
+		},
+		"fail to generate a command given a cluster/service target": {
+			inGenerateCommandTarget: "crowded-cluster/good-service",
+			m: mockRunTaskRequester{
+				mockRunTaskRequestFromECSService: func(client ecs.ECSServiceDescriber, cluster string, service string) (*ecs.RunTaskRequest, error) {
+					return nil, errors.New("some error")
+				},
+			},
+			wantedError: fmt.Errorf("generate task run command from ECS service crowded-cluster/good-service: some error"),
+		},
+		"should generate a command given an app/env/svc target": {
+			inGenerateCommandTarget: "good-app/good-env/good-service",
+			m: mockRunTaskRequester{
+				mockRunTaskRequestFromService: func(client ecs.ServiceDescriber, app, env, svc string) (*ecs.RunTaskRequest, error) {
+					return &wantedCommand, nil
+				},
+			},
+			wantedCommand: &wantedCommand,
+		},
+		"fail to generate a command given an app/env/svc target": {
+			inGenerateCommandTarget: "good-app/good-env/good-service",
+			m: mockRunTaskRequester{
+				mockRunTaskRequestFromService: func(client ecs.ServiceDescriber, app, env, svc string) (*ecs.RunTaskRequest, error) {
+					return nil, errors.New("some error")
+				},
+			},
+			wantedError: fmt.Errorf("generate task run command from service good-service: some error"),
+		},
+		"invalid input": {
+			inGenerateCommandTarget: "invalid/illegal/not-good/input/is/bad",
+			wantedError:             errors.New("invalid input to --generate-cmd: must be of one the form <cluster>/<service> or <app>/<env>/<workload>"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			opts := &runTaskOpts{
+				runTaskVars: runTaskVars{
+					generateCommandTarget: tc.inGenerateCommandTarget,
+				},
+				runTaskRequestFromECSService: tc.m.mockRunTaskRequestFromECSService,
+				runTaskRequestFromService:    tc.m.mockRunTaskRequestFromService,
+			}
+
+			got, err := opts.runTaskCommand()
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedCommand, got)
 			}
 		})
 	}

@@ -120,11 +120,15 @@ type runTaskOpts struct {
 	sess              *session.Session
 	targetEnvironment *config.Environment
 
-	// Configurer methods.
+	// Configurer functions.
 	configureRuntimeOpts func() error
 	configureRepository  func() error
 	// NOTE: configureEventsWriter is only called when tailing logs (i.e. --follow is specified)
 	configureEventsWriter func(tasks []*task.Task)
+
+	// Functions to generate a task run command.
+	runTaskRequestFromECSService func(client ecs.ECSServiceDescriber, cluster, service string) (*ecs.RunTaskRequest, error)
+	runTaskRequestFromService    func(client ecs.ServiceDescriber, app, env, svc string) (*ecs.RunTaskRequest, error)
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -167,6 +171,9 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	opts.configureEventsWriter = func(tasks []*task.Task) {
 		opts.eventsWriter = logging.NewTaskClient(opts.sess, opts.groupName, tasks)
 	}
+
+	opts.runTaskRequestFromECSService = ecs.RunTaskRequestFromECSService
+	opts.runTaskRequestFromService = ecs.RunTaskRequestFromService
 	return &opts, nil
 }
 
@@ -522,13 +529,13 @@ func (o *runTaskOpts) runTaskCommand() (*ecs.RunTaskRequest, error) {
 	switch len(parts) {
 	case 2:
 		clusterName, serviceName := parts[0], parts[1]
-		cmd, err = ecs.RunTaskRequestFromECSService(awsecs.New(sess), clusterName, serviceName)
+		cmd, err = o.runTaskRequestFromECSService(awsecs.New(sess), clusterName, serviceName)
 		if err != nil {
 			return nil, fmt.Errorf("generate task run command from ECS service %s: %w", clusterName+"/"+serviceName, err)
 		}
 	case 3:
 		appName, envName, serviceName := parts[0], parts[1], parts[2]
-		cmd, err = ecs.RunTaskRequestFromService(ecs.New(sess), appName, envName, serviceName)
+		cmd, err = o.runTaskRequestFromService(ecs.New(sess), appName, envName, serviceName)
 		if err != nil {
 			return nil, fmt.Errorf("generate task run command from service %s: %w", serviceName, err)
 		}
@@ -549,7 +556,7 @@ func (o *runTaskOpts) runTaskCommandFromARN(sess *session.Session) (*ecs.RunTask
 	if err != nil {
 		return nil, fmt.Errorf("extract service name from arn %s: %w", svcARN, err)
 	}
-	cmd, err := ecs.RunTaskRequestFromECSService(awsecs.New(sess), clusterName, serviceName)
+	cmd, err := o.runTaskRequestFromECSService(awsecs.New(sess), clusterName, serviceName)
 	if err != nil {
 		return nil, fmt.Errorf("generate task run command from ECS service %s: %w", clusterName+"/"+serviceName, err)
 	}
