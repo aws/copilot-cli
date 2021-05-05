@@ -71,7 +71,7 @@ Resources:
           !Sub '${App}-${Env}-VpcId'
   {{logicalIDSafe .ClusterName}}AuroraSecret:
     Metadata:
-      'aws:copilot:description': 'A SecretsManager secret to store your DB credentials'
+      'aws:copilot:description': 'A Secrets Manager secret to store your DB credentials'
     Type: AWS::SecretsManager::Secret
     Properties:
       Description: !Sub Aurora main user secret for ${AWS::StackName}
@@ -150,4 +150,3 @@ Outputs:
   {{logicalIDSafe .ClusterName}}SecurityGroup:
     Description: "The security group to attach to the workload."
     Value: !Ref {{logicalIDSafe .ClusterName}}SecurityGroup
-
