@@ -28,11 +28,11 @@ const (
 	cwGetLogEventsLimitMax = 10000
 )
 
-type svcLogsVars struct {
+type wkldLogsVars struct {
 	shouldOutputJSON bool
 	follow           bool
 	limit            int
-	svcName          string
+	name             string
 	envName          string
 	appName          string
 	humanStartTime   string
@@ -42,11 +42,10 @@ type svcLogsVars struct {
 }
 
 type svcLogsOpts struct {
-	svcLogsVars
+	wkldLogsVars
 
 	// internal states
-	startTime *int64
-	endTime   *int64
+	logTimeKeeping
 
 	w           io.Writer
 	configStore store
@@ -56,7 +55,7 @@ type svcLogsOpts struct {
 	initLogsSvc func() error // Overriden in tests.
 }
 
-func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
+func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 	configStore, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to environment config store: %w", err)
@@ -66,11 +65,11 @@ func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
 	opts := &svcLogsOpts{
-		svcLogsVars: vars,
-		w:           log.OutputWriter,
-		configStore: configStore,
-		deployStore: deployStore,
-		sel:         selector.NewDeploySelect(prompt.New(), configStore, deployStore),
+		wkldLogsVars: vars,
+		w:            log.OutputWriter,
+		configStore:  configStore,
+		deployStore:  deployStore,
+		sel:          selector.NewDeploySelect(prompt.New(), configStore, deployStore),
 	}
 	opts.initLogsSvc = func() error {
 		configStore, err := config.NewStore()
@@ -85,7 +84,7 @@ func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
 		if err != nil {
 			return err
 		}
-		opts.logsSvc = logging.NewServiceClient(sess, opts.appName, opts.envName, opts.svcName)
+		opts.logsSvc = logging.NewServiceClient(sess, opts.appName, opts.envName, opts.name)
 		return nil
 	}
 	return opts, nil
@@ -113,7 +112,7 @@ func (o *svcLogsOpts) Validate() error {
 			return fmt.Errorf("--since must be greater than 0")
 		}
 		// round up to the nearest second
-		o.startTime = o.parseSince()
+		o.startTime = o.parseSince(o.since)
 	}
 
 	if o.humanStartTime != "" {
@@ -169,7 +168,7 @@ func (o *svcLogsOpts) Execute() error {
 		OnEvents:  eventsWriter,
 	})
 	if err != nil {
-		return fmt.Errorf("write log events for service %s: %w", o.svcName, err)
+		return fmt.Errorf("write log events for service %s: %w", o.name, err)
 	}
 	return nil
 }
@@ -187,22 +186,27 @@ func (o *svcLogsOpts) askApp() error {
 }
 
 func (o *svcLogsOpts) askSvcEnvName() error {
-	deployedService, err := o.sel.DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithSvc(o.svcName))
+	deployedService, err := o.sel.DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithSvc(o.name))
 	if err != nil {
 		return fmt.Errorf("select deployed services for application %s: %w", o.appName, err)
 	}
-	o.svcName = deployedService.Svc
+	o.name = deployedService.Svc
 	o.envName = deployedService.Env
 	return nil
 }
 
-func (o *svcLogsOpts) parseSince() *int64 {
-	sinceSec := int64(o.since.Round(time.Second).Seconds())
+type logTimeKeeping struct {
+	startTime *int64
+	endTime   *int64
+}
+
+func (o *logTimeKeeping) parseSince(since time.Duration) *int64 {
+	sinceSec := int64(since.Round(time.Second).Seconds())
 	timeNow := time.Now().Add(time.Duration(-sinceSec) * time.Second)
 	return aws.Int64(timeNow.Unix() * 1000)
 }
 
-func (o *svcLogsOpts) parseRFC3339(timeStr string) (int64, error) {
+func (o *logTimeKeeping) parseRFC3339(timeStr string) (int64, error) {
 	startTimeTmp, err := time.Parse(time.RFC3339, timeStr)
 	if err != nil {
 		return 0, fmt.Errorf("reading time value %s: %w", timeStr, err)
@@ -212,7 +216,7 @@ func (o *svcLogsOpts) parseRFC3339(timeStr string) (int64, error) {
 
 // buildSvcLogsCmd builds the command for displaying service logs in an application.
 func buildSvcLogsCmd() *cobra.Command {
-	vars := svcLogsVars{}
+	vars := wkldLogsVars{}
 	cmd := &cobra.Command{
 		Use:   "logs",
 		Short: "Displays logs of a deployed service.",
@@ -242,7 +246,7 @@ func buildSvcLogsCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.svcName, nameFlag, nameFlagShort, "", svcFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVar(&vars.humanStartTime, startTimeFlag, "", startTimeFlagDescription)
