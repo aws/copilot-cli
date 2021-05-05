@@ -6,10 +6,26 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+)
+
+const (
+	secretInitAppPrompt     = "Which application do you want to add the secret to?"
+	secretInitAppPromptHelp = "The secret can then be versioned by your existing environments inside the application."
+
+	secretInitSecretNamePrompt     = "What would you like to name this secret?"
+	secretInitSecretNamePromptHelp = "The name of the secret, such as db_password."
+
+	fmtSecretInitSecretValuePrompt     = "What is the value of secret %s in environment %s?"
+	fmtSecretInitSecretValuePromptHelp = "If you do not wish to add the secret %s to environment %s, you can leave this blank by pressing 'enter' without entering any value."
 )
 
 type secretInitVars struct {
@@ -28,6 +44,9 @@ type secretInitOpts struct {
 
 	store store
 	fs    afero.Fs
+
+	prompter prompter
+	selector appSelector
 }
 
 func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
@@ -36,10 +55,14 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
 
+	prompter := prompt.New()
 	opts := secretInitOpts{
 		secretInitVars: vars,
 		store:          store,
 		fs:             &afero.Afero{Fs: afero.NewOsFs()},
+
+		prompter: prompter,
+		selector: selector.NewSelect(prompter, store),
 	}
 	return &opts, nil
 }
@@ -75,10 +98,89 @@ func (o *secretInitOpts) Validate() error {
 }
 
 func (o *secretInitOpts) Ask() error {
+	if o.overwrite {
+		log.Infof("You have specified %s flag. Please note that overwriting an existing secret may break your deployed service.\n", color.HighlightCode("--overwrite"))
+	}
+	if err := o.askForAppName(); err != nil {
+		return err
+	}
+	if err := o.askForSecretName(); err != nil {
+		return err
+	}
+	if err := o.askForSecretValues(); err != nil {
+		return err
+	}
 	return nil
 }
 
 func (o *secretInitOpts) Execute() error {
+	return nil
+}
+
+func (o *secretInitOpts) askForAppName() error {
+	if o.appName != "" {
+		return nil
+	}
+
+	app, err := o.selector.Application(secretInitAppPrompt, secretInitAppPromptHelp)
+	if err != nil {
+		return fmt.Errorf("ask for an application to add the secret to: %w", err)
+	}
+	o.appName = app
+	return nil
+}
+
+func (o *secretInitOpts) askForSecretName() error {
+	if o.name != "" {
+		return nil
+	}
+
+	name, err := o.prompter.Get(secretInitSecretNamePrompt,
+		secretInitSecretNamePromptHelp,
+		validateSecretName,
+		prompt.WithFinalMessage("secret name: "))
+	if err != nil {
+		return fmt.Errorf("ask for the secret name: %w", err)
+	}
+
+	o.name = name
+	return nil
+}
+
+func (o *secretInitOpts) askForSecretValues() error {
+	if o.values != nil {
+		return nil
+	}
+
+	envs, err := o.store.ListEnvironments(o.appName)
+	if err != nil {
+		return fmt.Errorf("list environments in app %s: %w", o.appName, err)
+	}
+
+	if len(envs) == 0 {
+		log.Errorf("Secrets are environment-level resource. Please run %s before running %s.\n",
+			color.HighlightCode("copilot env init"),
+			color.HighlightCode("copilot secret init"))
+		return fmt.Errorf("no environment is found in app %s", o.appName)
+	}
+
+	values := make(map[string]string)
+	for _, env := range envs {
+		value, err := o.prompter.Get(
+			fmt.Sprintf(fmtSecretInitSecretValuePrompt, color.HighlightUserInput(o.name), env.Name),
+			fmt.Sprintf(fmtSecretInitSecretValuePromptHelp, color.HighlightUserInput(o.name), env.Name),
+			nil,
+			prompt.WithFinalMessage(fmt.Sprintf("%s: ", env.Name)))
+		if err != nil {
+			return fmt.Errorf("ask for secret %s's value in environment %s: %w",
+				color.HighlightUserInput(o.name),
+				env.Name,
+				err)
+		}
+
+		values[env.Name] = value
+	}
+	o.values = values
 	return nil
 }
 
@@ -88,7 +190,7 @@ func BuildSecretInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "init",
 		Short:   "Create or update an SSM SecureString parameter.",
-		Example: `secret init`,
+		Example: ``, // TODO
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newSecretInitOpts(vars)
 			if err != nil {
