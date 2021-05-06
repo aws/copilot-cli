@@ -130,7 +130,9 @@ func TestSvcLogs_Validate(t *testing.T) {
 					name:           tc.inputSvc,
 					appName:        tc.inputApp,
 				},
-				configStore: mockstore,
+				wkldLogOpts: wkldLogOpts{
+					configStore: mockstore,
+				},
 			}
 
 			// WHEN
@@ -233,8 +235,10 @@ func TestSvcLogs_Ask(t *testing.T) {
 					name:    tc.inputSvc,
 					appName: tc.inputApp,
 				},
-				configStore: mockstore,
-				sel:         mockSel,
+				wkldLogOpts: wkldLogOpts{
+					configStore: mockstore,
+					sel:         mockSel,
+				},
 			}
 
 			// WHEN
@@ -339,12 +343,12 @@ func TestSvcLogs_Execute(t *testing.T) {
 					limit:   tc.limit,
 					taskIDs: tc.taskIDs,
 				},
-				logTimekeeping: logTimekeeping{
-					startTime: &tc.startTime,
-					endTime:   &tc.endTime,
+				wkldLogOpts: wkldLogOpts{
+					startTime:   &tc.startTime,
+					endTime:     &tc.endTime,
+					initLogsSvc: func() error { return nil },
+					logsSvc:     tc.mocklogsSvc(ctrl),
 				},
-				initLogsSvc: func() error { return nil },
-				logsSvc:     tc.mocklogsSvc(ctrl),
 			}
 
 			// WHEN
