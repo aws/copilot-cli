@@ -241,6 +241,13 @@ const updateHostedZoneRecords = async function (
   return Promise.all(promises);
 };
 
+// deleteHostedZoneRecords deletes the validation records associated with the certificate.
+// We don't want to delete a validation record if it's used by another certificate because
+// the validation records are used to renew the certificate. 
+// The legacy certificate (only `${envName}.${appName}.${domainName}`) and the new 
+// certificate generated with the "alias" field share the same validation record. 
+// Therefore, we check if there is more than one certificate using the record and only delete
+// if there is no other certificate using the record.
 const deleteHostedZoneRecords = async function (
   options,
   envName,
@@ -258,14 +265,11 @@ const deleteHostedZoneRecords = async function (
     isLegacyCert = true;
   }
 
-  let certWithDomainCount = await numOfGeneratedCertificates(
+  const certsWithEnvDomain = await numOfGeneratedCertificates(
     acm,
     `${envName}.${appName}.${domainName}`
   );
-  let isLastOne = false;
-  if (certWithDomainCount < 2) {
-    isLastOne = true;
-  }
+  const isLastOne = certsWithEnvDomain === 1;
 
   const newOptions = [];
   switch (`${isLegacyCert}|${isLastOne}`) {
@@ -308,21 +312,17 @@ const deleteHostedZoneRecords = async function (
   );
 };
 
-// numOfGeneratedCertificates returns the number of Copilot generated certificates. Specifically it returns
-// the number of certificate with domain name as `${envName}.${appName}.${domainName}`, since if any of
-// the other certificate with this domain name still exists, we cannot remove the validation record in our
-// env hosted zone.
+// numOfGeneratedCertificates returns the number of Copilot generated certificates for a given domain name. 
 const numOfGeneratedCertificates = async function (acm, defaultEnvDomain) {
-  let certWithDomainCount = 0;
+  let certsWithEnvDomain = 0;
   let listCertResp = await acm.listCertificates({}).promise();
   for (const certSummary of listCertResp.CertificateSummaryList || []) {
     if (certSummary.DomainName === defaultEnvDomain) {
-      certWithDomainCount++;
+      certsWithEnvDomain++;
     }
   }
   let nextToken = listCertResp.NextToken;
-  // Though very unlikely, we'll handle the pagination.
-  while (nextToken && certWithDomainCount < 2) {
+  while (nextToken) {
     listCertResp = await acm
       .listCertificates({
         NextToken: nextToken,
@@ -330,12 +330,12 @@ const numOfGeneratedCertificates = async function (acm, defaultEnvDomain) {
       .promise();
     for (const certSummary of listCertResp.CertificateSummaryList || []) {
       if (certSummary.DomainName === defaultEnvDomain) {
-        certWithDomainCount++;
+        certsWithEnvDomain++;
       }
     }
     nextToken = listCertResp.NextToken;
   }
-  return certWithDomainCount;
+  return certsWithEnvDomain;
 };
 
 const validateDomain = async function ({
