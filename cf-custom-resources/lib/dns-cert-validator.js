@@ -313,10 +313,14 @@ const deleteHostedZoneRecords = async function (
 };
 
 // numOfGeneratedCertificates returns the number of Copilot generated certificates for a given domain name.
-const numOfGeneratedCertificates = async function (acm, defaultEnvDomain) {
+const numOfGeneratedCertificates = async function (
+  acm,
+  defaultEnvDomain,
+  maxCount = 2
+) {
   let certsWithEnvDomain = 0;
   let listCertificatesInput = {};
-  while (true) {
+  while (certsWithEnvDomain < maxCount) {
     const listCertResp = await acm
       .listCertificates(listCertificatesInput)
       .promise();
