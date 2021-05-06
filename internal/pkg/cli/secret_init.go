@@ -67,6 +67,7 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 	return &opts, nil
 }
 
+// Validate returns an error if the flag values passed by the user are invalid.
 func (o *secretInitOpts) Validate() error {
 	if o.appName != "" {
 		_, err := o.store.GetApplication(o.appName)
@@ -97,6 +98,7 @@ func (o *secretInitOpts) Validate() error {
 	return nil
 }
 
+// Ask prompts the user for any required or important fields that are not provided.
 func (o *secretInitOpts) Ask() error {
 	if o.overwrite {
 		log.Infof("You have specified %s flag. Please note that overwriting an existing secret may break your deployed service.\n", color.HighlightCode("--overwrite"))
@@ -113,6 +115,7 @@ func (o *secretInitOpts) Ask() error {
 	return nil
 }
 
+// Execute creates the secrets.
 func (o *secretInitOpts) Execute() error {
 	return nil
 }
@@ -170,10 +173,7 @@ func (o *secretInitOpts) askForSecretValues() error {
 			fmt.Sprintf(fmtSecretInitSecretValuePrompt, color.HighlightUserInput(o.name), env.Name),
 			fmt.Sprintf(fmtSecretInitSecretValuePromptHelp, color.HighlightUserInput(o.name), env.Name))
 		if err != nil {
-			return fmt.Errorf("ask for secret %s's value in environment %s: %w",
-				color.HighlightUserInput(o.name),
-				env.Name,
-				err)
+			return fmt.Errorf("get secret value for %s in environment %s: %w", color.HighlightUserInput(o.name), env.Name, err)
 		}
 
 		values[env.Name] = value

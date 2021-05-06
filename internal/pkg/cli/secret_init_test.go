@@ -269,7 +269,7 @@ func TestSecretInitOpts_Ask(t *testing.T) {
 				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "dev"), gomock.Any()).MinTimes(0).MaxTimes(1)
 				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "prod"), gomock.Any()).MinTimes(0).MaxTimes(1)
 			},
-			wantedError: errors.New("ask for secret db-password's value in environment test: some error"),
+			wantedError: errors.New("get secret value for db-password in environment test: some error"),
 		},
 		"error if no env is found": {
 			inAppName: wantedApp,
