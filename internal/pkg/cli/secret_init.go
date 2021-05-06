@@ -182,7 +182,7 @@ func (o *secretInitOpts) askForSecretValues() error {
 	return nil
 }
 
-// BuildSecretInitCmd build the command for creating or updating a new secret.
+// BuildSecretInitCmd build the command for creating a new secret or updating an existing one.
 func BuildSecretInitCmd() *cobra.Command {
 	vars := secretInitVars{}
 	cmd := &cobra.Command{
