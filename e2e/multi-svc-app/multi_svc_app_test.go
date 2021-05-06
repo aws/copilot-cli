@@ -333,7 +333,7 @@ var _ = Describe("Multiple Service App", func() {
 			Expect(svcShowErr).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
 
-			// Calls the front end's efs test endpoint - which should create a file in the EFS filesystem.
+			// Calls the front end's EFS test endpoint - which should create a file in the EFS filesystem.
 			route := svc.Routes[0]
 
 			Expect(route.Environment).To(Equal("test"))
