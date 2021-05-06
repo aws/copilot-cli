@@ -243,9 +243,9 @@ const updateHostedZoneRecords = async function (
 
 // deleteHostedZoneRecords deletes the validation records associated with the certificate.
 // We don't want to delete a validation record if it's used by another certificate because
-// the validation records are used to renew the certificate. 
-// The legacy certificate (only `${envName}.${appName}.${domainName}`) and the new 
-// certificate generated with the "alias" field share the same validation record. 
+// the validation records are used to renew the certificate.
+// The legacy certificate (only `${envName}.${appName}.${domainName}`) and the new
+// certificate generated with the "alias" field share the same validation record.
 // Therefore, we check if there is more than one certificate using the record and only delete
 // if there is no other certificate using the record.
 const deleteHostedZoneRecords = async function (
@@ -312,28 +312,24 @@ const deleteHostedZoneRecords = async function (
   );
 };
 
-// numOfGeneratedCertificates returns the number of Copilot generated certificates for a given domain name. 
+// numOfGeneratedCertificates returns the number of Copilot generated certificates for a given domain name.
 const numOfGeneratedCertificates = async function (acm, defaultEnvDomain) {
   let certsWithEnvDomain = 0;
-  let listCertResp = await acm.listCertificates({}).promise();
-  for (const certSummary of listCertResp.CertificateSummaryList || []) {
-    if (certSummary.DomainName === defaultEnvDomain) {
-      certsWithEnvDomain++;
-    }
-  }
-  let nextToken = listCertResp.NextToken;
-  while (nextToken) {
-    listCertResp = await acm
-      .listCertificates({
-        NextToken: nextToken,
-      })
+  let listCertificatesInput = {};
+  while (true) {
+    const listCertResp = await acm
+      .listCertificates(listCertificatesInput)
       .promise();
     for (const certSummary of listCertResp.CertificateSummaryList || []) {
       if (certSummary.DomainName === defaultEnvDomain) {
         certsWithEnvDomain++;
       }
     }
-    nextToken = listCertResp.NextToken;
+    const nextToken = listCertResp.NextToken;
+    if (!nextToken) {
+      break;
+    }
+    listCertificatesInput.NextToken = nextToken;
   }
   return certsWithEnvDomain;
 };
