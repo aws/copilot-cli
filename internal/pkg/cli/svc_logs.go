@@ -43,9 +43,13 @@ type wkldLogsVars struct {
 
 type svcLogsOpts struct {
 	wkldLogsVars
+	wkldLogOpts
+}
 
+type wkldLogOpts struct {
 	// internal states
-	logTimekeeping
+	startTime *int64
+	endTime   *int64
 
 	w           io.Writer
 	configStore store
@@ -66,10 +70,12 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 	}
 	opts := &svcLogsOpts{
 		wkldLogsVars: vars,
-		w:            log.OutputWriter,
-		configStore:  configStore,
-		deployStore:  deployStore,
-		sel:          selector.NewDeploySelect(prompt.New(), configStore, deployStore),
+		wkldLogOpts: wkldLogOpts{
+			w:           log.OutputWriter,
+			configStore: configStore,
+			deployStore: deployStore,
+			sel:         selector.NewDeploySelect(prompt.New(), configStore, deployStore),
+		},
 	}
 	opts.initLogsSvc = func() error {
 		configStore, err := config.NewStore()
@@ -195,20 +201,13 @@ func (o *svcLogsOpts) askSvcEnvName() error {
 	return nil
 }
 
-// logTimekeeping handles common timekeeping logic
-// for job and svc logs.
-type logTimekeeping struct {
-	startTime *int64
-	endTime   *int64
-}
-
-func (o *logTimekeeping) parseSince(since time.Duration) *int64 {
+func (o *wkldLogOpts) parseSince(since time.Duration) *int64 {
 	sinceSec := int64(since.Round(time.Second).Seconds())
 	timeNow := time.Now().Add(time.Duration(-sinceSec) * time.Second)
 	return aws.Int64(timeNow.Unix() * 1000)
 }
 
-func (o *logTimekeeping) parseRFC3339(timeStr string) (int64, error) {
+func (o *wkldLogOpts) parseRFC3339(timeStr string) (int64, error) {
 	startTimeTmp, err := time.Parse(time.RFC3339, timeStr)
 	if err != nil {
 		return 0, fmt.Errorf("reading time value %s: %w", timeStr, err)

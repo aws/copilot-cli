@@ -6,7 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"io"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -20,29 +19,19 @@ import (
 )
 
 const (
-	jobLogNamePrompt     = "Which job's logs would you like to show?"
-	jobLogNameHelpPrompt = "The logs of a deployed job will be shown."
+	jobAppNamePrompt = "Which application does your job belong to?"
 )
 
 type jobLogsVars struct {
 	wkldLogsVars
 
 	includeStateMachineLogs bool // Whether to include the logs from the state machine log streams
-	excludeJobLogs          bool // Whether to exclude the logs from the job containers.
 }
 
 type jobLogsOpts struct {
 	jobLogsVars
 
-	// internal states
-	logTimekeeping
-
-	w           io.Writer
-	configStore store
-	deployStore deployedEnvironmentLister
-	sel         deploySelector
-	logsSvc     logEventsWriter
-	initLogsSvc func() error // Overriden in tests.
+	wkldLogOpts
 }
 
 func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
@@ -56,10 +45,12 @@ func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
 	}
 	opts := &jobLogsOpts{
 		jobLogsVars: vars,
-		w:           log.OutputWriter,
-		configStore: configStore,
-		deployStore: deployStore,
-		sel:         selector.NewDeploySelect(prompt.New(), configStore, deployStore),
+		wkldLogOpts: wkldLogOpts{
+			w:           log.OutputWriter,
+			configStore: configStore,
+			deployStore: deployStore,
+			sel:         selector.NewDeploySelect(prompt.New(), configStore, deployStore),
+		},
 	}
 	opts.initLogsSvc = func() error {
 		configStore, err := config.NewStore()
@@ -130,7 +121,21 @@ func (o *jobLogsOpts) Validate() error {
 
 // Ask asks for fields that are required but not passed in.
 func (o *jobLogsOpts) Ask() error {
+	if err := o.askApp(); err != nil {
+		return err
+	}
+	return nil
+}
 
+func (o *jobLogsOpts) askApp() error {
+	if o.appName != "" {
+		return nil
+	}
+	app, err := o.sel.Application(jobAppNamePrompt, svcAppNameHelpPrompt)
+	if err != nil {
+		return fmt.Errorf("select application: %w", err)
+	}
+	o.appName = app
 	return nil
 }
 
