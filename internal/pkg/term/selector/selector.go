@@ -118,7 +118,9 @@ type WorkspaceRetriever interface {
 // DeployStoreClient wraps methods of deploy store.
 type DeployStoreClient interface {
 	ListDeployedServices(appName string, envName string) ([]string, error)
+	ListDeployedJobs(appName, envName string) ([]string, error)
 	IsServiceDeployed(appName string, envName string, svcName string) (bool, error)
+	IsJobDeployed(appName, envName, jobName string) (bool, error)
 }
 
 // TaskStackDescriber wraps cloudformation client methods to describe task stacks
