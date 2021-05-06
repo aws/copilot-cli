@@ -195,7 +195,8 @@ func (o *svcLogsOpts) askSvcEnvName() error {
 	return nil
 }
 
-// logTimekeeping
+// logTimekeeping handles common timekeeping logic
+// for job and svc logs.
 type logTimekeeping struct {
 	startTime *int64
 	endTime   *int64

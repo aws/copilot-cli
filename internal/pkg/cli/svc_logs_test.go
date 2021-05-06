@@ -339,7 +339,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 					limit:   tc.limit,
 					taskIDs: tc.taskIDs,
 				},
-				logTimeKeeping: logTimeKeeping{
+				logTimekeeping: logTimekeeping{
 					startTime: &tc.startTime,
 					endTime:   &tc.endTime,
 				},

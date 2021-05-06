@@ -35,7 +35,7 @@ type jobLogsOpts struct {
 	jobLogsVars
 
 	// internal states
-	logTimeKeeping
+	logTimekeeping
 
 	w           io.Writer
 	configStore store
@@ -130,6 +130,7 @@ func (o *jobLogsOpts) Validate() error {
 
 // Ask asks for fields that are required but not passed in.
 func (o *jobLogsOpts) Ask() error {
+
 	return nil
 }
 
