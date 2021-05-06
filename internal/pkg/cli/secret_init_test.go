@@ -232,14 +232,11 @@ func TestSecretInitOpts_Ask(t *testing.T) {
 						Name: "prod",
 					},
 				}, nil)
-				m.mockPrompter.EXPECT().Get(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "test"),
-					gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "test"), gomock.Any()).
 					Return("test-password", nil)
-				m.mockPrompter.EXPECT().Get(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "dev"),
-					gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "dev"), gomock.Any()).
 					Return("dev-password", nil)
-				m.mockPrompter.EXPECT().Get(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "prod"),
-					gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "prod"), gomock.Any()).
 					Return("prod-password", nil)
 			},
 			wantedVars: wantedVars,
@@ -267,10 +264,10 @@ func TestSecretInitOpts_Ask(t *testing.T) {
 						Name: "prod",
 					},
 				}, nil)
-				m.mockPrompter.EXPECT().Get(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "test"), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "test"), gomock.Any()).
 					Return("", errors.New("some error"))
-				m.mockPrompter.EXPECT().Get(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "dev"), gomock.Any(), gomock.Any(), gomock.Any()).MinTimes(0).MaxTimes(1)
-				m.mockPrompter.EXPECT().Get(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "prod"), gomock.Any(), gomock.Any(), gomock.Any()).MinTimes(0).MaxTimes(1)
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "dev"), gomock.Any()).MinTimes(0).MaxTimes(1)
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "prod"), gomock.Any()).MinTimes(0).MaxTimes(1)
 			},
 			wantedError: errors.New("ask for secret db-password's value in environment test: some error"),
 		},
@@ -283,13 +280,10 @@ func TestSecretInitOpts_Ask(t *testing.T) {
 			wantedError: errors.New("no environment is found in app my-app"),
 		},
 		"do not ask for values if specified": {
-			inAppName: wantedApp,
-			inName:    wantedName,
-			inValues:  wantedValues,
-			setupMocks: func(m secretInitAskMocks) {
-				m.mockStore.EXPECT().ListEnvironments(gomock.Any()).Times(0)
-				m.mockPrompter.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any).Times(0)
-			},
+			inAppName:  wantedApp,
+			inName:     wantedName,
+			inValues:   wantedValues,
+			setupMocks: func(m secretInitAskMocks) {},
 			wantedVars: wantedVars,
 		},
 	}

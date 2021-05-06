@@ -166,11 +166,9 @@ func (o *secretInitOpts) askForSecretValues() error {
 
 	values := make(map[string]string)
 	for _, env := range envs {
-		value, err := o.prompter.Get(
+		value, err := o.prompter.GetSecret(
 			fmt.Sprintf(fmtSecretInitSecretValuePrompt, color.HighlightUserInput(o.name), env.Name),
-			fmt.Sprintf(fmtSecretInitSecretValuePromptHelp, color.HighlightUserInput(o.name), env.Name),
-			nil,
-			prompt.WithFinalMessage(fmt.Sprintf("%s: ", env.Name)))
+			fmt.Sprintf(fmtSecretInitSecretValuePromptHelp, color.HighlightUserInput(o.name), env.Name))
 		if err != nil {
 			return fmt.Errorf("ask for secret %s's value in environment %s: %w",
 				color.HighlightUserInput(o.name),
