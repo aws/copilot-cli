@@ -197,42 +197,42 @@ func (mr *MockserviceDescriberMockRecorder) DescribeService(app, env, svc interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockserviceDescriber)(nil).DescribeService), app, env, svc)
 }
 
-// MockapprunnerServiceGetter is a mock of apprunnerServiceGetter interface.
-type MockapprunnerServiceGetter struct {
+// MockapprunnerServiceDescriber is a mock of apprunnerServiceDescriber interface.
+type MockapprunnerServiceDescriber struct {
 	ctrl     *gomock.Controller
-	recorder *MockapprunnerServiceGetterMockRecorder
+	recorder *MockapprunnerServiceDescriberMockRecorder
 }
 
-// MockapprunnerServiceGetterMockRecorder is the mock recorder for MockapprunnerServiceGetter.
-type MockapprunnerServiceGetterMockRecorder struct {
-	mock *MockapprunnerServiceGetter
+// MockapprunnerServiceDescriberMockRecorder is the mock recorder for MockapprunnerServiceDescriber.
+type MockapprunnerServiceDescriberMockRecorder struct {
+	mock *MockapprunnerServiceDescriber
 }
 
-// NewMockapprunnerServiceGetter creates a new mock instance.
-func NewMockapprunnerServiceGetter(ctrl *gomock.Controller) *MockapprunnerServiceGetter {
-	mock := &MockapprunnerServiceGetter{ctrl: ctrl}
-	mock.recorder = &MockapprunnerServiceGetterMockRecorder{mock}
+// NewMockapprunnerServiceDescriber creates a new mock instance.
+func NewMockapprunnerServiceDescriber(ctrl *gomock.Controller) *MockapprunnerServiceDescriber {
+	mock := &MockapprunnerServiceDescriber{ctrl: ctrl}
+	mock.recorder = &MockapprunnerServiceDescriberMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockapprunnerServiceGetter) EXPECT() *MockapprunnerServiceGetterMockRecorder {
+func (m *MockapprunnerServiceDescriber) EXPECT() *MockapprunnerServiceDescriberMockRecorder {
 	return m.recorder
 }
 
-// DescribeService mocks base method.
-func (m *MockapprunnerServiceGetter) DescribeService(svcARN string) (*apprunner.Service, error) {
+// Service mocks base method.
+func (m *MockapprunnerServiceDescriber) Service() (*apprunner.Service, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeService", svcARN)
+	ret := m.ctrl.Call(m, "Service")
 	ret0, _ := ret[0].(*apprunner.Service)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DescribeService indicates an expected call of DescribeService.
-func (mr *MockapprunnerServiceGetterMockRecorder) DescribeService(svcARN interface{}) *gomock.Call {
+// Service indicates an expected call of Service.
+func (mr *MockapprunnerServiceDescriberMockRecorder) Service() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockapprunnerServiceGetter)(nil).DescribeService), svcARN)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockapprunnerServiceDescriber)(nil).Service))
 }
 
 // MockautoscalingAlarmNamesGetter is a mock of autoscalingAlarmNamesGetter interface.

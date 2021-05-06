@@ -121,7 +121,7 @@ func TestSvcPause_Ask(t *testing.T) {
 	}{
 		"errors if failed to select application": {
 			mockSelector: func(m *mocks.MockdeploySelector) {
-				m.EXPECT().Application(svcPauseAppNamePrompt, svcPauseAppNameHelpPrompt).Return("", mockError)
+				m.EXPECT().Application(svcPauseAppNamePrompt, svcAppNameHelpPrompt).Return("", mockError)
 			},
 
 			wantedError: fmt.Errorf("select application: some error"),
@@ -130,7 +130,7 @@ func TestSvcPause_Ask(t *testing.T) {
 			inputApp: "mockApp",
 
 			mockSelector: func(m *mocks.MockdeploySelector) {
-				m.EXPECT().DeployedService(svcPauseNamePrompt, "", "mockApp", gomock.Any(), gomock.Any()).
+				m.EXPECT().DeployedService(svcPauseNamePrompt, svcPauseSvcNameHelpPrompt, "mockApp", gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, mockError)
 			},
 
@@ -142,7 +142,7 @@ func TestSvcPause_Ask(t *testing.T) {
 			inputEnvironment: "mockEnv",
 
 			mockSelector: func(m *mocks.MockdeploySelector) {
-				m.EXPECT().DeployedService(svcPauseNamePrompt, "", "mockApp", gomock.Any(), gomock.Any()).
+				m.EXPECT().DeployedService(svcPauseNamePrompt, svcPauseSvcNameHelpPrompt, "mockApp", gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&selector.DeployedService{
 						Env: "mockEnv",
 						Svc: "mockSvc",

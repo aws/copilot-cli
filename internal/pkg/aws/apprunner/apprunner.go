@@ -23,12 +23,14 @@ const (
 	opStatusSucceeded = "SUCCEEDED"
 	opStatusFailed    = "FAILED"
 	svcStatusPaused   = "PAUSED"
+	svcStatusRunning  = "RUNNING"
 )
 
 type api interface {
 	DescribeService(input *apprunner.DescribeServiceInput) (*apprunner.DescribeServiceOutput, error)
 	ListServices(input *apprunner.ListServicesInput) (*apprunner.ListServicesOutput, error)
 	PauseService(input *apprunner.PauseServiceInput) (*apprunner.PauseServiceOutput, error)
+	ResumeService(input *apprunner.ResumeServiceInput) (*apprunner.ResumeServiceOutput, error)
 	ListOperations(input *apprunner.ListOperationsInput) (*apprunner.ListOperationsOutput, error)
 }
 
@@ -158,7 +160,7 @@ func SystemLogGroupName(svcARN string) (string, error) {
 	return fmt.Sprintf(fmtAppRunnerServiceLogGroupName, svcName, svcID), nil
 }
 
-//PauseService pause the running App Runner service.
+// PauseService pause the running App Runner service.
 func (a *AppRunner) PauseService(svcARN string) error {
 	resp, err := a.client.PauseService(&apprunner.PauseServiceInput{
 		ServiceArn: aws.String(svcARN),
@@ -167,6 +169,23 @@ func (a *AppRunner) PauseService(svcARN string) error {
 		return fmt.Errorf("pause service operation failed: %w", err)
 	}
 	if resp.OperationId == nil && aws.StringValue(resp.Service.Status) == svcStatusPaused {
+		return nil
+	}
+	if err := a.waitForOperation(aws.StringValue(resp.OperationId), svcARN); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ResumeService resumes a paused App Runner service.
+func (a *AppRunner) ResumeService(svcARN string) error {
+	resp, err := a.client.ResumeService(&apprunner.ResumeServiceInput{
+		ServiceArn: aws.String(svcARN),
+	})
+	if err != nil {
+		return fmt.Errorf("resume service operation failed: %w", err)
+	}
+	if resp.OperationId == nil && aws.StringValue(resp.Service.Status) == svcStatusRunning {
 		return nil
 	}
 	if err := a.waitForOperation(aws.StringValue(resp.OperationId), svcARN); err != nil {

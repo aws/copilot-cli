@@ -93,3 +93,18 @@ func (mr *MockapiMockRecorder) PauseService(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PauseService", reflect.TypeOf((*Mockapi)(nil).PauseService), input)
 }
+
+// ResumeService mocks base method.
+func (m *Mockapi) ResumeService(input *apprunner.ResumeServiceInput) (*apprunner.ResumeServiceOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResumeService", input)
+	ret0, _ := ret[0].(*apprunner.ResumeServiceOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ResumeService indicates an expected call of ResumeService.
+func (mr *MockapiMockRecorder) ResumeService(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResumeService", reflect.TypeOf((*Mockapi)(nil).ResumeService), input)
+}

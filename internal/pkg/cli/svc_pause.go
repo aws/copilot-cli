@@ -22,12 +22,12 @@ import (
 
 const (
 	svcPauseAppNamePrompt     = "Which application is the service in?"
-	svcPauseAppNameHelpPrompt = "An application groups all of your services together."
 	svcPauseNamePrompt        = "Which service would you like to pause?"
+	svcPauseSvcNameHelpPrompt = "The selected service will be paused."
 
 	fmtSvcPauseStart   = "Pausing App Runner service %s."
-	fmtsvcPauseFailed  = "Failed to pause App Runner service %s."
-	fmtSvcPauseSucceed = "Paused App Runner service %s."
+	fmtsvcPauseFailed  = "Failed to pause App Runner service %s.\n"
+	fmtSvcPauseSucceed = "Paused App Runner service %s.\n"
 )
 
 type svcPauseVars struct {
@@ -133,7 +133,7 @@ func (o *svcPauseOpts) askApp() error {
 	if o.appName != "" {
 		return nil
 	}
-	app, err := o.sel.Application(svcPauseAppNamePrompt, svcPauseAppNameHelpPrompt)
+	app, err := o.sel.Application(svcPauseAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application: %w", err)
 	}
@@ -142,7 +142,14 @@ func (o *svcPauseOpts) askApp() error {
 }
 
 func (o *svcPauseOpts) askSvcEnvName() error {
-	deployedService, err := o.sel.DeployedService(svcPauseNamePrompt, "", o.appName, selector.WithEnv(o.envName), selector.WithSvc(o.svcName))
+	deployedService, err := o.sel.DeployedService(
+		svcPauseNamePrompt,
+		svcPauseSvcNameHelpPrompt,
+		o.appName,
+		selector.WithEnv(o.envName),
+		selector.WithSvc(o.svcName),
+		selector.WithServiceTypesFilter([]string{manifest.RequestDrivenWebServiceType}),
+	)
 	if err != nil {
 		return fmt.Errorf("select deployed services for application %s: %w", o.appName, err)
 	}
