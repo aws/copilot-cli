@@ -22,7 +22,7 @@ const (
 	secretInitAppPromptHelp = "The secret can then be versioned by your existing environments inside the application."
 
 	secretInitSecretNamePrompt     = "What would you like to name this secret?"
-	secretInitSecretNamePromptHelp = "The name of the secret, such as db_password."
+	secretInitSecretNamePromptHelp = "The name of the secret, such as 'db_password'."
 
 	fmtSecretInitSecretValuePrompt     = "What is the value of secret %s in environment %s?"
 	fmtSecretInitSecretValuePromptHelp = "If you do not wish to add the secret %s to environment %s, you can leave this blank by pressing 'enter' without entering any value."
