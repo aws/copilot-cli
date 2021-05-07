@@ -25,7 +25,7 @@ const (
 	secretInitSecretNamePromptHelp = "The name of the secret, such as 'db_password'."
 
 	fmtSecretInitSecretValuePrompt     = "What is the value of secret %s in environment %s?"
-	fmtSecretInitSecretValuePromptHelp = "If you do not wish to add the secret %s to environment %s, you can leave this blank by pressing 'enter' without entering any value."
+	fmtSecretInitSecretValuePromptHelp = "If you do not wish to add the secret %s to environment %s, you can leave this blank by pressing 'Enter' without entering any value."
 )
 
 type secretInitVars struct {
