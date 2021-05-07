@@ -4,17 +4,26 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+)
+
+const (
+	fmtSecretParameterName = "/copilot/%s/%s/secrets/%s"
 )
 
 const (
@@ -47,6 +56,8 @@ type secretInitOpts struct {
 
 	prompter prompter
 	selector appSelector
+
+	configureSecretPutter func(envName string) (secretPutter, error)
 }
 
 func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
@@ -64,11 +75,32 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 		prompter: prompter,
 		selector: selector.NewSelect(prompter, store),
 	}
+
+	opts.configureSecretPutter = func(envName string) (secretPutter, error) {
+		provider := sessions.NewProvider()
+		env, err := opts.targetEnv(envName)
+		if err != nil {
+			return nil, err
+		}
+		sess, err := provider.FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return nil, fmt.Errorf("create session from environment manager role %s in region %s: %w", env.ManagerRoleARN, env.Region, err)
+		}
+		return ssm.New(sess), nil
+	}
 	return &opts, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *secretInitOpts) Validate() error {
+	if o.inputFilePath != "" && o.name != "" {
+		return errors.New("cannot specify `--cli-input-yaml` with `--name`")
+	}
+
+	if o.inputFilePath != "" && o.values != nil {
+		return errors.New("cannot specify `--cli-input-yaml` with `--values`")
+	}
+
 	if o.appName != "" {
 		_, err := o.store.GetApplication(o.appName)
 		if err != nil {
@@ -84,8 +116,8 @@ func (o *secretInitOpts) Validate() error {
 
 	if o.values != nil {
 		for env := range o.values {
-			if _, err := o.store.GetEnvironment(o.appName, env); err != nil {
-				return fmt.Errorf("get environment %s in application %s: %w", env, o.appName, err)
+			if _, err := o.targetEnv(env); err != nil {
+				return err
 			}
 		}
 	}
@@ -117,7 +149,73 @@ func (o *secretInitOpts) Ask() error {
 
 // Execute creates the secrets.
 func (o *secretInitOpts) Execute() error {
+	secretName := o.name
+	secretValues := o.values
+
+	if o.inputFilePath != "" {
+		var err error
+		secretName, secretValues, err = o.parseFile()
+		if err != nil {
+			return err
+		}
+	}
+
+	return o.putSecrets(secretName, secretValues)
+}
+
+func (o *secretInitOpts) putSecrets(secretName string, values map[string]string) error {
+	for envName, value := range values {
+		err := o.putSecret(secretName, envName, value)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+func (o *secretInitOpts) putSecret(secretName, envName, value string) error {
+	client, err := o.configureSecretPutter(envName)
+	if err != nil {
+		return err
+	}
+
+	tags := make(map[string]string)
+	for k, v := range o.resourceTags {
+		tags[k] = v
+	}
+	tags[deploy.AppTagKey] = o.appName
+	tags[deploy.EnvTagKey] = envName
+
+	name := fmt.Sprintf(fmtSecretParameterName, o.appName, envName, secretName)
+	in := ssm.PutSecretInput{
+		Name:      name,
+		Value:     value,
+		Overwrite: o.overwrite,
+		Tags:      tags,
+	}
+
+	out, err := client.PutSecret(in)
+	if err != nil {
+		var targetErr *ssm.ErrParameterAlreadyExists
+		if errors.As(err, &targetErr) {
+			log.Infoln(fmt.Sprintf("Secret %s already exists. Do not overwrite.\n", name))
+			return nil
+		}
+		return fmt.Errorf("put secret %s in environment %s: %w", secretName, envName, err)
+	}
+
+	version := aws.Int64Value(out.Version)
+	if version != 1 {
+		log.Infoln(fmt.Sprintf("Secret %s already exists in environment %s. Overwritten.", name, envName))
+		return nil
+	}
+
+	log.Infoln(fmt.Sprintf("Successfully created %s", name))
+	return nil
+}
+
+func (o *secretInitOpts) parseFile() (string, map[string]string, error) {
+	return "", nil, nil
 }
 
 func (o *secretInitOpts) askForAppName() error {
@@ -180,6 +278,14 @@ func (o *secretInitOpts) askForSecretValues() error {
 	}
 	o.values = values
 	return nil
+}
+
+func (o *secretInitOpts) targetEnv(envName string) (*config.Environment, error) {
+	env, err := o.store.GetEnvironment(o.appName, envName)
+	if err != nil {
+		return nil, fmt.Errorf("get environment %s in application %s: %w", envName, o.appName, err)
+	}
+	return env, nil
 }
 
 // BuildSecretInitCmd build the command for creating a new secret or updating an existing one.
