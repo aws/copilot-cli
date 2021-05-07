@@ -33,6 +33,7 @@ func TestEnv_Template(t *testing.T) {
 					DNSCertValidatorLambda:    "mockkey1",
 					DNSDelegationLambda:       "mockkey2",
 					EnableLongARNFormatLambda: "mockkey3",
+					CustomDomainLambda:        "mockkey4",
 					ImportVPC:                 nil,
 					VPCConfig: &config.AdjustVPC{
 						CIDR:               DefaultVPCCIDR,
@@ -298,6 +299,7 @@ func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 			template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
 			template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
 			template.EnableLongARNsFileName:   "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey3",
+			template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
 		},
 	}
 }

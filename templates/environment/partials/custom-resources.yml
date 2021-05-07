@@ -44,3 +44,17 @@ HTTPSCert:
     - !Sub "${AppName}.${AppDNSName}"
     - !Sub "*.${AppName}.${AppDNSName}"
     - !Sub "*.${EnvironmentName}.${AppName}.${AppDNSName}"
+
+CustomDomainAction:
+  Condition: HasAliases
+  DependsOn: HTTPSCert
+  Type: Custom::CustomDomainFunction
+  Properties:
+    ServiceToken: !GetAtt CustomDomainFunction.Arn
+    AppName: !Ref AppName
+    EnvName: !Ref EnvironmentName
+    Aliases: !Ref Aliases
+    AppDNSRole: !Ref AppDNSDelegationRole
+    DomainName: !Ref AppDNSName
+    LoadBalancerDNS: !GetAtt PublicLoadBalancer.DNSName
+    LoadBalancerHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID 
