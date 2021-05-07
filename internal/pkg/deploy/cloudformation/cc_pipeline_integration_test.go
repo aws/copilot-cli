@@ -86,12 +86,13 @@ func TestCCPipelineCreation(t *testing.T) {
 				StackSetName: aws.String(appStackSetName),
 			})
 			require.NoError(t, err)
-			require.Equal(t, len(stackInstances.Summaries), 2)
+			require.Equal(t, 2, len(stackInstances.Summaries))
 
 			err = s3Client.EmptyBucket(envBucketName)
 			require.NoError(t, err)
 
-			err = s3Client.EmptyBucket(appBucketName)
+			appS3Client := s3.New(appSess)
+			err = appS3Client.EmptyBucket(appBucketName)
 			require.NoError(t, err)
 
 			_, err = appCfClient.DeleteStackInstances(&awsCF.DeleteStackInstancesInput{

@@ -229,6 +229,40 @@ func TestAppUpgradeOpts_Execute(t *testing.T) {
 			},
 			wantedErr: fmt.Errorf("get identity: some error"),
 		},
+		"should return error if fail to get hostedzone id": {
+			given: func(ctrl *gomock.Controller) *appUpgradeOpts {
+				mockVersionGetter := mocks.NewMockversionGetter(ctrl)
+				mockVersionGetter.EXPECT().Version().Return(deploy.LegacyAppTemplateVersion, nil)
+
+				mockProg := mocks.NewMockprogress(ctrl)
+				mockProg.EXPECT().Start(gomock.Any())
+				mockProg.EXPECT().Stop(gomock.Any())
+
+				mockIdentity := mocks.NewMockidentityService(ctrl)
+				mockIdentity.EXPECT().Get().Return(identity.Caller{Account: "1234"}, nil)
+
+				mockStore := mocks.NewMockstore(ctrl)
+				mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{
+					Name:   "phonetool",
+					Domain: "foobar.com",
+				}, nil)
+
+				mockRoute53 := mocks.NewMockdomainHostedZoneGetter(ctrl)
+				mockRoute53.EXPECT().DomainHostedZoneID("foobar.com").Return("", errors.New("some error"))
+
+				return &appUpgradeOpts{
+					appUpgradeVars: appUpgradeVars{
+						name: "phonetool",
+					},
+					versionGetter: mockVersionGetter,
+					identity:      mockIdentity,
+					store:         mockStore,
+					prog:          mockProg,
+					route53:       mockRoute53,
+				}
+			},
+			wantedErr: fmt.Errorf("get hosted zone ID for domain foobar.com: some error"),
+		},
 		"should return error if fail to upgrade application": {
 			given: func(ctrl *gomock.Controller) *appUpgradeOpts {
 				mockVersionGetter := mocks.NewMockversionGetter(ctrl)
@@ -243,6 +277,7 @@ func TestAppUpgradeOpts_Execute(t *testing.T) {
 
 				mockStore := mocks.NewMockstore(ctrl)
 				mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+				mockStore.EXPECT().UpdateApplication(&config.Application{Name: "phonetool"}).Return(nil)
 
 				mockUpgrader := mocks.NewMockappUpgrader(ctrl)
 				mockUpgrader.EXPECT().UpgradeApplication(gomock.Any()).Return(errors.New("some error"))
@@ -274,10 +309,17 @@ func TestAppUpgradeOpts_Execute(t *testing.T) {
 
 				mockStore := mocks.NewMockstore(ctrl)
 				mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{
+					Name:   "phonetool",
+					Domain: "hello.com",
+				}, nil)
+				mockStore.EXPECT().UpdateApplication(&config.Application{
 					Name:               "phonetool",
 					Domain:             "hello.com",
 					DomainHostedZoneID: "2klfqok3",
-				}, nil)
+				}).Return(nil)
+
+				mockRoute53 := mocks.NewMockdomainHostedZoneGetter(ctrl)
+				mockRoute53.EXPECT().DomainHostedZoneID("hello.com").Return("2klfqok3", nil)
 
 				mockUpgrader := mocks.NewMockappUpgrader(ctrl)
 				mockUpgrader.EXPECT().UpgradeApplication(&deploy.CreateAppInput{
@@ -297,6 +339,7 @@ func TestAppUpgradeOpts_Execute(t *testing.T) {
 					store:         mockStore,
 					prog:          mockProg,
 					upgrader:      mockUpgrader,
+					route53:       mockRoute53,
 				}
 			},
 		},

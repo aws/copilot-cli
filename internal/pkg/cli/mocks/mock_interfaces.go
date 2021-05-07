@@ -444,6 +444,20 @@ func (mr *MockapplicationStoreMockRecorder) ListApplications() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListApplications", reflect.TypeOf((*MockapplicationStore)(nil).ListApplications))
 }
 
+// UpdateApplication mocks base method.
+func (m *MockapplicationStore) UpdateApplication(app *config.Application) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateApplication", app)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateApplication indicates an expected call of UpdateApplication.
+func (mr *MockapplicationStoreMockRecorder) UpdateApplication(app interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateApplication", reflect.TypeOf((*MockapplicationStore)(nil).UpdateApplication), app)
+}
+
 // MockapplicationCreator is a mock of applicationCreator interface.
 type MockapplicationCreator struct {
 	ctrl     *gomock.Controller
@@ -479,6 +493,43 @@ func (m *MockapplicationCreator) CreateApplication(app *config.Application) erro
 func (mr *MockapplicationCreatorMockRecorder) CreateApplication(app interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateApplication", reflect.TypeOf((*MockapplicationCreator)(nil).CreateApplication), app)
+}
+
+// MockapplicationUpdater is a mock of applicationUpdater interface.
+type MockapplicationUpdater struct {
+	ctrl     *gomock.Controller
+	recorder *MockapplicationUpdaterMockRecorder
+}
+
+// MockapplicationUpdaterMockRecorder is the mock recorder for MockapplicationUpdater.
+type MockapplicationUpdaterMockRecorder struct {
+	mock *MockapplicationUpdater
+}
+
+// NewMockapplicationUpdater creates a new mock instance.
+func NewMockapplicationUpdater(ctrl *gomock.Controller) *MockapplicationUpdater {
+	mock := &MockapplicationUpdater{ctrl: ctrl}
+	mock.recorder = &MockapplicationUpdaterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockapplicationUpdater) EXPECT() *MockapplicationUpdaterMockRecorder {
+	return m.recorder
+}
+
+// UpdateApplication mocks base method.
+func (m *MockapplicationUpdater) UpdateApplication(app *config.Application) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateApplication", app)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateApplication indicates an expected call of UpdateApplication.
+func (mr *MockapplicationUpdaterMockRecorder) UpdateApplication(app interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateApplication", reflect.TypeOf((*MockapplicationUpdater)(nil).UpdateApplication), app)
 }
 
 // MockapplicationGetter is a mock of applicationGetter interface.
@@ -1108,6 +1159,20 @@ func (m *Mockstore) ListWorkloads(appName string) ([]*config.Workload, error) {
 func (mr *MockstoreMockRecorder) ListWorkloads(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*Mockstore)(nil).ListWorkloads), appName)
+}
+
+// UpdateApplication mocks base method.
+func (m *Mockstore) UpdateApplication(app *config.Application) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateApplication", app)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateApplication indicates an expected call of UpdateApplication.
+func (mr *MockstoreMockRecorder) UpdateApplication(app interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateApplication", reflect.TypeOf((*Mockstore)(nil).UpdateApplication), app)
 }
 
 // MockdeployedEnvironmentLister is a mock of deployedEnvironmentLister interface.
