@@ -138,7 +138,6 @@ func RunTaskRequestFromJob(client jobDescriber, app, env, job string) (*RunTaskR
 		return nil, fmt.Errorf("retrieve cluster ARN created for environment %s in application %s: %w", env, app, err)
 	}
 
-	// container info?
 	taskDef, err := client.TaskDefinition(app, env, job)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve task definition for job %s: %w", job, err)
