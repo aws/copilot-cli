@@ -1,0 +1,140 @@
+# Security group to allow receiving HTTPS traffic.
+VPCEndpointSecurityGroup:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::SecurityGroup
+  Properties:
+    GroupDescription: Security Group to allow use of VPC Endpoints.
+    VpcId: !Ref VPC
+    SecurityGroupIngress:
+      - IpProtocol: tcp
+        Description: HTTPS
+        FromPort: 443
+        ToPort: 443
+        CidrIp: 10.0.0.0/0
+
+# Allow ingress traffic from VPC endpoints to our containers.
+IngressFromVPCEndpoints:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::SecurityGroupIngress
+  Properties:
+    Description: Ingress from VPC endpoints.
+    GroupId: !Ref 'EnvironmentSecurityGroup'
+    IpProtocol: -1
+    SourceSecurityGroupId: !Ref 'VPCEndpointSecurityGroup'
+
+# Allow traffic from VPC endpoints.
+IngressFromItself:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::SecurityGroupIngress
+  Properties:
+    Description: Ingress from VPC endpoints.
+    GroupId: !Ref 'EnvironmentSecurityGroup'
+    IpProtocol: -1
+    SourceSecurityGroupId: !Ref 'EnvironmentSecurityGroup'
+
+{{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+S3PrivateRouteTable{{inc $ind}}:
+  Type: AWS::EC2::RouteTable
+  Condition: CreateVPCEndpoints
+  Properties:
+    VpcId: !Ref 'VPC'
+
+S3PrivateRouteTable{{inc $ind}}Association:
+  Type: AWS::EC2::SubnetRouteTableAssociation
+  Condition: CreateVPCEndpoints
+  Properties:
+    RouteTableId: !Ref S3PrivateRouteTable{{inc $ind}}
+    SubnetId: !Ref PrivateSubnet{{inc $ind}}
+{{- end}}
+
+# ECS Resources
+ECSCluster:
+  Condition: CreateVPCEndpoints
+  Type: AWS::ECS::Cluster
+
+ECSTaskExecutionRole:
+  Condition: CreateVPCEndpoints
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+    Path: /
+    Policies:
+      - PolicyName: AmazonECSTaskExecutionRolePolicy
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Action:
+                # Allow the ECS Tasks to download images from ECR
+                - 'ecr:GetAuthorizationToken'
+                - 'ecr:BatchCheckLayerAvailability'
+                - 'ecr:GetDownloadUrlForLayer'
+                - 'ecr:BatchGetImage'
+
+                # Allow the ECS tasks to upload logs to CloudWatch
+                - 'logs:CreateLogStream'
+                - 'logs:PutLogEvents'
+              Resource: '*'
+
+# Gateway endpoint for S3.
+S3GatewayVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Gateway
+    RouteTableIds:
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+      - !Ref S3PrivateRouteTable{{inc $ind}}
+      {{- end}}
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+    VpcId: !Ref VPC
+
+# Interface endpoints.
+EcrApiVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    PrivateDnsEnabled: true
+    SubnetIds:
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+      - !Ref PrivateSubnet{{inc $ind}}
+      {{- end}}
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.api
+    VpcId: !Ref VPC
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup
+
+EcrDkrVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    PrivateDnsEnabled: true
+    SubnetIds:
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+      - !Ref PrivateSubnet{{inc $ind}}
+      {{- end}}
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.dkr
+    VpcId: !Ref VPC
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup
+
+LogVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    PrivateDnsEnabled: true
+    SubnetIds:
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+      - !Ref PrivateSubnet{{inc $ind}}
+      {{- end}}
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.logs
+    VpcId: !Ref VPC
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup
