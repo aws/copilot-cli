@@ -5,6 +5,7 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -126,6 +127,197 @@ func TestSecretInitOpts_Validate(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+type secretInitAskMocks struct {
+	mockStore    *mocks.Mockstore
+	mockPrompter *mocks.Mockprompter
+	mockSelector *mocks.MockappSelector
+}
+
+func TestSecretInitOpts_Ask(t *testing.T) {
+	var (
+		wantedName   = "db-password"
+		wantedApp    = "my-app"
+		wantedValues = map[string]string{
+			"test": "test-password",
+			"dev":  "dev-password",
+			"prod": "prod-password",
+		}
+		wantedVars = secretInitVars{
+			appName: wantedApp,
+			name:    wantedName,
+			values:  wantedValues,
+		}
+	)
+	testCases := map[string]struct {
+		inAppName string
+		inName    string
+		inValues  map[string]string
+
+		setupMocks func(m secretInitAskMocks)
+
+		wantedVars  secretInitVars
+		wantedError error
+	}{
+		"prompt to select an app if not specified": {
+			inName:   wantedName,
+			inValues: wantedValues,
+			setupMocks: func(m secretInitAskMocks) {
+				m.mockSelector.EXPECT().Application(secretInitAppPrompt, gomock.Any()).Return(wantedApp, nil)
+			},
+			wantedVars: wantedVars,
+		},
+		"error prompting to select an app": {
+			setupMocks: func(m secretInitAskMocks) {
+				m.mockSelector.EXPECT().Application(secretInitAppPrompt, gomock.Any()).Return("", errors.New("some error"))
+			},
+			wantedError: errors.New("ask for an application to add the secret to: some error"),
+		},
+		"do not prompt for app if specified": {
+			inAppName: wantedApp,
+			inName:    wantedName,
+			inValues:  wantedValues,
+			setupMocks: func(m secretInitAskMocks) {
+				m.mockSelector.EXPECT().Application(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedVars: secretInitVars{
+				appName: wantedApp,
+				name:    wantedName,
+				values:  wantedValues,
+			},
+		},
+		"ask for a secret name if not specified": {
+			inAppName: wantedApp,
+			inValues:  wantedValues,
+			setupMocks: func(m secretInitAskMocks) {
+				m.mockPrompter.EXPECT().Get(secretInitSecretNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("db-password", nil)
+			},
+			wantedVars: wantedVars,
+		},
+		"error prompting for a secret name": {
+			inAppName: wantedApp,
+			inValues:  wantedValues,
+			setupMocks: func(m secretInitAskMocks) {
+				m.mockPrompter.EXPECT().Get(secretInitSecretNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", errors.New("some error"))
+			},
+			wantedError: errors.New("ask for the secret name: some error"),
+		},
+		"do not ask for a secret name if specified": {
+			inName:    "db-password",
+			inAppName: wantedApp,
+			inValues:  wantedValues,
+			setupMocks: func(m secretInitAskMocks) {
+				m.mockPrompter.EXPECT().Get(secretInitSecretNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedVars: wantedVars,
+		},
+		"ask for values for each existing environment if not specified": {
+			inAppName: wantedApp,
+			inName:    wantedName,
+			setupMocks: func(m secretInitAskMocks) {
+				m.mockStore.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
+					{
+						Name: "test",
+					},
+					{
+						Name: "dev",
+					},
+					{
+						Name: "prod",
+					},
+				}, nil)
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "test"), gomock.Any()).
+					Return("test-password", nil)
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "dev"), gomock.Any()).
+					Return("dev-password", nil)
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "prod"), gomock.Any()).
+					Return("prod-password", nil)
+			},
+			wantedVars: wantedVars,
+		},
+		"error listing environments": {
+			inAppName: wantedApp,
+			inName:    wantedName,
+			setupMocks: func(m secretInitAskMocks) {
+				m.mockStore.EXPECT().ListEnvironments("my-app").Return(nil, errors.New("some error"))
+			},
+			wantedError: errors.New("list environments in app my-app: some error"),
+		},
+		"error prompting for values": {
+			inAppName: wantedApp,
+			inName:    wantedName,
+			setupMocks: func(m secretInitAskMocks) {
+				m.mockStore.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
+					{
+						Name: "test",
+					},
+					{
+						Name: "dev",
+					},
+					{
+						Name: "prod",
+					},
+				}, nil)
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "test"), gomock.Any()).
+					Return("", errors.New("some error"))
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "dev"), gomock.Any()).MinTimes(0).MaxTimes(1)
+				m.mockPrompter.EXPECT().GetSecret(fmt.Sprintf(fmtSecretInitSecretValuePrompt, "db-password", "prod"), gomock.Any()).MinTimes(0).MaxTimes(1)
+			},
+			wantedError: errors.New("get secret value for db-password in environment test: some error"),
+		},
+		"error if no env is found": {
+			inAppName: wantedApp,
+			inName:    wantedName,
+			setupMocks: func(m secretInitAskMocks) {
+				m.mockStore.EXPECT().ListEnvironments(wantedApp).Return([]*config.Environment{}, nil)
+			},
+			wantedError: errors.New("no environment is found in app my-app"),
+		},
+		"do not ask for values if specified": {
+			inAppName:  wantedApp,
+			inName:     wantedName,
+			inValues:   wantedValues,
+			setupMocks: func(m secretInitAskMocks) {},
+			wantedVars: wantedVars,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := secretInitAskMocks{
+				mockPrompter: mocks.NewMockprompter(ctrl),
+				mockSelector: mocks.NewMockappSelector(ctrl),
+				mockStore:    mocks.NewMockstore(ctrl),
+			}
+
+			opts := secretInitOpts{
+				secretInitVars: secretInitVars{
+					appName: tc.inAppName,
+					name:    tc.inName,
+					values:  tc.inValues,
+				},
+				prompter: m.mockPrompter,
+				store:    m.mockStore,
+				selector: m.mockSelector,
+			}
+
+			tc.setupMocks(m)
+
+			err := opts.Ask()
+			if tc.wantedError == nil {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedVars, opts.secretInitVars)
+			} else {
+				require.EqualError(t, tc.wantedError, err.Error())
 			}
 		})
 	}
