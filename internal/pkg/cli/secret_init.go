@@ -161,7 +161,7 @@ func (o *secretInitOpts) askForSecretValues() error {
 	}
 
 	if len(envs) == 0 {
-		log.Errorf("Secrets are environment-level resource. Please run %s before running %s.\n",
+		log.Errorf("Secrets environment-level resources. Please run %s before running %s.\n",
 			color.HighlightCode("copilot env init"),
 			color.HighlightCode("copilot secret init"))
 		return fmt.Errorf("no environment is found in app %s", o.appName)
