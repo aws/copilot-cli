@@ -14,6 +14,9 @@ extra:
     - name: English
       link: ./en/
       lang: en
+    - name: 日本語
+      link: ./ja/
+      lang: ja
 
 nav:
   - Home: index.en.md
@@ -164,6 +167,7 @@ plugins:
         default_language: en
         languages:
           en: english
+          ja: japanese
         material_alternate: false
     - macros:
         include_dir: site/content/docs/include
