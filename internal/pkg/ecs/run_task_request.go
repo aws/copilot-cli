@@ -127,6 +127,7 @@ func RunTaskRequestFromService(client ServiceDescriber, app, env, svc string) (*
 	}, nil
 }
 
+// RunTaskRequestFromJob populates a RunTaskRequest with information from a Copilot job.
 func RunTaskRequestFromJob(client jobDescriber, app, env, job string) (*RunTaskRequest, error) {
 	config, err := client.NetworkConfigurationForJob(app, env, job)
 	if err != nil {

@@ -230,6 +230,7 @@ func (c Client) NetworkConfiguration(app, env, svc string) (*ecs.NetworkConfigur
 	return c.ecsClient.NetworkConfiguration(clusterARN, svcName)
 }
 
+// NetworkConfigurationForJob returns the network configuration of the job.
 func (c Client) NetworkConfigurationForJob(app, env, job string) (*ecs.NetworkConfiguration, error) {
 	jobARN, err := c.stateMachineARN(app, env, job)
 	if err != nil {
@@ -250,8 +251,10 @@ func (c Client) NetworkConfigurationForJob(app, env, job string) (*ecs.NetworkCo
 	return (*ecs.NetworkConfiguration)(&config), nil
 }
 
+// NetworkConfiguration wraps an ecs.NetworkConfiguration struct.
 type NetworkConfiguration ecs.NetworkConfiguration
 
+// UnmarshalJSON implements custom logic to unmarshal a network configuration.
 func (n *NetworkConfiguration) UnmarshalJSON(b []byte) error {
 	var f interface{}
 	err := json.Unmarshal(b, &f)
