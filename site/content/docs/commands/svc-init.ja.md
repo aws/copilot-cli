@@ -3,17 +3,17 @@
 $ copilot svc init
 ```
 
-## ƒRƒ}ƒ“ƒh‚ÌŠT—v
+## ã‚³ãƒãƒ³ãƒ‰ã®æ¦‚è¦
 
-`copilot svc init` ‚ÍAƒR[ƒh‚ğÀs‚·‚é‚½‚ß‚ÉV‚µ‚¢ [Service](../concepts/services.md) ‚ğì¬‚µ‚Ü‚·B 
+`copilot svc init` ã¯ã€ã‚³ãƒ¼ãƒ‰ã‚’å®Ÿè¡Œã™ã‚‹ãŸã‚ã«æ–°ã—ã„ [Service](../concepts/services.ja.md) ã‚’ä½œæˆã—ã¾ã™ã€‚
 
-ƒRƒ}ƒ“ƒh‚ğÀs‚·‚é‚ÆA CLI ‚Íƒ[ƒJƒ‹‚Ì `copilot` ƒfƒBƒŒƒNƒgƒŠ‚É Application –¼‚ÌƒTƒuƒfƒBƒŒƒNƒgƒŠ‚ğì¬‚µA‚»‚±‚É [Manifest ƒtƒ@ƒCƒ‹](../manifest/overview.md) ‚ğì¬‚µ‚Ü‚·B©—R‚É Manifest ƒtƒ@ƒCƒ‹‚ğXV‚µAService ‚ÌƒfƒtƒHƒ‹ƒgİ’è‚ğ•ÏX‚Å‚«‚Ü‚·B‚Ü‚½ CLI ‚Í‘S‚Ä‚Ì [Environment](../concepts/environments.md) ‚©‚çƒvƒ‹‰Â”\‚É‚·‚éƒ|ƒŠƒV[‚ğ‚à‚Â ECR ƒŠƒ|ƒWƒgƒŠ‚ğƒZƒbƒgƒAƒbƒv‚µ‚Ü‚·B
+ã‚³ãƒãƒ³ãƒ‰ã‚’å®Ÿè¡Œã™ã‚‹ã¨ã€ CLI ã¯ãƒ­ãƒ¼ã‚«ãƒ«ã® `copilot` ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã« Application åã®ã‚µãƒ–ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‚’ä½œæˆã—ã€ãã“ã« [Manifest ãƒ•ã‚¡ã‚¤ãƒ«](../manifest/overview.ja.md)ã‚’ä½œæˆã—ã¾ã™ã€‚è‡ªç”±ã« Manifest ãƒ•ã‚¡ã‚¤ãƒ«ã‚’æ›´æ–°ã—ã€Service ã®ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆè¨­å®šã‚’å¤‰æ›´ã§ãã¾ã™ã€‚ã¾ãŸ CLI ã¯å…¨ã¦ã® [Environment](../concepts/environments.ja.md) ã‹ã‚‰ãƒ—ãƒ«å¯èƒ½ã«ã™ã‚‹ãƒãƒªã‚·ãƒ¼ã‚’ã‚‚ã¤ ECR ãƒªãƒã‚¸ãƒˆãƒªã‚’ã‚»ãƒƒãƒˆã‚¢ãƒƒãƒ—ã—ã¾ã™ã€‚
 
-‚»‚µ‚Ä Service ‚Í CLI ‚©‚çƒgƒ‰ƒbƒN‚·‚é‚½‚ß AWS System Manager Parameter Store ‚É“o˜^‚³‚ê‚Ü‚·B
+ãã—ã¦ Service ã¯ CLI ã‹ã‚‰ãƒˆãƒ©ãƒƒã‚¯ã™ã‚‹ãŸã‚ AWS System Manager Parameter Store ã«ç™»éŒ²ã•ã‚Œã¾ã™ã€‚
 
-‚»‚ÌŒãAŠù‚ÉƒZƒbƒgƒAƒbƒv‚³‚ê‚½ Environment ‚ª‚ ‚éê‡‚Í `copilot deploy` ‚ğÀs‚µ‚Ä Service ‚ğƒfƒvƒƒC‚Å‚«‚Ü‚·B
+ãã®å¾Œã€æ—¢ã«ã‚»ãƒƒãƒˆã‚¢ãƒƒãƒ—ã•ã‚ŒãŸ Environment ãŒã‚ã‚‹å ´åˆã¯ copilot deploy ã‚’å®Ÿè¡Œã—ã¦ Service ã‚’ãƒ‡ãƒ—ãƒ­ã‚¤ã§ãã¾ã™ã€‚
 
-## ƒtƒ‰ƒO
+## ãƒ•ãƒ©ã‚°
 
 ```bash
 Required Flags
@@ -29,11 +29,10 @@ Backend Service Flags
       --port uint16   Optional. The port on which your service listens.
 ```
 
-Še Service type ‚É‚Í‹¤’Ê‚Ì•K{ƒtƒ‰ƒO‚Ì‘¼‚ÉA“Æ©‚ÌƒIƒvƒVƒ‡ƒ“ƒtƒ‰ƒO‚Æ•K{ƒtƒ‰ƒO‚ª‚ ‚è‚Ü‚·B"frontend" ‚Æ‚µ‚Ä Load Balanced Web Service ‚ğì¬‚·‚é‚É‚ÍAŸ‚Ì‚æ‚¤‚ÉÀs‚µ‚Ü‚·
-
+å„ Service type ã«ã¯å…±é€šã®å¿…é ˆãƒ•ãƒ©ã‚°ã®ä»–ã«ã€ç‹¬è‡ªã®ã‚ªãƒ—ã‚·ãƒ§ãƒ³ãƒ•ãƒ©ã‚°ã¨å¿…é ˆãƒ•ãƒ©ã‚°ãŒã‚ã‚Šã¾ã™ã€‚"frontend" ã¨ã—ã¦ Load Balanced Web Service ã‚’ä½œæˆã™ã‚‹ã«ã¯ã€æ¬¡ã®ã‚ˆã†ã«å®Ÿè¡Œã—ã¾ã™ã€‚
 
 `$ copilot svc init --name frontend --app-type "Load Balanced Web Service" --dockerfile ./frontend/Dockerfile`
 
-## o—Í—á
+## å‡ºåŠ›ä¾‹
 
 ![Running copilot svc init](https://raw.githubusercontent.com/kohidave/copilot-demos/master/svc-init.svg?sanitize=true)

@@ -1,10 +1,10 @@
 # シークレット
 
-シークレットは、OAuth トークン、シークレットキー、API キーなどの機密情報です。これらの情報はアプリケーションコードでは必要ですが、ソースコードにコミットするべきではありません。AWS Copilot CLI では、シークレットは環境変数として渡されますが、その機密性のため扱いが異なります (詳細は[環境変数を使った開発](../developing/environment-variables.md)を参照して下さい) 。
+シークレットは、OAuth トークン、シークレットキー、API キーなどの機密情報です。これらの情報はアプリケーションコードでは必要ですが、ソースコードにコミットするべきではありません。AWS Copilot CLI では、シークレットは環境変数として渡されますが、その機密性のため扱いが異なります (詳細は[環境変数を使った開発](../developing/environment-variables.ja.md)を参照して下さい) 。
 
 ## シークレットの追加方法
 
-現在、シークレットを追加するには、シークレットを SecureString として [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) (SSM) に保存する必要があります。そして、SSM パラメータへの参照を [Manifest](../manifest/overview.md) に追加します。
+現在、シークレットを追加するには、シークレットを SecureString として [AWS Systems Manager パラメータストラ](https://docs.aws.amazon.com/ja_jp/systems-manager/latest/userguide/systems-manager-parameter-store.html) (SSM) に保存する必要があります。そして、SSM パラメータへの参照を [Manifest](../manifest/overview.ja.md) に追加します。
 
 ここでは、`GH_WEBHOOK_SECRET` という名前のシークレットを、`secretvalue1234` という値で保存する例を見てみましょう。
 

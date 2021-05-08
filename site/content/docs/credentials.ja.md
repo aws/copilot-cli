@@ -1,10 +1,15 @@
-この章では AWS Copilot CLI を使用する際もっとも良い体験を提供するために認証情報に関する推奨事項を説明します。
+# 認証情報
+
+この章では、みなさんの AWS Copilot CLI 体験を最高のものにするために『認証情報についての推奨事項』を説明していきます。
+
 ## Application 用の認証情報
-Copilot は[デフォルトの認証情報プロバイダーチェーン](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials)に沿って認証情報を検索し、認証情報を使用して Service と Environment が関連づけられた [Application のメタデータ](/docs/concepts/applications/)を保存または検索します。
+
+Copilot は[デフォルトの認証情報プロバイダーチェーン](https://docs.aws.amazon.com/ja_jp/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials)に沿って認証情報を検索し、認証情報を使用して Service と Environment が関連づけられた [Application のメタデータ](concepts/applications.ja.md)を保存または検索します。
 !!! tips
     **[名前付きプロファイル](https://docs.aws.amazon.com/ja_jp/cli/latest/userguide/cli-configure-profiles.html)を使用して** Application 用の認証情報を保存することを推奨します。
 
 もっとも簡単な方法は `[default]` プロファイルを利用することです:
+
 ```ini
 # ~/.aws/credentials
 [default]
@@ -15,6 +20,7 @@ aws_secret_access_key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 [default]
 region=us-west-2
 ```
+
 あるいは `AWS_PROFILE` 環境変数を設定して別の名前付きプロファイルを指定できます。例えば Application 用に `[my-app]` という名前のプロファイルを `[default]` プロファイルの代わりに用いることができます。
 
 !!! note
@@ -37,7 +43,8 @@ $ copilot deploy
 サポートされている `config` ファイルの設定についてもっと詳しく知りたい方は[設定ファイルと認証情報ファイルに関するドキュメント](https://docs.aws.amazon.com/ja_jp/cli/latest/userguide/cli-configure-files.html#cli-configure-files-settings)をご参照ください。
 
 ## Environment 用の認証情報
-Copilot における [Environment](/docs/concepts/environments/) は Application が存在するのとは別の AWS アカウントやリージョンに作成できます。Environment を最初に作成する際 Copilot はどの一時クレデンシャルまたは[名前付きプロファイル](https://docs.aws.amazon.com/ja_jp/cli/latest/userguide/cli-configure-profiles.html)を使用するか尋ねます。
+
+Copilot における [Environment](concepts/environments.ja.md) は Application が存在するのとは別の AWS アカウントやリージョンに作成できます。Environment を最初に作成する際 Copilot はどの一時クレデンシャルまたは[名前付きプロファイル](https://docs.aws.amazon.com/ja_jp/cli/latest/userguide/cli-configure-profiles.html)を使用するか尋ねます。
 
 ```bash
 $ copilot env init
@@ -52,4 +59,4 @@ Name: prod-iad
   > [profile prod-pdx]
 ```
 
-[Application 用の認証情報](#application-credentials)とは異なり、Environment 用の AWS 認証情報は Environment の作成と削除の時のみ必要です。したがって一時的な環境変数からそれらの値を安全に使うことができます。Copilot が尋ねたり使用したりする認証情報はフラグとして扱われます。なぜならデフォルトの認証プロバイダーチェーンは Application 用の認証情報のために使われるからです。
+[Application 用の認証情報](#application-用の認証情報)とは異なり、Environment 用の AWS 認証情報は Environment の作成と削除の時のみ必要です。したがって一時的な環境変数からそれらの値を安全に使うことができます。Copilot が尋ねたり使用したりする認証情報はフラグとして扱われます。なぜならデフォルトの認証プロバイダーチェーンは Application 用の認証情報のために使われるからです。

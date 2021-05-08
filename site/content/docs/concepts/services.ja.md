@@ -75,7 +75,7 @@ environments:
   prod:
     count: 2               # "prod" Environment ではタスクを2つ実行します
 ```
-Manifest ファイルの仕様について学ぶには、[Manifest](../manifest/overview.md) ページもご覧ください。
+Manifest ファイルの仕様について学ぶには、[Manifest](../manifest/overview.ja.md) ページもご覧ください。
 
 ## Service のデプロイ
 

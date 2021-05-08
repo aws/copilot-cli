@@ -40,6 +40,7 @@ $ copilot task exec --default --task-id 38c3818
 
 !!! info
     `copilot task exec` は特定のタスクロールの権限がないと実行できません。既存のタスクロールを使用してタスクを実行する場合、 `copilot task exec` を動作させるために必要な以下の権限が付与されていることを確認してください。
+
 ```json
 {
     "Version": "2012-10-17",

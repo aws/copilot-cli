@@ -1,3 +1,5 @@
+# Pipeline
+
 <!-- textlint-disable ja-technical-writing/ja-no-mixed-period -->自動化されたリリースプロセスを持つことはソフトウェアデリバリの重要な観点の１つです。Copilot はこれらのセットアップを可能な限り簡単にすることを追求しています 🚀
 <!-- textlint-enable ja-technical-writing/ja-no-mixed-period -->
 

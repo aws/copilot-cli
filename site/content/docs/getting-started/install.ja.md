@@ -1,3 +1,5 @@
+# Copilot のインストール
+
 AWS Copilotは、[Homebrew](https://brew.sh/) を使ってインストールするか、バイナリを直接ダウンロードしてインストールすることができます。
 
 ## Homebrew でインストール 🍻
@@ -11,26 +13,26 @@ brew install aws/tap/copilot-cli
 
 === "macOS"
 
-    | Command to install    |
+    | インストール用コマンド    |
     | :---------- |
     | `curl -Lo copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-darwin && chmod +x copilot && sudo mv copilot /usr/local/bin/copilot && copilot --help` |
     
 === "Linux x86 (64-bit)"
 
-    | Command to install    |
+    | インストール用コマンド    |
     | :---------- |
     | `curl -Lo copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux && chmod +x copilot && sudo mv copilot /usr/local/bin/copilot && copilot --help` |
     
 === "Linux (ARM)"
     
-    | Command to install    |
+    | インストール用コマンド    |
     | :---------- |
     | `curl -Lo copilot https://github.com/aws/copilot-cli/releases/latest/download/copilot-linux-arm64 && chmod +x copilot && sudo mv copilot /usr/local/bin/copilot && copilot --help` |
 
 
 === "Windows"
 
-    | Command to install    |
+    | インストール用コマンド    |
     | :---------- |
     | `Invoke-WebRequest -OutFile 'C:\Program Files\copilot.exe' https://github.com/aws/copilot-cli/releases/latest/download/copilot-windows.exe` |
 

@@ -26,4 +26,3 @@ $ copilot svc package -n frontend -e test --output-dir ./infrastructure
 $ ls ./infrastructure
 frontend.stack.yml      frontend-test.config.yml
 ```
-

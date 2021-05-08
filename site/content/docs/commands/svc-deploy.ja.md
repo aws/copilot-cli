@@ -3,25 +3,25 @@
 $ copilot svc deploy
 ```
 
-## ƒRƒ}ƒ“ƒh‚ÌŠT—v
+## ã‚³ãƒãƒ³ãƒ‰ã®æ¦‚è¦
 
-`copilot svc deploy` ‚ÍAƒ[ƒJƒ‹‚ÌƒR[ƒh‚âİ’è‚ğŒ³‚ÉƒfƒvƒƒC‚µ‚Ü‚·B
+`copilot svc deploy` ã¯ã€ãƒ­ãƒ¼ã‚«ãƒ«ã®ã‚³ãƒ¼ãƒ‰ã‚„è¨­å®šã‚’å…ƒã«ãƒ‡ãƒ—ãƒ­ã‚¤ã—ã¾ã™ã€‚
 
-Service ƒfƒvƒƒC‚Ìè‡‚ÍˆÈ‰º‚Ì’Ê‚è‚Å‚·B
+Service ãƒ‡ãƒ—ãƒ­ã‚¤ã®æ‰‹é †ã¯ä»¥ä¸‹ã®é€šã‚Šã§ã™ã€‚
 
-1. ƒ[ƒJƒ‹‚Ì Dockerfile ‚ğƒrƒ‹ƒh‚µ‚ÄƒRƒ“ƒeƒiƒCƒ[ƒW‚ğì¬
-2. `--tag` ‚Ì’lA‚Ü‚½‚ÍÅV‚Ì git sha (git ƒfƒBƒŒƒNƒgƒŠ‚Åì‹Æ‚µ‚Ä‚¢‚éê‡) ‚ğ—˜—p‚µ‚Äƒ^ƒO•t‚¯
-3. ƒRƒ“ƒeƒiƒCƒ[ƒW‚ğ ECR ‚ÉƒvƒbƒVƒ…
-4. Manifest ƒtƒ@ƒCƒ‹‚ÆƒAƒhƒIƒ“‚ğ CloudFormation ‚ÉƒpƒbƒP[ƒW
-5. ECS ƒ^ƒXƒN’è‹`‚ÆƒT[ƒrƒX‚ğì¬ / XV
+1. ãƒ­ãƒ¼ã‚«ãƒ«ã® Dockerfile ã‚’ãƒ“ãƒ«ãƒ‰ã—ã¦ã‚³ãƒ³ãƒ†ãƒŠã‚¤ãƒ¡ãƒ¼ã‚¸ã‚’ä½œæˆ
+2. `--tag` ã®å€¤ã€ã¾ãŸã¯æœ€æ–°ã® git sha (git ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã§ä½œæ¥­ã—ã¦ã„ã‚‹å ´åˆ) ã‚’åˆ©ç”¨ã—ã¦ã‚¿ã‚°ä»˜ã‘
+3. ã‚³ãƒ³ãƒ†ãƒŠã‚¤ãƒ¡ãƒ¼ã‚¸ã‚’ ECR ã«ãƒ—ãƒƒã‚·ãƒ¥
+4. Manifest ãƒ•ã‚¡ã‚¤ãƒ«ã¨ã‚¢ãƒ‰ã‚ªãƒ³ã‚’ CloudFormation ã«ãƒ‘ãƒƒã‚±ãƒ¼ã‚¸
+5. ECS ã‚¿ã‚¹ã‚¯å®šç¾©ã¨ã‚µãƒ¼ãƒ“ã‚¹ã‚’ä½œæˆ / æ›´æ–°
 
-## ƒtƒ‰ƒO
+## ãƒ•ãƒ©ã‚°
 
 ```bash
   -e, --env string                     Name of the environment.
   -h, --help                           help for deploy
   -n, --name string                    Name of the service.
-      --resource-tags stringToString   Optional. Labels with a key and value separated with commas.
+      --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
       --tag string                     Optional. The service's image tag.
 ```

@@ -1,32 +1,31 @@
-`'Scheduled Job'` Manifest で利用できるプロパティの一覧です。
+以下は `'Scheduled Job'` Manifest で利用できるすべてのプロパティのリストです。
 
-???+ note "レポートを作成する cron ジョブの Manifest のサンプル。
+???+ note "レポートを作成する cron ジョブのサンプル Manifest"
 
-    ```yaml
-    # Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
-    name: report-generator
-    type: Scheduled Job
-    
-    on:
-      schedule: @daily
-    cpu: 256
-    memory: 512
-    retries: 3
-    timeout: 1h
-    
-    image:
-      # Path to your service's Dockerfile.
-      build: ./Dockerfile
-    
-    variables:
-      LOG_LEVEL: info
-    secrets:
-      GITHUB_TOKEN: GITHUB_TOKEN
-    ```
+```yaml
+# Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
+name: report-generator
+type: Scheduled Job
+
+on:
+  schedule: @daily
+cpu: 256
+memory: 512
+retries: 3
+timeout: 1h
+
+image:
+  # Path to your service's Dockerfile.
+  build: ./Dockerfile
+
+variables:
+  LOG_LEVEL: info
+secrets:
+  GITHUB_TOKEN: GITHUB_TOKEN
+```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
-Job の名前。
-
+Job 名。
 
 <div class="separator"></div>
 
@@ -82,6 +81,7 @@ image:
     args:
       key: value
 ```
+
 この場合、Copilot は指定したコンテキストディレクトリを使用します。また、args で指定した key-value のペアで `--build-arg` を上書きします。これは下記の docker コマンドの実行と同等です。
 
 `$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir`.
@@ -91,43 +91,45 @@ image:
 全てのパスはワークスペースをルートとした相対パスで記述できます。
 
 <span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>  
-Dockerfile からコンテナを構築する代わりに、既存のイメージの名前を指定できます。このパラメータは[`image.build`](#image-build) と同時に使用できません。
-`location` フィールドは Amazon ECS のタスク定義の[`image` パラメータ](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image) と同じ定義になっています。
+Dockerfile からコンテナイメージをビルドする代わりに、既存のコンテナイメージ名の指定も可能です。`image.location` と [`image.build`](#image-build) の同時利用はできません。
+`location` フィールドの制約を含む指定方法は Amazon ECS タスク定義の [`image` パラメータ](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_image)のそれに従います。
+
+<span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a><span class="type">Map</span>  
+コンテナに付与したい [Docker ラベル](https://docs.docker.com/config/labels-custom-metadata/)を key/value の Map で指定できます。これは任意設定項目です。
 
 <div class="separator"></div>
 
 <a id="entrypoint" href="#entrypoint" class="field">`entrypoint`</a> <span class="type">String or Array of Strings</span>  
-イメージのエントリーポイントを上書きします:
+コンテナイメージのデフォルトエントリポイントをオーバーライドします。
 
 ```yaml
-# String の場合。
+# 文字列による指定。
 entrypoint: "/bin/entrypoint --p1 --p2"
-# String の配列の場合
+# あるいは文字列配列による指定も可能。
 entrypoint: ["/bin/entrypoint", "--p1", "--p2"]
 ```
 
 <div class="separator"></div>
 
 <a id="command" href="#command" class="field">`command`</a> <span class="type">String or Array of Strings</span>  
-イメージのコマンドを上書きします:
+コンテナイメージのデフォルトコマンドをオーバーライドします。
 
 ```yaml
-# String の場合。
+# 文字列による指定。
 command: ps au
-# String の配列の場合
+# あるいは文字列配列による指定も可能。
 command: ["ps", "au"]
 ```
 
 <div class="separator"></div>
 
 <a id="cpu" href="#cpu" class="field">`cpu`</a> <span class="type">Integer</span>  
-タスクに割り当てる CPU ユニットの数を指定します。有効な CPU の値については[Amazon ECS のドキュメント ](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/task-cpu-memory-error.html)をご確認ください。
+タスクに割り当てる CPU ユニット数。指定可能な値については [Amazon ECS ドキュメント](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/task-cpu-memory-error.html)をご覧ください。
 
 <div class="separator"></div>
 
 <a id="memory" href="#memory" class="field">`memory`</a> <span class="type">Integer</span>  
-タスクが利用するメモリ量を MiB で指定します。有効なメモリの値については
-[Amazon ECS のドキュメント](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/task-cpu-memory-error.html) をご覧ください。
+タスクに割り当てるメモリ量（MiB）。指定可能な値については [Amazon ECS ドキュメント](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/task-cpu-memory-error.html)をご覧ください。
 
 <div class="separator"></div>
 
@@ -150,7 +152,7 @@ Job の実行時間。この時間を超えた場合、Job は停止されて失
 <span class="parent-field">network.vpc.</span><a id="network-vpc-placement" href="#network-vpc-placement" class="field">`placement`</a> <span class="type">String</span>    
 `'public'` か `'private'`のいずれかである必要があります。デフォルトではタスクはパブリックサブネットで起動します。
 
-!!! info inline end
+!!! info
     `'private'` サブネットでインターネット接続が必要なタスクを実行するためには、`copilot env init` を実行したときに、NAT Gateway が存在する VPC をインポートしている必要があります。Copilot が生成した VPC における NAT Gateway のサポートについては、[#1959](https://github.com/aws/copilot-cli/issues/1959) を見てください。
 
 
@@ -171,14 +173,14 @@ Job に環境変数として渡される key-value ペア。Copilot ではデフ
 
 <a id="storage" href="#storage" class="field">`storage`</a> <span class="type">Map</span>  
 Storage セクションではコンテナとサイドカーからマウントする外部の EFS ボリュームを指定します。これにより、データ処理や CMS のワークロードのために、リージョン内で永続ストレージへアクセスできるようになります。より詳しくは
-[ストレージ](../developing/storage.md) のページを確認してください。
+[ストレージ](../developing/storage.ja.md) のページを確認してください。
 
 <span class="parent-field">storage.</span><a id="volumes" href="#volumes" class="field">`volumes`</a> <span class="type">Map</span>  
 アタッチする EFS ボリュームの名前と設定を指定します。`volumes` フィールドは次の形式の Map として指定されます:
 
 ```yaml
 volumes:
-  {{ volume name }}:
+  <volume name>:
     path: "/etc/mountpath"
     efs:
       ...

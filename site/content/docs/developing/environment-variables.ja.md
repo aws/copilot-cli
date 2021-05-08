@@ -26,10 +26,10 @@ database_name = os.getenv('DATABASE_NAME')
 * `COPILOT_ENVIRONMENT_NAME` - Service　が実行されている Environment 名(例: test、prod)
 * `COPILOT_SERVICE_NAME` - 現在の Service 名
 * `COPILOT_LB_DNS` - (存在する場合)ロードバランサー名。例: _kudos-Publi-MC2WNHAIOAVS-588300247.us-west-2.elb.amazonaws.com_ 注: カスタムドメイン名を利用している場合でも、この値は ロードバランサーの DNS 名を保持します
-* `COPILOT_SERVICE_DISCOVERY_ENDPOINT` - サービス検出を介して、Environment の中で他の Service と通信するために Service 名の後に追加されるエンドポイント。値は `{app name}.local` となります。サービスディスカバリについてのより詳しい情報は[サービス検出のガイド](../developing/service-discovery.md) を参照してください
+* `COPILOT_SERVICE_DISCOVERY_ENDPOINT` - サービス検出を介して、Environment の中で他の Service と通信するために Service 名の後に追加されるエンドポイント。値は `{app name}.local` となります。サービスディスカバリについてのより詳しい情報は[サービス検出のガイド](../developing/service-discovery.ja.md) を参照してください
 
 ## 環境変数を追加する方法
-環境変数を追加するのは簡単です。[Manifest](../manifest/overview.md) の `variables` セクションに直接追加できます。 下記のスニペットでは、`LOG_LEVEL` という変数を `debug` という値で Service に渡しています。
+環境変数を追加するのは簡単です。[Manifest](../manifest/overview.ja.md) の `variables` セクションに直接追加できます。 下記のスニペットでは、`LOG_LEVEL` という変数を `debug` という値で Service に渡しています。
 
 ```yaml
 # copilot/{service name}/manifest.yml の一部
@@ -54,4 +54,4 @@ environments:
 
 ## DynamoDB テーブルやS3 バケット、RDS データベースなどの名前を確認する方法
 
-Copilot CLI を使って、DynamoDB テーブルや S3 バケット、データベースなどの追加の AWS リソースをプロビジョニングする場合、出力の値は環境変数として、Application に渡されます。より詳しい情報は、[AWS リソースを追加する](../developing/additional-aws-resources.md)を確認してください。
+Copilot CLI を使って、DynamoDB テーブルや S3 バケット、データベースなどの追加の AWS リソースをプロビジョニングする場合、出力の値は環境変数として、Application に渡されます。より詳しい情報は、[AWS リソースを追加する](../developing/additional-aws-resources.ja.md)を確認してください。

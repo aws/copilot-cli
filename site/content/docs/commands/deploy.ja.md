@@ -5,7 +5,7 @@ $ copilot deploy
 
 ## コマンドの概要 
 
-このコマンドは、[`copilot svc deploy`](../commands/svc-deploy.md) または [`copilot job deploy`](../commands/job-deploy.md) の内部で利用されています。
+このコマンドは、[`copilot svc deploy`](../commands/svc-deploy.ja.md) または [`copilot job deploy`](../commands/job-deploy.ja.md) の内部で利用されています。
 `copilot deploy` の中で実行される各ステップは、`copilot svc deploy` や `copilot job deploy` で実行されるステップと同様です。
 
 1. ローカルの Dockerfile からコンテナイメージを作成
@@ -21,7 +21,7 @@ $ copilot deploy
   -e, --env string                     Name of the environment.
   -h, --help                           help for deploy
   -n, --name string                    Name of the service or job.
-      --resource-tags stringToString   Optional. Labels with a key and value separated with commas.
+      --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
       --tag string                     Optional. The container image tag.
 ```

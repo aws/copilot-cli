@@ -1,3 +1,5 @@
+# Application
+
 Application は、Service、Environment、Pipeline といった概念を取りまとめる概念です。あなたのアプリケーションがサービス１つですべてのことをやる
 ものであるか、マイクロサービスの集まりであるかに関係なく、sCopilot はそれらとそのデプロイ先の Environment を１つの Application として取りまとめます。
 

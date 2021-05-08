@@ -5,9 +5,9 @@ $ copilot job init
 
 ## コマンドの概要
 
-`copilot job init` は新しく [Job](../concepts/jobs.md) を作成します。
+`copilot job init` は新しく [Job](../concepts/jobs.ja.md) を作成します。
 
-このコマンドを実行すると、 Copilot CLI は [Manifest ファイル](../manifest/overview.md) を格納するための Application 名がついたディレクトリを `copilot` ディレクトリ配下に作成します。 Job のデフォルト設定を変更したい場合は Manifest ファイルを更新してください。 CLI はさらに全ての [Environment](../concepts/environments.md) からプルできるポリシーをアタッチした ECR リポジトリをセットアップします。最後に Job は AWS Systems Manager パラメータストアに登録され CLI が Job をトラックできるようになります。
+このコマンドを実行すると、 Copilot CLI は [Manifest ファイル](../manifest/overview.ja.md) を格納するための Application 名がついたディレクトリを `copilot` ディレクトリ配下に作成します。 Job のデフォルト設定を変更したい場合は Manifest ファイルを更新してください。 CLI はさらに全ての [Environment](../concepts/environments.ja.md) からプルできるポリシーをアタッチした ECR リポジトリをセットアップします。最後に Job は AWS Systems Manager パラメータストアに登録され CLI が Job をトラックできるようになります。
 
 その後すでにセットアップされた Environment があるなら、 `copilot job deploy` コマンドを実行してその Environment に Job をデプロイできます。
 

@@ -3,23 +3,23 @@
 $ copilot env ls [flags]
 ```
 
-## ƒRƒ}ƒ“ƒh‚ÌŠT—v
-`copilot env ls` ‚ÍAApplication “à‚Ì‘S‚Ä‚Ì Environment ‚ğˆê——•\¦‚µ‚Ü‚·B
+## ã‚³ãƒãƒ³ãƒ‰ã®æ¦‚è¦
+`copilot env ls` ã¯ã€Application å†…ã®å…¨ã¦ã® Environment ã‚’ä¸€è¦§è¡¨ç¤ºã—ã¾ã™ã€‚
 
-## ƒtƒ‰ƒO
+## ãƒ•ãƒ©ã‚°
 ```bash
 -h, --help          help for ls
     --json          Optional. Outputs in JSON format.
 -a, --app string    Name of the application.
 ```
-Œ‹‰Ê‚ğƒvƒƒOƒ‰ƒ€‚Åƒp[ƒX‚µ‚½‚¢ê‡ `--json` ƒtƒ‰ƒO‚ğ—˜—p‚·‚é‚±‚Æ‚ª‚Å‚«‚Ü‚·B
+çµæœã‚’ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã§ãƒ‘ãƒ¼ã‚¹ã—ãŸã„å ´åˆ `--json` ãƒ•ãƒ©ã‚°ã‚’åˆ©ç”¨ã™ã‚‹ã“ã¨ãŒã§ãã¾ã™ã€‚
 
-## Às—á
-frontend Application ‚Ì‘S‚Ä‚Ì Environment ‚ğˆê——•\¦‚µ‚Ü‚·B
+## å®Ÿè¡Œä¾‹
+frontend Application ã®å…¨ã¦ã® Environment ã‚’ä¸€è¦§è¡¨ç¤ºã—ã¾ã™ã€‚
 ```bash
 $ copilot env ls -a frontend
 ```
 
-## o—Í—á
+## å‡ºåŠ›ä¾‹
 
 ![Running copilot env ls](https://raw.githubusercontent.com/kohidave/copilot-demos/master/env-ls.svg?sanitize=true)

@@ -3,27 +3,27 @@
 $ copilot env show [flags]
 ```
 
-## ƒRƒ}ƒ“ƒh‚ÌŠT—v
-`copilot env show` ‚ÍA“Á’è‚Ì Environment ‚ÉŠÖ‚·‚éˆÈ‰º‚Ì‚æ‚¤‚Èî•ñ‚ğ•\¦‚µ‚Ü‚·B
+## ã‚³ãƒãƒ³ãƒ‰ã®æ¦‚è¦
+`copilot env show` ã¯ã€ç‰¹å®šã® Environment ã«é–¢ã™ã‚‹ä»¥ä¸‹ã®ã‚ˆã†ãªæƒ…å ±ã‚’è¡¨ç¤ºã—ã¾ã™ã€‚
 
-* Environment ‚ª‚ ‚éƒŠ[ƒWƒ‡ƒ“‚ÆƒAƒJƒEƒ“ƒg
-* Environment ‚ª _production_ ‚©‚Ç‚¤‚©
-* Environment ‚ÉŒ»İƒfƒvƒƒC‚³‚ê‚Ä‚¢‚é Service 
-* Environment ‚ÉŠÖ˜A‚·‚éƒ^ƒO
+* Environment ãŒã‚ã‚‹ãƒªãƒ¼ã‚¸ãƒ§ãƒ³ã¨ã‚¢ã‚«ã‚¦ãƒ³ãƒˆ
+* Environment ãŒ production ã‹ã©ã†ã‹
+* Environment ã«ç¾åœ¨ãƒ‡ãƒ—ãƒ­ã‚¤ã•ã‚Œã¦ã„ã‚‹ Service
+* Environment ã«é–¢é€£ã™ã‚‹ã‚¿ã‚°
 
-ƒIƒvƒVƒ‡ƒ“‚Å `--resources` ƒtƒ‰ƒO‚ğ•t‚¯‚é‚Æ Environment ‚ÉŠÖ˜A‚·‚é AWS ƒŠƒ\[ƒX‚ª•\¦‚³‚ê‚Ü‚·B
+ã‚ªãƒ—ã‚·ãƒ§ãƒ³ã§ `--resources` ãƒ•ãƒ©ã‚°ã‚’ä»˜ã‘ã‚‹ã¨ Environment ã«é–¢é€£ã™ã‚‹ AWS ãƒªã‚½ãƒ¼ã‚¹ãŒè¡¨ç¤ºã•ã‚Œã¾ã™ã€‚
 
-## ƒtƒ‰ƒO
+## ãƒ•ãƒ©ã‚°
 ```bash
 -h, --help          help for show
     --json          Optional. Outputs in JSON format.
 -n, --name string   Name of the environment.
     --resources     Optional. Show the resources in your environment.
 ```
-Œ‹‰Ê‚ğƒvƒƒOƒ‰ƒ€‚Åƒp[ƒX‚µ‚½‚¢ê‡ `--json` ƒtƒ‰ƒO‚ğ—˜—p‚·‚é‚±‚Æ‚ª‚Å‚«‚Ü‚·B
+çµæœã‚’ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã§ãƒ‘ãƒ¼ã‚¹ã—ãŸã„å ´åˆ `--json` ãƒ•ãƒ©ã‚°ã‚’åˆ©ç”¨ã™ã‚‹ã“ã¨ãŒã§ãã¾ã™ã€‚
 
-## Às—á
-"test" Environment ‚ÉŠÖ‚·‚éî•ñ‚ğ•\¦‚µ‚Ü‚·B
+## å®Ÿè¡Œä¾‹
+"test" Environment ã«é–¢ã™ã‚‹æƒ…å ±ã‚’è¡¨ç¤ºã—ã¾ã™ã€‚
 ```bash
 $ copilot env show -n test
 ```

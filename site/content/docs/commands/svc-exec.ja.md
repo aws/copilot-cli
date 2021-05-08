@@ -3,10 +3,10 @@
 $ copilot svc exec
 ```
 
-## ƒRƒ}ƒ“ƒh‚ÌŠT—v
-`copilot svc exec` ‚ÍAService ‚ÅÀs’†‚ÌƒRƒ“ƒeƒi‚É‘Î‚µ‚ÄƒRƒ}ƒ“ƒh‚ğÀs‚µ‚Ü‚·B
+## ã‚³ãƒãƒ³ãƒ‰ã®æ¦‚è¦
+`copilot svc exec` ã¯ã€Service ã§å®Ÿè¡Œä¸­ã®ã‚³ãƒ³ãƒ†ãƒŠã«å¯¾ã—ã¦ã‚³ãƒãƒ³ãƒ‰ã‚’å®Ÿè¡Œã—ã¾ã™ã€‚
 
-## ƒtƒ‰ƒO
+## ãƒ•ãƒ©ã‚°
 ```
   -a, --app string         Name of the application.
   -c, --command string     Optional. The command that is passed to a running container. (default "/bin/bash")
@@ -17,23 +17,24 @@ $ copilot svc exec
       --task-id string     Optional. ID of the task you want to exec in.
 ```
 
-## Às—á
+## å®Ÿè¡Œä¾‹
 
-"frontend" Service ‚Ìƒ^ƒXƒN‚ÉƒCƒ“ƒ^ƒ‰ƒNƒeƒBƒu‚ÈƒZƒbƒVƒ‡ƒ“‚ğŠJn‚µ‚Ü‚·B
+"frontend" Service ã®ã‚¿ã‚¹ã‚¯ã«ã‚¤ãƒ³ã‚¿ãƒ©ã‚¯ãƒ†ã‚£ãƒ–ãªã‚»ãƒƒã‚·ãƒ§ãƒ³ã‚’é–‹å§‹ã—ã¾ã™ã€‚
 
 ```bash
 $ copilot svc exec -a my-app -e test -n frontend
 ```
-"backend" Service “à‚Ì ID "8c38184" ‚©‚çn‚Ü‚éƒ^ƒXƒN‚Å 'ls' ƒRƒ}ƒ“ƒh‚ğÀs‚µ‚Ü‚·B
+
+"backend" Service å†…ã® ID "8c38184" ã‹ã‚‰å§‹ã¾ã‚‹ã‚¿ã‚¹ã‚¯ã§ 'ls' ã‚³ãƒãƒ³ãƒ‰ã‚’å®Ÿè¡Œã—ã¾ã™ã€‚
 
 ```bash
 $ copilot svc exec -a my-app -e test --name backend --task-id 8c38184 --command "ls"
 ```
 
-## o—Í—á
+## å‡ºåŠ›ä¾‹
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/Evrl9Vux31k" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 !!! info
-    1. Service ƒfƒvƒƒC‘O‚É Manifest ‚Å `exec: true` ‚ªİ’è‚³‚ê‚Ä‚¢‚é‚±‚Æ‚ğŠm”F‚µ‚Ä‚­‚¾‚³‚¢B
-    2. ‚±‚ê‚É‚æ‚è Service ‚Ì Fargate Platform Version ‚ª 1.4.0 ‚ÉƒAƒbƒvƒf[ƒg‚³‚ê‚Ü‚·‚Ì‚Å‚²’ˆÓ‚­‚¾‚³‚¢Bƒvƒ‰ƒbƒgƒtƒH[ƒ€ƒo[ƒWƒ‡ƒ“‚ğƒAƒbƒvƒf[ƒg‚·‚é‚ÆA[ECS ƒT[ƒrƒX‚ÌƒŠƒvƒŒƒCƒX](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-service.html#cfn-ecs-service-platformversion) ‚Æ‚È‚èAƒT[ƒrƒX‚Ìƒ_ƒEƒ“ƒ^ƒCƒ€‚ª”­¶‚µ‚Ü‚·B
+    1. Service ãƒ‡ãƒ—ãƒ­ã‚¤å‰ã« Manifest ã§ `exec: true` ãŒè¨­å®šã•ã‚Œã¦ã„ã‚‹ã“ã¨ã‚’ç¢ºèªã—ã¦ãã ã•ã„ã€‚
+    2. ã“ã‚Œã«ã‚ˆã‚Š Service ã® Fargate Platform Version ãŒ 1.4.0 ã«ã‚¢ãƒƒãƒ—ãƒ‡ãƒ¼ãƒˆã•ã‚Œã¾ã™ã®ã§ã”æ³¨æ„ãã ã•ã„ã€‚ãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ ãƒãƒ¼ã‚¸ãƒ§ãƒ³ã‚’ã‚¢ãƒƒãƒ—ãƒ‡ãƒ¼ãƒˆã™ã‚‹ã¨ã€[ECS ã‚µãƒ¼ãƒ“ã‚¹ã®ãƒªãƒ—ãƒ¬ã‚¤ã‚¹](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-service.html#cfn-ecs-service-platformversion)ã¨ãªã‚Šã€ã‚µãƒ¼ãƒ“ã‚¹ã®ãƒ€ã‚¦ãƒ³ã‚¿ã‚¤ãƒ ãŒç™ºç”Ÿã—ã¾ã™ã€‚

@@ -1,10 +1,12 @@
+# はじめに
+
 AWS Copilot CLI へようこそ 🎉
 
 Copilot CLI は、Amazon ECS および AWS Fargate を利用したプロダクションレディなコンテナ化されたアプリケーションのビルド、リリース、そして運用のためのツールです。
 開発のスタートからステージング環境へのプッシュ、そして本番環境へのリリースまで、Copilot はアプリケーション開発ライフサイクル全体の管理を容易にします。
 
 ## Copilot CLI のインストール
-AWS Copilot は、[Homebrew](https://brew.sh/) もしくはバイナリを直接ダウンロードすることでインストールできます。Homebrew を利用しない場合は、[手動でのインストール方法](./getting-started/install.md#手動でインストール) を参照してください。
+AWS Copilot は [Homebrew](https://brew.sh/) もしくはバイナリのダウンロードでインストールできます。Homebrew を利用しない場合は、[手動でのインストール方法](./getting-started/install.ja.md#手動でインストール) を参照してください。
 
 ```sh
 $ brew install aws/tap/copilot-cli

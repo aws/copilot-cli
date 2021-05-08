@@ -1,29 +1,32 @@
-Copilot Pipeline の Manifest で利用できるプロパティの一覧です。
+以下は Copilot Pipeline の Manifest で利用できるすべてのプロパティのリストです。
 
-???+ note "GitHub のリポジトリからトリガーされる Pipeline のサンプル Manifest "
+???+ note "GitHub のリポジトリからトリガーされる Pipeline のサンプル Manifest"
 
-    ```yaml
-    name: pipeline-sample-app-frontend
-    version: 1
+```yaml
+name: pipeline-sample-app-frontend
+version: 1
 
-    source:
-      provider: GitHub
-      properties:
-        branch: main
-        repository: https://github.com/<user>/sample-app-frontend
-        # オプション。既存の CodeStar Connection の接続名を指定します。
-        connection_name: a-connection
-    
-    stages:
-        - 
-          name: test
-          test_commands:
-            - make test
-            - echo "woo! Tests passed"
-        - 
-          name: prod
-          requires_approval: true
-    ```
+source:
+  provider: GitHub
+  properties:
+    branch: main
+    repository: https://github.com/<user>/sample-app-frontend
+    # オプション。既存の CodeStar Connection の接続名を指定します。
+    connection_name: a-connection
+
+build:
+  image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+
+stages:
+    - 
+      name: test
+      test_commands:
+        - make test
+        - echo "woo! Tests passed"
+    - 
+      name: prod
+      requires_approval: true
+```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Pipeline 名。
@@ -47,8 +50,8 @@ Pipeline のトリガーに関するプロバイダー固有の設定。
 <span class="parent-field">source.properties.</span><a id="source-properties-ats" href="#source-properties-ats" class="field">`access_token_secret`</a> <span class="type">String</span>  
 Pipeline をトリガーするための GitHub アクセストークンを保持する AWS Secrets Manager シークレットの名前。
 (プロバイダーが GitHub で、個人のアクセストークンを利用して Pipeline を作成した場合)
-!!! 補足
-    Copilot v1.4.0 から GitHub リポジトリをソースにする場合アクセストークンは不要になりました。代わりに Copilot は [AWS CodeStar の GitHub への接続](https://docs.aws.amazon.com/codepipeline/latest/userguide/update-github-action-connections.html)を使って Pipeline をトリガーします。
+!!! info
+    Copilot v1.4.0 から GitHub リポジトリをソースにする場合のアクセストークンは不要になりました。代わりに Copilot は [AWS CodeStar の GitHub への接続](https://docs.aws.amazon.com/ja_jp/codepipeline/latest/userguide/update-github-action-connections.html)を使って Pipeline をトリガーします。
 
 <span class="parent-field">source.properties.</span><a id="source-properties-branch" href="#source-properties-branch" class="field">`branch`</a> <span class="type">String</span>  
 Pipeline をトリガーするリポジトリのブランチ名。 GitHub の場合デフォルトは `main` で Bitbucket と CodeCommit の場合デフォルトは `master` です。
@@ -58,6 +61,14 @@ Pipeline をトリガーするリポジトリのブランチ名。 GitHub の場
 
 <span class="parent-field">source.properties.</span><a id="source-properties-connection-name" href="#source-properties-connection-name" class="field">`connection_name`</a> <span class="type">String</span>  
 既存の CodeStar Connections の接続名。指定しない場合 Copilot は接続を作成します。
+
+<div class="separator"></div>
+
+<a id="build" href="#build" class="field">`build`</a> <span class="type">Map</span>  
+CodeBuild プロジェクトに関する設定。
+
+<span class="parent-field">build.</span><a id="build-image" href="#build-image" class="field">`image`</a> <span class="type">String</span>  
+CodeBuild のビルドプロジェクトで利用する Docker イメージの URI。`aws/codebuild/amazonlinux2-x86_64-standard:3.0` がデフォルトで利用されます。
 
 <div class="separator"></div>
 

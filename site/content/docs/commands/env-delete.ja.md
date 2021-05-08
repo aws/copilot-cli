@@ -3,12 +3,12 @@
 $ copilot env delete [flags]
 ```
 
-## ƒRƒ}ƒ“ƒh‚ÌŠT—v
-`copilot env delete` ‚ÍAApplication ‚©‚ç Environment ‚ğíœ‚µ‚Ü‚·B Environment “à‚ÉÀs’†‚ÌƒAƒvƒŠƒP[ƒVƒ‡ƒ“‚ª‚ ‚éê‡‚ÍA‚Í‚¶‚ß‚É [`copilot svc delete`](../commands/svc-delete.md) ‚ğÀs‚·‚é•K—v‚ª‚ ‚è‚Ü‚·B
+## ã‚³ãƒãƒ³ãƒ‰ã®æ¦‚è¦
+`copilot env delete`ã¯ã€Applicationã‹ã‚‰ Environment ã‚’å‰Šé™¤ã—ã¾ã™ã€‚ Environment å†…ã«å®Ÿè¡Œä¸­ã®ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³ãŒã‚ã‚‹å ´åˆã¯ã€ã¯ã˜ã‚ã« [`copilot svc delete`](../commands/svc-delete.ja.md) ã‚’å®Ÿè¡Œã™ã‚‹å¿…è¦ãŒã‚ã‚Šã¾ã™ã€‚
 
-¿–â‚É“š‚¦‚½ŒãAEnvironment —p‚Ì AWS CloudFormation ƒXƒ^ƒbƒN‚ªíœ‚³‚ê‚½‚±‚Æ‚ğŠm”F‚µ‚Ä‚­‚¾‚³‚¢B
+è³ªå•ã«ç­”ãˆãŸå¾Œã€Environment ç”¨ã® AWS CloudFormation ã‚¹ã‚¿ãƒƒã‚¯ãŒå‰Šé™¤ã•ã‚ŒãŸã“ã¨ã‚’ç¢ºèªã—ã¦ãã ã•ã„ã€‚
 
-## ƒtƒ‰ƒO
+## ãƒ•ãƒ©ã‚°
 ```
 -h, --help             help for delete
 -n, --name string      Name of the environment.
@@ -16,12 +16,12 @@ $ copilot env delete [flags]
 -a, --app string       Name of the application.
 ```
 
-## Às—á
-"test" Environment ‚ğíœ‚µ‚Ü‚·B
+## å®Ÿè¡Œä¾‹
+"test" Environment ã‚’å‰Šé™¤ã—ã¾ã™ã€‚
 ```bash
 $ copilot env delete --name test 
 ```
-"test" Environment ‚ğƒvƒƒ“ƒvƒg‚È‚µ‚Åíœ‚µ‚Ü‚·B
+"test" Environment ã‚’ãƒ—ãƒ­ãƒ³ãƒ—ãƒˆãªã—ã§å‰Šé™¤ã—ã¾ã™ã€‚
 ```bash
 $ copilot env delete --name test --yes
 ```

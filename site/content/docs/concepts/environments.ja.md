@@ -1,8 +1,10 @@
+# Environment
+
 はじめて `copilot init` コマンドを実行すると、あわせて _test_ Environment を作成するかを尋ねられます。この _test_ Environment にはセキュアなネットワーク(e.g. VPC、サブネット、セキュリティグループ)を作成するために必要な AWS リソースや、複数の Service での共有を目的とした Application Load Balancer や ECS クラスタのようなリソースも含まれます。Service をこの _test_ Environment にデプロイすると、この Service は _test_ Environment のネットワークやリソースを利用します。Application は複数の Environment を持つことができ、それぞれが互いに独立したネットワークやその他のインフラストラクチャリソースを持ちます。
 
 あなたの Copilot の利用開始にあわせて Copilot は _test_ Environment (テスト環境)を作成しますが、これとは異なる Environment、例えば _production_ Environment (本番環境)を新たに作るというのはごく一般的なことでしょう。この _production_ Environment は _test_ Environment とは完全に独立したもので、_production_ Environment 用のネットワークスタックやそこにデプロイされる Service を持ちます。独立したテスト環境と本番環境を持つことで、まずはテスト環境にデプロイし、問題ないことを確認した上で本番環境にデプロイするというオペレーションが可能になります。
 
-下に載せた図は、_API_ と _Backend_ という２つの Service を持つ _MyApp_ という Application を表しています。これら２つの Service は _test_ と _production_ という２つの Environment にデプロイされています。_test_ Environment では両方の Service が１つのコンテナを実行している一方で、_production_ Environment ではそれぞれが３つのコンテナを実行しているのが分かるでしょうか。このように、Service はデプロイ先の Environment ごとに異なる設定を持つことができます。詳しくは[環境変数の利用ガイド](../developing/environment-variables.md)もご覧ください。
+下に載せた図は、_API_ と _Backend_ という２つの Service を持つ _MyApp_ という Application を表しています。これら２つの Service は _test_ と _production_ という２つの Environment にデプロイされています。_test_ Environment では両方の Service が１つのコンテナを実行している一方で、_production_ Environment ではそれぞれが３つのコンテナを実行しているのが分かるでしょうか。このように、Service はデプロイ先の Environment ごとに異なる設定を持つことができます。詳しくは[環境変数の利用ガイド](../developing/environment-variables.ja.md)もご覧ください。
 
 ![](https://user-images.githubusercontent.com/879348/85873795-7da9c480-b786-11ea-9990-9604a3cc5f01.png)
 

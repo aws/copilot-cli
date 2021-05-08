@@ -1,11 +1,12 @@
 # AWS リソースを追加する
-[Service の Manifest](../manifest/overview.md)とデフォルトでは統合されていない任意の AWS サービスを Copilot CLI では Addon という形で追加できます。Addon の例として Service から読み込んだり書き込んだりする必要がある DyanmoDB テーブルや S3 バケットが考えられます。
+
+[Service の Manifest](../manifest/overview.ja.md)とデフォルトでは統合されていない任意の AWS サービスを Copilot CLI では Addon という形で追加できます。Addon の例として Service から読み込んだり書き込んだりする必要がある DyanmoDB テーブルや S3 バケットが考えられます。
 
 ## S3 バケットや DynamoDB テーブルを追加する方法
 
 Copilot は以下のコマンドを使っていくつかの種類の Addon を作成するお手伝いをします:
 
-* [`storage init`](../commands/storage-init.md) は、 DynamoDB テーブルや S3 バケットを作成します。
+* [`storage init`](../commands/storage-init.ja.md) は、 DynamoDB テーブルや S3 バケットを作成します。
 
 ワークスペースから `copilot storage init` を実行するといくつかの質問に沿ってこれらのリソースをセットアップできます。
 
@@ -29,17 +30,17 @@ Copilot は以下のコマンドを使っていくつかの種類の Addon を�
         │   └── mytable-ddb.yaml
         └── manifest.yaml
 ```
-通常 `addons/` ディレクトリ以下の各ファイルは独立した Addon を表し [AWS CloudFormation (CFN) テンプレート](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html) と解釈されます。例えばさらに Service に S3 バケット Addon を追加したい場合は、 `storage init` を実行するか、もしくは独自の `mybucket-s3.yaml` ファイルを作成するかします。
+通常 `addons/` ディレクトリ以下の各ファイルは独立した Addon を表し [AWS CloudFormation (CFN) テンプレート](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/template-anatomy.html) と解釈されます。例えばさらに Service に S3 バケット Addon を追加したい場合は、 `storage init` を実行するか、もしくは独自の `mybucket-s3.yaml` ファイルを作成するかします。
 
 Service がデプロイされると Copilot はこれらのファイルを全てマージして単一の AWS CloudFormation テンプレートにして Service スタックにネストされたスタックを作成します。
 
 ## Addon テンプレートの構造
-Addon テンプレートは任意の有効な CloudFormation テンプレートを用いることができます。しかしデフォルトでは Copilot は `App`, `Env` そして `Name` [パラメーター](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html)を渡すので、お望みならば [Conditions セクション](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/conditions-section-structure.html) または [Mappings セクション](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html) でリソースのプロパティをカスタマイズできます。
+Addon テンプレートは任意の有効な CloudFormation テンプレートを用いることができます。しかしデフォルトでは Copilot は `App`, `Env` そして `Name` [パラメーター](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html)を渡すので、お望みならば [Conditions セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/conditions-section-structure.html) または [Mappings セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html) でリソースのプロパティをカスタマイズできます。
 
-ECS タスクから [Resources セクション](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html) にアクセスする必要がある場合以下の点に注意してください。
+ECS タスクから [Resources セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/resources-section-structure.html) にアクセスする必要がある場合以下の点に注意してください。
 
-1. テンプレートの中で [IAM 管理ポリシー](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-managedpolicy.html) リソースを使ってタスクにパーミッションを与え、　[Outputs セクション](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) を使ってパーミッションを ECS タスクロールに注入してください。
-2. [Outputs セクション](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) を作成して ECS タスクに環境変数として注入したい値を定義してください。
+1. テンプレートの中で [IAM 管理ポリシー](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-managedpolicy.html) リソースを使ってタスクにパーミッションを与え、　[Outputs セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) を使ってパーミッションを ECS タスクロールに注入してください。
+2. [Outputs セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) を作成して ECS タスクに環境変数として注入したい値を定義してください。
 
 以下は DynamoDB テーブル Addon を作成するテンプレートの例です。
 
@@ -107,7 +108,7 @@ Outputs:
 次回リリースするとき Copilot はこのテンプレートを Service にネストされたスタックとして用います！
 
 !!! info
-    リソースを追加するために AWS 管理ポリシーを定義する場合は、以下のような [IAM でのベストプラクティス](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html) に従うことを推奨します。
+    リソースを追加するために AWS 管理ポリシーを定義する場合は、以下のような [IAM でのベストプラクティス](https://docs.aws.amazon.com/ja_jp/IAM/latest/UserGuide/best-practices.html) に従うことを推奨します。
     
-    * addons/ ディレクトリで定義するポリシーでは[最小限のアクセス権を付与する](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#grant-least-privilege)。
-    * `addons/` ディレクトリで定義したリソースに対してのみアクセスできるようにポリシーを制限するために [追加セキュリティに対するポリシー条件を使用する](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#use-policy-conditions) 。
+    * addons/ ディレクトリで定義するポリシーでは[最小限のアクセス権を付与する](https://docs.aws.amazon.com/ja_jp/IAM/latest/UserGuide/best-practices.html#grant-least-privilege)
+    * `addons/` ディレクトリで定義したリソースに対してのみアクセスできるようにポリシーを制限するために [追加セキュリティに対するポリシー条件を使用する](https://docs.aws.amazon.com/ja_jp/IAM/latest/UserGuide/best-practices.html#use-policy-conditions) 

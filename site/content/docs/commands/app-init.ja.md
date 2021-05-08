@@ -4,7 +4,7 @@ $ copilot app init [name] [flags]
 ```
 
 ## コマンドの概要
-`copilot app init` はコマンドを実行したディレクトリ内に新しい [Application](../concepts/applications.md) を作成します。 Service は Application 内に作成していきます。
+`copilot app init` はコマンドを実行したディレクトリ内に新しい [Application](../concepts/applications.ja.md) を作成します。 Service は Application 内に作成していきます。
 
 質問への回答の後、CLI は、Service 用に作成されたインフラストラクチャーを管理する為の AWS Identity and Access Management ロールを作成します。
 作業ディレクトリ配下に新しいサブディレクトリ `copilot/` を確認できます。 `copilot` ディレクトリには Service 用の Manifest ファイルと追加のインフラストラクチャーが格納されます。
@@ -17,7 +17,7 @@ Copilot CLI における全てのコマンドと同じ様に、必要なフラ�
 ```bash
       --domain string                  Optional. Your existing custom domain name.
   -h, --help                           help for init
-      --resource-tags stringToString   Optional. Labels with a key and value separated with commas.
+      --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
 ```
 `--domain`　フラグは、 Application が利用している AWS アカウント上の Amazon Route 53 に登録されたドメイン名を指定します。

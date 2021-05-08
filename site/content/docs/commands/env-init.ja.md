@@ -3,15 +3,15 @@
 $ copilot env init [flags]
 ```
 
-## ƒRƒ}ƒ“ƒh‚ÌŠT—v
-`copilot env init` ‚ÍAService Às—p‚ÉV‚µ‚¢ [Environment](../concepts/environments.md) ‚ğì¬‚µ‚Ü‚·B
+## ã‚³ãƒãƒ³ãƒ‰ã®æ¦‚è¦
+`copilot env init` ã¯ã€Service å®Ÿè¡Œç”¨ã«æ–°ã—ã„ [Environment](../concepts/environments.ja.md) ã‚’ä½œæˆã—ã¾ã™ã€‚
 
-¿–â‚É“š‚¦‚é‚ÆACLI ‚Í VPC, Application Load Balancer, ECS Cluster ‚È‚Ç‚Ì Service ‚Å‹¤—L‚³‚ê‚é‹¤’Ê‚ÌƒCƒ“ƒtƒ‰ƒXƒgƒ‰ƒNƒ`ƒƒ[‚ğì¬‚µ‚Ü‚·B‚³‚ç‚ÉAƒfƒtƒHƒ‹ƒg‚ÌƒŠƒ\[ƒXİ’è‚âŠù‘¶ƒŠƒ\[ƒX‚ÌƒCƒ“ƒ|[ƒg‚È‚ÇA[Copilot ‚Ì Environment ‚ğƒJƒXƒ^ƒ}ƒCƒY](../concepts/environments.md#customize-your-environment) ‚Å‚«‚Ü‚·B
+è³ªå•ã«ç­”ãˆã‚‹ã¨ã€CLI ã¯ VPC, Application Load Balancer, ECS Cluster ãªã©ã® Service ã§å…±æœ‰ã•ã‚Œã‚‹å…±é€šã®ã‚¤ãƒ³ãƒ•ãƒ©ã‚¹ãƒˆãƒ©ã‚¯ãƒãƒ£ãƒ¼ã‚’ä½œæˆã—ã¾ã™ã€‚ã•ã‚‰ã«ã€ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã®ãƒªã‚½ãƒ¼ã‚¹è¨­å®šã‚„æ—¢å­˜ãƒªã‚½ãƒ¼ã‚¹ã®ã‚¤ãƒ³ãƒãƒ¼ãƒˆãªã©ã€[Copilot ã® Environment ã‚’ã‚«ã‚¹ã‚¿ãƒã‚¤ã‚º](../concepts/environments.ja.md#Environment-ã®ã‚«ã‚¹ã‚¿ãƒã‚¤ã‚º)ã§ãã¾ã™ã€‚
 
-[–¼‘O•t‚«ƒvƒƒtƒ@ƒCƒ‹](../credentials.md#environment-credentials) ‚ğg—p‚µ‚ÄAEnvironment ‚ğì¬‚·‚é AWS ƒAƒJƒEƒ“ƒg‚ÆƒŠ[ƒWƒ‡ƒ“‚ğw’è‚µ‚Ü‚·B
+[åå‰ä»˜ããƒ—ãƒ­ãƒ•ã‚¡ã‚¤ãƒ«](../credentials.ja.md#Environment-ç”¨ã®èªè¨¼æƒ…å ±)ã‚’ä½¿ç”¨ã—ã¦ã€Environment ã‚’ä½œæˆã™ã‚‹ AWS ã‚¢ã‚«ã‚¦ãƒ³ãƒˆã¨ãƒªãƒ¼ã‚¸ãƒ§ãƒ³ã‚’æŒ‡å®šã—ã¾ã™ã€‚
 
-## ƒtƒ‰ƒO
-AWS Copilot CLI ‚Ì‘S‚Ä‚ÌƒRƒ}ƒ“ƒh“¯—lA•K{ƒtƒ‰ƒO‚ğÈ—ª‚µ‚½ê‡‚É‚Í‚»‚ê‚ç‚Ìî•ñ‚Ì“ü—Í‚ğƒCƒ“ƒ^ƒ‰ƒNƒeƒBƒu‚É‹‚ß‚ç‚ê‚Ü‚·B•K{ƒtƒ‰ƒO‚ğ–¾¦“I‚É“n‚µ‚ÄƒRƒ}ƒ“ƒh‚ğÀs‚·‚é‚±‚Æ‚Å‚±‚ê‚ğƒXƒLƒbƒv‚Å‚«‚Ü‚·B
+## ãƒ•ãƒ©ã‚°
+AWS Copilot CLI ã®å…¨ã¦ã®ã‚³ãƒãƒ³ãƒ‰åŒæ§˜ã€å¿…é ˆãƒ•ãƒ©ã‚°ã‚’çœç•¥ã—ãŸå ´åˆã«ã¯ãã‚Œã‚‰ã®æƒ…å ±ã®å…¥åŠ›ã‚’ã‚¤ãƒ³ã‚¿ãƒ©ã‚¯ãƒ†ã‚£ãƒ–ã«æ±‚ã‚ã‚‰ã‚Œã¾ã™ã€‚å¿…é ˆãƒ•ãƒ©ã‚°ã‚’æ˜ç¤ºçš„ã«æ¸¡ã—ã¦ã‚³ãƒãƒ³ãƒ‰ã‚’å®Ÿè¡Œã™ã‚‹ã“ã¨ã§ã“ã‚Œã‚’ã‚¹ã‚­ãƒƒãƒ—ã§ãã¾ã™ã€‚
 ```
 Common Flags
       --aws-access-key-id string       Optional. An AWS access key.
@@ -37,14 +37,14 @@ Global Flags
   -a, --app string   Name of the application.
 ```
 
-## Às—á
-AWS ƒvƒƒtƒ@ƒCƒ‹‚Ì "default" ‚ÉAƒfƒtƒHƒ‹ƒgİ’è‚ğg—p‚µ‚Ä test Environment ‚ğì¬‚µ‚Ü‚·B
+## å®Ÿè¡Œä¾‹
+AWS ãƒ—ãƒ­ãƒ•ã‚¡ã‚¤ãƒ«ã® "default" ã«ã€ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆè¨­å®šã‚’ä½¿ç”¨ã—ã¦ test Environment ã‚’ä½œæˆã—ã¾ã™ã€‚
 
 ```bash
 $ copilot env init --name test --profile default --default-config
 ```
 
-AWS ƒvƒƒtƒ@ƒCƒ‹‚Ì "prod-admin" ‚ğ—˜—p‚µ‚ÄŠù‘¶‚Ì VPC ‚É prod-iad Environment ‚ğì¬‚µ‚Ü‚·B
+AWS ãƒ—ãƒ­ãƒ•ã‚¡ã‚¤ãƒ«ã® "prod-admin" ã‚’åˆ©ç”¨ã—ã¦æ—¢å­˜ã® VPC ã« prod-iad Environment ã‚’ä½œæˆã—ã¾ã™ã€‚
 ```bash
 $ copilot env init --name prod-iad --profile prod-admin --prod \
 --import-vpc-id vpc-099c32d2b98cdcf47 \
@@ -52,5 +52,6 @@ $ copilot env init --name prod-iad --profile prod-admin --prod \
 --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f
 ```
 
-## o—Í—á
+## å‡ºåŠ›ä¾‹
 ![Running copilot env init](https://raw.githubusercontent.com/kohidave/copilot-demos/master/env-init.svg?sanitize=true)
+
