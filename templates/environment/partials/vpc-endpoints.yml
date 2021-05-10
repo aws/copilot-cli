@@ -26,6 +26,8 @@ IngressFromVPCEndpoints:
 # Gateway endpoint for S3.
 S3GatewayVPCEndpoint:
   Condition: CreateVPCEndpoints
+  Metadata:
+    'aws:copilot:description': 'An S3 gateway endpoint.'
   Type: AWS::EC2::VPCEndpoint
   Properties:
     VpcEndpointType: Gateway
@@ -39,6 +41,8 @@ S3GatewayVPCEndpoint:
 # Interface endpoints.
 EcrApiVPCEndpoint:
   Condition: CreateVPCEndpoints
+  Metadata:
+    'aws:copilot:description': 'ECR interface endpoints.'
   Type: AWS::EC2::VPCEndpoint
   Properties:
     VpcEndpointType: Interface
@@ -67,8 +71,10 @@ EcrDkrVPCEndpoint:
     SecurityGroupIds:
       - !Ref VPCEndpointSecurityGroup
 
-LogVPCEndpoint:
+LogsVPCEndpoint:
   Condition: CreateVPCEndpoints
+  Metadata:
+    'aws:copilot:description': 'A CloudWatch Logs interface endpoint.'
   Type: AWS::EC2::VPCEndpoint
   Properties:
     VpcEndpointType: Interface
