@@ -91,7 +91,7 @@ LogsVPCEndpoint:
 SSMVPCEndpoint:
   Condition: CreateVPCEndpoints
   Metadata:
-    'aws:copilot:description': 'A Systems Manager interface endpoint.'
+    'aws:copilot:description': 'Systems Manager interface endpoints.'
   Type: AWS::EC2::VPCEndpoint
   Properties:
     VpcEndpointType: Interface
@@ -101,6 +101,36 @@ SSMVPCEndpoint:
       - !Ref PrivateSubnet{{inc $ind}}
       {{- end}}
     ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
+    VpcId: !Ref VPC
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup
+
+EC2MessagesVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    PrivateDnsEnabled: true
+    SubnetIds:
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+      - !Ref PrivateSubnet{{inc $ind}}
+      {{- end}}
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.ec2messages
+    VpcId: !Ref VPC
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup
+
+EC2VPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    PrivateDnsEnabled: true
+    SubnetIds:
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+      - !Ref PrivateSubnet{{inc $ind}}
+      {{- end}}
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.ec2
     VpcId: !Ref VPC
     SecurityGroupIds:
       - !Ref VPCEndpointSecurityGroup
