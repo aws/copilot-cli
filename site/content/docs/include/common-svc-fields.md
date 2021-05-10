@@ -108,24 +108,6 @@ Enable running commands in your container. The default is `false`. Required for 
 
 <div class="separator"></div>
 
-<a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>      
-The `network` section contains parameters for connecting to AWS resources in a VPC.
-
-<span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>    
-Subnets and security groups attached to your tasks.
-
-<span class="parent-field">network.vpc.</span><a id="network-vpc-placement" href="#network-vpc-placement" class="field">`placement`</a> <span class="type">String</span>  
-Must be one of `'public'` or `'private'`. Defaults to launching your tasks in public subnets.
-
-!!! info
-    If you launch tasks in `'private'` subnets and use a Copilot-generated VPC, Copilot will add NAT Gateways to your environment. Alternatively, you can import a VPC with NAT Gateways when running `copilot env init` for internet connectivity.
-
-<span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings</span>  
-Additional security group IDs associated with your tasks. Copilot always includes a security group so containers within your environment
-can communicate with each other.
-
-<div class="separator"></div>
-
 <a id="variables" href="#variables" class="field">`variables`</a> <span class="type">Map</span>  
 Key-value pairs that represent environment variables that will be passed to your service. Copilot will include a number of environment variables by default for you.
 
@@ -213,7 +195,3 @@ Optional. Defaults to `true`. Whether or not to use IAM authorization to determi
 <span class="parent-field">volume.efs.auth.</span><a id="access_point_id" href="#access-point-id" class="field">`access_point_id`</a> <span class="type">String</span>  
 Optional. Defaults to `""`. The ID of the EFS access point to connect to. If using an access point, `root_dir` must be either empty or `/` and `auth.iam` must be `true`.
 
-<div class="separator"></div>
-
-<a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
-The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.

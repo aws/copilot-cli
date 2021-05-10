@@ -68,3 +68,26 @@ The architecture type for your service. A [Load Balanced Web Service](../concept
 {% include 'http-config.md' %}
 {% include 'image-config.md' %}
 {% include 'common-svc-fields.md' %}
+
+<div class="separator"></div>
+
+<a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>      
+The `network` section contains parameters for connecting to AWS resources in a VPC.
+
+<span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>    
+Subnets and security groups attached to your tasks.
+
+<span class="parent-field">network.vpc.</span><a id="network-vpc-placement" href="#network-vpc-placement" class="field">`placement`</a> <span class="type">String</span>  
+Must be one of `'public'` or `'private'`. Defaults to launching your tasks in public subnets.
+
+!!! info
+    If you launch tasks in `'private'` subnets and use a Copilot-generated VPC, Copilot will add NAT gateways to your environment. Alternatively, you can import a VPC with NAT gateways when running `copilot env init` for internet connectivity.
+
+<span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings</span>  
+Additional security group IDs associated with your tasks. Copilot always includes a security group so containers within your environment
+can communicate with each other.
+
+<div class="separator"></div>
+
+<a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
+The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.
