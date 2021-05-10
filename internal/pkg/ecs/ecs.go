@@ -254,7 +254,32 @@ func (c Client) NetworkConfigurationForJob(app, env, job string) (*ecs.NetworkCo
 // NetworkConfiguration wraps an ecs.NetworkConfiguration struct.
 type NetworkConfiguration ecs.NetworkConfiguration
 
-// UnmarshalJSON implements custom logic to unmarshal a network configuration.
+// UnmarshalJSON implements custom logic to unmarshal only the network configuration from a state machine definition.
+// Example state machine definition:
+//	 "Version": "1.0",
+//	 "Comment": "Run AWS Fargate task",
+//	 "StartAt": "Run Fargate Task",
+//	 "States": {
+//	   "Run Fargate Task": {
+//		 "Type": "Task",
+//		 "Resource": "arn:aws:states:::ecs:runTask.sync",
+//		 "Parameters": {
+//		   "LaunchType": "FARGATE",
+//		   "PlatformVersion": "1.4.0",
+//		   "Cluster": "cluster",
+//		   "TaskDefinition": "def",
+//		   "PropagateTags": "TASK_DEFINITION",
+//		   "Group.$": "$$.Execution.Name",
+//		   "NetworkConfiguration": {
+//			 "AwsvpcConfiguration": {
+//			   "Subnets": ["sbn-1", "sbn-2"],
+//			   "AssignPublicIp": "ENABLED",
+//			   "SecurityGroups": ["sg-1", "sg-2"]
+//			 }
+//		   }
+//		 },
+//		 "End": true
+//	   }
 func (n *NetworkConfiguration) UnmarshalJSON(b []byte) error {
 	var f interface{}
 	err := json.Unmarshal(b, &f)
