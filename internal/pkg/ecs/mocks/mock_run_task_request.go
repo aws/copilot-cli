@@ -146,3 +146,71 @@ func (mr *MockserviceDescriberMockRecorder) TaskDefinition(app, env, svc interfa
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockserviceDescriber)(nil).TaskDefinition), app, env, svc)
 }
+
+// MockjobDescriber is a mock of jobDescriber interface.
+type MockjobDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockjobDescriberMockRecorder
+}
+
+// MockjobDescriberMockRecorder is the mock recorder for MockjobDescriber.
+type MockjobDescriberMockRecorder struct {
+	mock *MockjobDescriber
+}
+
+// NewMockjobDescriber creates a new mock instance.
+func NewMockjobDescriber(ctrl *gomock.Controller) *MockjobDescriber {
+	mock := &MockjobDescriber{ctrl: ctrl}
+	mock.recorder = &MockjobDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockjobDescriber) EXPECT() *MockjobDescriberMockRecorder {
+	return m.recorder
+}
+
+// ClusterARN mocks base method.
+func (m *MockjobDescriber) ClusterARN(app, env string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClusterARN", app, env)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ClusterARN indicates an expected call of ClusterARN.
+func (mr *MockjobDescriberMockRecorder) ClusterARN(app, env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterARN", reflect.TypeOf((*MockjobDescriber)(nil).ClusterARN), app, env)
+}
+
+// NetworkConfigurationForJob mocks base method.
+func (m *MockjobDescriber) NetworkConfigurationForJob(app, env, job string) (*ecs.NetworkConfiguration, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NetworkConfigurationForJob", app, env, job)
+	ret0, _ := ret[0].(*ecs.NetworkConfiguration)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NetworkConfigurationForJob indicates an expected call of NetworkConfigurationForJob.
+func (mr *MockjobDescriberMockRecorder) NetworkConfigurationForJob(app, env, job interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkConfigurationForJob", reflect.TypeOf((*MockjobDescriber)(nil).NetworkConfigurationForJob), app, env, job)
+}
+
+// TaskDefinition mocks base method.
+func (m *MockjobDescriber) TaskDefinition(app, env, job string) (*ecs.TaskDefinition, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TaskDefinition", app, env, job)
+	ret0, _ := ret[0].(*ecs.TaskDefinition)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TaskDefinition indicates an expected call of TaskDefinition.
+func (mr *MockjobDescriberMockRecorder) TaskDefinition(app, env, job interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockjobDescriber)(nil).TaskDefinition), app, env, job)
+}
