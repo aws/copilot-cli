@@ -115,39 +115,97 @@ func TestSvcPause_Ask(t *testing.T) {
 		inputApp         string
 		inputSvc         string
 		inputEnvironment string
+		skipConfirmation bool
 		mockSelector     func(m *mocks.MockdeploySelector)
+		mockPrompt       func(m *mocks.Mockprompter)
 
 		wantedError error
 	}{
 		"errors if failed to select application": {
+			skipConfirmation: true,
 			mockSelector: func(m *mocks.MockdeploySelector) {
 				m.EXPECT().Application(svcPauseAppNamePrompt, svcAppNameHelpPrompt).Return("", mockError)
 			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
 
 			wantedError: fmt.Errorf("select application: some error"),
 		},
 		"errors if failed to select deployed service": {
-			inputApp: "mockApp",
+			inputApp:         "mockApp",
+			skipConfirmation: true,
 
 			mockSelector: func(m *mocks.MockdeploySelector) {
-				m.EXPECT().DeployedService(svcPauseNamePrompt, svcPauseSvcNameHelpPrompt, "mockApp", gomock.Any(), gomock.Any(), gomock.Any()).
+				m.EXPECT().DeployedService("Which service of mockApp would you like to pause?", svcPauseSvcNameHelpPrompt, "mockApp", gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, mockError)
 			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
 
 			wantedError: fmt.Errorf("select deployed services for application mockApp: some error"),
 		},
-		"success": {
+		"successfully selected deployed service": {
 			inputApp:         "mockApp",
 			inputSvc:         "mockSvc",
 			inputEnvironment: "mockEnv",
-
+			skipConfirmation: true,
 			mockSelector: func(m *mocks.MockdeploySelector) {
-				m.EXPECT().DeployedService(svcPauseNamePrompt, svcPauseSvcNameHelpPrompt, "mockApp", gomock.Any(), gomock.Any(), gomock.Any()).
+				m.EXPECT().DeployedService("Which service of mockApp would you like to pause?", svcPauseSvcNameHelpPrompt, "mockApp", gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&selector.DeployedService{
 						Env: "mockEnv",
 						Svc: "mockSvc",
 					}, nil)
 			},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+		},
+		"should wrap error returned from prompter confirmation": {
+			inputApp:         "mockApp",
+			inputSvc:         "mockSvc",
+			inputEnvironment: "mockEnv",
+			skipConfirmation: false,
+			mockSelector: func(m *mocks.MockdeploySelector) {
+				m.EXPECT().DeployedService("Which service of mockApp would you like to pause?", svcPauseSvcNameHelpPrompt, "mockApp", gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&selector.DeployedService{
+						Env: "mockEnv",
+						Svc: "mockSvc",
+					}, nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm("Are you sure you want to stop processing requests for service mockSvc?", "").Times(1).Return(true, mockError)
+			},
+			wantedError: fmt.Errorf("svc pause confirmation prompt: %w", mockError),
+		},
+		"should return error if user doesn't confirm svc pause": {
+			inputApp:         "mockApp",
+			inputSvc:         "mockSvc",
+			inputEnvironment: "mockEnv",
+			skipConfirmation: false,
+			mockSelector: func(m *mocks.MockdeploySelector) {
+				m.EXPECT().DeployedService("Which service of mockApp would you like to pause?", svcPauseSvcNameHelpPrompt, "mockApp", gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&selector.DeployedService{
+						Env: "mockEnv",
+						Svc: "mockSvc",
+					}, nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm("Are you sure you want to stop processing requests for service mockSvc?", "").Times(1).Return(false, nil)
+			},
+			wantedError: errors.New("svc pause cancelled - no changes made"),
+		},
+		"should return error nil if user confirms svc pause": {
+			inputApp:         "mockApp",
+			inputSvc:         "mockSvc",
+			inputEnvironment: "mockEnv",
+			skipConfirmation: false,
+			mockSelector: func(m *mocks.MockdeploySelector) {
+				m.EXPECT().DeployedService("Which service of mockApp would you like to pause?", svcPauseSvcNameHelpPrompt, "mockApp", gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&selector.DeployedService{
+						Env: "mockEnv",
+						Svc: "mockSvc",
+					}, nil)
+			},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm("Are you sure you want to stop processing requests for service mockSvc?", "").Times(1).Return(true, nil)
+			},
+			wantedError: nil,
 		},
 	}
 
@@ -157,15 +215,19 @@ func TestSvcPause_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockSelector := mocks.NewMockdeploySelector(ctrl)
+			mockPrompter := mocks.NewMockprompter(ctrl)
 			tc.mockSelector(mockSelector)
+			tc.mockPrompt(mockPrompter)
 
 			svcPause := &svcPauseOpts{
 				svcPauseVars: svcPauseVars{
-					svcName: tc.inputSvc,
-					envName: tc.inputEnvironment,
-					appName: tc.inputApp,
+					skipConfirmation: tc.skipConfirmation,
+					svcName:          tc.inputSvc,
+					envName:          tc.inputEnvironment,
+					appName:          tc.inputApp,
 				},
-				sel: mockSelector,
+				sel:    mockSelector,
+				prompt: mockPrompter,
 			}
 
 			// WHEN
@@ -189,17 +251,17 @@ func TestSvcPause_Execute(t *testing.T) {
 	}{
 		"errors if failed to pause the service": {
 			mocking: func(t *testing.T, mockPauser *mocks.MockservicePauser, mockProgress *mocks.Mockprogress) {
-				mockProgress.EXPECT().Start(fmt.Sprintf(fmtSvcPauseStart, "mock-svc"))
+				mockProgress.EXPECT().Start("Pausing service mock-svc in environment mock-env.")
 				mockPauser.EXPECT().PauseService("mock-svc-arn").Return(mockError)
-				mockProgress.EXPECT().Stop(log.Serrorf(fmtsvcPauseFailed, "mock-svc"))
+				mockProgress.EXPECT().Stop(log.Serrorf("Failed to pause service mock-svc in environment mock-env.\n"))
 			},
 			wantedError: fmt.Errorf("some error"),
 		},
 		"success": {
 			mocking: func(t *testing.T, mockPauser *mocks.MockservicePauser, mockProgress *mocks.Mockprogress) {
-				mockProgress.EXPECT().Start(fmt.Sprintf(fmtSvcPauseStart, "mock-svc"))
+				mockProgress.EXPECT().Start("Pausing service mock-svc in environment mock-env.")
 				mockPauser.EXPECT().PauseService("mock-svc-arn").Return(nil)
-				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtSvcPauseSucceed, "mock-svc"))
+				mockProgress.EXPECT().Stop(log.Ssuccessf("Paused service mock-svc in environment mock-env.\n"))
 			},
 		},
 	}

@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
@@ -22,23 +23,26 @@ import (
 
 const (
 	svcPauseAppNamePrompt     = "Which application is the service in?"
-	svcPauseNamePrompt        = "Which service would you like to pause?"
+	svcPauseNamePrompt        = "Which service of %s would you like to pause?"
 	svcPauseSvcNameHelpPrompt = "The selected service will be paused."
 
-	fmtSvcPauseStart   = "Pausing App Runner service %s."
-	fmtsvcPauseFailed  = "Failed to pause App Runner service %s.\n"
-	fmtSvcPauseSucceed = "Paused App Runner service %s.\n"
+	fmtSvcPauseStart         = "Pausing service %s in environment %s."
+	fmtsvcPauseFailed        = "Failed to pause service %s in environment %s.\n"
+	fmtSvcPauseSucceed       = "Paused service %s in environment %s.\n"
+	fmtSvcPauseConfirmPrompt = "Are you sure you want to stop processing requests for service %s?"
 )
 
 type svcPauseVars struct {
-	svcName string
-	envName string
-	appName string
+	svcName          string
+	envName          string
+	appName          string
+	skipConfirmation bool
 }
 
 type svcPauseOpts struct {
 	svcPauseVars
 	store        store
+	prompt       prompter
 	sel          deploySelector
 	client       servicePauser
 	initSvcPause func() error
@@ -55,10 +59,11 @@ func newSvcPauseOpts(vars svcPauseVars) (*svcPauseOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
-
+	prompter := prompt.New()
 	opts := &svcPauseOpts{
 		svcPauseVars: vars,
 		store:        configStore,
+		prompt:       prompter,
 		sel:          selector.NewDeploySelect(prompt.New(), configStore, deployStore),
 		prog:         termprogress.NewSpinner(log.DiagnosticWriter),
 	}
@@ -126,7 +131,22 @@ func (o *svcPauseOpts) Ask() error {
 	if err := o.askApp(); err != nil {
 		return err
 	}
-	return o.askSvcEnvName()
+	if err := o.askSvcEnvName(); err != nil {
+		return err
+	}
+
+	if o.skipConfirmation {
+		return nil
+	}
+
+	pauseConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtSvcPauseConfirmPrompt, color.HighlightUserInput(o.svcName)), "")
+	if err != nil {
+		return fmt.Errorf("svc pause confirmation prompt: %w", err)
+	}
+	if !pauseConfirmed {
+		return errors.New("svc pause cancelled - no changes made")
+	}
+	return nil
 }
 
 func (o *svcPauseOpts) askApp() error {
@@ -143,7 +163,7 @@ func (o *svcPauseOpts) askApp() error {
 
 func (o *svcPauseOpts) askSvcEnvName() error {
 	deployedService, err := o.sel.DeployedService(
-		svcPauseNamePrompt,
+		fmt.Sprintf(svcPauseNamePrompt, color.HighlightUserInput(o.appName)),
 		svcPauseSvcNameHelpPrompt,
 		o.appName,
 		selector.WithEnv(o.envName),
@@ -165,15 +185,22 @@ func (o *svcPauseOpts) Execute() error {
 	}
 
 	log.Warningln("Your service will be unavailable while paused. You can resume the service once the pause operation is complete.")
-	o.prog.Start(fmt.Sprintf(fmtSvcPauseStart, color.HighlightUserInput(o.svcName)))
+	o.prog.Start(fmt.Sprintf(fmtSvcPauseStart, o.svcName, o.envName))
 
 	err := o.client.PauseService(o.svcARN)
 	if err != nil {
-		o.prog.Stop(log.Serrorf(fmtsvcPauseFailed, color.HighlightUserInput(o.svcName)))
+		o.prog.Stop(log.Serrorf(fmtsvcPauseFailed, o.svcName, o.envName))
 		return err
 	}
-	o.prog.Stop(log.Ssuccessf(fmtSvcPauseSucceed, color.HighlightUserInput(o.svcName)))
+	o.prog.Stop(log.Ssuccessf(fmtSvcPauseSucceed, o.svcName, o.envName))
 	return nil
+}
+
+// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
+func (o *svcPauseOpts) RecommendedActions() []string {
+	return []string{
+		fmt.Sprintf("Run %s to start processing requests again.", color.HighlightCode(fmt.Sprintf("copilot svc resume -n %s", o.svcName))),
+	}
 }
 
 // buildSvcPauseCmd builds the command for pausing the running service.
@@ -198,11 +225,19 @@ func buildSvcPauseCmd() *cobra.Command {
 			if err := opts.Ask(); err != nil {
 				return err
 			}
-			return opts.Execute()
+			if err := opts.Execute(); err != nil {
+				return err
+			}
+			log.Infoln("Recommended follow-up action:")
+			for _, followup := range opts.RecommendedActions() {
+				log.Infof("- %s\n", followup)
+			}
+			return nil
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.svcName, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
 	return cmd
 }
