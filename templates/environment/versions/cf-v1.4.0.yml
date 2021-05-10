@@ -17,6 +17,9 @@ Parameters:
   NATWorkloads:
     Type: String
     Default: ""
+  VPCEndpointWorkloads:
+    Type: String
+    Default: ""
   ToolsAccountPrincipalARN:
     Type: String
   AppDNSName:
@@ -40,12 +43,15 @@ Conditions:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
   CreateNATGateways:
     !Not [!Equals [ !Ref NATWorkloads, ""]]
+  CreateVPCEndpoints:
+    !Not [ !Equals [ !Ref VPCEndpointWorkloads, "" ] ]
   HasAliases:
     !Not [!Equals [ !Ref Aliases, "" ]]
 Resources:
 {{- if not .ImportVPC}}
 {{include "vpc-resources" .VPCConfig | indent 2}}
 {{include "nat-gateways" .VPCConfig | indent 2}}
+{{include "vpc-endpoints" .VPCConfig | indent 2}}
 {{- end}}
   # Creates a service discovery namespace with the form:
   # {svc}.{appname}.local
@@ -366,7 +372,7 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-SubDomain
   EnabledFeatures:
-    Value: !Sub '${ALBWorkloads},${EFSWorkloads},${NATWorkloads}'
+    Value: !Sub '${ALBWorkloads},${EFSWorkloads},${NATWorkloads},${VPCEndpointWorkloads}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
   ManagedFileSystemID:
     Condition: CreateEFS
