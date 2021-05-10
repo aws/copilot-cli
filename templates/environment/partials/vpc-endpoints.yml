@@ -23,21 +23,6 @@ IngressFromVPCEndpoints:
     IpProtocol: -1
     SourceSecurityGroupId: !Ref 'VPCEndpointSecurityGroup'
 
-{{- range $ind, $cidr := .PrivateSubnetCIDRs}}
-S3PrivateRouteTable{{inc $ind}}:
-  Type: AWS::EC2::RouteTable
-  Condition: CreateVPCEndpoints
-  Properties:
-    VpcId: !Ref 'VPC'
-
-S3PrivateRouteTable{{inc $ind}}Association:
-  Type: AWS::EC2::SubnetRouteTableAssociation
-  Condition: CreateVPCEndpoints
-  Properties:
-    RouteTableId: !Ref S3PrivateRouteTable{{inc $ind}}
-    SubnetId: !Ref PrivateSubnet{{inc $ind}}
-{{- end}}
-
 # Gateway endpoint for S3.
 S3GatewayVPCEndpoint:
   Condition: CreateVPCEndpoints
@@ -46,7 +31,7 @@ S3GatewayVPCEndpoint:
     VpcEndpointType: Gateway
     RouteTableIds:
       {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
-      - !Ref S3PrivateRouteTable{{inc $ind}}
+      - !Ref PrivateSubnet{{inc $ind}}RouteTable
       {{- end}}
     ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
     VpcId: !Ref VPC

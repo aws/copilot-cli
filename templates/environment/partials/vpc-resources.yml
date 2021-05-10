@@ -67,6 +67,15 @@ PrivateSubnet{{inc $ind}}:
     Tags:
       - Key: Name
         Value: !Sub 'copilot-${AppName}-${EnvironmentName}-priv{{$ind}}'
+PrivateSubnet{{inc $ind}}RouteTable:
+  Type: AWS::EC2::RouteTable
+  Properties:
+    VpcId: !Ref 'VPC'
+PrivateSubnet{{inc $ind}}RouteTableAssociation:
+  Type: AWS::EC2::SubnetRouteTableAssociation
+  Properties:
+    RouteTableId: !Ref PrivateRouteTable{{inc $ind}}
+    SubnetId: !Ref PrivateSubnet{{inc $ind}}
 {{end}}{{range $ind, $cidr := .PublicSubnetCIDRs}}
 PublicSubnet{{inc $ind}}RouteTableAssociation:
   Type: AWS::EC2::SubnetRouteTableAssociation
