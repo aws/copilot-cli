@@ -25,8 +25,8 @@ const (
 
 // ServiceTypes are the supported service manifest types.
 var ServiceTypes = []string{
-	LoadBalancedWebServiceType,
 	RequestDrivenWebServiceType,
+	LoadBalancedWebServiceType,
 	BackendServiceType,
 }
 

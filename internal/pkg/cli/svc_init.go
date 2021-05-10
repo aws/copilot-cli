@@ -39,11 +39,11 @@ const (
 
 var (
 	fmtSvcInitSvcTypePrompt     = "Which %s best represents your service's architecture?"
-	fmtSvcInitSvcTypeHelpPrompt = `A %s is a public, internet-facing, HTTP server that's behind a load balancer. 
-To learn more see: https://git.io/JfIpv
-
-A %s is a public, internet-facing, HTTP server that's managed by AWS AppRunner.
+	fmtSvcInitSvcTypeHelpPrompt = `A %s is an internet-facing HTTP server managed by AWS App Runner that scales based on incoming requests.
 To learn more see: https://git.io/Jt2UC
+
+A %s is an internet-facing HTTP server managed by Amazon ECS on AWS Fargate behind a load balancer.
+To learn more see: https://git.io/JfIpv
 
 A %s is a private, non internet-facing service accessible from other services in your VPC.
 To learn more see: https://git.io/JfIpT`
@@ -63,8 +63,8 @@ You should set this to the port which your Dockerfile uses to communicate with t
 )
 
 var serviceTypeHints = map[string]string{
-	manifest.LoadBalancedWebServiceType:  "Internet to ECS on Fargate",
 	manifest.RequestDrivenWebServiceType: "App Runner",
+	manifest.LoadBalancedWebServiceType:  "Internet to ECS on Fargate",
 	manifest.BackendServiceType:          "ECS on Fargate",
 }
 
@@ -239,8 +239,8 @@ func (o *initSvcOpts) askSvcType() error {
 	}
 
 	help := fmt.Sprintf(fmtSvcInitSvcTypeHelpPrompt,
-		manifest.LoadBalancedWebServiceType,
 		manifest.RequestDrivenWebServiceType,
+		manifest.LoadBalancedWebServiceType,
 		manifest.BackendServiceType,
 	)
 	msg := fmt.Sprintf(fmtSvcInitSvcTypePrompt, color.Emphasize("service type"))

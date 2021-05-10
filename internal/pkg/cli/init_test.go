@@ -111,12 +111,12 @@ func TestInitOpts_Run(t *testing.T) {
 			expect: func(opts *initOpts) {
 				opts.prompt.(*climocks.Mockprompter).EXPECT().SelectOption(gomock.Any(), gomock.Any(), []prompt.Option{
 					{
-						Value: manifest.LoadBalancedWebServiceType,
-						Hint:  "Internet to ECS on Fargate",
-					},
-					{
 						Value: manifest.RequestDrivenWebServiceType,
 						Hint:  "App Runner",
+					},
+					{
+						Value: manifest.LoadBalancedWebServiceType,
+						Hint:  "Internet to ECS on Fargate",
 					},
 					{
 						Value: manifest.BackendServiceType,

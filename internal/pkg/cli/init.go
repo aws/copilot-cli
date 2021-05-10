@@ -250,7 +250,7 @@ func (o *initOpts) Run() error {
 		log.Warningln("It's best to run this command in the root of your Git repository.")
 	}
 	log.Infoln(color.Help(`Welcome to the Copilot CLI! We're going to walk you through some questions
-to help you get set up with an application on ECS. An application is a collection of
+to help you get set up with a containerized application on AWS. An application is a collection of
 containerized services that operate together.`))
 	log.Infoln()
 
@@ -341,8 +341,8 @@ func (o *initOpts) askWorkload() (string, error) {
 	wkldInitTypePrompt := "Which " + color.Emphasize("workload type") + " best represents your architecture?"
 	// Build the workload help prompt from existing helps text.
 	wkldHelp := fmt.Sprintf(fmtSvcInitSvcTypeHelpPrompt,
-		manifest.LoadBalancedWebServiceType,
 		manifest.RequestDrivenWebServiceType,
+		manifest.LoadBalancedWebServiceType,
 		manifest.BackendServiceType,
 	) + `
 
@@ -423,8 +423,8 @@ func BuildInitCmd() *cobra.Command {
 	vars := initVars{}
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Create a new ECS application.",
-		Long:  "Create a new ECS application.",
+		Short: "Create a new ECS or App Runner application.",
+		Long:  "Create a new ECS or App Runner application.",
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitOpts(vars)
 			if err != nil {
