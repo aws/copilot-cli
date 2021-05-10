@@ -5,8 +5,12 @@
 package ecs
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/copilot-cli/internal/pkg/aws/stepfunctions"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -38,6 +42,10 @@ type ecsClient interface {
 	NetworkConfiguration(cluster, serviceName string) (*ecs.NetworkConfiguration, error)
 }
 
+type stepFunctionsClient interface {
+	StateMachineDefinition(stateMachineARN string) (string, error)
+}
+
 // ServiceDesc contains the description of an ECS service.
 type ServiceDesc struct {
 	Name        string
@@ -47,15 +55,17 @@ type ServiceDesc struct {
 
 // Client retrieves Copilot information from ECS endpoint.
 type Client struct {
-	rgGetter  resourceGetter
-	ecsClient ecsClient
+	rgGetter       resourceGetter
+	ecsClient      ecsClient
+	StepFuncClient stepFunctionsClient
 }
 
 // New inits a new Client.
 func New(sess *session.Session) *Client {
 	return &Client{
-		rgGetter:  resourcegroups.New(sess),
-		ecsClient: ecs.New(sess),
+		rgGetter:       resourcegroups.New(sess),
+		ecsClient:      ecs.New(sess),
+		StepFuncClient: stepfunctions.New(sess),
 	}
 }
 
@@ -220,6 +230,83 @@ func (c Client) NetworkConfiguration(app, env, svc string) (*ecs.NetworkConfigur
 	return c.ecsClient.NetworkConfiguration(clusterARN, svcName)
 }
 
+// NetworkConfigurationForJob returns the network configuration of the job.
+func (c Client) NetworkConfigurationForJob(app, env, job string) (*ecs.NetworkConfiguration, error) {
+	jobARN, err := c.stateMachineARN(app, env, job)
+	if err != nil {
+		return nil, err
+	}
+
+	raw, err := c.StepFuncClient.StateMachineDefinition(jobARN)
+	if err != nil {
+		return nil, fmt.Errorf("get state machine definition for job %s: %w", job, err)
+	}
+
+	var config NetworkConfiguration
+	err = json.Unmarshal([]byte(raw), &config)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal state machine definition: %w", err)
+	}
+
+	return (*ecs.NetworkConfiguration)(&config), nil
+}
+
+// NetworkConfiguration wraps an ecs.NetworkConfiguration struct.
+type NetworkConfiguration ecs.NetworkConfiguration
+
+// UnmarshalJSON implements custom logic to unmarshal only the network configuration from a state machine definition.
+// Example state machine definition:
+//	 "Version": "1.0",
+//	 "Comment": "Run AWS Fargate task",
+//	 "StartAt": "Run Fargate Task",
+//	 "States": {
+//	   "Run Fargate Task": {
+//		 "Type": "Task",
+//		 "Resource": "arn:aws:states:::ecs:runTask.sync",
+//		 "Parameters": {
+//		   "LaunchType": "FARGATE",
+//		   "PlatformVersion": "1.4.0",
+//		   "Cluster": "cluster",
+//		   "TaskDefinition": "def",
+//		   "PropagateTags": "TASK_DEFINITION",
+//		   "Group.$": "$$.Execution.Name",
+//		   "NetworkConfiguration": {
+//			 "AwsvpcConfiguration": {
+//			   "Subnets": ["sbn-1", "sbn-2"],
+//			   "AssignPublicIp": "ENABLED",
+//			   "SecurityGroups": ["sg-1", "sg-2"]
+//			 }
+//		   }
+//		 },
+//		 "End": true
+//	   }
+func (n *NetworkConfiguration) UnmarshalJSON(b []byte) error {
+	var f interface{}
+	err := json.Unmarshal(b, &f)
+	if err != nil {
+		return err
+	}
+
+	states := f.(map[string]interface{})["States"].(map[string]interface{})
+	parameters := states["Run Fargate Task"].(map[string]interface{})["Parameters"].(map[string]interface{})
+	networkConfig := parameters["NetworkConfiguration"].(map[string]interface{})["AwsvpcConfiguration"].(map[string]interface{})
+
+	var subnets []string
+	for _, subnet := range networkConfig["Subnets"].([]interface{}) {
+		subnets = append(subnets, subnet.(string))
+	}
+
+	var securityGroups []string
+	for _, sg := range networkConfig["SecurityGroups"].([]interface{}) {
+		securityGroups = append(securityGroups, sg.(string))
+	}
+
+	n.Subnets = subnets
+	n.SecurityGroups = securityGroups
+	n.AssignPublicIp = networkConfig["AssignPublicIp"].(string)
+	return nil
+}
+
 func (c Client) listActiveCopilotTasks(opts listActiveCopilotTasksOpts) ([]*ecs.Task, error) {
 	var tasks []*ecs.Task
 	if opts.TaskGroup != "" {
@@ -308,4 +395,37 @@ func (c Client) serviceARN(app, env, svc string) (*ecs.ServiceArn, error) {
 	}
 	serviceArn := ecs.ServiceArn(services[0].ARN)
 	return &serviceArn, nil
+}
+
+func (c Client) stateMachineARN(app, env, job string) (string, error) {
+	resources, err := c.rgGetter.GetResourcesByTags(resourcegroups.ResourceTypeStateMachine, map[string]string{
+		deploy.AppTagKey:     app,
+		deploy.EnvTagKey:     env,
+		deploy.ServiceTagKey: job,
+	})
+	if err != nil {
+		return "", fmt.Errorf("get state machine resource by tags for job %s: %w", job, err)
+	}
+
+	var stateMachineARN string
+	targetName := fmt.Sprintf(fmtStateMachineName, app, env, job)
+	for _, r := range resources {
+		parsedARN, err := arn.Parse(r.ARN)
+		if err != nil {
+			continue
+		}
+		parts := strings.Split(parsedARN.Resource, ":")
+		if len(parts) != 2 {
+			continue
+		}
+		if parts[1] == targetName {
+			stateMachineARN = r.ARN
+			break
+		}
+	}
+
+	if stateMachineARN == "" {
+		return "", fmt.Errorf("state machine for job %s not found", job)
+	}
+	return stateMachineARN, nil
 }
