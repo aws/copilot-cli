@@ -1,6 +1,7 @@
-# Security group to allow receiving HTTPS traffic.
 VPCEndpointSecurityGroup:
   Condition: CreateVPCEndpoints
+  Metadata:
+    'aws:copilot:description': 'A security group to associate with your VPC endpoints'
   Type: AWS::EC2::SecurityGroup
   Properties:
     GroupDescription: Security Group to allow use of VPC Endpoints.
@@ -22,16 +23,6 @@ IngressFromVPCEndpoints:
     IpProtocol: -1
     SourceSecurityGroupId: !Ref 'VPCEndpointSecurityGroup'
 
-# Allow traffic from VPC endpoints.
-IngressFromItself:
-  Condition: CreateVPCEndpoints
-  Type: AWS::EC2::SecurityGroupIngress
-  Properties:
-    Description: Ingress from VPC endpoints.
-    GroupId: !Ref 'EnvironmentSecurityGroup'
-    IpProtocol: -1
-    SourceSecurityGroupId: !Ref 'EnvironmentSecurityGroup'
-
 {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
 S3PrivateRouteTable{{inc $ind}}:
   Type: AWS::EC2::RouteTable
@@ -46,39 +37,6 @@ S3PrivateRouteTable{{inc $ind}}Association:
     RouteTableId: !Ref S3PrivateRouteTable{{inc $ind}}
     SubnetId: !Ref PrivateSubnet{{inc $ind}}
 {{- end}}
-
-# ECS Resources
-ECSCluster:
-  Condition: CreateVPCEndpoints
-  Type: AWS::ECS::Cluster
-
-ECSTaskExecutionRole:
-  Condition: CreateVPCEndpoints
-  Type: AWS::IAM::Role
-  Properties:
-    AssumeRolePolicyDocument:
-      Statement:
-        - Effect: Allow
-          Principal:
-            Service: [ecs-tasks.amazonaws.com]
-          Action: ['sts:AssumeRole']
-    Path: /
-    Policies:
-      - PolicyName: AmazonECSTaskExecutionRolePolicy
-        PolicyDocument:
-          Statement:
-            - Effect: Allow
-              Action:
-                # Allow the ECS Tasks to download images from ECR
-                - 'ecr:GetAuthorizationToken'
-                - 'ecr:BatchCheckLayerAvailability'
-                - 'ecr:GetDownloadUrlForLayer'
-                - 'ecr:BatchGetImage'
-
-                # Allow the ECS tasks to upload logs to CloudWatch
-                - 'logs:CreateLogStream'
-                - 'logs:PutLogEvents'
-              Resource: '*'
 
 # Gateway endpoint for S3.
 S3GatewayVPCEndpoint:
