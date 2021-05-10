@@ -218,6 +218,14 @@ func (o *secretInitOpts) parseFile() (string, map[string]string, error) {
 	return "", nil, nil
 }
 
+func (o *secretInitOpts) parseFileDraft() error {
+	_, err := o.fs.Open(o.inputFilePath)
+	if err != nil {
+		return fmt.Errorf("open input file %s: %w", o.inputFilePath, err)
+	}
+	return nil
+}
+
 func (o *secretInitOpts) askForAppName() error {
 	if o.appName != "" {
 		return nil
@@ -292,7 +300,7 @@ func (o *secretInitOpts) targetEnv(envName string) (*config.Environment, error) 
 func BuildSecretInitCmd() *cobra.Command {
 	vars := secretInitVars{}
 	cmd := &cobra.Command{
-		Use:     "init",
+		Use:     "secret init",
 		Short:   "Create or update an SSM SecureString parameter.",
 		Example: ``, // TODO
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {

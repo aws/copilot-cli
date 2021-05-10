@@ -139,6 +139,8 @@ EnvironmentManagerRole:
             "ssm:GetParameter",
             "ssm:GetParameters",
             "ssm:GetParametersByPath"
+            "ssm:PutParameter",
+            "ssm:AddTagsToResource"
           ]
           Resource: "*"
         - Sid: ELBv2

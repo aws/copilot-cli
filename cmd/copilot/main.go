@@ -53,6 +53,8 @@ func buildRootCmd() *cobra.Command {
 	cmd.AddCommand(cli.BuildInitCmd())
 	cmd.AddCommand(cli.BuildDocsCmd())
 
+	cmd.AddCommand(cli.BuildSecretInitCmd())
+
 	// "Develop" command group.
 	cmd.AddCommand(cli.BuildAppCmd())
 	cmd.AddCommand(cli.BuildEnvCmd())
