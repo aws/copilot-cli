@@ -1,7 +1,7 @@
 # Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 AWSTemplateFormatVersion: 2010-09-09
-Description: CloudFormation template that represents a load balanced web service on Amazon ECS.
+Description: CloudFormation template that represents a request driven web service on AWS App Runner.
 Parameters:
   AppName:
     Type: String
