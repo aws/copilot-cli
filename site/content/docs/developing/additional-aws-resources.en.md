@@ -41,7 +41,9 @@ However, by default, Copilot will pass the `App`, `Env`, and `Name` [Parameters]
 If you need to access your [Resources](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html) from your ECS task, make sure to:
 
 1. Define an [IAM ManagedPolicy](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-managedpolicy.html) resource in your template that holds the permissions for your task and add an [Output](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) so that the permission is injected to your ECS Task Role.
-2. Create an [Output](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) for any value that you want to be injected as an environment variable to your ECS tasks.
+2. Define a [Security Group](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html) in your template and add an [Output](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html). The security group will be automatically attached to your ECS service.
+3. Define a [Secret](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-secretsmanager-secret.html) in your template and add an [Output](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html). The secret will be injected into your container and can be accessed as an environment variable.
+4. Create an [Output](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) for any value that you want to be injected as an environment variable to your ECS tasks.
 
 Here is an example template layout for a DynamoDB table addon:
 ```yaml
