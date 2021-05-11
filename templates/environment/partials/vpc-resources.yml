@@ -41,6 +41,7 @@ InternetGatewayAttachment:
   Properties:
     InternetGatewayId: !Ref InternetGateway
     VpcId: !Ref VPC
+
 {{range $ind, $cidr := .PublicSubnetCIDRs}}
 PublicSubnet{{inc $ind}}:
   Metadata:
@@ -67,10 +68,12 @@ PrivateSubnet{{inc $ind}}:
     Tags:
       - Key: Name
         Value: !Sub 'copilot-${AppName}-${EnvironmentName}-priv{{$ind}}'
-PrivateSubnet{{inc $ind}}RouteTable:
+
+PrivateRouteTable{{inc $ind}}:
   Type: AWS::EC2::RouteTable
   Properties:
     VpcId: !Ref 'VPC'
+
 PrivateSubnet{{inc $ind}}RouteTableAssociation:
   Type: AWS::EC2::SubnetRouteTableAssociation
   Properties:

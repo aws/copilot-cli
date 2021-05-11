@@ -33,7 +33,7 @@ S3GatewayVPCEndpoint:
     VpcEndpointType: Gateway
     RouteTableIds:
       {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
-      - !Ref PrivateSubnet{{inc $ind}}RouteTable
+      - !Ref PrivateRouteTable{{inc $ind}}
       {{- end}}
     ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
     VpcId: !Ref VPC
