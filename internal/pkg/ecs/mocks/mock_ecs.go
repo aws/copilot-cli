@@ -181,3 +181,41 @@ func (mr *MockecsClientMockRecorder) TaskDefinition(taskDefName interface{}) *go
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockecsClient)(nil).TaskDefinition), taskDefName)
 }
+
+// MockstepFunctionsClient is a mock of stepFunctionsClient interface.
+type MockstepFunctionsClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockstepFunctionsClientMockRecorder
+}
+
+// MockstepFunctionsClientMockRecorder is the mock recorder for MockstepFunctionsClient.
+type MockstepFunctionsClientMockRecorder struct {
+	mock *MockstepFunctionsClient
+}
+
+// NewMockstepFunctionsClient creates a new mock instance.
+func NewMockstepFunctionsClient(ctrl *gomock.Controller) *MockstepFunctionsClient {
+	mock := &MockstepFunctionsClient{ctrl: ctrl}
+	mock.recorder = &MockstepFunctionsClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockstepFunctionsClient) EXPECT() *MockstepFunctionsClientMockRecorder {
+	return m.recorder
+}
+
+// StateMachineDefinition mocks base method.
+func (m *MockstepFunctionsClient) StateMachineDefinition(stateMachineARN string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StateMachineDefinition", stateMachineARN)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StateMachineDefinition indicates an expected call of StateMachineDefinition.
+func (mr *MockstepFunctionsClientMockRecorder) StateMachineDefinition(stateMachineARN interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateMachineDefinition", reflect.TypeOf((*MockstepFunctionsClient)(nil).StateMachineDefinition), stateMachineARN)
+}
