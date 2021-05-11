@@ -77,12 +77,11 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 	}
 
 	opts.configureSecretPutter = func(envName string) (secretPutter, error) {
-		provider := sessions.NewProvider()
 		env, err := opts.targetEnv(envName)
 		if err != nil {
 			return nil, err
 		}
-		sess, err := provider.FromRole(env.ManagerRoleARN, env.Region)
+		sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return nil, fmt.Errorf("create session from environment manager role %s in region %s: %w", env.ManagerRoleARN, env.Region, err)
 		}
