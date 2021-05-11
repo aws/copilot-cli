@@ -27,7 +27,7 @@ IngressFromVPCEndpoints:
 S3GatewayVPCEndpoint:
   Condition: CreateVPCEndpoints
   Metadata:
-    'aws:copilot:description': 'An S3 gateway endpoint.'
+    'aws:copilot:description': 'An S3 gateway endpoint'
   Type: AWS::EC2::VPCEndpoint
   Properties:
     VpcEndpointType: Gateway
@@ -42,7 +42,7 @@ S3GatewayVPCEndpoint:
 EcrApiVPCEndpoint:
   Condition: CreateVPCEndpoints
   Metadata:
-    'aws:copilot:description': 'ECR interface endpoints.'
+    'aws:copilot:description': 'ECR interface endpoints'
   Type: AWS::EC2::VPCEndpoint
   Properties:
     VpcEndpointType: Interface
@@ -74,7 +74,7 @@ EcrDkrVPCEndpoint:
 LogsVPCEndpoint:
   Condition: CreateVPCEndpoints
   Metadata:
-    'aws:copilot:description': 'A CloudWatch Logs interface endpoint.'
+    'aws:copilot:description': 'A CloudWatch Logs interface endpoint'
   Type: AWS::EC2::VPCEndpoint
   Properties:
     VpcEndpointType: Interface
@@ -91,7 +91,7 @@ LogsVPCEndpoint:
 SSMVPCEndpoint:
   Condition: CreateVPCEndpoints
   Metadata:
-    'aws:copilot:description': 'Systems Manager interface endpoints.'
+    'aws:copilot:description': 'Systems Manager interface endpoints'
   Type: AWS::EC2::VPCEndpoint
   Properties:
     VpcEndpointType: Interface
@@ -138,15 +138,15 @@ EC2VPCEndpoint:
 SecretsManagerVPCEndpoint:
   Condition: CreateVPCEndpoints
   Metadata:
-    'aws:copilot:description': 'A Secrets Manager interface endpoint.'
+    'aws:copilot:description': 'A Secrets Manager interface endpoint'
   Type: AWS::EC2::VPCEndpoint
   Properties:
     VpcEndpointType: Interface
     PrivateDnsEnabled: true
     SubnetIds:
-      { { - range $ind, $cidr := .PrivateSubnetCIDRs } }
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
       - !Ref PrivateSubnet{{inc $ind}}
-      { { - end } }
+      {{- end } }
     ServiceName: !Sub com.amazonaws.${AWS::Region}.secretsmanager
     VpcId: !Ref VPC
     SecurityGroupIds:
