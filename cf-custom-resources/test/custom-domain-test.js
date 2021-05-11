@@ -14,7 +14,7 @@ describe("DNS Validated Certificate Handler", () => {
   const testAppName = "myapp";
   const testEnvName = "test";
   const testDomainName = "example.com";
-  const testAliases = `{"frontend": "v1.${testEnvName}.${testAppName}.${testDomainName},foobar.com"}`;
+  const testAliases = `{"frontend": ["v1.${testEnvName}.${testAppName}.${testDomainName}", "foobar.com"]}`;
   const testLoadBalancerDNS =
     "examp-publi-gsedbvf8t12c-852245110.us-west-1.elb.amazonaws.com.";
   const testLBHostedZone = "Z1H1FL5HABSF5";

@@ -239,7 +239,7 @@ exports.handler = async function (event, context) {
 };
 
 // getAllAliases gets all aliases out from a string. For example:
-// {"frontend": "test.foobar.com,foobar.com", "api": "api.foobar.com"} will return
+// {"frontend": ["test.foobar.com", "foobar.com"], "api": ["api.foobar.com"]} will return
 // ["foobar.com"].
 const getAllAliases = function (aliases) {
   let obj;
@@ -250,7 +250,7 @@ const getAllAliases = function (aliases) {
   }
   var aliasList = [];
   for (var m in obj) {
-    aliasList.push(...obj[m].split(","));
+    aliasList.push(...obj[m]);
   }
   return [...new Set(aliasList)];
 };
