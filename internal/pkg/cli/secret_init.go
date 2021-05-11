@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/spf13/afero"
@@ -58,6 +60,7 @@ type secretInitOpts struct {
 	selector appSelector
 
 	configureSecretPutter func(envName string) (secretPutter, error)
+	readFile              func() ([]byte, error)
 }
 
 func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
@@ -86,6 +89,20 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 			return nil, fmt.Errorf("create session from environment manager role %s in region %s: %w", env.ManagerRoleARN, env.Region, err)
 		}
 		return ssm.New(sess), nil
+	}
+
+	opts.readFile = func() ([]byte, error) {
+		file, err := opts.fs.Open(opts.inputFilePath)
+		if err != nil {
+			return nil, fmt.Errorf("open input file %s: %w", opts.inputFilePath, err)
+		}
+
+		f, err := afero.ReadFile(opts.fs, file.Name())
+		if err != nil {
+			return nil, fmt.Errorf("read input file %s: %w", opts.inputFilePath, err)
+		}
+
+		return f, nil
 	}
 	return &opts, nil
 }
@@ -146,33 +163,34 @@ func (o *secretInitOpts) Ask() error {
 	return nil
 }
 
-// Execute creates the secrets.
+// Execute creates or updates the secrets.
 func (o *secretInitOpts) Execute() error {
-	secretName := o.name
-	secretValues := o.values
-
 	if o.inputFilePath != "" {
-		var err error
-		secretName, secretValues, err = o.parseFile()
+		secrets, err := o.parseSecretsInputFile()
 		if err != nil {
 			return err
 		}
-	}
-
-	return o.putSecrets(secretName, secretValues)
-}
-
-func (o *secretInitOpts) putSecrets(secretName string, values map[string]string) error {
-	for envName, value := range values {
-		err := o.putSecret(secretName, envName, value)
-		if err != nil {
-			return err
+		for secretName, secretValues := range secrets {
+			o.putSecret(secretName, secretValues)
 		}
+		return nil
 	}
+
+	o.putSecret(o.name, o.values)
 	return nil
 }
 
-func (o *secretInitOpts) putSecret(secretName, envName, value string) error {
+func (o *secretInitOpts) putSecret(secretName string, values map[string]string) {
+	for envName, value := range values {
+		err := o.putSecretInEnv(secretName, envName, value)
+		if err != nil {
+			log.Errorf("Failed to put secret %s in environment %s: %w", secretName, envName, err)
+			continue
+		}
+	}
+}
+
+func (o *secretInitOpts) putSecretInEnv(secretName, envName, value string) error {
 	client, err := o.configureSecretPutter(envName)
 	if err != nil {
 		return err
@@ -200,7 +218,7 @@ func (o *secretInitOpts) putSecret(secretName, envName, value string) error {
 			log.Infoln(fmt.Sprintf("Secret %s already exists. If you want to overwrite an existing secret, use the %s flag.\n", name, color.HighlightCode("--overwrite")))
 			return nil
 		}
-		return fmt.Errorf("put secret %s in environment %s: %w", secretName, envName, err)
+		return err
 	}
 
 	version := aws.Int64Value(out.Version)
@@ -213,8 +231,20 @@ func (o *secretInitOpts) putSecret(secretName, envName, value string) error {
 	return nil
 }
 
-func (o *secretInitOpts) parseFile() (string, map[string]string, error) {
-	return "", nil, nil
+func (o *secretInitOpts) parseSecretsInputFile() (map[string]map[string]string, error) {
+	raw, err := o.readFile()
+	if err != nil {
+		return nil, err
+	}
+
+	type inputFile struct {
+		Secrets map[string]map[string]string `yaml:",inline"`
+	}
+	var f inputFile
+	if err := yaml.Unmarshal(raw, &f); err != nil {
+		return nil, fmt.Errorf("unmarshal input file: %w", err)
+	}
+	return f.Secrets, nil
 }
 
 func (o *secretInitOpts) askForAppName() error {

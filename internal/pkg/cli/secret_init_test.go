@@ -500,3 +500,39 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 		})
 	}
 }
+
+func Test_SecretInitParseSecretsInputFile(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		opts := secretInitOpts{
+			readFile: func() ([]byte, error) {
+				raw := `db-password:
+    test: test-password
+    prod: prod-password
+db-host:
+    test: test-host
+    prod: prod-host
+test-only-secret:
+    test: test-only`
+				return []byte(raw), nil
+			},
+		}
+
+		expected := map[string]map[string]string{
+			"db-password": {
+				"test": "test-password",
+				"prod": "prod-password",
+			},
+			"db-host": {
+				"test": "test-host",
+				"prod": "prod-host",
+			},
+			"test-only-secret": {
+				"test": "test-only",
+			},
+		}
+
+		secrets, err := opts.parseSecretsInputFile()
+		require.NoError(t, err)
+		require.Equal(t, expected, secrets)
+	})
+}
