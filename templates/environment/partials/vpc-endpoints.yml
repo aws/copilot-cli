@@ -146,7 +146,7 @@ SecretsManagerVPCEndpoint:
     SubnetIds:
       {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
       - !Ref PrivateSubnet{{inc $ind}}
-      {{- end } }
+      {{- end}}
     ServiceName: !Sub com.amazonaws.${AWS::Region}.secretsmanager
     VpcId: !Ref VPC
     SecurityGroupIds:
