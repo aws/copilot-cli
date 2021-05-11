@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -67,8 +69,15 @@ func (s *SSM) PutSecret(in PutSecretInput) (*PutSecretOutput, error) {
 		Tags:      tags,
 	}
 	output, err := s.client.PutParameter(input)
-	if err != nil {
-		return nil, fmt.Errorf("put parameter %s: %w", in.Name, err)
+	if err == nil {
+		return (*PutSecretOutput)(output), nil
 	}
-	return (*PutSecretOutput)(output), nil
+
+	if awsErr, ok := err.(awserr.Error); ok {
+		if awsErr.Code() == ssm.ErrCodeParameterAlreadyExists {
+			return nil, &ErrParameterAlreadyExists{in.Name}
+		}
+	}
+	return nil, fmt.Errorf("put parameter %s: %w", in.Name, err)
+
 }

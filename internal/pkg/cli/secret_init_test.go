@@ -8,8 +8,13 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+
 	"github.com/aws/copilot-cli/internal/pkg/config"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/golang/mock/gomock"
 
@@ -90,6 +95,21 @@ func TestSecretInitOpts_Validate(t *testing.T) {
 			inInputFilePath: "weird/path/to/secrets",
 			setupMocks:      func(m secretInitMocks) {},
 			wantedError:     errors.New("open weird/path/to/secrets: file does not exist"),
+		},
+		"error if input file name is specified with name": {
+			inName:          "db-password",
+			inInputFilePath: "path/to/file",
+			setupMocks:      func(m secretInitMocks) {},
+			wantedError:     errors.New("cannot specify `--cli-input-yaml` with `--name`"),
+		},
+		"error if input file name is specified with values": {
+			inValues: map[string]string{
+				"test": "test-db",
+				"prod": "prod-db",
+			},
+			inInputFilePath: "path/to/file",
+			setupMocks:      func(m secretInitMocks) {},
+			wantedError:     errors.New("cannot specify `--cli-input-yaml` with `--values`"),
 		},
 	}
 
@@ -316,6 +336,164 @@ func TestSecretInitOpts_Ask(t *testing.T) {
 			if tc.wantedError == nil {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedVars, opts.secretInitVars)
+			} else {
+				require.EqualError(t, tc.wantedError, err.Error())
+			}
+		})
+	}
+}
+
+type secretInitExecuteMocks struct {
+	mockStore        *mocks.Mockstore
+	mockSecretPutter *mocks.MocksecretPutter
+}
+
+func TestSecretInitOpts_Execute(t *testing.T) {
+	var (
+		testApp    = "test-app"
+		testName   = "db-password"
+		testValues = map[string]string{
+			"test": "test-password",
+			"prod": "prod-password",
+		}
+	)
+	testCases := map[string]struct {
+		inAppName string
+		inName    string
+		inValues  map[string]string
+
+		inInputFilePath string
+
+		inOverwrite    bool
+		inResourceTags map[string]string
+
+		setupMocks func(m secretInitExecuteMocks)
+
+		wantedError error
+	}{
+		"successfully create secrets in two environments": {
+			inAppName: testApp,
+			inName:    testName,
+			inValues:  testValues,
+			inResourceTags: map[string]string{
+				"isPassword": "yes",
+			},
+
+			setupMocks: func(m secretInitExecuteMocks) {
+				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
+					Name:      "/copilot/test-app/test/secrets/db-password",
+					Value:     "test-password",
+					Overwrite: false,
+					Tags: map[string]string{
+						deploy.AppTagKey: "test-app",
+						deploy.EnvTagKey: "test",
+						"isPassword":     "yes",
+					},
+				}).Return(&ssm.PutSecretOutput{
+					Version: aws.Int64(1),
+				}, nil)
+				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
+					Name:      "/copilot/test-app/prod/secrets/db-password",
+					Value:     "prod-password",
+					Overwrite: false,
+					Tags: map[string]string{
+						deploy.AppTagKey: "test-app",
+						deploy.EnvTagKey: "prod",
+						"isPassword":     "yes",
+					},
+				}).Return(&ssm.PutSecretOutput{
+					Version: aws.Int64(1),
+				}, nil)
+			},
+		},
+		"do not throw error if parameter already exists": {
+			inAppName: testApp,
+			inName:    testName,
+			inValues:  testValues,
+
+			setupMocks: func(m secretInitExecuteMocks) {
+				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
+					Name:      "/copilot/test-app/test/secrets/db-password",
+					Value:     "test-password",
+					Overwrite: false,
+					Tags: map[string]string{
+						deploy.AppTagKey: "test-app",
+						deploy.EnvTagKey: "test",
+					},
+				}).Return(nil, &ssm.ErrParameterAlreadyExists{})
+				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
+					Name:      "/copilot/test-app/prod/secrets/db-password",
+					Value:     "prod-password",
+					Overwrite: false,
+					Tags: map[string]string{
+						deploy.AppTagKey: "test-app",
+						deploy.EnvTagKey: "prod",
+					},
+				}).Return(&ssm.PutSecretOutput{
+					Version: aws.Int64(1),
+				}, nil)
+			},
+		},
+		"error out if received other errors": {
+			inAppName: testApp,
+			inName:    testName,
+			inValues:  testValues,
+
+			setupMocks: func(m secretInitExecuteMocks) {
+				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
+					Name:      "/copilot/test-app/test/secrets/db-password",
+					Value:     "test-password",
+					Overwrite: false,
+					Tags: map[string]string{
+						deploy.AppTagKey: "test-app",
+						deploy.EnvTagKey: "test",
+					},
+				}).Return(nil, errors.New("some error"))
+				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
+					Name:      "/copilot/test-app/prod/secrets/db-password",
+					Value:     "prod-password",
+					Overwrite: false,
+					Tags: map[string]string{
+						deploy.AppTagKey: "test-app",
+						deploy.EnvTagKey: "prod",
+					},
+				}).Return(&ssm.PutSecretOutput{
+					Version: aws.Int64(1),
+				}, nil).MinTimes(0).MaxTimes(1)
+			},
+
+			wantedError: errors.New("put secret db-password in environment test: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := secretInitExecuteMocks{
+				mockStore:        mocks.NewMockstore(ctrl),
+				mockSecretPutter: mocks.NewMocksecretPutter(ctrl),
+			}
+			tc.setupMocks(m)
+
+			opts := secretInitOpts{
+				secretInitVars: secretInitVars{
+					appName:      tc.inAppName,
+					name:         tc.inName,
+					values:       tc.inValues,
+					resourceTags: tc.inResourceTags,
+					overwrite:    tc.inOverwrite,
+				},
+				store: m.mockStore,
+				configureSecretPutter: func(_ string) (secretPutter, error) {
+					return m.mockSecretPutter, nil
+				},
+			}
+
+			err := opts.Execute()
+			if tc.wantedError == nil {
+				require.NoError(t, err)
 			} else {
 				require.EqualError(t, tc.wantedError, err.Error())
 			}
