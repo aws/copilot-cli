@@ -217,14 +217,6 @@ func (o *secretInitOpts) parseFile() (string, map[string]string, error) {
 	return "", nil, nil
 }
 
-func (o *secretInitOpts) parseFileDraft() error {
-	_, err := o.fs.Open(o.inputFilePath)
-	if err != nil {
-		return fmt.Errorf("open input file %s: %w", o.inputFilePath, err)
-	}
-	return nil
-}
-
 func (o *secretInitOpts) askForAppName() error {
 	if o.appName != "" {
 		return nil
