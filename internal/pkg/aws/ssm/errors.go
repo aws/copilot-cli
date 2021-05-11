@@ -2,6 +2,7 @@ package ssm
 
 import "fmt"
 
+// ErrParameterAlreadyExists occurs when the parameter with name already existed.
 type ErrParameterAlreadyExists struct {
 	name string
 }
