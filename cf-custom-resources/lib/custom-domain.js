@@ -8,6 +8,8 @@ const aws = require("aws-sdk");
 let defaultResponseURL;
 let waiter;
 
+let hostedZoneCache = new Map();
+
 /**
  * Upload a CloudFormation response object to S3.
  *
@@ -149,17 +151,21 @@ const writeARecord = async function (
   domain,
   action
 ) {
-  const hostedZones = await route53
-    .listHostedZonesByName({
-      DNSName: domain,
-      MaxItems: "1",
-    })
-    .promise();
+  let hostedZoneId = hostedZoneCache.get(domain);
+  if (!hostedZoneId) {
+    const hostedZones = await route53
+      .listHostedZonesByName({
+        DNSName: domain,
+        MaxItems: "1",
+      })
+      .promise();
 
-  if (!hostedZones.HostedZones || hostedZones.HostedZones.length == 0) {
-    throw new Error(`Couldn't find any Hosted Zone with DNS name ${domain}.`);
+    if (!hostedZones.HostedZones || hostedZones.HostedZones.length == 0) {
+      throw new Error(`Couldn't find any Hosted Zone with DNS name ${domain}.`);
+    }
+    hostedZoneId = hostedZones.HostedZones[0].Id.split("/").pop();
+    hostedZoneCache.set(domain, hostedZoneId)
   }
-  const hostedZoneId = hostedZones.HostedZones[0].Id.split("/").pop();
   console.log(`${action} A record into Hosted Zone ${hostedZoneId}`);
   const changeBatch = await updateRecords(
     route53,
@@ -202,7 +208,7 @@ exports.handler = async function (event, context) {
           aliasTypes,
           "UPSERT"
         );
-        physicalResourceId = `custom-domain-${event.LogicalResourceId}`;
+        physicalResourceId = `${event.LogicalResourceId}`;
         break;
       case "Delete":
         await writeCustomDomainRecord(
@@ -233,8 +239,8 @@ exports.handler = async function (event, context) {
 };
 
 // getAllAliases gets all aliases out from a string. For example:
-// {"frontend": "foobar.com,barfoo.com", "api": "foo.com"} will return
-// ["foobar.com", "barfoo.com", "foo.com"].
+// {"frontend": "test.foobar.com,foobar.com", "api": "api.foobar.com"} will return
+// ["foobar.com"].
 const getAllAliases = function (aliases) {
   let obj;
   try {

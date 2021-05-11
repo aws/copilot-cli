@@ -274,13 +274,8 @@ describe("DNS Validated Certificate Handler", () => {
         },
       })
       .expectResolve(() => {
-        sinon.assert.calledWith(
-          listHostedZonesByNameFake,
-          sinon.match({
-            DNSName: `${testEnvName}.${testAppName}.${testDomainName}`,
-            MaxItems: "1",
-          })
-        );
+        // use cached result
+        sinon.assert.notCalled(listHostedZonesByNameFake);
         sinon.assert.calledWith(
           changeResourceRecordSetsFake,
           sinon.match({
