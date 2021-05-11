@@ -197,7 +197,7 @@ func (o *secretInitOpts) putSecret(secretName, envName, value string) error {
 	if err != nil {
 		var targetErr *ssm.ErrParameterAlreadyExists
 		if errors.As(err, &targetErr) {
-			log.Infoln(fmt.Sprintf("Secret %s already exists. Do not overwrite.\n", name))
+			log.Infoln(fmt.Sprintf("Secret %s already exists. If you want to overwrite an existing secret, use the %s flag.\n", name, color.HighlightCode("--overwrite")))
 			return nil
 		}
 		return fmt.Errorf("put secret %s in environment %s: %w", secretName, envName, err)
