@@ -215,7 +215,7 @@ func (o *secretInitOpts) putSecret(secretName string, values map[string]string) 
 		}
 	}
 
-	for envName, _ := range errorsForEnvironments {
+	for envName := range errorsForEnvironments {
 		log.Errorf("Failed to put secret %s in environment %s. See error message below.\n", color.HighlightUserInput(secretName), color.HighlightUserInput(envName))
 	}
 	log.Infoln("")
