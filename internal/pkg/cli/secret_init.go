@@ -154,7 +154,7 @@ func (o *secretInitOpts) Validate() error {
 // Ask prompts the user for any required or important fields that are not provided.
 func (o *secretInitOpts) Ask() error {
 	if o.overwrite {
-		log.Warningf("You have specified %s flag. Please note that overwriting an existing secret may break your deployed service.\n", color.HighlightCode("--overwrite"))
+		log.Warningf("You have specified %s flag. Please note that overwriting an existing secret may break your deployed service.\n", color.HighlightCode(fmt.Sprintf("--%s", overwriteFlag)))
 	}
 
 	if o.inputFilePath != "" {
@@ -413,7 +413,7 @@ func BuildSecretInitCmd() *cobra.Command {
 
 			err = opts.Execute()
 			if opts.shouldShowOverwriteHint {
-				log.Warningf("If you want to overwrite an existing secret, use the %s flag.\n", color.HighlightCode("--overwrite"))
+				log.Warningf("If you want to overwrite an existing secret, use the %s flag.\n", color.HighlightCode(fmt.Sprintf("--%s", overwriteFlag)))
 			}
 			if err != nil {
 				return err
