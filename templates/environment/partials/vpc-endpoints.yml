@@ -135,6 +135,21 @@ EC2VPCEndpoint:
     SecurityGroupIds:
       - !Ref VPCEndpointSecurityGroup
 
+SSMMessagesVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    PrivateDnsEnabled: true
+    SubnetIds:
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+      - !Ref PrivateSubnet{{inc $ind}}
+      {{- end}}
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.ssmmessages
+    VpcId: !Ref VPC
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup
+
 SecretsManagerVPCEndpoint:
   Condition: CreateVPCEndpoints
   Metadata:
