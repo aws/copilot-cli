@@ -53,11 +53,7 @@ func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
 		},
 	}
 	opts.initLogsSvc = func() error {
-		configStore, err := config.NewStore()
-		if err != nil {
-			return fmt.Errorf("connect to environment config store: %w", err)
-		}
-		env, err := configStore.GetEnvironment(opts.appName, opts.envName)
+		env, err := opts.configStore.GetEnvironment(opts.appName, opts.envName)
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
 		}
@@ -93,11 +89,11 @@ func (o *jobLogsOpts) Validate() error {
 			return fmt.Errorf("--since must be greater than 0")
 		}
 		// round up to the nearest second
-		o.startTime = o.parseSince(o.since)
+		o.startTime = parseSince(o.since)
 	}
 
 	if o.humanStartTime != "" {
-		startTime, err := o.parseRFC3339(o.humanStartTime)
+		startTime, err := parseRFC3339(o.humanStartTime)
 		if err != nil {
 			return fmt.Errorf(`invalid argument %s for "--start-time" flag: %w`, o.humanStartTime, err)
 		}
@@ -105,7 +101,7 @@ func (o *jobLogsOpts) Validate() error {
 	}
 
 	if o.humanEndTime != "" {
-		endTime, err := o.parseRFC3339(o.humanEndTime)
+		endTime, err := parseRFC3339(o.humanEndTime)
 		if err != nil {
 			return fmt.Errorf(`invalid argument %s for "--end-time" flag: %w`, o.humanEndTime, err)
 		}

@@ -194,7 +194,7 @@ Defaults to all logs. Only one of start-time / since may be used.`
 	endTimeFlagDescription = `Optional. Only return logs before a specific date (RFC3339).
 Defaults to all logs. Only one of end-time / follow may be used.`
 	tasksLogsFlagDescription               = "Optional. Only return logs from specific task IDs."
-	includeStateMachineLogsFlagDescription = "Optional. Include logs from the state machine executions. Default is false."
+	includeStateMachineLogsFlagDescription = "Optional. Include logs from the state machine executions."
 
 	deployTestFlagDescription        = `Deploy your service or job to a "test" environment.`
 	githubURLFlagDescription         = "(Deprecated.) Use --url instead. Repository URL to trigger your pipeline."

@@ -118,11 +118,11 @@ func (o *svcLogsOpts) Validate() error {
 			return fmt.Errorf("--since must be greater than 0")
 		}
 		// round up to the nearest second
-		o.startTime = o.parseSince(o.since)
+		o.startTime = parseSince(o.since)
 	}
 
 	if o.humanStartTime != "" {
-		startTime, err := o.parseRFC3339(o.humanStartTime)
+		startTime, err := parseRFC3339(o.humanStartTime)
 		if err != nil {
 			return fmt.Errorf(`invalid argument %s for "--start-time" flag: %w`, o.humanStartTime, err)
 		}
@@ -130,7 +130,7 @@ func (o *svcLogsOpts) Validate() error {
 	}
 
 	if o.humanEndTime != "" {
-		endTime, err := o.parseRFC3339(o.humanEndTime)
+		endTime, err := parseRFC3339(o.humanEndTime)
 		if err != nil {
 			return fmt.Errorf(`invalid argument %s for "--end-time" flag: %w`, o.humanEndTime, err)
 		}
@@ -201,13 +201,13 @@ func (o *svcLogsOpts) askSvcEnvName() error {
 	return nil
 }
 
-func (o *wkldLogOpts) parseSince(since time.Duration) *int64 {
+func parseSince(since time.Duration) *int64 {
 	sinceSec := int64(since.Round(time.Second).Seconds())
 	timeNow := time.Now().Add(time.Duration(-sinceSec) * time.Second)
 	return aws.Int64(timeNow.Unix() * 1000)
 }
 
-func (o *wkldLogOpts) parseRFC3339(timeStr string) (int64, error) {
+func parseRFC3339(timeStr string) (int64, error) {
 	startTimeTmp, err := time.Parse(time.RFC3339, timeStr)
 	if err != nil {
 		return 0, fmt.Errorf("reading time value %s: %w", timeStr, err)
