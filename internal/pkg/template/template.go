@@ -28,6 +28,7 @@ const (
 	DNSCertValidatorFileName = "dns-cert-validator"
 	DNSDelegationFileName    = "dns-delegation"
 	EnableLongARNsFileName   = "enable-long-arns"
+	CustomDomainFileName     = "custom-domain"
 )
 
 var box = templates.Box()
@@ -36,6 +37,7 @@ var envCustomResourceFiles = []string{
 	DNSCertValidatorFileName,
 	DNSDelegationFileName,
 	EnableLongARNsFileName,
+	CustomDomainFileName,
 }
 
 // Parser is the interface that wraps the Parse method.

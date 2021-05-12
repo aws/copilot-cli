@@ -1,14 +1,15 @@
 EnableLongARNFormatAction:
+  Metadata:
+    'aws:copilot:description': 'Enable long ARN formats for the authenticated AWS principal'
   Type: Custom::EnableLongARNFormatFunction
   DependsOn:
     - EnableLongARNFormatFunction
   Properties:
     ServiceToken: !GetAtt EnableLongARNFormatFunction.Arn
 
-# Adds records for this environment's hostedzone
-# into the application's hostedzone. This lets this
-# environment own the DNS of the it's subdomain.
 DelegateDNSAction:
+  Metadata:
+    'aws:copilot:description': 'Delegate DNS for environment subdomain'
   Condition: DelegateDNS
   Type: Custom::DNSDelegationFunction
   DependsOn:
@@ -22,6 +23,8 @@ DelegateDNSAction:
     RootDNSRole: !Ref AppDNSDelegationRole
 
 HTTPSCert:
+  Metadata:
+    'aws:copilot:description': 'Request and validate an ACM certificate for your domain'
   Condition: DelegateDNS
   Type: Custom::CertificateValidationFunction
   DependsOn:
@@ -44,3 +47,19 @@ HTTPSCert:
     - !Sub "${AppName}.${AppDNSName}"
     - !Sub "*.${AppName}.${AppDNSName}"
     - !Sub "*.${EnvironmentName}.${AppName}.${AppDNSName}"
+
+CustomDomainAction:
+  Metadata:
+    'aws:copilot:description': 'Add an A-record to the hosted zone for the domain alias'
+  Condition: HasAliases
+  DependsOn: HTTPSCert
+  Type: Custom::CustomDomainFunction
+  Properties:
+    ServiceToken: !GetAtt CustomDomainFunction.Arn
+    AppName: !Ref AppName
+    EnvName: !Ref EnvironmentName
+    Aliases: !Ref Aliases
+    AppDNSRole: !Ref AppDNSDelegationRole
+    DomainName: !Ref AppDNSName
+    LoadBalancerDNS: !GetAtt PublicLoadBalancer.DNSName
+    LoadBalancerHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID 
