@@ -359,15 +359,17 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 	)
 	testCases := map[string]struct {
 		inAppName string
-		inName    string
-		inValues  map[string]string
+
+		inName   string
+		inValues map[string]string
 
 		inInputFilePath string
 
 		inOverwrite    bool
 		inResourceTags map[string]string
 
-		setupMocks func(m secretInitExecuteMocks)
+		mockInputFileContent []byte
+		setupMocks           func(m secretInitExecuteMocks)
 
 		wantedError error
 	}{
@@ -434,6 +436,99 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 				}, nil)
 			},
 		},
+		"a secret fails to create in some environments": {
+			inAppName: testApp,
+			inName:    testName,
+			inValues:  testValues,
+
+			setupMocks: func(m secretInitExecuteMocks) {
+				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
+					Name:      "/copilot/test-app/test/secrets/db-password",
+					Value:     "test-password",
+					Overwrite: false,
+					Tags: map[string]string{
+						deploy.AppTagKey: "test-app",
+						deploy.EnvTagKey: "test",
+					},
+				}).Return(nil, errors.New("some error"))
+				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
+					Name:      "/copilot/test-app/prod/secrets/db-password",
+					Value:     "prod-password",
+					Overwrite: false,
+					Tags: map[string]string{
+						deploy.AppTagKey: "test-app",
+						deploy.EnvTagKey: "prod",
+					},
+				}).Return(&ssm.PutSecretOutput{
+					Version: aws.Int64(1),
+				}, nil)
+			},
+
+			wantedError: &errSecretFailedInSomeEnvironments{
+				secretName: testName,
+				errorsForEnvironments: map[string]error{
+					"test": errors.New("some error"),
+				},
+			},
+		},
+		"some secrets fail to create during a batch operation": {
+			inAppName:       testApp,
+			inInputFilePath: "some/file",
+
+			mockInputFileContent: []byte(`db-password:
+    test: test-password
+    prod: prod-password
+db-host:
+    test: test-host`),
+			setupMocks: func(m secretInitExecuteMocks) {
+				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
+					Name:      "/copilot/test-app/test/secrets/db-password",
+					Value:     "test-password",
+					Overwrite: false,
+					Tags: map[string]string{
+						deploy.AppTagKey: "test-app",
+						deploy.EnvTagKey: "test",
+					},
+				}).Return(nil, errors.New("some error for db-password in test"))
+				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
+					Name:      "/copilot/test-app/prod/secrets/db-password",
+					Value:     "prod-password",
+					Overwrite: false,
+					Tags: map[string]string{
+						deploy.AppTagKey: "test-app",
+						deploy.EnvTagKey: "prod",
+					},
+				}).Return(&ssm.PutSecretOutput{
+					Version: aws.Int64(1),
+				}, nil)
+				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
+					Name:      "/copilot/test-app/test/secrets/db-host",
+					Value:     "test-host",
+					Overwrite: false,
+					Tags: map[string]string{
+						deploy.AppTagKey: "test-app",
+						deploy.EnvTagKey: "test",
+					},
+				}).Return(nil, errors.New("some error for db-host in test"))
+			},
+
+			wantedError: &errBatchPutSecretsFailed{
+				errors: []error{
+					&errSecretFailedInSomeEnvironments{
+						secretName: "db-password",
+						errorsForEnvironments: map[string]error{
+							"test": errors.New("some error for db-password in test"),
+						},
+					},
+					&errSecretFailedInSomeEnvironments{
+						secretName: "db-host",
+						errorsForEnvironments: map[string]error{
+							"test": errors.New("some error for db-host in test"),
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -449,15 +544,19 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 
 			opts := secretInitOpts{
 				secretInitVars: secretInitVars{
-					appName:      tc.inAppName,
-					name:         tc.inName,
-					values:       tc.inValues,
-					resourceTags: tc.inResourceTags,
-					overwrite:    tc.inOverwrite,
+					appName:       tc.inAppName,
+					name:          tc.inName,
+					values:        tc.inValues,
+					resourceTags:  tc.inResourceTags,
+					overwrite:     tc.inOverwrite,
+					inputFilePath: tc.inInputFilePath,
 				},
 				store: m.mockStore,
 				configureSecretPutter: func(_ string) (secretPutter, error) {
 					return m.mockSecretPutter, nil
+				},
+				readFile: func() ([]byte, error) {
+					return tc.mockInputFileContent, nil
 				},
 			}
 
