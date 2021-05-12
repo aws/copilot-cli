@@ -41,6 +41,7 @@ InternetGatewayAttachment:
   Properties:
     InternetGatewayId: !Ref InternetGateway
     VpcId: !Ref VPC
+
 {{range $ind, $cidr := .PublicSubnetCIDRs}}
 PublicSubnet{{inc $ind}}:
   Metadata:
@@ -54,7 +55,21 @@ PublicSubnet{{inc $ind}}:
     Tags:
       - Key: Name
         Value: !Sub 'copilot-${AppName}-${EnvironmentName}-pub{{$ind}}'
-{{end}}{{range $ind, $cidr := .PrivateSubnetCIDRs}}
+
+PublicSubnet{{inc $ind}}RouteTableAssociation:
+  Type: AWS::EC2::SubnetRouteTableAssociation
+  Properties:
+    RouteTableId: !Ref PublicRouteTable
+    SubnetId: !Ref PublicSubnet{{inc $ind}}{{end}}
+
+{{range $ind, $cidr := .PrivateSubnetCIDRs}}
+PrivateRouteTable{{inc $ind}}:
+  Metadata:
+    'aws:copilot:description': 'Private route table {{inc $ind}}'
+  Type: AWS::EC2::RouteTable
+  Properties:
+    VpcId: !Ref 'VPC'
+
 PrivateSubnet{{inc $ind}}:
   Metadata:
     'aws:copilot:description': 'Private subnet {{inc $ind}} for resources with no internet access'
@@ -67,9 +82,10 @@ PrivateSubnet{{inc $ind}}:
     Tags:
       - Key: Name
         Value: !Sub 'copilot-${AppName}-${EnvironmentName}-priv{{$ind}}'
-{{end}}{{range $ind, $cidr := .PublicSubnetCIDRs}}
-PublicSubnet{{inc $ind}}RouteTableAssociation:
+
+PrivateSubnet{{inc $ind}}RouteTableAssociation:
   Type: AWS::EC2::SubnetRouteTableAssociation
   Properties:
-    RouteTableId: !Ref PublicRouteTable
-    SubnetId: !Ref PublicSubnet{{inc $ind}}{{end}}
+    RouteTableId: !Ref PrivateRouteTable{{inc $ind}}
+    SubnetId: !Ref PrivateSubnet{{inc $ind}}
+{{end}}

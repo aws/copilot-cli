@@ -1,0 +1,168 @@
+VPCEndpointSecurityGroup:
+  Condition: CreateVPCEndpoints
+  Metadata:
+    'aws:copilot:description': 'A security group to associate with your VPC endpoints'
+  Type: AWS::EC2::SecurityGroup
+  Properties:
+    GroupDescription: Security Group to allow use of VPC Endpoints.
+    VpcId: !Ref VPC
+    SecurityGroupIngress:
+      - IpProtocol: tcp
+        Description: HTTPS
+        FromPort: 443
+        ToPort: 443
+        CidrIp: {{.CIDR}}
+
+# Allow ingress traffic from VPC endpoints to our containers.
+IngressFromVPCEndpoints:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::SecurityGroupIngress
+  Properties:
+    Description: Ingress from VPC endpoints.
+    GroupId: !Ref 'EnvironmentSecurityGroup'
+    IpProtocol: -1
+    SourceSecurityGroupId: !Ref 'VPCEndpointSecurityGroup'
+
+# Gateway endpoint for S3.
+S3GatewayVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Metadata:
+    'aws:copilot:description': 'An S3 gateway endpoint'
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Gateway
+    RouteTableIds:
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+      - !Ref PrivateRouteTable{{inc $ind}}
+      {{- end}}
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+    VpcId: !Ref VPC
+
+# Interface endpoints.
+EcrApiVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Metadata:
+    'aws:copilot:description': 'ECR interface endpoints'
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    PrivateDnsEnabled: true
+    SubnetIds:
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+      - !Ref PrivateSubnet{{inc $ind}}
+      {{- end}}
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.api
+    VpcId: !Ref VPC
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup
+
+EcrDkrVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    PrivateDnsEnabled: true
+    SubnetIds:
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+      - !Ref PrivateSubnet{{inc $ind}}
+      {{- end}}
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.dkr
+    VpcId: !Ref VPC
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup
+
+LogsVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Metadata:
+    'aws:copilot:description': 'A CloudWatch Logs interface endpoint'
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    PrivateDnsEnabled: true
+    SubnetIds:
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+      - !Ref PrivateSubnet{{inc $ind}}
+      {{- end}}
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.logs
+    VpcId: !Ref VPC
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup
+
+SSMVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Metadata:
+    'aws:copilot:description': 'Systems Manager interface endpoints'
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    PrivateDnsEnabled: true
+    SubnetIds:
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+      - !Ref PrivateSubnet{{inc $ind}}
+      {{- end}}
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
+    VpcId: !Ref VPC
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup
+
+EC2MessagesVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    PrivateDnsEnabled: true
+    SubnetIds:
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+      - !Ref PrivateSubnet{{inc $ind}}
+      {{- end}}
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.ec2messages
+    VpcId: !Ref VPC
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup
+
+EC2VPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    PrivateDnsEnabled: true
+    SubnetIds:
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+      - !Ref PrivateSubnet{{inc $ind}}
+      {{- end}}
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.ec2
+    VpcId: !Ref VPC
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup
+
+SSMMessagesVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    PrivateDnsEnabled: true
+    SubnetIds:
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+      - !Ref PrivateSubnet{{inc $ind}}
+      {{- end}}
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.ssmmessages
+    VpcId: !Ref VPC
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup
+
+SecretsManagerVPCEndpoint:
+  Condition: CreateVPCEndpoints
+  Metadata:
+    'aws:copilot:description': 'A Secrets Manager interface endpoint'
+  Type: AWS::EC2::VPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    PrivateDnsEnabled: true
+    SubnetIds:
+      {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
+      - !Ref PrivateSubnet{{inc $ind}}
+      {{- end}}
+    ServiceName: !Sub com.amazonaws.${AWS::Region}.secretsmanager
+    VpcId: !Ref VPC
+    SecurityGroupIds:
+      - !Ref VPCEndpointSecurityGroup

@@ -24,12 +24,20 @@ StateMachine:
               - 0
               - Fn::Split:
                 - ','
+                {{- if eq .Network.SubnetsType "IsolatedSubnets"}}
+                - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
+                {{- else}}
                 - Fn::ImportValue: !Sub '${AppName}-${EnvName}-{{.Network.SubnetsType}}'
+                {{- end}}
             - Fn::Select:
               - 1
               - Fn::Split:
                 - ','
+                {{- if eq .Network.SubnetsType "IsolatedSubnets"}}
+                - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
+                {{- else}}
                 - Fn::ImportValue: !Sub '${AppName}-${EnvName}-{{.Network.SubnetsType}}'
+                {{- end}}
       AssignPublicIp: {{.Network.AssignPublicIP}}
       SecurityGroups:
         Fn::Join:

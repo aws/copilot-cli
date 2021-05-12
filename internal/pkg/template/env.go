@@ -25,6 +25,7 @@ var (
 		"lambdas",
 		"vpc-resources",
 		"nat-gateways",
+		"vpc-endpoints",
 	}
 )
 

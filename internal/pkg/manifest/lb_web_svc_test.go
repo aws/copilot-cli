@@ -67,7 +67,8 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: stringP("public"),
+							Placement:         stringP("public"),
+							AllowedPlacements: []string{PublicSubnetPlacement, PrivateSubnetPlacement},
 						},
 					},
 				},
@@ -354,8 +355,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      stringP("public"),
-							SecurityGroups: []string{"sg-123"},
+							Placement:         stringP("public"),
+							AllowedPlacements: []string{PublicSubnetPlacement, PrivateSubnetPlacement},
+							SecurityGroups:    []string{"sg-123"},
 						},
 					},
 				},

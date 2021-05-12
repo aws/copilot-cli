@@ -21,16 +21,14 @@ const (
 	defaultDockerfileName = "Dockerfile"
 
 	// AWS VPC subnet placement options.
-	PublicSubnetPlacement  = "public"
-	PrivateSubnetPlacement = "private"
+	PublicSubnetPlacement   = "public"
+	PrivateSubnetPlacement  = "private"
+	IsolatedSubnetPlacement = "isolated"
 )
 
 var (
 	// WorkloadTypes holds all workload manifest types.
 	WorkloadTypes = append(ServiceTypes, JobTypes...)
-
-	// All placement options.
-	subnetPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
 
 	// Error definitions.
 	errUnmarshalBuildOpts  = errors.New("cannot unmarshal build field into string or compose-style map")
@@ -393,14 +391,15 @@ func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	type networkWithDefaults NetworkConfig
 	conf := networkWithDefaults{
 		VPC: vpcConfig{
-			Placement: stringP(PublicSubnetPlacement),
+			Placement:         stringP(PublicSubnetPlacement),
+			AllowedPlacements: c.VPC.AllowedPlacements,
 		},
 	}
 	if err := unmarshal(&conf); err != nil {
 		return err
 	}
 	if !conf.VPC.isValidPlacement() {
-		return fmt.Errorf("field '%s' is '%v' must be one of %#v", "network.vpc.placement", aws.StringValue(conf.VPC.Placement), subnetPlacements)
+		return fmt.Errorf(`field '%s' is '%v'; must be one of %#v`, "network.vpc.placement", aws.StringValue(conf.VPC.Placement), c.VPC.AllowedPlacements)
 	}
 	*c = NetworkConfig(conf)
 	return nil
@@ -408,15 +407,16 @@ func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // vpcConfig represents the security groups and subnets attached to a task.
 type vpcConfig struct {
-	Placement      *string  `yaml:"placement"`
-	SecurityGroups []string `yaml:"security_groups"`
+	Placement         *string  `yaml:"placement"`
+	SecurityGroups    []string `yaml:"security_groups"`
+	AllowedPlacements []string
 }
 
 func (c vpcConfig) isValidPlacement() bool {
 	if c.Placement == nil {
 		return false
 	}
-	for _, allowed := range subnetPlacements {
+	for _, allowed := range c.AllowedPlacements {
 		if *c.Placement == allowed {
 			return true
 		}

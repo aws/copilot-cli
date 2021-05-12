@@ -16,11 +16,6 @@ NatGateway{{inc $ind}}:
     Tags:
       - Key: Name
         Value: !Sub 'copilot-${AppName}-${EnvironmentName}-{{$ind}}'
-PrivateRouteTable{{inc $ind}}:
-  Type: AWS::EC2::RouteTable
-  Condition: CreateNATGateways
-  Properties:
-    VpcId: !Ref 'VPC'
 PrivateRoute{{inc $ind}}:
   Type: AWS::EC2::Route
   Condition: CreateNATGateways
@@ -28,10 +23,4 @@ PrivateRoute{{inc $ind}}:
     RouteTableId: !Ref PrivateRouteTable{{inc $ind}}
     DestinationCidrBlock: 0.0.0.0/0
     NatGatewayId: !Ref NatGateway{{inc $ind}}
-PrivateRouteTable{{inc $ind}}Association:
-  Type: AWS::EC2::SubnetRouteTableAssociation
-  Condition: CreateNATGateways
-  Properties:
-    RouteTableId: !Ref PrivateRouteTable{{inc $ind}}
-    SubnetId: !Ref PrivateSubnet{{inc $ind}}
   {{- end}}

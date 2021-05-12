@@ -32,10 +32,11 @@ const (
 // Constants for workload options.
 const (
 	// AWS VPC networking configuration.
-	EnablePublicIP          = "ENABLED"
-	DisablePublicIP         = "DISABLED"
-	PublicSubnetsPlacement  = "PublicSubnets"
-	PrivateSubnetsPlacement = "PrivateSubnets"
+	EnablePublicIP           = "ENABLED"
+	DisablePublicIP          = "DISABLED"
+	PublicSubnetsPlacement   = "PublicSubnets"
+	PrivateSubnetsPlacement  = "PrivateSubnets"
+	IsolatedSubnetsPlacement = "IsolatedSubnets"
 )
 
 var (
@@ -342,6 +343,9 @@ func envControllerParameters(o WorkloadOpts) []string {
 	}
 	if o.Network.SubnetsType == PrivateSubnetsPlacement {
 		parameters = append(parameters, "NATWorkloads,") // YAML needs the comma separator; resolved in EnvContr.
+	}
+	if o.Network.SubnetsType == IsolatedSubnetsPlacement {
+		parameters = append(parameters, "VPCEndpointWorkloads,")
 	}
 	if o.Storage != nil && o.Storage.requiresEFSCreation() {
 		parameters = append(parameters, "EFSWorkloads,")

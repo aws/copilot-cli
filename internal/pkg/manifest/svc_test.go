@@ -124,7 +124,8 @@ environments:
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								Placement: stringP("public"),
+								Placement:         stringP("public"),
+								AllowedPlacements: []string{PublicSubnetPlacement, PrivateSubnetPlacement},
 							},
 						},
 					},
@@ -231,7 +232,8 @@ secrets:
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								Placement: stringP("public"),
+								Placement:         stringP("public"),
+								AllowedPlacements: []string{PublicSubnetPlacement, PrivateSubnetPlacement, IsolatedSubnetPlacement},
 							},
 						},
 					},

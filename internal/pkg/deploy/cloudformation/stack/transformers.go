@@ -496,7 +496,12 @@ func convertNetworkConfig(network manifest.NetworkConfig) *template.NetworkOpts 
 	}
 	if aws.StringValue(network.VPC.Placement) != manifest.PublicSubnetPlacement {
 		opts.AssignPublicIP = template.DisablePublicIP
-		opts.SubnetsType = template.PrivateSubnetsPlacement
+		switch aws.StringValue(network.VPC.Placement) {
+		case manifest.PrivateSubnetPlacement:
+			opts.SubnetsType = template.PrivateSubnetsPlacement
+		case manifest.IsolatedSubnetPlacement:
+			opts.SubnetsType = template.IsolatedSubnetsPlacement
+		}
 	}
 	return opts
 }

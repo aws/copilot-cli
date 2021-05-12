@@ -528,7 +528,8 @@ network:
 `,
 			wantedConfig: NetworkConfig{
 				VPC: vpcConfig{
-					Placement: stringP(PublicSubnetPlacement),
+					Placement:         stringP(PublicSubnetPlacement),
+					AllowedPlacements: []string{PublicSubnetPlacement, PrivateSubnetPlacement},
 				},
 			},
 		},
@@ -538,7 +539,7 @@ network:
   vpc:
     placement: 'tartarus'
 `,
-			wantedErr: errors.New(`field 'network.vpc.placement' is 'tartarus' must be one of []string{"public", "private"}`),
+			wantedErr: errors.New(`field 'network.vpc.placement' is 'tartarus'; must be one of []string{"public", "private"}`),
 		},
 		"unmarshals successfully for public placement with security groups": {
 			data: `
@@ -551,8 +552,9 @@ network:
 `,
 			wantedConfig: NetworkConfig{
 				VPC: vpcConfig{
-					Placement:      stringP(PublicSubnetPlacement),
-					SecurityGroups: []string{"sg-1234", "sg-4567"},
+					Placement:         stringP(PublicSubnetPlacement),
+					AllowedPlacements: []string{PublicSubnetPlacement, PrivateSubnetPlacement},
+					SecurityGroups:    []string{"sg-1234", "sg-4567"},
 				},
 			},
 		},
@@ -565,6 +567,7 @@ network:
 				Network NetworkConfig `yaml:"network"`
 			}
 			var m manifest
+			m.Network.VPC.AllowedPlacements = []string{PublicSubnetPlacement, PrivateSubnetPlacement}
 
 			// WHEN
 			err := yaml.Unmarshal([]byte(tc.data), &m)

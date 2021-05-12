@@ -41,6 +41,7 @@ Resources:
 {{- if not .ImportVPC}}
 {{include "vpc-resources" .VPCConfig | indent 2}}
 {{include "nat-gateways" .VPCConfig | indent 2}}
+{{include "vpc-endpoints" .VPCConfig | indent 2}}
 {{- end}}
   # Creates a service discovery namespace with the form:
   # {svc}.{appname}.local
