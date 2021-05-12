@@ -6,6 +6,7 @@ package deploy
 
 import (
 	"fmt"
+	"sort"
 
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -121,6 +122,7 @@ func (s *Store) listDeployedWorkloads(appName string, envName string, workloadTy
 		}
 		wklds[ind] = wkld.Name
 	}
+	sort.Strings(wklds)
 	return wklds, nil
 }
 
