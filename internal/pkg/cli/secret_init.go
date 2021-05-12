@@ -6,6 +6,9 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"strings"
+
+	"github.com/dustin/go-humanize/english"
 
 	"gopkg.in/yaml.v3"
 
@@ -58,6 +61,8 @@ type secretInitOpts struct {
 
 	prompter prompter
 	selector appSelector
+
+	shouldShowOverwriteHint bool
 
 	configureSecretPutter func(envName string) (secretPutter, error)
 	readFile              func() ([]byte, error)
@@ -175,30 +180,54 @@ func (o *secretInitOpts) Execute() error {
 		if err != nil {
 			return err
 		}
+
+		var errs []error
 		for secretName, secretValues := range secrets {
-			o.putSecret(secretName, secretValues)
+			if err := o.putSecret(secretName, secretValues); err != nil {
+				errs = append(errs, err)
+			}
+		}
+
+		if len(errs) != 0 {
+			return &errBatchPutSecretsFailed{
+				errors: errs,
+			}
 		}
 		return nil
 	}
 
-	o.putSecret(o.name, o.values)
-	return nil
+	return o.putSecret(o.name, o.values)
 }
 
-func (o *secretInitOpts) putSecret(secretName string, values map[string]string) {
-	errLogs := make([]string, 0)
+func (o *secretInitOpts) putSecret(secretName string, values map[string]string) error {
+	envs := make([]string, 0)
+	for env := range values {
+		envs = append(envs, env)
+	}
+	log.Infof("...Put secret %s to environment %s\n", color.HighlightUserInput(secretName), english.WordSeries(envs, "and"))
+
+	errorsForEnvironments := make(map[string]error)
 	for envName, value := range values {
 		err := o.putSecretInEnv(secretName, envName, value)
 		if err != nil {
-			errLogs = append(errLogs, fmt.Sprintf("Failed to put secret %s in environment %s: %s", color.HighlightUserInput(secretName), color.HighlightUserInput(envName), err.Error()))
+			errorsForEnvironments[envName] = err
 			continue
 		}
 	}
 
-	for _, errLog := range errLogs {
-		log.Errorln(errLog)
+	for envName, _ := range errorsForEnvironments {
+		log.Errorf("Failed to put secret %s in environment %s. See error message below.\n", color.HighlightUserInput(secretName), color.HighlightUserInput(envName))
 	}
 	log.Infoln("")
+
+	if len(errorsForEnvironments) != 0 {
+		return &errSecretFailedInSomeEnvironments{
+			secretName:            secretName,
+			errorsForEnvironments: errorsForEnvironments,
+		}
+	}
+
+	return nil
 }
 
 func (o *secretInitOpts) putSecretInEnv(secretName, envName, value string) error {
@@ -226,7 +255,8 @@ func (o *secretInitOpts) putSecretInEnv(secretName, envName, value string) error
 	if err != nil {
 		var targetErr *ssm.ErrParameterAlreadyExists
 		if errors.As(err, &targetErr) {
-			log.Warningf("Secret %s already exists. If you want to overwrite an existing secret, use the %s flag.\n", name, color.HighlightCode("--overwrite"))
+			o.shouldShowOverwriteHint = true
+			log.Successf("Secret %s already exists in environment %s as %s. Did not overwrite. \n", color.HighlightUserInput(secretName), color.HighlightUserInput(envName), color.HighlightResource(name))
 			return nil
 		}
 		return err
@@ -320,6 +350,40 @@ func (o *secretInitOpts) askForSecretValues() error {
 	return nil
 }
 
+// RecommendedActions shows recommended actions to do after running `secret init`.
+func (o *secretInitOpts) RecommendedActions() {
+	if o.shouldShowOverwriteHint {
+		log.Warningf("If you want to overwrite an existing secret, use the %s flag.\n", color.HighlightCode("--overwrite"))
+	}
+}
+
+type errSecretFailedInSomeEnvironments struct {
+	secretName            string
+	errorsForEnvironments map[string]error
+}
+
+type errBatchPutSecretsFailed struct {
+	errors []error
+}
+
+func (e *errSecretFailedInSomeEnvironments) Error() string {
+	out := make([]string, 0)
+	for env, err := range e.errorsForEnvironments {
+		out = append(out, fmt.Sprintf("Failed to put secret %s in some environments %s: %s", e.secretName, env, err.Error()))
+	}
+	return strings.Join(out, "\n")
+}
+
+func (e *errBatchPutSecretsFailed) Error() string {
+	out := []string{
+		"Batch put secrets failed for some secrets:",
+	}
+	for _, err := range e.errors {
+		out = append(out, err.Error())
+	}
+	return strings.Join(out, "\n")
+}
+
 func (o *secretInitOpts) targetEnv(envName string) (*config.Environment, error) {
 	env, err := o.store.GetEnvironment(o.appName, envName)
 	if err != nil {
@@ -346,9 +410,16 @@ func BuildSecretInitCmd() *cobra.Command {
 			if err := opts.Ask(); err != nil {
 				return err
 			}
-			if err := opts.Execute(); err != nil {
+
+			err = opts.Execute()
+			if opts.shouldShowOverwriteHint {
+				log.Warningf("If you want to overwrite an existing secret, use the %s flag.\n", color.HighlightCode("--overwrite"))
+			}
+			if err != nil {
 				return err
 			}
+
+			opts.RecommendedActions()
 			return nil
 		}),
 	}

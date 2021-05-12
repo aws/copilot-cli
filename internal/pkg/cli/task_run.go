@@ -538,16 +538,20 @@ func (o *runTaskOpts) runTaskCommand() (cliStringer, error) {
 			return nil, err
 		}
 	case 3:
-		appName, envName, serviceName := parts[0], parts[1], parts[2]
-		cmd, err = o.runTaskRequestFromService(ecs.New(sess), appName, envName, serviceName)
+		appName, envName, workloadName := parts[0], parts[1], parts[2]
+		cmd, err = o.runTaskRequestFromService(ecs.New(sess), appName, envName, workloadName)
 		if err != nil {
-			return nil, fmt.Errorf("generate task run command from service %s of application %s deployed in environment %s: %w", serviceName, appName, envName, err)
+			return nil, fmt.Errorf("generate task run command from service %s of application %s deployed in environment %s: %w", workloadName, appName, envName, err)
 		}
 	default:
 		return nil, errors.New("invalid input to --generate-cmd: must be of one the form <cluster>/<service> or <app>/<env>/<workload>")
 	}
 
 	return cmd, nil
+}
+
+func (o *runTaskOpts) typeOfWorkload() (string, error) {
+	return "", nil
 }
 
 func (o *runTaskOpts) parseARN() (string, string, error) {
