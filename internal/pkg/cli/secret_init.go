@@ -98,7 +98,7 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 		if err != nil {
 			return nil, fmt.Errorf("open input file %s: %w", opts.inputFilePath, err)
 		}
-
+		defer file.Close()
 		f, err := afero.ReadFile(opts.fs, file.Name())
 		if err != nil {
 			return nil, fmt.Errorf("read input file %s: %w", opts.inputFilePath, err)
