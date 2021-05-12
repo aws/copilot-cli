@@ -8,3 +8,7 @@ node_modules/
 site/node_modules/
 site/themes/docsy
 templates/custom-resources/
+# Ctags
+tags
+tags.lock
+tags.temp
