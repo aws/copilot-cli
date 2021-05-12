@@ -85,24 +85,14 @@ let report = function (
  * @param {string} aliasTypes the alias type
  */
 const writeCustomDomainRecord = async function (
+  appRoute53,
+  envRoute53,
   aliases,
   lbDNS,
   lbHostedZone,
-  rootDnsRole,
   aliasTypes,
   action
 ) {
-  const envRoute53 = new aws.Route53();
-  const appRoute53 = new aws.Route53({
-    credentials: new aws.ChainableTemporaryCredentials({
-      params: { RoleArn: rootDnsRole },
-      masterCredentials: new aws.EnvironmentCredentials("AWS"),
-    }),
-  });
-  if (waiter) {
-    // Used by the test suite, since waiters aren't mockable yet
-    envRoute53.waitFor = appRoute53.waitFor = waiter;
-  }
   for (const alias of aliases) {
     const aliasType = await getAliasType(aliasTypes, alias);
     switch (aliasType) {
@@ -194,28 +184,44 @@ exports.handler = async function (event, context) {
       regex: new RegExp(`^([^\.]+\.)?${app}.${domain}`),
       domain: `${app}.${domain}`,
     },
-    RootDomainZone: { regex: new RegExp(`^([^\.]+\.)?${domain}`), domain: `${domain}` },
+    RootDomainZone: {
+      regex: new RegExp(`^([^\.]+\.)?${domain}`),
+      domain: `${domain}`,
+    },
     OtherDomainZone: { regex: new RegExp(`.*`) },
   };
+  const envRoute53 = new aws.Route53();
+  const appRoute53 = new aws.Route53({
+    credentials: new aws.ChainableTemporaryCredentials({
+      params: { RoleArn: props.AppDNSRole },
+      masterCredentials: new aws.EnvironmentCredentials("AWS"),
+    }),
+  });
+  if (waiter) {
+    // Used by the test suite, since waiters aren't mockable yet
+    envRoute53.waitFor = appRoute53.waitFor = waiter;
+  }
   try {
     var aliases = await getAllAliases(props.Aliases);
     switch (event.RequestType) {
       case "Create":
         await writeCustomDomainRecord(
+          appRoute53,
+          envRoute53,
           aliases,
           props.LoadBalancerDNS,
           props.LoadBalancerHostedZone,
-          props.AppDNSRole,
           aliasTypes,
           "UPSERT"
         );
         break;
       case "Update":
         await writeCustomDomainRecord(
+          appRoute53,
+          envRoute53,
           aliases,
           props.LoadBalancerDNS,
           props.LoadBalancerHostedZone,
-          props.AppDNSRole,
           aliasTypes,
           "UPSERT"
         );
@@ -228,20 +234,22 @@ exports.handler = async function (event, context) {
           return !aliases.has(itm);
         });
         await writeCustomDomainRecord(
+          appRoute53,
+          envRoute53,
           aliasesToDelete,
           props.LoadBalancerDNS,
           props.LoadBalancerHostedZone,
-          props.AppDNSRole,
           aliasTypes,
           "DELETE"
         );
         break;
       case "Delete":
         await writeCustomDomainRecord(
+          appRoute53,
+          envRoute53,
           aliases,
           props.LoadBalancerDNS,
           props.LoadBalancerHostedZone,
-          props.AppDNSRole,
           aliasTypes,
           "DELETE"
         );
