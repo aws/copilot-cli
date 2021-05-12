@@ -7,8 +7,6 @@ import (
 	"errors"
 	"fmt"
 
-	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
-
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -188,9 +186,6 @@ func (o *secretInitOpts) Execute() error {
 }
 
 func (o *secretInitOpts) putSecret(secretName string, values map[string]string) {
-	spinner := termprogress.NewSpinner(log.DiagnosticWriter)
-
-	spinner.Start("start creating secret")
 	errLogs := make([]string, 0)
 	for envName, value := range values {
 		err := o.putSecretInEnv(secretName, envName, value)
@@ -203,7 +198,6 @@ func (o *secretInitOpts) putSecret(secretName string, values map[string]string) 
 	for _, errLog := range errLogs {
 		log.Errorln(errLog)
 	}
-	spinner.Stop("finish creating secret")
 	log.Infoln("")
 }
 
