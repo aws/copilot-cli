@@ -434,36 +434,6 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 				}, nil)
 			},
 		},
-		"error out if received other errors": {
-			inAppName: testApp,
-			inName:    testName,
-			inValues:  testValues,
-
-			setupMocks: func(m secretInitExecuteMocks) {
-				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
-					Name:      "/copilot/test-app/test/secrets/db-password",
-					Value:     "test-password",
-					Overwrite: false,
-					Tags: map[string]string{
-						deploy.AppTagKey: "test-app",
-						deploy.EnvTagKey: "test",
-					},
-				}).Return(nil, errors.New("some error"))
-				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
-					Name:      "/copilot/test-app/prod/secrets/db-password",
-					Value:     "prod-password",
-					Overwrite: false,
-					Tags: map[string]string{
-						deploy.AppTagKey: "test-app",
-						deploy.EnvTagKey: "prod",
-					},
-				}).Return(&ssm.PutSecretOutput{
-					Version: aws.Int64(1),
-				}, nil).MinTimes(0).MaxTimes(1)
-			},
-
-			wantedError: errors.New("put secret db-password in environment test: some error"),
-		},
 	}
 
 	for name, tc := range testCases {
