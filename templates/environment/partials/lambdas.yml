@@ -7,7 +7,7 @@ CertificateValidationFunction:
       S3Bucket: {{.ScriptBucketName}}
       S3Key: {{.DNSCertValidatorLambda}}
     Handler: "index.certificateRequestHandler"
-    Timeout: 600
+    Timeout: 900
     MemorySize: 512
     Role: !GetAtt 'CustomResourceRole.Arn'
     Runtime: nodejs12.x
@@ -37,3 +37,16 @@ EnableLongARNFormatFunction:
     MemorySize: 512
     Role: !GetAtt 'CloudformationExecutionRole.Arn'
     Runtime: nodejs12.x
+
+CustomDomainFunction:
+  Condition: HasAliases
+  Type: AWS::Lambda::Function
+  Properties:
+    Code:
+      S3Bucket: {{.ScriptBucketName}}
+      S3Key: {{.CustomDomainLambda}}
+    Handler: "index.handler"
+    Timeout: 600
+    MemorySize: 512
+    Role: !GetAtt 'CustomResourceRole.Arn'
+    Runtime: nodejs12.x 

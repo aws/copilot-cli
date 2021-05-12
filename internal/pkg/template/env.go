@@ -35,6 +35,7 @@ type EnvOpts struct {
 	DNSDelegationLambda       string
 	DNSCertValidatorLambda    string
 	EnableLongARNFormatLambda string
+	CustomDomainLambda        string
 	ScriptBucketName          string
 
 	ImportVPC *config.ImportVPC
