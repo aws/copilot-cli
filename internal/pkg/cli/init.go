@@ -20,7 +20,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -155,7 +154,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		unmarshal:    manifest.UnmarshalWorkload,
 		sel:          sel,
 		spinner:      spin,
-		cmd:          command.New(),
+		cmd:          exec.NewCmd(),
 		sessProvider: sessProvider,
 	}
 	deployJobCmd := &deployJobOpts{
@@ -170,7 +169,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		unmarshal:    manifest.UnmarshalWorkload,
 		sel:          sel,
 		spinner:      spin,
-		cmd:          command.New(),
+		cmd:          exec.NewCmd(),
 		sessProvider: sessProvider,
 	}
 

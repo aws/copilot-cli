@@ -7,6 +7,8 @@ import (
 	"encoding"
 	"io"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
+
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
@@ -23,7 +25,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -72,6 +73,7 @@ type workloadListWriter interface {
 
 type applicationStore interface {
 	applicationCreator
+	applicationUpdater
 	applicationGetter
 	applicationLister
 	applicationDeleter
@@ -79,6 +81,10 @@ type applicationStore interface {
 
 type applicationCreator interface {
 	CreateApplication(app *config.Application) error
+}
+
+type applicationUpdater interface {
+	UpdateApplication(app *config.Application) error
 }
 
 type applicationGetter interface {
@@ -172,7 +178,7 @@ type stackSerializer interface {
 }
 
 type runner interface {
-	Run(name string, args []string, options ...command.Option) error
+	Run(name string, args []string, options ...exec.CmdOption) error
 }
 
 type eventsWriter interface {
@@ -334,8 +340,8 @@ type imageRemover interface {
 }
 
 type pipelineDeployer interface {
-	CreatePipeline(env *deploy.CreatePipelineInput) error
-	UpdatePipeline(env *deploy.CreatePipelineInput) error
+	CreatePipeline(env *deploy.CreatePipelineInput, bucketName string) error
+	UpdatePipeline(env *deploy.CreatePipelineInput, bucketName string) error
 	PipelineExists(env *deploy.CreatePipelineInput) (bool, error)
 	DeletePipeline(pipelineName string) error
 	AddPipelineResourcesToApp(app *config.Application, region string) error
@@ -564,4 +570,12 @@ type codestar interface {
 
 type publicIPGetter interface {
 	PublicIP(ENI string) (string, error)
+}
+
+type cliStringer interface {
+	CLIString() string
+}
+
+type secretPutter interface {
+	PutSecret(in ssm.PutSecretInput) (*ssm.PutSecretOutput, error)
 }

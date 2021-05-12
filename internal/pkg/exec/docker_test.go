@@ -10,9 +10,6 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/term/command"
-
-	"github.com/aws/copilot-cli/internal/pkg/exec/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -28,7 +25,7 @@ func TestDockerCommand_Build(t *testing.T) {
 	mockTag2 := "tag2"
 	mockTag3 := "tag3"
 
-	var mockRunner *mocks.Mockrunner
+	var mockRunner *Mockrunner
 
 	tests := map[string]struct {
 		path       string
@@ -46,7 +43,7 @@ func TestDockerCommand_Build(t *testing.T) {
 			context: "",
 			tags:    []string{mockTag1},
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("docker", []string{"build",
 					"-t", mockURI,
 					"-t", mockURI + ":" + mockTag1,
@@ -59,7 +56,7 @@ func TestDockerCommand_Build(t *testing.T) {
 			context: "",
 			tags:    []string{mockTag1},
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 
 				mockRunner.EXPECT().Run("docker", []string{"build",
 					"-t", mockURI,
@@ -71,7 +68,7 @@ func TestDockerCommand_Build(t *testing.T) {
 			path:    mockPath,
 			context: mockContext,
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("docker", []string{"build",
 					"-t", mockURI,
 					"mockPath",
@@ -83,7 +80,7 @@ func TestDockerCommand_Build(t *testing.T) {
 			context: "mockPath/to",
 			tags:    []string{mockTag1},
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 
 				mockRunner.EXPECT().Run("docker", []string{"build",
 					"-t", mockURI,
@@ -97,7 +94,7 @@ func TestDockerCommand_Build(t *testing.T) {
 			path: mockPath,
 			tags: []string{mockTag1, mockTag2, mockTag3},
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("docker", []string{"build",
 					"-t", mockURI,
 					"-t", mockURI + ":" + mockTag1,
@@ -114,7 +111,7 @@ func TestDockerCommand_Build(t *testing.T) {
 				"abc":     "def",
 			},
 			setupMocks: func(c *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(c)
+				mockRunner = NewMockrunner(c)
 				mockRunner.EXPECT().Run("docker", []string{"build",
 					"-t", mockURI,
 					"--build-arg", "GOPROXY=direct",
@@ -128,7 +125,7 @@ func TestDockerCommand_Build(t *testing.T) {
 			target:    "foobar",
 			cacheFrom: []string{"foo/bar:latest", "foo/bar/baz:1.2.3"},
 			setupMocks: func(c *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(c)
+				mockRunner = NewMockrunner(c)
 				mockRunner.EXPECT().Run("docker", []string{"build",
 					"-t", mockURI,
 					"--cache-from", "foo/bar:latest",
@@ -173,7 +170,7 @@ func TestDockerCommand_Login(t *testing.T) {
 	mockUsername := "mockUsername"
 	mockPassword := "mockPassword"
 
-	var mockRunner *mocks.Mockrunner
+	var mockRunner *Mockrunner
 
 	tests := map[string]struct {
 		setupMocks func(controller *gomock.Controller)
@@ -182,7 +179,7 @@ func TestDockerCommand_Login(t *testing.T) {
 	}{
 		"wrap error returned from Run()": {
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 
 				mockRunner.EXPECT().Run("docker", []string{"login", "-u", mockUsername, "--password-stdin", mockURI}, gomock.Any()).Return(mockError)
 			},
@@ -190,7 +187,7 @@ func TestDockerCommand_Login(t *testing.T) {
 		},
 		"happy path": {
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 
 				mockRunner.EXPECT().Run("docker", []string{"login", "-u", mockUsername, "--password-stdin", mockURI}, gomock.Any()).Return(nil)
 			},
@@ -218,11 +215,11 @@ func TestDockerCommand_Push(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		m := mocks.NewMockrunner(ctrl)
+		m := NewMockrunner(ctrl)
 		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}).Return(nil)
 		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:g123bfc"}).Return(nil)
 		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}, gomock.Any()).
-			Do(func(_ string, _ []string, opt command.Option) {
+			Do(func(_ string, _ []string, opt CmdOption) {
 				cmd := &exec.Cmd{}
 				opt(cmd)
 				_, _ = cmd.Stdout.Write([]byte("\"aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app@sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807\"\n"))
@@ -242,7 +239,7 @@ func TestDockerCommand_Push(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		m := mocks.NewMockrunner(ctrl)
+		m := NewMockrunner(ctrl)
 		m.EXPECT().Run(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 
 		// WHEN
@@ -258,7 +255,7 @@ func TestDockerCommand_Push(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		m := mocks.NewMockrunner(ctrl)
+		m := NewMockrunner(ctrl)
 		m.EXPECT().Run("docker", []string{"push", "uri"}).Return(nil)
 		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "uri"}, gomock.Any()).Return(errors.New("some error"))
 
@@ -275,11 +272,11 @@ func TestDockerCommand_Push(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		m := mocks.NewMockrunner(ctrl)
+		m := NewMockrunner(ctrl)
 		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}).Return(nil)
 		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app:g123bfc"}).Return(nil)
 		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}, gomock.Any()).
-			Do(func(_ string, _ []string, opt command.Option) {
+			Do(func(_ string, _ []string, opt CmdOption) {
 				cmd := &exec.Cmd{}
 				opt(cmd)
 				_, _ = cmd.Stdout.Write([]byte(""))
@@ -298,7 +295,7 @@ func TestDockerCommand_Push(t *testing.T) {
 
 func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 	mockError := errors.New("some error")
-	var mockRunner *mocks.Mockrunner
+	var mockRunner *Mockrunner
 
 	tests := map[string]struct {
 		setupMocks func(controller *gomock.Controller)
@@ -308,7 +305,7 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 	}{
 		"error running docker info": {
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("docker", []string{"info", "-f", "'{{json .}}'"}, gomock.Any()).Return(mockError)
 			},
 
@@ -317,7 +314,7 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 		"return when docker engine is not started": {
 			inBuffer: bytes.NewBufferString(`'{"ServerErrors":["Cannot connect to the Docker daemon at unix:///var/run/docker.sock.", "Is the docker daemon running?"]}'`),
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("docker", []string{"info", "-f", "'{{json .}}'"}, gomock.Any()).Return(nil)
 			},
 
@@ -329,7 +326,7 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 			inBuffer: bytes.NewBufferString(`'{"ID":"A2VY:4WTA:HDKK:UR76:SD2I:EQYZ:GCED:H4GT:6O7X:P72W:LCUP:ZQJD","Containers":15}'
 `),
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("docker", []string{"info", "-f", "'{{json .}}'"}, gomock.Any()).Return(nil)
 			},
 		},

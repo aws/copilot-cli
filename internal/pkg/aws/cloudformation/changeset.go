@@ -6,6 +6,7 @@ package cloudformation
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -90,11 +91,10 @@ func (cs *changeSet) String() string {
 
 // create creates a ChangeSet, waits until it's created, and returns the ChangeSet ID on success.
 func (cs *changeSet) create(conf *stackConfig) error {
-	out, err := cs.client.CreateChangeSet(&cloudformation.CreateChangeSetInput{
+	input := &cloudformation.CreateChangeSetInput{
 		ChangeSetName:       aws.String(cs.name),
 		StackName:           aws.String(cs.stackName),
 		ChangeSetType:       aws.String(cs.csType.String()),
-		TemplateBody:        aws.String(conf.Template),
 		Parameters:          conf.Parameters,
 		Tags:                conf.Tags,
 		RoleARN:             conf.RoleARN,
@@ -104,7 +104,15 @@ func (cs *changeSet) create(conf *stackConfig) error {
 			cloudformation.CapabilityCapabilityNamedIam,
 			cloudformation.CapabilityCapabilityAutoExpand,
 		}),
-	})
+	}
+	if conf.TemplateBody != "" {
+		input.TemplateBody = aws.String(conf.TemplateBody)
+	}
+	if conf.TemplateURL != "" {
+		input.TemplateURL = aws.String(conf.TemplateURL)
+	}
+
+	out, err := cs.client.CreateChangeSet(input)
 	if err != nil {
 		return fmt.Errorf("create %s: %w", cs, err)
 	}
@@ -114,7 +122,6 @@ func (cs *changeSet) create(conf *stackConfig) error {
 	if err != nil {
 		return fmt.Errorf("wait for creation of %s: %w", cs, err)
 	}
-
 	// Since the ChangeSet creation succeeded, use the full ARN instead of the name.
 	// Using the full ID is essential in case the ChangeSet execution status is obsolete.
 	// If we call DescribeChangeSet using the ChangeSet name and Stack name on an obsolete changeset, the results is empty.
@@ -195,17 +202,18 @@ func (cs *changeSet) createAndExecute(conf *stackConfig) error {
 		if descrErr != nil {
 			return fmt.Errorf("check if changeset is empty: %v: %w", err, descrErr)
 		}
-		// The change set was empty - so we clean it up.
+		// The change set was empty - so we clean it up. The status reason will be like
+		// "The submitted information didn't contain changes. Submit different information to create a change set."
 		// We try to clean up the change set because there's a limit on the number
 		// of failed change sets a customer can have on a particular stack.
 		// See https://cloudonaut.io/aws-cli-cloudformation-deploy-limit-exceeded/.
-		if len(descr.Changes) == 0 {
+		if len(descr.Changes) == 0 && strings.Contains(descr.StatusReason, "didn't contain changes") {
 			_ = cs.delete()
 			return &ErrChangeSetEmpty{
 				cs: cs,
 			}
 		}
-		return err
+		return fmt.Errorf("%w: %s", err, descr.StatusReason)
 	}
 	return cs.execute()
 }

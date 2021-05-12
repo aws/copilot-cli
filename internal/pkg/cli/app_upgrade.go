@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/route53"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -43,6 +44,7 @@ type appUpgradeOpts struct {
 	store         store
 	prog          progress
 	versionGetter versionGetter
+	route53       domainHostedZoneGetter
 	sel           appSelector
 	identity      identityService
 	upgrader      appUpgrader
@@ -66,6 +68,7 @@ func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
 		store:          store,
 		identity:       identity.New(sess),
 		prog:           termprogress.NewSpinner(log.DiagnosticWriter),
+		route53:        route53.New(sess),
 		sel:            selector.NewSelect(prompt.New(), store),
 		versionGetter:  d,
 		upgrader:       cloudformation.New(sess),
@@ -156,6 +159,11 @@ func (o *appUpgradeOpts) upgradeApplication(app *config.Application, fromVersion
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
 	}
+	// Upgrade SSM Parameter Store record.
+	if err := o.upgradeAppSSMStore(app); err != nil {
+		return err
+	}
+	// Upgrade app CloudFormation resources.
 	if err := o.upgrader.UpgradeApplication(&deploy.CreateAppInput{
 		Name:               o.name,
 		AccountID:          caller.Account,
@@ -168,12 +176,27 @@ func (o *appUpgradeOpts) upgradeApplication(app *config.Application, fromVersion
 	return nil
 }
 
+func (o *appUpgradeOpts) upgradeAppSSMStore(app *config.Application) error {
+	if app.Domain != "" && app.DomainHostedZoneID == "" {
+		hostedZoneID, err := o.route53.DomainHostedZoneID(app.Domain)
+		if err != nil {
+			return fmt.Errorf("get hosted zone ID for domain %s: %w", app.Domain, err)
+		}
+		app.DomainHostedZoneID = hostedZoneID
+	}
+	if err := o.store.UpdateApplication(app); err != nil {
+		return fmt.Errorf("update application %s: %w", app.Name, err)
+	}
+	return nil
+}
+
 // buildAppUpgradeCmd builds the command to update an application to the latest version.
 func buildAppUpgradeCmd() *cobra.Command {
 	vars := appUpgradeVars{}
 	cmd := &cobra.Command{
-		Use:   "upgrade",
-		Short: "Upgrades the template of an application to the latest version.",
+		Use:    "upgrade",
+		Short:  "Upgrades the template of an application to the latest version.",
+		Hidden: true,
 		Example: `
     Upgrade the application "my-app" to the latest version
     /code $ copilot app upgrade -n my-app`,

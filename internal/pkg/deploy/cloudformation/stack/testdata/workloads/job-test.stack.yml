@@ -115,6 +115,8 @@ Resources:
         - FARGATE
       Cpu: !Ref TaskCPU
       Memory: !Ref TaskMemory
+      EphemeralStorage:
+        SizeInGiB: 200
       ExecutionRoleArn: !Ref ExecutionRole
       TaskRoleArn: !Ref TaskRole
       ContainerDefinitions:

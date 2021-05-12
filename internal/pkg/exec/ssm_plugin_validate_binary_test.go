@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/exec/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +20,7 @@ func TestSSMPluginCommand_ValidateBinary(t *testing.T) {
 		mockLatestVersion  = "1.2.30.0"
 		mockCurrentVersion = "1.2.7.0"
 	)
-	var mockRunner *mocks.Mockrunner
+	var mockRunner *Mockrunner
 	mockError := errors.New("some error")
 	tests := map[string]struct {
 		inLatestVersion  string
@@ -31,7 +30,7 @@ func TestSSMPluginCommand_ValidateBinary(t *testing.T) {
 	}{
 		"return error if fail to get the latest version": {
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("curl", []string{"-s", ssmPluginBinaryLatestVersionURL}, gomock.Any()).
 					Return(mockError)
 			},
@@ -40,7 +39,7 @@ func TestSSMPluginCommand_ValidateBinary(t *testing.T) {
 		"return error if fail to get the current version": {
 			inLatestVersion: mockLatestVersion,
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("curl", []string{"-s", ssmPluginBinaryLatestVersionURL}, gomock.Any()).
 					Return(nil)
 				mockRunner.EXPECT().Run(ssmPluginBinaryName, []string{"--version"}, gomock.Any()).
@@ -51,7 +50,7 @@ func TestSSMPluginCommand_ValidateBinary(t *testing.T) {
 		"return ErrSSMPluginNotExist if plugin doesn't exist": {
 			inLatestVersion: mockLatestVersion,
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("curl", []string{"-s", ssmPluginBinaryLatestVersionURL}, gomock.Any()).
 					Return(nil)
 				mockRunner.EXPECT().Run(ssmPluginBinaryName, []string{"--version"}, gomock.Any()).
@@ -63,7 +62,7 @@ func TestSSMPluginCommand_ValidateBinary(t *testing.T) {
 			inLatestVersion:  mockLatestVersion,
 			inCurrentVersion: mockCurrentVersion,
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("curl", []string{"-s", ssmPluginBinaryLatestVersionURL}, gomock.Any()).
 					Return(nil)
 				mockRunner.EXPECT().Run(ssmPluginBinaryName, []string{"--version"}, gomock.Any()).
@@ -75,7 +74,7 @@ func TestSSMPluginCommand_ValidateBinary(t *testing.T) {
 			inLatestVersion:  mockLatestVersion,
 			inCurrentVersion: mockLatestVersion,
 			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner = NewMockrunner(controller)
 				mockRunner.EXPECT().Run("curl", []string{"-s", ssmPluginBinaryLatestVersionURL}, gomock.Any()).
 					Return(nil)
 				mockRunner.EXPECT().Run(ssmPluginBinaryName, []string{"--version"}, gomock.Any()).

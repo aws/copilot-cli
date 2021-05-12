@@ -201,7 +201,7 @@ func TestValidateRDSName(t *testing.T) {
 		},
 		"too long": {
 			input: "AprilisthecruellestmonthbreedingLilacsoutofthedeadlanda",
-			want:  fmt.Errorf("value must be between 1 and %d characters in length", 63 - len("DBCluster")),
+			want:  fmt.Errorf("value must be between 1 and %d characters in length", 63-len("DBCluster")),
 		},
 		"bad character": {
 			input: "not-good!",
@@ -511,7 +511,7 @@ func TestValidateCron(t *testing.T) {
 }
 
 func TestValidateEngine(t *testing.T) {
-	testCases := map[string]testCase {
+	testCases := map[string]testCase{
 		"mysql": {
 			input: "MySQL",
 			want:  nil,
@@ -538,7 +538,7 @@ func TestValidateEngine(t *testing.T) {
 }
 
 func TestValidateMySQLDBName(t *testing.T) {
-	testCases := map[string]testCase {
+	testCases := map[string]testCase{
 		"good case": {
 			input: "my_db_123_",
 			want:  nil,
@@ -599,3 +599,37 @@ func TestValidatePostgreSQLDBName(t *testing.T) {
 	}
 }
 
+func TestValidateSecretName(t *testing.T) {
+	testCases := map[string]testCase{
+		"bad character": {
+			input: "bad!",
+			want:  errInvalidSecretNameCharacters,
+		},
+		"bad character space": {
+			input: "bad ",
+			want:  errInvalidSecretNameCharacters,
+		},
+		"secret name too short": {
+			input: "",
+			want:  fmt.Errorf(fmtErrValueBadSize, 1, 2048-(len("/copilot/")+len("/")+len("/secrets/"))),
+		},
+		"secret name too long": {
+			input: string(make([]rune, 2048)),
+			want:  fmt.Errorf(fmtErrValueBadSize, 1, 2048-(len("/copilot/")+len("/")+len("/secrets/"))),
+		},
+		"valid secret name": {
+			input: "secret.name",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := validateSecretName(tc.input)
+			if tc.want != nil {
+				require.EqualError(t, got, tc.want.Error())
+			} else {
+				require.NoError(t, got)
+			}
+		})
+	}
+}

@@ -47,13 +47,16 @@ var (
 
 	// Aurora-Serverless-specific errors.
 	errInvalidRDSNameCharacters = errors.New("value must start with a letter")
+
+	errInvalidSecretNameCharacters = errors.New("value must contain only letters, numbers, periods, hyphens and underscores")
 )
 
-var (
+const fmtErrValueBadSize = "value must be between %d and %d characters in length"
+
+const (
 	fmtErrInvalidStorageType = "invalid storage type %s: must be one of %s"
 
 	// Aurora-Serverless-specific errors.
-	fmtErrRDSNameBadSize          = "value must be between %d and %d characters in length"
 	fmtErrInvalidEngineType       = "invalid engine type %s: must be one of %s"
 	fmtErrInvalidDBNameCharacters = "invalid database name %s: must contain only alphanumeric characters and underscore; should start with a letter"
 )
@@ -122,6 +125,10 @@ var (
 		"$", // End of string.
 	)
 )
+
+// SSM secret parameter name validation expression.
+// https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_PutParameter.html#systemsmanager-PutParameter-request-Name
+var secretParameterNameRegExp = regexp.MustCompile("^[a-zA-Z0-9_.-]+$")
 
 const regexpFindAllMatches = -1
 
@@ -260,7 +267,7 @@ func validateMySQLDBName(val interface{}) error {
 
 	// Check for db name length.
 	if len(dbName) < minMySQLDBNameLength || len(dbName) > maxMySQLDBNameLength {
-		return fmt.Errorf(fmtErrRDSNameBadSize, minMySQLDBNameLength, maxMySQLDBNameLength)
+		return fmt.Errorf(fmtErrValueBadSize, minMySQLDBNameLength, maxMySQLDBNameLength)
 	}
 
 	return validateDBNameCharacters(dbName)
@@ -279,7 +286,7 @@ func validatePostgreSQLDBName(val interface{}) error {
 
 	// Check for db name length.
 	if len(dbName) < minPostgreSQLDBNameLength || len(dbName) > maxPostgreSQLDBNameLength {
-		return fmt.Errorf(fmtErrRDSNameBadSize, minPostgreSQLDBNameLength, maxPostgreSQLDBNameLength)
+		return fmt.Errorf(fmtErrValueBadSize, minPostgreSQLDBNameLength, maxPostgreSQLDBNameLength)
 	}
 
 	return validateDBNameCharacters(dbName)
@@ -519,7 +526,7 @@ func rdsNameValidation(val interface{}) error {
 		return errValueNotAString
 	}
 	if len(s) < minRDSNameLength || len(s) > maxRDSNameLength {
-		return fmt.Errorf(fmtErrRDSNameBadSize, minRDSNameLength, maxRDSNameLength)
+		return fmt.Errorf(fmtErrValueBadSize, minRDSNameLength, maxRDSNameLength)
 	}
 	m := rdsStorageNameRegExp.FindStringSubmatch(s)
 	if m == nil {
@@ -606,6 +613,24 @@ func validateCIDRSlice(val interface{}) error {
 		if err := validateCIDR(str); err != nil {
 			return errValueNotIPNetSlice
 		}
+	}
+	return nil
+}
+
+func validateSecretName(val interface{}) error {
+	const minSecretNameLength = 1
+	const maxSecretNameLength = 2048 - (len("/copilot/") + len("/") + len("/secrets/"))
+
+	s, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	if len(s) < minSecretNameLength || len(s) > maxSecretNameLength {
+		return fmt.Errorf(fmtErrValueBadSize, minSecretNameLength, maxSecretNameLength)
+	}
+	m := secretParameterNameRegExp.FindStringSubmatch(s)
+	if m == nil {
+		return errInvalidSecretNameCharacters
 	}
 	return nil
 }

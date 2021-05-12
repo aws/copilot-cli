@@ -56,6 +56,27 @@ func (s *Store) CreateApplication(application *Application) error {
 	return nil
 }
 
+func (s *Store) UpdateApplication(application *Application) error {
+	applicationPath := fmt.Sprintf(fmtApplicationPath, application.Name)
+	application.Version = schemaVersion
+
+	data, err := marshal(application)
+	if err != nil {
+		return fmt.Errorf("serializing application %s: %w", application.Name, err)
+	}
+
+	if _, err = s.ssmClient.PutParameter(&ssm.PutParameterInput{
+		Name:        aws.String(applicationPath),
+		Description: aws.String("Copilot Application"),
+		Type:        aws.String(ssm.ParameterTypeString),
+		Value:       aws.String(data),
+		Overwrite:   aws.Bool(true),
+	}); err != nil {
+		return fmt.Errorf("update application %s: %w", application.Name, err)
+	}
+	return nil
+}
+
 // GetApplication fetches an application by name. If it can't be found, return a ErrNoSuchApplication
 func (s *Store) GetApplication(applicationName string) (*Application, error) {
 	applicationPath := fmt.Sprintf(fmtApplicationPath, applicationName)

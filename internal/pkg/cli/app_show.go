@@ -32,11 +32,11 @@ type showAppVars struct {
 type showAppOpts struct {
 	showAppVars
 
-	store         store
-	w             io.Writer
-	sel           appSelector
-	pipelineSvc   pipelineGetter
-	versionGetter versionGetter
+	store            store
+	w                io.Writer
+	sel              appSelector
+	pipelineSvc      pipelineGetter
+	newVersionGetter func(string) (versionGetter, error)
 }
 
 func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
@@ -48,17 +48,19 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
-	d, err := describe.NewAppDescriber(vars.name)
-	if err != nil {
-		return nil, fmt.Errorf("new app describer for application %s: %v", vars.name, err)
-	}
 	return &showAppOpts{
-		showAppVars:   vars,
-		store:         store,
-		w:             log.OutputWriter,
-		sel:           selector.NewSelect(prompt.New(), store),
-		pipelineSvc:   codepipeline.New(defaultSession),
-		versionGetter: d,
+		showAppVars: vars,
+		store:       store,
+		w:           log.OutputWriter,
+		sel:         selector.NewSelect(prompt.New(), store),
+		pipelineSvc: codepipeline.New(defaultSession),
+		newVersionGetter: func(s string) (versionGetter, error) {
+			d, err := describe.NewAppDescriber(s)
+			if err != nil {
+				return d, fmt.Errorf("new app describer for application %s: %v", s, err)
+			}
+			return d, nil
+		},
 	}, nil
 }
 
@@ -139,7 +141,11 @@ func (o *showAppOpts) description() (*describe.App, error) {
 			Type: svc.Type,
 		})
 	}
-	version, err := o.versionGetter.Version()
+	versionGetter, err := o.newVersionGetter(o.name)
+	if err != nil {
+		return nil, err
+	}
+	version, err := versionGetter.Version()
 	if err != nil {
 		return nil, fmt.Errorf("get version for application %s: %w", o.name, err)
 	}

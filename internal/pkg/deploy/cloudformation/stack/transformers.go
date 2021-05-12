@@ -33,15 +33,21 @@ const (
 	defaultSidecarPort = "80"
 )
 
-// Supported capacity providers for Fargate services
+// Min and Max values for task ephemeral storage in GiB.
+const (
+	ephemeralMinValueGiB = 21
+	ephemeralMaxValueGiB = 200
+)
+
+// Supported capacityproviders for Fargate services
 const (
 	capacityProviderFargateSpot = "FARGATE_SPOT"
 	capacityProviderFargate     = "FARGATE"
 )
 
 var (
-
-	errInvalidSpotConfig   = errors.New(`"count.spot" and "count.range" cannot be specified together`)
+	errEphemeralBadSize  = errors.New("ephemeral storage must be between 20 GiB and 200 GiB")
+	errInvalidSpotConfig = errors.New(`"count.spot" and "count.range" cannot be specified together`)
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
@@ -278,12 +284,35 @@ func convertStorageOpts(wlName *string, in *manifest.Storage) (*template.Storage
 	if err != nil {
 		return nil, err
 	}
+	ephemeral, err := convertEphemeral(in.Ephemeral)
+	if err != nil {
+		return nil, err
+	}
 	return &template.StorageOpts{
+		Ephemeral:         ephemeral,
 		Volumes:           v,
 		MountPoints:       mp,
 		EFSPerms:          perms,
 		ManagedVolumeInfo: mv,
 	}, nil
+}
+
+func convertEphemeral(in *int) (*int, error) {
+	if in == nil {
+		return nil, nil
+	}
+
+	// Min value for extensible ephemeral storage is 21; if customer specifies 20, which is the default size,
+	// we shouldn't let CF error out. Instead, we'll just omit it from the config.
+	if aws.IntValue(in) == 20 {
+		return nil, nil
+	}
+
+	if aws.IntValue(in) < ephemeralMinValueGiB || aws.IntValue(in) > ephemeralMaxValueGiB {
+		return nil, errEphemeralBadSize
+	}
+
+	return in, nil
 }
 
 // convertSidecarMountPoints is used to convert from manifest to template objects.

@@ -60,21 +60,22 @@ const (
 	storageRDSInitialDBFlag      = "initial-db"
 	storageRDSParameterGroupFlag = "parameter-group"
 
-	taskGroupNameFlag  = "task-group-name"
-	countFlag          = "count"
-	cpuFlag            = "cpu"
-	memoryFlag         = "memory"
-	imageFlag          = "image"
-	taskRoleFlag       = "task-role"
-	executionRoleFlag  = "execution-role"
-	clusterFlag        = "cluster"
-	subnetsFlag        = "subnets"
-	securityGroupsFlag = "security-groups"
-	envVarsFlag        = "env-vars"
-	secretsFlag        = "secrets"
-	commandFlag        = "command"
-	entrypointFlag     = "entrypoint"
-	taskDefaultFlag    = "default"
+	taskGroupNameFlag   = "task-group-name"
+	countFlag           = "count"
+	cpuFlag             = "cpu"
+	memoryFlag          = "memory"
+	imageFlag           = "image"
+	taskRoleFlag        = "task-role"
+	executionRoleFlag   = "execution-role"
+	clusterFlag         = "cluster"
+	subnetsFlag         = "subnets"
+	securityGroupsFlag  = "security-groups"
+	envVarsFlag         = "env-vars"
+	secretsFlag         = "secrets"
+	commandFlag         = "command"
+	entrypointFlag      = "entrypoint"
+	taskDefaultFlag     = "default"
+	generateCommandFlag = "generate-cmd"
 
 	vpcIDFlag          = "import-vpc-id"
 	publicSubnetsFlag  = "import-public-subnets"
@@ -97,6 +98,10 @@ const (
 
 	taskIDFlag    = "task-id"
 	containerFlag = "container"
+
+	valuesFlag        = "values"
+	overwriteFlag     = "overwrite"
+	inputFilePathFlag = "cli-input-yaml"
 )
 
 // Short flag names.
@@ -150,6 +155,13 @@ Cannot be specified with '%s' or '%s'`, appFlag, envFlag)
 Cannot be specified with '%s', '%s' or '%s'`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
 	taskAppFlagDescription = fmt.Sprintf(`Optional. Name of the application.
 Cannot be specified with '%s', '%s' or '%s'`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
+
+	secretNameFlagDescription = fmt.Sprintf(`The name of the secret.
+Mutually exclusive with %s flag.`, inputFilePathFlag)
+	secretValuesFlagDescription = fmt.Sprintf(`Values of the secret in each environment. Specified as <environment>=<value> separated by commas.
+Mutually exclusive with %s flag.`, inputFilePathFlag)
+	secretInputFilePathFlagDescription = fmt.Sprintf(`Optional. A file in which the secret values are specified.
+Mutually exclusive with %s flag and %s flag"`, nameFlag, valuesFlag)
 )
 
 const (
@@ -224,7 +236,11 @@ Must be either "MySQL" or "PostgreSQL".`
 	taskGroupFlagDescription     = `Optional. The group name of the task. 
 Tasks with the same group name share the same set of resources. 
 (default directory name)`
-	taskImageTagFlagDescription = `Optional. The container image tag in addition to "latest".`
+	taskImageTagFlagDescription    = `Optional. The container image tag in addition to "latest".`
+	generateCommandFlagDescription = `Optional. Generate a command with a pre-filled value for each flag.
+To use it for an ECS service, specify --generate-cmd <cluster name>/<service name>.
+Alternatively, if the service is created with Copilot, specify --generate-cmd <application>/<environment>/<service>.
+Cannot be specified with any other flags.`
 
 	vpcIDFlagDescription          = "Optional. Use an existing VPC ID."
 	publicSubnetsFlagDescription  = "Optional. Use existing public subnet IDs."
@@ -255,4 +271,6 @@ are also accepted.`
 	taskIDFlagDescription      = "Optional. ID of the task you want to exec in."
 	execCommandFlagDescription = `Optional. The command that is passed to a running container.`
 	containerFlagDescription   = "Optional. The specific container you want to exec in. By default the first essential container will be used."
+
+	secretOverwriteFlagDescription = "Optional. Whether to overwrite an existing secret."
 )

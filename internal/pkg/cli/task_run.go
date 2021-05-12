@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
+
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
@@ -78,8 +80,8 @@ type runTaskVars struct {
 
 	taskRole      string
 	executionRole string
+	cluster       string
 
-	cluster                     string
 	subnets                     []string
 	securityGroups              []string
 	env                         string
@@ -92,12 +94,14 @@ type runTaskVars struct {
 	entrypoint   string
 	resourceTags map[string]string
 
-	follow bool
+	follow                bool
+	generateCommandTarget string
 }
 
 type runTaskOpts struct {
 	runTaskVars
 	isDockerfileSet bool
+	nFlag           int
 
 	// Interfaces to interact with dependencies.
 	fs      afero.Fs
@@ -116,11 +120,15 @@ type runTaskOpts struct {
 	sess              *session.Session
 	targetEnvironment *config.Environment
 
-	// Configurer methods.
+	// Configurer functions.
 	configureRuntimeOpts func() error
 	configureRepository  func() error
 	// NOTE: configureEventsWriter is only called when tailing logs (i.e. --follow is specified)
 	configureEventsWriter func(tasks []*task.Task)
+
+	// Functions to generate a task run command.
+	runTaskRequestFromECSService func(client ecs.ECSServiceDescriber, cluster, service string) (*ecs.RunTaskRequest, error)
+	runTaskRequestFromService    func(client ecs.ServiceDescriber, app, env, svc string) (*ecs.RunTaskRequest, error)
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -163,6 +171,9 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	opts.configureEventsWriter = func(tasks []*task.Task) {
 		opts.eventsWriter = logging.NewTaskClient(opts.sess, opts.groupName, tasks)
 	}
+
+	opts.runTaskRequestFromECSService = ecs.RunTaskRequestFromECSService
+	opts.runTaskRequestFromService = ecs.RunTaskRequestFromService
 	return &opts, nil
 }
 
@@ -247,6 +258,12 @@ func (o *runTaskOpts) configureSessAndEnv() error {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *runTaskOpts) Validate() error {
+	if o.generateCommandTarget != "" {
+		if o.nFlag >= 2 {
+			return errors.New("cannot specify `--generate-cmd` with any other flag")
+		}
+	}
+
 	if o.count <= 0 {
 		return errNumNotPositive
 	}
@@ -383,6 +400,9 @@ func (o *runTaskOpts) validateFlagsWithSecurityGroups() error {
 
 // Ask prompts the user for any required or important fields that are not provided.
 func (o *runTaskOpts) Ask() error {
+	if o.generateCommandTarget != "" {
+		return nil
+	}
 	if o.shouldPromptForAppEnv() {
 		if err := o.askAppName(); err != nil {
 			return err
@@ -398,7 +418,7 @@ func (o *runTaskOpts) shouldPromptForAppEnv() bool {
 	// NOTE: if security groups are specified but subnets are not, then we use the default subnets with the
 	// specified security groups.
 	useDefault := o.useDefaultSubnetsAndCluster || (o.securityGroups != nil && o.subnets == nil && o.cluster == "")
-	useConfig := o.subnets != nil
+	useConfig := o.subnets != nil || o.cluster != ""
 
 	// if user hasn't specified that they want to use the default subnets, and that they didn't provide specific subnets
 	// that they want to use, then we prompt.
@@ -407,6 +427,10 @@ func (o *runTaskOpts) shouldPromptForAppEnv() bool {
 
 // Execute deploys and runs the task.
 func (o *runTaskOpts) Execute() error {
+	if o.generateCommandTarget != "" {
+		return o.generateCommand()
+	}
+
 	if o.groupName == "" {
 		dir, err := os.Getwd()
 		if err != nil {
@@ -479,6 +503,76 @@ func (o *runTaskOpts) Execute() error {
 		}
 	}
 	return nil
+}
+
+func (o *runTaskOpts) generateCommand() error {
+	command, err := o.runTaskCommand()
+	if err != nil {
+		return err
+	}
+	log.Infoln(command.CLIString())
+	return nil
+}
+
+func (o *runTaskOpts) runTaskCommand() (cliStringer, error) {
+	var cmd cliStringer
+	sess, err := sessions.NewProvider().Default()
+	if err != nil {
+		return nil, fmt.Errorf("get default session: %s", err)
+	}
+
+	if arn.IsARN(o.generateCommandTarget) {
+		clusterName, serviceName, err := o.parseARN()
+		if err != nil {
+			return nil, err
+		}
+		return o.runTaskCommandFromECSService(sess, clusterName, serviceName)
+	}
+
+	parts := strings.Split(o.generateCommandTarget, "/")
+	switch len(parts) {
+	case 2:
+		clusterName, serviceName := parts[0], parts[1]
+		cmd, err = o.runTaskCommandFromECSService(sess, clusterName, serviceName)
+		if err != nil {
+			return nil, err
+		}
+	case 3:
+		appName, envName, serviceName := parts[0], parts[1], parts[2]
+		cmd, err = o.runTaskRequestFromService(ecs.New(sess), appName, envName, serviceName)
+		if err != nil {
+			return nil, fmt.Errorf("generate task run command from service %s of application %s deployed in environment %s: %w", serviceName, appName, envName, err)
+		}
+	default:
+		return nil, errors.New("invalid input to --generate-cmd: must be of one the form <cluster>/<service> or <app>/<env>/<workload>")
+	}
+
+	return cmd, nil
+}
+
+func (o *runTaskOpts) parseARN() (string, string, error) {
+	svcARN := awsecs.ServiceArn(o.generateCommandTarget)
+	clusterName, err := svcARN.ClusterName()
+	if err != nil {
+		return "", "", fmt.Errorf("extract cluster name from arn %s: %w", svcARN, err)
+	}
+	serviceName, err := svcARN.ServiceName()
+	if err != nil {
+		return "", "", fmt.Errorf("extract service name from arn %s: %w", svcARN, err)
+	}
+	return clusterName, serviceName, nil
+}
+
+func (o *runTaskOpts) runTaskCommandFromECSService(sess *session.Session, clusterName, serviceName string) (cliStringer, error) {
+	cmd, err := o.runTaskRequestFromECSService(awsecs.New(sess), clusterName, serviceName)
+	if err != nil {
+		var errMultipleContainers *ecs.ErrMultipleContainersInTaskDef
+		if errors.As(err, &errMultipleContainers) {
+			log.Errorln("`copilot task run` does not support running more than one container.")
+		}
+		return nil, fmt.Errorf("generate task run command from ECS service %s: %w", clusterName+"/"+serviceName, err)
+	}
+	return cmd, nil
 }
 
 func (o *runTaskOpts) displayLogStream() error {
@@ -678,7 +772,7 @@ You will be prompted to specify an environment for the tasks to run in.
 Run a task named "db-migrate" in the "test" environment under the current workspace.
 /code $ copilot task run -n db-migrate --env test
 Run 4 tasks with 2GB memory, an existing image, and a custom task role.
-/code $ copilot task run --num 4 --memory 2048 --image=rds-migrate --task-role migrate-role
+/code $ copilot task run --count 4 --memory 2048 --image=rds-migrate --task-role migrate-role
 Run a task with environment variables.
 /code $ copilot task run --env-vars name=myName,user=myUser
 Run a task using the current workspace with specific subnets and security groups.
@@ -687,6 +781,7 @@ Run a task with a command.
 /code $ copilot task run --command "python migrate-script.py"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newTaskRunOpts(vars)
+			opts.nFlag = cmd.Flags().NFlag()
 			if err != nil {
 				return err
 			}
@@ -737,5 +832,7 @@ Run a task with a command.
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
+	cmd.Flags().StringVar(&vars.generateCommandTarget, generateCommandFlag, "", generateCommandFlagDescription)
+
 	return cmd
 }
