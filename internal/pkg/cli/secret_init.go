@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -149,8 +151,13 @@ func (o *secretInitOpts) Validate() error {
 // Ask prompts the user for any required or important fields that are not provided.
 func (o *secretInitOpts) Ask() error {
 	if o.overwrite {
-		log.Infof("You have specified %s flag. Please note that overwriting an existing secret may break your deployed service.\n", color.HighlightCode("--overwrite"))
+		log.Warningf("You have specified %s flag. Please note that overwriting an existing secret may break your deployed service.\n", color.HighlightCode("--overwrite"))
 	}
+
+	if o.inputFilePath != "" {
+		return nil
+	}
+
 	if err := o.askForAppName(); err != nil {
 		return err
 	}
@@ -181,13 +188,23 @@ func (o *secretInitOpts) Execute() error {
 }
 
 func (o *secretInitOpts) putSecret(secretName string, values map[string]string) {
+	spinner := termprogress.NewSpinner(log.DiagnosticWriter)
+
+	spinner.Start("start creating secret")
+	errLogs := make([]string, 0)
 	for envName, value := range values {
 		err := o.putSecretInEnv(secretName, envName, value)
 		if err != nil {
-			log.Errorf("Failed to put secret %s in environment %s: %w", secretName, envName, err)
+			errLogs = append(errLogs, fmt.Sprintf("Failed to put secret %s in environment %s: %s", color.HighlightUserInput(secretName), color.HighlightUserInput(envName), err.Error()))
 			continue
 		}
 	}
+
+	for _, errLog := range errLogs {
+		log.Errorln(errLog)
+	}
+	spinner.Stop("finish creating secret")
+	log.Infoln("")
 }
 
 func (o *secretInitOpts) putSecretInEnv(secretName, envName, value string) error {
@@ -215,7 +232,7 @@ func (o *secretInitOpts) putSecretInEnv(secretName, envName, value string) error
 	if err != nil {
 		var targetErr *ssm.ErrParameterAlreadyExists
 		if errors.As(err, &targetErr) {
-			log.Infoln(fmt.Sprintf("Secret %s already exists. If you want to overwrite an existing secret, use the %s flag.\n", name, color.HighlightCode("--overwrite")))
+			log.Warningf("Secret %s already exists. If you want to overwrite an existing secret, use the %s flag.\n", name, color.HighlightCode("--overwrite"))
 			return nil
 		}
 		return err
@@ -223,11 +240,11 @@ func (o *secretInitOpts) putSecretInEnv(secretName, envName, value string) error
 
 	version := aws.Int64Value(out.Version)
 	if version != 1 {
-		log.Infoln(fmt.Sprintf("Secret %s already exists in environment %s. Overwritten.", name, envName))
+		log.Successln(fmt.Sprintf("Secret %s already exists in environment %s. Overwritten.", name, color.HighlightUserInput(envName)))
 		return nil
 	}
 
-	log.Infoln(fmt.Sprintf("Successfully created %s", name))
+	log.Successln(fmt.Sprintf("Successfully put secret %s in environment %s as %s.", color.HighlightUserInput(secretName), color.HighlightUserInput(envName), color.HighlightResource(name)))
 	return nil
 }
 
