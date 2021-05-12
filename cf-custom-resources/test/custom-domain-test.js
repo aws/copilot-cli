@@ -15,6 +15,7 @@ describe("DNS Validated Certificate Handler", () => {
   const testEnvName = "test";
   const testDomainName = "example.com";
   const testAliases = `{"frontend": ["v1.${testEnvName}.${testAppName}.${testDomainName}", "foobar.com"]}`;
+  const testUpdatedAliases = `{"frontend": ["v2.${testEnvName}.${testAppName}.${testDomainName}", "foobar.com"]}`;
   const testLoadBalancerDNS =
     "examp-publi-gsedbvf8t12c-852245110.us-west-1.elb.amazonaws.com.";
   const testLBHostedZone = "Z1H1FL5HABSF5";
@@ -157,7 +158,7 @@ describe("DNS Validated Certificate Handler", () => {
       });
   });
 
-  test("Upsert success", () => {
+  test("Create success", () => {
     const changeResourceRecordSetsFake = sinon.fake.resolves({
       ChangeInfo: {
         Id: "bogus",
@@ -213,6 +214,101 @@ describe("DNS Validated Certificate Handler", () => {
               Changes: [
                 {
                   Action: "UPSERT",
+                  ResourceRecordSet: {
+                    Name: `v1.${testEnvName}.${testAppName}.${testDomainName}`,
+                    Type: "A",
+                    AliasTarget: {
+                      HostedZoneId: testLBHostedZone,
+                      DNSName: testLoadBalancerDNS,
+                      EvaluateTargetHealth: true,
+                    },
+                  },
+                },
+              ],
+            },
+            HostedZoneId: testHostedZoneId,
+          })
+        );
+        expect(request.isDone()).toBe(true);
+      });
+  });
+
+  test("Update success", () => {
+    const changeResourceRecordSetsFake = sinon.fake.resolves({
+      ChangeInfo: {
+        Id: "bogus",
+      },
+    });
+
+    const listHostedZonesByNameFake = sinon.fake.resolves({
+      HostedZones: [
+        {
+          Id: `/hostedzone/${testHostedZoneId}`,
+        },
+      ],
+    });
+
+    AWS.mock(
+      "Route53",
+      "changeResourceRecordSets",
+      changeResourceRecordSetsFake
+    );
+    AWS.mock("Route53", "listHostedZonesByName", listHostedZonesByNameFake);
+
+    const request = nock(ResponseURL)
+      .put("/", (body) => {
+        return body.Status === "SUCCESS";
+      })
+      .reply(200);
+    return LambdaTester(handler.handler)
+      .event({
+        RequestType: "Update",
+        ResourceProperties: {
+          AppName: testAppName,
+          EnvName: testEnvName,
+          DomainName: testDomainName,
+          Aliases: testUpdatedAliases,
+          Region: "us-east-1",
+          LoadBalancerDNS: testLoadBalancerDNS,
+          LoadBalancerHostedZone: testLBHostedZone,
+          AppDNSRole: testRootDNSRole,
+        },
+        OldResourceProperties: {
+          Aliases: testAliases,
+        }
+      })
+      .expectResolve(() => {
+        // use cached result
+        sinon.assert.notCalled(listHostedZonesByNameFake);
+        sinon.assert.calledWith(
+          changeResourceRecordSetsFake,
+          sinon.match({
+            ChangeBatch: {
+              Changes: [
+                {
+                  Action: "UPSERT",
+                  ResourceRecordSet: {
+                    Name: `v2.${testEnvName}.${testAppName}.${testDomainName}`,
+                    Type: "A",
+                    AliasTarget: {
+                      HostedZoneId: testLBHostedZone,
+                      DNSName: testLoadBalancerDNS,
+                      EvaluateTargetHealth: true,
+                    },
+                  },
+                },
+              ],
+            },
+            HostedZoneId: testHostedZoneId,
+          })
+        );
+        sinon.assert.calledWith(
+          changeResourceRecordSetsFake,
+          sinon.match({
+            ChangeBatch: {
+              Changes: [
+                {
+                  Action: "DELETE",
                   ResourceRecordSet: {
                     Name: `v1.${testEnvName}.${testAppName}.${testDomainName}`,
                     Type: "A",

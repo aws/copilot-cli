@@ -103,8 +103,7 @@ const writeCustomDomainRecord = async function (
     // Used by the test suite, since waiters aren't mockable yet
     envRoute53.waitFor = appRoute53.waitFor = waiter;
   }
-  const aliasList = await getAllAliases(aliases);
-  for (const alias of aliasList) {
+  for (const alias of aliases) {
     const aliasType = await getAliasType(aliasTypes, alias);
     switch (aliasType) {
       case aliasTypes.EnvDomainZone:
@@ -164,7 +163,7 @@ const writeARecord = async function (
       throw new Error(`Couldn't find any Hosted Zone with DNS name ${domain}.`);
     }
     hostedZoneId = hostedZones.HostedZones[0].Id.split("/").pop();
-    hostedZoneCache.set(domain, hostedZoneId)
+    hostedZoneCache.set(domain, hostedZoneId);
   }
   console.log(`${action} A record into Hosted Zone ${hostedZoneId}`);
   const changeBatch = await updateRecords(
@@ -195,35 +194,57 @@ exports.handler = async function (event, context) {
     RootDomainZone: { regex: `.*${domain}`, domain: `${domain}` },
     OtherDomainZone: { regex: `.*` },
   };
-
   try {
+    var aliases = await getAllAliases(props.Aliases);
     switch (event.RequestType) {
       case "Create":
-      case "Update":
         await writeCustomDomainRecord(
-          props.Aliases,
+          aliases,
           props.LoadBalancerDNS,
           props.LoadBalancerHostedZone,
           props.AppDNSRole,
           aliasTypes,
           "UPSERT"
         );
-        physicalResourceId = `${event.LogicalResourceId}`;
         break;
-      case "Delete":
+      case "Update":
         await writeCustomDomainRecord(
-          props.Aliases,
+          aliases,
+          props.LoadBalancerDNS,
+          props.LoadBalancerHostedZone,
+          props.AppDNSRole,
+          aliasTypes,
+          "UPSERT"
+        );
+        // After upserting new aliases, delete unused ones. For example: previously we have ["foo.com", "bar.com"],
+        // and now the aliases param is updated to just ["foo.com"] then we'll delete "bar.com".
+        var prevAliases = await getAllAliases(event.OldResourceProperties.Aliases);
+        var aliasesToDelete = prevAliases.filter(function (itm) {
+          return aliases.indexOf(itm) === -1;
+        });
+        await writeCustomDomainRecord(
+          aliasesToDelete,
           props.LoadBalancerDNS,
           props.LoadBalancerHostedZone,
           props.AppDNSRole,
           aliasTypes,
           "DELETE"
         );
-        physicalResourceId = event.PhysicalResourceId;
+        break;
+      case "Delete":
+        await writeCustomDomainRecord(
+          aliases,
+          props.LoadBalancerDNS,
+          props.LoadBalancerHostedZone,
+          props.AppDNSRole,
+          aliasTypes,
+          "DELETE"
+        );
         break;
       default:
         throw new Error(`Unsupported request type ${event.RequestType}`);
     }
+    physicalResourceId = `${event.LogicalResourceId}`;
     await report(event, context, "SUCCESS", physicalResourceId, responseData);
   } catch (err) {
     console.log(`Caught error ${err}.`);
