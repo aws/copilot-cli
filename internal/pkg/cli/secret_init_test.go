@@ -408,6 +408,37 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 				}, nil)
 			},
 		},
+		"should make calls to overwrite if overwrite is specified": {
+			inAppName:   testApp,
+			inName:      testName,
+			inValues:    testValues,
+			inOverwrite: true,
+
+			setupMocks: func(m secretInitExecuteMocks) {
+				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
+					Name:      "/copilot/test-app/test/secrets/db-password",
+					Value:     "test-password",
+					Overwrite: true,
+					Tags: map[string]string{
+						deploy.AppTagKey: "test-app",
+						deploy.EnvTagKey: "test",
+					},
+				}).Return(&ssm.PutSecretOutput{
+					Version: aws.Int64(1),
+				}, nil)
+				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
+					Name:      "/copilot/test-app/prod/secrets/db-password",
+					Value:     "prod-password",
+					Overwrite: true,
+					Tags: map[string]string{
+						deploy.AppTagKey: "test-app",
+						deploy.EnvTagKey: "prod",
+					},
+				}).Return(&ssm.PutSecretOutput{
+					Version: aws.Int64(1),
+				}, nil)
+			},
+		},
 		"do not throw error if parameter already exists": {
 			inAppName: testApp,
 			inName:    testName,
