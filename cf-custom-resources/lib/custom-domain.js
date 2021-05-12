@@ -187,12 +187,15 @@ exports.handler = async function (event, context) {
   const [app, env, domain] = [props.AppName, props.EnvName, props.DomainName];
   var aliasTypes = {
     EnvDomainZone: {
-      regex: `.*${env}.${app}.${domain}`,
+      regex: new RegExp(`^([^\.]+\.)?${env}.${app}.${domain}`),
       domain: `${env}.${app}.${domain}`,
     },
-    AppDomainZone: { regex: `.*${app}.${domain}`, domain: `${app}.${domain}` },
-    RootDomainZone: { regex: `.*${domain}`, domain: `${domain}` },
-    OtherDomainZone: { regex: `.*` },
+    AppDomainZone: {
+      regex: new RegExp(`^([^\.]+\.)?${app}.${domain}`),
+      domain: `${app}.${domain}`,
+    },
+    RootDomainZone: { regex: new RegExp(`^([^\.]+\.)?${domain}`), domain: `${domain}` },
+    OtherDomainZone: { regex: new RegExp(`.*`) },
   };
   try {
     var aliases = await getAllAliases(props.Aliases);
@@ -218,9 +221,11 @@ exports.handler = async function (event, context) {
         );
         // After upserting new aliases, delete unused ones. For example: previously we have ["foo.com", "bar.com"],
         // and now the aliases param is updated to just ["foo.com"] then we'll delete "bar.com".
-        var prevAliases = await getAllAliases(event.OldResourceProperties.Aliases);
-        var aliasesToDelete = prevAliases.filter(function (itm) {
-          return aliases.indexOf(itm) === -1;
+        var prevAliases = await getAllAliases(
+          event.OldResourceProperties.Aliases
+        );
+        var aliasesToDelete = [...prevAliases].filter(function (itm) {
+          return !aliases.has(itm);
         });
         await writeCustomDomainRecord(
           aliasesToDelete,
@@ -261,7 +266,7 @@ exports.handler = async function (event, context) {
 
 // getAllAliases gets all aliases out from a string. For example:
 // {"frontend": ["test.foobar.com", "foobar.com"], "api": ["api.foobar.com"]} will return
-// ["foobar.com"].
+// ["test.foobar.com", "foobar.com", "api.foobar.com"].
 const getAllAliases = function (aliases) {
   let obj;
   try {
@@ -273,16 +278,16 @@ const getAllAliases = function (aliases) {
   for (var m in obj) {
     aliasList.push(...obj[m]);
   }
-  return [...new Set(aliasList)];
+  return new Set(aliasList);
 };
 
 const getAliasType = function (aliasTypes, alias) {
   switch (true) {
-    case new RegExp(aliasTypes.EnvDomainZone.regex).test(alias):
+    case aliasTypes.EnvDomainZone.regex.test(alias):
       return aliasTypes.EnvDomainZone;
-    case new RegExp(aliasTypes.AppDomainZone.regex).test(alias):
+    case aliasTypes.AppDomainZone.regex.test(alias):
       return aliasTypes.AppDomainZone;
-    case new RegExp(aliasTypes.RootDomainZone.regex).test(alias):
+    case aliasTypes.RootDomainZone.regex.test(alias):
       return aliasTypes.RootDomainZone;
     default:
       return aliasTypes.OtherDomainZone;

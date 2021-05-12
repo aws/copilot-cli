@@ -275,7 +275,7 @@ describe("DNS Validated Certificate Handler", () => {
         },
         OldResourceProperties: {
           Aliases: testAliases,
-        }
+        },
       })
       .expectResolve(() => {
         // use cached result

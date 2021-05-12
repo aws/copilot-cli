@@ -1,6 +1,6 @@
 EnableLongARNFormatAction:
   Metadata:
-    'aws:copilot:description': 'Custom resource enabling long ARN formats for the authenticated AWS principal'
+    'aws:copilot:description': 'Enable long ARN formats for the authenticated AWS principal'
   Type: Custom::EnableLongARNFormatFunction
   DependsOn:
     - EnableLongARNFormatFunction
@@ -9,7 +9,7 @@ EnableLongARNFormatAction:
 
 DelegateDNSAction:
   Metadata:
-    'aws:copilot:description': 'Custom resource delegating DNS for environment subdomain'
+    'aws:copilot:description': 'Delegate DNS for environment subdomain'
   Condition: DelegateDNS
   Type: Custom::DNSDelegationFunction
   DependsOn:
@@ -24,7 +24,7 @@ DelegateDNSAction:
 
 HTTPSCert:
   Metadata:
-    'aws:copilot:description': 'Custom resource requesting and validating a default ACM certificate'
+    'aws:copilot:description': 'Request and validate an ACM certificate for your domain'
   Condition: DelegateDNS
   Type: Custom::CertificateValidationFunction
   DependsOn:
@@ -50,7 +50,7 @@ HTTPSCert:
 
 CustomDomainAction:
   Metadata:
-    'aws:copilot:description': 'Custom resource adding an A-record to the hosted zone for the domain alias'
+    'aws:copilot:description': 'Add an A-record to the hosted zone for the domain alias'
   Condition: HasAliases
   DependsOn: HTTPSCert
   Type: Custom::CustomDomainFunction
