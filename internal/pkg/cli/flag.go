@@ -60,21 +60,22 @@ const (
 	storageRDSInitialDBFlag      = "initial-db"
 	storageRDSParameterGroupFlag = "parameter-group"
 
-	taskGroupNameFlag  = "task-group-name"
-	countFlag          = "count"
-	cpuFlag            = "cpu"
-	memoryFlag         = "memory"
-	imageFlag          = "image"
-	taskRoleFlag       = "task-role"
-	executionRoleFlag  = "execution-role"
-	clusterFlag        = "cluster"
-	subnetsFlag        = "subnets"
-	securityGroupsFlag = "security-groups"
-	envVarsFlag        = "env-vars"
-	secretsFlag        = "secrets"
-	commandFlag        = "command"
-	entrypointFlag     = "entrypoint"
-	taskDefaultFlag    = "default"
+	taskGroupNameFlag   = "task-group-name"
+	countFlag           = "count"
+	cpuFlag             = "cpu"
+	memoryFlag          = "memory"
+	imageFlag           = "image"
+	taskRoleFlag        = "task-role"
+	executionRoleFlag   = "execution-role"
+	clusterFlag         = "cluster"
+	subnetsFlag         = "subnets"
+	securityGroupsFlag  = "security-groups"
+	envVarsFlag         = "env-vars"
+	secretsFlag         = "secrets"
+	commandFlag         = "command"
+	entrypointFlag      = "entrypoint"
+	taskDefaultFlag     = "default"
+	generateCommandFlag = "generate-cmd"
 
 	vpcIDFlag          = "import-vpc-id"
 	publicSubnetsFlag  = "import-public-subnets"
@@ -238,7 +239,11 @@ Must be either "MySQL" or "PostgreSQL".`
 	taskGroupFlagDescription     = `Optional. The group name of the task. 
 Tasks with the same group name share the same set of resources. 
 (default directory name)`
-	taskImageTagFlagDescription = `Optional. The container image tag in addition to "latest".`
+	taskImageTagFlagDescription    = `Optional. The container image tag in addition to "latest".`
+	generateCommandFlagDescription = `Optional. Generate a command with a pre-filled value for each flag.
+To use it for an ECS service, specify --generate-cmd <cluster name>/<service name>.
+Alternatively, if the service is created with Copilot, specify --generate-cmd <application>/<environment>/<service>.
+Cannot be specified with any other flags.`
 
 	vpcIDFlagDescription          = "Optional. Use an existing VPC ID."
 	publicSubnetsFlagDescription  = "Optional. Use existing public subnet IDs."

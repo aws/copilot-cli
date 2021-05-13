@@ -26,6 +26,7 @@ var mockCreateEnvInput = deploy.CreateEnvironmentInput{
 		template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
 		template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
 		template.EnableLongARNsFileName:   "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey3",
+		template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
 	},
 }
 

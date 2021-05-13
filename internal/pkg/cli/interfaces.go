@@ -7,6 +7,8 @@ import (
 	"encoding"
 	"io"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
+
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
@@ -568,4 +570,12 @@ type codestar interface {
 
 type publicIPGetter interface {
 	PublicIP(ENI string) (string, error)
+}
+
+type cliStringer interface {
+	CLIString() string
+}
+
+type secretPutter interface {
+	PutSecret(in ssm.PutSecretInput) (*ssm.PutSecretOutput, error)
 }

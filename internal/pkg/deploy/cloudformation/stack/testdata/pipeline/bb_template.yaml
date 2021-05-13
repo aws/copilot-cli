@@ -43,6 +43,14 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
+              - codebuild:CreateReportGroup
+              - codebuild:CreateReport
+              - codebuild:UpdateReport
+              - codebuild:BatchPutTestCases
+              - codebuild:BatchPutCodeCoverages
+            Resource: !Sub arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/pipeline-phonetool-*
+          - Effect: Allow
+            Action:
               - s3:PutObject
               - s3:GetObject
               - s3:GetObjectVersion

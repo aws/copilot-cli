@@ -324,6 +324,35 @@ var _ = Describe("Multiple Service App", func() {
 
 		})
 
+		It("should be able to write to EFS volume", func() {
+			svcName := "front-end"
+			svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
+				AppName: appName,
+				Name:    svcName,
+			})
+			Expect(svcShowErr).NotTo(HaveOccurred())
+			Expect(len(svc.Routes)).To(Equal(1))
+
+			// Calls the front end's EFS test endpoint - which should create a file in the EFS filesystem.
+			route := svc.Routes[0]
+
+			Expect(route.Environment).To(Equal("test"))
+			routeURL = route.URL
+
+			resp, fetchErr := http.Get(fmt.Sprintf("%s/efs-putter", route.URL))
+			Expect(fetchErr).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+		})
+
+		It("EFS volume should appear in `env show`", func() {
+			envShowOutput, envShowErr := cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "test",
+			})
+			Expect(envShowErr).NotTo(HaveOccurred())
+			Expect(envShowOutput.Resources).To(ContainElement(HaveKeyWithValue("type", "AWS::EFS::FileSystem")))
+		})
+
 		It("job should have run", func() {
 			// Job should have run. We check this by hitting the "job-checker" path, which tells us the value
 			// of the "TEST_JOB_CHECK_VAR" in the frontend service, which will have been updated by a GET on
@@ -338,7 +367,7 @@ var _ = Describe("Multiple Service App", func() {
 					return "", err
 				}
 				return string(bodyBytes), nil
-			}, "4m", "15s").Should(Equal("yes")) // This is shorthand for "error is nil and resp is yes"
+			}, "4m", "10s").Should(Equal("yes")) // This is shorthand for "error is nil and resp is yes"
 		})
 
 		It("environment variable should be overridden and accessible through GET /magicwords", func() {

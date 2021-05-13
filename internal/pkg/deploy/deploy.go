@@ -24,7 +24,13 @@ const (
 )
 
 const (
-	ecsServiceResourceType = "ecs:service"
+	svcWorkloadType = "service"
+	jobWorkloadType = "job"
+)
+
+const (
+	ecsServiceResourceType   = "ecs:service"
+	stateMachineResourceType = "states:stateMachine"
 )
 
 type resourceGetter interface {
@@ -36,6 +42,7 @@ type ConfigStoreClient interface {
 	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
 	ListEnvironments(appName string) ([]*config.Environment, error)
 	GetService(appName, svcName string) (*config.Workload, error)
+	GetJob(appName, jobname string) (*config.Workload, error)
 }
 
 // Store fetches information on deployed services.
@@ -71,32 +78,53 @@ func NewStore(store ConfigStoreClient) (*Store, error) {
 	return s, nil
 }
 
-// ListDeployedServices returns the names of deployed services in an environment part of an application.
+// ListDeployedServices returns the names of deployed services in an environment.
 func (s *Store) ListDeployedServices(appName string, envName string) ([]string, error) {
+	return s.listDeployedWorkloads(appName, envName, svcWorkloadType)
+}
+
+// ListDeployedJobs returns the names of deployed jobs in an environment.
+func (s *Store) ListDeployedJobs(appName string, envName string) ([]string, error) {
+	return s.listDeployedWorkloads(appName, envName, jobWorkloadType)
+}
+
+func (s *Store) listDeployedWorkloads(appName string, envName string, workloadType string) ([]string, error) {
+	var keyResourceType string
+	var getWorkload func(string, string) (*config.Workload, error)
+	switch workloadType {
+	case jobWorkloadType:
+		keyResourceType = stateMachineResourceType
+		getWorkload = s.configStore.GetJob
+	case svcWorkloadType:
+		keyResourceType = ecsServiceResourceType
+		getWorkload = s.configStore.GetService
+	default:
+		return nil, fmt.Errorf("unrecognized workload type %s", workloadType)
+	}
 	rgClient, err := s.newRgClientFromIDs(appName, envName)
 	if err != nil {
 		return nil, err
 	}
-	resources, err := rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
+	resources, err := rgClient.GetResourcesByTags(keyResourceType, map[string]string{
 		AppTagKey: appName,
 		EnvTagKey: envName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("get resources by Copilot tags: %w", err)
 	}
-	svcs := make([]string, len(resources))
+	wklds := make([]string, len(resources))
 	for ind, resource := range resources {
-		svcName := resource.Tags[ServiceTagKey]
-		if svcName == "" {
-			return nil, fmt.Errorf("service with ARN %s is not tagged with %s", resource.ARN, ServiceTagKey)
+		name := resource.Tags[ServiceTagKey]
+		if name == "" {
+			return nil, fmt.Errorf("%s resource with ARN %s is not tagged with %s", workloadType, resource.ARN, ServiceTagKey)
 		}
-		svc, err := s.configStore.GetService(appName, svcName)
+		wkld, err := getWorkload(appName, name)
 		if err != nil {
-			return nil, fmt.Errorf("get service %s: %w", svcName, err)
+			return nil, fmt.Errorf("get %s %s: %w", workloadType, name, err)
 		}
-		svcs[ind] = svc.Name
+		wklds[ind] = wkld.Name
 	}
-	return svcs, nil
+	return wklds, nil
 }
 
 type result struct {
@@ -154,19 +182,38 @@ func (s *Store) ListEnvironmentsDeployedTo(appName string, svcName string) ([]st
 
 // IsServiceDeployed returns whether a service is deployed in an environment or not.
 func (s *Store) IsServiceDeployed(appName string, envName string, svcName string) (bool, error) {
+	return s.isWorkloadDeployed(appName, envName, svcName, svcWorkloadType)
+}
+
+// IsJobDeployed returnds whether a job is deployed in an environment or not by checking for a state machine.
+func (s *Store) IsJobDeployed(appName, envName, jobName string) (bool, error) {
+	return s.isWorkloadDeployed(appName, envName, jobName, jobWorkloadType)
+}
+
+func (s *Store) isWorkloadDeployed(appName, envName, name string, workloadType string) (bool, error) {
+	var keyResourceType string
+	switch workloadType {
+	case jobWorkloadType:
+		keyResourceType = stateMachineResourceType
+	case svcWorkloadType:
+		keyResourceType = ecsServiceResourceType
+	default:
+		return false, fmt.Errorf("unrecognized workload type %s", workloadType)
+	}
+
 	rgClient, err := s.newRgClientFromIDs(appName, envName)
 	if err != nil {
 		return false, err
 	}
-	svcARNs, err := rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
+	wkldARNs, err := rgClient.GetResourcesByTags(keyResourceType, map[string]string{
 		AppTagKey:     appName,
 		EnvTagKey:     envName,
-		ServiceTagKey: svcName,
+		ServiceTagKey: name,
 	})
 	if err != nil {
 		return false, fmt.Errorf("get resources by Copilot tags: %w", err)
 	}
-	if len(svcARNs) != 0 {
+	if len(wkldARNs) != 0 {
 		return true, nil
 	}
 	return false, nil
