@@ -19,13 +19,13 @@ func Test_RunTaskRequestFromECSService(t *testing.T) {
 		testService = "good-service"
 	)
 	testCases := map[string]struct {
-		setUpMock func(m *mocks.MockecsServiceDescriber)
+		setUpMock func(m *mocks.MockECSServiceDescriber)
 
 		wantedRunTaskRequest *RunTaskRequest
 		wantedError          error
 	}{
 		"success": {
-			setUpMock: func(m *mocks.MockecsServiceDescriber) {
+			setUpMock: func(m *mocks.MockECSServiceDescriber) {
 				m.EXPECT().Service(testCluster, testService).Return(&ecs.Service{
 					TaskDefinition: aws.String("task-def"),
 				}, nil)
@@ -90,14 +90,14 @@ func Test_RunTaskRequestFromECSService(t *testing.T) {
 			},
 		},
 		"unable to retrieve service": {
-			setUpMock: func(m *mocks.MockecsServiceDescriber) {
+			setUpMock: func(m *mocks.MockECSServiceDescriber) {
 				m.EXPECT().Service(testCluster, testService).Return(nil, errors.New("some error"))
 				m.EXPECT().NetworkConfiguration(gomock.Any(), gomock.Any()).AnyTimes()
 			},
 			wantedError: errors.New("retrieve service good-service in cluster crowded-cluster: some error"),
 		},
 		"unable to retrieve task definition": {
-			setUpMock: func(m *mocks.MockecsServiceDescriber) {
+			setUpMock: func(m *mocks.MockECSServiceDescriber) {
 				m.EXPECT().Service(testCluster, testService).Return(&ecs.Service{
 					TaskDefinition: aws.String("task-def"),
 				}, nil)
@@ -107,7 +107,7 @@ func Test_RunTaskRequestFromECSService(t *testing.T) {
 			wantedError: errors.New("retrieve task definition task-def: some error"),
 		},
 		"unable to retrieve network configuration": {
-			setUpMock: func(m *mocks.MockecsServiceDescriber) {
+			setUpMock: func(m *mocks.MockECSServiceDescriber) {
 				m.EXPECT().Service(gomock.Any(), gomock.Any()).AnyTimes()
 				m.EXPECT().TaskDefinition(gomock.Any()).AnyTimes()
 				m.EXPECT().NetworkConfiguration(testCluster, testService).Return(nil, errors.New("some error"))
@@ -115,7 +115,7 @@ func Test_RunTaskRequestFromECSService(t *testing.T) {
 			wantedError: errors.New("retrieve network configuration for service good-service in cluster crowded-cluster: some error"),
 		},
 		"error if found more than one container": {
-			setUpMock: func(m *mocks.MockecsServiceDescriber) {
+			setUpMock: func(m *mocks.MockECSServiceDescriber) {
 				m.EXPECT().Service(testCluster, testService).Return(&ecs.Service{
 					TaskDefinition: aws.String("task-def"),
 				}, nil)
@@ -142,7 +142,7 @@ func Test_RunTaskRequestFromECSService(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			m := mocks.NewMockecsServiceDescriber(ctrl)
+			m := mocks.NewMockECSServiceDescriber(ctrl)
 			tc.setUpMock(m)
 
 			got, err := RunTaskRequestFromECSService(m, testCluster, testService)
@@ -163,13 +163,13 @@ func Test_RunTaskRequestFromService(t *testing.T) {
 		testSvc = "svc"
 	)
 	testCases := map[string]struct {
-		setUpMock func(m *mocks.MockserviceDescriber)
+		setUpMock func(m *mocks.MockServiceDescriber)
 
 		wantedRunTaskRequest *RunTaskRequest
 		wantedError          error
 	}{
 		"returns RunTaskRequest with service's main container": {
-			setUpMock: func(m *mocks.MockserviceDescriber) {
+			setUpMock: func(m *mocks.MockServiceDescriber) {
 				m.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(&ecs.TaskDefinition{
 					ExecutionRoleArn: aws.String("execution-role"),
 					TaskRoleArn:      aws.String("task-role"),
@@ -235,7 +235,7 @@ func Test_RunTaskRequestFromService(t *testing.T) {
 			},
 		},
 		"unable to retrieve task definition": {
-			setUpMock: func(m *mocks.MockserviceDescriber) {
+			setUpMock: func(m *mocks.MockServiceDescriber) {
 				m.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(nil, errors.New("some error"))
 				m.EXPECT().NetworkConfiguration(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				m.EXPECT().ClusterARN(gomock.Any(), gomock.Any()).AnyTimes()
@@ -243,7 +243,7 @@ func Test_RunTaskRequestFromService(t *testing.T) {
 			wantedError: errors.New("retrieve task definition for service svc: some error"),
 		},
 		"unable to retrieve network configuration": {
-			setUpMock: func(m *mocks.MockserviceDescriber) {
+			setUpMock: func(m *mocks.MockServiceDescriber) {
 				m.EXPECT().TaskDefinition(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				m.EXPECT().NetworkConfiguration(testApp, testEnv, testSvc).Return(nil, errors.New("some error"))
 				m.EXPECT().ClusterARN(gomock.Any(), gomock.Any()).AnyTimes()
@@ -251,7 +251,7 @@ func Test_RunTaskRequestFromService(t *testing.T) {
 			wantedError: errors.New("retrieve network configuration for service svc: some error"),
 		},
 		"unable to obtain cluster ARN": {
-			setUpMock: func(m *mocks.MockserviceDescriber) {
+			setUpMock: func(m *mocks.MockServiceDescriber) {
 				m.EXPECT().TaskDefinition(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				m.EXPECT().NetworkConfiguration(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				m.EXPECT().ClusterARN(testApp, testEnv).Return("", errors.New("some error"))
@@ -265,7 +265,7 @@ func Test_RunTaskRequestFromService(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			m := mocks.NewMockserviceDescriber(ctrl)
+			m := mocks.NewMockServiceDescriber(ctrl)
 			tc.setUpMock(m)
 
 			got, err := RunTaskRequestFromService(m, testApp, testEnv, testSvc)

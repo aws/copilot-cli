@@ -178,5 +178,5 @@ func (a *AWS) GetFileSystemSize() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return strconv.Atoi(b.String())
+	return strconv.Atoi(strings.TrimSpace(b.String()))
 }

@@ -88,6 +88,21 @@ func (mr *MockConfigStoreClientMockRecorder) GetEnvironment(appName, environment
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockConfigStoreClient)(nil).GetEnvironment), appName, environmentName)
 }
 
+// GetJob mocks base method.
+func (m *MockConfigStoreClient) GetJob(appName, jobname string) (*config.Workload, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetJob", appName, jobname)
+	ret0, _ := ret[0].(*config.Workload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetJob indicates an expected call of GetJob.
+func (mr *MockConfigStoreClientMockRecorder) GetJob(appName, jobname interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJob", reflect.TypeOf((*MockConfigStoreClient)(nil).GetJob), appName, jobname)
+}
+
 // GetService mocks base method.
 func (m *MockConfigStoreClient) GetService(appName, svcName string) (*config.Workload, error) {
 	m.ctrl.T.Helper()
