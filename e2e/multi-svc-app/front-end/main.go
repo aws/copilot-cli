@@ -96,7 +96,7 @@ func PutEFSCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params)
 	}
 	fileObj.Close()
 
-	// Shred file to ensure metered size increases and it's not read as sparse.
+	// Shred file to write 10MiB of data to the filesystem.
 	shredCmd := exec.Command("shred", "-n", "1", fileName)
 	if err := shredCmd.Run(); err != nil {
 		log.Println("Shred test file in EFS volume FAILED")
