@@ -352,9 +352,6 @@ func (o *secretInitOpts) askForSecretValues() error {
 
 // RecommendedActions shows recommended actions to do after running `secret init`.
 func (o *secretInitOpts) RecommendedActions() {
-	if o.shouldShowOverwriteHint {
-		log.Warningf("If you want to overwrite an existing secret, use the %s flag.\n", color.HighlightCode("--overwrite"))
-	}
 }
 
 type errSecretFailedInSomeEnvironments struct {
