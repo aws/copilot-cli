@@ -34,6 +34,21 @@ func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
+// AddTagsToResource mocks base method.
+func (m *Mockapi) AddTagsToResource(input *ssm.AddTagsToResourceInput) (*ssm.AddTagsToResourceOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddTagsToResource", input)
+	ret0, _ := ret[0].(*ssm.AddTagsToResourceOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AddTagsToResource indicates an expected call of AddTagsToResource.
+func (mr *MockapiMockRecorder) AddTagsToResource(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTagsToResource", reflect.TypeOf((*Mockapi)(nil).AddTagsToResource), input)
+}
+
 // PutParameter mocks base method.
 func (m *Mockapi) PutParameter(input *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 	m.ctrl.T.Helper()
