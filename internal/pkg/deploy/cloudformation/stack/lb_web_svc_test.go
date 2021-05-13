@@ -184,7 +184,6 @@ Outputs:
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: "/",
 					},
-					Aliases:             []string{"mockAlias"},
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
@@ -216,7 +215,6 @@ Outputs:
 						SecretOutputs:   []string{"MySecretArn"},
 						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 					},
-					Aliases:      []string{"mockAlias"},
 					WorkloadType: manifest.LoadBalancedWebServiceType,
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: "/",

@@ -63,7 +63,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 
 	for name, tc := range testCases {
 
-		serializer, err := stack.NewLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{})
+		serializer, err := stack.NewHTTPSLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{})
 
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")

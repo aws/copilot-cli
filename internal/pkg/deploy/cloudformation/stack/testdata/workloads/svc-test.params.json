@@ -11,7 +11,7 @@
     "AddonsTemplateURL": "",
     "ContainerPort": "4000",
     "RulePath": "/",
-    "HTTPSEnabled": "false",
+    "HTTPSEnabled": "true",
     "TargetContainer": "fe",
     "TargetPort": "4000",
     "Stickiness": "false"

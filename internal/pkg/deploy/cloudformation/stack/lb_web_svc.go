@@ -138,9 +138,11 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", fmt.Errorf(`convert 'command' to string slice: %w`, err)
 	}
 	var aliases []string
-	albAlias := aws.StringValue(s.manifest.Alias)
-	if albAlias != "" {
-		aliases = append(aliases, albAlias)
+	if s.httpsEnabled {
+		albAlias := aws.StringValue(s.manifest.Alias)
+		if albAlias != "" {
+			aliases = append(aliases, albAlias)
+		}
 	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		Variables:           s.manifest.Variables,
