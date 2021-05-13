@@ -48,6 +48,12 @@ const (
 )
 
 const (
+	workloadTypeJob     = "job"
+	workloadTypeSvc     = "svc"
+	workloadTypeInvalid = "invalid"
+)
+
+const (
 	fmtImageURI = "%s:%s"
 )
 
@@ -129,6 +135,7 @@ type runTaskOpts struct {
 	// Functions to generate a task run command.
 	runTaskRequestFromECSService func(client ecs.ECSServiceDescriber, cluster, service string) (*ecs.RunTaskRequest, error)
 	runTaskRequestFromService    func(client ecs.ServiceDescriber, app, env, svc string) (*ecs.RunTaskRequest, error)
+	runTaskRequestFromJob        func(client ecs.JobDescriber, app, env, job string) (*ecs.RunTaskRequest, error)
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -174,6 +181,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 	opts.runTaskRequestFromECSService = ecs.RunTaskRequestFromECSService
 	opts.runTaskRequestFromService = ecs.RunTaskRequestFromService
+	opts.runTaskRequestFromJob = ecs.RunTaskRequestFromJob
 	return &opts, nil
 }
 
@@ -538,10 +546,10 @@ func (o *runTaskOpts) runTaskCommand() (cliStringer, error) {
 			return nil, err
 		}
 	case 3:
-		appName, envName, serviceName := parts[0], parts[1], parts[2]
-		cmd, err = o.runTaskRequestFromService(ecs.New(sess), appName, envName, serviceName)
+		appName, envName, workloadName := parts[0], parts[1], parts[2]
+		cmd, err = o.runTaskCommandFromWorkload(sess, appName, envName, workloadName)
 		if err != nil {
-			return nil, fmt.Errorf("generate task run command from service %s of application %s deployed in environment %s: %w", serviceName, appName, envName, err)
+			return nil, err
 		}
 	default:
 		return nil, errors.New("invalid input to --generate-cmd: must be of one the form <cluster>/<service> or <app>/<env>/<workload>")
@@ -573,6 +581,54 @@ func (o *runTaskOpts) runTaskCommandFromECSService(sess *session.Session, cluste
 		return nil, fmt.Errorf("generate task run command from ECS service %s: %w", clusterName+"/"+serviceName, err)
 	}
 	return cmd, nil
+}
+
+func (o *runTaskOpts) runTaskCommandFromWorkload(sess *session.Session, appName, envName, workloadName string) (cliStringer, error) {
+	workloadType, err := o.workloadType(appName, workloadName)
+	if err != nil {
+		return nil, err
+	}
+
+	var cmd cliStringer
+	switch workloadType {
+	case workloadTypeJob:
+		cmd, err = o.runTaskRequestFromJob(ecs.New(sess), appName, envName, workloadName)
+		if err != nil {
+			return nil, fmt.Errorf("generate task run command from job %s of application %s deployed in environment %s: %w", workloadName, appName, envName, err)
+		}
+	case workloadTypeSvc:
+		cmd, err = o.runTaskRequestFromService(ecs.New(sess), appName, envName, workloadName)
+		if err != nil {
+			return nil, fmt.Errorf("generate task run command from service %s of application %s deployed in environment %s: %w", workloadName, appName, envName, err)
+		}
+	default:
+		return nil, fmt.Errorf("workload %s is neither a service nor a job", workloadName)
+	}
+	return cmd, nil
+}
+
+func (o *runTaskOpts) workloadType(appName, workloadName string) (string, error) {
+	_, err := o.store.GetJob(appName, workloadName)
+	if err == nil {
+		return workloadTypeJob, nil
+	}
+
+	var errNoSuchJob *config.ErrNoSuchJob
+	if !errors.As(err, &errNoSuchJob) {
+		return "", fmt.Errorf("determine whether workload %s is a job: %w", workloadName, err)
+	}
+
+	_, err = o.store.GetService(appName, workloadName)
+	if err == nil {
+		return workloadTypeSvc, nil
+	}
+
+	var errNoSuchService *config.ErrNoSuchService
+	if !errors.As(err, &errNoSuchService) {
+		return "", fmt.Errorf("determine whether workload %s is a service: %w", workloadName, err)
+	}
+
+	return workloadTypeInvalid, nil
 }
 
 func (o *runTaskOpts) displayLogStream() error {
@@ -832,7 +888,6 @@ Run a task with a command.
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
-	cmd.Flags().StringVar(&vars.generateCommandTarget, generateCommandFlag, "", generateCommandFlagDescription)
 
 	return cmd
 }

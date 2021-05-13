@@ -31,7 +31,8 @@ type ServiceDescriber interface {
 	ClusterARN(app, env string) (string, error)
 }
 
-type jobDescriber interface {
+// JobDescriber provides information on a Copilot job.
+type JobDescriber interface {
 	TaskDefinition(app, env, job string) (*awsecs.TaskDefinition, error)
 	NetworkConfigurationForJob(app, env, job string) (*awsecs.NetworkConfiguration, error)
 	ClusterARN(app, env string) (string, error)
@@ -128,7 +129,7 @@ func RunTaskRequestFromService(client ServiceDescriber, app, env, svc string) (*
 }
 
 // RunTaskRequestFromJob populates a RunTaskRequest with information from a Copilot job.
-func RunTaskRequestFromJob(client jobDescriber, app, env, job string) (*RunTaskRequest, error) {
+func RunTaskRequestFromJob(client JobDescriber, app, env, job string) (*RunTaskRequest, error) {
 	config, err := client.NetworkConfigurationForJob(app, env, job)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve network configuration for job %s: %w", job, err)
