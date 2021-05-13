@@ -32,6 +32,15 @@ count:
   cpu_percentage: 70
   memory_percentage: 80
 
+storage:
+  ephemeral: 30
+  volumes:
+    efsTestVolume:
+      path: /var/www
+      read_only: false
+      efs: true
+      
+
 variables:
   TEST_JSON_ENV_VAR: "{}" # https://github.com/aws/copilot-cli/issues/1292
   TEST_BOOL_ENV_VAR: on # https://github.com/aws/copilot-cli/issues/1120

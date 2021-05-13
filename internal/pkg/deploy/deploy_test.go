@@ -57,7 +57,7 @@ func TestStore_ListDeployedServices(t *testing.T) {
 				)
 			},
 
-			wantedError: fmt.Errorf("service with ARN mockARN is not tagged with %s", ServiceTagKey),
+			wantedError: fmt.Errorf("service resource with ARN mockARN is not tagged with %s", ServiceTagKey),
 		},
 		"return error if fail to get config service": {
 			inputApp: "mockApp",
@@ -128,6 +128,88 @@ func TestStore_ListDeployedServices(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 				require.ElementsMatch(t, svcs, tc.wantedSvcs)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestStore_ListDeployedJobs(t *testing.T) {
+	testCases := map[string]struct {
+		inputApp   string
+		inputEnv   string
+		setupMocks func(mocks storeMock)
+
+		wantedError error
+		wantedSvcs  []string
+	}{
+		"success": {
+			inputApp: "mockApp",
+			inputEnv: "mockEnv",
+
+			setupMocks: func(m storeMock) {
+				gomock.InOrder(
+					m.rgGetter.EXPECT().GetResourcesByTags(stateMachineResourceType, map[string]string{
+						AppTagKey: "mockApp",
+						EnvTagKey: "mockEnv",
+					}).Return([]*rg.Resource{{ARN: "mockARN1", Tags: map[string]string{ServiceTagKey: "mockJob1"}},
+						{ARN: "mockARN2", Tags: map[string]string{ServiceTagKey: "mockJob2"}}}, nil),
+					m.configStore.EXPECT().GetJob("mockApp", "mockJob1").Return(&config.Workload{
+						App:  "mockApp",
+						Name: "mockJob1",
+					}, nil),
+					m.configStore.EXPECT().GetJob("mockApp", "mockJob2").Return(&config.Workload{
+						App:  "mockApp",
+						Name: "mockJob2",
+					}, nil),
+				)
+			},
+
+			wantedSvcs: []string{"mockJob1", "mockJob2"},
+		},
+		"return error if fail to get job name": {
+			inputApp: "mockApp",
+			inputEnv: "mockEnv",
+
+			setupMocks: func(m storeMock) {
+				gomock.InOrder(
+					m.rgGetter.EXPECT().GetResourcesByTags(stateMachineResourceType, map[string]string{
+						AppTagKey: "mockApp",
+						EnvTagKey: "mockEnv",
+					}).Return([]*rg.Resource{{ARN: "mockARN", Tags: map[string]string{}}}, nil),
+				)
+			},
+
+			wantedError: fmt.Errorf("job resource with ARN mockARN is not tagged with %s", ServiceTagKey),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockConfigStore := mocks.NewMockConfigStoreClient(ctrl)
+			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
+
+			mocks := storeMock{
+				rgGetter:    mockRgGetter,
+				configStore: mockConfigStore,
+			}
+
+			tc.setupMocks(mocks)
+
+			store := &Store{
+				configStore:        mockConfigStore,
+				newRgClientFromIDs: func(string, string) (resourceGetter, error) { return mockRgGetter, nil },
+			}
+			// WHEN
+			jobs, err := store.ListDeployedJobs(tc.inputApp, tc.inputEnv)
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+				require.ElementsMatch(t, jobs, tc.wantedSvcs)
 			} else {
 				require.NoError(t, err)
 			}
@@ -243,7 +325,7 @@ func TestStore_ListEnvironmentsDeployedTo(t *testing.T) {
 	}
 }
 
-func TestStore_IsDeployed(t *testing.T) {
+func TestStore_IsServiceDeployed(t *testing.T) {
 	testCases := map[string]struct {
 		inputApp   string
 		inputEnv   string
@@ -328,6 +410,101 @@ func TestStore_IsDeployed(t *testing.T) {
 
 			// WHEN
 			deployed, err := store.IsServiceDeployed(tc.inputApp, tc.inputEnv, tc.inputSvc)
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+				require.Equal(t, deployed, tc.wantedDeployed)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_IsJobDeployed(t *testing.T) {
+	testCases := map[string]struct {
+		inputApp   string
+		inputEnv   string
+		inputJob   string
+		setupMocks func(mocks storeMock)
+
+		wantedError    error
+		wantedDeployed bool
+	}{
+		"return error if fail to get resources by tags": {
+			inputApp: "mockApp",
+			inputEnv: "mockEnv",
+			inputJob: "mockJob",
+
+			setupMocks: func(m storeMock) {
+				gomock.InOrder(
+					m.rgGetter.EXPECT().GetResourcesByTags(stateMachineResourceType, map[string]string{
+						AppTagKey:     "mockApp",
+						EnvTagKey:     "mockEnv",
+						ServiceTagKey: "mockJob",
+					}).Return(nil, errors.New("some error")),
+				)
+			},
+
+			wantedError: fmt.Errorf("get resources by Copilot tags: some error"),
+		},
+		"success with false": {
+			inputApp: "mockApp",
+			inputEnv: "mockEnv",
+			inputJob: "mockJob",
+
+			setupMocks: func(m storeMock) {
+				gomock.InOrder(
+					m.rgGetter.EXPECT().GetResourcesByTags(stateMachineResourceType, map[string]string{
+						AppTagKey:     "mockApp",
+						EnvTagKey:     "mockEnv",
+						ServiceTagKey: "mockJob",
+					}).Return([]*rg.Resource{}, nil),
+				)
+			},
+			wantedDeployed: false,
+		},
+		"success with true": {
+			inputApp: "mockApp",
+			inputEnv: "mockEnv",
+			inputJob: "mockJob",
+
+			setupMocks: func(m storeMock) {
+				gomock.InOrder(
+					m.rgGetter.EXPECT().GetResourcesByTags(stateMachineResourceType, map[string]string{
+						AppTagKey:     "mockApp",
+						EnvTagKey:     "mockEnv",
+						ServiceTagKey: "mockJob",
+					}).Return([]*rg.Resource{{ARN: "mockJobARN"}}, nil),
+				)
+			},
+
+			wantedDeployed: true,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockConfigStore := mocks.NewMockConfigStoreClient(ctrl)
+			mockRgGetter := mocks.NewMockresourceGetter(ctrl)
+
+			mocks := storeMock{
+				rgGetter:    mockRgGetter,
+				configStore: mockConfigStore,
+			}
+
+			tc.setupMocks(mocks)
+
+			store := &Store{
+				configStore:        mockConfigStore,
+				newRgClientFromIDs: func(string, string) (resourceGetter, error) { return mockRgGetter, nil },
+			}
+
+			// WHEN
+			deployed, err := store.IsJobDeployed(tc.inputApp, tc.inputEnv, tc.inputJob)
 
 			// THEN
 			if tc.wantedError != nil {

@@ -527,6 +527,21 @@ func (m *MockDeployStoreClient) EXPECT() *MockDeployStoreClientMockRecorder {
 	return m.recorder
 }
 
+// IsJobDeployed mocks base method.
+func (m *MockDeployStoreClient) IsJobDeployed(appName, envName, jobName string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsJobDeployed", appName, envName, jobName)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsJobDeployed indicates an expected call of IsJobDeployed.
+func (mr *MockDeployStoreClientMockRecorder) IsJobDeployed(appName, envName, jobName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsJobDeployed", reflect.TypeOf((*MockDeployStoreClient)(nil).IsJobDeployed), appName, envName, jobName)
+}
+
 // IsServiceDeployed mocks base method.
 func (m *MockDeployStoreClient) IsServiceDeployed(appName, envName, svcName string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -540,6 +555,21 @@ func (m *MockDeployStoreClient) IsServiceDeployed(appName, envName, svcName stri
 func (mr *MockDeployStoreClientMockRecorder) IsServiceDeployed(appName, envName, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsServiceDeployed", reflect.TypeOf((*MockDeployStoreClient)(nil).IsServiceDeployed), appName, envName, svcName)
+}
+
+// ListDeployedJobs mocks base method.
+func (m *MockDeployStoreClient) ListDeployedJobs(appName, envName string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeployedJobs", appName, envName)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDeployedJobs indicates an expected call of ListDeployedJobs.
+func (mr *MockDeployStoreClientMockRecorder) ListDeployedJobs(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedJobs", reflect.TypeOf((*MockDeployStoreClient)(nil).ListDeployedJobs), appName, envName)
 }
 
 // ListDeployedServices mocks base method.

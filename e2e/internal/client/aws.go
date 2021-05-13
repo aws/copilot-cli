@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	cmd "github.com/aws/copilot-cli/e2e/internal/command"
@@ -159,4 +160,23 @@ func (a *AWS) DeleteECRRepo(name string) error {
 
 func (a *AWS) exec(command string, opts ...cmd.Option) error {
 	return BashExec(fmt.Sprintf("aws %s", command), opts...)
+}
+
+/*GetFileSystemSize runs:
+aws efs describe-file-systems | jq -r '.FileSystems[0].SizeInBytes.Value',
+which returns the size in bytes of the first filesystem returned by the call.
+*/
+func (a *AWS) GetFileSystemSize() (int, error) {
+	command := strings.Join([]string{
+		"efs",
+		"describe-file-systems",
+		"|",
+		"jq", "-r", "'.FileSystems[0].SizeInBytes.Value'",
+	}, " ")
+	var b bytes.Buffer
+	err := a.exec(command, cmd.Stdout(&b))
+	if err != nil {
+		return 0, err
+	}
+	return strconv.Atoi(strings.TrimSpace(b.String()))
 }
