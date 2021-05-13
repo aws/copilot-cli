@@ -462,10 +462,12 @@ Pipelines
 					shouldOutputJSON: tc.shouldOutputJSON,
 					name:             testAppName,
 				},
-				store:         mockStoreReader,
-				w:             b,
-				pipelineSvc:   mockPLSvc,
-				versionGetter: mockVersionGetter,
+				store:       mockStoreReader,
+				w:           b,
+				pipelineSvc: mockPLSvc,
+				newVersionGetter: func(s string) (versionGetter, error) {
+					return mockVersionGetter, nil
+				},
 			}
 
 			// WHEN

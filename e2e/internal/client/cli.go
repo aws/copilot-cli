@@ -495,7 +495,7 @@ func (cli *CLI) EnvShow(opts *EnvShowRequest) (*EnvShowOutput, error) {
 		exec.Command(cli.path, "env", "show",
 			"--app", opts.AppName,
 			"--name", opts.EnvName,
-			"--json"))
+			"--json", "--resources"))
 
 	if envShowErr != nil {
 		return nil, envShowErr

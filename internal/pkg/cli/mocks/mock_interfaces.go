@@ -14,6 +14,7 @@ import (
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	s3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	ssm "github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -6038,4 +6039,79 @@ func (m *MockpublicIPGetter) PublicIP(ENI string) (string, error) {
 func (mr *MockpublicIPGetterMockRecorder) PublicIP(ENI interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicIP", reflect.TypeOf((*MockpublicIPGetter)(nil).PublicIP), ENI)
+}
+
+// MockcliStringer is a mock of cliStringer interface.
+type MockcliStringer struct {
+	ctrl     *gomock.Controller
+	recorder *MockcliStringerMockRecorder
+}
+
+// MockcliStringerMockRecorder is the mock recorder for MockcliStringer.
+type MockcliStringerMockRecorder struct {
+	mock *MockcliStringer
+}
+
+// NewMockcliStringer creates a new mock instance.
+func NewMockcliStringer(ctrl *gomock.Controller) *MockcliStringer {
+	mock := &MockcliStringer{ctrl: ctrl}
+	mock.recorder = &MockcliStringerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockcliStringer) EXPECT() *MockcliStringerMockRecorder {
+	return m.recorder
+}
+
+// CLIString mocks base method.
+func (m *MockcliStringer) CLIString() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CLIString")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// CLIString indicates an expected call of CLIString.
+func (mr *MockcliStringerMockRecorder) CLIString() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CLIString", reflect.TypeOf((*MockcliStringer)(nil).CLIString))
+}
+
+// MocksecretPutter is a mock of secretPutter interface.
+type MocksecretPutter struct {
+	ctrl     *gomock.Controller
+	recorder *MocksecretPutterMockRecorder
+}
+
+// MocksecretPutterMockRecorder is the mock recorder for MocksecretPutter.
+type MocksecretPutterMockRecorder struct {
+	mock *MocksecretPutter
+}
+
+// NewMocksecretPutter creates a new mock instance.
+func NewMocksecretPutter(ctrl *gomock.Controller) *MocksecretPutter {
+	mock := &MocksecretPutter{ctrl: ctrl}
+	mock.recorder = &MocksecretPutterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocksecretPutter) EXPECT() *MocksecretPutterMockRecorder {
+	return m.recorder
+}
+
+// PutSecret mocks base method.
+func (m *MocksecretPutter) PutSecret(in ssm.PutSecretInput) (*ssm.PutSecretOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PutSecret", in)
+	ret0, _ := ret[0].(*ssm.PutSecretOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PutSecret indicates an expected call of PutSecret.
+func (mr *MocksecretPutterMockRecorder) PutSecret(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutSecret", reflect.TypeOf((*MocksecretPutter)(nil).PutSecret), in)
 }

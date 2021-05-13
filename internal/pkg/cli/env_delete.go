@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -25,14 +26,19 @@ import (
 )
 
 const (
-	envDeleteNamePrompt = "Which environment would you like to delete?"
-	fmtDeleteEnvPrompt  = "Are you sure you want to delete environment %s from application %s?"
+	envDeleteAppNameHelpPrompt = "An environment will be deleted in the selected application."
+	envDeleteNamePrompt        = "Which environment would you like to delete?"
+	fmtDeleteEnvPrompt         = "Are you sure you want to delete environment %s from application %s?"
 )
 
 const (
 	fmtDeleteEnvStart    = "Deleting environment %s from application %s."
 	fmtDeleteEnvFailed   = "Failed to delete environment %s from application %s.\n"
 	fmtDeleteEnvComplete = "Deleted environment %s from application %s.\n"
+)
+
+var (
+	envDeleteAppNamePrompt = fmt.Sprintf("In which %s would you like to delete the environment?", color.Emphasize("application"))
 )
 
 var (
@@ -112,10 +118,12 @@ func (o *deleteEnvOpts) Validate() error {
 
 // Ask prompts for fields that are required but not passed in.
 func (o *deleteEnvOpts) Ask() error {
+	if err := o.askAppName(); err != nil {
+		return err
+	}
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-
 	if o.skipConfirmation {
 		return nil
 	}
@@ -174,6 +182,19 @@ func (o *deleteEnvOpts) validateEnvName() error {
 	if _, err := o.getEnvConfig(); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (o *deleteEnvOpts) askAppName() error {
+	if o.appName != "" {
+		return nil
+	}
+
+	app, err := o.sel.Application(envDeleteAppNamePrompt, envDeleteAppNameHelpPrompt)
+	if err != nil {
+		return fmt.Errorf("ask for application: %w", err)
+	}
+	o.appName = app
 	return nil
 }
 

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -66,6 +68,29 @@ func TestSSM_PutSecret(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, wanted, got)
+	})
+
+	t.Run("fail to put parameter because it already exists", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockSSMClient := mocks.NewMockapi(ctrl)
+		mockSSMClient.EXPECT().PutParameter(gomock.Any()).
+			Return(nil, awserr.New(ssm.ErrCodeParameterAlreadyExists, "parameter already exists", fmt.Errorf("parameter already exists")))
+
+		client := SSM{
+			client: mockSSMClient,
+		}
+		got, err := client.PutSecret(PutSecretInput{
+			Name:  "/copilot/myapp/myenv/secrets/db-password",
+			Value: "super secure password",
+			Tags: map[string]string{
+				deploy.AppTagKey: "myapp",
+				deploy.EnvTagKey: "myenv",
+			},
+		})
+		require.EqualError(t, &ErrParameterAlreadyExists{"/copilot/myapp/myenv/secrets/db-password"}, err.Error())
+		require.Nil(t, got)
 	})
 
 	t.Run("fail to put parameter", func(t *testing.T) {

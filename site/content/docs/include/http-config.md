@@ -51,4 +51,3 @@ CIDR IP addresses permitted to access your service.
 http:
   allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
 ```
-

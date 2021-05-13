@@ -278,3 +278,126 @@ func Test_RunTaskRequestFromService(t *testing.T) {
 		})
 	}
 }
+
+func Test_RunTaskRequestFromJob(t *testing.T) {
+	var (
+		testApp = "test-app"
+		testEnv = "test-env"
+		testJob = "test-job"
+	)
+	testCases := map[string]struct {
+		setUpMock func(m *mocks.MockjobDescriber)
+
+		wantedRunTaskRequest *RunTaskRequest
+		wantedError          error
+	}{
+		"returns RunTaskRequest with job's main container": {
+			setUpMock: func(m *mocks.MockjobDescriber) {
+				m.EXPECT().TaskDefinition(testApp, testEnv, testJob).Return(&ecs.TaskDefinition{
+					ExecutionRoleArn: aws.String("execution-role"),
+					TaskRoleArn:      aws.String("task-role"),
+					ContainerDefinitions: []*awsecs.ContainerDefinition{
+						{
+							Name:       aws.String(testJob),
+							Image:      aws.String("beautiful-image"),
+							EntryPoint: aws.StringSlice([]string{"enter", "here"}),
+							Command:    aws.StringSlice([]string{"do", "not", "enter", "here"}),
+							Environment: []*awsecs.KeyValuePair{
+								{
+									Name:  aws.String("enter"),
+									Value: aws.String("no"),
+								},
+								{
+									Name:  aws.String("kidding"),
+									Value: aws.String("yes"),
+								},
+							},
+							Secrets: []*awsecs.Secret{
+								{
+									Name:      aws.String("truth"),
+									ValueFrom: aws.String("go-ask-the-wise"),
+								},
+							},
+						},
+						{
+							Name: aws.String("random-container-that-we-do-not-care"),
+						},
+					},
+				}, nil)
+				m.EXPECT().NetworkConfigurationForJob(testApp, testEnv, testJob).Return(&ecs.NetworkConfiguration{
+					AssignPublicIp: "1.2.3.4",
+					Subnets:        []string{"sbn-1", "sbn-2"},
+					SecurityGroups: []string{"sg-1", "sg-2"},
+				}, nil)
+				m.EXPECT().ClusterARN(testApp, testEnv).Return("kamura-village", nil)
+			},
+			wantedRunTaskRequest: &RunTaskRequest{
+				networkConfiguration: ecs.NetworkConfiguration{
+					AssignPublicIp: "1.2.3.4",
+					Subnets:        []string{"sbn-1", "sbn-2"},
+					SecurityGroups: []string{"sg-1", "sg-2"},
+				},
+
+				executionRole: "execution-role",
+				taskRole:      "task-role",
+
+				containerInfo: containerInfo{
+					image:      "beautiful-image",
+					entryPoint: []string{"enter", "here"},
+					command:    []string{"do", "not", "enter", "here"},
+					envVars: map[string]string{
+						"enter":   "no",
+						"kidding": "yes",
+					},
+					secrets: map[string]string{
+						"truth": "go-ask-the-wise",
+					},
+				},
+
+				cluster: "kamura-village",
+			},
+		},
+		"unable to retrieve task definition": {
+			setUpMock: func(m *mocks.MockjobDescriber) {
+				m.EXPECT().TaskDefinition(testApp, testEnv, testJob).Return(nil, errors.New("some error"))
+				m.EXPECT().NetworkConfigurationForJob(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().ClusterARN(gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			wantedError: errors.New("retrieve task definition for job test-job: some error"),
+		},
+		"unable to retrieve network configuration": {
+			setUpMock: func(m *mocks.MockjobDescriber) {
+				m.EXPECT().TaskDefinition(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().NetworkConfigurationForJob(testApp, testEnv, testJob).Return(nil, errors.New("some error"))
+				m.EXPECT().ClusterARN(gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			wantedError: errors.New("retrieve network configuration for job test-job: some error"),
+		},
+		"unable to obtain cluster ARN": {
+			setUpMock: func(m *mocks.MockjobDescriber) {
+				m.EXPECT().TaskDefinition(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().NetworkConfigurationForJob(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().ClusterARN(testApp, testEnv).Return("", errors.New("some error"))
+			},
+			wantedError: errors.New("retrieve cluster ARN created for environment test-env in application test-app: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := mocks.NewMockjobDescriber(ctrl)
+			tc.setUpMock(m)
+
+			got, err := RunTaskRequestFromJob(m, testApp, testEnv, testJob)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedRunTaskRequest, got)
+			}
+		})
+	}
+}

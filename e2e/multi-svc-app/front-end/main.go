@@ -4,17 +4,20 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 
 	"github.com/julienschmidt/httprouter"
 )
 
 // Get the env var "MAGIC_WORDS" for testing if the build arg was overridden.
 var magicWords string = os.Getenv("MAGIC_WORDS")
+var volumeName string = "efsTestVolume"
 
 // SimpleGet just returns true no matter what
 func SimpleGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
@@ -69,6 +72,49 @@ func SetJobCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params)
 	w.WriteHeader(http.StatusOK)
 }
 
+// PutEFSCheck writes a file to the EFS folder in the container.
+func PutEFSCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	efsVar := os.Getenv("COPILOT_MOUNT_POINTS")
+	copilotMountPoints := make(map[string]string)
+	if err := json.Unmarshal([]byte(efsVar), &copilotMountPoints); err != nil {
+		log.Println("Unmarshal COPILOT_MOUNT_POINTS env var FAILED")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	fileName := fmt.Sprintf("%s/testfile", copilotMountPoints[volumeName])
+	fileObj, err := os.Create(fileName)
+	if err != nil {
+		log.Printf("Create test file %s in EFS volume FAILED\n", fileName)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// Resize file to 10M
+	if err := fileObj.Truncate(1e7); err != nil {
+		log.Printf("Resize test file %s in EFS volume FAILED\n", fileName)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	fileObj.Close()
+
+	// Shred file to ensure metered size increases and it's not read as sparse.
+	shredCmd := exec.Command("shred", "-n", "1", fileName)
+	if err := shredCmd.Run(); err != nil {
+		log.Println("Shred test file in EFS volume FAILED")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	fi, err := os.Stat(fileName)
+	if err != nil {
+		log.Printf("Get info for file %s\n", fileName)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	log.Printf("File size: %d\n", fi.Size())
+	log.Println("Get /efs-putter succeeded")
+	w.WriteHeader(http.StatusOK)
+}
+
 func main() {
 	router := httprouter.New()
 	router.GET("/", SimpleGet)
@@ -76,6 +122,8 @@ func main() {
 	router.GET("/magicwords/", GetMagicWords)
 	router.GET("/job-checker/", GetJobCheck)
 	router.GET("/job-setter/", SetJobCheck)
+	router.GET("/efs-putter", PutEFSCheck)
 
+	log.Println("Listening on port 80...")
 	log.Fatal(http.ListenAndServe(":80", router))
 }

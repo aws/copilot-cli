@@ -14,6 +14,7 @@ import (
 )
 
 var cli *client.CLI
+var aws *client.AWS
 var appName string
 
 /**
@@ -28,6 +29,8 @@ func TestMultiSvcApp(t *testing.T) {
 var _ = BeforeSuite(func() {
 	ecsCli, err := client.NewCLI()
 	cli = ecsCli
+	Expect(err).NotTo(HaveOccurred())
+	aws = client.NewAWS()
 	Expect(err).NotTo(HaveOccurred())
 	appName = fmt.Sprintf("e2e-multisvc-%d", time.Now().Unix())
 })

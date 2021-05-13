@@ -85,6 +85,7 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 		testEnv = "test"
 	)
 	testCases := map[string]struct {
+		inAppName          string
 		inEnvName          string
 		inSkipConfirmation bool
 
@@ -97,6 +98,8 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 			inSkipConfirmation: false,
 			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {
 				mockSelector := mocks.NewMockconfigSelector(ctrl)
+				mockSelector.EXPECT().Application(envDeleteAppNamePrompt, envDeleteAppNameHelpPrompt, gomock.Any()).
+					Return(testApp, nil)
 				mockSelector.EXPECT().Environment(envDeleteNamePrompt, "", testApp).Return(testEnv, nil)
 
 				mockPrompter := mocks.NewMockprompter(ctrl)
@@ -107,8 +110,19 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 			},
 			wantedEnvName: testEnv,
 		},
+		"error if fail to select applications": {
+			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {
+				mockSelector := mocks.NewMockconfigSelector(ctrl)
+				mockSelector.EXPECT().Application(envDeleteAppNamePrompt, envDeleteAppNameHelpPrompt, gomock.Any()).
+					Return("", errors.New("some error"))
+
+				o.sel = mockSelector
+			},
+			wantedError: fmt.Errorf("ask for application: some error"),
+		},
 		"wraps error from prompting for confirmation": {
 			inSkipConfirmation: false,
+			inAppName:          testApp,
 			inEnvName:          testEnv,
 			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {
 
@@ -130,7 +144,7 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 			opts := &deleteEnvOpts{
 				deleteEnvVars: deleteEnvVars{
 					name:             tc.inEnvName,
-					appName:          testApp,
+					appName:          tc.inAppName,
 					skipConfirmation: tc.inSkipConfirmation,
 				},
 			}

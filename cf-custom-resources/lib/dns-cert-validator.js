@@ -76,76 +76,107 @@ let report = function (
 };
 
 /**
- * Requests a public certificate from AWS Certificate Manager, using DNS validation.
- * The hosted zone ID must refer to a **public** Route53-managed DNS zone that is authoritative
- * for the suffix of the certificate's Common Name (CN).  For example, if the CN is
- * `*.example.com`, the hosted zone ID must point to a Route 53 zone authoritative
- * for `example.com`.
+ * Requests a public certificate from AWS Certificate Manager, using DNS validation
+ * (see https://docs.aws.amazon.com/acm/latest/userguide/dns-validation.html).
+ * Specifically, it will do DNS validation in all the root, app, and env hosted zones in parallel.
+ * The root hosted zone is created when the user purchases example.com in route53 in their app account.
+ * We create the app hosted zone "app.example.com" when running "app init" part of the application stack.
+ * The env hosted zone "env.app.example.com" is created when running "env init" part of the env stack.
+ * Lastly, the function exits until the certificate is validated.
  *
  * @param {string} requestId the CloudFormation request ID
+ * @param {string} appName the name of the application
+ * @param {string} envName the name of the environment
  * @param {string} domainName the Common Name (CN) field for the requested certificate
- * @param {string} hostedZoneId the Route53 Hosted Zone ID
+ * @param {string} subjectAlternativeNames additional FQDNs to be included in the
+ * Subject Alternative Name extension of the requested certificate
+ * @param {string} envHostedZoneId the environment Route53 Hosted Zone ID
+ * @param {string} rootDnsRole the IAM role ARN that can manage domainName
+ * @param {string} isAliasEnabled whether alias is enabled
  * @returns {string} Validated certificate ARN
  */
 const requestCertificate = async function (
   requestId,
+  appName,
+  envName,
   domainName,
   subjectAlternativeNames,
-  hostedZoneId,
+  envHostedZoneId,
+  rootDnsRole,
+  isAliasEnabled,
   region
 ) {
   const crypto = require("crypto");
-  const [acm, route53] = clients(region);
+  const [acm, envRoute53, appRoute53] = clients(region, rootDnsRole);
+  var sansToUse =
+    isAliasEnabled === "false"
+      ? [`*.${envName}.${appName}.${domainName}`]
+      : subjectAlternativeNames;
   const reqCertResponse = await acm
     .requestCertificate({
-      DomainName: domainName,
-      SubjectAlternativeNames: subjectAlternativeNames,
+      DomainName: `${envName}.${appName}.${domainName}`,
+      SubjectAlternativeNames: sansToUse,
       IdempotencyToken: crypto
         .createHash("sha256")
         .update(requestId)
         .digest("hex")
         .substr(0, 32),
       ValidationMethod: "DNS",
+      Tags: [
+        {
+          Key: "copilot-application",
+          Value: appName,
+        },
+        {
+          Key: "copilot-environment",
+          Value: envName,
+        },
+      ],
     })
     .promise();
 
-  let record;
-  for (let attempt = 0; attempt < maxAttempts && !record; attempt++) {
+  let options;
+  let attempt;
+  // We need to count the domain name itself.
+  const expectedValidationOptionsNum = sansToUse.length + 1;
+  for (attempt = 0; attempt < maxAttempts; attempt++) {
     const { Certificate } = await acm
       .describeCertificate({
         CertificateArn: reqCertResponse.CertificateArn,
       })
       .promise();
-    const options = Certificate.DomainValidationOptions || [];
-
-    if (options.length > 0 && options[0].ResourceRecord) {
-      record = options[0].ResourceRecord;
-    } else {
-      // Exponential backoff with jitter based on 200ms base
-      // component of backoff fixed to ensure minimum total wait time on
-      // slow targets.
-      const base = Math.pow(2, attempt);
-      await sleep(random() * base * 50 + base * 150);
+    options = Certificate.DomainValidationOptions || [];
+    var readyRecordsNum = 0;
+    for (const option of options) {
+      if (option.ResourceRecord) {
+        readyRecordsNum++;
+      }
     }
+    if (readyRecordsNum === expectedValidationOptionsNum) {
+      break;
+    }
+    // Exponential backoff with jitter based on 200ms base
+    // component of backoff fixed to ensure minimum total wait time on
+    // slow targets.
+    const base = Math.pow(2, attempt);
+    await sleep(random() * base * 50 + base * 150);
   }
-  if (!record) {
+  if (attempt === maxAttempts) {
     throw new Error(
       `DescribeCertificate did not contain DomainValidationOptions after ${maxAttempts} tries.`
     );
   }
 
-  console.log(
-    `Creating DNS record into zone ${hostedZoneId}: ${record.Name} ${record.Type} ${record.Value}`
-  );
-  const changeBatch = await updateRecords(
-    route53,
-    hostedZoneId,
+  await updateHostedZoneRecords(
     "UPSERT",
-    record.Name,
-    record.Type,
-    record.Value
+    options,
+    envName,
+    appName,
+    domainName,
+    envRoute53,
+    appRoute53,
+    envHostedZoneId
   );
-  await waitForRecordChange(route53, changeBatch.ChangeInfo.Id);
 
   await acm
     .waitFor("certificateValidated", {
@@ -161,19 +192,210 @@ const requestCertificate = async function (
   return reqCertResponse.CertificateArn;
 };
 
+const updateHostedZoneRecords = async function (
+  action,
+  options,
+  envName,
+  appName,
+  domainName,
+  envRoute53,
+  appRoute53,
+  envHostedZoneId
+) {
+  const promises = [];
+  for (const option of options) {
+    switch (option.DomainName) {
+      case `${envName}.${appName}.${domainName}`:
+        promises.push(
+          validateDomain({
+            route53: envRoute53,
+            record: option.ResourceRecord,
+            action: action,
+            domainName: "",
+            hostedZoneId: envHostedZoneId,
+          })
+        );
+        break;
+      case `${appName}.${domainName}`:
+        promises.push(
+          validateDomain({
+            route53: appRoute53,
+            record: option.ResourceRecord,
+            action: action,
+            domainName: `${appName}.${domainName}`,
+          })
+        );
+        break;
+      case domainName:
+        promises.push(
+          validateDomain({
+            route53: appRoute53,
+            record: option.ResourceRecord,
+            action: action,
+            domainName: domainName,
+          })
+        );
+        break;
+    }
+  }
+  return Promise.all(promises);
+};
+
+// deleteHostedZoneRecords deletes the validation records associated with the certificate.
+// We don't want to delete a validation record if it's used by another certificate because
+// the validation records are used to renew the certificate.
+// The legacy certificate (only `${envName}.${appName}.${domainName}`) and the new
+// certificate generated with the "alias" field share the same validation record.
+// Therefore, we check if there is more than one certificate using the record and only delete
+// if there is no other certificate using the record.
+const deleteHostedZoneRecords = async function (
+  options,
+  envName,
+  appName,
+  domainName,
+  envRoute53,
+  appRoute53,
+  acm,
+  envHostedZoneId
+) {
+  let isLegacyCert = false;
+  // Legacy cert only has two DomainValidationOptions:
+  // `${envName}.${appName}.${domainName}` and `*.${envName}.${appName}.${domainName}`
+  if (options.length <= 2) {
+    isLegacyCert = true;
+  }
+
+  const certsWithEnvDomain = await numOfGeneratedCertificates(
+    acm,
+    `${envName}.${appName}.${domainName}`
+  );
+  const isLastOne = certsWithEnvDomain === 1;
+
+  const newOptions = [];
+  switch (`${isLegacyCert}|${isLastOne}`) {
+    case `true|true`:
+      // If it is a legacy cert and it is the last Copilot cert,
+      // we'll go ahead to remove the validation CNAME record in env hosted zone.
+      newOptions.push(...options);
+      break;
+    case `true|false`:
+      // If it is a legacy cert but it is not the last Copilot cert,
+      // we'll do nothing since the new Copilot cert needs validation CNAME record
+      // in the env hosted zone.
+      break;
+    case `false|true`:
+      // If it is not a legacy cert and it is the last Copilot cert,
+      // we'll remove all validation CNAME records in env/app/root hosted zone.
+      newOptions.push(...options);
+      break;
+    case `false|false`:
+      // If it is not a legacy cert and it is not the last Copilot cert,
+      // we'll remove validation CNAME records only for app and root hosted zone,
+      // since the legacy cert still needs the validation record in the env hosted zone.
+      for (const option of options) {
+        if (option.DomainName === `${envName}.${appName}.${domainName}`) {
+          continue;
+        }
+        newOptions.push(option);
+      }
+      break;
+  }
+  await updateHostedZoneRecords(
+    "DELETE",
+    newOptions,
+    envName,
+    appName,
+    domainName,
+    envRoute53,
+    appRoute53,
+    envHostedZoneId
+  );
+};
+
+// numOfGeneratedCertificates returns the number of Copilot generated certificates for a given domain name.
+const numOfGeneratedCertificates = async function (
+  acm,
+  defaultEnvDomain,
+  maxCount = 2
+) {
+  let certsWithEnvDomain = 0;
+  let listCertificatesInput = {};
+  while (certsWithEnvDomain < maxCount) {
+    const listCertResp = await acm
+      .listCertificates(listCertificatesInput)
+      .promise();
+    for (const certSummary of listCertResp.CertificateSummaryList || []) {
+      if (certSummary.DomainName === defaultEnvDomain) {
+        certsWithEnvDomain++;
+      }
+    }
+    const nextToken = listCertResp.NextToken;
+    if (!nextToken) {
+      break;
+    }
+    listCertificatesInput.NextToken = nextToken;
+  }
+  return certsWithEnvDomain;
+};
+
+const validateDomain = async function ({
+  route53,
+  record,
+  action,
+  domainName,
+  hostedZoneId,
+}) {
+  if (!hostedZoneId) {
+    const hostedZones = await route53
+      .listHostedZonesByName({
+        DNSName: domainName,
+        MaxItems: "1",
+      })
+      .promise();
+    if (!hostedZones.HostedZones || hostedZones.HostedZones.length === 0) {
+      throw new Error(
+        `Couldn't find any Hosted Zone with DNS name ${domainName}.`
+      );
+    }
+    hostedZoneId = hostedZones.HostedZones[0].Id.split("/").pop();
+  }
+  console.log(
+    `${action} DNS record into Hosted Zone ${hostedZoneId}: ${record.Name} ${record.Type} ${record.Value}`
+  );
+  const changeBatch = await updateRecords(
+    route53,
+    hostedZoneId,
+    action,
+    record.Name,
+    record.Type,
+    record.Value
+  );
+  await waitForRecordChange(route53, changeBatch.ChangeInfo.Id);
+};
+
 /**
  * Deletes a certificate from AWS Certificate Manager (ACM) by its ARN.
+ * Specifically, if it is the last certificate attaching to the listener, it will also remove the CNAME records
+ * for validation in all the root, app, and env hosted zones in parallel.
  * If the certificate does not exist, the function will return normally.
  *
  * @param {string} arn The certificate ARN
  */
-const deleteCertificate = async function (arn, region, hostedZoneId) {
-  const [acm, route53] = clients(region);
+const deleteCertificate = async function (
+  arn,
+  appName,
+  envName,
+  domainName,
+  region,
+  envHostedZoneId,
+  rootDnsRole
+) {
+  const [acm, envRoute53, appRoute53] = clients(region, rootDnsRole);
   try {
     console.log(`Waiting for certificate ${arn} to become unused`);
 
     let inUseByResources;
-    let dnsValidationRecord;
+    let options;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const { Certificate } = await acm
@@ -183,8 +405,16 @@ const deleteCertificate = async function (arn, region, hostedZoneId) {
         .promise();
 
       inUseByResources = Certificate.InUseBy || [];
-      dnsValidationRecord = Certificate.DomainValidationOptions || [];
-      if (inUseByResources.length) {
+      options = Certificate.DomainValidationOptions || [];
+      var ok = false;
+      for (const option of options) {
+        if (!option.ResourceRecord) {
+          ok = false;
+          break;
+        }
+        ok = true;
+      }
+      if (!ok || inUseByResources.length) {
         // Deleting resources can be quite slow - so just sleep 30 seconds between checks.
         await sleep(30000);
       } else {
@@ -198,24 +428,16 @@ const deleteCertificate = async function (arn, region, hostedZoneId) {
       );
     }
 
-    // Fetch the DNS Validation Record and delete it
-    if (
-      dnsValidationRecord.length > 0 &&
-      dnsValidationRecord[0].ResourceRecord
-    ) {
-      const record = dnsValidationRecord[0].ResourceRecord;
-
-      // Delete this record now that it's not needed
-      const changeBatch = await updateRecords(
-        route53,
-        hostedZoneId,
-        "DELETE",
-        record.Name,
-        record.Type,
-        record.Value
-      );
-      await waitForRecordChange(route53, changeBatch.ChangeInfo.Id);
-    }
+    await deleteHostedZoneRecords(
+      options,
+      envName,
+      appName,
+      domainName,
+      envRoute53,
+      appRoute53,
+      acm,
+      envHostedZoneId
+    );
 
     await acm
       .deleteCertificate({
@@ -274,16 +496,22 @@ const updateRecords = function (
     .promise();
 };
 
-const clients = function (region) {
+const clients = function (region, rootDnsRole) {
   const acm = new aws.ACM({
     region,
   });
-  const route53 = new aws.Route53();
+  const envRoute53 = new aws.Route53();
+  const appRoute53 = new aws.Route53({
+    credentials: new aws.ChainableTemporaryCredentials({
+      params: { RoleArn: rootDnsRole },
+      masterCredentials: new aws.EnvironmentCredentials("AWS"),
+    }),
+  });
   if (waiter) {
     // Used by the test suite, since waiters aren't mockable yet
-    route53.waitFor = acm.waitFor = waiter;
+    envRoute53.waitFor = appRoute53.waitFor = acm.waitFor = waiter;
   }
-  return [acm, route53];
+  return [acm, envRoute53, appRoute53];
 };
 
 /**
@@ -293,6 +521,7 @@ exports.certificateRequestHandler = async function (event, context) {
   var responseData = {};
   var physicalResourceId;
   var certificateArn;
+  const props = event.ResourceProperties;
 
   try {
     switch (event.RequestType) {
@@ -300,10 +529,14 @@ exports.certificateRequestHandler = async function (event, context) {
       case "Update":
         certificateArn = await requestCertificate(
           event.RequestId,
-          event.ResourceProperties.DomainName,
-          event.ResourceProperties.SubjectAlternativeNames,
-          event.ResourceProperties.HostedZoneId,
-          event.ResourceProperties.Region
+          props.AppName,
+          props.EnvName,
+          props.DomainName,
+          props.SubjectAlternativeNames,
+          props.EnvHostedZoneId,
+          props.RootDNSRole,
+          props.IsAliasEnabled,
+          props.Region
         );
         responseData.Arn = physicalResourceId = certificateArn;
         break;
@@ -314,8 +547,12 @@ exports.certificateRequestHandler = async function (event, context) {
         if (physicalResourceId.startsWith("arn:")) {
           await deleteCertificate(
             physicalResourceId,
-            event.ResourceProperties.Region,
-            event.ResourceProperties.HostedZoneId
+            props.AppName,
+            props.EnvName,
+            props.DomainName,
+            props.Region,
+            props.EnvHostedZoneId,
+            props.RootDNSRole
           );
         }
         break;

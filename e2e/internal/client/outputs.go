@@ -161,9 +161,10 @@ func toAppShowOutput(jsonInput string) (*AppShowOutput, error) {
 
 // EnvShowOutput is the JSON output of env show.
 type EnvShowOutput struct {
-	Environment EnvDescription    `json:"environment"`
-	Services    []EnvShowServices `json:"services"`
-	Tags        map[string]string `json:"tags"`
+	Environment EnvDescription      `json:"environment"`
+	Services    []EnvShowServices   `json:"services"`
+	Tags        map[string]string   `json:"tags"`
+	Resources   []map[string]string `json:"resources"`
 }
 
 // EnvShowServices contains brief info about a service.

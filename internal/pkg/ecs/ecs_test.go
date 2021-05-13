@@ -21,6 +21,7 @@ import (
 type clientMocks struct {
 	resourceGetter *mocks.MockresourceGetter
 	ecsClient      *mocks.MockecsClient
+	StepFuncClient *mocks.MockstepFunctionsClient
 }
 
 func TestClient_ClusterARN(t *testing.T) {
@@ -1012,6 +1013,151 @@ func Test_NetworkConfiguration(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, get, tc.wantedNetworkConfig)
+			}
+		})
+	}
+}
+
+func Test_NetworkConfigurationForJob(t *testing.T) {
+	const (
+		testApp = "testApp"
+		testEnv = "testEnv"
+		testJob = "testJob"
+		testARN = "arn:aws:states:us-east-1:1234456789012:stateMachine:testApp-testEnv-testJob"
+
+		testStateMachineDefinition = `{
+          "Version": "1.0",
+          "Comment": "Run AWS Fargate task",
+          "StartAt": "Run Fargate Task",
+          "States": {
+            "Run Fargate Task": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::ecs:runTask.sync",
+              "Parameters": {
+                "LaunchType": "FARGATE",
+                "PlatformVersion": "1.4.0",
+                "Cluster": "cluster",
+                "TaskDefinition": "def",
+                "PropagateTags": "TASK_DEFINITION",
+                "Group.$": "$$.Execution.Name",
+                "NetworkConfiguration": {
+                  "AwsvpcConfiguration": {
+                    "Subnets": ["sbn-1", "sbn-2"],
+                    "AssignPublicIp": "ENABLED",
+                    "SecurityGroups": ["sg-1", "sg-2"]
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+		}`
+	)
+
+	testCases := map[string]struct {
+		setupMocks func(m clientMocks)
+
+		wantedConfig *ecs.NetworkConfiguration
+		wantedError  error
+	}{
+		"success": {
+			setupMocks: func(m clientMocks) {
+				m.resourceGetter.EXPECT().GetResourcesByTags(resourcegroups.ResourceTypeStateMachine, map[string]string{
+					deploy.AppTagKey:     testApp,
+					deploy.EnvTagKey:     testEnv,
+					deploy.ServiceTagKey: testJob,
+				}).Return([]*resourcegroups.Resource{
+					{
+						ARN: "random-arn-doesn't matter",
+					},
+					{
+						ARN: testARN,
+					},
+				}, nil)
+
+				m.StepFuncClient.EXPECT().StateMachineDefinition(testARN).Return(testStateMachineDefinition, nil)
+			},
+			wantedConfig: &ecs.NetworkConfiguration{
+				Subnets:        []string{"sbn-1", "sbn-2"},
+				SecurityGroups: []string{"sg-1", "sg-2"},
+				AssignPublicIp: "ENABLED",
+			},
+		},
+		"fail to get resources by tags": {
+			setupMocks: func(m clientMocks) {
+				m.resourceGetter.EXPECT().GetResourcesByTags(resourcegroups.ResourceTypeStateMachine, map[string]string{
+					deploy.AppTagKey:     testApp,
+					deploy.EnvTagKey:     testEnv,
+					deploy.ServiceTagKey: testJob,
+				}).Return(nil, errors.New("some error"))
+			},
+			wantedError: errors.New("get state machine resource by tags for job testJob: some error"),
+		},
+		"state machine resource not found": {
+			setupMocks: func(m clientMocks) {
+				m.resourceGetter.EXPECT().GetResourcesByTags(resourcegroups.ResourceTypeStateMachine, map[string]string{
+					deploy.AppTagKey:     testApp,
+					deploy.EnvTagKey:     testEnv,
+					deploy.ServiceTagKey: testJob,
+				}).Return([]*resourcegroups.Resource{
+					{
+						ARN: "rabbit",
+					},
+					{
+						ARN: "cabbage",
+					},
+				}, nil)
+			},
+			wantedError: errors.New("state machine for job testJob not found"),
+		},
+		"fail to get state machine definition": {
+			setupMocks: func(m clientMocks) {
+				m.resourceGetter.EXPECT().GetResourcesByTags(resourcegroups.ResourceTypeStateMachine, map[string]string{
+					deploy.AppTagKey:     testApp,
+					deploy.EnvTagKey:     testEnv,
+					deploy.ServiceTagKey: testJob,
+				}).Return([]*resourcegroups.Resource{
+					{
+						ARN: "random-arn-doesn't matter",
+					},
+					{
+						ARN: testARN,
+					},
+				}, nil)
+
+				m.StepFuncClient.EXPECT().StateMachineDefinition(testARN).Return("", errors.New("some error"))
+			},
+			wantedError: errors.New("get state machine definition for job testJob: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// GIVEN
+			m := clientMocks{
+				StepFuncClient: mocks.NewMockstepFunctionsClient(ctrl),
+				resourceGetter: mocks.NewMockresourceGetter(ctrl),
+			}
+			tc.setupMocks(m)
+
+			client := Client{
+				rgGetter:       m.resourceGetter,
+				StepFuncClient: m.StepFuncClient,
+			}
+
+			// WHEN
+			get, err := client.NetworkConfigurationForJob(testApp, testEnv, testJob)
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, get, tc.wantedConfig)
 			}
 		})
 	}

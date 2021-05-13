@@ -77,6 +77,10 @@ func (e *EnvStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	_, customDomain, err := s3.ParseURL(e.in.CustomResourcesURLs[template.CustomDomainFileName])
+	if err != nil {
+		return "", err
+	}
 
 	if e.in.AdjustVPCConfig != nil {
 		vpcConf = e.in.AdjustVPCConfig
@@ -86,6 +90,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		DNSCertValidatorLambda:    dnsCertValidator,
 		DNSDelegationLambda:       dnsDelegation,
 		EnableLongARNFormatLambda: enableLongARN,
+		CustomDomainLambda:        customDomain,
 		ScriptBucketName:          bucket,
 		ImportVPC:                 e.in.ImportVPCConfig,
 		VPCConfig:                 vpcConf,
