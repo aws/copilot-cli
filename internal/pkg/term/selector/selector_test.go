@@ -65,7 +65,7 @@ func TestDeploySelect_Service(t *testing.T) {
 					ListDeployedServices(testApp, "test").
 					Return(nil, errors.New("some error"))
 			},
-			wantErr: fmt.Errorf("list deployed service for environment test: some error"),
+			wantErr: fmt.Errorf("list deployed services for environment test: some error"),
 		},
 		"return error if no deployed services found": {
 			setupMocks: func(m deploySelectMocks) {
@@ -203,6 +203,141 @@ func TestDeploySelect_Service(t *testing.T) {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {
 				require.Equal(t, tc.wantSvc, gotDeployed.Name)
+				require.Equal(t, tc.wantEnv, gotDeployed.Env)
+			}
+		})
+	}
+}
+
+func TestDeploySelect_Job(t *testing.T) {
+	const testApp = "mockApp"
+	testCases := map[string]struct {
+		setupMocks func(mocks deploySelectMocks)
+		job        string
+		env        string
+
+		wantErr error
+		wantEnv string
+		wantJob string
+	}{
+		"return error if fail to list deployed jobs": {
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.
+					EXPECT().
+					ListEnvironments(testApp).
+					Return([]*config.Environment{
+						{
+							Name: "test",
+						},
+					}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedJobs(testApp, "test").
+					Return(nil, errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("list deployed jobs for environment test: some error"),
+		},
+		"return error if no deployed jobs found": {
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.
+					EXPECT().
+					ListEnvironments(testApp).
+					Return([]*config.Environment{
+						{
+							Name: "test",
+						},
+					}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedJobs(testApp, "test").
+					Return([]string{}, nil)
+			},
+			wantErr: fmt.Errorf("no deployed jobs found in application %s", testApp),
+		},
+		"return error if fail to select": {
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.
+					EXPECT().
+					ListEnvironments(testApp).
+					Return([]*config.Environment{
+						{
+							Name: "test",
+						},
+					}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedJobs(testApp, "test").
+					Return([]string{"mockJob1", "mockJob2"}, nil)
+
+				m.prompt.
+					EXPECT().
+					SelectOne("Select a deployed job", "Help text", []string{"mockJob1 (test)", "mockJob2 (test)"}).
+					Return("", errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("select deployed jobs for application %s: some error", testApp),
+		},
+		"skip with only one deployed job": {
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.
+					EXPECT().
+					ListEnvironments(testApp).
+					Return([]*config.Environment{
+						{
+							Name: "test",
+						},
+					}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedJobs(testApp, "test").
+					Return([]string{"mockJob"}, nil)
+			},
+			wantEnv: "test",
+			wantJob: "mockJob",
+		},
+		"success with flags": {
+			env: "test",
+			job: "mockJob",
+			setupMocks: func(m deploySelectMocks) {
+				m.deploySvc.
+					EXPECT().
+					IsJobDeployed(testApp, "test", "mockJob").
+					Return(true, nil)
+			},
+			wantEnv: "test",
+			wantJob: "mockJob",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockdeploySvc := mocks.NewMockDeployStoreClient(ctrl)
+			mockconfigSvc := mocks.NewMockConfigLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := deploySelectMocks{
+				deploySvc: mockdeploySvc,
+				configSvc: mockconfigSvc,
+				prompt:    mockprompt,
+			}
+			tc.setupMocks(mocks)
+
+			sel := DeploySelect{
+				Select: &Select{
+					config: mockconfigSvc,
+					prompt: mockprompt,
+				},
+				deployStoreSvc: mockdeploySvc,
+			}
+			gotDeployed, err := sel.DeployedJob("Select a deployed job", "Help text", testApp, WithEnv(tc.env), WithName(tc.job))
+			if tc.wantErr != nil {
+				require.EqualError(t, tc.wantErr, err.Error())
+			} else {
+				require.Equal(t, tc.wantJob, gotDeployed.Name)
 				require.Equal(t, tc.wantEnv, gotDeployed.Env)
 			}
 		})

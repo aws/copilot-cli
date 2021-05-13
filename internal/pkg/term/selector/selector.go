@@ -465,7 +465,7 @@ func (s *DeploySelect) deployedWorkload(prompt, help string, app string, workloa
 		if s.name != "" {
 			deployed, err := isWorkloadDeployed(app, envName, s.name)
 			if err != nil {
-				return nil, fmt.Errorf("check if service %s is deployed in environment %s: %w", s.name, envName, err)
+				return nil, fmt.Errorf("check if %s %s is deployed in environment %s: %w", workloadType, s.name, envName, err)
 			}
 			if !deployed {
 				continue
@@ -474,7 +474,7 @@ func (s *DeploySelect) deployedWorkload(prompt, help string, app string, workloa
 		} else {
 			wlNames, err = listDeployedWorkloads(app, envName)
 			if err != nil {
-				return nil, fmt.Errorf("list deployed service for environment %s: %w", envName, err)
+				return nil, fmt.Errorf("list deployed %ss for environment %s: %w", workloadType, envName, err)
 			}
 		}
 		for _, wlName := range wlNames {
