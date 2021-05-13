@@ -14,10 +14,15 @@ describe("Env Controller Handler", () => {
 
   const testEnvStack = "mockEnvStack";
   const testWorkload = "mockWorkload";
+  const testAliases = ["example.com"];
   const testParams = [
     {
       ParameterKey: "ALBWorkloads",
-      ParameterValue: "my-app,my-other-app",
+      ParameterValue: "my-svc,my-other-svc",
+    },
+    {
+      ParameterKey: "Aliases",
+      ParameterValue: "",
     },
   ];
   const testOutputs = [
@@ -60,7 +65,8 @@ describe("Env Controller Handler", () => {
         ResourceProperties: {
           EnvStack: testEnvStack,
           Workload: testWorkload,
-          Parameters: ["ALBWorkloads"],
+          Aliases: testAliases,
+          Parameters: ["ALBWorkloads", "Aliases"],
         },
       })
       .expectResolve(() => {
@@ -90,7 +96,8 @@ describe("Env Controller Handler", () => {
         ResourceProperties: {
           EnvStack: testEnvStack,
           Workload: testWorkload,
-          Parameters: ["ALBWorkloads"],
+          Aliases: testAliases,
+          Parameters: ["ALBWorkloads", "Aliases"],
         },
       })
       .expectResolve(() => {
@@ -131,7 +138,8 @@ describe("Env Controller Handler", () => {
         ResourceProperties: {
           EnvStack: testEnvStack,
           Workload: testWorkload,
-          Parameters: ["ALBWorkloads"],
+          Aliases: testAliases,
+          Parameters: ["ALBWorkloads", "Aliases"],
         },
       })
       .expectResolve(() => {
@@ -147,7 +155,11 @@ describe("Env Controller Handler", () => {
             Parameters: [
               {
                 ParameterKey: "ALBWorkloads",
-                ParameterValue: "my-app,my-other-app,mockWorkload",
+                ParameterValue: "my-svc,my-other-svc,mockWorkload",
+              },
+              {
+                ParameterKey: "Aliases",
+                ParameterValue: '{"mockWorkload":["example.com"]}',
               },
             ],
             StackName: "mockEnvStack",
@@ -163,7 +175,16 @@ describe("Env Controller Handler", () => {
       Stacks: [
         {
           StackName: "mockEnvStack",
-          Parameters: testParams,
+          Parameters: [
+            {
+              ParameterKey: "ALBWorkloads",
+              ParameterValue: "my-svc,my-other-svc",
+            },
+            {
+              ParameterKey: "Aliases",
+              ParameterValue: '{"my-other-svc": ["v1.example.com"]}',
+            },
+          ],
           Outputs: testOutputs,
         },
       ],
@@ -189,8 +210,8 @@ describe("Env Controller Handler", () => {
         ResponseURL: ResponseURL,
         ResourceProperties: {
           EnvStack: testEnvStack,
-          Workload: "my-app",
-          Parameters: ["ALBWorkloads"],
+          Workload: "my-svc",
+          Parameters: ["ALBWorkloads", "Aliases"],
         },
       })
       .expectResolve(() => {
@@ -228,6 +249,10 @@ describe("Env Controller Handler", () => {
               ParameterKey: "ALBWorkloads",
               ParameterValue: "frontend,api",
             },
+            {
+              ParameterKey: "Aliases",
+              ParameterValue: '{"frontend": ["example.com"]}',
+            },
           ],
           Outputs: testOutputs,
         },
@@ -242,23 +267,25 @@ describe("Env Controller Handler", () => {
 
     const wantedRequest = nock(ResponseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS" &&
-          body.Data.CFNExecutionRoleARN === "arn:aws:iam::1234567890:role/my-project-prod-CFNExecutionRole";
+        return (
+          body.Status === "SUCCESS" &&
+          body.Data.CFNExecutionRoleARN ===
+            "arn:aws:iam::1234567890:role/my-project-prod-CFNExecutionRole"
+        );
       })
       .reply(200);
 
     // WHEN
-    const lambda = LambdaTester(EnvController.handler)
-      .event({
-        RequestType: "Create",
-        RequestId: testRequestId,
-        ResponseURL: ResponseURL,
-        ResourceProperties: {
-          EnvStack: "demo-test",
-          Workload: "frontend",
-          Parameters: [], // Remove frontend from then env stack.
-        },
-      });
+    const lambda = LambdaTester(EnvController.handler).event({
+      RequestType: "Create",
+      RequestId: testRequestId,
+      ResponseURL: ResponseURL,
+      ResourceProperties: {
+        EnvStack: "demo-test",
+        Workload: "frontend",
+        Parameters: [], // Remove frontend from the env stack.
+      },
+    });
 
     // THEN
     return lambda.expectResolve(() => {
@@ -287,6 +314,10 @@ describe("Env Controller Handler", () => {
             {
               ParameterKey: "ALBWorkloads",
               ParameterValue: "api",
+            },
+            {
+              ParameterKey: "Aliases",
+              ParameterValue: "",
             },
           ],
           StackName: "demo-test",
@@ -337,7 +368,7 @@ describe("Env Controller Handler", () => {
         ResourceProperties: {
           EnvStack: testEnvStack,
           Workload: testWorkload,
-          Parameters: ["ALBWorkloads"],
+          Parameters: ["ALBWorkloads", "Aliases"],
         },
       })
       .expectResolve(() => {
@@ -353,7 +384,11 @@ describe("Env Controller Handler", () => {
             Parameters: [
               {
                 ParameterKey: "ALBWorkloads",
-                ParameterValue: "my-app,my-other-app,mockWorkload",
+                ParameterValue: "my-svc,my-other-svc,mockWorkload",
+              },
+              {
+                ParameterKey: "Aliases",
+                ParameterValue: "",
               },
             ],
             StackName: "mockEnvStack",
@@ -383,7 +418,16 @@ describe("Env Controller Handler", () => {
       Stacks: [
         {
           StackName: "mockEnvStack",
-          Parameters: testParams,
+          Parameters: [
+            {
+              ParameterKey: "ALBWorkloads",
+              ParameterValue: "my-svc,my-other-svc",
+            },
+            {
+              ParameterKey: "Aliases",
+              ParameterValue: '{"my-svc": ["example.com"]}',
+            },
+          ],
           Outputs: [],
         },
       ],
@@ -407,8 +451,9 @@ describe("Env Controller Handler", () => {
         ResponseURL: ResponseURL,
         ResourceProperties: {
           EnvStack: testEnvStack,
-          Workload: "my-app",
-          Parameters: ["ALBWorkloads"],
+          Workload: "my-svc",
+          Aliases: testAliases,
+          Parameters: ["ALBWorkloads", "Aliases"],
         },
       })
       .expectResolve(() => {
@@ -424,7 +469,11 @@ describe("Env Controller Handler", () => {
             Parameters: [
               {
                 ParameterKey: "ALBWorkloads",
-                ParameterValue: "my-other-app",
+                ParameterValue: "my-other-svc",
+              },
+              {
+                ParameterKey: "Aliases",
+                ParameterValue: "",
               },
             ],
             StackName: "mockEnvStack",

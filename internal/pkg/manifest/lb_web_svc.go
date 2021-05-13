@@ -108,6 +108,7 @@ type RoutingRule struct {
 	Path        *string                 `yaml:"path"`
 	HealthCheck HealthCheckArgsOrString `yaml:"healthcheck"`
 	Stickiness  *bool                   `yaml:"stickiness"`
+	Alias       *string                 `yaml:"alias"`
 	// TargetContainer is the container load balancer routes traffic to.
 	TargetContainer          *string  `yaml:"target_container"`
 	TargetContainerCamelCase *string  `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility

@@ -110,6 +110,7 @@ Resources:
       EnvStack: !Sub '${AppName}-${EnvName}'
       Parameters:
         - 'ALBWorkloads'
+        - 'Aliases'
       # We need to force trigger this lambda function on all deployments, so we give it a random ID as input on all event types.
       UpdateID: c31b2422-5c1f-48cb-9a58-f0f418984d27
 
