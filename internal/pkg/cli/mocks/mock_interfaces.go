@@ -4959,14 +4959,14 @@ func (mr *MockdeploySelectorMockRecorder) Application(prompt, help interface{}, 
 }
 
 // DeployedService mocks base method.
-func (m *MockdeploySelector) DeployedService(prompt, help, app string, opts ...selector.GetDeployedServiceOpts) (*selector.DeployedService, error) {
+func (m *MockdeploySelector) DeployedService(prompt, help, app string, opts ...selector.GetDeployedWorkloadOpts) (*selector.DeployedWorkload, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{prompt, help, app}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "DeployedService", varargs...)
-	ret0, _ := ret[0].(*selector.DeployedService)
+	ret0, _ := ret[0].(*selector.DeployedWorkload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
