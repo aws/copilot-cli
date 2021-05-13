@@ -1,4 +1,4 @@
-List of all available properties for a `'Load Balanced Web Service'` manifest.
+List of all available properties for a `'Load Balanced Web Service'` manifest. To learn about its concept, see the [Services](../concepts/services.en.md) page.
 
 ???+ note "Sample manifest for a frontend service"
 

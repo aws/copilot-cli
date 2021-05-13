@@ -1,4 +1,4 @@
-List of all available properties for a Copilot pipeline manifest.
+List of all available properties for a Copilot pipeline manifest. To learn about its concept, see the [Pipelines](../concepts/pipelines.en.md) page.
 
 ???+ note "Sample manifest for a pipeline triggered from a GitHub repo"
 
