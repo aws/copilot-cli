@@ -159,11 +159,11 @@ func (o *svcExecOpts) askApp() error {
 }
 
 func (o *svcExecOpts) askSvcEnvName() error {
-	deployedService, err := o.sel.DeployedService(svcExecNamePrompt, svcExecNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithSvc(o.name))
+	deployedService, err := o.sel.DeployedService(svcExecNamePrompt, svcExecNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithName(o.name))
 	if err != nil {
 		return fmt.Errorf("select deployed service for application %s: %w", o.appName, err)
 	}
-	o.name = deployedService.Svc
+	o.name = deployedService.Name
 	o.envName = deployedService.Env
 	return nil
 }

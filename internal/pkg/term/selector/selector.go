@@ -39,6 +39,11 @@ const (
 )
 
 const (
+	svcWorkloadType = "service"
+	jobWorkloadType = "job"
+)
+
+const (
 	// dockerfilePromptUseCustom is the option for using Dockerfile with custom path.
 	dockerfilePromptUseCustom = "Enter custom path for your Dockerfile"
 	// DockerfilePromptUseImage is the option for using existing image instead of Dockerfile.
@@ -158,7 +163,7 @@ type WorkspaceSelect struct {
 type DeploySelect struct {
 	*Select
 	deployStoreSvc DeployStoreClient
-	svc            string
+	name           string
 	env            string
 }
 
@@ -337,31 +342,31 @@ func (s *TaskSelect) RunningTask(prompt, help string, opts ...TaskOpts) (*awsecs
 	return taskStrMap[task], nil
 }
 
-// GetDeployedServiceOpts sets up optional parameters for GetDeployedServiceOpts function.
-type GetDeployedServiceOpts func(*DeploySelect)
+// GetDeployedWorkloadOpts sets up optional parameters for GetDeployedWorkloadOpts function.
+type GetDeployedWorkloadOpts func(*DeploySelect)
 
-// WithSvc sets up the svc name for DeploySelect.
-func WithSvc(svc string) GetDeployedServiceOpts {
+// WithName sets up the svc or job name for DeploySelect.
+func WithName(name string) GetDeployedWorkloadOpts {
 	return func(in *DeploySelect) {
-		in.svc = svc
+		in.name = name
 	}
 }
 
 // WithEnv sets up the env name for DeploySelect.
-func WithEnv(env string) GetDeployedServiceOpts {
+func WithEnv(env string) GetDeployedWorkloadOpts {
 	return func(in *DeploySelect) {
 		in.env = env
 	}
 }
 
-// DeployedService contains the service name and environment name of the deployed service.
-type DeployedService struct {
-	Svc string
-	Env string
+// DeployedWorkload contains the service name and environment name of the deployed service.
+type DeployedWorkload struct {
+	Name string
+	Env  string
 }
 
-func (s *DeployedService) String() string {
-	return fmt.Sprintf("%s (%s)", s.Svc, s.Env)
+func (s *DeployedWorkload) String() string {
+	return fmt.Sprintf("%s (%s)", s.Name, s.Env)
 }
 
 // Task has the user select a task. Callers can provide an environment, an app, or a "use default cluster" option
@@ -414,9 +419,32 @@ func (s *CFTaskSelect) Task(prompt, help string, opts ...GetDeployedTaskOpts) (s
 	return choice, nil
 }
 
+// DeployedJob has the user select a deployed job. Callers can provide a particular environment,
+// a particular service to filter on, or both.
+func (s *DeploySelect) DeployedJob(prompt, help string, app string, opts ...GetDeployedWorkloadOpts) (*DeployedWorkload, error) {
+	return s.deployedWorkload(prompt, help, app, jobWorkloadType, opts...)
+}
+
 // DeployedService has the user select a deployed service. Callers can provide either a particular environment,
 // a particular service to filter on, or both.
-func (s *DeploySelect) DeployedService(prompt, help string, app string, opts ...GetDeployedServiceOpts) (*DeployedService, error) {
+func (s *DeploySelect) DeployedService(prompt, help string, app string, opts ...GetDeployedWorkloadOpts) (*DeployedWorkload, error) {
+	return s.deployedWorkload(prompt, help, app, svcWorkloadType, opts...)
+}
+
+func (s *DeploySelect) deployedWorkload(prompt, help string, app string, workloadType string, opts ...GetDeployedWorkloadOpts) (*DeployedWorkload, error) {
+	var isWorkloadDeployed func(string, string, string) (bool, error)
+	var listDeployedWorkloads func(string, string) ([]string, error)
+	switch workloadType {
+	case svcWorkloadType:
+		isWorkloadDeployed = s.deployStoreSvc.IsServiceDeployed
+		listDeployedWorkloads = s.deployStoreSvc.ListDeployedServices
+	case jobWorkloadType:
+		isWorkloadDeployed = s.deployStoreSvc.IsJobDeployed
+		listDeployedWorkloads = s.deployStoreSvc.ListDeployedJobs
+	default:
+		return nil, fmt.Errorf("unrecognized workload type %s", workloadType)
+	}
+
 	for _, opt := range opts {
 		opt(s)
 	}
@@ -430,61 +458,61 @@ func (s *DeploySelect) DeployedService(prompt, help string, app string, opts ...
 			return nil, fmt.Errorf("list environments: %w", err)
 		}
 	}
-	svcEnvs := make(map[string]DeployedService)
-	var svcEnvNames []string
+	wlEnvs := make(map[string]DeployedWorkload)
+	var wlEnvNames []string
 	for _, envName := range envNames {
-		var svcNames []string
-		if s.svc != "" {
-			deployed, err := s.deployStoreSvc.IsServiceDeployed(app, envName, s.svc)
+		var wlNames []string
+		if s.name != "" {
+			deployed, err := isWorkloadDeployed(app, envName, s.name)
 			if err != nil {
-				return nil, fmt.Errorf("check if service %s is deployed in environment %s: %w", s.svc, envName, err)
+				return nil, fmt.Errorf("check if service %s is deployed in environment %s: %w", s.name, envName, err)
 			}
 			if !deployed {
 				continue
 			}
-			svcNames = append(svcNames, s.svc)
+			wlNames = append(wlNames, s.name)
 		} else {
-			svcNames, err = s.deployStoreSvc.ListDeployedServices(app, envName)
+			wlNames, err = listDeployedWorkloads(app, envName)
 			if err != nil {
 				return nil, fmt.Errorf("list deployed service for environment %s: %w", envName, err)
 			}
 		}
-		for _, svcName := range svcNames {
-			svcEnv := DeployedService{
-				Svc: svcName,
-				Env: envName,
+		for _, wlName := range wlNames {
+			svcEnv := DeployedWorkload{
+				Name: wlName,
+				Env:  envName,
 			}
-			svcEnvName := svcEnv.String()
-			svcEnvs[svcEnvName] = svcEnv
-			svcEnvNames = append(svcEnvNames, svcEnvName)
+			wlEnvName := svcEnv.String()
+			wlEnvs[wlEnvName] = svcEnv
+			wlEnvNames = append(wlEnvNames, wlEnvName)
 		}
 	}
-	if len(svcEnvNames) == 0 {
-		return nil, fmt.Errorf("no deployed services found in application %s", color.HighlightUserInput(app))
+	if len(wlEnvNames) == 0 {
+		return nil, fmt.Errorf("no deployed %ss found in application %s", workloadType, color.HighlightUserInput(app))
 	}
-	// return if only one deployed service found
-	var deployedSvc DeployedService
-	if len(svcEnvNames) == 1 {
-		deployedSvc = svcEnvs[svcEnvNames[0]]
-		if s.svc == "" && s.env == "" {
-			log.Infof("Found only one deployed service %s in environment %s\n", color.HighlightUserInput(deployedSvc.Svc), color.HighlightUserInput(deployedSvc.Env))
+	// return if only one deployed service or job found
+	var deployedWL DeployedWorkload
+	if len(wlEnvNames) == 1 {
+		deployedWL = wlEnvs[wlEnvNames[0]]
+		if s.name == "" && s.env == "" {
+			log.Infof("Found only one deployed %s %s in environment %s\n", workloadType, color.HighlightUserInput(deployedWL.Name), color.HighlightUserInput(deployedWL.Env))
 		}
-		if (s.svc != "") != (s.env != "") {
-			log.Infof("Service %s found in environment %s\n", color.HighlightUserInput(deployedSvc.Svc), color.HighlightUserInput(deployedSvc.Env))
+		if (s.name != "") != (s.env != "") {
+			log.Infof("%s %s found in environment %s\n", strings.Title(workloadType), color.HighlightUserInput(deployedWL.Name), color.HighlightUserInput(deployedWL.Env))
 		}
-		return &deployedSvc, nil
+		return &deployedWL, nil
 	}
-	svcEnvName, err := s.prompt.SelectOne(
+	wlEnvName, err := s.prompt.SelectOne(
 		prompt,
 		help,
-		svcEnvNames,
+		wlEnvNames,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("select deployed services for application %s: %w", app, err)
+		return nil, fmt.Errorf("select deployed %ss for application %s: %w", workloadType, app, err)
 	}
-	deployedSvc = svcEnvs[svcEnvName]
+	deployedWL = wlEnvs[wlEnvName]
 
-	return &deployedSvc, nil
+	return &deployedWL, nil
 }
 
 // Service fetches all services in the workspace and then prompts the user to select one.

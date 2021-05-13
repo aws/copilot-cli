@@ -144,9 +144,9 @@ func TestSvcStatus_Ask(t *testing.T) {
 
 			mockSelector: func(m *mocks.MockdeploySelector) {
 				m.EXPECT().DeployedService(svcStatusNamePrompt, svcStatusNameHelpPrompt, "mockApp", gomock.Any(), gomock.Any()).
-					Return(&selector.DeployedService{
-						Env: "mockEnv",
-						Svc: "mockSvc",
+					Return(&selector.DeployedWorkload{
+						Env:  "mockEnv",
+						Name: "mockSvc",
 					}, nil)
 			},
 		},

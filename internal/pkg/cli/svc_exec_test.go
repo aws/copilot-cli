@@ -355,9 +355,9 @@ func TestSvcExec_Ask(t *testing.T) {
 			inputSvc: inputSvc,
 			setupMocks: func(m execSvcMocks) {
 				m.sel.EXPECT().DeployedService(svcExecNamePrompt, svcExecNameHelpPrompt, "my-app", gomock.Any(), gomock.Any()).
-					Return(&selector.DeployedService{
-						Env: "my-env",
-						Svc: "my-svc",
+					Return(&selector.DeployedWorkload{
+						Env:  "my-env",
+						Name: "my-svc",
 					}, nil)
 			},
 
@@ -370,9 +370,9 @@ func TestSvcExec_Ask(t *testing.T) {
 				gomock.InOrder(
 					m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("my-app", nil),
 					m.sel.EXPECT().DeployedService(svcExecNamePrompt, svcExecNameHelpPrompt, "my-app", gomock.Any(), gomock.Any()).
-						Return(&selector.DeployedService{
-							Env: "my-env",
-							Svc: "my-svc",
+						Return(&selector.DeployedWorkload{
+							Env:  "my-env",
+							Name: "my-svc",
 						}, nil),
 				)
 			},

@@ -198,11 +198,11 @@ func TestDeploySelect_Service(t *testing.T) {
 				},
 				deployStoreSvc: mockdeploySvc,
 			}
-			gotDeployed, err := sel.DeployedService("Select a deployed service", "Help text", testApp, WithEnv(tc.env), WithSvc(tc.svc))
+			gotDeployed, err := sel.DeployedService("Select a deployed service", "Help text", testApp, WithEnv(tc.env), WithName(tc.svc))
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {
-				require.Equal(t, tc.wantSvc, gotDeployed.Svc)
+				require.Equal(t, tc.wantSvc, gotDeployed.Name)
 				require.Equal(t, tc.wantEnv, gotDeployed.Env)
 			}
 		})

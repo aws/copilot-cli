@@ -164,9 +164,9 @@ func TestSvcLogs_Ask(t *testing.T) {
 			setupMocks: func(m svcLogsMock) {
 				gomock.InOrder(
 					m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, "mockApp",
-						gomock.Any(), gomock.Any()).Return(&selector.DeployedService{
-						Env: "mockEnv",
-						Svc: "mockSvc",
+						gomock.Any(), gomock.Any()).Return(&selector.DeployedWorkload{
+						Env:  "mockEnv",
+						Name: "mockSvc",
 					}, nil),
 				)
 			},
@@ -192,9 +192,9 @@ func TestSvcLogs_Ask(t *testing.T) {
 				gomock.InOrder(
 					m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("mockApp", nil),
 					m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, "mockApp",
-						gomock.Any(), gomock.Any()).Return(&selector.DeployedService{
-						Env: "mockEnv",
-						Svc: "mockSvc",
+						gomock.Any(), gomock.Any()).Return(&selector.DeployedWorkload{
+						Env:  "mockEnv",
+						Name: "mockSvc",
 					}, nil),
 				)
 			},
