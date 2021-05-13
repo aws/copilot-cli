@@ -89,7 +89,7 @@ stages:
       name: prod
       # requires_approval: true
 ```
-To learn about the specification of `pipeline.yml`, see the [pipeline manifest](../manifest/pipeline.en.md) page.
+You can see every available configuration option for `pipeline.yml` on the [pipeline manifest](../manifest/pipeline.en.md) page.
 
 There are 3 main parts of this file: the `name` field, which is the name of your CodePipeline, the `source` section, which details the repository and branch to track, and the `stages` section, which lists the environments you want this pipeline to deploy to. You can update this anytime, but you must run `copilot pipeline update` afterwards.
 
