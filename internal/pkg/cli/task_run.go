@@ -837,11 +837,10 @@ Run a task with a command.
 /code $ copilot task run --command "python migrate-script.py"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newTaskRunOpts(vars)
-			opts.nFlag = cmd.Flags().NFlag()
 			if err != nil {
 				return err
 			}
-
+			opts.nFlag = cmd.Flags().NFlag()
 			if cmd.Flags().Changed(dockerFileFlag) {
 				opts.isDockerfileSet = true
 			}
