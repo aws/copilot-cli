@@ -42,6 +42,7 @@ type ConfigStoreClient interface {
 	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
 	ListEnvironments(appName string) ([]*config.Environment, error)
 	GetService(appName, svcName string) (*config.Workload, error)
+	GetJob(appName, jobname string) (*config.Workload, error)
 }
 
 // Store fetches information on deployed services.
@@ -89,11 +90,14 @@ func (s *Store) ListDeployedJobs(appName string, envName string) ([]string, erro
 
 func (s *Store) listDeployedWorkloads(appName string, envName string, workloadType string) ([]string, error) {
 	var keyResourceType string
+	var getWorkload func(string, string) (*config.Workload, error)
 	switch workloadType {
 	case jobWorkloadType:
 		keyResourceType = stateMachineResourceType
+		getWorkload = s.configStore.GetJob
 	case svcWorkloadType:
 		keyResourceType = ecsServiceResourceType
+		getWorkload = s.configStore.GetService
 	default:
 		return nil, fmt.Errorf("unrecognized workload type %s", workloadType)
 	}
@@ -114,7 +118,7 @@ func (s *Store) listDeployedWorkloads(appName string, envName string, workloadTy
 		if name == "" {
 			return nil, fmt.Errorf("%s resource with ARN %s is not tagged with %s", workloadType, resource.ARN, ServiceTagKey)
 		}
-		wkld, err := s.configStore.GetService(appName, name)
+		wkld, err := getWorkload(appName, name)
 		if err != nil {
 			return nil, fmt.Errorf("get %s %s: %w", workloadType, name, err)
 		}

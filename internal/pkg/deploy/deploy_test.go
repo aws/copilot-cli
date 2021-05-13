@@ -155,11 +155,11 @@ func TestStore_ListDeployedJobs(t *testing.T) {
 						EnvTagKey: "mockEnv",
 					}).Return([]*rg.Resource{{ARN: "mockARN1", Tags: map[string]string{ServiceTagKey: "mockJob1"}},
 						{ARN: "mockARN2", Tags: map[string]string{ServiceTagKey: "mockJob2"}}}, nil),
-					m.configStore.EXPECT().GetService("mockApp", "mockJob1").Return(&config.Workload{
+					m.configStore.EXPECT().GetJob("mockApp", "mockJob1").Return(&config.Workload{
 						App:  "mockApp",
 						Name: "mockJob1",
 					}, nil),
-					m.configStore.EXPECT().GetService("mockApp", "mockJob2").Return(&config.Workload{
+					m.configStore.EXPECT().GetJob("mockApp", "mockJob2").Return(&config.Workload{
 						App:  "mockApp",
 						Name: "mockJob2",
 					}, nil),
