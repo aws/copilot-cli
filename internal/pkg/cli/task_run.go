@@ -888,6 +888,8 @@ Run a task with a command.
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
+	cmd.Flags().StringVar(&vars.generateCommandTarget, generateCommandFlag, "", generateCommandFlagDescription)
 
+	cmd.Flags().MarkHidden(generateCommandFlag)
 	return cmd
 }
