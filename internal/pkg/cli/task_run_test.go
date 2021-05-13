@@ -1034,7 +1034,7 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 		},
 		"invalid input": {
 			inGenerateCommandTarget: "invalid/illegal/not-good/input/is/bad",
-			wantedError:             errors.New("invalid input to --generate-cmd: must be of one the form <cluster>/<service> or <app>/<env>/<workload>"),
+			wantedError:             errors.New("invalid input to --generate-cmd: must be of format <cluster>/<service> or <app>/<env>/<workload>"),
 		},
 	}
 	for name, tc := range testCases {
