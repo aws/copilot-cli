@@ -34,7 +34,6 @@ func TestSecretInitOpts_Validate(t *testing.T) {
 		inValues        map[string]string
 		inOverwrite     bool
 		inInputFilePath string
-		inResourceTags  map[string]string
 
 		setupMocks func(m secretInitMocks)
 
@@ -43,9 +42,7 @@ func TestSecretInitOpts_Validate(t *testing.T) {
 		"valid with input file": {
 			inInputFilePath: "./deep/secrets.yml",
 			inOverwrite:     true,
-			inResourceTags: map[string]string{
-				"hide": "yes",
-			},
+
 			setupMocks: func(m secretInitMocks) {
 				m.mockFS.MkdirAll("deep", 0755)
 				afero.WriteFile(m.mockFS, "deep/secrets.yml", []byte("FROM nginx"), 0644)
@@ -59,9 +56,7 @@ func TestSecretInitOpts_Validate(t *testing.T) {
 			},
 			inApp:       "dragon_slaying",
 			inOverwrite: true,
-			inResourceTags: map[string]string{
-				"hide": "yes",
-			},
+
 			setupMocks: func(m secretInitMocks) {
 				m.mockStore.EXPECT().GetApplication("dragon_slaying").Return(&config.Application{}, nil)
 				m.mockStore.EXPECT().GetEnvironment("dragon_slaying", "good_village").Return(&config.Environment{}, nil)
@@ -127,7 +122,6 @@ func TestSecretInitOpts_Validate(t *testing.T) {
 					values:        tc.inValues,
 					inputFilePath: tc.inInputFilePath,
 					overwrite:     tc.inOverwrite,
-					resourceTags:  tc.inResourceTags,
 				},
 				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
 				store: mockStore,
@@ -365,8 +359,7 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 
 		inInputFilePath string
 
-		inOverwrite    bool
-		inResourceTags map[string]string
+		inOverwrite bool
 
 		mockInputFileContent []byte
 		setupMocks           func(m secretInitExecuteMocks)
@@ -377,9 +370,6 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 			inAppName: testApp,
 			inName:    testName,
 			inValues:  testValues,
-			inResourceTags: map[string]string{
-				"isPassword": "yes",
-			},
 
 			setupMocks: func(m secretInitExecuteMocks) {
 				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
@@ -389,7 +379,6 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 					Tags: map[string]string{
 						deploy.AppTagKey: "test-app",
 						deploy.EnvTagKey: "test",
-						"isPassword":     "yes",
 					},
 				}).Return(&ssm.PutSecretOutput{
 					Version: aws.Int64(1),
@@ -401,7 +390,6 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 					Tags: map[string]string{
 						deploy.AppTagKey: "test-app",
 						deploy.EnvTagKey: "prod",
-						"isPassword":     "yes",
 					},
 				}).Return(&ssm.PutSecretOutput{
 					Version: aws.Int64(1),
@@ -578,7 +566,6 @@ db-host:
 					appName:       tc.inAppName,
 					name:          tc.inName,
 					values:        tc.inValues,
-					resourceTags:  tc.inResourceTags,
 					overwrite:     tc.inOverwrite,
 					inputFilePath: tc.inInputFilePath,
 				},

@@ -50,8 +50,6 @@ type secretInitVars struct {
 	values        map[string]string
 	inputFilePath string
 	overwrite     bool
-
-	resourceTags map[string]string
 }
 
 type secretInitOpts struct {
@@ -237,19 +235,15 @@ func (o *secretInitOpts) putSecretInEnv(secretName, envName, value string) error
 		return err
 	}
 
-	tags := make(map[string]string)
-	for k, v := range o.resourceTags {
-		tags[k] = v
-	}
-	tags[deploy.AppTagKey] = o.appName
-	tags[deploy.EnvTagKey] = envName
-
 	name := fmt.Sprintf(fmtSecretParameterName, o.appName, envName, secretName)
 	in := ssm.PutSecretInput{
 		Name:      name,
 		Value:     value,
 		Overwrite: o.overwrite,
-		Tags:      tags,
+		Tags: map[string]string{
+			deploy.AppTagKey: o.appName,
+			deploy.EnvTagKey: envName,
+		},
 	}
 
 	out, err := client.PutSecret(in)
@@ -434,6 +428,5 @@ func BuildSecretInitCmd() *cobra.Command {
 	cmd.Flags().StringToStringVar(&vars.values, valuesFlag, nil, secretValuesFlagDescription)
 	cmd.Flags().BoolVar(&vars.overwrite, overwriteFlag, false, secretOverwriteFlagDescription)
 	cmd.Flags().StringVar(&vars.inputFilePath, inputFilePathFlag, "", secretInputFilePathFlagDescription)
-	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	return cmd
 }
