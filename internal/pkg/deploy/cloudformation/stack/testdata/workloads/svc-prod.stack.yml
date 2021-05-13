@@ -266,15 +266,16 @@ Resources:
     Properties:
       ServiceToken: !GetAtt EnvControllerFunction.Arn
       Workload: !Ref WorkloadName
+      Aliases: [example.com]
       EnvStack: !Sub '${AppName}-${EnvName}'
-      Parameters: [ALBWorkloads,Aliases,]
+      Parameters: [ALBWorkloads, Aliases,]
   
   EnvControllerFunction:
     Type: AWS::Lambda::Function
     Properties:
       Code:
         ZipFile: |
-          "use strict";const aws=require("aws-sdk");let defaultResponseURL;const updateStackWaiter={delay:30,maxAttempts:29};let report=function(a,b,c,d,e,f){return new Promise((g,h)=>{const i=require("https"),{URL:j}=require("url");var k=JSON.stringify({Status:c,Reason:f,PhysicalResourceId:d||b.logStreamName,StackId:a.StackId,RequestId:a.RequestId,LogicalResourceId:a.LogicalResourceId,Data:e});const l=new j(a.ResponseURL||defaultResponseURL),m={hostname:l.hostname,port:443,path:l.pathname+l.search,method:"PUT",headers:{"Content-Type":"","Content-Length":k.length}};i.request(m).on("error",h).on("response",a=>{a.resume(),400<=a.statusCode?h(new Error(`Error ${a.statusCode}: ${a.statusMessage}`)):g()}).end(k,"utf8")})};const controlEnv=async function(a,b,c){for(var d,e=new aws.CloudFormation;;){if(d=await e.describeStacks({StackName:a}).promise(),1!==d.Stacks.length)throw new Error(`Cannot find environment stack ${a}`);const f=d.Stacks[0],g=JSON.parse(JSON.stringify(f.Parameters)),h=setOfParameterKeysWithWorkload(g,b),i=new Set(c),j=[...h].filter(a=>!i.has(a)),k=[...i].filter(a=>!h.has(a)),l=getExportedValues(f);if(0===j.length+k.length)return l;for(const a of g){if(j.includes(a.ParameterKey)){const c=new Set(a.ParameterValue.split(",").filter(Boolean));c.delete(b),a.ParameterValue=[...c].join(",")}if(k.includes(a.ParameterKey)){const c=new Set(a.ParameterValue.split(",").filter(Boolean));c.add(b),a.ParameterValue=[...c].join(",")}}try{await e.updateStack({StackName:a,Parameters:g,UsePreviousTemplate:!0,RoleARN:l.CFNExecutionRoleARN,Capabilities:f.Capabilities}).promise()}catch(b){if(!b.message.match(/^Stack.*is in UPDATE_IN_PROGRESS state and can not be updated/))throw b;await e.waitFor("stackUpdateComplete",{StackName:a,$waiter:updateStackWaiter}).promise();continue}if(await e.waitFor("stackUpdateComplete",{StackName:a,$waiter:updateStackWaiter}).promise(),d=await e.describeStacks({StackName:a}).promise(),1!==d.Stacks.length)throw new Error(`Cannot find environment stack ${a}`);return getExportedValues(d.Stacks[0])}};exports.handler=async function(a,b){var c,d={};const e=a.ResourceProperties;try{switch(a.RequestType){case"Create":d=await Promise.race([exports.deadlineExpired(),controlEnv(e.EnvStack,e.Workload,e.Parameters)]),c=`envcontoller/${e.EnvStack}/${e.Workload}`;break;case"Update":d=await Promise.race([exports.deadlineExpired(),controlEnv(e.EnvStack,e.Workload,e.Parameters)]),c=a.PhysicalResourceId;break;case"Delete":d=await Promise.race([exports.deadlineExpired(),controlEnv(e.EnvStack,e.Workload,[])]),c=a.PhysicalResourceId;break;default:throw new Error(`Unsupported request type ${a.RequestType}`);}await report(a,b,"SUCCESS",c,d)}catch(d){console.log(`Caught error ${d}.`),await report(a,b,"FAILED",c,null,d.message)}};function setOfParameterKeysWithWorkload(a,b){const c=new Set;return a.forEach(a=>{var d=new Set(a.ParameterValue.split(","));d.has(b)&&c.add(a.ParameterKey)}),c}const getExportedValues=function(a){const b={};return a.Outputs.forEach(a=>{b[a.OutputKey]=a.OutputValue}),b};exports.deadlineExpired=function(){return new Promise(function(a,b){setTimeout(b,870000,new Error("Lambda took longer than 14.5 minutes to update environment"))})},exports.withDefaultResponseURL=function(a){defaultResponseURL=a};
+          Abracadabra
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
