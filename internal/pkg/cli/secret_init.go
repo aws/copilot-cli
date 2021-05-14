@@ -372,8 +372,7 @@ func (e *errSecretFailedInSomeEnvironments) Error() string {
 	return strings.Join(out, "\n")
 }
 
-// SecretName returns the name of the secret of the error.
-func (e *errSecretFailedInSomeEnvironments) SecretName() string {
+func (e *errSecretFailedInSomeEnvironments) name() string {
 	return e.secretName
 }
 
@@ -382,7 +381,7 @@ func (e *errBatchPutSecretsFailed) Error() string {
 		"Batch put secrets failed for some secrets:",
 	}
 	sort.SliceStable(e.errors, func(i, j int) bool {
-		return e.errors[i].SecretName() < e.errors[j].SecretName()
+		return e.errors[i].name() < e.errors[j].name()
 	})
 	for _, err := range e.errors {
 		out = append(out, err.Error())
