@@ -77,9 +77,10 @@ func TestAppRunner_DescribeService(t *testing.T) {
 						Value: "info",
 					},
 				},
-				CPU:    "1024",
-				Memory: "2048",
-				Port:   "80",
+				CPU:     "1024",
+				Memory:  "2048",
+				Port:    "80",
+				ImageID: "111111111111.dkr.ecr.us-east-1.amazonaws.com/testapp/testsvc:8cdef9a",
 			},
 		},
 	}

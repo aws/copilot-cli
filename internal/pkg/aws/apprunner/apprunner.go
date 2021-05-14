@@ -75,6 +75,7 @@ func (a *AppRunner) DescribeService(svcARN string) (*Service, error) {
 		EnvironmentVariables: envVars,
 		CPU:                  *resp.Service.InstanceConfiguration.Cpu,
 		Memory:               *resp.Service.InstanceConfiguration.Memory,
+		ImageID:              *resp.Service.SourceConfiguration.ImageRepository.ImageIdentifier,
 		Port:                 *resp.Service.SourceConfiguration.ImageRepository.ImageConfiguration.Port,
 	}, nil
 }

@@ -529,14 +529,15 @@ func TestAppRunnerStatusDescriber_Describe(t *testing.T) {
 func TestServiceStatusDesc_AppRunnerServiceString(t *testing.T) {
 	oldHumanize := humanizeTime
 	humanizeTime = func(then time.Time) string {
-		now := time.Unix(int64(1613145765), 0)
-		return humanize.Time(now)
+		now, _ := time.Parse(time.RFC3339, "2020-01-01T00:00:00+00:00")
+		return humanize.RelTime(then, now, "from now", "ago")
 	}
 	defer func() {
 		humanizeTime = oldHumanize
 	}()
 
-	updateTime := time.Unix(int64(1613145765), 0)
+	createTime, _ := time.Parse(time.RFC3339, "2020-01-01T00:00:00+00:00")
+	updateTime, _ := time.Parse(time.RFC3339, "2020-03-01T00:00:00+00:00")
 
 	logEvents := []*cloudwatchlogs.Event{
 		{
@@ -554,9 +555,13 @@ func TestServiceStatusDesc_AppRunnerServiceString(t *testing.T) {
 		"RUNNING": {
 			desc: &apprunnerServiceStatus{
 				Service: apprunner.Service{
-					ServiceARN:  "mock-svc-arn",
+					Name:        "frontend",
+					ID:          "8a2b343f658144d885e47d10adb4845e",
+					ServiceARN:  "arn:aws:apprunner:us-east-1:1111:service/frontend/8a2b343f658144d885e47d10adb4845e",
 					Status:      "RUNNING",
+					DateCreated: createTime,
 					DateUpdated: updateTime,
+					ImageID:     "hello",
 				},
 				LogEvents: logEvents,
 			},
@@ -567,13 +572,14 @@ func TestServiceStatusDesc_AppRunnerServiceString(t *testing.T) {
 Last Deployment
 
   Updated At        2 months ago
-  Target ARN        mock-svc-arn
+  Service ID        frontend/8a2b343f658144d885e47d10adb4845e
+  Source            hello
 
 System Logs
 
   2021-04-08T08:13:11-07:00    [AppRunner] Service creation started.
 `,
-			json: "{\"Service\":{\"ServiceARN\":\"mock-svc-arn\",\"Name\":\"\",\"ID\":\"\",\"Status\":\"RUNNING\",\"ServiceURL\":\"\",\"DateCreated\":\"0001-01-01T00:00:00Z\",\"DateUpdated\":\"2021-02-12T08:02:45-08:00\",\"CPU\":\"\",\"Memory\":\"\",\"Port\":\"\",\"EnvironmentVariables\":null},\"LogEvents\":[{\"logStreamName\":\"events\",\"ingestionTime\":0,\"message\":\"[AppRunner] Service creation started.\",\"timestamp\":1617894791771}]}\n",
+			json: `{"arn":"arn:aws:apprunner:us-east-1:1111:service/frontend/8a2b343f658144d885e47d10adb4845e","createdAt":"2020-01-01T00:00:00Z","updatedAt":"2020-03-01T00:00:00Z","source":{"imageId":"hello"}}` + "\n",
 		},
 	}
 

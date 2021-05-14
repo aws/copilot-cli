@@ -229,7 +229,24 @@ func (s *ecsServiceStatus) JSONString() (string, error) {
 
 // JSONString returns the stringified apprunnerServiceStatus struct with json format.
 func (a *apprunnerServiceStatus) JSONString() (string, error) {
-	b, err := json.Marshal(a)
+	data := struct {
+		ARN       string    `json:"arn"`
+		CreatedAt time.Time `json:"createdAt"`
+		UpdatedAt time.Time `json:"updatedAt"`
+		Source    struct {
+			ImageID string `json:"imageId"`
+		} `json:"source"`
+	}{
+		ARN:       a.Service.ServiceARN,
+		CreatedAt: a.Service.DateCreated,
+		UpdatedAt: a.Service.DateUpdated,
+		Source: struct {
+			ImageID string `json:"imageId"`
+		}{
+			ImageID: a.Service.ImageID,
+		},
+	}
+	b, err := json.Marshal(data)
 	if err != nil {
 		return "", fmt.Errorf("marshal services: %w", err)
 	}
@@ -281,7 +298,13 @@ func (a *apprunnerServiceStatus) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nLast Deployment\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(a.Service.DateUpdated))
-	fmt.Fprintf(writer, "  %s\t%s\n", "Target ARN", a.Service.ServiceARN)
+	serviceID := fmt.Sprintf("%s/%s", a.Service.Name, a.Service.ID)
+	fmt.Fprintf(writer, "  %s\t%s\n", "Service ID", serviceID)
+	imageID := a.Service.ImageID
+	if strings.Contains(a.Service.ImageID, "/") {
+		imageID = strings.SplitAfterN(imageID, "/", 2)[1] // strip the registry.
+	}
+	fmt.Fprintf(writer, "  %s\t%s\n", "Source", imageID)
 	writer.Flush()
 	fmt.Fprint(writer, color.Bold.Sprint("\nSystem Logs\n\n"))
 	writer.Flush()

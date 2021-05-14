@@ -17,6 +17,7 @@ type Service struct {
 	DateUpdated          time.Time
 	CPU                  string
 	Memory               string
+	ImageID              string
 	Port                 string
 	EnvironmentVariables []*EnvironmentVariable
 }
