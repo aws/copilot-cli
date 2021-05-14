@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/dustin/go-humanize/english"
@@ -181,7 +182,7 @@ func (o *secretInitOpts) Execute() error {
 			return err
 		}
 
-		var errs []error
+		var errs []errPutSecretFailed
 		for secretName, secretValues := range secrets {
 			if err := o.putSecret(secretName, secretValues); err != nil {
 				errs = append(errs, err)
@@ -199,7 +200,7 @@ func (o *secretInitOpts) Execute() error {
 	return o.putSecret(o.name, o.values)
 }
 
-func (o *secretInitOpts) putSecret(secretName string, values map[string]string) error {
+func (o *secretInitOpts) putSecret(secretName string, values map[string]string) errPutSecretFailed {
 	envs := make([]string, 0)
 	for env := range values {
 		envs = append(envs, env)
@@ -354,13 +355,18 @@ func (o *secretInitOpts) askForSecretValues() error {
 func (o *secretInitOpts) RecommendedActions() {
 }
 
+type errPutSecretFailed interface {
+	SecretName() string
+	Error() string
+}
+
 type errSecretFailedInSomeEnvironments struct {
 	secretName            string
 	errorsForEnvironments map[string]error
 }
 
 type errBatchPutSecretsFailed struct {
-	errors []error
+	errors []errPutSecretFailed
 }
 
 func (e *errSecretFailedInSomeEnvironments) Error() string {
@@ -371,10 +377,18 @@ func (e *errSecretFailedInSomeEnvironments) Error() string {
 	return strings.Join(out, "\n")
 }
 
+// SecretName returns the name of the secret of the error.
+func (e *errSecretFailedInSomeEnvironments) SecretName() string {
+	return e.secretName
+}
+
 func (e *errBatchPutSecretsFailed) Error() string {
 	out := []string{
 		"Batch put secrets failed for some secrets:",
 	}
+	sort.SliceStable(e.errors, func(i, j int) bool {
+		return e.errors[i].SecretName() < e.errors[j].SecretName()
+	})
 	for _, err := range e.errors {
 		out = append(out, err.Error())
 	}
