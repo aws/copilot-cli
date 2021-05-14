@@ -302,7 +302,7 @@ func TestResumeSvcOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					m.spinner.EXPECT().Start("Resuming service phonetool in environment test."),
 					m.serviceResumer.EXPECT().ResumeService(testSvcARN).Return(mockError),
-					m.spinner.EXPECT().Stop(log.Serrorf("Failed to resume service phonetool in environment test: %w.\n", mockError)),
+					m.spinner.EXPECT().Stop(log.Serrorf("Failed to resume service phonetool in environment test: mockError\n")),
 				)
 			},
 			wantedError: mockError,

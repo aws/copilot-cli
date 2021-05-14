@@ -25,7 +25,7 @@ const (
 	svcResumeSvcNameHelpPrompt = "The selected service will be resumed."
 
 	fmtSvcResumeStarted = "Resuming service %s in environment %s."
-	fmtSvcResumeFailed  = "Failed to resume service %s in environment %s: %w.\n"
+	fmtSvcResumeFailed  = "Failed to resume service %s in environment %s: %v\n"
 	fmtSvcResumeSuccess = "Resumed service %s in environment %s.\n"
 )
 
