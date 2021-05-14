@@ -544,7 +544,7 @@ db-host:
 			},
 
 			wantedError: &errBatchPutSecretsFailed{
-				errors: []errPutSecretFailed{
+				errors: []*errSecretFailedInSomeEnvironments{
 					&errSecretFailedInSomeEnvironments{
 						secretName: "db-password",
 						errorsForEnvironments: map[string]error{

@@ -182,10 +182,10 @@ func (o *secretInitOpts) Execute() error {
 			return err
 		}
 
-		var errs []errPutSecretFailed
+		var errs []*errSecretFailedInSomeEnvironments
 		for secretName, secretValues := range secrets {
 			if err := o.putSecret(secretName, secretValues); err != nil {
-				errs = append(errs, err)
+				errs = append(errs, err.(*errSecretFailedInSomeEnvironments))
 			}
 		}
 
@@ -200,7 +200,7 @@ func (o *secretInitOpts) Execute() error {
 	return o.putSecret(o.name, o.values)
 }
 
-func (o *secretInitOpts) putSecret(secretName string, values map[string]string) errPutSecretFailed {
+func (o *secretInitOpts) putSecret(secretName string, values map[string]string) error {
 	envs := make([]string, 0)
 	for env := range values {
 		envs = append(envs, env)
@@ -355,18 +355,13 @@ func (o *secretInitOpts) askForSecretValues() error {
 func (o *secretInitOpts) RecommendedActions() {
 }
 
-type errPutSecretFailed interface {
-	SecretName() string
-	Error() string
-}
-
 type errSecretFailedInSomeEnvironments struct {
 	secretName            string
 	errorsForEnvironments map[string]error
 }
 
 type errBatchPutSecretsFailed struct {
-	errors []errPutSecretFailed
+	errors []*errSecretFailedInSomeEnvironments
 }
 
 func (e *errSecretFailedInSomeEnvironments) Error() string {
