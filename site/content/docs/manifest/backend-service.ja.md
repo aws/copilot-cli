@@ -1,4 +1,4 @@
-以下は `'Backend Service'` Manifest で利用できるすべてのプロパティのリストです。
+以下は `'Backend Service'` Manifest で利用できるすべてのプロパティのリストです。[Copilot Service の概念](../concepts/services.ja.md)説明のページも合わせてご覧ください。
 
 <!-- textlint-disable ja-technical-writing/no-exclamation-question-mark, ja-technical-writing/ja-no-mixed-period -->
 ???+ note "api service のサンプル Manifest"

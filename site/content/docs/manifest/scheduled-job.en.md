@@ -1,4 +1,4 @@
-List of all available properties for a `'Scheduled Job'` manifest.
+List of all available properties for a `'Scheduled Job'` manifest. To learn about Copilot jobs, see the [Jobs](../concepts/jobs.en.md) concept page.
 
 ???+ note "Sample manifest for a report generator cronjob"
 

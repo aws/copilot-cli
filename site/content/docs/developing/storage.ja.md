@@ -42,7 +42,6 @@ $ copilot storage init -n my-cluster -t Aurora -w api --engine PostgreSQL --init
 このコマンドにより PostgreSQL エンジンを使用する `my_db` という名前のデータベースを持つ RDS Aurora Serverless クラスターが作成されます。JSON 文字列として `MYCLUSTER_SECRET` という名前の環境変数がワークロードに追加されます。この JSON 文字列は、`'host'`、`'port'`、`'dbname'`、`'username'`、`'password'`、`'dbClusterIdentifier'`、`'engine'` フィールドを含みます。
 
 ## ファイルシステム
-There are two ways to use an EFS file system with Copilot: using managed EFS, and importing your own filesystem.
 Copilot で EFS ファイルシステムを使う方法は２つあります: Copilot 管理の EFS、あるいは既存の EFS ファイルシステムのインポートです。
 
 ### Copilot 管理の EFS
@@ -78,10 +77,13 @@ storage:
 
 #### 内部的な詳細
 Copilot 管理の EFS を有効にすると、Copilot は以下のリソースを Environment ごとに作成します。
+
 * [EFS ファイルシステム](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-efs-filesystem.html)
 * Environment 内の各プライベートサブネットごとの[マウントターゲット]](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-efs-mounttarget.html)
 * Environment セキュリティグループからマウントターゲットへのアクセスを許可するセキュリティグループルール
+
 また、Copilot は Service ごとに以下のリソースを作成します。
+
 * [EFS アクセスポイント](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-efs-accesspoint.html)。このアクセスポイントは Copilot 管理の EFS を利用する設定を行った Service あるいは Job の名前に基づいたディレクトリを参照します。
 
 Environment ごとに作成されたリソースは `copilot env show --json --resources` で得られる結果を任意の JSON パーサで処理することで確認できます。次はそのようなコマンドの例です。

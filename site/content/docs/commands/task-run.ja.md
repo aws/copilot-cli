@@ -63,7 +63,7 @@ $ copilot task run -n db-migrate --env test --follow
 
 2GB のメモリ、既存のイメージ、およびカスタムタスクロールを使用して 4 つのタスクを実行します。
 ```
-$ copilot task run --num 4 --memory 2048 --image=rds-migrate --task-role migrate-role --follow
+$ copilot task run --count 4 --memory 2048 --image=rds-migrate --task-role migrate-role --follow
 ```
 
 環境変数を使用してタスクを実行します。

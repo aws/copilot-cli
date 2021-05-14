@@ -10,11 +10,13 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
@@ -61,17 +63,23 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 
 	for name, tc := range testCases {
 
-		serializer, err := stack.NewLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{})
+		serializer, err := stack.NewHTTPSLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{})
 
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
 		regExpGUID := regexp.MustCompile(`([a-f\d]{8}-)([a-f\d]{4}-){3}([a-f\d]{12})`) // Matches random guids
 		testName := fmt.Sprintf("CF Template should be equal/%s", name)
+		parser := template.New()
+		envController, err := parser.Read(envControllerPath)
+		require.NoError(t, err)
+		zipFile := envController.String()
 		t.Run(testName, func(t *testing.T) {
 			actualBytes := []byte(tpl)
 			// Cut random GUID from template.
 			actualBytes = regExpGUID.ReplaceAll(actualBytes, []byte("RandomGUID"))
 			actualString := string(actualBytes)
+			// Cut out zip file from EnvControllerAction for more readable output
+			actualString = strings.ReplaceAll(actualString, zipFile, "Abracadabra")
 			actualBytes = []byte(actualString)
 			mActual := make(map[interface{}]interface{})
 			require.NoError(t, yaml.Unmarshal(actualBytes, mActual))

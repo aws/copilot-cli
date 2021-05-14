@@ -37,7 +37,7 @@ $ copilot job init
 
 1 日 1 回実行される "reaper" という名前のスケジュールされたタスクを作成します。
 ```bash
-$ copilot job init --name reaper --dockerfile ./frontend/Dockerfile --schedule "every 2 hours"
+$ copilot job init --name reaper --dockerfile ./frontend/Dockerfile --schedule "@daily"
 ```
 リトライ回数を指定した "report-generator" という名前のスケジュールされたタスクを作成します。
 ```bash

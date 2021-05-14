@@ -240,6 +240,7 @@ Tasks with the same group name share the same set of resources.
 	generateCommandFlagDescription = `Optional. Generate a command with a pre-filled value for each flag.
 To use it for an ECS service, specify --generate-cmd <cluster name>/<service name>.
 Alternatively, if the service is created with Copilot, specify --generate-cmd <application>/<environment>/<service>.
+Similarly, to use it for a job created with Copilot, specify --generate-cmd <application>/<environment>/<job>.
 Cannot be specified with any other flags.`
 
 	vpcIDFlagDescription          = "Optional. Use an existing VPC ID."

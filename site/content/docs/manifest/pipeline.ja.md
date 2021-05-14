@@ -1,4 +1,4 @@
-以下は Copilot Pipeline の Manifest で利用できるすべてのプロパティのリストです。
+以下は Copilot Pipeline の Manifest で利用できるすべてのプロパティのリストです。[Pipeline の概念](../concepts/pipelines.ja.md)説明のページも合わせてご覧ください。
 
 ???+ note "GitHub のリポジトリからトリガーされる Pipeline のサンプル Manifest"
 
