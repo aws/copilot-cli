@@ -103,7 +103,6 @@ const controlEnv = async function (
     const updatedEnvStack = describeStackResp.Stacks[0];
     const envParams = JSON.parse(JSON.stringify(updatedEnvStack.Parameters));
     const envSet = setOfParameterKeysWithWorkload(envParams, workload);
-    const shouldUpdateAliases = needUpdateAliases(envParams, workload, aliases);
     const controllerSet = new Set(envControllerParameters);
 
     const parametersToRemove = [...envSet].filter(
@@ -114,11 +113,10 @@ const controlEnv = async function (
     );
     const exportedValues = getExportedValues(updatedEnvStack);
     // Return if there are no parameter changes.
+    const shouldUpdateAliases = needUpdateAliases(envParams, workload, aliases || []);
     if (
-      parametersToRemove.length +
-        parametersToAdd.length +
-        shouldUpdateAliases ===
-      0
+      parametersToRemove.length + parametersToAdd.length === 0 &&
+      !shouldUpdateAliases
     ) {
       return exportedValues;
     }
@@ -127,9 +125,9 @@ const controlEnv = async function (
       if (envParam.ParameterKey === AliasParamKey) {
         if (shouldUpdateAliases) {
           envParam.ParameterValue = updateAliases(
+            envParam.ParameterValue,
             workload,
-            aliases || [],
-            envParam.ParameterValue
+            aliases || []
           );
         }
         continue;
@@ -262,7 +260,7 @@ exports.handler = async function (event, context) {
 function setOfParameterKeysWithWorkload(cfnParams, workload) {
   const envSet = new Set();
   cfnParams.forEach((param) => {
-    if (param.ParameterKey !== AliasParamKey) {
+    if (param.ParameterKey.endsWith("Workloads")) {
       let values = new Set(param.ParameterValue.split(","));
       if (!values.has(workload)) {
         return;
@@ -274,20 +272,19 @@ function setOfParameterKeysWithWorkload(cfnParams, workload) {
 }
 
 function needUpdateAliases(cfnParams, workload, aliases) {
-  let requireUpdate = false;
-  cfnParams.forEach((param) => {
+  for (const param of cfnParams) {
     if (param.ParameterKey !== AliasParamKey) {
-      return;
+      continue;
     }
     let obj = JSON.parse(param.ParameterValue || "{}");
     if ((obj[workload] || []).toString() !== aliases.toString()) {
-      requireUpdate = true;
+      return true;
     }
-  });
-  return requireUpdate;
+  }
+  return false;
 }
 
-const updateAliases = function (workload, aliases, cfnAliases) {
+const updateAliases = function (cfnAliases, workload, aliases) {
   let obj = JSON.parse(cfnAliases || "{}");
   if (aliases.length !== 0) {
     obj[workload] = aliases;

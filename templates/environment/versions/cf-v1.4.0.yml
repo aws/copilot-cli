@@ -366,7 +366,8 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-SubDomain
   EnabledFeatures:
-    Value: !Sub '${ALBWorkloads},${EFSWorkloads},${NATWorkloads},${Aliases}'
+    # We don't need to include Aliases because updating it always results in the CustomDomain action to update.
+    Value: !Sub '${ALBWorkloads},${EFSWorkloads},${NATWorkloads}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
   ManagedFileSystemID:
     Condition: CreateEFS
