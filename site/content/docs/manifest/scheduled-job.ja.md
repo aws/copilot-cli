@@ -1,4 +1,4 @@
-以下は `'Scheduled Job'` Manifest で利用できるすべてのプロパティのリストです。
+以下は `'Scheduled Job'` Manifest で利用できるすべてのプロパティのリストです。[Job の概念](../concepts/jobs.ja.md)説明のページも合わせてご覧ください。
 
 ???+ note "レポートを作成する cron ジョブのサンプル Manifest"
 
