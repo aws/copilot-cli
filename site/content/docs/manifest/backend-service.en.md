@@ -1,4 +1,4 @@
-List of all available properties for a `'Backend Service'` manifest.
+List of all available properties for a `'Backend Service'` manifest. To learn about Copilot services, see the [Services](../concepts/services.en.md) concept page.
 
 ???+ note "Sample manifest for an api service"
 
