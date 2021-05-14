@@ -92,6 +92,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		Path: "frontend",
 		Port: 80,
 	})
+	testLBWebServiceManifest.Alias = aws.String("mockAlias")
 	testLBWebServiceManifest.EntryPoint = manifest.EntryPointOverride{
 		String:      nil,
 		StringSlice: []string{"/bin/echo", "hello"},

@@ -217,6 +217,7 @@ type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
 	Variables          map[string]string
 	Secrets            map[string]string
+	Aliases            []string
 	NestedStack        *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	Sidecars           []*SidecarOpts
 	LogConfig          *LogConfigOpts
@@ -338,7 +339,7 @@ func randomUUIDFunc() (string, error) {
 func envControllerParameters(o WorkloadOpts) []string {
 	parameters := []string{}
 	if o.WorkloadType == "Load Balanced Web Service" {
-		parameters = append(parameters, "ALBWorkloads,") // YAML needs the comma separator; resolved in EnvContr.
+		parameters = append(parameters, []string{"ALBWorkloads,", "Aliases,"}...) // YAML needs the comma separator; resolved in EnvContr.
 	}
 	if o.Network.SubnetsType == PrivateSubnetsPlacement {
 		parameters = append(parameters, "NATWorkloads,") // YAML needs the comma separator; resolved in EnvContr.

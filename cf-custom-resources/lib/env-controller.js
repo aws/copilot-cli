@@ -12,6 +12,8 @@ const updateStackWaiter = {
   maxAttempts: 29,
 };
 
+const AliasParamKey = "Aliases";
+
 /**
  * Upload a CloudFormation response object to S3.
  *
@@ -84,9 +86,11 @@ let report = function (
 const controlEnv = async function (
   stackName,
   workload,
+  aliases,
   envControllerParameters
 ) {
   var cfn = new aws.CloudFormation();
+  aliases = aliases || [];
   while (true) {
     var describeStackResp = await cfn
       .describeStacks({
@@ -101,26 +105,47 @@ const controlEnv = async function (
     const envSet = setOfParameterKeysWithWorkload(envParams, workload);
     const controllerSet = new Set(envControllerParameters);
 
-    const parametersToRemove = [...envSet].filter(param => !controllerSet.has(param));
-    const parametersToAdd = [...controllerSet].filter(param => !envSet.has(param));
+    const parametersToRemove = [...envSet].filter(
+      (param) => !controllerSet.has(param)
+    );
+    const parametersToAdd = [...controllerSet].filter(
+      (param) => !envSet.has(param)
+    );
     const exportedValues = getExportedValues(updatedEnvStack);
     // Return if there are no parameter changes.
-    if (parametersToRemove.length + parametersToAdd.length === 0)  {
+    const shouldUpdateAliases = needUpdateAliases(envParams, workload, aliases || []);
+    if (
+      parametersToRemove.length + parametersToAdd.length === 0 &&
+      !shouldUpdateAliases
+    ) {
       return exportedValues;
     }
 
     for (const envParam of envParams) {
+      if (envParam.ParameterKey === AliasParamKey) {
+        if (shouldUpdateAliases) {
+          envParam.ParameterValue = updateAliases(
+            envParam.ParameterValue,
+            workload,
+            aliases || []
+          );
+        }
+        continue;
+      }
       if (parametersToRemove.includes(envParam.ParameterKey)) {
-        const values = new Set(envParam.ParameterValue.split(',').filter(Boolean)); // Filter out the empty string
+        const values = new Set(
+          envParam.ParameterValue.split(",").filter(Boolean)
+        ); // Filter out the empty string
         // in the output array to prevent a leading comma in the parameters list.
         values.delete(workload);
-        envParam.ParameterValue = [...values].join(',');
+        envParam.ParameterValue = [...values].join(",");
       }
       if (parametersToAdd.includes(envParam.ParameterKey)) {
-        const values = new Set(envParam.ParameterValue.split(',').filter(Boolean)); // Filter out the empty string
-        // in the output array to prevent a leading comma in the parameters list.
+        const values = new Set(
+          envParam.ParameterValue.split(",").filter(Boolean)
+        );
         values.add(workload);
-        envParam.ParameterValue = [...values].join(',');
+        envParam.ParameterValue = [...values].join(",");
       }
     }
 
@@ -137,27 +162,27 @@ const controlEnv = async function (
     } catch (err) {
       if (
         !err.message.match(
-            /^Stack.*is in UPDATE_IN_PROGRESS state and can not be updated/
+          /^Stack.*is in UPDATE_IN_PROGRESS state and can not be updated/
         )
       ) {
         throw err;
       }
       // If the other workload is updating the env stack, wait until update completes.
       await cfn
-          .waitFor("stackUpdateComplete", {
-            StackName: stackName,
-            $waiter: updateStackWaiter,
-          })
-          .promise();
-      continue;
-    }
-    // Wait until update complete, then return the updated env stack output.
-    await cfn
         .waitFor("stackUpdateComplete", {
           StackName: stackName,
           $waiter: updateStackWaiter,
         })
         .promise();
+      continue;
+    }
+    // Wait until update complete, then return the updated env stack output.
+    await cfn
+      .waitFor("stackUpdateComplete", {
+        StackName: stackName,
+        $waiter: updateStackWaiter,
+      })
+      .promise();
     describeStackResp = await cfn
       .describeStacks({
         StackName: stackName,
@@ -186,6 +211,7 @@ exports.handler = async function (event, context) {
           controlEnv(
             props.EnvStack,
             props.Workload,
+            props.Aliases,
             props.Parameters
           ),
         ]);
@@ -197,6 +223,7 @@ exports.handler = async function (event, context) {
           controlEnv(
             props.EnvStack,
             props.Workload,
+            props.Aliases,
             props.Parameters
           ),
         ]);
@@ -232,15 +259,41 @@ exports.handler = async function (event, context) {
 
 function setOfParameterKeysWithWorkload(cfnParams, workload) {
   const envSet = new Set();
-  cfnParams.forEach(param => {
-    var values = new Set(param.ParameterValue.split(','));
-    if (!values.has(workload)) {
-      return;
+  cfnParams.forEach((param) => {
+    if (param.ParameterKey.endsWith("Workloads")) {
+      let values = new Set(param.ParameterValue.split(","));
+      if (!values.has(workload)) {
+        return;
+      }
     }
     envSet.add(param.ParameterKey);
-  })
-  return envSet
+  });
+  return envSet;
 }
+
+function needUpdateAliases(cfnParams, workload, aliases) {
+  for (const param of cfnParams) {
+    if (param.ParameterKey !== AliasParamKey) {
+      continue;
+    }
+    let obj = JSON.parse(param.ParameterValue || "{}");
+    if ((obj[workload] || []).toString() !== aliases.toString()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const updateAliases = function (cfnAliases, workload, aliases) {
+  let obj = JSON.parse(cfnAliases || "{}");
+  if (aliases.length !== 0) {
+    obj[workload] = aliases;
+  } else {
+    obj[workload] = undefined;
+  }
+  const updatedAliases = JSON.stringify(obj);
+  return updatedAliases === "{}" ? "" : updatedAliases;
+};
 
 const getExportedValues = function (stack) {
   const exportedValues = {};
