@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -23,7 +22,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 const (
@@ -450,41 +448,6 @@ This command is also run as part of "copilot init".`,
 	cmd.Flags().StringVarP(&vars.wkldType, svcTypeFlag, typeFlagShort, "", svcTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
-
 	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
-
-	// Bucket flags by service type.
-	requiredFlags := pflag.NewFlagSet("Required Flags", pflag.ContinueOnError)
-	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
-	requiredFlags.AddFlag(cmd.Flags().Lookup(svcTypeFlag))
-	requiredFlags.AddFlag(cmd.Flags().Lookup(dockerFileFlag))
-	requiredFlags.AddFlag(cmd.Flags().Lookup(imageFlag))
-
-	lbWebSvcFlags := pflag.NewFlagSet(manifest.LoadBalancedWebServiceType, pflag.ContinueOnError)
-	lbWebSvcFlags.AddFlag(cmd.Flags().Lookup(svcPortFlag))
-
-	backendSvcFlags := pflag.NewFlagSet(manifest.BackendServiceType, pflag.ContinueOnError)
-	backendSvcFlags.AddFlag(cmd.Flags().Lookup(svcPortFlag))
-
-	cmd.Annotations = map[string]string{
-		// The order of the sections we want to display.
-		"sections":                          fmt.Sprintf(`Required,%s`, strings.Join(manifest.ServiceTypes, ",")),
-		"Required":                          requiredFlags.FlagUsages(),
-		manifest.LoadBalancedWebServiceType: lbWebSvcFlags.FlagUsages(),
-		manifest.BackendServiceType:         lbWebSvcFlags.FlagUsages(),
-	}
-	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
-  {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}
-
-{{range $i, $sectionName := $sections}}{{h1 (print $sectionName " Flags")}}
-{{(index $annotations $sectionName) | trimTrailingWhitespaces}}{{if ne (inc $i) (len $sections)}}
-
-{{end}}{{end}}{{end}}{{if .HasAvailableInheritedFlags}}
-
-{{h1 "Global Flags"}}
-{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasExample}}
-
-{{h1 "Examples"}}{{code .Example}}{{end}}
-`)
 	return cmd
 }
