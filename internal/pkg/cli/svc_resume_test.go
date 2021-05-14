@@ -26,11 +26,6 @@ func TestResumeSvcOpts_Validate(t *testing.T) {
 
 		want error
 	}{
-		"should return error if no appName": {
-			inAppName:  "",
-			setupMocks: func(m *mocks.Mockstore) {},
-			want:       fmt.Errorf("could not find an application attached to this workspace, please run `app init` first"),
-		},
 		"with no flag set": {
 			inAppName: "phonetool",
 			setupMocks: func(m *mocks.Mockstore) {
