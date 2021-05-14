@@ -66,8 +66,8 @@ func TestScheduledJob_Template(t *testing.T) {
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
-					EntryPoint: []string{"/bin/echo", "hello"},
-					Command:    []string{"world"},
+					EntryPoint:          []string{"/bin/echo", "hello"},
+					Command:             []string{"world"},
 					EnvControllerLambda: "something",
 				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
@@ -96,8 +96,8 @@ func TestScheduledJob_Template(t *testing.T) {
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
-					EntryPoint: []string{"/bin/echo", "hello"},
-					Command:    []string{"world"},
+					EntryPoint:          []string{"/bin/echo", "hello"},
+					Command:             []string{"world"},
 					EnvControllerLambda: "something",
 				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{
@@ -446,7 +446,7 @@ func TestScheduledJob_Parameters(t *testing.T) {
 		},
 		{
 			ParameterKey:   aws.String(WorkloadContainerImageParamKey),
-			ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
+			ParameterValue: aws.String("111111111111.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
 		},
 		{
 			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),

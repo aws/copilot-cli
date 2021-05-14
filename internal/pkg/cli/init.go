@@ -312,11 +312,11 @@ func (o *initOpts) loadWkld() error {
 	if err != nil {
 		return err
 	}
-	if err := o.initWlCmd.Ask(); err != nil {
-		return fmt.Errorf("ask %s: %w", o.wkldType, err)
-	}
 	if err := o.initWlCmd.Validate(); err != nil {
 		return fmt.Errorf("validate %s: %w", o.wkldType, err)
+	}
+	if err := o.initWlCmd.Ask(); err != nil {
+		return fmt.Errorf("ask %s: %w", o.wkldType, err)
 	}
 
 	return nil

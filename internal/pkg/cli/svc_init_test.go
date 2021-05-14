@@ -47,6 +47,12 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inImage:          "mockImage",
 			wantedErr:        fmt.Errorf("--dockerfile and --image cannot be specified together"),
 		},
+		"fail if image not supported by App Runner": {
+			inAppName: "phonetool",
+			inImage:   "amazon/amazon-ecs-sample",
+			inSvcType: manifest.RequestDrivenWebServiceType,
+			wantedErr: fmt.Errorf("image amazon/amazon-ecs-sample is not supported by App Runner: value must be an ECR or ECR Public image URI"),
+		},
 		"invalid dockerfile directory path": {
 			inAppName:        "phonetool",
 			inDockerfilePath: "./hello/Dockerfile",

@@ -6,6 +6,7 @@ package apprunner
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -20,10 +21,15 @@ const (
 	fmtAppRunnerServiceLogGroupName     = "/aws/apprunner/%s/%s/service"
 	fmtAppRunnerApplicationLogGroupName = "/aws/apprunner/%s/%s/application"
 
+	// App Runner Statuses
 	opStatusSucceeded = "SUCCEEDED"
 	opStatusFailed    = "FAILED"
 	svcStatusPaused   = "PAUSED"
 	svcStatusRunning  = "RUNNING"
+
+	// App Runner ImageRepositoryTypes
+	repositoryTypeECR       = "ECR"
+	repositoryTypeECRPublic = "ECR_PUBLIC"
 )
 
 type api interface {
@@ -103,6 +109,80 @@ func (a *AppRunner) ServiceARN(svc string) (string, error) {
 	return "", fmt.Errorf("no AppRunner service found for %s", svc)
 }
 
+// PauseService pause the running App Runner service.
+func (a *AppRunner) PauseService(svcARN string) error {
+	resp, err := a.client.PauseService(&apprunner.PauseServiceInput{
+		ServiceArn: aws.String(svcARN),
+	})
+	if err != nil {
+		return fmt.Errorf("pause service operation failed: %w", err)
+	}
+	if resp.OperationId == nil && aws.StringValue(resp.Service.Status) == svcStatusPaused {
+		return nil
+	}
+	if err := a.waitForOperation(aws.StringValue(resp.OperationId), svcARN); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ResumeService resumes a paused App Runner service.
+func (a *AppRunner) ResumeService(svcARN string) error {
+	resp, err := a.client.ResumeService(&apprunner.ResumeServiceInput{
+		ServiceArn: aws.String(svcARN),
+	})
+	if err != nil {
+		return fmt.Errorf("resume service operation failed: %w", err)
+	}
+	if resp.OperationId == nil && aws.StringValue(resp.Service.Status) == svcStatusRunning {
+		return nil
+	}
+	if err := a.waitForOperation(aws.StringValue(resp.OperationId), svcARN); err != nil {
+		return err
+	}
+	return nil
+}
+
+// DescribeOperation return OperationSummary for given OperationId and ServiceARN.
+func (a *AppRunner) DescribeOperation(operationId, svcARN string) (*apprunner.OperationSummary, error) {
+	var nextToken *string
+	for {
+		resp, err := a.client.ListOperations(&apprunner.ListOperationsInput{
+			ServiceArn: aws.String(svcARN),
+			NextToken:  nextToken,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("list operations: %w", err)
+		}
+		for _, operation := range resp.OperationSummaryList {
+			if aws.StringValue(operation.Id) == operationId {
+				return operation, nil
+			}
+		}
+		if resp.NextToken == nil {
+			break
+		}
+		nextToken = resp.NextToken
+	}
+	return nil, fmt.Errorf("no operation found %s", operationId)
+}
+
+func (a *AppRunner) waitForOperation(operationId, svcARN string) error {
+	for {
+		resp, err := a.DescribeOperation(operationId, svcARN)
+		if err != nil {
+			return fmt.Errorf("error describing operation %s: %w", operationId, err)
+		}
+		switch status := aws.StringValue(resp.Status); status {
+		case opStatusSucceeded:
+			return nil
+		case opStatusFailed:
+			return fmt.Errorf("operation failed %s", operationId)
+		}
+		time.Sleep(3 * time.Second)
+	}
+}
+
 // ParseServiceName returns the service name.
 // For example: arn:aws:apprunner:us-west-2:1234567890:service/my-service/fc1098ac269245959ba78fd58bdd4bf
 // will return my-service
@@ -161,76 +241,36 @@ func SystemLogGroupName(svcARN string) (string, error) {
 	return fmt.Sprintf(fmtAppRunnerServiceLogGroupName, svcName, svcID), nil
 }
 
-// PauseService pause the running App Runner service.
-func (a *AppRunner) PauseService(svcARN string) error {
-	resp, err := a.client.PauseService(&apprunner.PauseServiceInput{
-		ServiceArn: aws.String(svcARN),
-	})
-	if err != nil {
-		return fmt.Errorf("pause service operation failed: %w", err)
-	}
-	if resp.OperationId == nil && aws.StringValue(resp.Service.Status) == svcStatusPaused {
-		return nil
-	}
-	if err := a.waitForOperation(aws.StringValue(resp.OperationId), svcARN); err != nil {
-		return err
-	}
-	return nil
+// ImageIsSupported returns true if the image identifier is supported by App Runner.
+func ImageIsSupported(imageIdentifier string) bool {
+	return imageIsECR(imageIdentifier) || imageIsECRPublic(imageIdentifier)
 }
 
-// ResumeService resumes a paused App Runner service.
-func (a *AppRunner) ResumeService(svcARN string) error {
-	resp, err := a.client.ResumeService(&apprunner.ResumeServiceInput{
-		ServiceArn: aws.String(svcARN),
-	})
-	if err != nil {
-		return fmt.Errorf("resume service operation failed: %w", err)
+// DetermineImageRepositoryType returns the App Runner ImageRepositoryType enum value for the provided image identifier,
+// or returns an error if the imageIdentifier is not supported by App Runner or the ImageRepositoryType cannot be
+// determined.
+func DetermineImageRepositoryType(imageIdentifier string) (string, error) {
+	if !ImageIsSupported(imageIdentifier) {
+		return "", fmt.Errorf("image is not supported by App Runner: %s", imageIdentifier)
 	}
-	if resp.OperationId == nil && aws.StringValue(resp.Service.Status) == svcStatusRunning {
-		return nil
+
+	if imageIsECR(imageIdentifier) {
+		return repositoryTypeECR, nil
 	}
-	if err := a.waitForOperation(aws.StringValue(resp.OperationId), svcARN); err != nil {
-		return err
+
+	if imageIsECRPublic(imageIdentifier) {
+		return repositoryTypeECRPublic, nil
 	}
-	return nil
+
+	return "", fmt.Errorf("unable to determine the image repository type for image: %s", imageIdentifier)
 }
 
-func (a *AppRunner) waitForOperation(operationId, svcARN string) error {
-	for {
-		resp, err := a.DescribeOperation(operationId, svcARN)
-		if err != nil {
-			return fmt.Errorf("error describing operation %s: %w", operationId, err)
-		}
-		switch status := aws.StringValue(resp.Status); status {
-		case opStatusSucceeded:
-			return nil
-		case opStatusFailed:
-			return fmt.Errorf("operation failed %s", operationId)
-		}
-		time.Sleep(3 * time.Second)
-	}
+func imageIsECR(imageIdentifier string) bool {
+	matched, _ := regexp.Match(`^\d{12}\.dkr\.ecr\.[^\.]+\.amazonaws\.com/`, []byte(imageIdentifier))
+	return matched
 }
 
-//DescribeOperation return OperationSummary for given OperationId and ServiceARN.
-func (a *AppRunner) DescribeOperation(operationId, svcARN string) (*apprunner.OperationSummary, error) {
-	var nextToken *string
-	for {
-		resp, err := a.client.ListOperations(&apprunner.ListOperationsInput{
-			ServiceArn: aws.String(svcARN),
-			NextToken:  nextToken,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("list operations: %w", err)
-		}
-		for _, operation := range resp.OperationSummaryList {
-			if aws.StringValue(operation.Id) == operationId {
-				return operation, nil
-			}
-		}
-		if resp.NextToken == nil {
-			break
-		}
-		nextToken = resp.NextToken
-	}
-	return nil, fmt.Errorf("no operation found %s", operationId)
+func imageIsECRPublic(imageIdentifier string) bool {
+	matched, _ := regexp.Match(`^public\.ecr\.aws/`, []byte(imageIdentifier))
+	return matched
 }

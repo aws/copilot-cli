@@ -2,6 +2,7 @@ AccessRole:
   Metadata:
     'aws:copilot:description': 'An IAM Role for App Runner to use on your behalf to pull your image from ECR'
   Type: AWS::IAM::Role
+  Condition: NeedsAccessRole
   Properties:
     AssumeRolePolicyDocument:
       Version: '2008-10-17'

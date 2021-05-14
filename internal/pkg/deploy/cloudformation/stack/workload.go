@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -42,6 +43,7 @@ const (
 
 // Parameter logical IDs for workloads on App Runner.
 const (
+	WorkloadImageRepositoryType                   = "ImageRepositoryType"
 	WorkloadInstanceCPUParamKey                   = "InstanceCPU"
 	WorkloadInstanceMemoryParamKey                = "InstanceMemory"
 	WorkloadInstanceRoleParamKey                  = "InstanceRole"
@@ -297,8 +299,24 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	if err != nil {
 		return nil, err
 	}
+	var img string
+	if w.image != nil {
+		img = w.image.GetLocation()
+	}
+	if w.rc.Image != nil {
+		img = w.rc.Image.GetLocation()
+	}
+
+	imageRepositoryType, err := apprunner.DetermineImageRepositoryType(img)
+	if err != nil {
+		return nil, fmt.Errorf("determining image repository type: %w", err)
+	}
 
 	appRunnerParameters := []*cloudformation.Parameter{
+		{
+			ParameterKey:   aws.String(WorkloadImageRepositoryType),
+			ParameterValue: aws.String(imageRepositoryType),
+		},
 		{
 			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
 			ParameterValue: aws.String(strconv.Itoa(int(*w.imageConfig.Port))),

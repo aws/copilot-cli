@@ -13,6 +13,8 @@ Parameters:
     Type: String
   ContainerPort:
     Type: Number
+  ImageRepositoryType:
+    Type: String
   InstanceCPU:
     Type: String
   InstanceMemory:
@@ -38,6 +40,10 @@ Parameters:
     Default: ''
 
 Conditions:
+  # App Runner will not accept an AccessRole for ImageRepositoryTypes other than ECR.
+  # In this scenario the request will fail.
+  NeedsAccessRole:
+    !Equals [!Ref ImageRepositoryType, 'ECR']
   HasHealthCheckPath:
     !Not [!Equals [!Ref HealthCheckPath, '']]
   HasHealthCheckInterval:
@@ -61,12 +67,14 @@ Resources:
     Properties:
       ServiceName: !Sub '${AppName}-${EnvName}-${WorkloadName}'
       SourceConfiguration:
-        AuthenticationConfiguration:
-          AccessRoleArn: !GetAtt AccessRole.Arn
+        AuthenticationConfiguration: !If
+          - NeedsAccessRole
+          - AccessRoleArn: !GetAtt AccessRole.Arn
+          - !Ref AWS::NoValue
         AutoDeploymentsEnabled: false
         ImageRepository:
           ImageIdentifier: !Ref ContainerImage
-          ImageRepositoryType: ECR
+          ImageRepositoryType: !Ref ImageRepositoryType
           ImageConfiguration:
             Port: !Ref ContainerPort
             RuntimeEnvironmentVariables:

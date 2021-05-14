@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/afero"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
@@ -31,6 +32,7 @@ var (
 	errValueNotAnIPNet                    = errors.New("value must be a valid IP address range (example: 10.0.0.0/16)")
 	errValueNotIPNetSlice                 = errors.New("value must be a valid slice of IP address range (example: 10.0.0.0/16,10.0.1.0/16)")
 	errPortInvalid                        = errors.New("value must be in range 1-65535")
+	errImageNotSupportedAppRunner         = errors.New("value must be an ECR or ECR Public image URI")
 	errS3ValueBadSize                     = errors.New("value must be between 3 and 63 characters in length")
 	errS3ValueBadFormat                   = errors.New("value must not contain consecutive periods or dashes, or be formatted as IP address")
 	errS3ValueTrailingDash                = errors.New("value must not have trailing -")
@@ -193,6 +195,13 @@ func validateSchedule(sched interface{}) error {
 		return errValueNotAString
 	}
 	return validateCron(s)
+}
+
+func validateAppRunnerImage(img interface{}) error {
+	if err := apprunnerImageValidation(img); err != nil {
+		return fmt.Errorf("image %s is not supported by App Runner: %w", img, err)
+	}
+	return nil
 }
 
 func validateTimeout(timeout interface{}) error {
@@ -397,6 +406,14 @@ func isCorrectFormat(s string) bool {
 	}
 
 	return valid
+}
+
+func apprunnerImageValidation(val interface{}) error {
+	strVal, ok := val.(string)
+	if ok && apprunner.ImageIsSupported(strVal) {
+		return nil
+	}
+	return errImageNotSupportedAppRunner
 }
 
 func basicPortValidation(val interface{}) error {

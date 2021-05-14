@@ -556,3 +556,85 @@ func TestAppRunner_ResumeService(t *testing.T) {
 		})
 	}
 }
+
+func TestAppRunner_ImageIsSupported(t *testing.T) {
+	testCases := map[string]struct {
+		in string
+
+		want bool
+	}{
+		"ECR tagged image": {
+			in:   "111111111111.dkr.ecr.us-east-1.amazonaws.com/test/frontend:latest",
+			want: true,
+		},
+		"ECR image digest": {
+			in:   "111111111111.dkr.ecr.us-east-1.amazonaws.com/test/frontend@sha256:f349f1cf8c3404f4b15b733d443a46f417d2959659645cddb2c5b380eeb0c2ad",
+			want: true,
+		},
+		"ECR Public image": {
+			in:   "public.ecr.aws/bitnami/wordpress:latest",
+			want: true,
+		},
+		"Dockerhub image URI": {
+			in:   "registry.hub.docker.com/amazon/amazon-ecs-sample",
+			want: false,
+		},
+		"Dockerhub image name": {
+			in:   "amazon/amazon-ecs-sample",
+			want: false,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			received := ImageIsSupported(tc.in)
+
+			require.Equal(t, tc.want, received)
+		})
+	}
+}
+
+func TestAppRunner_DetermineImageRepositoryType(t *testing.T) {
+	const (
+		mockOperationId = "mock-operation"
+		mockSvcARN      = "mockSvcArn"
+	)
+	testCases := map[string]struct {
+		in string
+
+		want    string
+		wantErr error
+	}{
+		"ECR tagged image": {
+			in:   "111111111111.dkr.ecr.us-east-1.amazonaws.com/test/frontend:latest",
+			want: repositoryTypeECR,
+		},
+		"ECR image digest": {
+			in:   "111111111111.dkr.ecr.us-east-1.amazonaws.com/test/frontend@sha256:f349f1cf8c3404f4b15b733d443a46f417d2959659645cddb2c5b380eeb0c2ad",
+			want: repositoryTypeECR,
+		},
+		"ECR Public image": {
+			in:   "public.ecr.aws/bitnami/wordpress:latest",
+			want: repositoryTypeECRPublic,
+		},
+		"Dockerhub image URI": {
+			in:      "registry.hub.docker.com/amazon/amazon-ecs-sample",
+			wantErr: fmt.Errorf("image is not supported by App Runner: registry.hub.docker.com/amazon/amazon-ecs-sample"),
+		},
+		"Dockerhub image name": {
+			in:      "amazon/amazon-ecs-sample",
+			wantErr: fmt.Errorf("image is not supported by App Runner: amazon/amazon-ecs-sample"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			received, err := DetermineImageRepositoryType(tc.in)
+
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.want, received)
+			}
+		})
+	}
+}

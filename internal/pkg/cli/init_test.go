@@ -48,8 +48,8 @@ func TestInitOpts_Run(t *testing.T) {
 			expect: func(opts *initOpts) {
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
+				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Validate().Times(1).Return(nil)
 				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(errors.New("my error"))
-				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Validate().Times(0)
 			},
 			wantedError: "ask Backend Service: my error",
 		},
@@ -58,7 +58,6 @@ func TestInitOpts_Run(t *testing.T) {
 			expect: func(opts *initOpts) {
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initAppCmd.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
-				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initWlCmd.(*climocks.MockactionCommand).EXPECT().Validate().Return(errors.New("my error"))
 			},
 			wantedError: "validate Load Balanced Web Service: my error",

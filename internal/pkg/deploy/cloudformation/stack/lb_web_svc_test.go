@@ -23,7 +23,7 @@ import (
 const (
 	testEnvName      = "test"
 	testAppName      = "phonetool"
-	testImageRepoURL = "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend"
+	testImageRepoURL = "111111111111.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend"
 	testImageTag     = "manual-bf3678c"
 )
 
@@ -370,7 +370,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		},
 		{
 			ParameterKey:   aws.String(WorkloadContainerImageParamKey),
-			ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
+			ParameterValue: aws.String("111111111111.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),

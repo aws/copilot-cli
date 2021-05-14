@@ -28,6 +28,7 @@ const (
 	wkldInitImagePrompt     = `What's the location of the image to use?`
 	wkldInitImagePromptHelp = `The name of an existing Docker image. Images in the Docker Hub registry are available by default.
 Other repositories are specified with either repository-url/image:tag or repository-url/image@digest`
+	wkldInitAppRunnerImagePromptHelp = `The name of an existing Docker image. App Runner supports images hosted in ECR or ECR Public registries.`
 )
 
 const (
@@ -165,6 +166,11 @@ func (o *initSvcOpts) Validate() error {
 			return err
 		}
 	}
+	if o.image != "" && o.wkldType == manifest.RequestDrivenWebServiceType {
+		if err := validateAppRunnerImage(o.image); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -272,8 +278,20 @@ func (o *initSvcOpts) askImage() error {
 	if o.image != "" {
 		return nil
 	}
-	image, err := o.prompt.Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil,
-		prompt.WithFinalMessage("Image:"))
+
+	var validator prompt.ValidatorFunc
+	promptHelp := wkldInitImagePromptHelp
+	if o.wkldType == manifest.RequestDrivenWebServiceType {
+		promptHelp = wkldInitAppRunnerImagePromptHelp
+		validator = validateAppRunnerImage
+	}
+
+	image, err := o.prompt.Get(
+		wkldInitImagePrompt,
+		promptHelp,
+		validator,
+		prompt.WithFinalMessage("Image:"),
+	)
 	if err != nil {
 		return fmt.Errorf("get image location: %w", err)
 	}
