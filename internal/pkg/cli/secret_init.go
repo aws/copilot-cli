@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/dustin/go-humanize/english"
@@ -181,10 +182,10 @@ func (o *secretInitOpts) Execute() error {
 			return err
 		}
 
-		var errs []error
+		var errs []*errSecretFailedInSomeEnvironments
 		for secretName, secretValues := range secrets {
 			if err := o.putSecret(secretName, secretValues); err != nil {
-				errs = append(errs, err)
+				errs = append(errs, err.(*errSecretFailedInSomeEnvironments))
 			}
 		}
 
@@ -360,7 +361,7 @@ type errSecretFailedInSomeEnvironments struct {
 }
 
 type errBatchPutSecretsFailed struct {
-	errors []error
+	errors []*errSecretFailedInSomeEnvironments
 }
 
 func (e *errSecretFailedInSomeEnvironments) Error() string {
@@ -371,10 +372,17 @@ func (e *errSecretFailedInSomeEnvironments) Error() string {
 	return strings.Join(out, "\n")
 }
 
+func (e *errSecretFailedInSomeEnvironments) name() string {
+	return e.secretName
+}
+
 func (e *errBatchPutSecretsFailed) Error() string {
 	out := []string{
 		"Batch put secrets failed for some secrets:",
 	}
+	sort.SliceStable(e.errors, func(i, j int) bool {
+		return e.errors[i].name() < e.errors[j].name()
+	})
 	for _, err := range e.errors {
 		out = append(out, err.Error())
 	}
