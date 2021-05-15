@@ -91,6 +91,7 @@ const controlEnv = async function (
 ) {
   var cfn = new aws.CloudFormation();
   aliases = aliases || [];
+  envControllerParameters = envControllerParameters || [];
   while (true) {
     var describeStackResp = await cfn
       .describeStacks({
@@ -103,7 +104,9 @@ const controlEnv = async function (
     const updatedEnvStack = describeStackResp.Stacks[0];
     const envParams = JSON.parse(JSON.stringify(updatedEnvStack.Parameters));
     const envSet = setOfParameterKeysWithWorkload(envParams, workload);
-    const controllerSet = new Set(envControllerParameters);
+    const controllerSet = new Set(envControllerParameters.filter(
+      (param) => param.endsWith("Workloads")
+    ));
 
     const parametersToRemove = [...envSet].filter(
       (param) => !controllerSet.has(param)
@@ -113,7 +116,7 @@ const controlEnv = async function (
     );
     const exportedValues = getExportedValues(updatedEnvStack);
     // Return if there are no parameter changes.
-    const shouldUpdateAliases = needUpdateAliases(envParams, workload, aliases || []);
+    const shouldUpdateAliases = needUpdateAliases(envParams, workload, aliases);
     if (
       parametersToRemove.length + parametersToAdd.length === 0 &&
       !shouldUpdateAliases
@@ -127,7 +130,7 @@ const controlEnv = async function (
           envParam.ParameterValue = updateAliases(
             envParam.ParameterValue,
             workload,
-            aliases || []
+            aliases
           );
         }
         continue;
@@ -260,11 +263,12 @@ exports.handler = async function (event, context) {
 function setOfParameterKeysWithWorkload(cfnParams, workload) {
   const envSet = new Set();
   cfnParams.forEach((param) => {
-    if (param.ParameterKey.endsWith("Workloads")) {
-      let values = new Set(param.ParameterValue.split(","));
-      if (!values.has(workload)) {
-        return;
-      }
+    if (!param.ParameterKey.endsWith("Workloads")) {
+      return;
+    }
+    let values = new Set(param.ParameterValue.split(","));
+    if (!values.has(workload)) {
+      return;
     }
     envSet.add(param.ParameterKey);
   });

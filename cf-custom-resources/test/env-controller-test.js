@@ -178,11 +178,19 @@ describe("Env Controller Handler", () => {
           Parameters: [
             {
               ParameterKey: "ALBWorkloads",
-              ParameterValue: "my-svc,my-other-svc",
+              ParameterValue: "",
             },
             {
               ParameterKey: "Aliases",
-              ParameterValue: '{"my-other-svc": ["v1.example.com"]}',
+              ParameterValue: "",
+            },
+            {
+              ParameterKey: "EFSWorkloads",
+              ParameterValue: "",
+            },
+            {
+              ParameterKey: "NATWorkloads",
+              ParameterValue: "",
             },
           ],
           Outputs: testOutputs,
@@ -211,7 +219,7 @@ describe("Env Controller Handler", () => {
         ResourceProperties: {
           EnvStack: testEnvStack,
           Workload: "my-svc",
-          Parameters: ["ALBWorkloads", "Aliases"],
+          Parameters: ["Aliases"],
         },
       })
       .expectResolve(() => {
