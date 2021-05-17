@@ -34,7 +34,6 @@ func TestSecretInitOpts_Validate(t *testing.T) {
 		inValues        map[string]string
 		inOverwrite     bool
 		inInputFilePath string
-		inResourceTags  map[string]string
 
 		setupMocks func(m secretInitMocks)
 
@@ -43,9 +42,7 @@ func TestSecretInitOpts_Validate(t *testing.T) {
 		"valid with input file": {
 			inInputFilePath: "./deep/secrets.yml",
 			inOverwrite:     true,
-			inResourceTags: map[string]string{
-				"hide": "yes",
-			},
+
 			setupMocks: func(m secretInitMocks) {
 				m.mockFS.MkdirAll("deep", 0755)
 				afero.WriteFile(m.mockFS, "deep/secrets.yml", []byte("FROM nginx"), 0644)
@@ -59,9 +56,7 @@ func TestSecretInitOpts_Validate(t *testing.T) {
 			},
 			inApp:       "dragon_slaying",
 			inOverwrite: true,
-			inResourceTags: map[string]string{
-				"hide": "yes",
-			},
+
 			setupMocks: func(m secretInitMocks) {
 				m.mockStore.EXPECT().GetApplication("dragon_slaying").Return(&config.Application{}, nil)
 				m.mockStore.EXPECT().GetEnvironment("dragon_slaying", "good_village").Return(&config.Environment{}, nil)
@@ -127,7 +122,6 @@ func TestSecretInitOpts_Validate(t *testing.T) {
 					values:        tc.inValues,
 					inputFilePath: tc.inInputFilePath,
 					overwrite:     tc.inOverwrite,
-					resourceTags:  tc.inResourceTags,
 				},
 				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
 				store: mockStore,
@@ -346,6 +340,7 @@ func TestSecretInitOpts_Ask(t *testing.T) {
 type secretInitExecuteMocks struct {
 	mockStore        *mocks.Mockstore
 	mockSecretPutter *mocks.MocksecretPutter
+	mockEnvUpgrader  *mocks.MockactionCommand
 }
 
 func TestSecretInitOpts_Execute(t *testing.T) {
@@ -365,8 +360,7 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 
 		inInputFilePath string
 
-		inOverwrite    bool
-		inResourceTags map[string]string
+		inOverwrite bool
 
 		mockInputFileContent []byte
 		setupMocks           func(m secretInitExecuteMocks)
@@ -377,9 +371,6 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 			inAppName: testApp,
 			inName:    testName,
 			inValues:  testValues,
-			inResourceTags: map[string]string{
-				"isPassword": "yes",
-			},
 
 			setupMocks: func(m secretInitExecuteMocks) {
 				m.mockSecretPutter.EXPECT().PutSecret(ssm.PutSecretInput{
@@ -389,7 +380,6 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 					Tags: map[string]string{
 						deploy.AppTagKey: "test-app",
 						deploy.EnvTagKey: "test",
-						"isPassword":     "yes",
 					},
 				}).Return(&ssm.PutSecretOutput{
 					Version: aws.Int64(1),
@@ -401,11 +391,11 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 					Tags: map[string]string{
 						deploy.AppTagKey: "test-app",
 						deploy.EnvTagKey: "prod",
-						"isPassword":     "yes",
 					},
 				}).Return(&ssm.PutSecretOutput{
 					Version: aws.Int64(1),
 				}, nil)
+				m.mockEnvUpgrader.EXPECT().Execute().Return(nil).Times(2)
 			},
 		},
 		"should make calls to overwrite if overwrite is specified": {
@@ -437,6 +427,7 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 				}).Return(&ssm.PutSecretOutput{
 					Version: aws.Int64(1),
 				}, nil)
+				m.mockEnvUpgrader.EXPECT().Execute().Return(nil).Times(2)
 			},
 		},
 		"do not throw error if parameter already exists": {
@@ -465,6 +456,7 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 				}).Return(&ssm.PutSecretOutput{
 					Version: aws.Int64(1),
 				}, nil)
+				m.mockEnvUpgrader.EXPECT().Execute().Return(nil).Times(2)
 			},
 		},
 		"a secret fails to create in some environments": {
@@ -493,6 +485,7 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 				}).Return(&ssm.PutSecretOutput{
 					Version: aws.Int64(1),
 				}, nil)
+				m.mockEnvUpgrader.EXPECT().Execute().Return(nil).Times(2)
 			},
 
 			wantedError: &errSecretFailedInSomeEnvironments{
@@ -541,17 +534,18 @@ db-host:
 						deploy.EnvTagKey: "test",
 					},
 				}).Return(nil, errors.New("some error for db-host in test"))
+				m.mockEnvUpgrader.EXPECT().Execute().Return(nil).Times(2)
 			},
 
 			wantedError: &errBatchPutSecretsFailed{
 				errors: []*errSecretFailedInSomeEnvironments{
-					&errSecretFailedInSomeEnvironments{
+					{
 						secretName: "db-password",
 						errorsForEnvironments: map[string]error{
 							"test": errors.New("some error for db-password in test"),
 						},
 					},
-					&errSecretFailedInSomeEnvironments{
+					{
 						secretName: "db-host",
 						errorsForEnvironments: map[string]error{
 							"test": errors.New("some error for db-host in test"),
@@ -570,6 +564,7 @@ db-host:
 			m := secretInitExecuteMocks{
 				mockStore:        mocks.NewMockstore(ctrl),
 				mockSecretPutter: mocks.NewMocksecretPutter(ctrl),
+				mockEnvUpgrader:  mocks.NewMockactionCommand(ctrl),
 			}
 			tc.setupMocks(m)
 
@@ -578,24 +573,29 @@ db-host:
 					appName:       tc.inAppName,
 					name:          tc.inName,
 					values:        tc.inValues,
-					resourceTags:  tc.inResourceTags,
 					overwrite:     tc.inOverwrite,
 					inputFilePath: tc.inInputFilePath,
 				},
 				store: m.mockStore,
-				configureSecretPutter: func(_ string) (secretPutter, error) {
-					return m.mockSecretPutter, nil
-				},
+
+				secretPutters:  make(map[string]secretPutter),
+				envUpgradeCMDs: make(map[string]actionCommand),
 				readFile: func() ([]byte, error) {
 					return tc.mockInputFileContent, nil
 				},
+			}
+
+			opts.configureClientsForEnv = func(envName string) error {
+				opts.secretPutters[envName] = m.mockSecretPutter
+				opts.envUpgradeCMDs[envName] = m.mockEnvUpgrader
+				return nil
 			}
 
 			err := opts.Execute()
 			if tc.wantedError == nil {
 				require.NoError(t, err)
 			} else {
-				require.EqualError(t, tc.wantedError, err.Error())
+				require.Equal(t, tc.wantedError, err)
 			}
 		})
 	}
