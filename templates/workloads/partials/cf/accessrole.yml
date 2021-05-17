@@ -7,36 +7,11 @@ AccessRole:
     AssumeRolePolicyDocument:
       Version: '2008-10-17'
       Statement:
-        # Note: This is the only statement that should be included upon release. All others are temporary and for testing purposes only.
-        # - Effect: Allow
-        #   Principal:
-        #     Service:
-        #       - build.apprunner.amazonaws.com
-        #   Action: sts:AssumeRole
-          - Effect: Allow
-            Principal:
-              Service:
-                - us-east-1.beta.cells.build.bullet.aws.internal
-                - us-east-1.alpha.cells.build.bullet.aws.internal
-                - us-east-1.gamma.cells.build.bullet.aws.internal
-            Action: sts:AssumeRole
+        - Effect: Allow
+          Principal:
+            Service:
+              - build.apprunner.amazonaws.com
+          Action: sts:AssumeRole
 
-    # Inline policies are for testing purposes only. Should be removed before release.
-    Policies:
-      - PolicyName: AWSAppRunnerServicePolicyForECRAccess
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-            -
-              Effect: Allow
-              Action:
-                - ecr:GetAuthorizationToken
-                - ecr:BatchCheckLayerAvailability
-                - ecr:GetDownloadUrlForLayer
-                - ecr:BatchGetImage
-                - ecr:DescribeImages
-                - ecr:ListImages
-              Resource: "*"
-
-    # ManagedPolicyArns:
-    #   - arn:aws:iam::aws:policy/AWSAppRunnerServicePolicyForECRAccess
+    ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess

@@ -103,6 +103,7 @@ Resources:
         InstanceRoleArn: !GetAtt InstanceRole.Arn
       HealthCheckConfiguration:
         Path: !If [HasHealthCheckPath, !Ref HealthCheckPath, !Ref AWS::NoValue]
+        Protocol: HTTP
         Interval: !If [HasHealthCheckInterval, !Ref HealthCheckInterval, !Ref AWS::NoValue]
         Timeout: !If [HasHealthCheckTimeout, !Ref HealthCheckTimeout, !Ref AWS::NoValue]
         HealthyThreshold: !If [HasHealthCheckHealthyThreshold, !Ref HealthCheckHealthyThreshold, !Ref AWS::NoValue]

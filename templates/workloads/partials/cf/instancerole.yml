@@ -13,15 +13,7 @@ InstanceRole:
   {{- end}}
     AssumeRolePolicyDocument:
       Statement:
-        # Note: This is the only statement that should be included upon release. All others are temporary and for testing purposes only.
-        # - Effect: Allow
-        #   Principal:
-        #     Service: tasks.apprunner.amazonaws.com
-        #   Action: 'sts:AssumeRole'
         - Effect: Allow
           Principal:
-            Service:
-              - us-east-1.gamma.credentialvendingserviceproxy.bullet.aws.internal
-              - eu-west-1.gamma.credentialvendingserviceproxy.bullet.aws.internal
-              - us-west-2.gamma.credentialvendingserviceproxy.bullet.aws.internal
+            Service: tasks.apprunner.amazonaws.com
           Action: 'sts:AssumeRole'
