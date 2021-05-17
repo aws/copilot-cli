@@ -443,7 +443,7 @@ func BuildSecretInitCmd() *cobra.Command {
 	vars := secretInitVars{}
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Create or update a Copilot-scoped secret.",
+		Short: "Create or update Copilot-scoped secrets.",
 		Example: `
 Create a secret by following our guided experience. 
 You will be prompted for the secret's name and the values you want for it in each existing environments.
