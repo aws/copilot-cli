@@ -23,44 +23,51 @@ import (
 )
 
 var (
-	errValueEmpty                         = errors.New("value must not be empty")
-	errValueTooLong                       = errors.New("value must not exceed 255 characters")
-	errValueBadFormat                     = errors.New("value must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
-	errValueNotAString                    = errors.New("value must be a string")
-	errValueNotAStringSlice               = errors.New("value must be a string slice")
-	errValueNotAValidPath                 = errors.New("value must be a valid path")
-	errValueNotAnIPNet                    = errors.New("value must be a valid IP address range (example: 10.0.0.0/16)")
-	errValueNotIPNetSlice                 = errors.New("value must be a valid slice of IP address range (example: 10.0.0.0/16,10.0.1.0/16)")
-	errPortInvalid                        = errors.New("value must be in range 1-65535")
-	errImageNotSupportedAppRunner         = errors.New("value must be an ECR or ECR Public image URI")
-	errS3ValueBadSize                     = errors.New("value must be between 3 and 63 characters in length")
-	errS3ValueBadFormat                   = errors.New("value must not contain consecutive periods or dashes, or be formatted as IP address")
-	errS3ValueTrailingDash                = errors.New("value must not have trailing -")
+	errValueEmpty           = errors.New("value must not be empty")
+	errValueTooLong         = errors.New("value must not exceed 255 characters")
+	errValueBadFormat       = errors.New("value must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
+	errValueNotAString      = errors.New("value must be a string")
+	errValueNotAStringSlice = errors.New("value must be a string slice")
+	errValueNotAValidPath   = errors.New("value must be a valid path")
+	errValueNotAnIPNet      = errors.New("value must be a valid IP address range (example: 10.0.0.0/16)")
+	errValueNotIPNetSlice   = errors.New("value must be a valid slice of IP address range (example: 10.0.0.0/16,10.0.1.0/16)")
+	errPortInvalid          = errors.New("value must be in range 1-65535")
+	errDomainInvalid        = errors.New("value must contain at least one '.' character")
+	errDurationInvalid      = errors.New("value must be a valid Go duration string (example: 1h30m)")
+	errDurationBadUnits     = errors.New("duration cannot be in units smaller than a second")
+	errScheduleInvalid      = errors.New("value must be a valid cron expression (examples: @weekly; @every 30m; 0 0 * * 0)")
+)
+
+// Addons validation errors.
+var (
+	fmtErrInvalidStorageType = "invalid storage type %s: must be one of %s"
+
+	// S3 errors.
+	errS3ValueBadSize      = errors.New("value must be between 3 and 63 characters in length")
+	errS3ValueBadFormat    = errors.New("value must not contain consecutive periods or dashes, or be formatted as IP address")
+	errS3ValueTrailingDash = errors.New("value must not have trailing -")
+
+	// DDB errors.
 	errValueBadFormatWithPeriod           = errors.New("value must contain only lowercase alphanumeric characters and .-")
 	errDDBValueBadSize                    = errors.New("value must be between 3 and 255 characters in length")
 	errDDBAttributeBadSize                = errors.New("value must be between 1 and 255 characters in length")
 	errValueBadFormatWithPeriodUnderscore = errors.New("value must contain only alphanumeric characters and ._-")
 	errDDBAttributeBadFormat              = errors.New("value must be of the form <name>:<T> where T is one of S, N, or B")
 	errTooManyLSIKeys                     = errors.New("number of specified LSI sort keys must be 5 or less")
-	errDomainInvalid                      = errors.New("value must contain at least one '.' character")
-	errDurationInvalid                    = errors.New("value must be a valid Go duration string (example: 1h30m)")
-	errDurationBadUnits                   = errors.New("duration cannot be in units smaller than a second")
-	errScheduleInvalid                    = errors.New("value must be a valid cron expression (examples: @weekly; @every 30m; 0 0 * * 0)")
 
 	// Aurora-Serverless-specific errors.
-	errInvalidRDSNameCharacters = errors.New("value must start with a letter")
-
+	errInvalidRDSNameCharacters    = errors.New("value must start with a letter")
+	fmtErrInvalidEngineType        = "invalid engine type %s: must be one of %s"
+	fmtErrInvalidDBNameCharacters  = "invalid database name %s: must contain only alphanumeric characters and underscore; should start with a letter"
 	errInvalidSecretNameCharacters = errors.New("value must contain only letters, numbers, periods, hyphens and underscores")
 )
 
 const fmtErrValueBadSize = "value must be between %d and %d characters in length"
 
-const (
-	fmtErrInvalidStorageType = "invalid storage type %s: must be one of %s"
-
-	// Aurora-Serverless-specific errors.
-	fmtErrInvalidEngineType       = "invalid engine type %s: must be one of %s"
-	fmtErrInvalidDBNameCharacters = "invalid database name %s: must contain only alphanumeric characters and underscore; should start with a letter"
+// App Runner validation errors.
+var (
+	errAppRunnerSvcNameTooLong    = errors.New("value must not exceed 40 characters")
+	errAppRunnerImageNotSupported = errors.New("value must be an ECR or ECR Public image URI")
 )
 
 var (
@@ -141,8 +148,15 @@ func validateAppName(val interface{}) error {
 	return nil
 }
 
-func validateSvcName(val interface{}) error {
-	if err := basicNameValidation(val); err != nil {
+func validateSvcName(val interface{}, svcType string) error {
+	var err error
+	switch svcType {
+	case manifest.RequestDrivenWebServiceType:
+		err = validateAppRunnerSvcName(val)
+	default:
+		err = basicNameValidation(val)
+	}
+	if err != nil {
 		return fmt.Errorf("service name %v is invalid: %w", val, err)
 	}
 	return nil
@@ -282,6 +296,18 @@ func validateMySQLDBName(val interface{}) error {
 	return validateDBNameCharacters(dbName)
 }
 
+func validateAppRunnerSvcName(val interface{}) error {
+	const maxNameLen = 40
+	name, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	if len(name) > maxNameLen {
+		return errAppRunnerSvcNameTooLong
+	}
+	return basicNameValidation(val)
+}
+
 func validatePostgreSQLDBName(val interface{}) error {
 	const (
 		minPostgreSQLDBNameLength = 1
@@ -413,7 +439,7 @@ func apprunnerImageValidation(val interface{}) error {
 	if ok && apprunner.ImageIsSupported(strVal) {
 		return nil
 	}
-	return errImageNotSupportedAppRunner
+	return errAppRunnerImageNotSupported
 }
 
 func basicPortValidation(val interface{}) error {

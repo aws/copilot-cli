@@ -149,7 +149,7 @@ func (o *initSvcOpts) Validate() error {
 		}
 	}
 	if o.name != "" {
-		if err := validateSvcName(o.name); err != nil {
+		if err := validateSvcName(o.name, o.wkldType); err != nil {
 			return err
 		}
 	}
@@ -265,7 +265,9 @@ func (o *initSvcOpts) askSvcName() error {
 	name, err := o.prompt.Get(
 		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.wkldType)),
 		fmt.Sprintf(fmtWkldInitNameHelpPrompt, service, o.appName),
-		validateSvcName,
+		func(val interface{}) error {
+			return validateSvcName(val, o.wkldType)
+		},
 		prompt.WithFinalMessage("Service name:"))
 	if err != nil {
 		return fmt.Errorf("get service name: %w", err)
