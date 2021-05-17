@@ -250,6 +250,15 @@ type WorkloadOpts struct {
 	StateMachine       *StateMachineOpts
 }
 
+// ParseRequestDrivenWebServiceInput holds data that can be provided to enable features for a request-driven web service stack.
+type ParseRequestDrivenWebServiceInput struct {
+	Variables           map[string]string
+	Tags                map[string]string        // Used by App Runner workloads to tag App Runner service resources
+	NestedStack         *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	EnableHealthCheck   bool
+	EnvControllerLambda string
+}
+
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
 // with the specified data object and returns its content.
 func (t *Template) ParseLoadBalancedWebService(data WorkloadOpts) (*Content, error) {
@@ -261,7 +270,7 @@ func (t *Template) ParseLoadBalancedWebService(data WorkloadOpts) (*Content, err
 
 // ParseRequestDrivenWebService parses a request-driven web service's CloudFormation template
 // with the specified data object and returns its content.
-func (t *Template) ParseRequestDrivenWebService(data WorkloadOpts) (*Content, error) {
+func (t *Template) ParseRequestDrivenWebService(data ParseRequestDrivenWebServiceInput) (*Content, error) {
 	return t.parseSvc(rdWebSvcTplName, data, withSvcParsingFuncs())
 }
 

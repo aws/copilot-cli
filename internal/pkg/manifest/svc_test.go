@@ -754,3 +754,34 @@ func TestAdvancedCount_IsValid(t *testing.T) {
 		})
 	}
 }
+
+func TestHealthCheckArgsOrString_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		hc     HealthCheckArgsOrString
+		wanted bool
+	}{
+		"should return true if there are no settings": {
+			wanted: true,
+		},
+		"should return false if a path is set via the basic configuration": {
+			hc: HealthCheckArgsOrString{
+				HealthCheckPath: aws.String("/"),
+			},
+			wanted: false,
+		},
+		"should return false if a value is set via the advanced configuration": {
+			hc: HealthCheckArgsOrString{
+				HealthCheckArgs: HTTPHealthCheckArgs{
+					Path: aws.String("/"),
+				},
+			},
+			wanted: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.hc.IsEmpty())
+		})
+	}
+}

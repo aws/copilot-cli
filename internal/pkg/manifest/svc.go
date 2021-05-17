@@ -272,10 +272,18 @@ func (hc *HealthCheckArgsOrString) UnmarshalYAML(unmarshal func(interface{}) err
 	return nil
 }
 
+// IsEmpty returns true if there are no health check configuration set.
+func (hc *HealthCheckArgsOrString) IsEmpty() bool {
+	if hc.HealthCheckPath != nil {
+		return false
+	}
+	return hc.HealthCheckArgs.isEmpty()
+}
+
+// Path returns the default health check path if provided otherwise, returns the path from the advanced configuration.
 func (hc *HealthCheckArgsOrString) Path() *string {
 	if hc.HealthCheckPath != nil {
 		return hc.HealthCheckPath
-	} else {
-		return hc.HealthCheckArgs.Path
 	}
+	return hc.HealthCheckArgs.Path
 }

@@ -286,13 +286,13 @@ func Test_RunTaskRequestFromJob(t *testing.T) {
 		testJob = "test-job"
 	)
 	testCases := map[string]struct {
-		setUpMock func(m *mocks.MockjobDescriber)
+		setUpMock func(m *mocks.MockJobDescriber)
 
 		wantedRunTaskRequest *RunTaskRequest
 		wantedError          error
 	}{
 		"returns RunTaskRequest with job's main container": {
-			setUpMock: func(m *mocks.MockjobDescriber) {
+			setUpMock: func(m *mocks.MockJobDescriber) {
 				m.EXPECT().TaskDefinition(testApp, testEnv, testJob).Return(&ecs.TaskDefinition{
 					ExecutionRoleArn: aws.String("execution-role"),
 					TaskRoleArn:      aws.String("task-role"),
@@ -358,7 +358,7 @@ func Test_RunTaskRequestFromJob(t *testing.T) {
 			},
 		},
 		"unable to retrieve task definition": {
-			setUpMock: func(m *mocks.MockjobDescriber) {
+			setUpMock: func(m *mocks.MockJobDescriber) {
 				m.EXPECT().TaskDefinition(testApp, testEnv, testJob).Return(nil, errors.New("some error"))
 				m.EXPECT().NetworkConfigurationForJob(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				m.EXPECT().ClusterARN(gomock.Any(), gomock.Any()).AnyTimes()
@@ -366,7 +366,7 @@ func Test_RunTaskRequestFromJob(t *testing.T) {
 			wantedError: errors.New("retrieve task definition for job test-job: some error"),
 		},
 		"unable to retrieve network configuration": {
-			setUpMock: func(m *mocks.MockjobDescriber) {
+			setUpMock: func(m *mocks.MockJobDescriber) {
 				m.EXPECT().TaskDefinition(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				m.EXPECT().NetworkConfigurationForJob(testApp, testEnv, testJob).Return(nil, errors.New("some error"))
 				m.EXPECT().ClusterARN(gomock.Any(), gomock.Any()).AnyTimes()
@@ -374,7 +374,7 @@ func Test_RunTaskRequestFromJob(t *testing.T) {
 			wantedError: errors.New("retrieve network configuration for job test-job: some error"),
 		},
 		"unable to obtain cluster ARN": {
-			setUpMock: func(m *mocks.MockjobDescriber) {
+			setUpMock: func(m *mocks.MockJobDescriber) {
 				m.EXPECT().TaskDefinition(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				m.EXPECT().NetworkConfigurationForJob(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				m.EXPECT().ClusterARN(testApp, testEnv).Return("", errors.New("some error"))
@@ -388,7 +388,7 @@ func Test_RunTaskRequestFromJob(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			m := mocks.NewMockjobDescriber(ctrl)
+			m := mocks.NewMockJobDescriber(ctrl)
 			tc.setUpMock(m)
 
 			got, err := RunTaskRequestFromJob(m, testApp, testEnv, testJob)

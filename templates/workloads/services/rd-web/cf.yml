@@ -101,6 +101,7 @@ Resources:
         Cpu: !Ref InstanceCPU
         Memory: !Ref InstanceMemory
         InstanceRoleArn: !GetAtt InstanceRole.Arn
+{{- if .EnableHealthCheck }}
       HealthCheckConfiguration:
         Path: !If [HasHealthCheckPath, !Ref HealthCheckPath, !Ref AWS::NoValue]
         Protocol: HTTP
@@ -108,7 +109,8 @@ Resources:
         Timeout: !If [HasHealthCheckTimeout, !Ref HealthCheckTimeout, !Ref AWS::NoValue]
         HealthyThreshold: !If [HasHealthCheckHealthyThreshold, !Ref HealthCheckHealthyThreshold, !Ref AWS::NoValue]
         UnhealthyThreshold: !If [HasHealthCheckUnhealthyThreshold, !Ref HealthCheckUnhealthyThreshold, !Ref AWS::NoValue]
-      Tags:              
+{{- end }}
+      Tags:
         - Key: copilot-application
           Value: !Ref AppName
         - Key: copilot-environment

@@ -36,6 +36,11 @@ var testRDWebServiceManifest = &manifest.RequestDrivenWebService{
 			"LOG_LEVEL": "info",
 			"NODE_ENV":  "development",
 		},
+		RequestDrivenWebServiceHttpConfig: manifest.RequestDrivenWebServiceHttpConfig{
+			HealthCheckConfiguration: manifest.HealthCheckArgsOrString{
+				HealthCheckPath: aws.String("/"),
+			},
+		},
 		Tags: map[string]string{
 			"owner": "jeff",
 		},
@@ -149,7 +154,7 @@ Outputs:
   Hello:
     Value: hello`,
 				}
-				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
+				mockParser.EXPECT().ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
 					Variables: c.manifest.Variables,
 					Tags:      c.manifest.Tags,
 					NestedStack: &template.WorkloadNestedStackOpts{
@@ -157,6 +162,7 @@ Outputs:
 						VariableOutputs: []string{"DDBTableName", "Hello"},
 						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 					},
+					EnableHealthCheck: true,
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				c.parser = mockParser
 				c.addons = addons
@@ -167,9 +173,10 @@ Outputs:
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
-				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
-					Variables: c.manifest.Variables,
-					Tags:      c.manifest.Tags,
+				mockParser.EXPECT().ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
+					Variables:         c.manifest.Variables,
+					Tags:              c.manifest.Tags,
+					EnableHealthCheck: true,
 				}).Return(nil, errors.New("parsing error"))
 				c.parser = mockParser
 				c.addons = addons
@@ -196,6 +203,7 @@ Outputs:
 							},
 						},
 					},
+					healthCheckConfig: testRDWebServiceManifest.HealthCheckConfiguration,
 				},
 				manifest: testRDWebServiceManifest,
 			}

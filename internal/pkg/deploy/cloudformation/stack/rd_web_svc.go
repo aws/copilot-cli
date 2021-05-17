@@ -14,7 +14,7 @@ import (
 
 type requestDrivenWebSvcReadParser interface {
 	template.ReadParser
-	ParseRequestDrivenWebService(template.WorkloadOpts) (*template.Content, error)
+	ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput) (*template.Content, error)
 }
 
 // RequestDrivenWebService represents the configuration needed to create a CloudFormation stack from a request-drive web service manifest.
@@ -62,10 +62,11 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	content, err := s.parser.ParseRequestDrivenWebService(template.WorkloadOpts{
-		Variables:   s.manifest.Variables,
-		Tags:        s.manifest.Tags,
-		NestedStack: outputs,
+	content, err := s.parser.ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
+		Variables:         s.manifest.Variables,
+		Tags:              s.manifest.Tags,
+		NestedStack:       outputs,
+		EnableHealthCheck: !s.healthCheckConfig.IsEmpty(),
 	})
 	if err != nil {
 		return "", err
