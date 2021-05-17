@@ -206,6 +206,7 @@ func (o *secretInitOpts) Execute() error {
 			if err := o.putSecret(secretName, secretValues); err != nil {
 				errs = append(errs, err.(*errSecretFailedInSomeEnvironments))
 			}
+			log.Infoln("")
 		}
 
 		if len(errs) != 0 {
@@ -267,7 +268,6 @@ func (o *secretInitOpts) putSecret(secretName string, values map[string]string) 
 	for envName := range errorsForEnvironments {
 		log.Errorf("Failed to put secret %s in environment %s. See error message below.\n", color.HighlightUserInput(secretName), color.HighlightUserInput(envName))
 	}
-	log.Infoln("")
 
 	if len(errorsForEnvironments) != 0 {
 		return &errSecretFailedInSomeEnvironments{
@@ -442,9 +442,20 @@ func (o *secretInitOpts) targetEnv(envName string) (*config.Environment, error) 
 func BuildSecretInitCmd() *cobra.Command {
 	vars := secretInitVars{}
 	cmd := &cobra.Command{
-		Use:     "secret init",
-		Short:   "Create or update an SSM SecureString parameter.",
-		Example: ``, // TODO
+		Use:   "init",
+		Short: "Create or update a Copilot-scoped secret.",
+		Example: `
+Create a secret by following our guided experience. 
+You will be prompted for the secret's name and the values you want for it in each existing environments.
+/code $ copilot secret init
+Create a secret named db-password. 
+You will be prompted for the values you want for db-password in each existing environments.
+/code $ copilot secret init --name db-password
+Create a secret named db-password with values you want in each existing environments. 
+You will be prompted for the values you want for db-password in each existing environments.
+/code $ copilot secret init --name db-password
+Create secrets from input.yml.
+/code $ copilot secret init --cli-input-yaml input.yml`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newSecretInitOpts(vars)
 			if err != nil {
