@@ -17,7 +17,7 @@ func BuildSecretCmd() *cobra.Command {
 Copilot secrets can be versioned by existing Copilot environments in your application.`,
 	}
 
-	cmd.AddCommand(BuildSecretInitCmd())
+	cmd.AddCommand(buildSecretInitCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
