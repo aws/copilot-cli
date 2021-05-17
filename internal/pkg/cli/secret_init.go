@@ -248,6 +248,11 @@ func (o *secretInitOpts) putSecret(secretName string, values map[string]string) 
 	for env := range values {
 		envs = append(envs, env)
 	}
+
+	if len(envs) == 0 {
+		return nil
+	}
+
 	log.Infof("...Put secret %s to environment %s\n", color.HighlightUserInput(secretName), english.WordSeries(envs, "and"))
 
 	errorsForEnvironments := make(map[string]error)
@@ -379,7 +384,9 @@ func (o *secretInitOpts) askForSecretValues() error {
 			return fmt.Errorf("get secret value for %s in environment %s: %w", color.HighlightUserInput(o.name), env.Name, err)
 		}
 
-		values[env.Name] = value
+		if value != "" {
+			values[env.Name] = value
+		}
 	}
 	o.values = values
 	return nil
