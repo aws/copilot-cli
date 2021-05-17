@@ -9,7 +9,7 @@ import (
 	"os"
 	"sort"
 	"strings"
-	goTemplate "text/template"
+	txttemplate "text/template"
 
 	"github.com/dustin/go-humanize/english"
 
@@ -423,7 +423,7 @@ func (o *secretInitOpts) RecommendedActions() error {
     {{$secretName}}: {{$secretValueFrom}}
   {{- end}}
 {{end}}`
-	tmpl, _ := goTemplate.New("secretInitOutput").Parse(templateRaw)
+	tmpl, _ := txttemplate.New("secretInitOutput").Parse(templateRaw)
 
 	log.Infoln("You can refer to these secrets from your manifest file by editing the `secrets` section.")
 	return tmpl.Execute(os.Stdout, secretInitOutput{
@@ -480,16 +480,11 @@ func buildSecretInitCmd() *cobra.Command {
 		Use:   "init",
 		Short: "Create or update secrets in SSM Parameter Store.",
 		Example: `
-Create a secret by following our guided experience. 
-You will be prompted for the secret's name and the values you want for it in each existing environments.
+Create a secret with prompts. 
 /code $ copilot secret init
-Create a secret named db-password. 
-You will be prompted for the values you want for db-password in each existing environments.
+Create a secret named db-password in multiple environments.
 /code $ copilot secret init --name db-password
-Create a secret named db-password with values you want in each existing environments. 
-You will be prompted for the values you want for db-password in each existing environments.
-/code $ copilot secret init --name db-password
-Create secrets from an YAML file input.yml.
+Create secrets from input.yml, for the format of the yaml file please see https://aws.github.io/copilot-cli/docs/commands/secret-init/.
 /code $ copilot secret init --cli-input-yaml input.yml`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newSecretInitOpts(vars)
