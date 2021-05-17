@@ -37,8 +37,7 @@ Generally, the steps involved in task run are:
   --follow                         Optional. Specifies if the logs should be streamed.
   --generate-cmd string            Optional. Generate a command with a pre-filled value for each flag.
                                    To use it for an ECS service, specify --generate-cmd <cluster name>/<service name>.
-                                   Alternatively, if the service is created with Copilot, specify --generate-cmd <application>/<environment>/<service>.
-                                   Similarly, to use it for a job created with Copilot, specify --generate-cmd <application>/<environment>/<job>.
+                                   Alternatively, if the service or job is created with Copilot, specify --generate-cmd <application>/<environment>/<service or job name>.
                                    Cannot be specified with any other flags.
 -h, --help                         help for run
   --image string                   Optional. The image to run instead of building a Dockerfile.
