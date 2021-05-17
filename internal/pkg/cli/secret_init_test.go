@@ -595,7 +595,7 @@ db-host:
 			if tc.wantedError == nil {
 				require.NoError(t, err)
 			} else {
-				require.Equal(t, tc.wantedError, err)
+				require.EqualError(t, tc.wantedError, err.Error())
 			}
 		})
 	}
