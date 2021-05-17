@@ -33,6 +33,9 @@ Once we deploy this update to our manifest, we'll be able to access the environm
 
 This works because ECS Agent will resolve the SSM parameter when it starts up your task, and set the environment variable for you. 
 
+!!! attention
+    Secrets are not supported for Request-Driven Web Services.
+
 !!! info
     **We're going to make this easier!** There are a couple of caveats - you have to store the secret in the same environment as your application.  
     Some of our next work is to add a `secrets` command that lets you add a secret without having to worry about which environment you're in, or how SSM works.

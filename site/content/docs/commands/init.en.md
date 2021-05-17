@@ -34,5 +34,5 @@ Like all commands in the Copilot CLI, if you don't provide required flags, we'll
       --timeout string      Optional. The total execution time for the task, including retries.
                             Accepts valid Go duration strings. For example: "2h", "1h30m", "900s".
   -t, --type string         Type of service to create. Must be one of:
-                            "Load Balanced Web Service", "Backend Service", "Scheduled Job"
+                            "Request-Driven Web Service", "Load Balanced Web Service", "Backend Service", "Scheduled Job"
 ```
