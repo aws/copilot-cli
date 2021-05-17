@@ -48,8 +48,7 @@ type AppRunner struct {
 // New returns a Service configured against the input session.
 func New(s *session.Session) *AppRunner {
 	return &AppRunner{
-		// TODO: remove endpoint override
-		client: apprunner.New(s, &aws.Config{Endpoint: aws.String("https://fusion.gamma.us-east-1.bullet.aws.dev")}),
+		client: apprunner.New(s),
 	}
 }
 
