@@ -141,6 +141,14 @@ EnvironmentManagerRole:
             "ssm:GetParametersByPath"
           ]
           Resource: "*"
+        - Sid: SSMSecret
+          Effect: Allow
+          Action: [
+            "ssm:PutParameter",
+            "ssm:AddTagsToResource"
+          ]
+          Resource:
+            - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/copilot/${AppName}/${EnvironmentName}/secrets/*'
         - Sid: ELBv2
           Effect: Allow
           Action: [
