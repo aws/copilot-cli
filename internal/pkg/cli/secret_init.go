@@ -478,7 +478,7 @@ func buildSecretInitCmd() *cobra.Command {
 	vars := secretInitVars{}
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Create or update Copilot-scoped secrets.",
+		Short: "Create or update secrets in SSM Parameter Store.",
 		Example: `
 Create a secret by following our guided experience. 
 You will be prompted for the secret's name and the values you want for it in each existing environments.

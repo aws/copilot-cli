@@ -14,14 +14,14 @@ func BuildSecretCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "secret",
 		Short: `Commands for secrets.
-Copilot secrets can be versioned by existing Copilot environments in your application.`,
+Secrets are sensitive information that you need in your application.`,
 	}
 
 	cmd.AddCommand(buildSecretInitCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
-		"group": group.Develop,
+		"group": group.Extend,
 	}
 	return cmd
 }
