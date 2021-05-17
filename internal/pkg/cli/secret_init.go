@@ -227,7 +227,7 @@ func (o *secretInitOpts) Execute() error {
 func (o *secretInitOpts) configureClientsAndUpgradeForEnvironments(secrets map[string]map[string]string) error {
 	envNames := make(map[string]struct{})
 	for _, values := range secrets {
-		for envName, _ := range values {
+		for envName := range values {
 			envNames[envName] = struct{}{}
 		}
 	}
