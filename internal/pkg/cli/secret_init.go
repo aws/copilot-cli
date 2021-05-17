@@ -489,7 +489,7 @@ You will be prompted for the values you want for db-password in each existing en
 Create a secret named db-password with values you want in each existing environments. 
 You will be prompted for the values you want for db-password in each existing environments.
 /code $ copilot secret init --name db-password
-Create secrets from input.yml.
+Create secrets from an YAML file input.yml.
 /code $ copilot secret init --cli-input-yaml input.yml`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newSecretInitOpts(vars)
