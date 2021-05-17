@@ -340,6 +340,7 @@ func TestSecretInitOpts_Ask(t *testing.T) {
 type secretInitExecuteMocks struct {
 	mockStore        *mocks.Mockstore
 	mockSecretPutter *mocks.MocksecretPutter
+	mockEnvUpgrader  *mocks.MockactionCommand
 }
 
 func TestSecretInitOpts_Execute(t *testing.T) {
@@ -394,6 +395,7 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 				}).Return(&ssm.PutSecretOutput{
 					Version: aws.Int64(1),
 				}, nil)
+				m.mockEnvUpgrader.EXPECT().Execute().Return(nil).Times(2)
 			},
 		},
 		"should make calls to overwrite if overwrite is specified": {
@@ -425,6 +427,7 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 				}).Return(&ssm.PutSecretOutput{
 					Version: aws.Int64(1),
 				}, nil)
+				m.mockEnvUpgrader.EXPECT().Execute().Return(nil).Times(2)
 			},
 		},
 		"do not throw error if parameter already exists": {
@@ -453,6 +456,7 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 				}).Return(&ssm.PutSecretOutput{
 					Version: aws.Int64(1),
 				}, nil)
+				m.mockEnvUpgrader.EXPECT().Execute().Return(nil).Times(2)
 			},
 		},
 		"a secret fails to create in some environments": {
@@ -481,6 +485,7 @@ func TestSecretInitOpts_Execute(t *testing.T) {
 				}).Return(&ssm.PutSecretOutput{
 					Version: aws.Int64(1),
 				}, nil)
+				m.mockEnvUpgrader.EXPECT().Execute().Return(nil).Times(2)
 			},
 
 			wantedError: &errSecretFailedInSomeEnvironments{
@@ -529,17 +534,18 @@ db-host:
 						deploy.EnvTagKey: "test",
 					},
 				}).Return(nil, errors.New("some error for db-host in test"))
+				m.mockEnvUpgrader.EXPECT().Execute().Return(nil).Times(2)
 			},
 
 			wantedError: &errBatchPutSecretsFailed{
 				errors: []*errSecretFailedInSomeEnvironments{
-					&errSecretFailedInSomeEnvironments{
+					{
 						secretName: "db-password",
 						errorsForEnvironments: map[string]error{
 							"test": errors.New("some error for db-password in test"),
 						},
 					},
-					&errSecretFailedInSomeEnvironments{
+					{
 						secretName: "db-host",
 						errorsForEnvironments: map[string]error{
 							"test": errors.New("some error for db-host in test"),
@@ -558,6 +564,7 @@ db-host:
 			m := secretInitExecuteMocks{
 				mockStore:        mocks.NewMockstore(ctrl),
 				mockSecretPutter: mocks.NewMocksecretPutter(ctrl),
+				mockEnvUpgrader:  mocks.NewMockactionCommand(ctrl),
 			}
 			tc.setupMocks(m)
 
@@ -570,12 +577,18 @@ db-host:
 					inputFilePath: tc.inInputFilePath,
 				},
 				store: m.mockStore,
-				configureSecretPutter: func(_ string) (secretPutter, error) {
-					return m.mockSecretPutter, nil
-				},
+
+				secretPutters:  make(map[string]secretPutter),
+				envUpgradeCMDs: make(map[string]actionCommand),
 				readFile: func() ([]byte, error) {
 					return tc.mockInputFileContent, nil
 				},
+			}
+
+			opts.configureClientsForEnv = func(envName string) error {
+				opts.secretPutters[envName] = m.mockSecretPutter
+				opts.envUpgradeCMDs[envName] = m.mockEnvUpgrader
+				return nil
 			}
 
 			err := opts.Execute()
