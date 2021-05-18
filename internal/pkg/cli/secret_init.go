@@ -441,9 +441,16 @@ type errBatchPutSecretsFailed struct {
 }
 
 func (e *errSecretFailedInSomeEnvironments) Error() string {
+	// Sort failure messages by environment names.
+	var envs []string
+	for env := range e.errorsForEnvironments {
+		envs = append(envs, env)
+	}
+	sort.Strings(envs)
+
 	out := make([]string, 0)
-	for env, err := range e.errorsForEnvironments {
-		out = append(out, fmt.Sprintf("Failed to put secret %s in some environments %s: %s", e.secretName, env, err.Error()))
+	for _, env := range envs {
+		out = append(out, fmt.Sprintf("put secret %s in environment %s: %s", e.secretName, env, e.errorsForEnvironments[env].Error()))
 	}
 	return strings.Join(out, "\n")
 }
@@ -454,7 +461,7 @@ func (e *errSecretFailedInSomeEnvironments) name() string {
 
 func (e *errBatchPutSecretsFailed) Error() string {
 	out := []string{
-		"Batch put secrets failed for some secrets:",
+		"batch put secrets:",
 	}
 	sort.SliceStable(e.errors, func(i, j int) bool {
 		return e.errors[i].name() < e.errors[j].name()
