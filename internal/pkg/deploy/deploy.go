@@ -27,8 +27,6 @@ const (
 )
 
 const (
-	svcWorkloadType   = "service"
-	jobWorkloadType   = "job"
 	stackResourceType = "cloudformation:stack"
 )
 
