@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -38,6 +40,7 @@ type resourceGetter interface {
 type ConfigStoreClient interface {
 	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
 	ListEnvironments(appName string) ([]*config.Environment, error)
+	ListWorkloads(appName string) ([]*config.Workload, error)
 	GetService(appName, svcName string) (*config.Workload, error)
 	GetJob(appName, jobname string) (*config.Workload, error)
 }
@@ -77,24 +80,29 @@ func NewStore(store ConfigStoreClient) (*Store, error) {
 
 // ListDeployedServices returns the names of deployed services in an environment.
 func (s *Store) ListDeployedServices(appName string, envName string) ([]string, error) {
-	return s.listDeployedWorkloads(appName, envName, svcWorkloadType)
+	return s.listDeployedWorkloads(appName, envName, manifest.ServiceTypes)
 }
 
 // ListDeployedJobs returns the names of deployed jobs in an environment.
 func (s *Store) ListDeployedJobs(appName string, envName string) ([]string, error) {
-	return s.listDeployedWorkloads(appName, envName, jobWorkloadType)
+	return s.listDeployedWorkloads(appName, envName, manifest.JobTypes)
 }
 
-func (s *Store) listDeployedWorkloads(appName string, envName string, workloadType string) ([]string, error) {
-	var getWorkload func(string, string) (*config.Workload, error)
-	switch workloadType {
-	case jobWorkloadType:
-		getWorkload = s.configStore.GetJob
-	case svcWorkloadType:
-		getWorkload = s.configStore.GetService
-	default:
-		return nil, fmt.Errorf("unrecognized workload type %s", workloadType)
+func (s *Store) listDeployedWorkloads(appName string, envName string, workloadType []string) ([]string, error) {
+	allWorkloads, err := s.configStore.ListWorkloads(appName)
+	if err != nil {
+		return nil, fmt.Errorf("list all workloads in application %s: %w", appName, err)
 	}
+	filteredWorkloadNames := make(map[string]bool)
+	for _, wkld := range allWorkloads {
+		for _, t := range workloadType {
+			if wkld.Type != t {
+				continue
+			}
+			filteredWorkloadNames[wkld.Name] = true
+		}
+	}
+
 	rgClient, err := s.newRgClientFromIDs(appName, envName)
 	if err != nil {
 		return nil, err
@@ -113,11 +121,9 @@ func (s *Store) listDeployedWorkloads(appName string, envName string, workloadTy
 			// To avoid listing duplicate service entry in a case when service has addons stack.
 			continue
 		}
-		wkld, err := getWorkload(appName, name)
-		if err != nil {
-			return nil, fmt.Errorf("get %s %s: %w", workloadType, name, err)
+		if _, ok := filteredWorkloadNames[name]; ok {
+			wklds = append(wklds, name)
 		}
-		wklds = append(wklds, wkld.Name)
 	}
 	sort.Strings(wklds)
 	return wklds, nil
