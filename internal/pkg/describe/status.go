@@ -308,8 +308,9 @@ func (a *apprunnerServiceStatus) HumanString() string {
 	writer.Flush()
 	fmt.Fprint(writer, color.Bold.Sprint("\nSystem Logs\n\n"))
 	writer.Flush()
+	lo, _ := time.LoadLocation("UTC")
 	for _, event := range a.LogEvents {
-		timestamp := time.Unix(event.Timestamp/1000, 0)
+		timestamp := time.Unix(event.Timestamp/1000, 0).In(lo)
 		fmt.Fprintf(writer, "  %v\t%s\n", timestamp.Format(time.RFC3339), event.Message)
 	}
 	writer.Flush()
