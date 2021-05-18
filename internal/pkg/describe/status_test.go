@@ -543,7 +543,7 @@ func TestServiceStatusDesc_AppRunnerServiceString(t *testing.T) {
 		{
 			LogStreamName: "events",
 			Message:       `[AppRunner] Service creation started.`,
-			Timestamp:     1617894791771,
+			Timestamp:     1621365985294,
 		},
 	}
 
@@ -577,7 +577,7 @@ Last Deployment
 
 System Logs
 
-  2021-04-08T08:13:11-07:00    [AppRunner] Service creation started.
+  2021-05-18T12:26:25-07:00    [AppRunner] Service creation started.
 `,
 			json: `{"arn":"arn:aws:apprunner:us-east-1:1111:service/frontend/8a2b343f658144d885e47d10adb4845e","createdAt":"2020-01-01T00:00:00Z","updatedAt":"2020-03-01T00:00:00Z","source":{"imageId":"hello"}}` + "\n",
 		},

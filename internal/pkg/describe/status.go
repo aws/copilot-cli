@@ -309,7 +309,7 @@ func (a *apprunnerServiceStatus) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nSystem Logs\n\n"))
 	writer.Flush()
 	for _, event := range a.LogEvents {
-		timestamp := time.Unix(0, int64(event.Timestamp)*int64(time.Millisecond))
+		timestamp := time.Unix(event.Timestamp/1000, 0)
 		fmt.Fprintf(writer, "  %v\t%s\n", timestamp.Format(time.RFC3339), event.Message)
 	}
 	writer.Flush()
