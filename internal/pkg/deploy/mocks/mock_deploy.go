@@ -132,3 +132,18 @@ func (mr *MockConfigStoreClientMockRecorder) ListEnvironments(appName interface{
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockConfigStoreClient)(nil).ListEnvironments), appName)
 }
+
+// ListWorkloads mocks base method.
+func (m *MockConfigStoreClient) ListWorkloads(appName string) ([]*config.Workload, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListWorkloads", appName)
+	ret0, _ := ret[0].([]*config.Workload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListWorkloads indicates an expected call of ListWorkloads.
+func (mr *MockConfigStoreClientMockRecorder) ListWorkloads(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloads", reflect.TypeOf((*MockConfigStoreClient)(nil).ListWorkloads), appName)
+}
