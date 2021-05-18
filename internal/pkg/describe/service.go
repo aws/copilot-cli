@@ -75,12 +75,6 @@ func (e containerEnvVars) humanString(w io.Writer) {
 	printTable(w, headers, rows)
 }
 
-type stackAndResourcesDescriber interface {
-	Stack(stackName string) (*cloudformation.Stack, error)
-	StackResources(stackName string) ([]*cloudformation.StackResource, error)
-	Metadata(stackName string) (string, error)
-}
-
 type ecsClient interface {
 	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
 }

@@ -168,6 +168,9 @@ func newResumeSvcOpts(vars resumeSvcVars) (*resumeSvcOpts, error) {
 		var a *apprunner.AppRunner
 		var d *describe.AppRunnerServiceDescriber
 		configStore, err := config.NewStore()
+		if err != nil {
+			return err
+		}
 		env, err := configStore.GetEnvironment(opts.appName, opts.envName)
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)

@@ -594,10 +594,6 @@ func TestAppRunner_ImageIsSupported(t *testing.T) {
 }
 
 func TestAppRunner_DetermineImageRepositoryType(t *testing.T) {
-	const (
-		mockOperationId = "mock-operation"
-		mockSvcARN      = "mockSvcArn"
-	)
 	testCases := map[string]struct {
 		in string
 
