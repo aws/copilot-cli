@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -28,11 +29,29 @@ const (
 	WorkloadEnvNameParamKey           = "EnvName"
 	WorkloadNameParamKey              = "WorkloadName"
 	WorkloadContainerImageParamKey    = "ContainerImage"
-	WorkloadTaskCPUParamKey           = "TaskCPU"
-	WorkloadTaskMemoryParamKey        = "TaskMemory"
-	WorkloadTaskCountParamKey         = "TaskCount"
-	WorkloadLogRetentionParamKey      = "LogRetention"
+	WorkloadContainerPortParamKey     = "ContainerPort"
 	WorkloadAddonsTemplateURLParamKey = "AddonsTemplateURL"
+)
+
+// Parameter logical IDs for workloads on ECS.
+const (
+	WorkloadTaskCPUParamKey      = "TaskCPU"
+	WorkloadTaskMemoryParamKey   = "TaskMemory"
+	WorkloadTaskCountParamKey    = "TaskCount"
+	WorkloadLogRetentionParamKey = "LogRetention"
+)
+
+// Parameter logical IDs for workloads on App Runner.
+const (
+	WorkloadImageRepositoryType                   = "ImageRepositoryType"
+	WorkloadInstanceCPUParamKey                   = "InstanceCPU"
+	WorkloadInstanceMemoryParamKey                = "InstanceMemory"
+	WorkloadInstanceRoleParamKey                  = "InstanceRole"
+	WorkloadHealthCheckPathParamKey               = "HealthCheckPath"
+	WorkloadHealthCheckIntervalParamKey           = "HealthCheckInterval"
+	WorkloadHealthCheckTimeoutParamKey            = "HealthCheckTimeout"
+	WorkloadHealthCheckHealthyThresholdParamKey   = "HealthCheckHealthyThreshold"
+	WorkloadHealthCheckUnhealthyThresholdParamKey = "HealthCheckUnhealthyThreshold"
 )
 
 // Matches alphanumeric characters and -._
@@ -84,13 +103,12 @@ type location interface {
 	GetLocation() string
 }
 
-// wkld represents a containerized workload running on Amazon ECS.
+// wkld represents a generic containerized workload.
 // A workload can be a long-running service, an ephemeral task, or a periodic task.
 type wkld struct {
 	name  string
 	env   string
 	app   string
-	tc    manifest.TaskConfig
 	rc    RuntimeConfig
 	image location
 
@@ -105,11 +123,6 @@ func (w *wkld) StackName() string {
 
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
-	desiredCount, err := w.tc.Count.Desired()
-	if err != nil {
-		return nil, err
-	}
-
 	var img string
 	if w.image != nil {
 		img = w.image.GetLocation()
@@ -133,22 +146,6 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(WorkloadContainerImageParamKey),
 			ParameterValue: aws.String(img),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),
-			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(w.tc.CPU))),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadTaskMemoryParamKey),
-			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(w.tc.Memory))),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadTaskCountParamKey),
-			ParameterValue: aws.String(strconv.Itoa(*desiredCount)),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadLogRetentionParamKey),
-			ParameterValue: aws.String("30"),
 		},
 		{
 			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
@@ -252,4 +249,127 @@ func envVarOutputNames(outputs []addon.Output) []string {
 		}
 	}
 	return envVars
+}
+
+type ecsWkld struct {
+	*wkld
+	tc manifest.TaskConfig
+}
+
+// Parameters returns the list of CloudFormation parameters used by the template.
+func (w *ecsWkld) Parameters() ([]*cloudformation.Parameter, error) {
+	wkldParameters, err := w.wkld.Parameters()
+	if err != nil {
+		return nil, err
+	}
+	desiredCount, err := w.tc.Count.Desired()
+	if err != nil {
+		return nil, err
+	}
+	return append(wkldParameters, []*cloudformation.Parameter{
+		{
+			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),
+			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(w.tc.CPU))),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadTaskMemoryParamKey),
+			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(w.tc.Memory))),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+			ParameterValue: aws.String(strconv.Itoa(*desiredCount)),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadLogRetentionParamKey),
+			ParameterValue: aws.String("30"),
+		},
+	}...), nil
+}
+
+type appRunnerWkld struct {
+	*wkld
+	instanceConfig    manifest.AppRunnerInstanceConfig
+	imageConfig       manifest.ImageWithPort
+	healthCheckConfig manifest.HealthCheckArgsOrString
+}
+
+// Parameters returns the list of CloudFormation parameters used by the template.
+func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
+	wkldParameters, err := w.wkld.Parameters()
+	if err != nil {
+		return nil, err
+	}
+	var img string
+	if w.image != nil {
+		img = w.image.GetLocation()
+	}
+	if w.rc.Image != nil {
+		img = w.rc.Image.GetLocation()
+	}
+
+	imageRepositoryType, err := apprunner.DetermineImageRepositoryType(img)
+	if err != nil {
+		return nil, fmt.Errorf("determining image repository type: %w", err)
+	}
+
+	appRunnerParameters := []*cloudformation.Parameter{
+		{
+			ParameterKey:   aws.String(WorkloadImageRepositoryType),
+			ParameterValue: aws.String(imageRepositoryType),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
+			ParameterValue: aws.String(strconv.Itoa(int(*w.imageConfig.Port))),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadInstanceCPUParamKey),
+			ParameterValue: aws.String(strconv.Itoa(*w.instanceConfig.CPU)),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadInstanceMemoryParamKey),
+			ParameterValue: aws.String(strconv.Itoa(*w.instanceConfig.Memory)),
+		},
+	}
+
+	// Optional HealthCheckPath parameter
+	if w.healthCheckConfig.Path() != nil {
+		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
+			ParameterKey:   aws.String(WorkloadHealthCheckPathParamKey),
+			ParameterValue: aws.String(*w.healthCheckConfig.Path()),
+		})
+	}
+
+	// Optional HealthCheckInterval parameter
+	if w.healthCheckConfig.HealthCheckArgs.Interval != nil {
+		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
+			ParameterKey:   aws.String(WorkloadHealthCheckIntervalParamKey),
+			ParameterValue: aws.String(strconv.Itoa(int(w.healthCheckConfig.HealthCheckArgs.Interval.Seconds()))),
+		})
+	}
+
+	// Optional HealthCheckTimeout parameter
+	if w.healthCheckConfig.HealthCheckArgs.Timeout != nil {
+		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
+			ParameterKey:   aws.String(WorkloadHealthCheckTimeoutParamKey),
+			ParameterValue: aws.String(strconv.Itoa(int(w.healthCheckConfig.HealthCheckArgs.Timeout.Seconds()))),
+		})
+	}
+
+	// Optional HealthCheckHealthyThreshold parameter
+	if w.healthCheckConfig.HealthCheckArgs.HealthyThreshold != nil {
+		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
+			ParameterKey:   aws.String(WorkloadHealthCheckHealthyThresholdParamKey),
+			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.HealthCheckArgs.HealthyThreshold))),
+		})
+	}
+
+	// Optional HealthCheckUnhealthyThreshold parameter
+	if w.healthCheckConfig.HealthCheckArgs.UnhealthyThreshold != nil {
+		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
+			ParameterKey:   aws.String(WorkloadHealthCheckUnhealthyThresholdParamKey),
+			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.HealthCheckArgs.UnhealthyThreshold))),
+		})
+	}
+
+	return append(wkldParameters, appRunnerParameters...), nil
 }

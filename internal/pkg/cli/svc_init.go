@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -23,13 +22,13 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 const (
 	wkldInitImagePrompt     = `What's the location of the image to use?`
 	wkldInitImagePromptHelp = `The name of an existing Docker image. Images in the Docker Hub registry are available by default.
 Other repositories are specified with either repository-url/image:tag or repository-url/image@digest`
+	wkldInitAppRunnerImagePromptHelp = `The name of an existing Docker image. App Runner supports images hosted in ECR or ECR Public registries.`
 )
 
 const (
@@ -39,7 +38,10 @@ const (
 
 var (
 	fmtSvcInitSvcTypePrompt     = "Which %s best represents your service's architecture?"
-	fmtSvcInitSvcTypeHelpPrompt = `A %s is a public, internet-facing, HTTP server that's behind a load balancer. 
+	fmtSvcInitSvcTypeHelpPrompt = `A %s is an internet-facing HTTP server managed by AWS App Runner that scales based on incoming requests.
+To learn more see: https://git.io/Jt2UC
+
+A %s is an internet-facing HTTP server managed by Amazon ECS on AWS Fargate behind a load balancer.
 To learn more see: https://git.io/JfIpv
 
 A %s is a private, non internet-facing service accessible from other services in your VPC.
@@ -60,8 +62,9 @@ You should set this to the port which your Dockerfile uses to communicate with t
 )
 
 var serviceTypeHints = map[string]string{
-	manifest.LoadBalancedWebServiceType: "Internet to ECS on Fargate",
-	manifest.BackendServiceType:         "ECS on Fargate",
+	manifest.RequestDrivenWebServiceType: "App Runner",
+	manifest.LoadBalancedWebServiceType:  "Internet to ECS on Fargate",
+	manifest.BackendServiceType:          "ECS on Fargate",
 }
 
 type initWkldVars struct {
@@ -146,7 +149,7 @@ func (o *initSvcOpts) Validate() error {
 		}
 	}
 	if o.name != "" {
-		if err := validateSvcName(o.name); err != nil {
+		if err := validateSvcName(o.name, o.wkldType); err != nil {
 			return err
 		}
 	}
@@ -160,6 +163,11 @@ func (o *initSvcOpts) Validate() error {
 	}
 	if o.port != 0 {
 		if err := validateSvcPort(o.port); err != nil {
+			return err
+		}
+	}
+	if o.image != "" && o.wkldType == manifest.RequestDrivenWebServiceType {
+		if err := validateAppRunnerImage(o.image); err != nil {
 			return err
 		}
 	}
@@ -235,6 +243,7 @@ func (o *initSvcOpts) askSvcType() error {
 	}
 
 	help := fmt.Sprintf(fmtSvcInitSvcTypeHelpPrompt,
+		manifest.RequestDrivenWebServiceType,
 		manifest.LoadBalancedWebServiceType,
 		manifest.BackendServiceType,
 	)
@@ -256,7 +265,9 @@ func (o *initSvcOpts) askSvcName() error {
 	name, err := o.prompt.Get(
 		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.wkldType)),
 		fmt.Sprintf(fmtWkldInitNameHelpPrompt, service, o.appName),
-		validateSvcName,
+		func(val interface{}) error {
+			return validateSvcName(val, o.wkldType)
+		},
 		prompt.WithFinalMessage("Service name:"))
 	if err != nil {
 		return fmt.Errorf("get service name: %w", err)
@@ -269,8 +280,20 @@ func (o *initSvcOpts) askImage() error {
 	if o.image != "" {
 		return nil
 	}
-	image, err := o.prompt.Get(wkldInitImagePrompt, wkldInitImagePromptHelp, nil,
-		prompt.WithFinalMessage("Image:"))
+
+	var validator prompt.ValidatorFunc
+	promptHelp := wkldInitImagePromptHelp
+	if o.wkldType == manifest.RequestDrivenWebServiceType {
+		promptHelp = wkldInitAppRunnerImagePromptHelp
+		validator = validateAppRunnerImage
+	}
+
+	image, err := o.prompt.Get(
+		wkldInitImagePrompt,
+		promptHelp,
+		validator,
+		prompt.WithFinalMessage("Image:"),
+	)
 	if err != nil {
 		return fmt.Errorf("get image location: %w", err)
 	}
@@ -445,41 +468,6 @@ This command is also run as part of "copilot init".`,
 	cmd.Flags().StringVarP(&vars.wkldType, svcTypeFlag, typeFlagShort, "", svcTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().StringVarP(&vars.image, imageFlag, imageFlagShort, "", imageFlagDescription)
-
 	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
-
-	// Bucket flags by service type.
-	requiredFlags := pflag.NewFlagSet("Required Flags", pflag.ContinueOnError)
-	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
-	requiredFlags.AddFlag(cmd.Flags().Lookup(svcTypeFlag))
-	requiredFlags.AddFlag(cmd.Flags().Lookup(dockerFileFlag))
-	requiredFlags.AddFlag(cmd.Flags().Lookup(imageFlag))
-
-	lbWebSvcFlags := pflag.NewFlagSet(manifest.LoadBalancedWebServiceType, pflag.ContinueOnError)
-	lbWebSvcFlags.AddFlag(cmd.Flags().Lookup(svcPortFlag))
-
-	backendSvcFlags := pflag.NewFlagSet(manifest.BackendServiceType, pflag.ContinueOnError)
-	backendSvcFlags.AddFlag(cmd.Flags().Lookup(svcPortFlag))
-
-	cmd.Annotations = map[string]string{
-		// The order of the sections we want to display.
-		"sections":                          fmt.Sprintf(`Required,%s`, strings.Join(manifest.ServiceTypes, ",")),
-		"Required":                          requiredFlags.FlagUsages(),
-		manifest.LoadBalancedWebServiceType: lbWebSvcFlags.FlagUsages(),
-		manifest.BackendServiceType:         lbWebSvcFlags.FlagUsages(),
-	}
-	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
-  {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}
-
-{{range $i, $sectionName := $sections}}{{h1 (print $sectionName " Flags")}}
-{{(index $annotations $sectionName) | trimTrailingWhitespaces}}{{if ne (inc $i) (len $sections)}}
-
-{{end}}{{end}}{{end}}{{if .HasAvailableInheritedFlags}}
-
-{{h1 "Global Flags"}}
-{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasExample}}
-
-{{h1 "Examples"}}{{code .Example}}{{end}}
-`)
 	return cmd
 }

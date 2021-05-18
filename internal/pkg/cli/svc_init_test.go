@@ -34,7 +34,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 		"invalid service type": {
 			inAppName: "phonetool",
 			inSvcType: "TestSvcType",
-			wantedErr: errors.New(`invalid service type TestSvcType: must be one of "Load Balanced Web Service", "Backend Service"`),
+			wantedErr: errors.New(`invalid service type TestSvcType: must be one of "Request-Driven Web Service", "Load Balanced Web Service", "Backend Service"`),
 		},
 		"invalid service name": {
 			inAppName: "phonetool",
@@ -46,6 +46,12 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			inDockerfilePath: "mockDockerfile",
 			inImage:          "mockImage",
 			wantedErr:        fmt.Errorf("--dockerfile and --image cannot be specified together"),
+		},
+		"fail if image not supported by App Runner": {
+			inAppName: "phonetool",
+			inImage:   "amazon/amazon-ecs-sample",
+			inSvcType: manifest.RequestDrivenWebServiceType,
+			wantedErr: fmt.Errorf("image amazon/amazon-ecs-sample is not supported by App Runner: value must be an ECR or ECR Public image URI"),
 		},
 		"invalid dockerfile directory path": {
 			inAppName:        "phonetool",
@@ -132,6 +138,10 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOption(gomock.Eq(fmt.Sprintf(fmtSvcInitSvcTypePrompt, "service type")), gomock.Any(), gomock.Eq([]prompt.Option{
+					{
+						Value: manifest.RequestDrivenWebServiceType,
+						Hint:  "App Runner",
+					},
 					{
 						Value: manifest.LoadBalancedWebServiceType,
 						Hint:  "Internet to ECS on Fargate",

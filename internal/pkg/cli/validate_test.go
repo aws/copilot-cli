@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+
 	"github.com/spf13/afero"
 
 	"github.com/stretchr/testify/require"
@@ -81,13 +83,52 @@ func TestValidateProjectName(t *testing.T) {
 }
 
 func TestValidateSvcName(t *testing.T) {
-	testCases := basicNameTestCases
+	testCases := map[string]struct {
+		val     interface{}
+		svcType string
+
+		wanted error
+	}{
+		"string as input": {
+			val:     "hello",
+			svcType: manifest.LoadBalancedWebServiceType,
+			wanted:  nil,
+		},
+		"number as input": {
+			val:    1234,
+			wanted: errValueNotAString,
+		},
+		"string with invalid characters": {
+			val:    "mySvc!",
+			wanted: errValueBadFormat,
+		},
+		"longer than 40 characters for app runner services": {
+			val:     strings.Repeat("x", 41),
+			svcType: manifest.RequestDrivenWebServiceType,
+			wanted:  errAppRunnerSvcNameTooLong,
+		},
+		"invalid length string": {
+			val:     strings.Repeat("s", 256),
+			svcType: manifest.LoadBalancedWebServiceType,
+			wanted:  errValueTooLong,
+		},
+		"does not start with letter": {
+			val:     "123chicken",
+			svcType: manifest.BackendServiceType,
+			wanted:  errValueBadFormat,
+		},
+		"contains upper-case letters": {
+			val:     "badGoose",
+			svcType: manifest.LoadBalancedWebServiceType,
+			wanted:  errValueBadFormat,
+		},
+	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := validateSvcName(tc.input)
+			got := validateSvcName(tc.val, tc.svcType)
 
-			require.True(t, errors.Is(got, tc.want))
+			require.True(t, errors.Is(got, tc.wanted), "got %v instead of %v", got, tc.wanted)
 		})
 	}
 }
@@ -97,7 +138,7 @@ func TestValidateEnvironmentName(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := validateSvcName(tc.input)
+			got := validateEnvironmentName(tc.input)
 
 			require.True(t, errors.Is(got, tc.want))
 		})

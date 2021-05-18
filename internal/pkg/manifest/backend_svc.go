@@ -33,7 +33,7 @@ type BackendService struct {
 	parser template.Parser
 }
 
-// BackendServiceConfig holds the configuration that can be overriden per environments.
+// BackendServiceConfig holds the configuration that can be overridden per environments.
 type BackendServiceConfig struct {
 	ImageConfig   imageWithPortAndHealthcheck `yaml:"image,flow"`
 	ImageOverride `yaml:",inline"`
@@ -44,8 +44,8 @@ type BackendServiceConfig struct {
 }
 
 type imageWithPortAndHealthcheck struct {
-	ServiceImageWithPort `yaml:",inline"`
-	HealthCheck          *ContainerHealthCheck `yaml:"healthcheck"`
+	ImageWithPort `yaml:",inline"`
+	HealthCheck   *ContainerHealthCheck `yaml:"healthcheck"`
 }
 
 // ContainerHealthCheck holds the configuration to determine if the service container is healthy.

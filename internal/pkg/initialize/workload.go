@@ -281,6 +281,8 @@ func (w *WorkloadInitializer) newServiceManifest(i *ServiceProps) (encoding.Bina
 	switch i.Type {
 	case manifest.LoadBalancedWebServiceType:
 		return w.newLoadBalancedWebServiceManifest(i)
+	case manifest.RequestDrivenWebServiceType:
+		return w.newRequestDrivenWebServiceManifest(i), nil
 	case manifest.BackendServiceType:
 		return newBackendServiceManifest(i)
 	default:
@@ -312,6 +314,18 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *ServiceProps)
 		}
 	}
 	return manifest.NewLoadBalancedWebService(props), nil
+}
+
+func (w *WorkloadInitializer) newRequestDrivenWebServiceManifest(i *ServiceProps) *manifest.RequestDrivenWebService {
+	props := &manifest.RequestDrivenWebServiceProps{
+		WorkloadProps: &manifest.WorkloadProps{
+			Name:       i.Name,
+			Dockerfile: i.DockerfilePath,
+			Image:      i.Image,
+		},
+		Port: i.Port,
+	}
+	return manifest.NewRequestDrivenWebService(props)
 }
 
 func newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error) {

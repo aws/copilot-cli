@@ -24,7 +24,7 @@ const (
 	metricAlarmType        = "Metric"
 )
 
-// humanizeDuration is overriden in tests so that its output is constant as time passes.
+// humanizeDuration is overridden in tests so that its output is constant as time passes.
 var humanizeDuration = humanize.RelTime
 
 type api interface {

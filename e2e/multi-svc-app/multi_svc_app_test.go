@@ -150,7 +150,7 @@ var _ = Describe("Multiple Service App", func() {
 		})
 
 		It("svc package should output a cloudformation template and params file", func() {
-			svcPackageError := cli.SvcPackage(&client.PackageInput{
+			_, svcPackageError := cli.SvcPackage(&client.PackageInput{
 				Name:    "front-end",
 				AppName: appName,
 				Env:     "test",
@@ -163,7 +163,7 @@ var _ = Describe("Multiple Service App", func() {
 		})
 
 		It("job package should output a Cloudformation template and params file", func() {
-			jobPackageError := cli.JobPackage(&client.PackageInput{
+			_, jobPackageError := cli.JobPackage(&client.PackageInput{
 				Name:    "query",
 				AppName: appName,
 				Env:     "test",

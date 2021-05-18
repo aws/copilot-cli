@@ -215,6 +215,16 @@ EnvironmentManagerRole:
             "ec2:DescribeNetworkInterfaces"
           ]
           Resource: "*"
+        - Sid: AppRunner
+          Effect: Allow
+          Action: [
+            "apprunner:DescribeService",
+            "apprunner:ListServices",
+            "apprunner:PauseService",
+            "apprunner:ResumeService",
+            "apprunner:ListOperations"
+          ]
+          Resource: "*"
         - Sid: Tags
           Effect: Allow
           Action: [
