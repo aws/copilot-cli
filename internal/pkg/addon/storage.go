@@ -155,6 +155,7 @@ func (r *RDS) MarshalBinary() ([]byte, error) {
 
 // NewRDS creates a new RDS marshaler which can be used to write CF via addonWriter.
 func NewRDS(input RDSProps) *RDS {
+	input.Envs = append(input.Envs, "All") // Append the special "All" key for Autoscaling mappings
 	return &RDS{
 		RDSProps: input,
 
