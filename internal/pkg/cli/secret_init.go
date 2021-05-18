@@ -6,8 +6,10 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
+	txttemplate "text/template"
 
 	"github.com/dustin/go-humanize/english"
 
@@ -22,6 +24,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -54,6 +57,8 @@ type secretInitVars struct {
 
 type secretInitOpts struct {
 	secretInitVars
+
+	secretValues map[string]map[string]string
 
 	store store
 	fs    afero.Fs
@@ -197,6 +202,8 @@ func (o *secretInitOpts) Execute() error {
 			return err
 		}
 
+		o.secretValues = secrets
+
 		if err := o.configureClientsAndUpgradeForEnvironments(secrets); err != nil {
 			return err
 		}
@@ -206,6 +213,7 @@ func (o *secretInitOpts) Execute() error {
 			if err := o.putSecret(secretName, secretValues); err != nil {
 				errs = append(errs, err.(*errSecretFailedInSomeEnvironments))
 			}
+			log.Infoln("")
 		}
 
 		if len(errs) != 0 {
@@ -216,9 +224,10 @@ func (o *secretInitOpts) Execute() error {
 		return nil
 	}
 
-	if err := o.configureClientsAndUpgradeForEnvironments(map[string]map[string]string{
+	o.secretValues = map[string]map[string]string{
 		o.name: o.values,
-	}); err != nil {
+	}
+	if err := o.configureClientsAndUpgradeForEnvironments(o.secretValues); err != nil {
 		return err
 	}
 	return o.putSecret(o.name, o.values)
@@ -267,7 +276,6 @@ func (o *secretInitOpts) putSecret(secretName string, values map[string]string) 
 	for envName := range errorsForEnvironments {
 		log.Errorf("Failed to put secret %s in environment %s. See error message below.\n", color.HighlightUserInput(secretName), color.HighlightUserInput(envName))
 	}
-	log.Infoln("")
 
 	if len(errorsForEnvironments) != 0 {
 		return &errSecretFailedInSomeEnvironments{
@@ -393,7 +401,34 @@ func (o *secretInitOpts) askForSecretValues() error {
 }
 
 // RecommendedActions shows recommended actions to do after running `secret init`.
-func (o *secretInitOpts) RecommendedActions() {
+func (o *secretInitOpts) RecommendedActions() error {
+	type secretInitOutput struct {
+		SecretsPerEnv map[string]map[string]string
+	}
+
+	// Transpose secret values so that environment is the first-level key.
+	secretsPerEnv := make(map[string]map[string]string)
+	for secretName, values := range o.secretValues {
+		for envName := range values {
+			if _, ok := secretsPerEnv[envName]; !ok {
+				secretsPerEnv[envName] = make(map[string]string)
+			}
+			secretsPerEnv[envName][template.ToSnakeCaseFunc(secretName)] = fmt.Sprintf(fmtSecretParameterName, o.appName, envName, secretName)
+		}
+	}
+
+	templateRaw := `{{range $env, $secrets := .SecretsPerEnv -}}
+{{$env}}
+  secrets: {{range $secretName, $secretValueFrom := $secrets}}
+    {{$secretName}}: {{$secretValueFrom}}
+  {{- end}}
+{{end}}`
+	tmpl, _ := txttemplate.New("secretInitOutput").Parse(templateRaw)
+
+	log.Infoln("You can refer to these secrets from your manifest file by editing the `secrets` section.")
+	return tmpl.Execute(os.Stdout, secretInitOutput{
+		SecretsPerEnv: secretsPerEnv,
+	})
 }
 
 type errSecretFailedInSomeEnvironments struct {
@@ -438,13 +473,19 @@ func (o *secretInitOpts) targetEnv(envName string) (*config.Environment, error) 
 	return env, nil
 }
 
-// BuildSecretInitCmd build the command for creating a new secret or updating an existing one.
-func BuildSecretInitCmd() *cobra.Command {
+// buildSecretInitCmd build the command for creating a new secret or updating an existing one.
+func buildSecretInitCmd() *cobra.Command {
 	vars := secretInitVars{}
 	cmd := &cobra.Command{
-		Use:     "secret init",
-		Short:   "Create or update an SSM SecureString parameter.",
-		Example: ``, // TODO
+		Use:   "init",
+		Short: "Create or update secrets in SSM Parameter Store.",
+		Example: `
+Create a secret with prompts. 
+/code $ copilot secret init
+Create a secret named db-password in multiple environments.
+/code $ copilot secret init --name db-password
+Create secrets from input.yml. For the format of the yaml file please see https://aws.github.io/copilot-cli/docs/commands/secret-init/.
+/code $ copilot secret init --cli-input-yaml input.yml`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newSecretInitOpts(vars)
 			if err != nil {
@@ -465,7 +506,9 @@ func BuildSecretInitCmd() *cobra.Command {
 				return err
 			}
 
-			opts.RecommendedActions()
+			if err := opts.RecommendedActions(); err != nil {
+				return err
+			}
 			return nil
 		}),
 	}

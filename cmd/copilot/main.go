@@ -60,8 +60,9 @@ func buildRootCmd() *cobra.Command {
 	cmd.AddCommand(cli.BuildJobCmd())
 	cmd.AddCommand(cli.BuildTaskCmd())
 
-	// "Addons" command group
+	// "Extend" command group
 	cmd.AddCommand(cli.BuildStorageCmd())
+	cmd.AddCommand(cli.BuildSecretCmd())
 
 	// "Settings" command group.
 	cmd.AddCommand(cli.BuildVersionCmd())
