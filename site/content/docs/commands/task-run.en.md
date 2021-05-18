@@ -35,6 +35,10 @@ Generally, the steps involved in task run are:
   --env-vars stringToString        Optional. Environment variables specified by key=value separated by commas. (default [])
   --execution-role string          Optional. The role that grants the container agent permission to make AWS API calls.
   --follow                         Optional. Specifies if the logs should be streamed.
+  --generate-cmd string            Optional. Generate a command with a pre-filled value for each flag.
+                                   To use it for an ECS service, specify --generate-cmd <cluster name>/<service name>.
+                                   Alternatively, if the service or job is created with Copilot, specify --generate-cmd <application>/<environment>/<service or job name>.
+                                   Cannot be specified with any other flags.
 -h, --help                         help for run
   --image string                   Optional. The image to run instead of building a Dockerfile.
   --memory int                     Optional. The amount of memory to reserve in MiB for each task. (default 512)

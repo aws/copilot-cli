@@ -161,7 +161,7 @@ Cannot be specified with '%s', '%s' or '%s'`, taskDefaultFlag, subnetsFlag, secu
 Mutually exclusive with %s flag.`, inputFilePathFlag)
 	secretValuesFlagDescription = fmt.Sprintf(`Values of the secret in each environment. Specified as <environment>=<value> separated by commas.
 Mutually exclusive with %s flag.`, inputFilePathFlag)
-	secretInputFilePathFlagDescription = fmt.Sprintf(`Optional. A file in which the secret values are specified.
+	secretInputFilePathFlagDescription = fmt.Sprintf(`Optional. A YAML file in which the secret values are specified.
 Mutually exclusive with %s flag and %s flag"`, nameFlag, valuesFlag)
 )
 
@@ -241,8 +241,7 @@ Tasks with the same group name share the same set of resources.
 	taskImageTagFlagDescription    = `Optional. The container image tag in addition to "latest".`
 	generateCommandFlagDescription = `Optional. Generate a command with a pre-filled value for each flag.
 To use it for an ECS service, specify --generate-cmd <cluster name>/<service name>.
-Alternatively, if the service is created with Copilot, specify --generate-cmd <application>/<environment>/<service>.
-Similarly, to use it for a job created with Copilot, specify --generate-cmd <application>/<environment>/<job>.
+Alternatively, if the service or job is created with Copilot, specify --generate-cmd <application>/<environment>/<service or job name>.
 Cannot be specified with any other flags.`
 
 	vpcIDFlagDescription          = "Optional. Use an existing VPC ID."
