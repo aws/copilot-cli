@@ -329,8 +329,9 @@ func (d *AppRunnerServiceDescriber) ServiceARN() (string, error) {
 	}
 
 	for _, resource := range serviceStackResources {
-		if aws.StringValue(resource.ResourceType) == apprunnerServiceType {
-			return *resource.PhysicalResourceId, nil
+		arn := aws.StringValue(resource.PhysicalResourceId)
+		if aws.StringValue(resource.ResourceType) == apprunnerServiceType && arn != "" {
+			return arn, nil
 		}
 	}
 

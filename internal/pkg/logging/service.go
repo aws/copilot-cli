@@ -106,6 +106,9 @@ func newAppRunnerServiceClient(opts *NewServiceLogsConfig) (*ServiceClient, erro
 		return nil, err
 	}
 	serviceArn, err := serviceDescriber.ServiceARN()
+	if err != nil {
+		return nil, err
+	}
 	logGroup := opts.LogGroup
 	switch strings.ToLower(logGroup) {
 	case "system":
