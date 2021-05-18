@@ -7,7 +7,7 @@ package mocks
 import (
 	reflect "reflect"
 
-	apprunner "github.com/aws/copilot-cli/internal/pkg/new-sdk-go/apprunner"
+	apprunner "github.com/aws/aws-sdk-go/service/apprunner"
 	gomock "github.com/golang/mock/gomock"
 )
 
