@@ -44,7 +44,7 @@ func TestStore_ListDeployedServices(t *testing.T) {
 
 			wantedError: fmt.Errorf("get resources by Copilot tags: some error"),
 		},
-		"return error if fail to get service name": {
+		"return nil if no services are found": {
 			inputApp: "mockApp",
 			inputEnv: "mockEnv",
 
@@ -57,7 +57,7 @@ func TestStore_ListDeployedServices(t *testing.T) {
 				)
 			},
 
-			wantedError: fmt.Errorf("service resource with ARN mockARN is not tagged with %s", ServiceTagKey),
+			wantedSvcs: nil,
 		},
 		"return error if fail to get config service": {
 			inputApp: "mockApp",
@@ -168,7 +168,7 @@ func TestStore_ListDeployedJobs(t *testing.T) {
 
 			wantedSvcs: []string{"mockJob1", "mockJob2"},
 		},
-		"return error if fail to get job name": {
+		"return nil if no jobs are found": {
 			inputApp: "mockApp",
 			inputEnv: "mockEnv",
 
@@ -180,8 +180,6 @@ func TestStore_ListDeployedJobs(t *testing.T) {
 					}).Return([]*rg.Resource{{ARN: "mockARN", Tags: map[string]string{}}}, nil),
 				)
 			},
-
-			wantedError: fmt.Errorf("job resource with ARN mockARN is not tagged with %s", ServiceTagKey),
 		},
 	}
 	for name, tc := range testCases {

@@ -106,13 +106,10 @@ func (s *Store) listDeployedWorkloads(appName string, envName string, workloadTy
 	if err != nil {
 		return nil, fmt.Errorf("get resources by Copilot tags: %w", err)
 	}
-	wklds := make([]string, len(resources))
-	for ind, resource := range resources {
+	var wklds []string
+	for _, resource := range resources {
 		name := resource.Tags[ServiceTagKey]
-		if name == "" {
-			return nil, fmt.Errorf("%s resource with ARN %s is not tagged with %s", workloadType, resource.ARN, ServiceTagKey)
-		}
-		if contains(name, wklds) {
+		if name == "" || contains(name, wklds) {
 			// To avoid listing duplicate service entry in a case when service has addons stack.
 			continue
 		}
@@ -120,7 +117,7 @@ func (s *Store) listDeployedWorkloads(appName string, envName string, workloadTy
 		if err != nil {
 			return nil, fmt.Errorf("get %s %s: %w", workloadType, name, err)
 		}
-		wklds[ind] = wkld.Name
+		wklds = append(wklds, wkld.Name)
 	}
 	sort.Strings(wklds)
 	return wklds, nil
