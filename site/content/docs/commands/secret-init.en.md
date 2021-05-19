@@ -15,7 +15,7 @@ A secret can have different values in each of your existing environments, and is
 ```
   -a, --app string              Name of the application.
       --cli-input-yaml string   Optional. A YAML file in which the secret values are specified.
-                                Mutually exclusive with --name flag and --values flag
+                                Mutually exclusive with the -n, --name and --values flags
   -h, --help                    help for init
   -n, --name string             The name of the secret.
                                 Mutually exclusive with --cli-input-yaml flag.
