@@ -58,7 +58,7 @@ environments:
         DB_PASSWORD: /copilot/my-app/dev/secrets/db_password
 ```
 
-Once you deploy this update in manifest, your service or job will be able to access the environment variable `DB_PASSWORD`.
+Once you deploy this updated manifest, your service or job will be able to access the environment variable `DB_PASSWORD`.
 It will have the value of the SSM parameter `/copilot/my-app/prod/secrets/db_password` if the service/job is deployed in a `prod` environment, and `/copilot/my-app/dev/secrets/db_password` if it's deployed in a `dev` environment.
 
 This works because ECS Agent will resolve the SSM parameter when it starts up your task, and set the environment variable for you.
