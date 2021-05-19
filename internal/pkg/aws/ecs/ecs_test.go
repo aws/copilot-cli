@@ -333,6 +333,157 @@ func TestECS_Tasks(t *testing.T) {
 	}
 }
 
+func TestECS_StoppedServiceTaskss(t *testing.T) {
+	testCases := map[string]struct {
+		clusterName   string
+		serviceName   string
+		mockECSClient func(m *mocks.Mockapi)
+
+		wantErr   error
+		wantTasks []*Task
+	}{
+		"errors if failed to list stopped tasks": {
+			clusterName: "mockCluster",
+			serviceName: "mockService",
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().ListTasks(&ecs.ListTasksInput{
+					Cluster:       aws.String("mockCluster"),
+					ServiceName:   aws.String("mockService"),
+					DesiredStatus: aws.String(ecs.DesiredStatusStopped),
+				}).Return(nil, errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("list running tasks: some error"),
+		},
+		"errors if failed to describe stopped tasks": {
+			clusterName: "mockCluster",
+			serviceName: "mockService",
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().ListTasks(&ecs.ListTasksInput{
+					Cluster:       aws.String("mockCluster"),
+					ServiceName:   aws.String("mockService"),
+					DesiredStatus: aws.String(ecs.DesiredStatusStopped),
+				}).Return(&ecs.ListTasksOutput{
+					NextToken: nil,
+					TaskArns:  aws.StringSlice([]string{"mockTaskArn"}),
+				}, nil)
+				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
+					Cluster: aws.String("mockCluster"),
+					Tasks:   aws.StringSlice([]string{"mockTaskArn"}),
+					Include: aws.StringSlice([]string{ecs.TaskFieldTags}),
+				}).Return(nil, errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("describe running tasks in cluster mockCluster: some error"),
+		},
+		"success": {
+			clusterName: "mockCluster",
+			serviceName: "mockService",
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().ListTasks(&ecs.ListTasksInput{
+					Cluster:       aws.String("mockCluster"),
+					ServiceName:   aws.String("mockService"),
+					DesiredStatus: aws.String(ecs.DesiredStatusStopped),
+				}).Return(&ecs.ListTasksOutput{
+					NextToken: nil,
+					TaskArns:  aws.StringSlice([]string{"mockTaskArn"}),
+				}, nil)
+				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
+					Cluster: aws.String("mockCluster"),
+					Tasks:   aws.StringSlice([]string{"mockTaskArn"}),
+					Include: aws.StringSlice([]string{ecs.TaskFieldTags}),
+				}).Return(&ecs.DescribeTasksOutput{
+					Tasks: []*ecs.Task{
+						{
+							TaskArn: aws.String("mockTaskArn"),
+						},
+					},
+				}, nil)
+			},
+			wantTasks: []*Task{
+				{
+					TaskArn: aws.String("mockTaskArn"),
+				},
+			},
+		},
+		"success with pagination": {
+			clusterName: "mockCluster",
+			serviceName: "mockService",
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().ListTasks(&ecs.ListTasksInput{
+					Cluster:       aws.String("mockCluster"),
+					ServiceName:   aws.String("mockService"),
+					DesiredStatus: aws.String(ecs.DesiredStatusStopped),
+				}).Return(&ecs.ListTasksOutput{
+					NextToken: aws.String("mockNextToken"),
+					TaskArns:  aws.StringSlice([]string{"mockTaskArn1"}),
+				}, nil)
+				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
+					Cluster: aws.String("mockCluster"),
+					Tasks:   aws.StringSlice([]string{"mockTaskArn1"}),
+					Include: aws.StringSlice([]string{ecs.TaskFieldTags}),
+				}).Return(&ecs.DescribeTasksOutput{
+					Tasks: []*ecs.Task{
+						{
+							TaskArn: aws.String("mockTaskArn1"),
+						},
+					},
+				}, nil)
+				m.EXPECT().ListTasks(&ecs.ListTasksInput{
+					Cluster:       aws.String("mockCluster"),
+					ServiceName:   aws.String("mockService"),
+					DesiredStatus: aws.String(ecs.DesiredStatusStopped),
+					NextToken:     aws.String("mockNextToken"),
+				}).Return(&ecs.ListTasksOutput{
+					NextToken: nil,
+					TaskArns:  aws.StringSlice([]string{"mockTaskArn2"}),
+				}, nil)
+				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
+					Cluster: aws.String("mockCluster"),
+					Tasks:   aws.StringSlice([]string{"mockTaskArn2"}),
+					Include: aws.StringSlice([]string{ecs.TaskFieldTags}),
+				}).Return(&ecs.DescribeTasksOutput{
+					Tasks: []*ecs.Task{
+						{
+							TaskArn: aws.String("mockTaskArn2"),
+						},
+					},
+				}, nil)
+			},
+			wantTasks: []*Task{
+				{
+					TaskArn: aws.String("mockTaskArn1"),
+				},
+				{
+					TaskArn: aws.String("mockTaskArn2"),
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockECSClient := mocks.NewMockapi(ctrl)
+			tc.mockECSClient(mockECSClient)
+
+			service := ECS{
+				client: mockECSClient,
+			}
+
+			gotTasks, gotErr := service.StoppedServiceTasks(tc.clusterName, tc.serviceName)
+
+			if gotErr != nil {
+				require.EqualError(t, tc.wantErr, gotErr.Error())
+			} else {
+				require.Equal(t, tc.wantTasks, gotTasks)
+			}
+		})
+
+	}
+}
+
 func TestECS_StopTasks(t *testing.T) {
 	mockTasks := []string{"mockTask1", "mockTask2"}
 	mockError := errors.New("some error")

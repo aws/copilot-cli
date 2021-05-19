@@ -129,18 +129,40 @@ type TaskStatus struct {
 	CapacityProvider string    `json:"capacityProvider"`
 }
 
+// StoppedTaskStatus contains the status info a stopped task.
+type StoppedTaskStatus TaskStatus
+
 // HumanString returns the stringified TaskStatus struct with human readable format.
 // Example output:
-//   6ca7a60d          f884127d            RUNNING             UNKNOWN             19 hours ago        -
+//   6ca7a60d          f884127d            RUNNING             19 hours ago       -              UNKNOWN
 func (t TaskStatus) HumanString() string {
-	var digest []string
+	digest := humanizeImageDigests(t.Images)
 	imageDigest := "-"
-	for _, image := range t.Images {
-		if len(image.Digest) < shortImageDigestLength {
-			continue
-		}
-		digest = append(digest, image.Digest[:shortImageDigestLength])
+	if len(digest) != 0 {
+		imageDigest = strings.Join(digest, ",")
 	}
+	startedSince := "-"
+	if !t.StartedAt.IsZero() {
+		startedSince = humanizeTime(t.StartedAt)
+	}
+	shortTaskID := "-"
+	if len(t.ID) >= shortTaskIDLength {
+		shortTaskID = t.ID[:shortTaskIDLength]
+	}
+	cp := "-"
+	if t.CapacityProvider != "" {
+		cp = t.CapacityProvider
+	}
+
+	return fmt.Sprintf("  %s\t%s\t%s\t%s\t%s\t%s\n", shortTaskID, imageDigest, t.LastStatus, startedSince, cp, taskHealthColor(t.Health))
+}
+
+// HumanString returns the stringified StoppedTaskStatus struct with human readable format.
+// Example output:
+//   6ca7a60d          f884127d            STOPPED             57 minutes ago             51 minutes ago
+func (t StoppedTaskStatus) HumanString() string {
+	digest := humanizeImageDigests(t.Images)
+	imageDigest := "-"
 	if len(digest) != 0 {
 		imageDigest = strings.Join(digest, ",")
 	}
@@ -156,12 +178,11 @@ func (t TaskStatus) HumanString() string {
 	if len(t.ID) >= shortTaskIDLength {
 		shortTaskID = t.ID[:shortTaskIDLength]
 	}
-	cp := "-"
-	if t.CapacityProvider != "" {
-		cp = t.CapacityProvider
+	stoppedReason := "-"
+	if t.StoppedReason != "" {
+		stoppedReason = t.StoppedReason
 	}
-
-	return fmt.Sprintf("  %s\t%s\t%s\t%s\t%s\t%s\t%s\n", shortTaskID, imageDigest, t.LastStatus, startedSince, stoppedSince, cp, taskHealthColor(t.Health))
+	return fmt.Sprintf("  %s\t%s\t%s\t%s\t%s\t%s\n", shortTaskID, imageDigest, t.LastStatus, startedSince, stoppedSince, stoppedReason)
 }
 
 // TaskDefinition wraps up ECS TaskDefinition struct.
@@ -296,4 +317,15 @@ func taskDefinitionName(taskDefARN string) (string, error) {
 	}
 	resources := strings.Split(parsedARN.Resource, "/")
 	return resources[len(resources)-1], nil
+}
+
+func humanizeImageDigests(images []Image) []string {
+	var digest []string
+	for _, image := range images {
+		if len(image.Digest) < shortImageDigestLength {
+			continue
+		}
+		digest = append(digest, image.Digest[:shortImageDigestLength])
+	}
+	return digest
 }
