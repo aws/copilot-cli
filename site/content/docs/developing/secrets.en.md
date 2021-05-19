@@ -15,7 +15,7 @@ If you want to bring your own secrets, be sure to add two tags to your secrets -
 
 Copilot requires the `copilot-application` and `copilot-environment` tags to limit access to this secret.  
 
-Suppose you have a (properly tagged!) SSM parameter named `GH_WEBHOOK_SECRET` with value `secretvalue1234`, you can modify your manifest file to pass in this value:
+Suppose you have a (properly tagged!) SSM parameter named `GH_WEBHOOK_SECRET` with value `secretvalue1234`. You can modify your manifest file to pass in this value:
 
 ```yaml
 secrets:                      
