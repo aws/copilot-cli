@@ -88,8 +88,8 @@ nav:
         - task exec: docs/commands/task-exec.en.md
         - task delete: docs/commands/task-delete.en.md
       - Extend:
-        - storage init: docs/commands/storage-init.en.md
         - secret init: docs/commands/secret-init.en.md
+        - storage init: docs/commands/storage-init.en.md
       - Settings:
         - version: docs/commands/version.en.md
         - completion: docs/commands/completion.en.md
@@ -116,6 +116,7 @@ nav:
         - pipeline show: docs/commands/pipeline-show.en.md
         - pipeline status: docs/commands/pipeline-status.en.md
         - pipeline update: docs/commands/pipeline-update.en.md
+        - secret init: docs/commands/secret-init.en.md
         - storage init: docs/commands/storage-init.en.md
         - svc delete: docs/commands/svc-delete.en.md
         - svc deploy: docs/commands/svc-deploy.en.md
