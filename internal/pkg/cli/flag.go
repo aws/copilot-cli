@@ -162,7 +162,7 @@ Mutually exclusive with %s flag.`, inputFilePathFlag)
 	secretValuesFlagDescription = fmt.Sprintf(`Values of the secret in each environment. Specified as <environment>=<value> separated by commas.
 Mutually exclusive with %s flag.`, inputFilePathFlag)
 	secretInputFilePathFlagDescription = fmt.Sprintf(`Optional. A YAML file in which the secret values are specified.
-Mutually exclusive with %s flag and %s flag"`, nameFlag, valuesFlag)
+Mutually exclusive with %s flag and %s flag`, nameFlag, valuesFlag)
 )
 
 const (

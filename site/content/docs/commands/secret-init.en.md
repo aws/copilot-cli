@@ -4,7 +4,7 @@ $ copilot secret init
 ```
 
 ## What does it do?
-`copilot secret init` creates or updates secrets as [SecureString](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html#what-is-a-parameter) parameters in SSM Parameter Store for your application.
+`copilot secret init` creates or updates secrets as [SecureString parameters](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html#what-is-a-parameter) in SSM Parameter Store for your application.
 
 A secret can have different values in each of your existing environments, and is accessible by your services or jobs from the same application and environment.
 
@@ -15,7 +15,7 @@ A secret can have different values in each of your existing environments, and is
 ```
   -a, --app string              Name of the application.
       --cli-input-yaml string   Optional. A YAML file in which the secret values are specified.
-                                Mutually exclusive with name flag and values flag"
+                                Mutually exclusive with name flag and values flag
   -h, --help                    help for init
   -n, --name string             The name of the secret.
                                 Mutually exclusive with cli-input-yaml flag.
