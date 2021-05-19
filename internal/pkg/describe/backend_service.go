@@ -9,7 +9,8 @@ import (
 	"fmt"
 	"text/tabwriter"
 
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
@@ -28,7 +29,7 @@ type BackendServiceDescriber struct {
 	enableResources bool
 
 	store                DeployedEnvServicesLister
-	svcDescriber         map[string]ecsSvcDescriber
+	ecsSvcDescriber      map[string]ecsSvcDescriber
 	initServiceDescriber func(string) error
 }
 
@@ -46,10 +47,10 @@ func NewBackendServiceDescriber(opt NewBackendServiceConfig) (*BackendServiceDes
 		svc:             opt.Svc,
 		enableResources: opt.EnableResources,
 		store:           opt.DeployStore,
-		svcDescriber:    make(map[string]ecsSvcDescriber),
+		ecsSvcDescriber: make(map[string]ecsSvcDescriber),
 	}
 	describer.initServiceDescriber = func(env string) error {
-		if _, ok := describer.svcDescriber[env]; ok {
+		if _, ok := describer.ecsSvcDescriber[env]; ok {
 			return nil
 		}
 		d, err := NewECSServiceDescriber(NewServiceConfig{
@@ -61,7 +62,7 @@ func NewBackendServiceDescriber(opt NewBackendServiceConfig) (*BackendServiceDes
 		if err != nil {
 			return err
 		}
-		describer.svcDescriber[env] = d
+		describer.ecsSvcDescriber[env] = d
 		return nil
 	}
 	return describer, nil
@@ -73,12 +74,12 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 	if err := d.initServiceDescriber(envName); err != nil {
 		return "", err
 	}
-	svcParams, err := d.svcDescriber[envName].Params()
+	svcStackParams, err := d.ecsSvcDescriber[envName].Params()
 	if err != nil {
-		return "", fmt.Errorf("retrieve service deployment configuration: %w", err)
+		return "", fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
 	}
-	port := svcParams[stack.LBWebServiceContainerPortParamKey]
-	if port == stack.NoExposedContainerPort {
+	port := svcStackParams[cfnstack.LBWebServiceContainerPortParamKey]
+	if port == cfnstack.NoExposedContainerPort {
 		return BlankServiceDiscoveryURI, nil
 	}
 	s := serviceDiscovery{
@@ -105,13 +106,13 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, err
 		}
-		svcParams, err := d.svcDescriber[env].Params()
+		svcParams, err := d.ecsSvcDescriber[env].Params()
 		if err != nil {
-			return nil, fmt.Errorf("retrieve service deployment configuration: %w", err)
+			return nil, fmt.Errorf("get stack parameters for environment %s: %w", env, err)
 		}
 		port := blankContainerPort
-		if svcParams[stack.LBWebServiceContainerPortParamKey] != stack.NoExposedContainerPort {
-			port = svcParams[stack.LBWebServiceContainerPortParamKey]
+		if svcParams[cfnstack.LBWebServiceContainerPortParamKey] != cfnstack.NoExposedContainerPort {
+			port = svcParams[cfnstack.LBWebServiceContainerPortParamKey]
 			services = appendServiceDiscovery(services, serviceDiscovery{
 				Service: d.svc,
 				Port:    port,
@@ -122,35 +123,35 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			ServiceConfig: &ServiceConfig{
 				Environment: env,
 				Port:        port,
-				CPU:         svcParams[stack.WorkloadTaskCPUParamKey],
-				Memory:      svcParams[stack.WorkloadTaskMemoryParamKey],
+				CPU:         svcParams[cfnstack.WorkloadTaskCPUParamKey],
+				Memory:      svcParams[cfnstack.WorkloadTaskMemoryParamKey],
 			},
-			Tasks: svcParams[stack.WorkloadTaskCountParamKey],
+			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
-		backendSvcEnvVars, err := d.svcDescriber[env].EnvVars()
+		backendSvcEnvVars, err := d.ecsSvcDescriber[env].EnvVars()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
 		}
 		envVars = append(envVars, flattenContainerEnvVars(env, backendSvcEnvVars)...)
-		webSvcSecrets, err := d.svcDescriber[env].Secrets()
+		webSvcSecrets, err := d.ecsSvcDescriber[env].Secrets()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve secrets: %w", err)
 		}
 		secrets = append(secrets, flattenSecrets(env, webSvcSecrets)...)
 	}
 
-	resources := make(map[string][]*CfnResource)
+	resources := make(map[string][]*stack.Resource)
 	if d.enableResources {
 		for _, env := range environments {
 			err := d.initServiceDescriber(env)
 			if err != nil {
 				return nil, err
 			}
-			stackResources, err := d.svcDescriber[env].ServiceStackResources()
+			stackResources, err := d.ecsSvcDescriber[env].ServiceStackResources()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}
-			resources[env] = flattenResources(stackResources)
+			resources[env] = stackResources
 		}
 	}
 
@@ -170,14 +171,14 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 // backendSvcDesc contains serialized parameters for a backend service.
 type backendSvcDesc struct {
-	Service          string             `json:"service"`
-	Type             string             `json:"type"`
-	App              string             `json:"application"`
-	Configurations   ecsConfigurations  `json:"configurations"`
-	ServiceDiscovery serviceDiscoveries `json:"serviceDiscovery"`
-	Variables        containerEnvVars   `json:"variables"`
-	Secrets          secrets            `json:"secrets,omitempty"`
-	Resources        cfnResources       `json:"resources,omitempty"`
+	Service          string               `json:"service"`
+	Type             string               `json:"type"`
+	App              string               `json:"application"`
+	Configurations   ecsConfigurations    `json:"configurations"`
+	ServiceDiscovery serviceDiscoveries   `json:"serviceDiscovery"`
+	Variables        containerEnvVars     `json:"variables"`
+	Secrets          secrets              `json:"secrets,omitempty"`
+	Resources        deployedSvcResources `json:"resources,omitempty"`
 
 	environments []string `json:"-"`
 }

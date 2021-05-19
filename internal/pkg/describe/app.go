@@ -10,12 +10,12 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
@@ -83,8 +83,9 @@ func (a *App) HumanString() string {
 
 // AppDescriber retrieves information about an application.
 type AppDescriber struct {
-	app string
-	cfn cfn
+	app               string
+	stackDescriber    stackDescriber
+	stackSetDescriber stackDescriber
 }
 
 // NewAppDescriber instantiates an application describer.
@@ -94,8 +95,9 @@ func NewAppDescriber(appName string) (*AppDescriber, error) {
 		return nil, fmt.Errorf("assume default role for app %s: %w", appName, err)
 	}
 	return &AppDescriber{
-		app: appName,
-		cfn: cloudformation.New(sess),
+		app:               appName,
+		stackDescriber:    stack.NewStackDescriber(cfnstack.NameForAppStack(appName), sess),
+		stackSetDescriber: stack.NewStackDescriber(cfnstack.NameForAppStackSet(appName), sess),
 	}, nil
 }
 
@@ -111,26 +113,24 @@ func (d *AppDescriber) Version() (string, error) {
 	}
 	stackMetadata, stackSetMetadata := metadata{}, metadata{}
 
-	appStackName := stack.NameForAppStack(d.app)
-	appStackMetadata, err := d.cfn.Metadata(cloudformation.MetadataWithStackName(appStackName))
+	appStackMetadata, err := d.stackDescriber.StackMetadata()
 	if err != nil {
-		return "", fmt.Errorf("get metadata for app stack %s: %w", appStackName, err)
+		return "", err
 	}
 	if err := yaml.Unmarshal([]byte(appStackMetadata), &stackMetadata); err != nil {
-		return "", fmt.Errorf("unmarshal Metadata property for app stack %s: %w", appStackName, err)
+		return "", fmt.Errorf("unmarshal Metadata property for app stack %s: %w", cfnstack.NameForAppStack(d.app), err)
 	}
 	appStackVersion := stackMetadata.TemplateVersion
 	if appStackVersion == "" {
 		appStackVersion = deploy.LegacyAppTemplateVersion
 	}
 
-	appStackSetName := stack.NameForAppStackSet(d.app)
-	appStackSetMetadata, err := d.cfn.Metadata(cloudformation.MetadataWithStackSetName(appStackSetName))
+	appStackSetMetadata, err := d.stackSetDescriber.StackSetMetadata()
 	if err != nil {
-		return "", fmt.Errorf("get metadata for app stack set %s: %w", appStackSetName, err)
+		return "", err
 	}
 	if err := yaml.Unmarshal([]byte(appStackSetMetadata), &stackSetMetadata); err != nil {
-		return "", fmt.Errorf("unmarshal Metadata property for app stack set %s: %w", appStackSetName, err)
+		return "", fmt.Errorf("unmarshal Metadata property for app stack set %s: %w", cfnstack.NameForAppStackSet(d.app), err)
 	}
 	appStackSetVersion := stackSetMetadata.TemplateVersion
 	if appStackSetVersion == "" {

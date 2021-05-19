@@ -11,12 +11,11 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"gopkg.in/yaml.v3"
 )
@@ -26,7 +25,7 @@ type EnvDescription struct {
 	Environment    *config.Environment `json:"environment"`
 	Services       []*config.Workload  `json:"services"`
 	Tags           map[string]string   `json:"tags,omitempty"`
-	Resources      []*CfnResource      `json:"resources,omitempty"`
+	Resources      []*stack.Resource   `json:"resources,omitempty"`
 	EnvironmentVPC EnvironmentVPC      `json:"environmentVPC"`
 }
 
@@ -45,7 +44,7 @@ type EnvDescriber struct {
 
 	configStore ConfigStoreSvc
 	deployStore DeployedEnvServicesLister
-	cfn         cfn
+	cfn         stackDescriber
 }
 
 // NewEnvDescriberConfig contains fields that initiates EnvDescriber struct.
@@ -74,7 +73,7 @@ func NewEnvDescriber(opt NewEnvDescriberConfig) (*EnvDescriber, error) {
 
 		configStore: opt.ConfigStore,
 		deployStore: opt.DeployStore,
-		cfn:         cloudformation.New(sess),
+		cfn:         stack.NewStackDescriber(cfnstack.NameForEnv(opt.App, opt.Env), sess),
 	}, nil
 }
 
@@ -90,9 +89,9 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 		return nil, err
 	}
 
-	var stackResources []*CfnResource
+	var stackResources []*stack.Resource
 	if d.enableResources {
-		stackResources, err = d.resources()
+		stackResources, err = d.cfn.Resources()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment resources: %w", err)
 		}
@@ -107,12 +106,30 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 	}, nil
 }
 
+// Params returns the parameters of the environment stack.
+func (d *EnvDescriber) Params() (map[string]string, error) {
+	descr, err := d.cfn.Describe()
+	if err != nil {
+		return nil, err
+	}
+	return descr.Parameters, nil
+}
+
+// Params returns the outputs of the environment stack.
+func (d *EnvDescriber) Outputs() (map[string]string, error) {
+	descr, err := d.cfn.Describe()
+	if err != nil {
+		return nil, err
+	}
+	return descr.Outputs, nil
+}
+
 // Version returns the CloudFormation template version associated with
 // the environment by reading the Metadata.Version field from the template.
 //
 // If the Version field does not exist, then it's a legacy template and it returns an deploy.LegacyEnvTemplateVersion and nil error.
 func (d *EnvDescriber) Version() (string, error) {
-	raw, err := d.cfn.Metadata(cloudformation.MetadataWithStackName(stack.NameForEnv(d.app, d.env.Name)))
+	raw, err := d.cfn.StackMetadata()
 	if err != nil {
 		return "", err
 	}
@@ -131,30 +148,24 @@ func (d *EnvDescriber) Version() (string, error) {
 
 func (d *EnvDescriber) loadStackInfo() (map[string]string, EnvironmentVPC, error) {
 	var environmentVPC EnvironmentVPC
-	tags := make(map[string]string)
 
-	envStack, err := d.cfn.Describe(stack.NameForEnv(d.app, d.env.Name))
+	envStack, err := d.cfn.Describe()
 	if err != nil {
 		return nil, environmentVPC, fmt.Errorf("retrieve environment stack: %w", err)
 	}
-	for _, tag := range envStack.Tags {
-		tags[*tag.Key] = *tag.Value
-	}
 
-	for _, out := range envStack.Outputs {
-		value := aws.StringValue(out.OutputValue)
-
-		switch aws.StringValue(out.OutputKey) {
-		case stack.EnvOutputVPCID:
-			environmentVPC.ID = value
-		case stack.EnvOutputPublicSubnets:
-			environmentVPC.PublicSubnetIDs = strings.Split(value, ",")
-		case stack.EnvOutputPrivateSubnets:
-			environmentVPC.PrivateSubnetIDs = strings.Split(value, ",")
+	for k, v := range envStack.Outputs {
+		switch k {
+		case cfnstack.EnvOutputVPCID:
+			environmentVPC.ID = v
+		case cfnstack.EnvOutputPublicSubnets:
+			environmentVPC.PublicSubnetIDs = strings.Split(v, ",")
+		case cfnstack.EnvOutputPrivateSubnets:
+			environmentVPC.PrivateSubnetIDs = strings.Split(v, ",")
 		}
 	}
 
-	return tags, environmentVPC, nil
+	return envStack.Tags, environmentVPC, nil
 }
 
 func (d *EnvDescriber) filterDeployedSvcs() ([]*config.Workload, error) {
@@ -175,15 +186,6 @@ func (d *EnvDescriber) filterDeployedSvcs() ([]*config.Workload, error) {
 		deployedSvcs = append(deployedSvcs, svcs[deployedSvcName])
 	}
 	return deployedSvcs, nil
-}
-
-func (d *EnvDescriber) resources() ([]*CfnResource, error) {
-	envStack, err := d.cfn.StackResources(stack.NameForEnv(d.app, d.env.Name))
-	if err != nil {
-		return nil, err
-	}
-	outputs := flattenResources(envStack)
-	return outputs, nil
 }
 
 // JSONString returns the stringified EnvDescription struct with json format.

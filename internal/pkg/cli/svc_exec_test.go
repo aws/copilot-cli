@@ -23,7 +23,7 @@ import (
 type execSvcMocks struct {
 	storeSvc           *mocks.Mockstore
 	sel                *mocks.MockdeploySelector
-	svcDescriber       *mocks.MockserviceDescriber
+	ecsSvcDescriber    *mocks.MockserviceDescriber
 	ecsCommandExecutor *mocks.MockecsCommandExecutor
 	ssmPluginManager   *mocks.MockssmPluginManager
 	prompter           *mocks.Mockprompter
@@ -497,7 +497,7 @@ func TestSvcExec_Execute(t *testing.T) {
 					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
 						Name: "my-env",
 					}, nil),
-					m.svcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(nil, mockError),
+					m.ecsSvcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(nil, mockError),
 				)
 			},
 			wantedError: fmt.Errorf("describe ECS service for mockSvc in environment mockEnv: some error"),
@@ -509,7 +509,7 @@ func TestSvcExec_Execute(t *testing.T) {
 					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
 						Name: "my-env",
 					}, nil),
-					m.svcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
+					m.ecsSvcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
 						Tasks: []*awsecs.Task{},
 					}, nil),
 				)
@@ -524,7 +524,7 @@ func TestSvcExec_Execute(t *testing.T) {
 					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
 						Name: "my-env",
 					}, nil),
-					m.svcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
+					m.ecsSvcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
 						Tasks: []*awsecs.Task{
 							{
 								TaskArn:    aws.String(mockTaskARN),
@@ -544,7 +544,7 @@ func TestSvcExec_Execute(t *testing.T) {
 					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
 						Name: "my-env",
 					}, nil),
-					m.svcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
+					m.ecsSvcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
 						ClusterName: "mockCluster",
 						Tasks: []*awsecs.Task{
 							{
@@ -570,7 +570,7 @@ func TestSvcExec_Execute(t *testing.T) {
 					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
 						Name: "my-env",
 					}, nil),
-					m.svcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
+					m.ecsSvcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
 						ClusterName: "mockCluster",
 						Tasks: []*awsecs.Task{
 							{
@@ -612,7 +612,7 @@ func TestSvcExec_Execute(t *testing.T) {
 			mocks := execSvcMocks{
 				storeSvc:           mockStoreReader,
 				ecsCommandExecutor: mockCommandExecutor,
-				svcDescriber:       mockSvcDescriber,
+				ecsSvcDescriber:    mockSvcDescriber,
 			}
 
 			tc.setupMocks(mocks)

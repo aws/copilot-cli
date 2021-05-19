@@ -35,6 +35,7 @@ const (
 	envParamToolsAccountPrincipalKey = "ToolsAccountPrincipalARN"
 	envParamAppDNSKey                = "AppDNSName"
 	envParamAppDNSDelegationRoleKey  = "AppDNSDelegationRole"
+	EnvParamAliasesKey               = "Aliases"
 
 	// Output keys.
 	EnvOutputVPCID               = "VpcId"
