@@ -8,6 +8,9 @@ $ copilot secret init
 
 A secret can have different values in each of your existing environments, and is accessible by your services or jobs from the same application and environment.
 
+!!! attention 
+    Secrets are not supported for Request-Driven Web Services.
+
 ## What are the flags?
 ```
   -a, --app string              Name of the application.
@@ -60,9 +63,6 @@ It will have the value of the SSM parameter `/copilot/my-app/prod/secrets/db_pas
 
 This works because ECS Agent will resolve the SSM parameter when it starts up your task, and set the environment variable for you.
 
-!!!info
-    Note that `/copilot/my-app/prod/secrets/db_password` is only accessible by any services or jobs that live in `my-app`'s `prod` environment, and similarly for `/copilot/my-app/dev/secrets/db_password`.
-
 ## <span id="secret-init-cli-input-yaml">How do I use the `--cli-input-yaml` flag?</span>
 You can specify multiple secrets, and their values in each of your existing environments in a file. Then you can use the file as the input to `--cli-input-yaml` flag. Copilot will read from the file and create or update the secrets accordingly.
 
@@ -92,5 +92,3 @@ notification_email:
   test: test@email.com
 ```
 
-!!! attention 
-    Secrets are not supported for Request-Driven Web Services.
