@@ -397,7 +397,7 @@ type dockerfileParser interface {
 }
 
 type statusDescriber interface {
-	Describe() (*describe.ServiceStatusDesc, error)
+	Describe() (describe.HumanJSONStringer, error)
 }
 
 type envDescriber interface {
@@ -507,6 +507,10 @@ type ec2Client interface {
 	HasDNSSupport(vpcID string) (bool, error)
 }
 
+type serviceResumer interface {
+	ResumeService(string) error
+}
+
 type jobInitializer interface {
 	Job(props *initialize.JobProps) (string, error)
 }
@@ -521,6 +525,10 @@ type roleDeleter interface {
 
 type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
+}
+
+type apprunnerServiceDescriber interface {
+	ServiceARN() (string, error)
 }
 
 type ecsCommandExecutor interface {
@@ -578,4 +586,8 @@ type cliStringer interface {
 
 type secretPutter interface {
 	PutSecret(in ssm.PutSecretInput) (*ssm.PutSecretOutput, error)
+}
+
+type servicePauser interface {
+	PauseService(svcARN string) error
 }

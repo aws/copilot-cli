@@ -887,6 +887,5 @@ Run a task with a command.
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
 	cmd.Flags().StringVar(&vars.generateCommandTarget, generateCommandFlag, "", generateCommandFlagDescription)
 
-	_ = cmd.Flags().MarkHidden(generateCommandFlag)
 	return cmd
 }

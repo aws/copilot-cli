@@ -215,7 +215,9 @@ func (o *initJobOpts) askJobName() error {
 	name, err := o.prompt.Get(
 		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.wkldType)),
 		fmt.Sprintf(fmtWkldInitNameHelpPrompt, job, o.appName),
-		validateSvcName,
+		func(val interface{}) error {
+			return validateSvcName(val, o.wkldType)
+		},
 		prompt.WithFinalMessage("Job name:"),
 	)
 	if err != nil {

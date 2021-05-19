@@ -57,7 +57,7 @@ type envUpgradeOpts struct {
 	uploader           customResourcesUploader
 
 	// Constructors for clients that can be initialized only at runtime.
-	// These functions are overriden in tests to provide mocks.
+	// These functions are overridden in tests to provide mocks.
 	newEnvVersionGetter func(app, env string) (versionGetter, error)
 	newTemplateUpgrader func(conf *config.Environment) (envTemplateUpgrader, error)
 	newS3               func(region string) (zipAndUploader, error)

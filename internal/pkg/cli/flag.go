@@ -37,6 +37,7 @@ const (
 	startTimeFlag         = "start-time"
 	endTimeFlag           = "end-time"
 	tasksFlag             = "tasks"
+	logGroupFlag          = "log-group"
 	prodEnvFlag           = "prod"
 	deployFlag            = "deploy"
 	resourcesFlag         = "resources"
@@ -127,17 +128,17 @@ const (
 // Descriptions for flags.
 var (
 	svcTypeFlagDescription = fmt.Sprintf(`Type of service to create. Must be one of:
-%s`, strings.Join(template.QuoteSliceFunc(manifest.ServiceTypes), ", "))
+%s.`, strings.Join(template.QuoteSliceFunc(manifest.ServiceTypes), ", "))
 	imageFlagDescription = fmt.Sprintf(`The location of an existing Docker image.
-Mutually exclusive with -%s, --%s`, dockerFileFlagShort, dockerFileFlag)
+Mutually exclusive with -%s, --%s.`, dockerFileFlagShort, dockerFileFlag)
 	dockerFileFlagDescription = fmt.Sprintf(`Path to the Dockerfile.
-Mutually exclusive with -%s, --%s`, imageFlagShort, imageFlag)
+Mutually exclusive with -%s, --%s.`, imageFlagShort, imageFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
-%s`, strings.Join(template.QuoteSliceFunc(storageTypes), ", "))
+%s.`, strings.Join(template.QuoteSliceFunc(storageTypes), ", "))
 	jobTypeFlagDescription = fmt.Sprintf(`Type of job to create. Must be one of:
-%s`, strings.Join(template.QuoteSliceFunc(manifest.JobTypes), ", "))
+%s.`, strings.Join(template.QuoteSliceFunc(manifest.JobTypes), ", "))
 	wkldTypeFlagDescription = fmt.Sprintf(`Type of job or svc to create. Must be one of:
-%s`, strings.Join(template.QuoteSliceFunc(manifest.WorkloadTypes), ", "))
+%s.`, strings.Join(template.QuoteSliceFunc(manifest.WorkloadTypes), ", "))
 
 	clusterFlagDescription = fmt.Sprintf(`Optional. The short name or full ARN of the cluster to run the task in. 
 Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
@@ -150,18 +151,18 @@ Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, subnetsFlag)
 	taskExecDefaultFlagDescription = fmt.Sprintf(`Optional. Execute commands in running tasks in default cluster and default subnets. 
 Cannot be specified with '%s' or '%s'.`, appFlag, envFlag)
 	taskDeleteDefaultFlagDescription = fmt.Sprintf(`Optional. Delete a task which was launched in the default cluster and subnets.
-Cannot be specified with '%s' or '%s'`, appFlag, envFlag)
+Cannot be specified with '%s' or '%s'.`, appFlag, envFlag)
 	taskEnvFlagDescription = fmt.Sprintf(`Optional. Name of the environment.
-Cannot be specified with '%s', '%s' or '%s'`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
+Cannot be specified with '%s', '%s' or '%s'.`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
 	taskAppFlagDescription = fmt.Sprintf(`Optional. Name of the application.
-Cannot be specified with '%s', '%s' or '%s'`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
+Cannot be specified with '%s', '%s' or '%s'.`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
 
 	secretNameFlagDescription = fmt.Sprintf(`The name of the secret.
-Mutually exclusive with %s flag.`, inputFilePathFlag)
+Mutually exclusive with the --%s flag.`, inputFilePathFlag)
 	secretValuesFlagDescription = fmt.Sprintf(`Values of the secret in each environment. Specified as <environment>=<value> separated by commas.
-Mutually exclusive with %s flag.`, inputFilePathFlag)
-	secretInputFilePathFlagDescription = fmt.Sprintf(`Optional. A file in which the secret values are specified.
-Mutually exclusive with %s flag and %s flag"`, nameFlag, valuesFlag)
+Mutually exclusive with the --%s flag.`, inputFilePathFlag)
+	secretInputFilePathFlagDescription = fmt.Sprintf(`Optional. A YAML file in which the secret values are specified.
+Mutually exclusive with the -%s ,--%s and --%s flags.`, nameFlagShort, nameFlag, valuesFlag)
 )
 
 const (
@@ -193,6 +194,7 @@ Defaults to all logs. Only one of start-time / since may be used.`
 	endTimeFlagDescription = `Optional. Only return logs before a specific date (RFC3339).
 Defaults to all logs. Only one of end-time / follow may be used.`
 	tasksLogsFlagDescription = "Optional. Only return logs from specific task IDs."
+	logGroupFlagDescription  = "Optional. Only return logs from specific log group."
 
 	deployTestFlagDescription        = `Deploy your service or job to a "test" environment.`
 	githubURLFlagDescription         = "(Deprecated.) Use --url instead. Repository URL to trigger your pipeline."
@@ -207,7 +209,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	localSvcFlagDescription          = "Only show services in the workspace."
 	localJobFlagDescription          = "Only show jobs in the workspace."
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
-	svcPortFlagDescription           = "Optional. The port on which your service listens."
+	svcPortFlagDescription           = "The port on which your service listens."
 
 	storageFlagDescription             = "Name of the storage resource to create."
 	storageWorkloadFlagDescription     = "Name of the service or job to associate with storage."
@@ -239,8 +241,7 @@ Tasks with the same group name share the same set of resources.
 	taskImageTagFlagDescription    = `Optional. The container image tag in addition to "latest".`
 	generateCommandFlagDescription = `Optional. Generate a command with a pre-filled value for each flag.
 To use it for an ECS service, specify --generate-cmd <cluster name>/<service name>.
-Alternatively, if the service is created with Copilot, specify --generate-cmd <application>/<environment>/<service>.
-Similarly, to use it for a job created with Copilot, specify --generate-cmd <application>/<environment>/<job>.
+Alternatively, if the service or job is created with Copilot, specify --generate-cmd <application>/<environment>/<service or job name>.
 Cannot be specified with any other flags.`
 
 	vpcIDFlagDescription          = "Optional. Use an existing VPC ID."

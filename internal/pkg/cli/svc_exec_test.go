@@ -447,6 +447,16 @@ func TestSvcExec_Execute(t *testing.T) {
 		mockTaskARN      = "arn:aws:ecs:us-west-2:123456789:task/mockCluster/mockTaskID"
 		mockOtherTaskARN = "arn:aws:ecs:us-west-2:123456789:task/mockCluster/mockTaskID1"
 	)
+	mockWl := config.Workload{
+		App:  "mockApp",
+		Name: "mockSvc",
+		Type: "Load Balanced Web Service",
+	}
+	mockRDWSWl := config.Workload{
+		App:  "mockApp",
+		Name: "mockSvc",
+		Type: "Request-Driven Web Service",
+	}
 	mockError := errors.New("some error")
 	testCases := map[string]struct {
 		containerName string
@@ -455,9 +465,26 @@ func TestSvcExec_Execute(t *testing.T) {
 
 		wantedError error
 	}{
+		"return error if fail to get workload": {
+			setupMocks: func(m execSvcMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().GetWorkload("mockApp", "mockSvc").Return(nil, mockError),
+				)
+			},
+			wantedError: fmt.Errorf("get workload: some error"),
+		},
+		"return error if service type is Request-Driven Web Service": {
+			setupMocks: func(m execSvcMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().GetWorkload("mockApp", "mockSvc").Return(&mockRDWSWl, nil),
+				)
+			},
+			wantedError: fmt.Errorf("executing a command in a running container part of a service is not supported for services with type: 'Request-Driven Web Service'"),
+		},
 		"return error if fail to get environment": {
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
+					m.storeSvc.EXPECT().GetWorkload("mockApp", "mockSvc").Return(&mockWl, nil),
 					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(nil, mockError),
 				)
 			},
@@ -466,6 +493,7 @@ func TestSvcExec_Execute(t *testing.T) {
 		"return error if fail to describe service": {
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
+					m.storeSvc.EXPECT().GetWorkload("mockApp", "mockSvc").Return(&mockWl, nil),
 					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
 						Name: "my-env",
 					}, nil),
@@ -477,6 +505,7 @@ func TestSvcExec_Execute(t *testing.T) {
 		"return error if no running task found": {
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
+					m.storeSvc.EXPECT().GetWorkload("mockApp", "mockSvc").Return(&mockWl, nil),
 					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
 						Name: "my-env",
 					}, nil),
@@ -491,6 +520,7 @@ func TestSvcExec_Execute(t *testing.T) {
 			taskID: "mockTaskID1",
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
+					m.storeSvc.EXPECT().GetWorkload("mockApp", "mockSvc").Return(&mockWl, nil),
 					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
 						Name: "my-env",
 					}, nil),
@@ -510,6 +540,7 @@ func TestSvcExec_Execute(t *testing.T) {
 			containerName: "hello",
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
+					m.storeSvc.EXPECT().GetWorkload("mockApp", "mockSvc").Return(&mockWl, nil),
 					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
 						Name: "my-env",
 					}, nil),
@@ -535,6 +566,7 @@ func TestSvcExec_Execute(t *testing.T) {
 		"success": {
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
+					m.storeSvc.EXPECT().GetWorkload("mockApp", "mockSvc").Return(&mockWl, nil),
 					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
 						Name: "my-env",
 					}, nil),

@@ -16,8 +16,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -26,18 +24,15 @@ import (
 const (
 	envOutputPublicLoadBalancerDNSName = "PublicLoadBalancerDNSName"
 	envOutputSubdomain                 = "EnvironmentSubdomain"
-
-	// Symbol used while displaying values in human format.
-	dittoSymbol = `  "`
 )
 
-// WebServiceURI represents the unique identifier to access a web service.
-type WebServiceURI struct {
+// LBWebServiceURI represents the unique identifier to access a web service.
+type LBWebServiceURI struct {
 	DNSName string // The environment's subdomain if the service is served on HTTPS. Otherwise, the public load balancer's DNS.
 	Path    string // Empty if the service is served on HTTPS. Otherwise, the pattern used to match the service.
 }
 
-func (uri *WebServiceURI) String() string {
+func (uri *LBWebServiceURI) String() string {
 	switch uri.Path {
 	// When the service is using host based routing, the service
 	// is included in the DNS name (svc.myenv.myproj.dns.com)
@@ -65,49 +60,41 @@ func (s *serviceDiscovery) String() string {
 	return fmt.Sprintf("%s.%s.local:%s", s.Service, s.App, s.Port)
 }
 
-type svcDescriber interface {
-	Params() (map[string]string, error)
-	EnvOutputs() (map[string]string, error)
-	EnvVars() ([]*ecs.ContainerEnvVar, error)
-	Secrets() ([]*ecs.ContainerSecret, error)
-	ServiceStackResources() ([]*cloudformation.StackResource, error)
-}
-
-// WebServiceDescriber retrieves information about a load balanced web service.
-type WebServiceDescriber struct {
+// LBWebServiceDescriber retrieves information about a load balanced web service.
+type LBWebServiceDescriber struct {
 	app             string
 	svc             string
 	enableResources bool
 
 	store                DeployedEnvServicesLister
-	svcDescriber         map[string]svcDescriber
+	envSvcDescribers     map[string]ecsSvcDescriber
 	initServiceDescriber func(string) error
 
 	// cache only last svc paramerters
 	svcParams map[string]string
 }
 
-// NewWebServiceConfig contains fields that initiates WebServiceDescriber struct.
-type NewWebServiceConfig struct {
+// NewLBWebServiceConfig contains fields that initiates WebServiceDescriber struct.
+type NewLBWebServiceConfig struct {
 	NewServiceConfig
 	EnableResources bool
 	DeployStore     DeployedEnvServicesLister
 }
 
-// NewWebServiceDescriber instantiates a load balanced service describer.
-func NewWebServiceDescriber(opt NewWebServiceConfig) (*WebServiceDescriber, error) {
-	describer := &WebServiceDescriber{
-		app:             opt.App,
-		svc:             opt.Svc,
-		enableResources: opt.EnableResources,
-		store:           opt.DeployStore,
-		svcDescriber:    make(map[string]svcDescriber),
+// NewLBWebServiceDescriber instantiates a load balanced service describer.
+func NewLBWebServiceDescriber(opt NewLBWebServiceConfig) (*LBWebServiceDescriber, error) {
+	describer := &LBWebServiceDescriber{
+		app:              opt.App,
+		svc:              opt.Svc,
+		enableResources:  opt.EnableResources,
+		store:            opt.DeployStore,
+		envSvcDescribers: make(map[string]ecsSvcDescriber),
 	}
 	describer.initServiceDescriber = func(env string) error {
-		if _, ok := describer.svcDescriber[env]; ok {
+		if _, ok := describer.envSvcDescribers[env]; ok {
 			return nil
 		}
-		d, err := NewServiceDescriber(NewServiceConfig{
+		d, err := NewECSServiceDescriber(NewServiceConfig{
 			App:         opt.App,
 			Env:         env,
 			Svc:         opt.Svc,
@@ -116,23 +103,23 @@ func NewWebServiceDescriber(opt NewWebServiceConfig) (*WebServiceDescriber, erro
 		if err != nil {
 			return err
 		}
-		describer.svcDescriber[env] = d
+		describer.envSvcDescribers[env] = d
 		return nil
 	}
 	return describer, nil
 }
 
 // Describe returns info of a web service.
-func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
+func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	environments, err := d.store.ListEnvironmentsDeployedTo(d.app, d.svc)
 	if err != nil {
 		return nil, fmt.Errorf("list deployed environments for application %s: %w", d.app, err)
 	}
 
 	var routes []*WebServiceRoute
-	var configs []*ServiceConfig
+	var configs []*ECSServiceConfig
 	var serviceDiscoveries []*ServiceDiscovery
-	var envVars []*envVar
+	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
 		err := d.initServiceDescriber(env)
@@ -147,24 +134,26 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Environment: env,
 			URL:         webServiceURI,
 		})
-		configs = append(configs, &ServiceConfig{
-			Environment: env,
-			Port:        d.svcParams[stack.LBWebServiceContainerPortParamKey],
-			Tasks:       d.svcParams[stack.WorkloadTaskCountParamKey],
-			CPU:         d.svcParams[stack.WorkloadTaskCPUParamKey],
-			Memory:      d.svcParams[stack.WorkloadTaskMemoryParamKey],
+		configs = append(configs, &ECSServiceConfig{
+			ServiceConfig: &ServiceConfig{
+				Environment: env,
+				Port:        d.svcParams[stack.LBWebServiceContainerPortParamKey],
+				CPU:         d.svcParams[stack.WorkloadTaskCPUParamKey],
+				Memory:      d.svcParams[stack.WorkloadTaskMemoryParamKey],
+			},
+			Tasks: d.svcParams[stack.WorkloadTaskCountParamKey],
 		})
 		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, serviceDiscovery{
 			Service: d.svc,
 			Port:    d.svcParams[stack.LBWebServiceContainerPortParamKey],
 			App:     d.app,
 		}, env)
-		webSvcEnvVars, err := d.svcDescriber[env].EnvVars()
+		webSvcEnvVars, err := d.envSvcDescribers[env].EnvVars()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
 		}
-		envVars = append(envVars, flattenEnvVars(env, webSvcEnvVars)...)
-		webSvcSecrets, err := d.svcDescriber[env].Secrets()
+		envVars = append(envVars, flattenContainerEnvVars(env, webSvcEnvVars)...)
+		webSvcSecrets, err := d.envSvcDescribers[env].Secrets()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve secrets: %w", err)
 		}
@@ -177,7 +166,7 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			if err != nil {
 				return nil, err
 			}
-			stackResources, err := d.svcDescriber[env].ServiceStackResources()
+			stackResources, err := d.envSvcDescribers[env].ServiceStackResources()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}
@@ -195,76 +184,40 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		Variables:        envVars,
 		Secrets:          secrets,
 		Resources:        resources,
+
+		environments: environments,
 	}, nil
 }
 
-// URI returns the WebServiceURI to identify this service uniquely given an environment name.
-func (d *WebServiceDescriber) URI(envName string) (string, error) {
+// URI returns the LBWebServiceURI to identify this service uniquely given an environment name.
+func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 	err := d.initServiceDescriber(envName)
 	if err != nil {
 		return "", err
 	}
 
-	envOutputs, err := d.svcDescriber[envName].EnvOutputs()
+	envOutputs, err := d.envSvcDescribers[envName].EnvOutputs()
 	if err != nil {
 		return "", fmt.Errorf("get output for environment %s: %w", envName, err)
 	}
-	svcParams, err := d.svcDescriber[envName].Params()
+	svcParams, err := d.envSvcDescribers[envName].Params()
 	if err != nil {
 		return "", fmt.Errorf("get parameters for service %s: %w", d.svc, err)
 	}
 	d.svcParams = svcParams
 
-	uri := &WebServiceURI{
+	uri := &LBWebServiceURI{
 		DNSName: envOutputs[envOutputPublicLoadBalancerDNSName],
 		Path:    svcParams[stack.LBWebServiceRulePathParamKey],
 	}
 	_, isHTTPS := envOutputs[envOutputSubdomain]
 	if isHTTPS {
 		dnsName := fmt.Sprintf("%s.%s", d.svc, envOutputs[envOutputSubdomain])
-		uri = &WebServiceURI{
+		uri = &LBWebServiceURI{
 			DNSName: dnsName,
 		}
 	}
 	return uri.String(), nil
-}
-
-// envVar contains serialized environment variables for a service.
-type envVar struct {
-	Environment string `json:"environment"`
-	Container   string `json:"container"`
-	Name        string `json:"name"`
-	Value       string `json:"value"`
-}
-
-type envVars []*envVar
-
-func (e envVars) humanString(w io.Writer) {
-	headers := []string{"Name", "Container", "Environment", "Value"}
-	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
-	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
-	sort.SliceStable(e, func(i, j int) bool { return e[i].Environment < e[j].Environment })
-	sort.SliceStable(e, func(i, j int) bool { return e[i].Container < e[j].Container })
-	sort.SliceStable(e, func(i, j int) bool { return e[i].Name < e[j].Name })
-	if len(e) > 0 {
-		fmt.Fprintf(w, "  %s\n", strings.Join([]string{e[0].Name, e[0].Container, e[0].Environment, e[0].Value}, "\t"))
-	}
-	for prev, cur := 0, 1; cur < len(e); prev, cur = prev+1, cur+1 {
-		cols := []string{e[cur].Name, e[cur].Container, e[cur].Environment, e[cur].Value}
-		if e[prev].Name == e[cur].Name {
-			cols[0] = dittoSymbol
-		}
-		if e[prev].Container == e[cur].Container {
-			cols[1] = dittoSymbol
-		}
-		if e[prev].Environment == e[cur].Environment {
-			cols[2] = dittoSymbol
-		}
-		if e[prev].Value == e[cur].Value {
-			cols[3] = dittoSymbol
-		}
-		fmt.Fprintf(w, "  %s\n", strings.Join(cols, "\t"))
-	}
 }
 
 type secret struct {
@@ -351,12 +304,14 @@ type webSvcDesc struct {
 	Service          string             `json:"service"`
 	Type             string             `json:"type"`
 	App              string             `json:"application"`
-	Configurations   configurations     `json:"configurations"`
+	Configurations   ecsConfigurations  `json:"configurations"`
 	Routes           []*WebServiceRoute `json:"routes"`
 	ServiceDiscovery serviceDiscoveries `json:"serviceDiscovery"`
-	Variables        envVars            `json:"variables"`
+	Variables        containerEnvVars   `json:"variables"`
 	Secrets          secrets            `json:"secrets,omitempty"`
 	Resources        cfnResources       `json:"resources,omitempty"`
+
+	environments []string
 }
 
 // JSONString returns the stringified webSvcDesc struct in json format.
@@ -403,9 +358,7 @@ func (w *webSvcDesc) HumanString() string {
 		fmt.Fprint(writer, color.Bold.Sprint("\nResources\n"))
 		writer.Flush()
 
-		// Go maps don't have a guaranteed order.
-		// Show the resources by the order of environments displayed under Configuration for a consistent view.
-		w.Resources.humanStringByEnv(writer, w.Configurations)
+		w.Resources.humanStringByEnv(writer, w.environments)
 	}
 	writer.Flush()
 	return b.String()

@@ -31,7 +31,7 @@ type backendSvcReadParser interface {
 
 // BackendService represents the configuration needed to create a CloudFormation stack from a backend service manifest.
 type BackendService struct {
-	*wkld
+	*ecsWkld
 	manifest *manifest.BackendService
 
 	parser backendSvcReadParser
@@ -49,15 +49,17 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 		return nil, fmt.Errorf("apply environment %s override: %w", env, err)
 	}
 	return &BackendService{
-		wkld: &wkld{
-			name:   aws.StringValue(mft.Name),
-			env:    env,
-			app:    app,
-			tc:     envManifest.BackendServiceConfig.TaskConfig,
-			rc:     rc,
-			image:  envManifest.ImageConfig,
-			parser: parser,
-			addons: addons,
+		ecsWkld: &ecsWkld{
+			wkld: &wkld{
+				name:   aws.StringValue(mft.Name),
+				env:    env,
+				app:    app,
+				rc:     rc,
+				image:  envManifest.ImageConfig,
+				parser: parser,
+				addons: addons,
+			},
+			tc: envManifest.TaskConfig,
 		},
 		manifest: envManifest,
 
@@ -139,7 +141,7 @@ func (s *BackendService) Template() (string, error) {
 
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
-	svcParams, err := s.wkld.Parameters()
+	svcParams, err := s.ecsWkld.Parameters()
 	if err != nil {
 		return nil, err
 	}
@@ -158,5 +160,5 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability to users.
 func (s *BackendService) SerializedParameters() (string, error) {
-	return s.wkld.templateConfiguration(s)
+	return s.templateConfiguration(s)
 }

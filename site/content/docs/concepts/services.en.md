@@ -20,9 +20,18 @@ We mentioned before that Copilot will set up all the infrastructure your service
 
 When you're setting up a service, Copilot will ask you about what kind of service you want to build.
 
-### Load Balanced Web Service
+### Internet-facing services
 
-Do you want your service to serve internet traffic? You can select a __Load Balanced Web Service__ and Copilot will provision an application load balancer, security groups, an ECS Service and run your service on Fargate.
+If you want your service to serve internet traffic then you have two options:
+
+* "Request-Driven Web Service" will provision an AWS App Runner Service to run your service. 
+* "Load Balanced Web Service" will provision an Application Load Balancer, security groups, an ECS service on Fargate to run your service.
+
+#### Request-Driven Web Service
+An AWS App Runner service that autoscales your instances based on incoming traffic and scales down to a baseline instance when there's no traffic. This option is more cost effective for HTTP services with sudden bursts in request volumes or low request volumes.
+
+#### Load Balanced Web Service
+An ECS Service running tasks on Fargate with an Application Load Balancer as ingress. This option is suitable for HTTP services with steady request volumes that need to access resources in a VPC or require advanced configuration.
 
 ![lb-web-service-infra](https://user-images.githubusercontent.com/879348/86045951-39762880-ba01-11ea-9a47-fc9278600154.png)
 

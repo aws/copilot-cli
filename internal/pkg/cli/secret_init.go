@@ -6,8 +6,10 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
+	txttemplate "text/template"
 
 	"github.com/dustin/go-humanize/english"
 
@@ -22,6 +24,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -50,12 +53,12 @@ type secretInitVars struct {
 	values        map[string]string
 	inputFilePath string
 	overwrite     bool
-
-	resourceTags map[string]string
 }
 
 type secretInitOpts struct {
 	secretInitVars
+
+	secretValues map[string]map[string]string
 
 	store store
 	fs    afero.Fs
@@ -65,8 +68,11 @@ type secretInitOpts struct {
 
 	shouldShowOverwriteHint bool
 
-	configureSecretPutter func(envName string) (secretPutter, error)
-	readFile              func() ([]byte, error)
+	envUpgradeCMDs map[string]actionCommand
+	secretPutters  map[string]secretPutter
+
+	configureClientsForEnv func(envName string) error
+	readFile               func() ([]byte, error)
 }
 
 func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
@@ -81,20 +87,34 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 		store:          store,
 		fs:             &afero.Afero{Fs: afero.NewOsFs()},
 
+		envUpgradeCMDs: make(map[string]actionCommand),
+		secretPutters:  make(map[string]secretPutter),
+
 		prompter: prompter,
 		selector: selector.NewSelect(prompter, store),
 	}
 
-	opts.configureSecretPutter = func(envName string) (secretPutter, error) {
+	opts.configureClientsForEnv = func(envName string) error {
+		cmd, err := newEnvUpgradeOpts(envUpgradeVars{
+			appName: opts.appName,
+			name:    envName,
+		})
+		if err != nil {
+			return fmt.Errorf("new env upgrade command: %v", err)
+		}
+		opts.envUpgradeCMDs[envName] = cmd
+
 		env, err := opts.targetEnv(envName)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
-			return nil, fmt.Errorf("create session from environment manager role %s in region %s: %w", env.ManagerRoleARN, env.Region, err)
+			return fmt.Errorf("create session from environment manager role %s in region %s: %w", env.ManagerRoleARN, env.Region, err)
 		}
-		return ssm.New(sess), nil
+		opts.secretPutters[envName] = ssm.New(sess)
+
+		return nil
 	}
 
 	opts.readFile = func() ([]byte, error) {
@@ -182,11 +202,18 @@ func (o *secretInitOpts) Execute() error {
 			return err
 		}
 
+		o.secretValues = secrets
+
+		if err := o.configureClientsAndUpgradeForEnvironments(secrets); err != nil {
+			return err
+		}
+
 		var errs []*errSecretFailedInSomeEnvironments
 		for secretName, secretValues := range secrets {
 			if err := o.putSecret(secretName, secretValues); err != nil {
 				errs = append(errs, err.(*errSecretFailedInSomeEnvironments))
 			}
+			log.Infoln("")
 		}
 
 		if len(errs) != 0 {
@@ -197,7 +224,32 @@ func (o *secretInitOpts) Execute() error {
 		return nil
 	}
 
+	o.secretValues = map[string]map[string]string{
+		o.name: o.values,
+	}
+	if err := o.configureClientsAndUpgradeForEnvironments(o.secretValues); err != nil {
+		return err
+	}
 	return o.putSecret(o.name, o.values)
+}
+
+func (o *secretInitOpts) configureClientsAndUpgradeForEnvironments(secrets map[string]map[string]string) error {
+	envNames := make(map[string]struct{})
+	for _, values := range secrets {
+		for envName := range values {
+			envNames[envName] = struct{}{}
+		}
+	}
+
+	for envName := range envNames {
+		if err := o.configureClientsForEnv(envName); err != nil {
+			return err
+		}
+		if err := o.envUpgradeCMDs[envName].Execute(); err != nil {
+			return fmt.Errorf(`execute "env upgrade --app %s --name %s": %v`, o.appName, envName, err)
+		}
+	}
+	return nil
 }
 
 func (o *secretInitOpts) putSecret(secretName string, values map[string]string) error {
@@ -205,6 +257,11 @@ func (o *secretInitOpts) putSecret(secretName string, values map[string]string) 
 	for env := range values {
 		envs = append(envs, env)
 	}
+
+	if len(envs) == 0 {
+		return nil
+	}
+
 	log.Infof("...Put secret %s to environment %s\n", color.HighlightUserInput(secretName), english.WordSeries(envs, "and"))
 
 	errorsForEnvironments := make(map[string]error)
@@ -219,7 +276,6 @@ func (o *secretInitOpts) putSecret(secretName string, values map[string]string) 
 	for envName := range errorsForEnvironments {
 		log.Errorf("Failed to put secret %s in environment %s. See error message below.\n", color.HighlightUserInput(secretName), color.HighlightUserInput(envName))
 	}
-	log.Infoln("")
 
 	if len(errorsForEnvironments) != 0 {
 		return &errSecretFailedInSomeEnvironments{
@@ -232,27 +288,18 @@ func (o *secretInitOpts) putSecret(secretName string, values map[string]string) 
 }
 
 func (o *secretInitOpts) putSecretInEnv(secretName, envName, value string) error {
-	client, err := o.configureSecretPutter(envName)
-	if err != nil {
-		return err
-	}
-
-	tags := make(map[string]string)
-	for k, v := range o.resourceTags {
-		tags[k] = v
-	}
-	tags[deploy.AppTagKey] = o.appName
-	tags[deploy.EnvTagKey] = envName
-
 	name := fmt.Sprintf(fmtSecretParameterName, o.appName, envName, secretName)
 	in := ssm.PutSecretInput{
 		Name:      name,
 		Value:     value,
 		Overwrite: o.overwrite,
-		Tags:      tags,
+		Tags: map[string]string{
+			deploy.AppTagKey: o.appName,
+			deploy.EnvTagKey: envName,
+		},
 	}
 
-	out, err := client.PutSecret(in)
+	out, err := o.secretPutters[envName].PutSecret(in)
 	if err != nil {
 		var targetErr *ssm.ErrParameterAlreadyExists
 		if errors.As(err, &targetErr) {
@@ -345,14 +392,43 @@ func (o *secretInitOpts) askForSecretValues() error {
 			return fmt.Errorf("get secret value for %s in environment %s: %w", color.HighlightUserInput(o.name), env.Name, err)
 		}
 
-		values[env.Name] = value
+		if value != "" {
+			values[env.Name] = value
+		}
 	}
 	o.values = values
 	return nil
 }
 
 // RecommendedActions shows recommended actions to do after running `secret init`.
-func (o *secretInitOpts) RecommendedActions() {
+func (o *secretInitOpts) RecommendedActions() error {
+	type secretInitOutput struct {
+		SecretsPerEnv map[string]map[string]string
+	}
+
+	// Transpose secret values so that environment is the first-level key.
+	secretsPerEnv := make(map[string]map[string]string)
+	for secretName, values := range o.secretValues {
+		for envName := range values {
+			if _, ok := secretsPerEnv[envName]; !ok {
+				secretsPerEnv[envName] = make(map[string]string)
+			}
+			secretsPerEnv[envName][template.ToSnakeCaseFunc(secretName)] = fmt.Sprintf(fmtSecretParameterName, o.appName, envName, secretName)
+		}
+	}
+
+	templateRaw := `{{range $env, $secrets := .SecretsPerEnv -}}
+{{$env}}
+  secrets: {{range $secretName, $secretValueFrom := $secrets}}
+    {{$secretName}}: {{$secretValueFrom}}
+  {{- end}}
+{{end}}`
+	tmpl, _ := txttemplate.New("secretInitOutput").Parse(templateRaw)
+
+	log.Infoln("You can refer to these secrets from your manifest file by editing the `secrets` section.")
+	return tmpl.Execute(os.Stdout, secretInitOutput{
+		SecretsPerEnv: secretsPerEnv,
+	})
 }
 
 type errSecretFailedInSomeEnvironments struct {
@@ -365,9 +441,16 @@ type errBatchPutSecretsFailed struct {
 }
 
 func (e *errSecretFailedInSomeEnvironments) Error() string {
+	// Sort failure messages by environment names.
+	var envs []string
+	for env := range e.errorsForEnvironments {
+		envs = append(envs, env)
+	}
+	sort.Strings(envs)
+
 	out := make([]string, 0)
-	for env, err := range e.errorsForEnvironments {
-		out = append(out, fmt.Sprintf("Failed to put secret %s in some environments %s: %s", e.secretName, env, err.Error()))
+	for _, env := range envs {
+		out = append(out, fmt.Sprintf("put secret %s in environment %s: %s", e.secretName, env, e.errorsForEnvironments[env].Error()))
 	}
 	return strings.Join(out, "\n")
 }
@@ -378,7 +461,7 @@ func (e *errSecretFailedInSomeEnvironments) name() string {
 
 func (e *errBatchPutSecretsFailed) Error() string {
 	out := []string{
-		"Batch put secrets failed for some secrets:",
+		"batch put secrets:",
 	}
 	sort.SliceStable(e.errors, func(i, j int) bool {
 		return e.errors[i].name() < e.errors[j].name()
@@ -397,13 +480,19 @@ func (o *secretInitOpts) targetEnv(envName string) (*config.Environment, error) 
 	return env, nil
 }
 
-// BuildSecretInitCmd build the command for creating a new secret or updating an existing one.
-func BuildSecretInitCmd() *cobra.Command {
+// buildSecretInitCmd build the command for creating a new secret or updating an existing one.
+func buildSecretInitCmd() *cobra.Command {
 	vars := secretInitVars{}
 	cmd := &cobra.Command{
-		Use:     "secret init",
-		Short:   "Create or update an SSM SecureString parameter.",
-		Example: ``, // TODO
+		Use:   "init",
+		Short: "Create or update secrets in SSM Parameter Store.",
+		Example: `
+Create a secret with prompts. 
+/code $ copilot secret init
+Create a secret named db-password in multiple environments.
+/code $ copilot secret init --name db-password
+Create secrets from input.yml. For the format of the YAML file, please see https://aws.github.io/copilot-cli/docs/commands/secret-init/.
+/code $ copilot secret init --cli-input-yaml input.yml`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newSecretInitOpts(vars)
 			if err != nil {
@@ -424,16 +513,17 @@ func BuildSecretInitCmd() *cobra.Command {
 				return err
 			}
 
-			opts.RecommendedActions()
+			if err := opts.RecommendedActions(); err != nil {
+				return err
+			}
 			return nil
 		}),
 	}
 
-	cmd.Flags().StringVar(&vars.appName, appFlag, tryReadingAppName(), appFlagDescription)
-	cmd.Flags().StringVar(&vars.name, nameFlag, "", secretNameFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", secretNameFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.values, valuesFlag, nil, secretValuesFlagDescription)
 	cmd.Flags().BoolVar(&vars.overwrite, overwriteFlag, false, secretOverwriteFlagDescription)
 	cmd.Flags().StringVar(&vars.inputFilePath, inputFilePathFlag, "", secretInputFilePathFlagDescription)
-	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	return cmd
 }

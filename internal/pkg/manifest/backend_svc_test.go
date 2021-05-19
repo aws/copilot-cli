@@ -34,7 +34,7 @@ func TestNewBackendSvc(t *testing.T) {
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: imageWithPortAndHealthcheck{
-						ServiceImageWithPort: ServiceImageWithPort{
+						ImageWithPort: ImageWithPort{
 							Image: Image{
 								Build: BuildArgsOrString{
 									BuildArgs: DockerBuildArgs{
@@ -80,7 +80,7 @@ func TestNewBackendSvc(t *testing.T) {
 				},
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: imageWithPortAndHealthcheck{
-						ServiceImageWithPort: ServiceImageWithPort{
+						ImageWithPort: ImageWithPort{
 							Image: Image{
 								Location: aws.String("mockImage"),
 							},
@@ -189,7 +189,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		},
 		BackendServiceConfig: BackendServiceConfig{
 			ImageConfig: imageWithPortAndHealthcheck{
-				ServiceImageWithPort: ServiceImageWithPort{
+				ImageWithPort: ImageWithPort{
 					Image: Image{
 						Build: BuildArgsOrString{
 							BuildArgs: DockerBuildArgs{
@@ -219,7 +219,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 	mockBackendServiceWithNilEnvironment := BackendService{
 		BackendServiceConfig: BackendServiceConfig{
 			ImageConfig: imageWithPortAndHealthcheck{
-				ServiceImageWithPort: ServiceImageWithPort{
+				ImageWithPort: ImageWithPort{
 					Port: aws.Uint16(80),
 				},
 			},
@@ -231,7 +231,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 	mockBackendServiceWithMinimalOverride := BackendService{
 		BackendServiceConfig: BackendServiceConfig{
 			ImageConfig: imageWithPortAndHealthcheck{
-				ServiceImageWithPort: ServiceImageWithPort{
+				ImageWithPort: ImageWithPort{
 					Port: aws.Uint16(80),
 				},
 			},
@@ -239,7 +239,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		Environments: map[string]*BackendServiceConfig{
 			"test": {
 				ImageConfig: imageWithPortAndHealthcheck{
-					ServiceImageWithPort: ServiceImageWithPort{
+					ImageWithPort: ImageWithPort{
 						Port: aws.Uint16(5000),
 					},
 				},
@@ -249,7 +249,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 	mockBackendServiceWithAllOverride := BackendService{
 		BackendServiceConfig: BackendServiceConfig{
 			ImageConfig: imageWithPortAndHealthcheck{
-				ServiceImageWithPort: ServiceImageWithPort{
+				ImageWithPort: ImageWithPort{
 					Port: aws.Uint16(80),
 					Image: Image{
 						DockerLabels: map[string]string{
@@ -282,7 +282,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		Environments: map[string]*BackendServiceConfig{
 			"test": {
 				ImageConfig: imageWithPortAndHealthcheck{
-					ServiceImageWithPort: ServiceImageWithPort{
+					ImageWithPort: ImageWithPort{
 						Image: Image{
 							DockerLabels: map[string]string{
 								"com.amazonaws.ecs.copilot.description": "Overridden!",
@@ -343,7 +343,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			wanted: &BackendService{
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: imageWithPortAndHealthcheck{
-						ServiceImageWithPort: ServiceImageWithPort{
+						ImageWithPort: ImageWithPort{
 							Port: aws.Uint16(5000),
 						},
 					},
@@ -358,7 +358,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			wanted: &BackendService{
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: imageWithPortAndHealthcheck{
-						ServiceImageWithPort: ServiceImageWithPort{
+						ImageWithPort: ImageWithPort{
 							Port: aws.Uint16(80),
 							Image: Image{
 								DockerLabels: map[string]string{

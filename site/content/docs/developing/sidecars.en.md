@@ -8,6 +8,9 @@ If you have defined an EFS volume for your main container through the [`storage`
 ## How to add sidecars with Copilot?
 There are two ways of adding sidecars using the Copilot manifest: by specifying [general sidecars](#general-sidecars) or by using [sidecar patterns](#sidecar-patterns).
 
+!!! Attention
+  Sidecars are not supported for Request-Driven Web Services
+
 ### General sidecars
 You'll need to provide the URL for the sidecar image. Optionally, you can specify the port you'd like to expose and the credential parameter for [private registry](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html).
 
