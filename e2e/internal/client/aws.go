@@ -23,7 +23,8 @@ type VPCStackOutput struct {
 	ExportName  string
 }
 
-type DBClusterSnapshot struct {
+// dbClusterSnapshot represents part of the response to `aws rds describe-db-cluster-snapshots`
+type dbClusterSnapshot struct {
 	Identifier string `json:"DBClusterSnapshotIdentifier"`
 	Cluster    string `json:"DBClusterIdentifier"`
 }
@@ -186,6 +187,7 @@ func (a *AWS) GetFileSystemSize() (int, error) {
 	return strconv.Atoi(strings.TrimSpace(b.String()))
 }
 
+// DeleteAllDBClusterSnapshots removes all "manual" RDS cluster snapshots to avoid running into snapshot limits.
 func (a *AWS) DeleteAllDBClusterSnapshots() error {
 	command := strings.Join([]string{
 		"rds",
@@ -197,7 +199,7 @@ func (a *AWS) DeleteAllDBClusterSnapshots() error {
 		return err
 	}
 	var snapshotResponse struct {
-		Snapshots []DBClusterSnapshot `json:"DBClusterSnapshots"`
+		Snapshots []dbClusterSnapshot `json:"DBClusterSnapshots"`
 	}
 	if err = json.Unmarshal(b.Bytes(), &snapshotResponse); err != nil {
 		return err
