@@ -77,7 +77,7 @@ The YAML file should be formatted as follows:
   <env 2>: <the value of secret B in env 2>
 ```
 
-Here is an example input file that creates secrets `db_host` and `db_password` in `dev`, `test` and `prod`, and `notification_email` in `dev` and `test` environments. Note that `notificaition-email` won't be created for `prod` environment since it doesn't have a value for `prod`.
+Here is an example input file that creates secrets `db_host` and `db_password` in `dev`, `test` and `prod`, and `notification_email` in `dev` and `test` environments. Note that `notification_email` won't be created for the `prod` environment since it doesn't have a value for `prod`.
 ```yaml
 db_host:
   dev: dev.db.host.com
