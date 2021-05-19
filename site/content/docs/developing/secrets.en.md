@@ -4,7 +4,7 @@ Secrets are sensitive bits of information like OAuth tokens, secret keys or API 
 
 ## How do I add Secrets?
 
-Adding secrets currently requires you to store your secret as a secure string in [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) (SSM), then add a reference to the SSM parameter to your [manifest](../manifest/overview.en.md). 
+Adding secrets currently requires you to store your secret as a SecureString in [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) (SSM), then add a reference to the SSM parameter to your [manifest](../manifest/overview.en.md). 
 
 You can easily create secrets using [`copilot secret init`](https://aws.github.io/copilot-cli/docs/commands/secret-init/)! After creating the secrets, Copilot will tell you what your secrets' names are. You can then use the name to add the reference in your manifest. 
 
@@ -15,7 +15,7 @@ If you want to bring your own secrets, be sure to add two tags to your secrets -
 
 Copilot requires the `copilot-application` and `copilot-environment` tags to limit access to this secret.  
 
-Suppose you have a (properly tagged!) SSM parameter named `GH_WEBHOOK_SECRET` with value `secretvalue1234`, you can modify your manifest file to pass in this value:
+Suppose you have a (properly tagged!) SSM parameter named `GH_WEBHOOK_SECRET` with value `secretvalue1234`. You can modify your manifest file to pass in this value:
 
 ```yaml
 secrets:                      
