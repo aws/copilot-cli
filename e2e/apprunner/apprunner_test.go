@@ -65,12 +65,12 @@ var _ = Describe("App Runner", func() {
 
 	Context("run svc status to ensure that the service is healthy", func() {
 		var (
-			svcStatus      *client.SvcStatusOutput
+			out            *client.SvcStatusOutput
 			svcStatusError error
 		)
 
 		BeforeAll(func() {
-			svcStatus, svcStatusError = cli.SvcStatus(&client.SvcStatusRequest{
+			out, svcStatusError = cli.SvcStatus(&client.SvcStatusRequest{
 				Name:    svcName,
 				AppName: appName,
 				EnvName: envName,
@@ -82,7 +82,7 @@ var _ = Describe("App Runner", func() {
 		})
 
 		It("should return app runner service status", func() {
-			Expect(svcStatus.Service.Status).To(Equal("RUNNING"))
+			Expect(out.Status).To(Equal("RUNNING"))
 		})
 	})
 
@@ -258,11 +258,11 @@ var _ = Describe("App Runner", func() {
 		})
 
 		It("should successfully pause service", func() {
-			Expect(pausedSvcStatus.Service.Status).To(Equal("PAUSED"))
+			Expect(pausedSvcStatus.Status).To(Equal("PAUSED"))
 		})
 
 		It("should successfully resume service", func() {
-			Expect(resumedSvcStatus.Service.Status).To(Equal("RUNNING"))
+			Expect(resumedSvcStatus.Status).To(Equal("RUNNING"))
 		})
 	})
 

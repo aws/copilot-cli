@@ -11,6 +11,7 @@ import (
 
 // SvcStatusOutput is the JSON output of the svc status.
 type SvcStatusOutput struct {
+	Status    string `json:"status"`
 	Service   SvcStatusServiceInfo
 	Tasks     []SvcStatusTaskInfo  `json:"tasks"`
 	Alarms    []SvcStatusAlarmInfo `json:"alarms"`
