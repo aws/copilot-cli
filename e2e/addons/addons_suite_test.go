@@ -14,6 +14,7 @@ import (
 )
 
 var cli *client.CLI
+var aws *client.AWS
 var (
 	appName string
 	svcName string
@@ -38,6 +39,9 @@ var _ = BeforeSuite(func() {
 	cli = ecsCli
 	Expect(err).NotTo(HaveOccurred())
 
+	awsCli := client.NewAWS()
+	aws = awsCli
+
 	appName = fmt.Sprintf("e2e-addons-%d", time.Now().Unix())
 	svcName = "hello"
 
@@ -52,6 +56,8 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	_, err := cli.AppDelete()
+	Expect(err).NotTo(HaveOccurred())
+	err = aws.DeleteAllDBClusterSnapshots()
 	Expect(err).NotTo(HaveOccurred())
 })
 
