@@ -22,10 +22,9 @@ secrets:
   GITHUB_WEBHOOK_SECRET: GH_WEBHOOK_SECRET  
 ```
 
-Once you deploy this update in manifest, your service or job will be able to access the environment variable `GITHUB_WEBHOOK_SECRET`, which will have the value of the SSM parameter `GH_WEBHOOK_SECRET`, `secretvalue1234`.
+Once you deploy this updated manifest, your service or job will be able to access the environment variable `GITHUB_WEBHOOK_SECRET`, which will have the value of the SSM parameter `GH_WEBHOOK_SECRET`, `secretvalue1234`.
 
 This works because ECS Agent will resolve the SSM parameter when it starts up your task, and set the environment variable for you.
 
 !!! attention
     Secrets are not supported for Request-Driven Web Services.
-

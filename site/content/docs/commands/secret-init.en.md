@@ -39,7 +39,7 @@ $ copilot secret init --cli-input-yaml input.yml
 ```
 
 !!!info
-    It is recommended that you specify your secret's values through our prompts (e.g. by running `copilot secret init --name`) or from an input file by using the `--cli-input-yaml` flag. While the `--values` flag is a convenient way to specify secret values, your input may appear in your shell history as plaintext, which may not be ideal from the security's standpoint. 
+    It is recommended that you specify your secret's values through our prompts (e.g. by running `copilot secret init --name`) or from an input file by using the `--cli-input-yaml` flag. While the `--values` flag is a convenient way to specify secret values, your input may appear in your shell history as plaintext.
 
 ## What's next?
 
