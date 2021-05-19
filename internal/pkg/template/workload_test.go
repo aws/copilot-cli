@@ -163,13 +163,6 @@ func TestTemplate_ParseNetwork(t *testing.T) {
   AwsvpcConfiguration:
     AssignPublicIp: ENABLED
     Subnets:
-    - Fn::Select:
-      - 0
-      - Fn::Split:
-        - ','
-        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
-    - Fn::Select:
-      - 1
       - Fn::Split:
         - ','
         - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
@@ -186,13 +179,6 @@ func TestTemplate_ParseNetwork(t *testing.T) {
   AwsvpcConfiguration:
     AssignPublicIp: DISABLED
     Subnets:
-    - Fn::Select:
-      - 0
-      - Fn::Split:
-        - ','
-        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
-    - Fn::Select:
-      - 1
       - Fn::Split:
         - ','
         - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
@@ -213,13 +199,6 @@ func TestTemplate_ParseNetwork(t *testing.T) {
   AwsvpcConfiguration:
     AssignPublicIp: DISABLED
     Subnets:
-    - Fn::Select:
-      - 0
-      - Fn::Split:
-        - ','
-        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
-    - Fn::Select:
-      - 1
       - Fn::Split:
         - ','
         - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'

@@ -461,10 +461,13 @@ https://aws.amazon.com/premiumsupport/knowledge-center/ecs-pull-container-api-er
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
 				log.Errorf(`No existing public subnets were found in VPC %s. You can either:
-- Create new public subnets and then import them.
-- Use the default Copilot environment configuration.`, o.importVPC.ID)
+- %s to interrupt, create new public subnets, then rerun %s and import them.
+- %s to interrupt, then rerun %s and use the default Copilot environment configuration.
+- Proceed without public subnets, knowing that deploying a load-balanced web service in this environment will fail because Load Balancers require at least two public subnets in different Availability Zones.
+`, o.importVPC.ID, color.HighlightUserInput("ctrl-c"), color.HighlightCode("copilot env init"), color.HighlightUserInput("ctrl-c"), color.HighlightCode("copilot env init"))
+			} else {
+				return fmt.Errorf("select public subnets: %w", err)
 			}
-			return fmt.Errorf("select public subnets: %w", err)
 		}
 		o.importVPC.PublicSubnetIDs = publicSubnets
 	}
@@ -472,11 +475,14 @@ https://aws.amazon.com/premiumsupport/knowledge-center/ecs-pull-container-api-er
 		privateSubnets, err := o.selVPC.PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", o.importVPC.ID)
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
-				log.Errorf(`No existing private subnets were found in VPC %s. You can either:
-- Create new private subnets and then import them.
-- Use the default Copilot environment configuration.`, o.importVPC.ID)
+				log.Infof(`No existing private subnets were found in VPC %s. You can either:
+- %s to interrupt, create new private subnets, then rerun %s and import them.
+- %s to interrupt, then rerun %s using the default Copilot environment configuration.
+- Proceed without private subnets.
+`, o.importVPC.ID, color.HighlightUserInput("ctrl-c"), color.HighlightCode("copilot env init"), color.HighlightUserInput("ctrl-c"), color.HighlightCode("copilot env init"))
+			} else {
+				return fmt.Errorf("select private subnets: %w", err)
 			}
-			return fmt.Errorf("select private subnets: %w", err)
 		}
 		o.importVPC.PrivateSubnetIDs = privateSubnets
 	}
