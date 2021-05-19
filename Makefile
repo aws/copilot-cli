@@ -138,7 +138,7 @@ tools:
 .PHONY: site-local
 site-local:
 	docker build . -f Dockerfile.site -t site:latest
-	docker run -p 8000:8000 -it site:latest
+	docker run -p 8000:8000 -v `pwd`/site:/website/site -it site:latest
 
 .PHONY: gen-mocks
 gen-mocks: tools
