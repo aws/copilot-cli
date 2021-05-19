@@ -6,33 +6,24 @@ Secrets are sensitive bits of information like OAuth tokens, secret keys or API 
 
 Adding secrets currently requires you to store your secret as a secure string in [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) (SSM), then add a reference to the SSM parameter to your [manifest](../manifest/overview.en.md). 
 
-We'll walk through an example where we want to store a secret called `GH_WEBHOOK_SECRET` with the value `secretvalue1234`. 
+You can easily create secrets using [`copilot secret init`](https://aws.github.io/copilot-cli/docs/commands/secret-init/)! After creating the secrets, Copilot will tell you what your secrets' names are. You can then use the name to add the reference in your manifest. 
 
-First, store the secret in SSM like so:
+### Alternatively...
 
-```sh
-aws ssm put-parameter --name GH_WEBHOOK_SECRET --value secretvalue1234 --type SecureString\
-  --tags Key=copilot-environment,Value=${ENVIRONMENT_NAME} Key=copilot-application,Value=${APP_NAME}
-```
+If you want to bring your own secrets, be sure to add two tags to your secrets - `copilot-application: <application from which you want to access the secret>` and 
+`copilot-environment: <environment from which you want to access the secret>.`
 
-This will store the value `secretvalue1234` into the SSM parameter `GH_WEBHOOK_SECRET` as a secret. 
+Copilot requires the `copilot-application` and `copilot-environment` tags to limit access to this secret.  
 
-!!! attention
-    Copilot requires the `copilot-application` and `copilot-environment` tags to limit access to this secret.  
-    It's important to replace the `${ENVIRONMENT_NAME}` and `${APP_NAME}` with the Copilot application and environment you want to have access to this secret.
-
-
-Next, we'll modify our manifest file to pass in this value:
+Suppose you have a (properly tagged!) SSM parameter named `GH_WEBHOOK_SECRET` with value `secretvalue1234`, you can modify your manifest file to pass in this value:
 
 ```yaml
 secrets:                      
   GITHUB_WEBHOOK_SECRET: GH_WEBHOOK_SECRET  
 ```
 
-Once we deploy this update to our manifest, we'll be able to access the environment variable `GITHUB_WEBHOOK_SECRET` which will have the value of the SSM parameter `GH_WEBHOOK_SECRET`, `secretvalue1234`.
+Once you deploy this update in manifest, your service or job will be able to access the environment variable `GITHUB_WEBHOOK_SECRET`, which will have the value of the SSM parameter `GH_WEBHOOK_SECRET`, `secretvalue1234`.
 
-This works because ECS Agent will resolve the SSM parameter when it starts up your task, and set the environment variable for you. 
+This works because ECS Agent will resolve the SSM parameter when it starts up your task, and set the environment variable for you.
 
-!!! info
-    **We're going to make this easier!** There are a couple of caveats - you have to store the secret in the same environment as your application.  
-    Some of our next work is to add a `secrets` command that lets you add a secret without having to worry about which environment you're in, or how SSM works.
+
