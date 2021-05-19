@@ -80,9 +80,10 @@ type AppRunnerStatusDescriber struct {
 
 // ecsServiceStatus contains the status for an ECS service.
 type ecsServiceStatus struct {
-	Service awsECS.ServiceStatus
-	Tasks   []awsECS.TaskStatus      `json:"tasks"`
-	Alarms  []cloudwatch.AlarmStatus `json:"alarms"`
+	Service      awsECS.ServiceStatus
+	Tasks        []awsECS.TaskStatus      `json:"tasks"`
+	Alarms       []cloudwatch.AlarmStatus `json:"alarms"`
+	StoppedTasks []awsECS.TaskStatus      `json:"stoppedTasks"`
 }
 
 // apprunnerServiceStatus contains the status for an AppRunner service.
@@ -175,10 +176,21 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 		return nil, err
 	}
 	alarms = append(alarms, autoscalingAlarms...)
+
+	var stoppedTaskStatus []awsECS.TaskStatus
+	for _, task := range svcDesc.StoppedTasks {
+		status, err := task.TaskStatus()
+		if err != nil {
+			return nil, fmt.Errorf("get status for stopped task %s: %w", *task.TaskArn, err)
+		}
+		stoppedTaskStatus = append(stoppedTaskStatus, *status)
+	}
+
 	return &ecsServiceStatus{
-		Service: service.ServiceStatus(),
-		Tasks:   taskStatus,
-		Alarms:  alarms,
+		Service:      service.ServiceStatus(),
+		Tasks:        taskStatus,
+		Alarms:       alarms,
+		StoppedTasks: stoppedTaskStatus,
 	}, nil
 }
 
@@ -270,11 +282,19 @@ func (s *ecsServiceStatus) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Task Definition", s.Service.TaskDefinition)
 	fmt.Fprint(writer, color.Bold.Sprint("\nTask Status\n\n"))
 	writer.Flush()
-	headers := []string{"ID", "Image Digest", "Last Status", "Started At", "Stopped At", "Capacity Provider", "Health Status"}
+	headers := []string{"ID", "Image Digest", "Last Status", "Started At", "Capacity Provider", "Health Status"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, task := range s.Tasks {
 		fmt.Fprint(writer, task.HumanString())
+	}
+	fmt.Fprint(writer, color.Bold.Sprint("\nStopped Tasks\n\n"))
+	writer.Flush()
+	headers = []string{"ID", "Image Digest", "Last Status", "Started At", "Stopped At", "Stopped Reason"}
+	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
+	for _, task := range s.StoppedTasks {
+		fmt.Fprint(writer, (awsECS.StoppedTaskStatus)(task).HumanString())
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nAlarms\n\n"))
 	writer.Flush()
