@@ -69,7 +69,7 @@ Resources:
               - dynamodb:Query
               - dynamodb:Scan
             Effect: Allow
-            Resource: !Sub ${ ddb.Arn}/Index/*
+            Resource: !Sub ${ ddb.Arn}/index/*
 
 Outputs:
   ddbName:
