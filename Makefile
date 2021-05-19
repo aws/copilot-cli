@@ -135,6 +135,11 @@ tools:
 	@echo "Installing custom resource dependencies" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} && npm ci
 
+.PHONY: site-local
+site-local:
+	docker build . -f Dockerfile.site -t site:latest
+	docker run -p 8000:8000 -v `pwd`/site:/website/site -it site:latest
+
 .PHONY: gen-mocks
 gen-mocks: tools
 	# TODO: make this more extensible?
