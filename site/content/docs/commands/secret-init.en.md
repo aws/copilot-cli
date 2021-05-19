@@ -18,10 +18,10 @@ A secret can have different values in each of your existing environments, and is
                                 Mutually exclusive with the -n, --name and --values flags.
   -h, --help                    help for init
   -n, --name string             The name of the secret.
-                                Mutually exclusive with --cli-input-yaml flag.
+                                Mutually exclusive with the --cli-input-yaml flag.
       --overwrite               Optional. Whether to overwrite an existing secret.
       --values stringToString   Values of the secret in each environment. Specified as <environment>=<value> separated by commas.
-                                Mutually exclusive with --cli-input-yaml flag. (default [])
+                                Mutually exclusive with the --cli-input-yaml flag. (default [])
 ```
 ## How can I use it?
 Create a secret with prompts. You will be prompted for the name of the secret, and its values in each of your existing environments.

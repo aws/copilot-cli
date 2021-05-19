@@ -158,9 +158,9 @@ Cannot be specified with '%s', '%s' or '%s'.`, taskDefaultFlag, subnetsFlag, sec
 Cannot be specified with '%s', '%s' or '%s'.`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
 
 	secretNameFlagDescription = fmt.Sprintf(`The name of the secret.
-Mutually exclusive with --%s flag.`, inputFilePathFlag)
+Mutually exclusive with the --%s flag.`, inputFilePathFlag)
 	secretValuesFlagDescription = fmt.Sprintf(`Values of the secret in each environment. Specified as <environment>=<value> separated by commas.
-Mutually exclusive with --%s flag.`, inputFilePathFlag)
+Mutually exclusive with the --%s flag.`, inputFilePathFlag)
 	secretInputFilePathFlagDescription = fmt.Sprintf(`Optional. A YAML file in which the secret values are specified.
 Mutually exclusive with the -%s ,--%s and --%s flags.`, nameFlagShort, nameFlag, valuesFlag)
 )
