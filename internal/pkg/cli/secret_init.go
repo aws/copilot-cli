@@ -491,7 +491,7 @@ Create a secret with prompts.
 /code $ copilot secret init
 Create a secret named db-password in multiple environments.
 /code $ copilot secret init --name db-password
-Create secrets from input.yml. For the format of the yaml file please see https://aws.github.io/copilot-cli/docs/commands/secret-init/.
+Create secrets from input.yml. For the format of the YAML file, please see https://aws.github.io/copilot-cli/docs/commands/secret-init/.
 /code $ copilot secret init --cli-input-yaml input.yml`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newSecretInitOpts(vars)

@@ -33,7 +33,7 @@ Create a secret named `db_password` in multiple environments. You will be prompt
 ```
 $ copilot secret init --name db_password
 ```
-Create secrets from `input.yml`. For the format of the YAML file please see <a href="#secret-init-cli-input-yaml">below</a>.
+Create secrets from `input.yml`. For the format of the YAML file, please see <a href="#secret-init-cli-input-yaml">below</a>.
 ```
 $ copilot secret init --cli-input-yaml input.yml
 ```
