@@ -37,7 +37,8 @@ Mappings:
       {{- else}}
       "DBMinCapacity": 2 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
       "DBMaxCapacity": 8 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
-      {{end -}}
+      {{end}}
+
 Resources:
   {{logicalIDSafe .ClusterName}}DBSubnetGroup:
     Type: 'AWS::RDS::DBSubnetGroup'
@@ -142,9 +143,7 @@ Resources:
         - !Ref {{logicalIDSafe .ClusterName}}DBClusterSecurityGroup
       ScalingConfiguration:
         AutoPause: true
-        # Replace MinCapacity or MaxCapacity below with 
-        # `MinCapacity: !FindInMap [{{logicalIDSafe .ClusterName}}EnvScalingConfigurationMap, !Ref Env, DBMinCapacity]`
-        # to set different autoscaling properties by environment.
+        # Replace "All" below with "!Ref Env" to set different autoscaling limits per environment.
         MinCapacity: !FindInMap [{{logicalIDSafe .ClusterName}}EnvScalingConfigurationMap, All, DBMinCapacity]
         MaxCapacity: !FindInMap [{{logicalIDSafe .ClusterName}}EnvScalingConfigurationMap, All, DBMaxCapacity]
         SecondsUntilAutoPause: !Ref {{logicalIDSafe .ClusterName}}DBAutoPauseSeconds
