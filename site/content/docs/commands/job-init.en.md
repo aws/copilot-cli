@@ -16,12 +16,12 @@ After that, if you already have an environment set up, you can run `copilot job 
 ```bash
   -a, --app string          Name of the application.
   -d, --dockerfile string   Path to the Dockerfile.
-                            Mutually exclusive with -i, --image
+                            Mutually exclusive with -i, --image.
   -h, --help                help for init
   -i, --image string        The location of an existing Docker image.
-                            Mutually exclusive with -d, --dockerfile
+                            Mutually exclusive with -d, --dockerfile.
   -t, --job-type string     Type of job to create. Must be one of:
-                            "Scheduled Job"
+                            "Scheduled Job".
   -n, --name string         Name of the job.
       --retries int         Optional. The number of times to try restarting the job on a failure.
   -s, --schedule string     The schedule on which to run this job. 

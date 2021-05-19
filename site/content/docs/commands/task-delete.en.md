@@ -13,7 +13,7 @@ $ copilot task delete
 ```
   -a, --app string    Name of the application.
       --default       Optional. Delete a task which was launched in the default cluster and subnets.
-                      Cannot be specified with 'app' or 'env'
+                      Cannot be specified with 'app' or 'env'.
   -e, --env string    Name of the environment.
   -h, --help          help for delete
   -n, --name string   Name of the service.
