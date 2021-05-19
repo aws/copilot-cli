@@ -451,7 +451,8 @@ func (cli *CLI) SvcPause(opts *SvcPauseRequest) (string, error) {
 		exec.Command(cli.path, "svc", "pause",
 			"--app", opts.AppName,
 			"--name", opts.Name,
-			"--env", opts.EnvName))
+			"--env", opts.EnvName,
+			"--yes"))
 }
 
 /*SvcResume runs:

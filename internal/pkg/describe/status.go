@@ -231,6 +231,7 @@ func (s *ecsServiceStatus) JSONString() (string, error) {
 func (a *apprunnerServiceStatus) JSONString() (string, error) {
 	data := struct {
 		ARN       string    `json:"arn"`
+		Status    string    `json:"status"`
 		CreatedAt time.Time `json:"createdAt"`
 		UpdatedAt time.Time `json:"updatedAt"`
 		Source    struct {
@@ -238,6 +239,7 @@ func (a *apprunnerServiceStatus) JSONString() (string, error) {
 		} `json:"source"`
 	}{
 		ARN:       a.Service.ServiceARN,
+		Status:    a.Service.Status,
 		CreatedAt: a.Service.DateCreated,
 		UpdatedAt: a.Service.DateUpdated,
 		Source: struct {
