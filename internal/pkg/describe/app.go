@@ -118,7 +118,7 @@ func (d *AppDescriber) Version() (string, error) {
 		return "", err
 	}
 	if err := yaml.Unmarshal([]byte(appStackMetadata), &stackMetadata); err != nil {
-		return "", fmt.Errorf("unmarshal Metadata property for app stack %s: %w", cfnstack.NameForAppStack(d.app), err)
+		return "", fmt.Errorf("unmarshal Metadata property from app %s stack: %w", d.app, err)
 	}
 	appStackVersion := stackMetadata.TemplateVersion
 	if appStackVersion == "" {
@@ -130,7 +130,7 @@ func (d *AppDescriber) Version() (string, error) {
 		return "", err
 	}
 	if err := yaml.Unmarshal([]byte(appStackSetMetadata), &stackSetMetadata); err != nil {
-		return "", fmt.Errorf("unmarshal Metadata property for app stack set %s: %w", cfnstack.NameForAppStackSet(d.app), err)
+		return "", fmt.Errorf("unmarshal Metadata property for app %s stack set: %w", d.app, err)
 	}
 	appStackSetVersion := stackSetMetadata.TemplateVersion
 	if appStackSetVersion == "" {

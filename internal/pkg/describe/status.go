@@ -62,10 +62,10 @@ type ECSStatusDescriber struct {
 	env string
 	svc string
 
-	ecsSvcDescriber serviceDescriber
-	ecsSvcGetter    ecsServiceGetter
-	cwSvcGetter     alarmStatusGetter
-	aasSvcGetter    autoscalingAlarmNamesGetter
+	svcDescriber serviceDescriber
+	ecsSvcGetter ecsServiceGetter
+	cwSvcGetter  alarmStatusGetter
+	aasSvcGetter autoscalingAlarmNamesGetter
 }
 
 // AppRunnerStatusDescriber retrieves status of an AppRunner service.
@@ -74,8 +74,8 @@ type AppRunnerStatusDescriber struct {
 	env string
 	svc string
 
-	ecsSvcDescriber apprunnerServiceDescriber
-	eventsGetter    logGetter
+	svcDescriber apprunnerServiceDescriber
+	eventsGetter logGetter
 }
 
 // ecsServiceStatus contains the status for an ECS service.
@@ -110,13 +110,13 @@ func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, er
 		return nil, fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 	}
 	return &ECSStatusDescriber{
-		app:             opt.App,
-		env:             opt.Env,
-		svc:             opt.Svc,
-		ecsSvcDescriber: ecs.New(sess),
-		cwSvcGetter:     cloudwatch.New(sess),
-		ecsSvcGetter:    awsECS.New(sess),
-		aasSvcGetter:    aas.New(sess),
+		app:          opt.App,
+		env:          opt.Env,
+		svc:          opt.Svc,
+		svcDescriber: ecs.New(sess),
+		cwSvcGetter:  cloudwatch.New(sess),
+		ecsSvcGetter: awsECS.New(sess),
+		aasSvcGetter: aas.New(sess),
 	}, nil
 }
 
@@ -134,17 +134,17 @@ func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*AppRunnerStatusD
 	}
 
 	return &AppRunnerStatusDescriber{
-		app:             opt.App,
-		env:             opt.Env,
-		svc:             opt.Svc,
-		ecsSvcDescriber: ecsSvcDescriber,
-		eventsGetter:    cloudwatchlogs.New(ecsSvcDescriber.sess),
+		app:          opt.App,
+		env:          opt.Env,
+		svc:          opt.Svc,
+		svcDescriber: ecsSvcDescriber,
+		eventsGetter: cloudwatchlogs.New(ecsSvcDescriber.sess),
 	}, nil
 }
 
 // Describe returns status of an ECS service.
 func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
-	svcDesc, err := s.ecsSvcDescriber.DescribeService(s.app, s.env, s.svc)
+	svcDesc, err := s.svcDescriber.DescribeService(s.app, s.env, s.svc)
 	if err != nil {
 		return nil, fmt.Errorf("get ECS service description for %s: %w", s.svc, err)
 	}
@@ -184,7 +184,7 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 
 // Describe returns status of an AppRunner service.
 func (a *AppRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
-	svc, err := a.ecsSvcDescriber.Service()
+	svc, err := a.svcDescriber.Service()
 	if err != nil {
 		return nil, fmt.Errorf("get AppRunner service description for App Runner service %s in environment %s: %w", a.svc, a.env, err)
 	}

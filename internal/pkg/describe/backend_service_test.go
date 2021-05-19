@@ -293,7 +293,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				svc:             testSvc,
 				enableResources: tc.shouldOutputResources,
 				store:           mockStore,
-				ecsSvcDescriber: map[string]ecsSvcDescriber{
+				svcDescriber: map[string]ecsSvcDescriber{
 					"test":    mockSvcDescriber,
 					"prod":    mockSvcDescriber,
 					"mockEnv": mockSvcDescriber,

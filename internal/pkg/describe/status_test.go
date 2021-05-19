@@ -265,13 +265,13 @@ func TestServiceStatus_Describe(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			svcStatus := &ECSStatusDescriber{
-				svc:             "mockSvc",
-				env:             "mockEnv",
-				app:             "mockApp",
-				cwSvcGetter:     mockcwSvc,
-				ecsSvcGetter:    mockecsSvc,
-				ecsSvcDescriber: mockSvcDescriber,
-				aasSvcGetter:    mockaasClient,
+				svc:          "mockSvc",
+				env:          "mockEnv",
+				app:          "mockApp",
+				cwSvcGetter:  mockcwSvc,
+				ecsSvcGetter: mockecsSvc,
+				svcDescriber: mockSvcDescriber,
+				aasSvcGetter: mockaasClient,
 			}
 
 			// WHEN
@@ -507,11 +507,11 @@ func TestAppRunnerStatusDescriber_Describe(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			svcStatus := &AppRunnerStatusDescriber{
-				app:             appName,
-				env:             envName,
-				svc:             svcName,
-				ecsSvcDescriber: mockSvcDesc,
-				eventsGetter:    mockLogsSvc,
+				app:          appName,
+				env:          envName,
+				svc:          svcName,
+				svcDescriber: mockSvcDesc,
+				eventsGetter: mockLogsSvc,
 			}
 
 			statusDesc, err := svcStatus.Describe()

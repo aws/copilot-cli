@@ -186,7 +186,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 			d := &LBWebServiceDescriber{
 				app: testApp,
 				svc: testSvc,
-				ecsSvcDescriber: map[string]ecsSvcDescriber{
+				svcDescriber: map[string]ecsSvcDescriber{
 					"test": mockSvcDescriber,
 				},
 				envDescriber: map[string]envDescriber{
@@ -536,7 +536,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 				svc:             testSvc,
 				enableResources: tc.shouldOutputResources,
 				store:           mockStore,
-				ecsSvcDescriber: map[string]ecsSvcDescriber{
+				svcDescriber: map[string]ecsSvcDescriber{
 					"test": mockSvcDescriber,
 					"prod": mockSvcDescriber,
 				},

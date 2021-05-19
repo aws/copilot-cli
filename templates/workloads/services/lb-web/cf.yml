@@ -45,7 +45,7 @@ Conditions:
     !Equals [!Ref HTTPSEnabled, true]
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
-  IsDefaultRootPath: # If we're using path based routing and use the root path, we have some special logic
+  IsDefaultRootPath:
     !Equals [!Ref RulePath, "/"]
 Resources:
 {{include "loggroup" . | indent 2}}
