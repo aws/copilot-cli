@@ -44,9 +44,9 @@ $ copilot secret init --cli-input-yaml input.yml
 ## What's next?
 
 Copilot will create SSM parameters named `/copilot/<app name>/<env name>/secrets/<secret name>`. 
-Using the parameter names, you can then modify the `secrets` section in your [service's](https://aws.github.io/copilot-cli/docs/manifest/backend-service/#secrets) or [job's](https://aws.github.io/copilot-cli/docs/manifest/scheduled-job/#secrets) manifest to reference the secrets that are just created. 
+Using the parameter names, you can then modify the `secrets` section in your [service's](https://aws.github.io/copilot-cli/docs/manifest/backend-service/#secrets) or [job's](https://aws.github.io/copilot-cli/docs/manifest/scheduled-job/#secrets) manifest to reference the secrets that were created. 
 
-For example, suppose you have an application `my-app`, and you've created a secret `db_host` in `prod` and `dev` environments.
+For example, suppose you have an application `my-app`, and you've created a secret `db_host` in your `prod` and `dev` environments.
 You can modify your service's manifest as follows:
 ```yaml
 environments:
@@ -64,7 +64,7 @@ It will have the value of the SSM parameter `/copilot/my-app/prod/secrets/db_pas
 This works because ECS Agent will resolve the SSM parameter when it starts up your task, and set the environment variable for you.
 
 ## <span id="secret-init-cli-input-yaml">How do I use the `--cli-input-yaml` flag?</span>
-You can specify multiple secrets, and their values in each of your existing environments in a file. Then you can use the file as the input to `--cli-input-yaml` flag. Copilot will read from the file and create or update the secrets accordingly.
+You can specify multiple secrets and their values in each of your existing environments in a file. Then you can use the file as the input to `--cli-input-yaml` flag. Copilot will read from the file and create or update the secrets accordingly.
 
 The YAML file should be formatted as follows:
 ```yaml
@@ -77,7 +77,7 @@ The YAML file should be formatted as follows:
   <env 2>: <the value of secret B in env 2>
 ```
 
-Here is an example input file that creates secrets `db_host` and `db_password` in `dev`, `test` and `prod`, and `notification_email` in `dev` and `test` environments. Note that `notificaition-email` won't be created for `prod` environment since it doesn't have a value for `prod`.
+Here is an example input file that creates secrets `db_host` and `db_password` in `dev`, `test` and `prod`, and `notification_email` in `dev` and `test` environments. Note that `notification_email` won't be created for the `prod` environment since it doesn't have a value for `prod`.
 ```yaml
 db_host:
   dev: dev.db.host.com
@@ -91,4 +91,3 @@ notification_email:
   dev: dev@email.com
   test: test@email.com
 ```
-
