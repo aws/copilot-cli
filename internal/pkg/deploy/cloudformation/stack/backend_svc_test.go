@@ -228,14 +228,16 @@ Outputs:
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			conf := &BackendService{
-				wkld: &wkld{
-					name: testServiceName,
-					env:  testEnvName,
-					app:  testAppName,
-					rc: RuntimeConfig{
-						Image: &ECRImage{
-							RepoURL:  testImageRepoURL,
-							ImageTag: testImageTag,
+				ecsWkld: &ecsWkld{
+					wkld: &wkld{
+						name: testServiceName,
+						env:  testEnvName,
+						app:  testAppName,
+						rc: RuntimeConfig{
+							Image: &ECRImage{
+								RepoURL:  testImageRepoURL,
+								ImageTag: testImageTag,
+							},
 						},
 					},
 				},
@@ -280,12 +282,14 @@ func TestBackendService_Parameters(t *testing.T) {
 	})
 
 	conf := &BackendService{
-		wkld: &wkld{
-			name: aws.StringValue(testBackendSvcManifest.Name),
-			env:  testEnvName,
-			app:  testAppName,
-			image: manifest.Image{
-				Location: aws.String("mockLocation"),
+		ecsWkld: &ecsWkld{
+			wkld: &wkld{
+				name: aws.StringValue(testBackendSvcManifest.Name),
+				env:  testEnvName,
+				app:  testAppName,
+				image: manifest.Image{
+					Location: aws.String("mockLocation"),
+				},
 			},
 			tc: testBackendSvcManifest.BackendServiceConfig.TaskConfig,
 		},

@@ -70,7 +70,7 @@ type deleteEnvOpts struct {
 	// cached data to avoid fetching the same information multiple times.
 	envConfig *config.Environment
 
-	// initRuntimeClients is overriden in tests.
+	// initRuntimeClients is overridden in tests.
 	initRuntimeClients func(*deleteEnvOpts) error
 }
 

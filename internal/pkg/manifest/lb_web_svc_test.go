@@ -38,7 +38,7 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 					Type: stringP("Load Balanced Web Service"),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ServiceImageWithPort{
+					ImageConfig: ImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
@@ -196,7 +196,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ServiceImageWithPort{
+					ImageConfig: ImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
@@ -244,7 +244,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ServiceImageWithPort{
+					ImageConfig: ImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
@@ -292,7 +292,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ServiceImageWithPort{
+					ImageConfig: ImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
@@ -361,7 +361,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
-						ImageConfig: ServiceImageWithPort{
+						ImageConfig: ImageWithPort{
 							Image: Image{
 								Build: BuildArgsOrString{
 									BuildArgs: DockerBuildArgs{
@@ -432,7 +432,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ServiceImageWithPort{
+					ImageConfig: ImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildArgs: DockerBuildArgs{
@@ -808,7 +808,7 @@ func TestLoadBalancedWebService_BuildRequired(t *testing.T) {
 			// GIVEN
 			manifest := &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ServiceImageWithPort{
+					ImageConfig: ImageWithPort{
 						Image: tc.image,
 					},
 				},

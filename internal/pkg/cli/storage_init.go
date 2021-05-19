@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -272,6 +273,18 @@ func (o *initStorageOpts) Ask() error {
 	if err := o.askStorageType(); err != nil {
 		return err
 	}
+
+	wkld, err := o.store.GetWorkload(o.appName, o.workloadName)
+	if err != nil {
+		return fmt.Errorf("get workload: %w", err)
+	}
+	if wkld.Type == manifest.RequestDrivenWebServiceType && o.storageType == rdsStorageType {
+		log.Warningf(`%s storage is launched in private subnets of your environment's VPC. 
+To reach the database from your %s please enable the HTTP Data API: 
+https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
+`, rdsStorageTypeOption, manifest.RequestDrivenWebServiceType)
+	}
+
 	// Storage name needs to be asked after workload because for Aurora the default storage name uses the workload name.
 	if err := o.askStorageName(); err != nil {
 		return err

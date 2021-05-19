@@ -27,7 +27,7 @@ const (
 	networkInterfaceAttachmentType = "ElasticNetworkInterface"
 )
 
-// humanizeTime is overriden in tests so that its output is constant as time passes.
+// humanizeTime is overridden in tests so that its output is constant as time passes.
 var humanizeTime = humanize.Time
 
 // Image contains very basic info of a container image.

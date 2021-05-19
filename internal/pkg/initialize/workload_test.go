@@ -376,6 +376,61 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 	}
 }
 
+func TestAppInitOpts_createRequestDrivenWebServiceManifest(t *testing.T) {
+	testCases := map[string]struct {
+		inSvcPort        uint16
+		inSvcName        string
+		inDockerfilePath string
+		inImage          string
+		inAppName        string
+
+		wantedErr error
+	}{
+		"creates manifest with dockerfile path": {
+			inAppName:        "app",
+			inSvcName:        "frontend",
+			inSvcPort:        80,
+			inDockerfilePath: "/Dockerfile",
+		},
+		"creates manifest with container image": {
+			inAppName: "app",
+			inSvcName: "frontend",
+			inSvcPort: 80,
+			inImage:   "111111111111.dkr.ecr.us-east-1.amazonaws.com/app/frontend",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			props := ServiceProps{
+				WorkloadProps: WorkloadProps{
+					Name:           tc.inSvcName,
+					App:            tc.inAppName,
+					DockerfilePath: tc.inDockerfilePath,
+					Image:          tc.inImage,
+				},
+				Port: tc.inSvcPort,
+			}
+
+			initter := &WorkloadInitializer{}
+
+			// WHEN
+			manifest := initter.newRequestDrivenWebServiceManifest(&props)
+
+			// THEN
+			require.Equal(t, tc.inSvcName, *manifest.Name)
+			require.Equal(t, tc.inSvcPort, *manifest.ImageConfig.Port)
+			if tc.inImage != "" {
+				require.Equal(t, tc.inImage, *manifest.ImageConfig.Location)
+			}
+			if tc.inDockerfilePath != "" {
+				require.Equal(t, tc.inDockerfilePath, *manifest.ImageConfig.Build.BuildArgs.Dockerfile)
+			}
+		})
+	}
+}
+
 func TestWorkloadInitializer_Service(t *testing.T) {
 
 	var (

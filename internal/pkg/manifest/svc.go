@@ -17,12 +17,15 @@ import (
 const (
 	// LoadBalancedWebServiceType is a web service with a load balancer and Fargate as compute.
 	LoadBalancedWebServiceType = "Load Balanced Web Service"
+	// RequestDrivenWebServiceType is a Request-Driven Web Service managed by AppRunner
+	RequestDrivenWebServiceType = "Request-Driven Web Service"
 	// BackendServiceType is a service that cannot be accessed from the internet but can be reached from other services.
 	BackendServiceType = "Backend Service"
 )
 
 // ServiceTypes are the supported service manifest types.
 var ServiceTypes = []string{
+	RequestDrivenWebServiceType,
 	LoadBalancedWebServiceType,
 	BackendServiceType,
 }
@@ -106,12 +109,6 @@ type RangeConfig struct {
 // IsEmpty returns whether RangeConfig is empty.
 func (r *RangeConfig) IsEmpty() bool {
 	return r.Min == nil && r.Max == nil && r.SpotFrom == nil
-}
-
-// ServiceImageWithPort represents a container image with an exposed port.
-type ServiceImageWithPort struct {
-	Image `yaml:",inline"`
-	Port  *uint16 `yaml:"port"`
 }
 
 // Count is a custom type which supports unmarshaling yaml which
@@ -215,4 +212,78 @@ func (a *AdvancedCount) IsValid() error {
 // ServiceDockerfileBuildRequired returns if the service container image should be built from local Dockerfile.
 func ServiceDockerfileBuildRequired(svc interface{}) (bool, error) {
 	return dockerfileBuildRequired("service", svc)
+}
+
+func IsTypeAService(t string) bool {
+	for _, serviceType := range ServiceTypes {
+		if t == serviceType {
+			return true
+		}
+	}
+
+	return false
+}
+
+// HTTPHealthCheckArgs holds the configuration to determine if the load balanced web service is healthy.
+// These options are specifiable under the "healthcheck" field.
+// See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html.
+type HTTPHealthCheckArgs struct {
+	Path               *string        `yaml:"path"`
+	SuccessCodes       *string        `yaml:"success_codes"`
+	HealthyThreshold   *int64         `yaml:"healthy_threshold"`
+	UnhealthyThreshold *int64         `yaml:"unhealthy_threshold"`
+	Timeout            *time.Duration `yaml:"timeout"`
+	Interval           *time.Duration `yaml:"interval"`
+}
+
+func (h *HTTPHealthCheckArgs) isEmpty() bool {
+	return h.Path == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil && h.Interval == nil && h.Timeout == nil
+}
+
+// HealthCheckArgsOrString is a custom type which supports unmarshaling yaml which
+// can either be of type string or type HealthCheckArgs.
+type HealthCheckArgsOrString struct {
+	HealthCheckPath *string
+	HealthCheckArgs HTTPHealthCheckArgs
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the HealthCheckArgsOrString
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (hc *HealthCheckArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshal(&hc.HealthCheckArgs); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if !hc.HealthCheckArgs.isEmpty() {
+		// Unmarshaled successfully to hc.HealthCheckArgs, reset hc.HealthCheckPath, and return.
+		hc.HealthCheckPath = nil
+		return nil
+	}
+
+	if err := unmarshal(&hc.HealthCheckPath); err != nil {
+		return errUnmarshalHealthCheckArgs
+	}
+	return nil
+}
+
+// IsEmpty returns true if there are no health check configuration set.
+func (hc *HealthCheckArgsOrString) IsEmpty() bool {
+	if hc.HealthCheckPath != nil {
+		return false
+	}
+	return hc.HealthCheckArgs.isEmpty()
+}
+
+// Path returns the default health check path if provided otherwise, returns the path from the advanced configuration.
+func (hc *HealthCheckArgsOrString) Path() *string {
+	if hc.HealthCheckPath != nil {
+		return hc.HealthCheckPath
+	}
+	return hc.HealthCheckArgs.Path
 }

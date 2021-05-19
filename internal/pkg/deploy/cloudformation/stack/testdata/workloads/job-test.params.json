@@ -4,11 +4,11 @@
     "EnvName": "test",
     "WorkloadName": "job",
     "ContainerImage": "alpine",
+    "AddonsTemplateURL": "",
     "TaskCPU": "256",
     "TaskMemory": "512",
     "TaskCount": "1",
     "LogRetention": "30",
-    "AddonsTemplateURL": "",
     "Schedule": "cron(0 12 ? * MON *)"
   },
   "Tags": { 

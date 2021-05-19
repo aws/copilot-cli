@@ -65,6 +65,12 @@ type Image struct {
 	DockerLabels map[string]string `yaml:"labels,flow"` // Apply Docker labels to the container at runtime.
 }
 
+// ImageWithPort represents a container image with an exposed port.
+type ImageWithPort struct {
+	Image `yaml:",inline"`
+	Port  *uint16 `yaml:"port"`
+}
+
 // GetLocation returns the location of the image.
 func (i Image) GetLocation() string {
 	return aws.StringValue(i.Location)
@@ -439,6 +445,12 @@ func UnmarshalWorkload(in []byte) (interface{}, error) {
 		m := newDefaultLoadBalancedWebService()
 		if err := yaml.Unmarshal(in, m); err != nil {
 			return nil, fmt.Errorf("unmarshal to load balanced web service: %w", err)
+		}
+		return m, nil
+	case RequestDrivenWebServiceType:
+		m := newDefaultRequestDrivenWebService()
+		if err := yaml.Unmarshal(in, m); err != nil {
+			return nil, fmt.Errorf("unmarshal to request-driven web service: %w", err)
 		}
 		return m, nil
 	case BackendServiceType:

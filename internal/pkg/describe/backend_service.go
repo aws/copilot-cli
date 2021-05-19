@@ -28,7 +28,7 @@ type BackendServiceDescriber struct {
 	enableResources bool
 
 	store                DeployedEnvServicesLister
-	svcDescriber         map[string]svcDescriber
+	svcDescriber         map[string]ecsSvcDescriber
 	initServiceDescriber func(string) error
 }
 
@@ -46,13 +46,13 @@ func NewBackendServiceDescriber(opt NewBackendServiceConfig) (*BackendServiceDes
 		svc:             opt.Svc,
 		enableResources: opt.EnableResources,
 		store:           opt.DeployStore,
-		svcDescriber:    make(map[string]svcDescriber),
+		svcDescriber:    make(map[string]ecsSvcDescriber),
 	}
 	describer.initServiceDescriber = func(env string) error {
 		if _, ok := describer.svcDescriber[env]; ok {
 			return nil
 		}
-		d, err := NewServiceDescriber(NewServiceConfig{
+		d, err := NewECSServiceDescriber(NewServiceConfig{
 			App:         opt.App,
 			Env:         env,
 			Svc:         opt.Svc,
@@ -96,9 +96,9 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		return nil, fmt.Errorf("list deployed environments for application %s: %w", d.app, err)
 	}
 
-	var configs []*ServiceConfig
+	var configs []*ECSServiceConfig
 	var services []*ServiceDiscovery
-	var envVars []*envVar
+	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
 		err := d.initServiceDescriber(env)
@@ -118,18 +118,20 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 				App:     d.app,
 			}, env)
 		}
-		configs = append(configs, &ServiceConfig{
-			Environment: env,
-			Port:        port,
-			Tasks:       svcParams[stack.WorkloadTaskCountParamKey],
-			CPU:         svcParams[stack.WorkloadTaskCPUParamKey],
-			Memory:      svcParams[stack.WorkloadTaskMemoryParamKey],
+		configs = append(configs, &ECSServiceConfig{
+			ServiceConfig: &ServiceConfig{
+				Environment: env,
+				Port:        port,
+				CPU:         svcParams[stack.WorkloadTaskCPUParamKey],
+				Memory:      svcParams[stack.WorkloadTaskMemoryParamKey],
+			},
+			Tasks: svcParams[stack.WorkloadTaskCountParamKey],
 		})
 		backendSvcEnvVars, err := d.svcDescriber[env].EnvVars()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
 		}
-		envVars = append(envVars, flattenEnvVars(env, backendSvcEnvVars)...)
+		envVars = append(envVars, flattenContainerEnvVars(env, backendSvcEnvVars)...)
 		webSvcSecrets, err := d.svcDescriber[env].Secrets()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve secrets: %w", err)
@@ -161,6 +163,8 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		Variables:        envVars,
 		Secrets:          secrets,
 		Resources:        resources,
+
+		environments: environments,
 	}, nil
 }
 
@@ -169,11 +173,13 @@ type backendSvcDesc struct {
 	Service          string             `json:"service"`
 	Type             string             `json:"type"`
 	App              string             `json:"application"`
-	Configurations   configurations     `json:"configurations"`
+	Configurations   ecsConfigurations  `json:"configurations"`
 	ServiceDiscovery serviceDiscoveries `json:"serviceDiscovery"`
-	Variables        envVars            `json:"variables"`
+	Variables        containerEnvVars   `json:"variables"`
 	Secrets          secrets            `json:"secrets,omitempty"`
 	Resources        cfnResources       `json:"resources,omitempty"`
+
+	environments []string `json:"-"`
 }
 
 // JSONString returns the stringified backendService struct with json format.
@@ -212,9 +218,7 @@ func (w *backendSvcDesc) HumanString() string {
 		fmt.Fprint(writer, color.Bold.Sprint("\nResources\n"))
 		writer.Flush()
 
-		// Go maps don't have a guaranteed order.
-		// Show the resources by the order of environments displayed under Configurations for a consistent view.
-		w.Resources.humanStringByEnv(writer, w.Configurations)
+		w.Resources.humanStringByEnv(writer, w.environments)
 	}
 	writer.Flush()
 	return b.String()

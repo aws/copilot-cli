@@ -94,11 +94,12 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 
 			tc.setupMocks(mocks)
 
-			d := &ServiceDescriber{
-				app:     testApp,
-				service: testSvc,
-				env:     testEnv,
-
+			d := &ECSServiceDescriber{
+				ServiceDescriber: &ServiceDescriber{
+					app:     testApp,
+					service: testSvc,
+					env:     testEnv,
+				},
 				ecsClient: mockecsClient,
 			}
 
@@ -187,11 +188,12 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 
 			tc.setupMocks(mocks)
 
-			d := &ServiceDescriber{
-				app:     testApp,
-				service: testSvc,
-				env:     testEnv,
-
+			d := &ECSServiceDescriber{
+				ServiceDescriber: &ServiceDescriber{
+					app:     testApp,
+					service: testSvc,
+					env:     testEnv,
+				},
 				ecsClient: mockecsClient,
 			}
 
