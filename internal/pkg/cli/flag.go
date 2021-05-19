@@ -37,6 +37,7 @@ const (
 	startTimeFlag         = "start-time"
 	endTimeFlag           = "end-time"
 	tasksFlag             = "tasks"
+	logGroupFlag          = "log-group"
 	prodEnvFlag           = "prod"
 	deployFlag            = "deploy"
 	resourcesFlag         = "resources"
@@ -193,6 +194,7 @@ Defaults to all logs. Only one of start-time / since may be used.`
 	endTimeFlagDescription = `Optional. Only return logs before a specific date (RFC3339).
 Defaults to all logs. Only one of end-time / follow may be used.`
 	tasksLogsFlagDescription = "Optional. Only return logs from specific task IDs."
+	logGroupFlagDescription  = "Optional. Only return logs from specific log group."
 
 	deployTestFlagDescription        = `Deploy your service or job to a "test" environment.`
 	githubURLFlagDescription         = "(Deprecated.) Use --url instead. Repository URL to trigger your pipeline."
@@ -207,7 +209,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	localSvcFlagDescription          = "Only show services in the workspace."
 	localJobFlagDescription          = "Only show jobs in the workspace."
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
-	svcPortFlagDescription           = "Optional. The port on which your service listens."
+	svcPortFlagDescription           = "The port on which your service listens."
 
 	storageFlagDescription             = "Name of the storage resource to create."
 	storageWorkloadFlagDescription     = "Name of the service or job to associate with storage."

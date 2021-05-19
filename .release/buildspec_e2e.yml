@@ -100,6 +100,15 @@ batch:
         variables:
           TEST_SUITE: exec
           APP_REGION: ap-northeast-1
+    - identifier: apprunner
+      env:
+        privileged-mode: true
+        type: LINUX_CONTAINER
+        compute-type: BUILD_GENERAL1_LARGE
+        image: aws/codebuild/standard:5.0
+        variables:
+          TEST_SUITE: apprunner
+          APP_REGION: ap-northeast-1
 
 
 phases:

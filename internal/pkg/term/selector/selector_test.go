@@ -15,6 +15,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -34,6 +35,7 @@ func TestDeploySelect_Service(t *testing.T) {
 		setupMocks func(mocks deploySelectMocks)
 		svc        string
 		env        string
+		opts       []GetDeployedServiceOpts
 
 		wantErr error
 		wantEnv string
@@ -174,6 +176,109 @@ func TestDeploySelect_Service(t *testing.T) {
 			wantEnv: "test",
 			wantSvc: "mockSvc",
 		},
+		"filter deployed services": {
+			opts: []GetDeployedServiceOpts{
+				WithFilter(func(svc *DeployedService) (bool, error) {
+					return svc.Env == "test1", nil
+				}),
+				WithServiceTypesFilter([]string{manifest.BackendServiceType}),
+			},
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.
+					EXPECT().
+					ListServices(testApp).
+					Return([]*config.Workload{
+						{
+							App:  testApp,
+							Name: "mockSvc1",
+							Type: manifest.BackendServiceType,
+						},
+						{
+							App:  testApp,
+							Name: "mockSvc2",
+							Type: manifest.BackendServiceType,
+						},
+						{
+							App:  testApp,
+							Name: "mockSvc3",
+							Type: manifest.LoadBalancedWebServiceType,
+						},
+					}, nil)
+
+				m.configSvc.
+					EXPECT().
+					ListEnvironments(testApp).
+					Return([]*config.Environment{
+						{Name: "test1"},
+						{Name: "test2"},
+					}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedServices(testApp, "test1").
+					Return([]string{"mockSvc1", "mockSvc2", "mockSvc3"}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedServices(testApp, "test2").
+					Return([]string{"mockSvc1", "mockSvc2", "mockSvc3"}, nil)
+
+				m.prompt.
+					EXPECT().
+					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test1)", "mockSvc2 (test1)"}).
+					Return("mockSvc1 (test1)", nil)
+			},
+			wantEnv: "test1",
+			wantSvc: "mockSvc1",
+		},
+		"filter returns error": {
+			opts: []GetDeployedServiceOpts{
+				WithFilter(func(svc *DeployedService) (bool, error) {
+					return svc.Env == "test1", fmt.Errorf("filter error")
+				}),
+			},
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.
+					EXPECT().
+					ListServices(testApp).
+					Return([]*config.Workload{
+						{
+							App:  testApp,
+							Name: "mockSvc1",
+							Type: manifest.BackendServiceType,
+						},
+						{
+							App:  testApp,
+							Name: "mockSvc2",
+							Type: manifest.BackendServiceType,
+						},
+						{
+							App:  testApp,
+							Name: "mockSvc3",
+							Type: manifest.LoadBalancedWebServiceType,
+						},
+					}, nil)
+
+				m.configSvc.
+					EXPECT().
+					ListEnvironments(testApp).
+					Return([]*config.Environment{
+						{Name: "test1"},
+						{Name: "test2"},
+					}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedServices(testApp, "test1").
+					Return([]string{"mockSvc1", "mockSvc2", "mockSvc3"}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedServices(testApp, "test2").
+					Return([]string{"mockSvc1", "mockSvc2", "mockSvc3"}, nil)
+			},
+			wantErr: fmt.Errorf("filter error"),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -198,7 +303,9 @@ func TestDeploySelect_Service(t *testing.T) {
 				},
 				deployStoreSvc: mockdeploySvc,
 			}
-			gotDeployed, err := sel.DeployedService("Select a deployed service", "Help text", testApp, WithEnv(tc.env), WithSvc(tc.svc))
+			opts := append([]GetDeployedServiceOpts{WithEnv(tc.env), WithSvc(tc.svc)}, tc.opts...)
+
+			gotDeployed, err := sel.DeployedService("Select a deployed service", "Help text", testApp, opts...)
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {

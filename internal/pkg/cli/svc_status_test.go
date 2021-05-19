@@ -11,7 +11,6 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -184,7 +183,6 @@ func TestSvcStatus_Ask(t *testing.T) {
 
 func TestSvcStatus_Execute(t *testing.T) {
 	mockError := errors.New("some error")
-	mockServiceStatus := &describe.ServiceStatusDesc{}
 	testCases := map[string]struct {
 		shouldOutputJSON    bool
 		mockStatusDescriber func(m *mocks.MockstatusDescriber)
@@ -196,20 +194,7 @@ func TestSvcStatus_Execute(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("describe status of service mockSvc: some error"),
 		},
-		"success with JSON output": {
-			shouldOutputJSON: true,
-
-			mockStatusDescriber: func(m *mocks.MockstatusDescriber) {
-				m.EXPECT().Describe().Return(mockServiceStatus, nil)
-			},
-		},
-		"success with HumanString": {
-			mockStatusDescriber: func(m *mocks.MockstatusDescriber) {
-				m.EXPECT().Describe().Return(mockServiceStatus, nil)
-			},
-		},
 	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)

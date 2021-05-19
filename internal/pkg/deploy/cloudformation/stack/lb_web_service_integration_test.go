@@ -25,10 +25,6 @@ import (
 
 const (
 	svcManifestPath = "svc-manifest.yml"
-	svcStackPath    = "svc-test.stack.yml"
-	svcParamsPath   = "svc-test.params.json"
-
-	desiredCountPath = "custom-resources/desired-count-delegation.js"
 )
 
 func TestLoadBalancedWebService_Template(t *testing.T) {

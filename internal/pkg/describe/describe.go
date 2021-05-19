@@ -6,6 +6,7 @@ package describe
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -20,11 +21,12 @@ const (
 	tabWidth               = 4  // number of characters in between columns.
 	cellPaddingWidth       = 2  // number of padding characters added by default to a cell.
 	statusCellPaddingWidth = 4
-	paddingChar            = ' ' // character in between columns.
+	paddingChar            = ' '   // character in between columns.
+	dittoSymbol            = `  "` // Symbol used while displaying values in human format.
 	noAdditionalFormatting = 0
 )
 
-// humanizeTime is overriden in tests so that its output is constant as time passes.
+// humanizeTime is overridden in tests so that its output is constant as time passes.
 var humanizeTime = humanize.Time
 
 // HumanJSONStringer contains methods that stringify app info for output.
@@ -34,6 +36,16 @@ type HumanJSONStringer interface {
 }
 
 type cfnResources map[string][]*CfnResource
+
+func (c cfnResources) humanStringByEnv(w io.Writer, envs []string) {
+	for _, env := range envs {
+		resources := c[env]
+		fmt.Fprintf(w, "\n  %s\n", env)
+		for _, resource := range resources {
+			fmt.Fprintf(w, "    %s\t%s\n", resource.Type, resource.PhysicalID)
+		}
+	}
+}
 
 // CfnResource contains application resources created by cloudformation.
 type CfnResource struct {
@@ -52,14 +64,16 @@ func flattenResources(stackResources []*cloudformation.StackResource) []*CfnReso
 	return resources
 }
 
-func flattenEnvVars(envName string, envVars []*ecs.ContainerEnvVar) []*envVar {
-	var out []*envVar
+func flattenContainerEnvVars(envName string, envVars []*ecs.ContainerEnvVar) []*containerEnvVar {
+	var out []*containerEnvVar
 	for _, v := range envVars {
-		out = append(out, &envVar{
-			Name:        v.Name,
-			Container:   v.Container,
-			Environment: envName,
-			Value:       v.Value,
+		out = append(out, &containerEnvVar{
+			envVar: &envVar{
+				Name:        v.Name,
+				Environment: envName,
+				Value:       v.Value,
+			},
+			Container: v.Container,
 		})
 	}
 	return out
@@ -78,20 +92,25 @@ func flattenSecrets(envName string, secrets []*ecs.ContainerSecret) []*secret {
 	return out
 }
 
+func printTable(w io.Writer, headers []string, rows [][]string) {
+	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
+	if len(rows) > 0 {
+		fmt.Fprintf(w, "  %s\n", strings.Join(rows[0], "\t"))
+	}
+	for prev, cur := 0, 1; cur < len(rows); prev, cur = prev+1, cur+1 {
+		cells := make([]string, len(rows[cur]))
+		copy(cells, rows[cur])
+		for i, v := range cells {
+			if v == rows[prev][i] {
+				cells[i] = dittoSymbol
+			}
+		}
+		fmt.Fprintf(w, "  %s\n", strings.Join(cells, "\t"))
+	}
+}
+
 // HumanString returns the stringified CfnResource struct with human readable format.
 func (c CfnResource) HumanString() string {
 	return fmt.Sprintf("    %s\t%s\n", c.Type, c.PhysicalID)
-}
-
-func (c cfnResources) humanStringByEnv(w io.Writer, configs []*ServiceConfig) {
-	// Go maps don't have a guaranteed order.
-	// Show the resources by the order of environments displayed under Configuration for a consistent view.
-	for _, config := range configs {
-		env := config.Environment
-		resources := c[env]
-		fmt.Fprintf(w, "\n  %s\n", env)
-		for _, resource := range resources {
-			fmt.Fprintf(w, "    %s\t%s\n", resource.Type, resource.PhysicalID)
-		}
-	}
 }

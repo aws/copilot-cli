@@ -26,4 +26,6 @@ Once you deploy this update in manifest, your service or job will be able to acc
 
 This works because ECS Agent will resolve the SSM parameter when it starts up your task, and set the environment variable for you.
 
+!!! attention
+    Secrets are not supported for Request-Driven Web Services.
 

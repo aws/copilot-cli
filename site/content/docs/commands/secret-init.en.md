@@ -91,3 +91,5 @@ notification_email:
   dev: dev@email.com
   test: test@email.com
 ```
+
+!!! attention Secrets are not supported for Request-Driven Web Services.

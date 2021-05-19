@@ -184,3 +184,119 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 		})
 	}
 }
+
+func TestServiceClient_WriteAppRunnerSvcLogEvents(t *testing.T) {
+	const (
+		mockLogGroupName     = "mockLogGroup"
+		logEventsHumanString = `instance/85372273718e4806 web-server@1.0.0 start /app
+instance/4e66ee07f2034a7c Server is running on port 4055
+`
+		logEventsJSONString = "{\"logStreamName\":\"instance/85372273718e4806b5cd805044755bc8\",\"ingestionTime\":0,\"message\":\"web-server@1.0.0 start /app\",\"timestamp\":0}\n{\"logStreamName\":\"instance/4e66ee07f2034a7cb287fdb5f2fd04f9\",\"ingestionTime\":0,\"message\":\"Server is running on port 4055\",\"timestamp\":0}\n"
+	)
+	logEvents := []*cloudwatchlogs.Event{
+		{
+			LogStreamName: "instance/85372273718e4806b5cd805044755bc8",
+			Message:       `web-server@1.0.0 start /app`,
+		},
+		{
+			LogStreamName: "instance/4e66ee07f2034a7cb287fdb5f2fd04f9",
+			Message:       `Server is running on port 4055`,
+		},
+	}
+	mockLimit := aws.Int64(100)
+	var mockNilLimit *int64
+	mockStartTime := aws.Int64(123456789)
+	testCases := map[string]struct {
+		follow     bool
+		limit      *int64
+		startTime  *int64
+		jsonOutput bool
+		setupMocks func(mocks serviceLogsMocks)
+
+		wantedError   error
+		wantedContent string
+	}{
+		"failed to get log events": {
+			setupMocks: func(m serviceLogsMocks) {
+				gomock.InOrder(
+					m.logGetter.EXPECT().LogEvents(gomock.Any()).
+						Return(nil, errors.New("some error")),
+				)
+			},
+
+			wantedError: fmt.Errorf("get task log events for log group mockLogGroup: some error"),
+		},
+		"success with human output": {
+			limit: mockLimit,
+			setupMocks: func(m serviceLogsMocks) {
+				gomock.InOrder(
+					m.logGetter.EXPECT().LogEvents(gomock.Any()).
+						Do(func(param cloudwatchlogs.LogEventsOpts) {
+							require.Equal(t, param.Limit, mockLimit)
+						}).Return(&cloudwatchlogs.LogEventsOutput{
+						Events: logEvents,
+					}, nil),
+				)
+			},
+			wantedContent: logEventsHumanString,
+		},
+		"success with json output": {
+			jsonOutput: true,
+			startTime:  mockStartTime,
+			setupMocks: func(m serviceLogsMocks) {
+				gomock.InOrder(
+					m.logGetter.EXPECT().LogEvents(gomock.Any()).
+						Do(func(param cloudwatchlogs.LogEventsOpts) {
+							require.Equal(t, param.Limit, mockNilLimit)
+						}).
+						Return(&cloudwatchlogs.LogEventsOutput{
+							Events: logEvents,
+						}, nil),
+				)
+			},
+			wantedContent: logEventsJSONString,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mocklogGetter := mocks.NewMocklogGetter(ctrl)
+
+			mocks := serviceLogsMocks{
+				logGetter: mocklogGetter,
+			}
+
+			tc.setupMocks(mocks)
+
+			b := &bytes.Buffer{}
+			svcLogs := &ServiceClient{
+				logGroupName: mockLogGroupName,
+				eventsGetter: mocklogGetter,
+				w:            b,
+			}
+
+			// WHEN
+			logWriter := WriteHumanLogs
+			if tc.jsonOutput {
+				logWriter = WriteJSONLogs
+			}
+			err := svcLogs.WriteLogEvents(WriteLogEventsOpts{
+				Follow:    tc.follow,
+				Limit:     tc.limit,
+				StartTime: tc.startTime,
+				OnEvents:  logWriter,
+			})
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedContent, b.String(), "expected output content match")
+			}
+		})
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
@@ -225,6 +226,12 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		wantedInitialDBName = "mydb"
 		wantedDBEngine      = engineTypePostgreSQL
 	)
+	mockWl := config.Workload{
+		App:  "ddos",
+		Name: "frontend",
+		Type: "Load Balanced Web Service",
+	}
+	mockError := errors.New("some error")
 	testCases := map[string]struct {
 		inAppName     string
 		inStorageType string
@@ -241,11 +248,27 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 		mockPrompt func(m *mocks.Mockprompter)
 		mockCfg    func(m *mocks.MockwsSelector)
+		mockStore  func(m *mocks.Mockstore)
 
 		wantedErr error
 
 		wantedVars *initStorageVars
 	}{
+		"error if fail to get workload type": {
+			inAppName:     wantedAppName,
+			inStorageName: wantedBucketName,
+			inStorageType: s3StorageType,
+
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockCfg: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Workload(gomock.Eq(storageInitSvcPrompt), gomock.Any()).Return(wantedSvcName, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(nil, mockError)
+			},
+
+			wantedErr: fmt.Errorf("get workload: some error"),
+		},
 		"Asks for storage type": {
 			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
@@ -269,6 +292,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Eq(options), gomock.Any()).Return(s3StorageType, nil)
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: nil,
 		},
@@ -280,7 +306,8 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockCfg:   func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {},
 
 			wantedErr: fmt.Errorf("select storage type: some error"),
 		},
@@ -292,6 +319,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockCfg: func(m *mocks.MockwsSelector) {
 				m.EXPECT().Workload(gomock.Eq(storageInitSvcPrompt), gomock.Any()).Return(wantedSvcName, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
 			},
 
 			wantedErr: nil,
@@ -305,6 +335,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockCfg: func(m *mocks.MockwsSelector) {
 				m.EXPECT().Workload(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
+			mockStore: func(m *mocks.Mockstore) {},
 
 			wantedErr: fmt.Errorf("retrieve local workload names: some error"),
 		},
@@ -325,6 +356,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return(wantedBucketName, nil)
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: nil,
 		},
@@ -344,6 +378,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return(wantedBucketName, nil)
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: nil,
 			wantedVars: &initStorageVars{
@@ -363,6 +400,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: fmt.Errorf("input storage name: some error"),
 		},
@@ -392,6 +432,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return(ddbStringType, nil)
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: nil,
 		},
@@ -409,6 +452,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return("", errors.New("some error"))
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: fmt.Errorf("get DDB partition key: some error"),
 		},
@@ -432,6 +478,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return("", errors.New("some error"))
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: fmt.Errorf("get DDB partition key datatype: some error"),
 		},
@@ -466,6 +515,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return(ddbStringType, nil)
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: nil,
 		},
@@ -484,6 +536,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return(false, errors.New("some error"))
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: fmt.Errorf("confirm DDB sort key: some error"),
 		},
@@ -507,6 +562,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return("", errors.New("some error"))
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: fmt.Errorf("get DDB sort key: some error"),
 		},
@@ -535,6 +593,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return("", errors.New("some error"))
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: fmt.Errorf("get DDB sort key datatype: some error"),
 		},
@@ -549,6 +610,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockCfg:    func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: nil,
 		},
@@ -563,7 +627,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockCfg:    func(m *mocks.MockwsSelector) {},
-
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 			wantedErr: nil,
 		},
 		"don't ask about LSI if no-sort is specified": {
@@ -576,6 +642,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockCfg:    func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: nil,
 		},
@@ -614,6 +683,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return(false, nil)
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedVars: &initStorageVars{
 				storageName:  wantedTableName,
@@ -642,6 +714,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return(false, nil)
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedVars: &initStorageVars{
 				storageName:  wantedTableName,
@@ -668,6 +743,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return(false, nil)
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedVars: &initStorageVars{
 				storageName:  wantedTableName,
@@ -700,6 +778,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return("", errors.New("some error"))
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: fmt.Errorf("get DDB alternate sort key name: some error"),
 		},
@@ -719,6 +800,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return(false, errors.New("some error"))
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: fmt.Errorf("confirm add alternate sort key: some error"),
 		},
@@ -749,6 +833,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: fmt.Errorf("get DDB alternate sort key type: some error"),
 		},
@@ -763,6 +850,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockCfg:    func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: nil,
 		},
@@ -779,6 +869,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					Return(wantedDBEngine, nil)
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedVars: &initStorageVars{
 				storageType:      rdsStorageType,
@@ -801,6 +894,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					Return("", errors.New("some error"))
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: errors.New("select database engine: some error"),
 		},
@@ -817,6 +913,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					Return(wantedInitialDBName, nil)
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedVars: &initStorageVars{
 				storageType:      rdsStorageType,
@@ -839,6 +938,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					Return("", errors.New("some error"))
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetWorkload(wantedAppName, wantedSvcName).Return(&mockWl, nil)
+			},
 
 			wantedErr: fmt.Errorf("input initial database name: some error"),
 		},
@@ -851,6 +953,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockConfig := mocks.NewMockwsSelector(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
 					storageType:  tc.inStorageType,
@@ -868,9 +971,11 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				appName: tc.inAppName,
 				sel:     mockConfig,
 				prompt:  mockPrompt,
+				store:   mockStore,
 			}
 			tc.mockPrompt(mockPrompt)
 			tc.mockCfg(mockConfig)
+			tc.mockStore(mockStore)
 			// WHEN
 			err := opts.Ask()
 
