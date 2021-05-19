@@ -15,13 +15,13 @@ A secret can have different values in each of your existing environments, and is
 ```
   -a, --app string              Name of the application.
       --cli-input-yaml string   Optional. A YAML file in which the secret values are specified.
-                                Mutually exclusive with name flag and values flag
+                                Mutually exclusive with --name flag and --values flag
   -h, --help                    help for init
   -n, --name string             The name of the secret.
-                                Mutually exclusive with cli-input-yaml flag.
+                                Mutually exclusive with --cli-input-yaml flag.
       --overwrite               Optional. Whether to overwrite an existing secret.
       --values stringToString   Values of the secret in each environment. Specified as <environment>=<value> separated by commas.
-                                Mutually exclusive with cli-input-yaml flag. (default [])
+                                Mutually exclusive with --cli-input-yaml flag. (default [])
 ```
 ## How can I use it?
 Create a secret with prompts. You will be prompted for the name of the secret, and its values in each of your existing environments.
