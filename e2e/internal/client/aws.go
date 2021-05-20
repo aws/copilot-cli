@@ -23,6 +23,12 @@ type VPCStackOutput struct {
 	ExportName  string
 }
 
+// dbClusterSnapshot represents part of the response to `aws rds describe-db-cluster-snapshots`
+type dbClusterSnapshot struct {
+	Identifier string `json:"DBClusterSnapshotIdentifier"`
+	Cluster    string `json:"DBClusterIdentifier"`
+}
+
 // NewAWS returns a wrapper around AWS commands.
 func NewAWS() *AWS {
 	return &AWS{}
@@ -179,4 +185,36 @@ func (a *AWS) GetFileSystemSize() (int, error) {
 		return 0, err
 	}
 	return strconv.Atoi(strings.TrimSpace(b.String()))
+}
+
+// DeleteAllDBClusterSnapshots removes all "manual" RDS cluster snapshots to avoid running into snapshot limits.
+func (a *AWS) DeleteAllDBClusterSnapshots() error {
+	command := strings.Join([]string{
+		"rds",
+		"describe-db-cluster-snapshots",
+	}, " ")
+	var b bytes.Buffer
+	err := a.exec(command, cmd.Stdout(&b))
+	if err != nil {
+		return err
+	}
+	var snapshotResponse struct {
+		Snapshots []dbClusterSnapshot `json:"DBClusterSnapshots"`
+	}
+	if err = json.Unmarshal(b.Bytes(), &snapshotResponse); err != nil {
+		return err
+	}
+	for _, s := range snapshotResponse.Snapshots {
+		deleteCmd := strings.Join([]string{
+			"rds",
+			"delete-db-cluster-snapshot",
+			"--db-cluster-snapshot-identifier",
+			s.Identifier,
+		}, " ")
+		var err = a.exec(deleteCmd)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

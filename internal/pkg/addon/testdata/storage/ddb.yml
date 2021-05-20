@@ -9,39 +9,43 @@ Parameters:
     Type: String
     Description: The name of the service, job, or workflow being deployed.
 Resources:
-  {{logicalIDSafe .Name}}:
+  ddb:
     Metadata:
-      'aws:copilot:description': 'An Amazon DynamoDB table for {{.Name}}'
+      'aws:copilot:description': 'An Amazon DynamoDB table for ddb'
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub ${App}-${Env}-${Name}-{{.Name}}
-      AttributeDefinitions:{{range .Attributes}}
-        - AttributeName: {{.Name}}
-          AttributeType: "{{.DataType}}"{{end}}
+      TableName: !Sub ${App}-${Env}-${Name}-ddb
+      AttributeDefinitions:
+        - AttributeName: primary
+          AttributeType: "S"
+        - AttributeName: sort
+          AttributeType: "N"
+        - AttributeName: othersort
+          AttributeType: "B"
       BillingMode: PAY_PER_REQUEST
       KeySchema:
-        - AttributeName: {{.PartitionKey}}
-          KeyType: HASH{{ if .SortKey }}
-        - AttributeName: {{.SortKey}}
-          KeyType: RANGE{{end}}{{if .HasLSI}}
-      LocalSecondaryIndexes:{{range .LSIs}}
-        - IndexName: {{.Name}}
+        - AttributeName: primary
+          KeyType: HASH
+        - AttributeName: sort
+          KeyType: RANGE
+      LocalSecondaryIndexes:
+        - IndexName: othersort
           KeySchema:
-            - AttributeName: {{.PartitionKey}}
+            - AttributeName: primary
               KeyType: HASH
-            - AttributeName: {{.SortKey}}
+            - AttributeName: othersort
               KeyType: RANGE
           Projection:
-            ProjectionType: ALL{{end}}{{end}}
+            ProjectionType: ALL
 
-  {{logicalIDSafe .Name}}AccessPolicy:
+  ddbAccessPolicy:
     Metadata:
-      'aws:copilot:description': 'An IAM ManagedPolicy for your service to access the {{.Name}} db'
+      'aws:copilot:description': 'An IAM ManagedPolicy for your service to access the ddb db'
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: !Sub
         - Grants CRUD access to the Dynamo DB table ${Table}
-        - { Table: !Ref {{logicalIDSafe .Name}} }
+        - { Table: !Ref ddb }
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -59,18 +63,18 @@ Resources:
               - dynamodb:Delete*
               - dynamodb:Update*
               - dynamodb:PutItem
-            Resource: !Sub ${ {{logicalIDSafe .Name}}.Arn}
+            Resource: !Sub ${ ddb.Arn}
           - Sid: DDBLSIActions
             Action:
               - dynamodb:Query
               - dynamodb:Scan
             Effect: Allow
-            Resource: !Sub ${ {{logicalIDSafe .Name}}.Arn}/index/*
+            Resource: !Sub ${ ddb.Arn}/index/*
 
 Outputs:
-  {{envVarName .Name}}:
+  ddbName:
     Description: "The name of this DynamoDB."
-    Value: !Ref {{logicalIDSafe .Name}}
-  {{logicalIDSafe .Name}}AccessPolicy:
+    Value: !Ref ddb
+  ddbAccessPolicy:
     Description: "The IAM::ManagedPolicy to attach to the task role."
-    Value: !Ref {{logicalIDSafe .Name}}AccessPolicy
+    Value: !Ref ddbAccessPolicy

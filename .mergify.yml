@@ -9,6 +9,7 @@ pull_request_rules:
       - status-success=build (compile-windows)
       - status-success=build (compile-darwin)
       - status-success=test
+      - status-success=integ-test
       - status-success=staticcheck
       - status-success=license
       - status-success=Semantic Pull Request
@@ -30,6 +31,7 @@ pull_request_rules:
       - status-success=build (compile-windows)
       - status-success=build (compile-darwin)
       - status-success=test
+      - status-success=integ-test
       - status-success=staticcheck
       - status-success=license
       - status-success=Semantic Pull Request

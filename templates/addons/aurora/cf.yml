@@ -30,6 +30,15 @@ Mappings:
       "DBMaxCapacity": 8 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
       {{end -}}
     {{end}}
+    All:
+      {{- if eq $.Engine "MySQL"}}
+      "DBMinCapacity": 1 # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256]
+      "DBMaxCapacity": 8 # AllowedValues: [1, 2, 4, 8, 16, 32, 64, 128, 256]
+      {{- else}}
+      "DBMinCapacity": 2 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
+      "DBMaxCapacity": 8 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
+      {{end}}
+
 Resources:
   {{logicalIDSafe .ClusterName}}DBSubnetGroup:
     Type: 'AWS::RDS::DBSubnetGroup'
@@ -134,8 +143,9 @@ Resources:
         - !Ref {{logicalIDSafe .ClusterName}}DBClusterSecurityGroup
       ScalingConfiguration:
         AutoPause: true
-        MinCapacity: !FindInMap [{{logicalIDSafe .ClusterName}}EnvScalingConfigurationMap, !Ref Env, DBMinCapacity]
-        MaxCapacity: !FindInMap [{{logicalIDSafe .ClusterName}}EnvScalingConfigurationMap, !Ref Env, DBMaxCapacity]
+        # Replace "All" below with "!Ref Env" to set different autoscaling limits per environment.
+        MinCapacity: !FindInMap [{{logicalIDSafe .ClusterName}}EnvScalingConfigurationMap, All, DBMinCapacity]
+        MaxCapacity: !FindInMap [{{logicalIDSafe .ClusterName}}EnvScalingConfigurationMap, All, DBMaxCapacity]
         SecondsUntilAutoPause: !Ref {{logicalIDSafe .ClusterName}}DBAutoPauseSeconds
   {{logicalIDSafe .ClusterName}}SecretAuroraClusterAttachment:
     Type: AWS::SecretsManager::SecretTargetAttachment
