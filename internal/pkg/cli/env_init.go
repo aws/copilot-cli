@@ -668,7 +668,7 @@ func buildEnvInitCmd() *cobra.Command {
   /code --import-public-subnets subnet-013e8b691862966cf,subnet -014661ebb7ab8681a \
   /code --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f
 
-  Creates an environment with overrided CIDRs.
+  Creates an environment with overridden CIDRs.
   /code $ copilot env init --override-vpc-cidr 10.1.0.0/16 \
   /code --override-public-cidrs 10.1.0.0/24,10.1.1.0/24 \
   /code --override-private-cidrs 10.1.2.0/24,10.1.3.0/24`,

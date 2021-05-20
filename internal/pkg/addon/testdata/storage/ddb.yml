@@ -1,0 +1,80 @@
+Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  Env:
+    Type: String
+    Description: The environment name your service, job, or workflow is being deployed to.
+  Name:
+    Type: String
+    Description: The name of the service, job, or workflow being deployed.
+Resources:
+  ddb:
+    Metadata:
+      'aws:copilot:description': 'An Amazon DynamoDB table for ddb'
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${App}-${Env}-${Name}-ddb
+      AttributeDefinitions:
+        - AttributeName: primary
+          AttributeType: "S"
+        - AttributeName: sort
+          AttributeType: "N"
+        - AttributeName: othersort
+          AttributeType: "B"
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: primary
+          KeyType: HASH
+        - AttributeName: sort
+          KeyType: RANGE
+      LocalSecondaryIndexes:
+        - IndexName: othersort
+          KeySchema:
+            - AttributeName: primary
+              KeyType: HASH
+            - AttributeName: othersort
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  ddbAccessPolicy:
+    Metadata:
+      'aws:copilot:description': 'An IAM ManagedPolicy for your service to access the ddb db'
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !Sub
+        - Grants CRUD access to the Dynamo DB table ${Table}
+        - { Table: !Ref ddb }
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: DDBActions
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGet*
+              - dynamodb:DescribeStream
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:BatchWrite*
+              - dynamodb:Create*
+              - dynamodb:Delete*
+              - dynamodb:Update*
+              - dynamodb:PutItem
+            Resource: !Sub ${ ddb.Arn}
+          - Sid: DDBLSIActions
+            Action:
+              - dynamodb:Query
+              - dynamodb:Scan
+            Effect: Allow
+            Resource: !Sub ${ ddb.Arn}/index/*
+
+Outputs:
+  ddbName:
+    Description: "The name of this DynamoDB."
+    Value: !Ref ddb
+  ddbAccessPolicy:
+    Description: "The IAM::ManagedPolicy to attach to the task role."
+    Value: !Ref ddbAccessPolicy
