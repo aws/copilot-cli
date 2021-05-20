@@ -65,5 +65,7 @@ The name of your service.
 The architecture type for your service. [Backend Services](../concepts/services.en.md#backend-service) are not reachable from the internet, but can be reached with [service discovery](../developing/service-discovery.en.md) from your other services.
 
 {% include 'image-config.md' %}
+
 {% include 'image-healthcheck.md' %}
+
 {% include 'common-svc-fields.md' %}

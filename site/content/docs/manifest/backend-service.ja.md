@@ -67,5 +67,7 @@ Service 名。
 Service のアーキテクチャ。[Backend Services](../concepts/services.ja.md#backend-service) はインターネット側からはアクセスできませんが、[サービス検出](../developing/service-discovery.ja.md)の利用により他の Service からはアクセスできます。
 
 {% include 'image-config.ja.md' %}
+
 {% include 'image-healthcheck.ja.md' %}
+
 {% include 'common-svc-fields.ja.md' %}
