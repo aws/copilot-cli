@@ -99,8 +99,10 @@ func (c Client) DescribeService(app, env, svc string) (*ServiceDesc, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get tasks for service %s: %w", serviceName, err)
 	}
-
 	stoppedTasks, err := c.ecsClient.StoppedServiceTasks(clusterName, serviceName)
+	if err != nil {
+		return nil, fmt.Errorf("get stopped tasks for service %s: %w", serviceName, err)
+	}
 
 	return &ServiceDesc{
 		ClusterName:  clusterName,
