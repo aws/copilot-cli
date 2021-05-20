@@ -32,7 +32,7 @@ type Resource struct {
 
 // HumanString returns the stringified Resource struct with human readable format.
 func (c Resource) HumanString() string {
-	return fmt.Sprintf("    %s\t%s\n", c.Type, c.PhysicalID)
+	return fmt.Sprintf("%s\t%s\n", c.Type, c.PhysicalID)
 }
 
 // StackDescriber retrieves information about a stack.

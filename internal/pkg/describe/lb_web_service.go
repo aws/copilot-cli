@@ -20,6 +20,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/dustin/go-humanize/english"
 )
 
 const (
@@ -37,20 +38,17 @@ type LBWebServiceURI struct {
 func (u *LBWebServiceURI) String() string {
 	var uris []string
 	for _, dnsName := range u.DNSNames {
-		uri := ""
-		switch strconv.FormatBool(u.HTTPS) + "|" + strconv.FormatBool(u.Path == "/") {
-		case "true|true":
-			uri = fmt.Sprintf("https://%s", dnsName)
-		case "false|true":
-			uri = fmt.Sprintf("http://%s", dnsName)
-		case "true|false":
-			uri = fmt.Sprintf("https://%s/%s", dnsName, u.Path)
-		case "false|false":
-			uri = fmt.Sprintf("http://%s/%s", dnsName, u.Path)
+		protocol := "http://"
+		if u.HTTPS {
+			protocol = "https://"
 		}
-		uris = append(uris, uri)
+		path := ""
+		if u.Path != "/" {
+			path = fmt.Sprintf("/%s", u.Path)
+		}
+		uris = append(uris, fmt.Sprintf("%s%s%s", protocol, dnsName, path))
 	}
-	return strings.Join(uris, " or ")
+	return english.OxfordWordSeries(uris, "or")
 }
 
 type serviceDiscovery struct {
@@ -208,7 +206,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	}, nil
 }
 
-// URI returns the WebServiceURI to identify this service uniquely given an environment name.
+// URI returns the LBWebServiceURI to identify this service uniquely given an environment name.
 func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 	err := d.initDescriber(envName)
 	if err != nil {

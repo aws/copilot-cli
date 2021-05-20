@@ -98,13 +98,6 @@ type ecsSvcDescriber interface {
 	ServiceStackResources() ([]*stack.Resource, error)
 }
 
-type stackDescriber interface {
-	Describe() (stack.StackDescription, error)
-	Resources() ([]*stack.Resource, error)
-	StackMetadata() (string, error)
-	StackSetMetadata() (string, error)
-}
-
 // ConfigStoreSvc wraps methods of config store.
 type ConfigStoreSvc interface {
 	GetEnvironment(appName string, environmentName string) (*config.Environment, error)

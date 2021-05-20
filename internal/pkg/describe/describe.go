@@ -34,6 +34,13 @@ type HumanJSONStringer interface {
 	JSONString() (string, error)
 }
 
+type stackDescriber interface {
+	Describe() (stack.StackDescription, error)
+	Resources() ([]*stack.Resource, error)
+	StackMetadata() (string, error)
+	StackSetMetadata() (string, error)
+}
+
 type deployedSvcResources map[string][]*stack.Resource
 
 func (c deployedSvcResources) humanStringByEnv(w io.Writer, envs []string) {

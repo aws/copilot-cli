@@ -101,14 +101,14 @@ func (p *Pipeline) HumanString() string {
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, stage := range p.Stages {
-		fmt.Fprint(writer, stage.HumanString())
+		fmt.Fprint(writer, fmt.Sprintf("  %s", stage.HumanString()))
 	}
 	writer.Flush()
 	if len(p.Resources) != 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nResources\n"))
 		writer.Flush()
 		for _, r := range p.Resources {
-			fmt.Fprint(writer, r.HumanString())
+			fmt.Fprint(writer, fmt.Sprintf("    %s", r.HumanString()))
 		}
 
 	}
