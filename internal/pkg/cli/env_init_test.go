@@ -437,7 +437,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
 					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
 				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
-					Return([]string{"mockPrivateSubnet"}, nil)
+					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
 			},
 		},
 		"success with importing env resources with flags": {
