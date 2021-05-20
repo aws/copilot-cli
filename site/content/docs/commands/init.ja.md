@@ -18,10 +18,10 @@ Copilot CLI の全てのコマンドと同様に、必要なフラグを指定�
   -a, --app string          Name of the application.
       --deploy              Deploy your service or job to a "test" environment.
   -d, --dockerfile string   Path to the Dockerfile.
-                            Mutually exclusive with -i, --image
+                            Mutually exclusive with -i, --image.
   -h, --help                help for init
   -i, --image string        The location of an existing Docker image.
-                            Mutually exclusive with -d, --dockerfile
+                            Mutually exclusive with -d, --dockerfile.
   -n, --name string         Name of the service or job.
       --port uint16         Optional. The port on which your service listens.
       --retries int         Optional. The number of times to try restarting the job on a failure.
@@ -34,5 +34,5 @@ Copilot CLI の全てのコマンドと同様に、必要なフラグを指定�
       --timeout string      Optional. The total execution time for the task, including retries.
                             Accepts valid Go duration strings. For example: "2h", "1h30m", "900s".
   -t, --type string         Type of service to create. Must be one of:
-                            "Load Balanced Web Service", "Backend Service", "Scheduled Job"
+                            "Request-Driven Web Service", "Load Balanced Web Service", "Backend Service", "Scheduled Job".
 ```

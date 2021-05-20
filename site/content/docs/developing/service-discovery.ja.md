@@ -6,6 +6,9 @@
 
 サービス検出は Copilot CLI を使って作成された全ての Service で有効化されています。以下の Go 言語の例を通して使い方を解説します。 `kudos` という名前の Application と 2 個の Service (`api` と `front-end`) を作成したとします。
 
+!!! attention
+    Request-Driven Web Service はサービス検出の利用をサポートしていません。
+
 この例では `front-end` Service はパブリックエンドポイントを持ち、サービス検出のエンドポイントを使って `api` Service を呼び出す場合を考えます。
  
 

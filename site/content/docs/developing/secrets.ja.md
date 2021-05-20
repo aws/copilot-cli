@@ -6,33 +6,24 @@
 
 現在、シークレットを追加するには、シークレットを SecureString として [AWS Systems Manager パラメータストラ](https://docs.aws.amazon.com/ja_jp/systems-manager/latest/userguide/systems-manager-parameter-store.html) (SSM) に保存する必要があります。そして、SSM パラメータへの参照を [Manifest](../manifest/overview.ja.md) に追加します。
 
-ここでは、`GH_WEBHOOK_SECRET` という名前のシークレットを、`secretvalue1234` という値で保存する例を見てみましょう。
+[`copilot secret init`](https://aws.github.io/copilot-cli/ja/docs/commands/secret-init/) コマンドを利用することで簡単にシークレットを作成できます！!シークレットを作成すると、Copilot はどのような名前で作られたかを教えてくれます。その名前を Service や Job の Manifest に記述しましょう。
 
-まず、次のようにシークレットを SSM に保存します。
+### あるいは...
 
-```sh
-aws ssm put-parameter --name GH_WEBHOOK_SECRET --value secretvalue1234 --type SecureString\
-  --tags Key=copilot-environment,Value=${ENVIRONMENT_NAME} Key=copilot-application,Value=${APP_NAME}
-```
+Copilot の外で作成したシークレットを持ち込みたい場合、そのシークレットに次の２つのタグを設定することを忘れないようにしてください - `copilot-application: <このシークレットを利用したい Copilot Application 名>` と `copilot-environment: <このシークレットを利用したい Copilot Environment 名>.`
 
-これにより、SSM のパラメータ `GH_WEBHOOK_SECRET` に値 `secretvalue1234` がシークレットとして格納されます。
+上記の `copilot-application` と `copilot-environment` タグは、Copilot が持ち込みシークレットへのアクセスを適切に制御するために必要となります。
 
-!!! attention
-    Copilot では、このシークレットへのアクセスを制限するために、 `copilot-application` と `copilot-environment` タグが必要です。
-    `${ENVIRONMENT_NAME}` と `${APP_NAME}` を、このシークレットへのアクセスを許可したい Copilot Application と Environment に置き換えることが重要です。
-
-
-次に、この値を渡すために Manifest ファイルを修正します。
+`GH_WEBHOOK_SECRET` という名前で値に `secretvalue1234` を持つ（適切にタグが設定された）SSM パラメータがあると仮定しましょう。このシークレットを Manifest ファイルから参照するには、次のような内容を Manifest に記述することになります。
 
 ```yaml
 secrets:                      
   GITHUB_WEBHOOK_SECRET: GH_WEBHOOK_SECRET  
 ```
 
-マニフェストのこの更新をデプロイすると、環境変数 `GITHUB_WEBHOOK_SECRET` にアクセスできるようになります。この環境変数には、SSM パラメータ `GH_WEBHOOK_SECRET` の値である `secretvalue1234` が格納されています。
+更新されたマニフェストをデプロイすると、Service や Job は環境変数 `GITHUB_WEBHOOK_SECRET` にアクセスできるようになります。この環境変数には、SSM パラメータ `GH_WEBHOOK_SECRET` の値である `secretvalue1234` が格納されます。
 
 これが機能するのは、ECS エージェントがタスクの開始時に SSM パラメータを解決し、環境変数を設定してくれるためです。
 
-!!! info
-    **この機能はもっと簡単にする予定です！** Application と同じ Environment にシークレットを保存しなければならないという、いくつかの注意点があります。
-    将来的に `secrets` コマンドを追加して、どの Environment にいるのかや SSM がどのように動作するのかを気にすることなく、シークレットを追加できるようにしたいと考えています。
+!!! attention
+    Request-Driven Web Service はシークレットの利用をサポートしていません。
