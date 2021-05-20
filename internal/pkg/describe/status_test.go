@@ -358,11 +358,6 @@ Task Status
   --                ------------        -----------         ----------          -----------------    -------------
   12345678          -                   PROVISIONING        -                   -                    HEALTHY
 
-Stopped Tasks
-
-  ID                Image Digest        Last Status         Started At          Stopped At          Stopped Reason
-  --                ------------        -----------         ----------          ----------          --------------
-
 Alarms
 
   Name                              Condition                         Last Updated         Health
@@ -428,11 +423,6 @@ Task Status
   ID                Image Digest         Last Status         Started At          Capacity Provider    Health Status
   --                ------------         -----------         ----------          -----------------    -------------
   12345678          69671a96,ca27a44e    RUNNING             -                   -                    HEALTHY
-
-Stopped Tasks
-
-  ID                Image Digest        Last Status         Started At          Stopped At          Stopped Reason
-  --                ------------        -----------         ----------          ----------          --------------
 
 Alarms
 

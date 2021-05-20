@@ -288,13 +288,15 @@ func (s *ecsServiceStatus) HumanString() string {
 	for _, task := range s.Tasks {
 		fmt.Fprint(writer, task.HumanString())
 	}
-	fmt.Fprint(writer, color.Bold.Sprint("\nStopped Tasks\n\n"))
-	writer.Flush()
-	headers = []string{"ID", "Image Digest", "Last Status", "Started At", "Stopped At", "Stopped Reason"}
-	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
-	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
-	for _, task := range s.StoppedTasks {
-		fmt.Fprint(writer, (awsECS.StoppedTaskStatus)(task).HumanString())
+	if len(s.StoppedTasks) > 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nStopped Tasks\n\n"))
+		writer.Flush()
+		headers = []string{"ID", "Image Digest", "Last Status", "Started At", "Stopped At", "Stopped Reason"}
+		fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
+		for _, task := range s.StoppedTasks {
+			fmt.Fprint(writer, (awsECS.StoppedTaskStatus)(task).HumanString())
+		}
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nAlarms\n\n"))
 	writer.Flush()
