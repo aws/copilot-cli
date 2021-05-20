@@ -404,7 +404,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
 					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
 				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
-					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
+					Return([]string{"mockPrivateSubnet"}, nil)
 			},
 			wantedError: fmt.Errorf("select private subnets: at least two private subnets must be selected"),
 		},
