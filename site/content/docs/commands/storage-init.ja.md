@@ -12,7 +12,7 @@ $ copilot storage init
 Required Flags
   -n, --name string           Name of the storage resource to create.
   -t, --storage-type string   Type of storage to add. Must be one of:
-                              "DynamoDB", "S3", "Aurora"
+                              "DynamoDB", "S3", "Aurora".
   -w, --workload string       Name of the service or job to associate with storage.
 
 DynamoDB Flags

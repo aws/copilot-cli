@@ -78,7 +78,46 @@ unhealthy なターゲットを healthy とみなすために必要な、連続�
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-timeout" href="#http-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
 ターゲットからの応答がない場合、ヘルスチェックが失敗したとみなすまでの時間を秒単位で指定します。デフォルト値は 2 秒で、設定可能な範囲は、1 〜 20 です。
 
-{% include 'image-config.md' %}
+<div class="separator"></div>
+
+<a id="image" href="#image" class="field">`image`</a> <span class="type">Map</span>  
+image セクションは、Docker ビルドに関する設定や公開するポートについてのパラメータを含みます。
+
+<span class="parent-field">image.</span><a id="image-build" href="#image-build" class="field">`build`</a> <span class="type">String or Map</span>  
+このフィールドに String（文字列）を指定した場合、Copilot はそれを Dockerfile の場所を示すパスと解釈します。その際、指定したパスのディレクトリ部が Docker のビルドコンテキストであると仮定します。以下は build フィールドに文字列を指定する例です。
+```yaml
+image:
+  build: path/to/dockerfile
+```
+これにより、イメージビルドの際に次のようなコマンドが実行されることになります: `$ docker build --file path/to/dockerfile path/to`
+
+build フィールドには Map も利用できます。
+```yaml
+image:
+  build:
+    dockerfile: path/to/dockerfile
+    context: context/dir
+    target: build-stage
+    cache_from:
+      - image:tag
+    args:
+      key: value
+```
+この例は、Copilot は Docker ビルドコンテキストに context フィールドの値が示すディレクトリを利用し、args 以下のキーバリューのペアをイメージビルド時の --build-args 引数として渡します。上記例と同等の docker build コマンドは次のようになります:  
+`$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir`.
+
+Copilot はあなたの意図を理解するために最善を尽くしますので、記述する情報の省略も可能です。例えば、`context` は指定しているが `dockerfile` は未指定の場合、Copilot は Dockerfile が "Dockerfile" という名前で存在すると仮定しつつ、docker コマンドを `context` ディレクトリ以下で実行します。逆に `dockerfile` は指定しているが `context` が未指定の場合は、Copilot はあなたが `dockerfile` で指定されたディレクトリをビルドコンテキストディレクトリとして利用したいのだと仮定します。
+
+すべてのパスはワークスペースのルートディレクトリからの相対パスと解釈されます。
+
+<span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>  
+Dockerfile からコンテナイメージをビルドする代わりに、既存のコンテナイメージ名の指定も可能です。[`image.build`](#image-build) との同時利用はできません。
+
+!!! note
+    現時点では [Amazon ECR Public](https://docs.aws.amazon.com/ja_jp/AmazonECR/latest/public/public-repositories.html) に格納されたコンテナイメージが利用可能です。
+
+<span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  
+公開するポート番号。Dockerfile 内に `EXPOSE` インストラクションが記述されている場合、Copilot はそれをパースした値をここに挿入します。
 
 <div class="separator"></div>  
 
