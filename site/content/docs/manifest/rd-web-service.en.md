@@ -80,7 +80,46 @@ The approximate amount of time, in seconds, between health checks of an individu
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-timeout" href="#http-healthcheck-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
 The amount of time, in seconds, during which no response from a target means a failed health check. The default is 2s. Range 1s-20s.
 
-{% include 'image-config.md' %}
+<div class="separator"></div>
+
+<a id="image" href="#image" class="field">`image`</a> <span class="type">Map</span>  
+The image section contains parameters relating to the Docker build configuration and exposed port.
+
+<span class="parent-field">image.</span><a id="image-build" href="#image-build" class="field">`build`</a> <span class="type">String or Map</span>  
+If you specify a string, Copilot interprets it as the path to your Dockerfile. It will assume that the dirname of the string you specify should be the build context. The manifest:
+```yaml
+image:
+  build: path/to/dockerfile
+```
+will result in the following call to docker build: `$ docker build --file path/to/dockerfile path/to`
+
+You can also specify build as a map:
+```yaml
+image:
+  build:
+    dockerfile: path/to/dockerfile
+    context: context/dir
+    target: build-stage
+    cache_from:
+      - image:tag
+    args:
+      key: value
+```
+In this case, Copilot will use the context directory you specified and convert the key-value pairs under args to --build-arg overrides. The equivalent docker build call will be:
+`$ docker build --file path/to/dockerfile --target build-stage --cache-from image:tag --build-arg key=value context/dir`.
+
+You can omit fields and Copilot will do its best to understand what you mean. For example, if you specify `context` but not `dockerfile`, Copilot will run Docker in the context directory and assume that your Dockerfile is named "Dockerfile." If you specify `dockerfile` but no `context`, Copilot assumes you want to run Docker in the directory that contains `dockerfile`.
+
+All paths are relative to your workspace root.
+
+<span class="parent-field">image.</span><a id="image-location" href="#image-location" class="field">`location`</a> <span class="type">String</span>  
+Instead of building a container from a Dockerfile, you can specify an existing image name. Mutually exclusive with [`image.build`](#image-build).
+
+!!! note
+    Only public images stored in [Amazon ECR Public](https://docs.aws.amazon.com/AmazonECR/latest/public/public-repositories.html) is available with AWS App Runner.
+
+<span class="parent-field">image.</span><a id="image-port" href="#image-port" class="field">`port`</a> <span class="type">Integer</span>  
+The port exposed in your Dockerfile. Copilot should parse this value for you from your `EXPOSE` instruction.
 
 <div class="separator"></div>  
 

@@ -309,7 +309,7 @@
         <div>
           <h1>Your toolkit for containerized applications on AWS</h1>
           <p>AWS Copilot is an open source command line interface that makes it easy for developers to <span class="em">build</span>, 
-            <span class="em">release</span>, and <span class="em">operate</span> production ready containerized applications on Amazon ECS and AWS Fargate.
+            <span class="em">release</span>, and <span class="em">operate</span> production ready containerized applications on AWS App Runner, Amazon ECS, and AWS Fargate.
           </p>
           <a
             href="docs/overview/"
@@ -346,7 +346,9 @@
               application using best practices on AWS from a Dockerfile. 
             </p>
             <p>
-              Instead of modeling individual resources, Copilot provides common cloud architectures: <a href="docs/concepts/services/#load-balanced-web-service">Load Balanced Web Service</a>, 
+              Instead of modeling individual resources, Copilot provides common cloud architectures:
+              <a href="docs/concepts/services/#request-driven-web-service">Request-Driven Web Service</a>,
+              <a href="docs/concepts/services/#load-balanced-web-service">Load Balanced Web Service</a>,
               <a href="docs/concepts/services/#backend-service">Backend Service</a>, <a href="docs/concepts/jobs/">Scheduled Job</a> and generates the necessary infrastructure from that.
               Focus your time on writing business logic instead of connecting AWS resources.
             </p>
@@ -507,7 +509,7 @@
             <p>
               Modeling, provisioning, and deploying services are only part of the application lifecycle for the developer. 
               Copilot also supports workflows around troubleshooting and debugging to help when things go wrong. <a href="docs/commands/svc-logs/">Tail
-              your logs</a> or <a href="docs/commands/svc-status/">view the health</a> of your services 
+              your logs</a>, <a href="docs/commands/svc-exec">get a shell</a> to a running container, <a href="docs/commands/svc-status/">view the health</a> of your services
               from the comfort of your terminal.
             </p>
           </div>
@@ -537,6 +539,22 @@
                   <h5>Run tasks</h5>
                   <p>
                     Run one-off tasks for operational workloads.
+                  </p>
+                </div>
+              </div>
+            </a>
+
+            <a class="card-wrapper" href="docs/commands/svc-exec/">
+              <div class="card">
+                <div class="logo">
+                  <span class="twemoji">
+                    {% include ".icons/octicons/terminal-24.svg" %}
+                  </span>
+                </div>
+                <div class="card-content">
+                  <h5>Exec</h5>
+                  <p>
+                    Run commands in or get a shell to a container running on AWS Fargate.
                   </p>
                 </div>
               </div>
