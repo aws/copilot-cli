@@ -159,7 +159,7 @@ func (t TaskStatus) HumanString() string {
 
 // HumanString returns the stringified StoppedTaskStatus struct with human readable format.
 // Example output:
-//   6ca7a60d          f884127d            STOPPED             57 minutes ago             51 minutes ago
+//   6ca7a60d          f884127d            STOPPED             57 minutes ago             51 minutes ago             Stopped by user
 func (t StoppedTaskStatus) HumanString() string {
 	digest := humanizeImageDigests(t.Images)
 	imageDigest := "-"

@@ -258,13 +258,15 @@ func TestTaskStatus_HumanString(t *testing.T) {
 			imageDigest:      mockImageDigest,
 			capacityProvider: "FARGATE",
 
-			wantTaskStatus: "  aslhfnqo\t18f7eb6c\tRUNNING\t14 years ago\tFARGATE\tHEALTHY\n",
+			wantTaskStatus: `  aslhfnqo	18f7eb6c	RUNNING	14 years ago	FARGATE	HEALTHY
+`,
 		},
 		"missing params": {
 			health:     "HEALTHY",
 			lastStatus: "RUNNING",
 
-			wantTaskStatus: "  -\t-\tRUNNING\t-\t-\tHEALTHY\n",
+			wantTaskStatus: `  -	-	RUNNING	-	-	HEALTHY
+`,
 		},
 	}
 
@@ -329,12 +331,14 @@ func TestStoppedTaskStatus_HumanString(t *testing.T) {
 			imageDigest:   mockImageDigest,
 			stoppedReason: "Stopped by reasons",
 
-			wantTaskStatus: "  aslhfnqo\t18f7eb6c\tRUNNING\t14 years ago\t14 years ago\tStopped by reasons\n",
+			wantTaskStatus: `  aslhfnqo	18f7eb6c	RUNNING	14 years ago	14 years ago	Stopped by reasons
+`,
 		},
 		"missing params": {
 			lastStatus: "RUNNING",
 
-			wantTaskStatus: "  -\t-\tRUNNING\t-\t-\t-\n",
+			wantTaskStatus: `  -	-	RUNNING	-	-	-
+`,
 		},
 	}
 
