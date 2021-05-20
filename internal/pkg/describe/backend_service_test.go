@@ -10,10 +10,9 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -30,13 +29,13 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 	testCases := map[string]struct {
 		shouldOutputResources bool
 
-		setupMocks func(mocks ecsSvcDescriberMocks)
+		setupMocks func(mocks lbWebSvcDescriberMocks)
 
 		wantedBackendSvc *backendSvcDesc
 		wantedError      error
 	}{
 		"return error if fail to list environment": {
-			setupMocks: func(m ecsSvcDescriberMocks) {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return(nil, mockErr),
 				)
@@ -44,129 +43,129 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("list deployed environments for application phonetool: some error"),
 		},
 		"return error if fail to retrieve service deployment configuration": {
-			setupMocks: func(m ecsSvcDescriberMocks) {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.svcDescriber.EXPECT().Params().Return(nil, mockErr),
+					m.ecsSvcDescriber.EXPECT().Params().Return(nil, mockErr),
 				)
 			},
-			wantedError: fmt.Errorf("retrieve service deployment configuration: some error"),
+			wantedError: fmt.Errorf("get stack parameters for environment test: some error"),
 		},
 		"return error if fail to retrieve environment variables": {
-			setupMocks: func(m ecsSvcDescriberMocks) {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceContainerPortParamKey: "80",
-						stack.WorkloadTaskCountParamKey:         "1",
-						stack.WorkloadTaskCPUParamKey:           "256",
-						stack.WorkloadTaskMemoryParamKey:        "512",
+					m.ecsSvcDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.LBWebServiceContainerPortParamKey: "80",
+						cfnstack.WorkloadTaskCountParamKey:         "1",
+						cfnstack.WorkloadTaskMemoryParamKey:        "512",
+						cfnstack.WorkloadTaskCPUParamKey:           "256",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
+					m.ecsSvcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
 		},
 		"return error if fail to retrieve secrets": {
-			setupMocks: func(m ecsSvcDescriberMocks) {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceContainerPortParamKey: "80",
-						stack.WorkloadTaskCountParamKey:         "1",
-						stack.WorkloadTaskCPUParamKey:           "256",
-						stack.WorkloadTaskMemoryParamKey:        "512",
+					m.ecsSvcDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.LBWebServiceContainerPortParamKey: "80",
+						cfnstack.WorkloadTaskCountParamKey:         "1",
+						cfnstack.WorkloadTaskCPUParamKey:           "256",
+						cfnstack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+					m.ecsSvcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
 							Container: "container",
 							Value:     "prod",
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().Secrets().Return(nil, mockErr),
+					m.ecsSvcDescriber.EXPECT().Secrets().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve secrets: some error"),
 		},
 		"success": {
 			shouldOutputResources: true,
-			setupMocks: func(m ecsSvcDescriberMocks) {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv, mockEnv}, nil),
 
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceContainerPortParamKey: "5000",
-						stack.WorkloadTaskCountParamKey:         "1",
-						stack.WorkloadTaskCPUParamKey:           "256",
-						stack.WorkloadTaskMemoryParamKey:        "512",
+					m.ecsSvcDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.LBWebServiceContainerPortParamKey: "5000",
+						cfnstack.WorkloadTaskCountParamKey:         "1",
+						cfnstack.WorkloadTaskCPUParamKey:           "256",
+						cfnstack.WorkloadTaskMemoryParamKey:        "512",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+					m.ecsSvcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
 							Container: "container",
 							Value:     testEnv,
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
+					m.ecsSvcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
 							Name:      "GITHUB_WEBHOOK_SECRET",
 							Container: "container",
 							ValueFrom: "GH_WEBHOOK_SECRET",
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceContainerPortParamKey: "5000",
-						stack.WorkloadTaskCountParamKey:         "2",
-						stack.WorkloadTaskCPUParamKey:           "512",
-						stack.WorkloadTaskMemoryParamKey:        "1024",
+					m.ecsSvcDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.LBWebServiceContainerPortParamKey: "5000",
+						cfnstack.WorkloadTaskCountParamKey:         "2",
+						cfnstack.WorkloadTaskCPUParamKey:           "512",
+						cfnstack.WorkloadTaskMemoryParamKey:        "1024",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+					m.ecsSvcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
 							Container: "container",
 							Value:     prodEnv,
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
+					m.ecsSvcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
 							Name:      "SOME_OTHER_SECRET",
 							Container: "container",
 							ValueFrom: "SHHHHHHHH",
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceContainerPortParamKey: "-1",
-						stack.WorkloadTaskCountParamKey:         "2",
-						stack.WorkloadTaskCPUParamKey:           "512",
-						stack.WorkloadTaskMemoryParamKey:        "1024",
+					m.ecsSvcDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.LBWebServiceContainerPortParamKey: "-1",
+						cfnstack.WorkloadTaskCountParamKey:         "2",
+						cfnstack.WorkloadTaskCPUParamKey:           "512",
+						cfnstack.WorkloadTaskMemoryParamKey:        "1024",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+					m.ecsSvcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
 							Container: "container",
 							Value:     mockEnv,
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().Secrets().Return(
+					m.ecsSvcDescriber.EXPECT().Secrets().Return(
 						nil, nil),
-					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
+					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
-							ResourceType:       aws.String("AWS::EC2::SecurityGroupIngress"),
-							PhysicalResourceId: aws.String("ContainerSecurityGroupIngressFromPublicALB"),
+							Type:       "AWS::EC2::SecurityGroupIngress",
+							PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
+					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
-							ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
-							PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
+							Type:       "AWS::EC2::SecurityGroup",
+							PhysicalID: "sg-0758ed6b233743530",
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
+					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
-							ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
-							PhysicalResourceId: aws.String("sg-2337435300758ed6b"),
+							Type:       "AWS::EC2::SecurityGroup",
+							PhysicalID: "sg-2337435300758ed6b",
 						},
 					}, nil),
 				)
@@ -250,7 +249,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						ValueFrom:   "SHHHHHHHH",
 					},
 				},
-				Resources: map[string][]*CfnResource{
+				Resources: map[string][]*stack.Resource{
 					"test": {
 						{
 							Type:       "AWS::EC2::SecurityGroupIngress",
@@ -282,9 +281,9 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 
 			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
 			mockSvcDescriber := mocks.NewMockecsSvcDescriber(ctrl)
-			mocks := ecsSvcDescriberMocks{
-				storeSvc:     mockStore,
-				svcDescriber: mockSvcDescriber,
+			mocks := lbWebSvcDescriberMocks{
+				storeSvc:        mockStore,
+				ecsSvcDescriber: mockSvcDescriber,
 			}
 
 			tc.setupMocks(mocks)
@@ -427,7 +426,7 @@ Resources
 					Namespace:   "http://my-svc.my-app.local:5000",
 				},
 			}
-			resources := map[string][]*CfnResource{
+			resources := map[string][]*stack.Resource{
 				"test": {
 					{
 						PhysicalID: "sg-0758ed6b233743530",

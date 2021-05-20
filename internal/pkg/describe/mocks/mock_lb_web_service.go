@@ -3,3 +3,62 @@
 
 // Package mocks is a generated GoMock package.
 package mocks
+
+import (
+	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+)
+
+// MockenvDescriber is a mock of envDescriber interface.
+type MockenvDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvDescriberMockRecorder
+}
+
+// MockenvDescriberMockRecorder is the mock recorder for MockenvDescriber.
+type MockenvDescriberMockRecorder struct {
+	mock *MockenvDescriber
+}
+
+// NewMockenvDescriber creates a new mock instance.
+func NewMockenvDescriber(ctrl *gomock.Controller) *MockenvDescriber {
+	mock := &MockenvDescriber{ctrl: ctrl}
+	mock.recorder = &MockenvDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockenvDescriber) EXPECT() *MockenvDescriberMockRecorder {
+	return m.recorder
+}
+
+// Outputs mocks base method.
+func (m *MockenvDescriber) Outputs() (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Outputs")
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Outputs indicates an expected call of Outputs.
+func (mr *MockenvDescriberMockRecorder) Outputs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Outputs", reflect.TypeOf((*MockenvDescriber)(nil).Outputs))
+}
+
+// Params mocks base method.
+func (m *MockenvDescriber) Params() (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Params")
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Params indicates an expected call of Params.
+func (mr *MockenvDescriberMockRecorder) Params() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Params", reflect.TypeOf((*MockenvDescriber)(nil).Params))
+}

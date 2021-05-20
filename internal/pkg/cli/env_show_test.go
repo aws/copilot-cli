@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 
 	"testing"
@@ -229,7 +230,7 @@ func TestEnvShow_Execute(t *testing.T) {
 		Name: "testSvc3",
 		Type: "load-balanced",
 	}
-	var wantedResources = []*describe.CfnResource{
+	var wantedResources = []*stack.Resource{
 		{
 			Type:       "AWS::IAM::Role",
 			PhysicalID: "testApp-testEnv-CFNExecutionRole",

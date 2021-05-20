@@ -10,6 +10,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
@@ -70,7 +71,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var routes []*WebServiceRoute
 	var configs []*ServiceConfig
 	var envVars envVars
-	resources := make(map[string][]*CfnResource)
+	resources := make(map[string][]*stack.Resource)
 	for _, env := range environments {
 		err := d.initServiceDescriber(env)
 		if err != nil {
@@ -107,7 +108,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}
-			resources[env] = flattenResources(stackResources)
+			resources[env] = stackResources
 		}
 	}
 
@@ -142,13 +143,13 @@ func (d *RDWebServiceDescriber) URI(envName string) (string, error) {
 
 // rdWebSvcDesc contains serialized parameters for a web service.
 type rdWebSvcDesc struct {
-	Service        string             `json:"service"`
-	Type           string             `json:"type"`
-	App            string             `json:"application"`
-	Configurations configurations     `json:"configurations"`
-	Routes         []*WebServiceRoute `json:"routes"`
-	Variables      envVars            `json:"variables"`
-	Resources      cfnResources       `json:"resources,omitempty"`
+	Service        string               `json:"service"`
+	Type           string               `json:"type"`
+	App            string               `json:"application"`
+	Configurations configurations       `json:"configurations"`
+	Routes         []*WebServiceRoute   `json:"routes"`
+	Variables      envVars              `json:"variables"`
+	Resources      deployedSvcResources `json:"resources,omitempty"`
 
 	environments []string `json:"-"`
 }
