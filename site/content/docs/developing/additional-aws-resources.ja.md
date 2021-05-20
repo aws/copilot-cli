@@ -37,7 +37,7 @@ Service がデプロイされると Copilot はこれらのファイルを全て
 ## Addon テンプレートの構造
 Addon テンプレートには任意の有効な CloudFormation テンプレートを用いることができます。しかしデフォルトでは Copilot は `App`, `Env` そして `Name` [パラメーター](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html)を渡すため、必要であれば [Conditions セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/conditions-section-structure.html) または [Mappings セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html) でリソースのプロパティをカスタマイズできます。
 
-ここでは、ECS タスクから [Resources セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/resources-section-structure.html) にアクセスいくつかの方法を紹介します。
+ここでは、ECS タスクから [Resources セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/resources-section-structure.html) にアクセスするいくつかの方法を紹介します。
 
 1. テンプレートの中で [IAM 管理ポリシー](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-iam-managedpolicy.html) リソースを使ってタスクにパーミッションを与え、　[Outputs セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) を使ってパーミッションを ECS タスクロールに注入してください。
 2. [Outputs セクション](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) を作成して ECS タスクに環境変数として注入したい値を定義してください。
