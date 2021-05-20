@@ -22,23 +22,25 @@ func TestAppDescriber_Version(t *testing.T) {
 	}{
 		"should return error if fail to get metadata": {
 			given: func(ctrl *gomock.Controller) *AppDescriber {
-				m := mocks.NewMockcfn(ctrl)
-				m.EXPECT().Metadata(gomock.Any()).Return("", errors.New("some error"))
+				m := mocks.NewMockstackDescriber(ctrl)
+				m.EXPECT().StackMetadata().Return("", errors.New("some error"))
 				return &AppDescriber{
-					app: "phonetool",
-					cfn: m,
+					app:               "phonetool",
+					stackDescriber:    m,
+					stackSetDescriber: m,
 				}
 			},
-			wantedErr: fmt.Errorf("get metadata for app stack phonetool-infrastructure-roles: some error"),
+			wantedErr: fmt.Errorf("some error"),
 		},
 		"success": {
 			given: func(ctrl *gomock.Controller) *AppDescriber {
-				m := mocks.NewMockcfn(ctrl)
-				m.EXPECT().Metadata(gomock.Any()).Return(`{"TemplateVersion":"v1.2.0"}`, nil)
-				m.EXPECT().Metadata(gomock.Any()).Return(`{"TemplateVersion":"v1.0.0"}`, nil)
+				m := mocks.NewMockstackDescriber(ctrl)
+				m.EXPECT().StackMetadata().Return(`{"TemplateVersion":"v1.2.0"}`, nil)
+				m.EXPECT().StackSetMetadata().Return(`{"TemplateVersion":"v1.0.0"}`, nil)
 				return &AppDescriber{
-					app: "phonetool",
-					cfn: m,
+					app:               "phonetool",
+					stackDescriber:    m,
+					stackSetDescriber: m,
 				}
 			},
 
@@ -46,12 +48,13 @@ func TestAppDescriber_Version(t *testing.T) {
 		},
 		"success with legacy template": {
 			given: func(ctrl *gomock.Controller) *AppDescriber {
-				m := mocks.NewMockcfn(ctrl)
-				m.EXPECT().Metadata(gomock.Any()).Return("", nil)
-				m.EXPECT().Metadata(gomock.Any()).Return(`{"TemplateVersion":"v1.0.0"}`, nil)
+				m := mocks.NewMockstackDescriber(ctrl)
+				m.EXPECT().StackMetadata().Return("", nil)
+				m.EXPECT().StackSetMetadata().Return(`{"TemplateVersion":"v1.0.0"}`, nil)
 				return &AppDescriber{
-					app: "phonetool",
-					cfn: m,
+					app:               "phonetool",
+					stackDescriber:    m,
+					stackSetDescriber: m,
 				}
 			},
 

@@ -158,7 +158,7 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_backend_service.go -source=./internal/pkg/describe/backend_service.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_service.go -source=./internal/pkg/describe/service.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_describe.go -source=./internal/pkg/describe/describe.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_stack.go -source=./internal/pkg/describe/stack.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/stack/mocks/mock_stack.go -source=./internal/pkg/describe/stack/stack.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_status.go -source=./internal/pkg/describe/status.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_pipeline_show.go -source=./internal/pkg/describe/pipeline_show.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_pipeline_status.go -source=./internal/pkg/describe/pipeline_status.go

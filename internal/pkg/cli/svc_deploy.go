@@ -449,11 +449,11 @@ func (o *deploySvcOpts) showSvcURI() error {
 		URI(string) (string, error)
 	}
 
-	var svcDescriber identifier
+	var ecsSvcDescriber identifier
 	var err error
 	switch o.targetSvc.Type {
 	case manifest.LoadBalancedWebServiceType:
-		svcDescriber, err = describe.NewLBWebServiceDescriber(describe.NewLBWebServiceConfig{
+		ecsSvcDescriber, err = describe.NewLBWebServiceDescriber(describe.NewLBWebServiceConfig{
 			NewServiceConfig: describe.NewServiceConfig{
 				App:         o.appName,
 				Svc:         o.name,
@@ -461,7 +461,7 @@ func (o *deploySvcOpts) showSvcURI() error {
 			},
 		})
 	case manifest.RequestDrivenWebServiceType:
-		svcDescriber, err = describe.NewRDWebServiceDescriber(describe.NewRDWebServiceConfig{
+		ecsSvcDescriber, err = describe.NewRDWebServiceDescriber(describe.NewRDWebServiceConfig{
 			NewServiceConfig: describe.NewServiceConfig{
 				App:         o.appName,
 				Svc:         o.name,
@@ -469,7 +469,7 @@ func (o *deploySvcOpts) showSvcURI() error {
 			},
 		})
 	case manifest.BackendServiceType:
-		svcDescriber, err = describe.NewBackendServiceDescriber(describe.NewBackendServiceConfig{
+		ecsSvcDescriber, err = describe.NewBackendServiceDescriber(describe.NewBackendServiceConfig{
 			NewServiceConfig: describe.NewServiceConfig{
 				App:         o.appName,
 				Svc:         o.name,
@@ -483,7 +483,7 @@ func (o *deploySvcOpts) showSvcURI() error {
 		return fmt.Errorf("create describer for service type %s: %w", o.targetSvc.Type, err)
 	}
 
-	uri, err := svcDescriber.URI(o.targetEnvironment.Name)
+	uri, err := ecsSvcDescriber.URI(o.targetEnvironment.Name)
 	if err != nil {
 		return fmt.Errorf("get uri for environment %s: %w", o.targetEnvironment.Name, err)
 	}

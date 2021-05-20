@@ -9,37 +9,44 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestLBWebServiceURI_String(t *testing.T) {
 	testCases := map[string]struct {
-		dnsName string
-		path    string
+		dnsNames []string
+		path     string
+		https    bool
 
 		wanted string
 	}{
 		"http": {
-			dnsName: "abc.us-west-1.elb.amazonaws.com",
-			path:    "svc",
+			dnsNames: []string{"abc.us-west-1.elb.amazonaws.com"},
+			path:     "svc",
 
 			wanted: "http://abc.us-west-1.elb.amazonaws.com/svc",
 		},
 		"http with / path": {
-			dnsName: "jobs.test.phonetool.com",
-			path:    "/",
+			dnsNames: []string{"jobs.test.phonetool.com"},
+			path:     "/",
 
 			wanted: "http://jobs.test.phonetool.com",
 		},
 		"https": {
-			dnsName: "jobs.test.phonetool.com",
-			path:    "",
+			dnsNames: []string{"jobs.test.phonetool.com"},
+			path:     "svc",
+			https:    true,
+
+			wanted: "https://jobs.test.phonetool.com/svc",
+		},
+		"https with / path": {
+			dnsNames: []string{"jobs.test.phonetool.com"},
+			path:     "/",
+			https:    true,
 
 			wanted: "https://jobs.test.phonetool.com",
 		},
@@ -48,8 +55,9 @@ func TestLBWebServiceURI_String(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			uri := &LBWebServiceURI{
-				DNSName: tc.dnsName,
-				Path:    tc.path,
+				DNSNames: tc.dnsNames,
+				Path:     tc.path,
+				HTTPS:    tc.https,
 			}
 
 			require.Equal(t, tc.wanted, uri.String())
@@ -57,9 +65,10 @@ func TestLBWebServiceURI_String(t *testing.T) {
 	}
 }
 
-type ecsSvcDescriberMocks struct {
-	storeSvc     *mocks.MockDeployedEnvServicesLister
-	svcDescriber *mocks.MockecsSvcDescriber
+type lbWebSvcDescriberMocks struct {
+	storeSvc        *mocks.MockDeployedEnvServicesLister
+	ecsSvcDescriber *mocks.MockecsSvcDescriber
+	envDescriber    *mocks.MockenvDescriber
 }
 
 func TestLBWebServiceDescriber_URI(t *testing.T) {
@@ -68,45 +77,56 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 		testEnv          = "test"
 		testSvc          = "jobs"
 		testEnvSubdomain = "test.phonetool.com"
-		testEnvLBDNSName = "http://abc.us-west-1.elb.amazonaws.com"
-		testSvcPath      = "*"
+		testEnvLBDNSName = "abc.us-west-1.elb.amazonaws.com"
+		testSvcPath      = "/"
 	)
 	mockErr := errors.New("some error")
 	testCases := map[string]struct {
-		setupMocks func(mocks ecsSvcDescriberMocks)
+		setupMocks func(mocks lbWebSvcDescriberMocks)
 
 		wantedURI   string
 		wantedError error
 	}{
-		"fail to get output of environment stack": {
-			setupMocks: func(m ecsSvcDescriberMocks) {
+		"fail to get parameters of environment stack": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.svcDescriber.EXPECT().EnvOutputs().Return(nil, mockErr),
+					m.envDescriber.EXPECT().Params().Return(nil, mockErr),
 				)
 			},
-			wantedError: fmt.Errorf("get output for environment test: some error"),
+			wantedError: fmt.Errorf("get stack parameters for environment test: some error"),
+		},
+		"fail to get outputs of environment stack": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				gomock.InOrder(
+					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.envDescriber.EXPECT().Outputs().Return(nil, mockErr),
+				)
+			},
+			wantedError: fmt.Errorf("get stack outputs for environment test: some error"),
 		},
 		"fail to get parameters of service stack": {
-			setupMocks: func(m ecsSvcDescriberMocks) {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 						envOutputSubdomain:                 testEnvSubdomain,
 					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(nil, mockErr),
+					m.ecsSvcDescriber.EXPECT().Params().Return(nil, mockErr),
 				)
 			},
-			wantedError: fmt.Errorf("get parameters for service jobs: some error"),
+			wantedError: fmt.Errorf("get stack parameters for service jobs: some error"),
 		},
 		"https web service": {
-			setupMocks: func(m ecsSvcDescriberMocks) {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 						envOutputSubdomain:                 testEnvSubdomain,
 					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceRulePathParamKey: testSvcPath,
+					m.ecsSvcDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.LBWebServiceRulePathParamKey: testSvcPath,
 					}, nil),
 				)
 			},
@@ -114,18 +134,37 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 			wantedURI: "https://jobs.test.phonetool.com",
 		},
 		"http web service": {
-			setupMocks: func(m ecsSvcDescriberMocks) {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
-					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceRulePathParamKey: testSvcPath,
+					m.ecsSvcDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.LBWebServiceRulePathParamKey: "*",
 					}, nil),
 				)
 			},
 
-			wantedURI: "http://http://abc.us-west-1.elb.amazonaws.com/*",
+			wantedURI: "http://abc.us-west-1.elb.amazonaws.com/*",
+		},
+		"with alias": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				gomock.InOrder(
+					m.envDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.EnvParamAliasesKey: `{"jobs": ["example.com", "v1.example.com"]}`,
+					}, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
+						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+						envOutputSubdomain:                 testEnvSubdomain,
+					}, nil),
+					m.ecsSvcDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.LBWebServiceRulePathParamKey: testSvcPath,
+					}, nil),
+				)
+			},
+
+			wantedURI: "https://example.com or https://v1.example.com",
 		},
 	}
 
@@ -136,8 +175,10 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockSvcDescriber := mocks.NewMockecsSvcDescriber(ctrl)
-			mocks := ecsSvcDescriberMocks{
-				svcDescriber: mockSvcDescriber,
+			mockEnvDescriber := mocks.NewMockenvDescriber(ctrl)
+			mocks := lbWebSvcDescriberMocks{
+				ecsSvcDescriber: mockSvcDescriber,
+				envDescriber:    mockEnvDescriber,
 			}
 
 			tc.setupMocks(mocks)
@@ -145,10 +186,13 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 			d := &LBWebServiceDescriber{
 				app: testApp,
 				svc: testSvc,
-				envSvcDescribers: map[string]ecsSvcDescriber{
+				svcDescriber: map[string]ecsSvcDescriber{
 					"test": mockSvcDescriber,
 				},
-				initServiceDescriber: func(string) error { return nil },
+				envDescriber: map[string]envDescriber{
+					"test": mockEnvDescriber,
+				},
+				initDescriber: func(string) error { return nil },
 			}
 
 			// WHEN
@@ -180,13 +224,13 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 	testCases := map[string]struct {
 		shouldOutputResources bool
 
-		setupMocks func(mocks ecsSvcDescriberMocks)
+		setupMocks func(mocks lbWebSvcDescriberMocks)
 
 		wantedWebSvc *webSvcDesc
 		wantedError  error
 	}{
 		"return error if fail to list environment": {
-			setupMocks: func(m ecsSvcDescriberMocks) {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return(nil, mockErr),
 				)
@@ -194,67 +238,70 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("list deployed environments for application phonetool: some error"),
 		},
 		"return error if fail to retrieve URI": {
-			setupMocks: func(m ecsSvcDescriberMocks) {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.svcDescriber.EXPECT().EnvOutputs().Return(nil, mockErr),
+					m.envDescriber.EXPECT().Params().Return(nil, mockErr),
 				)
 			},
-			wantedError: fmt.Errorf("retrieve service URI: get output for environment test: some error"),
+			wantedError: fmt.Errorf("retrieve service URI: get stack parameters for environment test: some error"),
 		},
 		"return error if fail to retrieve service deployment configuration": {
-			setupMocks: func(m ecsSvcDescriberMocks) {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceContainerPortParamKey: "80",
-						stack.WorkloadTaskCountParamKey:         "1",
-						stack.WorkloadTaskCPUParamKey:           "256",
-						stack.WorkloadTaskMemoryParamKey:        "512",
-						stack.LBWebServiceRulePathParamKey:      testSvcPath,
+					m.ecsSvcDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.LBWebServiceContainerPortParamKey: "80",
+						cfnstack.WorkloadTaskCountParamKey:         "1",
+						cfnstack.WorkloadTaskCPUParamKey:           "256",
+						cfnstack.WorkloadTaskMemoryParamKey:        "512",
+						cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
+					m.ecsSvcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
 		},
 		"return error if fail to retrieve environment variables": {
-			setupMocks: func(m ecsSvcDescriberMocks) {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceContainerPortParamKey: "80",
-						stack.WorkloadTaskCountParamKey:         "1",
-						stack.WorkloadTaskCPUParamKey:           "256",
-						stack.WorkloadTaskMemoryParamKey:        "512",
-						stack.LBWebServiceRulePathParamKey:      testSvcPath,
+					m.ecsSvcDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.LBWebServiceContainerPortParamKey: "80",
+						cfnstack.WorkloadTaskCountParamKey:         "1",
+						cfnstack.WorkloadTaskCPUParamKey:           "256",
+						cfnstack.WorkloadTaskMemoryParamKey:        "512",
+						cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
+					m.ecsSvcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
 		},
 		"return error if fail to retrieve secrets": {
-			setupMocks: func(m ecsSvcDescriberMocks) {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceContainerPortParamKey: "80",
-						stack.WorkloadTaskCountParamKey:         "1",
-						stack.WorkloadTaskCPUParamKey:           "256",
-						stack.WorkloadTaskMemoryParamKey:        "512",
-						stack.LBWebServiceRulePathParamKey:      testSvcPath,
+					m.ecsSvcDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.LBWebServiceContainerPortParamKey: "80",
+						cfnstack.WorkloadTaskCountParamKey:         "1",
+						cfnstack.WorkloadTaskCPUParamKey:           "256",
+						cfnstack.WorkloadTaskMemoryParamKey:        "512",
+						cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+					m.ecsSvcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
 							Container: "container",
@@ -262,34 +309,35 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 
-					m.svcDescriber.EXPECT().Secrets().Return(nil, mockErr),
+					m.ecsSvcDescriber.EXPECT().Secrets().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve secrets: some error"),
 		},
 		"return error if fail to retrieve service resources": {
 			shouldOutputResources: true,
-			setupMocks: func(m ecsSvcDescriberMocks) {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceRulePathParamKey:      testSvcPath,
-						stack.LBWebServiceContainerPortParamKey: "80",
-						stack.WorkloadTaskCountParamKey:         "1",
-						stack.WorkloadTaskCPUParamKey:           "256",
-						stack.WorkloadTaskMemoryParamKey:        "512",
+					m.ecsSvcDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.LBWebServiceContainerPortParamKey: "80",
+						cfnstack.WorkloadTaskCountParamKey:         "1",
+						cfnstack.WorkloadTaskCPUParamKey:           "256",
+						cfnstack.WorkloadTaskMemoryParamKey:        "512",
+						cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+					m.ecsSvcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
 							Container: "container",
 							Value:     "test",
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
+					m.ecsSvcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
 							Name:      "GITHUB_WEBHOOK_SECRET",
 							Container: "container",
@@ -301,75 +349,77 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 							ValueFrom: "SHHHHHHHH",
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().ServiceStackResources().Return(nil, mockErr),
+					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve service resources: some error"),
 		},
 		"success": {
 			shouldOutputResources: true,
-			setupMocks: func(m ecsSvcDescriberMocks) {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv}, nil),
 
-					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceRulePathParamKey:      testSvcPath,
-						stack.LBWebServiceContainerPortParamKey: "5000",
-						stack.WorkloadTaskCountParamKey:         "1",
-						stack.WorkloadTaskCPUParamKey:           "256",
-						stack.WorkloadTaskMemoryParamKey:        "512",
+					m.ecsSvcDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.LBWebServiceContainerPortParamKey: "5000",
+						cfnstack.WorkloadTaskCountParamKey:         "1",
+						cfnstack.WorkloadTaskCPUParamKey:           "256",
+						cfnstack.WorkloadTaskMemoryParamKey:        "512",
+						cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+					m.ecsSvcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
 							Container: "container1",
 							Value:     testEnv,
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
+					m.ecsSvcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
 							Name:      "GITHUB_WEBHOOK_SECRET",
 							Container: "container",
 							ValueFrom: "GH_WEBHOOK_SECRET",
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
-						envOutputPublicLoadBalancerDNSName: prodEnvLBDNSName,
+					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
+						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceRulePathParamKey:      prodSvcPath,
-						stack.LBWebServiceContainerPortParamKey: "5000",
-						stack.WorkloadTaskCountParamKey:         "2",
-						stack.WorkloadTaskCPUParamKey:           "512",
-						stack.WorkloadTaskMemoryParamKey:        "1024",
+					m.ecsSvcDescriber.EXPECT().Params().Return(map[string]string{
+						cfnstack.LBWebServiceContainerPortParamKey: "5000",
+						cfnstack.WorkloadTaskCountParamKey:         "2",
+						cfnstack.WorkloadTaskCPUParamKey:           "512",
+						cfnstack.WorkloadTaskMemoryParamKey:        "1024",
+						cfnstack.LBWebServiceRulePathParamKey:      prodSvcPath,
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+					m.ecsSvcDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
 						{
 							Name:      "COPILOT_ENVIRONMENT_NAME",
 							Container: "container2",
 							Value:     prodEnv,
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
+					m.ecsSvcDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
 							Name:      "SOME_OTHER_SECRET",
 							Container: "container",
 							ValueFrom: "SHHHHHHHH",
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
+					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
-							ResourceType:       aws.String("AWS::EC2::SecurityGroupIngress"),
-							PhysicalResourceId: aws.String("ContainerSecurityGroupIngressFromPublicALB"),
+							Type:       "AWS::EC2::SecurityGroupIngress",
+							PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
+					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
-							ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
-							PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
+							Type:       "AWS::EC2::SecurityGroup",
+							PhysicalID: "sg-0758ed6b233743530",
 						},
 					}, nil),
 				)
@@ -446,7 +496,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						ValueFrom:   "SHHHHHHHH",
 					},
 				},
-				Resources: map[string][]*CfnResource{
+				Resources: map[string][]*stack.Resource{
 					"test": {
 						{
 							Type:       "AWS::EC2::SecurityGroupIngress",
@@ -472,9 +522,11 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 
 			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
 			mockSvcDescriber := mocks.NewMockecsSvcDescriber(ctrl)
-			mocks := ecsSvcDescriberMocks{
-				storeSvc:     mockStore,
-				svcDescriber: mockSvcDescriber,
+			mockEnvDescriber := mocks.NewMockenvDescriber(ctrl)
+			mocks := lbWebSvcDescriberMocks{
+				storeSvc:        mockStore,
+				ecsSvcDescriber: mockSvcDescriber,
+				envDescriber:    mockEnvDescriber,
 			}
 
 			tc.setupMocks(mocks)
@@ -484,11 +536,15 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 				svc:             testSvc,
 				enableResources: tc.shouldOutputResources,
 				store:           mockStore,
-				envSvcDescribers: map[string]ecsSvcDescriber{
+				svcDescriber: map[string]ecsSvcDescriber{
 					"test": mockSvcDescriber,
 					"prod": mockSvcDescriber,
 				},
-				initServiceDescriber: func(string) error { return nil },
+				envDescriber: map[string]envDescriber{
+					"test": mockEnvDescriber,
+					"prod": mockEnvDescriber,
+				},
+				initDescriber: func(string) error { return nil },
 			}
 
 			// WHEN
@@ -642,7 +698,7 @@ Resources
 					Namespace:   "http://my-svc.my-app.local:5000",
 				},
 			}
-			resources := map[string][]*CfnResource{
+			resources := map[string][]*stack.Resource{
 				"test": {
 					{
 						PhysicalID: "sg-0758ed6b233743530",
