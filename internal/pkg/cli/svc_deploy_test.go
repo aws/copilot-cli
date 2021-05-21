@@ -608,7 +608,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
 				m.EXPECT().Version().Return("v0.0.0", nil)
 			},
-			wantErr: fmt.Errorf("cannot enable https alias: the application version should be at least %s", deploy.AliasLeastAppTemplateVersion),
+			wantErr: fmt.Errorf(`enable "http.alias": the application version should be at least %s`, deploy.AliasLeastAppTemplateVersion),
 		},
 		"success": {
 			inEnvironment: &config.Environment{

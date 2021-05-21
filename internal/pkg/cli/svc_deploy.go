@@ -422,7 +422,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	case *manifest.LoadBalancedWebService:
 		if err := o.validateAppVersion(t); err != nil {
 			log.Errorf(`Cannot deploy service %s because the application version is incompatible.
-To upgrade the application, please use the application credentials to run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
+To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
 `, aws.StringValue(t.Name),
 				color.HighlightCode("copilot app upgrade"))
 			return nil, err
@@ -467,7 +467,7 @@ func (o *deploySvcOpts) validateAppVersion(svc *manifest.LoadBalancedWebService)
 		}
 		diff := semver.Compare(appVersion, deploy.AliasLeastAppTemplateVersion)
 		if diff < 0 {
-			return fmt.Errorf("cannot enable https alias: the application version should be at least %s", deploy.AliasLeastAppTemplateVersion)
+			return fmt.Errorf(`enable "http.alias": the application version should be at least %s`, deploy.AliasLeastAppTemplateVersion)
 		}
 	}
 	return nil
