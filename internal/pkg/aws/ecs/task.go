@@ -93,18 +93,9 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 // ENI returns the network interface ID of the running task.
 // Every Fargate task is provided with an ENI by default (https://docs.aws.amazon.com/AmazonECS/latest/userguide/fargate-task-networking.html).
 func (t *Task) ENI() (string, error) {
-	var attachmentENI *ecs.Attachment
-	for _, attachment := range t.Attachments {
-		if aws.StringValue(attachment.Type) == networkInterfaceAttachmentType {
-			attachmentENI = attachment
-			break
-		}
-	}
-	if attachmentENI == nil {
-		return "", &ErrTaskENIInfoNotFound{
-			MissingField: missingFieldAttachment,
-			TaskARN:      aws.StringValue(t.TaskArn),
-		}
+	attachmentENI, err := t.attachmentENI()
+	if err != nil {
+		return "", err
 	}
 
 	for _, detail := range attachmentENI.Details {
@@ -118,7 +109,26 @@ func (t *Task) ENI() (string, error) {
 	}
 }
 
+// PrivateIP returns the PrivateIPv4Address of the task.
+func (t *Task) PrivateIP() (string, error) {
+	attachmentENI, err := t.attachmentENI()
+	if err != nil {
+		return "", err
+	}
+	for _, detail := range attachmentENI.Details {
+		if aws.StringValue(detail.Name) == privateIPv4AddressKey {
+			return aws.StringValue(detail.Value), nil
+		}
+	}
+	return "", &ErrTaskENIInfoNotFound{
+		MissingField: missingFieldPrivateIPv4Address,
+		TaskARN:      aws.StringValue(t.TaskArn),
+	}
+}
+
 func (t *Task) attachmentENI() (*ecs.Attachment, error) {
+	// Every Fargate task is provided with an ENI by default (https://docs.aws.amazon.com/AmazonECS/latest/userguide/fargate-task-networking.html).
+	// So an error is warranted if there is no ENI found.
 	var attachmentENI *ecs.Attachment
 	for _, attachment := range t.Attachments {
 		if aws.StringValue(attachment.Type) == networkInterfaceAttachmentType {

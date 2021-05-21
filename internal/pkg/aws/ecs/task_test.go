@@ -225,6 +225,88 @@ func TestTask_ENI(t *testing.T) {
 	}
 }
 
+func TestTask_PrivateIP(t *testing.T) {
+	testCases := map[string]struct {
+		taskARN     *string
+		attachments []*ecs.Attachment
+		wantedENI   string
+		wantedErr   error
+	}{
+		"no matching attachment": {
+			taskARN: aws.String("1"),
+			attachments: []*ecs.Attachment{
+				{
+					Type: aws.String("not ElasticNetworkInterface"),
+				},
+			},
+			wantedErr: &ErrTaskENIInfoNotFound{
+				MissingField: missingFieldAttachment,
+				TaskARN:      "1",
+			},
+		},
+		"no matching detail in network interface attachment": {
+			taskARN: aws.String("1"),
+			attachments: []*ecs.Attachment{
+				{
+					Type: aws.String("not ElasticNetworkInterface"),
+				},
+				{
+					Type: aws.String("ElasticNetworkInterface"),
+					Details: []*ecs.KeyValuePair{
+						{
+							Name:  aws.String("not privateIPv4Address"),
+							Value: aws.String("val"),
+						},
+					},
+				},
+			},
+			wantedErr: &ErrTaskENIInfoNotFound{
+				MissingField: missingFieldPrivateIPv4Address,
+				TaskARN:      "1",
+			},
+		},
+		"successfully retrieve eni id": {
+			taskARN: aws.String("1"),
+			attachments: []*ecs.Attachment{
+				{
+					Type: aws.String("not ElasticNetworkInterface"),
+				},
+				{
+					Type: aws.String("ElasticNetworkInterface"),
+					Details: []*ecs.KeyValuePair{
+						{
+							Name:  aws.String("not networkInterfaceId"),
+							Value: aws.String("val"),
+						},
+						{
+							Name:  aws.String("privateIPv4Address"),
+							Value: aws.String("eni-123"),
+						},
+					},
+				},
+			},
+			wantedENI: "eni-123",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			task := Task{
+				TaskArn:     tc.taskARN,
+				Attachments: tc.attachments,
+			}
+
+			out, err := task.PrivateIP()
+			if tc.wantedErr != nil {
+				require.Equal(t, tc.wantedErr, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedENI, out)
+			}
+		})
+	}
+}
+
 func TestTaskStatus_HumanString(t *testing.T) {
 	// from the function changes (ex: from "1 month ago" to "2 months ago"). To make our tests stable,
 	oldHumanize := humanizeTime

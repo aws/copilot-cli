@@ -65,8 +65,9 @@ func (e *ErrExecuteCommand) Error() string {
 }
 
 const (
-	missingFieldAttachment  = "attachment"
-	missingFieldDetailENIID = "detailENIID"
+	missingFieldAttachment         = "attachment"
+	missingFieldDetailENIID        = "detailENIID"
+	missingFieldPrivateIPv4Address = "privateIPv4"
 )
 
 // ErrTaskENIInfoNotFound when the ENI information is not found in a ECS task.
