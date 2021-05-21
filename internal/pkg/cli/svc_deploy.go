@@ -84,7 +84,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 	}
 	d, err := describe.NewAppDescriber(vars.appName)
 	if err != nil {
-		return nil, fmt.Errorf("new app describer for application %s: %v", vars.name, err)
+		return nil, fmt.Errorf("new app describer for application %s: %w", vars.name, err)
 	}
 	prompter := prompt.New()
 	return &deploySvcOpts{
