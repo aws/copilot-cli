@@ -37,6 +37,15 @@ func (s *Service) ServiceStatus() ServiceStatus {
 	}
 }
 
+// TargetGroups returns the target group ARNs of the load balancer, if any, attached to the service.
+func (s *Service) TargetGroups() []string {
+	var targetGroupARNs []string
+	for _, lb := range s.LoadBalancers {
+		targetGroupARNs = append(targetGroupARNs, aws.StringValue(lb.TargetGroupArn))
+	}
+	return targetGroupARNs
+}
+
 // ServiceArn is the arn of an ECS service.
 type ServiceArn string
 
