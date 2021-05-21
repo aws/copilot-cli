@@ -165,9 +165,9 @@ func imageName(uri, tag string) string {
 // GetHelperProviderFromDockerCfg tries to fetch credential store used by docker from config file.
 func (c DockerCommand) GetHelperProviderFromDockerCfg() string {
 	// Look into the default locations
-	pathsToTry := []string{"/.docker/config.json", ".dockercfg"}
+	pathsToTry := []string{filepath.Join(".docker, config.json"), ".dockercfg"}
 	for _, path := range pathsToTry {
-		content, err := ioutil.ReadFile(fmt.Sprintf("%s/%s",os.Getenv("HOME"), path))
+		content, err := ioutil.ReadFile(filepath.Join(os.Getenv("HOME"), path))
 		if err != nil {
 			// if we can't read the file keep going
 			continue
