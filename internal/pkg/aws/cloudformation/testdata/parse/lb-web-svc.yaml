@@ -131,14 +131,7 @@ Resources:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
           Subnets:
-            - Fn::Select:
-                - 0
-                - Fn::Split:
-                    - ','
-                    - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
-            - Fn::Select:
-                - 1
-                - Fn::Split:
+            Fn::Split:
                     - ','
                     - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
           SecurityGroups:

@@ -52,11 +52,11 @@ Resources:
   ServiceDiscoveryNamespace:
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
     Properties:
-        Name: !Sub ${AppName}.local
+      Name: !Sub ${AppName}.local
 {{- if .ImportVPC}}
-        Vpc: {{.ImportVPC.ID}}
+      Vpc: {{.ImportVPC.ID}}
 {{- else}}
-        Vpc: !Ref VPC
+      Vpc: !Ref VPC
 {{- end}}
   Cluster:
     Metadata:
