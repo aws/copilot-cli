@@ -163,7 +163,7 @@ func imageName(uri, tag string) string {
 }
 
 // GetHelperProviderFromDockerCfg will fetch credential store used by docker from config file
-func (c DockerCommand) GetHelperProviderFromDockerCfg() (string) {
+func (c DockerCommand) GetHelperProviderFromDockerCfg() string {
 	// Look into the default locations
 	pathsToTry := []string{"/.docker/config.json", ".dockercfg"}
 	for _, path := range pathsToTry {
