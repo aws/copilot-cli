@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"golang.org/x/mod/semver"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
@@ -58,6 +59,7 @@ type deploySvcOpts struct {
 	svcCFN             cloudformation.CloudFormation
 	sessProvider       sessionProvider
 	envUpgradeCmd      actionCommand
+	appVersionGetter   versionGetter
 
 	spinner progress
 	sel     wsSelector
@@ -76,23 +78,27 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
-
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
+	}
+	d, err := describe.NewAppDescriber(vars.appName)
+	if err != nil {
+		return nil, fmt.Errorf("new app describer for application %s: %v", vars.name, err)
 	}
 	prompter := prompt.New()
 	return &deploySvcOpts{
 		deployWkldVars: vars,
 
-		store:        store,
-		ws:           ws,
-		unmarshal:    manifest.UnmarshalWorkload,
-		spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
-		sel:          selector.NewWorkspaceSelect(prompter, store, ws),
-		prompt:       prompter,
-		cmd:          exec.NewCmd(),
-		sessProvider: sessions.NewProvider(),
+		store:            store,
+		ws:               ws,
+		unmarshal:        manifest.UnmarshalWorkload,
+		spinner:          termprogress.NewSpinner(log.DiagnosticWriter),
+		sel:              selector.NewWorkspaceSelect(prompter, store, ws),
+		prompt:           prompter,
+		appVersionGetter: d,
+		cmd:              exec.NewCmd(),
+		sessProvider:     sessions.NewProvider(),
 	}, nil
 }
 
@@ -414,6 +420,13 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
+		if err := o.validateAppVersion(t); err != nil {
+			log.Errorf(`Cannot deploy service %s because the application version is incompatible.
+To upgrade the application, please assume the application admin role and run %s first.
+`, aws.StringValue(t.Name),
+				color.HighlightCode("copilot app upgrade"))
+			return nil, err
+		}
 		if o.targetApp.RequiresDNSDelegation() {
 			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		} else {
@@ -440,6 +453,20 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 
 	if err := o.svcCFN.DeployService(os.Stderr, conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
 		return fmt.Errorf("deploy service: %w", err)
+	}
+	return nil
+}
+
+func (o *deploySvcOpts) validateAppVersion(svc *manifest.LoadBalancedWebService) error {
+	appVersion, err := o.appVersionGetter.Version()
+	if err != nil {
+		return fmt.Errorf("get version for app %s: %w", o.appName, err)
+	}
+	if aws.StringValue(svc.Alias) != "" && o.targetApp.RequiresDNSDelegation() {
+		diff := semver.Compare(appVersion, deploy.AliasLeastAppTemplateVersion)
+		if diff < 0 {
+			return fmt.Errorf("enabling https alias requires the application version to be at least %s", deploy.AliasLeastAppTemplateVersion)
+		}
 	}
 	return nil
 }
