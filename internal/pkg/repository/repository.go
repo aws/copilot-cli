@@ -15,6 +15,7 @@ type ContainerLoginBuildPusher interface {
 	Build(args *exec.BuildArguments) error
 	Login(uri, username, password string) error
 	Push(uri string, tags ...string) (digest string, err error)
+	GetHelperProviderFromDockerCfg() string
 }
 
 // Registry gets information of repositories.
@@ -54,13 +55,19 @@ func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, args *exec.B
 		return "", fmt.Errorf("build Dockerfile at %s: %w", args.Dockerfile, err)
 	}
 
-	username, password, err := r.registry.Auth()
-	if err != nil {
-		return "", fmt.Errorf("get auth: %w", err)
-	}
+	// Check for usage of amazon-ecr-credential-helper before performing docker login
+	credStore := docker.GetHelperProviderFromDockerCfg()
 
-	if err := docker.Login(args.URI, username, password); err != nil {
-		return "", fmt.Errorf("login to repo %s: %w", r.name, err)
+	// Perform docker login only if credStore not
+	if credStore != "ecr-login"{
+		username, password, err := r.registry.Auth()
+		if err != nil {
+			return "", fmt.Errorf("get auth: %w", err)
+		}
+
+		if err := docker.Login(args.URI, username, password); err != nil {
+			return "", fmt.Errorf("login to repo %s: %w", r.name, err)
+		}
 	}
 
 	digest, err = docker.Push(args.URI, args.Tags...)

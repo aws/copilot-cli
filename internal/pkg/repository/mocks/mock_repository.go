@@ -48,6 +48,20 @@ func (mr *MockContainerLoginBuildPusherMockRecorder) Build(args interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockContainerLoginBuildPusher)(nil).Build), args)
 }
 
+// GetHelperProviderFromDockerCfg mocks base method
+func (m *MockContainerLoginBuildPusher) GetHelperProviderFromDockerCfg() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHelperProviderFromDockerCfg")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetHelperProviderFromDockerCfg indicates an expected call of GetHelperProviderFromDockerCfg
+func (mr *MockContainerLoginBuildPusherMockRecorder) GetHelperProviderFromDockerCfg() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHelperProviderFromDockerCfg", reflect.TypeOf((*MockContainerLoginBuildPusher)(nil).GetHelperProviderFromDockerCfg))
+}
+
 // Login mocks base method.
 func (m *MockContainerLoginBuildPusher) Login(uri, username, password string) error {
 	m.ctrl.T.Helper()

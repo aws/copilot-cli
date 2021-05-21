@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
@@ -158,4 +160,39 @@ func imageName(uri, tag string) string {
 		return uri // If no tag is specified build with latest.
 	}
 	return fmt.Sprintf("%s:%s", uri, tag)
+}
+
+// GetHelperProviderFromDockerCfg will fetch credential store used by docker from config file
+func (c DockerCommand) GetHelperProviderFromDockerCfg() (string) {
+	// Look into the default locations
+	pathsToTry := []string{"/.docker/config.json", ".dockercfg"}
+	for _, path := range pathsToTry {
+		content, err := ioutil.ReadFile(fmt.Sprintf("%s/%s",os.Getenv("HOME"), path))
+		if err != nil {
+			// if we can't read the file keep going
+			continue
+		}
+
+		provider, err := parseCredFromDockerConfig(content)
+		if err != nil {
+			continue
+		}
+		if provider != "" {
+			return provider
+		}
+	}
+	return ""
+}
+
+// parseCredFromDockerConfig will unmarshal string to struct
+func parseCredFromDockerConfig(config []byte) (string, error) {
+	cred := struct {
+		CredsStore  string            `json:"credsStore,omitempty"`
+	}{}
+	err := json.Unmarshal(config, &cred)
+	if err != nil {
+		return "", err
+	}
+
+	return cred.CredsStore, nil
 }

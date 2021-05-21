@@ -45,6 +45,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(gomock.Any()).AnyTimes()
+				m.EXPECT().GetHelperProviderFromDockerCfg().Return("")
 				m.EXPECT().Login(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				m.EXPECT().Push(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
@@ -67,6 +68,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(gomock.Any()).AnyTimes()
+				m.EXPECT().GetHelperProviderFromDockerCfg().Return("")
 				m.EXPECT().Login(mockRepoURI, "my-name", "my-pwd").Return(errors.New("error logging in"))
 				m.EXPECT().Push(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
@@ -78,10 +80,19 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(&defaultDockerArguments).Times(1)
+				m.EXPECT().GetHelperProviderFromDockerCfg().Return("")
 				m.EXPECT().Login(gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 				m.EXPECT().Push(mockRepoURI, mockTag1, mockTag2, mockTag3).Return("", errors.New("error pushing image"))
 			},
 			wantedError: errors.New("push to repo my-repo: error pushing image"),
+		},
+		"push with ecr-login": {
+			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
+				m.EXPECT().Build(&defaultDockerArguments).Return(nil).Times(1)
+				m.EXPECT().GetHelperProviderFromDockerCfg().Return("ecr-login")
+				m.EXPECT().Push(mockRepoURI, mockTag1, mockTag2, mockTag3).Return("sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807", nil)
+			},
+			wantedDigest: "sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807",
 		},
 		"success": {
 			mockRegistry: func(m *mocks.MockRegistry) {
@@ -89,6 +100,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(&defaultDockerArguments).Return(nil).Times(1)
+				m.EXPECT().GetHelperProviderFromDockerCfg().Return("")
 				m.EXPECT().Login(mockRepoURI, "my-name", "my-pwd").Return(nil).Times(1)
 				m.EXPECT().Push(mockRepoURI, mockTag1, mockTag2, mockTag3).Return("sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807", nil)
 			},
