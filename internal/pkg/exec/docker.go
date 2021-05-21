@@ -21,12 +21,14 @@ type DockerCommand struct {
 	runner
 	// Override in unit tests.
 	buf *bytes.Buffer
+	homePath string
 }
 
 // NewDockerCommand returns a DockerCommand.
 func NewDockerCommand() DockerCommand {
 	return DockerCommand{
 		runner: NewCmd(),
+		homePath: os.Getenv("HOME"),
 	}
 }
 
@@ -40,6 +42,10 @@ type BuildArguments struct {
 	CacheFrom  []string          // Optional. Images to consider as cache sources to pass to `docker build`
 	Args       map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
 }
+
+const(
+	CredStoreECRLogin = "ecr-login" // set on `credStore` attribute in docker configuration file
+)
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
 func (c DockerCommand) Build(in *BuildArguments) error {
@@ -165,9 +171,9 @@ func imageName(uri, tag string) string {
 // GetHelperProviderFromDockerCfg tries to fetch credential store used by docker from config file.
 func (c DockerCommand) GetHelperProviderFromDockerCfg() string {
 	// Look into the default locations
-	pathsToTry := []string{filepath.Join(".docker, config.json"), ".dockercfg"}
+	pathsToTry := []string{filepath.Join(".docker", "config.json"), ".dockercfg"}
 	for _, path := range pathsToTry {
-		content, err := ioutil.ReadFile(filepath.Join(os.Getenv("HOME"), path))
+		content, err := ioutil.ReadFile(filepath.Join(c.homePath, path))
 		if err != nil {
 			// if we can't read the file keep going
 			continue
@@ -184,7 +190,6 @@ func (c DockerCommand) GetHelperProviderFromDockerCfg() string {
 	return ""
 }
 
-// parseCredFromDockerConfig will unmarshal string to struct
 func parseCredFromDockerConfig(config []byte) (string, error) {
 	cred := struct {
 		CredsStore  string            `json:"credsStore,omitempty"`

@@ -7,7 +7,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/spf13/afero"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -347,6 +349,65 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			}
+		})
+	}
+}
+
+func TestGetHelperProviderFromDockerCfg(t *testing.T){
+	var mockRunner *Mockrunner
+	var workspace = "test/copilot/.docker"
+	testCases := map[string]struct {
+		setupMocks func(controller *gomock.Controller)
+		inBuffer   *bytes.Buffer
+		mockFileSystem      func(fs afero.Fs)
+		postExec      func(fs afero.Fs)
+		wantedCredStore string
+ 	}{
+		"get docker credential using helper": {
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll(workspace, 0755)
+				afero.WriteFile(fs, filepath.Join(workspace, "config.json"), []byte(fmt.Sprintf("{\"credsStore\":\"%s\"}", CredStoreECRLogin)), 0644)
+			},
+			setupMocks: func(c *gomock.Controller) {
+				mockRunner = NewMockrunner(c)
+			},
+			postExec: func(fs afero.Fs){
+				fs.RemoveAll(workspace)
+			},
+			wantedCredStore: CredStoreECRLogin,
+		},
+		"no file check": {
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll(workspace, 0755)
+			},
+			setupMocks: func(c *gomock.Controller) {
+				mockRunner = NewMockrunner(c)
+			},
+			postExec: func(fs afero.Fs){
+				fs.RemoveAll(workspace)
+			},
+			wantedCredStore: "",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// Create an empty FileSystem
+			fs := afero.NewOsFs()
+
+			controller := gomock.NewController(t)
+			tc.setupMocks(controller)
+			tc.mockFileSystem(fs)
+			s := DockerCommand{
+				runner: mockRunner,
+				buf:    tc.inBuffer,
+				homePath: "test/copilot",
+			}
+
+			credStore := s.GetHelperProviderFromDockerCfg()
+			tc.postExec(fs)
+
+			require.Equal(t, tc.wantedCredStore, credStore)
 		})
 	}
 }

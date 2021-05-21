@@ -58,8 +58,8 @@ func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, args *exec.B
 	// Check for usage of amazon-ecr-credential-helper before performing docker login
 	credStore := docker.GetHelperProviderFromDockerCfg()
 
-	// Perform docker login only if credStore not
-	if credStore != "ecr-login"{
+	// Perform docker login only if credStore attribute value != ecr-login
+	if credStore != exec.CredStoreECRLogin{
 		username, password, err := r.registry.Auth()
 		if err != nil {
 			return "", fmt.Errorf("get auth: %w", err)
