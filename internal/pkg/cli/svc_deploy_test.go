@@ -573,12 +573,14 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			wantErr:              fmt.Errorf("ECR repository not found for service mockSvc in region us-west-2 and account 1234567890"),
 		},
 		"fail to get app version": {
+			inAlias: "mockAlias",
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
 			},
 			inApp: &config.Application{
-				Name: mockAppName,
+				Name:   mockAppName,
+				Domain: "mockDomain",
 			},
 			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
 				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
@@ -606,7 +608,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
 				m.EXPECT().Version().Return("v0.0.0", nil)
 			},
-			wantErr: fmt.Errorf("enabling https alias requires the application version to be at least %s", deploy.AliasLeastAppTemplateVersion),
+			wantErr: fmt.Errorf("cannot enable https alias: the application version should be at least %s", deploy.AliasLeastAppTemplateVersion),
 		},
 		"success": {
 			inEnvironment: &config.Environment{
@@ -614,15 +616,14 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				Region: "us-west-2",
 			},
 			inApp: &config.Application{
-				Name: mockAppName,
+				Name:   mockAppName,
+				Domain: "mockDomain",
 			},
 			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
 				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
 			},
 			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
-			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
-				m.EXPECT().Version().Return("v1.0.0", nil)
-			},
+			mockAppVersionGetter:   func(m *mocks.MockversionGetter) {},
 		},
 	}
 

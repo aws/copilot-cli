@@ -422,7 +422,7 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	case *manifest.LoadBalancedWebService:
 		if err := o.validateAppVersion(t); err != nil {
 			log.Errorf(`Cannot deploy service %s because the application version is incompatible.
-To upgrade the application, please assume the application admin role and run %s first.
+To upgrade the application, please use the application credentials to run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
 `, aws.StringValue(t.Name),
 				color.HighlightCode("copilot app upgrade"))
 			return nil, err
@@ -458,14 +458,16 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 }
 
 func (o *deploySvcOpts) validateAppVersion(svc *manifest.LoadBalancedWebService) error {
-	appVersion, err := o.appVersionGetter.Version()
-	if err != nil {
-		return fmt.Errorf("get version for app %s: %w", o.appName, err)
-	}
+	var appVersion string
+	var err error
 	if aws.StringValue(svc.Alias) != "" && o.targetApp.RequiresDNSDelegation() {
+		appVersion, err = o.appVersionGetter.Version()
+		if err != nil {
+			return fmt.Errorf("get version for app %s: %w", o.appName, err)
+		}
 		diff := semver.Compare(appVersion, deploy.AliasLeastAppTemplateVersion)
 		if diff < 0 {
-			return fmt.Errorf("enabling https alias requires the application version to be at least %s", deploy.AliasLeastAppTemplateVersion)
+			return fmt.Errorf("cannot enable https alias: the application version should be at least %s", deploy.AliasLeastAppTemplateVersion)
 		}
 	}
 	return nil
