@@ -24,6 +24,7 @@ const (
 	lastStatusRunning = "RUNNING"
 	// These field names are not defined as const in sdk.
 	networkInterfaceIDKey          = "networkInterfaceId"
+	privateIPv4AddressKey          = "privateIPv4Address"
 	networkInterfaceAttachmentType = "ElasticNetworkInterface"
 )
 
@@ -117,6 +118,23 @@ func (t *Task) ENI() (string, error) {
 	}
 }
 
+func (t *Task) attachmentENI() (*ecs.Attachment, error) {
+	var attachmentENI *ecs.Attachment
+	for _, attachment := range t.Attachments {
+		if aws.StringValue(attachment.Type) == networkInterfaceAttachmentType {
+			attachmentENI = attachment
+			break
+		}
+	}
+	if attachmentENI == nil {
+		return nil, &ErrTaskENIInfoNotFound{
+			MissingField: missingFieldAttachment,
+			TaskARN:      aws.StringValue(t.TaskArn),
+		}
+	}
+	return attachmentENI, nil
+}
+
 // TaskStatus contains the status info of a task.
 type TaskStatus struct {
 	Health           string    `json:"health"`
@@ -129,13 +147,17 @@ type TaskStatus struct {
 	CapacityProvider string    `json:"capacityProvider"`
 }
 
-// StoppedTaskStatus contains the status info a stopped task.
+// StoppedTaskStatus contains the status info of a stopped task.
 type StoppedTaskStatus TaskStatus
 
 // HumanString returns the stringified TaskStatus struct with human readable format.
 // Example output:
 //   6ca7a60d          f884127d            RUNNING             19 hours ago       -              UNKNOWN
 func (t TaskStatus) HumanString() string {
+	return t.humanString()
+}
+
+func (t TaskStatus) humanString() string {
 	digest := humanizeImageDigests(t.Images)
 	imageDigest := "-"
 	if len(digest) != 0 {
@@ -154,7 +176,7 @@ func (t TaskStatus) HumanString() string {
 		cp = t.CapacityProvider
 	}
 
-	return fmt.Sprintf("  %s\t%s\t%s\t%s\t%s\t%s\n", shortTaskID, imageDigest, t.LastStatus, startedSince, cp, taskHealthColor(t.Health))
+	return fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s", shortTaskID, imageDigest, t.LastStatus, startedSince, cp, taskHealthColor(t.Health))
 }
 
 // HumanString returns the stringified StoppedTaskStatus struct with human readable format.
@@ -182,7 +204,7 @@ func (t StoppedTaskStatus) HumanString() string {
 	if t.StoppedReason != "" {
 		stoppedReason = t.StoppedReason
 	}
-	return fmt.Sprintf("  %s\t%s\t%s\t%s\t%s\t%s\n", shortTaskID, imageDigest, t.LastStatus, startedSince, stoppedSince, stoppedReason)
+	return fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s", shortTaskID, imageDigest, t.LastStatus, startedSince, stoppedSince, stoppedReason)
 }
 
 // TaskDefinition wraps up ECS TaskDefinition struct.

@@ -153,6 +153,7 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get service %s: %w", svcDesc.Name, err)
 	}
+
 	var taskStatus []awsECS.TaskStatus
 	for _, task := range svcDesc.Tasks {
 		status, err := task.TaskStatus()
@@ -161,6 +162,7 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 		}
 		taskStatus = append(taskStatus, *status)
 	}
+
 	var alarms []cloudwatch.AlarmStatus
 	taggedAlarms, err := s.cwSvcGetter.AlarmsWithTags(map[string]string{
 		deploy.AppTagKey:     s.app,
@@ -199,9 +201,6 @@ func (a *AppRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
 	svc, err := a.svcDescriber.Service()
 	if err != nil {
 		return nil, fmt.Errorf("get AppRunner service description for App Runner service %s in environment %s: %w", a.svc, a.env, err)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("get service id: %w", err)
 	}
 	logGroupName := fmt.Sprintf(fmtAppRunnerSvcLogGroupName, svc.Name, svc.ID)
 	logEventsOpts := cloudwatchlogs.LogEventsOpts{
@@ -286,7 +285,7 @@ func (s *ecsServiceStatus) HumanString() string {
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, task := range s.Tasks {
-		fmt.Fprint(writer, task.HumanString())
+		fmt.Fprintf(writer, "  %s\n", task.HumanString())
 	}
 	if len(s.StoppedTasks) > 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nStopped Tasks\n\n"))
@@ -295,7 +294,7 @@ func (s *ecsServiceStatus) HumanString() string {
 		fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 		for _, task := range s.StoppedTasks {
-			fmt.Fprint(writer, (awsECS.StoppedTaskStatus)(task).HumanString())
+			fmt.Fprintf(writer, "  %s\n", (awsECS.StoppedTaskStatus)(task).HumanString())
 		}
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nAlarms\n\n"))
