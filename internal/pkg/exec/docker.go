@@ -162,7 +162,7 @@ func imageName(uri, tag string) string {
 	return fmt.Sprintf("%s:%s", uri, tag)
 }
 
-// GetHelperProviderFromDockerCfg will fetch credential store used by docker from config file
+// GetHelperProviderFromDockerCfg tries to fetch credential store used by docker from config file.
 func (c DockerCommand) GetHelperProviderFromDockerCfg() string {
 	// Look into the default locations
 	pathsToTry := []string{"/.docker/config.json", ".dockercfg"}
