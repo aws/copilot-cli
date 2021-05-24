@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.38.45
 	github.com/briandowns/spinner v1.12.0
 	github.com/dustin/go-humanize v1.0.0
-	github.com/fatih/color v1.11.0
+	github.com/fatih/color v1.12.0
 	github.com/fatih/structs v1.1.0
 	github.com/gobuffalo/packd v1.0.0
 	github.com/gobuffalo/packr/v2 v2.8.1
