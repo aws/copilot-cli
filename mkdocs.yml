@@ -42,6 +42,7 @@ nav:
       - Scheduled Job: docs/manifest/scheduled-job.en.md
       - Pipeline: docs/manifest/pipeline.en.md
     - Developing:
+      - Domain: docs/developing/domain.en.md
       - Environment Variables: docs/developing/environment-variables.en.md
       - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
       - Secrets: docs/developing/secrets.en.md
@@ -164,11 +165,6 @@ markdown_extensions:
           - site/overrides/.icons
 
 plugins:
-    - search
-    - redirects:
-        redirect_maps:
-            'docs/installing.md': 'docs/getting-started/install.md'
-            'docs/getting-started.md': 'docs/getting-started/first-app-tutorial.md'
     - i18n:
         default_language: en
         languages:
