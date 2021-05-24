@@ -180,7 +180,8 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/cloudformation/stackset/mocks/mock_stackset.go -source=./internal/pkg/aws/cloudformation/stackset/stackset.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/ssm/mocks/mock_ssm.go -source=./internal/pkg/aws/ssm/ssm.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/stepfunctions/mocks/mock_stepfunctions.go -source=./internal/pkg/aws/stepfunctions/stepfunctions.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/addon/mocks/mock_addons.go -source=./internal/pkg/addon/addons.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/apprunner/mocks/mock_apprunner.go -source=./internal/pkg/aws/apprunner/apprunner.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/elbv2/mocks/mock_elbv2.go -source=./internal/pkg/aws/elbv2/elbv2.go
 	${GOBIN}/mockgen -package=exec -source=./internal/pkg/exec/exec.go -destination=./internal/pkg/exec/mock_exec.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/mocks/mock_deploy.go -source=./internal/pkg/deploy/deploy.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/mocks/mock_cloudformation.go -source=./internal/pkg/deploy/cloudformation/cloudformation.go
@@ -198,4 +199,3 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/initialize/mocks/mock_workload.go -source=./internal/pkg/initialize/workload.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_ecs.go -source=./internal/pkg/ecs/ecs.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_run_task_request.go -source=./internal/pkg/ecs/run_task_request.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/apprunner/mocks/mock_apprunner.go -source=./internal/pkg/aws/apprunner/apprunner.go
