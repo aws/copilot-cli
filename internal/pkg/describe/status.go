@@ -123,7 +123,7 @@ func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, er
 
 // NewAppRunnerStatusDescriber instantiates a new AppRunnerStatusDescriber struct.
 func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*AppRunnerStatusDescriber, error) {
-	svcDescriber, err := NewAppRunnerServiceDescriber(NewServiceConfig{
+	ecsSvcDescriber, err := NewAppRunnerServiceDescriber(NewServiceConfig{
 		App: opt.App,
 		Env: opt.Env,
 		Svc: opt.Svc,
@@ -138,8 +138,8 @@ func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*AppRunnerStatusD
 		app:          opt.App,
 		env:          opt.Env,
 		svc:          opt.Svc,
-		svcDescriber: svcDescriber,
-		eventsGetter: cloudwatchlogs.New(svcDescriber.sess),
+		svcDescriber: ecsSvcDescriber,
+		eventsGetter: cloudwatchlogs.New(ecsSvcDescriber.sess),
 	}, nil
 }
 

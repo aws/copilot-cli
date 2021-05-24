@@ -5,14 +5,16 @@
 
 * **Documentation**: [https://aws.github.io/copilot-cli/](https://aws.github.io/copilot-cli/)
 
-The AWS Copilot CLI is a tool for developers to build, release and operate production ready containerized applications on Amazon ECS and AWS Fargate.
+The AWS Copilot CLI is a tool for developers to build, release and operate production ready containerized applications 
+on AWS App Runner, Amazon ECS, and AWS Fargate.  
 
 Use Copilot to:
-* Deploy production-ready, scalable ECS services from a Dockerfile in one command
-* Organize all your related microservices in one application
-* Set up test and production environments, across regions and accounts
-* Set up CI/CD pipelines to release your services to your environments
-* Monitor and debug your services from your terminal
+* Deploy production-ready, scalable services on AWS from a Dockerfile in one command.
+* Add databases or inject secrets to your services.  
+* Grow from one microservice to a collection of related microservices in an application.
+* Set up test and production environments, across regions and accounts.
+* Set up CI/CD pipelines to release your services to your environments.
+* Monitor and debug your services from your terminal.
 
 <p align="center">
     <img alt="init" src="./site/content/assets/images/init-cropped.gif" width="600"/>
@@ -56,7 +58,8 @@ $ copilot init --app demo                \
   --deploy
 ```
 
-This will create a VPC, Application Load Balancer, an Amazon ECS Service with the sample app running on AWS Fargate. This process will take around 8 minutes to complete - at which point you'll get a URL for your sample app running! 🚀
+This will create a VPC, Application Load Balancer, an Amazon ECS Service with the sample app running on AWS Fargate.
+This process will take around 8 minutes to complete - at which point you'll get a URL for your sample app running! 🚀
 
 ## Learning more 
 

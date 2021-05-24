@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"golang.org/x/mod/semver"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
@@ -58,6 +59,7 @@ type deploySvcOpts struct {
 	svcCFN             cloudformation.CloudFormation
 	sessProvider       sessionProvider
 	envUpgradeCmd      actionCommand
+	appVersionGetter   versionGetter
 
 	spinner progress
 	sel     wsSelector
@@ -76,23 +78,27 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
-
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
+	}
+	d, err := describe.NewAppDescriber(vars.appName)
+	if err != nil {
+		return nil, fmt.Errorf("new app describer for application %s: %w", vars.name, err)
 	}
 	prompter := prompt.New()
 	return &deploySvcOpts{
 		deployWkldVars: vars,
 
-		store:        store,
-		ws:           ws,
-		unmarshal:    manifest.UnmarshalWorkload,
-		spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
-		sel:          selector.NewWorkspaceSelect(prompter, store, ws),
-		prompt:       prompter,
-		cmd:          exec.NewCmd(),
-		sessProvider: sessions.NewProvider(),
+		store:            store,
+		ws:               ws,
+		unmarshal:        manifest.UnmarshalWorkload,
+		spinner:          termprogress.NewSpinner(log.DiagnosticWriter),
+		sel:              selector.NewWorkspaceSelect(prompter, store, ws),
+		prompt:           prompter,
+		appVersionGetter: d,
+		cmd:              exec.NewCmd(),
+		sessProvider:     sessions.NewProvider(),
 	}, nil
 }
 
@@ -414,6 +420,13 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
+		if err := o.validateAppVersion(t); err != nil {
+			log.Errorf(`Cannot deploy service %s because the application version is incompatible.
+To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
+`, aws.StringValue(t.Name),
+				color.HighlightCode("copilot app upgrade"))
+			return nil, err
+		}
 		if o.targetApp.RequiresDNSDelegation() {
 			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		} else {
@@ -444,16 +457,32 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 	return nil
 }
 
+func (o *deploySvcOpts) validateAppVersion(svc *manifest.LoadBalancedWebService) error {
+	var appVersion string
+	var err error
+	if aws.StringValue(svc.Alias) != "" && o.targetApp.RequiresDNSDelegation() {
+		appVersion, err = o.appVersionGetter.Version()
+		if err != nil {
+			return fmt.Errorf("get version for app %s: %w", o.appName, err)
+		}
+		diff := semver.Compare(appVersion, deploy.AliasLeastAppTemplateVersion)
+		if diff < 0 {
+			return fmt.Errorf(`enable "http.alias": the application version should be at least %s`, deploy.AliasLeastAppTemplateVersion)
+		}
+	}
+	return nil
+}
+
 func (o *deploySvcOpts) showSvcURI() error {
 	type identifier interface {
 		URI(string) (string, error)
 	}
 
-	var svcDescriber identifier
+	var ecsSvcDescriber identifier
 	var err error
 	switch o.targetSvc.Type {
 	case manifest.LoadBalancedWebServiceType:
-		svcDescriber, err = describe.NewLBWebServiceDescriber(describe.NewLBWebServiceConfig{
+		ecsSvcDescriber, err = describe.NewLBWebServiceDescriber(describe.NewLBWebServiceConfig{
 			NewServiceConfig: describe.NewServiceConfig{
 				App:         o.appName,
 				Svc:         o.name,
@@ -461,7 +490,7 @@ func (o *deploySvcOpts) showSvcURI() error {
 			},
 		})
 	case manifest.RequestDrivenWebServiceType:
-		svcDescriber, err = describe.NewRDWebServiceDescriber(describe.NewRDWebServiceConfig{
+		ecsSvcDescriber, err = describe.NewRDWebServiceDescriber(describe.NewRDWebServiceConfig{
 			NewServiceConfig: describe.NewServiceConfig{
 				App:         o.appName,
 				Svc:         o.name,
@@ -469,7 +498,7 @@ func (o *deploySvcOpts) showSvcURI() error {
 			},
 		})
 	case manifest.BackendServiceType:
-		svcDescriber, err = describe.NewBackendServiceDescriber(describe.NewBackendServiceConfig{
+		ecsSvcDescriber, err = describe.NewBackendServiceDescriber(describe.NewBackendServiceConfig{
 			NewServiceConfig: describe.NewServiceConfig{
 				App:         o.appName,
 				Svc:         o.name,
@@ -483,7 +512,7 @@ func (o *deploySvcOpts) showSvcURI() error {
 		return fmt.Errorf("create describer for service type %s: %w", o.targetSvc.Type, err)
 	}
 
-	uri, err := svcDescriber.URI(o.targetEnvironment.Name)
+	uri, err := ecsSvcDescriber.URI(o.targetEnvironment.Name)
 	if err != nil {
 		return fmt.Errorf("get uri for environment %s: %w", o.targetEnvironment.Name, err)
 	}

@@ -155,7 +155,7 @@ func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
 // Example output:
 //   DeployTo-test	Deploy	Cloudformation	stackname: dinder-test-test
 func (s *Stage) HumanString() string {
-	return fmt.Sprintf("  %s\t%s\t%s\t%s\n", s.Name, s.Category, s.Provider, s.Details)
+	return fmt.Sprintf("%s\t%s\t%s\t%s\n", s.Name, s.Category, s.Provider, s.Details)
 }
 
 // ListPipelineNamesByTags retrieves the names of all pipelines for an application.

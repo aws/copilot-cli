@@ -8,10 +8,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -53,8 +52,8 @@ Resources
 `
 
 type apprunnerSvcDescriberMocks struct {
-	storeSvc     *mocks.MockDeployedEnvServicesLister
-	svcDescriber *mocks.MockapprunnerSvcDescriber
+	storeSvc        *mocks.MockDeployedEnvServicesLister
+	ecsSvcDescriber *mocks.MockapprunnerSvcDescriber
 }
 
 func TestRDWebServiceDescriber_URI(t *testing.T) {
@@ -74,7 +73,7 @@ func TestRDWebServiceDescriber_URI(t *testing.T) {
 		"fail to get outputs of service stack": {
 			setupMocks: func(m apprunnerSvcDescriberMocks) {
 				gomock.InOrder(
-					m.svcDescriber.EXPECT().ServiceURL().Return("", mockErr),
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("", mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("get outputs for service frontend: some error"),
@@ -82,7 +81,7 @@ func TestRDWebServiceDescriber_URI(t *testing.T) {
 		"succeed in getting outputs of service stack": {
 			setupMocks: func(m apprunnerSvcDescriberMocks) {
 				gomock.InOrder(
-					m.svcDescriber.EXPECT().ServiceURL().Return(testSvcURL, nil),
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return(testSvcURL, nil),
 				)
 			},
 
@@ -98,7 +97,7 @@ func TestRDWebServiceDescriber_URI(t *testing.T) {
 
 			mockSvcDescriber := mocks.NewMockapprunnerSvcDescriber(ctrl)
 			mocks := apprunnerSvcDescriberMocks{
-				svcDescriber: mockSvcDescriber,
+				ecsSvcDescriber: mockSvcDescriber,
 			}
 
 			tc.setupMocks(mocks)
@@ -154,7 +153,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m apprunnerSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.svcDescriber.EXPECT().Service().Return(nil, mockErr),
+					m.ecsSvcDescriber.EXPECT().Service().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve service configuration: some error"),
@@ -164,8 +163,8 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m apprunnerSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.svcDescriber.EXPECT().Service().Return(&apprunner.Service{}, nil),
-					m.svcDescriber.EXPECT().ServiceStackResources().Return(nil, mockErr),
+					m.ecsSvcDescriber.EXPECT().Service().Return(&apprunner.Service{}, nil),
+					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve service resources: some error"),
@@ -175,7 +174,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m apprunnerSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv}, nil),
-					m.svcDescriber.EXPECT().Service().Return(&apprunner.Service{
+					m.ecsSvcDescriber.EXPECT().Service().Return(&apprunner.Service{
 						ServiceARN: "arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc",
 						ServiceURL: "6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
 						CPU:        "1024",
@@ -188,13 +187,13 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 							},
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
+					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
-							ResourceType:       aws.String("AWS::AppRunner::Service"),
-							PhysicalResourceId: aws.String("arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc"),
+							Type:       "AWS::AppRunner::Service",
+							PhysicalID: "arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc",
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().Service().Return(&apprunner.Service{
+					m.ecsSvcDescriber.EXPECT().Service().Return(&apprunner.Service{
 						ServiceARN: "arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc",
 						ServiceURL: "tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com",
 						CPU:        "2048",
@@ -207,10 +206,10 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 							},
 						},
 					}, nil),
-					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
+					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
-							ResourceType:       aws.String("AWS::AppRunner::Service"),
-							PhysicalResourceId: aws.String("arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc"),
+							Type:       "AWS::AppRunner::Service",
+							PhysicalID: "arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc",
 						},
 					}, nil),
 				)
@@ -255,7 +254,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 						Value:       "prod",
 					},
 				},
-				Resources: map[string][]*CfnResource{
+				Resources: map[string][]*stack.Resource{
 					"test": {
 						{
 							Type:       "AWS::AppRunner::Service",
@@ -282,8 +281,8 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
 			mockSvcDescriber := mocks.NewMockapprunnerSvcDescriber(ctrl)
 			mocks := apprunnerSvcDescriberMocks{
-				storeSvc:     mockStore,
-				svcDescriber: mockSvcDescriber,
+				storeSvc:        mockStore,
+				ecsSvcDescriber: mockSvcDescriber,
 			}
 
 			tc.setupMocks(mocks)
@@ -358,7 +357,7 @@ func TestRDWebServiceDesc_String(t *testing.T) {
 					Value:       "prod",
 				},
 			},
-			Resources: map[string][]*CfnResource{
+			Resources: map[string][]*stack.Resource{
 				"test": {
 					{
 						Type:       "AWS::AppRunner::Service",
@@ -380,5 +379,4 @@ func TestRDWebServiceDesc_String(t *testing.T) {
 		require.Equal(t, wantedHumanString, human)
 		require.Equal(t, wantedJSONString, json)
 	})
-
 }

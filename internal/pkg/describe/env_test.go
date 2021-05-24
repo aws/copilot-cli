@@ -8,12 +8,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -21,10 +19,10 @@ import (
 type envDescriberMocks struct {
 	configStoreSvc *mocks.MockConfigStoreSvc
 	deployStoreSvc *mocks.MockDeployedEnvServicesLister
-	stackDescriber *mocks.Mockcfn
+	stackDescriber *mocks.MockstackDescriber
 }
 
-var wantedResources = []*CfnResource{
+var wantedResources = []*stack.Resource{
 	{
 		Type:       "AWS::IAM::Role",
 		PhysicalID: "testApp-testEnv-CFNExecutionRole",
@@ -62,37 +60,22 @@ func TestEnvDescriber_Describe(t *testing.T) {
 		Name: "testSvc3",
 		Type: "load-balanced",
 	}
-	stackTags := []*awscfn.Tag{
-		{
-			Key:   aws.String("copilot-application"),
-			Value: aws.String("testApp"),
-		},
-		{
-			Key:   aws.String("copilot-environment"),
-			Value: aws.String("testEnv"),
-		},
+	stackTags := map[string]string{
+		"copilot-application": "testApp",
+		"copilot-environment": "testEnv",
 	}
-	stackOutputs := []*awscfn.Output{
-		{
-			OutputKey:   aws.String("VpcId"),
-			OutputValue: aws.String("vpc-012abcd345"),
-		},
-		{
-			OutputKey:   aws.String("PublicSubnets"),
-			OutputValue: aws.String("subnet-0789ab,subnet-0123cd"),
-		},
-		{
-			OutputKey:   aws.String("PrivateSubnets"),
-			OutputValue: aws.String("subnet-023ff,subnet-04af"),
-		},
+	stackOutputs := map[string]string{
+		"VpcId":          "vpc-012abcd345",
+		"PublicSubnets":  "subnet-0789ab,subnet-0123cd",
+		"PrivateSubnets": "subnet-023ff,subnet-04af",
 	}
-	mockResource1 := &cloudformation.StackResource{
-		PhysicalResourceId: aws.String("testApp-testEnv-CFNExecutionRole"),
-		ResourceType:       aws.String("AWS::IAM::Role"),
+	mockResource1 := &stack.Resource{
+		PhysicalID: "testApp-testEnv-CFNExecutionRole",
+		Type:       "AWS::IAM::Role",
 	}
-	mockResource2 := &cloudformation.StackResource{
-		PhysicalResourceId: aws.String("AWS::ECS::Cluster-jI63pYBWU6BZ"),
-		ResourceType:       aws.String("testApp-testEnv-Cluster"),
+	mockResource2 := &stack.Resource{
+		PhysicalID: "AWS::ECS::Cluster-jI63pYBWU6BZ",
+		Type:       "testApp-testEnv-Cluster",
 	}
 	envSvcs := []*config.Workload{testSvc1, testSvc2}
 	mockError := errors.New("some error")
@@ -133,7 +116,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
 						Return([]string{"testSvc1", "testSvc2"}, nil),
-					m.stackDescriber.EXPECT().Describe("testApp-testEnv").Return(nil, mockError),
+					m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{}, mockError),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve environment stack: some error"),
@@ -147,11 +130,11 @@ func TestEnvDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
 						Return([]string{"testSvc1", "testSvc2"}, nil),
-					m.stackDescriber.EXPECT().Describe("testApp-testEnv").Return(&cloudformation.StackDescription{
+					m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
 						Tags:    stackTags,
 						Outputs: stackOutputs,
 					}, nil),
-					m.stackDescriber.EXPECT().StackResources("testApp-testEnv").Return(nil, mockError),
+					m.stackDescriber.EXPECT().Resources().Return(nil, mockError),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve environment resources: some error"),
@@ -165,7 +148,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
 						Return([]string{"testSvc1", "testSvc2"}, nil),
-					m.stackDescriber.EXPECT().Describe("testApp-testEnv").Return(&cloudformation.StackDescription{
+					m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
 						Tags:    stackTags,
 						Outputs: stackOutputs,
 					}, nil),
@@ -191,11 +174,11 @@ func TestEnvDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.deployStoreSvc.EXPECT().ListDeployedServices(testApp, testEnv.Name).
 						Return([]string{"testSvc1", "testSvc2"}, nil),
-					m.stackDescriber.EXPECT().Describe("testApp-testEnv").Return(&cloudformation.StackDescription{
+					m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
 						Tags:    stackTags,
 						Outputs: stackOutputs,
 					}, nil),
-					m.stackDescriber.EXPECT().StackResources("testApp-testEnv").Return([]*cloudformation.StackResource{
+					m.stackDescriber.EXPECT().Resources().Return([]*stack.Resource{
 						mockResource1,
 						mockResource2,
 					}, nil),
@@ -222,7 +205,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 
 			mockConfigStoreSvc := mocks.NewMockConfigStoreSvc(ctrl)
 			mockDeployedEnvServicesLister := mocks.NewMockDeployedEnvServicesLister(ctrl)
-			mockCFN := mocks.NewMockcfn(ctrl)
+			mockCFN := mocks.NewMockstackDescriber(ctrl)
 			mocks := envDescriberMocks{
 				configStoreSvc: mockConfigStoreSvc,
 				deployStoreSvc: mockDeployedEnvServicesLister,
@@ -264,8 +247,8 @@ func TestEnvDescriber_Version(t *testing.T) {
 	}{
 		"should return deploy.LegacyEnvTemplateVersion version if legacy template": {
 			given: func(ctrl *gomock.Controller) *EnvDescriber {
-				m := mocks.NewMockcfn(ctrl)
-				m.EXPECT().Metadata(gomock.Any()).Return("", nil)
+				m := mocks.NewMockstackDescriber(ctrl)
+				m.EXPECT().StackMetadata().Return("", nil)
 				return &EnvDescriber{
 					app: "phonetool",
 					env: &config.Environment{Name: "test"},
@@ -276,8 +259,8 @@ func TestEnvDescriber_Version(t *testing.T) {
 		},
 		"should read the version from the Metadata field": {
 			given: func(ctrl *gomock.Controller) *EnvDescriber {
-				m := mocks.NewMockcfn(ctrl)
-				m.EXPECT().Metadata(gomock.Any()).Return(`{"Version":"1.0.0"}`, nil)
+				m := mocks.NewMockstackDescriber(ctrl)
+				m.EXPECT().StackMetadata().Return(`{"Version":"1.0.0"}`, nil)
 				return &EnvDescriber{
 					app: "phonetool",
 					env: &config.Environment{Name: "test"},

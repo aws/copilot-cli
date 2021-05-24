@@ -18,7 +18,20 @@ Service のタイプを選択すると、Copilot は Dockerfile 内で記述さ�
 
 その秘密は、Service の作成時に Copilot が Service の __タイプ__ を尋ねていることにあります。
 
-### Load Balanced Web Service
+### インターネットから接続可能な Service
+
+インターネットからアクセス可能な Service を作る際の選択肢には次の２つがあります。
+
+* "Request-Driven Web Service" - Service 実行環境として AWS App Runner サービスを作成します。
+* "Load Balanced Web Service" - Service 実行環境として Appplication Load Balancer (ALB)、セキュリティグループ、ECS サービス (Fargate) を作成します。
+
+#### Request-Driven Web Service
+
+AWS App Runner を利用する Service で、受け付けるトラフィックに応じてオートスケールし、トラフィックがない場合は設定された最低インスタンス数までスケールダウンします。リクエスト量の大きな変化や恒常的な少ないリクエスト量が見込まれる HTTP サービスにとってもよりコスト効率の高い選択肢です。
+
+#### Load Balanced Web Service
+
+Application Load Balancer をトラフィックの入り口として Fargate 上でタスクを実行する ECS サービスです。安定したリクエスト量が見込まれる場合、Service から VPC 内のリソースにアクセスする必要がある場合、あるいはより高度な設定の必要がある場合に適した選択肢です。
 
 Service でインターネット側からのリクエストを捌きたいですか？__Load Balanced Web Service__ を選べば、Copilot は Application Load Balancer やセキュリティグループ、そしてあなたの Service を Fargate で実行するための ECS サービスを作成します。
 

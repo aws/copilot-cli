@@ -45,7 +45,7 @@ Conditions:
     !Equals [!Ref HTTPSEnabled, true]
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
-  HTTPRootPath: # If we're using path based routing and use the root path, we have some special logic
+  IsDefaultRootPath: # If we're using path based routing and use the root path, we have some special logic
     !Equals [!Ref RulePath, "/"]
 Resources:
   LogGroup:
@@ -332,27 +332,6 @@ Resources:
         Fn::ImportValue:
           !Sub "${AppName}-${EnvName}-VpcId"
 
-  LoadBalancerDNSAlias:
-    Type: AWS::Route53::RecordSetGroup
-    Condition: HTTPSLoadBalancer
-    Properties:
-      HostedZoneId:
-        Fn::ImportValue:
-          !Sub "${AppName}-${EnvName}-HostedZone"
-      Comment: !Sub "LoadBalancer alias for service ${WorkloadName}"
-      RecordSets:
-      - Name:
-          !Join
-            - '.'
-            - - !Ref WorkloadName
-              - Fn::ImportValue:
-                  !Sub "${AppName}-${EnvName}-SubDomain"
-              - ""
-        Type: A
-        AliasTarget:
-          HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
-          DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
-
   RulePriorityFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -414,12 +393,17 @@ Resources:
       Conditions:
         - Field: 'host-header'
           HostHeaderConfig:
+            Values: [example.com]
+        - Field: 'path-pattern'
+          PathPatternConfig:
             Values:
-              - Fn::Join:
-                - '.'
-                - - !Ref WorkloadName
-                  - Fn::ImportValue:
-                      !Sub "${AppName}-${EnvName}-SubDomain"
+              !If
+                - IsDefaultRootPath
+                -
+                  - "/*"
+                -
+                  - !Sub "/${RulePath}"
+                  - !Sub "/${RulePath}/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
       Priority: !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
 
@@ -433,12 +417,17 @@ Resources:
       Conditions:
         - Field: 'host-header'
           HostHeaderConfig:
+            Values: [example.com]
+        - Field: 'path-pattern'
+          PathPatternConfig:
             Values:
-              - Fn::Join:
-                - '.'
-                - - !Ref WorkloadName
-                  - Fn::ImportValue:
-                      !Sub "${AppName}-${EnvName}-SubDomain"
+              !If
+                - IsDefaultRootPath
+                -
+                  - "/*"
+                -
+                  - !Sub "/${RulePath}"
+                  - !Sub "/${RulePath}/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
       Priority: !GetAtt HTTPSRulePriorityAction.Priority
 
@@ -461,7 +450,7 @@ Resources:
           PathPatternConfig:
             Values:
               !If
-                - HTTPRootPath
+                - IsDefaultRootPath
                 -
                   - "/*"
                 -
@@ -470,7 +459,7 @@ Resources:
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
       Priority: 
         !If
-          - HTTPRootPath
+          - IsDefaultRootPath
           - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
           - !GetAtt HTTPRulePriorityAction.Priority
 

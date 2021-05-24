@@ -281,8 +281,12 @@ func (o *initStorageOpts) Ask() error {
 	if wkld.Type == manifest.RequestDrivenWebServiceType && o.storageType == rdsStorageType {
 		log.Warningf(`%s storage is launched in private subnets of your environment's VPC. 
 To reach the database from your %s please enable the HTTP Data API: 
-https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html
-`, rdsStorageTypeOption, manifest.RequestDrivenWebServiceType)
+https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.html. 
+
+You will also need to an IAM policy that allows your %s to make Data API calls. 
+You can simply create the policy in the Aurora addon template and create an output. The policy will be automatically attached to your %s:
+https://aws.github.io/copilot-cli/docs/developing/additional-aws-resources/#what-does-an-addon-template-look-like
+`, rdsStorageTypeOption, manifest.RequestDrivenWebServiceType, manifest.RequestDrivenWebServiceType, manifest.RequestDrivenWebServiceType)
 	}
 
 	// Storage name needs to be asked after workload because for Aurora the default storage name uses the workload name.

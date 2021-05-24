@@ -21,4 +21,6 @@ const (
 	LegacyAppTemplateVersion = "v0.0.0"
 	// LatestAppTemplateVersion is the latest version number available for application templates.
 	LatestAppTemplateVersion = "v1.0.1"
+	// AliasLeastAppTemplateVersion is the least version number available for HTTPS alias.
+	AliasLeastAppTemplateVersion = "v1.0.0"
 )

@@ -223,4 +223,4 @@ EFS に関連する認可設定を指定します。
 <div class="separator"></div>
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
-`environment` セクションでは、Manifest 内の任意の設定値を Environment ごとにオーバーライドできます。上部記載の Manifest 例では `count` パラメータをオーバーライドすることで prod Environment で実行されるタスク数を２に設定しています。
+`environments` セクションでは、Manifest 内の任意の設定値を Environment ごとにオーバーライドできます。上部記載の Manifest 例では `count` パラメータをオーバーライドすることで prod Environment で実行されるタスク数を２に設定しています。

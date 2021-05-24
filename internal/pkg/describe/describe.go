@@ -8,10 +8,9 @@ import (
 	"io"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/dustin/go-humanize"
 )
 
@@ -35,9 +34,16 @@ type HumanJSONStringer interface {
 	JSONString() (string, error)
 }
 
-type cfnResources map[string][]*CfnResource
+type stackDescriber interface {
+	Describe() (stack.StackDescription, error)
+	Resources() ([]*stack.Resource, error)
+	StackMetadata() (string, error)
+	StackSetMetadata() (string, error)
+}
 
-func (c cfnResources) humanStringByEnv(w io.Writer, envs []string) {
+type deployedSvcResources map[string][]*stack.Resource
+
+func (c deployedSvcResources) humanStringByEnv(w io.Writer, envs []string) {
 	for _, env := range envs {
 		resources := c[env]
 		fmt.Fprintf(w, "\n  %s\n", env)
@@ -45,23 +51,6 @@ func (c cfnResources) humanStringByEnv(w io.Writer, envs []string) {
 			fmt.Fprintf(w, "    %s\t%s\n", resource.Type, resource.PhysicalID)
 		}
 	}
-}
-
-// CfnResource contains application resources created by cloudformation.
-type CfnResource struct {
-	Type       string `json:"type"`
-	PhysicalID string `json:"physicalID"`
-}
-
-func flattenResources(stackResources []*cloudformation.StackResource) []*CfnResource {
-	var resources []*CfnResource
-	for _, stackResource := range stackResources {
-		resources = append(resources, &CfnResource{
-			Type:       aws.StringValue(stackResource.ResourceType),
-			PhysicalID: aws.StringValue(stackResource.PhysicalResourceId),
-		})
-	}
-	return resources
 }
 
 func flattenContainerEnvVars(envName string, envVars []*ecs.ContainerEnvVar) []*containerEnvVar {
@@ -108,9 +97,4 @@ func printTable(w io.Writer, headers []string, rows [][]string) {
 		}
 		fmt.Fprintf(w, "  %s\n", strings.Join(cells, "\t"))
 	}
-}
-
-// HumanString returns the stringified CfnResource struct with human readable format.
-func (c CfnResource) HumanString() string {
-	return fmt.Sprintf("    %s\t%s\n", c.Type, c.PhysicalID)
 }
