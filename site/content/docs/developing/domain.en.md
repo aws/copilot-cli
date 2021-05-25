@@ -25,7 +25,7 @@ http:
 !!!info
     Note that for now you can only use aliases under the domain you specified when creating the application. We'll make this feature more powerful by allowing users to import certificates so as to use any alias in the future!
 
-## What is Copilot doing when using domain?
+## What happens under the hood?
 Under the hood Copilot
 
 * creates a hosted zone in your app account for the new app subdomain `${AppName}.${DomainName}`;
