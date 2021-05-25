@@ -6,6 +6,9 @@ package elbv2
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -28,8 +31,11 @@ func New(sess *session.Session) *ELBV2 {
 	}
 }
 
+// TargetHealth wraps up elbv2.TargetHealthDescription.
+type TargetHealth elbv2.TargetHealthDescription
+
 // TargetsHealth returns the health status of the targets in a target group.
-func (e *ELBV2) TargetsHealth(targetGroupARN string) (map[string]elbv2.TargetHealth, error) {
+func (e *ELBV2) TargetsHealth(targetGroupARN string) ([]*TargetHealth, error) {
 	in := &elbv2.DescribeTargetHealthInput{
 		TargetGroupArn: aws.String(targetGroupARN),
 	}
@@ -38,9 +44,39 @@ func (e *ELBV2) TargetsHealth(targetGroupARN string) (map[string]elbv2.TargetHea
 		return nil, fmt.Errorf("describe target health for target group %s: %w", targetGroupARN, err)
 	}
 
-	ret := make(map[string]elbv2.TargetHealth)
-	for _, description := range out.TargetHealthDescriptions {
-		ret[aws.StringValue(description.Target.Id)] = *description.TargetHealth
+	ret := make([]*TargetHealth, len(out.TargetHealthDescriptions))
+	for idx, description := range out.TargetHealthDescriptions {
+		ret[idx] = (*TargetHealth)(description)
 	}
 	return ret, nil
+}
+
+// TargetID returns the target's ID, which is either an instance or an IP address.
+func (t *TargetHealth) TargetID() string {
+	return aws.StringValue(t.Target.Id)
+}
+
+// HumanString returns the stringified TargetHealth struct with human readable format.
+func (t *TargetHealth) HumanString() string {
+	stateReason := "-"
+	if aws.StringValue(t.TargetHealth.Reason) != "" {
+		stateReason = aws.StringValue(t.TargetHealth.Reason)
+	}
+	state := strings.ToUpper(aws.StringValue(t.TargetHealth.State))
+	return fmt.Sprintf("%s\t%s\t%s", aws.StringValue(t.Target.Id), stateReason, targetHealthColor(state))
+}
+
+func targetHealthColor(state string) string {
+	switch state {
+	case "HEALTHY":
+		return color.Green.Sprint(state)
+	case "UNHEALTHY":
+		return color.Red.Sprint(state)
+	case "INITIAL", "UNUSED":
+		return color.Grey.Sprint(state)
+	case "DRAINING", "UNAVAILABLE":
+		return color.DullRed.Sprintf(state)
+	default:
+		return state
+	}
 }

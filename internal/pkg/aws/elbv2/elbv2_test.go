@@ -20,7 +20,7 @@ func TestELBV2_TargetsHealth(t *testing.T) {
 
 		setUpMock func(m *mocks.Mockapi)
 
-		wantedOut   map[string]elbv2.TargetHealth
+		wantedOut   []*TargetHealth
 		wantedError error
 	}{
 		"success": {
@@ -66,19 +66,37 @@ func TestELBV2_TargetsHealth(t *testing.T) {
 				}, nil)
 			},
 
-			wantedOut: map[string]elbv2.TargetHealth{
-				"10.00.233": {
-					Description: aws.String("timed out"),
-					Reason:      aws.String(elbv2.TargetHealthReasonEnumTargetTimeout),
-					State:       aws.String(elbv2.TargetHealthStateEnumUnhealthy),
+			wantedOut: []*TargetHealth{
+				{
+					HealthCheckPort: aws.String("80"),
+					Target: &elbv2.TargetDescription{
+						Id: aws.String("10.00.233"),
+					},
+					TargetHealth: &elbv2.TargetHealth{
+						Description: aws.String("timed out"),
+						Reason:      aws.String(elbv2.TargetHealthReasonEnumTargetTimeout),
+						State:       aws.String(elbv2.TargetHealthStateEnumUnhealthy),
+					},
 				},
-				"10.00.322": {
-					State: aws.String(elbv2.TargetHealthStateEnumHealthy),
+				{
+					HealthCheckPort: aws.String("80"),
+					Target: &elbv2.TargetDescription{
+						Id: aws.String("10.00.322"),
+					},
+					TargetHealth: &elbv2.TargetHealth{
+						State: aws.String(elbv2.TargetHealthStateEnumHealthy),
+					},
 				},
-				"10.00.332": {
-					Description: aws.String("mismatch"),
-					Reason:      aws.String(elbv2.TargetHealthReasonEnumTargetResponseCodeMismatch),
-					State:       aws.String(elbv2.TargetHealthStateEnumUnhealthy),
+				{
+					HealthCheckPort: aws.String("80"),
+					Target: &elbv2.TargetDescription{
+						Id: aws.String("10.00.332"),
+					},
+					TargetHealth: &elbv2.TargetHealth{
+						Description: aws.String("mismatch"),
+						Reason:      aws.String(elbv2.TargetHealthReasonEnumTargetResponseCodeMismatch),
+						State:       aws.String(elbv2.TargetHealthStateEnumUnhealthy),
+					},
 				},
 			},
 		},
@@ -116,6 +134,47 @@ func TestELBV2_TargetsHealth(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedOut, got)
 			}
+		})
+	}
+}
+
+func TestTargetHealth_HumanString(t *testing.T) {
+	testCases := map[string]struct {
+		id     string
+		state  string
+		reason string
+
+		wantedOut string
+	}{
+		"healthy": {
+			id:    "target-1",
+			state: elbv2.TargetHealthStateEnumHealthy,
+
+			wantedOut: `target-1	-	HEALTHY`,
+		},
+		"unhealthy with reason": {
+			id:     "target-1",
+			state:  elbv2.TargetHealthStateEnumUnhealthy,
+			reason: elbv2.TargetHealthReasonEnumTargetResponseCodeMismatch,
+
+			wantedOut: `target-1	Target.ResponseCodeMismatch	UNHEALTHY`,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			th := TargetHealth{
+				Target: &elbv2.TargetDescription{
+					Id: aws.String(tc.id),
+				},
+				TargetHealth: &elbv2.TargetHealth{
+					State:  aws.String(tc.state),
+					Reason: aws.String(tc.reason),
+				},
+			}
+
+			got := th.HumanString()
+			require.Equal(t, tc.wantedOut, got)
 		})
 	}
 }
