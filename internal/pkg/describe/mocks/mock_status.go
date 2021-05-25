@@ -11,6 +11,7 @@ import (
 	cloudwatch "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	cloudwatchlogs "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	elbv2 "github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	ecs0 "github.com/aws/copilot-cli/internal/pkg/ecs"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -271,4 +272,42 @@ func (m *MockautoscalingAlarmNamesGetter) ECSServiceAlarmNames(cluster, service 
 func (mr *MockautoscalingAlarmNamesGetterMockRecorder) ECSServiceAlarmNames(cluster, service interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ECSServiceAlarmNames", reflect.TypeOf((*MockautoscalingAlarmNamesGetter)(nil).ECSServiceAlarmNames), cluster, service)
+}
+
+// MocktargetHealthGetter is a mock of targetHealthGetter interface.
+type MocktargetHealthGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MocktargetHealthGetterMockRecorder
+}
+
+// MocktargetHealthGetterMockRecorder is the mock recorder for MocktargetHealthGetter.
+type MocktargetHealthGetterMockRecorder struct {
+	mock *MocktargetHealthGetter
+}
+
+// NewMocktargetHealthGetter creates a new mock instance.
+func NewMocktargetHealthGetter(ctrl *gomock.Controller) *MocktargetHealthGetter {
+	mock := &MocktargetHealthGetter{ctrl: ctrl}
+	mock.recorder = &MocktargetHealthGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocktargetHealthGetter) EXPECT() *MocktargetHealthGetterMockRecorder {
+	return m.recorder
+}
+
+// TargetsHealth mocks base method.
+func (m *MocktargetHealthGetter) TargetsHealth(targetGroupARN string) ([]*elbv2.TargetHealth, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TargetsHealth", targetGroupARN)
+	ret0, _ := ret[0].([]*elbv2.TargetHealth)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TargetsHealth indicates an expected call of TargetsHealth.
+func (mr *MocktargetHealthGetterMockRecorder) TargetsHealth(targetGroupARN interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TargetsHealth", reflect.TypeOf((*MocktargetHealthGetter)(nil).TargetsHealth), targetGroupARN)
 }

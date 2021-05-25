@@ -9,8 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
+
 	"github.com/aws/aws-sdk-go/aws"
 	ecsapi "github.com/aws/aws-sdk-go/service/ecs"
+	elbv2api "github.com/aws/aws-sdk-go/service/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
@@ -30,6 +33,7 @@ type serviceStatusMocks struct {
 	serviceDescriber      *mocks.MockserviceDescriber
 	aas                   *mocks.MockautoscalingAlarmNamesGetter
 	logGetter             *mocks.MocklogGetter
+	targetHealthGetter    *mocks.MocktargetHealthGetter
 }
 
 func TestServiceStatus_Describe(t *testing.T) {
@@ -94,6 +98,29 @@ func TestServiceStatus_Describe(t *testing.T) {
 
 			wantedError: fmt.Errorf("get status for task badMockTaskArn: parse ECS task ARN: arn: invalid prefix"),
 		},
+		"errors if failed to get stopped task status": {
+			setupMocks: func(m serviceStatusMocks) {
+				gomock.InOrder(
+					m.serviceDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
+						ClusterName: mockCluster,
+						Name:        mockService,
+						Tasks: []*awsecs.Task{
+							{
+								TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789012:task/mockCluster/1234567890123456789"),
+							},
+						},
+						StoppedTasks: []*awsecs.Task{
+							{
+								TaskArn: aws.String("badMockTaskArn"),
+							},
+						},
+					}, nil),
+					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&awsecs.Service{}, nil),
+				)
+			},
+
+			wantedError: fmt.Errorf("get status for stopped task badMockTaskArn: parse ECS task ARN: arn: invalid prefix"),
+		},
 		"errors if failed to get tagged CloudWatch alarms": {
 			setupMocks: func(m serviceStatusMocks) {
 				gomock.InOrder(
@@ -129,6 +156,235 @@ func TestServiceStatus_Describe(t *testing.T) {
 			},
 
 			wantedError: fmt.Errorf("get auto scaling CloudWatch alarms: some error"),
+		},
+		"error if failed to get service target group health": {
+			setupMocks: func(m serviceStatusMocks) {
+				gomock.InOrder(
+					m.serviceDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(mockServiceDesc, nil),
+					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&awsecs.Service{
+						LoadBalancers: []*ecsapi.LoadBalancer{
+							{
+								TargetGroupArn: aws.String("group-1"),
+							},
+						},
+					}, nil),
+					m.alarmStatusGetter.EXPECT().AlarmsWithTags(gomock.Any()).Return([]cloudwatch.AlarmStatus{}, nil),
+					m.aas.EXPECT().ECSServiceAlarmNames(mockCluster, mockService).Return([]string{"mockAlarmName"}, nil),
+					m.alarmStatusGetter.EXPECT().AlarmStatus([]string{"mockAlarmName"}).Return([]cloudwatch.AlarmStatus{}, nil),
+					m.targetHealthGetter.EXPECT().TargetsHealth("group-1").Return(nil, errors.New("some error")),
+				)
+			},
+			wantedError: fmt.Errorf("get targets health in target group group-1: some error"),
+		},
+		"exclude target health information when more than one target groups are present in service": {
+			setupMocks: func(m serviceStatusMocks) {
+				gomock.InOrder(
+					m.serviceDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
+						ClusterName: mockCluster,
+						Name:        mockService,
+						Tasks: []*awsecs.Task{
+							{
+								TaskArn:      aws.String("arn:aws:ecs:us-west-2:123456789012:task/mockCluster/1234567890123456789"),
+								StartedAt:    &startTime,
+								HealthStatus: aws.String("HEALTHY"),
+								LastStatus:   aws.String("RUNNING"),
+								Containers: []*ecsapi.Container{
+									{
+										Image:       aws.String("mockImageID1"),
+										ImageDigest: aws.String("69671a968e8ec3648e2697417750e"),
+									},
+								},
+								StoppedAt:     &stopTime,
+								StoppedReason: aws.String("some reason"),
+							},
+						},
+					}, nil),
+					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&awsecs.Service{
+						Status:       aws.String("ACTIVE"),
+						DesiredCount: aws.Int64(1),
+						RunningCount: aws.Int64(1),
+						Deployments: []*ecsapi.Deployment{
+							{
+								UpdatedAt:      &startTime,
+								TaskDefinition: aws.String("mockTaskDefinition"),
+							},
+						},
+						LoadBalancers: []*ecsapi.LoadBalancer{
+							{
+								TargetGroupArn: aws.String("group-1"),
+							},
+							{
+								TargetGroupArn: aws.String("group-2"),
+							},
+						},
+					}, nil),
+					m.alarmStatusGetter.EXPECT().AlarmsWithTags(map[string]string{
+						"copilot-application": "mockApp",
+						"copilot-environment": "mockEnv",
+						"copilot-service":     "mockSvc",
+					}).Return([]cloudwatch.AlarmStatus{}, nil),
+					m.aas.EXPECT().ECSServiceAlarmNames(mockCluster, mockService).Return([]string{}, nil),
+					m.alarmStatusGetter.EXPECT().AlarmStatus([]string{}).Return([]cloudwatch.AlarmStatus{}, nil),
+				)
+			},
+
+			wantedContent: &ecsServiceStatus{
+				Service: awsecs.ServiceStatus{
+					DesiredCount:     1,
+					RunningCount:     1,
+					Status:           "ACTIVE",
+					LastDeploymentAt: startTime,
+					TaskDefinition:   "mockTaskDefinition",
+				},
+				Alarms: nil,
+				Tasks: []awsecs.TaskStatus{
+					{
+						Health:     "HEALTHY",
+						LastStatus: "RUNNING",
+						ID:         "1234567890123456789",
+						Images: []awsecs.Image{
+							{
+								Digest: "69671a968e8ec3648e2697417750e",
+								ID:     "mockImageID1",
+							},
+						},
+						StartedAt:     startTime,
+						StoppedAt:     stopTime,
+						StoppedReason: "some reason",
+					},
+				},
+			},
+		},
+		"find corresponding tasks for the targets with exactly one target group present in service": {
+			setupMocks: func(m serviceStatusMocks) {
+				gomock.InOrder(
+					m.serviceDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
+						ClusterName: mockCluster,
+						Name:        mockService,
+						Tasks: []*awsecs.Task{
+							{
+								TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789012:task/mockCluster/task-with-private-ip-being-target"),
+								Attachments: []*ecsapi.Attachment{
+									{
+										Type: aws.String("ElasticNetworkInterface"),
+										Details: []*ecsapi.KeyValuePair{
+											{
+												Name:  aws.String("privateIPv4Address"),
+												Value: aws.String("1.2.3.4"),
+											},
+										},
+									},
+								},
+							},
+							{
+								TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789012:task/mockCluster/task-with-private-ip-not-a-target"),
+								Attachments: []*ecsapi.Attachment{
+									{
+										Type: aws.String("ElasticNetworkInterface"),
+										Details: []*ecsapi.KeyValuePair{
+											{
+												Name:  aws.String("privateIPv4Address"),
+												Value: aws.String("5.6.7.8"),
+											},
+										},
+									},
+								},
+							},
+							{
+								TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789012:task/mockCluster/another-task-with-private-ip-being-target"),
+								Attachments: []*ecsapi.Attachment{
+									{
+										Type: aws.String("ElasticNetworkInterface"),
+										Details: []*ecsapi.KeyValuePair{
+											{
+												Name:  aws.String("privateIPv4Address"),
+												Value: aws.String("4.3.2.1"),
+											},
+										},
+									},
+								},
+							},
+						},
+					}, nil),
+					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&awsecs.Service{
+						Deployments: []*ecsapi.Deployment{
+							{
+								UpdatedAt: &startTime,
+							},
+						},
+						LoadBalancers: []*ecsapi.LoadBalancer{
+							{
+								TargetGroupArn: aws.String("group-1"),
+							},
+						},
+					}, nil),
+					m.alarmStatusGetter.EXPECT().AlarmsWithTags(gomock.Any()).Return([]cloudwatch.AlarmStatus{}, nil),
+					m.aas.EXPECT().ECSServiceAlarmNames(gomock.Any(), gomock.Any()).Return([]string{}, nil),
+					m.alarmStatusGetter.EXPECT().AlarmStatus(gomock.Any()).Return([]cloudwatch.AlarmStatus{}, nil),
+					m.targetHealthGetter.EXPECT().TargetsHealth("group-1").Return([]*elbv2.TargetHealth{
+						{
+							Target: &elbv2api.TargetDescription{
+								Id: aws.String("1.2.3.4"),
+							},
+							TargetHealth: &elbv2api.TargetHealth{
+								State:  aws.String("unhealthy"),
+								Reason: aws.String("Target.ResponseCodeMismatch"),
+							},
+						},
+						{
+							Target: &elbv2api.TargetDescription{
+								Id: aws.String("4.3.2.1"),
+							},
+							TargetHealth: &elbv2api.TargetHealth{
+								State: aws.String("healthy"),
+							},
+						},
+					}, nil),
+				)
+			},
+
+			wantedContent: &ecsServiceStatus{
+				Service: awsecs.ServiceStatus{
+					LastDeploymentAt: startTime,
+				},
+				Alarms: nil,
+				Tasks: []awsecs.TaskStatus{
+					{
+						ID: "task-with-private-ip-being-target",
+					},
+					{
+						ID: "task-with-private-ip-not-a-target",
+					},
+					{
+						ID: "another-task-with-private-ip-being-target",
+					},
+				},
+				TargetsHealthStatus: []targetHealthStatus{
+					{
+						TargetHealth: elbv2.TargetHealth{
+							Target: &elbv2api.TargetDescription{
+								Id: aws.String("1.2.3.4"),
+							},
+							TargetHealth: &elbv2api.TargetHealth{
+								State:  aws.String("unhealthy"),
+								Reason: aws.String("Target.ResponseCodeMismatch"),
+							},
+						},
+						TaskID: "task-with-private-ip-being-target",
+					},
+					{
+						TargetHealth: elbv2.TargetHealth{
+							Target: &elbv2api.TargetDescription{
+								Id: aws.String("4.3.2.1"),
+							},
+							TargetHealth: &elbv2api.TargetHealth{
+								State: aws.String("healthy"),
+							},
+						},
+						TaskID: "another-task-with-private-ip-being-target",
+					},
+				},
+			},
 		},
 		"success": {
 			setupMocks: func(m serviceStatusMocks) {
@@ -255,23 +511,26 @@ func TestServiceStatus_Describe(t *testing.T) {
 			mockcwSvc := mocks.NewMockalarmStatusGetter(ctrl)
 			mockSvcDescriber := mocks.NewMockserviceDescriber(ctrl)
 			mockaasClient := mocks.NewMockautoscalingAlarmNamesGetter(ctrl)
+			mockTargetHealthGetter := mocks.NewMocktargetHealthGetter(ctrl)
 			mocks := serviceStatusMocks{
-				ecsServiceGetter:  mockecsSvc,
-				alarmStatusGetter: mockcwSvc,
-				serviceDescriber:  mockSvcDescriber,
-				aas:               mockaasClient,
+				ecsServiceGetter:   mockecsSvc,
+				alarmStatusGetter:  mockcwSvc,
+				serviceDescriber:   mockSvcDescriber,
+				aas:                mockaasClient,
+				targetHealthGetter: mockTargetHealthGetter,
 			}
 
 			tc.setupMocks(mocks)
 
 			svcStatus := &ECSStatusDescriber{
-				svc:          "mockSvc",
-				env:          "mockEnv",
-				app:          "mockApp",
-				cwSvcGetter:  mockcwSvc,
-				ecsSvcGetter: mockecsSvc,
-				svcDescriber: mockSvcDescriber,
-				aasSvcGetter: mockaasClient,
+				svc:                "mockSvc",
+				env:                "mockEnv",
+				app:                "mockApp",
+				cwSvcGetter:        mockcwSvc,
+				ecsSvcGetter:       mockecsSvc,
+				svcDescriber:       mockSvcDescriber,
+				aasSvcGetter:       mockaasClient,
+				targetHealthGetter: mockTargetHealthGetter,
 			}
 
 			// WHEN
@@ -369,7 +628,7 @@ Alarms
   rm                                atapoints within 3 minutes                             
                                                                                            
 `,
-			json: "{\"Service\":{\"desiredCount\":1,\"runningCount\":0,\"status\":\"ACTIVE\",\"lastDeploymentAt\":\"2006-01-02T15:04:05Z\",\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":null,\"lastStatus\":\"PROVISIONING\",\"startedAt\":\"0001-01-01T00:00:00Z\",\"stoppedAt\":\"0001-01-01T00:00:00Z\",\"stoppedReason\":\"\",\"capacityProvider\":\"\"}],\"alarms\":[{\"arn\":\"mockAlarmArn1\",\"name\":\"mySupercalifragilisticexpialidociousAlarm\",\"condition\":\"RequestCount \\u003e 100.00 for 3 datapoints within 25 minutes\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"},{\"arn\":\"mockAlarmArn2\",\"name\":\"Um-dittle-ittl-um-dittle-I-Alarm\",\"condition\":\"CPUUtilization \\u003e 70.00 for 3 datapoints within 3 minutes\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"}],\"stoppedTasks\":null}\n",
+			json: "{\"Service\":{\"desiredCount\":1,\"runningCount\":0,\"status\":\"ACTIVE\",\"lastDeploymentAt\":\"2006-01-02T15:04:05Z\",\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":null,\"lastStatus\":\"PROVISIONING\",\"startedAt\":\"0001-01-01T00:00:00Z\",\"stoppedAt\":\"0001-01-01T00:00:00Z\",\"stoppedReason\":\"\",\"capacityProvider\":\"\"}],\"alarms\":[{\"arn\":\"mockAlarmArn1\",\"name\":\"mySupercalifragilisticexpialidociousAlarm\",\"condition\":\"RequestCount \\u003e 100.00 for 3 datapoints within 25 minutes\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"},{\"arn\":\"mockAlarmArn2\",\"name\":\"Um-dittle-ittl-um-dittle-I-Alarm\",\"condition\":\"CPUUtilization \\u003e 70.00 for 3 datapoints within 3 minutes\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"}]}\n",
 		},
 		"running": {
 			desc: &ecsServiceStatus{
@@ -431,7 +690,7 @@ Alarms
   mockAlarm         mockCondition       2 months from now    OK
                                                              
 `,
-			json: "{\"Service\":{\"desiredCount\":1,\"runningCount\":1,\"status\":\"ACTIVE\",\"lastDeploymentAt\":\"2006-01-02T15:04:05Z\",\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"69671a968e8ec3648e2697417750e\"},{\"ID\":\"mockImageID2\",\"Digest\":\"ca27a44e25ce17fea7b07940ad793\"}],\"lastStatus\":\"RUNNING\",\"startedAt\":\"0001-01-01T00:00:00Z\",\"stoppedAt\":\"0001-01-01T00:00:00Z\",\"stoppedReason\":\"some reason\",\"capacityProvider\":\"\"}],\"alarms\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"condition\":\"mockCondition\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"}],\"stoppedTasks\":null}\n",
+			json: "{\"Service\":{\"desiredCount\":1,\"runningCount\":1,\"status\":\"ACTIVE\",\"lastDeploymentAt\":\"2006-01-02T15:04:05Z\",\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"69671a968e8ec3648e2697417750e\"},{\"ID\":\"mockImageID2\",\"Digest\":\"ca27a44e25ce17fea7b07940ad793\"}],\"lastStatus\":\"RUNNING\",\"startedAt\":\"0001-01-01T00:00:00Z\",\"stoppedAt\":\"0001-01-01T00:00:00Z\",\"stoppedReason\":\"some reason\",\"capacityProvider\":\"\"}],\"alarms\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"condition\":\"mockCondition\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"}]}\n",
 		},
 		"some are tasks deprovisioning": {
 			desc: &ecsServiceStatus{
@@ -519,6 +778,88 @@ Alarms
 `,
 			json: "{\"Service\":{\"desiredCount\":1,\"runningCount\":1,\"status\":\"ACTIVE\",\"lastDeploymentAt\":\"2006-01-02T15:04:05Z\",\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"69671a968e8ec3648e2697417750e\"},{\"ID\":\"mockImageID2\",\"Digest\":\"ca27a44e25ce17fea7b07940ad793\"}],\"lastStatus\":\"RUNNING\",\"startedAt\":\"0001-01-01T00:00:00Z\",\"stoppedAt\":\"0001-01-01T00:00:00Z\",\"stoppedReason\":\"some reason\",\"capacityProvider\":\"\"}],\"alarms\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"condition\":\"mockCondition\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"}],\"stoppedTasks\":[{\"health\":\"\",\"id\":\"0102030490123123123\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"30dkd891jdk9s8d350e932k390093\"},{\"ID\":\"mockImageID2\",\"Digest\":\"41flf902kfl0d9f461r043l411104\"}],\"lastStatus\":\"DEPROVISIONING\",\"startedAt\":\"0001-01-01T00:00:00Z\",\"stoppedAt\":\"2020-03-13T20:00:30Z\",\"stoppedReason\":\"some reason\",\"capacityProvider\":\"\"}]}\n",
 		},
+		"shows target health": {
+			desc: &ecsServiceStatus{
+				Service: awsecs.ServiceStatus{
+					DesiredCount:     1,
+					RunningCount:     1,
+					Status:           "ACTIVE",
+					LastDeploymentAt: startTime,
+					TaskDefinition:   "mockTaskDefinition",
+				},
+				Alarms: []cloudwatch.AlarmStatus{
+					{
+						Arn:          "mockAlarmArn",
+						Condition:    "mockCondition",
+						Name:         "mockAlarm",
+						Status:       "OK",
+						Type:         "Metric",
+						UpdatedTimes: updateTime,
+					},
+				},
+				Tasks: []awsecs.TaskStatus{
+					{
+						Health:     "HEALTHY",
+						LastStatus: "RUNNING",
+						ID:         "1234567890123456789",
+						Images: []awsecs.Image{
+							{
+								Digest: "69671a968e8ec3648e2697417750e",
+								ID:     "mockImageID1",
+							},
+							{
+								ID:     "mockImageID2",
+								Digest: "ca27a44e25ce17fea7b07940ad793",
+							},
+						},
+					},
+				},
+				TargetsHealthStatus: []targetHealthStatus{
+					{
+						TargetHealth: elbv2.TargetHealth{
+							Target: &elbv2api.TargetDescription{
+								Id: aws.String("5.6.7.8"),
+							},
+							TargetHealth: &elbv2api.TargetHealth{
+								State:  aws.String("unhealthy"),
+								Reason: aws.String("some reason"),
+							},
+						},
+						TaskID: "another-task-with-private-ip-being-target",
+					},
+				},
+			},
+			human: `Service Status
+
+  ACTIVE 1 / 1 running tasks (0 pending)
+
+Last Deployment
+
+  Updated At         14 years ago
+  Task Definition    mockTaskDefinition
+
+Task Status
+
+  ID                Image Digest         Last Status         Started At          Capacity Provider    Health Status
+  --                ------------         -----------         ----------          -----------------    -------------
+  12345678          69671a96,ca27a44e    RUNNING             -                   -                    HEALTHY
+
+Targets Health
+
+  Task              Target              Reason              Health Status
+  ----              ------              ------              -------------
+  another-          5.6.7.8             some reason         UNHEALTHY
+
+Alarms
+
+  Name              Condition           Last Updated         Health
+  ----              ---------           ------------         ------
+  mockAlarm         mockCondition       2 months from now    OK
+                                                             
+`,
+			json: `{"Service":{"desiredCount":1,"runningCount":1,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":[{"ID":"mockImageID1","Digest":"69671a968e8ec3648e2697417750e"},{"ID":"mockImageID2","Digest":"ca27a44e25ce17fea7b07940ad793"}],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":""}],"alarms":[{"arn":"mockAlarmArn","name":"mockAlarm","condition":"mockCondition","status":"OK","type":"Metric","updatedTimes":"2020-03-13T19:50:30Z"}],"targetsHealth":[{"TargetHealth":{"HealthCheckPort":null,"Target":{"AvailabilityZone":null,"Id":"5.6.7.8","Port":null},"TargetHealth":{"Description":null,"Reason":"some reason","State":"unhealthy"}},"taskID":"another-task-with-private-ip-being-target"}]}
+`,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -552,10 +893,10 @@ func TestAppRunnerStatusDescriber_Describe(t *testing.T) {
 	}
 	testCases := map[string]struct {
 		setupMocks func(mocks serviceStatusMocks)
-		desc       *apprunnerServiceStatus
+		desc       *appRunnerServiceStatus
 
 		wantedError   error
-		wantedContent *apprunnerServiceStatus
+		wantedContent *appRunnerServiceStatus
 	}{
 		"errors if failed to describe a service": {
 			setupMocks: func(m serviceStatusMocks) {
@@ -573,7 +914,7 @@ func TestAppRunnerStatusDescriber_Describe(t *testing.T) {
 					Events: logEvents,
 				}, nil)
 			},
-			wantedContent: &apprunnerServiceStatus{
+			wantedContent: &appRunnerServiceStatus{
 				Service:   mockAppRunnerService,
 				LogEvents: logEvents,
 			},
@@ -635,12 +976,12 @@ func TestServiceStatusDesc_AppRunnerServiceString(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		desc  *apprunnerServiceStatus
+		desc  *appRunnerServiceStatus
 		human string
 		json  string
 	}{
 		"RUNNING": {
-			desc: &apprunnerServiceStatus{
+			desc: &appRunnerServiceStatus{
 				Service: apprunner.Service{
 					Name:        "frontend",
 					ID:          "8a2b343f658144d885e47d10adb4845e",

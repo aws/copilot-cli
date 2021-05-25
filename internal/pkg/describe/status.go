@@ -18,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	awsECS "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
@@ -29,6 +30,10 @@ const (
 	fmtAppRunnerSvcLogGroupName = "/aws/apprunner/%s/%s/service"
 	defaultServiceLogsLimit     = 10
 )
+
+type targetHealthGetter interface {
+	TargetsHealth(targetGroupARN string) ([]*elbv2.TargetHealth, error)
+}
 
 type alarmStatusGetter interface {
 	AlarmsWithTags(tags map[string]string) ([]cloudwatch.AlarmStatus, error)
@@ -62,10 +67,11 @@ type ECSStatusDescriber struct {
 	env string
 	svc string
 
-	svcDescriber serviceDescriber
-	ecsSvcGetter ecsServiceGetter
-	cwSvcGetter  alarmStatusGetter
-	aasSvcGetter autoscalingAlarmNamesGetter
+	svcDescriber       serviceDescriber
+	ecsSvcGetter       ecsServiceGetter
+	cwSvcGetter        alarmStatusGetter
+	aasSvcGetter       autoscalingAlarmNamesGetter
+	targetHealthGetter targetHealthGetter
 }
 
 // AppRunnerStatusDescriber retrieves status of an AppRunner service.
@@ -80,14 +86,15 @@ type AppRunnerStatusDescriber struct {
 
 // ecsServiceStatus contains the status for an ECS service.
 type ecsServiceStatus struct {
-	Service      awsECS.ServiceStatus
-	Tasks        []awsECS.TaskStatus      `json:"tasks"`
-	Alarms       []cloudwatch.AlarmStatus `json:"alarms"`
-	StoppedTasks []awsECS.TaskStatus      `json:"stoppedTasks"`
+	Service             awsECS.ServiceStatus
+	Tasks               []awsECS.TaskStatus      `json:"tasks"`
+	Alarms              []cloudwatch.AlarmStatus `json:"alarms"`
+	StoppedTasks        []awsECS.TaskStatus      `json:"stoppedTasks,omitempty"`
+	TargetsHealthStatus []targetHealthStatus     `json:"targetsHealth,omitempty"`
 }
 
-// apprunnerServiceStatus contains the status for an AppRunner service.
-type apprunnerServiceStatus struct {
+// appRunnerServiceStatus contains the status for an AppRunner service.
+type appRunnerServiceStatus struct {
 	Service   apprunner.Service
 	LogEvents []*cloudwatchlogs.Event
 }
@@ -111,13 +118,14 @@ func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, er
 		return nil, fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 	}
 	return &ECSStatusDescriber{
-		app:          opt.App,
-		env:          opt.Env,
-		svc:          opt.Svc,
-		svcDescriber: ecs.New(sess),
-		cwSvcGetter:  cloudwatch.New(sess),
-		ecsSvcGetter: awsECS.New(sess),
-		aasSvcGetter: aas.New(sess),
+		app:                opt.App,
+		env:                opt.Env,
+		svc:                opt.Svc,
+		svcDescriber:       ecs.New(sess),
+		cwSvcGetter:        cloudwatch.New(sess),
+		ecsSvcGetter:       awsECS.New(sess),
+		aasSvcGetter:       aas.New(sess),
+		targetHealthGetter: elbv2.New(sess),
 	}, nil
 }
 
@@ -163,6 +171,15 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 		taskStatus = append(taskStatus, *status)
 	}
 
+	var stoppedTaskStatus []awsECS.TaskStatus
+	for _, task := range svcDesc.StoppedTasks {
+		status, err := task.TaskStatus()
+		if err != nil {
+			return nil, fmt.Errorf("get status for stopped task %s: %w", *task.TaskArn, err)
+		}
+		stoppedTaskStatus = append(stoppedTaskStatus, *status)
+	}
+
 	var alarms []cloudwatch.AlarmStatus
 	taggedAlarms, err := s.cwSvcGetter.AlarmsWithTags(map[string]string{
 		deploy.AppTagKey:     s.app,
@@ -179,20 +196,23 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 	}
 	alarms = append(alarms, autoscalingAlarms...)
 
-	var stoppedTaskStatus []awsECS.TaskStatus
-	for _, task := range svcDesc.StoppedTasks {
-		status, err := task.TaskStatus()
+	var targetsHealthStatus []targetHealthStatus
+	targetGroupsARN := service.TargetGroups()
+	if len(targetGroupsARN) == 1 {
+		// NOTE: Copilot services have at most one target group.
+		targetsHealth, err := s.targetHealthGetter.TargetsHealth(targetGroupsARN[0])
 		if err != nil {
-			return nil, fmt.Errorf("get status for stopped task %s: %w", *task.TaskArn, err)
+			return nil, fmt.Errorf("get targets health in target group %s: %w", targetGroupsARN[0], err)
 		}
-		stoppedTaskStatus = append(stoppedTaskStatus, *status)
+		targetsHealthStatus = relateTargetsHealthToTasks(targetsHealth, svcDesc.Tasks)
 	}
 
 	return &ecsServiceStatus{
-		Service:      service.ServiceStatus(),
-		Tasks:        taskStatus,
-		Alarms:       alarms,
-		StoppedTasks: stoppedTaskStatus,
+		Service:             service.ServiceStatus(),
+		Tasks:               taskStatus,
+		Alarms:              alarms,
+		StoppedTasks:        stoppedTaskStatus,
+		TargetsHealthStatus: targetsHealthStatus,
 	}, nil
 }
 
@@ -211,7 +231,7 @@ func (a *AppRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get log events for log group %s: %w", logGroupName, err)
 	}
-	return &apprunnerServiceStatus{
+	return &appRunnerServiceStatus{
 		Service:   *svc,
 		LogEvents: logEventsOutput.Events,
 	}, nil
@@ -238,8 +258,8 @@ func (s *ecsServiceStatus) JSONString() (string, error) {
 	return fmt.Sprintf("%s\n", b), nil
 }
 
-// JSONString returns the stringified apprunnerServiceStatus struct with json format.
-func (a *apprunnerServiceStatus) JSONString() (string, error) {
+// JSONString returns the stringified appRunnerServiceStatus struct with json format.
+func (a *appRunnerServiceStatus) JSONString() (string, error) {
 	data := struct {
 		ARN       string    `json:"arn"`
 		Status    string    `json:"status"`
@@ -279,6 +299,7 @@ func (s *ecsServiceStatus) HumanString() string {
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(s.Service.LastDeploymentAt))
 	fmt.Fprintf(writer, "  %s\t%s\n", "Task Definition", s.Service.TaskDefinition)
+
 	fmt.Fprint(writer, color.Bold.Sprint("\nTask Status\n\n"))
 	writer.Flush()
 	headers := []string{"ID", "Image Digest", "Last Status", "Started At", "Capacity Provider", "Health Status"}
@@ -287,6 +308,7 @@ func (s *ecsServiceStatus) HumanString() string {
 	for _, task := range s.Tasks {
 		fmt.Fprintf(writer, "  %s\n", task.HumanString())
 	}
+
 	if len(s.StoppedTasks) > 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nStopped Tasks\n\n"))
 		writer.Flush()
@@ -297,6 +319,19 @@ func (s *ecsServiceStatus) HumanString() string {
 			fmt.Fprintf(writer, "  %s\n", (awsECS.StoppedTaskStatus)(task).HumanString())
 		}
 	}
+
+	if len(s.TargetsHealthStatus) > 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nTargets Health\n\n"))
+		writer.Flush()
+		headers = []string{"Task",
+			"Target", "Reason", "Health Status"}
+		fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
+		for _, targetHealth := range s.TargetsHealthStatus {
+			fmt.Fprintf(writer, "  %s\n", targetHealth.humanString())
+		}
+	}
+
 	fmt.Fprint(writer, color.Bold.Sprint("\nAlarms\n\n"))
 	writer.Flush()
 	headers = []string{"Name", "Condition", "Last Updated", "Health"}
@@ -311,8 +346,8 @@ func (s *ecsServiceStatus) HumanString() string {
 	return b.String()
 }
 
-// HumanString returns the stringified apprunnerServiceStatus struct with human readable format.
-func (a *apprunnerServiceStatus) HumanString() string {
+// HumanString returns the stringified appRunnerServiceStatus struct with human readable format.
+func (a *appRunnerServiceStatus) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, statusCellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprint(writer, color.Bold.Sprint("Service Status\n\n"))
@@ -399,4 +434,53 @@ func statusColor(status string) string {
 	default:
 		return color.Red.Sprint(status)
 	}
+}
+
+type targetHealthStatus struct {
+	TargetHealth elbv2.TargetHealth `json:""`
+	TaskID       string             `json:"taskID"`
+}
+
+func (s *targetHealthStatus) relateToTask(taskID string) {
+	s.TaskID = taskID
+}
+
+func (s *targetHealthStatus) humanString() string {
+	relatedTask := "-"
+	if s.TaskID != "" {
+		relatedTask = awsECS.ShortTaskID(s.TaskID)
+	}
+	return fmt.Sprintf("%s\t%s", relatedTask, s.TargetHealth.HumanString())
+}
+
+func relateTargetsHealthToTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsECS.Task) []targetHealthStatus {
+	mapIPToTasks := make(map[string]awsECS.Task)
+	for _, t := range tasks {
+		ip, err := t.PrivateIP()
+		if err != nil {
+			continue
+		}
+		mapIPToTasks[ip] = *t
+	}
+
+	targetsHealthWithTask := make([]targetHealthStatus, len(targetsHealth))
+	for idx, targetHealth := range targetsHealth {
+		targetsHealthWithTask[idx] = targetHealthStatus{
+			TargetHealth: *targetHealth,
+		}
+
+		targetID := targetHealth.TargetID()
+		var (
+			task awsECS.Task
+			ok   bool
+		)
+		if task, ok = mapIPToTasks[targetID]; !ok {
+			continue
+		}
+		if taskID, err := awsECS.TaskID(aws.StringValue(task.TaskArn)); err == nil {
+			targetsHealthWithTask[idx].relateToTask(taskID)
+		}
+	}
+
+	return targetsHealthWithTask
 }
