@@ -28,7 +28,7 @@ type DockerCommand struct {
 func NewDockerCommand() DockerCommand {
 	return DockerCommand{
 		runner: NewCmd(),
-		homePath: os.Getenv("HOME"),
+		homePath: userHomeDirectory(),
 	}
 }
 
@@ -41,6 +41,11 @@ type BuildArguments struct {
 	Target     string            // Optional. The target build stage to pass to `docker build`
 	CacheFrom  []string          // Optional. Images to consider as cache sources to pass to `docker build`
 	Args       map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
+}
+
+type dockerConfig struct {
+	CredsStore  string            `json:"credsStore,omitempty"`
+	CredHelpers map[string]string `json:"credHelpers,omitempty"`
 }
 
 const(
@@ -168,36 +173,50 @@ func imageName(uri, tag string) string {
 	return fmt.Sprintf("%s:%s", uri, tag)
 }
 
-// GetHelperProviderFromDockerCfg tries to fetch credential store used by docker from config file.
-func (c DockerCommand) GetHelperProviderFromDockerCfg() string {
-	// Look into the default locations
-	pathsToTry := []string{filepath.Join(".docker", "config.json"), ".dockercfg"}
-	for _, path := range pathsToTry {
-		content, err := ioutil.ReadFile(filepath.Join(c.homePath, path))
-		if err != nil {
-			// if we can't read the file keep going
-			continue
-		}
+// IsEcrCredentialHelperEnabled return true if ecr-login is enabled either globally or registry level
+func (c DockerCommand) IsEcrCredentialHelperEnabled(uri string) bool {
+	// Make sure the program is able to obtain the home directory
+	splits := strings.Split(uri, "/")
+	if c.homePath != "" && len(splits) > 0 {
+		// Look into the default locations
+		pathsToTry := []string{filepath.Join(".docker", "config.json"), ".dockercfg"}
+		for _, path := range pathsToTry {
+			content, err := ioutil.ReadFile(filepath.Join(c.homePath, path))
+			if err != nil {
+				// if we can't read the file keep going
+				continue
+			}
 
-		provider, err := parseCredFromDockerConfig(content)
-		if err != nil {
-			continue
-		}
-		if provider != "" {
-			return provider
+			config, err := parseCredFromDockerConfig(content)
+			if err != nil {
+				continue
+			}
+
+			if config.CredsStore == CredStoreECRLogin || config.CredHelpers[splits[0]] == CredStoreECRLogin {
+				return true
+			}
 		}
 	}
-	return ""
+
+	return false
 }
 
-func parseCredFromDockerConfig(config []byte) (string, error) {
-	cred := struct {
-		CredsStore  string            `json:"credsStore,omitempty"`
-	}{}
+func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {
+	cred := dockerConfig{}
 	err := json.Unmarshal(config, &cred)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return cred.CredsStore, nil
+	return &cred, nil
+}
+
+func userHomeDirectory() string {
+	home, err := os.UserHomeDir()
+	if err!= nil{
+		println("authenticate to ECR: %w", err)
+		return ""
+	}
+
+	return home
 }

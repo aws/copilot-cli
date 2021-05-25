@@ -48,18 +48,18 @@ func (mr *MockContainerLoginBuildPusherMockRecorder) Build(args interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockContainerLoginBuildPusher)(nil).Build), args)
 }
 
-// GetHelperProviderFromDockerCfg mocks base method
-func (m *MockContainerLoginBuildPusher) GetHelperProviderFromDockerCfg() string {
+// IsEcrCredentialHelperEnabled mocks base method
+func (m *MockContainerLoginBuildPusher) IsEcrCredentialHelperEnabled(uri string) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetHelperProviderFromDockerCfg")
-	ret0, _ := ret[0].(string)
+	ret := m.ctrl.Call(m, "IsEcrCredentialHelperEnabled", uri)
+	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// GetHelperProviderFromDockerCfg indicates an expected call of GetHelperProviderFromDockerCfg
-func (mr *MockContainerLoginBuildPusherMockRecorder) GetHelperProviderFromDockerCfg() *gomock.Call {
+// IsEcrCredentialHelperEnabled indicates an expected call of IsEcrCredentialHelperEnabled
+func (mr *MockContainerLoginBuildPusherMockRecorder) IsEcrCredentialHelperEnabled(uri string) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHelperProviderFromDockerCfg", reflect.TypeOf((*MockContainerLoginBuildPusher)(nil).GetHelperProviderFromDockerCfg))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsEcrCredentialHelperEnabled", reflect.TypeOf((*MockContainerLoginBuildPusher)(nil).IsEcrCredentialHelperEnabled), uri)
 }
 
 // Login mocks base method.

@@ -353,17 +353,20 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 	}
 }
 
-func TestGetHelperProviderFromDockerCfg(t *testing.T){
+func TestIsEcrCredentialHelperEnabled(t *testing.T){
 	var mockRunner *Mockrunner
-	var workspace = "test/copilot/.docker"
+	workspace := "test/copilot/.docker"
+	registry := "dummyaccountid.dkr.ecr.region.amazonaws.com"
+	uri := fmt.Sprintf("%s/ui/app", registry)
+
 	testCases := map[string]struct {
 		setupMocks func(controller *gomock.Controller)
 		inBuffer   *bytes.Buffer
 		mockFileSystem      func(fs afero.Fs)
 		postExec      func(fs afero.Fs)
-		wantedCredStore string
+		isEcrRepo bool
  	}{
-		"get docker credential using helper": {
+		"ecr-login check global level": {
 			mockFileSystem: func(fs afero.Fs) {
 				fs.MkdirAll(workspace, 0755)
 				afero.WriteFile(fs, filepath.Join(workspace, "config.json"), []byte(fmt.Sprintf("{\"credsStore\":\"%s\"}", CredStoreECRLogin)), 0644)
@@ -374,7 +377,33 @@ func TestGetHelperProviderFromDockerCfg(t *testing.T){
 			postExec: func(fs afero.Fs){
 				fs.RemoveAll(workspace)
 			},
-			wantedCredStore: CredStoreECRLogin,
+			isEcrRepo: true,
+		},
+		"ecr-login check registry level": {
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll(workspace, 0755)
+				afero.WriteFile(fs, filepath.Join(workspace, "config.json"), []byte(fmt.Sprintf("{\"credhelpers\":{\"%s\": \"%s\"}}", registry, CredStoreECRLogin)), 0644)
+			},
+			setupMocks: func(c *gomock.Controller) {
+				mockRunner = NewMockrunner(c)
+			},
+			postExec: func(fs afero.Fs){
+				fs.RemoveAll(workspace)
+			},
+			isEcrRepo: true,
+		},
+		"default login check registry level": {
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll(workspace, 0755)
+				afero.WriteFile(fs, filepath.Join(workspace, "config.json"), []byte(fmt.Sprintf("{\"credhelpers\":{\"%s\": \"%s\"}}", registry, "desktop")), 0644)
+			},
+			setupMocks: func(c *gomock.Controller) {
+				mockRunner = NewMockrunner(c)
+			},
+			postExec: func(fs afero.Fs){
+				fs.RemoveAll(workspace)
+			},
+			isEcrRepo: false,
 		},
 		"no file check": {
 			mockFileSystem: func(fs afero.Fs) {
@@ -386,7 +415,7 @@ func TestGetHelperProviderFromDockerCfg(t *testing.T){
 			postExec: func(fs afero.Fs){
 				fs.RemoveAll(workspace)
 			},
-			wantedCredStore: "",
+			isEcrRepo: false,
 		},
 	}
 
@@ -404,10 +433,10 @@ func TestGetHelperProviderFromDockerCfg(t *testing.T){
 				homePath: "test/copilot",
 			}
 
-			credStore := s.GetHelperProviderFromDockerCfg()
+			credStore := s.IsEcrCredentialHelperEnabled(uri)
 			tc.postExec(fs)
 
-			require.Equal(t, tc.wantedCredStore, credStore)
+			require.Equal(t, tc.isEcrRepo, credStore)
 		})
 	}
 }
