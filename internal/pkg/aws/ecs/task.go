@@ -46,9 +46,7 @@ type Task ecs.Task
 // becomes "4082490e (sample-fargate:2)"
 func (t Task) String() string {
 	taskID, _ := TaskID(aws.StringValue(t.TaskArn))
-	if len(taskID) >= shortTaskIDLength {
-		taskID = taskID[:shortTaskIDLength]
-	}
+	taskID = ShortTaskID(taskID)
 	taskDefName, _ := taskDefinitionName(aws.StringValue(t.TaskDefinitionArn))
 	return fmt.Sprintf("%s (%s)", taskID, taskDefName)
 }
@@ -206,15 +204,16 @@ func (t StoppedTaskStatus) HumanString() string {
 	if !t.StoppedAt.IsZero() {
 		stoppedSince = humanizeTime(t.StoppedAt)
 	}
-	shortTaskID := "-"
-	if len(t.ID) >= shortTaskIDLength {
-		shortTaskID = t.ID[:shortTaskIDLength]
+	shortID := "-"
+	if t.ID != "" {
+		shortID = ShortTaskID(t.ID)
 	}
 	stoppedReason := "-"
 	if t.StoppedReason != "" {
 		stoppedReason = t.StoppedReason
 	}
-	return fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s", shortTaskID, imageDigest, t.LastStatus, startedSince, stoppedSince, stoppedReason)
+
+	return fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s", shortID, imageDigest, t.LastStatus, startedSince, stoppedSince, stoppedReason)
 }
 
 // TaskDefinition wraps up ECS TaskDefinition struct.
@@ -306,6 +305,14 @@ func TaskID(taskARN string) (string, error) {
 	resources := strings.Split(parsedARN.Resource, "/")
 	taskID := resources[len(resources)-1]
 	return taskID, nil
+}
+
+// ShortTaskID shortens a task ID to a specified length.
+func ShortTaskID(id string) string {
+	if len(id) >= shortTaskIDLength {
+		return id[:shortTaskIDLength]
+	}
+	return id
 }
 
 // FilterRunningTasks returns only tasks with the last status to be RUNNING.
