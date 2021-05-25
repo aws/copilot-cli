@@ -49,7 +49,7 @@ type dockerConfig struct {
 }
 
 const(
-	CredStoreECRLogin = "ecr-login" // set on `credStore` attribute in docker configuration file
+	credStoreECRLogin = "ecr-login" // set on `credStore` attribute in docker configuration file
 )
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
