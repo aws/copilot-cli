@@ -19,7 +19,7 @@ import (
 
 const (
 	defaultGHBranch = "main"
-	defaultCCBranch = "master"
+	defaultCCBranch = "main"
 )
 
 func TestNewProvider(t *testing.T) {
