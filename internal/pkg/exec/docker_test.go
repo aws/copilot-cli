@@ -369,7 +369,7 @@ func TestIsEcrCredentialHelperEnabled(t *testing.T){
 		"ecr-login check global level": {
 			mockFileSystem: func(fs afero.Fs) {
 				fs.MkdirAll(workspace, 0755)
-				afero.WriteFile(fs, filepath.Join(workspace, "config.json"), []byte(fmt.Sprintf("{\"credsStore\":\"%s\"}", CredStoreECRLogin)), 0644)
+				afero.WriteFile(fs, filepath.Join(workspace, "config.json"), []byte(fmt.Sprintf("{\"credsStore\":\"%s\"}", credStoreECRLogin)), 0644)
 			},
 			setupMocks: func(c *gomock.Controller) {
 				mockRunner = NewMockrunner(c)
@@ -382,7 +382,7 @@ func TestIsEcrCredentialHelperEnabled(t *testing.T){
 		"ecr-login check registry level": {
 			mockFileSystem: func(fs afero.Fs) {
 				fs.MkdirAll(workspace, 0755)
-				afero.WriteFile(fs, filepath.Join(workspace, "config.json"), []byte(fmt.Sprintf("{\"credhelpers\":{\"%s\": \"%s\"}}", registry, CredStoreECRLogin)), 0644)
+				afero.WriteFile(fs, filepath.Join(workspace, "config.json"), []byte(fmt.Sprintf("{\"credhelpers\":{\"%s\": \"%s\"}}", registry, credStoreECRLogin)), 0644)
 			},
 			setupMocks: func(c *gomock.Controller) {
 				mockRunner = NewMockrunner(c)
