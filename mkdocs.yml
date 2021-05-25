@@ -165,6 +165,11 @@ markdown_extensions:
           - site/overrides/.icons
 
 plugins:
+    - search
+    - redirects:
+        redirect_maps:
+            'docs/installing.md': 'docs/getting-started/install.en.md'
+            'docs/getting-started.md': 'docs/getting-started/first-app-tutorial.en.md'
     - i18n:
         default_language: en
         languages:
