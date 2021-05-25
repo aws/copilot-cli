@@ -202,6 +202,13 @@ func (c DockerCommand) IsEcrCredentialHelperEnabled(uri string) bool {
 }
 
 func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {
+	/*
+	Sample docker config file
+	"credsStore" : "ecr-login",
+	  "credHelpers": {
+	        "dummyaccountId.dkr.ecr.region.amazonaws.com": "ecr-login"
+	  },
+	*/
 	cred := dockerConfig{}
 	err := json.Unmarshal(config, &cred)
 	if err != nil {
@@ -214,7 +221,6 @@ func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {
 func userHomeDirectory() string {
 	home, err := os.UserHomeDir()
 	if err!= nil{
-		println("authenticate to ECR: %w", err)
 		return ""
 	}
 
