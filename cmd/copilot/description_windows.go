@@ -4,5 +4,5 @@
 package main
 
 const (
-	shortDescription = "Launch and manage applications on Amazon ECS and AWS Fargate."
+	shortDescription = "Launch and manage containerized applications on AWS."
 )
