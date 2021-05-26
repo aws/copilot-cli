@@ -245,7 +245,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			expectedRepoURL:          codecommitSSHURL,
 			expectedRepoName:         codecommitAnotherRepoName,
-			expectedRepoBranch:       "master",
+			expectedRepoBranch:       "main",
 			expectedCodeCommitRegion: codecommitRegion,
 			expectedEnvironments:     []string{"test", "prod"},
 			expectedError:            nil,
