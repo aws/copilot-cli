@@ -167,6 +167,21 @@ func (mr *MockecsClientMockRecorder) StopTasks(tasks interface{}, opts ...interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopTasks", reflect.TypeOf((*MockecsClient)(nil).StopTasks), varargs...)
 }
 
+// StoppedServiceTasks mocks base method.
+func (m *MockecsClient) StoppedServiceTasks(cluster, service string) ([]*ecs.Task, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StoppedServiceTasks", cluster, service)
+	ret0, _ := ret[0].([]*ecs.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StoppedServiceTasks indicates an expected call of StoppedServiceTasks.
+func (mr *MockecsClientMockRecorder) StoppedServiceTasks(cluster, service interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoppedServiceTasks", reflect.TypeOf((*MockecsClient)(nil).StoppedServiceTasks), cluster, service)
+}
+
 // TaskDefinition mocks base method.
 func (m *MockecsClient) TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error) {
 	m.ctrl.T.Helper()
