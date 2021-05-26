@@ -328,6 +328,16 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 	if (o.importVPC.isSet() || o.adjustVPC.isSet()) && o.defaultConfig {
 		return fmt.Errorf("cannot import or configure vpc if --%s is set", defaultConfigFlag)
 	}
+	if o.importVPC.isSet() {
+		// We allow 0 or 2+ public subnets.
+		if len(o.importVPC.PublicSubnetIDs) == 1 {
+			return fmt.Errorf("at least two public subnets must be imported to enable Load Balancing")
+		}
+		// We require 2 private subnets.
+		if len(o.importVPC.PrivateSubnetIDs) < 2 {
+			return fmt.Errorf("at least two private subnets must be imported")
+		}
+	}
 	return nil
 }
 

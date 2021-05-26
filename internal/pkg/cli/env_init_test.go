@@ -41,6 +41,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 		inDefault     bool
 		inVPCID       string
 		inPublicIDs   []string
+		inPrivateIDs  []string
 		inVPCCIDR     net.IPNet
 		inPublicCIDRs []string
 
@@ -61,11 +62,11 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 
 			wantedErrMsg: fmt.Sprintf("environment name 123env is invalid: %s", errValueBadFormat),
 		},
-		"cannot specify both vpc resources importing flags and configuing flags": {
+		"cannot specify both vpc resources importing flags and configuring flags": {
 			inEnvName:     "test-pdx",
 			inAppName:     "phonetool",
 			inPublicCIDRs: []string{"mockCIDR"},
-			inPublicIDs:   []string{"mockID"},
+			inPublicIDs:   []string{"mockID", "anotherMockID"},
 			inVPCCIDR: net.IPNet{
 				IP:   net.IP{10, 1, 232, 0},
 				Mask: net.IPMask{255, 255, 255, 0},
@@ -106,6 +107,29 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 
 			wantedErrMsg: "cannot specify both --profile and --aws-session-token",
 		},
+		"should err if only one public subnet is set": {
+			inVPCID:     "mockID",
+			inPublicIDs: []string{"mockID"},
+
+			wantedErrMsg: "at least two public subnets must be imported to enable Load Balancing",
+		},
+		"should err if less than two private subnets are set:": {
+			inVPCID:      "mockID",
+			inPublicIDs:  []string{"mockID", "anotherMockID"},
+			inPrivateIDs: []string{"mockID"},
+
+			wantedErrMsg: "at least two private subnets must be imported",
+		},
+		"valid VPC resource import (0 public, 3 private)": {
+			inVPCID:      "mockID",
+			inPublicIDs:  []string{},
+			inPrivateIDs: []string{"mockID", "anotherMockID", "yetAnotherMockID"},
+		},
+		"valid VPC resource import (3 public, 2 private)": {
+			inVPCID:      "mockID",
+			inPublicIDs:  []string{"mockID", "anotherMockID", "yetAnotherMockID"},
+			inPrivateIDs: []string{"mockID", "anotherMockID"},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -120,8 +144,9 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 						CIDR:              tc.inVPCCIDR,
 					},
 					importVPC: importVPCVars{
-						PublicSubnetIDs: tc.inPublicIDs,
-						ID:              tc.inVPCID,
+						PublicSubnetIDs:  tc.inPublicIDs,
+						PrivateSubnetIDs: tc.inPrivateIDs,
+						ID:               tc.inVPCID,
 					},
 					appName: tc.inAppName,
 					profile: tc.inProfileName,
