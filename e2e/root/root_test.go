@@ -13,7 +13,7 @@ var _ = Describe("Root", func() {
 		It("should output help text", func() {
 			output, err := cli.Help()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(output).To(ContainSubstring("Launch and manage applications on Amazon ECS and AWS Fargate."))
+			Expect(output).To(ContainSubstring("Launch and manage containerized applications on AWS."))
 			Expect(output).To(ContainSubstring("Getting Started"))
 			Expect(output).To(ContainSubstring("Develop"))
 			Expect(output).To(ContainSubstring("Release"))
