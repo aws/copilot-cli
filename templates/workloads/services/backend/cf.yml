@@ -105,7 +105,16 @@ Resources:
     Type: AWS::ECS::Service
     Properties:
 {{include "service-base-properties" . | indent 6}}
-      ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref ContainerPort}], !Ref "AWS::NoValue"]
+      ServiceRegistries: 
+        Fn::If:
+        - ExposePort
+        - - RegistryArn: !GetAtt DiscoveryService.Arn
+            Port: !Ref ContainerPort
+            {{- if .LegacyServiceDiscovery}}
+          - RegistryArn: !GetAtt LegacyDiscoveryService.Arn
+            Port: !Ref ContainerPort
+            {{- end}}
+        - !Ref "AWS::NoValue"
 
 {{include "efs-access-point" . | indent 2}}
 
