@@ -90,6 +90,7 @@ type SidecarOpts struct {
 	Secrets      map[string]string
 	MountPoints  []*MountPoint
 	DockerLabels map[string]string
+	Dependencies map[string]string
 }
 
 // StorageOpts holds data structures for rendering Volumes and Mount Points
@@ -235,6 +236,7 @@ type WorkloadOpts struct {
 	Command            []string
 	DomainAlias        string
 	DockerLabels       map[string]string
+	Dependencies       map[string]string
 
 	// Additional options for service templates.
 	WorkloadType        string

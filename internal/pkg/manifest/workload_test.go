@@ -579,3 +579,60 @@ network:
 		})
 	}
 }
+
+func TestDependency_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct Image
+		wantedError  error
+	}{
+		"Unspecified optional dependencies don't appear im image": {
+			inContent:    []byte(``),
+			wantedStruct: Image{},
+		},
+		"Empty dependencies don't appear in image": {
+			inContent:    []byte(`depends_on:`),
+			wantedStruct: Image{},
+		},
+		"Error when unmarshallable": {
+			inContent: []byte(`depends_on:
+    frontend: coolwebsite
+  sidecar2: wheels`),
+			wantedStruct: Image{
+				Dependencies: map[string]string{
+					"frontend": "coolwebsite",
+					"sidecar2": "wheels",
+				},
+			},
+			wantedError: errors.New("yaml: line 2: did not find expected key"),
+		},
+		"Valid yaml specified": {
+			inContent: []byte(`depends_on:
+  frontend: coolwebsite
+  sidecar2: wheels`),
+			wantedStruct: Image{
+				Dependencies: map[string]string{
+					"frontend": "coolwebsite",
+					"sidecar2": "wheels",
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			i := Image{}
+
+			err := yaml.Unmarshal(tc.inContent, &i)
+
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				// check memberwise dereferenced pointer equality
+				require.Equal(t, tc.wantedStruct.Dependencies, i.Dependencies)
+			}
+		})
+	}
+}
