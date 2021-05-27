@@ -241,6 +241,20 @@ func (c *CloudFormation) TemplateBody(name string) (string, error) {
 	return aws.StringValue(out.TemplateBody), nil
 }
 
+// Parameters returns the parameters of an existing stack.
+// If the stack does not exist, returns ErrStackNotFound.
+func (c *CloudFormation) Parameters(name string) (map[string]string, error) {
+	desc, err := c.Describe(name)
+	if err != nil {
+		return nil, err
+	}
+	params := make(map[string]string)
+	for _, p := range desc.Parameters {
+		params[aws.StringValue(p.ParameterKey)] = aws.StringValue(p.ParameterValue)
+	}
+	return params, nil
+}
+
 // TemplateBodyFromChangeSet returns the template body of a stack based on a change set.
 // If the stack does not exist, then returns ErrStackNotFound.
 func (c *CloudFormation) TemplateBodyFromChangeSet(changeSetID, stackName string) (string, error) {

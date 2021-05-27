@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -843,6 +844,69 @@ func TestCloudFormation_Exists(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, exists)
 	})
+}
+
+func TestCloudFormation_Parameters(t *testing.T) {
+	mockDesc := cloudformation.Stack{
+		StackName: aws.String("id"),
+		Parameters: []*cloudformation.Parameter{
+			{
+				ParameterKey:   aws.String(stack.EnvParamAliasesKey),
+				ParameterValue: nil,
+			},
+			{
+				ParameterKey:   aws.String(stack.EnvParamLegacyServiceDiscovery),
+				ParameterValue: aws.String(stack.DoNotCreateLegacySvcDiscovery),
+			},
+		},
+	}
+	testCases := map[string]struct {
+		createMock   func(ctrl *gomock.Controller) client
+		wantedParams map[string]string
+		wantedErr    error
+	}{
+		"success": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().DescribeStacks(gomock.Any()).Return(&cloudformation.DescribeStacksOutput{
+					Stacks: []*cloudformation.Stack{
+						&mockDesc,
+					},
+				}, nil)
+				return m
+			},
+			wantedParams: map[string]string{
+				"Aliases":                          "",
+				"UseLegacyServiceDiscoveryIfBlank": "doNotCreate",
+			},
+		},
+		"stack does not exist": {
+			createMock: func(ctrl *gomock.Controller) client {
+				m := mocks.NewMockclient(ctrl)
+				m.EXPECT().DescribeStacks(gomock.Any()).Return(nil, errDoesNotExist)
+				return m
+			},
+			wantedErr: &ErrStackNotFound{name: "id"},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			c := CloudFormation{
+				client: tc.createMock(ctrl),
+			}
+
+			// WHEN
+			params, err := c.Parameters(mockStack.Name)
+
+			// THEN
+			require.Equal(t, tc.wantedParams, params)
+			require.Equal(t, tc.wantedErr, err)
+		})
+	}
 }
 
 func TestCloudFormation_TemplateBody(t *testing.T) {
