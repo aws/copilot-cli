@@ -334,6 +334,21 @@ func (mr *MockcfnClientMockRecorder) Outputs(stack interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Outputs", reflect.TypeOf((*MockcfnClient)(nil).Outputs), stack)
 }
 
+// Parameters mocks base method.
+func (m *MockcfnClient) Parameters(stackName string) (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Parameters", stackName)
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Parameters indicates an expected call of Parameters.
+func (mr *MockcfnClientMockRecorder) Parameters(stackName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parameters", reflect.TypeOf((*MockcfnClient)(nil).Parameters), stackName)
+}
+
 // TemplateBody mocks base method.
 func (m *MockcfnClient) TemplateBody(stackName string) (string, error) {
 	m.ctrl.T.Helper()

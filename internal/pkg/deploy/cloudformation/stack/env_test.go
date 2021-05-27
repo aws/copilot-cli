@@ -286,7 +286,19 @@ func mockEnvironmentStack(stackArn, managerRoleARN, executionRoleARN string) *cl
 				OutputValue: aws.String(executionRoleARN),
 			},
 		},
+		Parameters: []*cloudformation.Parameter{
+			{
+				ParameterKey:   aws.String(EnvParamLegacyServiceDiscovery),
+				ParameterValue: aws.String(DoNotCreateLegacySvcDiscovery),
+			},
+		},
 	}
+}
+
+func mockLegacyEnvironmentStack(stackArn, managerRoleARN, executionRoleARN string) *cloudformation.Stack {
+	stack := mockEnvironmentStack(stackArn, managerRoleARN, executionRoleARN)
+	stack.Parameters = nil
+	return stack
 }
 
 func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {

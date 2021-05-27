@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -205,6 +206,40 @@ func TestCloudFormation_UpgradeLegacyEnvironment(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+func TestCloudFormation_EnvironmentParameters(t *testing.T) {
+	testCases := map[string]struct {
+		inAppName string
+		inEnvName string
+		inClient  func(ctrl *gomock.Controller) *mocks.MockcfnClient
+	}{
+		"calls Parameters": {
+			inAppName: "phonetool",
+			inEnvName: "test",
+			inClient: func(ctrl *gomock.Controller) *mocks.MockcfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Parameters("phonetool-test").Return(map[string]string{
+					stack.EnvParamLegacyServiceDiscovery: stack.DoNotCreateLegacySvcDiscovery,
+				}, nil)
+				return m
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			cf := &CloudFormation{
+				cfnClient: tc.inClient(ctrl),
+			}
+
+			// WHEN
+			cf.EnvironmentParameters(tc.inAppName, tc.inEnvName)
 		})
 	}
 }

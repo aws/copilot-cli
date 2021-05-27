@@ -77,6 +77,12 @@ func (cf CloudFormation) EnvironmentTemplate(appName, envName string) (string, e
 	return cf.cfnClient.TemplateBody(stackName)
 }
 
+// EnvironmentParameters returns the current parameters used in the environment stack.
+func (cf CloudFormation) EnvironmentParameters(appName, envName string) (map[string]string, error) {
+	stackName := stack.NameForEnv(appName, envName)
+	return cf.cfnClient.Parameters(stackName)
+}
+
 // UpdateEnvironmentTemplate updates the cloudformation stack's template body while maintaining the parameters and tags.
 func (cf CloudFormation) UpdateEnvironmentTemplate(appName, envName, templateBody, cfnExecRoleARN string) error {
 	stackName := stack.NameForEnv(appName, envName)
