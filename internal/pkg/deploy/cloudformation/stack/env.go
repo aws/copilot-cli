@@ -36,6 +36,7 @@ const (
 	envParamAppDNSKey                = "AppDNSName"
 	envParamAppDNSDelegationRoleKey  = "AppDNSDelegationRole"
 	EnvParamAliasesKey               = "Aliases"
+	EnvParamLegacyServiceDiscovery   = "UseLegacyServiceDiscoveryIfBlank"
 
 	// Output keys.
 	EnvOutputVPCID               = "VpcId"
@@ -48,6 +49,9 @@ const (
 	DefaultVPCCIDR            = "10.0.0.0/16"
 	DefaultPublicSubnetCIDRs  = "10.0.0.0/24,10.0.1.0/24"
 	DefaultPrivateSubnetCIDRs = "10.0.2.0/24,10.0.3.0/24"
+
+	// Placeholder parameter value to keep legacy svc discovery from being created
+	DoNotCreateLegacySvcDiscovery = "doNotCreate"
 )
 
 // NewEnvStackConfig sets up a struct which can provide values to CloudFormation for
@@ -128,6 +132,10 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
 			ParameterValue: aws.String(e.dnsDelegationRole()),
 		},
+		{
+			ParameterKey:   aws.String(EnvParamLegacyServiceDiscovery),
+			ParameterValue: aws.String(DoNotCreateLegacySvcDiscovery),
+		},
 	}, nil
 }
 
@@ -163,12 +171,10 @@ func (e *EnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.Environment
 	if err != nil {
 		return nil, fmt.Errorf("couldn't extract region and account from stack ID %s: %w", *stack.StackId, err)
 	}
-
 	stackOutputs := make(map[string]string)
 	for _, output := range stack.Outputs {
 		stackOutputs[*output.OutputKey] = *output.OutputValue
 	}
-
 	return &config.Environment{
 		Name:             e.in.Name,
 		App:              e.in.AppName,

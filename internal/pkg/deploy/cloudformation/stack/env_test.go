@@ -102,6 +102,10 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
 					ParameterValue: aws.String(""),
 				},
+				{
+					ParameterKey:   aws.String(EnvParamLegacyServiceDiscovery),
+					ParameterValue: aws.String(DoNotCreateLegacySvcDiscovery),
+				},
 			},
 		},
 		"with DNS": {
@@ -126,6 +130,10 @@ func TestEnv_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
 					ParameterValue: aws.String("arn:aws:iam::000000000:role/project-DNSDelegationRole"),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamLegacyServiceDiscovery),
+					ParameterValue: aws.String(DoNotCreateLegacySvcDiscovery),
 				},
 			},
 		},
@@ -241,6 +249,21 @@ func TestToEnv(t *testing.T) {
 		},
 		"should return a well formed environment": {
 			mockStack: mockEnvironmentStack(
+				"arn:aws:cloudformation:eu-west-3:902697171733:stack/project-env",
+				"arn:aws:iam::902697171733:role/phonetool-test-EnvManagerRole",
+				"arn:aws:iam::902697171733:role/phonetool-test-CFNExecutionRole"),
+			expectedEnv: config.Environment{
+				Name:             mockDeployInput.Name,
+				App:              mockDeployInput.AppName,
+				Prod:             mockDeployInput.Prod,
+				AccountID:        "902697171733",
+				Region:           "eu-west-3",
+				ManagerRoleARN:   "arn:aws:iam::902697171733:role/phonetool-test-EnvManagerRole",
+				ExecutionRoleARN: "arn:aws:iam::902697171733:role/phonetool-test-CFNExecutionRole",
+			},
+		},
+		"should return a well formed legacy environment": {
+			mockStack: mockLegacyEnvironmentStack(
 				"arn:aws:cloudformation:eu-west-3:902697171733:stack/project-env",
 				"arn:aws:iam::902697171733:role/phonetool-test-EnvManagerRole",
 				"arn:aws:iam::902697171733:role/phonetool-test-CFNExecutionRole"),

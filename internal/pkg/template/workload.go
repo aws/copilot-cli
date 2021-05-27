@@ -237,13 +237,14 @@ type WorkloadOpts struct {
 	DockerLabels       map[string]string
 
 	// Additional options for service templates.
-	WorkloadType        string
-	HealthCheck         *ecs.HealthCheck
-	HTTPHealthCheck     HTTPHealthCheckOpts
-	AllowedSourceIps    []string
-	RulePriorityLambda  string
-	DesiredCountLambda  string
-	EnvControllerLambda string
+	WorkloadType           string
+	HealthCheck            *ecs.HealthCheck
+	HTTPHealthCheck        HTTPHealthCheckOpts
+	AllowedSourceIps       []string
+	RulePriorityLambda     string
+	DesiredCountLambda     string
+	EnvControllerLambda    string
+	LegacyServiceDiscovery bool
 
 	// Additional options for job templates.
 	ScheduleExpression string
