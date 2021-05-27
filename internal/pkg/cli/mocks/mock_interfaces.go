@@ -3613,6 +3613,44 @@ func (mr *MockappResourcesGetterMockRecorder) GetRegionalAppResources(app interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalAppResources", reflect.TypeOf((*MockappResourcesGetter)(nil).GetRegionalAppResources), app)
 }
 
+// MockenvParamGetter is a mock of envParamGetter interface.
+type MockenvParamGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvParamGetterMockRecorder
+}
+
+// MockenvParamGetterMockRecorder is the mock recorder for MockenvParamGetter.
+type MockenvParamGetterMockRecorder struct {
+	mock *MockenvParamGetter
+}
+
+// NewMockenvParamGetter creates a new mock instance.
+func NewMockenvParamGetter(ctrl *gomock.Controller) *MockenvParamGetter {
+	mock := &MockenvParamGetter{ctrl: ctrl}
+	mock.recorder = &MockenvParamGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockenvParamGetter) EXPECT() *MockenvParamGetterMockRecorder {
+	return m.recorder
+}
+
+// EnvironmentParameters mocks base method.
+func (m *MockenvParamGetter) EnvironmentParameters(app, env string) (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvironmentParameters", app, env)
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnvironmentParameters indicates an expected call of EnvironmentParameters.
+func (mr *MockenvParamGetterMockRecorder) EnvironmentParameters(app, env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentParameters", reflect.TypeOf((*MockenvParamGetter)(nil).EnvironmentParameters), app, env)
+}
+
 // MocktaskDeployer is a mock of taskDeployer interface.
 type MocktaskDeployer struct {
 	ctrl     *gomock.Controller

@@ -159,18 +159,19 @@ func (j *ScheduledJob) Template() (string, error) {
 		return "", fmt.Errorf(`convert 'command' to string slice: %w`, err)
 	}
 	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
-		Variables:          j.manifest.Variables,
-		Secrets:            j.manifest.Secrets,
-		NestedStack:        outputs,
-		Sidecars:           sidecars,
-		ScheduleExpression: schedule,
-		StateMachine:       stateMachine,
-		LogConfig:          convertLogging(j.manifest.Logging),
-		DockerLabels:       j.manifest.ImageConfig.DockerLabels,
-		Storage:            storage,
-		Network:            convertNetworkConfig(j.manifest.Network),
-		EntryPoint:         entrypoint,
-		Command:            command,
+		Variables:              j.manifest.Variables,
+		Secrets:                j.manifest.Secrets,
+		NestedStack:            outputs,
+		Sidecars:               sidecars,
+		ScheduleExpression:     schedule,
+		StateMachine:           stateMachine,
+		LogConfig:              convertLogging(j.manifest.Logging),
+		DockerLabels:           j.manifest.ImageConfig.DockerLabels,
+		Storage:                storage,
+		Network:                convertNetworkConfig(j.manifest.Network),
+		EntryPoint:             entrypoint,
+		Command:                command,
+		LegacyServiceDiscovery: j.rc.LegacyServiceDiscovery,
 
 		EnvControllerLambda: envControllerLambda.String(),
 	})

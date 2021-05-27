@@ -43,6 +43,7 @@ type deployJobOpts struct {
 	addons             templater
 	appCFN             appResourcesGetter
 	jobCFN             cloudformation.CloudFormation
+	envCFN             envParamGetter
 	imageBuilderPusher imageBuilderPusher
 	sessProvider       sessionProvider
 	s3                 artifactUploader
@@ -207,6 +208,8 @@ func (o *deployJobOpts) configureClients() error {
 	// CF client against env account profile AND target environment region
 	o.jobCFN = cloudformation.New(envSession)
 
+	o.envCFN = cloudformation.New(envSession)
+
 	addonsSvc, err := addon.New(o.name)
 	if err != nil {
 		return fmt.Errorf("initiate addons service: %w", err)
@@ -300,10 +303,15 @@ func (o *deployJobOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 }
 
 func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
+	svcDiscovery, err := envUsesLegacySvcDiscovery(o.envCFN, o.appName, o.envName)
+	if err != nil {
+		return nil, err
+	}
 	if !o.buildRequired {
 		return &stack.RuntimeConfig{
-			AddonsTemplateURL: addonsURL,
-			AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
+			AddonsTemplateURL:      addonsURL,
+			AdditionalTags:         tags.Merge(o.targetApp.Tags, o.resourceTags),
+			LegacyServiceDiscovery: svcDiscovery,
 		}, nil
 	}
 	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
@@ -324,8 +332,9 @@ func (o *deployJobOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			ImageTag: o.imageTag,
 			Digest:   o.imageDigest,
 		},
-		AddonsTemplateURL: addonsURL,
-		AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
+		AddonsTemplateURL:      addonsURL,
+		AdditionalTags:         tags.Merge(o.targetApp.Tags, o.resourceTags),
+		LegacyServiceDiscovery: svcDiscovery,
 	}, nil
 }
 

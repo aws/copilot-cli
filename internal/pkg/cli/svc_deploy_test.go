@@ -357,6 +357,7 @@ func TestSvcDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 		mockAppResourcesGetter func(m *mocks.MockappResourcesGetter)
 		mockS3Svc              func(m *mocks.MockartifactUploader)
 		mockAddons             func(m *mocks.Mocktemplater)
+		mockEnvParamGetter     func(m *mocks.MockenvParamGetter)
 
 		wantPath string
 		wantErr  error
@@ -404,9 +405,9 @@ func TestSvcDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			mockAddons: func(m *mocks.Mocktemplater) {
 				m.EXPECT().Template().Return("some data", nil)
 			},
-			mockS3Svc: func(m *mocks.MockartifactUploader) {},
-
-			wantErr: fmt.Errorf("get app resources: some error"),
+			mockS3Svc:          func(m *mocks.MockartifactUploader) {},
+			mockEnvParamGetter: func(m *mocks.MockenvParamGetter) {},
+			wantErr:            fmt.Errorf("get app resources: some error"),
 		},
 		"should return error if fail to upload to S3 bucket": {
 			inputSvc: "mockSvc",
@@ -517,6 +518,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 		mockWorkspace          func(m *mocks.MockwsSvcDirReader)
 		mockAppResourcesGetter func(m *mocks.MockappResourcesGetter)
 		mockAppVersionGetter   func(m *mocks.MockversionGetter)
+		mockEnvParamGetter     func(m *mocks.MockenvParamGetter)
 
 		wantErr error
 	}{
@@ -526,6 +528,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			},
 			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
 			mockAppVersionGetter:   func(m *mocks.MockversionGetter) {},
+			mockEnvParamGetter:     func(m *mocks.MockenvParamGetter) {},
 			wantErr:                fmt.Errorf("read service %s manifest file: %w", mockSvcName, mockError),
 		},
 		"fail to get app resources": {
@@ -545,10 +548,34 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 					Name: mockAppName,
 				}, "us-west-2").Return(nil, mockError)
 			},
+			mockEnvParamGetter: func(m *mocks.MockenvParamGetter) {
+				m.EXPECT().EnvironmentParameters(mockAppName, mockEnvName).Return(map[string]string{
+					stack.EnvParamLegacyServiceDiscovery: stack.DoNotCreateLegacySvcDiscovery,
+				}, nil)
+			},
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {},
 			wantErr:              fmt.Errorf("get application %s resources from region us-west-2: %w", mockAppName, mockError),
 		},
-		"cannot to find ECR repo": {
+		"fail to get environment": {
+			inBuildRequire: true,
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
+				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+			},
+			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
+			mockEnvParamGetter: func(m *mocks.MockenvParamGetter) {
+				m.EXPECT().EnvironmentParameters(mockAppName, mockEnvName).Return(nil, errors.New("some error"))
+			},
+			mockAppVersionGetter: func(m *mocks.MockversionGetter) {},
+			wantErr:              errors.New("some error"),
+		},
+		"cannot find ECR repo": {
 			inBuildRequire: true,
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -567,6 +594,11 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 					AccountID: "1234567890",
 				}, "us-west-2").Return(&stack.AppRegionalResources{
 					RepositoryURLs: map[string]string{},
+				}, nil)
+			},
+			mockEnvParamGetter: func(m *mocks.MockenvParamGetter) {
+				m.EXPECT().EnvironmentParameters(mockAppName, mockEnvName).Return(map[string]string{
+					stack.EnvParamLegacyServiceDiscovery: stack.DoNotCreateLegacySvcDiscovery,
 				}, nil)
 			},
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {},
@@ -589,6 +621,11 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
 				m.EXPECT().Version().Return("", mockError)
 			},
+			mockEnvParamGetter: func(m *mocks.MockenvParamGetter) {
+				m.EXPECT().EnvironmentParameters(mockAppName, mockEnvName).Return(map[string]string{
+					stack.EnvParamLegacyServiceDiscovery: stack.DoNotCreateLegacySvcDiscovery,
+				}, nil)
+			},
 			wantErr: fmt.Errorf("get version for app %s: %w", mockAppName, mockError),
 		},
 		"fail to enable https alias because of incompatible app version": {
@@ -608,6 +645,11 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
 				m.EXPECT().Version().Return("v0.0.0", nil)
 			},
+			mockEnvParamGetter: func(m *mocks.MockenvParamGetter) {
+				m.EXPECT().EnvironmentParameters(mockAppName, mockEnvName).Return(map[string]string{
+					stack.EnvParamLegacyServiceDiscovery: stack.DoNotCreateLegacySvcDiscovery,
+				}, nil)
+			},
 			wantErr: fmt.Errorf(`enable "http.alias": the application version should be at least %s`, deploy.AliasLeastAppTemplateVersion),
 		},
 		"success": {
@@ -622,6 +664,11 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
 				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
 			},
+			mockEnvParamGetter: func(m *mocks.MockenvParamGetter) {
+				m.EXPECT().EnvironmentParameters(mockAppName, mockEnvName).Return(map[string]string{
+					stack.EnvParamLegacyServiceDiscovery: stack.DoNotCreateLegacySvcDiscovery,
+				}, nil)
+			},
 			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
 			mockAppVersionGetter:   func(m *mocks.MockversionGetter) {},
 		},
@@ -634,10 +681,12 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 
 			mockWorkspace := mocks.NewMockwsSvcDirReader(ctrl)
 			mockAppResourcesGetter := mocks.NewMockappResourcesGetter(ctrl)
+			mockEnvParamGetter := mocks.NewMockenvParamGetter(ctrl)
 			mockAppVersionGetter := mocks.NewMockversionGetter(ctrl)
 			tc.mockWorkspace(mockWorkspace)
 			tc.mockAppResourcesGetter(mockAppResourcesGetter)
 			tc.mockAppVersionGetter(mockAppVersionGetter)
+			tc.mockEnvParamGetter(mockEnvParamGetter)
 
 			opts := deploySvcOpts{
 				deployWkldVars: deployWkldVars{
@@ -648,6 +697,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				ws:                mockWorkspace,
 				buildRequired:     tc.inBuildRequire,
 				appCFN:            mockAppResourcesGetter,
+				envCFN:            mockEnvParamGetter,
 				appVersionGetter:  mockAppVersionGetter,
 				targetApp:         tc.inApp,
 				targetEnvironment: tc.inEnvironment,

@@ -57,6 +57,7 @@ type deploySvcOpts struct {
 	addons             templater
 	appCFN             appResourcesGetter
 	svcCFN             cloudformation.CloudFormation
+	envCFN             envParamGetter
 	sessProvider       sessionProvider
 	envUpgradeCmd      actionCommand
 	appVersionGetter   versionGetter
@@ -259,6 +260,8 @@ func (o *deploySvcOpts) configureClients() error {
 	// CF client against env account profile AND target environment region
 	o.svcCFN = cloudformation.New(envSession)
 
+	o.envCFN = cloudformation.New(envSession)
+
 	addonsSvc, err := addon.New(o.name)
 	if err != nil {
 		return fmt.Errorf("initiate addons service: %w", err)
@@ -378,11 +381,32 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 	return mft, nil
 }
 
+func envUsesLegacySvcDiscovery(cf envParamGetter, app, env string) (bool, error) {
+	envParams, err := cf.EnvironmentParameters(app, env)
+	if err != nil {
+		return false, err
+	}
+	// The parameter UseLegacyServiceDiscoveryIfBlank is unset in older environment stacks. When a legacy environment
+	// is upgraded, the parameter is set to "", which tells CF to create both new and old Cloudmap namespaces.
+	// If the parameter is unset or blank, the svc should register both cloudmap namespaces, so we set LegacyServiceDiscovery to true.
+	var useLegacySvcDiscovery bool
+	svcDisc, ok := envParams[stack.EnvParamLegacyServiceDiscovery]
+	if !ok || svcDisc == "" {
+		useLegacySvcDiscovery = true
+	}
+	return useLegacySvcDiscovery, nil
+}
+
 func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
+	svcDiscovery, err := envUsesLegacySvcDiscovery(o.envCFN, o.appName, o.envName)
+	if err != nil {
+		return nil, err
+	}
 	if !o.buildRequired {
 		return &stack.RuntimeConfig{
-			AddonsTemplateURL: addonsURL,
-			AdditionalTags:    tags.Merge(o.targetApp.Tags, o.resourceTags),
+			AddonsTemplateURL:      addonsURL,
+			AdditionalTags:         tags.Merge(o.targetApp.Tags, o.resourceTags),
+			LegacyServiceDiscovery: svcDiscovery,
 		}, nil
 	}
 	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
@@ -405,6 +429,7 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			ImageTag: o.imageTag,
 			Digest:   o.imageDigest,
 		},
+		LegacyServiceDiscovery: svcDiscovery,
 	}, nil
 }
 
