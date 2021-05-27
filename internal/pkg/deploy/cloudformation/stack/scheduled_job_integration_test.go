@@ -36,7 +36,7 @@ func TestScheduledJob_Template(t *testing.T) {
 	require.NoError(t, err)
 	v, ok := mft.(*manifest.ScheduledJob)
 	require.True(t, ok)
-	serializer, err := stack.NewScheduledJob(v, envName, appName, stack.RuntimeConfig{})
+	serializer, err := stack.NewScheduledJob(v, envName, appName, stack.RuntimeConfig{LegacyServiceDiscovery: false})
 
 	tpl, err := serializer.Template()
 	require.NoError(t, err, "template should render")

@@ -32,11 +32,13 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		envName       string
 		svcStackPath  string
 		svcParamsPath string
+		legacySvcDisc bool
 	}{
 		"default env": {
 			envName:       "test",
 			svcStackPath:  "svc-test.stack.yml",
 			svcParamsPath: "svc-test.params.json",
+			legacySvcDisc: true,
 		},
 		"staging env": {
 			envName:       "staging",
@@ -59,7 +61,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 
 	for name, tc := range testCases {
 
-		serializer, err := stack.NewHTTPSLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{})
+		serializer, err := stack.NewHTTPSLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{LegacyServiceDiscovery: tc.legacySvcDisc})
 
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
