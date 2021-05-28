@@ -54,7 +54,7 @@ Resources:
 {{- end}}
   # Creates a service discovery namespace with the form:
   # {svc}.{appname}.local
-  # This is a legacy construct and only used in older environments.
+  # This is a legacy construct and only used in environments created before v1.5.0.
   ServiceDiscoveryNamespace:
     Condition: UseLegacyServiceDiscovery
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
