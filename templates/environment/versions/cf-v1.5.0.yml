@@ -56,6 +56,7 @@ Resources:
   # {svc}.{appname}.local
   # This is a legacy construct and only used in environments created before v1.5.0.
   ServiceDiscoveryNamespace:
+    Condition: UseLegacyServiceDiscovery
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
     Properties:
         Name: !Sub ${AppName}.local
@@ -319,6 +320,7 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
   ServiceDiscoveryNamespaceID:
+    Condition: UseLegacyServiceDiscovery
     Value: !GetAtt ServiceDiscoveryNamespace.Id
     Export:
       Name: !Sub ${AWS::StackName}-ServiceDiscoveryNamespaceID
