@@ -333,7 +333,7 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 		if len(o.importVPC.PublicSubnetIDs) == 1 {
 			return fmt.Errorf("at least two public subnets must be imported to enable Load Balancing")
 		}
-		// We require 2 private subnets.
+		// We require 2+ private subnets.
 		if len(o.importVPC.PrivateSubnetIDs) < 2 {
 			return fmt.Errorf("at least two private subnets must be imported")
 		}

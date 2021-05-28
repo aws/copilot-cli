@@ -113,7 +113,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 
 			wantedErrMsg: "at least two public subnets must be imported to enable Load Balancing",
 		},
-		"should err if less than two private subnets are set:": {
+		"should err if fewer than two private subnets are set:": {
 			inVPCID:      "mockID",
 			inPublicIDs:  []string{"mockID", "anotherMockID"},
 			inPrivateIDs: []string{"mockID"},
