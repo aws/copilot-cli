@@ -132,8 +132,8 @@ Resources:
           AssignPublicIp: ENABLED
           Subnets:
             Fn::Split:
-                    - ','
-                    - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+              - ','
+              - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
           SecurityGroups:
             - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
       DeploymentConfiguration:
