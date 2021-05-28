@@ -131,10 +131,6 @@ Resources:
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
           Port: !Ref ContainerPort
-{{- if .LegacyServiceDiscovery}}
-        - RegistryArn: !GetAtt LegacyDiscoveryService.Arn
-          Port: !Ref ContainerPort
-{{- end}}
 
   TargetGroup:
     Metadata:

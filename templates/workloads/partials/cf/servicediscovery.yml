@@ -16,24 +16,8 @@ DiscoveryService:
     Name:  !Ref WorkloadName
     NamespaceId:
       Fn::ImportValue:
+      {{- if .LegacyServiceDiscovery}}
         !Sub '${AppName}-${EnvName}-ServiceDiscoveryNamespaceID'
-{{- if .LegacyServiceDiscovery}}
-LegacyDiscoveryService:
-  Metadata:
-    'aws:copilot:description': 'Legacy service discovery service using the namespace app.local'
-  Properties:
-    Description: Discovery Service for the Copilot services
-    DnsConfig:
-      RoutingPolicy: MULTIVALUE
-      DnsRecords:
-        - TTL: 10
-          Type: A
-        - TTL: 10
-          Type: SRV
-    HealthCheckCustomConfig:
-      FailureThreshold: 1
-    Name:  !Ref WorkloadName
-    NamespaceId:
-      Fn::ImportValue:
-        !Sub '${AppName}-${EnvName}-LegacyServiceDiscoveryNamespaceID'
-{{- end}}
+      {{- else}}
+        !Sub '${AppName}-${EnvName}-ServiceDiscoveryNamespaceIDWithEnv'
+      {{- end}}

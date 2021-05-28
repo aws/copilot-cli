@@ -320,14 +320,14 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
   ServiceDiscoveryNamespaceID:
-    Value: !GetAtt ServiceDiscoveryNamespaceWithEnv.Id
-    Export:
-      Name: !Sub ${AWS::StackName}-ServiceDiscoveryNamespaceID
-  LegacyServiceDiscoveryNamespaceID:
     Condition: UseLegacyServiceDiscovery
     Value: !GetAtt ServiceDiscoveryNamespace.Id
     Export:
-      Name: !Sub ${AWS::StackName}-LegacyServiceDiscoveryNamespaceID
+      Name: !Sub ${AWS::StackName}-ServiceDiscoveryNamespaceID
+  ServiceDiscoveryNamespaceIDWithEnv:
+    Value: !GetAtt ServiceDiscoveryNamespaceWithEnv.Id
+    Export:
+      Name: !Sub ${AWS::StackName}-ServiceDiscoveryNamespaceIDWithEnv
   EnvironmentSecurityGroup:
     Value: !Ref EnvironmentSecurityGroup
     Export:
