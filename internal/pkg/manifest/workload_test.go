@@ -587,7 +587,7 @@ func TestDependency_UnmarshalYAML(t *testing.T) {
 		wantedStruct Image
 		wantedError  error
 	}{
-		"Unspecified optional dependencies don't appear im image": {
+		"Unspecified optional dependencies don't appear in image": {
 			inContent:    []byte(``),
 			wantedStruct: Image{},
 		},
