@@ -329,7 +329,7 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-ServiceDiscoveryNamespaceIDWithEnv
   UseLegacyServiceDiscovery:
-    Value: !If [ UseLegacyServiceDiscovery, true, "" ]
+    Value: !If [ UseLegacyServiceDiscovery, true, false ]
     Export:
       Name: !Sub ${AWS::StackName}-UseLegacyServiceDiscovery
   EnvironmentSecurityGroup:

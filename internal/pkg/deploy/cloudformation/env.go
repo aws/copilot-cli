@@ -89,7 +89,7 @@ func (cf CloudFormation) EnvironmentUsesLegacySvcDiscovery(appName, envName stri
 		stackOutputs[*output.OutputKey] = *output.OutputValue
 	}
 	output, ok := stackOutputs[stack.EnvOutputLegacyServiceDiscovery]
-	if !ok || output != "" {
+	if !ok || output != "false" {
 		return true, nil
 	}
 	return false, nil
