@@ -208,7 +208,7 @@ func TestCCPipelineCreation(t *testing.T) {
 			Name:    pipelineStackName,
 			Source: &deploy.CodeCommitSource{
 				ProviderName:  manifest.CodeCommitProviderName,
-				Branch:        "master",
+				Branch:        "main",
 				RepositoryURL: "https://us-west-2.console.aws.amazon.com/codesuite/codecommit/repositories/repo-name/browse",
 			},
 			Build: deploy.PipelineBuildFromManifest(nil),

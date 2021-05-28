@@ -43,6 +43,7 @@ nav:
       - Pipeline: docs/manifest/pipeline.en.md
     - Developing:
       - Environment Variables: docs/developing/environment-variables.en.md
+      - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
       - Secrets: docs/developing/secrets.en.md
       - Service Discovery: docs/developing/service-discovery.en.md
       - Additional AWS Resources: docs/developing/additional-aws-resources.en.md
