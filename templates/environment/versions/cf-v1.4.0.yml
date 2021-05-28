@@ -52,11 +52,11 @@ Resources:
   ServiceDiscoveryNamespace:
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
     Properties:
-        Name: !Sub ${AppName}.local
+      Name: !Sub ${AppName}.local
 {{- if .ImportVPC}}
-        Vpc: {{.ImportVPC.ID}}
+      Vpc: {{.ImportVPC.ID}}
 {{- else}}
-        Vpc: !Ref VPC
+      Vpc: !Ref VPC
 {{- end}}
   Cluster:
     Metadata:
@@ -285,22 +285,28 @@ Outputs:
 {{- end}}
     Export:
       Name: !Sub ${AWS::StackName}-VpcId
+{{- if not .ImportVPC}}
   PublicSubnets:
-{{- if .ImportVPC}}
-    Value: !Join [ ',', [ {{range $id := .ImportVPC.PublicSubnetIDs}}{{$id}}, {{end}}] ]
-{{- else}}
     Value: !Join [ ',', [ {{range $ind, $cidr := .VPCConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}}] ]
-{{- end}}
     Export:
       Name: !Sub ${AWS::StackName}-PublicSubnets
-  PrivateSubnets:
-{{- if .ImportVPC}}
-    Value: !Join [ ',', [ {{range $id := .ImportVPC.PrivateSubnetIDs}}{{$id}}, {{end}}] ]
-{{- else}}
-    Value: !Join [ ',', [ {{range $ind, $cidr := .VPCConfig.PrivateSubnetCIDRs}}!Ref PrivateSubnet{{inc $ind}}, {{end}}] ]
+{{- else if ne (len .ImportVPC.PublicSubnetIDs) 0}}
+  PublicSubnets:
+    Value: !Join [ ',', [ {{range $id := .ImportVPC.PublicSubnetIDs}}{{$id}}, {{end}}] ]
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnets
 {{- end}}
+{{- if not .ImportVPC}}
+  PrivateSubnets:
+    Value: !Join [ ',', [ {{range $ind, $cidr := .VPCConfig.PrivateSubnetCIDRs}}!Ref PrivateSubnet{{inc $ind}}, {{end}}] ]
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
+{{- else if ne (len .ImportVPC.PrivateSubnetIDs) 0}}
+  PrivateSubnets:
+    Value: !Join [ ',', [ {{range $id := .ImportVPC.PrivateSubnetIDs}}{{$id}}, {{end}}] ]
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnets
+{{- end}}
   ServiceDiscoveryNamespaceID:
     Value: !GetAtt ServiceDiscoveryNamespace.Id
     Export:

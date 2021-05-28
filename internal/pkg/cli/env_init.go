@@ -44,7 +44,7 @@ const (
     - New IAM Roles to manage services and jobs in your environment
 `
 	envInitVPCSelectPrompt            = "Which VPC would you like to use?"
-	envInitPublicSubnetsSelectPrompt  = "Which public subnets would you like to use?"
+	envInitPublicSubnetsSelectPrompt  = "Which public subnets would you like to use?\nYou may choose to press 'Enter' to skip this step if the services and/or jobs you'll deploy to this environment are not internet-facing."
 	envInitPrivateSubnetsSelectPrompt = "Which private subnets would you like to use?"
 
 	envInitVPCCIDRPrompt         = "What VPC CIDR would you like to use?"
@@ -460,11 +460,15 @@ https://aws.amazon.com/premiumsupport/knowledge-center/ecs-pull-container-api-er
 		publicSubnets, err := o.selVPC.PublicSubnets(envInitPublicSubnetsSelectPrompt, "", o.importVPC.ID)
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
-				log.Errorf(`No existing public subnets were found in VPC %s. You can either:
-- Create new public subnets and then import them.
-- Use the default Copilot environment configuration.`, o.importVPC.ID)
+				log.Warningf(`No existing public subnets were found in VPC %s.
+If you proceed without public subnets, you will not be able to deploy Load Balanced Web Services in this environment.
+`, o.importVPC.ID)
+			} else {
+				return fmt.Errorf("select public subnets: %w", err)
 			}
-			return fmt.Errorf("select public subnets: %w", err)
+		}
+		if len(publicSubnets) == 1 {
+			return errors.New("select public subnets: at least two public subnets must be selected to enable Load Balancing")
 		}
 		o.importVPC.PublicSubnetIDs = publicSubnets
 	}
@@ -477,6 +481,9 @@ https://aws.amazon.com/premiumsupport/knowledge-center/ecs-pull-container-api-er
 - Use the default Copilot environment configuration.`, o.importVPC.ID)
 			}
 			return fmt.Errorf("select private subnets: %w", err)
+		}
+		if len(privateSubnets) == 1 {
+			return errors.New("select private subnets: at least two private subnets must be selected")
 		}
 		o.importVPC.PrivateSubnetIDs = privateSubnets
 	}

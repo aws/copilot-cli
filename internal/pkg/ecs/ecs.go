@@ -40,6 +40,7 @@ type ecsClient interface {
 	StopTasks(tasks []string, opts ...ecs.StopTasksOpts) error
 	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
 	NetworkConfiguration(cluster, serviceName string) (*ecs.NetworkConfiguration, error)
+	StoppedServiceTasks(cluster, service string) ([]*ecs.Task, error)
 }
 
 type stepFunctionsClient interface {
@@ -48,9 +49,10 @@ type stepFunctionsClient interface {
 
 // ServiceDesc contains the description of an ECS service.
 type ServiceDesc struct {
-	Name        string
-	ClusterName string
-	Tasks       []*ecs.Task
+	Name         string
+	ClusterName  string
+	Tasks        []*ecs.Task
+	StoppedTasks []*ecs.Task
 }
 
 // Client retrieves Copilot information from ECS endpoint.
@@ -97,10 +99,16 @@ func (c Client) DescribeService(app, env, svc string) (*ServiceDesc, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get tasks for service %s: %w", serviceName, err)
 	}
+	stoppedTasks, err := c.ecsClient.StoppedServiceTasks(clusterName, serviceName)
+	if err != nil {
+		return nil, fmt.Errorf("get stopped tasks for service %s: %w", serviceName, err)
+	}
+
 	return &ServiceDesc{
-		ClusterName: clusterName,
-		Name:        serviceName,
-		Tasks:       tasks,
+		ClusterName:  clusterName,
+		Name:         serviceName,
+		Tasks:        tasks,
+		StoppedTasks: stoppedTasks,
 	}, nil
 }
 
