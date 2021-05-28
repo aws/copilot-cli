@@ -243,7 +243,7 @@ func TestCloudFormation_EnvironmentUsesLegacySvcDiscovery(t *testing.T) {
 					Outputs: []*awscfn.Output{
 						{
 							OutputKey:   aws.String("UseLegacyServiceDiscovery"),
-							OutputValue: aws.String(""),
+							OutputValue: aws.String("false"),
 						},
 					},
 				}, nil)
