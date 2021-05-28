@@ -52,8 +52,8 @@
 {{- if $sidecar.DependsOn}}
   DependsOn:
   {{- range $name, $conditionFrom := $sidecar.DependsOn}}
-  - Condition: {{$conditionFrom}}
-    ContainerName: {{$name}}
+    - Condition: {{$conditionFrom}}
+      ContainerName: {{$name}}
   {{- end}}
 {{- end}}
 {{- if $sidecar.CredsParam}}

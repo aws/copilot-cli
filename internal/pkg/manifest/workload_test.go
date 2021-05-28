@@ -630,7 +630,6 @@ func TestDependency_UnmarshalYAML(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				// check memberwise dereferenced pointer equality
 				require.Equal(t, tc.wantedStruct.DependsOn, i.DependsOn)
 			}
 		})
