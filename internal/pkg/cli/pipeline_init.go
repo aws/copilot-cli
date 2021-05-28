@@ -60,7 +60,7 @@ const (
 	// For a Bitbucket repository.
 	bbURL           = "bitbucket.org"
 	defaultBBBranch = "master"
-	fmtBBRepoURL    = "https://%s@%s/%s/%s" // Ex: "https://repoOwner@bitbucket.org/repoOwner/repoName
+	fmtBBRepoURL    = "https://%s/%s/%s" // Ex: "https://bitbucket.org/repoOwner/repoName
 )
 
 var (
@@ -312,8 +312,6 @@ func (o *initPipelineOpts) parseCodeCommitRepoDetails() error {
 	return nil
 }
 
-// There are two ways Bitbucket formats repo clone URLs:
-
 func (o *initPipelineOpts) parseBitbucketRepoDetails() error {
 	o.provider = manifest.BitbucketProviderName
 	repoDetails, err := bbRepoURL(o.repoURL).parse()
@@ -367,7 +365,7 @@ func (o *initPipelineOpts) selectURL() error {
 // https	https://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (fetch)
 // fed		codecommit::us-west-2://aws-sample (fetch)
 // ssh		ssh://git-codecommit.us-west-2.amazonaws.com/v1/repos/aws-sample (push)
-// bb		https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (fetch)
+// bbhttps	https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service.git (fetch)
 // bbssh	ssh://git@bitbucket.org:teamsinspace/documentation-tests.git (fetch)
 
 // parseGitRemoteResults returns just the trimmed middle column (url) of the `git remote -v` results,
@@ -457,7 +455,7 @@ func (url ccRepoURL) parse() (ccRepoDetails, error) {
 
 // Bitbucket URLs, post-parseGitRemoteResults(), may look like:
 // https://username@bitbucket.org/teamsinspace/documentation-tests (HTTPS)
-// git@bitbucket.org:teamsinspace/documentation-tests (SSH)
+// ssh://git@bitbucket.org:teamsinspace/documentation-tests.git (SSH)
 func (url bbRepoURL) parse() (bbRepoDetails, error) {
 	urlString := string(url)
 	splitURL := strings.Split(urlString, "/")
@@ -465,7 +463,8 @@ func (url bbRepoURL) parse() (bbRepoDetails, error) {
 		return bbRepoDetails{}, fmt.Errorf("unable to parse the Bitbucket repository name from %s", url)
 	}
 	repoName := splitURL[len(splitURL)-1]
-	splitRepoOwner := strings.Split(splitURL[len(splitURL)-2], ":") // split again if SSH version
+	// rather than check for the SSH prefix, splitting on colon here; HTTPS version will be unaffected.
+	splitRepoOwner := strings.Split(splitURL[len(splitURL)-2], ":")
 	repoOwner := splitRepoOwner[len(splitRepoOwner)-1]
 
 	return bbRepoDetails{
@@ -617,7 +616,7 @@ func (o *initPipelineOpts) pipelineProvider() (manifest.Provider, error) {
 		}
 	case manifest.BitbucketProviderName:
 		config = &manifest.BitbucketProperties{
-			RepositoryURL: fmt.Sprintf(fmtBBRepoURL, o.repoOwner, bbURL, o.repoOwner, o.repoName),
+			RepositoryURL: fmt.Sprintf(fmtBBRepoURL, bbURL, o.repoOwner, o.repoName),
 			Branch:        o.repoBranch,
 		}
 	default:
