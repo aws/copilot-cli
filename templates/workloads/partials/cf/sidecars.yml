@@ -49,9 +49,12 @@
   DockerLabels:{{range $name, $value := $sidecar.DockerLabels}}
     {{$name | printf "%q"}}: {{$value | printf "%q"}}{{end}}
 {{- end -}}
-{{- if $sidecar.Dependencies}}
-  Dependencies:{{range $name, $value := $sidecar.Dependencies}}
-    {{$name | printf "%q"}}: {{$value | printf "%q"}}{{end}}
+{{- if $sidecar.DependsOn}}
+  DependsOn:
+  {{- range $name, $conditionFrom := $sidecar.DependsOn}}
+  - Condition: {{$conditionFrom}}
+    ContainerName: {{$name}}
+  {{- end}}
 {{- end}}
 {{- if $sidecar.CredsParam}}
   RepositoryCredentials:

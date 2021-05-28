@@ -600,7 +600,7 @@ func TestDependency_UnmarshalYAML(t *testing.T) {
     frontend: coolwebsite
   sidecar2: wheels`),
 			wantedStruct: Image{
-				Dependencies: map[string]string{
+				DependsOn: map[string]string{
 					"frontend": "coolwebsite",
 					"sidecar2": "wheels",
 				},
@@ -612,7 +612,7 @@ func TestDependency_UnmarshalYAML(t *testing.T) {
   frontend: coolwebsite
   sidecar2: wheels`),
 			wantedStruct: Image{
-				Dependencies: map[string]string{
+				DependsOn: map[string]string{
 					"frontend": "coolwebsite",
 					"sidecar2": "wheels",
 				},
@@ -631,7 +631,7 @@ func TestDependency_UnmarshalYAML(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				// check memberwise dereferenced pointer equality
-				require.Equal(t, tc.wantedStruct.Dependencies, i.Dependencies)
+				require.Equal(t, tc.wantedStruct.DependsOn, i.DependsOn)
 			}
 		})
 	}

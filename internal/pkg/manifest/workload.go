@@ -63,7 +63,7 @@ type Image struct {
 	Build        BuildArgsOrString `yaml:"build"`           // Build an image from a Dockerfile.
 	Location     *string           `yaml:"location"`        // Use an existing image instead.
 	DockerLabels map[string]string `yaml:"labels,flow"`     // Apply Docker labels to the container at runtime.
-	Dependencies map[string]string `yaml:"depends_on,flow"` // Add any sidecar dependencies.
+	DependsOn    map[string]string `yaml:"depends_on,flow"` // Add any sidecar dependencies.
 }
 
 // ImageWithPort represents a container image with an exposed port.
@@ -376,7 +376,7 @@ type SidecarConfig struct {
 	Secrets      map[string]string   `yaml:"secrets"`
 	MountPoints  []SidecarMountPoint `yaml:"mount_points"`
 	DockerLabels map[string]string   `yaml:"labels"`
-	Dependencies map[string]string   `yaml:"depends_on"`
+	DependsOn    map[string]string   `yaml:"depends_on"`
 }
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
