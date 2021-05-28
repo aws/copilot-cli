@@ -454,8 +454,8 @@ func (url ccRepoURL) parse() (ccRepoDetails, error) {
 }
 
 // Bitbucket URLs, post-parseGitRemoteResults(), may look like:
-// https://username@bitbucket.org/teamsinspace/documentation-tests (HTTPS)
-// ssh://git@bitbucket.org:teamsinspace/documentation-tests.git (SSH)
+// https://username@bitbucket.org/teamsinspace/documentation-tests
+// ssh://git@bitbucket.org:teamsinspace/documentation-tests
 func (url bbRepoURL) parse() (bbRepoDetails, error) {
 	urlString := string(url)
 	splitURL := strings.Split(urlString, "/")
@@ -463,7 +463,7 @@ func (url bbRepoURL) parse() (bbRepoDetails, error) {
 		return bbRepoDetails{}, fmt.Errorf("unable to parse the Bitbucket repository name from %s", url)
 	}
 	repoName := splitURL[len(splitURL)-1]
-	// rather than check for the SSH prefix, splitting on colon here; HTTPS version will be unaffected.
+	// rather than check for the SSH prefix, split on colon here; HTTPS version will be unaffected.
 	splitRepoOwner := strings.Split(splitURL[len(splitURL)-2], ":")
 	repoOwner := splitRepoOwner[len(splitRepoOwner)-1]
 
