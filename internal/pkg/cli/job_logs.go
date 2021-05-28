@@ -61,7 +61,12 @@ func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
 		if err != nil {
 			return err
 		}
-		opts.logsSvc = logging.NewServiceClient(sess, opts.appName, opts.envName, opts.name)
+		opts.logsSvc, err = logging.NewServiceClient(&logging.NewServiceLogsConfig{
+			Sess: sess,
+			App:  opts.appName,
+			Env:  opts.envName,
+			Svc:  opts.name,
+		})
 		return nil
 	}
 	return opts, nil

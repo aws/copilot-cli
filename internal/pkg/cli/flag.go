@@ -197,7 +197,6 @@ Defaults to all logs. Only one of start-time / since may be used.`
 Defaults to all logs. Only one of end-time / follow may be used.`
 	tasksLogsFlagDescription               = "Optional. Only return logs from specific task IDs."
 	includeStateMachineLogsFlagDescription = "Optional. Include logs from the state machine executions."
-	tasksLogsFlagDescription               = "Optional. Only return logs from specific task IDs."
 	logGroupFlagDescription                = "Optional. Only return logs from specific log group."
 
 	deployTestFlagDescription        = `Deploy your service or job to a "test" environment.`

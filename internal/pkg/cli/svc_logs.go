@@ -87,7 +87,7 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
 		}
-		workload, err := configStore.GetWorkload(opts.appName, opts.svcName)
+		workload, err := configStore.GetWorkload(opts.appName, opts.name)
 		if err != nil {
 			return fmt.Errorf("get workload: %w", err)
 		}
@@ -98,7 +98,7 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 		opts.logsSvc, err = logging.NewServiceClient(&logging.NewServiceLogsConfig{
 			App:         opts.appName,
 			Env:         opts.envName,
-			Svc:         opts.svcName,
+			Svc:         opts.name,
 			Sess:        sess,
 			LogGroup:    opts.logGroup,
 			WkldType:    workload.Type,
