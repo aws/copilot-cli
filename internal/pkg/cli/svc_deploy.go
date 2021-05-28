@@ -57,7 +57,7 @@ type deploySvcOpts struct {
 	addons             templater
 	appCFN             appResourcesGetter
 	svcCFN             cloudformation.CloudFormation
-	envCFN             envParamGetter
+	envCFN             envCFDescriber
 	sessProvider       sessionProvider
 	envUpgradeCmd      actionCommand
 	appVersionGetter   versionGetter
@@ -381,20 +381,8 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 	return mft, nil
 }
 
-func envUsesLegacySvcDiscovery(cf envParamGetter, app, env string) (bool, error) {
-	envParams, err := cf.EnvironmentParameters(app, env)
-	if err != nil {
-		return false, err
-	}
-	// The parameter UseLegacyServiceDiscoveryIfBlank is unset in older environment stacks. When a legacy environment
-	// is upgraded, the parameter is set to "", which tells CF to create both new and old Cloudmap namespaces.
-	// If the parameter is unset or blank, the svc should register both cloudmap namespaces, so we set LegacyServiceDiscovery to true.
-	var useLegacySvcDiscovery bool
-	svcDisc, ok := envParams[stack.EnvParamLegacyServiceDiscovery]
-	if !ok || svcDisc == "" {
-		useLegacySvcDiscovery = true
-	}
-	return useLegacySvcDiscovery, nil
+func envUsesLegacySvcDiscovery(cf envCFDescriber, app, env string) (bool, error) {
+	return cf.EnvironmentUsesLegacySvcDiscovery(app, env)
 }
 
 func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {

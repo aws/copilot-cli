@@ -3613,42 +3613,42 @@ func (mr *MockappResourcesGetterMockRecorder) GetRegionalAppResources(app interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalAppResources", reflect.TypeOf((*MockappResourcesGetter)(nil).GetRegionalAppResources), app)
 }
 
-// MockenvParamGetter is a mock of envParamGetter interface.
-type MockenvParamGetter struct {
+// MockenvCFDescriber is a mock of envCFDescriber interface.
+type MockenvCFDescriber struct {
 	ctrl     *gomock.Controller
-	recorder *MockenvParamGetterMockRecorder
+	recorder *MockenvCFDescriberMockRecorder
 }
 
-// MockenvParamGetterMockRecorder is the mock recorder for MockenvParamGetter.
-type MockenvParamGetterMockRecorder struct {
-	mock *MockenvParamGetter
+// MockenvCFDescriberMockRecorder is the mock recorder for MockenvCFDescriber.
+type MockenvCFDescriberMockRecorder struct {
+	mock *MockenvCFDescriber
 }
 
-// NewMockenvParamGetter creates a new mock instance.
-func NewMockenvParamGetter(ctrl *gomock.Controller) *MockenvParamGetter {
-	mock := &MockenvParamGetter{ctrl: ctrl}
-	mock.recorder = &MockenvParamGetterMockRecorder{mock}
+// NewMockenvCFDescriber creates a new mock instance.
+func NewMockenvCFDescriber(ctrl *gomock.Controller) *MockenvCFDescriber {
+	mock := &MockenvCFDescriber{ctrl: ctrl}
+	mock.recorder = &MockenvCFDescriberMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockenvParamGetter) EXPECT() *MockenvParamGetterMockRecorder {
+func (m *MockenvCFDescriber) EXPECT() *MockenvCFDescriberMockRecorder {
 	return m.recorder
 }
 
-// EnvironmentParameters mocks base method.
-func (m *MockenvParamGetter) EnvironmentParameters(app, env string) (map[string]string, error) {
+// EnvironmentUsesLegacySvcDiscovery mocks base method.
+func (m *MockenvCFDescriber) EnvironmentUsesLegacySvcDiscovery(app, env string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvironmentParameters", app, env)
-	ret0, _ := ret[0].(map[string]string)
+	ret := m.ctrl.Call(m, "EnvironmentUsesLegacySvcDiscovery", app, env)
+	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// EnvironmentParameters indicates an expected call of EnvironmentParameters.
-func (mr *MockenvParamGetterMockRecorder) EnvironmentParameters(app, env interface{}) *gomock.Call {
+// EnvironmentUsesLegacySvcDiscovery indicates an expected call of EnvironmentUsesLegacySvcDiscovery.
+func (mr *MockenvCFDescriberMockRecorder) EnvironmentUsesLegacySvcDiscovery(app, env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentParameters", reflect.TypeOf((*MockenvParamGetter)(nil).EnvironmentParameters), app, env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentUsesLegacySvcDiscovery", reflect.TypeOf((*MockenvCFDescriber)(nil).EnvironmentUsesLegacySvcDiscovery), app, env)
 }
 
 // MocktaskDeployer is a mock of taskDeployer interface.

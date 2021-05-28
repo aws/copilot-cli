@@ -363,8 +363,8 @@ type appResourcesGetter interface {
 	GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error)
 }
 
-type envParamGetter interface {
-	EnvironmentParameters(app, env string) (map[string]string, error)
+type envCFDescriber interface {
+	EnvironmentUsesLegacySvcDiscovery(app, env string) (bool, error)
 }
 
 type taskDeployer interface {

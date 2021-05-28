@@ -77,10 +77,22 @@ func (cf CloudFormation) EnvironmentTemplate(appName, envName string) (string, e
 	return cf.cfnClient.TemplateBody(stackName)
 }
 
-// EnvironmentParameters returns the current parameters used in the environment stack.
-func (cf CloudFormation) EnvironmentParameters(appName, envName string) (map[string]string, error) {
+// EnvironmentUsesLegacyServiceDiscovery returns true if the environment has been upgraded and services should continue using the legacy namespace.
+func (cf CloudFormation) EnvironmentUsesLegacySvcDiscovery(appName, envName string) (bool, error) {
 	stackName := stack.NameForEnv(appName, envName)
-	return cf.cfnClient.Parameters(stackName)
+	descr, err := cf.cfnClient.Describe(stackName)
+	if err != nil {
+		return false, err
+	}
+	stackOutputs := make(map[string]string)
+	for _, output := range descr.Outputs {
+		stackOutputs[*output.OutputKey] = *output.OutputValue
+	}
+	output, ok := stackOutputs[stack.EnvOutputLegacyServiceDiscovery]
+	if !ok || output != "" {
+		return true, nil
+	}
+	return false, nil
 }
 
 // UpdateEnvironmentTemplate updates the cloudformation stack's template body while maintaining the parameters and tags.

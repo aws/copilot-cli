@@ -43,7 +43,7 @@ type deployJobOpts struct {
 	addons             templater
 	appCFN             appResourcesGetter
 	jobCFN             cloudformation.CloudFormation
-	envCFN             envParamGetter
+	envCFN             envCFDescriber
 	imageBuilderPusher imageBuilderPusher
 	sessProvider       sessionProvider
 	s3                 artifactUploader

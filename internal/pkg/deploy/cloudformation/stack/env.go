@@ -38,6 +38,8 @@ const (
 	EnvParamAliasesKey               = "Aliases"
 	EnvParamLegacyServiceDiscovery   = "UseLegacyServiceDiscoveryIfBlank"
 
+	EnvOutputLegacyServiceDiscovery = "UseLegacyServiceDiscovery"
+
 	// Output keys.
 	EnvOutputVPCID               = "VpcId"
 	EnvOutputPublicSubnets       = "PublicSubnets"
