@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
 	"github.com/aws/copilot-cli/cmd/copilot/template"
@@ -47,10 +48,13 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
-
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
+	}
+	d, err := describe.NewAppDescriber(vars.appName)
+	if err != nil {
+		return nil, fmt.Errorf("new app describer for application %s: %w", vars.name, err)
 	}
 	prompter := prompt.New()
 	return &deployOpts{
@@ -79,14 +83,15 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 				o.deployWkld = &deploySvcOpts{
 					deployWkldVars: o.deployWkldVars,
 
-					store:        o.store,
-					ws:           o.ws,
-					unmarshal:    manifest.UnmarshalWorkload,
-					spinner:      termprogress.NewSpinner(log.DiagnosticWriter),
-					sel:          selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
-					prompt:       o.prompt,
-					cmd:          exec.NewCmd(),
-					sessProvider: sessions.NewProvider(),
+					store:            o.store,
+					ws:               o.ws,
+					unmarshal:        manifest.UnmarshalWorkload,
+					spinner:          termprogress.NewSpinner(log.DiagnosticWriter),
+					sel:              selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
+					prompt:           o.prompt,
+					cmd:              exec.NewCmd(),
+					sessProvider:     sessions.NewProvider(),
+					appVersionGetter: d,
 				}
 			}
 		},

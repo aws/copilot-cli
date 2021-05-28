@@ -26,7 +26,7 @@ func TestCC_Pipeline_Template(t *testing.T) {
 		Source: &deploy.CodeCommitSource{
 			ProviderName:  manifest.CodeCommitProviderName,
 			RepositoryURL: "https://us-west-2.console.aws.amazon.com/codesuite/codecommit/repositories/aws-sample/browse",
-			Branch:        "master",
+			Branch:        "main",
 		},
 		Build: deploy.PipelineBuildFromManifest(nil),
 		Stages: []deploy.PipelineStage{

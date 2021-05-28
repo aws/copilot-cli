@@ -251,6 +251,21 @@ func TestClient_DescribeService(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("get tasks for service mockService: some error"),
 		},
+		"return error if failed to get stopped service tasks": {
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.resourceGetter.EXPECT().GetResourcesByTags(serviceResourceType, getRgInput).
+						Return([]*resourcegroups.Resource{
+							{ARN: mockSvcARN},
+						}, nil),
+					m.ecsClient.EXPECT().ServiceTasks(mockCluster, mockService).Return([]*ecs.Task{
+						{TaskArn: aws.String("mockTaskARN")},
+					}, nil),
+					m.ecsClient.EXPECT().StoppedServiceTasks(mockCluster, mockService).Return(nil, errors.New("some error")),
+				)
+			},
+			wantedError: errors.New("get stopped tasks for service mockService: some error"),
+		},
 		"success": {
 			setupMocks: func(m clientMocks) {
 				gomock.InOrder(
@@ -261,6 +276,9 @@ func TestClient_DescribeService(t *testing.T) {
 					m.ecsClient.EXPECT().ServiceTasks(mockCluster, mockService).Return([]*ecs.Task{
 						{TaskArn: aws.String("mockTaskARN")},
 					}, nil),
+					m.ecsClient.EXPECT().StoppedServiceTasks(mockCluster, mockService).Return([]*ecs.Task{
+						{TaskArn: aws.String("mockStoppedTaskARN")},
+					}, nil),
 				)
 			},
 			wanted: &ServiceDesc{
@@ -268,6 +286,9 @@ func TestClient_DescribeService(t *testing.T) {
 				Name:        mockService,
 				Tasks: []*ecs.Task{
 					{TaskArn: aws.String("mockTaskARN")},
+				},
+				StoppedTasks: []*ecs.Task{
+					{TaskArn: aws.String("mockStoppedTaskARN")},
 				},
 			},
 		},
