@@ -197,7 +197,7 @@ Resources:
       Name:  !Ref WorkloadName
       NamespaceId:
         Fn::ImportValue:
-          !Sub '${AppName}-${EnvName}-ServiceDiscoveryNamespaceID'
+          !Sub '${AppName}-${EnvName}-ServiceDiscoveryNamespaceIDWithEnv'
   
   DynamicDesiredCountAction:
     Type: Custom::DynamicDesiredCountFunction
