@@ -11,9 +11,11 @@ import (
 
 // SvcStatusOutput is the JSON output of the svc status.
 type SvcStatusOutput struct {
-	Service SvcStatusServiceInfo
-	Tasks   []SvcStatusTaskInfo  `json:"tasks"`
-	Alarms  []SvcStatusAlarmInfo `json:"alarms"`
+	Status    string `json:"status"`
+	Service   SvcStatusServiceInfo
+	Tasks     []SvcStatusTaskInfo  `json:"tasks"`
+	Alarms    []SvcStatusAlarmInfo `json:"alarms"`
+	LogEvents []*SvcLogsOutput     `json:"logEvents"`
 }
 
 // SvcStatusServiceInfo contains the status info of a service.
@@ -59,13 +61,14 @@ func toSvcStatusOutput(jsonInput string) (*SvcStatusOutput, error) {
 
 // SvcShowOutput is the JSON output of the svc show.
 type SvcShowOutput struct {
-	SvcName            string                      `json:"service"`
-	Type               string                      `json:"type"`
-	AppName            string                      `json:"application"`
-	Configs            []SvcShowConfigurations     `json:"configurations"`
-	ServiceDiscoveries []SvcShowServiceDiscoveries `json:"serviceDiscovery"`
-	Routes             []SvcShowRoutes             `json:"routes"`
-	Variables          []SvcShowVariables          `json:"variables"`
+	SvcName            string                            `json:"service"`
+	Type               string                            `json:"type"`
+	AppName            string                            `json:"application"`
+	Configs            []SvcShowConfigurations           `json:"configurations"`
+	ServiceDiscoveries []SvcShowServiceDiscoveries       `json:"serviceDiscovery"`
+	Routes             []SvcShowRoutes                   `json:"routes"`
+	Variables          []SvcShowVariables                `json:"variables"`
+	Resources          map[string][]*SvcShowResourceInfo `json:"resources"`
 }
 
 // SvcShowConfigurations contains serialized configuration parameters for a service.
@@ -94,6 +97,12 @@ type SvcShowVariables struct {
 	Environment string `json:"environment"`
 	Name        string `json:"name"`
 	Value       string `json:"value"`
+}
+
+// SvcShowResourceInfo contains serialized resource info for a service.
+type SvcShowResourceInfo struct {
+	Type       string `json:"type"`
+	PhysicalID string `json:"physicalID"`
 }
 
 func toSvcShowOutput(jsonInput string) (*SvcShowOutput, error) {

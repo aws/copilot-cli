@@ -11,17 +11,16 @@ import (
 	ecsapi "github.com/aws/aws-sdk-go/service/ecs"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
-type svcDescriberMocks struct {
-	mockCFN       *mocks.Mockcfn
+type ecsSvcDescriberMocks struct {
+	mockCFN       *mocks.MockstackDescriber
 	mockECSClient *mocks.MockecsClient
 }
 
@@ -32,20 +31,20 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 		testEnv = "test"
 	)
 	testCases := map[string]struct {
-		setupMocks func(mocks svcDescriberMocks)
+		setupMocks func(mocks ecsSvcDescriberMocks)
 
 		wantedEnvVars []*awsecs.ContainerEnvVar
 		wantedError   error
 	}{
 		"returns error if fails to get task definition": {
-			setupMocks: func(m svcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				m.mockECSClient.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(nil, errors.New("some error"))
 			},
 
 			wantedError: errors.New("describe task definition for service svc: some error"),
 		},
 		"get environment variables": {
-			setupMocks: func(m svcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.mockECSClient.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(&ecs.TaskDefinition{
 						ContainerDefinitions: []*ecsapi.ContainerDefinition{
@@ -88,17 +87,18 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockecsClient := mocks.NewMockecsClient(ctrl)
-			mocks := svcDescriberMocks{
+			mocks := ecsSvcDescriberMocks{
 				mockECSClient: mockecsClient,
 			}
 
 			tc.setupMocks(mocks)
 
-			d := &ServiceDescriber{
-				app:     testApp,
-				service: testSvc,
-				env:     testEnv,
-
+			d := &ECSServiceDescriber{
+				ServiceDescriber: &ServiceDescriber{
+					app:     testApp,
+					service: testSvc,
+					env:     testEnv,
+				},
 				ecsClient: mockecsClient,
 			}
 
@@ -123,13 +123,13 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 		testEnv = "test"
 	)
 	testCases := map[string]struct {
-		setupMocks func(mocks svcDescriberMocks)
+		setupMocks func(mocks ecsSvcDescriberMocks)
 
 		wantedSecrets []*awsecs.ContainerSecret
 		wantedError   error
 	}{
 		"returns error if fails to get task definition": {
-			setupMocks: func(m svcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.mockECSClient.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(nil, errors.New("some error")),
 				)
@@ -138,7 +138,7 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 			wantedError: fmt.Errorf("describe task definition for service svc: some error"),
 		},
 		"successfully gets secrets": {
-			setupMocks: func(m svcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
 					m.mockECSClient.EXPECT().TaskDefinition(testApp, testEnv, testSvc).Return(&ecs.TaskDefinition{
 						ContainerDefinitions: []*ecsapi.ContainerDefinition{
@@ -181,17 +181,18 @@ func TestServiceDescriber_Secrets(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockecsClient := mocks.NewMockecsClient(ctrl)
-			mocks := svcDescriberMocks{
+			mocks := ecsSvcDescriberMocks{
 				mockECSClient: mockecsClient,
 			}
 
 			tc.setupMocks(mocks)
 
-			d := &ServiceDescriber{
-				app:     testApp,
-				service: testSvc,
-				env:     testEnv,
-
+			d := &ECSServiceDescriber{
+				ServiceDescriber: &ServiceDescriber{
+					app:     testApp,
+					service: testSvc,
+					env:     testEnv,
+				},
 				ecsClient: mockecsClient,
 			}
 
@@ -215,52 +216,52 @@ func TestServiceDescriber_ServiceStackResources(t *testing.T) {
 		testEnv = "test"
 		testSvc = "jobs"
 	)
-	testCfnResources := []*cloudformation.StackResource{
+	testdeployedSvcResources := []*stack.Resource{
 		{
-			ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
-			PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
+			Type:       "AWS::EC2::SecurityGroup",
+			PhysicalID: "sg-0758ed6b233743530",
 		},
 	}
 	testCases := map[string]struct {
-		setupMocks func(mocks svcDescriberMocks)
+		setupMocks func(mocks ecsSvcDescriberMocks)
 
-		wantedResources []*cloudformation.StackResource
+		wantedResources []*stack.Resource
 		wantedError     error
 	}{
 		"returns error when fail to describe stack resources": {
-			setupMocks: func(m svcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
-					m.mockCFN.EXPECT().StackResources(stack.NameForService(testApp, testEnv, testSvc)).Return(nil, errors.New("some error")),
+					m.mockCFN.EXPECT().Resources().Return(nil, errors.New("some error")),
 				)
 			},
 
 			wantedError: fmt.Errorf("some error"),
 		},
 		"ignores dummy stack resources": {
-			setupMocks: func(m svcDescriberMocks) {
+			setupMocks: func(m ecsSvcDescriberMocks) {
 				gomock.InOrder(
-					m.mockCFN.EXPECT().StackResources(stack.NameForService(testApp, testEnv, testSvc)).Return([]*cloudformation.StackResource{
+					m.mockCFN.EXPECT().Resources().Return([]*stack.Resource{
 						{
-							ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
-							PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
+							Type:       "AWS::EC2::SecurityGroup",
+							PhysicalID: "sg-0758ed6b233743530",
 						},
 						{
-							ResourceType:       aws.String("AWS::CloudFormation::WaitConditionHandle"),
-							PhysicalResourceId: aws.String("https://cloudformation-waitcondition-us-west-2.s3-us-west-2.amazonaws.com/"),
+							Type:       "AWS::CloudFormation::WaitConditionHandle",
+							PhysicalID: "https://cloudformation-waitcondition-us-west-2.s3-us-west-2.amazonaws.com/",
 						},
 						{
-							ResourceType:       aws.String("Custom::RulePriorityFunction"),
-							PhysicalResourceId: aws.String("alb-rule-priority-HTTPRulePriorityAction"),
+							Type:       "Custom::RulePriorityFunction",
+							PhysicalID: "alb-rule-priority-HTTPRulePriorityAction",
 						},
 						{
-							ResourceType:       aws.String("AWS::CloudFormation::WaitCondition"),
-							PhysicalResourceId: aws.String(" arn:aws:cloudformation:us-west-2:1234567890"),
+							Type:       "AWS::CloudFormation::WaitCondition",
+							PhysicalID: "arn:aws:cloudformation:us-west-2:1234567890",
 						},
 					}, nil),
 				)
 			},
 
-			wantedResources: testCfnResources,
+			wantedResources: testdeployedSvcResources,
 		},
 	}
 
@@ -270,8 +271,8 @@ func TestServiceDescriber_ServiceStackResources(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockCFN := mocks.NewMockcfn(ctrl)
-			mocks := svcDescriberMocks{
+			mockCFN := mocks.NewMockstackDescriber(ctrl)
+			mocks := ecsSvcDescriberMocks{
 				mockCFN: mockCFN,
 			}
 

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 
 	// TODO refactor this into our own pkg
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
@@ -26,7 +26,7 @@ type pipelineGetter interface {
 type Pipeline struct {
 	codepipeline.Pipeline
 
-	Resources []*CfnResource `json:"resources,omitempty"`
+	Resources []*stack.Resource `json:"resources,omitempty"`
 }
 
 // PipelineDescriber retrieves information about an application.
@@ -35,7 +35,7 @@ type PipelineDescriber struct {
 	showResources bool
 
 	pipelineSvc pipelineGetter
-	cfn         cfn
+	cfn         stackDescriber
 }
 
 // NewPipelineDescriber instantiates a new pipeline describer
@@ -51,7 +51,7 @@ func NewPipelineDescriber(pipelineName string, showResources bool) (*PipelineDes
 		pipelineName:  pipelineName,
 		pipelineSvc:   pipelineSvc,
 		showResources: showResources,
-		cfn:           cloudformation.New(sess),
+		cfn:           stack.NewStackDescriber(pipelineName, sess),
 	}, nil
 }
 
@@ -61,13 +61,13 @@ func (d *PipelineDescriber) Describe() (HumanJSONStringer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get pipeline: %w", err)
 	}
-	var resources []*CfnResource
+	var resources []*stack.Resource
 	if d.showResources {
-		stackResources, err := d.cfn.StackResources(d.pipelineName)
+		stackResources, err := d.cfn.Resources()
 		if err != nil && !IsStackNotExistsErr(err) {
 			return nil, fmt.Errorf("retrieve pipeline resources: %w", err)
 		}
-		resources = flattenResources(stackResources)
+		resources = stackResources
 	}
 	pipeline := &Pipeline{*cp, resources}
 	return pipeline, nil
@@ -101,14 +101,14 @@ func (p *Pipeline) HumanString() string {
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, stage := range p.Stages {
-		fmt.Fprint(writer, stage.HumanString())
+		fmt.Fprintf(writer, "  %s", stage.HumanString())
 	}
 	writer.Flush()
 	if len(p.Resources) != 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nResources\n"))
 		writer.Flush()
 		for _, r := range p.Resources {
-			fmt.Fprint(writer, r.HumanString())
+			fmt.Fprintf(writer, "    %s", r.HumanString())
 		}
 
 	}

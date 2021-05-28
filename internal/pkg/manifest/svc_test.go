@@ -77,7 +77,7 @@ environments:
 				wantedManifest := &LoadBalancedWebService{
 					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-						ImageConfig: ServiceImageWithPort{Image: Image{Build: BuildArgsOrString{},
+						ImageConfig: ImageWithPort{Image: Image{Build: BuildArgsOrString{},
 							Location: aws.String("foo/bar"),
 						}, Port: aws.Uint16(80)},
 						RoutingRule: RoutingRule{
@@ -200,7 +200,7 @@ secrets:
 					},
 					BackendServiceConfig: BackendServiceConfig{
 						ImageConfig: imageWithPortAndHealthcheck{
-							ServiceImageWithPort: ServiceImageWithPort{
+							ImageWithPort: ImageWithPort{
 								Image: Image{
 									Build: BuildArgsOrString{
 										BuildString: aws.String("./subscribers/Dockerfile"),
@@ -516,7 +516,7 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 		"success with false": {
 			svc: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ServiceImageWithPort{
+					ImageConfig: ImageWithPort{
 						Image: Image{
 							Location: aws.String("mockLocation"),
 						},
@@ -527,7 +527,7 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 		"success with true": {
 			svc: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ServiceImageWithPort{
+					ImageConfig: ImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
 								BuildString: aws.String("mockDockerfile"),
@@ -751,6 +751,37 @@ func TestAdvancedCount_IsValid(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+func TestHealthCheckArgsOrString_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		hc     HealthCheckArgsOrString
+		wanted bool
+	}{
+		"should return true if there are no settings": {
+			wanted: true,
+		},
+		"should return false if a path is set via the basic configuration": {
+			hc: HealthCheckArgsOrString{
+				HealthCheckPath: aws.String("/"),
+			},
+			wanted: false,
+		},
+		"should return false if a value is set via the advanced configuration": {
+			hc: HealthCheckArgsOrString{
+				HealthCheckArgs: HTTPHealthCheckArgs{
+					Path: aws.String("/"),
+				},
+			},
+			wanted: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.hc.IsEmpty())
 		})
 	}
 }

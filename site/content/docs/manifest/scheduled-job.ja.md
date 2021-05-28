@@ -1,4 +1,4 @@
-以下は `'Scheduled Job'` Manifest で利用できるすべてのプロパティのリストです。
+以下は `'Scheduled Job'` Manifest で利用できるすべてのプロパティのリストです。[Job の概念](../concepts/jobs.ja.md)説明のページも合わせてご覧ください。
 
 ???+ note "レポートを作成する cron ジョブのサンプル Manifest"
 
@@ -153,8 +153,7 @@ Job の実行時間。この時間を超えた場合、Job は停止されて失
 `'public'` か `'private'`のいずれかである必要があります。デフォルトではタスクはパブリックサブネットで起動します。
 
 !!! info
-    `'private'` サブネットでインターネット接続が必要なタスクを実行するためには、`copilot env init` を実行したときに、NAT Gateway が存在する VPC をインポートしている必要があります。Copilot が生成した VPC における NAT Gateway のサポートについては、[#1959](https://github.com/aws/copilot-cli/issues/1959) を見てください。
-
+    Copilot が作成した VPC の `'private'` サブネットを利用してタスクを実行する場合、Copilot は Environment に NAT ゲートウェイを追加します。あるいは Copilot 外で作成した VPC を `copilot env init` コマンドにてインポートしている場合は、その VPC に NAT ゲートウェイがあり、プライベートサブネットからインターネットへの接続性があることを確認してください。
 
 <span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings</span>  
 タスクに関連づける追加のセキュリティグループのリスト。Copilot は常にセキュリティグループを含んでおり、環境内のコンテナは互いに通信できるようになっています。

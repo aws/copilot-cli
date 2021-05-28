@@ -25,6 +25,7 @@ const (
 
 	// Names of workload templates.
 	lbWebSvcTplName     = "lb-web"
+	rdWebSvcTplName     = "rd-web"
 	backendSvcTplName   = "backend"
 	scheduledJobTplName = "scheduled-job"
 )
@@ -62,6 +63,8 @@ var (
 		"mount-points",
 		"volumes",
 		"image-overrides",
+		"instancerole",
+		"accessrole",
 	}
 )
 
@@ -217,6 +220,8 @@ type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
 	Variables          map[string]string
 	Secrets            map[string]string
+	Aliases            []string
+	Tags               map[string]string        // Used by App Runner workloads to tag App Runner service resources
 	NestedStack        *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	Sidecars           []*SidecarOpts
 	LogConfig          *LogConfigOpts
@@ -245,6 +250,15 @@ type WorkloadOpts struct {
 	StateMachine       *StateMachineOpts
 }
 
+// ParseRequestDrivenWebServiceInput holds data that can be provided to enable features for a request-driven web service stack.
+type ParseRequestDrivenWebServiceInput struct {
+	Variables           map[string]string
+	Tags                map[string]string        // Used by App Runner workloads to tag App Runner service resources
+	NestedStack         *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	EnableHealthCheck   bool
+	EnvControllerLambda string
+}
+
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
 // with the specified data object and returns its content.
 func (t *Template) ParseLoadBalancedWebService(data WorkloadOpts) (*Content, error) {
@@ -252,6 +266,12 @@ func (t *Template) ParseLoadBalancedWebService(data WorkloadOpts) (*Content, err
 		data.Network = defaultNetworkOpts()
 	}
 	return t.parseSvc(lbWebSvcTplName, data, withSvcParsingFuncs())
+}
+
+// ParseRequestDrivenWebService parses a request-driven web service's CloudFormation template
+// with the specified data object and returns its content.
+func (t *Template) ParseRequestDrivenWebService(data ParseRequestDrivenWebServiceInput) (*Content, error) {
+	return t.parseSvc(rdWebSvcTplName, data, withSvcParsingFuncs())
 }
 
 // ParseBackendService parses a backend service's CloudFormation template with the specified data object and returns its content.
@@ -338,7 +358,7 @@ func randomUUIDFunc() (string, error) {
 func envControllerParameters(o WorkloadOpts) []string {
 	parameters := []string{}
 	if o.WorkloadType == "Load Balanced Web Service" {
-		parameters = append(parameters, "ALBWorkloads,") // YAML needs the comma separator; resolved in EnvContr.
+		parameters = append(parameters, []string{"ALBWorkloads,", "Aliases,"}...) // YAML needs the comma separator; resolved in EnvContr.
 	}
 	if o.Network.SubnetsType == PrivateSubnetsPlacement {
 		parameters = append(parameters, "NATWorkloads,") // YAML needs the comma separator; resolved in EnvContr.

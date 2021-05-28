@@ -1,4 +1,4 @@
-以下は `'Backend Service'` Manifest で利用できるすべてのプロパティのリストです。
+以下は `'Backend Service'` Manifest で利用できるすべてのプロパティのリストです。[Copilot Service の概念](../concepts/services.ja.md)説明のページも合わせてご覧ください。
 
 <!-- textlint-disable ja-technical-writing/no-exclamation-question-mark, ja-technical-writing/ja-no-mixed-period -->
 ???+ note "api service のサンプル Manifest"
@@ -67,5 +67,7 @@ Service 名。
 Service のアーキテクチャ。[Backend Services](../concepts/services.ja.md#backend-service) はインターネット側からはアクセスできませんが、[サービス検出](../developing/service-discovery.ja.md)の利用により他の Service からはアクセスできます。
 
 {% include 'image-config.ja.md' %}
+
 {% include 'image-healthcheck.ja.md' %}
+
 {% include 'common-svc-fields.ja.md' %}

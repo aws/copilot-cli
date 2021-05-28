@@ -16,12 +16,12 @@ $ copilot job init
 ```bash
   -a, --app string          Name of the application.
   -d, --dockerfile string   Path to the Dockerfile.
-                            Mutually exclusive with -i, --image
+                            Mutually exclusive with -i, --image.
   -h, --help                help for init
   -i, --image string        The location of an existing Docker image.
-                            Mutually exclusive with -d, --dockerfile
+                            Mutually exclusive with -d, --dockerfile.
   -t, --job-type string     Type of job to create. Must be one of:
-                            "Scheduled Job"
+                            "Scheduled Job".
   -n, --name string         Name of the job.
       --retries int         Optional. The number of times to try restarting the job on a failure.
   -s, --schedule string     The schedule on which to run this job. 
@@ -37,7 +37,7 @@ $ copilot job init
 
 1 日 1 回実行される "reaper" という名前のスケジュールされたタスクを作成します。
 ```bash
-$ copilot job init --name reaper --dockerfile ./frontend/Dockerfile --schedule "every 2 hours"
+$ copilot job init --name reaper --dockerfile ./frontend/Dockerfile --schedule "@daily"
 ```
 リトライ回数を指定した "report-generator" という名前のスケジュールされたタスクを作成します。
 ```bash

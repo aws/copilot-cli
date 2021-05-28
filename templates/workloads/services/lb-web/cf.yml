@@ -45,7 +45,7 @@ Conditions:
     !Equals [!Ref HTTPSEnabled, true]
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
-  HTTPRootPath: # If we're using path based routing and use the root path, we have some special logic
+  IsDefaultRootPath:
     !Equals [!Ref RulePath, "/"]
 Resources:
 {{include "loggroup" . | indent 2}}
@@ -165,7 +165,7 @@ Resources:
       VpcId:
         Fn::ImportValue:
           !Sub "${AppName}-${EnvName}-VpcId"
-
+{{if not .Aliases}}
   LoadBalancerDNSAlias:
     Type: AWS::Route53::RecordSetGroup
     Condition: HTTPSLoadBalancer
@@ -186,7 +186,7 @@ Resources:
         AliasTarget:
           HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
           DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
-
+{{end}}
   RulePriorityFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -275,6 +275,11 @@ Resources:
             Query: "#{query}"
             StatusCode: HTTP_301
       Conditions:
+{{- if .Aliases }}
+        - Field: 'host-header'
+          HostHeaderConfig:
+            Values: {{ .Aliases }}
+{{- else }}
         - Field: 'host-header'
           HostHeaderConfig:
             Values:
@@ -283,6 +288,17 @@ Resources:
                 - - !Ref WorkloadName
                   - Fn::ImportValue:
                       !Sub "${AppName}-${EnvName}-SubDomain"
+{{- end}}
+        - Field: 'path-pattern'
+          PathPatternConfig:
+            Values:
+              !If
+                - IsDefaultRootPath
+                -
+                  - "/*"
+                -
+                  - !Sub "/${RulePath}"
+                  - !Sub "/${RulePath}/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
       Priority: !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
 
@@ -294,6 +310,19 @@ Resources:
         - TargetGroupArn: !Ref TargetGroup
           Type: forward
       Conditions:
+{{- if .AllowedSourceIps}}
+        - Field: 'source-ip'
+          SourceIpConfig:
+            Values:
+{{- range $sourceIP := .AllowedSourceIps}}
+            - {{$sourceIP}}
+{{- end}}
+{{- end}}
+{{- if .Aliases }}
+        - Field: 'host-header'
+          HostHeaderConfig:
+            Values: {{ .Aliases }}
+{{- else }}
         - Field: 'host-header'
           HostHeaderConfig:
             Values:
@@ -302,6 +331,17 @@ Resources:
                 - - !Ref WorkloadName
                   - Fn::ImportValue:
                       !Sub "${AppName}-${EnvName}-SubDomain"
+{{- end}}
+        - Field: 'path-pattern'
+          PathPatternConfig:
+            Values:
+              !If
+                - IsDefaultRootPath
+                -
+                  - "/*"
+                -
+                  - !Sub "/${RulePath}"
+                  - !Sub "/${RulePath}/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
       Priority: !GetAtt HTTPSRulePriorityAction.Priority
 
@@ -332,7 +372,7 @@ Resources:
           PathPatternConfig:
             Values:
               !If
-                - HTTPRootPath
+                - IsDefaultRootPath
                 -
                   - "/*"
                 -
@@ -341,7 +381,7 @@ Resources:
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
       Priority: 
         !If
-          - HTTPRootPath
+          - IsDefaultRootPath
           - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
           - !GetAtt HTTPRulePriorityAction.Priority
 

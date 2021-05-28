@@ -23,7 +23,7 @@ Augment your services with S3 buckets, NoSQL and SQL databases.`,
 	cmd.SetUsageTemplate(template.Usage)
 
 	cmd.Annotations = map[string]string{
-		"group": group.Addons,
+		"group": group.Extend,
 	}
 	return cmd
 }

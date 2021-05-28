@@ -5,6 +5,9 @@ EnvControllerAction:
   Properties:
     ServiceToken: !GetAtt EnvControllerFunction.Arn
     Workload: !Ref WorkloadName
+{{- if .Aliases}}
+    Aliases: {{ .Aliases }}
+{{- end}}
     EnvStack: !Sub '${AppName}-${EnvName}'
     Parameters: {{ envControllerParams . }}
 

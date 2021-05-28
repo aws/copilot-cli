@@ -9,17 +9,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/dustin/go-humanize"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 type pipelineDescriberMocks struct {
-	cfn            *mocks.Mockcfn
+	cfn            *mocks.MockstackDescriber
 	pipelineGetter *mocks.MockpipelineGetter
 }
 
@@ -55,7 +54,7 @@ var mockPipeline = &codepipeline.Pipeline{
 	CreatedAt: mockTime(),
 	UpdatedAt: mockTime(),
 }
-var expectedResources = []*CfnResource{
+var expectedResources = []*stack.Resource{
 	{
 		PhysicalID: "pipeline-dinder-badgoose-repo-BuildProject",
 		Type:       "AWS::CodeBuild::Project",
@@ -83,30 +82,30 @@ var expectedResources = []*CfnResource{
 }
 
 func TestPipelineDescriber_Describe(t *testing.T) {
-	mockResources := []*cloudformation.StackResource{
+	mockResources := []*stack.Resource{
 		{
-			PhysicalResourceId: aws.String("pipeline-dinder-badgoose-repo-BuildProject"),
-			ResourceType:       aws.String("AWS::CodeBuild::Project"),
+			PhysicalID: "pipeline-dinder-badgoose-repo-BuildProject",
+			Type:       "AWS::CodeBuild::Project",
 		},
 		{
-			PhysicalResourceId: aws.String("pipel-Buil-1PEASDDL44ID2"),
-			ResourceType:       aws.String("AWS::IAM::Policy"),
+			PhysicalID: "pipel-Buil-1PEASDDL44ID2",
+			Type:       "AWS::IAM::Policy",
 		},
 		{
-			PhysicalResourceId: aws.String("pipeline-dinder-badgoose-repo-BuildProjectRole-A4V6VSG1XIIJ"),
-			ResourceType:       aws.String("AWS::IAM::Role"),
+			PhysicalID: "pipeline-dinder-badgoose-repo-BuildProjectRole-A4V6VSG1XIIJ",
+			Type:       "AWS::IAM::Role",
 		},
 		{
-			PhysicalResourceId: aws.String("pipeline-dinder-badgoose-repo"),
-			ResourceType:       aws.String("AWS::CodePipeline::Pipeline"),
+			PhysicalID: "pipeline-dinder-badgoose-repo",
+			Type:       "AWS::CodePipeline::Pipeline",
 		},
 		{
-			PhysicalResourceId: aws.String("pipeline-dinder-badgoose-repo-PipelineRole-100SEEQN6CU0F"),
-			ResourceType:       aws.String("AWS::IAM::Role"),
+			PhysicalID: "pipeline-dinder-badgoose-repo-PipelineRole-100SEEQN6CU0F",
+			Type:       "AWS::IAM::Role",
 		},
 		{
-			PhysicalResourceId: aws.String("pipel-Pipe-EO4QGE10RJ8F"),
-			ResourceType:       aws.String("AWS::IAM::Policy"),
+			PhysicalID: "pipel-Pipe-EO4QGE10RJ8F",
+			Type:       "AWS::IAM::Policy",
 		},
 	}
 	mockError := errors.New("mockError")
@@ -121,7 +120,7 @@ func TestPipelineDescriber_Describe(t *testing.T) {
 		"happy path with resources": {
 			callMocks: func(m pipelineDescriberMocks) {
 				m.pipelineGetter.EXPECT().GetPipeline(pipelineName).Return(mockPipeline, nil)
-				m.cfn.EXPECT().StackResources(pipelineName).Return(mockResources, nil)
+				m.cfn.EXPECT().Resources().Return(mockResources, nil)
 			},
 			inShowResource: true,
 			expectedError:  nil,
@@ -146,7 +145,7 @@ func TestPipelineDescriber_Describe(t *testing.T) {
 		"wraps stack resources error": {
 			callMocks: func(m pipelineDescriberMocks) {
 				m.pipelineGetter.EXPECT().GetPipeline(pipelineName).Return(mockPipeline, nil)
-				m.cfn.EXPECT().StackResources(pipelineName).Return(nil, mockError)
+				m.cfn.EXPECT().Resources().Return(nil, mockError)
 			},
 			inShowResource: true,
 			expectedError:  fmt.Errorf("retrieve pipeline resources: %w", mockError),
@@ -158,7 +157,7 @@ func TestPipelineDescriber_Describe(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockCFN := mocks.NewMockcfn(ctrl)
+			mockCFN := mocks.NewMockstackDescriber(ctrl)
 			mockPipelineGetter := mocks.NewMockpipelineGetter(ctrl)
 
 			mocks := pipelineDescriberMocks{

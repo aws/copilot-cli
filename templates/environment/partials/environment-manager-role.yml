@@ -141,6 +141,14 @@ EnvironmentManagerRole:
             "ssm:GetParametersByPath"
           ]
           Resource: "*"
+        - Sid: SSMSecret
+          Effect: Allow
+          Action: [
+            "ssm:PutParameter",
+            "ssm:AddTagsToResource"
+          ]
+          Resource:
+            - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/copilot/${AppName}/${EnvironmentName}/secrets/*'
         - Sid: ELBv2
           Effect: Allow
           Action: [
@@ -205,6 +213,16 @@ EnvironmentManagerRole:
             "ec2:DescribeSubnets",
             "ec2:DescribeSecurityGroups",
             "ec2:DescribeNetworkInterfaces"
+          ]
+          Resource: "*"
+        - Sid: AppRunner
+          Effect: Allow
+          Action: [
+            "apprunner:DescribeService",
+            "apprunner:ListServices",
+            "apprunner:PauseService",
+            "apprunner:ResumeService",
+            "apprunner:ListOperations"
           ]
           Resource: "*"
         - Sid: Tags

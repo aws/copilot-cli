@@ -7,11 +7,15 @@ package logging
 import (
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
@@ -26,7 +30,7 @@ type logGetter interface {
 	LogEvents(opts cloudwatchlogs.LogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
 }
 
-// ServiceClient retrieves the logs of an Amazon ECS service.
+// ServiceClient retrieves the logs of an Amazon ECS or AppRunner service.
 type ServiceClient struct {
 	logGroupName        string
 	logStreamNamePrefix string
@@ -45,6 +49,18 @@ type WriteLogEventsOpts struct {
 	OnEvents func(w io.Writer, logs []HumanJSONStringer) error
 }
 
+// NewServiceLogsConfig contains fields that initiates ServiceClient struct.
+type NewServiceLogsConfig struct {
+	App         string
+	Env         string
+	Svc         string
+	Sess        *session.Session
+	LogGroup    string
+	WkldType    string
+	TaskIDs     []string
+	ConfigStore describe.ConfigStoreSvc
+}
+
 func (o WriteLogEventsOpts) limit() *int64 {
 	if o.Limit != nil {
 		return o.Limit
@@ -59,23 +75,70 @@ func (o WriteLogEventsOpts) limit() *int64 {
 
 // NewServiceClient returns a ServiceClient for the svc service under env and app.
 // The logging client is initialized from the given sess session.
-func NewServiceClient(sess *session.Session, app, env, svc string) *ServiceClient {
-	return &ServiceClient{
-		logGroupName:        fmt.Sprintf(fmtSvclogGroupName, app, env, svc),
-		logStreamNamePrefix: fmt.Sprintf(fmtSvcLogStreamPrefix, svc),
-		eventsGetter:        cloudwatchlogs.New(sess),
-		w:                   log.OutputWriter,
+func NewServiceClient(opts *NewServiceLogsConfig) (*ServiceClient, error) {
+	if opts.WkldType == manifest.RequestDrivenWebServiceType {
+		return newAppRunnerServiceClient(opts)
 	}
+	logGroup := fmt.Sprintf(fmtSvclogGroupName, opts.App, opts.Env, opts.Svc)
+	if opts.LogGroup != "" {
+		logGroup = opts.LogGroup
+	}
+	return &ServiceClient{
+		logGroupName:        logGroup,
+		logStreamNamePrefix: fmt.Sprintf(fmtSvcLogStreamPrefix, opts.Svc),
+		eventsGetter:        cloudwatchlogs.New(opts.Sess),
+		w:                   log.OutputWriter,
+	}, nil
+}
+
+func newAppRunnerServiceClient(opts *NewServiceLogsConfig) (*ServiceClient, error) {
+	if opts.TaskIDs != nil {
+		return nil, fmt.Errorf("cannot use --tasks for App Runner service logs")
+	}
+	serviceDescriber, err := describe.NewAppRunnerServiceDescriber(describe.NewServiceConfig{
+		App: opts.App,
+		Env: opts.Env,
+		Svc: opts.Svc,
+
+		ConfigStore: opts.ConfigStore,
+	})
+	if err != nil {
+		return nil, err
+	}
+	serviceArn, err := serviceDescriber.ServiceARN()
+	if err != nil {
+		return nil, err
+	}
+	logGroup := opts.LogGroup
+	switch strings.ToLower(logGroup) {
+	case "system":
+		logGroup, err = apprunner.SystemLogGroupName(serviceArn)
+		if err != nil {
+			return nil, fmt.Errorf("get system log group name: %w", err)
+		}
+	case "":
+		logGroup, err = apprunner.LogGroupName(serviceArn)
+		if err != nil {
+			return nil, fmt.Errorf("get log group name: %w", err)
+		}
+	}
+	return &ServiceClient{
+		logGroupName: logGroup,
+		eventsGetter: cloudwatchlogs.New(opts.Sess),
+		w:            log.OutputWriter,
+	}, nil
 }
 
 // WriteLogEvents writes service logs.
 func (s *ServiceClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 	logEventsOpts := cloudwatchlogs.LogEventsOpts{
-		LogGroup:   s.logGroupName,
-		Limit:      opts.limit(),
-		EndTime:    opts.EndTime,
-		StartTime:  opts.StartTime,
-		LogStreams: s.logStreams(opts.TaskIDs),
+		LogGroup:  s.logGroupName,
+		Limit:     opts.limit(),
+		EndTime:   opts.EndTime,
+		StartTime: opts.StartTime,
+	}
+	if opts.TaskIDs != nil {
+		logEventsOpts.LogStreams = s.logStreams(opts.TaskIDs)
 	}
 	for {
 		logEventsOutput, err := s.eventsGetter.LogEvents(logEventsOpts)

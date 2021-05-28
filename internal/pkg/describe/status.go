@@ -10,9 +10,13 @@ import (
 	"math"
 	"strings"
 	"text/tabwriter"
+	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/aas"
+	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	awsECS "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -21,12 +25,18 @@ import (
 )
 
 const (
-	maxAlarmStatusColumnWidth = 30
+	maxAlarmStatusColumnWidth   = 30
+	fmtAppRunnerSvcLogGroupName = "/aws/apprunner/%s/%s/service"
+	defaultServiceLogsLimit     = 10
 )
 
 type alarmStatusGetter interface {
 	AlarmsWithTags(tags map[string]string) ([]cloudwatch.AlarmStatus, error)
 	AlarmStatus(alarms []string) ([]cloudwatch.AlarmStatus, error)
+}
+
+type logGetter interface {
+	LogEvents(opts cloudwatchlogs.LogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
 }
 
 type ecsServiceGetter interface {
@@ -38,27 +48,48 @@ type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
 }
 
+type apprunnerServiceDescriber interface {
+	Service() (*apprunner.Service, error)
+}
+
 type autoscalingAlarmNamesGetter interface {
 	ECSServiceAlarmNames(cluster, service string) ([]string, error)
 }
 
-// ServiceStatus retrieves status of a service.
-type ServiceStatus struct {
+// ECSStatusDescriber retrieves status of an ECS service.
+type ECSStatusDescriber struct {
 	app string
 	env string
 	svc string
 
 	svcDescriber serviceDescriber
-	ecsSvc       ecsServiceGetter
-	cwSvc        alarmStatusGetter
-	aasSvc       autoscalingAlarmNamesGetter
+	ecsSvcGetter ecsServiceGetter
+	cwSvcGetter  alarmStatusGetter
+	aasSvcGetter autoscalingAlarmNamesGetter
 }
 
-// ServiceStatusDesc contains the status for a service.
-type ServiceStatusDesc struct {
-	Service awsECS.ServiceStatus
-	Tasks   []awsECS.TaskStatus      `json:"tasks"`
-	Alarms  []cloudwatch.AlarmStatus `json:"alarms"`
+// AppRunnerStatusDescriber retrieves status of an AppRunner service.
+type AppRunnerStatusDescriber struct {
+	app string
+	env string
+	svc string
+
+	svcDescriber apprunnerServiceDescriber
+	eventsGetter logGetter
+}
+
+// ecsServiceStatus contains the status for an ECS service.
+type ecsServiceStatus struct {
+	Service      awsECS.ServiceStatus
+	Tasks        []awsECS.TaskStatus      `json:"tasks"`
+	Alarms       []cloudwatch.AlarmStatus `json:"alarms"`
+	StoppedTasks []awsECS.TaskStatus      `json:"stoppedTasks"`
+}
+
+// apprunnerServiceStatus contains the status for an AppRunner service.
+type apprunnerServiceStatus struct {
+	Service   apprunner.Service
+	LogEvents []*cloudwatchlogs.Event
 }
 
 // NewServiceStatusConfig contains fields that initiates ServiceStatus struct.
@@ -69,8 +100,8 @@ type NewServiceStatusConfig struct {
 	ConfigStore ConfigStoreSvc
 }
 
-// NewServiceStatus instantiates a new ServiceStatus struct.
-func NewServiceStatus(opt *NewServiceStatusConfig) (*ServiceStatus, error) {
+// NewECSStatusDescriber instantiates a new ECSStatusDescriber struct.
+func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, error) {
 	env, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
@@ -79,24 +110,46 @@ func NewServiceStatus(opt *NewServiceStatusConfig) (*ServiceStatus, error) {
 	if err != nil {
 		return nil, fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 	}
-	return &ServiceStatus{
+	return &ECSStatusDescriber{
 		app:          opt.App,
 		env:          opt.Env,
 		svc:          opt.Svc,
 		svcDescriber: ecs.New(sess),
-		cwSvc:        cloudwatch.New(sess),
-		ecsSvc:       awsECS.New(sess),
-		aasSvc:       aas.New(sess),
+		cwSvcGetter:  cloudwatch.New(sess),
+		ecsSvcGetter: awsECS.New(sess),
+		aasSvcGetter: aas.New(sess),
 	}, nil
 }
 
-// Describe returns status of a service.
-func (s *ServiceStatus) Describe() (*ServiceStatusDesc, error) {
+// NewAppRunnerStatusDescriber instantiates a new AppRunnerStatusDescriber struct.
+func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*AppRunnerStatusDescriber, error) {
+	ecsSvcDescriber, err := NewAppRunnerServiceDescriber(NewServiceConfig{
+		App: opt.App,
+		Env: opt.Env,
+		Svc: opt.Svc,
+
+		ConfigStore: opt.ConfigStore,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &AppRunnerStatusDescriber{
+		app:          opt.App,
+		env:          opt.Env,
+		svc:          opt.Svc,
+		svcDescriber: ecsSvcDescriber,
+		eventsGetter: cloudwatchlogs.New(ecsSvcDescriber.sess),
+	}, nil
+}
+
+// Describe returns status of an ECS service.
+func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 	svcDesc, err := s.svcDescriber.DescribeService(s.app, s.env, s.svc)
 	if err != nil {
 		return nil, fmt.Errorf("get ECS service description for %s: %w", s.svc, err)
 	}
-	service, err := s.ecsSvc.Service(svcDesc.ClusterName, svcDesc.Name)
+	service, err := s.ecsSvcGetter.Service(svcDesc.ClusterName, svcDesc.Name)
 	if err != nil {
 		return nil, fmt.Errorf("get service %s: %w", svcDesc.Name, err)
 	}
@@ -109,7 +162,7 @@ func (s *ServiceStatus) Describe() (*ServiceStatusDesc, error) {
 		taskStatus = append(taskStatus, *status)
 	}
 	var alarms []cloudwatch.AlarmStatus
-	taggedAlarms, err := s.cwSvc.AlarmsWithTags(map[string]string{
+	taggedAlarms, err := s.cwSvcGetter.AlarmsWithTags(map[string]string{
 		deploy.AppTagKey:     s.app,
 		deploy.EnvTagKey:     s.env,
 		deploy.ServiceTagKey: s.svc,
@@ -123,27 +176,62 @@ func (s *ServiceStatus) Describe() (*ServiceStatusDesc, error) {
 		return nil, err
 	}
 	alarms = append(alarms, autoscalingAlarms...)
-	return &ServiceStatusDesc{
-		Service: service.ServiceStatus(),
-		Tasks:   taskStatus,
-		Alarms:  alarms,
+
+	var stoppedTaskStatus []awsECS.TaskStatus
+	for _, task := range svcDesc.StoppedTasks {
+		status, err := task.TaskStatus()
+		if err != nil {
+			return nil, fmt.Errorf("get status for stopped task %s: %w", *task.TaskArn, err)
+		}
+		stoppedTaskStatus = append(stoppedTaskStatus, *status)
+	}
+
+	return &ecsServiceStatus{
+		Service:      service.ServiceStatus(),
+		Tasks:        taskStatus,
+		Alarms:       alarms,
+		StoppedTasks: stoppedTaskStatus,
 	}, nil
 }
 
-func (s *ServiceStatus) ecsServiceAutoscalingAlarms(cluster, service string) ([]cloudwatch.AlarmStatus, error) {
-	alarmNames, err := s.aasSvc.ECSServiceAlarmNames(cluster, service)
+// Describe returns status of an AppRunner service.
+func (a *AppRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
+	svc, err := a.svcDescriber.Service()
+	if err != nil {
+		return nil, fmt.Errorf("get AppRunner service description for App Runner service %s in environment %s: %w", a.svc, a.env, err)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get service id: %w", err)
+	}
+	logGroupName := fmt.Sprintf(fmtAppRunnerSvcLogGroupName, svc.Name, svc.ID)
+	logEventsOpts := cloudwatchlogs.LogEventsOpts{
+		LogGroup: logGroupName,
+		Limit:    aws.Int64(defaultServiceLogsLimit),
+	}
+	logEventsOutput, err := a.eventsGetter.LogEvents(logEventsOpts)
+	if err != nil {
+		return nil, fmt.Errorf("get log events for log group %s: %w", logGroupName, err)
+	}
+	return &apprunnerServiceStatus{
+		Service:   *svc,
+		LogEvents: logEventsOutput.Events,
+	}, nil
+}
+
+func (s *ECSStatusDescriber) ecsServiceAutoscalingAlarms(cluster, service string) ([]cloudwatch.AlarmStatus, error) {
+	alarmNames, err := s.aasSvcGetter.ECSServiceAlarmNames(cluster, service)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve auto scaling alarm names for ECS service %s/%s: %w", cluster, service, err)
 	}
-	alarms, err := s.cwSvc.AlarmStatus(alarmNames)
+	alarms, err := s.cwSvcGetter.AlarmStatus(alarmNames)
 	if err != nil {
 		return nil, fmt.Errorf("get auto scaling CloudWatch alarms: %w", err)
 	}
 	return alarms, nil
 }
 
-// JSONString returns the stringified ServiceStatusDesc struct with json format.
-func (s *ServiceStatusDesc) JSONString() (string, error) {
+// JSONString returns the stringified ecsServiceStatus struct with json format.
+func (s *ecsServiceStatus) JSONString() (string, error) {
 	b, err := json.Marshal(s)
 	if err != nil {
 		return "", fmt.Errorf("marshal services: %w", err)
@@ -151,10 +239,39 @@ func (s *ServiceStatusDesc) JSONString() (string, error) {
 	return fmt.Sprintf("%s\n", b), nil
 }
 
-// HumanString returns the stringified ServiceStatusDesc struct with human readable format.
-func (s *ServiceStatusDesc) HumanString() string {
+// JSONString returns the stringified apprunnerServiceStatus struct with json format.
+func (a *apprunnerServiceStatus) JSONString() (string, error) {
+	data := struct {
+		ARN       string    `json:"arn"`
+		Status    string    `json:"status"`
+		CreatedAt time.Time `json:"createdAt"`
+		UpdatedAt time.Time `json:"updatedAt"`
+		Source    struct {
+			ImageID string `json:"imageId"`
+		} `json:"source"`
+	}{
+		ARN:       a.Service.ServiceARN,
+		Status:    a.Service.Status,
+		CreatedAt: a.Service.DateCreated,
+		UpdatedAt: a.Service.DateUpdated,
+		Source: struct {
+			ImageID string `json:"imageId"`
+		}{
+			ImageID: a.Service.ImageID,
+		},
+	}
+	b, err := json.Marshal(data)
+	if err != nil {
+		return "", fmt.Errorf("marshal services: %w", err)
+	}
+	return fmt.Sprintf("%s\n", b), nil
+}
+
+// HumanString returns the stringified ecsServiceStatus struct with human readable format.
+func (s *ecsServiceStatus) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, statusCellPaddingWidth, paddingChar, noAdditionalFormatting)
+
 	fmt.Fprint(writer, color.Bold.Sprint("Service Status\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s %v / %v running tasks (%v pending)\n", statusColor(s.Service.Status),
@@ -165,11 +282,21 @@ func (s *ServiceStatusDesc) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Task Definition", s.Service.TaskDefinition)
 	fmt.Fprint(writer, color.Bold.Sprint("\nTask Status\n\n"))
 	writer.Flush()
-	headers := []string{"ID", "Image Digest", "Last Status", "Started At", "Stopped At", "Capacity Provider", "Health Status"}
+	headers := []string{"ID", "Image Digest", "Last Status", "Started At", "Capacity Provider", "Health Status"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, task := range s.Tasks {
 		fmt.Fprint(writer, task.HumanString())
+	}
+	if len(s.StoppedTasks) > 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nStopped Tasks\n\n"))
+		writer.Flush()
+		headers = []string{"ID", "Image Digest", "Last Status", "Started At", "Stopped At", "Stopped Reason"}
+		fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
+		for _, task := range s.StoppedTasks {
+			fmt.Fprint(writer, (awsECS.StoppedTaskStatus)(task).HumanString())
+		}
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nAlarms\n\n"))
 	writer.Flush()
@@ -180,6 +307,35 @@ func (s *ServiceStatusDesc) HumanString() string {
 		updatedTimeSince := humanizeTime(alarm.UpdatedTimes)
 		printWithMaxWidth(writer, "  %s\t%s\t%s\t%s\n", maxAlarmStatusColumnWidth, alarm.Name, alarm.Condition, updatedTimeSince, alarmHealthColor(alarm.Status))
 		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", "", "", "", "")
+	}
+	writer.Flush()
+	return b.String()
+}
+
+// HumanString returns the stringified apprunnerServiceStatus struct with human readable format.
+func (a *apprunnerServiceStatus) HumanString() string {
+	var b bytes.Buffer
+	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, statusCellPaddingWidth, paddingChar, noAdditionalFormatting)
+	fmt.Fprint(writer, color.Bold.Sprint("Service Status\n\n"))
+	writer.Flush()
+	fmt.Fprintf(writer, " Status %s \n", statusColor(a.Service.Status))
+	fmt.Fprint(writer, color.Bold.Sprint("\nLast Deployment\n\n"))
+	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(a.Service.DateUpdated))
+	serviceID := fmt.Sprintf("%s/%s", a.Service.Name, a.Service.ID)
+	fmt.Fprintf(writer, "  %s\t%s\n", "Service ID", serviceID)
+	imageID := a.Service.ImageID
+	if strings.Contains(a.Service.ImageID, "/") {
+		imageID = strings.SplitAfterN(imageID, "/", 2)[1] // strip the registry.
+	}
+	fmt.Fprintf(writer, "  %s\t%s\n", "Source", imageID)
+	writer.Flush()
+	fmt.Fprint(writer, color.Bold.Sprint("\nSystem Logs\n\n"))
+	writer.Flush()
+	lo, _ := time.LoadLocation("UTC")
+	for _, event := range a.LogEvents {
+		timestamp := time.Unix(event.Timestamp/1000, 0).In(lo)
+		fmt.Fprintf(writer, "  %v\t%s\n", timestamp.Format(time.RFC3339), event.Message)
 	}
 	writer.Flush()
 	return b.String()
@@ -236,6 +392,10 @@ func statusColor(status string) string {
 	case "ACTIVE":
 		return color.Green.Sprint(status)
 	case "DRAINING":
+		return color.Yellow.Sprint(status)
+	case "RUNNING":
+		return color.Green.Sprint(status)
+	case "UPDATING":
 		return color.Yellow.Sprint(status)
 	default:
 		return color.Red.Sprint(status)

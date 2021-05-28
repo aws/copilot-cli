@@ -50,6 +50,8 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				mockBox.AddString("workloads/partials/cf/mount-points.yml", "mount-points")
 				mockBox.AddString("workloads/partials/cf/volumes.yml", "volumes")
 				mockBox.AddString("workloads/partials/cf/image-overrides.yml", "image-overrides")
+				mockBox.AddString("workloads/partials/cf/instancerole.yml", "instancerole")
+				mockBox.AddString("workloads/partials/cf/accessrole.yml", "accessrole")
 
 				t.box = mockBox
 			},
@@ -74,6 +76,8 @@ func TestTemplate_ParseSvc(t *testing.T) {
   mount-points
   volumes
   image-overrides
+  instancerole
+  accessrole
 `,
 		},
 	}
@@ -159,14 +163,7 @@ func TestTemplate_ParseNetwork(t *testing.T) {
   AwsvpcConfiguration:
     AssignPublicIp: ENABLED
     Subnets:
-    - Fn::Select:
-      - 0
-      - Fn::Split:
-        - ','
-        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
-    - Fn::Select:
-      - 1
-      - Fn::Split:
+      Fn::Split:
         - ','
         - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
     SecurityGroups:
@@ -182,14 +179,7 @@ func TestTemplate_ParseNetwork(t *testing.T) {
   AwsvpcConfiguration:
     AssignPublicIp: DISABLED
     Subnets:
-    - Fn::Select:
-      - 0
-      - Fn::Split:
-        - ','
-        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
-    - Fn::Select:
-      - 1
-      - Fn::Split:
+      Fn::Split:
         - ','
         - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
     SecurityGroups:
@@ -209,14 +199,7 @@ func TestTemplate_ParseNetwork(t *testing.T) {
   AwsvpcConfiguration:
     AssignPublicIp: DISABLED
     Subnets:
-    - Fn::Select:
-      - 0
-      - Fn::Split:
-        - ','
-        - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
-    - Fn::Select:
-      - 1
-      - Fn::Split:
+      Fn::Split:
         - ','
         - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
     SecurityGroups:

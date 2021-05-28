@@ -12,5 +12,5 @@ const (
 	Develop        = "Develop ✨"
 	Settings       = "Settings ⚙️"
 	Release        = "Release 🚀"
-	Addons         = "Addons 🧸"
+	Extend         = "Extend 🧸"
 )

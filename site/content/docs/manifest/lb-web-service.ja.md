@@ -1,4 +1,4 @@
-以下は `'Load Balanced Web Service'` Manifest で利用できるすべてのプロパティのリストです。
+以下は `'Load Balanced Web Service'` Manifest で利用できるすべてのプロパティのリストです。[Copilot Service の概念](../concepts/services.ja.md)説明のページも合わせてご覧ください。
 
 ???+ note "frontend Service のサンプル Manifest"
 

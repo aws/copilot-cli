@@ -1,4 +1,4 @@
-List of all available properties for a Copilot pipeline manifest.
+List of all available properties for a Copilot pipeline manifest. To learn more about pipelines, see the [Pipelines](../concepts/pipelines.en.md) concept page.
 
 ???+ note "Sample manifest for a pipeline triggered from a GitHub repo"
 
@@ -53,7 +53,7 @@ The name of AWS Secrets Manager secret that holds the GitHub access token to tri
     As of AWS Copilot v1.4.0, the access token is no longer needed for GitHub repository sources. Instead, Copilot will trigger the pipeline [using AWS CodeStar connections](https://docs.aws.amazon.com/codepipeline/latest/userguide/update-github-action-connections.html).
 
 <span class="parent-field">source.properties.</span><a id="source-properties-branch" href="#source-properties-branch" class="field">`branch`</a> <span class="type">String</span>  
-The name of the branch in your repository that triggers the pipeline. The default for GitHub is `main`; the default for Bitbucket and CodeCommit is `master`.
+The name of the branch in your repository that triggers the pipeline. The default for GitHub and CodeCommit is `main`; the default for Bitbucket is `master`.
 
 <span class="parent-field">source.properties.</span><a id="source-properties-repository" href="#source-properties-repository" class="field">`repository`</a> <span class="type">String</span>  
 The URL of your repository.

@@ -23,7 +23,7 @@ import (
 const (
 	testEnvName      = "test"
 	testAppName      = "phonetool"
-	testImageRepoURL = "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend"
+	testImageRepoURL = "111111111111.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend"
 	testImageTag     = "manual-bf3678c"
 )
 
@@ -67,10 +67,12 @@ func TestLoadBalancedWebService_StackName(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			conf := &LoadBalancedWebService{
-				wkld: &wkld{
-					name: tc.inSvcName,
-					env:  tc.inEnvName,
-					app:  tc.inAppName,
+				ecsWkld: &ecsWkld{
+					wkld: &wkld{
+						name: tc.inSvcName,
+						env:  tc.inEnvName,
+						app:  tc.inAppName,
+					},
 				},
 			}
 
@@ -92,6 +94,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		Path: "frontend",
 		Port: 80,
 	})
+	testLBWebServiceManifest.Alias = aws.String("mockAlias")
 	testLBWebServiceManifest.EntryPoint = manifest.EntryPointOverride{
 		String:      nil,
 		StringSlice: []string{"/bin/echo", "hello"},
@@ -268,14 +271,16 @@ Outputs:
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			conf := &LoadBalancedWebService{
-				wkld: &wkld{
-					name: aws.StringValue(testLBWebServiceManifest.Name),
-					env:  testEnvName,
-					app:  testAppName,
-					rc: RuntimeConfig{
-						Image: &ECRImage{
-							RepoURL:  testImageRepoURL,
-							ImageTag: testImageTag,
+				ecsWkld: &ecsWkld{
+					wkld: &wkld{
+						name: aws.StringValue(testLBWebServiceManifest.Name),
+						env:  testEnvName,
+						app:  testAppName,
+						rc: RuntimeConfig{
+							Image: &ECRImage{
+								RepoURL:  testImageRepoURL,
+								ImageTag: testImageTag,
+							},
 						},
 					},
 				},
@@ -365,7 +370,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		},
 		{
 			ParameterKey:   aws.String(WorkloadContainerImageParamKey),
-			ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
+			ParameterValue: aws.String("111111111111.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
@@ -552,17 +557,19 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 
 			// GIVEN
 			conf := &LoadBalancedWebService{
-				wkld: &wkld{
-					name: aws.StringValue(tc.manifest.Name),
-					env:  testEnvName,
-					app:  testAppName,
-					tc:   tc.manifest.TaskConfig,
-					rc: RuntimeConfig{
-						Image: &ECRImage{
-							RepoURL:  testImageRepoURL,
-							ImageTag: testImageTag,
+				ecsWkld: &ecsWkld{
+					wkld: &wkld{
+						name: aws.StringValue(tc.manifest.Name),
+						env:  testEnvName,
+						app:  testAppName,
+						rc: RuntimeConfig{
+							Image: &ECRImage{
+								RepoURL:  testImageRepoURL,
+								ImageTag: testImageTag,
+							},
 						},
 					},
+					tc: tc.manifest.TaskConfig,
 				},
 				manifest:     tc.manifest,
 				httpsEnabled: tc.httpsEnabled,
@@ -621,20 +628,22 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			c := &LoadBalancedWebService{
-				wkld: &wkld{
-					name: aws.StringValue(testLBWebServiceManifest.Name),
-					env:  testEnvName,
-					app:  testAppName,
-					tc:   testLBWebServiceManifest.TaskConfig,
-					rc: RuntimeConfig{
-						Image: &ECRImage{
-							RepoURL:  testImageRepoURL,
-							ImageTag: testImageTag,
-						},
-						AdditionalTags: map[string]string{
-							"owner": "boss",
+				ecsWkld: &ecsWkld{
+					wkld: &wkld{
+						name: aws.StringValue(testLBWebServiceManifest.Name),
+						env:  testEnvName,
+						app:  testAppName,
+						rc: RuntimeConfig{
+							Image: &ECRImage{
+								RepoURL:  testImageRepoURL,
+								ImageTag: testImageTag,
+							},
+							AdditionalTags: map[string]string{
+								"owner": "boss",
+							},
 						},
 					},
+					tc: testLBWebServiceManifest.TaskConfig,
 				},
 				manifest: testLBWebServiceManifest,
 			}
@@ -661,20 +670,22 @@ func TestLoadBalancedWebService_Tags(t *testing.T) {
 		Port: 80,
 	})
 	conf := &LoadBalancedWebService{
-		wkld: &wkld{
-			name: aws.StringValue(testLBWebServiceManifest.Name),
-			env:  testEnvName,
-			app:  testAppName,
-			rc: RuntimeConfig{
-				Image: &ECRImage{
-					RepoURL:  testImageRepoURL,
-					ImageTag: testImageTag,
-				},
-				AdditionalTags: map[string]string{
-					"owner":              "boss",
-					deploy.AppTagKey:     "overrideapp",
-					deploy.EnvTagKey:     "overrideenv",
-					deploy.ServiceTagKey: "overridesvc",
+		ecsWkld: &ecsWkld{
+			wkld: &wkld{
+				name: aws.StringValue(testLBWebServiceManifest.Name),
+				env:  testEnvName,
+				app:  testAppName,
+				rc: RuntimeConfig{
+					Image: &ECRImage{
+						RepoURL:  testImageRepoURL,
+						ImageTag: testImageTag,
+					},
+					AdditionalTags: map[string]string{
+						"owner":              "boss",
+						deploy.AppTagKey:     "overrideapp",
+						deploy.EnvTagKey:     "overrideenv",
+						deploy.ServiceTagKey: "overridesvc",
+					},
 				},
 			},
 		},

@@ -36,12 +36,14 @@ nav:
     - Credentials: docs/credentials.en.md
     - Manifest:
       - Overview: docs/manifest/overview.en.md
+      - Request-Driven Web Service: docs/manifest/rd-web-service.en.md
       - Load Balanced Web Service: docs/manifest/lb-web-service.en.md
       - Backend Service: docs/manifest/backend-service.en.md
       - Scheduled Job: docs/manifest/scheduled-job.en.md
       - Pipeline: docs/manifest/pipeline.en.md
     - Developing:
       - Environment Variables: docs/developing/environment-variables.en.md
+      - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
       - Secrets: docs/developing/secrets.en.md
       - Service Discovery: docs/developing/service-discovery.en.md
       - Additional AWS Resources: docs/developing/additional-aws-resources.en.md
@@ -86,7 +88,8 @@ nav:
         - task run: docs/commands/task-run.en.md
         - task exec: docs/commands/task-exec.en.md
         - task delete: docs/commands/task-delete.en.md
-      - Addons:
+      - Extend:
+        - secret init: docs/commands/secret-init.en.md
         - storage init: docs/commands/storage-init.en.md
       - Settings:
         - version: docs/commands/version.en.md
@@ -114,6 +117,7 @@ nav:
         - pipeline show: docs/commands/pipeline-show.en.md
         - pipeline status: docs/commands/pipeline-status.en.md
         - pipeline update: docs/commands/pipeline-update.en.md
+        - secret init: docs/commands/secret-init.en.md
         - storage init: docs/commands/storage-init.en.md
         - svc delete: docs/commands/svc-delete.en.md
         - svc deploy: docs/commands/svc-deploy.en.md
@@ -124,6 +128,8 @@ nav:
         - svc package: docs/commands/svc-package.en.md
         - svc show: docs/commands/svc-show.en.md
         - svc status: docs/commands/svc-status.en.md
+        - svc pause: docs/commands/svc-pause.en.md
+        - svc resume: docs/commands/svc-resume.en.md
         - task delete: docs/commands/task-delete.en.md
         - task exec: docs/commands/task-exec.en.md
         - task run: docs/commands/task-run.en.md

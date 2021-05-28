@@ -9,6 +9,9 @@ Manifest の中で [`storage` フィールド](../developing/storage.ja.md)を�
 ## Copilot でサイドカーを追加するには？
 Copilot の Manifest でサイドカーを追加したい場合、[サイドカーコンテナを直接定義する](#サイドカーコンテナを直接定義する)あるいは[サイドカーパターン](#サイドカーパターン)を利用する方法があります。
 
+!!! attention
+    Request-Driven Web Service はサイドカーの利用をサポートしていません。
+
 ### サイドカーコンテナを直接定義する
 サイドカーコンテナイメージの URL を指定する必要があります。オプションで公開するポートや[プライベートレジストリ](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/private-auth.html)の認証パラメータを指定できます。
 

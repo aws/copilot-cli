@@ -94,6 +94,7 @@ stages:
       name: prod
       # requires_approval: true
 ```
+`pipeline.yml` で利用可能な全ての設定項目については [Pipeline Manifest](../manifest/pipeline.ja.md) をご覧ください。
 
 このファイルには大きく３つのパーツがあります。最初の `name` フィールドは CodePipeline に作成されるパイプライの名称です。そして `source` セクションは Pipeline がトラックするソースリポジトリとそのブランチといった詳細を定義し、最後の `stages` セクションでは、どの Environment に対してこの Pipeline でデプロイを行いたいか定義します。この設定ファイルはいつでも変更可能ですが、変更後は Git リポジトリへのコミットとプッシュ、その後 `copilot pipeline update` コマンドを実行する必要があります。
 

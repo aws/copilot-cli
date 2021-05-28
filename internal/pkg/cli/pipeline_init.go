@@ -55,7 +55,7 @@ const (
 	// For a CodeCommit repository.
 	awsURL          = "aws.amazon.com"
 	ccIdentifier    = "codecommit"
-	defaultCCBranch = "master"
+	defaultCCBranch = "main"
 	fmtCCRepoURL    = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse" // Ex: "https://region.console.aws.amazon.com/codesuite/codecommit/repositories/repoName/browse"
 	// For a Bitbucket repository.
 	bbURL           = "bitbucket.org"

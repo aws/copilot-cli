@@ -1,4 +1,4 @@
-List of all available properties for a `'Backend Service'` manifest.
+List of all available properties for a `'Backend Service'` manifest. To learn about Copilot services, see the [Services](../concepts/services.en.md) concept page.
 
 ???+ note "Sample manifest for an api service"
 
@@ -65,5 +65,7 @@ The name of your service.
 The architecture type for your service. [Backend Services](../concepts/services.en.md#backend-service) are not reachable from the internet, but can be reached with [service discovery](../developing/service-discovery.en.md) from your other services.
 
 {% include 'image-config.md' %}
+
 {% include 'image-healthcheck.md' %}
+
 {% include 'common-svc-fields.md' %}

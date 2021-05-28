@@ -1,0 +1,48 @@
+# The manifest for the "{{.Name}}" service.
+# Read the full specification for the "{{.Type}}" type at:
+# https://aws.github.io/copilot-cli/docs/manifest/rd-web-service/
+
+# Your service name will be used in naming your resources like log groups, App Runner services, etc.
+name: {{.Name}}
+# The "architecture" of the service you're running.
+type: {{.Type}}
+
+image:
+{{- if .ImageConfig.Build.BuildArgs.Dockerfile}}
+  # Docker build arguments.
+  # For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/rd-web-service/#image-build
+  build: {{.ImageConfig.Build.BuildArgs.Dockerfile}}
+{{- end}}
+{{- if .ImageConfig.Location}}
+  # The name of the Docker image.
+  location: {{.ImageConfig.Location}}
+{{- end}}
+  # Port exposed through your container to route traffic to it.
+  port: {{.ImageConfig.Port}}
+
+# http:
+#   healthcheck:
+#     path: /
+#     healthy_threshold: 3
+#     unhealthy_threshold: 5
+#     interval: 10s
+#     timeout: 5s
+
+# Number of CPU units for the task.
+cpu: {{.InstanceConfig.CPU}}
+# Amount of memory in MiB used by the task.
+memory: {{.InstanceConfig.Memory}}
+
+# Optional fields for more advanced use-cases.
+#
+# variables:                    # Pass environment variables as key value pairs.
+#   LOG_LEVEL: info
+#
+# tags:                         # Pass tags as key value pairs.
+#   project: project-name
+
+# You can override any of the values defined above by environment.
+# environments:
+#   test:
+#     variables:
+#       LOG_LEVEL: debug        # Log level for the "test" environment.

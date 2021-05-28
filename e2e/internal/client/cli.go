@@ -87,8 +87,9 @@ type SvcInitRequest struct {
 
 // SvcShowRequest contains the parameters for calling copilot svc show.
 type SvcShowRequest struct {
-	Name    string
-	AppName string
+	Name      string
+	AppName   string
+	Resources bool
 }
 
 // SvcStatusRequest contains the parameters for calling copilot svc status.
@@ -114,6 +115,20 @@ type SvcLogsRequest struct {
 	EnvName string
 	Name    string
 	Since   string
+}
+
+// SvcPauseRequest contains the parameters for calling copilot svc logs.
+type SvcPauseRequest struct {
+	AppName string
+	EnvName string
+	Name    string
+}
+
+// SvcResumeRequest contains the parameters for calling copilot svc logs.
+type SvcResumeRequest struct {
+	AppName string
+	EnvName string
+	Name    string
 }
 
 // StorageInitRequest contains the parameters for calling copilot storage init.
@@ -296,11 +311,19 @@ copilot svc show
 	--json
 */
 func (cli *CLI) SvcShow(opts *SvcShowRequest) (*SvcShowOutput, error) {
+	args := []string{
+		"svc", "show",
+		"--app", opts.AppName,
+		"--name", opts.Name,
+		"--json",
+	}
+
+	if opts.Resources {
+		args = append(args, "--resources")
+	}
+
 	svcJSON, svcShowErr := cli.exec(
-		exec.Command(cli.path, "svc", "show",
-			"--app", opts.AppName,
-			"--name", opts.Name,
-			"--json"))
+		exec.Command(cli.path, args...))
 
 	if svcShowErr != nil {
 		return nil, svcShowErr
@@ -417,22 +440,61 @@ func (cli *CLI) SvcLogs(opts *SvcLogsRequest) ([]SvcLogsOutput, error) {
 	return toSvcLogsOutput(output)
 }
 
+/*SvcPause runs:
+copilot svc pause
+	--app $p
+	--name $n
+	--env $e
+*/
+func (cli *CLI) SvcPause(opts *SvcPauseRequest) (string, error) {
+	return cli.exec(
+		exec.Command(cli.path, "svc", "pause",
+			"--app", opts.AppName,
+			"--name", opts.Name,
+			"--env", opts.EnvName,
+			"--yes"))
+}
+
+/*SvcResume runs:
+copilot svc pause
+	--app $p
+	--name $n
+	--env $e
+*/
+func (cli *CLI) SvcResume(opts *SvcResumeRequest) (string, error) {
+	return cli.exec(
+		exec.Command(cli.path, "svc", "resume",
+			"--app", opts.AppName,
+			"--name", opts.Name,
+			"--env", opts.EnvName))
+}
+
 /*StorageInit runs:
 copilot storage init
 	--name $n
 	--storage-type $t
 	--workload $w
 	--engine $e
-    --initial-db $d
+  --initial-db $d
 */
 func (cli *CLI) StorageInit(opts *StorageInitRequest) (string, error) {
+	arguments := []string{
+		"storage", "init",
+		"--name", opts.StorageName,
+		"--storage-type", opts.StorageType,
+		"--workload", opts.WorkloadName,
+	}
+
+	if opts.RDSEngine != "" {
+		arguments = append(arguments, "--engine", opts.RDSEngine)
+	}
+
+	if opts.InitialDBName != "" {
+		arguments = append(arguments, "--initial-db", opts.InitialDBName)
+	}
+
 	return cli.exec(
-		exec.Command(cli.path, "storage", "init",
-			"--name", opts.StorageName,
-			"--storage-type", opts.StorageType,
-			"--workload", opts.WorkloadName,
-			"--engine", opts.RDSEngine,
-			"--initial-db", opts.InitialDBName))
+		exec.Command(cli.path, arguments...))
 }
 
 /*EnvDelete runs:
@@ -736,7 +798,7 @@ copilot job package
 	--app $appname
 	--tag $tag
 */
-func (cli *CLI) JobPackage(opts *PackageInput) error {
+func (cli *CLI) JobPackage(opts *PackageInput) (string, error) {
 	args := []string{
 		"job",
 		"package",
@@ -747,8 +809,15 @@ func (cli *CLI) JobPackage(opts *PackageInput) error {
 		"--tag", opts.Tag,
 	}
 
-	_, err := cli.exec(exec.Command(cli.path, args...))
-	return err
+	if opts.Dir != "" {
+		args = append(args, "--output-dir", opts.Dir)
+	}
+
+	if opts.Tag != "" {
+		args = append(args, "--tag", opts.Tag)
+	}
+
+	return cli.exec(exec.Command(cli.path, args...))
 }
 
 /*SvcPackage runs:
@@ -758,18 +827,24 @@ copilot svc package
 	--env $env
 	--app $appname
 */
-func (cli *CLI) SvcPackage(opts *PackageInput) error {
+func (cli *CLI) SvcPackage(opts *PackageInput) (string, error) {
 	args := []string{
 		"svc",
 		"package",
 		"--name", opts.Name,
 		"--env", opts.Env,
 		"--app", opts.AppName,
-		"--output-dir", opts.Dir,
-		"--tag", opts.Tag,
 	}
-	_, err := cli.exec(exec.Command(cli.path, args...))
-	return err
+
+	if opts.Dir != "" {
+		args = append(args, "--output-dir", opts.Dir)
+	}
+
+	if opts.Tag != "" {
+		args = append(args, "--tag", opts.Tag)
+	}
+
+	return cli.exec(exec.Command(cli.path, args...))
 }
 
 func (cli *CLI) exec(command *exec.Cmd) (string, error) {

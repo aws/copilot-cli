@@ -135,6 +135,11 @@ tools:
 	@echo "Installing custom resource dependencies" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} && npm ci
 
+.PHONY: site-local
+site-local:
+	docker build . -f Dockerfile.site -t site:latest
+	docker run -p 8000:8000 -v `pwd`/site:/website/site -it site:latest
+
 .PHONY: gen-mocks
 gen-mocks: tools
 	# TODO: make this more extensible?
@@ -149,9 +154,11 @@ gen-mocks: tools
 	${GOBIN}/mockgen -source=./internal/pkg/cli/completion.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_completion.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/identity.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_identity.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_lb_web_service.go -source=./internal/pkg/describe/lb_web_service.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_rd_web_service.go -source=./internal/pkg/describe/rd_web_service.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_backend_service.go -source=./internal/pkg/describe/backend_service.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_service.go -source=./internal/pkg/describe/service.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_describe.go -source=./internal/pkg/describe/describe.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_stack.go -source=./internal/pkg/describe/stack.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/stack/mocks/mock_stack.go -source=./internal/pkg/describe/stack/stack.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_status.go -source=./internal/pkg/describe/status.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_pipeline_show.go -source=./internal/pkg/describe/pipeline_show.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_pipeline_status.go -source=./internal/pkg/describe/pipeline_status.go
@@ -179,6 +186,7 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/mocks/mock_cloudformation.go -source=./internal/pkg/deploy/cloudformation/cloudformation.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_env.go -source=./internal/pkg/deploy/cloudformation/stack/env.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_lb_web_svc.go -source=./internal/pkg/deploy/cloudformation/stack/lb_web_svc.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_rd_web_svc.go -source=./internal/pkg/deploy/cloudformation/stack/rd_web_svc.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_backend_svc.go -source=./internal/pkg/deploy/cloudformation/stack/backend_svc.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_scheduled_job.go -source=./internal/pkg/deploy/cloudformation/stack/scheduled_job.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/template/mocks/mock_template.go -source=./internal/pkg/template/template.go
@@ -190,5 +198,4 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/initialize/mocks/mock_workload.go -source=./internal/pkg/initialize/workload.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_ecs.go -source=./internal/pkg/ecs/ecs.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_run_task_request.go -source=./internal/pkg/ecs/run_task_request.go
-
-
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/apprunner/mocks/mock_apprunner.go -source=./internal/pkg/aws/apprunner/apprunner.go

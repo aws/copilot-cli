@@ -94,7 +94,7 @@ Resources:
                         - dynamodb:Query
                         - dynamodb:Scan
                       Effect: Allow
-                      Resource: !Sub ${ MyTable.Arn}/Index/*
+                      Resource: !Sub ${ MyTable.Arn}/index/*
     MyBucket:
         Type: AWS::S3::Bucket
         DeletionPolicy: Retain

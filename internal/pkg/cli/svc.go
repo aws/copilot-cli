@@ -18,9 +18,9 @@ func BuildSvcCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "svc",
 		Short: `Commands for services.
-Services are long-running Amazon ECS services.`,
+Services are long-running ECS or App Runner services.`,
 		Long: `Commands for services.
-Services are long-running Amazon ECS services.`,
+Services are long-running ECS or App Runner services.`,
 	}
 
 	cmd.AddCommand(buildSvcInitCmd())
@@ -32,6 +32,8 @@ Services are long-running Amazon ECS services.`,
 	cmd.AddCommand(buildSvcStatusCmd())
 	cmd.AddCommand(buildSvcLogsCmd())
 	cmd.AddCommand(buildSvcExecCmd())
+	cmd.AddCommand(buildSvcPauseCmd())
+	cmd.AddCommand(buildSvcResumeCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 

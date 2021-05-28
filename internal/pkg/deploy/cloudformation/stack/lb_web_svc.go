@@ -38,7 +38,7 @@ type loadBalancedWebSvcReadParser interface {
 
 // LoadBalancedWebService represents the configuration needed to create a CloudFormation stack from a load balanced web service manifest.
 type LoadBalancedWebService struct {
-	*wkld
+	*ecsWkld
 	manifest     *manifest.LoadBalancedWebService
 	httpsEnabled bool
 
@@ -57,15 +57,17 @@ func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app st
 		return nil, fmt.Errorf("apply environment %s override: %s", env, err)
 	}
 	return &LoadBalancedWebService{
-		wkld: &wkld{
-			name:   aws.StringValue(mft.Name),
-			env:    env,
-			app:    app,
-			tc:     envManifest.TaskConfig,
-			rc:     rc,
-			image:  envManifest.ImageConfig,
-			parser: parser,
-			addons: addons,
+		ecsWkld: &ecsWkld{
+			wkld: &wkld{
+				name:   aws.StringValue(mft.Name),
+				env:    env,
+				app:    app,
+				rc:     rc,
+				image:  envManifest.ImageConfig,
+				parser: parser,
+				addons: addons,
+			},
+			tc: envManifest.TaskConfig,
 		},
 		manifest:     envManifest,
 		httpsEnabled: false,
@@ -137,9 +139,17 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf(`convert 'command' to string slice: %w`, err)
 	}
+	var aliases []string
+	if s.httpsEnabled {
+		albAlias := aws.StringValue(s.manifest.Alias)
+		if albAlias != "" {
+			aliases = append(aliases, albAlias)
+		}
+	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		Variables:           s.manifest.Variables,
 		Secrets:             s.manifest.Secrets,
+		Aliases:             aliases,
 		NestedStack:         outputs,
 		Sidecars:            sidecars,
 		LogConfig:           convertLogging(s.manifest.Logging),
@@ -189,7 +199,7 @@ func (s *LoadBalancedWebService) loadBalancerTarget() (targetContainer *string, 
 
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, error) {
-	wkldParams, err := s.wkld.Parameters()
+	wkldParams, err := s.ecsWkld.Parameters()
 	if err != nil {
 		return nil, err
 	}
@@ -228,5 +238,5 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability to users.
 func (s *LoadBalancedWebService) SerializedParameters() (string, error) {
-	return s.wkld.templateConfiguration(s)
+	return s.templateConfiguration(s)
 }

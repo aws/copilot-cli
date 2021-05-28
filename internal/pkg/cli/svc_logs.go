@@ -39,6 +39,7 @@ type wkldLogsVars struct {
 	humanEndTime     string
 	taskIDs          []string
 	since            time.Duration
+	logGroup         string
 }
 
 type svcLogsOpts struct {
@@ -86,11 +87,27 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
 		}
+		workload, err := configStore.GetWorkload(opts.appName, opts.svcName)
+		if err != nil {
+			return fmt.Errorf("get workload: %w", err)
+		}
 		sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return err
 		}
-		opts.logsSvc = logging.NewServiceClient(sess, opts.appName, opts.envName, opts.name)
+		opts.logsSvc, err = logging.NewServiceClient(&logging.NewServiceLogsConfig{
+			App:         opts.appName,
+			Env:         opts.envName,
+			Svc:         opts.svcName,
+			Sess:        sess,
+			LogGroup:    opts.logGroup,
+			WkldType:    workload.Type,
+			TaskIDs:     opts.taskIDs,
+			ConfigStore: configStore,
+		})
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 	return opts, nil
@@ -229,10 +246,12 @@ func buildSvcLogsCmd() *cobra.Command {
   /code $ copilot svc logs --since 1h
   Displays logs from 2006-01-02T15:04:05 to 2006-01-02T15:05:05.
   /code $ copilot svc logs --start-time 2006-01-02T15:04:05+00:00 --end-time 2006-01-02T15:05:05+00:00
-	Displays logs from specific task IDs.
+  Displays logs from specific task IDs.
   /code $ copilot svc logs --tasks 709c7eae05f947f6861b150372ddc443,1de57fd63c6a4920ac416d02add891b9
   Displays logs in real time.
-  /code $ copilot svc logs --follow`,
+  /code $ copilot svc logs --follow
+  Display logs from specific log group.
+  /code $ copilot svc logs --log-group system`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newSvcLogOpts(vars)
 			if err != nil {
@@ -257,5 +276,6 @@ func buildSvcLogsCmd() *cobra.Command {
 	cmd.Flags().DurationVar(&vars.since, sinceFlag, 0, sinceFlagDescription)
 	cmd.Flags().IntVar(&vars.limit, limitFlag, 0, limitFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.taskIDs, tasksFlag, nil, tasksLogsFlagDescription)
+	cmd.Flags().StringVar(&vars.logGroup, logGroupFlag, "", logGroupFlagDescription)
 	return cmd
 }
