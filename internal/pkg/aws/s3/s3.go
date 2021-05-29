@@ -8,6 +8,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"io"
 	"path"
 	"strconv"
@@ -22,6 +23,7 @@ import (
 
 const (
 	artifactDirName = "manual"
+	notFound = "NotFound"
 )
 
 type s3ManagerAPI interface {
@@ -31,6 +33,7 @@ type s3ManagerAPI interface {
 type s3API interface {
 	ListObjectVersions(input *s3.ListObjectVersionsInput) (*s3.ListObjectVersionsOutput, error)
 	DeleteObjects(input *s3.DeleteObjectsInput) (*s3.DeleteObjectsOutput, error)
+	HeadBucket (input *s3.HeadBucketInput) (*s3.HeadBucketOutput, error)
 }
 
 // NamedBinary is a named binary to be uploaded.
@@ -105,48 +108,59 @@ func (s *S3) ZipAndUpload(bucket, key string, files ...NamedBinary) (string, err
 func (s *S3) EmptyBucket(bucket string) error {
 	var listResp *s3.ListObjectVersionsOutput
 	var err error
-	listParams := &s3.ListObjectVersionsInput{
-		Bucket: aws.String(bucket),
+
+	// Bucket is exists check to make sure the bucket exists before proceeding in emptying it
+	isExists, err:= s.isBucketExists(bucket)
+	if err!= nil {
+		return fmt.Errorf("unable to determine the existance of bucket %s: %w", bucket, err)
 	}
-	// Remove all versions of all objects.
-	for {
-		listResp, err = s.s3Client.ListObjectVersions(listParams)
-		if err != nil {
-			return fmt.Errorf("list objects for bucket %s: %w", bucket, err)
-		}
-		var objectsToDelete []*s3.ObjectIdentifier
-		for _, object := range listResp.Versions {
-			objectsToDelete = append(objectsToDelete, &s3.ObjectIdentifier{
-				Key:       object.Key,
-				VersionId: object.VersionId,
-			})
-		}
-		// After deleting other versions, remove delete markers version.
-		// For info on "delete marker": https://docs.aws.amazon.com/AmazonS3/latest/dev/DeleteMarker.html
-		for _, deleteMarker := range listResp.DeleteMarkers {
-			objectsToDelete = append(objectsToDelete, &s3.ObjectIdentifier{
-				Key:       deleteMarker.Key,
-				VersionId: deleteMarker.VersionId,
-			})
-		}
-		if len(objectsToDelete) == 0 {
-			return nil
-		}
-		_, err = s.s3Client.DeleteObjects(&s3.DeleteObjectsInput{
+
+	if isExists {
+		listParams := &s3.ListObjectVersionsInput{
 			Bucket: aws.String(bucket),
-			Delete: &s3.Delete{
-				Objects: objectsToDelete,
-			},
-		})
-		if err != nil {
-			return fmt.Errorf("delete objects from bucket %s: %w", bucket, err)
 		}
-		if !aws.BoolValue(listResp.IsTruncated) {
-			return nil
+		// Remove all versions of all objects.
+		for {
+			listResp, err = s.s3Client.ListObjectVersions(listParams)
+			if err != nil {
+				return fmt.Errorf("list objects for bucket %s: %w", bucket, err)
+			}
+			var objectsToDelete []*s3.ObjectIdentifier
+			for _, object := range listResp.Versions {
+				objectsToDelete = append(objectsToDelete, &s3.ObjectIdentifier{
+					Key:       object.Key,
+					VersionId: object.VersionId,
+				})
+			}
+			// After deleting other versions, remove delete markers version.
+			// For info on "delete marker": https://docs.aws.amazon.com/AmazonS3/latest/dev/DeleteMarker.html
+			for _, deleteMarker := range listResp.DeleteMarkers {
+				objectsToDelete = append(objectsToDelete, &s3.ObjectIdentifier{
+					Key:       deleteMarker.Key,
+					VersionId: deleteMarker.VersionId,
+				})
+			}
+			if len(objectsToDelete) == 0 {
+				return nil
+			}
+			_, err = s.s3Client.DeleteObjects(&s3.DeleteObjectsInput{
+				Bucket: aws.String(bucket),
+				Delete: &s3.Delete{
+					Objects: objectsToDelete,
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("delete objects from bucket %s: %w", bucket, err)
+			}
+			if !aws.BoolValue(listResp.IsTruncated) {
+				return nil
+			}
+			listParams.KeyMarker = listResp.NextKeyMarker
+			listParams.VersionIdMarker = listResp.NextVersionIdMarker
 		}
-		listParams.KeyMarker = listResp.NextKeyMarker
-		listParams.VersionIdMarker = listResp.NextVersionIdMarker
 	}
+
+	return nil
 }
 
 // ParseURL parses S3 object URL and returns the bucket name and the key.
@@ -160,4 +174,25 @@ func ParseURL(url string) (bucket string, key string, err error) {
 	}
 	bucket, key = strings.Split(parsedURL[0], ".")[0], parsedURL[1]
 	return
+}
+
+// Check whether the bucket exists before proceeding with empty the bucket
+func (s *S3) isBucketExists(bucket string) (bool, error) {
+	input := &s3.HeadBucketInput{
+		Bucket: aws.String(bucket),
+	}
+	_, err := s.s3Client.HeadBucket(input)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+				case notFound:
+					return false, nil
+				default:
+					return false, aerr
+			}
+		}
+		return false, err
+	}
+
+	return true, nil
 }
