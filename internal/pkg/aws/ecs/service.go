@@ -37,7 +37,7 @@ func (s *Service) ServiceStatus() ServiceStatus {
 	}
 }
 
-// TargetGroups returns the target group ARNs of the load balancer, if any, attached to the service.
+// TargetGroups returns the ARNs of target groups attached to the service.
 func (s *Service) TargetGroups() []string {
 	var targetGroupARNs []string
 	for _, lb := range s.LoadBalancers {
