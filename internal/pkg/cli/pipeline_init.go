@@ -60,7 +60,7 @@ const (
 	// For a Bitbucket repository.
 	bbURL           = "bitbucket.org"
 	defaultBBBranch = "master"
-	fmtBBRepoURL    = "https://%s/%s/%s" // Ex: "https://bitbucket.org/repoOwner/repoName
+	fmtBBRepoURL    = "https://%s/%s/%s" // Ex: "https://bitbucket.org/repoOwner/repoName"
 )
 
 var (
