@@ -255,7 +255,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 				},
 			},
 		},
-		"find corresponding tasks for the targets with exactly one target group present in service": {
+		"find tasks' target health when exactly one target group present in service": {
 			setupMocks: func(m serviceStatusMocks) {
 				gomock.InOrder(
 					m.serviceDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
@@ -359,9 +359,20 @@ func TestServiceStatus_Describe(t *testing.T) {
 						ID: "another-task-with-private-ip-being-target",
 					},
 				},
-				TargetsHealthStatus: []targetHealthStatus{
+				TasksTargetHealth: []taskTargetHealth{
 					{
-						TargetHealth: elbv2.TargetHealth{
+						TargetHealthDescription: elbv2.TargetHealth{
+							Target: &elbv2api.TargetDescription{
+								Id: aws.String("4.3.2.1"),
+							},
+							TargetHealth: &elbv2api.TargetHealth{
+								State: aws.String("healthy"),
+							},
+						},
+						TaskID: "another-task-with-private-ip-being-target",
+					},
+					{
+						TargetHealthDescription: elbv2.TargetHealth{
 							Target: &elbv2api.TargetDescription{
 								Id: aws.String("1.2.3.4"),
 							},
@@ -371,17 +382,6 @@ func TestServiceStatus_Describe(t *testing.T) {
 							},
 						},
 						TaskID: "task-with-private-ip-being-target",
-					},
-					{
-						TargetHealth: elbv2.TargetHealth{
-							Target: &elbv2api.TargetDescription{
-								Id: aws.String("4.3.2.1"),
-							},
-							TargetHealth: &elbv2api.TargetHealth{
-								State: aws.String("healthy"),
-							},
-						},
-						TaskID: "another-task-with-private-ip-being-target",
 					},
 				},
 			},
@@ -778,7 +778,7 @@ Alarms
 `,
 			json: "{\"Service\":{\"desiredCount\":1,\"runningCount\":1,\"status\":\"ACTIVE\",\"lastDeploymentAt\":\"2006-01-02T15:04:05Z\",\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"69671a968e8ec3648e2697417750e\"},{\"ID\":\"mockImageID2\",\"Digest\":\"ca27a44e25ce17fea7b07940ad793\"}],\"lastStatus\":\"RUNNING\",\"startedAt\":\"0001-01-01T00:00:00Z\",\"stoppedAt\":\"0001-01-01T00:00:00Z\",\"stoppedReason\":\"some reason\",\"capacityProvider\":\"\"}],\"alarms\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"condition\":\"mockCondition\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"}],\"stoppedTasks\":[{\"health\":\"\",\"id\":\"0102030490123123123\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"30dkd891jdk9s8d350e932k390093\"},{\"ID\":\"mockImageID2\",\"Digest\":\"41flf902kfl0d9f461r043l411104\"}],\"lastStatus\":\"DEPROVISIONING\",\"startedAt\":\"0001-01-01T00:00:00Z\",\"stoppedAt\":\"2020-03-13T20:00:30Z\",\"stoppedReason\":\"some reason\",\"capacityProvider\":\"\"}]}\n",
 		},
-		"shows target health": {
+		"shows target health such that target healths for the same task are shown in consecutive rows": {
 			desc: &ecsServiceStatus{
 				Service: awsecs.ServiceStatus{
 					DesiredCount:     1,
@@ -814,15 +814,26 @@ Alarms
 						},
 					},
 				},
-				TargetsHealthStatus: []targetHealthStatus{
+				TasksTargetHealth: []taskTargetHealth{
 					{
-						TargetHealth: elbv2.TargetHealth{
+						TargetHealthDescription: elbv2.TargetHealth{
 							Target: &elbv2api.TargetDescription{
 								Id: aws.String("5.6.7.8"),
 							},
 							TargetHealth: &elbv2api.TargetHealth{
 								State:  aws.String("unhealthy"),
 								Reason: aws.String("some reason"),
+							},
+						},
+						TaskID: "a-task-with-private-ip-being-target",
+					},
+					{
+						TargetHealthDescription: elbv2.TargetHealth{
+							Target: &elbv2api.TargetDescription{
+								Id: aws.String("1.1.1.1"),
+							},
+							TargetHealth: &elbv2api.TargetHealth{
+								State: aws.String("healthy"),
 							},
 						},
 						TaskID: "another-task-with-private-ip-being-target",
@@ -844,11 +855,12 @@ Task Status
   --                ------------         -----------         ----------          -----------------    -------------
   12345678          69671a96,ca27a44e    RUNNING             -                   -                    HEALTHY
 
-Targets Health
+HTTP Health
 
   Task              Target              Reason              Health Status
   ----              ------              ------              -------------
-  another-          5.6.7.8             some reason         UNHEALTHY
+  a-task-w          5.6.7.8             some reason         UNHEALTHY
+  another-          1.1.1.1             -                   HEALTHY
 
 Alarms
 
@@ -857,7 +869,7 @@ Alarms
   mockAlarm         mockCondition       2 months from now    OK
                                                              
 `,
-			json: `{"Service":{"desiredCount":1,"runningCount":1,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":[{"ID":"mockImageID1","Digest":"69671a968e8ec3648e2697417750e"},{"ID":"mockImageID2","Digest":"ca27a44e25ce17fea7b07940ad793"}],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":""}],"alarms":[{"arn":"mockAlarmArn","name":"mockAlarm","condition":"mockCondition","status":"OK","type":"Metric","updatedTimes":"2020-03-13T19:50:30Z"}],"targetsHealth":[{"TargetHealth":{"HealthCheckPort":null,"Target":{"AvailabilityZone":null,"Id":"5.6.7.8","Port":null},"TargetHealth":{"Description":null,"Reason":"some reason","State":"unhealthy"}},"taskID":"another-task-with-private-ip-being-target"}]}
+			json: `{"Service":{"desiredCount":1,"runningCount":1,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":[{"ID":"mockImageID1","Digest":"69671a968e8ec3648e2697417750e"},{"ID":"mockImageID2","Digest":"ca27a44e25ce17fea7b07940ad793"}],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":""}],"alarms":[{"arn":"mockAlarmArn","name":"mockAlarm","condition":"mockCondition","status":"OK","type":"Metric","updatedTimes":"2020-03-13T19:50:30Z"}],"targetsHealth":[{"healthDescription":{"HealthCheckPort":null,"Target":{"AvailabilityZone":null,"Id":"5.6.7.8","Port":null},"TargetHealth":{"Description":null,"Reason":"some reason","State":"unhealthy"}},"taskID":"a-task-with-private-ip-being-target"},{"healthDescription":{"HealthCheckPort":null,"Target":{"AvailabilityZone":null,"Id":"1.1.1.1","Port":null},"TargetHealth":{"Description":null,"Reason":null,"State":"healthy"}},"taskID":"another-task-with-private-ip-being-target"}]}
 `,
 		},
 	}

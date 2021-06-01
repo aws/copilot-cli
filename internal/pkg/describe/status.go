@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -86,11 +87,11 @@ type AppRunnerStatusDescriber struct {
 
 // ecsServiceStatus contains the status for an ECS service.
 type ecsServiceStatus struct {
-	Service             awsECS.ServiceStatus
-	Tasks               []awsECS.TaskStatus      `json:"tasks"`
-	Alarms              []cloudwatch.AlarmStatus `json:"alarms"`
-	StoppedTasks        []awsECS.TaskStatus      `json:"stoppedTasks,omitempty"`
-	TargetsHealthStatus []targetHealthStatus     `json:"targetsHealth,omitempty"`
+	Service           awsECS.ServiceStatus
+	Tasks             []awsECS.TaskStatus      `json:"tasks"`
+	Alarms            []cloudwatch.AlarmStatus `json:"alarms"`
+	StoppedTasks      []awsECS.TaskStatus      `json:"stoppedTasks,omitempty"`
+	TasksTargetHealth []taskTargetHealth       `json:"targetsHealth,omitempty"`
 }
 
 // appRunnerServiceStatus contains the status for an AppRunner service.
@@ -196,7 +197,7 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 	}
 	alarms = append(alarms, autoscalingAlarms...)
 
-	var targetsHealthStatus []targetHealthStatus
+	var targetsHealthStatus []taskTargetHealth
 	targetGroupsARN := service.TargetGroups()
 	if len(targetGroupsARN) == 1 {
 		// NOTE: Copilot services have at most one target group.
@@ -204,15 +205,19 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("get targets health in target group %s: %w", targetGroupsARN[0], err)
 		}
-		targetsHealthStatus = relateTargetsHealthToTasks(targetsHealth, svcDesc.Tasks)
+		targetsHealthStatus = targetHealthForTasks(targetsHealth, svcDesc.Tasks)
+
+		sort.SliceStable(targetsHealthStatus, func(i, j int) bool {
+			return targetsHealthStatus[i].TaskID < targetsHealthStatus[j].TaskID
+		})
 	}
 
 	return &ecsServiceStatus{
-		Service:             service.ServiceStatus(),
-		Tasks:               taskStatus,
-		Alarms:              alarms,
-		StoppedTasks:        stoppedTaskStatus,
-		TargetsHealthStatus: targetsHealthStatus,
+		Service:           service.ServiceStatus(),
+		Tasks:             taskStatus,
+		Alarms:            alarms,
+		StoppedTasks:      stoppedTaskStatus,
+		TasksTargetHealth: targetsHealthStatus,
 	}, nil
 }
 
@@ -320,14 +325,13 @@ func (s *ecsServiceStatus) HumanString() string {
 		}
 	}
 
-	if len(s.TargetsHealthStatus) > 0 {
-		fmt.Fprint(writer, color.Bold.Sprint("\nTargets Health\n\n"))
+	if len(s.TasksTargetHealth) > 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nHTTP Health\n\n"))
 		writer.Flush()
-		headers = []string{"Task",
-			"Target", "Reason", "Health Status"}
+		headers = []string{"Task", "Target", "Reason", "Health Status"}
 		fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
-		for _, targetHealth := range s.TargetsHealthStatus {
+		for _, targetHealth := range s.TasksTargetHealth {
 			fmt.Fprintf(writer, "  %s\n", targetHealth.humanString())
 		}
 	}
@@ -436,51 +440,51 @@ func statusColor(status string) string {
 	}
 }
 
-type targetHealthStatus struct {
-	TargetHealth elbv2.TargetHealth `json:""`
-	TaskID       string             `json:"taskID"`
+type taskTargetHealth struct {
+	TargetHealthDescription elbv2.TargetHealth `json:"healthDescription"`
+	TaskID                  string             `json:"taskID"`
 }
 
-func (s *targetHealthStatus) relateToTask(taskID string) {
-	s.TaskID = taskID
-}
-
-func (s *targetHealthStatus) humanString() string {
-	relatedTask := "-"
+func (s *taskTargetHealth) humanString() string {
+	taskID := "-"
 	if s.TaskID != "" {
-		relatedTask = awsECS.ShortTaskID(s.TaskID)
+		taskID = awsECS.ShortTaskID(s.TaskID)
 	}
-	return fmt.Sprintf("%s\t%s", relatedTask, s.TargetHealth.HumanString())
+	return fmt.Sprintf("%s\t%s", taskID, s.TargetHealthDescription.HumanString())
 }
 
-func relateTargetsHealthToTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsECS.Task) []targetHealthStatus {
-	mapIPToTasks := make(map[string]awsECS.Task)
-	for _, t := range tasks {
-		ip, err := t.PrivateIP()
+// targetHealthForTasks finds the target health, if any, for each task.
+func targetHealthForTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsECS.Task) []taskTargetHealth {
+	var out []taskTargetHealth
+
+	// Create a set of target health to be matched against the tasks' private IP addresses.
+	// An IP target's ID is the IP address.
+	targetsHealthSet := make(map[string]*elbv2.TargetHealth)
+	for _, th := range targetsHealth {
+		targetsHealthSet[th.TargetID()] = th
+	}
+
+	// For each task, check if it is a target by matching its private IP address against targetsHealthSet.
+	// If it is a target, we try to add it to the output.
+	for _, task := range tasks {
+		ip, err := task.PrivateIP()
 		if err != nil {
 			continue
 		}
-		mapIPToTasks[ip] = *t
-	}
 
-	targetsHealthWithTask := make([]targetHealthStatus, len(targetsHealth))
-	for idx, targetHealth := range targetsHealth {
-		targetsHealthWithTask[idx] = targetHealthStatus{
-			TargetHealth: *targetHealth,
-		}
-
-		targetID := targetHealth.TargetID()
-		var (
-			task awsECS.Task
-			ok   bool
-		)
-		if task, ok = mapIPToTasks[targetID]; !ok {
+		// Check if the IP is a target
+		th, ok := targetsHealthSet[ip]
+		if !ok {
 			continue
 		}
+
 		if taskID, err := awsECS.TaskID(aws.StringValue(task.TaskArn)); err == nil {
-			targetsHealthWithTask[idx].relateToTask(taskID)
+			out = append(out, taskTargetHealth{
+				TaskID:                  taskID,
+				TargetHealthDescription: *th,
+			})
 		}
 	}
 
-	return targetsHealthWithTask
+	return out
 }
