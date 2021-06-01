@@ -197,7 +197,7 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 	}
 	alarms = append(alarms, autoscalingAlarms...)
 
-	var targetsHealthStatus []taskTargetHealth
+	var tasksTargetHealth []taskTargetHealth
 	targetGroupsARN := service.TargetGroups()
 	if len(targetGroupsARN) == 1 {
 		// NOTE: Copilot services have at most one target group.
@@ -205,10 +205,10 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("get targets health in target group %s: %w", targetGroupsARN[0], err)
 		}
-		targetsHealthStatus = targetHealthForTasks(targetsHealth, svcDesc.Tasks)
+		tasksTargetHealth = targetHealthForTasks(targetsHealth, svcDesc.Tasks)
 
-		sort.SliceStable(targetsHealthStatus, func(i, j int) bool {
-			return targetsHealthStatus[i].TaskID < targetsHealthStatus[j].TaskID
+		sort.SliceStable(tasksTargetHealth, func(i, j int) bool {
+			return tasksTargetHealth[i].TaskID < tasksTargetHealth[j].TaskID
 		})
 	}
 
@@ -217,7 +217,7 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 		Tasks:             taskStatus,
 		Alarms:            alarms,
 		StoppedTasks:      stoppedTaskStatus,
-		TasksTargetHealth: targetsHealthStatus,
+		TasksTargetHealth: tasksTargetHealth,
 	}, nil
 }
 
