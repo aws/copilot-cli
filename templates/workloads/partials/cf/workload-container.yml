@@ -11,6 +11,13 @@
   DockerLabels:{{range $name, $value := .DockerLabels}}
     {{$name | printf "%q"}}: {{$value | printf "%q"}}{{end}}
 {{- end}}
+{{- if .DependsOn}}
+  DependsOn:
+  {{- range $name, $conditionFrom := .DependsOn}}
+    - Condition: {{$conditionFrom}}
+      ContainerName: {{$name}}
+  {{- end}}
+{{- end}}
 {{- if eq .WorkloadType "Load Balanced Web Service"}}
   PortMappings:
     - ContainerPort: !Ref ContainerPort

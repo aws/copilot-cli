@@ -359,7 +359,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("select public subnets: some error"),
 		},
-		"fail to select private subnets": {
+		"fail to select TWO public subnets": {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
 			inProfile: mockProfile,
@@ -371,10 +371,58 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
 				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
 					Return([]string{"mockPublicSubnet"}, nil)
+			},
+			wantedError: fmt.Errorf("select public subnets: at least two public subnets must be selected to enable Load Balancing"),
+		},
+		"fail to select private subnets": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return(envInitImportEnvResourcesSelectOption, nil)
+				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
+				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
 				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
 					Return(nil, mockErr)
 			},
 			wantedError: fmt.Errorf("select private subnets: some error"),
+		},
+		"fail to select TWO private subnets": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return(envInitImportEnvResourcesSelectOption, nil)
+				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
+				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
+				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
+					Return([]string{"mockPrivateSubnet"}, nil)
+			},
+			wantedError: fmt.Errorf("select private subnets: at least two private subnets must be selected"),
+		},
+		"success with selecting zero public subnets and two private subnets": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return(envInitImportEnvResourcesSelectOption, nil)
+				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
+				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+					Return([]string{}, nil)
+				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
+					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
+			},
 		},
 		"success with importing env resources with no flags": {
 			inAppName: mockApp,
@@ -387,9 +435,9 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
 				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
-					Return([]string{"mockPublicSubnet"}, nil)
+					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
 				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
-					Return([]string{"mockPrivateSubnet"}, nil)
+					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
 			},
 		},
 		"success with importing env resources with flags": {
@@ -398,8 +446,8 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			inProfile: mockProfile,
 			inImportVPCVars: importVPCVars{
 				ID:               "mockVPCID",
-				PrivateSubnetIDs: []string{"mockPrivateSubnetID"},
-				PublicSubnetIDs:  []string{"mockPublicSubnetID"},
+				PrivateSubnetIDs: []string{"mockPrivateSubnetID", "anotherMockPrivateSubnetID"},
+				PublicSubnetIDs:  []string{"mockPublicSubnetID", "anotherMockPublicSubnetID"},
 			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
