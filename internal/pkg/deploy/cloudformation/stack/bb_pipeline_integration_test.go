@@ -26,7 +26,7 @@ func TestBB_Pipeline_Template(t *testing.T) {
 		Source: &deploy.BitbucketSource{
 			ProviderName:  manifest.BitbucketProviderName,
 			RepositoryURL: "https://huanjani@bitbucket.org/huanjani/sample",
-			Branch:        "master",
+			Branch:        "main",
 		},
 		Build: deploy.PipelineBuildFromManifest(nil),
 		Stages: []deploy.PipelineStage{
