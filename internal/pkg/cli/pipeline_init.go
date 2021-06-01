@@ -59,7 +59,7 @@ const (
 	fmtCCRepoURL    = "https://%s.console.%s/codesuite/codecommit/repositories/%s/browse" // Ex: "https://region.console.aws.amazon.com/codesuite/codecommit/repositories/repoName/browse"
 	// For a Bitbucket repository.
 	bbURL           = "bitbucket.org"
-	defaultBBBranch = "master"
+	defaultBBBranch = "main"
 	fmtBBRepoURL    = "https://%s@%s/%s/%s" // Ex: "https://repoOwner@bitbucket.org/repoOwner/repoName
 )
 
