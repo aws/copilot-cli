@@ -107,7 +107,7 @@ func (t *Task) ENI() (string, error) {
 	}
 }
 
-// PrivateIP returns the PrivateIPv4Address of the task.
+// PrivateIP returns the private IPv4 address of the task.
 func (t *Task) PrivateIP() (string, error) {
 	attachmentENI, err := t.attachmentENI()
 	if err != nil {
