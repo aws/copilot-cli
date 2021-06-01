@@ -40,7 +40,9 @@ If you set up any service using one of the Load Balanced Service types, Copilot 
 Optionally, when you set up an application, you can provide a domain name that you own and is registered in Route 53. If you provide a domain name, each time you spin up an environment, Copilot will create a subdomain environment-name.app-name.your-domain.com, provision an ACM cert, and bind it to your Application Load Balancer so it can use HTTPS.
 
 ## Customize your Environment
-Optionally, you can customize your environment interactively by using flags to import your existing resources, or configure the default environment resources. Currently, only VPC resources are customizable. However, if you want to customize more types of resources, feel free to bring your use cases and cut an issue!
+Optionally, you can customize your environment interactively by using flags to import your existing resources, or configure the default environment resources. Currently, only VPC resources are customizable. However, if you want to customize more types of resources, feel free to bring your use cases and cut an issue! 
+
+For more, see our [custom environment resources](../developing/custom-environment-resources.en.md) page.
 
 ## Digging into your Environment
 
