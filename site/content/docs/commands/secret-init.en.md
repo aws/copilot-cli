@@ -44,7 +44,7 @@ $ copilot secret init --cli-input-yaml input.yml
 ## What's next?
 
 Copilot will create SSM parameters named `/copilot/<app name>/<env name>/secrets/<secret name>`. 
-Using the parameter names, you can then modify the `secrets` section in your [service's](https://aws.github.io/copilot-cli/docs/manifest/backend-service/#secrets) or [job's](https://aws.github.io/copilot-cli/docs/manifest/scheduled-job/#secrets) manifest to reference the secrets that were created. 
+Using the parameter names, you can then modify the `secrets` section in your [service's](../manifest/backend-service.en.md#secrets) or [job's](../manifest/scheduled-job.en.md#secrets) manifest to reference the secrets that were created. 
 
 For example, suppose you have an application `my-app`, and you've created a secret `db_host` in your `prod` and `dev` environments.
 You can modify your service's manifest as follows:

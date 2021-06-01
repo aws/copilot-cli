@@ -44,7 +44,7 @@ $ copilot secret init --cli-input-yaml input.yml
 ## 作成したシークレットをアプリケーションから参照する
 
 Copilot は `/copilot/<app name>/<env name>/secrets/<secret name>` という名前の SSM パラメータを作成します。
-[Service](https://aws.github.io/copilot-cli/ja/docs/manifest/backend-service/#secrets) あるいは [Job](https://aws.github.io/copilot-cli/ja/docs/manifest/scheduled-job/#secrets) Manifest の `secrets` セクションでこのパラメータ名を指定することでこのシークレットをアプリケーションから参照できます。
+[Service](../manifest/backend-service.ja.md#secrets) あるいは [Job](../manifest/scheduled-job.ja.md#secrets) Manifest の `secrets` セクションでこのパラメータ名を指定することでこのシークレットをアプリケーションから参照できます。
 
 例えば、`my-app` という Application があり、その `prod` と `dev` Environment に `db_host` というシークレットを作ったとすると、Service の Manifest は以下のようになるでしょう。
 ```yaml
