@@ -25,7 +25,7 @@ func TestBB_Pipeline_Template(t *testing.T) {
 		Name:    "phonetool-pipeline",
 		Source: &deploy.BitbucketSource{
 			ProviderName:  manifest.BitbucketProviderName,
-			RepositoryURL: "https://huanjani@bitbucket.org/huanjani/sample",
+			RepositoryURL: "https://bitbucket.org/huanjani/sample",
 			Branch:        "main",
 		},
 		Build: deploy.PipelineBuildFromManifest(nil),
