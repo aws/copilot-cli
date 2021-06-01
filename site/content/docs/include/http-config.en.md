@@ -53,4 +53,4 @@ http:
 ```
 
 <span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String</span>  
-HTTPS alias domain of your service.
+HTTPS domain alias of your service.
