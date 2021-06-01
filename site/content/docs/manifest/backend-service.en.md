@@ -64,8 +64,8 @@ The name of your service.
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
 The architecture type for your service. [Backend Services](../concepts/services.en.md#backend-service) are not reachable from the internet, but can be reached with [service discovery](../developing/service-discovery.en.md) from your other services.
 
-{% include 'image-config.md' %}
+{% include 'image-config.en.md' %}
 
-{% include 'image-healthcheck.md' %}
+{% include 'image-healthcheck.en.md' %}
 
-{% include 'common-svc-fields.md' %}
+{% include 'common-svc-fields.en.md' %}
