@@ -105,7 +105,6 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 
 	opts.stackSerializer = func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
 		var serializer stackSerializer
-		log.Infof("%v\n", rc)
 		switch v := mft.(type) {
 		case *manifest.LoadBalancedWebService:
 			if app.RequiresDNSDelegation() {
