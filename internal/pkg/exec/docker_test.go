@@ -7,7 +7,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/spf13/afero"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -347,6 +349,94 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			}
+		})
+	}
+}
+
+func TestIsEcrCredentialHelperEnabled(t *testing.T){
+	var mockRunner *Mockrunner
+	workspace := "test/copilot/.docker"
+	registry := "dummyaccountid.dkr.ecr.region.amazonaws.com"
+	uri := fmt.Sprintf("%s/ui/app", registry)
+
+	testCases := map[string]struct {
+		setupMocks func(controller *gomock.Controller)
+		inBuffer   *bytes.Buffer
+		mockFileSystem      func(fs afero.Fs)
+		postExec      func(fs afero.Fs)
+		isEcrRepo bool
+ 	}{
+		"ecr-login check global level": {
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll(workspace, 0755)
+				afero.WriteFile(fs, filepath.Join(workspace, "config.json"), []byte(fmt.Sprintf("{\"credsStore\":\"%s\"}", credStoreECRLogin)), 0644)
+			},
+			setupMocks: func(c *gomock.Controller) {
+				mockRunner = NewMockrunner(c)
+			},
+			postExec: func(fs afero.Fs){
+				fs.RemoveAll(workspace)
+			},
+			isEcrRepo: true,
+		},
+		"ecr-login check registry level": {
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll(workspace, 0755)
+				afero.WriteFile(fs, filepath.Join(workspace, "config.json"), []byte(fmt.Sprintf("{\"credhelpers\":{\"%s\": \"%s\"}}", registry, credStoreECRLogin)), 0644)
+			},
+			setupMocks: func(c *gomock.Controller) {
+				mockRunner = NewMockrunner(c)
+			},
+			postExec: func(fs afero.Fs){
+				fs.RemoveAll(workspace)
+			},
+			isEcrRepo: true,
+		},
+		"default login check registry level": {
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll(workspace, 0755)
+				afero.WriteFile(fs, filepath.Join(workspace, "config.json"), []byte(fmt.Sprintf("{\"credhelpers\":{\"%s\": \"%s\"}}", registry, "desktop")), 0644)
+			},
+			setupMocks: func(c *gomock.Controller) {
+				mockRunner = NewMockrunner(c)
+			},
+			postExec: func(fs afero.Fs){
+				fs.RemoveAll(workspace)
+			},
+			isEcrRepo: false,
+		},
+		"no file check": {
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll(workspace, 0755)
+			},
+			setupMocks: func(c *gomock.Controller) {
+				mockRunner = NewMockrunner(c)
+			},
+			postExec: func(fs afero.Fs){
+				fs.RemoveAll(workspace)
+			},
+			isEcrRepo: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// Create an empty FileSystem
+			fs := afero.NewOsFs()
+
+			controller := gomock.NewController(t)
+			tc.setupMocks(controller)
+			tc.mockFileSystem(fs)
+			s := DockerCommand{
+				runner: mockRunner,
+				buf:    tc.inBuffer,
+				homePath: "test/copilot",
+			}
+
+			credStore := s.IsEcrCredentialHelperEnabled(uri)
+			tc.postExec(fs)
+
+			require.Equal(t, tc.isEcrRepo, credStore)
 		})
 	}
 }

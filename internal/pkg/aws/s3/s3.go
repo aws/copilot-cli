@@ -8,6 +8,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"io"
 	"path"
 	"strconv"
@@ -22,6 +23,7 @@ import (
 
 const (
 	artifactDirName = "manual"
+	notFound = "NotFound"
 )
 
 type s3ManagerAPI interface {
@@ -31,6 +33,7 @@ type s3ManagerAPI interface {
 type s3API interface {
 	ListObjectVersions(input *s3.ListObjectVersionsInput) (*s3.ListObjectVersionsOutput, error)
 	DeleteObjects(input *s3.DeleteObjectsInput) (*s3.DeleteObjectsOutput, error)
+	HeadBucket (input *s3.HeadBucketInput) (*s3.HeadBucketOutput, error)
 }
 
 // NamedBinary is a named binary to be uploaded.
@@ -105,6 +108,17 @@ func (s *S3) ZipAndUpload(bucket, key string, files ...NamedBinary) (string, err
 func (s *S3) EmptyBucket(bucket string) error {
 	var listResp *s3.ListObjectVersionsOutput
 	var err error
+
+	// Bucket is exists check to make sure the bucket exists before proceeding in emptying it
+	isExists, err:= s.isBucketExists(bucket)
+	if err!= nil {
+		return fmt.Errorf("unable to determine the existance of bucket %s: %w", bucket, err)
+	}
+
+	if !isExists {
+		return nil
+	}
+
 	listParams := &s3.ListObjectVersionsInput{
 		Bucket: aws.String(bucket),
 	}
@@ -160,4 +174,20 @@ func ParseURL(url string) (bucket string, key string, err error) {
 	}
 	bucket, key = strings.Split(parsedURL[0], ".")[0], parsedURL[1]
 	return
+}
+
+// Check whether the bucket exists before proceeding with empty the bucket
+func (s *S3) isBucketExists(bucket string) (bool, error) {
+	input := &s3.HeadBucketInput{
+		Bucket: aws.String(bucket),
+	}
+	_, err := s.s3Client.HeadBucket(input)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == notFound {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }

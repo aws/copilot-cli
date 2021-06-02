@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
@@ -19,12 +21,14 @@ type DockerCommand struct {
 	runner
 	// Override in unit tests.
 	buf *bytes.Buffer
+	homePath string
 }
 
 // NewDockerCommand returns a DockerCommand.
 func NewDockerCommand() DockerCommand {
 	return DockerCommand{
 		runner: NewCmd(),
+		homePath: userHomeDirectory(),
 	}
 }
 
@@ -38,6 +42,15 @@ type BuildArguments struct {
 	CacheFrom  []string          // Optional. Images to consider as cache sources to pass to `docker build`
 	Args       map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
 }
+
+type dockerConfig struct {
+	CredsStore  string            `json:"credsStore,omitempty"`
+	CredHelpers map[string]string `json:"credHelpers,omitempty"`
+}
+
+const(
+	credStoreECRLogin = "ecr-login" // set on `credStore` attribute in docker configuration file
+)
 
 // Build will run a `docker build` command for the given ecr repo URI and build arguments.
 func (c DockerCommand) Build(in *BuildArguments) error {
@@ -158,4 +171,62 @@ func imageName(uri, tag string) string {
 		return uri // If no tag is specified build with latest.
 	}
 	return fmt.Sprintf("%s:%s", uri, tag)
+}
+
+// IsEcrCredentialHelperEnabled return true if ecr-login is enabled either globally or registry level
+func (c DockerCommand) IsEcrCredentialHelperEnabled(uri string) bool {
+	// Make sure the program is able to obtain the home directory
+	splits := strings.Split(uri, "/")
+	if c.homePath == "" || len(splits) == 0 {
+		return false
+	}
+
+	// Look into the default locations
+	pathsToTry := []string{filepath.Join(".docker", "config.json"), ".dockercfg"}
+	for _, path := range pathsToTry {
+		content, err := ioutil.ReadFile(filepath.Join(c.homePath, path))
+		if err != nil {
+			// if we can't read the file keep going
+			continue
+		}
+
+		config, err := parseCredFromDockerConfig(content)
+		if err != nil {
+			continue
+		}
+
+		if config.CredsStore == credStoreECRLogin || config.CredHelpers[splits[0]] == credStoreECRLogin {
+			return true
+		}
+	}
+
+	return false
+}
+
+func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {
+	/*
+	Sample docker config file
+    {
+        "credsStore" : "ecr-login",
+        "credHelpers": {
+            "dummyaccountId.dkr.ecr.region.amazonaws.com": "ecr-login"
+        }
+    }
+	*/
+	cred := dockerConfig{}
+	err := json.Unmarshal(config, &cred)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cred, nil
+}
+
+func userHomeDirectory() string {
+	home, err := os.UserHomeDir()
+	if err!= nil{
+		return ""
+	}
+
+	return home
 }
