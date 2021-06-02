@@ -94,6 +94,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		CustomDomainLambda:        customDomain,
 		ScriptBucketName:          bucket,
 		ImportVPC:                 e.in.ImportVPCConfig,
+		ImportCertARNs:            e.in.ImportCertARNs,
 		VPCConfig:                 vpcConf,
 		Version:                   e.in.Version,
 	}, template.WithFuncs(map[string]interface{}{

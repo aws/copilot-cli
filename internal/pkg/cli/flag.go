@@ -79,6 +79,7 @@ const (
 	generateCommandFlag = "generate-cmd"
 
 	vpcIDFlag          = "import-vpc-id"
+	certsFlag          = "import-cert-arns"
 	publicSubnetsFlag  = "import-public-subnets"
 	privateSubnetsFlag = "import-private-subnets"
 
@@ -245,6 +246,7 @@ Alternatively, if the service or job is created with Copilot, specify --generate
 Cannot be specified with any other flags.`
 
 	vpcIDFlagDescription          = "Optional. Use an existing VPC ID."
+	certsFlagDescription          = "Optional. Use existing ACM certificates."
 	publicSubnetsFlagDescription  = "Optional. Use existing public subnet IDs."
 	privateSubnetsFlagDescription = "Optional. Use existing private subnet IDs."
 

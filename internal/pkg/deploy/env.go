@@ -13,7 +13,7 @@ const (
 	// LegacyEnvTemplateVersion is the version associated with the environment template before we started versioning.
 	LegacyEnvTemplateVersion = "v0.0.0"
 	// LatestEnvTemplateVersion is the latest version number available for environment templates.
-	LatestEnvTemplateVersion = "v1.4.0"
+	LatestEnvTemplateVersion = "v1.4.1"
 )
 
 // CreateEnvironmentInput holds the fields required to deploy an environment.
@@ -30,6 +30,7 @@ type CreateEnvironmentInput struct {
 	CustomResourcesURLs      map[string]string // Environment custom resource script S3 object URLs.
 	ImportVPCConfig          *config.ImportVPC // Optional configuration if users have an existing VPC.
 	AdjustVPCConfig          *config.AdjustVPC // Optional configuration if users want to override default VPC configuration.
+	ImportCertARNs           []string          // Optional configuration if users want to import certificates.
 
 	CFNServiceRoleARN string // Optional. A service role ARN that CloudFormation should use to make calls to resources in the stack.
 }

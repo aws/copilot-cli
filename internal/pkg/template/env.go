@@ -38,8 +38,9 @@ type EnvOpts struct {
 	CustomDomainLambda        string
 	ScriptBucketName          string
 
-	ImportVPC *config.ImportVPC
-	VPCConfig *config.AdjustVPC
+	ImportCertARNs []string
+	ImportVPC      *config.ImportVPC
+	VPCConfig      *config.AdjustVPC
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.

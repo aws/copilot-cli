@@ -120,8 +120,9 @@ type initEnvVars struct {
 	isProduction  bool   // True means retain resources even after deletion.
 	defaultConfig bool   // True means using default environment configuration.
 
-	importVPC importVPCVars // Existing VPC resources to use instead of creating new ones.
-	adjustVPC adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
+	importCerts []string      // Addtional existing ACM certificates to use.
+	importVPC   importVPCVars // Existing VPC resources to use instead of creating new ones.
+	adjustVPC   adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
 
 	tempCreds tempCredsVars // Temporary credentials to initialize the environment. Mutually exclusive with the profile.
 	region    string        // The region to create the environment in.
@@ -569,6 +570,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application, customResourcesURLs map
 		CustomResourcesURLs:      customResourcesURLs,
 		AdjustVPCConfig:          o.adjustVPCConfig(),
 		ImportVPCConfig:          o.importVPCConfig(),
+		ImportCertARNs:           o.importCerts,
 		Version:                  deploy.LatestEnvTemplateVersion,
 	}
 
@@ -680,10 +682,11 @@ func buildEnvInitCmd() *cobra.Command {
   Creates a prod-iad environment using your "prod-admin" AWS profile.
   /code $ copilot env init --name prod-iad --profile prod-admin --prod
 
-  Creates an environment with imported VPC resources.
+  Creates an environment with imported resources.
   /code $ copilot env init --import-vpc-id vpc-099c32d2b98cdcf47 \
   /code --import-public-subnets subnet-013e8b691862966cf,subnet -014661ebb7ab8681a \
-  /code --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f
+  /code --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f \
+  /code --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
 
   Creates an environment with overridden CIDRs.
   /code $ copilot env init --override-vpc-cidr 10.1.0.0/16 \
@@ -714,6 +717,7 @@ func buildEnvInitCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.isProduction, prodEnvFlag, false, prodEnvFlagDescription)
 
 	cmd.Flags().StringVar(&vars.importVPC.ID, vpcIDFlag, "", vpcIDFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.importCerts, certsFlag, nil, certsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.importVPC.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.importVPC.PrivateSubnetIDs, privateSubnetsFlag, nil, privateSubnetsFlagDescription)
 
@@ -736,6 +740,7 @@ func buildEnvInitCmd() *cobra.Command {
 
 	resourcesImportFlag := pflag.NewFlagSet("Import Existing Resources", pflag.ContinueOnError)
 	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(vpcIDFlag))
+	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(certsFlag))
 	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(publicSubnetsFlag))
 	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(privateSubnetsFlag))
 
