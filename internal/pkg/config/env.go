@@ -28,18 +28,20 @@ type Environment struct {
 
 // CustomizeEnv represents the custom environment config.
 type CustomizeEnv struct {
-	ImportVPC *ImportVPC `json:"importVPC,omitempty"`
-	VPCConfig *AdjustVPC `json:"adjustVPC,omitempty"`
+	ImportVPC      *ImportVPC `json:"importVPC,omitempty"`
+	VPCConfig      *AdjustVPC `json:"adjustVPC,omitempty"`
+	ImportCertARNs []string   `json:"importCertARNs,omitempty"`
 }
 
 // NewCustomizeEnv returns a new CustomizeEnv struct.
-func NewCustomizeEnv(importVPC *ImportVPC, adjustVPC *AdjustVPC) *CustomizeEnv {
-	if importVPC == nil && adjustVPC == nil {
+func NewCustomizeEnv(input CustomizeEnv) *CustomizeEnv {
+	if input.ImportVPC == nil && input.VPCConfig == nil && input.ImportCertARNs == nil {
 		return nil
 	}
 	return &CustomizeEnv{
-		ImportVPC: importVPC,
-		VPCConfig: adjustVPC,
+		ImportVPC:      input.ImportVPC,
+		VPCConfig:      input.VPCConfig,
+		ImportCertARNs: input.ImportCertARNs,
 	}
 }
 

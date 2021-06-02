@@ -267,9 +267,11 @@ func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.E
 	customResourcesURLs map[string]string, fromVersion, toVersion string) error {
 	var importedVPC *config.ImportVPC
 	var adjustedVPC *config.AdjustVPC
+	var importCertARNs []string
 	if conf.CustomConfig != nil {
 		importedVPC = conf.CustomConfig.ImportVPC
 		adjustedVPC = conf.CustomConfig.VPCConfig
+		importCertARNs = conf.CustomConfig.ImportCertARNs
 	}
 
 	if err := upgrader.UpgradeEnvironment(&deploy.CreateEnvironmentInput{
@@ -279,6 +281,7 @@ func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.E
 		CustomResourcesURLs: customResourcesURLs,
 		ImportVPCConfig:     importedVPC,
 		AdjustVPCConfig:     adjustedVPC,
+		ImportCertARNs:      importCertARNs,
 		CFNServiceRoleARN:   conf.ExecutionRoleARN,
 	}); err != nil {
 		return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
@@ -347,6 +350,7 @@ func (o *envUpgradeOpts) upgradeLegacyEnvironmentWithVPCOverrides(upgrader legac
 			Name:              conf.Name,
 			ImportVPCConfig:   conf.CustomConfig.ImportVPC,
 			AdjustVPCConfig:   conf.CustomConfig.VPCConfig,
+			ImportCertARNs:    conf.CustomConfig.ImportCertARNs,
 			CFNServiceRoleARN: conf.ExecutionRoleARN,
 		}, albWorkloads...); err != nil {
 			return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)

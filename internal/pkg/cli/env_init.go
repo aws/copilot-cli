@@ -290,7 +290,11 @@ func (o *initEnvOpts) Execute() error {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
 	}
 	env.Prod = o.isProduction
-	env.CustomConfig = config.NewCustomizeEnv(o.importVPCConfig(), o.adjustVPCConfig())
+	env.CustomConfig = config.NewCustomizeEnv(config.CustomizeEnv{
+		ImportVPC:      o.importVPCConfig(),
+		VPCConfig:      o.adjustVPCConfig(),
+		ImportCertARNs: o.importCerts,
+	})
 
 	// 6. Store the environment in SSM.
 	if err := o.store.CreateEnvironment(env); err != nil {

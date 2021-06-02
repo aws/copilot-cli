@@ -266,6 +266,7 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 							ImportVPC: &config.ImportVPC{
 								ID: "abc",
 							},
+							ImportCertARNs: []string{"mockCertARN"},
 						},
 					}, nil)
 				mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
@@ -285,6 +286,7 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					ImportVPCConfig: &config.ImportVPC{
 						ID: "abc",
 					},
+					ImportCertARNs:      []string{"mockCertARN"},
 					CFNServiceRoleARN:   "execARN",
 					CustomResourcesURLs: map[string]string{"mockCustomResource": "mockURL"},
 				}).Return(nil)
@@ -403,6 +405,7 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 							ImportVPC: &config.ImportVPC{
 								ID: "abc",
 							},
+							ImportCertARNs: []string{"mockCertARN"},
 						},
 					}, nil)
 				mockStore.EXPECT().ListServices("phonetool").Return([]*config.Workload{}, nil)
@@ -425,6 +428,7 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					AppName:           "phonetool",
 					Name:              "test",
 					CFNServiceRoleARN: "execARN",
+					ImportCertARNs:    []string{"mockCertARN"},
 					ImportVPCConfig: &config.ImportVPC{
 						ID: "abc",
 					},

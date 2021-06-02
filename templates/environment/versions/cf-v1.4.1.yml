@@ -185,7 +185,6 @@ Resources:
   ImportCertificate{{inc $ind}}:
     Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
     DependsOn: HTTPSListener
-    Condition: ExportHTTPSListener
     Properties:
       ListenerArn: !Ref HTTPSListener
       Certificates:
