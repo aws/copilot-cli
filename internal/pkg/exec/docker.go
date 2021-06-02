@@ -177,24 +177,26 @@ func imageName(uri, tag string) string {
 func (c DockerCommand) IsEcrCredentialHelperEnabled(uri string) bool {
 	// Make sure the program is able to obtain the home directory
 	splits := strings.Split(uri, "/")
-	if c.homePath != "" && len(splits) > 0 {
-		// Look into the default locations
-		pathsToTry := []string{filepath.Join(".docker", "config.json"), ".dockercfg"}
-		for _, path := range pathsToTry {
-			content, err := ioutil.ReadFile(filepath.Join(c.homePath, path))
-			if err != nil {
-				// if we can't read the file keep going
-				continue
-			}
+	if c.homePath == "" || len(splits) == 0 {
+		return false
+	}
 
-			config, err := parseCredFromDockerConfig(content)
-			if err != nil {
-				continue
-			}
+	// Look into the default locations
+	pathsToTry := []string{filepath.Join(".docker", "config.json"), ".dockercfg"}
+	for _, path := range pathsToTry {
+		content, err := ioutil.ReadFile(filepath.Join(c.homePath, path))
+		if err != nil {
+			// if we can't read the file keep going
+			continue
+		}
 
-			if config.CredsStore == credStoreECRLogin || config.CredHelpers[splits[0]] == credStoreECRLogin {
-				return true
-			}
+		config, err := parseCredFromDockerConfig(content)
+		if err != nil {
+			continue
+		}
+
+		if config.CredsStore == credStoreECRLogin || config.CredHelpers[splits[0]] == credStoreECRLogin {
+			return true
 		}
 	}
 
