@@ -1,6 +1,6 @@
 # Welcome to the AWS Copilot Community ❤️
 
-This is a place to share your [[applications, articles, videos](https://aws.github.io/copilot-cli/community/guides/)] and any other resources related to the AWS Copilot CLI 👩‍✈️.
+This is a place to share your [[applications, articles, videos](../community/guides.en.md)] and any other resources related to the AWS Copilot CLI 👩‍✈️.
 
 You can get involved with the CLI by:
 

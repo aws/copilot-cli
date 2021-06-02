@@ -77,7 +77,7 @@ func TestCloudFormation_CreatePipeline(t *testing.T) {
 		AppName: "kudos",
 		Name:    "cicd",
 		Source: &deploy.BitbucketSource{
-			RepositoryURL: "https://aws@bitbucket.org/aws/somethingCool",
+			RepositoryURL: "https://bitbucket.org/aws/somethingCool",
 			ProviderName:  "Bitbucket",
 			Branch:        "main",
 		},

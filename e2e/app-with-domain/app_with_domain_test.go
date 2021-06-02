@@ -15,7 +15,7 @@ import (
 
 var _ = Describe("App With Domain", func() {
 	const domainName = "copilot-e2e-tests.ecs.aws.dev"
-	const svcName = "nginx"
+	const svcName = "hello"
 	const envName = "test"
 
 	Context("when creating a new app", func() {
@@ -70,10 +70,10 @@ var _ = Describe("App With Domain", func() {
 
 		BeforeAll(func() {
 			_, svcInitErr = cli.SvcInit(&client.SvcInitRequest{
-				Name:    svcName,
-				SvcType: "Load Balanced Web Service",
-				Image:   "nginx",
-				SvcPort: "80",
+				Name:       svcName,
+				SvcType:    "Load Balanced Web Service",
+				Dockerfile: "./hello/Dockerfile",
+				SvcPort:    "80",
 			})
 		})
 
@@ -107,7 +107,7 @@ var _ = Describe("App With Domain", func() {
 			// Validate route has the expected HTTPS endpoint.
 			route := svc.Routes[0]
 			Expect(route.Environment).To(Equal(envName))
-			Expect(route.URL).To(Equal(fmt.Sprintf("https://%s.%s.%s.%s", svcName, envName, appName, domainName)))
+			Expect(route.URL).To(Equal(fmt.Sprintf("https://%s", domainName)))
 
 			// Make sure the response is OK.
 			// Since the www app was added second, it should have app appended to the name.
@@ -118,7 +118,7 @@ var _ = Describe("App With Domain", func() {
 				return resp.StatusCode, fetchErr
 			}, "60s", "1s").Should(Equal(200))
 			Eventually(func() (int, error) {
-				httpRoute := fmt.Sprintf("http://%s.%s.%s.%s", svcName, envName, appName, domainName)
+				httpRoute := fmt.Sprintf("http://%s", domainName)
 				resp, fetchErr = http.Get(httpRoute)
 				return resp.StatusCode, fetchErr
 			}, "60s", "1s").Should(Equal(200))
