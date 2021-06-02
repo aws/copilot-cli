@@ -42,7 +42,9 @@ nav:
       - Scheduled Job: docs/manifest/scheduled-job.en.md
       - Pipeline: docs/manifest/pipeline.en.md
     - Developing:
+      - Domain: docs/developing/domain.en.md
       - Environment Variables: docs/developing/environment-variables.en.md
+      - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
       - Secrets: docs/developing/secrets.en.md
       - Service Discovery: docs/developing/service-discovery.en.md
       - Additional AWS Resources: docs/developing/additional-aws-resources.en.md
@@ -166,8 +168,8 @@ plugins:
     - search
     - redirects:
         redirect_maps:
-            'docs/installing.md': 'docs/getting-started/install.md'
-            'docs/getting-started.md': 'docs/getting-started/first-app-tutorial.md'
+            'docs/installing.md': 'docs/getting-started/install.en.md'
+            'docs/getting-started.md': 'docs/getting-started/first-app-tutorial.en.md'
     - i18n:
         default_language: en
         languages:

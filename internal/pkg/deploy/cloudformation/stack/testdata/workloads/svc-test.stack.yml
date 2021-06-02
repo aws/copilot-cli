@@ -346,16 +346,9 @@ Resources:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
           Subnets:
-            - Fn::Select:
-              - 0
-              - Fn::Split:
-                - ','
-                - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
-            - Fn::Select:
-              - 1
-              - Fn::Split:
-                - ','
-                - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+            Fn::Split:
+              - ','
+              - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
           SecurityGroups:
             - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
       # This may need to be adjusted if the container takes a while to start up
