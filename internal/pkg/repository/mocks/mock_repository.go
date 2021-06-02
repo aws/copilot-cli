@@ -48,6 +48,20 @@ func (mr *MockContainerLoginBuildPusherMockRecorder) Build(args interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockContainerLoginBuildPusher)(nil).Build), args)
 }
 
+// IsEcrCredentialHelperEnabled mocks base method
+func (m *MockContainerLoginBuildPusher) IsEcrCredentialHelperEnabled(uri string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsEcrCredentialHelperEnabled", uri)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsEcrCredentialHelperEnabled indicates an expected call of IsEcrCredentialHelperEnabled
+func (mr *MockContainerLoginBuildPusherMockRecorder) IsEcrCredentialHelperEnabled(uri string) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsEcrCredentialHelperEnabled", reflect.TypeOf((*MockContainerLoginBuildPusher)(nil).IsEcrCredentialHelperEnabled), uri)
+}
+
 // Login mocks base method.
 func (m *MockContainerLoginBuildPusher) Login(uri, username, password string) error {
 	m.ctrl.T.Helper()

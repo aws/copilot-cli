@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"io"
 	"io/ioutil"
 	"strconv"
@@ -216,6 +217,9 @@ func TestS3_EmptyBucket(t *testing.T) {
 		"should delete all objects within the bucket": {
 			inBucket: "mockBucket",
 			mockS3Client: func(m *mocks.Mocks3API) {
+				m.EXPECT().HeadBucket(&s3.HeadBucketInput{
+					Bucket: aws.String("mockBucket"),
+				}).Return(nil, nil)
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
 					Bucket: aws.String("mockBucket"),
 				}).Return(&s3.ListObjectVersionsOutput{
@@ -235,6 +239,9 @@ func TestS3_EmptyBucket(t *testing.T) {
 		"should batch delete all objects within the bucket": {
 			inBucket: "mockBucket",
 			mockS3Client: func(m *mocks.Mocks3API) {
+				m.EXPECT().HeadBucket(&s3.HeadBucketInput{
+					Bucket: aws.String("mockBucket"),
+				}).Return(nil, nil)
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
 					Bucket: aws.String("mockBucket"),
 				}).Return(&s3.ListObjectVersionsOutput{
@@ -266,6 +273,9 @@ func TestS3_EmptyBucket(t *testing.T) {
 		"should delete all objects within the bucket including delete markers": {
 			inBucket: "mockBucket",
 			mockS3Client: func(m *mocks.Mocks3API) {
+				m.EXPECT().HeadBucket(&s3.HeadBucketInput{
+					Bucket: aws.String("mockBucket"),
+				}).Return(nil, nil)
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
 					Bucket: aws.String("mockBucket"),
 				}).Return(&s3.ListObjectVersionsOutput{
@@ -286,6 +296,9 @@ func TestS3_EmptyBucket(t *testing.T) {
 		"should wrap up error if fail to list objects": {
 			inBucket: "mockBucket",
 			mockS3Client: func(m *mocks.Mocks3API) {
+				m.EXPECT().HeadBucket(&s3.HeadBucketInput{
+					Bucket: aws.String("mockBucket"),
+				}).Return(nil, nil)
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
 					Bucket: aws.String("mockBucket"),
 				}).Return(nil, errors.New("some error"))
@@ -296,6 +309,9 @@ func TestS3_EmptyBucket(t *testing.T) {
 		"should not invoke DeleteObjects if bucket is empty": {
 			inBucket: "mockBucket",
 			mockS3Client: func(m *mocks.Mocks3API) {
+				m.EXPECT().HeadBucket(&s3.HeadBucketInput{
+					Bucket: aws.String("mockBucket"),
+				}).Return(nil, nil)
 				m.EXPECT().ListObjectVersions(gomock.Any()).Return(&s3.ListObjectVersionsOutput{
 					IsTruncated: aws.Bool(false),
 				}, nil)
@@ -306,6 +322,9 @@ func TestS3_EmptyBucket(t *testing.T) {
 		"should wrap up error if fail to delete objects": {
 			inBucket: "mockBucket",
 			mockS3Client: func(m *mocks.Mocks3API) {
+				m.EXPECT().HeadBucket(&s3.HeadBucketInput{
+					Bucket: aws.String("mockBucket"),
+				}).Return(nil, nil)
 				m.EXPECT().ListObjectVersions(&s3.ListObjectVersionsInput{
 					Bucket: aws.String("mockBucket"),
 				}).Return(&s3.ListObjectVersionsOutput{
@@ -321,6 +340,27 @@ func TestS3_EmptyBucket(t *testing.T) {
 			},
 
 			wantErr: fmt.Errorf("delete objects from bucket mockBucket: some error"),
+		},
+		"should not proceed with deletion as the bucket doesnt exists":{
+			inBucket: "mockBucket",
+			mockS3Client: func(m *mocks.Mocks3API) {
+				m.EXPECT().HeadBucket(&s3.HeadBucketInput{
+					Bucket: aws.String("mockBucket"),
+				}).Return(nil, awserr.New(notFound, "message", nil))
+			},
+
+			wantErr: nil,
+		},
+		"should throw error while perform bucket exists check":{
+			inBucket: "mockBucket",
+			mockS3Client: func(m *mocks.Mocks3API) {
+				m.EXPECT().HeadBucket(&s3.HeadBucketInput{
+					Bucket: aws.String("mockBucket"),
+				}).Return(nil, awserr.New("Unknown", "message", nil))
+			},
+
+			wantErr: fmt.Errorf("unable to determine the existance of bucket %s: %w", "mockBucket",
+				awserr.New("Unknown", "message", nil)),
 		},
 	}
 

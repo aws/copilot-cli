@@ -322,16 +322,9 @@ Resources:
         Subnets:
           Fn::Join:
             - '","'
-            - - Fn::Select:
-                - 0
-                - Fn::Split:
-                  - ','
-                  - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
-              - Fn::Select:
-                - 1
-                - Fn::Split:
-                  - ','
-                  - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
+            - Fn::Split:
+              - ','
+              - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
         AssignPublicIp: ENABLED # Should be DISABLED if we use private subnets
         SecurityGroups:
           Fn::Join:

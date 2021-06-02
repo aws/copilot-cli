@@ -1,6 +1,6 @@
 # Custom Environment Resources
 
-When creating a new [environment](../../concepts/environments.en.md) with Copilot, you are given the option to import existing VPC resources. (Use [flags with `env init`](../commands/env-init.en.md) or the guided experience, shown below.)
+When creating a new [environment](../concepts/environments.en.md) with Copilot, you are given the option to import existing VPC resources. (Use [flags with `env init`](../commands/env-init.en.md#what-are-the-flags) or the guided experience, shown below.)
 ```bash
 % copilot env init
 What is your environment's name? env-name
@@ -20,4 +20,4 @@ When you select the default configuration, Copilot follows [AWS best practices](
 
 ## Considerations
 * If you are using a private hosted zone, [you must](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/hosted-zone-private-considerations.html#hosted-zone-private-considerations-vpc-settings) set `enableDnsHostname` and `enableDnsSupport` to true.
-* To deploy internet-facing workloads in [private subnets](../include/common-svc-fields.md), your VPC will need a [NAT gateway](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html). 
+* To deploy internet-facing workloads in [private subnets](../include/common-svc-fields.en.md#network-vpc-placement), your VPC will need a [NAT gateway](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html). 
