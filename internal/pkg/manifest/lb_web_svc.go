@@ -153,7 +153,7 @@ func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 
 // ApplyEnv returns the service manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
-func (s LoadBalancedWebService) ApplyEnv(envName string) (*LoadBalancedWebService, error) {
+func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, error) {
 	overrideConfig, ok := s.Environments[envName]
 	if !ok {
 		return &s, nil

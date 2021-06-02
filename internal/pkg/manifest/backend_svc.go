@@ -104,7 +104,7 @@ func (s *BackendService) BuildArgs(wsRoot string) *DockerBuildArgs {
 
 // ApplyEnv returns the service manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
-func (s BackendService) ApplyEnv(envName string) (*BackendService, error) {
+func (s BackendService) ApplyEnv(envName string) (WorkloadManifest, error) {
 	overrideConfig, ok := s.Environments[envName]
 	if !ok {
 		return &s, nil

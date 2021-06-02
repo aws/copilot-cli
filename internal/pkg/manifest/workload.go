@@ -48,6 +48,11 @@ var (
 	errInvalidAutoscaling   = errors.New(`must specify "range" if using autoscaling`)
 )
 
+// WorkloadManifest represents a workload manifest.
+type WorkloadManifest interface {
+	ApplyEnv(envName string) (WorkloadManifest, error)
+}
+
 // WorkloadProps contains properties for creating a new workload manifest.
 type WorkloadProps struct {
 	Name       string
@@ -472,7 +477,7 @@ func (c vpcConfig) isValidPlacement() bool {
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.
 // If an error occurs during deserialization, then returns the error.
 // If the workload type in the manifest is invalid, then returns an ErrInvalidManifestType.
-func UnmarshalWorkload(in []byte) (interface{}, error) {
+func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
 	am := Workload{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
 		return nil, fmt.Errorf("unmarshal to workload manifest: %w", err)
