@@ -15,6 +15,7 @@ type ContainerLoginBuildPusher interface {
 	Build(args *exec.BuildArguments) error
 	Login(uri, username, password string) error
 	Push(uri string, tags ...string) (digest string, err error)
+	IsEcrCredentialHelperEnabled(uri string) bool
 }
 
 // Registry gets information of repositories.
@@ -54,13 +55,16 @@ func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, args *exec.B
 		return "", fmt.Errorf("build Dockerfile at %s: %w", args.Dockerfile, err)
 	}
 
-	username, password, err := r.registry.Auth()
-	if err != nil {
-		return "", fmt.Errorf("get auth: %w", err)
-	}
+	// Perform docker login only if credStore attribute value != ecr-login
+	if !docker.IsEcrCredentialHelperEnabled(args.URI) {
+		username, password, err := r.registry.Auth()
+		if err != nil {
+			return "", fmt.Errorf("get auth: %w", err)
+		}
 
-	if err := docker.Login(args.URI, username, password); err != nil {
-		return "", fmt.Errorf("login to repo %s: %w", r.name, err)
+		if err := docker.Login(args.URI, username, password); err != nil {
+			return "", fmt.Errorf("login to repo %s: %w", r.name, err)
+		}
 	}
 
 	digest, err = docker.Push(args.URI, args.Tags...)

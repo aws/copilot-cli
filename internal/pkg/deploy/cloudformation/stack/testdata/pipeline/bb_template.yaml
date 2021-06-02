@@ -271,7 +271,7 @@ Resources:
               Configuration:
                 ConnectionArn: !Ref SourceConnection
                 FullRepositoryId: huanjani/sample
-                BranchName: master
+                BranchName: main
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1

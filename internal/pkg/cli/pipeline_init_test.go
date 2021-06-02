@@ -245,7 +245,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			expectedRepoURL:          codecommitSSHURL,
 			expectedRepoName:         codecommitAnotherRepoName,
-			expectedRepoBranch:       "master",
+			expectedRepoBranch:       "main",
 			expectedCodeCommitRegion: codecommitRegion,
 			expectedEnvironments:     []string{"test", "prod"},
 			expectedError:            nil,
@@ -1112,7 +1112,7 @@ func TestInitPipelineGHRepoURL_parse(t *testing.T) {
 		expectedDetails ghRepoDetails
 		expectedError   error
 	}{
-		"matches repo name without .git suffix": {
+		"successfully parses name without .git suffix": {
 			inRepoURL: "https://github.com/badgoose/cli",
 
 			expectedDetails: ghRepoDetails{
@@ -1121,7 +1121,7 @@ func TestInitPipelineGHRepoURL_parse(t *testing.T) {
 			},
 			expectedError: nil,
 		},
-		"matches repo name with .git suffix": {
+		"successfully parses repo name with .git suffix": {
 			inRepoURL: "https://github.com/koke/grit.git",
 
 			expectedDetails: ghRepoDetails{
@@ -1159,7 +1159,7 @@ func TestInitPipelineCCRepoURL_parse(t *testing.T) {
 		expectedDetails ccRepoDetails
 		expectedError   error
 	}{
-		"matches with https url": {
+		"successfully parses https url": {
 			inRepoURL: "https://git-codecommit.sa-east-1.amazonaws.com/v1/repos/aws-sample",
 
 			expectedDetails: ccRepoDetails{
@@ -1168,7 +1168,7 @@ func TestInitPipelineCCRepoURL_parse(t *testing.T) {
 			},
 			expectedError: nil,
 		},
-		"matches with ssh url": {
+		"successfully parses ssh url": {
 			inRepoURL: "ssh://git-codecommit.us-east-2.amazonaws.com/v1/repos/aws-sample",
 
 			expectedDetails: ccRepoDetails{
@@ -1177,7 +1177,7 @@ func TestInitPipelineCCRepoURL_parse(t *testing.T) {
 			},
 			expectedError: nil,
 		},
-		"matches with federated (GRC) url": {
+		"successfully parses federated (GRC) url": {
 			inRepoURL: "codecommit::us-gov-west-1://aws-sample",
 
 			expectedDetails: ccRepoDetails{
@@ -1210,8 +1210,17 @@ func TestInitPipelineBBRepoURL_parse(t *testing.T) {
 		expectedDetails bbRepoDetails
 		expectedError   error
 	}{
-		"matches with https url": {
+		"successfully parses https url": {
 			inRepoURL: "https://huanjani@bitbucket.org/huanjani/aws-copilot-sample-service",
+
+			expectedDetails: bbRepoDetails{
+				name:  "aws-copilot-sample-service",
+				owner: "huanjani",
+			},
+			expectedError: nil,
+		},
+		"successfully parses ssh url": {
+			inRepoURL: "ssh://git@bitbucket.org:huanjani/aws-copilot-sample-service",
 
 			expectedDetails: bbRepoDetails{
 				name:  "aws-copilot-sample-service",

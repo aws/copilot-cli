@@ -93,6 +93,21 @@ func (mr *Mocks3APIMockRecorder) DeleteObjects(input interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteObjects", reflect.TypeOf((*Mocks3API)(nil).DeleteObjects), input)
 }
 
+// HeadBucket mocks base method.
+func (m *Mocks3API) HeadBucket(input *s3.HeadBucketInput) (*s3.HeadBucketOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HeadBucket", input)
+	ret0, _ := ret[0].(*s3.HeadBucketOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HeadBucket indicates an expected call of HeadBucket.
+func (mr *Mocks3APIMockRecorder) HeadBucket(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeadBucket", reflect.TypeOf((*Mocks3API)(nil).HeadBucket), input)
+}
+
 // ListObjectVersions mocks base method.
 func (m *Mocks3API) ListObjectVersions(input *s3.ListObjectVersionsInput) (*s3.ListObjectVersionsOutput, error) {
 	m.ctrl.T.Helper()
