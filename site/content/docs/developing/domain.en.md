@@ -23,7 +23,7 @@ http:
 ```
 
 !!!info
-    Currently, you can only use aliases under the domain you specified when creating the application. We'll make this feature more powerful in the future by allowing you to import certificates and use any aliases!
+    If you want to use aliases out of the domain you specified when creating the application. Please [import the certificates](../commands/env-init.en.md#what-are-the-flags) when creating the environment!
 
 ## What happens under the hood?
 Under the hood, Copilot

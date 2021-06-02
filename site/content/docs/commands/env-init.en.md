@@ -24,6 +24,7 @@ Common Flags
       --region string                  Optional. An AWS region where the environment will be created.
 
 Import Existing Resources Flags
+      --import-cert-arns strings         Optional. Use existing ACM certificates.
       --import-private-subnets strings   Optional. Use existing private subnet IDs.
       --import-public-subnets strings    Optional. Use existing public subnet IDs.
       --import-vpc-id string             Optional. Use an existing VPC ID.
@@ -48,7 +49,8 @@ Creates a prod-iad environment using your "prod-admin" AWS profile using existin
 $ copilot env init --name prod-iad --profile prod-admin --prod \
 --import-vpc-id vpc-099c32d2b98cdcf47 \
 --import-public-subnets subnet-013e8b691862966cf,subnet-014661ebb7ab8681a \
---import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f
+--import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f \
+--import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
 ```
 
 ## What does it look like?
