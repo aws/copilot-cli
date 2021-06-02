@@ -122,7 +122,8 @@ func (s BackendService) ApplyEnv(envName string) (*BackendService, error) {
 	// Apply overrides to the original service s.
 	err := mergo.Merge(&s, BackendService{
 		BackendServiceConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(imageTransformer{}))
+
 	if err != nil {
 		return nil, err
 	}

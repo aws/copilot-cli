@@ -8,7 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"strconv"
+
+	"github.com/imdario/mergo"
 
 	"github.com/google/shlex"
 
@@ -64,6 +67,40 @@ type Image struct {
 	Location     *string           `yaml:"location"`        // Use an existing image instead.
 	DockerLabels map[string]string `yaml:"labels,flow"`     // Apply Docker labels to the container at runtime.
 	DependsOn    map[string]string `yaml:"depends_on,flow"` // Add any sidecar dependencies.
+}
+
+type imageTransformer struct{}
+
+// Transformer implements customized merge logic for Image field of manifest.
+// It merges `DockerLabels` and `DependsOn` in the default manager (i.e. with configurations mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+// And then overrides both `Build` and `Location` fields at the same time with the src values, given that they are non-empty themselves.
+func (t imageTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(Image{}) {
+		return nil
+	}
+	return func(dst, src reflect.Value) error {
+		// Perform default merge
+		dstImage := dst.Interface().(Image)
+		srcImage := src.Interface().(Image)
+
+		err := mergo.Merge(&dstImage, srcImage, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+		if err != nil {
+			return err
+		}
+
+		// Perform customized merge
+		dstBuild := dst.Field(0)
+		dstLocation := dst.Field(1)
+
+		srcBuild := src.Field(0)
+		srcLocation := src.Field(1)
+
+		if !srcBuild.IsZero() || !srcLocation.IsZero() {
+			dstBuild.Set(srcBuild)
+			dstLocation.Set(srcLocation)
+		}
+		return nil
+	}
 }
 
 // ImageWithPort represents a container image with an exposed port.

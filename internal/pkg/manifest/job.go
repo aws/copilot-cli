@@ -134,7 +134,8 @@ func (j ScheduledJob) ApplyEnv(envName string) (*ScheduledJob, error) {
 	// Apply overrides to the original job
 	err := mergo.Merge(&j, ScheduledJob{
 		ScheduledJobConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(imageTransformer{}))
+
 	if err != nil {
 		return nil, err
 	}

@@ -171,7 +171,8 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (*LoadBalancedWebServic
 	// Apply overrides to the original service s.
 	err := mergo.Merge(&s, LoadBalancedWebService{
 		LoadBalancedWebServiceConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(imageTransformer{}))
+
 	if err != nil {
 		return nil, err
 	}

@@ -106,7 +106,8 @@ func (s RequestDrivenWebService) ApplyEnv(envName string) (*RequestDrivenWebServ
 	// Apply overrides to the original service configuration.
 	err := mergo.Merge(&s, RequestDrivenWebService{
 		RequestDrivenWebServiceConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(imageTransformer{}))
+
 	if err != nil {
 		return nil, err
 	}
