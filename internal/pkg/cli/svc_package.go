@@ -21,6 +21,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -59,6 +60,7 @@ type packageSvcOpts struct {
 	ws               wsSvcReader
 	store            store
 	appCFN           appResourcesGetter
+	envCFN           envCFDescriber
 	stackWriter      io.Writer
 	paramsWriter     io.Writer
 	addonsWriter     io.Writer
@@ -67,6 +69,13 @@ type packageSvcOpts struct {
 	sel              wsSelector
 	prompt           prompter
 	stackSerializer  func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
+	sessProvider     sessionProvider
+	// Cached data
+	targetEnvironment *config.Environment
+	runtimeConfig     stack.RuntimeConfig
+
+	// overridden in tests
+	configure func(*packageSvcOpts) error
 }
 
 func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
@@ -78,18 +87,12 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
-	p := sessions.NewProvider()
-	sess, err := p.Default()
-	if err != nil {
-		return nil, fmt.Errorf("retrieve default session: %w", err)
-	}
 	prompter := prompt.New()
 	opts := &packageSvcOpts{
 		packageSvcVars:   vars,
 		initAddonsClient: initPackageAddonsClient,
 		ws:               ws,
 		store:            store,
-		appCFN:           cloudformation.New(sess),
 		runner:           exec.NewCmd(),
 		sel:              selector.NewWorkspaceSelect(prompter, store, ws),
 		prompt:           prompter,
@@ -97,10 +100,12 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		paramsWriter:     ioutil.Discard,
 		addonsWriter:     ioutil.Discard,
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
+		sessProvider:     sessions.NewProvider(),
 	}
 
 	opts.stackSerializer = func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
 		var serializer stackSerializer
+		log.Infof("%v\n", rc)
 		switch v := mft.(type) {
 		case *manifest.LoadBalancedWebService:
 			if app.RequiresDNSDelegation() {
@@ -129,6 +134,11 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		}
 		return serializer, nil
 	}
+
+	opts.configure = func(o *packageSvcOpts) error {
+		return o.configureClients()
+	}
+
 	return opts, nil
 }
 
@@ -167,11 +177,18 @@ func (o *packageSvcOpts) Ask() error {
 
 // Execute prints the CloudFormation template of the application for the environment.
 func (o *packageSvcOpts) Execute() error {
-	o.tag = imageTagFromGit(o.runner, o.tag) // Best effort assign git tag.
-	env, err := o.store.GetEnvironment(o.appName, o.envName)
+
+	env, err := targetEnv(o.store, o.appName, o.envName)
 	if err != nil {
 		return err
 	}
+	o.targetEnvironment = env
+
+	if err := o.configure(o); err != nil {
+		return err
+	}
+
+	o.tag = imageTagFromGit(o.runner, o.tag) // Best effort assign git tag.
 
 	if o.outputDir != "" {
 		if err := o.setOutputFileWriters(); err != nil {
@@ -179,14 +196,14 @@ func (o *packageSvcOpts) Execute() error {
 		}
 	}
 
-	appTemplates, err := o.getSvcTemplates(env)
+	svcTemplates, err := o.getSvcTemplates()
 	if err != nil {
 		return err
 	}
-	if _, err = o.stackWriter.Write([]byte(appTemplates.stack)); err != nil {
+	if _, err = o.stackWriter.Write([]byte(svcTemplates.stack)); err != nil {
 		return err
 	}
-	if _, err = o.paramsWriter.Write([]byte(appTemplates.configuration)); err != nil {
+	if _, err = o.paramsWriter.Write([]byte(svcTemplates.configuration)); err != nil {
 		return err
 	}
 
@@ -249,8 +266,24 @@ type svcCfnTemplates struct {
 	configuration string
 }
 
+func (o *packageSvcOpts) configureClients() error {
+	defaultSess, err := o.sessProvider.Default()
+	if err != nil {
+		return fmt.Errorf("create default session: %w", err)
+	}
+	o.appCFN = cloudformation.New(defaultSess)
+
+	envSession, err := o.sessProvider.FromRole(o.targetEnvironment.ManagerRoleARN, o.targetEnvironment.Region)
+	if err != nil {
+		return fmt.Errorf("assuming environment manager role: %w", err)
+	}
+	o.envCFN = cloudformation.New(envSession)
+
+	return nil
+}
+
 // getSvcTemplates returns the CloudFormation stack's template and its parameters for the service.
-func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTemplates, error) {
+func (o *packageSvcOpts) getSvcTemplates() (*svcCfnTemplates, error) {
 	raw, err := o.ws.ReadServiceManifest(o.name)
 	if err != nil {
 		return nil, err
@@ -267,11 +300,18 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 	if err != nil {
 		return nil, err
 	}
-	rc := stack.RuntimeConfig{
-		AdditionalTags: app.Tags,
+	legacySvcDiscovery, err := envUsesLegacySvcDiscovery(o.envCFN, o.appName, o.envName)
+	if err != nil {
+		return nil, err
 	}
+
+	o.runtimeConfig = stack.RuntimeConfig{
+		AdditionalTags:         app.Tags,
+		LegacyServiceDiscovery: legacySvcDiscovery,
+	}
+
 	if imgNeedsBuild {
-		resources, err := o.appCFN.GetAppResourcesByRegion(app, env.Region)
+		resources, err := o.appCFN.GetAppResourcesByRegion(app, o.targetEnvironment.Region)
 		if err != nil {
 			return nil, err
 		}
@@ -279,16 +319,16 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 		if !ok {
 			return nil, &errRepoNotFound{
 				wlName:       o.name,
-				envRegion:    env.Region,
+				envRegion:    o.targetEnvironment.Region,
 				appAccountID: app.AccountID,
 			}
 		}
-		rc.Image = &stack.ECRImage{
+		o.runtimeConfig.Image = &stack.ECRImage{
 			RepoURL:  repoURL,
 			ImageTag: o.tag,
 		}
 	}
-	serializer, err := o.stackSerializer(mft, env, app, rc)
+	serializer, err := o.stackSerializer(mft, o.targetEnvironment, app, o.runtimeConfig)
 	if err != nil {
 		return nil, err
 	}

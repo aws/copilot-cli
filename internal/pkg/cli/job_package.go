@@ -10,9 +10,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -60,11 +58,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
-	p := sessions.NewProvider()
-	sess, err := p.Default()
-	if err != nil {
-		return nil, fmt.Errorf("retrieve default session: %w", err)
-	}
+
 	prompter := prompt.New()
 	opts := &packageJobOpts{
 		packageJobVars: vars,
@@ -98,12 +92,14 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			initAddonsClient: initPackageAddonsClient,
 			ws:               ws,
 			store:            o.store,
-			appCFN:           cloudformation.New(sess),
 			stackWriter:      os.Stdout,
 			paramsWriter:     ioutil.Discard,
 			addonsWriter:     ioutil.Discard,
 			fs:               &afero.Afero{Fs: afero.NewOsFs()},
 			stackSerializer:  o.stackSerializer,
+			configure: func(o *packageSvcOpts) error {
+				return o.configureClients()
+			},
 		}
 	}
 	return opts, nil

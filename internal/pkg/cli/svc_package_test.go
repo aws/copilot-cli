@@ -215,10 +215,11 @@ func TestPackageSvcOpts_Execute(t *testing.T) {
 
 		mockDependencies func(*gomock.Controller, *packageSvcOpts)
 
-		wantedStack  string
-		wantedParams string
-		wantedAddons string
-		wantedErr    error
+		wantedStack         string
+		wantedParams        string
+		wantedAddons        string
+		wantedRuntimeConfig stack.RuntimeConfig
+		wantedErr           error
 	}{
 		"writes service template without addons": {
 			inVars: packageSvcVars{
@@ -271,6 +272,9 @@ count: 1`), nil)
 						},
 					}, nil)
 
+				mockEnvCFN := mocks.NewMockenvCFDescriber(ctrl)
+				mockEnvCFN.EXPECT().EnvironmentUsesLegacySvcDiscovery("ecs-kudos", "test").Return(true, nil)
+
 				mockAddons := mocks.NewMocktemplater(ctrl)
 				mockAddons.EXPECT().Template().
 					Return("", &addon.ErrAddonsDirNotExist{})
@@ -278,6 +282,7 @@ count: 1`), nil)
 				opts.store = mockStore
 				opts.ws = mockWs
 				opts.appCFN = mockCfn
+				opts.envCFN = mockEnvCFN
 				opts.initAddonsClient = func(opts *packageSvcOpts) error {
 					opts.addonsClient = mockAddons
 					return nil
@@ -288,10 +293,21 @@ count: 1`), nil)
 					mockStackSerializer.EXPECT().SerializedParameters().Return("myparams", nil)
 					return mockStackSerializer, nil
 				}
+				opts.configure = func(*packageSvcOpts) error { return nil }
 			},
 
 			wantedStack:  "mystack",
 			wantedParams: "myparams",
+			wantedRuntimeConfig: stack.RuntimeConfig{
+				Image: &stack.ECRImage{
+					RepoURL:  "some url",
+					ImageTag: "1234",
+				},
+				AdditionalTags: map[string]string{
+					"owner": "boss",
+				},
+				LegacyServiceDiscovery: true,
+			},
 		},
 	}
 
@@ -321,6 +337,7 @@ count: 1`), nil)
 			require.Equal(t, tc.wantedStack, stackBuf.String())
 			require.Equal(t, tc.wantedParams, paramsBuf.String())
 			require.Equal(t, tc.wantedAddons, addonsBuf.String())
+			require.Equal(t, tc.wantedRuntimeConfig, opts.runtimeConfig)
 		})
 	}
 }
