@@ -67,6 +67,9 @@ func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
 			Env:  opts.envName,
 			Svc:  opts.name,
 		})
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 	return opts, nil
