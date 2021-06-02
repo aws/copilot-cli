@@ -22,7 +22,7 @@
     "organization": true
   },
   "license": "Apache-2.0",
-  "devDependencies": {
+  "dependencies": {
     "aws-sdk": "^2.817.0",
     "aws-sdk-mock": "^5.1.0",
     "babel-minify": "^0.5.1",
