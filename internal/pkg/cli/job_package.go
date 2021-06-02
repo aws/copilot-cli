@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -100,6 +101,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			configure: func(o *packageSvcOpts) error {
 				return o.configureClients()
 			},
+			sessProvider: sessions.NewProvider(),
 		}
 	}
 	return opts, nil
