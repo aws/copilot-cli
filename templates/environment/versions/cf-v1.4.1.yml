@@ -175,15 +175,22 @@ Resources:
     Properties:
       Certificates:
         - CertificateArn: !Ref HTTPSCert
-{{- range $arn := .ImportCertARNs}}
-        - CertificateArn: {{$arn}}
-{{- end}}
       DefaultActions:
         - TargetGroupArn: !Ref DefaultHTTPTargetGroup
           Type: forward
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 443
       Protocol: HTTPS
+{{- range $ind, $arn := .ImportCertARNs}}
+  ImportCertificate{{inc $ind}}:
+    Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
+    DependsOn: HTTPSListener
+    Condition: ExportHTTPSListener
+    Properties:
+      ListenerArn: !Ref HTTPSListener
+      Certificates:
+        - CertificateArn: {{$arn}}
+{{- end}}
   FileSystem:
     Condition: CreateEFS
     Type: AWS::EFS::FileSystem
