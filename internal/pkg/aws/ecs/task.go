@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/dustin/go-humanize"
 )
 
 const (
@@ -25,9 +24,6 @@ const (
 	privateIPv4AddressKey          = "privateIPv4Address"
 	networkInterfaceAttachmentType = "ElasticNetworkInterface"
 )
-
-// humanizeTime is overridden in tests so that its output is constant as time passes.
-var humanizeTime = humanize.Time
 
 // Image contains very basic info of a container image.
 type Image struct {
