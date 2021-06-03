@@ -27,6 +27,12 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
         dockerfile: ./frontend/Dockerfile
         context: ./frontend
       port: 80
+      healthcheck:
+        command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
+        interval: 10s
+        retries: 2
+        timeout: 5s
+        start_period: 0s
 
     cpu: 256
     memory: 512
@@ -67,5 +73,9 @@ The name of your service.
 The architecture type for your service. A [Load Balanced Web Service](../concepts/services.en.md#load-balanced-web-service) is an internet-facing service that's behind a load balancer, orchestrated by Amazon ECS on AWS Fargate.
 
 {% include 'http-config.en.md' %}
+
 {% include 'image-config.en.md' %}
+
+{% include 'image-healthcheck.en.md' %}
+
 {% include 'common-svc-fields.en.md' %}

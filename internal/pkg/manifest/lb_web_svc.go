@@ -45,7 +45,7 @@ type LoadBalancedWebService struct {
 
 // LoadBalancedWebServiceConfig holds the configuration for a load balanced web service.
 type LoadBalancedWebServiceConfig struct {
-	ImageConfig   ImageWithPort `yaml:"image,flow"`
+	ImageConfig   ImageWithPortAndHealthcheck `yaml:"image,flow"`
 	ImageOverride `yaml:",inline"`
 	RoutingRule   `yaml:"http,flow"`
 	TaskConfig    `yaml:",inline"`
@@ -100,7 +100,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 			Type: aws.String(LoadBalancedWebServiceType),
 		},
 		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-			ImageConfig: ImageWithPort{},
+			ImageConfig: ImageWithPortAndHealthcheck{},
 			RoutingRule: RoutingRule{
 				HealthCheck: HealthCheckArgsOrString{
 					HealthCheckPath: aws.String(DefaultHealthCheckPath),

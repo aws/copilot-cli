@@ -25,6 +25,12 @@ image:
     dockerfile: ./frontend/Dockerfile
     context: ./frontend
   port: 80
+  healthcheck:
+    command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
+    interval: 10s
+    retries: 2
+    timeout: 5s
+    start_period: 0s
 
 cpu: 256
 memory: 512
@@ -65,5 +71,9 @@ Service の名前。
 Service のアーキテクチャタイプ。 [Load Balanced Web Service](../concepts/services.ja.md#load-balanced-web-service) は、ロードバランサー及び AWS Fargate 上の Amazon ECS によって構成される、インターネットに公開するための Service です。
 
 {% include 'http-config.ja.md' %}
+
 {% include 'image-config.ja.md' %}
+
+{% include 'image-healthcheck.ja.md' %}
+
 {% include 'common-svc-fields.ja.md' %}
