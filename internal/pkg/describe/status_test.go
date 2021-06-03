@@ -9,15 +9,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
-
 	"github.com/aws/aws-sdk-go/aws"
 	ecsapi "github.com/aws/aws-sdk-go/service/ecs"
 	elbv2api "github.com/aws/aws-sdk-go/service/elbv2"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
@@ -765,9 +765,9 @@ Task Status
 
 Stopped Tasks
 
-  ID                Image Digest         Last Status         Started At          Stopped At          Stopped Reason
-  --                ------------         -----------         ----------          ----------          --------------
-  01020304          30dkd891,41flf902    DEPROVISIONING      -                   1 year ago          some reason
+  ID                Image Digest         Last Status         Started At          Stopped At           Stopped Reason
+  --                ------------         -----------         ----------          ----------           --------------
+  01020304          30dkd891,41flf902    DEPROVISIONING      -                   2 months from now    some reason
 
 Alarms
 
@@ -1030,6 +1030,187 @@ System Logs
 			print(tc.desc.HumanString())
 			require.Equal(t, tc.human, tc.desc.HumanString())
 			require.Equal(t, tc.json, json)
+		})
+	}
+}
+
+func TestECSTaskStatus_humanString(t *testing.T) {
+	// from the function changes (ex: from "1 month ago" to "2 months ago"). To make our tests stable,
+	oldHumanize := humanizeTime
+	humanizeTime = func(then time.Time) string {
+		now, _ := time.Parse(time.RFC3339, "2020-01-01T00:00:00+00:00")
+		return humanize.RelTime(then, now, "ago", "from now")
+	}
+	defer func() {
+		humanizeTime = oldHumanize
+	}()
+	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
+	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
+	mockImageDigest := "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"
+	testCases := map[string]struct {
+		id               string
+		health           string
+		lastStatus       string
+		imageDigest      string
+		startedAt        time.Time
+		stoppedAt        time.Time
+		capacityProvider string
+
+		wantTaskStatus string
+	}{
+		"all params": {
+			health:           "HEALTHY",
+			id:               "aslhfnqo39j8qomimvoiqm89349",
+			lastStatus:       "RUNNING",
+			startedAt:        startTime,
+			stoppedAt:        stopTime,
+			imageDigest:      mockImageDigest,
+			capacityProvider: "FARGATE",
+
+			wantTaskStatus: "aslhfnqo\t18f7eb6c\tRUNNING\t14 years ago\tFARGATE\tHEALTHY",
+		},
+		"missing params": {
+			health:     "HEALTHY",
+			lastStatus: "RUNNING",
+
+			wantTaskStatus: "-\t-\tRUNNING\t-\t-\tHEALTHY",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			task := ecsTaskStatus{
+				Health: tc.health,
+				ID:     tc.id,
+				Images: []awsecs.Image{
+					{
+						Digest: tc.imageDigest,
+					},
+				},
+				LastStatus:       tc.lastStatus,
+				StartedAt:        tc.startedAt,
+				StoppedAt:        tc.stoppedAt,
+				CapacityProvider: tc.capacityProvider,
+			}
+
+			gotTaskStatus := task.humanString()
+
+			require.Equal(t, tc.wantTaskStatus, gotTaskStatus)
+		})
+
+	}
+}
+
+func TestECSStoppedTaskStatus_humanString(t *testing.T) {
+	// from the function changes (ex: from "1 month ago" to "2 months ago"). To make our tests stable,
+	oldHumanize := humanizeTime
+	humanizeTime = func(then time.Time) string {
+		now, _ := time.Parse(time.RFC3339, "2020-01-01T00:00:00+00:00")
+		return humanize.RelTime(then, now, "ago", "from now")
+	}
+	defer func() {
+		humanizeTime = oldHumanize
+	}()
+	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
+	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
+	mockImageDigest := "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"
+	testCases := map[string]struct {
+		id            string
+		health        string
+		lastStatus    string
+		imageDigest   string
+		startedAt     time.Time
+		stoppedAt     time.Time
+		stoppedReason string
+
+		wantTaskStatus string
+	}{
+		"all params": {
+			health:        "HEALTHY",
+			id:            "aslhfnqo39j8qomimvoiqm89349",
+			lastStatus:    "RUNNING",
+			startedAt:     startTime,
+			stoppedAt:     stopTime,
+			imageDigest:   mockImageDigest,
+			stoppedReason: "Stopped by reasons",
+
+			wantTaskStatus: "aslhfnqo\t18f7eb6c\tRUNNING\t14 years ago\t14 years ago\tStopped by reasons",
+		},
+		"missing params": {
+			lastStatus: "RUNNING",
+
+			wantTaskStatus: "-\t-\tRUNNING\t-\t-\t-",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			task := ecsStoppedTaskStatus{
+				ID: tc.id,
+				Images: []awsecs.Image{
+					{
+						Digest: tc.imageDigest,
+					},
+				},
+				LastStatus:    tc.lastStatus,
+				StartedAt:     tc.startedAt,
+				StoppedAt:     tc.stoppedAt,
+				StoppedReason: tc.stoppedReason,
+			}
+
+			gotTaskStatus := task.humanString()
+
+			require.Equal(t, tc.wantTaskStatus, gotTaskStatus)
+		})
+
+	}
+}
+
+func TestTargetHealth_humanString(t *testing.T) {
+	testCases := map[string]struct {
+		id     string
+		state  string
+		reason string
+
+		wantedOut string
+	}{
+		"healthy": {
+			id:    "target-1",
+			state: elbv2api.TargetHealthStateEnumHealthy,
+
+			wantedOut: `target-1	-	HEALTHY`,
+		},
+		"unhealthy with reason": {
+			id:     "target-1",
+			state:  elbv2api.TargetHealthStateEnumUnhealthy,
+			reason: elbv2api.TargetHealthReasonEnumTargetResponseCodeMismatch,
+
+			wantedOut: `target-1	Target.ResponseCodeMismatch	UNHEALTHY`,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			th := elbv2TargetHealth{
+				Target: &elbv2api.TargetDescription{
+					Id: aws.String(tc.id),
+				},
+				TargetHealth: &elbv2api.TargetHealth{
+					State:  aws.String(tc.state),
+					Reason: aws.String(tc.reason),
+				},
+			}
+
+			got := th.humanString()
+			require.Equal(t, tc.wantedOut, got)
 		})
 	}
 }

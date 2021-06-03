@@ -6,9 +6,6 @@ package elbv2
 
 import (
 	"fmt"
-	"strings"
-
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -54,29 +51,4 @@ func (e *ELBV2) TargetsHealth(targetGroupARN string) ([]*TargetHealth, error) {
 // TargetID returns the target's ID, which is either an instance or an IP address.
 func (t *TargetHealth) TargetID() string {
 	return aws.StringValue(t.Target.Id)
-}
-
-// HumanString returns the stringified TargetHealth struct with human readable format.
-func (t *TargetHealth) HumanString() string {
-	stateReason := "-"
-	if aws.StringValue(t.TargetHealth.Reason) != "" {
-		stateReason = aws.StringValue(t.TargetHealth.Reason)
-	}
-	state := strings.ToUpper(aws.StringValue(t.TargetHealth.State))
-	return fmt.Sprintf("%s\t%s\t%s", aws.StringValue(t.Target.Id), stateReason, targetHealthColor(state))
-}
-
-func targetHealthColor(state string) string {
-	switch state {
-	case "HEALTHY":
-		return color.Green.Sprint(state)
-	case "UNHEALTHY":
-		return color.Red.Sprint(state)
-	case "INITIAL", "UNUSED":
-		return color.Grey.Sprint(state)
-	case "DRAINING", "UNAVAILABLE":
-		return color.DullRed.Sprintf(state)
-	default:
-		return state
-	}
 }

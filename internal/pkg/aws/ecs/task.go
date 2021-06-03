@@ -12,14 +12,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/dustin/go-humanize"
 )
 
 const (
-	shortTaskIDLength      = 8
-	shortImageDigestLength = 8
-	imageDigestPrefix      = "sha256:"
+	shortTaskIDLength = 8
+	imageDigestPrefix = "sha256:"
 
 	lastStatusRunning = "RUNNING"
 	// These field names are not defined as const in sdk.
@@ -46,7 +44,7 @@ type Task ecs.Task
 // becomes "4082490e (sample-fargate:2)"
 func (t Task) String() string {
 	taskID, _ := TaskID(aws.StringValue(t.TaskArn))
-	taskID = ShortTaskID(taskID)
+	taskID = shortTaskID(taskID)
 	taskDefName, _ := taskDefinitionName(aws.StringValue(t.TaskDefinitionArn))
 	return fmt.Sprintf("%s (%s)", taskID, taskDefName)
 }
@@ -155,67 +153,6 @@ type TaskStatus struct {
 	CapacityProvider string    `json:"capacityProvider"`
 }
 
-// StoppedTaskStatus contains the status info of a stopped task.
-type StoppedTaskStatus TaskStatus
-
-// HumanString returns the stringified TaskStatus struct with human readable format.
-// Example output:
-//   6ca7a60d          f884127d            RUNNING             19 hours ago       -              UNKNOWN
-func (t TaskStatus) HumanString() string {
-	return t.humanString()
-}
-
-func (t TaskStatus) humanString() string {
-	digest := humanizeImageDigests(t.Images)
-	imageDigest := "-"
-	if len(digest) != 0 {
-		imageDigest = strings.Join(digest, ",")
-	}
-	startedSince := "-"
-	if !t.StartedAt.IsZero() {
-		startedSince = humanizeTime(t.StartedAt)
-	}
-	shortTaskID := "-"
-	if len(t.ID) >= shortTaskIDLength {
-		shortTaskID = t.ID[:shortTaskIDLength]
-	}
-	cp := "-"
-	if t.CapacityProvider != "" {
-		cp = t.CapacityProvider
-	}
-
-	return fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s", shortTaskID, imageDigest, t.LastStatus, startedSince, cp, taskHealthColor(t.Health))
-}
-
-// HumanString returns the stringified StoppedTaskStatus struct with human readable format.
-// Example output:
-//   6ca7a60d          f884127d            STOPPED             57 minutes ago             51 minutes ago             Stopped by user
-func (t StoppedTaskStatus) HumanString() string {
-	digest := humanizeImageDigests(t.Images)
-	imageDigest := "-"
-	if len(digest) != 0 {
-		imageDigest = strings.Join(digest, ",")
-	}
-	startedSince := "-"
-	if !t.StartedAt.IsZero() {
-		startedSince = humanizeTime(t.StartedAt)
-	}
-	stoppedSince := "-"
-	if !t.StoppedAt.IsZero() {
-		stoppedSince = humanizeTime(t.StoppedAt)
-	}
-	shortID := "-"
-	if t.ID != "" {
-		shortID = ShortTaskID(t.ID)
-	}
-	stoppedReason := "-"
-	if t.StoppedReason != "" {
-		stoppedReason = t.StoppedReason
-	}
-
-	return fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s", shortID, imageDigest, t.LastStatus, startedSince, stoppedSince, stoppedReason)
-}
-
 // TaskDefinition wraps up ECS TaskDefinition struct.
 type TaskDefinition ecs.TaskDefinition
 
@@ -307,8 +244,7 @@ func TaskID(taskARN string) (string, error) {
 	return taskID, nil
 }
 
-// ShortTaskID shortens a task ID to a specified length.
-func ShortTaskID(id string) string {
+func shortTaskID(id string) string {
 	if len(id) >= shortTaskIDLength {
 		return id[:shortTaskIDLength]
 	}
@@ -324,19 +260,6 @@ func FilterRunningTasks(tasks []*Task) []*Task {
 		}
 	}
 	return filtered
-}
-
-func taskHealthColor(status string) string {
-	switch status {
-	case "HEALTHY":
-		return color.Green.Sprint(status)
-	case "UNHEALTHY":
-		return color.Red.Sprint(status)
-	case "UNKNOWN":
-		return color.Yellow.Sprint(status)
-	default:
-		return status
-	}
 }
 
 // imageDigestValue strips the hash function prefix, such as "sha256:", from the digest.
@@ -356,15 +279,4 @@ func taskDefinitionName(taskDefARN string) (string, error) {
 	}
 	resources := strings.Split(parsedARN.Resource, "/")
 	return resources[len(resources)-1], nil
-}
-
-func humanizeImageDigests(images []Image) []string {
-	var digest []string
-	for _, image := range images {
-		if len(image.Digest) < shortImageDigestLength {
-			continue
-		}
-		digest = append(digest, image.Digest[:shortImageDigestLength])
-	}
-	return digest
 }

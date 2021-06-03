@@ -30,6 +30,8 @@ const (
 	maxAlarmStatusColumnWidth   = 30
 	fmtAppRunnerSvcLogGroupName = "/aws/apprunner/%s/%s/service"
 	defaultServiceLogsLimit     = 10
+	shortImageDigestLength      = 8
+	shortTaskIDLength           = 8
 )
 
 type targetHealthGetter interface {
@@ -311,7 +313,7 @@ func (s *ecsServiceStatus) HumanString() string {
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, task := range s.Tasks {
-		fmt.Fprintf(writer, "  %s\n", task.HumanString())
+		fmt.Fprintf(writer, "  %s\n", (ecsTaskStatus)(task).humanString())
 	}
 
 	if len(s.StoppedTasks) > 0 {
@@ -321,7 +323,7 @@ func (s *ecsServiceStatus) HumanString() string {
 		fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 		for _, task := range s.StoppedTasks {
-			fmt.Fprintf(writer, "  %s\n", (awsECS.StoppedTaskStatus)(task).HumanString())
+			fmt.Fprintf(writer, "  %s\n", (ecsStoppedTaskStatus)(task).humanString())
 		}
 	}
 
@@ -377,6 +379,140 @@ func (a *appRunnerServiceStatus) HumanString() string {
 	}
 	writer.Flush()
 	return b.String()
+}
+
+type ecsTaskStatus awsECS.TaskStatus
+
+// Example output:
+//   6ca7a60d          f884127d            RUNNING             19 hours ago       -              UNKNOWN
+func (ts ecsTaskStatus) humanString() string {
+	digest := humanizeImageDigests(ts.Images)
+	imageDigest := "-"
+	if len(digest) != 0 {
+		imageDigest = strings.Join(digest, ",")
+	}
+	startedSince := "-"
+	if !ts.StartedAt.IsZero() {
+		startedSince = humanizeTime(ts.StartedAt)
+	}
+	shortTaskID := "-"
+	if len(ts.ID) >= shortTaskIDLength {
+		shortTaskID = ts.ID[:shortTaskIDLength]
+	}
+	cp := "-"
+	if ts.CapacityProvider != "" {
+		cp = ts.CapacityProvider
+	}
+
+	return fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s", shortTaskID, imageDigest, ts.LastStatus, startedSince, cp, taskHealthColor(ts.Health))
+}
+
+type ecsStoppedTaskStatus awsECS.TaskStatus
+
+// Example output:
+//   6ca7a60d          f884127d            STOPPED             57 minutes ago             51 minutes ago             Stopped by user
+func (ts ecsStoppedTaskStatus) humanString() string {
+	digest := humanizeImageDigests(ts.Images)
+	imageDigest := "-"
+	if len(digest) != 0 {
+		imageDigest = strings.Join(digest, ",")
+	}
+	startedSince := "-"
+	if !ts.StartedAt.IsZero() {
+		startedSince = humanizeTime(ts.StartedAt)
+	}
+	stoppedSince := "-"
+	if !ts.StoppedAt.IsZero() {
+		stoppedSince = humanizeTime(ts.StoppedAt)
+	}
+	shortID := "-"
+	if ts.ID != "" {
+		shortID = shortTaskID(ts.ID)
+	}
+	stoppedReason := "-"
+	if ts.StoppedReason != "" {
+		stoppedReason = ts.StoppedReason
+	}
+
+	return fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s", shortID, imageDigest, ts.LastStatus, startedSince, stoppedSince, stoppedReason)
+}
+
+type elbv2TargetHealth elbv2.TargetHealth
+
+func (th elbv2TargetHealth) humanString() string {
+	stateReason := "-"
+	if aws.StringValue(th.TargetHealth.Reason) != "" {
+		stateReason = aws.StringValue(th.TargetHealth.Reason)
+	}
+	state := strings.ToUpper(aws.StringValue(th.TargetHealth.State))
+	return fmt.Sprintf("%s\t%s\t%s", aws.StringValue(th.Target.Id), stateReason, targetHealthColor(state))
+}
+
+type taskTargetHealth struct {
+	TargetHealthDescription elbv2.TargetHealth `json:"healthDescription"`
+	TaskID                  string             `json:"taskID"`
+}
+
+func (s *taskTargetHealth) humanString() string {
+	taskID := "-"
+	if s.TaskID != "" {
+		taskID = shortTaskID(s.TaskID)
+	}
+	return fmt.Sprintf("%s\t%s", taskID, (elbv2TargetHealth)(s.TargetHealthDescription).humanString())
+}
+
+// targetHealthForTasks finds the target health, if any, for each task.
+func targetHealthForTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsECS.Task) []taskTargetHealth {
+	var out []taskTargetHealth
+
+	// Create a set of target health to be matched against the tasks' private IP addresses.
+	// An IP target's ID is the IP address.
+	targetsHealthSet := make(map[string]*elbv2.TargetHealth)
+	for _, th := range targetsHealth {
+		targetsHealthSet[th.TargetID()] = th
+	}
+
+	// For each task, check if it is a target by matching its private IP address against targetsHealthSet.
+	// If it is a target, we try to add it to the output.
+	for _, task := range tasks {
+		ip, err := task.PrivateIP()
+		if err != nil {
+			continue
+		}
+
+		// Check if the IP is a target
+		th, ok := targetsHealthSet[ip]
+		if !ok {
+			continue
+		}
+
+		if taskID, err := awsECS.TaskID(aws.StringValue(task.TaskArn)); err == nil {
+			out = append(out, taskTargetHealth{
+				TaskID:                  taskID,
+				TargetHealthDescription: *th,
+			})
+		}
+	}
+
+	return out
+}
+
+func humanizeImageDigests(images []awsECS.Image) []string {
+	var digest []string
+	for _, image := range images {
+		if len(image.Digest) < shortImageDigestLength {
+			continue
+		}
+		digest = append(digest, image.Digest[:shortImageDigestLength])
+	}
+	return digest
+}
+
+func shortTaskID(id string) string {
+	if len(id) >= shortTaskIDLength {
+		return id[:shortTaskIDLength]
+	}
+	return id
 }
 
 func printWithMaxWidth(w *tabwriter.Writer, format string, width int, members ...string) {
@@ -440,51 +576,30 @@ func statusColor(status string) string {
 	}
 }
 
-type taskTargetHealth struct {
-	TargetHealthDescription elbv2.TargetHealth `json:"healthDescription"`
-	TaskID                  string             `json:"taskID"`
+func taskHealthColor(status string) string {
+	switch status {
+	case "HEALTHY":
+		return color.Green.Sprint(status)
+	case "UNHEALTHY":
+		return color.Red.Sprint(status)
+	case "UNKNOWN":
+		return color.Yellow.Sprint(status)
+	default:
+		return status
+	}
 }
 
-func (s *taskTargetHealth) humanString() string {
-	taskID := "-"
-	if s.TaskID != "" {
-		taskID = awsECS.ShortTaskID(s.TaskID)
+func targetHealthColor(state string) string {
+	switch state {
+	case "HEALTHY":
+		return color.Green.Sprint(state)
+	case "UNHEALTHY":
+		return color.Red.Sprint(state)
+	case "INITIAL", "UNUSED":
+		return color.Grey.Sprint(state)
+	case "DRAINING", "UNAVAILABLE":
+		return color.DullRed.Sprintf(state)
+	default:
+		return state
 	}
-	return fmt.Sprintf("%s\t%s", taskID, s.TargetHealthDescription.HumanString())
-}
-
-// targetHealthForTasks finds the target health, if any, for each task.
-func targetHealthForTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsECS.Task) []taskTargetHealth {
-	var out []taskTargetHealth
-
-	// Create a set of target health to be matched against the tasks' private IP addresses.
-	// An IP target's ID is the IP address.
-	targetsHealthSet := make(map[string]*elbv2.TargetHealth)
-	for _, th := range targetsHealth {
-		targetsHealthSet[th.TargetID()] = th
-	}
-
-	// For each task, check if it is a target by matching its private IP address against targetsHealthSet.
-	// If it is a target, we try to add it to the output.
-	for _, task := range tasks {
-		ip, err := task.PrivateIP()
-		if err != nil {
-			continue
-		}
-
-		// Check if the IP is a target
-		th, ok := targetsHealthSet[ip]
-		if !ok {
-			continue
-		}
-
-		if taskID, err := awsECS.TaskID(aws.StringValue(task.TaskArn)); err == nil {
-			out = append(out, taskTargetHealth{
-				TaskID:                  taskID,
-				TargetHealthDescription: *th,
-			})
-		}
-	}
-
-	return out
 }
