@@ -16,7 +16,8 @@ import (
 
 // CLI is a wrapper around os.execs.
 type CLI struct {
-	path string
+	path       string
+	workingDir string
 }
 
 // AppInitRequest contains the parameters for calling copilot app init.
@@ -223,6 +224,17 @@ func NewCLI() (*CLI, error) {
 	return &CLI{
 		path: cliPath,
 	}, nil
+}
+
+// NewCLIWithDir returns the Copilot CLI such that the commands are run in the specified
+// working directory.
+func NewCLIWithDir(workingDir string) (*CLI, error) {
+	cli, err := NewCLI()
+	if err != nil {
+		return nil, err
+	}
+	cli.workingDir = workingDir
+	return cli, nil
 }
 
 /*Help runs
@@ -850,6 +862,7 @@ func (cli *CLI) SvcPackage(opts *PackageInput) (string, error) {
 func (cli *CLI) exec(command *exec.Cmd) (string, error) {
 	// Turn off colors
 	command.Env = append(os.Environ(), "COLOR=false")
+	command.Dir = cli.workingDir
 	sess, err := gexec.Start(command, ginkgo.GinkgoWriter, ginkgo.GinkgoWriter)
 	if err != nil {
 		return "", err
