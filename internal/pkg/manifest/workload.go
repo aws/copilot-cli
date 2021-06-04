@@ -552,25 +552,6 @@ func newDefaultContainerHealthCheck() *ContainerHealthCheck {
 	}
 }
 
-// apply overrides the healthcheck's fields if other has them set.
-func (hc *ContainerHealthCheck) apply(other *ContainerHealthCheck) {
-	if other.Command != nil {
-		hc.Command = other.Command
-	}
-	if other.Interval != nil {
-		hc.Interval = other.Interval
-	}
-	if other.Retries != nil {
-		hc.Retries = other.Retries
-	}
-	if other.Timeout != nil {
-		hc.Timeout = other.Timeout
-	}
-	if other.StartPeriod != nil {
-		hc.StartPeriod = other.StartPeriod
-	}
-}
-
 // applyIfNotSet changes the healthcheck's fields only if they were not set and the other healthcheck has them set.
 func (hc *ContainerHealthCheck) applyIfNotSet(other *ContainerHealthCheck) {
 	if hc.Command == nil && other.Command != nil {

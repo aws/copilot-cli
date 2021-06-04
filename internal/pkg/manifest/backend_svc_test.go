@@ -87,11 +87,7 @@ func TestNewBackendSvc(t *testing.T) {
 							Port: aws.Uint16(8080),
 						},
 						HealthCheck: &ContainerHealthCheck{
-							Command:     []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
-							Interval:    durationp(10 * time.Second),
-							Retries:     aws.Int(2),
-							Timeout:     durationp(5 * time.Second),
-							StartPeriod: durationp(0 * time.Second),
+							Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 						},
 					},
 					TaskConfig: TaskConfig{

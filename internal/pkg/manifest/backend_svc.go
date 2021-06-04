@@ -44,18 +44,12 @@ type BackendServiceConfig struct {
 // minimal task sizes, single replica, no healthcheck, and then returns it.
 func NewBackendService(props BackendServiceProps) *BackendService {
 	svc := newDefaultBackendService()
-	var healthCheck *ContainerHealthCheck
-	if props.HealthCheck != nil {
-		// Create the healthcheck field only if the caller specified a healthcheck.
-		healthCheck = newDefaultContainerHealthCheck()
-		healthCheck.apply(props.HealthCheck)
-	}
 	// Apply overrides.
 	svc.Name = aws.String(props.Name)
 	svc.BackendServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.BackendServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.BackendServiceConfig.ImageConfig.Port = uint16P(props.Port)
-	svc.BackendServiceConfig.ImageConfig.HealthCheck = healthCheck
+	svc.BackendServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.parser = template.New()
 	return svc
 }

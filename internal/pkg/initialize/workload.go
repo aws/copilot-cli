@@ -297,9 +297,10 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *ServiceProps)
 			Dockerfile: i.DockerfilePath,
 			Image:      i.Image,
 		},
-		Port:      i.Port,
-		AppDomain: i.appDomain,
-		Path:      "/",
+		Port:        i.Port,
+		HealthCheck: i.HealthCheck,
+		AppDomain:   i.appDomain,
+		Path:        "/",
 	}
 	existingSvcs, err := w.Store.ListServices(i.App)
 	if err != nil {

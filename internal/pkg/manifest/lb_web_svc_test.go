@@ -21,13 +21,16 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 
 		wanted *LoadBalancedWebService
 	}{
-		"translates to default load balanced web service": {
+		"translates to load balanced web service": {
 			props: LoadBalancedWebServiceProps{
 				WorkloadProps: &WorkloadProps{
 					Name:       "frontend",
 					Dockerfile: "./Dockerfile",
 				},
-				Path:      "/",
+				Path: "/",
+				HealthCheck: &ContainerHealthCheck{
+					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
+				},
 				Port:      80,
 				AppDomain: aws.String("example.com"),
 			},
@@ -48,6 +51,9 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 								},
 							},
 							Port: aws.Uint16(80),
+						},
+						HealthCheck: &ContainerHealthCheck{
+							Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 						},
 					},
 					AppDomain: aws.String("example.com"),
