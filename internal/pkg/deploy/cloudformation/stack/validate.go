@@ -125,7 +125,7 @@ func validateSidecarDependsOn(in manifest.SidecarConfig, sidecarName string, sid
 			return errInvalidDependsOnStatus
 		}
 		// essential containers must have 'start' as a status
-		if name == manifestName || sidecars[name].Essential == nil || *sidecars[name].Essential == true {
+		if name == manifestName || sidecars[name].Essential == nil || *sidecars[name].Essential {
 			if status != "start" {
 				return errEssentialContainerStatus
 			}
@@ -218,7 +218,7 @@ func validateImageDependsOn(img manifest.Image, sidecars map[string]*manifest.Si
 		}
 		// essential containers must have 'start' as a status
 		if sidecars != nil {
-			if sidecars[name].Essential == nil || *sidecars[name].Essential == true {
+			if sidecars[name].Essential == nil || *sidecars[name].Essential {
 				if status != "start" {
 					return errEssentialContainerStatus
 				}
