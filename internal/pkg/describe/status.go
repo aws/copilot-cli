@@ -296,58 +296,12 @@ func (a *appRunnerServiceStatus) JSONString() (string, error) {
 // HumanString returns the stringified ecsServiceStatus struct with human readable format.
 func (s *ecsServiceStatus) HumanString() string {
 	var b bytes.Buffer
-	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, statusCellPaddingWidth, paddingChar, noAdditionalFormatting)
+	writer := tabwriter.NewWriter(&b, 13, 4, 2, ' ', tabwriter.Debug)
 
-	fmt.Fprint(writer, color.Bold.Sprint("Service Status\n\n"))
-	writer.Flush()
-	fmt.Fprintf(writer, "  %s %v / %v running tasks (%v pending)\n", statusColor(s.Service.Status),
-		s.Service.RunningCount, s.Service.DesiredCount, s.Service.DesiredCount-s.Service.RunningCount)
-	fmt.Fprint(writer, color.Bold.Sprint("\nLast Deployment\n\n"))
-	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(s.Service.LastDeploymentAt))
-	fmt.Fprintf(writer, "  %s\t%s\n", "Task Definition", s.Service.TaskDefinition)
-
-	fmt.Fprint(writer, color.Bold.Sprint("\nTask Status\n\n"))
-	writer.Flush()
-	headers := []string{"ID", "Image Digest", "Last Status", "Started At", "Capacity Provider", "Health Status"}
-	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
-	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
-	for _, task := range s.Tasks {
-		fmt.Fprintf(writer, "  %s\n", (ecsTaskStatus)(task).humanString())
-	}
-
-	if len(s.StoppedTasks) > 0 {
-		fmt.Fprint(writer, color.Bold.Sprint("\nStopped Tasks\n\n"))
-		writer.Flush()
-		headers = []string{"ID", "Image Digest", "Last Status", "Started At", "Stopped At", "Stopped Reason"}
-		fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
-		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
-		for _, task := range s.StoppedTasks {
-			fmt.Fprintf(writer, "  %s\n", (ecsStoppedTaskStatus)(task).humanString())
-		}
-	}
-
-	if len(s.TasksTargetHealth) > 0 {
-		fmt.Fprint(writer, color.Bold.Sprint("\nHTTP Health\n\n"))
-		writer.Flush()
-		headers = []string{"Task", "Target", "Reason", "Health Status"}
-		fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
-		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
-		for _, targetHealth := range s.TasksTargetHealth {
-			fmt.Fprintf(writer, "  %s\n", targetHealth.humanString())
-		}
-	}
-
-	fmt.Fprint(writer, color.Bold.Sprint("\nAlarms\n\n"))
-	writer.Flush()
-	headers = []string{"Name", "Condition", "Last Updated", "Health"}
-	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
-	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
-	for _, alarm := range s.Alarms {
-		updatedTimeSince := humanizeTime(alarm.UpdatedTimes)
-		printWithMaxWidth(writer, "  %s\t%s\t%s\t%s\n", maxAlarmStatusColumnWidth, alarm.Name, alarm.Condition, updatedTimeSince, alarmHealthColor(alarm.Status))
-		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", "", "", "", "")
-	}
+	s.writeTaskSummary(writer)
+	s.writeStoppedTasks(writer)
+	s.writeRunningTasks(writer)
+	s.writeAlarms(writer)
 	writer.Flush()
 	return b.String()
 }
@@ -381,84 +335,428 @@ func (a *appRunnerServiceStatus) HumanString() string {
 	return b.String()
 }
 
+func (s *ecsServiceStatus) taskDefinitionVersionData() map[int]int {
+	out := make(map[int]int)
+	for _, t := range s.Tasks {
+		version, err := awsECS.TaskDefinitionVersion(t.TaskDefinition)
+		if err != nil {
+			out[-1] += 1
+		} else {
+			out[version] += 1
+		}
+	}
+	return out
+}
+
+func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
+	fmt.Fprint(writer, color.Bold.Sprint("\nTask Summary\n\n"))
+	writer.Flush()
+
+	var (
+		header, bar, stringSummary string
+	)
+
+	header = "Running"
+	bar = summaryBarBinary((int)(s.Service.RunningCount), (int)(s.Service.DesiredCount), color.Green.Sprint("■"), "□")
+	stringSummary = fmt.Sprintf("%d/%d Desired Tasks Running", s.Service.RunningCount, s.Service.DesiredCount)
+	fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+
+	header = "Deployment"
+	desiredTaskDefVersion, err := awsECS.TaskDefinitionVersion(s.Service.TaskDefinition)
+	if err == nil {
+		data := s.taskDefinitionVersionData()
+		bar = summaryBarBinary(data[desiredTaskDefVersion], (int)(s.Service.RunningCount), color.Green.Sprint("■"), "□")
+		stringSummary = fmt.Sprintf("%d/%d running task definition version %d (desired version)",
+			data[desiredTaskDefVersion],
+			s.Service.RunningCount,
+			desiredTaskDefVersion)
+		fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+	}
+
+	if s.shouldShowHTTPHealth() {
+		header = "Healthy"
+		healthyCount := s.healthyHTTPTasksCount()
+		bar = summaryBarBinary(healthyCount, (int)(s.Service.RunningCount), color.Green.Sprint("■"), "□")
+		stringSummary = fmt.Sprintf("%d/%d Passing HTTP Health Checks", healthyCount, s.Service.RunningCount)
+		fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+	}
+
+	if s.shouldShowCapacityProvider() {
+		header = "Capacity Provider"
+		fargate, spot, unset := s.capacityProviderData()
+		bar = summaryBar([]int{fargate, spot, unset}, []string{"f", "s", "d"})
+		stringSummary = ""
+		if fargate != 0 {
+			stringSummary += fmt.Sprintf("%d/%d on Fargate", fargate, s.Service.RunningCount)
+		}
+		if spot != 0 {
+			stringSummary = fmt.Sprintf("%d/%d on Fargate Spot", spot, s.Service.RunningCount)
+		}
+		if unset != 0 {
+			stringSummary += fmt.Sprintf(", %d/%d on default capacity provider", unset, s.Service.RunningCount)
+		}
+		fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+	}
+
+	writer.Flush()
+}
+
+func (s *ecsServiceStatus) writeLastDeployment(writer *tabwriter.Writer) {
+	fmt.Fprint(writer, color.Bold.Sprint("\nLast Deployment\n\n"))
+	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(s.Service.LastDeploymentAt))
+	fmt.Fprintf(writer, "  %s\t%s\n", "Task Definition", s.Service.TaskDefinition)
+	writer.Flush()
+}
+
+func (s *ecsServiceStatus) writeStoppedTasks(writer *tabwriter.Writer) {
+	if len(s.StoppedTasks) <= 0 {
+		return
+	}
+
+	fmt.Fprint(writer, color.Bold.Sprint("\nStopped Tasks\n\n"))
+	writer.Flush()
+
+	headers := []string{"Reason", "Task IDs"}
+	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
+
+	reasonToTasks := make(map[string][]string)
+	for _, task := range s.StoppedTasks {
+		reasonToTasks[task.StoppedReason] = append(reasonToTasks[task.StoppedReason], task.ID)
+	}
+	for reason, ids := range reasonToTasks {
+		var shortIDs []string
+		for _, id := range ids {
+			shortIDs = append(shortIDs, shortTaskID(id))
+		}
+		fmt.Fprintf(writer, "  %s\t%s\n", reason, strings.Join(shortIDs, ","))
+	}
+}
+
+func (s *ecsServiceStatus) writeRunningTasks(writer *tabwriter.Writer) {
+	fmt.Fprint(writer, color.Bold.Sprint("\nTasks\n\n"))
+	writer.Flush()
+
+	shouldShowHTTPHealth := s.shouldShowHTTPHealth()
+	shouldShowCapacityProvider := s.shouldShowCapacityProvider()
+	shouldShowContainerHealth := s.shouldShowContainerHealth()
+
+	taskToHealth := s.summarizeTasksTargetHealth()
+
+	headers := []string{"ID", "Status", "Digest", "Started At"}
+
+	var opts []ecsTaskStatusConfigOpts
+	if shouldShowCapacityProvider {
+		opts = append(opts, withCapProviderShown)
+		headers = append(headers, "CP")
+	}
+
+	if shouldShowContainerHealth {
+		opts = append(opts, withContainerHealthShow)
+		headers = append(headers, "CH")
+	}
+
+	if shouldShowHTTPHealth {
+		headers = append(headers, "HH")
+	}
+
+	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
+	for _, task := range s.Tasks {
+		taskStatus := fmt.Sprintf("%s", (ecsTaskStatus)(task).humanString(opts...))
+		if shouldShowHTTPHealth {
+			var httpHealthState string
+			if states, ok := taskToHealth[task.ID]; !ok || len(states) == 0 {
+				httpHealthState = "-"
+			} else {
+				// sometimes a task can have multiple target health states (although rare)
+				httpHealthState = strings.Join(states, ",")
+			}
+			taskStatus = fmt.Sprintf("%s\t%s", taskStatus, httpHealthState)
+		}
+		fmt.Fprintf(writer, "  %s\n", taskStatus)
+	}
+	writer.Flush()
+}
+
+func (s *ecsServiceStatus) writeAlarms(writer *tabwriter.Writer) {
+	if len(s.Alarms) <= 0 {
+		return
+	}
+
+	fmt.Fprint(writer, color.Bold.Sprint("\nAlarms\n\n"))
+	writer.Flush()
+	headers := []string{"Name", "Condition", "Last Updated", "Health"}
+	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
+	for _, alarm := range s.Alarms {
+		updatedTimeSince := humanizeTime(alarm.UpdatedTimes)
+		printWithMaxWidth(writer, "  %s\t%s\t%s\t%s\n", maxAlarmStatusColumnWidth, alarm.Name, alarm.Condition, updatedTimeSince, alarmHealthColor(alarm.Status))
+		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", "", "", "", "")
+	}
+}
+
+func (s *ecsServiceStatus) shouldShowContainerHealth() bool {
+	for _, t := range s.Tasks {
+		if t.Health != "UNKNOWN" && t.Health != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *ecsServiceStatus) shouldShowCapacityProvider() bool {
+	for _, task := range s.Tasks {
+		if task.CapacityProvider != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *ecsServiceStatus) shouldShowHTTPHealth() bool {
+	return len(s.TasksTargetHealth) != 0
+}
+
+func (s *ecsServiceStatus) containerHealthData() []int {
+	var healthyCount, unhealthyCount, unknownCount int
+	for _, t := range s.Tasks {
+		switch strings.ToUpper(t.Health) {
+		case "HEALTHY":
+			healthyCount += 1
+		case "UNHEALTHY":
+			unhealthyCount += 1
+		case "UNKNOWN":
+			unknownCount += 1
+		}
+	}
+	return []int{healthyCount, unhealthyCount, unknownCount}
+}
+
+func (s *ecsServiceStatus) summarizeTasksTargetHealth() map[string][]string {
+	out := make(map[string][]string)
+	for _, th := range s.TasksTargetHealth {
+		out[th.TaskID] = append(out[th.TaskID], aws.StringValue(th.TargetHealthDescription.TargetHealth.State))
+	}
+	return out
+}
+
+func (s *ecsServiceStatus) healthyHTTPTasksCount() int {
+	var count int
+	tasksHealthStates := s.summarizeTasksTargetHealth()
+	for _, states := range tasksHealthStates {
+		healthy := true
+		for _, state := range states {
+			if state != "healthy" {
+				healthy = false
+			}
+		}
+		if healthy {
+			count += 1
+		}
+	}
+	return count
+}
+
+func (s *ecsServiceStatus) capacityProviderData() (fargate int, spot int, unset int) {
+	for _, t := range s.Tasks {
+		switch strings.ToUpper(t.CapacityProvider) {
+		case "FARGATE":
+			fargate += 1
+		case "FARGATE_SPOT":
+			spot += 1
+		default:
+			unset += 1
+		}
+	}
+	return
+}
+
+type valueWithIndex struct {
+	value int
+	index int
+}
+
+func summaryString(data []int, representations []string) string {
+	var sum int
+	for _, dt := range data {
+		sum += dt
+	}
+
+	var str string
+	for idx, dt := range data {
+		if dt == 0 {
+			continue
+		}
+		str += fmt.Sprintf("%s (%d/%d)\t", representations[idx], dt, sum)
+	}
+
+	str = strings.TrimSuffix(str, "\t")
+	return str
+}
+
+func summaryBar(data []int, representations []string) string {
+	var dataWithIndices []valueWithIndex
+	for idx, dt := range data {
+		dataWithIndices = append(dataWithIndices, valueWithIndex{
+			value: dt,
+			index: idx,
+		})
+	}
+
+	portionsWithIndices := calculatePortions(dataWithIndices)
+	if portionsWithIndices == nil {
+		return "□□□□□□□□□□"
+	}
+
+	sort.SliceStable(portionsWithIndices, func(i, j int) bool {
+		return portionsWithIndices[i].index < portionsWithIndices[j].index
+	})
+
+	var bar string
+	for _, p := range portionsWithIndices {
+		bar += fmt.Sprintf("%s", strings.Repeat(representations[p.index], p.value))
+	}
+	return bar
+}
+
+func summaryBarBinary(filled int, total int, filledRepresentation string, emptyRepresentation string) string {
+	filledCount := calculateBinaryPortion(filled, total, 10)
+	return fmt.Sprintf("%s%s", strings.Repeat(filledRepresentation, filledCount), strings.Repeat(emptyRepresentation, 10-filledCount))
+}
+
+func calculateBinaryPortion(filled int, total int, length int) int {
+	if total == 0 {
+		return 0
+	}
+	filledCount := math.Round((float64)(filled) / (float64)(total) * (float64)(length))
+	return (int)(math.Min(filledCount, (float64)(length)))
+}
+
+func calculatePortions(valuesWithIndices []valueWithIndex) []valueWithIndex {
+	type decWithPortion struct {
+		dec     float64
+		portion valueWithIndex
+	}
+
+	var sum int
+	for _, pwi := range valuesWithIndices {
+		sum += pwi.value
+	}
+	if sum == 0 {
+		return nil
+	}
+
+	var decPartsToPortion []decWithPortion
+	for _, pwi := range valuesWithIndices {
+		// For each value, calculate its portion out of 10, record the decimal part and then take the floor.
+		// The floored result is roughly the value's portion out of 10, and will be calibrated later.
+		outOf10 := (float64)(pwi.value) / (float64)(sum) * 10
+		_, decPart := math.Modf(outOf10)
+
+		decPartsToPortion = append(decPartsToPortion, decWithPortion{
+			dec: decPart,
+			portion: valueWithIndex{
+				value: (int)(math.Floor(outOf10)),
+				index: pwi.index,
+			},
+		})
+	}
+
+	// Calculate the sum of the floored portion and see how far we are from 10.
+	var floorSum int
+	for _, floorPortion := range decPartsToPortion {
+		floorSum += floorPortion.portion.value
+	}
+	extra := 10 - floorSum
+
+	// Sort by decimal places from larger to smaller.
+	sort.SliceStable(decPartsToPortion, func(i, j int) bool {
+		return decPartsToPortion[i].dec > decPartsToPortion[j].dec
+	})
+
+	// Distribute extra values first to portions with larger decimal places.
+	var out []valueWithIndex
+	for _, d := range decPartsToPortion {
+		if extra > 0 {
+			d.portion.value += 1
+			extra -= 1
+		}
+		out = append(out, d.portion)
+	}
+
+	return out
+}
+
 type ecsTaskStatus awsECS.TaskStatus
+
+type ecsTaskStatusConfig struct {
+	shouldShowCapProvider     bool
+	shouldShowContainerHealth bool
+}
+
+type ecsTaskStatusConfigOpts func(config *ecsTaskStatusConfig)
+
+func withCapProviderShown(config *ecsTaskStatusConfig) {
+	config.shouldShowCapProvider = true
+}
+
+func withContainerHealthShow(config *ecsTaskStatusConfig) {
+	config.shouldShowContainerHealth = true
+}
 
 // Example output:
 //   6ca7a60d          f884127d            RUNNING             19 hours ago       -              UNKNOWN
-func (ts ecsTaskStatus) humanString() string {
-	digest := humanizeImageDigests(ts.Images)
-	imageDigest := "-"
-	if len(digest) != 0 {
-		imageDigest = strings.Join(digest, ",")
+func (ts ecsTaskStatus) humanString(opts ...ecsTaskStatusConfigOpts) string {
+	config := &ecsTaskStatusConfig{}
+	for _, opt := range opts {
+		opt(config)
 	}
-	startedSince := "-"
-	if !ts.StartedAt.IsZero() {
-		startedSince = humanizeTime(ts.StartedAt)
-	}
+
+	var statusString string
+
 	shortTaskID := "-"
 	if len(ts.ID) >= shortTaskIDLength {
 		shortTaskID = ts.ID[:shortTaskIDLength]
 	}
-	cp := "-"
-	if ts.CapacityProvider != "" {
-		cp = ts.CapacityProvider
-	}
+	statusString += fmt.Sprintf("%s", shortTaskID)
+	statusString += fmt.Sprintf("\t%s", ts.LastStatus)
 
-	return fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s", shortTaskID, imageDigest, ts.LastStatus, startedSince, cp, taskHealthColor(ts.Health))
-}
-
-type ecsStoppedTaskStatus awsECS.TaskStatus
-
-// Example output:
-//   6ca7a60d          f884127d            STOPPED             57 minutes ago             51 minutes ago             Stopped by user
-func (ts ecsStoppedTaskStatus) humanString() string {
 	digest := humanizeImageDigests(ts.Images)
 	imageDigest := "-"
 	if len(digest) != 0 {
 		imageDigest = strings.Join(digest, ",")
 	}
+	statusString += fmt.Sprintf("\t%s", imageDigest)
+
 	startedSince := "-"
 	if !ts.StartedAt.IsZero() {
 		startedSince = humanizeTime(ts.StartedAt)
 	}
-	stoppedSince := "-"
-	if !ts.StoppedAt.IsZero() {
-		stoppedSince = humanizeTime(ts.StoppedAt)
-	}
-	shortID := "-"
-	if ts.ID != "" {
-		shortID = shortTaskID(ts.ID)
-	}
-	stoppedReason := "-"
-	if ts.StoppedReason != "" {
-		stoppedReason = ts.StoppedReason
+	statusString += fmt.Sprintf("\t%s", startedSince)
+
+	if config.shouldShowCapProvider {
+		cp := "-"
+		if ts.CapacityProvider != "" {
+			cp = ts.CapacityProvider
+		}
+		statusString += fmt.Sprintf("\t%s", cp)
 	}
 
-	return fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s", shortID, imageDigest, ts.LastStatus, startedSince, stoppedSince, stoppedReason)
-}
-
-type elbv2TargetHealth elbv2.TargetHealth
-
-func (th elbv2TargetHealth) humanString() string {
-	stateReason := "-"
-	if aws.StringValue(th.TargetHealth.Reason) != "" {
-		stateReason = aws.StringValue(th.TargetHealth.Reason)
+	if config.shouldShowContainerHealth {
+		ch := "-"
+		if ts.Health != "" {
+			ch = ts.Health
+		}
+		statusString += fmt.Sprintf("\t%s", ch)
 	}
-	state := strings.ToUpper(aws.StringValue(th.TargetHealth.State))
-	return fmt.Sprintf("%s\t%s\t%s", aws.StringValue(th.Target.Id), stateReason, targetHealthColor(state))
+	return statusString
 }
 
 type taskTargetHealth struct {
 	TargetHealthDescription elbv2.TargetHealth `json:"healthDescription"`
 	TaskID                  string             `json:"taskID"`
-}
-
-func (s *taskTargetHealth) humanString() string {
-	taskID := "-"
-	if s.TaskID != "" {
-		taskID = shortTaskID(s.TaskID)
-	}
-	return fmt.Sprintf("%s\t%s", taskID, (elbv2TargetHealth)(s.TargetHealthDescription).humanString())
 }
 
 // targetHealthForTasks finds the target health, if any, for each task.
@@ -590,16 +888,17 @@ func taskHealthColor(status string) string {
 }
 
 func targetHealthColor(state string) string {
-	switch state {
+	capitalized := strings.ToUpper(state)
+	switch capitalized {
 	case "HEALTHY":
-		return color.Green.Sprint(state)
+		return color.Green.Sprint(capitalized)
 	case "UNHEALTHY":
-		return color.Red.Sprint(state)
+		return color.Red.Sprint(capitalized)
 	case "INITIAL", "UNUSED":
-		return color.Grey.Sprint(state)
+		return color.Grey.Sprint(capitalized)
 	case "DRAINING", "UNAVAILABLE":
-		return color.DullRed.Sprintf(state)
+		return color.DullRed.Sprintf(capitalized)
 	default:
-		return state
+		return capitalized
 	}
 }

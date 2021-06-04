@@ -1105,112 +1105,252 @@ func TestECSTaskStatus_humanString(t *testing.T) {
 	}
 }
 
-func TestECSStoppedTaskStatus_humanString(t *testing.T) {
-	// from the function changes (ex: from "1 month ago" to "2 months ago"). To make our tests stable,
-	oldHumanize := humanizeTime
-	humanizeTime = func(then time.Time) string {
-		now, _ := time.Parse(time.RFC3339, "2020-01-01T00:00:00+00:00")
-		return humanize.RelTime(then, now, "ago", "from now")
-	}
-	defer func() {
-		humanizeTime = oldHumanize
-	}()
-	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
-	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
-	mockImageDigest := "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"
-	testCases := map[string]struct {
-		id            string
-		health        string
-		lastStatus    string
-		imageDigest   string
-		startedAt     time.Time
-		stoppedAt     time.Time
-		stoppedReason string
+//func TestECSStoppedTaskStatus_humanString(t *testing.T) {
+//	// from the function changes (ex: from "1 month ago" to "2 months ago"). To make our tests stable,
+//	oldHumanize := humanizeTime
+//	humanizeTime = func(then time.Time) string {
+//		now, _ := time.Parse(time.RFC3339, "2020-01-01T00:00:00+00:00")
+//		return humanize.RelTime(then, now, "ago", "from now")
+//	}
+//	defer func() {
+//		humanizeTime = oldHumanize
+//	}()
+//	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
+//	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
+//	mockImageDigest := "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"
+//	testCases := map[string]struct {
+//		id            string
+//		health        string
+//		lastStatus    string
+//		imageDigest   string
+//		startedAt     time.Time
+//		stoppedAt     time.Time
+//		stoppedReason string
+//
+//		wantTaskStatus string
+//	}{
+//		"all params": {
+//			health:        "HEALTHY",
+//			id:            "aslhfnqo39j8qomimvoiqm89349",
+//			lastStatus:    "RUNNING",
+//			startedAt:     startTime,
+//			stoppedAt:     stopTime,
+//			imageDigest:   mockImageDigest,
+//			stoppedReason: "Stopped by reasons",
+//
+//			wantTaskStatus: "aslhfnqo\t18f7eb6c\tRUNNING\t14 years ago\t14 years ago\tStopped by reasons",
+//		},
+//		"missing params": {
+//			lastStatus: "RUNNING",
+//
+//			wantTaskStatus: "-\t-\tRUNNING\t-\t-\t-",
+//		},
+//	}
+//
+//	for name, tc := range testCases {
+//		t.Run(name, func(t *testing.T) {
+//			// GIVEN
+//			ctrl := gomock.NewController(t)
+//			defer ctrl.Finish()
+//
+//			task := ecsStoppedTaskStatus{
+//				ID: tc.id,
+//				Images: []awsecs.Image{
+//					{
+//						Digest: tc.imageDigest,
+//					},
+//				},
+//				LastStatus:    tc.lastStatus,
+//				StartedAt:     tc.startedAt,
+//				StoppedAt:     tc.stoppedAt,
+//				StoppedReason: tc.stoppedReason,
+//			}
+//
+//			gotTaskStatus := task.humanString()
+//
+//			require.Equal(t, tc.wantTaskStatus, gotTaskStatus)
+//		})
+//
+//	}
+//}
 
-		wantTaskStatus string
-	}{
-		"all params": {
-			health:        "HEALTHY",
-			id:            "aslhfnqo39j8qomimvoiqm89349",
-			lastStatus:    "RUNNING",
-			startedAt:     startTime,
-			stoppedAt:     stopTime,
-			imageDigest:   mockImageDigest,
-			stoppedReason: "Stopped by reasons",
+//func TestTargetHealth_humanString(t *testing.T) {
+//	testCases := map[string]struct {
+//		id     string
+//		state  string
+//		reason string
+//
+//		wantedOut string
+//	}{
+//		"healthy": {
+//			id:    "target-1",
+//			state: elbv2api.TargetHealthStateEnumHealthy,
+//
+//			wantedOut: `target-1	-	HEALTHY`,
+//		},
+//		"unhealthy with reason": {
+//			id:     "target-1",
+//			state:  elbv2api.TargetHealthStateEnumUnhealthy,
+//			reason: elbv2api.TargetHealthReasonEnumTargetResponseCodeMismatch,
+//
+//			wantedOut: `target-1	Target.ResponseCodeMismatch	UNHEALTHY`,
+//		},
+//	}
+//
+//	for name, tc := range testCases {
+//		t.Run(name, func(t *testing.T) {
+//			th := elbv2TargetHealth{
+//				Target: &elbv2api.TargetDescription{
+//					Id: aws.String(tc.id),
+//				},
+//				TargetHealth: &elbv2api.TargetHealth{
+//					State:  aws.String(tc.state),
+//					Reason: aws.String(tc.reason),
+//				},
+//			}
+//
+//			got := th.humanString()
+//			require.Equal(t, tc.wantedOut, got)
+//		})
+//	}
+//}
 
-			wantTaskStatus: "aslhfnqo\t18f7eb6c\tRUNNING\t14 years ago\t14 years ago\tStopped by reasons",
-		},
-		"missing params": {
-			lastStatus: "RUNNING",
+func Test_Temporary(t *testing.T) {
+	t.Run("temporary", func(t *testing.T) {
+		stoppedTime, _ := time.Parse(time.RFC3339, "2020-03-13T20:00:30+00:00")
 
-			wantTaskStatus: "-\t-\tRUNNING\t-\t-\t-",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			task := ecsStoppedTaskStatus{
-				ID: tc.id,
-				Images: []awsecs.Image{
-					{
-						Digest: tc.imageDigest,
+		desc := &ecsServiceStatus{
+			Service: awsecs.ServiceStatus{
+				RunningCount:   2,
+				DesiredCount:   4,
+				TaskDefinition: "arn:aws:ecs:us-east-1:111122222333:task-definition/some-task-def:6",
+			},
+			Tasks: []awsecs.TaskStatus{
+				{
+					//Health:     "HEALTHY",
+					LastStatus: "RUNNING",
+					ID:         "a-task-with-private-ip-being-target",
+					Images: []awsecs.Image{
+						{
+							Digest: "69671a968e8ec3648e2697417750e",
+							ID:     "mockImageID1",
+						},
+						{
+							ID:     "mockImageID2",
+							Digest: "ca27a44e25ce17fea7b07940ad793",
+						},
 					},
+					StoppedReason:  "some reason",
+					TaskDefinition: "arn:aws:ecs:us-east-1:111122222333:task-definition/some-task-def:6",
 				},
-				LastStatus:    tc.lastStatus,
-				StartedAt:     tc.startedAt,
-				StoppedAt:     tc.stoppedAt,
-				StoppedReason: tc.stoppedReason,
-			}
-
-			gotTaskStatus := task.humanString()
-
-			require.Equal(t, tc.wantTaskStatus, gotTaskStatus)
-		})
-
-	}
-}
-
-func TestTargetHealth_humanString(t *testing.T) {
-	testCases := map[string]struct {
-		id     string
-		state  string
-		reason string
-
-		wantedOut string
-	}{
-		"healthy": {
-			id:    "target-1",
-			state: elbv2api.TargetHealthStateEnumHealthy,
-
-			wantedOut: `target-1	-	HEALTHY`,
-		},
-		"unhealthy with reason": {
-			id:     "target-1",
-			state:  elbv2api.TargetHealthStateEnumUnhealthy,
-			reason: elbv2api.TargetHealthReasonEnumTargetResponseCodeMismatch,
-
-			wantedOut: `target-1	Target.ResponseCodeMismatch	UNHEALTHY`,
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			th := elbv2TargetHealth{
-				Target: &elbv2api.TargetDescription{
-					Id: aws.String(tc.id),
+				{
+					//Health:     "HEALTHY",
+					LastStatus: "RUNNING",
+					ID:         "another-task-with-private-ip-being-target",
+					Images: []awsecs.Image{
+						{
+							Digest: "69671a968e8ec3648e2697417750e",
+							ID:     "mockImageID1",
+						},
+						{
+							ID:     "mockImageID2",
+							Digest: "ca27a44e25ce17fea7b07940ad793",
+						},
+					},
+					StoppedReason:    "some reason",
+					CapacityProvider: "FARGATE_SPOT",
+					TaskDefinition:   "arn:aws:ecs:us-east-1:111122222333:task-definition/some-task-def:1",
 				},
-				TargetHealth: &elbv2api.TargetHealth{
-					State:  aws.String(tc.state),
-					Reason: aws.String(tc.reason),
+			},
+			StoppedTasks: []awsecs.TaskStatus{
+				{
+					LastStatus: "DEPROVISIONING",
+					ID:         "0102030490123123123",
+					StoppedAt:  stoppedTime,
+					Images: []awsecs.Image{
+						{
+							Digest: "30dkd891jdk9s8d350e932k390093",
+							ID:     "mockImageID1",
+						},
+						{
+							ID:     "mockImageID2",
+							Digest: "41flf902kfl0d9f461r043l411104",
+						},
+					},
+					StoppedReason: "some reason",
 				},
-			}
+				{
+					LastStatus: "DEPROVISIONING",
+					ID:         "1234567899",
+					StoppedAt:  stoppedTime,
+					Images: []awsecs.Image{
+						{
+							Digest: "30dkd891jdk9s8d350e932k390093",
+							ID:     "mockImageID1",
+						},
+						{
+							ID:     "mockImageID2",
+							Digest: "41flf902kfl0d9f461r043l411104",
+						},
+					},
+					StoppedReason: "some reason",
+				},
+				{
+					LastStatus: "DEPROVISIONING",
+					ID:         "1111111111",
+					StoppedAt:  stoppedTime,
+					Images: []awsecs.Image{
+						{
+							Digest: "30dkd891jdk9s8d350e932k390093",
+							ID:     "mockImageID1",
+						},
+						{
+							ID:     "mockImageID2",
+							Digest: "41flf902kfl0d9f461r043l411104",
+						},
+					},
+					StoppedReason: "some other reason",
+				},
+			},
+			TasksTargetHealth: []taskTargetHealth{
+				//{
+				//	TargetHealthDescription: elbv2.TargetHealth{
+				//		Target: &elbv2api.TargetDescription{
+				//			Id: aws.String("5.6.7.8"),
+				//		},
+				//		TargetHealth: &elbv2api.TargetHealth{
+				//			State:  aws.String("unhealthy"),
+				//			Reason: aws.String("some reason"),
+				//		},
+				//	},
+				//	TaskID: "a-task-with-private-ip-being-target",
+				//},
+				//{
+				//	TargetHealthDescription: elbv2.TargetHealth{
+				//		Target: &elbv2api.TargetDescription{
+				//			Id: aws.String("1.1.1.1"),
+				//		},
+				//		TargetHealth: &elbv2api.TargetHealth{
+				//			State: aws.String("healthy"),
+				//		},
+				//	},
+				//	TaskID: "another-task-with-private-ip-being-target",
+				//},
+				//{
+				//	TargetHealthDescription: elbv2.TargetHealth{
+				//		Target: &elbv2api.TargetDescription{
+				//			Id: aws.String("1.1.1.1"),
+				//		},
+				//		TargetHealth: &elbv2api.TargetHealth{
+				//			State: aws.String("unhealthy"),
+				//		},
+				//	},
+				//	TaskID: "another-task-with-private-ip-being-target",
+				//},
+			},
+		}
 
-			got := th.humanString()
-			require.Equal(t, tc.wantedOut, got)
-		})
-	}
+		human := desc.HumanString()
+		fmt.Print(human)
+	})
 }

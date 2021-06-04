@@ -693,3 +693,37 @@ func TestFilterRunningTasks(t *testing.T) {
 
 	}
 }
+
+func Test_TaskDefinitionVersion(t *testing.T) {
+	testCases := map[string]struct {
+		inARN string
+
+		wanted      int
+		wantedError error
+	}{
+		"success": {
+			inARN:  "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
+			wanted: 6,
+		},
+		"unable to parse": {
+			inARN:       "random not ARN",
+			wantedError: errors.New("parse ARN random not ARN: arn: invalid prefix"),
+		},
+		"unable to convert version from string to int": {
+			inARN:       "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:six",
+			wantedError: errors.New("convert version six from string to int: strconv.Atoi: parsing \"six\": invalid syntax"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := TaskDefinitionVersion(tc.inARN)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, got, tc.wanted)
+			}
+		})
+	}
+}

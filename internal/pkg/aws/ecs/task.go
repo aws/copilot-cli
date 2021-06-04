@@ -6,6 +6,7 @@ package ecs
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -79,6 +80,7 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 		StoppedAt:        stoppedAt,
 		StoppedReason:    stoppedReason,
 		CapacityProvider: aws.StringValue(t.CapacityProviderName),
+		TaskDefinition:   aws.StringValue(t.TaskDefinitionArn),
 	}, nil
 }
 
@@ -147,6 +149,7 @@ type TaskStatus struct {
 	StoppedAt        time.Time `json:"stoppedAt"`
 	StoppedReason    string    `json:"stoppedReason"`
 	CapacityProvider string    `json:"capacityProvider"`
+	TaskDefinition   string    `json:"taskDefinition"`
 }
 
 // TaskDefinition wraps up ECS TaskDefinition struct.
@@ -238,6 +241,23 @@ func TaskID(taskARN string) (string, error) {
 	resources := strings.Split(parsedARN.Resource, "/")
 	taskID := resources[len(resources)-1]
 	return taskID, nil
+}
+
+// TaskDefinitionVersion takes a task definition ARN and returns its version.
+// For example, given "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6", it returns 6.
+func TaskDefinitionVersion(taskDefARN string) (int, error) {
+	parsedARN, err := arn.Parse(taskDefARN)
+	if err != nil {
+		return 0, fmt.Errorf("parse ARN %s: %w", taskDefARN, err)
+	}
+
+	resource := parsedARN.Resource
+	parts := strings.Split(resource, ":")
+	version, err := strconv.Atoi(parts[len(parts)-1])
+	if err != nil {
+		return 0, fmt.Errorf("convert version %s from string to int: %w", parts[len(parts)-1], err)
+	}
+	return version, nil
 }
 
 func shortTaskID(id string) string {
