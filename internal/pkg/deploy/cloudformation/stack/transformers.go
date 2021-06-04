@@ -51,9 +51,12 @@ var (
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
-func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOpts, error) {
+func convertSidecar(s map[string]*manifest.SidecarConfig, i manifest.Image, m string) ([]*template.SidecarOpts, error) {
 	if s == nil {
 		return nil, nil
+	}
+	if err := validateNoCircularDependencies(s, i, m); err != nil {
+		return nil, err
 	}
 	var sidecars []*template.SidecarOpts
 	for name, config := range s {
@@ -62,6 +65,9 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 			return nil, err
 		}
 		if err := validateSidecarMountPoints(config.MountPoints); err != nil {
+			return nil, err
+		}
+		if err := validateSidecarDependsOn(*config, name, s, m); err != nil {
 			return nil, err
 		}
 		mp := convertSidecarMountPoints(config.MountPoints)
@@ -77,9 +83,21 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 			Variables:    config.Variables,
 			MountPoints:  mp,
 			DockerLabels: config.DockerLabels,
+			DependsOn:    config.DependsOn,
 		})
 	}
 	return sidecars, nil
+}
+
+// convertDependsOn converts an Image DependsOn field to a template DependsOn version
+func convertDependsOn(i *manifest.Image, s map[string]*manifest.SidecarConfig, m string) (map[string]string, error) {
+	if i == nil || i.DependsOn == nil {
+		return nil, nil
+	}
+	if err := validateImageDependsOn(*i, s, m); err != nil {
+		return nil, err
+	}
+	return i.DependsOn, nil
 }
 
 // Valid sidecar portMapping example: 2000/udp, or 2000 (default to be tcp).

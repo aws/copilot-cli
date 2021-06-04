@@ -28,6 +28,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/xlab/treeprint v1.1.0
+	github.com/yourbasic/graph v0.0.0-20170921192928-40eb135c0b26
 	golang.org/x/mod v0.4.1
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	gopkg.in/ini.v1 v1.62.0

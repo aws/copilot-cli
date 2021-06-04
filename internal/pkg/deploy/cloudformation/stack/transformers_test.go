@@ -16,12 +16,15 @@ import (
 
 func Test_convertSidecar(t *testing.T) {
 	mockImage := aws.String("mockImage")
+	mockManifestName := "frontend"
 	mockMap := map[string]string{"foo": "bar"}
 	mockCredsParam := aws.String("mockCredsParam")
 	testCases := map[string]struct {
 		inPort      string
 		inEssential bool
 		inLabels    map[string]string
+		inDependsOn map[string]string
+		inImg       manifest.Image
 
 		wanted    *template.SidecarOpts
 		wantedErr error
@@ -60,6 +63,84 @@ func Test_convertSidecar(t *testing.T) {
 				Essential:  aws.Bool(true),
 			},
 		},
+		"invalid container dependency due to circularly depending on itself": {
+			inPort:      "2000",
+			inEssential: true,
+			inDependsOn: map[string]string{
+				"foo": "start",
+			},
+
+			wantedErr: errCircularDependency,
+		},
+		"invalid container dependency due to circularly depending on another container": {
+			inPort:      "2000",
+			inEssential: true,
+			inDependsOn: map[string]string{
+				"frontend": "start",
+			},
+			inImg: manifest.Image{
+				DependsOn: map[string]string{
+					"foo": "start",
+				},
+			},
+			wantedErr: errCircularDependency,
+		},
+		"invalid container dependency status": {
+			inPort:      "2000",
+			inEssential: true,
+			inDependsOn: map[string]string{
+				"frontend": "never",
+			},
+			wantedErr: errInvalidDependsOnStatus,
+		},
+		"invalid essential container dependency status": {
+			inPort:      "2000",
+			inEssential: true,
+			inDependsOn: map[string]string{
+				"frontend": "complete",
+			},
+			wantedErr: errEssentialContainerStatus,
+		},
+		"good essential container dependencies": {
+			inPort:      "2000",
+			inEssential: true,
+			inDependsOn: map[string]string{
+				"frontend": "start",
+			},
+
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				Port:       aws.String("2000"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(true),
+				DependsOn: map[string]string{
+					"frontend": "start",
+				},
+			},
+		},
+		"good nonessential container dependencies": {
+			inPort:      "2000",
+			inEssential: false,
+			inDependsOn: map[string]string{
+				"frontend": "start",
+			},
+
+			wanted: &template.SidecarOpts{
+				Name:       aws.String("foo"),
+				Port:       aws.String("2000"),
+				CredsParam: mockCredsParam,
+				Image:      mockImage,
+				Secrets:    mockMap,
+				Variables:  mockMap,
+				Essential:  aws.Bool(false),
+				DependsOn: map[string]string{
+					"frontend": "start",
+				},
+			},
+		},
 		"specify essential as false": {
 			inPort:      "2000",
 			inEssential: false,
@@ -92,9 +173,10 @@ func Test_convertSidecar(t *testing.T) {
 					Essential:    aws.Bool(tc.inEssential),
 					Port:         aws.String(tc.inPort),
 					DockerLabels: tc.inLabels,
+					DependsOn:    tc.inDependsOn,
 				},
 			}
-			got, err := convertSidecar(sidecar)
+			got, err := convertSidecar(sidecar, tc.inImg, mockManifestName)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
@@ -1147,6 +1229,110 @@ func Test_convertEphemeral(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			got, err := convertEphemeral(tc.inEphemeral)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Equal(t, got, tc.wanted)
+			}
+		})
+	}
+}
+
+func Test_convertDependsOn(t *testing.T) {
+	mockManifestName := "frontend"
+	testCases := map[string]struct {
+		inImage    *manifest.Image
+		inSidecars map[string]*manifest.SidecarConfig
+
+		wanted      map[string]string
+		wantedError error
+	}{
+		"no container dependencies": {
+			inImage: &manifest.Image{},
+			wanted:  nil,
+		},
+		"invalid container dependency due to circular dependency on itself": {
+			inImage: &manifest.Image{
+				DependsOn: map[string]string{
+					"frontend": "end",
+				},
+			},
+			wantedError: errCircularDependency,
+		},
+		"invalid container dependency due to circular dependency on a sidecar": {
+			inImage: &manifest.Image{
+				DependsOn: map[string]string{
+					"sidecar": "start",
+				},
+			},
+			inSidecars: map[string]*manifest.SidecarConfig{
+				"sidecar": {
+					DependsOn: map[string]string{
+						"sidecar2": "start",
+					},
+				},
+				"sidecar2": {
+					DependsOn: map[string]string{
+						"frontend": "start",
+					},
+				},
+			},
+			wantedError: errCircularDependency,
+		},
+		"invalid container dependency due to status": {
+			inImage: &manifest.Image{
+				DependsOn: map[string]string{
+					"sidecar": "end",
+				},
+			},
+			inSidecars: map[string]*manifest.SidecarConfig{
+				"sidecar": {
+					Essential: aws.Bool(false),
+				},
+			},
+			wantedError: errInvalidDependsOnStatus,
+		},
+		"invalid implied essential container depdendency": {
+			inImage: &manifest.Image{
+				DependsOn: map[string]string{
+					"sidecar": "complete",
+				},
+			},
+			inSidecars: map[string]*manifest.SidecarConfig{
+				"sidecar": {},
+			},
+			wantedError: errEssentialContainerStatus,
+		},
+		"invalid set essential container depdendency": {
+			inImage: &manifest.Image{
+				DependsOn: map[string]string{
+					"sidecar": "complete",
+				},
+			},
+			inSidecars: map[string]*manifest.SidecarConfig{
+				"sidecar": {
+					Essential: aws.Bool(true),
+				},
+			},
+			wantedError: errEssentialContainerStatus,
+		},
+		"good essential container dependency": {
+			inImage: &manifest.Image{
+				DependsOn: map[string]string{
+					"sidecar": "start",
+				},
+			},
+			inSidecars: map[string]*manifest.SidecarConfig{
+				"sidecar": {},
+			},
+			wanted: map[string]string{
+				"sidecar": "start",
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := convertDependsOn(tc.inImage, tc.inSidecars, mockManifestName)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
