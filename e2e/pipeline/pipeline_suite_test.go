@@ -22,9 +22,7 @@ var (
 
 // Application identifiers.
 var (
-	appName  = fmt.Sprintf("e2e-pipeline-%d", time.Now().Unix())
-	envNames = []string{"test", "prod"}
-	svcName  = "frontend"
+	appName = fmt.Sprintf("e2e-pipeline-%d", time.Now().Unix())
 )
 
 // CodeCommit credentials.
