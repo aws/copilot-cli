@@ -90,7 +90,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig, i manifest.Image, m st
 }
 
 // convertDependsOn converts an Image DependsOn field to a template DependsOn version
-func convertDependsOn(i *manifest.Image, s map[string]*manifest.SidecarConfig, m string) (map[string]string, error) {
+func convertImageDependsOn(i *manifest.Image, s map[string]*manifest.SidecarConfig, m string) (map[string]string, error) {
 	if i == nil || i.DependsOn == nil {
 		return nil, nil
 	}

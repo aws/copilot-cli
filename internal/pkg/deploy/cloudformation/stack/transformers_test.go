@@ -1238,7 +1238,7 @@ func Test_convertEphemeral(t *testing.T) {
 	}
 }
 
-func Test_convertDependsOn(t *testing.T) {
+func Test_convertImageDependsOn(t *testing.T) {
 	mockManifestName := "frontend"
 	testCases := map[string]struct {
 		inImage    *manifest.Image
@@ -1332,7 +1332,7 @@ func Test_convertDependsOn(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := convertDependsOn(tc.inImage, tc.inSidecars, mockManifestName)
+			got, err := convertImageDependsOn(tc.inImage, tc.inSidecars, mockManifestName)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {

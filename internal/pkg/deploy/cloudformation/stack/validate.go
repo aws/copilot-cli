@@ -30,10 +30,10 @@ var (
 	errInvalidUIDGIDConfig          = errors.New("must specify both UID and GID, or neither")
 	errInvalidEFSConfig             = errors.New("bad EFS configuration: cannot specify both bool and config")
 	errReservedUID                  = errors.New("UID must not be 0")
-	errCircularDependency           = errors.New("Bad dependency name: circular dependency present")
-	errInvalidContainer             = errors.New("Container dependency does not exist")
-	errInvalidDependsOnStatus       = errors.New("Container dependency status must be one of < start | complete | success >")
-	errEssentialContainerStatus     = errors.New("Essential containers dependencies can only have status 'start'")
+	errCircularDependency           = errors.New("bad dependency name: circular dependency present")
+	errInvalidContainer             = errors.New("container dependency does not exist")
+	errInvalidDependsOnStatus       = errors.New("container dependency status must be one of < start | complete | success >")
+	errEssentialContainerStatus     = errors.New("essential container dependencies can only have status 'start'")
 )
 
 var (
