@@ -15,6 +15,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
@@ -29,22 +30,27 @@ const (
 
 func TestLoadBalancedWebService_Template(t *testing.T) {
 	testCases := map[string]struct {
-		envName       string
+		env           *config.Environment
 		svcStackPath  string
 		svcParamsPath string
 	}{
 		"default env": {
-			envName:       "test",
+			env: &config.Environment{
+				Name: "test",
+				CustomConfig: &config.CustomizeEnv{
+					ImportCertARNs: []string{"mockCertARN"},
+				},
+			},
 			svcStackPath:  "svc-test.stack.yml",
 			svcParamsPath: "svc-test.params.json",
 		},
 		"staging env": {
-			envName:       "staging",
+			env:           &config.Environment{Name: "staging"},
 			svcStackPath:  "svc-staging.stack.yml",
 			svcParamsPath: "svc-staging.params.json",
 		},
 		"prod env": {
-			envName:       "prod",
+			env:           &config.Environment{Name: "prod"},
 			svcStackPath:  "svc-prod.stack.yml",
 			svcParamsPath: "svc-prod.params.json",
 		},
@@ -59,7 +65,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 
 	for name, tc := range testCases {
 
-		serializer, err := stack.NewHTTPSLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{})
+		serializer, err := stack.NewHTTPSLoadBalancedWebService(v, tc.env, appName, stack.RuntimeConfig{})
 
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")

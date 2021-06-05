@@ -25,7 +25,7 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 	require.NoError(t, err)
 	v, ok := mft.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
-	serializer, err := stack.NewHTTPSLoadBalancedWebService(v, envName, appName, stack.RuntimeConfig{
+	serializer, err := stack.NewHTTPSLoadBalancedWebService(v, env, appName, stack.RuntimeConfig{
 		Image: &stack.ECRImage{
 			RepoURL:  imageURL,
 			ImageTag: imageTag,
@@ -54,7 +54,7 @@ func TestScheduledJob_Validate(t *testing.T) {
 	require.NoError(t, err)
 	v, ok := mft.(*manifest.ScheduledJob)
 	require.True(t, ok)
-	serializer, err := stack.NewScheduledJob(v, envName, appName, stack.RuntimeConfig{})
+	serializer, err := stack.NewScheduledJob(v, env.Name, appName, stack.RuntimeConfig{})
 
 	tpl, err := serializer.Template()
 	require.NoError(t, err, "template should render")

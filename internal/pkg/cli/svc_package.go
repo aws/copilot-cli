@@ -104,12 +104,12 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		switch v := mft.(type) {
 		case *manifest.LoadBalancedWebService:
 			if app.RequiresDNSDelegation() {
-				serializer, err = stack.NewHTTPSLoadBalancedWebService(v, env.Name, app.Name, rc)
+				serializer, err = stack.NewHTTPSLoadBalancedWebService(v, env, app.Name, rc)
 				if err != nil {
 					return nil, fmt.Errorf("init https load balanced web service stack serializer: %w", err)
 				}
 			} else {
-				serializer, err = stack.NewLoadBalancedWebService(v, env.Name, app.Name, rc)
+				serializer, err = stack.NewLoadBalancedWebService(v, env, app.Name, rc)
 				if err != nil {
 					return nil, fmt.Errorf("init load balanced web service stack serializer: %w", err)
 				}

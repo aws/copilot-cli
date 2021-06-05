@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/stretchr/testify/require"
@@ -20,10 +21,11 @@ const (
 	wantedCFNParameterPath = "autoscaling-svc-cf.params.json"
 
 	appName  = "my-app"
-	envName  = "test"
 	imageURL = "mockImageURL"
 	imageTag = "latest"
 )
+
+var env = &config.Environment{Name: "test"}
 
 func Test_Autoscaling_Integration(t *testing.T) {
 	path := filepath.Join("testdata", "autoscaling", manifestPath)
@@ -33,7 +35,7 @@ func Test_Autoscaling_Integration(t *testing.T) {
 	require.NoError(t, err)
 	v, ok := mft.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
-	serializer, err := stack.NewHTTPSLoadBalancedWebService(v, envName, appName, stack.RuntimeConfig{
+	serializer, err := stack.NewHTTPSLoadBalancedWebService(v, env, appName, stack.RuntimeConfig{
 		Image: &stack.ECRImage{
 			RepoURL:  imageURL,
 			ImageTag: imageTag,

@@ -29,6 +29,7 @@ Parameters:
     Type: String
     Default: ""
 Conditions:
+  HasNot: !Equals [ 'true', 'false' ]
   CreateALB:
     !Not [!Equals [ !Ref ALBWorkloads, "" ]]
   DelegateDNS:
@@ -36,12 +37,22 @@ Conditions:
   ExportHTTPSListener: !And
     - !Condition DelegateDNS
     - !Condition CreateALB
+  ExportAliasHTTPSListener: !And
+    - !Condition HasAliases
+    - !Not [!Condition DelegateDNS]
+    - !Condition CreateALB
+  HasHTTPSListener: !Or
+    - !Condition ExportHTTPSListener
+    - !Condition ExportAliasHTTPSListener
   CreateEFS:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
   CreateNATGateways:
     !Not [!Equals [ !Ref NATWorkloads, ""]]
   HasAliases:
     !Not [!Equals [ !Ref Aliases, "" ]]
+  CreateCustomDomainAction: !And
+    - !Condition DelegateDNS
+    - !Condition HasAliases
 Resources:
 {{- if not .ImportVPC}}
 {{include "vpc-resources" .VPCConfig | indent 2}}
@@ -170,7 +181,6 @@ Resources:
       Protocol: HTTP
   HTTPSListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
-    DependsOn: HTTPSCert
     Condition: ExportHTTPSListener
     Properties:
       Certificates:
@@ -181,14 +191,41 @@ Resources:
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 443
       Protocol: HTTPS
+{{- if .ImportCertARNs}}
+  AliasHTTPSListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: ExportAliasHTTPSListener
+    Properties:
+      Certificates:
+        - CertificateArn: {{index .ImportCertARNs 0}}
+      DefaultActions:
+        - TargetGroupArn: !Ref DefaultHTTPTargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref PublicLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+{{- else}}
+  AliasHTTPSListener:
+    Type: Custom::NullResource
+    Condition: HasNot
+{{- end}}
 {{- range $ind, $arn := .ImportCertARNs}}
-  ImportCertificate{{inc $ind}}:
+  HTTPSImportCertificate{{inc $ind}}:
     Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
-    DependsOn: HTTPSListener
+    Condition: ExportHTTPSListener
     Properties:
       ListenerArn: !Ref HTTPSListener
       Certificates:
         - CertificateArn: {{$arn}}
+{{- if gt $ind 0}}
+  AliasHTTPSImportCertificate{{inc $ind}}:
+    Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
+    Condition: ExportAliasHTTPSListener
+    Properties:
+      ListenerArn: !Ref AliasHTTPSListener
+      Certificates:
+        - CertificateArn: {{$arn}}
+{{- end}}
 {{- end}}
   FileSystem:
     Condition: CreateEFS
@@ -345,8 +382,8 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-HTTPListenerArn
   HTTPSListenerArn:
-    Condition: ExportHTTPSListener
-    Value: !Ref HTTPSListener
+    Condition: HasHTTPSListener
+    Value: !If [ExportHTTPSListener, !Ref HTTPSListener, !Ref AliasHTTPSListener]
     Export:
       Name: !Sub ${AWS::StackName}-HTTPSListenerArn
   DefaultHTTPTargetGroupArn:

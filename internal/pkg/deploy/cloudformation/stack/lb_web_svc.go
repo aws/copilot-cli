@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
@@ -23,7 +24,6 @@ const (
 
 // Parameter logical IDs for a load balanced web service.
 const (
-	LBWebServiceHTTPSParamKey           = "HTTPSEnabled"
 	LBWebServiceContainerPortParamKey   = "ContainerPort"
 	LBWebServiceRulePathParamKey        = "RulePath"
 	LBWebServiceTargetContainerParamKey = "TargetContainer"
@@ -41,26 +41,31 @@ type LoadBalancedWebService struct {
 	*ecsWkld
 	manifest     *manifest.LoadBalancedWebService
 	httpsEnabled bool
+	importCerts  bool
 
 	parser loadBalancedWebSvcReadParser
 }
 
 // NewLoadBalancedWebService creates a new LoadBalancedWebService stack from a manifest file.
-func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
+func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env *config.Environment, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
 	parser := template.New()
 	addons, err := addon.New(aws.StringValue(mft.Name))
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
-	envManifest, err := mft.ApplyEnv(env) // Apply environment overrides to the manifest values.
+	envManifest, err := mft.ApplyEnv(env.Name) // Apply environment overrides to the manifest values.
 	if err != nil {
-		return nil, fmt.Errorf("apply environment %s override: %s", env, err)
+		return nil, fmt.Errorf("apply environment %s override: %s", env.Name, err)
+	}
+	importCerts := false
+	if env.CustomConfig != nil && env.CustomConfig.ImportCertARNs != nil {
+		importCerts = true
 	}
 	return &LoadBalancedWebService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
 				name:   aws.StringValue(mft.Name),
-				env:    env,
+				env:    env.Name,
 				app:    app,
 				rc:     rc,
 				image:  envManifest.ImageConfig,
@@ -71,6 +76,7 @@ func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app st
 		},
 		manifest:     envManifest,
 		httpsEnabled: false,
+		importCerts:  importCerts,
 
 		parser: parser,
 	}, nil
@@ -79,7 +85,7 @@ func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app st
 // NewHTTPSLoadBalancedWebService  creates a new LoadBalancedWebService stack from its manifest that needs to be deployed to
 // a environment within an application. It creates an HTTPS listener and assumes that the environment
 // it's being deployed into has an HTTPS configured listener.
-func NewHTTPSLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
+func NewHTTPSLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env *config.Environment, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
 	webSvc, err := NewLoadBalancedWebService(mft, env, app, rc)
 	if err != nil {
 		return nil, err
@@ -140,16 +146,19 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", fmt.Errorf(`convert 'command' to string slice: %w`, err)
 	}
 	var aliases []string
-	if s.httpsEnabled {
-		albAlias := aws.StringValue(s.manifest.Alias)
-		if albAlias != "" {
-			aliases = append(aliases, albAlias)
-		}
+	albAlias := aws.StringValue(s.manifest.Alias)
+	if albAlias != "" {
+		aliases = append(aliases, albAlias)
+	}
+	httpsListener := false
+	if (aliases != nil && s.importCerts) || s.httpsEnabled {
+		httpsListener = true
 	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		Variables:           s.manifest.Variables,
 		Secrets:             s.manifest.Secrets,
 		Aliases:             aliases,
+		HTTPSListener:       httpsListener,
 		NestedStack:         outputs,
 		Sidecars:            sidecars,
 		LogConfig:           convertLogging(s.manifest.Logging),
@@ -215,10 +224,6 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 		{
 			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
 			ParameterValue: s.manifest.Path,
-		},
-		{
-			ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
-			ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),

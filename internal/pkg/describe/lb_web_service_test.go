@@ -156,7 +156,6 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					}, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
-						envOutputSubdomain:                 testEnvSubdomain,
 					}, nil),
 					m.ecsSvcDescriber.EXPECT().Params().Return(map[string]string{
 						cfnstack.LBWebServiceRulePathParamKey: testSvcPath,

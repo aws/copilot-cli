@@ -65,6 +65,7 @@ var (
 		"image-overrides",
 		"instancerole",
 		"accessrole",
+		"listener-rule",
 	}
 )
 
@@ -222,6 +223,7 @@ type WorkloadOpts struct {
 	Variables          map[string]string
 	Secrets            map[string]string
 	Aliases            []string
+	HTTPSListener      bool
 	Tags               map[string]string        // Used by App Runner workloads to tag App Runner service resources
 	NestedStack        *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	Sidecars           []*SidecarOpts

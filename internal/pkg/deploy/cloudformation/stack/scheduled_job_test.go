@@ -474,8 +474,7 @@ func TestScheduledJob_Parameters(t *testing.T) {
 		},
 	}
 	testCases := map[string]struct {
-		httpsEnabled bool
-		manifest     *manifest.ScheduledJob
+		manifest *manifest.ScheduledJob
 
 		expectedParams []*cloudformation.Parameter
 		expectedErr    error

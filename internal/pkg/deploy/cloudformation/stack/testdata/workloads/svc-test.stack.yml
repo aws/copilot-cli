@@ -21,9 +21,6 @@ Parameters:
     Type: String
   TaskCount:
     Type: Number
-  HTTPSEnabled:
-    Type: String
-    AllowedValues: [true, false]
   LogRetention:
     Type: Number
   AddonsTemplateURL:
@@ -38,11 +35,6 @@ Parameters:
     Type: String
     Default: false
 Conditions:
-  HTTPLoadBalancer:
-    !Not
-      - !Condition HTTPSLoadBalancer
-  HTTPSLoadBalancer:
-    !Equals [!Ref HTTPSEnabled, true]
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   IsDefaultRootPath: # If we're using path based routing and use the root path, we have some special logic
@@ -327,7 +319,9 @@ Resources:
     Metadata:
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
     Type: AWS::ECS::Service
-    DependsOn: WaitUntilListenerRuleIsCreated
+    DependsOn:
+      - HTTPListenerRuleWithDomain
+      - HTTPSListenerRule
     Properties:
       Cluster:
         Fn::ImportValue:
@@ -445,7 +439,6 @@ Resources:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
   HTTPSRulePriorityAction:
-    Condition: HTTPSLoadBalancer
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
@@ -453,7 +446,6 @@ Resources:
 
   HTTPListenerRuleWithDomain:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Condition: HTTPSLoadBalancer
     Properties:
       Actions:
         - Type: redirect
@@ -483,7 +475,6 @@ Resources:
 
   HTTPSListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Condition: HTTPSLoadBalancer
     Properties:
       Actions:
         - TargetGroupArn: !Ref TargetGroup
@@ -504,71 +495,6 @@ Resources:
                   - !Sub "/${RulePath}/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
       Priority: !GetAtt HTTPSRulePriorityAction.Priority
-
-  HTTPRulePriorityAction:
-    Condition: HTTPLoadBalancer
-    Type: Custom::RulePriorityFunction
-    Properties:
-      ServiceToken: !GetAtt RulePriorityFunction.Arn
-      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-
-  HTTPListenerRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Condition: HTTPLoadBalancer
-    Properties:
-      Actions:
-        - TargetGroupArn: !Ref TargetGroup
-          Type: forward
-      Conditions:
-        - Field: 'path-pattern'
-          PathPatternConfig:
-            Values:
-              !If
-                - IsDefaultRootPath
-                -
-                  - "/*"
-                -
-                  - !Sub "/${RulePath}"
-                  - !Sub "/${RulePath}/*"
-      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-      Priority: 
-        !If
-          - IsDefaultRootPath
-          - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
-          - !GetAtt HTTPRulePriorityAction.Priority
-
-  # Force a conditional dependency from the ECS service on the listener rules.
-  # Our service depends on our HTTP/S listener to be set up before it can
-  # be created. But, since our environment is either HTTPS or not, we
-  # have a conditional dependency (we have to wait for the HTTPS listener
-  # to be created or the HTTP listener to be created). In order to have a
-  # conditional dependency, we use the WaitHandle resource as a way to force
-  # a single dependency. The Ref in the WaitCondition implicitly creates a conditional
-  # dependency - if the condition is satisfied (HTTPLoadBalancer) - the ref resolves
-  # the HTTPWaitHandle, which depends on the HTTPListenerRule.
-
-  HTTPSWaitHandle:
-    Condition: HTTPSLoadBalancer
-    DependsOn: HTTPSListenerRule
-    Type: AWS::CloudFormation::WaitConditionHandle
-
-  HTTPWaitHandle:
-    Condition: HTTPLoadBalancer
-    DependsOn: HTTPListenerRule
-    Type: AWS::CloudFormation::WaitConditionHandle
-
-  # We don't actually need to wait for the condition to
-  # be completed, that's why we set a count of 0. The timeout
-  # is a required field, but useless, so we set it to one.
-  WaitUntilListenerRuleIsCreated:
-    Type: AWS::CloudFormation::WaitCondition
-    Properties:
-      Handle: !If [HTTPLoadBalancer, !Ref HTTPWaitHandle, !Ref HTTPSWaitHandle]
-      Timeout: "1"
-      Count: 0
-
-  
-  
 
   AddonsStack:
     Metadata:

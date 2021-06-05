@@ -428,9 +428,9 @@ To upgrade the application, please run %s first (see https://aws.github.io/copil
 			return nil, err
 		}
 		if o.targetApp.RequiresDNSDelegation() {
-			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
+			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment, o.targetEnvironment.App, *rc)
 		} else {
-			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
+			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.RequestDrivenWebService:
 		conf, err = stack.NewRequestDrivenWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)

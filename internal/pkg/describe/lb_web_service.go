@@ -244,6 +244,7 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 		}
 		if value[d.svc] != nil {
 			uri.DNSNames = value[d.svc]
+			uri.HTTPS = true
 		}
 	}
 	d.svcParams = svcParams

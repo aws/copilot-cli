@@ -1,0 +1,148 @@
+{{- if .HTTPSListener}}
+{{- if not .Aliases}}
+LoadBalancerDNSAlias:
+  Type: AWS::Route53::RecordSetGroup
+  Properties:
+    HostedZoneId:
+      Fn::ImportValue:
+        !Sub "${AppName}-${EnvName}-HostedZone"
+    Comment: !Sub "LoadBalancer alias for service ${WorkloadName}"
+    RecordSets:
+    - Name:
+        !Join
+          - '.'
+          - - !Ref WorkloadName
+            - Fn::ImportValue:
+                !Sub "${AppName}-${EnvName}-SubDomain"
+            - ""
+      Type: A
+      AliasTarget:
+        HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
+        DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+{{- end}}
+HTTPSRulePriorityAction:
+  Type: Custom::RulePriorityFunction
+  Properties:
+    ServiceToken: !GetAtt RulePriorityFunction.Arn
+    ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+
+HTTPListenerRuleWithDomain:
+  Type: AWS::ElasticLoadBalancingV2::ListenerRule
+  Properties:
+    Actions:
+      - Type: redirect
+        RedirectConfig:
+          Protocol: HTTPS
+          Port: 443
+          Host: "#{host}"
+          Path: "/#{path}"
+          Query: "#{query}"
+          StatusCode: HTTP_301
+    Conditions:
+{{- if .Aliases }}
+      - Field: 'host-header'
+        HostHeaderConfig:
+          Values: {{ .Aliases }}
+{{- else }}
+      - Field: 'host-header'
+        HostHeaderConfig:
+          Values:
+            - Fn::Join:
+              - '.'
+              - - !Ref WorkloadName
+                - Fn::ImportValue:
+                    !Sub "${AppName}-${EnvName}-SubDomain"
+{{- end}}
+      - Field: 'path-pattern'
+        PathPatternConfig:
+          Values:
+            !If
+              - IsDefaultRootPath
+              -
+                - "/*"
+              -
+                - !Sub "/${RulePath}"
+                - !Sub "/${RulePath}/*"
+    ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+    Priority: !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
+
+HTTPSListenerRule:
+  Type: AWS::ElasticLoadBalancingV2::ListenerRule
+  Properties:
+    Actions:
+      - TargetGroupArn: !Ref TargetGroup
+        Type: forward
+    Conditions:
+{{- if .AllowedSourceIps}}
+      - Field: 'source-ip'
+        SourceIpConfig:
+          Values:
+{{- range $sourceIP := .AllowedSourceIps}}
+          - {{$sourceIP}}
+{{- end}}
+{{- end}}
+{{- if .Aliases }}
+      - Field: 'host-header'
+        HostHeaderConfig:
+          Values: {{ .Aliases }}
+{{- else }}
+      - Field: 'host-header'
+        HostHeaderConfig:
+          Values:
+            - Fn::Join:
+              - '.'
+              - - !Ref WorkloadName
+                - Fn::ImportValue:
+                    !Sub "${AppName}-${EnvName}-SubDomain"
+{{- end}}
+      - Field: 'path-pattern'
+        PathPatternConfig:
+          Values:
+            !If
+              - IsDefaultRootPath
+              -
+                - "/*"
+              -
+                - !Sub "/${RulePath}"
+                - !Sub "/${RulePath}/*"
+    ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+    Priority: !GetAtt HTTPSRulePriorityAction.Priority
+{{- else}}
+HTTPRulePriorityAction:
+  Type: Custom::RulePriorityFunction
+  Properties:
+    ServiceToken: !GetAtt RulePriorityFunction.Arn
+    ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+
+HTTPListenerRule:
+  Type: AWS::ElasticLoadBalancingV2::ListenerRule
+  Properties:
+    Actions:
+      - TargetGroupArn: !Ref TargetGroup
+        Type: forward
+    Conditions:
+    {{- if .AllowedSourceIps}}
+      - Field: 'source-ip'
+        SourceIpConfig:
+          Values:
+          {{- range $sourceIP := .AllowedSourceIps}}
+          - {{$sourceIP}}
+          {{- end}}
+    {{- end}}
+      - Field: 'path-pattern'
+        PathPatternConfig:
+          Values:
+            !If
+              - IsDefaultRootPath
+              -
+                - "/*"
+              -
+                - !Sub "/${RulePath}"
+                - !Sub "/${RulePath}/*"
+    ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+    Priority: 
+      !If
+        - IsDefaultRootPath
+        - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
+        - !GetAtt HTTPRulePriorityAction.Priority
+{{- end}}

@@ -11,7 +11,6 @@
     "LogRetention": "30",
     "ContainerPort": "4000",
     "RulePath": "/",
-    "HTTPSEnabled": "true",
     "TargetContainer": "fe",
     "TargetPort": "4000",
     "Stickiness": "false"

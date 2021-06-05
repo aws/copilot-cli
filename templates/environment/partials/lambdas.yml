@@ -39,7 +39,7 @@ EnableLongARNFormatFunction:
     Runtime: nodejs12.x
 
 CustomDomainFunction:
-  Condition: HasAliases
+  Condition: CreateCustomDomainAction
   Type: AWS::Lambda::Function
   Properties:
     Code:

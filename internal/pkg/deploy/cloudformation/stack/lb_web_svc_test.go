@@ -187,6 +187,7 @@ Outputs:
 						HealthCheckPath: "/",
 					},
 					RulePriorityLambda:  "lambda",
+					Aliases:             []string{"mockAlias"},
 					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
 					Network: &template.NetworkOpts{
@@ -221,6 +222,7 @@ Outputs:
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: "/",
 					},
+					Aliases:             []string{"mockAlias"},
 					RulePriorityLambda:  "lambda",
 					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
@@ -398,75 +400,15 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		},
 	}
 	testCases := map[string]struct {
-		httpsEnabled bool
-		manifest     *manifest.LoadBalancedWebService
+		manifest *manifest.LoadBalancedWebService
 
 		expectedParams []*cloudformation.Parameter
 		expectedErr    error
 	}{
-		"HTTPS Enabled": {
-			httpsEnabled: true,
-			manifest:     testLBWebServiceManifest,
-
-			expectedParams: append(expectedParams, []*cloudformation.Parameter{
-				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
-					ParameterValue: aws.String("true"),
-				},
-				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
-					ParameterValue: aws.String("frontend"),
-				},
-				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
-					ParameterValue: aws.String("80"),
-				},
-				{
-					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
-					ParameterValue: aws.String("2"),
-				},
-				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
-					ParameterValue: aws.String("false"),
-				},
-			}...),
-		},
-		"HTTPS Not Enabled": {
-			httpsEnabled: false,
-			manifest:     testLBWebServiceManifest,
-
-			expectedParams: append(expectedParams, []*cloudformation.Parameter{
-				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
-					ParameterValue: aws.String("false"),
-				},
-				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
-					ParameterValue: aws.String("frontend"),
-				},
-				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
-					ParameterValue: aws.String("80"),
-				},
-				{
-					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
-					ParameterValue: aws.String("2"),
-				},
-				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
-					ParameterValue: aws.String("false"),
-				},
-			}...),
-		},
 		"with sidecar container": {
-			httpsEnabled: true,
-			manifest:     testLBWebServiceManifestWithSidecar,
+			manifest: testLBWebServiceManifestWithSidecar,
 
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
-				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
-					ParameterValue: aws.String("true"),
-				},
 				{
 					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
 					ParameterValue: aws.String("xray"),
@@ -486,14 +428,9 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"Stickiness enabled": {
-			httpsEnabled: false,
-			manifest:     testLBWebServiceManifestWithStickiness,
+			manifest: testLBWebServiceManifestWithStickiness,
 
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
-				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
-					ParameterValue: aws.String("false"),
-				},
 				{
 					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
@@ -513,14 +450,9 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"exec enabled": {
-			httpsEnabled: false,
-			manifest:     testLBWebServiceManifestWithExecEnabled,
+			manifest: testLBWebServiceManifestWithExecEnabled,
 
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
-				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
-					ParameterValue: aws.String("false"),
-				},
 				{
 					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
@@ -540,14 +472,12 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"with bad sidecar container": {
-			httpsEnabled: true,
-			manifest:     testLBWebServiceManifestWithBadSidecar,
+			manifest: testLBWebServiceManifestWithBadSidecar,
 
 			expectedErr: fmt.Errorf("target container xray doesn't exist"),
 		},
 		"with bad count": {
-			httpsEnabled: true,
-			manifest:     testLBWebServiceManifestWithBadCount,
+			manifest: testLBWebServiceManifestWithBadCount,
 
 			expectedErr: fmt.Errorf("parse task count value badCount: invalid range value badCount. Should be in format of ${min}-${max}"),
 		},
@@ -571,8 +501,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					},
 					tc: tc.manifest.TaskConfig,
 				},
-				manifest:     tc.manifest,
-				httpsEnabled: tc.httpsEnabled,
+				manifest: tc.manifest,
 			}
 
 			// WHEN
