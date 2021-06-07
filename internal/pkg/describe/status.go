@@ -488,7 +488,7 @@ func (s *ecsServiceStatus) writeRunningTasks(writer *tabwriter.Writer) {
 				// sometimes a task can have multiple target health states (although rare)
 				httpHealthState = strings.Join(states, ",")
 			}
-			taskStatus = fmt.Sprintf("%s\t%s", taskStatus, httpHealthState)
+			taskStatus = fmt.Sprintf("%s\t%s", taskStatus, strings.ToUpper(httpHealthState))
 		}
 		fmt.Fprintf(writer, "  %s\n", taskStatus)
 	}
@@ -562,7 +562,64 @@ func (ts ecsTaskStatus) humanString(opts ...ecsTaskStatusConfigOpts) string {
 	return statusString
 }
 
-// Bar methods
+type ecsTaskStatusConfigOpts func(config *ecsTaskStatusConfig)
+
+type ecsTaskStatusConfig struct {
+	shouldShowCapProvider     bool
+	shouldShowContainerHealth bool
+}
+
+func withCapProviderShown(config *ecsTaskStatusConfig) {
+	config.shouldShowCapProvider = true
+}
+
+func withContainerHealthShow(config *ecsTaskStatusConfig) {
+	config.shouldShowContainerHealth = true
+}
+
+type taskTargetHealth struct {
+	TargetHealthDescription elbv2.TargetHealth `json:"healthDescription"`
+	TaskID                  string             `json:"taskID"`
+	TargetGroupARN          string             `json:"targetGroup"`
+}
+
+// targetHealthForTasks finds the target health in a target group, if any, for each task.
+func targetHealthForTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsECS.Task, targetGroupARN string) []taskTargetHealth {
+	var out []taskTargetHealth
+
+	// Create a set of target health to be matched against the tasks' private IP addresses.
+	// An IP target's ID is the IP address.
+	targetsHealthSet := make(map[string]*elbv2.TargetHealth)
+	for _, th := range targetsHealth {
+		targetsHealthSet[th.TargetID()] = th
+	}
+
+	// For each task, check if it is a target by matching its private IP address against targetsHealthSet.
+	// If it is a target, we try to add it to the output.
+	for _, task := range tasks {
+		ip, err := task.PrivateIP()
+		if err != nil {
+			continue
+		}
+
+		// Check if the IP is a target
+		th, ok := targetsHealthSet[ip]
+		if !ok {
+			continue
+		}
+
+		if taskID, err := awsECS.TaskID(aws.StringValue(task.TaskArn)); err == nil {
+			out = append(out, taskTargetHealth{
+				TaskID:                  taskID,
+				TargetHealthDescription: *th,
+				TargetGroupARN:          targetGroupARN,
+			})
+		}
+	}
+
+	return out
+}
+
 type valueWithIndex struct {
 	value int
 	index int
@@ -663,64 +720,6 @@ func calculatePortions(valuesWithIndices []valueWithIndex, length int) []valueWi
 	return out
 }
 
-type ecsTaskStatusConfig struct {
-	shouldShowCapProvider     bool
-	shouldShowContainerHealth bool
-}
-
-type ecsTaskStatusConfigOpts func(config *ecsTaskStatusConfig)
-
-func withCapProviderShown(config *ecsTaskStatusConfig) {
-	config.shouldShowCapProvider = true
-}
-
-func withContainerHealthShow(config *ecsTaskStatusConfig) {
-	config.shouldShowContainerHealth = true
-}
-
-type taskTargetHealth struct {
-	TargetHealthDescription elbv2.TargetHealth `json:"healthDescription"`
-	TaskID                  string             `json:"taskID"`
-	TargetGroupARN          string             `json:"targetGroup"`
-}
-
-// targetHealthForTasks finds the target health in a target group, if any, for each task.
-func targetHealthForTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsECS.Task, targetGroupARN string) []taskTargetHealth {
-	var out []taskTargetHealth
-
-	// Create a set of target health to be matched against the tasks' private IP addresses.
-	// An IP target's ID is the IP address.
-	targetsHealthSet := make(map[string]*elbv2.TargetHealth)
-	for _, th := range targetsHealth {
-		targetsHealthSet[th.TargetID()] = th
-	}
-
-	// For each task, check if it is a target by matching its private IP address against targetsHealthSet.
-	// If it is a target, we try to add it to the output.
-	for _, task := range tasks {
-		ip, err := task.PrivateIP()
-		if err != nil {
-			continue
-		}
-
-		// Check if the IP is a target
-		th, ok := targetsHealthSet[ip]
-		if !ok {
-			continue
-		}
-
-		if taskID, err := awsECS.TaskID(aws.StringValue(task.TaskArn)); err == nil {
-			out = append(out, taskTargetHealth{
-				TaskID:                  taskID,
-				TargetHealthDescription: *th,
-				TargetGroupARN:          targetGroupARN,
-			})
-		}
-	}
-
-	return out
-}
-
 func shortTaskID(id string) string {
 	if len(id) >= shortTaskIDLength {
 		return id[:shortTaskIDLength]
@@ -786,34 +785,5 @@ func statusColor(status string) string {
 		return color.Yellow.Sprint(status)
 	default:
 		return color.Red.Sprint(status)
-	}
-}
-
-func taskHealthColor(status string) string {
-	switch status {
-	case "HEALTHY":
-		return color.Green.Sprint(status)
-	case "UNHEALTHY":
-		return color.Red.Sprint(status)
-	case "UNKNOWN":
-		return color.Yellow.Sprint(status)
-	default:
-		return status
-	}
-}
-
-func targetHealthColor(state string) string {
-	capitalized := strings.ToUpper(state)
-	switch capitalized {
-	case "HEALTHY":
-		return color.Green.Sprint(capitalized)
-	case "UNHEALTHY":
-		return color.Red.Sprint(capitalized)
-	case "INITIAL", "UNUSED":
-		return color.Grey.Sprint(capitalized)
-	case "DRAINING", "UNAVAILABLE":
-		return color.DullRed.Sprintf(capitalized)
-	default:
-		return capitalized
 	}
 }
