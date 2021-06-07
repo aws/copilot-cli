@@ -86,9 +86,9 @@ func (s *ecsServiceStatus) healthyHTTPTasksCount() int {
 func (s *ecsServiceStatus) capacityProviderData() (fargate int, spot int, unset int) {
 	for _, t := range s.Tasks {
 		switch strings.ToUpper(t.CapacityProvider) {
-		case "FARGATE":
+		case awsECS.TaskCapacityProviderFargate:
 			fargate += 1
-		case "FARGATE_SPOT":
+		case awsECS.TaskCapacityProviderFargateSpot:
 			spot += 1
 		default:
 			unset += 1

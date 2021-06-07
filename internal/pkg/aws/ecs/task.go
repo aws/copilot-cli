@@ -25,7 +25,12 @@ const (
 	privateIPv4AddressKey          = "privateIPv4Address"
 	networkInterfaceAttachmentType = "ElasticNetworkInterface"
 
+	// TaskContainerHealthStatusUnknown wraps the ECS health status UNKNOWN.
 	TaskContainerHealthStatusUnknown = ecs.HealthStatusUnknown
+	// TaskCapacityProviderFargate is the capacity provider name for FARGATE.
+	TaskCapacityProviderFargate = "FARGATE"
+	// TaskCapacityProviderFargateSpot is the capacity provider name for FARGATE_SPOT.
+	TaskCapacityProviderFargateSpot = "FARGATE_SPOT"
 )
 
 // Image contains very basic info of a container image.
@@ -151,7 +156,7 @@ type TaskStatus struct {
 	StoppedAt        time.Time `json:"stoppedAt"`
 	StoppedReason    string    `json:"stoppedReason"`
 	CapacityProvider string    `json:"capacityProvider"`
-	TaskDefinition   string    `json:"taskDefinition"`
+	TaskDefinition   string    `json:"taskDefinitionARN"`
 }
 
 // TaskDefinition wraps up ECS TaskDefinition struct.

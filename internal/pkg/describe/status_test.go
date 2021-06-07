@@ -531,7 +531,7 @@ func TestServiceStatusDesc_String(t *testing.T) {
 					RunningCount:     0,
 					Status:           "ACTIVE",
 					LastDeploymentAt: startTime,
-					TaskDefinition:   "mockTaskDefinition",
+					TaskDefinition:   "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
 				},
 				Alarms: []cloudwatch.AlarmStatus{
 					{
@@ -553,9 +553,10 @@ func TestServiceStatusDesc_String(t *testing.T) {
 				},
 				Tasks: []awsecs.TaskStatus{
 					{
-						Health:     "HEALTHY",
-						LastStatus: "PROVISIONING",
-						ID:         "1234567890123456789",
+						Health:         "HEALTHY",
+						LastStatus:     "PROVISIONING",
+						ID:             "1234567890123456789",
+						TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
 					},
 				},
 			},
@@ -568,7 +569,7 @@ Tasks
 
   ID         Status        Revision     Started At   Cont.Health
   --         ------        --------     ----------   -----------
-  12345678   PROVISIONING  -            -            HEALTHY
+  12345678   PROVISIONING  6            -            HEALTHY
 
 Alarms
 
@@ -581,7 +582,8 @@ Alarms
   rm                              atapoints within 3 minutes                         
                                                                                      
 `,
-			json: "{\"Service\":{\"desiredCount\":1,\"runningCount\":0,\"status\":\"ACTIVE\",\"lastDeploymentAt\":\"2006-01-02T15:04:05Z\",\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":null,\"lastStatus\":\"PROVISIONING\",\"startedAt\":\"0001-01-01T00:00:00Z\",\"stoppedAt\":\"0001-01-01T00:00:00Z\",\"stoppedReason\":\"\",\"capacityProvider\":\"\"}],\"alarms\":[{\"arn\":\"mockAlarmArn1\",\"name\":\"mySupercalifragilisticexpialidociousAlarm\",\"condition\":\"RequestCount \\u003e 100.00 for 3 datapoints within 25 minutes\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"},{\"arn\":\"mockAlarmArn2\",\"name\":\"Um-dittle-ittl-um-dittle-I-Alarm\",\"condition\":\"CPUUtilization \\u003e 70.00 for 3 datapoints within 3 minutes\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"}]}\n",
+			json: `{"Service":{"desiredCount":1,"runningCount":0,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":null,"lastStatus":"PROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6"}],"alarms":[{"arn":"mockAlarmArn1","name":"mySupercalifragilisticexpialidociousAlarm","condition":"RequestCount \u003e 100.00 for 3 datapoints within 25 minutes","status":"OK","type":"Metric","updatedTimes":"2020-03-13T19:50:30Z"},{"arn":"mockAlarmArn2","name":"Um-dittle-ittl-um-dittle-I-Alarm","condition":"CPUUtilization \u003e 70.00 for 3 datapoints within 3 minutes","status":"OK","type":"Metric","updatedTimes":"2020-03-13T19:50:30Z"}],"stoppedTasks":null,"targetsHealth":null}
+`,
 		},
 		"running": {
 			desc: &ecsServiceStatus{
@@ -590,7 +592,7 @@ Alarms
 					RunningCount:     1,
 					Status:           "ACTIVE",
 					LastDeploymentAt: startTime,
-					TaskDefinition:   "mockTaskDefinition",
+					TaskDefinition:   "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
 				},
 				Alarms: []cloudwatch.AlarmStatus{
 					{
@@ -617,20 +619,22 @@ Alarms
 								Digest: "ca27a44e25ce17fea7b07940ad793",
 							},
 						},
-						StoppedReason: "some reason",
+						StoppedReason:  "some reason",
+						TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
 					},
 				},
 			},
 			human: `Task Summary
 
-  Running    ■■■■■■■■■■   1/1 Desired Tasks Running
-  Healthy    ■■■■■■■■■■   1/1 Passes Container Health Checks
+  Running     ■■■■■■■■■■   1/1 Desired Tasks Running
+  Deployment  ■■■■■■■■■■   1/1 Running task definition version 6 (desired)
+  Healthy     ■■■■■■■■■■   1/1 Passes Container Health Checks
 
 Tasks
 
   ID         Status       Revision     Started At   Cont.Health
   --         ------       --------     ----------   -----------
-  12345678   RUNNING      -            -            HEALTHY
+  12345678   RUNNING      6            -            HEALTHY
 
 Alarms
 
@@ -639,9 +643,10 @@ Alarms
   mockAlarm  mockCondition  2 months from now  OK
                                                
 `,
-			json: "{\"Service\":{\"desiredCount\":1,\"runningCount\":1,\"status\":\"ACTIVE\",\"lastDeploymentAt\":\"2006-01-02T15:04:05Z\",\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"69671a968e8ec3648e2697417750e\"},{\"ID\":\"mockImageID2\",\"Digest\":\"ca27a44e25ce17fea7b07940ad793\"}],\"lastStatus\":\"RUNNING\",\"startedAt\":\"0001-01-01T00:00:00Z\",\"stoppedAt\":\"0001-01-01T00:00:00Z\",\"stoppedReason\":\"some reason\",\"capacityProvider\":\"\"}],\"alarms\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"condition\":\"mockCondition\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"}]}\n",
+			json: `{"Service":{"desiredCount":1,"runningCount":1,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":[{"ID":"mockImageID1","Digest":"69671a968e8ec3648e2697417750e"},{"ID":"mockImageID2","Digest":"ca27a44e25ce17fea7b07940ad793"}],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"some reason","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6"}],"alarms":[{"arn":"mockAlarmArn","name":"mockAlarm","condition":"mockCondition","status":"OK","type":"Metric","updatedTimes":"2020-03-13T19:50:30Z"}],"stoppedTasks":null,"targetsHealth":null}
+`,
 		},
-		"some are tasks deprovisioning": {
+		"with stopped tasks": {
 			desc: &ecsServiceStatus{
 				Service: awsecs.ServiceStatus{
 					DesiredCount:     1,
@@ -702,9 +707,10 @@ Tasks
   --         ------       --------     ----------   -----------
   12345678   RUNNING      -            -            HEALTHY
 `,
-			json: "{\"Service\":{\"desiredCount\":1,\"runningCount\":1,\"status\":\"ACTIVE\",\"lastDeploymentAt\":\"2006-01-02T15:04:05Z\",\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"69671a968e8ec3648e2697417750e\"},{\"ID\":\"mockImageID2\",\"Digest\":\"ca27a44e25ce17fea7b07940ad793\"}],\"lastStatus\":\"RUNNING\",\"startedAt\":\"0001-01-01T00:00:00Z\",\"stoppedAt\":\"0001-01-01T00:00:00Z\",\"stoppedReason\":\"some reason\",\"capacityProvider\":\"\"}],\"alarms\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"condition\":\"mockCondition\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":\"2020-03-13T19:50:30Z\"}],\"stoppedTasks\":[{\"health\":\"\",\"id\":\"0102030490123123123\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"30dkd891jdk9s8d350e932k390093\"},{\"ID\":\"mockImageID2\",\"Digest\":\"41flf902kfl0d9f461r043l411104\"}],\"lastStatus\":\"DEPROVISIONING\",\"startedAt\":\"0001-01-01T00:00:00Z\",\"stoppedAt\":\"2020-03-13T20:00:30Z\",\"stoppedReason\":\"some reason\",\"capacityProvider\":\"\"}]}\n",
+			json: `{"Service":{"desiredCount":1,"runningCount":1,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":[{"ID":"mockImageID1","Digest":"69671a968e8ec3648e2697417750e"},{"ID":"mockImageID2","Digest":"ca27a44e25ce17fea7b07940ad793"}],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"some reason","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":[{"health":"","id":"0102030490123123123","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"some reason","capacityProvider":"","taskDefinitionARN":""},{"health":"","id":"0203040590123123123","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"some reason","capacityProvider":"","taskDefinitionARN":""}],"targetsHealth":null}
+`,
 		},
-		"shows target health such that target healths for the same task are shown in consecutive rows": {
+		"with HTTP health": {
 			desc: &ecsServiceStatus{
 				Service: awsecs.ServiceStatus{
 					DesiredCount:     3,
@@ -738,7 +744,8 @@ Tasks
 								Reason: aws.String("some reason"),
 							},
 						},
-						TaskID: "1234567890123456789",
+						TaskID:         "1234567890123456789",
+						TargetGroupARN: "group-1",
 					},
 					{
 						TargetHealthDescription: elbv2.TargetHealth{
@@ -749,7 +756,8 @@ Tasks
 								State: aws.String("healthy"),
 							},
 						},
-						TaskID: "1345678990123456789",
+						TaskID:         "1345678990123456789",
+						TargetGroupARN: "group-1",
 					},
 				},
 			},
@@ -766,18 +774,99 @@ Tasks
   12345678   RUNNING      -            -            HEALTHY      UNHEALTHY
   13456789   RUNNING      -            -            HEALTHY      HEALTHY
 `,
-			json: `{"Service":{"desiredCount":1,"runningCount":1,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":[{"ID":"mockImageID1","Digest":"69671a968e8ec3648e2697417750e"},{"ID":"mockImageID2","Digest":"ca27a44e25ce17fea7b07940ad793"}],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":""}],"alarms":[{"arn":"mockAlarmArn","name":"mockAlarm","condition":"mockCondition","status":"OK","type":"Metric","updatedTimes":"2020-03-13T19:50:30Z"}],"targetsHealth":[{"healthDescription":{"HealthCheckPort":null,"Target":{"AvailabilityZone":null,"Id":"5.6.7.8","Port":null},"TargetHealth":{"Description":null,"Reason":"some reason","State":"unhealthy"}},"taskID":"a-task-with-private-ip-being-target"},{"healthDescription":{"HealthCheckPort":null,"Target":{"AvailabilityZone":null,"Id":"1.1.1.1","Port":null},"TargetHealth":{"Description":null,"Reason":null,"State":"healthy"}},"taskID":"another-task-with-private-ip-being-target"}]}
+			json: `{"Service":{"desiredCount":3,"runningCount":2,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""},{"health":"HEALTHY","id":"1345678990123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":null,"targetsHealth":[{"healthDescription":{"HealthCheckPort":null,"Target":{"AvailabilityZone":null,"Id":"5.6.7.8","Port":null},"TargetHealth":{"Description":null,"Reason":"some reason","State":"unhealthy"}},"taskID":"1234567890123456789","targetGroup":"group-1"},{"healthDescription":{"HealthCheckPort":null,"Target":{"AvailabilityZone":null,"Id":"1.1.1.1","Port":null},"TargetHealth":{"Description":null,"Reason":null,"State":"healthy"}},"taskID":"1345678990123456789","targetGroup":"group-1"}]}
+`,
+		},
+		"with all container health being UNKNOWN": {
+			desc: &ecsServiceStatus{
+				Service: awsecs.ServiceStatus{
+					DesiredCount:     3,
+					RunningCount:     2,
+					Status:           "ACTIVE",
+					LastDeploymentAt: startTime,
+					TaskDefinition:   "mockTaskDefinition",
+				},
+				Tasks: []awsecs.TaskStatus{
+					{
+						Health:     "UNKNOWN",
+						LastStatus: "RUNNING",
+						ID:         "1234567890123456789",
+						Images:     []awsecs.Image{},
+					},
+					{
+						Health:     "UNKNOWN",
+						LastStatus: "RUNNING",
+						ID:         "1345678990123456789",
+						Images:     []awsecs.Image{},
+					},
+				},
+			},
+			human: `Task Summary
+
+  Running    ■■■■■■■□□□   2/3 Desired Tasks Running
+
+Tasks
+
+  ID         Status       Revision     Started At
+  --         ------       --------     ----------
+  12345678   RUNNING      -            -
+  13456789   RUNNING      -            -
+`,
+			json: `{"Service":{"desiredCount":3,"runningCount":2,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"UNKNOWN","id":"1234567890123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""},{"health":"UNKNOWN","id":"1345678990123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":null,"targetsHealth":null}
+`,
+		},
+		"with capacity providers": {
+			desc: &ecsServiceStatus{
+				Service: awsecs.ServiceStatus{
+					DesiredCount:     3,
+					RunningCount:     2,
+					Status:           "ACTIVE",
+					LastDeploymentAt: startTime,
+					TaskDefinition:   "mockTaskDefinition",
+				},
+				Tasks: []awsecs.TaskStatus{
+					{
+						Health:           "UNKNOWN",
+						LastStatus:       "RUNNING",
+						ID:               "1234567890123456789",
+						Images:           []awsecs.Image{},
+						CapacityProvider: "FARGATE_SPOT",
+					},
+					{
+						Health:           "UNKNOWN",
+						LastStatus:       "RUNNING",
+						ID:               "1345678990123456789",
+						Images:           []awsecs.Image{},
+						CapacityProvider: "FARGATE",
+					},
+				},
+			},
+			human: `Task Summary
+
+  Running            ■■■■■■■□□□   2/3 Desired Tasks Running
+  Capacity Provider  fffffsssss   1/2 on Fargate, 1/2 on Fargate Spot
+
+Tasks
+
+  ID         Status       Revision     Started At   Capacity
+  --         ------       --------     ----------   --------
+  12345678   RUNNING      -            -            FARGATE_SPOT
+  13456789   RUNNING      -            -            FARGATE
+`,
+			json: `{"Service":{"desiredCount":3,"runningCount":2,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"UNKNOWN","id":"1234567890123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"FARGATE_SPOT","taskDefinitionARN":""},{"health":"UNKNOWN","id":"1345678990123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"FARGATE","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":null,"targetsHealth":null}
 `,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			//json, err := tc.desc.JSONString()
-			fmt.Print(tc.desc.HumanString())
-			//require.NoError(t, err)
-			require.Equal(t, tc.human, tc.desc.HumanString())
-			//require.Equal(t, tc.json, json)
+			json, err := tc.desc.JSONString()
+			require.NoError(t, err)
+			require.Equal(t, tc.json, json)
+
+			human := tc.desc.HumanString()
+			fmt.Print(human)
+			require.Equal(t, tc.human, human)
 		})
 	}
 }

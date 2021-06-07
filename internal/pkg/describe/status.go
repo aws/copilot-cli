@@ -92,8 +92,8 @@ type ecsServiceStatus struct {
 	Service           awsECS.ServiceStatus
 	Tasks             []awsECS.TaskStatus      `json:"tasks"`
 	Alarms            []cloudwatch.AlarmStatus `json:"alarms"`
-	StoppedTasks      []awsECS.TaskStatus      `json:"stoppedTasks,omitempty"`
-	TasksTargetHealth []taskTargetHealth       `json:"targetsHealth,omitempty"`
+	StoppedTasks      []awsECS.TaskStatus      `json:"stoppedTasks"`
+	TasksTargetHealth []taskTargetHealth       `json:"targetsHealth"`
 }
 
 // appRunnerServiceStatus contains the status for an AppRunner service.
@@ -358,9 +358,9 @@ func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 	stringSummary = fmt.Sprintf("%d/%d Desired Tasks Running", s.Service.RunningCount, s.Service.DesiredCount)
 	fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
 
-	header = "Deployment"
 	desiredTaskDefVersion, err := awsECS.TaskDefinitionVersion(s.Service.TaskDefinition)
-	if err == nil {
+	if err == nil && s.Service.RunningCount > 0 {
+		header = "Deployment"
 		data := s.taskDefinitionRevisionData()
 		bar = summaryBar(
 			[]int{
