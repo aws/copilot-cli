@@ -246,7 +246,12 @@ func TestValidateSidecarDependsOn(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := validateSidecarDependsOn(*tc.inSidecar, mockSidecarName, tc.allSidecars, mockWorkloadName)
+			s := convertSidecarOpts{
+				sidecarConfig: tc.allSidecars,
+				imageConfig:   &manifest.Image{},
+				workloadName:  mockWorkloadName,
+			}
+			gotErr := validateSidecarDependsOn(*tc.inSidecar, mockSidecarName, s)
 			if tc.wantErr == nil {
 				require.NoError(t, gotErr)
 			} else {
@@ -256,7 +261,7 @@ func TestValidateSidecarDependsOn(t *testing.T) {
 	}
 }
 
-func TestValidateNoCircularDependency(t *testing.T) {
+func TestValidateNoCircularDependencies(t *testing.T) {
 	mockWorkloadName := "frontend"
 	image := manifest.Image{}
 	testCases := map[string]struct {
@@ -364,7 +369,11 @@ func TestValidateNoCircularDependency(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := validateNoCircularDependencies(tc.allSidecars, image, mockWorkloadName)
+			gotErr := validateNoCircularDependencies(convertSidecarOpts{
+				sidecarConfig: tc.allSidecars,
+				imageConfig:   &image,
+				workloadName:  mockWorkloadName,
+			})
 			if tc.wantErr == nil {
 				require.NoError(t, gotErr)
 			} else {
@@ -443,7 +452,11 @@ func TestValidateImageDependsOn(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := validateImageDependsOn(*tc.inImage, tc.inSidecars, mockWorkloadName)
+			gotErr := validateImageDependsOn(convertSidecarOpts{
+				sidecarConfig: tc.inSidecars,
+				imageConfig:   tc.inImage,
+				workloadName:  mockWorkloadName,
+			})
 			if tc.wantErr == nil {
 				require.NoError(t, gotErr)
 			} else {

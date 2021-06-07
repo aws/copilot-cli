@@ -55,7 +55,7 @@ func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
 	if s.sidecarConfig == nil {
 		return nil, nil
 	}
-	if err := validateNoCircularDependencies(s.sidecarConfig, *s.imageConfig, s.workloadName); err != nil {
+	if err := validateNoCircularDependencies(s); err != nil {
 		return nil, err
 	}
 	var sidecars []*template.SidecarOpts
@@ -67,7 +67,7 @@ func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
 		if err := validateSidecarMountPoints(config.MountPoints); err != nil {
 			return nil, err
 		}
-		if err := validateSidecarDependsOn(*config, name, s.sidecarConfig, s.workloadName); err != nil {
+		if err := validateSidecarDependsOn(*config, name, s); err != nil {
 			return nil, err
 		}
 		mp := convertSidecarMountPoints(config.MountPoints)
@@ -94,7 +94,7 @@ func convertImageDependsOn(s convertSidecarOpts) (map[string]string, error) {
 	if s.imageConfig == nil || s.imageConfig.DependsOn == nil {
 		return nil, nil
 	}
-	if err := validateImageDependsOn(*s.imageConfig, s.sidecarConfig, s.workloadName); err != nil {
+	if err := validateImageDependsOn(s); err != nil {
 		return nil, err
 	}
 	return s.imageConfig.DependsOn, nil

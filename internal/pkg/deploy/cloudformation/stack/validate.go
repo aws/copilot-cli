@@ -114,7 +114,7 @@ func validateSidecarMountPoints(in []manifest.SidecarMountPoint) error {
 	return nil
 }
 
-func validateSidecarDependsOn(in manifest.SidecarConfig, sidecarName string, sidecars map[string]*manifest.SidecarConfig, workloadName string) error {
+func validateSidecarDependsOn(in manifest.SidecarConfig, sidecarName string, s convertSidecarOpts) error {
 	if in.DependsOn == nil {
 		return nil
 	}
@@ -125,7 +125,7 @@ func validateSidecarDependsOn(in manifest.SidecarConfig, sidecarName string, sid
 			return errInvalidDependsOnStatus
 		}
 		// essential containers must have 'start' as a status
-		if name == workloadName || sidecars[name].Essential == nil || aws.BoolValue(sidecars[name].Essential) {
+		if name == s.workloadName || s.sidecarConfig[name].Essential == nil || aws.BoolValue(s.sidecarConfig[name].Essential) {
 			if status != "start" {
 				return errEssentialContainerStatus
 			}
@@ -135,10 +135,10 @@ func validateSidecarDependsOn(in manifest.SidecarConfig, sidecarName string, sid
 	return nil
 }
 
-func validateNoCircularDependencies(sidecars map[string]*manifest.SidecarConfig, img manifest.Image, workloadName string) error {
+func validateNoCircularDependencies(s convertSidecarOpts) error {
 	used := make(map[string]bool)
 	path := make(map[string]bool)
-	dependencies, err := buildDependencyGraph(sidecars, img, workloadName)
+	dependencies, err := buildDependencyGraph(s)
 
 	// don't let nonexistent containers pass
 	if err != nil {
@@ -171,16 +171,16 @@ func hasCycles(graph *Graph, used map[string]bool, path map[string]bool, currNod
 	return false
 }
 
-func buildDependencyGraph(sidecars map[string]*manifest.SidecarConfig, img manifest.Image, workloadName string) (*Graph, error) {
+func buildDependencyGraph(s convertSidecarOpts) (*Graph, error) {
 	dependencyGraph := Graph{nodes: make(map[string][]string)}
 
 	// sidecar dependencies
-	for name, sidecar := range sidecars {
+	for name, sidecar := range s.sidecarConfig {
 		// add any existing dependency to the graph
 		if len(sidecar.DependsOn) != 0 {
 			for dep := range sidecar.DependsOn {
 				// containers being depended on must exist
-				if sidecars[dep] == nil && dep != workloadName {
+				if s.sidecarConfig[dep] == nil && dep != s.workloadName {
 					return nil, errInvalidContainer
 				}
 
@@ -190,14 +190,14 @@ func buildDependencyGraph(sidecars map[string]*manifest.SidecarConfig, img manif
 	}
 
 	// add any image dependencies to the graph
-	if len(img.DependsOn) != 0 {
-		for dep := range img.DependsOn {
+	if len(s.imageConfig.DependsOn) != 0 {
+		for dep := range s.imageConfig.DependsOn {
 			// containers being depended on must exist
-			if sidecars[dep] == nil && dep != workloadName {
+			if s.sidecarConfig[dep] == nil && dep != s.workloadName {
 				return nil, errInvalidContainer
 			}
 
-			dependencyGraph.Add(workloadName, dep)
+			dependencyGraph.Add(s.workloadName, dep)
 		}
 	}
 
@@ -229,19 +229,19 @@ func (graph *Graph) Add(fromNode, toNode string) {
 	}
 }
 
-func validateImageDependsOn(img manifest.Image, sidecars map[string]*manifest.SidecarConfig, workloadName string) error {
-	if img.DependsOn == nil {
+func validateImageDependsOn(s convertSidecarOpts) error {
+	if s.imageConfig.DependsOn == nil {
 		return nil
 	}
 
-	for name, status := range img.DependsOn {
+	for name, status := range s.imageConfig.DependsOn {
 		// status must be one of < start | complete | success >
 		if !isValidStatus(status) {
 			return errInvalidDependsOnStatus
 		}
 		// essential containers must have 'start' as a status
-		if sidecars != nil {
-			if sidecars[name].Essential == nil || *sidecars[name].Essential {
+		if s.sidecarConfig != nil {
+			if s.sidecarConfig[name].Essential == nil || *s.sidecarConfig[name].Essential {
 				if status != "start" {
 					return errEssentialContainerStatus
 				}
@@ -249,7 +249,7 @@ func validateImageDependsOn(img manifest.Image, sidecars map[string]*manifest.Si
 		}
 	}
 
-	return validateNoCircularDependencies(sidecars, img, workloadName)
+	return validateNoCircularDependencies(s)
 }
 
 func isValidStatus(s string) bool {
