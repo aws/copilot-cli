@@ -168,6 +168,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		Sidecars:           sidecars,
 		ScheduleExpression: schedule,
 		StateMachine:       stateMachine,
+		HealthCheck:        j.manifest.ImageConfig.HealthCheckOpts(),
 		LogConfig:          convertLogging(j.manifest.Logging),
 		DockerLabels:       j.manifest.ImageConfig.DockerLabels,
 		Storage:            storage,

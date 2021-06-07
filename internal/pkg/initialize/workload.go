@@ -71,9 +71,10 @@ type WorkloadProps struct {
 // JobProps contains the information needed to represent a Job.
 type JobProps struct {
 	WorkloadProps
-	Schedule string
-	Timeout  string
-	Retries  int
+	Schedule    string
+	HealthCheck *manifest.ContainerHealthCheck
+	Timeout     string
+	Retries     int
 }
 
 // ServiceProps contains the information needed to represent a Service (port, HealthCheck, and workload common props).
@@ -267,9 +268,10 @@ func newJobManifest(i *JobProps) (encoding.BinaryMarshaler, error) {
 				Dockerfile: i.DockerfilePath,
 				Image:      i.Image,
 			},
-			Schedule: i.Schedule,
-			Timeout:  i.Timeout,
-			Retries:  i.Retries,
+			HealthCheck: i.HealthCheck,
+			Schedule:    i.Schedule,
+			Timeout:     i.Timeout,
+			Retries:     i.Retries,
 		}), nil
 	default:
 		return nil, fmt.Errorf("job type %s doesn't have a manifest", i.Type)

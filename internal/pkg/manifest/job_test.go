@@ -105,8 +105,10 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					Type: aws.String(ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
-					ImageConfig: Image{
-						Location: aws.String("nginx"),
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Location: aws.String("nginx"),
+						},
 					},
 					On: JobTriggerConfig{
 						Schedule: aws.String("@hourly"),
@@ -146,8 +148,10 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					Type: aws.String(ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
-					ImageConfig: Image{
-						Location: aws.String("nginx"),
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Location: aws.String("nginx"),
+						},
 					},
 					On: JobTriggerConfig{
 						Schedule: aws.String("@hourly"),

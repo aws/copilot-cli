@@ -88,15 +88,17 @@ type initSvcOpts struct {
 	fs                    afero.Fs
 	init                  svcInitializer
 	prompt                prompter
-	df                    dockerfileParser
 	dockerEngineValidator dockerEngineValidator
 	sel                   dockerfileSelector
 
 	// Outputs stored on successful actions.
 	manifestPath string
 
-	// Sets up Dockerfile parser using fs and input path
-	setupParser func(*initSvcOpts)
+	// Cache variables
+	df dockerfileParser
+
+	// Init a Dockerfile parser using fs and input path
+	initParser func(string) dockerfileParser
 }
 
 func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
@@ -124,16 +126,17 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess),
 	}
+	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	return &initSvcOpts{
 		initSvcVars: vars,
 
-		fs:                    &afero.Afero{Fs: afero.NewOsFs()},
+		fs:                    fs,
 		init:                  initSvc,
 		prompt:                prompter,
 		sel:                   sel,
 		dockerEngineValidator: exec.NewDockerCommand(),
-		setupParser: func(o *initSvcOpts) {
-			o.df = exec.NewDockerfile(o.fs, o.dockerfilePath)
+		initParser: func(s string) dockerfileParser {
+			return exec.NewDockerfile(fs, s)
 		},
 	}, nil
 }
@@ -204,9 +207,15 @@ func (o *initSvcOpts) Ask() error {
 func (o *initSvcOpts) Execute() error {
 	// Check for a valid healthcheck and add it to the opts.
 	var hc *manifest.ContainerHealthCheck
-	hc, err := o.parseHealthCheck()
-	if err != nil {
-		return err
+	var err error
+	if o.dockerfilePath != "" {
+		if o.df == nil {
+			o.df = o.initParser(o.dockerfilePath)
+		}
+		hc, err = parseHealthCheck(o.df)
+		if err != nil {
+			return fmt.Errorf("parse dockerfile %s: %w", o.dockerfilePath, err)
+		}
 	}
 
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
@@ -340,7 +349,9 @@ func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 
 func (o *initSvcOpts) askSvcPort() (err error) {
 	// See if we can get a healthcheck from the dockerfile.
-	o.setupParser(o)
+	if o.df == nil {
+		o.df = o.initParser(o.dockerfilePath)
+	}
 
 	// If the port flag was set, use that and don't ask.
 	if o.port != 0 {
@@ -395,14 +406,10 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 	return nil
 }
 
-func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error) {
-	if o.dockerfilePath == "" || o.wkldType != manifest.BackendServiceType {
-		return nil, nil
-	}
-	o.setupParser(o)
-	hc, err := o.df.GetHealthCheck()
+func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, error) {
+	hc, err := df.GetHealthCheck()
 	if err != nil {
-		return nil, fmt.Errorf("get healthcheck from Dockerfile: %s, %w", o.dockerfilePath, err)
+		return nil, fmt.Errorf("get healthcheck: %w", err)
 	}
 	if hc == nil {
 		return nil, nil
