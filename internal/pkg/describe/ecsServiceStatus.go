@@ -34,6 +34,7 @@ func (s *ecsServiceStatus) shouldShowCapacityProvider() bool {
 }
 
 func (s *ecsServiceStatus) shouldShowHTTPHealth() bool {
+	// If none of the tasks is a target, we don't need to show HTTP health.
 	return len(s.TasksTargetHealth) != 0
 }
 
