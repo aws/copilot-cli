@@ -42,11 +42,11 @@ func (s *ecsServiceStatus) shouldShowHTTPHealth() bool {
 func (s *ecsServiceStatus) containerHealthData() (healthy int, unhealthy int, unknown int) {
 	for _, t := range s.Tasks {
 		switch strings.ToUpper(t.Health) {
-		case "HEALTHY":
+		case awsECS.TaskContainerHealthStatusHealthy:
 			healthy += 1
-		case "UNHEALTHY":
+		case awsECS.TaskContainerHealthStatusUnhealthy:
 			unhealthy += 1
-		case "UNKNOWN":
+		case awsECS.TaskContainerHealthStatusUnknown:
 			unknown += 1
 		}
 	}

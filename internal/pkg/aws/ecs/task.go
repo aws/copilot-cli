@@ -27,6 +27,11 @@ const (
 
 	// TaskContainerHealthStatusUnknown wraps the ECS health status UNKNOWN.
 	TaskContainerHealthStatusUnknown = ecs.HealthStatusUnknown
+	// TaskContainerHealthStatusHealthy wraps the ECS health status HEALTHY.
+	TaskContainerHealthStatusHealthy = ecs.HealthStatusHealthy
+	// TaskContainerHealthStatusUnhealthy wraps the ECS health status UNHEALTHY.
+	TaskContainerHealthStatusUnhealthy = ecs.HealthStatusUnhealthy
+
 	// TaskCapacityProviderFargate is the capacity provider name for FARGATE.
 	TaskCapacityProviderFargate = "FARGATE"
 	// TaskCapacityProviderFargateSpot is the capacity provider name for FARGATE_SPOT.
