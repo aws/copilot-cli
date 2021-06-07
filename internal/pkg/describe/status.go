@@ -299,7 +299,7 @@ func (a *appRunnerServiceStatus) JSONString() (string, error) {
 // HumanString returns the stringified ecsServiceStatus struct with human readable format.
 func (s *ecsServiceStatus) HumanString() string {
 	var b bytes.Buffer
-	writer := tabwriter.NewWriter(&b, 13, 4, 2, ' ', tabwriter.Debug)
+	writer := tabwriter.NewWriter(&b, 13, 4, 2, ' ', noAdditionalFormatting)
 
 	s.writeTaskSummary(writer)
 	s.writeStoppedTasks(writer)
@@ -339,7 +339,7 @@ func (a *appRunnerServiceStatus) HumanString() string {
 }
 
 func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
-	fmt.Fprint(writer, color.Bold.Sprint("\nTask Summary\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("Task Summary\n\n"))
 	writer.Flush()
 
 	var (
