@@ -12,6 +12,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/elbv2"
 )
 
+const (
+	TargetHealthStateHealthy = elbv2.TargetHealthStateEnumHealthy
+)
+
 type api interface {
 	DescribeTargetHealth(input *elbv2.DescribeTargetHealthInput) (*elbv2.DescribeTargetHealthOutput, error)
 }

@@ -25,7 +25,7 @@ const (
 	privateIPv4AddressKey          = "privateIPv4Address"
 	networkInterfaceAttachmentType = "ElasticNetworkInterface"
 
-	TaskContainerHealthUnknown = ecs.HealthStatusUnknown
+	TaskContainerHealthStatusUnknown = ecs.HealthStatusUnknown
 )
 
 // Image contains very basic info of a container image.

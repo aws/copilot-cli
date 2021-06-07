@@ -1087,6 +1087,126 @@ func TestECSTaskStatus_humanString(t *testing.T) {
 	}
 }
 
+func Test_targetHealthForTasks(t *testing.T) {
+	testCases := map[string]struct {
+		inTargetsHealth  []*elbv2.TargetHealth
+		inTasks          []*awsecs.Task
+		inTargetGroupARN string
+
+		wanted []taskTargetHealth
+	}{
+		"empty output if none of the tasks are a target": {
+			inTargetsHealth: []*elbv2.TargetHealth{
+				{
+					Target: &elbv2api.TargetDescription{
+						Id: aws.String("42.42.42.42"),
+					},
+				},
+				{
+					Target: &elbv2api.TargetDescription{
+						Id: aws.String("24.24.24.24"),
+					},
+				},
+			},
+			inTasks: []*awsecs.Task{
+				{
+					TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789012:task/mockCluster/task-with-private-ip-being-target"),
+					Attachments: []*ecsapi.Attachment{
+						{
+							Type: aws.String("ElasticNetworkInterface"),
+							Details: []*ecsapi.KeyValuePair{
+								{
+									Name:  aws.String("privateIPv4Address"),
+									Value: aws.String("1.2.3.4"),
+								},
+							},
+						},
+					},
+				},
+				{
+					TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789012:task/mockCluster/task-with-private-ip-being-target"),
+					Attachments: []*ecsapi.Attachment{
+						{
+							Type: aws.String("ElasticNetworkInterface"),
+							Details: []*ecsapi.KeyValuePair{
+								{
+									Name:  aws.String("privateIPv4Address"),
+									Value: aws.String("4.3.2.1"),
+								},
+							},
+						},
+					},
+				},
+			},
+			inTargetGroupARN: "group-1",
+			wanted:           nil,
+		},
+		"add task and its target health to output if the task is a target": {
+			inTargetsHealth: []*elbv2.TargetHealth{
+				{
+					Target: &elbv2api.TargetDescription{
+						Id: aws.String("42.42.42.42"),
+					},
+				},
+				{
+					Target: &elbv2api.TargetDescription{
+						Id: aws.String("24.24.24.24"),
+					},
+				},
+			},
+			inTasks: []*awsecs.Task{
+				{
+					TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789012:task/mockCluster/task-with-private-ip-being-target"),
+					Attachments: []*ecsapi.Attachment{
+						{
+							Type: aws.String("ElasticNetworkInterface"),
+							Details: []*ecsapi.KeyValuePair{
+								{
+									Name:  aws.String("privateIPv4Address"),
+									Value: aws.String("42.42.42.42"),
+								},
+							},
+						},
+					},
+				},
+				{
+					TaskArn: aws.String("arn:aws:ecs:us-west-2:123456789012:task/mockCluster/not-target"),
+					Attachments: []*ecsapi.Attachment{
+						{
+							Type: aws.String("ElasticNetworkInterface"),
+							Details: []*ecsapi.KeyValuePair{
+								{
+									Name:  aws.String("privateIPv4Address"),
+									Value: aws.String("4.3.2.1"),
+								},
+							},
+						},
+					},
+				},
+			},
+			inTargetGroupARN: "group-1",
+			wanted: []taskTargetHealth{
+				{
+					TaskID: "task-with-private-ip-being-target",
+					TargetHealthDescription: elbv2.TargetHealth{
+						Target: &elbv2api.TargetDescription{
+							Id: aws.String("42.42.42.42"),
+						},
+					},
+					TargetGroupARN: "group-1",
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := targetHealthForTasks(tc.inTargetsHealth, tc.inTasks, tc.inTargetGroupARN)
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
 //func TestECSStoppedTaskStatus_humanString(t *testing.T) {
 //	// from the function changes (ex: from "1 month ago" to "2 months ago"). To make our tests stable,
 //	oldHumanize := humanizeTime
@@ -1203,14 +1323,14 @@ func Test_Temporary(t *testing.T) {
 
 		desc := &ecsServiceStatus{
 			Service: awsecs.ServiceStatus{
-				RunningCount:   3,
+				RunningCount:   10,
 				DesiredCount:   4,
 				TaskDefinition: "arn:aws:ecs:us-east-1:111122222333:task-definition/some-task-def:6",
 			},
 			Tasks: []awsecs.TaskStatus{
 				{
-					Health: "HEALTHY",
-					//Health:     "UNKNOWN",
+					//Health: "HEALTHY",
+					Health:     "UNKNOWN",
 					LastStatus: "RUNNING",
 					ID:         "a-task-with-private-ip-being-target",
 					Images: []awsecs.Image{
@@ -1228,7 +1348,8 @@ func Test_Temporary(t *testing.T) {
 					TaskDefinition:   "arn:aws:ecs:us-east-1:111122222333:task-definition/some-task-def:6",
 				},
 				{
-					Health:     "UNKNOWN",
+					Health: "HEALTHY",
+					//Health:     "UNKNOWN",
 					LastStatus: "RUNNING",
 					ID:         "another-task-with-private-ip-being-target",
 					Images: []awsecs.Image{
@@ -1261,7 +1382,7 @@ func Test_Temporary(t *testing.T) {
 					},
 					StoppedReason:    "some reason",
 					CapacityProvider: "FARGATE_SPOT",
-					TaskDefinition:   "arn:aws:ecs:us-east-1:111122222333:task-definition/some-task-def:1",
+					TaskDefinition:   "arn:aws:ecs:us-east-1:111122222333:task-definition/some-task-def:6",
 				},
 			},
 			StoppedTasks: []awsecs.TaskStatus{
@@ -1344,7 +1465,7 @@ func Test_Temporary(t *testing.T) {
 							Id: aws.String("1.1.1.1"),
 						},
 						TargetHealth: &elbv2api.TargetHealth{
-							State: aws.String("unhealthy"),
+							State: aws.String("healthy"),
 						},
 					},
 					TaskID: "another-task-with-private-ip-being-target",

@@ -347,15 +347,27 @@ func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 	)
 
 	header = "Running"
-	bar = summaryBarBinary((int)(s.Service.RunningCount), (int)(s.Service.DesiredCount), color.Green.Sprint("■"), "□")
+	bar = summaryBar(
+		[]int{
+			(int)(s.Service.RunningCount),
+			(int)(s.Service.DesiredCount) - (int)(s.Service.RunningCount),
+		},
+		[]string{
+			color.Green.Sprint("■"), "□",
+		})
 	stringSummary = fmt.Sprintf("%d/%d Desired Tasks Running", s.Service.RunningCount, s.Service.DesiredCount)
 	fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
 
 	header = "Deployment"
 	desiredTaskDefVersion, err := awsECS.TaskDefinitionVersion(s.Service.TaskDefinition)
 	if err == nil {
-		data := s.taskDefinitionVersionData()
-		bar = summaryBarBinary(data[desiredTaskDefVersion], (int)(s.Service.RunningCount), color.Green.Sprint("■"), "□")
+		data := s.taskDefinitionRevisionData()
+		bar = summaryBar(
+			[]int{
+				data[desiredTaskDefVersion],
+				(int)(s.Service.RunningCount) - data[desiredTaskDefVersion],
+			},
+			[]string{color.Green.Sprint("■"), "□"})
 		stringSummary = fmt.Sprintf("%d/%d Running task definition version %d (desired)",
 			data[desiredTaskDefVersion],
 			s.Service.RunningCount,
@@ -368,7 +380,12 @@ func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 
 		if s.shouldShowHTTPHealth() {
 			healthyCount := s.healthyHTTPTasksCount()
-			bar = summaryBarBinary(healthyCount, (int)(s.Service.RunningCount), color.Green.Sprint("■"), "□")
+			bar = summaryBar(
+				[]int{
+					healthyCount,
+					(int)(s.Service.RunningCount) - healthyCount,
+				},
+				[]string{color.Green.Sprint("■"), "□"})
 			stringSummary = fmt.Sprintf("%d/%d Passes HTTP Health Checks", healthyCount, s.Service.RunningCount)
 			fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
 			header = ""
@@ -376,7 +393,12 @@ func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 
 		if s.shouldShowContainerHealth() {
 			healthyCount, _, _ := s.containerHealthData()
-			bar = summaryBarBinary(healthyCount, (int)(s.Service.RunningCount), color.Green.Sprint("■"), "□")
+			bar = summaryBar(
+				[]int{
+					healthyCount,
+					(int)(s.Service.RunningCount) - healthyCount,
+				},
+				[]string{color.Green.Sprint("■"), "□"})
 			stringSummary = fmt.Sprintf("%d/%d Passes Container Health Checks", healthyCount, s.Service.RunningCount)
 			fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
 		}
@@ -490,219 +512,6 @@ func (s *ecsServiceStatus) writeAlarms(writer *tabwriter.Writer) {
 	}
 }
 
-// Indicator methods that determine whether some information should be shown in humanized output.
-func (s *ecsServiceStatus) shouldShowHealthSummary() bool {
-	return s.shouldShowContainerHealth() || s.shouldShowHTTPHealth()
-}
-
-func (s *ecsServiceStatus) shouldShowContainerHealth() bool {
-	for _, t := range s.Tasks {
-		if t.Health != awsECS.TaskContainerHealthUnknown && t.Health != "" {
-			return true
-		}
-	}
-	// If all tasks' main container health are UNKNOWN or empty, we don't need to show container health.
-	return false
-}
-
-func (s *ecsServiceStatus) shouldShowCapacityProvider() bool {
-	for _, task := range s.Tasks {
-		if task.CapacityProvider != "" {
-			return true
-		}
-	}
-	// If all tasks' capacity provider is empty, we don't need to show capacity provider.
-	return false
-}
-
-func (s *ecsServiceStatus) shouldShowHTTPHealth() bool {
-	return len(s.TasksTargetHealth) != 0
-}
-
-// Data methods
-func (s *ecsServiceStatus) containerHealthData() (healthy int, unhealthy int, unknown int) {
-	for _, t := range s.Tasks {
-		switch strings.ToUpper(t.Health) {
-		case "HEALTHY":
-			healthy += 1
-		case "UNHEALTHY":
-			unhealthy += 1
-		case "UNKNOWN":
-			unknown += 1
-		}
-	}
-	return
-}
-
-func (s *ecsServiceStatus) taskDefinitionVersionData() map[int]int {
-	out := make(map[int]int)
-	for _, t := range s.Tasks {
-		version, err := awsECS.TaskDefinitionVersion(t.TaskDefinition)
-		if err != nil {
-			out[-1] += 1
-		} else {
-			out[version] += 1
-		}
-	}
-	return out
-}
-
-func (s *ecsServiceStatus) summarizeTasksTargetHealth() map[string][]string {
-	out := make(map[string][]string)
-	for _, th := range s.TasksTargetHealth {
-		out[th.TaskID] = append(out[th.TaskID], aws.StringValue(th.TargetHealthDescription.TargetHealth.State))
-	}
-	return out
-}
-
-func (s *ecsServiceStatus) healthyHTTPTasksCount() int {
-	var count int
-	tasksHealthStates := s.summarizeTasksTargetHealth()
-	for _, states := range tasksHealthStates {
-		healthy := true
-		for _, state := range states {
-			if state != "healthy" {
-				healthy = false
-			}
-		}
-		if healthy {
-			count += 1
-		}
-	}
-	return count
-}
-
-func (s *ecsServiceStatus) capacityProviderData() (fargate int, spot int, unset int) {
-	for _, t := range s.Tasks {
-		switch strings.ToUpper(t.CapacityProvider) {
-		case "FARGATE":
-			fargate += 1
-		case "FARGATE_SPOT":
-			spot += 1
-		default:
-			unset += 1
-		}
-	}
-	return
-}
-
-// Bar methods
-type valueWithIndex struct {
-	value int
-	index int
-}
-
-func summaryString(data []int, representations []string) string {
-	var sum int
-	for _, dt := range data {
-		sum += dt
-	}
-
-	var str string
-	for idx, dt := range data {
-		if dt == 0 {
-			continue
-		}
-		str += fmt.Sprintf("%s (%d/%d)\t", representations[idx], dt, sum)
-	}
-
-	str = strings.TrimSuffix(str, "\t")
-	return str
-}
-
-func summaryBar(data []int, representations []string) string {
-	var dataWithIndices []valueWithIndex
-	for idx, dt := range data {
-		dataWithIndices = append(dataWithIndices, valueWithIndex{
-			value: dt,
-			index: idx,
-		})
-	}
-
-	portionsWithIndices := calculatePortions(dataWithIndices)
-	if portionsWithIndices == nil {
-		return "□□□□□□□□□□"
-	}
-
-	sort.SliceStable(portionsWithIndices, func(i, j int) bool {
-		return portionsWithIndices[i].index < portionsWithIndices[j].index
-	})
-
-	var bar string
-	for _, p := range portionsWithIndices {
-		bar += fmt.Sprintf("%s", strings.Repeat(representations[p.index], p.value))
-	}
-	return bar
-}
-
-func summaryBarBinary(filled int, total int, filledRepresentation string, emptyRepresentation string) string {
-	filledCount := calculateBinaryPortion(filled, total, 10)
-	return fmt.Sprintf("%s%s", strings.Repeat(filledRepresentation, filledCount), strings.Repeat(emptyRepresentation, 10-filledCount))
-}
-
-func calculateBinaryPortion(filled int, total int, length int) int {
-	if total == 0 {
-		return 0
-	}
-	filledCount := math.Round((float64)(filled) / (float64)(total) * (float64)(length))
-	return (int)(math.Min(filledCount, (float64)(length)))
-}
-
-func calculatePortions(valuesWithIndices []valueWithIndex) []valueWithIndex {
-	type decWithPortion struct {
-		dec     float64
-		portion valueWithIndex
-	}
-
-	var sum int
-	for _, pwi := range valuesWithIndices {
-		sum += pwi.value
-	}
-	if sum == 0 {
-		return nil
-	}
-
-	var decPartsToPortion []decWithPortion
-	for _, pwi := range valuesWithIndices {
-		// For each value, calculate its portion out of 10, record the decimal part and then take the floor.
-		// The floored result is roughly the value's portion out of 10, and will be calibrated later.
-		outOf10 := (float64)(pwi.value) / (float64)(sum) * 10
-		_, decPart := math.Modf(outOf10)
-
-		decPartsToPortion = append(decPartsToPortion, decWithPortion{
-			dec: decPart,
-			portion: valueWithIndex{
-				value: (int)(math.Floor(outOf10)),
-				index: pwi.index,
-			},
-		})
-	}
-
-	// Calculate the sum of the floored portion and see how far we are from 10.
-	var floorSum int
-	for _, floorPortion := range decPartsToPortion {
-		floorSum += floorPortion.portion.value
-	}
-	extra := 10 - floorSum
-
-	// Sort by decimal places from larger to smaller.
-	sort.SliceStable(decPartsToPortion, func(i, j int) bool {
-		return decPartsToPortion[i].dec > decPartsToPortion[j].dec
-	})
-
-	// Distribute extra values first to portions with larger decimal places.
-	var out []valueWithIndex
-	for _, d := range decPartsToPortion {
-		if extra > 0 {
-			d.portion.value += 1
-			extra -= 1
-		}
-		out = append(out, d.portion)
-	}
-
-	return out
-}
-
 type ecsTaskStatus awsECS.TaskStatus
 
 // Example output:
@@ -751,6 +560,107 @@ func (ts ecsTaskStatus) humanString(opts ...ecsTaskStatusConfigOpts) string {
 		statusString += fmt.Sprintf("\t%s", ch)
 	}
 	return statusString
+}
+
+// Bar methods
+type valueWithIndex struct {
+	value int
+	index int
+}
+
+// summaryBar returns a summary bar given data and the string representations of each data category.
+// For example, data[0] will be represented by representations[0] in the summary bar.
+// If len(representations) < len(data), the default representation "□" is used for all data category with missing representation.
+func summaryBar(data []int, representations []string) string {
+	const (
+		summaryBarLength      = 10
+		defaultRepresentation = "□"
+	)
+
+	// The index is recorded so that we can later output the summary bar in the original order.
+	var dataWithIndices []valueWithIndex
+	for idx, dt := range data {
+		dataWithIndices = append(dataWithIndices, valueWithIndex{
+			value: dt,
+			index: idx,
+		})
+	}
+
+	portionsWithIndices := calculatePortions(dataWithIndices, summaryBarLength)
+	if portionsWithIndices == nil {
+		return fmt.Sprintf(strings.Repeat(defaultRepresentation, summaryBarLength))
+	}
+
+	sort.SliceStable(portionsWithIndices, func(i, j int) bool {
+		return portionsWithIndices[i].index < portionsWithIndices[j].index
+	})
+
+	var bar string
+	for _, p := range portionsWithIndices {
+		if p.value >= summaryBarLength {
+			// If a data category's portion exceeds the summary bar length (this happens only when the some of the data have negative value)
+			// returns the bar filled with that data category
+			return fmt.Sprintf("%s", strings.Repeat(representations[p.index], summaryBarLength))
+		}
+		bar += fmt.Sprintf("%s", strings.Repeat(representations[p.index], p.value))
+	}
+	return bar
+}
+
+func calculatePortions(valuesWithIndices []valueWithIndex, length int) []valueWithIndex {
+	type decWithPortion struct {
+		dec     float64
+		portion valueWithIndex
+	}
+
+	var sum int
+	for _, pwi := range valuesWithIndices {
+		sum += pwi.value
+	}
+	if sum == 0 {
+		return nil
+	}
+
+	var decPartsToPortion []decWithPortion
+	for _, pwi := range valuesWithIndices {
+		// For each value, calculate its portion out of `length`, record the decimal part and then take the floor.
+		// The floored result is roughly the value's portion out of `length`.
+		// The portion will be calibrated later according to the decimal part.
+		outOfLength := (float64)(pwi.value) / (float64)(sum) * (float64)(length)
+		_, decPart := math.Modf(outOfLength)
+
+		decPartsToPortion = append(decPartsToPortion, decWithPortion{
+			dec: decPart,
+			portion: valueWithIndex{
+				value: (int)(math.Floor(outOfLength)),
+				index: pwi.index,
+			},
+		})
+	}
+
+	// Calculate the sum of the floored portion and see how far we are from `length`.
+	var floorSum int
+	for _, floorPortion := range decPartsToPortion {
+		floorSum += floorPortion.portion.value
+	}
+	extra := length - floorSum
+
+	// Sort by decimal places from larger to smaller.
+	sort.SliceStable(decPartsToPortion, func(i, j int) bool {
+		return decPartsToPortion[i].dec > decPartsToPortion[j].dec
+	})
+
+	// Distribute extra values first to portions with larger decimal places.
+	var out []valueWithIndex
+	for _, d := range decPartsToPortion {
+		if extra > 0 {
+			d.portion.value += 1
+			extra -= 1
+		}
+		out = append(out, d.portion)
+	}
+
+	return out
 }
 
 type ecsTaskStatusConfig struct {
