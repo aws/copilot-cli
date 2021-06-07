@@ -336,33 +336,6 @@ func Test_TaskID(t *testing.T) {
 	}
 }
 
-func Test_ShortTaskID(t *testing.T) {
-	testCases := map[string]struct {
-		taskID string
-		wantID string
-	}{
-		"returns original ID if it's shorter than specified length": {
-			taskID: "task",
-			wantID: "task",
-		},
-		"returns shortened ID if it's longer than specified length": {
-			taskID: "taskIDSoLongg",
-			wantID: "taskIDSo",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// WHEN
-			gotID := shortTaskID(tc.taskID)
-
-			// THEN
-			require.Equal(t, tc.wantID, gotID)
-		})
-
-	}
-}
-
 func TestTaskDefinition_EnvVars(t *testing.T) {
 	testCases := map[string]struct {
 		inContainers []*ecs.ContainerDefinition
