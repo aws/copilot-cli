@@ -479,7 +479,7 @@ func (s *ecsServiceStatus) writeRunningTasks(writer *tabwriter.Writer) {
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, task := range s.Tasks {
-		taskStatus := fmt.Sprintf("%s", (ecsTaskStatus)(task).humanString(opts...))
+		taskStatus := fmt.Sprint((ecsTaskStatus)(task).humanString(opts...))
 		if shouldShowHTTPHealth {
 			var httpHealthState string
 			if states, ok := taskToHealth[task.ID]; !ok || len(states) == 0 {
@@ -528,7 +528,7 @@ func (ts ecsTaskStatus) humanString(opts ...ecsTaskStatusConfigOpts) string {
 	if ts.ID != "" {
 		shortID = shortTaskID(ts.ID)
 	}
-	statusString += fmt.Sprintf("%s", shortID)
+	statusString += fmt.Sprint(shortID)
 	statusString += fmt.Sprintf("\t%s", ts.LastStatus)
 
 	revision := "-"
@@ -645,7 +645,7 @@ func summaryBar(data []int, representations []string) string {
 
 	portionsWithIndices := calculatePortions(dataWithIndices, summaryBarLength)
 	if portionsWithIndices == nil {
-		return fmt.Sprintf(strings.Repeat(defaultRepresentation, summaryBarLength))
+		return fmt.Sprint(strings.Repeat(defaultRepresentation, summaryBarLength))
 	}
 
 	sort.SliceStable(portionsWithIndices, func(i, j int) bool {
@@ -657,9 +657,9 @@ func summaryBar(data []int, representations []string) string {
 		if p.value >= summaryBarLength {
 			// If a data category's portion exceeds the summary bar length (this happens only when the some of the data have negative value)
 			// returns the bar filled with that data category
-			return fmt.Sprintf("%s", strings.Repeat(representations[p.index], summaryBarLength))
+			return fmt.Sprint(strings.Repeat(representations[p.index], summaryBarLength))
 		}
-		bar += fmt.Sprintf("%s", strings.Repeat(representations[p.index], p.value))
+		bar += fmt.Sprint(strings.Repeat(representations[p.index], p.value))
 	}
 	return bar
 }
