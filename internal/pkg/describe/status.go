@@ -201,12 +201,9 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 
 	var tasksTargetHealth []taskTargetHealth
 	targetGroupsARN := service.TargetGroups()
-	if len(targetGroupsARN) > 0 {
-		for _, groupARN := range targetGroupsARN {
-			targetsHealth, err := s.targetHealthGetter.TargetsHealth(groupARN)
-			if err != nil {
-				continue
-			}
+	for _, groupARN := range targetGroupsARN {
+		targetsHealth, err := s.targetHealthGetter.TargetsHealth(groupARN)
+		if err == nil {
 			tasksTargetHealth = append(tasksTargetHealth, targetHealthForTasks(targetsHealth, svcDesc.Tasks, groupARN)...)
 		}
 	}
