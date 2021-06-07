@@ -124,12 +124,19 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	sidecars, err := convertSidecar(j.manifest.Sidecars, j.manifest.ImageConfig, *j.manifest.Name)
+	convSidecarOpts := convertSidecarOpts{
+		sidecarConfig: j.manifest.Sidecars,
+		imageConfig:   &j.manifest.ImageConfig,
+		workloadName:  *j.manifest.Name,
+	}
+	sidecars, err := convertSidecar(convSidecarOpts)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
 	}
-
+	dependencies, err := convertImageDependsOn(convSidecarOpts)
+	if err != nil {
+		return "", fmt.Errorf("convert container dependency for job %s: %w", j.name, err)
+	}
 	schedule, err := j.awsSchedule()
 	if err != nil {
 		return "", fmt.Errorf("convert schedule for job %s: %w", j.name, err)
@@ -171,6 +178,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		Network:            convertNetworkConfig(j.manifest.Network),
 		EntryPoint:         entrypoint,
 		Command:            command,
+		DependsOn:          dependencies,
 
 		EnvControllerLambda: envControllerLambda.String(),
 	})

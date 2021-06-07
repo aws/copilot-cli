@@ -9,10 +9,14 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/yourbasic/graph"
 )
 
-// Validation errors when rendering manifest into template.
+// container dependency status constants.
+const (
+	dependsOnStart    = "start"
+	dependsOnComplete = "complete"
+	dependsOnSuccess  = "success"
+)
 
 // Empty field errors.
 var (
@@ -38,7 +42,7 @@ var (
 
 var (
 	// Container dependency status options
-	DependsOnStatus = []string{"start", "complete", "success"}
+	DependsOnStatus = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess}
 )
 
 // Validate that paths contain only an approved set of characters to guard against command injection.
@@ -110,22 +114,18 @@ func validateSidecarMountPoints(in []manifest.SidecarMountPoint) error {
 	return nil
 }
 
-func validateSidecarDependsOn(in manifest.SidecarConfig, sidecarName string, sidecars map[string]*manifest.SidecarConfig, manifestName string) error {
+func validateSidecarDependsOn(in manifest.SidecarConfig, sidecarName string, sidecars map[string]*manifest.SidecarConfig, workloadName string) error {
 	if in.DependsOn == nil {
 		return nil
 	}
 
 	for name, status := range in.DependsOn {
-		// don't let a sidecar depend on itself
-		if name == sidecarName {
-			return errCircularDependency
-		}
 		// status must be one of < start | complete | success >
 		if !isValidStatus(status) {
 			return errInvalidDependsOnStatus
 		}
 		// essential containers must have 'start' as a status
-		if name == manifestName || sidecars[name].Essential == nil || *sidecars[name].Essential {
+		if name == workloadName || sidecars[name].Essential == nil || aws.BoolValue(sidecars[name].Essential) {
 			if status != "start" {
 				return errEssentialContainerStatus
 			}
@@ -135,83 +135,106 @@ func validateSidecarDependsOn(in manifest.SidecarConfig, sidecarName string, sid
 	return nil
 }
 
-func validateNoCircularDependencies(sidecars map[string]*manifest.SidecarConfig, img manifest.Image, manifestName string) error {
-	// don't let anything circularly depend on each other
-	dependencies := buildDependencyGraph(sidecars, img, manifestName)
+func validateNoCircularDependencies(sidecars map[string]*manifest.SidecarConfig, img manifest.Image, workloadName string) error {
+	used := make(map[string]bool)
+	path := make(map[string]bool)
+	dependencies, err := buildDependencyGraph(sidecars, img, workloadName)
 
-	// don't let invalid containers happen
-	if dependencies == nil {
-		return errInvalidContainer
+	// don't let nonexistent containers pass
+	if err != nil {
+		return err
 	}
 
 	// don't let circular dependencies happen
-	if !graph.Acyclic(dependencies) {
-		return errCircularDependency
+	for node := range dependencies.nodes {
+		if !used[node] && hasCycles(dependencies, used, path, node) {
+			return errCircularDependency
+		}
 	}
 
 	return nil
 }
 
-func buildDependencyGraph(sidecars map[string]*manifest.SidecarConfig, img manifest.Image, manifestName string) *graph.Mutable {
-	var currNode, depNode int
-	last := 1
-	nodes := map[string]int{}
-	dependencies := graph.New(len(sidecars) + 1)
+func hasCycles(graph *Graph, used map[string]bool, path map[string]bool, currNode string) bool {
+	used[currNode] = true
+	path[currNode] = true
+
+	for _, node := range graph.nodes[currNode] {
+		if !used[node] && hasCycles(graph, used, path, node) {
+			return true
+		} else if path[node] {
+			return true
+		}
+	}
+
+	path[currNode] = false
+	return false
+}
+
+func buildDependencyGraph(sidecars map[string]*manifest.SidecarConfig, img manifest.Image, workloadName string) (*Graph, error) {
+	dependencyGraph := Graph{nodes: make(map[string][]string)}
 
 	// sidecar dependencies
 	for name, sidecar := range sidecars {
 		// add any existing dependency to the graph
 		if len(sidecar.DependsOn) != 0 {
-			currNode, nodes, last = getNode(name, nodes, last)
-
 			for dep := range sidecar.DependsOn {
 				// containers being depended on must exist
-				if sidecars[dep] == nil && dep != manifestName {
-					return nil
+				if sidecars[dep] == nil && dep != workloadName {
+					return nil, errInvalidContainer
 				}
 
-				depNode, nodes, last = getNode(dep, nodes, last)
-				dependencies.Add(currNode, depNode)
+				dependencyGraph.Add(name, dep)
 			}
 		}
 	}
 
 	// add any image dependencies to the graph
 	if len(img.DependsOn) != 0 {
-		currNode, nodes, last = getNode(manifestName, nodes, last)
-
 		for dep := range img.DependsOn {
 			// containers being depended on must exist
-			if sidecars[dep] == nil {
-				return nil
+			if sidecars[dep] == nil && dep != workloadName {
+				return nil, errInvalidContainer
 			}
 
-			depNode, nodes, last = getNode(dep, nodes, last)
-			dependencies.Add(currNode, depNode)
+			dependencyGraph.Add(workloadName, dep)
 		}
 	}
 
-	return dependencies
+	return &dependencyGraph, nil
 }
 
-func getNode(name string, nodes map[string]int, last int) (int, map[string]int, int) {
-	if nodes[name] != 0 {
-		return nodes[name] - 1, nodes, last
+type Graph struct {
+	nodes map[string][]string
+}
+
+func (graph *Graph) Add(fromNode, toNode string) {
+	hasNode := false
+
+	// add origin node if doesn't exist
+	if graph.nodes[fromNode] == nil {
+		graph.nodes[fromNode] = []string{}
 	}
-	nodes[name] = last
-	return nodes[name] - 1, nodes, last + 1
+
+	// check if edge exists between from and to nodes
+	for _, node := range graph.nodes[fromNode] {
+		if node == toNode {
+			hasNode = true
+		}
+	}
+
+	// add edge if not there already
+	if !hasNode {
+		graph.nodes[fromNode] = append(graph.nodes[fromNode], toNode)
+	}
 }
 
-func validateImageDependsOn(img manifest.Image, sidecars map[string]*manifest.SidecarConfig, manifestName string) error {
+func validateImageDependsOn(img manifest.Image, sidecars map[string]*manifest.SidecarConfig, workloadName string) error {
 	if img.DependsOn == nil {
 		return nil
 	}
 
 	for name, status := range img.DependsOn {
-		// don't let image depend on itself
-		if name == manifestName {
-			return errCircularDependency
-		}
 		// status must be one of < start | complete | success >
 		if !isValidStatus(status) {
 			return errInvalidDependsOnStatus
@@ -226,7 +249,7 @@ func validateImageDependsOn(img manifest.Image, sidecars map[string]*manifest.Si
 		}
 	}
 
-	return validateNoCircularDependencies(sidecars, img, manifestName)
+	return validateNoCircularDependencies(sidecars, img, workloadName)
 }
 
 func isValidStatus(s string) bool {

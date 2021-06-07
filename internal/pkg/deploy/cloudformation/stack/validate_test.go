@@ -155,7 +155,7 @@ func Test_validateEFSConfig(t *testing.T) {
 
 func TestValidateSidecarDependsOn(t *testing.T) {
 	mockSidecarName := "sidecar"
-	mockManifestName := "frontend"
+	mockWorkloadName := "frontend"
 	testCases := map[string]struct {
 		inSidecar   *manifest.SidecarConfig
 		allSidecars map[string]*manifest.SidecarConfig
@@ -246,7 +246,7 @@ func TestValidateSidecarDependsOn(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := validateSidecarDependsOn(*tc.inSidecar, mockSidecarName, tc.allSidecars, mockManifestName)
+			gotErr := validateSidecarDependsOn(*tc.inSidecar, mockSidecarName, tc.allSidecars, mockWorkloadName)
 			if tc.wantErr == nil {
 				require.NoError(t, gotErr)
 			} else {
@@ -257,7 +257,7 @@ func TestValidateSidecarDependsOn(t *testing.T) {
 }
 
 func TestValidateNoCircularDependency(t *testing.T) {
-	mockManifestName := "frontend"
+	mockWorkloadName := "frontend"
 	image := manifest.Image{}
 	testCases := map[string]struct {
 		allSidecars map[string]*manifest.SidecarConfig
@@ -277,6 +277,27 @@ func TestValidateNoCircularDependency(t *testing.T) {
 						"frontend": "start",
 					},
 				},
+			},
+			wantErr: nil,
+		},
+		"working sidecars with complex container dependencies": {
+			allSidecars: map[string]*manifest.SidecarConfig{
+				"sidecar": {
+					DependsOn: map[string]string{
+						"secondCar": "start",
+					},
+				},
+				"secondCar": {
+					DependsOn: map[string]string{
+						"thirdCar": "start",
+					},
+				},
+				"thirdCar": {
+					DependsOn: map[string]string{
+						"fourthCar": "start",
+					},
+				},
+				"fourthCar": {},
 			},
 			wantErr: nil,
 		},
@@ -343,7 +364,7 @@ func TestValidateNoCircularDependency(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := validateNoCircularDependencies(tc.allSidecars, image, mockManifestName)
+			gotErr := validateNoCircularDependencies(tc.allSidecars, image, mockWorkloadName)
 			if tc.wantErr == nil {
 				require.NoError(t, gotErr)
 			} else {
@@ -354,7 +375,7 @@ func TestValidateNoCircularDependency(t *testing.T) {
 }
 
 func TestValidateImageDependsOn(t *testing.T) {
-	mockManifestName := "frontend"
+	mockWorkloadName := "frontend"
 	testCases := map[string]struct {
 		inImage    *manifest.Image
 		inSidecars map[string]*manifest.SidecarConfig
@@ -422,7 +443,7 @@ func TestValidateImageDependsOn(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := validateImageDependsOn(*tc.inImage, tc.inSidecars, mockManifestName)
+			gotErr := validateImageDependsOn(*tc.inImage, tc.inSidecars, mockWorkloadName)
 			if tc.wantErr == nil {
 				require.NoError(t, gotErr)
 			} else {

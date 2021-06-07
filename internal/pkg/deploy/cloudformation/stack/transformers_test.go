@@ -16,7 +16,7 @@ import (
 
 func Test_convertSidecar(t *testing.T) {
 	mockImage := aws.String("mockImage")
-	mockManifestName := "frontend"
+	mockWorkloadName := "frontend"
 	mockMap := map[string]string{"foo": "bar"}
 	mockCredsParam := aws.String("mockCredsParam")
 	testCases := map[string]struct {
@@ -176,7 +176,11 @@ func Test_convertSidecar(t *testing.T) {
 					DependsOn:    tc.inDependsOn,
 				},
 			}
-			got, err := convertSidecar(sidecar, tc.inImg, mockManifestName)
+			got, err := convertSidecar(convertSidecarOpts{
+				sidecarConfig: sidecar,
+				imageConfig:   &tc.inImg,
+				workloadName:  mockWorkloadName,
+			})
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
@@ -1239,7 +1243,7 @@ func Test_convertEphemeral(t *testing.T) {
 }
 
 func Test_convertImageDependsOn(t *testing.T) {
-	mockManifestName := "frontend"
+	mockWorkloadName := "frontend"
 	testCases := map[string]struct {
 		inImage    *manifest.Image
 		inSidecars map[string]*manifest.SidecarConfig
@@ -1254,7 +1258,7 @@ func Test_convertImageDependsOn(t *testing.T) {
 		"invalid container dependency due to circular dependency on itself": {
 			inImage: &manifest.Image{
 				DependsOn: map[string]string{
-					"frontend": "end",
+					"frontend": "start",
 				},
 			},
 			wantedError: errCircularDependency,
@@ -1332,7 +1336,11 @@ func Test_convertImageDependsOn(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := convertImageDependsOn(tc.inImage, tc.inSidecars, mockManifestName)
+			got, err := convertImageDependsOn(convertSidecarOpts{
+				sidecarConfig: tc.inSidecars,
+				imageConfig:   tc.inImage,
+				workloadName:  mockWorkloadName,
+			})
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
