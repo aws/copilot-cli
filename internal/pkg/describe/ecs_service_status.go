@@ -61,10 +61,9 @@ func (s *ecsServiceStatus) taskDefinitionRevisionData() map[int]int {
 	for _, t := range s.Tasks {
 		version, err := ecs.TaskDefinitionVersion(t.TaskDefinition)
 		if err != nil {
-			out[-1] += 1
-		} else {
-			out[version] += 1
+			continue
 		}
+		out[version] += 1
 	}
 	return out
 }

@@ -203,9 +203,10 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 	targetGroupsARN := service.TargetGroups()
 	for _, groupARN := range targetGroupsARN {
 		targetsHealth, err := s.targetHealthGetter.HealthStatus(groupARN)
-		if err == nil {
-			tasksTargetHealth = append(tasksTargetHealth, targetHealthForTasks(targetsHealth, svcDesc.Tasks, groupARN)...)
+		if err != nil {
+			continue
 		}
+		tasksTargetHealth = append(tasksTargetHealth, targetHealthForTasks(targetsHealth, svcDesc.Tasks, groupARN)...)
 	}
 	sort.SliceStable(tasksTargetHealth, func(i, j int) bool {
 		if tasksTargetHealth[i].TargetGroupARN == tasksTargetHealth[j].TargetGroupARN {
