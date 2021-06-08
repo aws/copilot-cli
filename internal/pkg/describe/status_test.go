@@ -803,14 +803,14 @@ Tasks
 			},
 			human: `Task Summary
 
-  Running    ■■■■■■■□□□   2/3 Desired Tasks Running
+  Running   ■■■■■■■□□□  2/3 Desired Tasks Running
 
 Tasks
 
-  ID         Status       Revision     Started At
-  --         ------       --------     ----------
-  12345678   RUNNING      -            -
-  13456789   RUNNING      -            -
+  ID        Status      Revision    Started At
+  --        ------      --------    ----------
+  12345678  RUNNING     -           -
+  13456789  RUNNING     -           -
 `,
 			json: `{"Service":{"desiredCount":3,"runningCount":2,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"UNKNOWN","id":"1234567890123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""},{"health":"UNKNOWN","id":"1345678990123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":null,"targetsHealth":null}
 `,
@@ -843,15 +843,15 @@ Tasks
 			},
 			human: `Task Summary
 
-  Running            ■■■■■■■□□□   2/3 Desired Tasks Running
-  Capacity Provider  fffffsssss   1/2 on Fargate, 1/2 on Fargate Spot
+  Running            ■■■■■■■□□□  2/3 Desired Tasks Running
+  Capacity Provider  fffffsssss  1/2 on Fargate, 1/2 on Fargate Spot
 
 Tasks
 
-  ID         Status       Revision     Started At   Capacity
-  --         ------       --------     ----------   --------
-  12345678   RUNNING      -            -            FARGATE_SPOT
-  13456789   RUNNING      -            -            FARGATE
+  ID        Status      Revision    Started At  Capacity
+  --        ------      --------    ----------  --------
+  12345678  RUNNING     -           -           FARGATE_SPOT
+  13456789  RUNNING     -           -           FARGATE
 `,
 			json: `{"Service":{"desiredCount":3,"runningCount":2,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"UNKNOWN","id":"1234567890123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"FARGATE_SPOT","taskDefinitionARN":""},{"health":"UNKNOWN","id":"1345678990123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"FARGATE","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":null,"targetsHealth":null}
 `,
@@ -1004,7 +1004,7 @@ Last Deployment
 
 System Logs
 
-  2021-05-18T19:26:25Z    [AppRunner] Service creation started.
+  2021-05-18T19:26:25Z  [AppRunner] Service creation started.
 `,
 			json: `{"arn":"arn:aws:apprunner:us-east-1:1111:service/frontend/8a2b343f658144d885e47d10adb4845e","status":"RUNNING","createdAt":"2020-01-01T00:00:00Z","updatedAt":"2020-03-01T00:00:00Z","source":{"imageId":"hello"}}` + "\n",
 		},
