@@ -126,7 +126,7 @@ func TestELBV2_TargetsHealth(t *testing.T) {
 				client: mockAPI,
 			}
 
-			got, err := elbv2Client.HealthStatus(tc.targetGroupARN)
+			got, err := elbv2Client.TargetsHealth(tc.targetGroupARN)
 
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
@@ -134,6 +134,55 @@ func TestELBV2_TargetsHealth(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedOut, got)
 			}
+		})
+	}
+}
+
+func TestTargetHealth_HealthStatus(t *testing.T) {
+	testCases := map[string]struct {
+		inTargetHealth *TargetHealth
+
+		wanted *HealthStatus
+	}{
+		"unhealthy status with all params": {
+			inTargetHealth: &TargetHealth{
+				Target: &elbv2.TargetDescription{
+					Id: aws.String("42.42.42.42"),
+				},
+				TargetHealth: &elbv2.TargetHealth{
+					State:       aws.String("unhealthy"),
+					Description: aws.String("some description"),
+					Reason:      aws.String("some reason"),
+				},
+			},
+			wanted: &HealthStatus{
+				TargetID:          "42.42.42.42",
+				HealthState:       "unhealthy",
+				HealthDescription: "some description",
+				HealthReason:      "some reason",
+			},
+		},
+		"healthy status with description and reason empty": {
+			inTargetHealth: &TargetHealth{
+				Target: &elbv2.TargetDescription{
+					Id: aws.String("24.24.24.24"),
+				},
+				TargetHealth: &elbv2.TargetHealth{
+					State: aws.String("healthy"),
+				},
+			},
+			wanted: &HealthStatus{
+				TargetID:          "24.24.24.24",
+				HealthState:       "healthy",
+				HealthDescription: "",
+				HealthReason:      "",
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.inTargetHealth.HealthStatus()
+			require.Equal(t, got, tc.wanted)
 		})
 	}
 }

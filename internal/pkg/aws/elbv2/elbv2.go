@@ -36,8 +36,8 @@ func New(sess *session.Session) *ELBV2 {
 // TargetHealth wraps up elbv2.TargetHealthDescription.
 type TargetHealth elbv2.TargetHealthDescription
 
-// HealthStatus returns the health status of the targets in a target group.
-func (e *ELBV2) HealthStatus(targetGroupARN string) ([]*TargetHealth, error) {
+// TargetsHealth returns the health status of the targets in a target group.
+func (e *ELBV2) TargetsHealth(targetGroupARN string) ([]*TargetHealth, error) {
 	in := &elbv2.DescribeTargetHealthInput{
 		TargetGroupArn: aws.String(targetGroupARN),
 	}
@@ -55,5 +55,27 @@ func (e *ELBV2) HealthStatus(targetGroupARN string) ([]*TargetHealth, error) {
 
 // TargetID returns the target's ID, which is either an instance or an IP address.
 func (t *TargetHealth) TargetID() string {
+	return t.targetID()
+}
+
+// HealthStatus contains the health status info of a target.
+type HealthStatus struct {
+	TargetID          string `json:"targetID"`
+	HealthDescription string `json:"healthDescription"`
+	HealthState       string `json:"healthState"`
+	HealthReason      string `json:"healthReason"`
+}
+
+// HealthStatus returns the health status of the target.
+func (t *TargetHealth) HealthStatus() *HealthStatus {
+	return &HealthStatus{
+		TargetID:          t.targetID(),
+		HealthDescription: aws.StringValue(t.TargetHealth.Description),
+		HealthState:       aws.StringValue(t.TargetHealth.State),
+		HealthReason:      aws.StringValue(t.TargetHealth.Reason),
+	}
+}
+
+func (t *TargetHealth) targetID() string {
 	return aws.StringValue(t.Target.Id)
 }
