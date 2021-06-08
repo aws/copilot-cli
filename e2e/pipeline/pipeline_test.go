@@ -24,7 +24,7 @@ var _ = Describe("pipeline flow", func() {
 		})
 
 		It("clones the repository", func() {
-			endpoint := strings.Split(cloneURL, "https://")[1]
+			endpoint := strings.TrimPrefix(cloneURL, "https://")
 			url := fmt.Sprintf("https://%s:%s@%s", url.PathEscape(codeCommitCreds.UserName), url.PathEscape(codeCommitCreds.Password), endpoint)
 
 			Eventually(func() error {
