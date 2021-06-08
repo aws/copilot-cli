@@ -94,11 +94,11 @@ func (t imageTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Va
 		}
 
 		// Perform customized merge
-		dstBuild := dst.Field(0)
-		dstLocation := dst.Field(1)
+		dstBuild := dst.FieldByName("Build")
+		dstLocation := dst.FieldByName("Location")
 
-		srcBuild := src.Field(0)
-		srcLocation := src.Field(1)
+		srcBuild := src.FieldByName("Build")
+		srcLocation := src.FieldByName("Location")
 
 		if !srcBuild.IsZero() || !srcLocation.IsZero() {
 			dstBuild.Set(srcBuild)
