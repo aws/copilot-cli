@@ -61,9 +61,9 @@ func (t *TargetHealth) TargetID() string {
 // HealthStatus contains the health status info of a target.
 type HealthStatus struct {
 	TargetID          string `json:"targetID"`
-	HealthDescription string `json:"healthDescription"`
-	HealthState       string `json:"healthState"`
-	HealthReason      string `json:"healthReason"`
+	HealthDescription string `json:"description"`
+	HealthState       string `json:"state"`
+	HealthReason      string `json:"reason"`
 }
 
 // HealthStatus returns the health status of the target.
