@@ -109,7 +109,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	convSidecarOpts := convertSidecarOpts{
 		sidecarConfig: s.manifest.Sidecars,
 		imageConfig:   &s.manifest.ImageConfig.Image,
-		workloadName:  *s.manifest.Name,
+		workloadName:  aws.StringValue(s.manifest.Name),
 	}
 	sidecars, err := convertSidecar(convSidecarOpts)
 	if err != nil {

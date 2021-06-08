@@ -50,6 +50,12 @@ var (
 	errInvalidSpotConfig = errors.New(`"count.spot" and "count.range" cannot be specified together`)
 )
 
+type convertSidecarOpts struct {
+	sidecarConfig map[string]*manifest.SidecarConfig
+	imageConfig   *manifest.Image
+	workloadName  string
+}
+
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
 func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
 	if s.sidecarConfig == nil {
@@ -67,6 +73,7 @@ func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
 		if err := validateSidecarMountPoints(config.MountPoints); err != nil {
 			return nil, err
 		}
+		convertDependsOnStatus(&s)
 		if err := validateSidecarDependsOn(*config, name, s); err != nil {
 			return nil, err
 		}
@@ -89,21 +96,35 @@ func convertSidecar(s convertSidecarOpts) ([]*template.SidecarOpts, error) {
 	return sidecars, nil
 }
 
+// convertDependsOnStatus converts image and sidecar depends on fields to have upper case statuses
+func convertDependsOnStatus(s *convertSidecarOpts) {
+	if s.sidecarConfig != nil {
+		for _, sidecar := range s.sidecarConfig {
+			if sidecar.DependsOn == nil {
+				continue
+			}
+			for name, status := range sidecar.DependsOn {
+				sidecar.DependsOn[name] = strings.ToUpper(status)
+			}
+		}
+	}
+	if s.imageConfig != nil && s.imageConfig.DependsOn != nil {
+		for name, status := range s.imageConfig.DependsOn {
+			s.imageConfig.DependsOn[name] = strings.ToUpper(status)
+		}
+	}
+}
+
 // convertDependsOn converts an Image DependsOn field to a template DependsOn version
 func convertImageDependsOn(s convertSidecarOpts) (map[string]string, error) {
 	if s.imageConfig == nil || s.imageConfig.DependsOn == nil {
 		return nil, nil
 	}
+	convertDependsOnStatus(&s)
 	if err := validateImageDependsOn(s); err != nil {
 		return nil, err
 	}
 	return s.imageConfig.DependsOn, nil
-}
-
-type convertSidecarOpts struct {
-	sidecarConfig map[string]*manifest.SidecarConfig
-	imageConfig   *manifest.Image
-	workloadName  string
 }
 
 // Valid sidecar portMapping example: 2000/udp, or 2000 (default to be tcp).

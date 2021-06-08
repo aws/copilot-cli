@@ -19,12 +19,14 @@ func Test_convertSidecar(t *testing.T) {
 	mockWorkloadName := "frontend"
 	mockMap := map[string]string{"foo": "bar"}
 	mockCredsParam := aws.String("mockCredsParam")
+	circularDependencyErr := fmt.Errorf("circular container dependency chain present: chain includes the following containers: ")
 	testCases := map[string]struct {
-		inPort      string
-		inEssential bool
-		inLabels    map[string]string
-		inDependsOn map[string]string
-		inImg       manifest.Image
+		inPort            string
+		inEssential       bool
+		inLabels          map[string]string
+		inDependsOn       map[string]string
+		inImg             manifest.Image
+		circDepContainers []string
 
 		wanted    *template.SidecarOpts
 		wantedErr error
@@ -70,7 +72,7 @@ func Test_convertSidecar(t *testing.T) {
 				"foo": "start",
 			},
 
-			wantedErr: errCircularDependency,
+			wantedErr: fmt.Errorf("circular container dependency chain present: container foo depends on itself"),
 		},
 		"invalid container dependency due to circularly depending on another container": {
 			inPort:      "2000",
@@ -83,7 +85,8 @@ func Test_convertSidecar(t *testing.T) {
 					"foo": "start",
 				},
 			},
-			wantedErr: errCircularDependency,
+			wantedErr:         circularDependencyErr,
+			circDepContainers: []string{"frontend", "foo"},
 		},
 		"invalid container dependency status": {
 			inPort:      "2000",
@@ -117,7 +120,7 @@ func Test_convertSidecar(t *testing.T) {
 				Variables:  mockMap,
 				Essential:  aws.Bool(true),
 				DependsOn: map[string]string{
-					"frontend": "start",
+					"frontend": "START",
 				},
 			},
 		},
@@ -137,7 +140,7 @@ func Test_convertSidecar(t *testing.T) {
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
 				DependsOn: map[string]string{
-					"frontend": "start",
+					"frontend": "START",
 				},
 			},
 		},
@@ -182,7 +185,12 @@ func Test_convertSidecar(t *testing.T) {
 				workloadName:  mockWorkloadName,
 			})
 
-			if tc.wantedErr != nil {
+			if tc.wantedErr == circularDependencyErr {
+				require.Contains(t, err.Error(), circularDependencyErr.Error())
+				for _, container := range tc.circDepContainers {
+					require.Contains(t, err.Error(), container)
+				}
+			} else if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
@@ -1244,9 +1252,11 @@ func Test_convertEphemeral(t *testing.T) {
 
 func Test_convertImageDependsOn(t *testing.T) {
 	mockWorkloadName := "frontend"
+	circularDependencyErr := fmt.Errorf("circular container dependency chain present: chain includes the following containers: ")
 	testCases := map[string]struct {
-		inImage    *manifest.Image
-		inSidecars map[string]*manifest.SidecarConfig
+		inImage           *manifest.Image
+		inSidecars        map[string]*manifest.SidecarConfig
+		circDepContainers []string
 
 		wanted      map[string]string
 		wantedError error
@@ -1261,7 +1271,7 @@ func Test_convertImageDependsOn(t *testing.T) {
 					"frontend": "start",
 				},
 			},
-			wantedError: errCircularDependency,
+			wantedError: fmt.Errorf("circular container dependency chain present: container frontend depends on itself"),
 		},
 		"invalid container dependency due to circular dependency on a sidecar": {
 			inImage: &manifest.Image{
@@ -1281,7 +1291,8 @@ func Test_convertImageDependsOn(t *testing.T) {
 					},
 				},
 			},
-			wantedError: errCircularDependency,
+			wantedError:       circularDependencyErr,
+			circDepContainers: []string{"frontend", "sidecar", "sidecar2"},
 		},
 		"invalid container dependency due to status": {
 			inImage: &manifest.Image{
@@ -1330,7 +1341,7 @@ func Test_convertImageDependsOn(t *testing.T) {
 				"sidecar": {},
 			},
 			wanted: map[string]string{
-				"sidecar": "start",
+				"sidecar": "START",
 			},
 		},
 	}
@@ -1341,7 +1352,12 @@ func Test_convertImageDependsOn(t *testing.T) {
 				imageConfig:   tc.inImage,
 				workloadName:  mockWorkloadName,
 			})
-			if tc.wantedError != nil {
+			if tc.wantedError == circularDependencyErr {
+				require.Contains(t, err.Error(), circularDependencyErr.Error())
+				for _, container := range tc.circDepContainers {
+					require.Contains(t, err.Error(), container)
+				}
+			} else if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.Equal(t, got, tc.wanted)
