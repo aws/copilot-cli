@@ -14,26 +14,56 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
+const (
+	serviceDeploymentStatusPrimary = "PRIMARY"
+	serviceDeploymentStatusActive  = "ACTIVE"
+)
+
 // Service wraps up ECS Service struct.
 type Service ecs.Service
 
+type Deployment struct {
+	Id             string    `json:"id"`
+	DesiredCount   int64     `json:"desiredCount"`
+	RunningCount   int64     `json:"runningCount"`
+	UpdatedAt      time.Time `json:"updatedAt"`
+	LaunchType     string    `json:"launchType"`
+	TaskDefinition string    `json:"taskDefinition"`
+}
+
 // ServiceStatus contains the status info of a service.
 type ServiceStatus struct {
-	DesiredCount     int64     `json:"desiredCount"`
-	RunningCount     int64     `json:"runningCount"`
-	Status           string    `json:"status"`
-	LastDeploymentAt time.Time `json:"lastDeploymentAt"`
-	TaskDefinition   string    `json:"taskDefinition"`
+	DesiredCount      int64        `json:"desiredCount"`
+	RunningCount      int64        `json:"runningCount"`
+	Status            string       `json:"status"`
+	ActiveDeployments []Deployment `json:"activeDeployment"`
+	TaskDefinition    string       `json:"taskDefinition"`
 }
 
 // ServiceStatus returns the status of the running service.
 func (s *Service) ServiceStatus() ServiceStatus {
+	var activeDeployments []Deployment
+	for _, deployment := range s.Deployments {
+		if aws.StringValue(deployment.Status) != serviceDeploymentStatusActive {
+			continue
+		}
+
+		activeDeployments = append(activeDeployments, Deployment{
+			Id:             aws.StringValue(deployment.Id),
+			DesiredCount:   aws.Int64Value(deployment.DesiredCount),
+			RunningCount:   aws.Int64Value(deployment.RunningCount),
+			UpdatedAt:      aws.TimeValue(deployment.UpdatedAt),
+			LaunchType:     aws.StringValue(deployment.LaunchType),
+			TaskDefinition: aws.StringValue(deployment.TaskDefinition),
+		})
+	}
+
 	return ServiceStatus{
-		Status:           aws.StringValue(s.Status),
-		DesiredCount:     aws.Int64Value(s.DesiredCount),
-		RunningCount:     aws.Int64Value(s.RunningCount),
-		LastDeploymentAt: *s.Deployments[0].UpdatedAt, // FIXME Service assumed to have at least one deployment
-		TaskDefinition:   aws.StringValue(s.Deployments[0].TaskDefinition),
+		Status:            aws.StringValue(s.Status),
+		DesiredCount:      aws.Int64Value(s.DesiredCount),
+		RunningCount:      aws.Int64Value(s.RunningCount),
+		ActiveDeployments: activeDeployments,
+		TaskDefinition:    aws.StringValue(s.Deployments[0].TaskDefinition),
 	}
 }
 
