@@ -19,7 +19,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
-	awsECS "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -48,8 +48,8 @@ type logGetter interface {
 }
 
 type ecsServiceGetter interface {
-	ServiceTasks(clusterName, serviceName string) ([]*awsECS.Task, error)
-	Service(clusterName, serviceName string) (*awsECS.Service, error)
+	ServiceTasks(clusterName, serviceName string) ([]*awsecs.Task, error)
+	Service(clusterName, serviceName string) (*awsecs.Service, error)
 }
 
 type serviceDescriber interface {
@@ -89,10 +89,10 @@ type AppRunnerStatusDescriber struct {
 
 // ecsServiceStatus contains the status for an ECS service.
 type ecsServiceStatus struct {
-	Service           awsECS.ServiceStatus
-	Tasks             []awsECS.TaskStatus      `json:"tasks"`
+	Service           awsecs.ServiceStatus
+	Tasks             []awsecs.TaskStatus      `json:"tasks"`
 	Alarms            []cloudwatch.AlarmStatus `json:"alarms"`
-	StoppedTasks      []awsECS.TaskStatus      `json:"stoppedTasks"`
+	StoppedTasks      []awsecs.TaskStatus      `json:"stoppedTasks"`
 	TasksTargetHealth []taskTargetHealth       `json:"targetsHealth"`
 }
 
@@ -126,7 +126,7 @@ func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, er
 		svc:                opt.Svc,
 		svcDescriber:       ecs.New(sess),
 		cwSvcGetter:        cloudwatch.New(sess),
-		ecsSvcGetter:       awsECS.New(sess),
+		ecsSvcGetter:       awsecs.New(sess),
 		aasSvcGetter:       aas.New(sess),
 		targetHealthGetter: elbv2.New(sess),
 	}, nil
@@ -165,20 +165,20 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 		return nil, fmt.Errorf("get service %s: %w", svcDesc.Name, err)
 	}
 
-	var taskStatus []awsECS.TaskStatus
+	var taskStatus []awsecs.TaskStatus
 	for _, task := range svcDesc.Tasks {
 		status, err := task.TaskStatus()
 		if err != nil {
-			return nil, fmt.Errorf("get status for task %s: %w", *task.TaskArn, err)
+			return nil, fmt.Errorf("get status for task %s: %w", aws.StringValue(task.TaskArn), err)
 		}
 		taskStatus = append(taskStatus, *status)
 	}
 
-	var stoppedTaskStatus []awsECS.TaskStatus
+	var stoppedTaskStatus []awsecs.TaskStatus
 	for _, task := range svcDesc.StoppedTasks {
 		status, err := task.TaskStatus()
 		if err != nil {
-			return nil, fmt.Errorf("get status for stopped task %s: %w", *task.TaskArn, err)
+			return nil, fmt.Errorf("get status for stopped task %s: %w", aws.StringValue(task.TaskArn), err)
 		}
 		stoppedTaskStatus = append(stoppedTaskStatus, *status)
 	}
@@ -355,7 +355,7 @@ func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 	fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
 
 	// Write summary of task definition revision.
-	desiredTaskDefVersion, err := awsECS.TaskDefinitionVersion(s.Service.TaskDefinition)
+	desiredTaskDefVersion, err := awsecs.TaskDefinitionVersion(s.Service.TaskDefinition)
 	if err == nil && s.Service.RunningCount > 0 {
 		header := "Deployment"
 		data := s.taskDefinitionRevisionData()
@@ -511,7 +511,7 @@ func (s *ecsServiceStatus) writeAlarms(writer *tabwriter.Writer) {
 	}
 }
 
-type ecsTaskStatus awsECS.TaskStatus
+type ecsTaskStatus awsecs.TaskStatus
 
 // Example output:
 //   6ca7a60d          RUNNING             42            19 hours ago       -              UNKNOWN
@@ -531,7 +531,7 @@ func (ts ecsTaskStatus) humanString(opts ...ecsTaskStatusConfigOpts) string {
 	statusString += fmt.Sprintf("\t%s", ts.LastStatus)
 
 	revision := "-"
-	v, err := awsECS.TaskDefinitionVersion(ts.TaskDefinition)
+	v, err := awsecs.TaskDefinitionVersion(ts.TaskDefinition)
 	if err == nil {
 		revision = strconv.Itoa(v)
 	}
@@ -583,7 +583,7 @@ type taskTargetHealth struct {
 }
 
 // targetHealthForTasks finds the target health in a target group, if any, for each task.
-func targetHealthForTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsECS.Task, targetGroupARN string) []taskTargetHealth {
+func targetHealthForTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsecs.Task, targetGroupARN string) []taskTargetHealth {
 	var out []taskTargetHealth
 
 	// Create a set of target health to be matched against the tasks' private IP addresses.
@@ -607,7 +607,7 @@ func targetHealthForTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsECS.T
 			continue
 		}
 
-		if taskID, err := awsECS.TaskID(aws.StringValue(task.TaskArn)); err == nil {
+		if taskID, err := awsecs.TaskID(aws.StringValue(task.TaskArn)); err == nil {
 			out = append(out, taskTargetHealth{
 				TaskID:                  taskID,
 				TargetHealthDescription: *th,
