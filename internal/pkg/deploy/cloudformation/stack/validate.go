@@ -37,7 +37,7 @@ var (
 	errReservedUID                  = errors.New("UID must not be 0")
 	errInvalidContainer             = errors.New("container dependency does not exist")
 	errInvalidDependsOnStatus       = fmt.Errorf("container dependency status must be one of < %s | %s | %s | %s >", dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy)
-	errEssentialContainerStatus     = errors.New("essential container dependencies can only have status 'start'")
+	errEssentialContainerStatus     = fmt.Errorf("essential container dependencies can only have status < %s | %s >", dependsOnStart, dependsOnHealthy)
 )
 
 // Container dependency status options
