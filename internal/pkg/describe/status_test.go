@@ -702,6 +702,71 @@ Tasks
 			json: `{"Service":{"desiredCount":1,"runningCount":1,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":[{"ID":"mockImageID1","Digest":"69671a968e8ec3648e2697417750e"},{"ID":"mockImageID2","Digest":"ca27a44e25ce17fea7b07940ad793"}],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"some reason","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":[{"health":"","id":"0102030490123123123","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"some reason","capacityProvider":"","taskDefinitionARN":""},{"health":"","id":"0203040590123123123","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"some reason","capacityProvider":"","taskDefinitionARN":""}],"targetsHealth":null}
 `,
 		},
+		"with stopped tasks and super long reason": {
+			desc: &ecsServiceStatus{
+				Service: awsecs.ServiceStatus{
+					DesiredCount:     1,
+					RunningCount:     1,
+					Status:           "ACTIVE",
+					LastDeploymentAt: startTime,
+					TaskDefinition:   "mockTaskDefinition",
+				},
+				Tasks: []awsecs.TaskStatus{
+					{
+						Health:     "HEALTHY",
+						LastStatus: "RUNNING",
+						ID:         "1234567890123456789",
+						Images: []awsecs.Image{
+							{
+								Digest: "69671a968e8ec3648e2697417750e",
+								ID:     "mockImageID1",
+							},
+							{
+								ID:     "mockImageID2",
+								Digest: "ca27a44e25ce17fea7b07940ad793",
+							},
+						},
+					},
+				},
+				StoppedTasks: []awsecs.TaskStatus{
+					{
+						LastStatus:    "DEPROVISIONING",
+						ID:            "0102030490123123123",
+						StoppedAt:     stoppedTime,
+						Images:        []awsecs.Image{},
+						StoppedReason: "April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m",
+					},
+					{
+						LastStatus:    "DEPROVISIONING",
+						ID:            "0203040590123123123",
+						StoppedAt:     stoppedTime,
+						Images:        []awsecs.Image{},
+						StoppedReason: "April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m",
+					},
+				},
+			},
+			human: `Task Summary
+
+  Running   ■■■■■■■■■■  1/1 desired tasks are running
+  Healthy   ■■■■■■■■■■  1/1 passes container health checks
+
+Stopped Tasks
+
+  Reason                          Task Count  Task IDs
+  ------                          ----------  --------
+  April-is-the-cruellest-month-b  2           01020304,02030405
+  reeding-Lilacs-out-of-the-dead              
+  -land-m                                     
+
+Tasks
+
+  ID        Status      Revision    Started At  Cont. Health
+  --        ------      --------    ----------  ------------
+  12345678  RUNNING     -           -           HEALTHY
+`,
+			json: `{"Service":{"desiredCount":1,"runningCount":1,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":[{"ID":"mockImageID1","Digest":"69671a968e8ec3648e2697417750e"},{"ID":"mockImageID2","Digest":"ca27a44e25ce17fea7b07940ad793"}],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":[{"health":"","id":"0102030490123123123","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m","capacityProvider":"","taskDefinitionARN":""},{"health":"","id":"0203040590123123123","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m","capacityProvider":"","taskDefinitionARN":""}],"targetsHealth":null}
+`,
+		},
 		"with HTTP health": {
 			desc: &ecsServiceStatus{
 				Service: awsecs.ServiceStatus{
@@ -849,6 +914,7 @@ Tasks
 			require.Equal(t, tc.json, json)
 
 			human := tc.desc.HumanString()
+			fmt.Print(human)
 			require.Equal(t, tc.human, human)
 		})
 	}

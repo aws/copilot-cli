@@ -441,7 +441,8 @@ func (s *ecsServiceStatus) writeStoppedTasks(writer *tabwriter.Writer) {
 		reasonToTasks[task.StoppedReason] = append(reasonToTasks[task.StoppedReason], shortTaskID(task.ID))
 	}
 	for reason, ids := range reasonToTasks {
-		fmt.Fprintf(writer, "  %s\t%d\t%s\n", reason, len(ids), strings.Join(ids, ","))
+		printWithMaxWidth(writer, "  %s\t%s\t%s\n", 30, reason, strconv.Itoa(len(ids)), strings.Join(ids, ","))
+		//fmt.Fprintf(writer, "  %s\t%d\t%s\n", reason, len(ids), strings.Join(ids, ","))
 	}
 }
 
