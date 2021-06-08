@@ -296,7 +296,7 @@ func (a *appRunnerServiceStatus) JSONString() (string, error) {
 // HumanString returns the stringified ecsServiceStatus struct with human readable format.
 func (s *ecsServiceStatus) HumanString() string {
 	var b bytes.Buffer
-	writer := tabwriter.NewWriter(&b, 13, 4, 2, ' ', noAdditionalFormatting)
+	writer := tabwriter.NewWriter(&b, statusMinCellWidth, tabWidth, statusCellPaddingWidth, paddingChar, noAdditionalFormatting)
 
 	s.writeTaskSummary(writer)
 	s.writeStoppedTasks(writer)
@@ -336,75 +336,78 @@ func (a *appRunnerServiceStatus) HumanString() string {
 }
 
 func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
+	// NOTE: all the `bar` need to be fully colored. Observe how all the second parameter for all `summaryBar` function
+	// is a list of strings that are colored (e.g. `[]string{color.Green.Sprint("■"), color.Grey.Sprint("□")}`)
+	// This is because if the some of the bar is partially colored, tab writer will behave unexpectedly.
+
 	fmt.Fprint(writer, color.Bold.Sprint("Task Summary\n\n"))
 	writer.Flush()
 
-	var (
-		header, bar, stringSummary string
-	)
-
-	header = "Running"
-	bar = summaryBar(
+	// Write summary of running tasks.
+	header := "Running"
+	bar := summaryBar(
 		[]int{
 			(int)(s.Service.RunningCount),
 			(int)(s.Service.DesiredCount) - (int)(s.Service.RunningCount),
 		},
-		[]string{
-			color.Green.Sprint("■"), "□",
-		})
-	stringSummary = fmt.Sprintf("%d/%d Desired Tasks Running", s.Service.RunningCount, s.Service.DesiredCount)
+		[]string{color.Green.Sprint("■"), color.Grey.Sprint("□")})
+	stringSummary := fmt.Sprintf("%d/%d Desired Tasks Running", s.Service.RunningCount, s.Service.DesiredCount)
 	fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
 
+	// Write summary of task definition revision.
 	desiredTaskDefVersion, err := awsECS.TaskDefinitionVersion(s.Service.TaskDefinition)
 	if err == nil && s.Service.RunningCount > 0 {
-		header = "Deployment"
+		header := "Deployment"
 		data := s.taskDefinitionRevisionData()
-		bar = summaryBar(
+		bar := summaryBar(
 			[]int{
 				data[desiredTaskDefVersion],
 				(int)(s.Service.RunningCount) - data[desiredTaskDefVersion],
 			},
-			[]string{color.Green.Sprint("■"), "□"})
-		stringSummary = fmt.Sprintf("%d/%d Running task definition version %d (desired)",
+			[]string{color.Green.Sprint("■"), color.Yellow.Sprint("□")})
+		stringSummary := fmt.Sprintf("%d/%d Running task definition version %d (desired)",
 			data[desiredTaskDefVersion],
 			s.Service.RunningCount,
 			desiredTaskDefVersion)
 		fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
 	}
 
+	// Write summary of HTTP health and container health.
 	if s.shouldShowHealthSummary() {
-		header = "Healthy"
-
+		header := "Healthy"
 		if s.shouldShowHTTPHealth() {
 			healthyCount := s.healthyHTTPTasksCount()
-			bar = summaryBar(
+			bar := summaryBar(
 				[]int{
 					healthyCount,
 					(int)(s.Service.RunningCount) - healthyCount,
 				},
-				[]string{color.Green.Sprint("■"), "□"})
-			stringSummary = fmt.Sprintf("%d/%d Passes HTTP Health Checks", healthyCount, s.Service.RunningCount)
+				[]string{color.Green.Sprint("■"), color.Grey.Sprint("□")})
+			stringSummary := fmt.Sprintf("%d/%d Passes HTTP Health Checks", healthyCount, s.Service.RunningCount)
 			fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
 			header = ""
 		}
 
 		if s.shouldShowContainerHealth() {
 			healthyCount, _, _ := s.containerHealthData()
-			bar = summaryBar(
+			bar := summaryBar(
 				[]int{
 					healthyCount,
 					(int)(s.Service.RunningCount) - healthyCount,
 				},
-				[]string{color.Green.Sprint("■"), "□"})
-			stringSummary = fmt.Sprintf("%d/%d Passes Container Health Checks", healthyCount, s.Service.RunningCount)
+				[]string{color.Green.Sprint("■"), color.Grey.Sprint("□")})
+			stringSummary := fmt.Sprintf("%d/%d Passes Container Health Checks", healthyCount, s.Service.RunningCount)
+
 			fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+
 		}
 	}
 
+	// Write summary of capacity providers.
 	if s.shouldShowCapacityProvider() {
-		header = "Capacity Provider"
+		header := "Capacity Provider"
 		fargate, spot, unset := s.capacityProviderData()
-		bar = summaryBar([]int{fargate, spot, unset}, []string{"f", "s", "d"})
+		bar := summaryBar([]int{fargate, spot, unset}, []string{color.Blue.Sprint("f"), color.Magenta.Sprint("s"), color.Grey.Sprint("d")})
 		var cpSummaries []string
 		if fargate != 0 {
 			cpSummaries = append(cpSummaries, fmt.Sprintf("%d/%d on Fargate", fargate, s.Service.RunningCount))
@@ -417,7 +420,6 @@ func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 		}
 		fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, strings.Join(cpSummaries, ", "))
 	}
-
 	writer.Flush()
 }
 
@@ -626,10 +628,8 @@ type valueWithIndex struct {
 // For example, data[0] will be represented by representations[0] in the summary bar.
 // If len(representations) < len(data), the default representation "□" is used for all data category with missing representation.
 func summaryBar(data []int, representations []string) string {
-	const (
-		summaryBarLength      = 10
-		defaultRepresentation = "□"
-	)
+	const summaryBarLength = 10
+	defaultRepresentation := color.Grey.Sprint("□")
 
 	// The index is recorded so that we can later output the summary bar in the original order.
 	var dataWithIndices []valueWithIndex

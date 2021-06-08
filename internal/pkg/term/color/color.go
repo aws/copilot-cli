@@ -16,11 +16,14 @@ import (
 // Refer to https://en.wikipedia.org/wiki/ANSI_escape_code to validate if colors would
 // be visible on white or black screen backgrounds.
 var (
-	Grey         = color.New(color.FgWhite)
-	Red          = color.New(color.FgHiRed)
-	DullRed      = color.New(color.FgRed)
-	Green        = color.New(color.FgHiGreen)
-	Yellow       = color.New(color.FgHiYellow)
+	Grey    = color.New(color.FgWhite)
+	Red     = color.New(color.FgHiRed)
+	DullRed = color.New(color.FgRed)
+	Green   = color.New(color.FgHiGreen)
+	Yellow  = color.New(color.FgHiYellow)
+	Magenta = color.New(color.FgMagenta)
+	Blue    = color.New(color.FgBlue)
+
 	HiBlue       = color.New(color.FgHiBlue)
 	Cyan         = color.New(color.FgCyan)
 	HiCyan       = color.New(color.FgHiCyan)
