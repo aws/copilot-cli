@@ -35,7 +35,7 @@ const (
 )
 
 type targetHealthGetter interface {
-	TargetsHealth(targetGroupARN string) ([]*elbv2.TargetHealth, error)
+	HealthStatus(targetGroupARN string) ([]*elbv2.TargetHealth, error)
 }
 
 type alarmStatusGetter interface {
@@ -202,7 +202,7 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 	var tasksTargetHealth []taskTargetHealth
 	targetGroupsARN := service.TargetGroups()
 	for _, groupARN := range targetGroupsARN {
-		targetsHealth, err := s.targetHealthGetter.TargetsHealth(groupARN)
+		targetsHealth, err := s.targetHealthGetter.HealthStatus(groupARN)
 		if err == nil {
 			tasksTargetHealth = append(tasksTargetHealth, targetHealthForTasks(targetsHealth, svcDesc.Tasks, groupARN)...)
 		}

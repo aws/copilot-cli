@@ -126,7 +126,7 @@ func TestELBV2_TargetsHealth(t *testing.T) {
 				client: mockAPI,
 			}
 
-			got, err := elbv2Client.TargetsHealth(tc.targetGroupARN)
+			got, err := elbv2Client.HealthStatus(tc.targetGroupARN)
 
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())

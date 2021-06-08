@@ -13,6 +13,7 @@ import (
 )
 
 const (
+	// TargetHealthStateHealthy wraps the ELBV2 health status HEALTHY.
 	TargetHealthStateHealthy = elbv2.TargetHealthStateEnumHealthy
 )
 
@@ -35,8 +36,8 @@ func New(sess *session.Session) *ELBV2 {
 // TargetHealth wraps up elbv2.TargetHealthDescription.
 type TargetHealth elbv2.TargetHealthDescription
 
-// TargetsHealth returns the health status of the targets in a target group.
-func (e *ELBV2) TargetsHealth(targetGroupARN string) ([]*TargetHealth, error) {
+// HealthStatus returns the health status of the targets in a target group.
+func (e *ELBV2) HealthStatus(targetGroupARN string) ([]*TargetHealth, error) {
 	in := &elbv2.DescribeTargetHealthInput{
 		TargetGroupArn: aws.String(targetGroupARN),
 	}
