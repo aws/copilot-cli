@@ -1,10 +1,13 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package describe
 
 import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	awsECS "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 )
 
@@ -15,7 +18,7 @@ func (s *ecsServiceStatus) shouldShowHealthSummary() bool {
 
 func (s *ecsServiceStatus) shouldShowContainerHealth() bool {
 	for _, t := range s.Tasks {
-		if t.Health != awsECS.TaskContainerHealthStatusUnknown && t.Health != "" {
+		if t.Health != ecs.TaskContainerHealthStatusUnknown && t.Health != "" {
 			return true
 		}
 	}
@@ -42,11 +45,11 @@ func (s *ecsServiceStatus) shouldShowHTTPHealth() bool {
 func (s *ecsServiceStatus) containerHealthData() (healthy int, unhealthy int, unknown int) {
 	for _, t := range s.Tasks {
 		switch strings.ToUpper(t.Health) {
-		case awsECS.TaskContainerHealthStatusHealthy:
+		case ecs.TaskContainerHealthStatusHealthy:
 			healthy += 1
-		case awsECS.TaskContainerHealthStatusUnhealthy:
+		case ecs.TaskContainerHealthStatusUnhealthy:
 			unhealthy += 1
-		case awsECS.TaskContainerHealthStatusUnknown:
+		case ecs.TaskContainerHealthStatusUnknown:
 			unknown += 1
 		}
 	}
@@ -56,7 +59,7 @@ func (s *ecsServiceStatus) containerHealthData() (healthy int, unhealthy int, un
 func (s *ecsServiceStatus) taskDefinitionRevisionData() map[int]int {
 	out := make(map[int]int)
 	for _, t := range s.Tasks {
-		version, err := awsECS.TaskDefinitionVersion(t.TaskDefinition)
+		version, err := ecs.TaskDefinitionVersion(t.TaskDefinition)
 		if err != nil {
 			out[-1] += 1
 		} else {
@@ -87,9 +90,9 @@ func (s *ecsServiceStatus) healthyHTTPTasksCount() int {
 func (s *ecsServiceStatus) capacityProviderData() (fargate int, spot int, unset int) {
 	for _, t := range s.Tasks {
 		switch strings.ToUpper(t.CapacityProvider) {
-		case awsECS.TaskCapacityProviderFargate:
+		case ecs.TaskCapacityProviderFargate:
 			fargate += 1
-		case awsECS.TaskCapacityProviderFargateSpot:
+		case ecs.TaskCapacityProviderFargateSpot:
 			spot += 1
 		default:
 			unset += 1
