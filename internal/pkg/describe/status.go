@@ -352,7 +352,7 @@ func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 			(int)(s.Service.DesiredCount) - (int)(s.Service.RunningCount),
 		},
 		[]string{color.Green.Sprint("■"), color.Grey.Sprint("□")})
-	stringSummary := fmt.Sprintf("%d/%d Desired Tasks Running", s.Service.RunningCount, s.Service.DesiredCount)
+	stringSummary := fmt.Sprintf("%d/%d desired tasks are running", s.Service.RunningCount, s.Service.DesiredCount)
 	fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
 
 	// Write summary of task definition revision.
@@ -365,8 +365,8 @@ func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 				data[desiredTaskDefVersion],
 				(int)(s.Service.RunningCount) - data[desiredTaskDefVersion],
 			},
-			[]string{color.Green.Sprint("■"), color.Yellow.Sprint("□")})
-		stringSummary := fmt.Sprintf("%d/%d Running task definition version %d (desired)",
+			[]string{color.Green.Sprint("■"), color.Grey.Sprint("□")})
+		stringSummary := fmt.Sprintf("%d/%d running task definition version %d (desired)",
 			data[desiredTaskDefVersion],
 			s.Service.RunningCount,
 			desiredTaskDefVersion)
@@ -384,7 +384,7 @@ func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 					(int)(s.Service.RunningCount) - healthyCount,
 				},
 				[]string{color.Green.Sprint("■"), color.Grey.Sprint("□")})
-			stringSummary := fmt.Sprintf("%d/%d Passes HTTP Health Checks", healthyCount, s.Service.RunningCount)
+			stringSummary := fmt.Sprintf("%d/%d passes HTTP health checks", healthyCount, s.Service.RunningCount)
 			fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
 			header = ""
 		}
@@ -397,7 +397,7 @@ func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 					(int)(s.Service.RunningCount) - healthyCount,
 				},
 				[]string{color.Green.Sprint("■"), color.Grey.Sprint("□")})
-			stringSummary := fmt.Sprintf("%d/%d Passes Container Health Checks", healthyCount, s.Service.RunningCount)
+			stringSummary := fmt.Sprintf("%d/%d passes container health checks", healthyCount, s.Service.RunningCount)
 
 			fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
 
@@ -417,7 +417,7 @@ func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 			cpSummaries = append(cpSummaries, fmt.Sprintf("%d/%d on Fargate Spot", spot, s.Service.RunningCount))
 		}
 		if unset != 0 {
-			cpSummaries = append(cpSummaries, fmt.Sprintf("%d/%d on default capacity provider", unset, s.Service.RunningCount))
+			cpSummaries = append(cpSummaries, fmt.Sprintf("%d/%d not scaled by capacity provider", unset, s.Service.RunningCount))
 		}
 		fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, strings.Join(cpSummaries, ", "))
 	}
@@ -432,20 +432,16 @@ func (s *ecsServiceStatus) writeStoppedTasks(writer *tabwriter.Writer) {
 	fmt.Fprint(writer, color.Bold.Sprint("\nStopped Tasks\n\n"))
 	writer.Flush()
 
-	headers := []string{"Reason", "Task IDs"}
+	headers := []string{"Reason", "Task Count", "Task IDs"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 
 	reasonToTasks := make(map[string][]string)
 	for _, task := range s.StoppedTasks {
-		reasonToTasks[task.StoppedReason] = append(reasonToTasks[task.StoppedReason], task.ID)
+		reasonToTasks[task.StoppedReason] = append(reasonToTasks[task.StoppedReason], shortTaskID(task.ID))
 	}
 	for reason, ids := range reasonToTasks {
-		var shortIDs []string
-		for _, id := range ids {
-			shortIDs = append(shortIDs, shortTaskID(id))
-		}
-		fmt.Fprintf(writer, "  %s\t%s\n", reason, strings.Join(shortIDs, ","))
+		fmt.Fprintf(writer, "  %s\t%d\t%s\n", reason, len(ids), strings.Join(ids, ","))
 	}
 }
 
@@ -469,7 +465,7 @@ func (s *ecsServiceStatus) writeRunningTasks(writer *tabwriter.Writer) {
 
 	if shouldShowContainerHealth {
 		opts = append(opts, withContainerHealthShow)
-		headers = append(headers, "Cont.Health")
+		headers = append(headers, "Cont. Health")
 	}
 
 	if shouldShowHTTPHealth {

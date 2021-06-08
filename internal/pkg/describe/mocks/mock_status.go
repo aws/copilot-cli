@@ -33,7 +33,7 @@ func NewMocktargetHealthGetter(ctrl *gomock.Controller) *MocktargetHealthGetter 
 	mock.recorder = &MocktargetHealthGetterMockRecorder{mock}
 	return mock
 }
-()
+
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MocktargetHealthGetter) EXPECT() *MocktargetHealthGetterMockRecorder {
 	return m.recorder

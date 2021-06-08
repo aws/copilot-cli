@@ -562,13 +562,13 @@ func TestServiceStatusDesc_String(t *testing.T) {
 			},
 			human: `Task Summary
 
-  Running   □□□□□□□□□□  0/1 Desired Tasks Running
-  Healthy   □□□□□□□□□□  1/0 Passes Container Health Checks
+  Running   □□□□□□□□□□  0/1 desired tasks are running
+  Healthy   □□□□□□□□□□  1/0 passes container health checks
 
 Tasks
 
-  ID        Status        Revision    Started At  Cont.Health
-  --        ------        --------    ----------  -----------
+  ID        Status        Revision    Started At  Cont. Health
+  --        ------        --------    ----------  ------------
   12345678  PROVISIONING  6           -           HEALTHY
 
 Alarms
@@ -626,14 +626,14 @@ Alarms
 			},
 			human: `Task Summary
 
-  Running     ■■■■■■■■■■  1/1 Desired Tasks Running
-  Deployment  ■■■■■■■■■■  1/1 Running task definition version 6 (desired)
-  Healthy     ■■■■■■■■■■  1/1 Passes Container Health Checks
+  Running     ■■■■■■■■■■  1/1 desired tasks are running
+  Deployment  ■■■■■■■■■■  1/1 running task definition version 6 (desired)
+  Healthy     ■■■■■■■■■■  1/1 passes container health checks
 
 Tasks
 
-  ID        Status      Revision    Started At  Cont.Health
-  --        ------      --------    ----------  -----------
+  ID        Status      Revision    Started At  Cont. Health
+  --        ------      --------    ----------  ------------
   12345678  RUNNING     6           -           HEALTHY
 
 Alarms
@@ -692,19 +692,19 @@ Alarms
 			},
 			human: `Task Summary
 
-  Running   ■■■■■■■■■■  1/1 Desired Tasks Running
-  Healthy   ■■■■■■■■■■  1/1 Passes Container Health Checks
+  Running   ■■■■■■■■■■  1/1 desired tasks are running
+  Healthy   ■■■■■■■■■■  1/1 passes container health checks
 
 Stopped Tasks
 
-  Reason       Task IDs
-  ------       --------
-  some reason  01020304,02030405
+  Reason       Task Count  Task IDs
+  ------       ----------  --------
+  some reason  2           01020304,02030405
 
 Tasks
 
-  ID        Status      Revision    Started At  Cont.Health
-  --        ------      --------    ----------  -----------
+  ID        Status      Revision    Started At  Cont. Health
+  --        ------      --------    ----------  ------------
   12345678  RUNNING     -           -           HEALTHY
 `,
 			json: `{"Service":{"desiredCount":1,"runningCount":1,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":[{"ID":"mockImageID1","Digest":"69671a968e8ec3648e2697417750e"},{"ID":"mockImageID2","Digest":"ca27a44e25ce17fea7b07940ad793"}],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"some reason","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":[{"health":"","id":"0102030490123123123","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"some reason","capacityProvider":"","taskDefinitionARN":""},{"health":"","id":"0203040590123123123","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"some reason","capacityProvider":"","taskDefinitionARN":""}],"targetsHealth":null}
@@ -763,16 +763,16 @@ Tasks
 			},
 			human: `Task Summary
 
-  Running   ■■■■■■■□□□  2/3 Desired Tasks Running
-  Healthy   ■■■■■□□□□□  1/2 Passes HTTP Health Checks
-            ■■■■■■■■■■  2/2 Passes Container Health Checks
+  Running   ■■■■■■■□□□  2/3 desired tasks are running
+  Healthy   ■■■■■□□□□□  1/2 passes HTTP health checks
+            ■■■■■■■■■■  2/2 passes container health checks
 
 Tasks
 
-  ID        Status      Revision    Started At  Cont.Health  HTTP Health
-  --        ------      --------    ----------  -----------  -----------
-  12345678  RUNNING     -           -           HEALTHY      UNHEALTHY
-  13456789  RUNNING     -           -           HEALTHY      HEALTHY
+  ID        Status      Revision    Started At  Cont. Health  HTTP Health
+  --        ------      --------    ----------  ------------  -----------
+  12345678  RUNNING     -           -           HEALTHY       UNHEALTHY
+  13456789  RUNNING     -           -           HEALTHY       HEALTHY
 `,
 			json: `{"Service":{"desiredCount":3,"runningCount":2,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""},{"health":"HEALTHY","id":"1345678990123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":null,"targetsHealth":[{"healthDescription":{"HealthCheckPort":null,"Target":{"AvailabilityZone":null,"Id":"5.6.7.8","Port":null},"TargetHealth":{"Description":null,"Reason":"some reason","State":"unhealthy"}},"taskID":"1234567890123456789","targetGroup":"group-1"},{"healthDescription":{"HealthCheckPort":null,"Target":{"AvailabilityZone":null,"Id":"1.1.1.1","Port":null},"TargetHealth":{"Description":null,"Reason":null,"State":"healthy"}},"taskID":"1345678990123456789","targetGroup":"group-1"}]}
 `,
@@ -803,7 +803,7 @@ Tasks
 			},
 			human: `Task Summary
 
-  Running   ■■■■■■■□□□  2/3 Desired Tasks Running
+  Running   ■■■■■■■□□□  2/3 desired tasks are running
 
 Tasks
 
@@ -843,7 +843,7 @@ Tasks
 			},
 			human: `Task Summary
 
-  Running            ■■■■■■■□□□  2/3 Desired Tasks Running
+  Running            ■■■■■■■□□□  2/3 desired tasks are running
   Capacity Provider  fffffsssss  1/2 on Fargate, 1/2 on Fargate Spot
 
 Tasks
