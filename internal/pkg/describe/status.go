@@ -35,7 +35,7 @@ const (
 )
 
 type targetHealthGetter interface {
-	HealthStatus(targetGroupARN string) ([]*elbv2.TargetHealth, error)
+	TargetsHealth(targetGroupARN string) ([]*elbv2.TargetHealth, error)
 }
 
 type alarmStatusGetter interface {
@@ -202,7 +202,7 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 	var tasksTargetHealth []taskTargetHealth
 	targetGroupsARN := service.TargetGroups()
 	for _, groupARN := range targetGroupsARN {
-		targetsHealth, err := s.targetHealthGetter.HealthStatus(groupARN)
+		targetsHealth, err := s.targetHealthGetter.TargetsHealth(groupARN)
 		if err != nil {
 			continue
 		}
@@ -574,9 +574,9 @@ func withContainerHealthShow(config *ecsTaskStatusConfig) {
 }
 
 type taskTargetHealth struct {
-	TargetHealthDescription elbv2.TargetHealth `json:"healthDescription"`
-	TaskID                  string             `json:"taskID"`
-	TargetGroupARN          string             `json:"targetGroup"`
+	HealthStatus   elbv2.HealthStatus `json:"healthStatus"`
+	TaskID         string             `json:"taskID"`
+	TargetGroupARN string             `json:"targetGroup"`
 }
 
 // targetHealthForTasks finds the target health in a target group, if any, for each task.
@@ -606,9 +606,9 @@ func targetHealthForTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsecs.T
 
 		if taskID, err := awsecs.TaskID(aws.StringValue(task.TaskArn)); err == nil {
 			out = append(out, taskTargetHealth{
-				TaskID:                  taskID,
-				TargetHealthDescription: *th,
-				TargetGroupARN:          targetGroupARN,
+				TaskID:         taskID,
+				HealthStatus:   *th.HealthStatus(),
+				TargetGroupARN: targetGroupARN,
 			})
 		}
 	}

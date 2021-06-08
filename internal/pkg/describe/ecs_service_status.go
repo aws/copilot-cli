@@ -6,7 +6,6 @@ package describe
 import (
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 )
@@ -103,7 +102,7 @@ func (s *ecsServiceStatus) capacityProviderData() (fargate int, spot int, unset 
 func (s *ecsServiceStatus) summarizeTasksTargetHealth() map[string][]string {
 	out := make(map[string][]string)
 	for _, th := range s.TasksTargetHealth {
-		out[th.TaskID] = append(out[th.TaskID], aws.StringValue(th.TargetHealthDescription.TargetHealth.State))
+		out[th.TaskID] = append(out[th.TaskID], th.HealthStatus.HealthState)
 	}
 	return out
 }

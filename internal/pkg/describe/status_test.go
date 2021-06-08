@@ -316,26 +316,18 @@ func TestServiceStatus_Describe(t *testing.T) {
 				},
 				TasksTargetHealth: []taskTargetHealth{
 					{
-						TargetHealthDescription: elbv2.TargetHealth{
-							Target: &elbv2api.TargetDescription{
-								Id: aws.String("1.2.3.4"),
-							},
-							TargetHealth: &elbv2api.TargetHealth{
-								State:  aws.String("unhealthy"),
-								Reason: aws.String("Target.ResponseCodeMismatch"),
-							},
+						HealthStatus: elbv2.HealthStatus{
+							TargetID:     "1.2.3.4",
+							HealthState:  "unhealthy",
+							HealthReason: "Target.ResponseCodeMismatch",
 						},
 						TaskID:         "task-with-private-ip-being-target",
 						TargetGroupARN: "group-1",
 					},
 					{
-						TargetHealthDescription: elbv2.TargetHealth{
-							Target: &elbv2api.TargetDescription{
-								Id: aws.String("1.2.3.4"),
-							},
-							TargetHealth: &elbv2api.TargetHealth{
-								State: aws.String("healthy"),
-							},
+						HealthStatus: elbv2.HealthStatus{
+							TargetID:    "1.2.3.4",
+							HealthState: "healthy",
 						},
 						TaskID:         "task-with-private-ip-being-target",
 						TargetGroupARN: "group-2",
@@ -735,26 +727,18 @@ Tasks
 				},
 				TasksTargetHealth: []taskTargetHealth{
 					{
-						TargetHealthDescription: elbv2.TargetHealth{
-							Target: &elbv2api.TargetDescription{
-								Id: aws.String("5.6.7.8"),
-							},
-							TargetHealth: &elbv2api.TargetHealth{
-								State:  aws.String("unhealthy"),
-								Reason: aws.String("some reason"),
-							},
+						HealthStatus: elbv2.HealthStatus{
+							TargetID:     "5.6.7.8",
+							HealthState:  "unhealthy",
+							HealthReason: "some reason",
 						},
 						TaskID:         "1234567890123456789",
 						TargetGroupARN: "group-1",
 					},
 					{
-						TargetHealthDescription: elbv2.TargetHealth{
-							Target: &elbv2api.TargetDescription{
-								Id: aws.String("1.1.1.1"),
-							},
-							TargetHealth: &elbv2api.TargetHealth{
-								State: aws.String("healthy"),
-							},
+						HealthStatus: elbv2.HealthStatus{
+							TargetID:    "1.1.1.1",
+							HealthState: "healthy",
 						},
 						TaskID:         "1345678990123456789",
 						TargetGroupARN: "group-1",
@@ -774,7 +758,7 @@ Tasks
   12345678  RUNNING     -           -           HEALTHY       UNHEALTHY
   13456789  RUNNING     -           -           HEALTHY       HEALTHY
 `,
-			json: `{"Service":{"desiredCount":3,"runningCount":2,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""},{"health":"HEALTHY","id":"1345678990123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":null,"targetsHealth":[{"healthDescription":{"HealthCheckPort":null,"Target":{"AvailabilityZone":null,"Id":"5.6.7.8","Port":null},"TargetHealth":{"Description":null,"Reason":"some reason","State":"unhealthy"}},"taskID":"1234567890123456789","targetGroup":"group-1"},{"healthDescription":{"HealthCheckPort":null,"Target":{"AvailabilityZone":null,"Id":"1.1.1.1","Port":null},"TargetHealth":{"Description":null,"Reason":null,"State":"healthy"}},"taskID":"1345678990123456789","targetGroup":"group-1"}]}
+			json: `{"Service":{"desiredCount":3,"runningCount":2,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""},{"health":"HEALTHY","id":"1345678990123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":null,"targetsHealth":[{"healthStatus":{"targetID":"5.6.7.8","healthDescription":"","healthState":"unhealthy","healthReason":"some reason"},"taskID":"1234567890123456789","targetGroup":"group-1"},{"healthStatus":{"targetID":"1.1.1.1","healthDescription":"","healthState":"healthy","healthReason":""},"taskID":"1345678990123456789","targetGroup":"group-1"}]}
 `,
 		},
 		"with all container health being UNKNOWN": {
@@ -1177,10 +1161,18 @@ func Test_targetHealthForTasks(t *testing.T) {
 					Target: &elbv2api.TargetDescription{
 						Id: aws.String("42.42.42.42"),
 					},
+					TargetHealth: &elbv2api.TargetHealth{
+						Description: aws.String("unhealthy because this and that"),
+						State:       aws.String("unhealthy"),
+						Reason:      aws.String("Target.Timeout"),
+					},
 				},
 				{
 					Target: &elbv2api.TargetDescription{
 						Id: aws.String("24.24.24.24"),
+					},
+					TargetHealth: &elbv2api.TargetHealth{
+						State: aws.String("healthy"),
 					},
 				},
 			},
@@ -1218,10 +1210,11 @@ func Test_targetHealthForTasks(t *testing.T) {
 			wanted: []taskTargetHealth{
 				{
 					TaskID: "task-with-private-ip-being-target",
-					TargetHealthDescription: elbv2.TargetHealth{
-						Target: &elbv2api.TargetDescription{
-							Id: aws.String("42.42.42.42"),
-						},
+					HealthStatus: elbv2.HealthStatus{
+						TargetID:          "42.42.42.42",
+						HealthReason:      "Target.Timeout",
+						HealthState:       "unhealthy",
+						HealthDescription: "unhealthy because this and that",
 					},
 					TargetGroupARN: "group-1",
 				},
@@ -1237,163 +1230,163 @@ func Test_targetHealthForTasks(t *testing.T) {
 	}
 }
 
-func Test_Temporary(t *testing.T) {
-	t.Run("temporary", func(t *testing.T) {
-		stoppedTime, _ := time.Parse(time.RFC3339, "2020-03-13T20:00:30+00:00")
-
-		desc := &ecsServiceStatus{
-			Service: awsecs.ServiceStatus{
-				RunningCount:   10,
-				DesiredCount:   4,
-				TaskDefinition: "arn:aws:ecs:us-east-1:111122222333:task-definition/some-task-def:6",
-			},
-			Tasks: []awsecs.TaskStatus{
-				{
-					//Health: "HEALTHY",
-					Health:     "UNKNOWN",
-					LastStatus: "RUNNING",
-					ID:         "a-task-with-private-ip-being-target",
-					Images: []awsecs.Image{
-						{
-							Digest: "69671a968e8ec3648e2697417750e",
-							ID:     "mockImageID1",
-						},
-						{
-							ID:     "mockImageID2",
-							Digest: "ca27a44e25ce17fea7b07940ad793",
-						},
-					},
-					StoppedReason:    "some reason",
-					CapacityProvider: "FARGATE",
-					TaskDefinition:   "arn:aws:ecs:us-east-1:111122222333:task-definition/some-task-def:6",
-				},
-				{
-					Health: "HEALTHY",
-					//Health:     "UNKNOWN",
-					LastStatus: "RUNNING",
-					ID:         "another-task-with-private-ip-being-target",
-					Images: []awsecs.Image{
-						{
-							Digest: "69671a968e8ec3648e2697417750e",
-							ID:     "mockImageID1",
-						},
-						{
-							ID:     "mockImageID2",
-							Digest: "ca27a44e25ce17fea7b07940ad793",
-						},
-					},
-					StoppedReason: "some reason",
-					//CapacityProvider: "FARGATE_SPOT",
-					TaskDefinition: "arn:aws:ecs:us-east-1:111122222333:task-definition/some-task-def:1",
-				},
-				{
-					Health:     "UNKNOWN",
-					LastStatus: "RUNNING",
-					ID:         "aaa",
-					Images: []awsecs.Image{
-						{
-							Digest: "69671a968e8ec3648e2697417750e",
-							ID:     "mockImageID1",
-						},
-						{
-							ID:     "mockImageID2",
-							Digest: "ca27a44e25ce17fea7b07940ad793",
-						},
-					},
-					StoppedReason:    "some reason",
-					CapacityProvider: "FARGATE_SPOT",
-					TaskDefinition:   "arn:aws:ecs:us-east-1:111122222333:task-definition/some-task-def:6",
-				},
-			},
-			StoppedTasks: []awsecs.TaskStatus{
-				{
-					LastStatus: "DEPROVISIONING",
-					ID:         "0102030490123123123",
-					StoppedAt:  stoppedTime,
-					Images: []awsecs.Image{
-						{
-							Digest: "30dkd891jdk9s8d350e932k390093",
-							ID:     "mockImageID1",
-						},
-						{
-							ID:     "mockImageID2",
-							Digest: "41flf902kfl0d9f461r043l411104",
-						},
-					},
-					StoppedReason: "some reason",
-				},
-				{
-					LastStatus: "DEPROVISIONING",
-					ID:         "1234567899",
-					StoppedAt:  stoppedTime,
-					Images: []awsecs.Image{
-						{
-							Digest: "30dkd891jdk9s8d350e932k390093",
-							ID:     "mockImageID1",
-						},
-						{
-							ID:     "mockImageID2",
-							Digest: "41flf902kfl0d9f461r043l411104",
-						},
-					},
-					StoppedReason: "some reason",
-				},
-				{
-					LastStatus: "DEPROVISIONING",
-					ID:         "1111111111",
-					StoppedAt:  stoppedTime,
-					Images: []awsecs.Image{
-						{
-							Digest: "30dkd891jdk9s8d350e932k390093",
-							ID:     "mockImageID1",
-						},
-						{
-							ID:     "mockImageID2",
-							Digest: "41flf902kfl0d9f461r043l411104",
-						},
-					},
-					StoppedReason: "some other reason",
-				},
-			},
-			TasksTargetHealth: []taskTargetHealth{
-				{
-					TargetHealthDescription: elbv2.TargetHealth{
-						Target: &elbv2api.TargetDescription{
-							Id: aws.String("5.6.7.8"),
-						},
-						TargetHealth: &elbv2api.TargetHealth{
-							State:  aws.String("unhealthy"),
-							Reason: aws.String("some reason"),
-						},
-					},
-					TaskID: "a-task-with-private-ip-being-target",
-				},
-				{
-					TargetHealthDescription: elbv2.TargetHealth{
-						Target: &elbv2api.TargetDescription{
-							Id: aws.String("1.1.1.1"),
-						},
-						TargetHealth: &elbv2api.TargetHealth{
-							State: aws.String("healthy"),
-						},
-					},
-					TaskID: "another-task-with-private-ip-being-target",
-				},
-				{
-					TargetHealthDescription: elbv2.TargetHealth{
-						Target: &elbv2api.TargetDescription{
-							Id: aws.String("1.1.1.1"),
-						},
-						TargetHealth: &elbv2api.TargetHealth{
-							State: aws.String("healthy"),
-						},
-					},
-					TaskID: "another-task-with-private-ip-being-target",
-				},
-			},
-		}
-
-		human := desc.HumanString()
-		fmt.Print(human)
-	})
-}
+//func Test_Temporary(t *testing.T) {
+//	t.Run("temporary", func(t *testing.T) {
+//		stoppedTime, _ := time.Parse(time.RFC3339, "2020-03-13T20:00:30+00:00")
+//
+//		desc := &ecsServiceStatus{
+//			Service: awsecs.ServiceStatus{
+//				RunningCount:   10,
+//				DesiredCount:   4,
+//				TaskDefinition: "arn:aws:ecs:us-east-1:111122222333:task-definition/some-task-def:6",
+//			},
+//			Tasks: []awsecs.TaskStatus{
+//				{
+//					//Health: "HEALTHY",
+//					Health:     "UNKNOWN",
+//					LastStatus: "RUNNING",
+//					ID:         "a-task-with-private-ip-being-target",
+//					Images: []awsecs.Image{
+//						{
+//							Digest: "69671a968e8ec3648e2697417750e",
+//							ID:     "mockImageID1",
+//						},
+//						{
+//							ID:     "mockImageID2",
+//							Digest: "ca27a44e25ce17fea7b07940ad793",
+//						},
+//					},
+//					StoppedReason:    "some reason",
+//					CapacityProvider: "FARGATE",
+//					TaskDefinition:   "arn:aws:ecs:us-east-1:111122222333:task-definition/some-task-def:6",
+//				},
+//				{
+//					Health: "HEALTHY",
+//					//Health:     "UNKNOWN",
+//					LastStatus: "RUNNING",
+//					ID:         "another-task-with-private-ip-being-target",
+//					Images: []awsecs.Image{
+//						{
+//							Digest: "69671a968e8ec3648e2697417750e",
+//							ID:     "mockImageID1",
+//						},
+//						{
+//							ID:     "mockImageID2",
+//							Digest: "ca27a44e25ce17fea7b07940ad793",
+//						},
+//					},
+//					StoppedReason: "some reason",
+//					//CapacityProvider: "FARGATE_SPOT",
+//					TaskDefinition: "arn:aws:ecs:us-east-1:111122222333:task-definition/some-task-def:1",
+//				},
+//				{
+//					Health:     "UNKNOWN",
+//					LastStatus: "RUNNING",
+//					ID:         "aaa",
+//					Images: []awsecs.Image{
+//						{
+//							Digest: "69671a968e8ec3648e2697417750e",
+//							ID:     "mockImageID1",
+//						},
+//						{
+//							ID:     "mockImageID2",
+//							Digest: "ca27a44e25ce17fea7b07940ad793",
+//						},
+//					},
+//					StoppedReason:    "some reason",
+//					CapacityProvider: "FARGATE_SPOT",
+//					TaskDefinition:   "arn:aws:ecs:us-east-1:111122222333:task-definition/some-task-def:6",
+//				},
+//			},
+//			StoppedTasks: []awsecs.TaskStatus{
+//				{
+//					LastStatus: "DEPROVISIONING",
+//					ID:         "0102030490123123123",
+//					StoppedAt:  stoppedTime,
+//					Images: []awsecs.Image{
+//						{
+//							Digest: "30dkd891jdk9s8d350e932k390093",
+//							ID:     "mockImageID1",
+//						},
+//						{
+//							ID:     "mockImageID2",
+//							Digest: "41flf902kfl0d9f461r043l411104",
+//						},
+//					},
+//					StoppedReason: "some reason",
+//				},
+//				{
+//					LastStatus: "DEPROVISIONING",
+//					ID:         "1234567899",
+//					StoppedAt:  stoppedTime,
+//					Images: []awsecs.Image{
+//						{
+//							Digest: "30dkd891jdk9s8d350e932k390093",
+//							ID:     "mockImageID1",
+//						},
+//						{
+//							ID:     "mockImageID2",
+//							Digest: "41flf902kfl0d9f461r043l411104",
+//						},
+//					},
+//					StoppedReason: "some reason",
+//				},
+//				{
+//					LastStatus: "DEPROVISIONING",
+//					ID:         "1111111111",
+//					StoppedAt:  stoppedTime,
+//					Images: []awsecs.Image{
+//						{
+//							Digest: "30dkd891jdk9s8d350e932k390093",
+//							ID:     "mockImageID1",
+//						},
+//						{
+//							ID:     "mockImageID2",
+//							Digest: "41flf902kfl0d9f461r043l411104",
+//						},
+//					},
+//					StoppedReason: "some other reason",
+//				},
+//			},
+//			TasksTargetHealth: []taskTargetHealth{
+//				{
+//					HealthStatus: elbv2.TargetHealth{
+//						Target: &elbv2api.TargetDescription{
+//							Id: aws.String("5.6.7.8"),
+//						},
+//						TargetHealth: &elbv2api.TargetHealth{
+//							State:  aws.String("unhealthy"),
+//							Reason: aws.String("some reason"),
+//						},
+//					},
+//					TaskID: "a-task-with-private-ip-being-target",
+//				},
+//				{
+//					HealthStatus: elbv2.TargetHealth{
+//						Target: &elbv2api.TargetDescription{
+//							Id: aws.String("1.1.1.1"),
+//						},
+//						TargetHealth: &elbv2api.TargetHealth{
+//							State: aws.String("healthy"),
+//						},
+//					},
+//					TaskID: "another-task-with-private-ip-being-target",
+//				},
+//				{
+//					HealthStatus: elbv2.TargetHealth{
+//						Target: &elbv2api.TargetDescription{
+//							Id: aws.String("1.1.1.1"),
+//						},
+//						TargetHealth: &elbv2api.TargetHealth{
+//							State: aws.String("healthy"),
+//						},
+//					},
+//					TaskID: "another-task-with-private-ip-being-target",
+//				},
+//			},
+//		}
+//
+//		human := desc.HumanString()
+//		fmt.Print(human)
+//	})
+//}

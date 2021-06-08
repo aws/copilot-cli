@@ -40,9 +40,9 @@ func (m *MocktargetHealthGetter) EXPECT() *MocktargetHealthGetterMockRecorder {
 }
 
 // HealthStatus mocks base method.
-func (m *MocktargetHealthGetter) HealthStatus(targetGroupARN string) ([]*elbv2.TargetHealth, error) {
+func (m *MocktargetHealthGetter) TargetsHealth(targetGroupARN string) ([]*elbv2.TargetHealth, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HealthStatus", targetGroupARN)
+	ret := m.ctrl.Call(m, "TargetsHealth", targetGroupARN)
 	ret0, _ := ret[0].([]*elbv2.TargetHealth)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -51,7 +51,7 @@ func (m *MocktargetHealthGetter) HealthStatus(targetGroupARN string) ([]*elbv2.T
 // HealthStatus indicates an expected call of HealthStatus.
 func (mr *MocktargetHealthGetterMockRecorder) HealthStatus(targetGroupARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealthStatus", reflect.TypeOf((*MocktargetHealthGetter)(nil).HealthStatus), targetGroupARN)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TargetsHealth", reflect.TypeOf((*MocktargetHealthGetter)(nil).TargetsHealth), targetGroupARN)
 }
 
 // MockalarmStatusGetter is a mock of alarmStatusGetter interface.
