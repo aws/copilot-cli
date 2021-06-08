@@ -28,6 +28,7 @@ var (
 // CodeCommit credentials.
 var (
 	repoName          = appName
+	repoURL           string
 	codeCommitIAMUser = fmt.Sprintf("%s-cc", appName)
 	codeCommitCreds   *client.IAMServiceCreds
 )
@@ -49,6 +50,8 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
+	_, err := copilot.AppDelete()
+	Expect(err).NotTo(HaveOccurred())
 	_ = aws.DeleteCodeCommitRepo(appName)
 	_ = aws.DeleteCodeCommitIAMUser(codeCommitIAMUser, codeCommitCreds.CredentialID)
 })

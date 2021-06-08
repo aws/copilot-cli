@@ -4,6 +4,7 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -630,6 +631,44 @@ func (cli *CLI) AppShow(appName string) (*AppShowOutput, error) {
 		return nil, err
 	}
 	return toAppShowOutput(output)
+}
+
+// PipelineInit runs "copilot pipeline init".
+func (cli *CLI) PipelineInit(app, url, branch string, envs []string) (string, error) {
+	return cli.exec(
+		exec.Command(cli.path, "pipeline", "init",
+			"-a", app,
+			"-u", url,
+			"-b", branch,
+			"-e", strings.Join(envs, ",")))
+}
+
+// PipelineShow runs "copilot pipeline show --json"
+func (cli *CLI) PipelineShow() (*PipelineShowOutput, error) {
+	text, err := cli.exec(
+		exec.Command(cli.path, "pipeline", "show", "--json"))
+	if err != nil {
+		return nil, err
+	}
+	var out PipelineShowOutput
+	if err := json.Unmarshal([]byte(text), &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// PipelineStatus runs "copilot pipeline status --json"
+func (cli *CLI) PipelineStatus() (*PipelineStatusOutput, error) {
+	text, err := cli.exec(
+		exec.Command(cli.path, "pipeline", "status", "--json"))
+	if err != nil {
+		return nil, err
+	}
+	var out PipelineStatusOutput
+	if err := json.Unmarshal([]byte(text), &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
 }
 
 /*AppList runs:
