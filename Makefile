@@ -96,13 +96,11 @@ package-custom-resources-clean:
 
 .PHONY: run-unit-test
 run-unit-test:
-	go test -race -cover -count=1 -coverprofile ${COVERAGE} ${PACKAGES}
+	go test -race -count=1 -coverprofile=${COVERAGE} ${PACKAGES}
 
 .PHONY: generate-coverage
-generate-coverage: ${COVERAGE}
+generate-coverage: test
 	go tool cover -html=${COVERAGE}
-
-${COVERAGE}: test
 
 .PHONY: integ-test
 integ-test: packr-build run-integ-test packr-clean
