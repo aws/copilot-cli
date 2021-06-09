@@ -522,21 +522,21 @@ func TestServiceStatusDesc_String(t *testing.T) {
 							DesiredCount:   1,
 							RunningCount:   1,
 							Status:         "ACTIVE",
-							TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:5",
+							TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:5",
 						},
 						{
 							Id:             "active-2",
 							DesiredCount:   2,
 							RunningCount:   1,
 							Status:         "ACTIVE",
-							TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:4",
+							TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:4",
 						},
 						{
 							Id:             "id-4",
 							DesiredCount:   10,
 							RunningCount:   1,
 							Status:         "PRIMARY",
-							TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
+							TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 						},
 						{
 							Id:     "id-5",
@@ -567,19 +567,19 @@ func TestServiceStatusDesc_String(t *testing.T) {
 						Health:         "HEALTHY",
 						LastStatus:     "RUNNING",
 						ID:             "111111111111111",
-						TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:5",
+						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:5",
 					},
 					{
 						Health:         "UNKNOWN",
 						LastStatus:     "RUNNING",
 						ID:             "111111111111111",
-						TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:4",
+						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:4",
 					},
 					{
 						Health:         "HEALTHY",
 						LastStatus:     "PROVISIONING",
 						ID:             "1234567890123456789",
-						TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
+						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 					},
 				},
 			},
@@ -610,7 +610,7 @@ Alarms
   rm                              atapoints within 3 minutes                         
                                                                                      
 `,
-			json: `{"Service":{"desiredCount":1,"runningCount":0,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":null,"lastStatus":"PROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6"}],"alarms":[{"arn":"mockAlarmArn1","name":"mySupercalifragilisticexpialidociousAlarm","condition":"RequestCount \u003e 100.00 for 3 datapoints within 25 minutes","status":"OK","type":"Metric","updatedTimes":"2020-03-13T19:50:30Z"},{"arn":"mockAlarmArn2","name":"Um-dittle-ittl-um-dittle-I-Alarm","condition":"CPUUtilization \u003e 70.00 for 3 datapoints within 3 minutes","status":"OK","type":"Metric","updatedTimes":"2020-03-13T19:50:30Z"}],"stoppedTasks":null,"targetsHealth":null}
+			json: `{"Service":{"desiredCount":10,"runningCount":3,"status":"ACTIVE","deployments":[{"id":"active-1","desiredCount":1,"runningCount":1,"updatedAt":"0001-01-01T00:00:00Z","launchType":"","taskDefinition":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:5","status":"ACTIVE"},{"id":"active-2","desiredCount":2,"runningCount":1,"updatedAt":"0001-01-01T00:00:00Z","launchType":"","taskDefinition":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:4","status":"ACTIVE"},{"id":"id-4","desiredCount":10,"runningCount":1,"updatedAt":"0001-01-01T00:00:00Z","launchType":"","taskDefinition":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6","status":"PRIMARY"},{"id":"id-5","desiredCount":0,"runningCount":0,"updatedAt":"0001-01-01T00:00:00Z","launchType":"","taskDefinition":"","status":"INACTIVE"}],"lastDeploymentAt":"0001-01-01T00:00:00Z","taskDefinition":""},"tasks":[{"health":"HEALTHY","id":"111111111111111","images":null,"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:5"},{"health":"UNKNOWN","id":"111111111111111","images":null,"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:4"},{"health":"HEALTHY","id":"1234567890123456789","images":null,"lastStatus":"PROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6"}],"alarms":[{"arn":"mockAlarmArn1","name":"mySupercalifragilisticexpialidociousAlarm","condition":"RequestCount \u003e 100.00 for 3 datapoints within 25 minutes","status":"OK","type":"Metric","updatedTimes":"2020-03-13T19:50:30Z"},{"arn":"mockAlarmArn2","name":"Um-dittle-ittl-um-dittle-I-Alarm","condition":"CPUUtilization \u003e 70.00 for 3 datapoints within 3 minutes","status":"OK","type":"Metric","updatedTimes":"2020-03-13T19:50:30Z"}],"stoppedTasks":null,"targetsHealth":null}
 `,
 		},
 		"while running with both health check (all primary)": {
@@ -622,7 +622,7 @@ Alarms
 					Deployments: []awsecs.Deployment{
 						{
 							Status:         "PRIMARY",
-							TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
+							TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 							DesiredCount:   3,
 							RunningCount:   3,
 						},
@@ -633,19 +633,19 @@ Alarms
 						Health:         "HEALTHY",
 						LastStatus:     "RUNNING",
 						ID:             "111111111111111",
-						TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
+						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 					},
 					{
 						Health:         "UNHEALTHY",
 						LastStatus:     "RUNNING",
 						ID:             "2222222222222222",
-						TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
+						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 					},
 					{
 						Health:         "HEALTHY",
 						LastStatus:     "PROVISIONING",
 						ID:             "3333333333333333",
-						TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
+						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 					},
 				},
 				TasksTargetHealth: []taskTargetHealth{
@@ -690,7 +690,7 @@ Tasks
   22222222  RUNNING       6           -           UNHEALTHY     HEALTHY
   33333333  PROVISIONING  6           -           HEALTHY       HEALTHY
 `,
-			json: `{"Service":{"desiredCount":1,"runningCount":1,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":[{"ID":"mockImageID1","Digest":"69671a968e8ec3648e2697417750e"},{"ID":"mockImageID2","Digest":"ca27a44e25ce17fea7b07940ad793"}],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"some reason","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6"}],"alarms":[{"arn":"mockAlarmArn","name":"mockAlarm","condition":"mockCondition","status":"OK","type":"Metric","updatedTimes":"2020-03-13T19:50:30Z"}],"stoppedTasks":null,"targetsHealth":null}
+			json: `{"Service":{"desiredCount":3,"runningCount":3,"status":"ACTIVE","deployments":[{"id":"","desiredCount":3,"runningCount":3,"updatedAt":"0001-01-01T00:00:00Z","launchType":"","taskDefinition":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6","status":"PRIMARY"}],"lastDeploymentAt":"0001-01-01T00:00:00Z","taskDefinition":""},"tasks":[{"health":"HEALTHY","id":"111111111111111","images":null,"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6"},{"health":"UNHEALTHY","id":"2222222222222222","images":null,"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6"},{"health":"HEALTHY","id":"3333333333333333","images":null,"lastStatus":"PROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6"}],"alarms":null,"stoppedTasks":null,"targetsHealth":[{"healthStatus":{"targetID":"1.1.1.1","description":"","state":"unhealthy","reason":"some reason"},"taskID":"111111111111111","targetGroup":"group-1"},{"healthStatus":{"targetID":"2.2.2.2","description":"","state":"healthy","reason":""},"taskID":"2222222222222222","targetGroup":"group-1"},{"healthStatus":{"targetID":"3.3.3.3","description":"","state":"healthy","reason":""},"taskID":"3333333333333333","targetGroup":"group-1"}]}
 `,
 		},
 		"while some tasks are stopping": {
@@ -702,7 +702,7 @@ Tasks
 					Deployments: []awsecs.Deployment{
 						{
 							Status:         "PRIMARY",
-							TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
+							TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 							DesiredCount:   5,
 							RunningCount:   3,
 						},
@@ -713,19 +713,19 @@ Tasks
 						Health:         "HEALTHY",
 						LastStatus:     "RUNNING",
 						ID:             "111111111111111",
-						TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
+						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 					},
 					{
 						Health:         "UNHEALTHY",
 						LastStatus:     "RUNNING",
 						ID:             "2222222222222222",
-						TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
+						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 					},
 					{
 						Health:         "HEALTHY",
 						LastStatus:     "PROVISIONING",
 						ID:             "3333333333333333",
-						TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
+						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 					},
 				},
 				StoppedTasks: []awsecs.TaskStatus{
@@ -794,10 +794,10 @@ Tasks
   22222222  RUNNING       6           -           UNHEALTHY
   33333333  PROVISIONING  6           -           HEALTHY
 `,
-			json: `{"Service":{"desiredCount":1,"runningCount":1,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"HEALTHY","id":"1234567890123456789","images":[{"ID":"mockImageID1","Digest":"69671a968e8ec3648e2697417750e"},{"ID":"mockImageID2","Digest":"ca27a44e25ce17fea7b07940ad793"}],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"some reason","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":[{"health":"","id":"0102030490123123123","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"some reason","capacityProvider":"","taskDefinitionARN":""},{"health":"","id":"0203040590123123123","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"some reason","capacityProvider":"","taskDefinitionARN":""}],"targetsHealth":null}
+			json: `{"Service":{"desiredCount":5,"runningCount":3,"status":"ACTIVE","deployments":[{"id":"","desiredCount":5,"runningCount":3,"updatedAt":"0001-01-01T00:00:00Z","launchType":"","taskDefinition":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6","status":"PRIMARY"}],"lastDeploymentAt":"0001-01-01T00:00:00Z","taskDefinition":""},"tasks":[{"health":"HEALTHY","id":"111111111111111","images":null,"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6"},{"health":"UNHEALTHY","id":"2222222222222222","images":null,"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6"},{"health":"HEALTHY","id":"3333333333333333","images":null,"lastStatus":"PROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6"}],"alarms":null,"stoppedTasks":[{"health":"","id":"S111111111111","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m","capacityProvider":"","taskDefinitionARN":""},{"health":"","id":"S2222222222222","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m","capacityProvider":"","taskDefinitionARN":""},{"health":"","id":"S333333333333333","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m","capacityProvider":"","taskDefinitionARN":""},{"health":"","id":"S44444444444","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m","capacityProvider":"","taskDefinitionARN":""},{"health":"","id":"S55555555555555","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m","capacityProvider":"","taskDefinitionARN":""},{"health":"","id":"S66666666666666","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m","capacityProvider":"","taskDefinitionARN":""}],"targetsHealth":null}
 `,
 		},
-		"while running without container health check": {
+		"while running without health check": {
 			desc: &ecsServiceStatus{
 				Service: awsecs.ServiceStatus{
 					DesiredCount: 3,
@@ -828,7 +828,7 @@ Tasks
   11111111  RUNNING     -           -
   22222222  RUNNING     -           -
 `,
-			json: `{"Service":{"desiredCount":3,"runningCount":2,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"UNKNOWN","id":"1234567890123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""},{"health":"UNKNOWN","id":"1345678990123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":null,"targetsHealth":null}
+			json: `{"Service":{"desiredCount":3,"runningCount":2,"status":"ACTIVE","deployments":null,"lastDeploymentAt":"0001-01-01T00:00:00Z","taskDefinition":""},"tasks":[{"health":"UNKNOWN","id":"1111111111111111","images":null,"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""},{"health":"UNKNOWN","id":"2222222222222222","images":null,"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":null,"targetsHealth":null}
 `,
 		},
 		"should hide HTTP health from summary if no primary task has HTTP check": {
@@ -843,21 +843,21 @@ Tasks
 							DesiredCount:   1,
 							RunningCount:   1,
 							Status:         "ACTIVE",
-							TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:5",
+							TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:5",
 						},
 						{
 							Id:             "active-2",
 							DesiredCount:   2,
 							RunningCount:   1,
 							Status:         "ACTIVE",
-							TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:4",
+							TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:4",
 						},
 						{
 							Id:             "primary",
 							DesiredCount:   10,
 							RunningCount:   1,
 							Status:         "PRIMARY",
-							TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
+							TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 						},
 					},
 				},
@@ -866,19 +866,19 @@ Tasks
 						Health:         "HEALTHY",
 						LastStatus:     "RUNNING",
 						ID:             "111111111111111",
-						TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:5",
+						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:5",
 					},
 					{
 						Health:         "UNKNOWN",
 						LastStatus:     "RUNNING",
 						ID:             "22222222222222",
-						TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:4",
+						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:4",
 					},
 					{
 						Health:         "HEALTHY",
 						LastStatus:     "PROVISIONING",
 						ID:             "3333333333333",
-						TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
+						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 					},
 				},
 				TasksTargetHealth: []taskTargetHealth{
@@ -916,6 +916,8 @@ Tasks
   11111111  RUNNING       5           -           HEALTHY       UNHEALTHY
   22222222  RUNNING       4           -           UNKNOWN       HEALTHY
   33333333  PROVISIONING  6           -           HEALTHY       -
+`,
+			json: `{"Service":{"desiredCount":10,"runningCount":3,"status":"ACTIVE","deployments":[{"id":"active-1","desiredCount":1,"runningCount":1,"updatedAt":"0001-01-01T00:00:00Z","launchType":"","taskDefinition":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:5","status":"ACTIVE"},{"id":"active-2","desiredCount":2,"runningCount":1,"updatedAt":"0001-01-01T00:00:00Z","launchType":"","taskDefinition":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:4","status":"ACTIVE"},{"id":"primary","desiredCount":10,"runningCount":1,"updatedAt":"0001-01-01T00:00:00Z","launchType":"","taskDefinition":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6","status":"PRIMARY"}],"lastDeploymentAt":"0001-01-01T00:00:00Z","taskDefinition":""},"tasks":[{"health":"HEALTHY","id":"111111111111111","images":null,"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:5"},{"health":"UNKNOWN","id":"22222222222222","images":null,"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:4"},{"health":"HEALTHY","id":"3333333333333","images":null,"lastStatus":"PROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6"}],"alarms":null,"stoppedTasks":null,"targetsHealth":[{"healthStatus":{"targetID":"1.1.1.1","description":"","state":"unhealthy","reason":"some reason"},"taskID":"111111111111111","targetGroup":"health check for active"},{"healthStatus":{"targetID":"2.2.2.2","description":"","state":"healthy","reason":""},"taskID":"22222222222222","targetGroup":"health check for active"}]}
 `,
 		},
 		"while running with capacity providers": {
@@ -962,7 +964,7 @@ Tasks
   22222222  RUNNING     -           -           FARGATE
   33333333  RUNNING     -           -           FARGATE (Launch type)
 `,
-			json: `{"Service":{"desiredCount":3,"runningCount":2,"status":"ACTIVE","lastDeploymentAt":"2006-01-02T15:04:05Z","taskDefinition":"mockTaskDefinition"},"tasks":[{"health":"UNKNOWN","id":"1234567890123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"FARGATE_SPOT","taskDefinitionARN":""},{"health":"UNKNOWN","id":"1345678990123456789","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"FARGATE","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":null,"targetsHealth":null}
+			json: `{"Service":{"desiredCount":3,"runningCount":3,"status":"ACTIVE","deployments":null,"lastDeploymentAt":"0001-01-01T00:00:00Z","taskDefinition":""},"tasks":[{"health":"UNKNOWN","id":"11111111111111111","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"FARGATE_SPOT","taskDefinitionARN":""},{"health":"UNKNOWN","id":"22222222222222","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"FARGATE","taskDefinitionARN":""},{"health":"UNKNOWN","id":"333333333333","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":null,"targetsHealth":null}
 `,
 		},
 		"hide tasks section if there is no desired running task": {
@@ -977,7 +979,7 @@ Tasks
 							DesiredCount:   10,
 							RunningCount:   1,
 							Status:         "PRIMARY",
-							TaskDefinition: "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
+							TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 						},
 					},
 				},
@@ -987,14 +989,17 @@ Tasks
 
   Running   ░░░░░░░░░░  0/0 desired tasks are running
 `,
+			json: `{"Service":{"desiredCount":0,"runningCount":0,"status":"ACTIVE","deployments":[{"id":"id-4","desiredCount":10,"runningCount":1,"updatedAt":"0001-01-01T00:00:00Z","launchType":"","taskDefinition":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6","status":"PRIMARY"}],"lastDeploymentAt":"0001-01-01T00:00:00Z","taskDefinition":""},"tasks":[],"alarms":null,"stoppedTasks":null,"targetsHealth":null}
+`,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			//json, err := tc.desc.JSONString()
-			//require.NoError(t, err)
-			//require.Equal(t, tc.json, json)
+			json, err := tc.desc.JSONString()
+			fmt.Print(json)
+			require.NoError(t, err)
+			require.Equal(t, tc.json, json)
 
 			human := tc.desc.HumanString()
 			fmt.Print(human)
@@ -1188,7 +1193,7 @@ func TestECSTaskStatus_humanString(t *testing.T) {
 			stoppedAt:        stopTime,
 			imageDigest:      mockImageDigest,
 			capacityProvider: "FARGATE",
-			taskDefinition:   "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:42",
+			taskDefinition:   "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:42",
 
 			wantTaskStatus: "aslhfnqo\tRUNNING\t42\t14 years ago",
 		},
@@ -1200,7 +1205,7 @@ func TestECSTaskStatus_humanString(t *testing.T) {
 			stoppedAt:        stopTime,
 			imageDigest:      mockImageDigest,
 			capacityProvider: "FARGATE",
-			taskDefinition:   "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:42",
+			taskDefinition:   "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:42",
 
 			inConfigs: []ecsTaskStatusConfigOpts{
 				withCapProviderShown,
