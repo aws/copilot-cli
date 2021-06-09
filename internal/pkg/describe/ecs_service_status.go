@@ -10,39 +10,37 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 )
 
-// Indicator methods that determine whether some information should be shown in humanized output.
-func (s *ecsServiceStatus) shouldShowHealthSummary() bool {
-	return s.shouldShowContainerHealth() || s.shouldShowHTTPHealth()
-}
-
-func (s *ecsServiceStatus) shouldShowContainerHealth() bool {
-	for _, t := range s.Tasks {
+func allContainerHealthEmpty(tasks []ecs.TaskStatus) bool {
+	// A container health is considered empty if it is empty or UNKNOWN
+	for _, t := range tasks {
 		if t.Health != ecs.TaskContainerHealthStatusUnknown && t.Health != "" {
-			return true
+			return false
 		}
 	}
-	// If all tasks' main container health are UNKNOWN or empty, we don't need to show container health.
-	return false
+	return true
 }
 
-func (s *ecsServiceStatus) shouldShowCapacityProvider() bool {
-	for _, task := range s.Tasks {
+func allCapacityProviderEmpty(tasks []ecs.TaskStatus) bool {
+	for _, task := range tasks {
 		if task.CapacityProvider != "" {
+			return false
+		}
+	}
+	return true
+}
+
+func anyTaskATarget(tasks []ecs.TaskStatus, targetsHealth []taskTargetHealth) bool {
+	taskToHealth := summarizeHTTPHealthForTasks(targetsHealth)
+	for _, t := range tasks {
+		if _, ok := taskToHealth[t.ID]; ok {
 			return true
 		}
 	}
-	// If all tasks' capacity provider is empty, we don't need to show capacity provider.
 	return false
 }
 
-func (s *ecsServiceStatus) shouldShowHTTPHealth() bool {
-	// If none of the tasks is a target, we don't need to show HTTP health.
-	return len(s.TasksTargetHealth) != 0
-}
-
-// Data methods that return reorganized information inside ecsServiceStatus
-func (s *ecsServiceStatus) containerHealthData() (healthy int, unhealthy int, unknown int) {
-	for _, t := range s.Tasks {
+func containerHealthDataForTasks(tasks []ecs.TaskStatus) (healthy int, unhealthy int, unknown int) {
+	for _, t := range tasks {
 		switch strings.ToUpper(t.Health) {
 		case ecs.TaskContainerHealthStatusHealthy:
 			healthy += 1
@@ -55,24 +53,12 @@ func (s *ecsServiceStatus) containerHealthData() (healthy int, unhealthy int, un
 	return
 }
 
-func (s *ecsServiceStatus) taskDefinitionRevisionData() map[int]int {
-	out := make(map[int]int)
-	for _, t := range s.Tasks {
-		version, err := ecs.TaskDefinitionVersion(t.TaskDefinition)
-		if err != nil {
-			continue
-		}
-		out[version] += 1
-	}
-	return out
-}
-
-func (s *ecsServiceStatus) healthyHTTPTasksCount() int {
+func healthyHTTPTaskCountInTasks(tasks []ecs.TaskStatus, targetsHealth []taskTargetHealth) int {
 	var count int
-	tasksHealthStates := s.summarizeTasksTargetHealth()
-	for _, states := range tasksHealthStates {
+	taskToHealth := summarizeHTTPHealthForTasks(targetsHealth)
+	for _, t := range tasks {
 		healthy := true
-		// A task is HTTP-healthy if it's deemed healthy by all of its HTTP health check.
+		states := taskToHealth[t.ID]
 		for _, state := range states {
 			if state != elbv2.TargetHealthStateHealthy {
 				healthy = false
@@ -85,24 +71,42 @@ func (s *ecsServiceStatus) healthyHTTPTasksCount() int {
 	return count
 }
 
-func (s *ecsServiceStatus) capacityProviderData() (fargate int, spot int, unset int) {
-	for _, t := range s.Tasks {
+func summarizeHTTPHealthForTasks(targetsHealth []taskTargetHealth) map[string][]string {
+	out := make(map[string][]string)
+	for _, th := range targetsHealth {
+		out[th.TaskID] = append(out[th.TaskID], th.HealthStatus.HealthState)
+	}
+	return out
+}
+
+func capacityProviderDataForTasks(tasks []ecs.TaskStatus) (fargate, spot, empty int) {
+	for _, t := range tasks {
 		switch strings.ToUpper(t.CapacityProvider) {
 		case ecs.TaskCapacityProviderFargate:
 			fargate += 1
 		case ecs.TaskCapacityProviderFargateSpot:
 			spot += 1
 		default:
-			unset += 1
+			empty += 1
 		}
 	}
 	return
 }
 
-func (s *ecsServiceStatus) summarizeTasksTargetHealth() map[string][]string {
-	out := make(map[string][]string)
-	for _, th := range s.TasksTargetHealth {
-		out[th.TaskID] = append(out[th.TaskID], th.HealthStatus.HealthState)
+func (s *ecsServiceStatus) tasksOfRevision(revision int) []ecs.TaskStatus {
+	var ret []ecs.TaskStatus
+	for _, t := range s.DesiredRunningTasks {
+		taskRevision, err := ecs.TaskDefinitionVersion(t.TaskDefinition)
+		if err != nil {
+			continue
+		}
+		if taskRevision == revision {
+			ret = append(ret, t)
+		}
 	}
-	return out
+	return ret
 }
+
+// Indicator methods that determine whether some information should be shown in humanized output.
+
+// Data methods that return reorganized information inside ecsServiceStatus
