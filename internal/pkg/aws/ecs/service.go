@@ -36,10 +36,12 @@ type Deployment struct {
 
 // ServiceStatus contains the status info of a service.
 type ServiceStatus struct {
-	DesiredCount int64        `json:"desiredCount"`
-	RunningCount int64        `json:"runningCount"`
-	Status       string       `json:"status"`
-	Deployments  []Deployment `json:"deployments"`
+	DesiredCount     int64        `json:"desiredCount"`
+	RunningCount     int64        `json:"runningCount"`
+	Status           string       `json:"status"`
+	Deployments      []Deployment `json:"deployments"`
+	LastDeploymentAt time.Time    `json:"lastDeploymentAt"` // kept to avoid breaking change
+	TaskDefinition   string       `json:"taskDefinition"`   // kept to avoid breaking change
 }
 
 // ServiceStatus returns the status of the running service.
