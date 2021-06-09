@@ -18,13 +18,11 @@ describe("DNS Validated Certificate Handler", () => {
   const testHostedZoneId = "Z3P5QSUBK4POTI";
   const testAppHostedZoneId = "K4POTIZ3P5QSUB";
   const testRootDNSRole = "mockRole";
-  const testSubjectAlternativeNames = [
-    "example.com",
-    "*.example.com",
-    "myapp.example.com",
-    "*.myapp.example.com",
-    "*.test.myapp.example.com",
-  ];
+  const testAliases = `{
+    "frontend": ["v1.${testAppName}.${testDomainName}", "foobar.com"],
+    "backend": ["v2.${testDomainName}"]
+  }`;
+  const testSANs = ["*.test.myapp.example.com", "v1.myapp.example.com", "v2.example.com"];
   const testCopilotTags = [
     { Key: "copilot-application", Value: testAppName },
     { Key: "copilot-environment", Value: testEnvName },
@@ -32,11 +30,13 @@ describe("DNS Validated Certificate Handler", () => {
   const testCertificateArn =
     "arn:aws:acm:region:123456789012:certificate/12345678-1234-1234-1234-123456789012";
   const testRRName = "_3639ac514e785e898d2646601fa951d5.example.com";
-  const testRRValue = "_x2.acm-validations.aws";
+  const testRRValue1 = "_x1.acm-validations.aws";
+  const testRRValue2 = "_x2.acm-validations.aws";
+  const testRRValue3 = "_x3.acm-validations.aws";
   const spySleep = sinon.spy(function (ms) {
     return Promise.resolve();
   });
-  const testDeleteRecordChangebatch = {
+  const testDeleteRecordChangebatch1 = {
     Changes: [
       {
         Action: "DELETE",
@@ -46,14 +46,48 @@ describe("DNS Validated Certificate Handler", () => {
           TTL: 60,
           ResourceRecords: [
             {
-              Value: testRRValue,
+              Value: testRRValue1,
             },
           ],
         },
       },
     ],
   };
-  const testUpsertRecordChangebatch = {
+  const testDeleteRecordChangebatch2 = {
+    Changes: [
+      {
+        Action: "DELETE",
+        ResourceRecordSet: {
+          Name: testRRName,
+          Type: "CNAME",
+          TTL: 60,
+          ResourceRecords: [
+            {
+              Value: testRRValue2,
+            },
+          ],
+        },
+      },
+    ],
+  };
+  const testDeleteRecordChangebatch3 = {
+    Changes: [
+      {
+        Action: "DELETE",
+        ResourceRecordSet: {
+          Name: testRRName,
+          Type: "CNAME",
+          TTL: 60,
+          ResourceRecords: [
+            {
+              Value: testRRValue3,
+            },
+          ],
+        },
+      },
+    ],
+  };
+  const testUpsertRecordChangebatch1 = {
     Changes: [
       {
         Action: "UPSERT",
@@ -63,7 +97,41 @@ describe("DNS Validated Certificate Handler", () => {
           TTL: 60,
           ResourceRecords: [
             {
-              Value: testRRValue,
+              Value: testRRValue1,
+            },
+          ],
+        },
+      },
+    ],
+  };
+  const testUpsertRecordChangebatch2 = {
+    Changes: [
+      {
+        Action: "UPSERT",
+        ResourceRecordSet: {
+          Name: testRRName,
+          Type: "CNAME",
+          TTL: 60,
+          ResourceRecords: [
+            {
+              Value: testRRValue2,
+            },
+          ],
+        },
+      },
+    ],
+  };
+  const testUpsertRecordChangebatch3 = {
+    Changes: [
+      {
+        Action: "UPSERT",
+        ResourceRecordSet: {
+          Name: testRRName,
+          Type: "CNAME",
+          TTL: 60,
+          ResourceRecords: [
+            {
+              Value: testRRValue3,
             },
           ],
         },
@@ -77,7 +145,7 @@ describe("DNS Validated Certificate Handler", () => {
       ResourceRecord: {
         Name: testRRName,
         Type: "CNAME",
-        Value: testRRValue,
+        Value: testRRValue1,
       },
     },
     {
@@ -86,63 +154,45 @@ describe("DNS Validated Certificate Handler", () => {
       ResourceRecord: {
         Name: testRRName,
         Type: "CNAME",
-        Value: testRRValue,
+        Value: testRRValue1,
       },
     },
   ];
   const newCertValidateOptions = [
     {
       DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
-      ValidationStatus: "SUCCESS",
+      ValidationStatus: "PENDING_VALIDATION",
       ResourceRecord: {
         Name: testRRName,
         Type: "CNAME",
-        Value: testRRValue,
+        Value: testRRValue1,
       },
     },
     {
       DomainName: `*.${testEnvName}.${testAppName}.${testDomainName}`,
-      ValidationStatus: "SUCCESS",
+      ValidationStatus: "PENDING_VALIDATION",
       ResourceRecord: {
         Name: testRRName,
         Type: "CNAME",
-        Value: testRRValue,
+        Value: testRRValue1,
       },
     },
     {
-      DomainName: `${testAppName}.${testDomainName}`,
-      ValidationStatus: "SUCCESS",
+      DomainName: `v1.${testAppName}.${testDomainName}`,
+      ValidationStatus: "PENDING_VALIDATION",
       ResourceRecord: {
         Name: testRRName,
         Type: "CNAME",
-        Value: testRRValue,
+        Value: testRRValue2,
       },
     },
     {
-      DomainName: `*.${testAppName}.${testDomainName}`,
-      ValidationStatus: "SUCCESS",
+      DomainName: `v2.${testDomainName}`,
+      ValidationStatus: "PENDING_VALIDATION",
       ResourceRecord: {
         Name: testRRName,
         Type: "CNAME",
-        Value: testRRValue,
-      },
-    },
-    {
-      DomainName: `${testDomainName}`,
-      ValidationStatus: "SUCCESS",
-      ResourceRecord: {
-        Name: testRRName,
-        Type: "CNAME",
-        Value: testRRValue,
-      },
-    },
-    {
-      DomainName: `*.${testDomainName}`,
-      ValidationStatus: "SUCCESS",
-      ResourceRecord: {
-        Name: testRRName,
-        Type: "CNAME",
-        Value: testRRValue,
+        Value: testRRValue3,
       },
     },
   ];
@@ -170,7 +220,7 @@ describe("DNS Validated Certificate Handler", () => {
     spySleep.resetHistory();
   });
 
-  test("Empty event payload fails", () => {
+  test("Empty event payload type fails", () => {
     const request = nock(ResponseURL)
       .put("/", (body) => {
         return (
@@ -180,7 +230,18 @@ describe("DNS Validated Certificate Handler", () => {
       })
       .reply(200);
     return LambdaTester(handler.certificateRequestHandler)
-      .event({})
+      .event({
+        RequestId: testRequestId,
+        ResourceProperties: {
+          AppName: testAppName,
+          EnvName: testEnvName,
+          DomainName: testDomainName,
+          EnvHostedZoneId: testHostedZoneId,
+          Aliases: testAliases,
+          Region: "us-east-1",
+          RootDNSRole: testRootDNSRole,
+        },
+      })
       .expectResolve(() => {
         expect(request.isDone()).toBe(true);
       });
@@ -199,6 +260,16 @@ describe("DNS Validated Certificate Handler", () => {
     return LambdaTester(handler.certificateRequestHandler)
       .event({
         RequestType: bogusType,
+        RequestId: testRequestId,
+        ResourceProperties: {
+          AppName: testAppName,
+          EnvName: testEnvName,
+          DomainName: testDomainName,
+          EnvHostedZoneId: testHostedZoneId,
+          Aliases: testAliases,
+          Region: "us-east-1",
+          RootDNSRole: testRootDNSRole,
+        },
       })
       .expectResolve(() => {
         expect(request.isDone()).toBe(true);
@@ -261,10 +332,9 @@ describe("DNS Validated Certificate Handler", () => {
           EnvName: testEnvName,
           DomainName: testDomainName,
           EnvHostedZoneId: testHostedZoneId,
-          IsAliasEnabled: "true",
+          Aliases: testAliases,
           Region: "us-east-1",
           RootDNSRole: testRootDNSRole,
-          SubjectAlternativeNames: testSubjectAlternativeNames,
         },
       })
       .expectResolve(() => {
@@ -278,7 +348,7 @@ describe("DNS Validated Certificate Handler", () => {
           requestCertificateFake,
           sinon.match({
             DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
-            SubjectAlternativeNames: testSubjectAlternativeNames,
+            SubjectAlternativeNames: testSANs,
             ValidationMethod: "DNS",
             Tags: testCopilotTags,
           })
@@ -286,21 +356,35 @@ describe("DNS Validated Certificate Handler", () => {
         sinon.assert.calledWith(
           changeResourceRecordSetsFake,
           sinon.match({
-            ChangeBatch: testUpsertRecordChangebatch,
+            ChangeBatch: testUpsertRecordChangebatch1,
+            HostedZoneId: testHostedZoneId,
+          })
+        );
+        sinon.assert.calledWith(
+          changeResourceRecordSetsFake,
+          sinon.match({
+            ChangeBatch: testUpsertRecordChangebatch2,
+            HostedZoneId: testHostedZoneId,
+          })
+        );
+        sinon.assert.calledWith(
+          changeResourceRecordSetsFake,
+          sinon.match({
+            ChangeBatch: testUpsertRecordChangebatch3,
             HostedZoneId: testHostedZoneId,
           })
         );
         sinon.assert.calledWith(
           listHostedZonesByNameFake,
           sinon.match({
-            DNSName: `${testAppName}.${testDomainName}`,
+            DNSName: `${testDomainName}`,
             MaxItems: "1",
           })
         );
         sinon.assert.calledWith(
           listHostedZonesByNameFake,
           sinon.match({
-            DNSName: `${testDomainName}`,
+            DNSName: `${testAppName}.${testDomainName}`,
             MaxItems: "1",
           })
         );
@@ -355,10 +439,8 @@ describe("DNS Validated Certificate Handler", () => {
           EnvName: testEnvName,
           DomainName: testDomainName,
           EnvHostedZoneId: testHostedZoneId,
-          IsAliasEnabled: "false",
           Region: "us-east-1",
           RootDNSRole: testRootDNSRole,
-          SubjectAlternativeNames: testSubjectAlternativeNames,
         },
       })
       .expectResolve(() => {
@@ -382,7 +464,7 @@ describe("DNS Validated Certificate Handler", () => {
         sinon.assert.calledWith(
           changeResourceRecordSetsFake,
           sinon.match({
-            ChangeBatch: testUpsertRecordChangebatch,
+            ChangeBatch: testUpsertRecordChangebatch1,
             HostedZoneId: testHostedZoneId,
           })
         );
@@ -426,10 +508,9 @@ describe("DNS Validated Certificate Handler", () => {
           EnvName: testEnvName,
           DomainName: testDomainName,
           EnvHostedZoneId: testHostedZoneId,
-          IsAliasEnabled: "true",
+          Aliases: testAliases,
           Region: "us-east-1",
           RootDNSRole: testRootDNSRole,
-          SubjectAlternativeNames: testSubjectAlternativeNames,
         },
       })
       .expectResolve(() => {
@@ -437,7 +518,7 @@ describe("DNS Validated Certificate Handler", () => {
           requestCertificateFake,
           sinon.match({
             DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
-            SubjectAlternativeNames: testSubjectAlternativeNames,
+            SubjectAlternativeNames: testSANs,
             ValidationMethod: "DNS",
           })
         );
@@ -485,11 +566,10 @@ describe("DNS Validated Certificate Handler", () => {
           AppName: testAppName,
           EnvName: testEnvName,
           DomainName: testDomainName,
-          IsAliasEnabled: "true",
+          Aliases: testAliases,
           EnvHostedZoneId: testHostedZoneId,
           Region: "us-east-1",
           RootDNSRole: testRootDNSRole,
-          SubjectAlternativeNames: testSubjectAlternativeNames,
         },
       })
       .expectResolve(() => {
@@ -497,7 +577,7 @@ describe("DNS Validated Certificate Handler", () => {
           requestCertificateFake,
           sinon.match({
             DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
-            SubjectAlternativeNames: testSubjectAlternativeNames,
+            SubjectAlternativeNames: testSANs,
             ValidationMethod: "DNS",
           })
         );
@@ -566,10 +646,9 @@ describe("DNS Validated Certificate Handler", () => {
           EnvName: testEnvName,
           DomainName: testDomainName,
           EnvHostedZoneId: testHostedZoneId,
-          IsAliasEnabled: "true",
+          Aliases: testAliases,
           Region: "us-east-1",
           RootDNSRole: testRootDNSRole,
-          SubjectAlternativeNames: testSubjectAlternativeNames,
         },
       })
       .expectResolve(() => {
@@ -577,7 +656,7 @@ describe("DNS Validated Certificate Handler", () => {
           requestCertificateFake,
           sinon.match({
             DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
-            SubjectAlternativeNames: testSubjectAlternativeNames,
+            SubjectAlternativeNames: testSANs,
             ValidationMethod: "DNS",
           })
         );
@@ -634,10 +713,8 @@ describe("DNS Validated Certificate Handler", () => {
           EnvName: testEnvName,
           DomainName: testDomainName,
           EnvHostedZoneId: testHostedZoneId,
-          IsAliasEnabled: "false",
           Region: "us-east-1",
           RootDNSRole: testRootDNSRole,
-          SubjectAlternativeNames: testSubjectAlternativeNames,
         },
       })
       .expectResolve(() => {
@@ -730,7 +807,7 @@ describe("DNS Validated Certificate Handler", () => {
         sinon.assert.calledWith(
           changeResourceRecordSetsFake,
           sinon.match({
-            ChangeBatch: testDeleteRecordChangebatch,
+            ChangeBatch: testDeleteRecordChangebatch1,
             HostedZoneId: testHostedZoneId,
           })
         );
@@ -880,14 +957,21 @@ describe("DNS Validated Certificate Handler", () => {
         sinon.assert.calledWith(
           changeResourceRecordSetsFake,
           sinon.match({
-            ChangeBatch: testDeleteRecordChangebatch,
+            ChangeBatch: testDeleteRecordChangebatch1,
             HostedZoneId: testHostedZoneId,
           })
         );
         sinon.assert.calledWith(
           changeResourceRecordSetsFake,
           sinon.match({
-            ChangeBatch: testDeleteRecordChangebatch,
+            ChangeBatch: testDeleteRecordChangebatch2,
+            HostedZoneId: testAppHostedZoneId,
+          })
+        );
+        sinon.assert.calledWith(
+          changeResourceRecordSetsFake,
+          sinon.match({
+            ChangeBatch: testDeleteRecordChangebatch3,
             HostedZoneId: testAppHostedZoneId,
           })
         );
@@ -915,7 +999,7 @@ describe("DNS Validated Certificate Handler", () => {
       });
   });
 
-  test("Delete operation deletes the last new cert but not the last", () => {
+  test("Delete operation deletes the new cert but not the last", () => {
     const describeCertificateFake = sinon.fake.resolves({
       Certificate: {
         CertificateArn: testCertificateArn,
@@ -991,7 +1075,14 @@ describe("DNS Validated Certificate Handler", () => {
         sinon.assert.calledWith(
           changeResourceRecordSetsFake,
           sinon.match({
-            ChangeBatch: testDeleteRecordChangebatch,
+            ChangeBatch: testDeleteRecordChangebatch2,
+            HostedZoneId: testAppHostedZoneId,
+          })
+        );
+        sinon.assert.calledWith(
+          changeResourceRecordSetsFake,
+          sinon.match({
+            ChangeBatch: testDeleteRecordChangebatch3,
             HostedZoneId: testAppHostedZoneId,
           })
         );
