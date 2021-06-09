@@ -386,12 +386,13 @@ func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 		for _, d := range activeDeployments {
 			runningActive += (int)(d.RunningCount)
 		}
+
 		runningPrimary = (int)(primaryDeployment.RunningCount)
-		barData = []int{runningPrimary, runningActive, (int)(s.Service.DesiredCount) - runningPrimary}
-		barRepresentations = []string{color.Green.Sprint("█"), color.Blue.Sprint("█"), color.Green.Sprint("░")}
+		barData = []int{runningPrimary, runningActive}
+		barRepresentations = []string{color.Green.Sprint("█"), color.Blue.Sprint("█")}
 	} else {
 		barData = []int{(int)(s.Service.RunningCount), (int)(s.Service.DesiredCount) - (int)(s.Service.RunningCount)}
-		barRepresentations = []string{color.Green.Sprint("█"), color.Grey.Sprint("░")}
+		barRepresentations = []string{color.Green.Sprint("█"), color.Green.Sprint("░")}
 	}
 	bar := summaryBar(barData, barRepresentations)
 	stringSummary := fmt.Sprintf("%d/%d desired tasks are running", s.Service.RunningCount, s.Service.DesiredCount)
@@ -454,7 +455,7 @@ func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 	if !allCapacityProviderEmpty(s.DesiredRunningTasks) {
 		header := "Capacity Provider"
 		fargate, spot, empty := capacityProviderDataForTasks(s.DesiredRunningTasks)
-		bar := summaryBar([]int{fargate + empty, spot}, []string{color.Grey.Sprintf("▒"), color.Grey.Sprintf("▓")})
+		bar := summaryBar([]int{fargate + empty, spot}, []string{color.Grey.Sprintf("▒"), color.Faint.Sprintf("▒")})
 		var cpSummaries []string
 		if fargate+empty != 0 {
 			// We consider those with empty capacity provider field as "FARGATE"
@@ -704,7 +705,8 @@ func summaryBar(data []int, representations []string, emptyRepresentation ...str
 		if p.value >= summaryBarLength {
 			// If a data category's portion exceeds the summary bar length (this happens only when the some of the data have negative value)
 			// returns the bar filled with that data category
-			return fmt.Sprint(strings.Repeat(representations[p.index], summaryBarLength))
+			bar += fmt.Sprint(strings.Repeat(representations[p.index], summaryBarLength))
+			return bar
 		}
 		bar += fmt.Sprint(strings.Repeat(representations[p.index], p.value))
 	}
