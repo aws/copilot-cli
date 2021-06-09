@@ -180,8 +180,14 @@ func TestServiceStatus_Describe(t *testing.T) {
 				)
 			},
 			wantedContent: &ecsServiceStatus{
-				Service: awsecs.ServiceStatus{},
-				Alarms:  nil,
+				Service: awsecs.ServiceStatus{
+					Deployments: []awsecs.Deployment{
+						{
+							UpdatedAt: startTime,
+						},
+					},
+				},
+				Alarms: nil,
 				DesiredRunningTasks: []awsecs.TaskStatus{
 					{
 						ID:        "1234567890123456789",
@@ -300,6 +306,12 @@ func TestServiceStatus_Describe(t *testing.T) {
 					DesiredCount: 1,
 					RunningCount: 1,
 					Status:       "ACTIVE",
+					Deployments: []awsecs.Deployment{
+						{
+							UpdatedAt:      startTime,
+							TaskDefinition: "mockTaskDefinition",
+						},
+					},
 				},
 				Alarms: nil,
 				DesiredRunningTasks: []awsecs.TaskStatus{
@@ -402,6 +414,12 @@ func TestServiceStatus_Describe(t *testing.T) {
 					DesiredCount: 1,
 					RunningCount: 1,
 					Status:       "ACTIVE",
+					Deployments: []awsecs.Deployment{
+						{
+							UpdatedAt:      startTime,
+							TaskDefinition: "mockTaskDefinition",
+						},
+					},
 				},
 				Alarms: []cloudwatch.AlarmStatus{
 					{
@@ -997,12 +1015,10 @@ Tasks
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			json, err := tc.desc.JSONString()
-			fmt.Print(json)
 			require.NoError(t, err)
 			require.Equal(t, tc.json, json)
 
 			human := tc.desc.HumanString()
-			fmt.Print(human)
 			require.Equal(t, tc.human, human)
 		})
 	}
@@ -1151,7 +1167,6 @@ System Logs
 		t.Run(name, func(t *testing.T) {
 			json, err := tc.desc.JSONString()
 			require.NoError(t, err)
-			print(tc.desc.HumanString())
 			require.Equal(t, tc.human, tc.desc.HumanString())
 			require.Equal(t, tc.json, json)
 		})
@@ -1221,7 +1236,7 @@ func TestECSTaskStatus_humanString(t *testing.T) {
 				withCapProviderShown,
 				withContainerHealthShow,
 			},
-			wantTaskStatus: "-\tRUNNING\t-\t-\t-\tHEALTHY",
+			wantTaskStatus: "-\tRUNNING\t-\t-\tFARGATE (Launch type)\tHEALTHY",
 		},
 	}
 
