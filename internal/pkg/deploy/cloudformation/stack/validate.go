@@ -214,28 +214,24 @@ func (g *graph) hasCycles(used map[string]bool, path map[string]bool, currNode s
 func buildDependencyGraph(s convertSidecarOpts) (*graph, error) {
 	dependencyGraph := graph{nodes: make(map[string][]string), cycle: make([]string, 0)}
 
-	// Add any idecar dependencies.
+	// Add any sidecar dependencies.
 	for name, sidecar := range s.sidecarConfig {
-		if len(sidecar.DependsOn) != 0 {
-			for dep := range sidecar.DependsOn {
-				if s.sidecarConfig[dep] == nil && dep != s.workloadName {
-					return nil, errInvalidContainer
-				}
-
-				dependencyGraph.Add(name, dep)
-			}
-		}
-	}
-
-	// Add any image dependencies.
-	if len(s.imageConfig.DependsOn) != 0 {
-		for dep := range s.imageConfig.DependsOn {
+		for dep := range sidecar.DependsOn {
 			if s.sidecarConfig[dep] == nil && dep != s.workloadName {
 				return nil, errInvalidContainer
 			}
 
-			dependencyGraph.Add(s.workloadName, dep)
+			dependencyGraph.Add(name, dep)
 		}
+	}
+
+	// Add any image dependencies.
+	for dep := range s.imageConfig.DependsOn {
+		if s.sidecarConfig[dep] == nil && dep != s.workloadName {
+			return nil, errInvalidContainer
+		}
+
+		dependencyGraph.Add(s.workloadName, dep)
 	}
 
 	return &dependencyGraph, nil
