@@ -220,7 +220,7 @@ type PipelineShowOutput struct {
 
 // PipelineStatusOutput represents the JSON output of the "pipeline status" command.
 type PipelineStatusOutput struct {
-	States struct {
+	States []struct {
 		Name    string `json:"stageName"`
 		Actions []struct {
 			Name   string `json:"name"`
