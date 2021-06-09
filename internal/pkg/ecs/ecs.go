@@ -51,7 +51,7 @@ type stepFunctionsClient interface {
 type ServiceDesc struct {
 	Name         string
 	ClusterName  string
-	Tasks        []*ecs.Task
+	Tasks        []*ecs.Task // Tasks is a list of tasks with DesiredStatus being RUNNING.
 	StoppedTasks []*ecs.Task
 }
 

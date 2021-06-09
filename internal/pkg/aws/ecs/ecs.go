@@ -99,7 +99,7 @@ func (e *ECS) Service(clusterName, serviceName string) (*Service, error) {
 	return nil, fmt.Errorf("cannot find service %s", serviceName)
 }
 
-// ServiceTasks calls ECS API and returns ECS tasks running by a service.
+// ServiceTasks calls ECS API and returns ECS tasks desired to be running by a service.
 func (e *ECS) ServiceTasks(cluster, service string) ([]*Task, error) {
 	return e.listTasks(cluster, withService(service))
 }
