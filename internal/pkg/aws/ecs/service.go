@@ -15,13 +15,15 @@ import (
 )
 
 const (
-	serviceDeploymentStatusPrimary = "PRIMARY"
-	serviceDeploymentStatusActive  = "ACTIVE"
+	ServiceDeploymentStatusPrimary  = "PRIMARY"
+	ServiceDeploymentStatusActive   = "ACTIVE"
+	serviceDeploymentStatusInactive = "INACTIVE"
 )
 
 // Service wraps up ECS Service struct.
 type Service ecs.Service
 
+// Deployment contains information of a ECS service Deployment.
 type Deployment struct {
 	Id             string    `json:"id"`
 	DesiredCount   int64     `json:"desiredCount"`
@@ -29,41 +31,37 @@ type Deployment struct {
 	UpdatedAt      time.Time `json:"updatedAt"`
 	LaunchType     string    `json:"launchType"`
 	TaskDefinition string    `json:"taskDefinition"`
+	Status         string    `json:"status"`
 }
 
 // ServiceStatus contains the status info of a service.
 type ServiceStatus struct {
-	DesiredCount      int64        `json:"desiredCount"`
-	RunningCount      int64        `json:"runningCount"`
-	Status            string       `json:"status"`
-	ActiveDeployments []Deployment `json:"activeDeployment"`
-	TaskDefinition    string       `json:"taskDefinition"`
+	DesiredCount int64        `json:"desiredCount"`
+	RunningCount int64        `json:"runningCount"`
+	Status       string       `json:"status"`
+	Deployments  []Deployment `json:"deployments"`
 }
 
 // ServiceStatus returns the status of the running service.
 func (s *Service) ServiceStatus() ServiceStatus {
-	var activeDeployments []Deployment
-	for _, deployment := range s.Deployments {
-		if aws.StringValue(deployment.Status) != serviceDeploymentStatusActive {
-			continue
-		}
-
-		activeDeployments = append(activeDeployments, Deployment{
-			Id:             aws.StringValue(deployment.Id),
-			DesiredCount:   aws.Int64Value(deployment.DesiredCount),
-			RunningCount:   aws.Int64Value(deployment.RunningCount),
-			UpdatedAt:      aws.TimeValue(deployment.UpdatedAt),
-			LaunchType:     aws.StringValue(deployment.LaunchType),
-			TaskDefinition: aws.StringValue(deployment.TaskDefinition),
+	var deployments []Deployment
+	for _, dp := range s.Deployments {
+		deployments = append(deployments, Deployment{
+			Id:             aws.StringValue(dp.Id),
+			DesiredCount:   aws.Int64Value(dp.DesiredCount),
+			RunningCount:   aws.Int64Value(dp.RunningCount),
+			UpdatedAt:      aws.TimeValue(dp.UpdatedAt),
+			LaunchType:     aws.StringValue(dp.LaunchType),
+			TaskDefinition: aws.StringValue(dp.TaskDefinition),
+			Status:         aws.StringValue(dp.Status),
 		})
 	}
 
 	return ServiceStatus{
-		Status:            aws.StringValue(s.Status),
-		DesiredCount:      aws.Int64Value(s.DesiredCount),
-		RunningCount:      aws.Int64Value(s.RunningCount),
-		ActiveDeployments: activeDeployments,
-		TaskDefinition:    aws.StringValue(s.Deployments[0].TaskDefinition),
+		Status:       aws.StringValue(s.Status),
+		DesiredCount: aws.Int64Value(s.DesiredCount),
+		RunningCount: aws.Int64Value(s.RunningCount),
+		Deployments:  deployments,
 	}
 }
 

@@ -30,7 +30,7 @@ func TestService_TargetGroups(t *testing.T) {
 }
 
 func TestService_ServiceStatus(t *testing.T) {
-	t.Run("should include active dpeloyments in status", func(t *testing.T) {
+	t.Run("should include active and primary deployments in status", func(t *testing.T) {
 		inServce := Service{
 			Deployments: []*ecs.Deployment{
 				{
@@ -58,20 +58,31 @@ func TestService_ServiceStatus(t *testing.T) {
 			},
 		}
 		wanted := ServiceStatus{
-			Status:         "",
-			DesiredCount:   0,
-			RunningCount:   0,
-			TaskDefinition: "",
-			ActiveDeployments: []Deployment{
+			Status:       "",
+			DesiredCount: 0,
+			RunningCount: 0,
+			Deployments: []Deployment{
 				{
 					Id:           "id-1",
 					DesiredCount: 3,
 					RunningCount: 3,
+					Status:       "ACTIVE",
 				},
 				{
 					Id:           "id-3",
 					DesiredCount: 4,
 					RunningCount: 2,
+					Status:       "ACTIVE",
+				},
+				{
+					Id:           "id-4",
+					DesiredCount: 10,
+					RunningCount: 1,
+					Status:       "PRIMARY",
+				},
+				{
+					Id:     "id-5",
+					Status: "INACTIVE",
 				},
 			},
 		}
