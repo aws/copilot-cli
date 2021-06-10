@@ -4,6 +4,7 @@ env:
   secrets-manager:
     DOCKERHUB_USERNAME: prod/ecs-cicd-bot/dockerhub-account-info:username
     DOCKERHUB_TOKEN: prod/ecs-cicd-bot/dockerhub-token:dockerhub-token
+    AWS_DIR: /tmp/.aws
 
 # We increased the number of VPCs limit to 15 from 5 in the e2e test's app account/region pair.
 # If the number of tests running in a region is larger than 15, this comment should be updated.
@@ -135,7 +136,7 @@ phases:
        - cd $CODEBUILD_SRC_DIR
        - export GOPATH=/go
        - rm -rf cf-custom-resources/node_modules
-       - mkdir -p /tmp/.aws
+       - mkdir -p $AWS_DIR
        - TEST_RGN=$TESTENV_REGION
        - |
          if [ -z "$TEST_RGN" ]; then
@@ -146,7 +147,7 @@ phases:
          if [ -z "$PROD_RGN" ]; then
             PROD_RGN=us-east-1
          fi
-       - printf "[default]\nregion = $APP_REGION\n[profile e2etestenv]\nregion=$TEST_RGN\n[profile e2eprodenv]\nregion=$PROD_RGN\n" > /tmp/.aws/config
-       - printf "[default]\naws_access_key_id=$E2E_USER_1_ACCESS_KEY\naws_secret_access_key=$E2E_USER_1_SECRET_KEY\n\n[e2etestenv]\naws_access_key_id=$E2E_USER_2_ACCESS_KEY\naws_secret_access_key=$E2E_USER_2_SECRET_KEY\n\n[e2eprodenv]\naws_access_key_id=$E2E_USER_3_ACCESS_KEY\naws_secret_access_key=$E2E_USER_3_SECRET_KEY\n" > /tmp/.aws/credentials
+       - printf "[default]\nregion = $APP_REGION\n[profile e2etestenv]\nregion=$TEST_RGN\n[profile e2eprodenv]\nregion=$PROD_RGN\n" > $AWS_DIR/config
+       - printf "[default]\naws_access_key_id=$E2E_USER_1_ACCESS_KEY\naws_secret_access_key=$E2E_USER_1_SECRET_KEY\n\n[e2etestenv]\naws_access_key_id=$E2E_USER_2_ACCESS_KEY\naws_secret_access_key=$E2E_USER_2_SECRET_KEY\n\n[e2eprodenv]\naws_access_key_id=$E2E_USER_3_ACCESS_KEY\naws_secret_access_key=$E2E_USER_3_SECRET_KEY\n" > $AWS_DIR/credentials
        - sed -i -e '$s/$/ --noColor/' e2e/e2e.sh
-       - ./run-e2e.sh $TEST_SUITE
+       - scripts/run-e2e $TEST_SUITE
