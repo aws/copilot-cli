@@ -622,43 +622,6 @@ func withContainerHealthShow(config *ecsTaskStatusConfig) {
 	config.shouldShowContainerHealth = true
 }
 
-// targetHealthForTasks finds the target health in a target group, if any, for each task.
-func targetHealthForTasks_Old(targetsHealth []*elbv2.TargetHealth, tasks []*awsecs.Task, targetGroupARN string) []taskTargetHealth {
-	var out []taskTargetHealth
-
-	// Create a set of target health to be matched against the tasks' private IP addresses.
-	// An IP target's ID is the IP address.
-	targetsHealthSet := make(map[string]*elbv2.TargetHealth)
-	for _, th := range targetsHealth {
-		targetsHealthSet[th.TargetID()] = th
-	}
-
-	// For each task, check if it is a target by matching its private IP address against targetsHealthSet.
-	// If it is a target, we try to add it to the output.
-	for _, task := range tasks {
-		ip, err := task.PrivateIP()
-		if err != nil {
-			continue
-		}
-
-		// Check if the IP is a target
-		th, ok := targetsHealthSet[ip]
-		if !ok {
-			continue
-		}
-
-		if taskID, err := awsecs.TaskID(aws.StringValue(task.TaskArn)); err == nil {
-			out = append(out, taskTargetHealth{
-				TaskID:         taskID,
-				HealthStatus:   *th.HealthStatus(),
-				TargetGroupARN: targetGroupARN,
-			})
-		}
-	}
-
-	return out
-}
-
 // targetHealthForTasks finds the corresponding task, if any, for each target health in a target group.
 func targetHealthForTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsecs.Task, targetGroupARN string) []taskTargetHealth {
 	var out []taskTargetHealth
