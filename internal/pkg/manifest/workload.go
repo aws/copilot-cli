@@ -74,15 +74,19 @@ type Image struct {
 	DependsOn    map[string]string `yaml:"depends_on,flow"` // Add any sidecar dependencies.
 }
 
-type imageTransformer struct{}
+type workloadTransformer struct{}
 
 // Transformer implements customized merge logic for Image field of manifest.
 // It merges `DockerLabels` and `DependsOn` in the default manager (i.e. with configurations mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
 // And then overrides both `Build` and `Location` fields at the same time with the src values, given that they are non-empty themselves.
-func (t imageTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(Image{}) {
-		return nil
+func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ == reflect.TypeOf(Image{}) {
+		return transformImage()
 	}
+	return nil
+}
+
+func transformImage() func(dst, src reflect.Value) error {
 	return func(dst, src reflect.Value) error {
 		// Perform default merge
 		dstImage := dst.Interface().(Image)
