@@ -25,6 +25,8 @@ build: packr-build compile-local packr-clean
 
 .PHONY: build-e2e
 build-e2e: packr-build compile-linux packr-clean
+	@echo "Building E2E Docker Image" &&\
+	docker build -t copilot/e2e . -f e2e/Dockerfile
 
 .PHONY: release
 release: packr-build compile-darwin compile-linux compile-windows packr-clean
@@ -118,13 +120,6 @@ local-integ-test: packr-build run-local-integ-test packr-clean
 
 run-local-integ-test:
 	go test -race -count=1 -timeout=60m -tags=localintegration ${PACKAGES}
-
-.PHONY: e2e
-e2e: build-e2e
-	@echo "Building E2E Docker Image" &&\
-	docker build -t copilot/e2e . -f e2e/Dockerfile
-	@echo "Running E2E Tests" &&\
-	docker run --privileged -v ${HOME}/.aws:/home/.aws -e "HOME=/home" copilot/e2e:latest
 
 .PHONY: tools
 tools:

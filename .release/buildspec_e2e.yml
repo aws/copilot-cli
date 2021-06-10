@@ -149,11 +149,4 @@ phases:
        - printf "[default]\nregion = $APP_REGION\n[profile e2etestenv]\nregion=$TEST_RGN\n[profile e2eprodenv]\nregion=$PROD_RGN\n" > /tmp/.aws/config
        - printf "[default]\naws_access_key_id=$E2E_USER_1_ACCESS_KEY\naws_secret_access_key=$E2E_USER_1_SECRET_KEY\n\n[e2etestenv]\naws_access_key_id=$E2E_USER_2_ACCESS_KEY\naws_secret_access_key=$E2E_USER_2_SECRET_KEY\n\n[e2eprodenv]\naws_access_key_id=$E2E_USER_3_ACCESS_KEY\naws_secret_access_key=$E2E_USER_3_SECRET_KEY\n" > /tmp/.aws/credentials
        - sed -i -e '$s/$/ --noColor/' e2e/e2e.sh
-       - make build-e2e
-       - docker build -t copilot-cli/e2e . -f e2e/Dockerfile
-       - >
-         docker run --privileged -v /tmp/.aws:/home/.aws -e "HOME=/home"
-         -e "TEST_SUITE=$TEST_SUITE"
-         -e "DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME"
-         -e "DOCKERHUB_TOKEN=$DOCKERHUB_TOKEN" 
-         copilot-cli/e2e:latest
+       - ./run-e2e.sh $TEST_SUITE
