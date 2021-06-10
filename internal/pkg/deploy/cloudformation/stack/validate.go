@@ -136,7 +136,7 @@ func validateSidecarDependsOn(in manifest.SidecarConfig, sidecarName string, s c
 }
 
 func isValidStatus(status string, container string, c convertSidecarOpts) (bool, error) {
-	if c.sidecarConfig[container] != nil {
+	if _, ok := c.sidecarConfig[container]; ok {
 		for _, allowed := range sidecarDependsOnStatus {
 			if status == allowed {
 				return true, nil
@@ -165,7 +165,7 @@ func isEssential(name string, s convertSidecarOpts) bool {
 }
 
 func isEssentialStatus(status string, container string, c convertSidecarOpts) (bool, error) {
-	if c.sidecarConfig[container] != nil {
+	if _, ok := c.sidecarConfig[container]; ok {
 		if status == dependsOnStart {
 			return true, nil
 		}
@@ -232,7 +232,7 @@ func buildDependencyGraph(s convertSidecarOpts) (*graph, error) {
 	// Add any sidecar dependencies.
 	for name, sidecar := range s.sidecarConfig {
 		for dep := range sidecar.DependsOn {
-			if s.sidecarConfig[dep] == nil && dep != s.workloadName {
+			if _, ok := s.sidecarConfig[dep]; !ok && dep != s.workloadName {
 				return nil, errInvalidContainer
 			}
 
@@ -242,7 +242,7 @@ func buildDependencyGraph(s convertSidecarOpts) (*graph, error) {
 
 	// Add any image dependencies.
 	for dep := range s.imageConfig.DependsOn {
-		if s.sidecarConfig[dep] == nil && dep != s.workloadName {
+		if _, ok := s.sidecarConfig[dep]; !ok && dep != s.workloadName {
 			return nil, errInvalidContainer
 		}
 
@@ -261,7 +261,7 @@ func (g *graph) add(fromNode, toNode string) {
 	hasNode := false
 
 	// Add origin node if doesn't exist.
-	if g.nodes[fromNode] == nil {
+	if _, ok := g.nodes[fromNode]; !ok {
 		g.nodes[fromNode] = []string{}
 	}
 
