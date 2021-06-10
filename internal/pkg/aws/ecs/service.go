@@ -15,9 +15,10 @@ import (
 )
 
 const (
-	ServiceDeploymentStatusPrimary  = "PRIMARY"
-	ServiceDeploymentStatusActive   = "ACTIVE"
-	serviceDeploymentStatusInactive = "INACTIVE"
+	// ServiceDeploymentStatusPrimary is the status PRIMARY of an ECS service deployment.
+	ServiceDeploymentStatusPrimary = "PRIMARY"
+	// ServiceDeploymentStatusActive is the status ACTIVE of an ECS service deployment.
+	ServiceDeploymentStatusActive = "ACTIVE"
 )
 
 // Service wraps up ECS Service struct.
