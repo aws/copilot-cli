@@ -44,9 +44,9 @@ var (
 
 // Container dependency status options
 var (
-	essentialContainerStatus = []string{dependsOnStart, dependsOnHealthy}
-	dependsOnStatus          = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
-	sidecarDependsOnStatus   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess}
+	essentialContainerValidStatus = []string{dependsOnStart, dependsOnHealthy}
+	dependsOnValidStatus          = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
+	sidecarDependsOnValidStatus   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess}
 )
 
 // Validate that paths contain only an approved set of characters to guard against command injection.
@@ -124,10 +124,11 @@ func validateSidecarDependsOn(in manifest.SidecarConfig, sidecarName string, s c
 	}
 
 	for name, status := range in.DependsOn {
-		if ok, err := isValidStatus(status, name, s); !ok {
+		if ok, err := isValidStatusForContainer(status, name, s); !ok {
 			return err
 		}
-		if ok, err := isEssentialStatus(status, name, s); isEssential(name, s) && !ok {
+		// Container cannot depend on essential containers if status is 'COMPLETE' or 'SUCCESS'
+		if ok, err := isEssentialStatus(status, name, s); isEssentialContainer(name, s) && !ok {
 			return err
 		}
 	}
@@ -135,9 +136,16 @@ func validateSidecarDependsOn(in manifest.SidecarConfig, sidecarName string, s c
 	return nil
 }
 
-func isValidStatus(status string, container string, c convertSidecarOpts) (bool, error) {
-	if _, ok := c.sidecarConfig[container]; ok {
-		for _, allowed := range sidecarDependsOnStatus {
+func isSidecar(container string, sidecars map[string]*manifest.SidecarConfig) bool {
+	if _, ok := sidecars[container]; ok {
+		return true
+	}
+	return false
+}
+
+func isValidStatusForContainer(status string, container string, c convertSidecarOpts) (bool, error) {
+	if isSidecar(container, c.sidecarConfig) {
+		for _, allowed := range sidecarDependsOnValidStatus {
 			if status == allowed {
 				return true, nil
 			}
@@ -145,7 +153,7 @@ func isValidStatus(status string, container string, c convertSidecarOpts) (bool,
 		return false, errInvalidSidecarDependsOnStatus
 	}
 
-	for _, allowed := range dependsOnStatus {
+	for _, allowed := range dependsOnValidStatus {
 		if status == allowed {
 			return true, nil
 		}
@@ -153,7 +161,7 @@ func isValidStatus(status string, container string, c convertSidecarOpts) (bool,
 	return false, errInvalidDependsOnStatus
 }
 
-func isEssential(name string, s convertSidecarOpts) bool {
+func isEssentialContainer(name string, s convertSidecarOpts) bool {
 	if s.sidecarConfig == nil {
 		return false
 	}
@@ -165,14 +173,14 @@ func isEssential(name string, s convertSidecarOpts) bool {
 }
 
 func isEssentialStatus(status string, container string, c convertSidecarOpts) (bool, error) {
-	if _, ok := c.sidecarConfig[container]; ok {
+	if isSidecar(container, c.sidecarConfig) {
 		if status == dependsOnStart {
 			return true, nil
 		}
 		return false, errEssentialSidecarStatus
 	}
 
-	for _, allowed := range essentialContainerStatus {
+	for _, allowed := range essentialContainerValidStatus {
 		if status == allowed {
 			return true, nil
 		}
@@ -284,10 +292,10 @@ func validateImageDependsOn(s convertSidecarOpts) error {
 	}
 
 	for name, status := range s.imageConfig.DependsOn {
-		if ok, err := isValidStatus(status, name, s); !ok {
+		if ok, err := isValidStatusForContainer(status, name, s); !ok {
 			return err
 		}
-		if ok, err := isEssentialStatus(status, name, s); isEssential(name, s) && !ok {
+		if ok, err := isEssentialStatus(status, name, s); isEssentialContainer(name, s) && !ok {
 			return err
 		}
 	}
