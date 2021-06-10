@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"sort"
 	"strconv"
@@ -299,11 +300,31 @@ func (s *ecsServiceStatus) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, statusMinCellWidth, tabWidth, statusCellPaddingWidth, paddingChar, noAdditionalFormatting)
 
-	s.writeTaskSummary(writer)
-	s.writeStoppedTasks(writer)
-	s.writeRunningTasks(writer)
-	s.writeAlarms(writer)
+	fmt.Fprint(writer, color.Bold.Sprint("Task Summary\n\n"))
 	writer.Flush()
+	s.writeTaskSummary(writer)
+	writer.Flush()
+
+	if len(s.StoppedTasks) > 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nStopped Tasks\n\n"))
+		writer.Flush()
+		s.writeStoppedTasks(writer)
+		writer.Flush()
+	}
+
+	if len(s.DesiredRunningTasks) > 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nTasks\n\n"))
+		writer.Flush()
+		s.writeRunningTasks(writer)
+		writer.Flush()
+	}
+
+	if len(s.Alarms) > 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nAlarms\n\n"))
+		writer.Flush()
+		s.writeAlarms(writer)
+		writer.Flush()
+	}
 	return b.String()
 }
 
@@ -336,14 +357,10 @@ func (a *appRunnerServiceStatus) HumanString() string {
 	return b.String()
 }
 
-func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
+func (s *ecsServiceStatus) writeTaskSummary(writer io.Writer) {
 	// NOTE: all the `bar` need to be fully colored. Observe how all the second parameter for all `summaryBar` function
 	// is a list of strings that are colored (e.g. `[]string{color.Green.Sprint("■"), color.Grey.Sprint("□")}`)
 	// This is because if the some of the bar is partially colored, tab writer will behave unexpectedly.
-
-	fmt.Fprint(writer, color.Bold.Sprint("Task Summary\n\n"))
-	writer.Flush()
-
 	var primaryDeployment awsecs.Deployment
 	var activeDeployments []awsecs.Deployment
 	for _, d := range s.Service.Deployments {
@@ -446,17 +463,9 @@ func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 		}
 		fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, strings.Join(cpSummaries, ", "))
 	}
-	writer.Flush()
 }
 
-func (s *ecsServiceStatus) writeStoppedTasks(writer *tabwriter.Writer) {
-	if len(s.StoppedTasks) <= 0 {
-		return
-	}
-
-	fmt.Fprint(writer, color.Bold.Sprint("\nStopped Tasks\n\n"))
-	writer.Flush()
-
+func (s *ecsServiceStatus) writeStoppedTasks(writer io.Writer) {
 	headers := []string{"Reason", "Task Count", "Sample Task IDs"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
@@ -474,14 +483,7 @@ func (s *ecsServiceStatus) writeStoppedTasks(writer *tabwriter.Writer) {
 	}
 }
 
-func (s *ecsServiceStatus) writeRunningTasks(writer *tabwriter.Writer) {
-	if len(s.DesiredRunningTasks) == 0 {
-		return
-	}
-
-	fmt.Fprint(writer, color.Bold.Sprint("\nTasks\n\n"))
-	writer.Flush()
-
+func (s *ecsServiceStatus) writeRunningTasks(writer io.Writer) {
 	shouldShowHTTPHealth := anyTaskATarget(s.DesiredRunningTasks, s.TasksTargetHealth)
 	shouldShowCapacityProvider := !allCapacityProviderEmpty(s.DesiredRunningTasks)
 	shouldShowContainerHealth := !allContainerHealthEmpty(s.DesiredRunningTasks)
@@ -521,16 +523,9 @@ func (s *ecsServiceStatus) writeRunningTasks(writer *tabwriter.Writer) {
 		}
 		fmt.Fprintf(writer, "  %s\n", taskStatus)
 	}
-	writer.Flush()
 }
 
-func (s *ecsServiceStatus) writeAlarms(writer *tabwriter.Writer) {
-	if len(s.Alarms) <= 0 {
-		return
-	}
-
-	fmt.Fprint(writer, color.Bold.Sprint("\nAlarms\n\n"))
-	writer.Flush()
+func (s *ecsServiceStatus) writeAlarms(writer io.Writer) {
 	headers := []string{"Name", "Condition", "Last Updated", "Health"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
@@ -775,7 +770,7 @@ func summaryOfDeployment(deployment awsecs.Deployment, representations []string)
 	return bar, stringSummary
 }
 
-func printWithMaxWidth(w *tabwriter.Writer, format string, width int, members ...string) {
+func printWithMaxWidth(w io.Writer, format string, width int, members ...string) {
 	columns := make([][]string, len(members))
 	maxNumOfLinesPerCol := 0
 	for ind, member := range members {
