@@ -217,6 +217,17 @@ func TestValidateSidecarDependsOn(t *testing.T) {
 					Essential: aws.Bool(false),
 				},
 			},
+			wantErr: errInvalidSidecarDependsOnStatus,
+		},
+		"error when container dependency status is invalid": {
+			inSidecar: &manifest.SidecarConfig{
+				DependsOn: map[string]string{
+					"frontend": "END",
+				},
+			},
+			allSidecars: map[string]*manifest.SidecarConfig{
+				"sidecar": {},
+			},
 			wantErr: errInvalidDependsOnStatus,
 		},
 		"error when set essential sidecar has a status besides start": {
@@ -231,9 +242,21 @@ func TestValidateSidecarDependsOn(t *testing.T) {
 					Essential: aws.Bool(true),
 				},
 			},
-			wantErr: errEssentialContainerStatus,
+			wantErr: errEssentialSidecarStatus,
 		},
 		"error when implied essential sidecar has a status besides start": {
+			inSidecar: &manifest.SidecarConfig{
+				DependsOn: map[string]string{
+					"sidecar2": "COMPLETE",
+				},
+			},
+			allSidecars: map[string]*manifest.SidecarConfig{
+				"sidecar":  {},
+				"sidecar2": {},
+			},
+			wantErr: errEssentialSidecarStatus,
+		},
+		"error when essential container dependency status is invalid": {
 			inSidecar: &manifest.SidecarConfig{
 				DependsOn: map[string]string{
 					"frontend": "COMPLETE",
@@ -265,7 +288,7 @@ func TestValidateSidecarDependsOn(t *testing.T) {
 func TestValidateNoCircularDependencies(t *testing.T) {
 	mockWorkloadName := "frontend"
 	image := manifest.Image{}
-	circularDependencyErr := fmt.Errorf("circular container dependency chain present: chain includes the following containers: ")
+	circularDependencyErr := fmt.Errorf("circular container dependency chain includes the following containers: ")
 	testCases := map[string]struct {
 		allSidecars       map[string]*manifest.SidecarConfig
 		circDepContainers []string
@@ -317,7 +340,7 @@ func TestValidateNoCircularDependencies(t *testing.T) {
 					},
 				},
 			},
-			wantErr: fmt.Errorf("circular container dependency chain present: container sidecar depends on itself"),
+			wantErr: fmt.Errorf("container sidecar cannot depend on itself"),
 		},
 		"error when sidecars circularly depend on each other": {
 			allSidecars: map[string]*manifest.SidecarConfig{
@@ -422,7 +445,7 @@ func TestValidateImageDependsOn(t *testing.T) {
 					"frontend": "START",
 				},
 			},
-			wantErr: fmt.Errorf("circular container dependency chain present: container frontend depends on itself"),
+			wantErr: fmt.Errorf("container frontend cannot depend on itself"),
 		},
 		"error when image container dependency status is invalid": {
 			inImage: &manifest.Image{
@@ -433,9 +456,9 @@ func TestValidateImageDependsOn(t *testing.T) {
 			inSidecars: map[string]*manifest.SidecarConfig{
 				"sidecar": {},
 			},
-			wantErr: errInvalidDependsOnStatus,
+			wantErr: errInvalidSidecarDependsOnStatus,
 		},
-		"error when set essential container has a status besides start": {
+		"error when set essential sidecar container has a status besides start": {
 			inImage: &manifest.Image{
 				DependsOn: map[string]string{
 					"sidecar": "COMPLETE",
@@ -446,9 +469,9 @@ func TestValidateImageDependsOn(t *testing.T) {
 					Essential: aws.Bool(true),
 				},
 			},
-			wantErr: errEssentialContainerStatus,
+			wantErr: errEssentialSidecarStatus,
 		},
-		"error when implied essential container has a status besides start": {
+		"error when implied essential sidecar container has a status besides start": {
 			inImage: &manifest.Image{
 				DependsOn: map[string]string{
 					"sidecar": "COMPLETE",
@@ -457,7 +480,7 @@ func TestValidateImageDependsOn(t *testing.T) {
 			inSidecars: map[string]*manifest.SidecarConfig{
 				"sidecar": {},
 			},
-			wantErr: errEssentialContainerStatus,
+			wantErr: errEssentialSidecarStatus,
 		},
 	}
 	for name, tc := range testCases {
