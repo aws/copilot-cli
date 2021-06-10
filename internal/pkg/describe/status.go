@@ -336,26 +336,6 @@ func (a *appRunnerServiceStatus) HumanString() string {
 	return b.String()
 }
 
-func summaryOfDeployment(deployment awsecs.Deployment, representations []string) (string, string) {
-	var revisionInfo string
-	revision, err := awsecs.TaskDefinitionVersion(deployment.TaskDefinition)
-	if err == nil {
-		revisionInfo = fmt.Sprintf(" (rev %d)", revision)
-	}
-
-	bar := summaryBar([]int{
-		(int)(deployment.RunningCount),
-		(int)(deployment.DesiredCount) - (int)(deployment.RunningCount)},
-		representations)
-	stringSummary := fmt.Sprintf("%d/%d running tasks for %s%s",
-		deployment.RunningCount,
-		deployment.DesiredCount,
-		strings.ToLower(deployment.Status),
-		revisionInfo)
-
-	return bar, stringSummary
-}
-
 func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 	// NOTE: all the `bar` need to be fully colored. Observe how all the second parameter for all `summaryBar` function
 	// is a list of strings that are colored (e.g. `[]string{color.Green.Sprint("■"), color.Grey.Sprint("□")}`)
@@ -773,6 +753,26 @@ func shortTaskID(id string) string {
 		return id[:shortTaskIDLength]
 	}
 	return id
+}
+
+func summaryOfDeployment(deployment awsecs.Deployment, representations []string) (string, string) {
+	var revisionInfo string
+	revision, err := awsecs.TaskDefinitionVersion(deployment.TaskDefinition)
+	if err == nil {
+		revisionInfo = fmt.Sprintf(" (rev %d)", revision)
+	}
+
+	bar := summaryBar([]int{
+		(int)(deployment.RunningCount),
+		(int)(deployment.DesiredCount) - (int)(deployment.RunningCount)},
+		representations)
+	stringSummary := fmt.Sprintf("%d/%d running tasks for %s%s",
+		deployment.RunningCount,
+		deployment.DesiredCount,
+		strings.ToLower(deployment.Status),
+		revisionInfo)
+
+	return bar, stringSummary
 }
 
 func printWithMaxWidth(w *tabwriter.Writer, format string, width int, members ...string) {
