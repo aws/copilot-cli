@@ -153,7 +153,7 @@ func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 
 // ApplyEnv returns the service manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
-func (s LoadBalancedWebService) ApplyEnv(envName string) (*LoadBalancedWebService, error) {
+func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, error) {
 	overrideConfig, ok := s.Environments[envName]
 	if !ok {
 		return &s, nil
@@ -171,7 +171,8 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (*LoadBalancedWebServic
 	// Apply overrides to the original service s.
 	err := mergo.Merge(&s, LoadBalancedWebService{
 		LoadBalancedWebServiceConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+
 	if err != nil {
 		return nil, err
 	}

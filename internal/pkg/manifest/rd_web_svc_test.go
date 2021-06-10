@@ -305,3 +305,195 @@ func TestRequestDrivenWebService_MarshalBinary(t *testing.T) {
 		})
 	}
 }
+
+func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
+	testCases := map[string]struct {
+		in         *RequestDrivenWebService
+		envToApply string
+
+		wanted *RequestDrivenWebService
+	}{
+		"with image build overridden by image location": {
+			in: &RequestDrivenWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./Dockerfile"),
+								},
+							},
+						},
+					},
+				},
+				Environments: map[string]*RequestDrivenWebServiceConfig{
+					"prod-iad": {
+						ImageConfig: ImageWithPort{
+							Image: Image{
+								Location: aws.String("env-override location"),
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &RequestDrivenWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Location: aws.String("env-override location"),
+						},
+					},
+				},
+			},
+		},
+		"with image location overridden by image location": {
+			in: &RequestDrivenWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Location: aws.String("default location"),
+						},
+					},
+				},
+				Environments: map[string]*RequestDrivenWebServiceConfig{
+					"prod-iad": {
+						ImageConfig: ImageWithPort{
+							Image: Image{
+								Location: aws.String("env-override location"),
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &RequestDrivenWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Location: aws.String("env-override location"),
+						},
+					},
+				},
+			},
+		},
+		"with image build overridden by image build": {
+			in: &RequestDrivenWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./Dockerfile"),
+								},
+							},
+						},
+					},
+				},
+				Environments: map[string]*RequestDrivenWebServiceConfig{
+					"prod-iad": {
+						ImageConfig: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &RequestDrivenWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildString: aws.String("overridden build string"),
+							},
+						},
+					},
+				},
+			},
+		},
+		"with image location overridden by image build": {
+			in: &RequestDrivenWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Location: aws.String("default location"),
+						},
+					},
+				},
+				Environments: map[string]*RequestDrivenWebServiceConfig{
+					"prod-iad": {
+						ImageConfig: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &RequestDrivenWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildString: aws.String("overridden build string"),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			conf, _ := tc.in.ApplyEnv(tc.envToApply)
+
+			// THEN
+			require.Equal(t, tc.wanted, conf, "returned configuration should have overrides from the environment")
+		})
+	}
+}

@@ -32,10 +32,6 @@ func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env, app 
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
-	envManifest, err := mft.ApplyEnv(env) // Apply environment overrides to the manifest values.
-	if err != nil {
-		return nil, fmt.Errorf("apply environment %s override: %s", env, err)
-	}
 	return &RequestDrivenWebService{
 		appRunnerWkld: &appRunnerWkld{
 			wkld: &wkld{
@@ -43,15 +39,15 @@ func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env, app 
 				env:    env,
 				app:    app,
 				rc:     rc,
-				image:  envManifest.ImageConfig,
+				image:  mft.ImageConfig,
 				addons: addons,
 				parser: parser,
 			},
-			instanceConfig:    envManifest.InstanceConfig,
-			imageConfig:       envManifest.ImageConfig,
-			healthCheckConfig: envManifest.HealthCheckConfiguration,
+			instanceConfig:    mft.InstanceConfig,
+			imageConfig:       mft.ImageConfig,
+			healthCheckConfig: mft.HealthCheckConfiguration,
 		},
-		manifest: envManifest,
+		manifest: mft,
 		parser:   parser,
 	}, nil
 }

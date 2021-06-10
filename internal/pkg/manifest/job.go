@@ -126,7 +126,7 @@ func (j *ScheduledJob) MarshalBinary() ([]byte, error) {
 }
 
 // ApplyEnv returns the manifest with environment overrides.
-func (j ScheduledJob) ApplyEnv(envName string) (*ScheduledJob, error) {
+func (j ScheduledJob) ApplyEnv(envName string) (WorkloadManifest, error) {
 	overrideConfig, ok := j.Environments[envName]
 	if !ok {
 		return &j, nil
@@ -134,7 +134,8 @@ func (j ScheduledJob) ApplyEnv(envName string) (*ScheduledJob, error) {
 	// Apply overrides to the original job
 	err := mergo.Merge(&j, ScheduledJob{
 		ScheduledJobConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+
 	if err != nil {
 		return nil, err
 	}
