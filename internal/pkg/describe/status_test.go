@@ -1043,7 +1043,6 @@ Tasks
 			require.Equal(t, tc.json, json)
 
 			human := tc.desc.HumanString()
-			fmt.Println(human)
 			require.Equal(t, tc.human, human)
 		})
 	}
@@ -1302,17 +1301,19 @@ func Test_targetHealthForTasks(t *testing.T) {
 
 		wanted []taskTargetHealth
 	}{
-		"empty output if none of the tasks are a target": {
+		"include target health in output even if it's not matchable to a task": {
 			inTargetsHealth: []*elbv2.TargetHealth{
 				{
 					Target: &elbv2api.TargetDescription{
 						Id: aws.String("42.42.42.42"),
 					},
+					TargetHealth: &elbv2api.TargetHealth{},
 				},
 				{
 					Target: &elbv2api.TargetDescription{
 						Id: aws.String("24.24.24.24"),
 					},
+					TargetHealth: &elbv2api.TargetHealth{},
 				},
 			},
 			inTasks: []*awsecs.Task{
@@ -1346,9 +1347,22 @@ func Test_targetHealthForTasks(t *testing.T) {
 				},
 			},
 			inTargetGroupARN: "group-1",
-			wanted:           nil,
+			wanted: []taskTargetHealth{
+				{
+					HealthStatus: elbv2.HealthStatus{
+						TargetID: "42.42.42.42",
+					},
+					TargetGroupARN: "group-1",
+				},
+				{
+					HealthStatus: elbv2.HealthStatus{
+						TargetID: "24.24.24.24",
+					},
+					TargetGroupARN: "group-1",
+				},
+			},
 		},
-		"add task and its target health to output if the task is a target": {
+		"target health should be matched to a task if applicable": {
 			inTargetsHealth: []*elbv2.TargetHealth{
 				{
 					Target: &elbv2api.TargetDescription{
@@ -1408,6 +1422,14 @@ func Test_targetHealthForTasks(t *testing.T) {
 						HealthReason:      "Target.Timeout",
 						HealthState:       "unhealthy",
 						HealthDescription: "unhealthy because this and that",
+					},
+					TargetGroupARN: "group-1",
+				},
+				{
+					TaskID: "",
+					HealthStatus: elbv2.HealthStatus{
+						TargetID:    "24.24.24.24",
+						HealthState: "healthy",
 					},
 					TargetGroupARN: "group-1",
 				},
