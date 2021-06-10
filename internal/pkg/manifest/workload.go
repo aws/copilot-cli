@@ -438,20 +438,24 @@ type TaskConfig struct {
 
 // NetworkConfig represents options for network connection to AWS resources within a VPC.
 type NetworkConfig struct {
-	VPC vpcConfig `yaml:"vpc"`
+	VPC *vpcConfig `yaml:"vpc"`
 }
 
 // UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.
 // If the user specified a placement that's not valid then throw an error.
 func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	type networkWithDefaults NetworkConfig
+	defaultVPCConf := &vpcConfig{
+		Placement: stringP(PublicSubnetPlacement),
+	}
 	conf := networkWithDefaults{
-		VPC: vpcConfig{
-			Placement: stringP(PublicSubnetPlacement),
-		},
+		VPC: defaultVPCConf,
 	}
 	if err := unmarshal(&conf); err != nil {
 		return err
+	}
+	if conf.VPC == nil { // If after unmarshaling the user didnot specify VPC configuration then reset it to public.
+		conf.VPC = defaultVPCConf
 	}
 	if !conf.VPC.isValidPlacement() {
 		return fmt.Errorf("field '%s' is '%v' must be one of %#v", "network.vpc.placement", aws.StringValue(conf.VPC.Placement), subnetPlacements)
@@ -466,7 +470,7 @@ type vpcConfig struct {
 	SecurityGroups []string `yaml:"security_groups"`
 }
 
-func (c vpcConfig) isValidPlacement() bool {
+func (c *vpcConfig) isValidPlacement() bool {
 	if c.Placement == nil {
 		return false
 	}
