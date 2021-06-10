@@ -4,6 +4,7 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,7 +17,8 @@ import (
 
 // CLI is a wrapper around os.execs.
 type CLI struct {
-	path string
+	path       string
+	workingDir string
 }
 
 // AppInitRequest contains the parameters for calling copilot app init.
@@ -223,6 +225,17 @@ func NewCLI() (*CLI, error) {
 	return &CLI{
 		path: cliPath,
 	}, nil
+}
+
+// NewCLIWithDir returns the Copilot CLI such that the commands are run in the specified
+// working directory.
+func NewCLIWithDir(workingDir string) (*CLI, error) {
+	cli, err := NewCLI()
+	if err != nil {
+		return nil, err
+	}
+	cli.workingDir = workingDir
+	return cli, nil
 }
 
 /*Help runs
@@ -620,6 +633,44 @@ func (cli *CLI) AppShow(appName string) (*AppShowOutput, error) {
 	return toAppShowOutput(output)
 }
 
+// PipelineInit runs "copilot pipeline init".
+func (cli *CLI) PipelineInit(app, url, branch string, envs []string) (string, error) {
+	return cli.exec(
+		exec.Command(cli.path, "pipeline", "init",
+			"-a", app,
+			"-u", url,
+			"-b", branch,
+			"-e", strings.Join(envs, ",")))
+}
+
+// PipelineShow runs "copilot pipeline show --json"
+func (cli *CLI) PipelineShow() (*PipelineShowOutput, error) {
+	text, err := cli.exec(
+		exec.Command(cli.path, "pipeline", "show", "--json"))
+	if err != nil {
+		return nil, err
+	}
+	var out PipelineShowOutput
+	if err := json.Unmarshal([]byte(text), &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// PipelineStatus runs "copilot pipeline status --json"
+func (cli *CLI) PipelineStatus() (*PipelineStatusOutput, error) {
+	text, err := cli.exec(
+		exec.Command(cli.path, "pipeline", "status", "--json"))
+	if err != nil {
+		return nil, err
+	}
+	var out PipelineStatusOutput
+	if err := json.Unmarshal([]byte(text), &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 /*AppList runs:
 copilot app ls
 */
@@ -850,6 +901,7 @@ func (cli *CLI) SvcPackage(opts *PackageInput) (string, error) {
 func (cli *CLI) exec(command *exec.Cmd) (string, error) {
 	// Turn off colors
 	command.Env = append(os.Environ(), "COLOR=false")
+	command.Dir = cli.workingDir
 	sess, err := gexec.Start(command, ginkgo.GinkgoWriter, ginkgo.GinkgoWriter)
 	if err != nil {
 		return "", err

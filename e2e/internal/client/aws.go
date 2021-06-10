@@ -13,6 +13,11 @@ import (
 	cmd "github.com/aws/copilot-cli/e2e/internal/command"
 )
 
+// IAM policy ARNs.
+const (
+	codeCommitPowerUserPolicyARN = "arn:aws:iam::aws:policy/AWSCodeCommitPowerUser"
+)
+
 // AWS is a wrapper around aws commands.
 type AWS struct{}
 
@@ -61,6 +66,170 @@ func (a *AWS) WaitStackCreateComplete(name string) error {
 		"--stack-name", name,
 	}, " ")
 	return a.exec(command)
+}
+
+// CreateCodeCommitRepo creates a repository with AWS CodeCommit and returns
+// the HTTP git clone url.
+func (a *AWS) CreateCodeCommitRepo(name string) (cloneURL string, err error) {
+	out := new(bytes.Buffer)
+	args := strings.Join([]string{
+		"codecommit",
+		"create-repository",
+		"--repository-name",
+		name,
+	}, " ")
+	if err := a.exec(args, cmd.Stdout(out)); err != nil {
+		return "", fmt.Errorf("create commit repository %s cmd: %v", name, err)
+	}
+
+	data := struct {
+		RepositoryMetadata struct {
+			CloneURLHTTP string `json:"cloneUrlHttp"`
+		} `json:"repositoryMetadata"`
+	}{}
+	if err := json.Unmarshal(out.Bytes(), &data); err != nil {
+		return "", fmt.Errorf("unmarshal json response from create commit repository: %v", err)
+	}
+	return data.RepositoryMetadata.CloneURLHTTP, nil
+}
+
+// DeleteCodeCommitRepo delete a CodeCommit repository.
+func (a *AWS) DeleteCodeCommitRepo(name string) error {
+	args := strings.Join([]string{
+		"codecommit",
+		"delete-repository",
+		"--repository-name",
+		name,
+	}, " ")
+	if err := a.exec(args); err != nil {
+		return fmt.Errorf("delete repository %s: %v", name, err)
+	}
+	return nil
+}
+
+// IAMServiceCreds represents service-specific IAM credentials.
+type IAMServiceCreds struct {
+	UserName     string `json:"ServiceUserName"`             // Git username.
+	Password     string `json:"ServicePassword"`             // Git password.
+	CredentialID string `json:"ServiceSpecificCredentialId"` // ID for the creds in order to delete them.
+}
+
+// CreateCodeCommitIAMUser creates an IAM user that can push and pull from codecommit.
+// Returns the credentials needed to interact with codecommit.
+func (a *AWS) CreateCodeCommitIAMUser(userName string) (*IAMServiceCreds, error) {
+	if err := a.createIAMUser("/copilot/e2etests/", userName); err != nil {
+		return nil, err
+	}
+	if err := a.attachUserPolicy(userName, codeCommitPowerUserPolicyARN); err != nil {
+		return nil, err
+	}
+	return a.createCodeCommitCreds(userName)
+}
+
+// DeleteCodeCommitIAMUser deletes an IAM user that can access codecommit.
+func (a *AWS) DeleteCodeCommitIAMUser(userName, credentialID string) error {
+	if err := a.deleteServiceSpecificCreds(userName, credentialID); err != nil {
+		return err
+	}
+	if err := a.detachUserPolicy(userName, codeCommitPowerUserPolicyARN); err != nil {
+		return err
+	}
+	return a.deleteIAMUser(userName)
+}
+
+func (a *AWS) createIAMUser(path, userName string) error {
+	args := strings.Join([]string{
+		"iam",
+		"create-user",
+		"--path",
+		path,
+		"--user-name",
+		userName,
+	}, " ")
+	if err := a.exec(args); err != nil {
+		return fmt.Errorf("create IAM user under path %s and name %s: %v", path, userName, err)
+	}
+	return nil
+}
+
+func (a *AWS) attachUserPolicy(userName, policyARN string) error {
+	args := strings.Join([]string{
+		"iam",
+		"attach-user-policy",
+		"--user-name",
+		userName,
+		"--policy-arn",
+		policyARN,
+	}, " ")
+	if err := a.exec(args); err != nil {
+		return fmt.Errorf("attach policy arn %s to user %s: %v", policyARN, userName, err)
+	}
+	return nil
+}
+
+func (a *AWS) createCodeCommitCreds(userName string) (*IAMServiceCreds, error) {
+	out := new(bytes.Buffer)
+	args := strings.Join([]string{
+		"iam",
+		"create-service-specific-credential",
+		"--user-name",
+		userName,
+		"--service-name",
+		"codecommit.amazonaws.com",
+	}, " ")
+	if err := a.exec(args, cmd.Stdout(out)); err != nil {
+		return nil, fmt.Errorf("create commit credentials for user %s: %v", userName, err)
+	}
+	data := struct {
+		Creds IAMServiceCreds `json:"ServiceSpecificCredential"`
+	}{}
+	if err := json.Unmarshal(out.Bytes(), &data); err != nil {
+		return nil, fmt.Errorf("unmarshal credentials for codecommit: %v", err)
+	}
+	return &data.Creds, nil
+}
+
+func (a *AWS) deleteServiceSpecificCreds(userName, credentialID string) error {
+	args := strings.Join([]string{
+		"iam",
+		"delete-service-specific-credential",
+		"--user-name",
+		userName,
+		"--service-specific-credential-id",
+		credentialID,
+	}, " ")
+	if err := a.exec(args); err != nil {
+		return fmt.Errorf("delete service specific creds %s for user %s: %v", credentialID, userName, err)
+	}
+	return nil
+}
+
+func (a *AWS) detachUserPolicy(userName, policyARN string) error {
+	args := strings.Join([]string{
+		"iam",
+		"detach-user-policy",
+		"--user-name",
+		userName,
+		"--policy-arn",
+		policyARN,
+	}, " ")
+	if err := a.exec(args); err != nil {
+		return fmt.Errorf("detach user policy %s for user %s: %v", policyARN, userName, err)
+	}
+	return nil
+}
+
+func (a *AWS) deleteIAMUser(userName string) error {
+	args := strings.Join([]string{
+		"iam",
+		"delete-user",
+		"--user-name",
+		userName,
+	}, " ")
+	if err := a.exec(args); err != nil {
+		return fmt.Errorf("delete iam user %s: %v", userName, err)
+	}
+	return nil
 }
 
 /*VPCStackOutput runs:
