@@ -61,10 +61,12 @@ func (s *Service) ServiceStatus() ServiceStatus {
 	}
 
 	return ServiceStatus{
-		Status:       aws.StringValue(s.Status),
-		DesiredCount: aws.Int64Value(s.DesiredCount),
-		RunningCount: aws.Int64Value(s.RunningCount),
-		Deployments:  deployments,
+		Status:           aws.StringValue(s.Status),
+		DesiredCount:     aws.Int64Value(s.DesiredCount),
+		RunningCount:     aws.Int64Value(s.RunningCount),
+		Deployments:      deployments,
+		LastDeploymentAt: aws.TimeValue(s.Deployments[0].UpdatedAt), // FIXME Service assumed to have at least one deployment
+		TaskDefinition:   aws.StringValue(s.Deployments[0].TaskDefinition),
 	}
 }
 

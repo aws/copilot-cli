@@ -186,6 +186,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 							UpdatedAt: startTime,
 						},
 					},
+					LastDeploymentAt: startTime,
 				},
 				Alarms: nil,
 				DesiredRunningTasks: []awsecs.TaskStatus{
@@ -312,6 +313,8 @@ func TestServiceStatus_Describe(t *testing.T) {
 							TaskDefinition: "mockTaskDefinition",
 						},
 					},
+					LastDeploymentAt: startTime,
+					TaskDefinition:   "mockTaskDefinition",
 				},
 				Alarms: nil,
 				DesiredRunningTasks: []awsecs.TaskStatus{
@@ -436,6 +439,8 @@ func TestServiceStatus_Describe(t *testing.T) {
 							TaskDefinition: "mockTaskDefinition",
 						},
 					},
+					LastDeploymentAt: startTime,
+					TaskDefinition:   "mockTaskDefinition",
 				},
 				Alarms: []cloudwatch.AlarmStatus{
 					{

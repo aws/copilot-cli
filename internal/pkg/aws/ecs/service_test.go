@@ -5,6 +5,7 @@ package ecs
 
 import (
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
@@ -31,7 +32,7 @@ func TestService_TargetGroups(t *testing.T) {
 
 func TestService_ServiceStatus(t *testing.T) {
 	t.Run("should include active and primary deployments in status", func(t *testing.T) {
-		inServce := Service{
+		inService := Service{
 			Deployments: []*ecs.Deployment{
 				{
 					Status:       aws.String("ACTIVE"),
@@ -85,8 +86,10 @@ func TestService_ServiceStatus(t *testing.T) {
 					Status: "INACTIVE",
 				},
 			},
+			LastDeploymentAt: time.Time{},
+			TaskDefinition:   "",
 		}
-		got := inServce.ServiceStatus()
+		got := inService.ServiceStatus()
 		require.Equal(t, got, wanted)
 	})
 }
