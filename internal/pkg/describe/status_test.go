@@ -603,7 +603,7 @@ func TestServiceStatusDesc_String(t *testing.T) {
 			},
 			human: `Task Summary
 
-  Running      ███░░░░░░░  3/10 desired tasks are running
+  Running      ██████████  3/10 desired tasks are running
   Deployments  █░░░░░░░░░  1/10 running tasks for primary (rev 6)
                ██████████  1/1 running tasks for active (rev 5)
                █████░░░░░  1/2 running tasks for active (rev 4)
@@ -921,7 +921,7 @@ Tasks
 			},
 			human: `Task Summary
 
-  Running      ███░░░░░░░  3/10 desired tasks are running
+  Running      ██████████  3/10 desired tasks are running
   Deployments  █░░░░░░░░░  1/10 running tasks for primary (rev 6)
                ██████████  1/1 running tasks for active (rev 5)
                █████░░░░░  1/2 running tasks for active (rev 4)
@@ -1019,6 +1019,7 @@ Tasks
 			require.Equal(t, tc.json, json)
 
 			human := tc.desc.HumanString()
+			fmt.Println(human)
 			require.Equal(t, tc.human, human)
 		})
 	}
