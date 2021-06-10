@@ -432,7 +432,7 @@ func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 					healthyCount,
 					(int)(primaryDeployment.DesiredCount) - healthyCount,
 				},
-				[]string{color.Green.Sprint("█"), color.Grey.Sprint("░")})
+				[]string{color.Green.Sprint("█"), color.Green.Sprint("░")})
 			stringSummary := fmt.Sprintf("%d/%d passes HTTP health checks%s", healthyCount, primaryDeployment.DesiredCount, revisionInfo)
 			fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
 			header = ""
@@ -455,7 +455,7 @@ func (s *ecsServiceStatus) writeTaskSummary(writer *tabwriter.Writer) {
 	if !allCapacityProviderEmpty(s.DesiredRunningTasks) {
 		header := "Capacity Provider"
 		fargate, spot, empty := capacityProviderDataForTasks(s.DesiredRunningTasks)
-		bar := summaryBar([]int{fargate + empty, spot}, []string{color.Grey.Sprintf("▒"), color.Faint.Sprintf("▒")})
+		bar := summaryBar([]int{fargate + empty, spot}, []string{color.Grey.Sprintf("▒"), color.Grey.Sprintf("▓")})
 		var cpSummaries []string
 		if fargate+empty != 0 {
 			// We consider those with empty capacity provider field as "FARGATE"
@@ -491,7 +491,6 @@ func (s *ecsServiceStatus) writeStoppedTasks(writer *tabwriter.Writer) {
 			sampleIDs = sampleIDs[:5]
 		}
 		printWithMaxWidth(writer, "  %s\t%s\t%s\n", 30, reason, strconv.Itoa(len(ids)), strings.Join(sampleIDs, ","))
-		//fmt.Fprintf(writer, "  %s\t%d\t%s\n", reason, len(ids), strings.Join(ids, ","))
 	}
 }
 

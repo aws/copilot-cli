@@ -57,9 +57,12 @@ func healthyHTTPTaskCountInTasks(tasks []ecs.TaskStatus, targetsHealth []taskTar
 	var count int
 	taskToHealth := summarizeHTTPHealthForTasks(targetsHealth)
 	for _, t := range tasks {
+		// A task is healthy if it has health states and all of its states are healthy
+		if _, ok := taskToHealth[t.ID]; !ok {
+			continue
+		}
 		healthy := true
-		states := taskToHealth[t.ID]
-		for _, state := range states {
+		for _, state := range taskToHealth[t.ID] {
 			if state != elbv2.TargetHealthStateHealthy {
 				healthy = false
 			}
