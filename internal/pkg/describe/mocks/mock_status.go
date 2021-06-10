@@ -39,7 +39,7 @@ func (m *MocktargetHealthGetter) EXPECT() *MocktargetHealthGetterMockRecorder {
 	return m.recorder
 }
 
-// HealthStatus mocks base method.
+// TargetsHealth mocks base method.
 func (m *MocktargetHealthGetter) TargetsHealth(targetGroupARN string) ([]*elbv2.TargetHealth, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "TargetsHealth", targetGroupARN)
@@ -48,8 +48,8 @@ func (m *MocktargetHealthGetter) TargetsHealth(targetGroupARN string) ([]*elbv2.
 	return ret0, ret1
 }
 
-// HealthStatus indicates an expected call of HealthStatus.
-func (mr *MocktargetHealthGetterMockRecorder) HealthStatus(targetGroupARN interface{}) *gomock.Call {
+// TargetsHealth indicates an expected call of TargetsHealth.
+func (mr *MocktargetHealthGetterMockRecorder) TargetsHealth(targetGroupARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TargetsHealth", reflect.TypeOf((*MocktargetHealthGetter)(nil).TargetsHealth), targetGroupARN)
 }
@@ -183,19 +183,19 @@ func (mr *MockecsServiceGetterMockRecorder) Service(clusterName, serviceName int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockecsServiceGetter)(nil).Service), clusterName, serviceName)
 }
 
-// ServiceTasks mocks base method.
-func (m *MockecsServiceGetter) ServiceTasks(clusterName, serviceName string) ([]*ecs.Task, error) {
+// ServiceRunningTasks mocks base method.
+func (m *MockecsServiceGetter) ServiceRunningTasks(clusterName, serviceName string) ([]*ecs.Task, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceTasks", clusterName, serviceName)
+	ret := m.ctrl.Call(m, "ServiceRunningTasks", clusterName, serviceName)
 	ret0, _ := ret[0].([]*ecs.Task)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ServiceTasks indicates an expected call of ServiceTasks.
-func (mr *MockecsServiceGetterMockRecorder) ServiceTasks(clusterName, serviceName interface{}) *gomock.Call {
+// ServiceRunningTasks indicates an expected call of ServiceRunningTasks.
+func (mr *MockecsServiceGetterMockRecorder) ServiceRunningTasks(clusterName, serviceName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceTasks", reflect.TypeOf((*MockecsServiceGetter)(nil).ServiceTasks), clusterName, serviceName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceRunningTasks", reflect.TypeOf((*MockecsServiceGetter)(nil).ServiceRunningTasks), clusterName, serviceName)
 }
 
 // MockserviceDescriber is a mock of serviceDescriber interface.

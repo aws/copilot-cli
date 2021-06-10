@@ -246,7 +246,7 @@ func TestClient_DescribeService(t *testing.T) {
 						Return([]*resourcegroups.Resource{
 							{ARN: mockSvcARN},
 						}, nil),
-					m.ecsClient.EXPECT().ServiceTasks(mockCluster, mockService).Return(nil, errors.New("some error")),
+					m.ecsClient.EXPECT().ServiceRunningTasks(mockCluster, mockService).Return(nil, errors.New("some error")),
 				)
 			},
 			wantedError: fmt.Errorf("get tasks for service mockService: some error"),
@@ -258,7 +258,7 @@ func TestClient_DescribeService(t *testing.T) {
 						Return([]*resourcegroups.Resource{
 							{ARN: mockSvcARN},
 						}, nil),
-					m.ecsClient.EXPECT().ServiceTasks(mockCluster, mockService).Return([]*ecs.Task{
+					m.ecsClient.EXPECT().ServiceRunningTasks(mockCluster, mockService).Return([]*ecs.Task{
 						{TaskArn: aws.String("mockTaskARN")},
 					}, nil),
 					m.ecsClient.EXPECT().StoppedServiceTasks(mockCluster, mockService).Return(nil, errors.New("some error")),
@@ -273,7 +273,7 @@ func TestClient_DescribeService(t *testing.T) {
 						Return([]*resourcegroups.Resource{
 							{ARN: mockSvcARN},
 						}, nil),
-					m.ecsClient.EXPECT().ServiceTasks(mockCluster, mockService).Return([]*ecs.Task{
+					m.ecsClient.EXPECT().ServiceRunningTasks(mockCluster, mockService).Return([]*ecs.Task{
 						{TaskArn: aws.String("mockTaskARN")},
 					}, nil),
 					m.ecsClient.EXPECT().StoppedServiceTasks(mockCluster, mockService).Return([]*ecs.Task{

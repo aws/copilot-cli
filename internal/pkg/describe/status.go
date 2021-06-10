@@ -49,7 +49,7 @@ type logGetter interface {
 }
 
 type ecsServiceGetter interface {
-	ServiceTasks(clusterName, serviceName string) ([]*awsecs.Task, error)
+	ServiceRunningTasks(clusterName, serviceName string) ([]*awsecs.Task, error)
 	Service(clusterName, serviceName string) (*awsecs.Service, error)
 }
 

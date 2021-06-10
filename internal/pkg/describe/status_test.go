@@ -176,7 +176,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 					m.alarmStatusGetter.EXPECT().AlarmsWithTags(gomock.Any()).Return([]cloudwatch.AlarmStatus{}, nil),
 					m.aas.EXPECT().ECSServiceAlarmNames(gomock.Any(), gomock.Any()).Return([]string{}, nil),
 					m.alarmStatusGetter.EXPECT().AlarmStatus(gomock.Any()).Return([]cloudwatch.AlarmStatus{}, nil),
-					m.targetHealthGetter.EXPECT().HealthStatus("group-1").Return(nil, errors.New("some error")),
+					m.targetHealthGetter.EXPECT().TargetsHealth("group-1").Return(nil, errors.New("some error")),
 				)
 			},
 			wantedContent: &ecsServiceStatus{
@@ -262,7 +262,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 					}).Return([]cloudwatch.AlarmStatus{}, nil),
 					m.aas.EXPECT().ECSServiceAlarmNames(mockCluster, mockService).Return([]string{}, nil),
 					m.alarmStatusGetter.EXPECT().AlarmStatus([]string{}).Return([]cloudwatch.AlarmStatus{}, nil),
-					m.targetHealthGetter.EXPECT().HealthStatus("group-1").Return([]*elbv2.TargetHealth{
+					m.targetHealthGetter.EXPECT().TargetsHealth("group-1").Return([]*elbv2.TargetHealth{
 						{
 							Target: &elbv2api.TargetDescription{
 								Id: aws.String("1.2.3.4"),
@@ -281,7 +281,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 							},
 						},
 					}, nil),
-					m.targetHealthGetter.EXPECT().HealthStatus("group-2").Return([]*elbv2.TargetHealth{
+					m.targetHealthGetter.EXPECT().TargetsHealth("group-2").Return([]*elbv2.TargetHealth{
 						{
 							Target: &elbv2api.TargetDescription{
 								Id: aws.String("1.2.3.4"),
