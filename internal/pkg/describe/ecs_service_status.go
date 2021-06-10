@@ -109,7 +109,3 @@ func (s *ecsServiceStatus) tasksOfRevision(revision int) []ecs.TaskStatus {
 	}
 	return ret
 }
-
-// Indicator methods that determine whether some information should be shown in humanized output.
-
-// Data methods that return reorganized information inside ecsServiceStatus
