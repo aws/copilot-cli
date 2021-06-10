@@ -162,7 +162,7 @@ func buildJobLogsCmd() *cobra.Command {
   /code $ copilot job logs --since 1h
   Displays logs from 2006-01-02T15:04:05 to 2006-01-02T15:05:05.
   /code $ copilot job logs --start-time 2006-01-02T15:04:05+00:00 --end-time 2006-01-02T15:05:05+00:00
-	Displays logs from specific task IDs.
+Displays logs from specific task IDs.
   /code $ copilot job logs --tasks 709c7eae05f947f6861b150372ddc443,1de57fd63c6a4920ac416d02add891b9
   Displays logs in real time.
   /code $ copilot job logs --follow
