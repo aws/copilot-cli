@@ -7,6 +7,7 @@ package mocks
 import (
 	reflect "reflect"
 
+	stack "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -60,4 +61,87 @@ func (m *MockHumanJSONStringer) JSONString() (string, error) {
 func (mr *MockHumanJSONStringerMockRecorder) JSONString() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JSONString", reflect.TypeOf((*MockHumanJSONStringer)(nil).JSONString))
+}
+
+// MockstackDescriber is a mock of stackDescriber interface.
+type MockstackDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockstackDescriberMockRecorder
+}
+
+// MockstackDescriberMockRecorder is the mock recorder for MockstackDescriber.
+type MockstackDescriberMockRecorder struct {
+	mock *MockstackDescriber
+}
+
+// NewMockstackDescriber creates a new mock instance.
+func NewMockstackDescriber(ctrl *gomock.Controller) *MockstackDescriber {
+	mock := &MockstackDescriber{ctrl: ctrl}
+	mock.recorder = &MockstackDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockstackDescriber) EXPECT() *MockstackDescriberMockRecorder {
+	return m.recorder
+}
+
+// Describe mocks base method.
+func (m *MockstackDescriber) Describe() (stack.StackDescription, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Describe")
+	ret0, _ := ret[0].(stack.StackDescription)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Describe indicates an expected call of Describe.
+func (mr *MockstackDescriberMockRecorder) Describe() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockstackDescriber)(nil).Describe))
+}
+
+// Resources mocks base method.
+func (m *MockstackDescriber) Resources() ([]*stack.Resource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Resources")
+	ret0, _ := ret[0].([]*stack.Resource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Resources indicates an expected call of Resources.
+func (mr *MockstackDescriberMockRecorder) Resources() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resources", reflect.TypeOf((*MockstackDescriber)(nil).Resources))
+}
+
+// StackMetadata mocks base method.
+func (m *MockstackDescriber) StackMetadata() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StackMetadata")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StackMetadata indicates an expected call of StackMetadata.
+func (mr *MockstackDescriberMockRecorder) StackMetadata() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackMetadata", reflect.TypeOf((*MockstackDescriber)(nil).StackMetadata))
+}
+
+// StackSetMetadata mocks base method.
+func (m *MockstackDescriber) StackSetMetadata() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StackSetMetadata")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StackSetMetadata indicates an expected call of StackSetMetadata.
+func (mr *MockstackDescriberMockRecorder) StackSetMetadata() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackSetMetadata", reflect.TypeOf((*MockstackDescriber)(nil).StackSetMetadata))
 }
