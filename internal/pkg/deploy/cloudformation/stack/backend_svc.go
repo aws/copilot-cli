@@ -44,10 +44,6 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
-	envManifest, err := mft.ApplyEnv(env) // Apply environment overrides to the manifest values.
-	if err != nil {
-		return nil, fmt.Errorf("apply environment %s override: %w", env, err)
-	}
 	return &BackendService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
@@ -55,13 +51,13 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 				env:    env,
 				app:    app,
 				rc:     rc,
-				image:  envManifest.ImageConfig,
+				image:  mft.ImageConfig,
 				parser: parser,
 				addons: addons,
 			},
-			tc: envManifest.TaskConfig,
+			tc: mft.TaskConfig,
 		},
-		manifest: envManifest,
+		manifest: mft,
 
 		parser: parser,
 	}, nil

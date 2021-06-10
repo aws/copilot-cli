@@ -581,7 +581,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 			},
 		},
-		"with count value overriden by count value": {
+		"with count value overridden by count value": {
 			in: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					TaskConfig: TaskConfig{
@@ -612,7 +612,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 			},
 		},
-		"with count value overriden by spot count": {
+		"with count value overridden by spot count": {
 			in: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					TaskConfig: TaskConfig{
@@ -645,7 +645,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 			},
 		},
-		"with range overriden by spot count": {
+		"with range overridden by spot count": {
 			in: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					TaskConfig: TaskConfig{
@@ -682,7 +682,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 			},
 		},
-		"with range overriden by range config": {
+		"with range overridden by range config": {
 			in: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					TaskConfig: TaskConfig{
@@ -729,7 +729,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 			},
 		},
-		"with spot overriden by count value": {
+		"with spot overridden by count value": {
 			in: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					TaskConfig: TaskConfig{
@@ -758,6 +758,178 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 			},
 		},
+		"with image build overridden by image location": {
+			in: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./Dockerfile"),
+								},
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						ImageConfig: ImageWithPort{
+							Image: Image{
+								Location: aws.String("env-override location"),
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Location: aws.String("env-override location"),
+						},
+					},
+				},
+			},
+		},
+		"with image location overridden by image location": {
+			in: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Location: aws.String("default location"),
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						ImageConfig: ImageWithPort{
+							Image: Image{
+								Location: aws.String("env-override location"),
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Location: aws.String("env-override location"),
+						},
+					},
+				},
+			},
+		},
+		"with image build overridden by image build": {
+			in: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./Dockerfile"),
+								},
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						ImageConfig: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildString: aws.String("overridden build string"),
+							},
+						},
+					},
+				},
+			},
+		},
+		"with image location overridden by image build": {
+			in: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Location: aws.String("default location"),
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						ImageConfig: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildString: aws.String("overridden build string"),
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -769,6 +941,55 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 			require.Equal(t, tc.wanted, conf, "returned configuration should have overrides from the environment")
 		})
 	}
+}
+
+func Test_Temp(t *testing.T) {
+	t.Run("temporary", func(t *testing.T) {
+		// WHEN
+		in := &LoadBalancedWebService{
+			Workload: Workload{
+				Name: aws.String("phonetool"),
+				Type: aws.String(LoadBalancedWebServiceType),
+			},
+			LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+				ImageConfig: ImageWithPort{
+					Image: Image{
+						Build: BuildArgsOrString{
+							BuildArgs: DockerBuildArgs{
+								Dockerfile: aws.String("./Dockerfile"),
+							},
+						},
+						DockerLabels: map[string]string{
+							"label1": "value1",
+						},
+						DependsOn: map[string]string{
+							"depends1": "on1",
+						},
+					},
+					Port: aws.Uint16(80),
+				},
+			},
+			Environments: map[string]*LoadBalancedWebServiceConfig{
+				"prod-iad": {
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Location: aws.String("env-override location"),
+							DockerLabels: map[string]string{
+								"label2": "value2",
+							},
+							DependsOn: map[string]string{
+								"depends2": "on2",
+							},
+						},
+						Port: aws.Uint16(5000),
+					},
+				},
+			},
+		}
+		envToApply := "prod-iad"
+		conf, _ := in.ApplyEnv(envToApply)
+		fmt.Println(conf.(*LoadBalancedWebService).ImageConfig.Image)
+	})
 }
 
 func TestLoadBalancedWebService_BuildRequired(t *testing.T) {

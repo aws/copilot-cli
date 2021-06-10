@@ -95,10 +95,6 @@ func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConf
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
-	envManifest, err := mft.ApplyEnv(env)
-	if err != nil {
-		return nil, fmt.Errorf("apply environment %s override: %w", env, err)
-	}
 	return &ScheduledJob{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
@@ -106,13 +102,13 @@ func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConf
 				env:    env,
 				app:    app,
 				rc:     rc,
-				image:  envManifest.ImageConfig,
+				image:  mft.ImageConfig,
 				parser: parser,
 				addons: addons,
 			},
-			tc: envManifest.TaskConfig,
+			tc: mft.TaskConfig,
 		},
-		manifest: envManifest,
+		manifest: mft,
 
 		parser: parser,
 	}, nil

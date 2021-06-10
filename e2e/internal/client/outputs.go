@@ -208,3 +208,23 @@ func toEnvListOutput(jsonInput string) (*EnvListOutput, error) {
 	var output EnvListOutput
 	return &output, json.Unmarshal([]byte(jsonInput), &output)
 }
+
+// PipelineShowOutput represents the JSON output of the "pipeline show" command.
+type PipelineShowOutput struct {
+	Name   string `json:"name"`
+	Stages []struct {
+		Name     string `json:"name"`
+		Category string `json:"category"`
+	} `json:"stages"`
+}
+
+// PipelineStatusOutput represents the JSON output of the "pipeline status" command.
+type PipelineStatusOutput struct {
+	States []struct {
+		Name    string `json:"stageName"`
+		Actions []struct {
+			Name   string `json:"name"`
+			Status string `json:"status"`
+		} `json:"actions"`
+	} `json:"stageStates"`
+}
