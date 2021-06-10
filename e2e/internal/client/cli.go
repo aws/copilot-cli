@@ -643,10 +643,15 @@ func (cli *CLI) PipelineInit(app, url, branch string, envs []string) (string, er
 			"-e", strings.Join(envs, ",")))
 }
 
+// PipelineUpdate runs "copilot pipeline update".
+func (cli *CLI) PipelineUpdate(app string) (string, error) {
+	return cli.exec(exec.Command(cli.path, "pipeline", "update", "-a", app, "--yes"))
+}
+
 // PipelineShow runs "copilot pipeline show --json"
-func (cli *CLI) PipelineShow() (*PipelineShowOutput, error) {
+func (cli *CLI) PipelineShow(app string) (*PipelineShowOutput, error) {
 	text, err := cli.exec(
-		exec.Command(cli.path, "pipeline", "show", "--json"))
+		exec.Command(cli.path, "pipeline", "show", "-a", app, "--json"))
 	if err != nil {
 		return nil, err
 	}
@@ -658,9 +663,9 @@ func (cli *CLI) PipelineShow() (*PipelineShowOutput, error) {
 }
 
 // PipelineStatus runs "copilot pipeline status --json"
-func (cli *CLI) PipelineStatus() (*PipelineStatusOutput, error) {
+func (cli *CLI) PipelineStatus(app string) (*PipelineStatusOutput, error) {
 	text, err := cli.exec(
-		exec.Command(cli.path, "pipeline", "status", "--json"))
+		exec.Command(cli.path, "pipeline", "status", "-a", app, "--json"))
 	if err != nil {
 		return nil, err
 	}
