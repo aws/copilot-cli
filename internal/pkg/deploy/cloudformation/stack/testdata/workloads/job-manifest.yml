@@ -12,6 +12,8 @@ image:
   labels:
     com.amazonaws.ecs.copilot.description: Hello world!
   location: alpine
+  depends_on:
+    nginx: start
 
 # Number of CPU units for the task.
 cpu: 256
