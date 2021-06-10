@@ -52,10 +52,6 @@ func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app st
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
-	envManifest, err := mft.ApplyEnv(env) // Apply environment overrides to the manifest values.
-	if err != nil {
-		return nil, fmt.Errorf("apply environment %s override: %s", env, err)
-	}
 	return &LoadBalancedWebService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
@@ -63,13 +59,13 @@ func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app st
 				env:    env,
 				app:    app,
 				rc:     rc,
-				image:  envManifest.ImageConfig,
+				image:  mft.ImageConfig,
 				parser: parser,
 				addons: addons,
 			},
-			tc: envManifest.TaskConfig,
+			tc: mft.TaskConfig,
 		},
-		manifest:     envManifest,
+		manifest:     mft,
 		httpsEnabled: false,
 
 		parser: parser,
