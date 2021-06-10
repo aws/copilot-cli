@@ -8,7 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"strconv"
+
+	"github.com/imdario/mergo"
 
 	"github.com/google/shlex"
 
@@ -45,6 +48,11 @@ var (
 	errInvalidAutoscaling   = errors.New(`must specify "range" if using autoscaling`)
 )
 
+// WorkloadManifest represents a workload manifest.
+type WorkloadManifest interface {
+	ApplyEnv(envName string) (WorkloadManifest, error)
+}
+
 // WorkloadProps contains properties for creating a new workload manifest.
 type WorkloadProps struct {
 	Name       string
@@ -60,9 +68,48 @@ type Workload struct {
 
 // Image represents the workload's container image.
 type Image struct {
-	Build        BuildArgsOrString `yaml:"build"`       // Build an image from a Dockerfile.
-	Location     *string           `yaml:"location"`    // Use an existing image instead.
-	DockerLabels map[string]string `yaml:"labels,flow"` // Apply Docker labels to the container at runtime.
+	Build        BuildArgsOrString `yaml:"build"`           // Build an image from a Dockerfile.
+	Location     *string           `yaml:"location"`        // Use an existing image instead.
+	DockerLabels map[string]string `yaml:"labels,flow"`     // Apply Docker labels to the container at runtime.
+	DependsOn    map[string]string `yaml:"depends_on,flow"` // Add any sidecar dependencies.
+}
+
+type workloadTransformer struct{}
+
+// Transformer implements customized merge logic for Image field of manifest.
+// It merges `DockerLabels` and `DependsOn` in the default manager (i.e. with configurations mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+// And then overrides both `Build` and `Location` fields at the same time with the src values, given that they are non-empty themselves.
+func (t workloadTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ == reflect.TypeOf(Image{}) {
+		return transformImage()
+	}
+	return nil
+}
+
+func transformImage() func(dst, src reflect.Value) error {
+	return func(dst, src reflect.Value) error {
+		// Perform default merge
+		dstImage := dst.Interface().(Image)
+		srcImage := src.Interface().(Image)
+
+		err := mergo.Merge(&dstImage, srcImage, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+		if err != nil {
+			return err
+		}
+
+		// Perform customized merge
+		dstBuild := dst.FieldByName("Build")
+		dstLocation := dst.FieldByName("Location")
+
+		srcBuild := src.FieldByName("Build")
+		srcLocation := src.FieldByName("Location")
+
+		if !srcBuild.IsZero() || !srcLocation.IsZero() {
+			dstBuild.Set(srcBuild)
+			dstLocation.Set(srcLocation)
+		}
+		return nil
+	}
 }
 
 // ImageWithPort represents a container image with an exposed port.
@@ -375,6 +422,7 @@ type SidecarConfig struct {
 	Secrets      map[string]string   `yaml:"secrets"`
 	MountPoints  []SidecarMountPoint `yaml:"mount_points"`
 	DockerLabels map[string]string   `yaml:"labels"`
+	DependsOn    map[string]string   `yaml:"depends_on"`
 }
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
@@ -433,7 +481,7 @@ func (c vpcConfig) isValidPlacement() bool {
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.
 // If an error occurs during deserialization, then returns the error.
 // If the workload type in the manifest is invalid, then returns an ErrInvalidManifestType.
-func UnmarshalWorkload(in []byte) (interface{}, error) {
+func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
 	am := Workload{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
 		return nil, fmt.Errorf("unmarshal to workload manifest: %w", err)

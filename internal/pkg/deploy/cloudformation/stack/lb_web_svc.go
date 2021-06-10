@@ -52,10 +52,6 @@ func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app st
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
-	envManifest, err := mft.ApplyEnv(env) // Apply environment overrides to the manifest values.
-	if err != nil {
-		return nil, fmt.Errorf("apply environment %s override: %s", env, err)
-	}
 	return &LoadBalancedWebService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
@@ -63,13 +59,13 @@ func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app st
 				env:    env,
 				app:    app,
 				rc:     rc,
-				image:  envManifest.ImageConfig,
+				image:  mft.ImageConfig,
 				parser: parser,
 				addons: addons,
 			},
-			tc: envManifest.TaskConfig,
+			tc: mft.TaskConfig,
 		},
-		manifest:     envManifest,
+		manifest:     mft,
 		httpsEnabled: false,
 
 		parser: parser,
@@ -106,9 +102,18 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := convertSidecar(s.manifest.Sidecars)
+	convSidecarOpts := convertSidecarOpts{
+		sidecarConfig: s.manifest.Sidecars,
+		imageConfig:   &s.manifest.ImageConfig.Image,
+		workloadName:  aws.StringValue(s.manifest.Name),
+	}
+	sidecars, err := convertSidecar(convSidecarOpts)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
+	}
+	dependencies, err := convertImageDependsOn(convSidecarOpts)
+	if err != nil {
+		return "", fmt.Errorf("convert the container dependency for service %s: %w", s.name, err)
 	}
 
 	advancedCount, err := convertAdvancedCount(&s.manifest.Count.AdvancedCount)
@@ -168,6 +173,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Network:             convertNetworkConfig(s.manifest.Network),
 		EntryPoint:          entrypoint,
 		Command:             command,
+		DependsOn:           dependencies,
 	})
 	if err != nil {
 		return "", err

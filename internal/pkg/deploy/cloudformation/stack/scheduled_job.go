@@ -95,10 +95,6 @@ func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConf
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
-	envManifest, err := mft.ApplyEnv(env)
-	if err != nil {
-		return nil, fmt.Errorf("apply environment %s override: %w", env, err)
-	}
 	return &ScheduledJob{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
@@ -106,13 +102,13 @@ func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConf
 				env:    env,
 				app:    app,
 				rc:     rc,
-				image:  envManifest.ImageConfig,
+				image:  mft.ImageConfig,
 				parser: parser,
 				addons: addons,
 			},
-			tc: envManifest.TaskConfig,
+			tc: mft.TaskConfig,
 		},
-		manifest: envManifest,
+		manifest: mft,
 
 		parser: parser,
 	}, nil
@@ -124,12 +120,19 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	sidecars, err := convertSidecar(j.manifest.Sidecars)
+	convSidecarOpts := convertSidecarOpts{
+		sidecarConfig: j.manifest.Sidecars,
+		imageConfig:   &j.manifest.ImageConfig,
+		workloadName:  aws.StringValue(j.manifest.Name),
+	}
+	sidecars, err := convertSidecar(convSidecarOpts)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
 	}
-
+	dependencies, err := convertImageDependsOn(convSidecarOpts)
+	if err != nil {
+		return "", fmt.Errorf("convert container dependency for job %s: %w", j.name, err)
+	}
 	schedule, err := j.awsSchedule()
 	if err != nil {
 		return "", fmt.Errorf("convert schedule for job %s: %w", j.name, err)
@@ -171,6 +174,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		Network:            convertNetworkConfig(j.manifest.Network),
 		EntryPoint:         entrypoint,
 		Command:            command,
+		DependsOn:          dependencies,
 
 		EnvControllerLambda: envControllerLambda.String(),
 	})

@@ -1,6 +1,6 @@
 AWS Copilot コミュニティへようこそ ❤️
 
-[[アプリケーション、ブログ記事、動画](https://aws.github.io/copilot-cli/community/guides/)] のような AWS Copilot CLI に関連するリソースを皆で共有しましょう👩‍✈️
+[[アプリケーション、ブログ記事、動画](../community/guides.ja.md)] のような AWS Copilot CLI に関連するリソースを皆で共有しましょう👩‍✈️
 
 コミュニティへの参加方法は他にもあります！
 

@@ -118,7 +118,7 @@ Subnets and security groups attached to your tasks.
 Must be one of `'public'` or `'private'`. Defaults to launching your tasks in public subnets.
 
 !!! info
-    If you launch tasks in `'private'` subnets and use a Copilot-generated VPC, Copilot will add NAT Gateways to your environment. Alternatively, you can import a VPC with NAT Gateways when running `copilot env init` for internet connectivity.
+    If you launch tasks in `'private'` subnets and use a Copilot-generated VPC, Copilot will automatically add NAT Gateways to your environment for internet connectivity. (See [pricing](https://aws.amazon.com/vpc/pricing/).) Alternatively, when running `copilot env init`, you can import an existing VPC with NAT Gateways, or one with VPC endpoints for isolated workloads. See our [custom environment resources](../developing/custom-environment-resources.en.md) page for more.
 
 <span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings</span>  
 Additional security group IDs associated with your tasks. Copilot always includes a security group so containers within your environment
