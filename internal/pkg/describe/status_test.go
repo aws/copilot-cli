@@ -325,12 +325,28 @@ func TestServiceStatus_Describe(t *testing.T) {
 				TasksTargetHealth: []taskTargetHealth{
 					{
 						HealthStatus: elbv2.HealthStatus{
+							TargetID:    "4.3.2.1",
+							HealthState: "healthy",
+						},
+						TaskID:         "",
+						TargetGroupARN: "group-1",
+					},
+					{
+						HealthStatus: elbv2.HealthStatus{
 							TargetID:     "1.2.3.4",
 							HealthState:  "unhealthy",
 							HealthReason: "Target.ResponseCodeMismatch",
 						},
 						TaskID:         "task-with-private-ip-being-target",
 						TargetGroupARN: "group-1",
+					},
+					{
+						HealthStatus: elbv2.HealthStatus{
+							TargetID:    "4.3.2.1",
+							HealthState: "healthy",
+						},
+						TaskID:         "",
+						TargetGroupARN: "group-2",
 					},
 					{
 						HealthStatus: elbv2.HealthStatus{

@@ -111,6 +111,12 @@ type NewServiceStatusConfig struct {
 	ConfigStore ConfigStoreSvc
 }
 
+type taskTargetHealth struct {
+	HealthStatus   elbv2.HealthStatus `json:"healthStatus"`
+	TaskID         string             `json:"taskID"`
+	TargetGroupARN string             `json:"targetGroup"`
+}
+
 // NewECSStatusDescriber instantiates a new ECSStatusDescriber struct.
 func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, error) {
 	env, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
@@ -601,14 +607,8 @@ func withContainerHealthShow(config *ecsTaskStatusConfig) {
 	config.shouldShowContainerHealth = true
 }
 
-type taskTargetHealth struct {
-	HealthStatus   elbv2.HealthStatus `json:"healthStatus"`
-	TaskID         string             `json:"taskID"`
-	TargetGroupARN string             `json:"targetGroup"`
-}
-
 // targetHealthForTasks finds the target health in a target group, if any, for each task.
-func targetHealthForTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsecs.Task, targetGroupARN string) []taskTargetHealth {
+func targetHealthForTasks_Old(targetsHealth []*elbv2.TargetHealth, tasks []*awsecs.Task, targetGroupARN string) []taskTargetHealth {
 	var out []taskTargetHealth
 
 	// Create a set of target health to be matched against the tasks' private IP addresses.
@@ -641,6 +641,44 @@ func targetHealthForTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsecs.T
 		}
 	}
 
+	return out
+}
+
+// targetHealthForTasks finds the corresponding task, if any, for each target health in a target group.
+func targetHealthForTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsecs.Task, targetGroupARN string) []taskTargetHealth {
+	var out []taskTargetHealth
+
+	// Create a map from task's private IP address to task's ID to be matched against target's ID.
+	ipToTaskID := make(map[string]string)
+	for _, task := range tasks {
+		ip, err := task.PrivateIP()
+		if err != nil {
+			continue
+		}
+
+		taskID, err := awsecs.TaskID(aws.StringValue(task.TaskArn))
+		if err != nil {
+			continue
+		}
+
+		ipToTaskID[ip] = taskID
+	}
+
+	// For each target, check if its health check is actually checking against one of the tasks.
+	// If the target is an IP target, then its ID is the IP address.
+	// If a task is running on that IP address, then effectively the target's health check is checking against that task.
+	for _, th := range targetsHealth {
+		targetID := th.TargetID()
+		taskID, ok := ipToTaskID[targetID]
+		if !ok {
+			taskID = ""
+		}
+		out = append(out, taskTargetHealth{
+			HealthStatus:   *th.HealthStatus(),
+			TargetGroupARN: targetGroupARN,
+			TaskID:         taskID,
+		})
+	}
 	return out
 }
 
