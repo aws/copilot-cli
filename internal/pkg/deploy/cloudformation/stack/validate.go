@@ -44,9 +44,9 @@ var (
 
 // Container dependency status options
 var (
-	essentialContainerValidStatus = []string{dependsOnStart, dependsOnHealthy}
-	dependsOnValidStatus          = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
-	sidecarDependsOnValidStatus   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess}
+	essentialContainerValidStatuses = []string{dependsOnStart, dependsOnHealthy}
+	dependsOnValidStatuses          = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
+	sidecarDependsOnValidStatuses   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess}
 )
 
 // Validate that paths contain only an approved set of characters to guard against command injection.
@@ -145,7 +145,7 @@ func isSidecar(container string, sidecars map[string]*manifest.SidecarConfig) bo
 
 func isValidStatusForContainer(status string, container string, c convertSidecarOpts) (bool, error) {
 	if isSidecar(container, c.sidecarConfig) {
-		for _, allowed := range sidecarDependsOnValidStatus {
+		for _, allowed := range sidecarDependsOnValidStatuses {
 			if status == allowed {
 				return true, nil
 			}
@@ -153,7 +153,7 @@ func isValidStatusForContainer(status string, container string, c convertSidecar
 		return false, errInvalidSidecarDependsOnStatus
 	}
 
-	for _, allowed := range dependsOnValidStatus {
+	for _, allowed := range dependsOnValidStatuses {
 		if status == allowed {
 			return true, nil
 		}
@@ -180,7 +180,7 @@ func isEssentialStatus(status string, container string, c convertSidecarOpts) (b
 		return false, errEssentialSidecarStatus
 	}
 
-	for _, allowed := range essentialContainerValidStatus {
+	for _, allowed := range essentialContainerValidStatuses {
 		if status == allowed {
 			return true, nil
 		}
