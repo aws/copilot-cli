@@ -378,7 +378,13 @@ func (s *ecsServiceStatus) writeTaskSummary(writer io.Writer) {
 		}
 	}
 
-	// Write summary of running tasks.
+	s.writeRunningTasksSummary(writer, primaryDeployment, activeDeployments)
+	s.writeDeploymentsSummary(writer, primaryDeployment, activeDeployments)
+	s.writeHealthSummary(writer, primaryDeployment, activeDeployments)
+	s.writeCapacityProvidersSummary(writer)
+}
+
+func (s *ecsServiceStatus) writeRunningTasksSummary(writer io.Writer, primaryDeployment awsecs.Deployment, activeDeployments []awsecs.Deployment) {
 	header := "Running"
 	var (
 		barData            []int
@@ -400,75 +406,84 @@ func (s *ecsServiceStatus) writeTaskSummary(writer io.Writer) {
 	bar := summaryBar(barData, barRepresentations)
 	stringSummary := fmt.Sprintf("%d/%d desired tasks are running", s.Service.RunningCount, s.Service.DesiredCount)
 	fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+}
 
-	// Write summary of primary deployment and active deployments.
-	if len(activeDeployments) > 0 {
-		// Show "Deployments" section only if there are "ACTIVE" deployments in addition to the "PRIMARY" deployment.
-		// This is because if there aren't any "ACTIVE" deployment, then this section would have been showing the same
-		// information as the "Running" section.
-		header := "Deployments"
-		bar, stringSummary := summaryOfDeployment(primaryDeployment, []string{color.Green.Sprint("█"), color.Green.Sprint("░")})
-		fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
-		for _, deployment := range activeDeployments {
-			bar, stringSummary := summaryOfDeployment(deployment, []string{color.Blue.Sprint("█"), color.Blue.Sprint("░")})
-			fmt.Fprintf(writer, "  %s\t%s\t%s\n", "", bar, stringSummary)
-		}
+func (s *ecsServiceStatus) writeDeploymentsSummary(writer io.Writer, primaryDeployment awsecs.Deployment, activeDeployments []awsecs.Deployment) {
+	if len(activeDeployments) <= 0 {
+		return
 	}
 
-	// Write summary of HTTP health and container health of tasks in primary deployment.
+	// Show "Deployments" section only if there are "ACTIVE" deployments in addition to the "PRIMARY" deployment.
+	// This is because if there aren't any "ACTIVE" deployment, then this section would have been showing the same
+	// information as the "Running" section.
+	header := "Deployments"
+	bar, stringSummary := summaryOfDeployment(primaryDeployment, []string{color.Green.Sprint("█"), color.Green.Sprint("░")})
+	fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+	for _, deployment := range activeDeployments {
+		bar, stringSummary := summaryOfDeployment(deployment, []string{color.Blue.Sprint("█"), color.Blue.Sprint("░")})
+		fmt.Fprintf(writer, "  %s\t%s\t%s\n", "", bar, stringSummary)
+	}
+}
+
+func (s *ecsServiceStatus) writeHealthSummary(writer io.Writer, primaryDeployment awsecs.Deployment, activeDeployments []awsecs.Deployment) {
 	revision, _ := awsecs.TaskDefinitionVersion(primaryDeployment.TaskDefinition)
 	primaryTasks := s.tasksOfRevision(revision)
+
 	shouldShowHTTPHealth := anyTasksInAnyTargetGroup(primaryTasks, s.TargetHealthDescriptions)
-	shouldShowContainerHealth := !isContainerHealthCheckEnabled(primaryTasks)
-	if shouldShowHTTPHealth || shouldShowContainerHealth {
-		header := "Health"
-
-		var revisionInfo string
-		if len(activeDeployments) > 0 {
-			revisionInfo = fmt.Sprintf(" (rev %d)", revision)
-		}
-
-		if shouldShowHTTPHealth {
-			healthyCount := countHealthyHTTPTasks(primaryTasks, s.TargetHealthDescriptions)
-			bar := summaryBar(
-				[]int{
-					healthyCount,
-					(int)(primaryDeployment.DesiredCount) - healthyCount,
-				},
-				[]string{color.Green.Sprint("█"), color.Green.Sprint("░")})
-			stringSummary := fmt.Sprintf("%d/%d passes HTTP health checks%s", healthyCount, primaryDeployment.DesiredCount, revisionInfo)
-			fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
-			header = ""
-		}
-
-		if shouldShowContainerHealth {
-			healthyCount, _, _ := containerHealthBreakDownByCount(primaryTasks)
-			bar := summaryBar(
-				[]int{
-					healthyCount,
-					(int)(primaryDeployment.DesiredCount) - healthyCount,
-				},
-				[]string{color.Green.Sprint("█"), color.Green.Sprint("░")})
-			stringSummary := fmt.Sprintf("%d/%d passes container health checks%s", healthyCount, primaryDeployment.DesiredCount, revisionInfo)
-			fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
-		}
+	shouldShowContainerHealth := isContainerHealthCheckEnabled(primaryTasks)
+	if !shouldShowHTTPHealth && !shouldShowContainerHealth {
+		return
 	}
 
-	// Write summary of capacity providers.
+	header := "Health"
+
+	var revisionInfo string
+	if len(activeDeployments) > 0 {
+		revisionInfo = fmt.Sprintf(" (rev %d)", revision)
+	}
+
+	if shouldShowHTTPHealth {
+		healthyCount := countHealthyHTTPTasks(primaryTasks, s.TargetHealthDescriptions)
+		bar := summaryBar(
+			[]int{
+				healthyCount,
+				(int)(primaryDeployment.DesiredCount) - healthyCount,
+			},
+			[]string{color.Green.Sprint("█"), color.Green.Sprint("░")})
+		stringSummary := fmt.Sprintf("%d/%d passes HTTP health checks%s", healthyCount, primaryDeployment.DesiredCount, revisionInfo)
+		fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+		header = ""
+	}
+
+	if shouldShowContainerHealth {
+		healthyCount, _, _ := containerHealthBreakDownByCount(primaryTasks)
+		bar := summaryBar(
+			[]int{
+				healthyCount,
+				(int)(primaryDeployment.DesiredCount) - healthyCount,
+			},
+			[]string{color.Green.Sprint("█"), color.Green.Sprint("░")})
+		stringSummary := fmt.Sprintf("%d/%d passes container health checks%s", healthyCount, primaryDeployment.DesiredCount, revisionInfo)
+		fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+	}
+}
+
+func (s *ecsServiceStatus) writeCapacityProvidersSummary(writer io.Writer) {
 	if !isCapacityProvidersEnabled(s.DesiredRunningTasks) {
-		header := "Capacity Provider"
-		fargate, spot, empty := capacityProvidersBreakDownByCount(s.DesiredRunningTasks)
-		bar := summaryBar([]int{fargate + empty, spot}, []string{color.Grey.Sprintf("▒"), color.Grey.Sprintf("▓")})
-		var cpSummaries []string
-		if fargate+empty != 0 {
-			// We consider those with empty capacity provider field as "FARGATE"
-			cpSummaries = append(cpSummaries, fmt.Sprintf("%d/%d on Fargate", fargate+empty, s.Service.RunningCount))
-		}
-		if spot != 0 {
-			cpSummaries = append(cpSummaries, fmt.Sprintf("%d/%d on Fargate Spot", spot, s.Service.RunningCount))
-		}
-		fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, strings.Join(cpSummaries, ", "))
+		return
 	}
+	header := "Capacity Provider"
+	fargate, spot, empty := capacityProvidersBreakDownByCount(s.DesiredRunningTasks)
+	bar := summaryBar([]int{fargate + empty, spot}, []string{color.Grey.Sprintf("▒"), color.Grey.Sprintf("▓")})
+	var cpSummaries []string
+	if fargate+empty != 0 {
+		// We consider those with empty capacity provider field as "FARGATE"
+		cpSummaries = append(cpSummaries, fmt.Sprintf("%d/%d on Fargate", fargate+empty, s.Service.RunningCount))
+	}
+	if spot != 0 {
+		cpSummaries = append(cpSummaries, fmt.Sprintf("%d/%d on Fargate Spot", spot, s.Service.RunningCount))
+	}
+	fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, strings.Join(cpSummaries, ", "))
 }
 
 func (s *ecsServiceStatus) writeStoppedTasks(writer io.Writer) {
@@ -491,8 +506,8 @@ func (s *ecsServiceStatus) writeStoppedTasks(writer io.Writer) {
 
 func (s *ecsServiceStatus) writeRunningTasks(writer io.Writer) {
 	shouldShowHTTPHealth := anyTasksInAnyTargetGroup(s.DesiredRunningTasks, s.TargetHealthDescriptions)
-	shouldShowCapacityProvider := !isCapacityProvidersEnabled(s.DesiredRunningTasks)
-	shouldShowContainerHealth := !isContainerHealthCheckEnabled(s.DesiredRunningTasks)
+	shouldShowCapacityProvider := isCapacityProvidersEnabled(s.DesiredRunningTasks)
+	shouldShowContainerHealth := isContainerHealthCheckEnabled(s.DesiredRunningTasks)
 
 	taskToHealth := summarizeHTTPHealthForTasks(s.TargetHealthDescriptions)
 
