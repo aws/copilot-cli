@@ -15,11 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type jobLogsMock struct {
-	configStore *mocks.Mockstore
-	sel         *mocks.MockdeploySelector
-}
-
 func TestJobLogs_Validate(t *testing.T) {
 	const (
 		mockSince        = 1 * time.Minute
