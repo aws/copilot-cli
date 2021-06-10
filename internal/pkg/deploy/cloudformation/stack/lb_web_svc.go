@@ -102,9 +102,18 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := convertSidecar(s.manifest.Sidecars)
+	convSidecarOpts := convertSidecarOpts{
+		sidecarConfig: s.manifest.Sidecars,
+		imageConfig:   &s.manifest.ImageConfig.Image,
+		workloadName:  aws.StringValue(s.manifest.Name),
+	}
+	sidecars, err := convertSidecar(convSidecarOpts)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
+	}
+	dependencies, err := convertImageDependsOn(convSidecarOpts)
+	if err != nil {
+		return "", fmt.Errorf("convert the container dependency for service %s: %w", s.name, err)
 	}
 
 	advancedCount, err := convertAdvancedCount(&s.manifest.Count.AdvancedCount)
@@ -164,6 +173,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Network:             convertNetworkConfig(s.manifest.Network),
 		EntryPoint:          entrypoint,
 		Command:             command,
+		DependsOn:           dependencies,
 	})
 	if err != nil {
 		return "", err
