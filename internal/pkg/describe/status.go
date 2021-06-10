@@ -418,8 +418,8 @@ func (s *ecsServiceStatus) writeTaskSummary(writer io.Writer) {
 	// Write summary of HTTP health and container health of tasks in primary deployment.
 	revision, _ := awsecs.TaskDefinitionVersion(primaryDeployment.TaskDefinition)
 	primaryTasks := s.tasksOfRevision(revision)
-	shouldShowHTTPHealth := anyTaskATarget(primaryTasks, s.TargetHealthDescriptions)
-	shouldShowContainerHealth := !allContainerHealthEmpty(primaryTasks)
+	shouldShowHTTPHealth := anyTasksInAnyTargetGroup(primaryTasks, s.TargetHealthDescriptions)
+	shouldShowContainerHealth := !isContainerHealthCheckEnabled(primaryTasks)
 	if shouldShowHTTPHealth || shouldShowContainerHealth {
 		header := "Health"
 
@@ -429,7 +429,7 @@ func (s *ecsServiceStatus) writeTaskSummary(writer io.Writer) {
 		}
 
 		if shouldShowHTTPHealth {
-			healthyCount := healthyHTTPTaskCountInTasks(primaryTasks, s.TargetHealthDescriptions)
+			healthyCount := countHealthyHTTPTasks(primaryTasks, s.TargetHealthDescriptions)
 			bar := summaryBar(
 				[]int{
 					healthyCount,
@@ -442,7 +442,7 @@ func (s *ecsServiceStatus) writeTaskSummary(writer io.Writer) {
 		}
 
 		if shouldShowContainerHealth {
-			healthyCount, _, _ := containerHealthDataForTasks(primaryTasks)
+			healthyCount, _, _ := containerHealthBreakDownByCount(primaryTasks)
 			bar := summaryBar(
 				[]int{
 					healthyCount,
@@ -455,9 +455,9 @@ func (s *ecsServiceStatus) writeTaskSummary(writer io.Writer) {
 	}
 
 	// Write summary of capacity providers.
-	if !allCapacityProviderEmpty(s.DesiredRunningTasks) {
+	if !isCapacityProvidersEnabled(s.DesiredRunningTasks) {
 		header := "Capacity Provider"
-		fargate, spot, empty := capacityProviderDataForTasks(s.DesiredRunningTasks)
+		fargate, spot, empty := capacityProvidersBreakDownByCount(s.DesiredRunningTasks)
 		bar := summaryBar([]int{fargate + empty, spot}, []string{color.Grey.Sprintf("▒"), color.Grey.Sprintf("▓")})
 		var cpSummaries []string
 		if fargate+empty != 0 {
@@ -490,9 +490,9 @@ func (s *ecsServiceStatus) writeStoppedTasks(writer io.Writer) {
 }
 
 func (s *ecsServiceStatus) writeRunningTasks(writer io.Writer) {
-	shouldShowHTTPHealth := anyTaskATarget(s.DesiredRunningTasks, s.TargetHealthDescriptions)
-	shouldShowCapacityProvider := !allCapacityProviderEmpty(s.DesiredRunningTasks)
-	shouldShowContainerHealth := !allContainerHealthEmpty(s.DesiredRunningTasks)
+	shouldShowHTTPHealth := anyTasksInAnyTargetGroup(s.DesiredRunningTasks, s.TargetHealthDescriptions)
+	shouldShowCapacityProvider := !isCapacityProvidersEnabled(s.DesiredRunningTasks)
+	shouldShowContainerHealth := !isContainerHealthCheckEnabled(s.DesiredRunningTasks)
 
 	taskToHealth := summarizeHTTPHealthForTasks(s.TargetHealthDescriptions)
 

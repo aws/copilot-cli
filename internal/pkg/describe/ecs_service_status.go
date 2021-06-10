@@ -10,27 +10,28 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 )
 
-func allContainerHealthEmpty(tasks []ecs.TaskStatus) bool {
-	// A container health is considered empty if it is empty or UNKNOWN
+func isContainerHealthCheckEnabled(tasks []ecs.TaskStatus) bool {
+	// If all of the tasks container health is empty or UNKNOWN, then the container health check
+	// is *typically* NOT enabled.
 	for _, t := range tasks {
 		if t.Health != ecs.TaskContainerHealthStatusUnknown && t.Health != "" {
-			return false
+			return true
 		}
 	}
-	return true
+	return false
 }
 
-func allCapacityProviderEmpty(tasks []ecs.TaskStatus) bool {
+func isCapacityProvidersEnabled(tasks []ecs.TaskStatus) bool {
 	for _, task := range tasks {
 		if task.CapacityProvider != "" {
-			return false
+			return true
 		}
 	}
-	return true
+	return false
 }
 
-func anyTaskATarget(tasks []ecs.TaskStatus, targetsHealth []taskTargetHealth) bool {
-	taskToHealth := summarizeHTTPHealthForTasks(targetsHealth)
+func anyTasksInAnyTargetGroup(tasks []ecs.TaskStatus, targetHealthDescriptions []taskTargetHealth) bool {
+	taskToHealth := summarizeHTTPHealthForTasks(targetHealthDescriptions)
 	for _, t := range tasks {
 		if _, ok := taskToHealth[t.ID]; ok {
 			return true
@@ -39,7 +40,7 @@ func anyTaskATarget(tasks []ecs.TaskStatus, targetsHealth []taskTargetHealth) bo
 	return false
 }
 
-func containerHealthDataForTasks(tasks []ecs.TaskStatus) (healthy int, unhealthy int, unknown int) {
+func containerHealthBreakDownByCount(tasks []ecs.TaskStatus) (healthy int, unhealthy int, unknown int) {
 	for _, t := range tasks {
 		switch strings.ToUpper(t.Health) {
 		case ecs.TaskContainerHealthStatusHealthy:
@@ -53,9 +54,9 @@ func containerHealthDataForTasks(tasks []ecs.TaskStatus) (healthy int, unhealthy
 	return
 }
 
-func healthyHTTPTaskCountInTasks(tasks []ecs.TaskStatus, targetsHealth []taskTargetHealth) int {
+func countHealthyHTTPTasks(tasks []ecs.TaskStatus, targetHealthDescriptions []taskTargetHealth) int {
 	var count int
-	taskToHealth := summarizeHTTPHealthForTasks(targetsHealth)
+	taskToHealth := summarizeHTTPHealthForTasks(targetHealthDescriptions)
 	for _, t := range tasks {
 		// A task is healthy if it has health states and all of its states are healthy
 		if _, ok := taskToHealth[t.ID]; !ok {
@@ -85,7 +86,7 @@ func summarizeHTTPHealthForTasks(targetsHealth []taskTargetHealth) map[string][]
 	return out
 }
 
-func capacityProviderDataForTasks(tasks []ecs.TaskStatus) (fargate, spot, empty int) {
+func capacityProvidersBreakDownByCount(tasks []ecs.TaskStatus) (fargate, spot, empty int) {
 	for _, t := range tasks {
 		switch strings.ToUpper(t.CapacityProvider) {
 		case ecs.TaskCapacityProviderFargate:
