@@ -106,6 +106,7 @@ const requestCertificate = async function (
 ) {
   const crypto = require("crypto");
   const [acm, envRoute53, appRoute53] = clients(region, rootDnsRole);
+  // For backward compatiblity.
   const sansToUse = [`*.${certDomain}`];
   for (const alias of aliases) {
     sansToUse.push(alias);
@@ -511,16 +512,16 @@ const getAllAliases = function (aliases) {
 };
 
 const getDomainType = function (alias) {
-  switch (true) {
-    case domainTypes.EnvDomainZone.regex.test(alias):
-      return domainTypes.EnvDomainZone;
-    case domainTypes.AppDomainZone.regex.test(alias):
-      return domainTypes.AppDomainZone;
-    case domainTypes.RootDomainZone.regex.test(alias):
-      return domainTypes.RootDomainZone;
-    default:
-      return domainTypes.OtherDomainZone;
+  if (domainTypes.EnvDomainZone.regex.test(alias)) {
+    return domainTypes.EnvDomainZone;
   }
+  if (domainTypes.AppDomainZone.regex.test(alias)) {
+    return domainTypes.AppDomainZone;
+  }
+  if (domainTypes.RootDomainZone.regex.test(alias)) {
+    return domainTypes.RootDomainZone;
+  }
+  return domainTypes.OtherDomainZone;
 };
 
 const clients = function (region, rootDnsRole) {
@@ -571,7 +572,34 @@ exports.certificateRequestHandler = async function (event, context) {
     var aliases = await getAllAliases(props.Aliases);
     switch (event.RequestType) {
       case "Create":
+        certificateArn = await requestCertificate(
+          event.RequestId,
+          props.AppName,
+          props.EnvName,
+          certDomain,
+          [...aliases],
+          props.EnvHostedZoneId,
+          props.RootDNSRole,
+          props.Region
+        );
+        responseData.Arn = physicalResourceId = certificateArn;
+        break;
       case "Update":
+        // Exit early if cert doesn't change.
+        if (event.OldResourceProperties) {
+          var prevAliases = await getAllAliases(
+            event.OldResourceProperties.Aliases
+          );
+          var aliasesToDelete = [...prevAliases].filter(function (itm) {
+            return !aliases.has(itm);
+          });
+          var aliasesToAdd = [...aliases].filter(function (itm) {
+            return !prevAliases.has(itm);
+          });
+          if (aliasesToAdd.length + aliasesToDelete.length === 0) {
+            break;
+          }
+        }
         certificateArn = await requestCertificate(
           event.RequestId,
           props.AppName,

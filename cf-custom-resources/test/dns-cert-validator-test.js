@@ -22,6 +22,10 @@ describe("DNS Validated Certificate Handler", () => {
     "frontend": ["v1.${testAppName}.${testDomainName}", "foobar.com"],
     "backend": ["v2.${testDomainName}"]
   }`;
+  const testUpdatedAliases = `{
+    "frontend": ["v1.${testAppName}.${testDomainName}"],
+    "backend": ["v2.${testDomainName}"]
+  }`;
   const testSANs = ["*.test.myapp.example.com", "v1.myapp.example.com", "v2.example.com"];
   const testCopilotTags = [
     { Key: "copilot-application", Value: testAppName },
@@ -276,7 +280,7 @@ describe("DNS Validated Certificate Handler", () => {
       });
   });
 
-  test("Create operation requests a new certificate", () => {
+  test("Update operation requests a new certificate", () => {
     const requestCertificateFake = sinon.fake.resolves({
       CertificateArn: testCertificateArn,
     });
@@ -325,7 +329,7 @@ describe("DNS Validated Certificate Handler", () => {
 
     return LambdaTester(handler.certificateRequestHandler)
       .event({
-        RequestType: "Create",
+        RequestType: "Update",
         RequestId: testRequestId,
         ResourceProperties: {
           AppName: testAppName,
@@ -336,6 +340,7 @@ describe("DNS Validated Certificate Handler", () => {
           Region: "us-east-1",
           RootDNSRole: testRootDNSRole,
         },
+        OldResourceProperties: {}
       })
       .expectResolve(() => {
         sinon.assert.calledWith(
@@ -388,6 +393,35 @@ describe("DNS Validated Certificate Handler", () => {
             MaxItems: "1",
           })
         );
+        expect(request.isDone()).toBe(true);
+      });
+  });
+
+  test("Update operation quits early if cert doesn't change", () => {
+    const request = nock(ResponseURL)
+      .put("/", (body) => {
+        return body.Status === "SUCCESS";
+      })
+      .reply(200);
+
+    return LambdaTester(handler.certificateRequestHandler)
+      .event({
+        RequestType: "Update",
+        RequestId: testRequestId,
+        ResourceProperties: {
+          AppName: testAppName,
+          EnvName: testEnvName,
+          DomainName: testDomainName,
+          Aliases: testAliases,
+          EnvHostedZoneId: testHostedZoneId,
+          Region: "us-east-1",
+          RootDNSRole: testRootDNSRole,
+        },
+        OldResourceProperties: {
+          Aliases: testUpdatedAliases,
+        },
+      })
+      .expectResolve(() => {
         expect(request.isDone()).toBe(true);
       });
   });
