@@ -194,8 +194,8 @@ func TestServiceStatus_Describe(t *testing.T) {
 						StartedAt: startTime,
 					},
 				},
-				StoppedTasks:      nil,
-				TasksTargetHealth: nil,
+				StoppedTasks:             nil,
+				TargetHealthDescriptions: nil,
 			},
 		},
 		"retrieve all target health information in service": {
@@ -322,7 +322,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 						ID: "task-with-private-ip-not-a-target",
 					},
 				},
-				TasksTargetHealth: []taskTargetHealth{
+				TargetHealthDescriptions: []taskTargetHealth{
 					{
 						HealthStatus: elbv2.HealthStatus{
 							TargetID:    "4.3.2.1",
@@ -682,7 +682,7 @@ Alarms
 						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 					},
 				},
-				TasksTargetHealth: []taskTargetHealth{
+				TargetHealthDescriptions: []taskTargetHealth{
 					{
 						HealthStatus: elbv2.HealthStatus{
 							TargetID:     "1.1.1.1",
@@ -915,7 +915,7 @@ Tasks
 						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 					},
 				},
-				TasksTargetHealth: []taskTargetHealth{
+				TargetHealthDescriptions: []taskTargetHealth{
 					{
 						HealthStatus: elbv2.HealthStatus{
 							TargetID:     "1.1.1.1",

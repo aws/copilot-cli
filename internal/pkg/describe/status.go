@@ -90,11 +90,11 @@ type AppRunnerStatusDescriber struct {
 
 // ecsServiceStatus contains the status for an ECS service.
 type ecsServiceStatus struct {
-	Service             awsecs.ServiceStatus
-	DesiredRunningTasks []awsecs.TaskStatus      `json:"tasks"`
-	Alarms              []cloudwatch.AlarmStatus `json:"alarms"`
-	StoppedTasks        []awsecs.TaskStatus      `json:"stoppedTasks"`
-	TasksTargetHealth   []taskTargetHealth       `json:"targetsHealth"`
+	Service                  awsecs.ServiceStatus
+	DesiredRunningTasks      []awsecs.TaskStatus      `json:"tasks"`
+	Alarms                   []cloudwatch.AlarmStatus `json:"alarms"`
+	StoppedTasks             []awsecs.TaskStatus      `json:"stoppedTasks"`
+	TargetHealthDescriptions []taskTargetHealth       `json:"targetHealthDescriptions"`
 }
 
 // appRunnerServiceStatus contains the status for an AppRunner service.
@@ -113,7 +113,7 @@ type NewServiceStatusConfig struct {
 
 type taskTargetHealth struct {
 	HealthStatus   elbv2.HealthStatus `json:"healthStatus"`
-	TaskID         string             `json:"taskID"`
+	TaskID         string             `json:"taskID"` // TaskID is empty if the target cannot be traced to a task.
 	TargetGroupARN string             `json:"targetGroup"`
 }
 
@@ -223,11 +223,11 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 	})
 
 	return &ecsServiceStatus{
-		Service:             service.ServiceStatus(),
-		DesiredRunningTasks: taskStatus,
-		Alarms:              alarms,
-		StoppedTasks:        stoppedTaskStatus,
-		TasksTargetHealth:   tasksTargetHealth,
+		Service:                  service.ServiceStatus(),
+		DesiredRunningTasks:      taskStatus,
+		Alarms:                   alarms,
+		StoppedTasks:             stoppedTaskStatus,
+		TargetHealthDescriptions: tasksTargetHealth,
 	}, nil
 }
 
@@ -418,7 +418,7 @@ func (s *ecsServiceStatus) writeTaskSummary(writer io.Writer) {
 	// Write summary of HTTP health and container health of tasks in primary deployment.
 	revision, _ := awsecs.TaskDefinitionVersion(primaryDeployment.TaskDefinition)
 	primaryTasks := s.tasksOfRevision(revision)
-	shouldShowHTTPHealth := anyTaskATarget(primaryTasks, s.TasksTargetHealth)
+	shouldShowHTTPHealth := anyTaskATarget(primaryTasks, s.TargetHealthDescriptions)
 	shouldShowContainerHealth := !allContainerHealthEmpty(primaryTasks)
 	if shouldShowHTTPHealth || shouldShowContainerHealth {
 		header := "Health"
@@ -429,7 +429,7 @@ func (s *ecsServiceStatus) writeTaskSummary(writer io.Writer) {
 		}
 
 		if shouldShowHTTPHealth {
-			healthyCount := healthyHTTPTaskCountInTasks(primaryTasks, s.TasksTargetHealth)
+			healthyCount := healthyHTTPTaskCountInTasks(primaryTasks, s.TargetHealthDescriptions)
 			bar := summaryBar(
 				[]int{
 					healthyCount,
@@ -490,11 +490,11 @@ func (s *ecsServiceStatus) writeStoppedTasks(writer io.Writer) {
 }
 
 func (s *ecsServiceStatus) writeRunningTasks(writer io.Writer) {
-	shouldShowHTTPHealth := anyTaskATarget(s.DesiredRunningTasks, s.TasksTargetHealth)
+	shouldShowHTTPHealth := anyTaskATarget(s.DesiredRunningTasks, s.TargetHealthDescriptions)
 	shouldShowCapacityProvider := !allCapacityProviderEmpty(s.DesiredRunningTasks)
 	shouldShowContainerHealth := !allContainerHealthEmpty(s.DesiredRunningTasks)
 
-	taskToHealth := summarizeHTTPHealthForTasks(s.TasksTargetHealth)
+	taskToHealth := summarizeHTTPHealthForTasks(s.TargetHealthDescriptions)
 
 	headers := []string{"ID", "Status", "Revision", "Started At"}
 

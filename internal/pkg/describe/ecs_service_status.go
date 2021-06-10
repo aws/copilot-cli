@@ -77,6 +77,9 @@ func healthyHTTPTaskCountInTasks(tasks []ecs.TaskStatus, targetsHealth []taskTar
 func summarizeHTTPHealthForTasks(targetsHealth []taskTargetHealth) map[string][]string {
 	out := make(map[string][]string)
 	for _, th := range targetsHealth {
+		if th.TaskID == "" {
+			continue
+		}
 		out[th.TaskID] = append(out[th.TaskID], th.HealthStatus.HealthState)
 	}
 	return out
