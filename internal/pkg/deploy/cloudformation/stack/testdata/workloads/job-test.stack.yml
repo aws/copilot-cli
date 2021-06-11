@@ -150,6 +150,9 @@ Resources:
           DockerLabels:
             com.amazonaws.ecs.copilot.coollabel: Synecdoche
             com.amazonaws.ecs.copilot.description: Hello world!
+          DependsOn:
+            - Condition: START
+              ContainerName: nginx
         - Name: nginx
           Image: 'public.ecr.aws/nginx/nginx'
           LogConfiguration:
