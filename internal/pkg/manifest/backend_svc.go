@@ -45,7 +45,7 @@ type BackendServiceConfig struct {
 func NewBackendService(props BackendServiceProps) *BackendService {
 	svc := newDefaultBackendService()
 	// Apply overrides.
-	svc.Name = aws.String(props.Name)
+	svc.Name = stringP(props.Name)
 	svc.BackendServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.BackendServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.BackendServiceConfig.ImageConfig.Port = uint16P(props.Port)

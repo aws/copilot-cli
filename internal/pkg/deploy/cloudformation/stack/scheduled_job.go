@@ -122,7 +122,7 @@ func (j *ScheduledJob) Template() (string, error) {
 	}
 	convSidecarOpts := convertSidecarOpts{
 		sidecarConfig: j.manifest.Sidecars,
-		imageConfig:   &j.manifest.ImageConfig,
+		imageConfig:   &j.manifest.ImageConfig.Image,
 		workloadName:  aws.StringValue(j.manifest.Name),
 	}
 	sidecars, err := convertSidecar(convSidecarOpts)

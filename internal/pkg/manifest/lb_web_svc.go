@@ -84,7 +84,7 @@ type LoadBalancedWebServiceProps struct {
 func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalancedWebService {
 	svc := newDefaultLoadBalancedWebService()
 	// Apply overrides.
-	svc.Name = aws.String(props.Name)
+	svc.Name = stringP(props.Name)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)

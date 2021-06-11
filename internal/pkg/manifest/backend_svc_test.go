@@ -317,7 +317,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: imageWithPortAndHealthcheck{
+			ImageConfig: ImageWithPortAndHealthcheck{
 				ImageWithPort: ImageWithPort{
 					Image: Image{
 						Build: BuildArgsOrString{
@@ -331,7 +331,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		},
 		Environments: map[string]*BackendServiceConfig{
 			"prod-iad": {
-				ImageConfig: imageWithPortAndHealthcheck{
+				ImageConfig: ImageWithPortAndHealthcheck{
 					ImageWithPort: ImageWithPort{
 						Image: Image{
 							Location: aws.String("env-override location"),
@@ -347,7 +347,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: imageWithPortAndHealthcheck{
+			ImageConfig: ImageWithPortAndHealthcheck{
 				ImageWithPort: ImageWithPort{
 					Image: Image{
 						Location: aws.String("original location"),
@@ -357,7 +357,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		},
 		Environments: map[string]*BackendServiceConfig{
 			"prod-iad": {
-				ImageConfig: imageWithPortAndHealthcheck{
+				ImageConfig: ImageWithPortAndHealthcheck{
 					ImageWithPort: ImageWithPort{
 						Image: Image{
 							Location: aws.String("env-override location"),
@@ -373,7 +373,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: imageWithPortAndHealthcheck{
+			ImageConfig: ImageWithPortAndHealthcheck{
 				ImageWithPort: ImageWithPort{
 					Image: Image{
 						Build: BuildArgsOrString{
@@ -388,7 +388,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		},
 		Environments: map[string]*BackendServiceConfig{
 			"prod-iad": {
-				ImageConfig: imageWithPortAndHealthcheck{
+				ImageConfig: ImageWithPortAndHealthcheck{
 					ImageWithPort: ImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
@@ -406,7 +406,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: imageWithPortAndHealthcheck{
+			ImageConfig: ImageWithPortAndHealthcheck{
 				ImageWithPort: ImageWithPort{
 					Image: Image{
 						Location: aws.String("original location"),
@@ -416,7 +416,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		},
 		Environments: map[string]*BackendServiceConfig{
 			"prod-iad": {
-				ImageConfig: imageWithPortAndHealthcheck{
+				ImageConfig: ImageWithPortAndHealthcheck{
 					ImageWithPort: ImageWithPort{
 						Image: Image{
 							Build: BuildArgsOrString{
@@ -520,7 +520,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: imageWithPortAndHealthcheck{
+					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
 								Location: aws.String("env-override location"),
@@ -541,7 +541,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: imageWithPortAndHealthcheck{
+					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
 								Location: aws.String("env-override location"),
@@ -561,7 +561,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: imageWithPortAndHealthcheck{
+					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
 								Build: BuildArgsOrString{
@@ -583,7 +583,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: imageWithPortAndHealthcheck{
+					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
 								Build: BuildArgsOrString{
