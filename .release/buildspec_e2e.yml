@@ -156,5 +156,4 @@ phases:
          -e "TEST_SUITE=$TEST_SUITE"
          -e "DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME"
          -e "DOCKERHUB_TOKEN=$DOCKERHUB_TOKEN"
-         -e "CI=true"
          copilot-cli/e2e:latest
