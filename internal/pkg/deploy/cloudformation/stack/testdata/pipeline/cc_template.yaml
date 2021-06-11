@@ -25,7 +25,7 @@ Resources:
             Version: '2012-10-17'
             Statement:
             - Effect: Allow
-              Resource: 'arn:aws:iam::1111:role/phonetool-test-EnvManagerRole'
+              Resource: 'arn:aws:iam::1111:role/phonetool-staging-test-EnvManagerRole'
               Action:
               - sts:AssumeRole
   BuildProjectPolicy:
@@ -190,10 +190,10 @@ Resources:
             Action:
               - sts:AssumeRole
             Resource:
-              - arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
+              - arn:aws:iam::1111:role/phonetool-staging-test-EnvManagerRole
       Roles:
         - !Ref PipelineRole
-  BuildTestCommandstest:
+  BuildTestCommandsstagingDASHtest:
     Type: AWS::CodeBuild::Project
     Properties:
       EncryptionKey: !ImportValue phonetool-ArtifactKey
@@ -262,9 +262,9 @@ Resources:
               - Name: SCCheckoutArtifact
             OutputArtifacts:
               - Name: BuildOutput
-        - Name: DeployTo-test
+        - Name: DeployTo-staging-test
           Actions:
-            - Name: CreateOrUpdate-api-test
+            - Name: CreateOrUpdate-api-staging-test
               Region: us-west-2
               ActionTypeId:
                 Category: Deploy
@@ -273,23 +273,23 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
-                ChangeSetName: phonetool-test-api
+                ChangeSetName: phonetool-staging-test-api
                 ActionMode: CREATE_UPDATE
-                StackName: phonetool-test-api
+                StackName: phonetool-staging-test-api
                 Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
-                TemplatePath: BuildOutput::infrastructure/api-test.stack.yml
-                TemplateConfiguration: BuildOutput::infrastructure/api-test.params.json
+                TemplatePath: BuildOutput::infrastructure/api-staging-test.stack.yml
+                TemplateConfiguration: BuildOutput::infrastructure/api-staging-test.params.json
                 # The ARN of the IAM role (in the env account) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
-                RoleArn: arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole
+                RoleArn: arn:aws:iam::1111:role/phonetool-staging-test-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
               RunOrder: 2
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
-              RoleArn: arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
+              RoleArn: arn:aws:iam::1111:role/phonetool-staging-test-EnvManagerRole
             - Name: TestCommands
               ActionTypeId:
                 Category: Test
@@ -297,7 +297,7 @@ Resources:
                 Version: 1
                 Provider: CodeBuild
               Configuration:
-                ProjectName: !Ref BuildTestCommandstest
+                ProjectName: !Ref BuildTestCommandsstagingDASHtest
               RunOrder: 3
               InputArtifacts:
                 - Name: SCCheckoutArtifact

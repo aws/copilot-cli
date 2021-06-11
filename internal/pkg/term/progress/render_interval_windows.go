@@ -3,9 +3,18 @@
 
 package progress
 
-import "time"
+import (
+	"os"
+	"time"
+)
 
-const (
+var (
 	// Windows flickers too frequently if the interval is too short.
 	renderInterval = 500 * time.Millisecond // How frequently Render should be invoked.
 )
+
+func init() {
+	if os.Getenv("CI") == "true" {
+		renderInterval = 30 * time.Second
+	}
+}

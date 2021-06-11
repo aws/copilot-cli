@@ -201,8 +201,9 @@ func TestECS_Tasks(t *testing.T) {
 			serviceName: "mockService",
 			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().ListTasks(&ecs.ListTasksInput{
-					Cluster:     aws.String("mockCluster"),
-					ServiceName: aws.String("mockService"),
+					Cluster:       aws.String("mockCluster"),
+					ServiceName:   aws.String("mockService"),
+					DesiredStatus: aws.String("RUNNING"),
 				}).Return(nil, errors.New("some error"))
 			},
 			wantErr: fmt.Errorf("list running tasks: some error"),
@@ -212,8 +213,9 @@ func TestECS_Tasks(t *testing.T) {
 			serviceName: "mockService",
 			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().ListTasks(&ecs.ListTasksInput{
-					Cluster:     aws.String("mockCluster"),
-					ServiceName: aws.String("mockService"),
+					Cluster:       aws.String("mockCluster"),
+					ServiceName:   aws.String("mockService"),
+					DesiredStatus: aws.String("RUNNING"),
 				}).Return(&ecs.ListTasksOutput{
 					NextToken: nil,
 					TaskArns:  aws.StringSlice([]string{"mockTaskArn"}),
@@ -231,8 +233,9 @@ func TestECS_Tasks(t *testing.T) {
 			serviceName: "mockService",
 			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().ListTasks(&ecs.ListTasksInput{
-					Cluster:     aws.String("mockCluster"),
-					ServiceName: aws.String("mockService"),
+					Cluster:       aws.String("mockCluster"),
+					ServiceName:   aws.String("mockService"),
+					DesiredStatus: aws.String("RUNNING"),
 				}).Return(&ecs.ListTasksOutput{
 					NextToken: nil,
 					TaskArns:  aws.StringSlice([]string{"mockTaskArn"}),
@@ -260,8 +263,9 @@ func TestECS_Tasks(t *testing.T) {
 			serviceName: "mockService",
 			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().ListTasks(&ecs.ListTasksInput{
-					Cluster:     aws.String("mockCluster"),
-					ServiceName: aws.String("mockService"),
+					Cluster:       aws.String("mockCluster"),
+					ServiceName:   aws.String("mockService"),
+					DesiredStatus: aws.String("RUNNING"),
 				}).Return(&ecs.ListTasksOutput{
 					NextToken: aws.String("mockNextToken"),
 					TaskArns:  aws.StringSlice([]string{"mockTaskArn1"}),
@@ -278,9 +282,10 @@ func TestECS_Tasks(t *testing.T) {
 					},
 				}, nil)
 				m.EXPECT().ListTasks(&ecs.ListTasksInput{
-					Cluster:     aws.String("mockCluster"),
-					ServiceName: aws.String("mockService"),
-					NextToken:   aws.String("mockNextToken"),
+					Cluster:       aws.String("mockCluster"),
+					ServiceName:   aws.String("mockService"),
+					DesiredStatus: aws.String("RUNNING"),
+					NextToken:     aws.String("mockNextToken"),
 				}).Return(&ecs.ListTasksOutput{
 					NextToken: nil,
 					TaskArns:  aws.StringSlice([]string{"mockTaskArn2"}),
@@ -321,7 +326,7 @@ func TestECS_Tasks(t *testing.T) {
 				client: mockECSClient,
 			}
 
-			gotTasks, gotErr := service.ServiceTasks(tc.clusterName, tc.serviceName)
+			gotTasks, gotErr := service.ServiceRunningTasks(tc.clusterName, tc.serviceName)
 
 			if gotErr != nil {
 				require.EqualError(t, tc.wantErr, gotErr.Error())

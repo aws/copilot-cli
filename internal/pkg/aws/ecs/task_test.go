@@ -11,7 +11,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/dustin/go-humanize"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -225,147 +224,85 @@ func TestTask_ENI(t *testing.T) {
 	}
 }
 
-func TestTaskStatus_HumanString(t *testing.T) {
-	// from the function changes (ex: from "1 month ago" to "2 months ago"). To make our tests stable,
-	oldHumanize := humanizeTime
-	humanizeTime = func(then time.Time) string {
-		now, _ := time.Parse(time.RFC3339, "2020-01-01T00:00:00+00:00")
-		return humanize.RelTime(then, now, "ago", "from now")
-	}
-	defer func() {
-		humanizeTime = oldHumanize
-	}()
-	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
-	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
-	mockImageDigest := "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"
+func TestTask_PrivateIP(t *testing.T) {
 	testCases := map[string]struct {
-		id               string
-		health           string
-		lastStatus       string
-		imageDigest      string
-		startedAt        time.Time
-		stoppedAt        time.Time
-		capacityProvider string
-
-		wantTaskStatus string
+		taskARN     *string
+		attachments []*ecs.Attachment
+		wantedENI   string
+		wantedErr   error
 	}{
-		"all params": {
-			health:           "HEALTHY",
-			id:               "aslhfnqo39j8qomimvoiqm89349",
-			lastStatus:       "RUNNING",
-			startedAt:        startTime,
-			stoppedAt:        stopTime,
-			imageDigest:      mockImageDigest,
-			capacityProvider: "FARGATE",
-
-			wantTaskStatus: `  aslhfnqo	18f7eb6c	RUNNING	14 years ago	FARGATE	HEALTHY
-`,
+		"no matching attachment": {
+			taskARN: aws.String("1"),
+			attachments: []*ecs.Attachment{
+				{
+					Type: aws.String("not ElasticNetworkInterface"),
+				},
+			},
+			wantedErr: &ErrTaskENIInfoNotFound{
+				MissingField: missingFieldAttachment,
+				TaskARN:      "1",
+			},
 		},
-		"missing params": {
-			health:     "HEALTHY",
-			lastStatus: "RUNNING",
-
-			wantTaskStatus: `  -	-	RUNNING	-	-	HEALTHY
-`,
+		"no matching detail in network interface attachment": {
+			taskARN: aws.String("1"),
+			attachments: []*ecs.Attachment{
+				{
+					Type: aws.String("not ElasticNetworkInterface"),
+				},
+				{
+					Type: aws.String("ElasticNetworkInterface"),
+					Details: []*ecs.KeyValuePair{
+						{
+							Name:  aws.String("not privateIPv4Address"),
+							Value: aws.String("val"),
+						},
+					},
+				},
+			},
+			wantedErr: &ErrTaskENIInfoNotFound{
+				MissingField: missingFieldPrivateIPv4Address,
+				TaskARN:      "1",
+			},
+		},
+		"successfully retrieve eni id": {
+			taskARN: aws.String("1"),
+			attachments: []*ecs.Attachment{
+				{
+					Type: aws.String("not ElasticNetworkInterface"),
+				},
+				{
+					Type: aws.String("ElasticNetworkInterface"),
+					Details: []*ecs.KeyValuePair{
+						{
+							Name:  aws.String("not networkInterfaceId"),
+							Value: aws.String("val"),
+						},
+						{
+							Name:  aws.String("privateIPv4Address"),
+							Value: aws.String("eni-123"),
+						},
+					},
+				},
+			},
+			wantedENI: "eni-123",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			task := TaskStatus{
-				Health: tc.health,
-				ID:     tc.id,
-				Images: []Image{
-					{
-						Digest: tc.imageDigest,
-					},
-				},
-				LastStatus:       tc.lastStatus,
-				StartedAt:        tc.startedAt,
-				StoppedAt:        tc.stoppedAt,
-				CapacityProvider: tc.capacityProvider,
+			task := Task{
+				TaskArn:     tc.taskARN,
+				Attachments: tc.attachments,
 			}
 
-			gotTaskStatus := task.HumanString()
-
-			require.Equal(t, tc.wantTaskStatus, gotTaskStatus)
-		})
-
-	}
-}
-
-func TestStoppedTaskStatus_HumanString(t *testing.T) {
-	// from the function changes (ex: from "1 month ago" to "2 months ago"). To make our tests stable,
-	oldHumanize := humanizeTime
-	humanizeTime = func(then time.Time) string {
-		now, _ := time.Parse(time.RFC3339, "2020-01-01T00:00:00+00:00")
-		return humanize.RelTime(then, now, "ago", "from now")
-	}
-	defer func() {
-		humanizeTime = oldHumanize
-	}()
-	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
-	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
-	mockImageDigest := "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"
-	testCases := map[string]struct {
-		id            string
-		health        string
-		lastStatus    string
-		imageDigest   string
-		startedAt     time.Time
-		stoppedAt     time.Time
-		stoppedReason string
-
-		wantTaskStatus string
-	}{
-		"all params": {
-			health:        "HEALTHY",
-			id:            "aslhfnqo39j8qomimvoiqm89349",
-			lastStatus:    "RUNNING",
-			startedAt:     startTime,
-			stoppedAt:     stopTime,
-			imageDigest:   mockImageDigest,
-			stoppedReason: "Stopped by reasons",
-
-			wantTaskStatus: `  aslhfnqo	18f7eb6c	RUNNING	14 years ago	14 years ago	Stopped by reasons
-`,
-		},
-		"missing params": {
-			lastStatus: "RUNNING",
-
-			wantTaskStatus: `  -	-	RUNNING	-	-	-
-`,
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			task := TaskStatus{
-				ID: tc.id,
-				Images: []Image{
-					{
-						Digest: tc.imageDigest,
-					},
-				},
-				LastStatus:    tc.lastStatus,
-				StartedAt:     tc.startedAt,
-				StoppedAt:     tc.stoppedAt,
-				StoppedReason: tc.stoppedReason,
+			out, err := task.PrivateIP()
+			if tc.wantedErr != nil {
+				require.Equal(t, tc.wantedErr, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedENI, out)
 			}
-
-			gotTaskStatus := (StoppedTaskStatus)(task).HumanString()
-
-			require.Equal(t, tc.wantTaskStatus, gotTaskStatus)
 		})
-
 	}
 }
 
@@ -727,5 +664,39 @@ func TestFilterRunningTasks(t *testing.T) {
 			require.Equal(t, tc.wantedTasks, got)
 		})
 
+	}
+}
+
+func Test_TaskDefinitionVersion(t *testing.T) {
+	testCases := map[string]struct {
+		inARN string
+
+		wanted      int
+		wantedError error
+	}{
+		"success": {
+			inARN:  "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6",
+			wanted: 6,
+		},
+		"unable to parse": {
+			inARN:       "random not ARN",
+			wantedError: errors.New("parse ARN random not ARN: arn: invalid prefix"),
+		},
+		"unable to convert version from string to int": {
+			inARN:       "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:six",
+			wantedError: errors.New("convert version six from string to int: strconv.Atoi: parsing \"six\": invalid syntax"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := TaskDefinitionVersion(tc.inARN)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, got, tc.wanted)
+			}
+		})
 	}
 }

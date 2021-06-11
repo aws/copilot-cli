@@ -38,7 +38,7 @@ type deployJobOpts struct {
 
 	store              store
 	ws                 wsJobDirReader
-	unmarshal          func(in []byte) (interface{}, error)
+	unmarshal          func(in []byte) (manifest.WorkloadManifest, error)
 	cmd                runner
 	addons             templater
 	appCFN             appResourcesGetter

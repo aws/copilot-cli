@@ -103,6 +103,8 @@ const (
 	valuesFlag        = "values"
 	overwriteFlag     = "overwrite"
 	inputFilePathFlag = "cli-input-yaml"
+
+	includeStateMachineLogsFlag = "include-state-machine"
 )
 
 // Short flag names.
@@ -193,8 +195,9 @@ Defaults to all logs. Only one of start-time / since may be used.`
 Defaults to all logs. Only one of start-time / since may be used.`
 	endTimeFlagDescription = `Optional. Only return logs before a specific date (RFC3339).
 Defaults to all logs. Only one of end-time / follow may be used.`
-	tasksLogsFlagDescription = "Optional. Only return logs from specific task IDs."
-	logGroupFlagDescription  = "Optional. Only return logs from specific log group."
+	tasksLogsFlagDescription               = "Optional. Only return logs from specific task IDs."
+	includeStateMachineLogsFlagDescription = "Optional. Include logs from the state machine executions."
+	logGroupFlagDescription                = "Optional. Only return logs from specific log group."
 
 	deployTestFlagDescription        = `Deploy your service or job to a "test" environment.`
 	githubURLFlagDescription         = "(Deprecated.) Use --url instead. Repository URL to trigger your pipeline."
