@@ -454,7 +454,7 @@ func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err := unmarshal(&conf); err != nil {
 		return err
 	}
-	if conf.VPC == nil { // If after unmarshaling the user didnot specify VPC configuration then reset it to public.
+	if conf.VPC == nil { // If after unmarshaling the user did not specify VPC configuration then reset it to public.
 		conf.VPC = defaultVPCConf
 	}
 	if !conf.VPC.isValidPlacement() {
