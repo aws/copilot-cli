@@ -25,12 +25,6 @@ image:
     dockerfile: ./frontend/Dockerfile
     context: ./frontend
   port: 80
-  healthcheck:
-    command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
-    interval: 10s
-    retries: 2
-    timeout: 5s
-    start_period: 0s
 
 cpu: 256
 memory: 512
