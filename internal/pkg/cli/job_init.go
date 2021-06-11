@@ -181,7 +181,7 @@ func (o *initJobOpts) Execute() error {
 	if o.dockerfilePath != "" {
 		hc, err = parseHealthCheck(o.initParser(o.dockerfilePath))
 		if err != nil {
-			return fmt.Errorf("parse dockerfile %s: %w", o.dockerfilePath, err)
+			log.Warningf("Cannot parse the HEALTHCHECK instruction from the Dockerfile: %v\n", err)
 		}
 	}
 	manifestPath, err := o.init.Job(&initialize.JobProps{

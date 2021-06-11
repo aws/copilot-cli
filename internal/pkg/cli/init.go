@@ -173,9 +173,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		sessProvider: sessProvider,
 	}
 	fs := &afero.Afero{Fs: afero.NewOsFs()}
-	initParser := func(s string) dockerfileParser {
-		return exec.NewDockerfile(fs, s)
-	}
 	return &initOpts{
 		initVars:     vars,
 		ShouldDeploy: vars.shouldDeploy,
@@ -215,7 +212,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					sel:                   sel,
 					prompt:                prompt,
 					dockerEngineValidator: exec.NewDockerCommand(),
-					initParser:            initParser,
+					initParser: func(s string) dockerfileParser {
+						return exec.NewDockerfile(fs, s)
+					},
 				}
 				o.initWlCmd = &opts
 				o.schedule = &opts.schedule // Surfaced via pointer for logging
@@ -233,7 +232,13 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					sel:                   sel,
 					prompt:                prompt,
 					dockerEngineValidator: exec.NewDockerCommand(),
-					initParser:            initParser,
+				}
+				opts.dockerfile = func(path string) dockerfileParser {
+					if opts.df != nil {
+						return opts.df
+					}
+					opts.df = exec.NewDockerfile(opts.fs, opts.dockerfilePath)
+					return opts.df
 				}
 				o.initWlCmd = &opts
 				o.port = &opts.port // Surfaced via pointer for logging.

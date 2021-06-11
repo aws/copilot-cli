@@ -98,7 +98,7 @@ type initSvcOpts struct {
 	df dockerfileParser
 
 	// Init a Dockerfile parser using fs and input path
-	initParser func(string) dockerfileParser
+	dockerfile func(string) dockerfileParser
 }
 
 func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
@@ -127,7 +127,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		Deployer: cloudformation.New(sess),
 	}
 	fs := &afero.Afero{Fs: afero.NewOsFs()}
-	return &initSvcOpts{
+	opts := &initSvcOpts{
 		initSvcVars: vars,
 
 		fs:                    fs,
@@ -135,10 +135,15 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		prompt:                prompter,
 		sel:                   sel,
 		dockerEngineValidator: exec.NewDockerCommand(),
-		initParser: func(s string) dockerfileParser {
-			return exec.NewDockerfile(fs, s)
-		},
-	}, nil
+	}
+	opts.dockerfile = func(path string) dockerfileParser {
+		if opts.df != nil {
+			return opts.df
+		}
+		opts.df = exec.NewDockerfile(opts.fs, opts.dockerfilePath)
+		return opts.df
+	}
+	return opts, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
@@ -209,9 +214,7 @@ func (o *initSvcOpts) Execute() error {
 	var hc *manifest.ContainerHealthCheck
 	var err error
 	if o.dockerfilePath != "" {
-		if o.df == nil {
-			o.df = o.initParser(o.dockerfilePath)
-		}
+		o.dockerfile(o.dockerfilePath)
 		hc, err = parseHealthCheck(o.df)
 		if err != nil {
 			return fmt.Errorf("parse dockerfile %s: %w", o.dockerfilePath, err)
@@ -349,9 +352,7 @@ func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 
 func (o *initSvcOpts) askSvcPort() (err error) {
 	// See if we can get a healthcheck from the dockerfile.
-	if o.df == nil {
-		o.df = o.initParser(o.dockerfilePath)
-	}
+	o.dockerfile(o.dockerfilePath)
 
 	// If the port flag was set, use that and don't ask.
 	if o.port != 0 {

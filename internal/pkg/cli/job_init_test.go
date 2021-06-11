@@ -530,13 +530,6 @@ func TestJobInitOpts_Execute(t *testing.T) {
 				}).Return("manifest/path", nil)
 			},
 		},
-		"fail to parse dockerfile": {
-			inDf: "./Dockerfile",
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {
-				m.EXPECT().GetHealthCheck().Return(nil, fmt.Errorf("some error"))
-			},
-			wantedErr: fmt.Errorf("parse dockerfile ./Dockerfile: get healthcheck: some error"),
-		},
 		"fail to init job": {
 			mockJobInit: func(m *mocks.MockjobInitializer) {
 				m.EXPECT().Job(gomock.Any()).Return("", errors.New("some error"))
