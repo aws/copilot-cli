@@ -16,7 +16,6 @@ import (
 var _ = Describe("App With Domain", func() {
 	const domainName = "copilot-e2e-tests.ecs.aws.dev"
 	const svcName = "hello"
-	const envName = "test"
 
 	Context("when creating a new app", func() {
 		var appInitErr error
@@ -51,16 +50,23 @@ var _ = Describe("App With Domain", func() {
 	Context("when creating a new environment", func() {
 		var envInitErr error
 
-		BeforeAll(func() {
+		It("env init should succeed for creating the test environment", func() {
 			_, envInitErr = cli.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
-				EnvName: envName,
+				EnvName: "test",
 				Profile: "default",
 				Prod:    false,
 			})
+			Expect(envInitErr).NotTo(HaveOccurred())
 		})
 
-		It("env init should succeed", func() {
+		It("env init should succeed for creating the prod environment", func() {
+			_, envInitErr = cli.EnvInit(&client.EnvInitRequest{
+				AppName: appName,
+				EnvName: "prod",
+				Profile: "default",
+				Prod:    false,
+			})
 			Expect(envInitErr).NotTo(HaveOccurred())
 		})
 	})
@@ -84,15 +90,22 @@ var _ = Describe("App With Domain", func() {
 
 	Context("when deploying a Load Balanced Web Service", func() {
 		var deployErr error
-		BeforeAll(func() {
+
+		It("svc deploy to test should succeed", func() {
 			_, deployErr = cli.SvcDeploy(&client.SvcDeployInput{
 				Name:     svcName,
-				EnvName:  envName,
+				EnvName:  "test",
 				ImageTag: "hello",
 			})
+			Expect(deployErr).NotTo(HaveOccurred())
 		})
 
-		It("svc deploy should succeed", func() {
+		It("svc deploy to prod should succeed", func() {
+			_, deployErr = cli.SvcDeploy(&client.SvcDeployInput{
+				Name:     svcName,
+				EnvName:  "prod",
+				ImageTag: "hello",
+			})
 			Expect(deployErr).NotTo(HaveOccurred())
 		})
 
@@ -104,24 +117,24 @@ var _ = Describe("App With Domain", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
 
-			// Validate route has the expected HTTPS endpoint.
-			route := svc.Routes[0]
-			Expect(route.Environment).To(Equal(envName))
-			Expect(route.URL).To(Equal(fmt.Sprintf("https://%s", domainName)))
+			for _, route := range svc.Routes {
+				// Validate route has the expected HTTPS endpoint.
+				Expect(route.URL).To(Equal(fmt.Sprintf("https://%s.%s", route.Environment, domainName)))
 
-			// Make sure the response is OK.
-			// Since the www app was added second, it should have app appended to the name.
-			var resp *http.Response
-			var fetchErr error
-			Eventually(func() (int, error) {
-				resp, fetchErr = http.Get(route.URL)
-				return resp.StatusCode, fetchErr
-			}, "60s", "1s").Should(Equal(200))
-			Eventually(func() (int, error) {
-				httpRoute := fmt.Sprintf("http://%s", domainName)
-				resp, fetchErr = http.Get(httpRoute)
-				return resp.StatusCode, fetchErr
-			}, "60s", "1s").Should(Equal(200))
+				// Make sure the response is OK.
+				var resp *http.Response
+				var fetchErr error
+				Eventually(func() (int, error) {
+					resp, fetchErr = http.Get(route.URL)
+					return resp.StatusCode, fetchErr
+				}, "60s", "1s").Should(Equal(200))
+				// HTTP should route to HTTPS.
+				Eventually(func() (int, error) {
+					httpRoute := fmt.Sprintf("http://%s.%s", route.Environment, domainName)
+					resp, fetchErr = http.Get(httpRoute)
+					return resp.StatusCode, fetchErr
+				}, "60s", "1s").Should(Equal(200))
+			}
 		})
 	})
 })
