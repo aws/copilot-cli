@@ -564,7 +564,7 @@ exports.certificateRequestHandler = async function (event, context) {
       regex: new RegExp(`^([^\.]+\.)?${domain}`),
       domain: `${domain}`,
     },
-    OtherDomainZone: { regex: new RegExp(`.*`) },
+    OtherDomainZone: {},
   };
 
   try {
@@ -577,7 +577,7 @@ exports.certificateRequestHandler = async function (event, context) {
           props.AppName,
           props.EnvName,
           certDomain,
-          [...aliases],
+          aliases,
           props.EnvHostedZoneId,
           props.RootDNSRole,
           props.Region
@@ -605,7 +605,7 @@ exports.certificateRequestHandler = async function (event, context) {
           props.AppName,
           props.EnvName,
           certDomain,
-          [...aliases],
+          aliases,
           props.EnvHostedZoneId,
           props.RootDNSRole,
           props.Region
