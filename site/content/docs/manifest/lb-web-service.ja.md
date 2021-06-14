@@ -65,5 +65,9 @@ Service の名前。
 Service のアーキテクチャタイプ。 [Load Balanced Web Service](../concepts/services.ja.md#load-balanced-web-service) は、ロードバランサー及び AWS Fargate 上の Amazon ECS によって構成される、インターネットに公開するための Service です。
 
 {% include 'http-config.ja.md' %}
+
 {% include 'image-config.ja.md' %}
+
+{% include 'image-healthcheck.ja.md' %}
+
 {% include 'common-svc-fields.ja.md' %}

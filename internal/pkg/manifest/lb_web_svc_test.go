@@ -21,13 +21,16 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 
 		wanted *LoadBalancedWebService
 	}{
-		"translates to default load balanced web service": {
+		"translates to load balanced web service": {
 			props: LoadBalancedWebServiceProps{
 				WorkloadProps: &WorkloadProps{
 					Name:       "frontend",
 					Dockerfile: "./Dockerfile",
 				},
-				Path:      "/",
+				Path: "/",
+				HealthCheck: &ContainerHealthCheck{
+					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
+				},
 				Port:      80,
 				AppDomain: aws.String("example.com"),
 			},
@@ -38,15 +41,20 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 					Type: stringP("Load Balanced Web Service"),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPort{
-						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: stringP("./Dockerfile"),
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: stringP("./Dockerfile"),
+									},
 								},
 							},
+							Port: aws.Uint16(80),
 						},
-						Port: aws.Uint16(80),
+						HealthCheck: &ContainerHealthCheck{
+							Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
+						},
 					},
 					AppDomain: aws.String("example.com"),
 					RoutingRule: RoutingRule{
@@ -65,8 +73,8 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: NetworkConfig{
-						VPC: vpcConfig{
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
 							Placement: stringP("public"),
 						},
 					},
@@ -196,15 +204,17 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPort{
-						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./Dockerfile"),
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./Dockerfile"),
+									},
 								},
 							},
+							Port: aws.Uint16(80),
 						},
-						Port: aws.Uint16(80),
 					},
 					RoutingRule: RoutingRule{
 						Path: aws.String("/awards/*"),
@@ -244,15 +254,17 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPort{
-						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./Dockerfile"),
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./Dockerfile"),
+									},
 								},
 							},
+							Port: aws.Uint16(80),
 						},
-						Port: aws.Uint16(80),
 					},
 					RoutingRule: RoutingRule{
 						Path: aws.String("/awards/*"),
@@ -292,15 +304,17 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPort{
-						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./Dockerfile"),
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./Dockerfile"),
+									},
 								},
 							},
+							Port: aws.Uint16(80),
 						},
-						Port: aws.Uint16(80),
 					},
 					RoutingRule: RoutingRule{
 						Path: aws.String("/awards/*"),
@@ -352,8 +366,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Logging: &Logging{
 						ConfigFile: aws.String("mockConfigFile"),
 					},
-					Network: NetworkConfig{
-						VPC: vpcConfig{
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
 							Placement:      stringP("public"),
 							SecurityGroups: []string{"sg-123"},
 						},
@@ -361,15 +375,17 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
-						ImageConfig: ImageWithPort{
-							Image: Image{
-								Build: BuildArgsOrString{
-									BuildArgs: DockerBuildArgs{
-										Dockerfile: aws.String("./RealDockerfile"),
+						ImageConfig: ImageWithPortAndHealthcheck{
+							ImageWithPort: ImageWithPort{
+								Image: Image{
+									Build: BuildArgsOrString{
+										BuildArgs: DockerBuildArgs{
+											Dockerfile: aws.String("./RealDockerfile"),
+										},
 									},
 								},
+								Port: aws.Uint16(5000),
 							},
-							Port: aws.Uint16(5000),
 						},
 						RoutingRule: RoutingRule{
 							TargetContainer: aws.String("xray"),
@@ -416,8 +432,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								"FOO": "BAR",
 							},
 						},
-						Network: NetworkConfig{
-							VPC: vpcConfig{
+						Network: &NetworkConfig{
+							VPC: &vpcConfig{
 								SecurityGroups: []string{"sg-456", "sg-789"},
 							},
 						},
@@ -432,15 +448,17 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPort{
-						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./RealDockerfile"),
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./RealDockerfile"),
+									},
 								},
 							},
+							Port: aws.Uint16(5000),
 						},
-						Port: aws.Uint16(5000),
 					},
 					RoutingRule: RoutingRule{
 						Path: aws.String("/awards/*"),
@@ -505,8 +523,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"FOO": "BAR",
 						},
 					},
-					Network: NetworkConfig{
-						VPC: vpcConfig{
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
 							Placement:      stringP("public"),
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
@@ -549,7 +567,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 			},
 		},
-		"with range override": {
+		"with range override and preserving network config": {
 			in: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					TaskConfig: TaskConfig{
@@ -558,6 +576,12 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								Range: &Range{Value: &mockRange},
 								CPU:   aws.Int(80),
 							},
+						},
+					},
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
+							Placement:      stringP("public"),
+							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},
 				},
@@ -576,6 +600,12 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								Range: &Range{Value: &mockRange},
 								CPU:   aws.Int(80),
 							},
+						},
+					},
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
+							Placement:      stringP("public"),
+							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},
 				},
@@ -765,11 +795,13 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPort{
-						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./Dockerfile"),
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./Dockerfile"),
+									},
 								},
 							},
 						},
@@ -777,9 +809,11 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
-						ImageConfig: ImageWithPort{
-							Image: Image{
-								Location: aws.String("env-override location"),
+						ImageConfig: ImageWithPortAndHealthcheck{
+							ImageWithPort: ImageWithPort{
+								Image: Image{
+									Location: aws.String("env-override location"),
+								},
 							},
 						},
 					},
@@ -793,9 +827,11 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPort{
-						Image: Image{
-							Location: aws.String("env-override location"),
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Location: aws.String("env-override location"),
+							},
 						},
 					},
 				},
@@ -808,17 +844,21 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPort{
-						Image: Image{
-							Location: aws.String("default location"),
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Location: aws.String("default location"),
+							},
 						},
 					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
-						ImageConfig: ImageWithPort{
-							Image: Image{
-								Location: aws.String("env-override location"),
+						ImageConfig: ImageWithPortAndHealthcheck{
+							ImageWithPort: ImageWithPort{
+								Image: Image{
+									Location: aws.String("env-override location"),
+								},
 							},
 						},
 					},
@@ -832,9 +872,11 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPort{
-						Image: Image{
-							Location: aws.String("env-override location"),
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Location: aws.String("env-override location"),
+							},
 						},
 					},
 				},
@@ -847,11 +889,13 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPort{
-						Image: Image{
-							Build: BuildArgsOrString{
-								BuildArgs: DockerBuildArgs{
-									Dockerfile: aws.String("./Dockerfile"),
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./Dockerfile"),
+									},
 								},
 							},
 						},
@@ -859,10 +903,12 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
-						ImageConfig: ImageWithPort{
-							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("overridden build string"),
+						ImageConfig: ImageWithPortAndHealthcheck{
+							ImageWithPort: ImageWithPort{
+								Image: Image{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("overridden build string"),
+									},
 								},
 							},
 						},
@@ -877,10 +923,12 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPort{
-						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("overridden build string"),
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
 							},
 						},
 					},
@@ -894,18 +942,22 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPort{
-						Image: Image{
-							Location: aws.String("default location"),
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Location: aws.String("default location"),
+							},
 						},
 					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": {
-						ImageConfig: ImageWithPort{
-							Image: Image{
-								Build: BuildArgsOrString{
-									BuildString: aws.String("overridden build string"),
+						ImageConfig: ImageWithPortAndHealthcheck{
+							ImageWithPort: ImageWithPort{
+								Image: Image{
+									Build: BuildArgsOrString{
+										BuildString: aws.String("overridden build string"),
+									},
 								},
 							},
 						},
@@ -920,10 +972,12 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPort{
-						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("overridden build string"),
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
 							},
 						},
 					},
@@ -944,6 +998,23 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 }
 
 func Test_Temp(t *testing.T) {
+	wamtedImageConfig := ImageWithPortAndHealthcheck{
+		ImageWithPort: ImageWithPort{
+			Image: Image{
+				Location: aws.String("env-override location"),
+				DockerLabels: map[string]string{
+					"label1": "value1",
+					"label2": "value2",
+				},
+				DependsOn: map[string]string{
+					"depends1": "on1",
+					"depends2": "on2",
+				},
+			},
+			Port: aws.Uint16(5000),
+		},
+		HealthCheck: newDefaultContainerHealthCheck(),
+	}
 	t.Run("temporary", func(t *testing.T) {
 		// WHEN
 		in := &LoadBalancedWebService{
@@ -952,43 +1023,48 @@ func Test_Temp(t *testing.T) {
 				Type: aws.String(LoadBalancedWebServiceType),
 			},
 			LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-				ImageConfig: ImageWithPort{
-					Image: Image{
-						Build: BuildArgsOrString{
-							BuildArgs: DockerBuildArgs{
-								Dockerfile: aws.String("./Dockerfile"),
+				ImageConfig: ImageWithPortAndHealthcheck{
+					ImageWithPort: ImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./Dockerfile"),
+								},
+							},
+							DockerLabels: map[string]string{
+								"label1": "value1",
+							},
+							DependsOn: map[string]string{
+								"depends1": "on1",
 							},
 						},
-						DockerLabels: map[string]string{
-							"label1": "value1",
-						},
-						DependsOn: map[string]string{
-							"depends1": "on1",
-						},
+						Port: aws.Uint16(80),
 					},
-					Port: aws.Uint16(80),
 				},
 			},
 			Environments: map[string]*LoadBalancedWebServiceConfig{
 				"prod-iad": {
-					ImageConfig: ImageWithPort{
-						Image: Image{
-							Location: aws.String("env-override location"),
-							DockerLabels: map[string]string{
-								"label2": "value2",
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Location: aws.String("env-override location"),
+								DockerLabels: map[string]string{
+									"label2": "value2",
+								},
+								DependsOn: map[string]string{
+									"depends2": "on2",
+								},
 							},
-							DependsOn: map[string]string{
-								"depends2": "on2",
-							},
+							Port: aws.Uint16(5000),
 						},
-						Port: aws.Uint16(5000),
+						HealthCheck: newDefaultContainerHealthCheck(),
 					},
 				},
 			},
 		}
 		envToApply := "prod-iad"
 		conf, _ := in.ApplyEnv(envToApply)
-		fmt.Println(conf.(*LoadBalancedWebService).ImageConfig.Image)
+		require.Equal(t, wamtedImageConfig, conf.(*LoadBalancedWebService).ImageConfig)
 	})
 }
 
@@ -1029,8 +1105,10 @@ func TestLoadBalancedWebService_BuildRequired(t *testing.T) {
 			// GIVEN
 			manifest := &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPort{
-						Image: tc.image,
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: tc.image,
+						},
 					},
 				},
 			}

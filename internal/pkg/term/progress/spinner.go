@@ -6,6 +6,7 @@ package progress
 import (
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -37,7 +38,11 @@ type Spinner struct {
 
 // NewSpinner returns a spinner that outputs to w.
 func NewSpinner(w io.Writer) *Spinner {
-	s := spinner.New(charset, 125*time.Millisecond, spinner.WithHiddenCursor(true))
+	interval := 125 * time.Millisecond
+	if os.Getenv("CI") == "true" {
+		interval = 30 * time.Second
+	}
+	s := spinner.New(charset, interval, spinner.WithHiddenCursor(true))
 	s.Writer = w
 	return &Spinner{
 		spin: s,

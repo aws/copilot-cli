@@ -905,7 +905,7 @@ func (cli *CLI) SvcPackage(opts *PackageInput) (string, error) {
 
 func (cli *CLI) exec(command *exec.Cmd) (string, error) {
 	// Turn off colors
-	command.Env = append(os.Environ(), "COLOR=false")
+	command.Env = append(os.Environ(), "COLOR=false", "CI=true")
 	command.Dir = cli.workingDir
 	sess, err := gexec.Start(command, ginkgo.GinkgoWriter, ginkgo.GinkgoWriter)
 	if err != nil {

@@ -464,8 +464,10 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 					},
 					port: tc.inSvcPort,
 				},
-				fs:                    &afero.Afero{Fs: afero.NewMemMapFs()},
-				setupParser:           func(o *initSvcOpts) {},
+				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
+				dockerfile: func(s string) dockerfileParser {
+					return mockDockerfile
+				},
 				df:                    mockDockerfile,
 				prompt:                mockPrompt,
 				sel:                   mockSel,
@@ -528,6 +530,9 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 					},
 					Port: 80,
 				}).Return("manifest/path", nil)
+			},
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {
+				m.EXPECT().GetHealthCheck().Return(nil, nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -631,9 +636,11 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 					},
 					port: tc.inSvcPort,
 				},
-				init:        mockSvcInitializer,
-				setupParser: func(*initSvcOpts) {},
-				df:          mockDockerfile,
+				init: mockSvcInitializer,
+				dockerfile: func(s string) dockerfileParser {
+					return mockDockerfile
+				},
+				df: mockDockerfile,
 			}
 
 			// WHEN

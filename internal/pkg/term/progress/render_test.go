@@ -62,6 +62,8 @@ func (m *mockFileWriter) Fd() uintptr {
 }
 
 func TestRender(t *testing.T) {
+	renderInterval = 100 * time.Millisecond // Ensure that even when CI=true we are testing with default interval.
+
 	t.Run("stops the renderer when context is canceled", func(t *testing.T) {
 		t.Parallel()
 		// GIVEN

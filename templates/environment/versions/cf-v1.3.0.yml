@@ -1,5 +1,5 @@
 # Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: MIT-0
 Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
 Metadata:
   Version: 'v1.3.0'
