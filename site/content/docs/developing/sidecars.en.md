@@ -40,7 +40,7 @@ sidecars:
       {label key} : <label value>
     # Optional container dependencies to apply to this container.
     depends_on:
-      {container name}: <status>
+      {container name}: <condition>
 
 ```
 
