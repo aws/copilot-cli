@@ -4,6 +4,7 @@
 package progress
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -18,12 +19,16 @@ func TestNew(t *testing.T) {
 	t.Run("it should initialize the spin spinner", func(t *testing.T) {
 		buf := new(strings.Builder)
 		got := NewSpinner(buf)
+		wantedInterval := 125 * time.Millisecond
+		if os.Getenv("CI") == "true" {
+			wantedInterval = 30 * time.Second
+		}
 
 		v, ok := got.spin.(*spin.Spinner)
 		require.True(t, ok)
 
 		require.Equal(t, buf, v.Writer)
-		require.Equal(t, 125*time.Millisecond, v.Delay)
+		require.Equal(t, wantedInterval, v.Delay)
 	})
 }
 

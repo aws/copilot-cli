@@ -69,7 +69,7 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 				m := mocks.NewMockstackSetClient(ctrl)
 				m.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).
-					Do(func(name, _ string, _, _, _, _ stackset.CreateOrUpdateOption) {
+					Do(func(name, _ string, _ ...stackset.CreateOrUpdateOption) {
 						require.Equal(t, "testapp-infrastructure", name)
 					})
 				return m
@@ -237,9 +237,9 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 				}, nil)
 				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).
-					Do(func(_, _ string, op, _, _, _, _ stackset.CreateOrUpdateOption) {
+					Do(func(_, _ string, ops ...stackset.CreateOrUpdateOption) {
 						actual := &awscfn.UpdateStackSetInput{}
-						op(actual)
+						ops[0](actual)
 						wanted := &awscfn.UpdateStackSetInput{}
 						stackset.WithOperationID("1")(wanted)
 						require.Equal(t, actual, wanted)
@@ -287,9 +287,9 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 				}, nil)
 				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).
-					Do(func(_, _ string, op, _, _, _, _ stackset.CreateOrUpdateOption) {
+					Do(func(_, _ string, ops ...stackset.CreateOrUpdateOption) {
 						actual := &awscfn.UpdateStackSetInput{}
-						op(actual)
+						ops[0](actual)
 						wanted := &awscfn.UpdateStackSetInput{}
 						stackset.WithOperationID("2")(wanted)
 						require.Equal(t, actual, wanted)
@@ -419,7 +419,7 @@ func TestCloudFormation_AddServiceToApp(t *testing.T) {
 				}, nil)
 				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).
-					Do(func(_, template string, _, _, _, _, _ stackset.CreateOrUpdateOption) {
+					Do(func(_, template string, _ ...stackset.CreateOrUpdateOption) {
 						configToDeploy, err := stack.AppConfigFrom(&template)
 						require.NoError(t, err)
 						require.ElementsMatch(t, []string{"TestSvc"}, configToDeploy.Services)
@@ -444,7 +444,7 @@ func TestCloudFormation_AddServiceToApp(t *testing.T) {
 				}, nil)
 				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).
-					Do(func(_, template string, _, _, _, _, _ stackset.CreateOrUpdateOption) {
+					Do(func(_, template string, _ ...stackset.CreateOrUpdateOption) {
 						configToDeploy, err := stack.AppConfigFrom(&template)
 						require.NoError(t, err)
 						require.ElementsMatch(t, []string{"test", "firsttest"}, configToDeploy.Services)
@@ -521,7 +521,7 @@ func TestCloudFormation_RemoveServiceFromApp(t *testing.T) {
 				}, nil)
 				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).
-					Do(func(_, template string, _, _, _, _, _ stackset.CreateOrUpdateOption) {
+					Do(func(_, template string, _ ...stackset.CreateOrUpdateOption) {
 						configToDeploy, err := stack.AppConfigFrom(&template)
 						require.NoError(t, err)
 						require.ElementsMatch(t, []string{"firsttest"}, configToDeploy.Services)
@@ -680,12 +680,13 @@ func TestCloudFormation_GetAppResourcesByRegion(t *testing.T) {
 							Region:  "us-east-9",
 						},
 					}, nil).
-					Do(func(_ string, optAcc, optRegion stackset.InstanceSummariesOption) {
+					Do(func(_ string, opts ...stackset.InstanceSummariesOption) {
 						wanted := &awscfn.ListStackInstancesInput{
 							StackInstanceAccount: aws.String("12345"),
 							StackInstanceRegion:  aws.String("us-east-9"),
 						}
 						actual := &awscfn.ListStackInstancesInput{}
+						optAcc, optRegion := opts[0], opts[1]
 						optAcc(actual)
 						optRegion(actual)
 						require.Equal(t, wanted, actual)

@@ -128,7 +128,6 @@ e2e: build-e2e
 
 .PHONY: tools
 tools:
-	GOBIN=${GOBIN} go get github.com/golang/mock/mockgen
 	GOBIN=${GOBIN} go get github.com/gobuffalo/packr/v2/packr2
 	@echo "Installing custom resource dependencies" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} && npm ci
@@ -140,6 +139,7 @@ site-local:
 
 .PHONY: gen-mocks
 gen-mocks: tools
+	GOBIN=${GOBIN} go get github.com/golang/mock/mockgen
 	# TODO: make this more extensible?
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/mocks/mock_rg.go -source=./internal/pkg/cli/env_delete.go resourceGetter
 	${GOBIN}/mockgen -source=./internal/pkg/term/progress/spinner.go -package=mocks -destination=./internal/pkg/term/progress/mocks/mock_spinner.go
