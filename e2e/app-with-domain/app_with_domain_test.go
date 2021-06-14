@@ -114,7 +114,7 @@ var _ = Describe("App With Domain", func() {
 				AppName: appName,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(svc.Routes)).To(Equal(1))
+			Expect(len(svc.Routes)).To(Equal(2))
 
 			wantedURLs := map[string]string{
 				"test": "https://test.copilot-e2e-tests.ecs.aws.dev",
