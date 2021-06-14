@@ -210,62 +210,6 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 	}
 }
 
-func TestEC2_PublicSubnetIDs(t *testing.T) {
-	testCases := map[string]struct {
-		inFilter []Filter
-
-		mockEC2Client func(m *mocks.Mockapi)
-
-		wantedError error
-		wantedARNs  []string
-	}{
-		"fail to get public subnets": {
-			inFilter: inAppEnvFilters,
-			mockEC2Client: func(m *mocks.Mockapi) {
-				m.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
-					Filters: toEC2Filter(inAppEnvFilters),
-				}).Return(nil, errors.New("error describing subnets"))
-			},
-			wantedError: fmt.Errorf("describe subnets: error describing subnets"),
-		},
-		"successfully get only public subnets": {
-			inFilter: inAppEnvFilters,
-			mockEC2Client: func(m *mocks.Mockapi) {
-				m.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
-					Filters: toEC2Filter(inAppEnvFilters),
-				}).Return(&ec2.DescribeSubnetsOutput{
-					Subnets: []*ec2.Subnet{
-						subnet1,
-						subnet2,
-						subnet3,
-					}}, nil)
-			},
-			wantedARNs: []string{"subnet-2", "subnet-3"},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-
-			mockAPI := mocks.NewMockapi(ctrl)
-			tc.mockEC2Client(mockAPI)
-
-			ec2Client := EC2{
-				client: mockAPI,
-			}
-
-			arns, err := ec2Client.PublicSubnetIDs(tc.inFilter...)
-			if tc.wantedError != nil {
-				require.EqualError(t, tc.wantedError, err.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedARNs, arns)
-			}
-		})
-	}
-}
-
 func TestEC2_PublicIP(t *testing.T) {
 	testCases := map[string]struct {
 		inENI         string

@@ -36,25 +36,6 @@ func (m *MockVPCGetter) EXPECT() *MockVPCGetterMockRecorder {
 	return m.recorder
 }
 
-// PublicSubnetIDs mocks base method.
-func (m *MockVPCGetter) PublicSubnetIDs(filters ...ec2.Filter) ([]string, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range filters {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "PublicSubnetIDs", varargs...)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PublicSubnetIDs indicates an expected call of PublicSubnetIDs.
-func (mr *MockVPCGetterMockRecorder) PublicSubnetIDs(filters ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicSubnetIDs", reflect.TypeOf((*MockVPCGetter)(nil).PublicSubnetIDs), filters...)
-}
-
 // SecurityGroups mocks base method.
 func (m *MockVPCGetter) SecurityGroups(filters ...ec2.Filter) ([]string, error) {
 	m.ctrl.T.Helper()
