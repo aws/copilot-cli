@@ -466,7 +466,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				},
 				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
 				dockerfile: func(s string) dockerfileParser {
-					return nil
+					return mockDockerfile
 				},
 				df:                    mockDockerfile,
 				prompt:                mockPrompt,
@@ -638,7 +638,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				},
 				init: mockSvcInitializer,
 				dockerfile: func(s string) dockerfileParser {
-					return nil
+					return mockDockerfile
 				},
 				df: mockDockerfile,
 			}

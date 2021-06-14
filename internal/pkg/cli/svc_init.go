@@ -214,8 +214,7 @@ func (o *initSvcOpts) Execute() error {
 	var hc *manifest.ContainerHealthCheck
 	var err error
 	if o.dockerfilePath != "" {
-		o.dockerfile(o.dockerfilePath)
-		hc, err = parseHealthCheck(o.df)
+		hc, err = parseHealthCheck(o.dockerfile(o.dockerfilePath))
 		if err != nil {
 			return fmt.Errorf("parse dockerfile %s: %w", o.dockerfilePath, err)
 		}
@@ -351,9 +350,6 @@ func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 }
 
 func (o *initSvcOpts) askSvcPort() (err error) {
-	// See if we can get a healthcheck from the dockerfile.
-	o.dockerfile(o.dockerfilePath)
-
 	// If the port flag was set, use that and don't ask.
 	if o.port != 0 {
 		return nil
@@ -362,7 +358,7 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 	var ports []uint16
 	if o.dockerfilePath != "" && o.image == "" {
 		// Check for exposed ports.
-		ports, err = o.df.GetExposedPorts()
+		ports, err = o.dockerfile(o.dockerfilePath).GetExposedPorts()
 		// Ignore any errors in dockerfile parsing--we'll use the default port instead.
 		if err != nil {
 			log.Debugln(err.Error())
