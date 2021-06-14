@@ -45,7 +45,7 @@ type LoadBalancedWebService struct {
 
 // LoadBalancedWebServiceConfig holds the configuration for a load balanced web service.
 type LoadBalancedWebServiceConfig struct {
-	ImageConfig   ImageWithPort `yaml:"image,flow"`
+	ImageConfig   ImageWithPortAndHealthcheck `yaml:"image,flow"`
 	ImageOverride `yaml:",inline"`
 	RoutingRule   `yaml:"http,flow"`
 	TaskConfig    `yaml:",inline"`
@@ -73,9 +73,10 @@ type RoutingRule struct {
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
 type LoadBalancedWebServiceProps struct {
 	*WorkloadProps
-	Path      string
-	Port      uint16
-	AppDomain *string
+	Path        string
+	Port        uint16
+	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
+	AppDomain   *string
 }
 
 // NewLoadBalancedWebService creates a new public load balanced web service, receives all the requests from the load balancer,
@@ -83,10 +84,11 @@ type LoadBalancedWebServiceProps struct {
 func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalancedWebService {
 	svc := newDefaultLoadBalancedWebService()
 	// Apply overrides.
-	svc.Name = aws.String(props.Name)
+	svc.Name = stringP(props.Name)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
+	svc.LoadBalancedWebServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.RoutingRule.Path = aws.String(props.Path)
 	svc.AppDomain = props.AppDomain
 	svc.parser = template.New()
@@ -100,7 +102,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 			Type: aws.String(LoadBalancedWebServiceType),
 		},
 		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-			ImageConfig: ImageWithPort{},
+			ImageConfig: ImageWithPortAndHealthcheck{},
 			RoutingRule: RoutingRule{
 				HealthCheck: HealthCheckArgsOrString{
 					HealthCheckPath: aws.String(DefaultHealthCheckPath),
