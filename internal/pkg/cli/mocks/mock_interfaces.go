@@ -5281,34 +5281,19 @@ func (m *Mockec2Selector) EXPECT() *Mockec2SelectorMockRecorder {
 	return m.recorder
 }
 
-// PrivateSubnets mocks base method.
-func (m *Mockec2Selector) PrivateSubnets(prompt, help, vpcID string) ([]string, error) {
+// Subnets mocks base method.
+func (m *Mockec2Selector) Subnets(prompt, help, vpcID string) ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PrivateSubnets", prompt, help, vpcID)
+	ret := m.ctrl.Call(m, "Subnets", prompt, help, vpcID)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// PrivateSubnets indicates an expected call of PrivateSubnets.
-func (mr *Mockec2SelectorMockRecorder) PrivateSubnets(prompt, help, vpcID interface{}) *gomock.Call {
+// Subnets indicates an expected call of Subnets.
+func (mr *Mockec2SelectorMockRecorder) Subnets(prompt, help, vpcID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrivateSubnets", reflect.TypeOf((*Mockec2Selector)(nil).PrivateSubnets), prompt, help, vpcID)
-}
-
-// PublicSubnets mocks base method.
-func (m *Mockec2Selector) PublicSubnets(prompt, help, vpcID string) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PublicSubnets", prompt, help, vpcID)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PublicSubnets indicates an expected call of PublicSubnets.
-func (mr *Mockec2SelectorMockRecorder) PublicSubnets(prompt, help, vpcID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicSubnets", reflect.TypeOf((*Mockec2Selector)(nil).PublicSubnets), prompt, help, vpcID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subnets", reflect.TypeOf((*Mockec2Selector)(nil).Subnets), prompt, help, vpcID)
 }
 
 // VPC mocks base method.

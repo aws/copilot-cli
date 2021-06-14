@@ -20,35 +20,6 @@ const (
 	TagFilterName = "tag:%s"
 )
 
-// ListVPCSubnetsOpts sets up optional parameters for ListVPCSubnets function.
-type ListVPCSubnetsOpts func([]*ec2.Subnet) []*ec2.Subnet
-
-// FilterForPublicSubnets is used to filter to get public subnets.
-func FilterForPublicSubnets() ListVPCSubnetsOpts {
-	return func(subnets []*ec2.Subnet) []*ec2.Subnet {
-		var publicSubnets []*ec2.Subnet
-		for _, subnet := range subnets {
-			if aws.BoolValue(subnet.MapPublicIpOnLaunch) {
-				publicSubnets = append(publicSubnets, subnet)
-			}
-		}
-		return publicSubnets
-	}
-}
-
-// FilterForPrivateSubnets is used to filter to get private subnets.
-func FilterForPrivateSubnets() ListVPCSubnetsOpts {
-	return func(subnets []*ec2.Subnet) []*ec2.Subnet {
-		var privateSubnets []*ec2.Subnet
-		for _, subnet := range subnets {
-			if !aws.BoolValue(subnet.MapPublicIpOnLaunch) {
-				privateSubnets = append(privateSubnets, subnet)
-			}
-		}
-		return privateSubnets
-	}
-}
-
 var (
 	// FilterForDefaultVPCSubnets is a pre-defined filter for the default subnets at the availability zone.
 	FilterForDefaultVPCSubnets = Filter{
@@ -187,16 +158,13 @@ func (c *EC2) HasDNSSupport(vpcID string) (bool, error) {
 }
 
 // ListVPCSubnets lists all subnets given a VPC ID.
-func (c *EC2) ListVPCSubnets(vpcID string, opts ...ListVPCSubnetsOpts) ([]string, error) {
+func (c *EC2) ListVPCSubnets(vpcID string) ([]string, error) {
 	respSubnets, err := c.subnets(Filter{
 		Name:   "vpc-id",
 		Values: []string{vpcID},
 	})
 	if err != nil {
 		return nil, err
-	}
-	for _, opt := range opts {
-		respSubnets = opt(respSubnets)
 	}
 	var subnets []string
 	for _, subnet := range respSubnets {

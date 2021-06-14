@@ -379,7 +379,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
-				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
 					Return(nil, mockErr)
 			},
 			wantedError: fmt.Errorf("select public subnets: some error"),
@@ -394,7 +394,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
-				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
 					Return([]string{"mockPublicSubnet"}, nil)
 			},
 			wantedError: fmt.Errorf("select public subnets: at least two public subnets must be selected to enable Load Balancing"),
@@ -409,9 +409,9 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
-				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
 					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
-				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
 					Return(nil, mockErr)
 			},
 			wantedError: fmt.Errorf("select private subnets: some error"),
@@ -426,9 +426,9 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
-				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
 					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
-				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
 					Return([]string{"mockPrivateSubnet"}, nil)
 			},
 			wantedError: fmt.Errorf("select private subnets: at least two private subnets must be selected"),
@@ -443,9 +443,9 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
-				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
 					Return([]string{}, nil)
-				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
 					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
 			},
 		},
@@ -459,9 +459,9 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					Return(envInitImportEnvResourcesSelectOption, nil)
 				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
 				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
-				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
 					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
-				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
+				m.selVPC.EXPECT().Subnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
 					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
 			},
 		},

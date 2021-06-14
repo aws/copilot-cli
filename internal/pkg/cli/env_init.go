@@ -467,11 +467,11 @@ https://aws.amazon.com/premiumsupport/knowledge-center/ecs-pull-container-api-er
 		return fmt.Errorf("VPC %s has no DNS support enabled", o.importVPC.ID)
 	}
 	if o.importVPC.PublicSubnetIDs == nil {
-		publicSubnets, err := o.selVPC.PublicSubnets(envInitPublicSubnetsSelectPrompt, "", o.importVPC.ID)
+		publicSubnets, err := o.selVPC.Subnets(envInitPublicSubnetsSelectPrompt, "", o.importVPC.ID)
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
-				log.Warningf(`No existing public subnets were found in VPC %s.
-If you proceed without public subnets, you will not be able to deploy Load Balanced Web Services in this environment.
+				log.Warningf(`No existing subnets were found in VPC %s.
+If you proceed without specifying public subnets, you will not be able to deploy Load Balanced Web Services in this environment.
 `, o.importVPC.ID)
 			} else {
 				return fmt.Errorf("select public subnets: %w", err)
@@ -483,11 +483,11 @@ If you proceed without public subnets, you will not be able to deploy Load Balan
 		o.importVPC.PublicSubnetIDs = publicSubnets
 	}
 	if o.importVPC.PrivateSubnetIDs == nil {
-		privateSubnets, err := o.selVPC.PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", o.importVPC.ID)
+		privateSubnets, err := o.selVPC.Subnets(envInitPrivateSubnetsSelectPrompt, "", o.importVPC.ID)
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
-				log.Errorf(`No existing private subnets were found in VPC %s. You can either:
-- Create new private subnets and then import them.
+				log.Errorf(`No existing subnets were found in VPC %s. You can either:
+- Create new subnets and then import them as private subnets.
 - Use the default Copilot environment configuration.`, o.importVPC.ID)
 			}
 			return fmt.Errorf("select private subnets: %w", err)

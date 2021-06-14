@@ -21,7 +21,7 @@ var (
 // VPCSubnetLister list VPCs and subnets.
 type VPCSubnetLister interface {
 	ListVPCs() ([]ec2.VPC, error)
-	ListVPCSubnets(vpcID string, opts ...ec2.ListVPCSubnetsOpts) ([]string, error)
+	ListVPCSubnets(vpcID string) ([]string, error)
 }
 
 // EC2Select is a selector for Ec2 resources.
@@ -65,18 +65,9 @@ func (s *EC2Select) VPC(prompt, help string) (string, error) {
 	return extractedVPC.ID, nil
 }
 
-// PublicSubnets has the user multiselect public subnets given the VPC ID.
-func (s *EC2Select) PublicSubnets(prompt, help, vpcID string) ([]string, error) {
-	return s.subnet(prompt, help, vpcID, ec2.FilterForPublicSubnets())
-}
-
-// PrivateSubnets has the user multiselect private subnets given the VPC ID.
-func (s *EC2Select) PrivateSubnets(prompt, help, vpcID string) ([]string, error) {
-	return s.subnet(prompt, help, vpcID, ec2.FilterForPrivateSubnets())
-}
-
-func (s *EC2Select) subnet(prompt, help string, vpcID string, filter ec2.ListVPCSubnetsOpts) ([]string, error) {
-	subnets, err := s.ec2Svc.ListVPCSubnets(vpcID, filter)
+// Subnets has the user multiselect subnets given the VPC ID.
+func (s *EC2Select) Subnets(prompt, help string, vpcID string) ([]string, error) {
+	subnets, err := s.ec2Svc.ListVPCSubnets(vpcID)
 	if err != nil {
 		return nil, fmt.Errorf("list subnets for VPC %s: %w", vpcID, err)
 	}

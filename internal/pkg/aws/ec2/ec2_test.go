@@ -158,7 +158,6 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 	const mockVPCID = "mockVPCID"
 	testCases := map[string]struct {
 		mockEC2Client func(m *mocks.Mockapi)
-		public        bool
 
 		wantedError   error
 		wantedSubnets []string
@@ -187,25 +186,6 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 			},
 			wantedSubnets: []string{"subnet-1", "subnet-2", "subnet-3"},
 		},
-		"success with filtering": {
-			public: true,
-			mockEC2Client: func(m *mocks.Mockapi) {
-				m.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
-					Filters: toEC2Filter([]Filter{
-						{
-							Name:   "vpc-id",
-							Values: []string{mockVPCID},
-						},
-					}),
-				}).Return(&ec2.DescribeSubnetsOutput{
-					Subnets: []*ec2.Subnet{
-						subnet1,
-						subnet2,
-						subnet3,
-					}}, nil)
-			},
-			wantedSubnets: []string{"subnet-2", "subnet-3"},
-		},
 	}
 
 	for name, tc := range testCases {
@@ -219,13 +199,7 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 				client: mockAPI,
 			}
 
-			var subnets []string
-			var err error
-			if tc.public {
-				subnets, err = ec2Client.ListVPCSubnets(mockVPCID, FilterForPublicSubnets())
-			} else {
-				subnets, err = ec2Client.ListVPCSubnets(mockVPCID)
-			}
+			subnets, err := ec2Client.ListVPCSubnets(mockVPCID)
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
@@ -294,7 +268,7 @@ func TestEC2_PublicSubnetIDs(t *testing.T) {
 
 func TestEC2_PublicIP(t *testing.T) {
 	testCases := map[string]struct {
-		inENI string
+		inENI         string
 		mockEC2Client func(m *mocks.Mockapi)
 
 		wantedIP  string
@@ -316,7 +290,7 @@ func TestEC2_PublicIP(t *testing.T) {
 					NetworkInterfaceIds: aws.StringSlice([]string{"eni-1"}),
 				}).Return(&ec2.DescribeNetworkInterfacesOutput{
 					NetworkInterfaces: []*ec2.NetworkInterface{
-						&ec2.NetworkInterface{},
+						{},
 					},
 				}, nil)
 			},
@@ -329,7 +303,7 @@ func TestEC2_PublicIP(t *testing.T) {
 					NetworkInterfaceIds: aws.StringSlice([]string{"eni-1"}),
 				}).Return(&ec2.DescribeNetworkInterfacesOutput{
 					NetworkInterfaces: []*ec2.NetworkInterface{
-						&ec2.NetworkInterface{
+						{
 							Association: &ec2.NetworkInterfaceAssociation{
 								PublicIp: aws.String("1.2.3"),
 							},
@@ -341,7 +315,7 @@ func TestEC2_PublicIP(t *testing.T) {
 		},
 	}
 
-	for name, tc := range testCases{
+	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			mockAPI := mocks.NewMockapi(ctrl)
