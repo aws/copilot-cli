@@ -122,8 +122,8 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 							Value: aws.Int(1),
 						},
 					},
-					Network: NetworkConfig{
-						VPC: vpcConfig{
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
 							Placement: stringP(PublicSubnetPlacement),
 						},
 					},
@@ -166,8 +166,8 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 							"LOG_LEVEL": "prod",
 						},
 					},
-					Network: NetworkConfig{
-						VPC: vpcConfig{
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
 							Placement: stringP(PublicSubnetPlacement),
 						},
 					},

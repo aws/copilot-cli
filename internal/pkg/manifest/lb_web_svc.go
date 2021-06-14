@@ -51,7 +51,7 @@ type LoadBalancedWebServiceConfig struct {
 	TaskConfig    `yaml:",inline"`
 	*Logging      `yaml:"logging,flow"`
 	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
-	Network       NetworkConfig             `yaml:"network"`
+	Network       *NetworkConfig            `yaml:"network"`
 
 	// Fields that are used while marshaling the template for additional clarifications,
 	// but don't correspond to a field in the manifests.
@@ -116,8 +116,8 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 					Enable: aws.Bool(false),
 				},
 			},
-			Network: NetworkConfig{
-				VPC: vpcConfig{
+			Network: &NetworkConfig{
+				VPC: &vpcConfig{
 					Placement: stringP(PublicSubnetPlacement),
 				},
 			},

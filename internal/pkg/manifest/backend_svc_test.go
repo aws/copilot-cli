@@ -54,8 +54,8 @@ func TestNewBackendSvc(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: NetworkConfig{
-						VPC: vpcConfig{
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
 							Placement: stringP("public"),
 						},
 					},
@@ -104,8 +104,8 @@ func TestNewBackendSvc(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: NetworkConfig{
-						VPC: vpcConfig{
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
 							Placement: stringP("public"),
 						},
 					},
