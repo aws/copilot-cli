@@ -487,7 +487,7 @@ If you proceed without specifying public subnets, you will not be able to deploy
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
 				log.Errorf(`No existing subnets were found in VPC %s. You can either:
-- Create new subnets and then import them as private subnets.
+- Create new private subnets and then import them.
 - Use the default Copilot environment configuration.`, o.importVPC.ID)
 			}
 			return fmt.Errorf("select private subnets: %w", err)

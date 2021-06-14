@@ -187,22 +187,6 @@ func (c *EC2) SubnetIDs(filters ...Filter) ([]string, error) {
 	return subnetIDs, nil
 }
 
-// PublicSubnetIDs finds the public subnet IDs with optional filters.
-func (c *EC2) PublicSubnetIDs(filters ...Filter) ([]string, error) {
-	subnets, err := c.subnets(filters...)
-	if err != nil {
-		return nil, err
-	}
-
-	var subnetIDs []string
-	for _, subnet := range subnets {
-		if aws.BoolValue(subnet.MapPublicIpOnLaunch) {
-			subnetIDs = append(subnetIDs, aws.StringValue(subnet.SubnetId))
-		}
-	}
-	return subnetIDs, nil
-}
-
 // SecurityGroups finds the security group IDs with optional filters.
 func (c *EC2) SecurityGroups(filters ...Filter) ([]string, error) {
 	inputFilters := toEC2Filter(filters)
