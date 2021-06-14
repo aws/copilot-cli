@@ -4,7 +4,6 @@
 package app_with_domain_test
 
 import (
-	"fmt"
 	"net/http"
 
 	. "github.com/onsi/ginkgo"
@@ -117,9 +116,13 @@ var _ = Describe("App With Domain", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
 
+			wantedURLs := map[string]string{
+				"test": "https://test.copilot-e2e-tests.ecs.aws.dev",
+				"prod": "https://prod.copilot-e2e-tests.ecs.aws.dev",
+			}
 			for _, route := range svc.Routes {
 				// Validate route has the expected HTTPS endpoint.
-				Expect(route.URL).To(Equal(fmt.Sprintf("https://%s.%s", route.Environment, domainName)))
+				Expect(route.URL).To(Equal(wantedURLs[route.Environment]))
 
 				// Make sure the response is OK.
 				var resp *http.Response
@@ -130,8 +133,7 @@ var _ = Describe("App With Domain", func() {
 				}, "60s", "1s").Should(Equal(200))
 				// HTTP should route to HTTPS.
 				Eventually(func() (int, error) {
-					httpRoute := fmt.Sprintf("http://%s.%s", route.Environment, domainName)
-					resp, fetchErr = http.Get(httpRoute)
+					resp, fetchErr = http.Get(route.URL)
 					return resp.StatusCode, fetchErr
 				}, "60s", "1s").Should(Equal(200))
 			}
