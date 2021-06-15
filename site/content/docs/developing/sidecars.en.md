@@ -38,6 +38,9 @@ sidecars:
     # Optional Docker labels to apply to this container.
     labels:
       {label key} : <label value>
+    # Optional container dependencies to apply to this container.
+    depends_on:
+      {container name}: <condition>
 
 ```
 

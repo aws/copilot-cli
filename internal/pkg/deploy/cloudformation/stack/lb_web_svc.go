@@ -164,6 +164,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		DesiredCountOnSpot:  desiredCountOnSpot,
 		ExecuteCommand:      convertExecuteCommand(&s.manifest.ExecuteCommand),
 		WorkloadType:        manifest.LoadBalancedWebServiceType,
+		HealthCheck:         s.manifest.ImageConfig.HealthCheckOpts(),
 		HTTPHealthCheck:     convertHTTPHealthCheck(&s.manifest.HealthCheck),
 		AllowedSourceIps:    s.manifest.AllowedSourceIps,
 		RulePriorityLambda:  rulePriorityLambda.String(),

@@ -105,8 +105,10 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					Type: aws.String(ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
-					ImageConfig: Image{
-						Location: aws.String("nginx"),
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Location: aws.String("nginx"),
+						},
 					},
 					On: JobTriggerConfig{
 						Schedule: aws.String("@hourly"),
@@ -122,8 +124,8 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 							Value: aws.Int(1),
 						},
 					},
-					Network: NetworkConfig{
-						VPC: vpcConfig{
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
 							Placement: stringP(PublicSubnetPlacement),
 						},
 					},
@@ -146,8 +148,10 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					Type: aws.String(ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
-					ImageConfig: Image{
-						Location: aws.String("nginx"),
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Location: aws.String("nginx"),
+						},
 					},
 					On: JobTriggerConfig{
 						Schedule: aws.String("@hourly"),
@@ -166,8 +170,8 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 							"LOG_LEVEL": "prod",
 						},
 					},
-					Network: NetworkConfig{
-						VPC: vpcConfig{
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
 							Placement: stringP(PublicSubnetPlacement),
 						},
 					},
@@ -182,18 +186,22 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					Type: aws.String(ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
-					ImageConfig: Image{
-						Build: BuildArgsOrString{
-							BuildArgs: DockerBuildArgs{
-								Dockerfile: aws.String("./Dockerfile"),
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./Dockerfile"),
+								},
 							},
 						},
 					},
 				},
 				Environments: map[string]*ScheduledJobConfig{
 					"prod-iad": {
-						ImageConfig: Image{
-							Location: aws.String("env-override location"),
+						ImageConfig: ImageWithHealthcheck{
+							Image: Image{
+								Location: aws.String("env-override location"),
+							},
 						},
 					},
 				},
@@ -206,8 +214,10 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					Type: aws.String(ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
-					ImageConfig: Image{
-						Location: aws.String("env-override location"),
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Location: aws.String("env-override location"),
+						},
 					},
 				},
 			},
@@ -219,14 +229,18 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					Type: aws.String(ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
-					ImageConfig: Image{
-						Location: aws.String("default location"),
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Location: aws.String("default location"),
+						},
 					},
 				},
 				Environments: map[string]*ScheduledJobConfig{
 					"prod-iad": {
-						ImageConfig: Image{
-							Location: aws.String("env-override location"),
+						ImageConfig: ImageWithHealthcheck{
+							Image: Image{
+								Location: aws.String("env-override location"),
+							},
 						},
 					},
 				},
@@ -239,8 +253,10 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					Type: aws.String(ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
-					ImageConfig: Image{
-						Location: aws.String("env-override location"),
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Location: aws.String("env-override location"),
+						},
 					},
 				},
 			},
@@ -252,19 +268,23 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					Type: aws.String(ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
-					ImageConfig: Image{
-						Build: BuildArgsOrString{
-							BuildArgs: DockerBuildArgs{
-								Dockerfile: aws.String("./Dockerfile"),
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./Dockerfile"),
+								},
 							},
 						},
 					},
 				},
 				Environments: map[string]*ScheduledJobConfig{
 					"prod-iad": {
-						ImageConfig: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("overridden build string"),
+						ImageConfig: ImageWithHealthcheck{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
 							},
 						},
 					},
@@ -278,9 +298,11 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					Type: aws.String(ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
-					ImageConfig: Image{
-						Build: BuildArgsOrString{
-							BuildString: aws.String("overridden build string"),
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildString: aws.String("overridden build string"),
+							},
 						},
 					},
 				},
@@ -293,15 +315,19 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					Type: aws.String(ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
-					ImageConfig: Image{
-						Location: aws.String("default location"),
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Location: aws.String("default location"),
+						},
 					},
 				},
 				Environments: map[string]*ScheduledJobConfig{
 					"prod-iad": {
-						ImageConfig: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("overridden build string"),
+						ImageConfig: ImageWithHealthcheck{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
 							},
 						},
 					},
@@ -315,9 +341,11 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					Type: aws.String(ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
-					ImageConfig: Image{
-						Build: BuildArgsOrString{
-							BuildString: aws.String("overridden build string"),
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildString: aws.String("overridden build string"),
+							},
 						},
 					},
 				},

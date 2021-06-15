@@ -194,9 +194,8 @@ func (o *appUpgradeOpts) upgradeAppSSMStore(app *config.Application) error {
 func buildAppUpgradeCmd() *cobra.Command {
 	vars := appUpgradeVars{}
 	cmd := &cobra.Command{
-		Use:    "upgrade",
-		Short:  "Upgrades the template of an application to the latest version.",
-		Hidden: true,
+		Use:   "upgrade",
+		Short: "Upgrades the template of an application to the latest version.",
 		Example: `
     Upgrade the application "my-app" to the latest version
     /code $ copilot app upgrade -n my-app`,
