@@ -36,6 +36,8 @@ const (
 	TaskCapacityProviderFargate = "FARGATE"
 	// TaskCapacityProviderFargateSpot is the capacity provider name for FARGATE_SPOT.
 	TaskCapacityProviderFargateSpot = "FARGATE_SPOT"
+	// TaskStatusRunning is the task status running.
+	TaskStatusRunning = "RUNNING"
 )
 
 // Image contains very basic info of a container image.
