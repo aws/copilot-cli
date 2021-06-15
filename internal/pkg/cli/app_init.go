@@ -41,13 +41,14 @@ type initAppVars struct {
 type initAppOpts struct {
 	initAppVars
 
-	identity identityService
-	store    applicationStore
-	route53  domainHostedZoneGetter
-	ws       wsAppManager
-	cfn      appDeployer
-	prompt   prompter
-	prog     progress
+	identity             identityService
+	store                applicationStore
+	route53              domainHostedZoneGetter
+	ws                   wsAppManager
+	cfn                  appDeployer
+	prompt               prompter
+	prog                 progress
+	isSessionFromEnvVars func() (bool, error)
 
 	cachedHostedZoneID string
 }
@@ -75,6 +76,9 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		cfn:         cloudformation.New(sess),
 		prompt:      prompt.New(),
 		prog:        termprogress.NewSpinner(log.DiagnosticWriter),
+		isSessionFromEnvVars: func() (bool, error) {
+			return sessions.AreCredsFromEnvVars(sess)
+		},
 	}, nil
 }
 
@@ -100,11 +104,7 @@ func (o *initAppOpts) Validate() error {
 
 // Ask prompts the user for any required arguments that they didn't provide.
 func (o *initAppOpts) Ask() error {
-	sess, err := sessions.NewProvider().Default()
-	if err != nil {
-		return fmt.Errorf("get default session: %w", err)
-	}
-	if ok, _ := sessions.AreCredsFromEnvVars(sess); ok { // Ignore the error, we do not want to crash for a warning.
+	if ok, _ := o.isSessionFromEnvVars(); ok { // Ignore the error, we do not want to crash for a warning.
 		log.Warningln(`Looks like you're creating an application using credentials set by environment variables.
 Copilot will store your application metadata in this account.
 We recommend using credentials from named profiles. To learn more:
