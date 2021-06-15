@@ -1,11 +1,11 @@
 # ドメイン
-[Application](../concepts/applications.en.md#追加のアプリケーション設定)で説明したように、 `copilot app init` を実行するときに Application のドメイン名を設定できます。 [Load Balanced Web Service](../concepts/services.ja.md#load-balanced-web-service) をデプロイするとこのドメイン名を使ってアクセスできるようになります。
+[Application](../concepts/applications.en.md#追加のアプリケーション設定)で説明したように、 `copilot app init` を実行するときに Application のドメイン名を設定できます。 [Load Balanced Web Service](../concepts/services.ja.md#load-balanced-web-service) をデプロイすると以下のようなドメイン名を使ってアクセスできるようになります。
 
 ```
 ${SvcName}.${EnvName}.${AppName}.${DomainName}
 ```
 
-例えば以下のようになります。
+具体的には例えば以下のようになります。
 
 ```
 https:kudo.test.coolapp.example.aws
