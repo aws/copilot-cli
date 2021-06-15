@@ -116,6 +116,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		identity: id,
 		cfn:      deployer,
 		prog:     spin,
+		isSessionFromEnvVars: func() (bool, error) {
+			return sessions.AreCredsFromEnvVars(defaultSess)
+		},
 	}
 	initEnvCmd := &initEnvOpts{
 		initEnvVars: initEnvVars{
