@@ -384,26 +384,34 @@ Resources:
 			},
 		},
 	}, nil).AnyTimes()
-	mockCFN.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
-		StackName: aws.String("my-app-my-env"),
-	}).Return(&sdkcloudformation.DescribeStackEventsOutput{
-		StackEvents: []*sdkcloudformation.StackEvent{
-			{
-				EventId:           aws.String("1"),
-				LogicalResourceId: aws.String("PublicLoadBalancer"),
-				ResourceType:      aws.String("AWS::ElasticLoadBalancingV2::LoadBalancer"),
-				ResourceStatus:    aws.String("CREATE_COMPLETE"),
-				Timestamp:         aws.Time(deploymentTime),
+	gomock.InOrder(
+		mockCFN.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
+			StackName: aws.String("my-app-my-env"),
+		}).Return(&sdkcloudformation.DescribeStackEventsOutput{
+			StackEvents: []*sdkcloudformation.StackEvent{
+				{
+					EventId:           aws.String("1"),
+					LogicalResourceId: aws.String("PublicLoadBalancer"),
+					ResourceType:      aws.String("AWS::ElasticLoadBalancingV2::LoadBalancer"),
+					ResourceStatus:    aws.String("CREATE_COMPLETE"),
+					Timestamp:         aws.Time(deploymentTime),
+				},
 			},
-			{
-				EventId:           aws.String("2"),
-				LogicalResourceId: aws.String("my-app-my-env"),
-				ResourceType:      aws.String("AWS::CloudFormation::Stack"),
-				ResourceStatus:    aws.String("CREATE_COMPLETE"),
-				Timestamp:         aws.Time(deploymentTime),
+		}, nil),
+		mockCFN.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
+			StackName: aws.String("my-app-my-env"),
+		}).Return(&sdkcloudformation.DescribeStackEventsOutput{
+			StackEvents: []*sdkcloudformation.StackEvent{
+				{
+					EventId:           aws.String("2"),
+					LogicalResourceId: aws.String("my-app-my-env"),
+					ResourceType:      aws.String("AWS::CloudFormation::Stack"),
+					ResourceStatus:    aws.String("CREATE_COMPLETE"),
+					Timestamp:         aws.Time(deploymentTime),
+				},
 			},
-		},
-	}, nil).AnyTimes()
+		}, nil),
+	)
 
 	mockCFN.EXPECT().Describe(svcStackName).Return(&cloudformation.StackDescription{
 		StackStatus: aws.String("CREATE_COMPLETE"),

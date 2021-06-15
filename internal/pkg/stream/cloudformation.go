@@ -56,6 +56,7 @@ type StackStreamer struct {
 
 	subscribers   []chan StackEvent
 	done          chan struct{}
+	isDone        bool
 	pastEventIDs  map[string]bool
 	eventsToFlush []StackEvent
 	mu            sync.Mutex
@@ -82,6 +83,11 @@ func (s *StackStreamer) Subscribe() <-chan StackEvent {
 	defer s.mu.Unlock()
 	c := make(chan StackEvent)
 	s.subscribers = append(s.subscribers, c)
+
+	if s.isDone {
+		// If the streamer is already done streaming, any new subscription requests should just return a closed channel.
+		close(c)
+	}
 	return c
 }
 
@@ -175,6 +181,7 @@ func (s *StackStreamer) Close() {
 	for _, sub := range s.subscribers {
 		close(sub)
 	}
+	s.isDone = true
 }
 
 // Done returns a channel that's closed when there are no more events that can be fetched.
