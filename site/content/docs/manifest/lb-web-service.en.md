@@ -67,5 +67,9 @@ The name of your service.
 The architecture type for your service. A [Load Balanced Web Service](../concepts/services.en.md#load-balanced-web-service) is an internet-facing service that's behind a load balancer, orchestrated by Amazon ECS on AWS Fargate.
 
 {% include 'http-config.en.md' %}
+
 {% include 'image-config.en.md' %}
+
+{% include 'image-healthcheck.en.md' %}
+
 {% include 'common-svc-fields.en.md' %}

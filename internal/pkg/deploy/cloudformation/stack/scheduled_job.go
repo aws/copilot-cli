@@ -122,7 +122,7 @@ func (j *ScheduledJob) Template() (string, error) {
 	}
 	convSidecarOpts := convertSidecarOpts{
 		sidecarConfig: j.manifest.Sidecars,
-		imageConfig:   &j.manifest.ImageConfig,
+		imageConfig:   &j.manifest.ImageConfig.Image,
 		workloadName:  aws.StringValue(j.manifest.Name),
 	}
 	sidecars, err := convertSidecar(convSidecarOpts)
@@ -168,6 +168,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		Sidecars:           sidecars,
 		ScheduleExpression: schedule,
 		StateMachine:       stateMachine,
+		HealthCheck:        j.manifest.ImageConfig.HealthCheckOpts(),
 		LogConfig:          convertLogging(j.manifest.Logging),
 		DockerLabels:       j.manifest.ImageConfig.DockerLabels,
 		Storage:            storage,

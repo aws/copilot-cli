@@ -24,15 +24,28 @@ func (m mockCloudFormation) DescribeStackEvents(*cloudformation.DescribeStackEve
 }
 
 func TestStackStreamer_Subscribe(t *testing.T) {
-	// GIVEN
-	streamer := &StackStreamer{}
+	t.Run("allow new subscriptions if stack streamer is still active", func(t *testing.T) {
+		// GIVEN
+		streamer := &StackStreamer{}
 
-	// WHEN
-	_ = streamer.Subscribe()
-	_ = streamer.Subscribe()
+		// WHEN
+		_ = streamer.Subscribe()
+		_ = streamer.Subscribe()
 
-	// THEN
-	require.Equal(t, 2, len(streamer.subscribers), "expected number of subscribers to match")
+		// THEN
+		require.Equal(t, 2, len(streamer.subscribers), "expected number of subscribers to match")
+	})
+	t.Run("new subscriptions on a finished stack streamer should return closed channels", func(t *testing.T) {
+		// GIVEN
+		streamer := &StackStreamer{isDone: true}
+
+		// WHEN
+		ch := streamer.Subscribe()
+		_, ok := <-ch
+
+		// THEN
+		require.False(t, ok, "channel should be closed")
+	})
 }
 
 func TestStackStreamer_Fetch(t *testing.T) {
@@ -283,4 +296,5 @@ func TestStackStreamer_Close(t *testing.T) {
 	// THEN
 	_, isOpen := <-c
 	require.False(t, isOpen, "expected subscribed channels to be closed")
+	require.True(t, streamer.isDone, "should mark the streamer that it won't allow new subscribers")
 }

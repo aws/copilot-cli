@@ -4,10 +4,7 @@
 package manifest
 
 import (
-	"time"
-
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -35,45 +32,24 @@ type BackendService struct {
 
 // BackendServiceConfig holds the configuration that can be overridden per environments.
 type BackendServiceConfig struct {
-	ImageConfig   imageWithPortAndHealthcheck `yaml:"image,flow"`
+	ImageConfig   ImageWithPortAndHealthcheck `yaml:"image,flow"`
 	ImageOverride `yaml:",inline"`
 	TaskConfig    `yaml:",inline"`
 	*Logging      `yaml:"logging,flow"`
 	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
-	Network       NetworkConfig             `yaml:"network"`
-}
-
-type imageWithPortAndHealthcheck struct {
-	ImageWithPort `yaml:",inline"`
-	HealthCheck   *ContainerHealthCheck `yaml:"healthcheck"`
-}
-
-// ContainerHealthCheck holds the configuration to determine if the service container is healthy.
-// See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-healthcheck.html
-type ContainerHealthCheck struct {
-	Command     []string       `yaml:"command"`
-	Interval    *time.Duration `yaml:"interval"`
-	Retries     *int           `yaml:"retries"`
-	Timeout     *time.Duration `yaml:"timeout"`
-	StartPeriod *time.Duration `yaml:"start_period"`
+	Network       *NetworkConfig            `yaml:"network"`
 }
 
 // NewBackendService applies the props to a default backend service configuration with
 // minimal task sizes, single replica, no healthcheck, and then returns it.
 func NewBackendService(props BackendServiceProps) *BackendService {
 	svc := newDefaultBackendService()
-	var healthCheck *ContainerHealthCheck
-	if props.HealthCheck != nil {
-		// Create the healthcheck field only if the caller specified a healthcheck.
-		healthCheck = newDefaultContainerHealthCheck()
-		healthCheck.apply(props.HealthCheck)
-	}
 	// Apply overrides.
-	svc.Name = aws.String(props.Name)
+	svc.Name = stringP(props.Name)
 	svc.BackendServiceConfig.ImageConfig.Image.Location = stringP(props.Image)
 	svc.BackendServiceConfig.ImageConfig.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.BackendServiceConfig.ImageConfig.Port = uint16P(props.Port)
-	svc.BackendServiceConfig.ImageConfig.HealthCheck = healthCheck
+	svc.BackendServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.parser = template.New()
 	return svc
 }
@@ -138,7 +114,7 @@ func newDefaultBackendService() *BackendService {
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: imageWithPortAndHealthcheck{},
+			ImageConfig: ImageWithPortAndHealthcheck{},
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),
@@ -149,75 +125,11 @@ func newDefaultBackendService() *BackendService {
 					Enable: aws.Bool(false),
 				},
 			},
-			Network: NetworkConfig{
-				VPC: vpcConfig{
+			Network: &NetworkConfig{
+				VPC: &vpcConfig{
 					Placement: stringP(PublicSubnetPlacement),
 				},
 			},
 		},
-	}
-}
-
-// newDefaultContainerHealthCheck returns container health check configuration
-// that's identical to a load balanced web service's defaults.
-func newDefaultContainerHealthCheck() *ContainerHealthCheck {
-	return &ContainerHealthCheck{
-		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
-		Interval:    durationp(10 * time.Second),
-		Retries:     aws.Int(2),
-		Timeout:     durationp(5 * time.Second),
-		StartPeriod: durationp(0 * time.Second),
-	}
-}
-
-// apply overrides the healthcheck's fields if other has them set.
-func (hc *ContainerHealthCheck) apply(other *ContainerHealthCheck) {
-	if other.Command != nil {
-		hc.Command = other.Command
-	}
-	if other.Interval != nil {
-		hc.Interval = other.Interval
-	}
-	if other.Retries != nil {
-		hc.Retries = other.Retries
-	}
-	if other.Timeout != nil {
-		hc.Timeout = other.Timeout
-	}
-	if other.StartPeriod != nil {
-		hc.StartPeriod = other.StartPeriod
-	}
-}
-
-// applyIfNotSet changes the healthcheck's fields only if they were not set and the other healthcheck has them set.
-func (hc *ContainerHealthCheck) applyIfNotSet(other *ContainerHealthCheck) {
-	if hc.Command == nil && other.Command != nil {
-		hc.Command = other.Command
-	}
-	if hc.Interval == nil && other.Interval != nil {
-		hc.Interval = other.Interval
-	}
-	if hc.Retries == nil && other.Retries != nil {
-		hc.Retries = other.Retries
-	}
-	if hc.Timeout == nil && other.Timeout != nil {
-		hc.Timeout = other.Timeout
-	}
-	if hc.StartPeriod == nil && other.StartPeriod != nil {
-		hc.StartPeriod = other.StartPeriod
-	}
-}
-
-// HealthCheckOpts converts the image's healthcheck configuration into a format parsable by the templates pkg.
-func (i imageWithPortAndHealthcheck) HealthCheckOpts() *ecs.HealthCheck {
-	if i.HealthCheck == nil {
-		return nil
-	}
-	return &ecs.HealthCheck{
-		Command:     aws.StringSlice(i.HealthCheck.Command),
-		Interval:    aws.Int64(int64(i.HealthCheck.Interval.Seconds())),
-		Retries:     aws.Int64(int64(*i.HealthCheck.Retries)),
-		StartPeriod: aws.Int64(int64(i.HealthCheck.StartPeriod.Seconds())),
-		Timeout:     aws.Int64(int64(i.HealthCheck.Timeout.Seconds())),
 	}
 }
