@@ -36,14 +36,14 @@ func TestEc2Select_VPC(t *testing.T) {
 		},
 		"return error if no VPC found": {
 			setupMocks: func(m ec2SelectMocks) {
-				m.ec2Svc.EXPECT().ListVPCs().Return([]ec2.VPC{}, nil)
+				m.ec2Svc.EXPECT().ListVPCs().Return([]ec2.VPCResource{}, nil)
 
 			},
 			wantErr: ErrVPCNotFound,
 		},
 		"return error if fail to select a VPC": {
 			setupMocks: func(m ec2SelectMocks) {
-				m.ec2Svc.EXPECT().ListVPCs().Return([]ec2.VPC{
+				m.ec2Svc.EXPECT().ListVPCs().Return([]ec2.VPCResource{
 					{
 						ID: "mockVPC1",
 					},
@@ -59,7 +59,7 @@ func TestEc2Select_VPC(t *testing.T) {
 		},
 		"success": {
 			setupMocks: func(m ec2SelectMocks) {
-				m.ec2Svc.EXPECT().ListVPCs().Return([]ec2.VPC{
+				m.ec2Svc.EXPECT().ListVPCs().Return([]ec2.VPCResource{
 					{
 						ID: "mockVPCID1",
 					},
@@ -108,6 +108,7 @@ func TestEc2Select_Subnets(t *testing.T) {
 	mockVPC := "mockVPC"
 	testCases := map[string]struct {
 		setupMocks func(mocks ec2SelectMocks)
+		isPublic   bool
 
 		wantErr     error
 		wantSubnets []string
@@ -120,25 +121,53 @@ func TestEc2Select_Subnets(t *testing.T) {
 		},
 		"return error if no subnets found": {
 			setupMocks: func(m ec2SelectMocks) {
-				m.ec2Svc.EXPECT().ListVPCSubnets(mockVPC).Return([]string{}, nil)
+				m.ec2Svc.EXPECT().ListVPCSubnets(mockVPC).Return(&ec2.VPCSubnets{
+					Public: []ec2.VPCResource{
+						{
+							ID: "mockSubnetID",
+						},
+					},
+				}, nil)
 			},
 			wantErr: ErrSubnetsNotFound,
 		},
 		"return error if fail to select": {
 			setupMocks: func(m ec2SelectMocks) {
-				m.ec2Svc.EXPECT().ListVPCSubnets(mockVPC).Return([]string{"mockSubnet1", "mockSubnet2"}, nil)
-				m.prompt.EXPECT().MultiSelect("Select a subnet", "Help text", []string{"mockSubnet1", "mockSubnet2"}).
+				m.ec2Svc.EXPECT().ListVPCSubnets(mockVPC).Return(&ec2.VPCSubnets{
+					Private: []ec2.VPCResource{
+						{
+							ID: "mockSubnetID",
+						},
+					},
+				}, nil)
+				m.prompt.EXPECT().MultiSelect("Select a subnet", "Help text", gomock.Any()).
 					Return(nil, mockErr)
 			},
 			wantErr: fmt.Errorf("some error"),
 		},
 		"success": {
+			isPublic: true,
 			setupMocks: func(m ec2SelectMocks) {
-				m.ec2Svc.EXPECT().ListVPCSubnets(mockVPC).Return([]string{"mockSubnet1", "mockSubnet2"}, nil)
-				m.prompt.EXPECT().MultiSelect("Select a subnet", "Help text", []string{"mockSubnet1", "mockSubnet2"}).
-					Return([]string{"mockSubnet1", "mockSubnet2"}, nil)
+				m.ec2Svc.EXPECT().ListVPCSubnets(mockVPC).Return(&ec2.VPCSubnets{
+					Private: []ec2.VPCResource{
+						{
+							ID: "mockSubnetID1",
+						},
+					},
+					Public: []ec2.VPCResource{
+						{
+							ID: "mockSubnetID2",
+						},
+						{
+							ID:   "mockSubnetID3",
+							Name: "mockSubnetName3",
+						},
+					},
+				}, nil)
+				m.prompt.EXPECT().MultiSelect("Select a subnet", "Help text", []string{"mockSubnetID2", "mockSubnetID3 (mockSubnetName3)"}).
+					Return([]string{"mockSubnetID2", "mockSubnetID3 (mockSubnetName3)"}, nil)
 			},
-			wantSubnets: []string{"mockSubnet1", "mockSubnet2"},
+			wantSubnets: []string{"mockSubnetID2", "mockSubnetID3"},
 		},
 	}
 
@@ -159,7 +188,7 @@ func TestEc2Select_Subnets(t *testing.T) {
 				prompt: mockprompt,
 				ec2Svc: mockec2Svc,
 			}
-			subnets, err := sel.Subnets("Select a subnet", "Help text", mockVPC)
+			subnets, err := sel.subnet("Select a subnet", "Help text", mockVPC, tc.isPublic)
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {

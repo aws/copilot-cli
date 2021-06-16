@@ -20,8 +20,8 @@ var (
 
 // VPCSubnetLister list VPCs and subnets.
 type VPCSubnetLister interface {
-	ListVPCs() ([]ec2.VPC, error)
-	ListVPCSubnets(vpcID string) ([]string, error)
+	ListVPCs() ([]ec2.VPCResource, error)
+	ListVPCSubnets(vpcID string) (*ec2.VPCSubnets, error)
 }
 
 // EC2Select is a selector for Ec2 resources.
@@ -58,27 +58,53 @@ func (s *EC2Select) VPC(prompt, help string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("select VPC: %w", err)
 	}
-	extractedVPC, err := ec2.ExtractVPC(vpc)
+	extractedVPC, err := ec2.ExtractVPCResource(vpc)
 	if err != nil {
 		return "", fmt.Errorf("extract VPC ID: %w", err)
 	}
 	return extractedVPC.ID, nil
 }
 
-// Subnets has the user multiselect subnets given the VPC ID.
-func (s *EC2Select) Subnets(prompt, help string, vpcID string) ([]string, error) {
-	subnets, err := s.ec2Svc.ListVPCSubnets(vpcID)
+// PublicSubnets has the user multiselect public subnets given the VPC ID.
+func (s *EC2Select) PublicSubnets(prompt, help, vpcID string) ([]string, error) {
+	return s.subnet(prompt, help, vpcID, true)
+}
+
+// PrivateSubnets has the user multiselect private subnets given the VPC ID.
+func (s *EC2Select) PrivateSubnets(prompt, help, vpcID string) ([]string, error) {
+	return s.subnet(prompt, help, vpcID, false)
+}
+
+func (s *EC2Select) subnet(prompt, help string, vpcID string, isPublic bool) ([]string, error) {
+	allSubnets, err := s.ec2Svc.ListVPCSubnets(vpcID)
 	if err != nil {
 		return nil, fmt.Errorf("list subnets for VPC %s: %w", vpcID, err)
+	}
+	subnets := allSubnets.Private
+	if isPublic {
+		subnets = allSubnets.Public
 	}
 	if len(subnets) == 0 {
 		return nil, ErrSubnetsNotFound
 	}
-	ans, err := s.prompt.MultiSelect(
+	var options []string
+	for _, subnet := range subnets {
+		stringifiedSubnet := subnet.String()
+		options = append(options, stringifiedSubnet)
+	}
+	selectedSubnets, err := s.prompt.MultiSelect(
 		prompt, help,
-		subnets)
+		options)
 	if err != nil {
 		return nil, err
 	}
-	return ans, nil
+	var extractedSubnets []string
+	for _, s := range selectedSubnets {
+		extractedSubnet, err := ec2.ExtractVPCResource(s)
+		if err != nil {
+			return nil, fmt.Errorf("extract subnet ID: %w", err)
+		}
+		extractedSubnets = append(extractedSubnets, extractedSubnet.ID)
+	}
+	return extractedSubnets, nil
 }

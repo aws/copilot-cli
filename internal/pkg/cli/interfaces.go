@@ -495,7 +495,8 @@ type dockerfileSelector interface {
 
 type ec2Selector interface {
 	VPC(prompt, help string) (string, error)
-	Subnets(prompt, help, vpcID string) ([]string, error)
+	PublicSubnets(prompt, help, vpcID string) ([]string, error)
+	PrivateSubnets(prompt, help, vpcID string) ([]string, error)
 }
 
 type credsSelector interface {
