@@ -6,8 +6,11 @@ package describe
 import (
 	"errors"
 	"fmt"
+	"io"
 	"testing"
 	"time"
+
+	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 
 	"github.com/aws/aws-sdk-go/aws"
 	ecsapi "github.com/aws/aws-sdk-go/service/ecs"
@@ -18,9 +21,11 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
-	"github.com/aws/copilot-cli/internal/pkg/ecs"
+	mocksprogress "github.com/aws/copilot-cli/internal/pkg/term/progress/mocks"
 
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
+
 	"github.com/dustin/go-humanize"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -197,6 +202,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 				},
 				StoppedTasks:             nil,
 				TargetHealthDescriptions: nil,
+				rendererConfigurer:       &barRendererConfigurer{},
 			},
 		},
 		"retrieve all target health information in service": {
@@ -360,6 +366,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 						TargetGroupARN: "group-2",
 					},
 				},
+				rendererConfigurer: &barRendererConfigurer{},
 			},
 		},
 		"success": {
@@ -480,6 +487,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 						StoppedReason: "some reason",
 					},
 				},
+				rendererConfigurer: &barRendererConfigurer{},
 			},
 		},
 	}
@@ -529,6 +537,20 @@ func TestServiceStatus_Describe(t *testing.T) {
 	}
 }
 
+type mockRenderer struct {
+	Length              int      // Length of the summary bar.
+	Data                []int    // Data to draw using the summary bar. The order matters, e.g. the value in position 0 will be the leftmost portion of the bar.
+	Representations     []string // Representations of each data value. Must be at least as long as `Data`. For example, Data[0] will be represented by Representations[0] in the summary bar.
+	EmptyRepresentation string   // Representation to use for an empty bar.
+
+	Render func(writer io.Writer) (int, error)
+}
+
+type statusMocks struct {
+	renderer           *mocksprogress.MockRenderer
+	rendererConfigurer *mocks.MockrendererConfigurer
+}
+
 func TestServiceStatusDesc_String(t *testing.T) {
 	// from the function changes (ex: from "1 month ago" to "2 months ago"). To make our tests stable,
 	oldHumanize := humanizeTime
@@ -540,14 +562,15 @@ func TestServiceStatusDesc_String(t *testing.T) {
 		humanizeTime = oldHumanize
 	}()
 
-	//startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
 	updateTime, _ := time.Parse(time.RFC3339, "2020-03-13T19:50:30+00:00")
 	stoppedTime, _ := time.Parse(time.RFC3339, "2020-03-13T20:00:30+00:00")
 
 	testCases := map[string]struct {
-		desc  *ecsServiceStatus
-		human string
-		json  string
+		desc                 *ecsServiceStatus
+		setUpMock            func(m statusMocks)
+		setUpMockBarRenderer func(length int, data []int, representations []string, emptyRepresentation string) (progress.Renderer, error)
+		human                string
+		json                 string
 	}{
 		"while provisioning (some primary, some active)": {
 			desc: &ecsServiceStatus{
@@ -621,6 +644,43 @@ func TestServiceStatusDesc_String(t *testing.T) {
 						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 					},
 				},
+			},
+			setUpMock: func(m statusMocks) {
+				// Running: 1 running primary, 2 running active.
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{1, 2}, []string{"█", "█"}, "░").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "██████████")
+				})
+
+				// Deployments (primary): 1 running, 10 desired.
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{1, 9}, []string{"█", "░"}, "").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "█░░░░░░░░░")
+				})
+
+				// Deployments (active, rev 5): 1 running, 1 desired.
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{1, 0}, []string{"█", "░"}, "").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "██████████")
+				})
+
+				// Deployments (active, rev 4): 1 running, 2 desired.
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{1, 1}, []string{"█", "░"}, "").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "█████░░░░░")
+				})
+
+				// Container: 1 healthy, 10 desired.
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{1, 9}, []string{"█", "░"}, "░").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "█░░░░░░░░░")
+				})
+
 			},
 			human: `Task Summary
 
@@ -723,6 +783,30 @@ Alarms
 					},
 				},
 			},
+			setUpMock: func(m statusMocks) {
+				// Running (only primary): 3 running, 3 desired
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{3, 0}, []string{"█", "░"}, "░").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "██████████")
+				})
+
+				// Skip Deployments because there is only the primary deployment.
+
+				// HTTP: 2 healthy, 3 desired.
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{2, 1}, []string{"█", "░"}, "░").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "███████░░░")
+				})
+
+				// Container: 2 healthy, 3 desired.
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{2, 1}, []string{"█", "░"}, "░").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "███████░░░")
+				})
+			},
 			human: `Task Summary
 
   Running   ██████████  3/3 desired tasks are running
@@ -820,6 +904,23 @@ Tasks
 					},
 				},
 			},
+			setUpMock: func(m statusMocks) {
+				// Running (only primary): 3 running, 5 desired
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{3, 2}, []string{"█", "░"}, "░").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "██████░░░░")
+				})
+
+				// Skip Deployments because there is only the primary deployment.
+
+				// Container: 2 healthy, 5 desired.
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{2, 3}, []string{"█", "░"}, "░").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "████░░░░░░")
+				})
+			},
 			human: `Task Summary
 
   Running   ██████░░░░  3/5 desired tasks are running
@@ -863,6 +964,16 @@ Tasks
 						ID:         "2222222222222222",
 					},
 				},
+			},
+			setUpMock: func(m statusMocks) {
+				// Running (only primary): 2 running, 3 desired
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{2, 1}, []string{"█", "░"}, "░").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "███████░░░")
+				})
+
+				// Skip Deployments because there is only the primary deployment.
 			},
 			human: `Task Summary
 
@@ -948,6 +1059,42 @@ Tasks
 					},
 				},
 			},
+			setUpMock: func(m statusMocks) {
+				// Running: 1 running primary, 2 running active.
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{1, 2}, []string{"█", "█"}, "░").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "██████████")
+				})
+
+				// Deployments (primary): 1 running, 10 desired.
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{1, 9}, []string{"█", "░"}, "").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "█░░░░░░░░░")
+				})
+
+				// Deployments (active, rev 5): 1 running, 1 desired.
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{1, 0}, []string{"█", "░"}, "").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "██████████")
+				})
+
+				// Deployments (active, rev 4): 1 running, 2 desired.
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{1, 1}, []string{"█", "░"}, "").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "█████░░░░░")
+				})
+
+				// Container: 1 healthy, 10 desired
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{1, 9}, []string{"█", "░"}, "░").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "█░░░░░░░░░")
+				})
+			},
 			human: `Task Summary
 
   Running      ██████████  3/10 desired tasks are running
@@ -998,6 +1145,23 @@ Tasks
 					},
 				},
 			},
+			setUpMock: func(m statusMocks) {
+				// Running (ony primary): 3 running, 3 desired.
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{3, 0}, []string{"█", "░"}, "░").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "██████████")
+				})
+
+				// Skip Deployments because there is only the primary deployment.
+
+				// Capacity: 2 fargate, 1 spot
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{2, 1}, []string{"▒", "▓"}, "░").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "▒▒▒▒▒▒▒▓▓▓")
+				})
+			},
 			human: `Task Summary
 
   Running            ██████████  3/3 desired tasks are running
@@ -1023,8 +1187,8 @@ Tasks
 					Deployments: []awsecs.Deployment{
 						{
 							Id:             "id-4",
-							DesiredCount:   10,
-							RunningCount:   1,
+							DesiredCount:   0,
+							RunningCount:   0,
 							Status:         "PRIMARY",
 							TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
 						},
@@ -1032,11 +1196,176 @@ Tasks
 				},
 				DesiredRunningTasks: []awsecs.TaskStatus{},
 			},
+			setUpMock: func(m statusMocks) {
+				// Running (only primary): 0 running, 0 desired.
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{0, 0}, []string{"█", "░"}, "░").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "░░░░░░░░░░")
+				})
+			},
 			human: `Task Summary
 
   Running   ░░░░░░░░░░  0/0 desired tasks are running
 `,
-			json: `{"Service":{"desiredCount":0,"runningCount":0,"status":"ACTIVE","deployments":[{"id":"id-4","desiredCount":10,"runningCount":1,"updatedAt":"0001-01-01T00:00:00Z","launchType":"","taskDefinition":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6","status":"PRIMARY"}],"lastDeploymentAt":"0001-01-01T00:00:00Z","taskDefinition":""},"tasks":[],"alarms":null,"stoppedTasks":null,"targetHealthDescriptions":null}
+			json: `{"Service":{"desiredCount":0,"runningCount":0,"status":"ACTIVE","deployments":[{"id":"id-4","desiredCount":0,"runningCount":0,"updatedAt":"0001-01-01T00:00:00Z","launchType":"","taskDefinition":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6","status":"PRIMARY"}],"lastDeploymentAt":"0001-01-01T00:00:00Z","taskDefinition":""},"tasks":[],"alarms":null,"stoppedTasks":null,"targetHealthDescriptions":null}
+`,
+		},
+		"skip section when renderer fails to configure": {
+			desc: &ecsServiceStatus{
+				Service: awsecs.ServiceStatus{
+					DesiredCount: 5,
+					RunningCount: 3,
+					Status:       "ACTIVE",
+					Deployments: []awsecs.Deployment{
+						{
+							Status:         "PRIMARY",
+							TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
+							DesiredCount:   5,
+							RunningCount:   3,
+						},
+					},
+				},
+				DesiredRunningTasks: []awsecs.TaskStatus{
+					{
+						Health:         "HEALTHY",
+						LastStatus:     "RUNNING",
+						ID:             "111111111111111",
+						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
+					},
+					{
+						Health:         "UNHEALTHY",
+						LastStatus:     "RUNNING",
+						ID:             "2222222222222222",
+						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
+					},
+					{
+						Health:         "HEALTHY",
+						LastStatus:     "PROVISIONING",
+						ID:             "3333333333333333",
+						TaskDefinition: "arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6",
+					},
+				},
+				StoppedTasks: []awsecs.TaskStatus{
+					{
+						LastStatus:    "DEPROVISIONING",
+						ID:            "S111111111111",
+						StoppedAt:     stoppedTime,
+						Images:        []awsecs.Image{},
+						StoppedReason: "April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m",
+					},
+					{
+						LastStatus:    "DEPROVISIONING",
+						ID:            "S2222222222222",
+						StoppedAt:     stoppedTime,
+						Images:        []awsecs.Image{},
+						StoppedReason: "April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m",
+					},
+					{
+						LastStatus:    "DEPROVISIONING",
+						ID:            "S333333333333333",
+						StoppedAt:     stoppedTime,
+						Images:        []awsecs.Image{},
+						StoppedReason: "April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m",
+					},
+					{
+						LastStatus:    "DEPROVISIONING",
+						ID:            "S44444444444",
+						StoppedAt:     stoppedTime,
+						Images:        []awsecs.Image{},
+						StoppedReason: "April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m",
+					},
+					{
+						LastStatus:    "DEPROVISIONING",
+						ID:            "S55555555555555",
+						StoppedAt:     stoppedTime,
+						Images:        []awsecs.Image{},
+						StoppedReason: "April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m",
+					},
+					{
+						LastStatus:    "DEPROVISIONING",
+						ID:            "S66666666666666",
+						StoppedAt:     stoppedTime,
+						Images:        []awsecs.Image{},
+						StoppedReason: "April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m",
+					},
+				},
+			},
+			setUpMock: func(m statusMocks) {
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{3, 2}, []string{"█", "░"}, "░").
+					Return(nil, errors.New("some error"))
+				// Skip Deployments because there is only the primary deployment.
+
+				// Container: 2 healthy, 5 desired.
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{2, 3}, []string{"█", "░"}, "░").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
+					fmt.Fprint(out, "████░░░░░░")
+				})
+			},
+			human: `Task Summary
+
+  Health    ████░░░░░░  2/5 passes container health checks
+
+Stopped Tasks
+
+  Reason                          Task Count  Sample Task IDs
+  ------                          ----------  ---------------
+  April-is-the-cruellest-month-b  6           S1111111,S2222222,S3333333,S44
+  reeding-Lilacs-out-of-the-dead              44444,S5555555
+  -land-m                                     
+
+Tasks
+
+  ID        Status        Revision    Started At  Cont. Health
+  --        ------        --------    ----------  ------------
+  11111111  RUNNING       6           -           HEALTHY
+  22222222  RUNNING       6           -           UNHEALTHY
+  33333333  PROVISIONING  6           -           HEALTHY
+`,
+			json: `{"Service":{"desiredCount":5,"runningCount":3,"status":"ACTIVE","deployments":[{"id":"","desiredCount":5,"runningCount":3,"updatedAt":"0001-01-01T00:00:00Z","launchType":"","taskDefinition":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6","status":"PRIMARY"}],"lastDeploymentAt":"0001-01-01T00:00:00Z","taskDefinition":""},"tasks":[{"health":"HEALTHY","id":"111111111111111","images":null,"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6"},{"health":"UNHEALTHY","id":"2222222222222222","images":null,"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6"},{"health":"HEALTHY","id":"3333333333333333","images":null,"lastStatus":"PROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":"arn:aws:ecs:us-east-1:000000000000:task-definition/some-task-def:6"}],"alarms":null,"stoppedTasks":[{"health":"","id":"S111111111111","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m","capacityProvider":"","taskDefinitionARN":""},{"health":"","id":"S2222222222222","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m","capacityProvider":"","taskDefinitionARN":""},{"health":"","id":"S333333333333333","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m","capacityProvider":"","taskDefinitionARN":""},{"health":"","id":"S44444444444","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m","capacityProvider":"","taskDefinitionARN":""},{"health":"","id":"S55555555555555","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m","capacityProvider":"","taskDefinitionARN":""},{"health":"","id":"S66666666666666","images":[],"lastStatus":"DEPROVISIONING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"2020-03-13T20:00:30Z","stoppedReason":"April-is-the-cruellest-month-breeding-Lilacs-out-of-the-dead-land-m","capacityProvider":"","taskDefinitionARN":""}],"targetHealthDescriptions":null}
+`,
+		},
+		"empty bar when renderer is unable to render": {
+			desc: &ecsServiceStatus{
+				Service: awsecs.ServiceStatus{
+					DesiredCount: 3,
+					RunningCount: 2,
+					Status:       "ACTIVE",
+				},
+				DesiredRunningTasks: []awsecs.TaskStatus{
+					{
+						Health:     "UNKNOWN",
+						LastStatus: "RUNNING",
+						ID:         "1111111111111111",
+					},
+					{
+						Health:     "UNKNOWN",
+						LastStatus: "RUNNING",
+						ID:         "2222222222222222",
+					},
+				},
+			},
+			setUpMock: func(m statusMocks) {
+				// Running (only primary): 2 running, 3 desired
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{2, 1}, []string{"█", "░"}, "░").
+					Return(m.renderer, nil)
+				m.renderer.EXPECT().Render(gomock.Any()).Return(0, errors.New("some error"))
+
+				// Skip Deployments because there is only the primary deployment.
+			},
+			human: `Task Summary
+
+  Running               2/3 desired tasks are running
+
+Tasks
+
+  ID        Status      Revision    Started At
+  --        ------      --------    ----------
+  11111111  RUNNING     -           -
+  22222222  RUNNING     -           -
+`,
+			json: `{"Service":{"desiredCount":3,"runningCount":2,"status":"ACTIVE","deployments":null,"lastDeploymentAt":"0001-01-01T00:00:00Z","taskDefinition":""},"tasks":[{"health":"UNKNOWN","id":"1111111111111111","images":null,"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""},{"health":"UNKNOWN","id":"2222222222222222","images":null,"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":null,"targetHealthDescriptions":null}
 `,
 		},
 	}
@@ -1046,6 +1375,17 @@ Tasks
 			json, err := tc.desc.JSONString()
 			require.NoError(t, err)
 			require.Equal(t, tc.json, json)
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mockRendererConfigurer := mocks.NewMockrendererConfigurer(ctrl)
+			mockRenderer := mocksprogress.NewMockRenderer(ctrl)
+			tc.desc.rendererConfigurer = mockRendererConfigurer
+
+			tc.setUpMock(statusMocks{
+				rendererConfigurer: mockRendererConfigurer,
+				renderer:           mockRenderer,
+			})
 
 			human := tc.desc.HumanString()
 			require.Equal(t, tc.human, human)

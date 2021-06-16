@@ -13,6 +13,7 @@ import (
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	elbv2 "github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	ecs0 "github.com/aws/copilot-cli/internal/pkg/ecs"
+	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -310,4 +311,42 @@ func (m *MockautoscalingAlarmNamesGetter) ECSServiceAlarmNames(cluster, service 
 func (mr *MockautoscalingAlarmNamesGetterMockRecorder) ECSServiceAlarmNames(cluster, service interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ECSServiceAlarmNames", reflect.TypeOf((*MockautoscalingAlarmNamesGetter)(nil).ECSServiceAlarmNames), cluster, service)
+}
+
+// MockrendererConfigurer is a mock of rendererConfigurer interface.
+type MockrendererConfigurer struct {
+	ctrl     *gomock.Controller
+	recorder *MockrendererConfigurerMockRecorder
+}
+
+// MockrendererConfigurerMockRecorder is the mock recorder for MockrendererConfigurer.
+type MockrendererConfigurerMockRecorder struct {
+	mock *MockrendererConfigurer
+}
+
+// NewMockrendererConfigurer creates a new mock instance.
+func NewMockrendererConfigurer(ctrl *gomock.Controller) *MockrendererConfigurer {
+	mock := &MockrendererConfigurer{ctrl: ctrl}
+	mock.recorder = &MockrendererConfigurerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockrendererConfigurer) EXPECT() *MockrendererConfigurerMockRecorder {
+	return m.recorder
+}
+
+// SummaryBarRenderer mocks base method.
+func (m *MockrendererConfigurer) SummaryBarRenderer(length int, data []int, representations []string, emptyRepresentation string) (progress.Renderer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SummaryBarRenderer", length, data, representations, emptyRepresentation)
+	ret0, _ := ret[0].(progress.Renderer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SummaryBarRenderer indicates an expected call of SummaryBarRenderer.
+func (mr *MockrendererConfigurerMockRecorder) SummaryBarRenderer(length, data, representations, emptyRepresentation interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SummaryBarRenderer", reflect.TypeOf((*MockrendererConfigurer)(nil).SummaryBarRenderer), length, data, representations, emptyRepresentation)
 }

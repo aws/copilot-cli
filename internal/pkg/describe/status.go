@@ -15,6 +15,8 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/progress"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/aas"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
@@ -95,6 +97,23 @@ type ecsServiceStatus struct {
 	Alarms                   []cloudwatch.AlarmStatus `json:"alarms"`
 	StoppedTasks             []awsecs.TaskStatus      `json:"stoppedTasks"`
 	TargetHealthDescriptions []taskTargetHealth       `json:"targetHealthDescriptions"`
+
+	rendererConfigurer rendererConfigurer // The Renderer interface is not mock friendly. We abstract away the code with an intermediate interface so that it can be mocked.
+}
+
+type rendererConfigurer interface {
+	SummaryBarRenderer(length int, data []int, representations []string, emptyRepresentation string) (progress.Renderer, error)
+}
+
+type barRendererConfigurer struct{}
+
+// SummaryBarRenderer configures and returns a summary bar renderer.
+func (c *barRendererConfigurer) SummaryBarRenderer(length int, data []int, representations []string, emptyRepresentation string) (progress.Renderer, error) {
+	renderer, err := progress.NewSummaryBarComponent(length, data, representations, emptyRepresentation)
+	if err != nil {
+		return nil, fmt.Errorf("set up summary bar renderer: %w", err)
+	}
+	return renderer, nil
 }
 
 // appRunnerServiceStatus contains the status for an AppRunner service.
@@ -228,6 +247,7 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 		Alarms:                   alarms,
 		StoppedTasks:             stoppedTaskStatus,
 		TargetHealthDescriptions: tasksTargetHealth,
+		rendererConfigurer:       &barRendererConfigurer{},
 	}, nil
 }
 
@@ -403,9 +423,17 @@ func (s *ecsServiceStatus) writeRunningTasksSummary(writer io.Writer, primaryDep
 		barData = []int{(int)(s.Service.RunningCount), (int)(s.Service.DesiredCount) - (int)(s.Service.RunningCount)}
 		barRepresentations = []string{color.Green.Sprint("█"), color.Green.Sprint("░")}
 	}
-	bar := summaryBar(barData, barRepresentations)
+
+	renderer, err := s.rendererConfigurer.SummaryBarRenderer(10, barData, barRepresentations, color.Green.Sprint("░"))
+	if err != nil {
+		return
+	}
+	fmt.Fprintf(writer, "  %s\t", header)
+	if _, err := renderer.Render(writer); err != nil {
+		fmt.Fprintf(writer, strings.Repeat(" ", 10))
+	}
 	stringSummary := fmt.Sprintf("%d/%d desired tasks are running", s.Service.RunningCount, s.Service.DesiredCount)
-	fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+	fmt.Fprintf(writer, "\t%s\n", stringSummary)
 }
 
 func (s *ecsServiceStatus) writeDeploymentsSummary(writer io.Writer, primaryDeployment awsecs.Deployment, activeDeployments []awsecs.Deployment) {
@@ -417,12 +445,36 @@ func (s *ecsServiceStatus) writeDeploymentsSummary(writer io.Writer, primaryDepl
 	// This is because if there aren't any "ACTIVE" deployment, then this section would have been showing the same
 	// information as the "Running" section.
 	header := "Deployments"
-	bar, stringSummary := summaryOfDeployment(primaryDeployment, []string{color.Green.Sprint("█"), color.Green.Sprint("░")})
-	fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+	fmt.Fprintf(writer, "  %s\t", header)
+	s.writeDeployment(writer, primaryDeployment, []string{color.Green.Sprint("█"), color.Green.Sprint("░")})
+
 	for _, deployment := range activeDeployments {
-		bar, stringSummary := summaryOfDeployment(deployment, []string{color.Blue.Sprint("█"), color.Blue.Sprint("░")})
-		fmt.Fprintf(writer, "  %s\t%s\t%s\n", "", bar, stringSummary)
+		fmt.Fprint(writer, "  \t")
+		s.writeDeployment(writer, deployment, []string{color.Blue.Sprint("█"), color.Blue.Sprint("░")})
 	}
+}
+
+func (s *ecsServiceStatus) writeDeployment(writer io.Writer, deployment awsecs.Deployment, representations []string) {
+	var revisionInfo string
+	revision, err := awsecs.TaskDefinitionVersion(deployment.TaskDefinition)
+	if err == nil {
+		revisionInfo = fmt.Sprintf(" (rev %d)", revision)
+	}
+
+	renderer, err := s.rendererConfigurer.SummaryBarRenderer(10, []int{(int)(deployment.RunningCount), (int)(deployment.DesiredCount) - (int)(deployment.RunningCount)}, representations, "")
+	if err != nil {
+		return
+	}
+	if _, err := renderer.Render(writer); err != nil {
+		fmt.Fprintf(writer, strings.Repeat(" ", 10))
+	}
+
+	stringSummary := fmt.Sprintf("%d/%d running tasks for %s%s",
+		deployment.RunningCount,
+		deployment.DesiredCount,
+		strings.ToLower(deployment.Status),
+		revisionInfo)
+	fmt.Fprintf(writer, "\t%s\n", stringSummary)
 }
 
 func (s *ecsServiceStatus) writeHealthSummary(writer io.Writer, primaryDeployment awsecs.Deployment, activeDeployments []awsecs.Deployment) {
@@ -444,27 +496,38 @@ func (s *ecsServiceStatus) writeHealthSummary(writer io.Writer, primaryDeploymen
 
 	if shouldShowHTTPHealth {
 		healthyCount := countHealthyHTTPTasks(primaryTasks, s.TargetHealthDescriptions)
-		bar := summaryBar(
-			[]int{
-				healthyCount,
-				(int)(primaryDeployment.DesiredCount) - healthyCount,
-			},
-			[]string{color.Green.Sprint("█"), color.Green.Sprint("░")})
+		renderer, err := s.rendererConfigurer.SummaryBarRenderer(10,
+			[]int{healthyCount, (int)(primaryDeployment.DesiredCount) - healthyCount},
+			[]string{color.Green.Sprint("█"), color.Green.Sprint("░")},
+			color.Grey.Sprintf("░"))
+		if err != nil {
+			return
+		}
+
+		fmt.Fprintf(writer, "  %s\t", header)
+		if _, err := renderer.Render(writer); err != nil {
+			fmt.Fprintf(writer, strings.Repeat(" ", 10))
+		}
 		stringSummary := fmt.Sprintf("%d/%d passes HTTP health checks%s", healthyCount, primaryDeployment.DesiredCount, revisionInfo)
-		fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+		fmt.Fprintf(writer, "\t%s\n", stringSummary)
 		header = ""
 	}
 
 	if shouldShowContainerHealth {
 		healthyCount, _, _ := containerHealthBreakDownByCount(primaryTasks)
-		bar := summaryBar(
-			[]int{
-				healthyCount,
-				(int)(primaryDeployment.DesiredCount) - healthyCount,
-			},
-			[]string{color.Green.Sprint("█"), color.Green.Sprint("░")})
+		renderer, err := s.rendererConfigurer.SummaryBarRenderer(10,
+			[]int{healthyCount, (int)(primaryDeployment.DesiredCount) - healthyCount},
+			[]string{color.Green.Sprint("█"), color.Green.Sprint("░")},
+			color.Grey.Sprintf("░"))
+		if err != nil {
+			return
+		}
+		fmt.Fprintf(writer, "  %s\t", header)
+		if _, err := renderer.Render(writer); err != nil {
+			fmt.Fprintf(writer, strings.Repeat(" ", 10))
+		}
 		stringSummary := fmt.Sprintf("%d/%d passes container health checks%s", healthyCount, primaryDeployment.DesiredCount, revisionInfo)
-		fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+		fmt.Fprintf(writer, "\t%s\n", stringSummary)
 	}
 }
 
@@ -474,7 +537,20 @@ func (s *ecsServiceStatus) writeCapacityProvidersSummary(writer io.Writer) {
 	}
 	header := "Capacity Provider"
 	fargate, spot, empty := capacityProvidersBreakDownByCount(s.DesiredRunningTasks)
-	bar := summaryBar([]int{fargate + empty, spot}, []string{color.Grey.Sprintf("▒"), color.Grey.Sprintf("▓")})
+
+	renderer, err := s.rendererConfigurer.SummaryBarRenderer(10,
+		[]int{fargate + empty, spot},
+		[]string{color.Grey.Sprintf("▒"), color.Grey.Sprintf("▓")},
+		color.Grey.Sprintf("░"))
+	if err != nil {
+		return
+	}
+
+	fmt.Fprintf(writer, "  %s\t", header)
+	if _, err := renderer.Render(writer); err != nil {
+		fmt.Fprintf(writer, strings.Repeat(" ", 10))
+	}
+
 	var cpSummaries []string
 	if fargate+empty != 0 {
 		// We consider those with empty capacity provider field as "FARGATE"
@@ -483,7 +559,7 @@ func (s *ecsServiceStatus) writeCapacityProvidersSummary(writer io.Writer) {
 	if spot != 0 {
 		cpSummaries = append(cpSummaries, fmt.Sprintf("%d/%d on Fargate Spot", spot, s.Service.RunningCount))
 	}
-	fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, strings.Join(cpSummaries, ", "))
+	fmt.Fprintf(writer, "\t%s\n", strings.Join(cpSummaries, ", "))
 }
 
 func (s *ecsServiceStatus) writeStoppedTasks(writer io.Writer) {
@@ -660,130 +736,11 @@ func targetHealthForTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsecs.T
 	return out
 }
 
-type valueWithIndex struct {
-	value int
-	index int
-}
-
-// summaryBar returns a summary bar given data and the string representations of each data category.
-// For example, data[0] will be represented by representations[0] in the summary bar.
-// If len(representations) < len(data), the default representation "□" is used for all data category with missing representation.
-func summaryBar(data []int, representations []string, emptyRepresentation ...string) string {
-	const summaryBarLength = 10
-	defaultRepresentation := color.Grey.Sprint("░")
-
-	// The index is recorded so that we can later output the summary bar in the original order.
-	var dataWithIndices []valueWithIndex
-	for idx, dt := range data {
-		dataWithIndices = append(dataWithIndices, valueWithIndex{
-			value: dt,
-			index: idx,
-		})
-	}
-
-	portionsWithIndices := calculatePortions(dataWithIndices, summaryBarLength)
-	if portionsWithIndices == nil {
-		return fmt.Sprint(strings.Repeat(defaultRepresentation, summaryBarLength))
-	}
-
-	sort.SliceStable(portionsWithIndices, func(i, j int) bool {
-		return portionsWithIndices[i].index < portionsWithIndices[j].index
-	})
-
-	var bar string
-	for _, p := range portionsWithIndices {
-		if p.value >= summaryBarLength {
-			// If a data category's portion exceeds the summary bar length (this happens only when the some of the data have negative value)
-			// returns the bar filled with that data category
-			bar += fmt.Sprint(strings.Repeat(representations[p.index], summaryBarLength))
-			return bar
-		}
-		bar += fmt.Sprint(strings.Repeat(representations[p.index], p.value))
-	}
-	return bar
-}
-
-func calculatePortions(valuesWithIndices []valueWithIndex, length int) []valueWithIndex {
-	type decWithPortion struct {
-		dec     float64
-		portion valueWithIndex
-	}
-
-	var sum int
-	for _, pwi := range valuesWithIndices {
-		sum += pwi.value
-	}
-	if sum == 0 {
-		return nil
-	}
-
-	var decPartsToPortion []decWithPortion
-	for _, pwi := range valuesWithIndices {
-		// For each value, calculate its portion out of `length`, record the decimal part and then take the floor.
-		// The floored result is roughly the value's portion out of `length`.
-		// The portion will be calibrated later according to the decimal part.
-		outOfLength := (float64)(pwi.value) / (float64)(sum) * (float64)(length)
-		_, decPart := math.Modf(outOfLength)
-
-		decPartsToPortion = append(decPartsToPortion, decWithPortion{
-			dec: decPart,
-			portion: valueWithIndex{
-				value: (int)(math.Floor(outOfLength)),
-				index: pwi.index,
-			},
-		})
-	}
-
-	// Calculate the sum of the floored portion and see how far we are from `length`.
-	var floorSum int
-	for _, floorPortion := range decPartsToPortion {
-		floorSum += floorPortion.portion.value
-	}
-	extra := length - floorSum
-
-	// Sort by decimal places from larger to smaller.
-	sort.SliceStable(decPartsToPortion, func(i, j int) bool {
-		return decPartsToPortion[i].dec > decPartsToPortion[j].dec
-	})
-
-	// Distribute extra values first to portions with larger decimal places.
-	var out []valueWithIndex
-	for _, d := range decPartsToPortion {
-		if extra > 0 {
-			d.portion.value += 1
-			extra -= 1
-		}
-		out = append(out, d.portion)
-	}
-
-	return out
-}
-
 func shortTaskID(id string) string {
 	if len(id) >= shortTaskIDLength {
 		return id[:shortTaskIDLength]
 	}
 	return id
-}
-
-func summaryOfDeployment(deployment awsecs.Deployment, representations []string) (string, string) {
-	var revisionInfo string
-	revision, err := awsecs.TaskDefinitionVersion(deployment.TaskDefinition)
-	if err == nil {
-		revisionInfo = fmt.Sprintf(" (rev %d)", revision)
-	}
-
-	bar := summaryBar([]int{
-		(int)(deployment.RunningCount),
-		(int)(deployment.DesiredCount) - (int)(deployment.RunningCount)},
-		representations)
-	stringSummary := fmt.Sprintf("%d/%d running tasks for %s%s",
-		deployment.RunningCount,
-		deployment.DesiredCount,
-		strings.ToLower(deployment.Status),
-		revisionInfo)
-
-	return bar, stringSummary
 }
 
 func printWithMaxWidth(w io.Writer, format string, width int, members ...string) {
