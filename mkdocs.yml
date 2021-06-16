@@ -56,6 +56,7 @@ nav:
         - docs: docs/commands/docs.en.md
       - Build:
         - app init: docs/commands/app-init.en.md
+        - app upgrade: docs/commands/app-upgrade.en.md
         - app delete: docs/commands/app-delete.en.md
         - env init: docs/commands/env-init.en.md
         - env delete: docs/commands/env-delete.en.md
@@ -100,6 +101,7 @@ nav:
         - app init: docs/commands/app-init.en.md
         - app ls: docs/commands/app-ls.en.md
         - app show: docs/commands/app-show.en.md
+        - app upgrade: docs/commands/app-upgrade.en.md
         - completion: docs/commands/completion.en.md
         - docs: docs/commands/docs.en.md
         - env delete: docs/commands/env-delete.en.md
