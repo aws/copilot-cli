@@ -32,7 +32,7 @@ import (
 )
 
 type serviceStatusDescriberMocks struct {
-	apprunnerSvcDescriber *mocks.MockapprunnerSvcDescriber
+	appRunnerSvcDescriber *mocks.MockapprunnerSvcDescriber
 	ecsServiceGetter      *mocks.MockecsServiceGetter
 	alarmStatusGetter     *mocks.MockalarmStatusGetter
 	serviceDescriber      *mocks.MockserviceDescriber
@@ -512,7 +512,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 
 			tc.setupMocks(mocks)
 
-			svcStatus := &ECSStatusDescriber{
+			svcStatus := &ecsStatusDescriber{
 				svc:                "mockSvc",
 				env:                "mockEnv",
 				app:                "mockApp",
@@ -1421,7 +1421,7 @@ func TestAppRunnerStatusDescriber_Describe(t *testing.T) {
 		"errors if failed to describe a service": {
 			setupMocks: func(m serviceStatusDescriberMocks) {
 				gomock.InOrder(
-					m.apprunnerSvcDescriber.EXPECT().Service().Return(nil, mockError),
+					m.appRunnerSvcDescriber.EXPECT().Service().Return(nil, mockError),
 				)
 			},
 
@@ -1429,7 +1429,7 @@ func TestAppRunnerStatusDescriber_Describe(t *testing.T) {
 		},
 		"success": {
 			setupMocks: func(m serviceStatusDescriberMocks) {
-				m.apprunnerSvcDescriber.EXPECT().Service().Return(&mockAppRunnerService, nil)
+				m.appRunnerSvcDescriber.EXPECT().Service().Return(&mockAppRunnerService, nil)
 				m.logGetter.EXPECT().LogEvents(cloudwatchlogs.LogEventsOpts{LogGroup: "/aws/apprunner/testapp-test-frontend/fc1098ac269245959ba78fd58bdd4bf/service", Limit: aws.Int64(10)}).Return(&cloudwatchlogs.LogEventsOutput{
 					Events: logEvents,
 				}, nil)
@@ -1449,12 +1449,12 @@ func TestAppRunnerStatusDescriber_Describe(t *testing.T) {
 			mockSvcDesc := mocks.NewMockapprunnerSvcDescriber(ctrl)
 			mockLogsSvc := mocks.NewMocklogGetter(ctrl)
 			mocks := serviceStatusDescriberMocks{
-				apprunnerSvcDescriber: mockSvcDesc,
+				appRunnerSvcDescriber: mockSvcDesc,
 				logGetter:             mockLogsSvc,
 			}
 			tc.setupMocks(mocks)
 
-			svcStatus := &AppRunnerStatusDescriber{
+			svcStatus := &appRunnerStatusDescriber{
 				app:          appName,
 				env:          envName,
 				svc:          svcName,

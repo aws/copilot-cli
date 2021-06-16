@@ -67,8 +67,7 @@ type autoscalingAlarmNamesGetter interface {
 	ECSServiceAlarmNames(cluster, service string) ([]string, error)
 }
 
-// ECSStatusDescriber retrieves status of an ECS service.
-type ECSStatusDescriber struct {
+type ecsStatusDescriber struct {
 	app string
 	env string
 	svc string
@@ -80,8 +79,7 @@ type ECSStatusDescriber struct {
 	targetHealthGetter targetHealthGetter
 }
 
-// AppRunnerStatusDescriber retrieves status of an AppRunner service.
-type AppRunnerStatusDescriber struct {
+type appRunnerStatusDescriber struct {
 	app string
 	env string
 	svc string
@@ -136,8 +134,8 @@ type taskTargetHealth struct {
 	TargetGroupARN string             `json:"targetGroup"`
 }
 
-// NewECSStatusDescriber instantiates a new ECSStatusDescriber struct.
-func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, error) {
+// NewECSStatusDescriber instantiates a new ecsStatusDescriber struct.
+func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ecsStatusDescriber, error) {
 	env, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
@@ -146,7 +144,7 @@ func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, er
 	if err != nil {
 		return nil, fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 	}
-	return &ECSStatusDescriber{
+	return &ecsStatusDescriber{
 		app:                opt.App,
 		env:                opt.Env,
 		svc:                opt.Svc,
@@ -158,8 +156,8 @@ func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, er
 	}, nil
 }
 
-// NewAppRunnerStatusDescriber instantiates a new AppRunnerStatusDescriber struct.
-func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*AppRunnerStatusDescriber, error) {
+// NewAppRunnerStatusDescriber instantiates a new appRunnerStatusDescriber struct.
+func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*appRunnerStatusDescriber, error) {
 	ecsSvcDescriber, err := NewAppRunnerServiceDescriber(NewServiceConfig{
 		App: opt.App,
 		Env: opt.Env,
@@ -171,7 +169,7 @@ func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*AppRunnerStatusD
 		return nil, err
 	}
 
-	return &AppRunnerStatusDescriber{
+	return &appRunnerStatusDescriber{
 		app:          opt.App,
 		env:          opt.Env,
 		svc:          opt.Svc,
@@ -181,7 +179,7 @@ func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*AppRunnerStatusD
 }
 
 // Describe returns status of an ECS service.
-func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
+func (s *ecsStatusDescriber) Describe() (HumanJSONStringer, error) {
 	svcDesc, err := s.svcDescriber.DescribeService(s.app, s.env, s.svc)
 	if err != nil {
 		return nil, fmt.Errorf("get ECS service description for %s: %w", s.svc, err)
@@ -252,7 +250,7 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 }
 
 // Describe returns status of an AppRunner service.
-func (a *AppRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
+func (a *appRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
 	svc, err := a.svcDescriber.Service()
 	if err != nil {
 		return nil, fmt.Errorf("get AppRunner service description for App Runner service %s in environment %s: %w", a.svc, a.env, err)
@@ -272,7 +270,7 @@ func (a *AppRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
 	}, nil
 }
 
-func (s *ECSStatusDescriber) ecsServiceAutoscalingAlarms(cluster, service string) ([]cloudwatch.AlarmStatus, error) {
+func (s *ecsStatusDescriber) ecsServiceAutoscalingAlarms(cluster, service string) ([]cloudwatch.AlarmStatus, error) {
 	alarmNames, err := s.aasSvcGetter.ECSServiceAlarmNames(cluster, service)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve auto scaling alarm names for ECS service %s/%s: %w", cluster, service, err)
