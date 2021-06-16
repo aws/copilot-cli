@@ -43,7 +43,7 @@ func (cf CloudFormation) DeployApp(in *deploy.CreateAppInput) error {
 	if err != nil {
 		return err
 	}
-	stackSetAdminRoleARN, err := appConfig.StackSetAdminRoleARN()
+	stackSetAdminRoleARN, err := appConfig.StackSetAdminRoleARN(cf.region)
 	if err != nil {
 		return fmt.Errorf("get stack set administrator role arn: %w", err)
 	}
@@ -435,7 +435,7 @@ func (cf CloudFormation) deployAppConfig(appConfig *stack.AppStackConfig, resour
 	//  * We update the StackSet with Version 2, the update completes.
 	//  * Someone else tries to update the StackSet with their stale version 2.
 	//  * "2" has already been used as an operation ID, and the stale write fails.
-	stackSetAdminRoleARN, err := appConfig.StackSetAdminRoleARN()
+	stackSetAdminRoleARN, err := appConfig.StackSetAdminRoleARN(cf.region)
 	if err != nil {
 		return fmt.Errorf("get stack set administrator role arn: %w", err)
 	}
