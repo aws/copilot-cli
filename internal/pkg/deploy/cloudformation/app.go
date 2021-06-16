@@ -43,11 +43,14 @@ func (cf CloudFormation) DeployApp(in *deploy.CreateAppInput) error {
 	if err != nil {
 		return err
 	}
-
+	stackSetAdminRoleARN, err := appConfig.StackSetAdminRoleARN()
+	if err != nil {
+		return fmt.Errorf("get stack set administrator role arn: %w", err)
+	}
 	return cf.appStackSet.Create(appConfig.StackSetName(), blankAppTemplate,
 		stackset.WithDescription(appConfig.StackSetDescription()),
 		stackset.WithExecutionRoleName(appConfig.StackSetExecutionRoleName()),
-		stackset.WithAdministrationRoleARN(appConfig.StackSetAdminRoleARN()),
+		stackset.WithAdministrationRoleARN(stackSetAdminRoleARN),
 		stackset.WithTags(toMap(appConfig.Tags())))
 }
 
@@ -432,12 +435,15 @@ func (cf CloudFormation) deployAppConfig(appConfig *stack.AppStackConfig, resour
 	//  * We update the StackSet with Version 2, the update completes.
 	//  * Someone else tries to update the StackSet with their stale version 2.
 	//  * "2" has already been used as an operation ID, and the stale write fails.
-
+	stackSetAdminRoleARN, err := appConfig.StackSetAdminRoleARN()
+	if err != nil {
+		return fmt.Errorf("get stack set administrator role arn: %w", err)
+	}
 	return cf.appStackSet.UpdateAndWait(appConfig.StackSetName(), newTemplateToDeploy,
 		stackset.WithOperationID(fmt.Sprintf("%d", resources.Version)),
 		stackset.WithDescription(appConfig.StackSetDescription()),
 		stackset.WithExecutionRoleName(appConfig.StackSetExecutionRoleName()),
-		stackset.WithAdministrationRoleARN(appConfig.StackSetAdminRoleARN()),
+		stackset.WithAdministrationRoleARN(stackSetAdminRoleARN),
 		stackset.WithTags(toMap(appConfig.Tags())))
 }
 

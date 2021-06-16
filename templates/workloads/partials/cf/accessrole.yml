@@ -14,4 +14,4 @@ AccessRole:
           Action: sts:AssumeRole
 
     ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess

@@ -20,6 +20,7 @@ const (
 	ecsPrimaryDeploymentStatus = "PRIMARY"
 	rollOutCompleted           = "COMPLETED"
 	rollOutFailed              = "FAILED"
+	rollOutEmpty               = ""
 )
 
 var ecsEventFailureKeywords = []string{"fail", "unhealthy", "error", "throttle", "unable", "missing"}
@@ -51,6 +52,8 @@ func (d ECSDeployment) done() bool {
 	case rollOutFailed:
 		return true
 	case rollOutCompleted:
+		return d.DesiredCount == d.RunningCount
+	case rollOutEmpty:
 		return d.DesiredCount == d.RunningCount
 	default:
 		return false

@@ -9,8 +9,10 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"gopkg.in/yaml.v3"
@@ -192,9 +194,16 @@ func (c *AppStackConfig) stackSetAdminRoleName() string {
 
 // StackSetAdminRoleARN returns the role ARN of the role used to administer the Application
 // StackSet.
-func (c *AppStackConfig) StackSetAdminRoleARN() string {
-	//TODO find a partition-neutral way to construct this ARN
-	return fmt.Sprintf("arn:aws:iam::%s:role/%s", c.AccountID, c.stackSetAdminRoleName())
+func (c *AppStackConfig) StackSetAdminRoleARN() (string, error) {
+	sess, err := sessions.NewProvider().Default()
+	if err != nil {
+		return "", fmt.Errorf("get default session: %w", err)
+	}
+	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), aws.StringValue(sess.Config.Region))
+	if !ok {
+		return "", fmt.Errorf("cannot find the partition for region %s", aws.StringValue(sess.Config.Region))
+	}
+	return fmt.Sprintf("arn:%s:iam::%s:role/%s", partition.ID(), c.AccountID, c.stackSetAdminRoleName()), nil
 }
 
 // StackSetExecutionRoleName returns the role name of the role used to actually create
