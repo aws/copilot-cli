@@ -430,7 +430,7 @@ func (s *ecsServiceStatus) writeRunningTasksSummary(writer io.Writer, primaryDep
 	}
 	fmt.Fprintf(writer, "  %s\t", header)
 	if _, err := renderer.Render(writer); err != nil {
-		fmt.Fprintf(writer, strings.Repeat(" ", 10))
+		fmt.Fprint(writer, strings.Repeat(" ", 10))
 	}
 	stringSummary := fmt.Sprintf("%d/%d desired tasks are running", s.Service.RunningCount, s.Service.DesiredCount)
 	fmt.Fprintf(writer, "\t%s\n", stringSummary)
@@ -466,7 +466,7 @@ func (s *ecsServiceStatus) writeDeployment(writer io.Writer, deployment awsecs.D
 		return
 	}
 	if _, err := renderer.Render(writer); err != nil {
-		fmt.Fprintf(writer, strings.Repeat(" ", 10))
+		fmt.Fprint(writer, strings.Repeat(" ", 10))
 	}
 
 	stringSummary := fmt.Sprintf("%d/%d running tasks for %s%s",
@@ -506,7 +506,7 @@ func (s *ecsServiceStatus) writeHealthSummary(writer io.Writer, primaryDeploymen
 
 		fmt.Fprintf(writer, "  %s\t", header)
 		if _, err := renderer.Render(writer); err != nil {
-			fmt.Fprintf(writer, strings.Repeat(" ", 10))
+			fmt.Fprint(writer, strings.Repeat(" ", 10))
 		}
 		stringSummary := fmt.Sprintf("%d/%d passes HTTP health checks%s", healthyCount, primaryDeployment.DesiredCount, revisionInfo)
 		fmt.Fprintf(writer, "\t%s\n", stringSummary)
@@ -524,7 +524,7 @@ func (s *ecsServiceStatus) writeHealthSummary(writer io.Writer, primaryDeploymen
 		}
 		fmt.Fprintf(writer, "  %s\t", header)
 		if _, err := renderer.Render(writer); err != nil {
-			fmt.Fprintf(writer, strings.Repeat(" ", 10))
+			fmt.Fprint(writer, strings.Repeat(" ", 10))
 		}
 		stringSummary := fmt.Sprintf("%d/%d passes container health checks%s", healthyCount, primaryDeployment.DesiredCount, revisionInfo)
 		fmt.Fprintf(writer, "\t%s\n", stringSummary)
@@ -548,7 +548,7 @@ func (s *ecsServiceStatus) writeCapacityProvidersSummary(writer io.Writer) {
 
 	fmt.Fprintf(writer, "  %s\t", header)
 	if _, err := renderer.Render(writer); err != nil {
-		fmt.Fprintf(writer, strings.Repeat(" ", 10))
+		fmt.Fprint(writer, strings.Repeat(" ", 10))
 	}
 
 	var cpSummaries []string
