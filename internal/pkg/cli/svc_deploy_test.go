@@ -651,7 +651,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				appVersionGetter:  mockAppVersionGetter,
 				targetApp:         tc.inApp,
 				targetEnvironment: tc.inEnvironment,
-				unmarshal: func(b []byte) (interface{}, error) {
+				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
 					return &manifest.LoadBalancedWebService{
 						Workload: manifest.Workload{
 							Name: aws.String(mockSvcName),

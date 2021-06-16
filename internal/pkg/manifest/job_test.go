@@ -105,8 +105,10 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					Type: aws.String(ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
-					ImageConfig: Image{
-						Location: aws.String("nginx"),
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Location: aws.String("nginx"),
+						},
 					},
 					On: JobTriggerConfig{
 						Schedule: aws.String("@hourly"),
@@ -122,8 +124,8 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 							Value: aws.Int(1),
 						},
 					},
-					Network: NetworkConfig{
-						VPC: vpcConfig{
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
 							Placement: stringP(PublicSubnetPlacement),
 						},
 					},
@@ -146,8 +148,10 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 					Type: aws.String(ScheduledJobType),
 				},
 				ScheduledJobConfig: ScheduledJobConfig{
-					ImageConfig: Image{
-						Location: aws.String("nginx"),
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Location: aws.String("nginx"),
+						},
 					},
 					On: JobTriggerConfig{
 						Schedule: aws.String("@hourly"),
@@ -166,13 +170,185 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 							"LOG_LEVEL": "prod",
 						},
 					},
-					Network: NetworkConfig{
-						VPC: vpcConfig{
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
 							Placement: stringP(PublicSubnetPlacement),
 						},
 					},
 				},
 				Environments: nil,
+			},
+		},
+		"with image build overridden by image location": {
+			inputManifest: &ScheduledJob{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(ScheduledJobType),
+				},
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./Dockerfile"),
+								},
+							},
+						},
+					},
+				},
+				Environments: map[string]*ScheduledJobConfig{
+					"prod-iad": {
+						ImageConfig: ImageWithHealthcheck{
+							Image: Image{
+								Location: aws.String("env-override location"),
+							},
+						},
+					},
+				},
+			},
+			inputEnv: "prod-iad",
+
+			wantedManifest: &ScheduledJob{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(ScheduledJobType),
+				},
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Location: aws.String("env-override location"),
+						},
+					},
+				},
+			},
+		},
+		"with image location overridden by image location": {
+			inputManifest: &ScheduledJob{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(ScheduledJobType),
+				},
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Location: aws.String("default location"),
+						},
+					},
+				},
+				Environments: map[string]*ScheduledJobConfig{
+					"prod-iad": {
+						ImageConfig: ImageWithHealthcheck{
+							Image: Image{
+								Location: aws.String("env-override location"),
+							},
+						},
+					},
+				},
+			},
+			inputEnv: "prod-iad",
+
+			wantedManifest: &ScheduledJob{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(ScheduledJobType),
+				},
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Location: aws.String("env-override location"),
+						},
+					},
+				},
+			},
+		},
+		"with image build overridden by image build": {
+			inputManifest: &ScheduledJob{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(ScheduledJobType),
+				},
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./Dockerfile"),
+								},
+							},
+						},
+					},
+				},
+				Environments: map[string]*ScheduledJobConfig{
+					"prod-iad": {
+						ImageConfig: ImageWithHealthcheck{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
+							},
+						},
+					},
+				},
+			},
+			inputEnv: "prod-iad",
+
+			wantedManifest: &ScheduledJob{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(ScheduledJobType),
+				},
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildString: aws.String("overridden build string"),
+							},
+						},
+					},
+				},
+			},
+		},
+		"with image location overridden by image build": {
+			inputManifest: &ScheduledJob{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(ScheduledJobType),
+				},
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Location: aws.String("default location"),
+						},
+					},
+				},
+				Environments: map[string]*ScheduledJobConfig{
+					"prod-iad": {
+						ImageConfig: ImageWithHealthcheck{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("overridden build string"),
+								},
+							},
+						},
+					},
+				},
+			},
+			inputEnv: "prod-iad",
+
+			wantedManifest: &ScheduledJob{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(ScheduledJobType),
+				},
+				ScheduledJobConfig: ScheduledJobConfig{
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildString: aws.String("overridden build string"),
+							},
+						},
+					},
+				},
 			},
 		},
 	}

@@ -63,6 +63,9 @@ type initJobOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
+
+	// Init a Dockerfile parser using fs and input path
+	initParser func(string) dockerfileParser
 }
 
 func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
@@ -78,6 +81,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 
 	p := sessions.NewProvider()
 	sess, err := p.Default()
+	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	if err != nil {
 		return nil, err
 	}
@@ -95,12 +99,15 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 	return &initJobOpts{
 		initJobVars: vars,
 
-		fs:                    &afero.Afero{Fs: afero.NewOsFs()},
+		fs:                    fs,
 		store:                 store,
 		init:                  jobInitter,
 		prompt:                prompter,
 		sel:                   sel,
 		dockerEngineValidator: exec.NewDockerCommand(),
+		initParser: func(path string) dockerfileParser {
+			return exec.NewDockerfile(fs, path)
+		},
 	}, nil
 }
 
@@ -168,6 +175,15 @@ func (o *initJobOpts) Ask() error {
 
 // Execute writes the job's manifest file, creates an ECR repo, and stores the name in SSM.
 func (o *initJobOpts) Execute() error {
+	// Check for a valid healthcheck and add it to the opts.
+	var hc *manifest.ContainerHealthCheck
+	var err error
+	if o.dockerfilePath != "" {
+		hc, err = parseHealthCheck(o.initParser(o.dockerfilePath))
+		if err != nil {
+			log.Warningf("Cannot parse the HEALTHCHECK instruction from the Dockerfile: %v\n", err)
+		}
+	}
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -177,9 +193,10 @@ func (o *initJobOpts) Execute() error {
 			Image:          o.image,
 		},
 
-		Schedule: o.schedule,
-		Timeout:  o.timeout,
-		Retries:  o.retries,
+		Schedule:    o.schedule,
+		HealthCheck: hc,
+		Timeout:     o.timeout,
+		Retries:     o.retries,
 	})
 	if err != nil {
 		return err

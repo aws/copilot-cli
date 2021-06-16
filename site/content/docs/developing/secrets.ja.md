@@ -4,9 +4,9 @@
 
 ## シークレットの追加方法
 
-現在、シークレットを追加するには、シークレットを SecureString として [AWS Systems Manager パラメータストラ](https://docs.aws.amazon.com/ja_jp/systems-manager/latest/userguide/systems-manager-parameter-store.html) (SSM) に保存する必要があります。そして、SSM パラメータへの参照を [Manifest](../manifest/overview.ja.md) に追加します。
+現在、シークレットを追加するには、シークレットを SecureString として [AWS Systems Manager パラメータストア](https://docs.aws.amazon.com/ja_jp/systems-manager/latest/userguide/systems-manager-parameter-store.html) (SSM) に保存する必要があります。そして、SSM パラメータへの参照を [Manifest](../manifest/overview.ja.md) に追加します。
 
-[`copilot secret init`](../commands/secret-init.ja.md) コマンドを利用することで簡単にシークレットを作成できます！!シークレットを作成すると、Copilot はどのような名前で作られたかを教えてくれます。その名前を Service や Job の Manifest に記述しましょう。
+[`copilot secret init`](../commands/secret-init.ja.md) コマンドを利用することで簡単にシークレットを作成できます！シークレットを作成すると、Copilot はどのような名前で作られたかを教えてくれます。その名前を Service や Job の Manifest に記述しましょう。
 
 ### あるいは...
 

@@ -30,6 +30,8 @@ image:
   build: hello/Dockerfile
   # Port exposed through your container to route traffic to it.
   port: 3000
+  depends_on:
+    nginx: start
 
 http:
   # Requests to this path will be forwarded to your service. 

@@ -16,13 +16,15 @@ import (
 
 const (
 	// Display settings.
-	minCellWidth           = 20 // minimum number of characters in a table's cell.
-	tabWidth               = 4  // number of characters in between columns.
-	cellPaddingWidth       = 2  // number of padding characters added by default to a cell.
-	statusCellPaddingWidth = 4
+	minCellWidth           = 20    // minimum number of characters in a table's cell.
+	tabWidth               = 4     // number of characters in between columns.
+	cellPaddingWidth       = 2     // number of padding characters added by default to a cell.
 	paddingChar            = ' '   // character in between columns.
 	dittoSymbol            = `  "` // Symbol used while displaying values in human format.
 	noAdditionalFormatting = 0
+
+	statusMinCellWidth     = 12 // minimum number of characters in a table's cell.
+	statusCellPaddingWidth = 2
 )
 
 // humanizeTime is overridden in tests so that its output is constant as time passes.

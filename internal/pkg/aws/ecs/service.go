@@ -14,27 +14,69 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
+const (
+	// ServiceDeploymentStatusPrimary is the status PRIMARY of an ECS service deployment.
+	ServiceDeploymentStatusPrimary = "PRIMARY"
+	// ServiceDeploymentStatusActive is the status ACTIVE of an ECS service deployment.
+	ServiceDeploymentStatusActive = "ACTIVE"
+)
+
 // Service wraps up ECS Service struct.
 type Service ecs.Service
 
+// Deployment contains information of a ECS service Deployment.
+type Deployment struct {
+	Id             string    `json:"id"`
+	DesiredCount   int64     `json:"desiredCount"`
+	RunningCount   int64     `json:"runningCount"`
+	UpdatedAt      time.Time `json:"updatedAt"`
+	LaunchType     string    `json:"launchType"`
+	TaskDefinition string    `json:"taskDefinition"`
+	Status         string    `json:"status"`
+}
+
 // ServiceStatus contains the status info of a service.
 type ServiceStatus struct {
-	DesiredCount     int64     `json:"desiredCount"`
-	RunningCount     int64     `json:"runningCount"`
-	Status           string    `json:"status"`
-	LastDeploymentAt time.Time `json:"lastDeploymentAt"`
-	TaskDefinition   string    `json:"taskDefinition"`
+	DesiredCount     int64        `json:"desiredCount"`
+	RunningCount     int64        `json:"runningCount"`
+	Status           string       `json:"status"`
+	Deployments      []Deployment `json:"deployments"`
+	LastDeploymentAt time.Time    `json:"lastDeploymentAt"` // kept to avoid breaking change
+	TaskDefinition   string       `json:"taskDefinition"`   // kept to avoid breaking change
 }
 
 // ServiceStatus returns the status of the running service.
 func (s *Service) ServiceStatus() ServiceStatus {
+	var deployments []Deployment
+	for _, dp := range s.Deployments {
+		deployments = append(deployments, Deployment{
+			Id:             aws.StringValue(dp.Id),
+			DesiredCount:   aws.Int64Value(dp.DesiredCount),
+			RunningCount:   aws.Int64Value(dp.RunningCount),
+			UpdatedAt:      aws.TimeValue(dp.UpdatedAt),
+			LaunchType:     aws.StringValue(dp.LaunchType),
+			TaskDefinition: aws.StringValue(dp.TaskDefinition),
+			Status:         aws.StringValue(dp.Status),
+		})
+	}
+
 	return ServiceStatus{
 		Status:           aws.StringValue(s.Status),
 		DesiredCount:     aws.Int64Value(s.DesiredCount),
 		RunningCount:     aws.Int64Value(s.RunningCount),
-		LastDeploymentAt: *s.Deployments[0].UpdatedAt, // FIXME Service assumed to have at least one deployment
+		Deployments:      deployments,
+		LastDeploymentAt: aws.TimeValue(s.Deployments[0].UpdatedAt), // FIXME Service assumed to have at least one deployment
 		TaskDefinition:   aws.StringValue(s.Deployments[0].TaskDefinition),
 	}
+}
+
+// TargetGroups returns the ARNs of target groups attached to the service.
+func (s *Service) TargetGroups() []string {
+	var targetGroupARNs []string
+	for _, lb := range s.LoadBalancers {
+		targetGroupARNs = append(targetGroupARNs, aws.StringValue(lb.TargetGroupArn))
+	}
+	return targetGroupARNs
 }
 
 // ServiceArn is the arn of an ECS service.

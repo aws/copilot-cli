@@ -33,7 +33,7 @@ func TestNewBackendSvc(t *testing.T) {
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: imageWithPortAndHealthcheck{
+					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
 								Build: BuildArgsOrString{
@@ -54,8 +54,8 @@ func TestNewBackendSvc(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: NetworkConfig{
-						VPC: vpcConfig{
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
 							Placement: stringP("public"),
 						},
 					},
@@ -79,7 +79,7 @@ func TestNewBackendSvc(t *testing.T) {
 					Type: aws.String(BackendServiceType),
 				},
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: imageWithPortAndHealthcheck{
+					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Image: Image{
 								Location: aws.String("mockImage"),
@@ -87,11 +87,7 @@ func TestNewBackendSvc(t *testing.T) {
 							Port: aws.Uint16(8080),
 						},
 						HealthCheck: &ContainerHealthCheck{
-							Command:     []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
-							Interval:    durationp(10 * time.Second),
-							Retries:     aws.Int(2),
-							Timeout:     durationp(5 * time.Second),
-							StartPeriod: durationp(0 * time.Second),
+							Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 						},
 					},
 					TaskConfig: TaskConfig{
@@ -104,8 +100,8 @@ func TestNewBackendSvc(t *testing.T) {
 							Enable: aws.Bool(false),
 						},
 					},
-					Network: NetworkConfig{
-						VPC: vpcConfig{
+					Network: &NetworkConfig{
+						VPC: &vpcConfig{
 							Placement: stringP("public"),
 						},
 					},
@@ -188,7 +184,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: imageWithPortAndHealthcheck{
+			ImageConfig: ImageWithPortAndHealthcheck{
 				ImageWithPort: ImageWithPort{
 					Image: Image{
 						Build: BuildArgsOrString{
@@ -218,7 +214,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 	}
 	mockBackendServiceWithNilEnvironment := BackendService{
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: imageWithPortAndHealthcheck{
+			ImageConfig: ImageWithPortAndHealthcheck{
 				ImageWithPort: ImageWithPort{
 					Port: aws.Uint16(80),
 				},
@@ -230,7 +226,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 	}
 	mockBackendServiceWithMinimalOverride := BackendService{
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: imageWithPortAndHealthcheck{
+			ImageConfig: ImageWithPortAndHealthcheck{
 				ImageWithPort: ImageWithPort{
 					Port: aws.Uint16(80),
 				},
@@ -238,7 +234,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		},
 		Environments: map[string]*BackendServiceConfig{
 			"test": {
-				ImageConfig: imageWithPortAndHealthcheck{
+				ImageConfig: ImageWithPortAndHealthcheck{
 					ImageWithPort: ImageWithPort{
 						Port: aws.Uint16(5000),
 					},
@@ -248,7 +244,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 	}
 	mockBackendServiceWithAllOverride := BackendService{
 		BackendServiceConfig: BackendServiceConfig{
-			ImageConfig: imageWithPortAndHealthcheck{
+			ImageConfig: ImageWithPortAndHealthcheck{
 				ImageWithPort: ImageWithPort{
 					Port: aws.Uint16(80),
 					Image: Image{
@@ -281,7 +277,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		},
 		Environments: map[string]*BackendServiceConfig{
 			"test": {
-				ImageConfig: imageWithPortAndHealthcheck{
+				ImageConfig: ImageWithPortAndHealthcheck{
 					ImageWithPort: ImageWithPort{
 						Image: Image{
 							DockerLabels: map[string]string{
@@ -315,6 +311,123 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			},
 		},
 	}
+	mockBackendServiceWithImageOverrideBuildByLocation := BackendService{
+		Workload: Workload{
+			Name: aws.String("phonetool"),
+			Type: aws.String(BackendServiceType),
+		},
+		BackendServiceConfig: BackendServiceConfig{
+			ImageConfig: ImageWithPortAndHealthcheck{
+				ImageWithPort: ImageWithPort{
+					Image: Image{
+						Build: BuildArgsOrString{
+							BuildArgs: DockerBuildArgs{
+								Dockerfile: aws.String("./Dockerfile"),
+							},
+						},
+					},
+				},
+			},
+		},
+		Environments: map[string]*BackendServiceConfig{
+			"prod-iad": {
+				ImageConfig: ImageWithPortAndHealthcheck{
+					ImageWithPort: ImageWithPort{
+						Image: Image{
+							Location: aws.String("env-override location"),
+						},
+					},
+				},
+			},
+		},
+	}
+	mockBackendServiceWithImageOverrideLocationByLocation := BackendService{
+		Workload: Workload{
+			Name: aws.String("phonetool"),
+			Type: aws.String(BackendServiceType),
+		},
+		BackendServiceConfig: BackendServiceConfig{
+			ImageConfig: ImageWithPortAndHealthcheck{
+				ImageWithPort: ImageWithPort{
+					Image: Image{
+						Location: aws.String("original location"),
+					},
+				},
+			},
+		},
+		Environments: map[string]*BackendServiceConfig{
+			"prod-iad": {
+				ImageConfig: ImageWithPortAndHealthcheck{
+					ImageWithPort: ImageWithPort{
+						Image: Image{
+							Location: aws.String("env-override location"),
+						},
+					},
+				},
+			},
+		},
+	}
+	mockBackendServiceWithImageOverrideBuildByBuild := BackendService{
+		Workload: Workload{
+			Name: aws.String("phonetool"),
+			Type: aws.String(BackendServiceType),
+		},
+		BackendServiceConfig: BackendServiceConfig{
+			ImageConfig: ImageWithPortAndHealthcheck{
+				ImageWithPort: ImageWithPort{
+					Image: Image{
+						Build: BuildArgsOrString{
+							BuildArgs: DockerBuildArgs{
+								Dockerfile: aws.String("original dockerfile"),
+								Context:    aws.String("original context"),
+							},
+						},
+					},
+				},
+			},
+		},
+		Environments: map[string]*BackendServiceConfig{
+			"prod-iad": {
+				ImageConfig: ImageWithPortAndHealthcheck{
+					ImageWithPort: ImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildString: aws.String("env overridden dockerfile"),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	mockBackendServiceWithImageOverrideLocationByBuild := BackendService{
+		Workload: Workload{
+			Name: aws.String("phonetool"),
+			Type: aws.String(BackendServiceType),
+		},
+		BackendServiceConfig: BackendServiceConfig{
+			ImageConfig: ImageWithPortAndHealthcheck{
+				ImageWithPort: ImageWithPort{
+					Image: Image{
+						Location: aws.String("original location"),
+					},
+				},
+			},
+		},
+		Environments: map[string]*BackendServiceConfig{
+			"prod-iad": {
+				ImageConfig: ImageWithPortAndHealthcheck{
+					ImageWithPort: ImageWithPort{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildString: aws.String("env overridden dockerfile"),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 	testCases := map[string]struct {
 		svc       *BackendService
 		inEnvName string
@@ -342,7 +455,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 
 			wanted: &BackendService{
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: imageWithPortAndHealthcheck{
+					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Port: aws.Uint16(5000),
 						},
@@ -357,7 +470,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 
 			wanted: &BackendService{
 				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: imageWithPortAndHealthcheck{
+					ImageConfig: ImageWithPortAndHealthcheck{
 						ImageWithPort: ImageWithPort{
 							Port: aws.Uint16(80),
 							Image: Image{
@@ -396,6 +509,92 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 				},
 			},
 			original: &mockBackendServiceWithAllOverride,
+		},
+		"with image build overridden by image location": {
+			svc:       &mockBackendServiceWithImageOverrideBuildByLocation,
+			inEnvName: "prod-iad",
+
+			wanted: &BackendService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(BackendServiceType),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Location: aws.String("env-override location"),
+							},
+						},
+					},
+				},
+			},
+			original: &mockBackendServiceWithImageOverrideBuildByLocation,
+		},
+		"with image location overridden by image location": {
+			svc:       &mockBackendServiceWithImageOverrideLocationByLocation,
+			inEnvName: "prod-iad",
+
+			wanted: &BackendService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(BackendServiceType),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Location: aws.String("env-override location"),
+							},
+						},
+					},
+				},
+			},
+			original: &mockBackendServiceWithImageOverrideLocationByLocation,
+		},
+		"with image build overridden by image build": {
+			svc:       &mockBackendServiceWithImageOverrideBuildByBuild,
+			inEnvName: "prod-iad",
+			wanted: &BackendService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(BackendServiceType),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("env overridden dockerfile"),
+								},
+							},
+						},
+					},
+				},
+			},
+			original: &mockBackendServiceWithImageOverrideBuildByBuild,
+		},
+		"with image location overridden by image build": {
+			svc:       &mockBackendServiceWithImageOverrideLocationByBuild,
+			inEnvName: "prod-iad",
+			wanted: &BackendService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(BackendServiceType),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("env overridden dockerfile"),
+								},
+							},
+						},
+					},
+				},
+			},
+			original: &mockBackendServiceWithImageOverrideLocationByBuild,
 		},
 	}
 

@@ -8,12 +8,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"io"
 	"io/ioutil"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws/awserr"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -102,7 +103,7 @@ func TestS3_ZipAndUpload(t *testing.T) {
 	}{
 		"return error if upload fails": {
 			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
-				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput) {
+				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput, _ ...func(*s3manager.Uploader)) {
 					require.Equal(t, aws.StringValue(in.Bucket), "mockBucket")
 					require.Equal(t, aws.StringValue(in.Key), "mockFileName")
 				}).Return(nil, errors.New("some error"))
@@ -111,7 +112,7 @@ func TestS3_ZipAndUpload(t *testing.T) {
 		},
 		"should upload to the s3 bucket": {
 			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
-				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput) {
+				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput, _ ...func(*s3manager.Uploader)) {
 					b, err := ioutil.ReadAll(in.Body)
 					require.NoError(t, err)
 					reader, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
@@ -341,7 +342,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 
 			wantErr: fmt.Errorf("delete objects from bucket mockBucket: some error"),
 		},
-		"should not proceed with deletion as the bucket doesnt exists":{
+		"should not proceed with deletion as the bucket doesnt exists": {
 			inBucket: "mockBucket",
 			mockS3Client: func(m *mocks.Mocks3API) {
 				m.EXPECT().HeadBucket(&s3.HeadBucketInput{
@@ -351,7 +352,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 
 			wantErr: nil,
 		},
-		"should throw error while perform bucket exists check":{
+		"should throw error while perform bucket exists check": {
 			inBucket: "mockBucket",
 			mockS3Client: func(m *mocks.Mocks3API) {
 				m.EXPECT().HeadBucket(&s3.HeadBucketInput{

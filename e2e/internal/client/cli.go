@@ -4,6 +4,7 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -632,6 +633,49 @@ func (cli *CLI) AppShow(appName string) (*AppShowOutput, error) {
 	return toAppShowOutput(output)
 }
 
+// PipelineInit runs "copilot pipeline init".
+func (cli *CLI) PipelineInit(app, url, branch string, envs []string) (string, error) {
+	return cli.exec(
+		exec.Command(cli.path, "pipeline", "init",
+			"-a", app,
+			"-u", url,
+			"-b", branch,
+			"-e", strings.Join(envs, ",")))
+}
+
+// PipelineUpdate runs "copilot pipeline update".
+func (cli *CLI) PipelineUpdate(app string) (string, error) {
+	return cli.exec(exec.Command(cli.path, "pipeline", "update", "-a", app, "--yes"))
+}
+
+// PipelineShow runs "copilot pipeline show --json"
+func (cli *CLI) PipelineShow(app string) (*PipelineShowOutput, error) {
+	text, err := cli.exec(
+		exec.Command(cli.path, "pipeline", "show", "-a", app, "--json"))
+	if err != nil {
+		return nil, err
+	}
+	var out PipelineShowOutput
+	if err := json.Unmarshal([]byte(text), &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// PipelineStatus runs "copilot pipeline status --json"
+func (cli *CLI) PipelineStatus(app string) (*PipelineStatusOutput, error) {
+	text, err := cli.exec(
+		exec.Command(cli.path, "pipeline", "status", "-a", app, "--json"))
+	if err != nil {
+		return nil, err
+	}
+	var out PipelineStatusOutput
+	if err := json.Unmarshal([]byte(text), &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 /*AppList runs:
 copilot app ls
 */
@@ -861,7 +905,7 @@ func (cli *CLI) SvcPackage(opts *PackageInput) (string, error) {
 
 func (cli *CLI) exec(command *exec.Cmd) (string, error) {
 	// Turn off colors
-	command.Env = append(os.Environ(), "COLOR=false")
+	command.Env = append(os.Environ(), "COLOR=false", "CI=true")
 	command.Dir = cli.workingDir
 	sess, err := gexec.Start(command, ginkgo.GinkgoWriter, ginkgo.GinkgoWriter)
 	if err != nil {

@@ -93,6 +93,9 @@ The `location` field follows the same definition as the [`image` parameter](http
 <span class="parent-field">image.</span><a id="image-labels" href="#image-labels" class="field">`labels`</a><span class="type">Map</span>  
 An optional key/value map of [Docker labels](https://docs.docker.com/config/labels-custom-metadata/) to add to the container.
 
+<span class="parent-field">image.</span><a id="image-depends-on" href="#image-depends-on" class="field">`depends_on`</a><span class="type">Map</span>  
+An optional key/value map of [Container Dependencies](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_ContainerDependency.html) to add to the container.
+
 <div class="separator"></div>  
 
 <a id="entrypoint" href="#entrypoint" class="field">`entrypoint`</a> <span class="type">String or Array of Strings</span>  

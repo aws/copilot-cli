@@ -65,11 +65,12 @@ func (e *ErrExecuteCommand) Error() string {
 }
 
 const (
-	missingFieldAttachment  = "attachment"
-	missingFieldDetailENIID = "detailENIID"
+	missingFieldAttachment         = "attachment"
+	missingFieldDetailENIID        = "detailENIID"
+	missingFieldPrivateIPv4Address = "privateIPv4"
 )
 
-// ErrTaskENIInfoNotFound when the ENI information is not found in a ECS task.
+// ErrTaskENIInfoNotFound when some ENI information is not found in a ECS task.
 type ErrTaskENIInfoNotFound struct {
 	MissingField string
 	TaskARN      string
@@ -81,6 +82,8 @@ func (e *ErrTaskENIInfoNotFound) Error() string {
 		return fmt.Sprintf("cannot find network interface attachment for task %s", e.TaskARN)
 	case missingFieldDetailENIID:
 		return fmt.Sprintf("cannot find network interface ID for task %s", e.TaskARN)
+	case missingFieldPrivateIPv4Address:
+		return fmt.Sprintf("cannot find private IPv4 address for task %s", e.TaskARN)
 	}
 	return ""
 }

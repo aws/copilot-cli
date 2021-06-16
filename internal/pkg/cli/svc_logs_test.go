@@ -120,17 +120,19 @@ func TestSvcLogs_Validate(t *testing.T) {
 			tc.mockstore(mockstore)
 
 			svcLogs := &svcLogsOpts{
-				svcLogsVars: svcLogsVars{
+				wkldLogsVars: wkldLogsVars{
 					follow:         tc.inputFollow,
 					limit:          tc.inputLimit,
 					envName:        tc.inputEnvName,
 					humanStartTime: tc.inputStartTime,
 					humanEndTime:   tc.inputEndTime,
 					since:          tc.inputSince,
-					svcName:        tc.inputSvc,
+					name:           tc.inputSvc,
 					appName:        tc.inputApp,
 				},
-				configStore: mockstore,
+				wkldLogOpts: wkldLogOpts{
+					configStore: mockstore,
+				},
 			}
 
 			// WHEN
@@ -228,13 +230,15 @@ func TestSvcLogs_Ask(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			svcLogs := &svcLogsOpts{
-				svcLogsVars: svcLogsVars{
+				wkldLogsVars: wkldLogsVars{
 					envName: tc.inputEnvName,
-					svcName: tc.inputSvc,
+					name:    tc.inputSvc,
 					appName: tc.inputApp,
 				},
-				configStore: mockstore,
-				sel:         mockSel,
+				wkldLogOpts: wkldLogOpts{
+					configStore: mockstore,
+					sel:         mockSel,
+				},
 			}
 
 			// WHEN
@@ -333,16 +337,18 @@ func TestSvcLogs_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			svcLogs := &svcLogsOpts{
-				svcLogsVars: svcLogsVars{
-					svcName: tc.inputSvc,
+				wkldLogsVars: wkldLogsVars{
+					name:    tc.inputSvc,
 					follow:  tc.follow,
 					limit:   tc.limit,
 					taskIDs: tc.taskIDs,
 				},
-				startTime:   &tc.startTime,
-				endTime:     &tc.endTime,
-				initLogsSvc: func() error { return nil },
-				logsSvc:     tc.mocklogsSvc(ctrl),
+				wkldLogOpts: wkldLogOpts{
+					startTime:   &tc.startTime,
+					endTime:     &tc.endTime,
+					initLogsSvc: func() error { return nil },
+					logsSvc:     tc.mocklogsSvc(ctrl),
+				},
 			}
 
 			// WHEN
