@@ -4,6 +4,7 @@
 package progress
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -216,6 +217,141 @@ func TestTableComponent_Render(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tc.wantedNumLines, numLines, "expected number of lines to match")
 			require.Equal(t, tc.wantedOut, buf.String(), "expected table content to match")
+		})
+	}
+}
+
+func Test_NewSummaryBarComponent(t *testing.T) {
+	testCases := map[string]struct {
+		inLength              int
+		inData                []int
+		inRepresentation      []string
+		inEmptyRepresentation string
+
+		wantedSummaryBarComponent *SummaryBarComponent
+		wantedError               error
+	}{
+		"error if length <= 0": {
+			inLength:         0,
+			inData:           []int{},
+			inRepresentation: []string{},
+			wantedError:      errors.New("invalid length 0 for summary bar"),
+		},
+		"error if not enough representations": {
+			inLength:         10,
+			inData:           []int{1, 0},
+			inRepresentation: []string{"W"},
+			wantedError:      errors.New("not enough representations: 1 representation for 2 data values"),
+		},
+		"error if data contains negative values": {
+			inLength:         10,
+			inData:           []int{1, 0, -1},
+			inRepresentation: []string{"W", "H", "A"},
+			wantedError:      errors.New("input data contains negative values"),
+		},
+		"returns wanted bar component": {
+			inLength:              10,
+			inData:                []int{1, 0, 2},
+			inRepresentation:      []string{"W", "H", "A"},
+			inEmptyRepresentation: "T",
+			wantedSummaryBarComponent: &SummaryBarComponent{
+				Length:              10,
+				Data:                []int{1, 0, 2},
+				Representations:     []string{"W", "H", "A"},
+				EmptyRepresentation: "T",
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			component, err := NewSummaryBarComponent(tc.inLength, tc.inData, tc.inRepresentation, tc.inEmptyRepresentation)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Equal(t, component, tc.wantedSummaryBarComponent)
+			}
+		})
+	}
+}
+
+func TestSummaryBarComponent_Render(t *testing.T) {
+	testCases := map[string]struct {
+		inLength              int
+		inData                []int
+		inRepresentation      []string
+		inEmptyRepresentation string
+
+		wantedError error
+		wantedOut   string
+	}{
+		"output empty bar if data is empty": {
+			inLength:              10,
+			inData:                []int{},
+			inRepresentation:      []string{},
+			inEmptyRepresentation: "@",
+			wantedOut:             "@@@@@@@@@@",
+		},
+		"output empty bar if data sum up to 0": {
+			inLength:              10,
+			inData:                []int{0, 0, 0},
+			inRepresentation:      []string{"W", "H", "A"},
+			inEmptyRepresentation: "@",
+			wantedOut:             "@@@@@@@@@@",
+		},
+		"output correct bar when data sums up to length": {
+			inLength:         10,
+			inData:           []int{1, 5, 4},
+			inRepresentation: []string{"W", "H", "A"},
+			wantedOut:        "WHHHHHAAAA",
+		},
+		"output correct bar when data doesn't sum up to length": {
+			inLength:         10,
+			inData:           []int{4, 2, 2, 1},
+			inRepresentation: []string{"W", "H", "A", "T"},
+			wantedOut:        "WWWWWHHAAT",
+		},
+		"output correct bar when data sum exceeds length": {
+			inLength:         10,
+			inData:           []int{4, 3, 6, 3},
+			inRepresentation: []string{"W", "H", "A", "T"},
+			wantedOut:        "WWHHAAAATT",
+		},
+		"output correct bar when data is roughly uniform": {
+			inLength:         10,
+			inData:           []int{2, 3, 3, 3},
+			inRepresentation: []string{"W", "H", "A", "T"},
+			wantedOut:        "WWHHHAAATT",
+		},
+		"output correct bar when data is heavily skewed": {
+			inLength:         10,
+			inData:           []int{23, 3, 3, 3},
+			inRepresentation: []string{"W", "H", "A", "T"},
+			wantedOut:        "WWWWWWWHAT",
+		},
+		"output correct bar when data is extremely heavily skewed": {
+			inLength:         10,
+			inData:           []int{233, 3, 3, 3},
+			inRepresentation: []string{"W", "H", "A", "T"},
+			wantedOut:        "WWWWWWWWWW",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			bar := SummaryBarComponent{
+				Length:              tc.inLength,
+				Data:                tc.inData,
+				Representations:     tc.inRepresentation,
+				EmptyRepresentation: tc.inEmptyRepresentation,
+			}
+			buf := new(strings.Builder)
+			_, err := bar.Render(buf)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Equal(t, buf.String(), tc.wantedOut)
+			}
 		})
 	}
 }

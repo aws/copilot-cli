@@ -5,10 +5,15 @@ package progress
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"math"
+	"sort"
 	"strings"
 	"text/tabwriter"
+
+	"github.com/dustin/go-humanize/english"
 )
 
 const (
@@ -157,4 +162,137 @@ func renderComponents(out io.Writer, components []Renderer) (numLines int, err e
 		return 0, err
 	}
 	return numLines, nil
+}
+
+// SummaryBarComponent returns a summary bar given data and the string representations of each data category.
+// For example, data[0] will be represented by representations[0] in the summary bar.
+// If len(representations) < len(data), the default representation "□" is used for all data category with missing representation.
+type SummaryBarComponent struct {
+	Length              int      // Length of the summary bar.
+	Data                []int    // Data to draw using the summary bar. The order matters, e.g. the value in position 0 will be the leftmost portion of the bar.
+	Representations     []string // Representations of each data value. Must be at least as long as `Data`. For example, Data[0] will be represented by Representations[0] in the summary bar.
+	EmptyRepresentation string   // Representation to use for an empty bar.
+}
+
+// NewSummaryBarComponent returns a SummaryBarComponent.
+func NewSummaryBarComponent(length int, data []int, representations []string, emptyRepresentation string) (*SummaryBarComponent, error) {
+	if length <= 0 {
+		return nil, fmt.Errorf("invalid length %d for summary bar", length)
+	}
+
+	if len(representations) < len(data) {
+		return nil, fmt.Errorf("not enough representations: %s for %s",
+			english.Plural(len(representations), "representation", "representations"),
+			english.Plural(len(data), "data value", "data values"),
+		)
+	}
+
+	if hasNegativeValue(data) {
+		return nil, fmt.Errorf("input data contains negative values")
+	}
+	return &SummaryBarComponent{
+		Length:              length,
+		Data:                data,
+		Representations:     representations,
+		EmptyRepresentation: emptyRepresentation,
+	}, nil
+}
+
+// Render writes the summary bar to out， without a new line.
+func (c *SummaryBarComponent) Render(out io.Writer) (numLines int, err error) {
+	buf := new(bytes.Buffer)
+	portions, err := c.calculatePortions()
+	if err != nil {
+		if !errors.Is(err, &errTotalIsZero{}) {
+			return 0, err
+		}
+		if _, err := buf.WriteString(fmt.Sprint(strings.Repeat(c.EmptyRepresentation, c.Length))); err != nil {
+			return 0, fmt.Errorf("write empty bar to buffer: %w", err)
+		}
+		if _, err := buf.WriteTo(out); err != nil {
+			return 0, fmt.Errorf("write buffer to out: %w", err)
+		}
+		return 0, nil
+	}
+
+	var bar string
+	for idx, p := range portions {
+		bar += fmt.Sprint(strings.Repeat(c.Representations[idx], p))
+	}
+	if _, err := buf.WriteString(bar); err != nil {
+		return 0, fmt.Errorf("write bar to buffer: %w", err)
+	}
+	if _, err := buf.WriteTo(out); err != nil {
+		return 0, fmt.Errorf("write buffer to out: %w", err)
+	}
+	return 0, nil
+}
+
+func (c *SummaryBarComponent) calculatePortions() ([]int, error) {
+	type estimation struct {
+		index   int
+		dec     float64
+		portion int
+	}
+
+	var sum int
+	for _, v := range c.Data {
+		sum += v
+	}
+	if sum <= 0 {
+		return nil, &errTotalIsZero{}
+	}
+
+	// We first underestimate how many units each data value would take in the summary bar of length Length.
+	// Then we distribute the rest of the units to each estimation.
+	var underestimations []estimation
+	for idx, v := range c.Data {
+		rawFraction := (float64)(v) / (float64)(sum) * (float64)(c.Length)
+		_, decPart := math.Modf(rawFraction)
+
+		underestimations = append(underestimations, estimation{
+			dec:     decPart,
+			portion: (int)(math.Max(math.Floor(rawFraction), 0)),
+			index:   idx,
+		})
+	}
+
+	// Calculate the sum of the underestimated units and see how far we are from filling the bar of length `Length`.
+	var currLength int
+	for _, underestimated := range underestimations {
+		currLength += underestimated.portion
+	}
+	unitsLeft := c.Length - currLength
+
+	// Sort by decimal places from larger to smaller.
+	sort.SliceStable(underestimations, func(i, j int) bool {
+		return underestimations[i].dec > underestimations[j].dec
+	})
+
+	// Distribute extra values first to portions with larger decimal places.
+	out := make([]int, len(c.Data))
+	for _, d := range underestimations {
+		if unitsLeft > 0 {
+			d.portion += 1
+			unitsLeft -= 1
+		}
+		out[d.index] = d.portion
+	}
+
+	return out, nil
+}
+
+type errTotalIsZero struct{}
+
+func (e *errTotalIsZero) Error() string {
+	return "The data sums up to zero"
+}
+
+func hasNegativeValue(data []int) bool {
+	for _, d := range data {
+		if d < 0 {
+			return true
+		}
+	}
+	return false
 }
