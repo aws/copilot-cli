@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type serviceStatusMocks struct {
+type serviceStatusDescriberMocks struct {
 	apprunnerSvcDescriber *mocks.MockapprunnerSvcDescriber
 	ecsServiceGetter      *mocks.MockecsServiceGetter
 	alarmStatusGetter     *mocks.MockalarmStatusGetter
@@ -61,13 +61,13 @@ func TestServiceStatus_Describe(t *testing.T) {
 	}
 	mockError := errors.New("some error")
 	testCases := map[string]struct {
-		setupMocks func(mocks serviceStatusMocks)
+		setupMocks func(mocks serviceStatusDescriberMocks)
 
 		wantedError   error
 		wantedContent *ecsServiceStatus
 	}{
 		"errors if failed to describe a service": {
-			setupMocks: func(m serviceStatusMocks) {
+			setupMocks: func(m serviceStatusDescriberMocks) {
 				gomock.InOrder(
 					m.serviceDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(nil, mockError),
 				)
@@ -76,7 +76,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("get ECS service description for mockSvc: some error"),
 		},
 		"errors if failed to get the ECS service": {
-			setupMocks: func(m serviceStatusMocks) {
+			setupMocks: func(m serviceStatusDescriberMocks) {
 				gomock.InOrder(
 					m.serviceDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(mockServiceDesc, nil),
 					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(nil, mockError),
@@ -86,7 +86,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("get service mockService: some error"),
 		},
 		"errors if failed to get running tasks status": {
-			setupMocks: func(m serviceStatusMocks) {
+			setupMocks: func(m serviceStatusDescriberMocks) {
 				gomock.InOrder(
 					m.serviceDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
 						ClusterName: mockCluster,
@@ -104,7 +104,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("get status for task badMockTaskArn: parse ECS task ARN: arn: invalid prefix"),
 		},
 		"errors if failed to get stopped task status": {
-			setupMocks: func(m serviceStatusMocks) {
+			setupMocks: func(m serviceStatusDescriberMocks) {
 				gomock.InOrder(
 					m.serviceDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
 						ClusterName: mockCluster,
@@ -127,7 +127,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("get status for stopped task badMockTaskArn: parse ECS task ARN: arn: invalid prefix"),
 		},
 		"errors if failed to get tagged CloudWatch alarms": {
-			setupMocks: func(m serviceStatusMocks) {
+			setupMocks: func(m serviceStatusDescriberMocks) {
 				gomock.InOrder(
 					m.serviceDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(mockServiceDesc, nil),
 					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&awsecs.Service{}, nil),
@@ -138,7 +138,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("get tagged CloudWatch alarms: some error"),
 		},
 		"errors if failed to get auto scaling CloudWatch alarm names": {
-			setupMocks: func(m serviceStatusMocks) {
+			setupMocks: func(m serviceStatusDescriberMocks) {
 				gomock.InOrder(
 					m.serviceDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(mockServiceDesc, nil),
 					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&awsecs.Service{}, nil),
@@ -150,7 +150,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("retrieve auto scaling alarm names for ECS service mockCluster/mockService: some error"),
 		},
 		"errors if failed to get auto scaling CloudWatch alarm status": {
-			setupMocks: func(m serviceStatusMocks) {
+			setupMocks: func(m serviceStatusDescriberMocks) {
 				gomock.InOrder(
 					m.serviceDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(mockServiceDesc, nil),
 					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&awsecs.Service{}, nil),
@@ -163,7 +163,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("get auto scaling CloudWatch alarms: some error"),
 		},
 		"do not error out if failed to get a service's target group health": {
-			setupMocks: func(m serviceStatusMocks) {
+			setupMocks: func(m serviceStatusDescriberMocks) {
 				gomock.InOrder(
 					m.serviceDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(mockServiceDesc, nil),
 					m.ecsServiceGetter.EXPECT().Service(mockCluster, mockService).Return(&awsecs.Service{
@@ -206,7 +206,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 			},
 		},
 		"retrieve all target health information in service": {
-			setupMocks: func(m serviceStatusMocks) {
+			setupMocks: func(m serviceStatusDescriberMocks) {
 				gomock.InOrder(
 					m.serviceDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
 						ClusterName: mockCluster,
@@ -370,7 +370,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 			},
 		},
 		"success": {
-			setupMocks: func(m serviceStatusMocks) {
+			setupMocks: func(m serviceStatusDescriberMocks) {
 				gomock.InOrder(
 					m.serviceDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
 						ClusterName: mockCluster,
@@ -502,7 +502,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 			mockSvcDescriber := mocks.NewMockserviceDescriber(ctrl)
 			mockaasClient := mocks.NewMockautoscalingAlarmNamesGetter(ctrl)
 			mockTargetHealthGetter := mocks.NewMocktargetHealthGetter(ctrl)
-			mocks := serviceStatusMocks{
+			mocks := serviceStatusDescriberMocks{
 				ecsServiceGetter:   mockecsSvc,
 				alarmStatusGetter:  mockcwSvc,
 				serviceDescriber:   mockSvcDescriber,
@@ -537,16 +537,7 @@ func TestServiceStatus_Describe(t *testing.T) {
 	}
 }
 
-type mockRenderer struct {
-	Length              int      // Length of the summary bar.
-	Data                []int    // Data to draw using the summary bar. The order matters, e.g. the value in position 0 will be the leftmost portion of the bar.
-	Representations     []string // Representations of each data value. Must be at least as long as `Data`. For example, Data[0] will be represented by Representations[0] in the summary bar.
-	EmptyRepresentation string   // Representation to use for an empty bar.
-
-	Render func(writer io.Writer) (int, error)
-}
-
-type statusMocks struct {
+type serviceStatusMocks struct {
 	renderer           *mocksprogress.MockRenderer
 	rendererConfigurer *mocks.MockrendererConfigurer
 }
@@ -567,7 +558,7 @@ func TestServiceStatusDesc_String(t *testing.T) {
 
 	testCases := map[string]struct {
 		desc                 *ecsServiceStatus
-		setUpMock            func(m statusMocks)
+		setUpMock            func(m serviceStatusMocks)
 		setUpMockBarRenderer func(length int, data []int, representations []string, emptyRepresentation string) (progress.Renderer, error)
 		human                string
 		json                 string
@@ -645,7 +636,7 @@ func TestServiceStatusDesc_String(t *testing.T) {
 					},
 				},
 			},
-			setUpMock: func(m statusMocks) {
+			setUpMock: func(m serviceStatusMocks) {
 				// Running: 1 running primary, 2 running active.
 				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{1, 2}, []string{"█", "█"}, "░").
 					Return(m.renderer, nil)
@@ -783,7 +774,7 @@ Alarms
 					},
 				},
 			},
-			setUpMock: func(m statusMocks) {
+			setUpMock: func(m serviceStatusMocks) {
 				// Running (only primary): 3 running, 3 desired
 				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{3, 0}, []string{"█", "░"}, "░").
 					Return(m.renderer, nil)
@@ -904,7 +895,7 @@ Tasks
 					},
 				},
 			},
-			setUpMock: func(m statusMocks) {
+			setUpMock: func(m serviceStatusMocks) {
 				// Running (only primary): 3 running, 5 desired
 				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{3, 2}, []string{"█", "░"}, "░").
 					Return(m.renderer, nil)
@@ -965,7 +956,7 @@ Tasks
 					},
 				},
 			},
-			setUpMock: func(m statusMocks) {
+			setUpMock: func(m serviceStatusMocks) {
 				// Running (only primary): 2 running, 3 desired
 				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{2, 1}, []string{"█", "░"}, "░").
 					Return(m.renderer, nil)
@@ -1059,7 +1050,7 @@ Tasks
 					},
 				},
 			},
-			setUpMock: func(m statusMocks) {
+			setUpMock: func(m serviceStatusMocks) {
 				// Running: 1 running primary, 2 running active.
 				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{1, 2}, []string{"█", "█"}, "░").
 					Return(m.renderer, nil)
@@ -1152,7 +1143,7 @@ Tasks
 					},
 				},
 			},
-			setUpMock: func(m statusMocks) {
+			setUpMock: func(m serviceStatusMocks) {
 				// Running (ony primary): 3 running, 4 desired.
 				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{3, 1}, []string{"█", "░"}, "░").
 					Return(m.renderer, nil)
@@ -1204,7 +1195,7 @@ Tasks
 				},
 				DesiredRunningTasks: []awsecs.TaskStatus{},
 			},
-			setUpMock: func(m statusMocks) {
+			setUpMock: func(m serviceStatusMocks) {
 				// Running (only primary): 0 running, 0 desired.
 				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{0, 0}, []string{"█", "░"}, "░").
 					Return(m.renderer, nil)
@@ -1299,7 +1290,7 @@ Tasks
 					},
 				},
 			},
-			setUpMock: func(m statusMocks) {
+			setUpMock: func(m serviceStatusMocks) {
 				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{3, 2}, []string{"█", "░"}, "░").
 					Return(nil, errors.New("some error"))
 				// Skip Deployments because there is only the primary deployment.
@@ -1354,7 +1345,7 @@ Tasks
 					},
 				},
 			},
-			setUpMock: func(m statusMocks) {
+			setUpMock: func(m serviceStatusMocks) {
 				// Running (only primary): 2 running, 3 desired
 				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{2, 1}, []string{"█", "░"}, "░").
 					Return(m.renderer, nil)
@@ -1390,7 +1381,7 @@ Tasks
 			mockRenderer := mocksprogress.NewMockRenderer(ctrl)
 			tc.desc.rendererConfigurer = mockRendererConfigurer
 
-			tc.setUpMock(statusMocks{
+			tc.setUpMock(serviceStatusMocks{
 				rendererConfigurer: mockRendererConfigurer,
 				renderer:           mockRenderer,
 			})
@@ -1421,14 +1412,14 @@ func TestAppRunnerStatusDescriber_Describe(t *testing.T) {
 		},
 	}
 	testCases := map[string]struct {
-		setupMocks func(mocks serviceStatusMocks)
+		setupMocks func(mocks serviceStatusDescriberMocks)
 		desc       *appRunnerServiceStatus
 
 		wantedError   error
 		wantedContent *appRunnerServiceStatus
 	}{
 		"errors if failed to describe a service": {
-			setupMocks: func(m serviceStatusMocks) {
+			setupMocks: func(m serviceStatusDescriberMocks) {
 				gomock.InOrder(
 					m.apprunnerSvcDescriber.EXPECT().Service().Return(nil, mockError),
 				)
@@ -1437,7 +1428,7 @@ func TestAppRunnerStatusDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("get AppRunner service description for App Runner service frontend in environment test: some error"),
 		},
 		"success": {
-			setupMocks: func(m serviceStatusMocks) {
+			setupMocks: func(m serviceStatusDescriberMocks) {
 				m.apprunnerSvcDescriber.EXPECT().Service().Return(&mockAppRunnerService, nil)
 				m.logGetter.EXPECT().LogEvents(cloudwatchlogs.LogEventsOpts{LogGroup: "/aws/apprunner/testapp-test-frontend/fc1098ac269245959ba78fd58bdd4bf/service", Limit: aws.Int64(10)}).Return(&cloudwatchlogs.LogEventsOutput{
 					Events: logEvents,
@@ -1457,7 +1448,7 @@ func TestAppRunnerStatusDescriber_Describe(t *testing.T) {
 
 			mockSvcDesc := mocks.NewMockapprunnerSvcDescriber(ctrl)
 			mockLogsSvc := mocks.NewMocklogGetter(ctrl)
-			mocks := serviceStatusMocks{
+			mocks := serviceStatusDescriberMocks{
 				apprunnerSvcDescriber: mockSvcDesc,
 				logGetter:             mockLogsSvc,
 			}
