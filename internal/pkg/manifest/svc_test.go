@@ -77,9 +77,11 @@ environments:
 				wantedManifest := &LoadBalancedWebService{
 					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-						ImageConfig: ImageWithPort{Image: Image{Build: BuildArgsOrString{},
-							Location: aws.String("foo/bar"),
-						}, Port: aws.Uint16(80)},
+						ImageConfig: ImageWithPortAndHealthcheck{
+							ImageWithPort: ImageWithPort{Image: Image{Build: BuildArgsOrString{},
+								Location: aws.String("foo/bar"),
+							}, Port: aws.Uint16(80)},
+						},
 						RoutingRule: RoutingRule{
 							Path:            aws.String("svc"),
 							TargetContainer: aws.String("frontend"),
@@ -122,8 +124,8 @@ environments:
 								"LOG_TOKEN": "LOG_TOKEN",
 							},
 						},
-						Network: NetworkConfig{
-							VPC: vpcConfig{
+						Network: &NetworkConfig{
+							VPC: &vpcConfig{
 								Placement: stringP("public"),
 							},
 						},
@@ -199,7 +201,7 @@ secrets:
 						Type: aws.String(BackendServiceType),
 					},
 					BackendServiceConfig: BackendServiceConfig{
-						ImageConfig: imageWithPortAndHealthcheck{
+						ImageConfig: ImageWithPortAndHealthcheck{
 							ImageWithPort: ImageWithPort{
 								Image: Image{
 									Build: BuildArgsOrString{
@@ -209,11 +211,7 @@ secrets:
 								Port: aws.Uint16(8080),
 							},
 							HealthCheck: &ContainerHealthCheck{
-								Command:     []string{"CMD-SHELL", "curl http://localhost:5000/ || exit 1"},
-								Interval:    durationp(10 * time.Second),
-								Retries:     aws.Int(2),
-								Timeout:     durationp(5 * time.Second),
-								StartPeriod: durationp(0 * time.Second),
+								Command: []string{"CMD-SHELL", "curl http://localhost:5000/ || exit 1"},
 							},
 						},
 						TaskConfig: TaskConfig{
@@ -229,8 +227,8 @@ secrets:
 								"API_TOKEN": "SUBS_API_TOKEN",
 							},
 						},
-						Network: NetworkConfig{
-							VPC: vpcConfig{
+						Network: &NetworkConfig{
+							VPC: &vpcConfig{
 								Placement: stringP("public"),
 							},
 						},
@@ -516,9 +514,11 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 		"success with false": {
 			svc: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPort{
-						Image: Image{
-							Location: aws.String("mockLocation"),
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Location: aws.String("mockLocation"),
+							},
 						},
 					},
 				},
@@ -527,10 +527,12 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 		"success with true": {
 			svc: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: ImageWithPort{
-						Image: Image{
-							Build: BuildArgsOrString{
-								BuildString: aws.String("mockDockerfile"),
+					ImageConfig: ImageWithPortAndHealthcheck{
+						ImageWithPort: ImageWithPort{
+							Image: Image{
+								Build: BuildArgsOrString{
+									BuildString: aws.String("mockDockerfile"),
+								},
 							},
 						},
 					},

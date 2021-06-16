@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -477,8 +478,11 @@ func TestJobInitOpts_Ask(t *testing.T) {
 }
 
 func TestJobInitOpts_Execute(t *testing.T) {
+	second := time.Second
+	zero := 0
 	testCases := map[string]struct {
-		mockJobInit func(m *mocks.MockjobInitializer)
+		mockJobInit    func(m *mocks.MockjobInitializer)
+		mockDockerfile func(m *mocks.MockdockerfileParser)
 
 		inApp  string
 		inName string
@@ -498,6 +502,15 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			inSchedule:         "@hourly",
 			wantedManifestPath: "manifest/path",
 
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {
+				m.EXPECT().GetHealthCheck().Return(&exec.HealthCheck{
+					Cmd:         []string{"mockCommand"},
+					Interval:    second,
+					Timeout:     second,
+					StartPeriod: second,
+					Retries:     zero,
+				}, nil)
+			},
 			mockJobInit: func(m *mocks.MockjobInitializer) {
 				m.EXPECT().Job(&initialize.JobProps{
 					WorkloadProps: initialize.WorkloadProps{
@@ -507,10 +520,17 @@ func TestJobInitOpts_Execute(t *testing.T) {
 						DockerfilePath: "./Dockerfile",
 					},
 					Schedule: "@hourly",
+					HealthCheck: &manifest.ContainerHealthCheck{
+						Command:     []string{"mockCommand"},
+						Interval:    &second,
+						Retries:     &zero,
+						Timeout:     &second,
+						StartPeriod: &second,
+					},
 				}).Return("manifest/path", nil)
 			},
 		},
-		"failure": {
+		"fail to init job": {
 			mockJobInit: func(m *mocks.MockjobInitializer) {
 				m.EXPECT().Job(gomock.Any()).Return("", errors.New("some error"))
 			},
@@ -524,9 +544,13 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockJobInitializer := mocks.NewMockjobInitializer(ctrl)
+			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
 
 			if tc.mockJobInit != nil {
 				tc.mockJobInit(mockJobInitializer)
+			}
+			if tc.mockDockerfile != nil {
+				tc.mockDockerfile(mockDockerfile)
 			}
 
 			opts := initJobOpts{
@@ -540,6 +564,9 @@ func TestJobInitOpts_Execute(t *testing.T) {
 					schedule: tc.inSchedule,
 				},
 				init: mockJobInitializer,
+				initParser: func(s string) dockerfileParser {
+					return mockDockerfile
+				},
 			}
 
 			// WHEN

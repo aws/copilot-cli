@@ -10,12 +10,14 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"time"
 
 	"github.com/imdario/mergo"
 
 	"github.com/google/shlex"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"gopkg.in/yaml.v3"
 )
 
@@ -110,6 +112,18 @@ func transformImage() func(dst, src reflect.Value) error {
 		}
 		return nil
 	}
+}
+
+// ImageWithHealthcheck represents a container image with health check.
+type ImageWithHealthcheck struct {
+	Image       `yaml:",inline"`
+	HealthCheck *ContainerHealthCheck `yaml:"healthcheck"`
+}
+
+// ImageWithPortAndHealthcheck represents a container image with an exposed port and health check.
+type ImageWithPortAndHealthcheck struct {
+	ImageWithPort `yaml:",inline"`
+	HealthCheck   *ContainerHealthCheck `yaml:"healthcheck"`
 }
 
 // ImageWithPort represents a container image with an exposed port.
@@ -438,20 +452,24 @@ type TaskConfig struct {
 
 // NetworkConfig represents options for network connection to AWS resources within a VPC.
 type NetworkConfig struct {
-	VPC vpcConfig `yaml:"vpc"`
+	VPC *vpcConfig `yaml:"vpc"`
 }
 
 // UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.
 // If the user specified a placement that's not valid then throw an error.
 func (c *NetworkConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	type networkWithDefaults NetworkConfig
+	defaultVPCConf := &vpcConfig{
+		Placement: stringP(PublicSubnetPlacement),
+	}
 	conf := networkWithDefaults{
-		VPC: vpcConfig{
-			Placement: stringP(PublicSubnetPlacement),
-		},
+		VPC: defaultVPCConf,
 	}
 	if err := unmarshal(&conf); err != nil {
 		return err
+	}
+	if conf.VPC == nil { // If after unmarshaling the user did not specify VPC configuration then reset it to public.
+		conf.VPC = defaultVPCConf
 	}
 	if !conf.VPC.isValidPlacement() {
 		return fmt.Errorf("field '%s' is '%v' must be one of %#v", "network.vpc.placement", aws.StringValue(conf.VPC.Placement), subnetPlacements)
@@ -466,7 +484,7 @@ type vpcConfig struct {
 	SecurityGroups []string `yaml:"security_groups"`
 }
 
-func (c vpcConfig) isValidPlacement() bool {
+func (c *vpcConfig) isValidPlacement() bool {
 	if c.Placement == nil {
 		return false
 	}
@@ -506,10 +524,6 @@ func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
 		if err := yaml.Unmarshal(in, m); err != nil {
 			return nil, fmt.Errorf("unmarshal to backend service: %w", err)
 		}
-		if m.BackendServiceConfig.ImageConfig.HealthCheck != nil {
-			// Make sure that unset fields in the healthcheck gets a default value.
-			m.BackendServiceConfig.ImageConfig.HealthCheck.applyIfNotSet(newDefaultContainerHealthCheck())
-		}
 		return m, nil
 	case ScheduledJobType:
 		m := newDefaultScheduledJob()
@@ -520,6 +534,74 @@ func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
 	default:
 		return nil, &ErrInvalidWorkloadType{Type: typeVal}
 	}
+}
+
+// ContainerHealthCheck holds the configuration to determine if the service container is healthy.
+// See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-healthcheck.html
+type ContainerHealthCheck struct {
+	Command     []string       `yaml:"command"`
+	Interval    *time.Duration `yaml:"interval"`
+	Retries     *int           `yaml:"retries"`
+	Timeout     *time.Duration `yaml:"timeout"`
+	StartPeriod *time.Duration `yaml:"start_period"`
+}
+
+// newDefaultContainerHealthCheck returns container health check configuration
+// that's identical to a load balanced web service's defaults.
+func newDefaultContainerHealthCheck() *ContainerHealthCheck {
+	return &ContainerHealthCheck{
+		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
+		Interval:    durationp(10 * time.Second),
+		Retries:     aws.Int(2),
+		Timeout:     durationp(5 * time.Second),
+		StartPeriod: durationp(0 * time.Second),
+	}
+}
+
+// applyIfNotSet changes the healthcheck's fields only if they were not set and the other healthcheck has them set.
+func (hc *ContainerHealthCheck) applyIfNotSet(other *ContainerHealthCheck) {
+	if hc.Command == nil && other.Command != nil {
+		hc.Command = other.Command
+	}
+	if hc.Interval == nil && other.Interval != nil {
+		hc.Interval = other.Interval
+	}
+	if hc.Retries == nil && other.Retries != nil {
+		hc.Retries = other.Retries
+	}
+	if hc.Timeout == nil && other.Timeout != nil {
+		hc.Timeout = other.Timeout
+	}
+	if hc.StartPeriod == nil && other.StartPeriod != nil {
+		hc.StartPeriod = other.StartPeriod
+	}
+}
+
+func (hc *ContainerHealthCheck) healthCheckOpts() *ecs.HealthCheck {
+	// Make sure that unset fields in the healthcheck gets a default value.
+	hc.applyIfNotSet(newDefaultContainerHealthCheck())
+	return &ecs.HealthCheck{
+		Command:     aws.StringSlice(hc.Command),
+		Interval:    aws.Int64(int64(hc.Interval.Seconds())),
+		Retries:     aws.Int64(int64(*hc.Retries)),
+		StartPeriod: aws.Int64(int64(hc.StartPeriod.Seconds())),
+		Timeout:     aws.Int64(int64(hc.Timeout.Seconds())),
+	}
+}
+
+// HealthCheckOpts converts the image's healthcheck configuration into a format parsable by the templates pkg.
+func (i ImageWithPortAndHealthcheck) HealthCheckOpts() *ecs.HealthCheck {
+	if i.HealthCheck == nil {
+		return nil
+	}
+	return i.HealthCheck.healthCheckOpts()
+}
+
+func (i ImageWithHealthcheck) HealthCheckOpts() *ecs.HealthCheck {
+	if i.HealthCheck == nil {
+		return nil
+	}
+	return i.HealthCheck.healthCheckOpts()
 }
 
 func requiresBuild(image Image) (bool, error) {

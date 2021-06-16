@@ -518,7 +518,7 @@ func TestNetworkConfig_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		data string
 
-		wantedConfig NetworkConfig
+		wantedConfig *NetworkConfig
 		wantedErr    error
 	}{
 		"defaults to public placement if vpc is empty": {
@@ -526,8 +526,8 @@ func TestNetworkConfig_UnmarshalYAML(t *testing.T) {
 network:
   vpc:
 `,
-			wantedConfig: NetworkConfig{
-				VPC: vpcConfig{
+			wantedConfig: &NetworkConfig{
+				VPC: &vpcConfig{
 					Placement: stringP(PublicSubnetPlacement),
 				},
 			},
@@ -549,8 +549,8 @@ network:
     - 'sg-1234'
     - 'sg-4567'
 `,
-			wantedConfig: NetworkConfig{
-				VPC: vpcConfig{
+			wantedConfig: &NetworkConfig{
+				VPC: &vpcConfig{
 					Placement:      stringP(PublicSubnetPlacement),
 					SecurityGroups: []string{"sg-1234", "sg-4567"},
 				},
@@ -562,7 +562,7 @@ network:
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			type manifest struct {
-				Network NetworkConfig `yaml:"network"`
+				Network *NetworkConfig `yaml:"network"`
 			}
 			var m manifest
 

@@ -86,8 +86,11 @@ func summarizeHTTPHealthForTasks(targetsHealth []taskTargetHealth) map[string][]
 	return out
 }
 
-func capacityProvidersBreakDownByCount(tasks []ecs.TaskStatus) (fargate, spot, empty int) {
+func runningCapacityProvidersBreakDownByCount(tasks []ecs.TaskStatus) (fargate, spot, empty int) {
 	for _, t := range tasks {
+		if t.LastStatus != ecs.TaskStatusRunning {
+			continue
+		}
 		switch strings.ToUpper(t.CapacityProvider) {
 		case ecs.TaskCapacityProviderFargate:
 			fargate += 1

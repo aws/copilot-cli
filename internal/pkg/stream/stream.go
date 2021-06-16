@@ -18,7 +18,7 @@ const (
 // Streamer is the interface that groups methods to periodically retrieve events,
 // publish them to subscribers, and stop publishing once there are no more events left.
 type Streamer interface {
-	// Fetcher fetches events, updates the internal state of the Streamer with new events and returns the next time
+	// Fetch fetches events, updates the internal state of the Streamer with new events and returns the next time
 	// the Fetch call should be attempted. On failure, Fetch returns an error.
 	Fetch() (next time.Time, err error)
 

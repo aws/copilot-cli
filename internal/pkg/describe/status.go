@@ -536,8 +536,8 @@ func (s *ecsServiceStatus) writeCapacityProvidersSummary(writer io.Writer) {
 		return
 	}
 	header := "Capacity Provider"
-	fargate, spot, empty := capacityProvidersBreakDownByCount(s.DesiredRunningTasks)
 
+	fargate, spot, empty := runningCapacityProvidersBreakDownByCount(s.DesiredRunningTasks)
 	renderer, err := s.rendererConfigurer.SummaryBarRenderer(10,
 		[]int{fargate + empty, spot},
 		[]string{color.Grey.Sprintf("▒"), color.Grey.Sprintf("▓")},

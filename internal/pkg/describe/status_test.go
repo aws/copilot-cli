@@ -1117,7 +1117,7 @@ Tasks
 		"while running with capacity providers": {
 			desc: &ecsServiceStatus{
 				Service: awsecs.ServiceStatus{
-					DesiredCount: 3,
+					DesiredCount: 4,
 					RunningCount: 3,
 					Status:       "ACTIVE",
 				},
@@ -1143,14 +1143,21 @@ Tasks
 						Images:           []awsecs.Image{},
 						CapacityProvider: "",
 					},
+					{
+						Health:           "UNKNOWN",
+						LastStatus:       "ACTIVATING",
+						ID:               "444444444444",
+						Images:           []awsecs.Image{},
+						CapacityProvider: "",
+					},
 				},
 			},
 			setUpMock: func(m statusMocks) {
-				// Running (ony primary): 3 running, 3 desired.
-				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{3, 0}, []string{"█", "░"}, "░").
+				// Running (ony primary): 3 running, 4 desired.
+				m.rendererConfigurer.EXPECT().SummaryBarRenderer(10, []int{3, 1}, []string{"█", "░"}, "░").
 					Return(m.renderer, nil)
 				m.renderer.EXPECT().Render(gomock.Any()).Do(func(out io.Writer) {
-					fmt.Fprint(out, "██████████")
+					fmt.Fprint(out, "████████░░")
 				})
 
 				// Skip Deployments because there is only the primary deployment.
@@ -1164,7 +1171,7 @@ Tasks
 			},
 			human: `Task Summary
 
-  Running            ██████████  3/3 desired tasks are running
+  Running            ████████░░  3/4 desired tasks are running
   Capacity Provider  ▒▒▒▒▒▒▒▓▓▓  2/3 on Fargate, 1/3 on Fargate Spot
 
 Tasks
@@ -1174,8 +1181,9 @@ Tasks
   11111111  RUNNING     -           -           FARGATE_SPOT
   22222222  RUNNING     -           -           FARGATE
   33333333  RUNNING     -           -           FARGATE (Launch type)
+  44444444  ACTIVATING  -           -           FARGATE (Launch type)
 `,
-			json: `{"Service":{"desiredCount":3,"runningCount":3,"status":"ACTIVE","deployments":null,"lastDeploymentAt":"0001-01-01T00:00:00Z","taskDefinition":""},"tasks":[{"health":"UNKNOWN","id":"11111111111111111","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"FARGATE_SPOT","taskDefinitionARN":""},{"health":"UNKNOWN","id":"22222222222222","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"FARGATE","taskDefinitionARN":""},{"health":"UNKNOWN","id":"333333333333","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":null,"targetHealthDescriptions":null}
+			json: `{"Service":{"desiredCount":4,"runningCount":3,"status":"ACTIVE","deployments":null,"lastDeploymentAt":"0001-01-01T00:00:00Z","taskDefinition":""},"tasks":[{"health":"UNKNOWN","id":"11111111111111111","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"FARGATE_SPOT","taskDefinitionARN":""},{"health":"UNKNOWN","id":"22222222222222","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"FARGATE","taskDefinitionARN":""},{"health":"UNKNOWN","id":"333333333333","images":[],"lastStatus":"RUNNING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""},{"health":"UNKNOWN","id":"444444444444","images":[],"lastStatus":"ACTIVATING","startedAt":"0001-01-01T00:00:00Z","stoppedAt":"0001-01-01T00:00:00Z","stoppedReason":"","capacityProvider":"","taskDefinitionARN":""}],"alarms":null,"stoppedTasks":null,"targetHealthDescriptions":null}
 `,
 		},
 		"hide tasks section if there is no desired running task": {
