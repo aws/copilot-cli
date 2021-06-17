@@ -12,7 +12,7 @@ https:kudo.test.coolapp.example.aws
 ```
 
 ## Service にエイリアスを設定する方法
-Copilot が Service につけるデフォルトのドメイン名を使いたくない場合は、 Service に[エイリアス](https://docs.aws.amazon.com/ja_jp/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html)を設定することも簡単にできます。 [Manifest]((../manifest/overview.ja.md) のエイリアスセクションに直接指定できます。以下のスニペットは Service にエイリアスを設定する例です。
+Copilot が Service につけるデフォルトのドメイン名を使いたくない場合は、 Service に[エイリアス](https://docs.aws.amazon.com/ja_jp/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html)を設定することも簡単にできます。 [Manifest](../manifest/overview.ja.md) のエイリアスセクションに直接指定できます。以下のスニペットは Service にエイリアスを設定する例です。
 
 ``` yaml
 # copilot/{service name}/manifest.yml のなかで
