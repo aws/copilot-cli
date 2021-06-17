@@ -44,7 +44,7 @@ Service はパブリックサブネットで実行されますが、ロードバ
 
 既存リソースをインポートするためにコマンドのフラグを利用して Environment をインタラクティブにカスタマイズしたり、あるいはデフォルトの Environment リソースを変更したりできます。現時点では VPC リソースのみがカスタマイズ可能です。他のリソースをカスタマイズしたいというリクエストがある場合、お気軽にユースケースを添えた GitHub イシューを作成してくださいね！
 
-もっと詳しく知りたい方は、[Environment のリソースをカスタマイズする](../developing/custom-environment-resources.en.md) ページをご覧ください。
+もっと詳しく知りたい方は、[Environment のリソースをカスタマイズする](../developing/custom-environment-resources.ja.md)ページをご覧ください。
 
 ## Environment の中身を掘り下げてみよう
 
