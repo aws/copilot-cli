@@ -473,7 +473,7 @@ func (s *ecsServiceStatus) writeCapacityProvidersSummary(writer io.Writer) {
 		return
 	}
 	header := "Capacity Provider"
-	fargate, spot, empty := capacityProvidersBreakDownByCount(s.DesiredRunningTasks)
+	fargate, spot, empty := runningCapacityProvidersBreakDownByCount(s.DesiredRunningTasks)
 	bar := summaryBar([]int{fargate + empty, spot}, []string{color.Grey.Sprintf("▒"), color.Grey.Sprintf("▓")})
 	var cpSummaries []string
 	if fargate+empty != 0 {

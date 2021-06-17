@@ -266,6 +266,9 @@ func TestInitAppOpts_Ask(t *testing.T) {
 				store:  mocks.NewMockstore(ctrl),
 				ws:     mocks.NewMockwsAppManager(ctrl),
 				prompt: mocks.NewMockprompter(ctrl),
+				isSessionFromEnvVars: func() (bool, error) {
+					return false, nil
+				},
 			}
 			tc.expect(opts)
 
