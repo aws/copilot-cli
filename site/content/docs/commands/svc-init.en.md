@@ -26,9 +26,9 @@ Flags
                             "Request-Driven Web Service", "Load Balanced Web Service", "Backend Service".
 ```
 
-To create a "frontend" load balanced web service you could run:  
+To create a "frontend" load balanced web service you could run:
 
-`$ copilot svc init --name frontend --app-type "Load Balanced Web Service" --dockerfile ./frontend/Dockerfile`
+`$ copilot svc init --name frontend --svc-type "Load Balanced Web Service" --dockerfile ./frontend/Dockerfile`
 
 ## What does it look like?
 
