@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -20,7 +22,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -259,7 +260,11 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 	if err != nil {
 		return nil, err
 	}
-	imgNeedsBuild, err := manifest.ServiceDockerfileBuildRequired(mft)
+	envMft, err := mft.ApplyEnv(o.envName)
+	if err != nil {
+		return nil, fmt.Errorf("apply environment %s override: %s", o.envName, err)
+	}
+	imgNeedsBuild, err := manifest.ServiceDockerfileBuildRequired(envMft)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +293,7 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTempla
 			ImageTag: o.tag,
 		}
 	}
-	serializer, err := o.stackSerializer(mft, env, app, rc)
+	serializer, err := o.stackSerializer(envMft, env, app, rc)
 	if err != nil {
 		return nil, err
 	}

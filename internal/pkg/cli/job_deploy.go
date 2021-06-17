@@ -338,7 +338,11 @@ func (o *deployJobOpts) manifest() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal job %s manifest: %w", o.name, err)
 	}
-	return mft, nil
+	envMft, err := mft.ApplyEnv(o.envName)
+	if err != nil {
+		return nil, fmt.Errorf("apply environment %s override: %s", o.envName, err)
+	}
+	return envMft, nil
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
