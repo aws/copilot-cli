@@ -34,6 +34,7 @@ Services are long-running ECS or App Runner services.`,
 	cmd.AddCommand(buildSvcExecCmd())
 	cmd.AddCommand(buildSvcPauseCmd())
 	cmd.AddCommand(buildSvcResumeCmd())
+	cmd.AddCommand(buildSvcStopTaskCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 

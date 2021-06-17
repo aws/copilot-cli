@@ -511,6 +511,7 @@ func TestClient_StopWorkloadTasks(t *testing.T) {
 		mockECS func(m *mocks.MockecsClient)
 		mockrg  func(m *mocks.MockresourceGetter)
 
+		stopMessage []string
 		wantErr error
 	}{
 		"success": {
@@ -528,6 +529,24 @@ func TestClient_StopWorkloadTasks(t *testing.T) {
 					"copilot-environment": "pdx",
 				}).Return([]*resourcegroups.Resource{&mockResource}, nil).Times(2)
 			},
+		},
+		"success with stop message": {
+			inApp:  "phonetool",
+			inEnv:  "pdx",
+			inTask: "service",
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().RunningTasksInFamily(mockCluster, "phonetool-pdx-service").Return(mockECSTask, nil)
+				m.EXPECT().StopTasks([]string{"deadbeef", "abcd"}, gomock.Any()).Return(nil)
+			},
+			mockrg: func(m *mocks.MockresourceGetter) {
+				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
+					"copilot-application": "phonetool",
+					"copilot-environment": "pdx",
+				}).Return([]*resourcegroups.Resource{&mockResource}, nil).Times(2)
+			},
+
+			stopMessage : []string{"Stop tasks"},
 		},
 		"no tasks": {
 			inApp:  "phonetool",
@@ -595,7 +614,12 @@ func TestClient_StopWorkloadTasks(t *testing.T) {
 			}
 
 			// WHEN
-			err := c.StopWorkloadTasks(tc.inApp, tc.inEnv, tc.inTask)
+			var err error
+			if tc.stopMessage!=nil && len(tc.stopMessage) > 0 {
+				err = c.StopWorkloadTasks(tc.inApp, tc.inEnv, tc.inTask, tc.stopMessage[0])
+			}else{
+				err = c.StopWorkloadTasks(tc.inApp, tc.inEnv, tc.inTask)
+			}
 
 			// THEN
 			if tc.wantErr != nil {
@@ -804,6 +828,107 @@ func Test_StopDefaultClusterTasks(t *testing.T) {
 
 			// WHEN
 			err := c.StopDefaultClusterTasks(tc.inTask)
+
+			// THEN
+			if tc.wantErr != nil {
+				require.EqualError(t, err, tc.wantErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_StopTasksWithTaskIds(t *testing.T) {
+	mockCluster := "arn:aws::ecs:cluster/abcd1234"
+	mockResource := resourcegroups.Resource{
+		ARN: mockCluster,
+	}
+	mockECSTask := []string{"deadbeef"}
+	testCases := map[string]struct {
+		inApp  string
+		inEnv  string
+		inTask string
+
+		mockrg  func(m *mocks.MockresourceGetter)
+		mockECS func(m *mocks.MockecsClient)
+		stopMessage []string
+
+		wantErr error
+	}{
+		"success": {
+			inApp:  "phonetool",
+			inEnv:  "pdx",
+			inTask: "service",
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().StopTasks([]string{"deadbeef"}, gomock.Any()).Return(nil)
+			},
+			mockrg: func(m *mocks.MockresourceGetter) {
+				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
+					"copilot-application": "phonetool",
+					"copilot-environment": "pdx",
+				}).Return([]*resourcegroups.Resource{&mockResource}, nil).Times(1)
+			},
+		},
+		"success with stop message": {
+			inApp:  "phonetool",
+			inEnv:  "pdx",
+			inTask: "service",
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().StopTasks([]string{"deadbeef"}, gomock.Any()).Return(nil)
+			},
+			mockrg: func(m *mocks.MockresourceGetter) {
+				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
+					"copilot-application": "phonetool",
+					"copilot-environment": "pdx",
+				}).Return([]*resourcegroups.Resource{&mockResource}, nil).Times(1)
+			},
+
+			stopMessage : []string{"Stop tasks"},
+		},
+		"failure stopping tasks": {
+			inApp:  "phonetool",
+			inEnv:  "pdx",
+			inTask: "service",
+
+			mockECS: func(m *mocks.MockecsClient) {
+				m.EXPECT().StopTasks([]string{"deadbeef"}, gomock.Any()).Return(errors.New("some error"))
+			},
+			mockrg: func(m *mocks.MockresourceGetter) {
+				m.EXPECT().GetResourcesByTags(clusterResourceType, map[string]string{
+					"copilot-application": "phonetool",
+					"copilot-environment": "pdx",
+				}).Return([]*resourcegroups.Resource{&mockResource}, nil).Times(1)
+			},
+			wantErr: errors.New("some error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockECS := mocks.NewMockecsClient(ctrl)
+			mockrg := mocks.NewMockresourceGetter(ctrl)
+
+			tc.mockECS(mockECS)
+			tc.mockrg(mockrg)
+
+			c := Client{
+				ecsClient: mockECS,
+				rgGetter:  mockrg,
+			}
+
+			// WHEN
+			var err error
+			if tc.stopMessage!=nil && len(tc.stopMessage) > 0 {
+				err = c.StopTasksWithTaskIds(tc.inApp, tc.inEnv, mockECSTask, tc.stopMessage[0])
+			}else{
+				err = c.StopTasksWithTaskIds(tc.inApp, tc.inEnv, mockECSTask)
+			}
 
 			// THEN
 			if tc.wantErr != nil {

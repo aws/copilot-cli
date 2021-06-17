@@ -155,11 +155,11 @@ func (c Client) ListActiveDefaultClusterTasks(filter ListTasksFilter) ([]*ecs.Ta
 	})
 }
 
-// StopWorkloadTasks stops all tasks in the given application, enviornment, and workload.
-func (c Client) StopWorkloadTasks(app, env, workload string) error {
+// StopWorkloadTasks stops all tasks in the given application, environment, and workload.
+func (c Client) StopWorkloadTasks(app, env, workload string, stopMessage ...string) error {
 	return c.stopTasks(app, env, ListTasksFilter{
 		TaskGroup: fmt.Sprintf(fmtWorkloadTaskDefinitionFamily, app, env, workload),
-	})
+	}, stopMessage...)
 }
 
 // StopOneOffTasks stops all one-off tasks in the given application and environment with the family name.
@@ -170,8 +170,20 @@ func (c Client) StopOneOffTasks(app, env, family string) error {
 	})
 }
 
+func (c Client) StopTasksWithTaskIds(app string, env string, taskIDs[] string, stopMessage ...string) error {
+	clusterARN, err := c.ClusterARN(app, env)
+	if err != nil {
+		return fmt.Errorf("get cluster for env %s: %w", env, err)
+	}
+	stopReason := taskStopReason
+	if len(stopMessage) > 0 {
+		stopReason = stopMessage[0]
+	}
+	return c.ecsClient.StopTasks(taskIDs, ecs.WithStopTaskCluster(clusterARN), ecs.WithStopTaskReason(stopReason))
+}
+
 // stopTasks stops all tasks in the given application and environment in the given family.
-func (c Client) stopTasks(app, env string, filter ListTasksFilter) error {
+func (c Client) stopTasks(app, env string, filter ListTasksFilter, stopMessage ...string) error {
 	tasks, err := c.ListActiveAppEnvTasks(ListActiveAppEnvTasksOpts{
 		App:             app,
 		Env:             env,
@@ -188,7 +200,11 @@ func (c Client) stopTasks(app, env string, filter ListTasksFilter) error {
 	if err != nil {
 		return fmt.Errorf("get cluster for env %s: %w", env, err)
 	}
-	return c.ecsClient.StopTasks(taskIDs, ecs.WithStopTaskCluster(clusterARN), ecs.WithStopTaskReason(taskStopReason))
+	stopReason := taskStopReason
+	if len(stopMessage) > 0 {
+		stopReason = stopMessage[0]
+	}
+	return c.ecsClient.StopTasks(taskIDs, ecs.WithStopTaskCluster(clusterARN), ecs.WithStopTaskReason(stopReason))
 }
 
 // StopDefaultClusterTasks stops all copilot tasks from the given family in the default cluster.
