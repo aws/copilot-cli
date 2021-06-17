@@ -42,27 +42,27 @@ var (
 	}
 )
 
-func TestEC2_ExtractVPC(t *testing.T) {
+func TestEC2_ExtractResource(t *testing.T) {
 	testCases := map[string]struct {
-		displayString string
-		wantedError   error
-		wantedVPC     *VPCResource
+		displayString  string
+		wantedError    error
+		wantedResource *Resource
 	}{
 		"returns error if string is empty": {
 			displayString: "",
-			wantedError:   fmt.Errorf("extract VPC resource ID from string: "),
+			wantedError:   fmt.Errorf("extract resource ID from string: "),
 		},
 		"returns just the VPC ID if no name present": {
 			displayString: "vpc-imagr8vpcstring",
 			wantedError:   nil,
-			wantedVPC: &VPCResource{
+			wantedResource: &Resource{
 				ID: "vpc-imagr8vpcstring",
 			},
 		},
 		"returns both the VPC ID and name if both present": {
 			displayString: "vpc-imagr8vpcstring (copilot-app-name-env)",
 			wantedError:   nil,
-			wantedVPC: &VPCResource{
+			wantedResource: &Resource{
 				ID:   "vpc-imagr8vpcstring",
 				Name: "copilot-app-name-env",
 			},
@@ -70,12 +70,12 @@ func TestEC2_ExtractVPC(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			vpc, err := ExtractVPCResource(tc.displayString)
+			resource, err := ExtractResource(tc.displayString)
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedVPC, vpc)
+				require.Equal(t, tc.wantedResource, resource)
 			}
 		})
 	}
@@ -86,7 +86,7 @@ func TestEC2_ListVPC(t *testing.T) {
 		mockEC2Client func(m *mocks.Mockapi)
 
 		wantedError error
-		wantedVPC   []VPCResource
+		wantedVPC   []VPC
 	}{
 		"fail to describe vpcs": {
 			mockEC2Client: func(m *mocks.Mockapi) {
@@ -120,13 +120,17 @@ func TestEC2_ListVPC(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantedVPC: []VPCResource{
+			wantedVPC: []VPC{
 				{
-					ID: "mockVPCID1",
+					Resource: Resource{
+						ID: "mockVPCID1",
+					},
 				},
 				{
-					ID:   "mockVPCID2",
-					Name: "mockVPC2Name",
+					Resource: Resource{
+						ID:   "mockVPCID2",
+						Name: "mockVPC2Name",
+					},
 				},
 			},
 		},
@@ -171,8 +175,8 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 		mockEC2Client func(m *mocks.Mockapi)
 
 		wantedError          error
-		wantedPublicSubnets  []VPCResource
-		wantedPrivateSubnets []VPCResource
+		wantedPublicSubnets  []Subnet
+		wantedPrivateSubnets []Subnet
 	}{
 		"fail to describe route tables": {
 			mockEC2Client: func(m *mocks.Mockapi) {
@@ -254,19 +258,24 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantedPublicSubnets: []VPCResource{
+			wantedPublicSubnets: []Subnet{
 				{
-					ID: "subnet2",
+					Resource: Resource{
+						ID: "subnet2",
+					},
 				},
 				{
-					ID:   "subnet3",
-					Name: "mySubnet",
+					Resource: Resource{
+						ID:   "subnet3",
+						Name: "mySubnet",
+					},
 				},
 			},
-			wantedPrivateSubnets: []VPCResource{
+			wantedPrivateSubnets: []Subnet{
 				{
-					ID: "subnet1",
-				},
+					Resource: Resource{
+						ID: "subnet1",
+					}},
 			},
 		},
 	}

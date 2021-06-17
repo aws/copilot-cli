@@ -50,10 +50,10 @@ func (mr *MockVPCSubnetListerMockRecorder) ListVPCSubnets(vpcID interface{}) *go
 }
 
 // ListVPCs mocks base method.
-func (m *MockVPCSubnetLister) ListVPCs() ([]ec2.VPCResource, error) {
+func (m *MockVPCSubnetLister) ListVPCs() ([]ec2.VPC, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListVPCs")
-	ret0, _ := ret[0].([]ec2.VPCResource)
+	ret0, _ := ret[0].([]ec2.VPC)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
