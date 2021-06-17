@@ -333,7 +333,7 @@ func TestStopTaskSvcOpts_Execute(t *testing.T) {
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Return(&config.Environment{Name: mockEnvName}, nil),
 					mocks.spinner.EXPECT().Start(fmt.Sprintf("Stopping all running tasks in %s.", color.HighlightUserInput(mockSvcName))),
 					mocks.ecs.EXPECT().StopWorkloadTasks(mockAppName, mockEnvName, mockSvcName, taskStopUserInitiated).Return(mockError),
-					mocks.spinner.EXPECT().Stop(log.Serrorf("Error stopping running tasks in %s.", mockSvcName)),
+					mocks.spinner.EXPECT().Stop(log.Serrorf("Error stopping running tasks in %s.\n", mockSvcName)),
 				)
 			},
 			wantedError: fmt.Errorf("stop running tasks in family %s: %w", mockSvcName, mockError),
@@ -349,7 +349,7 @@ func TestStopTaskSvcOpts_Execute(t *testing.T) {
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Return(&config.Environment{Name: mockEnvName}, nil),
 					mocks.spinner.EXPECT().Start(fmt.Sprintf("Stopping %s task(s)", tasksLen)),
 					mocks.ecs.EXPECT().StopTasksWithTaskIds(mockAppName, mockEnvName, taskIDs, taskStopUserInitiated).Return(mockError),
-					mocks.spinner.EXPECT().Stop(log.Serrorf("Error stopping running tasks in %s.", mockSvcName)),
+					mocks.spinner.EXPECT().Stop(log.Serrorf("Error stopping running tasks in %s.\n", mockSvcName)),
 				)
 			},
 			wantedError: fmt.Errorf("stop running tasks by ids %w", mockError),

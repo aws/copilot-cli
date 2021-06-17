@@ -25,10 +25,11 @@ const (
 	fmtSvcStopTasksConfirmPrompt = "Are you sure you want to stop all tasks inside %s from application %s?"
 	svcStopTasksConfirmHelp      = "This will stop all the tasks running under this service."
 	taskStopUserInitiated        = "Task stopped as user initiated stop action"
+	stopTaskCancelled            = "svc stop-task cancelled - no changes made"
 )
 
 var (
-	errStopTasksCancelled = errors.New("svc stop-task cancelled - no changes made")
+	errStopTasksCancelled = errors.New(stopTaskCancelled)
 )
 
 type wkldStopTaskVars struct {
@@ -142,6 +143,7 @@ func (o *svcStopTaskOpts) Execute() error {
 	}
 }
 
+// askAppName ask for application name
 func (o *svcStopTaskOpts) askAppName() error {
 	if o.appName != "" {
 		return nil
@@ -155,6 +157,7 @@ func (o *svcStopTaskOpts) askAppName() error {
 	return nil
 }
 
+// askSvcEnvName ask for environment name
 func (o *svcStopTaskOpts) askSvcEnvName() error {
 	if o.name != "" {
 		return nil
@@ -169,6 +172,7 @@ func (o *svcStopTaskOpts) askSvcEnvName() error {
 	return nil
 }
 
+// getSession get AWS session
 func (o *svcStopTaskOpts) getSession() (*session.Session, error) {
 	if o.session != nil {
 		return o.session, nil
@@ -191,9 +195,9 @@ func (o *svcStopTaskOpts) stopTaskIds(sess *session.Session) error {
 	tasksLen := strconv.Itoa(len(o.taskIDs))
 	o.spinner.Start(fmt.Sprintf("Stopping %s task(s)", color.HighlightUserInput(tasksLen)))
 
-	// Stop task by Ids
+	// Stop task based on taskArn
 	if err := o.newTaskStopper(sess).StopTasksWithTaskIds(o.appName, o.envName, o.taskIDs, taskStopUserInitiated); err != nil {
-		o.spinner.Stop(log.Serrorf("Error stopping running tasks in %s.", o.name))
+		o.spinner.Stop(log.Serrorf("Error stopping running tasks in %s.\n", o.name))
 		return fmt.Errorf("stop running tasks by ids %w", err)
 	}
 
@@ -208,7 +212,7 @@ func (o *svcStopTaskOpts) stopAllTasks(sess *session.Session) error {
 
 	// Stop all tasks.
 	if err := o.newTaskStopper(sess).StopWorkloadTasks(o.appName, o.envName, o.name, taskStopUserInitiated); err != nil {
-		o.spinner.Stop(log.Serrorf("Error stopping running tasks in %s.", o.name))
+		o.spinner.Stop(log.Serrorf("Error stopping running tasks in %s.\n", o.name))
 		return fmt.Errorf("stop running tasks in family %s: %w", o.name, err)
 	}
 
