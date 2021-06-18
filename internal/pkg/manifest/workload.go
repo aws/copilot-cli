@@ -366,7 +366,7 @@ type ExecuteCommand struct {
 	Config ExecuteCommandConfig
 }
 
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the BuildArgsOrString
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the ExecuteCommand
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v2) interface.
 func (e *ExecuteCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
