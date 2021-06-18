@@ -377,9 +377,13 @@ Resources:
 	var isEnvCalled bool
 	mockCFN.EXPECT().DescribeStackEvents(gomock.Any()).DoAndReturn(
 		func(in *sdkcloudformation.DescribeStackEventsInput) (*sdkcloudformation.DescribeStackEventsOutput, error) {
-			// We cannot guarantee which goroutine's stream will be invoked first.
-			// If the service streamer is invoked first, then keep looping until the env renderer is populated first.
-			// This way we guarantee that the environment stack is streamed.
+			// We stream both the service stack updates and environment stack updates in parallel.
+			// If the service stream finishes before the environment stack is streamed, then the env controller
+			// does not get rendered. This is because the env controller renderer cancels rendering itself if
+			// the service stream is done (EnvControllerAction exited), but there were no environment stack events.
+			//
+			// Instead, in this test we want to ensure that the environment stream finishes first so that the env stack events
+			// get rendered and then the service finishes.
 			switch stackName := aws.StringValue(in.StackName); stackName {
 			case svcStackName:
 				mu.Lock()
