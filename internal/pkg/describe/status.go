@@ -39,10 +39,6 @@ var (
 	summaryBarEmptyRepConfig = summarybar.WithEmptyRep(emptyRep)
 )
 
-type apprunnerServiceDescriber interface {
-	Service() (*apprunner.Service, error)
-}
-
 // ecsServiceStatus contains the status for an ECS service.
 type ecsServiceStatus struct {
 	Service                  awsecs.ServiceStatus
