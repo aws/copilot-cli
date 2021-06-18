@@ -349,7 +349,6 @@ func (cf CloudFormation) createEnvControllerRenderer(in *envControllerRendererIn
 			if errors.Is(err, context.Canceled) {
 				// The stack streamer was canceled on purposed, do not return an error.
 				// This occurs if we detect that the environment stack has no updates.
-				fmt.Println("cancelled")
 				return nil
 			}
 			return err

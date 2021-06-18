@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -371,62 +372,65 @@ Resources:
     Metadata:
       'aws:copilot:description': "Updating ALB"
 `, nil)
-	gomock.InOrder(
-		mockCFN.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
-			StackName: aws.String(svcStackName),
-		}).Return(&sdkcloudformation.DescribeStackEventsOutput{
-			StackEvents: []*sdkcloudformation.StackEvent{
-				{
-					EventId:           aws.String("1"),
-					LogicalResourceId: aws.String("EnvControllerAction"),
-					ResourceType:      aws.String("Custom::EnvController"),
-					ResourceStatus:    aws.String("CREATE_COMPLETE"),
-					Timestamp:         aws.Time(deploymentTime),
-				},
-			},
-		}, nil),
-		mockCFN.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
-			StackName: aws.String(svcStackName),
-		}).Return(&sdkcloudformation.DescribeStackEventsOutput{
-			StackEvents: []*sdkcloudformation.StackEvent{
-				{
-					EventId:           aws.String("2"),
-					LogicalResourceId: aws.String(svcStackName),
-					ResourceType:      aws.String("AWS::CloudFormation::Stack"),
-					ResourceStatus:    aws.String("CREATE_COMPLETE"),
-					Timestamp:         aws.Time(deploymentTime),
-				},
-			},
-		}, nil),
-	)
-	gomock.InOrder(
-		mockCFN.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
-			StackName: aws.String("my-app-my-env"),
-		}).Return(&sdkcloudformation.DescribeStackEventsOutput{
-			StackEvents: []*sdkcloudformation.StackEvent{
-				{
-					EventId:           aws.String("1"),
-					LogicalResourceId: aws.String("PublicLoadBalancer"),
-					ResourceType:      aws.String("AWS::ElasticLoadBalancingV2::LoadBalancer"),
-					ResourceStatus:    aws.String("CREATE_COMPLETE"),
-					Timestamp:         aws.Time(deploymentTime),
-				},
-			},
-		}, nil),
-		mockCFN.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
-			StackName: aws.String("my-app-my-env"),
-		}).Return(&sdkcloudformation.DescribeStackEventsOutput{
-			StackEvents: []*sdkcloudformation.StackEvent{
-				{
-					EventId:           aws.String("2"),
-					LogicalResourceId: aws.String("my-app-my-env"),
-					ResourceType:      aws.String("AWS::CloudFormation::Stack"),
-					ResourceStatus:    aws.String("CREATE_COMPLETE"),
-					Timestamp:         aws.Time(deploymentTime),
-				},
-			},
-		}, nil),
-	)
+
+	var mu sync.Mutex
+	var isEnvCalled bool
+	mockCFN.EXPECT().DescribeStackEvents(gomock.Any()).DoAndReturn(
+		func(in *sdkcloudformation.DescribeStackEventsInput) (*sdkcloudformation.DescribeStackEventsOutput, error) {
+			// We cannot guarantee which goroutine's stream will be invoked first.
+			// If the service streamer is invoked first, then keep looping until the env renderer is populated first.
+			// This way we guarantee that the environment stack is streamed.
+			switch stackName := aws.StringValue(in.StackName); stackName {
+			case svcStackName:
+				mu.Lock()
+				defer mu.Unlock()
+				if !isEnvCalled {
+					return &sdkcloudformation.DescribeStackEventsOutput{}, nil
+				}
+				return &sdkcloudformation.DescribeStackEventsOutput{
+					StackEvents: []*sdkcloudformation.StackEvent{
+						{
+							EventId:           aws.String("1"),
+							LogicalResourceId: aws.String("EnvControllerAction"),
+							ResourceType:      aws.String("Custom::EnvController"),
+							ResourceStatus:    aws.String("CREATE_COMPLETE"),
+							Timestamp:         aws.Time(deploymentTime),
+						},
+						{
+							EventId:           aws.String("2"),
+							LogicalResourceId: aws.String(svcStackName),
+							ResourceType:      aws.String("AWS::CloudFormation::Stack"),
+							ResourceStatus:    aws.String("CREATE_COMPLETE"),
+							Timestamp:         aws.Time(deploymentTime),
+						},
+					},
+				}, nil
+			case "my-app-my-env":
+				mu.Lock()
+				defer mu.Unlock()
+				isEnvCalled = true
+				return &sdkcloudformation.DescribeStackEventsOutput{
+					StackEvents: []*sdkcloudformation.StackEvent{
+						{
+							EventId:           aws.String("1"),
+							LogicalResourceId: aws.String("PublicLoadBalancer"),
+							ResourceType:      aws.String("AWS::ElasticLoadBalancingV2::LoadBalancer"),
+							ResourceStatus:    aws.String("CREATE_COMPLETE"),
+							Timestamp:         aws.Time(deploymentTime),
+						},
+						{
+							EventId:           aws.String("2"),
+							LogicalResourceId: aws.String("my-app-my-env"),
+							ResourceType:      aws.String("AWS::CloudFormation::Stack"),
+							ResourceStatus:    aws.String("CREATE_COMPLETE"),
+							Timestamp:         aws.Time(deploymentTime),
+						},
+					},
+				}, nil
+			}
+			return nil, errors.New("unexpected call")
+		},
+	).AnyTimes()
 
 	mockCFN.EXPECT().Describe(svcStackName).Return(&cloudformation.StackDescription{
 		StackStatus: aws.String("CREATE_COMPLETE"),

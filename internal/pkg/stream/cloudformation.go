@@ -115,10 +115,7 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 			return next, fmt.Errorf("describe stack events %s: %w", s.stackName, err)
 		}
 
-		fmt.Printf("hello! out: %v\n", out.String())
-
 		s.retries = 0
-
 		var finished bool
 		for _, event := range out.StackEvents {
 			if event.Timestamp.Before(s.changeSetCreationTime) {
