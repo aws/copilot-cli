@@ -15,6 +15,8 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/progress/summarybar"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/aas"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
@@ -26,6 +28,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+
+	fcolor "github.com/fatih/color"
 )
 
 const (
@@ -33,6 +37,13 @@ const (
 	fmtAppRunnerSvcLogGroupName = "/aws/apprunner/%s/%s/service"
 	defaultServiceLogsLimit     = 10
 	shortTaskIDLength           = 8
+	summaryBarWidth             = 10
+	emptyRep                    = "░"
+)
+
+var (
+	summaryBarWidthConfig    = summarybar.WithWidth(summaryBarWidth)
+	summaryBarEmptyRepConfig = summarybar.WithEmptyRep(emptyRep)
 )
 
 type targetHealthGetter interface {
@@ -65,8 +76,7 @@ type autoscalingAlarmNamesGetter interface {
 	ECSServiceAlarmNames(cluster, service string) ([]string, error)
 }
 
-// ECSStatusDescriber retrieves status of an ECS service.
-type ECSStatusDescriber struct {
+type ecsStatusDescriber struct {
 	app string
 	env string
 	svc string
@@ -78,8 +88,7 @@ type ECSStatusDescriber struct {
 	targetHealthGetter targetHealthGetter
 }
 
-// AppRunnerStatusDescriber retrieves status of an AppRunner service.
-type AppRunnerStatusDescriber struct {
+type appRunnerStatusDescriber struct {
 	app string
 	env string
 	svc string
@@ -117,8 +126,8 @@ type taskTargetHealth struct {
 	TargetGroupARN string             `json:"targetGroup"`
 }
 
-// NewECSStatusDescriber instantiates a new ECSStatusDescriber struct.
-func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, error) {
+// NewECSStatusDescriber instantiates a new ecsStatusDescriber struct.
+func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ecsStatusDescriber, error) {
 	env, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
@@ -127,7 +136,7 @@ func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, er
 	if err != nil {
 		return nil, fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 	}
-	return &ECSStatusDescriber{
+	return &ecsStatusDescriber{
 		app:                opt.App,
 		env:                opt.Env,
 		svc:                opt.Svc,
@@ -139,8 +148,8 @@ func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ECSStatusDescriber, er
 	}, nil
 }
 
-// NewAppRunnerStatusDescriber instantiates a new AppRunnerStatusDescriber struct.
-func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*AppRunnerStatusDescriber, error) {
+// NewAppRunnerStatusDescriber instantiates a new appRunnerStatusDescriber struct.
+func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*appRunnerStatusDescriber, error) {
 	ecsSvcDescriber, err := NewAppRunnerServiceDescriber(NewServiceConfig{
 		App: opt.App,
 		Env: opt.Env,
@@ -152,7 +161,7 @@ func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*AppRunnerStatusD
 		return nil, err
 	}
 
-	return &AppRunnerStatusDescriber{
+	return &appRunnerStatusDescriber{
 		app:          opt.App,
 		env:          opt.Env,
 		svc:          opt.Svc,
@@ -162,7 +171,7 @@ func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*AppRunnerStatusD
 }
 
 // Describe returns status of an ECS service.
-func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
+func (s *ecsStatusDescriber) Describe() (HumanJSONStringer, error) {
 	svcDesc, err := s.svcDescriber.DescribeService(s.app, s.env, s.svc)
 	if err != nil {
 		return nil, fmt.Errorf("get ECS service description for %s: %w", s.svc, err)
@@ -228,11 +237,12 @@ func (s *ECSStatusDescriber) Describe() (HumanJSONStringer, error) {
 		Alarms:                   alarms,
 		StoppedTasks:             stoppedTaskStatus,
 		TargetHealthDescriptions: tasksTargetHealth,
+		//rendererConfigurer:       &barRendererConfigurer{},
 	}, nil
 }
 
 // Describe returns status of an AppRunner service.
-func (a *AppRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
+func (a *appRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
 	svc, err := a.svcDescriber.Service()
 	if err != nil {
 		return nil, fmt.Errorf("get AppRunner service description for App Runner service %s in environment %s: %w", a.svc, a.env, err)
@@ -252,7 +262,7 @@ func (a *AppRunnerStatusDescriber) Describe() (HumanJSONStringer, error) {
 	}, nil
 }
 
-func (s *ECSStatusDescriber) ecsServiceAutoscalingAlarms(cluster, service string) ([]cloudwatch.AlarmStatus, error) {
+func (s *ecsStatusDescriber) ecsServiceAutoscalingAlarms(cluster, service string) ([]cloudwatch.AlarmStatus, error) {
 	alarmNames, err := s.aasSvcGetter.ECSServiceAlarmNames(cluster, service)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve auto scaling alarm names for ECS service %s/%s: %w", cluster, service, err)
@@ -385,27 +395,40 @@ func (s *ecsServiceStatus) writeTaskSummary(writer io.Writer) {
 }
 
 func (s *ecsServiceStatus) writeRunningTasksSummary(writer io.Writer, primaryDeployment awsecs.Deployment, activeDeployments []awsecs.Deployment) {
-	header := "Running"
-	var (
-		barData            []int
-		barRepresentations []string
-	)
+	// By default, we want to show the primary running task vs. primary desired tasks.
+	data := []summarybar.Datum{
+		{
+			Value:          (int)(s.Service.RunningCount),
+			Representation: color.Green.Sprint("█"),
+		},
+		{
+			Value:          (int)(s.Service.DesiredCount) - (int)(s.Service.RunningCount),
+			Representation: color.Green.Sprint("░"),
+		},
+	}
+	// If there is one or more active deployments, show the primary running tasks vs. active running tasks instead.
 	if len(activeDeployments) > 0 {
 		var runningPrimary, runningActive int
 		for _, d := range activeDeployments {
 			runningActive += (int)(d.RunningCount)
 		}
-
 		runningPrimary = (int)(primaryDeployment.RunningCount)
-		barData = []int{runningPrimary, runningActive}
-		barRepresentations = []string{color.Green.Sprint("█"), color.Blue.Sprint("█")}
-	} else {
-		barData = []int{(int)(s.Service.RunningCount), (int)(s.Service.DesiredCount) - (int)(s.Service.RunningCount)}
-		barRepresentations = []string{color.Green.Sprint("█"), color.Green.Sprint("░")}
+		data = []summarybar.Datum{
+			{
+				Value:          runningPrimary,
+				Representation: color.Green.Sprint("█"),
+			},
+			{
+				Value:          runningActive,
+				Representation: color.Blue.Sprint("█"),
+			},
+		}
 	}
-	bar := summaryBar(barData, barRepresentations)
+	renderer := summarybar.New(data, summaryBarWidthConfig, summaryBarEmptyRepConfig)
+	fmt.Fprintf(writer, "  %s\t", "Running")
+	_, _ = renderer.Render(writer)
 	stringSummary := fmt.Sprintf("%d/%d desired tasks are running", s.Service.RunningCount, s.Service.DesiredCount)
-	fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+	fmt.Fprintf(writer, "\t%s\n", stringSummary)
 }
 
 func (s *ecsServiceStatus) writeDeploymentsSummary(writer io.Writer, primaryDeployment awsecs.Deployment, activeDeployments []awsecs.Deployment) {
@@ -417,12 +440,40 @@ func (s *ecsServiceStatus) writeDeploymentsSummary(writer io.Writer, primaryDepl
 	// This is because if there aren't any "ACTIVE" deployment, then this section would have been showing the same
 	// information as the "Running" section.
 	header := "Deployments"
-	bar, stringSummary := summaryOfDeployment(primaryDeployment, []string{color.Green.Sprint("█"), color.Green.Sprint("░")})
-	fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+	fmt.Fprintf(writer, "  %s\t", header)
+
+	s.writeDeployment(writer, primaryDeployment, color.Green)
 	for _, deployment := range activeDeployments {
-		bar, stringSummary := summaryOfDeployment(deployment, []string{color.Blue.Sprint("█"), color.Blue.Sprint("░")})
-		fmt.Fprintf(writer, "  %s\t%s\t%s\n", "", bar, stringSummary)
+		fmt.Fprint(writer, "  \t")
+		s.writeDeployment(writer, deployment, color.Blue)
 	}
+}
+
+func (s *ecsServiceStatus) writeDeployment(writer io.Writer, deployment awsecs.Deployment, repColor *fcolor.Color) {
+	var revisionInfo string
+	revision, err := awsecs.TaskDefinitionVersion(deployment.TaskDefinition)
+	if err == nil {
+		revisionInfo = fmt.Sprintf(" (rev %d)", revision)
+	}
+
+	data := []summarybar.Datum{
+		{
+			Value:          (int)(deployment.RunningCount),
+			Representation: repColor.Sprint("█"),
+		},
+		{
+			Value:          (int)(deployment.DesiredCount) - (int)(deployment.RunningCount),
+			Representation: repColor.Sprint("░"),
+		},
+	}
+	renderer := summarybar.New(data, summaryBarWidthConfig, summaryBarEmptyRepConfig)
+	_, _ = renderer.Render(writer)
+	stringSummary := fmt.Sprintf("%d/%d running tasks for %s%s",
+		deployment.RunningCount,
+		deployment.DesiredCount,
+		strings.ToLower(deployment.Status),
+		revisionInfo)
+	fmt.Fprintf(writer, "\t%s\n", stringSummary)
 }
 
 func (s *ecsServiceStatus) writeHealthSummary(writer io.Writer, primaryDeployment awsecs.Deployment, activeDeployments []awsecs.Deployment) {
@@ -435,36 +486,52 @@ func (s *ecsServiceStatus) writeHealthSummary(writer io.Writer, primaryDeploymen
 		return
 	}
 
-	header := "Health"
-
 	var revisionInfo string
 	if len(activeDeployments) > 0 {
 		revisionInfo = fmt.Sprintf(" (rev %d)", revision)
 	}
 
+	header := "Health"
 	if shouldShowHTTPHealth {
 		healthyCount := countHealthyHTTPTasks(primaryTasks, s.TargetHealthDescriptions)
-		bar := summaryBar(
-			[]int{
-				healthyCount,
-				(int)(primaryDeployment.DesiredCount) - healthyCount,
+
+		data := []summarybar.Datum{
+			{
+				Value:          healthyCount,
+				Representation: color.Green.Sprint("█"),
 			},
-			[]string{color.Green.Sprint("█"), color.Green.Sprint("░")})
+			{
+				Value:          (int)(primaryDeployment.DesiredCount) - healthyCount,
+				Representation: color.Green.Sprint("░"),
+			},
+		}
+		renderer := summarybar.New(data, summaryBarWidthConfig, summaryBarEmptyRepConfig)
+		fmt.Fprintf(writer, "  %s\t", "Health")
+		_, _ = renderer.Render(writer)
 		stringSummary := fmt.Sprintf("%d/%d passes HTTP health checks%s", healthyCount, primaryDeployment.DesiredCount, revisionInfo)
-		fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+		fmt.Fprintf(writer, "\t%s\n", stringSummary)
 		header = ""
 	}
 
 	if shouldShowContainerHealth {
 		healthyCount, _, _ := containerHealthBreakDownByCount(primaryTasks)
-		bar := summaryBar(
-			[]int{
-				healthyCount,
-				(int)(primaryDeployment.DesiredCount) - healthyCount,
+
+		data := []summarybar.Datum{
+			{
+				Value:          healthyCount,
+				Representation: color.Green.Sprint("█"),
 			},
-			[]string{color.Green.Sprint("█"), color.Green.Sprint("░")})
+			{
+				Value:          (int)(primaryDeployment.DesiredCount) - healthyCount,
+				Representation: color.Green.Sprint("░"),
+			},
+		}
+
+		renderer := summarybar.New(data, summaryBarWidthConfig, summaryBarEmptyRepConfig)
+		fmt.Fprintf(writer, "  %s\t", header)
+		_, _ = renderer.Render(writer)
 		stringSummary := fmt.Sprintf("%d/%d passes container health checks%s", healthyCount, primaryDeployment.DesiredCount, revisionInfo)
-		fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, stringSummary)
+		fmt.Fprintf(writer, "\t%s\n", stringSummary)
 	}
 }
 
@@ -472,9 +539,22 @@ func (s *ecsServiceStatus) writeCapacityProvidersSummary(writer io.Writer) {
 	if !isCapacityProvidersEnabled(s.DesiredRunningTasks) {
 		return
 	}
-	header := "Capacity Provider"
+
 	fargate, spot, empty := runningCapacityProvidersBreakDownByCount(s.DesiredRunningTasks)
-	bar := summaryBar([]int{fargate + empty, spot}, []string{color.Grey.Sprintf("▒"), color.Grey.Sprintf("▓")})
+	data := []summarybar.Datum{
+		{
+			Value:          fargate + empty,
+			Representation: color.Grey.Sprintf("▒"),
+		},
+		{
+			Value:          spot,
+			Representation: color.Grey.Sprintf("▓"),
+		},
+	}
+	renderer := summarybar.New(data, summaryBarWidthConfig, summaryBarEmptyRepConfig)
+	fmt.Fprintf(writer, "  %s\t", "Capacity Provider")
+	_, _ = renderer.Render(writer)
+
 	var cpSummaries []string
 	if fargate+empty != 0 {
 		// We consider those with empty capacity provider field as "FARGATE"
@@ -483,7 +563,7 @@ func (s *ecsServiceStatus) writeCapacityProvidersSummary(writer io.Writer) {
 	if spot != 0 {
 		cpSummaries = append(cpSummaries, fmt.Sprintf("%d/%d on Fargate Spot", spot, s.Service.RunningCount))
 	}
-	fmt.Fprintf(writer, "  %s\t%s\t%s\n", header, bar, strings.Join(cpSummaries, ", "))
+	fmt.Fprintf(writer, "\t%s\n", strings.Join(cpSummaries, ", "))
 }
 
 func (s *ecsServiceStatus) writeStoppedTasks(writer io.Writer) {
@@ -660,130 +740,11 @@ func targetHealthForTasks(targetsHealth []*elbv2.TargetHealth, tasks []*awsecs.T
 	return out
 }
 
-type valueWithIndex struct {
-	value int
-	index int
-}
-
-// summaryBar returns a summary bar given data and the string representations of each data category.
-// For example, data[0] will be represented by representations[0] in the summary bar.
-// If len(representations) < len(data), the default representation "□" is used for all data category with missing representation.
-func summaryBar(data []int, representations []string, emptyRepresentation ...string) string {
-	const summaryBarLength = 10
-	defaultRepresentation := color.Grey.Sprint("░")
-
-	// The index is recorded so that we can later output the summary bar in the original order.
-	var dataWithIndices []valueWithIndex
-	for idx, dt := range data {
-		dataWithIndices = append(dataWithIndices, valueWithIndex{
-			value: dt,
-			index: idx,
-		})
-	}
-
-	portionsWithIndices := calculatePortions(dataWithIndices, summaryBarLength)
-	if portionsWithIndices == nil {
-		return fmt.Sprint(strings.Repeat(defaultRepresentation, summaryBarLength))
-	}
-
-	sort.SliceStable(portionsWithIndices, func(i, j int) bool {
-		return portionsWithIndices[i].index < portionsWithIndices[j].index
-	})
-
-	var bar string
-	for _, p := range portionsWithIndices {
-		if p.value >= summaryBarLength {
-			// If a data category's portion exceeds the summary bar length (this happens only when the some of the data have negative value)
-			// returns the bar filled with that data category
-			bar += fmt.Sprint(strings.Repeat(representations[p.index], summaryBarLength))
-			return bar
-		}
-		bar += fmt.Sprint(strings.Repeat(representations[p.index], p.value))
-	}
-	return bar
-}
-
-func calculatePortions(valuesWithIndices []valueWithIndex, length int) []valueWithIndex {
-	type decWithPortion struct {
-		dec     float64
-		portion valueWithIndex
-	}
-
-	var sum int
-	for _, pwi := range valuesWithIndices {
-		sum += pwi.value
-	}
-	if sum == 0 {
-		return nil
-	}
-
-	var decPartsToPortion []decWithPortion
-	for _, pwi := range valuesWithIndices {
-		// For each value, calculate its portion out of `length`, record the decimal part and then take the floor.
-		// The floored result is roughly the value's portion out of `length`.
-		// The portion will be calibrated later according to the decimal part.
-		outOfLength := (float64)(pwi.value) / (float64)(sum) * (float64)(length)
-		_, decPart := math.Modf(outOfLength)
-
-		decPartsToPortion = append(decPartsToPortion, decWithPortion{
-			dec: decPart,
-			portion: valueWithIndex{
-				value: (int)(math.Floor(outOfLength)),
-				index: pwi.index,
-			},
-		})
-	}
-
-	// Calculate the sum of the floored portion and see how far we are from `length`.
-	var floorSum int
-	for _, floorPortion := range decPartsToPortion {
-		floorSum += floorPortion.portion.value
-	}
-	extra := length - floorSum
-
-	// Sort by decimal places from larger to smaller.
-	sort.SliceStable(decPartsToPortion, func(i, j int) bool {
-		return decPartsToPortion[i].dec > decPartsToPortion[j].dec
-	})
-
-	// Distribute extra values first to portions with larger decimal places.
-	var out []valueWithIndex
-	for _, d := range decPartsToPortion {
-		if extra > 0 {
-			d.portion.value += 1
-			extra -= 1
-		}
-		out = append(out, d.portion)
-	}
-
-	return out
-}
-
 func shortTaskID(id string) string {
 	if len(id) >= shortTaskIDLength {
 		return id[:shortTaskIDLength]
 	}
 	return id
-}
-
-func summaryOfDeployment(deployment awsecs.Deployment, representations []string) (string, string) {
-	var revisionInfo string
-	revision, err := awsecs.TaskDefinitionVersion(deployment.TaskDefinition)
-	if err == nil {
-		revisionInfo = fmt.Sprintf(" (rev %d)", revision)
-	}
-
-	bar := summaryBar([]int{
-		(int)(deployment.RunningCount),
-		(int)(deployment.DesiredCount) - (int)(deployment.RunningCount)},
-		representations)
-	stringSummary := fmt.Sprintf("%d/%d running tasks for %s%s",
-		deployment.RunningCount,
-		deployment.DesiredCount,
-		strings.ToLower(deployment.Status),
-		revisionInfo)
-
-	return bar, stringSummary
 }
 
 func printWithMaxWidth(w io.Writer, format string, width int, members ...string) {
