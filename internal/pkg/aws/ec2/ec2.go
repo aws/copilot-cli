@@ -14,40 +14,12 @@ import (
 )
 
 const (
-	defaultForAZFilterName = "default-for-az"
+	defaultForAZFilterName  = "default-for-az"
+	internetGatewayIDPrefix = "igw-"
 
 	// TagFilterName is the filter name format for tag filters
 	TagFilterName = "tag:%s"
 )
-
-// ListVPCSubnetsOpts sets up optional parameters for ListVPCSubnets function.
-type ListVPCSubnetsOpts func([]*ec2.Subnet) []*ec2.Subnet
-
-// FilterForPublicSubnets is used to filter to get public subnets.
-func FilterForPublicSubnets() ListVPCSubnetsOpts {
-	return func(subnets []*ec2.Subnet) []*ec2.Subnet {
-		var publicSubnets []*ec2.Subnet
-		for _, subnet := range subnets {
-			if aws.BoolValue(subnet.MapPublicIpOnLaunch) {
-				publicSubnets = append(publicSubnets, subnet)
-			}
-		}
-		return publicSubnets
-	}
-}
-
-// FilterForPrivateSubnets is used to filter to get private subnets.
-func FilterForPrivateSubnets() ListVPCSubnetsOpts {
-	return func(subnets []*ec2.Subnet) []*ec2.Subnet {
-		var privateSubnets []*ec2.Subnet
-		for _, subnet := range subnets {
-			if !aws.BoolValue(subnet.MapPublicIpOnLaunch) {
-				privateSubnets = append(privateSubnets, subnet)
-			}
-		}
-		return privateSubnets
-	}
-}
 
 var (
 	// FilterForDefaultVPCSubnets is a pre-defined filter for the default subnets at the availability zone.
@@ -63,6 +35,7 @@ type api interface {
 	DescribeVpcs(input *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error)
 	DescribeVpcAttribute(input *ec2.DescribeVpcAttributeInput) (*ec2.DescribeVpcAttributeOutput, error)
 	DescribeNetworkInterfaces(input *ec2.DescribeNetworkInterfacesInput) (*ec2.DescribeNetworkInterfacesOutput, error)
+	DescribeRouteTables(input *ec2.DescribeRouteTablesInput) (*ec2.DescribeRouteTablesOutput, error)
 }
 
 // Filter contains the name and values of a filter.
@@ -86,37 +59,70 @@ func New(s *session.Session) *EC2 {
 	}
 }
 
-// VPC contains the ID and name of a VPC.
-type VPC struct {
+// Resource contains the ID and name of a EC2 resource.
+type Resource struct {
 	ID   string
 	Name string
 }
 
-// String formats the elements of a VPC into a display-ready string.
-// For example: VPC{ID: "vpc-0576efeea396efee2", Name: "copilot-video-store-test"}
-// will return vpc-0576efeea396efee2 (copilot-video-store-test).
-func (v *VPC) String() string {
-	if v.Name != "" {
-		return fmt.Sprintf("%s (%s)", v.ID, v.Name)
-	}
-	return v.ID
+// VPC contains the ID and name of a VPC.
+type VPC struct {
+	Resource
 }
 
-// ExtractVPC extracts the VPC ID from the VPC display string.
+// Subnet contains the ID and name of a subnet.
+type Subnet struct {
+	Resource
+}
+
+// String formats the elements of a VPC into a display-ready string.
+// For example: VPCResource{"ID": "vpc-0576efeea396efee2", "Name": "video-store-test"}
+// will return "vpc-0576efeea396efee2 (copilot-video-store-test)".
+// while VPCResource{"ID": "subnet-018ccb78d353cec9b", "Name": "public-subnet-1"}
+// will return "subnet-018ccb78d353cec9b (public-subnet-1)"
+func (r *Resource) String() string {
+	if r.Name != "" {
+		return fmt.Sprintf("%s (%s)", r.ID, r.Name)
+	}
+	return r.ID
+}
+
+// ExtractVPC extracts the vpc ID from the resource display string.
 // For example: vpc-0576efeea396efee2 (copilot-video-store-test)
 // will return VPC{ID: "vpc-0576efeea396efee2", Name: "copilot-video-store-test"}.
 func ExtractVPC(label string) (*VPC, error) {
-	if label == "" {
-		return nil, fmt.Errorf("extract VPC ID from string: %s", label)
-	}
-	splitVPC := strings.SplitN(label, " ", 2)
-	// TODO: switch to regex to make more robust
-	var name string
-	if len(splitVPC) == 2 {
-		name = strings.Trim(splitVPC[1], "()")
+	resource, err := extractResource(label)
+	if err != nil {
+		return nil, err
 	}
 	return &VPC{
-		ID:   splitVPC[0],
+		Resource: *resource,
+	}, nil
+}
+
+// ExtractSubnet extracts the subnet ID from the resource display string.
+func ExtractSubnet(label string) (*Subnet, error) {
+	resource, err := extractResource(label)
+	if err != nil {
+		return nil, err
+	}
+	return &Subnet{
+		Resource: *resource,
+	}, nil
+}
+
+func extractResource(label string) (*Resource, error) {
+	if label == "" {
+		return nil, fmt.Errorf("extract resource ID from string: %s", label)
+	}
+	splitResource := strings.SplitN(label, " ", 2)
+	// TODO: switch to regex to make more robust
+	var name string
+	if len(splitResource) == 2 {
+		name = strings.Trim(splitResource[1], "()")
+	}
+	return &Resource{
+		ID:   splitResource[0],
 		Name: name,
 	}, nil
 }
@@ -167,8 +173,10 @@ func (c *EC2) ListVPCs() ([]VPC, error) {
 			}
 		}
 		vpcs = append(vpcs, VPC{
-			ID:   aws.StringValue(vpc.VpcId),
-			Name: name,
+			Resource: Resource{
+				ID:   aws.StringValue(vpc.VpcId),
+				Name: name,
+			},
 		})
 	}
 	return vpcs, nil
@@ -186,23 +194,67 @@ func (c *EC2) HasDNSSupport(vpcID string) (bool, error) {
 	return aws.BoolValue(resp.EnableDnsSupport.Value), nil
 }
 
-// ListVPCSubnets lists all subnets given a VPC ID.
-func (c *EC2) ListVPCSubnets(vpcID string, opts ...ListVPCSubnetsOpts) ([]string, error) {
-	respSubnets, err := c.subnets(Filter{
+// VPCSubnets are all subnets within a VPC.
+type VPCSubnets struct {
+	Public  []Subnet
+	Private []Subnet
+}
+
+// ListVPCSubnets lists all subnets with a given VPC ID. Note that public subnets
+// are subnets associated with an internet gateway through a route table.
+// And the rest of the subnets are private.
+func (c *EC2) ListVPCSubnets(vpcID string) (*VPCSubnets, error) {
+	vpcFilter := Filter{
 		Name:   "vpc-id",
 		Values: []string{vpcID},
-	})
+	}
+	respRouteTables, err := c.routeTables(vpcFilter)
 	if err != nil {
 		return nil, err
 	}
-	for _, opt := range opts {
-		respSubnets = opt(respSubnets)
+	publicSubnetMap := make(map[string]bool)
+	for _, routeTable := range respRouteTables {
+		var igwAttached bool
+		for _, route := range routeTable.Routes {
+			if strings.HasPrefix(aws.StringValue(route.GatewayId), internetGatewayIDPrefix) {
+				igwAttached = true
+				break
+			}
+		}
+		if igwAttached {
+			for _, association := range routeTable.Associations {
+				publicSubnetMap[aws.StringValue(association.SubnetId)] = true
+			}
+		}
 	}
-	var subnets []string
+	var publicSubnets, privateSubnets []Subnet
+	respSubnets, err := c.subnets(vpcFilter)
+	if err != nil {
+		return nil, err
+	}
 	for _, subnet := range respSubnets {
-		subnets = append(subnets, aws.StringValue(subnet.SubnetId))
+		var name string
+		for _, tag := range subnet.Tags {
+			if aws.StringValue(tag.Key) == "Name" {
+				name = aws.StringValue(tag.Value)
+			}
+		}
+		s := Subnet{
+			Resource: Resource{
+				ID:   aws.StringValue(subnet.SubnetId),
+				Name: name,
+			},
+		}
+		if _, ok := publicSubnetMap[s.ID]; ok {
+			publicSubnets = append(publicSubnets, s)
+		} else {
+			privateSubnets = append(privateSubnets, s)
+		}
 	}
-	return subnets, nil
+	return &VPCSubnets{
+		Public:  publicSubnets,
+		Private: privateSubnets,
+	}, nil
 }
 
 // SubnetIDs finds the subnet IDs with optional filters.
@@ -215,22 +267,6 @@ func (c *EC2) SubnetIDs(filters ...Filter) ([]string, error) {
 	subnetIDs := make([]string, len(subnets))
 	for idx, subnet := range subnets {
 		subnetIDs[idx] = aws.StringValue(subnet.SubnetId)
-	}
-	return subnetIDs, nil
-}
-
-// PublicSubnetIDs finds the public subnet IDs with optional filters.
-func (c *EC2) PublicSubnetIDs(filters ...Filter) ([]string, error) {
-	subnets, err := c.subnets(filters...)
-	if err != nil {
-		return nil, err
-	}
-
-	var subnetIDs []string
-	for _, subnet := range subnets {
-		if aws.BoolValue(subnet.MapPublicIpOnLaunch) {
-			subnetIDs = append(subnetIDs, aws.StringValue(subnet.SubnetId))
-		}
 	}
 	return subnetIDs, nil
 }
@@ -277,6 +313,25 @@ func (c *EC2) subnets(filters ...Filter) ([]*ec2.Subnet, error) {
 	}
 
 	return subnets, nil
+}
+
+func (c *EC2) routeTables(filters ...Filter) ([]*ec2.RouteTable, error) {
+	var routeTables []*ec2.RouteTable
+	input := &ec2.DescribeRouteTablesInput{
+		Filters: toEC2Filter(filters),
+	}
+	for {
+		resp, err := c.client.DescribeRouteTables(input)
+		if err != nil {
+			return nil, fmt.Errorf("describe route tables: %w", err)
+		}
+		routeTables = append(routeTables, resp.RouteTables...)
+		if resp.NextToken == nil {
+			break
+		}
+		input.NextToken = resp.NextToken
+	}
+	return routeTables, nil
 }
 
 func toEC2Filter(filters []Filter) []*ec2.Filter {
