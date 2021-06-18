@@ -395,7 +395,18 @@ func (s *ecsServiceStatus) writeTaskSummary(writer io.Writer) {
 }
 
 func (s *ecsServiceStatus) writeRunningTasksSummary(writer io.Writer, primaryDeployment awsecs.Deployment, activeDeployments []awsecs.Deployment) {
-	var data []summarybar.Datum
+	// By default, we want to show the primary running task vs. primary desired tasks.
+	data := []summarybar.Datum{
+		{
+			Value:          (int)(s.Service.RunningCount),
+			Representation: color.Green.Sprint("█"),
+		},
+		{
+			Value:          (int)(s.Service.DesiredCount) - (int)(s.Service.RunningCount),
+			Representation: color.Green.Sprint("░"),
+		},
+	}
+	// If there is one or more active deployments, show the primary running tasks vs. active running tasks instead.
 	if len(activeDeployments) > 0 {
 		var runningPrimary, runningActive int
 		for _, d := range activeDeployments {
@@ -410,17 +421,6 @@ func (s *ecsServiceStatus) writeRunningTasksSummary(writer io.Writer, primaryDep
 			{
 				Value:          runningActive,
 				Representation: color.Blue.Sprint("█"),
-			},
-		}
-	} else {
-		data = []summarybar.Datum{
-			{
-				Value:          (int)(s.Service.RunningCount),
-				Representation: color.Green.Sprint("█"),
-			},
-			{
-				Value:          (int)(s.Service.DesiredCount) - (int)(s.Service.RunningCount),
-				Representation: color.Green.Sprint("░"),
 			},
 		}
 	}
