@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -327,128 +326,6 @@ Resources:
 	// THEN
 	require.NoError(t, err)
 	require.Contains(t, buf.String(), "Updating environment", "env stack description is rendered")
-}
-
-func testDeployWorkload_WithEnvControllerRenderer(t *testing.T, svcStackName string, when func(w progress.FileWriter, cf CloudFormation) error) {
-	// GIVEN
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockCFN := mocks.NewMockcfnClient(ctrl)
-	deploymentTime := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
-
-	mockCFN.EXPECT().Create(gomock.Any()).Return("1234", nil)
-	mockCFN.EXPECT().DescribeChangeSet("1234", svcStackName).Return(&cloudformation.ChangeSetDescription{
-		Changes: []*sdkcloudformation.Change{
-			{
-				ResourceChange: &sdkcloudformation.ResourceChange{
-					LogicalResourceId: aws.String("EnvControllerAction"),
-					ResourceType:      aws.String("Custom::EnvControllerFunction"),
-					Action:            aws.String(sdkcloudformation.ChangeActionAdd),
-				},
-			},
-		},
-	}, nil)
-	mockCFN.EXPECT().TemplateBodyFromChangeSet("1234", svcStackName).Return(`
-Resources:
-  EnvControllerAction:
-    Metadata:
-      'aws:copilot:description': "Updating environment"
-`, nil)
-	mockCFN.EXPECT().Describe(svcStackName).Return(&cloudformation.StackDescription{
-		Tags: []*sdkcloudformation.Tag{
-			{
-				Key:   aws.String("copilot-application"),
-				Value: aws.String("my-app"),
-			},
-			{
-				Key:   aws.String("copilot-environment"),
-				Value: aws.String("my-env"),
-			},
-		},
-	}, nil)
-	mockCFN.EXPECT().TemplateBody("my-app-my-env").Return(`
-Resources:
-  PublicLoadBalancer:
-    Metadata:
-      'aws:copilot:description': "Updating ALB"
-`, nil)
-
-	var mu sync.Mutex
-	var isEnvCalled bool
-	mockCFN.EXPECT().DescribeStackEvents(gomock.Any()).DoAndReturn(
-		func(in *sdkcloudformation.DescribeStackEventsInput) (*sdkcloudformation.DescribeStackEventsOutput, error) {
-			// We stream both the service stack updates and environment stack updates in parallel.
-			// If the service stream finishes before the environment stack is streamed, then the env controller
-			// does not get rendered. This is because the env controller renderer cancels rendering itself if
-			// the service stream is done (EnvControllerAction exited), but there were no environment stack events.
-			//
-			// Instead, in this test we want to ensure that the environment stream finishes first so that the env stack events
-			// get rendered and then the service finishes.
-			switch stackName := aws.StringValue(in.StackName); stackName {
-			case svcStackName:
-				mu.Lock()
-				defer mu.Unlock()
-				if !isEnvCalled {
-					return &sdkcloudformation.DescribeStackEventsOutput{}, nil
-				}
-				return &sdkcloudformation.DescribeStackEventsOutput{
-					StackEvents: []*sdkcloudformation.StackEvent{
-						{
-							EventId:           aws.String("1"),
-							LogicalResourceId: aws.String("EnvControllerAction"),
-							ResourceType:      aws.String("Custom::EnvController"),
-							ResourceStatus:    aws.String("CREATE_COMPLETE"),
-							Timestamp:         aws.Time(deploymentTime),
-						},
-						{
-							EventId:           aws.String("2"),
-							LogicalResourceId: aws.String(svcStackName),
-							ResourceType:      aws.String("AWS::CloudFormation::Stack"),
-							ResourceStatus:    aws.String("CREATE_COMPLETE"),
-							Timestamp:         aws.Time(deploymentTime),
-						},
-					},
-				}, nil
-			case "my-app-my-env":
-				mu.Lock()
-				defer mu.Unlock()
-				isEnvCalled = true
-				return &sdkcloudformation.DescribeStackEventsOutput{
-					StackEvents: []*sdkcloudformation.StackEvent{
-						{
-							EventId:           aws.String("1"),
-							LogicalResourceId: aws.String("PublicLoadBalancer"),
-							ResourceType:      aws.String("AWS::ElasticLoadBalancingV2::LoadBalancer"),
-							ResourceStatus:    aws.String("CREATE_COMPLETE"),
-							Timestamp:         aws.Time(deploymentTime),
-						},
-						{
-							EventId:           aws.String("2"),
-							LogicalResourceId: aws.String("my-app-my-env"),
-							ResourceType:      aws.String("AWS::CloudFormation::Stack"),
-							ResourceStatus:    aws.String("CREATE_COMPLETE"),
-							Timestamp:         aws.Time(deploymentTime),
-						},
-					},
-				}, nil
-			}
-			return nil, errors.New("unexpected call")
-		},
-	).AnyTimes()
-
-	mockCFN.EXPECT().Describe(svcStackName).Return(&cloudformation.StackDescription{
-		StackStatus: aws.String("CREATE_COMPLETE"),
-	}, nil)
-	client := CloudFormation{cfnClient: mockCFN}
-	buf := new(strings.Builder)
-
-	// WHEN
-	err := when(mockFileWriter{Writer: buf}, client)
-
-	// THEN
-	require.NoError(t, err)
-	require.Contains(t, buf.String(), "Updating environment", "env stack description is rendered")
-	require.Contains(t, buf.String(), "Updating ALB", "resource in the env stack should be rendered")
 }
 
 func testDeployWorkload_RenderNewlyCreatedStackWithAddons(t *testing.T, stackName string, when func(w progress.FileWriter, cf CloudFormation) error) {
