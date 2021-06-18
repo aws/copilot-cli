@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -35,6 +36,12 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/cobra"
+)
+
+var (
+	fmtErrAliasAppVersionIncompatible = `Cannot deploy service %s because the application version is incompatible.
+To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
+`
 )
 
 type deployWkldVars struct {
@@ -424,14 +431,12 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
-		if err := o.validateAppVersion(t); err != nil {
-			log.Errorf(`Cannot deploy service %s because the application version is incompatible.
-To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
-`, aws.StringValue(t.Name),
-				color.HighlightCode("copilot app upgrade"))
-			return nil, err
-		}
 		if o.targetApp.RequiresDNSDelegation() {
+			if err := validateAlias(t, o.targetApp, o.envName, o.appVersionGetter); err != nil {
+				log.Errorf(fmtErrAliasAppVersionIncompatible, aws.StringValue(t.Name),
+					color.HighlightCode("copilot app upgrade"))
+				return nil, fmt.Errorf(`enable "http.alias": %w`, err)
+			}
 			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		} else {
 			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
@@ -461,18 +466,32 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 	return nil
 }
 
-func (o *deploySvcOpts) validateAppVersion(svc *manifest.LoadBalancedWebService) error {
-	var appVersion string
-	var err error
-	if aws.StringValue(svc.Alias) != "" && o.targetApp.RequiresDNSDelegation() {
-		appVersion, err = o.appVersionGetter.Version()
-		if err != nil {
-			return fmt.Errorf("get version for app %s: %w", o.appName, err)
-		}
-		diff := semver.Compare(appVersion, deploy.AliasLeastAppTemplateVersion)
-		if diff < 0 {
-			return fmt.Errorf(`enable "http.alias": the application version should be at least %s`, deploy.AliasLeastAppTemplateVersion)
-		}
+func validateAlias(svc *manifest.LoadBalancedWebService, app *config.Application, envName string, appVersionGetter versionGetter) error {
+	alias := aws.StringValue(svc.Alias)
+	if alias == "" {
+		return nil
+	}
+	if err := validateAppVersion(alias, app, appVersionGetter); err != nil {
+		return err
+	}
+	regEnvHostedZone := regexp.MustCompile(fmt.Sprintf(`^([^\.]+\.)?%s.%s.%s`, envName, app.Name, app.Domain))
+	regAppHostedZone := regexp.MustCompile(fmt.Sprintf(`^([^\.]+\.)?%s.%s`, app.Name, app.Domain))
+	regRootHostedZone := regexp.MustCompile(fmt.Sprintf(`^([^\.]+\.)?%s`, app.Domain))
+	// Alias should be within either env, app, or root hosted zone.
+	if regEnvHostedZone.MatchString(alias) || regAppHostedZone.MatchString(alias) || regRootHostedZone.MatchString(alias) {
+		return nil
+	}
+	return errors.New("cannot use alias within a hosted zone that is not managed by Copilot")
+}
+
+func validateAppVersion(alias string, app *config.Application, appVersionGetter versionGetter) error {
+	appVersion, err := appVersionGetter.Version()
+	if err != nil {
+		return fmt.Errorf("get version for app %s: %w", app.Name, err)
+	}
+	diff := semver.Compare(appVersion, deploy.AliasLeastAppTemplateVersion)
+	if diff < 0 {
+		return fmt.Errorf(`the application version should be at least %s`, deploy.AliasLeastAppTemplateVersion)
 	}
 	return nil
 }

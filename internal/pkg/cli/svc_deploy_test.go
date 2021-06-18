@@ -589,7 +589,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
 				m.EXPECT().Version().Return("", mockError)
 			},
-			wantErr: fmt.Errorf("get version for app %s: %w", mockAppName, mockError),
+			wantErr: fmt.Errorf(`enable "http.alias": get version for app %s: %w`, mockAppName, mockError),
 		},
 		"fail to enable https alias because of incompatible app version": {
 			inAlias: "mockAlias",
@@ -610,7 +610,8 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			},
 			wantErr: fmt.Errorf(`enable "http.alias": the application version should be at least %s`, deploy.AliasLeastAppTemplateVersion),
 		},
-		"success": {
+		"fail to enable https alias because of invalid alias": {
+			inAlias: "v1.v2.mockDomain",
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -623,7 +624,28 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
 			},
 			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
-			mockAppVersionGetter:   func(m *mocks.MockversionGetter) {},
+			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
+				m.EXPECT().Version().Return("v1.0.0", nil)
+			},
+			wantErr: fmt.Errorf(`enable "http.alias": cannot use alias within a hosted zone that is not managed by Copilot`),
+		},
+		"success": {
+			inAlias: "v1.mockDomain",
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mockWorkspace: func(m *mocks.MockwsSvcDirReader) {
+				m.EXPECT().ReadServiceManifest(mockSvcName).Return([]byte{}, nil)
+			},
+			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
+			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
+				m.EXPECT().Version().Return("v1.0.0", nil)
+			},
 		},
 	}
 
@@ -667,10 +689,10 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 
 			_, gotErr := opts.stackConfiguration(mockAddonsURL)
 
-			if gotErr != nil {
+			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())
 			} else {
-				require.Equal(t, tc.wantErr, gotErr)
+				require.NoError(t, gotErr)
 			}
 		})
 	}

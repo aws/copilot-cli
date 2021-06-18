@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -22,6 +24,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -99,34 +103,42 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		addonsWriter:     ioutil.Discard,
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 	}
-
+	appVersionGetter, err := describe.NewAppDescriber(vars.appName)
+	if err != nil {
+		return nil, fmt.Errorf("new app describer for application %s: %w", vars.name, err)
+	}
 	opts.stackSerializer = func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
 		var serializer stackSerializer
-		switch v := mft.(type) {
+		switch t := mft.(type) {
 		case *manifest.LoadBalancedWebService:
 			if app.RequiresDNSDelegation() {
-				serializer, err = stack.NewHTTPSLoadBalancedWebService(v, env.Name, app.Name, rc)
+				if err := validateAlias(t, app, env.Name, appVersionGetter); err != nil {
+					log.Errorf(fmtErrAliasAppVersionIncompatible, aws.StringValue(t.Name),
+						color.HighlightCode("copilot app upgrade"))
+					return nil, fmt.Errorf(`enable "http.alias": %w`, err)
+				}
+				serializer, err = stack.NewHTTPSLoadBalancedWebService(t, env.Name, app.Name, rc)
 				if err != nil {
 					return nil, fmt.Errorf("init https load balanced web service stack serializer: %w", err)
 				}
 			} else {
-				serializer, err = stack.NewLoadBalancedWebService(v, env.Name, app.Name, rc)
+				serializer, err = stack.NewLoadBalancedWebService(t, env.Name, app.Name, rc)
 				if err != nil {
 					return nil, fmt.Errorf("init load balanced web service stack serializer: %w", err)
 				}
 			}
 		case *manifest.RequestDrivenWebService:
-			serializer, err = stack.NewRequestDrivenWebService(v, env.Name, app.Name, rc)
+			serializer, err = stack.NewRequestDrivenWebService(t, env.Name, app.Name, rc)
 			if err != nil {
 				return nil, fmt.Errorf("init request-driven web service stack serializer: %w", err)
 			}
 		case *manifest.BackendService:
-			serializer, err = stack.NewBackendService(v, env.Name, app.Name, rc)
+			serializer, err = stack.NewBackendService(t, env.Name, app.Name, rc)
 			if err != nil {
 				return nil, fmt.Errorf("init backend service stack serializer: %w", err)
 			}
 		default:
-			return nil, fmt.Errorf("create stack serializer for manifest of type %T", v)
+			return nil, fmt.Errorf("create stack serializer for manifest of type %T", t)
 		}
 		return serializer, nil
 	}
