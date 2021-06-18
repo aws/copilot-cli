@@ -403,7 +403,7 @@ func (o *initStorageOpts) askDynamoPartitionKey() error {
 	)
 	key, err := o.prompt.Get(keyPrompt,
 		storageInitDDBPartitionKeyHelp,
-		dynamoTableNameValidation,
+		dynamoAttributeNameValidation,
 		prompt.WithFinalMessage("Partition key:"),
 	)
 	if err != nil {
@@ -450,7 +450,7 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 	)
 	key, err := o.prompt.Get(keyPrompt,
 		storageInitDDBSortKeyHelp,
-		dynamoTableNameValidation,
+		dynamoAttributeNameValidation,
 		prompt.WithFinalMessage("Sort key:"),
 	)
 	if err != nil {
