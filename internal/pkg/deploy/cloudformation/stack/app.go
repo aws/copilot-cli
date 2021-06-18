@@ -61,6 +61,9 @@ const (
 	appDomainHostedZoneIDKey      = "AppDomainHostedZoneID"
 	appNameKey                    = "AppName"
 	appDNSDelegationRoleName      = "DNSDelegationRole"
+
+	// arn:${partition}:iam::${account}:role/${roleName}
+	fmtStackSetAdminRoleARN = "arn:%s:iam::%s:role/%s"
 )
 
 var cfTemplateFunctions = map[string]interface{}{
@@ -196,9 +199,9 @@ func (c *AppStackConfig) stackSetAdminRoleName() string {
 func (c *AppStackConfig) StackSetAdminRoleARN(region string) (string, error) {
 	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
 	if !ok {
-		return "", fmt.Errorf("cannot find the partition for region %s", region)
+		return "", fmt.Errorf("find the partition for region %s", region)
 	}
-	return fmt.Sprintf("arn:%s:iam::%s:role/%s", partition.ID(), c.AccountID, c.stackSetAdminRoleName()), nil
+	return fmt.Sprintf(fmtStackSetAdminRoleARN, partition.ID(), c.AccountID, c.stackSetAdminRoleName()), nil
 }
 
 // StackSetExecutionRoleName returns the role name of the role used to actually create

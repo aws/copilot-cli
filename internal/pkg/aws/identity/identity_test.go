@@ -18,6 +18,7 @@ func TestIdentity_Get(t *testing.T) {
 	mockError := errors.New("error")
 	mockBadARN := "mockArn"
 	mockARN := "arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole"
+	mockChinaARN := "arn:aws-cn:iam::1111:role/phonetool-test-CFNExecutionRole"
 	mockAccount := "123412341234"
 	mockUserID := "mockUserID"
 
@@ -54,6 +55,20 @@ func TestIdentity_Get(t *testing.T) {
 			wantIdentity: Caller{
 				Account:     mockAccount,
 				RootUserARN: fmt.Sprintf("arn:aws:iam::%s:root", mockAccount),
+				UserID:      mockUserID,
+			},
+		},
+		"should return Identity in non standard partition": {
+			callMock: func(m *mocks.Mockapi) {
+				m.EXPECT().GetCallerIdentity(gomock.Any()).Return(&sts.GetCallerIdentityOutput{
+					Account: &mockAccount,
+					Arn:     &mockChinaARN,
+					UserId:  &mockUserID,
+				}, nil)
+			},
+			wantIdentity: Caller{
+				Account:     mockAccount,
+				RootUserARN: fmt.Sprintf("arn:aws-cn:iam::%s:root", mockAccount),
 				UserID:      mockUserID,
 			},
 		},

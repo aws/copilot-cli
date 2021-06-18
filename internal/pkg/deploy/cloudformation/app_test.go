@@ -57,7 +57,7 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				return nil
 			},
-			want: fmt.Errorf("get stack set administrator role arn: cannot find the partition for region bad-region"),
+			want: fmt.Errorf("get stack set administrator role arn: find the partition for region bad-region"),
 		},
 		"Infrastructure Roles Stack Already Exists": {
 			region: "us-west-2",

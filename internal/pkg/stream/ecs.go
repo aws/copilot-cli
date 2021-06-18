@@ -51,9 +51,7 @@ func (d ECSDeployment) done() bool {
 	switch d.RolloutState {
 	case rollOutFailed:
 		return true
-	case rollOutCompleted:
-		return d.DesiredCount == d.RunningCount
-	case rollOutEmpty:
+	case rollOutCompleted, rollOutEmpty:
 		return d.DesiredCount == d.RunningCount
 	default:
 		return false
