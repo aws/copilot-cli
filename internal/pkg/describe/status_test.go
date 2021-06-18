@@ -20,7 +20,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
-	mocksprogress "github.com/aws/copilot-cli/internal/pkg/term/progress/mocks"
 
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
@@ -536,10 +535,6 @@ func TestServiceStatus_Describe(t *testing.T) {
 	}
 }
 
-type serviceStatusMocks struct {
-	renderer *mocksprogress.MockRenderer
-}
-
 func TestServiceStatusDesc_String(t *testing.T) {
 	// from the function changes (ex: from "1 month ago" to "2 months ago"). To make our tests stable,
 	oldHumanize := humanizeTime
@@ -556,7 +551,6 @@ func TestServiceStatusDesc_String(t *testing.T) {
 
 	testCases := map[string]struct {
 		desc                 *ecsServiceStatus
-		setUpMock            func(m serviceStatusMocks)
 		setUpMockBarRenderer func(length int, data []int, representations []string, emptyRepresentation string) (progress.Renderer, error)
 		human                string
 		json                 string
