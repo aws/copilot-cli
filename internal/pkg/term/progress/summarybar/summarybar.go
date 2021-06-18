@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package summarybar provides renderers for summary bar.
 package summarybar
 
 import (
@@ -78,7 +79,7 @@ func (c *summaryBarComponent) Render(out io.Writer) (numLines int, err error) {
 	}
 
 	buf := new(bytes.Buffer)
-	portions, err := c.calculatePortions2(data)
+	portions, err := c.calculatePortions(data)
 	if err != nil {
 		if !errors.Is(err, errTotalIsZero) {
 			return 0, err
@@ -105,7 +106,7 @@ func (c *summaryBarComponent) Render(out io.Writer) (numLines int, err error) {
 	return 0, nil
 }
 
-func (c *summaryBarComponent) calculatePortions2(data []int) ([]int, error) {
+func (c *summaryBarComponent) calculatePortions(data []int) ([]int, error) {
 	type estimation struct {
 		index   int
 		dec     float64
