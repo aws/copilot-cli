@@ -1,6 +1,6 @@
 # Environment のリソースをカスタマイズする
 
-Copilot を使って新しく [Environment](../concepts/environments.ja.md) を作成するとき既存の VPC リソースをインポートすることもできます。(これは以下のように[`env init` を実行するときのフラグ](../commands/env-init.ja.md#フラグ)またはインタラクティブに質問に答えることで実現できます。)
+Copilot を使って新しく [Environment](../concepts/environments.ja.md) を作成するとき既存の VPC リソースをインポートすることもできます。(これは以下のように[`env init` を実行するときのフラグ](../commands/env-init.ja.md#_2)またはインタラクティブに質問に答えることで実現できます。)
 
 ```bash
 % copilot env init
@@ -21,4 +21,4 @@ Which credentials would you like to use to create name? [profile default]
 
 ## 制約
 * プライベートホストゾーンをご利用の場合は、[こちら](https://docs.aws.amazon.com/ja_jp/Route53/latest/DeveloperGuide/hosted-zone-private-considerations.html#hosted-zone-private-considerations-vpc-settings)にあるように`enableDnsHostname` と `enableDnsSupport` を true に設定してください。
-* [プライベートサブネット'(../include/common-svc-fields.ja.md#network-vpc-placement)にインターネットに面したワークロードをデプロイする場合は、 VPC に [NAT ゲートウェイ](https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/vpc-nat-gateway.html)が必要です。
+* [プライベートサブネット](../include/common-svc-fields.ja.md#network-vpc-placement)にインターネットに面したワークロードをデプロイする場合は、 VPC に [NAT ゲートウェイ](https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/vpc-nat-gateway.html)が必要です。
