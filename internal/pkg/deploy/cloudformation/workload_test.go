@@ -85,9 +85,6 @@ func TestCloudFormation_DeployService(t *testing.T) {
 	t.Run("returns an error if stack creation fails", func(t *testing.T) {
 		testDeployWorkload_StreamUntilStackCreationFails(t, "myapp-myenv-mysvc", when)
 	})
-	t.Run("renders a stack with an EnvController", func(t *testing.T) {
-		testDeployWorkload_WithEnvControllerRenderer(t, "myapp-myenv-mysvc", when)
-	})
 	t.Run("renders a stack with an EnvController that triggers no Env Stack updates", func(t *testing.T) {
 		testDeployWorkload_WithEnvControllerRenderer_NoStackUpdates(t, "myapp-myenv-mysvc", when)
 	})

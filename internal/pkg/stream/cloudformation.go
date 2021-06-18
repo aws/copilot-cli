@@ -116,7 +116,6 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 		}
 
 		s.retries = 0
-
 		var finished bool
 		for _, event := range out.StackEvents {
 			if event.Timestamp.Before(s.changeSetCreationTime) {
