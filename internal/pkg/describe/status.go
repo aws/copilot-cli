@@ -29,7 +29,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 
-	faithcolor "github.com/fatih/color"
+	fatihcolor "github.com/fatih/color"
 )
 
 const (
@@ -449,7 +449,7 @@ func (s *ecsServiceStatus) writeDeploymentsSummary(writer io.Writer, primaryDepl
 	}
 }
 
-func (s *ecsServiceStatus) writeDeployment(writer io.Writer, deployment awsecs.Deployment, repColor *faithcolor.Color) {
+func (s *ecsServiceStatus) writeDeployment(writer io.Writer, deployment awsecs.Deployment, repColor *fatihcolor.Color) {
 	var revisionInfo string
 	revision, err := awsecs.TaskDefinitionVersion(deployment.TaskDefinition)
 	if err == nil {
