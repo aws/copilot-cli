@@ -87,10 +87,31 @@ func (r *Resource) String() string {
 	return r.ID
 }
 
-// ExtractResource extracts the resource ID from the resource display string.
+// ExtractVPC extracts the vpc ID from the resource display string.
 // For example: vpc-0576efeea396efee2 (copilot-video-store-test)
 // will return VPC{ID: "vpc-0576efeea396efee2", Name: "copilot-video-store-test"}.
-func ExtractResource(label string) (*Resource, error) {
+func ExtractVPC(label string) (*VPC, error) {
+	resource, err := extractResource(label)
+	if err != nil {
+		return nil, err
+	}
+	return &VPC{
+		Resource: *resource,
+	}, nil
+}
+
+// ExtractSubnet extracts the subnet ID from the resource display string.
+func ExtractSubnet(label string) (*Subnet, error) {
+	resource, err := extractResource(label)
+	if err != nil {
+		return nil, err
+	}
+	return &Subnet{
+		Resource: *resource,
+	}, nil
+}
+
+func extractResource(label string) (*Resource, error) {
 	if label == "" {
 		return nil, fmt.Errorf("extract resource ID from string: %s", label)
 	}

@@ -58,7 +58,7 @@ func (s *EC2Select) VPC(prompt, help string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("select VPC: %w", err)
 	}
-	extractedVPC, err := ec2.ExtractResource(vpc)
+	extractedVPC, err := ec2.ExtractVPC(vpc)
 	if err != nil {
 		return "", fmt.Errorf("extract VPC ID: %w", err)
 	}
@@ -108,7 +108,7 @@ func (s *EC2Select) selectSubnets(prompt, help string, subnets []ec2.Subnet) ([]
 	}
 	var extractedSubnets []string
 	for _, s := range selectedSubnets {
-		extractedSubnet, err := ec2.ExtractResource(s)
+		extractedSubnet, err := ec2.ExtractSubnet(s)
 		if err != nil {
 			return nil, fmt.Errorf("extract subnet ID: %w", err)
 		}

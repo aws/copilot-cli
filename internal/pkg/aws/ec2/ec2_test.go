@@ -42,7 +42,7 @@ var (
 	}
 )
 
-func TestEC2_ExtractResource(t *testing.T) {
+func TestEC2_extractResource(t *testing.T) {
 	testCases := map[string]struct {
 		displayString  string
 		wantedError    error
@@ -70,7 +70,7 @@ func TestEC2_ExtractResource(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			resource, err := ExtractResource(tc.displayString)
+			resource, err := extractResource(tc.displayString)
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
