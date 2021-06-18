@@ -371,19 +371,34 @@ Resources:
     Metadata:
       'aws:copilot:description': "Updating ALB"
 `, nil)
-	mockCFN.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
-		StackName: aws.String(svcStackName),
-	}).Return(&sdkcloudformation.DescribeStackEventsOutput{
-		StackEvents: []*sdkcloudformation.StackEvent{
-			{
-				EventId:           aws.String("1"),
-				LogicalResourceId: aws.String(svcStackName),
-				ResourceType:      aws.String("AWS::CloudFormation::Stack"),
-				ResourceStatus:    aws.String("CREATE_COMPLETE"),
-				Timestamp:         aws.Time(deploymentTime),
+	gomock.InOrder(
+		mockCFN.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
+			StackName: aws.String(svcStackName),
+		}).Return(&sdkcloudformation.DescribeStackEventsOutput{
+			StackEvents: []*sdkcloudformation.StackEvent{
+				{
+					EventId:           aws.String("1"),
+					LogicalResourceId: aws.String("EnvControllerAction"),
+					ResourceType:      aws.String("Custom::EnvController"),
+					ResourceStatus:    aws.String("CREATE_COMPLETE"),
+					Timestamp:         aws.Time(deploymentTime),
+				},
 			},
-		},
-	}, nil).AnyTimes()
+		}, nil),
+		mockCFN.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
+			StackName: aws.String(svcStackName),
+		}).Return(&sdkcloudformation.DescribeStackEventsOutput{
+			StackEvents: []*sdkcloudformation.StackEvent{
+				{
+					EventId:           aws.String("2"),
+					LogicalResourceId: aws.String(svcStackName),
+					ResourceType:      aws.String("AWS::CloudFormation::Stack"),
+					ResourceStatus:    aws.String("CREATE_COMPLETE"),
+					Timestamp:         aws.Time(deploymentTime),
+				},
+			},
+		}, nil),
+	)
 	gomock.InOrder(
 		mockCFN.EXPECT().DescribeStackEvents(&sdkcloudformation.DescribeStackEventsInput{
 			StackName: aws.String("my-app-my-env"),
