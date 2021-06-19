@@ -49,6 +49,21 @@ func (mr *MockapiMockRecorder) DescribeNetworkInterfaces(input interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeNetworkInterfaces", reflect.TypeOf((*Mockapi)(nil).DescribeNetworkInterfaces), input)
 }
 
+// DescribeRouteTables mocks base method.
+func (m *Mockapi) DescribeRouteTables(input *ec2.DescribeRouteTablesInput) (*ec2.DescribeRouteTablesOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeRouteTables", input)
+	ret0, _ := ret[0].(*ec2.DescribeRouteTablesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeRouteTables indicates an expected call of DescribeRouteTables.
+func (mr *MockapiMockRecorder) DescribeRouteTables(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeRouteTables", reflect.TypeOf((*Mockapi)(nil).DescribeRouteTables), input)
+}
+
 // DescribeSecurityGroups mocks base method.
 func (m *Mockapi) DescribeSecurityGroups(arg0 *ec2.DescribeSecurityGroupsInput) (*ec2.DescribeSecurityGroupsOutput, error) {
 	m.ctrl.T.Helper()

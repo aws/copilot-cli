@@ -6,29 +6,39 @@ package ecs
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"github.com/dustin/go-humanize"
 )
 
 const (
-	shortTaskIDLength      = 8
-	shortImageDigestLength = 8
-	imageDigestPrefix      = "sha256:"
+	shortTaskIDLength = 8
+	imageDigestPrefix = "sha256:"
 
 	lastStatusRunning = "RUNNING"
 	// These field names are not defined as const in sdk.
 	networkInterfaceIDKey          = "networkInterfaceId"
+	privateIPv4AddressKey          = "privateIPv4Address"
 	networkInterfaceAttachmentType = "ElasticNetworkInterface"
-)
 
-// humanizeTime is overridden in tests so that its output is constant as time passes.
-var humanizeTime = humanize.Time
+	// TaskContainerHealthStatusUnknown wraps the ECS health status UNKNOWN.
+	TaskContainerHealthStatusUnknown = ecs.HealthStatusUnknown
+	// TaskContainerHealthStatusHealthy wraps the ECS health status HEALTHY.
+	TaskContainerHealthStatusHealthy = ecs.HealthStatusHealthy
+	// TaskContainerHealthStatusUnhealthy wraps the ECS health status UNHEALTHY.
+	TaskContainerHealthStatusUnhealthy = ecs.HealthStatusUnhealthy
+
+	// TaskCapacityProviderFargate is the capacity provider name for FARGATE.
+	TaskCapacityProviderFargate = "FARGATE"
+	// TaskCapacityProviderFargateSpot is the capacity provider name for FARGATE_SPOT.
+	TaskCapacityProviderFargateSpot = "FARGATE_SPOT"
+	// TaskStatusRunning is the task status running.
+	TaskStatusRunning = "RUNNING"
+)
 
 // Image contains very basic info of a container image.
 type Image struct {
@@ -45,9 +55,7 @@ type Task ecs.Task
 // becomes "4082490e (sample-fargate:2)"
 func (t Task) String() string {
 	taskID, _ := TaskID(aws.StringValue(t.TaskArn))
-	if len(taskID) >= shortTaskIDLength {
-		taskID = taskID[:shortTaskIDLength]
-	}
+	taskID = shortTaskID(taskID)
 	taskDefName, _ := taskDefinitionName(aws.StringValue(t.TaskDefinitionArn))
 	return fmt.Sprintf("%s (%s)", taskID, taskDefName)
 }
@@ -86,24 +94,16 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 		StoppedAt:        stoppedAt,
 		StoppedReason:    stoppedReason,
 		CapacityProvider: aws.StringValue(t.CapacityProviderName),
+		TaskDefinition:   aws.StringValue(t.TaskDefinitionArn),
 	}, nil
 }
 
 // ENI returns the network interface ID of the running task.
 // Every Fargate task is provided with an ENI by default (https://docs.aws.amazon.com/AmazonECS/latest/userguide/fargate-task-networking.html).
 func (t *Task) ENI() (string, error) {
-	var attachmentENI *ecs.Attachment
-	for _, attachment := range t.Attachments {
-		if aws.StringValue(attachment.Type) == networkInterfaceAttachmentType {
-			attachmentENI = attachment
-			break
-		}
-	}
-	if attachmentENI == nil {
-		return "", &ErrTaskENIInfoNotFound{
-			MissingField: missingFieldAttachment,
-			TaskARN:      aws.StringValue(t.TaskArn),
-		}
+	attachmentENI, err := t.attachmentENI()
+	if err != nil {
+		return "", err
 	}
 
 	for _, detail := range attachmentENI.Details {
@@ -117,6 +117,42 @@ func (t *Task) ENI() (string, error) {
 	}
 }
 
+// PrivateIP returns the private IPv4 address of the task.
+func (t *Task) PrivateIP() (string, error) {
+	attachmentENI, err := t.attachmentENI()
+	if err != nil {
+		return "", err
+	}
+	for _, detail := range attachmentENI.Details {
+		if aws.StringValue(detail.Name) == privateIPv4AddressKey {
+			return aws.StringValue(detail.Value), nil
+		}
+	}
+	return "", &ErrTaskENIInfoNotFound{
+		MissingField: missingFieldPrivateIPv4Address,
+		TaskARN:      aws.StringValue(t.TaskArn),
+	}
+}
+
+func (t *Task) attachmentENI() (*ecs.Attachment, error) {
+	// Every Fargate task is provided with an ENI by default (https://docs.aws.amazon.com/AmazonECS/latest/userguide/fargate-task-networking.html).
+	// So an error is warranted if there is no ENI found.
+	var attachmentENI *ecs.Attachment
+	for _, attachment := range t.Attachments {
+		if aws.StringValue(attachment.Type) == networkInterfaceAttachmentType {
+			attachmentENI = attachment
+			break
+		}
+	}
+	if attachmentENI == nil {
+		return nil, &ErrTaskENIInfoNotFound{
+			MissingField: missingFieldAttachment,
+			TaskARN:      aws.StringValue(t.TaskArn),
+		}
+	}
+	return attachmentENI, nil
+}
+
 // TaskStatus contains the status info of a task.
 type TaskStatus struct {
 	Health           string    `json:"health"`
@@ -127,62 +163,7 @@ type TaskStatus struct {
 	StoppedAt        time.Time `json:"stoppedAt"`
 	StoppedReason    string    `json:"stoppedReason"`
 	CapacityProvider string    `json:"capacityProvider"`
-}
-
-// StoppedTaskStatus contains the status info a stopped task.
-type StoppedTaskStatus TaskStatus
-
-// HumanString returns the stringified TaskStatus struct with human readable format.
-// Example output:
-//   6ca7a60d          f884127d            RUNNING             19 hours ago       -              UNKNOWN
-func (t TaskStatus) HumanString() string {
-	digest := humanizeImageDigests(t.Images)
-	imageDigest := "-"
-	if len(digest) != 0 {
-		imageDigest = strings.Join(digest, ",")
-	}
-	startedSince := "-"
-	if !t.StartedAt.IsZero() {
-		startedSince = humanizeTime(t.StartedAt)
-	}
-	shortTaskID := "-"
-	if len(t.ID) >= shortTaskIDLength {
-		shortTaskID = t.ID[:shortTaskIDLength]
-	}
-	cp := "-"
-	if t.CapacityProvider != "" {
-		cp = t.CapacityProvider
-	}
-
-	return fmt.Sprintf("  %s\t%s\t%s\t%s\t%s\t%s\n", shortTaskID, imageDigest, t.LastStatus, startedSince, cp, taskHealthColor(t.Health))
-}
-
-// HumanString returns the stringified StoppedTaskStatus struct with human readable format.
-// Example output:
-//   6ca7a60d          f884127d            STOPPED             57 minutes ago             51 minutes ago             Stopped by user
-func (t StoppedTaskStatus) HumanString() string {
-	digest := humanizeImageDigests(t.Images)
-	imageDigest := "-"
-	if len(digest) != 0 {
-		imageDigest = strings.Join(digest, ",")
-	}
-	startedSince := "-"
-	if !t.StartedAt.IsZero() {
-		startedSince = humanizeTime(t.StartedAt)
-	}
-	stoppedSince := "-"
-	if !t.StoppedAt.IsZero() {
-		stoppedSince = humanizeTime(t.StoppedAt)
-	}
-	shortTaskID := "-"
-	if len(t.ID) >= shortTaskIDLength {
-		shortTaskID = t.ID[:shortTaskIDLength]
-	}
-	stoppedReason := "-"
-	if t.StoppedReason != "" {
-		stoppedReason = t.StoppedReason
-	}
-	return fmt.Sprintf("  %s\t%s\t%s\t%s\t%s\t%s\n", shortTaskID, imageDigest, t.LastStatus, startedSince, stoppedSince, stoppedReason)
+	TaskDefinition   string    `json:"taskDefinitionARN"`
 }
 
 // TaskDefinition wraps up ECS TaskDefinition struct.
@@ -276,6 +257,30 @@ func TaskID(taskARN string) (string, error) {
 	return taskID, nil
 }
 
+// TaskDefinitionVersion takes a task definition ARN and returns its version.
+// For example, given "arn:aws:ecs:us-east-1:568623488001:task-definition/some-task-def:6", it returns 6.
+func TaskDefinitionVersion(taskDefARN string) (int, error) {
+	parsedARN, err := arn.Parse(taskDefARN)
+	if err != nil {
+		return 0, fmt.Errorf("parse ARN %s: %w", taskDefARN, err)
+	}
+
+	resource := parsedARN.Resource
+	parts := strings.Split(resource, ":")
+	version, err := strconv.Atoi(parts[len(parts)-1])
+	if err != nil {
+		return 0, fmt.Errorf("convert version %s from string to int: %w", parts[len(parts)-1], err)
+	}
+	return version, nil
+}
+
+func shortTaskID(id string) string {
+	if len(id) >= shortTaskIDLength {
+		return id[:shortTaskIDLength]
+	}
+	return id
+}
+
 // FilterRunningTasks returns only tasks with the last status to be RUNNING.
 func FilterRunningTasks(tasks []*Task) []*Task {
 	var filtered []*Task
@@ -285,19 +290,6 @@ func FilterRunningTasks(tasks []*Task) []*Task {
 		}
 	}
 	return filtered
-}
-
-func taskHealthColor(status string) string {
-	switch status {
-	case "HEALTHY":
-		return color.Green.Sprint(status)
-	case "UNHEALTHY":
-		return color.Red.Sprint(status)
-	case "UNKNOWN":
-		return color.Yellow.Sprint(status)
-	default:
-		return status
-	}
 }
 
 // imageDigestValue strips the hash function prefix, such as "sha256:", from the digest.
@@ -317,15 +309,4 @@ func taskDefinitionName(taskDefARN string) (string, error) {
 	}
 	resources := strings.Split(parsedARN.Resource, "/")
 	return resources[len(resources)-1], nil
-}
-
-func humanizeImageDigests(images []Image) []string {
-	var digest []string
-	for _, image := range images {
-		if len(image.Digest) < shortImageDigestLength {
-			continue
-		}
-		digest = append(digest, image.Digest[:shortImageDigestLength])
-	}
-	return digest
 }

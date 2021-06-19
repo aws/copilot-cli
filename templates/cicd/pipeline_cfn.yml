@@ -1,5 +1,5 @@
 # Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: MIT-0
 AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for {{$.AppName}}
 Resources:
@@ -236,7 +236,7 @@ Resources:
         - !Ref PipelineRole
 {{- range $index, $stage := .Stages}}
   {{- if $stage.TestCommands}}
-  BuildTestCommands{{$stage.Name}}:
+  BuildTestCommands{{logicalIDSafe $stage.Name}}:
     Type: AWS::CodeBuild::Project
     Properties:
       EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
@@ -396,7 +396,7 @@ Resources:
                 Version: 1
                 Provider: CodeBuild
               Configuration:
-                ProjectName: !Ref BuildTestCommands{{$stage.Name}}
+                ProjectName: !Ref BuildTestCommands{{logicalIDSafe $stage.Name}}
               RunOrder: 3
               InputArtifacts:
                 - Name: SCCheckoutArtifact{{end}}{{end}}{{end}}{{end}}

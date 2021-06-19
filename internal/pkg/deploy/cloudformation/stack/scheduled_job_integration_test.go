@@ -34,8 +34,11 @@ func TestScheduledJob_Template(t *testing.T) {
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload(manifestBytes)
 	require.NoError(t, err)
-	v, ok := mft.(*manifest.ScheduledJob)
+	envMft, err := mft.ApplyEnv(envName)
+	require.NoError(t, err)
+	v, ok := envMft.(*manifest.ScheduledJob)
 	require.True(t, ok)
+
 	serializer, err := stack.NewScheduledJob(v, envName, appName, stack.RuntimeConfig{})
 
 	tpl, err := serializer.Template()

@@ -23,7 +23,8 @@ http:
 ```
 
 !!!info
-    Currently, you can only use aliases under the domain you specified when creating the application. We'll make this feature more powerful in the future by allowing you to import certificates and use any aliases!
+    1. Using this feature requires your app version to be at least `v1.0.0`. You will be prompted to run [`app upgrade`](../commands/app-upgrade.en.md) first if your app version does not meet the requirement.
+    2. Currently, you can only use aliases under the domain you specified when creating the application. We'll make this feature more powerful in the future by allowing you to import certificates and use any aliases!
 
 ## What happens under the hood?
 Under the hood, Copilot
@@ -33,3 +34,7 @@ Under the hood, Copilot
 * creates and validates an ACM certificate for the env subdomain
 * associates the certificate with your HTTPS listener and redirects HTTP traffic to HTTPS
 * creates an optional A record for your alias
+
+## What does it look like?
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/Oyr-n59mVjI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>

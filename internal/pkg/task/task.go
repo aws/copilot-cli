@@ -18,7 +18,6 @@ import (
 type VPCGetter interface {
 	SubnetIDs(filters ...ec2.Filter) ([]string, error)
 	SecurityGroups(filters ...ec2.Filter) ([]string, error)
-	PublicSubnetIDs(filters ...ec2.Filter) ([]string, error)
 }
 
 // ClusterGetter wraps the method of getting a cluster ARN.

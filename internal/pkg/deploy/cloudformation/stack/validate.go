@@ -11,7 +11,13 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
-// Validation errors when rendering manifest into template.
+// Container dependency status constants.
+const (
+	dependsOnStart    = "START"
+	dependsOnComplete = "COMPLETE"
+	dependsOnSuccess  = "SUCCESS"
+	dependsOnHealthy  = "HEALTHY"
+)
 
 // Empty field errors.
 var (
@@ -23,12 +29,24 @@ var (
 
 // Conditional errors.
 var (
-	errAccessPointWithRootDirectory = errors.New("`root_directory` must be empty or \"/\" when `access_point` is specified")
-	errAccessPointWithoutIAM        = errors.New("`iam` must be true when `access_point` is specified")
-	errUIDWithNonManagedFS          = errors.New("UID and GID cannot be specified with non-managed EFS")
-	errInvalidUIDGIDConfig          = errors.New("must specify both UID and GID, or neither")
-	errInvalidEFSConfig             = errors.New("bad EFS configuration: cannot specify both bool and config")
-	errReservedUID                  = errors.New("UID must not be 0")
+	errAccessPointWithRootDirectory  = errors.New("`root_directory` must be empty or \"/\" when `access_point` is specified")
+	errAccessPointWithoutIAM         = errors.New("`iam` must be true when `access_point` is specified")
+	errUIDWithNonManagedFS           = errors.New("UID and GID cannot be specified with non-managed EFS")
+	errInvalidUIDGIDConfig           = errors.New("must specify both UID and GID, or neither")
+	errInvalidEFSConfig              = errors.New("bad EFS configuration: cannot specify both bool and config")
+	errReservedUID                   = errors.New("UID must not be 0")
+	errInvalidContainer              = errors.New("container dependency does not exist")
+	errInvalidDependsOnStatus        = fmt.Errorf("container dependency status must be one of < %s | %s | %s | %s >", dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy)
+	errInvalidSidecarDependsOnStatus = fmt.Errorf("sidecar container dependency status must be one of < %s | %s | %s >", dependsOnStart, dependsOnComplete, dependsOnSuccess)
+	errEssentialContainerStatus      = fmt.Errorf("essential container dependencies can only have status < %s | %s >", dependsOnStart, dependsOnHealthy)
+	errEssentialSidecarStatus        = fmt.Errorf("essential sidecar container dependencies can only have status < %s >", dependsOnStart)
+)
+
+// Container dependency status options
+var (
+	essentialContainerValidStatuses = []string{dependsOnStart, dependsOnHealthy}
+	dependsOnValidStatuses          = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
+	sidecarDependsOnValidStatuses   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess}
 )
 
 // Validate that paths contain only an approved set of characters to guard against command injection.
@@ -98,6 +116,191 @@ func validateSidecarMountPoints(in []manifest.SidecarMountPoint) error {
 		}
 	}
 	return nil
+}
+
+func validateSidecarDependsOn(in manifest.SidecarConfig, sidecarName string, s convertSidecarOpts) error {
+	if in.DependsOn == nil {
+		return nil
+	}
+
+	for name, status := range in.DependsOn {
+		if ok, err := isValidStatusForContainer(status, name, s); !ok {
+			return err
+		}
+		// Container cannot depend on essential containers if status is 'COMPLETE' or 'SUCCESS'
+		if ok, err := isEssentialStatus(status, name, s); isEssentialContainer(name, s) && !ok {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func isSidecar(container string, sidecars map[string]*manifest.SidecarConfig) bool {
+	if _, ok := sidecars[container]; ok {
+		return true
+	}
+	return false
+}
+
+func isValidStatusForContainer(status string, container string, c convertSidecarOpts) (bool, error) {
+	if isSidecar(container, c.sidecarConfig) {
+		for _, allowed := range sidecarDependsOnValidStatuses {
+			if status == allowed {
+				return true, nil
+			}
+		}
+		return false, errInvalidSidecarDependsOnStatus
+	}
+
+	for _, allowed := range dependsOnValidStatuses {
+		if status == allowed {
+			return true, nil
+		}
+	}
+	return false, errInvalidDependsOnStatus
+}
+
+func isEssentialContainer(name string, s convertSidecarOpts) bool {
+	if s.sidecarConfig == nil {
+		return false
+	}
+	if name == s.workloadName || s.sidecarConfig[name].Essential == nil || aws.BoolValue(s.sidecarConfig[name].Essential) {
+		return true
+	}
+
+	return false
+}
+
+func isEssentialStatus(status string, container string, c convertSidecarOpts) (bool, error) {
+	if isSidecar(container, c.sidecarConfig) {
+		if status == dependsOnStart {
+			return true, nil
+		}
+		return false, errEssentialSidecarStatus
+	}
+
+	for _, allowed := range essentialContainerValidStatuses {
+		if status == allowed {
+			return true, nil
+		}
+	}
+	return false, errEssentialContainerStatus
+}
+
+func validateNoCircularDependencies(s convertSidecarOpts) error {
+	dependencies, err := buildDependencyGraph(s)
+
+	if err != nil {
+		return err
+	}
+	if dependencies.isAcyclic() {
+		return nil
+	}
+	if len(dependencies.cycle) == 1 {
+		return fmt.Errorf("container %s cannot depend on itself", dependencies.cycle[0])
+	}
+	return fmt.Errorf("circular container dependency chain includes the following containers: %s", dependencies.cycle)
+}
+
+func (g *graph) isAcyclic() bool {
+	used := make(map[string]bool)
+	path := make(map[string]bool)
+
+	for node := range g.nodes {
+		if !used[node] && g.hasCycles(used, path, node) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (g *graph) hasCycles(used map[string]bool, path map[string]bool, currNode string) bool {
+	used[currNode] = true
+	path[currNode] = true
+
+	for _, node := range g.nodes[currNode] {
+		if !used[node] && g.hasCycles(used, path, node) {
+			g.cycle = append(g.cycle, node)
+			return true
+		} else if path[node] {
+			g.cycle = append(g.cycle, node)
+			return true
+		}
+	}
+
+	path[currNode] = false
+	return false
+}
+
+func buildDependencyGraph(s convertSidecarOpts) (*graph, error) {
+	dependencyGraph := graph{nodes: make(map[string][]string), cycle: make([]string, 0)}
+
+	// Add any sidecar dependencies.
+	for name, sidecar := range s.sidecarConfig {
+		for dep := range sidecar.DependsOn {
+			if _, ok := s.sidecarConfig[dep]; !ok && dep != s.workloadName {
+				return nil, errInvalidContainer
+			}
+
+			dependencyGraph.add(name, dep)
+		}
+	}
+
+	// Add any image dependencies.
+	for dep := range s.imageConfig.DependsOn {
+		if _, ok := s.sidecarConfig[dep]; !ok && dep != s.workloadName {
+			return nil, errInvalidContainer
+		}
+
+		dependencyGraph.add(s.workloadName, dep)
+	}
+
+	return &dependencyGraph, nil
+}
+
+type graph struct {
+	nodes map[string][]string
+	cycle []string
+}
+
+func (g *graph) add(fromNode, toNode string) {
+	hasNode := false
+
+	// Add origin node if doesn't exist.
+	if _, ok := g.nodes[fromNode]; !ok {
+		g.nodes[fromNode] = []string{}
+	}
+
+	// Check if edge exists between from and to nodes.
+	for _, node := range g.nodes[fromNode] {
+		if node == toNode {
+			hasNode = true
+		}
+	}
+
+	// Add edge if not there already.
+	if !hasNode {
+		g.nodes[fromNode] = append(g.nodes[fromNode], toNode)
+	}
+}
+
+func validateImageDependsOn(s convertSidecarOpts) error {
+	if s.imageConfig.DependsOn == nil {
+		return nil
+	}
+
+	for name, status := range s.imageConfig.DependsOn {
+		if ok, err := isValidStatusForContainer(status, name, s); !ok {
+			return err
+		}
+		if ok, err := isEssentialStatus(status, name, s); isEssentialContainer(name, s) && !ok {
+			return err
+		}
+	}
+
+	return validateNoCircularDependencies(s)
 }
 
 func validateEFSConfig(in manifest.Volume) error {

@@ -128,7 +128,6 @@ e2e: build-e2e
 
 .PHONY: tools
 tools:
-	GOBIN=${GOBIN} go get github.com/golang/mock/mockgen
 	GOBIN=${GOBIN} go get github.com/gobuffalo/packr/v2/packr2
 	@echo "Installing custom resource dependencies" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} && npm ci
@@ -140,9 +139,11 @@ site-local:
 
 .PHONY: gen-mocks
 gen-mocks: tools
+	GOBIN=${GOBIN} go get github.com/golang/mock/mockgen
 	# TODO: make this more extensible?
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/mocks/mock_rg.go -source=./internal/pkg/cli/env_delete.go resourceGetter
 	${GOBIN}/mockgen -source=./internal/pkg/term/progress/spinner.go -package=mocks -destination=./internal/pkg/term/progress/mocks/mock_spinner.go
+	${GOBIN}/mockgen -source=./internal/pkg/term/progress/render.go -package=mocks -destination=./internal/pkg/term/progress/mocks/mock_render.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/progress.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_progress.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/prompter.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_prompter.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/interfaces.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_interfaces.go
@@ -178,7 +179,8 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/cloudformation/stackset/mocks/mock_stackset.go -source=./internal/pkg/aws/cloudformation/stackset/stackset.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/ssm/mocks/mock_ssm.go -source=./internal/pkg/aws/ssm/ssm.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/stepfunctions/mocks/mock_stepfunctions.go -source=./internal/pkg/aws/stepfunctions/stepfunctions.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/addon/mocks/mock_addons.go -source=./internal/pkg/addon/addons.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/apprunner/mocks/mock_apprunner.go -source=./internal/pkg/aws/apprunner/apprunner.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/elbv2/mocks/mock_elbv2.go -source=./internal/pkg/aws/elbv2/elbv2.go
 	${GOBIN}/mockgen -package=exec -source=./internal/pkg/exec/exec.go -destination=./internal/pkg/exec/mock_exec.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/mocks/mock_deploy.go -source=./internal/pkg/deploy/deploy.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/mocks/mock_cloudformation.go -source=./internal/pkg/deploy/cloudformation/cloudformation.go
@@ -196,4 +198,3 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/initialize/mocks/mock_workload.go -source=./internal/pkg/initialize/workload.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_ecs.go -source=./internal/pkg/ecs/ecs.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_run_task_request.go -source=./internal/pkg/ecs/run_task_request.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/apprunner/mocks/mock_apprunner.go -source=./internal/pkg/aws/apprunner/apprunner.go

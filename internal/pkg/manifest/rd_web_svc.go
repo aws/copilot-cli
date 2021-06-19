@@ -98,7 +98,7 @@ func (s *RequestDrivenWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 
 // ApplyEnv returns the service manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
-func (s RequestDrivenWebService) ApplyEnv(envName string) (*RequestDrivenWebService, error) {
+func (s RequestDrivenWebService) ApplyEnv(envName string) (WorkloadManifest, error) {
 	overrideConfig, ok := s.Environments[envName]
 	if !ok {
 		return &s, nil
@@ -106,7 +106,8 @@ func (s RequestDrivenWebService) ApplyEnv(envName string) (*RequestDrivenWebServ
 	// Apply overrides to the original service configuration.
 	err := mergo.Merge(&s, RequestDrivenWebService{
 		RequestDrivenWebServiceConfig: *overrideConfig,
-	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue, mergo.WithTransformers(workloadTransformer{}))
+
 	if err != nil {
 		return nil, err
 	}

@@ -51,7 +51,7 @@ type deploySvcOpts struct {
 	store              store
 	ws                 wsSvcDirReader
 	imageBuilderPusher imageBuilderPusher
-	unmarshal          func([]byte) (interface{}, error)
+	unmarshal          func([]byte) (manifest.WorkloadManifest, error)
 	s3                 artifactUploader
 	cmd                runner
 	addons             templater
@@ -375,7 +375,11 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal service %s manifest: %w", o.name, err)
 	}
-	return mft, nil
+	envMft, err := mft.ApplyEnv(o.envName)
+	if err != nil {
+		return nil, fmt.Errorf("apply environment %s override: %s", o.envName, err)
+	}
+	return envMft, nil
 }
 
 func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {

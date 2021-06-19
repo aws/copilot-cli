@@ -35,7 +35,7 @@ type resourceGetter interface {
 type ecsClient interface {
 	RunningTasksInFamily(cluster, family string) ([]*ecs.Task, error)
 	RunningTasks(cluster string) ([]*ecs.Task, error)
-	ServiceTasks(clusterName, serviceName string) ([]*ecs.Task, error)
+	ServiceRunningTasks(clusterName, serviceName string) ([]*ecs.Task, error)
 	DefaultCluster() (string, error)
 	StopTasks(tasks []string, opts ...ecs.StopTasksOpts) error
 	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
@@ -51,7 +51,7 @@ type stepFunctionsClient interface {
 type ServiceDesc struct {
 	Name         string
 	ClusterName  string
-	Tasks        []*ecs.Task
+	Tasks        []*ecs.Task // Tasks is a list of tasks with DesiredStatus being RUNNING.
 	StoppedTasks []*ecs.Task
 }
 
@@ -95,7 +95,7 @@ func (c Client) DescribeService(app, env, svc string) (*ServiceDesc, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get service name: %w", err)
 	}
-	tasks, err := c.ecsClient.ServiceTasks(clusterName, serviceName)
+	tasks, err := c.ecsClient.ServiceRunningTasks(clusterName, serviceName)
 	if err != nil {
 		return nil, fmt.Errorf("get tasks for service %s: %w", serviceName, err)
 	}

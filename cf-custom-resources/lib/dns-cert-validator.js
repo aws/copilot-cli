@@ -14,6 +14,7 @@ let waiter;
 let sleep = defaultSleep;
 let random = Math.random;
 let maxAttempts = 10;
+let domainTypes;
 
 /**
  * Upload a CloudFormation response object to S3.
@@ -85,36 +86,34 @@ let report = function (
  * Lastly, the function exits until the certificate is validated.
  *
  * @param {string} requestId the CloudFormation request ID
- * @param {string} appName the name of the application
- * @param {string} envName the name of the environment
- * @param {string} domainName the Common Name (CN) field for the requested certificate
- * @param {string} subjectAlternativeNames additional FQDNs to be included in the
- * Subject Alternative Name extension of the requested certificate
+ * @param {string} appName the application name
+ * @param {string} envName the environment name
+ * @param {string} certDomain the domain of the certificate
+ * @param {string} aliases the custom domain aliases
  * @param {string} envHostedZoneId the environment Route53 Hosted Zone ID
  * @param {string} rootDnsRole the IAM role ARN that can manage domainName
- * @param {string} isAliasEnabled whether alias is enabled
  * @returns {string} Validated certificate ARN
  */
 const requestCertificate = async function (
   requestId,
   appName,
   envName,
-  domainName,
-  subjectAlternativeNames,
+  certDomain,
+  aliases,
   envHostedZoneId,
   rootDnsRole,
-  isAliasEnabled,
   region
 ) {
   const crypto = require("crypto");
   const [acm, envRoute53, appRoute53] = clients(region, rootDnsRole);
-  var sansToUse =
-    isAliasEnabled === "false"
-      ? [`*.${envName}.${appName}.${domainName}`]
-      : subjectAlternativeNames;
+  // For backward compatiblity.
+  const sansToUse = [`*.${certDomain}`];
+  for (const alias of aliases) {
+    sansToUse.push(alias);
+  }
   const reqCertResponse = await acm
     .requestCertificate({
-      DomainName: `${envName}.${appName}.${domainName}`,
+      DomainName: certDomain,
       SubjectAlternativeNames: sansToUse,
       IdempotencyToken: crypto
         .createHash("sha256")
@@ -170,9 +169,6 @@ const requestCertificate = async function (
   await updateHostedZoneRecords(
     "UPSERT",
     options,
-    envName,
-    appName,
-    domainName,
     envRoute53,
     appRoute53,
     envHostedZoneId
@@ -195,17 +191,15 @@ const requestCertificate = async function (
 const updateHostedZoneRecords = async function (
   action,
   options,
-  envName,
-  appName,
-  domainName,
   envRoute53,
   appRoute53,
   envHostedZoneId
 ) {
   const promises = [];
   for (const option of options) {
-    switch (option.DomainName) {
-      case `${envName}.${appName}.${domainName}`:
+    const domainType = await getDomainType(option.DomainName);
+    switch (domainType) {
+      case domainTypes.EnvDomainZone:
         promises.push(
           validateDomain({
             route53: envRoute53,
@@ -216,23 +210,23 @@ const updateHostedZoneRecords = async function (
           })
         );
         break;
-      case `${appName}.${domainName}`:
+      case domainTypes.AppDomainZone:
         promises.push(
           validateDomain({
             route53: appRoute53,
             record: option.ResourceRecord,
             action: action,
-            domainName: `${appName}.${domainName}`,
+            domainName: domainType.domain,
           })
         );
         break;
-      case domainName:
+      case domainTypes.RootDomainZone:
         promises.push(
           validateDomain({
             route53: appRoute53,
             record: option.ResourceRecord,
             action: action,
-            domainName: domainName,
+            domainName: domainType.domain,
           })
         );
         break;
@@ -250,9 +244,7 @@ const updateHostedZoneRecords = async function (
 // if there is no other certificate using the record.
 const deleteHostedZoneRecords = async function (
   options,
-  envName,
-  appName,
-  domainName,
+  certDomain,
   envRoute53,
   appRoute53,
   acm,
@@ -265,10 +257,7 @@ const deleteHostedZoneRecords = async function (
     isLegacyCert = true;
   }
 
-  const certsWithEnvDomain = await numOfGeneratedCertificates(
-    acm,
-    `${envName}.${appName}.${domainName}`
-  );
+  const certsWithEnvDomain = await numOfGeneratedCertificates(acm, certDomain);
   const isLastOne = certsWithEnvDomain === 1;
 
   const newOptions = [];
@@ -293,19 +282,28 @@ const deleteHostedZoneRecords = async function (
       // we'll remove validation CNAME records only for app and root hosted zone,
       // since the legacy cert still needs the validation record in the env hosted zone.
       for (const option of options) {
-        if (option.DomainName === `${envName}.${appName}.${domainName}`) {
+        if (option.DomainName === certDomain || option.DomainName === `*.${certDomain}`) {
           continue;
         }
         newOptions.push(option);
       }
       break;
   }
+  // Make sure DNS validation records are unique. For example: "example.com" and "*.example.com"
+  // might have the same DNS validation record.
+  const filteredOption = [];
+  var uniqueValidateRecordNames = new Set();
+  for (const option of newOptions) {
+    var id = `${option.ResourceRecord.Name} ${option.ResourceRecord.Value}`;
+    if (uniqueValidateRecordNames.has(id)) {
+      continue;
+    }
+    uniqueValidateRecordNames.add(id);
+    filteredOption.push(option);
+  }
   await updateHostedZoneRecords(
     "DELETE",
-    newOptions,
-    envName,
-    appName,
-    domainName,
+    filteredOption,
     envRoute53,
     appRoute53,
     envHostedZoneId
@@ -380,12 +378,13 @@ const validateDomain = async function ({
  * If the certificate does not exist, the function will return normally.
  *
  * @param {string} arn The certificate ARN
+ * @param {string} certDomain the domain of the certificate
+ * @param {string} envHostedZoneId the environment Route53 Hosted Zone ID
+ * @param {string} rootDnsRole the IAM role ARN that can manage domainName
  */
 const deleteCertificate = async function (
   arn,
-  appName,
-  envName,
-  domainName,
+  certDomain,
   region,
   envHostedZoneId,
   rootDnsRole
@@ -421,7 +420,6 @@ const deleteCertificate = async function (
         break;
       }
     }
-
     if (inUseByResources.length) {
       throw new Error(
         `Certificate still in use after checking for ${maxAttempts} attempts.`
@@ -430,9 +428,7 @@ const deleteCertificate = async function (
 
     await deleteHostedZoneRecords(
       options,
-      envName,
-      appName,
-      domainName,
+      certDomain,
       envRoute53,
       appRoute53,
       acm,
@@ -496,6 +492,38 @@ const updateRecords = function (
     .promise();
 };
 
+// getAllAliases gets all aliases out from a string. For example:
+// {"frontend": ["test.foobar.com", "foobar.com"], "api": ["api.foobar.com"]} will return
+// ["test.foobar.com", "foobar.com", "api.foobar.com"].
+const getAllAliases = function (aliases) {
+  let obj;
+  try {
+    obj = JSON.parse(aliases || "{}");
+  } catch (error) {
+    throw new Error(`Cannot parse ${aliases} into JSON format.`);
+  }
+  var aliasList = [];
+  for (var m in obj) {
+    aliasList.push(...obj[m]);
+  }
+  return new Set(aliasList.filter(function (itm) {
+    return getDomainType(itm) != domainTypes.OtherDomainZone;
+  }));
+};
+
+const getDomainType = function (alias) {
+  if (domainTypes.EnvDomainZone.regex.test(alias)) {
+    return domainTypes.EnvDomainZone;
+  }
+  if (domainTypes.AppDomainZone.regex.test(alias)) {
+    return domainTypes.AppDomainZone;
+  }
+  if (domainTypes.RootDomainZone.regex.test(alias)) {
+    return domainTypes.RootDomainZone;
+  }
+  return domainTypes.OtherDomainZone;
+};
+
 const clients = function (region, rootDnsRole) {
   const acm = new aws.ACM({
     region,
@@ -522,20 +550,64 @@ exports.certificateRequestHandler = async function (event, context) {
   var physicalResourceId;
   var certificateArn;
   const props = event.ResourceProperties;
+  const [app, env, domain] = [props.AppName, props.EnvName, props.DomainName];
+  domainTypes = {
+    EnvDomainZone: {
+      regex: new RegExp(`^([^\.]+\.)?${env}.${app}.${domain}`),
+      domain: `${env}.${app}.${domain}`,
+    },
+    AppDomainZone: {
+      regex: new RegExp(`^([^\.]+\.)?${app}.${domain}`),
+      domain: `${app}.${domain}`,
+    },
+    RootDomainZone: {
+      regex: new RegExp(`^([^\.]+\.)?${domain}`),
+      domain: `${domain}`,
+    },
+    OtherDomainZone: {},
+  };
 
   try {
+    var certDomain = `${props.EnvName}.${props.AppName}.${props.DomainName}`;
+    var aliases = await getAllAliases(props.Aliases);
     switch (event.RequestType) {
       case "Create":
-      case "Update":
         certificateArn = await requestCertificate(
           event.RequestId,
           props.AppName,
           props.EnvName,
-          props.DomainName,
-          props.SubjectAlternativeNames,
+          certDomain,
+          aliases,
           props.EnvHostedZoneId,
           props.RootDNSRole,
-          props.IsAliasEnabled,
+          props.Region
+        );
+        responseData.Arn = physicalResourceId = certificateArn;
+        break;
+      case "Update":
+        // Exit early if cert doesn't change.
+        if (event.OldResourceProperties) {
+          var prevAliases = await getAllAliases(
+            event.OldResourceProperties.Aliases
+          );
+          var aliasesToDelete = [...prevAliases].filter(function (itm) {
+            return !aliases.has(itm);
+          });
+          var aliasesToAdd = [...aliases].filter(function (itm) {
+            return !prevAliases.has(itm);
+          });
+          if (aliasesToAdd.length + aliasesToDelete.length === 0) {
+            break;
+          }
+        }
+        certificateArn = await requestCertificate(
+          event.RequestId,
+          props.AppName,
+          props.EnvName,
+          certDomain,
+          aliases,
+          props.EnvHostedZoneId,
+          props.RootDNSRole,
           props.Region
         );
         responseData.Arn = physicalResourceId = certificateArn;
@@ -547,9 +619,7 @@ exports.certificateRequestHandler = async function (event, context) {
         if (physicalResourceId.startsWith("arn:")) {
           await deleteCertificate(
             physicalResourceId,
-            props.AppName,
-            props.EnvName,
-            props.DomainName,
+            certDomain,
             props.Region,
             props.EnvHostedZoneId,
             props.RootDNSRole
@@ -559,7 +629,6 @@ exports.certificateRequestHandler = async function (event, context) {
       default:
         throw new Error(`Unsupported request type ${event.RequestType}`);
     }
-
     await report(event, context, "SUCCESS", physicalResourceId, responseData);
   } catch (err) {
     console.log(`Caught error ${err}.`);
