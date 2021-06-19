@@ -79,7 +79,7 @@ storage:
 Copilot 管理の EFS を有効にすると、Copilot は以下のリソースを Environment ごとに作成します。
 
 * [EFS ファイルシステム](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-efs-filesystem.html)
-* Environment 内の各プライベートサブネットごとの[マウントターゲット]](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-efs-mounttarget.html)
+* Environment 内の各プライベートサブネットごとの[マウントターゲット](https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-efs-mounttarget.html)
 * Environment セキュリティグループからマウントターゲットへのアクセスを許可するセキュリティグループルール
 
 また、Copilot は Service ごとに以下のリソースを作成します。
