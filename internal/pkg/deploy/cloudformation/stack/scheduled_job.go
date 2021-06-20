@@ -153,14 +153,15 @@ func (j *ScheduledJob) Template() (string, error) {
 		return "", fmt.Errorf("read env controller lambda: %w", err)
 	}
 
-	entrypoint, err := j.manifest.EntryPoint.ToStringSlice()
+	entrypoint, err := convertEntryPoint(j.manifest.EntryPoint)
 	if err != nil {
-		return "", fmt.Errorf(`convert 'entrypoint' to string slice: %w`, err)
+		return "", err
 	}
-	command, err := j.manifest.Command.ToStringSlice()
+	command, err := convertCommand(j.manifest.Command)
 	if err != nil {
-		return "", fmt.Errorf(`convert 'command' to string slice: %w`, err)
+		return "", err
 	}
+
 	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
 		Variables:          j.manifest.Variables,
 		Secrets:            j.manifest.Secrets,

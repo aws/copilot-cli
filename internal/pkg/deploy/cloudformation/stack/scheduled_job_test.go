@@ -37,11 +37,11 @@ func TestScheduledJob_Template(t *testing.T) {
 		Timeout:  "1h30m",
 		Retries:  3,
 	})
-	testScheduledJobManifest.EntryPoint = manifest.EntryPointOverride{
+	testScheduledJobManifest.EntryPoint = &manifest.EntryPointOverride{
 		String:      nil,
 		StringSlice: []string{"/bin/echo", "hello"},
 	}
-	testScheduledJobManifest.Command = manifest.CommandOverride{
+	testScheduledJobManifest.Command = &manifest.CommandOverride{
 		String:      nil,
 		StringSlice: []string{"world"},
 	}

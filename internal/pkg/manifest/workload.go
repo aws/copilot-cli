@@ -211,8 +211,8 @@ func (i *Image) cacheFrom() []string {
 
 // ImageOverride holds fields that override Dockerfile image defaults.
 type ImageOverride struct {
-	EntryPoint EntryPointOverride `yaml:"entrypoint"`
-	Command    CommandOverride    `yaml:"command"`
+	EntryPoint *EntryPointOverride `yaml:"entrypoint"`
+	Command    *CommandOverride    `yaml:"command"`
 }
 
 // EntryPointOverride is a custom type which supports unmarshaling "entrypoint" yaml which

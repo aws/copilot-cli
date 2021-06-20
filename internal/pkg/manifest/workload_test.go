@@ -47,7 +47,7 @@ func TestEntryPointOverride_UnmarshalYAML(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			e := ImageOverride{
-				EntryPoint: EntryPointOverride{
+				EntryPoint: &EntryPointOverride{
 					String: aws.String("wrong"),
 				},
 			}
@@ -138,7 +138,7 @@ func TestCommandOverride_UnmarshalYAML(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			e := ImageOverride{
-				Command: CommandOverride{
+				Command: &CommandOverride{
 					String: aws.String("wrong"),
 				},
 			}

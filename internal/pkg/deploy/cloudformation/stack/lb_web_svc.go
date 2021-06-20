@@ -135,15 +135,15 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
 	}
+	entrypoint, err := convertEntryPoint(s.manifest.EntryPoint)
+	if err != nil {
+		return "", err
+	}
+	command, err := convertCommand(s.manifest.Command)
+	if err != nil {
+		return "", err
+	}
 
-	entrypoint, err := s.manifest.EntryPoint.ToStringSlice()
-	if err != nil {
-		return "", fmt.Errorf(`convert 'entrypoint' to string slice: %w`, err)
-	}
-	command, err := s.manifest.Command.ToStringSlice()
-	if err != nil {
-		return "", fmt.Errorf(`convert 'command' to string slice: %w`, err)
-	}
 	var aliases []string
 	if s.httpsEnabled {
 		albAlias := aws.StringValue(s.manifest.Alias)
