@@ -105,18 +105,17 @@ func (s *BackendService) Template() (string, error) {
 		desiredCountOnSpot = advancedCount.Spot
 		capacityProviders = advancedCount.Cps
 	}
-
 	storage, err := convertStorageOpts(s.manifest.Name, s.manifest.Storage)
 	if err != nil {
 		return "", fmt.Errorf("convert storage options for service %s: %w", s.name, err)
 	}
-	entrypoint, err := s.manifest.EntryPoint.ToStringSlice()
+	entrypoint, err := convertEntryPoint(s.manifest.EntryPoint)
 	if err != nil {
-		return "", fmt.Errorf(`convert 'entrypoint' to string slice: %w`, err)
+		return "", err
 	}
-	command, err := s.manifest.Command.ToStringSlice()
+	command, err := convertCommand(s.manifest.Command)
 	if err != nil {
-		return "", fmt.Errorf(`convert 'command' to string slice: %w`, err)
+		return "", err
 	}
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		Variables:           s.manifest.BackendServiceConfig.Variables,

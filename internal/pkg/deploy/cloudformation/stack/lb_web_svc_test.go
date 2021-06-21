@@ -106,11 +106,11 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		Retries: aws.Int(5),
 	}
 	testLBWebServiceManifest.Alias = aws.String("mockAlias")
-	testLBWebServiceManifest.EntryPoint = manifest.EntryPointOverride{
+	testLBWebServiceManifest.EntryPoint = &manifest.EntryPointOverride{
 		String:      nil,
 		StringSlice: []string{"/bin/echo", "hello"},
 	}
-	testLBWebServiceManifest.Command = manifest.CommandOverride{
+	testLBWebServiceManifest.Command = &manifest.CommandOverride{
 		String:      nil,
 		StringSlice: []string{"world"},
 	}

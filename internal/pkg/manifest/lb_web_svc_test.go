@@ -543,6 +543,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 						},
 					},
+					ImageOverride: ImageOverride{
+						Command: &CommandOverride{
+							StringSlice: []string{"command", "default"},
+						},
+						EntryPoint: &EntryPointOverride{
+							StringSlice: []string{"entrypoint", "default"},
+						},
+					},
 				},
 				Environments: map[string]*LoadBalancedWebServiceConfig{
 					"prod-iad": nil,
@@ -559,6 +567,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								Range: &Range{Value: &mockRange},
 								CPU:   aws.Int(80),
 							},
+						},
+					},
+					ImageOverride: ImageOverride{
+						Command: &CommandOverride{
+							StringSlice: []string{"command", "default"},
+						},
+						EntryPoint: &EntryPointOverride{
+							StringSlice: []string{"entrypoint", "default"},
 						},
 					},
 				},
@@ -979,6 +995,45 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 									BuildString: aws.String("overridden build string"),
 								},
 							},
+						},
+					},
+				},
+			},
+		},
+		"with command and entrypoint overridden": {
+			in: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageOverride: ImageOverride{
+						Command: &CommandOverride{
+							StringSlice: []string{"command", "default"},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						ImageOverride: ImageOverride{
+							Command: &CommandOverride{
+								StringSlice: []string{"command", "prod"},
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageOverride: ImageOverride{
+						Command: &CommandOverride{
+							StringSlice: []string{"command", "prod"},
 						},
 					},
 				},
