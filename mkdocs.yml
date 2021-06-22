@@ -139,7 +139,7 @@ nav:
         - version: docs/commands/version.en.md
   - Community:
       - Get Involved: community/get-involved.en.md
-      - Guides and resources: community/guides.en.md
+      - Guides and Resources: community/guides.en.md
 theme:
   name: material
   custom_dir: site/overrides
