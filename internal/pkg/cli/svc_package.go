@@ -112,10 +112,19 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		switch t := mft.(type) {
 		case *manifest.LoadBalancedWebService:
 			if app.RequiresDNSDelegation() {
-				if err := validateAlias(t, app, env.Name, appVersionGetter); err != nil {
-					log.Errorf(fmtErrAliasAppVersionIncompatible, aws.StringValue(t.Name),
+				if err := validateAlias(aws.StringValue(t.Alias), app, env.Name, appVersionGetter); err != nil {
+					msg := fmt.Sprintf(fmtErrAliasAppVersionIncompatible, aws.StringValue(t.Name),
 						color.HighlightCode("copilot app upgrade"))
-					return nil, fmt.Errorf(`enable "http.alias": %w`, err)
+					if errors.Is(err, errBadAliasPattern) {
+						msg = fmt.Sprintf(`%s must match one of the following patterns:
+- <name>.%s.%s.%s,
+- <name>.%s.%s,
+- <name>.%s
+`,
+							color.HighlightCode("http.alias"), env.Name, app.Name, app.Domain, app.Name, app.Domain, app.Domain)
+					}
+					log.Error(msg)
+					return nil, err
 				}
 				serializer, err = stack.NewHTTPSLoadBalancedWebService(t, env.Name, app.Name, rc)
 				if err != nil {

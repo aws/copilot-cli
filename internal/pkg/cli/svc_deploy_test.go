@@ -589,7 +589,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
 				m.EXPECT().Version().Return("", mockError)
 			},
-			wantErr: fmt.Errorf(`enable "http.alias": get version for app %s: %w`, mockAppName, mockError),
+			wantErr: fmt.Errorf("get version for app %s: %w", mockAppName, mockError),
 		},
 		"fail to enable https alias because of incompatible app version": {
 			inAlias: "mockAlias",
@@ -608,7 +608,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
 				m.EXPECT().Version().Return("v0.0.0", nil)
 			},
-			wantErr: fmt.Errorf(`enable "http.alias": the application version should be at least %s`, deploy.AliasLeastAppTemplateVersion),
+			wantErr: fmt.Errorf("alias is not compatible with application versions below %s", deploy.AliasLeastAppTemplateVersion),
 		},
 		"fail to enable https alias because of invalid alias": {
 			inAlias: "v1.v2.mockDomain",
@@ -627,7 +627,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
 				m.EXPECT().Version().Return("v1.0.0", nil)
 			},
-			wantErr: fmt.Errorf(`enable "http.alias": cannot use alias within a hosted zone that is not managed by Copilot`),
+			wantErr: fmt.Errorf("alias is not supported in hosted zones not managed by Copilot"),
 		},
 		"success": {
 			inAlias: "v1.mockDomain",

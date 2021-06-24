@@ -42,6 +42,7 @@ var (
 	fmtErrAliasAppVersionIncompatible = `Cannot deploy service %s because the application version is incompatible.
 To upgrade the application, please run %s first (see https://aws.github.io/copilot-cli/docs/credentials/#application-credentials).
 `
+	errBadAliasPattern = errors.New("alias is not supported in hosted zones not managed by Copilot")
 )
 
 type deployWkldVars struct {
@@ -432,10 +433,19 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
 		if o.targetApp.RequiresDNSDelegation() {
-			if err := validateAlias(t, o.targetApp, o.envName, o.appVersionGetter); err != nil {
-				log.Errorf(fmtErrAliasAppVersionIncompatible, aws.StringValue(t.Name),
+			if err := validateAlias(aws.StringValue(t.Alias), o.targetApp, o.envName, o.appVersionGetter); err != nil {
+				msg := fmt.Sprintf(fmtErrAliasAppVersionIncompatible, aws.StringValue(t.Name),
 					color.HighlightCode("copilot app upgrade"))
-				return nil, fmt.Errorf(`enable "http.alias": %w`, err)
+				if errors.Is(err, errBadAliasPattern) {
+					msg = fmt.Sprintf(`%s must match one of the following patterns:
+- <name>.%s.%s.%s,
+- <name>.%s.%s,
+- <name>.%s
+`,
+						color.HighlightCode("http.alias"), o.envName, o.targetApp.Name, o.targetApp.Domain, o.targetApp.Name, o.targetApp.Domain, o.targetApp.Domain)
+				}
+				log.Error(msg)
+				return nil, err
 			}
 			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		} else {
@@ -466,22 +476,31 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 	return nil
 }
 
-func validateAlias(svc *manifest.LoadBalancedWebService, app *config.Application, envName string, appVersionGetter versionGetter) error {
-	alias := aws.StringValue(svc.Alias)
+func validateAlias(alias string, app *config.Application, envName string, appVersionGetter versionGetter) error {
 	if alias == "" {
 		return nil
 	}
 	if err := validateAppVersion(alias, app, appVersionGetter); err != nil {
 		return err
 	}
-	regEnvHostedZone := regexp.MustCompile(fmt.Sprintf(`^([^\.]+\.)?%s.%s.%s`, envName, app.Name, app.Domain))
-	regAppHostedZone := regexp.MustCompile(fmt.Sprintf(`^([^\.]+\.)?%s.%s`, app.Name, app.Domain))
-	regRootHostedZone := regexp.MustCompile(fmt.Sprintf(`^([^\.]+\.)?%s`, app.Domain))
 	// Alias should be within either env, app, or root hosted zone.
-	if regEnvHostedZone.MatchString(alias) || regAppHostedZone.MatchString(alias) || regRootHostedZone.MatchString(alias) {
-		return nil
+	var regEnvHostedZone, regAppHostedZone, regRootHostedZone *regexp.Regexp
+	var err error
+	if regEnvHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s.%s`, envName, app.Name, app.Domain)); err != nil {
+		return err
 	}
-	return errors.New("cannot use alias within a hosted zone that is not managed by Copilot")
+	if regAppHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s.%s`, app.Name, app.Domain)); err != nil {
+		return err
+	}
+	if regRootHostedZone, err = regexp.Compile(fmt.Sprintf(`^([^\.]+\.)?%s`, app.Domain)); err != nil {
+		return err
+	}
+	for _, re := range []*regexp.Regexp{regEnvHostedZone, regAppHostedZone, regRootHostedZone} {
+		if re.MatchString(alias) {
+			return nil
+		}
+	}
+	return errBadAliasPattern
 }
 
 func validateAppVersion(alias string, app *config.Application, appVersionGetter versionGetter) error {
@@ -491,7 +510,7 @@ func validateAppVersion(alias string, app *config.Application, appVersionGetter 
 	}
 	diff := semver.Compare(appVersion, deploy.AliasLeastAppTemplateVersion)
 	if diff < 0 {
-		return fmt.Errorf(`the application version should be at least %s`, deploy.AliasLeastAppTemplateVersion)
+		return fmt.Errorf(`alias is not compatible with application versions below %s`, deploy.AliasLeastAppTemplateVersion)
 	}
 	return nil
 }
