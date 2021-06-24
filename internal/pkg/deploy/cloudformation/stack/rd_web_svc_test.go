@@ -172,7 +172,7 @@ Outputs:
 		"should return parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
-				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
+				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.ParseRequestDrivenWebServiceInput{
 					Variables:         c.manifest.Variables,
 					Tags:              c.manifest.Tags,

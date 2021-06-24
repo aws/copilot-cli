@@ -163,8 +163,8 @@ func (o *deployJobOpts) Execute() error {
 func (o *deployJobOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 	template, err := o.addons.Template()
 	if err != nil {
-		var notExistErr *addon.ErrAddonsDirNotExist
-		if errors.As(err, &notExistErr) {
+		var notFoundErr *addon.ErrAddonsNotFound
+		if errors.As(err, &notFoundErr) {
 			// addons doesn't exist for job, the url is empty.
 			return "", nil
 		}
