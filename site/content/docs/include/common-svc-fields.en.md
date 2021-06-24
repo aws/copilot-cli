@@ -61,7 +61,7 @@ count:
 ```
 
 <span class="parent-field">count.</span><a id="count-range" href="#count-range" class="field">`range`</a> <span class="type">String or Map</span>  
-You can specify a minimum and maximum bound for the number of tasks your service should maintain.
+You can specify a minimum and maximum bound for the number of tasks your service should maintain, based on the values you specify for the metrics.
 ```yaml
 count:
   range: n-m
