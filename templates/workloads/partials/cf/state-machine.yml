@@ -17,6 +17,7 @@ StateMachine:
         Fn::ImportValue:
           !Sub '${AppName}-${EnvName}-ClusterId'
       TaskDefinition: !Ref TaskDefinition
+      Partition: !Ref AWS::Partition
       Subnets:
         Fn::Join:
           - '","'

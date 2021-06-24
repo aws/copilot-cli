@@ -46,7 +46,7 @@ EnvControllerRole:
             Action:
               - cloudformation:DescribeStacks
               - cloudformation:UpdateStack
-            Resource:  !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}-${EnvName}/*'
+            Resource:  !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}-${EnvName}/*'
             Condition:
               StringEquals:
                 'cloudformation:ResourceTag/copilot-application': !Sub '${AppName}'
@@ -58,10 +58,10 @@ EnvControllerRole:
           - Effect: Allow
             Action:
               - iam:PassRole
-            Resource:  !Sub 'arn:aws:iam::${AWS::AccountId}:role/${AppName}-${EnvName}-CFNExecutionRole'
+            Resource:  !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${AppName}-${EnvName}-CFNExecutionRole'
             Condition:
               StringEquals:
                 'iam:ResourceTag/copilot-application': !Sub '${AppName}'
                 'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
     ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole

@@ -33,6 +33,7 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 	testCases := map[string]struct {
 		mockStack    func(ctrl *gomock.Controller) cfnClient
 		mockStackSet func(t *testing.T, ctrl *gomock.Controller) stackSetClient
+		region       string
 		want         error
 	}{
 		"Infrastructure Roles Stack Fails": {
@@ -46,7 +47,20 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 			},
 			want: errors.New("error creating stack"),
 		},
+		"fail to get admin role arn": {
+			region: "bad-region",
+			mockStack: func(ctrl *gomock.Controller) cfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().CreateAndWait(gomock.Any()).Return(&cloudformation.ErrStackAlreadyExists{})
+				return m
+			},
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				return nil
+			},
+			want: fmt.Errorf("get stack set administrator role arn: find the partition for region bad-region"),
+		},
 		"Infrastructure Roles Stack Already Exists": {
+			region: "us-west-2",
 			mockStack: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().CreateAndWait(gomock.Any()).Return(&cloudformation.ErrStackAlreadyExists{})
@@ -60,6 +74,7 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 			},
 		},
 		"Infrastructure Roles StackSet Created": {
+			region: "us-west-2",
 			mockStack: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().CreateAndWait(gomock.Any()).Return(nil)
@@ -86,6 +101,7 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 				cfnClient:   tc.mockStack(ctrl),
 				appStackSet: tc.mockStackSet(t, ctrl),
 				box:         templates.Box(),
+				region:      tc.region,
 			}
 
 			// WHEN
@@ -161,6 +177,7 @@ func TestCloudFormation_UpgradeApplication(t *testing.T) {
 				return &CloudFormation{
 					cfnClient:   mockCFNClient,
 					appStackSet: mockAppStackSet,
+					region:      "us-west-2",
 				}
 			},
 		},
@@ -187,6 +204,7 @@ func TestCloudFormation_UpgradeApplication(t *testing.T) {
 				return &CloudFormation{
 					cfnClient:   mockCFNClient,
 					appStackSet: mockAppStackSet,
+					region:      "us-west-2",
 				}
 			},
 		},
@@ -314,6 +332,7 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 			cf := CloudFormation{
 				appStackSet: tc.mockStackSet(t, ctrl),
 				box:         templates.Box(),
+				region:      "us-west-2",
 			}
 			got := cf.AddEnvToApp(&AddEnvToAppOpts{
 				App:          tc.app,
@@ -482,6 +501,7 @@ func TestCloudFormation_AddServiceToApp(t *testing.T) {
 			cf := CloudFormation{
 				appStackSet: tc.mockStackSet(t, ctrl),
 				box:         templates.Box(),
+				region:      "us-west-2",
 			}
 
 			got := cf.AddServiceToApp(tc.app, tc.svcName)
@@ -540,6 +560,7 @@ func TestCloudFormation_RemoveServiceFromApp(t *testing.T) {
 			cf := CloudFormation{
 				appStackSet: tc.mockStackSet(t, ctrl),
 				box:         templates.Box(),
+				region:      "us-west-2",
 			}
 
 			got := cf.RemoveServiceFromApp(mockApp, tc.service)
