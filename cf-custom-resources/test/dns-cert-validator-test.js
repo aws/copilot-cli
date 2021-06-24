@@ -33,6 +33,8 @@ describe("DNS Validated Certificate Handler", () => {
   ];
   const testCertificateArn =
     "arn:aws:acm:region:123456789012:certificate/12345678-1234-1234-1234-123456789012";
+    const testOtherCertificateArn =
+    "arn:aws:acm:region:123456789012:certificate/1234-1234-123456789012-12345678-1234";
   const testRRName = "_3639ac514e785e898d2646601fa951d5.example.com";
   const testRRValue1 = "_x1.acm-validations.aws";
   const testRRValue2 = "_x2.acm-validations.aws";
@@ -51,23 +53,6 @@ describe("DNS Validated Certificate Handler", () => {
           ResourceRecords: [
             {
               Value: testRRValue1,
-            },
-          ],
-        },
-      },
-    ],
-  };
-  const testDeleteRecordChangebatch2 = {
-    Changes: [
-      {
-        Action: "DELETE",
-        ResourceRecordSet: {
-          Name: testRRName,
-          Type: "CNAME",
-          TTL: 60,
-          ResourceRecords: [
-            {
-              Value: testRRValue2,
             },
           ],
         },
@@ -159,6 +144,35 @@ describe("DNS Validated Certificate Handler", () => {
         Name: testRRName,
         Type: "CNAME",
         Value: testRRValue1,
+      },
+    },
+  ];
+  const newCertValidatorOptionsWithoutV2 = [
+    {
+      DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
+      ValidationStatus: "SUCCESS",
+      ResourceRecord: {
+        Name: testRRName,
+        Type: "CNAME",
+        Value: testRRValue1,
+      },
+    },
+    {
+      DomainName: `*.${testEnvName}.${testAppName}.${testDomainName}`,
+      ValidationStatus: "SUCCESS",
+      ResourceRecord: {
+        Name: testRRName,
+        Type: "CNAME",
+        Value: testRRValue1,
+      },
+    },
+    {
+      DomainName: `v1.${testAppName}.${testDomainName}`,
+      ValidationStatus: "PENDING_VALIDATION",
+      ResourceRecord: {
+        Name: testRRName,
+        Type: "CNAME",
+        Value: testRRValue2,
       },
     },
   ];
@@ -763,7 +777,7 @@ describe("DNS Validated Certificate Handler", () => {
       });
   });
 
-  test("Delete operation deletes the last legacy cert", () => {
+  test("Delete operation deletes the last cert", () => {
     const describeCertificateFake = sinon.fake.resolves({
       Certificate: {
         CertificateArn: testCertificateArn,
@@ -780,6 +794,7 @@ describe("DNS Validated Certificate Handler", () => {
       CertificateSummaryList: [
         {
           DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
+          CertificateArn: testCertificateArn
         },
       ],
       NextToken: "some token",
@@ -855,11 +870,18 @@ describe("DNS Validated Certificate Handler", () => {
       });
   });
 
-  test("Delete operation deletes the legacy cert but not the last", () => {
-    const describeCertificateFake = sinon.fake.resolves({
+  test("Delete operation deletes the cert without record removal", () => {
+    const describeCertificateFake = sinon.stub();
+    describeCertificateFake.onFirstCall().resolves({
       Certificate: {
         CertificateArn: testCertificateArn,
-        DomainValidationOptions: legacyCertValidatorOptions,
+        DomainValidationOptions: newCertValidatorOptionsWithoutV2,
+      },
+    });
+    describeCertificateFake.onSecondCall().resolves({
+      Certificate: {
+        CertificateArn: testOtherCertificateArn,
+        DomainValidationOptions: newCertValidateOptions,
       },
     });
     AWS.mock("ACM", "describeCertificate", describeCertificateFake);
@@ -872,9 +894,11 @@ describe("DNS Validated Certificate Handler", () => {
       CertificateSummaryList: [
         {
           DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
+          CertificateArn: testCertificateArn,
         },
         {
           DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
+          CertificateArn: testOtherCertificateArn,
         },
       ],
     });
@@ -909,6 +933,12 @@ describe("DNS Validated Certificate Handler", () => {
         );
         sinon.assert.calledWith(listCertificatesFake, sinon.match({}));
         sinon.assert.calledWith(
+          describeCertificateFake,
+          sinon.match({
+            CertificateArn: testOtherCertificateArn,
+          })
+        );
+        sinon.assert.calledWith(
           deleteCertificateFake,
           sinon.match({
             CertificateArn: testCertificateArn,
@@ -918,11 +948,18 @@ describe("DNS Validated Certificate Handler", () => {
       });
   });
 
-  test("Delete operation deletes the last new cert", () => {
-    const describeCertificateFake = sinon.fake.resolves({
+  test("Delete operation deletes the cert with record removal", () => {
+    const describeCertificateFake = sinon.stub();
+    describeCertificateFake.onFirstCall().resolves({
       Certificate: {
         CertificateArn: testCertificateArn,
         DomainValidationOptions: newCertValidateOptions,
+      },
+    });
+    describeCertificateFake.onSecondCall().resolves({
+      Certificate: {
+        CertificateArn: testOtherCertificateArn,
+        DomainValidationOptions: newCertValidatorOptionsWithoutV2,
       },
     });
     AWS.mock("ACM", "describeCertificate", describeCertificateFake);
@@ -935,6 +972,11 @@ describe("DNS Validated Certificate Handler", () => {
       CertificateSummaryList: [
         {
           DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
+          CertificateArn: testCertificateArn,
+        },
+        {
+          DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
+          CertificateArn: testOtherCertificateArn,
         },
       ],
     });
@@ -989,128 +1031,9 @@ describe("DNS Validated Certificate Handler", () => {
         );
         sinon.assert.calledWith(listCertificatesFake, sinon.match({}));
         sinon.assert.calledWith(
-          changeResourceRecordSetsFake,
-          sinon.match({
-            ChangeBatch: testDeleteRecordChangebatch1,
-            HostedZoneId: testHostedZoneId,
-          })
-        );
-        sinon.assert.calledWith(
-          changeResourceRecordSetsFake,
-          sinon.match({
-            ChangeBatch: testDeleteRecordChangebatch2,
-            HostedZoneId: testAppHostedZoneId,
-          })
-        );
-        sinon.assert.calledWith(
-          changeResourceRecordSetsFake,
-          sinon.match({
-            ChangeBatch: testDeleteRecordChangebatch3,
-            HostedZoneId: testAppHostedZoneId,
-          })
-        );
-        sinon.assert.calledWith(
-          listHostedZonesByNameFake,
-          sinon.match({
-            DNSName: `${testAppName}.${testDomainName}`,
-            MaxItems: "1",
-          })
-        );
-        sinon.assert.calledWith(
-          listHostedZonesByNameFake,
-          sinon.match({
-            DNSName: `${testDomainName}`,
-            MaxItems: "1",
-          })
-        );
-        sinon.assert.calledWith(
-          deleteCertificateFake,
-          sinon.match({
-            CertificateArn: testCertificateArn,
-          })
-        );
-        expect(request.isDone()).toBe(true);
-      });
-  });
-
-  test("Delete operation deletes the new cert but not the last", () => {
-    const describeCertificateFake = sinon.fake.resolves({
-      Certificate: {
-        CertificateArn: testCertificateArn,
-        DomainValidationOptions: newCertValidateOptions,
-      },
-    });
-    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
-
-    const deleteCertificateFake = sinon.fake.resolves({});
-    AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
-
-    const listCertificatesFake = sinon.stub();
-    listCertificatesFake.resolves({
-      CertificateSummaryList: [
-        {
-          DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
-        },
-        {
-          DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
-        },
-      ],
-    });
-    AWS.mock("ACM", "listCertificates", listCertificatesFake);
-
-    const changeResourceRecordSetsFake = sinon.fake.resolves({
-      ChangeInfo: {
-        Id: "bogus",
-      },
-    });
-    AWS.mock(
-      "Route53",
-      "changeResourceRecordSets",
-      changeResourceRecordSetsFake
-    );
-
-    const listHostedZonesByNameFake = sinon.fake.resolves({
-      HostedZones: [
-        {
-          Id: `/hostedzone/${testAppHostedZoneId}`,
-        },
-      ],
-    });
-    AWS.mock("Route53", "listHostedZonesByName", listHostedZonesByNameFake);
-
-    const request = nock(ResponseURL)
-      .put("/", (body) => {
-        return body.Status === "SUCCESS";
-      })
-      .reply(200);
-
-    return LambdaTester(handler.certificateRequestHandler)
-      .event({
-        RequestType: "Delete",
-        RequestId: testRequestId,
-        PhysicalResourceId: testCertificateArn,
-        ResourceProperties: {
-          AppName: testAppName,
-          EnvName: testEnvName,
-          DomainName: testDomainName,
-          EnvHostedZoneId: testHostedZoneId,
-          Region: "us-east-1",
-          RootDNSRole: testRootDNSRole,
-        },
-      })
-      .expectResolve(() => {
-        sinon.assert.calledWith(
           describeCertificateFake,
           sinon.match({
-            CertificateArn: testCertificateArn,
-          })
-        );
-        sinon.assert.calledWith(listCertificatesFake, sinon.match({}));
-        sinon.assert.calledWith(
-          changeResourceRecordSetsFake,
-          sinon.match({
-            ChangeBatch: testDeleteRecordChangebatch2,
-            HostedZoneId: testAppHostedZoneId,
+            CertificateArn: testOtherCertificateArn,
           })
         );
         sinon.assert.calledWith(
@@ -1118,13 +1041,6 @@ describe("DNS Validated Certificate Handler", () => {
           sinon.match({
             ChangeBatch: testDeleteRecordChangebatch3,
             HostedZoneId: testAppHostedZoneId,
-          })
-        );
-        sinon.assert.calledWith(
-          listHostedZonesByNameFake,
-          sinon.match({
-            DNSName: `${testAppName}.${testDomainName}`,
-            MaxItems: "1",
           })
         );
         sinon.assert.calledWith(
