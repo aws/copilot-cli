@@ -408,6 +408,10 @@ type versionGetter interface {
 	Version() (string, error)
 }
 
+type endpointGetter interface {
+	ServiceDiscoveryEndpoint() (string, error)
+}
+
 type envTemplater interface {
 	EnvironmentTemplate(appName, envName string) (string, error)
 }

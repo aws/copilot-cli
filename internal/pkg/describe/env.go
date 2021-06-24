@@ -20,6 +20,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var (
+	fmtLegacySvcDiscoveryEndpoint = "%s.local"
+)
+
 // EnvDescription contains the information about an environment.
 type EnvDescription struct {
 	Environment    *config.Environment `json:"environment"`
@@ -144,6 +148,28 @@ func (d *EnvDescriber) Version() (string, error) {
 		return deploy.LegacyEnvTemplateVersion, nil
 	}
 	return metadata.Version, nil
+}
+
+// ServiceDiscoveryEndpoint returns the endpoint the environment was initialized with, if any. Otherwise,
+// it returns the legacy app.local endpoint.
+func (d *EnvDescriber) ServiceDiscoveryEndpoint() (string, error) {
+	p, err := d.Params()
+	if err != nil {
+		return "", fmt.Errorf("get template version of environment %s in app %s: %w", d.env.Name, d.env.App, err)
+	}
+	for k, v := range p {
+		// Ignore non-svc discovery params
+		if k != cfnstack.EnvParamServiceDiscoveryEndpoint {
+			continue
+		}
+		// If the service discovery param is set (meaning the stack is not upgraded), use the provided value
+		if v != "" {
+			return v, nil
+		}
+		// if the param exists but is empty, use the legacy endpoint.
+		return fmt.Sprintf(fmtLegacySvcDiscoveryEndpoint, d.app), nil
+	}
+	return fmt.Sprintf(fmtLegacySvcDiscoveryEndpoint, d.app), nil
 }
 
 func (d *EnvDescriber) loadStackInfo() (map[string]string, EnvironmentVPC, error) {

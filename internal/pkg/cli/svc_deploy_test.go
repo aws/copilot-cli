@@ -517,6 +517,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 		mockWorkspace          func(m *mocks.MockwsSvcDirReader)
 		mockAppResourcesGetter func(m *mocks.MockappResourcesGetter)
 		mockAppVersionGetter   func(m *mocks.MockversionGetter)
+		mockEndpointGetter     func(m *mocks.MockendpointGetter)
 
 		wantErr error
 	}{
@@ -526,6 +527,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			},
 			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
 			mockAppVersionGetter:   func(m *mocks.MockversionGetter) {},
+			mockEndpointGetter:     func(m *mocks.MockendpointGetter) {},
 			wantErr:                fmt.Errorf("read service %s manifest file: %w", mockSvcName, mockError),
 		},
 		"fail to get app resources": {
@@ -544,6 +546,9 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				m.EXPECT().GetAppResourcesByRegion(&config.Application{
 					Name: mockAppName,
 				}, "us-west-2").Return(nil, mockError)
+			},
+			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
+				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 			},
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {},
 			wantErr:              fmt.Errorf("get application %s resources from region us-west-2: %w", mockAppName, mockError),
@@ -569,6 +574,9 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 					RepositoryURLs: map[string]string{},
 				}, nil)
 			},
+			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
+				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			},
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {},
 			wantErr:              fmt.Errorf("ECR repository not found for service mockSvc in region us-west-2 and account 1234567890"),
 		},
@@ -589,6 +597,9 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
 				m.EXPECT().Version().Return("", mockError)
 			},
+			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
+				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			},
 			wantErr: fmt.Errorf("get version for app %s: %w", mockAppName, mockError),
 		},
 		"fail to enable https alias because of incompatible app version": {
@@ -608,6 +619,9 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			mockAppVersionGetter: func(m *mocks.MockversionGetter) {
 				m.EXPECT().Version().Return("v0.0.0", nil)
 			},
+			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
+				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			},
 			wantErr: fmt.Errorf(`enable "http.alias": the application version should be at least %s`, deploy.AliasLeastAppTemplateVersion),
 		},
 		"success": {
@@ -624,6 +638,9 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			},
 			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
 			mockAppVersionGetter:   func(m *mocks.MockversionGetter) {},
+			mockEndpointGetter: func(m *mocks.MockendpointGetter) {
+				m.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			},
 		},
 	}
 
@@ -635,9 +652,11 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 			mockWorkspace := mocks.NewMockwsSvcDirReader(ctrl)
 			mockAppResourcesGetter := mocks.NewMockappResourcesGetter(ctrl)
 			mockAppVersionGetter := mocks.NewMockversionGetter(ctrl)
+			mockEndpointGetter := mocks.NewMockendpointGetter(ctrl)
 			tc.mockWorkspace(mockWorkspace)
 			tc.mockAppResourcesGetter(mockAppResourcesGetter)
 			tc.mockAppVersionGetter(mockAppVersionGetter)
+			tc.mockEndpointGetter(mockEndpointGetter)
 
 			opts := deploySvcOpts{
 				deployWkldVars: deployWkldVars{
@@ -649,6 +668,7 @@ func TestSvcDeployOpts_stackConfiguration(t *testing.T) {
 				buildRequired:     tc.inBuildRequire,
 				appCFN:            mockAppResourcesGetter,
 				appVersionGetter:  mockAppVersionGetter,
+				endpointGetter:    mockEndpointGetter,
 				targetApp:         tc.inApp,
 				targetEnvironment: tc.inEnvironment,
 				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {

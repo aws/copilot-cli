@@ -38,16 +38,21 @@ const (
 	EnvParamAliasesKey               = "Aliases"
 
 	// Output keys.
-	EnvOutputVPCID               = "VpcId"
-	EnvOutputPublicSubnets       = "PublicSubnets"
-	EnvOutputPrivateSubnets      = "PrivateSubnets"
-	envOutputCFNExecutionRoleARN = "CFNExecutionRoleARN"
-	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
+	EnvOutputVPCID                   = "VpcId"
+	EnvOutputPublicSubnets           = "PublicSubnets"
+	EnvOutputPrivateSubnets          = "PrivateSubnets"
+	envOutputCFNExecutionRoleARN     = "CFNExecutionRoleARN"
+	envOutputManagerRoleKey          = "EnvironmentManagerRoleARN"
+	EnvParamServiceDiscoveryEndpoint = "ServiceDiscoveryEndpoint"
 
 	// Default parameter values
 	DefaultVPCCIDR            = "10.0.0.0/16"
 	DefaultPublicSubnetCIDRs  = "10.0.0.0/24,10.0.1.0/24"
 	DefaultPrivateSubnetCIDRs = "10.0.2.0/24,10.0.3.0/24"
+)
+
+var (
+	fmtServiceDiscoveryEndpoint = "%s.%s.local"
 )
 
 // NewEnvStackConfig sets up a struct which can provide values to CloudFormation for
@@ -127,6 +132,10 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
 			ParameterValue: aws.String(e.dnsDelegationRole()),
+		},
+		{
+			ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
+			ParameterValue: aws.String(fmt.Sprintf(fmtServiceDiscoveryEndpoint, e.in.Name, e.in.AppName)),
 		},
 	}, nil
 }
