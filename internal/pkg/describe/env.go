@@ -155,7 +155,7 @@ func (d *EnvDescriber) Version() (string, error) {
 func (d *EnvDescriber) ServiceDiscoveryEndpoint() (string, error) {
 	p, err := d.Params()
 	if err != nil {
-		return "", fmt.Errorf("get template version of environment %s in app %s: %w", d.env.Name, d.env.App, err)
+		return "", fmt.Errorf("get params of environment %s in app %s: %w", d.env.Name, d.env.App, err)
 	}
 	for k, v := range p {
 		// Ignore non-svc discovery params

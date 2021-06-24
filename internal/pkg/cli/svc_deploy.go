@@ -423,6 +423,7 @@ func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 			ImageTag: o.imageTag,
 			Digest:   o.imageDigest,
 		},
+		ServiceDiscoveryEndpoint: endpoint,
 	}, nil
 }
 
