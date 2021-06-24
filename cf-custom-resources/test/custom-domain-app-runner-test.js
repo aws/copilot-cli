@@ -4,68 +4,37 @@
 
 /* jshint node: true */
 /*jshint esversion: 8 */
+
+
 const AWS = require("aws-sdk-mock");
 const LambdaTester = require("lambda-tester").noVersionCheck();
 const handler = require("../lib/custom-domain-app-runner").handler;
 const sinon = require("sinon");
-
-
-
+const nock = require("nock");
 
 describe("Custom Domain for App Runner Service", () => {
     const [mockServiceARN, mockCustomDomain, mockHostedZoneID] = ["mockService", "mockDomain", "mockHostedZoneID",];
-
-    let mockTarget = "mockTarget";
-    let mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
-    let mockWaitFor = sinon.fake.resolves();
-    let mockDescribeCustomDomains = sinon.fake.resolves({
-        CustomDomains: [
-            {
-                DomainName: "other-domain",
-                CertificateValidationRecords: [
-                    {
-                        Name: "this shouldn't appear",
-                        Value: "this shouldn't appear",
-                    },
-                ],
-            },
-            {
-                DomainName: mockCustomDomain,
-                CertificateValidationRecords: [
-                    {
-                        Name: "mock-record-name-1",
-                        Value: "mock-record-value-1",
-                    },
-                    {
-                        Name: "mock-record-name-2",
-                        Value: "mock-record-value-2",
-                    },
-                ],
-            },
-        ],
-    });
-    let mockChangeResourceRecordSets = sinon.stub();
-
-    function setUpMocks() {
-        AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-        AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
-        AWS.mock("Route53", "waitFor", mockWaitFor);
-        AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
-    }
-
-    beforeEach(() => {
-    });
+    const mockResponseURL = "https://mock.com/";
 
     afterEach(() => {
-        // Restore waiters and logger
         AWS.restore();
     });
 
     test("fail to associate custom domain", () => {
         const mockAssociateCustomDomain = sinon.fake.rejects(new Error("some error"));
         AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
+
+        const expectedResponse = nock(mockResponseURL)
+            .put("/", (body) => {
+                return (
+                    body.Status === "FAILED" &&
+                    body.Reason === "some error"
+                );
+            })
+            .reply(200);
         return LambdaTester( handler )
             .event({
+                ResponseURL: mockResponseURL,
                 ResourceProperties: {
                     ServiceARN: mockServiceARN,
                     AppDNSRole: "",
@@ -73,8 +42,8 @@ describe("Custom Domain for App Runner Service", () => {
                     HostedZoneID: mockHostedZoneID,
                 },
             })
-            .expectReject( err => {
-                expect(err.message).toBe("add custom domain mockDomain: some error");
+            .expectResolve( () => {
+                expect(expectedResponse.isDone()).toBe(true);
                 sinon.assert.calledWith(mockAssociateCustomDomain, sinon.match({
                     DomainName: mockCustomDomain,
                     ServiceArn: mockServiceARN,
@@ -89,8 +58,17 @@ describe("Custom Domain for App Runner Service", () => {
         AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
         AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
 
+        const expectedResponse = nock(mockResponseURL)
+            .put("/", (body) => {
+                return (
+                    body.Status === "FAILED" &&
+                    body.Reason === "upsert record mockDomain: some error"
+                );
+            })
+            .reply(200);
         return LambdaTester( handler )
             .event({
+                ResponseURL: mockResponseURL,
                 ResourceProperties: {
                     ServiceARN: mockServiceARN,
                     AppDNSRole: "",
@@ -98,8 +76,8 @@ describe("Custom Domain for App Runner Service", () => {
                     HostedZoneID: mockHostedZoneID,
                 },
             })
-            .expectReject( err => {
-                expect(err.message).toBe("add custom domain mockDomain: upsert record mockDomain: some error");
+            .expectResolve( () => {
+                expect(expectedResponse.isDone()).toBe(true);
                 sinon.assert.calledOnce(mockAssociateCustomDomain);
                 sinon.assert.calledWith(mockChangeResourceRecordSets, sinon.match({
                     ChangeBatch: {
@@ -133,8 +111,17 @@ describe("Custom Domain for App Runner Service", () => {
         AWS.mock("Route53", "changeResourceRecordSets", mockChangeResourceRecordSets);
         AWS.mock("Route53", "waitFor", mockWaitFor);
 
+        const expectedResponse = nock(mockResponseURL)
+            .put("/", (body) => {
+                return (
+                    body.Status === "FAILED" &&
+                    body.Reason === "wait for record sets change for mockDomain: some error"
+                );
+            })
+            .reply(200);
         return LambdaTester( handler )
             .event({
+                ResponseURL: mockResponseURL,
                 ResourceProperties: {
                     ServiceARN: mockServiceARN,
                     AppDNSRole: "",
@@ -142,8 +129,8 @@ describe("Custom Domain for App Runner Service", () => {
                     HostedZoneID: mockHostedZoneID,
                 },
             })
-            .expectReject( err => {
-                expect(err.message).toBe("add custom domain mockDomain: wait for record sets change for mockDomain: some error");
+            .expectResolve( err => {
+                expect(expectedResponse.isDone()).toBe(true);
                 sinon.assert.calledOnce(mockAssociateCustomDomain);
                 sinon.assert.calledWith(mockChangeResourceRecordSets, sinon.match({
                     ChangeBatch: {
@@ -179,8 +166,17 @@ describe("Custom Domain for App Runner Service", () => {
         AWS.mock("Route53", "waitFor", mockWaitFor);
         AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
 
+        const expectedResponse = nock(mockResponseURL)
+            .put("/", (body) => {
+                return (
+                    body.Status === "FAILED" &&
+                    body.Reason === "get custom domains for service mockService: some error"
+                );
+            })
+            .reply(200);
         return LambdaTester( handler )
             .event({
+                ResponseURL: mockResponseURL,
                 ResourceProperties: {
                     ServiceARN: mockServiceARN,
                     AppDNSRole: "",
@@ -188,8 +184,8 @@ describe("Custom Domain for App Runner Service", () => {
                     HostedZoneID: mockHostedZoneID,
                 },
             })
-            .expectReject( err => {
-                expect(err.message).toBe("add custom domain mockDomain: get custom domains for service mockService: some error");
+            .expectResolve( err => {
+                expect(expectedResponse.isDone()).toBe(true);
                 sinon.assert.calledWith(mockDescribeCustomDomains, sinon.match({ ServiceArn: mockServiceARN, }));
             });
     });
@@ -234,8 +230,17 @@ describe("Custom Domain for App Runner Service", () => {
         AWS.mock("Route53", "waitFor", mockWaitFor);
         AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
 
+        const expectedResponse = nock(mockResponseURL)
+            .put("/", (body) => {
+                return (
+                    body.Status === "FAILED" &&
+                    body.Reason === "upsert certificate validation record: upsert record mock-record-name-2: some error"
+                );
+            })
+            .reply(200);
         return LambdaTester( handler )
             .event({
+                ResponseURL: mockResponseURL,
                 ResourceProperties: {
                     ServiceARN: mockServiceARN,
                     AppDNSRole: "",
@@ -243,8 +248,8 @@ describe("Custom Domain for App Runner Service", () => {
                     HostedZoneID: mockHostedZoneID,
                 },
             })
-            .expectReject( err => {
-                expect(err.message).toBe("add custom domain mockDomain: upsert record mock-record-name-2: some error");
+            .expectResolve( () => {
+                expect(expectedResponse.isDone()).toBe(true);
                 sinon.assert.calledWith(mockChangeResourceRecordSets, sinon.match({
                     ChangeBatch: {
                         Changes: [
@@ -326,8 +331,14 @@ describe("Custom Domain for App Runner Service", () => {
         AWS.mock("Route53", "waitFor", mockWaitFor);
         AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
 
+        const expectedResponse = nock(mockResponseURL)
+            .put("/", (body) => {
+                return body.Status === "SUCCESS";
+            })
+            .reply(200);
         return LambdaTester( handler )
             .event({
+                ResponseURL: mockResponseURL,
                 ResourceProperties: {
                     ServiceARN: mockServiceARN,
                     AppDNSRole: "",
@@ -335,6 +346,8 @@ describe("Custom Domain for App Runner Service", () => {
                     HostedZoneID: mockHostedZoneID,
                 },
             })
-            .expectResolve();
+            .expectResolve(() => {
+                expect(expectedResponse.isDone()).toBe(true);
+            });
     });
 });
