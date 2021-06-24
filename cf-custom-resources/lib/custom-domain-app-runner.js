@@ -12,8 +12,6 @@ let appRoute53Client, appRunnerClient, appHostedZoneID;
 const { sendResponse } = require('../lib/partials');
 
 exports.handler = async function (event, context) {
-    console.log(event.ResourceProperties);
-
     const props = event.ResourceProperties;
     const [serviceARN, appDNSRole, customDomain] = [props.ServiceARN, props.AppDNSRole, props.CustomDomain,];
     appHostedZoneID = props.HostedZoneID;
@@ -27,10 +25,10 @@ exports.handler = async function (event, context) {
     });
     appRunnerClient = new AWS.AppRunner();
 
-    await addCustomDomain(serviceARN, customDomain).then(() => {
-        sendResponse(event, context, "SUCCESS", event.LogicalResourceId);
-    }).catch(err => {
-        sendResponse(event, context, "FAILED", event.LogicalResourceId, null, err.message).catch((err) => {
+    await addCustomDomain(serviceARN, customDomain).then(async () => {
+        await sendResponse(event, context, "SUCCESS", event.LogicalResourceId);
+    }).catch(async err => {
+        await sendResponse(event, context, "FAILED", event.LogicalResourceId, null, err.message).catch((err) => {
             throw new Error("send response: " + err.message);
         });
     });
@@ -89,7 +87,6 @@ async function validateCertForDomain(serviceARN, domainName) {
  * @throws wrapped error.
  */
 async function upsertCNAMERecordAndWait(recordName, recordValue, hostedZoneID) {
-    console.log(recordName);
     let params = {
         ChangeBatch: {
             Changes: [
