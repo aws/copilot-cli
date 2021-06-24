@@ -438,11 +438,16 @@ func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 					color.HighlightCode("copilot app upgrade"))
 				if errors.Is(err, errBadAliasPattern) {
 					msg = fmt.Sprintf(`%s must match one of the following patterns:
+- %s.%s.%s,
 - <name>.%s.%s.%s,
+- %s.%s,
 - <name>.%s.%s,
+- %s,
 - <name>.%s
 `,
-						color.HighlightCode("http.alias"), o.envName, o.targetApp.Name, o.targetApp.Domain, o.targetApp.Name, o.targetApp.Domain, o.targetApp.Domain)
+						color.HighlightCode("http.alias"), o.envName, o.targetApp.Name, o.targetApp.Domain, o.envName,
+						o.targetApp.Name, o.targetApp.Domain, o.targetApp.Name, o.targetApp.Domain, o.targetApp.Name,
+						o.targetApp.Domain, o.targetApp.Domain, o.targetApp.Domain)
 				}
 				log.Error(msg)
 				return nil, err

@@ -117,11 +117,16 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 						color.HighlightCode("copilot app upgrade"))
 					if errors.Is(err, errBadAliasPattern) {
 						msg = fmt.Sprintf(`%s must match one of the following patterns:
+- %s.%s.%s,
 - <name>.%s.%s.%s,
+- %s.%s,
 - <name>.%s.%s,
+- %s,
 - <name>.%s
 `,
-							color.HighlightCode("http.alias"), env.Name, app.Name, app.Domain, app.Name, app.Domain, app.Domain)
+							color.HighlightCode("http.alias"), env.Name, app.Name, app.Domain, env.Name,
+							app.Name, app.Domain, app.Name, app.Domain, app.Name,
+							app.Domain, app.Domain, app.Domain)
 					}
 					log.Error(msg)
 					return nil, err
