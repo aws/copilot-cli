@@ -22,7 +22,7 @@ TaskRole:
             - Effect: 'Allow'
               Action: 'sts:AssumeRole'
               Resource:
-                - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
+                - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/*'
               Condition:
                 StringEquals:
                   'iam:ResourceTag/copilot-application': !Sub '${AppName}'
@@ -64,10 +64,10 @@ TaskRole:
               {{- if $EFS.AccessPointID}}
               Condition:
                 StringEquals:
-                  'elasticfilesystem:AccessPointArn': !Sub 'arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:access-point/{{$EFS.AccessPointID}}'
+                  'elasticfilesystem:AccessPointArn': !Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:access-point/{{$EFS.AccessPointID}}'
               {{- end}}
               Resource:
-                - !Sub 'arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/{{$EFS.FilesystemID}}'
+                - !Sub 'arn:${AWS::Partition}:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/{{$EFS.FilesystemID}}'
       {{- end}}
       {{- if .Storage.ManagedVolumeInfo}}
       - PolicyName: 'GrantAccessCopilotManagedEFS'
@@ -83,8 +83,9 @@ TaskRole:
                   'elasticfilesystem:AccessPointArn': !GetAtt AccessPoint.Arn
               Resource: 
                 - Fn::Sub:
-                  - 'arn:aws:elasticfilesystem:${region}:${account}:file-system/${fsid}'
-                  - region: !Ref AWS::Region
+                  - 'arn:${partition}:elasticfilesystem:${region}:${account}:file-system/${fsid}'
+                  - partition: !Ref AWS::Partition
+                    region: !Ref AWS::Region
                     account: !Ref AWS::AccountId
                     fsid: !GetAtt EnvControllerAction.ManagedFileSystemID
       {{- end}}

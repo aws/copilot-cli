@@ -252,7 +252,7 @@ Resources:
               Resource: "*"
 {{- end}}
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
   HTTPSRulePriorityAction:
     Condition: HTTPSLoadBalancer

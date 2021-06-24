@@ -129,6 +129,69 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 		_, isOpen := <-streamer.Done()
 		require.False(t, isOpen, "there should be no more work to do since the deployment is completed")
 	})
+	t.Run("stores events until deployment is done without circuit breaker", func(t *testing.T) {
+		// GIVEN
+		oldStartDate := time.Date(2020, time.November, 23, 17, 0, 0, 0, time.UTC)
+		startDate := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
+		m := mockECS{
+			out: &ecs.Service{
+				Deployments: []*awsecs.Deployment{
+					{
+						DesiredCount:   aws.Int64(10),
+						FailedTasks:    aws.Int64(0),
+						PendingCount:   aws.Int64(0),
+						RunningCount:   aws.Int64(10),
+						Status:         aws.String("PRIMARY"),
+						TaskDefinition: aws.String("arn:aws:ecs:us-west-2:1111:task-definition/myapp-test-mysvc:2"),
+						UpdatedAt:      aws.Time(startDate),
+					},
+					{
+						DesiredCount:   aws.Int64(10),
+						FailedTasks:    aws.Int64(10),
+						PendingCount:   aws.Int64(0),
+						RunningCount:   aws.Int64(0),
+						Status:         aws.String("ACTIVE"),
+						TaskDefinition: aws.String("arn:aws:ecs:us-west-2:1111:task-definition/myapp-test-mysvc:1"),
+						UpdatedAt:      aws.Time(oldStartDate),
+					},
+				},
+			},
+		}
+		streamer := NewECSDeploymentStreamer(m, "my-cluster", "my-svc", startDate)
+
+		// WHEN
+		_, err := streamer.Fetch()
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, []ECSService{
+			{
+				Deployments: []ECSDeployment{
+					{
+						Status:          "PRIMARY",
+						TaskDefRevision: "2",
+						DesiredCount:    10,
+						RunningCount:    10,
+						FailedCount:     0,
+						PendingCount:    0,
+						UpdatedAt:       startDate,
+					},
+					{
+						Status:          "ACTIVE",
+						TaskDefRevision: "1",
+						DesiredCount:    10,
+						RunningCount:    0,
+						FailedCount:     10,
+						PendingCount:    0,
+						UpdatedAt:       oldStartDate,
+					},
+				},
+				LatestFailureEvents: nil,
+			},
+		}, streamer.eventsToFlush)
+		_, isOpen := <-streamer.Done()
+		require.False(t, isOpen, "there should be no more work to do since the deployment is completed")
+	})
 	t.Run("stores only failure event messages", func(t *testing.T) {
 		// GIVEN
 		startDate := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)

@@ -73,7 +73,7 @@ Resources:
               - Effect: 'Allow'
                 Action: 'sts:AssumeRole'
                 Resource:
-                  - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/*'
                 Condition:
                   StringEquals:
                     'iam:ResourceTag/copilot-application': !Sub '${AppName}'

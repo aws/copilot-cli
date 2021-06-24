@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -60,6 +61,9 @@ const (
 	appDomainHostedZoneIDKey      = "AppDomainHostedZoneID"
 	appNameKey                    = "AppName"
 	appDNSDelegationRoleName      = "DNSDelegationRole"
+
+	// arn:${partition}:iam::${account}:role/${roleName}
+	fmtStackSetAdminRoleARN = "arn:%s:iam::%s:role/%s"
 )
 
 var cfTemplateFunctions = map[string]interface{}{
@@ -192,9 +196,12 @@ func (c *AppStackConfig) stackSetAdminRoleName() string {
 
 // StackSetAdminRoleARN returns the role ARN of the role used to administer the Application
 // StackSet.
-func (c *AppStackConfig) StackSetAdminRoleARN() string {
-	//TODO find a partition-neutral way to construct this ARN
-	return fmt.Sprintf("arn:aws:iam::%s:role/%s", c.AccountID, c.stackSetAdminRoleName())
+func (c *AppStackConfig) StackSetAdminRoleARN(region string) (string, error) {
+	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
+	if !ok {
+		return "", fmt.Errorf("find the partition for region %s", region)
+	}
+	return fmt.Sprintf(fmtStackSetAdminRoleARN, partition.ID(), c.AccountID, c.stackSetAdminRoleName()), nil
 }
 
 // StackSetExecutionRoleName returns the role name of the role used to actually create
