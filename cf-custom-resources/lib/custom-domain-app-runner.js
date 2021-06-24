@@ -9,7 +9,9 @@
 const AWS = require('aws-sdk');
 let appRoute53Client, appRunnerClient, appHostedZoneID;
 
-exports.handler = async function (event, _) {
+const { sendResponse } = require('../lib/partials');
+
+exports.handler = async function (event, context) {
     console.log(event.ResourceProperties);
 
     const props = event.ResourceProperties;
@@ -25,11 +27,22 @@ exports.handler = async function (event, _) {
     });
     appRunnerClient = new AWS.AppRunner();
 
-    await addCustomDomain(serviceARN, customDomain).catch(err => {
-        throw new Error(`add custom domain ${customDomain}: ` + err.message);
+    await addCustomDomain(serviceARN, customDomain).then(() => {
+        sendResponse(event, context, "SUCCESS", event.LogicalResourceId);
+    }).catch(err => {
+        sendResponse(event, context, "FAILED", event.LogicalResourceId, null, err.message).catch((err) => {
+            throw new Error("send response: " + err.message);
+        });
     });
 };
 
+/**
+ * Validate certificates of the custom domain for the service by upserting validation records.
+ * Errors are not handled and are directly passed to the caller.
+ *
+ * @param {string} serviceARN ARN of the service that the custom domain applies to.
+ * @param {string} customDomainName the custom domain name.
+ */
 async function addCustomDomain(serviceARN, customDomainName) {
     const data = await appRunnerClient.associateCustomDomain({
         DomainName: customDomainName,
@@ -44,6 +57,7 @@ async function addCustomDomain(serviceARN, customDomainName) {
  *
  * @param {string} serviceARN ARN of the service that the custom domain applies to.
  * @param {string} domainName the custom domain name.
+ * @throws wrapped error.
  */
 async function validateCertForDomain(serviceARN, domainName) {
     const data = await appRunnerClient.describeCustomDomains({
@@ -59,7 +73,9 @@ async function validateCertForDomain(serviceARN, domainName) {
         }
         const records = customDomains[i].CertificateValidationRecords;
         for (const i in records) {
-            await upsertCNAMERecordAndWait(records[i].Name, records[i].Value, appHostedZoneID);
+            await upsertCNAMERecordAndWait(records[i].Name, records[i].Value, appHostedZoneID).catch(err => {
+                throw new Error("upsert certificate validation record: " + err.message);
+            });
         }
     }
 }
