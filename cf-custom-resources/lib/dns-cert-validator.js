@@ -239,7 +239,7 @@ const updateHostedZoneRecords = async function (
 // We don't want to delete a validation record if it's used by another certificate because
 // the validation records are used to renew the certificate.
 const deleteHostedZoneRecords = async function (
-  options,
+  oldCertOptions,
   certArn,
   defaultDomain,
   envRoute53,
@@ -263,6 +263,8 @@ const deleteHostedZoneRecords = async function (
         // Skip if it is not the new certificate.
         continue;
       }
+      // There exists another certificate created by Copilot which has the updated alias fields as SANs.
+      // We don't want to delete any validation records associated with the new certificate.
       const { Certificate } = await acm
         .describeCertificate({
           CertificateArn: certSummary.CertificateArn,
@@ -276,13 +278,12 @@ const deleteHostedZoneRecords = async function (
     }
     listCertificatesInput.NextToken = listCertResp.NextToken;
   }
-  const newCertOptionSet = new Set(
-    newCertOptions.map((item) => item.DomainName)
-  );
+  const newCertSANs = new Set(newCertOptions.map((item) => item.DomainName));
   const recordOptionToDelete = [];
-  for (const option of options) {
-    if (!newCertOptionSet.has(option.DomainName)) {
-      recordOptionToDelete.push(option);
+  for (const oldCertOption of oldCertOptions) {
+    if (!newCertSANs.has(oldCertOption.DomainName)) {
+      // This alias field is no longer in use, we can safely delete its validation.
+      recordOptionToDelete.push(oldCertOption);
     }
   }
   // Make sure DNS validation records are unique. For example: "example.com" and "*.example.com"
