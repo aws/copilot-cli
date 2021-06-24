@@ -17,7 +17,10 @@ type ErrAddonsNotFound struct {
 }
 
 func (e *ErrAddonsNotFound) Error() string {
-	return fmt.Sprintf("read addons directory for %s: %v", e.WlName, e.ParentErr)
+	if e.ParentErr != nil {
+		return fmt.Sprintf("read addons directory for %s: %v", e.WlName, e.ParentErr)
+	}
+	return fmt.Sprintf("read addons directory for %s: no addons found", e.WlName)
 }
 
 type errKeyAlreadyExists struct {

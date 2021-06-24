@@ -71,21 +71,6 @@ func TestAddons_Template(t *testing.T) {
 				ParentErr: nil,
 			},
 		},
-		"return ErrAddonsNotFound if addons directory is empty in a job": {
-			mockAddons: func(ctrl *gomock.Controller) *Addons {
-				ws := mocks.NewMockworkspaceReader(ctrl)
-				ws.EXPECT().ReadAddonsDir(testJobName).
-					Return([]string{}, nil)
-				return &Addons{
-					wlName: testJobName,
-					ws:     ws,
-				}
-			},
-			wantedErr: &ErrAddonsNotFound{
-				WlName:    testJobName,
-				ParentErr: nil,
-			},
-		},
 		"return ErrAddonsNotFound if addons directory does not contain yaml files in a service": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
 				ws := mocks.NewMockworkspaceReader(ctrl)
@@ -98,21 +83,6 @@ func TestAddons_Template(t *testing.T) {
 			},
 			wantedErr: &ErrAddonsNotFound{
 				WlName:    testSvcName,
-				ParentErr: nil,
-			},
-		},
-		"return ErrAddonsNotFound if addons directory does not contain yaml files in a job": {
-			mockAddons: func(ctrl *gomock.Controller) *Addons {
-				ws := mocks.NewMockworkspaceReader(ctrl)
-				ws.EXPECT().ReadAddonsDir(testJobName).
-					Return([]string{".gitkeep"}, nil)
-				return &Addons{
-					wlName: testJobName,
-					ws:     ws,
-				}
-			},
-			wantedErr: &ErrAddonsNotFound{
-				WlName:    testJobName,
 				ParentErr: nil,
 			},
 		},
