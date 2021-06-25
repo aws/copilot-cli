@@ -31,8 +31,7 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 				HealthCheck: &ContainerHealthCheck{
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 				},
-				Port:      80,
-				AppDomain: aws.String("example.com"),
+				Port: 80,
 			},
 
 			wanted: &LoadBalancedWebService{
@@ -56,7 +55,6 @@ func TestNewLoadBalancedWebService(t *testing.T) {
 							Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 						},
 					},
-					AppDomain: aws.String("example.com"),
 					RoutingRule: RoutingRule{
 						Path: stringP("/"),
 						HealthCheck: HealthCheckArgsOrString{

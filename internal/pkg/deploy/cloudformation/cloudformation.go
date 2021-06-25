@@ -110,6 +110,7 @@ type CloudFormation struct {
 	appStackSet    stackSetClient
 	box            packd.Box
 	s3Client       s3Client
+	region         string
 }
 
 // New returns a configured CloudFormation client.
@@ -127,6 +128,7 @@ func New(sess *session.Session) CloudFormation {
 		appStackSet: stackset.New(sess),
 		box:         templates.Box(),
 		s3Client:    s3.New(sess),
+		region:      aws.StringValue(sess.Config.Region),
 	}
 	return client
 }

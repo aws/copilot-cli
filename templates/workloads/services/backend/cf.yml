@@ -95,7 +95,7 @@ Resources:
                 - "tag:GetResources"
               Resource: "*"
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 {{- end }}
   Service:
     DependsOn:

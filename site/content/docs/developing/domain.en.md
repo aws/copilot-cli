@@ -9,8 +9,19 @@ ${SvcName}.${EnvName}.${AppName}.${DomainName}
 For example:
 
 ```
-https:kudo.test.coolapp.example.aws
+https://kudo.test.coolapp.example.aws
 ```
+
+Currently, you can only use aliases under the domain you specified when creating the application. Since we [delegate responsibility for the subdomain to Route 53](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/CreatingNewSubdomain.html#UpdateDNSParentDomain), the alias you specify must be in either one of these three hosted zone:
+
+- root: `${DomainName}`
+- app: `${AppName}.${DomainName}`
+- env: `${EnvName}.${AppName}.${DomainName}`
+
+We'll make this feature more powerful in the future by allowing you to import certificates and use any aliases!
+
+!!!info
+    Both root and app hosted zone are in your app account, while the env hosted zones are in your env accounts.
 
 ## How do I configure an alias for my service?
 If you don't like the default domain name Copilot assigns to your service, setting an [alias](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html) for your service is also very easy. You can add it directly to your [manifest's](../manifest/overview.en.md) `alias` section. The following snippet will set an alias to your service.
@@ -23,8 +34,7 @@ http:
 ```
 
 !!!info
-    1. Using this feature requires your app version to be at least `v1.0.0`. You will be prompted to run [`app upgrade`](../commands/app-upgrade.en.md) first if your app version does not meet the requirement.
-    2. Currently, you can only use aliases under the domain you specified when creating the application. We'll make this feature more powerful in the future by allowing you to import certificates and use any aliases!
+    Using this feature requires your app version to be at least `v1.0.0`. You will be prompted to run [`app upgrade`](../commands/app-upgrade.en.md) first if your app version does not meet the requirement.
 
 ## What happens under the hood?
 Under the hood, Copilot

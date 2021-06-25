@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -99,34 +101,40 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		addonsWriter:     ioutil.Discard,
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 	}
-
+	appVersionGetter, err := describe.NewAppDescriber(vars.appName)
+	if err != nil {
+		return nil, fmt.Errorf("new app describer for application %s: %w", vars.name, err)
+	}
 	opts.stackSerializer = func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
 		var serializer stackSerializer
-		switch v := mft.(type) {
+		switch t := mft.(type) {
 		case *manifest.LoadBalancedWebService:
 			if app.RequiresDNSDelegation() {
-				serializer, err = stack.NewHTTPSLoadBalancedWebService(v, env.Name, app.Name, rc)
+				if err := validateAlias(aws.StringValue(t.Name), aws.StringValue(t.Alias), app, env.Name, appVersionGetter); err != nil {
+					return nil, err
+				}
+				serializer, err = stack.NewHTTPSLoadBalancedWebService(t, env.Name, app.Name, rc)
 				if err != nil {
 					return nil, fmt.Errorf("init https load balanced web service stack serializer: %w", err)
 				}
 			} else {
-				serializer, err = stack.NewLoadBalancedWebService(v, env.Name, app.Name, rc)
+				serializer, err = stack.NewLoadBalancedWebService(t, env.Name, app.Name, rc)
 				if err != nil {
 					return nil, fmt.Errorf("init load balanced web service stack serializer: %w", err)
 				}
 			}
 		case *manifest.RequestDrivenWebService:
-			serializer, err = stack.NewRequestDrivenWebService(v, env.Name, app.Name, rc)
+			serializer, err = stack.NewRequestDrivenWebService(t, env.Name, app.Name, rc)
 			if err != nil {
 				return nil, fmt.Errorf("init request-driven web service stack serializer: %w", err)
 			}
 		case *manifest.BackendService:
-			serializer, err = stack.NewBackendService(v, env.Name, app.Name, rc)
+			serializer, err = stack.NewBackendService(t, env.Name, app.Name, rc)
 			if err != nil {
 				return nil, fmt.Errorf("init backend service stack serializer: %w", err)
 			}
 		default:
-			return nil, fmt.Errorf("create stack serializer for manifest of type %T", v)
+			return nil, fmt.Errorf("create stack serializer for manifest of type %T", t)
 		}
 		return serializer, nil
 	}
@@ -192,9 +200,9 @@ func (o *packageSvcOpts) Execute() error {
 	}
 
 	addonsTemplate, err := o.getAddonsTemplate()
-	// return nil if addons dir doesn't exist.
-	var notExistErr *addon.ErrAddonsDirNotExist
-	if errors.As(err, &notExistErr) {
+	// return nil if addons not found.
+	var notFoundErr *addon.ErrAddonsNotFound
+	if errors.As(err, &notFoundErr) {
 		return nil
 	}
 	if err != nil {

@@ -30,7 +30,7 @@ func TestAuth(t *testing.T) {
 
 		wantedUsername string
 		wantedPassword string
-		wantErr  error
+		wantErr        error
 	}{
 		"should return wrapped error given error returned from GetAuthorizationToken": {
 			mockECRClient: func(m *mocks.Mockapi) {
@@ -42,7 +42,7 @@ func TestAuth(t *testing.T) {
 			mockECRClient: func(m *mocks.Mockapi) {
 				m.EXPECT().GetAuthorizationToken(gomock.Any()).Return(&ecr.GetAuthorizationTokenOutput{
 					AuthorizationData: []*ecr.AuthorizationData{
-						&ecr.AuthorizationData{
+						{
 							AuthorizationToken: aws.String(encoded),
 						},
 					},
@@ -110,7 +110,7 @@ func TestRepositoryURI(t *testing.T) {
 					RepositoryNames: aws.StringSlice([]string{mockRepoName}),
 				}).Return(&ecr.DescribeRepositoriesOutput{
 					Repositories: []*ecr.Repository{
-						&ecr.Repository{
+						{
 							RepositoryUri: aws.String(mockRepoURI),
 						},
 					},
@@ -151,6 +151,10 @@ func TestURIFromARN(t *testing.T) {
 		"valid arn": {
 			givenARN:  "arn:aws:ecr:us-west-2:0123456789:repository/myrepo",
 			wantedURI: "0123456789.dkr.ecr.us-west-2.amazonaws.com/myrepo",
+		},
+		"valid arn in china partition": {
+			givenARN:  "arn:aws-cn:ecr:cn-north-1:0123456789:repository/myrepo",
+			wantedURI: "0123456789.dkr.ecr.cn-north-1.amazonaws.com.cn/myrepo",
 		},
 		"valid arn with namespace": {
 			givenARN:  "arn:aws:ecr:us-west-2:0123456789:repository/myproject/myapp",
@@ -202,13 +206,13 @@ func TestListImages(t *testing.T) {
 			mockECRClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeImages(gomock.Any()).Return(&ecr.DescribeImagesOutput{
 					ImageDetails: []*ecr.ImageDetail{
-						&ecr.ImageDetail{
+						{
 							ImageDigest: aws.String(mockDigest),
 						},
 					},
 				}, nil)
 			},
-			wantImages: []Image{Image{Digest: mockDigest}},
+			wantImages: []Image{{Digest: mockDigest}},
 			wantError:  nil,
 		},
 		"should return all images when paginated": {
@@ -217,7 +221,7 @@ func TestListImages(t *testing.T) {
 					RepositoryName: aws.String(mockRepoName),
 				}).Return(&ecr.DescribeImagesOutput{
 					ImageDetails: []*ecr.ImageDetail{
-						&ecr.ImageDetail{
+						{
 							ImageDigest: aws.String(mockDigest),
 						},
 					},
@@ -228,13 +232,13 @@ func TestListImages(t *testing.T) {
 					NextToken:      &mockNextToken,
 				}).Return(&ecr.DescribeImagesOutput{
 					ImageDetails: []*ecr.ImageDetail{
-						&ecr.ImageDetail{
+						{
 							ImageDigest: aws.String(mockDigest),
 						},
 					},
 				}, nil)
 			},
-			wantImages: []Image{Image{Digest: mockDigest}, Image{Digest: mockDigest}},
+			wantImages: []Image{{Digest: mockDigest}, {Digest: mockDigest}},
 			wantError:  nil,
 		},
 	}
@@ -265,7 +269,7 @@ func TestDeleteImages(t *testing.T) {
 	mockError := errors.New("mockError")
 	mockDigest := "mockDigest"
 	mockImages := []Image{
-		Image{
+		{
 			Digest: mockDigest,
 		},
 	}
@@ -336,7 +340,7 @@ func TestDeleteImages(t *testing.T) {
 					ImageIds:       imageIdentifiers,
 				}).Return(&ecr.BatchDeleteImageOutput{
 					Failures: []*ecr.ImageFailure{
-						&ecr.ImageFailure{
+						{
 							FailureCode:   &mockFailCode,
 							FailureReason: &mockFailReason,
 							ImageId:       imageIdentifiers[0],
@@ -389,7 +393,7 @@ func TestClearRepository(t *testing.T) {
 					RepositoryName: aws.String(mockRepoName),
 				}).Return(&ecr.DescribeImagesOutput{
 					ImageDetails: []*ecr.ImageDetail{
-						&ecr.ImageDetail{
+						{
 							ImageDigest: aws.String(mockDigest),
 						},
 					},
