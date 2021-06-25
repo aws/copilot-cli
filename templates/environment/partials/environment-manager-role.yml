@@ -148,7 +148,7 @@ EnvironmentManagerRole:
             "ssm:AddTagsToResource"
           ]
           Resource:
-            - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/copilot/${AppName}/${EnvironmentName}/secrets/*'
+            - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/copilot/${AppName}/${EnvironmentName}/secrets/*'
         - Sid: ELBv2
           Effect: Allow
           Action: [
@@ -246,11 +246,11 @@ EnvironmentManagerRole:
           ]
           Resource:
             - !GetAtt CloudformationExecutionRole.Arn
-            - !Sub "arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-EnvManagerRole"
+            - !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${AWS::StackName}-EnvManagerRole"
         - Sid: DeleteEnvStack
           Effect: Allow
           Action:
             - 'cloudformation:DescribeStacks'
             - 'cloudformation:DeleteStack'
           Resource:
-            - !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'
+            - !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'

@@ -26,7 +26,7 @@ func TestAddons_Template(t *testing.T) {
 		wantedTemplate string
 		wantedErr      error
 	}{
-		"return ErrAddonsDirNotExist if addons doesn't exist in a service": {
+		"return ErrAddonsNotFound if addons doesn't exist in a service": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
 				ws := mocks.NewMockworkspaceReader(ctrl)
 				ws.EXPECT().ReadAddonsDir(testSvcName).
@@ -36,12 +36,12 @@ func TestAddons_Template(t *testing.T) {
 					ws:     ws,
 				}
 			},
-			wantedErr: &ErrAddonsDirNotExist{
+			wantedErr: &ErrAddonsNotFound{
 				WlName:    testSvcName,
 				ParentErr: testErr,
 			},
 		},
-		"return ErrAddonsDirNotExist if addons doesn't exist in a job": {
+		"return ErrAddonsNotFound if addons doesn't exist in a job": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
 				ws := mocks.NewMockworkspaceReader(ctrl)
 				ws.EXPECT().ReadAddonsDir(testJobName).
@@ -51,12 +51,42 @@ func TestAddons_Template(t *testing.T) {
 					ws:     ws,
 				}
 			},
-			wantedErr: &ErrAddonsDirNotExist{
+			wantedErr: &ErrAddonsNotFound{
 				WlName:    testJobName,
 				ParentErr: testErr,
 			},
 		},
-		"print correct error message for ErrAddonsDirNotExist": {
+		"return ErrAddonsNotFound if addons directory is empty in a service": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir(testSvcName).
+					Return([]string{}, nil)
+				return &Addons{
+					wlName: testSvcName,
+					ws:     ws,
+				}
+			},
+			wantedErr: &ErrAddonsNotFound{
+				WlName:    testSvcName,
+				ParentErr: nil,
+			},
+		},
+		"return ErrAddonsNotFound if addons directory does not contain yaml files in a service": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir(testSvcName).
+					Return([]string{".gitkeep"}, nil)
+				return &Addons{
+					wlName: testSvcName,
+					ws:     ws,
+				}
+			},
+			wantedErr: &ErrAddonsNotFound{
+				WlName:    testSvcName,
+				ParentErr: nil,
+			},
+		},
+		"print correct error message for ErrAddonsNotFound": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
 				ws := mocks.NewMockworkspaceReader(ctrl)
 				ws.EXPECT().ReadAddonsDir(testJobName).

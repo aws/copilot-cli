@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -20,6 +21,7 @@ import (
 
 const (
 	urlFmtString      = "%s.dkr.ecr.%s.amazonaws.com/%s"
+	urlFmtStringForCN = "%s.dkr.ecr.%s.amazonaws.com.cn/%s"
 	arnResourcePrefix = "repository/"
 	batchDeleteLimit  = 100
 )
@@ -179,10 +181,14 @@ func URIFromARN(repositoryARN string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parsing repository ARN %s: %w", repositoryARN, err)
 	}
+	urlFmtStr := urlFmtString
+	if repoARN.Partition == endpoints.AwsCnPartitionID {
+		urlFmtStr = urlFmtStringForCN
+	}
 	// Repo ARNs look like arn:aws:ecr:region:012345678910:repository/test
 	// so we have to strip the repository out.
 	repoName := strings.TrimPrefix(repoARN.Resource, arnResourcePrefix)
-	return fmt.Sprintf(urlFmtString,
+	return fmt.Sprintf(urlFmtStr,
 		repoARN.AccountID,
 		repoARN.Region,
 		repoName), nil

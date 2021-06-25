@@ -148,7 +148,7 @@ func (e *EnvStackConfig) dnsDelegationRole() string {
 	if err != nil {
 		return ""
 	}
-	return fmt.Sprintf("arn:aws:iam::%s:role/%s", appRole.AccountID, dnsDelegationRoleName(e.in.AppName))
+	return fmt.Sprintf("arn:%s:iam::%s:role/%s", appRole.Partition, appRole.AccountID, dnsDelegationRoleName(e.in.AppName))
 }
 
 // StackName returns the name of the CloudFormation stack (based on the app and env names).

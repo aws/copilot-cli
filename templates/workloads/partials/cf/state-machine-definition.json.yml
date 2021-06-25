@@ -10,7 +10,7 @@
   "States": {
     "Run Fargate Task": {
       "Type": "Task",
-      "Resource": "arn:aws:states:::ecs:runTask.sync",
+      "Resource": "arn:${Partition}:states:::ecs:runTask.sync",
       "Parameters": {
         "LaunchType": "FARGATE",
         "PlatformVersion": "1.4.0",

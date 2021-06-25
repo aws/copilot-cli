@@ -130,7 +130,7 @@ Resources:
                 Action:
                   - 'ssm:GetParameters'
                 Resource:
-                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
                 Condition:
                   StringEquals:
                     'ssm:ResourceTag/copilot-application': !Sub '${AppName}'
@@ -139,7 +139,7 @@ Resources:
                 Action:
                   - 'secretsmanager:GetSecretValue'
                 Resource:
-                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+                  - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
                 Condition:
                   StringEquals:
                     'secretsmanager:ResourceTag/copilot-application': !Sub '${AppName}'
@@ -148,9 +148,9 @@ Resources:
                 Action:
                   - 'kms:Decrypt'
                 Resource:
-                  - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+                  - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
       ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+        - 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
   
   TaskRole:
     Metadata:
@@ -174,7 +174,7 @@ Resources:
               - Effect: 'Allow'
                 Action: 'sts:AssumeRole'
                 Resource:
-                  - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/*'
                 Condition:
                   StringEquals:
                     'iam:ResourceTag/copilot-application': !Sub '${AppName}'
@@ -235,7 +235,7 @@ Resources:
               Service: ecs-tasks.amazonaws.com
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceAutoscaleRole'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonEC2ContainerServiceAutoscaleRole'
   
   AutoScalingTarget:
     Metadata:
@@ -305,7 +305,7 @@ Resources:
               Action:
                 - cloudformation:DescribeStacks
                 - cloudformation:UpdateStack
-              Resource:  !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}-${EnvName}/*'
+              Resource:  !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}-${EnvName}/*'
               Condition:
                 StringEquals:
                   'cloudformation:ResourceTag/copilot-application': !Sub '${AppName}'
@@ -317,13 +317,13 @@ Resources:
             - Effect: Allow
               Action:
                 - iam:PassRole
-              Resource:  !Sub 'arn:aws:iam::${AWS::AccountId}:role/${AppName}-${EnvName}-CFNExecutionRole'
+              Resource:  !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${AppName}-${EnvName}-CFNExecutionRole'
               Condition:
                 StringEquals:
                   'iam:ResourceTag/copilot-application': !Sub '${AppName}'
                   'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
   Service:
     Metadata:
@@ -450,7 +450,7 @@ Resources:
                 - "tag:GetResources"
               Resource: "*"
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
   HTTPSRulePriorityAction:
     Condition: HTTPSLoadBalancer
