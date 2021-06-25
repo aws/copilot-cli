@@ -1,5 +1,5 @@
 # We're creating the manifest ahead of time as we want to test the service with a count > 1.
-name: hello
+name: frontend
 type: Load Balanced Web Service
 image:
   build: 
@@ -9,13 +9,8 @@ image:
 
 http:
   path: '/'
-  alias: test.copilot-e2e-tests.ecs.aws.dev
+  alias: frontend.copilot-e2e-tests.ecs.aws.dev
 
 cpu: 256
 memory: 512
 count: 1
-
-environments:
-  prod:
-    http:
-      alias: prod.copilot-e2e-tests.ecs.aws.dev
