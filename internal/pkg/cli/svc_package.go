@@ -24,8 +24,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -112,23 +110,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		switch t := mft.(type) {
 		case *manifest.LoadBalancedWebService:
 			if app.RequiresDNSDelegation() {
-				if err := validateAlias(aws.StringValue(t.Alias), app, env.Name, appVersionGetter); err != nil {
-					msg := fmt.Sprintf(fmtErrAliasAppVersionIncompatible, aws.StringValue(t.Name),
-						color.HighlightCode("copilot app upgrade"))
-					if errors.Is(err, errBadAliasPattern) {
-						msg = fmt.Sprintf(`%s must match one of the following patterns:
-- %s.%s.%s,
-- <name>.%s.%s.%s,
-- %s.%s,
-- <name>.%s.%s,
-- %s,
-- <name>.%s
-`,
-							color.HighlightCode("http.alias"), env.Name, app.Name, app.Domain, env.Name,
-							app.Name, app.Domain, app.Name, app.Domain, app.Name,
-							app.Domain, app.Domain, app.Domain)
-					}
-					log.Error(msg)
+				if err := validateAlias(aws.StringValue(t.Name), aws.StringValue(t.Alias), app, env.Name, appVersionGetter); err != nil {
 					return nil, err
 				}
 				serializer, err = stack.NewHTTPSLoadBalancedWebService(t, env.Name, app.Name, rc)
