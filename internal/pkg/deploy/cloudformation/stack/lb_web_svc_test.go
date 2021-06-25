@@ -209,7 +209,7 @@ Outputs:
 					Command:    []string{"world"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 
-				addons := mockTemplater{err: &addon.ErrAddonsDirNotExist{}}
+				addons := mockTemplater{err: &addon.ErrAddonsNotFound{}}
 				c.parser = m
 				c.wkld.addons = addons
 			},

@@ -437,7 +437,7 @@ func TestSvcDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 		"should return empty url if the service doesn't have any addons": {
 			inputSvc: "mockSvc",
 			mockAddons: func(m *mocks.Mocktemplater) {
-				m.EXPECT().Template().Return("", &addon.ErrAddonsDirNotExist{
+				m.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{
 					WlName: "mockSvc",
 				})
 			},

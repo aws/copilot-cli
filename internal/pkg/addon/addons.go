@@ -52,14 +52,21 @@ func New(wlName string) (*Addons, error) {
 func (a *Addons) Template() (string, error) {
 	fnames, err := a.ws.ReadAddonsDir(a.wlName)
 	if err != nil {
-		return "", &ErrAddonsDirNotExist{
+		return "", &ErrAddonsNotFound{
 			WlName:    a.wlName,
 			ParentErr: err,
 		}
 	}
 
+	yamlFiles := filterYAMLfiles(fnames)
+	if len(yamlFiles) == 0 {
+		return "", &ErrAddonsNotFound{
+			WlName: a.wlName,
+		}
+	}
+
 	mergedTemplate := newCFNTemplate("merged")
-	for _, fname := range filterYAMLfiles(fnames) {
+	for _, fname := range yamlFiles {
 		out, err := a.ws.ReadAddon(a.wlName, fname)
 		if err != nil {
 			return "", fmt.Errorf("read addon %s under %s: %w", fname, a.wlName, err)

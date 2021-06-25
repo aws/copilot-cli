@@ -200,9 +200,9 @@ func (o *packageSvcOpts) Execute() error {
 	}
 
 	addonsTemplate, err := o.getAddonsTemplate()
-	// return nil if addons dir doesn't exist.
-	var notExistErr *addon.ErrAddonsDirNotExist
-	if errors.As(err, &notExistErr) {
+	// return nil if addons not found.
+	var notFoundErr *addon.ErrAddonsNotFound
+	if errors.As(err, &notFoundErr) {
 		return nil
 	}
 	if err != nil {
