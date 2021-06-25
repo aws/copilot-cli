@@ -52,10 +52,6 @@ type LoadBalancedWebServiceConfig struct {
 	*Logging      `yaml:"logging,flow"`
 	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
 	Network       *NetworkConfig            `yaml:"network"`
-
-	// Fields that are used while marshaling the template for additional clarifications,
-	// but don't correspond to a field in the manifests.
-	AppDomain *string
 }
 
 // RoutingRule holds the path to route requests to the service.
@@ -76,7 +72,6 @@ type LoadBalancedWebServiceProps struct {
 	Path        string
 	Port        uint16
 	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
-	AppDomain   *string
 }
 
 // NewLoadBalancedWebService creates a new public load balanced web service, receives all the requests from the load balancer,
@@ -90,7 +85,6 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	svc.LoadBalancedWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
 	svc.LoadBalancedWebServiceConfig.ImageConfig.HealthCheck = props.HealthCheck
 	svc.RoutingRule.Path = aws.String(props.Path)
-	svc.AppDomain = props.AppDomain
 	svc.parser = template.New()
 	return svc
 }
