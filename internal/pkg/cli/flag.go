@@ -167,7 +167,7 @@ Mutually exclusive with the --%s flag.`, inputFilePathFlag)
 Mutually exclusive with the -%s ,--%s and --%s flags.`, nameFlagShort, nameFlag, valuesFlag)
 
 	repoURLFlagDescription = fmt.Sprintf(`The repository URL to trigger your pipeline.
-Supported providers are: %s`, strings.Join(PipelineProviders, ", "))
+Supported providers are: %s`, strings.Join(template.QuoteSliceFunc(manifest.PipelineProviders), ", "))
 )
 
 const (
