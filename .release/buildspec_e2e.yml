@@ -125,7 +125,7 @@ batch:
 phases:
   install:
     runtime-versions:
-      golang: 1.15
+      golang: 1.16
       nodejs: 12
   pre_build:
     commands:
