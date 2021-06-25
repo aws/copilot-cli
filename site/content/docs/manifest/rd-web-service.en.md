@@ -46,10 +46,7 @@ The architecture type for your service. A [Request-Driven Web Service](../concep
 <div class="separator"></div>
 
 <a id="http" href="#http" class="field">`http`</a> <span class="type">Map</span>  
-The http section contains parameters related to integrating your service with an Application Load Balancer.
-
-<span class="parent-field">http.</span><a id="http-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
-Requests to this path will be forwarded to your service. Each Request-Driven Web Service should listen on a unique path.
+The http section contains parameters related to the managed load balancer.
 
 <span class="parent-field">http.</span><a id="http-healthcheck" href="#http-healthcheck" class="field">`healthcheck`</a> <span class="type">String or Map</span>  
 If you specify a string, Copilot interprets it as the path exposed in your container to handle target group health check requests. The default is "/".
@@ -67,6 +64,9 @@ http:
     interval: 15s
     timeout: 10s
 ```
+
+<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-path" href="#http-healthcheck-path" class="field">`path`</a> <span class="type">String</span>  
+The destination that the health check requests are sent to.
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-healthy-threshold" href="#http-healthcheck-healthy-threshold" class="field">`healthy_threshold`</a> <span class="type">Integer</span>  
 The number of consecutive health check successes required before considering an unhealthy target healthy. The default is 3. Range: 1-20.
@@ -140,5 +140,4 @@ Key-value pairs that represent environment variables that will be passed to your
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.
-
 
