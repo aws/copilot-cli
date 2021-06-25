@@ -46,7 +46,7 @@ The architecture type for your service. A [Request-Driven Web Service](../concep
 <div class="separator"></div>
 
 <a id="http" href="#http" class="field">`http`</a> <span class="type">Map</span>  
-The http section contains parameters relating to http configurations.
+The http section contains parameters related to the managed load balancer.
 
 <span class="parent-field">http.</span><a id="http-healthcheck" href="#http-healthcheck" class="field">`healthcheck`</a> <span class="type">String or Map</span>  
 If you specify a string, Copilot interprets it as the path exposed in your container to handle target group health check requests. The default is "/".
@@ -140,5 +140,4 @@ Key-value pairs that represent environment variables that will be passed to your
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the count parameter so that we can run 2 copies of our service in our prod environment.
-
 
