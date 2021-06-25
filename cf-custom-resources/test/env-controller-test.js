@@ -74,6 +74,129 @@ describe("Env Controller Handler", () => {
       });
   });
 
+  describe("should maintain the physical resource id for all event RequestTypes", () => {
+    const request = nock(ResponseURL)
+      .persist()
+      .put("/", (body) => {
+        return body.PhysicalResourceId === "envcontoller/test/hello"; // Should always be set to our value instead of log stream.
+      })
+      .reply(200);
+
+    afterAll(() => {
+      request.persist(false);
+    })
+
+    describe("on CREATE", () => {
+      const tester = LambdaTester(EnvController.handler)
+        .event({
+          RequestType: "Create",
+          RequestId: testRequestId,
+          ResponseURL: ResponseURL,
+          ResourceProperties: {
+            EnvStack: "test",
+            Workload: "hello",
+            Parameters: [],
+          },
+        });
+
+      test("physical id matches when create succeeds", () => {
+        AWS.mock("CloudFormation", "describeStacks", sinon.fake.resolves({
+          Stacks: [
+            {
+              StackName: "test",
+              Parameters: [],
+              Outputs: [],
+            },
+          ],
+        }));
+        return tester.expectResolve(() => {
+            expect(request.isDone()).toBe(true);
+          });
+      });
+
+      test("physical id matches when create fails", () => {
+        AWS.mock("CloudFormation", "describeStacks", sinon.fake.rejects("unexpected error"));
+        return tester.expectResolve(() => {
+            expect(request.isDone()).toBe(true);
+          });
+      });
+    });
+
+    describe("on UPDATE", () => {
+      const tester = LambdaTester(EnvController.handler)
+        .event({
+          RequestType: "Update",
+          PhysicalResourceId: "envcontoller/test/hello",
+          RequestId: testRequestId,
+          ResponseURL: ResponseURL,
+          ResourceProperties: {
+            EnvStack: "test",
+            Workload: "hello",
+            Parameters: [],
+          },
+        });
+
+      test("physical id matches when update succeeds", () => {
+        AWS.mock("CloudFormation", "describeStacks", sinon.fake.resolves({
+          Stacks: [
+            {
+              StackName: "test",
+              Parameters: [],
+              Outputs: [],
+            },
+          ],
+        }));
+        return tester.expectResolve(() => {
+          expect(request.isDone()).toBe(true);
+        });
+      });
+
+      test("physical id matches when update fails", () => {
+        AWS.mock("CloudFormation", "describeStacks", sinon.fake.rejects("unexpected error"));
+        return tester.expectResolve(() => {
+          expect(request.isDone()).toBe(true);
+        });
+      });
+    });
+
+    describe("on DELETE", () => {
+      const tester = LambdaTester(EnvController.handler)
+        .event({
+          RequestType: "Delete",
+          PhysicalResourceId: "envcontoller/test/hello",
+          RequestId: testRequestId,
+          ResponseURL: ResponseURL,
+          ResourceProperties: {
+            EnvStack: "test",
+            Workload: "hello",
+            Parameters: [],
+          },
+        });
+
+      test("physical id matches when delete succeeds", () => {
+        AWS.mock("CloudFormation", "describeStacks", sinon.fake.resolves({
+          Stacks: [
+            {
+              StackName: "test",
+              Parameters: [],
+              Outputs: [],
+            },
+          ],
+        }));
+        return tester.expectResolve(() => {
+          expect(request.isDone()).toBe(true);
+        });
+      });
+
+      test("physical id matches when delete fails", () => {
+        AWS.mock("CloudFormation", "describeStacks", sinon.fake.rejects("unexpected error"));
+        return tester.expectResolve(() => {
+          expect(request.isDone()).toBe(true);
+        });
+      });
+    });
+  });
+
   test("fail if cannot find environment stack", () => {
     const describeStacksFake = sinon.fake.resolves({
       Stacks: [],
