@@ -65,7 +65,7 @@ http:
     timeout: 10s
 ```
 
-<span class="parent-field">http.healthcheck.</span><a id="http-heathcheck-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
+<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-path" href="#http-healthcheck-path" class="field">`path`</a> <span class="type">String</span>  
 The destination that the health check requests are sent to.
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-healthy-threshold" href="#http-healthcheck-healthy-threshold" class="field">`healthy_threshold`</a> <span class="type">Integer</span>  
