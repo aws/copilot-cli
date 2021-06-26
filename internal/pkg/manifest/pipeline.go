@@ -21,6 +21,7 @@ const (
 	pipelineManifestPath = "cicd/pipeline.yml"
 )
 
+// PipelineProviders is the list of all available source integrations.
 var PipelineProviders = []string{
 	GithubProviderName,
 	CodeCommitProviderName,
