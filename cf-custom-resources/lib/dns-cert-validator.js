@@ -10,6 +10,8 @@ const defaultSleep = function (ms) {
 
 // These are used for test purposes only
 let defaultResponseURL;
+let defaultLogGroup;
+let defaultLogStream;
 let waiter;
 let sleep = defaultSleep;
 let random = Math.random;
@@ -613,7 +615,7 @@ exports.certificateRequestHandler = async function (event, context) {
       "FAILED",
       physicalResourceId,
       null,
-      err.message
+      `${err.message} (Log: ${defaultLogGroup || context.logGroupName}${defaultLogStream || context.logStreamName})`
     );
   }
 };
@@ -661,4 +663,18 @@ exports.withRandom = function (r) {
  */
 exports.withMaxAttempts = function (ma) {
   maxAttempts = ma;
+};
+
+/**
+ * @private
+ */
+ exports.withDefaultLogStream = function (logStream) {
+  defaultLogStream = logStream;
+};
+
+/**
+ * @private
+ */
+ exports.withDefaultLogGroup = function (logGroup) {
+  defaultLogGroup = logGroup;
 };

@@ -9,6 +9,8 @@ describe("DNS Validated Certificate Handler", () => {
   const handler = require("../lib/dns-cert-validator");
   const nock = require("nock");
   const ResponseURL = "https://cloudwatch-response-mock.example.com/";
+  const LogGroup = "/aws/lambda/testLambda";
+  const LogStream = "/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd";
 
   let origLog = console.log;
   const testRequestId = "f4ef1b10-c39a-44e3-99c0-fbf7e53c3943";
@@ -217,6 +219,8 @@ describe("DNS Validated Certificate Handler", () => {
 
   beforeEach(() => {
     handler.withDefaultResponseURL(ResponseURL);
+    handler.withDefaultLogGroup(LogGroup);
+    handler.withDefaultLogStream(LogStream);
     handler.withWaiter(function () {
       // Mock waiter is merely a self-fulfilling promise
       return {
@@ -243,7 +247,7 @@ describe("DNS Validated Certificate Handler", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Unsupported request type undefined"
+          body.Reason === "Unsupported request type undefined (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
         );
       })
       .reply(200);
@@ -271,7 +275,7 @@ describe("DNS Validated Certificate Handler", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Unsupported request type " + bogusType
+          body.Reason === "Unsupported request type " + bogusType + " (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
         );
       })
       .reply(200);

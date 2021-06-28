@@ -9,6 +9,8 @@ describe("DNS Validated Certificate Handler", () => {
   const handler = require("../lib/custom-domain");
   const nock = require("nock");
   const ResponseURL = "https://cloudwatch-response-mock.example.com/";
+  const LogGroup = "/aws/lambda/testLambda";
+  const LogStream = "/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd";
 
   let origLog = console.log;
   const testAppName = "myapp";
@@ -24,6 +26,8 @@ describe("DNS Validated Certificate Handler", () => {
 
   beforeEach(() => {
     handler.withDefaultResponseURL(ResponseURL);
+    handler.withDefaultLogGroup(LogGroup);
+    handler.withDefaultLogStream(LogStream);
     handler.withWaiter(function () {
       // Mock waiter is merely a self-fulfilling promise
       return {
@@ -48,7 +52,8 @@ describe("DNS Validated Certificate Handler", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Unsupported request type undefined" &&
+          body.Reason ===
+            "Unsupported request type undefined (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)" &&
           body.PhysicalResourceId === "mockID"
         );
       })
@@ -60,7 +65,7 @@ describe("DNS Validated Certificate Handler", () => {
           EnvName: testEnvName,
           DomainName: testDomainName,
         },
-        LogicalResourceId: "mockID"
+        LogicalResourceId: "mockID",
       })
       .expectResolve(() => {
         expect(request.isDone()).toBe(true);
@@ -73,7 +78,8 @@ describe("DNS Validated Certificate Handler", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Unsupported request type " + bogusType
+          body.Reason ===
+            "Unsupported request type bogus (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
         );
       })
       .reply(200);
@@ -96,7 +102,7 @@ describe("DNS Validated Certificate Handler", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Cannot parse badAliases into JSON format."
+          body.Reason === "Cannot parse badAliases into JSON format. (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
         );
       })
       .reply(200);
@@ -130,7 +136,7 @@ describe("DNS Validated Certificate Handler", () => {
         return (
           body.Status === "FAILED" &&
           body.Reason ===
-            "Couldn't find any Hosted Zone with DNS name test.myapp.example.com."
+            "Couldn't find any Hosted Zone with DNS name test.myapp.example.com. (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
         );
       })
       .reply(200);

@@ -120,7 +120,7 @@ exports.handler = async function (event, context) {
       "FAILED",
       physicalResourceId,
       null,
-      err.message
+      `${err.message} (Log: ${context.logGroupName}/${context.logStreamName})`
     );
   }
 };

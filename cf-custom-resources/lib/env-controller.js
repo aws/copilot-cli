@@ -6,6 +6,8 @@ const aws = require("aws-sdk");
 
 // These are used for test purposes only
 let defaultResponseURL;
+let defaultLogGroup;
+let defaultLogStream;
 
 const updateStackWaiter = {
   delay: 30,
@@ -253,7 +255,7 @@ exports.handler = async function (event, context) {
       "FAILED",
       physicalResourceId,
       null,
-      err.message
+      `${err.message} (Log: ${defaultLogGroup || context.logGroupName}${defaultLogStream || context.logStreamName})`
     );
   }
 };
@@ -331,4 +333,18 @@ exports.deadlineExpired = function () {
  */
 exports.withDefaultResponseURL = function (url) {
   defaultResponseURL = url;
+};
+
+/**
+ * @private
+ */
+ exports.withDefaultLogStream = function (logStream) {
+  defaultLogStream = logStream;
+};
+
+/**
+ * @private
+ */
+ exports.withDefaultLogGroup = function (logGroup) {
+  defaultLogGroup = logGroup;
 };
