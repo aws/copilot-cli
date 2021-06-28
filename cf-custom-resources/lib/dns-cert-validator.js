@@ -523,7 +523,7 @@ const clients = function (region, rootDnsRole) {
  */
 exports.certificateRequestHandler = async function (event, context) {
   var responseData = {};
-  var physicalResourceId;
+  var physicalResourceId = event.PhysicalResourceId;
   var certificateArn;
   const props = event.ResourceProperties;
   const [app, env, domain] = [props.AppName, props.EnvName, props.DomainName];
@@ -589,7 +589,6 @@ exports.certificateRequestHandler = async function (event, context) {
         responseData.Arn = physicalResourceId = certificateArn;
         break;
       case "Delete":
-        physicalResourceId = event.PhysicalResourceId;
         // If the resource didn't create correctly, the physical resource ID won't be the
         // certificate ARN, so don't try to delete it in that case.
         if (physicalResourceId.startsWith("arn:")) {

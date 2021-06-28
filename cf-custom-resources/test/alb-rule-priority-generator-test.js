@@ -93,12 +93,17 @@ describe("ALB Rule Priority Generator", () => {
     const requestType = "Update";
     const request = nock(ResponseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS";
+        return (
+          body.Status === "SUCCESS" &&
+          body.PhysicalResourceId === "mockPhysicalID"
+        );
       })
       .reply(200);
     return LambdaTester(albRulePriorityHandler.nextAvailableRulePriorityHandler)
       .event({
         RequestType: requestType,
+        LogicalResourceId: "mockID",
+        PhysicalResourceId: "mockPhysicalID",
       })
       .expectResolve(() => {
         sinon.assert.notCalled(describeRulesFake);
@@ -129,7 +134,11 @@ describe("ALB Rule Priority Generator", () => {
     AWS.mock("ELBv2", "describeRules", describeRulesFake);
     const request = nock(ResponseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS" && body.Data.Priority == 1;
+        return (
+          body.Status === "SUCCESS" &&
+          body.Data.Priority == 1 &&
+          body.PhysicalResourceId === "alb-rule-priority-mockID"
+        );
       })
       .reply(200);
 
@@ -140,6 +149,7 @@ describe("ALB Rule Priority Generator", () => {
         ResourceProperties: {
           ListenerArn: testALBListenerArn,
         },
+        LogicalResourceId: "mockID",
       })
       .expectResolve(() => {
         sinon.assert.calledWith(

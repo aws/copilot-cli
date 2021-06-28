@@ -82,7 +82,6 @@ let report = function (
  * @param {string} subDomain the full subdomain to add to the domain above (test.ecs-cli.aws).
  * @param {string[]} nameServers the subdomain nameservers to add to the domain's hostedzone.
  * @param {string} rootDnsRole the IAM role ARN that can manage domainName
- * @returns {string} the created subdomain
  */
 const createSubdomainInRoot = async function (
   requestId,
@@ -141,7 +140,6 @@ const createSubdomainInRoot = async function (
   );
 
   await waitForRecordSetChange(route53, changeBatch.ChangeInfo.Id);
-  return subDomain;
 };
 
 /**
@@ -264,28 +262,27 @@ const waitForRecordSetChange = function (route53, changeId) {
 
 exports.domainDelegationHandler = async function (event, context) {
   var responseData = {};
-  var physicalResourceId;
+  const props = event.ResourceProperties;
+  const physicalResourceId = props.SubdomainName;
   try {
     switch (event.RequestType) {
       case "Create":
       case "Update":
-        const subdomain = await createSubdomainInRoot(
+        await createSubdomainInRoot(
           event.RequestId,
-          event.ResourceProperties.DomainName,
-          event.ResourceProperties.SubdomainName,
-          event.ResourceProperties.NameServers,
-          event.ResourceProperties.RootDNSRole
+          props.DomainName,
+          props.SubdomainName,
+          props.NameServers,
+          props.RootDNSRole
         );
-        responseData.Arn = physicalResourceId = subdomain;
         break;
       case "Delete":
         await deleteSubdomainInRoot(
           event.RequestId,
-          event.ResourceProperties.DomainName,
-          event.ResourceProperties.SubdomainName,
-          event.ResourceProperties.RootDNSRole
+          props.DomainName,
+          props.SubdomainName,
+          props.RootDNSRole
         );
-        physicalResourceId = event.PhysicalResourceId;
         break;
       default:
         throw new Error(`Unsupported request type ${event.RequestType}`);

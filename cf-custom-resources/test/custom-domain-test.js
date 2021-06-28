@@ -48,7 +48,8 @@ describe("DNS Validated Certificate Handler", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Unsupported request type undefined"
+          body.Reason === "Unsupported request type undefined" &&
+          body.PhysicalResourceId === "mockID"
         );
       })
       .reply(200);
@@ -59,6 +60,7 @@ describe("DNS Validated Certificate Handler", () => {
           EnvName: testEnvName,
           DomainName: testDomainName,
         },
+        LogicalResourceId: "mockID"
       })
       .expectResolve(() => {
         expect(request.isDone()).toBe(true);

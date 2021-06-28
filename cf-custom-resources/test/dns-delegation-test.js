@@ -37,7 +37,15 @@ describe("DNS Delegation Handler", () => {
       })
       .reply(200);
     return LambdaTester(dnsDelegationHandler.domainDelegationHandler)
-      .event({})
+      .event({
+        RequestId: testRequestId,
+        ResourceProperties: {
+          DomainName: testDomainName,
+          SubdomainName: testSubDomainName,
+          NameServers: testNameServers,
+          RootDNSRole: testIAMRole,
+        },
+      })
       .expectResolve(() => {
         expect(request.isDone()).toBe(true);
       });
@@ -56,6 +64,13 @@ describe("DNS Delegation Handler", () => {
     return LambdaTester(dnsDelegationHandler.domainDelegationHandler)
       .event({
         RequestType: bogusType,
+        RequestId: testRequestId,
+        ResourceProperties: {
+          DomainName: testDomainName,
+          SubdomainName: testSubDomainName,
+          NameServers: testNameServers,
+          RootDNSRole: testIAMRole,
+        },
       })
       .expectResolve(() => {
         expect(request.isDone()).toBe(true);

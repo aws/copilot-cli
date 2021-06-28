@@ -414,7 +414,7 @@ describe("DNS Validated Certificate Handler", () => {
   test("Update operation quits early if cert doesn't change", () => {
     const request = nock(ResponseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS";
+        return body.Status === "SUCCESS" && body.PhysicalResourceId === "mockCertArn";
       })
       .reply(200);
 
@@ -422,6 +422,7 @@ describe("DNS Validated Certificate Handler", () => {
       .event({
         RequestType: "Update",
         RequestId: testRequestId,
+        PhysicalResourceId: "mockCertArn",
         ResourceProperties: {
           AppName: testAppName,
           EnvName: testEnvName,

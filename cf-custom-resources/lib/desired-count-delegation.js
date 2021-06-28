@@ -130,8 +130,8 @@ const getRunningTaskCount = async function (
  */
 exports.handler = async function (event, context) {
   var responseData = {};
-  var physicalResourceId;
   const props = event.ResourceProperties;
+  const physicalResourceId = event.PhysicalResourceId || `copilot/apps/${props.App}/envs/${props.Env}/services/${props.Svc}/autoscaling`;
 
   try {
     switch (event.RequestType) {
@@ -143,7 +143,6 @@ exports.handler = async function (event, context) {
           props.Env,
           props.Svc
         );
-        physicalResourceId = `copilot/apps/${props.App}/envs/${props.Env}/services/${props.Svc}/autoscaling`;
         break;
       case "Update":
         responseData.DesiredCount = await getRunningTaskCount(
@@ -153,10 +152,8 @@ exports.handler = async function (event, context) {
           props.Env,
           props.Svc
         );
-        physicalResourceId = event.PhysicalResourceId;
         break;
       case "Delete":
-        physicalResourceId = event.PhysicalResourceId;
         break;
       default:
         throw new Error(`Unsupported request type ${event.RequestType}`);

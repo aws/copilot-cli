@@ -97,18 +97,16 @@ const enableLongArnFormat = async function () {
  */
 exports.handler = async function (event, context) {
   var responseData = {};
-  var physicalResourceId;
+  const physicalResourceId = event.PhysicalResourceId || event.LogicalResourceId;
 
   try {
     switch (event.RequestType) {
       case "Create":
         await enableLongArnFormat();
-        physicalResourceId = event.PhysicalResourceId;
         break;
       // Do nothing on update and delete, since this isn't a "real" resource.
       case "Update":
       case "Delete":
-        physicalResourceId = event.PhysicalResourceId;
         break;
       default:
         throw new Error(`Unsupported request type ${event.RequestType}`);

@@ -172,7 +172,7 @@ const writeARecord = async function (
  */
 exports.handler = async function (event, context) {
   var responseData = {};
-  var physicalResourceId;
+  const physicalResourceId = `${event.LogicalResourceId}`;
   const props = event.ResourceProperties;
   const [app, env, domain] = [props.AppName, props.EnvName, props.DomainName];
   var aliasTypes = {
@@ -257,7 +257,6 @@ exports.handler = async function (event, context) {
       default:
         throw new Error(`Unsupported request type ${event.RequestType}`);
     }
-    physicalResourceId = `${event.LogicalResourceId}`;
     await report(event, context, "SUCCESS", physicalResourceId, responseData);
   } catch (err) {
     console.log(`Caught error ${err}.`);
