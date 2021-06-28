@@ -615,7 +615,9 @@ exports.certificateRequestHandler = async function (event, context) {
       "FAILED",
       physicalResourceId,
       null,
-      `${err.message} (Log: ${defaultLogGroup || context.logGroupName}${defaultLogStream || context.logStreamName})`
+      `${err.message} (Log: ${defaultLogGroup || context.logGroupName}${
+        defaultLogStream || context.logStreamName
+      })`
     );
   }
 };
@@ -668,13 +670,13 @@ exports.withMaxAttempts = function (ma) {
 /**
  * @private
  */
- exports.withDefaultLogStream = function (logStream) {
+exports.withDefaultLogStream = function (logStream) {
   defaultLogStream = logStream;
 };
 
 /**
  * @private
  */
- exports.withDefaultLogGroup = function (logGroup) {
+exports.withDefaultLogGroup = function (logGroup) {
   defaultLogGroup = logGroup;
 };

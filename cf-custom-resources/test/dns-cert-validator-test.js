@@ -28,14 +28,18 @@ describe("DNS Validated Certificate Handler", () => {
     "frontend": ["v1.${testAppName}.${testDomainName}"],
     "backend": ["v2.${testDomainName}"]
   }`;
-  const testSANs = ["*.test.myapp.example.com", "v1.myapp.example.com", "v2.example.com"];
+  const testSANs = [
+    "*.test.myapp.example.com",
+    "v1.myapp.example.com",
+    "v2.example.com",
+  ];
   const testCopilotTags = [
     { Key: "copilot-application", Value: testAppName },
     { Key: "copilot-environment", Value: testEnvName },
   ];
   const testCertificateArn =
     "arn:aws:acm:region:123456789012:certificate/12345678-1234-1234-1234-123456789012";
-    const testOtherCertificateArn =
+  const testOtherCertificateArn =
     "arn:aws:acm:region:123456789012:certificate/1234-1234-123456789012-12345678-1234";
   const testRRName = "_3639ac514e785e898d2646601fa951d5.example.com";
   const testRRValue1 = "_x1.acm-validations.aws";
@@ -247,7 +251,8 @@ describe("DNS Validated Certificate Handler", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Unsupported request type undefined (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
+          body.Reason ===
+            "Unsupported request type undefined (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
         );
       })
       .reply(200);
@@ -275,7 +280,10 @@ describe("DNS Validated Certificate Handler", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Unsupported request type " + bogusType + " (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
+          body.Reason ===
+            "Unsupported request type " +
+              bogusType +
+              " (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
         );
       })
       .reply(200);
@@ -358,7 +366,7 @@ describe("DNS Validated Certificate Handler", () => {
           Region: "us-east-1",
           RootDNSRole: testRootDNSRole,
         },
-        OldResourceProperties: {}
+        OldResourceProperties: {},
       })
       .expectResolve(() => {
         sinon.assert.calledWith(
@@ -418,7 +426,9 @@ describe("DNS Validated Certificate Handler", () => {
   test("Update operation quits early if cert doesn't change", () => {
     const request = nock(ResponseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS" && body.PhysicalResourceId === "mockCertArn";
+        return (
+          body.Status === "SUCCESS" && body.PhysicalResourceId === "mockCertArn"
+        );
       })
       .reply(200);
 
@@ -799,7 +809,7 @@ describe("DNS Validated Certificate Handler", () => {
       CertificateSummaryList: [
         {
           DomainName: `${testEnvName}.${testAppName}.${testDomainName}`,
-          CertificateArn: testCertificateArn
+          CertificateArn: testCertificateArn,
         },
       ],
       NextToken: "some token",

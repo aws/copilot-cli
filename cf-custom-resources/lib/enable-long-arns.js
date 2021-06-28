@@ -97,7 +97,8 @@ const enableLongArnFormat = async function () {
  */
 exports.handler = async function (event, context) {
   var responseData = {};
-  const physicalResourceId = event.PhysicalResourceId || event.LogicalResourceId;
+  const physicalResourceId =
+    event.PhysicalResourceId || event.LogicalResourceId;
 
   try {
     switch (event.RequestType) {

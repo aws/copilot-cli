@@ -102,7 +102,8 @@ describe("DNS Validated Certificate Handler", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Cannot parse badAliases into JSON format. (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
+          body.Reason ===
+            "Cannot parse badAliases into JSON format. (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
         );
       })
       .reply(200);
