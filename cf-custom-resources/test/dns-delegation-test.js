@@ -9,6 +9,8 @@ describe("DNS Delegation Handler", () => {
   const dnsDelegationHandler = require("../lib/dns-delegation");
   const nock = require("nock");
   const ResponseURL = "https://cloudwatch-response-mock.example.com/";
+  const LogGroup = "/aws/lambda/testLambda";
+  const LogStream = "/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd";
 
   let origLog = console.log;
 
@@ -20,6 +22,8 @@ describe("DNS Delegation Handler", () => {
 
   beforeEach(() => {
     dnsDelegationHandler.withDefaultResponseURL(ResponseURL);
+    dnsDelegationHandler.withDefaultLogGroup(LogGroup);
+    dnsDelegationHandler.withDefaultLogStream(LogStream);
     console.log = function () {};
   });
   afterEach(() => {
@@ -32,12 +36,21 @@ describe("DNS Delegation Handler", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Unsupported request type undefined"
+          body.Reason ===
+            "Unsupported request type undefined (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
         );
       })
       .reply(200);
     return LambdaTester(dnsDelegationHandler.domainDelegationHandler)
-      .event({})
+      .event({
+        RequestId: testRequestId,
+        ResourceProperties: {
+          DomainName: testDomainName,
+          SubdomainName: testSubDomainName,
+          NameServers: testNameServers,
+          RootDNSRole: testIAMRole,
+        },
+      })
       .expectResolve(() => {
         expect(request.isDone()).toBe(true);
       });
@@ -49,13 +62,23 @@ describe("DNS Delegation Handler", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Unsupported request type " + bogusType
+          body.Reason ===
+            "Unsupported request type " +
+              bogusType +
+              " (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
         );
       })
       .reply(200);
     return LambdaTester(dnsDelegationHandler.domainDelegationHandler)
       .event({
         RequestType: bogusType,
+        RequestId: testRequestId,
+        ResourceProperties: {
+          DomainName: testDomainName,
+          SubdomainName: testSubDomainName,
+          NameServers: testNameServers,
+          RootDNSRole: testIAMRole,
+        },
       })
       .expectResolve(() => {
         expect(request.isDone()).toBe(true);
