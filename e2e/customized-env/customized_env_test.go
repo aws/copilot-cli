@@ -76,8 +76,9 @@ var _ = Describe("Customized Env", func() {
 
 	Context("when adding cross account environments", func() {
 		var (
-			testEnvInitErr error
-			prodEnvInitErr error
+			testEnvInitErr   error
+			prodEnvInitErr   error
+			sharedEnvInitErr error
 		)
 		BeforeAll(func() {
 			_, testEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
@@ -96,17 +97,26 @@ var _ = Describe("Customized Env", func() {
 				VPCConfig:     vpcConfig,
 				CustomizedEnv: true,
 			})
+			_, sharedEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
+				AppName:       appName,
+				EnvName:       "shared",
+				Profile:       "default",
+				Prod:          false,
+				VPCImport:     vpcImport,
+				CustomizedEnv: true,
+			})
 		})
 
-		It("env init should succeed for test and prod envs", func() {
+		It("env init should succeed for test, prod and shared envs", func() {
 			Expect(testEnvInitErr).NotTo(HaveOccurred())
 			Expect(prodEnvInitErr).NotTo(HaveOccurred())
+			Expect(sharedEnvInitErr).NotTo(HaveOccurred())
 		})
 
-		It("env ls should list both envs", func() {
+		It("env ls should list all three envs", func() {
 			envListOutput, err := cli.EnvList(appName)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(envListOutput.Envs)).To(Equal(2))
+			Expect(len(envListOutput.Envs)).To(Equal(3))
 			envs := map[string]client.EnvDescription{}
 			for _, env := range envListOutput.Envs {
 				envs[env.Name] = env
@@ -116,6 +126,9 @@ var _ = Describe("Customized Env", func() {
 
 			Expect(envs["test"]).NotTo(BeNil())
 			Expect(envs["test"].Prod).To(BeFalse())
+
+			Expect(envs["shared"]).NotTo(BeNil())
+			Expect(envs["shared"].Prod).To(BeFalse())
 
 			Expect(envs["prod"]).NotTo(BeNil())
 			Expect(envs["prod"].Prod).To(BeTrue())
@@ -173,6 +186,7 @@ environments:
 		var (
 			testDeployErr    error
 			prodEndDeployErr error
+			sharedDeployErr  error
 			svcName          string
 		)
 		BeforeAll(func() {
@@ -188,14 +202,20 @@ environments:
 				EnvName:  "prod",
 				ImageTag: "gallopinggurdey",
 			})
+			_, sharedDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
+				Name:     svcName,
+				EnvName:  "shared",
+				ImageTag: "gallopinggurdey",
+			})
 		})
 
-		It("svc deploy should succeed to both environments", func() {
+		It("svc deploy should succeed to all three environments", func() {
 			Expect(testDeployErr).NotTo(HaveOccurred())
 			Expect(prodEndDeployErr).NotTo(HaveOccurred())
+			Expect(sharedDeployErr).NotTo(HaveOccurred())
 		})
 
-		It("svc show should include a valid URL and description for test and prod envs", func() {
+		It("svc show should include a valid URL and description for test, prod and shared envs", func() {
 			svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
 				AppName: appName,
 				Name:    svcName,
@@ -208,12 +228,18 @@ environments:
 				envRoutes[route.Environment] = route
 			}
 
-			Expect(len(svc.ServiceDiscoveries)).To(Equal(1))
-			Expect(svc.ServiceDiscoveries[0].Environment).To(ConsistOf("test", "prod"))
-			Expect(svc.ServiceDiscoveries[0].Namespace).To(Equal(fmt.Sprintf("%s.%s.local:80", svc.SvcName, appName)))
+			Expect(len(svc.ServiceDiscoveries)).To(Equal(3))
+			var envs, namespaces, wantedNamespaces []string
+			for _, sd := range svc.ServiceDiscoveries {
+				envs = append(envs, sd.Environment[0])
+				namespaces = append(namespaces, sd.Namespace)
+				wantedNamespaces = append(wantedNamespaces, fmt.Sprintf("%s.%s.%s.local:80", svc.SvcName, sd.Environment, appName))
+			}
+			Expect(envs).To(ConsistOf("test", "prod", "shared"))
+			Expect(namespaces).To(ConsistOf(wantedNamespaces))
 
 			// Call each environment's endpoint and ensure it returns a 200
-			for _, env := range []string{"test", "prod"} {
+			for _, env := range []string{"test", "prod", "shared"} {
 				route := envRoutes[env]
 				Expect(route.Environment).To(Equal(env))
 				Eventually(func() (int, error) {
@@ -224,7 +250,7 @@ environments:
 		})
 
 		It("svc logs should display logs", func() {
-			for _, envName := range []string{"test", "prod"} {
+			for _, envName := range []string{"test", "prod", "shared"} {
 				var svcLogs []client.SvcLogsOutput
 				var svcLogsErr error
 				Eventually(func() ([]client.SvcLogsOutput, error) {
@@ -246,9 +272,9 @@ environments:
 			}
 		})
 
-		It("env show should display info for test and prod envs", func() {
+		It("env show should display info for test, prod, and shared envs", func() {
 			envs := map[string]client.EnvDescription{}
-			for _, envName := range []string{"test", "prod"} {
+			for _, envName := range []string{"test", "prod", "shared"} {
 				envShowOutput, envShowErr := cli.EnvShow(&client.EnvShowRequest{
 					AppName: appName,
 					EnvName: envName,
@@ -272,6 +298,8 @@ environments:
 			Expect(envs["test"].Prod).To(BeFalse())
 			Expect(envs["prod"]).NotTo(BeNil())
 			Expect(envs["prod"].Prod).To(BeTrue())
+			Expect(envs["shared"]).NotTo(BeNil())
+			Expect(envs["shared"].Prod).To(BeFalse())
 		})
 	})
 })
