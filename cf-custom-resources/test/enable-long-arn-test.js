@@ -26,7 +26,7 @@ describe("Enable Long ARN Handler", () => {
     AWS.mock("ECS", "putAccountSetting", mockPutAccountSetting);
     const request = nock(responseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS";
+        return body.Status === "SUCCESS" && body.PhysicalResourceId === "mockID";
       })
       .reply(200);
 
@@ -35,6 +35,7 @@ describe("Enable Long ARN Handler", () => {
       RequestType: "Create",
       RequestId: testRequestId,
       ResponseURL: responseURL,
+      LogicalResourceId: "mockID"
     });
 
     // THEN
@@ -71,7 +72,7 @@ describe("Enable Long ARN Handler", () => {
     AWS.mock("ECS", "putAccountSetting", mockPutAccountSetting);
     const request = nock(responseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS";
+        return body.Status === "SUCCESS" && body.PhysicalResourceId === "mockID";
       })
       .reply(200);
 
@@ -80,6 +81,7 @@ describe("Enable Long ARN Handler", () => {
       RequestType: "Update",
       RequestId: testRequestId,
       ResponseURL: responseURL,
+      PhysicalResourceId: "mockID"
     });
 
     // THEN

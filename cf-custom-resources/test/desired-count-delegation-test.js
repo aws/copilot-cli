@@ -58,7 +58,7 @@ describe("Desired count delegation Handler", () => {
     AWS.mock("ECS", "describeServices", describeServicesFake);
     const request = nock(responseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS" && body.Data.DesiredCount == 3;
+        return body.Status === "SUCCESS" && body.Data.DesiredCount == 3 && body.PhysicalResourceId === "copilot/apps/mockApp/envs/testEnv/services/testSvc/autoscaling";
       })
       .reply(200);
 
@@ -136,6 +136,7 @@ describe("Desired count delegation Handler", () => {
           Svc: testSvc,
           DefaultDesiredCount: 3,
         },
+        PhysicalResourceId: "mockID"
       })
       .expectResolve(() => {
         sinon.assert.calledWith(
@@ -180,6 +181,7 @@ describe("Desired count delegation Handler", () => {
       .event({
         RequestType: "Delete",
         ResponseURL: responseURL,
+        PhysicalResourceId: "mockID"
       })
       .expectResolve(() => {
         expect(request.isDone()).toBe(true);

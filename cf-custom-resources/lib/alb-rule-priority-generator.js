@@ -9,6 +9,8 @@ const priorityForRootRule = "50000";
 
 // These are used for test purposes only
 let defaultResponseURL;
+let defaultLogGroup;
+let defaultLogStream;
 
 /**
  * Upload a CloudFormation response object to S3.
@@ -121,7 +123,8 @@ const calculateNextRulePriority = async function (listenerArn) {
  */
 exports.nextAvailableRulePriorityHandler = async function (event, context) {
   var responseData = {};
-  var physicalResourceId;
+  const physicalResourceId =
+    event.PhysicalResourceId || `alb-rule-priority-${event.LogicalResourceId}`;
   var rulePriority;
 
   try {
@@ -131,12 +134,10 @@ exports.nextAvailableRulePriorityHandler = async function (event, context) {
           event.ResourceProperties.ListenerArn
         );
         responseData.Priority = rulePriority;
-        physicalResourceId = `alb-rule-priority-${event.LogicalResourceId}`;
         break;
       // Do nothing on update and delete, since this isn't a "real" resource.
       case "Update":
       case "Delete":
-        physicalResourceId = event.PhysicalResourceId;
         break;
       default:
         throw new Error(`Unsupported request type ${event.RequestType}`);
@@ -151,7 +152,9 @@ exports.nextAvailableRulePriorityHandler = async function (event, context) {
       "FAILED",
       physicalResourceId,
       null,
-      err.message
+      `${err.message} (Log: ${defaultLogGroup || context.logGroupName}${
+        defaultLogStream || context.logStreamName
+      })`
     );
   }
 };
@@ -161,4 +164,18 @@ exports.nextAvailableRulePriorityHandler = async function (event, context) {
  */
 exports.withDefaultResponseURL = function (url) {
   defaultResponseURL = url;
+};
+
+/**
+ * @private
+ */
+exports.withDefaultLogStream = function (logStream) {
+  defaultLogStream = logStream;
+};
+
+/**
+ * @private
+ */
+exports.withDefaultLogGroup = function (logGroup) {
+  defaultLogGroup = logGroup;
 };
