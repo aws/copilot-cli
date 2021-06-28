@@ -26,7 +26,7 @@ Resources:
             # Allows the key to be administered in the tools account
             Effect: Allow
             Principal:
-              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+              AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
             Action:
               - "kms:Create*"
               - "kms:Describe*"
@@ -48,8 +48,8 @@ Resources:
             Effect: Allow
             Principal:
               AWS:
-                - !Sub arn:aws:iam::${AWS::AccountId}:root{{range $accounts}}
-                - arn:aws:iam::{{.}}:root{{end}}
+                - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root{{range $accounts}}
+                - !Sub arn:${AWS::Partition}:iam::{{.}}:root{{end}}
             Action:
               - kms:Encrypt
               - kms:Decrypt
@@ -69,12 +69,12 @@ Resources:
               - s3:*
             Effect: Allow
             Resource:
-              - !Sub arn:aws:s3:::${PipelineBuiltArtifactBucket}
-              - !Sub arn:aws:s3:::${PipelineBuiltArtifactBucket}/*
+              - !Sub arn:${AWS::Partition}:s3:::${PipelineBuiltArtifactBucket}
+              - !Sub arn:${AWS::Partition}:s3:::${PipelineBuiltArtifactBucket}/*
             Principal:
               AWS:
-                - !Sub arn:aws:iam::${AWS::AccountId}:root{{range $accounts}}
-                - arn:aws:iam::{{.}}:root{{end}}
+                - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root{{range $accounts}}
+                - !Sub arn:${AWS::Partition}:iam::{{.}}:root{{end}}
   PipelineBuiltArtifactBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -101,8 +101,8 @@ Resources:
           Effect: Allow
           Principal:
               AWS:
-                - !Sub arn:aws:iam::${AWS::AccountId}:root{{range $accounts}}
-                - arn:aws:iam::{{.}}:root{{end}}
+                - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root{{range $accounts}}
+                - !Sub arn:${AWS::Partition}:iam::{{.}}:root{{end}}
           Action:
           - ecr:GetDownloadUrlForLayer
           - ecr:BatchGetImage

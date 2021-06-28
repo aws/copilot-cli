@@ -50,7 +50,7 @@ Resources:
                 Action:
                   - sts:AssumeRole
                 Resource:
-                  - !Sub 'arn:aws:iam::*:role/${AdminRoleName}'
+                  - !Sub 'arn:${AWS::Partition}:iam::*:role/${AdminRoleName}'
   ExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -113,7 +113,7 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS:  !Sub arn:aws:iam::${AWS::AccountId}:root
+              AWS:  !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
             Action:
               - sts:AssumeRole
           - Effect: Allow
@@ -121,9 +121,9 @@ Resources:
               AWS: !Split
                 - ','
                 - !Sub
-                    - 'arn:aws:iam::${inner}:root'
+                    - 'arn:${AWS::Partition}:iam::${inner}:root'
                     - inner: !Join
-                      - ':root,arn:aws:iam::'
+                      - ':root,arn:${AWS::Partition}:iam::'
                       - Ref: "AppDNSDelegatedAccounts"
             Action:
               - sts:AssumeRole

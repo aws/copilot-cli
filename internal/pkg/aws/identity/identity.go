@@ -7,6 +7,8 @@ package identity
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 )
@@ -37,14 +39,17 @@ type Caller struct {
 // Get returns the Caller associated with the Client's session.
 func (s STS) Get() (Caller, error) {
 	out, err := s.client.GetCallerIdentity(&sts.GetCallerIdentityInput{})
-
 	if err != nil {
 		return Caller{}, fmt.Errorf("get caller identity: %w", err)
 	}
+	parsedARN, err := arn.Parse(aws.StringValue(out.Arn))
+	if err != nil {
+		return Caller{}, fmt.Errorf("parse caller arn: %w", err)
+	}
 
 	return Caller{
-		RootUserARN: fmt.Sprintf("arn:aws:iam::%s:root", *out.Account),
-		Account:     *out.Account,
-		UserID:      *out.UserId,
+		RootUserARN: fmt.Sprintf("arn:%s:iam::%s:root", parsedARN.Partition, aws.StringValue(out.Account)),
+		Account:     aws.StringValue(out.Account),
+		UserID:      aws.StringValue(out.UserId),
 	}, nil
 }

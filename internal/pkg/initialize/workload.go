@@ -301,7 +301,6 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *ServiceProps)
 		},
 		Port:        i.Port,
 		HealthCheck: i.HealthCheck,
-		AppDomain:   i.appDomain,
 		Path:        "/",
 	}
 	existingSvcs, err := w.Store.ListServices(i.App)

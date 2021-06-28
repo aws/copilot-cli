@@ -83,7 +83,7 @@ Resources:
               Action:
                 - cloudformation:DescribeStacks
                 - cloudformation:UpdateStack
-              Resource:  !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}-${EnvName}/*'
+              Resource:  !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}-${EnvName}/*'
               Condition:
                 StringEquals:
                   'cloudformation:ResourceTag/copilot-application': !Sub '${AppName}'
@@ -95,13 +95,13 @@ Resources:
             - Effect: Allow
               Action:
                 - iam:PassRole
-              Resource:  !Sub 'arn:aws:iam::${AWS::AccountId}:role/${AppName}-${EnvName}-CFNExecutionRole'
+              Resource:  !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${AppName}-${EnvName}-CFNExecutionRole'
               Condition:
                 StringEquals:
                   'iam:ResourceTag/copilot-application': !Sub '${AppName}'
                   'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
   TaskDefinition:
     Metadata:
@@ -206,7 +206,7 @@ Resources:
                 Action:
                   - 'ssm:GetParameters'
                 Resource:
-                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
                 Condition:
                   StringEquals:
                     'ssm:ResourceTag/copilot-application': !Sub '${AppName}'
@@ -215,7 +215,7 @@ Resources:
                 Action:
                   - 'secretsmanager:GetSecretValue'
                 Resource:
-                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+                  - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
                 Condition:
                   StringEquals:
                     'secretsmanager:ResourceTag/copilot-application': !Sub '${AppName}'
@@ -224,9 +224,9 @@ Resources:
                 Action:
                   - 'kms:Decrypt'
                 Resource:
-                  - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+                  - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
       ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+        - 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
   
 
   TaskRole:
@@ -251,7 +251,7 @@ Resources:
               - Effect: 'Allow'
                 Action: 'sts:AssumeRole'
                 Resource:
-                  - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/*'
                 Condition:
                   StringEquals:
                     'iam:ResourceTag/copilot-application': !Sub '${AppName}'
@@ -269,8 +269,9 @@ Resources:
                     'elasticfilesystem:AccessPointArn': !GetAtt AccessPoint.Arn
                 Resource: 
                   - Fn::Sub:
-                    - 'arn:aws:elasticfilesystem:${region}:${account}:file-system/${fsid}'
-                    - region: !Ref AWS::Region
+                    - 'arn:${partition}:elasticfilesystem:${region}:${account}:file-system/${fsid}'
+                    - partition: !Ref AWS::Partition
+                      region: !Ref AWS::Region
                       account: !Ref AWS::AccountId
                       fsid: !GetAtt EnvControllerAction.ManagedFileSystemID
 
@@ -322,6 +323,7 @@ Resources:
           Fn::ImportValue:
             !Sub '${AppName}-${EnvName}-ClusterId'
         TaskDefinition: !Ref TaskDefinition
+        Partition: !Ref AWS::Partition
         Subnets:
           Fn::Join:
             - '","'
@@ -342,7 +344,7 @@ Resources:
           "States": {
             "Run Fargate Task": {
               "Type": "Task",
-              "Resource": "arn:aws:states:::ecs:runTask.sync",
+              "Resource": "arn:${Partition}:states:::ecs:runTask.sync",
               "Parameters": {
                 "LaunchType": "FARGATE",
                 "PlatformVersion": "1.4.0",
