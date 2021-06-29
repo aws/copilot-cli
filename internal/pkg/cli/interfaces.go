@@ -570,6 +570,7 @@ type runningTaskSelector interface {
 
 type dockerEngineValidator interface {
 	CheckDockerEngineRunning() error
+	GetPlatform() (string, string, error)
 }
 
 type codestar interface {

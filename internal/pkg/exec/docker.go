@@ -20,14 +20,14 @@ import (
 type DockerCommand struct {
 	runner
 	// Override in unit tests.
-	buf *bytes.Buffer
+	buf      *bytes.Buffer
 	homePath string
 }
 
 // NewDockerCommand returns a DockerCommand.
 func NewDockerCommand() DockerCommand {
 	return DockerCommand{
-		runner: NewCmd(),
+		runner:   NewCmd(),
 		homePath: userHomeDirectory(),
 	}
 }
@@ -48,7 +48,7 @@ type dockerConfig struct {
 	CredHelpers map[string]string `json:"credHelpers,omitempty"`
 }
 
-const(
+const (
 	credStoreECRLogin = "ecr-login" // set on `credStore` attribute in docker configuration file
 )
 
@@ -166,6 +166,36 @@ func (c DockerCommand) CheckDockerEngineRunning() error {
 	}
 }
 
+// GetPlatform will run the `docker version` command to get the OS/Arch.
+func (c DockerCommand) GetPlatform() (operatingSystem, architecture string, err error) {
+	var os string
+	var arch string
+	if _, err := exec.LookPath("docker"); err != nil {
+		return "", "", ErrDockerCommandNotFound
+	}
+	osBuf := &bytes.Buffer{}
+	err = c.runner.Run("docker", []string{"version", "-f", "'{{.Server.Os}}'"}, Stdout(osBuf))
+	if err != nil {
+		return "", "", fmt.Errorf("get docker os: %w", err)
+	}
+	if c.buf != nil {
+		osBuf = c.buf
+	}
+	os = strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(osBuf.String()), "'"), "'")
+
+	archBuf := &bytes.Buffer{}
+	err = c.runner.Run("docker", []string{"version", "-f", "'{{.Server.Arch}}'"}, Stdout(archBuf))
+	if err != nil {
+		return "", "", fmt.Errorf("get docker architecture: %w", err)
+	}
+	if c.buf != nil {
+		archBuf = c.buf
+	}
+	arch = strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(archBuf.String()), "'"), "'")
+
+	return os, arch, nil
+}
+
 func imageName(uri, tag string) string {
 	if tag == "" {
 		return uri // If no tag is specified build with latest.
@@ -205,13 +235,13 @@ func (c DockerCommand) IsEcrCredentialHelperEnabled(uri string) bool {
 
 func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {
 	/*
-	Sample docker config file
-    {
-        "credsStore" : "ecr-login",
-        "credHelpers": {
-            "dummyaccountId.dkr.ecr.region.amazonaws.com": "ecr-login"
-        }
-    }
+			Sample docker config file
+		    {
+		        "credsStore" : "ecr-login",
+		        "credHelpers": {
+		            "dummyaccountId.dkr.ecr.region.amazonaws.com": "ecr-login"
+		        }
+		    }
 	*/
 	cred := dockerConfig{}
 	err := json.Unmarshal(config, &cred)
@@ -224,7 +254,7 @@ func parseCredFromDockerConfig(config []byte) (*dockerConfig, error) {
 
 func userHomeDirectory() string {
 	home, err := os.UserHomeDir()
-	if err!= nil{
+	if err != nil {
 		return ""
 	}
 
