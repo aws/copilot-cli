@@ -502,6 +502,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		mockSvcInit      func(m *mocks.MocksvcInitializer)
 		mockDockerfile   func(m *mocks.MockdockerfileParser)
+		mockValidator    func(m *mocks.MockdockerEngineValidator)
 		inSvcPort        uint16
 		inSvcType        string
 		inSvcName        string
@@ -527,12 +528,19 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Name:           "frontend",
 						Type:           "Load Balanced Web Service",
 						DockerfilePath: "./Dockerfile",
+						Platform: &manifest.PlatformConfig{
+							OS:   "linux",
+							Arch: "amd64",
+						},
 					},
 					Port: 80,
 				}).Return("manifest/path", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetHealthCheck().Return(nil, nil)
+			},
+			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -550,11 +558,18 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Name:           "frontend",
 						Type:           "Backend Service",
 						DockerfilePath: "./Dockerfile",
+						Platform: &manifest.PlatformConfig{
+							OS:   "linux",
+							Arch: "amd64",
+						},
 					},
 				}).Return("manifest/path", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetHealthCheck().Return(nil, nil)
+			},
+			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -573,10 +588,17 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Name:  "backend",
 						Type:  "Backend Service",
 						Image: "nginx:latest",
+						Platform: &manifest.PlatformConfig{
+							OS:   "linux",
+							Arch: "amd64",
+						},
 					},
 				}).Return("manifest/path", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
+			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
+			},
 
 			wantedManifestPath: "manifest/path",
 		},
@@ -594,14 +616,36 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Name:  "frontend",
 						Type:  "Load Balanced Web Service",
 						Image: "nginx:latest",
+						Platform: &manifest.PlatformConfig{
+							OS:   "linux",
+							Arch: "amd64",
+						},
 					},
 				}).Return("manifest/path", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
+			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
+			},
 
 			wantedManifestPath: "manifest/path",
 		},
+		"return error if detect ARM architecture": {
+			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+				m.EXPECT().GetPlatform().Return("linux", "arm", nil)
+			},
+			wantedErr: errors.New("architecture type arm is currently unsupported"),
+		},
+		"return error if OS/arch detection fails": {
+			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+				m.EXPECT().GetPlatform().Return("", "", mockError)
+			},
+			wantedErr: errors.New("get os/arch from docker: mock error"),
+		},
 		"failure": {
+			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
+			},
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
 				m.EXPECT().Service(gomock.Any()).Return("", errors.New("some error"))
 			},
@@ -617,6 +661,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 
 			mockSvcInitializer := mocks.NewMocksvcInitializer(ctrl)
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
+			mockDockerValidator := mocks.NewMockdockerEngineValidator(ctrl)
 
 			if tc.mockSvcInit != nil {
 				tc.mockSvcInit(mockSvcInitializer)
@@ -624,7 +669,9 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			if tc.mockDockerfile != nil {
 				tc.mockDockerfile(mockDockerfile)
 			}
-
+			if tc.mockValidator != nil {
+				tc.mockValidator(mockDockerValidator)
+			}
 			opts := initSvcOpts{
 				initSvcVars: initSvcVars{
 					initWkldVars: initWkldVars{
@@ -640,7 +687,8 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				dockerfile: func(s string) dockerfileParser {
 					return mockDockerfile
 				},
-				df: mockDockerfile,
+				df:                    mockDockerfile,
+				dockerEngineValidator: mockDockerValidator,
 			}
 
 			// WHEN

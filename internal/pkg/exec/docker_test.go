@@ -7,10 +7,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/spf13/afero"
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/spf13/afero"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -353,19 +354,87 @@ func TestDockerCommand_CheckDockerEngineRunning(t *testing.T) {
 	}
 }
 
-func TestIsEcrCredentialHelperEnabled(t *testing.T){
+func TestDockerCommand_GetPlatform(t *testing.T) {
+	mockError := errors.New("some error")
+	mockOS := "operatingSystem"
+	mockArch := "archie"
+	var mockRunner *Mockrunner
+
+	tests := map[string]struct {
+		setupMocks   func(controller *gomock.Controller)
+		inOSBuffer   *bytes.Buffer
+		inArchBuffer *bytes.Buffer
+		wantedOS     string
+		wantedArch   string
+
+		wantedErr error
+	}{
+		"error running 'docker version' for os": {
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = NewMockrunner(controller)
+				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{.Server.Os}}'"}, gomock.Any()).Return(mockError)
+			},
+			wantedErr: fmt.Errorf("get docker os: some error"),
+		},
+		"error running 'docker version' for arch": {
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = NewMockrunner(controller)
+				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{.Server.Os}}'"}, gomock.Any()).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{.Server.Arch}}'"}, gomock.Any()).Return(mockError)
+			},
+			wantedErr: fmt.Errorf("get docker architecture: some error"),
+		},
+		"success": {
+			inOSBuffer:   bytes.NewBufferString(`linux`),
+			inArchBuffer: bytes.NewBufferString(`amd64`),
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = NewMockrunner(controller)
+				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{.Server.Os}}'"}, gomock.Any()).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"version", "-f", "'{{.Server.Arch}}'"}, gomock.Any()).Return(nil)
+			},
+			wantedOS:   mockOS,
+			wantedArch: mockArch,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			tc.setupMocks(controller)
+			s := DockerCommand{
+				runner: mockRunner,
+				buf:    tc.inOSBuffer,
+			}
+
+			os, arch, err := s.GetPlatform()
+			if tc.wantedErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantedErr.Error())
+				if tc.wantedOS != "" {
+					require.Equal(t, tc.wantedOS, os)
+				}
+				if tc.wantedArch != "" {
+					require.Equal(t, tc.wantedArch, arch)
+				}
+			}
+		})
+	}
+}
+
+func TestIsEcrCredentialHelperEnabled(t *testing.T) {
 	var mockRunner *Mockrunner
 	workspace := "test/copilot/.docker"
 	registry := "dummyaccountid.dkr.ecr.region.amazonaws.com"
 	uri := fmt.Sprintf("%s/ui/app", registry)
 
 	testCases := map[string]struct {
-		setupMocks func(controller *gomock.Controller)
-		inBuffer   *bytes.Buffer
-		mockFileSystem      func(fs afero.Fs)
-		postExec      func(fs afero.Fs)
-		isEcrRepo bool
- 	}{
+		setupMocks     func(controller *gomock.Controller)
+		inBuffer       *bytes.Buffer
+		mockFileSystem func(fs afero.Fs)
+		postExec       func(fs afero.Fs)
+		isEcrRepo      bool
+	}{
 		"ecr-login check global level": {
 			mockFileSystem: func(fs afero.Fs) {
 				fs.MkdirAll(workspace, 0755)
@@ -374,7 +443,7 @@ func TestIsEcrCredentialHelperEnabled(t *testing.T){
 			setupMocks: func(c *gomock.Controller) {
 				mockRunner = NewMockrunner(c)
 			},
-			postExec: func(fs afero.Fs){
+			postExec: func(fs afero.Fs) {
 				fs.RemoveAll(workspace)
 			},
 			isEcrRepo: true,
@@ -387,7 +456,7 @@ func TestIsEcrCredentialHelperEnabled(t *testing.T){
 			setupMocks: func(c *gomock.Controller) {
 				mockRunner = NewMockrunner(c)
 			},
-			postExec: func(fs afero.Fs){
+			postExec: func(fs afero.Fs) {
 				fs.RemoveAll(workspace)
 			},
 			isEcrRepo: true,
@@ -400,7 +469,7 @@ func TestIsEcrCredentialHelperEnabled(t *testing.T){
 			setupMocks: func(c *gomock.Controller) {
 				mockRunner = NewMockrunner(c)
 			},
-			postExec: func(fs afero.Fs){
+			postExec: func(fs afero.Fs) {
 				fs.RemoveAll(workspace)
 			},
 			isEcrRepo: false,
@@ -412,7 +481,7 @@ func TestIsEcrCredentialHelperEnabled(t *testing.T){
 			setupMocks: func(c *gomock.Controller) {
 				mockRunner = NewMockrunner(c)
 			},
-			postExec: func(fs afero.Fs){
+			postExec: func(fs afero.Fs) {
 				fs.RemoveAll(workspace)
 			},
 			isEcrRepo: false,
@@ -428,8 +497,8 @@ func TestIsEcrCredentialHelperEnabled(t *testing.T){
 			tc.setupMocks(controller)
 			tc.mockFileSystem(fs)
 			s := DockerCommand{
-				runner: mockRunner,
-				buf:    tc.inBuffer,
+				runner:   mockRunner,
+				buf:      tc.inBuffer,
 				homePath: "test/copilot",
 			}
 

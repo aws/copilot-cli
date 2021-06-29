@@ -221,7 +221,9 @@ func (o *initSvcOpts) Execute() error {
 			return fmt.Errorf("parse dockerfile %s: %w", o.dockerfilePath, err)
 		}
 	}
-	if err = o.getOSArch(); err != nil {
+
+	o.os, o.arch, err = o.getOSArch()
+	if err != nil {
 		return err
 	}
 
@@ -429,21 +431,17 @@ func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, erro
 	}, nil
 }
 
-func (o initSvcOpts) getOSArch() error {
-	os, arch, err := o.dockerEngineValidator.GetPlatform()
+func (o initSvcOpts) getOSArch() (os, arch string, err error) {
+	os, arch, err = o.dockerEngineValidator.GetPlatform()
 	if err != nil {
-		return fmt.Errorf("get os/arch from docker: %w", err)
+		return "", "", fmt.Errorf("get os/arch from docker: %w", err)
 	}
 	// Until we target X86_64 for ARM architectures, error out early.
 	if arch == "arm" || arch == "arm64" {
-		return fmt.Errorf("architecture type %s is currently unsupported", arch)
+		return "", "", fmt.Errorf("architecture type %s is currently unsupported", arch)
 	}
-	o.os = os
-	o.arch = arch
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return os, arch, nil
 }
 
 func svcTypePromptOpts() []prompt.Option {
