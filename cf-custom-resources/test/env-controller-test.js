@@ -9,6 +9,8 @@ describe("Env Controller Handler", () => {
   const LambdaTester = require("lambda-tester").noVersionCheck();
   const nock = require("nock");
   const ResponseURL = "https://cloudwatch-response-mock.example.com/";
+  const LogGroup = "/aws/lambda/testLambda";
+  const LogStream = "/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd";
   const testRequestId = "f4ef1b10-c39a-44e3-99c0-fbf7e53c3943";
   let origLog = console.log;
 
@@ -35,6 +37,8 @@ describe("Env Controller Handler", () => {
 
   beforeEach(() => {
     EnvController.withDefaultResponseURL(ResponseURL);
+    EnvController.withDefaultLogGroup(LogGroup);
+    EnvController.withDefaultLogStream(LogStream);
     EnvController.deadlineExpired = function () {
       return new Promise(function (resolve, reject) {});
     };
@@ -52,7 +56,8 @@ describe("Env Controller Handler", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Unsupported request type OOPS"
+          body.Reason ===
+            "Unsupported request type OOPS (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
         );
       })
       .reply(200);
@@ -84,75 +89,89 @@ describe("Env Controller Handler", () => {
 
     afterAll(() => {
       request.persist(false);
-    })
+    });
 
     describe("on CREATE", () => {
-      const tester = LambdaTester(EnvController.handler)
-        .event({
-          RequestType: "Create",
-          RequestId: testRequestId,
-          ResponseURL: ResponseURL,
-          ResourceProperties: {
-            EnvStack: "test",
-            Workload: "hello",
-            Parameters: [],
-          },
-        });
+      const tester = LambdaTester(EnvController.handler).event({
+        RequestType: "Create",
+        RequestId: testRequestId,
+        ResponseURL: ResponseURL,
+        ResourceProperties: {
+          EnvStack: "test",
+          Workload: "hello",
+          Parameters: [],
+        },
+      });
 
       test("physical id matches when create succeeds", () => {
-        AWS.mock("CloudFormation", "describeStacks", sinon.fake.resolves({
-          Stacks: [
-            {
-              StackName: "test",
-              Parameters: [],
-              Outputs: [],
-            },
-          ],
-        }));
+        AWS.mock(
+          "CloudFormation",
+          "describeStacks",
+          sinon.fake.resolves({
+            Stacks: [
+              {
+                StackName: "test",
+                Parameters: [],
+                Outputs: [],
+              },
+            ],
+          })
+        );
         return tester.expectResolve(() => {
-            expect(request.isDone()).toBe(true);
-          });
+          expect(request.isDone()).toBe(true);
+        });
       });
 
       test("physical id matches when create fails", () => {
-        AWS.mock("CloudFormation", "describeStacks", sinon.fake.rejects("unexpected error"));
+        AWS.mock(
+          "CloudFormation",
+          "describeStacks",
+          sinon.fake.rejects("unexpected error")
+        );
         return tester.expectResolve(() => {
-            expect(request.isDone()).toBe(true);
-          });
+          expect(request.isDone()).toBe(true);
+        });
       });
     });
 
     describe("on UPDATE", () => {
-      const tester = LambdaTester(EnvController.handler)
-        .event({
-          RequestType: "Update",
-          PhysicalResourceId: "envcontoller/test/hello",
-          RequestId: testRequestId,
-          ResponseURL: ResponseURL,
-          ResourceProperties: {
-            EnvStack: "test",
-            Workload: "hello",
-            Parameters: [],
-          },
-        });
+      const tester = LambdaTester(EnvController.handler).event({
+        RequestType: "Update",
+        PhysicalResourceId: "envcontoller/test/hello",
+        RequestId: testRequestId,
+        ResponseURL: ResponseURL,
+        ResourceProperties: {
+          EnvStack: "test",
+          Workload: "hello",
+          Parameters: [],
+        },
+      });
 
       test("physical id matches when update succeeds", () => {
-        AWS.mock("CloudFormation", "describeStacks", sinon.fake.resolves({
-          Stacks: [
-            {
-              StackName: "test",
-              Parameters: [],
-              Outputs: [],
-            },
-          ],
-        }));
+        AWS.mock(
+          "CloudFormation",
+          "describeStacks",
+          sinon.fake.resolves({
+            Stacks: [
+              {
+                StackName: "test",
+                Parameters: [],
+                Outputs: [],
+              },
+            ],
+          })
+        );
         return tester.expectResolve(() => {
           expect(request.isDone()).toBe(true);
         });
       });
 
       test("physical id matches when update fails", () => {
-        AWS.mock("CloudFormation", "describeStacks", sinon.fake.rejects("unexpected error"));
+        AWS.mock(
+          "CloudFormation",
+          "describeStacks",
+          sinon.fake.rejects("unexpected error")
+        );
         return tester.expectResolve(() => {
           expect(request.isDone()).toBe(true);
         });
@@ -160,36 +179,43 @@ describe("Env Controller Handler", () => {
     });
 
     describe("on DELETE", () => {
-      const tester = LambdaTester(EnvController.handler)
-        .event({
-          RequestType: "Delete",
-          PhysicalResourceId: "envcontoller/test/hello",
-          RequestId: testRequestId,
-          ResponseURL: ResponseURL,
-          ResourceProperties: {
-            EnvStack: "test",
-            Workload: "hello",
-            Parameters: [],
-          },
-        });
+      const tester = LambdaTester(EnvController.handler).event({
+        RequestType: "Delete",
+        PhysicalResourceId: "envcontoller/test/hello",
+        RequestId: testRequestId,
+        ResponseURL: ResponseURL,
+        ResourceProperties: {
+          EnvStack: "test",
+          Workload: "hello",
+          Parameters: [],
+        },
+      });
 
       test("physical id matches when delete succeeds", () => {
-        AWS.mock("CloudFormation", "describeStacks", sinon.fake.resolves({
-          Stacks: [
-            {
-              StackName: "test",
-              Parameters: [],
-              Outputs: [],
-            },
-          ],
-        }));
+        AWS.mock(
+          "CloudFormation",
+          "describeStacks",
+          sinon.fake.resolves({
+            Stacks: [
+              {
+                StackName: "test",
+                Parameters: [],
+                Outputs: [],
+              },
+            ],
+          })
+        );
         return tester.expectResolve(() => {
           expect(request.isDone()).toBe(true);
         });
       });
 
       test("physical id matches when delete fails", () => {
-        AWS.mock("CloudFormation", "describeStacks", sinon.fake.rejects("unexpected error"));
+        AWS.mock(
+          "CloudFormation",
+          "describeStacks",
+          sinon.fake.rejects("unexpected error")
+        );
         return tester.expectResolve(() => {
           expect(request.isDone()).toBe(true);
         });
@@ -206,7 +232,8 @@ describe("Env Controller Handler", () => {
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
-          body.Reason === "Cannot find environment stack mockEnvStack"
+          body.Reason ===
+            "Cannot find environment stack mockEnvStack (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
         );
       })
       .reply(200);
@@ -249,7 +276,11 @@ describe("Env Controller Handler", () => {
     AWS.mock("CloudFormation", "updateStack", updateStackFake);
     const request = nock(ResponseURL)
       .put("/", (body) => {
-        return body.Status === "FAILED" && body.Reason === "not apple pie";
+        return (
+          body.Status === "FAILED" &&
+          body.Reason ===
+            "not apple pie (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
+        );
       })
       .reply(200);
 

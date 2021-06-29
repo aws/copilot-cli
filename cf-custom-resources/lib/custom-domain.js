@@ -6,6 +6,8 @@ const aws = require("aws-sdk");
 
 // These are used for test purposes only
 let defaultResponseURL;
+let defaultLogGroup;
+let defaultLogStream;
 let waiter;
 
 let hostedZoneCache = new Map();
@@ -172,7 +174,7 @@ const writeARecord = async function (
  */
 exports.handler = async function (event, context) {
   var responseData = {};
-  var physicalResourceId;
+  const physicalResourceId = event.LogicalResourceId;
   const props = event.ResourceProperties;
   const [app, env, domain] = [props.AppName, props.EnvName, props.DomainName];
   var aliasTypes = {
@@ -257,7 +259,6 @@ exports.handler = async function (event, context) {
       default:
         throw new Error(`Unsupported request type ${event.RequestType}`);
     }
-    physicalResourceId = `${event.LogicalResourceId}`;
     await report(event, context, "SUCCESS", physicalResourceId, responseData);
   } catch (err) {
     console.log(`Caught error ${err}.`);
@@ -267,7 +268,9 @@ exports.handler = async function (event, context) {
       "FAILED",
       physicalResourceId,
       null,
-      err.message
+      `${err.message} (Log: ${defaultLogGroup || context.logGroupName}${
+        defaultLogStream || context.logStreamName
+      })`
     );
   }
 };
@@ -365,4 +368,18 @@ exports.withWaiter = function (w) {
  */
 exports.reset = function () {
   waiter = undefined;
+};
+
+/**
+ * @private
+ */
+exports.withDefaultLogStream = function (logStream) {
+  defaultLogStream = logStream;
+};
+
+/**
+ * @private
+ */
+exports.withDefaultLogGroup = function (logGroup) {
+  defaultLogGroup = logGroup;
 };

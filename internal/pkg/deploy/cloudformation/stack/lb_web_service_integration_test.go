@@ -27,6 +27,9 @@ const (
 	svcManifestPath = "svc-manifest.yml"
 	svcStackPath    = "svc-test.stack.yml"
 	svcParamsPath   = "svc-test.params.json"
+
+	dynamicDesiredCountPath = "custom-resources/desired-count-delegation.js"
+	rulePriorityPath        = "custom-resources/alb-rule-priority-generator.js"
 )
 
 func TestLoadBalancedWebService_Template(t *testing.T) {
@@ -49,14 +52,23 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	parser := template.New()
 	envController, err := parser.Read(envControllerPath)
 	require.NoError(t, err)
-	zipFile := envController.String()
+	envControllerZipFile := envController.String()
+	dynamicDesiredCount, err := parser.Read(dynamicDesiredCountPath)
+	require.NoError(t, err)
+	dynamicDesiredCountZipFile := dynamicDesiredCount.String()
+	rulePriority, err := parser.Read(rulePriorityPath)
+	require.NoError(t, err)
+	rulePriorityZipFile := rulePriority.String()
+
 	t.Run(testName, func(t *testing.T) {
 		actualBytes := []byte(tpl)
 		// Cut random GUID from template.
 		actualBytes = regExpGUID.ReplaceAll(actualBytes, []byte("RandomGUID"))
 		actualString := string(actualBytes)
-		// Cut out zip file from EnvControllerAction for more readable output
-		actualString = strings.ReplaceAll(actualString, zipFile, "Abracadabra")
+		// Cut out zip file for more readable output
+		actualString = strings.ReplaceAll(actualString, envControllerZipFile, "mockEnvControllerZipFile")
+		actualString = strings.ReplaceAll(actualString, dynamicDesiredCountZipFile, "mockDynamicDesiredCountZipFile")
+		actualString = strings.ReplaceAll(actualString, rulePriorityZipFile, "mockRulePriorityZipFile")
 		actualBytes = []byte(actualString)
 		mActual := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal(actualBytes, mActual))
