@@ -458,7 +458,7 @@ type NetworkConfig struct {
 // PlatformConfig represents operating system and architecture specifications.
 type PlatformConfig struct {
 	OS   string `yaml:"os"`
-	Arch string `yaml:architecture`
+	Arch string `yaml:"architecture"`
 }
 
 // UnmarshalYAML ensures that a NetworkConfig always defaults to public subnets.
