@@ -51,7 +51,7 @@ type LoadBalancedWebServiceConfig struct {
 	TaskConfig    `yaml:",inline"`
 	*Logging      `yaml:"logging,flow"`
 	Sidecars      map[string]*SidecarConfig `yaml:"sidecars"`
-	Network       *NetworkConfig            `yaml:"network"`
+	Network       *NetworkConfig            `yaml:"network"` // TODO: the type needs to be updated after we upgrade mergo
 }
 
 // RoutingRule holds the path to route requests to the service.
@@ -62,8 +62,8 @@ type RoutingRule struct {
 	Alias       *string                 `yaml:"alias"`
 	// TargetContainer is the container load balancer routes traffic to.
 	TargetContainer          *string   `yaml:"target_container"`
-	TargetContainerCamelCase *string   `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
-	AllowedSourceIps         *[]string `yaml:"allowed_source_ips"`
+	TargetContainerCamelCase *string   `yaml:"targetContainer"`    // "targetContainerCamelCase" for backwards compatibility
+	AllowedSourceIps         *[]string `yaml:"allowed_source_ips"` // TODO: the type needs to be updated after we upgrade mergo
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
