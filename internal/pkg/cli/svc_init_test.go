@@ -630,12 +630,6 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 
 			wantedManifestPath: "manifest/path",
 		},
-		"return error if detect ARM architecture": {
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {
-				m.EXPECT().GetPlatform().Return("linux", "arm", nil)
-			},
-			wantedErr: errors.New("architecture type arm is currently unsupported"),
-		},
 		"return error if OS/arch detection fails": {
 			mockValidator: func(m *mocks.MockdockerEngineValidator) {
 				m.EXPECT().GetPlatform().Return("", "", mockError)
