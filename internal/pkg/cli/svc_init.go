@@ -438,7 +438,7 @@ func (o initSvcOpts) getOSArch() (os, arch string, err error) {
 	}
 	// Until we target X86_64 for ARM architectures, log a warning.
 	if arch == "arm" || arch == "arm64" {
-		log.Warningf("Architecture type %s is currently unsupported. To deploy, run %s\n", arch, "$ DOCKER_DEFAULT_PLATFORM=linux/amd64 copilot svc deploy")
+		log.Warningf("Architecture type %s is currently unsupported. To deploy, run %s\n", arch, "`DOCKER_DEFAULT_PLATFORM=linux/amd64 copilot svc deploy`")
 		return os, arch, nil
 	}
 
