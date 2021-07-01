@@ -16,7 +16,7 @@ let defaultResponseURL;
  * @param {string} [reason] reason for failure, if any, to convey to the user
  * @returns {Promise} Promise that is resolved on success, or rejected on connection error or HTTP error response
  */
-exports.sendResponse = function (
+exports.report = function (
     event,
     context,
     responseStatus,
@@ -63,4 +63,12 @@ exports.sendResponse = function (
             })
             .end(responseBody, "utf8");
     });
+};
+
+/**
+ * Sleep for ms milliseconds.
+ * @param {int} ms the duration of the sleep
+ */
+exports.sleep = function (ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 };

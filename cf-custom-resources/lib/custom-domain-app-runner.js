@@ -7,9 +7,13 @@
 "use strict";
 
 const AWS = require('aws-sdk');
-let appRoute53Client, appRunnerClient, appHostedZoneID;
+const ERR_NAME_CUSTOM_DOMAIN_ALREADY_ASSOCIATED = "CustomDomainAlreadyAssociatedException";
+const ERR_NAME_INVALID_REQUEST = "InvalidRequestException";
+const DOMAIN_STATUS_PENDING_VERIFICATION = "pending_certificate_dns_validation";
 
-const { sendResponse } = require('../lib/partials');
+const { report, sleep } = require('../lib/partials');
+
+let appRoute53Client, appRunnerClient, appHostedZoneID;
 
 exports.handler = async function (event, context) {
     const props = event.ResourceProperties;
@@ -25,12 +29,20 @@ exports.handler = async function (event, context) {
     });
     appRunnerClient = new AWS.AppRunner();
 
-    await addCustomDomain(serviceARN, customDomain).then(async () => {
-        await sendResponse(event, context, "SUCCESS", event.LogicalResourceId);
-    }).catch(async err => {
-        await sendResponse(event, context, "FAILED", event.LogicalResourceId, null, err.message).catch((err) => {
+    await addCustomDomain(serviceARN, customDomain).catch(async err => {
+        if (err.name === ERR_NAME_CUSTOM_DOMAIN_ALREADY_ASSOCIATED) {
+            console.log("Custom domain already associated. Do nothing.");
+            return;
+        }
+        console.log(`Caught error: ${err.message}`);
+        await report(event, context, "FAILED", event.LogicalResourceId, null, err.message).catch((err) => {
             throw new Error("send response: " + err.message);
         });
+    });
+
+    console.log("Finished");
+    await report(event, context, "SUCCESS", event.LogicalResourceId).catch((err) => {
+        throw new Error("send response: " + err.message);
     });
 };
 
@@ -45,7 +57,13 @@ async function addCustomDomain(serviceARN, customDomainName) {
     const data = await appRunnerClient.associateCustomDomain({
         DomainName: customDomainName,
         ServiceArn: serviceARN,
-    }).promise();
+    }).promise().catch(err => {
+        if (err.name === ERR_NAME_INVALID_REQUEST && err.message.includes(`${customDomainName} is already associated with`)) {
+            throw new CustomDomainError(`${customDomainName} is already associated with service ${serviceARN}`, ERR_NAME_CUSTOM_DOMAIN_ALREADY_ASSOCIATED);
+        }
+        throw err;
+    });
+
     await upsertCNAMERecordAndWait(customDomainName, data.DNSTarget, appHostedZoneID);
     await validateCertForDomain(serviceARN, customDomainName);
 }
@@ -58,23 +76,45 @@ async function addCustomDomain(serviceARN, customDomainName) {
  * @throws wrapped error.
  */
 async function validateCertForDomain(serviceARN, domainName) {
-    const data = await appRunnerClient.describeCustomDomains({
-        ServiceArn: serviceARN,
-    }).promise().catch((err) => {
-        throw new Error(`get custom domains for service ${serviceARN}: ` + err.message);
-    });
+    console.log("Add validation records");
+    const attempts = 10;
+    let i;
+    for (i = 0; i < attempts; i++){
+        const data = await appRunnerClient.describeCustomDomains({
+            ServiceArn: serviceARN,
+        }).promise().catch(err => {
+            throw new Error(`get custom domains for service ${serviceARN}: ` + err.message);
+        });
 
-    const customDomains = data.CustomDomains;
-    for (const i in customDomains) {
-        if (customDomains[i].DomainName !== domainName) {
+        const customDomains = data.CustomDomains;
+        let domain;
+        for (const i in customDomains) {
+            if (customDomains[i].DomainName === domainName) {
+                domain = customDomains[i];
+                break;
+            }
+        }
+        if (!domain) {
+            throw new Error(`domain ${domainName} is not associated`);
+        }
+
+        if (domain.Status !== DOMAIN_STATUS_PENDING_VERIFICATION) {
+            console.log(`Custom domain ${domainName} status is ${domain.Status}. Desired state is ${DOMAIN_STATUS_PENDING_VERIFICATION}. Wait and check again`);
+            await sleep(3000);
             continue;
         }
-        const records = customDomains[i].CertificateValidationRecords;
+
+        const records = domain.CertificateValidationRecords;
         for (const i in records) {
             await upsertCNAMERecordAndWait(records[i].Name, records[i].Value, appHostedZoneID).catch(err => {
                 throw new Error("upsert certificate validation record: " + err.message);
             });
         }
+        break;
+    }
+
+    if (i >= attempts) {
+        throw new Error(`failed waiting for custom domain ${domainName} to change to state ${DOMAIN_STATUS_PENDING_VERIFICATION}`);
     }
 }
 
@@ -87,6 +127,7 @@ async function validateCertForDomain(serviceARN, domainName) {
  * @throws wrapped error.
  */
 async function upsertCNAMERecordAndWait(recordName, recordValue, hostedZoneID) {
+    console.log(`Upsert record ${recordName}`);
     let params = {
         ChangeBatch: {
             Changes: [
@@ -112,6 +153,7 @@ async function upsertCNAMERecordAndWait(recordName, recordValue, hostedZoneID) {
         throw new Error(`upsert record ${recordName}: ` + err.message);
     });
 
+     console.log("Finished upserting, start waiting");
      await appRoute53Client.waitFor('resourceRecordSetsChanged', {
          // Wait up to 5 minutes
          $waiter: {
@@ -123,3 +165,10 @@ async function upsertCNAMERecordAndWait(recordName, recordValue, hostedZoneID) {
          throw new Error(`wait for record sets change for ${recordName}: ` + err.message);
      });
 }
+
+function CustomDomainError(message, name) {
+    this.name = name;
+    this.message = message;
+    this.stack = (new Error()).stack;
+}
+CustomDomainError.prototype = Object.create(Error.prototype);
