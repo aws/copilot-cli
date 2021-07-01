@@ -147,14 +147,14 @@ async function validateCertForDomain(serviceARN, domainName) {
             throw new Error(`get custom domains for service ${serviceARN}: ` + err.message);
         });
 
-        const customDomains = data.CustomDomains;
         let domain;
-        for (const i in customDomains) {
-            if (customDomains[i].DomainName === domainName) {
-                domain = customDomains[i];
+        for (const d of data.CustomDomains) {
+            if (d.DomainName === domainName) {
+                domain = d;
                 break;
             }
         }
+
         if (!domain) {
             throw new Error(`domain ${domainName} is not associated`);
         }
@@ -165,8 +165,8 @@ async function validateCertForDomain(serviceARN, domainName) {
         }
 
         const records = domain.CertificateValidationRecords;
-        for (const i in records) {
-            await updateCNAMERecordAndWait(records[i].Name, records[i].Value, appHostedZoneID, "UPSERT").catch(err => {
+        for (const record of records) {
+            await updateCNAMERecordAndWait(record.Name, record.Value, appHostedZoneID, "UPSERT").catch(err => {
                 throw new Error("upsert certificate validation record: " + err.message);
             });
         }
