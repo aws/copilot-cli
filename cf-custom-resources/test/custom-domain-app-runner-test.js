@@ -8,7 +8,7 @@
 
 const AWS = require("aws-sdk-mock");
 const LambdaTester = require("lambda-tester").noVersionCheck();
-const handler = require("../lib/custom-domain-app-runner").handler;
+const {handler, domainStatusPendingVerification, waitForDomainStatusChangeAttempts, withSleep, reset} = require("../lib/custom-domain-app-runner");
 const sinon = require("sinon");
 const nock = require("nock");
 
@@ -16,8 +16,15 @@ describe("Custom Domain for App Runner Service", () => {
     const [mockServiceARN, mockCustomDomain, mockHostedZoneID] = ["mockService", "mockDomain", "mockHostedZoneID",];
     const mockResponseURL = "https://mock.com/";
 
+    beforeEach(() => {
+        withSleep(_ => {
+            return new Promise((resolve) => setTimeout(resolve, 1));
+        });
+    });
+
     afterEach(() => {
         AWS.restore();
+        reset();
     });
 
     test("fail to associate custom domain", () => {
@@ -190,6 +197,51 @@ describe("Custom Domain for App Runner Service", () => {
             });
     });
 
+    test("fail to wait for app runner to provide validation records", () => {
+        const mockTarget = "mockTarget";
+        const mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
+        const mockWaitFor = sinon.fake.resolves();
+        const mockChangeResourceRecordSets = sinon.fake.resolves({ ChangeInfo: {Id: "mockID", }, });
+        const mockDescribeCustomDomains = sinon.stub();
+        for (let i = 0; i < waitForDomainStatusChangeAttempts; i++) {
+            mockDescribeCustomDomains.onCall(i).resolves({
+                CustomDomains: [
+                    {
+                        DomainName: mockCustomDomain,
+                        Status: "not-pending",
+                    },
+                ],
+            });
+        }
+
+        AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
+        AWS.mock("Route53", "changeResourceRecordSets",mockChangeResourceRecordSets);
+        AWS.mock("Route53", "waitFor", mockWaitFor);
+        AWS.mock("AppRunner", "describeCustomDomains", mockDescribeCustomDomains);
+
+        const expectedResponse = nock(mockResponseURL)
+            .put("/", (body) => {
+                return (
+                    body.Status === "FAILED" &&
+                    body.Reason === "failed waiting for custom domain mockDomain to change to state pending_certificate_dns_validation"
+                );
+            })
+            .reply(200);
+        return LambdaTester( handler )
+            .event({
+                ResponseURL: mockResponseURL,
+                ResourceProperties: {
+                    ServiceARN: mockServiceARN,
+                    AppDNSRole: "",
+                    CustomDomain: mockCustomDomain,
+                    HostedZoneID: mockHostedZoneID,
+                },
+            })
+            .expectResolve( () => {
+                expect(expectedResponse.isDone()).toBe(true);
+            });
+    });
+
     test("fail to add cert validation record", () => {
         const mockTarget = "mockTarget";
         const mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
@@ -217,6 +269,7 @@ describe("Custom Domain for App Runner Service", () => {
                             Value: "mock-record-value-2",
                         },
                     ],
+                    Status: "pending_certificate_dns_validation",
                 },
             ],
         });
@@ -293,21 +346,50 @@ describe("Custom Domain for App Runner Service", () => {
             });
     });
 
+    test("fail to send failure response", () => {
+        const mockAssociateCustomDomain = sinon.fake.rejects(new Error("some error"));
+        AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
+
+        const expectedResponse = nock(mockResponseURL)
+            .put("/", (body) => {
+                return (
+                    body.Status === "FAILED" &&
+                    body.Reason === "some error"
+                );
+            })
+            .reply(200);
+        return LambdaTester( handler )
+            .event({
+                ResponseURL: "super weird URL",
+                ResourceProperties: {
+                    ServiceARN: mockServiceARN,
+                    AppDNSRole: "",
+                    CustomDomain: mockCustomDomain,
+                    HostedZoneID: mockHostedZoneID,
+                },
+            })
+            .expectReject( );
+    });
+
     test("success", () => {
         const mockTarget = "mockTarget";
         const mockAssociateCustomDomain = sinon.fake.resolves({ DNSTarget: mockTarget, });
         const mockWaitFor = sinon.fake.resolves();
-        const mockDescribeCustomDomains = sinon.fake.resolves({
+        const mockDescribeCustomDomains = sinon.stub();
+
+        // Successfully wait for custom domain's status to be "pending" after several waits.
+        for (let i = 0; i < waitForDomainStatusChangeAttempts - 1; i++) {
+            mockDescribeCustomDomains.onCall(i).resolves({
+                CustomDomains: [
+                    {
+                        DomainName: mockCustomDomain,
+                        Status: "not-pending",
+                    },
+                ],
+            });
+        }
+        mockDescribeCustomDomains.onCall(waitForDomainStatusChangeAttempts - 1).resolves({
             CustomDomains: [
-                {
-                    DomainName: "other-domain",
-                    CertificateValidationRecords: [
-                        {
-                            Name: "this shouldn't appear",
-                            Value: "this shouldn't appear",
-                        },
-                    ],
-                },
                 {
                     DomainName: mockCustomDomain,
                     CertificateValidationRecords: [
@@ -320,9 +402,11 @@ describe("Custom Domain for App Runner Service", () => {
                             Value: "mock-record-value-2",
                         },
                     ],
+                    Status: domainStatusPendingVerification,
                 },
             ],
         });
+
         const mockChangeResourceRecordSets = sinon.stub();
         mockChangeResourceRecordSets.resolves({ ChangeInfo: {Id: "mockID", }, });
 

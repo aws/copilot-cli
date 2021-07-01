@@ -69,6 +69,6 @@ exports.report = function (
  * Sleep for ms milliseconds.
  * @param {int} ms the duration of the sleep
  */
-exports.sleep = function (ms) {
+exports.defaultSleep = function (ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 };

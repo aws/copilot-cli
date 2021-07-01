@@ -7,12 +7,15 @@
 "use strict";
 
 const AWS = require('aws-sdk');
+const { report, defaultSleep } = require('../lib/partials');
+
 const ERR_NAME_CUSTOM_DOMAIN_ALREADY_ASSOCIATED = "CustomDomainAlreadyAssociatedException";
 const ERR_NAME_INVALID_REQUEST = "InvalidRequestException";
 const DOMAIN_STATUS_PENDING_VERIFICATION = "pending_certificate_dns_validation";
+const ATTEMPTS = 10;
 
-const { report, sleep } = require('../lib/partials');
 
+let sleep = defaultSleep;
 let appRoute53Client, appRunnerClient, appHostedZoneID;
 
 exports.handler = async function (event, context) {
@@ -29,8 +32,10 @@ exports.handler = async function (event, context) {
     });
     appRunnerClient = new AWS.AppRunner();
 
+    let addCustomDomainErr;
     await addCustomDomain(serviceARN, customDomain).catch(async err => {
-        if (err.name === ERR_NAME_CUSTOM_DOMAIN_ALREADY_ASSOCIATED) {
+        addCustomDomainErr = err;
+        if (err.name === "CustomDomainAlreadyAssociated") {
             console.log("Custom domain already associated. Do nothing.");
             return;
         }
@@ -40,10 +45,12 @@ exports.handler = async function (event, context) {
         });
     });
 
-    console.log("Finished");
-    await report(event, context, "SUCCESS", event.LogicalResourceId).catch((err) => {
-        throw new Error("send response: " + err.message);
-    });
+    if (!addCustomDomainErr) {
+        console.log("Finished");
+        await report(event, context, "SUCCESS", event.LogicalResourceId).catch((err) => {
+            throw new Error("send response: " + err.message);
+        });
+    }
 };
 
 /**
@@ -77,9 +84,8 @@ async function addCustomDomain(serviceARN, customDomainName) {
  */
 async function validateCertForDomain(serviceARN, domainName) {
     console.log("Add validation records");
-    const attempts = 10;
     let i;
-    for (i = 0; i < attempts; i++){
+    for (i = 0; i < ATTEMPTS; i++){
         const data = await appRunnerClient.describeCustomDomains({
             ServiceArn: serviceARN,
         }).promise().catch(err => {
@@ -113,7 +119,7 @@ async function validateCertForDomain(serviceARN, domainName) {
         break;
     }
 
-    if (i >= attempts) {
+    if (i >= ATTEMPTS) {
         throw new Error(`failed waiting for custom domain ${domainName} to change to state ${DOMAIN_STATUS_PENDING_VERIFICATION}`);
     }
 }
@@ -172,3 +178,12 @@ function CustomDomainError(message, name) {
     this.stack = (new Error()).stack;
 }
 CustomDomainError.prototype = Object.create(Error.prototype);
+
+exports.domainStatusPendingVerification = DOMAIN_STATUS_PENDING_VERIFICATION;
+exports.waitForDomainStatusChangeAttempts = ATTEMPTS;
+exports.withSleep = function (s) {
+    sleep = s;
+};
+exports.reset = function () {
+    sleep = defaultSleep;
+};
