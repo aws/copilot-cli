@@ -28,9 +28,10 @@ exports.report = function (
         const https = require("https");
         const { URL } = require("url");
 
+        let reasonWithLogInfo = `${reason} (Log: ${context.logGroupName}${context.logStreamName})`;
         var responseBody = JSON.stringify({
             Status: responseStatus,
-            Reason: reason,
+            Reason: reasonWithLogInfo,
             PhysicalResourceId: physicalResourceId || context.logStreamName,
             StackId: event.StackId,
             RequestId: event.RequestId,

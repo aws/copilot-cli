@@ -14,8 +14,8 @@ const ERR_NAME_INVALID_REQUEST = "InvalidRequestException";
 const DOMAIN_STATUS_PENDING_VERIFICATION = "pending_certificate_dns_validation";
 const ATTEMPTS = 10;
 
-
 let sleep = defaultSleep;
+let logGroup, logStreamName;
 let appRoute53Client, appRunnerClient, appHostedZoneID;
 
 exports.handler = async function (event, context) {
@@ -32,24 +32,17 @@ exports.handler = async function (event, context) {
     });
     appRunnerClient = new AWS.AppRunner();
 
-    let addCustomDomainErr;
-    await addCustomDomain(serviceARN, customDomain).catch(async err => {
-        addCustomDomainErr = err;
+    try {
+        await addCustomDomain(serviceARN, customDomain);
+        console.log("Finished");
+        await report(event, context, "SUCCESS", event.LogicalResourceId);
+    } catch (err) {
         if (err.name === "CustomDomainAlreadyAssociated") {
             console.log("Custom domain already associated. Do nothing.");
             return;
         }
         console.log(`Caught error: ${err.message}`);
-        await report(event, context, "FAILED", event.LogicalResourceId, null, err.message).catch((err) => {
-            throw new Error("send response: " + err.message);
-        });
-    });
-
-    if (!addCustomDomainErr) {
-        console.log("Finished");
-        await report(event, context, "SUCCESS", event.LogicalResourceId).catch((err) => {
-            throw new Error("send response: " + err.message);
-        });
+        await report(event, context, "FAILED", event.LogicalResourceId, null, err.message);
     }
 };
 
@@ -181,6 +174,12 @@ CustomDomainError.prototype = Object.create(Error.prototype);
 
 exports.domainStatusPendingVerification = DOMAIN_STATUS_PENDING_VERIFICATION;
 exports.waitForDomainStatusChangeAttempts = ATTEMPTS;
+exports.withLogGroup = function (g) {
+    logGroup = g;
+};
+exports.withLogStreamName = function (s) {
+    logStreamName = s;
+};
 exports.withSleep = function (s) {
     sleep = s;
 };

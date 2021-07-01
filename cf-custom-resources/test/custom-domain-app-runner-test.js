@@ -33,9 +33,10 @@ describe("Custom Domain for App Runner Service", () => {
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
+                let expectedErrMessageRegex = /^some error \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
-                    body.Reason === "some error"
+                    body.Reason.search(expectedErrMessageRegex) !== -1
                 );
             })
             .reply(200);
@@ -67,9 +68,10 @@ describe("Custom Domain for App Runner Service", () => {
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
+                let expectedErrMessageRegex = /^upsert record mockDomain: some error \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
-                    body.Reason === "upsert record mockDomain: some error"
+                    body.Reason.search(expectedErrMessageRegex) !== -1
                 );
             })
             .reply(200);
@@ -120,9 +122,10 @@ describe("Custom Domain for App Runner Service", () => {
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
+                let expectedErrMessageRegex = /^wait for record sets change for mockDomain: some error \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
-                    body.Reason === "wait for record sets change for mockDomain: some error"
+                    body.Reason.search(expectedErrMessageRegex) !== -1
                 );
             })
             .reply(200);
@@ -175,9 +178,10 @@ describe("Custom Domain for App Runner Service", () => {
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
+                let expectedErrMessageRegex = /^get custom domains for service mockService: some error \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
-                    body.Reason === "get custom domains for service mockService: some error"
+                    body.Reason.search(expectedErrMessageRegex) !== -1
                 );
             })
             .reply(200);
@@ -221,9 +225,10 @@ describe("Custom Domain for App Runner Service", () => {
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
+                let expectedErrMessageRegex = /^failed waiting for custom domain mockDomain to change to state pending_certificate_dns_validation \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
-                    body.Reason === "failed waiting for custom domain mockDomain to change to state pending_certificate_dns_validation"
+                    body.Reason.search(expectedErrMessageRegex) !== -1
                 );
             })
             .reply(200);
@@ -285,9 +290,10 @@ describe("Custom Domain for App Runner Service", () => {
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
+                let expectedErrMessageRegex = /^upsert certificate validation record: upsert record mock-record-name-2: some error \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
-                    body.Reason === "upsert certificate validation record: upsert record mock-record-name-2: some error"
+                    body.Reason.search(expectedErrMessageRegex) !== -1
                 );
             })
             .reply(200);
@@ -368,7 +374,7 @@ describe("Custom Domain for App Runner Service", () => {
                     HostedZoneID: mockHostedZoneID,
                 },
             })
-            .expectReject( );
+            .expectReject(() => {});
     });
 
     test("success", () => {
