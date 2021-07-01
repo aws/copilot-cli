@@ -37,8 +37,9 @@ exports.handler = async function (event, context) {
         console.log("Finished");
         await report(event, context, "SUCCESS", event.LogicalResourceId);
     } catch (err) {
-        if (err.name === "CustomDomainAlreadyAssociated") {
+        if (err.name === ERR_NAME_INVALID_REQUEST && err.message.includes(`${customDomain} is already associated with`)) {
             console.log("Custom domain already associated. Do nothing.");
+            await report(event, context, "SUCCESS", event.LogicalResourceId);
             return;
         }
         console.log(`Caught error: ${err.message}`);
@@ -57,14 +58,9 @@ async function addCustomDomain(serviceARN, customDomainName) {
     const data = await appRunnerClient.associateCustomDomain({
         DomainName: customDomainName,
         ServiceArn: serviceARN,
-    }).promise().catch(err => {
-        if (err.name === ERR_NAME_INVALID_REQUEST && err.message.includes(`${customDomainName} is already associated with`)) {
-            throw new CustomDomainError(`${customDomainName} is already associated with service ${serviceARN}`, ERR_NAME_CUSTOM_DOMAIN_ALREADY_ASSOCIATED);
-        }
-        throw err;
-    });
+    }).promise();
 
-    await upsertCNAMERecordAndWait(customDomainName, data.DNSTarget, appHostedZoneID);
+    await updateCNAMERecordAndWait(customDomainName, data.DNSTarget, appHostedZoneID, "UPSERT");
     await validateCertForDomain(serviceARN, customDomainName);
 }
 
@@ -105,14 +101,14 @@ async function validateCertForDomain(serviceARN, domainName) {
 
         const records = domain.CertificateValidationRecords;
         for (const i in records) {
-            await upsertCNAMERecordAndWait(records[i].Name, records[i].Value, appHostedZoneID).catch(err => {
+            await updateCNAMERecordAndWait(records[i].Name, records[i].Value, appHostedZoneID, "UPSERT").catch(err => {
                 throw new Error("upsert certificate validation record: " + err.message);
             });
         }
         break;
     }
 
-    if (i >= ATTEMPTS) {
+    if (i === ATTEMPTS) {
         throw new Error(`failed waiting for custom domain ${domainName} to change to state ${DOMAIN_STATUS_PENDING_VERIFICATION}`);
     }
 }
@@ -123,15 +119,16 @@ async function validateCertForDomain(serviceARN, domainName) {
  * @param {string} recordName the name of the record
  * @param {string} recordValue the value of the record
  * @param {string} hostedZoneID the ID of the hosted zone into which the record needs to be upserted.
+ * @param {string} action the action to perform; can be "CREATE", "DELETE", or "UPSERT".
  * @throws wrapped error.
  */
-async function upsertCNAMERecordAndWait(recordName, recordValue, hostedZoneID) {
+async function updateCNAMERecordAndWait(recordName, recordValue, hostedZoneID, action) {
     console.log(`Upsert record ${recordName}`);
     let params = {
         ChangeBatch: {
             Changes: [
                 {
-                    Action: "UPSERT",
+                    Action: action,
                     ResourceRecordSet: {
                         Name: recordName,
                         Type: "CNAME",
@@ -164,13 +161,6 @@ async function upsertCNAMERecordAndWait(recordName, recordValue, hostedZoneID) {
          throw new Error(`wait for record sets change for ${recordName}: ` + err.message);
      });
 }
-
-function CustomDomainError(message, name) {
-    this.name = name;
-    this.message = message;
-    this.stack = (new Error()).stack;
-}
-CustomDomainError.prototype = Object.create(Error.prototype);
 
 exports.domainStatusPendingVerification = DOMAIN_STATUS_PENDING_VERIFICATION;
 exports.waitForDomainStatusChangeAttempts = ATTEMPTS;
