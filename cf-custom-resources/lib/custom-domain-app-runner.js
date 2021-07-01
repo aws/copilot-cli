@@ -127,7 +127,7 @@ async function addCustomDomain(serviceARN, customDomainName) {
         ServiceArn: serviceARN,
     }).promise();
 
-    await updateCNAMERecordAndWait(customDomainName, data.DNSTarget, appHostedZoneID, "UPSERT");
+    await updateCNAMERecordAndWait(customDomainName, data.DNSTarget, appHostedZoneID, "UPSERT"); // Upsert the record that maps `customDomainName` to the DNS of the app runner service.
     await validateCertForDomain(serviceARN, customDomainName);
 }
 
@@ -164,6 +164,7 @@ async function validateCertForDomain(serviceARN, domainName) {
             continue;
         }
 
+        // Upsert all records needed for certificate validation.
         const records = domain.CertificateValidationRecords;
         for (const record of records) {
             await updateCNAMERecordAndWait(record.Name, record.Value, appHostedZoneID, "UPSERT").catch(err => {
