@@ -96,7 +96,6 @@ exports.handler = async function (event, context) {
         switch (event.RequestType) {
             case "Create":
                 await addCustomDomain(serviceARN, customDomain);
-                console.log("Finished");
                 break;
             case "Update":
             case "Delete":
@@ -107,7 +106,6 @@ exports.handler = async function (event, context) {
         await report(event, context, "SUCCESS", event.LogicalResourceId);
     } catch (err) {
         if (err.name === ERR_NAME_INVALID_REQUEST && err.message.includes(`${customDomain} is already associated with`)) {
-            console.log("Custom domain already associated. Do nothing.");
             await report(event, context, "SUCCESS", event.LogicalResourceId);
             return;
         }
@@ -141,7 +139,6 @@ async function addCustomDomain(serviceARN, customDomainName) {
  * @throws wrapped error.
  */
 async function validateCertForDomain(serviceARN, domainName) {
-    console.log("Add validation records");
     let i;
     for (i = 0; i < ATTEMPTS; i++){
         const data = await appRunnerClient.describeCustomDomains({
@@ -163,7 +160,6 @@ async function validateCertForDomain(serviceARN, domainName) {
         }
 
         if (domain.Status !== DOMAIN_STATUS_PENDING_VERIFICATION) {
-            console.log(`Custom domain ${domainName} status is ${domain.Status}. Desired state is ${DOMAIN_STATUS_PENDING_VERIFICATION}. Wait and check again`);
             await sleep(3000);
             continue;
         }
@@ -192,7 +188,6 @@ async function validateCertForDomain(serviceARN, domainName) {
  * @throws wrapped error.
  */
 async function updateCNAMERecordAndWait(recordName, recordValue, hostedZoneID, action) {
-    console.log(`Upsert record ${recordName}`);
     let params = {
         ChangeBatch: {
             Changes: [
@@ -218,7 +213,6 @@ async function updateCNAMERecordAndWait(recordName, recordValue, hostedZoneID, a
         throw new Error(`upsert record ${recordName}: ` + err.message);
     });
 
-     console.log("Finished upserting, start waiting");
      await appRoute53Client.waitFor('resourceRecordSetsChanged', {
          // Wait up to 5 minutes
          $waiter: {
