@@ -12,7 +12,7 @@ const {handler, domainStatusPendingVerification, waitForDomainStatusChangeAttemp
 const sinon = require("sinon");
 const nock = require("nock");
 
-describe("Custom Domain for App Runner Service", () => {
+describe("Custom Domain for App Runner Service During Create", () => {
     const [mockServiceARN, mockCustomDomain, mockHostedZoneID] = ["mockService", "mockDomain", "mockHostedZoneID",];
     const mockResponseURL = "https://mock.com/";
 
@@ -42,6 +42,7 @@ describe("Custom Domain for App Runner Service", () => {
             .reply(200);
         return LambdaTester( handler )
             .event({
+                RequestType: "Create",
                 ResponseURL: mockResponseURL,
                 ResourceProperties: {
                     ServiceARN: mockServiceARN,
@@ -77,6 +78,7 @@ describe("Custom Domain for App Runner Service", () => {
             .reply(200);
         return LambdaTester( handler )
             .event({
+                RequestType: "Create",
                 ResponseURL: mockResponseURL,
                 ResourceProperties: {
                     ServiceARN: mockServiceARN,
@@ -131,6 +133,7 @@ describe("Custom Domain for App Runner Service", () => {
             .reply(200);
         return LambdaTester( handler )
             .event({
+                RequestType: "Create",
                 ResponseURL: mockResponseURL,
                 ResourceProperties: {
                     ServiceARN: mockServiceARN,
@@ -187,6 +190,7 @@ describe("Custom Domain for App Runner Service", () => {
             .reply(200);
         return LambdaTester( handler )
             .event({
+                RequestType: "Create",
                 ResponseURL: mockResponseURL,
                 ResourceProperties: {
                     ServiceARN: mockServiceARN,
@@ -234,6 +238,7 @@ describe("Custom Domain for App Runner Service", () => {
             .reply(200);
         return LambdaTester( handler )
             .event({
+                RequestType: "Create",
                 ResponseURL: mockResponseURL,
                 ResourceProperties: {
                     ServiceARN: mockServiceARN,
@@ -299,6 +304,7 @@ describe("Custom Domain for App Runner Service", () => {
             .reply(200);
         return LambdaTester( handler )
             .event({
+                RequestType: "Create",
                 ResponseURL: mockResponseURL,
                 ResourceProperties: {
                     ServiceARN: mockServiceARN,
@@ -355,15 +361,6 @@ describe("Custom Domain for App Runner Service", () => {
     test("fail to send failure response", () => {
         const mockAssociateCustomDomain = sinon.fake.rejects(new Error("some error"));
         AWS.mock("AppRunner", "associateCustomDomain", mockAssociateCustomDomain);
-
-        const expectedResponse = nock(mockResponseURL)
-            .put("/", (body) => {
-                return (
-                    body.Status === "FAILED" &&
-                    body.Reason === "some error"
-                );
-            })
-            .reply(200);
         return LambdaTester( handler )
             .event({
                 ResponseURL: "super weird URL",
@@ -428,6 +425,7 @@ describe("Custom Domain for App Runner Service", () => {
             .reply(200);
         return LambdaTester( handler )
             .event({
+                RequestType: "Create",
                 ResponseURL: mockResponseURL,
                 ResourceProperties: {
                     ServiceARN: mockServiceARN,

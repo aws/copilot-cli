@@ -83,19 +83,27 @@ exports.handler = async function (event, context) {
     const props = event.ResourceProperties;
     const [serviceARN, appDNSRole, customDomain] = [props.ServiceARN, props.AppDNSRole, props.CustomDomain,];
     appHostedZoneID = props.HostedZoneID;
-
-    // Configure clients.
-    appRoute53Client = new AWS.Route53({
-        credentials: new AWS.ChainableTemporaryCredentials({
-            params: { RoleArn: appDNSRole, },
-            masterCredentials: new AWS.EnvironmentCredentials("AWS"),
-        }),
-    });
-    appRunnerClient = new AWS.AppRunner();
-
     try {
-        await addCustomDomain(serviceARN, customDomain);
-        console.log("Finished");
+        // Configure clients.
+        appRoute53Client = new AWS.Route53({
+            credentials: new AWS.ChainableTemporaryCredentials({
+                params: { RoleArn: appDNSRole, },
+                masterCredentials: new AWS.EnvironmentCredentials("AWS"),
+            }),
+        });
+        appRunnerClient = new AWS.AppRunner();
+
+        switch (event.RequestType) {
+            case "Create":
+                await addCustomDomain(serviceARN, customDomain);
+                console.log("Finished");
+                break;
+            case "Update":
+            case "Delete":
+                throw new Error("not yet implemented");
+            default:
+                throw new Error(`Unsupported request type ${event.RequestType}`);
+        }
         await report(event, context, "SUCCESS", event.LogicalResourceId);
     } catch (err) {
         if (err.name === ERR_NAME_INVALID_REQUEST && err.message.includes(`${customDomain} is already associated with`)) {
