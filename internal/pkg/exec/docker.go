@@ -187,9 +187,6 @@ func (c DockerCommand) GetPlatform() (os, arch string, err error) {
 		OS   string `json:"Os"`
 		Arch string `json:"Arch"`
 	}
-	type dockerResponse struct {
-		DockerServer dockerServer `json:"Server"`
-	}
 	var platform dockerServer
 	if err := json.Unmarshal([]byte(out), &platform); err != nil {
 		return "", "", fmt.Errorf("unmarshal docker platform: %w", err)
