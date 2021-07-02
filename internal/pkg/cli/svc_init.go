@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"strconv"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -431,15 +432,21 @@ func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, erro
 	}, nil
 }
 
-func (o initSvcOpts) getOSArch() (os, arch string, err error) {
-	os, arch, err = o.dockerEngineValidator.GetPlatform()
-	if err != nil {
-		return "", "", fmt.Errorf("get os/arch from docker: %w", err)
+func (o initSvcOpts) getOSArch() (operatingSystem, architecture string, err error) {
+	var os string
+	var arch string
+	if o.image != "" {
+		os = runtime.GOOS
+		arch = runtime.GOARCH
+	} else {
+		os, arch, err = o.dockerEngineValidator.GetPlatform()
+		if err != nil {
+			return "", "", fmt.Errorf("get os/arch from docker: %w", err)
+		}
 	}
 	// Until we target X86_64 for ARM architectures, log a warning.
 	if arch == "arm" || arch == "arm64" {
 		log.Warningf("Architecture type %s is currently unsupported. To deploy, run %s\n", arch, "`DOCKER_DEFAULT_PLATFORM=linux/amd64 copilot svc deploy`")
-		return os, arch, nil
 	}
 
 	return os, arch, nil
