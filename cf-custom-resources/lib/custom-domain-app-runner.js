@@ -41,7 +41,7 @@ function report (
         const https = require("https");
         const { URL } = require("url");
 
-        let reasonWithLogInfo = `${reason} (Log: ${context.logGroupName}${context.logStreamName})`;
+        let reasonWithLogInfo = `${reason} (Log: ${context.logGroupName}/${context.logStreamName})`;
         var responseBody = JSON.stringify({
             Status: responseStatus,
             Reason: reasonWithLogInfo,
@@ -127,8 +127,10 @@ async function addCustomDomain(serviceARN, customDomainName) {
         ServiceArn: serviceARN,
     }).promise();
 
-    await updateCNAMERecordAndWait(customDomainName, data.DNSTarget, appHostedZoneID, "UPSERT"); // Upsert the record that maps `customDomainName` to the DNS of the app runner service.
-    await validateCertForDomain(serviceARN, customDomainName);
+    await Promise.all([
+        updateCNAMERecordAndWait(customDomainName, data.DNSTarget, appHostedZoneID, "UPSERT"), // Upsert the record that maps `customDomainName` to the DNS of the app runner service.
+        validateCertForDomain(serviceARN, customDomainName),
+    ]);
 }
 
 /**

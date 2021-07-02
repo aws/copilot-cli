@@ -33,6 +33,7 @@ describe("Custom Domain for App Runner Service During Create", () => {
 
         const expectedResponse = nock(mockResponseURL)
             .put("/", (body) => {
+
                 let expectedErrMessageRegex = /^some error \(Log: .*\)$/;
                 return (
                     body.Status === "FAILED" &&
