@@ -589,7 +589,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Type:  "Backend Service",
 						Image: "nginx:latest",
 						Platform: &manifest.PlatformConfig{
-							OS:   "darwin",
+							OS:   "linux",
 							Arch: "amd64",
 						},
 					},
@@ -614,7 +614,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Type:  "Load Balanced Web Service",
 						Image: "nginx:latest",
 						Platform: &manifest.PlatformConfig{
-							OS:   "darwin",
+							OS:   "linux",
 							Arch: "amd64",
 						},
 					},
