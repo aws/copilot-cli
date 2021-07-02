@@ -589,16 +589,13 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Type:  "Backend Service",
 						Image: "nginx:latest",
 						Platform: &manifest.PlatformConfig{
-							OS:   "linux",
+							OS:   "darwin",
 							Arch: "amd64",
 						},
 					},
 				}).Return("manifest/path", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {
-				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
-			},
 
 			wantedManifestPath: "manifest/path",
 		},
@@ -617,16 +614,13 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 						Type:  "Load Balanced Web Service",
 						Image: "nginx:latest",
 						Platform: &manifest.PlatformConfig{
-							OS:   "linux",
+							OS:   "darwin",
 							Arch: "amd64",
 						},
 					},
 				}).Return("manifest/path", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {
-				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
-			},
 
 			wantedManifestPath: "manifest/path",
 		},
