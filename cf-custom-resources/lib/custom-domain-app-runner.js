@@ -10,7 +10,9 @@ const AWS = require('aws-sdk');
 
 const ERR_NAME_INVALID_REQUEST = "InvalidRequestException";
 const DOMAIN_STATUS_PENDING_VERIFICATION = "pending_certificate_dns_validation";
-const ATTEMPTS = 10;
+const DOMAIN_STATUS_ACTIVE = "active";
+const ATTEMPTS_WAIT_FOR_PENDING = 10;
+const ATTEMPTS_WAIT_FOR_ACTIVE = 12;
 
 let defaultSleep = function (ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -96,6 +98,7 @@ exports.handler = async function (event, context) {
         switch (event.RequestType) {
             case "Create":
                 await addCustomDomain(serviceARN, customDomain);
+                await waitForCustomDomainToBeActive(serviceARN, customDomain);
                 break;
             case "Update":
             case "Delete":
@@ -113,6 +116,49 @@ exports.handler = async function (event, context) {
         await report(event, context, "FAILED", event.LogicalResourceId, null, err.message);
     }
 };
+
+/**
+ * Wait for the custom domain to be ACTIVE.
+ * @param {string} serviceARN the service to which the domain is added.
+ * @param {string} customDomainName the domain name.
+ */
+async function waitForCustomDomainToBeActive(serviceARN, customDomainName) {
+    let i;
+    for (i = 0; i < ATTEMPTS_WAIT_FOR_ACTIVE; i++) {
+        const data = await appRunnerClient.describeCustomDomains({
+            ServiceArn: serviceARN,
+        }).promise().catch(err => {
+            throw new Error(`wait for domain ${customDomainName} to be active: ` + err.message);
+        });
+
+        let domain;
+        for (const d of data.CustomDomains) {
+            if (d.DomainName === customDomainName) {
+                domain = d;
+                break;
+            }
+        }
+
+        if (!domain) {
+            throw new Error(`wait for domain ${customDomainName} to be active: : domain ${customDomainName} is not associated`);
+        }
+
+        if (domain.Status !== DOMAIN_STATUS_ACTIVE) {
+            // Exponential backoff with jitter based on 200ms base
+            // component of backoff fixed to ensure minimum total wait time on
+            // slow targets.
+            const base = Math.pow(2, i);
+            await sleep(Math.random() * base * 50 + base * 150);
+            continue;
+        }
+        return;
+    }
+
+    if (i === ATTEMPTS_WAIT_FOR_ACTIVE) {
+        console.log("Fail to wait for state to become ACTIVE. However, this doesn't necessarily mean the operation has failed. It usually takes a long time to validate domain and can be longer than the 15 minutes duration for which a Lambda function can run at most.");
+        throw new Error(`fail to wait for domain ${customDomainName} to become ${DOMAIN_STATUS_ACTIVE}`);
+    }
+}
 
 /**
  * Validate certificates of the custom domain for the service by upserting validation records.
@@ -142,7 +188,7 @@ async function addCustomDomain(serviceARN, customDomainName) {
  */
 async function validateCertForDomain(serviceARN, domainName) {
     let i;
-    for (i = 0; i < ATTEMPTS; i++){
+    for (i = 0; i < ATTEMPTS_WAIT_FOR_PENDING; i++){
         const data = await appRunnerClient.describeCustomDomains({
             ServiceArn: serviceARN,
         }).promise().catch(err => {
@@ -176,7 +222,7 @@ async function validateCertForDomain(serviceARN, domainName) {
         break;
     }
 
-    if (i === ATTEMPTS) {
+    if (i === ATTEMPTS_WAIT_FOR_PENDING) {
         throw new Error(`update validation records for domain ${domainName}: fail to wait for state ${DOMAIN_STATUS_PENDING_VERIFICATION}`);
     }
 }
@@ -229,7 +275,8 @@ async function updateCNAMERecordAndWait(recordName, recordValue, hostedZoneID, a
 }
 
 exports.domainStatusPendingVerification = DOMAIN_STATUS_PENDING_VERIFICATION;
-exports.waitForDomainStatusChangeAttempts = ATTEMPTS;
+exports.waitForDomainStatusPendingAttempts = ATTEMPTS_WAIT_FOR_PENDING;
+exports.waitForDomainStatusActiveAttempts = ATTEMPTS_WAIT_FOR_ACTIVE;
 exports.withSleep = function (s) {
     sleep = s;
 };
