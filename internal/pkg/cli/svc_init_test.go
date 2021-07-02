@@ -123,10 +123,10 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 		inImage          string
 		inSvcPort        uint16
 
-		mockPrompt     func(m *mocks.Mockprompter)
-		mockSel        func(m *mocks.MockdockerfileSelector)
-		mockDockerfile func(m *mocks.MockdockerfileParser)
-		mockValidator  func(m *mocks.MockdockerEngineValidator)
+		mockPrompt       func(m *mocks.Mockprompter)
+		mockSel          func(m *mocks.MockdockerfileSelector)
+		mockDockerfile   func(m *mocks.MockdockerfileParser)
+		mockDockerEngine func(m *mocks.MockdockerEngine)
 
 		wantedErr error
 	}{
@@ -153,10 +153,10 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				}), gomock.Any()).
 					Return(wantedSvcType, nil)
 			},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockSel:        func(m *mocks.MockdockerfileSelector) {},
-			mockValidator:  func(m *mocks.MockdockerEngineValidator) {},
-			wantedErr:      nil,
+			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
+			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
+			wantedErr:        nil,
 		},
 		"return an error if fail to get service type": {
 			inSvcType:        "",
@@ -168,10 +168,10 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOption(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockSel:        func(m *mocks.MockdockerfileSelector) {},
-			mockValidator:  func(m *mocks.MockdockerEngineValidator) {},
-			wantedErr:      fmt.Errorf("select service type: some error"),
+			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
+			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
+			wantedErr:        fmt.Errorf("select service type: some error"),
 		},
 		"prompt for service name": {
 			inSvcType:        wantedSvcType,
@@ -185,9 +185,9 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 			},
-			mockSel:       func(m *mocks.MockdockerfileSelector) {},
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {},
-			wantedErr:     nil,
+			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
+			wantedErr:        nil,
 		},
 		"returns an error if fail to get service name": {
 			inSvcType:        wantedSvcType,
@@ -199,10 +199,10 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockSel:        func(m *mocks.MockdockerfileSelector) {},
-			mockValidator:  func(m *mocks.MockdockerEngineValidator) {},
-			wantedErr:      fmt.Errorf("get service name: some error"),
+			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
+			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
+			wantedErr:        fmt.Errorf("get service name: some error"),
 		},
 		"skip selecting Dockerfile if image flag is set": {
 			inSvcType:        wantedSvcType,
@@ -211,11 +211,11 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			inImage:          "mockImage",
 			inDockerfilePath: "",
 
-			mockPrompt:     func(m *mocks.Mockprompter) {},
-			mockSel:        func(m *mocks.MockdockerfileSelector) {},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockValidator:  func(m *mocks.MockdockerEngineValidator) {},
-			wantedErr:      nil,
+			mockPrompt:       func(m *mocks.Mockprompter) {},
+			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
+			wantedErr:        nil,
 		},
 		"return error if failed to check if docker engine is running": {
 			inSvcType: wantedSvcType,
@@ -225,7 +225,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockPrompt:     func(m *mocks.Mockprompter) {},
 			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("check if docker engine is running: some error"),
@@ -241,7 +241,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			},
 			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(exec.ErrDockerCommandNotFound)
 			},
 			wantedErr: nil,
@@ -257,7 +257,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			},
 			mockSel:        func(m *mocks.MockdockerfileSelector) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(&exec.ErrDockerDaemonNotResponsive{})
 			},
 			wantedErr: nil,
@@ -282,7 +282,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				).Return("Use an existing image instead", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(nil)
 			},
 			wantedErr: fmt.Errorf("get image location: mock error"),
@@ -308,7 +308,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				).Return("Use an existing image instead", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(nil)
 			},
 		},
@@ -329,7 +329,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				).Return("frontend/Dockerfile", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(nil)
 			},
 			wantedErr: nil,
@@ -347,7 +347,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			},
 			mockPrompt:     func(m *mocks.Mockprompter) {},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(nil)
 			},
 			wantedErr: fmt.Errorf("select Dockerfile: some error"),
@@ -361,9 +361,9 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
 			},
-			mockSel:       func(m *mocks.MockdockerfileSelector) {},
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {},
-			wantedErr:     nil,
+			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
+			wantedErr:        nil,
 		},
 		"asks for port if not specified": {
 			inSvcType:        wantedSvcType,
@@ -378,9 +378,9 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
 			},
-			mockSel:       func(m *mocks.MockdockerfileSelector) {},
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {},
-			wantedErr:     nil,
+			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
+			wantedErr:        nil,
 		},
 		"errors if port not specified": {
 			inSvcType:        wantedSvcType,
@@ -395,9 +395,9 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("expose error"))
 			},
-			mockSel:       func(m *mocks.MockdockerfileSelector) {},
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {},
-			wantedErr:     fmt.Errorf("get port: some error"),
+			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
+			wantedErr:        fmt.Errorf("get port: some error"),
 		},
 		"errors if port out of range": {
 			inSvcType:        wantedSvcType,
@@ -412,9 +412,9 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
 			},
-			mockSel:       func(m *mocks.MockdockerfileSelector) {},
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {},
-			wantedErr:     fmt.Errorf("get port: some error"),
+			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
+			wantedErr:        fmt.Errorf("get port: some error"),
 		},
 		"don't ask if dockerfile has port": {
 			inSvcType:        wantedSvcType,
@@ -427,8 +427,8 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{80}, nil)
 			},
-			mockSel:       func(m *mocks.MockdockerfileSelector) {},
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {},
+			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 		},
 		"don't use dockerfile port if flag specified": {
 			inSvcType:        wantedSvcType,
@@ -438,9 +438,9 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockPrompt: func(m *mocks.Mockprompter) {
 			},
-			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
-			mockSel:        func(m *mocks.MockdockerfileSelector) {},
-			mockValidator:  func(m *mocks.MockdockerEngineValidator) {},
+			mockDockerfile:   func(m *mocks.MockdockerfileParser) {},
+			mockSel:          func(m *mocks.MockdockerfileSelector) {},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {},
 		},
 	}
 
@@ -453,7 +453,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
 			mockSel := mocks.NewMockdockerfileSelector(ctrl)
-			mockValidator := mocks.NewMockdockerEngineValidator(ctrl)
+			mockDockerEngine := mocks.NewMockdockerEngine(ctrl)
 			opts := &initSvcOpts{
 				initSvcVars: initSvcVars{
 					initWkldVars: initWkldVars{
@@ -468,15 +468,15 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				dockerfile: func(s string) dockerfileParser {
 					return mockDockerfile
 				},
-				df:                    mockDockerfile,
-				prompt:                mockPrompt,
-				sel:                   mockSel,
-				dockerEngineValidator: mockValidator,
+				df:           mockDockerfile,
+				prompt:       mockPrompt,
+				sel:          mockSel,
+				dockerEngine: mockDockerEngine,
 			}
 			tc.mockSel(mockSel)
 			tc.mockPrompt(mockPrompt)
 			tc.mockDockerfile(mockDockerfile)
-			tc.mockValidator(mockValidator)
+			tc.mockDockerEngine(mockDockerEngine)
 
 			// WHEN
 			err := opts.Ask()
@@ -502,7 +502,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		mockSvcInit      func(m *mocks.MocksvcInitializer)
 		mockDockerfile   func(m *mocks.MockdockerfileParser)
-		mockValidator    func(m *mocks.MockdockerEngineValidator)
+		mockDockerEngine func(m *mocks.MockdockerEngine)
 		inSvcPort        uint16
 		inSvcType        string
 		inSvcName        string
@@ -539,7 +539,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetHealthCheck().Return(nil, nil)
 			},
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 
@@ -568,7 +568,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
 				m.EXPECT().GetHealthCheck().Return(nil, nil)
 			},
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 
@@ -625,13 +625,13 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			wantedManifestPath: "manifest/path",
 		},
 		"return error if OS/arch detection fails": {
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().GetPlatform().Return("", "", mockError)
 			},
 			wantedErr: errors.New("get os/arch from docker: mock error"),
 		},
 		"failure": {
-			mockValidator: func(m *mocks.MockdockerEngineValidator) {
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 			mockSvcInit: func(m *mocks.MocksvcInitializer) {
@@ -649,7 +649,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 
 			mockSvcInitializer := mocks.NewMocksvcInitializer(ctrl)
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
-			mockDockerValidator := mocks.NewMockdockerEngineValidator(ctrl)
+			mockDockerEngine := mocks.NewMockdockerEngine(ctrl)
 
 			if tc.mockSvcInit != nil {
 				tc.mockSvcInit(mockSvcInitializer)
@@ -657,8 +657,8 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			if tc.mockDockerfile != nil {
 				tc.mockDockerfile(mockDockerfile)
 			}
-			if tc.mockValidator != nil {
-				tc.mockValidator(mockDockerValidator)
+			if tc.mockDockerEngine != nil {
+				tc.mockDockerEngine(mockDockerEngine)
 			}
 			opts := initSvcOpts{
 				initSvcVars: initSvcVars{
@@ -675,8 +675,8 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				dockerfile: func(s string) dockerfileParser {
 					return mockDockerfile
 				},
-				df:                    mockDockerfile,
-				dockerEngineValidator: mockDockerValidator,
+				df:           mockDockerfile,
+				dockerEngine: mockDockerEngine,
 			}
 
 			// WHEN

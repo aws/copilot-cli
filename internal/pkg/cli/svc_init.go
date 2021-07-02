@@ -86,11 +86,11 @@ type initSvcOpts struct {
 	initSvcVars
 
 	// Interfaces to interact with dependencies.
-	fs                    afero.Fs
-	init                  svcInitializer
-	prompt                prompter
-	dockerEngineValidator dockerEngineValidator
-	sel                   dockerfileSelector
+	fs           afero.Fs
+	init         svcInitializer
+	prompt       prompter
+	dockerEngine dockerEngine
+	sel          dockerfileSelector
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -133,11 +133,11 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	opts := &initSvcOpts{
 		initSvcVars: vars,
 
-		fs:                    fs,
-		init:                  initSvc,
-		prompt:                prompter,
-		sel:                   sel,
-		dockerEngineValidator: exec.NewDockerCommand(),
+		fs:           fs,
+		init:         initSvc,
+		prompt:       prompter,
+		sel:          sel,
+		dockerEngine: exec.NewDockerCommand(),
 	}
 	opts.dockerfile = func(path string) dockerfileParser {
 		if opts.df != nil {
@@ -223,7 +223,7 @@ func (o *initSvcOpts) Execute() error {
 		}
 	}
 
-	o.os, o.arch, err = o.getOSArch()
+	o.os, o.arch, err = o.dockerPlatform()
 	if err != nil {
 		return err
 	}
@@ -329,7 +329,7 @@ func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 	if o.dockerfilePath != "" || o.image != "" {
 		return true, nil
 	}
-	if err = o.dockerEngineValidator.CheckDockerEngineRunning(); err != nil {
+	if err = o.dockerEngine.CheckDockerEngineRunning(); err != nil {
 		var errDaemon *exec.ErrDockerDaemonNotResponsive
 		switch {
 		case errors.Is(err, exec.ErrDockerCommandNotFound):
@@ -432,21 +432,21 @@ func parseHealthCheck(df dockerfileParser) (*manifest.ContainerHealthCheck, erro
 	}, nil
 }
 
-func (o initSvcOpts) getOSArch() (operatingSystem, architecture string, err error) {
+func (o *initSvcOpts) dockerPlatform() (operatingSystem, architecture string, err error) {
 	var os string
 	var arch string
 	if o.image != "" {
 		os = runtime.GOOS
 		arch = runtime.GOARCH
 	} else {
-		os, arch, err = o.dockerEngineValidator.GetPlatform()
+		os, arch, err = o.dockerEngine.GetPlatform()
 		if err != nil {
 			return "", "", fmt.Errorf("get os/arch from docker: %w", err)
 		}
 	}
 	// Until we target X86_64 for ARM architectures, log a warning.
 	if arch == "arm" || arch == "arm64" {
-		log.Warningf("Architecture type %s is currently unsupported. To deploy, run %s\n", arch, "`DOCKER_DEFAULT_PLATFORM=linux/amd64 copilot svc deploy`")
+		log.Warningf("Architecture type %s is currently unsupported.\nTo deploy, run %s\n", arch, "`DOCKER_DEFAULT_PLATFORM=linux/amd64 copilot svc deploy`")
 	}
 
 	return os, arch, nil
